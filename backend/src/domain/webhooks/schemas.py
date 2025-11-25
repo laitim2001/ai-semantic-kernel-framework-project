@@ -108,3 +108,83 @@ class WebhookAuditEntry(BaseModel):
     error_message: Optional[str] = Field(None, description="Error message if failed")
     duration_ms: Optional[int] = Field(None, description="Processing duration in ms")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ============================================
+# S2-2: n8n Workflow Trigger (Outbound)
+# ============================================
+
+class N8nTriggerRequest(BaseModel):
+    """Schema for triggering an n8n workflow."""
+    n8n_workflow_id: str = Field(..., description="n8n workflow ID or webhook path")
+    data: dict[str, Any] = Field(default_factory=dict, description="Data to pass to n8n workflow")
+    webhook_path: Optional[str] = Field(None, description="Custom webhook path (overrides workflow_id)")
+    test_mode: bool = Field(False, description="Use n8n test webhook endpoint")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "n8n_workflow_id": "process-data",
+                "data": {"items": [1, 2, 3], "action": "process"},
+                "test_mode": False
+            }
+        }
+    )
+
+
+class N8nTriggerResponse(BaseModel):
+    """Schema for n8n trigger response."""
+    success: bool = Field(..., description="Whether the trigger was successful")
+    workflow_id: str = Field(..., description="n8n workflow ID that was triggered")
+    request_id: str = Field(..., description="Unique request ID")
+    n8n_response: Optional[dict[str, Any]] = Field(None, description="Response from n8n")
+    error: Optional[str] = Field(None, description="Error message if failed")
+    error_type: Optional[str] = Field(None, description="Error type classification")
+    duration_ms: Optional[int] = Field(None, description="Request duration in ms")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "workflow_id": "process-data",
+                "request_id": "req-abc123",
+                "n8n_response": {"received": True},
+                "duration_ms": 150,
+                "timestamp": "2025-01-01T00:00:00Z"
+            }
+        }
+    )
+
+
+class N8nHealthResponse(BaseModel):
+    """Schema for n8n health check response."""
+    success: bool = Field(..., description="Whether n8n is healthy")
+    status: str = Field(..., description="Health status (healthy/unhealthy)")
+    n8n_url: str = Field(..., description="n8n URL that was checked")
+    error: Optional[str] = Field(None, description="Error if unhealthy")
+
+
+class N8nWorkflowInfo(BaseModel):
+    """Schema for n8n workflow information."""
+    id: str = Field(..., description="Workflow ID")
+    name: str = Field(..., description="Workflow name")
+    active: bool = Field(..., description="Whether workflow is active")
+    created_at: Optional[datetime] = Field(None, description="Creation timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
+
+
+class N8nWorkflowListResponse(BaseModel):
+    """Schema for n8n workflow list response."""
+    success: bool = Field(..., description="Whether the request was successful")
+    workflows: list[N8nWorkflowInfo] = Field(default_factory=list, description="List of workflows")
+    total: int = Field(0, description="Total number of workflows")
+    error: Optional[str] = Field(None, description="Error message if failed")
+
+
+class N8nExecutionStatusResponse(BaseModel):
+    """Schema for n8n execution status response."""
+    success: bool = Field(..., description="Whether the query was successful")
+    execution_id: str = Field(..., description="n8n execution ID")
+    data: Optional[dict[str, Any]] = Field(None, description="Execution data from n8n")
+    error: Optional[str] = Field(None, description="Error message if failed")
