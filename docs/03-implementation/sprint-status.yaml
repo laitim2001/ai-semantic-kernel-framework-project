@@ -485,11 +485,247 @@ sprints:
 
   sprint_3:
     name: "Sprint 3: Security & Observability"
-    status: "not-started"
-    start_date: "2026-01-06"
-    end_date: "2026-01-17"
+    status: "in-progress"
+    start_date: "2025-11-25"
+    end_date: "2025-12-06"
     planned_story_points: 38
     completed_story_points: 0
+
+    goals:
+      - "實現 RBAC 權限系統"
+      - "API 安全強化（防注入、限流、安全 headers）"
+      - "敏感數據加密（靜態 + 傳輸中）"
+      - "Secrets 管理（Azure Key Vault 準備）"
+      - "分佈式追蹤和性能監控"
+      - "安全滲透測試"
+
+    notes: |
+      Local-First 開發策略 (Phase 1):
+      - 認證方式: Mock Auth (開發) → Azure AD 準備 (Phase 2)
+      - 監控方案: Console Logging + 簡單 Metrics
+      - Secrets 管理: .env 文件 (Phase 1) → Azure Key Vault (Phase 2)
+      - 成本: $0 Azure 費用
+      詳細規劃參考: docs/03-implementation/sprint-planning/sprint-3-security-observability.md
+
+    backlog:
+      - id: "S3-1"
+        title: "RBAC Permission System"
+        description: "實現基於角色的訪問控制系統，支持細粒度權限管理"
+        story_points: 8
+        assignee: "Backend Engineer 1"
+        status: "pending"
+        priority: "P0 - Critical"
+        dependencies: ["S0-7"]
+        acceptance_criteria:
+          - "定義 4 個角色：Admin、PowerUser、User、Viewer"
+          - "每個 API endpoint 有權限檢查"
+          - "用戶可以分配多個角色"
+          - "權限繼承正確（Admin > PowerUser > User > Viewer）"
+          - "提供權限檢查裝飾器"
+        subtasks:
+          - "創建 RBAC 數據模型和遷移"
+          - "實現初始化腳本（角色和權限）"
+          - "創建權限檢查裝飾器"
+          - "更新所有 API 添加權限檢查"
+          - "實現角色管理 API"
+          - "編寫單元測試"
+          - "編寫集成測試"
+
+      - id: "S3-2"
+        title: "API Security Hardening"
+        description: "強化 API 安全性，防止常見攻擊（SQL 注入、XSS、CSRF），實現限流和輸入驗證"
+        story_points: 5
+        assignee: "Backend Engineer 2"
+        status: "pending"
+        priority: "P0 - Critical"
+        dependencies: ["S1-8"]
+        acceptance_criteria:
+          - "所有輸入經過驗證和清理"
+          - "SQL 注入防護（使用 ORM）"
+          - "API 限流（每分鐘 60 次）"
+          - "CORS 配置正確"
+          - "安全 headers（HSTS、CSP、X-Frame-Options）"
+        subtasks:
+          - "實現輸入驗證（Pydantic validators）"
+          - "審查所有 ORM 查詢（防 SQL 注入）"
+          - "配置 API 限流（fastapi-limiter）"
+          - "配置 CORS"
+          - "實現安全 headers middleware"
+          - "配置 CSRF 保護"
+          - "安全測試（OWASP ZAP 掃描）"
+
+      - id: "S3-3"
+        title: "Data Encryption at Rest"
+        description: "實現敏感數據的靜態加密，包括數據庫字段加密和文件存儲加密"
+        story_points: 5
+        assignee: "Backend Engineer 1"
+        status: "pending"
+        priority: "P0 - Critical"
+        dependencies: ["S0-4"]
+        acceptance_criteria:
+          - "敏感字段（密碼、API keys、tokens）加密存儲"
+          - "使用 AES-256-GCM 加密算法"
+          - "加密密鑰通過環境變量管理（Phase 1）"
+          - "提供透明的加密/解密層"
+          - "數據庫連接使用 SSL/TLS"
+        subtasks:
+          - "實現 EncryptionService"
+          - "創建 EncryptedString 列類型"
+          - "識別並遷移敏感字段"
+          - "配置數據庫 SSL/TLS"
+          - "編寫加密/解密測試"
+          - "性能測試（加密開銷）"
+
+      - id: "S3-4"
+        title: "Secrets Management (Local-First)"
+        description: "實現本地 Secrets 管理，準備 Azure Key Vault 整合"
+        story_points: 5
+        assignee: "DevOps Engineer"
+        status: "pending"
+        priority: "P0 - Critical"
+        dependencies: ["S0-2"]
+        acceptance_criteria:
+          - "所有敏感配置從環境變量讀取"
+          - "SecretsManager 抽象層實現"
+          - "本地開發使用 .env 文件"
+          - "Azure Key Vault 整合代碼準備（Phase 2）"
+          - "無硬編碼的敏感信息"
+        subtasks:
+          - "實現 SecretsManager 抽象類"
+          - "實現 EnvSecretsProvider（本地開發）"
+          - "準備 AzureKeyVaultProvider 接口"
+          - "更新所有配置讀取邏輯"
+          - "實現 secret 輪轉腳本模板"
+          - "測試 Secrets 管理"
+
+      - id: "S3-5"
+        title: "Security Audit Dashboard"
+        description: "創建 Grafana Dashboard 顯示安全事件、審計日誌、異常登錄等"
+        story_points: 3
+        assignee: "DevOps Engineer"
+        status: "pending"
+        priority: "P1 - High"
+        dependencies: ["S2-7", "S0-8"]
+        acceptance_criteria:
+          - "Dashboard 顯示過去 24 小時安全事件"
+          - "可視化失敗登錄嘗試"
+          - "顯示權限變更歷史"
+          - "異常活動告警（多次失敗登錄）"
+          - "可按用戶/資源/時間篩選"
+        subtasks:
+          - "設計 Dashboard 佈局"
+          - "創建 Grafana Dashboard JSON"
+          - "添加安全事件指標"
+          - "配置告警規則（異常登錄）"
+          - "測試 Dashboard 數據"
+
+      - id: "S3-6"
+        title: "Distributed Tracing (Jaeger)"
+        description: "部署 Jaeger 分佈式追蹤系統，實現跨服務請求追蹤"
+        story_points: 5
+        assignee: "Backend Engineer 2"
+        status: "pending"
+        priority: "P1 - High"
+        dependencies: ["S2-5"]
+        acceptance_criteria:
+          - "Jaeger 部署並運行（Docker Compose）"
+          - "所有服務集成 OpenTelemetry"
+          - "追蹤上下文在服務間傳播"
+          - "Jaeger UI 顯示完整調用鏈"
+          - "追蹤數據保留 7 天"
+        subtasks:
+          - "添加 Jaeger 到 Docker Compose"
+          - "配置 OpenTelemetry exporter"
+          - "驗證追蹤上下文傳播"
+          - "配置數據保留策略"
+          - "測試 Jaeger UI"
+
+      - id: "S3-7"
+        title: "Custom Business Metrics"
+        description: "實現自定義業務指標，監控平台使用情況和業務 KPI"
+        story_points: 3
+        assignee: "Backend Engineer 1"
+        status: "pending"
+        priority: "P1 - High"
+        dependencies: ["S0-8"]
+        acceptance_criteria:
+          - "記錄工作流創建/執行/失敗數量"
+          - "LLM Token 使用量和成本"
+          - "平均執行時長"
+          - "活躍用戶數"
+          - "Prometheus 可抓取指標"
+        subtasks:
+          - "定義業務指標"
+          - "實現指標收集邏輯"
+          - "驗證 Prometheus 抓取"
+          - "創建業務 Dashboard"
+
+      - id: "S3-8"
+        title: "Performance Monitoring Dashboard"
+        description: "創建性能監控 Dashboard，顯示 API 延遲、吞吐量、資源使用等"
+        story_points: 3
+        assignee: "DevOps Engineer"
+        status: "pending"
+        priority: "P1 - High"
+        dependencies: ["S3-7"]
+        acceptance_criteria:
+          - "顯示 API P95/P99 延遲"
+          - "顯示每秒請求數（RPS）"
+          - "顯示錯誤率"
+          - "CPU/內存使用率"
+          - "數據庫連接池狀態"
+        subtasks:
+          - "設計 Dashboard 佈局"
+          - "創建 Grafana Dashboard JSON"
+          - "配置性能告警規則"
+          - "測試 Dashboard 數據"
+
+      - id: "S3-9"
+        title: "Security Penetration Testing"
+        description: "進行全面的安全滲透測試，發現並修復漏洞"
+        story_points: 5
+        assignee: "QA Engineer"
+        status: "pending"
+        priority: "P0 - Critical"
+        dependencies: ["S3-1", "S3-2", "S3-3"]
+        acceptance_criteria:
+          - "OWASP Top 10 檢查通過"
+          - "SQL 注入測試通過"
+          - "XSS 測試通過"
+          - "CSRF 測試通過"
+          - "無 P0/P1 安全漏洞"
+        subtasks:
+          - "設置測試環境"
+          - "運行 OWASP ZAP 掃描"
+          - "手動滲透測試（按清單）"
+          - "記錄發現的漏洞"
+          - "修復 P0/P1 漏洞"
+          - "重新測試驗證修復"
+          - "生成安全測試報告"
+
+    risks:
+      - description: "滲透測試可能發現大量漏洞需要修復"
+        severity: "high"
+        mitigation: "預留時間進行漏洞修復，優先處理 P0/P1"
+
+      - description: "加密可能影響性能"
+        severity: "medium"
+        mitigation: "進行性能基準測試，必要時優化加密策略"
+
+      - description: "RBAC 實現複雜度"
+        severity: "medium"
+        mitigation: "參考成熟框架設計，逐步實現"
+
+    blockers: []
+
+    definition_of_done:
+      - "所有代碼已合併到 main"
+      - "安全測試通過（無 P0/P1 漏洞）"
+      - "RBAC 應用到所有 API"
+      - "敏感數據已加密"
+      - "Secrets 管理完成"
+      - "分佈式追蹤正常工作"
+      - "所有 Dashboard 可用"
 
   sprint_4:
     name: "Sprint 4: UI & Frontend Development"
@@ -572,3 +808,7 @@ notes:
     note: "TD-001 (Kong JWT) resolved during Sprint 2 implementation"
   - date: "2025-11-25"
     note: "Ready for Sprint 3: Security & Observability"
+  - date: "2025-11-25"
+    note: "Sprint 3 started - Security & Observability (38 points, 9 stories)"
+  - date: "2025-11-25"
+    note: "Sprint 2 PR merged to main (PR #7)"
