@@ -21,7 +21,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.audit.schemas import (
     AuditLogFilter,
@@ -31,11 +31,16 @@ from src.domain.audit.schemas import (
     AuditLogExportRequest,
 )
 from src.domain.audit.service import AuditService
-from src.infrastructure.database.session import get_db
+from src.infrastructure.database.session import get_session
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
+
+
+def get_audit_service(session: AsyncSession = Depends(get_session)) -> AuditService:
+    """Get audit service dependency."""
+    return AuditService(session)
 
 
 @router.get("/logs", response_model=AuditLogListResponse)
@@ -53,7 +58,7 @@ async def list_audit_logs(
     page_size: int = Query(50, ge=1, le=500, description="Items per page"),
     sort_by: str = Query("created_at", description="Field to sort by"),
     sort_order: str = Query("desc", description="Sort order (asc/desc)"),
-    db: Session = Depends(get_db),
+    service: AuditService = Depends(get_audit_service),
 ):
     """
     List audit logs with filtering and pagination.
@@ -76,7 +81,6 @@ async def list_audit_logs(
         sort_order=sort_order,
     )
 
-    service = AuditService(db)
     result = await service.list(filters)
 
     logger.debug(f"Listed {len(result.items)} audit logs (page {page})")
@@ -86,12 +90,11 @@ async def list_audit_logs(
 @router.get("/logs/{log_id}", response_model=AuditLogResponse)
 async def get_audit_log(
     log_id: int,
-    db: Session = Depends(get_db),
+    service: AuditService = Depends(get_audit_service),
 ):
     """
     Get a specific audit log by ID.
     """
-    service = AuditService(db)
     log = await service.get_by_id(log_id)
 
     if not log:
@@ -104,7 +107,7 @@ async def get_audit_log(
 async def get_audit_stats(
     user_id: Optional[UUID] = Query(None, description="Filter by user ID"),
     resource_type: Optional[str] = Query(None, description="Filter by resource type"),
-    db: Session = Depends(get_db),
+    service: AuditService = Depends(get_audit_service),
 ):
     """
     Get audit log statistics.
@@ -114,7 +117,6 @@ async def get_audit_stats(
     - Top actions and resources
     - Error rate
     """
-    service = AuditService(db)
     stats = await service.get_stats(user_id=user_id, resource_type=resource_type)
 
     return stats
@@ -125,14 +127,13 @@ async def get_logs_for_resource(
     resource_type: str,
     resource_id: UUID,
     limit: int = Query(100, ge=1, le=500, description="Maximum logs to return"),
-    db: Session = Depends(get_db),
+    service: AuditService = Depends(get_audit_service),
 ):
     """
     Get audit logs for a specific resource.
 
     Useful for viewing the history of a workflow, execution, or other entity.
     """
-    service = AuditService(db)
     logs = await service.get_for_resource(resource_type, resource_id, limit)
 
     return {
@@ -147,14 +148,13 @@ async def get_logs_for_resource(
 async def get_logs_for_user(
     user_id: UUID,
     limit: int = Query(100, ge=1, le=500, description="Maximum logs to return"),
-    db: Session = Depends(get_db),
+    service: AuditService = Depends(get_audit_service),
 ):
     """
     Get audit logs for a specific user.
 
     Useful for viewing all actions performed by a user.
     """
-    service = AuditService(db)
     logs = await service.get_for_user(user_id, limit)
 
     return {
@@ -167,15 +167,13 @@ async def get_logs_for_user(
 @router.post("/export")
 async def export_audit_logs(
     export_request: AuditLogExportRequest,
-    db: Session = Depends(get_db),
+    service: AuditService = Depends(get_audit_service),
 ):
     """
     Export audit logs to CSV or JSON format.
 
     Exports logs within the specified date range.
     """
-    service = AuditService(db)
-
     # Build filters
     filters = AuditLogFilter(
         start_date=export_request.start_date,
@@ -198,7 +196,7 @@ async def export_audit_logs(
             "request_id", "error_message", "duration_ms"
         ]
         if export_request.include_metadata:
-            headers.append("metadata")
+            headers.append("extra_data")
         writer.writerow(headers)
 
         # Data rows
@@ -252,7 +250,7 @@ async def export_audit_logs(
 @router.post("/cleanup")
 async def cleanup_old_logs(
     retention_days: int = Query(90, ge=30, le=365, description="Days to retain"),
-    db: Session = Depends(get_db),
+    service: AuditService = Depends(get_audit_service),
 ):
     """
     Clean up old audit logs.
@@ -263,7 +261,6 @@ async def cleanup_old_logs(
     NOTE: This is an admin-only operation. In production, this
     should be protected by appropriate authorization.
     """
-    service = AuditService(db)
     deleted_count = await service.cleanup_old_logs(retention_days)
 
     return {

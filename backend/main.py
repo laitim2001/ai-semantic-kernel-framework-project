@@ -52,6 +52,11 @@ from src.api.v1.audit import router as audit_router
 
 app.include_router(audit_router, prefix="/api/v1", tags=["audit"])
 
+# Sprint 2: Webhook API Routes
+from src.api.v1.webhooks import router as webhooks_router
+
+app.include_router(webhooks_router, prefix="/api/v1", tags=["webhooks"])
+
 # TODO: 添加其他路由
 # from src.workflow.router import router as workflow_router
 # from src.execution.router import router as execution_router

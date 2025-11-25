@@ -2,6 +2,9 @@
 Audit Log Schemas (Pydantic Models)
 
 Sprint 2 - Story S2-7
+
+Note: These schemas are designed to work with the current audit_logs table schema.
+Some fields are optional to support backwards compatibility.
 """
 from datetime import datetime
 from typing import Any, Optional
@@ -22,7 +25,7 @@ class AuditLogCreate(BaseModel):
     ip_address: Optional[str] = Field(None, description="Client IP address")
     user_agent: Optional[str] = Field(None, description="Client user agent string")
     request_id: Optional[str] = Field(None, description="Correlation/request ID")
-    metadata: Optional[dict[str, Any]] = Field(None, description="Additional metadata")
+    extra_data: Optional[dict[str, Any]] = Field(None, description="Additional metadata")
     error_message: Optional[str] = Field(None, description="Error message if action failed")
     duration_ms: Optional[int] = Field(None, description="Duration of action in milliseconds")
 
@@ -47,18 +50,18 @@ class AuditLogResponse(BaseModel):
     """Schema for audit log responses."""
     id: int
     user_id: Optional[UUID] = None
-    actor_type: Optional[str] = None
+    actor_type: Optional[str] = "user"  # Default value for compatibility
     action: str
     resource_type: str
     resource_id: Optional[UUID] = None
-    resource_name: Optional[str] = None
+    resource_name: Optional[str] = None  # Not in current DB schema
     changes: Optional[dict[str, Any]] = None
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
-    request_id: Optional[str] = None
-    metadata: Optional[dict[str, Any]] = None
-    error_message: Optional[str] = None
-    duration_ms: Optional[int] = None
+    request_id: Optional[str] = None  # Not in current DB schema
+    metadata: Optional[dict[str, Any]] = None  # Not in current DB schema
+    error_message: Optional[str] = None  # Not in current DB schema
+    duration_ms: Optional[int] = None  # Not in current DB schema
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

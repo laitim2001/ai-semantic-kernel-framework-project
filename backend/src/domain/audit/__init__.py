@@ -10,6 +10,8 @@ from .schemas import (
     AuditLogResponse,
     AuditLogFilter,
     AuditLogListResponse,
+    AuditLogStats,
+    AuditLogExportRequest,
 )
 
 __all__ = [
@@ -18,4 +20,6 @@ __all__ = [
     "AuditLogResponse",
     "AuditLogFilter",
     "AuditLogListResponse",
+    "AuditLogStats",
+    "AuditLogExportRequest",
 ]
