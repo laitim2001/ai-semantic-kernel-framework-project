@@ -5,7 +5,6 @@ import os
 import logging
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # Configure logging
@@ -24,14 +23,22 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000"],  # 前端地址
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Sprint 3: Security Middleware (S3-2)
+try:
+    from src.core.security import setup_security_middleware
+    setup_security_middleware(app)
+    logger.info("Security middleware configured successfully")
+except ImportError as e:
+    logger.warning(f"Security middleware not available: {e}")
+    # Fallback to basic CORS if security module not available
+    from fastapi.middleware.cors import CORSMiddleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://localhost:8000"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 @app.get("/")
@@ -92,6 +99,11 @@ app.include_router(admin_router, prefix="/api/v1", tags=["admin"])
 from src.api.v1.rbac import router as rbac_router
 
 app.include_router(rbac_router, prefix="/api/v1", tags=["rbac"])
+
+# Sprint 3: Security API Routes (S3-2)
+from src.api.v1.security import router as security_router
+
+app.include_router(security_router, prefix="/api/v1", tags=["security"])
 
 # Initialize OpenTelemetry (if enabled)
 try:
