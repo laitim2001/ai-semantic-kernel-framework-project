@@ -88,6 +88,11 @@ from src.api.v1.admin import router as admin_router
 
 app.include_router(admin_router, prefix="/api/v1", tags=["admin"])
 
+# Sprint 3: RBAC API Routes (S3-1)
+from src.api.v1.rbac import router as rbac_router
+
+app.include_router(rbac_router, prefix="/api/v1", tags=["rbac"])
+
 # Initialize OpenTelemetry (if enabled)
 try:
     if os.getenv("OTEL_ENABLED", "true").lower() == "true":

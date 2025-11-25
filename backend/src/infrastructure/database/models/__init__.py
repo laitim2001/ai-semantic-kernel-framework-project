@@ -7,6 +7,17 @@ from .checkpoint import Checkpoint, CheckpointStatus
 from .user import User
 from .workflow import Workflow, WorkflowStatus
 from .execution import Execution, ExecutionStatus
+from .rbac import (
+    Role,
+    Permission,
+    RoleName,
+    ResourceType,
+    ActionType,
+    user_roles,
+    role_permissions,
+    STANDARD_PERMISSIONS,
+    ROLE_DEFINITIONS,
+)
 
 __all__ = [
     "Base",
@@ -20,4 +31,14 @@ __all__ = [
     "WorkflowStatus",
     "Execution",
     "ExecutionStatus",
+    # RBAC Models
+    "Role",
+    "Permission",
+    "RoleName",
+    "ResourceType",
+    "ActionType",
+    "user_roles",
+    "role_permissions",
+    "STANDARD_PERMISSIONS",
+    "ROLE_DEFINITIONS",
 ]
