@@ -1,0 +1,90 @@
+# Prometheus Configuration for IPA Platform
+# Sprint 2: Monitoring Integration
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+  # External labels for Alertmanager
+  external_labels:
+    monitor: 'ipa-platform'
+    environment: 'development'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+# Rule files
+rule_files: []
+  # - "alert_rules.yml"
+  # - "recording_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # IPA Backend API
+  - job_name: 'ipa-backend'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['backend:8000']
+        labels:
+          service: 'ipa-backend'
+          environment: 'development'
+    # Fallback if metrics endpoint not available
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Kong API Gateway
+  - job_name: 'kong'
+    static_configs:
+      - targets: ['kong:8001']
+        labels:
+          service: 'kong-gateway'
+    metrics_path: '/metrics'
+    # Kong metrics may not be available by default
+    scrape_interval: 30s
+    honor_labels: true
+
+  # PostgreSQL (via postgres_exporter if available)
+  # - job_name: 'postgresql'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+  #       labels:
+  #         service: 'postgresql'
+
+  # Redis (via redis_exporter if available)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+  #       labels:
+  #         service: 'redis'
+
+  # RabbitMQ (has built-in prometheus support)
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+        labels:
+          service: 'rabbitmq'
+    metrics_path: '/metrics'
+    # RabbitMQ prometheus plugin must be enabled
+    scrape_interval: 30s
+
+  # n8n (if metrics available)
+  - job_name: 'n8n'
+    static_configs:
+      - targets: ['n8n:5678']
+        labels:
+          service: 'n8n'
+    metrics_path: '/metrics'
+    scrape_interval: 60s
+    # n8n may not expose metrics by default
+    honor_labels: true
