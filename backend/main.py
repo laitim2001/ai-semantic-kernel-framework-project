@@ -47,11 +47,16 @@ async def health_check():
     }
 
 
-# TODO: 在 Sprint 0 中添加以下路由
+# Sprint 2: Audit API Routes
+from src.api.v1.audit import router as audit_router
+
+app.include_router(audit_router, prefix="/api/v1", tags=["audit"])
+
+# TODO: 添加其他路由
 # from src.workflow.router import router as workflow_router
 # from src.execution.router import router as execution_router
 # from src.agent.router import router as agent_router
-# 
+#
 # app.include_router(workflow_router, prefix="/api/v1/workflows", tags=["workflows"])
 # app.include_router(execution_router, prefix="/api/v1/executions", tags=["executions"])
 # app.include_router(agent_router, prefix="/api/v1/agents", tags=["agents"])
