@@ -105,6 +105,13 @@ services:
       # Semantic Kernel Configuration
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4}
+
+      # OpenTelemetry / Jaeger Configuration (Sprint 3 - S3-6)
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: ipa-backend
+      JAEGER_ENABLED: ${JAEGER_ENABLED:-true}
+      JAEGER_AGENT_HOST: jaeger
+      JAEGER_AGENT_PORT: 6831
     volumes:
       - ./backend:/app
       - backend_cache:/app/.cache
@@ -122,7 +129,85 @@ services:
     restart: unless-stopped
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-  # Frontend (React - 可選，稍後添加)
+  # Jaeger - Distributed Tracing (Sprint 3 - S3-6)
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    container_name: ipa-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: badger
+      BADGER_EPHEMERAL: "false"
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+      # Data retention: 7 days
+      BADGER_SPAN_STORE_TTL: 168h
+    volumes:
+      - jaeger_data:/badger
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC receiver
+      - "4318:4318"     # OTLP HTTP receiver
+      - "6831:6831/udp" # Thrift compact (legacy)
+      - "14268:14268"   # Jaeger collector HTTP
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - ipa-network
+    restart: unless-stopped
+
+  # Prometheus - Metrics Collection (Sprint 3 - S3-6)
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: ipa-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - ipa-network
+    restart: unless-stopped
+
+  # Grafana - Visualization (Sprint 3 - S3-6)
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: ipa-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - jaeger
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - ipa-network
+    restart: unless-stopped
+
+  # Frontend (React - Optional, add later)
   # frontend:
   #   build:
   #     context: ./frontend
@@ -135,7 +220,7 @@ services:
   #     - ./frontend:/app
   #     - /app/node_modules
   #   ports:
-  #     - "3000:3000"
+  #     - "3001:3000"
   #   depends_on:
   #     - backend
   #   networks:
@@ -150,6 +235,12 @@ volumes:
   rabbitmq_data:
     driver: local
   backend_cache:
+    driver: local
+  jaeger_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:

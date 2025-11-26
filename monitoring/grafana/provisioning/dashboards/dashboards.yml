@@ -1,0 +1,16 @@
+# Grafana Dashboard Provisioning Configuration
+# Automatically load dashboards from the dashboards directory
+
+apiVersion: 1
+
+providers:
+  - name: 'IPA Platform Dashboards'
+    orgId: 1
+    folder: 'IPA Platform'
+    folderUid: 'ipa-platform'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

@@ -1,9 +1,10 @@
-# Grafana Datasources Provisioning
-# Automatically configure Prometheus as datasource
+# Grafana Datasources Configuration for IPA Platform
+# Sprint 3 - Story S3-6: Distributed Tracing
 
 apiVersion: 1
 
 datasources:
+  # Prometheus - Primary metrics source
   - name: Prometheus
     type: prometheus
     access: proxy
@@ -11,5 +12,23 @@ datasources:
     isDefault: true
     editable: false
     jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 2.48.0
       timeInterval: "15s"
-      httpMethod: "POST"
+
+  # Jaeger - Distributed tracing
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    isDefault: false
+    editable: false
+    jsonData:
+      nodeGraph:
+        enabled: true
+      traceQuery:
+        timeShiftEnabled: true
+        spanStartTimeShift: '-30m'
+        spanEndTimeShift: '30m'
