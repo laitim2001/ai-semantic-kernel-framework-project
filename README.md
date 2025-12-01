@@ -350,7 +350,7 @@ This project is under **Proprietary License**. Unauthorized copying, distributio
 ## Acknowledgments
 
 Thanks to these open source projects:
-- [Microsoft Agent Framework](https://github.com/microsoft/autogen)
+- [Microsoft Agent Framework](https://github.com/microsoft/agent-framework)
 - [Microsoft Semantic Kernel](https://github.com/microsoft/semantic-kernel)
 - [FastAPI](https://fastapi.tiangolo.com/)
 - [React Flow](https://reactflow.dev/)
