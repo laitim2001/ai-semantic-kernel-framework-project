@@ -1,7 +1,25 @@
-version: '3.8'
+# IPA Platform - Local Development Environment
+# Sprint 0: Infrastructure Foundation
+#
+# Usage:
+#   docker-compose up -d                    # Start core services only
+#   docker-compose --profile monitoring up -d  # Start with monitoring stack
+#   docker-compose down                     # Stop all services
+#   docker-compose logs -f                  # View logs
+#   docker-compose ps                       # Check status
+#
+# Services:
+#   - PostgreSQL 16 (port 5432) - Primary database
+#   - Redis 7 (port 6379) - Caching and sessions
+#   - RabbitMQ (port 5672, UI: 15672) - Message queue (local dev)
+#   - Jaeger (port 16686) - Distributed tracing [monitoring profile]
+#   - Prometheus (port 9090) - Metrics [monitoring profile]
+#   - Grafana (port 3000) - Dashboards [monitoring profile]
 
 services:
+  # =============================================================================
   # PostgreSQL Database
+  # =============================================================================
   postgres:
     image: postgres:16-alpine
     container_name: ipa-postgres
@@ -9,10 +27,10 @@ services:
       POSTGRES_DB: ${DB_NAME:-ipa_platform}
       POSTGRES_USER: ${DB_USER:-ipa_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-ipa_password}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     ports:
       - "${DB_PORT:-5432}:5432"
     healthcheck:
@@ -20,11 +38,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - ipa-network
     restart: unless-stopped
 
+  # =============================================================================
   # Redis Cache
+  # =============================================================================
   redis:
     image: redis:7-alpine
     container_name: ipa-redis
@@ -34,15 +55,17 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_password}", "ping"]
       interval: 10s
-      timeout: 3s
+      timeout: 5s
       retries: 5
     networks:
       - ipa-network
     restart: unless-stopped
 
-  # RabbitMQ (本地開發用 - 代替 Azure Service Bus)
+  # =============================================================================
+  # RabbitMQ Message Queue (Local Dev - replaces Azure Service Bus)
+  # =============================================================================
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     container_name: ipa-rabbitmq
@@ -53,7 +76,7 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     ports:
       - "${RABBITMQ_PORT:-5672}:5672"
-      - "15672:15672"  # Management UI
+      - "15672:15672"  # Management UI: http://localhost:15672
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
@@ -63,92 +86,28 @@ services:
       - ipa-network
     restart: unless-stopped
 
-  # Backend API (FastAPI)
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: development
-    container_name: ipa-backend
-    environment:
-      # Database Configuration
-      DATABASE_URL: postgresql://${DB_USER:-ipa_user}:${DB_PASSWORD:-ipa_password}@postgres:5432/${DB_NAME:-ipa_platform}
-      
-      # Redis Configuration
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
-      
-      # Message Queue Configuration
-      # 本地開發: 使用 RabbitMQ
-      # 生產環境: 使用 Azure Service Bus (設置 MESSAGE_QUEUE_TYPE=azure_service_bus)
-      MESSAGE_QUEUE_TYPE: ${MESSAGE_QUEUE_TYPE:-rabbitmq}
-      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
-      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
-      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
-      AZURE_SERVICE_BUS_CONNECTION_STRING: ${AZURE_SERVICE_BUS_CONNECTION_STRING:-}
-      
-      # Azure AD OAuth
-      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
-      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
-      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
-      
-      # Application Insights
-      APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
-      
-      # Application Settings
-      APP_ENV: ${APP_ENV:-development}
-      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
-      API_PORT: 8000
-      
-      # Semantic Kernel Configuration
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4}
+  # =============================================================================
+  # Monitoring Stack (Optional - use --profile monitoring)
+  # =============================================================================
 
-      # OpenTelemetry / Jaeger Configuration (Sprint 3 - S3-6)
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
-      OTEL_SERVICE_NAME: ipa-backend
-      JAEGER_ENABLED: ${JAEGER_ENABLED:-true}
-      JAEGER_AGENT_HOST: jaeger
-      JAEGER_AGENT_PORT: 6831
-    volumes:
-      - ./backend:/app
-      - backend_cache:/app/.cache
-    ports:
-      - "${API_PORT:-8000}:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - ipa-network
-    restart: unless-stopped
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
-  # Jaeger - Distributed Tracing (Sprint 3 - S3-6)
+  # Jaeger - Distributed Tracing
   jaeger:
     image: jaegertracing/all-in-one:1.53
     container_name: ipa-jaeger
+    profiles: ["monitoring"]
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
       SPAN_STORAGE_TYPE: badger
       BADGER_EPHEMERAL: "false"
       BADGER_DIRECTORY_VALUE: /badger/data
       BADGER_DIRECTORY_KEY: /badger/key
-      # Data retention: 7 days
-      BADGER_SPAN_STORE_TTL: 168h
+      BADGER_SPAN_STORE_TTL: 168h  # 7 days retention
     volumes:
       - jaeger_data:/badger
     ports:
       - "16686:16686"   # Jaeger UI
       - "4317:4317"     # OTLP gRPC receiver
       - "4318:4318"     # OTLP HTTP receiver
-      - "6831:6831/udp" # Thrift compact (legacy)
-      - "14268:14268"   # Jaeger collector HTTP
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
       interval: 30s
@@ -158,10 +117,11 @@ services:
       - ipa-network
     restart: unless-stopped
 
-  # Prometheus - Metrics Collection (Sprint 3 - S3-6)
+  # Prometheus - Metrics Collection
   prometheus:
     image: prom/prometheus:v2.48.0
     container_name: ipa-prometheus
+    profiles: ["monitoring"]
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -182,10 +142,11 @@ services:
       - ipa-network
     restart: unless-stopped
 
-  # Grafana - Visualization (Sprint 3 - S3-6)
+  # Grafana - Visualization
   grafana:
     image: grafana/grafana:10.2.2
     container_name: ipa-grafana
+    profiles: ["monitoring"]
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
@@ -194,7 +155,7 @@ services:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
-      - "3000:3000"
+      - "3001:3000"  # Changed to 3001 to avoid conflict with frontend
     depends_on:
       - prometheus
       - jaeger
@@ -207,42 +168,27 @@ services:
       - ipa-network
     restart: unless-stopped
 
-  # Frontend (React - Optional, add later)
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #     target: development
-  #   container_name: ipa-frontend
-  #   environment:
-  #     REACT_APP_API_URL: http://backend:8000
-  #   volumes:
-  #     - ./frontend:/app
-  #     - /app/node_modules
-  #   ports:
-  #     - "3001:3000"
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - ipa-network
-  #   restart: unless-stopped
-
+# =============================================================================
+# Volumes
+# =============================================================================
 volumes:
   postgres_data:
-    driver: local
+    name: ipa-postgres-data
   redis_data:
-    driver: local
+    name: ipa-redis-data
   rabbitmq_data:
-    driver: local
-  backend_cache:
-    driver: local
+    name: ipa-rabbitmq-data
   jaeger_data:
-    driver: local
+    name: ipa-jaeger-data
   prometheus_data:
-    driver: local
+    name: ipa-prometheus-data
   grafana_data:
-    driver: local
+    name: ipa-grafana-data
 
+# =============================================================================
+# Networks
+# =============================================================================
 networks:
   ipa-network:
+    name: ipa-network
     driver: bridge

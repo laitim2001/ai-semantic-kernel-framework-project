@@ -1,100 +1,178 @@
-"""
-Execution Model
+# =============================================================================
+# IPA Platform - Execution Model
+# =============================================================================
+# Sprint 1: Core Engine - Agent Framework Integration
+#
+# Execution model for tracking workflow execution instances.
+# Stores execution state, results, and LLM usage statistics.
+# =============================================================================
 
-Database model for workflow executions.
-"""
-import enum
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from uuid import uuid4
 
-from sqlalchemy import Column, String, Text, Integer, Enum, DateTime
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import BaseModel
+from src.infrastructure.database.models.base import Base, TimestampMixin
 
-
-class ExecutionStatus(str, enum.Enum):
-    """Execution status enum."""
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    PAUSED = "PAUSED"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-    CANCELLED = "CANCELLED"
+if TYPE_CHECKING:
+    from src.infrastructure.database.models.user import User
+    from src.infrastructure.database.models.workflow import Workflow
+    from src.infrastructure.database.models.checkpoint import Checkpoint
 
 
-class Execution(BaseModel):
-    """Execution model.
+class Execution(Base, TimestampMixin):
+    """
+    Workflow execution instance model.
 
-    Represents a single execution instance of a workflow.
+    Tracks the state and results of a workflow execution.
+    Includes LLM usage statistics for cost tracking.
+
+    Attributes:
+        id: UUID primary key
+        workflow_id: Reference to the workflow being executed
+        status: Execution status (pending, running, paused, completed, failed, cancelled)
+        started_at: When execution started
+        completed_at: When execution completed or failed
+        result: Execution output data
+        error: Error message if failed
+        llm_calls: Total number of LLM API calls
+        llm_tokens: Total tokens used (input + output)
+        llm_cost: Estimated cost in USD
+        triggered_by: User who triggered the execution
+
+    Status Flow:
+        pending -> running -> completed
+                          -> failed
+                          -> cancelled
+        running -> paused -> running
+                         -> cancelled
     """
 
     __tablename__ = "executions"
 
-    workflow_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    workflow_version_id = Column(UUID(as_uuid=True), nullable=False)
-    triggered_by = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # Primary key
+    id: Mapped[uuid4] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
 
-    status = Column(
-        Enum(ExecutionStatus, name="executionstatus", create_type=False),
-        nullable=True,
-        default=ExecutionStatus.PENDING,
+    # Workflow reference
+    workflow_id: Mapped[uuid4] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("workflows.id", ondelete="CASCADE"),
+        nullable=False,
         index=True,
     )
 
-    # Execution timing
-    started_at = Column(DateTime(timezone=True), nullable=True)
-    completed_at = Column(DateTime(timezone=True), nullable=True)
-    duration_ms = Column(Integer, nullable=True)
+    # Status
+    status: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="pending",
+        index=True,
+    )
 
-    # Execution data
-    input_data = Column(JSONB, nullable=True)
-    output_data = Column(JSONB, nullable=True)
-    error_message = Column(Text, nullable=True)
-    retry_count = Column(Integer, nullable=True)
-    execution_metadata = Column("metadata", JSONB, nullable=True)
+    # Timestamps
+    started_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Results
+    result: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+
+    error: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    # LLM Statistics
+    llm_calls: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    llm_tokens: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    llm_cost: Mapped[Decimal] = mapped_column(
+        Numeric(10, 6),
+        nullable=False,
+        default=Decimal("0.000000"),
+    )
+
+    # Trigger reference
+    triggered_by: Mapped[Optional[uuid4]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    # Input data
+    input_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+
+    # Relationships
+    workflow: Mapped["Workflow"] = relationship(
+        "Workflow",
+        back_populates="executions",
+    )
+
+    triggered_by_user: Mapped[Optional["User"]] = relationship(
+        "User",
+        back_populates="executions",
+    )
+
+    checkpoints: Mapped[List["Checkpoint"]] = relationship(
+        "Checkpoint",
+        back_populates="execution",
+        lazy="selectin",
+    )
 
     def __repr__(self) -> str:
         return f"<Execution(id={self.id}, workflow_id={self.workflow_id}, status={self.status})>"
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert execution to dictionary for serialization."""
+        return {
+            "id": str(self.id),
+            "workflow_id": str(self.workflow_id),
+            "status": self.status,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "result": self.result,
+            "error": self.error,
+            "llm_calls": self.llm_calls,
+            "llm_tokens": self.llm_tokens,
+            "llm_cost": float(self.llm_cost),
+            "triggered_by": str(self.triggered_by) if self.triggered_by else None,
+            "input_data": self.input_data,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
     @property
     def duration_seconds(self) -> Optional[float]:
-        """Get duration in seconds."""
-        if self.duration_ms is not None:
-            return self.duration_ms / 1000.0
+        """Calculate execution duration in seconds."""
+        if self.started_at and self.completed_at:
+            return (self.completed_at - self.started_at).total_seconds()
         return None
-
-    @property
-    def current_step_index(self) -> Optional[int]:
-        """Get current step index from metadata if available."""
-        if self.execution_metadata and "current_step" in self.execution_metadata:
-            return self.execution_metadata["current_step"]
-        return None
-
-    def mark_started(self):
-        """Mark execution as started."""
-        self.status = ExecutionStatus.RUNNING
-        self.started_at = datetime.now(timezone.utc)
-
-    def mark_completed(self, output_data: Optional[dict] = None):
-        """Mark execution as completed."""
-        self.status = ExecutionStatus.COMPLETED
-        self.completed_at = datetime.now(timezone.utc)
-        if self.started_at:
-            started = self.started_at
-            if started.tzinfo is None:
-                started = started.replace(tzinfo=timezone.utc)
-            self.duration_ms = int((self.completed_at - started).total_seconds() * 1000)
-        if output_data:
-            self.output_data = output_data
-
-    def mark_failed(self, error_message: str):
-        """Mark execution as failed."""
-        self.status = ExecutionStatus.FAILED
-        self.completed_at = datetime.now(timezone.utc)
-        self.error_message = error_message
-        if self.started_at:
-            started = self.started_at
-            if started.tzinfo is None:
-                started = started.replace(tzinfo=timezone.utc)
-            self.duration_ms = int((self.completed_at - started).total_seconds() * 1000)

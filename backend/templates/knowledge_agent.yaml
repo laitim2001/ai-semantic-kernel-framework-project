@@ -1,0 +1,152 @@
+# =============================================================================
+# Knowledge Search Agent Template
+# =============================================================================
+# Searches and retrieves relevant information from knowledge bases,
+# documentation, and historical data.
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# Created: 2025-11-30
+# =============================================================================
+
+id: knowledge_agent
+name: 知識查詢 Agent
+description: |
+  智能知識庫查詢助手。從知識庫、文檔和歷史記錄中
+  搜索並返回相關資訊，支援語義搜索和結構化查詢。
+
+category: knowledge
+status: published
+version: "1.0.0"
+author: IPA Platform Team
+
+instructions: |
+  你是一個知識管理專家，負責從各種知識來源檢索資訊。
+
+  ## 知識來源
+
+  1. **知識庫文章**: 技術文檔、FAQ、操作手冊
+  2. **歷史工單**: 過去類似問題的處理記錄
+  3. **系統文檔**: API 文檔、配置指南
+  4. **培訓資料**: 培訓材料和最佳實踐
+
+  ## 搜索策略
+
+  1. **語義搜索**: 理解查詢意圖，找到語義相關內容
+  2. **關鍵字匹配**: 精確匹配特定術語
+  3. **相似案例**: 找到相似的歷史問題和解決方案
+
+  ## 結果排序
+
+  根據以下因素排序：
+  - 相關性分數 (權重: {{relevance_weight}})
+  - 時效性 (最近更新優先)
+  - 使用頻率 (熱門文章優先)
+  - 用戶評分
+
+  ## 輸出要求
+
+  搜索結果最多返回 {{max_results}} 條。
+
+  請以 JSON 格式回覆：
+  - query_analysis: 查詢分析
+  - search_strategy: 使用的搜索策略
+  - results: 搜索結果列表
+    - title: 標題
+    - source: 來源
+    - snippet: 摘要片段
+    - relevance_score: 相關性分數
+    - url: 連結
+  - suggested_queries: 建議的相關查詢
+  - no_results_suggestion: 無結果時的建議
+
+tools:
+  - knowledge_base_search
+  - document_search
+  - ticket_history_search
+  - faq_lookup
+
+model: gpt-4
+temperature: 0.3
+max_tokens: 2048
+
+parameters:
+  - name: max_results
+    type: integer
+    description: 最大返回結果數
+    required: false
+    default: 10
+    min_value: 1
+    max_value: 50
+
+  - name: relevance_weight
+    type: number
+    description: 相關性權重 (0-1)
+    required: false
+    default: 0.7
+    min_value: 0
+    max_value: 1
+
+  - name: include_historical
+    type: boolean
+    description: 是否包含歷史工單
+    required: false
+    default: true
+
+  - name: sources
+    type: list
+    description: 限定搜索來源
+    required: false
+
+examples:
+  - input: "如何重置 Windows 密碼"
+    output:
+      query_analysis:
+        intent: "尋求操作指南"
+        keywords: ["Windows", "密碼", "重置"]
+        domain: "IT 支援"
+      search_strategy: "語義搜索 + 關鍵字匹配"
+      results:
+        - title: "Windows 10/11 密碼重置指南"
+          source: "IT 知識庫"
+          snippet: "本文介紹三種重置 Windows 密碼的方法..."
+          relevance_score: 0.95
+          url: "/kb/articles/win-password-reset"
+        - title: "自助密碼重置服務使用說明"
+          source: "IT 知識庫"
+          snippet: "使用自助服務入口網站重置密碼..."
+          relevance_score: 0.88
+          url: "/kb/articles/self-service-password"
+      suggested_queries:
+        - "忘記 Windows 密碼怎麼辦"
+        - "密碼過期處理"
+    description: 密碼重置查詢
+
+  - input: "VPN 連接錯誤 691"
+    output:
+      query_analysis:
+        intent: "故障排除"
+        keywords: ["VPN", "錯誤", "691"]
+        domain: "網路問題"
+      search_strategy: "關鍵字匹配 + 歷史案例"
+      results:
+        - title: "VPN 錯誤代碼 691 解決方案"
+          source: "IT 知識庫"
+          snippet: "錯誤 691 表示認證失敗，常見原因包括..."
+          relevance_score: 0.98
+          url: "/kb/articles/vpn-error-691"
+        - title: "工單 #12345: VPN 691 錯誤"
+          source: "歷史工單"
+          snippet: "問題: 無法連接 VPN，顯示 691。解決方案: 重置用戶密碼..."
+          relevance_score: 0.92
+          url: "/tickets/12345"
+      suggested_queries:
+        - "VPN 無法連接"
+        - "VPN 認證失敗"
+    description: 錯誤代碼查詢
+
+tags:
+  - knowledge
+  - search
+  - documentation
+  - faq

@@ -1,25 +1,30 @@
-"""
-Audit Domain Module
+# =============================================================================
+# IPA Platform - Audit Domain Module
+# =============================================================================
+# Sprint 3: 集成 & 可靠性 - 審計日誌系統
+#
+# 提供完整的審計日誌功能：
+#   - 所有關鍵操作記錄
+#   - 執行軌跡追蹤
+#   - 合規性報告
+# =============================================================================
 
-Provides audit logging functionality for the IPA Platform.
-Sprint 2 - Story S2-7
-"""
-from .service import AuditService
-from .schemas import (
-    AuditLogCreate,
-    AuditLogResponse,
-    AuditLogFilter,
-    AuditLogListResponse,
-    AuditLogStats,
-    AuditLogExportRequest,
+from src.domain.audit.logger import (
+    AuditAction,
+    AuditEntry,
+    AuditError,
+    AuditLogger,
+    AuditQueryParams,
+    AuditResource,
+    AuditSeverity,
 )
 
 __all__ = [
-    "AuditService",
-    "AuditLogCreate",
-    "AuditLogResponse",
-    "AuditLogFilter",
-    "AuditLogListResponse",
-    "AuditLogStats",
-    "AuditLogExportRequest",
+    "AuditAction",
+    "AuditEntry",
+    "AuditError",
+    "AuditLogger",
+    "AuditQueryParams",
+    "AuditResource",
+    "AuditSeverity",
 ]

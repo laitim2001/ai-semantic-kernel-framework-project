@@ -1,305 +1,397 @@
 """
 Notifications API Routes
+========================
 
-Provides REST API endpoints for notification operations.
-Sprint 2 - Story S2-3: Teams Notification Service
+REST API endpoints for Teams notification services.
+
+Sprint 3 - S3-4: Teams Notification Integration
 
 Endpoints:
-- POST /api/v1/notifications/send           - Send a custom notification
-- POST /api/v1/notifications/execution      - Send execution notification
-- POST /api/v1/notifications/checkpoint     - Send checkpoint approval request
-- POST /api/v1/notifications/alert          - Send system alert
-- POST /api/v1/notifications/test           - Test notification endpoint
-- GET  /api/v1/notifications/health         - Notification service health check
+- POST /notifications/approval - Send approval request
+- POST /notifications/completion - Send completion notification
+- POST /notifications/error - Send error alert
+- POST /notifications/custom - Send custom notification
+- GET /notifications/history - Get notification history
+- GET /notifications/statistics - Get notification statistics
+- GET /notifications/config - Get current configuration
+- PUT /notifications/config - Update configuration
+- GET /notifications/types - List notification types
+- GET /notifications/health - Health check
+
+Author: IPA Platform Team
+Created: 2025-11-30
 """
-import logging
-from datetime import datetime
+
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Query
 
-from src.domain.notifications.service import TeamsNotificationService, get_notification_service
-from src.domain.notifications.schemas import (
-    NotificationRequest,
-    NotificationResponse,
-    NotificationType,
-    NotificationPriority,
-    ExecutionNotificationContext,
-    CheckpointNotificationContext,
-    FactItem,
-    ActionButton,
+from src.api.v1.notifications.schemas import (
+    ApprovalNotificationRequest,
+    CompletionNotificationRequest,
+    ConfigurationResponse,
+    ConfigurationUpdateRequest,
+    CustomNotificationRequest,
+    ErrorAlertRequest,
+    HealthCheckResponse,
+    NotificationHistoryResponse,
+    NotificationResultResponse,
+    NotificationStatisticsResponse,
+    NotificationTypesResponse,
 )
-from src.infrastructure.database.session import get_session
-
-logger = logging.getLogger(__name__)
-
-router = APIRouter(prefix="/notifications", tags=["Notifications"])
-
-
-def get_notification_service_dep(
-    session: AsyncSession = Depends(get_session)
-) -> TeamsNotificationService:
-    """Get notification service dependency."""
-    return get_notification_service(session)
+from src.domain.notifications import (
+    NotificationPriority,
+    NotificationType,
+    TeamsNotificationConfig,
+    TeamsNotificationService,
+)
 
 
-# ============================================
-# Request/Response Models
-# ============================================
+router = APIRouter(prefix="/notifications", tags=["notifications"])
 
-class SendNotificationRequest(BaseModel):
-    """Request to send a custom notification."""
-    title: str = Field(..., description="Notification title", max_length=500)
-    message: str = Field(..., description="Notification message")
-    notification_type: str = Field(
-        default="custom",
-        description="Notification type (custom, execution_success, execution_failed, etc.)"
+
+# Global service instance (configured at startup)
+_notification_service: Optional[TeamsNotificationService] = None
+
+
+def get_notification_service() -> TeamsNotificationService:
+    """Get or create notification service instance."""
+    global _notification_service
+    if _notification_service is None:
+        _notification_service = TeamsNotificationService()
+    return _notification_service
+
+
+def set_notification_service(service: TeamsNotificationService) -> None:
+    """Set notification service instance (for testing)."""
+    global _notification_service
+    _notification_service = service
+
+
+# ============================================================================
+# Send Notification Endpoints
+# ============================================================================
+
+@router.post("/approval", response_model=NotificationResultResponse)
+async def send_approval_notification(request: ApprovalNotificationRequest):
+    """
+    Send approval request notification to Teams.
+
+    Sends an Adaptive Card with approval request details
+    and a button to view and approve the checkpoint.
+    """
+    service = get_notification_service()
+
+    # Map priority string to enum
+    try:
+        priority = NotificationPriority(request.priority.lower())
+    except ValueError:
+        priority = NotificationPriority.NORMAL
+
+    result = await service.send_approval_request(
+        checkpoint_id=request.checkpoint_id,
+        workflow_name=request.workflow_name,
+        content=request.content,
+        approver=request.approver,
+        priority=priority,
+        execution_id=request.execution_id,
     )
-    priority: str = Field(default="normal", description="Priority (low, normal, high, urgent)")
-    facts: list[dict] = Field(default_factory=list, description="Key-value facts")
-    actions: list[dict] = Field(default_factory=list, description="Action buttons")
+
+    return NotificationResultResponse(
+        notification_id=result.notification_id,
+        notification_type=result.notification_type.value,
+        success=result.success,
+        timestamp=result.timestamp,
+        message=result.message,
+        retry_count=result.retry_count,
+        response_code=result.response_code,
+    )
 
 
-class ExecutionNotificationRequest(BaseModel):
-    """Request for execution notification."""
-    execution_id: str = Field(..., description="Execution ID")
-    workflow_id: str = Field(..., description="Workflow ID")
-    workflow_name: str = Field(..., description="Workflow name")
-    status: str = Field(..., description="Execution status (success, failed)")
-    duration_seconds: Optional[float] = Field(None, description="Execution duration")
-    error_message: Optional[str] = Field(None, description="Error message if failed")
-
-
-class CheckpointNotificationRequest(BaseModel):
-    """Request for checkpoint approval notification."""
-    checkpoint_id: str = Field(..., description="Checkpoint ID")
-    execution_id: str = Field(..., description="Execution ID")
-    workflow_name: str = Field(..., description="Workflow name")
-    step_number: int = Field(..., description="Step number")
-    step_name: Optional[str] = Field(None, description="Step name")
-    proposed_action: Optional[str] = Field(None, description="Proposed action")
-
-
-class AlertNotificationRequest(BaseModel):
-    """Request for system alert notification."""
-    title: str = Field(..., description="Alert title")
-    message: str = Field(..., description="Alert message")
-    severity: str = Field(default="warning", description="Severity (info, warning, error, critical)")
-    details: Optional[dict] = Field(None, description="Additional details")
-
-
-class TestNotificationRequest(BaseModel):
-    """Request to test notification."""
-    title: str = Field(default="🧪 Test Notification", description="Test title")
-    message: str = Field(default="This is a test notification from IPA Platform", description="Test message")
-
-
-# ============================================
-# Endpoints
-# ============================================
-
-@router.get("/health")
-async def notification_health(
-    service: TeamsNotificationService = Depends(get_notification_service_dep),
-):
+@router.post("/completion", response_model=NotificationResultResponse)
+async def send_completion_notification(request: CompletionNotificationRequest):
     """
-    Notification service health check.
+    Send execution completion notification to Teams.
 
-    Returns:
-        Health status and provider information
+    Sends an Adaptive Card with execution results,
+    status, duration, and a link to view details.
     """
-    return {
-        "status": "healthy",
-        "service": "notifications",
-        "provider": service.provider.get_provider_name(),
-        "timestamp": datetime.utcnow().isoformat(),
-    }
+    service = get_notification_service()
+
+    result = await service.send_execution_completed(
+        execution_id=request.execution_id,
+        workflow_name=request.workflow_name,
+        status=request.status,
+        result_summary=request.result_summary,
+        duration=request.duration,
+        step_count=request.step_count,
+    )
+
+    return NotificationResultResponse(
+        notification_id=result.notification_id,
+        notification_type=result.notification_type.value,
+        success=result.success,
+        timestamp=result.timestamp,
+        message=result.message,
+        retry_count=result.retry_count,
+        response_code=result.response_code,
+    )
 
 
-@router.post("/send", response_model=NotificationResponse)
-async def send_notification(
-    request: SendNotificationRequest,
-    service: TeamsNotificationService = Depends(get_notification_service_dep),
-):
+@router.post("/error", response_model=NotificationResultResponse)
+async def send_error_alert(request: ErrorAlertRequest):
     """
-    Send a custom notification.
+    Send error alert notification to Teams.
 
-    This endpoint allows sending custom notifications with
-    arbitrary title, message, facts, and actions.
+    Sends an Adaptive Card with error details,
+    severity indicator, and a link to view the execution.
     """
+    service = get_notification_service()
+
+    # Map severity string to enum
     try:
-        # Convert request to NotificationRequest
-        facts = [FactItem(**f) for f in request.facts] if request.facts else []
-        actions = [ActionButton(**a) for a in request.actions] if request.actions else []
+        severity = NotificationPriority(request.severity.lower())
+    except ValueError:
+        severity = NotificationPriority.HIGH
 
-        notification_request = NotificationRequest(
-            notification_type=NotificationType(request.notification_type),
-            priority=NotificationPriority(request.priority),
-            title=request.title,
-            message=request.message,
-            facts=facts,
-            actions=actions,
-        )
+    result = await service.send_error_alert(
+        execution_id=request.execution_id,
+        workflow_name=request.workflow_name,
+        error_message=request.error_message,
+        error_type=request.error_type,
+        severity=severity,
+    )
 
-        response = await service.send_notification(notification_request)
-        return response
-
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid request: {str(e)}"
-        )
-    except Exception as e:
-        logger.error(f"Error sending notification: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error sending notification: {str(e)}"
-        )
+    return NotificationResultResponse(
+        notification_id=result.notification_id,
+        notification_type=result.notification_type.value,
+        success=result.success,
+        timestamp=result.timestamp,
+        message=result.message,
+        retry_count=result.retry_count,
+        response_code=result.response_code,
+    )
 
 
-@router.post("/execution", response_model=NotificationResponse)
-async def send_execution_notification(
-    request: ExecutionNotificationRequest,
-    service: TeamsNotificationService = Depends(get_notification_service_dep),
+@router.post("/custom", response_model=NotificationResultResponse)
+async def send_custom_notification(request: CustomNotificationRequest):
+    """
+    Send custom notification with arbitrary content.
+
+    Allows sending any Adaptive Card content for
+    advanced or application-specific notifications.
+    """
+    service = get_notification_service()
+
+    # Map notification type string to enum
+    try:
+        notification_type = NotificationType(request.notification_type.lower())
+    except ValueError:
+        notification_type = NotificationType.INFO_ALERT
+
+    result = await service.send_custom_notification(
+        title=request.title,
+        body=request.body,
+        actions=request.actions,
+        notification_type=notification_type,
+    )
+
+    return NotificationResultResponse(
+        notification_id=result.notification_id,
+        notification_type=result.notification_type.value,
+        success=result.success,
+        timestamp=result.timestamp,
+        message=result.message,
+        retry_count=result.retry_count,
+        response_code=result.response_code,
+    )
+
+
+# ============================================================================
+# History & Statistics Endpoints
+# ============================================================================
+
+@router.get("/history", response_model=NotificationHistoryResponse)
+async def get_notification_history(
+    notification_type: Optional[str] = Query(None, description="Filter by type"),
+    success_only: bool = Query(False, description="Only show successful"),
+    limit: int = Query(50, ge=1, le=200, description="Max results"),
 ):
     """
-    Send execution notification (success or failure).
+    Get notification history.
 
-    Automatically formats the notification based on execution status.
+    Returns recent notifications with optional filtering
+    by type and success status.
     """
-    try:
-        context = ExecutionNotificationContext(
-            execution_id=request.execution_id,
-            workflow_id=request.workflow_id,
-            workflow_name=request.workflow_name,
-            status=request.status,
-            duration_seconds=request.duration_seconds,
-            error_message=request.error_message,
-            completed_at=datetime.utcnow(),
-        )
+    service = get_notification_service()
 
-        if request.status.lower() in ["success", "completed"]:
-            response = await service.send_execution_success(context)
-        else:
-            response = await service.send_execution_failed(context)
+    # Map type string to enum if provided
+    type_filter = None
+    if notification_type:
+        try:
+            type_filter = NotificationType(notification_type.lower())
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid notification type: {notification_type}",
+            )
 
-        return response
+    results = service.get_history(
+        notification_type=type_filter,
+        success_only=success_only,
+        limit=limit,
+    )
 
-    except Exception as e:
-        logger.error(f"Error sending execution notification: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error sending notification: {str(e)}"
-        )
+    return NotificationHistoryResponse(
+        results=[
+            NotificationResultResponse(
+                notification_id=r.notification_id,
+                notification_type=r.notification_type.value,
+                success=r.success,
+                timestamp=r.timestamp,
+                message=r.message,
+                retry_count=r.retry_count,
+                response_code=r.response_code,
+            )
+            for r in results
+        ],
+        total=len(results),
+    )
 
 
-@router.post("/checkpoint", response_model=NotificationResponse)
-async def send_checkpoint_notification(
-    request: CheckpointNotificationRequest,
-    service: TeamsNotificationService = Depends(get_notification_service_dep),
-):
+@router.get("/statistics", response_model=NotificationStatisticsResponse)
+async def get_notification_statistics():
     """
-    Send checkpoint approval request notification.
+    Get notification statistics.
 
-    Includes approve/reject action buttons when URLs are configured.
+    Returns success/failure counts, success rate,
+    and breakdown by notification type.
     """
-    try:
-        # Build approval URLs
-        api_url = service.api_url
-        approve_url = f"{api_url}/api/v1/checkpoints/{request.checkpoint_id}/approve"
-        reject_url = f"{api_url}/api/v1/checkpoints/{request.checkpoint_id}/reject"
+    service = get_notification_service()
+    stats = service.get_statistics()
 
-        context = CheckpointNotificationContext(
-            checkpoint_id=request.checkpoint_id,
-            execution_id=request.execution_id,
-            workflow_name=request.workflow_name,
-            step_number=request.step_number,
-            step_name=request.step_name,
-            proposed_action=request.proposed_action,
-            approve_url=approve_url,
-            reject_url=reject_url,
-        )
-
-        response = await service.send_checkpoint_approval(context)
-        return response
-
-    except Exception as e:
-        logger.error(f"Error sending checkpoint notification: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error sending notification: {str(e)}"
-        )
+    return NotificationStatisticsResponse(
+        total=stats["total"],
+        successful=stats["successful"],
+        failed=stats["failed"],
+        success_rate=stats["success_rate"],
+        by_type=stats["by_type"],
+        rate_limit_current=stats["rate_limit_current"],
+        rate_limit_max=stats["rate_limit_max"],
+    )
 
 
-@router.post("/alert", response_model=NotificationResponse)
-async def send_alert_notification(
-    request: AlertNotificationRequest,
-    service: TeamsNotificationService = Depends(get_notification_service_dep),
-):
+@router.delete("/history")
+async def clear_notification_history():
     """
-    Send system alert notification.
+    Clear notification history.
 
-    Supports different severity levels (info, warning, error, critical).
+    Returns the number of entries that were cleared.
     """
-    try:
-        # Convert details dict to string dict if needed
-        details = None
-        if request.details:
-            details = {k: str(v) for k, v in request.details.items()}
+    service = get_notification_service()
+    count = service.clear_history()
 
-        response = await service.send_system_alert(
-            title=request.title,
-            message=request.message,
-            severity=request.severity,
-            details=details,
-        )
-        return response
-
-    except Exception as e:
-        logger.error(f"Error sending alert notification: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error sending notification: {str(e)}"
-        )
+    return {"cleared": count, "message": f"Cleared {count} notification history entries"}
 
 
-@router.post("/test", response_model=NotificationResponse)
-async def test_notification(
-    request: TestNotificationRequest = TestNotificationRequest(),
-    service: TeamsNotificationService = Depends(get_notification_service_dep),
-):
+# ============================================================================
+# Configuration Endpoints
+# ============================================================================
+
+@router.get("/config", response_model=ConfigurationResponse)
+async def get_configuration():
     """
-    Test notification endpoint.
+    Get current notification configuration.
 
-    Sends a test notification to verify the notification service is working.
+    Note: webhook_url is not exposed for security.
     """
-    try:
-        notification_request = NotificationRequest(
-            notification_type=NotificationType.CUSTOM,
-            priority=NotificationPriority.NORMAL,
-            title=request.title,
-            message=request.message,
-            facts=[
-                FactItem(title="Provider", value=service.provider.get_provider_name()),
-                FactItem(title="Timestamp", value=datetime.utcnow().isoformat()),
-            ],
-            actions=[
-                ActionButton(
-                    type="Action.OpenUrl",
-                    title="View Documentation",
-                    url="https://docs.ipa-platform.local",
-                )
-            ],
-        )
+    service = get_notification_service()
+    config = service.config
 
-        response = await service.send_notification(notification_request)
-        return response
+    return ConfigurationResponse(
+        enabled=config.enabled,
+        channel_name=config.channel_name,
+        retry_count=config.retry_count,
+        retry_delay=config.retry_delay,
+        max_notifications_per_minute=config.max_notifications_per_minute,
+        app_name=config.app_name,
+        app_url=config.app_url,
+        theme_color=config.theme_color,
+    )
 
-    except Exception as e:
-        logger.error(f"Error sending test notification: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error sending test notification: {str(e)}"
-        )
+
+@router.put("/config", response_model=ConfigurationResponse)
+async def update_configuration(request: ConfigurationUpdateRequest):
+    """
+    Update notification configuration.
+
+    Only provided fields will be updated.
+    """
+    service = get_notification_service()
+    current = service.config
+
+    # Create updated config
+    new_config = TeamsNotificationConfig(
+        webhook_url=request.webhook_url or current.webhook_url,
+        enabled=request.enabled if request.enabled is not None else current.enabled,
+        channel_name=request.channel_name or current.channel_name,
+        retry_count=request.retry_count if request.retry_count is not None else current.retry_count,
+        retry_delay=request.retry_delay if request.retry_delay is not None else current.retry_delay,
+        max_notifications_per_minute=(
+            request.max_notifications_per_minute
+            if request.max_notifications_per_minute is not None
+            else current.max_notifications_per_minute
+        ),
+        app_name=request.app_name or current.app_name,
+        app_url=request.app_url or current.app_url,
+        theme_color=request.theme_color or current.theme_color,
+    )
+
+    service.configure(new_config)
+
+    return ConfigurationResponse(
+        enabled=new_config.enabled,
+        channel_name=new_config.channel_name,
+        retry_count=new_config.retry_count,
+        retry_delay=new_config.retry_delay,
+        max_notifications_per_minute=new_config.max_notifications_per_minute,
+        app_name=new_config.app_name,
+        app_url=new_config.app_url,
+        theme_color=new_config.theme_color,
+    )
+
+
+# ============================================================================
+# Utility Endpoints
+# ============================================================================
+
+@router.get("/types", response_model=NotificationTypesResponse)
+async def list_notification_types():
+    """
+    List all available notification types.
+    """
+    return NotificationTypesResponse(
+        types=[t.value for t in NotificationType]
+    )
+
+
+@router.get("/health", response_model=HealthCheckResponse)
+async def health_check():
+    """
+    Check notification service health.
+
+    Returns service status, configuration state,
+    and rate limit availability.
+    """
+    service = get_notification_service()
+    config = service.config
+    history = service.get_history(limit=1)
+
+    return HealthCheckResponse(
+        service="notifications",
+        status="healthy" if service.is_enabled else "disabled",
+        enabled=config.enabled,
+        webhook_configured=bool(config.webhook_url),
+        rate_limit_available=config.max_notifications_per_minute - len(service._notification_timestamps),
+        last_notification=history[0].timestamp if history else None,
+    )

@@ -313,7 +313,7 @@ CREATE TABLE execution_logs_2025_11 PARTITION OF execution_logs
 **用途**: 存儲 Agent 配置和定義
 
 ```sql
-CREATE TYPE agent_type AS ENUM ('semantic_kernel', 'autogen', 'custom');
+CREATE TYPE agent_type AS ENUM ('agent_framework', 'autogen', 'custom');
 CREATE TYPE agent_status AS ENUM ('active', 'inactive', 'deprecated');
 
 CREATE TABLE agents (
@@ -342,7 +342,7 @@ CREATE INDEX idx_agents_created_by ON agents(created_by);
 ```
 
 **說明**:
-- 支持不同類型的 Agent (Semantic Kernel, AutoGen, Custom)
+- 支持不同類型的 Agent (Agent Framework, AutoGen, Custom)
 - configuration 存儲 Agent 特定配置
 - 溫度和 token 限制可配置
 

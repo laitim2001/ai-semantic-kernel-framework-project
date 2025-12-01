@@ -112,7 +112,7 @@ Implementation (Phase 3)
 
 ## 📌 Current Status
 
-**Project:** Enterprise AI Agent Framework (Semantic Kernel)  
+**Project:** Enterprise AI Agent Framework  
 **Track:** BMAD Method (Greenfield)  
 **Current Phase:** Phase 0 - Discovery  
 **Last Updated:** 2025-11-14

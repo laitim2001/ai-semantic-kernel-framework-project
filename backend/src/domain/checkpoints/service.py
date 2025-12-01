@@ -1,432 +1,423 @@
-"""
-Checkpoint Service
-
-Sprint 2 - Story S2-4: Teams Approval Flow
-
-Service for managing checkpoint approval workflow.
-"""
-from __future__ import annotations
+# =============================================================================
+# IPA Platform - Checkpoint Service
+# =============================================================================
+# Sprint 2: Workflow & Checkpoints - Human-in-the-Loop
+#
+# Service layer for checkpoint management.
+# Provides:
+#   - CheckpointStatus: Status enumeration
+#   - CheckpointData: Checkpoint data structure
+#   - CheckpointService: Business logic for checkpoint operations
+#
+# The service layer orchestrates checkpoint operations and provides
+# a clean interface for API endpoints and workflow integration.
+# =============================================================================
 
 import logging
-import os
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from enum import Enum
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from src.infrastructure.database.models.checkpoint import Checkpoint, CheckpointStatus
-from src.infrastructure.database.models.audit_log import AuditAction
-from src.domain.audit.service import AuditService
-from src.domain.notifications.service import TeamsNotificationService, get_notification_service
-from src.domain.notifications.schemas import CheckpointNotificationContext
-from .schemas import (
-    CheckpointCreate,
-    CheckpointResponse,
-    CheckpointApprovalRequest,
-    CheckpointRejectionRequest,
-    CheckpointListResponse,
-)
+from src.infrastructure.database.repositories.checkpoint import CheckpointRepository
 
 logger = logging.getLogger(__name__)
 
 
+class CheckpointStatus(str, Enum):
+    """
+    Checkpoint status enumeration.
+
+    Status lifecycle:
+        PENDING → APPROVED (human approved)
+        PENDING → REJECTED (human rejected)
+        PENDING → EXPIRED (timeout reached)
+
+    Values:
+        PENDING: Waiting for human response
+        APPROVED: Human approved continuation
+        REJECTED: Human rejected, workflow will terminate/retry
+        EXPIRED: No response within timeout period
+    """
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+
+
+@dataclass
+class CheckpointData:
+    """
+    Checkpoint data structure for API responses.
+
+    Attributes:
+        id: Checkpoint UUID
+        execution_id: Parent execution UUID
+        node_id: Workflow node that created the checkpoint
+        status: Current checkpoint status
+        payload: Data to review
+        response: Human response (if any)
+        responded_by: User who responded
+        responded_at: When response was received
+        expires_at: When checkpoint will expire
+        created_at: When checkpoint was created
+        notes: Additional notes or metadata
+    """
+
+    id: UUID
+    execution_id: UUID
+    node_id: str
+    status: CheckpointStatus
+    payload: Dict[str, Any] = field(default_factory=dict)
+    response: Optional[Dict[str, Any]] = None
+    responded_by: Optional[UUID] = None
+    responded_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    notes: Optional[str] = None
+
+    @classmethod
+    def from_model(cls, checkpoint) -> "CheckpointData":
+        """
+        Create CheckpointData from database model.
+
+        Args:
+            checkpoint: Checkpoint database model instance
+
+        Returns:
+            CheckpointData instance
+        """
+        try:
+            status = CheckpointStatus(checkpoint.status)
+        except ValueError:
+            status = CheckpointStatus.PENDING
+
+        return cls(
+            id=checkpoint.id,
+            execution_id=checkpoint.execution_id,
+            node_id=checkpoint.node_id,
+            status=status,
+            payload=checkpoint.payload or {},
+            response=checkpoint.response,
+            responded_by=checkpoint.responded_by,
+            responded_at=checkpoint.responded_at,
+            expires_at=checkpoint.expires_at,
+            created_at=checkpoint.created_at,
+            notes=checkpoint.notes,
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert to dictionary for serialization.
+
+        Returns:
+            Dictionary representation
+        """
+        return {
+            "id": str(self.id),
+            "execution_id": str(self.execution_id),
+            "node_id": self.node_id,
+            "status": self.status.value,
+            "payload": self.payload,
+            "response": self.response,
+            "responded_by": str(self.responded_by) if self.responded_by else None,
+            "responded_at": self.responded_at.isoformat() if self.responded_at else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "notes": self.notes,
+        }
+
+
 class CheckpointService:
     """
-    Service for checkpoint management and approval workflow.
+    Service for checkpoint business logic.
 
-    Features:
-    - Create checkpoints during workflow execution
-    - Send Teams notifications for approval requests
-    - Handle approve/reject actions
-    - Resume/terminate execution based on approval
-    - Track approval audit trail
+    Provides methods for:
+        - Creating checkpoints for human approval
+        - Listing pending approvals
+        - Approving/rejecting checkpoints
+        - Managing checkpoint lifecycle
 
     Example:
-        service = CheckpointService(db=session)
+        service = CheckpointService(repository)
 
-        # Create checkpoint
+        # Create a checkpoint
         checkpoint = await service.create_checkpoint(
-            CheckpointCreate(
-                execution_id=exec_id,
-                step_index=3,
-                step_name="Manager Approval",
-                proposed_action="Create new employee account"
-            )
+            execution_id=exec_id,
+            node_id="approval-gate",
+            payload={"draft": "Please review this response."},
         )
 
-        # Approve checkpoint
-        await service.approve_checkpoint(
+        # Get pending approvals
+        pending = await service.get_pending_approvals(limit=10)
+
+        # Approve a checkpoint
+        approved = await service.approve_checkpoint(
             checkpoint_id=checkpoint.id,
-            user_id=user.id,
-            feedback="Approved"
+            user_id=approver_id,
+            response={"action": "proceed", "comment": "Looks good!"},
         )
     """
 
-    def __init__(self, db: AsyncSession):
-        """Initialize CheckpointService."""
-        self.db = db
-        self.audit_service = AuditService(db)
-        self.notification_service = get_notification_service(db)
-        self.api_url = os.getenv("API_URL", "http://localhost:8080")
+    def __init__(
+        self,
+        repository: CheckpointRepository,
+        default_timeout_hours: int = 24,
+    ):
+        """
+        Initialize checkpoint service.
+
+        Args:
+            repository: CheckpointRepository instance
+            default_timeout_hours: Default checkpoint timeout in hours
+        """
+        self._repository = repository
+        self._default_timeout_hours = default_timeout_hours
 
     async def create_checkpoint(
         self,
-        data: CheckpointCreate,
-        workflow_name: Optional[str] = None,
-        send_notification: bool = True,
-    ) -> Checkpoint:
+        execution_id: UUID,
+        node_id: str,
+        payload: Dict[str, Any],
+        timeout_hours: Optional[int] = None,
+        notes: Optional[str] = None,
+    ) -> CheckpointData:
         """
-        Create a new checkpoint for approval.
+        Create a new checkpoint for human approval.
 
         Args:
-            data: Checkpoint creation data
-            workflow_name: Name of the workflow (for notification)
-            send_notification: Whether to send Teams notification
+            execution_id: Parent execution UUID
+            node_id: Workflow node creating the checkpoint
+            payload: Data to be reviewed by human
+            timeout_hours: Hours until checkpoint expires (default from config)
+            notes: Optional notes or context
 
         Returns:
-            Created Checkpoint instance
+            Created checkpoint data
         """
-        # Calculate expiration
-        expires_at = None
-        if data.expires_in_minutes:
-            expires_at = datetime.utcnow() + timedelta(minutes=data.expires_in_minutes)
+        # Calculate expiration time
+        timeout = timeout_hours or self._default_timeout_hours
+        expires_at = datetime.utcnow() + timedelta(hours=timeout)
 
-        # Create checkpoint
-        checkpoint = Checkpoint(
-            execution_id=data.execution_id,
-            step_index=data.step_index,
-            step_name=data.step_name,
-            proposed_action=data.proposed_action,
-            context=data.context,
-            status=CheckpointStatus.PENDING,
+        checkpoint = await self._repository.create(
+            execution_id=execution_id,
+            node_id=node_id,
+            status=CheckpointStatus.PENDING.value,
+            payload=payload,
             expires_at=expires_at,
+            notes=notes,
         )
 
-        self.db.add(checkpoint)
-        await self.db.commit()
-        await self.db.refresh(checkpoint)
-
-        logger.info(f"Checkpoint created: {checkpoint.id} for execution {data.execution_id}")
-
-        # Send Teams notification
-        if send_notification:
-            await self._send_approval_notification(checkpoint, workflow_name or "Workflow")
-
-        # Log to audit
-        await self.audit_service.log(
-            action=AuditAction.CREATE,
-            resource_type="checkpoint",
-            resource_id=str(checkpoint.id),
-            resource_name=f"checkpoint-{data.step_index}",
-            changes={
-                "execution_id": str(data.execution_id),
-                "step_index": data.step_index,
-                "step_name": data.step_name,
-                "status": CheckpointStatus.PENDING.value,
-            },
+        logger.info(
+            f"Created checkpoint {checkpoint.id} for execution {execution_id} "
+            f"at node {node_id}, expires at {expires_at}"
         )
 
-        return checkpoint
+        return CheckpointData.from_model(checkpoint)
 
-    async def get_checkpoint(self, checkpoint_id: UUID) -> Optional[Checkpoint]:
-        """Get a checkpoint by ID."""
-        result = await self.db.execute(
-            select(Checkpoint).where(Checkpoint.id == checkpoint_id)
+    async def get_checkpoint(self, checkpoint_id: UUID) -> Optional[CheckpointData]:
+        """
+        Get a checkpoint by ID.
+
+        Args:
+            checkpoint_id: Checkpoint UUID
+
+        Returns:
+            Checkpoint data or None if not found
+        """
+        checkpoint = await self._repository.get(checkpoint_id)
+        if checkpoint is None:
+            return None
+
+        return CheckpointData.from_model(checkpoint)
+
+    async def get_pending_approvals(
+        self,
+        limit: int = 50,
+        execution_id: Optional[UUID] = None,
+    ) -> List[CheckpointData]:
+        """
+        Get pending checkpoints awaiting approval.
+
+        Args:
+            limit: Maximum number to return
+            execution_id: Optional filter by execution
+
+        Returns:
+            List of pending checkpoint data
+        """
+        checkpoints = await self._repository.get_pending(
+            limit=limit,
+            execution_id=execution_id,
         )
-        return result.scalar_one_or_none()
 
-    async def get_checkpoint_by_execution(
+        return [CheckpointData.from_model(cp) for cp in checkpoints]
+
+    async def get_checkpoints_by_execution(
         self,
         execution_id: UUID,
-        step_index: Optional[int] = None,
-    ) -> list[Checkpoint]:
-        """Get checkpoints for an execution."""
-        query = select(Checkpoint).where(Checkpoint.execution_id == execution_id)
+        include_expired: bool = False,
+    ) -> List[CheckpointData]:
+        """
+        Get all checkpoints for an execution.
 
-        if step_index is not None:
-            query = query.where(Checkpoint.step_index == step_index)
+        Args:
+            execution_id: Execution UUID
+            include_expired: Whether to include expired checkpoints
 
-        query = query.order_by(Checkpoint.step_index)
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
-
-    async def get_pending_checkpoints(
-        self,
-        page: int = 1,
-        page_size: int = 20,
-    ) -> CheckpointListResponse:
-        """Get all pending checkpoints."""
-        offset = (page - 1) * page_size
-
-        # Count total
-        count_query = select(func.count(Checkpoint.id)).where(
-            Checkpoint.status == CheckpointStatus.PENDING
+        Returns:
+            List of checkpoint data
+        """
+        checkpoints = await self._repository.get_by_execution(
+            execution_id=execution_id,
+            include_expired=include_expired,
         )
-        total_result = await self.db.execute(count_query)
-        total = total_result.scalar() or 0
 
-        # Get checkpoints
-        query = (
-            select(Checkpoint)
-            .where(Checkpoint.status == CheckpointStatus.PENDING)
-            .order_by(Checkpoint.created_at.desc())
-            .offset(offset)
-            .limit(page_size)
-        )
-        result = await self.db.execute(query)
-        checkpoints = list(result.scalars().all())
-
-        return CheckpointListResponse(
-            total=total,
-            checkpoints=[CheckpointResponse.model_validate(cp) for cp in checkpoints],
-            page=page,
-            page_size=page_size,
-        )
+        return [CheckpointData.from_model(cp) for cp in checkpoints]
 
     async def approve_checkpoint(
         self,
         checkpoint_id: UUID,
         user_id: UUID,
-        data: Optional[CheckpointApprovalRequest] = None,
-    ) -> Checkpoint:
+        response: Optional[Dict[str, Any]] = None,
+        feedback: Optional[str] = None,
+    ) -> Optional[CheckpointData]:
         """
-        Approve a checkpoint.
+        Approve a pending checkpoint.
 
         Args:
-            checkpoint_id: Checkpoint ID
-            user_id: User ID approving
-            data: Optional approval data with feedback
+            checkpoint_id: Checkpoint UUID
+            user_id: User approving the checkpoint
+            response: Optional response data (e.g., modifications)
+            feedback: Optional feedback text
 
         Returns:
-            Updated Checkpoint
+            Updated checkpoint data or None if not found
 
         Raises:
-            ValueError: If checkpoint not found or cannot be approved
+            ValueError: If checkpoint is not in PENDING status
         """
-        checkpoint = await self.get_checkpoint(checkpoint_id)
+        checkpoint = await self._repository.get(checkpoint_id)
+        if checkpoint is None:
+            return None
 
-        if not checkpoint:
-            raise ValueError(f"Checkpoint {checkpoint_id} not found")
+        if checkpoint.status != CheckpointStatus.PENDING.value:
+            raise ValueError(
+                f"Cannot approve checkpoint in {checkpoint.status} status. "
+                f"Only PENDING checkpoints can be approved."
+            )
 
-        if not checkpoint.can_be_approved():
-            if checkpoint.is_expired():
-                raise ValueError("Checkpoint has expired")
-            raise ValueError(f"Checkpoint is already {checkpoint.status.value}")
+        # Build response data
+        response_data = response or {}
+        if feedback:
+            response_data["feedback"] = feedback
 
-        # Update checkpoint
-        feedback = data.feedback if data else None
-        checkpoint.approve(str(user_id), feedback)
-        await self.db.commit()
-        await self.db.refresh(checkpoint)
-
-        logger.info(f"Checkpoint {checkpoint_id} approved by {user_id}")
-
-        # Send approval notification
-        await self._send_result_notification(
-            checkpoint,
-            approved=True,
-            user_id=str(user_id),
+        updated = await self._repository.update_status(
+            checkpoint_id=checkpoint_id,
+            status=CheckpointStatus.APPROVED.value,
+            response=response_data,
+            responded_by=user_id,
         )
 
-        # Log to audit
-        await self.audit_service.log(
-            action=AuditAction.UPDATE,
-            resource_type="checkpoint",
-            resource_id=str(checkpoint_id),
-            resource_name=f"checkpoint-{checkpoint.step_index}",
-            user_id=user_id,
-            changes={
-                "status": CheckpointStatus.APPROVED.value,
-                "approved_by": str(user_id),
-                "feedback": feedback,
-            },
-        )
+        if updated:
+            logger.info(
+                f"Checkpoint {checkpoint_id} approved by user {user_id}"
+            )
+            return CheckpointData.from_model(updated)
 
-        return checkpoint
+        return None
 
     async def reject_checkpoint(
         self,
         checkpoint_id: UUID,
         user_id: UUID,
-        data: CheckpointRejectionRequest,
-    ) -> Checkpoint:
+        reason: Optional[str] = None,
+        response: Optional[Dict[str, Any]] = None,
+    ) -> Optional[CheckpointData]:
         """
-        Reject a checkpoint.
+        Reject a pending checkpoint.
 
         Args:
-            checkpoint_id: Checkpoint ID
-            user_id: User ID rejecting
-            data: Rejection data with reason
+            checkpoint_id: Checkpoint UUID
+            user_id: User rejecting the checkpoint
+            reason: Reason for rejection
+            response: Optional additional response data
 
         Returns:
-            Updated Checkpoint
+            Updated checkpoint data or None if not found
 
         Raises:
-            ValueError: If checkpoint not found or cannot be rejected
+            ValueError: If checkpoint is not in PENDING status
         """
-        checkpoint = await self.get_checkpoint(checkpoint_id)
+        checkpoint = await self._repository.get(checkpoint_id)
+        if checkpoint is None:
+            return None
 
-        if not checkpoint:
-            raise ValueError(f"Checkpoint {checkpoint_id} not found")
+        if checkpoint.status != CheckpointStatus.PENDING.value:
+            raise ValueError(
+                f"Cannot reject checkpoint in {checkpoint.status} status. "
+                f"Only PENDING checkpoints can be rejected."
+            )
 
-        if not checkpoint.can_be_approved():
-            if checkpoint.is_expired():
-                raise ValueError("Checkpoint has expired")
-            raise ValueError(f"Checkpoint is already {checkpoint.status.value}")
+        # Build response data
+        response_data = response or {}
+        if reason:
+            response_data["rejection_reason"] = reason
 
-        # Update checkpoint
-        checkpoint.reject(str(user_id), data.reason)
-        await self.db.commit()
-        await self.db.refresh(checkpoint)
-
-        logger.info(f"Checkpoint {checkpoint_id} rejected by {user_id}: {data.reason}")
-
-        # Send rejection notification
-        await self._send_result_notification(
-            checkpoint,
-            approved=False,
-            user_id=str(user_id),
-            reason=data.reason,
+        updated = await self._repository.update_status(
+            checkpoint_id=checkpoint_id,
+            status=CheckpointStatus.REJECTED.value,
+            response=response_data,
+            responded_by=user_id,
         )
 
-        # Log to audit
-        await self.audit_service.log(
-            action=AuditAction.UPDATE,
-            resource_type="checkpoint",
-            resource_id=str(checkpoint_id),
-            resource_name=f"checkpoint-{checkpoint.step_index}",
-            user_id=user_id,
-            changes={
-                "status": CheckpointStatus.REJECTED.value,
-                "approved_by": str(user_id),
-                "reason": data.reason,
-            },
-        )
+        if updated:
+            logger.info(
+                f"Checkpoint {checkpoint_id} rejected by user {user_id}: {reason}"
+            )
+            return CheckpointData.from_model(updated)
 
-        return checkpoint
+        return None
 
-    async def expire_checkpoint(self, checkpoint_id: UUID) -> Checkpoint:
-        """Mark a checkpoint as expired."""
-        checkpoint = await self.get_checkpoint(checkpoint_id)
-
-        if not checkpoint:
-            raise ValueError(f"Checkpoint {checkpoint_id} not found")
-
-        checkpoint.expire()
-        await self.db.commit()
-        await self.db.refresh(checkpoint)
-
-        logger.info(f"Checkpoint {checkpoint_id} expired")
-
-        # Log to audit
-        await self.audit_service.log(
-            action=AuditAction.UPDATE,
-            resource_type="checkpoint",
-            resource_id=str(checkpoint_id),
-            resource_name=f"checkpoint-{checkpoint.step_index}",
-            changes={
-                "status": CheckpointStatus.EXPIRED.value,
-                "expired_at": datetime.utcnow().isoformat(),
-            },
-        )
-
-        return checkpoint
-
-    async def check_expired_checkpoints(self) -> int:
+    async def expire_old_checkpoints(self) -> int:
         """
-        Check and expire overdue checkpoints.
+        Expire checkpoints past their expiration time.
 
         Returns:
             Number of checkpoints expired
         """
-        now = datetime.utcnow()
+        count = await self._repository.expire_old()
 
-        query = select(Checkpoint).where(
-            Checkpoint.status == CheckpointStatus.PENDING,
-            Checkpoint.expires_at.isnot(None),
-            Checkpoint.expires_at < now,
-        )
+        if count > 0:
+            logger.info(f"Expired {count} old checkpoints")
 
-        result = await self.db.execute(query)
-        checkpoints = list(result.scalars().all())
+        return count
 
-        expired_count = 0
-        for checkpoint in checkpoints:
-            checkpoint.expire()
-            expired_count += 1
-
-        if expired_count > 0:
-            await self.db.commit()
-            logger.info(f"Expired {expired_count} checkpoints")
-
-        return expired_count
-
-    async def _send_approval_notification(
+    async def get_stats(
         self,
-        checkpoint: Checkpoint,
-        workflow_name: str,
-    ) -> None:
-        """Send Teams notification for approval request."""
-        try:
-            context = CheckpointNotificationContext(
-                checkpoint_id=str(checkpoint.id),
-                execution_id=str(checkpoint.execution_id),
-                workflow_name=workflow_name,
-                step_number=checkpoint.step_index,
-                step_name=checkpoint.step_name,
-                proposed_action=checkpoint.proposed_action,
-                approve_url=f"{self.api_url}/api/v1/checkpoints/{checkpoint.id}/approve",
-                reject_url=f"{self.api_url}/api/v1/checkpoints/{checkpoint.id}/reject",
-            )
+        execution_id: Optional[UUID] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get checkpoint statistics.
 
-            response = await self.notification_service.send_checkpoint_approval(context)
+        Args:
+            execution_id: Optional filter by execution
 
-            # Update checkpoint with notification info
-            checkpoint.notification_sent = True
-            checkpoint.notification_id = response.notification_id
-            await self.db.commit()
+        Returns:
+            Dictionary with statistics
+        """
+        return await self._repository.get_stats(execution_id)
 
-        except Exception as e:
-            logger.error(f"Failed to send approval notification: {e}")
+    async def delete_checkpoint(self, checkpoint_id: UUID) -> bool:
+        """
+        Delete a checkpoint.
 
-    async def _send_result_notification(
-        self,
-        checkpoint: Checkpoint,
-        approved: bool,
-        user_id: str,
-        reason: Optional[str] = None,
-    ) -> None:
-        """Send Teams notification for approval result."""
-        try:
-            if approved:
-                title = "✅ Checkpoint Approved"
-                message = f"Checkpoint at step {checkpoint.step_index} has been approved"
-                severity = "info"
-            else:
-                title = "❌ Checkpoint Rejected"
-                message = f"Checkpoint at step {checkpoint.step_index} has been rejected"
-                if reason:
-                    message += f": {reason}"
-                severity = "warning"
+        Args:
+            checkpoint_id: Checkpoint UUID
 
-            await self.notification_service.send_system_alert(
-                title=title,
-                message=message,
-                severity=severity,
-                details={
-                    "Checkpoint ID": str(checkpoint.id),
-                    "Execution ID": str(checkpoint.execution_id),
-                    "Step": str(checkpoint.step_index),
-                    "Decision By": user_id,
-                },
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to send result notification: {e}")
-
-
-def get_checkpoint_service(db: AsyncSession) -> CheckpointService:
-    """Factory function to create CheckpointService."""
-    return CheckpointService(db=db)
+        Returns:
+            True if deleted, False if not found
+        """
+        return await self._repository.delete(checkpoint_id)

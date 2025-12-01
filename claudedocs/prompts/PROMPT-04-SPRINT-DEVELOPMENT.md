@@ -1,23 +1,23 @@
-# PROMPT-04: SPRINT DEVELOPMENT
-# Sprint Story 開發執行
+# PROMPT-04: DEVELOPMENT EXECUTION
+# 開發任務執行
 
-> **用途**: 執行 Sprint Story 的完整開發流程
-> **變數**: `{SPRINT_ID}` `{STORY_ID}`
-> **預估時間**: 15-30 分鐘 (根據 Story 複雜度)
-> **版本**: v2.0.0
+> **用途**: 執行開發任務的完整開發流程
+> **變數**: `{TASK_ID}` 或任務描述
+> **預估時間**: 15-30 分鐘 (根據任務複雜度)
+> **版本**: v3.0.0
 
 ---
 
 ## 🔤 變數定義
 
 ```yaml
-{SPRINT_ID}:
-  描述: Sprint 標識符
-  範例: "Sprint-0", "sprint_0"
-
-{STORY_ID}:
-  描述: Story 標識符
-  範例: "S0-1", "S0-2"
+{TASK_ID}:
+  描述: 任務標識符或任務描述
+  格式: 自由格式
+  範例:
+    - "add-user-profile-api"
+    - "fix-login-redirect"
+    - "implement-workflow-versioning"
 ```
 
 ---
@@ -28,31 +28,35 @@
 
 ```yaml
 檢查項:
-  - [ ] 已執行 PROMPT-02 準備 Story
+  - [ ] 已執行 PROMPT-02 準備任務
   - [ ] 已理解需求和驗收標準
-  - [ ] 所有依賴 Story 已完成
-  - [ ] 本地開發環境正常
+  - [ ] 本地開發環境正常 (docker-compose up -d)
+  - [ ] 後端 API 運行中 (localhost:8000)
+  - [ ] 前端開發服務器運行中 (localhost:3000)
 
 如果未準備好:
-  → 建議先執行 @PROMPT-02-NEW-SPRINT-PREP.md {SPRINT_ID} {STORY_ID}
+  → 建議先執行 @PROMPT-02-NEW-SPRINT-PREP.md {TASK_ID}
 ```
 
 ### Step 2: 創建 Feature Branch
 
 ```bash
 # Branch 命名規範
-格式: feature/sprint-{N}-{story-id}-{description}
-範例: feature/sprint-0-s0-1-dev-environment
+格式: feature/{task-id}-{description}
+範例:
+  - feature/add-user-profile-api
+  - feature/fix-login-redirect
+  - bugfix/fix-workflow-validation
 
 命令:
-git checkout -b feature/sprint-{N}-{story-id}-{description}
+git checkout -b feature/{task-id}-{description}
 ```
 
 ### Step 3: 實施開發
 
 ```yaml
 開發流程:
-  1. 閱讀技術規格
+  1. 閱讀相關代碼
   2. 設計實現方案
   3. 編寫代碼
   4. 編寫單元測試
@@ -66,6 +70,18 @@ git checkout -b feature/sprint-{N}-{story-id}-{description}
   - 避免過度設計
   - 考慮錯誤處理
   - 注意安全性
+
+專案代碼規範:
+  Python:
+    - 格式化: Black (line-length: 100)
+    - 導入排序: isort (profile: black)
+    - Lint: flake8
+    - 類型檢查: mypy
+
+  TypeScript:
+    - 格式化: Prettier
+    - Lint: ESLint
+    - 類型檢查: tsc
 ```
 
 ### Step 4: 編寫測試
@@ -85,6 +101,13 @@ git checkout -b feature/sprint-{N}-{story-id}-{description}
      - 測試完整用戶場景
 
 測試覆蓋率目標: >= 80%
+
+測試命令:
+  # Python
+  pytest backend/tests/ -v --cov=backend/src
+
+  # TypeScript
+  npm test -- --coverage
 ```
 
 ### Step 5: 本地驗證
@@ -96,7 +119,7 @@ git checkout -b feature/sprint-{N}-{story-id}-{description}
   - [ ] 功能符合驗收標準
   - [ ] 無明顯 Bug
   - [ ] 代碼質量檢查通過
-  - [ ] 文檔已更新
+  - [ ] 文檔已更新 (如需要)
 ```
 
 ### Step 6: 代碼自檢
@@ -117,21 +140,21 @@ git checkout -b feature/sprint-{N}-{story-id}-{description}
 ## 📤 輸出格式
 
 ```markdown
-# Sprint Story 開發報告: {STORY_ID}
+# 開發任務報告: {TASK_ID}
 
 **生成時間**: {TIMESTAMP}
 **生成者**: AI Assistant (PROMPT-04)
 
 ---
 
-## 📊 Story 信息
+## 📊 任務信息
 
 | 項目 | 內容 |
 |------|------|
-| **Story ID** | {STORY_ID} |
-| **標題** | {STORY_TITLE} |
-| **Sprint** | {SPRINT_ID} |
-| **Story Points** | {STORY_POINTS} |
+| **任務 ID** | {TASK_ID} |
+| **任務類型** | {TASK_TYPE} |
+| **複雜度** | {COMPLEXITY} |
+| **完成狀態** | {STATUS} |
 
 ---
 
@@ -227,14 +250,14 @@ git checkout -b feature/sprint-{N}-{story-id}-{description}
 ## 🚀 下一步行動
 
 1. ✅ 開發完成
-2. ⏭️ 執行 `@PROMPT-05-TESTING-PHASE.md {STORY_ID}` (可選,深度測試)
-3. 📋 執行 `@PROMPT-06-PROGRESS-SAVE.md {SPRINT_ID} {STORY_ID}` (保存進度)
+2. ⏭️ 執行 `@PROMPT-05-TESTING-PHASE.md {TASK_ID}` (可選,深度測試)
+3. 📋 執行 `@PROMPT-06-PROGRESS-SAVE.md {TASK_ID}` (保存進度)
 4. 🔍 (可選) 執行 `@PROMPT-08-CODE-REVIEW.md {FILE_PATH}` (代碼審查)
 
 ---
 
 **生成工具**: PROMPT-04
-**版本**: v2.0.0
+**版本**: v3.0.0
 ```
 
 ---
@@ -242,8 +265,8 @@ git checkout -b feature/sprint-{N}-{story-id}-{description}
 ## 💡 使用範例
 
 ```bash
-# 開發 Story S0-1
-用戶: "@PROMPT-04-SPRINT-DEVELOPMENT.md Sprint-0 S0-1"
+# 開發新功能
+用戶: "@PROMPT-04-SPRINT-DEVELOPMENT.md add-user-profile-api"
 
 AI 執行:
 1. 確認準備就緒
@@ -256,20 +279,22 @@ AI 執行:
 
 輸出:
 ---
-✅ Story S0-1 開發完成
+✅ 任務開發完成
+
+任務: add-user-profile-api
+類型: Feature
 
 功能實現:
-- Docker Compose 配置
-- PostgreSQL 容器設置
-- Redis 容器設置
-- 開發環境啟動腳本
+- 用戶個人資料 CRUD API
+- 頭像上傳支持
+- 資料驗證邏輯
 
 測試覆蓋: 85%
 質量檢查: ✅ 全部通過
 
 下一步:
 1. 可選深度測試: @PROMPT-05
-2. 保存進度: @PROMPT-06 Sprint-0 S0-1
+2. 保存進度: @PROMPT-06 add-user-profile-api
 ---
 ```
 
@@ -278,11 +303,11 @@ AI 執行:
 ## 🔗 相關文檔
 
 - [AI Assistant Instructions](../AI-ASSISTANT-INSTRUCTIONS.md)
-- [PROMPT-02: New Sprint Prep](./PROMPT-02-NEW-SPRINT-PREP.md)
+- [PROMPT-02: Task Prep](./PROMPT-02-NEW-SPRINT-PREP.md)
 - [PROMPT-05: Testing Phase](./PROMPT-05-TESTING-PHASE.md)
 - [PROMPT-06: Progress Save](./PROMPT-06-PROGRESS-SAVE.md)
 
 ---
 
-**版本**: v2.0.0
-**更新日期**: 2025-11-20
+**版本**: v3.0.0
+**更新日期**: 2025-12-01

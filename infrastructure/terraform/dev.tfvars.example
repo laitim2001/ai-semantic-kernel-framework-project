@@ -1,0 +1,57 @@
+# IPA Platform - Development Environment Variables
+# Sprint 0: Infrastructure Foundation
+#
+# Usage:
+#   1. Copy this file to dev.tfvars
+#   2. Fill in the sensitive values
+#   3. Run: terraform plan -var-file="dev.tfvars"
+
+# =============================================================================
+# General
+# =============================================================================
+
+environment = "dev"
+location    = "East Asia"
+
+# =============================================================================
+# App Service
+# =============================================================================
+
+# B1 for development (cost-effective)
+app_service_sku = "B1"
+
+# =============================================================================
+# Database
+# =============================================================================
+
+db_admin_username = "ipaadmin"
+db_admin_password = "CHANGE_THIS_PASSWORD"  # Use a strong password!
+
+# B_Standard_B1ms for development (burstable, cost-effective)
+db_sku        = "B_Standard_B1ms"
+db_storage_mb = 32768  # 32 GB
+
+# =============================================================================
+# Redis
+# =============================================================================
+
+# Basic C0 for development (250 MB)
+redis_capacity = 0
+redis_family   = "C"
+redis_sku      = "Basic"
+
+# =============================================================================
+# Service Bus
+# =============================================================================
+
+# Basic for development
+service_bus_sku = "Basic"
+
+# =============================================================================
+# Azure OpenAI
+# =============================================================================
+
+# Get these from Azure Portal > Azure OpenAI > Keys and Endpoint
+azure_openai_endpoint        = "https://your-resource.openai.azure.com/"
+azure_openai_api_key         = "YOUR_AZURE_OPENAI_API_KEY"
+azure_openai_deployment_name = "gpt-4o"

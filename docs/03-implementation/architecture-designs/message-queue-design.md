@@ -197,7 +197,7 @@ class Priority(int, Enum):
     "payload": {
         "task_id": "uuid",
         "agent_id": "uuid",
-        "agent_type": "semantic_kernel",
+        "agent_type": "agent_framework",
         "prompt": "...",
         "context": {...},
         "tools": [...]

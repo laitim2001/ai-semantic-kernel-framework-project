@@ -1,0 +1,177 @@
+# =============================================================================
+# IPA Platform - Customer Service Prompt Templates
+# =============================================================================
+# Sprint 3: 集成 & 可靠性 - Prompt 模板管理
+#
+# 客服場景的 Prompt 模板：
+#   - customer_inquiry: 客戶詢問回應
+#   - escalation: 問題升級處理
+#   - satisfaction_survey: 滿意度調查分析
+# =============================================================================
+
+templates:
+  - id: customer_inquiry
+    name: 客戶詢問回應
+    description: 分析客戶詢問並生成專業的回應
+    category: customer_service
+    version: "1.0.0"
+    author: system
+    tags:
+      - inquiry
+      - response
+      - customer
+    variables:
+      - customer_name
+      - inquiry_content
+      - customer_history
+      - product_info
+    default_values:
+      customer_history: "新客戶，無歷史記錄"
+      product_info: "標準產品信息"
+    content: |
+      你是一個專業的客戶服務代表。請分析以下客戶詢問並生成專業的回應。
+
+      ## 客戶信息
+      - **客戶名稱**: {{customer_name}}
+      - **客戶歷史**: {{customer_history}}
+
+      ## 詢問內容
+      {{inquiry_content}}
+
+      ## 相關產品信息
+      {{product_info}}
+
+      ## 請生成回應：
+
+      1. **問題分析**
+         - 客戶的主要問題
+         - 問題類型
+         - 緊急程度
+
+      2. **建議回應**
+         - 開場問候
+         - 問題確認
+         - 解答內容
+         - 額外建議
+         - 結束語
+
+      3. **後續行動**
+         - 是否需要跟進
+         - 建議的跟進時間
+         - 相關知識庫文章
+
+      請以友好、專業的語氣生成回應內容。
+
+  - id: escalation
+    name: 問題升級處理
+    description: 處理需要升級的客戶問題
+    category: customer_service
+    version: "1.0.0"
+    author: system
+    tags:
+      - escalation
+      - priority
+      - management
+    variables:
+      - ticket_id
+      - customer_name
+      - issue_description
+      - previous_attempts
+      - escalation_reason
+    content: |
+      你是一個資深客戶服務經理。請處理以下需要升級的客戶問題。
+
+      ## 工單信息
+      - **工單 ID**: {{ticket_id}}
+      - **客戶名稱**: {{customer_name}}
+
+      ## 問題描述
+      {{issue_description}}
+
+      ## 之前的處理嘗試
+      {{previous_attempts}}
+
+      ## 升級原因
+      {{escalation_reason}}
+
+      ## 請提供以下內容：
+
+      1. **問題評估**
+         - 問題嚴重程度
+         - 客戶情緒評估
+         - 業務影響
+
+      2. **升級決策**
+         - 建議升級等級 (L2/L3/管理層)
+         - 升級理由
+         - 預期處理時間
+
+      3. **處理方案**
+         - 立即行動
+         - 補償建議
+         - 長期解決方案
+
+      4. **客戶溝通**
+         - 致歉話術
+         - 解決方案說明
+         - 補償提案
+
+      請以專業且富有同理心的方式處理此升級案件。
+
+  - id: satisfaction_survey
+    name: 滿意度調查分析
+    description: 分析客戶滿意度調查結果並生成報告
+    category: customer_service
+    version: "1.0.0"
+    author: system
+    tags:
+      - survey
+      - satisfaction
+      - analysis
+    variables:
+      - survey_period
+      - survey_data
+      - previous_period_data
+    default_values:
+      previous_period_data: "無歷史數據"
+    content: |
+      你是一個客戶體驗分析專家。請分析以下滿意度調查結果。
+
+      ## 調查期間
+      {{survey_period}}
+
+      ## 調查數據
+      {{survey_data}}
+
+      ## 上期數據
+      {{previous_period_data}}
+
+      ## 請提供以下分析：
+
+      1. **整體評分**
+         - 綜合滿意度分數
+         - 與上期對比
+         - NPS (淨推薦值)
+
+      2. **維度分析**
+         - 服務品質
+         - 響應速度
+         - 問題解決率
+         - 專業程度
+
+      3. **情緒分析**
+         - 正面反饋主題
+         - 負面反饋主題
+         - 改進建議提取
+
+      4. **行動建議**
+         - 優先改進項目
+         - 維持優勢項目
+         - 具體行動計劃
+
+      5. **總結報告**
+         - 關鍵發現
+         - 風險提示
+         - 下期目標
+
+      請以數據驅動的方式生成分析報告。

@@ -1,0 +1,197 @@
+# =============================================================================
+# IPA Platform - E2E Tests CI Workflow
+#
+# Runs end-to-end tests on pull requests and main branch pushes.
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# =============================================================================
+
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # ===========================================================================
+  # Backend E2E Tests
+  # ===========================================================================
+  backend-e2e:
+    name: Backend E2E Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ipa_user
+          POSTGRES_PASSWORD: ipa_password
+          POSTGRES_DB: ipa_platform_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov httpx
+
+      - name: Run E2E tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://ipa_user:ipa_password@localhost:5432/ipa_platform_test
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: test
+        run: |
+          pytest tests/e2e/ -v --tb=short --junitxml=e2e-results.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-e2e-results
+          path: backend/e2e-results.xml
+
+  # ===========================================================================
+  # Load Tests (Optional)
+  # ===========================================================================
+  load-tests:
+    name: Load Tests
+    runs-on: ubuntu-latest
+    needs: backend-e2e
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Locust
+        run: pip install locust
+
+      - name: Run smoke load test
+        working-directory: backend
+        run: |
+          # Run a short load test (30 seconds, 10 users)
+          # This is just a smoke test in CI
+          echo "Load tests would run here against staging environment"
+          # locust -f tests/load/locustfile.py --host=${{ secrets.STAGING_URL }} --headless -u 10 -r 2 -t 30s --html=load-report.html
+
+      - name: Upload load test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-report
+          path: backend/load-report.html
+          if-no-files-found: ignore
+
+  # ===========================================================================
+  # Frontend E2E Tests (Playwright)
+  # ===========================================================================
+  frontend-e2e:
+    name: Frontend E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: npx playwright test --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results
+          path: frontend/test-results/
+
+  # ===========================================================================
+  # E2E Summary
+  # ===========================================================================
+  e2e-summary:
+    name: E2E Test Summary
+    runs-on: ubuntu-latest
+    needs: [backend-e2e, frontend-e2e]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "Backend E2E: ${{ needs.backend-e2e.result }}"
+          echo "Frontend E2E: ${{ needs.frontend-e2e.result }}"
+
+          if [ "${{ needs.backend-e2e.result }}" != "success" ] || [ "${{ needs.frontend-e2e.result }}" != "success" ]; then
+            echo "One or more E2E test suites failed"
+            exit 1
+          fi
+
+          echo "All E2E tests passed!"

@@ -1,26 +1,39 @@
 """
 Notifications Domain Module
+============================
 
-Sprint 2 - Story S2-3: Teams Notification Service
+This module provides notification services for the IPA Platform, including:
+- Microsoft Teams integration via Adaptive Cards
+- Approval request notifications
+- Execution completion notifications
+- Error alert notifications
 
-Provides:
-- TeamsNotificationService for sending Teams Adaptive Cards
-- Console/Mock provider for local development
-- Webhook provider for production Teams integration
+Sprint 3 - S3-4: Teams Notification Integration
+
+Author: IPA Platform Team
+Created: 2025-11-30
 """
-from .service import TeamsNotificationService, get_notification_service
-from .schemas import (
-    NotificationRequest,
-    NotificationResponse,
-    NotificationStatus,
-    AdaptiveCardContent,
+
+from src.domain.notifications.teams import (
+    NotificationError,
+    NotificationPriority,
+    NotificationResult,
+    NotificationType,
+    TeamsCard,
+    TeamsNotificationConfig,
+    TeamsNotificationService,
 )
 
 __all__ = [
+    # Configuration
+    "TeamsNotificationConfig",
+    # Service
     "TeamsNotificationService",
-    "get_notification_service",
-    "NotificationRequest",
-    "NotificationResponse",
-    "NotificationStatus",
-    "AdaptiveCardContent",
+    # Types
+    "NotificationType",
+    "NotificationPriority",
+    "NotificationResult",
+    "TeamsCard",
+    # Exceptions
+    "NotificationError",
 ]

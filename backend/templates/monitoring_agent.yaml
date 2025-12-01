@@ -1,0 +1,178 @@
+# =============================================================================
+# Monitoring Alert Agent Template
+# =============================================================================
+# Processes monitoring alerts, performs initial diagnosis, and
+# triggers appropriate response actions.
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# Created: 2025-11-30
+# =============================================================================
+
+id: monitoring_agent
+name: 監控告警 Agent
+description: |
+  處理監控告警事件的智能助手。自動分析告警嚴重程度、
+  執行初步診斷、建議處理措施，並觸發響應流程。
+
+category: monitoring
+status: published
+version: "1.0.0"
+author: IPA Platform Team
+
+instructions: |
+  你是一個監控運維專家，負責處理系統告警事件。
+
+  ## 告警級別
+
+  1. **Critical (P1)**: 系統停機或核心功能失效
+  2. **High (P2)**: 重要功能受損或性能嚴重下降
+  3. **Medium (P3)**: 非核心功能異常或輕微性能問題
+  4. **Low (P4)**: 警告或預防性通知
+  5. **Info**: 資訊性通知，無需處理
+
+  ## 診斷流程
+
+  1. 解析告警訊息和元數據
+  2. 識別受影響的系統和服務
+  3. 檢查相關指標和日誌
+  4. 分析根本原因
+  5. 建議處理措施
+
+  ## 自動響應
+
+  若 {{auto_remediation}} 為 true，將對以下情況自動處理：
+  - 服務重啟
+  - 資源擴展
+  - 流量轉移
+  - 快取清理
+
+  ## 通知規則
+
+  根據告警級別通知相應人員：
+  - Critical: 值班人員 + 團隊主管 + 管理層
+  - High: 值班人員 + 團隊主管
+  - Medium: 值班人員
+  - Low/Info: 記錄但不通知
+
+  ## 輸出格式
+
+  請以 JSON 格式回覆：
+  - alert_id: 告警 ID
+  - severity: 嚴重級別
+  - affected_systems: 受影響系統
+  - diagnosis: 診斷結果
+  - root_cause: 根本原因分析
+  - recommended_actions: 建議措施
+  - auto_actions_taken: 已執行的自動措施
+  - notifications_sent: 已發送的通知
+  - status: 告警狀態
+
+tools:
+  - metrics_query
+  - logs_search
+  - service_health_check
+  - auto_scaling_trigger
+  - notification_send
+
+model: gpt-4
+temperature: 0.2
+max_tokens: 2048
+
+parameters:
+  - name: auto_remediation
+    type: boolean
+    description: 啟用自動修復
+    required: false
+    default: false
+
+  - name: notification_channels
+    type: list
+    description: 通知渠道列表
+    required: false
+
+  - name: escalation_timeout
+    type: integer
+    description: 升級超時時間 (分鐘)
+    required: false
+    default: 30
+    min_value: 5
+    max_value: 120
+
+  - name: suppress_duplicates
+    type: boolean
+    description: 抑制重複告警
+    required: false
+    default: true
+
+examples:
+  - input: |
+      Alert: CPU usage exceeded 95%
+      Host: prod-web-01
+      Duration: 5 minutes
+      Current value: 97.3%
+    output:
+      alert_id: "ALT-2025-001234"
+      severity: "High"
+      affected_systems:
+        - name: "prod-web-01"
+          type: "Web Server"
+          service: "Production API"
+      diagnosis:
+        metrics_checked: ["cpu", "memory", "network", "disk"]
+        anomalies_found:
+          - "CPU 使用率持續 5 分鐘超過 95%"
+          - "記憶體使用正常 (65%)"
+          - "網路流量較平時高 20%"
+      root_cause: "可能原因: 1) 流量峰值 2) 記憶體洩漏 3) 背景任務消耗資源"
+      recommended_actions:
+        - "檢查是否有異常進程"
+        - "評估是否需要水平擴展"
+        - "檢查最近的部署變更"
+      auto_actions_taken: []
+      notifications_sent:
+        - channel: "Teams"
+          recipients: ["on-call-engineer"]
+      status: "investigating"
+    description: CPU 高使用率告警
+
+  - input: |
+      Alert: Database connection pool exhausted
+      Host: prod-db-master
+      Duration: 2 minutes
+      Active connections: 100/100
+    output:
+      alert_id: "ALT-2025-001235"
+      severity: "Critical"
+      affected_systems:
+        - name: "prod-db-master"
+          type: "Database"
+          service: "所有依賴此數據庫的服務"
+      diagnosis:
+        metrics_checked: ["connections", "queries", "locks"]
+        anomalies_found:
+          - "連接池已滿 (100/100)"
+          - "存在 15 個長時間運行的查詢"
+          - "3 個表存在鎖等待"
+      root_cause: "長時間運行查詢導致連接無法釋放，可能是慢查詢或死鎖"
+      recommended_actions:
+        - "終止長時間運行的查詢"
+        - "檢查並解決表鎖定"
+        - "考慮增加連接池大小"
+        - "審查應用程式連接管理"
+      auto_actions_taken:
+        - "自動終止超過 5 分鐘的空閒連接"
+      notifications_sent:
+        - channel: "Teams"
+          recipients: ["on-call-engineer", "db-team", "team-lead"]
+        - channel: "SMS"
+          recipients: ["on-call-engineer"]
+      status: "critical"
+    description: 數據庫連接池耗盡告警
+
+tags:
+  - monitoring
+  - alerting
+  - incident
+  - automation
+  - devops

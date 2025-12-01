@@ -159,7 +159,7 @@ backend/
 │   │   ├── execution_service.py  # Execution 調度
 │   │   └── agent_service.py      # Agent 執行
 │   │
-│   ├── agents/                   # Semantic Kernel Agents
+│   ├── agents/                   # Agent Framework Agents
 │   │   ├── __init__.py
 │   │   ├── base_agent.py         # 基礎 Agent 類
 │   │   ├── react_agent.py        # ReAct Agent
@@ -259,7 +259,7 @@ backend/
 - **依賴**: Domain, Infrastructure
 
 #### Agents (`src/agents/`)
-- **職責**: Semantic Kernel Agent 實現
+- **職責**: Agent Framework Agent 實現
 - **原則**: Agent 特定邏輯,與 Domain 分離
 - **依賴**: Domain, Services
 

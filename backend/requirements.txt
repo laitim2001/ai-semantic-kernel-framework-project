@@ -1,56 +1,107 @@
-# Core dependencies
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
+# ============================================
+# IPA Platform - Python Dependencies
+# ============================================
+# Sprint 0: Infrastructure Foundation
+
+# ===========================================
+# Core Framework
+# ===========================================
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
 
+# ===========================================
+# Microsoft Agent Framework
+# ===========================================
+# Preview version (Beta) - monitor for GA release
+# Note: [azure] extra not available, use base package
+agent-framework>=1.0.0b251120
+
+# ===========================================
 # Database
-sqlalchemy>=2.0.23
-alembic>=1.13.0
-psycopg2-binary>=2.9.9
-asyncpg>=0.29.0
+# ===========================================
+sqlalchemy>=2.0.25
+asyncpg>=0.29.0              # PostgreSQL async driver
+alembic>=1.13.0              # Database migrations
+greenlet>=3.0.0              # Required for SQLAlchemy async
 
-# Cache
-redis>=5.0.1
-hiredis>=2.3.2
+# ===========================================
+# Cache & Messaging
+# ===========================================
+redis>=5.0.0
+aio-pika>=9.3.0              # RabbitMQ async client
 
+# ===========================================
 # Azure Services
+# ===========================================
 azure-identity>=1.15.0
-azure-servicebus>=7.11.4
-azure-monitor-opentelemetry>=1.2.0
-applicationinsights>=0.11.10
+azure-keyvault-secrets>=4.7.0
+azure-servicebus>=7.11.0     # Production message queue
 
-# OpenTelemetry (S3-6 Distributed Tracing)
-opentelemetry-api>=1.21.0
-opentelemetry-sdk>=1.21.0
-opentelemetry-instrumentation>=0.42b0
-opentelemetry-instrumentation-fastapi>=0.42b0
-opentelemetry-instrumentation-httpx>=0.42b0
-opentelemetry-instrumentation-sqlalchemy>=0.42b0
-opentelemetry-exporter-otlp-proto-grpc>=1.21.0
-opentelemetry-propagator-b3>=1.21.0
-
-# AI / Semantic Kernel
-semantic-kernel>=1.0.0
-openai>=1.6.1
-
-# Authentication
+# ===========================================
+# Authentication & Security
+# ===========================================
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
-python-multipart>=0.0.6
+python-multipart>=0.0.6      # Form data parsing
 
-# Encryption (S3-3)
-cryptography>=41.0.0
+# ===========================================
+# HTTP Client
+# ===========================================
+httpx>=0.26.0                # Async HTTP client
+aiohttp>=3.9.0               # Alternative async HTTP
 
+# ===========================================
 # Utilities
+# ===========================================
 python-dotenv>=1.0.0
-httpx>=0.25.2
+structlog>=24.1.0            # Structured logging
+tenacity>=8.2.0              # Retry logic
+croniter>=2.0.0              # Cron expression parsing
 
-# Development
-pytest>=7.4.3
-pytest-asyncio>=0.21.1
+# ===========================================
+# Observability (Optional - Sprint 3)
+# ===========================================
+opentelemetry-api>=1.22.0
+opentelemetry-sdk>=1.22.0
+opentelemetry-instrumentation-fastapi>=0.43b0
+opentelemetry-exporter-otlp>=1.22.0
+prometheus-client>=0.19.0
+
+# ===========================================
+# Development Dependencies
+# ===========================================
+black>=24.1.0
+isort>=5.13.0
+flake8>=7.0.0
+mypy>=1.8.0
+ruff>=0.1.0
+
+# ===========================================
+# Testing
+# ===========================================
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
 pytest-cov>=4.1.0
-black>=23.12.0
-isort>=5.13.2
-flake8>=6.1.0
-mypy>=1.7.1
+pytest-mock>=3.12.0
+httpx>=0.26.0                # For TestClient
+factory-boy>=3.3.0           # Test data factories
+faker>=22.0.0                # Fake data generation
+
+# ===========================================
+# Load Testing (Sprint 6)
+# ===========================================
+locust>=2.20.0               # Load testing framework
+
+# ===========================================
+# Security Testing (Sprint 6)
+# ===========================================
+pip-audit>=2.6.0             # Dependency vulnerability scanning
+bandit>=1.7.0                # Security linter
+
+# ===========================================
+# Type Stubs
+# ===========================================
+types-redis>=4.6.0
+types-passlib>=1.7.0

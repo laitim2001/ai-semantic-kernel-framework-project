@@ -1,0 +1,262 @@
+# =============================================================================
+# IPA Platform - Production Deployment Workflow
+#
+# Deploys the application to Azure App Service using blue-green deployment.
+#
+# Triggers:
+# - Manual dispatch with version tag
+# - Push to main branch (after passing all tests)
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# =============================================================================
+
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+
+env:
+  AZURE_RESOURCE_GROUP: rg-ipa-platform-production
+  AZURE_APP_NAME: app-ipa-platform-production
+  ACR_NAME: ipaplatformacr
+  IMAGE_NAME: ipa-platform
+
+jobs:
+  # ===========================================================================
+  # Build and Test
+  # ===========================================================================
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run tests
+        working-directory: backend
+        run: pytest tests/ -v --tb=short --cov=src --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+
+  # ===========================================================================
+  # Build and Push Docker Image
+  # ===========================================================================
+  build-image:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push image
+        run: |
+          VERSION=${{ needs.build-and-test.outputs.version }}
+          docker build \
+            -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${VERSION} \
+            -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest \
+            --build-arg BUILD_VERSION=${VERSION} \
+            --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            -f backend/Dockerfile \
+            backend/
+
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${VERSION}
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+
+  # ===========================================================================
+  # Deploy to Staging
+  # ===========================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-test, build-image]
+    environment: staging
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to staging slot
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_APP_NAME }}
+          slot-name: staging
+          images: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ needs.build-and-test.outputs.version }}
+
+      - name: Wait for deployment
+        run: sleep 60
+
+      - name: Health check staging
+        run: |
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.AZURE_APP_NAME }}-staging.azurewebsites.net/health)
+            if [ "$STATUS" -eq 200 ]; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i: Status $STATUS"
+            sleep 10
+          done
+          echo "Health check failed"
+          exit 1
+
+  # ===========================================================================
+  # Production Approval and Swap
+  # ===========================================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-test, deploy-staging]
+    environment: production
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Swap slots
+        run: |
+          az webapp deployment slot swap \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_APP_NAME }} \
+            --slot staging \
+            --target-slot production
+
+      - name: Verify production
+        run: |
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.AZURE_APP_NAME }}.azurewebsites.net/health)
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Production health check failed with status $STATUS"
+            exit 1
+          fi
+          echo "Production deployment verified!"
+
+      - name: Create release
+        uses: actions/create-release@v1
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.build-and-test.outputs.version }}
+          release_name: Release ${{ needs.build-and-test.outputs.version }}
+          body: |
+            ## Release ${{ needs.build-and-test.outputs.version }}
+
+            Deployed to production on $(date -u +%Y-%m-%d)
+
+            ### Changes
+            - See commit history for details
+
+            ### Deployment Info
+            - Environment: production
+            - Image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ needs.build-and-test.outputs.version }}
+          draft: false
+          prerelease: false
+
+  # ===========================================================================
+  # Notify
+  # ===========================================================================
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always()
+
+    steps:
+      - name: Notify Teams on Success
+        if: needs.deploy-production.result == 'success'
+        run: |
+          curl -X POST ${{ secrets.TEAMS_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d '{
+              "@type": "MessageCard",
+              "themeColor": "0076D7",
+              "summary": "IPA Platform Deployed",
+              "sections": [{
+                "activityTitle": "Deployment Successful",
+                "facts": [
+                  {"name": "Version", "value": "${{ needs.build-and-test.outputs.version }}"},
+                  {"name": "Environment", "value": "Production"},
+                  {"name": "Status", "value": "✅ Success"}
+                ]
+              }]
+            }'
+
+      - name: Notify Teams on Failure
+        if: needs.deploy-production.result == 'failure'
+        run: |
+          curl -X POST ${{ secrets.TEAMS_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d '{
+              "@type": "MessageCard",
+              "themeColor": "FF0000",
+              "summary": "IPA Platform Deployment Failed",
+              "sections": [{
+                "activityTitle": "Deployment Failed",
+                "facts": [
+                  {"name": "Version", "value": "${{ needs.build-and-test.outputs.version }}"},
+                  {"name": "Environment", "value": "Production"},
+                  {"name": "Status", "value": "❌ Failed"}
+                ]
+              }]
+            }'

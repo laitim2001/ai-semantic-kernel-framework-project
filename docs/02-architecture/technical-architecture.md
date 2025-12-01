@@ -42,7 +42,7 @@
 
 IPA Platform 是一個基於 **事件驅動** 和 **微服務架構** 的智能流程自動化平台,專注於:
 
-- **靈活編排**: 通過 n8n 觸發和 Semantic Kernel Agent 執行複雜業務流程
+- **靈活編排**: 通過 n8n 觸發和 Agent Framework 執行複雜業務流程
 - **智能決策**: 利用 AI Agent 處理非結構化數據和複雜邏輯
 - **高可靠性**: 內置重試、DLQ、審計追蹤等企業級特性
 - **可觀測性**: 全鏈路監控、日誌追蹤、性能分析
@@ -183,7 +183,7 @@ IPA Platform 是一個基於 **事件驅動** 和 **微服務架構** 的智能�
 | 特性需求 | 架構實現 |
 |---------|------|
 | **n8n 觸發** | App Service 接收 n8n webhook → FastAPI 路由到 Execution Module |
-| **Agent 執行** | Semantic Kernel Agent Runtime + Tool Integration |
+| **Agent 執行** | Agent Framework Runtime + Tool Integration |
 | **重試機制** | Execution Module 內置指數退避重試 + Service Bus DLQ |
 | **審計追蹤** | PostgreSQL append-only audit log + Application Insights |
 | **實時監控** | Azure Monitor (基礎) + Prometheus (自定義) + Application Insights |
@@ -266,15 +266,15 @@ IPA Platform 是一個基於 **事件驅動** 和 **微服務架構** 的智能�
 
 **MVP 階段: Python + FastAPI（單體應用）**
 - **用途**: 統一後端服務（Workflow/Execution/Agent 模塊）
-- **選擇理由**: 
-  - Semantic Kernel Python SDK 支持完整
+- **選擇理由**:
+  - Agent Framework Python SDK 支持完整
   - FastAPI 高性能異步框架（與 Node.js 性能相當）
   - Python 生態豐富（數據處理、AI/ML）
   - 開發速度快，適合 MVP 快速迭代
   - 類型提示（Type Hints）提供類型安全
 - **框架**: 
   - FastAPI 0.100+（Web 框架）
-  - Semantic Kernel Python SDK（Agent 框架）
+  - Agent Framework SDK（Agent 框架）
   - SQLAlchemy 2.0+（ORM）
   - Pydantic 2.0+（數據驗證）
   - Celery（異步任務，可選）
@@ -284,7 +284,7 @@ IPA Platform 是一個基於 **事件驅動** 和 **微服務架構** 的智能�
 - **選項 A**: 保持 Python（適合團隊 Python 背景強）
 - **選項 B**: 拆分關鍵服務為 C# .NET（適合需要極致性能場景）
   - Execution Service 可用 .NET（更好的並發性能）
-  - Agent Service 保持 Python（Semantic Kernel 兩者都支持）
+  - Agent Service 保持 Python（Agent Framework 兩者都支持）
 
 #### API 設計
 
@@ -539,7 +539,7 @@ src/
 #### 容器化: Docker
 
 **MVP 階段 Docker Images**:
-- `ipa-backend`: Python 3.11 + FastAPI + Semantic Kernel
+- `ipa-backend`: Python 3.11 + FastAPI + Agent Framework
 - `ipa-frontend`: Nginx + React static files
 - `prometheus`: Prometheus Server (可選，用於自定義指標)
 
@@ -733,7 +733,7 @@ sequenceDiagram
     loop For Each Agent in Chain
         ES->>MQ: Publish agent.execute
         MQ->>AS: Consume agent.execute
-        AS->>AS: Execute Semantic Kernel
+        AS->>AS: Execute Agent Framework
         AS->>DB: Save Agent Execution
         AS->>MQ: Publish agent.completed
         MQ->>ES: Consume agent.completed

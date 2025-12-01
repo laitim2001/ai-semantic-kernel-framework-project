@@ -1,357 +1,268 @@
-"""
-Workflow Pydantic schemas for request/response validation
-"""
+# =============================================================================
+# IPA Platform - Workflow Schemas
+# =============================================================================
+# Sprint 1: Core Engine - Agent Framework Integration
+#
+# Pydantic schemas for Workflow API request/response validation.
+# =============================================================================
+
 from datetime import datetime
-from typing import Optional, List, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID
-from enum import Enum
 
-from pydantic import BaseModel, Field, validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator
 
-
-class TriggerType(str, Enum):
-    """Workflow trigger types"""
-    MANUAL = "manual"
-    SCHEDULED = "scheduled"
-    EVENT = "event"
-    WEBHOOK = "webhook"
+from src.domain.workflows.models import NodeType, TriggerType
 
 
-class WorkflowStatus(str, Enum):
-    """Workflow status"""
-    DRAFT = "draft"
-    ACTIVE = "active"
-    ARCHIVED = "archived"
+class WorkflowNodeSchema(BaseModel):
+    """Schema for workflow node."""
 
+    id: str = Field(..., min_length=1, max_length=100)
+    type: str = Field(..., pattern="^(start|end|agent|gateway)$")
+    name: Optional[str] = Field(None, max_length=255)
+    agent_id: Optional[UUID] = None
+    config: Dict[str, Any] = Field(default_factory=dict)
+    position: Optional[Dict[str, float]] = None
 
-class WorkflowBase(BaseModel):
-    """Base workflow schema with common fields"""
-    name: str = Field(..., min_length=2, max_length=255, description="Workflow name")
-    description: Optional[str] = Field(None, max_length=1000, description="Workflow description")
-    trigger_type: TriggerType = Field(..., description="How the workflow is triggered")
-    trigger_config: dict[str, Any] = Field(default_factory=dict, description="Trigger configuration (JSON)")
-    status: WorkflowStatus = Field(default=WorkflowStatus.DRAFT, description="Workflow status")
-    tags: List[str] = Field(default_factory=list, description="Workflow tags for categorization")
-
-    @validator('trigger_config')
-    def validate_trigger_config(cls, v, values):
-        """Validate trigger configuration based on trigger type"""
-        trigger_type = values.get('trigger_type')
-
-        if trigger_type == TriggerType.SCHEDULED:
-            if 'cron_expression' not in v:
-                raise ValueError("Scheduled workflows must have 'cron_expression' in trigger_config")
-
-        elif trigger_type == TriggerType.WEBHOOK:
-            if 'webhook_url' not in v and 'webhook_secret' not in v:
-                raise ValueError("Webhook workflows should have 'webhook_url' or 'webhook_secret' in trigger_config")
-
-        return v
-
-    @validator('tags')
-    def validate_tags(cls, v):
-        """Validate tags list"""
-        if len(v) > 10:
-            raise ValueError("Maximum 10 tags allowed")
-
-        for tag in v:
-            if len(tag) > 50:
-                raise ValueError("Tag length must not exceed 50 characters")
-
-        return v
-
-
-class WorkflowCreate(WorkflowBase):
-    """Schema for creating a new workflow"""
-    model_config = ConfigDict(
-        json_schema_extra={
+    class Config:
+        json_schema_extra = {
             "example": {
-                "name": "Customer Onboarding Workflow",
-                "description": "Automated customer onboarding process with email verification",
+                "id": "classifier",
+                "type": "agent",
+                "name": "Intent Classifier",
+                "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+            }
+        }
+
+
+class WorkflowEdgeSchema(BaseModel):
+    """Schema for workflow edge."""
+
+    source: str = Field(..., min_length=1, max_length=100)
+    target: str = Field(..., min_length=1, max_length=100)
+    condition: Optional[str] = None
+    label: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "source": "classifier",
+                "target": "support_agent",
+                "condition": "intent == 'support'",
+            }
+        }
+
+
+class WorkflowGraphSchema(BaseModel):
+    """Schema for workflow graph definition."""
+
+    nodes: List[WorkflowNodeSchema] = Field(default_factory=list)
+    edges: List[WorkflowEdgeSchema] = Field(default_factory=list)
+    variables: Dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkflowCreateRequest(BaseModel):
+    """
+    Request schema for creating a new workflow.
+
+    Attributes:
+        name: Workflow name
+        description: Optional description
+        trigger_type: How the workflow is triggered
+        trigger_config: Trigger-specific configuration
+        graph_definition: Node and edge definitions
+    """
+
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    trigger_type: str = Field(default="manual", pattern="^(manual|schedule|webhook|event)$")
+    trigger_config: Dict[str, Any] = Field(default_factory=dict)
+    graph_definition: WorkflowGraphSchema
+
+    @field_validator("graph_definition")
+    @classmethod
+    def validate_graph(cls, v: WorkflowGraphSchema) -> WorkflowGraphSchema:
+        """Validate graph has required structure."""
+        if not v.nodes:
+            raise ValueError("Workflow must have at least one node")
+
+        # Check for start node
+        has_start = any(n.type == "start" for n in v.nodes)
+        if not has_start:
+            raise ValueError("Workflow must have a START node")
+
+        # Check for end node
+        has_end = any(n.type == "end" for n in v.nodes)
+        if not has_end:
+            raise ValueError("Workflow must have an END node")
+
+        return v
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "customer-support-workflow",
+                "description": "Handles customer support inquiries",
                 "trigger_type": "webhook",
-                "trigger_config": {
-                    "webhook_secret": "secret_key_here"
+                "trigger_config": {"endpoint": "/webhooks/support"},
+                "graph_definition": {
+                    "nodes": [
+                        {"id": "start", "type": "start"},
+                        {
+                            "id": "classifier",
+                            "type": "agent",
+                            "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+                        },
+                        {"id": "end", "type": "end"},
+                    ],
+                    "edges": [
+                        {"source": "start", "target": "classifier"},
+                        {"source": "classifier", "target": "end"},
+                    ],
                 },
-                "status": "draft",
-                "tags": ["customer", "onboarding", "automation"]
             }
         }
-    )
 
 
-class WorkflowUpdate(BaseModel):
-    """Schema for updating an existing workflow (all fields optional)"""
-    name: Optional[str] = Field(None, min_length=2, max_length=255)
-    description: Optional[str] = Field(None, max_length=1000)
-    trigger_type: Optional[TriggerType] = None
-    trigger_config: Optional[dict[str, Any]] = None
-    status: Optional[WorkflowStatus] = None
-    tags: Optional[List[str]] = None
+class WorkflowUpdateRequest(BaseModel):
+    """
+    Request schema for updating a workflow.
 
-    @validator('trigger_config')
-    def validate_trigger_config(cls, v, values):
-        """Validate trigger configuration if provided"""
-        if v is not None:
-            trigger_type = values.get('trigger_type')
+    All fields are optional - only provided fields will be updated.
+    """
 
-            if trigger_type == TriggerType.SCHEDULED:
-                if 'cron_expression' not in v:
-                    raise ValueError("Scheduled workflows must have 'cron_expression' in trigger_config")
-
-            elif trigger_type == TriggerType.WEBHOOK:
-                if 'webhook_url' not in v and 'webhook_secret' not in v:
-                    raise ValueError("Webhook workflows should have 'webhook_url' or 'webhook_secret'")
-
-        return v
-
-    @validator('tags')
-    def validate_tags(cls, v):
-        """Validate tags if provided"""
-        if v is not None:
-            if len(v) > 10:
-                raise ValueError("Maximum 10 tags allowed")
-
-            for tag in v:
-                if len(tag) > 50:
-                    raise ValueError("Tag length must not exceed 50 characters")
-
-        return v
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "name": "Updated Workflow Name",
-                "status": "active",
-                "tags": ["updated", "production"]
-            }
-        }
-    )
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = None
+    trigger_type: Optional[str] = Field(None, pattern="^(manual|schedule|webhook|event)$")
+    trigger_config: Optional[Dict[str, Any]] = None
+    graph_definition: Optional[WorkflowGraphSchema] = None
+    status: Optional[str] = Field(None, pattern="^(draft|active|inactive|archived)$")
 
 
-class WorkflowResponse(WorkflowBase):
-    """Schema for workflow response"""
-    id: UUID = Field(..., description="Workflow unique identifier")
-    created_by: UUID = Field(..., description="User ID who created the workflow")
-    current_version_id: Optional[UUID] = Field(None, description="Current active version ID")
-    created_at: datetime = Field(..., description="Creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
+class WorkflowResponse(BaseModel):
+    """
+    Response schema for workflow data.
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        json_schema_extra={
-            "example": {
-                "id": "123e4567-e89b-12d3-a456-426614174000",
-                "name": "Customer Onboarding Workflow",
-                "description": "Automated customer onboarding process",
-                "trigger_type": "webhook",
-                "trigger_config": {"webhook_secret": "***"},
-                "status": "active",
-                "tags": ["customer", "onboarding"],
-                "created_by": "223e4567-e89b-12d3-a456-426614174001",
-                "current_version_id": "323e4567-e89b-12d3-a456-426614174002",
-                "created_at": "2025-11-21T12:00:00Z",
-                "updated_at": "2025-11-21T12:30:00Z"
-            }
-        }
-    )
+    Used for both single workflow and list responses.
+    """
+
+    id: UUID
+    name: str
+    description: Optional[str]
+    trigger_type: str
+    trigger_config: Dict[str, Any]
+    graph_definition: Dict[str, Any]
+    status: str
+    version: int
+    created_by: Optional[UUID]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class WorkflowListResponse(BaseModel):
-    """Schema for paginated workflow list response"""
-    items: List[WorkflowResponse] = Field(..., description="List of workflows")
-    total: int = Field(..., description="Total number of workflows")
-    page: int = Field(..., description="Current page number")
-    page_size: int = Field(..., description="Number of items per page")
-    total_pages: int = Field(..., description="Total number of pages")
+    """Response schema for paginated workflow list."""
 
-    model_config = ConfigDict(
-        json_schema_extra={
+    items: List[WorkflowResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class WorkflowExecuteRequest(BaseModel):
+    """
+    Request schema for executing a workflow.
+
+    Attributes:
+        input: Initial input data for the workflow
+        variables: Optional runtime variables
+    """
+
+    input: Dict[str, Any] = Field(default_factory=dict)
+    variables: Dict[str, Any] = Field(default_factory=dict)
+
+    class Config:
+        json_schema_extra = {
             "example": {
-                "items": [
+                "input": {"message": "I need help with my order", "user_id": "12345"},
+                "variables": {"priority": "high"},
+            }
+        }
+
+
+class NodeExecutionResult(BaseModel):
+    """Result of a single node execution."""
+
+    node_id: str
+    type: str
+    output: Optional[str] = None
+    error: Optional[str] = None
+    llm_calls: int = 0
+    llm_tokens: int = 0
+    llm_cost: float = 0.0
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+
+
+class WorkflowExecutionResponse(BaseModel):
+    """
+    Response schema for workflow execution.
+
+    Attributes:
+        execution_id: Unique execution identifier
+        workflow_id: Workflow that was executed
+        status: Execution status
+        result: Final execution result
+        node_results: Results from each node
+        stats: Aggregate execution statistics
+    """
+
+    execution_id: UUID
+    workflow_id: UUID
+    status: str
+    result: Optional[str] = None
+    node_results: List[NodeExecutionResult] = Field(default_factory=list)
+    stats: Dict[str, Any] = Field(default_factory=dict)
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "execution_id": "550e8400-e29b-41d4-a716-446655440001",
+                "workflow_id": "550e8400-e29b-41d4-a716-446655440000",
+                "status": "completed",
+                "result": "Your order #12345 has been shipped...",
+                "node_results": [
                     {
-                        "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "name": "Workflow 1",
-                        "description": "Description 1",
-                        "trigger_type": "manual",
-                        "trigger_config": {},
-                        "status": "active",
-                        "tags": ["tag1"],
-                        "created_by": "223e4567-e89b-12d3-a456-426614174001",
-                        "current_version_id": None,
-                        "created_at": "2025-11-21T12:00:00Z",
-                        "updated_at": "2025-11-21T12:00:00Z"
+                        "node_id": "classifier",
+                        "type": "agent",
+                        "output": "Intent: order_status",
+                        "llm_calls": 1,
+                        "llm_tokens": 150,
+                        "llm_cost": 0.001,
+                        "started_at": "2024-01-15T10:30:00Z",
+                        "completed_at": "2024-01-15T10:30:02Z",
                     }
                 ],
-                "total": 50,
-                "page": 1,
-                "page_size": 20,
-                "total_pages": 3
-            }
-        }
-    )
-
-
-class WorkflowFilterParams(BaseModel):
-    """Query parameters for filtering workflows"""
-    status: Optional[WorkflowStatus] = Field(None, description="Filter by status")
-    trigger_type: Optional[TriggerType] = Field(None, description="Filter by trigger type")
-    tags: Optional[str] = Field(None, description="Filter by tags (comma-separated)")
-    search: Optional[str] = Field(None, description="Search in name and description")
-    created_by: Optional[UUID] = Field(None, description="Filter by creator")
-
-    # Pagination
-    page: int = Field(default=1, ge=1, description="Page number")
-    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
-
-    # Sorting
-    sort_by: str = Field(default="created_at", description="Field to sort by")
-    sort_order: str = Field(default="desc", pattern="^(asc|desc)$", description="Sort order (asc/desc)")
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "status": "active",
-                "trigger_type": "webhook",
-                "tags": "customer,onboarding",
-                "search": "onboarding",
-                "page": 1,
-                "page_size": 20,
-                "sort_by": "created_at",
-                "sort_order": "desc"
-            }
-        }
-    )
-
-
-# ========================================
-# Workflow Version Management Schemas
-# ========================================
-
-class VersionResponse(BaseModel):
-    """Schema for workflow version response"""
-    id: UUID = Field(..., description="Version unique identifier")
-    workflow_id: UUID = Field(..., description="Workflow ID this version belongs to")
-    version_number: int = Field(..., description="Sequential version number (1, 2, 3...)")
-    definition: dict[str, Any] = Field(..., description="Complete workflow definition at this version")
-    change_summary: Optional[str] = Field(None, description="Summary of changes in this version")
-    created_by: UUID = Field(..., description="User ID who created this version")
-    created_at: datetime = Field(..., description="Version creation timestamp")
-
-    model_config = ConfigDict(
-        from_attributes=True,
-        json_schema_extra={
-            "example": {
-                "id": "523e4567-e89b-12d3-a456-426614174003",
-                "workflow_id": "123e4567-e89b-12d3-a456-426614174000",
-                "version_number": 3,
-                "definition": {
-                    "name": "Customer Onboarding Workflow",
-                    "description": "Automated process",
-                    "trigger_type": "webhook",
-                    "trigger_config": {"webhook_secret": "***"},
-                    "status": "active",
-                    "tags": ["customer", "onboarding"]
+                "stats": {
+                    "total_llm_calls": 2,
+                    "total_llm_tokens": 450,
+                    "total_llm_cost": 0.003,
+                    "duration_seconds": 5.2,
                 },
-                "change_summary": "Updated trigger configuration",
-                "created_by": "223e4567-e89b-12d3-a456-426614174001",
-                "created_at": "2025-11-21T14:30:00Z"
+                "started_at": "2024-01-15T10:30:00Z",
+                "completed_at": "2024-01-15T10:30:05Z",
             }
         }
-    )
 
 
-class VersionListResponse(BaseModel):
-    """Schema for workflow version list response"""
-    items: List[VersionResponse] = Field(..., description="List of versions (newest first)")
-    total: int = Field(..., description="Total number of versions")
-    current_version_id: Optional[UUID] = Field(None, description="Current active version ID")
+class WorkflowValidationResponse(BaseModel):
+    """Response schema for workflow validation."""
 
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "items": [
-                    {
-                        "id": "523e4567-e89b-12d3-a456-426614174003",
-                        "workflow_id": "123e4567-e89b-12d3-a456-426614174000",
-                        "version_number": 3,
-                        "definition": {"name": "Workflow v3"},
-                        "change_summary": "Latest changes",
-                        "created_by": "223e4567-e89b-12d3-a456-426614174001",
-                        "created_at": "2025-11-21T14:30:00Z"
-                    }
-                ],
-                "total": 3,
-                "current_version_id": "523e4567-e89b-12d3-a456-426614174003"
-            }
-        }
-    )
-
-
-class VersionCreateRequest(BaseModel):
-    """Schema for manually creating a version snapshot"""
-    change_summary: str = Field(..., min_length=1, max_length=500, description="Description of changes")
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "change_summary": "Manual snapshot before major refactoring"
-            }
-        }
-    )
-
-
-class RollbackRequest(BaseModel):
-    """Schema for rolling back to a specific version"""
-    version_number: int = Field(..., gt=0, description="Version number to rollback to")
-    change_summary: Optional[str] = Field(None, max_length=500, description="Reason for rollback")
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "version_number": 2,
-                "change_summary": "Rollback due to bug in version 4"
-            }
-        }
-    )
-
-
-class VersionCompareResponse(BaseModel):
-    """Schema for comparing two workflow versions"""
-    version1: VersionResponse = Field(..., description="First version details")
-    version2: VersionResponse = Field(..., description="Second version details")
-    differences: dict[str, Any] = Field(..., description="Differences between versions")
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "version1": {
-                    "id": "423e4567-e89b-12d3-a456-426614174002",
-                    "workflow_id": "123e4567-e89b-12d3-a456-426614174000",
-                    "version_number": 2,
-                    "definition": {"trigger_type": "manual"},
-                    "change_summary": "Initial version",
-                    "created_by": "223e4567-e89b-12d3-a456-426614174001",
-                    "created_at": "2025-11-21T12:00:00Z"
-                },
-                "version2": {
-                    "id": "523e4567-e89b-12d3-a456-426614174003",
-                    "workflow_id": "123e4567-e89b-12d3-a456-426614174000",
-                    "version_number": 4,
-                    "definition": {"trigger_type": "webhook"},
-                    "change_summary": "Changed to webhook trigger",
-                    "created_by": "223e4567-e89b-12d3-a456-426614174001",
-                    "created_at": "2025-11-21T14:00:00Z"
-                },
-                "differences": {
-                    "modified": {
-                        "trigger_type": {
-                            "old": "manual",
-                            "new": "webhook"
-                        }
-                    },
-                    "added": {},
-                    "removed": {}
-                }
-            }
-        }
-    )
+    valid: bool
+    errors: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)

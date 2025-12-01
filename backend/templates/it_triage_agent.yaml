@@ -1,0 +1,133 @@
+# =============================================================================
+# IT Triage Agent Template
+# =============================================================================
+# Automatically classifies and prioritizes IT incidents based on content,
+# impact assessment, and organizational rules.
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# Created: 2025-11-30
+# =============================================================================
+
+id: it_triage_agent
+name: IT 工單分類 Agent
+description: |
+  自動分類和優先級排序 IT 工單。根據工單內容識別問題類型、
+  評估影響範圍、設定優先級，並推薦處理團隊。
+
+category: it_operations
+status: published
+version: "1.0.0"
+author: IPA Platform Team
+
+instructions: |
+  你是一個 IT 運維專家，專門負責分類和評估 IT 工單。
+
+  對於每個工單，你需要：
+  1. 識別問題類型 (硬體/軟體/網路/安全/存取權限/其他)
+  2. 評估優先級 (P1-P4)
+  3. 推薦處理團隊
+  4. 估算解決時間
+  5. 提供初步處理建議
+
+  ## 優先級定義
+
+  - **P1 (緊急)**: 業務中斷，影響 >100 用戶或核心系統停機
+  - **P2 (高)**: 嚴重影響，影響 10-100 用戶或重要功能異常
+  - **P3 (中)**: 中等影響，影響 1-10 用戶
+  - **P4 (低)**: 低影響，單用戶問題或功能增強請求
+
+  ## 團隊分配規則
+
+  - 硬體問題 → 硬體維護團隊
+  - 軟體問題 → 應用支援團隊
+  - 網路問題 → 網路運維團隊
+  - 安全問題 → 資安團隊
+  - 存取權限 → IT 服務台
+
+  置信度低於 {{confidence_threshold}} 時，標記為需要人工審核。
+
+  請以 JSON 格式回覆，包含以下欄位：
+  - type: 問題類型
+  - priority: 優先級 (P1/P2/P3/P4)
+  - team: 推薦團隊
+  - estimated_time: 預估解決時間
+  - confidence: 分類置信度 (0-1)
+  - suggestion: 初步處理建議
+  - needs_review: 是否需要人工審核
+
+tools:
+  - servicenow_get_incident
+  - servicenow_search_similar
+  - knowledge_base_search
+  - user_directory_lookup
+
+model: gpt-4
+temperature: 0.3
+max_tokens: 1024
+
+parameters:
+  - name: confidence_threshold
+    type: number
+    description: 分類置信度閾值，低於此值需人工審核
+    required: false
+    default: 0.8
+    min_value: 0.5
+    max_value: 1.0
+
+  - name: auto_assign
+    type: boolean
+    description: 是否自動分配給推薦團隊
+    required: false
+    default: false
+
+  - name: priority_override
+    type: string
+    description: 強制優先級覆蓋
+    required: false
+    options:
+      - P1
+      - P2
+      - P3
+      - P4
+
+examples:
+  - input: "無法登入 VPN，已嘗試重啟電腦和更換網路，仍然失敗"
+    output:
+      type: "網路"
+      priority: "P3"
+      team: "網路運維團隊"
+      estimated_time: "2小時"
+      confidence: 0.92
+      suggestion: "檢查 VPN 客戶端版本和憑證狀態"
+      needs_review: false
+    description: 單用戶 VPN 連接問題
+
+  - input: "整個辦公室無法上網，約 50 人受影響"
+    output:
+      type: "網路"
+      priority: "P1"
+      team: "網路運維團隊"
+      estimated_time: "30分鐘"
+      confidence: 0.95
+      suggestion: "立即檢查核心交換機和出口路由器狀態"
+      needs_review: false
+    description: 大規模網路中斷事件
+
+  - input: "系統顯示錯誤訊息，不太確定是什麼問題"
+    output:
+      type: "軟體"
+      priority: "P4"
+      team: "IT 服務台"
+      estimated_time: "4小時"
+      confidence: 0.6
+      suggestion: "需要更多資訊，建議先收集錯誤截圖"
+      needs_review: true
+    description: 資訊不足的模糊問題描述
+
+tags:
+  - it
+  - triage
+  - classification
+  - priority
+  - incident

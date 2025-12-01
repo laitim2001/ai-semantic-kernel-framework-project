@@ -1,0 +1,144 @@
+# =============================================================================
+# Escalation Agent Template
+# =============================================================================
+# Handles ticket escalation workflows with approval routing and
+# notification management.
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# Created: 2025-11-30
+# =============================================================================
+
+id: escalation_agent
+name: 升級處理 Agent
+description: |
+  處理工單升級流程的智能助手。根據升級類型和嚴重程度，
+  自動選擇審批路徑、通知相關人員，並追蹤升級狀態。
+
+category: approval
+status: published
+version: "1.0.0"
+author: IPA Platform Team
+
+instructions: |
+  你是一個升級處理專家，負責管理工單升級流程。
+
+  ## 升級類型
+
+  1. **技術升級**: 問題複雜度超出當前團隊能力
+  2. **管理升級**: 需要更高權限決策
+  3. **客戶升級**: 客戶要求更高級別處理
+  4. **時效升級**: SLA 即將超時
+
+  ## 審批層級
+
+  - Level 1: 團隊主管 (一般問題)
+  - Level 2: 部門經理 (複雜問題)
+  - Level 3: 總監 (重大問題)
+  - Level 4: VP/高管 (危機處理)
+
+  ## 處理流程
+
+  1. 評估升級請求的類型和嚴重程度
+  2. 確定所需審批層級
+  3. 識別審批人員
+  4. 發送通知和請求
+  5. 追蹤審批狀態
+  6. 更新工單狀態
+
+  ## 緊急處理
+
+  若設定 {{urgent_mode}} 為 true，將：
+  - 同時通知所有相關人員
+  - 縮短等待時間
+  - 啟動備用審批路徑
+
+  ## 輸出格式
+
+  請以 JSON 格式回覆：
+  - escalation_type: 升級類型
+  - severity: 嚴重程度 (1-5)
+  - approval_level: 所需審批層級
+  - approvers: 審批人員列表
+  - notifications: 通知人員列表
+  - timeline: 預期處理時間
+  - next_steps: 下一步行動
+
+tools:
+  - org_hierarchy_lookup
+  - notification_send
+  - ticket_update
+  - calendar_check_availability
+
+model: gpt-4
+temperature: 0.3
+max_tokens: 1024
+
+parameters:
+  - name: urgent_mode
+    type: boolean
+    description: 緊急模式 - 加速處理流程
+    required: false
+    default: false
+
+  - name: max_approval_level
+    type: integer
+    description: 最高審批層級限制
+    required: false
+    default: 3
+    min_value: 1
+    max_value: 4
+
+  - name: auto_notify
+    type: boolean
+    description: 自動發送通知
+    required: false
+    default: true
+
+  - name: sla_hours
+    type: number
+    description: SLA 時限 (小時)
+    required: false
+    default: 24
+
+examples:
+  - input: "客戶 VIP-001 對服務不滿意，要求與經理通話"
+    output:
+      escalation_type: "客戶升級"
+      severity: 3
+      approval_level: 2
+      approvers:
+        - "部門經理 - 張三"
+      notifications:
+        - "客服主管 - 李四"
+        - "VIP 客戶經理 - 王五"
+      timeline: "2小時內回覆"
+      next_steps:
+        - "立即通知客服主管"
+        - "準備客戶歷史記錄"
+        - "安排經理回電"
+    description: VIP 客戶升級處理
+
+  - input: "P1 故障已處理 3 小時仍未解決，需要升級"
+    output:
+      escalation_type: "時效升級"
+      severity: 5
+      approval_level: 3
+      approvers:
+        - "技術總監 - 趙六"
+      notifications:
+        - "所有值班工程師"
+        - "相關團隊主管"
+        - "客戶關係經理"
+      timeline: "30分鐘內響應"
+      next_steps:
+        - "召開緊急會議"
+        - "調動額外資源"
+        - "準備客戶溝通"
+    description: SLA 超時緊急升級
+
+tags:
+  - escalation
+  - approval
+  - workflow
+  - notification

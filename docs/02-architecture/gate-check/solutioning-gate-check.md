@@ -84,7 +84,7 @@
 
 | 需求 ID | 功能特性 | PRD 引用 | 架構實現 | 覆蓋率 | 備註 |
 |---------|---------|---------|---------|--------|------|
-| **F1** | Semantic Kernel Agent 執行 | Appendix A | Agent Service (Part 2) | ✅ 100% | 核心功能,詳細設計完整 |
+| **F1** | Agent Framework Agent 執行 | Appendix A | Agent Service (Part 2) | ✅ 100% | 核心功能,詳細設計完整 |
 | **F2** | Agent 工作流配置與管理 | Appendix A | Workflow Service (Part 2) | ✅ 100% | REST + GraphQL API |
 | **F3** | YAML Prompt 模板管理 | Appendix B (F9) | Prompt Template Engine (Part 2) | ✅ 100% | 版本控制、A/B測試 |
 
@@ -99,7 +99,7 @@
 
 | 需求 ID | 功能特性 | PRD 引用 | 架構實現 | 覆蓋率 | 備註 |
 |---------|---------|---------|---------|--------|------|
-| **F6** | LLM 服務集成 | Appendix A | Semantic Kernel SDK | ✅ 100% | 支援多模型(OpenAI, Azure) |
+| **F6** | LLM 服務集成 | Appendix A | Agent Framework SDK | ✅ 100% | 支援多模型(OpenAI, Azure) |
 | **F7** | 外部 API 集成 | Appendix A | Tool Registry + HTTP Tool (Part 2) | ✅ 100% | 可擴展的 Tool 抽象 |
 
 #### Reliability Layer (F8-F9)
@@ -190,7 +190,7 @@
 | API Gateway | ✅ 完整 | Kong | ✅ 合格 |
 | Workflow Service | ✅ 完整 | Node.js + Express | ✅ 合格 |
 | Execution Service | ✅ 完整 | .NET 8 + ASP.NET Core | ✅ 合格 |
-| Agent Service | ✅ 完整 | .NET 8 + Semantic Kernel | ✅ 合格 |
+| Agent Service | ✅ 完整 | .NET 8 + Agent Framework | ✅ 合格 |
 | Notification Service | ✅ 完整 | Node.js | ✅ 合格 |
 
 #### Domain Layer (領域層)
@@ -242,7 +242,7 @@
 **決策**: 使用 C# + .NET 8 實現 Agent Service
 
 **理由**:
-- ✅ Semantic Kernel 原生支持,API 穩定
+- ✅ Agent Framework 原生支持,API 穩定
 - ✅ 強類型系統適合複雜業務邏輯
 - ✅ 異步編程模型成熟 (async/await)
 - ✅ 性能優秀,低延遲
@@ -288,7 +288,7 @@
 | **Node.js** | 20 LTS | ⭐⭐⭐⭐⭐ | 優秀 | 豐富 | 🟢 Low |
 | **TypeScript** | 5.x | ⭐⭐⭐⭐⭐ | 優秀 | 豐富 | 🟢 Low |
 | **.NET 8** | LTS | ⭐⭐⭐⭐⭐ | 優秀 | 中等 | 🟡 Medium |
-| **Semantic Kernel** | Latest | ⭐⭐⭐⭐ | 良好 | 有限 | 🟡 Medium |
+| **Agent Framework** | Latest | ⭐⭐⭐⭐ | 良好 | 有限 | 🟡 Medium |
 | **PostgreSQL** | 15 | ⭐⭐⭐⭐⭐ | 優秀 | 豐富 | 🟢 Low |
 | **Redis** | 7 | ⭐⭐⭐⭐⭐ | 優秀 | 豐富 | 🟢 Low |
 | **RabbitMQ** | 3.12 | ⭐⭐⭐⭐⭐ | 優秀 | 中等 | 🟢 Low |
@@ -297,12 +297,12 @@
 
 ### 4.2 關鍵技術驗證
 
-#### 4.2.1 Semantic Kernel Agent 執行
+#### 4.2.1 Agent Framework Agent 執行
 
-**驗證項目**: Semantic Kernel 能否滿足多 Agent 編排需求?
+**驗證項目**: Agent Framework 能否滿足多 Agent 編排需求?
 
-**驗證方法**: 
-- ✅ 已確認 Semantic Kernel 支持 Agent Plugins
+**驗證方法**:
+- ✅ 已確認 Agent Framework 支持 Agent Plugins
 - ✅ 已確認支持 Function Calling
 - ✅ 已確認支持自定義 Tool 集成
 
@@ -383,7 +383,7 @@ channel.publish('retry-exchange', '', buffer, {
 
 | 風險 ID | 風險描述 | 等級 | 影響 | 概率 | 緩解措施 | 負責人 |
 |---------|---------|------|------|------|---------|--------|
-| **TR-001** | Semantic Kernel API 變更 | 🟡 Medium | High | Low | 鎖定版本,關注 Release Notes | Tech Lead |
+| **TR-001** | Agent Framework API 變更 | 🟡 Medium | High | Low | 鎖定版本,關注 Release Notes | Tech Lead |
 | **TR-002** | .NET 技能差距 | 🟡 Medium | Medium | Medium | 提供培訓,配對編程 | Engineering Manager |
 | **TR-003** | LLM Token 成本超預算 | 🟡 Medium | High | Medium | 實現成本監控,設置閾值告警 | Product Manager |
 | **TR-004** | 性能不達標 | 🟢 Low | High | Low | 充分的緩存策略 + 負載測試 | Tech Lead |
@@ -578,7 +578,7 @@ Low │ TR-004,TR-005│ AR-002,PR-003│ AR-003,AR-004│
 
 **條件**:
 1. 在 Sprint 0 (2 週) 內完成開發環境搭建
-2. 組織 .NET + Semantic Kernel 技術培訓
+2. 組織 .NET + Agent Framework 技術培訓
 3. 配置 Token 成本監控系統
 4. 實施完整的安全加密機制
 

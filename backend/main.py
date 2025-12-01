@@ -1,143 +1,222 @@
-"""
-IPA Platform - FastAPI Backend Application
-"""
-import os
+# =============================================================================
+# IPA Platform - Main Application
+# =============================================================================
+# Intelligent Process Automation Platform
+#
+# Built on Microsoft Agent Framework for multi-agent orchestration
+# with human-in-the-loop capabilities.
+#
+# Sprint 1: Core Engine - Agent Framework Integration
+# =============================================================================
+
 import logging
+from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import AsyncGenerator
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.core.config import get_settings
+
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 # Version
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
-# Create FastAPI app
-app = FastAPI(
-    title="IPA Platform API",
-    description="Intelligent Process Automation Platform powered by Semantic Kernel",
-    version=__version__,
-    docs_url="/docs",
-    redoc_url="/redoc",
-)
 
-# Sprint 3: Security Middleware (S3-2)
-try:
-    from src.core.security import setup_security_middleware
-    setup_security_middleware(app)
-    logger.info("Security middleware configured successfully")
-except ImportError as e:
-    logger.warning(f"Security middleware not available: {e}")
-    # Fallback to basic CORS if security module not available
-    from fastapi.middleware.cors import CORSMiddleware
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """
+    Application lifespan handler for startup/shutdown events.
+
+    Initializes and cleans up:
+        - Database connection pool
+        - Agent Framework service
+        - Redis cache (future)
+    """
+    settings = get_settings()
+
+    # Startup
+    logger.info(f"IPA Platform v{__version__} starting...")
+    logger.info(f"Environment: {settings.app_env}")
+
+    # Initialize database
+    try:
+        from src.infrastructure.database.session import init_db
+        await init_db()
+        logger.info("Database connection initialized")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        # Continue without database in development
+        if settings.app_env == "production":
+            raise
+
+    # Initialize Agent Service
+    try:
+        from src.domain.agents.service import init_agent_service
+        await init_agent_service()
+        logger.info("Agent service initialized")
+    except Exception as e:
+        logger.warning(f"Agent service initialization warning: {e}")
+        # Continue without agent service - will use mock mode
+
+    yield
+
+    # Shutdown
+    logger.info("IPA Platform shutting down...")
+
+    # Close database connections
+    try:
+        from src.infrastructure.database.session import close_db
+        await close_db()
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.error(f"Error closing database: {e}")
+
+    # Shutdown Agent Service
+    try:
+        from src.domain.agents.service import get_agent_service
+        service = get_agent_service()
+        await service.shutdown()
+        logger.info("Agent service shutdown complete")
+    except Exception as e:
+        logger.error(f"Error shutting down agent service: {e}")
+
+
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application."""
+    settings = get_settings()
+
+    app = FastAPI(
+        title="IPA Platform API",
+        description="""
+        Intelligent Process Automation Platform
+
+        Built on Microsoft Agent Framework for enterprise AI agent orchestration.
+
+        ## Features (MVP)
+        - F1: Multi-Agent Orchestration
+        - F2: Human-in-the-loop Checkpoints
+        - F3: Cross-system Integration
+        - F4: Cross-scenario Collaboration
+        - F5: Few-shot Learning
+        - F6: Agent Templates
+        - F7: DevUI Debugging
+        - F8: n8n Trigger Integration
+        - F9: Prompt Template Management
+        - F10: Audit Trail
+        - F11: Teams Notifications
+        - F12: Monitoring Dashboard
+        - F13: Web UI
+        - F14: Redis Caching
+
+        ## API Endpoints
+        - `/api/v1/agents` - Agent management and execution
+        - `/api/v1/workflows` - Workflow definitions (coming soon)
+        - `/api/v1/executions` - Execution tracking (coming soon)
+        """,
+        version=__version__,
+        lifespan=lifespan,
+        docs_url="/docs" if settings.enable_api_docs else None,
+        redoc_url="/redoc" if settings.enable_api_docs else None,
+        openapi_url="/openapi.json" if settings.enable_api_docs else None,
+    )
+
+    # CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://localhost:8000"],
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
+    # Register routes
+    register_routes(app)
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "service": "IPA Platform API",
-        "version": __version__,
-        "status": "running",
-    }
+    return app
 
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "version": __version__,
-    }
+def register_routes(app: FastAPI) -> None:
+    """Register all API routes."""
 
+    @app.get("/", tags=["Health"])
+    async def root():
+        """Root endpoint - API information."""
+        return {
+            "service": "IPA Platform API",
+            "version": __version__,
+            "status": "running",
+            "framework": "Microsoft Agent Framework",
+            "docs": "/docs",
+        }
 
-# Sprint 2: Audit API Routes
-from src.api.v1.audit import router as audit_router
+    @app.get("/health", tags=["Health"])
+    async def health_check():
+        """Health check endpoint for container orchestration."""
+        # Check database connectivity
+        db_status = "ok"
+        try:
+            from sqlalchemy import text
+            from src.infrastructure.database.session import get_engine
+            engine = get_engine()
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+        except Exception as e:
+            logger.warning(f"Database health check failed: {e}")
+            db_status = "degraded"
 
-app.include_router(audit_router, prefix="/api/v1", tags=["audit"])
-
-# Sprint 2: Webhook API Routes
-from src.api.v1.webhooks import router as webhooks_router
-
-app.include_router(webhooks_router, prefix="/api/v1", tags=["webhooks"])
-
-# Sprint 2: Notifications API Routes (S2-3)
-from src.api.v1.notifications import router as notifications_router
-
-app.include_router(notifications_router, prefix="/api/v1", tags=["notifications"])
-
-# Sprint 2: Checkpoints API Routes (S2-4)
-from src.api.v1.checkpoints import router as checkpoints_router
-
-app.include_router(checkpoints_router, prefix="/api/v1", tags=["checkpoints"])
-
-# Sprint 2: Monitoring API Routes (S2-5)
-from src.api.v1.monitoring import router as monitoring_router
-
-app.include_router(monitoring_router, prefix="/api/v1", tags=["monitoring"])
-
-# Sprint 2: Alerts API Routes (S2-6)
-from src.api.v1.alerts import router as alerts_router
-
-app.include_router(alerts_router, prefix="/api/v1", tags=["alerts"])
-
-# Sprint 2: Admin Dashboard API Routes (S2-8)
-from src.api.v1.admin import router as admin_router
-
-app.include_router(admin_router, prefix="/api/v1", tags=["admin"])
-
-# Sprint 3: RBAC API Routes (S3-1)
-from src.api.v1.rbac import router as rbac_router
-
-app.include_router(rbac_router, prefix="/api/v1", tags=["rbac"])
-
-# Sprint 3: Security API Routes (S3-2)
-from src.api.v1.security import router as security_router
-
-app.include_router(security_router, prefix="/api/v1", tags=["security"])
-
-# Initialize OpenTelemetry (if enabled)
-try:
-    if os.getenv("OTEL_ENABLED", "true").lower() == "true":
-        from src.core.telemetry import setup_telemetry
-        setup_telemetry(
-            app=app,
-            service_name="ipa-platform",
-            service_version=__version__,
-            enable_console=os.getenv("ENVIRONMENT", "development") == "development",
+        return JSONResponse(
+            content={
+                "status": "healthy" if db_status == "ok" else "degraded",
+                "version": __version__,
+                "timestamp": datetime.utcnow().isoformat(),
+                "checks": {
+                    "api": "ok",
+                    "database": db_status,
+                },
+            },
+            status_code=200,
         )
-        logger.info("OpenTelemetry instrumentation enabled")
-except ImportError as e:
-    logger.warning(f"OpenTelemetry not available: {e}")
-except Exception as e:
-    logger.error(f"Failed to initialize OpenTelemetry: {e}")
 
-# TODO: 添加其他路由
-# from src.workflow.router import router as workflow_router
-# from src.execution.router import router as execution_router
-# from src.agent.router import router as agent_router
-#
-# app.include_router(workflow_router, prefix="/api/v1/workflows", tags=["workflows"])
-# app.include_router(execution_router, prefix="/api/v1/executions", tags=["executions"])
-# app.include_router(agent_router, prefix="/api/v1/agents", tags=["agents"])
+    @app.get("/ready", tags=["Health"])
+    async def readiness_check():
+        """Readiness check endpoint for Kubernetes/Azure App Service."""
+        return JSONResponse(
+            content={
+                "ready": True,
+                "version": __version__,
+            },
+            status_code=200,
+        )
+
+    # ==========================================================================
+    # API v1 Routes
+    # ==========================================================================
+
+    # Include API v1 router
+    from src.api.v1 import api_router
+    app.include_router(api_router)
+
+
+# Create application instance
+app = create_app()
 
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,
-        log_level="debug",
+        log_level="info",
     )

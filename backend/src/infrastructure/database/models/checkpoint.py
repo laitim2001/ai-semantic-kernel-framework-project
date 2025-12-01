@@ -1,136 +1,148 @@
-"""
-Checkpoint Model for Human-in-the-Loop Approval Flow
+# =============================================================================
+# IPA Platform - Checkpoint Model
+# =============================================================================
+# Sprint 1: Core Engine - Agent Framework Integration
+#
+# Checkpoint model for human-in-the-loop workflow pausing.
+# Allows workflows to pause and wait for human approval or input.
+# =============================================================================
 
-Sprint 2 - Story S2-4: Teams Approval Flow
-
-Checkpoints represent pause points in workflow execution where
-human approval is required before proceeding.
-"""
-from __future__ import annotations
-
-import enum
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, Optional
 from uuid import uuid4
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    Enum,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-)
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import BaseModel
+from src.infrastructure.database.models.base import Base, TimestampMixin
 
-
-class CheckpointStatus(str, enum.Enum):
-    """Checkpoint status enumeration."""
-    PENDING = "PENDING"              # Waiting for approval
-    APPROVED = "APPROVED"            # Approved by user
-    REJECTED = "REJECTED"            # Rejected by user
-    EXPIRED = "EXPIRED"              # Approval window expired
-    AUTO_APPROVED = "AUTO_APPROVED"  # Auto-approved by system
+if TYPE_CHECKING:
+    from src.infrastructure.database.models.execution import Execution
 
 
-class Checkpoint(BaseModel):
+class Checkpoint(Base, TimestampMixin):
     """
-    Checkpoint model for human-in-the-loop approval.
+    Human-in-the-loop checkpoint model.
+
+    Checkpoints allow workflows to pause execution and wait for
+    human approval, review, or additional input before continuing.
 
     Attributes:
-        execution_id: Reference to the execution
-        step_index: The step number where checkpoint occurs
-        step_name: Name of the step
-        status: Current checkpoint status
-        proposed_action: Description of what will happen if approved
-        context: Additional context data for the approval decision
-        approved_by: User ID who approved/rejected
-        approved_at: Timestamp of approval/rejection
-        feedback: Reviewer's feedback or rejection reason
-        expires_at: When the approval request expires
-        notification_sent: Whether Teams notification was sent
-        notification_id: Reference to the notification ID
+        id: UUID primary key
+        execution_id: Reference to the parent execution
+        node_id: ID of the workflow node that created this checkpoint
+        status: Checkpoint status (pending, approved, rejected, expired)
+        payload: Data to be reviewed by human
+        response: Human response/decision
+        responded_by: User who responded
+        responded_at: When response was received
+        expires_at: When checkpoint expires if not responded
+
+    Example:
+        checkpoint = Checkpoint(
+            execution_id=execution.id,
+            node_id="approval-gate",
+            payload={"amount": 10000, "reason": "Large purchase"},
+        )
     """
+
     __tablename__ = "checkpoints"
 
-    # Foreign Keys - Note: FK constraints exist in DB, but we don't define ForeignKey()
-    # to avoid metadata issues with tables not in the same Base
-    execution_id = Column(
+    # Primary key
+    id: Mapped[uuid4] = mapped_column(
         UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+
+    # Execution reference
+    execution_id: Mapped[uuid4] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("executions.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
 
-    # Step Information
-    step_index = Column(Integer, nullable=False)
-    step_name = Column(String(255), nullable=True)
+    # Node reference
+    node_id: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
 
     # Status
-    status = Column(
-        Enum(CheckpointStatus, name="checkpointstatus", create_type=False),
-        default=CheckpointStatus.PENDING,
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
+        default="pending",
         index=True,
     )
 
-    # Approval Details
-    proposed_action = Column(Text, nullable=True)
-    context = Column(JSONB, nullable=True)
+    # Payload for review
+    payload: Mapped[Dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+    )
 
-    # Approval Response - Note: FK constraint exists in DB, but we don't define relationship
-    # to avoid circular import issues
-    approved_by = Column(UUID(as_uuid=True), nullable=True)
-    approved_at = Column(DateTime(timezone=True), nullable=True)
-    feedback = Column(Text, nullable=True)
+    # Human response
+    response: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+
+    responded_by: Mapped[Optional[uuid4]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    responded_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     # Expiration
-    expires_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
-    # Notification Tracking
-    notification_sent = Column(Boolean, default=False, nullable=False)
-    notification_id = Column(String(100), nullable=True)
+    # Notes/comments
+    notes: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    # Relationships
+    execution: Mapped["Execution"] = relationship(
+        "Execution",
+        back_populates="checkpoints",
+    )
 
     def __repr__(self) -> str:
         return f"<Checkpoint(id={self.id}, execution_id={self.execution_id}, status={self.status})>"
 
-    def is_pending(self) -> bool:
-        """Check if checkpoint is still pending approval."""
-        return self.status == CheckpointStatus.PENDING
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert checkpoint to dictionary for serialization."""
+        return {
+            "id": str(self.id),
+            "execution_id": str(self.execution_id),
+            "node_id": self.node_id,
+            "status": self.status,
+            "payload": self.payload,
+            "response": self.response,
+            "responded_by": str(self.responded_by) if self.responded_by else None,
+            "responded_at": self.responded_at.isoformat() if self.responded_at else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
+    @property
     def is_expired(self) -> bool:
         """Check if checkpoint has expired."""
-        if self.expires_at is None:
-            return False
-        now = datetime.now(timezone.utc)
-        # Handle both timezone-aware and naive datetimes from database
-        expires = self.expires_at
-        if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
-        return now > expires
-
-    def can_be_approved(self) -> bool:
-        """Check if checkpoint can be approved."""
-        return self.is_pending() and not self.is_expired()
-
-    def approve(self, user_id: str, feedback: Optional[str] = None) -> None:
-        """Approve the checkpoint."""
-        self.status = CheckpointStatus.APPROVED
-        self.approved_by = user_id
-        self.approved_at = datetime.utcnow()
-        self.feedback = feedback
-
-    def reject(self, user_id: str, reason: str) -> None:
-        """Reject the checkpoint."""
-        self.status = CheckpointStatus.REJECTED
-        self.approved_by = user_id
-        self.approved_at = datetime.utcnow()
-        self.feedback = reason
-
-    def expire(self) -> None:
-        """Mark checkpoint as expired."""
-        self.status = CheckpointStatus.EXPIRED
+        if self.expires_at:
+            return datetime.utcnow() > self.expires_at
+        return False

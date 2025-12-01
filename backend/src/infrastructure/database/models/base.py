@@ -1,63 +1,68 @@
-"""
-Base Model Classes for IPA Platform
-"""
-import uuid
+# =============================================================================
+# IPA Platform - Database Base Model
+# =============================================================================
+# Sprint 1: Core Engine - Agent Framework Integration
+#
+# Base model class and mixins for all SQLAlchemy ORM models.
+# Provides common functionality like UUID primary keys and timestamps.
+# =============================================================================
+
 from datetime import datetime
 from typing import Any
+from uuid import uuid4
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
-class BaseModel(Base):
+class Base(DeclarativeBase):
     """
-    Abstract base model with common fields.
+    Base class for all SQLAlchemy models.
 
-    Provides:
-    - UUID primary key
-    - Created and updated timestamps
-    - Common helper methods
+    Provides a declarative base with common type annotations.
+    All models should inherit from this class.
     """
-    __abstract__ = True
 
-    id = Column(
+    # Type annotation map for common types
+    type_annotation_map = {
+        datetime: DateTime(timezone=True),
+    }
+
+
+class TimestampMixin:
+    """
+    Mixin that adds created_at and updated_at timestamps.
+
+    Attributes:
+        created_at: Timestamp when the record was created (auto-set)
+        updated_at: Timestamp when the record was last updated (auto-update)
+    """
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class UUIDMixin:
+    """
+    Mixin that adds a UUID primary key.
+
+    Attributes:
+        id: UUID primary key (auto-generated)
+    """
+
+    id: Mapped[uuid4] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
-        default=uuid.uuid4,
-        nullable=False
+        default=uuid4,
     )
-    created_at = Column(
-        DateTime(timezone=True),
-        default=datetime.utcnow,
-        nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-        nullable=False
-    )
-
-    @declared_attr
-    def __tablename__(cls) -> str:
-        """Auto-generate table name from class name."""
-        # Convert CamelCase to snake_case
-        name = cls.__name__
-        return ''.join(
-            ['_' + c.lower() if c.isupper() else c for c in name]
-        ).lstrip('_') + 's'
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert model to dictionary."""
-        return {
-            column.name: getattr(self, column.name)
-            for column in self.__table__.columns
-        }
-
-    def __repr__(self) -> str:
-        """String representation of model."""
-        return f"<{self.__class__.__name__}(id={self.id})>"

@@ -1,0 +1,211 @@
+# =============================================================================
+# IPA Platform - Common Prompt Templates
+# =============================================================================
+# Sprint 3: 集成 & 可靠性 - Prompt 模板管理
+#
+# 通用 Prompt 模板：
+#   - summary: 內容摘要生成
+#   - report: 報告生成
+#   - translation: 翻譯
+# =============================================================================
+
+templates:
+  - id: summary
+    name: 內容摘要生成
+    description: 生成文檔或對話的結構化摘要
+    category: common
+    version: "1.0.0"
+    author: system
+    tags:
+      - summary
+      - extraction
+      - common
+    variables:
+      - content
+      - max_length
+      - language
+    default_values:
+      max_length: "500"
+      language: "繁體中文"
+    content: |
+      請為以下內容生成結構化摘要。
+
+      ## 原始內容
+      {{content}}
+
+      ## 要求
+      - 摘要長度：不超過 {{max_length}} 字
+      - 輸出語言：{{language}}
+
+      ## 請提供：
+
+      1. **一句話摘要**
+         - 用一句話概括主要內容
+
+      2. **關鍵要點**
+         - 列出 3-5 個關鍵要點
+         - 每個要點不超過 20 字
+
+      3. **詳細摘要**
+         - 完整但簡潔的內容摘要
+         - 保留重要細節
+
+      4. **相關標籤**
+         - 3-5 個描述性標籤
+
+  - id: report
+    name: 報告生成
+    description: 基於數據生成結構化報告
+    category: common
+    version: "1.0.0"
+    author: system
+    tags:
+      - report
+      - analysis
+      - common
+    variables:
+      - report_title
+      - report_type
+      - data
+      - period
+      - audience
+    default_values:
+      audience: "管理層"
+      period: "本期"
+    content: |
+      請基於以下數據生成結構化報告。
+
+      ## 報告信息
+      - **標題**: {{report_title}}
+      - **類型**: {{report_type}}
+      - **期間**: {{period}}
+      - **目標讀者**: {{audience}}
+
+      ## 數據
+      {{data}}
+
+      ## 請生成以下報告結構：
+
+      1. **執行摘要**
+         - 關鍵發現 (3-5 點)
+         - 整體結論
+
+      2. **詳細分析**
+         - 數據解讀
+         - 趨勢分析
+         - 異常說明
+
+      3. **視覺化建議**
+         - 建議的圖表類型
+         - 數據展示方式
+
+      4. **建議與行動**
+         - 基於數據的建議
+         - 具體行動項目
+         - 責任人建議
+
+      5. **附錄**
+         - 數據來源說明
+         - 計算方法說明
+
+      請以專業、清晰的格式輸出報告。
+
+  - id: translation
+    name: 翻譯
+    description: 專業文檔翻譯
+    category: common
+    version: "1.0.0"
+    author: system
+    tags:
+      - translation
+      - language
+      - common
+    variables:
+      - source_text
+      - source_language
+      - target_language
+      - domain
+    default_values:
+      source_language: "自動檢測"
+      target_language: "繁體中文"
+      domain: "通用"
+    content: |
+      請將以下文本進行專業翻譯。
+
+      ## 翻譯設定
+      - **來源語言**: {{source_language}}
+      - **目標語言**: {{target_language}}
+      - **專業領域**: {{domain}}
+
+      ## 原文
+      {{source_text}}
+
+      ## 翻譯要求：
+
+      1. **準確性**
+         - 忠實原文含義
+         - 保持專業術語一致性
+
+      2. **流暢性**
+         - 符合目標語言表達習慣
+         - 語句通順自然
+
+      3. **專業性**
+         - 使用領域專業術語
+         - 保持正式語氣
+
+      ## 請提供：
+
+      1. **翻譯結果**
+         - 完整的翻譯文本
+
+      2. **翻譯說明** (如有必要)
+         - 特殊術語處理
+         - 文化差異調整
+         - 其他注意事項
+
+  - id: email_draft
+    name: 郵件草稿
+    description: 生成專業郵件草稿
+    category: common
+    version: "1.0.0"
+    author: system
+    tags:
+      - email
+      - communication
+      - common
+    variables:
+      - recipient
+      - subject
+      - purpose
+      - key_points
+      - tone
+    default_values:
+      tone: "專業正式"
+    content: |
+      請根據以下信息生成專業郵件草稿。
+
+      ## 郵件信息
+      - **收件人**: {{recipient}}
+      - **主題**: {{subject}}
+      - **目的**: {{purpose}}
+      - **語氣**: {{tone}}
+
+      ## 關鍵要點
+      {{key_points}}
+
+      ## 請生成：
+
+      1. **郵件主題** (如需調整)
+
+      2. **郵件正文**
+         - 開場問候
+         - 主要內容
+         - 行動呼籲 (如有)
+         - 結束語
+
+      3. **備選版本**
+         - 簡潔版
+         - 詳細版
+
+      請確保郵件專業、清晰、得體。

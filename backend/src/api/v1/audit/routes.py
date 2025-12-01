@@ -1,270 +1,408 @@
-"""
-Audit Log API Routes
+# =============================================================================
+# IPA Platform - Audit API Routes
+# =============================================================================
+# Sprint 3: 集成 & 可靠性 - 審計日誌系統
+#
+# REST API endpoints for Audit log management:
+#   - GET /audit/logs - 查詢審計日誌
+#   - GET /audit/logs/{id} - 獲取單個條目
+#   - GET /audit/executions/{id}/trail - 執行軌跡
+#   - GET /audit/statistics - 統計信息
+#   - GET /audit/export - 導出報告
+#   - GET /audit/actions - 動作類型列表
+#   - GET /audit/resources - 資源類型列表
+# =============================================================================
 
-Provides REST API endpoints for audit log operations.
-Sprint 2 - Story S2-7
-
-Endpoints:
-- GET  /api/v1/audit/logs         - List audit logs with filtering
-- GET  /api/v1/audit/logs/{id}    - Get a specific audit log
-- GET  /api/v1/audit/stats        - Get audit statistics
-- GET  /api/v1/audit/resource/{resource_type}/{resource_id} - Get logs for a resource
-- POST /api/v1/audit/export       - Export audit logs
-"""
-import csv
-import io
-import json
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import PlainTextResponse
 
-from src.domain.audit.schemas import (
-    AuditLogFilter,
-    AuditLogListResponse,
-    AuditLogResponse,
-    AuditLogStats,
-    AuditLogExportRequest,
+from src.api.v1.audit.schemas import (
+    ActionListResponse,
+    AuditEntryResponse,
+    AuditListResponse,
+    AuditStatisticsResponse,
+    AuditTrailResponse,
+    ExportResponse,
+    ResourceListResponse,
 )
-from src.domain.audit.service import AuditService
-from src.infrastructure.database.session import get_session
+from src.domain.audit.logger import (
+    AuditAction,
+    AuditLogger,
+    AuditQueryParams,
+    AuditResource,
+    AuditSeverity,
+)
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/audit", tags=["Audit"])
+router = APIRouter(
+    prefix="/audit",
+    tags=["audit"],
+    responses={
+        500: {"description": "Internal server error"},
+    },
+)
 
 
-def get_audit_service(session: AsyncSession = Depends(get_session)) -> AuditService:
-    """Get audit service dependency."""
-    return AuditService(session)
+# =============================================================================
+# Dependency Injection
+# =============================================================================
+
+# Global logger instance (in production, use proper DI)
+_audit_logger: Optional[AuditLogger] = None
 
 
-@router.get("/logs", response_model=AuditLogListResponse)
+def get_audit_logger() -> AuditLogger:
+    """Get or create audit logger."""
+    global _audit_logger
+
+    if _audit_logger is None:
+        _audit_logger = AuditLogger()
+
+    return _audit_logger
+
+
+# =============================================================================
+# Query Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/logs",
+    response_model=AuditListResponse,
+    summary="查詢審計日誌",
+    description="獲取審計日誌列表，支持多條件過濾",
+)
 async def list_audit_logs(
-    user_id: Optional[UUID] = Query(None, description="Filter by user ID"),
-    action: Optional[str] = Query(None, description="Filter by action type"),
-    resource_type: Optional[str] = Query(None, description="Filter by resource type"),
-    resource_id: Optional[UUID] = Query(None, description="Filter by resource ID"),
-    actor_type: Optional[str] = Query(None, description="Filter by actor type"),
-    request_id: Optional[str] = Query(None, description="Filter by request ID"),
-    start_date: Optional[datetime] = Query(None, description="Filter logs after this date"),
-    end_date: Optional[datetime] = Query(None, description="Filter logs before this date"),
-    has_error: Optional[bool] = Query(None, description="Filter by error presence"),
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(50, ge=1, le=500, description="Items per page"),
-    sort_by: str = Query("created_at", description="Field to sort by"),
-    sort_order: str = Query("desc", description="Sort order (asc/desc)"),
-    service: AuditService = Depends(get_audit_service),
-):
-    """
-    List audit logs with filtering and pagination.
+    action: Optional[str] = Query(None, description="動作類型過濾"),
+    resource: Optional[str] = Query(None, description="資源類型過濾"),
+    actor_id: Optional[str] = Query(None, description="操作者 ID 過濾"),
+    resource_id: Optional[str] = Query(None, description="資源 ID 過濾"),
+    execution_id: Optional[UUID] = Query(None, description="執行 ID 過濾"),
+    workflow_id: Optional[UUID] = Query(None, description="工作流 ID 過濾"),
+    severity: Optional[str] = Query(None, description="嚴重程度過濾"),
+    start_time: Optional[datetime] = Query(None, description="開始時間"),
+    end_time: Optional[datetime] = Query(None, description="結束時間"),
+    limit: int = Query(100, ge=1, le=1000, description="返回數量"),
+    offset: int = Query(0, ge=0, description="跳過數量"),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+) -> AuditListResponse:
+    """查詢審計日誌."""
+    # 解析動作類型
+    actions = None
+    if action:
+        try:
+            actions = [AuditAction(action)]
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid action: {action}",
+            )
 
-    Returns a paginated list of audit logs that can be filtered by various criteria.
-    """
-    filters = AuditLogFilter(
-        user_id=user_id,
-        action=action,
-        resource_type=resource_type,
+    # 解析資源類型
+    resources = None
+    if resource:
+        try:
+            resources = [AuditResource(resource)]
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid resource: {resource}",
+            )
+
+    # 解析嚴重程度
+    severity_filter = None
+    if severity:
+        try:
+            severity_filter = AuditSeverity(severity)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid severity: {severity}",
+            )
+
+    params = AuditQueryParams(
+        actions=actions,
+        resources=resources,
+        actor_id=actor_id,
         resource_id=resource_id,
-        actor_type=actor_type,
-        request_id=request_id,
-        start_date=start_date,
-        end_date=end_date,
-        has_error=has_error,
-        page=page,
-        page_size=page_size,
-        sort_by=sort_by,
-        sort_order=sort_order,
+        execution_id=execution_id,
+        workflow_id=workflow_id,
+        severity=severity_filter,
+        start_time=start_time,
+        end_time=end_time,
+        limit=limit,
+        offset=offset,
     )
 
-    result = await service.list(filters)
+    entries = audit_logger.query(params)
+    total = audit_logger.count(params)
 
-    logger.debug(f"Listed {len(result.items)} audit logs (page {page})")
-    return result
-
-
-@router.get("/logs/{log_id}", response_model=AuditLogResponse)
-async def get_audit_log(
-    log_id: int,
-    service: AuditService = Depends(get_audit_service),
-):
-    """
-    Get a specific audit log by ID.
-    """
-    log = await service.get_by_id(log_id)
-
-    if not log:
-        raise HTTPException(status_code=404, detail="Audit log not found")
-
-    return AuditLogResponse.model_validate(log)
-
-
-@router.get("/stats", response_model=AuditLogStats)
-async def get_audit_stats(
-    user_id: Optional[UUID] = Query(None, description="Filter by user ID"),
-    resource_type: Optional[str] = Query(None, description="Filter by resource type"),
-    service: AuditService = Depends(get_audit_service),
-):
-    """
-    Get audit log statistics.
-
-    Returns aggregate statistics about audit logs including:
-    - Total count and counts by time period
-    - Top actions and resources
-    - Error rate
-    """
-    stats = await service.get_stats(user_id=user_id, resource_type=resource_type)
-
-    return stats
-
-
-@router.get("/resource/{resource_type}/{resource_id}")
-async def get_logs_for_resource(
-    resource_type: str,
-    resource_id: UUID,
-    limit: int = Query(100, ge=1, le=500, description="Maximum logs to return"),
-    service: AuditService = Depends(get_audit_service),
-):
-    """
-    Get audit logs for a specific resource.
-
-    Useful for viewing the history of a workflow, execution, or other entity.
-    """
-    logs = await service.get_for_resource(resource_type, resource_id, limit)
-
-    return {
-        "resource_type": resource_type,
-        "resource_id": str(resource_id),
-        "count": len(logs),
-        "logs": [AuditLogResponse.model_validate(log) for log in logs],
-    }
-
-
-@router.get("/user/{user_id}")
-async def get_logs_for_user(
-    user_id: UUID,
-    limit: int = Query(100, ge=1, le=500, description="Maximum logs to return"),
-    service: AuditService = Depends(get_audit_service),
-):
-    """
-    Get audit logs for a specific user.
-
-    Useful for viewing all actions performed by a user.
-    """
-    logs = await service.get_for_user(user_id, limit)
-
-    return {
-        "user_id": str(user_id),
-        "count": len(logs),
-        "logs": [AuditLogResponse.model_validate(log) for log in logs],
-    }
-
-
-@router.post("/export")
-async def export_audit_logs(
-    export_request: AuditLogExportRequest,
-    service: AuditService = Depends(get_audit_service),
-):
-    """
-    Export audit logs to CSV or JSON format.
-
-    Exports logs within the specified date range.
-    """
-    # Build filters
-    filters = AuditLogFilter(
-        start_date=export_request.start_date,
-        end_date=export_request.end_date,
-        page=1,
-        page_size=10000,  # Max export size
+    return AuditListResponse(
+        items=[
+            AuditEntryResponse(
+                id=e.id,
+                action=e.action.value,
+                resource=e.resource.value,
+                resource_id=e.resource_id,
+                actor_id=e.actor_id,
+                actor_name=e.actor_name,
+                timestamp=e.timestamp,
+                severity=e.severity.value,
+                message=e.message,
+                details=e.details,
+                metadata=e.metadata,
+                ip_address=e.ip_address,
+                user_agent=e.user_agent,
+                execution_id=e.execution_id,
+                workflow_id=e.workflow_id,
+            )
+            for e in entries
+        ],
+        total=total,
+        offset=offset,
+        limit=limit,
     )
 
-    result = await service.list(filters)
 
-    if export_request.format.lower() == "csv":
-        # Generate CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
+@router.get(
+    "/logs/{entry_id}",
+    response_model=AuditEntryResponse,
+    summary="獲取審計條目",
+    description="獲取指定 ID 的審計條目",
+)
+async def get_audit_entry(
+    entry_id: UUID,
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+) -> AuditEntryResponse:
+    """獲取單個審計條目."""
+    entry = audit_logger.get_entry(entry_id)
 
-        # Header
-        headers = [
-            "id", "created_at", "action", "resource_type", "resource_id",
-            "resource_name", "user_id", "actor_type", "ip_address",
-            "request_id", "error_message", "duration_ms"
-        ]
-        if export_request.include_metadata:
-            headers.append("extra_data")
-        writer.writerow(headers)
-
-        # Data rows
-        for log in result.items:
-            row = [
-                log.id,
-                log.created_at.isoformat(),
-                log.action,
-                log.resource_type,
-                str(log.resource_id) if log.resource_id else "",
-                log.resource_name or "",
-                str(log.user_id) if log.user_id else "",
-                log.actor_type or "",
-                log.ip_address or "",
-                log.request_id or "",
-                log.error_message or "",
-                log.duration_ms or "",
-            ]
-            if export_request.include_metadata:
-                row.append(json.dumps(log.metadata) if log.metadata else "")
-            writer.writerow(row)
-
-        output.seek(0)
-
-        filename = f"audit_logs_{export_request.start_date.date()}_{export_request.end_date.date()}.csv"
-        return StreamingResponse(
-            iter([output.getvalue()]),
-            media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Audit entry not found: {entry_id}",
         )
 
-    else:
-        # Generate JSON
-        data = {
-            "export_date": datetime.utcnow().isoformat(),
-            "start_date": export_request.start_date.isoformat(),
-            "end_date": export_request.end_date.isoformat(),
-            "total_logs": result.total,
-            "logs": [log.model_dump() for log in result.items]
+    return AuditEntryResponse(
+        id=entry.id,
+        action=entry.action.value,
+        resource=entry.resource.value,
+        resource_id=entry.resource_id,
+        actor_id=entry.actor_id,
+        actor_name=entry.actor_name,
+        timestamp=entry.timestamp,
+        severity=entry.severity.value,
+        message=entry.message,
+        details=entry.details,
+        metadata=entry.metadata,
+        ip_address=entry.ip_address,
+        user_agent=entry.user_agent,
+        execution_id=entry.execution_id,
+        workflow_id=entry.workflow_id,
+    )
+
+
+@router.get(
+    "/executions/{execution_id}/trail",
+    response_model=AuditTrailResponse,
+    summary="獲取執行軌跡",
+    description="獲取指定執行的完整審計軌跡",
+)
+async def get_execution_trail(
+    execution_id: UUID,
+    include_related: bool = Query(True, description="是否包含相關事件"),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+) -> AuditTrailResponse:
+    """獲取執行軌跡."""
+    entries = audit_logger.get_execution_trail(
+        execution_id=execution_id,
+        include_related=include_related,
+    )
+
+    # 計算時間範圍
+    start_time = None
+    end_time = None
+    if entries:
+        start_time = entries[0].timestamp
+        end_time = entries[-1].timestamp
+
+    return AuditTrailResponse(
+        execution_id=execution_id,
+        entries=[
+            AuditEntryResponse(
+                id=e.id,
+                action=e.action.value,
+                resource=e.resource.value,
+                resource_id=e.resource_id,
+                actor_id=e.actor_id,
+                actor_name=e.actor_name,
+                timestamp=e.timestamp,
+                severity=e.severity.value,
+                message=e.message,
+                details=e.details,
+                metadata=e.metadata,
+                ip_address=e.ip_address,
+                user_agent=e.user_agent,
+                execution_id=e.execution_id,
+                workflow_id=e.workflow_id,
+            )
+            for e in entries
+        ],
+        total_entries=len(entries),
+        start_time=start_time,
+        end_time=end_time,
+    )
+
+
+# =============================================================================
+# Statistics & Export Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/statistics",
+    response_model=AuditStatisticsResponse,
+    summary="獲取統計信息",
+    description="獲取審計日誌統計信息",
+)
+async def get_statistics(
+    start_time: Optional[datetime] = Query(None, description="開始時間"),
+    end_time: Optional[datetime] = Query(None, description="結束時間"),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+) -> AuditStatisticsResponse:
+    """獲取審計統計."""
+    stats = audit_logger.get_statistics(
+        start_time=start_time,
+        end_time=end_time,
+    )
+
+    return AuditStatisticsResponse(
+        total_entries=stats["total_entries"],
+        by_action=stats["by_action"],
+        by_resource=stats["by_resource"],
+        by_severity=stats["by_severity"],
+        period=stats["period"],
+    )
+
+
+@router.get(
+    "/export",
+    summary="導出審計日誌",
+    description="導出審計日誌為 CSV 或 JSON 格式",
+)
+async def export_logs(
+    format: str = Query("csv", description="導出格式 (csv/json)"),
+    action: Optional[str] = Query(None, description="動作類型過濾"),
+    resource: Optional[str] = Query(None, description="資源類型過濾"),
+    start_time: Optional[datetime] = Query(None, description="開始時間"),
+    end_time: Optional[datetime] = Query(None, description="結束時間"),
+    limit: int = Query(1000, ge=1, le=10000, description="導出數量限制"),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
+    """導出審計日誌."""
+    # 解析動作類型
+    actions = None
+    if action:
+        try:
+            actions = [AuditAction(action)]
+        except ValueError:
+            pass
+
+    # 解析資源類型
+    resources = None
+    if resource:
+        try:
+            resources = [AuditResource(resource)]
+        except ValueError:
+            pass
+
+    params = AuditQueryParams(
+        actions=actions,
+        resources=resources,
+        start_time=start_time,
+        end_time=end_time,
+        limit=limit,
+    )
+
+    if format.lower() == "csv":
+        csv_data = audit_logger.export_csv(params)
+        return PlainTextResponse(
+            content=csv_data,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename=audit_logs_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+            },
+        )
+
+    elif format.lower() == "json":
+        json_data = audit_logger.export_json(params)
+        return {
+            "format": "json",
+            "data": json_data,
+            "entry_count": len(json_data),
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
-        filename = f"audit_logs_{export_request.start_date.date()}_{export_request.end_date.date()}.json"
-
-        return Response(
-            content=json.dumps(data, indent=2, default=str),
-            media_type="application/json",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported format: {format}. Use 'csv' or 'json'.",
         )
 
 
-@router.post("/cleanup")
-async def cleanup_old_logs(
-    retention_days: int = Query(90, ge=30, le=365, description="Days to retain"),
-    service: AuditService = Depends(get_audit_service),
-):
-    """
-    Clean up old audit logs.
+# =============================================================================
+# Metadata Endpoints
+# =============================================================================
 
-    Deletes logs older than the specified retention period.
-    This is typically called by a scheduled job.
 
-    NOTE: This is an admin-only operation. In production, this
-    should be protected by appropriate authorization.
-    """
-    deleted_count = await service.cleanup_old_logs(retention_days)
+@router.get(
+    "/actions",
+    response_model=ActionListResponse,
+    summary="列出動作類型",
+    description="獲取所有可用的動作類型",
+)
+async def list_actions() -> ActionListResponse:
+    """列出所有動作類型."""
+    actions = [
+        {"value": action.value, "name": action.name}
+        for action in AuditAction
+    ]
+    return ActionListResponse(actions=actions)
 
+
+@router.get(
+    "/resources",
+    response_model=ResourceListResponse,
+    summary="列出資源類型",
+    description="獲取所有可用的資源類型",
+)
+async def list_resources() -> ResourceListResponse:
+    """列出所有資源類型."""
+    resources = [
+        {"value": resource.value, "name": resource.name}
+        for resource in AuditResource
+    ]
+    return ResourceListResponse(resources=resources)
+
+
+@router.get(
+    "/health",
+    summary="健康檢查",
+    description="審計服務健康檢查",
+)
+async def health_check(
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+) -> dict:
+    """健康檢查."""
     return {
-        "status": "success",
-        "deleted_count": deleted_count,
-        "retention_days": retention_days,
+        "status": "healthy",
+        "service": "audit",
+        "entry_count": audit_logger.get_entry_count(),
+        "timestamp": datetime.utcnow().isoformat(),
     }

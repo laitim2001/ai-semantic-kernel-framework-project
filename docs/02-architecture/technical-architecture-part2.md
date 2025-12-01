@@ -497,20 +497,20 @@ public class ExecutionOrchestrator
 
 #### 職責
 
-- **Agent 運行時**: 執行 Semantic Kernel Agent
+- **Agent 運行時**: 執行 Agent Framework Agent
 - **Prompt 管理**: 加載和渲染 Prompt 模板
 - **Tool 集成**: 管理和調用外部 Tool
 - **結果緩存**: 緩存相同輸入的 Agent 結果
 
-#### Semantic Kernel 集成
+#### Agent Framework 集成
 
 ```csharp
-public class SemanticKernelAgentService : IAgentService
+public class AgentFrameworkService : IAgentService
 {
     private readonly IKernel _kernel;
     private readonly IPromptTemplateEngine _templateEngine;
     private readonly IToolRegistry _toolRegistry;
-    private readonly ILogger<SemanticKernelAgentService> _logger;
+    private readonly ILogger<AgentFrameworkService> _logger;
     
     public async Task<AgentResult> ExecuteAgent(
         Guid agentId,

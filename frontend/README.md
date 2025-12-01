@@ -1,56 +1,104 @@
-# Frontend (React + TypeScript)
+# IPA Platform Frontend
 
-IPA Platform 前端應用，基於 React 和 TypeScript 構建。
+Modern React frontend for the Intelligent Process Automation Platform.
 
-## 📁 項目結構（計劃）
+## Tech Stack
 
-```
-frontend/
-├── public/
-├── src/
-│   ├── components/       # 可復用組件
-│   ├── pages/           # 頁面組件
-│   ├── services/        # API 服務
-│   ├── hooks/           # 自定義 Hooks
-│   ├── store/           # 狀態管理（Redux）
-│   ├── types/           # TypeScript 類型
-│   ├── utils/           # 工具函數
-│   ├── App.tsx
-│   └── main.tsx
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-└── README.md
-```
+- **Framework**: React 18 + TypeScript 5
+- **Build Tool**: Vite 5
+- **Styling**: TailwindCSS 3 + Shadcn/ui
+- **State Management**: Zustand + TanStack Query
+- **Routing**: React Router 6
+- **Charts**: Recharts
 
-## 🚀 快速開始
+## Getting Started
 
-### 初始化項目（Sprint 1 開始）
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+
+### Installation
 
 ```bash
-cd frontend
-
-# 安裝依賴
+# Install dependencies
 npm install
 
-# 啟動開發服務器
+# Start development server
 npm run dev
 
-# 構建生產版本
+# Build for production
 npm run build
+
+# Run tests
+npm run test
 ```
 
-## 📚 技術棧（計劃）
+### Environment Variables
 
-- **框架**: React 18+
-- **語言**: TypeScript 5+
-- **構建工具**: Vite 5+
-- **UI 框架**: Material-UI (MUI) 或 Ant Design
-- **狀態管理**: Redux Toolkit + RTK Query
-- **路由**: React Router 6+
-- **表單**: React Hook Form
-- **圖表**: Recharts 或 ECharts
+Copy `.env.example` to `.env` and configure:
 
-## 📝 說明
+```bash
+VITE_API_URL=/api/v1
+```
 
-前端開發將在 **Sprint 1** 開始。當前 Sprint 0 專注於後端基礎設施。
+## Project Structure
+
+```
+src/
+├── api/                 # API client and hooks
+├── components/
+│   ├── ui/             # Shadcn/ui components
+│   ├── layout/         # Layout components
+│   └── shared/         # Shared business components
+├── hooks/              # Custom React hooks
+├── lib/                # Utility functions
+├── pages/              # Page components
+│   ├── dashboard/
+│   ├── workflows/
+│   ├── agents/
+│   ├── approvals/
+│   ├── audit/
+│   └── templates/
+├── store/              # Zustand stores
+└── types/              # TypeScript types
+```
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run test` | Run unit tests |
+| `npm run test:e2e` | Run E2E tests |
+| `npm run lint` | Run ESLint |
+| `npm run typecheck` | Type check |
+
+## Pages
+
+| Route | Description |
+|-------|-------------|
+| `/dashboard` | System overview and metrics |
+| `/workflows` | Workflow management |
+| `/workflows/:id` | Workflow details |
+| `/agents` | Agent management |
+| `/agents/:id` | Agent details and testing |
+| `/templates` | Template marketplace |
+| `/approvals` | Approval workbench |
+| `/audit` | Audit logs |
+
+## Sprint 5 Features
+
+- Dashboard with key metrics and charts
+- Workflow list and detail views
+- Agent management and testing
+- Template marketplace
+- Approval workbench
+- Audit log viewer
+
+---
+
+**Sprint**: 5 - Frontend UI
+**Version**: 0.1.0

@@ -1,37 +1,103 @@
-"""
-User Model
+# =============================================================================
+# IPA Platform - User Model
+# =============================================================================
+# Sprint 1: Core Engine - Agent Framework Integration
+#
+# User model for platform authentication and authorization.
+# Supports role-based access control (admin, operator, viewer).
+# =============================================================================
 
-Database model for users.
-"""
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
+from uuid import uuid4
 
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Boolean, DateTime, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import BaseModel
+from src.infrastructure.database.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from src.infrastructure.database.models.workflow import Workflow
+    from src.infrastructure.database.models.execution import Execution
 
 
-class User(BaseModel):
-    """User model.
+class User(Base, TimestampMixin):
+    """
+    Platform user model.
 
-    Represents a platform user with authentication and authorization info.
+    Attributes:
+        id: UUID primary key
+        email: Unique email address
+        hashed_password: Bcrypt hashed password
+        full_name: User's display name
+        role: User role (admin, operator, viewer)
+        is_active: Whether user can log in
+        last_login: Last successful login timestamp
+
+    Relationships:
+        workflows: Workflows created by this user
+        executions: Executions triggered by this user
     """
 
     __tablename__ = "users"
 
-    username = Column(String(100), unique=True, nullable=False, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(255), nullable=False)
-    full_name = Column(String(255), nullable=True)
-    is_active = Column(Boolean, default=True, nullable=True, index=True)
-    is_superuser = Column(Boolean, default=False, nullable=True)
-    last_login_at = Column(DateTime(timezone=True), nullable=True)
+    # Primary key
+    id: Mapped[uuid4] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+
+    # Authentication fields
+    email: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    hashed_password: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    # Profile fields
+    full_name: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    # Authorization
+    role: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="viewer",
+    )
+
+    # Status
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+    )
+
+    last_login: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Relationships
+    workflows: Mapped[List["Workflow"]] = relationship(
+        "Workflow",
+        back_populates="created_by_user",
+        lazy="selectin",
+    )
+
+    executions: Mapped[List["Execution"]] = relationship(
+        "Execution",
+        back_populates="triggered_by_user",
+        lazy="selectin",
+    )
 
     def __repr__(self) -> str:
-        return f"<User(id={self.id}, username={self.username})>"
-
-    @property
-    def role(self) -> str:
-        """Get user role based on is_superuser flag."""
-        return "admin" if self.is_superuser else "user"
+        return f"<User(id={self.id}, email={self.email}, role={self.role})>"

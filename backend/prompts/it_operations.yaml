@@ -1,0 +1,165 @@
+# =============================================================================
+# IPA Platform - IT Operations Prompt Templates
+# =============================================================================
+# Sprint 3: 集成 & 可靠性 - Prompt 模板管理
+#
+# IT 運營場景的 Prompt 模板：
+#   - incident_triage: 事件分類和優先級評估
+#   - incident_resolution: 事件解決方案建議
+#   - system_health_check: 系統健康檢查報告
+# =============================================================================
+
+templates:
+  - id: incident_triage
+    name: 事件分類和優先級評估
+    description: 分析和分類 IT 事件，評估優先級和影響範圍
+    category: it_operations
+    version: "1.0.0"
+    author: system
+    tags:
+      - incident
+      - triage
+      - priority
+    variables:
+      - incident_description
+      - affected_systems
+      - reporter
+      - timestamp
+    default_values:
+      timestamp: "{{current_time}}"
+    content: |
+      你是一個專業的 IT 事件分類專家。請分析以下事件並提供分類和優先級評估。
+
+      ## 事件信息
+      - **描述**: {{incident_description}}
+      - **受影響系統**: {{affected_systems}}
+      - **報告者**: {{reporter}}
+      - **報告時間**: {{timestamp}}
+
+      ## 請提供以下分析：
+
+      1. **事件分類**
+         - 類別 (硬體/軟體/網路/安全/其他)
+         - 子類別
+         - 相關服務
+
+      2. **優先級評估**
+         - 優先級 (P1-關鍵/P2-高/P3-中/P4-低)
+         - 影響範圍 (全域/部門/個人)
+         - 緊急程度
+
+      3. **建議行動**
+         - 立即行動
+         - 通知對象
+         - 預計處理時間
+
+      請以結構化的 JSON 格式輸出結果。
+
+  - id: incident_resolution
+    name: 事件解決方案建議
+    description: 基於事件分析提供解決方案建議和操作步驟
+    category: it_operations
+    version: "1.0.0"
+    author: system
+    tags:
+      - incident
+      - resolution
+      - solution
+    variables:
+      - incident_id
+      - incident_type
+      - incident_description
+      - system_logs
+      - previous_solutions
+    default_values:
+      previous_solutions: "無歷史解決方案記錄"
+    content: |
+      你是一個專業的 IT 事件解決專家。請基於以下信息提供解決方案建議。
+
+      ## 事件信息
+      - **事件 ID**: {{incident_id}}
+      - **事件類型**: {{incident_type}}
+      - **事件描述**: {{incident_description}}
+
+      ## 系統日誌
+      ```
+      {{system_logs}}
+      ```
+
+      ## 歷史解決方案
+      {{previous_solutions}}
+
+      ## 請提供以下內容：
+
+      1. **根本原因分析**
+         - 可能的原因列表 (按可能性排序)
+         - 診斷依據
+
+      2. **解決方案建議**
+         - 推薦解決方案
+         - 替代方案
+         - 每個方案的風險評估
+
+      3. **操作步驟**
+         - 詳細的步驟列表
+         - 每步的驗證方法
+         - 回滾計劃
+
+      4. **預防措施**
+         - 防止再次發生的建議
+         - 監控建議
+
+      請以結構化格式輸出結果。
+
+  - id: system_health_check
+    name: 系統健康檢查報告
+    description: 分析系統指標並生成健康檢查報告
+    category: it_operations
+    version: "1.0.0"
+    author: system
+    tags:
+      - health
+      - monitoring
+      - report
+    variables:
+      - system_name
+      - metrics
+      - threshold_config
+      - check_time
+    default_values:
+      threshold_config: "使用默認閾值"
+    content: |
+      你是一個系統監控專家。請分析以下系統指標並生成健康檢查報告。
+
+      ## 系統信息
+      - **系統名稱**: {{system_name}}
+      - **檢查時間**: {{check_time}}
+
+      ## 系統指標
+      {{metrics}}
+
+      ## 閾值配置
+      {{threshold_config}}
+
+      ## 請生成以下報告：
+
+      1. **整體健康狀態**
+         - 健康評分 (0-100)
+         - 狀態 (健康/警告/危險)
+
+      2. **指標分析**
+         - 每個指標的當前值和狀態
+         - 異常指標說明
+         - 趨勢分析
+
+      3. **建議行動**
+         - 需要立即關注的問題
+         - 預防性維護建議
+         - 優化建議
+
+      4. **總結**
+         - 關鍵發現
+         - 風險評估
+         - 下次檢查建議時間
+
+      請以結構化的報告格式輸出。
