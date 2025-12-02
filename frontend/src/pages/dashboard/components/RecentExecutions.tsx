@@ -16,9 +16,16 @@ import { formatRelativeTime, formatDuration } from '@/lib/utils';
 import type { Execution } from '@/types';
 
 export function RecentExecutions() {
+  interface ExecutionListResponse {
+    items: Execution[];
+    total: number;
+    page: number;
+    page_size: number;
+  }
+
   const { data, isLoading } = useQuery({
     queryKey: ['recent-executions'],
-    queryFn: () => api.get<Execution[]>('/executions?limit=10'),
+    queryFn: () => api.get<ExecutionListResponse>('/executions?limit=10'),
   });
 
   if (isLoading) {
@@ -29,8 +36,8 @@ export function RecentExecutions() {
     );
   }
 
-  // Use mock data if API not available
-  const executions = data || generateMockExecutions();
+  // Use mock data if API not available, handle both array and object response
+  const executions = Array.isArray(data) ? data : (data?.items || generateMockExecutions());
 
   if (executions.length === 0) {
     return <EmptyState title="暫無執行記錄" description="尚未有任何工作流執行" />;

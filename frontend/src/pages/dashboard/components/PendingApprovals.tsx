@@ -17,9 +17,14 @@ import { formatRelativeTime } from '@/lib/utils';
 import type { Checkpoint } from '@/types';
 
 export function PendingApprovals() {
+  interface PendingApprovalsResponse {
+    items: Checkpoint[];
+    count: number;
+  }
+
   const { data, isLoading } = useQuery({
     queryKey: ['pending-approvals-preview'],
-    queryFn: () => api.get<Checkpoint[]>('/checkpoints/pending?limit=5'),
+    queryFn: () => api.get<PendingApprovalsResponse>('/checkpoints/pending?limit=5'),
   });
 
   if (isLoading) {
@@ -30,8 +35,8 @@ export function PendingApprovals() {
     );
   }
 
-  // Use mock data if API not available
-  const approvals = data || generateMockApprovals();
+  // Use mock data if API not available, handle both array and object response
+  const approvals = Array.isArray(data) ? data : (data?.items || generateMockApprovals());
 
   if (approvals.length === 0) {
     return (

@@ -23,13 +23,20 @@ import type { Agent } from '@/types';
 export function AgentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
+  interface AgentListResponse {
+    items: Agent[];
+    total: number;
+    page: number;
+    page_size: number;
+  }
+
   const { data, isLoading } = useQuery({
     queryKey: ['agents', searchQuery],
-    queryFn: () => api.get<Agent[]>(`/agents?search=${searchQuery}`),
+    queryFn: () => api.get<AgentListResponse>(`/agents?search=${searchQuery}`),
   });
 
-  // Use mock data if API not available
-  const agents = data || generateMockAgents();
+  // Use mock data if API not available, handle both array and object response
+  const agents = Array.isArray(data) ? data : (data?.items || generateMockAgents());
 
   const filteredAgents = agents.filter((agent) =>
     agent.name.toLowerCase().includes(searchQuery.toLowerCase())

@@ -25,9 +25,10 @@ import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import type { ExecutionChartData } from '@/types';
 
 export function ExecutionChart() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['dashboard-execution-chart'],
     queryFn: () => api.get<ExecutionChartData[]>('/dashboard/executions/chart'),
+    retry: false, // Don't retry if endpoint doesn't exist
   });
 
   if (isLoading) {
@@ -38,8 +39,8 @@ export function ExecutionChart() {
     );
   }
 
-  // Use mock data if API not available
-  const chartData = data || generateMockData();
+  // Use mock data if API not available or returns error
+  const chartData = (!data || isError) ? generateMockData() : (Array.isArray(data) ? data : generateMockData());
 
   return (
     <div className="h-64">

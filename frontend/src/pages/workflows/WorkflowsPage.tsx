@@ -22,13 +22,20 @@ import type { Workflow } from '@/types';
 export function WorkflowsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
+  interface WorkflowListResponse {
+    items: Workflow[];
+    total: number;
+    page: number;
+    page_size: number;
+  }
+
   const { data, isLoading } = useQuery({
     queryKey: ['workflows', searchQuery],
-    queryFn: () => api.get<Workflow[]>(`/workflows?search=${searchQuery}`),
+    queryFn: () => api.get<WorkflowListResponse>(`/workflows?search=${searchQuery}`),
   });
 
-  // Use mock data if API not available
-  const workflows = data || generateMockWorkflows();
+  // Use mock data if API not available, handle both array and object response
+  const workflows = Array.isArray(data) ? data : (data?.items || generateMockWorkflows());
 
   const filteredWorkflows = workflows.filter((wf) =>
     wf.name.toLowerCase().includes(searchQuery.toLowerCase())

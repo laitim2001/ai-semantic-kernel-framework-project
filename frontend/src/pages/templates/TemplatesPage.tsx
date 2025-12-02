@@ -31,16 +31,26 @@ export function TemplatesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('全部');
 
+  interface TemplateListResponse {
+    templates: Template[];
+    total: number;
+    page: number;
+    page_size: number;
+  }
+
   const { data, isLoading } = useQuery({
     queryKey: ['templates', searchQuery, selectedCategory],
-    queryFn: () =>
-      api.get<Template[]>(
-        `/templates?search=${searchQuery}&category=${selectedCategory}`
-      ),
+    queryFn: () => {
+      // Don't send category param when "全部" is selected
+      const categoryParam = selectedCategory === '全部' ? '' : `&category=${selectedCategory}`;
+      return api.get<TemplateListResponse>(
+        `/templates?search=${searchQuery}${categoryParam}`
+      );
+    },
   });
 
-  // Use mock data if API not available
-  const templates = data || generateMockTemplates();
+  // Use mock data if API not available, handle response format
+  const templates = Array.isArray(data) ? data : (data?.templates || generateMockTemplates());
 
   const filteredTemplates = templates.filter((t) => {
     const matchesSearch = t.name

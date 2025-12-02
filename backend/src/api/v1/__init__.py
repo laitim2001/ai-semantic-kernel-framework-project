@@ -29,6 +29,7 @@ from src.api.v1.audit.routes import router as audit_router
 from src.api.v1.cache.routes import router as cache_router
 from src.api.v1.checkpoints.routes import router as checkpoints_router
 from src.api.v1.connectors.routes import router as connectors_router
+from src.api.v1.dashboard.routes import router as dashboard_router
 from src.api.v1.devtools.routes import router as devtools_router
 from src.api.v1.executions.routes import router as executions_router
 from src.api.v1.learning.routes import router as learning_router
@@ -44,6 +45,7 @@ from src.api.v1.workflows.routes import router as workflows_router
 api_router = APIRouter(prefix="/api/v1")
 
 # Include sub-routers
+api_router.include_router(dashboard_router)
 api_router.include_router(agents_router)
 api_router.include_router(workflows_router)
 api_router.include_router(executions_router)
