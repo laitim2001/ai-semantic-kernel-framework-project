@@ -1019,3 +1019,284 @@ async def delete_voting_session(session_id: UUID):
         raise HTTPException(status_code=404, detail="Voting session not found")
 
     return SuccessResponse(message="Voting session deleted")
+
+
+# =============================================================================
+# Sprint 16: Agent Framework GroupChatBuilder Adapter Routes
+# =============================================================================
+
+from src.api.v1.groupchat.schemas import (
+    # Sprint 16 schemas
+    ParticipantSchema,
+    MessageSchema,
+    CreateGroupChatAdapterRequest,
+    RunGroupChatAdapterRequest,
+    GroupChatAdapterResponse,
+    GroupChatResultSchema,
+    ManagerSelectionRequestSchema,
+    ManagerSelectionResponseSchema,
+    OrchestratorStateSchema,
+)
+
+# Agent Framework adapter imports
+try:
+    from src.integrations.agent_framework.builders import (
+        GroupChatBuilderAdapter,
+        GroupChatParticipant,
+        GroupChatMessage,
+        SpeakerSelectionMethod,
+        MessageRole,
+        GroupChatOrchestrator,
+        ManagerSelectionRequest,
+        ManagerSelectionResponse,
+    )
+    _adapter_available = True
+except ImportError:
+    _adapter_available = False
+
+# In-memory adapter storage
+_groupchat_adapters: Dict[str, Any] = {}
+
+
+@router.post("/adapter/", response_model=GroupChatAdapterResponse, status_code=201)
+async def create_groupchat_adapter(request: CreateGroupChatAdapterRequest):
+    """Create a new GroupChat adapter (Sprint 16).
+
+    創建新的 GroupChat 適配器（使用 Agent Framework）。
+    """
+    if not _adapter_available:
+        raise HTTPException(
+            status_code=501,
+            detail="Agent Framework adapter not available"
+        )
+
+    if request.id in _groupchat_adapters:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Adapter '{request.id}' already exists"
+        )
+
+    # Convert participants
+    participants = [
+        GroupChatParticipant(
+            name=p.name,
+            description=p.description,
+            capabilities=p.capabilities,
+            metadata=p.metadata,
+        )
+        for p in request.participants
+    ]
+
+    # Create adapter
+    try:
+        selection_method = SpeakerSelectionMethod(request.selection_method)
+    except ValueError:
+        selection_method = SpeakerSelectionMethod.ROUND_ROBIN
+
+    adapter = GroupChatBuilderAdapter(
+        id=request.id,
+        participants=participants,
+        selection_method=selection_method,
+        max_rounds=request.max_rounds,
+        config=request.config,
+    )
+
+    # Initialize adapter
+    await adapter.initialize()
+
+    # Store adapter
+    _groupchat_adapters[request.id] = adapter
+
+    return GroupChatAdapterResponse(
+        id=adapter.id,
+        status=adapter.status.value,
+        selection_method=adapter.selection_method.value,
+        participants=list(adapter.participants.keys()),
+        is_built=adapter.is_built,
+        is_initialized=adapter.is_initialized,
+    )
+
+
+@router.get("/adapter/", response_model=List[GroupChatAdapterResponse])
+async def list_groupchat_adapters():
+    """List all GroupChat adapters.
+
+    列出所有 GroupChat 適配器。
+    """
+    if not _adapter_available:
+        return []
+
+    return [
+        GroupChatAdapterResponse(
+            id=adapter.id,
+            status=adapter.status.value,
+            selection_method=adapter.selection_method.value,
+            participants=list(adapter.participants.keys()),
+            is_built=adapter.is_built,
+            is_initialized=adapter.is_initialized,
+        )
+        for adapter in _groupchat_adapters.values()
+    ]
+
+
+@router.get("/adapter/{adapter_id}", response_model=GroupChatAdapterResponse)
+async def get_groupchat_adapter(adapter_id: str):
+    """Get GroupChat adapter details.
+
+    獲取 GroupChat 適配器詳情。
+    """
+    if adapter_id not in _groupchat_adapters:
+        raise HTTPException(status_code=404, detail="Adapter not found")
+
+    adapter = _groupchat_adapters[adapter_id]
+
+    return GroupChatAdapterResponse(
+        id=adapter.id,
+        status=adapter.status.value,
+        selection_method=adapter.selection_method.value,
+        participants=list(adapter.participants.keys()),
+        is_built=adapter.is_built,
+        is_initialized=adapter.is_initialized,
+    )
+
+
+@router.post("/adapter/{adapter_id}/run", response_model=GroupChatResultSchema)
+async def run_groupchat_adapter(adapter_id: str, request: RunGroupChatAdapterRequest):
+    """Run GroupChat adapter.
+
+    執行 GroupChat 適配器。
+    """
+    if adapter_id not in _groupchat_adapters:
+        raise HTTPException(status_code=404, detail="Adapter not found")
+
+    adapter = _groupchat_adapters[adapter_id]
+
+    try:
+        result = await adapter.run(request.input_message)
+
+        # Convert result to schema
+        conversation = []
+        for msg in result.conversation:
+            conversation.append(MessageSchema(
+                role=msg.role.value,
+                content=msg.content,
+                author_name=msg.author_name,
+                timestamp=msg.timestamp,
+                metadata=msg.metadata,
+            ))
+
+        final_message = None
+        if result.final_message:
+            final_message = MessageSchema(
+                role=result.final_message.role.value,
+                content=result.final_message.content,
+                author_name=result.final_message.author_name,
+                timestamp=result.final_message.timestamp,
+                metadata=result.final_message.metadata,
+            )
+
+        return GroupChatResultSchema(
+            status=result.status.value,
+            conversation=conversation,
+            final_message=final_message,
+            total_rounds=result.total_rounds,
+            participants_involved=result.participants_involved,
+            duration=result.duration,
+            metadata=result.metadata,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/adapter/{adapter_id}/participants", response_model=SuccessResponse)
+async def add_adapter_participant(adapter_id: str, participant: ParticipantSchema):
+    """Add participant to adapter.
+
+    添加參與者到適配器。
+    """
+    if adapter_id not in _groupchat_adapters:
+        raise HTTPException(status_code=404, detail="Adapter not found")
+
+    adapter = _groupchat_adapters[adapter_id]
+
+    try:
+        new_participant = GroupChatParticipant(
+            name=participant.name,
+            description=participant.description,
+            capabilities=participant.capabilities,
+            metadata=participant.metadata,
+        )
+        adapter.add_participant(new_participant)
+        return SuccessResponse(message=f"Participant '{participant.name}' added")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/adapter/{adapter_id}/participants/{name}", response_model=SuccessResponse)
+async def remove_adapter_participant(adapter_id: str, name: str):
+    """Remove participant from adapter.
+
+    從適配器移除參與者。
+    """
+    if adapter_id not in _groupchat_adapters:
+        raise HTTPException(status_code=404, detail="Adapter not found")
+
+    adapter = _groupchat_adapters[adapter_id]
+
+    if adapter.remove_participant(name):
+        return SuccessResponse(message=f"Participant '{name}' removed")
+    else:
+        raise HTTPException(status_code=404, detail="Participant not found")
+
+
+@router.delete("/adapter/{adapter_id}", response_model=SuccessResponse)
+async def delete_groupchat_adapter(adapter_id: str):
+    """Delete GroupChat adapter.
+
+    刪除 GroupChat 適配器。
+    """
+    if adapter_id not in _groupchat_adapters:
+        raise HTTPException(status_code=404, detail="Adapter not found")
+
+    adapter = _groupchat_adapters.pop(adapter_id)
+    await adapter.cleanup()
+
+    return SuccessResponse(message=f"Adapter '{adapter_id}' deleted")
+
+
+# =============================================================================
+# Sprint 16: Orchestrator Routes (S16-3)
+# =============================================================================
+
+
+@router.post("/orchestrator/select", response_model=ManagerSelectionResponseSchema)
+async def orchestrator_select_speaker(request: ManagerSelectionRequestSchema):
+    """Select next speaker using orchestrator logic.
+
+    使用編排器邏輯選擇下一位發言者。
+    """
+    if not _adapter_available:
+        raise HTTPException(
+            status_code=501,
+            detail="Agent Framework adapter not available"
+        )
+
+    # Simple round-robin selection for demonstration
+    participants = list(request.participants.keys())
+    if not participants:
+        return ManagerSelectionResponseSchema(
+            finish=True,
+            final_message="No participants available"
+        )
+
+    # Select based on round index
+    selected_idx = request.round_index % len(participants)
+    selected = participants[selected_idx]
+
+    return ManagerSelectionResponseSchema(
+        selected_participant=selected,
+        instruction=None,
+        finish=False,
+        final_message=None,
+    )

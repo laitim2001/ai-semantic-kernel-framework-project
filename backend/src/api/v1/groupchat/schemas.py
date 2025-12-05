@@ -280,3 +280,124 @@ class ErrorResponse(BaseModel):
     success: bool = False
     error: str
     detail: Optional[str] = None
+
+
+# =============================================================================
+# Sprint 16: Agent Framework GroupChatBuilder Schemas
+# =============================================================================
+
+
+class SpeakerSelectionMethodEnum(str):
+    """發言者選擇方法枚舉。"""
+    AUTO = "auto"
+    ROUND_ROBIN = "round_robin"
+    RANDOM = "random"
+    MANUAL = "manual"
+    CUSTOM = "custom"
+
+
+class GroupChatStatusEnum(str):
+    """群組對話狀態枚舉。"""
+    IDLE = "idle"
+    RUNNING = "running"
+    WAITING = "waiting"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ParticipantSchema(BaseModel):
+    """群組對話參與者。"""
+    name: str = Field(..., description="參與者名稱")
+    description: str = Field(default="", description="參與者描述")
+    capabilities: List[str] = Field(default_factory=list, description="能力列表")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="附加元數據")
+
+
+class MessageSchema(BaseModel):
+    """群組對話消息。"""
+    role: str = Field(..., description="消息角色 (user/assistant/system/manager)")
+    content: str = Field(..., description="消息內容")
+    author_name: Optional[str] = Field(None, description="作者名稱")
+    timestamp: Optional[float] = Field(None, description="時間戳")
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CreateGroupChatAdapterRequest(BaseModel):
+    """創建 GroupChat 適配器請求 (Sprint 16)。"""
+    id: str = Field(..., description="適配器 ID")
+    participants: List[ParticipantSchema] = Field(..., description="參與者列表")
+    selection_method: str = Field(
+        default="round_robin",
+        description="選擇方法 (auto/round_robin/random/manual/custom)"
+    )
+    max_rounds: Optional[int] = Field(None, ge=1, le=100, description="最大輪數")
+    config: Dict[str, Any] = Field(default_factory=dict, description="額外配置")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": "team-discussion",
+                "participants": [
+                    {"name": "researcher", "description": "Research agent"},
+                    {"name": "writer", "description": "Writing agent"},
+                ],
+                "selection_method": "round_robin",
+                "max_rounds": 10,
+            }
+        }
+    }
+
+
+class RunGroupChatAdapterRequest(BaseModel):
+    """執行 GroupChat 適配器請求。"""
+    input_message: str = Field(..., description="輸入任務")
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class GroupChatAdapterResponse(BaseModel):
+    """GroupChat 適配器響應。"""
+    id: str
+    status: str
+    selection_method: str
+    participants: List[str]
+    is_built: bool
+    is_initialized: bool
+
+
+class GroupChatResultSchema(BaseModel):
+    """GroupChat 執行結果。"""
+    status: str
+    conversation: List[MessageSchema]
+    final_message: Optional[MessageSchema] = None
+    total_rounds: int
+    participants_involved: List[str]
+    duration: float
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ManagerSelectionRequestSchema(BaseModel):
+    """發言者選擇請求 (Sprint 16 S16-4)。"""
+    task: MessageSchema
+    participants: Dict[str, str]  # name -> description
+    conversation: List[MessageSchema]
+    round_index: int
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ManagerSelectionResponseSchema(BaseModel):
+    """發言者選擇響應。"""
+    selected_participant: Optional[str] = None
+    instruction: Optional[str] = None
+    finish: bool = False
+    final_message: Optional[str] = None
+
+
+class OrchestratorStateSchema(BaseModel):
+    """編排器狀態。"""
+    phase: str
+    round_index: int
+    pending_agent: Optional[str] = None
+    conversation_length: int
+    participants: List[str]

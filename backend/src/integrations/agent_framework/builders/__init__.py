@@ -123,7 +123,64 @@ from .handoff_hitl import (
 )
 
 # Sprint 16: GroupChatBuilder 適配器
-# from .groupchat import GroupChatBuilderAdapter
+from .groupchat import (
+    GroupChatBuilderAdapter,
+    GroupChatParticipant,
+    GroupChatMessage,
+    GroupChatState,
+    GroupChatTurn,
+    GroupChatResult,
+    GroupChatStatus,
+    SpeakerSelectionMethod,
+    MessageRole,
+    SpeakerSelectionResult,
+    create_groupchat_adapter,
+    create_round_robin_chat,
+    create_auto_managed_chat,
+    create_custom_selector_chat,
+    create_round_robin_selector,
+    create_random_selector,
+    create_last_speaker_different_selector,
+)
+
+# Sprint 16: GroupChatOrchestrator (S16-3 & S16-4)
+from .groupchat_orchestrator import (
+    ManagerSelectionRequest,
+    ManagerSelectionResponse,
+    GroupChatDirective,
+    OrchestratorState,
+    OrchestratorPhase,
+    GroupChatOrchestrator,
+    create_orchestrator,
+    create_manager_selection_request,
+    create_manager_selection_response,
+)
+
+# Sprint 16: GroupChatManager 遷移層
+from .groupchat_migration import (
+    GroupChatManagerAdapter,
+    GroupParticipantLegacy,
+    GroupMessageLegacy,
+    GroupChatContextLegacy,
+    GroupChatResultLegacy,
+    SpeakerSelectionMethodLegacy,
+    GroupChatStateLegacy,
+    convert_selection_method_to_new,
+    convert_selection_method_from_new,
+    convert_state_to_legacy,
+    convert_state_from_legacy,
+    convert_participant_to_new,
+    convert_participant_from_new,
+    convert_message_to_new,
+    convert_message_from_new,
+    convert_result_to_legacy,
+    migrate_groupchat_manager,
+    create_groupchat_manager_adapter,
+    create_priority_chat_manager,
+    create_weighted_chat_manager,
+    create_priority_selector,
+    create_weighted_selector,
+)
 
 # Sprint 17: MagenticBuilder 適配器
 # from .magentic import MagenticBuilderAdapter
@@ -205,7 +262,56 @@ __all__ = [
     "create_hitl_manager",
     "create_hitl_checkpoint_adapter",
     # Sprint 16: GroupChatBuilder 適配器
-    # "GroupChatBuilderAdapter",
+    "GroupChatBuilderAdapter",
+    "GroupChatParticipant",
+    "GroupChatMessage",
+    "GroupChatState",
+    "GroupChatTurn",
+    "GroupChatResult",
+    "GroupChatStatus",
+    "SpeakerSelectionMethod",
+    "MessageRole",
+    "SpeakerSelectionResult",
+    "create_groupchat_adapter",
+    "create_round_robin_chat",
+    "create_auto_managed_chat",
+    "create_custom_selector_chat",
+    "create_round_robin_selector",
+    "create_random_selector",
+    "create_last_speaker_different_selector",
+    # Sprint 16: GroupChatOrchestrator (S16-3 & S16-4)
+    "ManagerSelectionRequest",
+    "ManagerSelectionResponse",
+    "GroupChatDirective",
+    "OrchestratorState",
+    "OrchestratorPhase",
+    "GroupChatOrchestrator",
+    "create_orchestrator",
+    "create_manager_selection_request",
+    "create_manager_selection_response",
+    # Sprint 16: GroupChatManager 遷移層
+    "GroupChatManagerAdapter",
+    "GroupParticipantLegacy",
+    "GroupMessageLegacy",
+    "GroupChatContextLegacy",
+    "GroupChatResultLegacy",
+    "SpeakerSelectionMethodLegacy",
+    "GroupChatStateLegacy",
+    "convert_selection_method_to_new",
+    "convert_selection_method_from_new",
+    "convert_state_to_legacy",
+    "convert_state_from_legacy",
+    "convert_participant_to_new",
+    "convert_participant_from_new",
+    "convert_message_to_new",
+    "convert_message_from_new",
+    "convert_result_to_legacy",
+    "migrate_groupchat_manager",
+    "create_groupchat_manager_adapter",
+    "create_priority_chat_manager",
+    "create_weighted_chat_manager",
+    "create_priority_selector",
+    "create_weighted_selector",
     # Sprint 17: MagenticBuilder 適配器
     # "MagenticBuilderAdapter",
     # Sprint 18: WorkflowExecutor 適配器
