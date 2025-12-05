@@ -81,6 +81,25 @@ def workflow_to_response(workflow) -> WorkflowResponse:
     )
 
 
+def serialize_graph_definition(graph_schema) -> dict:
+    """Convert graph schema to a JSON-serializable dict.
+
+    Ensures all UUIDs are converted to strings for JSONB storage.
+    """
+    def serialize_node(node) -> dict:
+        node_dict = node.model_dump()
+        # Explicitly convert agent_id UUID to string if present
+        if node_dict.get("agent_id") is not None:
+            node_dict["agent_id"] = str(node_dict["agent_id"])
+        return node_dict
+
+    return {
+        "nodes": [serialize_node(node) for node in graph_schema.nodes],
+        "edges": [edge.model_dump() for edge in graph_schema.edges],
+        "variables": graph_schema.variables,
+    }
+
+
 # =============================================================================
 # CRUD Endpoints
 # =============================================================================
@@ -105,12 +124,8 @@ async def create_workflow(
     - **trigger_type**: How the workflow is triggered
     - **graph_definition**: Node and edge definitions
     """
-    # Convert graph schema to dict
-    graph_dict = {
-        "nodes": [node.model_dump() for node in request.graph_definition.nodes],
-        "edges": [edge.model_dump() for edge in request.graph_definition.edges],
-        "variables": request.graph_definition.variables,
-    }
+    # Convert graph schema to dict with proper UUID serialization
+    graph_dict = serialize_graph_definition(request.graph_definition)
 
     # Validate workflow definition
     try:
@@ -243,11 +258,8 @@ async def update_workflow(
     if request.trigger_config is not None:
         update_data["trigger_config"] = request.trigger_config
     if request.graph_definition is not None:
-        graph_dict = {
-            "nodes": [node.model_dump() for node in request.graph_definition.nodes],
-            "edges": [edge.model_dump() for edge in request.graph_definition.edges],
-            "variables": request.graph_definition.variables,
-        }
+        # Convert graph schema with proper UUID serialization
+        graph_dict = serialize_graph_definition(request.graph_definition)
 
         # Validate new graph definition
         try:
