@@ -2,6 +2,7 @@
 // IPA Platform - Sidebar Navigation
 // =============================================================================
 // Sprint 5: Frontend UI - Navigation Component
+// Sprint 12: S12-4 UI Integration - Added Performance Monitoring
 //
 // Sidebar navigation with links to all main sections.
 //
@@ -19,6 +20,7 @@ import {
   FileText,
   BookTemplate,
   Settings,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +32,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: '效能監控', href: '/performance', icon: Activity },
   { name: '工作流', href: '/workflows', icon: Workflow },
   { name: 'Agents', href: '/agents', icon: Bot },
   { name: '模板市場', href: '/templates', icon: BookTemplate },

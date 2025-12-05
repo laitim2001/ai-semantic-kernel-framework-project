@@ -8,6 +8,7 @@
 #   - Sprint 9: GroupChat & Multi-turn Conversation
 #   - Sprint 10: Dynamic Planning & Autonomous Decision
 #   - Sprint 11: Nested Workflows & Advanced Orchestration
+#   - Sprint 12: Integration & Polish
 #
 # API version 1 module aggregating all route modules.
 # Includes:
@@ -31,6 +32,7 @@
 #   - groupchat: GroupChat and multi-turn conversation (Sprint 9)
 #   - planning: Dynamic planning and autonomous decision (Sprint 10)
 #   - nested: Nested workflows and advanced orchestration (Sprint 11)
+#   - performance: Performance monitoring and optimization (Sprint 12)
 # =============================================================================
 
 from fastapi import APIRouter
@@ -49,6 +51,7 @@ from src.api.v1.handoff.routes import router as handoff_router
 from src.api.v1.learning.routes import router as learning_router
 from src.api.v1.nested.routes import router as nested_router
 from src.api.v1.notifications.routes import router as notifications_router
+from src.api.v1.performance.routes import router as performance_router
 from src.api.v1.planning.routes import router as planning_router
 from src.api.v1.prompts.routes import router as prompts_router
 from src.api.v1.routing.routes import router as routing_router
@@ -79,10 +82,11 @@ api_router.include_router(devtools_router)
 api_router.include_router(versioning_router)
 
 # Include sub-routers - Phase 2 (Advanced Orchestration)
-api_router.include_router(concurrent_router)  # Sprint 7: Concurrent Execution
-api_router.include_router(handoff_router)     # Sprint 8: Agent Handoff
-api_router.include_router(groupchat_router)   # Sprint 9: GroupChat
-api_router.include_router(planning_router)    # Sprint 10: Dynamic Planning
-api_router.include_router(nested_router)      # Sprint 11: Nested Workflows
+api_router.include_router(concurrent_router)   # Sprint 7: Concurrent Execution
+api_router.include_router(handoff_router)      # Sprint 8: Agent Handoff
+api_router.include_router(groupchat_router)    # Sprint 9: GroupChat
+api_router.include_router(planning_router)     # Sprint 10: Dynamic Planning
+api_router.include_router(nested_router)       # Sprint 11: Nested Workflows
+api_router.include_router(performance_router)  # Sprint 12: Performance Monitoring
 
 __all__ = ["api_router"]
