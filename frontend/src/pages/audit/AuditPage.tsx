@@ -23,11 +23,11 @@ export function AuditPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['audit-logs', searchQuery],
-    queryFn: () => api.get<AuditLog[]>(`/audit?search=${searchQuery}`),
+    queryFn: () => api.get<{ items: AuditLog[]; total: number }>(`/audit/logs?search=${searchQuery}`),
   });
 
   // Use mock data if API not available
-  const logs = data || generateMockAuditLogs();
+  const logs = data?.items || generateMockAuditLogs();
 
   if (isLoading) {
     return <PageLoading />;

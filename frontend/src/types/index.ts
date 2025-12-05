@@ -28,14 +28,18 @@ export interface Workflow {
   id: string;
   name: string;
   description: string;
-  version: string;
+  version: string | number;
   status: 'active' | 'inactive' | 'draft';
   trigger_type: 'manual' | 'schedule' | 'event' | 'webhook';
-  definition: WorkflowDefinition;
+  trigger_config?: Record<string, unknown>;
+  // API returns graph_definition, but mock data uses definition
+  definition?: WorkflowDefinition;
+  graph_definition?: WorkflowGraphDefinition;
+  created_by?: string | null;
   created_at: string;
   updated_at: string;
   last_execution_at?: string;
-  execution_count: number;
+  execution_count?: number;
 }
 
 export interface WorkflowDefinition {
@@ -43,18 +47,40 @@ export interface WorkflowDefinition {
   edges: WorkflowEdge[];
 }
 
+export interface WorkflowGraphDefinition {
+  nodes: WorkflowGraphNode[];
+  edges: WorkflowGraphEdge[];
+  variables?: Record<string, unknown>;
+}
+
 export interface WorkflowNode {
   id: string;
-  type: 'start' | 'end' | 'task' | 'decision' | 'agent' | 'approval';
+  type: 'start' | 'end' | 'task' | 'decision' | 'agent' | 'approval' | 'gateway';
   name: string;
   config: Record<string, unknown>;
 }
 
-export interface WorkflowEdge {
+export interface WorkflowGraphNode {
   id: string;
+  type: string;
+  name: string | null;
+  agent_id: string | null;
+  config: Record<string, unknown>;
+  position?: { x: number; y: number } | null;
+}
+
+export interface WorkflowEdge {
+  id?: string;
   source: string;
   target: string;
   condition?: string;
+}
+
+export interface WorkflowGraphEdge {
+  source: string;
+  target: string;
+  condition?: string;
+  label?: string;
 }
 
 // -----------------------------------------------------------------------------
@@ -103,18 +129,22 @@ export interface Agent {
   template_id?: string;
   instructions: string;
   tools: string[];
-  model_config: ModelConfig;
+  // API returns model_config_data, but mock data uses model_config
+  model_config?: ModelConfig;
+  model_config_data?: ModelConfig;
+  max_iterations?: number;
+  version?: number;
   status: 'active' | 'inactive';
   created_at: string;
   updated_at: string;
-  execution_count: number;
-  avg_response_time_ms: number;
+  execution_count?: number;
+  avg_response_time_ms?: number;
 }
 
 export interface ModelConfig {
-  model: string;
-  temperature: number;
-  max_tokens: number;
+  model?: string;
+  temperature?: number;
+  max_tokens?: number;
 }
 
 // -----------------------------------------------------------------------------

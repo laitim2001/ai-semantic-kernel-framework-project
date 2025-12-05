@@ -73,10 +73,12 @@ export function AgentDetailPage() {
             <p className="text-gray-500">{ag.description}</p>
           </div>
         </div>
-        <Button variant="outline">
-          <Settings className="w-4 h-4 mr-2" />
-          編輯
-        </Button>
+        <Link to={`/agents/${id}/edit`}>
+          <Button variant="outline">
+            <Settings className="w-4 h-4 mr-2" />
+            編輯
+          </Button>
+        </Link>
       </div>
 
       {/* Info cards */}
@@ -84,14 +86,14 @@ export function AgentDetailPage() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-gray-500">類別</p>
-            <p className="text-lg font-semibold mt-1">{ag.category}</p>
+            <p className="text-lg font-semibold mt-1">{ag.category || '未分類'}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-gray-500">執行次數</p>
             <p className="text-lg font-semibold mt-1">
-              {formatNumber(ag.execution_count)}
+              {formatNumber(ag.execution_count ?? 0)}
             </p>
           </CardContent>
         </Card>
@@ -99,14 +101,16 @@ export function AgentDetailPage() {
           <CardContent className="pt-6">
             <p className="text-sm text-gray-500">平均響應時間</p>
             <p className="text-lg font-semibold mt-1">
-              {ag.avg_response_time_ms}ms
+              {ag.avg_response_time_ms ?? 0}ms
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-gray-500">模型</p>
-            <p className="text-lg font-semibold mt-1">{ag.model_config.model}</p>
+            <p className="text-lg font-semibold mt-1">
+              {ag.model_config_data?.model || ag.model_config?.model || 'gpt-4o'}
+            </p>
           </CardContent>
         </Card>
       </div>

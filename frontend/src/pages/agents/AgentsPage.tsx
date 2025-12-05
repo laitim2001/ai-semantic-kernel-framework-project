@@ -54,12 +54,19 @@ export function AgentsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Agent 管理</h1>
           <p className="text-gray-500">管理和配置您的 AI Agents</p>
         </div>
-        <Link to="/templates">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            從模板創建
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link to="/templates">
+            <Button variant="outline">
+              從模板創建
+            </Button>
+          </Link>
+          <Link to="/agents/new">
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              建立 Agent
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Search bar */}
@@ -118,9 +125,9 @@ export function AgentsPage() {
                   </div>
 
                   <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
-                    <span>{formatNumber(agent.execution_count)} 次執行</span>
+                    <span>{formatNumber(agent.execution_count ?? 0)} 次執行</span>
                     <span>·</span>
-                    <span>平均 {agent.avg_response_time_ms}ms</span>
+                    <span>平均 {agent.avg_response_time_ms ?? 0}ms</span>
                   </div>
                 </CardContent>
               </Card>

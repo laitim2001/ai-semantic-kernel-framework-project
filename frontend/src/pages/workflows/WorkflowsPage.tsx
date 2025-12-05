@@ -53,10 +53,12 @@ export function WorkflowsPage() {
           <h1 className="text-2xl font-bold text-gray-900">工作流管理</h1>
           <p className="text-gray-500">管理和監控您的自動化工作流</p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          創建工作流
-        </Button>
+        <Link to="/workflows/new">
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            創建工作流
+          </Button>
+        </Link>
       </div>
 
       {/* Search bar */}
@@ -99,7 +101,7 @@ export function WorkflowsPage() {
                   <div className="flex items-center gap-4 text-sm text-gray-500">
                     <span>{workflow.trigger_type}</span>
                     <span>·</span>
-                    <span>{formatNumber(workflow.execution_count)} 次執行</span>
+                    <span>{formatNumber(workflow.execution_count ?? 0)} 次執行</span>
                   </div>
 
                   {workflow.last_execution_at && (

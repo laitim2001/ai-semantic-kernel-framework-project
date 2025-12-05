@@ -27,7 +27,7 @@ export function ApprovalsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['pending-checkpoints'],
-    queryFn: () => api.get<Checkpoint[]>('/checkpoints/pending'),
+    queryFn: () => api.get<{ items: Checkpoint[]; count: number }>('/checkpoints/pending'),
   });
 
   const approveMutation = useMutation({
@@ -55,7 +55,7 @@ export function ApprovalsPage() {
   }
 
   // Use mock data if API not available
-  const checkpoints = data || generateMockCheckpoints();
+  const checkpoints = data?.items || generateMockCheckpoints();
 
   return (
     <div className="space-y-6">
