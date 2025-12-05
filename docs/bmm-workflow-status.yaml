@@ -45,6 +45,8 @@ history:
     event: "Production deployment ready with E2E tests, security audit, and deployment scripts"
   - date: "2025-12-05"
     event: "✅ Sprint 10 完成 - Dynamic Planning & Autonomous Decision (42/42 pts)"
+  - date: "2025-12-05"
+    event: "✅ Sprint 11 完成 - Nested Workflows & Advanced Orchestration (39/39 pts)"
 
 workflow_status:
   # Phase 0: Discovery
@@ -84,10 +86,10 @@ workflow_status:
       ✅ Sprint 8: Agent Handoff & Collaboration - 完成 (31/31 pts)
       ✅ Sprint 9: GroupChat & Multi-turn - 完成 (42/42 pts)
       ✅ Sprint 10: Dynamic Planning & Autonomous Decision - 完成 (42/42 pts)
-      ⏳ Sprint 11: Nested Workflows - 待開始
+      ✅ Sprint 11: Nested Workflows & Advanced Orchestration - 完成 (39/39 pts)
       ⏳ Sprint 12: Integration & Polish - 待開始
 
-      Phase 2 完成: 149/222 pts (67%)
+      Phase 2 完成: 188/222 pts (85%)
 
 notes: |
   專案重啟原因：

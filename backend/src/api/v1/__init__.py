@@ -2,7 +2,12 @@
 # IPA Platform - API v1 Module
 # =============================================================================
 # Sprint 4: Developer Experience - Complete Developer Tools
-# Sprint 7: Concurrent Execution Engine (Phase 2)
+# Phase 2: Advanced Orchestration
+#   - Sprint 7: Concurrent Execution Engine
+#   - Sprint 8: Agent Handoff & Collaboration
+#   - Sprint 9: GroupChat & Multi-turn Conversation
+#   - Sprint 10: Dynamic Planning & Autonomous Decision
+#   - Sprint 11: Nested Workflows & Advanced Orchestration
 #
 # API version 1 module aggregating all route modules.
 # Includes:
@@ -22,6 +27,10 @@
 #   - devtools: Execution tracing and debugging (Sprint 4)
 #   - versioning: Template version management (Sprint 4)
 #   - concurrent: Concurrent execution with Fork-Join (Sprint 7)
+#   - handoff: Agent handoff and collaboration (Sprint 8)
+#   - groupchat: GroupChat and multi-turn conversation (Sprint 9)
+#   - planning: Dynamic planning and autonomous decision (Sprint 10)
+#   - nested: Nested workflows and advanced orchestration (Sprint 11)
 # =============================================================================
 
 from fastapi import APIRouter
@@ -35,8 +44,12 @@ from src.api.v1.connectors.routes import router as connectors_router
 from src.api.v1.dashboard.routes import router as dashboard_router
 from src.api.v1.devtools.routes import router as devtools_router
 from src.api.v1.executions.routes import router as executions_router
+from src.api.v1.groupchat.routes import router as groupchat_router
+from src.api.v1.handoff.routes import router as handoff_router
 from src.api.v1.learning.routes import router as learning_router
+from src.api.v1.nested.routes import router as nested_router
 from src.api.v1.notifications.routes import router as notifications_router
+from src.api.v1.planning.routes import router as planning_router
 from src.api.v1.prompts.routes import router as prompts_router
 from src.api.v1.routing.routes import router as routing_router
 from src.api.v1.templates.routes import router as templates_router
@@ -47,7 +60,7 @@ from src.api.v1.workflows.routes import router as workflows_router
 # Create main v1 router
 api_router = APIRouter(prefix="/api/v1")
 
-# Include sub-routers
+# Include sub-routers - Phase 1 (MVP)
 api_router.include_router(dashboard_router)
 api_router.include_router(agents_router)
 api_router.include_router(workflows_router)
@@ -64,6 +77,12 @@ api_router.include_router(templates_router)
 api_router.include_router(learning_router)
 api_router.include_router(devtools_router)
 api_router.include_router(versioning_router)
+
+# Include sub-routers - Phase 2 (Advanced Orchestration)
 api_router.include_router(concurrent_router)  # Sprint 7: Concurrent Execution
+api_router.include_router(handoff_router)     # Sprint 8: Agent Handoff
+api_router.include_router(groupchat_router)   # Sprint 9: GroupChat
+api_router.include_router(planning_router)    # Sprint 10: Dynamic Planning
+api_router.include_router(nested_router)      # Sprint 11: Nested Workflows
 
 __all__ = ["api_router"]
