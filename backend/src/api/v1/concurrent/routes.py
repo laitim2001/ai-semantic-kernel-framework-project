@@ -2,9 +2,11 @@
 # IPA Platform - Concurrent Execution API Routes
 # =============================================================================
 # Sprint 7: Concurrent Execution Engine (Phase 2)
+# Sprint 14: ConcurrentBuilder 重構 (Phase 3 - P3-F1)
 #
 # REST API endpoints for concurrent execution management.
-# Provides:
+#
+# Phase 2 Endpoints (Legacy):
 #   - POST /concurrent/execute - Execute concurrent tasks
 #   - GET /concurrent/{id}/status - Get execution status
 #   - GET /concurrent/{id}/branches - Get all branch statuses
@@ -12,12 +14,21 @@
 #   - POST /concurrent/{id}/branches/{bid}/cancel - Cancel specific branch
 #   - GET /concurrent/stats - Get concurrent execution statistics
 #
+# Phase 3 Endpoints (Adapter-based):
+#   - POST /concurrent/v2/execute - Execute with ConcurrentBuilderAdapter
+#   - GET /concurrent/v2/{id} - Get execution details
+#   - GET /concurrent/v2/stats - Get adapter statistics
+#
+# Migration Support:
+#   - use_adapter query parameter to switch implementations
+#   - Automatic fallback for compatibility
+#
 # All endpoints integrate with ConcurrentExecutor and StateManager.
 # =============================================================================
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -47,6 +58,13 @@ from src.domain.workflows.executors import (
 from src.domain.workflows.deadlock_detector import (
     DeadlockDetector,
     get_deadlock_detector,
+)
+# Sprint 14: Import adapter service
+from src.api.v1.concurrent.adapter_service import (
+    ConcurrentAPIService,
+    ExecuteRequest as AdapterExecuteRequest,
+    ExecuteResponse as AdapterExecuteResponse,
+    get_concurrent_api_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -684,3 +702,264 @@ async def health_check(
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat(),
         }
+
+
+# =============================================================================
+# Phase 3: V2 Adapter-based Endpoints (Sprint 14)
+# =============================================================================
+# These endpoints use the new ConcurrentBuilderAdapter from Agent Framework.
+# They provide the same functionality with improved performance and features.
+# =============================================================================
+
+
+def get_api_service() -> ConcurrentAPIService:
+    """Get ConcurrentAPIService instance for dependency injection."""
+    return get_concurrent_api_service()
+
+
+@router.post(
+    "/v2/execute",
+    response_model=Dict[str, Any],
+    status_code=status.HTTP_201_CREATED,
+    summary="Execute concurrent tasks (V2 - Adapter)",
+    description="Execute concurrent tasks using ConcurrentBuilderAdapter (Phase 3)",
+    tags=["concurrent-v2"],
+)
+async def execute_concurrent_v2(
+    workflow_id: Optional[UUID] = Query(None, description="Workflow ID"),
+    mode: ConcurrentModeEnum = Query(ConcurrentModeEnum.ALL, description="Execution mode"),
+    timeout_seconds: int = Query(300, ge=1, le=3600, description="Timeout in seconds"),
+    max_concurrency: int = Query(10, ge=1, le=100, description="Max concurrent tasks"),
+    use_adapter: bool = Query(True, description="Use new adapter (True) or legacy (False)"),
+    api_service: ConcurrentAPIService = Depends(get_api_service),
+) -> Dict[str, Any]:
+    """
+    Execute concurrent tasks using the new ConcurrentBuilderAdapter.
+
+    This endpoint uses the Phase 3 adapter-based implementation that wraps
+    the official Microsoft Agent Framework ConcurrentBuilder.
+
+    Features:
+    - ALL mode: Wait for all tasks to complete
+    - ANY mode: Return when any task completes
+    - MAJORITY mode: Wait for majority of tasks
+    - FIRST_SUCCESS mode: Return on first successful task
+
+    Args:
+        workflow_id: Optional workflow ID
+        mode: Execution mode (all, any, majority, first_success)
+        timeout_seconds: Global timeout (1-3600 seconds)
+        max_concurrency: Maximum concurrent tasks (1-100)
+        use_adapter: Use new adapter (True) or legacy implementation (False)
+
+    Returns:
+        Execution response with results and branch information
+    """
+    try:
+        # Create adapter request
+        request = AdapterExecuteRequest(
+            workflow_id=workflow_id,
+            mode=mode.value,
+            timeout_seconds=timeout_seconds,
+            max_concurrency=max_concurrency,
+            tasks=[],  # Tasks would be populated from workflow
+            input_data={},
+        )
+
+        # Execute
+        response = await api_service.execute(request, use_adapter=use_adapter)
+
+        # Convert to dict for JSON response
+        return {
+            "execution_id": str(response.execution_id),
+            "status": response.status,
+            "mode": response.mode,
+            "total_tasks": response.total_tasks,
+            "completed_tasks": response.completed_tasks,
+            "failed_tasks": response.failed_tasks,
+            "results": response.results,
+            "errors": response.errors,
+            "duration_ms": response.duration_ms,
+            "branches": response.branches,
+            "started_at": response.started_at.isoformat() if response.started_at else None,
+            "completed_at": response.completed_at.isoformat() if response.completed_at else None,
+            "use_adapter": use_adapter,
+            "message": f"Executed with {'adapter' if use_adapter else 'legacy'} implementation",
+        }
+
+    except Exception as e:
+        logger.error(f"Error in v2 execute: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute concurrent tasks: {str(e)}",
+        )
+
+
+@router.get(
+    "/v2/{execution_id}",
+    response_model=Dict[str, Any],
+    summary="Get execution details (V2)",
+    description="Get execution details from adapter service",
+    tags=["concurrent-v2"],
+)
+async def get_execution_v2(
+    execution_id: UUID,
+    api_service: ConcurrentAPIService = Depends(get_api_service),
+) -> Dict[str, Any]:
+    """
+    Get execution details from the adapter service.
+
+    Args:
+        execution_id: Execution UUID
+
+    Returns:
+        Execution details including request, response, and adapter info
+    """
+    try:
+        execution = api_service.get_execution(execution_id)
+
+        if execution is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Execution {execution_id} not found",
+            )
+
+        response = execution.get("response")
+        return {
+            "execution_id": str(execution_id),
+            "status": response.status if response else "unknown",
+            "mode": response.mode if response else "unknown",
+            "total_tasks": response.total_tasks if response else 0,
+            "completed_tasks": response.completed_tasks if response else 0,
+            "failed_tasks": response.failed_tasks if response else 0,
+            "results": response.results if response else {},
+            "errors": response.errors if response else {},
+            "duration_ms": response.duration_ms if response else 0,
+            "branches": response.branches if response else [],
+            "use_adapter": execution.get("use_adapter", True),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting v2 execution {execution_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get execution: {str(e)}",
+        )
+
+
+@router.get(
+    "/v2/stats",
+    response_model=Dict[str, Any],
+    summary="Get adapter statistics (V2)",
+    description="Get statistics from the adapter service",
+    tags=["concurrent-v2"],
+)
+async def get_stats_v2(
+    api_service: ConcurrentAPIService = Depends(get_api_service),
+) -> Dict[str, Any]:
+    """
+    Get statistics from the ConcurrentAPIService.
+
+    Returns:
+        Statistics including total executions, adapter vs legacy usage, and success rates
+    """
+    try:
+        stats = api_service.get_statistics()
+        return {
+            **stats,
+            "implementation": "ConcurrentBuilderAdapter (Phase 3)",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting v2 stats: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get statistics: {str(e)}",
+        )
+
+
+@router.get(
+    "/v2/health",
+    summary="Health check (V2)",
+    description="Check adapter service health",
+    tags=["concurrent-v2"],
+)
+async def health_check_v2(
+    api_service: ConcurrentAPIService = Depends(get_api_service),
+) -> Dict[str, Any]:
+    """
+    Health check for the V2 adapter-based concurrent execution service.
+    """
+    try:
+        stats = api_service.get_statistics()
+        return {
+            "status": "healthy",
+            "implementation": "ConcurrentBuilderAdapter",
+            "phase": "Phase 3 (Sprint 14)",
+            "adapter_service": {
+                "total_executions": stats.get("total_executions", 0),
+                "adapter_executions": stats.get("adapter_executions", 0),
+                "legacy_executions": stats.get("legacy_executions", 0),
+                "registered_executors": stats.get("registered_executors", 0),
+            },
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"V2 health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "implementation": "ConcurrentBuilderAdapter",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+
+@router.get(
+    "/v2/executions",
+    response_model=Dict[str, Any],
+    summary="List executions (V2)",
+    description="List all executions from adapter service",
+    tags=["concurrent-v2"],
+)
+async def list_executions_v2(
+    limit: int = Query(100, ge=1, le=1000, description="Max results"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    api_service: ConcurrentAPIService = Depends(get_api_service),
+) -> Dict[str, Any]:
+    """
+    List all executions from the adapter service.
+
+    Args:
+        limit: Maximum number of results (1-1000)
+        offset: Pagination offset
+
+    Returns:
+        List of executions with pagination info
+    """
+    try:
+        executions = api_service.list_executions(limit=limit, offset=offset)
+        return {
+            "executions": [
+                {
+                    "execution_id": str(e.get("execution_id")),
+                    "use_adapter": e.get("use_adapter", True),
+                    "status": e.get("response", {}).status if e.get("response") else "unknown",
+                }
+                for e in executions
+            ],
+            "count": len(executions),
+            "limit": limit,
+            "offset": offset,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error listing v2 executions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list executions: {str(e)}",
+        )

@@ -563,6 +563,183 @@ class RegisterCapabilityResponse(BaseModel):
 
 
 # =============================================================================
+# HITL (Human-in-the-Loop) Schemas - Sprint 15
+# =============================================================================
+
+class HITLInputTypeEnum(str, Enum):
+    """HITL input types."""
+    TEXT = "text"
+    CHOICE = "choice"
+    CONFIRMATION = "confirmation"
+    FILE = "file"
+    FORM = "form"
+
+
+class HITLSessionStatusEnum(str, Enum):
+    """HITL session status."""
+    ACTIVE = "active"
+    INPUT_RECEIVED = "input_received"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
+    ESCALATED = "escalated"
+
+
+class HITLInputRequestSchema(BaseModel):
+    """HITL input request."""
+    request_id: UUID = Field(
+        ...,
+        description="Request ID",
+    )
+    session_id: UUID = Field(
+        ...,
+        description="Session ID",
+    )
+    prompt: str = Field(
+        ...,
+        description="Prompt message for user",
+    )
+    awaiting_agent_id: str = Field(
+        default="",
+        description="Agent waiting for input",
+    )
+    input_type: HITLInputTypeEnum = Field(
+        default=HITLInputTypeEnum.TEXT,
+        description="Expected input type",
+    )
+    choices: List[str] = Field(
+        default_factory=list,
+        description="Available choices (for CHOICE type)",
+    )
+    default_value: Optional[str] = Field(
+        default=None,
+        description="Default value",
+    )
+    timeout_seconds: int = Field(
+        default=300,
+        description="Timeout in seconds",
+    )
+    expires_at: datetime = Field(
+        ...,
+        description="When request expires",
+    )
+    conversation_summary: str = Field(
+        default="",
+        description="Summary of conversation so far",
+    )
+
+
+class HITLSubmitInputRequest(BaseModel):
+    """Request to submit user input for HITL."""
+    request_id: UUID = Field(
+        ...,
+        description="Request ID to respond to",
+    )
+    input_value: Any = Field(
+        ...,
+        description="User's input value",
+    )
+    user_id: Optional[str] = Field(
+        default=None,
+        description="User ID (if available)",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata",
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "request_id": "123e4567-e89b-12d3-a456-426614174000",
+                "input_value": "Yes, please proceed with the refund",
+                "user_id": "user-123",
+            }
+        }
+
+
+class HITLSubmitInputResponse(BaseModel):
+    """Response after submitting HITL input."""
+    response_id: UUID = Field(
+        ...,
+        description="Response ID",
+    )
+    request_id: UUID = Field(
+        ...,
+        description="Request ID",
+    )
+    session_id: UUID = Field(
+        ...,
+        description="Session ID",
+    )
+    message: str = Field(
+        default="Input submitted successfully",
+        description="Status message",
+    )
+
+
+class HITLSessionSchema(BaseModel):
+    """HITL session information."""
+    session_id: UUID = Field(
+        ...,
+        description="Session ID",
+    )
+    handoff_execution_id: Optional[UUID] = Field(
+        default=None,
+        description="Related handoff execution ID",
+    )
+    status: HITLSessionStatusEnum = Field(
+        ...,
+        description="Session status",
+    )
+    created_at: datetime = Field(
+        ...,
+        description="When session was created",
+    )
+    updated_at: datetime = Field(
+        ...,
+        description="When session was last updated",
+    )
+    completed_at: Optional[datetime] = Field(
+        default=None,
+        description="When session completed",
+    )
+    current_request: Optional[HITLInputRequestSchema] = Field(
+        default=None,
+        description="Current pending request",
+    )
+    history_count: int = Field(
+        default=0,
+        description="Number of request/response pairs",
+    )
+
+
+class HITLSessionListResponse(BaseModel):
+    """Response with list of HITL sessions."""
+    sessions: List[HITLSessionSchema] = Field(
+        default_factory=list,
+        description="HITL sessions",
+    )
+    total: int = Field(
+        default=0,
+        description="Total count",
+    )
+
+
+class HITLPendingRequestsResponse(BaseModel):
+    """Response with pending HITL requests."""
+    requests: List[HITLInputRequestSchema] = Field(
+        default_factory=list,
+        description="Pending requests",
+    )
+    total: int = Field(
+        default=0,
+        description="Total count",
+    )
+
+
+# =============================================================================
 # Error Response
 # =============================================================================
 

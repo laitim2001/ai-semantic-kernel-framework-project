@@ -45,6 +45,15 @@ from src.api.v1.handoff.schemas import (
     MatchStrategyEnum,
     RegisterCapabilityRequest,
     RegisterCapabilityResponse,
+    # Sprint 15: HITL Schemas
+    HITLInputRequestSchema,
+    HITLInputTypeEnum,
+    HITLPendingRequestsResponse,
+    HITLSessionListResponse,
+    HITLSessionSchema,
+    HITLSessionStatusEnum,
+    HITLSubmitInputRequest,
+    HITLSubmitInputResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -611,3 +620,371 @@ def _calculate_match_score(
     overall_score = weighted_score / total_weight if total_weight > 0 else 0.0
 
     return overall_score, capability_scores, missing
+
+
+# =============================================================================
+# HITL (Human-in-the-Loop) Endpoints - Sprint 15
+# =============================================================================
+
+# HITL sessions storage
+_hitl_sessions: Dict[UUID, Dict[str, Any]] = {}
+_hitl_requests: Dict[UUID, Dict[str, Any]] = {}
+
+
+@router.get(
+    "/hitl/sessions",
+    response_model=HITLSessionListResponse,
+    summary="List HITL Sessions",
+    description="Get list of active HITL sessions",
+    tags=["Handoff", "HITL"],
+)
+async def list_hitl_sessions(
+    status_filter: Optional[HITLSessionStatusEnum] = Query(
+        default=None,
+        alias="status",
+        description="Filter by session status",
+    ),
+    handoff_execution_id: Optional[UUID] = Query(
+        default=None,
+        description="Filter by handoff execution ID",
+    ),
+) -> HITLSessionListResponse:
+    """
+    List HITL sessions.
+
+    Returns active sessions that are waiting for user input
+    or recently completed.
+    """
+    sessions = list(_hitl_sessions.values())
+
+    # Filter by status
+    if status_filter:
+        sessions = [s for s in sessions if s["status"] == status_filter.value]
+
+    # Filter by handoff execution
+    if handoff_execution_id:
+        sessions = [
+            s for s in sessions
+            if s.get("handoff_execution_id") == handoff_execution_id
+        ]
+
+    # Convert to response schema
+    session_schemas = []
+    for s in sessions:
+        current_request = None
+        if s.get("current_request_id"):
+            req = _hitl_requests.get(s["current_request_id"])
+            if req:
+                current_request = HITLInputRequestSchema(
+                    request_id=req["request_id"],
+                    session_id=s["session_id"],
+                    prompt=req["prompt"],
+                    awaiting_agent_id=req.get("awaiting_agent_id", ""),
+                    input_type=HITLInputTypeEnum(req.get("input_type", "text")),
+                    choices=req.get("choices", []),
+                    default_value=req.get("default_value"),
+                    timeout_seconds=req.get("timeout_seconds", 300),
+                    expires_at=req["expires_at"],
+                    conversation_summary=req.get("conversation_summary", ""),
+                )
+
+        session_schemas.append(HITLSessionSchema(
+            session_id=s["session_id"],
+            handoff_execution_id=s.get("handoff_execution_id"),
+            status=HITLSessionStatusEnum(s["status"]),
+            created_at=s["created_at"],
+            updated_at=s["updated_at"],
+            completed_at=s.get("completed_at"),
+            current_request=current_request,
+            history_count=len(s.get("history", [])),
+        ))
+
+    return HITLSessionListResponse(
+        sessions=session_schemas,
+        total=len(session_schemas),
+    )
+
+
+@router.get(
+    "/hitl/sessions/{session_id}",
+    response_model=HITLSessionSchema,
+    responses={
+        404: {"model": HandoffErrorResponse},
+    },
+    summary="Get HITL Session",
+    description="Get details of a specific HITL session",
+    tags=["Handoff", "HITL"],
+)
+async def get_hitl_session(
+    session_id: UUID,
+) -> HITLSessionSchema:
+    """
+    Get details of a specific HITL session.
+    """
+    if session_id not in _hitl_sessions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"HITL session {session_id} not found",
+        )
+
+    s = _hitl_sessions[session_id]
+
+    current_request = None
+    if s.get("current_request_id"):
+        req = _hitl_requests.get(s["current_request_id"])
+        if req:
+            current_request = HITLInputRequestSchema(
+                request_id=req["request_id"],
+                session_id=session_id,
+                prompt=req["prompt"],
+                awaiting_agent_id=req.get("awaiting_agent_id", ""),
+                input_type=HITLInputTypeEnum(req.get("input_type", "text")),
+                choices=req.get("choices", []),
+                default_value=req.get("default_value"),
+                timeout_seconds=req.get("timeout_seconds", 300),
+                expires_at=req["expires_at"],
+                conversation_summary=req.get("conversation_summary", ""),
+            )
+
+    return HITLSessionSchema(
+        session_id=s["session_id"],
+        handoff_execution_id=s.get("handoff_execution_id"),
+        status=HITLSessionStatusEnum(s["status"]),
+        created_at=s["created_at"],
+        updated_at=s["updated_at"],
+        completed_at=s.get("completed_at"),
+        current_request=current_request,
+        history_count=len(s.get("history", [])),
+    )
+
+
+@router.get(
+    "/hitl/pending",
+    response_model=HITLPendingRequestsResponse,
+    summary="Get Pending HITL Requests",
+    description="Get all pending HITL input requests",
+    tags=["Handoff", "HITL"],
+)
+async def get_pending_hitl_requests() -> HITLPendingRequestsResponse:
+    """
+    Get all pending HITL input requests.
+
+    Returns requests that are waiting for user input,
+    sorted by urgency (expiring soon first).
+    """
+    now = datetime.utcnow()
+    pending = []
+
+    for req in _hitl_requests.values():
+        if req.get("responded"):
+            continue
+
+        # Check if expired
+        if req["expires_at"] < now:
+            continue
+
+        session = _hitl_sessions.get(req["session_id"])
+        if not session or session["status"] != "active":
+            continue
+
+        pending.append(HITLInputRequestSchema(
+            request_id=req["request_id"],
+            session_id=req["session_id"],
+            prompt=req["prompt"],
+            awaiting_agent_id=req.get("awaiting_agent_id", ""),
+            input_type=HITLInputTypeEnum(req.get("input_type", "text")),
+            choices=req.get("choices", []),
+            default_value=req.get("default_value"),
+            timeout_seconds=req.get("timeout_seconds", 300),
+            expires_at=req["expires_at"],
+            conversation_summary=req.get("conversation_summary", ""),
+        ))
+
+    # Sort by expires_at (urgency)
+    pending.sort(key=lambda r: r.expires_at)
+
+    return HITLPendingRequestsResponse(
+        requests=pending,
+        total=len(pending),
+    )
+
+
+@router.post(
+    "/hitl/submit",
+    response_model=HITLSubmitInputResponse,
+    responses={
+        400: {"model": HandoffErrorResponse},
+        404: {"model": HandoffErrorResponse},
+    },
+    summary="Submit HITL Input",
+    description="Submit user input for a HITL request",
+    tags=["Handoff", "HITL"],
+)
+async def submit_hitl_input(
+    request: HITLSubmitInputRequest,
+) -> HITLSubmitInputResponse:
+    """
+    Submit user input for a HITL request.
+
+    This resumes the handoff workflow with the user's input.
+    """
+    if request.request_id not in _hitl_requests:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"HITL request {request.request_id} not found",
+        )
+
+    req = _hitl_requests[request.request_id]
+
+    if req.get("responded"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"HITL request {request.request_id} already responded",
+        )
+
+    # Check expiration
+    now = datetime.utcnow()
+    if req["expires_at"] < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"HITL request {request.request_id} has expired",
+        )
+
+    # Update request
+    response_id = uuid4()
+    req["responded"] = True
+    req["response_id"] = response_id
+    req["input_value"] = request.input_value
+    req["responded_at"] = now
+    req["user_id"] = request.user_id
+
+    # Update session
+    session_id = req["session_id"]
+    if session_id in _hitl_sessions:
+        session = _hitl_sessions[session_id]
+        session["status"] = "input_received"
+        session["updated_at"] = now
+        session["current_request_id"] = None
+        session["history"].append({
+            "type": "response",
+            "request_id": str(request.request_id),
+            "response_id": str(response_id),
+            "timestamp": now.isoformat(),
+        })
+
+    logger.info(
+        f"HITL input submitted: request={request.request_id}, "
+        f"session={session_id}"
+    )
+
+    return HITLSubmitInputResponse(
+        response_id=response_id,
+        request_id=request.request_id,
+        session_id=session_id,
+        message="Input submitted successfully",
+    )
+
+
+@router.post(
+    "/hitl/sessions/{session_id}/cancel",
+    response_model=HITLSessionSchema,
+    responses={
+        404: {"model": HandoffErrorResponse},
+    },
+    summary="Cancel HITL Session",
+    description="Cancel an active HITL session",
+    tags=["Handoff", "HITL"],
+)
+async def cancel_hitl_session(
+    session_id: UUID,
+    reason: Optional[str] = Query(
+        default=None,
+        description="Cancellation reason",
+    ),
+) -> HITLSessionSchema:
+    """
+    Cancel an active HITL session.
+    """
+    if session_id not in _hitl_sessions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"HITL session {session_id} not found",
+        )
+
+    session = _hitl_sessions[session_id]
+    now = datetime.utcnow()
+
+    session["status"] = "cancelled"
+    session["completed_at"] = now
+    session["updated_at"] = now
+    if reason:
+        session["cancel_reason"] = reason
+
+    logger.info(f"HITL session cancelled: {session_id}")
+
+    return HITLSessionSchema(
+        session_id=session["session_id"],
+        handoff_execution_id=session.get("handoff_execution_id"),
+        status=HITLSessionStatusEnum.CANCELLED,
+        created_at=session["created_at"],
+        updated_at=session["updated_at"],
+        completed_at=session["completed_at"],
+        current_request=None,
+        history_count=len(session.get("history", [])),
+    )
+
+
+@router.post(
+    "/hitl/sessions/{session_id}/escalate",
+    response_model=HITLSessionSchema,
+    responses={
+        404: {"model": HandoffErrorResponse},
+    },
+    summary="Escalate HITL Session",
+    description="Escalate an active HITL session",
+    tags=["Handoff", "HITL"],
+)
+async def escalate_hitl_session(
+    session_id: UUID,
+    reason: str = Query(
+        ...,
+        description="Escalation reason",
+    ),
+    target: Optional[str] = Query(
+        default=None,
+        description="Escalation target (e.g., supervisor)",
+    ),
+) -> HITLSessionSchema:
+    """
+    Escalate an active HITL session.
+
+    Marks the session for human review/intervention.
+    """
+    if session_id not in _hitl_sessions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"HITL session {session_id} not found",
+        )
+
+    session = _hitl_sessions[session_id]
+    now = datetime.utcnow()
+
+    session["status"] = "escalated"
+    session["updated_at"] = now
+    session["escalation_reason"] = reason
+    session["escalation_target"] = target
+
+    logger.warning(
+        f"HITL session escalated: {session_id}, reason={reason}"
+    )
+
+    return HITLSessionSchema(
+        session_id=session["session_id"],
+        handoff_execution_id=session.get("handoff_execution_id"),
+        status=HITLSessionStatusEnum.ESCALATED,
+        created_at=session["created_at"],
+        updated_at=session["updated_at"],
+        completed_at=session.get("completed_at"),
+        current_request=None,
+        history_count=len(session.get("history", [])),
+    )
