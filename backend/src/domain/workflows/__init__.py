@@ -2,6 +2,7 @@
 # IPA Platform - Workflows Domain Module
 # =============================================================================
 # Sprint 1: Core Engine - Agent Framework Integration
+# Sprint 7: Concurrent Execution Engine (Phase 2)
 #
 # Domain module for workflow management and execution.
 # =============================================================================
@@ -34,6 +35,16 @@ from src.domain.workflows.service import (
     get_workflow_execution_service,
 )
 
+from src.domain.workflows.deadlock_detector import (
+    DeadlockDetector,
+    DeadlockInfo,
+    DeadlockResolutionStrategy,
+    TimeoutHandler,
+    WaitingTask,
+    get_deadlock_detector,
+    reset_deadlock_detector,
+)
+
 __all__ = [
     # Models
     "NodeType",
@@ -59,4 +70,12 @@ __all__ = [
     "WorkflowExecutionResult",
     "WorkflowExecutionService",
     "get_workflow_execution_service",
+    # Deadlock Detection (Sprint 7)
+    "DeadlockDetector",
+    "DeadlockInfo",
+    "DeadlockResolutionStrategy",
+    "TimeoutHandler",
+    "WaitingTask",
+    "get_deadlock_detector",
+    "reset_deadlock_detector",
 ]

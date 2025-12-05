@@ -2,6 +2,7 @@
 # IPA Platform - API v1 Module
 # =============================================================================
 # Sprint 4: Developer Experience - Complete Developer Tools
+# Sprint 7: Concurrent Execution Engine (Phase 2)
 #
 # API version 1 module aggregating all route modules.
 # Includes:
@@ -20,6 +21,7 @@
 #   - learning: Few-shot learning mechanism (Sprint 4)
 #   - devtools: Execution tracing and debugging (Sprint 4)
 #   - versioning: Template version management (Sprint 4)
+#   - concurrent: Concurrent execution with Fork-Join (Sprint 7)
 # =============================================================================
 
 from fastapi import APIRouter
@@ -28,6 +30,7 @@ from src.api.v1.agents.routes import router as agents_router
 from src.api.v1.audit.routes import router as audit_router
 from src.api.v1.cache.routes import router as cache_router
 from src.api.v1.checkpoints.routes import router as checkpoints_router
+from src.api.v1.concurrent.routes import router as concurrent_router
 from src.api.v1.connectors.routes import router as connectors_router
 from src.api.v1.dashboard.routes import router as dashboard_router
 from src.api.v1.devtools.routes import router as devtools_router
@@ -61,5 +64,6 @@ api_router.include_router(templates_router)
 api_router.include_router(learning_router)
 api_router.include_router(devtools_router)
 api_router.include_router(versioning_router)
+api_router.include_router(concurrent_router)  # Sprint 7: Concurrent Execution
 
 __all__ = ["api_router"]
