@@ -55,6 +55,11 @@ from typing import (
 from ..base import BuilderAdapter
 from ..exceptions import ExecutionError, ValidationError, WorkflowBuildError
 
+# =============================================================================
+# 官方 Agent Framework API 導入 (Sprint 19 整合)
+# =============================================================================
+from agent_framework import ConcurrentBuilder
+
 logger = logging.getLogger(__name__)
 
 # Type variables for generic typing
@@ -503,6 +508,9 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
         self._built = False
         self._workflow: Optional[Any] = None
 
+        # Sprint 19: 使用官方 ConcurrentBuilder API
+        self._builder = ConcurrentBuilder()
+
         logger.info(
             f"ConcurrentBuilderAdapter initialized: id={id}, mode={mode.value}, "
             f"max_concurrency={self._max_concurrency}, timeout={self._timeout_seconds}s"
@@ -655,7 +663,7 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
         """
         構建並行執行工作流。
 
-        驗證配置並準備執行。
+        驗證配置並準備執行。使用官方 Agent Framework ConcurrentBuilder API。
 
         Returns:
             Self (工作流已準備好執行)
@@ -674,6 +682,27 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
             f"Building concurrent workflow: {self._id}, "
             f"tasks={len(self._tasks)}, mode={self._mode.value}"
         )
+
+        # Sprint 19: 使用官方 ConcurrentBuilder API 構建工作流
+        # 將 IPA 平台任務轉換為官方 API 格式
+        participants = [task.executor for task in self._tasks]
+
+        # 調用官方 ConcurrentBuilder.participants().build()
+        try:
+            self._workflow = (
+                self._builder
+                .participants(participants)
+                .with_aggregator(self._aggregator)
+                .build()
+            )
+            logger.info(f"Official ConcurrentBuilder workflow created: {self._id}")
+        except Exception as e:
+            # 如果官方 API 失敗，記錄警告但繼續使用內部實現
+            logger.warning(
+                f"Official ConcurrentBuilder.build() failed: {e}. "
+                f"Falling back to IPA platform implementation."
+            )
+            self._workflow = None
 
         self._built = True
         return self

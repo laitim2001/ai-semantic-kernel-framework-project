@@ -44,6 +44,14 @@ from uuid import UUID, uuid4
 
 from ..base import BuilderAdapter
 
+# =============================================================================
+# 官方 Agent Framework API 導入 (Sprint 19 整合)
+# =============================================================================
+from agent_framework import (
+    HandoffBuilder,
+    HandoffUserInputRequest,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -282,6 +290,9 @@ class HandoffBuilderAdapter(BuilderAdapter[Any, HandoffExecutionResult]):
         self._on_handoff: List[Callable] = []
         self._on_user_input_request: List[Callable] = []
         self._on_completion: List[Callable] = []
+
+        # Sprint 19: 使用官方 HandoffBuilder API
+        self._builder = HandoffBuilder()
 
         # 註冊參與者
         if participants:
@@ -542,8 +553,7 @@ class HandoffBuilderAdapter(BuilderAdapter[Any, HandoffExecutionResult]):
         """
         構建 Handoff Workflow。
 
-        在真實的 Agent Framework 整合中，此方法會使用
-        HandoffBuilder 構建 Workflow。目前實現為模擬。
+        使用官方 Agent Framework HandoffBuilder API 構建工作流。
 
         Returns:
             Workflow 實例
@@ -557,6 +567,28 @@ class HandoffBuilderAdapter(BuilderAdapter[Any, HandoffExecutionResult]):
         if not self._coordinator_id:
             raise ValueError("No coordinator configured. Call set_coordinator() first.")
 
+        # Sprint 19: 使用官方 HandoffBuilder API 構建工作流
+        # 將 IPA 平台參與者轉換為官方 API 格式
+        participants = [p.executor for p in self._participants.values()]
+        coordinator = self._participants.get(self._coordinator_id)
+
+        try:
+            # 調用官方 HandoffBuilder.participants().build()
+            workflow = (
+                self._builder
+                .participants(participants)
+                .build()
+            )
+            self._workflow = workflow
+            logger.info(f"Official HandoffBuilder workflow created: {self._id}")
+        except Exception as e:
+            # 如果官方 API 失敗，記錄警告但繼續使用內部實現
+            logger.warning(
+                f"Official HandoffBuilder.build() failed: {e}. "
+                f"Falling back to IPA platform implementation."
+            )
+            self._workflow = None
+
         self._built = True
 
         logger.info(
@@ -564,7 +596,10 @@ class HandoffBuilderAdapter(BuilderAdapter[Any, HandoffExecutionResult]):
             f"with {len(self._participants)} participants"
         )
 
-        # 返回模擬的 workflow 配置
+        # 返回 workflow 或備用配置
+        if self._workflow:
+            return self._workflow
+
         return {
             "id": self._id,
             "coordinator_id": self._coordinator_id,

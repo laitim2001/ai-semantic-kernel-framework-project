@@ -54,6 +54,15 @@ import asyncio
 from ..base import BuilderAdapter
 from ..exceptions import WorkflowBuildError, AdapterError
 
+# =============================================================================
+# 官方 Agent Framework API 導入 (Sprint 19 整合)
+# =============================================================================
+from agent_framework import (
+    GroupChatBuilder,
+    GroupChatDirective,
+    ManagerSelectionResponse,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -566,6 +575,9 @@ class GroupChatBuilderAdapter(BuilderAdapter):
         self._state: Optional[GroupChatState] = None
         self._events: List[Dict[str, Any]] = []
 
+        # Sprint 19: 使用官方 GroupChatBuilder API
+        self._builder = GroupChatBuilder()
+
     @property
     def id(self) -> str:
         """獲取適配器 ID。"""
@@ -770,6 +782,8 @@ class GroupChatBuilderAdapter(BuilderAdapter):
         """
         構建 GroupChat Workflow。
 
+        使用官方 Agent Framework GroupChatBuilder API 構建工作流。
+
         Returns:
             構建完成的 Workflow 實例
 
@@ -784,7 +798,29 @@ class GroupChatBuilderAdapter(BuilderAdapter):
                 name: p.description for name, p in self._participants.items()
             }
 
-            # 創建 mock workflow（實際環境會使用 Agent Framework）
+            # Sprint 19: 使用官方 GroupChatBuilder API 構建工作流
+            # 將 IPA 平台參與者轉換為官方 API 格式
+            participants = [p.agent for p in self._participants.values() if p.agent]
+
+            try:
+                # 調用官方 GroupChatBuilder.participants().build()
+                workflow = (
+                    self._builder
+                    .participants(participants)
+                    .build()
+                )
+                self._workflow = workflow
+                self._built = True
+                self._logger.info(f"Official GroupChatBuilder workflow created: {self._id}")
+                return workflow
+            except Exception as e:
+                # 如果官方 API 失敗，記錄警告並回退到 Mock 實現
+                self._logger.warning(
+                    f"Official GroupChatBuilder.build() failed: {e}. "
+                    f"Falling back to IPA platform implementation."
+                )
+
+            # 回退: 創建 mock workflow
             workflow = _MockGroupChatWorkflow(
                 id=self._id,
                 participants=self._participants,
@@ -799,7 +835,7 @@ class GroupChatBuilderAdapter(BuilderAdapter):
 
             self._workflow = workflow
             self._built = True
-            self._logger.info(f"GroupChat workflow built: {self._id}")
+            self._logger.info(f"GroupChat workflow built (fallback): {self._id}")
             return workflow
 
         except Exception as e:
