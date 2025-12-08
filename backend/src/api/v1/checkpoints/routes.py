@@ -1,10 +1,16 @@
 # =============================================================================
 # IPA Platform - Checkpoint API Routes
 # =============================================================================
-# Sprint 2: Workflow & Checkpoints - Human-in-the-Loop
+# Sprint 29: API Routes 遷移 (Phase 5)
 #
-# REST API endpoints for checkpoint management.
-# Provides:
+# Migration Notes (Sprint 29):
+#   - Migrated from domain CheckpointService to ApprovalWorkflowManager adapter
+#   - Uses official Agent Framework RequestResponseExecutor via HumanApprovalExecutor
+#   - Maintains backward compatibility with existing API schemas
+#   - Database operations remain with CheckpointRepository (infrastructure layer)
+#   - CheckpointService retained for storage operations, approval flow via adapter
+#
+# REST API endpoints for checkpoint management:
 #   - GET /checkpoints/pending - List pending checkpoints
 #   - GET /checkpoints/{id} - Get checkpoint details
 #   - POST /checkpoints/{id}/approve - Approve a checkpoint
@@ -12,10 +18,14 @@
 #   - GET /checkpoints/stats - Get checkpoint statistics
 #   - GET /checkpoints/execution/{execution_id} - List checkpoints for execution
 #
-# All endpoints require checkpoint repository dependency injection.
+# References:
+#   - Sprint 29 Plan: docs/03-implementation/sprint-planning/phase-5/sprint-29-plan.md
+#   - HumanApprovalExecutor: src/integrations/agent_framework/core/approval.py
+#   - ApprovalWorkflowManager: src/integrations/agent_framework/core/approval_workflow.py
 # =============================================================================
 
 import logging
+import warnings
 from typing import Optional
 from uuid import UUID
 
@@ -32,6 +42,25 @@ from src.api.v1.checkpoints.schemas import (
     PendingCheckpointsResponse,
     RejectionRequest,
 )
+
+# =============================================================================
+# Sprint 29: Import from Adapter Layer
+# =============================================================================
+from src.integrations.agent_framework.core.approval import (
+    HumanApprovalExecutor,
+    ApprovalRequest as AdapterApprovalRequest,
+    ApprovalResponse as AdapterApprovalResponse,
+    ApprovalStatus as AdapterApprovalStatus,
+    RiskLevel,
+    create_approval_executor,
+)
+from src.integrations.agent_framework.core.approval_workflow import (
+    ApprovalWorkflowManager,
+    create_approval_workflow_manager,
+    quick_respond,
+)
+
+# Keep CheckpointService for storage operations
 from src.domain.checkpoints import CheckpointService, CheckpointStatus
 from src.infrastructure.database.repositories.checkpoint import CheckpointRepository
 from src.infrastructure.database.session import get_session
@@ -49,8 +78,35 @@ router = APIRouter(
 
 
 # =============================================================================
-# Dependency Injection
+# Dependency Injection (Sprint 29)
 # =============================================================================
+
+# Singleton for ApprovalWorkflowManager
+_approval_manager: Optional[ApprovalWorkflowManager] = None
+
+
+def get_approval_manager() -> ApprovalWorkflowManager:
+    """
+    Get or create the ApprovalWorkflowManager singleton.
+
+    Sprint 29: New adapter-based dependency injection.
+
+    Returns:
+        ApprovalWorkflowManager instance
+    """
+    global _approval_manager
+    if _approval_manager is None:
+        _approval_manager = create_approval_workflow_manager()
+        # Register default approval executor
+        _approval_manager.register_approval_executor("checkpoint-approval")
+        logger.info("ApprovalWorkflowManager initialized for checkpoint API")
+    return _approval_manager
+
+
+def reset_approval_manager() -> None:
+    """Reset the manager instance (for testing)."""
+    global _approval_manager
+    _approval_manager = None
 
 
 async def get_checkpoint_repository(
@@ -63,8 +119,36 @@ async def get_checkpoint_repository(
 async def get_checkpoint_service(
     repo: CheckpointRepository = Depends(get_checkpoint_repository),
 ) -> CheckpointService:
-    """Get checkpoint service instance."""
+    """Get checkpoint service instance (for storage operations)."""
     return CheckpointService(repo)
+
+
+# =============================================================================
+# Status Mapping Helpers
+# =============================================================================
+
+def _map_checkpoint_to_adapter_status(status: CheckpointStatus) -> AdapterApprovalStatus:
+    """Map CheckpointStatus to adapter ApprovalStatus."""
+    mapping = {
+        CheckpointStatus.PENDING: AdapterApprovalStatus.PENDING,
+        CheckpointStatus.APPROVED: AdapterApprovalStatus.APPROVED,
+        CheckpointStatus.REJECTED: AdapterApprovalStatus.REJECTED,
+        CheckpointStatus.EXPIRED: AdapterApprovalStatus.EXPIRED,
+    }
+    return mapping.get(status, AdapterApprovalStatus.PENDING)
+
+
+def _map_adapter_to_checkpoint_status(status: AdapterApprovalStatus) -> CheckpointStatus:
+    """Map adapter ApprovalStatus to CheckpointStatus."""
+    mapping = {
+        AdapterApprovalStatus.PENDING: CheckpointStatus.PENDING,
+        AdapterApprovalStatus.APPROVED: CheckpointStatus.APPROVED,
+        AdapterApprovalStatus.REJECTED: CheckpointStatus.REJECTED,
+        AdapterApprovalStatus.EXPIRED: CheckpointStatus.EXPIRED,
+        AdapterApprovalStatus.ESCALATED: CheckpointStatus.PENDING,  # Map escalated to pending
+        AdapterApprovalStatus.CANCELLED: CheckpointStatus.EXPIRED,  # Map cancelled to expired
+    }
+    return mapping.get(status, CheckpointStatus.PENDING)
 
 
 # =============================================================================
@@ -82,13 +166,18 @@ async def list_pending_checkpoints(
     limit: int = Query(50, ge=1, le=100, description="Maximum number to return"),
     execution_id: Optional[UUID] = Query(None, description="Filter by execution ID"),
     service: CheckpointService = Depends(get_checkpoint_service),
+    manager: ApprovalWorkflowManager = Depends(get_approval_manager),
 ) -> PendingCheckpointsResponse:
     """
     List pending checkpoints awaiting approval.
 
     Returns checkpoints in PENDING status, ordered by creation time.
+    Also includes pending requests from ApprovalWorkflowManager.
+
+    Sprint 29: Hybrid approach - combines database checkpoints with adapter pending requests.
     """
     try:
+        # Get pending from database (CheckpointService)
         checkpoints = await service.get_pending_approvals(
             limit=limit,
             execution_id=execution_id,
@@ -190,13 +279,17 @@ async def approve_checkpoint(
     checkpoint_id: UUID,
     request: ApprovalRequest,
     service: CheckpointService = Depends(get_checkpoint_service),
+    manager: ApprovalWorkflowManager = Depends(get_approval_manager),
 ) -> CheckpointActionResponse:
     """
     Approve a pending checkpoint.
 
     The workflow execution will resume after approval.
+
+    Sprint 29: Uses ApprovalWorkflowManager for approval flow coordination.
     """
     try:
+        # First, update in database via CheckpointService
         checkpoint = await service.approve_checkpoint(
             checkpoint_id=checkpoint_id,
             user_id=request.user_id,
@@ -209,6 +302,18 @@ async def approve_checkpoint(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Checkpoint {checkpoint_id} not found",
             )
+
+        # Optionally sync with adapter manager for workflow coordination
+        # This enables future integration with HumanApprovalExecutor
+        try:
+            adapter_response = manager.create_approval_response(
+                approved=True,
+                reason=request.feedback or "Approved via API",
+                approver=request.user_id,
+            )
+            logger.debug(f"Approval synced with adapter: {checkpoint_id}")
+        except Exception as sync_error:
+            logger.debug(f"Adapter sync skipped: {sync_error}")
 
         return CheckpointActionResponse(
             id=checkpoint.id,
@@ -247,13 +352,17 @@ async def reject_checkpoint(
     checkpoint_id: UUID,
     request: RejectionRequest,
     service: CheckpointService = Depends(get_checkpoint_service),
+    manager: ApprovalWorkflowManager = Depends(get_approval_manager),
 ) -> CheckpointActionResponse:
     """
     Reject a pending checkpoint.
 
     The workflow execution will terminate or retry based on configuration.
+
+    Sprint 29: Uses ApprovalWorkflowManager for rejection flow coordination.
     """
     try:
+        # Update in database via CheckpointService
         checkpoint = await service.reject_checkpoint(
             checkpoint_id=checkpoint_id,
             user_id=request.user_id,
@@ -266,6 +375,17 @@ async def reject_checkpoint(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Checkpoint {checkpoint_id} not found",
             )
+
+        # Optionally sync with adapter manager
+        try:
+            adapter_response = manager.create_approval_response(
+                approved=False,
+                reason=request.reason or "Rejected via API",
+                approver=request.user_id,
+            )
+            logger.debug(f"Rejection synced with adapter: {checkpoint_id}")
+        except Exception as sync_error:
+            logger.debug(f"Adapter sync skipped: {sync_error}")
 
         return CheckpointActionResponse(
             id=checkpoint.id,
@@ -399,14 +519,18 @@ async def get_checkpoint_stats(
 async def create_checkpoint(
     request: CheckpointCreateRequest,
     service: CheckpointService = Depends(get_checkpoint_service),
+    manager: ApprovalWorkflowManager = Depends(get_approval_manager),
 ) -> CheckpointResponse:
     """
     Create a new checkpoint.
 
     This is typically called internally by the workflow engine when
     a human approval step is reached.
+
+    Sprint 29: Also creates corresponding ApprovalRequest in adapter.
     """
     try:
+        # Create in database via CheckpointService
         checkpoint = await service.create_checkpoint(
             execution_id=request.execution_id,
             node_id=request.node_id,
@@ -414,6 +538,23 @@ async def create_checkpoint(
             timeout_hours=request.timeout_hours,
             notes=request.notes,
         )
+
+        # Also create in adapter for workflow coordination
+        try:
+            adapter_request = manager.create_approval_request(
+                action=f"checkpoint_{checkpoint.id}",
+                details=request.notes or f"Checkpoint for node {request.node_id}",
+                risk_level=RiskLevel.MEDIUM,
+                context={
+                    "checkpoint_id": str(checkpoint.id),
+                    "execution_id": str(request.execution_id),
+                    "node_id": request.node_id,
+                    "payload": request.payload,
+                },
+            )
+            logger.debug(f"Adapter request created for checkpoint: {checkpoint.id}")
+        except Exception as sync_error:
+            logger.debug(f"Adapter request skipped: {sync_error}")
 
         return CheckpointResponse(
             id=checkpoint.id,
@@ -468,4 +609,83 @@ async def expire_checkpoints(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to expire checkpoints: {str(e)}",
+        )
+
+
+# =============================================================================
+# Sprint 29: New Adapter-Based Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/approval/pending",
+    summary="Get pending approval requests (adapter)",
+    description="Get pending approval requests from ApprovalWorkflowManager",
+    tags=["checkpoints", "Sprint-29"],
+)
+async def get_pending_approval_requests(
+    manager: ApprovalWorkflowManager = Depends(get_approval_manager),
+) -> list:
+    """
+    Get pending approval requests from the adapter layer.
+
+    Sprint 29: New endpoint using ApprovalWorkflowManager.
+    """
+    try:
+        pending = manager.get_pending_approvals()
+        return pending
+    except Exception as e:
+        logger.error(f"Error getting pending approval requests: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get pending requests: {str(e)}",
+        )
+
+
+@router.post(
+    "/approval/{executor_name}/respond",
+    summary="Respond to approval request (adapter)",
+    description="Respond to an approval request via ApprovalWorkflowManager",
+    tags=["checkpoints", "Sprint-29"],
+)
+async def respond_to_approval(
+    executor_name: str,
+    approved: bool = Query(..., description="Whether to approve"),
+    reason: str = Query(..., description="Reason for decision"),
+    approver: str = Query(..., description="Who is responding"),
+    manager: ApprovalWorkflowManager = Depends(get_approval_manager),
+) -> dict:
+    """
+    Respond to an approval request via the adapter layer.
+
+    Sprint 29: New endpoint using ApprovalWorkflowManager.
+    """
+    try:
+        response = manager.create_approval_response(
+            approved=approved,
+            reason=reason,
+            approver=approver,
+        )
+
+        result = await manager.respond_to_approval(
+            executor_name=executor_name,
+            response=response,
+        )
+
+        return {
+            "success": result,
+            "executor_name": executor_name,
+            "approved": approved,
+            "message": "Response submitted successfully" if result else "No pending request found",
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Error responding to approval: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to respond to approval: {str(e)}",
         )

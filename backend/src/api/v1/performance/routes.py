@@ -127,7 +127,7 @@ class OptimizationResultResponse(BaseModel):
 # Global instances for demo - in production, these would be dependency injected
 _collector = MetricCollector()
 _profiler = PerformanceProfiler()
-_optimizer = PerformanceOptimizer()
+_optimizer = PerformanceOptimizer(_profiler)
 
 
 @router.get("/metrics", response_model=PerformanceMetricsResponse)

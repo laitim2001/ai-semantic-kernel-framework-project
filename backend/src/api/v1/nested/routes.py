@@ -2,6 +2,7 @@
 # IPA Platform - Nested Workflow API Routes
 # =============================================================================
 # Sprint 11: S11-5 Nested Workflow API
+# Sprint 23: 重構以使用 NestedWorkflowAdapter (Phase 4)
 #
 # REST API endpoints for nested workflow management.
 # Provides:
@@ -20,11 +21,16 @@
 #   - POST /nested/context/propagate - Propagate context
 #   - GET /nested/context/flow/{id} - Get data flow events
 #   - GET /nested/stats - Get nested workflow statistics
+#
+# Phase 4 Migration:
+#   使用 NestedWorkflowAdapter 替代 domain 層實現
+#   保留 API 相容性，內部邏輯使用適配器
 # =============================================================================
 
+import asyncio
 import logging
 from datetime import datetime
-from typing import Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -58,15 +64,37 @@ from src.api.v1.nested.schemas import (
     TerminationTypeEnum,
     WorkflowScopeEnum,
 )
+
+# =============================================================================
+# Sprint 23: 使用適配器層替代 domain 層
+# =============================================================================
+from src.integrations.agent_framework.builders.nested_workflow import (
+    NestedWorkflowAdapter,
+    ContextPropagationStrategy,
+    ExecutionMode,
+    RecursionStatus,
+    ContextConfig,
+    RecursionConfig,
+    RecursionState,
+    SubWorkflowInfo,
+    NestedExecutionResult,
+    ContextPropagator,
+    RecursiveDepthController,
+    create_nested_workflow_adapter,
+    create_sequential_nested_workflow,
+    create_parallel_nested_workflow,
+)
+
+# Sprint 25: 保留 domain 層導入
+# 這些類提供擴展功能，由適配器包裝使用
+# 注意: 這些是保留的擴展功能，不是棄用代碼
 from src.domain.orchestration.nested import (
     CompositionType,
-    ContextPropagator,
     DataFlowTracker,
     NestedWorkflowConfig,
     NestedWorkflowManager,
     NestedWorkflowType,
     PropagationType,
-    RecursionConfig,
     RecursionStrategy,
     RecursivePatternHandler,
     SubWorkflowExecutionMode,
@@ -90,19 +118,96 @@ router = APIRouter(
 
 # =============================================================================
 # Global Instances (to be replaced with proper DI)
+# Sprint 23: 添加 NestedWorkflowAdapter 實例
 # =============================================================================
 
 
+# 新適配器實例 (Sprint 23)
+_nested_adapters: Dict[UUID, NestedWorkflowAdapter] = {}
+_adapter_context_propagator: Optional[ContextPropagator] = None
+_adapter_depth_controller: Optional[RecursiveDepthController] = None
+
+# 舊 domain 層實例 (標記為 Deprecated，將在 Sprint 25 移除)
 _nested_manager: Optional[NestedWorkflowManager] = None
 _sub_executor: Optional[SubWorkflowExecutor] = None
 _recursive_handler: Optional[RecursivePatternHandler] = None
 _composition_builder: Optional[WorkflowCompositionBuilder] = None
-_context_propagator: Optional[ContextPropagator] = None
+_context_propagator_legacy: Optional[Any] = None  # 使用 domain 層的 ContextPropagator
 _data_flow_tracker: Optional[DataFlowTracker] = None
 
 
+# =============================================================================
+# Sprint 23: 新適配器依賴函數
+# =============================================================================
+
+
+def get_nested_adapter(adapter_id: str = "default") -> NestedWorkflowAdapter:
+    """
+    獲取或創建 NestedWorkflowAdapter。
+
+    Sprint 23: 新的依賴注入函數，使用適配器層。
+
+    Args:
+        adapter_id: 適配器 ID
+
+    Returns:
+        NestedWorkflowAdapter 實例
+    """
+    global _nested_adapters
+    key = UUID(adapter_id) if adapter_id != "default" else uuid4()
+
+    if key not in _nested_adapters:
+        _nested_adapters[key] = create_nested_workflow_adapter(
+            id=str(key),
+            max_depth=10,
+            context_strategy=ContextPropagationStrategy.INHERITED,
+        )
+    return _nested_adapters[key]
+
+
+def get_adapter_context_propagator() -> ContextPropagator:
+    """
+    獲取適配器的上下文傳播器。
+
+    Sprint 23: 使用新適配器層的 ContextPropagator。
+
+    Returns:
+        ContextPropagator 實例
+    """
+    global _adapter_context_propagator
+    if _adapter_context_propagator is None:
+        config = ContextConfig(strategy=ContextPropagationStrategy.INHERITED)
+        _adapter_context_propagator = ContextPropagator(config)
+    return _adapter_context_propagator
+
+
+def get_adapter_depth_controller() -> RecursiveDepthController:
+    """
+    獲取適配器的遞歸深度控制器。
+
+    Sprint 23: 使用新適配器層的 RecursiveDepthController。
+
+    Returns:
+        RecursiveDepthController 實例
+    """
+    global _adapter_depth_controller
+    if _adapter_depth_controller is None:
+        config = RecursionConfig(max_depth=10, timeout_seconds=300.0)
+        _adapter_depth_controller = RecursiveDepthController(config)
+    return _adapter_depth_controller
+
+
+# =============================================================================
+# 舊依賴函數 (標記為 Deprecated)
+# =============================================================================
+
+
 def get_nested_manager() -> NestedWorkflowManager:
-    """Get or create nested workflow manager."""
+    """
+    Get or create nested workflow manager.
+
+    Deprecated: 將在 Sprint 25 移除，請使用 get_nested_adapter()
+    """
     global _nested_manager
     if _nested_manager is None:
         _nested_manager = NestedWorkflowManager()
@@ -110,7 +215,11 @@ def get_nested_manager() -> NestedWorkflowManager:
 
 
 def get_sub_executor() -> SubWorkflowExecutor:
-    """Get or create sub-workflow executor."""
+    """
+    Get or create sub-workflow executor.
+
+    Deprecated: 將在 Sprint 25 移除，請使用 NestedWorkflowAdapter.run()
+    """
     global _sub_executor
     if _sub_executor is None:
         _sub_executor = SubWorkflowExecutor()
@@ -118,7 +227,11 @@ def get_sub_executor() -> SubWorkflowExecutor:
 
 
 def get_recursive_handler() -> RecursivePatternHandler:
-    """Get or create recursive pattern handler."""
+    """
+    Get or create recursive pattern handler.
+
+    Deprecated: 將在 Sprint 25 移除，請使用 NestedWorkflowAdapter 的遞歸控制
+    """
     global _recursive_handler
     if _recursive_handler is None:
         _recursive_handler = RecursivePatternHandler()
@@ -126,23 +239,34 @@ def get_recursive_handler() -> RecursivePatternHandler:
 
 
 def get_composition_builder() -> WorkflowCompositionBuilder:
-    """Get or create composition builder."""
+    """
+    Get or create composition builder.
+
+    Deprecated: 將在 Sprint 25 移除，請使用 NestedWorkflowAdapter 的組合功能
+    """
     global _composition_builder
     if _composition_builder is None:
         _composition_builder = WorkflowCompositionBuilder()
     return _composition_builder
 
 
-def get_context_propagator() -> ContextPropagator:
-    """Get or create context propagator."""
-    global _context_propagator
-    if _context_propagator is None:
-        _context_propagator = ContextPropagator()
-    return _context_propagator
+def get_context_propagator() -> Any:
+    """
+    Get or create context propagator.
+
+    Deprecated: 將在 Sprint 25 移除，請使用 get_adapter_context_propagator()
+    """
+    global _context_propagator_legacy
+    # 使用新的適配器層
+    return get_adapter_context_propagator()
 
 
 def get_data_flow_tracker() -> DataFlowTracker:
-    """Get or create data flow tracker."""
+    """
+    Get or create data flow tracker.
+
+    Deprecated: 將在 Sprint 25 整合到適配器層
+    """
     global _data_flow_tracker
     if _data_flow_tracker is None:
         _data_flow_tracker = DataFlowTracker()
@@ -229,7 +353,73 @@ def _convert_status_to_enum(status: str) -> ExecutionStatusEnum:
         "cancelled": ExecutionStatusEnum.CANCELLED,
         "timeout": ExecutionStatusEnum.TIMEOUT,
     }
-    return mapping.get(status.lower(), ExecutionStatusEnum.PENDING)
+
+
+# =============================================================================
+# Sprint 23: 適配器層轉換函數
+# =============================================================================
+
+
+def _convert_scope_to_adapter(scope: WorkflowScopeEnum) -> ContextPropagationStrategy:
+    """
+    Convert API scope enum to adapter context strategy.
+
+    Sprint 23: 將 API 層的 WorkflowScope 轉換為適配器層的 ContextPropagationStrategy。
+    """
+    mapping = {
+        WorkflowScopeEnum.ISOLATED: ContextPropagationStrategy.ISOLATED,
+        WorkflowScopeEnum.INHERITED: ContextPropagationStrategy.INHERITED,
+        WorkflowScopeEnum.SHARED: ContextPropagationStrategy.MERGED,
+    }
+    return mapping.get(scope, ContextPropagationStrategy.INHERITED)
+
+
+def _convert_propagation_to_adapter(prop_type: PropagationTypeEnum) -> ContextPropagationStrategy:
+    """
+    Convert API propagation type to adapter context strategy.
+
+    Sprint 23: 將 API 層的 PropagationType 轉換為適配器層的 ContextPropagationStrategy。
+    """
+    mapping = {
+        PropagationTypeEnum.COPY: ContextPropagationStrategy.INHERITED,
+        PropagationTypeEnum.REFERENCE: ContextPropagationStrategy.INHERITED,  # 不支持 REFERENCE
+        PropagationTypeEnum.MERGE: ContextPropagationStrategy.MERGED,
+        PropagationTypeEnum.FILTER: ContextPropagationStrategy.FILTERED,
+    }
+    return mapping.get(prop_type, ContextPropagationStrategy.INHERITED)
+
+
+def _convert_composition_to_execution_mode(comp_type: CompositionTypeEnum) -> ExecutionMode:
+    """
+    Convert API composition type to adapter execution mode.
+
+    Sprint 23: 將 API 層的 CompositionType 轉換為適配器層的 ExecutionMode。
+    """
+    mapping = {
+        CompositionTypeEnum.SEQUENCE: ExecutionMode.SEQUENTIAL,
+        CompositionTypeEnum.PARALLEL: ExecutionMode.PARALLEL,
+        CompositionTypeEnum.CONDITIONAL: ExecutionMode.CONDITIONAL,
+        CompositionTypeEnum.LOOP: ExecutionMode.SEQUENTIAL,  # 使用遞歸處理
+        CompositionTypeEnum.SWITCH: ExecutionMode.CONDITIONAL,
+    }
+    return mapping.get(comp_type, ExecutionMode.SEQUENTIAL)
+
+
+def _convert_recursion_status_to_enum(status: RecursionStatus) -> ExecutionStatusEnum:
+    """
+    Convert adapter recursion status to API execution status.
+
+    Sprint 23: 將適配器層的 RecursionStatus 轉換為 API 層的 ExecutionStatusEnum。
+    """
+    mapping = {
+        RecursionStatus.PENDING: ExecutionStatusEnum.PENDING,
+        RecursionStatus.RUNNING: ExecutionStatusEnum.RUNNING,
+        RecursionStatus.COMPLETED: ExecutionStatusEnum.COMPLETED,
+        RecursionStatus.FAILED: ExecutionStatusEnum.FAILED,
+        RecursionStatus.DEPTH_EXCEEDED: ExecutionStatusEnum.FAILED,
+        RecursionStatus.TIMEOUT: ExecutionStatusEnum.TIMEOUT,
+    }
+    return mapping.get(status, ExecutionStatusEnum.PENDING)
 
 
 # =============================================================================

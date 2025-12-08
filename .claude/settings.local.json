@@ -36,7 +36,15 @@
       "SlashCommand(/sc:save)",
       "Bash(git commit -m \"$(cat <<''EOF''\nfeat(sprint-8): Complete Agent Handoff & Collaboration (Phase 2)\n\nSprint 8 implementation includes:\n- S8-1: HandoffController (8 pts) - Core handoff execution with 3 policies\n- S8-2: HandoffTrigger (5 pts) - 6 trigger types with condition parser\n- S8-3: CollaborationProtocol (8 pts) - Agent messaging and session management\n- S8-4: CapabilityMatcher (5 pts) - Intelligent agent capability matching\n- S8-5: Handoff API (5 pts) - Complete REST API for handoff operations\n\nKey features:\n- HandoffPolicy: IMMEDIATE, GRACEFUL, CONDITIONAL\n- TriggerType: CONDITION, EVENT, TIMEOUT, ERROR, CAPABILITY, EXPLICIT\n- MessageType: REQUEST, RESPONSE, BROADCAST, NEGOTIATE, ACKNOWLEDGE\n- MatchStrategy: BEST_FIT, FIRST_FIT, ROUND_ROBIN, LEAST_LOADED\n- 15 built-in agent capabilities\n\nTotal: 31 story points, 277 tests passing\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git commit:*)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(pip show:*)",
+      "Bash(pip search:*)",
+      "Bash(pip index:*)",
+      "Bash(done)",
+      "Bash(find:*)",
+      "Skill(microsoft-agent-framework)",
+      "Bash(mkdir:*)",
+      "Bash(xargs basename:*)"
     ],
     "deny": [],
     "ask": []

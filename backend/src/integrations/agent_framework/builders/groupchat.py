@@ -1,12 +1,12 @@
 """
-GroupChatBuilder Adapter - Sprint 16
+GroupChatBuilder Adapter - Sprint 16/20
 
 將 Agent Framework GroupChatBuilder API 封裝為 IPA 平台適配器。
 支持多種發言者選擇方法和群組對話編排。
 
 模組功能:
     1. GroupChatBuilderAdapter - GroupChatBuilder 適配器
-    2. SpeakerSelectionMethod - 發言者選擇方法枚舉
+    2. SpeakerSelectionMethod - 發言者選擇方法枚舉 (7 種策略)
     3. GroupChatParticipant - 參與者配置
     4. GroupChatState - 群組對話狀態
     5. GroupChatMessage - 群組消息
@@ -19,6 +19,8 @@ API 映射:
     | SpeakerSelectionMethod.ROUND_ROBIN | set_select_speakers_func() |
     | SpeakerSelectionMethod.RANDOM | set_select_speakers_func() |
     | SpeakerSelectionMethod.MANUAL | set_select_speakers_func() |
+    | SpeakerSelectionMethod.PRIORITY | set_select_speakers_func() |
+    | SpeakerSelectionMethod.EXPERTISE | set_select_speakers_func() |
 
 使用範例:
     adapter = GroupChatBuilderAdapter(
@@ -29,9 +31,25 @@ API 映射:
     )
     result = await adapter.run("Write a blog post about AI")
 
+    # Sprint 20: 使用優先級選擇
+    adapter = GroupChatBuilderAdapter(
+        id="priority-chat",
+        participants=[senior_dev, junior_dev],
+        selection_method=SpeakerSelectionMethod.PRIORITY,
+    )
+
+    # Sprint 20: 使用專業能力匹配
+    adapter = GroupChatBuilderAdapter(
+        id="expertise-chat",
+        participants=[researcher, coder, tester],
+        selection_method=SpeakerSelectionMethod.EXPERTISE,
+    )
+
 Author: IPA Platform Team
 Sprint: 16 - GroupChatBuilder 重構
+Sprint: 20 - S20-2 整合 SpeakerSelector (PRIORITY, EXPERTISE)
 Created: 2025-12-05
+Updated: 2025-12-06
 """
 
 from dataclasses import dataclass, field
@@ -83,12 +101,16 @@ class SpeakerSelectionMethod(str, Enum):
         RANDOM: 隨機選擇（映射到 set_select_speakers_func()）
         MANUAL: 手動指定（映射到 set_select_speakers_func()）
         CUSTOM: 自定義選擇函數（映射到 set_select_speakers_func()）
+        PRIORITY: 按優先級選擇（Sprint 20 整合）
+        EXPERTISE: 按專業能力匹配選擇（Sprint 20 整合）
     """
     AUTO = "auto"
     ROUND_ROBIN = "round_robin"
     RANDOM = "random"
     MANUAL = "manual"
     CUSTOM = "custom"
+    PRIORITY = "priority"
+    EXPERTISE = "expertise"
 
 
 class GroupChatStatus(str, Enum):
@@ -468,6 +490,496 @@ def create_last_speaker_different_selector(
 
 
 # =============================================================================
+# Sprint 20: Termination Condition Factories (S20-3)
+# =============================================================================
+
+
+class TerminationType(str, Enum):
+    """
+    終止條件類型枚舉。
+
+    Sprint 20 整合: 從 domain/orchestration/groupchat/termination.py 遷移
+
+    Values:
+        MAX_ROUNDS: 達到最大輪次
+        MAX_MESSAGES: 達到最大訊息數
+        TIMEOUT: 超時
+        KEYWORD: 關鍵字觸發
+        CONSENSUS: 達成共識
+        CUSTOM: 自定義條件
+        NO_PROGRESS: 無進展（相同回應重複）
+    """
+    MAX_ROUNDS = "max_rounds"
+    MAX_MESSAGES = "max_messages"
+    TIMEOUT = "timeout"
+    KEYWORD = "keyword"
+    CONSENSUS = "consensus"
+    CUSTOM = "custom"
+    NO_PROGRESS = "no_progress"
+
+
+# 預設終止關鍵字（從 domain 層遷移）
+DEFAULT_TERMINATION_KEYWORDS = [
+    "TERMINATE",
+    "DONE",
+    "END CONVERSATION",
+    "TASK COMPLETE",
+    "完成",
+    "結束",
+]
+
+
+def create_max_rounds_termination(
+    max_rounds: int,
+) -> TerminationConditionFn:
+    """
+    創建最大輪數終止條件。
+
+    Sprint 20 整合: 從 domain 層遷移
+
+    Args:
+        max_rounds: 最大輪數
+
+    Returns:
+        終止條件函數
+    """
+    def condition(messages: List[GroupChatMessage]) -> bool:
+        # 計算輪數（排除 user 消息）
+        agent_messages = [m for m in messages if m.role != MessageRole.USER]
+        return len(agent_messages) >= max_rounds
+
+    return condition
+
+
+def create_max_messages_termination(
+    max_messages: int,
+) -> TerminationConditionFn:
+    """
+    創建最大訊息數終止條件。
+
+    Sprint 20 整合: 從 domain 層遷移
+
+    Args:
+        max_messages: 最大訊息數
+
+    Returns:
+        終止條件函數
+    """
+    def condition(messages: List[GroupChatMessage]) -> bool:
+        return len(messages) >= max_messages
+
+    return condition
+
+
+def create_keyword_termination(
+    keywords: Optional[List[str]] = None,
+    case_sensitive: bool = False,
+    check_last_n: int = 1,
+) -> TerminationConditionFn:
+    """
+    創建關鍵字終止條件。
+
+    Sprint 20 整合: 從 domain 層遷移
+
+    Args:
+        keywords: 終止關鍵字列表
+        case_sensitive: 是否區分大小寫
+        check_last_n: 檢查最後 N 條訊息
+
+    Returns:
+        終止條件函數
+    """
+    _keywords = keywords or DEFAULT_TERMINATION_KEYWORDS
+
+    def condition(messages: List[GroupChatMessage]) -> bool:
+        if not messages:
+            return False
+
+        messages_to_check = messages[-check_last_n:]
+
+        for message in messages_to_check:
+            content = message.content
+            if not case_sensitive:
+                content = content.lower()
+
+            for keyword in _keywords:
+                check_keyword = keyword if case_sensitive else keyword.lower()
+                if check_keyword in content:
+                    logger.debug(f"Termination keyword '{keyword}' found in message")
+                    return True
+
+        return False
+
+    return condition
+
+
+def create_timeout_termination(
+    timeout_seconds: float,
+    start_time: Optional[float] = None,
+) -> TerminationConditionFn:
+    """
+    創建超時終止條件。
+
+    Sprint 20 整合: 從 domain 層遷移
+
+    Args:
+        timeout_seconds: 超時秒數
+        start_time: 開始時間戳（None 則使用第一條訊息時間）
+
+    Returns:
+        終止條件函數
+    """
+    import time
+
+    _start_time = start_time or time.time()
+
+    def condition(messages: List[GroupChatMessage]) -> bool:
+        elapsed = time.time() - _start_time
+        if elapsed > timeout_seconds:
+            logger.debug(f"Timeout reached: {elapsed:.1f}s > {timeout_seconds}s")
+            return True
+        return False
+
+    return condition
+
+
+def create_consensus_termination(
+    agreement_keyword: str = "agree",
+    threshold: float = 0.8,
+    check_last_n: int = 5,
+) -> TerminationConditionFn:
+    """
+    創建共識終止條件。
+
+    當超過指定比例的參與者在最近的訊息中表達同意時終止。
+
+    Sprint 20 整合: 從 domain 層遷移
+
+    Args:
+        agreement_keyword: 同意關鍵字
+        threshold: 達成共識的閾值（0-1）
+        check_last_n: 檢查最後 N 條訊息
+
+    Returns:
+        終止條件函數
+    """
+    def condition(messages: List[GroupChatMessage]) -> bool:
+        if not messages:
+            return False
+
+        # 獲取最後 N 條 Agent 訊息
+        agent_messages = [
+            m for m in messages[-check_last_n:]
+            if m.role == MessageRole.ASSISTANT
+        ]
+
+        if not agent_messages:
+            return False
+
+        # 計算同意數
+        agreement_count = sum(
+            1 for m in agent_messages
+            if agreement_keyword.lower() in m.content.lower()
+        )
+
+        # 獲取唯一參與者數
+        unique_speakers = set(m.author_name for m in agent_messages if m.author_name)
+        if not unique_speakers:
+            return False
+
+        agreement_ratio = agreement_count / len(unique_speakers)
+
+        if agreement_ratio >= threshold:
+            logger.debug(
+                f"Consensus reached: {agreement_ratio:.1%} >= {threshold:.1%}"
+            )
+            return True
+
+        return False
+
+    return condition
+
+
+def create_no_progress_termination(
+    min_repeats: int = 3,
+    check_last_n: int = 5,
+) -> TerminationConditionFn:
+    """
+    創建無進展終止條件。
+
+    當最近的訊息內容重複時終止。
+
+    Sprint 20 整合: 從 domain 層遷移
+
+    Args:
+        min_repeats: 最小重複次數
+        check_last_n: 檢查最後 N 條訊息
+
+    Returns:
+        終止條件函數
+    """
+    def condition(messages: List[GroupChatMessage]) -> bool:
+        if len(messages) < min_repeats:
+            return False
+
+        # 獲取最後 N 條 Agent 訊息
+        agent_messages = [
+            m for m in messages[-check_last_n:]
+            if m.role == MessageRole.ASSISTANT
+        ]
+
+        if len(agent_messages) < min_repeats:
+            return False
+
+        # 簡單檢查：內容完全相同
+        contents = [m.content.strip().lower() for m in agent_messages]
+        unique_contents = set(contents)
+
+        if len(unique_contents) == 1 and len(contents) >= min_repeats:
+            logger.debug(f"No progress detected: {min_repeats} similar messages")
+            return True
+
+        return False
+
+    return condition
+
+
+def create_combined_termination(
+    *conditions: TerminationConditionFn,
+    mode: str = "any",
+) -> TerminationConditionFn:
+    """
+    創建組合終止條件。
+
+    Sprint 20 新增
+
+    Args:
+        *conditions: 終止條件函數列表
+        mode: "any" 任一滿足則終止, "all" 全部滿足才終止
+
+    Returns:
+        組合終止條件函數
+    """
+    def condition(messages: List[GroupChatMessage]) -> bool:
+        if mode == "any":
+            return any(cond(messages) for cond in conditions)
+        elif mode == "all":
+            return all(cond(messages) for cond in conditions)
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+
+    return condition
+
+
+# =============================================================================
+# Sprint 20: Priority and Expertise Selectors (S20-2)
+# =============================================================================
+
+
+def create_priority_selector(
+    participants: Dict[str, "GroupChatParticipant"],
+) -> SpeakerSelectorFn:
+    """
+    創建優先級選擇器。
+
+    根據參與者的優先級（metadata 中的 priority 字段）選擇。
+    優先級數值越小，優先級越高。
+
+    Sprint 20 整合: 從 domain/orchestration/groupchat/speaker_selector.py 遷移
+
+    Args:
+        participants: 參與者字典 {name: GroupChatParticipant}
+
+    Returns:
+        優先級選擇函數
+
+    Example:
+        participants = {
+            "senior": GroupChatParticipant(
+                name="senior", metadata={"priority": 1}
+            ),
+            "junior": GroupChatParticipant(
+                name="junior", metadata={"priority": 2}
+            ),
+        }
+        selector = create_priority_selector(participants)
+    """
+    def selector(state: Dict[str, Any]) -> Optional[str]:
+        if not participants:
+            return None
+
+        history = state.get("history", [])
+        last_speaker = None
+        if history:
+            last_turn = history[-1]
+            if isinstance(last_turn, dict):
+                last_speaker = last_turn.get("speaker")
+            else:
+                last_speaker = getattr(last_turn, "speaker", None)
+
+        # 構建優先級列表
+        priority_list = []
+        for name, participant in participants.items():
+            # 跳過上一位發言者（避免連續發言）
+            if name == last_speaker:
+                continue
+            priority = participant.metadata.get("priority", 100)
+            priority_list.append((name, priority))
+
+        # 如果所有人都被過濾掉，則包含所有人
+        if not priority_list:
+            priority_list = [
+                (name, p.metadata.get("priority", 100))
+                for name, p in participants.items()
+            ]
+
+        # 按優先級排序（數值小的優先）
+        priority_list.sort(key=lambda x: x[1])
+
+        return priority_list[0][0] if priority_list else None
+
+    return selector
+
+
+def create_expertise_selector(
+    participants: Dict[str, "GroupChatParticipant"],
+    synonym_map: Optional[Dict[str, List[str]]] = None,
+    min_score_threshold: float = 0.1,
+) -> SpeakerSelectorFn:
+    """
+    創建專業能力匹配選擇器。
+
+    根據訊息內容匹配最相關的專業 Agent。
+    使用關鍵字匹配和同義詞擴展。
+
+    Sprint 20 整合: 從 domain/orchestration/groupchat/speaker_selector.py 遷移
+    保留 ExpertiseMatcher 的核心邏輯（同義詞表、匹配算法）。
+
+    Args:
+        participants: 參與者字典 {name: GroupChatParticipant}
+        synonym_map: 自定義同義詞映射（可選）
+        min_score_threshold: 最小匹配分數閾值
+
+    Returns:
+        專業能力匹配選擇函數
+
+    Example:
+        participants = {
+            "coder": GroupChatParticipant(
+                name="coder",
+                capabilities=["coding", "debugging"]
+            ),
+            "tester": GroupChatParticipant(
+                name="tester",
+                capabilities=["testing", "qa"]
+            ),
+        }
+        selector = create_expertise_selector(participants)
+    """
+    import re
+
+    # 預定義的能力同義詞表（從 domain 層遷移）
+    CAPABILITY_SYNONYMS = {
+        "coding": ["programming", "development", "code", "implement", "build"],
+        "debugging": ["debug", "fix", "troubleshoot", "investigate", "diagnose"],
+        "testing": ["test", "qa", "quality", "verify", "validate"],
+        "planning": ["plan", "schedule", "organize", "coordinate", "project"],
+        "review": ["review", "feedback", "assess", "evaluate", "check"],
+        "design": ["design", "architect", "structure", "blueprint", "model"],
+        "documentation": ["document", "doc", "write", "describe", "explain"],
+        "analysis": ["analyze", "analyse", "research", "study", "investigate"],
+        "security": ["secure", "security", "protect", "auth", "permission"],
+        "performance": ["optimize", "performance", "speed", "efficiency", "tune"],
+    }
+
+    # 合併自定義同義詞
+    synonyms = {**CAPABILITY_SYNONYMS, **(synonym_map or {})}
+
+    def calculate_relevance(
+        capabilities: List[str],
+        content_lower: str,
+        content_words: set,
+    ) -> tuple:
+        """計算能力與內容的相關性分數。"""
+        if not capabilities:
+            return 0.0, []
+
+        matched = []
+        total_score = 0.0
+
+        for cap in capabilities:
+            cap_lower = cap.lower()
+            cap_score = 0.0
+
+            # 直接匹配（最高權重）
+            if cap_lower in content_lower:
+                cap_score = 1.0
+                matched.append(cap)
+            else:
+                # 同義詞匹配
+                cap_synonyms = synonyms.get(cap_lower, [cap_lower])
+                for syn in cap_synonyms:
+                    if syn in content_lower or syn in content_words:
+                        cap_score = 0.7  # 同義詞匹配權重較低
+                        matched.append(cap)
+                        break
+
+            total_score += cap_score
+
+        # 正規化分數
+        normalized_score = total_score / len(capabilities) if capabilities else 0
+        return min(1.0, normalized_score), matched
+
+    def selector(state: Dict[str, Any]) -> Optional[str]:
+        if not participants:
+            return None
+
+        # 獲取最後一條訊息
+        conversation = state.get("conversation", [])
+        if not conversation:
+            # 無訊息上下文，返回第一個參與者
+            return list(participants.keys())[0]
+
+        last_message = conversation[-1]
+        if isinstance(last_message, dict):
+            content = last_message.get("content", "")
+        else:
+            content = getattr(last_message, "content", "")
+
+        if not content:
+            return list(participants.keys())[0]
+
+        content_lower = content.lower()
+        content_words = set(re.findall(r'\w+', content_lower))
+
+        # 計算每個參與者的匹配分數
+        scores = []
+        for name, participant in participants.items():
+            score, matched = calculate_relevance(
+                participant.capabilities,
+                content_lower,
+                content_words,
+            )
+            scores.append((name, score, matched))
+
+        # 按分數排序
+        scores.sort(key=lambda x: x[1], reverse=True)
+
+        # 返回最高分（超過閾值）的參與者
+        if scores and scores[0][1] >= min_score_threshold:
+            logger.debug(
+                f"Expertise match: {scores[0][0]} "
+                f"(score: {scores[0][1]:.2f}, matched: {scores[0][2]})"
+            )
+            return scores[0][0]
+
+        # 分數不足，返回第一個參與者
+        return list(participants.keys())[0]
+
+    return selector
+
+
+# =============================================================================
 # GroupChatBuilderAdapter
 # =============================================================================
 
@@ -695,6 +1207,8 @@ class GroupChatBuilderAdapter(BuilderAdapter):
         """
         獲取發言者選擇函數。
 
+        Sprint 20 更新: 添加 PRIORITY 和 EXPERTISE 選擇方法支持。
+
         Returns:
             選擇函數
 
@@ -721,6 +1235,11 @@ class GroupChatBuilderAdapter(BuilderAdapter):
                     "Use set_manager() in Agent Framework."
                 )
             return auto_selector
+        # Sprint 20: 新增 PRIORITY 和 EXPERTISE 選擇方法
+        elif self._selection_method == SpeakerSelectionMethod.PRIORITY:
+            return create_priority_selector(self._participants)
+        elif self._selection_method == SpeakerSelectionMethod.EXPERTISE:
+            return create_expertise_selector(self._participants)
         else:
             raise ValueError(f"Unknown selection method: {self._selection_method}")
 
@@ -1270,6 +1789,114 @@ def create_custom_selector_chat(
         participants=participants,
         selection_method=SpeakerSelectionMethod.CUSTOM,
         custom_selector=selector,
+        max_rounds=max_rounds,
+        **kwargs,
+    )
+
+
+# =============================================================================
+# Sprint 20: Priority and Expertise Factory Functions
+# =============================================================================
+
+
+def create_priority_chat(
+    id: str,
+    participants: List[GroupChatParticipant],
+    max_rounds: Optional[int] = 10,
+    **kwargs,
+) -> GroupChatBuilderAdapter:
+    """
+    創建優先級選擇的群組對話適配器。
+
+    Sprint 20 新增: 從 domain 層遷移的優先級選擇功能。
+
+    根據參與者的優先級（metadata.priority）選擇發言者。
+    優先級數值越小，優先級越高。
+
+    Args:
+        id: 適配器 ID
+        participants: 參與者列表（需設置 metadata.priority）
+        max_rounds: 最大輪數
+        **kwargs: 其他配置參數
+
+    Returns:
+        配置好的 GroupChatBuilderAdapter 實例
+
+    Example:
+        adapter = create_priority_chat(
+            id="priority-discussion",
+            participants=[
+                GroupChatParticipant(
+                    name="senior",
+                    description="Senior Developer",
+                    metadata={"priority": 1},
+                ),
+                GroupChatParticipant(
+                    name="junior",
+                    description="Junior Developer",
+                    metadata={"priority": 2},
+                ),
+            ],
+        )
+    """
+    return GroupChatBuilderAdapter(
+        id=id,
+        participants=participants,
+        selection_method=SpeakerSelectionMethod.PRIORITY,
+        max_rounds=max_rounds,
+        **kwargs,
+    )
+
+
+def create_expertise_chat(
+    id: str,
+    participants: List[GroupChatParticipant],
+    max_rounds: Optional[int] = 15,
+    **kwargs,
+) -> GroupChatBuilderAdapter:
+    """
+    創建專業能力匹配的群組對話適配器。
+
+    Sprint 20 新增: 從 domain 層遷移的專業能力匹配功能。
+
+    根據訊息內容匹配最相關的專業 Agent。
+    使用關鍵字匹配和同義詞擴展。
+
+    Args:
+        id: 適配器 ID
+        participants: 參與者列表（需設置 capabilities）
+        max_rounds: 最大輪數
+        **kwargs: 其他配置參數
+
+    Returns:
+        配置好的 GroupChatBuilderAdapter 實例
+
+    Example:
+        adapter = create_expertise_chat(
+            id="expertise-discussion",
+            participants=[
+                GroupChatParticipant(
+                    name="coder",
+                    description="Software Developer",
+                    capabilities=["coding", "debugging"],
+                ),
+                GroupChatParticipant(
+                    name="tester",
+                    description="QA Engineer",
+                    capabilities=["testing", "qa"],
+                ),
+                GroupChatParticipant(
+                    name="designer",
+                    description="UX Designer",
+                    capabilities=["design", "analysis"],
+                ),
+            ],
+        )
+    """
+    return GroupChatBuilderAdapter(
+        id=id,
+        participants=participants,
+        selection_method=SpeakerSelectionMethod.EXPERTISE,
         max_rounds=max_rounds,
         **kwargs,
     )

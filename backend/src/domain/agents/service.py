@@ -2,20 +2,31 @@
 # IPA Platform - Agent Service
 # =============================================================================
 # Sprint 1: Core Engine - Agent Framework Integration
+# Sprint 31: S31-2 - 遷移至使用 AgentExecutorAdapter
 #
 # Core service for Agent Framework operations.
 # Handles agent creation, execution, and LLM interaction.
 #
+# 架構更新 (Sprint 31):
+#   - 所有官方 Agent Framework API 導入已移至 AgentExecutorAdapter
+#   - 此服務層現在透過適配器呼叫官方 API
+#   - 符合項目架構規範: 官方 API 集中於 integrations 層
+#
 # Dependencies:
-#   - Microsoft Agent Framework (agent_framework)
-#   - Azure OpenAI (azure-identity)
+#   - AgentExecutorAdapter (src.integrations.agent_framework.builders)
 # =============================================================================
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 from src.core.config import get_settings
+from src.integrations.agent_framework.builders import (
+    AgentExecutorAdapter,
+    AgentExecutorConfig,
+    AgentExecutorResult as AdapterResult,
+    create_agent_executor_adapter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +93,7 @@ class AgentService:
     """
 
     # GPT-4o pricing (USD per million tokens)
+    # 注意: 實際計算已委託給 AgentExecutorAdapter
     GPT4O_INPUT_PRICE = 5.0
     GPT4O_OUTPUT_PRICE = 15.0
 
@@ -89,6 +101,9 @@ class AgentService:
         """Initialize AgentService."""
         self._settings = get_settings()
         self._initialized = False
+        # Sprint 31: 使用適配器取代直接的官方 API 客戶端
+        self._adapter: Optional[AgentExecutorAdapter] = None
+        # 保留 _client 屬性以維持向後兼容性
         self._client: Optional[Any] = None
 
     @property
@@ -96,46 +111,40 @@ class AgentService:
         """Check if service is initialized."""
         return self._initialized
 
+    @property
+    def adapter(self) -> Optional[AgentExecutorAdapter]:
+        """Get the underlying adapter instance."""
+        return self._adapter
+
     async def initialize(self) -> None:
         """
-        Initialize Azure OpenAI client.
+        Initialize Agent service via AgentExecutorAdapter.
 
-        Connects to Azure OpenAI service using configured credentials.
-        Should be called during application startup.
+        透過 AgentExecutorAdapter 連接 Azure OpenAI 服務。
+        應在應用程式啟動時呼叫。
+
+        架構更新 (Sprint 31):
+            - 所有官方 API 導入現在集中在 AgentExecutorAdapter
+            - 此服務層透過適配器呼叫官方 API
 
         Raises:
-            RuntimeError: If Azure OpenAI is not configured
+            RuntimeError: If initialization fails
         """
         if self._initialized:
             logger.debug("AgentService already initialized")
             return
 
-        if not self._settings.azure_openai_configured:
-            logger.warning(
-                "Azure OpenAI not configured. Agent execution will be unavailable."
-            )
-            self._initialized = True
-            return
-
         try:
-            # Import Agent Framework components
-            from agent_framework.azure import AzureOpenAIChatClient
-            from azure.identity import DefaultAzureCredential
+            # Sprint 31: 透過適配器初始化 (官方 API 集中於適配器層)
+            self._adapter = create_agent_executor_adapter(self._settings)
+            await self._adapter.initialize()
 
-            # Create Azure OpenAI client
-            self._client = AzureOpenAIChatClient(
-                credential=DefaultAzureCredential(),
-                endpoint=self._settings.azure_openai_endpoint,
-                deployment_name=self._settings.azure_openai_deployment_name,
-            )
+            # 設定 _client 為 adapter 的客戶端引用以維持向後兼容
+            if self._adapter.has_client:
+                self._client = self._adapter  # 代理至適配器
 
             self._initialized = True
-            logger.info("AgentService initialized successfully")
-
-        except ImportError as e:
-            logger.error(f"Agent Framework import error: {e}")
-            logger.warning("Running in mock mode - Agent Framework not available")
-            self._initialized = True
+            logger.info("AgentService initialized via AgentExecutorAdapter")
 
         except Exception as e:
             logger.error(f"Failed to initialize AgentService: {e}")
@@ -147,6 +156,10 @@ class AgentService:
 
         Should be called during application shutdown.
         """
+        # Sprint 31: 透過適配器關閉
+        if self._adapter:
+            await self._adapter.shutdown()
+            self._adapter = None
         self._client = None
         self._initialized = False
         logger.info("AgentService shutdown complete")
@@ -191,6 +204,10 @@ class AgentService:
         Creates a temporary agent executor and runs it with the message.
         Tracks LLM usage statistics for cost monitoring.
 
+        架構更新 (Sprint 31):
+            - 官方 API 呼叫已委託給 AgentExecutorAdapter
+            - 此方法透過適配器執行，不再直接導入 agent_framework
+
         Args:
             config: Agent configuration
             message: User message to process
@@ -204,9 +221,9 @@ class AgentService:
         """
         self._ensure_initialized()
 
-        # If no client (Azure not configured), return mock response
-        if self._client is None:
-            logger.warning("No LLM client available, returning mock response")
+        # Sprint 31: 透過適配器執行 (官方 API 集中於適配器層)
+        if self._adapter is None:
+            logger.warning("No adapter available, returning mock response")
             return AgentExecutionResult(
                 text=f"[Mock Response] Agent '{config.name}' received: {message}",
                 llm_calls=0,
@@ -215,66 +232,29 @@ class AgentService:
             )
 
         try:
-            from agent_framework import AgentExecutor, ChatMessage, Role
-
-            # Create agent with configuration
-            agent = self._client.create_agent(
+            # 轉換配置格式
+            adapter_config = AgentExecutorConfig(
                 name=config.name,
                 instructions=config.instructions,
                 tools=config.tools,
+                model_config=config.model_config,
+                max_iterations=config.max_iterations,
             )
 
-            # Create executor
-            executor = AgentExecutor(agent, id=config.name)
+            # 透過適配器執行 (官方 API 呼叫在適配器內部)
+            adapter_result = await self._adapter.execute(
+                config=adapter_config,
+                message=message,
+                context=context,
+            )
 
-            # Prepare messages
-            messages = [ChatMessage(role=Role.USER, content=message)]
-
-            # Add context if provided
-            if context:
-                context_str = "\n".join(f"{k}: {v}" for k, v in context.items())
-                messages.insert(
-                    0,
-                    ChatMessage(
-                        role=Role.SYSTEM,
-                        content=f"Additional context:\n{context_str}",
-                    ),
-                )
-
-            # Run agent
-            response = await executor.agent.run(messages)
-
-            # Extract statistics
-            llm_calls = 1
-            llm_tokens = 0
-            prompt_tokens = 0
-            completion_tokens = 0
-
-            if hasattr(response, "usage"):
-                prompt_tokens = getattr(response.usage, "prompt_tokens", 0)
-                completion_tokens = getattr(response.usage, "completion_tokens", 0)
-                llm_tokens = prompt_tokens + completion_tokens
-
-            llm_cost = self._calculate_cost(prompt_tokens, completion_tokens)
-
-            # Extract tool calls if any
-            tool_calls = []
-            if hasattr(response, "tool_calls"):
-                for tc in response.tool_calls or []:
-                    tool_calls.append(
-                        {
-                            "tool": getattr(tc, "name", "unknown"),
-                            "input": getattr(tc, "arguments", {}),
-                            "output": getattr(tc, "result", None),
-                        }
-                    )
-
+            # 轉換結果格式以維持向後兼容
             return AgentExecutionResult(
-                text=response.text if hasattr(response, "text") else str(response),
-                llm_calls=llm_calls,
-                llm_tokens=llm_tokens,
-                llm_cost=llm_cost,
-                tool_calls=tool_calls,
+                text=adapter_result.text,
+                llm_calls=adapter_result.llm_calls,
+                llm_tokens=adapter_result.llm_tokens,
+                llm_cost=adapter_result.llm_cost,
+                tool_calls=adapter_result.tool_calls,
             )
 
         except Exception as e:
@@ -313,20 +293,19 @@ class AgentService:
         """
         Test Azure OpenAI connection.
 
+        架構更新 (Sprint 31):
+            - 透過 AgentExecutorAdapter 進行連接測試
+
         Returns:
             True if connection successful, False otherwise
         """
         try:
             await self.initialize()
-            if self._client is None:
+            # Sprint 31: 使用適配器進行連接測試
+            if self._adapter is None:
                 return False
 
-            # Simple test call
-            result = await self.run_simple(
-                instructions="You are a test assistant.",
-                message="Say 'OK' if you can hear me.",
-            )
-            return "OK" in result.upper()
+            return await self._adapter.test_connection()
 
         except Exception as e:
             logger.error(f"Connection test failed: {e}")

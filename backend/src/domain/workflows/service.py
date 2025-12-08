@@ -2,14 +2,18 @@
 # IPA Platform - Workflow Execution Service
 # =============================================================================
 # Sprint 1: Core Engine - Agent Framework Integration
+# Sprint 27: Execution Engine Migration - Official API Integration
 #
 # Service for executing workflows with Agent Framework integration.
 # Handles sequential agent orchestration and state management.
+#
+# S27-4: Now supports official Microsoft Agent Framework API through
+# SequentialOrchestrationAdapter and EnhancedExecutionStateMachine.
 # =============================================================================
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from src.domain.agents.service import AgentConfig, AgentService, get_agent_service
@@ -18,6 +22,29 @@ from src.domain.workflows.models import (
     WorkflowContext,
     WorkflowDefinition,
     WorkflowNode,
+)
+
+# Sprint 27: Official API Adapters Import
+from src.integrations.agent_framework.core.executor import (
+    WorkflowNodeExecutor,
+    NodeInput,
+    NodeOutput,
+    create_executor_from_node,
+)
+from src.integrations.agent_framework.core.execution import (
+    SequentialOrchestrationAdapter,
+    SequentialExecutionResult,
+    create_sequential_orchestration,
+)
+from src.integrations.agent_framework.core.events import (
+    WorkflowStatusEventAdapter,
+    InternalExecutionEvent,
+    ExecutionStatus,
+)
+from src.integrations.agent_framework.core.state_machine import (
+    EnhancedExecutionStateMachine,
+    StateMachineManager,
+    create_enhanced_state_machine,
 )
 
 logger = logging.getLogger(__name__)
@@ -135,18 +162,67 @@ class WorkflowExecutionService:
     Orchestrates sequential agent execution following workflow graph.
     Tracks execution state, LLM usage, and handles errors.
 
+    Sprint 27 Enhancement:
+    - Supports official Microsoft Agent Framework API via use_official_api flag
+    - Integrates SequentialOrchestrationAdapter for sequential execution
+    - Uses EnhancedExecutionStateMachine for event-driven state tracking
+    - Supports event handlers for workflow status updates
+
     Usage:
+        # Legacy mode (default)
         service = WorkflowExecutionService()
-        result = await service.execute_workflow(
-            workflow_id=uuid4(),
-            definition=workflow_def,
-            input_data={"message": "Hello"},
-        )
+        result = await service.execute_workflow(...)
+
+        # Official API mode
+        service = WorkflowExecutionService(use_official_api=True)
+        service.add_event_handler(my_handler)
+        result = await service.execute_workflow(...)
     """
 
-    def __init__(self):
-        """Initialize WorkflowExecutionService."""
+    def __init__(self, use_official_api: bool = False):
+        """
+        Initialize WorkflowExecutionService.
+
+        Args:
+            use_official_api: If True, use official Agent Framework API.
+                              Default is False for backward compatibility.
+        """
         self._agent_service: Optional[AgentService] = None
+        self._use_official_api = use_official_api
+
+        # Sprint 27: Official API components
+        self._event_adapter: Optional[WorkflowStatusEventAdapter] = None
+        self._state_machine_manager: Optional[StateMachineManager] = None
+        self._event_handlers: List[Callable] = []
+
+        if use_official_api:
+            self._event_adapter = WorkflowStatusEventAdapter()
+            self._state_machine_manager = StateMachineManager(self._event_adapter)
+
+    def add_event_handler(self, handler: Callable) -> None:
+        """
+        Add an event handler for workflow status updates.
+
+        Handlers receive (execution_id: UUID, event: InternalExecutionEvent).
+
+        Args:
+            handler: Async callable to handle events
+        """
+        self._event_handlers.append(handler)
+        if self._event_adapter:
+            self._event_adapter.add_handler(handler)
+
+    def remove_event_handler(self, handler: Callable) -> None:
+        """
+        Remove an event handler.
+
+        Args:
+            handler: The handler to remove
+        """
+        if handler in self._event_handlers:
+            self._event_handlers.remove(handler)
+        if self._event_adapter:
+            self._event_adapter.remove_handler(handler)
 
     async def _get_agent_service(self) -> AgentService:
         """Get or initialize agent service."""
@@ -176,6 +252,10 @@ class WorkflowExecutionService:
 
         Returns:
             WorkflowExecutionResult with status and outputs
+
+        Note:
+            If use_official_api=True, uses SequentialOrchestrationAdapter
+            from official Microsoft Agent Framework API.
         """
         # Validate workflow
         errors = definition.validate()
@@ -190,6 +270,135 @@ class WorkflowExecutionService:
             status="running",
         )
 
+        logger.info(f"Starting workflow execution: {execution_id}")
+
+        # Route to appropriate execution path
+        if self._use_official_api:
+            return await self._execute_workflow_official(
+                execution_id=execution_id,
+                workflow_id=workflow_id,
+                definition=definition,
+                input_data=input_data,
+                variables=variables,
+                agent_configs=agent_configs,
+                result=result,
+            )
+        else:
+            return await self._execute_workflow_legacy(
+                execution_id=execution_id,
+                workflow_id=workflow_id,
+                definition=definition,
+                input_data=input_data,
+                variables=variables,
+                agent_configs=agent_configs,
+                result=result,
+            )
+
+    async def _execute_workflow_official(
+        self,
+        execution_id: UUID,
+        workflow_id: UUID,
+        definition: WorkflowDefinition,
+        input_data: Dict[str, Any],
+        variables: Optional[Dict[str, Any]],
+        agent_configs: Optional[Dict[UUID, AgentConfig]],
+        result: WorkflowExecutionResult,
+    ) -> WorkflowExecutionResult:
+        """
+        Execute workflow using official Agent Framework API.
+
+        Uses SequentialOrchestrationAdapter and EnhancedExecutionStateMachine.
+        """
+        # Create state machine for tracking
+        state_machine = self._state_machine_manager.create(execution_id)
+        state_machine.start()
+
+        try:
+            # Get agent service
+            agent_service = await self._get_agent_service()
+
+            # Get nodes in execution order
+            sorted_nodes = self._get_sorted_nodes(definition)
+
+            # Create executors for each node
+            executors = []
+            for node in sorted_nodes:
+                if node.type in (NodeType.AGENT, NodeType.GATEWAY):
+                    executor = create_executor_from_node(
+                        node=node,
+                        agent_service=agent_service,
+                    )
+                    executors.append(executor)
+
+            if not executors:
+                # No executable nodes, return early
+                result.result = input_data.get("message", "")
+                result.complete("completed")
+                state_machine.complete()
+                return result
+
+            # Create sequential orchestration adapter
+            orchestration = create_sequential_orchestration(
+                executors=executors,
+                name=f"workflow-{workflow_id}",
+                on_step_complete=self._create_step_handler(execution_id, result),
+            )
+
+            # Execute with streaming for event handling
+            async for event in orchestration.run_stream(input_data):
+                # Process event through state machine
+                internal_event = InternalExecutionEvent(
+                    execution_id=execution_id,
+                    event_type=event.get("event_type", "unknown"),
+                    status=self._map_event_to_status(event.get("event_type")),
+                    node_id=event.get("executor_id"),
+                    data=event,
+                    timestamp=datetime.utcnow(),
+                    is_final=event.get("event_type") in ("completed", "failed"),
+                )
+                await state_machine.handle_event(internal_event)
+
+                # Capture final result
+                if event.get("event_type") == "completed":
+                    result.result = event.get("result")
+
+            # Mark complete
+            result.complete("completed")
+            state_machine.complete(
+                llm_calls=result.total_llm_calls,
+                llm_tokens=result.total_llm_tokens,
+                llm_cost=float(result.total_llm_cost),
+            )
+
+            logger.info(
+                f"Workflow execution completed (official API): {execution_id}, "
+                f"tokens={result.total_llm_tokens}, cost=${result.total_llm_cost:.6f}"
+            )
+
+        except Exception as e:
+            logger.error(f"Workflow execution failed (official API): {e}")
+            result.status = "failed"
+            result.result = str(e)
+            result.complete("failed")
+            state_machine.fail()
+
+        return result
+
+    async def _execute_workflow_legacy(
+        self,
+        execution_id: UUID,
+        workflow_id: UUID,
+        definition: WorkflowDefinition,
+        input_data: Dict[str, Any],
+        variables: Optional[Dict[str, Any]],
+        agent_configs: Optional[Dict[UUID, AgentConfig]],
+        result: WorkflowExecutionResult,
+    ) -> WorkflowExecutionResult:
+        """
+        Execute workflow using legacy implementation.
+
+        Maintains backward compatibility with existing code.
+        """
         # Create execution context
         context = WorkflowContext(
             execution_id=execution_id,
@@ -197,8 +406,6 @@ class WorkflowExecutionService:
             variables=variables or {},
             input_data=input_data,
         )
-
-        logger.info(f"Starting workflow execution: {execution_id}")
 
         try:
             # Get start node
@@ -220,17 +427,134 @@ class WorkflowExecutionService:
             # Mark complete
             result.complete("completed")
             logger.info(
-                f"Workflow execution completed: {execution_id}, "
+                f"Workflow execution completed (legacy): {execution_id}, "
                 f"tokens={result.total_llm_tokens}, cost=${result.total_llm_cost:.6f}"
             )
 
         except Exception as e:
-            logger.error(f"Workflow execution failed: {e}")
+            logger.error(f"Workflow execution failed (legacy): {e}")
             result.status = "failed"
             result.result = str(e)
             result.complete("failed")
 
         return result
+
+    def _get_sorted_nodes(self, definition: WorkflowDefinition) -> List[WorkflowNode]:
+        """
+        Get workflow nodes in execution order.
+
+        Returns nodes sorted by topological order, excluding START/END.
+        """
+        # Simple topological sort based on edges
+        visited = set()
+        sorted_nodes = []
+
+        def visit(node_id: str):
+            if node_id in visited:
+                return
+            visited.add(node_id)
+
+            node = definition.get_node(node_id)
+            if not node:
+                return
+
+            # Visit dependencies first
+            for edge in definition.edges:
+                if edge.target == node_id:
+                    visit(edge.source)
+
+            if node.type not in (NodeType.START, NodeType.END):
+                sorted_nodes.append(node)
+
+        # Start from end nodes and work backward
+        end_nodes = [n for n in definition.nodes if n.type == NodeType.END]
+        for end_node in end_nodes:
+            for edge in definition.edges:
+                if edge.target == end_node.id:
+                    visit(edge.source)
+
+        return sorted_nodes
+
+    def _create_step_handler(
+        self,
+        execution_id: UUID,
+        result: WorkflowExecutionResult,
+    ) -> Callable:
+        """
+        Create a step completion handler.
+
+        Updates result with node execution details.
+        """
+        async def handler(node_id: str, step_result: Any):
+            node_result = NodeExecutionResult(
+                node_id=node_id,
+                node_type=NodeType.AGENT,  # Default, actual type not easily available
+                output=str(step_result) if step_result else None,
+            )
+            node_result.complete()
+            result.node_results.append(node_result)
+
+        return handler
+
+    def _map_event_to_status(self, event_type: str) -> ExecutionStatus:
+        """Map event type to ExecutionStatus."""
+        mapping = {
+            "started": ExecutionStatus.RUNNING,
+            "executor_started": ExecutionStatus.RUNNING,
+            "executor_completed": ExecutionStatus.RUNNING,
+            "completed": ExecutionStatus.COMPLETED,
+            "failed": ExecutionStatus.FAILED,
+        }
+        return mapping.get(event_type, ExecutionStatus.RUNNING)
+
+    # =========================================================================
+    # Sprint 27: Official API Utility Methods
+    # =========================================================================
+
+    @property
+    def use_official_api(self) -> bool:
+        """Check if service uses official API."""
+        return self._use_official_api
+
+    @property
+    def state_machine_manager(self) -> Optional[StateMachineManager]:
+        """Get the state machine manager (official API mode only)."""
+        return self._state_machine_manager
+
+    @property
+    def event_adapter(self) -> Optional[WorkflowStatusEventAdapter]:
+        """Get the event adapter (official API mode only)."""
+        return self._event_adapter
+
+    def get_execution_state(self, execution_id: UUID) -> Optional[Dict[str, Any]]:
+        """
+        Get the state of an execution (official API mode only).
+
+        Args:
+            execution_id: The execution ID
+
+        Returns:
+            State dictionary or None if not found
+        """
+        if self._state_machine_manager:
+            machine = self._state_machine_manager.get(execution_id)
+            if machine:
+                return machine.to_dict()
+        return None
+
+    def get_all_execution_states(self) -> Dict[UUID, Dict[str, Any]]:
+        """
+        Get states of all tracked executions (official API mode only).
+
+        Returns:
+            Dictionary of execution_id to state
+        """
+        if self._state_machine_manager:
+            return {
+                exec_id: self._state_machine_manager.get(exec_id).to_dict()
+                for exec_id in self._state_machine_manager.get_all_statuses().keys()
+            }
+        return {}
 
     async def _execute_sequential(
         self,
@@ -444,11 +768,40 @@ class WorkflowExecutionService:
 
 # Global service instance
 _workflow_execution_service: Optional[WorkflowExecutionService] = None
+_workflow_execution_service_official: Optional[WorkflowExecutionService] = None
 
 
-def get_workflow_execution_service() -> WorkflowExecutionService:
-    """Get or create the global WorkflowExecutionService instance."""
-    global _workflow_execution_service
-    if _workflow_execution_service is None:
-        _workflow_execution_service = WorkflowExecutionService()
-    return _workflow_execution_service
+def get_workflow_execution_service(use_official_api: bool = False) -> WorkflowExecutionService:
+    """
+    Get or create the global WorkflowExecutionService instance.
+
+    Args:
+        use_official_api: If True, returns service configured to use
+                          official Microsoft Agent Framework API.
+
+    Returns:
+        WorkflowExecutionService instance
+    """
+    global _workflow_execution_service, _workflow_execution_service_official
+
+    if use_official_api:
+        if _workflow_execution_service_official is None:
+            _workflow_execution_service_official = WorkflowExecutionService(
+                use_official_api=True
+            )
+        return _workflow_execution_service_official
+    else:
+        if _workflow_execution_service is None:
+            _workflow_execution_service = WorkflowExecutionService(use_official_api=False)
+        return _workflow_execution_service
+
+
+def reset_workflow_execution_service() -> None:
+    """
+    Reset global service instances.
+
+    Useful for testing and configuration changes.
+    """
+    global _workflow_execution_service, _workflow_execution_service_official
+    _workflow_execution_service = None
+    _workflow_execution_service_official = None

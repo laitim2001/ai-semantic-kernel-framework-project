@@ -349,3 +349,51 @@ class ConfigurationError(AdapterError):
         self.missing_keys = missing_keys or []
         self.invalid_keys = invalid_keys or {}
         self.config_source = config_source
+
+
+class RecursionError(AdapterError):
+    """
+    遞歸深度超過限制時拋出的異常。
+
+    當嵌套工作流的遞歸深度超過配置的最大值時使用。
+
+    Example:
+        raise RecursionError(
+            "Maximum recursion depth exceeded",
+            max_depth=5,
+            current_depth=6,
+            workflow_id="nested-workflow-1"
+        )
+    """
+
+    def __init__(
+        self,
+        message: str,
+        max_depth: Optional[int] = None,
+        current_depth: Optional[int] = None,
+        workflow_id: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+        original_error: Optional[Exception] = None,
+    ):
+        """
+        初始化異常。
+
+        Args:
+            message: 錯誤訊息
+            max_depth: 配置的最大遞歸深度
+            current_depth: 當前遞歸深度
+            workflow_id: 觸發異常的工作流 ID
+            context: 可選的上下文信息
+            original_error: 可選的原始異常
+        """
+        ctx = context or {}
+        if max_depth is not None:
+            ctx["max_depth"] = max_depth
+        if current_depth is not None:
+            ctx["current_depth"] = current_depth
+        if workflow_id:
+            ctx["workflow_id"] = workflow_id
+        super().__init__(message, context=ctx, original_error=original_error)
+        self.max_depth = max_depth
+        self.current_depth = current_depth
+        self.workflow_id = workflow_id

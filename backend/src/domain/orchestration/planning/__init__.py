@@ -2,16 +2,31 @@
 # IPA Platform - Planning Module
 # =============================================================================
 # Sprint 10: Dynamic Planning & Autonomous Decision (42 points)
+# Sprint 30: 棄用警告 - 請使用適配器層
 #
-# This module provides intelligent task decomposition, dynamic planning,
-# autonomous decision-making, and trial-and-error learning capabilities.
+# DEPRECATED: 此模組已棄用，請使用適配器層
 #
-# Components:
-# - TaskDecomposer: Breaks down complex tasks into executable subtasks
-# - DynamicPlanner: Creates and executes adaptive execution plans
-# - AutonomousDecisionEngine: Makes intelligent decisions with explainability
-# - TrialAndErrorEngine: Learns from failures and improves over time
+# 推薦使用:
+#   from src.integrations.agent_framework.builders import (
+#       PlanningAdapter,
+#       TaskDecomposerAdapter,
+#       DynamicPlannerAdapter,
+#   )
+#
+# 或使用 API 服務:
+#   from src.api.v1.planning.routes import planning_* endpoints
+#
+# 此模組將在未來版本中移除
 # =============================================================================
+
+import warnings
+
+warnings.warn(
+    "domain.orchestration.planning 模組已棄用。"
+    "請使用 integrations.agent_framework.builders.PlanningAdapter",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from .task_decomposer import (
     TaskDecomposer,

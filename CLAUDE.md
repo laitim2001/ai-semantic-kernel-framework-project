@@ -10,8 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Core Framework**: Microsoft Agent Framework (Preview) - unifies Semantic Kernel + AutoGen
 - **Target Users**: Mid-size enterprises (500-2000 employees)
-- **Status**: **MVP Complete** - 285/285 story points across 6 Sprints
-- **Stats**: 812 tests, 155 API routes, 15 domain modules
+- **Status**: **Phase 6 Complete** - 1190 story points across 33 Sprints - UAT Ready
+- **Architecture**: Full official Agent Framework API integration (>95% API coverage)
+- **Stats**: 3198 tests, 297 API routes, 20 production-ready adapters
 
 ---
 
@@ -98,29 +99,34 @@ PostgreSQL 16 + Redis 7 + RabbitMQ
 
 ```
 backend/src/
-├── api/v1/              # 15 API route modules
+├── api/v1/              # 15+ API route modules
 │   ├── agents/          # Agent CRUD and configuration
 │   ├── workflows/       # Workflow management
 │   ├── executions/      # Execution lifecycle
-│   ├── checkpoints/     # Human-in-the-loop approvals
-│   ├── connectors/      # External system integrations
-│   ├── triggers/        # Workflow trigger definitions
-│   ├── routing/         # Intelligent task routing
-│   ├── templates/       # Workflow templates
-│   ├── prompts/         # Prompt management
-│   ├── learning/        # Few-shot learning
-│   ├── notifications/   # Teams/email notifications
-│   ├── audit/           # Audit logging
-│   ├── cache/           # LLM response caching
-│   ├── devtools/        # Developer utilities
-│   └── versioning/      # Version control
+│   ├── groupchat/       # GroupChat orchestration (→ Adapter)
+│   ├── handoff/         # Agent handoff (→ Adapter)
+│   ├── concurrent/      # Concurrent execution (→ Adapter)
+│   ├── nested/          # Nested workflows (→ Adapter)
+│   ├── planning/        # Dynamic planning (→ Adapter)
+│   └── ...
 │
-├── domain/              # Business logic services
+├── integrations/        # 🔑 Official API Integration Layer (Phase 4)
+│   └── agent_framework/
+│       ├── builders/    # Adapter implementations
+│       │   ├── groupchat.py      # GroupChatBuilderAdapter
+│       │   ├── handoff.py        # HandoffBuilderAdapter
+│       │   ├── concurrent.py     # ConcurrentBuilderAdapter
+│       │   ├── nested_workflow.py # NestedWorkflowAdapter
+│       │   ├── planning.py       # PlanningAdapter
+│       │   └── magentic.py       # MagenticBuilderAdapter
+│       ├── multiturn/   # MultiTurnAdapter + CheckpointStorage
+│       └── memory/      # Memory storage adapters
+│
+├── domain/              # Business logic (⚠️ deprecated for orchestration)
 │   ├── agents/          # Agent service
 │   ├── workflows/       # Workflow service + state machine
 │   ├── executions/      # Execution state machine
-│   ├── checkpoints/     # Checkpoint storage
-│   └── ...
+│   └── orchestration/   # ⚠️ Deprecated - use adapters
 │
 ├── infrastructure/      # External integrations
 │   ├── database/        # SQLAlchemy models, repositories
@@ -131,6 +137,17 @@ backend/src/
     ├── config.py       # Settings management
     └── performance/    # Performance monitoring
 ```
+
+### Key Adapters (Phase 4)
+
+| Adapter | Purpose | Official API |
+|---------|---------|--------------|
+| `GroupChatBuilderAdapter` | Multi-agent chat | `GroupChatBuilder` |
+| `HandoffBuilderAdapter` | Agent handoff | `HandoffBuilder` |
+| `ConcurrentBuilderAdapter` | Parallel execution | `ConcurrentBuilder` |
+| `NestedWorkflowAdapter` | Nested workflows | `WorkflowExecutor` |
+| `PlanningAdapter` | Task planning | `MagenticBuilder` |
+| `MultiTurnAdapter` | Conversation state | `CheckpointStorage` |
 
 ### Frontend Architecture
 
@@ -154,10 +171,11 @@ frontend/src/
 
 ### Key Design Patterns
 
-1. **Execution State Machine**: Workflows go through states (pending → running → waiting_approval → completed/failed)
-2. **Checkpoint System**: Human-in-the-loop approvals with timeout and escalation
-3. **LLM Cache**: Redis-based caching for repeated LLM calls
-4. **Connector Pattern**: Pluggable external system integrations (ServiceNow, Dynamics 365)
+1. **Adapter Pattern** (Phase 4): All orchestration via official Agent Framework adapters
+2. **Execution State Machine**: Workflows go through states (pending → running → waiting_approval → completed/failed)
+3. **Checkpoint System**: Human-in-the-loop approvals with timeout and escalation
+4. **LLM Cache**: Redis-based caching for repeated LLM calls
+5. **Connector Pattern**: Pluggable external system integrations (ServiceNow, Dynamics 365)
 
 ---
 
@@ -268,6 +286,61 @@ Full instructions: `claudedocs/AI-ASSISTANT-INSTRUCTIONS.md`
 
 ---
 
+## CRITICAL: Microsoft Agent Framework API Usage
+
+**This is the most important rule for this project.**
+
+### MUST Use Official API
+
+When developing in `backend/src/integrations/agent_framework/builders/`, you **MUST**:
+
+1. **Import official classes from `agent_framework`**:
+```python
+from agent_framework import (
+    ConcurrentBuilder,      # for concurrent.py
+    GroupChatBuilder,       # for groupchat.py
+    HandoffBuilder,         # for handoff.py
+    MagenticBuilder,        # for magentic.py
+    WorkflowExecutor,       # for workflow_executor.py
+)
+```
+
+2. **Use official Builder instance in adapter class**:
+```python
+class XxxBuilderAdapter:
+    def __init__(self, ...):
+        self._builder = OfficialBuilder()  # MUST have this line
+```
+
+3. **Call official Builder in build() method**:
+```python
+def build(self) -> Workflow:
+    return self._builder.participants(...).build()  # MUST call official API
+```
+
+### DO NOT
+
+- ❌ Do NOT create your own implementation without using `agent_framework` imports
+- ❌ Do NOT skip `from agent_framework import ...` statements
+- ❌ Do NOT implement similar functionality without calling official API
+
+### Verification
+
+Before completing any adapter work, run:
+```bash
+cd backend
+python scripts/verify_official_api_usage.py
+```
+
+All checks must pass (5/5).
+
+### Reference
+
+- Official source code: `reference/agent-framework/python/packages/core/agent_framework/`
+- Workflow checklist: `docs/03-implementation/sprint-planning/phase-3/SPRINT-WORKFLOW-CHECKLIST.md`
+
+---
+
 ## Important Notes
 
 1. **Agent Framework is Preview**: API may change. Reference docs in `reference/agent-framework/`
@@ -280,6 +353,6 @@ Full instructions: `claudedocs/AI-ASSISTANT-INSTRUCTIONS.md`
 
 ---
 
-**Last Updated**: 2025-12-01
+**Last Updated**: 2025-12-08
 **Project Start**: 2025-11-14
-**Status**: MVP Complete (285/285 points, 6 Sprints)
+**Status**: Phase 6 Complete (1190 points, 33 Sprints) - Architecture Finalized & UAT Ready

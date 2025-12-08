@@ -1,9 +1,16 @@
 # =============================================================================
 # IPA Platform - Handoff API Routes
 # =============================================================================
-# Sprint 8: Agent Handoff & Collaboration (Phase 2)
+# Sprint 29: API Routes 遷移 (Phase 5)
 #
 # API endpoints for Agent handoff and capability matching.
+#
+# Migration Notes (Sprint 29):
+#   - Migrated from mock implementation to HandoffService adapter
+#   - Uses HandoffService from integrations.agent_framework.builders
+#   - Maintains backward compatibility with existing API schemas
+#   - HITL endpoints preserved for future migration to WorkflowApprovalAdapter
+#
 # Endpoints:
 #   - POST /handoff/trigger - Trigger a handoff
 #   - GET /handoff/{id}/status - Get handoff status
@@ -13,17 +20,18 @@
 #   - GET /handoff/agents/{id}/capabilities - Get agent capabilities
 #
 # References:
-#   - Sprint 8 Plan: docs/03-implementation/sprint-planning/phase-2/sprint-8-plan.md
+#   - Sprint 29 Plan: docs/03-implementation/sprint-planning/phase-5/sprint-29-plan.md
+#   - HandoffService: src/integrations/agent_framework/builders/handoff_service.py
 # =============================================================================
 
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from src.api.v1.handoff.schemas import (
     AgentCapabilitiesResponse,
@@ -56,22 +64,118 @@ from src.api.v1.handoff.schemas import (
     HITLSubmitInputResponse,
 )
 
+# =============================================================================
+# Sprint 29: Import from Adapter Layer
+# =============================================================================
+from src.integrations.agent_framework.builders.handoff_service import (
+    HandoffService,
+    HandoffRequest,
+    HandoffServiceStatus,
+    create_handoff_service,
+)
+from src.integrations.agent_framework.builders.handoff_policy import (
+    LegacyHandoffPolicy,
+)
+from src.integrations.agent_framework.builders.handoff_capability import (
+    MatchStrategy,
+    AgentCapabilityInfo,
+    CapabilityRequirementInfo,
+    CapabilityCategory,
+)
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/handoff", tags=["Handoff"])
 
+
 # =============================================================================
-# In-Memory Storage (for demonstration)
+# Dependency Injection (Sprint 29)
 # =============================================================================
 
-# Handoff records storage
-_handoffs: Dict[UUID, Dict[str, Any]] = {}
+# Singleton service instance
+_handoff_service: Optional[HandoffService] = None
 
-# Agent capabilities storage
-_agent_capabilities: Dict[UUID, List[Dict[str, Any]]] = {}
 
-# Agent availability
-_agent_availability: Dict[UUID, Dict[str, Any]] = {}
+def get_handoff_service() -> HandoffService:
+    """
+    Get or create the HandoffService singleton.
+
+    Returns:
+        HandoffService instance
+    """
+    global _handoff_service
+    if _handoff_service is None:
+        _handoff_service = create_handoff_service()
+        logger.info("HandoffService initialized for API routes")
+    return _handoff_service
+
+
+def reset_handoff_service() -> None:
+    """Reset the service instance (for testing)."""
+    global _handoff_service
+    _handoff_service = None
+
+
+# =============================================================================
+# Status Mapping Helpers
+# =============================================================================
+
+def _map_service_status_to_api(service_status: HandoffServiceStatus) -> HandoffStatusEnum:
+    """Map HandoffServiceStatus to API HandoffStatusEnum."""
+    mapping = {
+        HandoffServiceStatus.INITIATED: HandoffStatusEnum.INITIATED,
+        HandoffServiceStatus.MATCHING: HandoffStatusEnum.VALIDATING,
+        HandoffServiceStatus.CONTEXT_TRANSFER: HandoffStatusEnum.TRANSFERRING,
+        HandoffServiceStatus.EXECUTING: HandoffStatusEnum.TRANSFERRING,
+        HandoffServiceStatus.WAITING_INPUT: HandoffStatusEnum.TRANSFERRING,
+        HandoffServiceStatus.COMPLETED: HandoffStatusEnum.COMPLETED,
+        HandoffServiceStatus.FAILED: HandoffStatusEnum.FAILED,
+        HandoffServiceStatus.CANCELLED: HandoffStatusEnum.CANCELLED,
+        HandoffServiceStatus.ROLLED_BACK: HandoffStatusEnum.ROLLED_BACK,
+    }
+    return mapping.get(service_status, HandoffStatusEnum.INITIATED)
+
+
+def _map_api_policy_to_legacy(api_policy: HandoffPolicyEnum) -> LegacyHandoffPolicy:
+    """Map API HandoffPolicyEnum to LegacyHandoffPolicy."""
+    mapping = {
+        HandoffPolicyEnum.IMMEDIATE: LegacyHandoffPolicy.IMMEDIATE,
+        HandoffPolicyEnum.GRACEFUL: LegacyHandoffPolicy.GRACEFUL,
+        HandoffPolicyEnum.CONDITIONAL: LegacyHandoffPolicy.CONDITIONAL,
+    }
+    return mapping.get(api_policy, LegacyHandoffPolicy.IMMEDIATE)
+
+
+def _map_api_strategy_to_adapter(api_strategy: MatchStrategyEnum) -> MatchStrategy:
+    """Map API MatchStrategyEnum to adapter MatchStrategy."""
+    mapping = {
+        MatchStrategyEnum.BEST_FIT: MatchStrategy.BEST_FIT,
+        MatchStrategyEnum.FIRST_FIT: MatchStrategy.FIRST_FIT,
+        MatchStrategyEnum.ROUND_ROBIN: MatchStrategy.ROUND_ROBIN,
+        MatchStrategyEnum.LEAST_LOADED: MatchStrategy.LEAST_LOADED,
+    }
+    return mapping.get(api_strategy, MatchStrategy.BEST_FIT)
+
+
+def _map_api_category_to_adapter(api_category: CapabilityCategoryEnum) -> CapabilityCategory:
+    """Map API CapabilityCategoryEnum to adapter CapabilityCategory."""
+    mapping = {
+        CapabilityCategoryEnum.LANGUAGE: CapabilityCategory.LANGUAGE,
+        CapabilityCategoryEnum.REASONING: CapabilityCategory.REASONING,
+        CapabilityCategoryEnum.KNOWLEDGE: CapabilityCategory.KNOWLEDGE,
+        CapabilityCategoryEnum.ACTION: CapabilityCategory.ACTION,
+        CapabilityCategoryEnum.INTEGRATION: CapabilityCategory.INTEGRATION,
+        CapabilityCategoryEnum.COMMUNICATION: CapabilityCategory.COMMUNICATION,
+    }
+    return mapping.get(api_category, CapabilityCategory.ACTION)
+
+
+# =============================================================================
+# HITL Storage (preserved for future migration to WorkflowApprovalAdapter)
+# =============================================================================
+
+_hitl_sessions: Dict[UUID, Dict[str, Any]] = {}
+_hitl_requests: Dict[UUID, Dict[str, Any]] = {}
 
 
 # =============================================================================
@@ -91,6 +195,7 @@ _agent_availability: Dict[UUID, Dict[str, Any]] = {}
 )
 async def trigger_handoff(
     request: HandoffTriggerRequest,
+    service: HandoffService = Depends(get_handoff_service),
 ) -> HandoffTriggerResponse:
     """
     Trigger a handoff between agents.
@@ -100,51 +205,37 @@ async def trigger_handoff(
 
     If target_agent_id is not provided, the system will attempt
     to find the best matching agent based on required_capabilities.
+
+    Sprint 29: Now uses HandoffService adapter instead of mock.
     """
     logger.info(
         f"Handoff trigger requested: {request.source_agent_id} -> "
         f"{request.target_agent_id or 'auto-match'}"
     )
 
-    # Generate handoff ID
-    handoff_id = uuid4()
+    # Create HandoffRequest for service
+    handoff_request = HandoffRequest(
+        source_agent_id=request.source_agent_id,
+        target_agent_id=request.target_agent_id,
+        policy=_map_api_policy_to_legacy(request.policy),
+        required_capabilities=request.required_capabilities,
+        context=request.context,
+        reason=request.reason or "",
+        metadata=request.metadata,
+    )
 
-    # Determine target agent
-    target_agent_id = request.target_agent_id
-    if not target_agent_id and request.required_capabilities:
-        # Auto-match based on capabilities
-        target_agent_id = _find_matching_agent(
-            request.required_capabilities,
-            exclude=[request.source_agent_id],
-        )
+    # Trigger handoff via service
+    result = await service.trigger_handoff(handoff_request)
 
-    # Create handoff record
-    now = datetime.utcnow()
-    handoff = {
-        "handoff_id": handoff_id,
-        "status": HandoffStatusEnum.INITIATED,
-        "source_agent_id": request.source_agent_id,
-        "target_agent_id": target_agent_id,
-        "policy": request.policy,
-        "context": request.context,
-        "progress": 0.0,
-        "context_transferred": False,
-        "initiated_at": now,
-        "completed_at": None,
-        "reason": request.reason,
-        "metadata": request.metadata,
-    }
-    _handoffs[handoff_id] = handoff
-
-    logger.info(f"Handoff {handoff_id} initiated successfully")
+    logger.info(f"Handoff {result.handoff_id} initiated successfully")
 
     return HandoffTriggerResponse(
-        handoff_id=handoff_id,
-        status=HandoffStatusEnum.INITIATED,
-        source_agent_id=request.source_agent_id,
-        target_agent_id=target_agent_id,
-        initiated_at=now,
-        message="Handoff initiated successfully",
+        handoff_id=result.handoff_id,
+        status=_map_service_status_to_api(result.status),
+        source_agent_id=result.source_agent_id,
+        target_agent_id=result.target_agent_id,
+        initiated_at=result.initiated_at,
+        message=result.message or "Handoff initiated successfully",
     )
 
 
@@ -159,33 +250,36 @@ async def trigger_handoff(
 )
 async def get_handoff_status(
     handoff_id: UUID,
+    service: HandoffService = Depends(get_handoff_service),
 ) -> HandoffStatusResponse:
     """
     Get the current status of a handoff.
 
     Returns detailed information about the handoff progress,
     including transfer status and any error messages.
+
+    Sprint 29: Now uses HandoffService adapter.
     """
-    if handoff_id not in _handoffs:
+    result = service.get_handoff_status(handoff_id)
+
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Handoff {handoff_id} not found",
         )
 
-    handoff = _handoffs[handoff_id]
-
     return HandoffStatusResponse(
-        handoff_id=handoff["handoff_id"],
-        status=handoff["status"],
-        source_agent_id=handoff["source_agent_id"],
-        target_agent_id=handoff["target_agent_id"],
-        policy=handoff["policy"],
-        progress=handoff["progress"],
-        context_transferred=handoff["context_transferred"],
-        initiated_at=handoff["initiated_at"],
-        completed_at=handoff.get("completed_at"),
-        error_message=handoff.get("error_message"),
-        metadata=handoff.get("metadata", {}),
+        handoff_id=result.handoff_id,
+        status=_map_service_status_to_api(result.status),
+        source_agent_id=result.source_agent_id,
+        target_agent_id=result.target_agent_id,
+        policy=HandoffPolicyEnum(result.policy.value),
+        progress=result.progress,
+        context_transferred=result.context_transferred,
+        initiated_at=result.initiated_at,
+        completed_at=result.completed_at,
+        error_message=result.error_message,
+        metadata=result.metadata,
     )
 
 
@@ -202,61 +296,43 @@ async def get_handoff_status(
 async def cancel_handoff(
     handoff_id: UUID,
     request: Optional[HandoffCancelRequest] = None,
+    service: HandoffService = Depends(get_handoff_service),
 ) -> HandoffCancelResponse:
     """
     Cancel an in-progress handoff.
 
     If the handoff has already begun transferring, a rollback
     will be attempted to restore the source agent's state.
+
+    Sprint 29: Now uses HandoffService adapter.
     """
-    if handoff_id not in _handoffs:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Handoff {handoff_id} not found",
+    try:
+        reason = request.reason if request else None
+        result = await service.cancel_handoff(handoff_id, reason=reason)
+
+        logger.info(
+            f"Handoff {handoff_id} cancelled"
+            f"{' with rollback' if result.rollback_performed else ''}"
         )
 
-    handoff = _handoffs[handoff_id]
-
-    # Check if cancellable
-    if handoff["status"] in (
-        HandoffStatusEnum.COMPLETED,
-        HandoffStatusEnum.CANCELLED,
-        HandoffStatusEnum.ROLLED_BACK,
-    ):
+        return HandoffCancelResponse(
+            handoff_id=result.handoff_id,
+            status=_map_service_status_to_api(result.status),
+            cancelled_at=result.cancelled_at,
+            rollback_performed=result.rollback_performed,
+            message=result.message or "Handoff cancelled successfully",
+        )
+    except ValueError as e:
+        error_msg = str(e)
+        if "not found" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=error_msg,
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Handoff {handoff_id} cannot be cancelled (status: {handoff['status']})",
+            detail=error_msg,
         )
-
-    # Perform cancellation
-    now = datetime.utcnow()
-    rollback_needed = handoff["context_transferred"]
-
-    handoff["status"] = (
-        HandoffStatusEnum.ROLLED_BACK if rollback_needed
-        else HandoffStatusEnum.CANCELLED
-    )
-    handoff["completed_at"] = now
-
-    if request and request.reason:
-        handoff["metadata"]["cancel_reason"] = request.reason
-
-    logger.info(
-        f"Handoff {handoff_id} cancelled"
-        f"{' with rollback' if rollback_needed else ''}"
-    )
-
-    return HandoffCancelResponse(
-        handoff_id=handoff_id,
-        status=handoff["status"],
-        cancelled_at=now,
-        rollback_performed=rollback_needed,
-        message=(
-            "Handoff cancelled with rollback"
-            if rollback_needed
-            else "Handoff cancelled successfully"
-        ),
-    )
 
 
 @router.get(
@@ -281,51 +357,56 @@ async def get_handoff_history(
         alias="status",
         description="Filter by status",
     ),
+    service: HandoffService = Depends(get_handoff_service),
 ) -> HandoffHistoryResponse:
     """
     Get handoff history with pagination and filtering.
 
     Supports filtering by source agent, target agent, and status.
     Results are sorted by initiation time (newest first).
+
+    Sprint 29: Now uses HandoffService adapter.
     """
-    # Filter handoffs
-    filtered = list(_handoffs.values())
-
-    if source_agent_id:
-        filtered = [h for h in filtered if h["source_agent_id"] == source_agent_id]
-
-    if target_agent_id:
-        filtered = [h for h in filtered if h["target_agent_id"] == target_agent_id]
-
+    # Map API status filter to service status
+    service_status = None
     if status_filter:
-        filtered = [h for h in filtered if h["status"] == status_filter]
+        reverse_mapping = {
+            HandoffStatusEnum.INITIATED: HandoffServiceStatus.INITIATED,
+            HandoffStatusEnum.VALIDATING: HandoffServiceStatus.MATCHING,
+            HandoffStatusEnum.TRANSFERRING: HandoffServiceStatus.CONTEXT_TRANSFER,
+            HandoffStatusEnum.COMPLETED: HandoffServiceStatus.COMPLETED,
+            HandoffStatusEnum.FAILED: HandoffServiceStatus.FAILED,
+            HandoffStatusEnum.CANCELLED: HandoffServiceStatus.CANCELLED,
+            HandoffStatusEnum.ROLLED_BACK: HandoffServiceStatus.ROLLED_BACK,
+        }
+        service_status = reverse_mapping.get(status_filter)
 
-    # Sort by initiated_at descending
-    filtered.sort(key=lambda h: h["initiated_at"], reverse=True)
-
-    # Paginate
-    total = len(filtered)
-    start = (page - 1) * page_size
-    end = start + page_size
-    page_items = filtered[start:end]
+    # Get history from service
+    records, total = service.get_handoff_history(
+        source_agent_id=source_agent_id,
+        target_agent_id=target_agent_id,
+        status_filter=service_status,
+        page=page,
+        page_size=page_size,
+    )
 
     # Convert to response items
     items = []
-    for h in page_items:
+    for record in records:
         duration = None
-        if h.get("completed_at") and h.get("initiated_at"):
-            duration = (h["completed_at"] - h["initiated_at"]).total_seconds()
+        if record.completed_at and record.initiated_at:
+            duration = (record.completed_at - record.initiated_at).total_seconds()
 
         items.append(HandoffHistoryItem(
-            handoff_id=h["handoff_id"],
-            status=h["status"],
-            source_agent_id=h["source_agent_id"],
-            target_agent_id=h["target_agent_id"],
-            policy=h["policy"],
-            initiated_at=h["initiated_at"],
-            completed_at=h.get("completed_at"),
+            handoff_id=record.handoff_id,
+            status=_map_service_status_to_api(record.status),
+            source_agent_id=record.source_agent_id,
+            target_agent_id=record.target_agent_id,
+            policy=HandoffPolicyEnum(record.policy.value),
+            initiated_at=record.initiated_at,
+            completed_at=record.completed_at,
             duration_seconds=duration,
-            reason=h.get("reason"),
+            reason=record.reason,
         ))
 
     return HandoffHistoryResponse(
@@ -333,7 +414,7 @@ async def get_handoff_history(
         total=total,
         page=page,
         page_size=page_size,
-        has_more=end < total,
+        has_more=(page * page_size) < total,
     )
 
 
@@ -349,68 +430,66 @@ async def get_handoff_history(
 )
 async def match_capabilities(
     request: CapabilityMatchRequest,
+    service: HandoffService = Depends(get_handoff_service),
 ) -> CapabilityMatchResponse:
     """
     Find agents that match the specified capability requirements.
 
     Uses the specified strategy to select and rank matching agents.
     Can filter by availability and exclude specific agents.
+
+    Sprint 29: Now uses HandoffService.capability_matcher adapter.
     """
     logger.info(
         f"Capability match requested: {len(request.requirements)} requirements, "
         f"strategy={request.strategy}"
     )
 
-    matches: List[CapabilityMatchResult] = []
-    exclude_set = set(request.exclude_agents)
-
-    # Evaluate each agent
-    for agent_id, capabilities in _agent_capabilities.items():
-        if agent_id in exclude_set:
-            continue
-
-        # Check availability if requested
-        availability = _agent_availability.get(agent_id, {})
-        is_available = availability.get("is_available", True)
-        current_load = availability.get("current_load", 0.0)
-
-        if request.check_availability and not is_available:
-            continue
-
-        # Calculate match score
-        score, capability_scores, missing = _calculate_match_score(
-            capabilities,
-            request.requirements,
+    # Convert API requirements to adapter format
+    adapter_requirements = [
+        CapabilityRequirementInfo(
+            name=req.capability_name,
+            min_proficiency=req.min_proficiency,
+            category=_map_api_category_to_adapter(req.category) if req.category else None,
+            required=req.required,
+            weight=req.weight,
         )
+        for req in request.requirements
+    ]
 
-        # Skip if missing required capabilities
-        if missing:
-            continue
+    # Find matching agents
+    matches = service.find_matching_agents(
+        requirements=adapter_requirements,
+        strategy=_map_api_strategy_to_adapter(request.strategy),
+        exclude_agents=set(request.exclude_agents) if request.exclude_agents else None,
+        check_availability=request.check_availability,
+        max_results=request.max_results,
+    )
 
-        matches.append(CapabilityMatchResult(
-            agent_id=agent_id,
-            score=score,
-            capability_scores=capability_scores,
-            missing_capabilities=[],
-            is_available=is_available,
-            current_load=current_load,
+    # Convert to response format
+    response_matches = []
+    for match in matches:
+        # Convert agent_id string back to UUID if possible
+        try:
+            agent_uuid = UUID(match.agent_id)
+        except ValueError:
+            agent_uuid = uuid4()  # Fallback
+
+        availability = match.availability
+        response_matches.append(CapabilityMatchResult(
+            agent_id=agent_uuid,
+            score=match.score,
+            capability_scores=match.capability_scores,
+            missing_capabilities=match.missing_capabilities,
+            is_available=match.is_available,
+            current_load=availability.current_load if availability else 0.0,
         ))
 
-    # Sort by strategy
-    if request.strategy == MatchStrategyEnum.BEST_FIT:
-        matches.sort(key=lambda m: m.score, reverse=True)
-    elif request.strategy == MatchStrategyEnum.LEAST_LOADED:
-        matches.sort(key=lambda m: (m.current_load, -m.score))
-    # FIRST_FIT and ROUND_ROBIN use default order
-
-    # Limit results
-    matches = matches[:request.max_results]
-
-    best_match = matches[0] if matches else None
+    best_match = response_matches[0] if response_matches else None
 
     return CapabilityMatchResponse(
-        matches=matches,
-        total_candidates=len(_agent_capabilities),
+        matches=response_matches,
+        total_candidates=service.capability_matcher.agent_count,
         strategy_used=request.strategy,
         best_match=best_match,
     )
@@ -427,31 +506,26 @@ async def match_capabilities(
 )
 async def get_agent_capabilities(
     agent_id: UUID,
+    service: HandoffService = Depends(get_handoff_service),
 ) -> AgentCapabilitiesResponse:
     """
     Get the capabilities registered for a specific agent.
 
     Returns all capabilities with their proficiency levels
     and categories.
-    """
-    if agent_id not in _agent_capabilities:
-        # Return empty list for unknown agents (not error)
-        return AgentCapabilitiesResponse(
-            agent_id=agent_id,
-            capabilities=[],
-            total_capabilities=0,
-        )
 
-    capabilities = _agent_capabilities[agent_id]
+    Sprint 29: Now uses HandoffService adapter.
+    """
+    capabilities = service.get_agent_capabilities(agent_id)
 
     cap_schemas = [
         AgentCapabilitySchema(
-            id=cap["id"],
-            name=cap["name"],
-            description=cap.get("description", ""),
-            category=cap["category"],
-            proficiency_level=cap["proficiency_level"],
-            created_at=cap["created_at"],
+            id=uuid4(),  # Generate ID since adapter doesn't track
+            name=cap.name,
+            description=cap.description,
+            category=CapabilityCategoryEnum(cap.category.value),
+            proficiency_level=cap.proficiency,
+            created_at=datetime.utcnow(),
         )
         for cap in capabilities
     ]
@@ -473,45 +547,52 @@ async def get_agent_capabilities(
 async def register_capability(
     agent_id: UUID,
     request: RegisterCapabilityRequest,
+    service: HandoffService = Depends(get_handoff_service),
 ) -> RegisterCapabilityResponse:
     """
     Register a new capability for an agent.
 
     If the agent already has this capability, it will be updated
     with the new proficiency level.
+
+    Sprint 29: Now uses HandoffService adapter.
     """
     capability_id = uuid4()
-    now = datetime.utcnow()
 
-    capability = {
-        "id": capability_id,
-        "name": request.name,
-        "description": request.description,
-        "category": request.category,
-        "proficiency_level": request.proficiency_level,
-        "created_at": now,
-    }
+    # Get existing capabilities
+    existing_caps = service.get_agent_capabilities(agent_id)
 
-    # Initialize agent's capability list if needed
-    if agent_id not in _agent_capabilities:
-        _agent_capabilities[agent_id] = []
-
-    # Check for existing capability with same name
+    # Check if updating or creating
     existing = next(
-        (c for c in _agent_capabilities[agent_id] if c["name"] == request.name),
+        (c for c in existing_caps if c.name == request.name),
         None,
     )
-    if existing:
-        # Update existing
-        existing["proficiency_level"] = request.proficiency_level
-        existing["description"] = request.description
-        existing["category"] = request.category
-        capability_id = existing["id"]
-        logger.info(f"Updated capability {request.name} for agent {agent_id}")
+    is_update = existing is not None
+
+    # Create new capability info
+    new_capability = AgentCapabilityInfo(
+        name=request.name,
+        proficiency=request.proficiency_level,
+        category=_map_api_category_to_adapter(request.category),
+        description=request.description,
+    )
+
+    # Update capabilities list
+    if is_update:
+        # Remove old, add new
+        updated_caps = [c for c in existing_caps if c.name != request.name]
+        updated_caps.append(new_capability)
     else:
-        # Add new
-        _agent_capabilities[agent_id].append(capability)
-        logger.info(f"Registered capability {request.name} for agent {agent_id}")
+        updated_caps = list(existing_caps)
+        updated_caps.append(new_capability)
+
+    # Register updated capabilities
+    service.register_agent_capabilities(agent_id, updated_caps)
+
+    logger.info(
+        f"{'Updated' if is_update else 'Registered'} capability {request.name} "
+        f"for agent {agent_id}"
+    )
 
     return RegisterCapabilityResponse(
         capability_id=capability_id,
@@ -519,7 +600,7 @@ async def register_capability(
         name=request.name,
         message=(
             f"Capability '{request.name}' "
-            f"{'updated' if existing else 'registered'} successfully"
+            f"{'updated' if is_update else 'registered'} successfully"
         ),
     )
 
@@ -533,102 +614,34 @@ async def register_capability(
 async def remove_capability(
     agent_id: UUID,
     capability_name: str,
+    service: HandoffService = Depends(get_handoff_service),
 ) -> None:
     """
     Remove a capability from an agent.
 
     If the capability doesn't exist, the operation succeeds silently.
+
+    Sprint 29: Now uses HandoffService adapter.
     """
-    if agent_id not in _agent_capabilities:
+    existing_caps = service.get_agent_capabilities(agent_id)
+
+    if not existing_caps:
         return
 
-    _agent_capabilities[agent_id] = [
-        c for c in _agent_capabilities[agent_id]
-        if c["name"] != capability_name
-    ]
+    # Filter out the capability to remove
+    updated_caps = [c for c in existing_caps if c.name != capability_name]
 
-    logger.info(f"Removed capability {capability_name} from agent {agent_id}")
-
-
-# =============================================================================
-# Helper Functions
-# =============================================================================
-
-def _find_matching_agent(
-    required_capabilities: List[str],
-    exclude: List[UUID],
-) -> Optional[UUID]:
-    """Find the best matching agent for required capabilities."""
-    exclude_set = set(exclude)
-    best_agent = None
-    best_score = 0.0
-
-    for agent_id, capabilities in _agent_capabilities.items():
-        if agent_id in exclude_set:
-            continue
-
-        # Check if agent has all required capabilities
-        cap_names = {c["name"] for c in capabilities}
-        if not all(req in cap_names for req in required_capabilities):
-            continue
-
-        # Calculate simple score (average proficiency)
-        relevant_caps = [
-            c for c in capabilities
-            if c["name"] in required_capabilities
-        ]
-        if relevant_caps:
-            score = sum(c["proficiency_level"] for c in relevant_caps) / len(relevant_caps)
-            if score > best_score:
-                best_score = score
-                best_agent = agent_id
-
-    return best_agent
-
-
-def _calculate_match_score(
-    agent_capabilities: List[Dict[str, Any]],
-    requirements: List[Any],
-) -> tuple[float, Dict[str, float], List[str]]:
-    """Calculate match score for agent against requirements."""
-    cap_map = {c["name"]: c for c in agent_capabilities}
-    capability_scores: Dict[str, float] = {}
-    missing: List[str] = []
-    total_weight = 0.0
-    weighted_score = 0.0
-
-    for req in requirements:
-        cap = cap_map.get(req.capability_name)
-
-        if cap is None:
-            if req.required:
-                missing.append(req.capability_name)
-            capability_scores[req.capability_name] = 0.0
-            continue
-
-        # Score based on proficiency
-        proficiency = cap["proficiency_level"]
-        if proficiency >= req.min_proficiency:
-            score = min(1.0, proficiency + 0.1)
-        else:
-            score = proficiency * 0.5
-
-        capability_scores[req.capability_name] = score
-        weighted_score += score * req.weight
-        total_weight += req.weight
-
-    overall_score = weighted_score / total_weight if total_weight > 0 else 0.0
-
-    return overall_score, capability_scores, missing
+    if len(updated_caps) != len(existing_caps):
+        # Re-register without the removed capability
+        service.register_agent_capabilities(agent_id, updated_caps)
+        logger.info(f"Removed capability {capability_name} from agent {agent_id}")
 
 
 # =============================================================================
 # HITL (Human-in-the-Loop) Endpoints - Sprint 15
+# NOTE: These endpoints are preserved for backward compatibility.
+# Future migration to WorkflowApprovalAdapter (Sprint 28) is planned.
 # =============================================================================
-
-# HITL sessions storage
-_hitl_sessions: Dict[UUID, Dict[str, Any]] = {}
-_hitl_requests: Dict[UUID, Dict[str, Any]] = {}
 
 
 @router.get(
@@ -654,6 +667,9 @@ async def list_hitl_sessions(
 
     Returns active sessions that are waiting for user input
     or recently completed.
+
+    NOTE: This endpoint uses in-memory storage.
+    Future migration to WorkflowApprovalAdapter planned.
     """
     sessions = list(_hitl_sessions.values())
 

@@ -1,16 +1,25 @@
 # =============================================================================
 # IPA Platform - Execution API Routes
 # =============================================================================
-# Sprint 1: Core Engine - Agent Framework Integration
+# Sprint 29: API Routes 遷移 (Phase 5)
 #
-# REST API endpoints for execution management.
-# Provides:
+# Migration Notes (Sprint 29):
+#   - Migrated from domain ExecutionStateMachine to EnhancedExecutionStateMachine adapter
+#   - Uses official Agent Framework event system integration
+#   - Maintains backward compatibility with existing API schemas
+#   - Database operations remain with ExecutionRepository (infrastructure layer)
+#   - Resume/checkpoint operations preserved for S29-4 migration
+#
+# REST API endpoints for execution management:
 #   - GET /executions/ - List executions with filtering
 #   - GET /executions/{id} - Get execution details
 #   - POST /executions/{id}/cancel - Cancel an execution
 #   - GET /executions/{id}/transitions - Get valid state transitions
+#   - POST /executions/{id}/resume - Resume paused execution
 #
-# All endpoints require execution repository dependency injection.
+# References:
+#   - Sprint 29 Plan: docs/03-implementation/sprint-planning/phase-5/sprint-29-plan.md
+#   - EnhancedExecutionStateMachine: src/integrations/agent_framework/core/state_machine.py
 # =============================================================================
 
 import logging
@@ -32,11 +41,18 @@ from src.api.v1.executions.schemas import (
     ResumeStatusResponse,
     ValidTransitionsResponse,
 )
+
+# =============================================================================
+# Sprint 29: Import from Adapter Layer
+# =============================================================================
+from src.integrations.agent_framework.core.state_machine import (
+    EnhancedExecutionStateMachine,
+    EVENT_TO_DOMAIN_STATUS,
+    DOMAIN_TO_EVENT_STATUS,
+)
 from src.domain.executions import (
-    ExecutionStateMachine,
     ExecutionStatus,
     InvalidStateTransitionError,
-    validate_transition,
 )
 from src.infrastructure.database.repositories.execution import ExecutionRepository
 from src.infrastructure.database.session import get_session
@@ -66,6 +82,32 @@ async def get_execution_repository(
 
 
 # =============================================================================
+# Helper Functions (Sprint 29)
+# =============================================================================
+
+
+def validate_state_transition(current_status: str, target_status: str) -> bool:
+    """
+    Validate if a state transition is allowed.
+
+    Sprint 29: Uses EnhancedExecutionStateMachine class methods.
+
+    Args:
+        current_status: Current execution status
+        target_status: Target execution status
+
+    Returns:
+        True if transition is valid
+    """
+    try:
+        from_status = ExecutionStatus(current_status)
+        to_status = ExecutionStatus(target_status)
+        return EnhancedExecutionStateMachine.can_transition(from_status, to_status)
+    except ValueError:
+        return False
+
+
+# =============================================================================
 # List Executions
 # =============================================================================
 
@@ -80,8 +122,8 @@ async def list_executions(
     workflow_id: Optional[UUID] = Query(
         None, description="Filter by workflow ID"
     ),
-    status: Optional[str] = Query(
-        None, description="Filter by status"
+    status_filter: Optional[str] = Query(
+        None, alias="status", description="Filter by status"
     ),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Records per page"),
@@ -100,11 +142,11 @@ async def list_executions(
                 workflow_id=workflow_id,
                 page=page,
                 page_size=page_size,
-                status=status,
+                status=status_filter,
             )
-        elif status:
+        elif status_filter:
             executions, total = await repo.get_by_status(
-                status=status,
+                status=status_filter,
                 page=page,
                 page_size=page_size,
             )
@@ -224,6 +266,8 @@ async def cancel_execution(
 
     Only executions in PENDING, RUNNING, or PAUSED status can be cancelled.
     Terminal states (COMPLETED, FAILED, CANCELLED) cannot be cancelled.
+
+    Sprint 29: Uses EnhancedExecutionStateMachine for validation.
     """
     try:
         execution = await repo.get(execution_id)
@@ -234,9 +278,9 @@ async def cancel_execution(
                 detail=f"Execution {execution_id} not found",
             )
 
-        # Validate transition using state machine
+        # Validate transition using adapter
         current_status = execution.status
-        if not validate_transition(current_status, "cancelled"):
+        if not validate_state_transition(current_status, "cancelled"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Cannot cancel execution in {current_status} status",
@@ -284,6 +328,8 @@ async def get_valid_transitions(
 ) -> ValidTransitionsResponse:
     """
     Get valid state transitions for the current execution status.
+
+    Sprint 29: Uses EnhancedExecutionStateMachine for state machine operations.
     """
     try:
         execution = await repo.get(execution_id)
@@ -299,8 +345,9 @@ async def get_valid_transitions(
         except ValueError:
             current_status = ExecutionStatus.PENDING
 
-        valid_transitions = ExecutionStateMachine.get_valid_transitions(current_status)
-        is_terminal = ExecutionStateMachine.is_terminal(current_status)
+        # Use adapter class methods
+        valid_transitions = EnhancedExecutionStateMachine.get_valid_transitions(current_status)
+        is_terminal = EnhancedExecutionStateMachine.is_terminal(current_status)
 
         return ValidTransitionsResponse(
             current_status=current_status.value,
@@ -451,6 +498,7 @@ async def get_workflow_stats(
 
 # =============================================================================
 # Resume Execution (Sprint 2)
+# NOTE: CheckpointService usage preserved for S29-4 migration
 # =============================================================================
 
 
@@ -470,6 +518,8 @@ async def resume_execution(
 
     Resumes execution after human approval of a checkpoint.
     Can specify a specific checkpoint or use the latest approved checkpoint.
+
+    NOTE: Uses domain CheckpointService - will be migrated in S29-4.
     """
     from src.domain.checkpoints import CheckpointService
     from src.domain.workflows.resume_service import WorkflowResumeService, ResumeStatus
@@ -539,6 +589,7 @@ async def resume_execution(
 
 # =============================================================================
 # Get Resume Status (Sprint 2)
+# NOTE: CheckpointService usage preserved for S29-4 migration
 # =============================================================================
 
 
@@ -557,6 +608,8 @@ async def get_resume_status(
 
     Returns information about pending checkpoints and whether
     the execution can be resumed.
+
+    NOTE: Uses domain CheckpointService - will be migrated in S29-4.
     """
     from src.domain.checkpoints import CheckpointService
     from src.domain.workflows.resume_service import WorkflowResumeService

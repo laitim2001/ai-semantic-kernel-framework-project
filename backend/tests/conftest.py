@@ -4,14 +4,16 @@ Pytest Configuration and Fixtures
 Shared fixtures for all tests.
 """
 import pytest
-from fastapi.testclient import TestClient
-
-from main import app
 
 
 @pytest.fixture
-def client() -> TestClient:
-    """Create a test client for the FastAPI application."""
+def client():
+    """Create a test client for the FastAPI application.
+
+    Uses lazy import to avoid initialization issues during test collection.
+    """
+    from fastapi.testclient import TestClient
+    from main import app
     return TestClient(app)
 
 

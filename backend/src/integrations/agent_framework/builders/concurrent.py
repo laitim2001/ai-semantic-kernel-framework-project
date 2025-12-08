@@ -2,7 +2,9 @@
 # IPA Platform - ConcurrentBuilder Adapter
 # =============================================================================
 # Sprint 14: ConcurrentBuilder 重構
+# Sprint 22: Concurrent & Memory 遷移 (Phase 4)
 # Phase 3 Feature: P3-F1 (並行執行重構)
+# Phase 4 Feature: P4-F1 (並行網關整合)
 #
 # 將 Phase 2 ConcurrentExecutor 功能適配到 Agent Framework ConcurrentBuilder。
 #
@@ -12,9 +14,18 @@
 #   Phase 2 ConcurrentMode.MAJORITY → 自定義 MajorityModeAggregator
 #   Phase 2 ConcurrentMode.FIRST_SUCCESS → 自定義 FirstSuccessAggregator
 #
+# Sprint 22 新增功能:
+#   - GatewayType: 並行網關類型 (PARALLEL_SPLIT, PARALLEL_JOIN, INCLUSIVE_GATEWAY)
+#   - JoinCondition: 合併條件 (ALL, ANY, FIRST, N_OF_M)
+#   - with_gateway_config(): 配置並行網關
+#
 # 使用範例:
 #   from src.integrations.agent_framework.builders import ConcurrentBuilderAdapter
-#   from src.integrations.agent_framework.builders.concurrent import ConcurrentMode
+#   from src.integrations.agent_framework.builders.concurrent import (
+#       ConcurrentMode,
+#       GatewayType,
+#       JoinCondition,
+#   )
 #
 #   adapter = ConcurrentBuilderAdapter(
 #       id="parallel-analysis",
@@ -24,6 +35,11 @@
 #   )
 #   adapter.add_executor(executor1)
 #   adapter.add_executor(executor2)
+#   adapter.with_gateway_config(
+#       gateway_type=GatewayType.PARALLEL_SPLIT,
+#       join_condition=JoinCondition.ALL,
+#       timeout=60.0,
+#   )
 #   workflow = adapter.build()
 #   result = await adapter.run(input_data)
 #
@@ -31,6 +47,7 @@
 #   - Agent Framework ConcurrentBuilder: reference/agent-framework/python/
 #     packages/core/agent_framework/_workflows/_concurrent.py
 #   - Phase 2 ConcurrentExecutor: backend/src/domain/workflows/executors/concurrent.py
+#   - Phase 2 ParallelGateway: backend/src/domain/workflows/executors/parallel_gateway.py
 # =============================================================================
 
 import asyncio
@@ -93,6 +110,123 @@ class ConcurrentMode(str, Enum):
     ANY = "any"
     MAJORITY = "majority"
     FIRST_SUCCESS = "first_success"
+
+
+# =============================================================================
+# Sprint 22: 並行網關類型和合併條件
+# =============================================================================
+
+
+class GatewayType(str, Enum):
+    """
+    並行網關類型。
+
+    定義並行執行的網關模式，對應 Phase 2 ParallelGateway 功能。
+
+    Values:
+        PARALLEL_SPLIT: 並行分割 - 同時執行多個分支
+        PARALLEL_JOIN: 並行合併 - 等待所有分支完成後合併結果
+        INCLUSIVE_GATEWAY: 包含網關 - 根據條件選擇性地執行分支
+
+    對應 Agent Framework:
+        使用 ConcurrentBuilder 配合不同的 aggregator 實現。
+    """
+
+    PARALLEL_SPLIT = "parallel_split"
+    PARALLEL_JOIN = "parallel_join"
+    INCLUSIVE_GATEWAY = "inclusive_gateway"
+
+
+class JoinCondition(str, Enum):
+    """
+    並行合併條件。
+
+    定義何時從並行執行中返回結果。
+
+    Values:
+        ALL: 等待所有分支完成
+        ANY: 任一分支完成即返回
+        FIRST: 第一個完成的分支結果
+        N_OF_M: 等待 N 個分支完成（需要配合 n_required 參數）
+
+    對應 Agent Framework:
+        透過自定義 aggregator 實現不同的合併邏輯。
+    """
+
+    ALL = "all"
+    ANY = "any"
+    FIRST = "first"
+    N_OF_M = "n_of_m"
+
+
+class MergeStrategy(str, Enum):
+    """
+    結果合併策略。
+
+    定義如何合併來自多個分支的結果。
+
+    Values:
+        COLLECT_ALL: 收集所有結果到列表
+        MERGE_DICT: 合併字典結果
+        FIRST_RESULT: 使用第一個結果
+        AGGREGATE: 使用自定義聚合函數
+    """
+
+    COLLECT_ALL = "collect_all"
+    MERGE_DICT = "merge_dict"
+    FIRST_RESULT = "first_result"
+    AGGREGATE = "aggregate"
+
+
+@dataclass
+class GatewayConfig:
+    """
+    並行網關配置。
+
+    用於配置並行執行的網關行為。
+
+    Attributes:
+        gateway_type: 網關類型
+        join_condition: 合併條件
+        merge_strategy: 結果合併策略
+        timeout: 超時時間（秒）
+        n_required: N_OF_M 條件所需的完成數
+        fail_fast: 遇到失敗時是否立即停止
+        aggregate_function: 自定義聚合函數名稱
+    """
+
+    gateway_type: GatewayType = GatewayType.PARALLEL_SPLIT
+    join_condition: JoinCondition = JoinCondition.ALL
+    merge_strategy: MergeStrategy = MergeStrategy.COLLECT_ALL
+    timeout: Optional[float] = None
+    n_required: int = 1
+    fail_fast: bool = False
+    aggregate_function: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """轉換為字典格式。"""
+        return {
+            "gateway_type": self.gateway_type.value,
+            "join_condition": self.join_condition.value,
+            "merge_strategy": self.merge_strategy.value,
+            "timeout": self.timeout,
+            "n_required": self.n_required,
+            "fail_fast": self.fail_fast,
+            "aggregate_function": self.aggregate_function,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "GatewayConfig":
+        """從字典創建配置。"""
+        return cls(
+            gateway_type=GatewayType(data.get("gateway_type", "parallel_split")),
+            join_condition=JoinCondition(data.get("join_condition", "all")),
+            merge_strategy=MergeStrategy(data.get("merge_strategy", "collect_all")),
+            timeout=data.get("timeout"),
+            n_required=data.get("n_required", 1),
+            fail_fast=data.get("fail_fast", False),
+            aggregate_function=data.get("aggregate_function"),
+        )
 
 
 # =============================================================================
@@ -411,6 +545,149 @@ class FirstSuccessAggregator(BaseAggregator):
         )
 
 
+# =============================================================================
+# Sprint 22: N_OF_M 聚合器 (用於 JoinCondition.N_OF_M)
+# =============================================================================
+
+
+class NOfMAggregator(BaseAggregator):
+    """
+    N_OF_M 模式聚合器。
+
+    等待 N 個任務完成後返回結果。
+    用於 JoinCondition.N_OF_M 合併條件。
+    """
+
+    def __init__(self, n_required: int = 1):
+        super().__init__(ConcurrentMode.MAJORITY)  # 使用 MAJORITY 作為基礎模式
+        self._n_required = max(1, n_required)
+
+    async def aggregate(
+        self,
+        results: List[TaskResult],
+        total_expected: int,
+    ) -> ConcurrentExecutionResult:
+        completed = [r for r in results if r.success]
+        failed = [r for r in results if not r.success]
+
+        total_duration = sum(r.duration_ms for r in results)
+
+        return ConcurrentExecutionResult(
+            mode=self.mode,
+            total_tasks=total_expected,
+            completed_count=len(completed),
+            failed_count=len(failed),
+            task_results=results,
+            duration_ms=total_duration,
+            metadata={
+                "n_required": self._n_required,
+                "reached_n": len(results) >= self._n_required,
+                "n_completed": len(completed),
+            },
+        )
+
+
+# =============================================================================
+# Sprint 22: 合併策略聚合器 (用於 MergeStrategy)
+# =============================================================================
+
+
+class MergeStrategyAggregator(BaseAggregator):
+    """
+    基於合併策略的聚合器。
+
+    根據 MergeStrategy 處理結果合併邏輯。
+    """
+
+    def __init__(
+        self,
+        merge_strategy: MergeStrategy = MergeStrategy.COLLECT_ALL,
+        aggregate_function: Optional[str] = None,
+    ):
+        super().__init__(ConcurrentMode.ALL)
+        self._merge_strategy = merge_strategy
+        self._aggregate_function = aggregate_function
+
+    async def aggregate(
+        self,
+        results: List[TaskResult],
+        total_expected: int,
+    ) -> ConcurrentExecutionResult:
+        completed = [r for r in results if r.success]
+        failed = [r for r in results if not r.success]
+
+        total_duration = sum(r.duration_ms for r in results)
+
+        # 根據合併策略處理結果
+        merged_result = self._merge_results(completed)
+
+        return ConcurrentExecutionResult(
+            mode=self.mode,
+            total_tasks=total_expected,
+            completed_count=len(completed),
+            failed_count=len(failed),
+            task_results=results,
+            duration_ms=total_duration,
+            metadata={
+                "merge_strategy": self._merge_strategy.value,
+                "merged_result": merged_result,
+            },
+        )
+
+    def _merge_results(self, results: List[TaskResult]) -> Any:
+        """根據合併策略合併結果。"""
+        if not results:
+            return None
+
+        raw_results = [r.result for r in results]
+
+        if self._merge_strategy == MergeStrategy.COLLECT_ALL:
+            return raw_results
+
+        elif self._merge_strategy == MergeStrategy.MERGE_DICT:
+            merged = {}
+            for result in raw_results:
+                if isinstance(result, dict):
+                    merged.update(result)
+            return merged
+
+        elif self._merge_strategy == MergeStrategy.FIRST_RESULT:
+            return raw_results[0] if raw_results else None
+
+        elif self._merge_strategy == MergeStrategy.AGGREGATE:
+            return self._apply_aggregate_function(raw_results)
+
+        return raw_results
+
+    def _apply_aggregate_function(self, results: List[Any]) -> Any:
+        """應用聚合函數。"""
+        func_name = self._aggregate_function
+
+        if func_name == "sum":
+            return sum(v for v in results if isinstance(v, (int, float)))
+
+        elif func_name == "count":
+            return len(results)
+
+        elif func_name == "concat":
+            return "".join(str(v) for v in results)
+
+        elif func_name == "max":
+            numeric = [v for v in results if isinstance(v, (int, float))]
+            return max(numeric) if numeric else None
+
+        elif func_name == "min":
+            numeric = [v for v in results if isinstance(v, (int, float))]
+            return min(numeric) if numeric else None
+
+        elif func_name == "avg":
+            numeric = [v for v in results if isinstance(v, (int, float))]
+            return sum(numeric) / len(numeric) if numeric else None
+
+        else:
+            return results
+
+
 def get_aggregator_for_mode(mode: ConcurrentMode) -> BaseAggregator:
     """
     根據執行模式獲取對應的聚合器。
@@ -659,6 +936,99 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
         self._max_concurrency = min(max(1, max_concurrency), 100)
         return self
 
+    # =========================================================================
+    # Sprint 22: Gateway 配置方法
+    # =========================================================================
+
+    def with_gateway_config(
+        self,
+        gateway_type: GatewayType = GatewayType.PARALLEL_SPLIT,
+        join_condition: JoinCondition = JoinCondition.ALL,
+        merge_strategy: MergeStrategy = MergeStrategy.COLLECT_ALL,
+        timeout: Optional[float] = None,
+        n_required: int = 1,
+        fail_fast: bool = False,
+        aggregate_function: Optional[str] = None,
+    ) -> "ConcurrentBuilderAdapter":
+        """
+        配置並行網關。
+
+        使用官方 ConcurrentBuilder 實現，保留 Phase 2 的網關語義。
+
+        Args:
+            gateway_type: 網關類型 (PARALLEL_SPLIT, PARALLEL_JOIN, INCLUSIVE_GATEWAY)
+            join_condition: 合併條件 (ALL, ANY, FIRST, N_OF_M)
+            merge_strategy: 結果合併策略
+            timeout: 超時時間（秒），覆蓋全局超時
+            n_required: N_OF_M 條件所需的完成數
+            fail_fast: 遇到失敗時是否立即停止
+            aggregate_function: 自定義聚合函數名稱 (sum, count, concat, max, min, avg)
+
+        Returns:
+            Self for method chaining
+
+        Raises:
+            ValidationError: 如果已經 build()
+
+        Example:
+            adapter.with_gateway_config(
+                gateway_type=GatewayType.PARALLEL_SPLIT,
+                join_condition=JoinCondition.ALL,
+                timeout=60.0,
+            )
+
+            # N_OF_M 條件：等待 3 個任務完成
+            adapter.with_gateway_config(
+                join_condition=JoinCondition.N_OF_M,
+                n_required=3,
+            )
+        """
+        if self._built:
+            raise ValidationError("Cannot change gateway_config after build()")
+
+        self._gateway_config = GatewayConfig(
+            gateway_type=gateway_type,
+            join_condition=join_condition,
+            merge_strategy=merge_strategy,
+            timeout=timeout,
+            n_required=n_required,
+            fail_fast=fail_fast,
+            aggregate_function=aggregate_function,
+        )
+
+        # 根據 join_condition 更新模式和聚合器
+        if join_condition == JoinCondition.ALL:
+            self._mode = ConcurrentMode.ALL
+            self._aggregator = MergeStrategyAggregator(merge_strategy, aggregate_function)
+        elif join_condition == JoinCondition.ANY:
+            self._mode = ConcurrentMode.ANY
+            self._aggregator = AnyModeAggregator()
+        elif join_condition == JoinCondition.FIRST:
+            self._mode = ConcurrentMode.FIRST_SUCCESS
+            self._aggregator = FirstSuccessAggregator()
+        elif join_condition == JoinCondition.N_OF_M:
+            self._mode = ConcurrentMode.MAJORITY
+            self._aggregator = NOfMAggregator(n_required)
+
+        # 更新超時
+        if timeout is not None:
+            self._timeout_seconds = min(max(1.0, timeout), 3600.0)
+
+        # 更新 fail_fast 設置
+        self._fail_fast = fail_fast
+
+        logger.debug(
+            f"Gateway config set: type={gateway_type.value}, "
+            f"join={join_condition.value}, merge={merge_strategy.value}"
+        )
+
+        return self
+
+    @property
+    def gateway_config(self) -> Optional[GatewayConfig]:
+        """獲取網關配置。"""
+        return getattr(self, "_gateway_config", None)
+
     def build(self) -> "ConcurrentBuilderAdapter":
         """
         構建並行執行工作流。
@@ -809,7 +1179,13 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
 
         # 根據模式執行
         try:
-            if self._mode == ConcurrentMode.ALL:
+            # Sprint 22: 檢查 gateway 配置的 N_OF_M 條件
+            gateway_config = getattr(self, "_gateway_config", None)
+            if gateway_config and gateway_config.join_condition == JoinCondition.N_OF_M:
+                results = await self._execute_n_of_m(
+                    execute_single_task, gateway_config.n_required
+                )
+            elif self._mode == ConcurrentMode.ALL:
                 results = await self._execute_all(execute_single_task)
             elif self._mode == ConcurrentMode.ANY:
                 results = await self._execute_any(execute_single_task)
@@ -965,6 +1341,52 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
                 task.cancel()
             raise
 
+    # =========================================================================
+    # Sprint 22: N_OF_M 執行模式
+    # =========================================================================
+
+    async def _execute_n_of_m(
+        self,
+        execute_fn: Callable[[ConcurrentTaskConfig], TaskResult],
+        n_required: int,
+    ) -> List[TaskResult]:
+        """N_OF_M 模式：等待 N 個任務完成。"""
+        n = max(1, min(n_required, len(self._tasks)))
+        logger.debug(
+            f"Executing N_OF_M mode with {len(self._tasks)} tasks, "
+            f"need {n} to complete"
+        )
+
+        tasks = [asyncio.create_task(execute_fn(task)) for task in self._tasks]
+        results: List[TaskResult] = []
+
+        try:
+            while len(results) < n and tasks:
+                done, pending = await asyncio.wait(
+                    tasks,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+
+                for completed_task in done:
+                    results.append(completed_task.result())
+
+                tasks = list(pending)
+
+            # 取消剩餘任務
+            for task in tasks:
+                task.cancel()
+
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in N_OF_M mode: {e}")
+            for task in tasks:
+                task.cancel()
+            raise
+
     async def initialize(self) -> None:
         """初始化適配器 (BuilderAdapter 介面)。"""
         logger.debug(f"Initializing ConcurrentBuilderAdapter: {self._id}")
@@ -979,7 +1401,7 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
 
     def to_dict(self) -> Dict[str, Any]:
         """轉換為字典格式。"""
-        return {
+        result = {
             "id": self._id,
             "mode": self._mode.value,
             "max_concurrency": self._max_concurrency,
@@ -996,6 +1418,13 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
             ],
             "built": self._built,
         }
+
+        # Sprint 22: 添加網關配置
+        gateway_config = getattr(self, "_gateway_config", None)
+        if gateway_config:
+            result["gateway_config"] = gateway_config.to_dict()
+
+        return result
 
 
 # =============================================================================
@@ -1050,4 +1479,145 @@ def create_first_success_concurrent(
     )
     if executors:
         adapter.add_executors(executors)
+    return adapter
+
+
+# =============================================================================
+# Sprint 22: Gateway 便捷工廠函數
+# =============================================================================
+
+
+def create_parallel_split_gateway(
+    id: str,
+    executors: Optional[Sequence[Union[ExecutorProtocol, Callable[..., Any]]]] = None,
+    join_condition: JoinCondition = JoinCondition.ALL,
+    merge_strategy: MergeStrategy = MergeStrategy.COLLECT_ALL,
+    timeout: Optional[float] = None,
+    **kwargs,
+) -> ConcurrentBuilderAdapter:
+    """
+    創建並行分割網關。
+
+    Args:
+        id: 網關 ID
+        executors: 執行器列表
+        join_condition: 合併條件
+        merge_strategy: 結果合併策略
+        timeout: 超時時間
+        **kwargs: 其他 ConcurrentBuilderAdapter 參數
+
+    Returns:
+        配置好的並行網關適配器
+    """
+    adapter = ConcurrentBuilderAdapter(id=id, **kwargs)
+    if executors:
+        adapter.add_executors(executors)
+    adapter.with_gateway_config(
+        gateway_type=GatewayType.PARALLEL_SPLIT,
+        join_condition=join_condition,
+        merge_strategy=merge_strategy,
+        timeout=timeout,
+    )
+    return adapter
+
+
+def create_parallel_join_gateway(
+    id: str,
+    executors: Optional[Sequence[Union[ExecutorProtocol, Callable[..., Any]]]] = None,
+    merge_strategy: MergeStrategy = MergeStrategy.MERGE_DICT,
+    timeout: Optional[float] = None,
+    **kwargs,
+) -> ConcurrentBuilderAdapter:
+    """
+    創建並行合併網關。
+
+    Args:
+        id: 網關 ID
+        executors: 執行器列表
+        merge_strategy: 結果合併策略
+        timeout: 超時時間
+        **kwargs: 其他 ConcurrentBuilderAdapter 參數
+
+    Returns:
+        配置好的並行合併網關適配器
+    """
+    adapter = ConcurrentBuilderAdapter(id=id, **kwargs)
+    if executors:
+        adapter.add_executors(executors)
+    adapter.with_gateway_config(
+        gateway_type=GatewayType.PARALLEL_JOIN,
+        join_condition=JoinCondition.ALL,
+        merge_strategy=merge_strategy,
+        timeout=timeout,
+    )
+    return adapter
+
+
+def create_n_of_m_gateway(
+    id: str,
+    n_required: int,
+    executors: Optional[Sequence[Union[ExecutorProtocol, Callable[..., Any]]]] = None,
+    merge_strategy: MergeStrategy = MergeStrategy.COLLECT_ALL,
+    timeout: Optional[float] = None,
+    **kwargs,
+) -> ConcurrentBuilderAdapter:
+    """
+    創建 N_OF_M 網關。
+
+    等待 N 個任務完成後返回結果。
+
+    Args:
+        id: 網關 ID
+        n_required: 需要完成的任務數量
+        executors: 執行器列表
+        merge_strategy: 結果合併策略
+        timeout: 超時時間
+        **kwargs: 其他 ConcurrentBuilderAdapter 參數
+
+    Returns:
+        配置好的 N_OF_M 網關適配器
+    """
+    adapter = ConcurrentBuilderAdapter(id=id, **kwargs)
+    if executors:
+        adapter.add_executors(executors)
+    adapter.with_gateway_config(
+        gateway_type=GatewayType.PARALLEL_SPLIT,
+        join_condition=JoinCondition.N_OF_M,
+        n_required=n_required,
+        merge_strategy=merge_strategy,
+        timeout=timeout,
+    )
+    return adapter
+
+
+def create_inclusive_gateway(
+    id: str,
+    executors: Optional[Sequence[Union[ExecutorProtocol, Callable[..., Any]]]] = None,
+    join_condition: JoinCondition = JoinCondition.ALL,
+    timeout: Optional[float] = None,
+    **kwargs,
+) -> ConcurrentBuilderAdapter:
+    """
+    創建包含網關。
+
+    根據條件選擇性地執行分支。
+
+    Args:
+        id: 網關 ID
+        executors: 執行器列表
+        join_condition: 合併條件
+        timeout: 超時時間
+        **kwargs: 其他 ConcurrentBuilderAdapter 參數
+
+    Returns:
+        配置好的包含網關適配器
+    """
+    adapter = ConcurrentBuilderAdapter(id=id, **kwargs)
+    if executors:
+        adapter.add_executors(executors)
+    adapter.with_gateway_config(
+        gateway_type=GatewayType.INCLUSIVE_GATEWAY,
+        join_condition=join_condition,
+        timeout=timeout,
+    )
     return adapter

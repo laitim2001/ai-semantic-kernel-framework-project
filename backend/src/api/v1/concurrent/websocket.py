@@ -2,6 +2,7 @@
 # IPA Platform - Concurrent Execution WebSocket Support
 # =============================================================================
 # Sprint 7: Concurrent Execution Engine (Phase 2)
+# Sprint 31: S31-3 - 遷移至適配器層 (Phase 6)
 #
 # WebSocket endpoints for real-time execution monitoring.
 # Provides:
@@ -9,12 +10,16 @@
 #   - Execution progress notifications
 #   - Deadlock detection alerts
 #   - Error event broadcasting
+#
+# 架構更新 (Sprint 31):
+#   - 移除 domain.workflows.executors 和 deadlock_detector 導入
+#   - 統一使用 ConcurrentAPIService 和適配器層
+#   - 死鎖檢測由適配器內部處理
 # =============================================================================
 
 import asyncio
 import logging
-from datetime import datetime
-from typing import Any, Callable, Dict, Optional, Set
+from typing import Any, Dict, Optional, Set
 from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -23,14 +28,8 @@ from src.api.v1.concurrent.schemas import (
     WebSocketMessage,
     WebSocketMessageType,
 )
-from src.domain.workflows.executors import (
-    ConcurrentStateManager,
-    get_state_manager,
-)
-from src.domain.workflows.deadlock_detector import (
-    DeadlockDetector,
-    get_deadlock_detector,
-)
+# Sprint 31: 使用適配器層導入 (取代 domain 層)
+from src.api.v1.concurrent.adapter_service import ConcurrentAPIService
 
 logger = logging.getLogger(__name__)
 
@@ -468,12 +467,14 @@ def get_connection_manager() -> ConcurrentConnectionManager:
 
 
 async def register_state_change_callback(
-    state_manager: ConcurrentStateManager,
+    service: ConcurrentAPIService,
 ) -> None:
     """
-    Register callback with state manager to publish WebSocket events.
+    Register callback with service to publish WebSocket events.
 
-    This allows the state manager to automatically broadcast
+    Sprint 31: 更新為使用 ConcurrentAPIService (取代 ConcurrentStateManager)
+
+    This allows the service to automatically broadcast
     updates when execution state changes.
     """
 
@@ -493,6 +494,7 @@ async def register_state_change_callback(
         elif new_status == "failed":
             await publish_branch_failed(execution_id, branch_id, error or "Unknown error")
 
-    # Note: In a real implementation, the state manager would have
+    # Note: In a real implementation, the service would have
     # callback registration methods. For now, this is a placeholder.
-    logger.info("Registered WebSocket callbacks with state manager")
+    # Sprint 31: 適配器內部處理狀態變更事件
+    logger.info("Registered WebSocket callbacks with ConcurrentAPIService")

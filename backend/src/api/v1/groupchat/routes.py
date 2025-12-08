@@ -2,8 +2,14 @@
 # IPA Platform - GroupChat API Routes
 # =============================================================================
 # Sprint 9: S9-6 GroupChat API (8 points)
+# Sprint 20: S20-1 Migrate to Agent Framework Adapter (8 points)
 #
 # RESTful API routes for group chat, multi-turn sessions, and voting.
+#
+# 重要變更 (Sprint 20):
+#   - 移除 domain.orchestration.groupchat 依賴
+#   - 使用 integrations.agent_framework.builders 適配器
+#   - 保持 API 響應格式不變
 # =============================================================================
 
 from datetime import datetime
@@ -41,30 +47,125 @@ from src.api.v1.groupchat.schemas import (
     SuccessResponse,
 )
 
-# Domain imports
-from src.domain.orchestration.groupchat import (
-    GroupChatManager,
-    GroupChatConfig,
+# =============================================================================
+# Sprint 20: Agent Framework Adapter Imports (取代 domain.orchestration.groupchat)
+# =============================================================================
+from src.integrations.agent_framework.builders import (
+    # GroupChat Adapter
+    GroupChatBuilderAdapter,
+    GroupChatParticipant,
+    GroupChatMessage,
     GroupChatState,
     GroupChatStatus,
-    AgentInfo,
-    MessageType,
     SpeakerSelectionMethod,
-    VotingManager,
-    VotingSession,
-    VoteType,
-    VoteResult,
-    VotingSessionStatus,
+    MessageRole,
+    # Voting Adapter (Sprint 20: S20-4)
+    GroupChatVotingAdapter,
+    VotingMethod,
+    VotingConfig,
+    Vote,
+    VotingResult,
 )
-from src.domain.orchestration.multiturn import (
-    MultiTurnSessionManager,
+
+# =============================================================================
+# Sprint 20: Compatibility Types (為向後兼容定義)
+# =============================================================================
+from dataclasses import dataclass, field
+from enum import Enum
+
+
+class MessageType(str, Enum):
+    """Message types for backward compatibility."""
+    SYSTEM = "system"
+    USER = "user"
+    AGENT = "agent"
+    TOOL = "tool"
+
+
+@dataclass
+class AgentInfo:
+    """Agent info for backward compatibility with old API.
+
+    Note: Internally converted to GroupChatParticipant.
+    """
+    agent_id: str
+    name: str
+    description: str = ""
+    capabilities: List[str] = field(default_factory=list)
+
+    def to_participant(self) -> GroupChatParticipant:
+        """Convert to GroupChatParticipant."""
+        return GroupChatParticipant(
+            name=self.name,
+            description=self.description,
+            capabilities=self.capabilities,
+            metadata={"agent_id": self.agent_id},
+        )
+
+
+@dataclass
+class GroupChatConfig:
+    """GroupChat config for backward compatibility.
+
+    Note: Maps to GroupChatBuilderAdapter constructor parameters.
+    """
+    max_rounds: int = 10
+    max_messages_per_round: int = 5
+    speaker_selection_method: SpeakerSelectionMethod = SpeakerSelectionMethod.ROUND_ROBIN
+    allow_repeat_speaker: bool = False
+
+
+class VoteType(str, Enum):
+    """Vote types for backward compatibility.
+
+    Maps to VotingMethod in S20-4.
+    """
+    YES_NO = "yes_no"
+    MULTI_CHOICE = "multi_choice"
+    RANKING = "ranking"
+    WEIGHTED = "weighted"
+    APPROVAL = "approval"
+
+    def to_voting_method(self) -> VotingMethod:
+        """Convert to VotingMethod."""
+        mapping = {
+            VoteType.YES_NO: VotingMethod.MAJORITY,
+            VoteType.MULTI_CHOICE: VotingMethod.MAJORITY,
+            VoteType.RANKING: VotingMethod.RANKED,
+            VoteType.WEIGHTED: VotingMethod.WEIGHTED,
+            VoteType.APPROVAL: VotingMethod.APPROVAL,
+        }
+        return mapping.get(self, VotingMethod.MAJORITY)
+
+
+class VotingSessionStatus(str, Enum):
+    """Voting session status for backward compatibility."""
+    PENDING = "pending"
+    ACTIVE = "active"
+    CLOSED = "closed"
+    CANCELLED = "cancelled"
+
+
+class VoteResult(str, Enum):
+    """Vote result for backward compatibility."""
+    PENDING = "pending"
+    PASSED = "passed"
+    REJECTED = "rejected"
+    TIE = "tie"
+    NO_QUORUM = "no_quorum"
+
+
+# =============================================================================
+# Sprint 32: S32-2 會話層遷移 (取代 domain.orchestration.multiturn)
+# =============================================================================
+# 使用 MultiTurnAPIService 包裝 MultiTurnAdapter
+# 完整遷移至 integrations.agent_framework.multiturn
+from src.api.v1.groupchat.multiturn_service import (
+    MultiTurnAPIService,
     MultiTurnSession,
+    SessionMessage,
     SessionStatus,
-)
-from src.domain.orchestration.memory import (
-    InMemoryConversationMemoryStore,
-    ConversationSession,
-    ConversationTurn,
+    get_multiturn_service,
 )
 
 router = APIRouter(prefix="/groupchat", tags=["GroupChat"])
@@ -73,19 +174,126 @@ router = APIRouter(prefix="/groupchat", tags=["GroupChat"])
 # =============================================================================
 # In-Memory State (for MVP - replace with proper DI in production)
 # =============================================================================
+# Sprint 20: 使用適配器取代 domain layer managers
 
-# Single shared GroupChatManager instance
-_group_chat_manager = GroupChatManager()
+# GroupChat adapter storage (取代 GroupChatManager)
+_groupchat_states: Dict[str, Dict[str, Any]] = {}  # group_id -> state data
+_groupchat_adapters: Dict[str, GroupChatBuilderAdapter] = {}  # group_id -> adapter
 
-# Session storage
-_session_manager = MultiTurnSessionManager()
-_memory_store = InMemoryConversationMemoryStore()
+# Sprint 32: 使用 MultiTurnAPIService (取代 MultiTurnSessionManager)
+# 透過 get_multiturn_service() 獲取單例實例
+_session_service: MultiTurnAPIService = None  # 延遲初始化
 
-# Voting storage
-_voting_manager = VotingManager()
+
+def _get_session_service() -> MultiTurnAPIService:
+    """Get or create the MultiTurnAPIService instance."""
+    global _session_service
+    if _session_service is None:
+        _session_service = get_multiturn_service()
+    return _session_service
+
+# Voting storage (使用 GroupChatVotingAdapter - Sprint 20 S20-4)
+_voting_sessions: Dict[str, Dict[str, Any]] = {}  # session_id -> session data
+_voting_adapters: Dict[str, GroupChatVotingAdapter] = {}  # group_id -> voting adapter
 
 # WebSocket connections
 _websocket_connections: Dict[UUID, List[WebSocket]] = {}
+
+
+# =============================================================================
+# Sprint 20: Helper Functions for Backward Compatibility
+# =============================================================================
+
+def _create_groupchat_state(
+    group_id: str,
+    name: str,
+    agents: List[AgentInfo],
+    config: GroupChatConfig,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Create a GroupChat state record for backward compatibility."""
+    now = datetime.utcnow()
+    return {
+        "group_id": group_id,
+        "name": name,
+        "agents": agents,
+        "config": config,
+        "metadata": metadata or {},
+        "messages": [],
+        "status": GroupChatStatus.IDLE,
+        "current_round": 0,
+        "message_count": 0,
+        "created_at": now,
+        "started_at": None,
+        "ended_at": None,
+    }
+
+
+@dataclass
+class MessageRecord:
+    """Message record for backward compatibility."""
+    id: str
+    sender_id: str
+    sender_name: str
+    content: str
+    message_type: MessageType
+    timestamp: datetime
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "sender_id": self.sender_id,
+            "sender_name": self.sender_name,
+            "content": self.content,
+            "message_type": self.message_type.value,
+            "timestamp": self.timestamp.isoformat(),
+            "metadata": self.metadata,
+        }
+
+
+@dataclass
+class VoteRecord:
+    """Vote record for backward compatibility (replaces domain VotingManager)."""
+    vote_id: str
+    voter_id: str
+    voter_name: str
+    choice: str
+    weight: float = 1.0
+    timestamp: datetime = field(default_factory=datetime.utcnow)
+    reason: Optional[str] = None
+
+
+@dataclass
+class VotingSessionRecord:
+    """Voting session record for backward compatibility.
+
+    Sprint 20: 取代 domain.orchestration.groupchat.VotingManager
+    """
+    session_id: str
+    group_id: Optional[UUID]
+    topic: str
+    description: str
+    vote_type: VoteType
+    options: List[str]
+    status: VotingSessionStatus = VotingSessionStatus.ACTIVE
+    result: VoteResult = VoteResult.PENDING
+    votes: Dict[str, VoteRecord] = field(default_factory=dict)
+    required_quorum: float = 0.5
+    pass_threshold: float = 0.5
+    eligible_voters: Optional[set] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    deadline: Optional[datetime] = None
+
+    @property
+    def vote_count(self) -> int:
+        return len(self.votes)
+
+    @property
+    def participation_rate(self) -> float:
+        if self.eligible_voters:
+            return self.vote_count / len(self.eligible_voters) if self.eligible_voters else 0
+        return 0.0
 
 
 # =============================================================================
@@ -98,6 +306,8 @@ async def create_group_chat(request: CreateGroupChatRequest):
     """Create a new group chat.
 
     建立新的群組聊天。
+
+    Sprint 20: 使用 GroupChatBuilderAdapter 取代 GroupChatManager
     """
     # Create agent info from IDs
     agents = [
@@ -121,23 +331,39 @@ async def create_group_chat(request: CreateGroupChatRequest):
         allow_repeat_speaker=config_data.get("allow_repeat_speaker", False),
     )
 
-    # Use the shared manager to create group chat
-    state = await _group_chat_manager.create_group_chat(
-        name=request.name,
-        agents=agents,
-        config=config,
-        metadata={"description": request.description, "workflow_id": str(request.workflow_id) if request.workflow_id else None},
+    # Sprint 20: 使用適配器取代 manager
+    group_id = str(uuid4())
+    metadata = {
+        "description": request.description,
+        "workflow_id": str(request.workflow_id) if request.workflow_id else None,
+    }
+
+    # Convert agents to participants for adapter
+    participants = [agent.to_participant() for agent in agents]
+
+    # Create adapter instance
+    adapter = GroupChatBuilderAdapter(
+        id=group_id,
+        participants=participants,
+        selection_method=config.speaker_selection_method,
+        max_rounds=config.max_rounds,
+        config={"allow_repeat_speaker": config.allow_repeat_speaker},
     )
 
+    # Store state and adapter
+    state = _create_groupchat_state(group_id, request.name, agents, config, metadata)
+    _groupchat_states[group_id] = state
+    _groupchat_adapters[group_id] = adapter
+
     return GroupChatResponse(
-        group_id=UUID(state.group_id),
-        name=state.name,
+        group_id=UUID(group_id),
+        name=request.name,
         description=request.description,
-        status=state.status.value,
-        participants=[a.name for a in state.agents],
-        message_count=state.message_count,
-        current_round=state.current_round,
-        created_at=state.created_at,
+        status=state["status"].value,
+        participants=[a.name for a in agents],
+        message_count=state["message_count"],
+        current_round=state["current_round"],
+        created_at=state["created_at"],
     )
 
 
@@ -149,23 +375,26 @@ async def list_group_chats(
     """List all group chats.
 
     列出所有群組聊天。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
-    all_groups = await _group_chat_manager.list_group_chats()
-    groups = all_groups[offset:offset + limit]
+    # Sprint 20: 從 in-memory state 讀取
+    all_states = list(_groupchat_states.values())
+    states = all_states[offset:offset + limit]
 
     return [
         GroupChatResponse(
-            group_id=UUID(g.group_id),
-            name=g.name,
-            description=g.metadata.get("description", ""),
-            status=g.status.value,
-            participants=[a.name for a in g.agents],
-            message_count=g.message_count,
-            current_round=g.current_round,
-            created_at=g.created_at,
-            updated_at=g.started_at,
+            group_id=UUID(s["group_id"]),
+            name=s["name"],
+            description=s["metadata"].get("description", ""),
+            status=s["status"].value,
+            participants=[a.name for a in s["agents"]],
+            message_count=s["message_count"],
+            current_round=s["current_round"],
+            created_at=s["created_at"],
+            updated_at=s["started_at"],
         )
-        for g in groups
+        for s in states
     ]
 
 
@@ -174,21 +403,23 @@ async def get_group_chat(group_id: UUID):
     """Get group chat details.
 
     獲取群組聊天詳情。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
-    state = await _group_chat_manager.get_group_chat(str(group_id))
+    state = _groupchat_states.get(str(group_id))
     if not state:
         raise HTTPException(status_code=404, detail="Group chat not found")
 
     return GroupChatResponse(
-        group_id=UUID(state.group_id),
-        name=state.name,
-        description=state.metadata.get("description", ""),
-        status=state.status.value,
-        participants=[a.name for a in state.agents],
-        message_count=state.message_count,
-        current_round=state.current_round,
-        created_at=state.created_at,
-        updated_at=state.started_at,
+        group_id=UUID(state["group_id"]),
+        name=state["name"],
+        description=state["metadata"].get("description", ""),
+        status=state["status"].value,
+        participants=[a.name for a in state["agents"]],
+        message_count=state["message_count"],
+        current_round=state["current_round"],
+        created_at=state["created_at"],
+        updated_at=state["started_at"],
     )
 
 
@@ -197,22 +428,25 @@ async def update_group_config(group_id: UUID, config: GroupChatConfigUpdate):
     """Update group chat configuration.
 
     更新群組聊天配置。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
-    state = await _group_chat_manager.get_group_chat(str(group_id))
+    state = _groupchat_states.get(str(group_id))
     if not state:
         raise HTTPException(status_code=404, detail="Group chat not found")
 
-    # Update config
+    # Update config in state
+    current_config = state["config"]
     if config.max_rounds is not None:
-        state.config.max_rounds = config.max_rounds
+        current_config.max_rounds = config.max_rounds
     if config.max_messages_per_round is not None:
-        state.config.max_messages_per_round = config.max_messages_per_round
+        current_config.max_messages_per_round = config.max_messages_per_round
     if config.speaker_selection_method is not None:
-        state.config.speaker_selection_method = SpeakerSelectionMethod(
+        current_config.speaker_selection_method = SpeakerSelectionMethod(
             config.speaker_selection_method
         )
     if config.allow_repeat_speaker is not None:
-        state.config.allow_repeat_speaker = config.allow_repeat_speaker
+        current_config.allow_repeat_speaker = config.allow_repeat_speaker
 
     return SuccessResponse(message="Configuration updated")
 
@@ -227,15 +461,30 @@ async def add_agent_to_group(
     """Add an agent to the group chat.
 
     添加 Agent 到群組聊天。
+
+    Sprint 20: 使用 _groupchat_states 和 adapter 取代 GroupChatManager
     """
+    state = _groupchat_states.get(str(group_id))
+    adapter = _groupchat_adapters.get(str(group_id))
+    if not state or not adapter:
+        raise HTTPException(status_code=404, detail="Group chat not found")
+
     agent = AgentInfo(
         agent_id=agent_id,
         name=name,
         capabilities=capabilities,
     )
-    result = await _group_chat_manager.add_agent(str(group_id), agent)
-    if not result:
-        raise HTTPException(status_code=404, detail="Group chat not found")
+
+    # Add to state
+    state["agents"].append(agent)
+
+    # Add to adapter
+    try:
+        adapter.add_participant(agent.to_participant())
+    except ValueError as e:
+        # Remove from state if adapter fails
+        state["agents"].pop()
+        raise HTTPException(status_code=400, detail=str(e))
 
     return SuccessResponse(message=f"Agent {agent_id} added to group")
 
@@ -245,10 +494,26 @@ async def remove_agent_from_group(group_id: UUID, agent_id: str):
     """Remove an agent from the group chat.
 
     從群組聊天移除 Agent。
+
+    Sprint 20: 使用 _groupchat_states 和 adapter 取代 GroupChatManager
     """
-    result = await _group_chat_manager.remove_agent(str(group_id), agent_id)
-    if not result:
+    state = _groupchat_states.get(str(group_id))
+    adapter = _groupchat_adapters.get(str(group_id))
+    if not state or not adapter:
         raise HTTPException(status_code=404, detail="Group chat not found")
+
+    # Find and remove agent from state
+    agent_to_remove = None
+    for i, agent in enumerate(state["agents"]):
+        if agent.agent_id == agent_id:
+            agent_to_remove = state["agents"].pop(i)
+            break
+
+    if not agent_to_remove:
+        raise HTTPException(status_code=404, detail="Agent not found in group")
+
+    # Remove from adapter
+    adapter.remove_participant(agent_to_remove.name)
 
     return SuccessResponse(message=f"Agent {agent_id} removed from group")
 
@@ -258,18 +523,38 @@ async def start_conversation(group_id: UUID, request: StartConversationRequest):
     """Start a group conversation.
 
     開始群組對話。
+
+    Sprint 20: 使用 _groupchat_states 和 adapter 取代 GroupChatManager
     """
+    state = _groupchat_states.get(str(group_id))
+    adapter = _groupchat_adapters.get(str(group_id))
+    if not state or not adapter:
+        raise HTTPException(status_code=404, detail="Group chat not found")
+
     try:
-        state = await _group_chat_manager.start_conversation(
-            group_id=str(group_id),
-            initial_message=request.initial_message,
+        # Update state
+        state["status"] = GroupChatStatus.RUNNING
+        state["started_at"] = datetime.utcnow()
+
+        # Add initial message
+        initial_message = MessageRecord(
+            id=str(uuid4()),
+            sender_id=request.initiator,
             sender_name=request.initiator,
+            content=request.initial_message,
+            message_type=MessageType.USER,
+            timestamp=datetime.utcnow(),
         )
+        state["messages"].append(initial_message)
+        state["message_count"] += 1
+
+        # Initialize adapter
+        await adapter.initialize()
 
         return ConversationResultResponse(
             status="started",
-            rounds_completed=state.current_round,
-            messages=[m.to_dict() for m in state.messages],
+            rounds_completed=state["current_round"],
+            messages=[m.to_dict() for m in state["messages"]],
             termination_reason=None,
         )
     except ValueError as e:
@@ -283,18 +568,27 @@ async def send_message(group_id: UUID, request: SendMessageRequest):
     """Send a message to the group.
 
     發送訊息到群組。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
-    message = await _group_chat_manager.add_message(
-        group_id=str(group_id),
-        content=request.content,
+    state = _groupchat_states.get(str(group_id))
+    if not state:
+        raise HTTPException(status_code=404, detail="Group chat not found")
+
+    # Create message record
+    message = MessageRecord(
+        id=str(uuid4()),
         sender_id=request.sender_name,
         sender_name=request.sender_name,
+        content=request.content,
         message_type=MessageType.USER,
-        metadata=request.metadata,
+        timestamp=datetime.utcnow(),
+        metadata=request.metadata or {},
     )
 
-    if not message:
-        raise HTTPException(status_code=404, detail="Group chat not found")
+    # Add to state
+    state["messages"].append(message)
+    state["message_count"] += 1
 
     # Broadcast to WebSocket connections
     await _broadcast_to_group(group_id, {
@@ -303,7 +597,7 @@ async def send_message(group_id: UUID, request: SendMessageRequest):
     })
 
     return MessageResponse(
-        id=str(message.id),
+        id=message.id,
         sender_id=message.sender_id,
         sender_name=message.sender_name,
         content=message.content,
@@ -322,16 +616,18 @@ async def get_messages(
     """Get messages from the group chat.
 
     獲取群組聊天訊息。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
-    state = await _group_chat_manager.get_group_chat(str(group_id))
+    state = _groupchat_states.get(str(group_id))
     if not state:
         raise HTTPException(status_code=404, detail="Group chat not found")
 
-    messages = state.messages[offset:offset + limit]
+    messages = state["messages"][offset:offset + limit]
 
     return [
         MessageResponse(
-            id=str(m.id),
+            id=m.id,
             sender_id=m.sender_id,
             sender_name=m.sender_name,
             content=m.content,
@@ -348,13 +644,15 @@ async def get_transcript(group_id: UUID):
     """Get the full conversation transcript.
 
     獲取完整對話記錄。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
-    messages = await _group_chat_manager.get_transcript(str(group_id))
-    if not messages and not await _group_chat_manager.get_group_chat(str(group_id)):
+    state = _groupchat_states.get(str(group_id))
+    if not state:
         raise HTTPException(status_code=404, detail="Group chat not found")
 
     transcript = []
-    for msg in messages:
+    for msg in state["messages"]:
         transcript.append({
             "speaker": msg.sender_name,
             "content": msg.content,
@@ -369,31 +667,33 @@ async def get_summary(group_id: UUID):
     """Get group chat summary.
 
     獲取群組聊天摘要。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
-    state = await _group_chat_manager.get_group_chat(str(group_id))
+    state = _groupchat_states.get(str(group_id))
     if not state:
         raise HTTPException(status_code=404, detail="Group chat not found")
 
     # Calculate messages per participant
     messages_per_participant: Dict[str, int] = {}
-    for msg in state.messages:
+    for msg in state["messages"]:
         messages_per_participant[msg.sender_name] = (
             messages_per_participant.get(msg.sender_name, 0) + 1
         )
 
     # Calculate duration
     duration = None
-    if state.started_at and state.ended_at:
-        duration = (state.ended_at - state.started_at).total_seconds()
+    if state["started_at"] and state["ended_at"]:
+        duration = (state["ended_at"] - state["started_at"]).total_seconds()
 
     return GroupChatSummaryResponse(
-        group_id=UUID(state.group_id),
-        name=state.name,
-        total_rounds=state.current_round,
-        total_messages=len(state.messages),
-        participants=[a.name for a in state.agents],
+        group_id=UUID(state["group_id"]),
+        name=state["name"],
+        total_rounds=state["current_round"],
+        total_messages=len(state["messages"]),
+        participants=[a.name for a in state["agents"]],
         duration_seconds=duration,
-        termination_reason=state.metadata.get("termination_reason"),
+        termination_reason=state["metadata"].get("termination_reason"),
         messages_per_participant=messages_per_participant,
     )
 
@@ -406,10 +706,22 @@ async def terminate_group_chat(
     """Terminate the group chat.
 
     終止群組聊天。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
-    result = await _group_chat_manager.terminate_conversation(str(group_id), reason)
-    if not result:
+    state = _groupchat_states.get(str(group_id))
+    adapter = _groupchat_adapters.get(str(group_id))
+    if not state:
         raise HTTPException(status_code=404, detail="Group chat not found")
+
+    # Update state
+    state["status"] = GroupChatStatus.COMPLETED
+    state["ended_at"] = datetime.utcnow()
+    state["metadata"]["termination_reason"] = reason
+
+    # Cleanup adapter if exists
+    if adapter:
+        await adapter.cleanup()
 
     # Notify WebSocket clients
     await _broadcast_to_group(group_id, {
@@ -425,10 +737,20 @@ async def delete_group_chat(group_id: UUID):
     """Delete a group chat.
 
     刪除群組聊天。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
-    result = await _group_chat_manager.delete_group_chat(str(group_id))
-    if not result:
+    gid = str(group_id)
+    if gid not in _groupchat_states:
         raise HTTPException(status_code=404, detail="Group chat not found")
+
+    # Remove state
+    del _groupchat_states[gid]
+
+    # Cleanup and remove adapter
+    if gid in _groupchat_adapters:
+        adapter = _groupchat_adapters.pop(gid)
+        await adapter.cleanup()
 
     return SuccessResponse(message="Group chat deleted")
 
@@ -443,6 +765,8 @@ async def websocket_endpoint(websocket: WebSocket, group_id: UUID):
     """WebSocket endpoint for real-time group chat.
 
     WebSocket 端點用於實時群組聊天。
+
+    Sprint 20: 使用 _groupchat_states 取代 GroupChatManager
     """
     await websocket.accept()
 
@@ -456,16 +780,20 @@ async def websocket_endpoint(websocket: WebSocket, group_id: UUID):
             data = await websocket.receive_json()
 
             if data.get("type") == "message":
-                # Handle incoming message via shared manager
-                message = await _group_chat_manager.add_message(
-                    group_id=str(group_id),
-                    content=data.get("content", ""),
-                    sender_id=data.get("sender", "user"),
-                    sender_name=data.get("sender", "user"),
-                    message_type=MessageType.USER,
-                )
+                # Sprint 20: 使用 _groupchat_states 取代 manager
+                state = _groupchat_states.get(str(group_id))
+                if state:
+                    message = MessageRecord(
+                        id=str(uuid4()),
+                        sender_id=data.get("sender", "user"),
+                        sender_name=data.get("sender", "user"),
+                        content=data.get("content", ""),
+                        message_type=MessageType.USER,
+                        timestamp=datetime.utcnow(),
+                    )
+                    state["messages"].append(message)
+                    state["message_count"] += 1
 
-                if message:
                     # Broadcast to all connections
                     await _broadcast_to_group(group_id, {
                         "type": "message",
@@ -515,8 +843,11 @@ async def create_session(request: CreateSessionRequest):
     """Create a new multi-turn session.
 
     建立新的多輪對話會話。
+
+    Sprint 32: 使用 MultiTurnAPIService (取代 MultiTurnSessionManager)
     """
-    session = await _session_manager.create_session(
+    service = _get_session_service()
+    session = await service.create_session(
         user_id=request.user_id,
         initial_context=request.initial_context,
     )
@@ -543,8 +874,11 @@ async def list_sessions(
     """List multi-turn sessions.
 
     列出多輪對話會話。
+
+    Sprint 32: 使用 MultiTurnAPIService (取代 MultiTurnSessionManager)
     """
-    sessions = await _session_manager.list_sessions(user_id=user_id)
+    service = _get_session_service()
+    sessions = await service.list_sessions(user_id=user_id)
 
     if status:
         sessions = [s for s in sessions if s.status.value == status]
@@ -571,8 +905,11 @@ async def get_session(session_id: UUID):
     """Get session details.
 
     獲取會話詳情。
+
+    Sprint 32: 使用 MultiTurnAPIService (取代 MultiTurnSessionManager)
     """
-    session = await _session_manager.get_session(str(session_id))
+    service = _get_session_service()
+    session = await service.get_session(str(session_id))
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -593,8 +930,11 @@ async def execute_turn(session_id: UUID, request: ExecuteTurnRequest):
     """Execute a turn in the session.
 
     執行對話輪次。
+
+    Sprint 32: 使用 MultiTurnAPIService (取代 MultiTurnSessionManager)
     """
-    session = await _session_manager.get_session(str(session_id))
+    service = _get_session_service()
+    session = await service.get_session(str(session_id))
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -606,8 +946,8 @@ async def execute_turn(session_id: UUID, request: ExecuteTurnRequest):
         def mock_agent_handler(agent_id: str, user_input: str, history: list) -> str:
             return f"Response to: {user_input}"
 
-        # Execute turn with mock handler
-        response_message = await _session_manager.execute_turn(
+        # Execute turn with mock handler (Sprint 32: 透過 service 執行)
+        response_message = await service.execute_turn(
             session_id=str(session_id),
             user_input=request.user_input,
             agent_handler=mock_agent_handler,
@@ -619,8 +959,8 @@ async def execute_turn(session_id: UUID, request: ExecuteTurnRequest):
         if not response_message:
             raise HTTPException(status_code=500, detail="Failed to execute turn")
 
-        # Get updated session for turn number
-        updated_session = await _session_manager.get_session(str(session_id))
+        # Get updated session for turn number (Sprint 32: 透過 service 獲取)
+        updated_session = await service.get_session(str(session_id))
 
         return TurnResponse(
             turn_id=UUID(response_message.message_id),
@@ -645,8 +985,11 @@ async def get_session_history(
     """Get session turn history.
 
     獲取會話輪次歷史。
+
+    Sprint 32: 使用 MultiTurnAPIService (取代 MultiTurnSessionManager)
     """
-    history = await _session_manager.get_history(str(session_id), limit=limit)
+    service = _get_session_service()
+    history = await service.get_history(str(session_id), limit=limit)
 
     # Group messages by turn to create turn responses
     turns_by_number: Dict[int, Dict[str, Any]] = {}
@@ -690,8 +1033,11 @@ async def update_session_context(session_id: UUID, request: SessionContextUpdate
     """Update session context.
 
     更新會話上下文。
+
+    Sprint 32: 使用 MultiTurnAPIService (取代 MultiTurnSessionManager)
     """
-    result = await _session_manager.update_session(
+    service = _get_session_service()
+    result = await service.update_session(
         str(session_id),
         context=request.context,
     )
@@ -706,8 +1052,11 @@ async def close_session(session_id: UUID):
     """Close a session.
 
     關閉會話。
+
+    Sprint 32: 使用 MultiTurnAPIService (取代 MultiTurnSessionManager)
     """
-    result = await _session_manager.close_session(str(session_id))
+    service = _get_session_service()
+    result = await service.close_session(str(session_id))
     if not result:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -719,8 +1068,11 @@ async def delete_session(session_id: UUID):
     """Delete a session.
 
     刪除會話。
+
+    Sprint 32: 使用 MultiTurnAPIService (取代 MultiTurnSessionManager)
     """
-    result = await _session_manager.delete_session(str(session_id))
+    service = _get_session_service()
+    result = await service.delete_session(str(session_id))
     if not result:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -730,6 +1082,7 @@ async def delete_session(session_id: UUID):
 # =============================================================================
 # Voting Routes
 # =============================================================================
+# Sprint 20: 使用 _voting_sessions 取代 VotingManager
 
 
 @router.post("/voting/", response_model=VotingSessionResponse, status_code=201)
@@ -737,26 +1090,38 @@ async def create_voting_session(request: CreateVotingSessionRequest):
     """Create a new voting session.
 
     建立新的投票會話。
+
+    Sprint 20: 使用 VotingSessionRecord 取代 VotingManager
     """
     try:
         vote_type = VoteType(request.vote_type)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid vote type: {request.vote_type}")
 
-    session = _voting_manager.create_session(
+    # Sprint 20: 使用 in-memory storage
+    session_id = str(uuid4())
+    deadline = None
+    if request.deadline_minutes:
+        from datetime import timedelta
+        deadline = datetime.utcnow() + timedelta(minutes=request.deadline_minutes)
+
+    session = VotingSessionRecord(
+        session_id=session_id,
         group_id=request.group_id,
         topic=request.topic,
-        description=request.description,
+        description=request.description or "",
         vote_type=vote_type,
         options=request.options,
-        deadline_minutes=request.deadline_minutes,
-        required_quorum=request.required_quorum,
-        pass_threshold=request.pass_threshold,
+        required_quorum=request.required_quorum or 0.5,
+        pass_threshold=request.pass_threshold or 0.5,
         eligible_voters=set(request.eligible_voters) if request.eligible_voters else None,
+        deadline=deadline,
     )
 
+    _voting_sessions[session_id] = session
+
     return VotingSessionResponse(
-        session_id=session.session_id,
+        session_id=UUID(session.session_id),
         group_id=session.group_id,
         topic=session.topic,
         description=session.description,
@@ -781,13 +1146,26 @@ async def list_voting_sessions(
     """List voting sessions.
 
     列出投票會話。
+
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
     """
-    voting_status = VotingSessionStatus(status) if status else None
-    sessions = _voting_manager.list_sessions(group_id=group_id, status=voting_status)
+    sessions = list(_voting_sessions.values())
+
+    # Filter by group_id
+    if group_id:
+        sessions = [s for s in sessions if s.group_id == group_id]
+
+    # Filter by status
+    if status:
+        try:
+            voting_status = VotingSessionStatus(status)
+            sessions = [s for s in sessions if s.status == voting_status]
+        except ValueError:
+            pass
 
     return [
         VotingSessionResponse(
-            session_id=s.session_id,
+            session_id=UUID(s.session_id),
             group_id=s.group_id,
             topic=s.topic,
             description=s.description,
@@ -811,13 +1189,15 @@ async def get_voting_session(session_id: UUID):
     """Get voting session details.
 
     獲取投票會話詳情。
+
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
     """
-    session = _voting_manager.get_session(session_id)
+    session = _voting_sessions.get(str(session_id))
     if not session:
         raise HTTPException(status_code=404, detail="Voting session not found")
 
     return VotingSessionResponse(
-        session_id=session.session_id,
+        session_id=UUID(session.session_id),
         group_id=session.group_id,
         topic=session.topic,
         description=session.description,
@@ -839,28 +1219,42 @@ async def cast_vote(session_id: UUID, request: CastVoteRequest):
     """Cast a vote.
 
     投票。
-    """
-    try:
-        vote = _voting_manager.cast_vote(
-            session_id=session_id,
-            voter_id=request.voter_id,
-            voter_name=request.voter_name,
-            choice=request.choice,
-            weight=request.weight,
-            reason=request.reason,
-        )
 
-        return VoteResponse(
-            vote_id=vote.vote_id,
-            voter_id=vote.voter_id,
-            voter_name=vote.voter_name,
-            choice=vote.choice,
-            weight=vote.weight,
-            timestamp=vote.timestamp,
-            reason=vote.reason,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
+    """
+    session = _voting_sessions.get(str(session_id))
+    if not session:
+        raise HTTPException(status_code=404, detail="Voting session not found")
+
+    if session.status != VotingSessionStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Voting session is not active")
+
+    if request.voter_id in session.votes:
+        raise HTTPException(status_code=400, detail="Voter has already voted")
+
+    if request.choice not in session.options:
+        raise HTTPException(status_code=400, detail=f"Invalid choice: {request.choice}")
+
+    vote = VoteRecord(
+        vote_id=str(uuid4()),
+        voter_id=request.voter_id,
+        voter_name=request.voter_name,
+        choice=request.choice,
+        weight=request.weight or 1.0,
+        reason=request.reason,
+    )
+
+    session.votes[request.voter_id] = vote
+
+    return VoteResponse(
+        vote_id=UUID(vote.vote_id),
+        voter_id=vote.voter_id,
+        voter_name=vote.voter_name,
+        choice=vote.choice,
+        weight=vote.weight,
+        timestamp=vote.timestamp,
+        reason=vote.reason,
+    )
 
 
 @router.patch("/voting/{session_id}/vote/{voter_id}", response_model=VoteResponse)
@@ -868,19 +1262,31 @@ async def change_vote(session_id: UUID, voter_id: str, request: ChangeVoteReques
     """Change a vote.
 
     更改投票。
-    """
-    vote = _voting_manager.change_vote(
-        session_id=session_id,
-        voter_id=voter_id,
-        new_choice=request.new_choice,
-        reason=request.reason,
-    )
 
-    if not vote:
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
+    """
+    session = _voting_sessions.get(str(session_id))
+    if not session:
+        raise HTTPException(status_code=404, detail="Voting session not found")
+
+    if voter_id not in session.votes:
         raise HTTPException(status_code=404, detail="Vote not found")
 
+    if session.status != VotingSessionStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Voting session is not active")
+
+    if request.new_choice not in session.options:
+        raise HTTPException(status_code=400, detail=f"Invalid choice: {request.new_choice}")
+
+    # Update vote
+    vote = session.votes[voter_id]
+    vote.choice = request.new_choice
+    vote.timestamp = datetime.utcnow()
+    if request.reason:
+        vote.reason = request.reason
+
     return VoteResponse(
-        vote_id=vote.vote_id,
+        vote_id=UUID(vote.vote_id),
         voter_id=vote.voter_id,
         voter_name=vote.voter_name,
         choice=vote.choice,
@@ -895,10 +1301,20 @@ async def withdraw_vote(session_id: UUID, voter_id: str):
     """Withdraw a vote.
 
     撤回投票。
+
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
     """
-    result = _voting_manager.withdraw_vote(session_id, voter_id)
-    if not result:
+    session = _voting_sessions.get(str(session_id))
+    if not session:
+        raise HTTPException(status_code=404, detail="Voting session not found")
+
+    if voter_id not in session.votes:
         raise HTTPException(status_code=404, detail="Vote not found")
+
+    if session.status != VotingSessionStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Voting session is not active")
+
+    del session.votes[voter_id]
 
     return SuccessResponse(message="Vote withdrawn")
 
@@ -908,14 +1324,16 @@ async def get_votes(session_id: UUID):
     """Get all votes for a session.
 
     獲取會話的所有投票。
+
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
     """
-    session = _voting_manager.get_session(session_id)
+    session = _voting_sessions.get(str(session_id))
     if not session:
         raise HTTPException(status_code=404, detail="Voting session not found")
 
     return [
         VoteResponse(
-            vote_id=v.vote_id,
+            vote_id=UUID(v.vote_id),
             voter_id=v.voter_id,
             voter_name=v.voter_name,
             choice=v.choice,
@@ -935,24 +1353,56 @@ async def calculate_voting_result(
     """Calculate voting result.
 
     計算投票結果。
+
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
     """
-    try:
-        result = _voting_manager.calculate_result(
-            session_id=session_id,
-            total_eligible_voters=total_eligible_voters,
-        )
+    session = _voting_sessions.get(str(session_id))
+    if not session:
+        raise HTTPException(status_code=404, detail="Voting session not found")
 
-        session = _voting_manager.get_session(session_id)
+    # Calculate vote counts by choice
+    vote_counts: Dict[str, float] = {}
+    for vote in session.votes.values():
+        vote_counts[vote.choice] = vote_counts.get(vote.choice, 0) + vote.weight
 
-        return VotingResultResponse(
-            session_id=session_id,
-            result=session.result.value if session else "unknown",
-            result_details=result,
-            participation_rate=result.get("participation_rate", 0),
-            total_votes=result.get("total_votes", 0),
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    total_votes = len(session.votes)
+    total_weight = sum(v.weight for v in session.votes.values())
+
+    # Calculate participation rate
+    eligible_count = total_eligible_voters or (len(session.eligible_voters) if session.eligible_voters else total_votes)
+    participation_rate = total_votes / eligible_count if eligible_count > 0 else 0
+
+    # Determine result based on vote type
+    if participation_rate < session.required_quorum:
+        session.result = VoteResult.NO_QUORUM
+    else:
+        # Find winner
+        if vote_counts:
+            winner = max(vote_counts, key=vote_counts.get)
+            winner_ratio = vote_counts[winner] / total_weight if total_weight > 0 else 0
+            if winner_ratio >= session.pass_threshold:
+                session.result = VoteResult.PASSED
+            else:
+                session.result = VoteResult.REJECTED
+        else:
+            session.result = VoteResult.TIE
+
+    result_details = {
+        "vote_counts": vote_counts,
+        "total_votes": total_votes,
+        "total_weight": total_weight,
+        "participation_rate": participation_rate,
+        "required_quorum": session.required_quorum,
+        "pass_threshold": session.pass_threshold,
+    }
+
+    return VotingResultResponse(
+        session_id=session_id,
+        result=session.result.value,
+        result_details=result_details,
+        participation_rate=participation_rate,
+        total_votes=total_votes,
+    )
 
 
 @router.get("/voting/{session_id}/statistics", response_model=VotingStatisticsResponse)
@@ -960,22 +1410,28 @@ async def get_voting_statistics(session_id: UUID):
     """Get voting statistics.
 
     獲取投票統計。
+
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
     """
-    stats = _voting_manager.get_statistics(session_id)
-    if not stats:
+    session = _voting_sessions.get(str(session_id))
+    if not session:
         raise HTTPException(status_code=404, detail="Voting session not found")
 
+    votes = list(session.votes.values())
+    first_vote = min((v.timestamp for v in votes), default=None) if votes else None
+    last_vote = max((v.timestamp for v in votes), default=None) if votes else None
+
     return VotingStatisticsResponse(
-        session_id=UUID(stats["session_id"]),
-        topic=stats["topic"],
-        vote_type=stats["vote_type"],
-        status=stats["status"],
-        result=stats["result"],
-        total_votes=stats["total_votes"],
-        eligible_voters=stats["eligible_voters"],
-        participation_rate=stats["participation_rate"],
-        first_vote=datetime.fromisoformat(stats["first_vote"]) if stats.get("first_vote") else None,
-        last_vote=datetime.fromisoformat(stats["last_vote"]) if stats.get("last_vote") else None,
+        session_id=UUID(session.session_id),
+        topic=session.topic,
+        vote_type=session.vote_type.value,
+        status=session.status.value,
+        result=session.result.value,
+        total_votes=session.vote_count,
+        eligible_voters=len(session.eligible_voters) if session.eligible_voters else 0,
+        participation_rate=session.participation_rate,
+        first_vote=first_vote,
+        last_vote=last_vote,
     )
 
 
@@ -984,10 +1440,14 @@ async def close_voting_session(session_id: UUID):
     """Close a voting session.
 
     關閉投票會話。
+
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
     """
-    result = _voting_manager.close_session(session_id)
-    if not result:
+    session = _voting_sessions.get(str(session_id))
+    if not session:
         raise HTTPException(status_code=404, detail="Voting session not found")
+
+    session.status = VotingSessionStatus.CLOSED
 
     return SuccessResponse(message="Voting session closed")
 
@@ -1000,10 +1460,14 @@ async def cancel_voting_session(
     """Cancel a voting session.
 
     取消投票會話。
+
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
     """
-    result = _voting_manager.cancel_session(session_id, reason)
-    if not result:
+    session = _voting_sessions.get(str(session_id))
+    if not session:
         raise HTTPException(status_code=404, detail="Voting session not found")
+
+    session.status = VotingSessionStatus.CANCELLED
 
     return SuccessResponse(message=f"Voting session cancelled: {reason}")
 
@@ -1013,10 +1477,14 @@ async def delete_voting_session(session_id: UUID):
     """Delete a voting session.
 
     刪除投票會話。
+
+    Sprint 20: 使用 _voting_sessions 取代 VotingManager
     """
-    result = _voting_manager.delete_session(session_id)
-    if not result:
+    sid = str(session_id)
+    if sid not in _voting_sessions:
         raise HTTPException(status_code=404, detail="Voting session not found")
+
+    del _voting_sessions[sid]
 
     return SuccessResponse(message="Voting session deleted")
 

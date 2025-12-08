@@ -1,10 +1,23 @@
 # Technical Architecture Design
 # IPA Platform - Intelligent Process Automation
 
-**版本**: 1.0  
-**日期**: 2025-11-19  
-**狀態**: 草稿  
+**版本**: 2.5
+**日期**: 2025-12-07
+**狀態**: Phase 5 完成 - 完整 API 整合與 MVP 驗收
 **負責人**: Architecture Team
+
+> **Phase 5 更新 (Sprint 26-30)**: 完成 MVP 核心功能與官方 Agent Framework API 的完整整合。
+> - **Sprint 26**: WorkflowDefinitionAdapter 遷移完成
+> - **Sprint 27**: ExecutionAdapter + EnhancedExecutionStateMachine 遷移
+> - **Sprint 28**: HumanApprovalExecutor + ApprovalWorkflowManager 整合
+> - **Sprint 29**: 所有 API Routes 遷移到適配器層
+> - **Sprint 30**: E2E 測試、效能測試、文檔更新
+>
+> **適配器架構位置**: `backend/src/integrations/agent_framework/`
+> - `builders/`: 官方 API 適配器 (GroupChat, Handoff, Concurrent, Planning)
+> - `core/`: 核心功能適配器 (Workflow, StateMachine, Approval)
+> - `memory/`: 記憶體存儲適配器
+> - `multiturn/`: 多輪對話適配器
 
 ---
 

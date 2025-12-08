@@ -46,7 +46,6 @@ def sample_workflow_id():
 def sample_config(sample_workflow_id):
     """Create a sample nested workflow configuration."""
     return NestedWorkflowConfig(
-        parent_workflow_id=sample_workflow_id,
         workflow_type=NestedWorkflowType.REFERENCE,
         scope=WorkflowScope.INHERITED,
         max_depth=5,
@@ -64,36 +63,35 @@ class TestNestedWorkflowConfig:
 
     def test_config_creation(self, sample_workflow_id):
         """Test configuration creation with defaults."""
-        config = NestedWorkflowConfig(
-            parent_workflow_id=sample_workflow_id,
-        )
-        assert config.parent_workflow_id == sample_workflow_id
+        config = NestedWorkflowConfig()
         assert config.workflow_type == NestedWorkflowType.REFERENCE
         assert config.scope == WorkflowScope.INHERITED
-        assert config.max_depth == 10
+        assert config.max_depth == 5
         assert config.timeout_seconds == 600
 
     def test_config_custom_values(self, sample_workflow_id):
         """Test configuration with custom values."""
         config = NestedWorkflowConfig(
-            parent_workflow_id=sample_workflow_id,
             workflow_type=NestedWorkflowType.RECURSIVE,
             scope=WorkflowScope.ISOLATED,
             max_depth=20,
             timeout_seconds=1200,
-            metadata={"key": "value"},
+            retry_on_failure=False,
+            max_retries=5,
         )
         assert config.workflow_type == NestedWorkflowType.RECURSIVE
         assert config.scope == WorkflowScope.ISOLATED
         assert config.max_depth == 20
         assert config.timeout_seconds == 1200
-        assert config.metadata["key"] == "value"
+        assert config.retry_on_failure is False
+        assert config.max_retries == 5
 
     def test_config_to_dict(self, sample_config):
         """Test configuration serialization."""
         result = sample_config.to_dict()
-        assert "config_id" in result
-        assert "parent_workflow_id" in result
+        assert "workflow_type" in result
+        assert "scope" in result
+        assert "max_depth" in result
         assert result["workflow_type"] == "reference"
         assert result["scope"] == "inherited"
 

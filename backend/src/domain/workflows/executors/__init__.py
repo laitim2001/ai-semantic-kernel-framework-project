@@ -3,20 +3,42 @@
 # =============================================================================
 # Sprint 2: Workflow & Checkpoints - Human-in-the-Loop
 # Sprint 7: Concurrent Execution Engine (Phase 2)
+# Sprint 25: 清理和棄用警告
 #
-# Workflow executor implementations providing:
-#   - ApprovalGateway: Human approval step executor
-#   - HumanApprovalRequest: Approval request data structure
-#   - ConcurrentExecutor: Parallel task execution (Phase 2)
-#   - ConcurrentStateManager: Parallel state management (Phase 2)
+# DEPRECATED: Concurrent 相關類已遷移到適配器層
 #
-# Executors handle specific node types in workflow execution.
+# 推薦使用:
+#   from src.integrations.agent_framework.builders import (
+#       ConcurrentBuilderAdapter,
+#       ConcurrentExecutorAdapter,
+#   )
+#
+# 或使用 API 服務:
+#   from src.api.v1.concurrent.adapter_service import ConcurrentAPIService
+#
+# 保留的功能:
+#   - ApprovalGateway: Human approval step executor (核心功能)
+#
+# 已棄用 (將在未來版本移除):
+#   - ConcurrentExecutor -> ConcurrentBuilderAdapter
+#   - ConcurrentStateManager -> 適配器內部狀態管理
+#   - ParallelGateway -> ConcurrentBuilderAdapter.fan_out/fan_in
 # =============================================================================
+
+import warnings
 
 from src.domain.workflows.executors.approval import (
     ApprovalGateway,
     HumanApprovalRequest,
     ApprovalResponse,
+)
+
+# 以下導入標記為棄用，請使用適配器替代
+warnings.warn(
+    "domain.workflows.executors 中的 Concurrent 相關類已棄用。"
+    "請使用 integrations.agent_framework.builders.ConcurrentBuilderAdapter",
+    DeprecationWarning,
+    stacklevel=2,
 )
 
 from src.domain.workflows.executors.concurrent import (

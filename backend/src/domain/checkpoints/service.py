@@ -2,25 +2,42 @@
 # IPA Platform - Checkpoint Service
 # =============================================================================
 # Sprint 2: Workflow & Checkpoints - Human-in-the-Loop
+# Sprint 28: Refactored for Official API Migration
 #
-# Service layer for checkpoint management.
+# Service layer for checkpoint STORAGE management.
 # Provides:
 #   - CheckpointStatus: Status enumeration
 #   - CheckpointData: Checkpoint data structure
 #   - CheckpointService: Business logic for checkpoint operations
+#
+# IMPORTANT (Sprint 28):
+#   - Storage operations remain in CheckpointService
+#   - Approval operations are DEPRECATED - use HumanApprovalExecutor instead
+#   - approve_checkpoint() and reject_checkpoint() emit deprecation warnings
+#   - For new code, use:
+#       from src.integrations.agent_framework.core import HumanApprovalExecutor
 #
 # The service layer orchestrates checkpoint operations and provides
 # a clean interface for API endpoints and workflow integration.
 # =============================================================================
 
 import logging
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 from uuid import UUID
 
 from src.infrastructure.database.repositories.checkpoint import CheckpointRepository
+
+# Type checking imports to avoid circular dependencies
+if TYPE_CHECKING:
+    from src.integrations.agent_framework.core.approval import (
+        HumanApprovalExecutor,
+        ApprovalRequest,
+        ApprovalResponse,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -132,15 +149,20 @@ class CheckpointData:
 
 class CheckpointService:
     """
-    Service for checkpoint business logic.
+    Service for checkpoint STORAGE operations.
+
+    Sprint 28 Update:
+        - Storage operations (create, get, list, delete) remain here
+        - Approval operations (approve, reject) are DEPRECATED
+        - For approval logic, use HumanApprovalExecutor from official API
 
     Provides methods for:
         - Creating checkpoints for human approval
         - Listing pending approvals
-        - Approving/rejecting checkpoints
+        - Approving/rejecting checkpoints (DEPRECATED)
         - Managing checkpoint lifecycle
 
-    Example:
+    Example (Storage):
         service = CheckpointService(repository)
 
         # Create a checkpoint
@@ -153,11 +175,30 @@ class CheckpointService:
         # Get pending approvals
         pending = await service.get_pending_approvals(limit=10)
 
-        # Approve a checkpoint
-        approved = await service.approve_checkpoint(
-            checkpoint_id=checkpoint.id,
-            user_id=approver_id,
-            response={"action": "proceed", "comment": "Looks good!"},
+    Example (NEW - Official API):
+        from src.integrations.agent_framework.core import (
+            HumanApprovalExecutor,
+            ApprovalRequest,
+            ApprovalResponse,
+        )
+
+        executor = HumanApprovalExecutor(name="approval-gate")
+
+        # In workflow
+        request = ApprovalRequest(
+            action="approve_draft",
+            details="Please review this response.",
+            risk_level="medium",
+        )
+
+        # Later, respond via workflow
+        await workflow.respond(
+            executor_name="approval-gate",
+            response=ApprovalResponse(
+                approved=True,
+                reason="Looks good!",
+                approver="user@company.com",
+            )
         )
     """
 
@@ -165,6 +206,7 @@ class CheckpointService:
         self,
         repository: CheckpointRepository,
         default_timeout_hours: int = 24,
+        approval_executor: Optional["HumanApprovalExecutor"] = None,
     ):
         """
         Initialize checkpoint service.
@@ -172,9 +214,11 @@ class CheckpointService:
         Args:
             repository: CheckpointRepository instance
             default_timeout_hours: Default checkpoint timeout in hours
+            approval_executor: Optional HumanApprovalExecutor for new API integration
         """
         self._repository = repository
         self._default_timeout_hours = default_timeout_hours
+        self._approval_executor = approval_executor
 
     async def create_checkpoint(
         self,
@@ -287,6 +331,10 @@ class CheckpointService:
         """
         Approve a pending checkpoint.
 
+        .. deprecated::
+            Use HumanApprovalExecutor with workflow.respond() instead.
+            See Sprint 28 migration guide.
+
         Args:
             checkpoint_id: Checkpoint UUID
             user_id: User approving the checkpoint
@@ -299,6 +347,14 @@ class CheckpointService:
         Raises:
             ValueError: If checkpoint is not in PENDING status
         """
+        warnings.warn(
+            "approve_checkpoint() is deprecated. "
+            "Use HumanApprovalExecutor with workflow.respond() instead. "
+            "See: from src.integrations.agent_framework.core import HumanApprovalExecutor",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         checkpoint = await self._repository.get(checkpoint_id)
         if checkpoint is None:
             return None
@@ -339,6 +395,10 @@ class CheckpointService:
         """
         Reject a pending checkpoint.
 
+        .. deprecated::
+            Use HumanApprovalExecutor with workflow.respond() instead.
+            See Sprint 28 migration guide.
+
         Args:
             checkpoint_id: Checkpoint UUID
             user_id: User rejecting the checkpoint
@@ -351,6 +411,14 @@ class CheckpointService:
         Raises:
             ValueError: If checkpoint is not in PENDING status
         """
+        warnings.warn(
+            "reject_checkpoint() is deprecated. "
+            "Use HumanApprovalExecutor with workflow.respond() instead. "
+            "See: from src.integrations.agent_framework.core import HumanApprovalExecutor",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         checkpoint = await self._repository.get(checkpoint_id)
         if checkpoint is None:
             return None
@@ -421,3 +489,179 @@ class CheckpointService:
             True if deleted, False if not found
         """
         return await self._repository.delete(checkpoint_id)
+
+    # =========================================================================
+    # Sprint 28: HumanApprovalExecutor Integration Methods
+    # =========================================================================
+
+    def set_approval_executor(
+        self,
+        executor: "HumanApprovalExecutor",
+    ) -> None:
+        """
+        Set the HumanApprovalExecutor for official API integration.
+
+        Args:
+            executor: HumanApprovalExecutor instance
+        """
+        self._approval_executor = executor
+        logger.info(
+            f"CheckpointService integrated with HumanApprovalExecutor: {executor.name}"
+        )
+
+    def get_approval_executor(self) -> Optional["HumanApprovalExecutor"]:
+        """
+        Get the configured HumanApprovalExecutor.
+
+        Returns:
+            HumanApprovalExecutor or None if not configured
+        """
+        return self._approval_executor
+
+    async def create_checkpoint_with_approval(
+        self,
+        execution_id: UUID,
+        node_id: str,
+        payload: Dict[str, Any],
+        timeout_hours: Optional[int] = None,
+        notes: Optional[str] = None,
+        action: Optional[str] = None,
+        risk_level: Optional[str] = None,
+    ) -> CheckpointData:
+        """
+        Create checkpoint and register with HumanApprovalExecutor.
+
+        This method bridges the legacy checkpoint storage with the new
+        HumanApprovalExecutor system. It:
+        1. Creates a checkpoint in the database (storage)
+        2. Registers an approval request with HumanApprovalExecutor (if configured)
+
+        Args:
+            execution_id: Parent execution UUID
+            node_id: Workflow node creating the checkpoint
+            payload: Data to be reviewed by human
+            timeout_hours: Hours until checkpoint expires
+            notes: Optional notes or context
+            action: Optional action description for approval request
+            risk_level: Optional risk level (low, medium, high, critical)
+
+        Returns:
+            Created checkpoint data
+        """
+        # Create checkpoint in storage
+        checkpoint = await self.create_checkpoint(
+            execution_id=execution_id,
+            node_id=node_id,
+            payload=payload,
+            timeout_hours=timeout_hours,
+            notes=notes,
+        )
+
+        # Register with approval executor if configured
+        if self._approval_executor:
+            try:
+                # Import here to avoid circular dependency
+                from src.integrations.agent_framework.core.approval import (
+                    ApprovalRequest,
+                    RiskLevel,
+                )
+
+                # Build approval request
+                request = ApprovalRequest(
+                    action=action or f"approve_{node_id}",
+                    details=notes or str(payload),
+                    risk_level=risk_level or "medium",
+                    context={
+                        "checkpoint_id": str(checkpoint.id),
+                        "execution_id": str(execution_id),
+                        "node_id": node_id,
+                        "payload": payload,
+                    },
+                    requester="checkpoint_service",
+                    workflow_id=None,  # Can be set by caller
+                    execution_id=str(execution_id),
+                )
+
+                # Register with executor
+                await self._approval_executor.on_request_created(request, None)
+
+                logger.info(
+                    f"Checkpoint {checkpoint.id} registered with approval executor"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to register checkpoint with approval executor: {e}"
+                )
+
+        return checkpoint
+
+    async def handle_approval_response(
+        self,
+        checkpoint_id: UUID,
+        approved: bool,
+        approver: str,
+        reason: str,
+        conditions: Optional[List[str]] = None,
+    ) -> Optional[CheckpointData]:
+        """
+        Handle approval response and update checkpoint.
+
+        This method bridges the HumanApprovalExecutor response back to
+        the legacy checkpoint storage system.
+
+        Args:
+            checkpoint_id: Checkpoint UUID
+            approved: Whether approved
+            approver: Who approved/rejected
+            reason: Reason for decision
+            conditions: Optional conditions on approval
+
+        Returns:
+            Updated checkpoint data or None if not found
+        """
+        checkpoint = await self._repository.get(checkpoint_id)
+        if checkpoint is None:
+            return None
+
+        if checkpoint.status != CheckpointStatus.PENDING.value:
+            logger.warning(
+                f"Checkpoint {checkpoint_id} not in PENDING status, "
+                f"current status: {checkpoint.status}"
+            )
+            return None
+
+        # Build response data
+        response_data = {
+            "approved": approved,
+            "reason": reason,
+            "conditions": conditions or [],
+        }
+
+        # Update status
+        new_status = (
+            CheckpointStatus.APPROVED.value if approved
+            else CheckpointStatus.REJECTED.value
+        )
+
+        updated = await self._repository.update_status(
+            checkpoint_id=checkpoint_id,
+            status=new_status,
+            response=response_data,
+            responded_by=None,  # Using approver string instead of UUID
+        )
+
+        if updated:
+            # Update notes with approver info
+            if updated.notes:
+                updated.notes = f"{updated.notes}\nApproved by: {approver}"
+            else:
+                updated.notes = f"Approved by: {approver}"
+
+            logger.info(
+                f"Checkpoint {checkpoint_id} "
+                f"{'approved' if approved else 'rejected'} "
+                f"via HumanApprovalExecutor by {approver}"
+            )
+            return CheckpointData.from_model(updated)
+
+        return None
