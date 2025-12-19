@@ -7,11 +7,13 @@
 # This module adapts the existing WorkflowNode concept to the official
 # Microsoft Agent Framework Executor interface.
 #
-# Official API Pattern (from workflows-api.md):
-#   @Executor.register
-#   class MyExecutor(Executor[InputType, OutputType]):
-#       async def execute(self, input: InputType, context) -> OutputType:
-#           ...
+# Official API Pattern (from agent_framework samples):
+#   from agent_framework import Executor, WorkflowContext, handler
+#
+#   class MyExecutor(Executor):
+#       @handler
+#       async def handle(self, input: InputType, ctx: WorkflowContext) -> None:
+#           await ctx.send_message(result)
 #
 # Key Features:
 #   - Supports AGENT, GATEWAY, START, END node types
@@ -19,8 +21,8 @@
 #   - Supports function execution for gateway/function nodes
 #   - Proper error handling with success/failure status
 #
-# IMPORTANT: Uses official Agent Framework API
-#   from agent_framework.workflows import Executor
+# IMPORTANT: Uses official Agent Framework API with @handler decorator
+#   from agent_framework import Executor, WorkflowContext, handler
 # =============================================================================
 
 from typing import Any, Dict, List, Optional, Callable, Union
@@ -32,9 +34,10 @@ import logging
 from pydantic import BaseModel, Field
 
 # Official Agent Framework Import - MUST use this
-from agent_framework.workflows import Executor
+# Note: Classes are directly under agent_framework, not agent_framework.workflows
+from agent_framework import Executor, WorkflowContext, handler
 
-# Import existing domain models (will add deprecation warnings later)
+# Import domain models directly from models (not from __init__ to avoid circular imports)
 from src.domain.workflows.models import WorkflowNode, NodeType
 
 
@@ -91,8 +94,7 @@ class NodeOutput(BaseModel):
 # WorkflowNodeExecutor - Official Executor Implementation
 # =============================================================================
 
-@Executor.register
-class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
+class WorkflowNodeExecutor(Executor):
     """
     Workflow node executor adapter.
 
@@ -108,11 +110,10 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         >>> from src.domain.workflows.models import WorkflowNode, NodeType
         >>> node = WorkflowNode(id="classifier", type=NodeType.AGENT, agent_id=uuid)
         >>> executor = WorkflowNodeExecutor(node=node, agent_service=agent_svc)
-        >>> result = await executor.execute(NodeInput(data={"query": "help"}), ctx)
-        >>> print(result.success)  # True
+        >>> # Register with WorkflowBuilder and run via workflow.run()
 
-    IMPORTANT: This class uses the official @Executor.register decorator
-    from agent_framework.workflows.Executor
+    IMPORTANT: This class uses the official @handler decorator
+    from agent_framework to mark handler methods.
     """
 
     def __init__(
@@ -135,6 +136,8 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         self._node = node
         self._agent_service = agent_service
         self._function_registry = function_registry or {}
+        # Internal context storage for sharing state between nodes
+        self._context_storage: Dict[str, Any] = {}
 
         # Validate requirements
         if node.type == NodeType.AGENT and not agent_service:
@@ -153,32 +156,40 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         """Get the node type."""
         return self._node.type
 
-    async def execute(self, input: NodeInput, context) -> NodeOutput:
+    @handler
+    async def handle_node_input(
+        self,
+        input_data: NodeInput,
+        ctx: WorkflowContext
+    ) -> None:
         """
-        Execute the workflow node.
+        Main handler for workflow node execution.
 
-        This is the main entry point called by the workflow engine.
-        Routes to the appropriate handler based on node type.
+        This is the entry point called by the workflow engine when data
+        arrives at this node. Routes to the appropriate internal handler
+        based on node type and sends the result to the next node.
+
+        IMPORTANT: Uses official @handler decorator from agent_framework.
 
         Args:
-            input: The NodeInput containing data and context
-            context: Workflow context for sharing state (use context.get/set)
-
-        Returns:
-            NodeOutput with result, success status, and metadata
+            input_data: Dictionary containing input data for this node
+            ctx: WorkflowContext for sending messages and yielding outputs
         """
         start_time = datetime.utcnow()
 
         try:
+            # input_data is already NodeInput type (enforced by @handler decorator)
+            node_input = input_data
+
             # Route to appropriate handler based on node type
             if self._node.type == NodeType.START:
-                result = await self._execute_start_node(input, context)
+                result = await self._execute_start_node(node_input)
             elif self._node.type == NodeType.END:
-                result = await self._execute_end_node(input, context)
+                result = await self._execute_end_node(node_input)
             elif self._node.type == NodeType.AGENT:
-                result = await self._execute_agent_node(input, context)
+                result = await self._execute_agent_node(node_input)
             elif self._node.type == NodeType.GATEWAY:
-                result = await self._execute_gateway_node(input, context)
+                result = await self._execute_gateway_node(node_input)
             else:
                 raise ValueError(f"Unknown node type: {self._node.type}")
 
@@ -186,7 +197,8 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
             end_time = datetime.utcnow()
             execution_ms = (end_time - start_time).total_seconds() * 1000
 
-            return NodeOutput(
+            # Create output
+            output = NodeOutput(
                 result=result,
                 success=True,
                 metadata={
@@ -198,6 +210,9 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
                 }
             )
 
+            # Send result to next node via official API
+            await ctx.send_message(output.model_dump())
+
         except Exception as e:
             logger.error(
                 f"Node '{self._node.id}' execution failed: {str(e)}",
@@ -207,7 +222,7 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
             end_time = datetime.utcnow()
             execution_ms = (end_time - start_time).total_seconds() * 1000
 
-            return NodeOutput(
+            error_output = NodeOutput(
                 result=None,
                 success=False,
                 error=str(e),
@@ -220,7 +235,19 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
                 }
             )
 
-    async def _execute_start_node(self, input: NodeInput, context) -> Any:
+            # Send error result to next node
+            await ctx.send_message(error_output.model_dump())
+
+    # Helper methods for context storage (internal state management)
+    def _context_set(self, key: str, value: Any) -> None:
+        """Set a value in internal context storage."""
+        self._context_storage[key] = value
+
+    def _context_get(self, key: str, default: Any = None) -> Any:
+        """Get a value from internal context storage."""
+        return self._context_storage.get(key, default)
+
+    async def _execute_start_node(self, input: NodeInput) -> Any:
         """
         Execute a START node.
 
@@ -229,7 +256,6 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
 
         Args:
             input: The input data
-            context: Workflow context
 
         Returns:
             The input data (pass-through)
@@ -239,12 +265,12 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         # Set initial variables from config if specified
         initial_vars = self._node.config.get("initial_variables", {})
         for key, value in initial_vars.items():
-            context.set(key, value)
+            self._context_set(key, value)
 
         # Pass through input data
         return input.data
 
-    async def _execute_end_node(self, input: NodeInput, context) -> Any:
+    async def _execute_end_node(self, input: NodeInput) -> Any:
         """
         Execute an END node.
 
@@ -252,7 +278,6 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
 
         Args:
             input: The input data
-            context: Workflow context
 
         Returns:
             The final result (may include transformations)
@@ -262,11 +287,11 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         # Check for output transformation in config
         output_key = self._node.config.get("output_key")
         if output_key:
-            return context.get(output_key, input.data)
+            return self._context_get(output_key, input.data)
 
         return input.data
 
-    async def _execute_agent_node(self, input: NodeInput, context) -> Any:
+    async def _execute_agent_node(self, input: NodeInput) -> Any:
         """
         Execute an AGENT node.
 
@@ -274,7 +299,6 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
 
         Args:
             input: The input data
-            context: Workflow context
 
         Returns:
             Agent execution result
@@ -293,7 +317,7 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
             )
 
         # Prepare agent input
-        agent_input = self._prepare_agent_input(input, context)
+        agent_input = self._prepare_agent_input(input)
 
         # Execute agent via service
         result = await self._agent_service.execute(
@@ -305,20 +329,19 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         # Store result in context if output_key specified
         output_key = self._node.config.get("output_key")
         if output_key:
-            context.set(output_key, result)
+            self._context_set(output_key, result)
 
         return result
 
-    def _prepare_agent_input(self, input: NodeInput, context) -> Dict[str, Any]:
+    def _prepare_agent_input(self, input: NodeInput) -> Dict[str, Any]:
         """
         Prepare input data for agent execution.
 
-        Merges input data with context and applies any transformations
+        Merges input data with internal context and applies any transformations
         specified in node config.
 
         Args:
             input: The node input
-            context: Workflow context
 
         Returns:
             Prepared input dictionary for agent
@@ -329,7 +352,7 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         # Merge context variables if specified
         context_keys = self._node.config.get("context_keys", [])
         for key in context_keys:
-            value = context.get(key)
+            value = self._context_get(key)
             if value is not None:
                 agent_input[key] = value
 
@@ -341,7 +364,7 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
 
         return agent_input
 
-    async def _execute_gateway_node(self, input: NodeInput, context) -> Any:
+    async def _execute_gateway_node(self, input: NodeInput) -> Any:
         """
         Execute a GATEWAY node.
 
@@ -353,7 +376,6 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
 
         Args:
             input: The input data
-            context: Workflow context
 
         Returns:
             Gateway evaluation result with routing information
@@ -375,7 +397,7 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
             # Inclusive gateway - evaluate all conditions
             matching_targets = []
             for condition in conditions:
-                if await self._evaluate_condition(condition, input, context):
+                if await self._evaluate_condition(condition, input):
                     matching_targets.append(condition.get("target"))
 
             return {
@@ -387,7 +409,7 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         else:  # exclusive (default)
             # Exclusive gateway - first matching condition
             for condition in conditions:
-                if await self._evaluate_condition(condition, input, context):
+                if await self._evaluate_condition(condition, input):
                     return {
                         "gateway_type": "exclusive",
                         "target": condition.get("target"),
@@ -406,7 +428,6 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         self,
         condition: Dict[str, Any],
         input: NodeInput,
-        context
     ) -> bool:
         """
         Evaluate a gateway condition.
@@ -417,7 +438,6 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         Args:
             condition: Condition configuration
             input: The input data
-            context: Workflow context
 
         Returns:
             True if condition is met, False otherwise
@@ -429,13 +449,13 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
             # Function-based condition
             func = self._function_registry[func_name]
             if asyncio.iscoroutinefunction(func):
-                return await func(input.data, context)
+                return await func(input.data, self._context_storage)
             else:
-                return func(input.data, context)
+                return func(input.data, self._context_storage)
 
         elif expr:
             # Expression-based condition (safe evaluation)
-            return self._safe_evaluate_expression(expr, input.data, context)
+            return self._safe_evaluate_expression(expr, input.data)
 
         return True  # Default to true if no condition specified
 
@@ -443,7 +463,6 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         self,
         expr: str,
         data: Dict[str, Any],
-        context
     ) -> bool:
         """
         Safely evaluate a condition expression.
@@ -459,7 +478,6 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
         Args:
             expr: Expression string
             data: Input data dictionary
-            context: Workflow context
 
         Returns:
             Evaluation result
@@ -481,10 +499,10 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
                     key = parts[0].strip()
                     value_str = parts[1].strip()
 
-                    # Get actual value from data or context
+                    # Get actual value from data or internal context storage
                     actual_value = data.get(key)
                     if actual_value is None:
-                        actual_value = context.get(key)
+                        actual_value = self._context_get(key)
 
                     # Parse expected value
                     try:
@@ -529,7 +547,7 @@ class WorkflowNodeExecutor(Executor[NodeInput, NodeOutput]):
                         return actual_value in expected_value
 
         # Default: treat as boolean key check
-        return bool(data.get(expr) or context.get(expr))
+        return bool(data.get(expr) or self._context_get(expr))
 
 
 # =============================================================================

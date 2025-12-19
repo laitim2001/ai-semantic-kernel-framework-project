@@ -1,0 +1,770 @@
+{
+  "timestamp": "2025-12-18T16:10:53.877317",
+  "summary": {
+    "scenarios": {
+      "total": 4,
+      "passed": 0,
+      "failed": 4,
+      "pass_rate": 0.0
+    },
+    "tests": {
+      "total": 30,
+      "passed": 7,
+      "failed": 23,
+      "skipped": 0,
+      "pass_rate": 0.23333333333333334
+    },
+    "total_duration_ms": 8718.414068222046,
+    "total_duration_formatted": "8.72s"
+  },
+  "scenarios": [
+    {
+      "scenario_id": "scenario_001",
+      "scenario_name": "IT 工單智能分派",
+      "status": "failed",
+      "total_tests": 6,
+      "passed": 0,
+      "failed": 6,
+      "skipped": 0,
+      "duration_ms": 1970.7796573638916,
+      "test_results": [
+        {
+          "test_id": "TC-001-01",
+          "test_name": "簡單工單直接分派",
+          "status": "failed",
+          "duration_ms": 8.498668670654297,
+          "message": "Some APIs not available",
+          "details": {
+            "input": {
+              "ticket_id": "TEST-001",
+              "description": "我忘記了密碼，需要重置",
+              "requester": {
+                "name": "測試用戶",
+                "department": "銷售部"
+              }
+            },
+            "expected": {
+              "classification_type": "software",
+              "priority": "P4",
+              "needs_approval": false
+            },
+            "api_availability": {
+              "/api/v1/agents": false,
+              "/api/v1/workflows": false,
+              "/api/v1/executions": false
+            }
+          },
+          "timestamp": "2025-12-18T16:10:47.081729"
+        },
+        {
+          "test_id": "TC-001-02",
+          "test_name": "中等工單智能路由",
+          "status": "failed",
+          "duration_ms": 8.78763198852539,
+          "message": "Some APIs not available",
+          "details": {
+            "input": {
+              "ticket_id": "TEST-002",
+              "description": "無法連接公司 VPN，已嘗試重啟電腦",
+              "requester": {
+                "name": "遠程員工",
+                "department": "研發部"
+              }
+            },
+            "expected": {
+              "classification_type": "network",
+              "priority": "P3",
+              "needs_approval": false
+            },
+            "api_availability": {
+              "/api/v1/agents": false,
+              "/api/v1/workflows": false,
+              "/api/v1/executions": false
+            }
+          },
+          "timestamp": "2025-12-18T16:10:47.090840"
+        },
+        {
+          "test_id": "TC-001-03",
+          "test_name": "複雜工單人工審批",
+          "status": "failed",
+          "duration_ms": 8.487701416015625,
+          "message": "Some APIs not available",
+          "details": {
+            "input": {
+              "ticket_id": "TEST-003",
+              "description": "整層樓約 50 人無法上網，所有業務停擺",
+              "requester": {
+                "name": "樓層主管",
+                "department": "行政部"
+              },
+              "priority_hint": "P1"
+            },
+            "expected": {
+              "classification_type": "network",
+              "priority": "P1",
+              "needs_approval": true,
+              "checkpoint_triggered": true
+            },
+            "api_availability": {
+              "/api/v1/agents": false,
+              "/api/v1/workflows": false,
+              "/api/v1/executions": false
+            },
+            "checkpoint_api": false
+          },
+          "timestamp": "2025-12-18T16:10:47.099472"
+        },
+        {
+          "test_id": "TC-001-04",
+          "test_name": "升級工單交接",
+          "status": "failed",
+          "duration_ms": 9.353876113891602,
+          "message": "Some APIs not available",
+          "details": {
+            "input": {
+              "ticket_id": "TEST-004",
+              "description": "問題已經報告 3 次都沒有解決，需要專家處理",
+              "requester": {
+                "name": "不滿意的用戶",
+                "department": "財務部"
+              },
+              "metadata": {
+                "previous_tickets": [
+                  "PREV-001",
+                  "PREV-002",
+                  "PREV-003"
+                ],
+                "escalation_requested": true
+              }
+            },
+            "expected": {
+              "handoff_triggered": true,
+              "target_agent": "escalation"
+            },
+            "api_availability": {
+              "/api/v1/agents": false,
+              "/api/v1/workflows": false,
+              "/api/v1/executions": false
+            },
+            "handoff_api": false
+          },
+          "timestamp": "2025-12-18T16:10:47.108966"
+        },
+        {
+          "test_id": "TC-001-05",
+          "test_name": "Agent CRUD 驗證",
+          "status": "failed",
+          "duration_ms": 2.7358531951904297,
+          "message": "Some CRUD operations failed",
+          "details": {
+            "create": {
+              "status_code": 307,
+              "success": false
+            }
+          },
+          "timestamp": "2025-12-18T16:10:47.111846"
+        },
+        {
+          "test_id": "TC-001-06",
+          "test_name": "Workflow 執行驗證",
+          "status": "failed",
+          "duration_ms": 8.391380310058594,
+          "message": "Workflows API not available: 307",
+          "details": {
+            "api_check": false
+          },
+          "timestamp": "2025-12-18T16:10:47.120381"
+        }
+      ],
+      "timestamp": "2025-12-18T16:10:47.127218"
+    },
+    {
+      "scenario_id": "scenario_002",
+      "scenario_name": "多 Agent 協作分析",
+      "status": "failed",
+      "total_tests": 7,
+      "passed": 1,
+      "failed": 6,
+      "skipped": 0,
+      "duration_ms": 1578.993320465088,
+      "test_results": [
+        {
+          "test_id": "TC-002-01",
+          "test_name": "3 Agent 基本討論",
+          "status": "failed",
+          "duration_ms": 2.8290748596191406,
+          "message": "GroupChat API not available",
+          "details": {
+            "input": {
+              "analysis_topic": "是否應該將現有的單體架構遷移到微服務架構？",
+              "speaker_selection_method": "round_robin",
+              "max_rounds": 5
+            },
+            "expected": {
+              "discussion_rounds": 5,
+              "all_participants_spoke": true,
+              "report_generated": true
+            },
+            "groupchat_api": false
+          },
+          "timestamp": "2025-12-18T16:10:48.670564"
+        },
+        {
+          "test_id": "TC-002-02",
+          "test_name": "輪流發言模式",
+          "status": "failed",
+          "duration_ms": 2.820730209350586,
+          "message": "GroupChat API not available",
+          "details": {
+            "input": {
+              "analysis_topic": "新產品上市策略評估",
+              "speaker_selection_method": "round_robin"
+            },
+            "expected": {
+              "speaking_order_correct": true
+            },
+            "groupchat_api": false
+          },
+          "timestamp": "2025-12-18T16:10:48.673528"
+        },
+        {
+          "test_id": "TC-002-03",
+          "test_name": "專長發言模式",
+          "status": "failed",
+          "duration_ms": 4.001140594482422,
+          "message": "GroupChat API not available",
+          "details": {
+            "input": {
+              "analysis_topic": "API 效能優化方案",
+              "speaker_selection_method": "expertise"
+            },
+            "expected": {
+              "expertise_based_selection": true
+            },
+            "groupchat_api": false
+          },
+          "timestamp": "2025-12-18T16:10:48.677714"
+        },
+        {
+          "test_id": "TC-002-04",
+          "test_name": "投票達成共識",
+          "status": "failed",
+          "duration_ms": 2.9833316802978516,
+          "message": "GroupChat API not available",
+          "details": {
+            "input": {
+              "analysis_topic": "是否採用新的 CI/CD 工具？",
+              "require_voting": true
+            },
+            "expected": {
+              "voting_triggered": true,
+              "voting_completed": true,
+              "result_recorded": true
+            },
+            "groupchat_api": false
+          },
+          "timestamp": "2025-12-18T16:10:48.680845"
+        },
+        {
+          "test_id": "TC-002-05",
+          "test_name": "對話記憶持久化",
+          "status": "failed",
+          "duration_ms": 2.4881362915039062,
+          "message": "GroupChat API not available",
+          "details": {
+            "input": {
+              "analysis_topic": "客戶滿意度提升計劃",
+              "max_rounds": 8
+            },
+            "expected": {
+              "memory_saved": true,
+              "message_count_gte": 8,
+              "summary_generated": true
+            },
+            "groupchat_api": false
+          },
+          "timestamp": "2025-12-18T16:10:48.683475"
+        },
+        {
+          "test_id": "TC-002-06",
+          "test_name": "GroupChat API 驗證",
+          "status": "failed",
+          "duration_ms": 12.467145919799805,
+          "message": "Some GroupChat APIs not available",
+          "details": {
+            "groupchat_list": {
+              "status_code": 307,
+              "available": false
+            },
+            "sessions_list": {
+              "status_code": 422,
+              "available": false
+            },
+            "speaker_selection": {
+              "status_code": 404,
+              "available": true
+            },
+            "voting": {
+              "status_code": 422,
+              "available": false
+            }
+          },
+          "timestamp": "2025-12-18T16:10:48.696075"
+        },
+        {
+          "test_id": "TC-002-07",
+          "test_name": "Memory 服務驗證",
+          "status": "passed",
+          "duration_ms": 9.172439575195312,
+          "message": "Memory service check completed",
+          "details": {
+            "memory_list": {
+              "status_code": 404,
+              "available": true
+            },
+            "memory_search": {
+              "status_code": 404,
+              "available": true
+            },
+            "conversations": {
+              "status_code": 404,
+              "available": true
+            }
+          },
+          "timestamp": "2025-12-18T16:10:48.705429"
+        }
+      ],
+      "timestamp": "2025-12-18T16:10:48.706319"
+    },
+    {
+      "scenario_id": "scenario_003",
+      "scenario_name": "自動化報表生成",
+      "status": "failed",
+      "total_tests": 8,
+      "passed": 2,
+      "failed": 6,
+      "skipped": 0,
+      "duration_ms": 1917.0920848846436,
+      "test_results": [
+        {
+          "test_id": "TC-003-01",
+          "test_name": "單數據源報表",
+          "status": "failed",
+          "duration_ms": 6.612300872802734,
+          "message": "Reporting scenario APIs verified",
+          "details": {
+            "input": {
+              "data_sources": [
+                "internal_db"
+              ],
+              "report_type": "simple"
+            },
+            "expected": {
+              "data_collected": true,
+              "report_generated": true
+            },
+            "workflows_api": false,
+            "triggers_api": true,
+            "requested_sources": [
+              "internal_db"
+            ]
+          },
+          "timestamp": "2025-12-18T16:10:50.345407"
+        },
+        {
+          "test_id": "TC-003-02",
+          "test_name": "多數據源並行收集",
+          "status": "failed",
+          "duration_ms": 8.278131484985352,
+          "message": "Reporting scenario APIs verified",
+          "details": {
+            "input": {
+              "data_sources": [
+                "servicenow",
+                "dynamics365",
+                "internal_db"
+              ],
+              "execution_mode": "parallel"
+            },
+            "expected": {
+              "parallel_execution": true,
+              "all_sources_collected": true,
+              "merge_successful": true
+            },
+            "workflows_api": false,
+            "triggers_api": true,
+            "requested_sources": [
+              "servicenow",
+              "dynamics365",
+              "internal_db"
+            ],
+            "concurrent_api": true
+          },
+          "timestamp": "2025-12-18T16:10:50.353840"
+        },
+        {
+          "test_id": "TC-003-03",
+          "test_name": "緩存命中測試",
+          "status": "failed",
+          "duration_ms": 7.571220397949219,
+          "message": "Reporting scenario APIs verified",
+          "details": {
+            "input": {
+              "repeat_execution": true,
+              "cache_enabled": true
+            },
+            "expected": {
+              "cache_hit": true,
+              "skip_analysis": true
+            },
+            "workflows_api": false,
+            "triggers_api": true,
+            "cache_api": true
+          },
+          "timestamp": "2025-12-18T16:10:50.361550"
+        },
+        {
+          "test_id": "TC-003-04",
+          "test_name": "定時觸發測試",
+          "status": "failed",
+          "duration_ms": 5.253791809082031,
+          "message": "Reporting scenario APIs verified",
+          "details": {
+            "input": {
+              "trigger_type": "cron",
+              "schedule": "*/5 * * * *"
+            },
+            "expected": {
+              "trigger_registered": true,
+              "schedule_valid": true
+            },
+            "workflows_api": false,
+            "triggers_api": true
+          },
+          "timestamp": "2025-12-18T16:10:50.366957"
+        },
+        {
+          "test_id": "TC-003-05",
+          "test_name": "報表通知測試",
+          "status": "failed",
+          "duration_ms": 7.264137268066406,
+          "message": "Reporting scenario APIs verified",
+          "details": {
+            "input": {
+              "notification_channels": [
+                "email",
+                "teams"
+              ]
+            },
+            "expected": {
+              "notification_api": true
+            },
+            "workflows_api": false,
+            "triggers_api": true,
+            "notifications_api": true
+          },
+          "timestamp": "2025-12-18T16:10:50.374378"
+        },
+        {
+          "test_id": "TC-003-06",
+          "test_name": "Connector API 驗證",
+          "status": "failed",
+          "duration_ms": 41.46766662597656,
+          "message": "Connector API check completed",
+          "details": {
+            "connectors_list": {
+              "status_code": 307,
+              "available": false
+            },
+            "connector_types": {
+              "status_code": 200,
+              "available": true
+            }
+          },
+          "timestamp": "2025-12-18T16:10:50.415975"
+        },
+        {
+          "test_id": "TC-003-07",
+          "test_name": "Concurrent Execution 驗證",
+          "status": "passed",
+          "duration_ms": 7.023096084594727,
+          "message": "Concurrent execution API check completed",
+          "details": {
+            "concurrent_executions": {
+              "status_code": 404,
+              "available": true
+            },
+            "concurrent_branches": {
+              "status_code": 404,
+              "available": true
+            },
+            "fork_join": {
+              "status_code": 404,
+              "available": true
+            }
+          },
+          "timestamp": "2025-12-18T16:10:50.423141"
+        },
+        {
+          "test_id": "TC-003-08",
+          "test_name": "Cache 服務驗證",
+          "status": "passed",
+          "duration_ms": 199.70059394836426,
+          "message": "Cache service check completed",
+          "details": {
+            "cache_list": {
+              "status_code": 404,
+              "available": true
+            },
+            "cache_stats": {
+              "status_code": 200,
+              "available": true
+            },
+            "llm_cache": {
+              "status_code": 404,
+              "available": true
+            }
+          },
+          "timestamp": "2025-12-18T16:10:50.623011"
+        }
+      ],
+      "timestamp": "2025-12-18T16:10:50.623515"
+    },
+    {
+      "scenario_id": "scenario_004",
+      "scenario_name": "複雜任務自主規劃",
+      "status": "failed",
+      "total_tests": 9,
+      "passed": 4,
+      "failed": 5,
+      "skipped": 0,
+      "duration_ms": 3251.549005508423,
+      "test_results": [
+        {
+          "test_id": "TC-004-01",
+          "test_name": "基本任務分解",
+          "status": "failed",
+          "duration_ms": 21.770715713500977,
+          "message": "Planning scenario APIs verified",
+          "details": {
+            "input": {
+              "goal": "設置開發環境並運行第一個測試",
+              "max_depth": 2
+            },
+            "expected": {
+              "task_count_gte": 3,
+              "has_dependencies": true,
+              "all_tasks_assigned": true
+            },
+            "planning_api": true,
+            "nested_api": true,
+            "workflows_api": false,
+            "capabilities_api": true,
+            "handoff_api": true
+          },
+          "timestamp": "2025-12-18T16:10:52.787867"
+        },
+        {
+          "test_id": "TC-004-02",
+          "test_name": "嵌套工作流執行",
+          "status": "failed",
+          "duration_ms": 13.061761856079102,
+          "message": "Planning scenario APIs verified",
+          "details": {
+            "input": {
+              "goal": "部署微服務應用",
+              "subtasks": [
+                "準備基礎設施",
+                "部署數據庫",
+                "部署後端服務",
+                "部署前端應用"
+              ]
+            },
+            "expected": {
+              "nested_execution": true,
+              "context_propagated": true,
+              "correct_order": true
+            },
+            "planning_api": true,
+            "nested_api": true,
+            "workflows_api": false,
+            "capabilities_api": true,
+            "handoff_api": true
+          },
+          "timestamp": "2025-12-18T16:10:52.801094"
+        },
+        {
+          "test_id": "TC-004-03",
+          "test_name": "關鍵節點審批",
+          "status": "failed",
+          "duration_ms": 15.737295150756836,
+          "message": "Planning scenario APIs verified",
+          "details": {
+            "input": {
+              "goal": "更新生產環境配置",
+              "has_critical_tasks": true
+            },
+            "expected": {
+              "checkpoint_triggered": true,
+              "approval_required": true
+            },
+            "planning_api": true,
+            "nested_api": true,
+            "workflows_api": false,
+            "capabilities_api": true,
+            "checkpoints_api": false,
+            "handoff_api": true
+          },
+          "timestamp": "2025-12-18T16:10:52.817018"
+        },
+        {
+          "test_id": "TC-004-04",
+          "test_name": "失敗重試測試",
+          "status": "failed",
+          "duration_ms": 19.129037857055664,
+          "message": "Planning scenario APIs verified",
+          "details": {
+            "input": {
+              "goal": "執行可能失敗的操作",
+              "simulate_failure": true,
+              "failure_count": 2
+            },
+            "expected": {
+              "retry_attempted": true,
+              "retry_count": 2,
+              "eventual_success": true
+            },
+            "planning_api": true,
+            "nested_api": true,
+            "workflows_api": false,
+            "capabilities_api": true,
+            "executions_api": false,
+            "handoff_api": true
+          },
+          "timestamp": "2025-12-18T16:10:52.836322"
+        },
+        {
+          "test_id": "TC-004-05",
+          "test_name": "動態調整測試",
+          "status": "failed",
+          "duration_ms": 12.756824493408203,
+          "message": "Planning scenario APIs verified",
+          "details": {
+            "input": {
+              "goal": "完成軟體開發任務",
+              "mid_execution_change": {
+                "type": "resource_unavailable",
+                "affected_task": "code_review"
+              }
+            },
+            "expected": {
+              "replan_triggered": true,
+              "alternative_assigned": true,
+              "execution_continued": true
+            },
+            "planning_api": true,
+            "nested_api": true,
+            "workflows_api": false,
+            "capabilities_api": true,
+            "handoff_api": true
+          },
+          "timestamp": "2025-12-18T16:10:52.849236"
+        },
+        {
+          "test_id": "TC-004-06",
+          "test_name": "Planning API 驗證",
+          "status": "passed",
+          "duration_ms": 10.495424270629883,
+          "message": "Planning API check completed",
+          "details": {
+            "planning_list": {
+              "status_code": 404,
+              "available": true
+            },
+            "planning_goals": {
+              "status_code": 404,
+              "available": true
+            },
+            "planning_plans": {
+              "status_code": 200,
+              "available": true
+            },
+            "decomposer": {
+              "status_code": 405,
+              "available": true
+            }
+          },
+          "timestamp": "2025-12-18T16:10:52.859892"
+        },
+        {
+          "test_id": "TC-004-07",
+          "test_name": "Nested Workflow API 驗證",
+          "status": "passed",
+          "duration_ms": 8.822202682495117,
+          "message": "Nested Workflow API check completed",
+          "details": {
+            "nested_list": {
+              "status_code": 404,
+              "available": true
+            },
+            "nested_workflows": {
+              "status_code": 404,
+              "available": true
+            },
+            "nested_executions": {
+              "status_code": 404,
+              "available": true
+            }
+          },
+          "timestamp": "2025-12-18T16:10:52.868864"
+        },
+        {
+          "test_id": "TC-004-08",
+          "test_name": "Capability Matcher 驗證",
+          "status": "passed",
+          "duration_ms": 10.55288314819336,
+          "message": "Capability Matcher API check completed",
+          "details": {
+            "capabilities_list": {
+              "status_code": 404,
+              "available": true
+            },
+            "capability_match": {
+              "status_code": 404,
+              "available": true
+            },
+            "handoff_capabilities": {
+              "status_code": 404,
+              "available": true
+            }
+          },
+          "timestamp": "2025-12-18T16:10:52.879582"
+        },
+        {
+          "test_id": "TC-004-09",
+          "test_name": "Checkpoint API 驗證",
+          "status": "passed",
+          "duration_ms": 994.905948638916,
+          "message": "Checkpoint API check completed",
+          "details": {
+            "checkpoints_list": {
+              "status_code": 307,
+              "available": false
+            },
+            "pending_approvals": {
+              "status_code": 500,
+              "available": false
+            },
+            "approvals_list": {
+              "status_code": 404,
+              "available": true
+            }
+          },
+          "timestamp": "2025-12-18T16:10:53.874644"
+        }
+      ],
+      "timestamp": "2025-12-18T16:10:53.875214"
+    }
+  ]
+}

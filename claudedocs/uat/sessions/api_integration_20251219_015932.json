@@ -1,0 +1,30 @@
+{
+  "test_plan": "API Integration Test",
+  "executed_at": "2025-12-19T01:59:28.245302",
+  "completed_at": "2025-12-19T01:59:32.620524",
+  "environment": {
+    "base_url": "http://localhost:8000",
+    "test_type": "HTTP API Integration"
+  },
+  "summary": {
+    "total_tests": 1,
+    "passed": 0,
+    "failed": 1,
+    "pass_rate": "0.0%",
+    "total_duration_seconds": 4.38
+  },
+  "results": [
+    {
+      "test_id": 1,
+      "test_name": "Server Health Check",
+      "phase": "Pre-flight",
+      "method": "GET",
+      "endpoint": "/health",
+      "status": "FAIL",
+      "http_status": 0,
+      "duration_ms": 0,
+      "response": {},
+      "error": "Connection error: All connection attempts failed"
+    }
+  ]
+}

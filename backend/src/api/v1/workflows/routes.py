@@ -23,6 +23,7 @@
 #   - WorkflowDefinitionAdapter: src/integrations/agent_framework/core/workflow.py
 # =============================================================================
 
+import json
 import logging
 from typing import Optional
 from uuid import UUID, uuid4
@@ -427,11 +428,24 @@ async def execute_workflow(
                 "completed_at": end_time,
             })
 
+        # Convert result to JSON string for API response
+        result_str = None
+        if result.result is not None:
+            try:
+                if isinstance(result.result, str):
+                    result_str = result.result
+                elif isinstance(result.result, (dict, list)):
+                    result_str = json.dumps(result.result, default=str)
+                else:
+                    result_str = str(result.result)
+            except Exception:
+                result_str = str(result.result)
+
         return WorkflowExecutionResponse(
             execution_id=execution_id,
             workflow_id=workflow_id,
             status="completed" if result.success else "failed",
-            result=result.result,
+            result=result_str,
             node_results=node_results,
             stats={
                 "total_llm_calls": 0,

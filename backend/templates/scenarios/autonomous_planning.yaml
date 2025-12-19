@@ -1,0 +1,580 @@
+# =============================================================================
+# Scenario 4: Autonomous Task Planning - 複雜任務自主規劃
+# =============================================================================
+# 完整的端到端場景，展示如何使用 IPA Platform 實現任務自動分解、
+# 嵌套工作流執行、動態資源分配和失敗重試。
+#
+# 涉及功能: Planning (TaskDecomposer), Nested Workflow, Handoff,
+#           Capability Matcher, Checkpoint, Memory, Trial-and-Error
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# Created: 2025-12-18
+# =============================================================================
+
+scenario:
+  id: scenario_004_autonomous_planning
+  name: 複雜任務自主規劃
+  description: |
+    用戶提出高層次目標，系統自動分解為子任務，
+    動態分配資源，並在執行過程中自我調整。
+    支援嵌套工作流、失敗重試和關鍵節點人工審批。
+  version: "1.0.0"
+  category: automation
+  status: draft
+
+# -----------------------------------------------------------------------------
+# Section 1: Agents 定義
+# -----------------------------------------------------------------------------
+agents:
+  # Planning Agent - 任務規劃
+  - id: planning_agent
+    name: 任務規劃 Agent
+    description: 負責分解和規劃複雜任務
+    instructions: |
+      你是專業的任務規劃專家。你的職責是：
+      1. 分析用戶的高層次目標
+      2. 將目標分解為可執行的子任務
+      3. 識別任務間的依賴關係
+      4. 估算每個任務的資源需求
+      5. 制定執行計劃和時間表
+
+      請使用以下格式輸出任務分解：
+      - task_id: 唯一標識符
+      - name: 任務名稱
+      - description: 任務描述
+      - dependencies: 依賴的任務 ID 列表
+      - required_capabilities: 所需能力列表
+      - estimated_duration: 預估時長
+      - priority: 優先級 (critical, high, medium, low)
+    tools:
+      - task_decomposer
+      - dependency_analyzer
+      - resource_estimator
+    model: gpt-4
+    temperature: 0.5
+    capabilities:
+      - task_planning
+      - dependency_analysis
+      - resource_estimation
+
+  # Coordinator Agent - 協調執行
+  - id: coordinator_agent
+    name: 執行協調 Agent
+    description: 協調子任務的執行
+    instructions: |
+      你是任務執行協調者。你的職責是：
+      1. 按照計劃調度子任務執行
+      2. 監控任務執行狀態
+      3. 處理任務間的依賴
+      4. 動態調整計劃（如有需要）
+      5. 匯報整體進度
+
+      當任務失敗時，評估是否應該重試或觸發替代方案。
+    tools:
+      - task_scheduler
+      - status_monitor
+      - resource_allocator
+    model: gpt-4
+    temperature: 0.3
+    capabilities:
+      - task_coordination
+      - progress_monitoring
+      - dynamic_adjustment
+
+  # DevOps Agent - 環境配置
+  - id: devops_agent
+    name: DevOps Agent
+    description: 負責環境配置和部署
+    instructions: |
+      你是 DevOps 專家。負責：
+      - 環境準備和配置
+      - 部署和發布
+      - 基礎設施管理
+      - CI/CD 流程執行
+    tools:
+      - infrastructure_manager
+      - deployment_tool
+      - config_manager
+    model: gpt-4
+    temperature: 0.3
+    capabilities:
+      - infrastructure_setup
+      - deployment
+      - configuration_management
+      - ci_cd
+
+  # Developer Agent - 代碼開發
+  - id: developer_agent
+    name: 開發者 Agent
+    description: 負責代碼開發和修改
+    instructions: |
+      你是軟體開發專家。負責：
+      - 代碼編寫和修改
+      - 代碼審查
+      - 技術文檔編寫
+      - 問題修復
+    tools:
+      - code_editor
+      - code_analyzer
+      - test_runner
+    model: gpt-4
+    temperature: 0.5
+    capabilities:
+      - code_development
+      - code_review
+      - documentation
+      - debugging
+
+  # QA Agent - 測試驗證
+  - id: qa_agent
+    name: QA Agent
+    description: 負責測試和質量保證
+    instructions: |
+      你是 QA 專家。負責：
+      - 測試計劃制定
+      - 測試執行
+      - 缺陷報告
+      - 質量評估
+    tools:
+      - test_executor
+      - bug_tracker
+      - coverage_analyzer
+    model: gpt-4
+    temperature: 0.3
+    capabilities:
+      - test_planning
+      - test_execution
+      - quality_assurance
+      - bug_reporting
+
+# -----------------------------------------------------------------------------
+# Section 2: Planning 配置
+# -----------------------------------------------------------------------------
+planning:
+  # 任務分解配置
+  task_decomposer:
+    id: default_decomposer
+    config:
+      max_depth: 3                    # 最大分解深度
+      min_task_duration: 300          # 最小任務時長 (秒)
+      max_subtasks: 10                # 每層最大子任務數
+      decomposition_strategy: hybrid  # hybrid, top_down, bottom_up
+      dependency_detection: auto      # auto, manual
+
+  # 動態規劃配置
+  dynamic_planner:
+    id: default_planner
+    config:
+      enable_replanning: true         # 啟用動態重規劃
+      replan_triggers:
+        - task_failure
+        - resource_unavailable
+        - timeout_exceeded
+        - manual_request
+      replan_cooldown: 60             # 重規劃冷卻時間 (秒)
+
+  # 能力匹配配置
+  capability_matcher:
+    id: default_matcher
+    config:
+      matching_strategy: best_fit     # best_fit, first_fit, round_robin
+      capability_weights:
+        exact_match: 1.0
+        partial_match: 0.7
+        related_match: 0.4
+      fallback_enabled: true
+      fallback_agent: coordinator_agent
+
+# -----------------------------------------------------------------------------
+# Section 3: Workflow 定義
+# -----------------------------------------------------------------------------
+workflow:
+  id: autonomous_planning_workflow
+  name: 複雜任務自主規劃工作流
+  description: 完整的任務自主規劃和執行流程
+
+  nodes:
+    # 節點 1: 接收高層次目標
+    - id: receive_goal
+      name: 接收目標
+      type: trigger
+      trigger_type: api
+      config:
+        endpoint: /api/v1/planning/goals
+
+    # 節點 2: 任務分解
+    - id: task_decomposition
+      name: 任務分解
+      type: agent
+      agent_ref: planning_agent
+      config:
+        action: decompose
+        output: task_tree
+
+    # 節點 3: 人工審批計劃
+    - id: plan_approval
+      name: 計劃審批
+      type: checkpoint
+      config:
+        condition: "task_count > 5 or has_critical_tasks"
+        approvers:
+          - role: project_manager
+        timeout_minutes: 60
+        show_details:
+          - task_tree
+          - estimated_duration
+          - required_resources
+
+    # 節點 4: 資源分配
+    - id: resource_allocation
+      name: 資源分配
+      type: processor
+      config:
+        action: allocate_resources
+        use_capability_matcher: true
+        assignments_output: resource_assignments
+
+    # 節點 5: 嵌套工作流執行
+    - id: nested_execution
+      name: 嵌套執行
+      type: nested_workflow
+      config:
+        execution_strategy: dependency_order  # 按依賴順序
+        max_parallel: 3                       # 最大並行數
+        context_propagation: inherited        # 上下文繼承
+        max_depth: 3                          # 最大嵌套深度
+        subtasks_source: task_tree
+
+    # 節點 6: 子任務執行 (模板)
+    - id: subtask_template
+      name: 子任務執行模板
+      type: template
+      config:
+        # 這是動態生成的子任務執行模板
+        steps:
+          - id: capability_match
+            name: 能力匹配
+            type: capability_matcher
+            config:
+              input: subtask.required_capabilities
+              output: assigned_agent
+
+          - id: task_execution
+            name: 任務執行
+            type: agent
+            agent_ref: "${assigned_agent}"
+            config:
+              input: subtask
+              timeout_seconds: subtask.estimated_duration
+
+          - id: result_validation
+            name: 結果驗證
+            type: validator
+            config:
+              validation_rules: subtask.acceptance_criteria
+
+    # 節點 7: 失敗處理 (Trial-and-Error)
+    - id: failure_handler
+      name: 失敗處理
+      type: error_handler
+      config:
+        strategies:
+          - type: retry
+            max_attempts: 3
+            backoff: exponential
+            initial_delay: 5
+          - type: alternative_agent
+            trigger: "retry_exhausted"
+            selection: capability_matcher
+          - type: replan
+            trigger: "alternative_failed"
+            action: trigger_replanning
+          - type: escalate
+            trigger: "replan_failed"
+            target: manual_intervention
+
+    # 節點 8: 進度監控
+    - id: progress_monitor
+      name: 進度監控
+      type: monitor
+      config:
+        update_frequency: 30  # 秒
+        metrics:
+          - completed_tasks
+          - failed_tasks
+          - remaining_tasks
+          - estimated_completion
+        alerts:
+          - condition: "progress_rate < 0.5"
+            action: notify_coordinator
+          - condition: "failed_tasks > 2"
+            action: trigger_review
+
+    # 節點 9: 關鍵節點審批
+    - id: critical_checkpoint
+      name: 關鍵節點審批
+      type: checkpoint
+      config:
+        trigger_condition: "current_task.priority == 'critical'"
+        approvers:
+          - role: technical_lead
+        timeout_minutes: 30
+        require_comment: true
+
+    # 節點 10: 完成彙總
+    - id: completion_summary
+      name: 完成彙總
+      type: agent
+      agent_ref: coordinator_agent
+      config:
+        action: summarize
+        include:
+          - execution_timeline
+          - success_rate
+          - issues_encountered
+          - lessons_learned
+
+    # 節點 11: 審計記錄
+    - id: audit_log
+      name: 審計記錄
+      type: audit
+      config:
+        log_level: detailed
+        include:
+          - original_goal
+          - task_tree
+          - execution_history
+          - resource_utilization
+          - final_outcome
+
+  edges:
+    - source: receive_goal
+      target: task_decomposition
+
+    - source: task_decomposition
+      target: plan_approval
+
+    - source: plan_approval
+      target: resource_allocation
+      condition: "approved"
+
+    - source: plan_approval
+      target: task_decomposition
+      condition: "rejected_for_revision"
+
+    - source: resource_allocation
+      target: nested_execution
+
+    - source: nested_execution
+      target: failure_handler
+      condition: "has_failures"
+
+    - source: nested_execution
+      target: critical_checkpoint
+      condition: "is_critical_task"
+
+    - source: critical_checkpoint
+      target: nested_execution
+      condition: "approved"
+
+    - source: failure_handler
+      target: nested_execution
+      condition: "retry_success or alternative_success"
+
+    - source: failure_handler
+      target: task_decomposition
+      condition: "replan_triggered"
+
+    - source: nested_execution
+      target: completion_summary
+      condition: "all_tasks_completed"
+
+    - source: completion_summary
+      target: audit_log
+
+# -----------------------------------------------------------------------------
+# Section 4: Test Cases 測試案例
+# -----------------------------------------------------------------------------
+test_cases:
+  - id: TC-004-01
+    name: 基本任務分解
+    description: 驗證簡單目標能被分解為 3+ 子任務
+    input:
+      goal: "設置開發環境並運行第一個測試"
+      max_depth: 2
+    expected:
+      task_count: ">= 3"
+      has_dependencies: true
+      all_tasks_assigned: true
+
+  - id: TC-004-02
+    name: 嵌套工作流執行
+    description: 驗證包含子流程的任務正確執行
+    input:
+      goal: "部署微服務應用"
+      subtasks:
+        - "準備基礎設施"
+        - "部署數據庫"
+        - "部署後端服務"
+        - "部署前端應用"
+    expected:
+      nested_execution: true
+      context_propagated: true
+      correct_order: true
+
+  - id: TC-004-03
+    name: 關鍵節點審批
+    description: 驗證關鍵任務觸發人工審批
+    input:
+      goal: "更新生產環境配置"
+      has_critical_tasks: true
+    expected:
+      checkpoint_triggered: true
+      approval_required: true
+
+  - id: TC-004-04
+    name: 失敗重試測試
+    description: 驗證任務失敗後 Trial-and-Error 機制
+    input:
+      goal: "執行可能失敗的操作"
+      simulate_failure: true
+      failure_count: 2  # 前兩次失敗
+    expected:
+      retry_attempted: true
+      retry_count: 2
+      eventual_success: true
+
+  - id: TC-004-05
+    name: 動態調整測試
+    description: 驗證執行中變更觸發重新規劃
+    input:
+      goal: "完成軟體開發任務"
+      mid_execution_change:
+        type: resource_unavailable
+        affected_task: "code_review"
+    expected:
+      replan_triggered: true
+      alternative_assigned: true
+      execution_continued: true
+
+# -----------------------------------------------------------------------------
+# Section 5: Nested Workflow Templates 嵌套工作流模板
+# -----------------------------------------------------------------------------
+nested_workflow_templates:
+  # 環境設置子工作流
+  - id: environment_setup_subworkflow
+    name: 環境設置子工作流
+    description: 準備和配置執行環境
+    nodes:
+      - id: check_prerequisites
+        name: 檢查前置條件
+        type: validator
+      - id: setup_infrastructure
+        name: 設置基礎設施
+        type: agent
+        agent_ref: devops_agent
+      - id: verify_setup
+        name: 驗證設置
+        type: validator
+    edges:
+      - source: check_prerequisites
+        target: setup_infrastructure
+      - source: setup_infrastructure
+        target: verify_setup
+
+  # 部署子工作流
+  - id: deployment_subworkflow
+    name: 部署子工作流
+    description: 執行部署操作
+    nodes:
+      - id: pre_deployment_check
+        name: 部署前檢查
+        type: validator
+      - id: execute_deployment
+        name: 執行部署
+        type: agent
+        agent_ref: devops_agent
+      - id: post_deployment_test
+        name: 部署後測試
+        type: agent
+        agent_ref: qa_agent
+      - id: rollback_if_needed
+        name: 必要時回滾
+        type: conditional
+        config:
+          condition: "test_failed"
+          action: rollback
+    edges:
+      - source: pre_deployment_check
+        target: execute_deployment
+      - source: execute_deployment
+        target: post_deployment_test
+      - source: post_deployment_test
+        target: rollback_if_needed
+        condition: "test_failed"
+
+# -----------------------------------------------------------------------------
+# Section 6: Configuration 配置
+# -----------------------------------------------------------------------------
+config:
+  # 任務分解配置
+  decomposition:
+    max_depth: 3
+    min_task_duration: 300
+    decomposition_strategy: hybrid
+
+  # 嵌套執行配置
+  nested_execution:
+    max_depth: 3
+    max_parallel: 5
+    context_propagation: inherited
+    timeout_multiplier: 1.5
+
+  # 重試配置
+  retry:
+    max_attempts: 3
+    backoff_type: exponential
+    initial_delay: 5
+    max_delay: 60
+
+  # 能力匹配配置
+  capability_matching:
+    strategy: best_fit
+    require_exact_match: false
+    allow_fallback: true
+
+  # 審批配置
+  approval:
+    critical_task_approval: required
+    plan_approval_threshold: 5  # 超過 5 個任務需審批
+    timeout_minutes: 60
+
+# -----------------------------------------------------------------------------
+# Section 7: Metadata 元數據
+# -----------------------------------------------------------------------------
+metadata:
+  tags:
+    - planning
+    - automation
+    - nested_workflow
+    - trial_and_error
+    - dynamic_planning
+
+  documentation:
+    user_guide: "docs/04-user-guide/scenario-004-planning.md"
+    api_reference: "docs/05-api/planning.md"
+
+  metrics:
+    - name: task_decomposition_accuracy
+      description: 任務分解準確率
+      target: ">= 0.85"
+    - name: first_time_success_rate
+      description: 首次執行成功率
+      target: ">= 0.7"
+    - name: average_retry_count
+      description: 平均重試次數
+      target: "<= 1.5"
+    - name: goal_completion_rate
+      description: 目標完成率
+      target: ">= 0.95"

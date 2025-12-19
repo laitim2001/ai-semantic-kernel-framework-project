@@ -1,0 +1,96 @@
+{
+  "passed": 4,
+  "failed": 1,
+  "total_tests": 5,
+  "duration_ms": 70400.35009384155,
+  "total_tokens": 1920,
+  "total_cost": 0.01861,
+  "results": [
+    {
+      "test_name": "Single Agent Response",
+      "passed": true,
+      "duration_ms": 11110.031366348267,
+      "llm_calls": 1,
+      "llm_tokens": 95,
+      "llm_cost": 0.001135,
+      "response": "你好！我是 ChatGPT，一個由 OpenAI 訓練的 AI 助手。我可以用文字協助你回答問題、整理資訊、翻譯與寫作、提供學習與工作上的建議等。你現在想聊或需要幫忙的是什麼？",
+      "error": "",
+      "details": {}
+    },
+    {
+      "test_name": "Agent with Context",
+      "passed": true,
+      "duration_ms": 3712.5353813171387,
+      "llm_calls": 1,
+      "llm_tokens": 156,
+      "llm_cost": 0.0014199999999999998,
+      "response": "{\"priority\":\"P1\",\"category\":\"Hardware > Endpoint > Power/Boot Failure\",\"reason\":\"User (Finance Manager) reports the computer will not power on, which is a complete work stoppage with an imminent time-sensitive meeting in 30 minutes. No known workaround provided, requiring immediate attention.\"}",
+      "error": "",
+      "details": {
+        "context": {
+          "department": "Finance",
+          "user_role": "Manager",
+          "previous_tickets": 0
+        }
+      }
+    },
+    {
+      "test_name": "IT Ticket Classification",
+      "passed": true,
+      "duration_ms": 12029.426574707031,
+      "llm_calls": 3,
+      "llm_tokens": 551,
+      "llm_cost": 0.004875,
+      "response": "",
+      "error": "",
+      "details": {
+        "classifications": [
+          {
+            "ticket_id": "TKT-001",
+            "classification": "1. **分類 (Category)：** 網路（network）  \n2. **優先級 (Priority)：** P2（高）  \n3. **建議處理團隊 (Suggested Team)：** network-team  \n4. **是否需要核准 (Needs Approval)：** yes",
+            "tokens": 177
+          },
+          {
+            "ticket_id": "TKT-002",
+            "classification": "1. **類別（Category）**：network（網路）  \n2. **優先級（Priority）**：P1（重大/關鍵）  \n3. **建議處理團隊（Suggested Team）**：network-team（網路團隊）  \n4. **需要核准（Needs Approval）**：yes（是）",
+            "tokens": 196
+          },
+          {
+            "ticket_id": "TKT-003",
+            "classification": "1. **類別 (Category)：** Security（安全）\n2. **優先級 (Priority)：** P3（中）\n3. **建議處理團隊 (Suggested Team)：** helpdesk（服務台）\n4. **是否需要核准 (Needs Approval)：** no（否）",
+            "tokens": 178
+          }
+        ]
+      }
+    },
+    {
+      "test_name": "Multi-turn Conversation",
+      "passed": false,
+      "duration_ms": 19990.036964416504,
+      "llm_calls": 0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "response": "",
+      "error": "'str' object has no attribute 'choices'",
+      "details": {}
+    },
+    {
+      "test_name": "Expert Agent Collaboration",
+      "passed": true,
+      "duration_ms": 23558.02845954895,
+      "llm_calls": 4,
+      "llm_tokens": 1118,
+      "llm_cost": 0.01118,
+      "response": "僅在單體架構已明顯拖累營收/成本指標（如發版週期過慢、故障頻繁、擴展受限、跨團隊協作成本高），且組織具備或願投入完善的平台成熟度（CI/CD、可觀測性、服務治理、資安與資料邊界）時，才建議遷移至微服務。優先採取「先模組化單體、再以 strangler 漸進抽離少數高變更/高負載的有界情境」來驗證 ROI，並及早建立自動化測試、監控與安全控制，以降低 12–24 個月遷移風險與雙軌運行成本。",
+      "error": "",
+      "details": {
+        "experts": [
+          "tech_expert",
+          "business_expert",
+          "risk_expert"
+        ],
+        "discussion_turns": 3
+      }
+    }
+  ]
+}

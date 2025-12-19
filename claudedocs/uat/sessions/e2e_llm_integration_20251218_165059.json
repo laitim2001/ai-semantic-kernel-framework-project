@@ -1,0 +1,104 @@
+{
+  "passed": 5,
+  "failed": 0,
+  "total_tests": 5,
+  "duration_ms": 81012.46571540833,
+  "total_tokens": 3120,
+  "total_cost": 0.03053,
+  "results": [
+    {
+      "test_name": "Single Agent Response",
+      "passed": true,
+      "duration_ms": 15435.952186584473,
+      "llm_calls": 1,
+      "llm_tokens": 95,
+      "llm_cost": 0.001135,
+      "response": "你好！我是 ChatGPT，一個由 OpenAI 訓練的 AI 助手。我可以用文字協助你解答問題、整理資訊、撰寫與改寫內容、翻譯、以及一起討論各種主題。你現在想聊什麼呢？",
+      "error": "",
+      "details": {}
+    },
+    {
+      "test_name": "Agent with Context",
+      "passed": true,
+      "duration_ms": 4509.1187953948975,
+      "llm_calls": 1,
+      "llm_tokens": 169,
+      "llm_cost": 0.0016150000000000001,
+      "response": "{\"priority\":\"P1\",\"category\":\"Hardware - Endpoint/Workstation Power Issue\",\"reason\":\"User’s computer will not power on, preventing any work. As a Finance Manager with an imminent meeting in 30 minutes, this is an urgent business-impacting outage for the user requiring immediate assistance (e.g., power supply/battery/adapter or hardware failure).\"}",
+      "error": "",
+      "details": {
+        "context": {
+          "department": "Finance",
+          "user_role": "Manager",
+          "previous_tickets": 0
+        }
+      }
+    },
+    {
+      "test_name": "IT Ticket Classification",
+      "passed": true,
+      "duration_ms": 12308.701992034912,
+      "llm_calls": 3,
+      "llm_tokens": 522,
+      "llm_cost": 0.0044399999999999995,
+      "response": "",
+      "error": "",
+      "details": {
+        "classifications": [
+          {
+            "ticket_id": "TKT-001",
+            "classification": "1. **類別**：網路  \n2. **優先級**：P2（高）  \n3. **建議處理團隊**：network-team  \n4. **需要核准**：是",
+            "tokens": 164
+          },
+          {
+            "ticket_id": "TKT-002",
+            "classification": "1. **分類 (Category)：** 網路 (network)  \n2. **優先級 (Priority)：** P1（critical）  \n3. **建議處理團隊 (Suggested Team)：** network-team  \n4. **需要核准 (Needs Approval)：** yes",
+            "tokens": 179
+          },
+          {
+            "ticket_id": "TKT-003",
+            "classification": "1. **分類 (Category)：** 其他（Other）  \n2. **優先級 (Priority)：** P3（中）  \n3. **建議處理團隊 (Suggested Team)：** Helpdesk（服務台）  \n4. **是否需要核准 (Needs Approval)：** 否",
+            "tokens": 179
+          }
+        ]
+      }
+    },
+    {
+      "test_name": "Multi-turn Conversation",
+      "passed": true,
+      "duration_ms": 24785.22300720215,
+      "llm_calls": 4,
+      "llm_tokens": 1136,
+      "llm_cost": 0.01136,
+      "response": "",
+      "error": "",
+      "details": {
+        "turns": 4,
+        "responses": [
+          "What’s going wrong (error message, slow, won’t start, Wi‑Fi, etc.)?\n\nTo narrow it down, tell me:\n1) ",
+          "",
+          "",
+          "Try these first (in order):\n\n1) **Restart** the laptop (not sleep/hibernate).  \n2) **Check Task Mana"
+        ]
+      }
+    },
+    {
+      "test_name": "Expert Agent Collaboration",
+      "passed": true,
+      "duration_ms": 23972.389936447144,
+      "llm_calls": 4,
+      "llm_tokens": 1198,
+      "llm_cost": 0.011980000000000001,
+      "response": "只有在單體架構已明確、可量化地限制業務成果（如發布週期過慢、跨團隊部署衝突、特定工作負載無法獨立擴展、可靠性隔離不足）且其改善效益能覆蓋微服務帶來的長期平台與營運成本/風險時，才建議遷移；若問題主要是程式品質、測試不足或效能調校，通常先在單體內以模組化、CI/CD 強化與效能優化更划算。建議採「價值導向、漸進式」策略，以 strangler 方式先抽離一個高變動/高規模領域並以穩定 API 封裝，且同時補齊可觀測性、治理與自動化能力，待證實能提升交付速度與可營運性後再擴大。",
+      "error": "",
+      "details": {
+        "experts": [
+          "tech_expert",
+          "business_expert",
+          "risk_expert"
+        ],
+        "discussion_turns": 3
+      }
+    }
+  ]
+}

@@ -291,6 +291,81 @@ class AgentExecutorAdapter:
             tools=config.tools if config.tools else None,
         )
 
+    def _create_client_from_config(
+        self,
+        model_config: Dict[str, Any],
+    ) -> Optional[Any]:
+        """
+        根據 Agent 的 model_config 創建 LLM 客戶端。
+
+        Args:
+            model_config: Agent 的模型配置
+
+        Returns:
+            LLM 客戶端實例或 None
+        """
+        provider = model_config.get("provider", "azure_openai")
+
+        if provider == "azure_openai":
+            endpoint = model_config.get("azure_endpoint")
+            deployment = model_config.get("azure_deployment_name")
+            api_key = model_config.get("api_key")
+            api_version = model_config.get("azure_api_version", "2024-10-21")
+
+            if not endpoint or not deployment or not api_key:
+                logger.warning(
+                    f"Azure OpenAI config incomplete: endpoint={bool(endpoint)}, "
+                    f"deployment={bool(deployment)}, api_key={bool(api_key)}"
+                )
+                return None
+
+            try:
+                from openai import AzureOpenAI
+
+                client = AzureOpenAI(
+                    azure_endpoint=endpoint,
+                    api_key=api_key,
+                    api_version=api_version,
+                )
+                logger.info(f"Created Azure OpenAI client for deployment: {deployment}")
+                return client
+
+            except ImportError:
+                logger.error("openai package not installed")
+                return None
+            except Exception as e:
+                logger.error(f"Failed to create Azure OpenAI client: {e}")
+                return None
+
+        elif provider == "openai":
+            api_key = model_config.get("api_key")
+            base_url = model_config.get("base_url")
+
+            if not api_key:
+                logger.warning("OpenAI API key not provided")
+                return None
+
+            try:
+                from openai import OpenAI
+
+                client = OpenAI(
+                    api_key=api_key,
+                    base_url=base_url if base_url else None,
+                )
+                logger.info("Created OpenAI client")
+                return client
+
+            except ImportError:
+                logger.error("openai package not installed")
+                return None
+            except Exception as e:
+                logger.error(f"Failed to create OpenAI client: {e}")
+                return None
+
+        else:
+            logger.warning(f"Unsupported provider: {provider}")
+            return None
+
     async def execute(
         self,
         config: AgentExecutorConfig,
@@ -301,6 +376,7 @@ class AgentExecutorAdapter:
         使用給定配置執行 Agent。
 
         創建臨時 Agent 並執行訊息處理，追蹤 LLM 使用統計。
+        優先使用 Agent 自己的 model_config，否則回退到全局配置。
 
         Args:
             config: Agent 配置
@@ -315,8 +391,20 @@ class AgentExecutorAdapter:
         """
         self._ensure_initialized()
 
+        # 優先使用 Agent 自己的 model_config 創建客戶端
+        agent_client = None
+        model_config = config.model_config
+
+        if model_config and model_config.get("api_key"):
+            agent_client = self._create_client_from_config(model_config)
+            if agent_client:
+                logger.info(f"Using Agent-specific LLM client for: {config.name}")
+
+        # 如果沒有 Agent 特定客戶端，使用全局客戶端
+        client_to_use = agent_client if agent_client else self._client
+
         # Mock 模式回應
-        if self._client is None:
+        if client_to_use is None:
             logger.warning("No LLM client available, returning mock response")
             return AgentExecutorResult(
                 text=f"[Mock Response] Agent '{config.name}' received: {message}",
@@ -326,7 +414,16 @@ class AgentExecutorAdapter:
             )
 
         try:
-            # 創建 Agent
+            # 如果使用 Agent 特定客戶端 (OpenAI SDK)，直接調用
+            if agent_client is not None:
+                return await self._execute_with_openai_client(
+                    client=agent_client,
+                    config=config,
+                    message=message,
+                    context=context,
+                )
+
+            # 否則使用 Agent Framework 官方 API
             agent = self.create_agent(config)
 
             # 準備訊息列表
@@ -346,7 +443,6 @@ class AgentExecutorAdapter:
             messages.append(user_message)
 
             # 執行 Agent (使用官方 run API)
-            # 注意: ChatAgent.run 接受單一訊息或 AgentThread
             response = await agent.run(message)
 
             # 提取統計資訊
@@ -390,6 +486,107 @@ class AgentExecutorAdapter:
         except Exception as e:
             logger.error(f"Agent execution failed: {e}")
             raise RuntimeError(f"Agent execution failed: {e}")
+
+    async def _execute_with_openai_client(
+        self,
+        client: Any,
+        config: AgentExecutorConfig,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> AgentExecutorResult:
+        """
+        使用 OpenAI SDK 直接執行聊天。
+
+        Args:
+            client: OpenAI 或 AzureOpenAI 客戶端
+            config: Agent 配置
+            message: 使用者訊息
+            context: 可選的額外上下文
+
+        Returns:
+            AgentExecutorResult
+        """
+        # 準備訊息
+        messages = []
+
+        # 系統訊息 (Agent 指令)
+        if config.instructions:
+            messages.append({
+                "role": "system",
+                "content": config.instructions,
+            })
+
+        # 添加上下文
+        if context:
+            context_str = "\n".join(f"{k}: {v}" for k, v in context.items())
+            messages.append({
+                "role": "system",
+                "content": f"Additional context:\n{context_str}",
+            })
+
+        # 使用者訊息
+        messages.append({
+            "role": "user",
+            "content": message,
+        })
+
+        # 獲取模型配置
+        model_config = config.model_config
+        model = model_config.get("azure_deployment_name") or model_config.get("model", "gpt-4o")
+        temperature = model_config.get("temperature", 0.7)
+        # 新版 OpenAI API 使用 max_completion_tokens 而非 max_tokens
+        max_completion_tokens = model_config.get("max_completion_tokens") or model_config.get("max_tokens", 2000)
+
+        # 某些模型（如 o1 系列、推理模型）不支持 temperature 和 max_completion_tokens
+        # 檢測是否是推理模型並調整參數
+        is_reasoning_model = any(
+            pattern in model.lower()
+            for pattern in ["o1", "o3", "o4", "gpt-5", "reasoning"]
+        )
+
+        try:
+            # 調用 OpenAI API - 根據模型類型調整參數
+            if is_reasoning_model:
+                # 推理模型只支持少量參數
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_completion_tokens=max_completion_tokens,
+                )
+            else:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_completion_tokens=max_completion_tokens,
+                )
+
+            # 提取統計資訊
+            llm_calls = 1
+            prompt_tokens = response.usage.prompt_tokens if response.usage else 0
+            completion_tokens = response.usage.completion_tokens if response.usage else 0
+            llm_tokens = prompt_tokens + completion_tokens
+            llm_cost = self._calculate_cost(prompt_tokens, completion_tokens)
+
+            # 提取回應文本
+            response_text = response.choices[0].message.content if response.choices else ""
+
+            logger.info(
+                f"Agent '{config.name}' executed: "
+                f"tokens={llm_tokens}, cost=${llm_cost:.6f}"
+            )
+
+            return AgentExecutorResult(
+                text=response_text,
+                llm_calls=llm_calls,
+                llm_tokens=llm_tokens,
+                llm_cost=llm_cost,
+                tool_calls=[],
+            )
+
+        except Exception as e:
+            logger.error(f"OpenAI API call failed: {e}")
+            raise RuntimeError(f"OpenAI API call failed: {e}")
 
     async def execute_simple(
         self,

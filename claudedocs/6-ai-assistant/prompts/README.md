@@ -38,6 +38,14 @@
 |-----------|--------|------|----------|------|
 | **PROMPT-09** | [SESSION-END.md](./PROMPT-09-SESSION-END.md) | Session 結束總結 | ❌ 無 | ~260 |
 
+### UAT 測試
+
+| Prompt ID | 文件名 | 用途 | 變數支援 | 行數 |
+|-----------|--------|------|----------|------|
+| **PROMPT-10** | [UAT-SESSION.md](./PROMPT-10-UAT-SESSION.md) | UAT 測試會話管理 | ✅ ACTION, MODULE | ~280 |
+| **PROMPT-11** | [UAT-ISSUE.md](./PROMPT-11-UAT-ISSUE.md) | UAT 問題記錄 | ✅ MODULE, DESCRIPTION | ~320 |
+| **PROMPT-12** | [UAT-FIX.md](./PROMPT-12-UAT-FIX.md) | UAT 問題修復 | ✅ ISSUE_ID | ~350 |
+
 ---
 
 ## 🎯 設計理念 (v2.0.0)
@@ -147,6 +155,19 @@ AI: 審查指定路徑的代碼
 階段 7: Session 結束
   - @PROMPT-09-SESSION-END.md
   - 生成工作摘要
+
+階段 8: UAT 測試 (Phase 6 後)
+  - @PROMPT-10-UAT-SESSION.md start {MODULE}
+  - 開始 UAT 測試會話
+
+  - @PROMPT-11-UAT-ISSUE.md {MODULE} {DESCRIPTION}
+  - 記錄發現的問題
+
+  - @PROMPT-12-UAT-FIX.md {ISSUE_ID}
+  - 修復並驗證問題
+
+  - @PROMPT-10-UAT-SESSION.md end
+  - 結束測試會話
 ```
 
 ---
@@ -164,6 +185,9 @@ AI: 審查指定路徑的代碼
 | 07 | ❌ | ✅ 架構文檔 | ✅ 審查報告 | ❌ | 10-15分 |
 | 08 | ✅ 路徑 | ✅ 代碼文件 | ✅ 審查報告 | ❌ | 5-10分 |
 | 09 | ❌ | ✅ Session記錄 | ✅ 摘要文檔 | ✅ Git | 3-5分 |
+| 10 | ✅ ACTION+MODULE | ✅ UAT記錄 | ✅ 會話記錄 | ✅ 環境檢查 | 5-15分 |
+| 11 | ✅ MODULE+DESC | ✅ Issue模板 | ✅ Issue文件 | ❌ | 3-5分 |
+| 12 | ✅ ISSUE_ID | ✅ Issue文件 | ✅ Fix記錄 | ✅ Git | 10-30分 |
 
 ---
 

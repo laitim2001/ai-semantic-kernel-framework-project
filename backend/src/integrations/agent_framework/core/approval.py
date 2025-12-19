@@ -35,7 +35,12 @@ import logging
 from pydantic import BaseModel, Field
 
 # Official Agent Framework Imports - MUST use these
-from agent_framework.workflows import RequestResponseExecutor, Executor
+# Note: Classes are directly under agent_framework, not agent_framework.workflows
+from agent_framework import Executor, handler, WorkflowContext
+
+# RequestResponseExecutor not directly available - use Executor as base
+# This will be updated when official API is finalized
+RequestResponseExecutor = Executor  # Compatibility alias
 
 logger = logging.getLogger(__name__)
 
@@ -315,8 +320,7 @@ class ApprovalState:
 # HumanApprovalExecutor - Main Executor
 # =============================================================================
 
-@Executor.register
-class HumanApprovalExecutor(RequestResponseExecutor[ApprovalRequest, ApprovalResponse]):
+class HumanApprovalExecutor(Executor):
     """
     Human approval executor using official RequestResponseExecutor.
 
@@ -370,7 +374,8 @@ class HumanApprovalExecutor(RequestResponseExecutor[ApprovalRequest, ApprovalRes
             on_escalation: Callback when request is escalated
             on_timeout: Callback when request times out
         """
-        super().__init__()
+        # Official Executor requires 'id' parameter
+        super().__init__(id=name)
         self._name = name
         self._escalation_policy = escalation_policy or EscalationPolicy()
         self._notification_config = notification_config or NotificationConfig()
@@ -384,6 +389,54 @@ class HumanApprovalExecutor(RequestResponseExecutor[ApprovalRequest, ApprovalRes
         # State tracking
         self._pending_requests: Dict[str, ApprovalState] = {}
         self._completed_requests: Dict[str, ApprovalState] = {}
+
+    @handler
+    async def handle_approval_request(
+        self,
+        input_data: Dict[str, Any],
+        ctx: WorkflowContext
+    ) -> None:
+        """
+        Main handler for approval requests.
+
+        This is the entry point called by the workflow engine when an approval
+        is needed. Creates a pending approval request and waits for response.
+
+        IMPORTANT: Uses official @handler decorator from agent_framework.
+
+        Args:
+            input_data: Dictionary containing approval request data
+            ctx: WorkflowContext for sending messages and yielding outputs
+        """
+        try:
+            # Create approval request from input data
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                action=input_data.get("action", "approve"),
+                payload=input_data.get("payload", {}),
+                context=input_data.get("context"),
+                requester_id=input_data.get("requester_id"),
+                priority=ApprovalPriority(input_data.get("priority", "normal")),
+            )
+
+            # Track the request
+            await self.on_request_created(request, ctx)
+
+            logger.info(f"Approval handler received request: {request.request_id}")
+
+            # Send acknowledgment back
+            await ctx.send_message({
+                "type": "approval_pending",
+                "request_id": request.request_id,
+                "status": "pending",
+            })
+
+        except Exception as e:
+            logger.error(f"Approval handler error: {str(e)}", exc_info=True)
+            await ctx.send_message({
+                "type": "approval_error",
+                "error": str(e),
+            })
 
     @property
     def name(self) -> str:

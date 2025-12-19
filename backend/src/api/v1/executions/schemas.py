@@ -21,6 +21,13 @@ class ExecutionBase(BaseModel):
     workflow_id: UUID = Field(..., description="ID of the workflow being executed")
 
 
+class ExecutionCreateRequest(ExecutionBase):
+    """Request schema for creating an execution."""
+
+    status: str = Field("pending", description="Initial execution status")
+    input_data: Optional[Dict[str, Any]] = Field(None, description="Input data for execution")
+
+
 class ExecutionDetailResponse(BaseModel):
     """
     Detailed execution response schema.

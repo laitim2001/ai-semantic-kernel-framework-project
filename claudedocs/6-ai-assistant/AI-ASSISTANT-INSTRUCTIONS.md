@@ -47,6 +47,14 @@
 | **Instruction 9** | 架構審查 | 審查技術架構決策 | 10-15 分鐘 |
 | **Instruction 10** | 代碼審查 | 審查代碼質量 | 5-10 分鐘 |
 
+### UAT 測試指令
+
+| 指令 ID | 指令名稱 | 用途 | 預估時間 |
+|---------|----------|------|----------|
+| **Instruction 11** | UAT 會話管理 | 開始/結束 UAT 測試會話 | 5-15 分鐘 |
+| **Instruction 12** | UAT 問題記錄 | 記錄 UAT 發現的問題 | 3-5 分鐘 |
+| **Instruction 13** | UAT 問題修復 | 修復並驗證 UAT 問題 | 10-30 分鐘 |
+
 ---
 
 ## 快速參考卡
@@ -71,8 +79,14 @@
 ├─ 🚀 準備發 PR
 │  └─ → 使用 Instruction 4 (創建 Pull Request)
 │
-└─ 📊 每日工作結束
-   └─ → 使用 Instruction 5 (生成 Session 摘要)
+├─ 📊 每日工作結束
+│  └─ → 使用 Instruction 5 (生成 Session 摘要)
+│
+└─ 🧪 UAT 測試
+   ├─ 開始測試 → 使用 @PROMPT-10-UAT-SESSION.md start
+   ├─ 發現問題 → 使用 @PROMPT-11-UAT-ISSUE.md
+   ├─ 修復問題 → 使用 @PROMPT-12-UAT-FIX.md
+   └─ 結束測試 → 使用 @PROMPT-10-UAT-SESSION.md end
 ```
 
 ### 組合使用指南
@@ -88,6 +102,14 @@
   1. 檢查文檔: Instruction 6 (一致性檢查)
   2. 完整結束: Instruction 7 (完整結束流程)
   3. 創建 PR: Instruction 4 (Pull Request)
+
+UAT 測試流程:
+  1. 開始測試: @PROMPT-10-UAT-SESSION.md start {MODULE}
+  2. 測試功能: 按 checklist 逐項測試
+  3. 記錄問題: @PROMPT-11-UAT-ISSUE.md {MODULE} {DESCRIPTION}
+  4. 修復問題: @PROMPT-12-UAT-FIX.md {ISSUE_ID}
+  5. 驗證修復: 重新測試確認
+  6. 結束測試: @PROMPT-10-UAT-SESSION.md end
 ```
 
 ---
@@ -106,8 +128,8 @@ CLAUDEDOCS_PATH: "claudedocs/"
 # 工作流程追蹤文件
 WORKFLOW_STATUS_FILE: "docs/bmm-workflow-status.yaml"
 
-# 專案狀態 (MVP 已完成)
-PROJECT_STATUS: "MVP Complete"
+# 專案狀態 (Phase 6 完成, UAT Ready)
+PROJECT_STATUS: "Phase 6 Complete - UAT Ready"
 TOTAL_SPRINTS: 6
 TOTAL_POINTS: "285/285"
 BACKEND_TESTS: 812

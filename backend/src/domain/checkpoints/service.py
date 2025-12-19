@@ -227,6 +227,9 @@ class CheckpointService:
         payload: Dict[str, Any],
         timeout_hours: Optional[int] = None,
         notes: Optional[str] = None,
+        step: str = "0",
+        checkpoint_type: str = "approval",
+        state: Optional[Dict[str, Any]] = None,
     ) -> CheckpointData:
         """
         Create a new checkpoint for human approval.
@@ -237,6 +240,9 @@ class CheckpointService:
             payload: Data to be reviewed by human
             timeout_hours: Hours until checkpoint expires (default from config)
             notes: Optional notes or context
+            step: Step identifier in workflow (default "0")
+            checkpoint_type: Type of checkpoint (approval, review, input)
+            state: Current workflow state
 
         Returns:
             Created checkpoint data
@@ -252,6 +258,9 @@ class CheckpointService:
             payload=payload,
             expires_at=expires_at,
             notes=notes,
+            step=step,
+            checkpoint_type=checkpoint_type,
+            state=state or {},
         )
 
         logger.info(
@@ -324,7 +333,7 @@ class CheckpointService:
     async def approve_checkpoint(
         self,
         checkpoint_id: UUID,
-        user_id: UUID,
+        user_id: Optional[UUID] = None,
         response: Optional[Dict[str, Any]] = None,
         feedback: Optional[str] = None,
     ) -> Optional[CheckpointData]:
@@ -388,7 +397,7 @@ class CheckpointService:
     async def reject_checkpoint(
         self,
         checkpoint_id: UUID,
-        user_id: UUID,
+        user_id: Optional[UUID] = None,
         reason: Optional[str] = None,
         response: Optional[Dict[str, Any]] = None,
     ) -> Optional[CheckpointData]:

@@ -1,0 +1,460 @@
+# =============================================================================
+# Scenario 1: IT Ticket Triage - IT 工單智能分派
+# =============================================================================
+# 完整的端到端場景，展示如何使用 IPA Platform 實現 IT 工單自動分類、
+# 智能路由、人工審批和 Agent 交接。
+#
+# 涉及功能: Agent, Workflow, Trigger, Checkpoint, Routing, Handoff,
+#           Capability Matcher, Audit, Notification, Sequential, Planning
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# Created: 2025-12-18
+# =============================================================================
+
+scenario:
+  id: scenario_001_it_ticket_triage
+  name: IT 工單智能分派
+  description: |
+    當用戶提交 IT 支援工單時，系統自動分析問題類型，
+    分派給適當的處理 Agent，必要時升級給人工審批。
+  version: "1.0.0"
+  category: it_operations
+  status: draft
+
+# -----------------------------------------------------------------------------
+# Section 1: Agents 定義
+# -----------------------------------------------------------------------------
+agents:
+  # Triage Agent - 工單分類
+  - id: triage_agent
+    name: 工單分類 Agent
+    description: 自動分析和分類 IT 工單
+    template_ref: it_triage_agent  # 引用現有模板
+    instructions: |
+      你是 IT 工單分類專家。對於每個工單，你需要：
+      1. 識別問題類型 (硬體/軟體/網路/安全/存取權限)
+      2. 評估優先級 (P1-P4)
+      3. 推薦處理團隊
+      4. 判斷是否需要人工審批
+
+      P1/P2 工單必須標記為需要審批。
+    tools:
+      - servicenow_get_incident
+      - knowledge_base_search
+    model: gpt-4
+    temperature: 0.3
+
+  # Network Agent - 網路問題處理
+  - id: network_agent
+    name: 網路問題處理 Agent
+    description: 專門處理網路相關問題
+    instructions: |
+      你是網路運維專家。負責處理：
+      - VPN 連接問題
+      - 網路連通性問題
+      - DNS 問題
+      - 防火牆配置
+
+      請提供詳細的診斷步驟和解決方案。
+    tools:
+      - network_diagnostic
+      - ping_test
+      - dns_lookup
+    model: gpt-4
+    temperature: 0.5
+    capabilities:
+      - network_troubleshooting
+      - vpn_support
+      - firewall_configuration
+
+  # Software Agent - 軟體問題處理
+  - id: software_agent
+    name: 軟體問題處理 Agent
+    description: 專門處理軟體和應用相關問題
+    instructions: |
+      你是應用支援專家。負責處理：
+      - 軟體安裝問題
+      - 應用程式錯誤
+      - 許可證問題
+      - 系統更新
+
+      請提供清晰的操作步驟。
+    tools:
+      - software_inventory
+      - license_check
+      - error_log_analyzer
+    model: gpt-4
+    temperature: 0.5
+    capabilities:
+      - software_installation
+      - application_support
+      - license_management
+
+  # Hardware Agent - 硬體問題處理
+  - id: hardware_agent
+    name: 硬體問題處理 Agent
+    description: 專門處理硬體相關問題
+    instructions: |
+      你是硬體維護專家。負責處理：
+      - 設備故障診斷
+      - 硬體更換建議
+      - 外設連接問題
+
+      需要現場服務時，請安排技術人員。
+    tools:
+      - hardware_inventory
+      - warranty_check
+      - technician_scheduler
+    model: gpt-4
+    temperature: 0.5
+    capabilities:
+      - hardware_diagnosis
+      - device_replacement
+      - onsite_support
+
+  # Escalation Agent - 升級處理
+  - id: escalation_agent
+    name: 升級處理 Agent
+    description: 處理複雜或升級工單
+    template_ref: escalation_agent  # 引用現有模板
+    instructions: |
+      你是高級技術支援專家。負責處理：
+      - 其他 Agent 無法解決的問題
+      - 需要跨團隊協作的問題
+      - VIP 用戶的緊急問題
+
+      請協調資源並確保問題得到解決。
+    capabilities:
+      - advanced_troubleshooting
+      - cross_team_coordination
+      - vip_support
+
+# -----------------------------------------------------------------------------
+# Section 2: Workflow 定義
+# -----------------------------------------------------------------------------
+workflow:
+  id: it_triage_workflow
+  name: IT 工單智能分派工作流
+  description: 完整的 IT 工單處理流程
+  version: "1.0.0"
+
+  # 工作流節點
+  nodes:
+    # 節點 1: 接收工單
+    - id: receive_ticket
+      name: 接收工單
+      type: trigger
+      trigger_type: webhook
+      config:
+        path: /webhook/it-ticket
+        method: POST
+
+    # 節點 2: 工單分類
+    - id: classify_ticket
+      name: 工單分類
+      type: agent
+      agent_ref: triage_agent
+      config:
+        timeout_seconds: 30
+        retry_count: 2
+
+    # 節點 3: 路由決策
+    - id: route_decision
+      name: 智能路由
+      type: router
+      config:
+        routing_rules:
+          - condition: "classification.type == 'network'"
+            target: network_handler
+          - condition: "classification.type == 'software'"
+            target: software_handler
+          - condition: "classification.type == 'hardware'"
+            target: hardware_handler
+          - condition: "true"  # default
+            target: escalation_handler
+
+    # 節點 4: 審批檢查點 (僅 P1/P2)
+    - id: approval_checkpoint
+      name: 人工審批
+      type: checkpoint
+      config:
+        condition: "classification.priority in ['P1', 'P2']"
+        approvers:
+          - role: it_manager
+          - role: team_lead
+        timeout_minutes: 30
+        escalation:
+          enabled: true
+          timeout_minutes: 15
+          escalate_to: it_director
+
+    # 節點 5a: 網路問題處理
+    - id: network_handler
+      name: 網路問題處理
+      type: agent
+      agent_ref: network_agent
+      config:
+        timeout_seconds: 300
+
+    # 節點 5b: 軟體問題處理
+    - id: software_handler
+      name: 軟體問題處理
+      type: agent
+      agent_ref: software_agent
+      config:
+        timeout_seconds: 300
+
+    # 節點 5c: 硬體問題處理
+    - id: hardware_handler
+      name: 硬體問題處理
+      type: agent
+      agent_ref: hardware_agent
+      config:
+        timeout_seconds: 300
+
+    # 節點 6: 升級處理 (Handoff)
+    - id: escalation_handler
+      name: 升級處理
+      type: handoff
+      config:
+        target_agent: escalation_agent
+        policy: graceful  # 等待當前任務完成
+        context_transfer:
+          - ticket_info
+          - classification_result
+          - previous_attempts
+
+    # 節點 7: 結果通知
+    - id: notify_result
+      name: 結果通知
+      type: notification
+      config:
+        channels:
+          - email
+          - teams
+        template: ticket_resolution
+
+    # 節點 8: 審計記錄
+    - id: audit_log
+      name: 審計記錄
+      type: audit
+      config:
+        log_level: detailed
+        include:
+          - ticket_info
+          - classification
+          - routing_decision
+          - resolution
+          - duration
+
+  # 工作流邊 (連接)
+  edges:
+    - source: receive_ticket
+      target: classify_ticket
+
+    - source: classify_ticket
+      target: route_decision
+
+    - source: route_decision
+      target: approval_checkpoint
+      condition: "classification.priority in ['P1', 'P2']"
+
+    - source: route_decision
+      target: network_handler
+      condition: "classification.type == 'network' and classification.priority not in ['P1', 'P2']"
+
+    - source: route_decision
+      target: software_handler
+      condition: "classification.type == 'software' and classification.priority not in ['P1', 'P2']"
+
+    - source: route_decision
+      target: hardware_handler
+      condition: "classification.type == 'hardware' and classification.priority not in ['P1', 'P2']"
+
+    - source: approval_checkpoint
+      target: network_handler
+      condition: "approved and classification.type == 'network'"
+
+    - source: approval_checkpoint
+      target: software_handler
+      condition: "approved and classification.type == 'software'"
+
+    - source: approval_checkpoint
+      target: hardware_handler
+      condition: "approved and classification.type == 'hardware'"
+
+    - source: approval_checkpoint
+      target: escalation_handler
+      condition: "rejected or timeout"
+
+    - source: network_handler
+      target: notify_result
+
+    - source: software_handler
+      target: notify_result
+
+    - source: hardware_handler
+      target: notify_result
+
+    - source: escalation_handler
+      target: notify_result
+
+    - source: notify_result
+      target: audit_log
+
+# -----------------------------------------------------------------------------
+# Section 3: Trigger 定義
+# -----------------------------------------------------------------------------
+triggers:
+  # Webhook 觸發器
+  - id: it_ticket_webhook
+    name: IT 工單 Webhook
+    type: webhook
+    config:
+      path: /api/v1/triggers/webhook/it-ticket
+      method: POST
+      authentication:
+        type: hmac
+        secret_env: IT_WEBHOOK_SECRET
+      payload_schema:
+        type: object
+        required:
+          - ticket_id
+          - description
+          - requester
+        properties:
+          ticket_id:
+            type: string
+          description:
+            type: string
+          requester:
+            type: object
+          priority_hint:
+            type: string
+            enum: [P1, P2, P3, P4]
+
+# -----------------------------------------------------------------------------
+# Section 4: Test Cases 測試案例
+# -----------------------------------------------------------------------------
+test_cases:
+  - id: TC-001-01
+    name: 簡單工單直接分派
+    description: P4 密碼重置請求，應直接分派到 IT 服務台
+    input:
+      ticket_id: "TEST-001"
+      description: "我忘記了密碼，需要重置"
+      requester:
+        name: "測試用戶"
+        department: "銷售部"
+    expected:
+      classification:
+        type: "存取權限"
+        priority: "P4"
+      routing: "software_handler"
+      needs_approval: false
+
+  - id: TC-001-02
+    name: 中等工單智能路由
+    description: P3 VPN 連接問題，應路由到網路團隊
+    input:
+      ticket_id: "TEST-002"
+      description: "無法連接公司 VPN，已嘗試重啟電腦"
+      requester:
+        name: "遠程員工"
+        department: "研發部"
+    expected:
+      classification:
+        type: "網路"
+        priority: "P3"
+      routing: "network_handler"
+      needs_approval: false
+
+  - id: TC-001-03
+    name: 複雜工單人工審批
+    description: P1 大規模網路中斷，需觸發人工審批
+    input:
+      ticket_id: "TEST-003"
+      description: "整層樓約 50 人無法上網，所有業務停擺"
+      requester:
+        name: "樓層主管"
+        department: "行政部"
+      priority_hint: "P1"
+    expected:
+      classification:
+        type: "網路"
+        priority: "P1"
+      routing: "approval_checkpoint"
+      needs_approval: true
+
+  - id: TC-001-04
+    name: 升級工單交接
+    description: 多次嘗試未解決的問題，應交接給升級 Agent
+    input:
+      ticket_id: "TEST-004"
+      description: "問題已經報告 3 次都沒有解決，需要專家處理"
+      requester:
+        name: "不滿意的用戶"
+        department: "財務部"
+      metadata:
+        previous_tickets: ["PREV-001", "PREV-002", "PREV-003"]
+        escalation_requested: true
+    expected:
+      routing: "escalation_handler"
+      handoff:
+        triggered: true
+        target: "escalation_agent"
+
+# -----------------------------------------------------------------------------
+# Section 5: Configuration 配置
+# -----------------------------------------------------------------------------
+config:
+  # 超時設定
+  timeouts:
+    classification: 30  # seconds
+    handler: 300        # seconds
+    approval: 1800      # seconds (30 min)
+
+  # 重試設定
+  retries:
+    max_attempts: 3
+    backoff_multiplier: 2
+
+  # 通知設定
+  notifications:
+    on_received: true
+    on_classified: false
+    on_approval_needed: true
+    on_resolved: true
+    on_escalated: true
+
+  # 審計設定
+  audit:
+    enabled: true
+    log_level: detailed
+    retention_days: 90
+
+# -----------------------------------------------------------------------------
+# Section 6: Metadata 元數據
+# -----------------------------------------------------------------------------
+metadata:
+  tags:
+    - it_operations
+    - triage
+    - automation
+    - human_in_loop
+
+  documentation:
+    user_guide: "docs/04-user-guide/scenario-001-it-triage.md"
+    api_reference: "docs/05-api/triggers.md#it-ticket-webhook"
+
+  metrics:
+    - name: classification_accuracy
+      description: 分類準確率
+      target: ">= 0.9"
+    - name: average_resolution_time
+      description: 平均解決時間
+      target: "<= 4 hours"
+    - name: escalation_rate
+      description: 升級率
+      target: "<= 0.1"

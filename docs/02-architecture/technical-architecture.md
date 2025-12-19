@@ -1,21 +1,21 @@
 # Technical Architecture Design
 # IPA Platform - Intelligent Process Automation
 
-**版本**: 2.5
-**日期**: 2025-12-07
-**狀態**: Phase 5 完成 - 完整 API 整合與 MVP 驗收
+**版本**: 3.0
+**日期**: 2025-12-18
+**狀態**: Phase 6 完成 - 架構最終化與 UAT 準備
 **負責人**: Architecture Team
 
-> **Phase 5 更新 (Sprint 26-30)**: 完成 MVP 核心功能與官方 Agent Framework API 的完整整合。
-> - **Sprint 26**: WorkflowDefinitionAdapter 遷移完成
-> - **Sprint 27**: ExecutionAdapter + EnhancedExecutionStateMachine 遷移
-> - **Sprint 28**: HumanApprovalExecutor + ApprovalWorkflowManager 整合
-> - **Sprint 29**: 所有 API Routes 遷移到適配器層
-> - **Sprint 30**: E2E 測試、效能測試、文檔更新
+> **Phase 6 更新 (Sprint 31-33)**: 完成架構最終化、驗證腳本準備、UAT 場景設計。
+> - **Sprint 31**: GroupChat + Memory 適配器完成
+> - **Sprint 32**: 完整端到端測試
+> - **Sprint 33**: 文檔整理與 UAT 準備
+>
+> **累計完成**: 1190 Story Points, 33 Sprints, 3198 Tests, 297 API Routes
 >
 > **適配器架構位置**: `backend/src/integrations/agent_framework/`
-> - `builders/`: 官方 API 適配器 (GroupChat, Handoff, Concurrent, Planning)
-> - `core/`: 核心功能適配器 (Workflow, StateMachine, Approval)
+> - `builders/`: 官方 API 適配器 (GroupChat, Handoff, Concurrent, Planning, Magentic)
+> - `core/`: 核心功能適配器 (Workflow, StateMachine, Approval, Execution)
 > - `memory/`: 記憶體存儲適配器
 > - `multiturn/`: 多輪對話適配器
 
@@ -26,7 +26,9 @@
 - **[Technical Architecture](./technical-architecture.md)** ← 您在這裡
 - [PRD 文檔](../01-planning/prd/prd-main.md)
 - [UI/UX 設計](../01-planning/ui-ux/ui-ux-design-spec.md)
+- [UAT 驗證計畫](../../claudedocs/uat/UAT-SCENARIO-VALIDATION-PLAN.md) ⭐ **NEW**
 - [系統架構圖](#system-architecture)
+- [功能架構 (四層模型)](#feature-architecture)
 - [核心模塊設計](#core-modules)
 - [數據架構](#data-architecture)
 
@@ -38,14 +40,15 @@
 2. [設計原則](#design-principles)
 3. [技術棧選擇](#technology-stack)
 4. [系統架構](#system-architecture)
-5. [核心模塊設計](#core-modules)
-6. [數據架構設計](#data-architecture)
-7. [集成架構](#integration-architecture)
-8. [安全架構](#security-architecture)
-9. [監控與日誌](#monitoring-logging)
-10. [部署架構](#deployment-architecture)
-11. [性能優化策略](#performance-optimization)
-12. [災難恢復](#disaster-recovery)
+5. [功能架構 (四層模型)](#feature-architecture) ⭐ **NEW**
+6. [核心模塊設計](#core-modules)
+7. [數據架構設計](#data-architecture)
+8. [集成架構](#integration-architecture)
+9. [安全架構](#security-architecture)
+10. [監控與日誌](#monitoring-logging)
+11. [部署架構](#deployment-architecture)
+12. [性能優化策略](#performance-optimization)
+13. [災難恢復](#disaster-recovery)
 
 ---
 
@@ -760,6 +763,167 @@ sequenceDiagram
 
 ---
 
+## <a id="feature-architecture"></a>5. 功能架構 (四層模型)
+
+### 5.1 架構概覽
+
+IPA Platform 採用四層功能架構，從基礎設施到業務場景逐層建構：
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Layer 4: Business Scenarios (業務場景層)                                    │
+│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌──────────────┐ │
+│  │ IT 工單分派    │ │ 多 Agent 協作  │ │ 自動化報表    │ │ 自主規劃     │ │
+│  │ Scenario 001   │ │ Scenario 002   │ │ Scenario 003   │ │ Scenario 004 │ │
+│  └────────────────┘ └────────────────┘ └────────────────┘ └──────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Layer 3: Orchestration Patterns (編排模式層)                                │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
+│  │ Sequential   │ │ Parallel     │ │ GroupChat    │ │ Nested       │       │
+│  │ 順序執行     │ │ 並行執行     │ │ 群組對話     │ │ 嵌套工作流   │       │
+│  ├──────────────┤ ├──────────────┤ ├──────────────┤ ├──────────────┤       │
+│  │ Handoff      │ │ Planning     │ │ Fork-Join    │ │ Magentic     │       │
+│  │ Agent 交接   │ │ 任務規劃     │ │ 分叉合併     │ │ 磁性編排     │       │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Layer 2: Core Capabilities (核心能力層)                                     │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
+│  │ Checkpoint   │ │ Memory       │ │ Routing      │ │ Speaker      │       │
+│  │ 檢查點審批   │ │ 記憶存儲     │ │ 智能路由     │ │ 發言選擇     │       │
+│  ├──────────────┤ ├──────────────┤ ├──────────────┤ ├──────────────┤       │
+│  │ Capability   │ │ Voting       │ │ Termination  │ │ Retry        │       │
+│  │ 能力匹配     │ │ 投票機制     │ │ 終止條件     │ │ 重試機制     │       │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Layer 1: Infrastructure (基礎設施層)                                        │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
+│  │ Agent        │ │ Workflow     │ │ Execution    │ │ Connector    │       │
+│  │ Agent 管理   │ │ 工作流引擎   │ │ 執行管理     │ │ 外部連接器   │       │
+│  ├──────────────┤ ├──────────────┤ ├──────────────┤ ├──────────────┤       │
+│  │ Trigger      │ │ Template     │ │ StateMachine │ │ Event        │       │
+│  │ 觸發器       │ │ 模板管理     │ │ 狀態機       │ │ 事件系統     │       │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 Layer 1: 基礎設施層
+
+提供平台運行的基本能力：
+
+| 模組 | 功能 | API 路由 |
+|------|------|----------|
+| **Agent** | Agent CRUD、配置、能力定義 | `/api/v1/agents` |
+| **Workflow** | 工作流定義、版本管理 | `/api/v1/workflows` |
+| **Execution** | 執行生命週期管理 | `/api/v1/executions` |
+| **Connector** | 外部系統整合 (ServiceNow, D365) | `/api/v1/connectors` |
+| **Trigger** | 觸發器配置 (Webhook, Schedule) | `/api/v1/triggers` |
+| **Template** | 場景模板管理 | `/api/v1/templates` |
+
+### 5.3 Layer 2: 核心能力層
+
+提供進階功能支援：
+
+| 模組 | 功能 | 使用場景 |
+|------|------|----------|
+| **Checkpoint** | 人工審批、關鍵節點確認 | 高風險操作前的確認 |
+| **Memory** | 對話記憶、上下文管理 | 多輪對話、長期學習 |
+| **Routing** | 智能路由、條件分派 | 工單分類、動態分配 |
+| **Speaker** | 發言選擇、輪流機制 | GroupChat 協調 |
+| **Capability** | Agent 能力匹配 | 任務到 Agent 的最佳配對 |
+| **Voting** | 共識機制、投票決策 | 多 Agent 協作決策 |
+
+### 5.4 Layer 3: 編排模式層
+
+提供複雜工作流編排能力：
+
+| 模式 | 適配器 | 官方 API |
+|------|--------|----------|
+| **Sequential** | `SequentialAdapter` | Agent Framework Core |
+| **Parallel** | `ConcurrentBuilderAdapter` | `ConcurrentBuilder` |
+| **GroupChat** | `GroupChatBuilderAdapter` | `GroupChatBuilder` |
+| **Nested** | `NestedWorkflowAdapter` | `WorkflowExecutor` |
+| **Handoff** | `HandoffBuilderAdapter` | `HandoffBuilder` |
+| **Planning** | `PlanningAdapter` | `MagenticBuilder` |
+
+### 5.5 Layer 4: 業務場景層
+
+四個核心驗證場景展示平台能力：
+
+#### Scenario 001: IT 工單智能分派
+
+```
+輸入: ServiceNow 工單 → 分類判斷 → 路由分派 → [審批] → 分配執行
+涉及: Sequential, Handoff, Checkpoint, Routing
+測試: 6 個測試案例 (TC-001-01 ~ TC-001-06)
+```
+
+#### Scenario 002: 多 Agent 協作分析
+
+```
+輸入: 分析任務 → GroupChat 討論 → 投票共識 → 綜合結論
+涉及: GroupChat, Voting, Memory, Speaker Selection
+測試: 7 個測試案例 (TC-002-01 ~ TC-002-07)
+```
+
+#### Scenario 003: 自動化報表生成
+
+```
+輸入: 報表請求 → 並行數據採集 → Fork-Join 合併 → 格式輸出
+涉及: Parallel, Fork-Join, Connector, Cache
+測試: 8 個測試案例 (TC-003-01 ~ TC-003-08)
+```
+
+#### Scenario 004: 複雜任務自主規劃
+
+```
+輸入: 高層目標 → 任務分解 → 嵌套執行 → 動態調整 → 完成回報
+涉及: Planning, Nested Workflow, Capability Matcher, Trial-and-Error
+測試: 9 個測試案例 (TC-004-01 ~ TC-004-09)
+```
+
+### 5.6 UAT 驗證架構
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                      UAT Validation Framework                           │
+├────────────────────────────────────────────────────────────────────────┤
+│  Test Runner: scripts/uat/run_all_scenarios.py                         │
+│  ┌──────────────────────────────────────────────────────────────────┐ │
+│  │ Base Class: ScenarioTestBase                                      │ │
+│  │ - async setup() / teardown()                                      │ │
+│  │ - async get_test_cases() → List[TestCase]                         │ │
+│  │ - async run_test_case(TestCase) → TestResult                      │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌──────────┐│
+│  │ Scenario 001   │ │ Scenario 002   │ │ Scenario 003   │ │ Scenario ││
+│  │ IT Triage Test │ │ Collaboration  │ │ Reporting Test │ │ 004 Plan ││
+│  │ 6 Test Cases   │ │ 7 Test Cases   │ │ 8 Test Cases   │ │ 9 Cases  ││
+│  └────────────────┘ └────────────────┘ └────────────────┘ └──────────┘│
+├────────────────────────────────────────────────────────────────────────┤
+│  Output: JSON Report (claudedocs/uat/sessions/)                        │
+│  - Scenario results with pass/fail status                              │
+│  - Individual test case results                                        │
+│  - Duration and performance metrics                                    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+**執行指令**:
+```bash
+# 執行所有場景
+python -m scripts.uat.run_all_scenarios
+
+# 執行特定場景
+python -m scripts.uat.run_all_scenarios --scenario 1
+
+# 儲存報告
+python -m scripts.uat.run_all_scenarios --save-report
+```
+
+**詳細驗證計畫**: 參見 `claudedocs/uat/UAT-SCENARIO-VALIDATION-PLAN.md`
+
+---
+
 **待續**: 下一部分將包含核心模塊詳細設計、數據架構、集成架構等內容。
 
-**文檔狀態**: 第 1 部分完成 (架構概覽、設計原則、技術棧、系統架構) ✅
+**文檔狀態**: 第 1 部分完成 (架構概覽、設計原則、技術棧、系統架構、功能架構) ✅

@@ -6,10 +6,10 @@
 // Detailed view of a single agent with test interface.
 // =============================================================================
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { ArrowLeft, Settings, Play, Send, Bot } from 'lucide-react';
+import { ArrowLeft, Settings, Play, Send, Bot, User, Trash2 } from 'lucide-react';
 import { api } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -20,10 +20,19 @@ import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import { formatNumber } from '@/lib/utils';
 import type { Agent } from '@/types';
 
+// 對話訊息類型
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
 export function AgentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [testInput, setTestInput] = useState('');
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: agent, isLoading } = useQuery({
     queryKey: ['agent', id],
@@ -31,11 +40,37 @@ export function AgentDetailPage() {
     enabled: !!id,
   });
 
+  // 自動滾動到最新訊息
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const testMutation = useMutation({
     mutationFn: (message: string) =>
-      api.post<{ response: string }>(`/agents/${id}/test`, { message }),
+      api.post<{ result: string; stats: Record<string, unknown>; tool_calls: unknown[] }>(`/agents/${id}/run`, { message }),
     onSuccess: (data) => {
-      setTestResult(data.response);
+      // 添加 Agent 回應到對話
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: data.result,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    },
+    onError: (error: Error) => {
+      // 添加錯誤訊息
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: `錯誤: ${error.message}`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
     },
   });
 
@@ -48,8 +83,23 @@ export function AgentDetailPage() {
 
   const handleTest = () => {
     if (testInput.trim()) {
+      // 添加用戶訊息到對話
+      const userMessage: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: testInput,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+
+      // 發送請求
       testMutation.mutate(testInput);
+      setTestInput('');
     }
+  };
+
+  const clearChat = () => {
+    setMessages([]);
   };
 
   return (
@@ -131,48 +181,112 @@ export function AgentDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Test interface */}
+      {/* Test interface - 對話視窗 */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Play className="w-5 h-5" />
-            測試 Agent
+            測試對話
           </CardTitle>
+          {messages.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearChat}>
+              <Trash2 className="w-4 h-4 mr-1" />
+              清除對話
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="flex flex-col h-[400px]">
+            {/* 對話歷史區域 */}
+            <div className="flex-1 overflow-y-auto mb-4 space-y-4 p-4 bg-gray-50 rounded-lg border">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <Bot className="w-12 h-12 mb-3 opacity-50" />
+                  <p className="text-sm">開始與 {ag.name} 對話</p>
+                  <p className="text-xs mt-1">輸入訊息來測試 Agent 的回應</p>
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex gap-3 ${
+                        msg.role === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      {msg.role === 'assistant' && (
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Bot className="w-4 h-4 text-primary" />
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                          msg.role === 'user'
+                            ? 'bg-primary text-white rounded-br-md'
+                            : 'bg-white border border-gray-200 rounded-bl-md'
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        <p
+                          className={`text-xs mt-1 ${
+                            msg.role === 'user' ? 'text-white/70' : 'text-gray-400'
+                          }`}
+                        >
+                          {msg.timestamp.toLocaleTimeString('zh-TW', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      {msg.role === 'user' && (
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                          <User className="w-4 h-4 text-gray-600" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {testMutation.isPending && (
+                    <div className="flex gap-3 justify-start">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3">
+                        <div className="flex gap-1">
+                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </>
+              )}
+            </div>
+
+            {/* 輸入區域 */}
             <div className="flex gap-2">
               <input
                 type="text"
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
-                placeholder="輸入測試訊息..."
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                onKeyDown={(e) => e.key === 'Enter' && handleTest()}
+                placeholder="輸入訊息..."
+                className="flex-1 px-4 py-3 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleTest()}
+                disabled={testMutation.isPending}
               />
-              <Button onClick={handleTest} disabled={testMutation.isPending}>
+              <Button
+                onClick={handleTest}
+                disabled={testMutation.isPending || !testInput.trim()}
+                className="rounded-full w-12 h-12"
+              >
                 {testMutation.isPending ? (
                   <LoadingSpinner size="sm" />
                 ) : (
-                  <Send className="w-4 h-4" />
+                  <Send className="w-5 h-5" />
                 )}
               </Button>
             </div>
-
-            {testResult && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">回覆:</p>
-                <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                  {testResult}
-                </p>
-              </div>
-            )}
-
-            {!testResult && !testMutation.isPending && (
-              <p className="text-sm text-gray-500 text-center py-4">
-                輸入訊息來測試 Agent 的回應
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>

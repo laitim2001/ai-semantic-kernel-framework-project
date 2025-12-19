@@ -67,21 +67,42 @@ class Checkpoint(Base, TimestampMixin):
     # Node reference
     node_id: Mapped[str] = mapped_column(
         String(255),
+        nullable=True,
+    )
+
+    # Step in workflow (required by database)
+    step: Mapped[str] = mapped_column(
+        String(255),
         nullable=False,
+        default="0",
+    )
+
+    # Checkpoint type (required by database)
+    checkpoint_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="approval",
+    )
+
+    # Current workflow state (required by database)
+    state: Mapped[Dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
     )
 
     # Status
     status: Mapped[str] = mapped_column(
         String(50),
-        nullable=False,
+        nullable=True,
         default="pending",
         index=True,
     )
 
     # Payload for review
-    payload: Mapped[Dict[str, Any]] = mapped_column(
+    payload: Mapped[Optional[Dict[str, Any]]] = mapped_column(
         JSONB,
-        nullable=False,
+        nullable=True,
         default=dict,
     )
 

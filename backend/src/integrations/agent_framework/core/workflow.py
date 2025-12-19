@@ -7,22 +7,24 @@
 # This module adapts the existing WorkflowDefinition to the official
 # Microsoft Agent Framework Workflow interface.
 #
-# Official API Pattern (from workflows-api.md):
-#   workflow = Workflow(
-#       executors=[executor1, executor2, ...],
-#       edges=[edge1, edge2, ...],
-#       checkpoint_store=checkpoint_store
+# Official API Pattern (from WorkflowBuilder):
+#   workflow = (
+#       WorkflowBuilder()
+#       .register_executor(factory, name="name")
+#       .add_edge("source", "target")
+#       .set_start_executor("name")
+#       .build()
 #   )
-#   result = await workflow.run(input_data)
+#   result = await workflow.run(message)
 #
 # Key Features:
-#   - Converts WorkflowDefinition to official Workflow
-#   - Integrates WorkflowNodeExecutor and WorkflowEdgeAdapter
+#   - Converts WorkflowDefinition to official Workflow via WorkflowBuilder
+#   - Integrates WorkflowNodeExecutor for node execution
 #   - Supports checkpoint storage for persistence
 #   - Provides run() and run_stream() methods
 #
 # IMPORTANT: Uses official Agent Framework API
-#   from agent_framework.workflows import Workflow
+#   from agent_framework import WorkflowBuilder
 # =============================================================================
 
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional
@@ -31,11 +33,12 @@ from datetime import datetime
 import logging
 
 # Official Agent Framework Imports - MUST use these
-from agent_framework.workflows import Workflow, Edge, Executor
+# Note: Classes are directly under agent_framework
+from agent_framework import Workflow, WorkflowBuilder, Edge, Executor
 
 # Import our adapters
 from .executor import WorkflowNodeExecutor, NodeInput, NodeOutput
-from .edge import WorkflowEdgeAdapter, convert_edges
+from .edge import WorkflowEdgeAdapter
 
 # Import existing domain models
 from src.domain.workflows.models import (
@@ -181,10 +184,10 @@ class WorkflowDefinitionAdapter:
 
     def build(self) -> Workflow:
         """
-        Build the official Workflow from the definition.
+        Build the official Workflow from the definition using WorkflowBuilder.
 
-        Converts all nodes to executors and edges to official Edge objects,
-        then constructs the Workflow.
+        Converts all nodes to executors, registers them with WorkflowBuilder,
+        and adds edges between them.
 
         Returns:
             Official Workflow instance
@@ -197,7 +200,10 @@ class WorkflowDefinitionAdapter:
 
         logger.debug(f"Building workflow with {len(self._definition.nodes)} nodes")
 
-        # 1. Create executors for all nodes
+        # 1. Create WorkflowBuilder
+        builder = WorkflowBuilder()
+
+        # 2. Create executors for all nodes
         self._executors = []
         self._executor_map = {}
 
@@ -210,19 +216,54 @@ class WorkflowDefinitionAdapter:
             self._executors.append(executor)
             self._executor_map[node.id] = executor
 
-        # 2. Convert all edges to official Edge objects
-        self._edges = convert_edges(self._definition.edges)
+        # 3. Add edges between executors using executor objects directly
+        # Note: The installed agent_framework version uses add_edge with
+        # Executor objects, not registered names
+        for edge in self._definition.edges:
+            source_executor = self._executor_map.get(edge.source)
+            target_executor = self._executor_map.get(edge.target)
 
-        # 3. Build the official Workflow
-        self._workflow = Workflow(
-            executors=self._executors,
-            edges=self._edges,
-            checkpoint_store=self._checkpoint_store,
-        )
+            if source_executor is None:
+                raise ValueError(f"Source node '{edge.source}' not found")
+            if target_executor is None:
+                raise ValueError(f"Target node '{edge.target}' not found")
+
+            if edge.condition:
+                # Create condition evaluator for conditional edges
+                evaluator = WorkflowEdgeAdapter(edge)
+                builder.add_edge(
+                    source_executor,
+                    target_executor,
+                    condition=evaluator.evaluate_condition,
+                )
+            else:
+                builder.add_edge(source_executor, target_executor)
+
+        # 4. Set start executor
+        start_node = self._definition.get_start_node()
+        if start_node:
+            start_executor = self._executor_map.get(start_node.id)
+            if start_executor:
+                builder.set_start_executor(start_executor)
+            else:
+                raise ValueError(f"Start node '{start_node.id}' not found in executor map")
+        elif self._definition.nodes:
+            # Fallback to first node if no explicit start
+            first_executor = self._executors[0]
+            builder.set_start_executor(first_executor)
+        else:
+            raise ValueError("Workflow must have at least one node")
+
+        # 5. Configure checkpointing if storage provided
+        if self._checkpoint_store:
+            builder.with_checkpointing(self._checkpoint_store)
+
+        # 6. Build the official Workflow
+        self._workflow = builder.build()
 
         logger.info(
             f"Built workflow with {len(self._executors)} executors, "
-            f"{len(self._edges)} edges"
+            f"{len(self._definition.edges)} edges"
         )
 
         return self._workflow
@@ -451,35 +492,26 @@ def build_simple_workflow(
     Returns:
         Official Workflow instance
     """
-    executors = [start_executor]
-    edges = []
+    builder = WorkflowBuilder()
 
+    # Build the chain of executors
+    all_executors = [start_executor]
     if middle_executors:
-        executors.extend(middle_executors)
+        all_executors.extend(middle_executors)
+    all_executors.append(end_executor)
 
-        # Connect start to first middle
-        edges.append(Edge(source=start_executor.id, target=middle_executors[0].id))
+    # Use add_chain for linear workflows (requires 2+ executors)
+    if len(all_executors) >= 2:
+        builder.add_chain(all_executors)
 
-        # Connect middle nodes in sequence
-        for i in range(len(middle_executors) - 1):
-            edges.append(Edge(
-                source=middle_executors[i].id,
-                target=middle_executors[i + 1].id,
-            ))
+    # Set start executor
+    builder.set_start_executor(start_executor)
 
-        # Connect last middle to end
-        edges.append(Edge(source=middle_executors[-1].id, target=end_executor.id))
-    else:
-        # Direct start to end
-        edges.append(Edge(source=start_executor.id, target=end_executor.id))
+    # Configure checkpointing if storage provided
+    if checkpoint_store:
+        builder.with_checkpointing(checkpoint_store)
 
-    executors.append(end_executor)
-
-    return Workflow(
-        executors=executors,
-        edges=edges,
-        checkpoint_store=checkpoint_store,
-    )
+    return builder.build()
 
 
 def build_branching_workflow(
@@ -507,8 +539,7 @@ def build_branching_workflow(
     if len(branch_executors) != len(branch_conditions):
         raise ValueError("branch_executors and branch_conditions must have same length")
 
-    executors = [gateway_executor] + branch_executors + [merge_executor]
-    edges = []
+    builder = WorkflowBuilder()
 
     # Connect gateway to each branch with conditions
     for executor, condition in zip(branch_executors, branch_conditions):
@@ -518,14 +549,21 @@ def build_branching_workflow(
             condition=condition,
         )
         adapter = WorkflowEdgeAdapter(workflow_edge)
-        edges.append(adapter.to_official_edge())
+        builder.add_edge(
+            gateway_executor,
+            executor,
+            condition=adapter.evaluate_condition,
+        )
 
     # Connect each branch to merge
     for executor in branch_executors:
-        edges.append(Edge(source=executor.id, target=merge_executor.id))
+        builder.add_edge(executor, merge_executor)
 
-    return Workflow(
-        executors=executors,
-        edges=edges,
-        checkpoint_store=checkpoint_store,
-    )
+    # Set start executor (gateway)
+    builder.set_start_executor(gateway_executor)
+
+    # Configure checkpointing if storage provided
+    if checkpoint_store:
+        builder.with_checkpointing(checkpoint_store)
+
+    return builder.build()

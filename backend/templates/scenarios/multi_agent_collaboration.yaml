@@ -1,0 +1,430 @@
+# =============================================================================
+# Scenario 2: Multi-Agent Collaboration - 多 Agent 協作分析
+# =============================================================================
+# 完整的端到端場景，展示如何使用 IPA Platform 實現多 Agent 群組討論、
+# 多輪對話、投票決策和報告生成。
+#
+# 涉及功能: Agent, GroupChat, Multi-turn, Memory, Speaker Selection,
+#           Voting, Termination, Audit, Parallel
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# Created: 2025-12-18
+# =============================================================================
+
+scenario:
+  id: scenario_002_multi_agent_collaboration
+  name: 多 Agent 協作分析
+  description: |
+    對複雜的業務問題進行多角度分析，多個專家 Agent 協作討論，
+    最後綜合產出報告。支援多種發言模式和投票決策。
+  version: "1.0.0"
+  category: analysis
+  status: draft
+
+# -----------------------------------------------------------------------------
+# Section 1: Agents 定義
+# -----------------------------------------------------------------------------
+agents:
+  # Business Analyst Agent
+  - id: business_analyst
+    name: 業務分析師 Agent
+    description: 從業務角度分析問題
+    instructions: |
+      你是資深業務分析師。你的職責是：
+      1. 從業務價值角度評估方案
+      2. 分析市場影響和競爭優勢
+      3. 評估 ROI 和商業可行性
+      4. 識別業務風險和機會
+
+      請提供數據支持的分析，並清晰表達你的立場。
+    tools:
+      - market_research
+      - financial_calculator
+      - competitor_analysis
+    model: gpt-4
+    temperature: 0.7
+    capabilities:
+      - business_analysis
+      - market_research
+      - financial_modeling
+    persona:
+      role: "業務分析專家"
+      speaking_style: "數據驅動、注重 ROI"
+
+  # Technical Architect Agent
+  - id: technical_architect
+    name: 技術架構師 Agent
+    description: 從技術角度分析問題
+    instructions: |
+      你是資深技術架構師。你的職責是：
+      1. 評估技術可行性和複雜度
+      2. 分析系統影響和依賴關係
+      3. 提出架構建議和技術方案
+      4. 識別技術風險和挑戰
+
+      請基於工程最佳實踐提供建議。
+    tools:
+      - architecture_analyzer
+      - dependency_checker
+      - performance_estimator
+    model: gpt-4
+    temperature: 0.5
+    capabilities:
+      - system_design
+      - architecture_review
+      - technical_assessment
+    persona:
+      role: "技術架構專家"
+      speaking_style: "嚴謹、注重可行性"
+
+  # Risk Analyst Agent
+  - id: risk_analyst
+    name: 風險分析師 Agent
+    description: 從風險角度分析問題
+    instructions: |
+      你是風險管理專家。你的職責是：
+      1. 識別潛在風險和威脅
+      2. 評估風險嚴重程度和發生機率
+      3. 提出風險緩解措施
+      4. 監控關鍵風險指標
+
+      請全面評估各類風險，包括技術、業務、合規和運營風險。
+    tools:
+      - risk_assessment_matrix
+      - compliance_checker
+      - historical_incident_analyzer
+    model: gpt-4
+    temperature: 0.4
+    capabilities:
+      - risk_assessment
+      - compliance_analysis
+      - mitigation_planning
+    persona:
+      role: "風險管理專家"
+      speaking_style: "謹慎、全面考慮最壞情況"
+
+  # Report Generator Agent
+  - id: report_generator
+    name: 報告生成 Agent
+    description: 綜合討論結果生成報告
+    template_ref: report_agent  # 引用現有模板
+    instructions: |
+      你是專業的分析報告撰寫者。你的職責是：
+      1. 綜合各方觀點形成結論
+      2. 提煉關鍵洞見和建議
+      3. 撰寫清晰、結構化的報告
+      4. 確保報告客觀、公正
+
+      報告應包含：摘要、各方觀點、共識點、分歧點、建議和結論。
+    capabilities:
+      - report_writing
+      - content_synthesis
+      - executive_summary
+
+# -----------------------------------------------------------------------------
+# Section 2: GroupChat 配置
+# -----------------------------------------------------------------------------
+groupchat:
+  id: analysis_discussion_group
+  name: 分析討論群組
+  description: 多專家協作分析討論群組
+
+  # 參與者
+  participants:
+    - agent_ref: business_analyst
+      role: participant
+    - agent_ref: technical_architect
+      role: participant
+    - agent_ref: risk_analyst
+      role: participant
+    - agent_ref: report_generator
+      role: observer  # 只觀察，最後生成報告
+
+  # 發言選擇配置
+  speaker_selection:
+    method: auto  # auto, round_robin, random, manual, priority, expertise
+    config:
+      # AUTO 模式配置 - LLM 自動選擇最適合發言的 Agent
+      auto:
+        selection_prompt: |
+          基於當前討論內容，選擇最適合下一個發言的專家。
+          考慮因素：
+          1. 當前話題的專業領域
+          2. 是否需要不同角度的觀點
+          3. 是否有專家還沒有表達意見
+        max_consecutive_same_speaker: 2
+
+      # ROUND_ROBIN 模式配置 - 輪流發言
+      round_robin:
+        order:
+          - business_analyst
+          - technical_architect
+          - risk_analyst
+        skip_if_no_input: false
+
+      # EXPERTISE 模式配置 - 按專長選擇
+      expertise:
+        topic_mapping:
+          business: business_analyst
+          technical: technical_architect
+          risk: risk_analyst
+          default: business_analyst
+
+  # 終止條件
+  termination:
+    conditions:
+      - type: max_rounds
+        value: 10
+      - type: consensus_reached
+        config:
+          agreement_threshold: 0.8
+      - type: keyword
+        keywords:
+          - "達成共識"
+          - "總結完畢"
+          - "討論結束"
+      - type: timeout
+        value: 1800  # 30 minutes
+
+  # 投票配置
+  voting:
+    enabled: true
+    config:
+      trigger_keywords:
+        - "進行投票"
+        - "表決"
+        - "投票決定"
+      voting_method: majority  # majority, unanimous, weighted
+      timeout_seconds: 60
+      allow_abstain: true
+      record_reasoning: true  # 記錄每個投票者的理由
+
+  # 對話記憶配置
+  memory:
+    enabled: true
+    config:
+      storage_type: redis  # redis, postgres
+      max_history: 50      # 保留最近 50 條訊息
+      summarization:
+        enabled: true
+        frequency: 10  # 每 10 條訊息生成摘要
+      persistence:
+        enabled: true
+        session_timeout: 3600  # 1 hour
+
+# -----------------------------------------------------------------------------
+# Section 3: Workflow 定義
+# -----------------------------------------------------------------------------
+workflow:
+  id: multi_agent_analysis_workflow
+  name: 多 Agent 協作分析工作流
+  description: 完整的多專家協作分析流程
+
+  nodes:
+    # 節點 1: 接收分析請求
+    - id: receive_request
+      name: 接收分析請求
+      type: trigger
+      trigger_type: api
+      config:
+        endpoint: /api/v1/analysis/request
+
+    # 節點 2: 準備討論上下文
+    - id: prepare_context
+      name: 準備討論上下文
+      type: processor
+      config:
+        actions:
+          - extract_key_points
+          - load_relevant_data
+          - initialize_memory
+
+    # 節點 3: GroupChat 討論
+    - id: group_discussion
+      name: 群組討論
+      type: groupchat
+      groupchat_ref: analysis_discussion_group
+      config:
+        initial_message: |
+          請各位專家針對以下問題進行分析討論：
+          {analysis_topic}
+
+          請從各自的專業角度提供見解。
+
+    # 節點 4: 投票決策 (如需要)
+    - id: voting_decision
+      name: 投票決策
+      type: voting
+      config:
+        question: "基於討論，我們是否應該採納此方案？"
+        options:
+          - label: "同意"
+            value: approve
+          - label: "反對"
+            value: reject
+          - label: "需要更多信息"
+            value: need_more_info
+        participants:
+          - business_analyst
+          - technical_architect
+          - risk_analyst
+
+    # 節點 5: 生成報告
+    - id: generate_report
+      name: 生成報告
+      type: agent
+      agent_ref: report_generator
+      config:
+        input:
+          - discussion_history
+          - voting_result
+          - consensus_points
+          - disagreement_points
+        output_format: markdown
+
+    # 節點 6: 審計記錄
+    - id: audit_log
+      name: 審計記錄
+      type: audit
+      config:
+        log_level: detailed
+        include:
+          - discussion_transcript
+          - voting_record
+          - final_report
+
+  edges:
+    - source: receive_request
+      target: prepare_context
+
+    - source: prepare_context
+      target: group_discussion
+
+    - source: group_discussion
+      target: voting_decision
+      condition: "requires_decision == true"
+
+    - source: group_discussion
+      target: generate_report
+      condition: "requires_decision == false"
+
+    - source: voting_decision
+      target: generate_report
+
+    - source: generate_report
+      target: audit_log
+
+# -----------------------------------------------------------------------------
+# Section 4: Test Cases 測試案例
+# -----------------------------------------------------------------------------
+test_cases:
+  - id: TC-002-01
+    name: 3 Agent 基本討論
+    description: 驗證 3 個 Agent 能夠進行基本討論並產出結論
+    input:
+      analysis_topic: "是否應該將現有的單體架構遷移到微服務架構？"
+      speaker_selection_method: round_robin
+      max_rounds: 5
+    expected:
+      discussion_rounds: 5
+      all_participants_spoke: true
+      report_generated: true
+
+  - id: TC-002-02
+    name: 輪流發言模式
+    description: 驗證 Round-Robin 發言順序正確
+    input:
+      analysis_topic: "新產品上市策略評估"
+      speaker_selection_method: round_robin
+    expected:
+      speaking_order:
+        - business_analyst
+        - technical_architect
+        - risk_analyst
+        - business_analyst  # 循環
+
+  - id: TC-002-03
+    name: 專長發言模式
+    description: 驗證按專長自動選擇發言者
+    input:
+      analysis_topic: "API 效能優化方案"  # 技術話題
+      speaker_selection_method: expertise
+    expected:
+      first_speaker: technical_architect
+
+  - id: TC-002-04
+    name: 投票達成共識
+    description: 驗證投票機制正常運作
+    input:
+      analysis_topic: "是否採用新的 CI/CD 工具？"
+      require_voting: true
+    expected:
+      voting_triggered: true
+      voting_completed: true
+      result_recorded: true
+
+  - id: TC-002-05
+    name: 對話記憶持久化
+    description: 驗證對話歷史正確保存到 Memory
+    input:
+      analysis_topic: "客戶滿意度提升計劃"
+      max_rounds: 8
+    expected:
+      memory_saved: true
+      message_count: ">= 8"
+      summary_generated: true
+
+# -----------------------------------------------------------------------------
+# Section 5: Configuration 配置
+# -----------------------------------------------------------------------------
+config:
+  # GroupChat 配置
+  groupchat:
+    default_speaker_selection: auto
+    max_rounds: 10
+    round_timeout_seconds: 120
+
+  # Memory 配置
+  memory:
+    storage_backend: redis
+    max_messages: 100
+    enable_summarization: true
+
+  # Voting 配置
+  voting:
+    default_method: majority
+    timeout_seconds: 120
+    require_reasoning: true
+
+  # Report 配置
+  report:
+    format: markdown
+    include_transcript: true
+    include_voting_details: true
+
+# -----------------------------------------------------------------------------
+# Section 6: Metadata 元數據
+# -----------------------------------------------------------------------------
+metadata:
+  tags:
+    - collaboration
+    - groupchat
+    - multi_agent
+    - analysis
+    - voting
+
+  documentation:
+    user_guide: "docs/04-user-guide/scenario-002-collaboration.md"
+    api_reference: "docs/05-api/groupchat.md"
+
+  metrics:
+    - name: discussion_quality_score
+      description: 討論質量評分
+      target: ">= 0.8"
+    - name: consensus_rate
+      description: 共識達成率
+      target: ">= 0.7"
+    - name: average_discussion_time
+      description: 平均討論時間
+      target: "<= 20 minutes"

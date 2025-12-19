@@ -29,9 +29,12 @@ import asyncio
 import logging
 
 # Official Agent Framework Imports - MUST use these
-from agent_framework import ChatAgent
-from agent_framework.workflows.orchestrations import SequentialOrchestration
-from agent_framework.workflows import Workflow
+# Note: Classes are directly under agent_framework, not agent_framework.workflows
+# SequentialOrchestration was renamed to SequentialBuilder in the official API
+from agent_framework import ChatAgent, SequentialBuilder, Workflow
+
+# Alias for backward compatibility
+SequentialOrchestration = SequentialBuilder
 
 # Import Sprint 26 adapters
 from .executor import WorkflowNodeExecutor, NodeInput, NodeOutput
@@ -270,7 +273,7 @@ class SequentialOrchestrationAdapter:
         """Get total execution count."""
         return self._execution_count
 
-    async def run(self, input_data: Any) -> SequentialExecutionResult:
+    async def run(self, input_data: Any) -> "SequentialExecutionResult":
         """
         Execute the sequential orchestration.
 
@@ -551,7 +554,7 @@ class ExecutionAdapter:
         execution_id: UUID,
         input_data: Dict[str, Any],
         checkpoint_id: Optional[str] = None,
-    ) -> ExecutionResult:
+    ) -> "ExecutionResult":
         """
         Execute the workflow.
 

@@ -1,0 +1,457 @@
+{
+  "test_plan": "IT Ticket E2E Workflow",
+  "executed_at": "2025-12-18T17:11:38.976848",
+  "environment": {
+    "azure_model": "gpt-5.2",
+    "api_version": "2024-12-01-preview",
+    "endpoint": "https://chris-mj48nnoz-eastus2.cognitiveservices.azure.com/"
+  },
+  "summary": {
+    "total_tests": 15,
+    "passed": 11,
+    "failed": 4,
+    "pass_rate": "73.3%"
+  },
+  "metrics": {
+    "total_duration_ms": 127205.44004440308,
+    "total_llm_calls": 11,
+    "total_tokens": 5006,
+    "total_cost": 0.05006
+  },
+  "results": [
+    {
+      "test_id": 1,
+      "test_name": "Workflow Definition Creation",
+      "phase": "Phase 1: Basic Components",
+      "status": "PASS",
+      "duration_ms": 0.0045299530029296875,
+      "llm_calls": 0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "response": "",
+      "error": "",
+      "details": {
+        "workflow_def": {
+          "name": "IT Ticket Triage Workflow",
+          "description": "Complete IT ticket triage from intake to dispatch",
+          "version": "1.0.0",
+          "nodes": [
+            {
+              "id": "intake",
+              "type": "agent",
+              "agent": "triage_agent"
+            },
+            {
+              "id": "route",
+              "type": "condition"
+            },
+            {
+              "id": "approval",
+              "type": "checkpoint"
+            },
+            {
+              "id": "handoff",
+              "type": "handoff"
+            },
+            {
+              "id": "complete",
+              "type": "end"
+            }
+          ],
+          "edges": [
+            {
+              "from": "intake",
+              "to": "route"
+            },
+            {
+              "from": "route",
+              "to": "approval",
+              "condition": "priority == 'P1'"
+            },
+            {
+              "from": "route",
+              "to": "handoff",
+              "condition": "priority != 'P1'"
+            },
+            {
+              "from": "approval",
+              "to": "handoff"
+            },
+            {
+              "from": "handoff",
+              "to": "complete"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "test_id": 2,
+      "test_name": "Execution State Machine",
+      "phase": "Phase 1: Basic Components",
+      "status": "FAIL",
+      "duration_ms": 0.00858306884765625,
+      "llm_calls": 0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "response": "",
+      "error": "",
+      "details": {
+        "transitions_tested": 4,
+        "valid": 3
+      }
+    },
+    {
+      "test_id": 3,
+      "test_name": "P1 Critical Ticket Classification",
+      "phase": "Phase 2: LLM Classification",
+      "status": "PASS",
+      "duration_ms": 8210.508584976196,
+      "llm_calls": 1,
+      "llm_tokens": 361,
+      "llm_cost": 0.00361,
+      "response": "{\"priority\":\"P1\",\"category\":\"Network\",\"team\":\"network-team\",\"needs_approval\":true,\"reason\":\"財務部整層網路斷線，約50人無法連網且影響月結作業（核心營運/財務流程中斷）；通報者為CFO屬VIP，需最高優先處理。\"}",
+      "error": "",
+      "details": {
+        "ticket_id": "TKT-E2E-001",
+        "expected_priority": "P1",
+        "detected_priority": "P1"
+      }
+    },
+    {
+      "test_id": 4,
+      "test_name": "P2 High Priority Ticket Classification",
+      "phase": "Phase 2: LLM Classification",
+      "status": "FAIL",
+      "duration_ms": 4995.216369628906,
+      "llm_calls": 1,
+      "llm_tokens": 382,
+      "llm_cost": 0.00382,
+      "response": "{\"priority\":\"P3\",\"category\":\"Network\",\"team\":\"network-team\",\"needs_approval\":false,\"reason\":\"單一使用者回報居家 VPN 連線極慢且已持續三天，造成遠端登入延遲但仍可能可用（僅慢）。屬網路/VPN 連線效能問題，需由網路團隊檢查 VPN 閘道、路由、帶寬/壅塞與使用者端連線狀況。\"}",
+      "error": "",
+      "details": {
+        "ticket_id": "TKT-E2E-002",
+        "expected_priority": "P2",
+        "detected_priority": "P3"
+      }
+    },
+    {
+      "test_id": 5,
+      "test_name": "P3 Medium Priority Ticket Classification",
+      "phase": "Phase 2: LLM Classification",
+      "status": "FAIL",
+      "duration_ms": 3852.802276611328,
+      "llm_calls": 1,
+      "llm_tokens": 336,
+      "llm_cost": 0.0033599999999999997,
+      "response": "{\"priority\":\"P4\",\"category\":\"Software\",\"team\":\"helpdesk\",\"needs_approval\":false,\"reason\":\"單一使用者（實習生）申請安裝開發軟體 VS Code，屬一般軟體安裝需求，未提及緊急期限或業務中斷影響。\"}",
+      "error": "",
+      "details": {
+        "ticket_id": "TKT-E2E-004",
+        "expected_priority": "P3",
+        "detected_priority": "P4"
+      }
+    },
+    {
+      "test_id": 6,
+      "test_name": "VIP Context Classification",
+      "phase": "Phase 2: LLM Classification",
+      "status": "PASS",
+      "duration_ms": 4451.070070266724,
+      "llm_calls": 1,
+      "llm_tokens": 424,
+      "llm_cost": 0.00424,
+      "response": "{\"priority\":\"P1\",\"category\":\"Network\",\"team\":\"network-team\",\"needs_approval\":true,\"reason\":\"VIP CFO回報；財務部整層網路斷線，約50人無法連網，月結關帳期間影響關鍵財務作業，屬於業務中斷需立即處理。\"}",
+      "error": "",
+      "details": {
+        "vip": true,
+        "priority_detected": "P1"
+      }
+    },
+    {
+      "test_id": 7,
+      "test_name": "Scenario Routing",
+      "phase": "Phase 3: Routing",
+      "status": "PASS",
+      "duration_ms": 0.016689300537109375,
+      "llm_calls": 0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "response": "",
+      "error": "",
+      "details": {
+        "routing_results": [
+          {
+            "ticket_id": "TKT-E2E-001",
+            "category": "Network",
+            "expected_team": "network-team",
+            "routed_team": "network-team",
+            "correct": true
+          },
+          {
+            "ticket_id": "TKT-E2E-002",
+            "category": "Network",
+            "expected_team": "network-team",
+            "routed_team": "network-team",
+            "correct": true
+          },
+          {
+            "ticket_id": "TKT-E2E-003",
+            "category": "Hardware",
+            "expected_team": "endpoint-team",
+            "routed_team": "endpoint-team",
+            "correct": true
+          },
+          {
+            "ticket_id": "TKT-E2E-004",
+            "category": "Software",
+            "expected_team": "helpdesk",
+            "routed_team": "helpdesk",
+            "correct": true
+          }
+        ]
+      }
+    },
+    {
+      "test_id": 8,
+      "test_name": "Capability Matching",
+      "phase": "Phase 3: Routing",
+      "status": "PASS",
+      "duration_ms": 0.02288818359375,
+      "llm_calls": 0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "response": "",
+      "error": "",
+      "details": {
+        "matches": [
+          {
+            "required": [
+              "network_diagnosis"
+            ],
+            "expected": "network_expert",
+            "matched": "network_expert",
+            "correct": true
+          },
+          {
+            "required": [
+              "hardware_diagnosis"
+            ],
+            "expected": "endpoint_expert",
+            "matched": "endpoint_expert",
+            "correct": true
+          },
+          {
+            "required": [
+              "software_installation"
+            ],
+            "expected": "helpdesk_agent",
+            "matched": "helpdesk_agent",
+            "correct": true
+          }
+        ]
+      }
+    },
+    {
+      "test_id": 9,
+      "test_name": "Checkpoint Creation",
+      "phase": "Phase 4: Human-in-the-Loop",
+      "status": "PASS",
+      "duration_ms": 0.049591064453125,
+      "llm_calls": 0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "response": "",
+      "error": "",
+      "details": {
+        "checkpoint": {
+          "id": "CP-TKT-E2E-001",
+          "execution_id": "EXE-TKT-E2E-001",
+          "ticket_id": "TKT-E2E-001",
+          "status": "PENDING",
+          "approvers": [
+            "it_manager"
+          ],
+          "timeout_minutes": 30,
+          "created_at": "2025-12-18T17:09:53.281432",
+          "context": {
+            "priority": "P1",
+            "team": "network-team",
+            "reason": "Critical issue requires manager approval"
+          }
+        }
+      }
+    },
+    {
+      "test_id": 10,
+      "test_name": "Approval Flow",
+      "phase": "Phase 4: Human-in-the-Loop",
+      "status": "PASS",
+      "duration_ms": 0.0054836273193359375,
+      "llm_calls": 0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "response": "",
+      "error": "",
+      "details": {
+        "approval": {
+          "checkpoint_id": "CP-TKT-E2E-001",
+          "action": "APPROVE",
+          "approved_by": "it_manager",
+          "approved_at": "2025-12-18T17:09:53.281503",
+          "comment": "Approved for immediate action"
+        },
+        "execution_status": "RUNNING"
+      }
+    },
+    {
+      "test_id": 11,
+      "test_name": "Rejection Flow",
+      "phase": "Phase 4: Human-in-the-Loop",
+      "status": "PASS",
+      "duration_ms": 0.004291534423828125,
+      "llm_calls": 0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "response": "",
+      "error": "",
+      "details": {
+        "rejection": {
+          "checkpoint_id": "CP-TKT-E2E-003",
+          "action": "REJECT",
+          "rejected_by": "it_manager",
+          "rejected_at": "2025-12-18T17:09:53.281526",
+          "reason": "Need more information before escalation"
+        },
+        "execution_status": "FAILED"
+      }
+    },
+    {
+      "test_id": 12,
+      "test_name": "Handoff Trigger",
+      "phase": "Phase 5: Handoff",
+      "status": "PASS",
+      "duration_ms": 0.00667572021484375,
+      "llm_calls": 0,
+      "llm_tokens": 0,
+      "llm_cost": 0.0,
+      "response": "",
+      "error": "",
+      "details": {
+        "handoff": {
+          "id": "HO-TKT-E2E-001",
+          "source_agent": "triage_agent",
+          "target_agent": "network_expert",
+          "status": "INITIATED",
+          "context": {
+            "ticket_id": "TKT-E2E-001",
+            "ticket_title": "整層網路斷線 - 財務部",
+            "priority": "P1",
+            "classification_summary": "Network outage affecting Finance department",
+            "approval_status": "APPROVED"
+          },
+          "created_at": "2025-12-18T17:09:53.281566"
+        }
+      }
+    },
+    {
+      "test_id": 13,
+      "test_name": "Handoff Completion",
+      "phase": "Phase 5: Handoff",
+      "status": "FAIL",
+      "duration_ms": 20316.150426864624,
+      "llm_calls": 1,
+      "llm_tokens": 597,
+      "llm_cost": 0.00597,
+      "response": "",
+      "error": "",
+      "details": {
+        "handoff_completion": {
+          "id": "HO-TKT-E2E-001",
+          "status": "COMPLETED",
+          "target_response": "",
+          "completed_at": "2025-12-18T17:10:13.597733"
+        }
+      }
+    },
+    {
+      "test_id": 14,
+      "test_name": "GroupChat Collaboration",
+      "phase": "Phase 6: Collaboration",
+      "status": "PASS",
+      "duration_ms": 63492.17486381531,
+      "llm_calls": 4,
+      "llm_tokens": 1978,
+      "llm_cost": 0.019780000000000002,
+      "response": "I can consolidate, but the “expert opinions” are currently blank. Please paste what each provided (even bullet notes), and I’ll produce a single prioritized recommendation.\n\nIn the meantime, here’s th",
+      "error": "",
+      "details": {
+        "experts": [
+          {
+            "expert": "network_expert",
+            "response": "",
+            "tokens": 595
+          },
+          {
+            "expert": "endpoint_expert",
+            "response": "",
+            "tokens": 596
+          },
+          {
+            "expert": "helpdesk_agent",
+            "response": "",
+            "tokens": 594
+          }
+        ]
+      }
+    },
+    {
+      "test_id": 15,
+      "test_name": "Complete E2E Workflow",
+      "phase": "Phase 7: Complete E2E",
+      "status": "PASS",
+      "duration_ms": 21886.672735214233,
+      "llm_calls": 2,
+      "llm_tokens": 928,
+      "llm_cost": 0.00928,
+      "response": "",
+      "error": "",
+      "details": {
+        "ticket_id": "TKT-E2E-003",
+        "workflow_steps": [
+          {
+            "step": "classification",
+            "status": "completed"
+          },
+          {
+            "step": "routing",
+            "team": "endpoint-team",
+            "status": "completed"
+          },
+          {
+            "step": "checkpoint",
+            "status": "created"
+          },
+          {
+            "step": "approval",
+            "status": "approved"
+          },
+          {
+            "step": "capability_match",
+            "agent": "endpoint_expert",
+            "status": "completed"
+          },
+          {
+            "step": "handoff",
+            "status": "completed"
+          },
+          {
+            "step": "resolution",
+            "status": "completed"
+          }
+        ],
+        "final_status": "COMPLETED"
+      }
+    }
+  ]
+}

@@ -1,0 +1,476 @@
+# =============================================================================
+# Scenario 3: Automated Report Generation - 自動化報表生成
+# =============================================================================
+# 完整的端到端場景，展示如何使用 IPA Platform 實現從多個數據源並行收集
+# 數據、整合分析、生成報表並自動通知。
+#
+# 涉及功能: Connector, Trigger (Cron), Parallel, Fork-Join, Sequential,
+#           Cache, Audit, Notification, Dashboard
+#
+# Author: IPA Platform Team
+# Version: 1.0.0
+# Created: 2025-12-18
+# =============================================================================
+
+scenario:
+  id: scenario_003_automated_reporting
+  name: 自動化報表生成
+  description: |
+    定期從多個數據源收集信息，並行處理後生成綜合報表，
+    並自動通知相關人員。支援 LLM 緩存優化和完整審計追蹤。
+  version: "1.0.0"
+  category: reporting
+  status: draft
+
+# -----------------------------------------------------------------------------
+# Section 1: Agents 定義
+# -----------------------------------------------------------------------------
+agents:
+  # Data Collector Agent
+  - id: data_collector_agent
+    name: 數據收集 Agent
+    description: 負責從各數據源收集數據
+    instructions: |
+      你是數據收集專家。你的職責是：
+      1. 從指定的數據源獲取數據
+      2. 驗證數據完整性和質量
+      3. 轉換數據格式為統一標準
+      4. 處理數據收集錯誤
+
+      請確保數據準確性，並記錄任何異常。
+    tools:
+      - database_query
+      - api_fetch
+      - file_reader
+    model: gpt-4
+    temperature: 0.2
+    capabilities:
+      - data_extraction
+      - data_validation
+      - format_conversion
+
+  # Data Analyzer Agent
+  - id: data_analyzer_agent
+    name: 數據分析 Agent
+    description: 負責分析和整合數據
+    instructions: |
+      你是數據分析專家。你的職責是：
+      1. 整合來自多個來源的數據
+      2. 進行統計分析和趨勢識別
+      3. 發現異常和洞見
+      4. 生成分析結論
+
+      請使用清晰的數據可視化描述來呈現結果。
+    tools:
+      - statistical_analyzer
+      - trend_detector
+      - anomaly_detector
+    model: gpt-4
+    temperature: 0.3
+    capabilities:
+      - data_analysis
+      - statistical_modeling
+      - insight_generation
+
+  # Report Writer Agent
+  - id: report_writer_agent
+    name: 報表撰寫 Agent
+    description: 負責撰寫最終報表
+    template_ref: report_agent  # 引用現有模板
+    instructions: |
+      你是專業報表撰寫者。你的職責是：
+      1. 根據分析結果撰寫報表
+      2. 使用清晰、專業的語言
+      3. 包含必要的圖表說明
+      4. 提供執行建議
+
+      報表應包含：摘要、關鍵指標、趨勢分析、問題和建議。
+    capabilities:
+      - report_writing
+      - data_visualization
+      - executive_summary
+
+# -----------------------------------------------------------------------------
+# Section 2: Connectors 連接器定義
+# -----------------------------------------------------------------------------
+connectors:
+  # ServiceNow 連接器
+  - id: servicenow_connector
+    name: ServiceNow 連接器
+    type: servicenow
+    description: 連接 ServiceNow 獲取工單數據
+    config:
+      instance_url: "${SERVICENOW_INSTANCE_URL}"
+      auth_type: oauth2
+      credentials_ref: servicenow_oauth
+      tables:
+        - incident
+        - change_request
+        - problem
+      fields:
+        - number
+        - short_description
+        - state
+        - priority
+        - created_at
+        - resolved_at
+
+  # Dynamics 365 連接器
+  - id: dynamics365_connector
+    name: Dynamics 365 連接器
+    type: dynamics365
+    description: 連接 Dynamics 365 獲取 CRM 數據
+    config:
+      environment_url: "${DYNAMICS365_URL}"
+      auth_type: oauth2
+      credentials_ref: dynamics365_oauth
+      entities:
+        - account
+        - contact
+        - opportunity
+      fields:
+        - accountid
+        - name
+        - revenue
+        - createdon
+
+  # PostgreSQL 連接器
+  - id: postgres_connector
+    name: PostgreSQL 連接器
+    type: database
+    description: 連接內部數據庫
+    config:
+      host: "${DB_HOST}"
+      port: "${DB_PORT}"
+      database: "${DB_NAME}"
+      auth_type: password
+      credentials_ref: postgres_creds
+      ssl_mode: require
+
+# -----------------------------------------------------------------------------
+# Section 3: Workflow 定義
+# -----------------------------------------------------------------------------
+workflow:
+  id: automated_report_workflow
+  name: 自動化報表生成工作流
+  description: 完整的多數據源報表生成流程
+
+  nodes:
+    # 節點 1: 定時觸發
+    - id: cron_trigger
+      name: 定時觸發
+      type: trigger
+      trigger_type: cron
+      config:
+        schedule: "0 9 * * 1"  # 每週一早上 9:00
+        timezone: "Asia/Taipei"
+
+    # 節點 2: 並行數據收集 (Fork)
+    - id: parallel_data_collection
+      name: 並行數據收集
+      type: parallel
+      config:
+        execution_mode: all  # 等待所有完成
+        timeout_seconds: 300
+        branches:
+          - id: servicenow_fetch
+            name: ServiceNow 數據收集
+            connector_ref: servicenow_connector
+            query:
+              table: incident
+              filter: "created_at >= @last_week"
+              fields: ["number", "state", "priority", "resolved_at"]
+
+          - id: dynamics365_fetch
+            name: Dynamics 365 數據收集
+            connector_ref: dynamics365_connector
+            query:
+              entity: opportunity
+              filter: "createdon >= @last_week"
+              fields: ["name", "revenue", "status"]
+
+          - id: internal_db_fetch
+            name: 內部數據庫收集
+            connector_ref: postgres_connector
+            query:
+              sql: |
+                SELECT
+                  agent_id,
+                  COUNT(*) as execution_count,
+                  AVG(duration_ms) as avg_duration
+                FROM executions
+                WHERE created_at >= NOW() - INTERVAL '7 days'
+                GROUP BY agent_id
+
+    # 節點 3: 數據合併 (Join)
+    - id: data_merge
+      name: 數據合併
+      type: join
+      config:
+        strategy: merge_all
+        output_format: json
+        include_metadata: true
+
+    # 節點 4: LLM 緩存檢查
+    - id: cache_check
+      name: LLM 緩存檢查
+      type: cache
+      config:
+        cache_key: "weekly_report_{date}"
+        ttl_seconds: 86400  # 24 hours
+        on_hit: skip_to_report_delivery
+        on_miss: continue
+
+    # 節點 5: 數據分析
+    - id: data_analysis
+      name: 數據分析
+      type: agent
+      agent_ref: data_analyzer_agent
+      config:
+        input:
+          - servicenow_data
+          - dynamics365_data
+          - internal_db_data
+        analysis_types:
+          - trend_analysis
+          - anomaly_detection
+          - kpi_calculation
+        output: analysis_result
+
+    # 節點 6: 報表生成
+    - id: report_generation
+      name: 報表生成
+      type: agent
+      agent_ref: report_writer_agent
+      config:
+        input:
+          - analysis_result
+        template: weekly_summary_report
+        output_format: markdown
+        include:
+          - executive_summary
+          - key_metrics
+          - trend_charts
+          - recommendations
+
+    # 節點 7: 緩存結果
+    - id: cache_result
+      name: 緩存報表
+      type: cache
+      config:
+        action: set
+        cache_key: "weekly_report_{date}"
+        ttl_seconds: 86400
+
+    # 節點 8: 報表分發
+    - id: report_delivery
+      name: 報表分發
+      type: notification
+      config:
+        channels:
+          - type: email
+            recipients:
+              - role: management
+              - role: team_leads
+            template: weekly_report_email
+          - type: teams
+            channel: "#weekly-reports"
+            template: weekly_report_teams
+          - type: dashboard
+            widget: "weekly_summary"
+
+    # 節點 9: 審計記錄
+    - id: audit_log
+      name: 審計記錄
+      type: audit
+      config:
+        log_level: detailed
+        include:
+          - data_sources
+          - collection_stats
+          - processing_time
+          - distribution_status
+
+  edges:
+    - source: cron_trigger
+      target: parallel_data_collection
+
+    - source: parallel_data_collection
+      target: data_merge
+
+    - source: data_merge
+      target: cache_check
+
+    - source: cache_check
+      target: data_analysis
+      condition: "cache_miss"
+
+    - source: cache_check
+      target: report_delivery
+      condition: "cache_hit"
+
+    - source: data_analysis
+      target: report_generation
+
+    - source: report_generation
+      target: cache_result
+
+    - source: cache_result
+      target: report_delivery
+
+    - source: report_delivery
+      target: audit_log
+
+# -----------------------------------------------------------------------------
+# Section 4: Triggers 觸發器定義
+# -----------------------------------------------------------------------------
+triggers:
+  # 定時觸發器
+  - id: weekly_report_cron
+    name: 每週報表定時器
+    type: cron
+    config:
+      schedule: "0 9 * * 1"  # 每週一早上 9:00
+      timezone: "Asia/Taipei"
+      enabled: true
+
+  # 手動觸發器
+  - id: manual_report_trigger
+    name: 手動報表觸發
+    type: api
+    config:
+      endpoint: /api/v1/reports/generate
+      method: POST
+      authentication: required
+      parameters:
+        - name: report_type
+          type: string
+          required: true
+          enum: [daily, weekly, monthly]
+        - name: date_range
+          type: object
+          required: false
+
+# -----------------------------------------------------------------------------
+# Section 5: Test Cases 測試案例
+# -----------------------------------------------------------------------------
+test_cases:
+  - id: TC-003-01
+    name: 單數據源報表
+    description: 驗證從單一數據源生成報表
+    input:
+      data_sources:
+        - internal_db_fetch
+      report_type: simple
+    expected:
+      data_collected: true
+      report_generated: true
+
+  - id: TC-003-02
+    name: 多數據源並行收集
+    description: 驗證 Fork-Join 並行收集 3 個數據源
+    input:
+      data_sources:
+        - servicenow_fetch
+        - dynamics365_fetch
+        - internal_db_fetch
+      execution_mode: all
+    expected:
+      parallel_execution: true
+      all_sources_collected: true
+      merge_successful: true
+
+  - id: TC-003-03
+    name: 緩存命中測試
+    description: 驗證 LLM 緩存正常命中
+    setup:
+      - action: run_report_once  # 先執行一次以填充緩存
+    input:
+      repeat_execution: true
+    expected:
+      cache_hit: true
+      skip_analysis: true
+
+  - id: TC-003-04
+    name: 定時觸發測試
+    description: 驗證 Cron 定時觸發正確執行
+    input:
+      trigger_type: cron
+      schedule: "*/5 * * * *"  # 每 5 分鐘 (測試用)
+    expected:
+      triggered_on_schedule: true
+      workflow_executed: true
+
+  - id: TC-003-05
+    name: 報表通知測試
+    description: 驗證報表完成後正確發送通知
+    input:
+      notification_channels:
+        - email
+        - teams
+    expected:
+      email_sent: true
+      teams_posted: true
+      dashboard_updated: true
+
+# -----------------------------------------------------------------------------
+# Section 6: Configuration 配置
+# -----------------------------------------------------------------------------
+config:
+  # 並行執行配置
+  parallel:
+    max_concurrent: 5
+    timeout_seconds: 300
+    retry_failed: true
+    retry_count: 2
+
+  # 緩存配置
+  cache:
+    enabled: true
+    backend: redis
+    default_ttl: 86400
+    key_prefix: "report_"
+
+  # 通知配置
+  notifications:
+    email:
+      enabled: true
+      smtp_host: "${SMTP_HOST}"
+    teams:
+      enabled: true
+      webhook_url: "${TEAMS_WEBHOOK_URL}"
+    dashboard:
+      enabled: true
+      auto_refresh: true
+
+  # 報表配置
+  report:
+    default_format: markdown
+    include_charts: true
+    include_raw_data: false
+
+# -----------------------------------------------------------------------------
+# Section 7: Metadata 元數據
+# -----------------------------------------------------------------------------
+metadata:
+  tags:
+    - reporting
+    - automation
+    - parallel_execution
+    - cron
+    - data_integration
+
+  documentation:
+    user_guide: "docs/04-user-guide/scenario-003-reporting.md"
+    api_reference: "docs/05-api/reports.md"
+
+  metrics:
+    - name: report_generation_time
+      description: 報表生成時間
+      target: "<= 5 minutes"
+    - name: data_collection_success_rate
+      description: 數據收集成功率
+      target: ">= 0.99"
+    - name: cache_hit_rate
+      description: 緩存命中率
+      target: ">= 0.5"

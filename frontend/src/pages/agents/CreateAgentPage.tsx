@@ -396,32 +396,57 @@ export function CreateAgentPage() {
               </p>
             </div>
 
-            {/* Model Selection */}
+            {/* Model Selection - 根據供應商顯示不同輸入方式 */}
             <div className="space-y-2">
               <Label htmlFor="model">模型</Label>
-              <Select
-                id="model"
-                value={formData.model_config_data.model}
-                onChange={(e) =>
-                  updateFormData({
-                    model_config_data: {
-                      ...formData.model_config_data,
-                      model: e.target.value,
-                    },
-                  })
-                }
-                options={(MODELS_BY_PROVIDER[formData.model_config_data.provider] || []).map((m) => ({
-                  value: m.value,
-                  label: m.label,
-                }))}
-              />
-              {/* Show model description */}
-              {formData.model_config_data.model && (
-                <p className="text-xs text-gray-500">
-                  {MODELS_BY_PROVIDER[formData.model_config_data.provider]?.find(
-                    (m) => m.value === formData.model_config_data.model
-                  )?.description || ''}
-                </p>
+              {formData.model_config_data.provider === 'azure_openai' ? (
+                // Azure OpenAI: 自行填寫（基於 Azure AI Foundry deployment）
+                <>
+                  <Input
+                    id="model"
+                    value={formData.model_config_data.model}
+                    onChange={(e) =>
+                      updateFormData({
+                        model_config_data: {
+                          ...formData.model_config_data,
+                          model: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="例如：gpt-4o、gpt-4、gpt-35-turbo"
+                  />
+                  <p className="text-xs text-gray-500">
+                    輸入在 Azure AI Foundry 中部署的模型名稱
+                  </p>
+                </>
+              ) : (
+                // 其他供應商：保留下拉選單
+                <>
+                  <Select
+                    id="model"
+                    value={formData.model_config_data.model}
+                    onChange={(e) =>
+                      updateFormData({
+                        model_config_data: {
+                          ...formData.model_config_data,
+                          model: e.target.value,
+                        },
+                      })
+                    }
+                    options={(MODELS_BY_PROVIDER[formData.model_config_data.provider] || []).map((m) => ({
+                      value: m.value,
+                      label: m.label,
+                    }))}
+                  />
+                  {/* Show model description */}
+                  {formData.model_config_data.model && (
+                    <p className="text-xs text-gray-500">
+                      {MODELS_BY_PROVIDER[formData.model_config_data.provider]?.find(
+                        (m) => m.value === formData.model_config_data.model
+                      )?.description || ''}
+                    </p>
+                  )}
+                </>
               )}
             </div>
 
@@ -478,7 +503,7 @@ export function CreateAgentPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="azure_api_version" required>API 版本</Label>
-                  <Select
+                  <Input
                     id="azure_api_version"
                     value={formData.model_config_data.azure_api_version || '2024-10-21'}
                     onChange={(e) =>
@@ -489,8 +514,11 @@ export function CreateAgentPage() {
                         },
                       })
                     }
-                    options={AZURE_API_VERSIONS}
+                    placeholder="例如：2024-10-21、2024-08-01-preview"
                   />
+                  <p className="text-xs text-gray-500">
+                    Azure OpenAI API 版本，可在 Azure AI Foundry 文檔中查看支援的版本
+                  </p>
                 </div>
 
                 <div className="space-y-2">

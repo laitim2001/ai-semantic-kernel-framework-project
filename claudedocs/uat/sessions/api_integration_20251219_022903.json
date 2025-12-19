@@ -1,0 +1,524 @@
+{
+  "test_plan": "API Integration Test",
+  "executed_at": "2025-12-19T02:29:00.598585",
+  "completed_at": "2025-12-19T02:29:03.776259",
+  "environment": {
+    "base_url": "http://localhost:8000",
+    "test_type": "HTTP API Integration"
+  },
+  "summary": {
+    "total_tests": 20,
+    "passed": 17,
+    "failed": 3,
+    "pass_rate": "85.0%",
+    "total_duration_seconds": 3.18
+  },
+  "results": [
+    {
+      "test_id": 1,
+      "test_name": "Create Agent",
+      "phase": "Phase 1: Agents API",
+      "method": "POST",
+      "endpoint": "/api/v1/agents/",
+      "status": "PASS",
+      "http_status": 201,
+      "duration_ms": 96.6,
+      "response": {
+        "id": "3c0687f4-28e9-4781-90b6-69705db1320a",
+        "name": "Test Agent fd838c34",
+        "description": "Integration test agent",
+        "instructions": "You are a test assistant for integration testing.",
+        "category": "testing",
+        "tools": [],
+        "model_config_data": {
+          "max_tokens": 2000,
+          "temperature": 0.7
+        },
+        "max_iterations": 10,
+        "status": "active",
+        "version": 1,
+        "created_at": "2025-12-19T02:29:02.548920Z",
+        "updated_at": "2025-12-19T02:29:02.548920Z"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 2,
+      "test_name": "List Agents",
+      "phase": "Phase 1: Agents API",
+      "method": "GET",
+      "endpoint": "/api/v1/agents/",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 197.44,
+      "response": {
+        "count": "N/A"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 3,
+      "test_name": "Get Agent",
+      "phase": "Phase 1: Agents API",
+      "method": "GET",
+      "endpoint": "/api/v1/agents/3c0687f4-28e9-4781-90b6-69705db1320a",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 30.38,
+      "response": {
+        "id": "3c0687f4-28e9-4781-90b6-69705db1320a",
+        "name": "Test Agent fd838c34",
+        "description": "Integration test agent",
+        "instructions": "You are a test assistant for integration testing.",
+        "category": "testing",
+        "tools": [],
+        "model_config_data": {
+          "max_tokens": 2000,
+          "temperature": 0.7
+        },
+        "max_iterations": 10,
+        "status": "active",
+        "version": 1,
+        "created_at": "2025-12-19T02:29:02.548920Z",
+        "updated_at": "2025-12-19T02:29:02.548920Z"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 4,
+      "test_name": "Update Agent",
+      "phase": "Phase 1: Agents API",
+      "method": "PUT",
+      "endpoint": "/api/v1/agents/3c0687f4-28e9-4781-90b6-69705db1320a",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 138.37,
+      "response": {
+        "id": "3c0687f4-28e9-4781-90b6-69705db1320a",
+        "name": "Test Agent fd838c34",
+        "description": "Updated agent description",
+        "instructions": "You are a test assistant for integration testing.",
+        "category": "testing",
+        "tools": [],
+        "model_config_data": {
+          "max_tokens": 2000,
+          "temperature": 0.7
+        },
+        "max_iterations": 10,
+        "status": "active",
+        "version": 2,
+        "created_at": "2025-12-19T02:29:02.548920Z",
+        "updated_at": "2025-12-19T02:29:02.977180Z"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 5,
+      "test_name": "Create Workflow",
+      "phase": "Phase 2: Workflows API",
+      "method": "POST",
+      "endpoint": "/api/v1/workflows/",
+      "status": "PASS",
+      "http_status": 201,
+      "duration_ms": 31.65,
+      "response": {
+        "id": "691e0b1e-c55b-4c0f-80f9-28fc5a888ba6",
+        "name": "Test Workflow cc1691bd",
+        "description": "Integration test workflow",
+        "trigger_type": "manual",
+        "trigger_config": {},
+        "graph_definition": {
+          "edges": [
+            {
+              "label": null,
+              "source": "start",
+              "target": "process",
+              "condition": null
+            },
+            {
+              "label": null,
+              "source": "process",
+              "target": "end",
+              "condition": null
+            }
+          ],
+          "nodes": [
+            {
+              "id": "start",
+              "name": "Start Node",
+              "type": "start",
+              "config": {},
+              "agent_id": null,
+              "position": null
+            },
+            {
+              "id": "process",
+              "name": "Process Node",
+              "type": "agent",
+              "config": {},
+              "agent_id": "3c0687f4-28e9-4781-90b6-69705db1320a",
+              "position": null
+            },
+            {
+              "id": "end",
+              "name": "End Node",
+              "type": "end",
+              "config": {},
+              "agent_id": null,
+              "position": null
+            }
+          ],
+          "variables": {}
+        },
+        "status": "draft",
+        "version": 1,
+        "created_by": null,
+        "created_at": "2025-12-19T02:29:03.092642Z",
+        "updated_at": "2025-12-19T02:29:03.092642Z"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 6,
+      "test_name": "List Workflows",
+      "phase": "Phase 2: Workflows API",
+      "method": "GET",
+      "endpoint": "/api/v1/workflows/",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 32.74,
+      "response": {
+        "count": "N/A"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 7,
+      "test_name": "Get Workflow",
+      "phase": "Phase 2: Workflows API",
+      "method": "GET",
+      "endpoint": "/api/v1/workflows/691e0b1e-c55b-4c0f-80f9-28fc5a888ba6",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 20.24,
+      "response": {
+        "id": "691e0b1e-c55b-4c0f-80f9-28fc5a888ba6",
+        "name": "Test Workflow cc1691bd",
+        "description": "Integration test workflow",
+        "trigger_type": "manual",
+        "trigger_config": {},
+        "graph_definition": {
+          "edges": [
+            {
+              "label": null,
+              "source": "start",
+              "target": "process",
+              "condition": null
+            },
+            {
+              "label": null,
+              "source": "process",
+              "target": "end",
+              "condition": null
+            }
+          ],
+          "nodes": [
+            {
+              "id": "start",
+              "name": "Start Node",
+              "type": "start",
+              "config": {},
+              "agent_id": null,
+              "position": null
+            },
+            {
+              "id": "process",
+              "name": "Process Node",
+              "type": "agent",
+              "config": {},
+              "agent_id": "3c0687f4-28e9-4781-90b6-69705db1320a",
+              "position": null
+            },
+            {
+              "id": "end",
+              "name": "End Node",
+              "type": "end",
+              "config": {},
+              "agent_id": null,
+              "position": null
+            }
+          ],
+          "variables": {}
+        },
+        "status": "draft",
+        "version": 1,
+        "created_by": null,
+        "created_at": "2025-12-19T02:29:03.092642Z",
+        "updated_at": "2025-12-19T02:29:03.092642Z"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 8,
+      "test_name": "Validate Workflow",
+      "phase": "Phase 2: Workflows API",
+      "method": "POST",
+      "endpoint": "/api/v1/workflows/691e0b1e-c55b-4c0f-80f9-28fc5a888ba6/validate",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 14.6,
+      "response": {
+        "valid": true,
+        "errors": [],
+        "warnings": []
+      },
+      "error": ""
+    },
+    {
+      "test_id": 9,
+      "test_name": "Update Workflow",
+      "phase": "Phase 2: Workflows API",
+      "method": "PUT",
+      "endpoint": "/api/v1/workflows/691e0b1e-c55b-4c0f-80f9-28fc5a888ba6",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 32.99,
+      "response": {
+        "id": "691e0b1e-c55b-4c0f-80f9-28fc5a888ba6",
+        "name": "Test Workflow cc1691bd",
+        "description": "Updated description",
+        "trigger_type": "manual",
+        "trigger_config": {},
+        "graph_definition": {
+          "edges": [
+            {
+              "label": null,
+              "source": "start",
+              "target": "process",
+              "condition": null
+            },
+            {
+              "label": null,
+              "source": "process",
+              "target": "end",
+              "condition": null
+            }
+          ],
+          "nodes": [
+            {
+              "id": "start",
+              "name": "Start Node",
+              "type": "start",
+              "config": {},
+              "agent_id": null,
+              "position": null
+            },
+            {
+              "id": "process",
+              "name": "Process Node",
+              "type": "agent",
+              "config": {},
+              "agent_id": "3c0687f4-28e9-4781-90b6-69705db1320a",
+              "position": null
+            },
+            {
+              "id": "end",
+              "name": "End Node",
+              "type": "end",
+              "config": {},
+              "agent_id": null,
+              "position": null
+            }
+          ],
+          "variables": {}
+        },
+        "status": "draft",
+        "version": 2,
+        "created_by": null,
+        "created_at": "2025-12-19T02:29:03.092642Z",
+        "updated_at": "2025-12-19T02:29:03.190074Z"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 10,
+      "test_name": "Create Checkpoint",
+      "phase": "Phase 3: Checkpoints API",
+      "method": "POST",
+      "endpoint": "/api/v1/checkpoints/",
+      "status": "FAIL",
+      "http_status": 500,
+      "duration_ms": 40.55,
+      "response": {},
+      "error": "Internal Server Error"
+    },
+    {
+      "test_id": 11,
+      "test_name": "List Pending Checkpoints",
+      "phase": "Phase 3: Checkpoints API",
+      "method": "GET",
+      "endpoint": "/api/v1/checkpoints/pending",
+      "status": "FAIL",
+      "http_status": 0,
+      "duration_ms": 4.27,
+      "response": {},
+      "error": ""
+    },
+    {
+      "test_id": 12,
+      "test_name": "Create Checkpoint for Rejection",
+      "phase": "Phase 3: Checkpoints API",
+      "method": "POST",
+      "endpoint": "/api/v1/checkpoints/",
+      "status": "FAIL",
+      "http_status": 500,
+      "duration_ms": 447.03,
+      "response": {},
+      "error": "{\"detail\":\"Failed to create checkpoint: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.ForeignKeyViolationError'>: insert or update on table \\\"checkpoints\\\" violates foreign key constraint \\\"checkpoints_execution_id_fkey\\\"\\nDETAIL:  Key (execution_id)=(ec189802-9e85-4544-9f7f-abff02531e18) is not present in table \\\"executions\\\".\\n[SQL: INSERT INTO checkpoints (id, execution_id, node_id, step, checkpoint_type, state, status, payload, responded_by, responded_at, expires_at, notes) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::JSONB, $7::VARCHAR, $8::JSONB, $9::UUID, $10::TIMESTAMP WITH TIME ZONE, $11::TIMESTAMP WITH TIME ZONE, $12::VARCHAR) RETURNING checkpoints.created_at, checkpoints.updated_at]\\n[parameters: (UUID('c1719109-c7eb-46b2-9c94-ecb3cb6d27dd'), UUID('ec189802-9e85-4544-9f7f-abff02531e18'), 'approval_node_2', '2', 'review', '{\\\"workflow_state\\\": \\\"in_progress\\\"}', 'pending', '{\\\"priority\\\": \\\"P2\\\", \\\"reason\\\": \\\"Test rejection\\\"}', None, None, datetime.datetime(2025, 12, 20, 2, 29, 3, 522548), None)]\\n(Background on this error at: https://sqlalche.me/e/20/gkpj)\"}"
+    },
+    {
+      "test_id": 13,
+      "test_name": "Trigger Handoff",
+      "phase": "Phase 4: Handoff API",
+      "method": "POST",
+      "endpoint": "/api/v1/handoff/trigger",
+      "status": "PASS",
+      "http_status": 201,
+      "duration_ms": 5.17,
+      "response": {
+        "handoff_id": "43f5c56e-e114-468e-aef7-b8d6905b398e",
+        "status": "initiated",
+        "source_agent_id": "8dfcd833-1864-4218-af98-b896334ce928",
+        "target_agent_id": "71aacef0-d19b-489b-8a81-2f6a207e1e6b",
+        "initiated_at": "2025-12-19T02:29:03.711877",
+        "message": "Handoff initiated successfully"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 14,
+      "test_name": "Capability Matching",
+      "phase": "Phase 4: Handoff API",
+      "method": "POST",
+      "endpoint": "/api/v1/handoff/capability/match",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 4.41,
+      "response": {
+        "matches": [],
+        "total_candidates": 0,
+        "strategy_used": "best_fit",
+        "best_match": null
+      },
+      "error": ""
+    },
+    {
+      "test_id": 15,
+      "test_name": "Get Handoff History",
+      "phase": "Phase 4: Handoff API",
+      "method": "GET",
+      "endpoint": "/api/v1/handoff/history",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 3.3,
+      "response": {
+        "count": "N/A"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 16,
+      "test_name": "Route to Scenario",
+      "phase": "Phase 5: Routing API",
+      "method": "POST",
+      "endpoint": "/api/v1/routing/route",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 6.19,
+      "response": {
+        "success": false,
+        "source_execution_id": "4210243a-236e-469a-997d-b7450cec0b81",
+        "target_execution_id": null,
+        "source_scenario": "it_operations",
+        "target_scenario": "customer_service",
+        "relation_id": null,
+        "message": "No default workflow configured for customer_service",
+        "workflow_id": null,
+        "timestamp": "2025-12-19T02:29:03.724461"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 17,
+      "test_name": "List Scenarios",
+      "phase": "Phase 5: Routing API",
+      "method": "GET",
+      "endpoint": "/api/v1/routing/scenarios",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 2.69,
+      "response": {
+        "count": "N/A"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 18,
+      "test_name": "Routing Health Check",
+      "phase": "Phase 5: Routing API",
+      "method": "GET",
+      "endpoint": "/api/v1/routing/health",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 2.12,
+      "response": {
+        "service": "routing",
+        "status": "healthy",
+        "total_relations": 0,
+        "configured_scenarios": 5,
+        "configured_workflows": 0
+      },
+      "error": ""
+    },
+    {
+      "test_id": 19,
+      "test_name": "Create GroupChat",
+      "phase": "Phase 6: GroupChat API",
+      "method": "POST",
+      "endpoint": "/api/v1/groupchat/",
+      "status": "PASS",
+      "http_status": 201,
+      "duration_ms": 2.62,
+      "response": {
+        "group_id": "613b8a2d-b566-4f62-917e-3b46a3da2e97",
+        "name": "Test GroupChat ef7ecb78",
+        "description": "Integration test group chat",
+        "status": "idle",
+        "participants": [
+          "Agent-3c0687f4",
+          "Agent-agent_6d",
+          "Agent-agent_cb"
+        ],
+        "message_count": 0,
+        "current_round": 0,
+        "created_at": "2025-12-19T02:29:03.734893",
+        "updated_at": null
+      },
+      "error": ""
+    },
+    {
+      "test_id": 20,
+      "test_name": "List GroupChats",
+      "phase": "Phase 6: GroupChat API",
+      "method": "GET",
+      "endpoint": "/api/v1/groupchat/",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 2.17,
+      "response": {
+        "count": 1
+      },
+      "error": ""
+    }
+  ]
+}

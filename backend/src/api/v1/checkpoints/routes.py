@@ -537,6 +537,9 @@ async def create_checkpoint(
             payload=request.payload,
             timeout_hours=request.timeout_hours,
             notes=request.notes,
+            step=request.step,
+            checkpoint_type=request.checkpoint_type,
+            state=request.state,
         )
 
         # Also create in adapter for workflow coordination

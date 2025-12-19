@@ -32,7 +32,8 @@ import asyncio
 import logging
 
 # Official Agent Framework Imports - MUST use these
-from agent_framework.workflows import Workflow, Edge
+# Note: Classes are directly under agent_framework, not agent_framework.workflows
+from agent_framework import Workflow, Edge
 
 # Import Sprint 28 approval components
 from .approval import (

@@ -1,0 +1,254 @@
+{
+  "test_plan": "API Integration Test",
+  "executed_at": "2025-12-18T17:40:07.032922",
+  "completed_at": "2025-12-18T17:40:10.813636",
+  "environment": {
+    "base_url": "http://localhost:8000",
+    "test_type": "HTTP API Integration"
+  },
+  "summary": {
+    "total_tests": 16,
+    "passed": 9,
+    "failed": 7,
+    "pass_rate": "56.2%",
+    "total_duration_seconds": 3.78
+  },
+  "results": [
+    {
+      "test_id": 1,
+      "test_name": "Create Workflow",
+      "phase": "Phase 1: Workflows API",
+      "method": "POST",
+      "endpoint": "/api/v1/workflows/",
+      "status": "FAIL",
+      "http_status": 400,
+      "duration_ms": 5.59,
+      "response": {},
+      "error": "{\"detail\":{\"message\":\"Invalid workflow definition\",\"errors\":[\"Agent node 'process' must have an agent_id\"]}}"
+    },
+    {
+      "test_id": 2,
+      "test_name": "Create Agent",
+      "phase": "Phase 2: Agents API",
+      "method": "POST",
+      "endpoint": "/api/v1/agents/",
+      "status": "PASS",
+      "http_status": 201,
+      "duration_ms": 195.96,
+      "response": {
+        "id": "b365bf5a-7460-4ac5-906c-bf3ae6ee94ff",
+        "name": "Test Agent 812e0222",
+        "description": "Integration test agent",
+        "instructions": "You are a test assistant for integration testing.",
+        "category": "testing",
+        "tools": [],
+        "model_config_data": {
+          "max_tokens": 2000,
+          "temperature": 0.7
+        },
+        "max_iterations": 10,
+        "status": "active",
+        "version": 1,
+        "created_at": "2025-12-18T17:40:09.794702Z",
+        "updated_at": "2025-12-18T17:40:09.794702Z"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 3,
+      "test_name": "List Agents",
+      "phase": "Phase 2: Agents API",
+      "method": "GET",
+      "endpoint": "/api/v1/agents/",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 53.35,
+      "response": {
+        "count": "N/A"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 4,
+      "test_name": "Get Agent",
+      "phase": "Phase 2: Agents API",
+      "method": "GET",
+      "endpoint": "/api/v1/agents/b365bf5a-7460-4ac5-906c-bf3ae6ee94ff",
+      "status": "FAIL",
+      "http_status": 404,
+      "duration_ms": 17.19,
+      "response": {},
+      "error": "{\"detail\":\"Agent with id 'b365bf5a-7460-4ac5-906c-bf3ae6ee94ff' not found\"}"
+    },
+    {
+      "test_id": 5,
+      "test_name": "Update Agent",
+      "phase": "Phase 2: Agents API",
+      "method": "PUT",
+      "endpoint": "/api/v1/agents/b365bf5a-7460-4ac5-906c-bf3ae6ee94ff",
+      "status": "FAIL",
+      "http_status": 404,
+      "duration_ms": 12.29,
+      "response": {},
+      "error": "{\"detail\":\"Agent with id 'b365bf5a-7460-4ac5-906c-bf3ae6ee94ff' not found\"}"
+    },
+    {
+      "test_id": 6,
+      "test_name": "Create Checkpoint",
+      "phase": "Phase 3: Checkpoints API",
+      "method": "POST",
+      "endpoint": "/api/v1/checkpoints/",
+      "status": "FAIL",
+      "http_status": 500,
+      "duration_ms": 203.29,
+      "response": {},
+      "error": "{\"detail\":\"Failed to create checkpoint: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.NotNullViolationError'>: null value in column \\\"step\\\" of relation \\\"checkpoints\\\" violates not-null constraint\\nDETAIL:  Failing row contains (0779f1b4-ca77-4cd1-a0a3-24f5026f9775, 8681f531-d68b-41bc-ae2b-f2a3357a4a5b, null, null, null, null, null, pending, null, null, null, null, 2025-12-18 17:40:10.0776+00, 2025-12-18 17:40:10.0776+00, approval_node, {\\\"reason\\\": \\\"Integration test checkpoint\\\", \\\"priority\\\": \\\"P1\\\"}, null, null, null, 2025-12-19 17:40:10.067322+00, Integration test checkpoint).\\n[SQL: INSERT INTO checkpoints (id, execution_id, node_id, status, payload, responded_by, responded_at, expires_at, notes) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSONB, $6::UUID, $7::TIMESTAMP WITH TIME ZONE, $8::TIMESTAMP WITH TIME ZONE, $9::VARCHAR) RETURNING checkpoints.created_at, checkpoints.updated_at]\\n[parameters: (UUID('0779f1b4-ca77-4cd1-a0a3-24f5026f9775'), UUID('8681f531-d68b-41bc-ae2b-f2a3357a4a5b'), 'approval_node', 'pending', '{\\\"priority\\\": \\\"P1\\\", \\\"reason\\\": \\\"Integration test checkpoint\\\"}', None, None, datetime.datetime(2025, 12, 19, 17, 40, 10, 67322), 'Integration test checkpoint')]\\n(Background on this error at: https://sqlalche.me/e/20/gkpj)\"}"
+    },
+    {
+      "test_id": 7,
+      "test_name": "List Pending Checkpoints",
+      "phase": "Phase 3: Checkpoints API",
+      "method": "GET",
+      "endpoint": "/api/v1/checkpoints/pending",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 88.74,
+      "response": {
+        "count": "N/A"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 8,
+      "test_name": "Create Checkpoint for Rejection",
+      "phase": "Phase 3: Checkpoints API",
+      "method": "POST",
+      "endpoint": "/api/v1/checkpoints/",
+      "status": "FAIL",
+      "http_status": 500,
+      "duration_ms": 31.04,
+      "response": {},
+      "error": "{\"detail\":\"Failed to create checkpoint: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.NotNullViolationError'>: null value in column \\\"step\\\" of relation \\\"checkpoints\\\" violates not-null constraint\\nDETAIL:  Failing row contains (326e9fba-a298-409a-9c05-2ee418ba2317, 29a16209-54f6-4dcb-8f1e-2ca27dded9e9, null, null, null, null, null, pending, null, null, null, null, 2025-12-18 17:40:10.364594+00, 2025-12-18 17:40:10.364594+00, approval_node_2, {\\\"reason\\\": \\\"Test rejection\\\", \\\"priority\\\": \\\"P2\\\"}, null, null, null, 2025-12-19 17:40:10.358985+00, null).\\n[SQL: INSERT INTO checkpoints (id, execution_id, node_id, status, payload, responded_by, responded_at, expires_at, notes) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSONB, $6::UUID, $7::TIMESTAMP WITH TIME ZONE, $8::TIMESTAMP WITH TIME ZONE, $9::VARCHAR) RETURNING checkpoints.created_at, checkpoints.updated_at]\\n[parameters: (UUID('326e9fba-a298-409a-9c05-2ee418ba2317'), UUID('29a16209-54f6-4dcb-8f1e-2ca27dded9e9'), 'approval_node_2', 'pending', '{\\\"priority\\\": \\\"P2\\\", \\\"reason\\\": \\\"Test rejection\\\"}', None, None, datetime.datetime(2025, 12, 19, 17, 40, 10, 358985), None)]\\n(Background on this error at: https://sqlalche.me/e/20/gkpj)\"}"
+    },
+    {
+      "test_id": 9,
+      "test_name": "Trigger Handoff",
+      "phase": "Phase 4: Handoff API",
+      "method": "POST",
+      "endpoint": "/api/v1/handoff/trigger",
+      "status": "PASS",
+      "http_status": 201,
+      "duration_ms": 4.81,
+      "response": {
+        "handoff_id": "068719bb-e96a-4bb0-9377-161b07ab51f1",
+        "status": "initiated",
+        "source_agent_id": "6262c35a-74a4-44ea-85cd-40db0c763e2b",
+        "target_agent_id": "741b04b6-f13c-451b-8d63-1953391ea6a2",
+        "initiated_at": "2025-12-18T17:40:10.390895",
+        "message": "Handoff initiated successfully"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 10,
+      "test_name": "Capability Matching",
+      "phase": "Phase 4: Handoff API",
+      "method": "POST",
+      "endpoint": "/api/v1/handoff/capability/match",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 3.76,
+      "response": {
+        "matches": [],
+        "total_candidates": 0,
+        "strategy_used": "best_fit",
+        "best_match": null
+      },
+      "error": ""
+    },
+    {
+      "test_id": 11,
+      "test_name": "Get Handoff History",
+      "phase": "Phase 4: Handoff API",
+      "method": "GET",
+      "endpoint": "/api/v1/handoff/history",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 4.23,
+      "response": {
+        "count": "N/A"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 12,
+      "test_name": "Route to Scenario",
+      "phase": "Phase 5: Routing API",
+      "method": "POST",
+      "endpoint": "/api/v1/routing/route",
+      "status": "FAIL",
+      "http_status": 400,
+      "duration_ms": 2.58,
+      "response": {},
+      "error": "{\"detail\":\"Invalid scenario: 'it-support' is not a valid Scenario\"}"
+    },
+    {
+      "test_id": 13,
+      "test_name": "List Scenarios",
+      "phase": "Phase 5: Routing API",
+      "method": "GET",
+      "endpoint": "/api/v1/routing/scenarios",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 4.19,
+      "response": {
+        "count": "N/A"
+      },
+      "error": ""
+    },
+    {
+      "test_id": 14,
+      "test_name": "Routing Health Check",
+      "phase": "Phase 5: Routing API",
+      "method": "GET",
+      "endpoint": "/api/v1/routing/health",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 1.99,
+      "response": {
+        "service": "routing",
+        "status": "healthy",
+        "total_relations": 0,
+        "configured_scenarios": 5,
+        "configured_workflows": 0
+      },
+      "error": ""
+    },
+    {
+      "test_id": 15,
+      "test_name": "Create GroupChat",
+      "phase": "Phase 6: GroupChat API",
+      "method": "POST",
+      "endpoint": "/api/v1/groupchat/",
+      "status": "FAIL",
+      "http_status": 500,
+      "duration_ms": 12.55,
+      "response": {},
+      "error": "Internal Server Error"
+    },
+    {
+      "test_id": 16,
+      "test_name": "List GroupChats",
+      "phase": "Phase 6: GroupChat API",
+      "method": "GET",
+      "endpoint": "/api/v1/groupchat/",
+      "status": "PASS",
+      "http_status": 200,
+      "duration_ms": 270.7,
+      "response": {
+        "count": 0
+      },
+      "error": ""
+    }
+  ]
+}

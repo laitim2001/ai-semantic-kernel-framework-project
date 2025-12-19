@@ -81,9 +81,14 @@ class PendingCheckpointsResponse(BaseModel):
 class ApprovalRequest(BaseModel):
     """
     Request schema for approving a checkpoint.
+
+    Note: user_id is optional to support system-level approvals and testing.
+    When user_id is None, responded_by will not be set in the database.
     """
 
-    user_id: UUID = Field(..., description="ID of user approving the checkpoint")
+    user_id: Optional[UUID] = Field(
+        None, description="ID of user approving the checkpoint (optional)"
+    )
     response: Optional[Dict[str, Any]] = Field(
         None, description="Optional response data (e.g., modifications)"
     )
@@ -95,9 +100,14 @@ class ApprovalRequest(BaseModel):
 class RejectionRequest(BaseModel):
     """
     Request schema for rejecting a checkpoint.
+
+    Note: user_id is optional to support system-level rejections and testing.
+    When user_id is None, responded_by will not be set in the database.
     """
 
-    user_id: UUID = Field(..., description="ID of user rejecting the checkpoint")
+    user_id: Optional[UUID] = Field(
+        None, description="ID of user rejecting the checkpoint (optional)"
+    )
     reason: Optional[str] = Field(
         None, description="Reason for rejection"
     )
@@ -113,6 +123,15 @@ class CheckpointCreateRequest(BaseModel):
 
     execution_id: UUID = Field(..., description="Parent execution UUID")
     node_id: str = Field(..., description="Workflow node ID")
+    step: str = Field(
+        default="0", description="Step identifier in workflow"
+    )
+    checkpoint_type: str = Field(
+        default="approval", description="Type of checkpoint (approval, review, input)"
+    )
+    state: Dict[str, Any] = Field(
+        default_factory=dict, description="Current workflow state"
+    )
     payload: Dict[str, Any] = Field(
         default_factory=dict, description="Data to be reviewed"
     )

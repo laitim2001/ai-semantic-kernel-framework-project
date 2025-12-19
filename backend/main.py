@@ -127,6 +127,8 @@ def create_app() -> FastAPI:
         docs_url="/docs" if settings.enable_api_docs else None,
         redoc_url="/redoc" if settings.enable_api_docs else None,
         openapi_url="/openapi.json" if settings.enable_api_docs else None,
+        # Disable automatic redirect from /path to /path/ to avoid 307 responses
+        redirect_slashes=False,
     )
 
     # CORS middleware

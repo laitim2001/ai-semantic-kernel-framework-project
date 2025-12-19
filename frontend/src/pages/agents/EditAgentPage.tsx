@@ -175,6 +175,7 @@ export function EditAgentPage() {
   // Initialize form data when agent loads
   useEffect(() => {
     if (agent) {
+      const config = agent.model_config_data || {};
       setFormData({
         name: agent.name,
         description: agent.description || '',
@@ -182,10 +183,20 @@ export function EditAgentPage() {
         instructions: agent.instructions,
         tools: agent.tools || [],
         model_config_data: {
-          provider: (agent.model_config_data?.provider as string) || 'azure_openai',
-          model: (agent.model_config_data?.model as string) || 'gpt-4o',
-          temperature: (agent.model_config_data?.temperature as number) || 0.7,
-          max_tokens: (agent.model_config_data?.max_tokens as number) || 2000,
+          provider: (config.provider as string) || 'azure_openai',
+          model: (config.model as string) || 'gpt-4o',
+          temperature: (config.temperature as number) || 0.7,
+          max_tokens: (config.max_tokens as number) || 2000,
+          // Azure OpenAI 特定欄位
+          azure_endpoint: (config.azure_endpoint as string) || '',
+          azure_deployment_name: (config.azure_deployment_name as string) || '',
+          azure_api_version: (config.azure_api_version as string) || '',
+          api_key: (config.api_key as string) || '',
+          // OpenAI 特定欄位
+          openai_org_id: (config.openai_org_id as string) || '',
+          base_url: (config.base_url as string) || '',
+          // Google AI 特定欄位
+          google_project_id: (config.google_project_id as string) || '',
         },
         max_iterations: agent.max_iterations || 10,
         status: agent.status,
@@ -480,29 +491,52 @@ export function EditAgentPage() {
 
             <div className="space-y-2">
               <Label htmlFor="model">模型</Label>
-              <Select
-                id="model"
-                value={formData.model_config_data.model}
-                onChange={(e) =>
-                  updateFormData({
-                    model_config_data: {
-                      ...formData.model_config_data,
-                      model: e.target.value,
-                    },
-                  })
-                }
-                options={
-                  MODELS_BY_PROVIDER[formData.model_config_data.provider]?.map((m) => ({
-                    value: m.value,
-                    label: m.label,
-                  })) || []
-                }
-              />
+              {formData.model_config_data.provider === 'azure_openai' ? (
+                // Azure OpenAI: 自行填寫
+                <>
+                  <Input
+                    id="model"
+                    value={formData.model_config_data.model}
+                    onChange={(e) =>
+                      updateFormData({
+                        model_config_data: {
+                          ...formData.model_config_data,
+                          model: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="例如：gpt-4o、gpt-4、gpt-35-turbo"
+                  />
+                  <p className="text-xs text-gray-500">
+                    輸入在 Azure AI Foundry 中部署的模型名稱
+                  </p>
+                </>
+              ) : (
+                // 其他供應商：保留下拉選單
+                <Select
+                  id="model"
+                  value={formData.model_config_data.model}
+                  onChange={(e) =>
+                    updateFormData({
+                      model_config_data: {
+                        ...formData.model_config_data,
+                        model: e.target.value,
+                      },
+                    })
+                  }
+                  options={
+                    MODELS_BY_PROVIDER[formData.model_config_data.provider]?.map((m) => ({
+                      value: m.value,
+                      label: m.label,
+                    })) || []
+                  }
+                />
+              )}
             </div>
           </div>
 
-          {/* Model Description */}
-          {(() => {
+          {/* Model Description - 只顯示非 Azure OpenAI 供應商 */}
+          {formData.model_config_data.provider !== 'azure_openai' && (() => {
             const selectedModel = MODELS_BY_PROVIDER[formData.model_config_data.provider]?.find(
               (m) => m.value === formData.model_config_data.model
             );
@@ -588,7 +622,7 @@ export function EditAgentPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="azure_api_version" required>API 版本</Label>
-                <Select
+                <Input
                   id="azure_api_version"
                   value={formData.model_config_data.azure_api_version || '2024-10-21'}
                   onChange={(e) =>
@@ -599,8 +633,11 @@ export function EditAgentPage() {
                       },
                     })
                   }
-                  options={AZURE_API_VERSIONS}
+                  placeholder="例如：2024-10-21、2024-08-01-preview"
                 />
+                <p className="text-xs text-gray-500">
+                  Azure OpenAI API 版本，可在 Azure AI Foundry 文檔中查看支援的版本
+                </p>
               </div>
 
               <div className="space-y-2">

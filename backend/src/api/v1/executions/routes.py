@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.executions.schemas import (
     ExecutionCancelResponse,
+    ExecutionCreateRequest,
     ExecutionDetailResponse,
     ExecutionListResponse,
     ExecutionStatsResponse,
@@ -188,6 +189,62 @@ async def list_executions(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list executions: {str(e)}",
+        )
+
+
+# =============================================================================
+# Create Execution
+# =============================================================================
+
+
+@router.post(
+    "/",
+    response_model=ExecutionDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create execution",
+    description="Create a new execution record for a workflow",
+)
+async def create_execution(
+    request: ExecutionCreateRequest,
+    repo: ExecutionRepository = Depends(get_execution_repository),
+) -> ExecutionDetailResponse:
+    """
+    Create a new execution record.
+
+    This creates a pending execution that can be used for checkpoint testing.
+    For actual workflow execution, use POST /workflows/{id}/execute.
+    """
+    try:
+        # Create execution record
+        execution = await repo.create(
+            workflow_id=request.workflow_id,
+            status=request.status,
+            input_data=request.input_data,
+        )
+
+        return ExecutionDetailResponse(
+            id=execution.id,
+            workflow_id=execution.workflow_id,
+            status=execution.status,
+            started_at=execution.started_at,
+            completed_at=execution.completed_at,
+            result=execution.result,
+            error=execution.error,
+            llm_calls=execution.llm_calls,
+            llm_tokens=execution.llm_tokens,
+            llm_cost=float(execution.llm_cost),
+            triggered_by=execution.triggered_by,
+            input_data=execution.input_data,
+            duration_seconds=execution.duration_seconds,
+            created_at=execution.created_at,
+            updated_at=execution.updated_at,
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating execution: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create execution: {str(e)}",
         )
 
 

@@ -7,8 +7,8 @@
 # This module adapts the existing WorkflowEdge to the official
 # Microsoft Agent Framework Edge interface.
 #
-# Official API Pattern (from workflows-api.md):
-#   Edge(source="node_a", target="node_b", condition=lambda output: ...)
+# Official API Pattern (from agent_framework._workflows._edge):
+#   Edge(source_id="node_a", target_id="node_b", condition=lambda output: ...)
 #
 # Key Features:
 #   - Converts WorkflowEdge to official Edge
@@ -25,7 +25,8 @@ import re
 import logging
 
 # Official Agent Framework Import - MUST use this
-from agent_framework.workflows import Edge
+# Note: Classes are directly under agent_framework, not agent_framework.workflows
+from agent_framework import Edge
 
 # Import existing domain models
 from src.domain.workflows.models import WorkflowEdge
@@ -342,14 +343,14 @@ class WorkflowEdgeAdapter:
         """
         if self._evaluator:
             return Edge(
-                source=self._edge.source,
-                target=self._edge.target,
+                source_id=self._edge.source,
+                target_id=self._edge.target,
                 condition=self._evaluator.evaluate,
             )
         else:
             return Edge(
-                source=self._edge.source,
-                target=self._edge.target,
+                source_id=self._edge.source,
+                target_id=self._edge.target,
             )
 
     def evaluate_condition(self, output: Any) -> bool:
@@ -414,7 +415,7 @@ def create_edge_from_start(target: str) -> Edge:
     Returns:
         Edge from "start" to target
     """
-    return Edge(source="start", target=target)
+    return Edge(source_id="start", target_id=target)
 
 
 def create_edge_to_end(source: str) -> Edge:
@@ -427,7 +428,7 @@ def create_edge_to_end(source: str) -> Edge:
     Returns:
         Edge from source to "end"
     """
-    return Edge(source=source, target="end")
+    return Edge(source_id=source, target_id="end")
 
 
 def convert_edges(edges: List[WorkflowEdge]) -> List[Edge]:
