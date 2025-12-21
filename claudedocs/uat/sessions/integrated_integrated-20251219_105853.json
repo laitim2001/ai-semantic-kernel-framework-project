@@ -1,0 +1,456 @@
+{
+  "test_id": "integrated-20251219_105853",
+  "ticket_id": "TKT-2025-001",
+  "start_time": "2025-12-19T10:58:53.308847",
+  "end_time": "2025-12-19T11:00:23.808306",
+  "overall_status": "failed",
+  "phases": [
+    {
+      "phase": "phase_1_ticket_creation",
+      "status": "failed",
+      "message": "階段 1 失敗: 1 個錯誤",
+      "duration_ms": 1086.452,
+      "details": {
+        "api_health": "healthy",
+        "initial_cache_stats": {
+          "total_entries": 0,
+          "total_hits": 0,
+          "total_misses": 0,
+          "hit_rate": 0.0,
+          "hit_rate_percentage": 0.0,
+          "memory_usage_bytes": 0,
+          "last_reset": "2025-12-19T10:29:01.179664",
+          "enabled": true
+        },
+        "available_workflows": 0
+      },
+      "errors": [
+        "Workflow 創建失敗: 422"
+      ],
+      "features_verified": [
+        {
+          "feature_id": "#35",
+          "feature_name": "Redis LLM caching - 基準線",
+          "verified": true,
+          "details": {
+            "initial_stats": {
+              "total_entries": 0,
+              "total_hits": 0,
+              "total_misses": 0,
+              "hit_rate": 0.0,
+              "hit_rate_percentage": 0.0,
+              "memory_usage_bytes": 0,
+              "last_reset": "2025-12-19T10:29:01.179664",
+              "enabled": true
+            }
+          },
+          "errors": []
+        }
+      ]
+    },
+    {
+      "phase": "phase_2_classification_decomposition",
+      "status": "passed",
+      "message": "分類+分解完成 (2/3 功能驗證)",
+      "duration_ms": 43417.19899999999,
+      "details": {
+        "classification_response": "```json\n{\n  \"main_category\": \"infrastructure\",\n  \"sub_category\": \"database_connectivity_outage\",\n  \"priority_score\": 0.95,\n  \"suggested_priority\": \"critical\",\n  \"suggested_handling_team\": \"SRE/Infra Ops (Azure) + DBA (PostgreSQL) on-call\",\n  \"estimated_resolution_time\": \"2-6 hours\",\n  \"impact_assessment\": {\n    \"scope\": \"production\",\n    \"affected_users\": 500,\n    \"severity\": \"high\",\n    \"symptoms\": [\n      \"intermittent database connection failures\",\n      \"connection timeout after 30 seconds\"\n",
+        "llm_mode": "real_azure_openai",
+        "execution_plan": {
+          "plan_generated": true,
+          "plan_preview": "",
+          "tokens_used": 1237
+        },
+        "cache_stats_after_phase_2": {
+          "total_entries": 0,
+          "total_hits": 0,
+          "total_misses": 0,
+          "hit_rate": 0.0,
+          "hit_rate_percentage": 0.0,
+          "memory_usage_bytes": 0,
+          "last_reset": "2025-12-19T10:29:01.179664",
+          "enabled": true
+        },
+        "llm_stats": {
+          "calls": 2,
+          "tokens": 1818,
+          "cost": 0.02217
+        }
+      },
+      "errors": [
+        "任務分解 API 錯誤: 404"
+      ],
+      "features_verified": [
+        {
+          "feature_id": "#20",
+          "feature_name": "Decompose complex tasks",
+          "verified": false,
+          "details": {
+            "error": "API 返回 404: {\"detail\":\"Not Found\"}"
+          },
+          "errors": [
+            "API 返回 404: {\"detail\":\"Not Found\"}"
+          ]
+        },
+        {
+          "feature_id": "#21",
+          "feature_name": "Plan step generation",
+          "verified": true,
+          "details": {
+            "plan_generated": true,
+            "plan_preview": "",
+            "tokens_used": 1237
+          },
+          "errors": []
+        },
+        {
+          "feature_id": "#35",
+          "feature_name": "Redis LLM caching - Phase 2",
+          "verified": true,
+          "details": {
+            "hits_before": 0,
+            "hits_after": 0,
+            "hit_increase": 0,
+            "hit_rate_after": 0.0
+          },
+          "errors": []
+        }
+      ]
+    },
+    {
+      "phase": "phase_3_routing",
+      "status": "passed",
+      "message": "路由決策完成",
+      "duration_ms": 65.197,
+      "details": {
+        "available_scenarios": {
+          "scenarios": [
+            {
+              "scenario": "it_operations",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "IT Operations: incident management, system monitoring",
+              "allowed_targets": [
+                "customer_service",
+                "finance"
+              ]
+            },
+            {
+              "scenario": "customer_service",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "Customer Service: ticket handling, customer inquiries",
+              "allowed_targets": [
+                "it_operations",
+                "sales"
+              ]
+            },
+            {
+              "scenario": "finance",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "Finance: billing, refunds, financial operations",
+              "allowed_targets": [
+                "customer_service",
+                "sales"
+              ]
+            },
+            {
+              "scenario": "hr",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "HR: employee management, onboarding",
+              "allowed_targets": [
+                "it_operations"
+              ]
+            },
+            {
+              "scenario": "sales",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "Sales: quotes, orders, customer engagement",
+              "allowed_targets": [
+                "customer_service",
+                "finance"
+              ]
+            }
+          ],
+          "total": 5
+        },
+        "capability_match": {
+          "matches": [],
+          "total_candidates": 0,
+          "strategy_used": "best_fit",
+          "best_match": null
+        }
+      },
+      "errors": [],
+      "features_verified": []
+    },
+    {
+      "phase": "phase_4_approval_hitl_persistence",
+      "status": "failed",
+      "message": "審批+HITL完成 (0/2 功能驗證)",
+      "duration_ms": 0.054,
+      "details": {
+        "notification_sent": true
+      },
+      "errors": [],
+      "features_verified": [
+        {
+          "feature_id": "#39",
+          "feature_name": "Checkpoint state persistence",
+          "verified": false,
+          "details": {},
+          "errors": []
+        },
+        {
+          "feature_id": "#14",
+          "feature_name": "HITL with escalation",
+          "verified": false,
+          "details": {},
+          "errors": []
+        }
+      ]
+    },
+    {
+      "phase": "phase_5_handoff",
+      "status": "passed",
+      "message": "Handoff 完成",
+      "duration_ms": 0.024,
+      "details": {},
+      "errors": [],
+      "features_verified": []
+    },
+    {
+      "phase": "phase_6_groupchat_multiturn_voting",
+      "status": "passed",
+      "message": "GroupChat+投票完成 (1/2 功能驗證)",
+      "duration_ms": 45517.740000000005,
+      "details": {
+        "multiturn_session": {
+          "session_id": "6b4634d6-ac23-4eab-9754-8e52e9aecebb",
+          "status": null
+        },
+        "groupchat_id": "14ecc77f-d7b3-4c3d-876f-85e22d179b3d",
+        "conversation_rounds": 3,
+        "conversation_preview": [
+          {
+            "role": "System",
+            "content": "案例編號: TKT-2025-001\n問題描述: 生產環境資料庫連線異常\n\n詳細資訊:\n\n使用者報告：\n- 系統在今天上午 10:30 開始間歇性無法連接資料庫\n- 影響範圍：所有使用者 (約 500"
+          },
+          {
+            "role": "DBA Expert",
+            "content": "先查DB端：`pg_stat_activity`是否連線爆量/卡住、`max_connections`、`pg_locks`、長交易；看Postgres/Azure VM系統log是否CPU/IO飽和"
+          },
+          {
+            "role": "System Admin",
+            "content": "先確認10:30是否有Azure維護/備份/快照導致IO飆高。DB端查`pg_stat_activity`/`pg_locks`/長交易與`max_connections`是否耗盡，並看VM CPU/"
+          },
+          {
+            "role": "Network Engineer",
+            "content": "先判斷是網路抖動或DB忙：在App/DB兩端同時跑連續tcping/nc測DB:5432看10:30是否丟包/延遲飆；查Azure NSG/防火牆/路由與10:30維護事件。若網路正常，多半DB端連線"
+          }
+        ],
+        "solution": {
+          "generated": true,
+          "preview": ""
+        },
+        "groupchat_terminated": true,
+        "llm_stats": {
+          "calls": 4,
+          "tokens": 3048,
+          "cost": 0.028839999999999998
+        }
+      },
+      "errors": [],
+      "features_verified": [
+        {
+          "feature_id": "#1",
+          "feature_name": "Multi-turn conversation sessions",
+          "verified": true,
+          "details": {
+            "session_id": "6b4634d6-ac23-4eab-9754-8e52e9aecebb",
+            "status": null
+          },
+          "errors": []
+        },
+        {
+          "feature_id": "#17",
+          "feature_name": "Voting system",
+          "verified": false,
+          "details": {
+            "error": "API 返回 422: {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"topic\"],\"msg\":\"Field required\",\"input\":{\"group_id\":\"14ecc77f-d7b3-4c3d-876f-85e22d179b3d\",\"question\":\"建議採用哪個解決方案？\",\"options\":[{\"id\":\"opt1\",\"text\":\"重啟資料庫連接池\""
+          },
+          "errors": [
+            "API 返回 422: {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"topic\"],\"msg\":\"Field required\",\"input\":{\"group_id\":\"14ecc77f-d7b3-4c3d-876f-85e22d179b3d\",\"question\":\"建議採用哪個解決方案？\",\"options\":[{\"id\":\"opt1\",\"text\":\"重啟資料庫連接池\""
+          ]
+        }
+      ]
+    },
+    {
+      "phase": "phase_7_completion_cache_shutdown",
+      "status": "passed",
+      "message": "完成+驗證 (2/3 功能驗證)",
+      "duration_ms": 412.34700000000004,
+      "details": {
+        "cache_verification": {
+          "hits_before": 0,
+          "hits_after": 0,
+          "hit_increase": 0,
+          "hit_rate_after": 0.0
+        },
+        "final_llm_stats": {
+          "calls": 6,
+          "tokens": 4866,
+          "cost": 0.05101
+        }
+      },
+      "errors": [],
+      "features_verified": [
+        {
+          "feature_id": "#35",
+          "feature_name": "Redis LLM caching - Final",
+          "verified": true,
+          "details": {
+            "total_hits": 0,
+            "total_misses": 0,
+            "hit_rate": 0.0
+          },
+          "errors": []
+        },
+        {
+          "feature_id": "#36",
+          "feature_name": "Cache invalidation",
+          "verified": false,
+          "details": {
+            "error": "API 返回 404"
+          },
+          "errors": [
+            "API 返回 404"
+          ]
+        },
+        {
+          "feature_id": "#49",
+          "feature_name": "Graceful shutdown",
+          "verified": true,
+          "details": {
+            "system_healthy": true
+          },
+          "errors": []
+        }
+      ]
+    }
+  ],
+  "resources": {
+    "workflow_id": null,
+    "execution_id": null,
+    "checkpoint_id": null,
+    "handoff_id": null,
+    "groupchat_id": "14ecc77f-d7b3-4c3d-876f-85e22d179b3d",
+    "multiturn_session_id": "6b4634d6-ac23-4eab-9754-8e52e9aecebb",
+    "voting_session_id": null,
+    "hitl_session_id": null
+  },
+  "llm_stats": {
+    "calls": 6,
+    "tokens": 4866,
+    "cost_usd": 0.05101
+  },
+  "cache_stats": {
+    "initial": {
+      "total_entries": 0,
+      "total_hits": 0,
+      "total_misses": 0,
+      "hit_rate": 0.0,
+      "hit_rate_percentage": 0.0,
+      "memory_usage_bytes": 0,
+      "last_reset": "2025-12-19T10:29:01.179664",
+      "enabled": true
+    },
+    "final": {
+      "total_entries": 0,
+      "total_hits": 0,
+      "total_misses": 0,
+      "hit_rate": 0.0,
+      "hit_rate_percentage": 0.0,
+      "memory_usage_bytes": 0,
+      "last_reset": "2025-12-19T10:29:01.179664",
+      "enabled": true
+    },
+    "improvement": {
+      "hits_before": 0,
+      "hits_after": 0,
+      "hit_increase": 0,
+      "hit_rate_after": 0.0
+    }
+  },
+  "features_summary": {
+    "total_features": 11,
+    "verified_features": 6,
+    "verification_rate": "54.5%",
+    "features": [
+      {
+        "id": "#35",
+        "name": "Redis LLM caching - 基準線",
+        "verified": true
+      },
+      {
+        "id": "#20",
+        "name": "Decompose complex tasks",
+        "verified": false
+      },
+      {
+        "id": "#21",
+        "name": "Plan step generation",
+        "verified": true
+      },
+      {
+        "id": "#35",
+        "name": "Redis LLM caching - Phase 2",
+        "verified": true
+      },
+      {
+        "id": "#39",
+        "name": "Checkpoint state persistence",
+        "verified": false
+      },
+      {
+        "id": "#14",
+        "name": "HITL with escalation",
+        "verified": false
+      },
+      {
+        "id": "#1",
+        "name": "Multi-turn conversation sessions",
+        "verified": true
+      },
+      {
+        "id": "#17",
+        "name": "Voting system",
+        "verified": false
+      },
+      {
+        "id": "#35",
+        "name": "Redis LLM caching - Final",
+        "verified": true
+      },
+      {
+        "id": "#36",
+        "name": "Cache invalidation",
+        "verified": false
+      },
+      {
+        "id": "#49",
+        "name": "Graceful shutdown",
+        "verified": true
+      }
+    ]
+  },
+  "summary": {
+    "total_phases": 7,
+    "passed": 5,
+    "failed": 2,
+    "skipped": 0
+  }
+}

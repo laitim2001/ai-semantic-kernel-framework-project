@@ -1,0 +1,243 @@
+{
+  "test_id": "lifecycle-20251219_053628",
+  "ticket_id": "TKT-2025-001",
+  "start_time": "2025-12-19T05:36:28.537944",
+  "end_time": "2025-12-19T05:36:30.045898",
+  "overall_status": "failed",
+  "phases": [
+    {
+      "phase": "phase_1_ticket_creation",
+      "status": "passed",
+      "message": "工單接收與建立完成",
+      "duration_ms": 954.419,
+      "details": {
+        "agent_id": "6e7d8748-77ac-45b7-9cae-223defeef016",
+        "agent_created": true,
+        "workflow_id": "babf8720-d69f-4332-a577-f944bf36aad3",
+        "workflow_created": true,
+        "execution_id": "ef257b95-b200-43bf-97fe-2c69a7a51574",
+        "execution_status": "pending",
+        "execution_created": true
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_2_classification",
+      "status": "passed",
+      "message": "智慧分類完成",
+      "duration_ms": 88.91799999999999,
+      "details": {
+        "available_agents": 0,
+        "classification": {
+          "category": "infrastructure",
+          "subcategory": "database",
+          "priority_score": 0.95,
+          "recommended_priority": "high",
+          "suggested_team": "DBA Team",
+          "estimated_resolution_time": "2-4 hours",
+          "keywords": [
+            "database",
+            "connection",
+            "timeout",
+            "postgresql"
+          ],
+          "impact_assessment": {
+            "affected_users": 500,
+            "business_impact": "high",
+            "urgency": "immediate"
+          }
+        },
+        "classification_completed": true,
+        "llm_stats": {
+          "calls": 1,
+          "tokens": 350,
+          "cost": 0.00175
+        }
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_3_routing",
+      "status": "passed",
+      "message": "路由決策完成",
+      "duration_ms": 16.817,
+      "details": {
+        "available_scenarios": {
+          "scenarios": [
+            {
+              "scenario": "it_operations",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "IT Operations: incident management, system monitoring",
+              "allowed_targets": [
+                "customer_service",
+                "finance"
+              ]
+            },
+            {
+              "scenario": "customer_service",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "Customer Service: ticket handling, customer inquiries",
+              "allowed_targets": [
+                "it_operations",
+                "sales"
+              ]
+            },
+            {
+              "scenario": "finance",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "Finance: billing, refunds, financial operations",
+              "allowed_targets": [
+                "customer_service",
+                "sales"
+              ]
+            },
+            {
+              "scenario": "hr",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "HR: employee management, onboarding",
+              "allowed_targets": [
+                "it_operations"
+              ]
+            },
+            {
+              "scenario": "sales",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "Sales: quotes, orders, customer engagement",
+              "allowed_targets": [
+                "customer_service",
+                "finance"
+              ]
+            }
+          ],
+          "total": 5
+        },
+        "capability_match": {
+          "matches": [],
+          "total_candidates": 0,
+          "strategy_used": "best_fit",
+          "best_match": null
+        },
+        "relation_created": false,
+        "routing_statistics": {
+          "total_relations": 0,
+          "by_source_scenario": {},
+          "by_relation_type": {},
+          "configured_scenarios": 5,
+          "configured_workflows": 0
+        }
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_4_approval",
+      "status": "failed",
+      "message": "階段 4 失敗: 1 個錯誤",
+      "duration_ms": 4.764,
+      "details": {
+        "notification_sent": true
+      },
+      "errors": [
+        "Checkpoint 創建失敗: 422"
+      ]
+    },
+    {
+      "phase": "phase_5_handoff",
+      "status": "passed",
+      "message": "Agent 派遣完成",
+      "duration_ms": 11.712,
+      "details": {
+        "source_agent_id": "7355e5e2-6e36-4ef8-99f5-7bb7484cf203",
+        "target_agent_id": "48be821f-bd93-4656-b211-83a97704c8f4",
+        "handoff_id": "5ab12c09-e3ff-4cbd-86a9-aa918f2fc5d8",
+        "handoff_status": "initiated",
+        "handoff_triggered": true,
+        "handoff_final_status": "initiated",
+        "context_transferred": false,
+        "handoff_history_count": 7
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_6_groupchat",
+      "status": "passed",
+      "message": "工單處理完成",
+      "duration_ms": 394.505,
+      "details": {
+        "groupchat_id": "1f3c6381-9c10-417e-91c4-23a25d12356e",
+        "groupchat_created": true,
+        "conversation_started": true,
+        "initial_rounds": 0,
+        "messages_sent": 3,
+        "solution": {
+          "diagnosis": "連接池耗盡，原因是新部署服務未正確配置連接池大小",
+          "root_cause": "新服務部署後，連接數從 50 增加到 200+，超過 PostgreSQL max_connections",
+          "solution_steps": [
+            "1. 臨時增加 PostgreSQL max_connections 到 300",
+            "2. 重啟新部署服務並設定連接池大小為 10",
+            "3. 監控 pg_stat_activity 確認連接數恢復正常"
+          ],
+          "prevention": "建立部署前連接池配置檢查清單",
+          "estimated_fix_time": "30 分鐘"
+        },
+        "groupchat_terminated": true
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_7_completion",
+      "status": "passed",
+      "message": "工單處理完成，所有記錄已更新",
+      "duration_ms": 36.489,
+      "details": {
+        "llm_statistics": {
+          "total_calls": 1,
+          "total_tokens": 350,
+          "total_cost_usd": 0.00175
+        },
+        "audit_trail": {
+          "total_entries": 0,
+          "start_time": null,
+          "end_time": null
+        },
+        "audit_statistics": {
+          "total_entries": 0,
+          "by_action": {},
+          "by_resource": {},
+          "by_severity": {},
+          "period": {
+            "start": null,
+            "end": null
+          }
+        },
+        "health_checks": {
+          "routing": true,
+          "audit": true
+        }
+      },
+      "errors": []
+    }
+  ],
+  "resources": {
+    "workflow_id": "babf8720-d69f-4332-a577-f944bf36aad3",
+    "execution_id": "ef257b95-b200-43bf-97fe-2c69a7a51574",
+    "checkpoint_id": null,
+    "handoff_id": "5ab12c09-e3ff-4cbd-86a9-aa918f2fc5d8",
+    "groupchat_id": "1f3c6381-9c10-417e-91c4-23a25d12356e"
+  },
+  "llm_stats": {
+    "calls": 1,
+    "tokens": 350,
+    "cost_usd": 0.00175
+  },
+  "summary": {
+    "total_phases": 7,
+    "passed": 6,
+    "failed": 1,
+    "skipped": 0
+  }
+}

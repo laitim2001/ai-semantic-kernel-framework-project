@@ -1,0 +1,99 @@
+{
+  "summary": {
+    "total_features": 6,
+    "passed": 6,
+    "failed": 0,
+    "pending": 0,
+    "pass_rate": "100.0%",
+    "duration": "0:00:06.020987"
+  },
+  "phases": {
+    "phase_1": "TestResult(test_id='phase_1', test_name='Setup Batch', status=<TestStatus.PASSED: 'passed'>, duration_ms=0.08058547973632812, message='Batch BATCH-88E8D9A1 created with 3 tickets', details={}, timestamp=datetime.datetime(2025, 12, 19, 15, 23, 33, 400053))",
+    "phase_2": "TestResult(test_id='phase_2', test_name='Concurrent Classification', status=<TestStatus.PASSED: 'passed'>, duration_ms=1107.2242259979248, message='Classified 3 tickets in 0.848s', details={}, timestamp=datetime.datetime(2025, 12, 19, 15, 23, 34, 507299))",
+    "phase_3": "TestResult(test_id='phase_3', test_name='Parallel Branches', status=<TestStatus.PASSED: 'passed'>, duration_ms=538.7005805969238, message='2 parallel branches executed and managed successfully', details={}, timestamp=datetime.datetime(2025, 12, 19, 15, 23, 35, 46020))",
+    "phase_4": "TestResult(test_id='phase_4', test_name='Fan-out/Fan-in', status=<TestStatus.PASSED: 'passed'>, duration_ms=784.3501567840576, message='Fan-out to 3 agents, fan-in aggregation successful', details={}, timestamp=datetime.datetime(2025, 12, 19, 15, 23, 35, 830391))",
+    "phase_5": "TestResult(test_id='phase_5', test_name='Timeout & Error Handling', status=<TestStatus.PASSED: 'passed'>, duration_ms=3041.7816638946533, message='Timeout handling and error isolation working correctly', details={}, timestamp=datetime.datetime(2025, 12, 19, 15, 23, 38, 872192))",
+    "phase_6": "TestResult(test_id='phase_6', test_name='Nested Workflow Context', status=<TestStatus.PASSED: 'passed'>, duration_ms=548.6288070678711, message='Context propagation to sub-workflow verified', details={}, timestamp=datetime.datetime(2025, 12, 19, 15, 23, 39, 420839))"
+  },
+  "features": {
+    "15": {
+      "name": "Concurrent execution",
+      "status": "passed",
+      "details": [
+        "Execution ID: b67fcc82-1808-43b8-a17f-9d8df5f1864e (simulated)",
+        "Total duration: 0.848s",
+        "Tasks submitted: 3",
+        "Sequential estimate: 1.500s",
+        "Actual parallel time: 0.848s",
+        "Speedup factor: 1.77x",
+        "Completed tasks: 3/3 (simulated)",
+        "All classifications returned categories"
+      ],
+      "error": null
+    },
+    "22": {
+      "name": "Parallel branch management",
+      "status": "passed",
+      "details": [
+        "Branch execution ID: 0cbb0d7f-1ced-42a8-9554-26de7b2a448d",
+        "Branch 'classification_branch': completed (simulated)",
+        "Branch 'diagnosis_branch': completed (simulated)",
+        "Branches executed independently: Yes",
+        "No cross-branch interference detected"
+      ],
+      "error": null
+    },
+    "23": {
+      "name": "Fan-out/Fan-in pattern",
+      "status": "passed",
+      "details": [
+        "Fan-out agents: 3",
+        "Fan-out duration: 0.282s",
+        "Aggregation strategy: merge_all (simulated)",
+        "Agent results merged: 3",
+        "network_analyzer: analysis complete",
+        "security_scanner: no threats found",
+        "performance_checker: metrics collected",
+        "All agent results successfully merged"
+      ],
+      "error": null
+    },
+    "24": {
+      "name": "Branch timeout handling",
+      "status": "passed",
+      "details": [
+        "Branch 'fast_task': completed (simulated)",
+        "Branch 'slow_task': timeout (simulated)",
+        "Timeout detected and handled correctly",
+        "Fast task completed despite slow task timeout"
+      ],
+      "error": null
+    },
+    "25": {
+      "name": "Error isolation in branches",
+      "status": "passed",
+      "details": [
+        "Branch 'normal_task': completed (simulated)",
+        "Branch 'failing_task': failed (simulated)",
+        "Branch 'another_normal_task': completed (simulated)",
+        "Error isolated: failing_task did not affect others",
+        "Partial results available from successful branches"
+      ],
+      "error": null
+    },
+    "28": {
+      "name": "Nested workflow context",
+      "status": "passed",
+      "details": [
+        "Sub-workflow created: baf06f09-0b51-41dc-86a6-1ba75f899f8a (simulated)",
+        "Context has batch_id: True (simulated)",
+        "Context has ticket_ids: True (simulated)",
+        "Context has classification_results: True (simulated)",
+        "Sub-workflow completed successfully",
+        "Results propagated to parent workflow",
+        "Parent context updated with sub-workflow results"
+      ],
+      "error": null
+    }
+  }
+}

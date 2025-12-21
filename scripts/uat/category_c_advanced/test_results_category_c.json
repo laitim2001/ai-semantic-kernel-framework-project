@@ -1,0 +1,96 @@
+{
+  "summary": {
+    "total_features": 4,
+    "passed": 4,
+    "failed": 0,
+    "pending": 0,
+    "pass_rate": "100.0%",
+    "duration": "0:00:03.351679"
+  },
+  "scenarios": {
+    "scenario_1": "TestResult(test_id='phase_1', test_name='Document Approval (Sub-workflow Composition)', status=<TestStatus.PASSED: 'passed'>, duration_ms=1287.9424095153809, message='Document DOC-886174C9 approved through 3 sub-workflows', details={}, timestamp=datetime.datetime(2025, 12, 19, 16, 35, 49, 853764))",
+    "scenario_2": "TestResult(test_id='phase_2', test_name='Root Cause Analysis (Recursive Execution)', status=<TestStatus.PASSED: 'passed'>, duration_ms=845.8976745605469, message='Root cause identified at depth 5: 需求變更太頻繁', details={}, timestamp=datetime.datetime(2025, 12, 19, 16, 35, 50, 699688))",
+    "scenario_3": "TestResult(test_id='phase_3', test_name='ServiceNow Sync (External Connector)', status=<TestStatus.PASSED: 'passed'>, duration_ms=614.1757965087891, message='Ticket TKT-6C8A8590 synced to ServiceNow', details={}, timestamp=datetime.datetime(2025, 12, 19, 16, 35, 51, 314019))",
+    "scenario_4": "TestResult(test_id='phase_4', test_name='Priority Queue (Message Prioritization)', status=<TestStatus.PASSED: 'passed'>, duration_ms=603.3618450164795, message='Messages processed in priority order, preemption working', details={}, timestamp=datetime.datetime(2025, 12, 19, 16, 35, 51, 917406))"
+  },
+  "features": {
+    "26": {
+      "name": "Sub-workflow composition",
+      "status": "passed",
+      "details": [
+        "Document: DOC-886174C9",
+        "Amount: $150,000",
+        "Composition ID: f9047ab8-ef4e-44ce-a88a-6194cd60d11c",
+        "Sub-workflows: 3 (manager, finance, legal)",
+        "Sub-workflow 'manager_approval': approved",
+        "Sub-workflow 'finance_review': approved",
+        "Sub-workflow 'legal_review': approved",
+        "All sub-workflows approved: True",
+        "Composition strategy 'all_required' satisfied",
+        "Final result: APPROVED"
+      ],
+      "error": null
+    },
+    "27": {
+      "name": "Recursive execution",
+      "status": "passed",
+      "details": [
+        "Problem: 系統響應緩慢",
+        "Analysis ID: 71739fda-68eb-4630-845f-5d807cbd5acc",
+        "Depth 1: 為什麼響應緩慢? → 資料庫查詢慢",
+        "Depth 2: 為什麼查詢慢? → 缺少索引",
+        "Depth 3: 為什麼缺少索引? → 新功能未優化",
+        "Depth 4: 為什麼未優化? → 開發時間緊迫",
+        "Depth 5: 為什麼時間緊迫? → 需求變更太頻繁 (根因)",
+        "Root cause identified at depth 5",
+        "Max depth configured: 5",
+        "Actual depth reached: 5",
+        "Termination condition: root_cause_found",
+        "Recursion path fully traceable"
+      ],
+      "error": null
+    },
+    "34": {
+      "name": "External connector updates",
+      "status": "passed",
+      "details": [
+        "Ticket: TKT-6C8A8590",
+        "Status: resolved",
+        "Sync ID: 9fb75b42-124d-40c4-8b17-4664ef8072fd",
+        "External ticket ID: SN-B452EC78 (simulated)",
+        "Sync status: SUCCESS (simulated)",
+        "Data format transformation: Correct",
+        "Retry mechanism: Available (not triggered)"
+      ],
+      "error": null
+    },
+    "37": {
+      "name": "Message prioritization",
+      "status": "passed",
+      "details": [
+        "Submitted: 一般查詢 (priority=1)",
+        "Submitted: 功能請求 (priority=5)",
+        "Submitted: 系統告警 (priority=8)",
+        "Submitted: 安全事件 (priority=10)",
+        "Submitted: 另一個查詢 (priority=1)",
+        "\nExpected processing order:",
+        "  1. 安全事件 (priority=10)",
+        "  2. 系統告警 (priority=8)",
+        "  3. 功能請求 (priority=5)",
+        "  4. 一般查詢 (priority=1)",
+        "  5. 另一個查詢 (priority=1)",
+        "\nActual processing order:",
+        "  1. 安全事件 (priority=10)",
+        "  2. 系統告警 (priority=8)",
+        "  3. 功能請求 (priority=5)",
+        "  4. 一般查詢 (priority=1)",
+        "  5. 另一個查詢 (priority=1)",
+        "Critical message processed first: True",
+        "Low priority messages processed: True",
+        "Preemption mechanism: Working correctly",
+        "No starvation detected for low priority"
+      ],
+      "error": null
+    }
+  }
+}

@@ -1,0 +1,311 @@
+{
+  "summary": {
+    "total_features": 38,
+    "main_list": {
+      "total": 32,
+      "passed": 0,
+      "failed": 32,
+      "pending": 0
+    },
+    "category_specific": {
+      "total": 6,
+      "passed": 0,
+      "failed": 6,
+      "pending": 0
+    },
+    "overall_pass_rate": "0.0%",
+    "phases_completed": 0,
+    "duration": "0:00:03.368450"
+  },
+  "phases": {
+    "phase_1": "TestResult(test_id='phase_1', test_name='Event Trigger & Multi-Source Ticket Reception', status=<TestStatus.FAILED: 'failed'>, duration_ms=265.74158668518066, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/workflows', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 23, 247086))",
+    "phase_2": "TestResult(test_id='phase_2', test_name='Intelligent Classification & Task Decomposition', status=<TestStatus.FAILED: 'failed'>, duration_ms=279.0408134460449, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/planning/classify', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 23, 526168))",
+    "phase_3": "TestResult(test_id='phase_3', test_name='Cross-Scenario Routing', status=<TestStatus.FAILED: 'failed'>, duration_ms=270.33400535583496, message='[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/routing/route', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 23, 796535))",
+    "phase_4": "TestResult(test_id='phase_4', test_name='Parallel Branch Processing (Fan-out)', status=<TestStatus.FAILED: 'failed'>, duration_ms=271.4121341705322, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/concurrent/fanout', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 24, 67977))",
+    "phase_5": "TestResult(test_id='phase_5', test_name='Recursive Root Cause Analysis (5 Whys)', status=<TestStatus.FAILED: 'failed'>, duration_ms=282.67598152160645, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/multiturn/message', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 24, 350692))",
+    "phase_6": "TestResult(test_id='phase_6', test_name='Autonomous Decision + Trial-and-Error', status=<TestStatus.FAILED: 'failed'>, duration_ms=262.99190521240234, message='[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/planning/decisions', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 24, 613715))",
+    "phase_7": "TestResult(test_id='phase_7', test_name='Agent Handoff (A2A)', status=<TestStatus.FAILED: 'failed'>, duration_ms=283.2834720611572, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/handoff/a2a', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 24, 897034))",
+    "phase_8": "TestResult(test_id='phase_8', test_name='Multi-Department Sub-workflow Approval', status=<TestStatus.FAILED: 'failed'>, duration_ms=265.3810977935791, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/nested/subworkflow', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 25, 162449))",
+    "phase_9": "TestResult(test_id='phase_9', test_name='GroupChat Expert Consultation + Voting', status=<TestStatus.FAILED: 'failed'>, duration_ms=306.29801750183105, message='[STRICT MODE] API call failed: HTTP 405 for POST http://localhost:8000/api/v1/groupchat/sessions', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 25, 468784))",
+    "phase_10": "TestResult(test_id='phase_10', test_name='External System Sync (Fan-in)', status=<TestStatus.FAILED: 'failed'>, duration_ms=313.43793869018555, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/connectors/servicenow/sync', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 25, 782255))",
+    "phase_11": "TestResult(test_id='phase_11', test_name='Completion & Record + Cache Verification', status=<TestStatus.FAILED: 'failed'>, duration_ms=293.3981418609619, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/audit/record', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 26, 75691))",
+    "phase_12": "TestResult(test_id='phase_12', test_name='Graceful Shutdown + Post-Incident Analysis', status=<TestStatus.FAILED: 'failed'>, duration_ms=273.8943099975586, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/checkpoints', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 2, 26, 349622))"
+  },
+  "main_features": {
+    "1": {
+      "name": "順序式 Agent 編排",
+      "phase": "Phase 1",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/workflows"
+    },
+    "15": {
+      "name": "Concurrent 並行執行",
+      "phase": "Phase 1",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/workflows"
+    },
+    "25": {
+      "name": "Nested Workflows 嵌套工作流",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/concurrent/fanout"
+    },
+    "26": {
+      "name": "Sub-workflow Execution",
+      "phase": "Phase 8",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/nested/subworkflow"
+    },
+    "27": {
+      "name": "Recursive Patterns",
+      "phase": "Phase 5",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/multiturn/message"
+    },
+    "50": {
+      "name": "Termination 條件",
+      "phase": "Phase 9",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 405 for POST http://localhost:8000/api/v1/groupchat/sessions"
+    },
+    "17": {
+      "name": "Collaboration Protocol 協作協議",
+      "phase": "Phase 7",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/handoff/a2a"
+    },
+    "18": {
+      "name": "GroupChat 群組聊天",
+      "phase": "Phase 9",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 405 for POST http://localhost:8000/api/v1/groupchat/sessions"
+    },
+    "19": {
+      "name": "Agent Handoff 交接",
+      "phase": "Phase 7",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/handoff/a2a"
+    },
+    "28": {
+      "name": "GroupChat 投票系統",
+      "phase": "Phase 9",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 405 for POST http://localhost:8000/api/v1/groupchat/sessions"
+    },
+    "31": {
+      "name": "Context Transfer",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/concurrent/fanout"
+    },
+    "32": {
+      "name": "Handoff Service",
+      "phase": "Phase 7",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/handoff/a2a"
+    },
+    "33": {
+      "name": "GroupChat Orchestrator",
+      "phase": "Phase 9",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 405 for POST http://localhost:8000/api/v1/groupchat/sessions"
+    },
+    "39": {
+      "name": "Agent to Agent (A2A)",
+      "phase": "Phase 7",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/handoff/a2a"
+    },
+    "48": {
+      "name": "投票系統",
+      "phase": "Phase 9",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 405 for POST http://localhost:8000/api/v1/groupchat/sessions"
+    },
+    "2": {
+      "name": "人機協作檢查點",
+      "phase": "Phase 8",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/nested/subworkflow"
+    },
+    "29": {
+      "name": "HITL Manage",
+      "phase": "Phase 8",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/nested/subworkflow"
+    },
+    "49": {
+      "name": "HITL 功能擴展",
+      "phase": "Phase 8",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/nested/subworkflow"
+    },
+    "22": {
+      "name": "Dynamic Planning 動態規劃",
+      "phase": "Phase 2",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/planning/classify"
+    },
+    "23": {
+      "name": "Autonomous Decision 自主決策",
+      "phase": "Phase 6",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/planning/decisions"
+    },
+    "24": {
+      "name": "Trial-and-Error 試錯",
+      "phase": "Phase 6",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/planning/decisions"
+    },
+    "34": {
+      "name": "Planning Adapter",
+      "phase": "Phase 2",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/planning/classify"
+    },
+    "20": {
+      "name": "Multi-turn 多輪對話",
+      "phase": "Phase 5",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/multiturn/message"
+    },
+    "21": {
+      "name": "Conversation Memory",
+      "phase": "Phase 5",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/multiturn/message"
+    },
+    "3": {
+      "name": "跨系統連接器",
+      "phase": "Phase 10",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/connectors/servicenow/sync"
+    },
+    "4": {
+      "name": "跨場景協作 (CS↔IT)",
+      "phase": "Phase 3",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/routing/route"
+    },
+    "30": {
+      "name": "Capability Matcher",
+      "phase": "Phase 3",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/routing/route"
+    },
+    "43": {
+      "name": "智能路由",
+      "phase": "Phase 3",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/routing/route"
+    },
+    "47": {
+      "name": "Agent 能力匹配器",
+      "phase": "Phase 3",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/routing/route"
+    },
+    "14": {
+      "name": "Redis 緩存",
+      "phase": "Phase 1",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/workflows"
+    },
+    "35": {
+      "name": "Redis/Postgres Checkpoint",
+      "phase": "Phase 8",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/nested/subworkflow"
+    },
+    "10": {
+      "name": "審計追蹤",
+      "phase": "Phase 11",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/audit/record"
+    }
+  },
+  "category_features": {
+    "B-2": {
+      "name": "Parallel branch management",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/concurrent/fanout"
+    },
+    "B-3": {
+      "name": "Fan-out/Fan-in pattern",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/concurrent/fanout"
+    },
+    "B-4": {
+      "name": "Branch timeout handling",
+      "phase": "Phase 6",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/planning/decisions"
+    },
+    "B-5": {
+      "name": "Error isolation in branches",
+      "phase": "Phase 6",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 422 for POST http://localhost:8000/api/v1/planning/decisions"
+    },
+    "B-6": {
+      "name": "Nested workflow context",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/concurrent/fanout"
+    },
+    "C-4": {
+      "name": "Message prioritization",
+      "phase": "Phase 10",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/connectors/servicenow/sync"
+    }
+  },
+  "api_call_stats": {
+    "real": 0,
+    "simulated": 0
+  },
+  "strict_mode": true,
+  "test_mode": "strict",
+  "simulation_used": false
+}

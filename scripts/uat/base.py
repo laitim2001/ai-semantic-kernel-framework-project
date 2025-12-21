@@ -549,6 +549,78 @@ class ScenarioTestBase(ABC):
 # Utility functions
 # =============================================================================
 
+# =============================================================================
+# UATTestBase - Simplified base for Category B/C tests
+# =============================================================================
+
+class TestPhase:
+    """Helper class for test phases."""
+
+    def __init__(self, phase_id: str, phase_name: str):
+        self.phase_id = phase_id
+        self.phase_name = phase_name
+        self.start_time = time.time()
+
+    def complete_success(self, message: str = "") -> TestResult:
+        """Mark phase as successful."""
+        duration = (time.time() - self.start_time) * 1000
+        return TestResult(
+            test_id=f"phase_{self.phase_id}",
+            test_name=self.phase_name,
+            status=TestStatus.PASSED,
+            duration_ms=duration,
+            message=message,
+        )
+
+    def complete_failure(self, error: str) -> TestResult:
+        """Mark phase as failed."""
+        duration = (time.time() - self.start_time) * 1000
+        return TestResult(
+            test_id=f"phase_{self.phase_id}",
+            test_name=self.phase_name,
+            status=TestStatus.FAILED,
+            duration_ms=duration,
+            message=error,
+        )
+
+
+class UATTestBase:
+    """
+    Simplified base class for UAT tests.
+    Used by Category B/C test scripts.
+    """
+
+    def __init__(self, test_name: str):
+        self.test_name = test_name
+        self.logger = logging.getLogger(test_name)
+
+    def log_header(self, message: str):
+        """Log header message."""
+        safe_print("\n" + "=" * 70)
+        safe_print(f" {message}")
+        safe_print("=" * 70)
+
+    def log_step(self, message: str):
+        """Log step message."""
+        safe_print(f"\n>>> {message}")
+
+    def log_info(self, message: str):
+        """Log info message."""
+        safe_print(f"    {message}")
+
+    def log_success(self, message: str):
+        """Log success message."""
+        safe_print(f"    [PASS] {message}")
+
+    def log_warning(self, message: str):
+        """Log warning message."""
+        safe_print(f"    [WARN] {message}")
+
+    def log_error(self, message: str):
+        """Log error message."""
+        safe_print(f"    [FAIL] {message}")
+
+
 def run_scenario_sync(scenario_class, **kwargs) -> ScenarioResult:
     """
     Synchronously run a scenario test.

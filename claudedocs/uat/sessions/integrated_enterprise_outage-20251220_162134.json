@@ -1,0 +1,434 @@
+{
+  "summary": {
+    "total_features": 38,
+    "main_list": {
+      "total": 32,
+      "passed": 22,
+      "failed": 10,
+      "pending": 0
+    },
+    "category_specific": {
+      "total": 6,
+      "passed": 2,
+      "failed": 4,
+      "pending": 0
+    },
+    "overall_pass_rate": "63.2%",
+    "phases_completed": 7,
+    "duration": "0:00:14.749351"
+  },
+  "phases": {
+    "phase_1": "TestResult(test_id='phase_1', test_name='Event Trigger & Multi-Source Ticket Reception', status=<TestStatus.PASSED: 'passed'>, duration_ms=1295.842170715332, message='Created 4 tickets, started workflow', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 21, 442337))",
+    "phase_2": "TestResult(test_id='phase_2', test_name='Intelligent Classification & Task Decomposition', status=<TestStatus.PASSED: 'passed'>, duration_ms=527.0390510559082, message='All tickets classified, tasks decomposed', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 21, 969455))",
+    "phase_3": "TestResult(test_id='phase_3', test_name='Cross-Scenario Routing', status=<TestStatus.FAILED: 'failed'>, duration_ms=1616.9092655181885, message='[STRICT MODE] API call failed: HTTP 400 for POST http://localhost:8000/api/v1/routing/relations', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 23, 586389))",
+    "phase_4": "TestResult(test_id='phase_4', test_name='Parallel Branch Processing (Fan-out)', status=<TestStatus.FAILED: 'failed'>, duration_ms=540.259838104248, message='[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/nested/sub-workflows/execute', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 24, 126679))",
+    "phase_5": "TestResult(test_id='phase_5', test_name='Recursive Root Cause Analysis (5 Whys)', status=<TestStatus.FAILED: 'failed'>, duration_ms=1642.2691345214844, message='[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/planning/adapter/multiturn/93ff676e-43d2-4e95-baf1-29f1dd3710e8/turn', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 25, 768983))",
+    "phase_6": "TestResult(test_id='phase_6', test_name='Autonomous Decision + Trial-and-Error', status=<TestStatus.PASSED: 'passed'>, duration_ms=1105.1013469696045, message='Issue resolved: Failover + reindex successful', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 26, 874120))",
+    "phase_7": "TestResult(test_id='phase_7', test_name='Agent Handoff (A2A)', status=<TestStatus.PASSED: 'passed'>, duration_ms=537.8270149230957, message='Agent handoff completed with context preservation', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 27, 412031))",
+    "phase_8": "TestResult(test_id='phase_8', test_name='Multi-Department Sub-workflow Approval', status=<TestStatus.PASSED: 'passed'>, duration_ms=2838.35768699646, message='All department approvals obtained', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 30, 250403))",
+    "phase_9": "TestResult(test_id='phase_9', test_name='GroupChat Expert Consultation + Voting', status=<TestStatus.PASSED: 'passed'>, duration_ms=3170.9723472595215, message='Expert consensus: 5/5 approved', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 33, 421396))",
+    "phase_10": "TestResult(test_id='phase_10', test_name='External System Sync (Fan-in)', status=<TestStatus.FAILED: 'failed'>, duration_ms=289.29758071899414, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/connectors/servicenow/execute', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 33, 710716))",
+    "phase_11": "TestResult(test_id='phase_11', test_name='Completion & Record + Cache Verification', status=<TestStatus.PASSED: 'passed'>, duration_ms=526.3116359710693, message='Closed 4 tickets, audit recorded', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 34, 237060))",
+    "phase_12": "TestResult(test_id='phase_12', test_name='Graceful Shutdown + Post-Incident Analysis', status=<TestStatus.FAILED: 'failed'>, duration_ms=658.597469329834, message='[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/executions/e7242204-280b-42a9-ba19-488577810e55/shutdown', details={}, timestamp=datetime.datetime(2025, 12, 20, 16, 21, 34, 895674))"
+  },
+  "main_features": {
+    "1": {
+      "name": "順序式 Agent 編排",
+      "phase": "Phase 1",
+      "status": "passed",
+      "details": [
+        "Agent exists: triage-agent (40a6ff8f-8902-46c6-8732-e03a004bd93e)",
+        "Agent exists: analyst-agent (bc036f03-f74c-4ed3-aa1c-7867406ed1b4)",
+        "Agent exists: resolver-agent (3bfa668b-d432-4a6a-be76-d31d0c70f866)",
+        "Workflow created: da5e7c78-0887-4407-bbba-52c6e5d74d5c",
+        "Execution started: e7242204-280b-42a9-ba19-488577810e55"
+      ],
+      "error": null
+    },
+    "15": {
+      "name": "Concurrent 並行執行",
+      "phase": "Phase 1",
+      "status": "passed",
+      "details": [
+        "Ticket IT-001 (IT): Created",
+        "Ticket CS-001 (CS): Created",
+        "Ticket FIN-001 (FIN): Created",
+        "Ticket OPS-001 (OPS): Created",
+        "Concurrent creation: 4 tickets in parallel"
+      ],
+      "error": null
+    },
+    "25": {
+      "name": "Nested Workflows 嵌套工作流",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/nested/sub-workflows/execute"
+    },
+    "26": {
+      "name": "Sub-workflow Execution",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "Sub-workflow: it_manager_approval (IT Manager)",
+        "Sub-workflow: cto_approval (CTO)",
+        "Sub-workflow: ops_manager_approval (Ops Manager)"
+      ],
+      "error": null
+    },
+    "27": {
+      "name": "Recursive Patterns",
+      "phase": "Phase 5",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/planning/adapter/multiturn/93ff676e-43d2-4e95-baf1-29f1dd3710e8/turn"
+    },
+    "50": {
+      "name": "Termination 條件",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "Termination type: Consensus reached",
+        "Condition: All experts approved",
+        "Session status: Closed"
+      ],
+      "error": null
+    },
+    "17": {
+      "name": "Collaboration Protocol 協作協議",
+      "phase": "Phase 7",
+      "status": "passed",
+      "details": [
+        "triage_agent -> specialist_agent: REQUEST",
+        "specialist_agent -> triage_agent: ACKNOWLEDGE",
+        "specialist_agent -> triage_agent: RESPONSE",
+        "Protocol completed: 3 messages exchanged"
+      ],
+      "error": null
+    },
+    "18": {
+      "name": "GroupChat 群組聊天",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "Session ID: 3cd59539-ad92-4266-974b-7680bc2019aa",
+        "Participants: 5 experts",
+        "dba_expert: 索引已重建，查詢效能恢復正常...",
+        "sre_expert: 監控顯示所有指標綠燈...",
+        "devops_expert: 部署狀態穩定...",
+        "app_expert: 應用程式回應時間正常...",
+        "security_expert: 無安全漏洞引入..."
+      ],
+      "error": null
+    },
+    "19": {
+      "name": "Agent Handoff 交接",
+      "phase": "Phase 7",
+      "status": "passed",
+      "details": [
+        "Handoff ID: a384011a-cb9f-4c25-9ec3-e7607a9817a6",
+        "Handoff policy: graceful",
+        "Status: completed"
+      ],
+      "error": null
+    },
+    "28": {
+      "name": "GroupChat 投票系統",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "dba_expert: yes",
+        "devops_expert: yes",
+        "sre_expert: yes",
+        "app_expert: yes",
+        "security_expert: yes"
+      ],
+      "error": null
+    },
+    "31": {
+      "name": "Context Transfer",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/nested/sub-workflows/execute"
+    },
+    "32": {
+      "name": "Handoff Service",
+      "phase": "Phase 7",
+      "status": "passed",
+      "details": [
+        "Handoff service: Active",
+        "Context preserved: Yes",
+        "Agent state transferred: Yes"
+      ],
+      "error": null
+    },
+    "33": {
+      "name": "GroupChat Orchestrator",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "Orchestrator: Active",
+        "Turn management: Round-robin"
+      ],
+      "error": null
+    },
+    "39": {
+      "name": "Agent to Agent (A2A)",
+      "phase": "Phase 7",
+      "status": "passed",
+      "details": [
+        "A2A channel: Established",
+        "Source: triage_agent",
+        "Target: specialist_agent"
+      ],
+      "error": null
+    },
+    "48": {
+      "name": "投票系統",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "Voting completed: 5/5 approved",
+        "Quorum reached: Yes (100% > 60%)",
+        "Result: APPROVED"
+      ],
+      "error": null
+    },
+    "2": {
+      "name": "人機協作檢查點",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "Checkpoint: it_manager_approval",
+        "Checkpoint: cto_approval",
+        "Checkpoint: ops_manager_approval"
+      ],
+      "error": null
+    },
+    "29": {
+      "name": "HITL Manage",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "IT Manager: Approved",
+        "CTO: Approved",
+        "Ops Manager: Approved"
+      ],
+      "error": null
+    },
+    "49": {
+      "name": "HITL 功能擴展",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "Escalation policy: Configured",
+        "Timeout escalation: To VP level after 5 min",
+        "Complexity escalation: Enabled for P0 incidents",
+        "Multi-approver support: Yes"
+      ],
+      "error": null
+    },
+    "22": {
+      "name": "Dynamic Planning 動態規劃",
+      "phase": "Phase 2",
+      "status": "passed",
+      "details": [
+        "IT-001: database_outage (P0)",
+        "CS-001: service_disruption (P0)",
+        "FIN-001: transaction_failure (P0)",
+        "OPS-001: workflow_halt (P0)",
+        "Correlation detected: All 4 tickets related to same root cause"
+      ],
+      "error": null
+    },
+    "23": {
+      "name": "Autonomous Decision 自主決策",
+      "phase": "Phase 6",
+      "status": "passed",
+      "details": [
+        "Decision made: failover_and_reindex",
+        "Confidence: 0.90",
+        "Auto-approved: Yes (confidence >= threshold)"
+      ],
+      "error": null
+    },
+    "24": {
+      "name": "Trial-and-Error 試錯",
+      "phase": "Phase 6",
+      "status": "passed",
+      "details": [
+        "Trial 1: REINDEX CONCURRENTLY -> ❌",
+        "Trial 2: Switch to standby -> ✅",
+        "Trial 3: REINDEX on standby -> ✅"
+      ],
+      "error": null
+    },
+    "34": {
+      "name": "Planning Adapter",
+      "phase": "Phase 2",
+      "status": "passed",
+      "details": [
+        "Tasks generated: 5",
+        "  - 診斷資料庫連接狀態",
+        "  - 通知受影響客戶",
+        "  - 暫停財務交易處理",
+        "  - 記錄營運流程狀態",
+        "  - 準備備援方案"
+      ],
+      "error": null
+    },
+    "20": {
+      "name": "Multi-turn 多輪對話",
+      "phase": "Phase 5",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/planning/adapter/multiturn/93ff676e-43d2-4e95-baf1-29f1dd3710e8/turn"
+    },
+    "21": {
+      "name": "Conversation Memory",
+      "phase": "Phase 5",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/planning/adapter/multiturn/93ff676e-43d2-4e95-baf1-29f1dd3710e8/turn"
+    },
+    "3": {
+      "name": "跨系統連接器",
+      "phase": "Phase 10",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/connectors/servicenow/execute"
+    },
+    "4": {
+      "name": "跨場景協作 (CS↔IT)",
+      "phase": "Phase 3",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 400 for POST http://localhost:8000/api/v1/routing/relations"
+    },
+    "30": {
+      "name": "Capability Matcher",
+      "phase": "Phase 3",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 400 for POST http://localhost:8000/api/v1/routing/relations"
+    },
+    "43": {
+      "name": "智能路由",
+      "phase": "Phase 3",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 400 for POST http://localhost:8000/api/v1/routing/relations"
+    },
+    "47": {
+      "name": "Agent 能力匹配器",
+      "phase": "Phase 3",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 400 for POST http://localhost:8000/api/v1/routing/relations"
+    },
+    "14": {
+      "name": "Redis 緩存",
+      "phase": "Phase 1",
+      "status": "passed",
+      "details": [
+        "Cache baseline: {'hits': 0, 'misses': 0, 'keys': 0}",
+        "Cache hits: 0",
+        "Cache misses: 0",
+        "Hit rate: 0.0%"
+      ],
+      "error": null
+    },
+    "35": {
+      "name": "Redis/Postgres Checkpoint",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "Persisted: it_manager_approval",
+        "Persisted: cto_approval",
+        "Persisted: ops_manager_approval",
+        "Final checkpoint: Saved",
+        "Persistence: Redis + PostgreSQL",
+        "Data integrity: Verified"
+      ],
+      "error": null
+    },
+    "10": {
+      "name": "審計追蹤",
+      "phase": "Phase 11",
+      "status": "passed",
+      "details": [
+        "IT-001: COMPLETED",
+        "CS-001: COMPLETED",
+        "FIN-001: COMPLETED",
+        "OPS-001: COMPLETED",
+        "Audit trail: 0 entries found",
+        "Execution ID: e7242204-280b-42a9-ba19-488577810e55",
+        "Tickets in scope: 4",
+        "Post-incident report: Generated",
+        "Root cause: 遷移腳本缺少索引重建步驟",
+        "Prevention measures: 3"
+      ],
+      "error": null
+    }
+  },
+  "category_features": {
+    "B-2": {
+      "name": "Parallel branch management",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/nested/sub-workflows/execute"
+    },
+    "B-3": {
+      "name": "Fan-out/Fan-in pattern",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/nested/sub-workflows/execute"
+    },
+    "B-4": {
+      "name": "Branch timeout handling",
+      "phase": "Phase 6",
+      "status": "passed",
+      "details": [
+        "Timeout policy: 30 seconds per operation",
+        "Timeout action: Retry with fallback",
+        "Timeout triggered: Trial 1 (lock contention)"
+      ],
+      "error": null
+    },
+    "B-5": {
+      "name": "Error isolation in branches",
+      "phase": "Phase 6",
+      "status": "passed",
+      "details": [
+        "Error isolation: Enabled",
+        "Trial 1 failure: Isolated, did not affect Trial 2/3",
+        "Graceful degradation: Active"
+      ],
+      "error": null
+    },
+    "B-6": {
+      "name": "Nested workflow context",
+      "phase": "Phase 4",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 500 for POST http://localhost:8000/api/v1/nested/sub-workflows/execute"
+    },
+    "C-4": {
+      "name": "Message prioritization",
+      "phase": "Phase 10",
+      "status": "failed",
+      "details": [],
+      "error": "[STRICT MODE] API call failed: HTTP 404 for POST http://localhost:8000/api/v1/connectors/servicenow/execute"
+    }
+  },
+  "api_call_stats": {
+    "real": 47,
+    "simulated": 0
+  },
+  "strict_mode": true,
+  "test_mode": "strict",
+  "simulation_used": false
+}

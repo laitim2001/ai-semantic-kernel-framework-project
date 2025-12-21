@@ -1,0 +1,455 @@
+{
+  "test_id": "lifecycle-20251219_102808",
+  "ticket_id": "TKT-2025-001",
+  "start_time": "2025-12-19T10:28:08.083270",
+  "end_time": "2025-12-19T10:29:18.433003",
+  "overall_status": "passed",
+  "phases": [
+    {
+      "phase": "phase_1_ticket_creation",
+      "status": "passed",
+      "message": "工單接收與建立完成",
+      "duration_ms": 1615.235,
+      "details": {
+        "agent_id": "bb12f102-7e45-48e2-ae8f-d00d33982186",
+        "agent_created": true,
+        "workflow_id": "15584016-e682-487b-bea8-2165862992fd",
+        "workflow_created": true,
+        "execution_id": "2cfcf5cd-3a31-4b0a-bd12-e52cc730d7fc",
+        "execution_status": "pending",
+        "execution_created": true
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_2_classification",
+      "status": "passed",
+      "message": "智慧分類完成",
+      "duration_ms": 8161.568000000001,
+      "details": {
+        "available_agents": 0,
+        "historical_tickets_count": 0,
+        "llm_mode": "agent_executor",
+        "llm_stats": {
+          "calls": 1,
+          "tokens": 577,
+          "prompt_tokens": 409,
+          "completion_tokens": 168,
+          "cost": 0.004565,
+          "via_adapter": true
+        },
+        "classification": {
+          "category": "infrastructure",
+          "subcategory": "database",
+          "priority_score": 0.95,
+          "recommended_priority": "high",
+          "suggested_team": "SRE/DBA On-Call Team",
+          "estimated_resolution_time": "2-6 hours",
+          "keywords": [
+            "production",
+            "database connection",
+            "intermittent",
+            "PostgreSQL 16",
+            "Spring Boot 3.2",
+            "Azure VM",
+            "connection timeout",
+            "30 seconds",
+            "all users",
+            "service restart ineffective"
+          ],
+          "impact_assessment": {
+            "affected_users": 500,
+            "business_impact": "high",
+            "urgency": "immediate"
+          }
+        },
+        "classification_completed": true
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_3_routing",
+      "status": "passed",
+      "message": "路由決策完成",
+      "duration_ms": 24.42,
+      "details": {
+        "available_scenarios": {
+          "scenarios": [
+            {
+              "scenario": "it_operations",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "IT Operations: incident management, system monitoring",
+              "allowed_targets": [
+                "customer_service",
+                "finance"
+              ]
+            },
+            {
+              "scenario": "customer_service",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "Customer Service: ticket handling, customer inquiries",
+              "allowed_targets": [
+                "it_operations",
+                "sales"
+              ]
+            },
+            {
+              "scenario": "finance",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "Finance: billing, refunds, financial operations",
+              "allowed_targets": [
+                "customer_service",
+                "sales"
+              ]
+            },
+            {
+              "scenario": "hr",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "HR: employee management, onboarding",
+              "allowed_targets": [
+                "it_operations"
+              ]
+            },
+            {
+              "scenario": "sales",
+              "default_workflow_id": null,
+              "enabled": true,
+              "description": "Sales: quotes, orders, customer engagement",
+              "allowed_targets": [
+                "customer_service",
+                "finance"
+              ]
+            }
+          ],
+          "total": 5
+        },
+        "capability_match": {
+          "matches": [],
+          "total_candidates": 0,
+          "strategy_used": "best_fit",
+          "best_match": null
+        },
+        "relation_created": false,
+        "routing_statistics": {
+          "total_relations": 0,
+          "by_source_scenario": {},
+          "by_relation_type": {},
+          "configured_scenarios": 5,
+          "configured_workflows": 0
+        }
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_4_approval",
+      "status": "passed",
+      "message": "審批流程完成",
+      "duration_ms": 424.276,
+      "details": {
+        "checkpoint_id": "3b57205c-9989-4c2d-97c3-060c05df925e",
+        "checkpoint_status": "pending",
+        "notification_sent": true,
+        "approval_result": {
+          "id": "3b57205c-9989-4c2d-97c3-060c05df925e",
+          "status": "approved",
+          "message": "Checkpoint approved successfully",
+          "responded_at": "2025-12-19T10:28:18.281463Z"
+        },
+        "approved": true
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_5_handoff",
+      "status": "passed",
+      "message": "Agent 派遣完成",
+      "duration_ms": 21.588,
+      "details": {
+        "source_agent_id": "48103cfe-1115-4a7f-afae-8fd6409f5b64",
+        "target_agent_id": "0ce23b41-c161-4af7-9b53-0e60135b384e",
+        "handoff_id": "634ec5c4-5589-400a-8809-2662e0891a94",
+        "handoff_status": "initiated",
+        "handoff_triggered": true,
+        "handoff_final_status": "initiated",
+        "context_transferred": false,
+        "handoff_history_count": 12
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_6_groupchat",
+      "status": "passed",
+      "message": "工單處理完成",
+      "duration_ms": 42381.134000000005,
+      "details": {
+        "llm_mode": "real_groupchat",
+        "groupchat_id": "cfb4627a-b2f6-43f7-b030-9ca78d3479f4",
+        "groupchat_created": true,
+        "conversation_started": true,
+        "initial_rounds": 0,
+        "messages_sent": 3,
+        "conversation_history": [
+          {
+            "role": "System",
+            "content": "案例編號: TKT-2025-001\n問題描述: 生產環境資料庫連線異常\n\n詳細資訊:\n\n使用者報告：\n- 系統在今天上午 10:30 開始間歇性無法連接資料庫\n- 影響範圍：所有使用者 (約 500 人)\n- 錯誤訊息：Connection timeout after 30 seconds\n- 已嘗試：重啟應用程式服務 (無效)\n\n環境資訊：\n- 資料庫：PostgreSQL 16\n- 應用程式：Spring Boot 3.2\n- 雲端環境：Azure VM\n\n\n請各位專家提供診斷意見和解決方案。"
+          },
+          {
+            "role": "DBA Expert",
+            "content": "建議先查 PostgreSQL `pg_stat_activity`/`pg_stat_database` 是否連線數暴增、長交易或鎖等待，並核對 `max_connections` 與 Spring Boot/HikariCP `maximumPoolSize` 是否不匹配造成耗盡。同步檢查 Azure VM 網路/NSG、DNS、CPU/IO 飽和與 `postgresql.log` 是否有 `too many connections`、checkpoint/IO 延遲。可先調整連線池、加上 PgBouncer，並設定合理 timeout 與連線回收。"
+          },
+          {
+            "role": "System Admin",
+            "content": "從系統面看，30 秒 timeout 多半是 DB 主機資源或網路抖動。請先查 Azure VM 10:30 起 CPU steal、記憶體/Swap、磁碟 IOPS/延遲與 NIC 丟包；同時檢視 NSG/防火牆、DNS 解析與連線追蹤表是否滿。建議開啟 PostgreSQL 慢查/鎖等待日誌並比對監控時間軸，必要時先擴 VM 規格或分離儲存。"
+          },
+          {
+            "role": "Network Engineer",
+            "content": "從網路角度，30 秒 timeout 且影響全員，優先懷疑 Azure 網路抖動或安全規則變更。請查 10:30 起 NSG/防火牆是否有 deny、DB VM NIC 丟包/重傳、TCP SYN backlog/conntrack 是否滿；同時用 Network Watcher 連線測試與 NSG Flow Logs 比對。建議暫時放寬 DB 連線埠來源並監控。"
+          }
+        ],
+        "solution": {
+          "diagnosis": "生產環境自 10:30 起出現間歇性 PostgreSQL 連線逾時（30 秒），影響全體使用者且重啟應用無效；綜合研判為「資料庫端連線/資源瓶頸」或「Azure 網路抖動/安全規則變更」導致連線建立或取得連線池資源超時。",
+          "root_cause": "最可能根因為 PostgreSQL 連線資源耗盡或阻塞（max_connections 與 Spring Boot/HikariCP 連線池設定不匹配、連線暴增、長交易/鎖等待），並可能伴隨 DB VM CPU/IO 飽和或磁碟延遲；次要可能為 Azure 網路層問題（NSG/防火牆規則變更、NIC 丟包/重傳、SYN backlog/conntrack 滿、DNS 解析異常）造成連線建立逾時。",
+          "solution_steps": [
+            "立即蒐證與定位（以 10:30 為時間錨點）：(1) DB 端查 pg_stat_activity/pg_stat_database 觀察連線數、active/idle in transaction、等待事件與鎖等待；(2) 檢查 postgresql.log 是否出現 too many connections、checkpoint/IO 延遲、長查詢/鎖等待；(3) Azure VM 監控查 CPU、記憶體/Swap、磁碟 IOPS/延遲、NIC 丟包/重傳；(4) 網路面查 NSG/防火牆變更、NSG Flow Logs、Network Watcher 連線測試、DNS 解析結果與延遲。",
+            "快速緩解（先恢復服務穩定）：(1) 比對並調整 HikariCP maximumPoolSize 與 PostgreSQL max_connections，避免池大小總和超過 DB 可承載；(2) 針對長交易/鎖等待，終止異常 session（必要時針對阻塞鏈處理），並設定合理 statement_timeout/idle_in_transaction_session_timeout；(3) 若連線數壓力大，導入/啟用 PgBouncer 進行連線池化；(4) 若 DB VM 資源飽和，先臨時升級 VM 規格或提升磁碟效能層級；(5) 若判定為網路/規則問題，暫時放寬 DB 連線埠來源（最小可行範圍）並回復/修正 NSG deny 規則。",
+            "根治與驗證： (1) 建立連線容量模型（使用者數、峰值 QPS、池大小、max_connections、work_mem 等）並固化設定；(2) 開啟並保留慢查詢/鎖等待相關日誌與監控告警（連線數、等待事件、IO 延遲、丟包率）；(3) 針對應用端加入連線取得超時/重試退避、連線回收與健康檢查設定；(4) 以壓測/回歸測試驗證在峰值下無 timeout，並用 Network Watcher/Flow Logs 與 DB 指標確認問題不再於 10:30 類似負載下重現。"
+          ],
+          "prevention": "建立端到端監控與告警（PostgreSQL 連線數/等待事件/鎖等待/慢查詢、VM CPU/IO/NIC、NSG Flow Logs），定期審核 NSG/防火牆變更；制定連線池與 max_connections 的容量規劃與變更流程；導入 PgBouncer 或集中式連線池化；設定合理 timeout（statement/idle transaction/connection acquire）與自動化阻塞偵測；定期壓測與演練擴容/回復流程。",
+          "estimated_fix_time": "快速定位與緩解約 1-3 小時；若需導入 PgBouncer 或升級/調整 Azure 資源與規則並完成驗證，約 0.5-2 個工作天。"
+        },
+        "llm_stats": {
+          "calls": 4,
+          "tokens": 3412,
+          "cost": 0.03049
+        },
+        "groupchat_terminated": true
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_7_completion",
+      "status": "passed",
+      "message": "工單處理完成，所有記錄已更新",
+      "duration_ms": 288.177,
+      "details": {
+        "llm_statistics": {
+          "total_calls": 5,
+          "total_tokens": 3989,
+          "total_cost_usd": 0.035055
+        },
+        "audit_trail": {
+          "total_entries": 0,
+          "start_time": null,
+          "end_time": null
+        },
+        "audit_statistics": {
+          "total_entries": 0,
+          "by_action": {},
+          "by_resource": {},
+          "by_severity": {},
+          "period": {
+            "start": null,
+            "end": null
+          }
+        },
+        "health_checks": {
+          "routing": true,
+          "audit": true
+        }
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_8_task_decomposition",
+      "status": "passed",
+      "message": "任務分解與計劃生成完成",
+      "duration_ms": 11.476,
+      "details": {
+        "decompose_error": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"task_description\"],\"msg\":\"Field required\",\"input\":{\"task\":\"處理 IT 工單 [TKT-2025-001]: 生產環境資料庫連線異常\",\"context\":{\"ticket_id\":\"TKT-2025-001\",\"priority\":\"high\",\"category\":\"infrastructure\",\"description\":\"\\n使用者報告：\\n- 系統在今天上午 10:30 開始間歇性無法連接資料庫\\n- 影響範圍：所有使用者 (約 500 人)\\n- 錯誤訊息：Connection timeout after 30 seconds\\n- 已嘗試：重啟應用程式服務 (無效)\\n\\n環境資訊：\\n- 資料庫：PostgreSQL 16\\n- 應用程式：Spring Boot 3.2\\n- 雲端環境：Azure VM\\n\"}}}]}",
+        "plan_result": {
+          "id": "0d8acea9-053c-46dc-ab49-8006502d3c2e",
+          "name": "Plan for: 解決 生產環境資料庫連線異常",
+          "goal": "解決 生產環境資料庫連線異常",
+          "status": "draft",
+          "progress": 0.0,
+          "current_phase": 0,
+          "total_phases": 1,
+          "subtasks_count": 5,
+          "created_at": "2025-12-19T10:29:01.008628",
+          "started_at": null,
+          "completed_at": null,
+          "deadline": null
+        },
+        "plan_step_count": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_9_multi_turn",
+      "status": "passed",
+      "message": "多輪對話測試完成",
+      "duration_ms": 6.656,
+      "details": {
+        "session_error": "{\"detail\":\"Method Not Allowed\"}"
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_10_voting",
+      "status": "passed",
+      "message": "投票系統測試完成",
+      "duration_ms": 37.830000000000005,
+      "details": {
+        "voting_error": "{\"detail\":\"Method Not Allowed\"}"
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_11_escalation",
+      "status": "passed",
+      "message": "HITL 升級測試完成",
+      "duration_ms": 115.67399999999999,
+      "details": {},
+      "errors": [
+        "Checkpoint 建立失敗: 422"
+      ]
+    },
+    {
+      "phase": "phase_12_cache",
+      "status": "passed",
+      "message": "快取測試完成",
+      "duration_ms": 6336.929999999999,
+      "details": {
+        "initial_stats": {
+          "total_entries": 0,
+          "total_hits": 0,
+          "total_misses": 0,
+          "hit_rate": 0.0,
+          "hit_rate_percentage": 0.0,
+          "memory_usage_bytes": 0,
+          "last_reset": "2025-12-19T10:29:01.179664",
+          "enabled": true
+        },
+        "first_request_duration_ms": 1972.6680000000001,
+        "first_response": "資訊不足，無法判定 TKT-2025-001 的問題類別。\n\n請提供至少一項工單內容（例如：標題/描述/錯誤訊息/影響系統/症狀），我才能進行分類。",
+        "second_request_duration_ms": 3619.911,
+        "second_response": "缺少工單內容，無法判定 TKT-2025-001 的問題類別。\n\n請提供至少以下任一資訊，我才能進行分類（並可給主類別/次類別/標籤）：\n- 工單標題與描述（含錯誤訊息/截圖文字）\n- 影響系統/服務",
+        "final_stats": {
+          "total_entries": 0,
+          "total_hits": 0,
+          "total_misses": 0,
+          "hit_rate": 0.0,
+          "hit_rate_percentage": 0.0,
+          "memory_usage_bytes": 0,
+          "last_reset": "2025-12-19T10:29:01.179664",
+          "enabled": true
+        },
+        "hit_increase": 0
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_13_cache_invalidation",
+      "status": "passed",
+      "message": "快取失效測試完成",
+      "duration_ms": 9089.468,
+      "details": {
+        "before_clear_stats": {
+          "total_entries": 0,
+          "total_hits": 0,
+          "total_misses": 0,
+          "hit_rate": 0.0,
+          "hit_rate_percentage": 0.0,
+          "memory_usage_bytes": 0,
+          "last_reset": "2025-12-19T10:29:01.179664",
+          "enabled": true
+        },
+        "cleared_count": 0,
+        "clear_success": true,
+        "after_clear_stats": {
+          "total_entries": 0,
+          "total_hits": 0,
+          "total_misses": 0,
+          "hit_rate": 0.0,
+          "hit_rate_percentage": 0.0,
+          "memory_usage_bytes": 0,
+          "last_reset": "2025-12-19T10:29:01.179664",
+          "enabled": true
+        },
+        "cache_reduction": 0,
+        "new_request_tokens": 333,
+        "cache_miss_verified": true
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_14_checkpoint_persistence",
+      "status": "passed",
+      "message": "檢查點持久化測試完成",
+      "duration_ms": 1035.103,
+      "details": {
+        "checkpoint_id": "e121017c-b6c5-4477-90cc-113037a9918a",
+        "checkpoint_created": true,
+        "persistence_verified": true,
+        "complex_structure_preserved": true,
+        "persisted_data": {
+          "ticket_id": "TKT-2025-001",
+          "timestamp": "2025-12-19T10:29:16.598300",
+          "processing_step": 5,
+          "conversation_history": [
+            {
+              "role": "user",
+              "content": "問題描述"
+            },
+            {
+              "role": "assistant",
+              "content": "已收到您的問題"
+            }
+          ],
+          "intermediate_results": {
+            "assigned_team": "DBA Team",
+            "classification": "infrastructure",
+            "priority_score": 0.85
+          }
+        },
+        "restore_success": true
+      },
+      "errors": []
+    },
+    {
+      "phase": "phase_15_graceful_shutdown",
+      "status": "passed",
+      "message": "優雅關閉測試完成",
+      "duration_ms": 799.551,
+      "details": {
+        "shutdown_execution_id": "6516eb98-14a0-4cfa-82a9-d034b40093c9",
+        "interrupted_status": "pending",
+        "state_preserved": true,
+        "resume_verified": true
+      },
+      "errors": []
+    }
+  ],
+  "resources": {
+    "workflow_id": "15584016-e682-487b-bea8-2165862992fd",
+    "execution_id": "2cfcf5cd-3a31-4b0a-bd12-e52cc730d7fc",
+    "checkpoint_id": "3b57205c-9989-4c2d-97c3-060c05df925e",
+    "handoff_id": "634ec5c4-5589-400a-8809-2662e0891a94",
+    "groupchat_id": "cfb4627a-b2f6-43f7-b030-9ca78d3479f4"
+  },
+  "llm_stats": {
+    "calls": 8,
+    "tokens": 4595,
+    "cost_usd": 0.042945000000000004
+  },
+  "summary": {
+    "total_phases": 15,
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0
+  }
+}

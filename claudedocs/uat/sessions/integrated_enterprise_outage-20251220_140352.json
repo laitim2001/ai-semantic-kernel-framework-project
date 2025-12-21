@@ -1,0 +1,496 @@
+{
+  "summary": {
+    "total_features": 38,
+    "main_list": {
+      "total": 32,
+      "passed": 32,
+      "failed": 0,
+      "pending": 0
+    },
+    "category_specific": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    "overall_pass_rate": "100.0%",
+    "phases_completed": 12,
+    "duration": "0:00:16.787224"
+  },
+  "phases": {
+    "phase_1": "TestResult(test_id='phase_1', test_name='Event Trigger & Multi-Source Ticket Reception', status=<TestStatus.PASSED: 'passed'>, duration_ms=1132.8094005584717, message='Created 4 tickets, started workflow', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 37, 53600))",
+    "phase_2": "TestResult(test_id='phase_2', test_name='Intelligent Classification & Task Decomposition', status=<TestStatus.PASSED: 'passed'>, duration_ms=582.8642845153809, message='All tickets classified, tasks decomposed', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 37, 636488))",
+    "phase_3": "TestResult(test_id='phase_3', test_name='Cross-Scenario Routing', status=<TestStatus.PASSED: 'passed'>, duration_ms=2252.4490356445312, message='All tickets routed with capability matching', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 39, 888954))",
+    "phase_4": "TestResult(test_id='phase_4', test_name='Parallel Branch Processing (Fan-out)', status=<TestStatus.PASSED: 'passed'>, duration_ms=1336.9691371917725, message='Created 3 parallel branches', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 41, 225938))",
+    "phase_5": "TestResult(test_id='phase_5', test_name='Recursive Root Cause Analysis (5 Whys)', status=<TestStatus.PASSED: 'passed'>, duration_ms=1646.465539932251, message='Root cause: 遷移腳本缺少重建步驟', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 42, 872420))",
+    "phase_6": "TestResult(test_id='phase_6', test_name='Autonomous Decision + Trial-and-Error', status=<TestStatus.PASSED: 'passed'>, duration_ms=1089.2229080200195, message='Issue resolved: Failover + reindex successful', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 43, 961658))",
+    "phase_7": "TestResult(test_id='phase_7', test_name='Agent Handoff (A2A)', status=<TestStatus.PASSED: 'passed'>, duration_ms=531.1591625213623, message='Agent handoff completed with context preservation', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 44, 492834))",
+    "phase_8": "TestResult(test_id='phase_8', test_name='Multi-Department Sub-workflow Approval', status=<TestStatus.PASSED: 'passed'>, duration_ms=2596.6668128967285, message='All department approvals obtained', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 47, 89516))",
+    "phase_9": "TestResult(test_id='phase_9', test_name='GroupChat Expert Consultation + Voting', status=<TestStatus.PASSED: 'passed'>, duration_ms=2190.964698791504, message='Expert consensus: 5/5 approved', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 49, 280497))",
+    "phase_10": "TestResult(test_id='phase_10', test_name='External System Sync (Fan-in)', status=<TestStatus.PASSED: 'passed'>, duration_ms=1164.137601852417, message='All external systems synced', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 50, 444649))",
+    "phase_11": "TestResult(test_id='phase_11', test_name='Completion & Record + Cache Verification', status=<TestStatus.PASSED: 'passed'>, duration_ms=1731.8918704986572, message='Closed 4 tickets, audit recorded', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 52, 176558))",
+    "phase_12": "TestResult(test_id='phase_12', test_name='Graceful Shutdown + Post-Incident Analysis', status=<TestStatus.PASSED: 'passed'>, duration_ms=531.1381816864014, message='Graceful shutdown complete, post-incident report generated', details={}, timestamp=datetime.datetime(2025, 12, 20, 14, 3, 52, 707719))"
+  },
+  "main_features": {
+    "1": {
+      "name": "順序式 Agent 編排",
+      "phase": "Phase 1",
+      "status": "passed",
+      "details": [
+        "Workflow created: WF-94E414B8 (simulated)",
+        "Execution started: EXEC-62776997 (simulated)"
+      ],
+      "error": null
+    },
+    "15": {
+      "name": "Concurrent 並行執行",
+      "phase": "Phase 1",
+      "status": "passed",
+      "details": [
+        "Ticket IT-001 (IT): Created",
+        "Ticket CS-001 (CS): Created",
+        "Ticket FIN-001 (FIN): Created",
+        "Ticket OPS-001 (OPS): Created",
+        "Concurrent creation: 4 tickets in parallel"
+      ],
+      "error": null
+    },
+    "25": {
+      "name": "Nested Workflows 嵌套工作流",
+      "phase": "Phase 4",
+      "status": "passed",
+      "details": [
+        "Nested workflow: technical_diagnosis",
+        "Nested workflow: customer_notification",
+        "Nested workflow: business_recovery"
+      ],
+      "error": null
+    },
+    "26": {
+      "name": "Sub-workflow Execution",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "Sub-workflow: it_manager_approval (IT Manager)",
+        "Sub-workflow: cto_approval (CTO)",
+        "Sub-workflow: ops_manager_approval (Ops Manager)"
+      ],
+      "error": null
+    },
+    "27": {
+      "name": "Recursive Patterns",
+      "phase": "Phase 5",
+      "status": "passed",
+      "details": [
+        "Why 1: 為什麼資料庫無響應？",
+        "  → 連接池耗盡",
+        "Why 2: 為什麼連接池耗盡？",
+        "  → 大量慢查詢佔用連接",
+        "Why 3: 為什麼有大量慢查詢？",
+        "  → 索引失效",
+        "Why 4: 為什麼索引失效？",
+        "  → 昨晚資料遷移後未重建",
+        "Why 5: 為什麼未重建？",
+        "  → 遷移腳本缺少重建步驟 [ROOT CAUSE]"
+      ],
+      "error": null
+    },
+    "50": {
+      "name": "Termination 條件",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "Termination type: Consensus reached",
+        "Condition: All experts approved",
+        "Session status: Closed"
+      ],
+      "error": null
+    },
+    "17": {
+      "name": "Collaboration Protocol 協作協議",
+      "phase": "Phase 7",
+      "status": "passed",
+      "details": [
+        "triage_agent -> specialist_agent: REQUEST",
+        "specialist_agent -> triage_agent: ACKNOWLEDGE",
+        "specialist_agent -> triage_agent: RESPONSE",
+        "Protocol completed: 3 messages exchanged"
+      ],
+      "error": null
+    },
+    "18": {
+      "name": "GroupChat 群組聊天",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "Session ID: e406bd61-fd46-46b6-aded-f2e194129382",
+        "Participants: 5 experts",
+        "dba_expert: 索引已重建，查詢效能恢復正常...",
+        "sre_expert: 監控顯示所有指標綠燈...",
+        "devops_expert: 部署狀態穩定...",
+        "app_expert: 應用程式回應時間正常...",
+        "security_expert: 無安全漏洞引入..."
+      ],
+      "error": null
+    },
+    "19": {
+      "name": "Agent Handoff 交接",
+      "phase": "Phase 7",
+      "status": "passed",
+      "details": [
+        "Handoff ID: 4fd4d698-f1f2-4d14-a827-620a26bf3215",
+        "Handoff policy: graceful",
+        "Status: completed"
+      ],
+      "error": null
+    },
+    "28": {
+      "name": "GroupChat 投票系統",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "dba_expert: approve",
+        "devops_expert: approve",
+        "sre_expert: approve",
+        "app_expert: approve",
+        "security_expert: approve"
+      ],
+      "error": null
+    },
+    "31": {
+      "name": "Context Transfer",
+      "phase": "Phase 4",
+      "status": "passed",
+      "details": [
+        "Context transferred to all branches",
+        "Context keys: ['incident_id', 'root_ticket', 'correlation_chain', 'priority']"
+      ],
+      "error": null
+    },
+    "32": {
+      "name": "Handoff Service",
+      "phase": "Phase 7",
+      "status": "passed",
+      "details": [
+        "Handoff service: Active",
+        "Context preserved: Yes",
+        "Agent state transferred: Yes"
+      ],
+      "error": null
+    },
+    "33": {
+      "name": "GroupChat Orchestrator",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "Orchestrator: Active",
+        "Turn management: Round-robin"
+      ],
+      "error": null
+    },
+    "39": {
+      "name": "Agent to Agent (A2A)",
+      "phase": "Phase 7",
+      "status": "passed",
+      "details": [
+        "A2A channel: Established",
+        "Source: triage_agent",
+        "Target: specialist_agent"
+      ],
+      "error": null
+    },
+    "48": {
+      "name": "投票系統",
+      "phase": "Phase 9",
+      "status": "passed",
+      "details": [
+        "Voting completed: 5/5 approved",
+        "Quorum reached: Yes (100% > 60%)",
+        "Result: APPROVED"
+      ],
+      "error": null
+    },
+    "2": {
+      "name": "人機協作檢查點",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "Checkpoint: it_manager_approval",
+        "Checkpoint: cto_approval",
+        "Checkpoint: ops_manager_approval"
+      ],
+      "error": null
+    },
+    "29": {
+      "name": "HITL Manage",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "IT Manager: Approved",
+        "CTO: Approved",
+        "Ops Manager: Approved"
+      ],
+      "error": null
+    },
+    "49": {
+      "name": "HITL 功能擴展",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "Escalation policy: Configured",
+        "Timeout escalation: To VP level after 5 min",
+        "Complexity escalation: Enabled for P0 incidents",
+        "Multi-approver support: Yes"
+      ],
+      "error": null
+    },
+    "22": {
+      "name": "Dynamic Planning 動態規劃",
+      "phase": "Phase 2",
+      "status": "passed",
+      "details": [
+        "IT-001: database_outage (P0)",
+        "CS-001: service_disruption (P0)",
+        "FIN-001: transaction_failure (P0)",
+        "OPS-001: workflow_halt (P0)",
+        "Correlation detected: All 4 tickets related to same root cause"
+      ],
+      "error": null
+    },
+    "23": {
+      "name": "Autonomous Decision 自主決策",
+      "phase": "Phase 6",
+      "status": "passed",
+      "details": [
+        "Decision made: failover_and_reindex",
+        "Confidence: 0.9",
+        "Auto-approved: Yes (confidence >= threshold)"
+      ],
+      "error": null
+    },
+    "24": {
+      "name": "Trial-and-Error 試錯",
+      "phase": "Phase 6",
+      "status": "passed",
+      "details": [
+        "Trial 1: REINDEX CONCURRENTLY -> ❌",
+        "Trial 2: Switch to standby -> ✅",
+        "Trial 3: REINDEX on standby -> ✅"
+      ],
+      "error": null
+    },
+    "34": {
+      "name": "Planning Adapter",
+      "phase": "Phase 2",
+      "status": "passed",
+      "details": [
+        "Tasks generated: 5",
+        "  - 診斷資料庫連接狀態",
+        "  - 通知受影響客戶",
+        "  - 暫停財務交易處理",
+        "  - 記錄營運流程狀態",
+        "  - 準備備援方案"
+      ],
+      "error": null
+    },
+    "20": {
+      "name": "Multi-turn 多輪對話",
+      "phase": "Phase 5",
+      "status": "passed",
+      "details": [
+        "Turn 1: Recorded",
+        "Turn 2: Recorded",
+        "Turn 3: Recorded",
+        "Turn 4: Recorded",
+        "Turn 5: Recorded"
+      ],
+      "error": null
+    },
+    "21": {
+      "name": "Conversation Memory",
+      "phase": "Phase 5",
+      "status": "passed",
+      "details": [
+        "Messages in memory: 10 (simulated)",
+        "Context preservation: Complete",
+        "Root cause identified: 遷移腳本缺少重建步驟"
+      ],
+      "error": null
+    },
+    "3": {
+      "name": "跨系統連接器",
+      "phase": "Phase 10",
+      "status": "passed",
+      "details": [
+        "ServiceNow: update_incident -> resolved",
+        "Prometheus: clear_alert -> cleared",
+        "PagerDuty: resolve_incident -> resolved"
+      ],
+      "error": null
+    },
+    "4": {
+      "name": "跨場景協作 (CS↔IT)",
+      "phase": "Phase 3",
+      "status": "passed",
+      "details": [
+        "IT-001 <-> CS-001: Linked",
+        "IT-001 <-> FIN-001: Linked",
+        "IT-001 <-> OPS-001: Linked",
+        "Cross-scenario context sharing: Enabled"
+      ],
+      "error": null
+    },
+    "30": {
+      "name": "Capability Matcher",
+      "phase": "Phase 3",
+      "status": "passed",
+      "details": [
+        "Agent dba_expert: score 0.95",
+        "Agent network_specialist: score 0.88"
+      ],
+      "error": null
+    },
+    "43": {
+      "name": "智能路由",
+      "phase": "Phase 3",
+      "status": "passed",
+      "details": [
+        "IT-001 -> it_operations: Routed (simulated)",
+        "CS-001 -> customer_service: Routed (simulated)",
+        "FIN-001 -> finance: Routed (simulated)",
+        "OPS-001 -> operations: Routed (simulated)"
+      ],
+      "error": null
+    },
+    "47": {
+      "name": "Agent 能力匹配器",
+      "phase": "Phase 3",
+      "status": "passed",
+      "details": [
+        "Capability: [database, sql, optimization]",
+        "Capability: [networking, dns, routing]"
+      ],
+      "error": null
+    },
+    "14": {
+      "name": "Redis 緩存",
+      "phase": "Phase 1",
+      "status": "passed",
+      "details": [
+        "Cache baseline: {'hits': 0, 'misses': 0, 'keys': 0}",
+        "Cache hits: 0",
+        "Cache misses: 0",
+        "Hit rate: 0.0%"
+      ],
+      "error": null
+    },
+    "35": {
+      "name": "Redis/Postgres Checkpoint",
+      "phase": "Phase 8",
+      "status": "passed",
+      "details": [
+        "Persisted: it_manager_approval",
+        "Persisted: cto_approval",
+        "Persisted: ops_manager_approval",
+        "Final checkpoint: Saved",
+        "Persistence: Redis + PostgreSQL",
+        "Data integrity: Verified"
+      ],
+      "error": null
+    },
+    "10": {
+      "name": "審計追蹤",
+      "phase": "Phase 11",
+      "status": "passed",
+      "details": [
+        "IT-001: COMPLETED",
+        "CS-001: COMPLETED",
+        "FIN-001: COMPLETED",
+        "OPS-001: COMPLETED",
+        "Audit trail: Recorded",
+        "Event type: incident_resolved",
+        "Tickets resolved: 4",
+        "Post-incident report: Generated",
+        "Root cause: 遷移腳本缺少索引重建步驟",
+        "Prevention measures: 3"
+      ],
+      "error": null
+    }
+  },
+  "category_features": {
+    "B-2": {
+      "name": "Parallel branch management",
+      "phase": "Phase 4",
+      "status": "passed",
+      "details": [
+        "Total branches: 3",
+        "Branch management: Active"
+      ],
+      "error": null
+    },
+    "B-3": {
+      "name": "Fan-out/Fan-in pattern",
+      "phase": "Phase 4",
+      "status": "passed",
+      "details": [
+        "Branch 1: technical_diagnosis created (simulated)",
+        "Branch 2: customer_notification created (simulated)",
+        "Branch 3: business_recovery created (simulated)"
+      ],
+      "error": null
+    },
+    "B-4": {
+      "name": "Branch timeout handling",
+      "phase": "Phase 6",
+      "status": "passed",
+      "details": [
+        "Timeout policy: 30 seconds per operation",
+        "Timeout action: Retry with fallback",
+        "Timeout triggered: Trial 1 (lock contention)"
+      ],
+      "error": null
+    },
+    "B-5": {
+      "name": "Error isolation in branches",
+      "phase": "Phase 6",
+      "status": "passed",
+      "details": [
+        "Error isolation: Enabled",
+        "Trial 1 failure: Isolated, did not affect Trial 2/3",
+        "Graceful degradation: Active"
+      ],
+      "error": null
+    },
+    "B-6": {
+      "name": "Nested workflow context",
+      "phase": "Phase 4",
+      "status": "passed",
+      "details": [
+        "Context inherited: technical_diagnosis",
+        "Context inherited: customer_notification",
+        "Context inherited: business_recovery"
+      ],
+      "error": null
+    },
+    "C-4": {
+      "name": "Message prioritization",
+      "phase": "Phase 10",
+      "status": "passed",
+      "details": [
+        "Priority queue: Active",
+        "P0 (critical_alert): Processed",
+        "P1 (status_update): Processed",
+        "P2 (notification): Processed",
+        "Priority order: P0 -> P1 -> P2"
+      ],
+      "error": null
+    }
+  },
+  "api_call_stats": {
+    "real": 2,
+    "simulated": 60
+  },
+  "strict_mode": false,
+  "test_mode": "normal",
+  "simulation_used": true
+}
