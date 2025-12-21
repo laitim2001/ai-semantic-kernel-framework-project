@@ -97,6 +97,25 @@ class Settings(BaseSettings):
         return bool(self.azure_openai_endpoint and self.azure_openai_api_key)
 
     # ==========================================================================
+    # LLM Service Settings (Phase 7: AI Autonomous Decision)
+    # ==========================================================================
+    llm_enabled: bool = True
+    llm_provider: Literal["azure", "mock"] = "azure"
+    llm_max_retries: int = 3
+    llm_timeout_seconds: float = 60.0
+    llm_cache_enabled: bool = True
+    llm_cache_ttl_seconds: int = 3600
+
+    @property
+    def is_llm_enabled(self) -> bool:
+        """Check if LLM service is enabled and configured."""
+        if not self.llm_enabled:
+            return False
+        if self.llm_provider == "azure":
+            return self.is_azure_openai_configured
+        return True  # Mock is always available
+
+    # ==========================================================================
     # Azure Service Bus (Production)
     # ==========================================================================
     azure_service_bus_connection_string: str = ""

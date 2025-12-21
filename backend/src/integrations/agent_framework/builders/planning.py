@@ -58,6 +58,10 @@ from src.domain.orchestration.planning.dynamic_planner import (
 # 本地異常
 from ..exceptions import AdapterError, ExecutionError, ValidationError
 
+# LLM 服務層 (Phase 7)
+from src.integrations.llm import LLMServiceFactory
+from src.integrations.llm.protocol import LLMServiceProtocol
+
 logger = logging.getLogger(__name__)
 
 
@@ -213,15 +217,20 @@ class PlanningAdapter:
         self,
         id: str,
         config: Optional[PlanningConfig] = None,
+        llm_service: Optional[LLMServiceProtocol] = None,
     ):
         """初始化規劃適配器。
 
         Args:
             id: 適配器唯一標識符
             config: 規劃配置
+            llm_service: LLM 服務實例 (Phase 7 - AI 自主決策)
         """
         self._id = id
         self._config = config or PlanningConfig()
+
+        # LLM 服務 (Phase 7 - 啟用 AI 自主決策)
+        self._llm_service = llm_service
 
         # 官方 Builder 實例
         self._magentic_builder = MagenticBuilder()
@@ -271,6 +280,54 @@ class PlanningAdapter:
         """獲取配置。"""
         return self._config
 
+    @property
+    def llm_service(self) -> Optional[LLMServiceProtocol]:
+        """獲取 LLM 服務。"""
+        return self._llm_service
+
+    # =========================================================================
+    # LLM 服務管理 (Phase 7)
+    # =========================================================================
+
+    def _ensure_llm_service(self) -> Optional[LLMServiceProtocol]:
+        """確保 LLM 服務可用。
+
+        如果未顯式提供 LLM 服務，嘗試從工廠獲取單例。
+        這允許在配置了 LLM 的環境中自動啟用 AI 自主決策。
+
+        Returns:
+            LLMServiceProtocol 實例，如果無法獲取則返回 None
+        """
+        if self._llm_service is not None:
+            return self._llm_service
+
+        # 嘗試從工廠獲取單例
+        try:
+            self._llm_service = LLMServiceFactory.create(singleton=True)
+            logger.info(f"PlanningAdapter '{self._id}' 自動獲取 LLM 服務單例")
+        except Exception as e:
+            logger.debug(f"PlanningAdapter '{self._id}' 無法獲取 LLM 服務: {e}")
+            # 這是正常情況 - 在未配置 LLM 的環境中會使用規則式回退
+            pass
+
+        return self._llm_service
+
+    def with_llm_service(
+        self,
+        llm_service: LLMServiceProtocol,
+    ) -> "PlanningAdapter":
+        """設置 LLM 服務。
+
+        Args:
+            llm_service: LLM 服務實例
+
+        Returns:
+            self，支持鏈式調用
+        """
+        self._llm_service = llm_service
+        logger.info(f"PlanningAdapter '{self._id}' 設置 LLM 服務")
+        return self
+
     # =========================================================================
     # Builder 模式方法
     # =========================================================================
@@ -290,10 +347,17 @@ class PlanningAdapter:
 
         Returns:
             self，支持鏈式調用
+
+        Note:
+            Phase 7: 自動注入 LLM 服務以啟用 AI 自主分解
         """
         self._decomposition_strategy = strategy
 
+        # Phase 7: 確保 LLM 服務可用並注入
+        llm_service = self._ensure_llm_service()
+
         self._task_decomposer = TaskDecomposer(
+            llm_service=llm_service,  # Phase 7: AI 自主分解
             max_subtasks=max_subtasks or self._config.max_subtasks,
             max_depth=max_depth or self._config.max_depth,
         )
@@ -304,7 +368,8 @@ class PlanningAdapter:
         elif self._mode == PlanningMode.DECISION_DRIVEN:
             self._mode = PlanningMode.FULL
 
-        logger.info(f"PlanningAdapter '{self._id}' 啟用任務分解，策略: {strategy.value}")
+        llm_status = "啟用 AI 自主" if llm_service else "規則式回退"
+        logger.info(f"PlanningAdapter '{self._id}' 啟用任務分解，策略: {strategy.value}，{llm_status}")
         return self
 
     def with_decision_engine(
@@ -322,8 +387,15 @@ class PlanningAdapter:
 
         Returns:
             self，支持鏈式調用
+
+        Note:
+            Phase 7: 自動注入 LLM 服務以啟用 AI 自主決策
         """
+        # Phase 7: 確保 LLM 服務可用並注入
+        llm_service = self._ensure_llm_service()
+
         self._decision_engine = AutonomousDecisionEngine(
+            llm_service=llm_service,  # Phase 7: AI 自主決策
             risk_threshold=risk_threshold,
             auto_decision_confidence=auto_decision_confidence,
         )
@@ -346,7 +418,8 @@ class PlanningAdapter:
         elif self._mode == PlanningMode.DECOMPOSED:
             self._mode = PlanningMode.FULL
 
-        logger.info(f"PlanningAdapter '{self._id}' 啟用決策引擎，規則數: {len(self._decision_rules)}")
+        llm_status = "啟用 AI 自主" if llm_service else "規則式回退"
+        logger.info(f"PlanningAdapter '{self._id}' 啟用決策引擎，規則數: {len(self._decision_rules)}，{llm_status}")
         return self
 
     def with_trial_error(
@@ -362,8 +435,15 @@ class PlanningAdapter:
 
         Returns:
             self，支持鏈式調用
+
+        Note:
+            Phase 7: 自動注入 LLM 服務以啟用 AI 自主學習
         """
+        # Phase 7: 確保 LLM 服務可用並注入
+        llm_service = self._ensure_llm_service()
+
         self._trial_error_engine = TrialAndErrorEngine(
+            llm_service=llm_service,  # Phase 7: AI 自主學習
             max_retries=max_retries,
             learning_threshold=learning_threshold,
             timeout_seconds=int(self._config.timeout_seconds),
@@ -371,7 +451,8 @@ class PlanningAdapter:
 
         self._mode = PlanningMode.ADAPTIVE
 
-        logger.info(f"PlanningAdapter '{self._id}' 啟用試錯學習，最大重試: {max_retries}")
+        llm_status = "啟用 AI 自主" if llm_service else "規則式回退"
+        logger.info(f"PlanningAdapter '{self._id}' 啟用試錯學習，最大重試: {max_retries}，{llm_status}")
         return self
 
     def with_task_callback(
@@ -397,10 +478,17 @@ class PlanningAdapter:
 
         Returns:
             self，支持鏈式調用
+
+        Note:
+            Phase 7: 自動注入 LLM 服務以啟用 AI 自主規劃
         """
+        # Phase 7: 確保 LLM 服務可用
+        llm_service = self._ensure_llm_service()
+
         # 確保有 TaskDecomposer
         if not self._task_decomposer:
             self._task_decomposer = TaskDecomposer(
+                llm_service=llm_service,  # Phase 7: AI 自主分解
                 max_subtasks=self._config.max_subtasks,
                 max_depth=self._config.max_depth,
             )
@@ -409,7 +497,8 @@ class PlanningAdapter:
             task_decomposer=self._task_decomposer
         )
 
-        logger.info(f"PlanningAdapter '{self._id}' 啟用動態規劃")
+        llm_status = "啟用 AI 自主" if llm_service else "規則式回退"
+        logger.info(f"PlanningAdapter '{self._id}' 啟用動態規劃，{llm_status}")
         return self
 
     # =========================================================================
@@ -712,9 +801,16 @@ class PlanningAdapter:
 
         Returns:
             DecompositionResult 分解結果
+
+        Note:
+            Phase 7: 自動注入 LLM 服務以啟用 AI 自主分解
         """
         if not self._task_decomposer:
+            # Phase 7: 確保 LLM 服務可用
+            llm_service = self._ensure_llm_service()
+
             self._task_decomposer = TaskDecomposer(
+                llm_service=llm_service,  # Phase 7: AI 自主分解
                 max_subtasks=self._config.max_subtasks,
                 max_depth=self._config.max_depth,
             )
@@ -1203,6 +1299,7 @@ def create_planning_adapter(
     id: str,
     mode: PlanningMode = PlanningMode.SIMPLE,
     config: Optional[PlanningConfig] = None,
+    llm_service: Optional[LLMServiceProtocol] = None,
 ) -> PlanningAdapter:
     """創建規劃適配器的工廠函數。
 
@@ -1210,11 +1307,15 @@ def create_planning_adapter(
         id: 適配器 ID
         mode: 規劃模式
         config: 配置
+        llm_service: LLM 服務實例 (Phase 7 - 可選，會自動獲取單例)
 
     Returns:
         配置好的 PlanningAdapter 實例
+
+    Note:
+        Phase 7: 如果未提供 llm_service，適配器會自動嘗試獲取 LLM 服務單例
     """
-    adapter = PlanningAdapter(id=id, config=config)
+    adapter = PlanningAdapter(id=id, config=config, llm_service=llm_service)
 
     if mode in [PlanningMode.DECOMPOSED, PlanningMode.FULL]:
         adapter.with_task_decomposition()
@@ -1229,22 +1330,35 @@ def create_planning_adapter(
     return adapter
 
 
-def create_simple_planner(id: str) -> PlanningAdapter:
+def create_simple_planner(
+    id: str,
+    llm_service: Optional[LLMServiceProtocol] = None,
+) -> PlanningAdapter:
     """創建簡單規劃適配器。"""
-    return create_planning_adapter(id=id, mode=PlanningMode.SIMPLE)
+    return create_planning_adapter(id=id, mode=PlanningMode.SIMPLE, llm_service=llm_service)
 
 
 def create_decomposed_planner(
     id: str,
     strategy: DecompositionStrategy = DecompositionStrategy.HYBRID,
+    llm_service: Optional[LLMServiceProtocol] = None,
 ) -> PlanningAdapter:
-    """創建帶任務分解的規劃適配器。"""
-    return PlanningAdapter(id=id).with_task_decomposition(strategy=strategy)
+    """創建帶任務分解的規劃適配器。
+
+    Note:
+        Phase 7: 自動注入 LLM 服務以啟用 AI 自主分解
+    """
+    return PlanningAdapter(id=id, llm_service=llm_service).with_task_decomposition(strategy=strategy)
 
 
 def create_full_planner(
     id: str,
     config: Optional[PlanningConfig] = None,
+    llm_service: Optional[LLMServiceProtocol] = None,
 ) -> PlanningAdapter:
-    """創建完整模式的規劃適配器。"""
-    return create_planning_adapter(id=id, mode=PlanningMode.FULL, config=config)
+    """創建完整模式的規劃適配器。
+
+    Note:
+        Phase 7: 自動注入 LLM 服務以啟用 AI 自主決策
+    """
+    return create_planning_adapter(id=id, mode=PlanningMode.FULL, config=config, llm_service=llm_service)

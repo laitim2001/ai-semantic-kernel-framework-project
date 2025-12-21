@@ -927,3 +927,140 @@ python -m scripts.uat.run_all_scenarios --save-report
 **待續**: 下一部分將包含核心模塊詳細設計、數據架構、集成架構等內容。
 
 **文檔狀態**: 第 1 部分完成 (架構概覽、設計原則、技術棧、系統架構、功能架構) ✅
+
+---
+
+## <a id="llm-service-layer"></a>6. LLM 服務層架構 (Phase 7)
+
+### 6.1 架構概覽
+
+Phase 7 引入了統一的 LLM 服務抽象層，為所有 AI 自主決策能力提供支援：
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          LLM Service Layer                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Application Layer (Consumers)                                               │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
+│  │ TaskDecom-   │ │ Decision-    │ │ TrialError-  │ │ Planning-    │       │
+│  │ poser        │ │ Engine       │ │ Engine       │ │ Adapter      │       │
+│  │ 任務分解     │ │ 決策引擎     │ │ 試錯引擎     │ │ 規劃適配器   │       │
+│  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘       │
+│         │                │                │                │                │
+│         └────────────────┼────────────────┼────────────────┘                │
+│                          ▼                                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  LLM Service Abstraction                                                     │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  LLMServiceProtocol (Protocol Interface)                              │  │
+│  │  - generate(prompt: str) → str                                        │  │
+│  │  - generate_structured(prompt, schema) → Dict                         │  │
+│  │  - is_available() → bool                                              │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                          │                                                   │
+│         ┌────────────────┼────────────────┐                                 │
+│         ▼                ▼                ▼                                 │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                        │
+│  │ AzureOpenAI- │ │ MockLLM-     │ │ CachedLLM-   │                        │
+│  │ LLMService   │ │ Service      │ │ Service      │                        │
+│  │ 生產環境     │ │ 測試用       │ │ Redis 緩存   │                        │
+│  └──────────────┘ └──────────────┘ └──────────────┘                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Factory & Configuration                                                     │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  LLMServiceFactory                                                    │  │
+│  │  - create(provider, singleton) → LLMServiceProtocol                   │  │
+│  │  - create_for_testing() → MockLLMService                              │  │
+│  │  - Singleton pattern for shared instances                             │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.2 核心組件
+
+#### LLMServiceProtocol
+
+定義 LLM 服務的標準接口：
+
+```python
+class LLMServiceProtocol(Protocol):
+    """LLM 服務協議 - 所有 LLM 實現必須遵循此接口。"""
+
+    async def generate(self, prompt: str, **kwargs) -> str:
+        """生成文本回應。"""
+        ...
+
+    async def generate_structured(
+        self,
+        prompt: str,
+        output_schema: Dict[str, Any],
+        **kwargs
+    ) -> Dict[str, Any]:
+        """生成結構化 JSON 回應。"""
+        ...
+
+    def is_available(self) -> bool:
+        """檢查服務是否可用。"""
+        ...
+```
+
+#### LLM 服務實現
+
+| 實現類別 | 用途 | 特性 |
+|---------|------|------|
+| **AzureOpenAILLMService** | 生產環境 | Azure OpenAI GPT-4o 整合 |
+| **MockLLMService** | 測試環境 | 可配置回應、延遲模擬、錯誤注入 |
+| **CachedLLMService** | 效能優化 | Redis 緩存、hit/miss 統計 |
+
+### 6.3 與 Phase 2 組件整合
+
+所有 Phase 2 擴展組件都支援 LLM 服務注入：
+
+| 組件 | LLM 用途 | 回退策略 |
+|------|----------|----------|
+| **TaskDecomposer** | AI 任務分解 | 規則式分解 |
+| **DecisionEngine** | 智能決策 | 預設決策邏輯 |
+| **TrialAndErrorEngine** | 錯誤學習 | 簡單重試策略 |
+| **DynamicPlanner** | 動態規劃 | 靜態計畫 |
+
+### 6.4 配置方式
+
+環境變數配置：
+
+```bash
+# Azure OpenAI 設定
+AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
+AZURE_OPENAI_API_KEY=<key>
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
+
+# LLM 服務設定
+LLM_PROVIDER=azure_openai  # 或 mock
+LLM_TIMEOUT=30             # 秒
+LLM_CACHE_ENABLED=true
+LLM_CACHE_TTL=3600         # 秒
+```
+
+### 6.5 效能指標
+
+Phase 7 測試驗證的性能基準：
+
+| 指標 | 目標 | 實際結果 |
+|------|------|----------|
+| **P95 延遲** | < 5s | ✅ 通過 |
+| **並發成功率** | > 80% | ✅ 通過 |
+| **緩存延遲** | < 100ms | ✅ 通過 |
+| **工廠創建速度** | < 10ms | ✅ 通過 |
+
+### 6.6 降級策略
+
+當 LLM 服務不可用時，系統自動降級到規則式處理：
+
+```
+LLM 可用 → AI 智能處理
+    │
+    ↓ LLM 失敗/超時
+    │
+規則式回退 → 基本功能維持
+```
+
+詳細說明請參閱：`backend/src/integrations/llm/README.md`
