@@ -141,8 +141,8 @@ class AgentExecutorAdapter:
             logger.debug("AgentExecutorAdapter already initialized")
             return
 
-        # 檢查 Azure 配置
-        azure_configured = getattr(self._settings, "azure_openai_configured", False)
+        # 檢查 Azure 配置 (使用正確的屬性名稱)
+        azure_configured = getattr(self._settings, "is_azure_openai_configured", False)
         if not azure_configured:
             logger.warning(
                 "Azure OpenAI not configured. Agent execution will use mock mode."

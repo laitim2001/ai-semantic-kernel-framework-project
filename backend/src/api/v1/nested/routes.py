@@ -353,6 +353,7 @@ def _convert_status_to_enum(status: str) -> ExecutionStatusEnum:
         "cancelled": ExecutionStatusEnum.CANCELLED,
         "timeout": ExecutionStatusEnum.TIMEOUT,
     }
+    return mapping.get(status, ExecutionStatusEnum.PENDING)
 
 
 # =============================================================================

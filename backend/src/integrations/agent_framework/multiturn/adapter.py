@@ -6,8 +6,9 @@
 # 多輪對話適配器，整合官方 CheckpointStorage 與 Phase 2 會話管理。
 #
 # 官方 API 使用:
-#   - CheckpointStorage: 狀態持久化接口
-#   - InMemoryCheckpointStorage: 內存存儲實現
+#   - CheckpointStorage: 官方狀態持久化 Protocol
+#   - InMemoryCheckpointStorage: 官方內存存儲實現
+#   - WorkflowCheckpoint: 官方檢查點數據類
 #
 # Phase 2 擴展:
 #   - SessionManager: 會話生命週期管理
@@ -23,7 +24,11 @@ import logging
 import uuid
 
 # 官方 Agent Framework API
-from agent_framework import CheckpointStorage, InMemoryCheckpointStorage
+from agent_framework import (
+    CheckpointStorage,
+    InMemoryCheckpointStorage,
+    WorkflowCheckpoint,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -305,7 +310,7 @@ class MultiTurnAdapter:
 
     官方 API:
     - 使用 CheckpointStorage 進行狀態持久化
-    - 支持 InMemoryCheckpointStorage 作為默認存儲
+    - 支持 MemoryCheckpointStorage 作為默認存儲
 
     Phase 2 擴展:
     - 會話生命週期管理
@@ -345,13 +350,13 @@ class MultiTurnAdapter:
         Args:
             session_id: 會話 ID，如果不提供則自動生成
             config: 多輪對話配置
-            checkpoint_storage: Checkpoint 存儲，默認使用 InMemoryCheckpointStorage
+            checkpoint_storage: Checkpoint 存儲，默認使用 MemoryCheckpointStorage
         """
         # 會話基本信息
         self._session_id = session_id or str(uuid.uuid4())
         self._config = config or MultiTurnConfig()
 
-        # 官方 API - Checkpoint 存儲
+        # 官方 API - Checkpoint 存儲（使用官方 InMemoryCheckpointStorage）
         self._checkpoint_storage = checkpoint_storage or InMemoryCheckpointStorage()
 
         # Phase 2 組件
@@ -617,21 +622,46 @@ class MultiTurnAdapter:
     # Checkpoint 操作（使用官方 API）
     # =========================================================================
 
-    async def save_checkpoint(self) -> None:
-        """保存檢查點到 CheckpointStorage。"""
+    async def save_checkpoint(self) -> str:
+        """保存檢查點到 CheckpointStorage。
+
+        使用官方 WorkflowCheckpoint 格式：
+        - checkpoint_id: 使用 session_id 作為唯一標識
+        - workflow_id: 使用 session_id 作為工作流標識
+        - shared_state: 存儲完整的會話狀態
+
+        Returns:
+            checkpoint_id
+        """
         state = self._get_full_state()
-        await self._checkpoint_storage.save(self._session_id, state)
-        logger.debug(f"檢查點已保存: {self._session_id}")
+
+        # 創建官方 WorkflowCheckpoint 對象
+        checkpoint = WorkflowCheckpoint(
+            checkpoint_id=self._session_id,
+            workflow_id=self._session_id,
+            shared_state=state,  # IPA 狀態存儲在 shared_state 中
+            metadata={"adapter": "MultiTurnAdapter", "version": "1.0"},
+        )
+
+        # 調用官方 API
+        checkpoint_id = await self._checkpoint_storage.save_checkpoint(checkpoint)
+        logger.debug(f"檢查點已保存: {checkpoint_id}")
+        return checkpoint_id
 
     async def restore_checkpoint(self) -> bool:
         """從 CheckpointStorage 恢復檢查點。
 
+        使用官方 load_checkpoint API，從 WorkflowCheckpoint.shared_state 提取狀態。
+
         Returns:
             是否成功恢復
         """
-        state = await self._checkpoint_storage.load(self._session_id)
+        # 調用官方 API
+        checkpoint = await self._checkpoint_storage.load_checkpoint(self._session_id)
 
-        if state:
+        if checkpoint:
+            # 從 WorkflowCheckpoint.shared_state 提取 IPA 狀態
+            state = checkpoint.shared_state
             self._restore_from_state(state)
             logger.info(f"檢查點已恢復: {self._session_id}")
             return True
@@ -640,8 +670,15 @@ class MultiTurnAdapter:
         return False
 
     async def delete_checkpoint(self) -> bool:
-        """刪除檢查點。"""
-        result = await self._checkpoint_storage.delete(self._session_id)
+        """刪除檢查點。
+
+        使用官方 delete_checkpoint API。
+
+        Returns:
+            是否成功刪除
+        """
+        # 調用官方 API
+        result = await self._checkpoint_storage.delete_checkpoint(self._session_id)
         if result:
             logger.debug(f"檢查點已刪除: {self._session_id}")
         return result
@@ -792,6 +829,11 @@ def create_redis_multiturn_adapter(
 ) -> MultiTurnAdapter:
     """創建使用 Redis 存儲的多輪對話適配器。
 
+    ⚠️ 警告: 此函數目前暫停使用。
+    RedisCheckpointStorage 使用 IPA 自定義接口（save/load/delete），
+    而 MultiTurnAdapter 已更新為使用官方 API（save_checkpoint/load_checkpoint）。
+    如需 Redis 支持，請使用默認的 InMemoryCheckpointStorage 或等待後續更新。
+
     Args:
         redis_client: Redis 客戶端
         session_id: 會話 ID
@@ -802,24 +844,17 @@ def create_redis_multiturn_adapter(
     Returns:
         MultiTurnAdapter 實例
 
+    Raises:
+        NotImplementedError: 此函數目前暫停使用
+
     Example:
         ```python
-        import redis.asyncio as redis
-
-        redis_client = redis.Redis(host='localhost', port=6379)
-        adapter = create_redis_multiturn_adapter(redis_client)
+        # 目前請使用默認的 InMemoryCheckpointStorage
+        adapter = create_multiturn_adapter(session_id="my-session")
         ```
     """
-    from .checkpoint_storage import RedisCheckpointStorage
-
-    storage = RedisCheckpointStorage(
-        redis_client=redis_client,
-        namespace=namespace,
-        ttl_seconds=ttl_seconds,
-    )
-
-    return MultiTurnAdapter(
-        session_id=session_id,
-        config=config,
-        checkpoint_storage=storage,
+    raise NotImplementedError(
+        "create_redis_multiturn_adapter 暫停使用。"
+        "RedisCheckpointStorage 尚未遷移至官方 API (save_checkpoint/load_checkpoint)。"
+        "請使用 create_multiturn_adapter() 搭配默認的 InMemoryCheckpointStorage。"
     )

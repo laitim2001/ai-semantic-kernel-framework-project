@@ -6,6 +6,18 @@ Shared fixtures for all tests.
 import pytest
 
 
+# =============================================================================
+# Pytest Markers Configuration (Phase 7)
+# =============================================================================
+
+def pytest_configure(config):
+    """Register custom markers."""
+    config.addinivalue_line("markers", "e2e: End-to-end tests (may require real API)")
+    config.addinivalue_line("markers", "performance: Performance benchmark tests")
+    config.addinivalue_line("markers", "slow: Tests that take a long time to run")
+    config.addinivalue_line("markers", "integration: Integration tests")
+
+
 @pytest.fixture
 def client():
     """Create a test client for the FastAPI application.

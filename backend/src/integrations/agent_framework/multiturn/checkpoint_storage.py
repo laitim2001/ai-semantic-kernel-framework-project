@@ -5,10 +5,19 @@
 #
 # 自定義 Checkpoint 存儲實現，擴展官方 CheckpointStorage 接口。
 #
-# 支持的存儲後端:
-#   - RedisCheckpointStorage: Redis 存儲
-#   - PostgresCheckpointStorage: PostgreSQL 存儲
-#   - FileCheckpointStorage: 文件系統存儲
+# 官方 API 使用說明:
+#   - 內存存儲: 直接使用官方 InMemoryCheckpointStorage
+#   - 持久化存儲: 以下擴展類使用 IPA 自定義接口（save/load/delete）
+#
+# IPA 擴展存儲後端（非官方 API）:
+#   - RedisCheckpointStorage: Redis 存儲（IPA 自定義接口）
+#   - PostgresCheckpointStorage: PostgreSQL 存儲（IPA 自定義接口）
+#   - FileCheckpointStorage: 文件系統存儲（IPA 自定義接口）
+#
+# 注意: 這些擴展存儲使用 save/load/delete 方法，不是官方的
+#       save_checkpoint/load_checkpoint/delete_checkpoint 方法。
+#       如需符合官方 API，請使用官方 InMemoryCheckpointStorage 或
+#       FileCheckpointStorage（from agent_framework）。
 # =============================================================================
 
 from abc import ABC, abstractmethod
@@ -463,3 +472,20 @@ class FileCheckpointStorage(BaseCheckpointStorage):
         if count > 0:
             logger.info(f"文件系統清理 {count} 個過期 checkpoint")
         return count
+
+
+# =============================================================================
+# 注意：內存存儲請使用官方 InMemoryCheckpointStorage
+# =============================================================================
+# 官方已提供 InMemoryCheckpointStorage，請直接使用：
+#
+# from agent_framework import InMemoryCheckpointStorage
+# storage = InMemoryCheckpointStorage()
+#
+# 官方 API 方法：
+#   - save_checkpoint(checkpoint: WorkflowCheckpoint) -> str
+#   - load_checkpoint(checkpoint_id: str) -> WorkflowCheckpoint | None
+#   - delete_checkpoint(checkpoint_id: str) -> bool
+#   - list_checkpoint_ids(workflow_id: str | None) -> list[str]
+#   - list_checkpoints(workflow_id: str | None) -> list[WorkflowCheckpoint]
+# =============================================================================
