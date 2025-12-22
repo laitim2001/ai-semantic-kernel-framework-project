@@ -1,0 +1,121 @@
+# MCP Server Configuration
+#
+# This file defines the MCP servers available to the IPA Platform.
+# Each server provides tools that can be used by AI agents.
+#
+# Environment variables can be referenced using ${VAR_NAME} syntax.
+# Missing environment variables will result in empty strings.
+#
+# Example:
+#   env:
+#     API_KEY: ${MY_API_KEY}
+
+servers:
+  # Azure MCP Server
+  # Provides tools for Azure resource management
+  - name: azure-mcp
+    command: python
+    args:
+      - "-m"
+      - "mcp_servers.azure"
+    env:
+      AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
+    transport: stdio
+    timeout: 60
+    enabled: true
+    description: "Azure resource management tools"
+    tags:
+      - azure
+      - cloud
+      - infrastructure
+
+  # GitHub MCP Server
+  # Provides tools for GitHub repository management
+  - name: github-mcp
+    command: npx
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-github"
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_TOKEN}
+    transport: stdio
+    timeout: 30
+    enabled: true
+    description: "GitHub repository and issue management"
+    tags:
+      - github
+      - devops
+      - source-control
+
+  # Filesystem MCP Server
+  # Provides tools for local file operations
+  - name: filesystem-mcp
+    command: npx
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-filesystem"
+      - "/allowed/path"
+    transport: stdio
+    timeout: 30
+    enabled: false
+    description: "Local filesystem operations"
+    tags:
+      - filesystem
+      - local
+
+  # PostgreSQL MCP Server
+  # Provides tools for database operations
+  - name: postgres-mcp
+    command: npx
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-postgres"
+    env:
+      POSTGRES_CONNECTION_STRING: ${DATABASE_URL}
+    transport: stdio
+    timeout: 30
+    enabled: false
+    description: "PostgreSQL database operations"
+    tags:
+      - database
+      - postgres
+
+  # Slack MCP Server
+  # Provides tools for Slack messaging
+  - name: slack-mcp
+    command: npx
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-slack"
+    env:
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      SLACK_TEAM_ID: ${SLACK_TEAM_ID}
+    transport: stdio
+    timeout: 30
+    enabled: false
+    description: "Slack messaging and channel management"
+    tags:
+      - slack
+      - communication
+
+  # Custom IPA Tools Server
+  # Internal tools for IPA-specific operations
+  - name: ipa-tools
+    command: python
+    args:
+      - "-m"
+      - "ipa_mcp_server"
+    env:
+      IPA_API_URL: ${IPA_API_URL}
+      IPA_API_KEY: ${IPA_API_KEY}
+    transport: stdio
+    timeout: 60
+    enabled: true
+    description: "IPA Platform internal tools"
+    tags:
+      - ipa
+      - internal
+      - automation
