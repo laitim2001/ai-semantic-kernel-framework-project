@@ -1,0 +1,74 @@
+{
+  "phase": 8,
+  "scenario": "Code Interpreter - Financial Analysis",
+  "timestamp": "2025-12-22T13:35:14.703580",
+  "total_tests": 7,
+  "passed_tests": 7,
+  "success_rate": "100.0%",
+  "overall_success": true,
+  "test_results": {
+    "health_check": {
+      "success": true,
+      "data": {
+        "status": "healthy",
+        "azure_openai_configured": true,
+        "message": "Code Interpreter service is ready"
+      }
+    },
+    "create_session": {
+      "success": true,
+      "session_id": "sess_6cce15f8dec8"
+    },
+    "execute_simple": {
+      "success": true,
+      "data": {
+        "success": true,
+        "output": "Pi = 3.141593\nsqrt(2) = 1.414214\n10! = 3628800\n{'pi': 3.141592653589793, 'sqrt_2': 1.4142135623730951, 'factorial_10': 3628800}",
+        "execution_time": 14.239559888839722,
+        "files": [],
+        "error": null,
+        "metadata": {
+          "status": "success",
+          "code_outputs": []
+        }
+      }
+    },
+    "analyze_financial": {
+      "success": true,
+      "data": {
+        "success": true,
+        "output": "Here are the computed results from the provided data.\n\n1) Totals\n- Total sales: 4,250,000\n- Total cost: 2,975,000\n- Total profit: 1,275,000\n\n2) Average profit margin\n- Overall margin: 30.0% (and each month individually has 30% margin)\n\n3) Month-over-month growth rate (sales)\n- October → November: 10.40%\n- November → December: 17.39%\n\n4) Forecast next month's sales (linear regression)\n- Regression model (Sales as a function of Month): Sales = 1,046,666.67 + 185,000.00 × Month\n- Forecast for Month 4 (next month): approximately 1,786,667\n\nIf you’d like, I can also present the results in a CSV/Excel-friendly format or show the regression diagnostics.",
+        "execution_time": 31.332374095916748,
+        "files": [],
+        "error": null
+      }
+    },
+    "generate_chart": {
+      "success": true,
+      "data": {
+        "success": true,
+        "output": "I executed the task and generated a combined bar and line chart as requested. Here are the results and how to access the chart.\n\nDataset\n- Months: October, November, December\n- Sales (bar): 1,250,000; 1,380,000; 1,620,000\n- Profit (line): 375,000; 414,000; 486,000\n\nWhat I did\n- Created a bar chart for Sales on the primary y-axis\n- Added a line chart for Profit on a secondary y-axis\n- Included data labels for both bars and line points\n- Applied a professional styling with a clean grid and contrasting colors\n- Saved the chart to a file for you to view\n\nChart file\n- Location: /mnt/data/sales_profit_chart.png\n\nDownload the chart\n- [Download the chart](sandbox:/mnt/data/sales_profit_chart.png)\n\nIf you’d like the image embedded here or want adjustments (e.g., different styling, adding a title, or changing axis ranges), tell me and I’ll adjust and re-run.",
+        "execution_time": 32.11950397491455,
+        "files": [],
+        "error": null
+      }
+    },
+    "complex_analysis": {
+      "success": true,
+      "data": {
+        "success": true,
+        "output": "Here are the results of the requested financial data analysis.\n\n1) DataFrame (Month, Sales, Cost, Profit, Profit Margin, MoM Growth Rate)\n\n- October:\n  - Sales: 1,250,000\n  - Cost: 875,000\n  - Profit: 375,000\n  - Profit Margin: 0.30 (30%)\n  - MoM Growth Rate: NaN (no prior month)\n\n- November:\n  - Sales: 1,380,000\n  - Cost: 966,000\n  - Profit: 414,000\n  - Profit Margin: 0.30 (30%)\n  - MoM Growth Rate: 0.104 (10.4%)\n\n- December:\n  - Sales: 1,620,000\n  - Cost: 1,134,000\n  - Profit: 486,000\n  - Profit Margin: 0.30 (30%)\n  - MoM Growth Rate: 0.173913 (17.3913%)\n\n2) Descriptive statistics (mean, std, min, max) for numeric columns\n- Sales:\n  - mean: 1,416,667\n  - std: 187,705.44\n  - min: 1,250,000\n  - max: 1,620,000\n- Cost:\n  - mean: 991,666.67\n  - std: 131,393.81\n  - min: 875,000\n  - max: 1,134,000\n- Profit:\n  - mean: 425,000\n  - std: 56,311.63\n  - min: 375,000\n  - max: 486,000\n- Profit Margin:\n  - mean: 0.30\n  - std: 0.00\n  - min: 0.30\n  - max: 0.30\n- MoM Growth Rate (two observed values: Nov and Dec):\n  - count: 2\n  - mean: 0.138957\n  - std: 0.049436\n  - min: 0.104\n  - max: 0.173913\n\n3) Correlation analysis\n- Correlation between Sales and Profit: 1.0 (perfect positive correlation, as Profit = 0.30 * Sales for all three months)\n\n4) Analysis summary\n- Profit margin is constant at 30% across the three months, indicating stable profitability.\n- MoM sales growth:\n  - Nov vs Oct: 10.4% growth\n  - Dec vs Nov: 17.39% growth\n  - Average MoM growth (over observed periods): ~13.90% with some variability (std ~4.94%)\n- Revenue and profit moved in lockstep due to the fixed 30% margin, suggested by the near-perfect correlation between Sales and Profit.\n- Costs grow in line with sales, maintaining the stable margin; there is no margin compression or expansion within the dataset.\n\nIf you’d like, I can export these results to CSV/Excel or generate plots (e.g., Sales/Profit over time, Margin stability, MoM Growth visualization).",
+        "execution_time": 35.79118514060974,
+        "files": [],
+        "error": null
+      }
+    },
+    "cleanup": {
+      "success": true,
+      "data": {
+        "success": true,
+        "message": "Session sess_6cce15f8dec8 deleted successfully"
+      }
+    }
+  }
+}

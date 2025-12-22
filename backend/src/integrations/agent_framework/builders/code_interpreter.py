@@ -126,12 +126,17 @@ class ExecutionResult:
 
         try:
             # 解析 Responses API 輸出
-            if hasattr(response, 'output'):
-                for item in response.output:
+            logger.debug(f"Parsing response: has output={hasattr(response, 'output')}")
+            if hasattr(response, 'output') and response.output is not None:
+                logger.debug(f"Output items count: {len(response.output) if hasattr(response.output, '__len__') else 'N/A'}")
+                for idx, item in enumerate(response.output):
+                    logger.debug(f"Processing item {idx}: type={getattr(item, 'type', 'unknown')}")
                     if hasattr(item, 'type'):
                         if item.type == 'message':
                             # 提取文字內容
-                            for content in getattr(item, 'content', []):
+                            contents = getattr(item, 'content', []) or []
+                            logger.debug(f"Message contents: {len(contents) if hasattr(contents, '__len__') else 'N/A'}")
+                            for content in contents:
                                 if hasattr(content, 'text'):
                                     output_text += content.text + "\n"
                         elif item.type == 'code_interpreter_call':
@@ -141,11 +146,14 @@ class ExecutionResult:
                                 "code": getattr(item, 'code', ''),
                             }
                             code_outputs.append(code_info)
-                            if hasattr(item, 'outputs'):
-                                for out in item.outputs:
+                            outputs_value = getattr(item, 'outputs', None)
+                            logger.debug(f"code_interpreter_call outputs: {outputs_value}")
+                            if outputs_value is not None:
+                                for out in outputs_value:
                                     if hasattr(out, 'type'):
                                         if out.type == 'logs':
-                                            output_text += getattr(out, 'logs', '') + "\n"
+                                            logs_value = getattr(out, 'logs', '') or ''
+                                            output_text += logs_value + "\n"
                                         elif out.type == 'image':
                                             files.append({
                                                 "type": "image",
@@ -159,9 +167,11 @@ class ExecutionResult:
             success = True
 
         except Exception as e:
+            import traceback
             error = str(e)
             success = False
             logger.error(f"Failed to parse Responses API output: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
 
         return cls(
             success=success,
@@ -272,8 +282,8 @@ class CodeInterpreterAdapter:
             settings = get_settings()
 
             # 優先使用配置中的值，否則使用環境變數
-            endpoint = self._config.azure_endpoint or settings.AZURE_OPENAI_ENDPOINT
-            api_key = self._config.api_key or settings.AZURE_OPENAI_API_KEY
+            endpoint = self._config.azure_endpoint or settings.azure_openai_endpoint
+            api_key = self._config.api_key or settings.azure_openai_api_key
 
             if not endpoint or not api_key:
                 raise ConfigurationError(
@@ -303,7 +313,7 @@ class CodeInterpreterAdapter:
         try:
             from src.core.config import get_settings
             settings = get_settings()
-            return settings.AZURE_OPENAI_DEPLOYMENT_NAME or "gpt-4"
+            return settings.azure_openai_deployment_name or "gpt-4"
         except Exception:
             return "gpt-4"
 

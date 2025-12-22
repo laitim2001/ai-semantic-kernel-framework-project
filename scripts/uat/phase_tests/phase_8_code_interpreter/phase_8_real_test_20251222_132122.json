@@ -1,0 +1,46 @@
+{
+  "phase": 8,
+  "scenario": "Code Interpreter - Financial Analysis",
+  "timestamp": "2025-12-22T13:21:22.782022",
+  "total_tests": 7,
+  "passed_tests": 3,
+  "success_rate": "42.9%",
+  "overall_success": false,
+  "test_results": {
+    "health_check": {
+      "success": true,
+      "data": {
+        "status": "healthy",
+        "azure_openai_configured": true,
+        "message": "Code Interpreter service is ready"
+      }
+    },
+    "create_session": {
+      "success": true,
+      "session_id": "sess_828609424823"
+    },
+    "execute_simple": {
+      "success": false,
+      "error": "{\"detail\":\"Execution failed: cannot import name 'settings' from 'src.core.config' (C:\\\\Users\\\\rci.ChrisLai\\\\Documents\\\\GitHub\\\\ai-semantic-kernel-framework-project\\\\backend\\\\src\\\\core\\\\config.py)\"}"
+    },
+    "analyze_financial": {
+      "success": false,
+      "error": "{\"detail\":\"Analysis failed: cannot import name 'settings' from 'src.core.config' (C:\\\\Users\\\\rci.ChrisLai\\\\Documents\\\\GitHub\\\\ai-semantic-kernel-framework-project\\\\backend\\\\src\\\\core\\\\config.py)\"}"
+    },
+    "generate_chart": {
+      "success": false,
+      "error": "{\"detail\":\"Analysis failed: cannot import name 'settings' from 'src.core.config' (C:\\\\Users\\\\rci.ChrisLai\\\\Documents\\\\GitHub\\\\ai-semantic-kernel-framework-project\\\\backend\\\\src\\\\core\\\\config.py)\"}"
+    },
+    "complex_analysis": {
+      "success": false,
+      "error": "{\"detail\":\"Analysis failed: cannot import name 'settings' from 'src.core.config' (C:\\\\Users\\\\rci.ChrisLai\\\\Documents\\\\GitHub\\\\ai-semantic-kernel-framework-project\\\\backend\\\\src\\\\core\\\\config.py)\"}"
+    },
+    "cleanup": {
+      "success": true,
+      "data": {
+        "success": true,
+        "message": "Session sess_828609424823 deleted successfully"
+      }
+    }
+  }
+}

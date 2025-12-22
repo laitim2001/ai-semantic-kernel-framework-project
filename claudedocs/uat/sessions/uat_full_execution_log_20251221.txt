@@ -1,0 +1,480 @@
+2025-12-21 13:10:25,962 - src.integrations.llm.azure_openai - INFO - AzureOpenAILLMService initialized: endpoint=https://chris-mj48nnoz-eastus2..., deployment=gpt-5.2
+2025-12-21 13:10:25,962 - src.integrations.llm.factory - INFO - Created LLM service: provider=azure, cache=False
+2025-12-21 13:10:32,545 - httpx - INFO - HTTP Request: POST https://chris-mj48nnoz-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-5.2/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-12-21 13:10:45,223 - httpx - INFO - HTTP Request: POST https://chris-mj48nnoz-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-5.2/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-12-21 13:11:14,032 - httpx - INFO - HTTP Request: POST https://chris-mj48nnoz-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-5.2/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+STRICT MODE ENABLED (Default)
+Test will FAIL if any API call fails (no simulation fallback)
+Use --no-strict to allow simulation fallback
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[INFO] Loaded environment from: C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framework-project\backend\.env
+
+============================================================
+PRE-FLIGHT CHECK: Azure OpenAI Connection
+============================================================
+[OK] AZURE_OPENAI_ENDPOINT: https://chris-mj48nnoz-eastus2...
+[OK] AZURE_OPENAI_API_KEY: ***5yDz
+[OK] AZURE_OPENAI_DEPLOYMENT_NAME: gpt-5.2
+[OK] Backend API: healthy
+============================================================
+[PREFLIGHT] All checks passed - Ready for real LLM testing
+
+
+======================================================================
+ Enterprise Critical System Outage Response Test
+======================================================================
+    Testing 32 features across 12 phases
+    Features: 26 from FEATURE-INDEX.md + 6 Category-specific
+
+>>> [REAL LLM] Azure OpenAI service initialized
+    [PASS] [LLM] Azure OpenAI service ready for autonomous execution
+
+>>> Phase 1: ???????????
+
+>>> Creating agents for workflow...
+    [URL TRANSLATE] http://localhost:8000/api/v1/agents -> http://localhost:8000/api/v1/agents/
+    [REAL API] GET http://localhost:8000/api/v1/agents/ -> OK
+
+>>> Creating master workflow...
+    [URL TRANSLATE] http://localhost:8000/api/v1/workflows -> http://localhost:8000/api/v1/workflows/
+    [REAL API] POST http://localhost:8000/api/v1/workflows/ -> OK
+
+>>> Initializing cache baseline...
+    [REAL API] GET http://localhost:8000/api/v1/cache/stats -> OK
+
+>>> Creating tickets from 4 departments concurrently...
+
+>>> Starting workflow execution...
+    [URL TRANSLATE] http://localhost:8000/api/v1/executions -> http://localhost:8000/api/v1/executions/
+    [REAL API] POST http://localhost:8000/api/v1/executions/ -> OK
+    [PASS] Phase 1 completed: 4 tickets created, workflow started
+
+>>> Phase 2: ???? + ???? + ????
+
+>>> Classifying tickets with LLM (Phase 7 Autonomous)...
+
+>>> [REAL LLM] Azure OpenAI service initialized
+
+>>> Decomposing into execution tasks...
+    [REAL API] POST http://localhost:8000/api/v1/planning/decompose -> OK
+    [PASS] Phase 2 completed: Tickets classified and tasks decomposed
+
+>>> Phase 3: ????? + ???????
+
+>>> Routing tickets to appropriate scenarios...
+    [REAL API] POST http://localhost:8000/api/v1/routing/route -> OK
+    [REAL API] POST http://localhost:8000/api/v1/routing/route -> OK
+    [REAL API] POST http://localhost:8000/api/v1/routing/route -> OK
+    [REAL API] POST http://localhost:8000/api/v1/routing/route -> OK
+
+>>> Matching agent capabilities...
+    [URL TRANSLATE] http://localhost:8000/api/v1/handoff/capability-match -> http://localhost:8000/api/v1/handoff/capability/match
+    [REAL API] POST http://localhost:8000/api/v1/handoff/capability/match -> OK
+
+>>> Establishing cross-scenario collaboration channels...
+    [REAL API] POST http://localhost:8000/api/v1/routing/relations -> OK
+    [REAL API] POST http://localhost:8000/api/v1/routing/relations -> OK
+    [REAL API] POST http://localhost:8000/api/v1/routing/relations -> OK
+    [PASS] Phase 3 completed: Tickets routed, cross-scenario links established
+
+>>> Phase 4: ?????? (Fan-out)
+
+>>> Creating parallel execution branches...
+    [URL TRANSLATE] http://localhost:8000/api/v1/concurrent/fanout -> http://localhost:8000/api/v1/concurrent/v2/execute
+    [REAL API] POST http://localhost:8000/api/v1/concurrent/v2/execute -> OK
+
+>>> Executing branches as nested workflows...
+    [URL TRANSLATE] http://localhost:8000/api/v1/nested/subworkflow -> http://localhost:8000/api/v1/nested/sub-workflows/execute
+    [REAL API] POST http://localhost:8000/api/v1/nested/sub-workflows/execute -> OK
+    [URL TRANSLATE] http://localhost:8000/api/v1/nested/subworkflow -> http://localhost:8000/api/v1/nested/sub-workflows/execute
+    [REAL API] POST http://localhost:8000/api/v1/nested/sub-workflows/execute -> OK
+    [URL TRANSLATE] http://localhost:8000/api/v1/nested/subworkflow -> http://localhost:8000/api/v1/nested/sub-workflows/execute
+    [REAL API] POST http://localhost:8000/api/v1/nested/sub-workflows/execute -> OK
+
+>>> Transferring context between branches...
+    [URL TRANSLATE] http://localhost:8000/api/v1/handoff/context/transfer -> http://localhost:8000/api/v1/handoff/trigger
+    [REAL API] POST http://localhost:8000/api/v1/handoff/trigger -> OK
+    [PASS] Phase 4 completed: Parallel branches created and executing
+
+>>> Phase 5: ?????? (5 Whys)
+
+>>> Starting recursive 5 Whys analysis...
+    [URL TRANSLATE] http://localhost:8000/api/v1/multiturn/sessions -> http://localhost:8000/api/v1/planning/adapter/multiturn
+    [REAL API] POST http://localhost:8000/api/v1/planning/adapter/multiturn -> OK
+    [REAL API] POST http://localhost:8000/api/v1/planning/adapter/multiturn/25f471b1-44e9-4898-8ada-5981dd134556/turn -> OK
+    [REAL API] POST http://localhost:8000/api/v1/planning/adapter/multiturn/25f471b1-44e9-4898-8ada-5981dd134556/turn -> OK
+    [REAL API] POST http://localhost:8000/api/v1/planning/adapter/multiturn/25f471b1-44e9-4898-8ada-5981dd134556/turn -> OK
+    [REAL API] POST http://localhost:8000/api/v1/planning/adapter/multiturn/25f471b1-44e9-4898-8ada-5981dd134556/turn -> OK
+    [REAL API] POST http://localhost:8000/api/v1/planning/adapter/multiturn/25f471b1-44e9-4898-8ada-5981dd134556/turn -> OK
+
+>>> Verifying conversation memory...
+    [REAL API] GET http://localhost:8000/api/v1/planning/adapter/multiturn/25f471b1-44e9-4898-8ada-5981dd134556/history -> OK
+    [PASS] Phase 5 completed: Root cause identified through 5 Whys
+
+>>> Phase 6: ???? + ????
+
+>>> Making autonomous decision...
+
+>>> Executing with trial-and-error...
+    [REAL API] POST http://localhost:8000/api/v1/planning/trial -> OK
+    [REAL API] POST http://localhost:8000/api/v1/planning/trial -> OK
+    [REAL API] POST http://localhost:8000/api/v1/planning/trial -> OK
+
+>>> Testing timeout and error handling...
+    [PASS] Phase 6 completed: Issue resolved through trial-and-error
+
+>>> Phase 7: Agent ?? (A2A Handoff)
+
+>>> Establishing A2A communication...
+    [URL TRANSLATE] http://localhost:8000/api/v1/handoff/a2a -> http://localhost:8000/api/v1/handoff/trigger
+    [REAL API] POST http://localhost:8000/api/v1/handoff/trigger -> OK
+
+>>> Executing collaboration protocol...
+
+>>> Triggering agent handoff...
+    [REAL API] POST http://localhost:8000/api/v1/handoff/trigger -> OK
+    [PASS] Phase 7 completed: Agent handoff successful
+
+>>> Phase 8: ?????????
+
+>>> Creating approval sub-workflows...
+    [URL TRANSLATE] http://localhost:8000/api/v1/nested/subworkflow -> http://localhost:8000/api/v1/nested/sub-workflows/execute
+    [REAL API] POST http://localhost:8000/api/v1/nested/sub-workflows/execute -> OK
+    [URL TRANSLATE] http://localhost:8000/api/v1/nested/subworkflow -> http://localhost:8000/api/v1/nested/sub-workflows/execute
+    [REAL API] POST http://localhost:8000/api/v1/nested/sub-workflows/execute -> OK
+    [URL TRANSLATE] http://localhost:8000/api/v1/nested/subworkflow -> http://localhost:8000/api/v1/nested/sub-workflows/execute
+    [REAL API] POST http://localhost:8000/api/v1/nested/sub-workflows/execute -> OK
+
+>>> Creating approval checkpoints...
+    [URL TRANSLATE] http://localhost:8000/api/v1/checkpoints -> http://localhost:8000/api/v1/checkpoints/
+    [REAL API] POST http://localhost:8000/api/v1/checkpoints/ -> OK
+    [URL TRANSLATE] http://localhost:8000/api/v1/checkpoints -> http://localhost:8000/api/v1/checkpoints/
+    [REAL API] POST http://localhost:8000/api/v1/checkpoints/ -> OK
+    [URL TRANSLATE] http://localhost:8000/api/v1/checkpoints -> http://localhost:8000/api/v1/checkpoints/
+    [REAL API] POST http://localhost:8000/api/v1/checkpoints/ -> OK
+
+>>> Managing HITL approvals...
+    [REAL API] POST http://localhost:8000/api/v1/checkpoints/783cb8d7-2166-42fd-bf35-df752a931321/approve -> OK
+    [REAL API] POST http://localhost:8000/api/v1/checkpoints/e9b4e882-fb40-45df-aa3d-577034ced67b/approve -> OK
+    [REAL API] POST http://localhost:8000/api/v1/checkpoints/01b0fbc0-fb65-4669-adc6-05f30a79fb08/approve -> OK
+
+>>> Testing escalation mechanism...
+    [PASS] Phase 8 completed: All approvals obtained
+
+>>> Phase 9: GroupChat ???? + ????
+
+>>> Creating GroupChat session with 5 experts...
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/ -> OK
+
+>>> Conducting multi-turn expert discussion...
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/821fbfce-e955-49e2-a748-16f2b082f843/message -> OK
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/821fbfce-e955-49e2-a748-16f2b082f843/message -> OK
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/821fbfce-e955-49e2-a748-16f2b082f843/message -> OK
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/821fbfce-e955-49e2-a748-16f2b082f843/message -> OK
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/821fbfce-e955-49e2-a748-16f2b082f843/message -> OK
+
+>>> Initiating expert voting...
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/voting/ -> OK
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/voting/b6f08b51-3a05-424a-92dd-666f03f03fdf/vote -> OK
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/voting/b6f08b51-3a05-424a-92dd-666f03f03fdf/vote -> OK
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/voting/b6f08b51-3a05-424a-92dd-666f03f03fdf/vote -> OK
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/voting/b6f08b51-3a05-424a-92dd-666f03f03fdf/vote -> OK
+    [REAL API] POST http://localhost:8000/api/v1/groupchat/voting/b6f08b51-3a05-424a-92dd-666f03f03fdf/vote -> OK
+
+>>> Checking termination condition...
+    [PASS] Phase 9 completed: Expert consensus reached
+
+>>> Phase 10: ?????? (Fan-in ??)
+
+>>> Syncing with external systems...
+    [URL TRANSLATE] http://localhost:8000/api/v1/connectors/servicenow/sync -> http://localhost:8000/api/v1/connectors/servicenow/execute
+    [REAL API] POST http://localhost:8000/api/v1/connectors/servicenow/execute -> OK
+    [URL TRANSLATE] http://localhost:8000/api/v1/connectors/dynamics365/sync -> http://localhost:8000/api/v1/connectors/dynamics365/execute
+    [REAL API] POST http://localhost:8000/api/v1/connectors/dynamics365/execute -> OK
+    [URL TRANSLATE] http://localhost:8000/api/v1/connectors/sharepoint/sync -> http://localhost:8000/api/v1/connectors/sharepoint/execute
+    [REAL API] POST http://localhost:8000/api/v1/connectors/sharepoint/execute -> OK
+
+>>> Aggregating branch results (Fan-in)...
+
+>>> Phase 11: ????? + ????
+
+>>> Closing all tickets...
+
+>>> Querying audit trail...
+    [REAL API] GET http://localhost:8000/api/v1/audit/executions/b17b5834-324f-40f4-827a-9b60f67f2d2d/trail -> OK
+
+>>> Verifying cache statistics...
+    [REAL API] GET http://localhost:8000/api/v1/cache/stats -> OK
+    [PASS] Phase 11 completed: All tickets closed, audit recorded
+
+>>> Phase 12: ???? + ????
+
+>>> Saving final checkpoint...
+    [URL TRANSLATE] http://localhost:8000/api/v1/checkpoints -> http://localhost:8000/api/v1/checkpoints/
+    [REAL API] POST http://localhost:8000/api/v1/checkpoints/ -> OK
+
+>>> Generating post-incident report...
+
+>>> Performing graceful shutdown...
+    [REAL API] POST http://localhost:8000/api/v1/executions/b17b5834-324f-40f4-827a-9b60f67f2d2d/shutdown -> OK
+    [PASS] Phase 12 completed: Graceful shutdown complete
+
+======================================================================
+ Test Summary
+======================================================================
+
+============================================================
+OVERALL RESULTS
+============================================================
+Total Features: 38
+Overall Pass Rate: 94.7%
+Phases Completed: 11/12
+Duration: 0:01:03.243954
+
+API Call Statistics:
+  Real API Calls: 58 (100.0%)
+  Simulated: 0 (0.0%)
+  Mode: STRICT (no simulation allowed)
+
+LLM Service Statistics (Phase 7):
+  Total Calls: 3
+  Successes: 3 (100.0%)
+  Failures: 0
+  Provider: Azure OpenAI
+
+============================================================
+MAIN LIST FEATURES (FEATURE-INDEX.md)
+============================================================
+Total: 32 | Passed: 31 | Failed: 1 | Pending: 0
+
+[PASS] #1: ??? Agent ??
+   Phase: Phase 1
+   - Agent exists: triage-agent (40a6ff8f-8902-46c6-8732-e03a004bd93e)
+   - Agent exists: analyst-agent (bc036f03-f74c-4ed3-aa1c-7867406ed1b4)
+   - Agent exists: resolver-agent (3bfa668b-d432-4a6a-be76-d31d0c70f866)
+   - ... and 2 more
+
+[PASS] #2: ???????
+   Phase: Phase 8
+   - Checkpoint: it_manager_approval
+   - Checkpoint: cto_approval
+   - Checkpoint: ops_manager_approval
+
+[FAIL] #3: ??????
+   Phase: Phase 10
+   [!] Error: [STRICT MODE] API call failed: HTTP 404 for GET http://localhost:8000/api/v1/concurrent/b17b5834-324f-40f4-827a-9b60f67f2d2d/status
+
+[PASS] #4: ????? (CS?IT)
+   Phase: Phase 3
+   - IT-001 <-> CS-001: Linked (parent)
+   - IT-001 <-> FIN-001: Linked (references)
+   - IT-001 <-> OPS-001: Linked (child)
+   - ... and 1 more
+
+[PASS] #10: ????
+   Phase: Phase 11
+   - IT-001: COMPLETED
+   - CS-001: COMPLETED
+   - FIN-001: COMPLETED
+   - ... and 7 more
+
+[PASS] #14: Redis ??
+   Phase: Phase 1
+   - Cache baseline: {'hits': 0, 'misses': 0, 'keys': 0}
+   - Cache hits: 0
+   - Cache misses: 0
+   - ... and 1 more
+
+[PASS] #15: Concurrent ????
+   Phase: Phase 1
+   - Ticket IT-001 (IT): Created
+   - Ticket CS-001 (CS): Created
+   - Ticket FIN-001 (FIN): Created
+   - ... and 2 more
+
+[PASS] #17: Collaboration Protocol ????
+   Phase: Phase 7
+   - triage_agent -> specialist_agent: REQUEST
+   - specialist_agent -> triage_agent: ACKNOWLEDGE
+   - specialist_agent -> triage_agent: RESPONSE
+   - ... and 1 more
+
+[PASS] #18: GroupChat ????
+   Phase: Phase 9
+   - Session ID: 821fbfce-e955-49e2-a748-16f2b082f843
+   - Participants: 5 experts
+   - dba_expert: ??????????????...
+   - ... and 4 more
+
+[PASS] #19: Agent Handoff ??
+   Phase: Phase 7
+   - Handoff ID: eb30c825-6277-4638-97be-d2ba7b00c632
+   - Handoff policy: graceful
+   - Status: completed
+
+[PASS] #20: Multi-turn ????
+   Phase: Phase 5
+   - Turn 1: Recorded
+   - Turn 2: Recorded
+   - Turn 3: Recorded
+   - ... and 2 more
+
+[PASS] #21: Conversation Memory
+   Phase: Phase 5
+   - Messages in memory: 10
+   - Context preservation: Complete
+   - Root cause identified: ??????????
+
+[PASS] #22: Dynamic Planning ????
+   Phase: Phase 2
+   - [REAL LLM] Classification using Phase 7 LLM Service
+   - IT-001: Database Outage (P1-Critical)
+   - CS-001: Authentication/Login Service Disruption (P1-Critical)
+   - ... and 3 more
+
+[PASS] #23: Autonomous Decision ????
+   Phase: Phase 6
+   - [REAL LLM] Autonomous decision made by AI
+   - LLM reasoning: ??? critical ??? database/api/portal?????????????????????????????????????????????????????????/??????...
+   - Decision made: failover_and_reindex
+   - ... and 2 more
+
+[PASS] #24: Trial-and-Error ??
+   Phase: Phase 6
+   - [REAL LLM] Error learning active
+   - Analysis: ?????????? REINDEX CONCURRENTLY???????????????????????????????????????/??/??????...
+   - Recommendation: ???????
+1) ????????????? REINDEX CONCURRENTLY?????????????????????????/???????? ...
+   - ... and 3 more
+
+[PASS] #25: Nested Workflows ?????
+   Phase: Phase 4
+   - Nested workflow: technical_diagnosis
+   - Nested workflow: customer_notification
+   - Nested workflow: business_recovery
+
+[PASS] #26: Sub-workflow Execution
+   Phase: Phase 8
+   - Sub-workflow: it_manager_approval (IT Manager)
+   - Sub-workflow: cto_approval (CTO)
+   - Sub-workflow: ops_manager_approval (Ops Manager)
+
+[PASS] #27: Recursive Patterns
+   Phase: Phase 5
+   - Why 1: ??????????
+   -   ? ?????
+   - Why 2: ?????????
+   - ... and 7 more
+
+[PASS] #28: GroupChat ????
+   Phase: Phase 9
+   - dba_expert: yes
+   - devops_expert: yes
+   - sre_expert: yes
+   - ... and 2 more
+
+[PASS] #29: HITL Manage
+   Phase: Phase 8
+   - IT Manager: Approved
+   - CTO: Approved
+   - Ops Manager: Approved
+
+[PASS] #30: Capability Matcher
+   Phase: Phase 3
+   - Agent dba_expert: score 0.95
+   - Agent network_specialist: score 0.88
+
+[PASS] #31: Context Transfer
+   Phase: Phase 4
+   - Context transferred to all branches
+   - Context keys: ['incident_id', 'root_ticket', 'correlation_chain', 'priority']
+
+[PASS] #32: Handoff Service
+   Phase: Phase 7
+   - Handoff service: Active
+   - Context preserved: Yes
+   - Agent state transferred: Yes
+
+[PASS] #33: GroupChat Orchestrator
+   Phase: Phase 9
+   - Orchestrator: Active
+   - Turn management: Round-robin
+
+[PASS] #34: Planning Adapter
+   Phase: Phase 2
+   - Tasks generated: 5
+   -   - ?????????
+   -   - ???????
+   - ... and 3 more
+
+[PASS] #35: Redis/Postgres Checkpoint
+   Phase: Phase 8
+   - Persisted: it_manager_approval
+   - Persisted: cto_approval
+   - Persisted: ops_manager_approval
+   - ... and 3 more
+
+[PASS] #39: Agent to Agent (A2A)
+   Phase: Phase 7
+   - A2A channel: Established
+   - Source: triage_agent
+   - Target: specialist_agent
+
+[PASS] #43: ????
+   Phase: Phase 3
+   - IT-001 -> customer_service: Routed
+   - CS-001 -> it_operations: Routed
+   - FIN-001 -> it_operations: Routed
+   - ... and 1 more
+
+[PASS] #47: Agent ?????
+   Phase: Phase 3
+   - Capability: [database, sql, optimization]
+   - Capability: [networking, dns, routing]
+
+[PASS] #48: ????
+   Phase: Phase 9
+   - Voting completed: 5/5 approved
+   - Quorum reached: Yes (100% > 60%)
+   - Result: APPROVED
+
+[PASS] #49: HITL ????
+   Phase: Phase 8
+   - Escalation policy: Configured
+   - Timeout escalation: To VP level after 5 min
+   - Complexity escalation: Enabled for P0 incidents
+   - ... and 1 more
+
+[PASS] #50: Termination ??
+   Phase: Phase 9
+   - Termination type: Consensus reached
+   - Condition: All experts approved
+   - Session status: Closed
+
+============================================================
+CATEGORY-SPECIFIC FEATURES
+============================================================
+Total: 6 | Passed: 5 | Failed: 1 | Pending: 0
+
+[PASS] B-2: Parallel branch management
+   Phase: Phase 4
+
+[PASS] B-3: Fan-out/Fan-in pattern
+   Phase: Phase 4
+
+[PASS] B-4: Branch timeout handling
+   Phase: Phase 6
+
+[PASS] B-5: Error isolation in branches
+   Phase: Phase 6
+
+[PASS] B-6: Nested workflow context
+   Phase: Phase 4
+
+[FAIL] C-4: Message prioritization
+   Phase: Phase 10
+
+[FILE] Results saved to: C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framework-project\scripts\uat\integrated_scenario\test_results_integrated_scenario.json
+[FILE] Session saved to: C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framework-project\claudedocs\uat\sessions\integrated_enterprise_outage-20251221_131128.json
