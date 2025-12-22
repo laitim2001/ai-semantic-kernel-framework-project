@@ -1,0 +1,13 @@
+date,product,region,sales,units
+2024-01-01,Laptop,North,15000,10
+2024-01-01,Laptop,South,12000,8
+2024-01-01,Phone,North,8000,20
+2024-01-01,Phone,South,9500,25
+2024-01-02,Laptop,North,14500,9
+2024-01-02,Laptop,South,13000,9
+2024-01-02,Phone,North,8500,22
+2024-01-02,Phone,South,10000,28
+2024-01-03,Laptop,North,16000,11
+2024-01-03,Laptop,South,11500,7
+2024-01-03,Phone,North,7500,18
+2024-01-03,Phone,South,11000,30

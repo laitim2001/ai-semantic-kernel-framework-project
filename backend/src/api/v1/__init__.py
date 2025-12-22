@@ -33,11 +33,13 @@
 #   - planning: Dynamic planning and autonomous decision (Sprint 10)
 #   - nested: Nested workflows and advanced orchestration (Sprint 11)
 #   - performance: Performance monitoring and optimization (Sprint 12)
+#   - code_interpreter: Code Interpreter integration (Sprint 37)
 # =============================================================================
 
 from fastapi import APIRouter
 
 from src.api.v1.agents.routes import router as agents_router
+from src.api.v1.code_interpreter.routes import router as code_interpreter_router
 from src.api.v1.audit.routes import router as audit_router
 from src.api.v1.cache.routes import router as cache_router
 from src.api.v1.checkpoints.routes import router as checkpoints_router
@@ -88,5 +90,8 @@ api_router.include_router(groupchat_router)    # Sprint 9: GroupChat
 api_router.include_router(planning_router)     # Sprint 10: Dynamic Planning
 api_router.include_router(nested_router)       # Sprint 11: Nested Workflows
 api_router.include_router(performance_router)  # Sprint 12: Performance Monitoring
+
+# Include sub-routers - Phase 8 (Code Interpreter Integration)
+api_router.include_router(code_interpreter_router)  # Sprint 37: Code Interpreter
 
 __all__ = ["api_router"]

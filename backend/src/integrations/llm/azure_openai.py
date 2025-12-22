@@ -53,7 +53,7 @@ class AzureOpenAILLMService:
         service = AzureOpenAILLMService(
             endpoint="https://xxx.openai.azure.com/",
             api_key="your-api-key",
-            deployment_name="gpt-4o",
+            deployment_name="gpt-5.2",
         )
 
         # 文本生成
@@ -94,7 +94,7 @@ class AzureOpenAILLMService:
         self.endpoint = endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
         self.api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
         self.deployment_name = deployment_name or os.getenv(
-            "AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o"
+            "AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.2"
         )
         self.api_version = api_version
         self.max_retries = max_retries
@@ -274,10 +274,12 @@ IMPORTANT:
 
         for attempt in range(self.max_retries):
             try:
+                # Use max_completion_tokens for newer models (o1, gpt-5.x, etc.)
+                # Fallback to max_tokens for older models
                 response = await self._client.chat.completions.create(
                     model=self.deployment_name,
                     messages=messages,
-                    max_tokens=max_tokens,
+                    max_completion_tokens=max_tokens,
                     temperature=temperature,
                     stop=stop,
                 )
@@ -411,21 +413,43 @@ IMPORTANT:
     def _validate_schema(self, data: Dict[str, Any], schema: Dict[str, Any]) -> bool:
         """基本 schema 驗證。
 
-        檢查必要的鍵是否存在。這是一個簡化的驗證，
-        不進行完整的 JSON Schema 驗證。
+        檢查必要的鍵是否存在。支援 JSON Schema 格式和簡單字典格式。
+        這是一個簡化的驗證，不進行完整的 JSON Schema 驗證。
 
         Args:
             data: 要驗證的數據
-            schema: 預期的 schema
+            schema: 預期的 schema（JSON Schema 格式或簡單字典）
 
         Returns:
             True 如果驗證通過
         """
-        # 簡單驗證：檢查頂層鍵
-        for key in schema:
-            if key not in data:
-                logger.warning(f"Schema validation: missing key '{key}'")
-                return False
+        # 檢查是否為 JSON Schema 格式 (包含 "properties" 鍵)
+        if "properties" in schema:
+            # JSON Schema 格式：檢查 properties 中定義的鍵
+            properties = schema["properties"]
+            required_keys = schema.get("required", [])
+
+            # 如果有 required 欄位，只檢查必需的鍵
+            if required_keys:
+                for key in required_keys:
+                    if key not in data:
+                        logger.warning(f"Schema validation: missing required key '{key}'")
+                        return False
+            else:
+                # 沒有 required 定義時，至少有一個 property 鍵存在即可
+                has_any_key = any(key in data for key in properties)
+                if not has_any_key and properties:
+                    logger.warning(
+                        f"Schema validation: data has none of expected keys {list(properties.keys())}"
+                    )
+                    return False
+        else:
+            # 簡單字典格式（向後兼容）：檢查頂層鍵
+            for key in schema:
+                if key not in data:
+                    logger.warning(f"Schema validation: missing key '{key}'")
+                    return False
+
         return True
 
     async def close(self) -> None:

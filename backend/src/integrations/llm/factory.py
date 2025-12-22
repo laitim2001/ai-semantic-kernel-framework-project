@@ -44,7 +44,7 @@ class LLMServiceFactory:
         # 使用自定義配置
         service = LLMServiceFactory.create(
             provider="azure",
-            deployment_name="gpt-4o",
+            deployment_name="gpt-5.2",
             max_retries=5,
         )
         ```

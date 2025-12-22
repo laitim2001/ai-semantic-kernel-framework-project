@@ -80,11 +80,12 @@ class AssistantManagerService:
             ConfigurationError: 當必要配置缺失時
         """
         # 延遲導入以避免循環依賴
-        from src.core.config import settings
+        from src.core.config import get_settings
+        settings = get_settings()
 
-        self._endpoint = endpoint or getattr(settings, 'AZURE_OPENAI_ENDPOINT', '')
-        self._api_key = api_key or getattr(settings, 'AZURE_OPENAI_API_KEY', '')
-        self._deployment = deployment or getattr(settings, 'AZURE_OPENAI_DEPLOYMENT_NAME', '')
+        self._endpoint = endpoint or settings.azure_openai_endpoint
+        self._api_key = api_key or settings.azure_openai_api_key
+        self._deployment = deployment or settings.azure_openai_deployment_name
         self._api_version = api_version
 
         # 驗證配置

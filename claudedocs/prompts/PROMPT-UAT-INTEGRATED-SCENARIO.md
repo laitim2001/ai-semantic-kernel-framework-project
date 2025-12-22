@@ -9,6 +9,29 @@
 **功能覆蓋**: 32 個功能 (26 主列表 + 6 Category 特有)
 **測試階段**: 12 個階段
 **預估執行時間**: 15-30 分鐘
+**LLM 整合**: Phase 7 自主決策能力 (Azure OpenAI GPT-4o)
+
+---
+
+## Phase 7 LLM 服務整合
+
+測試腳本整合了 Phase 7 LLM 服務基礎設施，實現**真正的 AI 自主決策**能力：
+
+| 功能 | 描述 | 使用場景 |
+|-----|------|---------|
+| 智慧分類 (#22) | LLM 直接進行工單分類 | Phase 2 |
+| 自主決策 (#23) | LLM 評估選項並自主選擇最佳方案 | Phase 6 |
+| 試錯學習 (#24) | LLM 分析失敗原因並學習改進 | Phase 6 |
+
+### 降級策略
+
+```
+真實 LLM (Azure OpenAI)
+    ↓ 若失敗
+API 調用 (Backend Planning API)
+    ↓ 若失敗
+模擬數據 (僅非 strict 模式)
+```
 
 ---
 
@@ -115,9 +138,17 @@ python scripts/uat/integrated_scenario/enterprise_outage_test.py --strict
 ```
 
 **如何判斷是否使用真實 LLM**：
-- ✅ 真實 LLM：測試輸出顯示 `[REAL API]` 標記
-- ❌ 模擬資料：測試輸出顯示 `(simulated)` 標記
+- ✅ 真實 LLM：測試輸出顯示 `[REAL LLM]` 標記
+- ✅ 真實 API：測試輸出顯示 `[REAL API]` 標記
+- ⚠️ API 模式：測試輸出顯示 `[API]` 標記（使用後端 API）
+- ❌ 模擬資料：測試輸出顯示 `[SIMULATED]` 或 `(simulated)` 標記
 - ❌ Strict 模式下若 API 失敗，測試將中止並報錯
+
+**Phase 7 LLM 服務標記**：
+- `[LLM] Azure OpenAI service ready` - 初始化成功
+- `[REAL LLM] Autonomous decision made by AI` - 真實 AI 決策
+- `[REAL LLM] Error learning active` - AI 錯誤學習啟用
+- `LLM Service Statistics` - 測試摘要中的 LLM 統計
 
 **Strict 模式行為**：
 - API 呼叫失敗時：立即中止測試，報告錯誤
@@ -180,6 +211,7 @@ Enterprise Critical System Outage Response Test
 ============================================================
 Testing 32 features across 12 phases
 Features: 26 from FEATURE-INDEX.md + 6 Category-specific
+[SUCCESS] [LLM] Azure OpenAI service ready for autonomous execution
 
 [Phase 1] Event Trigger & Multi-Source Ticket Reception
   - Creating master workflow...
@@ -189,6 +221,13 @@ Features: 26 from FEATURE-INDEX.md + 6 Category-specific
   [PASS] Phase 1 completed
 
 [Phase 2] Intelligent Classification & Task Decomposition
+  - [REAL LLM] Classification via Azure OpenAI...
+  ...
+
+[Phase 6] Autonomous Decision + Trial-and-Error
+  - [REAL LLM] Autonomous decision made by AI
+  - LLM reasoning: 考慮到系統緊急程度為 critical...
+  - [REAL LLM] Error learning active
   ...
 
 ============================================================
@@ -199,6 +238,17 @@ Total Features: 32
 Overall Pass Rate: XX.X%
 Phases Completed: 12/12
 Duration: XX:XX:XX
+
+API Call Statistics:
+  Real API Calls: XX (XX.X%)
+  Simulated: XX (XX.X%)
+  Mode: STRICT (no simulation allowed)
+
+LLM Service Statistics (Phase 7):
+  Total Calls: X
+  Successes: X (XX.X%)
+  Failures: 0
+  Provider: Azure OpenAI
 
 MAIN LIST FEATURES (FEATURE-INDEX.md)
 Total: 26 | Passed: XX | Failed: XX | Pending: XX
@@ -281,5 +331,5 @@ Total: 6 | Passed: XX | Failed: XX | Pending: XX
 ---
 
 **文件建立者**: Claude Code
-**最後更新**: 2025-12-20
-**版本**: 1.0
+**最後更新**: 2025-12-21
+**版本**: 1.1 (Phase 7 LLM 服務整合)

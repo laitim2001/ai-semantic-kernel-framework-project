@@ -36,7 +36,7 @@ class TestAzureOpenAILLMServiceInit:
 
         assert service.endpoint == "https://test.openai.azure.com/"
         assert service.api_key == "test-key"
-        assert service.deployment_name == "gpt-4o"  # 預設值
+        assert service.deployment_name == "gpt-5.2"  # 預設值
 
     def test_init_with_params(self):
         """測試使用參數初始化。"""
@@ -124,7 +124,7 @@ class TestAzureOpenAILLMServiceGenerate:
         )
 
         call_args = service._client.chat.completions.create.call_args
-        assert call_args.kwargs["max_tokens"] == 500
+        assert call_args.kwargs["max_completion_tokens"] == 500
         assert call_args.kwargs["temperature"] == 0.5
         assert call_args.kwargs["stop"] == ["END"]
 
@@ -359,6 +359,64 @@ class TestAzureOpenAILLMServiceValidateSchema:
         data = {"name": "John", "age": 30, "extra": "value"}
         schema = {"name": "string", "age": "number"}
 
+        assert service._validate_schema(data, schema) is True
+
+    def test_validate_json_schema_format_success(self, service):
+        """測試 JSON Schema 格式驗證成功。"""
+        data = {"classifications": [], "correlation": {}}
+        schema = {
+            "type": "object",
+            "properties": {
+                "classifications": {"type": "array"},
+                "correlation": {"type": "object"}
+            }
+        }
+
+        assert service._validate_schema(data, schema) is True
+
+    def test_validate_json_schema_format_with_required(self, service):
+        """測試 JSON Schema 格式帶 required 欄位。"""
+        data = {"selected_option": "reindex", "confidence": 0.9}
+        schema = {
+            "type": "object",
+            "properties": {
+                "selected_option": {"type": "string"},
+                "confidence": {"type": "number"},
+                "reasoning": {"type": "string"}
+            },
+            "required": ["selected_option", "confidence"]
+        }
+
+        # 缺少 reasoning 但不是 required，應該通過
+        assert service._validate_schema(data, schema) is True
+
+    def test_validate_json_schema_format_missing_required(self, service):
+        """測試 JSON Schema 格式缺少必需欄位。"""
+        data = {"selected_option": "reindex"}
+        schema = {
+            "type": "object",
+            "properties": {
+                "selected_option": {"type": "string"},
+                "confidence": {"type": "number"}
+            },
+            "required": ["selected_option", "confidence"]
+        }
+
+        # 缺少 required 的 confidence，應該失敗
+        assert service._validate_schema(data, schema) is False
+
+    def test_validate_json_schema_format_partial_match(self, service):
+        """測試 JSON Schema 格式部分匹配。"""
+        data = {"classifications": [{"ticket_id": "T1"}]}
+        schema = {
+            "type": "object",
+            "properties": {
+                "classifications": {"type": "array"},
+                "correlation": {"type": "object"}
+            }
+        }
+
+        # 只有 classifications，沒有 correlation，但至少有一個屬性存在
         assert service._validate_schema(data, schema) is True
 
 

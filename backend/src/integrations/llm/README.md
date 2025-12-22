@@ -143,7 +143,7 @@ from src.integrations.llm.azure_openai import AzureOpenAILLMService
 service = AzureOpenAILLMService(
     endpoint="https://your-resource.openai.azure.com/",
     api_key="your-api-key",
-    deployment_name="gpt-4o",
+    deployment_name="gpt-5.2",
     timeout=30
 )
 
@@ -288,7 +288,7 @@ adapter.with_trial_error(max_retries=3)
 # Azure OpenAI 必要配置
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_API_KEY=your-api-key
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
 
 # LLM 服務可選配置
 LLM_PROVIDER=azure_openai    # azure_openai | mock

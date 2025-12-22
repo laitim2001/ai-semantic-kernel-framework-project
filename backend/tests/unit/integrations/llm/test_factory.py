@@ -106,12 +106,12 @@ class TestLLMServiceFactoryAzure:
         service = LLMServiceFactory.create(
             provider="azure",
             singleton=False,
-            deployment_name="gpt-4o",
+            deployment_name="gpt-5.2",
             max_retries=5,
         )
 
         assert isinstance(service, AzureOpenAILLMService)
-        assert service.deployment_name == "gpt-4o"
+        assert service.deployment_name == "gpt-5.2"
         assert service.max_retries == 5
 
 

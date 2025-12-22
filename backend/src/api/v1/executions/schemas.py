@@ -169,3 +169,37 @@ class ResumeStatusResponse(BaseModel):
     pending_checkpoints: List[Dict[str, Any]] = Field(
         default_factory=list, description="List of pending checkpoints"
     )
+
+
+# =============================================================================
+# Phase 12: Graceful Shutdown Schemas
+# =============================================================================
+
+
+class ShutdownRequest(BaseModel):
+    """
+    Request for graceful shutdown of an execution.
+    """
+
+    reason: Optional[str] = Field(
+        None, description="Reason for shutdown"
+    )
+    cleanup_resources: bool = Field(
+        True, description="Whether to clean up resources"
+    )
+    save_checkpoint: bool = Field(
+        True, description="Whether to save final checkpoint"
+    )
+
+
+class ShutdownResponse(BaseModel):
+    """
+    Response for execution shutdown.
+    """
+
+    id: UUID = Field(..., description="Execution UUID")
+    status: str = Field(..., description="Final execution status")
+    message: str = Field(..., description="Shutdown message")
+    resources_cleaned: bool = Field(False, description="Whether resources were cleaned")
+    checkpoint_saved: bool = Field(False, description="Whether checkpoint was saved")
+    shutdown_at: datetime = Field(..., description="When shutdown occurred")

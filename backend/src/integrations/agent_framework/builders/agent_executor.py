@@ -532,7 +532,7 @@ class AgentExecutorAdapter:
 
         # 獲取模型配置
         model_config = config.model_config
-        model = model_config.get("azure_deployment_name") or model_config.get("model", "gpt-4o")
+        model = model_config.get("azure_deployment_name") or model_config.get("model", "gpt-5.2")
         temperature = model_config.get("temperature", 0.7)
         # 新版 OpenAI API 使用 max_completion_tokens 而非 max_tokens
         max_completion_tokens = model_config.get("max_completion_tokens") or model_config.get("max_tokens", 2000)

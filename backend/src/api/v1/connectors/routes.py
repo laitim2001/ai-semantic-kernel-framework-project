@@ -54,11 +54,63 @@ router = APIRouter(
 _registry: ConnectorRegistry = None
 
 
+def _register_default_connectors(registry: ConnectorRegistry) -> None:
+    """Register default connectors for UAT testing.
+
+    In production, connectors should be registered via configuration
+    or admin API. For UAT purposes, we register test connectors.
+    """
+    from src.domain.connectors.base import ConnectorConfig, AuthType
+
+    # Default test connectors for UAT
+    default_configs = [
+        ConnectorConfig(
+            name="servicenow",
+            connector_type="servicenow",
+            base_url="https://test.service-now.com",
+            auth_type=AuthType.NONE,
+            enabled=True,
+            options={"test_mode": True},
+        ),
+        ConnectorConfig(
+            name="dynamics365",
+            connector_type="dynamics365",
+            base_url="https://test.crm.dynamics.com",
+            auth_type=AuthType.NONE,
+            enabled=True,
+            options={"test_mode": True},
+        ),
+        ConnectorConfig(
+            name="sharepoint",
+            connector_type="sharepoint",
+            base_url="https://test.sharepoint.com",
+            auth_type=AuthType.NONE,
+            enabled=True,
+            options={"test_mode": True},
+        ),
+    ]
+
+    for config in default_configs:
+        try:
+            registry.register_from_config(config)
+            logger.info(f"Registered default connector: {config.name}")
+        except ValueError as e:
+            # Already registered, skip
+            logger.debug(f"Connector already registered: {config.name}")
+        except Exception as e:
+            # Log any unexpected errors
+            logger.error(f"Failed to register connector {config.name}: {e}")
+
+
 def get_registry() -> ConnectorRegistry:
     """Get or create connector registry."""
     global _registry
     if _registry is None:
+        logger.info("Creating new ConnectorRegistry...")
         _registry = ConnectorRegistry()
+        # Register default connectors for UAT testing
+        _register_default_connectors(_registry)
+        logger.info(f"ConnectorRegistry initialized with {len(_registry._connectors)} connectors")
     return _registry
 
 

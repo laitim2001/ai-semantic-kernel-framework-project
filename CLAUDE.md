@@ -223,7 +223,7 @@ REDIS_PASSWORD=redis_password
 # Azure OpenAI (for Agent Framework)
 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
 AZURE_OPENAI_API_KEY=<key>
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
 ```
 
 ---

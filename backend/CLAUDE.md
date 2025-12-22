@@ -218,7 +218,7 @@ REDIS_PASSWORD=redis_password
 # Azure OpenAI
 AZURE_OPENAI_ENDPOINT=https://xxx.openai.azure.com/
 AZURE_OPENAI_API_KEY=xxx
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
 ```
 
 ---

@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     # ==========================================================================
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""
-    azure_openai_deployment_name: str = "gpt-4o"
+    azure_openai_deployment_name: str = "gpt-5.2"
     azure_openai_api_version: str = "2024-02-15-preview"
 
     @property

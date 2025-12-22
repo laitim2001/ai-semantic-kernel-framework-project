@@ -17,7 +17,8 @@ Agent Framework Builders - Adapter Implementations
     ├── magentic.py           # MagenticBuilderAdapter (Sprint 17)
     ├── workflow_executor.py  # WorkflowExecutorAdapter (Sprint 18)
     ├── nested_workflow.py    # NestedWorkflowAdapter (Sprint 23)
-    └── planning.py           # PlanningAdapter (Sprint 24)
+    ├── planning.py           # PlanningAdapter (Sprint 24)
+    └── code_interpreter.py   # CodeInterpreterAdapter (Sprint 37)
 
     multiturn/                # MultiTurn 模組 (Sprint 24)
     ├── __init__.py           # 統一導出
@@ -439,6 +440,13 @@ from .agent_executor import (
     set_agent_executor_adapter,
 )
 
+# Sprint 37: S37-2 CodeInterpreterAdapter (Code Interpreter 適配器)
+from .code_interpreter import (
+    CodeInterpreterAdapter,
+    CodeInterpreterConfig,
+    ExecutionResult,
+)
+
 # Sprint 24: S24-3 MultiTurnAdapter (Multi-turn 整合)
 from ..multiturn import (
     MultiTurnAdapter,
@@ -790,4 +798,8 @@ __all__ = [
     "create_initialized_adapter",
     "get_agent_executor_adapter",
     "set_agent_executor_adapter",
+    # Sprint 37: S37-2 CodeInterpreterAdapter (Code Interpreter 適配器)
+    "CodeInterpreterAdapter",
+    "CodeInterpreterConfig",
+    "ExecutionResult",
 ]
