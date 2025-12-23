@@ -110,7 +110,7 @@ class SQLAlchemySessionRepository(SessionRepository):
             updated_at=session.updated_at,
             expires_at=session.expires_at,
             title=session.title,
-            metadata=session.metadata,
+            session_metadata=session.metadata,
         )
         self._db.add(db_session)
         await self._db.commit()
@@ -155,7 +155,7 @@ class SQLAlchemySessionRepository(SessionRepository):
                 expires_at=session.expires_at,
                 ended_at=session.ended_at,
                 title=session.title,
-                metadata=session.metadata,
+                session_metadata=session.metadata,
             )
         )
         await self._db.commit()
@@ -225,7 +225,7 @@ class SQLAlchemySessionRepository(SessionRepository):
             attachments_json=[a.to_dict() for a in message.attachments],
             tool_calls_json=[tc.to_dict() for tc in message.tool_calls],
             created_at=message.created_at,
-            metadata=message.metadata,
+            message_metadata=message.metadata,
         )
         self._db.add(db_message)
 
@@ -371,7 +371,7 @@ class SQLAlchemySessionRepository(SessionRepository):
             expires_at=db_session.expires_at,
             ended_at=db_session.ended_at,
             title=db_session.title,
-            metadata=db_session.metadata or {},
+            metadata=db_session.session_metadata or {},
         )
 
     def _message_to_domain(self, db_message: MessageModel) -> Message:
@@ -401,5 +401,5 @@ class SQLAlchemySessionRepository(SessionRepository):
             tool_calls=tool_calls,
             parent_id=str(db_message.parent_id) if db_message.parent_id else None,
             created_at=db_message.created_at,
-            metadata=db_message.metadata or {},
+            metadata=db_message.message_metadata or {},
         )

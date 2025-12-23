@@ -5,10 +5,13 @@ REST API endpoints for Session management.
 Provides CRUD operations for sessions and messages.
 """
 
-from typing import Optional, List
+from typing import Optional, List, AsyncGenerator
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from fastapi.responses import FileResponse
 import logging
+
+import redis.asyncio as aioredis
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.sessions.schemas import (
     CreateSessionRequest,
@@ -23,6 +26,7 @@ from src.api.v1.sessions.schemas import (
     AttachmentResponse,
     ErrorResponse,
 )
+from src.core.config import get_settings
 from src.domain.sessions.models import SessionStatus
 from src.domain.sessions.service import (
     SessionService,
@@ -31,31 +35,70 @@ from src.domain.sessions.service import (
     SessionNotActiveError,
     MessageLimitExceededError,
 )
+from src.domain.sessions.repository import SQLAlchemySessionRepository
+from src.domain.sessions.cache import SessionCache
+from src.infrastructure.database.session import get_session
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
-# ===== 依賴注入 (需要實際實現) =====
+# ===== Redis 連接管理 =====
 
-async def get_session_service() -> SessionService:
+_redis_client: Optional[aioredis.Redis] = None
+
+
+async def get_redis() -> aioredis.Redis:
+    """獲取 Redis 客戶端 (單例)"""
+    global _redis_client
+    if _redis_client is None:
+        settings = get_settings()
+        _redis_client = aioredis.Redis(
+            host=settings.redis_host,
+            port=settings.redis_port,
+            password=settings.redis_password if settings.redis_password else None,
+            decode_responses=True,
+        )
+    return _redis_client
+
+
+# ===== 依賴注入 =====
+
+async def get_session_service(
+    db: AsyncSession = Depends(get_session),
+) -> AsyncGenerator[SessionService, None]:
     """獲取 Session 服務 (依賴注入)
 
-    TODO: 實現實際的依賴注入
+    創建完整的 SessionService 實例，包括:
+    - SQLAlchemySessionRepository: 資料庫存取
+    - SessionCache: Redis 快取
+    - SessionEventPublisher: 事件發布 (使用預設)
     """
-    # 這裡應該返回實際的 SessionService 實例
-    # 需要與 FastAPI 的依賴注入系統整合
-    raise NotImplementedError("SessionService dependency not configured")
+    # 獲取 Redis 客戶端
+    redis_client = await get_redis()
+
+    # 創建 Repository 和 Cache
+    repository = SQLAlchemySessionRepository(db)
+    cache = SessionCache(redis_client)
+
+    # 創建 SessionService
+    service = SessionService(repository=repository, cache=cache)
+
+    yield service
 
 
 async def get_current_user_id() -> str:
     """獲取當前用戶 ID (依賴注入)
 
-    TODO: 實現實際的認證
+    NOTE: 目前返回預設用戶 ID，實際應用需整合認證系統
+    - 整合 JWT Token 驗證
+    - 從 Authorization header 提取用戶 ID
+    - 驗證用戶權限
     """
-    # 這裡應該從 JWT token 或 session 中獲取用戶 ID
-    raise NotImplementedError("Authentication not configured")
+    # 預設用戶 ID (開發/測試用) - 必須是有效的 UUID 格式
+    # 在生產環境中，應從 JWT token 或 session 提取
+    return "00000000-0000-0000-0000-000000000001"
 
 
 # ===== Session CRUD =====

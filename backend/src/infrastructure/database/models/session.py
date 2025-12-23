@@ -77,8 +77,8 @@ class SessionModel(Base, UUIDMixin, TimestampMixin):
         nullable=True,
     )
 
-    # 元數據
-    metadata: Mapped[dict] = mapped_column(
+    # 元數據 (使用 session_metadata 避免 SQLAlchemy 保留字衝突)
+    session_metadata: Mapped[dict] = mapped_column(
         JSONB,
         nullable=False,
         default=dict,
@@ -161,8 +161,8 @@ class MessageModel(Base, UUIDMixin):
         default=datetime.utcnow,
     )
 
-    # 元數據
-    metadata: Mapped[dict] = mapped_column(
+    # 元數據 (使用 message_metadata 避免 SQLAlchemy 保留字衝突)
+    message_metadata: Mapped[dict] = mapped_column(
         JSONB,
         nullable=False,
         default=dict,
@@ -239,8 +239,8 @@ class AttachmentModel(Base, UUIDMixin):
         default=datetime.utcnow,
     )
 
-    # 元數據
-    metadata: Mapped[dict] = mapped_column(
+    # 元數據 (使用 attachment_metadata 避免 SQLAlchemy 保留字衝突)
+    attachment_metadata: Mapped[dict] = mapped_column(
         JSONB,
         nullable=False,
         default=dict,
