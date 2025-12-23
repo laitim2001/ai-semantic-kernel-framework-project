@@ -153,12 +153,14 @@ async def execute_code(
 
         # Convert files to response format (handle None)
         files = []
+        container_id = result.metadata.get("container_id") if result.metadata else None
         if result.files:
             files = [
                 schemas.FileOutput(
                     type=f.get("type", "file"),
                     file_id=f.get("file_id", ""),
                     filename=f.get("filename"),
+                    container_id=f.get("container_id") or container_id,
                 )
                 for f in result.files
             ]
@@ -174,6 +176,7 @@ async def execute_code(
                 code_outputs=result.metadata.get("code_outputs", []),
                 api_mode=result.metadata.get("api_mode"),
                 response_id=result.metadata.get("response_id"),
+                container_id=container_id,
             ) if result.metadata else None,
         )
 
@@ -244,12 +247,14 @@ async def analyze_task(
 
         # Convert files to response format (handle None)
         files = []
+        container_id = result.metadata.get("container_id") if result.metadata else None
         if result.files:
             files = [
                 schemas.FileOutput(
                     type=f.get("type", "file"),
                     file_id=f.get("file_id", ""),
                     filename=f.get("filename"),
+                    container_id=f.get("container_id") or container_id,
                 )
                 for f in result.files
             ]
@@ -668,4 +673,107 @@ async def delete_file(file_id: str) -> schemas.FileDeleteResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"File deletion failed: {str(e)}"
+        )
+
+
+# =============================================================================
+# Code Interpreter Sandbox File Download (Sprint 38)
+# =============================================================================
+
+@router.get(
+    "/sandbox/containers/{container_id}/files/{file_id}",
+    summary="下載沙盒生成的檔案",
+    description="從 Code Interpreter 沙盒下載生成的檔案（如圖表、報告等）",
+)
+async def download_sandbox_file(
+    container_id: str,
+    file_id: str,
+    session_id: Optional[str] = Query(None, description="可選的會話 ID"),
+) -> StreamingResponse:
+    """
+    下載 Code Interpreter 沙盒中生成的檔案。
+
+    使用 Azure OpenAI Container Files API 端點:
+    {AOAI_ENDPOINT}/openai/v1/containers/{container_id}/files/{file_id}/content
+
+    Args:
+        container_id: 容器 ID (從執行結果的 metadata.container_id 獲取)
+        file_id: 檔案 ID (從執行結果的 files[].file_id 獲取)
+        session_id: 可選的會話 ID
+
+    Returns:
+        StreamingResponse: 檔案內容
+
+    Raises:
+        HTTPException: 當下載失敗時
+    """
+    try:
+        # Get or create adapter
+        adapter = None
+        if session_id:
+            adapter = _get_session(session_id)
+
+        # Create new adapter if no session
+        if adapter is None:
+            config = CodeInterpreterConfig(timeout=60)
+            adapter = CodeInterpreterAdapter(config=config)
+
+        # Download file from sandbox
+        logger.info(f"Downloading sandbox file: container={container_id}, file={file_id}")
+        content = adapter.download_file(container_id, file_id)
+
+        # Determine content type based on file extension or default to binary
+        content_type = "application/octet-stream"
+        filename = file_id
+
+        # Try to infer content type from common patterns
+        if "png" in file_id.lower() or file_id.endswith(".png"):
+            content_type = "image/png"
+            if not filename.endswith(".png"):
+                filename = f"{file_id}.png"
+        elif "jpg" in file_id.lower() or "jpeg" in file_id.lower():
+            content_type = "image/jpeg"
+        elif "csv" in file_id.lower():
+            content_type = "text/csv"
+        elif "json" in file_id.lower():
+            content_type = "application/json"
+        elif "pdf" in file_id.lower():
+            content_type = "application/pdf"
+
+        # Cleanup if no session was used
+        if not session_id:
+            adapter.cleanup()
+
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Length": str(len(content)),
+            }
+        )
+
+    except ValueError as e:
+        logger.error(f"Validation error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except ConfigurationError as e:
+        logger.error(f"Configuration error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Service not configured: {str(e)}"
+        )
+    except Exception as e:
+        error_msg = str(e)
+        if "not found" in error_msg.lower() or "404" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"File not found: container_id={container_id}, file_id={file_id}"
+            )
+        logger.error(f"Sandbox file download failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Sandbox file download failed: {str(e)}"
         )

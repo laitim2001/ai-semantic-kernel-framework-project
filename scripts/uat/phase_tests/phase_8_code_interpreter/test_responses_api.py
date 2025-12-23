@@ -24,7 +24,7 @@ import httpx
 
 # Configuration
 BASE_URL = "http://localhost:8000"
-TIMEOUT = 120.0
+TIMEOUT = 300.0  # 5 minutes for complex AI analysis (Azure OpenAI may take 140-150s)
 
 
 def print_separator(title: str = ""):
@@ -272,9 +272,13 @@ print("Chart generated successfully!")
 
             if success:
                 files = data.get("files", [])
+                metadata = data.get("metadata", {})
+                container_id = metadata.get("container_id")
+
                 print(f"[PASS] Chart generation complete!")
                 print(f"       Time: {data.get('execution_time', 0):.2f}s")
                 print(f"       Files generated: {len(files)}")
+                print(f"       Container ID: {container_id or 'N/A'}")
 
                 # Show execution process
                 print_execution_steps(data)
@@ -282,9 +286,12 @@ print("Chart generated successfully!")
                 if files:
                     print("\n[Generated Files]")
                     for f in files:
-                        print(f"  - Type: {f.get('type')}, File ID: {f.get('file_id', 'N/A')}")
+                        file_id = f.get('file_id', 'N/A')
+                        file_container_id = f.get('container_id') or container_id
+                        print(f"  - Type: {f.get('type')}, File ID: {file_id}")
+                        print(f"    Container ID: {file_container_id or 'N/A'}")
 
-                return {"status": "pass", "data": data}
+                return {"status": "pass", "data": data, "container_id": container_id, "files": files}
             else:
                 print(f"[FAIL] Chart generation failed: {data.get('error')}")
                 return {"status": "fail", "error": data.get("error")}
@@ -296,6 +303,72 @@ print("Chart generated successfully!")
     except Exception as e:
         print(f"[FAIL] Error: {e}")
         return {"status": "fail", "error": str(e)}
+
+
+async def test_file_download(
+    client: httpx.AsyncClient,
+    session_id: str,
+    container_id: Optional[str],
+    files: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Step 5: Download generated files from sandbox."""
+    print("\n[Step 5] Download Sandbox Files")
+    print_separator()
+
+    if not container_id or not files:
+        print(f"[SKIP] No container_id or files available for download")
+        print(f"       container_id: {container_id}")
+        print(f"       files count: {len(files) if files else 0}")
+        return {"status": "skip", "message": "No files to download"}
+
+    downloaded_count = 0
+
+    for f in files:
+        file_id = f.get("file_id")
+        file_container_id = f.get("container_id") or container_id
+
+        if not file_id or not file_container_id:
+            print(f"  [SKIP] Missing file_id or container_id")
+            continue
+
+        try:
+            print(f"  Downloading: file_id={file_id}")
+            print(f"               container_id={file_container_id}")
+
+            download_url = f"{BASE_URL}/api/v1/code-interpreter/sandbox/containers/{file_container_id}/files/{file_id}"
+
+            response = await client.get(
+                download_url,
+                params={"session_id": session_id},
+                timeout=60.0
+            )
+
+            if response.status_code == 200:
+                content = response.content
+                content_type = response.headers.get("content-type", "unknown")
+
+                # Save to local file
+                local_filename = f"downloaded_{file_id}.png" if "image" in content_type else f"downloaded_{file_id}"
+                with open(local_filename, "wb") as out_file:
+                    out_file.write(content)
+
+                print(f"  [PASS] Downloaded: {len(content)} bytes")
+                print(f"         Content-Type: {content_type}")
+                print(f"         Saved to: {local_filename}")
+                downloaded_count += 1
+            else:
+                print(f"  [FAIL] HTTP {response.status_code}")
+                print(f"         Error: {response.text[:200]}")
+
+        except Exception as e:
+            print(f"  [FAIL] Download error: {e}")
+
+    if downloaded_count > 0:
+        print(f"\n[PASS] Successfully downloaded {downloaded_count}/{len(files)} files")
+        return {"status": "pass", "downloaded": downloaded_count, "total": len(files)}
+    else:
+        print(f"\n[WARN] No files were downloaded")
+        return {"status": "warn", "downloaded": 0, "total": len(files)}
 
 
 async def test_create_session(client: httpx.AsyncClient) -> Dict[str, Any]:
@@ -376,6 +449,12 @@ async def run_tests():
         results["execute_code"] = await test_responses_api_execute(client, session_id)
         results["analyze_data"] = await test_responses_api_analyze(client, session_id)
         results["generate_chart"] = await test_responses_api_chart(client, session_id)
+
+        # Test file download (if chart generation produced files)
+        chart_result = results.get("generate_chart", {})
+        container_id = chart_result.get("container_id")
+        files = chart_result.get("files", [])
+        results["file_download"] = await test_file_download(client, session_id, container_id, files)
 
         # Cleanup
         results["cleanup"] = await test_cleanup_session(client, session_id)

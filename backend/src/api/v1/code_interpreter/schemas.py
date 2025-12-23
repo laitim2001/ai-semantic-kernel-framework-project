@@ -113,6 +113,7 @@ class FileOutput(BaseModel):
     type: str = Field(..., description="文件類型 (file, image)")
     file_id: str = Field(..., description="文件 ID")
     filename: Optional[str] = Field(default=None, description="文件名")
+    container_id: Optional[str] = Field(default=None, description="容器 ID (用於下載生成的檔案)")
 
 
 class CodeOutput(BaseModel):
@@ -133,6 +134,7 @@ class ExecutionMetadata(BaseModel):
     )
     api_mode: Optional[str] = Field(default=None, description="API 模式 (responses/assistants)")
     response_id: Optional[str] = Field(default=None, description="Responses API 回應 ID")
+    container_id: Optional[str] = Field(default=None, description="容器 ID (用於下載生成的檔案)")
 
 
 class CodeExecuteResponse(BaseModel):

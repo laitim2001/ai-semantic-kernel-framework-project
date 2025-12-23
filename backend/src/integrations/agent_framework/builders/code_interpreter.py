@@ -123,42 +123,97 @@ class ExecutionResult:
         code_outputs = []
         files = []
         error = None
+        container_id = None
 
         try:
+            logger.info(f"Parsing Responses API response: id={getattr(response, 'id', 'N/A')}")
+
             # 解析 Responses API 輸出
-            logger.debug(f"Parsing response: has output={hasattr(response, 'output')}")
+            logger.info(f"Parsing response: has output={hasattr(response, 'output')}, container_id={container_id}")
             if hasattr(response, 'output') and response.output is not None:
-                logger.debug(f"Output items count: {len(response.output) if hasattr(response.output, '__len__') else 'N/A'}")
+                output_count = len(response.output) if hasattr(response.output, '__len__') else 0
+                logger.info(f"Output items count: {output_count}")
                 for idx, item in enumerate(response.output):
-                    logger.debug(f"Processing item {idx}: type={getattr(item, 'type', 'unknown')}")
+                    item_type = getattr(item, 'type', 'unknown')
+                    logger.info(f"Processing item {idx}: type={item_type}")
                     if hasattr(item, 'type'):
-                        if item.type == 'message':
-                            # 提取文字內容
-                            contents = getattr(item, 'content', []) or []
-                            logger.debug(f"Message contents: {len(contents) if hasattr(contents, '__len__') else 'N/A'}")
-                            for content in contents:
-                                if hasattr(content, 'text'):
-                                    output_text += content.text + "\n"
-                        elif item.type == 'code_interpreter_call':
+                        if item.type == 'code_interpreter_call':
+                            # 優先處理 code_interpreter_call 以獲取 container_id
+                            item_container_id = getattr(item, 'container_id', None)
+                            logger.info(f"code_interpreter_call: container_id={item_container_id}")
+                            if item_container_id:
+                                container_id = item_container_id
+
                             # 提取代碼執行結果
                             code_info = {
                                 "id": getattr(item, 'id', ''),
                                 "code": getattr(item, 'code', ''),
+                                "container_id": item_container_id or container_id,
                             }
                             code_outputs.append(code_info)
-                            outputs_value = getattr(item, 'outputs', None)
-                            logger.debug(f"code_interpreter_call outputs: {outputs_value}")
-                            if outputs_value is not None:
-                                for out in outputs_value:
-                                    if hasattr(out, 'type'):
-                                        if out.type == 'logs':
-                                            logs_value = getattr(out, 'logs', '') or ''
-                                            output_text += logs_value + "\n"
-                                        elif out.type == 'image':
-                                            files.append({
-                                                "type": "image",
-                                                "file_id": getattr(out, 'file_id', ''),
-                                            })
+
+                # 第二次遍歷處理 message 類型 (確保 container_id 已設置)
+                for idx, item in enumerate(response.output):
+                    if hasattr(item, 'type') and item.type == 'message':
+                        # 提取文字內容
+                        contents = getattr(item, 'content', []) or []
+                        logger.info(f"Message contents count: {len(contents) if contents else 0}")
+                        for content in contents:
+                            if hasattr(content, 'text'):
+                                output_text += content.text + "\n"
+                            # 檢查 annotations 中的檔案資訊
+                            annotations = getattr(content, 'annotations', None)
+                            logger.info(f"Content annotations: {annotations is not None}, count={len(annotations) if annotations else 0}")
+                            if annotations:
+                                for ann in annotations:
+                                    ann_type = getattr(ann, 'type', 'unknown')
+                                    logger.info(f"Annotation type: {ann_type}")
+                                    if ann_type == 'container_file_citation':
+                                        file_info = {
+                                            "type": "file",
+                                            "file_id": getattr(ann, 'file_id', ''),
+                                            "container_id": getattr(ann, 'container_id', '') or container_id,
+                                            "filename": getattr(ann, 'filename', ''),
+                                        }
+                                        logger.info(f"Found file in annotations: {file_info}")
+                                        if file_info["file_id"]:
+                                            files.append(file_info)
+                                            logger.info(f"Added file to list: {file_info}")
+
+                # 處理 code_interpreter_call 的 outputs
+                for idx, item in enumerate(response.output):
+                    if hasattr(item, 'type') and item.type == 'code_interpreter_call':
+                        item_container_id = getattr(item, 'container_id', None) or container_id
+                        outputs_value = getattr(item, 'outputs', None)
+                        logger.info(f"code_interpreter_call outputs: {outputs_value is not None}")
+                        if outputs_value is not None:
+                            for out in outputs_value:
+                                if hasattr(out, 'type'):
+                                    if out.type == 'logs':
+                                        logs_value = getattr(out, 'logs', '') or ''
+                                        output_text += logs_value + "\n"
+                                    elif out.type == 'image':
+                                        file_info = {
+                                            "type": "image",
+                                            "file_id": getattr(out, 'file_id', ''),
+                                            "container_id": item_container_id or container_id,
+                                        }
+                                        files.append(file_info)
+                                        logger.info(f"Found image output: {file_info}")
+                                    elif out.type == 'files':
+                                        # 處理 files 類型的輸出
+                                        for f in (getattr(out, 'files', []) or []):
+                                            file_info = {
+                                                "type": "file",
+                                                "file_id": getattr(f, 'file_id', ''),
+                                                "container_id": item_container_id or container_id,
+                                                "filename": getattr(f, 'name', ''),
+                                            }
+                                            if file_info["file_id"]:
+                                                files.append(file_info)
+                                                logger.info(f"Found file output: {file_info}")
+
+            logger.info(f"Final result: container_id={container_id}, files_count={len(files)}")
 
             # 備用: 嘗試 output_text 屬性
             if not output_text and hasattr(response, 'output_text'):
@@ -184,6 +239,7 @@ class ExecutionResult:
                 "code_outputs": code_outputs,
                 "api_mode": "responses",
                 "response_id": getattr(response, 'id', ''),
+                "container_id": container_id,
             },
         )
 
@@ -623,6 +679,125 @@ class CodeInterpreterAdapter:
                 error=str(e),
                 metadata={"api_mode": "responses", "method": "simple"},
             )
+
+    def download_file(
+        self,
+        container_id: str,
+        file_id: str,
+    ) -> bytes:
+        """從 Code Interpreter 沙盒下載生成的檔案。
+
+        使用 Azure OpenAI Container Files API 下載檔案。
+        端點格式: {AOAI_ENDPOINT}/openai/v1/containers/{container_id}/files/{file_id}/content
+
+        Args:
+            container_id: 沙盒容器 ID (從 ExecutionResult.metadata["container_id"] 獲取)
+            file_id: 檔案 ID (從 ExecutionResult.files[n]["file_id"] 獲取)
+
+        Returns:
+            檔案內容 (bytes)
+
+        Raises:
+            ConfigurationError: 當 Azure OpenAI 未配置時
+            ValueError: 當 container_id 或 file_id 為空時
+            Exception: 當下載失敗時
+
+        Example:
+            ```python
+            result = adapter.execute(code_that_generates_chart)
+            if result.files:
+                file_info = result.files[0]
+                container_id = file_info.get("container_id") or result.metadata.get("container_id")
+                content = adapter.download_file(container_id, file_info["file_id"])
+                with open("chart.png", "wb") as f:
+                    f.write(content)
+            ```
+        """
+        import httpx
+
+        if not container_id:
+            raise ValueError("container_id is required for file download")
+        if not file_id:
+            raise ValueError("file_id is required for file download")
+
+        try:
+            from src.core.config import get_settings
+            settings = get_settings()
+
+            endpoint = self._config.azure_endpoint or settings.azure_openai_endpoint
+            api_key = self._config.api_key or settings.azure_openai_api_key
+
+            if not endpoint or not api_key:
+                raise ConfigurationError(
+                    "Azure OpenAI endpoint and API key are required for file download"
+                )
+
+            # 構建下載 URL
+            # 根據 Microsoft Q&A 社區解決方案，Responses API Container Files 正確格式為:
+            # GET {endpoint}/openai/v1/containers/{container_id}/files/{file_id}/content
+            # 參考: https://learn.microsoft.com/en-us/answers/questions/5534977
+            download_url = f"{endpoint.rstrip('/')}/openai/v1/containers/{container_id}/files/{file_id}/content"
+
+            logger.info(f"Downloading container file: container_id={container_id}, file_id={file_id}")
+            logger.info(f"Download URL: {download_url}")
+
+            # 使用 httpx 下載
+            # 嘗試多個 API 版本 (Container Files API 可能需要特定版本)
+            api_versions = [
+                "preview",             # 社區推薦的版本
+                "2025-03-01-preview",  # Responses API 版本
+                "2024-10-01-preview",  # 較舊版本
+            ]
+
+            last_error = None
+            for api_version in api_versions:
+                with httpx.Client(timeout=60.0) as client:
+                    logger.info(f"Trying Container Files API with api-version={api_version}")
+                    response = client.get(
+                        download_url,
+                        headers={
+                            "api-key": api_key,
+                        },
+                        params={"api-version": api_version},
+                    )
+
+                    if response.status_code == 200:
+                        content = response.content
+                        logger.info(f"File downloaded successfully with {api_version}: {len(content)} bytes")
+                        return content
+                    elif response.status_code == 400:
+                        # API 版本問題，嘗試下一個
+                        last_error = f"api-version {api_version}: {response.text[:200]}"
+                        logger.warning(f"API version {api_version} failed (400), trying next...")
+                        continue
+                    elif response.status_code == 404:
+                        # 容器或檔案不存在，可能是 Azure 尚未完全支援
+                        last_error = f"Container/file not found (404): {response.text[:200]}"
+                        logger.warning(f"API version {api_version} returned 404, trying next...")
+                        continue
+                    else:
+                        last_error = f"HTTP {response.status_code} - {response.text[:200]}"
+                        logger.warning(f"Failed with {api_version}: {last_error}")
+                        continue
+
+            # 所有版本都失敗 - 可能是 Azure 尚未完全支援此功能
+            error_msg = (
+                f"Container file download failed after trying all API versions. "
+                f"Last error: {last_error}. "
+                f"Note: Azure OpenAI may not fully support container file downloads yet. "
+                f"See: https://learn.microsoft.com/en-us/answers/questions/5508278"
+            )
+            logger.error(error_msg)
+            raise Exception(error_msg)
+
+        except httpx.TimeoutException as e:
+            logger.error(f"File download timeout: {e}")
+            raise Exception(f"File download timeout: {e}")
+        except Exception as e:
+            if isinstance(e, (ValueError, ConfigurationError)):
+                raise
+            logger.error(f"File download failed: {e}")
+            raise Exception(f"File download failed: {e}")
 
     def cleanup(self) -> bool:
         """清理資源，刪除 Assistant。
