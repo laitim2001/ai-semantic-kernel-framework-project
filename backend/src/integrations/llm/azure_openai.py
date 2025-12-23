@@ -74,7 +74,7 @@ class AzureOpenAILLMService:
         deployment_name: Optional[str] = None,
         api_version: str = "2024-02-01",
         max_retries: int = 3,
-        timeout: float = 60.0,
+        timeout: float = 180.0,  # 增加到 180 秒以支援複雜 AI 分析
     ):
         """初始化 Azure OpenAI 服務。
 
@@ -84,7 +84,7 @@ class AzureOpenAILLMService:
             deployment_name: 部署名稱，如未提供則從環境變量讀取
             api_version: API 版本，預設 2024-02-01
             max_retries: 最大重試次數，預設 3
-            timeout: 請求超時時間（秒），預設 60
+            timeout: 請求超時時間（秒），預設 180（支援複雜 AI 分析）
 
         Raises:
             ValueError: 當必要參數缺失時
