@@ -28,7 +28,7 @@ import httpx
 
 # Configuration
 BASE_URL = "http://localhost:8000"
-TIMEOUT = 120.0
+TIMEOUT = 300.0  # 5 minutes for complex AI analysis
 
 
 def print_separator(title: str = ""):
@@ -108,7 +108,11 @@ async def test_mcp_servers_list(client: httpx.AsyncClient) -> Dict[str, Any]:
 
         if response.status_code == 200:
             data = response.json()
-            servers = data.get("servers", data.get("data", []))
+            # Handle both list response and dict response
+            if isinstance(data, list):
+                servers = data
+            else:
+                servers = data.get("servers", data.get("data", []))
             print(f"[PASS] Found {len(servers)} MCP servers")
             for server in servers[:5]:
                 name = server.get("name", server) if isinstance(server, dict) else server
