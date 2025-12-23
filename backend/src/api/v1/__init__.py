@@ -34,6 +34,7 @@
 #   - nested: Nested workflows and advanced orchestration (Sprint 11)
 #   - performance: Performance monitoring and optimization (Sprint 12)
 #   - code_interpreter: Code Interpreter integration (Sprint 37)
+#   - mcp: MCP Architecture - Server management, tool discovery (Sprint 39-41)
 # =============================================================================
 
 from fastapi import APIRouter
@@ -51,6 +52,7 @@ from src.api.v1.executions.routes import router as executions_router
 from src.api.v1.groupchat.routes import router as groupchat_router
 from src.api.v1.handoff.routes import router as handoff_router
 from src.api.v1.learning.routes import router as learning_router
+from src.api.v1.mcp.routes import router as mcp_router
 from src.api.v1.nested.routes import router as nested_router
 from src.api.v1.notifications.routes import router as notifications_router
 from src.api.v1.performance.routes import router as performance_router
@@ -93,5 +95,8 @@ api_router.include_router(performance_router)  # Sprint 12: Performance Monitori
 
 # Include sub-routers - Phase 8 (Code Interpreter Integration)
 api_router.include_router(code_interpreter_router)  # Sprint 37: Code Interpreter
+
+# Include sub-routers - Phase 9 (MCP Architecture)
+api_router.include_router(mcp_router)  # Sprint 39-41: MCP Architecture
 
 __all__ = ["api_router"]
