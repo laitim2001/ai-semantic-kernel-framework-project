@@ -82,7 +82,15 @@
       "Bash(cmd /c:*)",
       "Bash(curl.exe:*)",
       "Bash(git -C \"C:\\\\Users\\\\rci.ChrisLai\\\\Documents\\\\GitHub\\\\ai-semantic-kernel-framework-project\" status)",
-      "Bash(git -C \"C:\\\\Users\\\\rci.ChrisLai\\\\Documents\\\\GitHub\\\\ai-semantic-kernel-framework-project\" add -A)"
+      "Bash(git -C \"C:\\\\Users\\\\rci.ChrisLai\\\\Documents\\\\GitHub\\\\ai-semantic-kernel-framework-project\" add -A)",
+      "Bash(git -C \"ai-semantic-kernel-framework-project\" log --oneline -5)",
+      "Bash(git -C \"C:\\\\Users\\\\CLai03\\\\Documents\\\\GitHub\\\\ai-semantic-kernel-framework-project\\\\ai-semantic-kernel-framework-project\" status --short)",
+      "Bash(git rev-list:*)",
+      "Bash(for f in \"CLAUDE.md\" \"docker-compose.yml\" \"backend/main.py\" \"backend/requirements.txt\" \"frontend/package.json\")",
+      "Bash(do if [ -f \"$f\" ])",
+      "Bash(then echo \"✅ $f\")",
+      "Bash(else echo \"❌ $f MISSING\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []
