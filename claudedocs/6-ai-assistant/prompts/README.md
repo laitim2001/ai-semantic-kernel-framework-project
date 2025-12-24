@@ -1,393 +1,187 @@
-# AI Assistant Prompts Library
-# AI 助手標準化 Prompt 庫
+# 🤖 AI 助手 Prompt 庫
 
-> **版本**: v2.0.0
-> **專案**: Microsoft Agent Framework Platform (IPA)
-> **更新日期**: 2025-11-20
-
----
-
-## 📚 Prompt 文件清單
-
-### 專案啟動與準備
-
-| Prompt ID | 文件名 | 用途 | 變數支援 | 行數 |
-|-----------|--------|------|----------|------|
-| **PROMPT-01** | [PROJECT-ONBOARDING.md](./PROMPT-01-PROJECT-ONBOARDING.md) | 新專案/新開發者上手 | ❌ 無 | ~120 |
-| **PROMPT-02** | [NEW-SPRINT-PREP.md](./PROMPT-02-NEW-SPRINT-PREP.md) | 準備開始新 Sprint Story | ✅ Sprint ID, Story ID | ~220 |
-| **PROMPT-03** | [BUG-FIX-PREP.md](./PROMPT-03-BUG-FIX-PREP.md) | 準備修復 Bug | ✅ Bug ID | ~180 |
-
-### 開發與實施
-
-| Prompt ID | 文件名 | 用途 | 變數支援 | 行數 |
-|-----------|--------|------|----------|------|
-| **PROMPT-04** | [SPRINT-DEVELOPMENT.md](./PROMPT-04-SPRINT-DEVELOPMENT.md) | 執行 Sprint Story 開發 | ✅ Sprint ID, Story ID | ~170 |
-| **PROMPT-05** | [TESTING-PHASE.md](./PROMPT-05-TESTING-PHASE.md) | 執行測試階段 | ✅ Story ID | ~190 |
-| **PROMPT-06** | [PROGRESS-SAVE.md](./PROMPT-06-PROGRESS-SAVE.md) | 保存進度和狀態 | ✅ Sprint ID, Story ID | ~300 |
-
-### 審查與質量
-
-| Prompt ID | 文件名 | 用途 | 變數支援 | 行數 |
-|-----------|--------|------|----------|------|
-| **PROMPT-07** | [ARCHITECTURE-REVIEW.md](./PROMPT-07-ARCHITECTURE-REVIEW.md) | 架構審查和分析 | ❌ 無 | ~290 |
-| **PROMPT-08** | [CODE-REVIEW.md](./PROMPT-08-CODE-REVIEW.md) | 代碼質量審查 | ✅ 文件/目錄路徑 | ~270 |
-
-### 完成與總結
-
-| Prompt ID | 文件名 | 用途 | 變數支援 | 行數 |
-|-----------|--------|------|----------|------|
-| **PROMPT-09** | [SESSION-END.md](./PROMPT-09-SESSION-END.md) | Session 結束總結 | ❌ 無 | ~260 |
-
-### UAT 測試
-
-| Prompt ID | 文件名 | 用途 | 變數支援 | 行數 |
-|-----------|--------|------|----------|------|
-| **PROMPT-10** | [UAT-SESSION.md](./PROMPT-10-UAT-SESSION.md) | UAT 測試會話管理 | ✅ ACTION, MODULE | ~280 |
-| **PROMPT-11** | [UAT-ISSUE.md](./PROMPT-11-UAT-ISSUE.md) | UAT 問題記錄 | ✅ MODULE, DESCRIPTION | ~320 |
-| **PROMPT-12** | [UAT-FIX.md](./PROMPT-12-UAT-FIX.md) | UAT 問題修復 | ✅ ISSUE_ID | ~350 |
+> **版本**: v3.1.0
+> **專案**: IPA Platform (Intelligent Process Automation)
+> **更新日期**: 2025-12-24
+> **狀態**: Phase 11 完成 - Agent-Session Integration
 
 ---
 
-## 🎯 設計理念 (v2.0.0)
+## 📚 情況指引清單
+
+### 開發準備
+
+| 情況 | 文件 | 用途 |
+|------|------|------|
+| 🚀 **情況1** | [專案入門](./SITUATION-1-PROJECT-ONBOARDING.md) | 新開發者或新會話開始時，快速了解專案 |
+| 🎯 **情況2** | [開發任務準備](./SITUATION-2-FEATURE-DEV-PREP.md) | 開始新開發任務前的準備工作 |
+
+### 開發實施
+
+| 情況 | 文件 | 用途 |
+|------|------|------|
+| 🐛 **情況3** | [Bug 修復](./SITUATION-3-BUG-FIX.md) | 處理 Bug 和錯誤修復 |
+| 🚀 **情況4** | [功能開發](./SITUATION-4-FEATURE-DEVELOPMENT.md) | 實作新功能的標準流程 |
+| 🧪 **情況5** | [測試執行](./SITUATION-5-TESTING.md) | 運行和編寫測試 |
+| 🔄 **情況11** | [功能修改/更新](./SITUATION-11-FEATURE-UPDATE.md) | 修改、更新或重構現有功能 |
+
+### 進度管理
+
+| 情況 | 文件 | 用途 |
+|------|------|------|
+| 💾 **情況6** | [保存進度](./SITUATION-6-SAVE-PROGRESS.md) | 提交和保存開發成果 |
+| 🔚 **情況9** | [Session 結束](./SITUATION-9-SESSION-END.md) | 結束開發會話 |
+
+### 審查與驗證
+
+| 情況 | 文件 | 用途 |
+|------|------|------|
+| 🏗️ **情況7** | [架構審查](./SITUATION-7-ARCHITECTURE-REVIEW.md) | 評估和改進系統架構 |
+| 👀 **情況8** | [代碼審查](./SITUATION-8-CODE-REVIEW.md) | 審查代碼變更和 PR |
+| 🎯 **情況10** | [UAT 測試](./SITUATION-10-UAT-SESSION.md) | 用戶驗收測試會話 |
+
+---
+
+## 🎯 設計理念 (v3.0.0)
 
 ### 核心原則
 
-1. **AI 自主讀取**:
-   - 格式: `@PROMPT-XX.md [變數]`
-   - AI 自動讀取並執行,無需人工複製貼上
+1. **情境導向**
+   - 根據開發者的實際工作情境設計
+   - 使用「情況」命名，更貼近使用場景
+   - 每個情況都有明確的使用時機
 
-2. **精簡高效**:
-   - Prompt 長度: 80-300 行
-   - 去除冗長示範,專注執行步驟
-   - 清晰的 AI 指令,而非示範性內容
+2. **Prompt 模板區塊**
+   - 每個文件都有明確的「📋 Prompt 模板」區塊
+   - 開發者可以直接複製使用
+   - 模板設計簡潔實用
 
-3. **變數支援**:
-   - 必要時支持變數 (Sprint ID, Story ID, Bug ID, 路徑)
-   - 簡化的變數系統,易於使用
+3. **AI 執行步驟**
+   - 清晰的步驟順序
+   - 每個步驟有預估時間
+   - 包含具體的命令和操作
 
-4. **指令式設計**:
-   - 明確的步驟順序
-   - 可驗證的輸出格式
-   - 標準化的操作流程
+4. **驗收標準**
+   - 每個情況都有「✅ 驗收標準」
+   - 明確列出完成條件
+   - 便於驗證 AI 助手的輸出
 
-5. **適中輸出**:
-   - 詳細但不冗長
-   - 關注可操作的建議
-   - 避免過度分析
+5. **相關文檔連結**
+   - 每個文件都連結到相關情況
+   - 形成完整的工作流程
+   - 便於流程間切換
 
 ---
 
 ## 📖 使用指南
 
-### 基本使用
+### 基本使用方式
 
-```bash
-# 方式 1: 無變數的 Prompt
-用戶: "@PROMPT-01-PROJECT-ONBOARDING.md"
-AI: 自動讀取並執行專案上手流程
+```markdown
+# 方式 1: 閱讀情況文件
+用戶: "請閱讀 SITUATION-1-PROJECT-ONBOARDING.md 並執行"
+AI: 讀取文件並按照步驟執行
 
-# 方式 2: 帶變數的 Prompt
-用戶: "@PROMPT-02-NEW-SPRINT-PREP.md Sprint-0 S0-1"
-AI: 讀取 Prompt,替換變數 {SPRINT_ID}=Sprint-0, {STORY_ID}=S0-1
+# 方式 2: 複製 Prompt 模板
+用戶: [複製文件中的 Prompt 模板區塊]
+AI: 根據模板提供的上下文執行
 
-# 方式 3: 使用路徑變數
-用戶: "@PROMPT-08-CODE-REVIEW.md backend/src/agent/"
-AI: 審查指定路徑的代碼
+# 方式 3: 直接描述情境
+用戶: "我剛開始這個專案，需要快速上手"
+AI: 參考 SITUATION-1 的流程執行
 ```
 
-### 變數語法
-
-#### PROMPT-02: NEW-SPRINT-PREP
-```
-用法: @PROMPT-02-NEW-SPRINT-PREP.md {SPRINT_ID} {STORY_ID}
-範例: @PROMPT-02-NEW-SPRINT-PREP.md Sprint-0 S0-1
-```
-
-#### PROMPT-04: SPRINT-DEVELOPMENT
-```
-用法: @PROMPT-04-SPRINT-DEVELOPMENT.md {SPRINT_ID} {STORY_ID}
-範例: @PROMPT-04-SPRINT-DEVELOPMENT.md Sprint-0 S0-2
-```
-
-#### PROMPT-06: PROGRESS-SAVE
-```
-用法: @PROMPT-06-PROGRESS-SAVE.md {SPRINT_ID} {STORY_ID}
-範例: @PROMPT-06-PROGRESS-SAVE.md Sprint-0 S0-3
-```
-
-#### PROMPT-08: CODE-REVIEW
-```
-用法: @PROMPT-08-CODE-REVIEW.md {FILE_PATH}
-範例: @PROMPT-08-CODE-REVIEW.md backend/src/agent/
-```
-
----
-
-## 🔄 工作流程整合
-
-### 完整開發週期
+### 常用工作流程
 
 ```yaml
-階段 1: 專案上手
-  - @PROMPT-01-PROJECT-ONBOARDING.md
-  - 了解專案結構、技術棧、工作流程
+# 每日開發流程
+開始工作:
+  - SITUATION-1: 專案入門 (如果是新會話)
+  - SITUATION-2: 開發任務準備
 
-階段 2: Sprint 準備
-  - @PROMPT-02-NEW-SPRINT-PREP.md {SPRINT_ID} {STORY_ID}
-  - 準備開發環境、理解 Story 需求
+開發中:
+  - SITUATION-4: 功能開發 (新功能)
+  - SITUATION-11: 功能修改/更新 (現有功能)
+  - SITUATION-3: Bug 修復 (如遇到問題)
+  - SITUATION-5: 測試執行
 
-階段 3: 開發實施
-  - @PROMPT-04-SPRINT-DEVELOPMENT.md {SPRINT_ID} {STORY_ID}
-  - 執行開發任務
+結束工作:
+  - SITUATION-6: 保存進度
+  - SITUATION-9: Session 結束
 
-階段 4: 測試驗證
-  - @PROMPT-05-TESTING-PHASE.md {STORY_ID}
-  - 執行測試、驗證功能
+# 審查流程
+  - SITUATION-8: 代碼審查
+  - SITUATION-7: 架構審查 (大型變更)
 
-階段 5: 保存進度
-  - @PROMPT-06-PROGRESS-SAVE.md {SPRINT_ID} {STORY_ID}
-  - 提交代碼、更新文檔
-
-階段 6: 代碼審查
-  - @PROMPT-08-CODE-REVIEW.md {PATH}
-  - 審查代碼質量
-
-階段 7: Session 結束
-  - @PROMPT-09-SESSION-END.md
-  - 生成工作摘要
-
-階段 8: UAT 測試 (Phase 6 後)
-  - @PROMPT-10-UAT-SESSION.md start {MODULE}
-  - 開始 UAT 測試會話
-
-  - @PROMPT-11-UAT-ISSUE.md {MODULE} {DESCRIPTION}
-  - 記錄發現的問題
-
-  - @PROMPT-12-UAT-FIX.md {ISSUE_ID}
-  - 修復並驗證問題
-
-  - @PROMPT-10-UAT-SESSION.md end
-  - 結束測試會話
+# Phase 驗收
+  - SITUATION-10: UAT 測試
 ```
 
 ---
 
-## 📊 Prompt 特性對照
+## 📊 專案狀態概覽
 
-| Prompt | 變數支援 | 讀取文件 | 寫入文件 | 執行命令 | 預估時間 |
-|--------|---------|---------|---------|---------|---------|
-| 01 | ❌ | ✅ 多個 | ❌ | ❌ | 5-10分 |
-| 02 | ✅ Sprint+Story | ✅ Sprint文檔 | ❌ | ❌ | 3-5分 |
-| 03 | ✅ Bug ID | ✅ Bug報告 | ❌ | ❌ | 3-5分 |
-| 04 | ✅ Sprint+Story | ✅ 技術文檔 | ✅ 代碼 | ✅ Git | 15-30分 |
-| 05 | ✅ Story ID | ✅ 測試文檔 | ✅ 測試 | ✅ 測試命令 | 10-20分 |
-| 06 | ✅ Sprint+Story | ✅ 狀態文件 | ✅ 狀態更新 | ✅ Git | 5-10分 |
-| 07 | ❌ | ✅ 架構文檔 | ✅ 審查報告 | ❌ | 10-15分 |
-| 08 | ✅ 路徑 | ✅ 代碼文件 | ✅ 審查報告 | ❌ | 5-10分 |
-| 09 | ❌ | ✅ Session記錄 | ✅ 摘要文檔 | ✅ Git | 3-5分 |
-| 10 | ✅ ACTION+MODULE | ✅ UAT記錄 | ✅ 會話記錄 | ✅ 環境檢查 | 5-15分 |
-| 11 | ✅ MODULE+DESC | ✅ Issue模板 | ✅ Issue文件 | ❌ | 3-5分 |
-| 12 | ✅ ISSUE_ID | ✅ Issue文件 | ✅ Fix記錄 | ✅ Git | 10-30分 |
+### IPA Platform 當前狀態
 
----
+| 項目 | 狀態 |
+|------|------|
+| **Phase** | Phase 11 完成 - Agent-Session Integration |
+| **Sprint** | 47 Sprints 完成 |
+| **Story Points** | ~1490 Points |
+| **測試覆蓋** | 3500+ tests |
+| **核心框架** | Microsoft Agent Framework (Preview) |
 
-## 🔗 與 AI-ASSISTANT-INSTRUCTIONS.md 整合
+### 技術棧
 
-所有 Prompt 文件有效整合 Instructions 指令:
-
-```yaml
-PROMPT-01 (專案上手):
-  - 概覽所有 Instructions
-  - 理解工作流程
-  - 熟悉專案結構
-
-PROMPT-02/03/04 (開發準備與實施):
-  - 遵循 Instruction 1 (狀態更新)
-  - 遵循 Instruction 3 (Git 工作流程)
-
-PROMPT-05 (測試):
-  - 整合 Instruction 10 (代碼審查)
-  - 質量保證流程
-
-PROMPT-06 (進度保存):
-  - 執行 Instruction 1 (更新狀態)
-  - 執行 Instruction 3 (Git 提交)
-  - 執行 Instruction 5 (Session 摘要)
-  - 可選 Instruction 6 (文檔檢查)
-
-PROMPT-07/08 (審查):
-  - 對應 Instruction 9 (架構審查)
-  - 對應 Instruction 10 (代碼審查)
-
-PROMPT-09 (結束):
-  - 強制執行 Instruction 10 (Session 摘要)
-  - Session 結束檢查清單
+```
+後端: Python FastAPI + Pydantic
+前端: React 18 + TypeScript + Tailwind CSS
+數據庫: PostgreSQL 16 + Redis 7
+消息隊列: RabbitMQ
+LLM: Azure OpenAI GPT-4o
 ```
 
 ---
 
-## 📝 使用範例
+## 🔗 相關文檔
 
-### 範例 1: 開始新 Sprint Story
+### 專案文檔
+- `CLAUDE.md` - 專案總覽和開發指南
+- `docs/bmm-workflow-status.yaml` - 工作流程狀態
 
-```
-場景: 開始開發 Sprint 0 的 Story S0-2
+### 架構文檔
+- `backend/CLAUDE.md` - 後端架構指南
+- `backend/src/api/CLAUDE.md` - API 層設計規範
+- `backend/src/domain/CLAUDE.md` - Domain 層設計規範
 
-步驟:
-1. 用戶: "@PROMPT-02-NEW-SPRINT-PREP.md Sprint-0 S0-2"
-2. AI 讀取 PROMPT-02,替換變數
-3. AI 執行:
-   - 讀取 sprint-status.yaml 找到 S0-2
-   - 讀取 Sprint 0 計劃文檔
-   - 讀取技術架構文檔
-   - 輸出 Story 需求摘要和準備清單
-
-輸出範例:
----
-📋 Sprint Story 準備完成
-
-Story: S0-2 - Azure App Service Setup
-Sprint: Sprint 0
-Points: 5 分
-負責人: DevOps
-
-需求摘要:
-- 創建 Azure App Service Plan (Standard S1)
-- 配置 staging 和 production 環境
-- 設置環境變數和連接字串
-- 配置自動擴展規則
-
-技術參考:
-- docs/02-architecture/technical-architecture.md#app-service
-- docs/03-implementation/sprint-planning/sprint-0-mvp-revised.md
-
-準備清單:
-✅ Sprint 文檔已讀取
-✅ 技術架構已理解
-⏳ 需要創建 Azure Service Principal
-⏳ 需要準備環境變數清單
-
-下一步:
-1. 創建 Azure Service Principal
-2. 執行 @PROMPT-04-SPRINT-DEVELOPMENT.md Sprint-0 S0-2
----
-```
-
----
-
-### 範例 2: 執行開發任務
-
-```
-場景: 開發 Story S0-2
-
-步驟:
-1. 用戶: "@PROMPT-04-SPRINT-DEVELOPMENT.md Sprint-0 S0-2"
-2. AI 執行開發流程:
-   - 創建 feature branch
-   - 編寫代碼
-   - 執行本地測試
-   - 更新文檔
-
-(省略詳細輸出)
-```
-
----
-
-### 範例 3: 保存進度
-
-```
-場景: S0-2 開發完成,保存進度
-
-步驟:
-1. 用戶: "@PROMPT-06-PROGRESS-SAVE.md Sprint-0 S0-2"
-2. AI 執行:
-   - 使用 Instruction 1 更新 sprint-status.yaml
-   - 使用 Instruction 3 Git 提交
-   - 使用 Instruction 5 生成 Session 摘要
-   - (可選) Instruction 6 文檔檢查
-
-輸出:
----
-✅ 進度保存完成
-
-Sprint: Sprint-0
-Story: S0-2
-狀態: not-started → completed
-完成點數: 5 → 10 (總計)
-
-Git 提交:
-- feat(sprint-0): complete S0-2 Azure App Service setup
-- docs: update sprint status for S0-2
-
-文檔更新:
-- sprint-status.yaml (S0-2 狀態)
-- session-logs/session-2025-11-20.md
-
-下一步建議:
-- 開始 S0-3: CI/CD Pipeline
-- 或執行 @PROMPT-09-SESSION-END.md 結束工作
----
-```
-
----
-
-## 🛠️ Prompt 開發指南
-
-### 創建新 Prompt 的標準
-
-1. **文件命名**: `PROMPT-{NN}-{PURPOSE}.md`
-2. **文件長度**: 80-300 行
-3. **結構要求**:
-   ```markdown
-   # Prompt 標題
-
-   ## 用途
-   [簡短描述]
-
-   ## 變數
-   [如果有變數,列出變數定義]
-
-   ## 執行步驟
-   [清晰的步驟列表]
-
-   ## 輸出格式
-   [標準化輸出模板]
-
-   ## 範例
-   [使用範例]
-   ```
-
-4. **變數命名規範**:
-   - 使用大寫: `{STORY_ID}`, `{SPRINT_ID}`
-   - 描述性命名: `{FILE_PATH}`, `{BUG_ID}`
-   - 在文檔開頭明確定義
-
-5. **輸出格式**:
-   - 使用 Markdown 格式
-   - 包含狀態圖標 (✅ ❌ ⏳ ⚠️)
-   - 清晰的區塊分隔
+### 規則文檔
+- `.claude/rules/code-quality.md` - 代碼品質規則
+- `.claude/rules/git-workflow.md` - Git 工作流程規則
+- `.claude/rules/testing.md` - 測試規則
 
 ---
 
 ## 🔄 版本歷史
 
+### v3.1.0 (2025-12-24)
+- ✅ 新增 SITUATION-11: 功能修改/更新
+- ✅ 覆蓋現有功能修改、重構、API 更新場景
+
+### v3.0.0 (2025-12-24)
+- 🔄 完全重寫 Prompt 系統
+- ✅ 採用「情況」(SITUATION) 命名
+- ✅ 添加 Prompt 模板區塊
+- ✅ 添加驗收標準
+- ✅ 更新至 Phase 11 狀態
+- ✅ 10 個標準情況文件
+
 ### v2.0.0 (2025-11-20)
-- ✅ 初始版本發布
-- ✅ 9 個標準 Prompt 完成
-- ✅ 整合 AI-ASSISTANT-INSTRUCTIONS.md
-- ✅ 適配 IPA 平台專案
+- 初始版本發布
+- 12 個 PROMPT 文件
+- 整合 AI-ASSISTANT-INSTRUCTIONS.md
 
 ---
 
-## 📚 相關文檔
-
-- [AI Assistant Instructions](../AI-ASSISTANT-INSTRUCTIONS.md) - 核心指令文檔
-- [BMAD Workflow Status](../../docs/bmm-workflow-status.yaml) - 專案階段追蹤
-- [Sprint Status](../../docs/03-implementation/sprint-status.yaml) - Sprint 進度追蹤
-- [Technical Architecture](../../docs/02-architecture/technical-architecture.md) - 技術架構
-
----
-
-**維護者**: AI Assistant Team
-**最後更新**: 2025-11-20
+**維護者**: AI 助手 + 開發團隊
+**最後更新**: 2025-12-24
 **反饋**: GitHub Issues
