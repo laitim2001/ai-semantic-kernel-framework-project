@@ -31,6 +31,18 @@ domain/
 │   ├── __init__.py
 │   └── service.py          # CheckpointService
 │
+├── sessions/               # 🆕 Phase 11: Agent-Session Integration
+│   ├── __init__.py
+│   ├── models.py           # Session, Message, Attachment, ToolCall models
+│   ├── service.py          # SessionService (lifecycle management)
+│   ├── events.py           # SessionEventPublisher (15 event types)
+│   ├── executor.py         # AgentExecutor (LLM interaction)
+│   ├── streaming.py        # StreamingHandler (SSE support)
+│   ├── tool_handler.py     # ToolCallHandler (with approval)
+│   ├── error_handler.py    # SessionErrorHandler (24 error codes)
+│   ├── recovery.py         # SessionRecoveryManager
+│   └── metrics.py          # MetricsCollector (Prometheus-style)
+│
 ├── templates/              # Workflow 模板
 ├── triggers/               # 觸發器
 ├── connectors/             # 外部連接器
@@ -352,4 +364,37 @@ class CheckpointService:
 
 ---
 
-**Last Updated**: 2025-12-18
+## Sessions Module (Phase 11)
+
+### Overview
+
+The `sessions/` module provides Agent-Session integration for conversational AI:
+
+| Component | Purpose |
+|-----------|---------|
+| `models.py` | Session, Message, Attachment, ToolCall domain models |
+| `service.py` | SessionService for lifecycle management |
+| `events.py` | Event publishing with 15 event types |
+| `executor.py` | AgentExecutor for LLM interaction |
+| `streaming.py` | StreamingHandler for SSE responses |
+| `tool_handler.py` | ToolCallHandler with approval workflow |
+| `error_handler.py` | 24 error codes with HTTP mapping |
+| `recovery.py` | Checkpoint and event buffer recovery |
+| `metrics.py` | Prometheus-style metrics collection |
+
+### Session State Machine
+
+```
+CREATED → ACTIVE ↔ SUSPENDED → ENDED
+```
+
+### Key Features
+
+- **Tool Approval**: Manual/auto approval modes for tool calls
+- **SSE Streaming**: Real-time response streaming
+- **Error Recovery**: Checkpoint-based session recovery
+- **Metrics**: Counter, Histogram, Gauge metrics
+
+---
+
+**Last Updated**: 2025-12-24

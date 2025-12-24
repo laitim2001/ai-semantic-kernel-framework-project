@@ -10,9 +10,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Core Framework**: Microsoft Agent Framework (Preview) - unifies Semantic Kernel + AutoGen
 - **Target Users**: Mid-size enterprises (500-2000 employees)
-- **Status**: **Phase 6 Complete** - 1190 story points across 33 Sprints - UAT Ready
+- **Status**: **Phase 11 Complete** - Agent-Session Integration - UAT Verified (4/4 scenarios passed)
 - **Architecture**: Full official Agent Framework API integration (>95% API coverage)
-- **Stats**: 3198 tests, 297 API routes, 20 production-ready adapters
+- **Stats**: 3500+ tests, 310+ API routes, 25+ production-ready adapters
+- **Phases Completed**: Phase 1-11 (Sprints 1-47)
 
 ---
 
@@ -99,15 +100,17 @@ PostgreSQL 16 + Redis 7 + RabbitMQ
 
 ```
 backend/src/
-├── api/v1/              # 15+ API route modules
+├── api/v1/              # 20+ API route modules
 │   ├── agents/          # Agent CRUD and configuration
 │   ├── workflows/       # Workflow management
 │   ├── executions/      # Execution lifecycle
+│   ├── sessions/        # 🆕 Phase 11: Session-based conversations
 │   ├── groupchat/       # GroupChat orchestration (→ Adapter)
 │   ├── handoff/         # Agent handoff (→ Adapter)
 │   ├── concurrent/      # Concurrent execution (→ Adapter)
 │   ├── nested/          # Nested workflows (→ Adapter)
 │   ├── planning/        # Dynamic planning (→ Adapter)
+│   ├── code_interpreter/ # 🆕 Phase 8: Code execution
 │   └── ...
 │
 ├── integrations/        # 🔑 Official API Integration Layer (Phase 4)
@@ -122,10 +125,17 @@ backend/src/
 │       ├── multiturn/   # MultiTurnAdapter + CheckpointStorage
 │       └── memory/      # Memory storage adapters
 │
-├── domain/              # Business logic (⚠️ deprecated for orchestration)
+├── domain/              # Business logic
 │   ├── agents/          # Agent service
 │   ├── workflows/       # Workflow service + state machine
 │   ├── executions/      # Execution state machine
+│   ├── sessions/        # 🆕 Phase 11: Agent-Session integration
+│   │   ├── models.py    # Session, Message, ToolCall models
+│   │   ├── service.py   # SessionService
+│   │   ├── events.py    # SessionEventPublisher
+│   │   ├── executor.py  # AgentExecutor (LLM interaction)
+│   │   ├── streaming.py # StreamingHandler (SSE)
+│   │   └── tool_handler.py # ToolCallHandler
 │   └── orchestration/   # ⚠️ Deprecated - use adapters
 │
 ├── infrastructure/      # External integrations
@@ -138,7 +148,7 @@ backend/src/
     └── performance/    # Performance monitoring
 ```
 
-### Key Adapters (Phase 4)
+### Key Adapters (Phase 4-11)
 
 | Adapter | Purpose | Official API |
 |---------|---------|--------------|
@@ -148,6 +158,8 @@ backend/src/
 | `NestedWorkflowAdapter` | Nested workflows | `WorkflowExecutor` |
 | `PlanningAdapter` | Task planning | `MagenticBuilder` |
 | `MultiTurnAdapter` | Conversation state | `CheckpointStorage` |
+| `SessionAgentBridge` | Agent-Session integration | `AgentExecutor` |
+| `CodeInterpreterAdapter` | Code execution | `Responses API` |
 
 ### Frontend Architecture
 
@@ -353,6 +365,6 @@ All checks must pass (5/5).
 
 ---
 
-**Last Updated**: 2025-12-08
+**Last Updated**: 2025-12-24
 **Project Start**: 2025-11-14
-**Status**: Phase 6 Complete (1190 points, 33 Sprints) - Architecture Finalized & UAT Ready
+**Status**: Phase 11 Complete (47 Sprints) - Agent-Session Integration UAT Verified

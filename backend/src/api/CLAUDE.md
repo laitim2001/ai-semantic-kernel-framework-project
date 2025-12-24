@@ -34,7 +34,13 @@ api/
 │   ├── handoff/            # Handoff API → HandoffBuilderAdapter
 │   ├── concurrent/         # Concurrent API → ConcurrentBuilderAdapter
 │   ├── nested/             # Nested Workflow API → NestedWorkflowAdapter
-│   └── planning/           # Planning API → PlanningAdapter
+│   ├── planning/           # Planning API → PlanningAdapter
+│   │
+│   │  # Phase 11: Agent-Session Integration
+│   ├── sessions/           # 🆕 Session-based conversations
+│   │   ├── routes.py       # Session CRUD, Chat, Messages, Approvals
+│   │   └── schemas.py      # Session/Message/ToolCall schemas
+│   └── code_interpreter/   # 🆕 Phase 8: Code execution
 ```
 
 ---
@@ -211,6 +217,24 @@ These routes connect to **Adapter Layer** (`src/integrations/agent_framework/`):
 | `/concurrent` | ConcurrentBuilderAdapter | ConcurrentBuilder |
 | `/nested` | NestedWorkflowAdapter | WorkflowExecutor |
 | `/planning` | PlanningAdapter | MagenticBuilder |
+| `/sessions` | SessionAgentBridge | AgentExecutor |
+| `/code_interpreter` | CodeInterpreterAdapter | Responses API |
+
+---
+
+## Sessions API Routes (Phase 11)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/sessions` | Create new session |
+| GET | `/sessions/{id}` | Get session by ID |
+| DELETE | `/sessions/{id}` | Delete session |
+| GET | `/sessions/{id}/messages` | List session messages |
+| POST | `/sessions/{id}/chat` | Send chat message |
+| POST | `/sessions/{id}/chat/stream` | Stream chat response (SSE) |
+| GET | `/sessions/{id}/tool-calls` | List tool calls |
+| POST | `/sessions/{id}/tool-calls/{id}/approve` | Approve tool call |
+| POST | `/sessions/{id}/tool-calls/{id}/reject` | Reject tool call |
 
 ### Example: GroupChat Route
 
@@ -302,4 +326,4 @@ raise HTTPException(
 
 ---
 
-**Last Updated**: 2025-12-18
+**Last Updated**: 2025-12-24
