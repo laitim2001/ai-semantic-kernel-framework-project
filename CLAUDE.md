@@ -250,26 +250,39 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
 
 ---
 
-## AI Assistant System
+## AI Assistant System (v3.1.0)
 
-This project includes AI-assisted development workflows in `claudedocs/`:
+This project includes AI-assisted development workflows in `claudedocs/6-ai-assistant/prompts/`:
 
-### Quick Reference
-- **PROMPT-01**: Project onboarding
-- **PROMPT-04**: Development execution
-- **PROMPT-06**: Progress save (most used)
-- **PROMPT-09**: Session end
+### 情況指引 (SITUATION Guide)
+
+| 情況 | 用途 |
+|------|------|
+| **SITUATION-1** | 專案入門 - 新會話開始 |
+| **SITUATION-2** | 開發準備 - 任務前準備 |
+| **SITUATION-3** | Bug 修復 |
+| **SITUATION-4** | 功能開發 - 新功能 |
+| **SITUATION-5** | 測試執行 |
+| **SITUATION-6** | 保存進度 (常用) |
+| **SITUATION-7** | 架構審查 |
+| **SITUATION-8** | 代碼審查 |
+| **SITUATION-9** | Session 結束 |
+| **SITUATION-10** | UAT 測試 |
+| **SITUATION-11** | 功能修改/更新 - 現有功能 |
 
 ### Usage
 ```bash
-# Start development task
-"@claudedocs/prompts/PROMPT-04-SPRINT-DEVELOPMENT.md add-user-profile-api"
+# 新功能開發
+"請閱讀 SITUATION-4-FEATURE-DEVELOPMENT.md 並執行"
 
-# Save progress
-"@claudedocs/prompts/PROMPT-06-PROGRESS-SAVE.md"
+# 修改現有功能
+"請閱讀 SITUATION-11-FEATURE-UPDATE.md 並執行"
+
+# 保存進度
+"請閱讀 SITUATION-6-SAVE-PROGRESS.md 並執行"
 ```
 
-Full instructions: `claudedocs/AI-ASSISTANT-INSTRUCTIONS.md`
+Full instructions: `claudedocs/6-ai-assistant/prompts/README.md`
 
 ---
 
