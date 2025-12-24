@@ -66,6 +66,7 @@ class TestPhase(Enum):
     PHASE_8 = "phase_8_code_interpreter"
     PHASE_9 = "phase_9_mcp_architecture"
     PHASE_10 = "phase_10_session_mode"
+    PHASE_11 = "phase_11_agent_session_integration"
 
 
 @dataclass

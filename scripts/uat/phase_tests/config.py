@@ -94,4 +94,26 @@ API_ENDPOINTS = {
         "history": "/sessions/{session_id}/history",
         "search": "/sessions/{session_id}/search",
     },
+
+    # Phase 11: Agent-Session Integration
+    "agent_session": {
+        # Chat endpoints
+        "chat": "/sessions/{session_id}/chat",
+        "chat_stream": "/sessions/{session_id}/chat/stream",
+
+        # Tool call endpoints
+        "tool_calls": "/sessions/{session_id}/tool-calls",
+        "tool_call_status": "/sessions/{session_id}/tool-calls/{tool_call_id}",
+
+        # Approval endpoints
+        "approvals": "/sessions/{session_id}/approvals",
+        "approve": "/sessions/{session_id}/approvals/{approval_id}/approve",
+        "reject": "/sessions/{session_id}/approvals/{approval_id}/reject",
+
+        # WebSocket
+        "websocket": "/sessions/{session_id}/ws",
+
+        # Metrics
+        "metrics": "/sessions/{session_id}/metrics",
+    },
 }
