@@ -148,12 +148,15 @@ class AgentSessionTestClient:
     async def health_check(self) -> Dict[str, Any]:
         """檢查 API 健康狀態"""
         try:
-            response = await self._client.get("/health")
-            return {
-                "status": "healthy" if response.status_code == 200 else "unhealthy",
-                "status_code": response.status_code,
-                "data": response.json() if response.status_code == 200 else None,
-            }
+            # Health endpoint is at root, not under /api/v1
+            health_url = self.base_url.replace("/api/v1", "") + "/health"
+            async with httpx.AsyncClient(timeout=10.0) as temp_client:
+                response = await temp_client.get(health_url)
+                return {
+                    "status": "healthy" if response.status_code == 200 else "unhealthy",
+                    "status_code": response.status_code,
+                    "data": response.json() if response.status_code == 200 else None,
+                }
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
@@ -651,8 +654,10 @@ async def run_streaming_scenario(
         result = await client.create_session(title="Streaming Test")
         duration = (datetime.now() - start).total_seconds() * 1000
 
+        # Safely extract session_id with None checks
+        data = result.get("data") if result else None
         session_id = (
-            result.get("data", {}).get("id")
+            (data.get("id") if data else None)
             or f"sim_stream_{datetime.now().timestamp()}"
         )
         steps.append(StepResult(
@@ -778,8 +783,10 @@ async def run_approval_workflow_scenario(
         )
         duration = (datetime.now() - start).total_seconds() * 1000
 
+        # Safely extract session_id with None checks
+        data = result.get("data") if result else None
         session_id = (
-            result.get("data", {}).get("id")
+            (data.get("id") if data else None)
             or f"sim_approval_{datetime.now().timestamp()}"
         )
         steps.append(StepResult(
@@ -947,8 +954,10 @@ async def run_error_recovery_scenario(
         result = await client.create_session(title="Error Recovery Test")
         duration = (datetime.now() - start).total_seconds() * 1000
 
+        # Safely extract session_id with None checks
+        data = result.get("data") if result else None
         session_id = (
-            result.get("data", {}).get("id")
+            (data.get("id") if data else None)
             or f"sim_error_{datetime.now().timestamp()}"
         )
         steps.append(StepResult(
@@ -981,7 +990,9 @@ async def run_error_recovery_scenario(
         result = await client.get_session(session_id)
         duration = (datetime.now() - start).total_seconds() * 1000
 
-        session_status = result.get("data", {}).get("status", "active")
+        # Safely extract session status with None checks
+        data = result.get("data") if result else None
+        session_status = (data.get("status") if data else None) or "active"
         steps.append(StepResult(
             step=3,
             name="Verify session status",
