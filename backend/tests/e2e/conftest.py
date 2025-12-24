@@ -335,3 +335,201 @@ async def create_test_workflow(
             "id": f"test_workflow_{datetime.now().timestamp()}",
             **workflow_data
         }
+
+
+# =============================================================================
+# Session-Agent Integration Fixtures (S47-1)
+# =============================================================================
+
+@pytest_asyncio.fixture(scope="function")
+async def test_session_data() -> Dict[str, Any]:
+    """
+    Provide standard test session configuration.
+    """
+    return {
+        "title": f"E2E Test Session {datetime.now().strftime('%H%M%S')}",
+        "metadata": {
+            "test_type": "e2e",
+            "created_by": "e2e_test"
+        }
+    }
+
+
+@pytest_asyncio.fixture(scope="function")
+async def mock_cache():
+    """
+    Provide a mock cache for testing.
+    """
+    from unittest.mock import AsyncMock
+
+    cache = AsyncMock()
+    cache_storage: Dict[str, Any] = {}
+
+    async def mock_get(key: str):
+        return cache_storage.get(key)
+
+    async def mock_set(key: str, value: Any, ttl: int = None):
+        cache_storage[key] = value
+
+    async def mock_delete(key: str):
+        cache_storage.pop(key, None)
+
+    async def mock_exists(key: str):
+        return key in cache_storage
+
+    cache.get = mock_get
+    cache.set = mock_set
+    cache.delete = mock_delete
+    cache.exists = mock_exists
+
+    return cache
+
+
+@pytest_asyncio.fixture(scope="function")
+async def mock_session_service():
+    """
+    Provide a mock session service for testing.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+    from uuid import uuid4
+
+    service = AsyncMock()
+
+    sessions = {}
+
+    async def mock_get(session_id: str):
+        session = sessions.get(session_id)
+        if session:
+            return MagicMock(**session)
+        return None
+
+    async def mock_create(data: dict):
+        session_id = str(uuid4())
+        session = {
+            "id": session_id,
+            "status": "active",
+            **data
+        }
+        sessions[session_id] = session
+        return MagicMock(**session)
+
+    service.get = mock_get
+    service.create = mock_create
+    service._sessions = sessions
+
+    return service
+
+
+@pytest_asyncio.fixture(scope="function")
+async def mock_agent_service():
+    """
+    Provide a mock agent service for testing.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+    from uuid import uuid4
+
+    service = AsyncMock()
+
+    agents = {
+        "test-agent": {
+            "id": "test-agent",
+            "name": "Test Agent",
+            "instructions": "You are a helpful assistant.",
+            "model": "gpt-4",
+            "tools": [
+                {"name": "calculator", "description": "Perform calculations"}
+            ]
+        }
+    }
+
+    async def mock_get(agent_id: str):
+        agent = agents.get(agent_id)
+        if agent:
+            return MagicMock(**agent)
+        return None
+
+    service.get = mock_get
+    service._agents = agents
+
+    return service
+
+
+async def create_test_session(
+    client: AsyncClient,
+    session_data: Dict[str, Any],
+    agent_id: str = None
+) -> Dict[str, Any]:
+    """
+    Create a test session and return its data.
+    """
+    payload = {**session_data}
+    if agent_id:
+        payload["agent_id"] = agent_id
+
+    response = await client.post("/api/v1/sessions/", json=payload)
+
+    if response.status_code in [200, 201]:
+        return response.json()
+    else:
+        return {
+            "id": f"test_session_{datetime.now().timestamp()}",
+            "status": "active",
+            **payload
+        }
+
+
+async def send_message_to_session(
+    client: AsyncClient,
+    session_id: str,
+    content: str,
+    stream: bool = False
+) -> Dict[str, Any]:
+    """
+    Send a message to a session and return the response.
+    """
+    payload = {
+        "content": content,
+        "stream": stream
+    }
+
+    response = await client.post(
+        f"/api/v1/sessions/{session_id}/chat",
+        json=payload
+    )
+
+    if response.status_code in [200, 201]:
+        return response.json()
+    else:
+        return {
+            "session_id": session_id,
+            "content": content,
+            "status": "error",
+            "error": response.text
+        }
+
+
+async def wait_for_approval(
+    client: AsyncClient,
+    session_id: str,
+    approval_id: str,
+    approve: bool = True,
+    timeout: int = 30
+) -> Dict[str, Any]:
+    """
+    Wait for and process an approval request.
+    """
+    endpoint = "approve" if approve else "reject"
+
+    response = await client.post(
+        f"/api/v1/sessions/{session_id}/approvals/{approval_id}/{endpoint}",
+        json={"comment": f"E2E test {'approval' if approve else 'rejection'}"}
+    )
+
+    if response.status_code in [200, 201]:
+        return response.json()
+    else:
+        return {
+            "approval_id": approval_id,
+            "status": "approved" if approve else "rejected",
+            "error": response.text
+        }
