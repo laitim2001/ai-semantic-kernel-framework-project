@@ -116,4 +116,42 @@ API_ENDPOINTS = {
         # Metrics
         "metrics": "/sessions/{session_id}/metrics",
     },
+
+    # Phase 12: Claude Agent SDK Integration
+    "claude_sdk": {
+        # Sprint 48: Core SDK
+        "query": "/claude-sdk/query",
+        "sessions": "/claude-sdk/sessions",
+        "session": "/claude-sdk/sessions/{session_id}",
+        "session_query": "/claude-sdk/sessions/{session_id}/query",
+        "session_history": "/claude-sdk/sessions/{session_id}/history",
+        "session_fork": "/claude-sdk/sessions/{session_id}/fork",
+
+        # Sprint 49: Tools & Hooks
+        "tools": "/claude-sdk/tools",
+        "tool_execute": "/claude-sdk/tools/{tool_name}/execute",
+        "hooks": "/claude-sdk/hooks",
+        "hooks_config": "/claude-sdk/hooks/config",
+
+        # Sprint 50: MCP & Hybrid
+        "mcp_servers": "/claude-sdk/mcp/servers",
+        "mcp_server": "/claude-sdk/mcp/servers/{server_name}",
+        "mcp_connect": "/claude-sdk/mcp/servers/{server_name}/connect",
+        "mcp_disconnect": "/claude-sdk/mcp/servers/{server_name}/disconnect",
+        "mcp_tools": "/claude-sdk/mcp/servers/{server_name}/tools",
+        "mcp_tool_execute": "/claude-sdk/mcp/servers/{server_name}/tools/{tool_name}/execute",
+        "mcp_health": "/claude-sdk/mcp/health",
+
+        # Hybrid Orchestrator
+        "hybrid_execute": "/claude-sdk/hybrid/execute",
+        "hybrid_analyze": "/claude-sdk/hybrid/analyze",
+        "hybrid_sessions": "/claude-sdk/hybrid/sessions",
+        "hybrid_session": "/claude-sdk/hybrid/sessions/{session_id}",
+        "hybrid_metrics": "/claude-sdk/hybrid/metrics",
+
+        # Context Synchronizer
+        "context_sync": "/claude-sdk/context/sync",
+        "context_snapshot": "/claude-sdk/context/snapshot",
+        "context_restore": "/claude-sdk/context/restore",
+    },
 }
