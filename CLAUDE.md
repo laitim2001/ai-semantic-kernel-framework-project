@@ -340,8 +340,8 @@ def create_agent(
 | **函數/方法** | snake_case | `create_agent()`, `execute_workflow()` |
 | **變數** | snake_case | `agent_config`, `execution_result` |
 | **常數** | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT`, `DEFAULT_TIMEOUT` |
-| **私有成員** | _prefix | `_internal_state`, `_validate_config()` |
-| **Protected** | _single_prefix | `_process_result()` |
+| **慣例私有** | _single_prefix | `_internal_state`, `_validate()` (慣例上不應外部存取) |
+| **Name Mangling** | __double_prefix | `__secret_key` (Python 會改名防止子類覆蓋) |
 | **Type Variables** | PascalCase + T suffix | `AgentT`, `ResultT` |
 | **Protocols** | PascalCase + Protocol suffix | `ExecutorProtocol` |
 | **Enums** | PascalCase (class), UPPER_SNAKE (members) | `class Status:`, `PENDING = "pending"` |
@@ -481,13 +481,13 @@ async def create_agent(
 }
 ```
 
-### 7. 資料庫規範 (SQLAlchemy)
+### 7. 資料庫規範 (SQLAlchemy 2.0)
 
-#### Model 結構範本
+#### Model 結構範本 (使用新式 Mapped + mapped_column)
 ```python
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import String, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
