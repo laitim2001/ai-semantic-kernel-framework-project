@@ -1,94 +1,118 @@
-# 🚀 情況4: 新功能開發
+# 🆕 情況4: 新功能開發
 
-> **使用時機**: 開始實際編寫新功能/模組代碼時
-> **目標**: 按照計劃高效地完成功能開發
-> **適用場景**: Sprint 開發、新功能實作、新模組開發、API 開發
+> **使用時機**: 對話進行中，正在開發全新功能
+> **目標**: 系統化開發，符合架構標準
+> **適用場景**: Epic Story 實施, 新模組開發
 
 ---
 
-## 📋 Prompt 模板 (給開發人員)
+## 📋 Prompt 模板
 
 ```markdown
-你好！我要開始開發一個功能。
+我正在開發新功能: [功能名稱]
 
-**功能名稱**: [功能名稱]
-**功能描述**: [詳細描述功能需求]
+根據: [Epic X Story X.X / 用戶需求 / 設計文檔]
 
-**技術要求**:
-- [技術要求 1]
-- [技術要求 2]
+請幫我:
 
-**相關文件** (如有):
-- [相關設計文檔]
-- [相關 API 規格]
+1. 建立功能規劃目錄
+   - 在 claudedocs/1-planning/features/ 建立 FEAT-XXX-[功能名稱] 目錄
+   - 建立 01-requirements.md (需求規格)
+   - 建立 02-technical-design.md (技術設計)
+   - 建立 03-implementation-plan.md (實施計劃)
+   - 建立 04-progress.md (進度追蹤)
 
-請幫我：
+2. 確認規劃文檔
+   - 閱讀 docs/03-implementation/sprint-execution/[相關 Sprint]
+   - 確認驗收標準
 
-1. 確認開發計劃
-   - 回顧之前的任務準備 (如有)
-   - 確認實作步驟
+3. 系統化開發
+   - 後端: Domain 模型 → Service → API → 測試
+   - 使用 TodoWrite 追蹤進度
 
-2. 實作功能
-   - 按照 IPA Platform 的架構模式開發
-   - 遵循現有的代碼風格
+4. 遵循最佳實踐
+   - 參考現有實現模式
+   - 撰寫單元測試
 
-3. 編寫測試
-   - 為新功能添加單元測試
-   - 確保測試覆蓋主要場景
+5. 記錄開發過程
+   - 更新 04-progress.md
+   - 記錄技術決策
 
-4. 代碼品質檢查
-   - 運行 linting
-   - 檢查類型
-
-請用中文回答，開始開發。
+請用中文溝通。
 ```
 
 ---
 
-## 🤖 AI 助手執行步驟
+## 🤖 AI 執行流程
 
-### Step 1: 確認開發計劃 (1 分鐘)
+### Phase 0: 規劃準備 (必須先執行)
 
 ```bash
-# 1. 確認當前分支
-Bash: git status
-Bash: git branch
+# 1. 確認功能編號（查看現有 FEAT 編號）
+Bash: ls claudedocs/1-planning/features/
 
-# 2. 回顧相關架構
-Read: backend/src/api/CLAUDE.md (如開發 API)
-Read: backend/src/domain/CLAUDE.md (如開發業務邏輯)
+# 2. 建立功能目錄結構
+Bash: mkdir -p claudedocs/1-planning/features/FEAT-XXX-功能名稱
+
+# 3. 建立規劃文檔
+Write: claudedocs/1-planning/features/FEAT-XXX-功能名稱/01-requirements.md
+Write: claudedocs/1-planning/features/FEAT-XXX-功能名稱/02-technical-design.md
+Write: claudedocs/1-planning/features/FEAT-XXX-功能名稱/03-implementation-plan.md
+Write: claudedocs/1-planning/features/FEAT-XXX-功能名稱/04-progress.md
 ```
 
-### Step 2: 實作功能 (主要時間)
+**功能目錄結構範例：**
+```
+claudedocs/1-planning/features/
+├── FEAT-001-agent-management/
+│   ├── 01-requirements.md      # 需求規格
+│   ├── 02-technical-design.md  # 技術設計
+│   ├── 03-implementation-plan.md # 實施計劃
+│   └── 04-progress.md          # 進度追蹤
+├── FEAT-002-workflow-engine/
+│   └── ...
+└── FEAT-003-新功能/
+    └── ...
+```
+
+**文檔內容指引：**
+
+| 文檔 | 內容 |
+|------|------|
+| `01-requirements.md` | 功能概述、用戶需求、功能需求、驗收標準 |
+| `02-technical-design.md` | 數據模型、API 設計、組件設計、技術架構 |
+| `03-implementation-plan.md` | 開發階段、任務分解、依賴關係 |
+| `04-progress.md` | 開發日誌、完成狀態、問題記錄、測試結果 |
+
+---
+
+### Phase 1: 後端開發
 
 ```bash
-# IPA Platform 標準開發流程
-
 # 1. Domain Layer (業務邏輯)
-# 位置: backend/src/domain/{module}/
-
-Write/Edit: backend/src/domain/{module}/models.py   # Domain 模型
-Write/Edit: backend/src/domain/{module}/service.py  # 業務邏輯
+Write: backend/src/domain/{module}/models.py
+Write: backend/src/domain/{module}/service.py
+Write: backend/src/domain/{module}/__init__.py
 
 # 2. API Layer (HTTP 路由)
-# 位置: backend/src/api/v1/{module}/
+Write: backend/src/api/v1/{module}/schemas.py
+Write: backend/src/api/v1/{module}/routes.py
+Write: backend/src/api/v1/{module}/__init__.py
+Edit: backend/src/api/v1/__init__.py (合併 router)
 
-Write/Edit: backend/src/api/v1/{module}/schemas.py  # Pydantic 模型
-Write/Edit: backend/src/api/v1/{module}/routes.py   # FastAPI 路由
+# 3. Infrastructure Layer (如需數據庫)
+Edit: backend/src/infrastructure/database/models/{module}.py
+Write: backend/src/infrastructure/database/repositories/{module}_repository.py
 
-# 3. Infrastructure Layer (如需要)
-# 位置: backend/src/infrastructure/
-
-Write/Edit: backend/src/infrastructure/database/models/{module}.py
-Write/Edit: backend/src/infrastructure/database/repositories/{module}_repository.py
+# 4. 更新進度
+Edit: claudedocs/1-planning/features/FEAT-XXX/04-progress.md
+TodoWrite: 標記後端任務完成
 ```
 
-### Step 3: 編寫測試 (重要!)
+### Phase 2: 測試開發
 
 ```bash
 # 1. 單元測試
-# 位置: backend/tests/unit/
-
 Write: backend/tests/unit/domain/test_{module}_service.py
 Write: backend/tests/unit/api/v1/test_{module}_routes.py
 
@@ -96,110 +120,110 @@ Write: backend/tests/unit/api/v1/test_{module}_routes.py
 Bash: cd backend && pytest tests/unit/domain/test_{module}_service.py -v
 Bash: cd backend && pytest tests/unit/api/v1/test_{module}_routes.py -v
 
-# 3. 運行相關模組所有測試
-Bash: cd backend && pytest tests/unit/ -k "{module}" -v
-```
-
-### Step 4: 代碼品質檢查 (2 分鐘)
-
-```bash
-# 1. 格式化
+# 3. 代碼品質
 Bash: cd backend && black src/domain/{module}/ src/api/v1/{module}/
-
-# 2. Import 排序
 Bash: cd backend && isort src/domain/{module}/ src/api/v1/{module}/
-
-# 3. Linting
 Bash: cd backend && flake8 src/domain/{module}/ src/api/v1/{module}/
 
-# 4. 類型檢查 (可選)
+# 4. 更新進度
+Edit: claudedocs/1-planning/features/FEAT-XXX/04-progress.md
+TodoWrite: 標記測試任務完成
+```
+
+### Phase 3: 整合驗證
+
+```bash
+# 1. 運行完整測試
+Bash: cd backend && pytest tests/unit/ -k "{module}" -v
+
+# 2. 類型檢查
 Bash: cd backend && mypy src/domain/{module}/ src/api/v1/{module}/
+
+# 3. 記錄測試結果
+Edit: claudedocs/1-planning/features/FEAT-XXX/04-progress.md
 ```
 
 ---
 
-## 📦 IPA Platform 代碼模板
+## 📐 開發標準 Checklist
 
-### Domain Service 模板
+### 規劃階段
+- [ ] 功能目錄已建立 (FEAT-XXX-功能名稱/)
+- [ ] 01-requirements.md 已完成
+- [ ] 02-technical-design.md 已完成
+- [ ] 03-implementation-plan.md 已完成
+- [ ] 04-progress.md 已初始化
 
-```python
-# backend/src/domain/{module}/service.py
-from typing import List, Optional
-from sqlalchemy.orm import Session
+### 後端標準
+- [ ] Domain 模型遵循命名規範
+- [ ] Service 包含業務邏輯驗證
+- [ ] API 使用 Pydantic 驗證
+- [ ] 錯誤處理完整
+- [ ] 單元測試覆蓋率 >80%
 
-from src.infrastructure.database.repositories.{module}_repository import {Module}Repository
-from src.core.logging import get_logger
+### 代碼品質
+- [ ] Black 格式化通過
+- [ ] isort 排序通過
+- [ ] Flake8 無錯誤
+- [ ] mypy 類型檢查通過 (如可能)
+- [ ] 註解完整 (複雜邏輯)
 
-logger = get_logger(__name__)
+---
 
+## 📁 功能文檔模板
 
-class {Module}Service:
-    """
-    {Module} 業務邏輯服務。
+### 01-requirements.md 模板
+```markdown
+# FEAT-XXX: [功能名稱]
 
-    遵循 IPA Platform 標準 Service 模式。
-    """
+> **建立日期**: YYYY-MM-DD
+> **狀態**: 📋 設計中 / 🚧 開發中 / ✅ 完成
+> **優先級**: High / Medium / Low
 
-    def __init__(self, db: Session):
-        self.db = db
-        self.repository = {Module}Repository(db)
+## 1. 功能概述
+### 1.1 背景
+### 1.2 目標
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> List[...]:
-        """取得所有項目。"""
-        return self.repository.get_all(skip=skip, limit=limit)
+## 2. 功能需求
+### 2.1 用戶故事
+### 2.2 功能列表
 
-    def get_by_id(self, id: str) -> Optional[...]:
-        """根據 ID 取得單一項目。"""
-        return self.repository.get_by_id(id)
+## 3. 驗收標準
+### 3.1 功能驗收
+### 3.2 技術驗收
 
-    def create(self, data: dict) -> ...:
-        """創建新項目。"""
-        self._validate_create(data)
-        item = self.repository.create(data)
-        logger.info(f"Created {module}: {item.id}")
-        return item
+## 4. 相關文檔
 ```
 
-### API Route 模板
+### 04-progress.md 模板
+```markdown
+# FEAT-XXX: [功能名稱] - 開發進度
 
-```python
-# backend/src/api/v1/{module}/routes.py
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+## 📊 整體進度
+- [ ] Phase 0: 規劃準備
+- [ ] Phase 1: 後端開發
+- [ ] Phase 2: 測試開發
+- [ ] Phase 3: 整合驗證
 
-from src.core.database import get_db
-from src.domain.{module}.service import {Module}Service
-from . import schemas
+## 📝 開發日誌
 
-router = APIRouter(prefix="/{module}", tags=["{Module}"])
+### YYYY-MM-DD
+- 完成項目:
+- 遇到問題:
+- 下一步:
 
+## 🐛 問題追蹤
+| 問題 | 狀態 | 解決方案 |
+|------|------|----------|
 
-@router.get("/", response_model=list[schemas.{Module}Response])
-async def list_{module}s(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """列出所有 {module}。"""
-    service = {Module}Service(db)
-    return service.get_all(skip=skip, limit=limit)
-
-
-@router.post("/", response_model=schemas.{Module}Response, status_code=status.HTTP_201_CREATED)
-async def create_{module}(
-    data: schemas.{Module}Create,
-    db: Session = Depends(get_db)
-):
-    """創建新 {module}。"""
-    service = {Module}Service(db)
-    return service.create(data.dict())
+## ✅ 測試結果
 ```
 
 ---
 
 ## ✅ 驗收標準
 
-AI 助手完成開發後應確認：
+新功能開發完成後，應該確認:
 
 1. **功能完整**
    - 所有需求都已實現
@@ -214,26 +238,22 @@ AI 助手完成開發後應確認：
    - Flake8 無錯誤
    - 無明顯的安全問題
 
-4. **文檔更新** (如需要)
-   - API 文檔更新
-   - CLAUDE.md 更新
+4. **文檔更新**
+   - FEAT 進度文檔更新
+   - TodoWrite 狀態更新
 
 ---
 
 ## 🔗 相關文檔
 
 ### 開發流程指引
+- [情況1: 專案入門](./SITUATION-1-PROJECT-ONBOARDING.md)
 - [情況2: 開發前準備](./SITUATION-2-FEATURE-DEV-PREP.md)
-- [情況3: 功能增強/修正](./SITUATION-3-FEATURE-ENHANCEMENT.md)
+- [情況3: 舊功能進階/修正](./SITUATION-3-FEATURE-ENHANCEMENT.md)
 - [情況5: 保存進度](./SITUATION-5-SAVE-PROGRESS.md)
-
-### 架構參考
-- `backend/src/api/CLAUDE.md` - API 層設計規範
-- `backend/src/domain/CLAUDE.md` - Domain 層設計規範
-- `backend/CLAUDE.md` - 後端總體指南
 
 ---
 
 **維護者**: AI 助手 + 開發團隊
 **最後更新**: 2025-12-27
-**版本**: 3.0
+**版本**: 2.0

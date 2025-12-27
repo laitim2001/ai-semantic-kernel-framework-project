@@ -11,13 +11,11 @@
 ```markdown
 你好！我需要你幫我快速了解這個專案。
 
-這是 IPA Platform (Intelligent Process Automation)，一個企業級 AI Agent 編排管理平台。
-
-請幫我：
+這是 IPA Platform (Intelligent Process Automation)，一個企業級 AI Agent 編排管理平台，我需要你:
 
 1. 閱讀專案概覽
    - 請先閱讀 `CLAUDE.md` 了解專案基本資訊和開發指南
-   - 閱讀 `docs/bmm-workflow-status.yaml` 了解當前階段和歷史
+   - 閱讀 `docs/bmm-workflow-status.yaml` 了解當前開發階段
 
 2. 理解專案結構
    - 查看 `backend/src/api/v1/` 了解 API 結構
@@ -26,12 +24,13 @@
 
 3. 確認當前狀態
    - 檢查 Git 狀態: `git status` 和 `git log --oneline -10`
-   - 了解最近完成的 Phase 和 Sprint
+   - 閱讀 `claudedocs/3-progress/weekly/` 最新的每週進度 (如有)
 
 4. 總結並回答
    - 這個專案是做什麼的？
    - 當前開發到哪個階段？
    - 最近完成了什麼功能？
+   - 有沒有進行中的任務？
    - 技術棧是什麼？
 
 請用中文回答，並保持簡潔。
@@ -52,6 +51,9 @@ Read: docs/bmm-workflow-status.yaml (工作流程狀態)
 Bash: git status
 Bash: git log --oneline -10
 Bash: git branch
+
+# 3. 讀取最新進度 (如有)
+Read: claudedocs/3-progress/weekly/[最新週報].md
 ```
 
 ### Step 2: 理解項目結構 (2 分鐘)
@@ -62,9 +64,9 @@ Bash: ls backend/src/api/v1/
 Bash: ls backend/src/domain/
 Bash: ls backend/src/integrations/agent_framework/
 
-# 2. 掃描前端結構
-Bash: ls frontend/src/pages/
-Bash: ls frontend/src/components/
+# 2. 檢查配置文件
+Read: backend/requirements.txt (了解依賴)
+Read: docker-compose.yml (了解服務架構)
 ```
 
 ### Step 3: 生成總結報告 (1 分鐘)
@@ -86,10 +88,10 @@ Bash: ls frontend/src/components/
 - **LLM**: Azure OpenAI GPT-4o
 
 ## 當前狀態
-- **階段**: Phase 11 完成 - Agent-Session Integration
-- **完成度**: 47 Sprints, ~1490 Story Points
-- **UAT**: 4/4 場景通過
+- **階段**: [從 bmm-workflow-status.yaml 讀取]
+- **完成度**: [Sprint 數量和 Story Points]
 - **最新分支**: main
+- **最後提交**: [commit message]
 
 ## 已完成的主要 Phases
 | Phase | 名稱 | 重點功能 |
@@ -99,6 +101,10 @@ Bash: ls frontend/src/components/
 | 7-8 | Orchestration | 並發執行、Agent Handoff |
 | 9-10 | MCP & Sessions | MCP 架構、Session Mode |
 | 11 | Integration | Agent-Session 整合 |
+
+## 進行中任務
+- ⏳ [檢查 Git 狀態或 bmm-workflow-status.yaml]
+- ⏳ [如果沒有，回答: 無進行中任務]
 
 ## 快速導航
 - **後端 API**: backend/src/api/v1/
@@ -119,31 +125,50 @@ Bash: ls frontend/src/components/
 
 ## ✅ 驗收標準
 
-AI 助手應該能回答以下問題：
+AI 助手應該能回答以下問題:
 
 1. **專案是什麼？**
    - IPA Platform，企業級 AI Agent 編排管理平台
 
 2. **當前階段？**
-   - Phase 11 完成，Agent-Session Integration
+   - 從 bmm-workflow-status.yaml 讀取當前 Phase 和 Sprint
 
-3. **技術棧？**
-   - FastAPI + React + PostgreSQL + Redis + Azure OpenAI
+3. **最近完成？**
+   - 從 Git log 或狀態文件讀取
 
-4. **核心框架？**
-   - Microsoft Agent Framework (Preview)
+4. **進行中任務？**
+   - 檢查 Git 狀態或 bmm-workflow-status.yaml
 
-5. **如何啟動？**
+5. **技術棧？**
+   - Python FastAPI + React + PostgreSQL + Redis + Azure OpenAI
+
+6. **如何啟動？**
    - `docker-compose up -d` → `uvicorn main:app --reload`
 
-6. **專案規模？**
-   - 47 Sprints, ~1490 Story Points, 3500+ tests
+---
+
+## 📚 推薦閱讀順序 (深入了解)
+
+### 新開發者 (Day 1)
+1. CLAUDE.md - 專案總覽
+2. docs/bmm-workflow-status.yaml - 當前狀態
+3. docker-compose.yml - 環境設置
+
+### 新開發者 (Day 2-3)
+1. docs/02-architecture/ - 技術架構
+2. docs/01-planning/prd/ - 產品需求
+3. backend/src/api/v1/ - API 結構
+
+### 新開發者 (Week 2)
+1. backend/src/domain/ - 業務邏輯
+2. backend/src/integrations/agent_framework/ - Agent Framework
+3. claudedocs/4-changes/ - 變更歷史
 
 ---
 
 ## 🔗 相關文檔
 
-### 核心開發流程
+### 開發流程指引
 - [情況2: 開發前準備](./SITUATION-2-FEATURE-DEV-PREP.md)
 - [情況3: 功能增強/修正](./SITUATION-3-FEATURE-ENHANCEMENT.md)
 - [情況4: 新功能開發](./SITUATION-4-NEW-FEATURE-DEV.md)
@@ -153,4 +178,4 @@ AI 助手應該能回答以下問題：
 
 **維護者**: AI 助手 + 開發團隊
 **最後更新**: 2025-12-27
-**版本**: 3.0
+**版本**: 2.0

@@ -1,113 +1,193 @@
-# 💾 情況5: 保存進度
+# 💾 情況5: 保存現有進度
 
-> **使用時機**: 完成階段性工作，需要保存進度時
-> **目標**: 安全地提交和記錄開發成果
-> **適用場景**: 功能完成、階段性提交、工作日結束
+> **使用時機**: 對話進行中，需要保存當前工作進度
+> **目標**: 完整記錄進度，更新文檔，同步 GitHub
+> **適用場景**: 結束工作前, 里程碑達成, 定期檢查點
 
 ---
 
-## 📋 Prompt 模板 (給開發人員)
+## 📋 Prompt 模板
 
 ```markdown
-你好！我需要保存當前的開發進度。
+我需要保存當前的工作進度。
 
-**完成的工作**:
-- [完成項目 1]
-- [完成項目 2]
+當前狀態: [開發功能中 / 規劃中 / 修復進行中 / 測試中]
+工作內容: [簡述當前正在做什麼]
 
-**提交訊息** (選填): [如果有特定的提交訊息]
+請幫我完成以下步驟:
 
-請幫我：
+1. 更新進度記錄
+   - 更新 `claudedocs/3-progress/weekly/2025-WXX.md` (本週進度)
+   - 更新 `DEVELOPMENT-LOG.md` (如有)
 
-1. 檢查當前狀態
-   - 查看所有變更的文件
-   - 確認沒有遺漏的文件
+2. 更新任務狀態
+   - 檢查 TodoWrite 任務清單
+   - 標記已完成的任務
+   - 添加新發現的任務
 
-2. 運行品質檢查
-   - 運行測試確保沒有破壞
-   - 運行 linting 確保代碼品質
+3. 檢查代碼品質
+   - 運行 pytest (測試)
+   - 運行 black/isort (格式化)
+   - 運行 flake8 (lint)
 
-3. 提交變更
-   - 生成適當的 commit message
-   - 提交到當前分支
+4. Git 提交和推送
+   - 檢查 git status 確認變更
+   - 使用有意義的 commit message
+   - 執行 git push
 
-4. 更新文檔 (如需要)
-   - 更新相關的 CLAUDE.md
-   - 更新進度追蹤文件
+5. 生成進度摘要
+   - 總結完成的工作
+   - 記錄下次需要繼續的工作
 
-請用中文回答。
+請用中文完成所有步驟。
 ```
 
 ---
 
-## 🤖 AI 助手執行步驟
+## 🤖 AI 執行流程
 
-### Step 1: 檢查當前狀態 (1 分鐘)
+### Step 1: 更新進度記錄 (3 分鐘)
 
 ```bash
-# 1. 查看 Git 狀態
-Bash: git status
+# 1. 檢查是否存在本週進度文件
+Bash: ls claudedocs/3-progress/weekly/
 
-# 2. 查看變更詳情
-Bash: git diff --stat
-
-# 3. 查看最近的提交
-Bash: git log --oneline -5
-
-# 4. 確認當前分支
-Bash: git branch
+# 2. 如果不存在，創建新文件
+Write: claudedocs/3-progress/weekly/2025-WXX.md
 ```
 
-### Step 2: 運行品質檢查 (2 分鐘)
+**每週進度模板**:
+```markdown
+# 2025-WXX 每週進度 (X月X日 - X月X日)
+
+## 本週目標
+- [列出本週計劃完成的目標]
+
+## 完成情況
+### 已完成
+- ✅ [任務 1] - [簡述]
+- ✅ [任務 2] - [簡述]
+
+### 進行中
+- ⏳ [任務 3] - [進度 XX%]
+
+### 未開始
+- ⏸️ [任務 4] - [原因]
+
+## 遇到的挑戰
+### 挑戰 1: [描述]
+- **問題**: [詳細說明]
+- **解決方案**: [如何解決]
+- **學習**: [經驗總結]
+
+## 技術決策
+- **決策 1**: [描述] → [選擇的方案] → [理由]
+
+## 下週計劃
+- [ ] [任務 1]
+- [ ] [任務 2]
+
+## 風險提示
+- ⚠️ [風險 1] - [緩解措施]
+```
+
+### Step 2: 更新任務狀態 (2 分鐘)
 
 ```bash
-# 1. 運行相關測試
+# 1. 檢查當前 TodoWrite 狀態
+# (AI 助手內部檢查)
+
+# 2. 更新 TodoWrite
+TodoWrite: [更新所有任務狀態]
+
+# 3. 如果有 Sprint checklist，更新
+Edit: docs/03-implementation/sprint-execution/sprint-XX/checklist.md
+```
+
+### Step 3: 檢查代碼品質 (3 分鐘)
+
+```bash
+# 1. 運行測試
 Bash: cd backend && pytest tests/unit/ -v --tb=short
 
-# 2. 運行格式化 (可選，自動修復)
+# 2. 格式化代碼
 Bash: cd backend && black . && isort .
 
-# 3. 運行 linting
+# 3. Lint 檢查
 Bash: cd backend && flake8 src/
 
-# 4. 查看是否有格式化變更需要加入
-Bash: git diff --stat
+# 4. 類型檢查 (可選)
+Bash: cd backend && mypy src/
 ```
 
-### Step 3: 提交變更 (2 分鐘)
+### Step 4: Git 提交和推送 (3 分鐘)
 
 ```bash
-# 1. 添加所有變更
+# 1. 檢查 Git 狀態
+Bash: git status
+
+# 2. 查看變更內容
+Bash: git diff --stat
+
+# 3. 添加文件
 Bash: git add .
 
-# 2. 或選擇性添加
-Bash: git add backend/src/domain/xxx/
-Bash: git add backend/tests/unit/xxx/
-
-# 3. 生成提交訊息並提交
+# 4. 提交 (使用 HEREDOC 格式)
 Bash: git commit -m "$(cat <<'EOF'
-feat(module): 簡要描述
+type(scope): 簡短描述
 
-- 詳細變更 1
-- 詳細變更 2
+詳細描述:
+- 變更 1
+- 變更 2
 
 🤖 Generated with Claude Code
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
 
-# 4. 確認提交成功
-Bash: git log --oneline -3
+# 5. 推送到 GitHub
+Bash: git push origin main
+
+# 6. 確認推送成功
+Bash: git log --oneline -1
 ```
 
-### Step 4: 可選 - 推送到遠端
+### Step 5: 生成進度摘要 (3 分鐘)
 
-```bash
-# 推送到遠端分支
-Bash: git push origin HEAD
+```markdown
+# 📊 進度保存摘要
 
-# 或設定上游分支
-Bash: git push -u origin feature/xxx
+## 時間
+- **日期**: YYYY-MM-DD
+- **時間**: HH:MM
+
+## 工作內容
+### 本次會話完成
+- ✅ [完成項 1] - [詳細說明]
+- ✅ [完成項 2] - [詳細說明]
+- ⏳ [進行中項目] - [當前狀態]
+
+### 代碼變更
+- **新增文件**: XX 個
+  - `file1.py` - [用途]
+  - `file2.py` - [用途]
+- **修改文件**: XX 個
+  - `file3.py` - [變更內容]
+
+### 測試狀態
+- pytest: ✅ 通過
+- black/isort: ✅ 通過
+- flake8: ✅ 通過
+
+## 下次繼續工作
+### 待完成任務
+- [ ] [任務 1] - [詳細說明]
+- [ ] [任務 2] - [詳細說明]
+
+## Git 狀態
+- **Branch**: main
+- **Last Commit**: [commit hash]
+- **Pushed**: ✅ 已推送到 GitHub
 ```
 
 ---
@@ -154,58 +234,70 @@ refactor(domain): Extract session state machine
 
 ---
 
-## 📊 進度總結模板
+## ✅ 驗收標準
 
-```markdown
-# 📊 開發進度總結
+保存進度完成後，應該確認:
 
-## 完成項目
-- ✅ [完成項目 1]
-- ✅ [完成項目 2]
+### 文檔更新
+- [ ] 每週進度報告存在且最新
+- [ ] TodoWrite 狀態反映實際進度
 
-## 變更的文件
-| 文件 | 變更類型 | 說明 |
-|------|----------|------|
-| path/to/file.py | 新增 | [說明] |
-| path/to/file.py | 修改 | [說明] |
+### 代碼品質
+- [ ] pytest 測試通過
+- [ ] black/isort 格式化通過
+- [ ] flake8 無錯誤
 
-## 測試狀態
-- 單元測試: ✅ 通過
-- 相關模組: X/X 通過
+### Git 狀態
+- [ ] 所有變更已提交
+- [ ] Commit message 清晰有意義
+- [ ] 已推送到 GitHub
 
-## 下一步工作
-- [ ] [下一個任務 1]
-- [ ] [下一個任務 2]
-```
+### 進度摘要
+- [ ] 生成完整的進度摘要
+- [ ] 列出下次繼續工作的清單
 
 ---
 
-## ✅ 驗收標準
+## 🔄 定期保存頻率建議
 
-AI 助手完成保存後應確認：
+### 每日保存 (推薦)
+- **時機**: 每天工作結束前
+- **內容**: 快速保存，更新任務狀態
+- **時間**: 10-15 分鐘
 
-1. **狀態檢查**
-   - 所有變更都已識別
-   - 沒有遺漏的文件
+### 每週保存 (必須)
+- **時機**: 每週五下午
+- **內容**: 完整保存，生成每週報告
+- **時間**: 20-30 分鐘
 
-2. **品質通過**
-   - 測試全部通過
-   - 無 linting 錯誤
+### 里程碑保存 (重要)
+- **時機**: Sprint 結束, Story 完成
+- **內容**: 全面保存，生成階段報告
+- **時間**: 30-60 分鐘
 
-3. **提交完成**
-   - Commit message 符合規範
-   - 提交成功
+---
 
-4. **進度記錄**
-   - 提供完成項目摘要
-   - 記錄下一步工作
+## 📱 快速保存 (簡化版)
+
+**給開發人員的快速 Prompt**:
+
+```markdown
+快速保存進度:
+1. 運行測試和格式化
+2. Git 提交和推送
+3. 生成簡短摘要
+
+當前工作: [一句話描述]
+```
 
 ---
 
 ## 🔗 相關文檔
 
 ### 開發流程指引
-- [情況3: 功能增強/修正](./SITUATION-3-FEATURE-ENHANCEMENT.md)
+- [情況1: 專案入門](./SITUATION-1-PROJECT-ONBOARDING.md)
+- [情況2: 開發前準備](./SITUATION-2-FEATURE-DEV-PREP.md)
+- [情況3: 舊功能進階/修正](./SITUATION-3-FEATURE-ENHANCEMENT.md)
 - [情況4: 新功能開發](./SITUATION-4-NEW-FEATURE-DEV.md)
 
 ### Git 規範
@@ -215,4 +307,4 @@ AI 助手完成保存後應確認：
 
 **維護者**: AI 助手 + 開發團隊
 **最後更新**: 2025-12-27
-**版本**: 3.0
+**版本**: 2.0
