@@ -1,5 +1,6 @@
 # =============================================================================
 # IPA Platform - Main Application
+# Phase 11 Fix: Added chat/websocket routers with /sessions prefix (2025-12-24)
 # =============================================================================
 # Intelligent Process Automation Platform
 #

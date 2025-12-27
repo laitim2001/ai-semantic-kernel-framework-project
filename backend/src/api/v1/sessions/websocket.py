@@ -41,7 +41,7 @@ from src.infrastructure.database.session import get_session
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["sessions-websocket"])
+router = APIRouter(prefix="/sessions", tags=["sessions-websocket"])
 
 
 # =============================================================================
@@ -542,7 +542,7 @@ async def get_session_bridge(
 # WebSocket Endpoint
 # =============================================================================
 
-@router.websocket("/sessions/{session_id}/ws")
+@router.websocket("/{session_id}/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
     session_id: str,
@@ -626,7 +626,7 @@ async def websocket_endpoint(
 # HTTP Endpoints for WebSocket Status
 # =============================================================================
 
-@router.get("/sessions/{session_id}/ws/status")
+@router.get("/{session_id}/ws/status")
 async def get_websocket_status(session_id: str) -> Dict[str, Any]:
     """獲取 WebSocket 連接狀態
 
@@ -643,7 +643,7 @@ async def get_websocket_status(session_id: str) -> Dict[str, Any]:
     }
 
 
-@router.post("/sessions/{session_id}/ws/broadcast")
+@router.post("/{session_id}/ws/broadcast")
 async def broadcast_to_session(
     session_id: str,
     message: Dict[str, Any],

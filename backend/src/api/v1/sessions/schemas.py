@@ -187,6 +187,13 @@ class ToolCallResponse(BaseModel):
         )
 
 
+class ToolCallListResponse(BaseModel):
+    """工具調用列表響應"""
+    session_id: str
+    tool_calls: List[ToolCallResponse] = []
+    total: int = 0
+
+
 class MessageResponse(BaseModel):
     """訊息響應"""
     id: str

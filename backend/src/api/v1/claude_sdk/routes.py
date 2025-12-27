@@ -19,7 +19,7 @@ from .schemas import (
 )
 
 
-router = APIRouter(prefix="/claude-sdk", tags=["Claude SDK"])
+router = APIRouter(tags=["Claude SDK Core"])
 
 # Global client instance (should be properly managed in production)
 _client: Optional[ClaudeSDKClient] = None

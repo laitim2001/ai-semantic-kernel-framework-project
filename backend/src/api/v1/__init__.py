@@ -36,6 +36,7 @@
 #   - code_interpreter: Code Interpreter integration (Sprint 37)
 #   - mcp: MCP Architecture - Server management, tool discovery (Sprint 39-41)
 #   - sessions: Session Mode - Multi-turn conversation management (Sprint 42-44)
+#   - claude_sdk: Claude Agent SDK Integration (Sprint 48-51)
 # =============================================================================
 
 from fastapi import APIRouter
@@ -54,7 +55,7 @@ from src.api.v1.groupchat.routes import router as groupchat_router
 from src.api.v1.handoff.routes import router as handoff_router
 from src.api.v1.learning.routes import router as learning_router
 from src.api.v1.mcp.routes import router as mcp_router
-from src.api.v1.sessions.routes import router as sessions_router
+from src.api.v1.sessions import router as sessions_router  # Sprint 42-47: Session + Chat + WebSocket
 from src.api.v1.nested.routes import router as nested_router
 from src.api.v1.notifications.routes import router as notifications_router
 from src.api.v1.performance.routes import router as performance_router
@@ -65,6 +66,7 @@ from src.api.v1.templates.routes import router as templates_router
 from src.api.v1.triggers.routes import router as triggers_router
 from src.api.v1.versioning.routes import router as versioning_router
 from src.api.v1.workflows.routes import router as workflows_router
+from src.api.v1.claude_sdk import router as claude_sdk_router  # Sprint 48-51: Claude SDK
 
 # Create main v1 router
 api_router = APIRouter(prefix="/api/v1")
@@ -103,5 +105,8 @@ api_router.include_router(mcp_router)  # Sprint 39-41: MCP Architecture
 
 # Include sub-routers - Phase 10 (Session Mode)
 api_router.include_router(sessions_router)  # Sprint 42-44: Session Management
+
+# Include sub-routers - Phase 12 (Claude Agent SDK Integration)
+api_router.include_router(claude_sdk_router)  # Sprint 48-51: Claude SDK
 
 __all__ = ["api_router"]

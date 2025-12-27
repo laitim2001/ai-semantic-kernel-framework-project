@@ -24,6 +24,8 @@ from src.api.v1.sessions.schemas import (
     MessageResponse,
     MessageListResponse,
     AttachmentResponse,
+    ToolCallListResponse,
+    ToolCallResponse,
     ErrorResponse,
 )
 from src.core.config import get_settings
@@ -593,6 +595,51 @@ async def download_attachment(
 
 
 # ===== 工具調用操作 =====
+
+@router.get(
+    "/{session_id}/tool-calls",
+    response_model=ToolCallListResponse,
+    summary="獲取工具調用列表",
+    description="獲取 Session 中所有工具調用的記錄",
+)
+async def list_tool_calls(
+    session_id: str,
+    status_filter: Optional[str] = Query(None, description="狀態過濾: pending/completed/failed"),
+    user_id: str = Depends(get_current_user_id),
+    service: SessionService = Depends(get_session_service),
+) -> ToolCallListResponse:
+    """列出 Session 的所有工具調用"""
+    session = await service.get_session(session_id)
+
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "SESSION_NOT_FOUND", "message": "Session not found"},
+        )
+
+    if session.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "ACCESS_DENIED", "message": "Access denied"},
+        )
+
+    # 從 messages 中收集所有 tool calls
+    messages = await service.get_messages(session_id)
+    all_tool_calls = []
+
+    for message in messages:
+        for tc in message.tool_calls:
+            # 如果有狀態過濾，進行過濾
+            if status_filter and tc.status.value != status_filter:
+                continue
+            all_tool_calls.append(ToolCallResponse.from_domain(tc))
+
+    return ToolCallListResponse(
+        session_id=session_id,
+        tool_calls=all_tool_calls,
+        total=len(all_tool_calls),
+    )
+
 
 @router.post(
     "/{session_id}/tool-calls/{tool_call_id}",

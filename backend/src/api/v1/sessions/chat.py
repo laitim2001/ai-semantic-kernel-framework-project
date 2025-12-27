@@ -48,7 +48,7 @@ from src.integrations.llm.factory import LLMServiceFactory
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["sessions-chat"])
+router = APIRouter(prefix="/sessions", tags=["sessions-chat"])
 
 
 # =============================================================================
