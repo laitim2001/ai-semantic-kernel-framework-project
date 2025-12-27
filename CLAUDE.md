@@ -634,7 +634,85 @@ raise HTTPException(
 cd backend && black . && isort . && flake8 . && mypy . && pytest
 ```
 
-### 11. Git Commit 規範
+### 11. TypeScript/Frontend 規範
+
+#### 命名規範
+| 類型 | 規範 | 範例 |
+|------|------|------|
+| **組件檔案** | PascalCase.tsx | `AgentCard.tsx`, `WorkflowList.tsx` |
+| **工具/Hook** | camelCase.ts | `useAgents.ts`, `apiClient.ts` |
+| **類型檔案** | camelCase.ts | `agent.types.ts`, `workflow.ts` |
+| **組件名** | PascalCase | `AgentCard`, `WorkflowEditor` |
+| **Props 介面** | {Component}Props | `AgentCardProps`, `ButtonProps` |
+| **Hook** | use{Name} | `useAgents()`, `useWorkflow()` |
+| **Handler** | handle{Action} | `handleSubmit`, `handleDelete` |
+| **Boolean** | is/has/can prefix | `isLoading`, `hasError`, `canEdit` |
+
+#### React 組件規範
+```tsx
+// 組件結構順序
+interface AgentCardProps {
+  agent: Agent;
+  onEdit?: (id: string) => void;
+}
+
+export function AgentCard({ agent, onEdit }: AgentCardProps) {
+  // 1. Hooks (useState, useEffect, custom hooks)
+  const [isOpen, setIsOpen] = useState(false);
+
+  // 2. Handlers
+  const handleClick = () => setIsOpen(true);
+
+  // 3. Render
+  return <div onClick={handleClick}>{agent.name}</div>;
+}
+```
+
+#### 狀態管理 (Zustand)
+```tsx
+// stores/agentStore.ts
+interface AgentState {
+  agents: Agent[];
+  isLoading: boolean;
+  fetchAgents: () => Promise<void>;
+}
+
+export const useAgentStore = create<AgentState>((set) => ({
+  agents: [],
+  isLoading: false,
+  fetchAgents: async () => {
+    set({ isLoading: true });
+    const agents = await api.getAgents();
+    set({ agents, isLoading: false });
+  },
+}));
+```
+
+#### 樣式規範 (Tailwind + Shadcn)
+```tsx
+// ✅ 使用 Tailwind 類別
+<Button className="bg-primary hover:bg-primary/90">Submit</Button>
+
+// ✅ 使用 cn() 合併類別
+<div className={cn("p-4 rounded-lg", isActive && "bg-accent")} />
+
+// ❌ 避免 inline styles
+<div style={{ padding: 16 }} />  // 不推薦
+```
+
+#### 工具配置
+| 工具 | 用途 |
+|------|------|
+| **Prettier** | 代碼格式化 |
+| **ESLint** | 代碼檢查 |
+| **TypeScript** | 類型檢查 (strict mode) |
+
+```bash
+# 前端品質檢查
+cd frontend && npm run lint && npm run build
+```
+
+### 12. Git Commit 規範
 
 ```
 <type>(<scope>): <description>
