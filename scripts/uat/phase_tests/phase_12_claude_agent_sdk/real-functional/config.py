@@ -15,7 +15,7 @@ class TestConfig:
 
     # Anthropic API
     anthropic_api_key: str
-    model_name: str = "claude-sonnet-4-20250514"
+    model_name: str = "claude-haiku-4-5"  # Default: Haiku 4.5 (fast & cost-effective)
     max_tokens: int = 1024
 
     # Backend API
@@ -56,7 +56,7 @@ class TestConfig:
 
         return cls(
             anthropic_api_key=api_key,
-            model_name=os.getenv("MODEL_NAME", "claude-sonnet-4-20250514"),
+            model_name=os.getenv("MODEL_NAME", "claude-haiku-4-5"),
             max_tokens=int(os.getenv("MAX_TOKENS", "1024")),
             backend_url=os.getenv("BACKEND_URL", "http://localhost:8000"),
             request_timeout=int(os.getenv("TEST_TIMEOUT", "120")),
