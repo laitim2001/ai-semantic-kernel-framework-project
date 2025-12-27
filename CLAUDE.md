@@ -23,10 +23,10 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 
 - **Core Framework**: Microsoft Agent Framework (Preview) - unifies Semantic Kernel + AutoGen
 - **Target Users**: Mid-size enterprises (500-2000 employees)
-- **Status**: **Phase 11 Complete** - Agent-Session Integration - UAT Verified (4/4 scenarios passed)
+- **Status**: **Phase 12 In Progress** - Claude Agent SDK Integration (130/165 pts, 79%)
 - **Architecture**: Full official Agent Framework API integration (>95% API coverage)
 - **Stats**: 3500+ tests, 310+ API routes, 25+ production-ready adapters
-- **Phases Completed**: Phase 1-11 (Sprints 1-47)
+- **Phases Completed**: Phase 1-11 (Sprints 1-47), Phase 12 Sprints 48-51 complete
 
 ---
 
@@ -124,19 +124,41 @@ backend/src/
 │   ├── nested/          # Nested workflows (→ Adapter)
 │   ├── planning/        # Dynamic planning (→ Adapter)
 │   ├── code_interpreter/ # 🆕 Phase 8: Code execution
+│   ├── mcp/             # 🆕 Phase 9: MCP Server management
+│   ├── claude_sdk/      # 🆕 Phase 12: Claude SDK API routes
+│   │   ├── routes.py         # Core SDK routes
+│   │   ├── tools_routes.py   # Tool registry & execution
+│   │   ├── hooks_routes.py   # Hook management
+│   │   ├── mcp_routes.py     # MCP server operations
+│   │   └── hybrid_routes.py  # Hybrid orchestration
 │   └── ...
 │
-├── integrations/        # 🔑 Official API Integration Layer (Phase 4)
-│   └── agent_framework/
-│       ├── builders/    # Adapter implementations
-│       │   ├── groupchat.py      # GroupChatBuilderAdapter
-│       │   ├── handoff.py        # HandoffBuilderAdapter
-│       │   ├── concurrent.py     # ConcurrentBuilderAdapter
-│       │   ├── nested_workflow.py # NestedWorkflowAdapter
-│       │   ├── planning.py       # PlanningAdapter
-│       │   └── magentic.py       # MagenticBuilderAdapter
-│       ├── multiturn/   # MultiTurnAdapter + CheckpointStorage
-│       └── memory/      # Memory storage adapters
+├── integrations/        # 🔑 Official API Integration Layer (Phase 4+)
+│   ├── agent_framework/
+│   │   ├── builders/    # Adapter implementations
+│   │   │   ├── groupchat.py      # GroupChatBuilderAdapter
+│   │   │   ├── handoff.py        # HandoffBuilderAdapter
+│   │   │   ├── concurrent.py     # ConcurrentBuilderAdapter
+│   │   │   ├── nested_workflow.py # NestedWorkflowAdapter
+│   │   │   ├── planning.py       # PlanningAdapter
+│   │   │   └── magentic.py       # MagenticBuilderAdapter
+│   │   ├── multiturn/   # MultiTurnAdapter + CheckpointStorage
+│   │   └── memory/      # Memory storage adapters
+│   │
+│   ├── claude_sdk/      # 🆕 Phase 12: Claude Agent SDK
+│   │   ├── client.py    # ClaudeSDKClient 核心封裝
+│   │   ├── query.py     # Query API 實現
+│   │   ├── session.py   # Session 管理
+│   │   ├── tools/       # Tool Registry & Execution
+│   │   ├── hooks/       # Hook Manager & Pipeline
+│   │   ├── mcp/         # MCP Integration
+│   │   └── hybrid/      # Hybrid Orchestrator
+│   │
+│   └── mcp/             # 🆕 Phase 9-12: MCP Architecture
+│       ├── core/        # MCP Core Components
+│       ├── registry/    # Server Registry
+│       ├── servers/     # MCP Server Implementations
+│       └── security/    # Security Controls
 │
 ├── domain/              # Business logic
 │   ├── agents/          # Agent service
@@ -161,7 +183,7 @@ backend/src/
     └── performance/    # Performance monitoring
 ```
 
-### Key Adapters (Phase 4-11)
+### Key Adapters (Phase 4-12)
 
 | Adapter | Purpose | Official API |
 |---------|---------|--------------|
@@ -173,6 +195,12 @@ backend/src/
 | `MultiTurnAdapter` | Conversation state | `CheckpointStorage` |
 | `SessionAgentBridge` | Agent-Session integration | `AgentExecutor` |
 | `CodeInterpreterAdapter` | Code execution | `Responses API` |
+| **Phase 12: Claude Agent SDK** | | |
+| `ClaudeSDKClient` | Claude SDK 核心封裝 | Claude Agent SDK |
+| `ToolRegistry` | Tool 註冊與管理 | SDK Tools API |
+| `HookManager` | Hook 生命週期管理 | SDK Hooks API |
+| `MCPServerManager` | MCP Server 管理 | MCP Protocol |
+| `HybridOrchestrator` | 混合編排 (Agent + Claude) | Custom Integration |
 
 ### Frontend Architecture
 
@@ -263,36 +291,33 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
 
 ---
 
-## AI Assistant System (v3.1.0)
+## AI Assistant System (v4.1.0)
 
 This project includes AI-assisted development workflows in `claudedocs/6-ai-assistant/prompts/`:
 
-### 情況指引 (SITUATION Guide)
+### 情況指引 (SITUATION Guide) - 5 Core Situations
 
-| 情況 | 用途 |
-|------|------|
-| **SITUATION-1** | 專案入門 - 新會話開始 |
-| **SITUATION-2** | 開發準備 - 任務前準備 |
-| **SITUATION-3** | Bug 修復 |
-| **SITUATION-4** | 功能開發 - 新功能 |
-| **SITUATION-5** | 測試執行 |
-| **SITUATION-6** | 保存進度 (常用) |
-| **SITUATION-7** | 架構審查 |
-| **SITUATION-8** | 代碼審查 |
-| **SITUATION-9** | Session 結束 |
-| **SITUATION-10** | UAT 測試 |
-| **SITUATION-11** | 功能修改/更新 - 現有功能 |
+| 情況 | 檔案名稱 | 用途 |
+|------|----------|------|
+| **SITUATION-1** | PROJECT-ONBOARDING | 專案入門 - 新會話開始、了解專案全貌 |
+| **SITUATION-2** | FEATURE-DEV-PREP | 開發準備 - 任務前的分析與規劃 |
+| **SITUATION-3** | FEATURE-ENHANCEMENT | 舊功能進階/修正 - Bug 修復、重構 |
+| **SITUATION-4** | NEW-FEATURE-DEV | 新功能開發 - 全新功能實施 |
+| **SITUATION-5** | SAVE-PROGRESS | 保存進度 - 提交代碼、更新文檔 |
 
 ### Usage
 ```bash
+# 新會話開始
+"請閱讀 SITUATION-1-PROJECT-ONBOARDING.md 並執行"
+
 # 新功能開發
-"請閱讀 SITUATION-4-FEATURE-DEVELOPMENT.md 並執行"
+"請閱讀 SITUATION-4-NEW-FEATURE-DEV.md 並執行"
 
 # 修改現有功能
-"請閱讀 SITUATION-11-FEATURE-UPDATE.md 並執行"
+"請閱讀 SITUATION-3-FEATURE-ENHANCEMENT.md 並執行"
 
 # 保存進度
-"請閱讀 SITUATION-6-SAVE-PROGRESS.md 並執行"
+"請閱讀 SITUATION-5-SAVE-PROGRESS.md 並執行"
 ```
 
 Full instructions: `claudedocs/6-ai-assistant/prompts/README.md`
@@ -391,6 +416,6 @@ All checks must pass (5/5).
 
 ---
 
-**Last Updated**: 2025-12-24
+**Last Updated**: 2025-12-27
 **Project Start**: 2025-11-14
-**Status**: Phase 11 Complete (47 Sprints) - Agent-Session Integration UAT Verified
+**Status**: Phase 12 In Progress (51 Sprints) - Claude Agent SDK Integration (130/165 pts, 79%)
