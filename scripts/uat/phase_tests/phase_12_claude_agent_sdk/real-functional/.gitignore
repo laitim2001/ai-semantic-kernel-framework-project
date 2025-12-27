@@ -1,0 +1,15 @@
+# Environment files with secrets
+.env
+
+# Test result files
+*.json
+!package.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary files
+*.tmp
+*.temp

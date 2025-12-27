@@ -1,0 +1,203 @@
+# Real Functional Tests
+
+> Phase 12 真實功能測試 - 使用實際 ANTHROPIC_API_KEY 進行完整功能驗證
+
+## 概述
+
+這個測試套件使用真實的 Claude API 進行完整功能驗證，包括：
+
+- 🤖 真實 LLM 對話（使用 claude-sonnet-4-20250514）
+- 🔧 真實工具執行（文件讀寫、命令執行、計算器）
+- 🔌 MCP Server 整合
+- 📋 端到端使用案例
+
+## 前置條件
+
+1. **Python 3.9+**
+2. **Anthropic Python SDK**:
+   ```bash
+   pip install anthropic
+   ```
+3. **ANTHROPIC_API_KEY** - 設置在 `.env` 文件或環境變數
+
+## 配置
+
+### 方法 1: 使用 .env 文件（推薦）
+
+```bash
+# 複製範例文件
+cp .env.example .env
+
+# 編輯 .env 設置 API Key
+# ANTHROPIC_API_KEY=sk-ant-api03-...
+```
+
+### 方法 2: 環境變數
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-api03-...
+```
+
+## 運行測試
+
+### 運行所有場景
+
+```bash
+python real_functional_test.py
+```
+
+### 運行特定場景
+
+```bash
+# 場景 A: 真實 LLM 對話
+python real_functional_test.py --scenario A
+
+# 場景 B: 真實工具執行
+python real_functional_test.py --scenario B
+
+# 場景 C: MCP 整合
+python real_functional_test.py --scenario C
+
+# 場景 D: 端到端用例
+python real_functional_test.py --scenario D
+```
+
+## 測試場景
+
+### Scenario A: Real LLM Conversation
+測試真實的 Claude LLM 對話功能
+
+| 測試 | 說明 |
+|------|------|
+| `test_simple_conversation` | 簡單的問答對話 |
+| `test_multi_turn_conversation` | 多輪對話上下文維護 |
+| `test_system_prompt` | 系統提示詞效果 |
+| `test_streaming_response` | 串流響應處理 |
+
+### Scenario B: Real Tool Execution
+測試真實的工具調用和執行
+
+| 測試 | 說明 |
+|------|------|
+| `test_tool_call_generation` | Claude 生成工具調用 |
+| `test_file_read_tool` | 文件讀取工具 |
+| `test_file_write_tool` | 文件寫入工具 |
+| `test_command_execution_tool` | 命令執行工具（受限） |
+| `test_calculator_tool` | 數學計算工具（安全的 AST 解析） |
+
+### Scenario C: Real MCP Integration
+測試真實的 MCP Server 整合
+
+| 測試 | 說明 |
+|------|------|
+| `test_mcp_server_connection` | MCP Server 連接 |
+| `test_mcp_tool_discovery` | MCP 工具發現 |
+| `test_mcp_tool_execution` | MCP 工具執行 |
+| `test_mcp_resource_access` | MCP 資源訪問 |
+
+### Scenario D: End-to-End Use Cases
+完整的端到端使用案例
+
+| 測試 | 說明 |
+|------|------|
+| `test_code_review_assistant` | 代碼審查助手 |
+| `test_file_analysis_workflow` | 文件分析工作流 |
+| `test_multi_step_task` | 多步驟任務 |
+| `test_error_handling_recovery` | 錯誤處理和恢復 |
+
+## 預期結果
+
+```
+============================================================
+🚀 Phase 12: Claude Agent SDK Real Functional Test
+============================================================
+✅ Configuration loaded
+   Model: claude-sonnet-4-20250514
+   Backend: http://localhost:8000
+
+============================================================
+📋 Scenario A: Real LLM Conversation
+   測試真實的 Claude LLM 對話功能
+============================================================
+
+  🧪 test_simple_conversation... ✅ PASSED (1.23s)
+  🧪 test_multi_turn_conversation... ✅ PASSED (2.45s)
+  🧪 test_system_prompt... ✅ PASSED (1.12s)
+  🧪 test_streaming_response... ✅ PASSED (1.89s)
+
+... (更多場景)
+
+============================================================
+📊 Phase 12 Real Functional Test - Results
+============================================================
+
+✅ PASSED Scenario A: Real LLM Conversation
+   Tests: 4/4 passed
+   Duration: 6.69s
+
+✅ PASSED Scenario B: Real Tool Execution
+   Tests: 5/5 passed
+   Duration: 3.21s
+
+✅ PASSED Scenario C: Real MCP Integration
+   Tests: 4/4 passed
+   Duration: 0.12s
+
+✅ PASSED Scenario D: End-to-End Use Cases
+   Tests: 4/4 passed
+   Duration: 5.43s
+
+============================================================
+Overall: 17/17 tests passed
+Total Duration: 15.45s
+============================================================
+```
+
+## 安全注意事項
+
+### API Key 保護
+- `.env` 文件已添加到 `.gitignore`
+- 不要在公開代碼中暴露 API Key
+- 定期輪換 API Key
+
+### 工具執行限制
+- 命令執行工具只允許特定命令前綴
+- 計算器使用安全的 AST 解析（非 eval）
+- 文件操作限制在臨時目錄
+
+## 費用估算
+
+| 場景 | 預估 Token | 預估費用 |
+|------|-----------|---------|
+| A: LLM Conversation | ~2000 | ~$0.04 |
+| B: Tool Execution | ~1500 | ~$0.03 |
+| C: MCP Integration | ~500 | ~$0.01 |
+| D: E2E Use Cases | ~3000 | ~$0.06 |
+| **Total** | **~7000** | **~$0.14** |
+
+*費用基於 Claude 3.5 Sonnet 定價估算*
+
+## 故障排除
+
+### API Key 錯誤
+```
+❌ Configuration error: ANTHROPIC_API_KEY is required
+```
+解決：確保 `.env` 文件存在且包含有效的 API Key
+
+### 模組未安裝
+```
+❌ anthropic package not installed
+```
+解決：`pip install anthropic`
+
+### 網路連接問題
+```
+❌ Failed to initialize Anthropic client
+```
+解決：檢查網路連接和防火牆設置
+
+---
+
+**Version**: Real Functional v1.0
+**Created**: 2025-12-27
