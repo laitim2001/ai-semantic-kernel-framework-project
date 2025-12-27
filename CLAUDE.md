@@ -232,27 +232,436 @@ frontend/src/
 
 ---
 
-## Code Standards
+## Code Standards (代碼規範)
 
-### Python
-- **Formatter**: Black (line-length: 100)
-- **Import Sorter**: isort (profile: black)
-- **Type Checker**: mypy (strict mode)
-- **Test Coverage**: >= 80%
+本專案的代碼規範標準，確保代碼一致性和可維護性。
 
-### TypeScript
-- **Formatter**: Prettier
-- **Linter**: ESLint
-- **UI Framework**: Shadcn UI + Tailwind CSS
+### 1. Python 檔案標頭規範
 
-### Git Commit Format
+每個 Python 檔案必須包含標準標頭註釋：
+
+```python
+# =============================================================================
+# IPA Platform - {模組名稱}
+# =============================================================================
+# Sprint {N}: {Sprint 名稱}
+# Sprint {M}: {相關更新描述}
+#
+# {檔案功能描述}
+# {可選：架構說明或重要注意事項}
+#
+# Dependencies:
+#   - {依賴模組1} (src.path.to.module)
+#   - {依賴模組2} (src.path.to.module)
+# =============================================================================
+```
+
+**範例**：
+```python
+# =============================================================================
+# IPA Platform - Agent Service
+# =============================================================================
+# Sprint 1: Core Engine - Agent Framework Integration
+# Sprint 31: S31-2 - 遷移至使用 AgentExecutorAdapter
+#
+# Core service for Agent Framework operations.
+# Handles agent creation, execution, and LLM interaction.
+#
+# 架構更新 (Sprint 31):
+#   - 所有官方 Agent Framework API 導入已移至 AgentExecutorAdapter
+#
+# Dependencies:
+#   - AgentExecutorAdapter (src.integrations.agent_framework.builders)
+# =============================================================================
+```
+
+### 2. Python Docstring 規範 (Google Style)
+
+#### Class Docstring
+```python
+class AgentService:
+    """
+    Core service for Agent Framework operations.
+
+    Handles agent creation, execution, and LLM interaction through
+    the official Agent Framework adapters.
+
+    Attributes:
+        db: Database session for persistence
+        executor_adapter: Adapter for agent execution
+        config: Service configuration settings
+
+    Example:
+        >>> service = AgentService(db_session)
+        >>> agent = service.create_agent(config)
+        >>> result = service.execute(agent.id, input_data)
+    """
+```
+
+#### Function/Method Docstring
+```python
+def create_agent(
+    self,
+    config: AgentConfig,
+    *,
+    validate: bool = True
+) -> Agent:
+    """
+    Create a new agent with the specified configuration.
+
+    Creates and persists a new agent instance using the provided
+    configuration. Optionally validates the configuration before creation.
+
+    Args:
+        config: Agent configuration containing name, type, and settings.
+        validate: Whether to validate config before creation. Defaults to True.
+
+    Returns:
+        The newly created Agent instance with assigned ID.
+
+    Raises:
+        ValidationError: If config validation fails and validate=True.
+        DuplicateAgentError: If an agent with the same name already exists.
+        DatabaseError: If persistence operation fails.
+
+    Example:
+        >>> config = AgentConfig(name="assistant", type="chat")
+        >>> agent = service.create_agent(config)
+        >>> print(agent.id)  # uuid4 string
+    """
+```
+
+### 3. 命名規範
+
+| 類型 | 規範 | 範例 |
+|------|------|------|
+| **檔案名** | snake_case | `agent_service.py`, `workflow_executor.py` |
+| **類別名** | PascalCase | `AgentService`, `WorkflowExecutor` |
+| **函數/方法** | snake_case | `create_agent()`, `execute_workflow()` |
+| **變數** | snake_case | `agent_config`, `execution_result` |
+| **常數** | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT`, `DEFAULT_TIMEOUT` |
+| **私有成員** | _prefix | `_internal_state`, `_validate_config()` |
+| **Protected** | _single_prefix | `_process_result()` |
+| **Type Variables** | PascalCase + T suffix | `AgentT`, `ResultT` |
+| **Protocols** | PascalCase + Protocol suffix | `ExecutorProtocol` |
+| **Enums** | PascalCase (class), UPPER_SNAKE (members) | `class Status:`, `PENDING = "pending"` |
+
+### 4. Python Type Hints 規範
+
+#### 必須使用類型標註的情況
+```python
+# ✅ 公開函數必須有完整類型標註
+def get_agent(self, agent_id: str) -> Optional[Agent]:
+    ...
+
+# ✅ 類別屬性必須標註類型
+class AgentService:
+    db: Session
+    config: ServiceConfig
+    _cache: Dict[str, Agent]
+
+# ✅ 複雜返回類型使用 TypedDict 或 dataclass
+@dataclass
+class ExecutionResult:
+    success: bool
+    output: Any
+    duration_ms: int
+    error: Optional[str] = None
+```
+
+#### 常用類型模式
+```python
+from typing import Optional, List, Dict, Any, Union, Callable, TypeVar, Generic
+from typing import Literal, TypedDict, Protocol
+from collections.abc import Sequence, Mapping, Iterable
+
+# Optional 用於可能為 None 的值
+def find_agent(self, name: str) -> Optional[Agent]: ...
+
+# Union 用於多種可能的類型
+def process(self, data: Union[str, bytes]) -> Result: ...
+
+# Literal 用於特定值集合
+Status = Literal["pending", "running", "completed", "failed"]
+
+# Callable 用於函數參數
+def register_callback(self, callback: Callable[[Event], None]) -> None: ...
+
+# Generic 用於泛型類別
+T = TypeVar("T")
+class Repository(Generic[T]):
+    def get_by_id(self, id: str) -> Optional[T]: ...
+```
+
+### 5. Import 順序規範
+
+```python
+# 1. 標準庫 (Standard library)
+import os
+import sys
+from datetime import datetime
+from typing import Dict, List, Optional
+
+# 2. 第三方套件 (Third-party packages)
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
+
+# 3. 本地模組 (Local imports)
+from src.core.config import settings
+from src.core.logging import get_logger
+from src.domain.agents.service import AgentService
+from src.infrastructure.database import get_db
+```
+
+### 6. API 設計規範 (FastAPI)
+
+#### RESTful 路由命名
+| 操作 | Method | Route Pattern | 範例 |
+|------|--------|---------------|------|
+| 列表 | GET | `/api/v1/{resources}` | `/api/v1/agents` |
+| 單一 | GET | `/api/v1/{resources}/{id}` | `/api/v1/agents/{id}` |
+| 建立 | POST | `/api/v1/{resources}` | `/api/v1/agents` |
+| 更新 | PUT | `/api/v1/{resources}/{id}` | `/api/v1/agents/{id}` |
+| 刪除 | DELETE | `/api/v1/{resources}/{id}` | `/api/v1/agents/{id}` |
+| 動作 | POST | `/api/v1/{resources}/{id}/{action}` | `/api/v1/agents/{id}/execute` |
+
+#### Route 結構範本
+```python
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from src.core.database import get_db
+from src.domain.agents.service import AgentService
+from . import schemas
+
+router = APIRouter(prefix="/agents", tags=["Agents"])
+
+
+@router.get("/", response_model=list[schemas.AgentResponse])
+async def list_agents(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+) -> list[schemas.AgentResponse]:
+    """List all agents with pagination."""
+    service = AgentService(db)
+    return service.get_all(skip=skip, limit=limit)
+
+
+@router.post("/", response_model=schemas.AgentResponse, status_code=status.HTTP_201_CREATED)
+async def create_agent(
+    data: schemas.AgentCreate,
+    db: Session = Depends(get_db)
+) -> schemas.AgentResponse:
+    """Create a new agent."""
+    service = AgentService(db)
+    return service.create(data)
+```
+
+#### Response 格式規範
+```python
+# 成功回應 - 單一物件
+{"id": "uuid", "name": "Agent Name", "created_at": "2025-12-27T10:00:00Z"}
+
+# 成功回應 - 列表 (含分頁)
+{
+    "data": [...],
+    "total": 100,
+    "page": 1,
+    "page_size": 20,
+    "total_pages": 5
+}
+
+# 錯誤回應
+{
+    "error": "VALIDATION_ERROR",
+    "message": "Invalid input data",
+    "details": {"field": "name", "issue": "Field is required"}
+}
+```
+
+### 7. 資料庫規範 (SQLAlchemy)
+
+#### Model 結構範本
+```python
+from datetime import datetime
+from typing import Optional
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, JSON
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
+
+from src.infrastructure.database import Base
+
+
+class AgentModel(Base):
+    """
+    Agent database model.
+
+    Table: agents
+
+    Attributes:
+        id: Primary key (UUID)
+        name: Agent display name
+        type: Agent type classification
+        config: JSON configuration
+    """
+    __tablename__ = "agents"
+
+    # Primary key
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+
+    # Required fields
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # Optional fields
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    config: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
+
+    # Timestamps (必須)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    # Relationships
+    executions: Mapped[list["ExecutionModel"]] = relationship(
+        "ExecutionModel", back_populates="agent", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<Agent(id={self.id}, name={self.name})>"
+```
+
+#### Repository Pattern
+```python
+class AgentRepository(BaseRepository[AgentModel]):
+    """Repository for Agent model with custom queries."""
+
+    def __init__(self, db: Session):
+        super().__init__(db, AgentModel)
+
+    def get_by_type(self, agent_type: str) -> list[AgentModel]:
+        """Get all agents of a specific type."""
+        return self.db.query(self.model).filter(
+            self.model.type == agent_type
+        ).all()
+```
+
+### 8. Pydantic Schema 規範
+
+```python
+from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class AgentBase(BaseModel):
+    """Base schema with common fields."""
+    name: str = Field(..., min_length=1, max_length=100, description="Agent name")
+    description: Optional[str] = Field(None, max_length=500)
+
+
+class AgentCreate(AgentBase):
+    """Schema for creating new agent."""
+    type: str = Field(..., description="Agent type")
+    config: Optional[dict] = Field(default_factory=dict)
+
+
+class AgentUpdate(BaseModel):
+    """Schema for updating agent (all fields optional)."""
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    config: Optional[dict] = None
+
+
+class AgentResponse(AgentBase):
+    """Schema for API response."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    type: str
+    created_at: datetime
+    updated_at: datetime
+```
+
+### 9. 錯誤處理規範
+
+```python
+from fastapi import HTTPException, status
+
+# 使用 HTTPException 的標準方式
+raise HTTPException(
+    status_code=status.HTTP_404_NOT_FOUND,
+    detail="Agent not found"
+)
+
+# 自定義錯誤格式
+raise HTTPException(
+    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    detail={
+        "error": "VALIDATION_ERROR",
+        "message": "Invalid configuration",
+        "details": {"field": "timeout", "issue": "Must be positive integer"}
+    }
+)
+
+# 業務邏輯錯誤
+raise HTTPException(
+    status_code=status.HTTP_400_BAD_REQUEST,
+    detail="Cannot delete agent with active workflows"
+)
+```
+
+### 10. 工具與品質檢查
+
+| 工具 | 用途 | 設定 |
+|------|------|------|
+| **Black** | 代碼格式化 | line-length: 100 |
+| **isort** | Import 排序 | profile: black |
+| **flake8** | 代碼檢查 | max-line-length: 100 |
+| **mypy** | 類型檢查 | strict mode |
+| **pytest** | 測試框架 | coverage >= 80% |
+
+```bash
+# 完整品質檢查命令
+cd backend && black . && isort . && flake8 . && mypy . && pytest
+```
+
+### 11. Git Commit 規範
+
 ```
 <type>(<scope>): <description>
+
+[optional body]
 
 🤖 Generated with Claude Code
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
-Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
+
+| Type | 用途 |
+|------|------|
+| `feat` | 新功能 |
+| `fix` | Bug 修復 |
+| `docs` | 文檔更新 |
+| `refactor` | 重構 (不改變功能) |
+| `test` | 測試相關 |
+| `chore` | 維護性工作 |
+
+| Scope | 範圍 |
+|-------|------|
+| `api` | API 路由層 |
+| `domain` | 業務邏輯層 |
+| `infra` | 基礎設施層 |
+| `integrations` | 整合層 |
+| `frontend` | 前端 |
+| `sprint-N` | Sprint 相關變更 |
 
 ---
 
