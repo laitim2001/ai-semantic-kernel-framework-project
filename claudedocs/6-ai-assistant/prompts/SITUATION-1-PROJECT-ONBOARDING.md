@@ -63,6 +63,7 @@ Read: claudedocs/3-progress/weekly/[最新週報].md
 Bash: ls backend/src/api/v1/
 Bash: ls backend/src/domain/
 Bash: ls backend/src/integrations/agent_framework/
+Bash: ls backend/src/integrations/claude_sdk/ (Phase 12)
 
 # 2. 檢查配置文件
 Read: backend/requirements.txt (了解依賴)
@@ -101,6 +102,7 @@ Read: docker-compose.yml (了解服務架構)
 | 7-8 | Orchestration | 並發執行、Agent Handoff |
 | 9-10 | MCP & Sessions | MCP 架構、Session Mode |
 | 11 | Integration | Agent-Session 整合 |
+| 12 | Claude Agent SDK | SDK 整合、Tools、Hooks、MCP、Hybrid 架構 |
 
 ## 進行中任務
 - ⏳ [檢查 Git 狀態或 bmm-workflow-status.yaml]
@@ -110,6 +112,7 @@ Read: docker-compose.yml (了解服務架構)
 - **後端 API**: backend/src/api/v1/
 - **業務邏輯**: backend/src/domain/
 - **Agent Framework**: backend/src/integrations/agent_framework/
+- **Claude SDK**: backend/src/integrations/claude_sdk/ (Phase 12)
 - **前端頁面**: frontend/src/pages/
 - **文檔**: docs/
 - **AI 助手**: claudedocs/6-ai-assistant/prompts/
@@ -162,7 +165,9 @@ AI 助手應該能回答以下問題:
 ### 新開發者 (Week 2)
 1. backend/src/domain/ - 業務邏輯
 2. backend/src/integrations/agent_framework/ - Agent Framework
-3. claudedocs/4-changes/ - 變更歷史
+3. backend/src/integrations/claude_sdk/ - Claude Agent SDK (Phase 12)
+4. docs/03-implementation/sprint-planning/phase-12/ - Phase 12 規劃
+5. claudedocs/4-changes/ - 變更歷史
 
 ---
 
@@ -178,4 +183,4 @@ AI 助手應該能回答以下問題:
 
 **維護者**: AI 助手 + 開發團隊
 **最後更新**: 2025-12-27
-**版本**: 2.0
+**版本**: 2.1
