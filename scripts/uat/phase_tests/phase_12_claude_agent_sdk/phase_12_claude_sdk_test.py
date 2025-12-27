@@ -421,17 +421,44 @@ class ClaudeSDKTestClient:
         self,
         name: str,
         hook_type: str,
-        handler: str,
-        priority: int = 100,
-        enabled: bool = True,
+        handler: str = "",  # Deprecated: not used by API
+        priority: int = 100,  # Deprecated: will be converted to enum
+        enabled: bool = True,  # Deprecated: not used by API
     ) -> Dict[str, Any]:
-        """Register a new hook (S51-2)"""
+        """Register a new hook (S51-2)
+
+        API expects:
+        - type: "approval", "audit", "rate_limit", "sandbox", "custom"
+        - name: optional hook name
+        - priority: "low", "normal", "high", "critical"
+        - config: optional HookConfig
+        """
+        # Map old hook_type values to new API types
+        type_mapping = {
+            "post_execution": "audit",
+            "pre_execution": "approval",
+            "audit": "audit",
+            "approval": "approval",
+            "rate_limit": "rate_limit",
+            "sandbox": "sandbox",
+            "custom": "custom",
+        }
+        api_type = type_mapping.get(hook_type, "custom")
+
+        # Map priority int to enum string
+        if priority >= 100:
+            api_priority = "critical"
+        elif priority >= 75:
+            api_priority = "high"
+        elif priority >= 50:
+            api_priority = "normal"
+        else:
+            api_priority = "low"
+
         payload = {
+            "type": api_type,
             "name": name,
-            "hook_type": hook_type,
-            "handler": handler,
-            "priority": priority,
-            "enabled": enabled,
+            "priority": api_priority,
         }
         try:
             endpoint = self.endpoints.get("hook_register", "/claude-sdk/hooks/register")
@@ -1817,7 +1844,8 @@ async def run_api_routes_scenario(
         )
         data = result.get("data") or {}
         if isinstance(data, dict):
-            hook_id = data.get("hook_id", "test-hook-id")
+            # API returns "id" not "hook_id"
+            hook_id = data.get("id") or data.get("hook_id", "test-hook-id")
         steps.append(StepResult(
             step=step_num,
             name="Register Hook API",
