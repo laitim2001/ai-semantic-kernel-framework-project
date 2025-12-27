@@ -1,8 +1,8 @@
-# 🚀 情況4: 功能開發 - 實作新功能
+# 🚀 情況4: 新功能開發
 
-> **使用時機**: 開始實際編寫新功能代碼時
+> **使用時機**: 開始實際編寫新功能/模組代碼時
 > **目標**: 按照計劃高效地完成功能開發
-> **適用場景**: Sprint 開發、功能實作、API 開發
+> **適用場景**: Sprint 開發、新功能實作、新模組開發、API 開發
 
 ---
 
@@ -223,10 +223,9 @@ AI 助手完成開發後應確認：
 ## 🔗 相關文檔
 
 ### 開發流程指引
-- [情況2: 開發任務準備](./SITUATION-2-FEATURE-DEV-PREP.md)
-- [情況5: 測試執行](./SITUATION-5-TESTING.md)
-- [情況6: 保存進度](./SITUATION-6-SAVE-PROGRESS.md)
-- [情況8: 代碼審查](./SITUATION-8-CODE-REVIEW.md)
+- [情況2: 開發前準備](./SITUATION-2-FEATURE-DEV-PREP.md)
+- [情況3: 功能增強/修正](./SITUATION-3-FEATURE-ENHANCEMENT.md)
+- [情況5: 保存進度](./SITUATION-5-SAVE-PROGRESS.md)
 
 ### 架構參考
 - `backend/src/api/CLAUDE.md` - API 層設計規範
@@ -236,5 +235,5 @@ AI 助手完成開發後應確認：
 ---
 
 **維護者**: AI 助手 + 開發團隊
-**最後更新**: 2025-12-24
-**版本**: 2.0
+**最後更新**: 2025-12-27
+**版本**: 3.0

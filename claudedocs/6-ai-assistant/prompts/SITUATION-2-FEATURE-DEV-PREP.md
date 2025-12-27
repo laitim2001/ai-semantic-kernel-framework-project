@@ -134,11 +134,11 @@ AI 助手應該完成以下準備工作：
 
 ## 🔗 相關文檔
 
-### 開發流程指引
+### 核心開發流程
 - [情況1: 專案入門](./SITUATION-1-PROJECT-ONBOARDING.md)
-- [情況4: 功能開發](./SITUATION-4-FEATURE-DEVELOPMENT.md)
-- [情況5: 測試執行](./SITUATION-5-TESTING.md)
-- [情況6: 保存進度](./SITUATION-6-SAVE-PROGRESS.md)
+- [情況3: 功能增強/修正](./SITUATION-3-FEATURE-ENHANCEMENT.md)
+- [情況4: 新功能開發](./SITUATION-4-NEW-FEATURE-DEV.md)
+- [情況5: 保存進度](./SITUATION-5-SAVE-PROGRESS.md)
 
 ### 架構參考
 - `backend/src/api/CLAUDE.md` - API 層設計規範
@@ -147,5 +147,5 @@ AI 助手應該完成以下準備工作：
 ---
 
 **維護者**: AI 助手 + 開發團隊
-**最後更新**: 2025-12-24
-**版本**: 2.0
+**最後更新**: 2025-12-27
+**版本**: 3.0

@@ -143,21 +143,14 @@ AI 助手應該能回答以下問題：
 
 ## 🔗 相關文檔
 
-### 開發流程指引
-- [情況2: 開發任務準備](./SITUATION-2-FEATURE-DEV-PREP.md)
-- [情況3: Bug 修復](./SITUATION-3-BUG-FIX.md)
-- [情況4: 功能開發](./SITUATION-4-FEATURE-DEVELOPMENT.md)
-- [情況5: 測試執行](./SITUATION-5-TESTING.md)
-- [情況6: 保存進度](./SITUATION-6-SAVE-PROGRESS.md)
-
-### 審查與結束
-- [情況7: 架構審查](./SITUATION-7-ARCHITECTURE-REVIEW.md)
-- [情況8: 代碼審查](./SITUATION-8-CODE-REVIEW.md)
-- [情況9: Session 結束](./SITUATION-9-SESSION-END.md)
-- [情況10: UAT 測試](./SITUATION-10-UAT-SESSION.md)
+### 核心開發流程
+- [情況2: 開發前準備](./SITUATION-2-FEATURE-DEV-PREP.md)
+- [情況3: 功能增強/修正](./SITUATION-3-FEATURE-ENHANCEMENT.md)
+- [情況4: 新功能開發](./SITUATION-4-NEW-FEATURE-DEV.md)
+- [情況5: 保存進度](./SITUATION-5-SAVE-PROGRESS.md)
 
 ---
 
 **維護者**: AI 助手 + 開發團隊
-**最後更新**: 2025-12-24
-**版本**: 2.0
+**最後更新**: 2025-12-27
+**版本**: 3.0

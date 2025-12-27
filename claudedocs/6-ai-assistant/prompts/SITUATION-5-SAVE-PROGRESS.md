@@ -1,4 +1,4 @@
-# 💾 情況6: 保存進度 - 提交和保存開發成果
+# 💾 情況5: 保存進度
 
 > **使用時機**: 完成階段性工作，需要保存進度時
 > **目標**: 安全地提交和記錄開發成果
@@ -205,9 +205,8 @@ AI 助手完成保存後應確認：
 ## 🔗 相關文檔
 
 ### 開發流程指引
-- [情況4: 功能開發](./SITUATION-4-FEATURE-DEVELOPMENT.md)
-- [情況5: 測試執行](./SITUATION-5-TESTING.md)
-- [情況9: Session 結束](./SITUATION-9-SESSION-END.md)
+- [情況3: 功能增強/修正](./SITUATION-3-FEATURE-ENHANCEMENT.md)
+- [情況4: 新功能開發](./SITUATION-4-NEW-FEATURE-DEV.md)
 
 ### Git 規範
 - `.claude/rules/git-workflow.md` - Git 工作流程規則
@@ -215,5 +214,5 @@ AI 助手完成保存後應確認：
 ---
 
 **維護者**: AI 助手 + 開發團隊
-**最後更新**: 2025-12-24
-**版本**: 2.0
+**最後更新**: 2025-12-27
+**版本**: 3.0
