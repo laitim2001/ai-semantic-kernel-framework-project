@@ -4,6 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## AI Assistant Notes (重要)
+
+- **專案位置**: Windows C 槽 (`C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framework-project`)
+- **啟動 Server 方式**: 不要使用 `start /D`，請使用 `cmd /c` 或直接在終端執行
+- **Python 環境**: 請確保在正確的虛擬環境中執行
+
+```bash
+# 正確的 Backend 啟動方式 (Windows)
+cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framework-project\backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+```
+
+---
+
 ## Project Overview
 
 **IPA Platform** (Intelligent Process Automation) is an enterprise-grade AI Agent orchestration platform built on **Microsoft Agent Framework**.

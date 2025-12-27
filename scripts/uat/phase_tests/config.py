@@ -127,31 +127,39 @@ API_ENDPOINTS = {
         "session_history": "/claude-sdk/sessions/{session_id}/history",
         "session_fork": "/claude-sdk/sessions/{session_id}/fork",
 
-        # Sprint 49: Tools & Hooks
+        # Sprint 49: Tools & Hooks (Integration Layer)
         "tools": "/claude-sdk/tools",
-        "tool_execute": "/claude-sdk/tools/{tool_name}/execute",
+        "tool": "/claude-sdk/tools/{tool_name}",
         "hooks": "/claude-sdk/hooks",
-        "hooks_config": "/claude-sdk/hooks/config",
+        "hook": "/claude-sdk/hooks/{hook_id}",
 
-        # Sprint 50: MCP & Hybrid
+        # Sprint 51: Tools API Routes (S51-1)
+        "tools_list": "/claude-sdk/tools",
+        "tool_get": "/claude-sdk/tools/{name}",
+        "tool_execute": "/claude-sdk/tools/execute",
+        "tool_validate": "/claude-sdk/tools/validate",
+
+        # Sprint 51: Hooks API Routes (S51-2)
+        "hooks_list": "/claude-sdk/hooks",
+        "hook_get": "/claude-sdk/hooks/{hook_id}",
+        "hook_register": "/claude-sdk/hooks/register",
+        "hook_delete": "/claude-sdk/hooks/{hook_id}",
+        "hook_enable": "/claude-sdk/hooks/{hook_id}/enable",
+        "hook_disable": "/claude-sdk/hooks/{hook_id}/disable",
+
+        # Sprint 51: MCP API Routes (S51-3)
         "mcp_servers": "/claude-sdk/mcp/servers",
-        "mcp_server": "/claude-sdk/mcp/servers/{server_name}",
-        "mcp_connect": "/claude-sdk/mcp/servers/{server_name}/connect",
-        "mcp_disconnect": "/claude-sdk/mcp/servers/{server_name}/disconnect",
-        "mcp_tools": "/claude-sdk/mcp/servers/{server_name}/tools",
-        "mcp_tool_execute": "/claude-sdk/mcp/servers/{server_name}/tools/{tool_name}/execute",
-        "mcp_health": "/claude-sdk/mcp/health",
+        "mcp_connect": "/claude-sdk/mcp/servers/connect",
+        "mcp_disconnect": "/claude-sdk/mcp/servers/{server_id}/disconnect",
+        "mcp_health": "/claude-sdk/mcp/servers/{server_id}/health",
+        "mcp_tools": "/claude-sdk/mcp/tools",
+        "mcp_tool_execute": "/claude-sdk/mcp/tools/execute",
 
-        # Hybrid Orchestrator
+        # Sprint 51: Hybrid API Routes (S51-4)
         "hybrid_execute": "/claude-sdk/hybrid/execute",
         "hybrid_analyze": "/claude-sdk/hybrid/analyze",
-        "hybrid_sessions": "/claude-sdk/hybrid/sessions",
-        "hybrid_session": "/claude-sdk/hybrid/sessions/{session_id}",
         "hybrid_metrics": "/claude-sdk/hybrid/metrics",
-
-        # Context Synchronizer
-        "context_sync": "/claude-sdk/context/sync",
-        "context_snapshot": "/claude-sdk/context/snapshot",
-        "context_restore": "/claude-sdk/context/restore",
+        "hybrid_context_sync": "/claude-sdk/hybrid/context/sync",
+        "hybrid_capabilities": "/claude-sdk/hybrid/capabilities",
     },
 }

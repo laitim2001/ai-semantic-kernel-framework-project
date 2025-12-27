@@ -96,7 +96,7 @@ class PhaseTestBase:
                 duration_ms=duration,
                 details=result if isinstance(result, dict) else {},
             ))
-            print(f"  ✅ Step {step_num}: {name}")
+            print(f"  [PASS] Step {step_num}: {name}")
             return result if isinstance(result, dict) else {}
 
         except Exception as e:
@@ -108,7 +108,7 @@ class PhaseTestBase:
                 duration_ms=duration,
                 error=str(e),
             ))
-            print(f"  ❌ Step {step_num}: {name} - {e}")
+            print(f"  [FAIL] Step {step_num}: {name} - {e}")
             return {"error": str(e)}
 
 
@@ -126,6 +126,7 @@ class AgentSessionTestClient:
         self.endpoints = API_ENDPOINTS.get("agent_session", {})
         self.session_endpoints = API_ENDPOINTS.get("sessions", {})
         self._client: Optional[httpx.AsyncClient] = None
+        self._test_agent_id: Optional[str] = None  # 測試用 Agent ID
 
     async def __aenter__(self):
         """Context manager entry"""
@@ -134,12 +135,65 @@ class AgentSessionTestClient:
             timeout=self.timeout,
             headers={"Content-Type": "application/json"},
         )
+        # 初始化測試 Agent
+        await self._ensure_test_agent()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit"""
         if self._client:
             await self._client.aclose()
+
+    # =========================================================================
+    # Test Agent Management
+    # =========================================================================
+
+    async def _ensure_test_agent(self) -> None:
+        """確保測試 Agent 存在"""
+        try:
+            # 先嘗試獲取現有的測試 Agent
+            response = await self._client.get("/agents")
+            if response.status_code == 200:
+                data = response.json()
+                agents = data.get("data", []) if isinstance(data, dict) else data
+                if isinstance(agents, list):
+                    for agent in agents:
+                        if agent.get("name") == "Phase11TestAgent":
+                            self._test_agent_id = agent.get("id")
+                            print(f"  [INFO] Using existing test agent: {self._test_agent_id}")
+                            return
+
+            # 如果沒有找到，建立新的測試 Agent
+            agent_data = {
+                "name": "Phase11TestAgent",
+                "description": "Test agent for Phase 11 UAT",
+                "instructions": "You are a helpful assistant for testing purposes. You can use tools like calculator and search.",
+                "category": "test",
+                "tools": ["calculator", "search"],
+            }
+            response = await self._client.post("/agents", json=agent_data)
+            if response.status_code in [200, 201]:
+                result = response.json()
+                self._test_agent_id = result.get("id")
+                print(f"  [OK] Created test agent: {self._test_agent_id}")
+            elif response.status_code == 409:
+                # Agent 已存在 (衝突)，再次嘗試獲取
+                response = await self._client.get("/agents")
+                if response.status_code == 200:
+                    data = response.json()
+                    agents = data.get("data", []) if isinstance(data, dict) else data
+                    if isinstance(agents, list):
+                        for agent in agents:
+                            if agent.get("name") == "Phase11TestAgent":
+                                self._test_agent_id = agent.get("id")
+                                print(f"  [INFO] Using existing test agent: {self._test_agent_id}")
+                                return
+        except Exception as e:
+            print(f"  [WARN] Could not create test agent: {e}")
+            # 使用一個有效的 UUID 格式作為後備
+            import uuid
+            self._test_agent_id = str(uuid.uuid4())
+            print(f"  [INFO] Using fallback UUID: {self._test_agent_id}")
 
     # =========================================================================
     # Health Check
@@ -176,30 +230,41 @@ class AgentSessionTestClient:
 
         Args:
             title: Session 標題
-            agent_id: 關聯的 Agent ID
+            agent_id: 關聯的 Agent ID (如果未提供，使用測試 Agent)
             approval_mode: 審批模式 (auto/manual)
             metadata: 額外的 metadata
         """
+        # 使用提供的 agent_id 或測試 Agent ID (必填欄位!)
+        effective_agent_id = agent_id or self._test_agent_id
+        if not effective_agent_id:
+            import uuid
+            effective_agent_id = str(uuid.uuid4())
+
         payload = {
-            "title": title,
-            "metadata": metadata or {},
-            "config": {"approval_mode": approval_mode},
+            "agent_id": effective_agent_id,  # 必填欄位
+            "config": {
+                "timeout_minutes": 60,
+                "enable_code_interpreter": True,
+            },
+            "metadata": metadata or {"title": title, "approval_mode": approval_mode},
         }
-        if agent_id:
-            payload["agent_id"] = agent_id
 
         try:
             response = await self._client.post(
                 self.session_endpoints.get("create", "/sessions"),
                 json=payload,
             )
-            return {
+            result = {
                 "success": response.status_code in [200, 201],
                 "status_code": response.status_code,
                 "data": response.json() if response.status_code in [200, 201] else None,
                 "error": response.text if response.status_code >= 400 else None,
             }
+            if not result["success"]:
+                print(f"    [WARN] Session creation failed: {result.get('error', 'Unknown error')[:200]}")
+            return result
         except Exception as e:
+            print(f"    [WARN] Session creation exception: {e}")
             return {"success": False, "error": str(e)}
 
     async def get_session(self, session_id: str) -> Dict[str, Any]:
@@ -492,26 +557,34 @@ async def run_tool_execution_scenario(
         duration = (datetime.now() - start).total_seconds() * 1000
 
         if result.get("success") and result.get("data"):
-            session_id = result["data"].get("id", f"sim_session_{datetime.now().timestamp()}")
+            session_id = result["data"].get("id")
             steps.append(StepResult(
                 step=1,
                 name="Create session",
                 status=TestStatus.PASSED,
                 duration_ms=duration,
-                details={"session_id": session_id},
+                details={"session_id": session_id, "real_api": True},
             ))
-            print(f"  ✅ Step 1: Created session {session_id}")
+            print(f"  [PASS] Step 1: Created session {session_id}")
         else:
-            # Simulation fallback
-            session_id = f"sim_session_{datetime.now().timestamp()}"
+            # API 失敗，標記為失敗並提供詳細錯誤
+            error_msg = result.get("error", "Unknown error")
             steps.append(StepResult(
                 step=1,
-                name="Create session (simulated)",
-                status=TestStatus.PASSED,
+                name="Create session",
+                status=TestStatus.FAILED,
                 duration_ms=duration,
-                details={"session_id": session_id, "simulated": True},
+                error=error_msg[:500],
             ))
-            print(f"  ✅ Step 1: Simulated session {session_id}")
+            print(f"  [FAIL] Step 1: Failed to create session - {error_msg[:100]}")
+            # 提前返回失敗結果
+            return ScenarioResult(
+                name=scenario_name,
+                status=TestStatus.FAILED,
+                duration_seconds=duration / 1000,
+                steps=steps,
+                error=error_msg[:500],
+            )
 
         # Step 2: Send calculation request
         start = datetime.now()
@@ -529,7 +602,7 @@ async def run_tool_execution_scenario(
                 duration_ms=duration,
                 details={"response": result.get("data")},
             ))
-            print(f"  ✅ Step 2: Sent calculation request")
+            print(f"  [PASS] Step 2: Sent calculation request")
         else:
             # Simulation
             steps.append(StepResult(
@@ -542,7 +615,7 @@ async def run_tool_execution_scenario(
                     "simulated_response": "Using calculator: 15 + 27 + 38 = 80",
                 },
             ))
-            print(f"  ✅ Step 2: Simulated calculation request")
+            print(f"  [PASS] Step 2: Simulated calculation request")
 
         # Step 3: Verify tool call
         start = datetime.now()
@@ -558,7 +631,7 @@ async def run_tool_execution_scenario(
                 duration_ms=duration,
                 details={"tool_calls": tool_calls},
             ))
-            print(f"  ✅ Step 3: Found {len(tool_calls)} tool calls")
+            print(f"  [PASS] Step 3: Found {len(tool_calls)} tool calls")
         else:
             # Simulation
             steps.append(StepResult(
@@ -573,7 +646,7 @@ async def run_tool_execution_scenario(
                     ],
                 },
             ))
-            print(f"  ✅ Step 3: Simulated tool call verification")
+            print(f"  [PASS] Step 3: Simulated tool call verification")
 
         # Step 4: Send follow-up
         start = datetime.now()
@@ -590,7 +663,7 @@ async def run_tool_execution_scenario(
             duration_ms=duration,
             details={"response": result.get("data") or {"simulated": True}},
         ))
-        print(f"  ✅ Step 4: Context maintained for follow-up")
+        print(f"  [PASS] Step 4: Context maintained for follow-up")
 
         # Step 5: End session
         start = datetime.now()
@@ -603,7 +676,7 @@ async def run_tool_execution_scenario(
             status=TestStatus.PASSED,
             duration_ms=duration,
         ))
-        print(f"  ✅ Step 5: Session ended")
+        print(f"  [PASS] Step 5: Session ended")
 
     except Exception as e:
         steps.append(StepResult(
@@ -613,14 +686,14 @@ async def run_tool_execution_scenario(
             duration_ms=0,
             error=str(e),
         ))
-        print(f"  ❌ Error: {e}")
+        print(f"  [FAIL] Error: {e}")
 
     # Calculate overall status
     failed_steps = [s for s in steps if s.status == TestStatus.FAILED]
     status = TestStatus.FAILED if failed_steps else TestStatus.PASSED
     total_duration = sum(s.duration_ms for s in steps) / 1000
 
-    print(f"\nScenario Result: {'✅ PASSED' if status == TestStatus.PASSED else '❌ FAILED'}")
+    print(f"\nScenario Result: {'[PASS] PASSED' if status == TestStatus.PASSED else '[FAIL] FAILED'}")
     print(f"Duration: {total_duration:.2f}s")
 
     return ScenarioResult(
@@ -654,20 +727,35 @@ async def run_streaming_scenario(
         result = await client.create_session(title="Streaming Test")
         duration = (datetime.now() - start).total_seconds() * 1000
 
-        # Safely extract session_id with None checks
-        data = result.get("data") if result else None
-        session_id = (
-            (data.get("id") if data else None)
-            or f"sim_stream_{datetime.now().timestamp()}"
-        )
-        steps.append(StepResult(
-            step=1,
-            name="Create session",
-            status=TestStatus.PASSED,
-            duration_ms=duration,
-            details={"session_id": session_id},
-        ))
-        print(f"  ✅ Step 1: Created session {session_id}")
+        # 檢查 API 是否成功
+        if result.get("success") and result.get("data"):
+            session_id = result["data"].get("id")
+            steps.append(StepResult(
+                step=1,
+                name="Create session",
+                status=TestStatus.PASSED,
+                duration_ms=duration,
+                details={"session_id": session_id, "real_api": True},
+            ))
+            print(f"  [PASS] Step 1: Created session {session_id}")
+        else:
+            # API 失敗
+            error_msg = result.get("error", "Unknown error")
+            steps.append(StepResult(
+                step=1,
+                name="Create session",
+                status=TestStatus.FAILED,
+                duration_ms=duration,
+                error=error_msg[:500],
+            ))
+            print(f"  [FAIL] Step 1: Failed to create session - {error_msg[:100]}")
+            return ScenarioResult(
+                name=scenario_name,
+                status=TestStatus.FAILED,
+                duration_seconds=duration / 1000,
+                steps=steps,
+                error=error_msg[:500],
+            )
 
         # Step 2: Send streaming request
         start = datetime.now()
@@ -691,7 +779,7 @@ async def run_streaming_scenario(
                     "has_done": done_event is not None,
                 },
             ))
-            print(f"  ✅ Step 2: Received {len(text_deltas)} chunks")
+            print(f"  [PASS] Step 2: Received {len(text_deltas)} chunks")
         else:
             # Simulation
             steps.append(StepResult(
@@ -704,7 +792,7 @@ async def run_streaming_scenario(
                     "simulated_chunks": ["Once", " upon", " a", " time", "..."],
                 },
             ))
-            print(f"  ✅ Step 2: Simulated streaming")
+            print(f"  [PASS] Step 2: Simulated streaming")
 
         # Step 3: Verify message history
         start = datetime.now()
@@ -720,7 +808,7 @@ async def run_streaming_scenario(
                 duration_ms=duration,
                 details={"message_count": len(messages)},
             ))
-            print(f"  ✅ Step 3: History contains {len(messages)} messages")
+            print(f"  [PASS] Step 3: History contains {len(messages)} messages")
         else:
             steps.append(StepResult(
                 step=3,
@@ -729,7 +817,7 @@ async def run_streaming_scenario(
                 duration_ms=duration,
                 details={"simulated": True},
             ))
-            print(f"  ✅ Step 3: Simulated history verification")
+            print(f"  [PASS] Step 3: Simulated history verification")
 
     except Exception as e:
         steps.append(StepResult(
@@ -739,14 +827,14 @@ async def run_streaming_scenario(
             duration_ms=0,
             error=str(e),
         ))
-        print(f"  ❌ Error: {e}")
+        print(f"  [FAIL] Error: {e}")
 
     # Calculate overall status
     failed_steps = [s for s in steps if s.status == TestStatus.FAILED]
     status = TestStatus.FAILED if failed_steps else TestStatus.PASSED
     total_duration = sum(s.duration_ms for s in steps) / 1000
 
-    print(f"\nScenario Result: {'✅ PASSED' if status == TestStatus.PASSED else '❌ FAILED'}")
+    print(f"\nScenario Result: {'[PASS] PASSED' if status == TestStatus.PASSED else '[FAIL] FAILED'}")
     print(f"Duration: {total_duration:.2f}s")
 
     return ScenarioResult(
@@ -783,20 +871,35 @@ async def run_approval_workflow_scenario(
         )
         duration = (datetime.now() - start).total_seconds() * 1000
 
-        # Safely extract session_id with None checks
-        data = result.get("data") if result else None
-        session_id = (
-            (data.get("id") if data else None)
-            or f"sim_approval_{datetime.now().timestamp()}"
-        )
-        steps.append(StepResult(
-            step=1,
-            name="Create session with manual approval",
-            status=TestStatus.PASSED,
-            duration_ms=duration,
-            details={"session_id": session_id, "approval_mode": "manual"},
-        ))
-        print(f"  ✅ Step 1: Created session with manual approval")
+        # 檢查 API 是否成功
+        if result.get("success") and result.get("data"):
+            session_id = result["data"].get("id")
+            steps.append(StepResult(
+                step=1,
+                name="Create session with manual approval",
+                status=TestStatus.PASSED,
+                duration_ms=duration,
+                details={"session_id": session_id, "approval_mode": "manual", "real_api": True},
+            ))
+            print(f"  [PASS] Step 1: Created session with manual approval {session_id}")
+        else:
+            # API 失敗
+            error_msg = result.get("error", "Unknown error")
+            steps.append(StepResult(
+                step=1,
+                name="Create session with manual approval",
+                status=TestStatus.FAILED,
+                duration_ms=duration,
+                error=error_msg[:500],
+            ))
+            print(f"  [FAIL] Step 1: Failed to create session - {error_msg[:100]}")
+            return ScenarioResult(
+                name=scenario_name,
+                status=TestStatus.FAILED,
+                duration_seconds=duration / 1000,
+                steps=steps,
+                error=error_msg[:500],
+            )
 
         # Step 2: Send message triggering tool
         start = datetime.now()
@@ -813,14 +916,16 @@ async def run_approval_workflow_scenario(
             duration_ms=duration,
             details={"response": result.get("data") or {"simulated": True}},
         ))
-        print(f"  ✅ Step 2: Sent message triggering tool call")
+        print(f"  [PASS] Step 2: Sent message triggering tool call")
 
         # Step 3: List pending approvals
         start = datetime.now()
         result = await client.list_pending_approvals(session_id)
         duration = (datetime.now() - start).total_seconds() * 1000
 
-        approvals = result.get("data", [])
+        # API 返回格式: {"session_id": ..., "approvals": [...], "total": N}
+        approvals_data = result.get("data", {})
+        approvals = approvals_data.get("approvals", []) if isinstance(approvals_data, dict) else []
         approval_id = None
         if isinstance(approvals, list) and len(approvals) > 0:
             approval_id = approvals[0].get("id")
@@ -831,7 +936,7 @@ async def run_approval_workflow_scenario(
                 duration_ms=duration,
                 details={"pending_count": len(approvals)},
             ))
-            print(f"  ✅ Step 3: Found {len(approvals)} pending approvals")
+            print(f"  [PASS] Step 3: Found {len(approvals)} pending approvals")
         else:
             # Simulation
             approval_id = f"approval_{datetime.now().timestamp()}"
@@ -842,7 +947,7 @@ async def run_approval_workflow_scenario(
                 duration_ms=duration,
                 details={"simulated": True, "approval_id": approval_id},
             ))
-            print(f"  ✅ Step 3: Simulated pending approval")
+            print(f"  [PASS] Step 3: Simulated pending approval")
 
         # Step 4: Approve tool call
         start = datetime.now()
@@ -860,7 +965,7 @@ async def run_approval_workflow_scenario(
             duration_ms=duration,
             details={"approved": True},
         ))
-        print(f"  ✅ Step 4: Approved tool call")
+        print(f"  [PASS] Step 4: Approved tool call")
 
         # Step 5: Send another message to trigger rejection test
         start = datetime.now()
@@ -872,7 +977,9 @@ async def run_approval_workflow_scenario(
 
         # Get new approval
         approvals_result = await client.list_pending_approvals(session_id)
-        new_approvals = approvals_result.get("data", [])
+        # API 返回格式: {"session_id": ..., "approvals": [...], "total": N}
+        approvals_data = approvals_result.get("data", {})
+        new_approvals = approvals_data.get("approvals", []) if isinstance(approvals_data, dict) else []
         reject_approval_id = (
             new_approvals[0].get("id")
             if new_approvals
@@ -885,7 +992,7 @@ async def run_approval_workflow_scenario(
             status=TestStatus.PASSED,
             duration_ms=duration,
         ))
-        print(f"  ✅ Step 5: Triggered dangerous tool call")
+        print(f"  [PASS] Step 5: Triggered dangerous tool call")
 
         # Step 6: Reject tool call
         start = datetime.now()
@@ -903,7 +1010,7 @@ async def run_approval_workflow_scenario(
             duration_ms=duration,
             details={"rejected": True},
         ))
-        print(f"  ✅ Step 6: Rejected dangerous tool call")
+        print(f"  [PASS] Step 6: Rejected dangerous tool call")
 
     except Exception as e:
         steps.append(StepResult(
@@ -913,14 +1020,14 @@ async def run_approval_workflow_scenario(
             duration_ms=0,
             error=str(e),
         ))
-        print(f"  ❌ Error: {e}")
+        print(f"  [FAIL] Error: {e}")
 
     # Calculate overall status
     failed_steps = [s for s in steps if s.status == TestStatus.FAILED]
     status = TestStatus.FAILED if failed_steps else TestStatus.PASSED
     total_duration = sum(s.duration_ms for s in steps) / 1000
 
-    print(f"\nScenario Result: {'✅ PASSED' if status == TestStatus.PASSED else '❌ FAILED'}")
+    print(f"\nScenario Result: {'[PASS] PASSED' if status == TestStatus.PASSED else '[FAIL] FAILED'}")
     print(f"Duration: {total_duration:.2f}s")
 
     return ScenarioResult(
@@ -954,20 +1061,35 @@ async def run_error_recovery_scenario(
         result = await client.create_session(title="Error Recovery Test")
         duration = (datetime.now() - start).total_seconds() * 1000
 
-        # Safely extract session_id with None checks
-        data = result.get("data") if result else None
-        session_id = (
-            (data.get("id") if data else None)
-            or f"sim_error_{datetime.now().timestamp()}"
-        )
-        steps.append(StepResult(
-            step=1,
-            name="Create session",
-            status=TestStatus.PASSED,
-            duration_ms=duration,
-            details={"session_id": session_id},
-        ))
-        print(f"  ✅ Step 1: Created session {session_id}")
+        # 檢查 API 是否成功
+        if result.get("success") and result.get("data"):
+            session_id = result["data"].get("id")
+            steps.append(StepResult(
+                step=1,
+                name="Create session",
+                status=TestStatus.PASSED,
+                duration_ms=duration,
+                details={"session_id": session_id, "real_api": True},
+            ))
+            print(f"  [PASS] Step 1: Created session {session_id}")
+        else:
+            # API 失敗
+            error_msg = result.get("error", "Unknown error")
+            steps.append(StepResult(
+                step=1,
+                name="Create session",
+                status=TestStatus.FAILED,
+                duration_ms=duration,
+                error=error_msg[:500],
+            ))
+            print(f"  [FAIL] Step 1: Failed to create session - {error_msg[:100]}")
+            return ScenarioResult(
+                name=scenario_name,
+                status=TestStatus.FAILED,
+                duration_seconds=duration / 1000,
+                steps=steps,
+                error=error_msg[:500],
+            )
 
         # Step 2: Send normal message
         start = datetime.now()
@@ -983,7 +1105,7 @@ async def run_error_recovery_scenario(
             status=TestStatus.PASSED,
             duration_ms=duration,
         ))
-        print(f"  ✅ Step 2: Normal message processed")
+        print(f"  [PASS] Step 2: Normal message processed")
 
         # Step 3: Verify session still active after any errors
         start = datetime.now()
@@ -1000,7 +1122,7 @@ async def run_error_recovery_scenario(
             duration_ms=duration,
             details={"status": session_status},
         ))
-        print(f"  ✅ Step 3: Session status: {session_status}")
+        print(f"  [PASS] Step 3: Session status: {session_status}")
 
         # Step 4: Check metrics
         start = datetime.now()
@@ -1015,7 +1137,7 @@ async def run_error_recovery_scenario(
             duration_ms=duration,
             details={"metrics": metrics or {"simulated": True}},
         ))
-        print(f"  ✅ Step 4: Metrics retrieved")
+        print(f"  [PASS] Step 4: Metrics retrieved")
 
         # Step 5: Recovery - send another message
         start = datetime.now()
@@ -1031,7 +1153,7 @@ async def run_error_recovery_scenario(
             status=TestStatus.PASSED,
             duration_ms=duration,
         ))
-        print(f"  ✅ Step 5: Recovery successful")
+        print(f"  [PASS] Step 5: Recovery successful")
 
     except Exception as e:
         steps.append(StepResult(
@@ -1041,14 +1163,14 @@ async def run_error_recovery_scenario(
             duration_ms=0,
             error=str(e),
         ))
-        print(f"  ❌ Error: {e}")
+        print(f"  [FAIL] Error: {e}")
 
     # Calculate overall status
     failed_steps = [s for s in steps if s.status == TestStatus.FAILED]
     status = TestStatus.FAILED if failed_steps else TestStatus.PASSED
     total_duration = sum(s.duration_ms for s in steps) / 1000
 
-    print(f"\nScenario Result: {'✅ PASSED' if status == TestStatus.PASSED else '❌ FAILED'}")
+    print(f"\nScenario Result: {'[PASS] PASSED' if status == TestStatus.PASSED else '[FAIL] FAILED'}")
     print(f"Duration: {total_duration:.2f}s")
 
     return ScenarioResult(
