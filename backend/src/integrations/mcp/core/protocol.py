@@ -115,6 +115,14 @@ class MCPProtocol:
         """Get list of registered tool names."""
         return list(self._tools.keys())
 
+    def list_tools(self) -> List[ToolSchema]:
+        """Get list of all registered tool schemas.
+
+        Returns:
+            List of ToolSchema objects for all registered tools
+        """
+        return list(self._tool_schemas.values())
+
     @property
     def is_initialized(self) -> bool:
         """Check if protocol is initialized."""

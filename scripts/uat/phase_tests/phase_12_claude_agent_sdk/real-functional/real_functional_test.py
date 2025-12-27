@@ -33,6 +33,17 @@ sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 
 from config import TestConfig, CLAUDE_TOOLS, TEST_SCENARIOS
 
+# Import MCP components for Scenario C
+try:
+    from src.integrations.mcp.servers.filesystem.server import FilesystemMCPServer
+    from src.integrations.mcp.servers.filesystem.sandbox import SandboxConfig, FilesystemSandbox
+    from src.integrations.mcp.servers.filesystem.tools import FilesystemTools
+    from src.integrations.mcp.core.types import ToolSchema, ToolResult
+    MCP_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ MCP components not available: {e}")
+    MCP_AVAILABLE = False
+
 
 @dataclass
 class TestResult:
@@ -566,26 +577,293 @@ class RealFunctionalTest:
     # Scenario C: Real MCP Integration Tests
     # ============================================================
 
+    def _get_mcp_server(self) -> Optional["FilesystemMCPServer"]:
+        """獲取或創建 MCP Server 實例"""
+        if not MCP_AVAILABLE:
+            return None
+
+        if not hasattr(self, "_mcp_server") or self._mcp_server is None:
+            # 創建沙盒配置，允許訪問臨時目錄
+            config = SandboxConfig(
+                allowed_paths=[str(self.temp_dir)],
+                max_file_size=10 * 1024 * 1024,  # 10MB
+                max_list_depth=5,
+                allow_write=True,
+                allow_delete=True,
+            )
+            self._mcp_server = FilesystemMCPServer(config)
+
+        return self._mcp_server
+
+    def _parse_mcp_result(self, result: "ToolResult") -> Dict[str, Any]:
+        """解析 MCP 工具執行結果
+
+        MCP 結果格式: {"content": [{"type": "text", "text": "<JSON string>"}]}
+        此方法提取並解析 JSON 字符串返回實際數據
+        """
+        import json as json_module
+
+        if not result.success:
+            return {}
+
+        content = result.content
+        if isinstance(content, dict):
+            # MCP 格式: {"content": [...]}
+            if "content" in content:
+                content_list = content.get("content", [])
+                if content_list and isinstance(content_list, list):
+                    first_item = content_list[0]
+                    if isinstance(first_item, dict) and "text" in first_item:
+                        text = first_item["text"]
+                        try:
+                            return json_module.loads(text)
+                        except (json_module.JSONDecodeError, TypeError):
+                            return {"raw_text": text}
+            # 如果是直接的字典結果
+            return content
+
+        return {"raw": str(content)}
+
     async def test_mcp_server_connection(self) -> Dict[str, Any]:
-        """測試 MCP Server 連接"""
-        # TODO: 實現真實的 MCP Server 連接測試
-        # 目前返回模擬成功
-        return {"success": True, "details": "MCP connection test placeholder"}
+        """測試 MCP Server 連接 - 驗證 FilesystemMCPServer 可以正常初始化"""
+        if not MCP_AVAILABLE:
+            return {"success": False, "error": "MCP components not available"}
+
+        try:
+            server = self._get_mcp_server()
+
+            if server is None:
+                return {"success": False, "error": "Failed to create MCP server"}
+
+            # 驗證 server 屬性
+            if not hasattr(server, "SERVER_NAME"):
+                return {"success": False, "error": "Server missing SERVER_NAME attribute"}
+
+            if not hasattr(server, "SERVER_VERSION"):
+                return {"success": False, "error": "Server missing SERVER_VERSION attribute"}
+
+            server_info = {
+                "name": server.SERVER_NAME,
+                "version": server.SERVER_VERSION,
+                "description": server.SERVER_DESCRIPTION,
+            }
+
+            return {
+                "success": True,
+                "details": f"MCP Server connected: {server_info['name']} v{server_info['version']}",
+                "server_info": server_info,
+            }
+
+        except Exception as e:
+            return {"success": False, "error": f"MCP connection error: {str(e)}"}
 
     async def test_mcp_tool_discovery(self) -> Dict[str, Any]:
-        """測試 MCP 工具發現"""
-        # TODO: 實現真實的 MCP 工具發現測試
-        return {"success": True, "details": "MCP tool discovery test placeholder"}
+        """測試 MCP 工具發現 - 驗證可以獲取 Filesystem 工具列表"""
+        if not MCP_AVAILABLE:
+            return {"success": False, "error": "MCP components not available"}
+
+        try:
+            server = self._get_mcp_server()
+            if server is None:
+                return {"success": False, "error": "Failed to get MCP server"}
+
+            # 獲取工具列表
+            tools = server.get_tools()
+            tool_names = server.get_tool_names()
+
+            # 預期的工具列表
+            expected_tools = [
+                "read_file",
+                "write_file",
+                "list_directory",
+                "search_files",
+                "get_file_info",
+                "delete_file",
+            ]
+
+            # 驗證所有預期工具都存在
+            missing_tools = [t for t in expected_tools if t not in tool_names]
+
+            if missing_tools:
+                return {
+                    "success": False,
+                    "error": f"Missing tools: {missing_tools}",
+                    "found_tools": tool_names,
+                }
+
+            # 驗證工具 schemas 有正確的結構
+            for tool in tools:
+                if not hasattr(tool, "name") or not hasattr(tool, "description"):
+                    return {
+                        "success": False,
+                        "error": f"Tool schema missing required attributes: {tool}",
+                    }
+
+            return {
+                "success": True,
+                "details": f"Discovered {len(tools)} MCP tools: {tool_names}",
+                "tools": [{"name": t.name, "description": t.description} for t in tools],
+            }
+
+        except Exception as e:
+            return {"success": False, "error": f"MCP tool discovery error: {str(e)}"}
 
     async def test_mcp_tool_execution(self) -> Dict[str, Any]:
-        """測試 MCP 工具執行"""
-        # TODO: 實現真實的 MCP 工具執行測試
-        return {"success": True, "details": "MCP tool execution test placeholder"}
+        """測試 MCP 工具執行 - 驗證 read_file, write_file, list_directory 等工具"""
+        if not MCP_AVAILABLE:
+            return {"success": False, "error": "MCP components not available"}
+
+        try:
+            server = self._get_mcp_server()
+            if server is None:
+                return {"success": False, "error": "Failed to get MCP server"}
+
+            test_results = []
+
+            # Test 1: write_file
+            test_file = self.temp_dir / "mcp_test_file.txt"
+            test_content = "Hello from MCP Filesystem Server!"
+
+            write_result = await server.call_tool(
+                "write_file",
+                {"path": str(test_file), "content": test_content},
+            )
+
+            if not write_result.success:
+                return {"success": False, "error": f"write_file failed: {write_result.error}"}
+
+            write_data = self._parse_mcp_result(write_result)
+            test_results.append(f"write_file: wrote {write_data.get('bytes_written', 0)} bytes")
+
+            # Test 2: read_file
+            read_result = await server.call_tool(
+                "read_file",
+                {"path": str(test_file)},
+            )
+
+            if not read_result.success:
+                return {"success": False, "error": f"read_file failed: {read_result.error}"}
+
+            read_data = self._parse_mcp_result(read_result)
+            read_content = read_data.get("content", "")
+            if read_content != test_content:
+                return {
+                    "success": False,
+                    "error": f"Content mismatch: expected '{test_content}', got '{read_content}'",
+                }
+
+            test_results.append(f"read_file: read {len(read_content)} chars")
+
+            # Test 3: list_directory
+            list_result = await server.call_tool(
+                "list_directory",
+                {"path": str(self.temp_dir)},
+            )
+
+            if not list_result.success:
+                return {"success": False, "error": f"list_directory failed: {list_result.error}"}
+
+            list_data = self._parse_mcp_result(list_result)
+            items = list_data.get("items", [])
+            file_names = [item.get("name") for item in items]
+
+            if "mcp_test_file.txt" not in file_names:
+                return {
+                    "success": False,
+                    "error": f"Test file not found in directory listing: {file_names}",
+                }
+
+            test_results.append(f"list_directory: found {len(items)} items")
+
+            return {
+                "success": True,
+                "details": f"MCP tool execution: {', '.join(test_results)}",
+                "results": test_results,
+            }
+
+        except Exception as e:
+            return {"success": False, "error": f"MCP tool execution error: {str(e)}"}
 
     async def test_mcp_resource_access(self) -> Dict[str, Any]:
-        """測試 MCP 資源訪問"""
-        # TODO: 實現真實的 MCP 資源訪問測試
-        return {"success": True, "details": "MCP resource access test placeholder"}
+        """測試 MCP 資源訪問 - 驗證 get_file_info 和 search_files"""
+        if not MCP_AVAILABLE:
+            return {"success": False, "error": "MCP components not available"}
+
+        try:
+            server = self._get_mcp_server()
+            if server is None:
+                return {"success": False, "error": "Failed to get MCP server"}
+
+            test_results = []
+
+            # 確保測試文件存在
+            test_file = self.temp_dir / "mcp_resource_test.py"
+            test_content = "# MCP Resource Test\ndef hello(): return 'world'\n"
+            test_file.write_text(test_content, encoding="utf-8")
+
+            # Test 1: get_file_info
+            info_result = await server.call_tool(
+                "get_file_info",
+                {"path": str(test_file)},
+            )
+
+            if not info_result.success:
+                return {"success": False, "error": f"get_file_info failed: {info_result.error}"}
+
+            file_info = self._parse_mcp_result(info_result)
+            if not file_info.get("is_file"):
+                return {"success": False, "error": "get_file_info returned wrong type"}
+
+            if file_info.get("extension") != ".py":
+                return {
+                    "success": False,
+                    "error": f"Wrong extension: expected '.py', got '{file_info.get('extension')}'",
+                }
+
+            test_results.append(f"get_file_info: {file_info.get('name')}, {file_info.get('size')} bytes")
+
+            # Test 2: search_files
+            search_result = await server.call_tool(
+                "search_files",
+                {"path": str(self.temp_dir), "pattern": "*.py"},
+            )
+
+            if not search_result.success:
+                return {"success": False, "error": f"search_files failed: {search_result.error}"}
+
+            search_data = self._parse_mcp_result(search_result)
+            search_results_list = search_data.get("results", [])
+            found_names = [r.get("name") for r in search_results_list]
+
+            if "mcp_resource_test.py" not in found_names:
+                return {
+                    "success": False,
+                    "error": f"Test file not found in search: {found_names}",
+                }
+
+            test_results.append(f"search_files: found {len(search_results_list)} .py files")
+
+            # Test 3: search_files with content pattern
+            content_search = await server.call_tool(
+                "search_files",
+                {"path": str(self.temp_dir), "pattern": "*.py", "content_pattern": "def hello"},
+            )
+
+            if content_search.success:
+                content_data = self._parse_mcp_result(content_search)
+                content_results = content_data.get("results", [])
+                test_results.append(f"content_search: found {len(content_results)} matches")
+            else:
+                test_results.append("content_search: skipped (optional)")
+
+            return {
+                "success": True,
+                "details": f"MCP resource access: {', '.join(test_results)}",
+                "results": test_results,
+            }
+
+        except Exception as e:
+            return {"success": False, "error": f"MCP resource access error: {str(e)}"}
 
     # ============================================================
     # Scenario D: End-to-End Use Cases

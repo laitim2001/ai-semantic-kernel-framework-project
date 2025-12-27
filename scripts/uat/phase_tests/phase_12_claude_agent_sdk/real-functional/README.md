@@ -89,14 +89,17 @@ python real_functional_test.py --scenario D
 | `test_calculator_tool` | 數學計算工具（安全的 AST 解析） |
 
 ### Scenario C: Real MCP Integration
-測試真實的 MCP Server 整合
+測試真實的 FilesystemMCPServer 整合（沙盒化文件操作）
 
 | 測試 | 說明 |
 |------|------|
-| `test_mcp_server_connection` | MCP Server 連接 |
-| `test_mcp_tool_discovery` | MCP 工具發現 |
-| `test_mcp_tool_execution` | MCP 工具執行 |
-| `test_mcp_resource_access` | MCP 資源訪問 |
+| `test_mcp_server_connection` | 創建 FilesystemMCPServer，驗證 server 屬性 |
+| `test_mcp_tool_discovery` | 發現 6 個 MCP 工具 (read/write/list/search/info/delete) |
+| `test_mcp_tool_execution` | 執行 write_file, read_file, list_directory |
+| `test_mcp_resource_access` | 執行 get_file_info, search_files（含內容搜尋） |
+
+> **Note**: Scenario C 使用專案內建的 FilesystemMCPServer，無需外部依賴。
+> 測試在臨時目錄中執行，完成後自動清理。
 
 ### Scenario D: End-to-End Use Cases
 完整的端到端使用案例
