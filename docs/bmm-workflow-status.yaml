@@ -16,11 +16,11 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-11-19"
-updated: "2025-12-24"
+updated: "2025-12-27"
 last_phase_completed: "Phase 11 完成 - Agent-Session Integration (UAT 4/4 passed)"
-current_phase: "Phase 11 完成 - All sprints completed"
-current_sprint: "Sprint 47 完成 - Integration & Polish (25/25 pts, 100%)"
-next_sprint: "N/A - Phase 11 UAT Verified"
+current_phase: "Phase 12 進行中 - Claude Agent SDK Integration"
+current_sprint: "Sprint 51 完成 - Claude SDK API Routes (35/35 pts, 100%)"
+next_sprint: "Sprint 52 - Claude SDK Testing & Polish"
 project: "microsoft-agent-framework-platform"
 project_type: "software"
 selected_track: "method"
@@ -152,6 +152,19 @@ history:
     event: "🎉🎉🎉 Phase 11 完成 - Agent-Session Integration (UAT 4/4 passed)"
   - date: "2025-12-24"
     event: "🏆 IPA Platform Phase 11 完成 - 47 Sprints 累計"
+  # === Phase 12: Claude Agent SDK Integration (2025-12-25 ~ ongoing) ===
+  - date: "2025-12-25"
+    event: "✅ Sprint 48 完成 - Claude SDK Core Integration (28/28 pts)"
+  - date: "2025-12-25"
+    event: "✅ Sprint 49 完成 - Tools & Hooks System (32/32 pts)"
+  - date: "2025-12-26"
+    event: "✅ Sprint 50 完成 - MCP & Hybrid Orchestrator (35/35 pts)"
+  - date: "2025-12-27"
+    event: "✅ Sprint 51 完成 - Claude SDK API Routes (35/35 pts)"
+  - date: "2025-12-27"
+    event: "📊 Phase 12 進度: 130/165 pts (79%) - Sprint 48-51 完成"
+  - date: "2025-12-27"
+    event: "🧪 Phase 12 UAT 通過 - 4/4 scenarios (core_sdk, tools_hooks, mcp_hybrid, api_routes)"
 
 workflow_status:
   # Phase 0: Discovery
@@ -302,6 +315,36 @@ workflow_status:
       - approval_workflow: PASSED ✅
       - error_recovery: PASSED ✅
 
+      === Phase 12 進度 (Claude Agent SDK Integration) ===
+      ✅ Sprint 48: Claude SDK Core Integration - 完成 (28/28 pts)
+         - S48-1: ClaudeSDKClient (10 pts) ✅
+         - S48-2: SessionManager (8 pts) ✅
+         - S48-3: MessageProcessor (5 pts) ✅
+         - S48-4: ErrorHandler (5 pts) ✅
+      ✅ Sprint 49: Tools & Hooks System - 完成 (32/32 pts)
+         - S49-1: ToolRegistry (8 pts) ✅
+         - S49-2: HookManager (8 pts) ✅
+         - S49-3: ExecutionPipeline (8 pts) ✅
+         - S49-4: ApprovalHook (8 pts) ✅
+      ✅ Sprint 50: MCP & Hybrid Orchestrator - 完成 (35/35 pts)
+         - S50-1: MCPServerManager (10 pts) ✅
+         - S50-2: MCPToolBridge (8 pts) ✅
+         - S50-3: HybridOrchestrator (10 pts) ✅
+         - S50-4: ContextManager (7 pts) ✅
+      ✅ Sprint 51: Claude SDK API Routes - 完成 (35/35 pts)
+         - S51-1: Tools Routes (8 pts) ✅
+         - S51-2: Hooks Routes (8 pts) ✅
+         - S51-3: MCP Routes (10 pts) ✅
+         - S51-4: Hybrid Routes (9 pts) ✅
+
+      Phase 12 進度: 130/165 pts (79%) - 4 sprints 完成
+
+      UAT 測試結果 (Phase 12):
+      - core_sdk: PASSED ✅
+      - tools_hooks: PASSED ✅
+      - mcp_hybrid: PASSED ✅
+      - api_routes: PASSED ✅
+
       === 全項目統計 ===
       Phase 1 (MVP): 285 pts (7 sprints)
       Phase 2 (Multi-Agent): 222 pts (6 sprints)
@@ -310,8 +353,9 @@ workflow_status:
       Phase 5 (Integration): 183 pts (5 sprints)
       Phase 6 (Finalization): 78 pts (3 sprints)
       Phase 7-11 (Advanced): ~300 pts (14 sprints)
+      Phase 12 (Claude SDK): 130 pts (4 sprints) - 進行中
       ----------------------------------
-      總計: ~1490 pts (47 sprints) 🏆
+      總計: ~1620 pts (51 sprints) 🏆
 
 notes: |
   專案重啟原因：
