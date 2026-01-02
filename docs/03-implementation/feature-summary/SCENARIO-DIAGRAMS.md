@@ -155,6 +155,45 @@
 │  │                                                                            │  │
 │  └────────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                  │
+│  ┌─ PLATFORM SERVICES ─────────────────────────────────────────────────────────┐  │
+│  │                                                                            │  │
+│  │  [Audit & Compliance]  [Performance Monitor]   [DevTools]                 │  │
+│  │   • Event Logging       • Metrics Collection   • Debug Console            │  │
+│  │   • Compliance Reports  • Alerting System      • Health Check             │  │
+│  │   • Retention Policy    • Dashboard Analytics  • Config Viewer            │  │
+│  │                                                                            │  │
+│  │  [Caching Layer]       [Notifications]         [Learning System]          │  │
+│  │   • Redis Integration   • Multi-channel Push   • Usage Analytics          │  │
+│  │   • LLM Response Cache  • Template Engine      • Pattern Detection        │  │
+│  │   • Session Cache       • Preference Settings  • Recommendation           │  │
+│  │                                                                            │  │
+│  └────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                  │
+│  ┌─ EXTERNAL CONNECTORS ───────────────────────────────────────────────────────┐  │
+│  │                                                                            │  │
+│  │  [ServiceNow]          [Dynamics 365]          [SharePoint]               │  │
+│  │   • Incident Mgmt       • CRM Integration      • Document Store           │  │
+│  │   • Change Request      • Sales Automation     • List Management          │  │
+│  │   • CMDB Sync           • Customer 360         • Site Operations          │  │
+│  │                                                                            │  │
+│  │  [Connector Registry]                                                      │  │
+│  │   • Dynamic Registration • Health Monitoring  • Schema Validation         │  │
+│  │                                                                            │  │
+│  └────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                  │
+│  ┌─ CONFIGURATION & MANAGEMENT ────────────────────────────────────────────────┐  │
+│  │                                                                            │  │
+│  │  [Prompt Management]   [Template Engine]       [Trigger System]           │  │
+│  │   • Version Control     • Dynamic Templates    • Event Triggers           │  │
+│  │   • A/B Testing         • Variable Injection   • Schedule Triggers        │  │
+│  │   • Performance Track   • Inheritance Chain    • Webhook Triggers         │  │
+│  │                                                                            │  │
+│  │  [Version Control]     [Routing Engine]                                   │  │
+│  │   • Entity Versioning   • Rule-based Routing  • Load Balancing            │  │
+│  │   • Rollback Support    • Priority Queues     • Fallback Chains           │  │
+│  │                                                                            │  │
+│  └────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1322,7 +1361,24 @@ Legend:
 | Tool Registry | 12 | `integrations/claude_sdk/tools/registry.py` |
 | Hook Manager | 12 | `integrations/claude_sdk/hooks/manager.py` |
 | Hybrid Orchestrator | 12 | `integrations/claude_sdk/hybrid/orchestrator.py` |
+| **Platform Services** | | |
+| Audit & Compliance | 6+ | `infrastructure/audit/` |
+| Caching Layer | 1+ | `infrastructure/cache/` |
+| Performance Monitor | 6+ | `core/performance/` |
+| Notifications | 4+ | `infrastructure/messaging/notifications.py` |
+| Learning System | 7+ | `domain/learning/` |
+| **External Connectors** | | |
+| ServiceNow Connector | 5+ | `integrations/connectors/servicenow/` |
+| Dynamics 365 Connector | 5+ | `integrations/connectors/dynamics365/` |
+| SharePoint Connector | 5+ | `integrations/connectors/sharepoint/` |
+| Connector Registry | 5+ | `integrations/connectors/registry.py` |
+| **Configuration & Management** | | |
+| Prompt Management | 7+ | `domain/prompts/` |
+| Template Engine | 4+ | `domain/templates/` |
+| Trigger System | 4+ | `domain/triggers/` |
+| Version Control | 6+ | `domain/versioning/` |
+| Routing Engine | 7+ | `domain/routing/` |
 
 ---
 
-**Generated**: 2025-12-29
+**Generated**: 2026-01-02
