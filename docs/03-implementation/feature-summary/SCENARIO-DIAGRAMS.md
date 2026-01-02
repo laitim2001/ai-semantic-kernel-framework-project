@@ -1362,16 +1362,16 @@ Legend:
 | Hook Manager | 12 | `integrations/claude_sdk/hooks/manager.py` |
 | Hybrid Orchestrator | 12 | `integrations/claude_sdk/hybrid/orchestrator.py` |
 | **Platform Services** | | |
-| Audit & Compliance | 6+ | `infrastructure/audit/` |
+| Audit & Compliance | 6+ | `domain/audit/` |
 | Caching Layer | 1+ | `infrastructure/cache/` |
 | Performance Monitor | 6+ | `core/performance/` |
 | Notifications | 4+ | `infrastructure/messaging/notifications.py` |
 | Learning System | 7+ | `domain/learning/` |
 | **External Connectors** | | |
-| ServiceNow Connector | 5+ | `integrations/connectors/servicenow/` |
-| Dynamics 365 Connector | 5+ | `integrations/connectors/dynamics365/` |
-| SharePoint Connector | 5+ | `integrations/connectors/sharepoint/` |
-| Connector Registry | 5+ | `integrations/connectors/registry.py` |
+| ServiceNow Connector | 5+ | `domain/connectors/servicenow.py` |
+| Dynamics 365 Connector | 5+ | `domain/connectors/dynamics365.py` |
+| SharePoint Connector | 5+ | `domain/connectors/sharepoint.py` |
+| Connector Registry | 5+ | `domain/connectors/registry.py` |
 | **Configuration & Management** | | |
 | Prompt Management | 7+ | `domain/prompts/` |
 | Template Engine | 4+ | `domain/templates/` |

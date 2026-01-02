@@ -472,20 +472,18 @@ backend/src/
 │   │   ├── tools/       # Tool registry
 │   │   ├── hooks/       # Hook manager
 │   │   └── hybrid/      # Hybrid orchestrator
-│   ├── mcp/             # MCP Protocol
-│   │   ├── core/        # MCP core
-│   │   ├── servers/     # MCP servers
-│   │   └── security/    # Security controls
-│   └── connectors/      # External System Connectors
-│       ├── servicenow/  # ServiceNow ITSM
-│       ├── dynamics365/ # Dynamics 365 CRM
-│       └── sharepoint/  # SharePoint Documents
+│   └── mcp/             # MCP Protocol
+│       ├── core/        # MCP core
+│       ├── servers/     # MCP servers
+│       └── security/    # Security controls
 │
 ├── domain/              # Business logic
 │   ├── agents/          # Agent service
 │   ├── workflows/       # Workflow service
 │   ├── executions/      # Execution service
 │   ├── sessions/        # Session service
+│   ├── connectors/      # External connectors (ServiceNow, D365, SharePoint)
+│   ├── audit/           # Audit & Compliance logging
 │   ├── prompts/         # Prompt management
 │   ├── templates/       # Template engine
 │   ├── triggers/        # Trigger system
@@ -495,7 +493,7 @@ backend/src/
 │   ├── database/        # PostgreSQL
 │   ├── cache/           # Redis
 │   ├── messaging/       # RabbitMQ
-│   └── audit/           # Audit & Compliance
+│   └── storage/         # File storage
 │
 └── core/                # Cross-cutting concerns
     ├── config.py        # Settings management
