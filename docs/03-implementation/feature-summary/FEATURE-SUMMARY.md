@@ -472,21 +472,34 @@ backend/src/
 │   │   ├── tools/       # Tool registry
 │   │   ├── hooks/       # Hook manager
 │   │   └── hybrid/      # Hybrid orchestrator
-│   └── mcp/             # MCP Protocol
-│       ├── core/        # MCP core
-│       ├── servers/     # MCP servers
-│       └── security/    # Security controls
+│   ├── mcp/             # MCP Protocol
+│   │   ├── core/        # MCP core
+│   │   ├── servers/     # MCP servers
+│   │   └── security/    # Security controls
+│   └── connectors/      # External System Connectors
+│       ├── servicenow/  # ServiceNow ITSM
+│       ├── dynamics365/ # Dynamics 365 CRM
+│       └── sharepoint/  # SharePoint Documents
 │
 ├── domain/              # Business logic
 │   ├── agents/          # Agent service
 │   ├── workflows/       # Workflow service
 │   ├── executions/      # Execution service
-│   └── sessions/        # Session service
+│   ├── sessions/        # Session service
+│   ├── prompts/         # Prompt management
+│   ├── templates/       # Template engine
+│   ├── triggers/        # Trigger system
+│   └── routing/         # Routing engine
 │
-└── infrastructure/      # External integrations
-    ├── database/        # PostgreSQL
-    ├── cache/           # Redis
-    └── messaging/       # RabbitMQ
+├── infrastructure/      # External integrations
+│   ├── database/        # PostgreSQL
+│   ├── cache/           # Redis
+│   ├── messaging/       # RabbitMQ
+│   └── audit/           # Audit & Compliance
+│
+└── core/                # Cross-cutting concerns
+    ├── config.py        # Settings management
+    └── performance/     # Performance monitoring
 ```
 
 ### Key Design Patterns
@@ -510,11 +523,16 @@ backend/src/
 | `PlanningAdapter` | Task planning | `MagenticBuilder` |
 | `MultiTurnAdapter` | Conversation state | `CheckpointStorage` |
 | `CodeInterpreterAdapter` | Code execution | `Responses API` |
+| `SessionAgentBridge` | Agent-Session integration | `AgentExecutor` |
 | `ClaudeSDKClient` | Claude SDK | Claude Agent SDK |
 | `ToolRegistry` | Tool management | SDK Tools API |
 | `HookManager` | Lifecycle hooks | SDK Hooks API |
 | `MCPServerManager` | MCP servers | MCP Protocol |
 | `HybridOrchestrator` | Mixed orchestration | Custom Integration |
+| **External Connectors** | | |
+| `ServiceNowConnector` | ITSM integration | ServiceNow API |
+| `Dynamics365Connector` | CRM integration | Dynamics 365 API |
+| `SharePointConnector` | Document management | SharePoint API |
 
 ---
 
@@ -527,9 +545,12 @@ backend/src/
 | Core Engine | 1, 5-6 | Agent, Workflow, Execution services |
 | Orchestration | 2-4 | GroupChat, Handoff, Concurrent, Nested |
 | AI Enhancement | 7-8 | Decision Engine, Code Interpreter |
-| MCP | 9 | Protocol, Servers, Security |
+| MCP & Tools | 9, 12 | Protocol, Servers, Security, Tool Registry |
 | Sessions | 10-11 | Session management, Agent integration |
 | Claude SDK | 12 | SDK client, Tools, Hooks, Hybrid |
+| Platform Services | 1, 6+ | Audit, Caching, Performance Monitor, Notifications |
+| External Connectors | 5+ | ServiceNow, Dynamics 365, SharePoint |
+| Configuration | 4, 7+ | Prompts, Templates, Triggers, Routing |
 
 ### By Sprint
 
@@ -548,6 +569,6 @@ See [sprint-execution/](../sprint-execution/) for detailed sprint-by-sprint impl
 
 ---
 
-**Generated**: 2025-12-29
+**Generated**: 2026-01-02
 **Project Start**: 2025-11-14
 **Current Phase**: Phase 12 - Claude Agent SDK Integration
