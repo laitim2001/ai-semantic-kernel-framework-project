@@ -171,16 +171,29 @@ backend/src/
 │   │   ├── executor.py  # AgentExecutor (LLM interaction)
 │   │   ├── streaming.py # StreamingHandler (SSE)
 │   │   └── tool_handler.py # ToolCallHandler
+│   ├── connectors/      # External connectors (ServiceNow, D365, SharePoint)
+│   ├── audit/           # Audit & Compliance logging
+│   ├── checkpoints/     # Execution checkpoints & HITL
+│   ├── prompts/         # Prompt management
+│   ├── templates/       # Template engine
+│   ├── triggers/        # Trigger system (webhook, schedule, event)
+│   ├── routing/         # Intelligent routing engine
+│   ├── versioning/      # Version control for workflows/agents
+│   ├── learning/        # Feedback & learning system
+│   ├── notifications/   # Notification service
+│   ├── devtools/        # Developer tools & debugging
 │   └── orchestration/   # ⚠️ Deprecated - use adapters
 │
 ├── infrastructure/      # External integrations
 │   ├── database/        # SQLAlchemy models, repositories
 │   ├── cache/           # Redis + LLM caching
-│   └── messaging/       # RabbitMQ integration
+│   ├── messaging/       # RabbitMQ integration
+│   └── storage/         # File storage
 │
 └── core/               # Cross-cutting concerns
     ├── config.py       # Settings management
-    └── performance/    # Performance monitoring
+    ├── performance/    # Performance monitoring
+    └── security/       # Security controls
 ```
 
 ### Key Adapters (Phase 4-12)
