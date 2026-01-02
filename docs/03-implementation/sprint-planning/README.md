@@ -1,22 +1,70 @@
 # IPA Platform - Sprint Planning Overview
 
-**版本**: 2.0 (Based on Microsoft Agent Framework)
+**版本**: 4.0 (Phase 14: Hybrid MAF + Claude SDK Architecture)
 **創建日期**: 2025-11-29
-**總開發週期**: 12-14 週 (6 個 Sprint)
+**最後更新**: 2026-01-02
+**總開發週期**: 57 Sprints (14 Phases)
 
 ---
 
-## 快速導航
+## 快速導航 - Phase 總覽
 
-| Sprint | 名稱 | 週數 | 主要交付物 | 文件 |
-|--------|------|------|-----------|------|
-| Sprint 0 | 基礎設施 | Week 1-2 | 開發環境 + CI/CD | [Plan](./sprint-0-plan.md) / [Checklist](./sprint-0-checklist.md) |
-| Sprint 1 | 核心引擎 | Week 3-4 | Agent Framework 集成 | [Plan](./sprint-1-plan.md) / [Checklist](./sprint-1-checklist.md) |
-| Sprint 2 | 工作流 & 檢查點 | Week 5-6 | Workflow + Checkpoint | [Plan](./sprint-2-plan.md) / [Checklist](./sprint-2-checklist.md) |
-| Sprint 3 | 集成 & 可靠性 | Week 7-8 | n8n + Teams + 審計 | [Plan](./sprint-3-plan.md) / [Checklist](./sprint-3-checklist.md) |
-| Sprint 4 | 開發者體驗 | Week 9-10 | Marketplace + DevUI | [Plan](./sprint-4-plan.md) / [Checklist](./sprint-4-checklist.md) |
-| Sprint 5 | 前端 UI | Week 11-12 | React UI + Dashboard | [Plan](./sprint-5-plan.md) / [Checklist](./sprint-5-checklist.md) |
-| Sprint 6 | 打磨 & 發布 | Week 13-14 | 測試 + 部署 | [Plan](./sprint-6-plan.md) / [Checklist](./sprint-6-checklist.md) |
+| Phase | 名稱 | Sprints | Story Points | 狀態 | 文件 |
+|-------|------|---------|--------------|------|------|
+| Phase 1 | 基礎建設 | 1-6 | ~90 pts | ✅ 完成 | [README](./phase-1/README.md) |
+| Phase 2 | 並行執行引擎 | 7-12 | ~90 pts | ✅ 完成 | [README](./phase-2/README.md) |
+| Phase 3 | Official API Migration | 13-18 | ~105 pts | ✅ 完成 | [README](./phase-3/README.md) |
+| Phase 4 | Advanced Adapters | 19-24 | ~105 pts | ✅ 完成 | [README](./phase-4/README.md) |
+| Phase 5 | Connector Ecosystem | 25-27 | ~75 pts | ✅ 完成 | [README](./phase-5/README.md) |
+| Phase 6 | Enterprise Integration | 28-30 | ~75 pts | ✅ 完成 | [README](./phase-6/README.md) |
+| Phase 7 | Multi-turn & Memory | 31-33 | ~90 pts | ✅ 完成 | [README](./phase-7/README.md) |
+| Phase 8 | Code Interpreter | 34-36 | ~90 pts | ✅ 完成 | [README](./phase-8/README.md) |
+| Phase 9 | MCP Integration | 37-39 | ~90 pts | ✅ 完成 | [README](./phase-9/README.md) |
+| Phase 10 | MCP Expansion | 40-44 | ~105 pts | ✅ 完成 | [README](./phase-10/README.md) |
+| Phase 11 | Agent-Session Integration | 45-47 | ~90 pts | ✅ 完成 | [README](./phase-11/README.md) |
+| Phase 12 | Claude Agent SDK | 48-51 | ~105 pts | 🔄 進行中 | [README](./phase-12/README.md) |
+| **Phase 13** | **Hybrid Core Architecture** | 52-54 | 105 pts | 📋 待開始 | [README](./phase-13/README.md) |
+| **Phase 14** | **Advanced Hybrid Features** | 55-57 | 95 pts | 📋 待開始 | [README](./phase-14/README.md) |
+
+**總計**: ~1310 Story Points across 57 Sprints
+
+---
+
+## Phase 13-14: Hybrid Architecture (NEW)
+
+### 背景
+
+Phase 12 完成 Claude Agent SDK 整合後，需要進一步整合 **Microsoft Agent Framework (MAF)** 和 **Claude Agent SDK** 兩個框架，實現真正的混合編排架構。
+
+### Phase 13: Hybrid Core Architecture (105 pts)
+
+**目標**: 建立 MAF + Claude SDK 的核心整合架構
+
+| Sprint | 名稱 | Points | 主要交付物 |
+|--------|------|--------|-----------|
+| Sprint 52 | Intent Router & Mode Detection | 35 pts | 智能意圖路由、模式檢測 |
+| Sprint 53 | Context Bridge & Sync | 35 pts | 跨框架上下文同步 |
+| Sprint 54 | HybridOrchestrator Refactor | 35 pts | 統一 Tool 執行、V2 編排器 |
+
+**核心組件**:
+- **Intent Router**: 判斷 Workflow Mode vs Chat Mode
+- **Context Bridge**: MAF ↔ Claude 狀態同步
+- **Unified Tool Executor**: 所有 Tool 通過 Claude 執行
+
+### Phase 14: Advanced Hybrid Features (95 pts)
+
+**目標**: 實現進階混合功能和優化
+
+| Sprint | 名稱 | Points | 主要交付物 |
+|--------|------|--------|-----------|
+| Sprint 55 | Risk Assessment Engine | 30 pts | 風險評估驅動的審批決策 |
+| Sprint 56 | Mode Switcher & HITL | 35 pts | 動態模式切換、增強 HITL |
+| Sprint 57 | Unified Checkpoint & Polish | 30 pts | 統一 Checkpoint、整合測試 |
+
+**核心組件**:
+- **Risk Assessment Engine**: 基於風險等級的 HITL
+- **Mode Switcher**: Workflow ↔ Chat 動態切換
+- **Unified Checkpoint**: 跨框架狀態保存與恢復
 
 ---
 
@@ -51,151 +99,88 @@
 | 層級 | 技術 | 版本 | 說明 |
 |------|------|------|------|
 | **Agent 框架** | Microsoft Agent Framework | Preview | 核心編排引擎 |
+| **Claude SDK** | Claude Agent SDK | Latest | 智能對話能力 |
 | **後端** | Python FastAPI | 0.100+ | REST API 服務 |
 | **前端** | React + TypeScript | 18+ | 現代化 UI |
 | **數據庫** | PostgreSQL | 16+ | 主數據存儲 |
 | **緩存** | Redis | 7+ | LLM 響應緩存 |
 | **消息隊列** | Azure Service Bus / RabbitMQ | - | 異步任務處理 |
-| **LLM** | Azure OpenAI | GPT-4o | 企業級推理 |
+| **LLM** | Azure OpenAI + Claude | GPT-4o / Claude 3.5 | 企業級推理 |
 
-### Agent Framework 核心 API
-
-```python
-# 安裝
-pip install agent-framework --pre
-
-# 基本 Agent 創建
-from agent_framework.azure import AzureOpenAIChatClient
-
-agent = AzureOpenAIChatClient().create_agent(
-    name="MyAgent",
-    instructions="You are a helpful assistant.",
-    tools=[my_tool]
-)
-result = await agent.run("Execute task")
-
-# Workflow 構建
-from agent_framework import WorkflowBuilder, Executor
-
-workflow = (
-    WorkflowBuilder(max_iterations=10)
-    .set_start_executor(prepare)
-    .add_edge(prepare, agent_executor)
-    .add_edge(agent_executor, review_gateway)
-    .with_checkpointing(checkpoint_storage)
-    .build()
-)
-
-# Human-in-the-loop
-await ctx.request_info(
-    request_data=ApprovalRequest(prompt="Review needed"),
-    response_type=str
-)
-```
-
-### 系統架構圖
+### 系統架構圖 (Phase 14)
 
 ```
-┌─────────────────────────────────────────────────┐
-│         React 18 前端 (Shadcn UI)               │
-│  Dashboard | Workflows | Agents | Monitor       │
-└─────────────────────┬───────────────────────────┘
-                      │ HTTPS
-┌─────────────────────┴───────────────────────────┐
-│  Azure App Service (Python FastAPI)             │
-│  ├─ Workflow Service (CRUD, 驗證)              │
-│  ├─ Execution Service (調度, 狀態管理)         │
-│  └─ Agent Service (Agent Framework 運行時)     │
-└─────────────────────┬───────────────────────────┘
-                      │
-        ┌─────────────┼─────────────┐
-        │             │             │
-   ┌────▼───┐   ┌────▼────┐   ┌───▼────────┐
-   │Service │   │Redis    │   │PostgreSQL  │
-   │Bus     │   │Cache    │   │Database    │
-   └────────┘   └─────────┘   └────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│              React 18 前端 (Shadcn UI)                       │
+│   Dashboard | Workflows | Agents | Sessions | Monitor        │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ HTTPS
+┌─────────────────────────┴───────────────────────────────────┐
+│                   FastAPI Backend                            │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─────────────┐    ┌──────────────┐    ┌───────────────┐   │
+│  │Intent Router│───→│HybridOrchest.│───→│ Risk Assessor │   │
+│  └─────────────┘    └──────────────┘    └───────────────┘   │
+│         │                  │                    │            │
+│         ▼                  ▼                    ▼            │
+│  ┌─────────────┐    ┌──────────────┐    ┌───────────────┐   │
+│  │Mode Switcher│    │Context Bridge│    │Unified Chkpt  │   │
+│  └─────────────┘    └──────────────┘    └───────────────┘   │
+│         │                  │                                 │
+│         ▼                  ▼                                 │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │              Unified Tool Executor                       │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│         │                                │                   │
+│         ▼                                ▼                   │
+│  ┌─────────────────┐            ┌───────────────────┐       │
+│  │MAF Adapters     │            │Claude SDK         │       │
+│  │ - GroupChat     │            │ - ClaudeSDKClient │       │
+│  │ - Handoff       │            │ - ToolRegistry    │       │
+│  │ - Concurrent    │            │ - HookManager     │       │
+│  │ - Nested        │            │ - MCP Integration │       │
+│  └─────────────────┘            └───────────────────┘       │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+   ┌────▼────┐      ┌────▼────┐      ┌─────▼─────┐
+   │Service  │      │Redis    │      │PostgreSQL │
+   │Bus      │      │Cache    │      │Database   │
+   └─────────┘      └─────────┘      └───────────┘
 ```
 
 ---
 
-## 14 個 MVP 功能
+## 開發狀態總覽
 
-### 核心引擎層 (P0)
-| ID | 功能 | 開發時間 | Sprint |
-|----|------|---------|--------|
-| F1 | 順序式 Agent 編排 | 2 週 | Sprint 1 |
-| F2 | 人機協作檢查點 (Human-in-the-loop) | 2 週 | Sprint 2 |
-| F3 | 跨系統關聯 (ServiceNow/Dynamics/SharePoint) | 2 週 | Sprint 2 |
+### 已完成 Phase (1-11)
 
-### 創新功能層 (P1)
-| ID | 功能 | 開發時間 | Sprint |
-|----|------|---------|--------|
-| F4 | 跨場景協作 (CS↔IT) | 2 週 | Sprint 3 |
-| F5 | 學習型協作 (Few-shot Learning) | 1 週 | Sprint 4 |
+| Phase | 主要成就 |
+|-------|---------|
+| Phase 1-2 | 基礎架構、並行執行引擎 |
+| Phase 3-4 | Official API Migration、Advanced Adapters |
+| Phase 5-6 | Connector Ecosystem、Enterprise Integration |
+| Phase 7-8 | Multi-turn & Memory、Code Interpreter |
+| Phase 9-10 | MCP Core、MCP Expansion (22 servers) |
+| Phase 11 | Agent-Session Integration (90 pts) |
 
-### 開發者體驗層 (P0)
-| ID | 功能 | 開發時間 | Sprint |
-|----|------|---------|--------|
-| F6 | Agent 模板市場 (6-8 模板) | 3 週 | Sprint 4 |
-| F7 | DevUI 整合 (可視化調試) | 2 週 | Sprint 4 |
+### 進行中 Phase (12)
 
-### 可靠性層 (P0)
-| ID | 功能 | 開發時間 | Sprint |
-|----|------|---------|--------|
-| F8 | n8n 觸發 + 錯誤處理 | 2 週 | Sprint 3 |
-| F9 | Prompt 管理 (YAML 模板) | 1 週 | Sprint 3 |
+| Sprint | 狀態 | Points |
+|--------|------|--------|
+| Sprint 48 | ✅ 完成 | 35 pts |
+| Sprint 49 | ✅ 完成 | 35 pts |
+| Sprint 50 | ✅ 完成 | 30 pts |
+| Sprint 51 | 🔄 進行中 | 35 pts |
 
-### 可觀測性層 (P0)
-| ID | 功能 | 開發時間 | Sprint |
-|----|------|---------|--------|
-| F10 | 審計追蹤 (Append-only) | 1 週 | Sprint 3 |
-| F11 | Teams 通知 (Adaptive Card) | 1 週 | Sprint 3 |
-| F12 | 監控儀表板 | 2 週 | Sprint 5 |
+**Phase 12 進度**: 130/165 pts (79%)
 
-### UI/UX 層 (P0)
-| ID | 功能 | 開發時間 | Sprint |
-|----|------|---------|--------|
-| F13 | 現代 Web UI | 4 週 | Sprint 5 |
+### 待開始 Phase (13-14)
 
-### 性能優化層 (P0)
-| ID | 功能 | 開發時間 | Sprint |
-|----|------|---------|--------|
-| F14 | Redis 緩存 | 1 週 | Sprint 2 |
-
----
-
-## 數據模型概覽
-
-### 核心表結構
-
-```sql
--- 用戶表
-users (id, email, name, role, password_hash, created_at)
-
--- Agent 表
-agents (id, name, description, category, code, config, status, created_by)
-
--- 工作流表
-workflows (id, agent_id, name, trigger_type, trigger_config, created_at)
-
--- 執行記錄表
-executions (id, workflow_id, status, started_at, completed_at, result, error,
-            llm_calls, llm_tokens, llm_cost)
-
--- 檢查點表
-checkpoints (id, execution_id, step, state, status, approved_by, feedback)
-
--- 審計日誌表 (Append-only)
-audit_logs (id, execution_id, action, actor, details, timestamp)
-
--- 學習案例表
-learning_cases (id, execution_id, scenario, original_action,
-                human_modified_action, feedback)
-
--- Agent 模板表
-agent_templates (id, name, category, description, code_template,
-                 config_schema, usage_count)
-```
+Phase 13-14 為 **Hybrid MAF + Claude SDK** 整合架構，計劃在 Phase 12 完成後開始。
 
 ---
 
@@ -210,9 +195,11 @@ agent_templates (id, name, category, description, code_template,
 | Dashboard 加載時間 | < 2 秒 |
 | 併發執行數 | 50+ 同時 |
 | Redis 緩存命中率 | ≥ 60% |
+| Checkpoint 恢復成功率 | > 99.9% |
+| 模式切換成功率 | > 99% |
 
 ### 可用性要求
-| 指標 | MVP 目標 | Phase 2 目標 |
+| 指標 | MVP 目標 | Phase 14 目標 |
 |------|----------|-------------|
 | 系統正常運行 | 99.0% | 99.5% |
 | 數據持久性 | 99.99% | 99.99% |
@@ -226,25 +213,7 @@ agent_templates (id, name, category, description, code_template,
 | 傳輸加密 | TLS 1.3 |
 | 存儲加密 | AES-256 |
 | 機密管理 | Azure Key Vault |
-
----
-
-## 成功指標 (KPI)
-
-### 技術 KPI
-| 指標 | 1 月 | 3 月 | 6 月 |
-|------|------|------|------|
-| Agent 執行成功率 | ≥85% | ≥90% | ≥95% |
-| 平均執行時間 | <60s | <45s | <30s |
-| LLM 成本/執行 | <$0.10 | <$0.08 | <$0.05 |
-| 緩存命中率 | ≥50% | ≥60% | ≥70% |
-
-### 業務 KPI
-| 指標 | 基線 (人工) | 1 月目標 | 3 月目標 |
-|------|------------|----------|----------|
-| 工單解決時間 | 4-6 小時 | 2-3 小時 | 1-2 小時 |
-| 人工工作減少 | 0% | 30% | 40-50% |
-| 人工干預率 | 100% | <40% | <30% |
+| 風險評估 | Risk Assessment Engine (Phase 14) |
 
 ---
 
@@ -290,6 +259,7 @@ REDIS_URL=redis://localhost:6379
 AZURE_OPENAI_ENDPOINT=https://xxx.openai.azure.com/
 AZURE_OPENAI_API_KEY=xxx
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
+ANTHROPIC_API_KEY=xxx
 ```
 
 ---
@@ -299,9 +269,10 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
 | 風險 | 等級 | 緩解措施 |
 |------|------|---------|
 | Agent Framework API 變更 | 中 | 鎖定版本，監控 Release Notes |
+| Claude SDK API 變更 | 中 | 版本鎖定，抽象層隔離 |
 | LLM Token 成本超預算 | 中 | 成本監控 + 閾值告警 + 緩存 |
-| 第三方 API 不穩定 | 中 | 超時控制 + 降級策略 + 重試 |
-| UI 開發延遲 | 低 | 使用 Shadcn UI 組件庫 |
+| 框架整合複雜度 | 高 | Context Bridge + Unified Checkpoint |
+| 模式切換狀態丟失 | 中 | Checkpoint 機制 + 回滾支持 |
 
 ---
 
@@ -314,8 +285,12 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
 | UI/UX 設計 | `docs/01-planning/ui-ux/` |
 | 技術架構 | `docs/02-architecture/` |
 | Agent Framework | `reference/agent-framework/` |
-| Agent Framework 官方文檔 | https://learn.microsoft.com/en-us/agent-framework/ |
+| Claude Agent SDK | `backend/src/integrations/claude_sdk/` |
+| Phase 13 文檔 | `docs/03-implementation/sprint-planning/phase-13/` |
+| Phase 14 文檔 | `docs/03-implementation/sprint-planning/phase-14/` |
 
 ---
 
-**下一步**: 查看 [Sprint 0 Plan](./sprint-0-plan.md) 開始開發
+**下一步**:
+- 完成 Phase 12 Sprint 51
+- 開始 Phase 13 Sprint 52 - Intent Router & Mode Detection
