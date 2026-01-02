@@ -1,7 +1,8 @@
 # IPA Platform - Scenario-Based Feature Diagrams
 
 > **Purpose**: 透過完整的業務場景流程圖展示 IPA Platform 所有已實現功能
-> **Last Updated**: 2025-12-29
+> **Last Updated**: 2026-01-02
+> **Related**: [FEATURE-CATALOG.md](./FEATURE-CATALOG.md) - 完整功能目錄 (65+ features)
 
 ---
 
@@ -156,6 +157,8 @@
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+> 📚 **詳細功能說明**: 上述 Feature Map 為高層次概覽。如需查看每個功能的詳細描述、依賴關係、API 端點及相關檔案，請參閱 **[FEATURE-CATALOG.md](./FEATURE-CATALOG.md)** (65+ 功能完整文檔)。
 
 ---
 
