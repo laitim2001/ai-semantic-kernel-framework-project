@@ -1,14 +1,23 @@
 # IPA Platform - Feature Summary
 
-> **Last Updated**: 2025-12-29
+> **Last Updated**: 2026-01-02
 > **Total Development**: 12 Phases, 51 Sprints, 1,488+ Story Points
 > **Status**: Phase 12 In Progress (79% Complete)
+
+### Related Documents
+
+| Document | Description |
+|----------|-------------|
+| [FEATURE-CATALOG.md](./FEATURE-CATALOG.md) | 完整功能目錄 - 65+ 功能詳細描述、依賴關係、API 端點 |
+| [SCENARIO-DIAGRAMS.md](./SCENARIO-DIAGRAMS.md) | 場景流程圖 - 4 個完整業務場景展示 |
 
 ---
 
 ## Overview
 
 IPA Platform (Intelligent Process Automation) 是一個企業級 AI Agent 編排平台，基於 **Microsoft Agent Framework** 構建。本文件整合所有已實現功能的摘要，方便快速了解專案全貌。
+
+> 💡 **Tip**: 本文件為 Phase-by-Sprint 的開發摘要。如需查看**功能導向**的完整說明，請參閱 [FEATURE-CATALOG.md](./FEATURE-CATALOG.md)。
 
 ### Quick Stats
 
