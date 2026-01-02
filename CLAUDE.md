@@ -19,14 +19,16 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 
 ## Project Overview
 
-**IPA Platform** (Intelligent Process Automation) is an enterprise-grade AI Agent orchestration platform built on **Microsoft Agent Framework**.
+**IPA Platform** (Intelligent Process Automation) is an enterprise-grade AI Agent orchestration platform built on **Microsoft Agent Framework** + **Claude Agent SDK** hybrid architecture.
 
-- **Core Framework**: Microsoft Agent Framework (Preview) - unifies Semantic Kernel + AutoGen
+- **Core Framework**: Microsoft Agent Framework (Preview) + Claude Agent SDK
 - **Target Users**: Mid-size enterprises (500-2000 employees)
 - **Status**: **Phase 12 In Progress** - Claude Agent SDK Integration (130/165 pts, 79%)
-- **Architecture**: Full official Agent Framework API integration (>95% API coverage)
+- **Next Phase**: Phase 13-14 Hybrid MAF + Claude SDK Architecture (200 pts planned)
+- **Architecture**: Full official Agent Framework API integration (>95% API coverage) + Claude SDK hybrid
 - **Stats**: 3500+ tests, 310+ API routes, 25+ production-ready adapters
 - **Phases Completed**: Phase 1-11 (Sprints 1-47), Phase 12 Sprints 48-51 complete
+- **Phases Planned**: Phase 13 (Sprints 52-54), Phase 14 (Sprints 55-57)
 
 ---
 
@@ -214,6 +216,14 @@ backend/src/
 | `HookManager` | Hook 生命週期管理 | SDK Hooks API |
 | `MCPServerManager` | MCP Server 管理 | MCP Protocol |
 | `HybridOrchestrator` | 混合編排 (Agent + Claude) | Custom Integration |
+| **Phase 13-14: Hybrid Architecture** | | |
+| `IntentRouter` | 智能意圖路由 (Workflow/Chat 模式判斷) | Custom + LLM |
+| `ContextBridge` | MAF ↔ Claude 上下文同步 | Custom Integration |
+| `UnifiedToolExecutor` | 統一 Tool 執行層 | Claude SDK Tools |
+| `HybridOrchestratorV2` | 進階混合編排器 | MAF + Claude SDK |
+| `RiskAssessmentEngine` | 風險評估引擎 (驅動 HITL) | Custom + LLM |
+| `ModeSwitcher` | 動態模式切換 (Workflow ↔ Chat) | Custom Integration |
+| `UnifiedCheckpointStorage` | 統一 Checkpoint 管理 | Redis + PostgreSQL |
 
 ### Frontend Architecture
 
@@ -242,6 +252,54 @@ frontend/src/
 3. **Checkpoint System**: Human-in-the-loop approvals with timeout and escalation
 4. **LLM Cache**: Redis-based caching for repeated LLM calls
 5. **Connector Pattern**: Pluggable external system integrations (ServiceNow, Dynamics 365)
+6. **Hybrid Architecture** (Phase 13-14): MAF + Claude SDK intelligent routing and mode switching
+
+### Phase 13-14: Hybrid MAF + Claude SDK Architecture (Planned)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   FastAPI Backend                            │
+├──────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐    ┌──────────────┐    ┌───────────────┐   │
+│  │Intent Router│───→│HybridOrchest.│───→│ Risk Assessor │   │
+│  └─────────────┘    └──────────────┘    └───────────────┘   │
+│         │                  │                    │            │
+│         ▼                  ▼                    ▼            │
+│  ┌─────────────┐    ┌──────────────┐    ┌───────────────┐   │
+│  │Mode Switcher│    │Context Bridge│    │Unified Chkpt  │   │
+│  └─────────────┘    └──────────────┘    └───────────────┘   │
+│         │                  │                                 │
+│         ▼                  ▼                                 │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │              Unified Tool Executor                       │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│         │                                │                   │
+│         ▼                                ▼                   │
+│  ┌─────────────────┐            ┌───────────────────┐       │
+│  │MAF Adapters     │            │Claude SDK         │       │
+│  │ - GroupChat     │            │ - ClaudeSDKClient │       │
+│  │ - Handoff       │            │ - ToolRegistry    │       │
+│  │ - Concurrent    │            │ - HookManager     │       │
+│  │ - Nested        │            │ - MCP Integration │       │
+│  └─────────────────┘            └───────────────────┘       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Phase 13 Core Components** (105 pts, Sprints 52-54):
+- **Intent Router**: Intelligent routing - Workflow Mode vs Chat Mode detection
+- **Context Bridge**: MAF ↔ Claude bidirectional state synchronization
+- **Unified Tool Executor**: All tools executed through Claude SDK
+- **HybridOrchestrator V2**: Enhanced orchestrator with mode-aware execution
+
+**Phase 14 Advanced Features** (95 pts, Sprints 55-57):
+- **Risk Assessment Engine**: Risk-driven HITL (Human-in-the-Loop) decisions
+- **Mode Switcher**: Dynamic Workflow ↔ Chat mode switching
+- **Unified Checkpoint**: Cross-framework state persistence and recovery
+
+**Execution Modes**:
+- `WORKFLOW_MODE`: Multi-step structured workflows via MAF adapters
+- `CHAT_MODE`: Conversational interaction via Claude SDK
+- `HYBRID_MODE`: Combined mode with intelligent routing
 
 ---
 
@@ -788,6 +846,9 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
 | `docs/02-architecture/technical-architecture.md` | System architecture |
 | `docs/01-planning/prd/prd-main.md` | Product requirements |
 | `claudedocs/AI-ASSISTANT-INSTRUCTIONS.md` | AI workflow instructions |
+| `docs/03-implementation/sprint-planning/README.md` | Sprint planning overview (Phase 1-14) |
+| `docs/03-implementation/sprint-planning/phase-13/README.md` | Phase 13: Hybrid Core Architecture |
+| `docs/03-implementation/sprint-planning/phase-14/README.md` | Phase 14: Advanced Hybrid Features |
 
 ---
 
@@ -916,6 +977,7 @@ All checks must pass (5/5).
 
 ---
 
-**Last Updated**: 2025-12-27
+**Last Updated**: 2026-01-02
 **Project Start**: 2025-11-14
-**Status**: Phase 12 In Progress (51 Sprints) - Claude Agent SDK Integration (130/165 pts, 79%)
+**Status**: Phase 12 In Progress (57 Sprints planned) - Claude Agent SDK Integration (130/165 pts, 79%)
+**Next Phase**: Phase 13-14 Hybrid MAF + Claude SDK Architecture (200 pts, 6 Sprints)
