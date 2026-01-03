@@ -38,6 +38,14 @@ Hybrid Endpoints (hybrid_routes.py):
     GET /api/v1/claude-sdk/hybrid/metrics - Get metrics
     POST /api/v1/claude-sdk/hybrid/context/sync - Sync context
     GET /api/v1/claude-sdk/hybrid/capabilities - List capabilities
+
+Intent Router Endpoints (intent_routes.py) - Sprint 52:
+    POST /api/v1/claude-sdk/intent/classify - Classify user intent
+    POST /api/v1/claude-sdk/intent/analyze-complexity - Analyze task complexity
+    POST /api/v1/claude-sdk/intent/detect-multi-agent - Detect multi-agent needs
+    GET /api/v1/claude-sdk/intent/classifiers - List available classifiers
+    GET /api/v1/claude-sdk/intent/stats - Get classification statistics
+    PUT /api/v1/claude-sdk/intent/config - Update router configuration
 """
 
 from fastapi import APIRouter
@@ -47,6 +55,7 @@ from .tools_routes import router as tools_router
 from .hooks_routes import router as hooks_router
 from .mcp_routes import router as mcp_router
 from .hybrid_routes import router as hybrid_router
+from .intent_routes import router as intent_router
 from .schemas import (
     QueryRequest,
     QueryResponse,
@@ -67,6 +76,7 @@ router.include_router(tools_router)
 router.include_router(hooks_router)
 router.include_router(mcp_router)
 router.include_router(hybrid_router)
+router.include_router(intent_router)
 
 __all__ = [
     "router",
@@ -75,6 +85,7 @@ __all__ = [
     "hooks_router",
     "mcp_router",
     "hybrid_router",
+    "intent_router",
     "QueryRequest",
     "QueryResponse",
     "CreateSessionRequest",
