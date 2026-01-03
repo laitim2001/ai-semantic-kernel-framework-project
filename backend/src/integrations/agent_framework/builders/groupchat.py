@@ -55,6 +55,7 @@ Updated: 2025-12-06
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     Awaitable,
     Callable,
@@ -65,6 +66,10 @@ from typing import (
     Sequence,
     Union,
 )
+
+# Type hints for MAF Tool Callback (Phase 13 / Sprint 54)
+if TYPE_CHECKING:
+    from src.integrations.hybrid.execution import MAFToolCallback
 from uuid import uuid4
 import logging
 import asyncio
@@ -1041,6 +1046,7 @@ class GroupChatBuilderAdapter(BuilderAdapter):
         termination_condition: Optional[TerminationConditionFn] = None,
         checkpoint_storage: Any = None,
         config: Optional[Dict[str, Any]] = None,
+        tool_callback: Optional["MAFToolCallback"] = None,
     ):
         """
         初始化 GroupChatBuilderAdapter。
@@ -1056,6 +1062,7 @@ class GroupChatBuilderAdapter(BuilderAdapter):
             termination_condition: 自定義終止條件
             checkpoint_storage: Checkpoint 存儲
             config: 額外配置
+            tool_callback: MAF Tool Callback for unified tool execution (Sprint 54)
 
         Raises:
             ValueError: 參數無效時
@@ -1081,6 +1088,9 @@ class GroupChatBuilderAdapter(BuilderAdapter):
         self._max_rounds = max_rounds
         self._termination_condition = termination_condition
         self._checkpoint_storage = checkpoint_storage
+
+        # Sprint 54: MAF Tool Callback for unified tool execution
+        self._tool_callback = tool_callback
 
         # 運行時狀態
         self._status = GroupChatStatus.IDLE

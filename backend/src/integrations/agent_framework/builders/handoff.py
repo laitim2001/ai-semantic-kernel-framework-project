@@ -39,8 +39,12 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
 from uuid import UUID, uuid4
+
+# Type hints for MAF Tool Callback (Phase 13 / Sprint 54)
+if TYPE_CHECKING:
+    from src.integrations.hybrid.execution import MAFToolCallback
 
 from ..base import BuilderAdapter
 
@@ -253,6 +257,7 @@ class HandoffBuilderAdapter(BuilderAdapter[Any, HandoffExecutionResult]):
         request_prompt: Optional[str] = None,
         termination_condition: Optional[Callable[[List[Dict]], bool]] = None,
         config: Optional[Dict[str, Any]] = None,
+        tool_callback: Optional["MAFToolCallback"] = None,
     ):
         """
         初始化 HandoffBuilderAdapter。
@@ -267,6 +272,7 @@ class HandoffBuilderAdapter(BuilderAdapter[Any, HandoffExecutionResult]):
             request_prompt: 請求用戶輸入時的提示信息
             termination_condition: 終止條件函數
             config: 額外配置
+            tool_callback: MAF Tool Callback for unified tool execution (Sprint 54)
         """
         super().__init__(config)
         self._id = id
@@ -278,6 +284,9 @@ class HandoffBuilderAdapter(BuilderAdapter[Any, HandoffExecutionResult]):
         self._request_prompt = request_prompt or "Please provide your input."
         self._termination_condition = termination_condition
         self._handoff_routes: Dict[str, HandoffRoute] = {}
+
+        # Sprint 54: MAF Tool Callback for unified tool execution
+        self._tool_callback = tool_callback
 
         # 執行狀態
         self._current_execution_id: Optional[UUID] = None

@@ -1,0 +1,757 @@
+# =============================================================================
+# IPA Platform - Hybrid Orchestrator V2
+# =============================================================================
+# Sprint 54: HybridOrchestrator Refactor (S54-3)
+#
+# 重構後的混合編排器，整合 Phase 13 所有核心組件:
+#   - IntentRouter: 意圖分析和執行模式選擇
+#   - ContextBridge: 跨框架上下文同步
+#   - UnifiedToolExecutor: 統一 Tool 執行層
+#   - MAFToolCallback: MAF Tool 回調整合
+#
+# 執行模式:
+#   - WORKFLOW_MODE: 多步驟結構化工作流程 (MAF 主導)
+#   - CHAT_MODE: 對話式交互 (Claude 主導)
+#   - HYBRID_MODE: 動態切換模式
+#
+# Dependencies:
+#   - IntentRouter (src.integrations.hybrid.intent)
+#   - ContextBridge (src.integrations.hybrid.context)
+#   - UnifiedToolExecutor (src.integrations.hybrid.execution)
+# =============================================================================
+
+import asyncio
+import logging
+import time
+import uuid
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+
+from src.integrations.hybrid.intent import (
+    ExecutionMode,
+    IntentAnalysis,
+    IntentRouter,
+    SessionContext,
+)
+from src.integrations.hybrid.context import (
+    ContextBridge,
+    HybridContext,
+    MAFContext,
+    ClaudeContext,
+    SyncResult,
+)
+from src.integrations.hybrid.execution import (
+    UnifiedToolExecutor,
+    ToolSource,
+    ToolExecutionResult,
+    MAFToolCallback,
+    create_maf_callback,
+)
+
+if TYPE_CHECKING:
+    from src.integrations.claude_sdk.hybrid.selector import FrameworkSelector
+
+logger = logging.getLogger(__name__)
+
+
+class OrchestratorMode(str, Enum):
+    """Orchestrator operation mode."""
+
+    V1_COMPAT = "v1_compat"  # V1 兼容模式
+    V2_FULL = "v2_full"  # V2 完整功能
+    V2_MINIMAL = "v2_minimal"  # V2 最小功能 (無 Intent Router)
+
+
+@dataclass
+class OrchestratorConfig:
+    """Configuration for HybridOrchestratorV2."""
+
+    mode: OrchestratorMode = OrchestratorMode.V2_FULL
+    primary_framework: str = "claude_sdk"
+    auto_switch: bool = True
+    switch_confidence_threshold: float = 0.7
+    timeout: float = 300.0
+    max_retries: int = 3
+    enable_metrics: bool = True
+    enable_tool_callback: bool = True
+
+
+@dataclass
+class ExecutionContextV2:
+    """Enhanced execution context for V2."""
+
+    session_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    hybrid_context: Optional[HybridContext] = None
+    intent_analysis: Optional[IntentAnalysis] = None
+    current_mode: ExecutionMode = ExecutionMode.CHAT_MODE
+    conversation_history: List[Dict[str, Any]] = field(default_factory=list)
+    tool_executions: List[ToolExecutionResult] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: float = field(default_factory=time.time)
+    last_activity: float = field(default_factory=time.time)
+
+
+@dataclass
+class HybridResultV2:
+    """Enhanced result from V2 orchestrator."""
+
+    success: bool
+    content: str = ""
+    error: Optional[str] = None
+    framework_used: str = ""
+    execution_mode: ExecutionMode = ExecutionMode.CHAT_MODE
+    session_id: Optional[str] = None
+    intent_analysis: Optional[IntentAnalysis] = None
+    tool_results: List[ToolExecutionResult] = field(default_factory=list)
+    sync_result: Optional[SyncResult] = None
+    duration: float = 0.0
+    tokens_used: int = 0
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+class HybridOrchestratorV2:
+    """
+    重構後的混合編排器 V2。
+
+    整合 Phase 13 所有核心組件，提供智能的執行模式選擇、
+    跨框架上下文同步和統一的 Tool 執行。
+
+    Key Features:
+    - 智能意圖分析和模式選擇 (IntentRouter)
+    - 跨框架上下文同步 (ContextBridge)
+    - 統一 Tool 執行層 (UnifiedToolExecutor)
+    - MAF Tool 回調整合 (MAFToolCallback)
+    - 向後兼容 V1 API
+    """
+
+    def __init__(
+        self,
+        *,
+        config: Optional[OrchestratorConfig] = None,
+        intent_router: Optional[IntentRouter] = None,
+        context_bridge: Optional[ContextBridge] = None,
+        unified_executor: Optional[UnifiedToolExecutor] = None,
+        maf_callback: Optional[MAFToolCallback] = None,
+        framework_selector: Optional["FrameworkSelector"] = None,
+        claude_executor: Optional[Callable] = None,
+        maf_executor: Optional[Callable] = None,
+    ):
+        """
+        Initialize HybridOrchestratorV2.
+
+        Args:
+            config: Orchestrator configuration
+            intent_router: Router for intent analysis (Sprint 52)
+            context_bridge: Bridge for context sync (Sprint 53)
+            unified_executor: Unified tool executor (Sprint 54)
+            maf_callback: MAF tool callback (Sprint 54)
+            framework_selector: Legacy selector for V1 compat
+            claude_executor: Executor for Claude SDK
+            maf_executor: Executor for MAF
+        """
+        self._config = config or OrchestratorConfig()
+
+        # Phase 13 components
+        self._intent_router = intent_router or IntentRouter()
+        self._context_bridge = context_bridge or ContextBridge()
+        self._unified_executor = unified_executor
+        self._maf_callback = maf_callback
+
+        # Legacy components (for V1 compatibility)
+        self._framework_selector = framework_selector
+        self._claude_executor = claude_executor
+        self._maf_executor = maf_executor
+
+        # Session state
+        self._sessions: Dict[str, ExecutionContextV2] = {}
+        self._active_session: Optional[str] = None
+
+        # Metrics
+        self._metrics = OrchestratorMetrics()
+
+        logger.info(
+            f"HybridOrchestratorV2 initialized: mode={self._config.mode.value}, "
+            f"intent_router={intent_router is not None}, "
+            f"context_bridge={context_bridge is not None}, "
+            f"unified_executor={unified_executor is not None}"
+        )
+
+    @property
+    def config(self) -> OrchestratorConfig:
+        """Get current configuration."""
+        return self._config
+
+    @property
+    def active_session_id(self) -> Optional[str]:
+        """Get active session ID."""
+        return self._active_session
+
+    @property
+    def session_count(self) -> int:
+        """Get number of active sessions."""
+        return len(self._sessions)
+
+    @property
+    def intent_router(self) -> IntentRouter:
+        """Get intent router instance."""
+        return self._intent_router
+
+    @property
+    def context_bridge(self) -> ContextBridge:
+        """Get context bridge instance."""
+        return self._context_bridge
+
+    @property
+    def unified_executor(self) -> Optional[UnifiedToolExecutor]:
+        """Get unified executor instance."""
+        return self._unified_executor
+
+    def create_session(
+        self,
+        session_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """
+        Create a new execution session.
+
+        Args:
+            session_id: Optional custom session ID
+            metadata: Optional session metadata
+
+        Returns:
+            The session ID
+        """
+        sid = session_id or str(uuid.uuid4())
+        self._sessions[sid] = ExecutionContextV2(
+            session_id=sid,
+            metadata=metadata or {},
+        )
+        self._active_session = sid
+        logger.info(f"Created V2 session: {sid}")
+        return sid
+
+    def get_session(self, session_id: str) -> Optional[ExecutionContextV2]:
+        """Get a session by ID."""
+        return self._sessions.get(session_id)
+
+    def close_session(self, session_id: str) -> bool:
+        """Close and remove a session."""
+        if session_id in self._sessions:
+            del self._sessions[session_id]
+            if self._active_session == session_id:
+                self._active_session = None
+            logger.info(f"Closed V2 session: {session_id}")
+            return True
+        return False
+
+    async def execute(
+        self,
+        prompt: str,
+        *,
+        session_id: Optional[str] = None,
+        force_mode: Optional[ExecutionMode] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        max_tokens: Optional[int] = None,
+        timeout: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> HybridResultV2:
+        """
+        Execute a task using intelligent mode selection.
+
+        Args:
+            prompt: The task prompt or user message
+            session_id: Optional session ID (creates new if not provided)
+            force_mode: Force specific execution mode
+            tools: Available tools for execution
+            max_tokens: Maximum tokens for response
+            timeout: Execution timeout in seconds
+            metadata: Additional metadata for execution
+
+        Returns:
+            HybridResultV2 with execution outcome
+        """
+        start_time = time.time()
+
+        # Get or create session
+        if session_id and session_id in self._sessions:
+            context = self._sessions[session_id]
+        else:
+            sid = self.create_session(session_id, metadata)
+            context = self._sessions[sid]
+
+        context.last_activity = time.time()
+
+        try:
+            # 1. Intent Analysis (skip if forcing mode or in minimal mode)
+            if force_mode:
+                intent_analysis = IntentAnalysis(
+                    mode=force_mode,
+                    confidence=1.0,
+                    reasoning="Forced mode by user request",
+                )
+            elif self._config.mode == OrchestratorMode.V2_MINIMAL:
+                intent_analysis = IntentAnalysis(
+                    mode=ExecutionMode.CHAT_MODE,
+                    confidence=0.8,
+                    reasoning="Minimal mode - defaulting to CHAT",
+                )
+            else:
+                # Build session context for analysis
+                session_context = SessionContext(
+                    session_id=context.session_id,
+                    conversation_history=context.conversation_history,
+                    current_mode=context.current_mode,
+                )
+                intent_analysis = await self._intent_router.analyze_intent(
+                    user_input=prompt,
+                    session_context=session_context,
+                )
+
+            context.intent_analysis = intent_analysis
+            context.current_mode = intent_analysis.mode
+
+            # 2. Prepare Hybrid Context
+            hybrid_context = await self._prepare_hybrid_context(context, prompt)
+            context.hybrid_context = hybrid_context
+
+            # 3. Execute based on mode
+            if intent_analysis.mode == ExecutionMode.WORKFLOW_MODE:
+                result = await self._execute_workflow_mode(
+                    prompt, context, intent_analysis, tools, max_tokens, timeout
+                )
+            elif intent_analysis.mode == ExecutionMode.CHAT_MODE:
+                result = await self._execute_chat_mode(
+                    prompt, context, intent_analysis, tools, max_tokens, timeout
+                )
+            else:  # HYBRID_MODE
+                result = await self._execute_hybrid_mode(
+                    prompt, context, intent_analysis, tools, max_tokens, timeout
+                )
+
+            # 4. Sync context after execution
+            if hybrid_context:
+                sync_result = await self._context_bridge.sync_after_execution(
+                    result, hybrid_context
+                )
+                result.sync_result = sync_result
+
+            # 5. Update conversation history
+            context.conversation_history.append({
+                "role": "user",
+                "content": prompt,
+                "timestamp": time.time(),
+            })
+            context.conversation_history.append({
+                "role": "assistant",
+                "content": result.content,
+                "mode": intent_analysis.mode.value,
+                "framework": result.framework_used,
+                "timestamp": time.time(),
+            })
+
+            # 6. Update metrics
+            if self._config.enable_metrics:
+                self._metrics.record_execution(
+                    mode=intent_analysis.mode,
+                    framework=result.framework_used,
+                    success=result.success,
+                    duration=time.time() - start_time,
+                )
+
+        except asyncio.TimeoutError:
+            result = HybridResultV2(
+                success=False,
+                error=f"Execution timed out after {timeout or self._config.timeout}s",
+                session_id=context.session_id,
+                execution_mode=context.current_mode,
+            )
+        except Exception as e:
+            logger.error(f"Execution error: {e}", exc_info=True)
+            result = HybridResultV2(
+                success=False,
+                error=str(e),
+                session_id=context.session_id,
+                execution_mode=context.current_mode,
+            )
+
+        result.duration = time.time() - start_time
+        result.session_id = context.session_id
+        result.intent_analysis = context.intent_analysis
+
+        return result
+
+    async def _prepare_hybrid_context(
+        self,
+        context: ExecutionContextV2,
+        prompt: str,
+    ) -> Optional[HybridContext]:
+        """Prepare hybrid context for execution."""
+        try:
+            # Create or update hybrid context via bridge
+            hybrid_context = await self._context_bridge.get_or_create_hybrid(
+                session_id=context.session_id,
+            )
+            return hybrid_context
+        except Exception as e:
+            logger.warning(f"Failed to prepare hybrid context: {e}")
+            return None
+
+    async def _execute_workflow_mode(
+        self,
+        prompt: str,
+        context: ExecutionContextV2,
+        intent: IntentAnalysis,
+        tools: Optional[List[Dict[str, Any]]],
+        max_tokens: Optional[int],
+        timeout: Optional[float],
+    ) -> HybridResultV2:
+        """
+        Execute in Workflow Mode.
+
+        MAF 主導執行，但 Tool 透過 UnifiedToolExecutor。
+        """
+        logger.info(f"Executing in WORKFLOW_MODE: {prompt[:50]}...")
+
+        if self._maf_executor:
+            try:
+                # Use MAF executor with tool callback if available
+                raw_result = await asyncio.wait_for(
+                    self._maf_executor(
+                        prompt=prompt,
+                        history=context.conversation_history,
+                        tools=tools,
+                        max_tokens=max_tokens,
+                        tool_callback=self._maf_callback,
+                    ),
+                    timeout=timeout or self._config.timeout,
+                )
+
+                return self._convert_to_result_v2(
+                    raw_result,
+                    framework="microsoft_agent_framework",
+                    mode=ExecutionMode.WORKFLOW_MODE,
+                )
+            except Exception as e:
+                logger.error(f"Workflow mode execution error: {e}")
+                return HybridResultV2(
+                    success=False,
+                    error=str(e),
+                    framework_used="microsoft_agent_framework",
+                    execution_mode=ExecutionMode.WORKFLOW_MODE,
+                )
+        else:
+            # Simulated response
+            return HybridResultV2(
+                success=True,
+                content=f"[WORKFLOW_MODE] Processed: {prompt[:100]}...",
+                framework_used="microsoft_agent_framework",
+                execution_mode=ExecutionMode.WORKFLOW_MODE,
+            )
+
+    async def _execute_chat_mode(
+        self,
+        prompt: str,
+        context: ExecutionContextV2,
+        intent: IntentAnalysis,
+        tools: Optional[List[Dict[str, Any]]],
+        max_tokens: Optional[int],
+        timeout: Optional[float],
+    ) -> HybridResultV2:
+        """
+        Execute in Chat Mode.
+
+        Claude 主導執行，直接使用 Claude SDK。
+        """
+        logger.info(f"Executing in CHAT_MODE: {prompt[:50]}...")
+
+        if self._claude_executor:
+            try:
+                raw_result = await asyncio.wait_for(
+                    self._claude_executor(
+                        prompt=prompt,
+                        history=context.conversation_history,
+                        tools=tools,
+                        max_tokens=max_tokens,
+                    ),
+                    timeout=timeout or self._config.timeout,
+                )
+
+                return self._convert_to_result_v2(
+                    raw_result,
+                    framework="claude_sdk",
+                    mode=ExecutionMode.CHAT_MODE,
+                )
+            except Exception as e:
+                logger.error(f"Chat mode execution error: {e}")
+                return HybridResultV2(
+                    success=False,
+                    error=str(e),
+                    framework_used="claude_sdk",
+                    execution_mode=ExecutionMode.CHAT_MODE,
+                )
+        else:
+            # Simulated response
+            return HybridResultV2(
+                success=True,
+                content=f"[CHAT_MODE] Processed: {prompt[:100]}...",
+                framework_used="claude_sdk",
+                execution_mode=ExecutionMode.CHAT_MODE,
+            )
+
+    async def _execute_hybrid_mode(
+        self,
+        prompt: str,
+        context: ExecutionContextV2,
+        intent: IntentAnalysis,
+        tools: Optional[List[Dict[str, Any]]],
+        max_tokens: Optional[int],
+        timeout: Optional[float],
+    ) -> HybridResultV2:
+        """
+        Execute in Hybrid Mode.
+
+        動態切換，根據執行過程中的需求調整。
+        優先使用 Claude 處理，MAF 處理結構化部分。
+        """
+        logger.info(f"Executing in HYBRID_MODE: {prompt[:50]}...")
+
+        # In hybrid mode, we start with Claude and may switch to MAF
+        # for structured workflow parts
+        suggested_framework = intent.suggested_framework
+
+        if suggested_framework and suggested_framework.maf_confidence > 0.7:
+            # Use MAF for structured parts
+            result = await self._execute_workflow_mode(
+                prompt, context, intent, tools, max_tokens, timeout
+            )
+            result.execution_mode = ExecutionMode.HYBRID_MODE
+        else:
+            # Use Claude for conversational parts
+            result = await self._execute_chat_mode(
+                prompt, context, intent, tools, max_tokens, timeout
+            )
+            result.execution_mode = ExecutionMode.HYBRID_MODE
+
+        return result
+
+    def _convert_to_result_v2(
+        self,
+        raw_result: Any,
+        framework: str,
+        mode: ExecutionMode,
+    ) -> HybridResultV2:
+        """Convert raw result to HybridResultV2."""
+        if isinstance(raw_result, HybridResultV2):
+            return raw_result
+        elif isinstance(raw_result, dict):
+            return HybridResultV2(
+                success=raw_result.get("success", True),
+                content=raw_result.get("content", ""),
+                error=raw_result.get("error"),
+                framework_used=framework,
+                execution_mode=mode,
+                tokens_used=raw_result.get("tokens_used", 0),
+                metadata=raw_result.get("metadata", {}),
+            )
+        else:
+            return HybridResultV2(
+                success=True,
+                content=str(raw_result),
+                framework_used=framework,
+                execution_mode=mode,
+            )
+
+    async def execute_tool(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+        *,
+        source: ToolSource = ToolSource.HYBRID,
+        session_id: Optional[str] = None,
+        approval_required: bool = False,
+    ) -> ToolExecutionResult:
+        """
+        Execute a tool through unified executor.
+
+        Args:
+            tool_name: Name of the tool to execute
+            arguments: Tool arguments
+            source: Source of the tool call
+            session_id: Optional session ID
+            approval_required: Whether approval is required
+
+        Returns:
+            ToolExecutionResult
+        """
+        if not self._unified_executor:
+            return ToolExecutionResult(
+                success=False,
+                error="UnifiedToolExecutor not configured",
+                tool_name=tool_name,
+                source=source,
+            )
+
+        # Get hybrid context if session exists
+        context = None
+        if session_id and session_id in self._sessions:
+            context = self._sessions[session_id].hybrid_context
+
+        return await self._unified_executor.execute(
+            tool_name=tool_name,
+            arguments=arguments,
+            source=source,
+            context=context,
+            approval_required=approval_required,
+        )
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get orchestrator metrics."""
+        return self._metrics.to_dict()
+
+    def reset_metrics(self) -> None:
+        """Reset all metrics."""
+        self._metrics.reset()
+
+    # V1 Compatibility Methods
+
+    def analyze_task(self, prompt: str) -> IntentAnalysis:
+        """
+        Analyze a task without executing (V1 compat).
+
+        Args:
+            prompt: The task prompt to analyze
+
+        Returns:
+            IntentAnalysis with mode and confidence
+        """
+        # Synchronous wrapper for async method
+        import asyncio
+
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(
+                self._intent_router.analyze_intent(prompt)
+            )
+        finally:
+            loop.close()
+
+    def set_claude_executor(self, executor: Callable) -> None:
+        """Set the Claude SDK executor (V1 compat)."""
+        self._claude_executor = executor
+
+    def set_maf_executor(self, executor: Callable) -> None:
+        """Set the MAF executor (V1 compat)."""
+        self._maf_executor = executor
+
+
+@dataclass
+class OrchestratorMetrics:
+    """Metrics for HybridOrchestratorV2."""
+
+    execution_count: int = 0
+    total_duration: float = 0.0
+    mode_usage: Dict[str, int] = field(default_factory=lambda: {
+        "WORKFLOW_MODE": 0,
+        "CHAT_MODE": 0,
+        "HYBRID_MODE": 0,
+    })
+    framework_usage: Dict[str, int] = field(default_factory=lambda: {
+        "claude_sdk": 0,
+        "microsoft_agent_framework": 0,
+    })
+    success_count: int = 0
+    failure_count: int = 0
+
+    def record_execution(
+        self,
+        mode: ExecutionMode,
+        framework: str,
+        success: bool,
+        duration: float,
+    ) -> None:
+        """Record an execution."""
+        self.execution_count += 1
+        self.total_duration += duration
+        self.mode_usage[mode.name] = self.mode_usage.get(mode.name, 0) + 1
+        self.framework_usage[framework] = self.framework_usage.get(framework, 0) + 1
+        if success:
+            self.success_count += 1
+        else:
+            self.failure_count += 1
+
+    def reset(self) -> None:
+        """Reset all metrics."""
+        self.execution_count = 0
+        self.total_duration = 0.0
+        self.mode_usage = {
+            "WORKFLOW_MODE": 0,
+            "CHAT_MODE": 0,
+            "HYBRID_MODE": 0,
+        }
+        self.framework_usage = {
+            "claude_sdk": 0,
+            "microsoft_agent_framework": 0,
+        }
+        self.success_count = 0
+        self.failure_count = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        avg_duration = (
+            self.total_duration / self.execution_count
+            if self.execution_count > 0
+            else 0.0
+        )
+        success_rate = (
+            self.success_count / self.execution_count
+            if self.execution_count > 0
+            else 0.0
+        )
+        return {
+            "execution_count": self.execution_count,
+            "total_duration": self.total_duration,
+            "avg_duration": avg_duration,
+            "mode_usage": dict(self.mode_usage),
+            "framework_usage": dict(self.framework_usage),
+            "success_count": self.success_count,
+            "failure_count": self.failure_count,
+            "success_rate": success_rate,
+        }
+
+
+def create_orchestrator_v2(
+    *,
+    mode: OrchestratorMode = OrchestratorMode.V2_FULL,
+    primary_framework: str = "claude_sdk",
+    auto_switch: bool = True,
+    intent_router: Optional[IntentRouter] = None,
+    context_bridge: Optional[ContextBridge] = None,
+    unified_executor: Optional[UnifiedToolExecutor] = None,
+) -> HybridOrchestratorV2:
+    """
+    Factory function to create a HybridOrchestratorV2.
+
+    Args:
+        mode: Orchestrator operation mode
+        primary_framework: Default framework
+        auto_switch: Whether to auto-switch modes
+        intent_router: Optional custom IntentRouter
+        context_bridge: Optional custom ContextBridge
+        unified_executor: Optional custom UnifiedToolExecutor
+
+    Returns:
+        Configured HybridOrchestratorV2 instance
+    """
+    config = OrchestratorConfig(
+        mode=mode,
+        primary_framework=primary_framework,
+        auto_switch=auto_switch,
+    )
+
+    return HybridOrchestratorV2(
+        config=config,
+        intent_router=intent_router,
+        context_bridge=context_bridge,
+        unified_executor=unified_executor,
+    )

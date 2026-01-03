@@ -56,6 +56,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -68,6 +69,10 @@ from typing import (
     Union,
     runtime_checkable,
 )
+
+# Type hints for MAF Tool Callback (Phase 13 / Sprint 54)
+if TYPE_CHECKING:
+    from src.integrations.hybrid.execution import MAFToolCallback
 
 from ..base import BuilderAdapter
 from ..exceptions import ExecutionError, ValidationError, WorkflowBuildError
@@ -764,6 +769,7 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
         max_concurrency: int = 10,
         timeout_seconds: float = 300.0,
         config: Optional[Dict[str, Any]] = None,
+        tool_callback: Optional["MAFToolCallback"] = None,
     ):
         """
         初始化 ConcurrentBuilderAdapter。
@@ -774,6 +780,7 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
             max_concurrency: 最大並發數 (1-100)
             timeout_seconds: 全局超時時間 (秒，最大 3600)
             config: 額外配置選項
+            tool_callback: MAF Tool 回調處理器 (Phase 13 / Sprint 54)
         """
         super().__init__(config)
         self._id = id
@@ -787,6 +794,9 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
 
         # Sprint 19: 使用官方 ConcurrentBuilder API
         self._builder = ConcurrentBuilder()
+
+        # Sprint 54: MAF Tool Callback for unified tool execution
+        self._tool_callback = tool_callback
 
         logger.info(
             f"ConcurrentBuilderAdapter initialized: id={id}, mode={mode.value}, "

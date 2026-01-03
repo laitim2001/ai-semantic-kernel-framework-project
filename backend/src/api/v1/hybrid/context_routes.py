@@ -74,7 +74,6 @@ def get_synchronizer() -> ContextSynchronizer:
     if _synchronizer is None:
         _event_publisher = SyncEventPublisher()
         _synchronizer = ContextSynchronizer(
-            bridge=get_context_bridge(),
             event_publisher=_event_publisher,
         )
     return _synchronizer

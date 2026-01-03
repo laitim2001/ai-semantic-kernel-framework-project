@@ -7,7 +7,7 @@
 # =============================================================================
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -217,7 +217,7 @@ class MergeContextRequest(BaseModel):
         default=None,
         description="Claude session ID"
     )
-    primary_framework: str = Field(
+    primary_framework: Literal["maf", "claude"] = Field(
         default="maf",
         description="Primary framework: maf or claude"
     )
