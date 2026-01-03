@@ -162,4 +162,64 @@ API_ENDPOINTS = {
         "hybrid_context_sync": "/claude-sdk/hybrid/context/sync",
         "hybrid_capabilities": "/claude-sdk/hybrid/capabilities",
     },
+
+    # Phase 13: Hybrid MAF + Claude SDK Integration (Core Architecture)
+    "hybrid": {
+        # Sprint 52: Intent Router & Mode Detection
+        "analyze": "/hybrid/analyze",
+        "classify_intent": "/hybrid/intent/classify",
+        "detect_mode": "/hybrid/mode/detect",
+        "routing_policy": "/hybrid/routing/policy",
+        "routing_policy_evaluate": "/hybrid/routing/policy/evaluate",
+
+        # Sprint 53: Context Bridge & Sync
+        "context_sync": "/hybrid/context/sync",
+        "context_state": "/hybrid/context/state",
+        "context_maf_to_claude": "/hybrid/context/maf-to-claude",
+        "context_claude_to_maf": "/hybrid/context/claude-to-maf",
+        "context_conflict": "/hybrid/context/conflict/resolve",
+
+        # Sprint 54: HybridOrchestrator Refactor
+        "execute": "/hybrid/execute",
+        "execute_stream": "/hybrid/execute/stream",
+        "switch_mode": "/hybrid/switch-mode",
+        "tool_execute": "/hybrid/tools/execute",
+        "metrics": "/hybrid/metrics",
+        "health": "/hybrid/health",
+    },
+
+    # Phase 14: HITL & Approval (Human-in-the-Loop 進階功能)
+    "hitl": {
+        # Sprint 55: Risk Assessment Engine (風險評估引擎)
+        "risk_assess": "/hitl/risk/assess",
+        "risk_policy": "/hitl/risk/policy",
+        "risk_policy_update": "/hitl/risk/policy",
+        "risk_history": "/hitl/risk/history",
+        "risk_audit": "/hitl/risk/audit",
+
+        # Sprint 55: Approval Router (審批路由)
+        "approvals": "/hitl/approvals",
+        "approval_get": "/hitl/approvals/{approval_id}",
+        "approval_approve": "/hitl/approvals/{approval_id}/approve",
+        "approval_reject": "/hitl/approvals/{approval_id}/reject",
+        "approval_escalate": "/hitl/approvals/{approval_id}/escalate",
+        "approval_pending": "/hitl/approvals/pending",
+
+        # Sprint 56: Mode Switcher (模式切換器)
+        "mode_switch": "/hitl/mode/switch",
+        "mode_status": "/hitl/mode/status",
+        "mode_history": "/hitl/mode/history",
+        "transition_prepare": "/hitl/transition/prepare",
+        "transition_execute": "/hitl/transition/execute",
+        "transition_rollback": "/hitl/transition/rollback",
+
+        # Sprint 57: Unified Checkpoint (統一檢查點)
+        "checkpoint_save": "/hitl/checkpoint/save",
+        "checkpoint_restore": "/hitl/checkpoint/restore",
+        "checkpoint_list": "/hitl/checkpoint/list",
+        "checkpoint_get": "/hitl/checkpoint/{checkpoint_id}",
+        "checkpoint_delete": "/hitl/checkpoint/{checkpoint_id}",
+        "checkpoint_compare": "/hitl/checkpoint/compare",
+        "checkpoint_versions": "/hitl/checkpoint/{checkpoint_id}/versions",
+    },
 }
