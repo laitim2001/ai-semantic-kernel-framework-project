@@ -40,7 +40,12 @@ api/
 │   ├── sessions/           # 🆕 Session-based conversations
 │   │   ├── routes.py       # Session CRUD, Chat, Messages, Approvals
 │   │   └── schemas.py      # Session/Message/ToolCall schemas
-│   └── code_interpreter/   # 🆕 Phase 8: Code execution
+│   ├── code_interpreter/   # 🆕 Phase 8: Code execution
+│   │
+│   │  # Phase 13: Hybrid MAF + Claude SDK Architecture
+│   └── hybrid/             # 🆕 Hybrid context management
+│       ├── context_routes.py   # Context bridge & sync API
+│       └── schemas.py          # Hybrid context schemas
 ```
 
 ---
@@ -235,6 +240,18 @@ These routes connect to **Adapter Layer** (`src/integrations/agent_framework/`):
 | GET | `/sessions/{id}/tool-calls` | List tool calls |
 | POST | `/sessions/{id}/tool-calls/{id}/approve` | Approve tool call |
 | POST | `/sessions/{id}/tool-calls/{id}/reject` | Reject tool call |
+
+---
+
+## Hybrid Context API Routes (Phase 13)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/hybrid/context/{session_id}` | Get hybrid context |
+| GET | `/hybrid/context/{session_id}/status` | Get sync status |
+| POST | `/hybrid/context/sync` | Trigger manual sync |
+| POST | `/hybrid/context/merge` | Merge MAF and Claude contexts |
+| GET | `/hybrid/context` | List all cached contexts |
 
 ### Example: GroupChat Route
 

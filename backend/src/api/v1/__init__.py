@@ -37,6 +37,7 @@
 #   - mcp: MCP Architecture - Server management, tool discovery (Sprint 39-41)
 #   - sessions: Session Mode - Multi-turn conversation management (Sprint 42-44)
 #   - claude_sdk: Claude Agent SDK Integration (Sprint 48-51)
+#   - hybrid: Hybrid Context Bridge (Sprint 53)
 # =============================================================================
 
 from fastapi import APIRouter
@@ -67,6 +68,7 @@ from src.api.v1.triggers.routes import router as triggers_router
 from src.api.v1.versioning.routes import router as versioning_router
 from src.api.v1.workflows.routes import router as workflows_router
 from src.api.v1.claude_sdk import router as claude_sdk_router  # Sprint 48-51: Claude SDK
+from src.api.v1.hybrid import context_router as hybrid_context_router  # Sprint 53: Hybrid Context
 
 # Create main v1 router
 api_router = APIRouter(prefix="/api/v1")
@@ -108,5 +110,8 @@ api_router.include_router(sessions_router)  # Sprint 42-44: Session Management
 
 # Include sub-routers - Phase 12 (Claude Agent SDK Integration)
 api_router.include_router(claude_sdk_router)  # Sprint 48-51: Claude SDK
+
+# Include sub-routers - Phase 13 (Hybrid MAF + Claude SDK Architecture)
+api_router.include_router(hybrid_context_router)  # Sprint 53: Hybrid Context Bridge
 
 __all__ = ["api_router"]
