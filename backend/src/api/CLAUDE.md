@@ -253,6 +253,20 @@ These routes connect to **Adapter Layer** (`src/integrations/agent_framework/`):
 | POST | `/hybrid/context/merge` | Merge MAF and Claude contexts |
 | GET | `/hybrid/context` | List all cached contexts |
 
+---
+
+## Risk Assessment API Routes (Phase 14)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/hybrid/risk/assess` | Assess single operation risk |
+| POST | `/hybrid/risk/assess-batch` | Assess multiple operations |
+| GET | `/hybrid/risk/session/{session_id}` | Get session risk profile |
+| GET | `/hybrid/risk/metrics` | Get engine performance metrics |
+| DELETE | `/hybrid/risk/session/{session_id}/history` | Clear session history |
+| POST | `/hybrid/risk/metrics/reset` | Reset engine metrics |
+| GET | `/hybrid/risk/config` | Get current risk configuration |
+
 ### Example: GroupChat Route
 
 ```python
