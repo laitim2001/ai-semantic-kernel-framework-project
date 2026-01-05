@@ -21,14 +21,18 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 
 **IPA Platform** (Intelligent Process Automation) is an enterprise-grade AI Agent orchestration platform built on **Microsoft Agent Framework** + **Claude Agent SDK** hybrid architecture.
 
-- **Core Framework**: Microsoft Agent Framework (Preview) + Claude Agent SDK
+- **Core Framework**: Microsoft Agent Framework (Preview) + Claude Agent SDK + AG-UI Protocol
 - **Target Users**: Mid-size enterprises (500-2000 employees)
-- **Status**: **Phase 12 In Progress** - Claude Agent SDK Integration (130/165 pts, 79%)
-- **Next Phase**: Phase 13-14 Hybrid MAF + Claude SDK Architecture (200 pts planned)
-- **Architecture**: Full official Agent Framework API integration (>95% API coverage) + Claude SDK hybrid
-- **Stats**: 3500+ tests, 310+ API routes, 25+ production-ready adapters
-- **Phases Completed**: Phase 1-11 (Sprints 1-47), Phase 12 Sprints 48-51 complete
-- **Phases Planned**: Phase 13 (Sprints 52-54), Phase 14 (Sprints 55-57)
+- **Status**: **Phase 15 Complete** - AG-UI Protocol Integration (85/85 pts, 100%)
+- **Next Phase**: Phase 16 - Production Readiness & Performance Optimization (TBD)
+- **Architecture**: Full official Agent Framework API integration (>95% API coverage) + Claude SDK hybrid + AG-UI Protocol
+- **Stats**: 4000+ tests, 350+ API routes, 30+ production-ready adapters
+- **Phases Completed**: Phase 1-15 (Sprints 1-60)
+  - Phase 1-11: Core Platform (Sprints 1-47)
+  - Phase 12: Claude Agent SDK Integration (Sprints 48-51, 165 pts)
+  - Phase 13: Hybrid Core Architecture (Sprints 52-54, 105 pts)
+  - Phase 14: Advanced Hybrid Features (Sprints 55-57, 95 pts)
+  - Phase 15: AG-UI Protocol Integration (Sprints 58-60, 85 pts)
 
 ---
 
@@ -224,6 +228,16 @@ backend/src/
 | `RiskAssessmentEngine` | 風險評估引擎 (驅動 HITL) | Custom + LLM |
 | `ModeSwitcher` | 動態模式切換 (Workflow ↔ Chat) | Custom Integration |
 | `UnifiedCheckpointStorage` | 統一 Checkpoint 管理 | Redis + PostgreSQL |
+| **Phase 15: AG-UI Protocol** | | |
+| `HybridEventBridge` | Hybrid → AG-UI 事件轉換 | AG-UI Protocol |
+| `ThreadManager` | 對話線程狀態管理 | AG-UI Threads |
+| `AgenticChatHandler` | Agentic Chat 功能 | AG-UI Feature 1 |
+| `ToolRenderingHandler` | 工具結果渲染 | AG-UI Feature 2 |
+| `HITLHandler` | Human-in-the-Loop 審批 | AG-UI Feature 3 |
+| `GenerativeUIHandler` | 動態 UI 生成 | AG-UI Feature 4 |
+| `ToolBasedUIHandler` | Tool-based 動態 UI | AG-UI Feature 5 |
+| `SharedStateHandler` | 前後端狀態同步 | AG-UI Feature 6 |
+| `PredictiveStateHandler` | 樂觀更新與預測狀態 | AG-UI Feature 7 |
 
 ### Frontend Architecture
 
@@ -253,8 +267,9 @@ frontend/src/
 4. **LLM Cache**: Redis-based caching for repeated LLM calls
 5. **Connector Pattern**: Pluggable external system integrations (ServiceNow, Dynamics 365)
 6. **Hybrid Architecture** (Phase 13-14): MAF + Claude SDK intelligent routing and mode switching
+7. **AG-UI Protocol** (Phase 15): SSE-based real-time UI updates with optimistic concurrency control
 
-### Phase 13-14: Hybrid MAF + Claude SDK Architecture (Planned)
+### Phase 13-14: Hybrid MAF + Claude SDK Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -300,6 +315,74 @@ frontend/src/
 - `WORKFLOW_MODE`: Multi-step structured workflows via MAF adapters
 - `CHAT_MODE`: Conversational interaction via Claude SDK
 - `HYBRID_MODE`: Combined mode with intelligent routing
+
+### Phase 15: AG-UI Protocol Integration
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Frontend (React)                           │
+├──────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐    ┌──────────────┐    ┌───────────────┐   │
+│  │  useAGUI    │    │useSharedState│    │useOptimistic  │   │
+│  │  Hook       │    │    Hook      │    │  State Hook   │   │
+│  └─────────────┘    └──────────────┘    └───────────────┘   │
+│         │                  │                    │            │
+│         ▼                  ▼                    ▼            │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │              SSE Event Stream                            │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ POST /api/v1/ag-ui (SSE)
+┌─────────────────────────────────────────────────────────────┐
+│                   FastAPI Backend                            │
+├──────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐    ┌──────────────┐    ┌───────────────┐   │
+│  │  AG-UI API  │───→│HybridEvent   │───→│ Thread        │   │
+│  │  Routes     │    │   Bridge     │    │ Manager       │   │
+│  └─────────────┘    └──────────────┘    └───────────────┘   │
+│         │                  │                                 │
+│         ▼                  ▼                                 │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │              AG-UI Feature Handlers                      │ │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐    │ │
+│  │  │ Agentic  │ │  Tool    │ │  HITL    │ │Generative│    │ │
+│  │  │  Chat    │ │ Render   │ │ Handler  │ │   UI     │    │ │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘    │ │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐                 │ │
+│  │  │ Tool-UI  │ │ Shared   │ │Predictive│                 │ │
+│  │  │ Handler  │ │ State    │ │  State   │                 │ │
+│  │  └──────────┘ └──────────┘ └──────────┘                 │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                              │                               │
+│                              ▼                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │           HybridOrchestrator V2 (Phase 13-14)           │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Phase 15 Features** (85 pts, Sprints 58-60):
+- **Sprint 58**: AG-UI Core Infrastructure (30 pts)
+  - SSE Endpoint with StreamingResponse
+  - HybridEventBridge (Hybrid → AG-UI event conversion)
+  - ThreadManager (thread state + Redis cache)
+  - AG-UI Event Types (15 event types)
+- **Sprint 59**: AG-UI Basic Features 1-4 (28 pts)
+  - Agentic Chat (message streaming)
+  - Tool Rendering (result type detection + formatting)
+  - Human-in-the-Loop (risk-based approval)
+  - Generative UI (progress + mode switch)
+- **Sprint 60**: AG-UI Advanced Features 5-7 (27 pts)
+  - Tool-based Dynamic UI (form, chart, card, table)
+  - Shared State (snapshot + delta sync)
+  - Predictive State Updates (optimistic concurrency)
+
+**AG-UI Event Types**:
+- Lifecycle: `RUN_STARTED`, `RUN_FINISHED`, `RUN_ERROR`
+- Messages: `TEXT_MESSAGE_START`, `TEXT_MESSAGE_CONTENT`, `TEXT_MESSAGE_END`
+- Tools: `TOOL_CALL_START`, `TOOL_CALL_ARGS`, `TOOL_CALL_END`
+- State: `STATE_SNAPSHOT`, `STATE_DELTA`, `CUSTOM`
 
 ---
 
@@ -846,9 +929,12 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
 | `docs/02-architecture/technical-architecture.md` | System architecture |
 | `docs/01-planning/prd/prd-main.md` | Product requirements |
 | `claudedocs/AI-ASSISTANT-INSTRUCTIONS.md` | AI workflow instructions |
-| `docs/03-implementation/sprint-planning/README.md` | Sprint planning overview (Phase 1-14) |
+| `docs/03-implementation/sprint-planning/README.md` | Sprint planning overview (Phase 1-15) |
 | `docs/03-implementation/sprint-planning/phase-13/README.md` | Phase 13: Hybrid Core Architecture |
 | `docs/03-implementation/sprint-planning/phase-14/README.md` | Phase 14: Advanced Hybrid Features |
+| `docs/03-implementation/sprint-planning/phase-15/README.md` | Phase 15: AG-UI Protocol Integration |
+| `docs/api/ag-ui-api-reference.md` | AG-UI API Reference |
+| `docs/guides/ag-ui-integration-guide.md` | AG-UI Integration Guide |
 
 ---
 
@@ -977,7 +1063,8 @@ All checks must pass (5/5).
 
 ---
 
-**Last Updated**: 2026-01-02
+**Last Updated**: 2026-01-05
 **Project Start**: 2025-11-14
-**Status**: Phase 12 In Progress (57 Sprints planned) - Claude Agent SDK Integration (130/165 pts, 79%)
-**Next Phase**: Phase 13-14 Hybrid MAF + Claude SDK Architecture (200 pts, 6 Sprints)
+**Status**: Phase 15 Complete (60 Sprints completed) - AG-UI Protocol Integration (85/85 pts, 100%)
+**Total Story Points**: 450+ pts across 15 phases
+**Next Phase**: Phase 16 - Production Readiness & Performance Optimization (TBD)
