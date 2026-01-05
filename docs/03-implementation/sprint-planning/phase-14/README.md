@@ -21,11 +21,11 @@ Phase 14 專注於建立**風險評估引擎**、**動態模式切換**和**統�
 
 | Sprint | 名稱 | Story Points | 狀態 |
 |--------|------|--------------|------|
-| [Sprint 55](./sprint-55-plan.md) | Risk Assessment Engine | 30 點 | 📋 計劃中 |
-| [Sprint 56](./sprint-56-plan.md) | Mode Switcher & HITL | 35 點 | 📋 計劃中 |
+| [Sprint 55](./sprint-55-plan.md) | Risk Assessment Engine | 30 點 | ✅ 完成 |
+| [Sprint 56](./sprint-56-plan.md) | Mode Switcher & HITL | 35 點 | ✅ 完成 |
 | [Sprint 57](./sprint-57-plan.md) | Unified Checkpoint & Polish | 30 點 | 📋 計劃中 |
 
-**總計**: 95 Story Points
+**總計**: 95 Story Points (65/95 已完成，68%)
 
 ## 架構概覽
 
