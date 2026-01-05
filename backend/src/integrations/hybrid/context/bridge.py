@@ -412,6 +412,136 @@ class ContextBridge:
         """
         return self._context_cache.get(session_id)
 
+    async def get_or_create_hybrid(
+        self,
+        session_id: str,
+    ) -> HybridContext:
+        """
+        獲取或創建混合上下文
+
+        If a hybrid context exists for the session_id, returns it.
+        Otherwise, creates a new one with minimal MAF and Claude contexts.
+
+        Args:
+            session_id: Session or workflow ID
+
+        Returns:
+            HybridContext: Existing or newly created hybrid context
+        """
+        # Check cache first
+        if session_id in self._context_cache:
+            logger.debug(f"Returning cached hybrid context for: {session_id}")
+            return self._context_cache[session_id]
+
+        # Create new hybrid context
+        logger.info(f"Creating new hybrid context for: {session_id}")
+
+        # Create minimal MAF context
+        maf_context = MAFContext(
+            workflow_id=session_id,
+            workflow_name=f"Session-{session_id}",
+            created_at=datetime.utcnow(),
+        )
+
+        # Create minimal Claude context
+        claude_context = ClaudeContext(
+            session_id=session_id,
+            created_at=datetime.utcnow(),
+        )
+
+        # Merge into hybrid context
+        hybrid = await self.merge_contexts(
+            maf_context=maf_context,
+            claude_context=claude_context,
+            primary_framework="claude",  # Default to Claude for chat sessions
+        )
+
+        # Cache it (merge_contexts already does this via get_session_id())
+        # But ensure it's also cached by the explicit session_id
+        self._context_cache[session_id] = hybrid
+
+        return hybrid
+
+    async def sync_after_execution(
+        self,
+        result: Any,
+        hybrid_context: Optional[HybridContext],
+    ) -> Optional[SyncResult]:
+        """
+        Sync context after execution.
+
+        Updates the hybrid context with execution result data,
+        storing the prompt and output in the context for later retrieval.
+
+        Args:
+            result: Execution result (HybridResultV2)
+            hybrid_context: Hybrid context to update
+
+        Returns:
+            Optional[SyncResult]: Sync result or None if no sync needed
+        """
+        if hybrid_context is None:
+            return None
+
+        try:
+            # Update version
+            hybrid_context.version += 1
+            hybrid_context.updated_at = datetime.utcnow()
+            hybrid_context.last_sync_at = datetime.utcnow()
+
+            # Store execution result in MAF context metadata
+            if hybrid_context.maf:
+                if hybrid_context.maf.metadata is None:
+                    hybrid_context.maf.metadata = {}
+                # Merge result metadata into MAF metadata
+                if hasattr(result, 'metadata') and result.metadata:
+                    hybrid_context.maf.metadata.update(result.metadata)
+                # Store content for state preservation
+                if hasattr(result, 'content') and result.content:
+                    hybrid_context.maf.metadata["last_content"] = result.content
+                if hasattr(result, 'intent_analysis') and result.intent_analysis:
+                    if hasattr(result.intent_analysis, 'detected_features'):
+                        hybrid_context.maf.metadata.update(
+                            result.intent_analysis.detected_features or {}
+                        )
+
+            # Store execution result in Claude context
+            if hybrid_context.claude:
+                if hybrid_context.claude.metadata is None:
+                    hybrid_context.claude.metadata = {}
+                if hasattr(result, 'metadata') and result.metadata:
+                    hybrid_context.claude.metadata.update(result.metadata)
+                if hasattr(result, 'content') and result.content:
+                    hybrid_context.claude.metadata["last_content"] = result.content
+
+            # Update sync status
+            hybrid_context.sync_status = SyncStatus.SYNCED
+
+            # Update cache
+            if result.session_id:
+                self._context_cache[result.session_id] = hybrid_context
+
+            return SyncResult(
+                success=True,
+                direction=SyncDirection.BIDIRECTIONAL,
+                strategy=SyncStrategy.MERGE,
+                source_version=hybrid_context.version - 1,
+                target_version=hybrid_context.version,
+                changes_applied=1,
+                conflicts_resolved=0,
+            )
+
+        except Exception as e:
+            logger.error(f"sync_after_execution failed: {e}")
+            return SyncResult(
+                success=False,
+                direction=SyncDirection.BIDIRECTIONAL,
+                strategy=SyncStrategy.MERGE,
+                source_version=hybrid_context.version,
+                target_version=hybrid_context.version,
+                error=str(e),
+            )
+
     async def sync_bidirectional(
         self,
         hybrid_context: HybridContext,

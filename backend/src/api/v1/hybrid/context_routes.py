@@ -15,6 +15,7 @@
 # =============================================================================
 
 import logging
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -55,17 +56,17 @@ router = APIRouter(
 # Singleton Instances
 # =============================================================================
 
-_context_bridge: Optional[ContextBridge] = None
+# Note: ContextBridge is shared with core_routes.py to ensure context
+# created during execution is visible in context queries
 _synchronizer: Optional[ContextSynchronizer] = None
 _event_publisher: Optional[SyncEventPublisher] = None
 
 
 def get_context_bridge() -> ContextBridge:
-    """Get or create ContextBridge singleton."""
-    global _context_bridge
-    if _context_bridge is None:
-        _context_bridge = ContextBridge()
-    return _context_bridge
+    """Get shared ContextBridge singleton from core_routes."""
+    # Import from core_routes to share the same instance
+    from .core_routes import get_context_bridge as get_shared_bridge
+    return get_shared_bridge()
 
 
 def get_synchronizer() -> ContextSynchronizer:
@@ -196,13 +197,18 @@ async def get_hybrid_context(session_id: str):
         HTTPException: 404 if context not found
     """
     bridge = get_context_bridge()
+    logger.info(f"get_hybrid_context({session_id}): bridge._context_cache keys = {list(bridge._context_cache.keys())}")
     hybrid = await bridge.get_hybrid_context(session_id)
+    logger.info(f"get_hybrid_context({session_id}): hybrid = {hybrid}")
 
     if hybrid is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Hybrid context not found for session: {session_id}"
         )
+
+    if hybrid.maf:
+        logger.info(f"get_hybrid_context({session_id}): maf.metadata = {hybrid.maf.metadata}")
 
     return _hybrid_context_to_response(hybrid)
 
@@ -252,6 +258,9 @@ async def trigger_sync(request: SyncRequest):
     """
     Trigger manual sync operation.
 
+    If no hybrid context exists for the session, one will be auto-created
+    with minimal MAF and Claude contexts.
+
     Args:
         request: Sync request with session_id, strategy, and direction
 
@@ -259,18 +268,66 @@ async def trigger_sync(request: SyncRequest):
         SyncResultResponse: Result of the sync operation
 
     Raises:
-        HTTPException: 404 if context not found, 400 if invalid parameters
+        HTTPException: 400 if invalid parameters
     """
     bridge = get_context_bridge()
     synchronizer = get_synchronizer()
 
-    # Get existing hybrid context
+    # Get existing hybrid context or create new one
     hybrid = await bridge.get_hybrid_context(request.session_id)
 
     if hybrid is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Context not found for session: {request.session_id}"
+        # Auto-create hybrid context for this session
+        logger.info(f"Auto-creating hybrid context for session: {request.session_id}")
+        logger.info(f"DEBUG: request.state_data = {request.state_data}")
+
+        # Extract state data if provided
+        state = request.state_data or {}
+        logger.info(f"DEBUG: state = {state}")
+        maf_vars = state.get("variables", {})
+        claude_vars = state.get("context_variables", {})
+        logger.info(f"DEBUG: initial maf_vars = {maf_vars}, claude_vars = {claude_vars}")
+
+        # If direction is maf_to_claude, put state variables in MAF context
+        # If direction is claude_to_maf, put state variables in Claude context
+        if request.direction == "maf_to_claude":
+            # MAF state data - copy variables to MAF context metadata
+            maf_vars = state.get("variables", maf_vars)
+            # Also copy MAF variables to Claude context for sync
+            claude_vars = maf_vars.copy() if maf_vars else claude_vars
+        elif request.direction == "claude_to_maf":
+            # Claude state data - copy context_variables
+            claude_vars = state.get("context_variables", claude_vars)
+            # Also copy Claude variables to MAF for sync
+            maf_vars = claude_vars.copy() if claude_vars else maf_vars
+
+        logger.info(f"DEBUG: after direction logic maf_vars = {maf_vars}, claude_vars = {claude_vars}")
+        # Create contexts with state data
+        # Note: sync_to_claude uses checkpoint_data for conversion to context_variables
+        # So we put variables in BOTH checkpoint_data (for sync) and metadata (for API response)
+        maf_context = MAFContext(
+            workflow_id=state.get("workflow_id", request.session_id),
+            workflow_name=state.get("workflow_name", f"Workflow-{request.session_id}"),
+            current_step=state.get("current_step", 0),
+            total_steps=state.get("total_steps", 0),
+            checkpoint_data=maf_vars,  # For sync operation
+            metadata=maf_vars.copy() if maf_vars else {},  # For API response
+            created_at=datetime.utcnow(),
+        )
+        claude_context = ClaudeContext(
+            session_id=request.session_id,
+            context_variables=claude_vars,
+            created_at=datetime.utcnow(),
+        )
+
+        # Determine primary framework based on direction
+        primary_framework = "maf" if request.direction == "maf_to_claude" else "claude"
+
+        # Create hybrid context via merge
+        hybrid = await bridge.merge_contexts(
+            maf_context=maf_context,
+            claude_context=claude_context,
+            primary_framework=primary_framework,
         )
 
     # Parse strategy
@@ -298,11 +355,22 @@ async def trigger_sync(request: SyncRequest):
         f"with strategy={strategy.value}, direction={direction.value}"
     )
 
+    # Convert direction to target_type for synchronizer
+    # maf_to_claude → target is claude
+    # claude_to_maf → target is maf
+    # bidirectional → default to claude (will sync both ways internally)
+    if direction == SyncDirection.MAF_TO_CLAUDE:
+        target_type = "claude"
+    elif direction == SyncDirection.CLAUDE_TO_MAF:
+        target_type = "maf"
+    else:  # BIDIRECTIONAL
+        target_type = "claude"  # Start with maf→claude, then sync back
+
     # Execute sync
     result = await synchronizer.sync(
-        hybrid_context=hybrid,
+        source=hybrid,
+        target_type=target_type,
         strategy=strategy,
-        direction=direction,
     )
 
     return SyncResultResponse(

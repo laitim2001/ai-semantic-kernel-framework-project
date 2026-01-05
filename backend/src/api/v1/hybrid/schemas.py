@@ -205,6 +205,10 @@ class SyncRequest(BaseModel):
         default=False,
         description="Force sync even if no changes detected"
     )
+    state_data: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Initial state data to sync (workflow_id, current_step, variables, etc.)"
+    )
 
 
 class MergeContextRequest(BaseModel):

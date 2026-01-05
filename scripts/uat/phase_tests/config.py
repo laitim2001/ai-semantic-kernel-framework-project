@@ -165,27 +165,31 @@ API_ENDPOINTS = {
 
     # Phase 13: Hybrid MAF + Claude SDK Integration (Core Architecture)
     "hybrid": {
-        # Sprint 52: Intent Router & Mode Detection
+        # Sprint 52: Intent Router & Mode Detection (core_routes.py)
         "analyze": "/hybrid/analyze",
-        "classify_intent": "/hybrid/intent/classify",
-        "detect_mode": "/hybrid/mode/detect",
-        "routing_policy": "/hybrid/routing/policy",
-        "routing_policy_evaluate": "/hybrid/routing/policy/evaluate",
-
-        # Sprint 53: Context Bridge & Sync
-        "context_sync": "/hybrid/context/sync",
-        "context_state": "/hybrid/context/state",
-        "context_maf_to_claude": "/hybrid/context/maf-to-claude",
-        "context_claude_to_maf": "/hybrid/context/claude-to-maf",
-        "context_conflict": "/hybrid/context/conflict/resolve",
-
-        # Sprint 54: HybridOrchestrator Refactor
         "execute": "/hybrid/execute",
-        "execute_stream": "/hybrid/execute/stream",
-        "switch_mode": "/hybrid/switch-mode",
-        "tool_execute": "/hybrid/tools/execute",
         "metrics": "/hybrid/metrics",
-        "health": "/hybrid/health",
+        "status": "/hybrid/status",
+
+        # Sprint 53: Context Bridge & Sync (context_routes.py)
+        "context_get": "/hybrid/context/{session_id}",
+        "context_status": "/hybrid/context/{session_id}/status",
+        "context_sync": "/hybrid/context/sync",
+        "context_merge": "/hybrid/context/merge",
+        "context_list": "/hybrid/context",
+
+        # Sprint 55: Risk Assessment (risk_routes.py)
+        "risk_assess": "/hybrid/risk/assess",
+        "risk_assess_batch": "/hybrid/risk/assess-batch",
+        "risk_session": "/hybrid/risk/session/{session_id}",
+        "risk_metrics": "/hybrid/risk/metrics",
+
+        # Sprint 56: Mode Switcher (switch_routes.py)
+        "switch": "/hybrid/switch",
+        "switch_status": "/hybrid/switch/status/{session_id}",
+        "switch_rollback": "/hybrid/switch/rollback",
+        "switch_history": "/hybrid/switch/history/{session_id}",
+        "switch_checkpoints": "/hybrid/switch/checkpoints/{session_id}",
     },
 
     # Phase 14: HITL & Approval (Human-in-the-Loop 進階功能)

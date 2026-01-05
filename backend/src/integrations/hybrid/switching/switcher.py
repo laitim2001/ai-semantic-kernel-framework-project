@@ -206,6 +206,20 @@ class InMemoryCheckpointStorage:
         """Clear all checkpoints."""
         self._checkpoints.clear()
 
+    async def list_checkpoints(self, session_id: str) -> List[SwitchCheckpoint]:
+        """List all checkpoints for a session."""
+        return [
+            cp for cp in self._checkpoints.values()
+            if cp.context_snapshot.get("session_id") == session_id
+        ]
+
+    async def get_latest_checkpoint(self, session_id: str) -> Optional[SwitchCheckpoint]:
+        """Get the most recent checkpoint for a session."""
+        session_checkpoints = await self.list_checkpoints(session_id)
+        if not session_checkpoints:
+            return None
+        return max(session_checkpoints, key=lambda cp: cp.created_at)
+
 
 # =============================================================================
 # ModeSwitcher Main Class

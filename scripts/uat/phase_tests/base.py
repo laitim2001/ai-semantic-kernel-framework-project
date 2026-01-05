@@ -18,7 +18,11 @@ from typing import Any, Dict, List, Optional, Callable
 
 import httpx
 
-from .config import PhaseTestConfig, DEFAULT_CONFIG
+# Support both module and script execution
+try:
+    from .config import PhaseTestConfig, DEFAULT_CONFIG
+except ImportError:
+    from config import PhaseTestConfig, DEFAULT_CONFIG
 
 
 def safe_print(text: str):

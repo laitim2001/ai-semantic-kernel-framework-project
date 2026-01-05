@@ -88,7 +88,7 @@ class MigratedStateResponse(BaseModel):
     source_mode: str = Field(..., description="Original execution mode")
     target_mode: str = Field(..., description="Target execution mode")
     status: str = Field(..., description="Migration status")
-    migrated_at: datetime = Field(..., description="When migration occurred")
+    migrated_at: Optional[datetime] = Field(None, description="When migration occurred")
     conversation_history_count: int = Field(0, description="Number of conversation messages migrated")
     tool_call_count: int = Field(0, description="Number of tool calls migrated")
     context_summary: str = Field("", description="Summary of migrated context")

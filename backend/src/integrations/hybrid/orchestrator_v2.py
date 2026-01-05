@@ -289,19 +289,29 @@ class HybridOrchestratorV2:
                     mode=force_mode,
                     confidence=1.0,
                     reasoning="Forced mode by user request",
+                    analysis_time_ms=0.0,  # No analysis needed for forced mode
                 )
             elif self._config.mode == OrchestratorMode.V2_MINIMAL:
                 intent_analysis = IntentAnalysis(
                     mode=ExecutionMode.CHAT_MODE,
                     confidence=0.8,
                     reasoning="Minimal mode - defaulting to CHAT",
+                    analysis_time_ms=0.0,  # No analysis in minimal mode
                 )
             else:
                 # Build session context for analysis
+                # Set workflow_active=True if we're currently in workflow mode
+                # This enables context boost for follow-up messages in workflows
+                is_workflow_active = context.current_mode == ExecutionMode.WORKFLOW_MODE
+                # pending_steps > 0 enables the context boost in RuleBasedClassifier
+                pending_steps = 1 if is_workflow_active else 0
+
                 session_context = SessionContext(
                     session_id=context.session_id,
                     conversation_history=context.conversation_history,
                     current_mode=context.current_mode,
+                    workflow_active=is_workflow_active,
+                    pending_steps=pending_steps,
                 )
                 intent_analysis = await self._intent_router.analyze_intent(
                     user_input=prompt,
@@ -329,14 +339,17 @@ class HybridOrchestratorV2:
                     prompt, context, intent_analysis, tools, max_tokens, timeout
                 )
 
-            # 4. Sync context after execution
+            # 4. Set session_id BEFORE sync to ensure cache update works
+            result.session_id = context.session_id
+
+            # 5. Sync context after execution
             if hybrid_context:
                 sync_result = await self._context_bridge.sync_after_execution(
                     result, hybrid_context
                 )
                 result.sync_result = sync_result
 
-            # 5. Update conversation history
+            # 6. Update conversation history
             context.conversation_history.append({
                 "role": "user",
                 "content": prompt,
@@ -350,7 +363,7 @@ class HybridOrchestratorV2:
                 "timestamp": time.time(),
             })
 
-            # 6. Update metrics
+            # 7. Update metrics
             if self._config.enable_metrics:
                 self._metrics.record_execution(
                     mode=intent_analysis.mode,

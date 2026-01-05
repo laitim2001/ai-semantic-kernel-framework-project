@@ -53,6 +53,7 @@ from .switch_schemas import (
     SwitchStatusResponse,
     SwitchTriggerResponse,
 )
+from .core_routes import get_context_bridge, get_orchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +105,34 @@ def get_checkpoint_storage() -> InMemoryCheckpointStorage:
 
 
 def get_session_mode(session_id: str) -> ExecutionMode:
-    """Get current execution mode for a session."""
-    return _session_modes.get(session_id, ExecutionMode.WORKFLOW_MODE)
+    """Get current execution mode for a session.
+
+    Looks up mode from:
+    1. Local _session_modes cache (set by switch operations)
+    2. Orchestrator session context (set by execute operations)
+    3. Default to CHAT_MODE (matches ExecutionContextV2 default)
+    """
+    # First check local cache (set by switch operations)
+    if session_id in _session_modes:
+        logger.info(f"get_session_mode({session_id}): Found in _session_modes cache: {_session_modes[session_id]}")
+        return _session_modes[session_id]
+
+    # Then check orchestrator session (set by execute operations)
+    try:
+        orchestrator = get_orchestrator()
+        logger.info(f"get_session_mode({session_id}): orchestrator has {len(orchestrator._sessions)} sessions")
+        session_data = orchestrator.get_session(session_id)
+        logger.info(f"get_session_mode({session_id}): orchestrator.get_session returned: {session_data}")
+        if session_data:
+            logger.info(f"get_session_mode({session_id}): session_data.current_mode = {session_data.current_mode}")
+            if session_data.current_mode:
+                return session_data.current_mode
+    except Exception as e:
+        logger.warning(f"get_session_mode({session_id}): Exception during orchestrator lookup: {e}")
+
+    # Default to CHAT_MODE (matches ExecutionContextV2 dataclass default)
+    logger.info(f"get_session_mode({session_id}): Returning default CHAT_MODE")
+    return ExecutionMode.CHAT_MODE
 
 
 def set_session_mode(session_id: str, mode: ExecutionMode) -> None:
@@ -218,15 +245,42 @@ def _result_to_response(result: SwitchResult, session_id: str) -> SwitchResultRe
     """Convert SwitchResult to response schema."""
     migrated_state = None
     if result.migrated_state:
+        ms = result.migrated_state
+        # Handle both MigratedState types (models.py has direction, state_migrator.py has source_mode)
+        if hasattr(ms, "source_mode"):
+            source_mode = _mode_to_str(ms.source_mode)
+            target_mode = _mode_to_str(ms.target_mode)
+            status_val = ms.status.value if hasattr(ms.status, 'value') else str(ms.status)
+            migrated_at = getattr(ms, 'migrated_at', None)
+            conv_history = getattr(ms, 'conversation_history', [])
+            tool_records = getattr(ms, 'tool_call_records', [])
+        elif hasattr(ms, "direction"):
+            # Extract source/target from direction enum name (e.g., WORKFLOW_TO_CHAT)
+            direction_name = ms.direction.name if hasattr(ms.direction, 'name') else str(ms.direction)
+            parts = direction_name.split("_TO_")
+            source_mode = parts[0].lower() if len(parts) >= 1 else "unknown"
+            target_mode = parts[1].lower() if len(parts) >= 2 else "unknown"
+            status_val = "completed"
+            migrated_at = None
+            conv_history = getattr(ms, 'conversation_history', [])
+            tool_records = []
+        else:
+            source_mode = "unknown"
+            target_mode = "unknown"
+            status_val = "unknown"
+            migrated_at = None
+            conv_history = []
+            tool_records = []
+
         migrated_state = MigratedStateResponse(
-            source_mode=_mode_to_str(result.migrated_state.source_mode),
-            target_mode=_mode_to_str(result.migrated_state.target_mode),
-            status=result.migrated_state.status.value,
-            migrated_at=result.migrated_state.migrated_at,
-            conversation_history_count=len(result.migrated_state.conversation_history),
-            tool_call_count=len(result.migrated_state.tool_call_records),
-            context_summary=result.migrated_state.context_summary,
-            warnings=result.migrated_state.warnings,
+            source_mode=source_mode,
+            target_mode=target_mode,
+            status=status_val,
+            migrated_at=migrated_at,
+            conversation_history_count=len(conv_history),
+            tool_call_count=len(tool_records),
+            context_summary=getattr(ms, 'context_summary', ""),
+            warnings=getattr(ms, 'warnings', []),
         )
 
     # Note: checkpoint is just an ID in SwitchResult, not the full object
@@ -283,8 +337,13 @@ async def trigger_switch(request: SwitchRequest):
     Raises:
         HTTPException: 400 if invalid mode or switch conditions not met
     """
+    # DEBUG: Trace _session_modes at switch entry
+    logger.info(f"trigger_switch ENTRY: session_id={request.session_id}")
+    logger.info(f"trigger_switch ENTRY: _session_modes dict id={id(_session_modes)}, content={dict(_session_modes)}")
+
     switcher = get_mode_switcher()
     current_mode = get_session_mode(request.session_id)
+    logger.info(f"trigger_switch: get_session_mode returned {current_mode}")
 
     # Parse target mode
     try:
@@ -310,38 +369,74 @@ async def trigger_switch(request: SwitchRequest):
     )
 
     # Create manual trigger
+    # SwitchTrigger expects mode values as strings, not ExecutionMode enums
     trigger = SwitchTrigger(
         trigger_type=SwitchTriggerType.MANUAL,
         reason=request.reason,
         confidence=1.0,  # Manual switches have full confidence
-        source_mode=current_mode,
-        target_mode=target_mode,
+        source_mode=current_mode.value,
+        target_mode=target_mode.value,
         metadata=request.metadata,
     )
 
-    # Create migration context
+    # Create migration context with actual session data from orchestrator
+    orchestrator = get_orchestrator()
+    session_data = orchestrator.get_session(request.session_id)
+
+    # Extract actual session state
+    conversation_history = []
+    workflow_steps = []
+    tool_calls = []
+    variables = {}
+
+    if session_data:
+        conversation_history = session_data.conversation_history or []
+        tool_calls = [
+            {"name": t.tool_name, "result": t.result, "success": t.success}
+            for t in (session_data.tool_executions or [])
+        ]
+        # Extract variables from conversation history and metadata
+        variables = session_data.metadata.copy() if session_data.metadata else {}
+        # Add context from conversation for state preservation
+        if session_data.hybrid_context and session_data.hybrid_context.maf:
+            maf = session_data.hybrid_context.maf
+            variables.update({
+                "workflow_id": maf.workflow_id,
+                "workflow_name": maf.workflow_name,
+                "current_step": maf.current_step,
+            })
+            if maf.metadata:
+                variables.update(maf.metadata)
+
     context = MigrationContext(
         session_id=request.session_id,
         current_mode=current_mode,
-        # In a real implementation, these would be populated from actual session data
-        conversation_history=[],
-        workflow_steps=[],
-        tool_calls=[],
-        variables={},
+        conversation_history=conversation_history,
+        workflow_steps=workflow_steps,
+        tool_calls=tool_calls,
+        variables=variables,
         metadata=request.metadata,
     )
 
     try:
         # Execute switch
-        result = await switcher.switch(
-            session_id=request.session_id,
+        result = await switcher.execute_switch(
             trigger=trigger,
             context=context,
+            session_id=request.session_id,
         )
 
         # Update session mode on success
         if result.success:
             set_session_mode(request.session_id, target_mode)
+
+            # Update ContextBridge to ensure get_context_state works
+            bridge = get_context_bridge()
+            try:
+                # Create or update hybrid context in the bridge
+                await bridge.get_or_create_hybrid(request.session_id)
+            except Exception as e:
+                logger.warning(f"Failed to update context bridge: {e}")
 
             # Create transition record
             transition = ModeTransition(
@@ -358,7 +453,10 @@ async def trigger_switch(request: SwitchRequest):
         return _result_to_response(result, request.session_id)
 
     except Exception as e:
-        logger.error(f"Switch failed for session {request.session_id}: {e}", exc_info=True)
+        import traceback
+        full_trace = traceback.format_exc()
+        logger.error(f"Switch failed for session {request.session_id}: {e}\n{full_trace}")
+        print(f"=== SWITCH ERROR ===\n{full_trace}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Switch failed: {str(e)}"
@@ -462,9 +560,14 @@ async def rollback_switch(request: RollbackRequest):
 
     try:
         # Execute rollback
-        result = await switcher.rollback(
-            session_id=request.session_id,
-            checkpoint_id=checkpoint.checkpoint_id,
+        result_bool = await switcher.rollback_switch(
+            checkpoint_id_or_checkpoint=checkpoint.checkpoint_id,
+        )
+        # Create a SwitchResult from the boolean result
+        result = SwitchResult(
+            success=result_bool,
+            status=SwitchStatus.ROLLED_BACK if result_bool else SwitchStatus.FAILED,
+            error=None if result_bool else "Rollback failed",
         )
 
         if result.success:

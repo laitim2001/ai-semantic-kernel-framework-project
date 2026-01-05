@@ -60,6 +60,20 @@ WORKFLOW_KEYWORDS: List[str] = [
     "group chat",
     "groupchat",
     "team of agents",
+    # Business workflow indicators (enterprise processes)
+    "invoice",
+    "approval",
+    "purchase order",
+    "order processing",
+    "expense report",
+    "reimbursement",
+    "payment",
+    "submit",
+    "route for approval",
+    "escalate",
+    "assign to",
+    "transfer to",
+    "forward to",
     # Chinese workflow indicators (Traditional)
     "工作流程",
     "流程",
@@ -74,6 +88,16 @@ WORKFLOW_KEYWORDS: List[str] = [
     "代理協作",
     "代理移交",
     "群組聊天",
+    # Chinese business workflow indicators
+    "發票",
+    "審批",
+    "核准",
+    "採購單",
+    "費用報銷",
+    "付款",
+    "提交",
+    "轉交",
+    "移交",
 ]
 
 # Keywords strongly indicating simple chat/Q&A
@@ -143,11 +167,24 @@ WORKFLOW_PHRASE_PATTERNS: List[str] = [
     r"execute\s+(?:the\s+)?(?:following\s+)?steps",
     r"coordinate\s+(?:multiple\s+)?agents",
     r"hand\s*off\s+to\s+(?:another\s+)?agent",
+    # Business workflow patterns
+    r"process\s+(?:the\s+)?(?:this\s+)?invoice",
+    r"(?:for|requires?|needs?)\s+(?:\$?[\d,]+\s+)?approval",
+    r"submit\s+(?:the\s+)?(?:this\s+)?(?:expense|report|request)",
+    r"route\s+(?:this\s+)?(?:for\s+)?approval",
+    r"purchase\s+order\s+#?\w*",
+    r"invoice\s+#?\w+",
+    r"approve\s+(?:the\s+)?(?:this\s+)?",
+    r"reject\s+(?:the\s+)?(?:this\s+)?",
+    # Chinese workflow patterns
     r"建立(?:新的)?(?:工作)?流程",
     r"設定(?:新的)?自動化",
     r"排程(?:新的)?任務",
     r"執行(?:以下)?步驟",
     r"協調(?:多個)?代理",
+    r"處理(?:這張)?發票",
+    r"提交(?:費用)?報告",
+    r"(?:需要|等待)?(?:\$?[\d,]+\s*)?審批",
 ]
 
 # Phrase patterns that strongly indicate chat mode
@@ -271,8 +308,15 @@ class RuleBasedClassifier(BaseClassifier):
         chat_score = chat_matches + (chat_pattern_matches * 2)
         hybrid_score = hybrid_matches * 2  # Hybrid indicators are strong signals
 
-        # Consider context
+        # Consider context - apply boost BEFORE comparison
         context_boost = self._get_context_boost(context)
+
+        # Apply context boost to scores BEFORE the comparison
+        # This ensures context influences the routing decision
+        if context_boost == "workflow":
+            workflow_score += 3  # Strong boost for active workflow context
+        elif context_boost == "chat":
+            chat_score += 1
 
         # Build metadata for debugging
         metadata: Dict = {
@@ -287,7 +331,7 @@ class RuleBasedClassifier(BaseClassifier):
             "context_boost": context_boost,
         }
 
-        # Determine mode based on scores
+        # Determine mode based on scores (context boost already applied)
         if hybrid_score > 0 and workflow_score > 0 and chat_score > 0:
             # Clear hybrid indication
             mode = ExecutionMode.HYBRID_MODE
@@ -298,29 +342,30 @@ class RuleBasedClassifier(BaseClassifier):
             )
         elif workflow_score > chat_score:
             mode = ExecutionMode.WORKFLOW_MODE
-            # Apply context boost if currently in workflow
-            if context_boost == "workflow":
-                workflow_score += 2
             confidence = self._calculate_confidence(workflow_score, chat_score)
             reasoning = (
                 f"Workflow mode detected: {workflow_score} workflow signals "
                 f"vs {chat_score} chat signals"
             )
+            if context_boost == "workflow":
+                reasoning += " (boosted by active workflow context)"
         elif chat_score > workflow_score:
             mode = ExecutionMode.CHAT_MODE
-            # Apply context boost if currently in chat
-            if context_boost == "chat":
-                chat_score += 1
             confidence = self._calculate_confidence(chat_score, workflow_score)
             reasoning = (
                 f"Chat mode detected: {chat_score} chat signals "
                 f"vs {workflow_score} workflow signals"
             )
         else:
-            # Tie or no matches - default to chat
-            mode = ExecutionMode.CHAT_MODE
-            confidence = 0.5
-            reasoning = "No clear indicators, defaulting to chat mode"
+            # Tie or no matches - check context for tiebreaker
+            if context_boost == "workflow":
+                mode = ExecutionMode.WORKFLOW_MODE
+                confidence = 0.7  # Context-based decision
+                reasoning = "Tie resolved by active workflow context"
+            else:
+                mode = ExecutionMode.CHAT_MODE
+                confidence = 0.5
+                reasoning = "No clear indicators, defaulting to chat mode"
 
         return ClassificationResult(
             mode=mode,
