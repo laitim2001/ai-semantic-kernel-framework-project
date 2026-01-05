@@ -1,14 +1,33 @@
 # Phase 14 UAT 測試：人工審核與核准機制
 
 > **Phase 14**：進階混合功能 (HITL & Approval)
-> **故事點數**：95 pts (Sprint 55-57)
+> **故事點數**：100 pts (Sprint 55-57)
 > **重點**：風險驅動審核、動態模式切換、狀態持久化
+
+---
+
+## 開發狀態
+
+| Sprint | 名稱 | 點數 | 狀態 | 進度檔案 |
+|--------|------|------|------|----------|
+| Sprint 55 | Risk Assessment Engine | 35 pts | ✅ 完成 | `sprint-55/progress.md` |
+| Sprint 56 | Mode Switcher & HITL | 35 pts | ✅ 完成 | `sprint-56/progress.md` |
+| Sprint 57 | Unified Checkpoint & Polish | 30 pts | ✅ 完成 | `sprint-57/progress.md` |
+
+**Phase 14 開發總進度**: 100/100 pts (100%) ✅
+
+> **重要**：Phase 14 開發已於 2026-01-03 完成。本文件為 UAT 測試規劃。
 
 ---
 
 ## 概述
 
 Phase 14 實現進階混合架構功能，包含智慧風險評估、動態模式切換，以及跨框架的統一 Checkpoint 管理。這些 UAT 測試驗證關鍵業務場景下的人工審核機制。
+
+> **從 Phase 13 移入的測試**：
+> - Mode Switching Mid-Execution 測試（原 S54-4）已移至本 Phase
+> - 原因：需要 ModeSwitcher 組件（Sprint 56 實現）
+> - 這確保了測試與實現的正確對應關係
 
 ## Sprint 涵蓋範圍
 
@@ -18,7 +37,7 @@ Phase 14 實現進階混合架構功能，包含智慧風險評估、動態模�
 - **S55-3**：ApprovalRouter (8 pts) - 風險驅動的審批路由
 - **S55-4**：Risk API (5 pts) - REST API 端點
 
-### Sprint 56：模式切換器 (30 pts)
+### Sprint 56：模式切換器 (35 pts)
 - **S56-1**：ModeSwitcher Core (10 pts) - 優雅模式轉換
 - **S56-2**：TransitionManager (10 pts) - 轉換狀態管理
 - **S56-3**：ContextPreserver (5 pts) - 切換時上下文保留
@@ -50,17 +69,23 @@ Phase 14 實現進階混合架構功能，包含智慧風險評估、動態模�
 
 ### 2. 模式切換場景 (`scenario_mode_switcher.py`)
 
+> **注意**：此場景包含從 Phase 13 (S54-4) 移入的 Mode Switching Mid-Execution 測試
+
 | 場景 | 描述 | 驗證項目 |
 |------|------|----------|
 | 工作流程 → 對話轉換 | 執行中暫停詢問問題 | 工作流程狀態保留 |
 | 對話 → 工作流程升級 | 對話中觸發正式流程 | 無縫銜接執行 |
 | 優雅模式轉換 | 等待安全點再切換 | 無資料遺失 |
 | 切換時上下文保留 | 跨模式維持對話歷史 | 上下文完整 |
+| **執行中模式切換** | 工作流程執行中切換至對話模式 | 安全點檢查、狀態保留 |
+| **對話中觸發工作流程** | 對話訊息觸發結構化流程 | 工作流程正確啟動 |
+| **切換後回復原模式** | 切換後返回原始執行狀態 | 狀態完全恢復 |
 
 **業務場景範例**：
 - 用戶正在執行請假申請，突然問「假期餘額是多少？」
 - 客服對話中用戶說「幫我建立一張工單」
 - 審批流程中審批者需要查詢政策說明
+- 工作流程執行到一半，用戶需要與 AI 討論下一步選項
 
 ### 3. 統一 Checkpoint 場景 (`scenario_unified_checkpoint.py`)
 
@@ -161,5 +186,5 @@ python -m phase_14_hitl_approval.phase_14_hitl_approval_test --real-llm
 
 ---
 
-**最後更新**：2026-01-03
+**最後更新**：2026-01-05
 **作者**：IPA Platform 團隊

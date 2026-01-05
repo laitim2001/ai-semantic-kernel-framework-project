@@ -4,10 +4,10 @@
 # Phase 14：人工審核與核准機制
 #
 # Sprint 55：風險評估引擎 (35 pts)
-# Sprint 56：模式切換器 (30 pts)
+# Sprint 56：模式切換器 (35 pts)
 # Sprint 57：統一 Checkpoint (30 pts)
 #
-# 總計：95 故事點數
+# 總計：100 故事點數
 # =============================================================================
 """
 Phase 14 HITL 核心測試模組
@@ -30,8 +30,38 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from base import PhaseTestBase, StepResult, ScenarioResult, TestStatus
+from base import PhaseTestBase, TestStatus, safe_print
+from base import StepResult as BaseStepResult, ScenarioResult as BaseScenarioResult
 from config import DEFAULT_CONFIG, API_ENDPOINTS
+
+
+# =============================================================================
+# 本地版本的數據類 (簡化簽名)
+# =============================================================================
+
+@dataclass
+class StepResult:
+    """簡化版步驟結果 (Phase 14 專用)"""
+    step_name: str
+    status: TestStatus
+    message: str = ""
+    details: Dict[str, Any] = None
+
+    def __post_init__(self):
+        if self.details is None:
+            self.details = {}
+
+
+@dataclass
+class ScenarioResult:
+    """簡化版場景結果 (Phase 14 專用)"""
+    scenario_name: str
+    steps: List[StepResult] = None
+    duration_seconds: float = 0
+
+    def __post_init__(self):
+        if self.steps is None:
+            self.steps = []
 
 
 # =============================================================================
@@ -538,12 +568,15 @@ class Phase14HITLApprovalTest(PhaseTestBase):
     - 統一 Checkpoint 場景 (Sprint 57)
     """
 
-    def __init__(self):
-        super().__init__(
-            phase_name="Phase 14: HITL & Approval",
-            phase_number=14
-        )
+    # 類別屬性 (覆蓋基類)
+    SCENARIO_ID = "phase14-hitl-approval"
+    SCENARIO_NAME = "Phase 14: HITL & Approval"
+    SCENARIO_DESCRIPTION = "人工審核與核准機制測試"
+
+    def __init__(self, config=None):
+        super().__init__(config)
         self.client = HITLTestClient()
+        self.api_available = False
 
     async def setup(self) -> bool:
         """測試前置設定"""
@@ -553,12 +586,31 @@ class Phase14HITLApprovalTest(PhaseTestBase):
             self.api_available = "simulated" not in response
             return True
         except Exception as e:
-            print(f"設定失敗: {e}")
+            safe_print(f"Setup failed: {e}")
             return False
 
-    async def teardown(self):
+    async def teardown(self) -> bool:
         """測試後清理"""
-        await self.client.close()
+        try:
+            await self.client.close()
+            return True
+        except Exception:
+            return False
+
+    async def execute(self) -> bool:
+        """執行所有測試場景（實現抽象方法）"""
+        try:
+            results = await self.run_all_tests()
+            # 計算通過率
+            total = sum(len(r.steps) for r in results)
+            passed = sum(
+                sum(1 for s in r.steps if s.status == TestStatus.PASSED)
+                for r in results
+            )
+            return passed == total
+        except Exception as e:
+            safe_print(f"Execution failed: {e}")
+            return False
 
     # =========================================================================
     # Sprint 55: 風險評估測試
@@ -1001,9 +1053,9 @@ class Phase14HITLApprovalTest(PhaseTestBase):
         results = []
 
         # Sprint 55: 風險評估
-        print("\n" + "=" * 60)
-        print("Sprint 55: 風險評估引擎")
-        print("=" * 60)
+        safe_print("\n" + "=" * 60)
+        safe_print("Sprint 55: Risk Assessment Engine")
+        safe_print("=" * 60)
 
         sprint55_results = []
         for test_method in [
@@ -1015,19 +1067,19 @@ class Phase14HITLApprovalTest(PhaseTestBase):
         ]:
             result = await test_method()
             sprint55_results.append(result)
-            status = "✓" if result.status == TestStatus.PASSED else "✗"
-            print(f"  {status} {result.step_name}: {result.message}")
+            status = "[PASS]" if result.status == TestStatus.PASSED else "[FAIL]"
+            safe_print(f"  {status} {result.step_name}: {result.message}")
 
         results.append(ScenarioResult(
-            scenario_name="風險評估引擎",
+            scenario_name="Risk Assessment Engine",
             steps=sprint55_results,
             duration_seconds=0
         ))
 
         # Sprint 56: 模式切換
-        print("\n" + "=" * 60)
-        print("Sprint 56: 模式切換器")
-        print("=" * 60)
+        safe_print("\n" + "=" * 60)
+        safe_print("Sprint 56: Mode Switcher")
+        safe_print("=" * 60)
 
         sprint56_results = []
         for test_method in [
@@ -1039,19 +1091,19 @@ class Phase14HITLApprovalTest(PhaseTestBase):
         ]:
             result = await test_method()
             sprint56_results.append(result)
-            status = "✓" if result.status == TestStatus.PASSED else "✗"
-            print(f"  {status} {result.step_name}: {result.message}")
+            status = "[PASS]" if result.status == TestStatus.PASSED else "[FAIL]"
+            safe_print(f"  {status} {result.step_name}: {result.message}")
 
         results.append(ScenarioResult(
-            scenario_name="模式切換器",
+            scenario_name="Mode Switcher",
             steps=sprint56_results,
             duration_seconds=0
         ))
 
         # Sprint 57: 統一 Checkpoint
-        print("\n" + "=" * 60)
-        print("Sprint 57: 統一 Checkpoint")
-        print("=" * 60)
+        safe_print("\n" + "=" * 60)
+        safe_print("Sprint 57: Unified Checkpoint")
+        safe_print("=" * 60)
 
         sprint57_results = []
         for test_method in [
@@ -1063,11 +1115,11 @@ class Phase14HITLApprovalTest(PhaseTestBase):
         ]:
             result = await test_method()
             sprint57_results.append(result)
-            status = "✓" if result.status == TestStatus.PASSED else "✗"
-            print(f"  {status} {result.step_name}: {result.message}")
+            status = "[PASS]" if result.status == TestStatus.PASSED else "[FAIL]"
+            safe_print(f"  {status} {result.step_name}: {result.message}")
 
         results.append(ScenarioResult(
-            scenario_name="統一 Checkpoint",
+            scenario_name="Unified Checkpoint",
             steps=sprint57_results,
             duration_seconds=0
         ))
@@ -1081,9 +1133,9 @@ class Phase14HITLApprovalTest(PhaseTestBase):
             for r in results
         )
 
-        print("\n" + "=" * 60)
-        print(f"Phase 14 測試結果: {passed_tests}/{total_tests} 通過")
-        print("=" * 60)
+        safe_print("\n" + "=" * 60)
+        safe_print(f"Phase 14 Test Results: {passed_tests}/{total_tests} Passed")
+        safe_print("=" * 60)
 
         return results
 

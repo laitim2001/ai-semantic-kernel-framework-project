@@ -1,7 +1,7 @@
 # =============================================================================
 # IPA Platform - Phase 14 UAT 測試：模式切換場景
 # =============================================================================
-# Sprint 56：模式切換器 (30 pts)
+# Sprint 56：模式切換器 (35 pts)
 #
 # 本模組實現模式切換相關的真實業務場景測試：
 # - 工作流程 → 對話轉換
@@ -30,7 +30,11 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from ..base import PhaseTestBase, ScenarioResult, StepResult, TestStatus
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from base import PhaseTestBase, ScenarioResult, StepResult, TestStatus
 
 
 class ExecutionMode(str, Enum):

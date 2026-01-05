@@ -30,7 +30,11 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from ..base import PhaseTestBase, ScenarioResult, StepResult, TestStatus
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from base import PhaseTestBase, ScenarioResult, StepResult, TestStatus
 
 
 class CheckpointType(str, Enum):

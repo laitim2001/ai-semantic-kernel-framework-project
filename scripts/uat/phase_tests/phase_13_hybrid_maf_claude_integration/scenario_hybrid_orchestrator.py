@@ -4,6 +4,9 @@
 # Sprint 54: HybridOrchestrator Refactor (35 pts)
 #
 # Real-world business scenarios for hybrid orchestration and mode execution.
+#
+# NOTE: Mode Switching Mid-Execution tests moved to Phase 14 (Sprint 55-57)
+#       See: phase_14_hitl_approval/scenario_mode_switching.py
 # =============================================================================
 """
 Hybrid Orchestrator Scenario Tests
@@ -12,7 +15,9 @@ Business scenarios that validate:
 - Workflow mode execution (structured multi-step processes)
 - Chat mode execution (conversational interactions)
 - Hybrid mode with intelligent auto-routing
-- Mode switching mid-execution (dynamic adaptation)
+
+NOTE: Mode switching mid-execution tests are now in Phase 14
+      (requires ModeSwitcher from Sprint 55-57)
 """
 
 import asyncio
@@ -137,37 +142,8 @@ HYBRID_SCENARIOS = [
     }
 ]
 
-MODE_SWITCH_SCENARIOS = [
-    # User-initiated mode switch
-    {
-        "name": "User Requests Workflow",
-        "initial_mode": "CHAT_MODE",
-        "initial_input": "Tell me about the expense approval process",
-        "switch_trigger": "Actually, let's process my pending expense report #EXP-789",
-        "target_mode": "WORKFLOW_MODE",
-        "preserve_context": True
-    },
-    # System-detected mode switch need
-    {
-        "name": "System Detects Action Intent",
-        "initial_mode": "CHAT_MODE",
-        "initial_input": "I have a question about submitting time off",
-        "switch_trigger": "Request 3 days off starting next Monday",
-        "target_mode": "WORKFLOW_MODE",
-        "preserve_context": True
-    },
-    # Graceful mode switch with state preservation
-    {
-        "name": "Mid-Workflow Chat",
-        "initial_mode": "WORKFLOW_MODE",
-        "initial_input": "Submit expense report #EXP-001",
-        "workflow_step": 2,
-        "switch_trigger": "Wait, what's the limit for meal expenses?",
-        "target_mode": "CHAT_MODE",
-        "preserve_context": True,
-        "resume_workflow": True
-    }
-]
+# NOTE: MODE_SWITCH_SCENARIOS moved to Phase 14
+# See: phase_14_hitl_approval/scenario_mode_switching.py
 
 
 # =============================================================================
@@ -458,149 +434,9 @@ async def test_hybrid_mode_with_auto_routing(
     return results
 
 
-async def test_mode_switching_mid_execution(
-    client,
-    verbose: bool = True
-) -> List[StepResult]:
-    """
-    Scenario: Mode Switching Mid-Execution
-
-    Business Context:
-    Users may need to interrupt workflows for questions, or escalate
-    chat conversations to formal actions. The system must handle these
-    transitions gracefully while preserving all relevant context.
-
-    Expected Behavior:
-    - Allow mode switching at any point
-    - Preserve context across mode switches
-    - Support workflow pause/resume when switching to chat
-    - Maintain state integrity during transitions
-    """
-    results = []
-
-    for scenario in MODE_SWITCH_SCENARIOS:
-        print(f"\n  Testing: {scenario['name']}")
-        session_id = f"test-switch-{scenario['name'].lower().replace(' ', '-')}"
-
-        try:
-            # Step 1: Start in initial mode
-            response1 = await client.execute_hybrid(
-                scenario["initial_input"],
-                session_id=session_id,
-                force_mode=scenario["initial_mode"]
-            )
-
-            if "simulated" in response1:
-                result1 = StepResult(
-                    step_name=f"{scenario['name']} - Initial",
-                    status=TestStatus.PASSED,
-                    message=f"[Simulated] Started in {scenario['initial_mode']}",
-                    details={"initial_mode": scenario["initial_mode"]}
-                )
-            else:
-                initial_mode = response1.get("execution_mode")
-                if initial_mode == scenario["initial_mode"]:
-                    result1 = StepResult(
-                        step_name=f"{scenario['name']} - Initial",
-                        status=TestStatus.PASSED,
-                        message=f"Started in {initial_mode}",
-                        details=response1
-                    )
-                else:
-                    result1 = StepResult(
-                        step_name=f"{scenario['name']} - Initial",
-                        status=TestStatus.FAILED,
-                        message=f"Expected {scenario['initial_mode']}, got {initial_mode}",
-                        details=response1
-                    )
-
-            results.append(result1)
-
-            # Step 2: Trigger mode switch
-            response2 = await client.execute_hybrid(
-                scenario["switch_trigger"],
-                session_id=session_id
-                # No force_mode - let system detect the need
-            )
-
-            if "simulated" in response2:
-                result2 = StepResult(
-                    step_name=f"{scenario['name']} - Switch",
-                    status=TestStatus.PASSED,
-                    message=f"[Simulated] Should switch to {scenario['target_mode']}",
-                    details={"target_mode": scenario["target_mode"]}
-                )
-            else:
-                new_mode = response2.get("execution_mode")
-                context_preserved = response2.get("context_preserved", True)
-
-                mode_switched = (
-                    new_mode == scenario["target_mode"] or
-                    new_mode == "HYBRID_MODE"
-                )
-
-                if mode_switched and (context_preserved or not scenario["preserve_context"]):
-                    result2 = StepResult(
-                        step_name=f"{scenario['name']} - Switch",
-                        status=TestStatus.PASSED,
-                        message=f"Switched to {new_mode}, context preserved: {context_preserved}",
-                        details=response2
-                    )
-                else:
-                    result2 = StepResult(
-                        step_name=f"{scenario['name']} - Switch",
-                        status=TestStatus.FAILED,
-                        message=f"Switch issue: mode={new_mode}, context={context_preserved}",
-                        details=response2
-                    )
-
-            results.append(result2)
-
-            # Step 3: Verify context state after switch
-            state_response = await client.get_context_state(session_id)
-
-            if "simulated" in state_response:
-                result3 = StepResult(
-                    step_name=f"{scenario['name']} - Context",
-                    status=TestStatus.PASSED,
-                    message="[Simulated] Context state available",
-                    details={"session_id": session_id}
-                )
-            else:
-                has_maf_state = "maf_state" in state_response
-                has_claude_state = "claude_state" in state_response
-
-                if has_maf_state or has_claude_state:
-                    result3 = StepResult(
-                        step_name=f"{scenario['name']} - Context",
-                        status=TestStatus.PASSED,
-                        message=f"Context available: MAF={has_maf_state}, Claude={has_claude_state}",
-                        details=state_response
-                    )
-                else:
-                    result3 = StepResult(
-                        step_name=f"{scenario['name']} - Context",
-                        status=TestStatus.FAILED,
-                        message="No context state found after switch",
-                        details=state_response
-                    )
-
-            results.append(result3)
-
-            if verbose:
-                for r in results[-3:]:
-                    status = "✓" if r.status == TestStatus.PASSED else "✗"
-                    print(f"    {status} {r.step_name}: {r.message}")
-
-        except Exception as e:
-            results.append(StepResult(
-                step_name=f"{scenario['name']} - Error",
-                status=TestStatus.FAILED,
-                message=f"Error: {str(e)}",
-                details={"scenario": scenario["name"], "error": str(e)}
-            ))
-
-    return results
+# NOTE: test_mode_switching_mid_execution() moved to Phase 14
+# See: phase_14_hitl_approval/scenario_mode_switching.py
+# Reason: Requires ModeSwitcher component from Sprint 55-57
 
 
 # =============================================================================
@@ -630,10 +466,8 @@ async def run_all_hybrid_orchestrator_scenarios(client) -> Dict:
     results3 = await test_hybrid_mode_with_auto_routing(client)
     all_results.extend(results3)
 
-    print("\n4. Mode Switching Mid-Execution")
-    print("-" * 40)
-    results4 = await test_mode_switching_mid_execution(client)
-    all_results.extend(results4)
+    # NOTE: Mode Switching tests moved to Phase 14
+    # See: phase_14_hitl_approval/scenario_mode_switching.py
 
     # Summary
     passed = sum(1 for r in all_results if r.status == TestStatus.PASSED)

@@ -6,6 +6,20 @@
 
 ---
 
+## 開發狀態
+
+| Sprint | 名稱 | 點數 | 狀態 | 進度檔案 |
+|--------|------|------|------|----------|
+| Sprint 52 | Intent Router & Mode Detection | 35 pts | ✅ 完成 | `sprint-52/progress.md` |
+| Sprint 53 | Context Bridge & Sync | 35 pts | ✅ 完成 | `sprint-53/progress.md` |
+| Sprint 54 | HybridOrchestrator Refactor | 35 pts | ✅ 完成 | `sprint-54/progress.md` |
+
+**Phase 13 開發總進度**: 105/105 pts (100%) ✅
+
+> **重要**：Phase 13 開發已於 2026-01-03 完成。本文件為 UAT 測試規劃。
+
+---
+
 ## 概述
 
 Phase 13 實現核心混合架構，啟用 Microsoft Agent Framework (MAF) 與 Claude Agent SDK 之間的智慧路由。這些 UAT 測試驗證真實業務場景，而非僅測試 API 功能。
@@ -29,6 +43,9 @@ Phase 13 實現核心混合架構，啟用 Microsoft Agent Framework (MAF) 與 C
 - **S54-2**：ModeAwareExecution (10 pts) - 模式感知執行
 - **S54-3**：UnifiedToolExecutor (8 pts) - 統一工具層
 - **S54-4**：Orchestrator API (5 pts) - REST API 端點
+
+> **注意**：Mode Switching Mid-Execution 測試已移至 Phase 14 (Sprint 55-57)
+> 原因：需要 ModeSwitcher 組件（Phase 14 實現）
 
 ---
 
@@ -59,7 +76,62 @@ Phase 13 實現核心混合架構，啟用 Microsoft Agent Framework (MAF) 與 C
 | 工作流程模式 | 多步驟結構化工作流程 | 步驟完成度 |
 | 對話模式 | 對話式互動 | 回應品質 |
 | 混合自動路由 | 動態模式選擇 | 正確路由 |
-| 執行中切換 | 執行期間切換模式 | 狀態保留 |
+
+> **注意**：執行中模式切換測試已移至 Phase 14 (需要 ModeSwitcher)
+
+### 4. 統一工具執行器場景 (`scenario_unified_executor.py`)
+
+| 場景 | 描述 | 驗證項目 |
+|------|------|----------|
+| 單一工具執行 | 不同來源的工具執行 (MAF/Claude/Hybrid) | 路由正確性 |
+| 批次執行 | 多工具並行執行 | 結果聚合 |
+| Hook 管道 | Pre/Post 執行鉤子 | 驗證/日誌/轉換 |
+| 錯誤處理 | 未知工具、無效參數、逾時 | 錯誤類型識別 |
+
+### 5. MAF Tool Callback 場景 (`scenario_tool_callback.py`)
+
+| 場景 | 描述 | 驗證項目 |
+|------|------|----------|
+| 攔截邏輯 | MAF 工具呼叫攔截 | 路由至 UnifiedToolExecutor |
+| 封鎖工具 | 安全敏感工具封鎖 | 封鎖模式匹配 |
+| 審批路由 | 需審批工具的路由 | HITL 整合 |
+| 回退行為 | Claude 不可用時回退至 MAF | 降級處理 |
+| 上下文傳播 | 執行上下文傳遞 | 變數/工具結果保留 |
+
+### 6. 複雜度分析器場景 (`scenario_analyzers.py`)
+
+| 場景 | 描述 | 預期複雜度 |
+|------|------|----------|
+| 簡單任務 | FAQ、狀態查詢 | 0.0-0.3 (CHAT_MODE) |
+| 中等任務 | 報告生成、排程 | 0.3-0.6 (HYBRID_MODE) |
+| 複雜任務 | 審批流程、入職流程 | 0.6-0.8 (WORKFLOW_MODE) |
+| 極複雜任務 | 預算規劃、系統遷移 | 0.8-1.0 (WORKFLOW_MODE) |
+| 上下文影響 | 相同任務不同上下文 | 動態調整 |
+| 邊界案例 | 空輸入、極長輸入、特殊字元 | 穩健處理 |
+
+### 7. Mapper 場景 (`scenario_mappers.py`)
+
+| 場景 | 描述 | 驗證項目 |
+|------|------|----------|
+| MAF → Claude 上下文 | 工作流程變數轉換 | 類型保留 |
+| MAF 歷史轉換 | 對話歷史格式轉換 | 工具呼叫格式 |
+| Agent → Prompt | 代理狀態生成系統提示 | 指令/約束包含 |
+| Claude → MAF Checkpoint | Claude 狀態轉 Checkpoint | 會話/工具保留 |
+| Claude → 執行記錄 | 執行資料轉 MAF 格式 | 狀態/錯誤映射 |
+| 工具 → 審批請求 | 工具呼叫生成審批 | 風險等級判定 |
+| 雙向往返 | MAF → Claude → MAF | 資料無損 |
+
+### 8. 同步器場景 (`scenario_synchronizer.py`)
+
+| 場景 | 描述 | 驗證項目 |
+|------|------|----------|
+| 樂觀鎖 | 版本檢查更新 | 版本遞增 |
+| 並發修改 | 多客戶端同時更新 | 衝突偵測 |
+| 衝突解決策略 | LWW/Server Wins/Merge/Manual | 策略套用 |
+| 深度合併 | 巢狀物件/陣列合併 | 欄位級合併 |
+| 回滾操作 | 失敗回滾/Checkpoint 恢復 | 狀態還原 |
+| 狀態恢復 | 網路失敗/崩潰/Split-brain | 恢復動作 |
+| 跨框架同步 | MAF ↔ Claude 雙向 | 一致性維護 |
 
 ---
 
@@ -143,5 +215,5 @@ python -m phase_13_hybrid_maf_claude_integration.phase_13_hybrid_core_test --rea
 
 ---
 
-**最後更新**：2026-01-03
+**最後更新**：2026-01-05
 **作者**：IPA Platform 團隊
