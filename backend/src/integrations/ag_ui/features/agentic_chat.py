@@ -505,8 +505,8 @@ class AgenticChatHandler:
         """
         return CustomEvent(
             type=AGUIEventType.CUSTOM,
-            name="typing_indicator",
-            value={
+            event_name="typing_indicator",
+            payload={
                 "thread_id": thread_id,
                 "run_id": run_id,
                 "is_typing": is_typing,

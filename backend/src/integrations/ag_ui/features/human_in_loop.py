@@ -220,7 +220,7 @@ class ApprovalStorage:
         Returns:
             Unique approval request ID
         """
-        timeout = timeout_seconds or self._default_timeout
+        timeout = timeout_seconds if timeout_seconds is not None else self._default_timeout
         approval_id = f"approval-{uuid.uuid4().hex[:12]}"
 
         request = ApprovalRequest(

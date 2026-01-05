@@ -448,10 +448,12 @@ class TestAgenticChatHandler:
             )
             yield TextMessageContentEvent(
                 type=AGUIEventType.TEXT_MESSAGE_CONTENT,
+                message_id="msg-001",
                 delta="Hello ",
             )
             yield TextMessageContentEvent(
                 type=AGUIEventType.TEXT_MESSAGE_CONTENT,
+                message_id="msg-002",
                 delta="world!",
             )
             yield RunFinishedEvent(
@@ -481,6 +483,7 @@ class TestAgenticChatHandler:
         async def mock_stream(*args, **kwargs):
             yield TextMessageContentEvent(
                 type=AGUIEventType.TEXT_MESSAGE_CONTENT,
+                message_id="msg-resp",
                 delta="Response text",
             )
 
@@ -608,10 +611,10 @@ class TestAgenticChatHandler:
         )
 
         assert event.type == AGUIEventType.CUSTOM
-        assert event.name == "typing_indicator"
-        assert event.value["thread_id"] == "thread-123"
-        assert event.value["run_id"] == "run-456"
-        assert event.value["is_typing"] is True
+        assert event.event_name == "typing_indicator"
+        assert event.payload["thread_id"] == "thread-123"
+        assert event.payload["run_id"] == "run-456"
+        assert event.payload["is_typing"] is True
 
 
 # =============================================================================
@@ -649,7 +652,7 @@ class TestCreateChatHandler:
 
         assert handler.config.max_history_length == 100
 
-    @patch("src.integrations.ag_ui.features.agentic_chat.create_bridge")
+    @patch("src.integrations.ag_ui.bridge.create_bridge")
     def test_create_without_bridge(self, mock_create_bridge):
         """Test creating handler creates bridge if not provided."""
         orchestrator = MagicMock()
