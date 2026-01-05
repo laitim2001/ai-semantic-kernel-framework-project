@@ -28,6 +28,7 @@ class StateSnapshotEvent(BaseAGUIEvent):
     Attributes:
         type: 固定為 STATE_SNAPSHOT
         snapshot: 完整的狀態物件
+        metadata: 事件元數據 (threadId, runId, version 等)
 
     Example:
         >>> event = StateSnapshotEvent(
@@ -35,7 +36,8 @@ class StateSnapshotEvent(BaseAGUIEvent):
         ...         "user": {"name": "Alice", "role": "admin"},
         ...         "conversation": {"turn": 5, "context_length": 1024},
         ...         "tools": ["search", "calculate", "generate"]
-        ...     }
+        ...     },
+        ...     metadata={"threadId": "t1", "runId": "r1"}
         ... )
     """
 
@@ -46,6 +48,10 @@ class StateSnapshotEvent(BaseAGUIEvent):
     snapshot: Dict[str, Any] = Field(
         default_factory=dict,
         description="完整的狀態物件",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="事件元數據 (threadId, runId, version 等)",
     )
 
 
