@@ -22,10 +22,10 @@
 |-------|------|------|------|------|
 | S58-4 | AG-UI Event Types | 5 | ✅ 完成 | 100% |
 | S58-3 | Thread Manager | 5 | ✅ 完成 | 100% |
-| S58-2 | HybridEventBridge | 10 | 🔄 進行中 | 0% |
-| S58-1 | AG-UI SSE Endpoint | 10 | ⏳ 待開始 | 0% |
+| S58-2 | HybridEventBridge | 10 | ✅ 完成 | 100% |
+| S58-1 | AG-UI SSE Endpoint | 10 | ✅ 完成 | 100% |
 
-**總進度**: 10/30 pts (33%)
+**總進度**: 30/30 pts (100%) ✅
 
 ---
 
@@ -149,19 +149,23 @@ backend/tests/unit/
 
 ### S58-2: HybridEventBridge (10 pts)
 
-**狀態**: ⏳ 待開始
+**狀態**: ✅ 完成
 
 **檔案**:
-- [ ] `backend/src/integrations/ag_ui/__init__.py`
-- [ ] `backend/src/integrations/ag_ui/bridge.py`
-- [ ] `backend/src/integrations/ag_ui/converters.py`
+- [x] `backend/src/integrations/ag_ui/__init__.py`
+- [x] `backend/src/integrations/ag_ui/bridge.py`
+- [x] `backend/src/integrations/ag_ui/converters.py`
 
 **測試**:
-- [ ] `backend/tests/unit/integrations/ag_ui/test_bridge.py`
-- [ ] `backend/tests/unit/integrations/ag_ui/test_converters.py`
+- [x] `backend/tests/unit/integrations/ag_ui/test_bridge.py` (34 tests)
+- [x] `backend/tests/unit/integrations/ag_ui/test_converters.py` (34 tests)
+
+**測試結果**: 68 tests passed ✅
 
 **關鍵組件**:
-- `HybridEventBridge` 類別 (stream_events, _format_sse)
+- `HybridEventBridge` 類別 (stream_events, stream_events_raw, _format_sse)
+- `BridgeConfig` 配置類別 (include_timestamps, default_timeout, etc.)
+- `RunAgentInput` 輸入模型
 - `EventConverters` 類別 (convert, to_run_started, to_run_finished, to_text_message_*, to_tool_call_*)
 
 **Event Mapping**:
@@ -180,22 +184,30 @@ backend/tests/unit/
 
 ### S58-1: AG-UI SSE Endpoint (10 pts)
 
-**狀態**: ⏳ 待開始
+**狀態**: ✅ 完成
 
 **檔案**:
-- [ ] `backend/src/api/v1/ag_ui/__init__.py`
-- [ ] `backend/src/api/v1/ag_ui/routes.py`
-- [ ] `backend/src/api/v1/ag_ui/schemas.py`
-- [ ] `backend/src/api/v1/ag_ui/dependencies.py`
-- [ ] 修改 `backend/src/api/v1/__init__.py` 註冊 router
+- [x] `backend/src/api/v1/ag_ui/__init__.py`
+- [x] `backend/src/api/v1/ag_ui/routes.py`
+- [x] `backend/src/api/v1/ag_ui/schemas.py`
+- [x] `backend/src/api/v1/ag_ui/dependencies.py`
+- [x] 修改 `backend/src/api/v1/__init__.py` 註冊 router
 
 **測試**:
-- [ ] `backend/tests/unit/api/v1/ag_ui/test_routes.py`
+- [x] `backend/tests/unit/api/v1/ag_ui/test_routes.py` (31 tests)
+- [x] `backend/tests/unit/api/v1/ag_ui/test_approval_routes.py` (29 tests)
+
+**測試結果**: 60 tests passed ✅
 
 **API 端點**:
 - `POST /api/v1/ag-ui` - 主 SSE 端點
-- `GET /api/v1/ag-ui/threads/{thread_id}` - 獲取 Thread
-- `DELETE /api/v1/ag-ui/threads/{thread_id}` - 刪除 Thread
+- `POST /api/v1/ag-ui/sync` - 同步端點
+- `GET /api/v1/ag-ui/threads/{thread_id}` - 獲取 Thread 歷史
+- `GET /api/v1/ag-ui/health` - 健康檢查端點
+- `GET /api/v1/ag-ui/approvals` - 獲取待審批列表
+- `POST /api/v1/ag-ui/approvals/{id}/approve` - 批准工具呼叫
+- `POST /api/v1/ag-ui/approvals/{id}/reject` - 拒絕工具呼叫
+- `DELETE /api/v1/ag-ui/approvals/{id}` - 取消審批請求
 
 ---
 
@@ -208,4 +220,5 @@ backend/tests/unit/
 ---
 
 **更新日期**: 2026-01-05
-**Sprint 狀態**: 🔄 進行中
+**Sprint 狀態**: ✅ 完成
+**測試總計**: 290 tests passed (Events: 73, Thread: 89, Bridge: 68, API: 60)
