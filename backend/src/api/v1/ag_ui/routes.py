@@ -3,17 +3,22 @@
 # =============================================================================
 # Sprint 58: AG-UI Core Infrastructure
 # S58-1: AG-UI SSE Endpoint
+# Sprint 59: AG-UI Basic Features
+# S59-3: Human-in-the-Loop Approval Endpoints
 #
 # REST API endpoints for AG-UI protocol integration.
 # Provides SSE streaming endpoint compatible with CopilotKit frontend.
 #
-# Main endpoint: POST /api/v1/ag-ui
-# - Receives RunAgentRequest
-# - Streams AG-UI events via SSE
+# Main endpoints:
+# - POST /api/v1/ag-ui - Run agent (SSE stream)
+# - POST /api/v1/ag-ui/approvals/{id}/approve - Approve tool call
+# - POST /api/v1/ag-ui/approvals/{id}/reject - Reject tool call
+# - GET /api/v1/ag-ui/approvals/pending - List pending approvals
 #
 # Dependencies:
 #   - HybridEventBridge (src.integrations.ag_ui.bridge)
 #   - AG-UI Events (src.integrations.ag_ui.events)
+#   - HITLHandler (src.integrations.ag_ui.features.human_in_loop)
 # =============================================================================
 
 import logging
@@ -26,14 +31,28 @@ from fastapi.responses import StreamingResponse
 from src.api.v1.ag_ui.dependencies import get_hybrid_bridge
 from src.api.v1.ag_ui.schemas import (
     AGUIExecutionMode,
+    ApprovalActionRequest,
+    ApprovalActionResponse,
+    ApprovalResponse,
+    ApprovalStatusEnum,
+    ApprovalStorageStats,
     ErrorResponse,
     HealthResponse,
+    PendingApprovalsResponse,
+    RiskLevelEnum,
     RunAgentRequest,
     RunAgentResponse,
 )
 from src.integrations.ag_ui.bridge import (
     HybridEventBridge,
     RunAgentInput,
+)
+from src.integrations.ag_ui.features.human_in_loop import (
+    ApprovalStorage,
+    ApprovalStatus,
+    HITLHandler,
+    get_approval_storage,
+    get_hitl_handler,
 )
 from src.integrations.hybrid.intent import ExecutionMode
 
@@ -423,3 +442,306 @@ async def get_thread_history(
         "total": 0,
         "limit": limit,
     }
+
+
+# =============================================================================
+# S59-3: Human-in-the-Loop Approval Endpoints
+# =============================================================================
+
+def _convert_approval_to_response(request) -> ApprovalResponse:
+    """Convert ApprovalRequest to ApprovalResponse schema."""
+    from src.integrations.hybrid.risk import RiskLevel
+
+    # Map internal RiskLevel to API enum
+    risk_level_map = {
+        RiskLevel.LOW: RiskLevelEnum.LOW,
+        RiskLevel.MEDIUM: RiskLevelEnum.MEDIUM,
+        RiskLevel.HIGH: RiskLevelEnum.HIGH,
+        RiskLevel.CRITICAL: RiskLevelEnum.CRITICAL,
+    }
+
+    # Map internal ApprovalStatus to API enum
+    status_map = {
+        ApprovalStatus.PENDING: ApprovalStatusEnum.PENDING,
+        ApprovalStatus.APPROVED: ApprovalStatusEnum.APPROVED,
+        ApprovalStatus.REJECTED: ApprovalStatusEnum.REJECTED,
+        ApprovalStatus.TIMEOUT: ApprovalStatusEnum.TIMEOUT,
+        ApprovalStatus.CANCELLED: ApprovalStatusEnum.CANCELLED,
+    }
+
+    return ApprovalResponse(
+        approval_id=request.approval_id,
+        tool_call_id=request.tool_call_id,
+        tool_name=request.tool_name,
+        arguments=request.arguments,
+        risk_level=risk_level_map.get(request.risk_level, RiskLevelEnum.MEDIUM),
+        risk_score=request.risk_score,
+        reasoning=request.reasoning,
+        run_id=request.run_id,
+        session_id=request.session_id,
+        status=status_map.get(request.status, ApprovalStatusEnum.PENDING),
+        created_at=request.created_at,
+        expires_at=request.expires_at,
+        resolved_at=request.resolved_at,
+        user_comment=request.user_comment,
+    )
+
+
+@router.get(
+    "/approvals/pending",
+    response_model=PendingApprovalsResponse,
+    summary="List Pending Approvals",
+    description="""
+    Get all pending approval requests.
+
+    Optionally filter by session_id or run_id.
+    Expired requests are automatically marked as timeout.
+    """,
+    responses={
+        200: {"description": "List of pending approvals"},
+    },
+)
+async def list_pending_approvals(
+    session_id: Optional[str] = Query(None, description="Filter by session ID"),
+    run_id: Optional[str] = Query(None, description="Filter by run ID"),
+    storage: ApprovalStorage = Depends(get_approval_storage),
+) -> PendingApprovalsResponse:
+    """
+    List all pending approval requests.
+
+    Returns requests sorted by creation time (oldest first).
+    """
+    pending = await storage.get_pending(session_id=session_id, run_id=run_id)
+
+    return PendingApprovalsResponse(
+        pending=[_convert_approval_to_response(r) for r in pending],
+        total=len(pending),
+    )
+
+
+@router.get(
+    "/approvals/{approval_id}",
+    response_model=ApprovalResponse,
+    summary="Get Approval Request",
+    description="Get details of a specific approval request by ID.",
+    responses={
+        200: {"description": "Approval request details"},
+        404: {"model": ErrorResponse, "description": "Approval not found"},
+    },
+)
+async def get_approval(
+    approval_id: str,
+    storage: ApprovalStorage = Depends(get_approval_storage),
+) -> ApprovalResponse:
+    """
+    Get a specific approval request by ID.
+    """
+    request = await storage.get(approval_id)
+
+    if not request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "APPROVAL_NOT_FOUND",
+                "message": f"Approval request not found: {approval_id}",
+            },
+        )
+
+    return _convert_approval_to_response(request)
+
+
+@router.post(
+    "/approvals/{approval_id}/approve",
+    response_model=ApprovalActionResponse,
+    summary="Approve Tool Call",
+    description="""
+    Approve a pending tool call request.
+
+    The tool call will be executed after approval.
+    An optional comment can be provided for audit purposes.
+    """,
+    responses={
+        200: {"description": "Approval action successful"},
+        400: {"model": ErrorResponse, "description": "Request already resolved or expired"},
+        404: {"model": ErrorResponse, "description": "Approval not found"},
+    },
+)
+async def approve_tool_call(
+    approval_id: str,
+    body: Optional[ApprovalActionRequest] = None,
+    hitl: HITLHandler = Depends(get_hitl_handler),
+) -> ApprovalActionResponse:
+    """
+    Approve a pending tool call.
+    """
+    comment = body.comment if body else None
+
+    success, request = await hitl.handle_approval_response(
+        approval_id=approval_id,
+        approved=True,
+        user_comment=comment,
+    )
+
+    if not request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "APPROVAL_NOT_FOUND",
+                "message": f"Approval request not found: {approval_id}",
+            },
+        )
+
+    if not success:
+        # Request was already resolved or expired
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "APPROVAL_ALREADY_RESOLVED",
+                "message": f"Approval request already resolved or expired: {approval_id}",
+                "details": {"status": request.status.value},
+            },
+        )
+
+    logger.info(f"Tool call approved: {approval_id}")
+
+    return ApprovalActionResponse(
+        success=True,
+        approval_id=approval_id,
+        status=ApprovalStatusEnum.APPROVED,
+        message="Tool call approved successfully",
+        resolved_at=request.resolved_at,
+    )
+
+
+@router.post(
+    "/approvals/{approval_id}/reject",
+    response_model=ApprovalActionResponse,
+    summary="Reject Tool Call",
+    description="""
+    Reject a pending tool call request.
+
+    The tool call will not be executed.
+    An optional comment can be provided explaining the rejection.
+    """,
+    responses={
+        200: {"description": "Rejection action successful"},
+        400: {"model": ErrorResponse, "description": "Request already resolved or expired"},
+        404: {"model": ErrorResponse, "description": "Approval not found"},
+    },
+)
+async def reject_tool_call(
+    approval_id: str,
+    body: Optional[ApprovalActionRequest] = None,
+    hitl: HITLHandler = Depends(get_hitl_handler),
+) -> ApprovalActionResponse:
+    """
+    Reject a pending tool call.
+    """
+    comment = body.comment if body else None
+
+    success, request = await hitl.handle_approval_response(
+        approval_id=approval_id,
+        approved=False,
+        user_comment=comment,
+    )
+
+    if not request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "APPROVAL_NOT_FOUND",
+                "message": f"Approval request not found: {approval_id}",
+            },
+        )
+
+    if not success:
+        # Request was already resolved or expired
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "APPROVAL_ALREADY_RESOLVED",
+                "message": f"Approval request already resolved or expired: {approval_id}",
+                "details": {"status": request.status.value},
+            },
+        )
+
+    logger.info(f"Tool call rejected: {approval_id}")
+
+    return ApprovalActionResponse(
+        success=True,
+        approval_id=approval_id,
+        status=ApprovalStatusEnum.REJECTED,
+        message="Tool call rejected",
+        resolved_at=request.resolved_at,
+    )
+
+
+@router.post(
+    "/approvals/{approval_id}/cancel",
+    response_model=ApprovalActionResponse,
+    summary="Cancel Approval Request",
+    description="Cancel a pending approval request without executing the tool call.",
+    responses={
+        200: {"description": "Cancellation successful"},
+        400: {"model": ErrorResponse, "description": "Request already resolved"},
+        404: {"model": ErrorResponse, "description": "Approval not found"},
+    },
+)
+async def cancel_approval(
+    approval_id: str,
+    storage: ApprovalStorage = Depends(get_approval_storage),
+) -> ApprovalActionResponse:
+    """
+    Cancel a pending approval request.
+    """
+    success = await storage.cancel(approval_id)
+
+    if not success:
+        request = await storage.get(approval_id)
+        if not request:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "APPROVAL_NOT_FOUND",
+                    "message": f"Approval request not found: {approval_id}",
+                },
+            )
+        # Request was already resolved
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "APPROVAL_ALREADY_RESOLVED",
+                "message": f"Approval request already resolved: {approval_id}",
+                "details": {"status": request.status.value},
+            },
+        )
+
+    logger.info(f"Approval request cancelled: {approval_id}")
+
+    from datetime import datetime
+    return ApprovalActionResponse(
+        success=True,
+        approval_id=approval_id,
+        status=ApprovalStatusEnum.CANCELLED,
+        message="Approval request cancelled",
+        resolved_at=datetime.utcnow(),
+    )
+
+
+@router.get(
+    "/approvals/stats",
+    response_model=ApprovalStorageStats,
+    summary="Get Approval Statistics",
+    description="Get statistics about approval storage (counts by status).",
+    responses={
+        200: {"description": "Approval statistics"},
+    },
+)
+async def get_approval_stats(
+    storage: ApprovalStorage = Depends(get_approval_storage),
+) -> ApprovalStorageStats:
+    """
+    Get approval storage statistics.
+    """
+    stats = storage.get_stats()
+    return ApprovalStorageStats(**stats)
