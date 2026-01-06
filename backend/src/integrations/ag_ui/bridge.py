@@ -30,6 +30,9 @@ from src.integrations.ag_ui.events import (
     RunStartedEvent,
     RunFinishedEvent,
     RunFinishReason,
+    TextMessageStartEvent,
+    TextMessageContentEvent,
+    TextMessageEndEvent,
 )
 
 if TYPE_CHECKING:
@@ -164,6 +167,71 @@ class HybridEventBridge:
         self._orchestrator = orchestrator
         logger.info("Orchestrator updated in bridge")
 
+    async def _generate_simulation_events(
+        self,
+        run_input: RunAgentInput,
+    ) -> AsyncGenerator[BaseAGUIEvent, None]:
+        """
+        Generate simulation events when orchestrator is not configured.
+
+        This is used for UAT testing and development without a real LLM.
+
+        Args:
+            run_input: RunAgentInput with execution parameters
+
+        Yields:
+            Simulated AG-UI events
+        """
+        thread_id = run_input.thread_id
+        run_id = run_input.run_id or f"run-{uuid.uuid4().hex[:12]}"
+        message_id = f"msg-{uuid.uuid4().hex[:8]}"
+
+        logger.info(f"Generating simulation events for thread={thread_id}, run={run_id}")
+
+        # 1. RUN_STARTED
+        yield self._converters.to_run_started(thread_id, run_id)
+
+        # 2. TEXT_MESSAGE_START
+        yield TextMessageStartEvent(
+            type="TEXT_MESSAGE_START",
+            message_id=message_id,
+            role="assistant",
+        )
+
+        # 3. Simulate response content
+        simulation_content = (
+            f"[Simulation Mode] Received your message: '{run_input.prompt[:50]}...'. "
+            f"The AG-UI API is working correctly. "
+            f"Configure HybridOrchestratorV2 for real LLM responses."
+        )
+
+        # Yield content in chunks
+        for i in range(0, len(simulation_content), self._config.chunk_size):
+            chunk = simulation_content[i : i + self._config.chunk_size]
+            yield TextMessageContentEvent(
+                type="TEXT_MESSAGE_CONTENT",
+                message_id=message_id,
+                delta=chunk,
+            )
+
+        # 4. TEXT_MESSAGE_END
+        yield TextMessageEndEvent(
+            type="TEXT_MESSAGE_END",
+            message_id=message_id,
+        )
+
+        # 5. RUN_FINISHED
+        yield self._converters.to_run_finished(
+            thread_id=thread_id,
+            run_id=run_id,
+            success=True,
+            error=None,
+            usage={
+                "simulation": True,
+                "tokens_used": len(simulation_content.split()),
+            } if self._config.include_metadata else None,
+        )
+
     async def stream_events(
         self,
         run_input: RunAgentInput,
@@ -185,11 +253,12 @@ class HybridEventBridge:
         Yields:
             SSE-formatted event strings ("data: {...}\\n\\n")
 
-        Raises:
-            ValueError: If orchestrator is not configured
         """
+        # Simulation mode when orchestrator not configured
         if not self._orchestrator:
-            raise ValueError("Orchestrator not configured in bridge")
+            async for event in self._generate_simulation_events(run_input):
+                yield self._format_sse(event)
+            return
 
         thread_id = run_input.thread_id
         run_id = run_input.run_id or f"run-{uuid.uuid4().hex[:12]}"
@@ -261,17 +330,20 @@ class HybridEventBridge:
         Similar to stream_events but yields BaseAGUIEvent objects
         instead of SSE-formatted strings.
 
+        If orchestrator is not configured, operates in simulation mode
+        and returns a mock response.
+
         Args:
             run_input: RunAgentInput with execution parameters
 
         Yields:
             BaseAGUIEvent instances
-
-        Raises:
-            ValueError: If orchestrator is not configured
         """
+        # Simulation mode when orchestrator not configured
         if not self._orchestrator:
-            raise ValueError("Orchestrator not configured in bridge")
+            async for event in self._generate_simulation_events(run_input):
+                yield event
+            return
 
         thread_id = run_input.thread_id
         run_id = run_input.run_id or f"run-{uuid.uuid4().hex[:12]}"

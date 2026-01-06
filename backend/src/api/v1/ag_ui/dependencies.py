@@ -7,12 +7,15 @@
 # Dependency injection providers for AG-UI API endpoints.
 # Provides HybridEventBridge and related dependencies.
 #
+# Supports simulation mode for UAT testing when orchestrator is unavailable.
+#
 # Dependencies:
 #   - HybridEventBridge (src.integrations.ag_ui.bridge)
 #   - HybridOrchestratorV2 (src.integrations.hybrid.orchestrator_v2)
 # =============================================================================
 
 import logging
+import os
 from typing import Optional
 
 import redis.asyncio as aioredis
@@ -53,6 +56,44 @@ async def get_redis_client() -> aioredis.Redis:
     return _redis_client
 
 
+def _try_create_orchestrator():
+    """
+    Try to create HybridOrchestratorV2.
+
+    Returns None if dependencies are not available.
+    """
+    try:
+        from src.integrations.hybrid.orchestrator_v2 import (
+            HybridOrchestratorV2,
+            OrchestratorConfig,
+            OrchestratorMode,
+        )
+
+        # Check if we're in simulation mode (for UAT testing)
+        if os.getenv("AG_UI_SIMULATION_MODE", "").lower() == "true":
+            logger.info("AG-UI running in simulation mode (orchestrator disabled)")
+            return None
+
+        # Try to create orchestrator with minimal config
+        config = OrchestratorConfig(
+            mode=OrchestratorMode.V2_MINIMAL,
+            primary_framework="claude_sdk",
+            auto_switch=False,
+            enable_metrics=False,
+        )
+
+        orchestrator = HybridOrchestratorV2(config=config)
+        logger.info("HybridOrchestratorV2 created for AG-UI bridge")
+        return orchestrator
+
+    except ImportError as e:
+        logger.warning(f"Could not import HybridOrchestratorV2: {e}")
+        return None
+    except Exception as e:
+        logger.warning(f"Could not create HybridOrchestratorV2: {e}")
+        return None
+
+
 async def get_hybrid_bridge(
     redis_client: aioredis.Redis = Depends(get_redis_client),
 ) -> HybridEventBridge:
@@ -61,6 +102,12 @@ async def get_hybrid_bridge(
 
     Creates or retrieves a configured HybridEventBridge for AG-UI
     protocol event streaming.
+
+    If HybridOrchestratorV2 cannot be created (missing dependencies or config),
+    the bridge operates in "simulation mode" - API routes will work but
+    return simulated responses.
+
+    Set AG_UI_SIMULATION_MODE=true to force simulation mode for testing.
 
     Args:
         redis_client: Redis client for caching/session management
@@ -71,7 +118,7 @@ async def get_hybrid_bridge(
     global _hybrid_bridge
 
     if _hybrid_bridge is None:
-        # Create bridge with default configuration
+        # Create bridge configuration
         config = BridgeConfig(
             chunk_size=100,
             include_metadata=True,
@@ -79,8 +126,18 @@ async def get_hybrid_bridge(
             emit_custom_events=True,
         )
 
-        _hybrid_bridge = HybridEventBridge(config=config)
-        logger.info("AG-UI HybridEventBridge initialized")
+        # Try to create orchestrator
+        orchestrator = _try_create_orchestrator()
+
+        _hybrid_bridge = HybridEventBridge(
+            orchestrator=orchestrator,
+            config=config,
+        )
+
+        if orchestrator:
+            logger.info("AG-UI HybridEventBridge initialized with orchestrator")
+        else:
+            logger.info("AG-UI HybridEventBridge initialized in simulation mode")
 
     return _hybrid_bridge
 

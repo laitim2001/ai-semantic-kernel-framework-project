@@ -5,6 +5,8 @@
 # S58-1: AG-UI SSE Endpoint
 # Sprint 59: AG-UI Basic Features
 # S59-3: Human-in-the-Loop Approval Endpoints
+# Sprint 60: AG-UI Advanced Features
+# S60-2: Shared State Management Endpoints
 #
 # REST API endpoints for AG-UI protocol integration.
 # Provides SSE streaming endpoint compatible with CopilotKit frontend.
@@ -14,15 +16,19 @@
 # - POST /api/v1/ag-ui/approvals/{id}/approve - Approve tool call
 # - POST /api/v1/ag-ui/approvals/{id}/reject - Reject tool call
 # - GET /api/v1/ag-ui/approvals/pending - List pending approvals
+# - GET /api/v1/ag-ui/threads/{id}/state - Get thread state
+# - PATCH /api/v1/ag-ui/threads/{id}/state - Update thread state
 #
 # Dependencies:
 #   - HybridEventBridge (src.integrations.ag_ui.bridge)
 #   - AG-UI Events (src.integrations.ag_ui.events)
 #   - HITLHandler (src.integrations.ag_ui.features.human_in_loop)
+#   - SharedStateHandler (src.integrations.ag_ui.features.advanced)
 # =============================================================================
 
 import logging
 import uuid
+from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -36,12 +42,19 @@ from src.api.v1.ag_ui.schemas import (
     ApprovalResponse,
     ApprovalStatusEnum,
     ApprovalStorageStats,
+    ConflictResolutionStrategyEnum,
+    DiffOperationEnum,
     ErrorResponse,
     HealthResponse,
     PendingApprovalsResponse,
     RiskLevelEnum,
     RunAgentRequest,
     RunAgentResponse,
+    StateConflictResponse,
+    StateDiffSchema,
+    StateUpdateResponse,
+    ThreadStateResponse,
+    ThreadStateUpdateRequest,
 )
 from src.integrations.ag_ui.bridge import (
     HybridEventBridge,
@@ -59,6 +72,40 @@ from src.integrations.hybrid.intent import ExecutionMode
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ag-ui", tags=["ag-ui"])
+
+
+# =============================================================================
+# Health Check
+# =============================================================================
+
+
+@router.get(
+    "/health",
+    response_model=HealthResponse,
+    summary="AG-UI Health Check",
+    description="Check if AG-UI endpoint is available and functioning.",
+)
+async def health_check() -> HealthResponse:
+    """
+    Health check endpoint for AG-UI protocol.
+
+    Returns:
+        HealthResponse with status and version information.
+    """
+    return HealthResponse(
+        status="healthy",
+        version="1.0.0",
+        protocol="ag-ui",
+        features=[
+            "agentic_chat",
+            "tool_rendering",
+            "human_in_loop",
+            "generative_ui",
+            "tool_based_ui",
+            "shared_state",
+            "predictive_state",
+        ],
+    )
 
 
 # =============================================================================
@@ -130,25 +177,6 @@ async def generate_sse_stream(
 # =============================================================================
 # API Endpoints
 # =============================================================================
-
-@router.get(
-    "/health",
-    response_model=HealthResponse,
-    summary="AG-UI Health Check",
-    description="Check the health status of the AG-UI endpoint",
-)
-async def health_check() -> HealthResponse:
-    """
-    AG-UI Health Check endpoint.
-
-    Returns service status and supported features.
-    """
-    return HealthResponse(
-        status="healthy",
-        version="1.0.0",
-        features=["streaming", "tool_calls", "hybrid_mode", "workflow_mode", "chat_mode"],
-    )
-
 
 @router.post(
     "",
@@ -288,8 +316,6 @@ async def run_agent_sync(
     Collects all events and returns a complete response.
     Useful for simple integrations that don't support SSE.
     """
-    from datetime import datetime
-
     # Validate request
     if not request.thread_id:
         raise HTTPException(
@@ -520,6 +546,25 @@ async def list_pending_approvals(
 
 
 @router.get(
+    "/approvals/stats",
+    response_model=ApprovalStorageStats,
+    summary="Get Approval Statistics",
+    description="Get statistics about approval storage (counts by status).",
+    responses={
+        200: {"description": "Approval statistics"},
+    },
+)
+async def get_approval_stats(
+    storage: ApprovalStorage = Depends(get_approval_storage),
+) -> ApprovalStorageStats:
+    """
+    Get approval storage statistics.
+    """
+    stats = storage.get_stats()
+    return ApprovalStorageStats(**stats)
+
+
+@router.get(
     "/approvals/{approval_id}",
     response_model=ApprovalResponse,
     summary="Get Approval Request",
@@ -718,7 +763,6 @@ async def cancel_approval(
 
     logger.info(f"Approval request cancelled: {approval_id}")
 
-    from datetime import datetime
     return ApprovalActionResponse(
         success=True,
         approval_id=approval_id,
@@ -728,20 +772,225 @@ async def cancel_approval(
     )
 
 
+# =============================================================================
+# S60-2: Shared State Management Endpoints
+# =============================================================================
+
+# In-memory state storage for demo purposes
+# In production, this should use Redis or database
+_thread_states: Dict[str, Dict[str, Any]] = {}
+_thread_versions: Dict[str, int] = {}
+_thread_timestamps: Dict[str, datetime] = {}
+
+
+def _get_thread_state_storage() -> Dict[str, Dict[str, Any]]:
+    """Get thread state storage (dependency injection point)."""
+    return _thread_states
+
+
+def _get_thread_version(thread_id: str) -> int:
+    """Get current version for a thread."""
+    return _thread_versions.get(thread_id, 0)
+
+
+def _increment_version(thread_id: str) -> int:
+    """Increment and return new version for a thread."""
+    current = _thread_versions.get(thread_id, 0)
+    new_version = current + 1
+    _thread_versions[thread_id] = new_version
+    return new_version
+
+
+def _apply_diff_to_state(
+    state: Dict[str, Any],
+    diff: StateDiffSchema,
+) -> Dict[str, Any]:
+    """
+    Apply a single diff operation to state.
+
+    Args:
+        state: Current state
+        diff: Diff operation to apply
+
+    Returns:
+        Updated state
+    """
+    import copy
+    state = copy.deepcopy(state)
+    path_parts = diff.path.split(".")
+
+    if diff.op == DiffOperationEnum.ADD or diff.op == DiffOperationEnum.REPLACE:
+        # Navigate to parent and set value
+        current = state
+        for part in path_parts[:-1]:
+            if part not in current:
+                current[part] = {}
+            current = current[part]
+        current[path_parts[-1]] = diff.new_value
+
+    elif diff.op == DiffOperationEnum.REMOVE:
+        # Navigate to parent and remove key
+        current = state
+        for part in path_parts[:-1]:
+            if part not in current:
+                return state  # Path doesn't exist
+            current = current[part]
+        if path_parts[-1] in current:
+            del current[path_parts[-1]]
+
+    return state
+
+
 @router.get(
-    "/approvals/stats",
-    response_model=ApprovalStorageStats,
-    summary="Get Approval Statistics",
-    description="Get statistics about approval storage (counts by status).",
+    "/threads/{thread_id}/state",
+    response_model=ThreadStateResponse,
+    summary="Get Thread State",
+    description="""
+    Get the current state for a thread.
+
+    Returns the full state snapshot including version number
+    for optimistic concurrency control.
+    """,
     responses={
-        200: {"description": "Approval statistics"},
+        200: {"description": "Thread state"},
+        404: {"model": ErrorResponse, "description": "Thread not found"},
     },
 )
-async def get_approval_stats(
-    storage: ApprovalStorage = Depends(get_approval_storage),
-) -> ApprovalStorageStats:
+async def get_thread_state(
+    thread_id: str,
+) -> ThreadStateResponse:
     """
-    Get approval storage statistics.
+    Get current thread state.
+
+    Returns state data, version, and metadata for the specified thread.
     """
-    stats = storage.get_stats()
-    return ApprovalStorageStats(**stats)
+    state = _thread_states.get(thread_id, {})
+    version = _get_thread_version(thread_id)
+    last_modified = _thread_timestamps.get(thread_id, datetime.utcnow())
+
+    return ThreadStateResponse(
+        thread_id=thread_id,
+        state=state,
+        version=version,
+        last_modified=last_modified,
+        metadata={"source": "backend"},
+    )
+
+
+@router.patch(
+    "/threads/{thread_id}/state",
+    response_model=StateUpdateResponse,
+    summary="Update Thread State",
+    description="""
+    Update thread state with full snapshot or delta diffs.
+
+    Supports two update modes:
+    - **Snapshot update**: Provide `state` to replace entire state
+    - **Delta update**: Provide `diffs` to apply incremental changes
+
+    Supports optimistic concurrency with `expected_version`.
+    """,
+    responses={
+        200: {"description": "State updated successfully"},
+        409: {"model": StateConflictResponse, "description": "Version conflict"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def update_thread_state(
+    thread_id: str,
+    request: ThreadStateUpdateRequest,
+) -> StateUpdateResponse:
+    """
+    Update thread state with snapshot or diffs.
+    """
+    current_version = _get_thread_version(thread_id)
+
+    # Check for version conflict if expected_version is provided
+    if request.expected_version is not None:
+        if request.expected_version != current_version:
+            # Return conflict response
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "error": "VERSION_CONFLICT",
+                    "message": "State has been modified by another client",
+                    "details": {
+                        "server_version": current_version,
+                        "client_version": request.expected_version,
+                    },
+                },
+            )
+
+    diffs_applied = 0
+    conflicts_resolved = 0
+
+    if request.state is not None:
+        # Full snapshot update
+        _thread_states[thread_id] = request.state
+        diffs_applied = 1  # Treat snapshot as single diff
+
+    elif request.diffs:
+        # Delta update
+        current_state = _thread_states.get(thread_id, {})
+
+        for diff in request.diffs:
+            current_state = _apply_diff_to_state(current_state, diff)
+            diffs_applied += 1
+
+        _thread_states[thread_id] = current_state
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "INVALID_REQUEST",
+                "message": "Either 'state' or 'diffs' must be provided",
+            },
+        )
+
+    # Update version and timestamp
+    new_version = _increment_version(thread_id)
+    now = datetime.utcnow()
+    _thread_timestamps[thread_id] = now
+
+    logger.info(
+        f"Thread state updated: thread_id={thread_id}, "
+        f"version={new_version}, diffs_applied={diffs_applied}"
+    )
+
+    return StateUpdateResponse(
+        success=True,
+        thread_id=thread_id,
+        version=new_version,
+        conflicts_resolved=conflicts_resolved,
+        diffs_applied=diffs_applied,
+        message="State updated successfully",
+        updated_at=now,
+    )
+
+
+@router.delete(
+    "/threads/{thread_id}/state",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Clear Thread State",
+    description="Clear all state for a thread.",
+    responses={
+        204: {"description": "State cleared"},
+    },
+)
+async def clear_thread_state(
+    thread_id: str,
+) -> None:
+    """
+    Clear thread state.
+
+    Removes all state data and resets version to 0.
+    """
+    if thread_id in _thread_states:
+        del _thread_states[thread_id]
+    if thread_id in _thread_versions:
+        del _thread_versions[thread_id]
+    if thread_id in _thread_timestamps:
+        del _thread_timestamps[thread_id]
+
+    logger.info(f"Thread state cleared: thread_id={thread_id}")
