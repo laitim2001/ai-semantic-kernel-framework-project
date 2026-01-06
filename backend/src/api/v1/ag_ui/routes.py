@@ -46,6 +46,7 @@ from src.api.v1.ag_ui.schemas import (
     DiffOperationEnum,
     ErrorResponse,
     HealthResponse,
+    ModeSwitchEventResponse,
     PendingApprovalsResponse,
     RiskLevelEnum,
     RunAgentRequest,
@@ -53,8 +54,15 @@ from src.api.v1.ag_ui.schemas import (
     StateConflictResponse,
     StateDiffSchema,
     StateUpdateResponse,
+    TestModeSwitchRequest,
+    TestUIComponentRequest,
+    TestWorkflowProgressRequest,
     ThreadStateResponse,
     ThreadStateUpdateRequest,
+    UIComponentEventResponse,
+    UIComponentTypeEnum,
+    WorkflowProgressEventResponse,
+    WorkflowStepStatusEnum,
 )
 from src.integrations.ag_ui.bridge import (
     HybridEventBridge,
@@ -994,3 +1002,234 @@ async def clear_thread_state(
         del _thread_timestamps[thread_id]
 
     logger.info(f"Thread state cleared: thread_id={thread_id}")
+
+
+# =============================================================================
+# S61-6: Test Endpoints for Feature 4 & 5
+# =============================================================================
+
+@router.post(
+    "/test/progress",
+    response_model=WorkflowProgressEventResponse,
+    summary="Test Workflow Progress Event (Feature 4)",
+    description="""
+    Generate a test workflow progress event for UAT testing.
+
+    This endpoint simulates the workflow progress events that would be
+    emitted during real workflow execution, enabling Feature 4 (Generative UI)
+    testing without requiring actual workflow execution.
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "Workflow progress event generated"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_workflow_progress(
+    request: TestWorkflowProgressRequest,
+) -> WorkflowProgressEventResponse:
+    """
+    Generate test workflow progress event.
+
+    Creates a simulated workflow progress event for testing Feature 4
+    (Generative UI - Progress Updates).
+    """
+    import time
+
+    # Generate workflow ID
+    workflow_id = f"wf-test-{uuid.uuid4().hex[:8]}"
+    run_id = f"run-{uuid.uuid4().hex[:12]}"
+
+    # Create step definitions
+    steps = []
+    for i in range(1, request.total_steps + 1):
+        step_status = "completed" if i < request.current_step else (
+            request.step_status.value if i == request.current_step else "pending"
+        )
+        steps.append({
+            "step_id": f"step-{i}",
+            "name": f"Step {i}",
+            "status": step_status,
+            "started_at": datetime.utcnow().isoformat() if step_status != "pending" else None,
+            "completed_at": datetime.utcnow().isoformat() if step_status == "completed" else None,
+        })
+
+    # Calculate progress
+    completed_steps = request.current_step - 1
+    if request.step_status == WorkflowStepStatusEnum.COMPLETED:
+        completed_steps = request.current_step
+    overall_progress = completed_steps / request.total_steps
+
+    # Build payload
+    payload = {
+        "workflow_id": workflow_id,
+        "workflow_name": request.workflow_name,
+        "total_steps": request.total_steps,
+        "completed_steps": completed_steps,
+        "current_step": steps[request.current_step - 1] if steps else None,
+        "overall_progress": round(overall_progress, 2),
+        "steps": steps,
+        "started_at": datetime.utcnow().isoformat(),
+        "run_id": run_id,
+        "thread_id": request.thread_id,
+    }
+
+    logger.info(
+        f"Test workflow progress: workflow_id={workflow_id}, "
+        f"progress={overall_progress:.0%}"
+    )
+
+    return WorkflowProgressEventResponse(
+        event_name="workflow_progress",
+        payload=payload,
+    )
+
+
+@router.post(
+    "/test/mode-switch",
+    response_model=ModeSwitchEventResponse,
+    summary="Test Mode Switch Event (Feature 4)",
+    description="""
+    Generate a test mode switch event for UAT testing.
+
+    This endpoint simulates the mode switch events that would be emitted
+    when the system switches between chat and workflow execution modes,
+    enabling Feature 4 (Generative UI - Mode Switching) testing.
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "Mode switch event generated"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_mode_switch(
+    request: TestModeSwitchRequest,
+) -> ModeSwitchEventResponse:
+    """
+    Generate test mode switch event.
+
+    Creates a simulated mode switch event for testing Feature 4
+    (Generative UI - Mode Switching).
+    """
+    # Generate switch ID
+    switch_id = f"sw-test-{uuid.uuid4().hex[:8]}"
+    run_id = f"run-{uuid.uuid4().hex[:12]}"
+
+    # Build payload
+    payload = {
+        "switch_id": switch_id,
+        "source_mode": request.source_mode,
+        "target_mode": request.target_mode,
+        "reason": request.reason,
+        "trigger_type": "manual",
+        "confidence": request.confidence,
+        "message": f"Successfully switched from {request.source_mode} to {request.target_mode}",
+        "success": True,
+        "run_id": run_id,
+        "thread_id": request.thread_id,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+    logger.info(
+        f"Test mode switch: {request.source_mode} -> {request.target_mode}, "
+        f"confidence={request.confidence}"
+    )
+
+    return ModeSwitchEventResponse(
+        event_name="mode_switch",
+        payload=payload,
+    )
+
+
+@router.post(
+    "/test/ui-component",
+    response_model=UIComponentEventResponse,
+    summary="Test UI Component Event (Feature 5)",
+    description="""
+    Generate a test UI component event for UAT testing.
+
+    This endpoint simulates the dynamic UI component events that would be
+    emitted when tools return UI schemas, enabling Feature 5 (Tool-based UI)
+    testing without requiring actual tool execution.
+
+    Supported component types:
+    - **form**: Dynamic form with fields
+    - **chart**: Data visualization (bar, line, pie, etc.)
+    - **card**: Information card
+    - **table**: Data table with columns
+    - **custom**: Custom component
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "UI component event generated"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_ui_component(
+    request: TestUIComponentRequest,
+) -> UIComponentEventResponse:
+    """
+    Generate test UI component event.
+
+    Creates a simulated UI component event for testing Feature 5
+    (Tool-based Dynamic UI).
+    """
+    import time
+
+    # Generate component ID
+    component_id = f"ui-test-{uuid.uuid4().hex[:12]}"
+
+    # Validate props based on component type
+    component_type = request.component_type.value
+
+    if component_type == "form":
+        # Ensure fields exist for form
+        if "fields" not in request.props:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "INVALID_PROPS",
+                    "message": "Form component requires 'fields' in props",
+                },
+            )
+
+    elif component_type == "chart":
+        # Ensure chart has data
+        if "data" not in request.props and "chartType" not in request.props:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "INVALID_PROPS",
+                    "message": "Chart component requires 'data' or 'chartType' in props",
+                },
+            )
+
+    elif component_type == "table":
+        # Ensure table has columns
+        if "columns" not in request.props and "data" not in request.props:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "INVALID_PROPS",
+                    "message": "Table component requires 'columns' or 'data' in props",
+                },
+            )
+
+    # Build component definition
+    component = {
+        "componentId": component_id,
+        "componentType": component_type,
+        "props": request.props,
+        "title": request.title,
+        "createdAt": time.time(),
+        "threadId": request.thread_id,
+    }
+
+    logger.info(
+        f"Test UI component: type={component_type}, id={component_id}"
+    )
+
+    return UIComponentEventResponse(
+        event_name="ui_component",
+        component=component,
+    )

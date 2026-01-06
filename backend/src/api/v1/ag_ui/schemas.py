@@ -5,6 +5,8 @@
 # S58-1: AG-UI SSE Endpoint
 # Sprint 59: AG-UI Basic Features
 # S59-3: Human-in-the-Loop Approval Schemas
+# Sprint 60: AG-UI Advanced Features
+# S60-2: Shared State Management Schemas
 #
 # Request/Response schemas for AG-UI protocol API.
 # Follows CopilotKit AG-UI protocol specification.
@@ -139,6 +141,7 @@ class HealthResponse(BaseModel):
     """Health check response for AG-UI endpoint."""
     status: str = Field("healthy", description="Service status")
     version: str = Field("1.0.0", description="AG-UI protocol version")
+    protocol: str = Field("ag-ui", description="Protocol name")
     features: List[str] = Field(
         default_factory=lambda: ["streaming", "tool_calls", "hybrid_mode"],
         description="Supported features"
@@ -296,6 +299,314 @@ class ApprovalStorageStats(BaseModel):
                 "rejected": 2,
                 "timeout": 1,
                 "cancelled": 0,
+            }
+        }
+    )
+
+
+# =============================================================================
+# S60-2: Shared State Management Schemas
+# =============================================================================
+
+class DiffOperationEnum(str, Enum):
+    """Type of diff operation."""
+    ADD = "add"
+    REMOVE = "remove"
+    REPLACE = "replace"
+    MOVE = "move"
+
+
+class ConflictResolutionStrategyEnum(str, Enum):
+    """Strategy for resolving state conflicts."""
+    SERVER_WINS = "server_wins"
+    CLIENT_WINS = "client_wins"
+    LAST_WRITE_WINS = "last_write_wins"
+    MERGE = "merge"
+    MANUAL = "manual"
+
+
+class StateDiffSchema(BaseModel):
+    """Schema for a single state diff operation."""
+    path: str = Field(..., description="JSON path to the changed value")
+    op: DiffOperationEnum = Field(..., description="Type of diff operation")
+    old_value: Optional[Any] = Field(None, alias="oldValue", description="Previous value")
+    new_value: Optional[Any] = Field(None, alias="newValue", description="New value")
+    timestamp: Optional[float] = Field(None, description="When the diff was created")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_schema_extra={
+            "example": {
+                "path": "user.profile.name",
+                "op": "replace",
+                "oldValue": "John",
+                "newValue": "Jane",
+                "timestamp": 1704456000.0,
+            }
+        }
+    )
+
+
+class ThreadStateResponse(BaseModel):
+    """Response for thread state retrieval."""
+    thread_id: str = Field(..., description="Thread ID")
+    state: Dict[str, Any] = Field(default_factory=dict, description="Current state data")
+    version: int = Field(..., description="State version number")
+    last_modified: datetime = Field(..., description="Last modification timestamp")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "thread_id": "thread-abc123",
+                "state": {
+                    "user": {"name": "John", "role": "admin"},
+                    "context": {"step": 3, "total": 10},
+                },
+                "version": 5,
+                "last_modified": "2026-01-05T10:00:00Z",
+                "metadata": {"source": "backend"},
+            }
+        }
+    )
+
+
+class ThreadStateUpdateRequest(BaseModel):
+    """Request to update thread state."""
+    state: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Full state to replace (for snapshot update)"
+    )
+    diffs: Optional[List[StateDiffSchema]] = Field(
+        None,
+        description="List of state diffs to apply (for delta update)"
+    )
+    expected_version: Optional[int] = Field(
+        None,
+        description="Expected current version for optimistic locking"
+    )
+    conflict_resolution: ConflictResolutionStrategyEnum = Field(
+        ConflictResolutionStrategyEnum.SERVER_WINS,
+        description="How to resolve conflicts"
+    )
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "diffs": [
+                    {"path": "user.name", "op": "replace", "newValue": "Jane"},
+                    {"path": "context.step", "op": "replace", "newValue": 4},
+                ],
+                "expected_version": 5,
+                "conflict_resolution": "server_wins",
+            }
+        }
+    )
+
+
+class StateUpdateResponse(BaseModel):
+    """Response after state update."""
+    success: bool = Field(..., description="Whether the update was successful")
+    thread_id: str = Field(..., description="Thread ID")
+    version: int = Field(..., description="New state version after update")
+    conflicts_resolved: int = Field(0, description="Number of conflicts resolved")
+    diffs_applied: int = Field(0, description="Number of diffs applied")
+    message: str = Field("", description="Status message")
+    updated_at: datetime = Field(..., description="Update timestamp")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "thread_id": "thread-abc123",
+                "version": 6,
+                "conflicts_resolved": 0,
+                "diffs_applied": 2,
+                "message": "State updated successfully",
+                "updated_at": "2026-01-05T10:05:00Z",
+            }
+        }
+    )
+
+
+class StateConflictResponse(BaseModel):
+    """Response when state conflict is detected."""
+    has_conflict: bool = Field(..., description="Whether a conflict exists")
+    conflict_paths: List[str] = Field(
+        default_factory=list,
+        description="Paths where conflicts were detected"
+    )
+    server_version: int = Field(..., description="Current server version")
+    client_version: int = Field(..., description="Client's expected version")
+    resolution_required: bool = Field(
+        False,
+        description="Whether manual resolution is required"
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "has_conflict": True,
+                "conflict_paths": ["user.name", "context.step"],
+                "server_version": 7,
+                "client_version": 5,
+                "resolution_required": True,
+            }
+        }
+    )
+
+
+# =============================================================================
+# S61-6: Test Endpoints for Feature 4 & 5
+# =============================================================================
+
+class WorkflowStepStatusEnum(str, Enum):
+    """Status for workflow step."""
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class TestWorkflowProgressRequest(BaseModel):
+    """Request to generate test workflow progress event."""
+    thread_id: str = Field(..., description="Thread ID")
+    workflow_name: str = Field("Test Workflow", description="Workflow name")
+    total_steps: int = Field(3, ge=1, le=20, description="Total number of steps")
+    current_step: int = Field(1, ge=1, description="Current step number")
+    step_status: WorkflowStepStatusEnum = Field(
+        WorkflowStepStatusEnum.IN_PROGRESS,
+        description="Status of current step"
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "thread_id": "test-123",
+                "workflow_name": "Data Processing",
+                "total_steps": 5,
+                "current_step": 2,
+                "step_status": "in_progress",
+            }
+        }
+    )
+
+
+class TestModeSwitchRequest(BaseModel):
+    """Request to generate test mode switch event."""
+    thread_id: str = Field(..., description="Thread ID")
+    source_mode: str = Field("chat", description="Source execution mode")
+    target_mode: str = Field("workflow", description="Target execution mode")
+    reason: str = Field("complexity", description="Reason for mode switch")
+    confidence: float = Field(0.9, ge=0.0, le=1.0, description="Confidence score")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "thread_id": "test-123",
+                "source_mode": "chat",
+                "target_mode": "workflow",
+                "reason": "Multi-step task detected",
+                "confidence": 0.95,
+            }
+        }
+    )
+
+
+class UIComponentTypeEnum(str, Enum):
+    """Type of UI component."""
+    FORM = "form"
+    CHART = "chart"
+    CARD = "card"
+    TABLE = "table"
+    CUSTOM = "custom"
+
+
+class TestUIComponentRequest(BaseModel):
+    """Request to generate test UI component event."""
+    thread_id: str = Field(..., description="Thread ID")
+    component_type: UIComponentTypeEnum = Field(..., description="Type of UI component")
+    props: Dict[str, Any] = Field(..., description="Component properties")
+    title: Optional[str] = Field(None, description="Component title")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "thread_id": "test-123",
+                "component_type": "form",
+                "props": {
+                    "fields": [
+                        {"name": "email", "label": "Email", "type": "email", "required": True}
+                    ],
+                    "submitLabel": "Submit",
+                },
+                "title": "Contact Form",
+            }
+        }
+    )
+
+
+class WorkflowProgressEventResponse(BaseModel):
+    """Response containing workflow progress event data."""
+    event_name: str = Field("workflow_progress", description="Event name")
+    payload: Dict[str, Any] = Field(..., description="Event payload")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "event_name": "workflow_progress",
+                "payload": {
+                    "workflow_id": "wf-abc123",
+                    "workflow_name": "Data Processing",
+                    "total_steps": 5,
+                    "completed_steps": 1,
+                    "current_step": {"step_id": "step-2", "name": "Process Data", "status": "in_progress"},
+                    "overall_progress": 0.3,
+                },
+            }
+        }
+    )
+
+
+class ModeSwitchEventResponse(BaseModel):
+    """Response containing mode switch event data."""
+    event_name: str = Field("mode_switch", description="Event name")
+    payload: Dict[str, Any] = Field(..., description="Event payload")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "event_name": "mode_switch",
+                "payload": {
+                    "switch_id": "sw-abc123",
+                    "source_mode": "chat",
+                    "target_mode": "workflow",
+                    "reason": "Multi-step task detected",
+                    "confidence": 0.95,
+                    "success": True,
+                },
+            }
+        }
+    )
+
+
+class UIComponentEventResponse(BaseModel):
+    """Response containing UI component event data."""
+    event_name: str = Field("ui_component", description="Event name")
+    component: Dict[str, Any] = Field(..., description="Component definition")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "event_name": "ui_component",
+                "component": {
+                    "componentId": "ui-abc123",
+                    "componentType": "form",
+                    "props": {"fields": [{"name": "email", "label": "Email"}]},
+                    "title": "Contact Form",
+                },
             }
         }
     )
