@@ -52,8 +52,8 @@ const STATUS_ICONS: Record<PredictionStatus, string> = {
   conflicted: '⚠',
 };
 
-/** Status labels */
-const STATUS_LABELS: Record<PredictionStatus, string> = {
+/** Status labels - exported for external use */
+export const STATUS_LABELS: Record<PredictionStatus, string> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
   rolled_back: 'Rolled Back',

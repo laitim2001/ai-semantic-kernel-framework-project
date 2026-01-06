@@ -114,7 +114,7 @@ export function AgentsPage() {
 
                   <div className="mt-4 flex items-center gap-2 flex-wrap">
                     <Badge variant="outline">{agent.category}</Badge>
-                    {agent.tools.slice(0, 2).map((tool) => (
+                    {agent.tools.slice(0, 2).map((tool: string) => (
                       <Badge key={tool} variant="secondary">
                         {tool}
                       </Badge>

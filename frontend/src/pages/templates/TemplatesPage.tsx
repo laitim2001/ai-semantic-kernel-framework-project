@@ -134,7 +134,7 @@ export function TemplatesPage() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-1">
-                  {template.tags.slice(0, 3).map((tag) => (
+                  {template.tags.slice(0, 3).map((tag: string) => (
                     <span
                       key={tag}
                       className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded"

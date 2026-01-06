@@ -18,7 +18,6 @@ import {
   GitBranch,
   Settings,
   Eye,
-  Plus,
   Trash2,
   Play,
   Square,
@@ -31,7 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
+import { SimpleSelect as Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 
 // =============================================================================

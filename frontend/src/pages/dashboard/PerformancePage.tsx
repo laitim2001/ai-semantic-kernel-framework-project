@@ -36,7 +36,6 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle,
-  Clock,
 } from 'lucide-react';
 import {
   LineChart,
@@ -48,8 +47,6 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  BarChart,
-  Bar,
 } from 'recharts';
 
 // Performance metrics types

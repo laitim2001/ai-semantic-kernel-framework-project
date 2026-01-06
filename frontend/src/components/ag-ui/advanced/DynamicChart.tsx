@@ -274,7 +274,7 @@ const ScatterChart: FC<{
   height: number;
   onDataPointClick?: DynamicChartProps['onDataPointClick'];
 }> = ({ data, height, onDataPointClick }) => {
-  const { points, maxX, maxY } = useMemo(() => {
+  const { points } = useMemo(() => {
     // For scatter, we expect data in pairs [x, y]
     // If not, use index as X
     const allY = data.datasets.flatMap((ds) => ds.data);

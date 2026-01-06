@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
+import { SimpleSelect as Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 
 // =============================================================================
@@ -92,14 +92,6 @@ const MODEL_PROVIDERS = [
   { value: 'anthropic', label: 'Anthropic', description: 'Claude 系列模型' },
   { value: 'google', label: 'Google AI', description: 'Gemini 系列模型' },
   { value: 'local', label: '本地模型', description: 'Ollama、vLLM 等本地部署的模型' },
-];
-
-const AZURE_API_VERSIONS = [
-  { value: '2024-10-21', label: '2024-10-21 (最新穩定版)' },
-  { value: '2024-08-01-preview', label: '2024-08-01-preview' },
-  { value: '2024-06-01', label: '2024-06-01' },
-  { value: '2024-02-15-preview', label: '2024-02-15-preview' },
-  { value: '2023-12-01-preview', label: '2023-12-01-preview' },
 ];
 
 const MODELS_BY_PROVIDER: Record<string, { value: string; label: string; description: string }[]> = {

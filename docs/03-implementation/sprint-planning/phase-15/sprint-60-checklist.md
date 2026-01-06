@@ -230,3 +230,40 @@ Sprint 60 結束日期: 2026-01-05
 
 Phase 15 總計: 85 / 85 pts ✅
 ```
+
+---
+
+## 補充: UI 組件擴展 (2026-01-06)
+
+### 新增 Shadcn UI 組件
+
+為支援 Sprint 60 advanced 組件 (DynamicForm, DynamicChart, DynamicCard, DynamicTable)，
+需要安裝和創建以下 Radix UI 基礎組件：
+
+**安裝的依賴**:
+```bash
+npm install @radix-ui/react-checkbox @radix-ui/react-radio-group @radix-ui/react-collapsible
+```
+
+**新增的 UI 組件**:
+| 檔案 | 用途 | Radix 依賴 |
+|------|------|------------|
+| `frontend/src/components/ui/Checkbox.tsx` | 表單複選框 | @radix-ui/react-checkbox |
+| `frontend/src/components/ui/RadioGroup.tsx` | 單選按鈕組 | @radix-ui/react-radio-group |
+| `frontend/src/components/ui/Table.tsx` | 表格組件 | 純 HTML |
+| `frontend/src/components/ui/Tooltip.tsx` | 提示工具 | @radix-ui/react-tooltip |
+| `frontend/src/components/ui/Collapsible.tsx` | 可折疊區塊 | @radix-ui/react-collapsible |
+| `frontend/src/components/ui/Select.tsx` | 下拉選單 (Radix + 向後兼容) | @radix-ui/react-select |
+
+**Select 組件向後兼容**:
+- 新增 `Select`, `SelectTrigger`, `SelectContent`, `SelectItem` (Radix UI API)
+- 保留 `SimpleSelect` 用於舊頁面向後兼容
+
+**修改的檔案**:
+- `src/pages/agents/CreateAgentPage.tsx` - 改用 SimpleSelect
+- `src/pages/agents/EditAgentPage.tsx` - 改用 SimpleSelect
+- `src/pages/workflows/CreateWorkflowPage.tsx` - 改用 SimpleSelect
+- `src/pages/workflows/EditWorkflowPage.tsx` - 改用 SimpleSelect
+
+**類型定義**:
+- `frontend/src/vite-env.d.ts` - Vite ImportMeta 類型定義
