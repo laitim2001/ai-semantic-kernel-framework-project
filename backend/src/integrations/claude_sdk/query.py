@@ -57,13 +57,18 @@ async def execute_query(
                 raise TimeoutError(f"Query exceeded timeout of {timeout}s")
 
             # Call Claude API
-            response = await client.messages.create(
-                model=config.model,
-                max_tokens=max_tokens,
-                system=config.system_prompt or "",
-                messages=messages,
-                tools=tool_definitions if tool_definitions else None,
-            )
+            # Build request kwargs - only include tools if we have them
+            request_kwargs = {
+                "model": config.model,
+                "max_tokens": max_tokens,
+                "messages": messages,
+            }
+            if config.system_prompt:
+                request_kwargs["system"] = config.system_prompt
+            if tool_definitions:
+                request_kwargs["tools"] = tool_definitions
+
+            response = await client.messages.create(**request_kwargs)
 
             total_tokens += response.usage.input_tokens + response.usage.output_tokens
 
