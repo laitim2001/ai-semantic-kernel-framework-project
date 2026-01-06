@@ -284,3 +284,76 @@ async def cleanup_dependencies() -> None:
     _hybrid_bridge = None
     _claude_client = None
     logger.info("AG-UI dependencies cleaned up")
+
+
+def reset_hybrid_bridge() -> Dict[str, Any]:
+    """
+    Reset HybridEventBridge and related global state.
+
+    Forces re-creation of orchestrator with fresh Claude executor.
+    Useful when environment variables change or for debugging.
+
+    Returns:
+        Dict with reset status and diagnostics
+    """
+    global _hybrid_bridge, _claude_client
+
+    # Clear cached instances
+    old_bridge = _hybrid_bridge
+    old_client = _claude_client
+
+    _hybrid_bridge = None
+    _claude_client = None
+
+    # Check API key status
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    api_key_status = f"SET (starts with {api_key[:15]}...)" if api_key else "NOT SET"
+
+    # Try to create new Claude client
+    new_client = _try_create_claude_client()
+
+    result = {
+        "reset": True,
+        "api_key_status": api_key_status,
+        "claude_client_created": new_client is not None,
+        "old_bridge_existed": old_bridge is not None,
+        "old_client_existed": old_client is not None,
+    }
+
+    if new_client:
+        _claude_client = new_client
+        result["message"] = "Reset complete. Claude SDK ready for next request."
+    else:
+        result["message"] = "Reset complete. Claude SDK not available (check ANTHROPIC_API_KEY)."
+
+    logger.info(f"HybridEventBridge reset: {result}")
+    return result
+
+
+def get_bridge_status() -> Dict[str, Any]:
+    """
+    Get current status of HybridEventBridge and related components.
+
+    Returns:
+        Dict with current status information
+    """
+    global _hybrid_bridge, _claude_client
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+
+    status = {
+        "api_key_configured": bool(api_key),
+        "api_key_preview": f"{api_key[:15]}..." if api_key else None,
+        "claude_client_initialized": _claude_client is not None,
+        "bridge_initialized": _hybrid_bridge is not None,
+        "orchestrator_configured": False,
+        "claude_executor_enabled": False,
+    }
+
+    if _hybrid_bridge:
+        orchestrator = _hybrid_bridge.orchestrator
+        status["orchestrator_configured"] = orchestrator is not None
+        if orchestrator:
+            status["claude_executor_enabled"] = hasattr(orchestrator, "_claude_executor") and orchestrator._claude_executor is not None
+
+    return status

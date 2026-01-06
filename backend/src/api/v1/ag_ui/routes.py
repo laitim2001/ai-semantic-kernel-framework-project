@@ -1,5 +1,5 @@
 # =============================================================================
-# IPA Platform - AG-UI API Routes
+# IPA Platform - AG-UI API Routes (Updated: 2026-01-06 15:30)
 # =============================================================================
 # Sprint 58: AG-UI Core Infrastructure
 # S58-1: AG-UI SSE Endpoint
@@ -34,7 +34,11 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
-from src.api.v1.ag_ui.dependencies import get_hybrid_bridge
+from src.api.v1.ag_ui.dependencies import (
+    get_hybrid_bridge,
+    get_bridge_status,
+    reset_hybrid_bridge,
+)
 from src.api.v1.ag_ui.schemas import (
     AGUIExecutionMode,
     ApprovalActionRequest,
@@ -114,6 +118,46 @@ async def health_check() -> HealthResponse:
             "predictive_state",
         ],
     )
+
+
+@router.get(
+    "/status",
+    summary="AG-UI Bridge Status",
+    description="Get current status of HybridEventBridge and Claude SDK.",
+)
+async def bridge_status() -> Dict[str, Any]:
+    """
+    Get status of AG-UI bridge components.
+
+    Returns:
+        Dict with status information including:
+        - api_key_configured: Whether ANTHROPIC_API_KEY is set
+        - claude_client_initialized: Whether ClaudeSDKClient is created
+        - bridge_initialized: Whether HybridEventBridge is created
+        - orchestrator_configured: Whether HybridOrchestratorV2 is configured
+        - claude_executor_enabled: Whether claude_executor is available
+    """
+    return get_bridge_status()
+
+
+@router.post(
+    "/reset",
+    summary="Reset AG-UI Bridge",
+    description="Reset HybridEventBridge and re-initialize with fresh Claude executor.",
+)
+async def reset_bridge() -> Dict[str, Any]:
+    """
+    Reset AG-UI bridge and force re-creation of all components.
+
+    Useful when:
+    - Environment variables have changed
+    - Debugging Claude SDK connection issues
+    - Forcing fresh initialization after errors
+
+    Returns:
+        Dict with reset status and diagnostics
+    """
+    return reset_hybrid_bridge()
 
 
 # =============================================================================
