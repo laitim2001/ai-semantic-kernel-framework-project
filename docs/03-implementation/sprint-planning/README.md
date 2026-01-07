@@ -1,9 +1,9 @@
 # IPA Platform - Sprint Planning Overview
 
-**版本**: 5.0 (Phase 15: AG-UI Protocol Integration)
+**版本**: 6.0 (Phase 16: Unified Agentic Chat Interface)
 **創建日期**: 2025-11-29
-**最後更新**: 2026-01-05
-**總開發週期**: 60 Sprints (15 Phases)
+**最後更新**: 2026-01-07
+**總開發週期**: 65 Sprints (16 Phases)
 
 ---
 
@@ -22,12 +22,13 @@
 | Phase 9 | MCP Integration | 37-39 | ~90 pts | ✅ 完成 | [README](./phase-9/README.md) |
 | Phase 10 | MCP Expansion | 40-44 | ~105 pts | ✅ 完成 | [README](./phase-10/README.md) |
 | Phase 11 | Agent-Session Integration | 45-47 | ~90 pts | ✅ 完成 | [README](./phase-11/README.md) |
-| Phase 12 | Claude Agent SDK | 48-51 | ~105 pts | 🔄 進行中 | [README](./phase-12/README.md) |
-| **Phase 13** | **Hybrid Core Architecture** | 52-54 | 105 pts | 📋 待開始 | [README](./phase-13/README.md) |
-| **Phase 14** | **Advanced Hybrid Features** | 55-57 | 95 pts | 📋 待開始 | [README](./phase-14/README.md) |
-| **Phase 15** | **AG-UI Protocol Integration** | 58-60 | 85 pts | 📋 待開始 | [README](./phase-15/README.md) |
+| Phase 12 | Claude Agent SDK | 48-51 | 165 pts | ✅ 完成 | [README](./phase-12/README.md) |
+| Phase 13 | Hybrid Core Architecture | 52-54 | 105 pts | ✅ 完成 | [README](./phase-13/README.md) |
+| Phase 14 | Advanced Hybrid Features | 55-57 | 95 pts | ✅ 完成 | [README](./phase-14/README.md) |
+| Phase 15 | AG-UI Protocol Integration | 58-60 | 85 pts | ✅ 完成 | [README](./phase-15/README.md) |
+| **Phase 16** | **Unified Agentic Chat Interface** | 61-65 | ~100 pts | 📋 規劃中 | [README](./phase-16/README.md) |
 
-**總計**: ~1395 Story Points across 60 Sprints
+**總計**: ~1555 Story Points across 65 Sprints
 
 ---
 
@@ -221,7 +222,7 @@ Frontend:
 
 ## 開發狀態總覽
 
-### 已完成 Phase (1-11)
+### 已完成 Phase (1-15)
 
 | Phase | 主要成就 |
 |-------|---------|
@@ -231,27 +232,27 @@ Frontend:
 | Phase 7-8 | Multi-turn & Memory、Code Interpreter |
 | Phase 9-10 | MCP Core、MCP Expansion (22 servers) |
 | Phase 11 | Agent-Session Integration (90 pts) |
+| Phase 12 | Claude Agent SDK Integration (165 pts) |
+| Phase 13 | Hybrid Core Architecture - Intent Router, Context Bridge (105 pts) |
+| Phase 14 | Advanced Hybrid Features - Risk Assessment, Mode Switcher (95 pts) |
+| Phase 15 | AG-UI Protocol Integration - 7 Features Complete (85 pts) |
 
-### 進行中 Phase (12)
+**已完成總計**: 1455 Story Points across 60 Sprints
 
-| Sprint | 狀態 | Points |
-|--------|------|--------|
-| Sprint 48 | ✅ 完成 | 35 pts |
-| Sprint 49 | ✅ 完成 | 35 pts |
-| Sprint 50 | ✅ 完成 | 30 pts |
-| Sprint 51 | 🔄 進行中 | 35 pts |
-
-**Phase 12 進度**: 130/165 pts (79%)
-
-### 待開始 Phase (13-15)
+### 規劃中 Phase (16)
 
 | Phase | 重點 | Story Points |
 |-------|------|--------------|
-| Phase 13 | Hybrid Core Architecture (Intent Router, Context Bridge) | 105 pts |
-| Phase 14 | Advanced Hybrid Features (Risk Assessment, Mode Switcher) | 95 pts |
-| Phase 15 | AG-UI Protocol Integration (SSE, Event Bridge, 7 Features) | 85 pts |
+| Phase 16 | Unified Agentic Chat Interface | ~100 pts |
 
-**總計**: 285 Story Points，計劃在 Phase 12 完成後開始。
+**Phase 16 Sprint 概覽**:
+
+| Sprint | 名稱 | Points | 主要交付物 |
+|--------|------|--------|-----------|
+| Sprint 62 | Core Architecture & Adaptive Layout | ~30 pts | 基礎架構、自適應佈局 |
+| Sprint 63 | Mode Switching & State Management | ~25 pts | 模式切換、狀態管理 |
+| Sprint 64 | Approval Flow & Risk Indicators | ~25 pts | 審批流程、風險指示 |
+| Sprint 65 | Metrics, Checkpoints & Polish | ~20 pts | 指標、Checkpoint、優化 |
 
 ---
 
@@ -360,11 +361,17 @@ ANTHROPIC_API_KEY=xxx
 | Phase 13 文檔 | `docs/03-implementation/sprint-planning/phase-13/` |
 | Phase 14 文檔 | `docs/03-implementation/sprint-planning/phase-14/` |
 | Phase 15 文檔 | `docs/03-implementation/sprint-planning/phase-15/` |
+| Phase 16 文檔 | `docs/03-implementation/sprint-planning/phase-16/` |
 
 ---
 
 **下一步**:
-- 完成 Phase 12 Sprint 51
-- 開始 Phase 13 Sprint 52 - Intent Router & Mode Detection
-- Phase 14 Sprint 55-57: Risk Assessment, Mode Switcher, Unified Checkpoint
-- Phase 15 Sprint 58-60: AG-UI Protocol Integration
+- 開始 Phase 16 Sprint 62 - Core Architecture & Adaptive Layout
+- Phase 16 目標：建立生產級的統一 Agentic 對話視窗
+- 預計完成時間：4 Sprints (~2 週)
+
+**Phase 16 關鍵特性**:
+- 自適應佈局（Chat Mode 全寬 / Workflow Mode 側邊面板）
+- 智能模式切換（自動檢測 + 手動覆蓋）
+- 分層審批系統（低風險內嵌 / 高風險彈窗）
+- 進階指標顯示（Token、Checkpoint、風險、時間）
