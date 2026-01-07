@@ -22,11 +22,14 @@ Phase 15 專注於整合 **AG-UI (Agent-User Interface)** 協議，這是由 Cop
 
 | Sprint | 名稱 | Story Points | 狀態 |
 |--------|------|--------------|------|
-| [Sprint 58](./sprint-58-plan.md) | AG-UI Core Infrastructure | 30 點 | 📋 計劃中 |
-| [Sprint 59](./sprint-59-plan.md) | AG-UI Basic Features (1-4) | 28 點 | 📋 計劃中 |
-| [Sprint 60](./sprint-60-plan.md) | AG-UI Advanced Features (5-7) & Integration | 27 點 | 📋 計劃中 |
+| [Sprint 58](./sprint-58-plan.md) | AG-UI Core Infrastructure | 30 點 | ✅ 完成 |
+| [Sprint 59](./sprint-59-plan.md) | AG-UI Basic Features (1-4) | 28 點 | ✅ 完成 |
+| [Sprint 60](./sprint-60-plan.md) | AG-UI Advanced Features (5-7) & Integration | 27 點 | ✅ 完成 |
+| [Sprint 61](./sprint-61-plan.md) | AG-UI Frontend Integration & E2E Testing | 38 點 | 🔄 進行中 |
 
-**總計**: 85 Story Points
+**後端總計**: 85 Story Points ✅
+**前端補充**: 38 Story Points (Sprint 61)
+**Phase 15 總計**: 123 Story Points
 
 ## AG-UI 7 大核心功能
 

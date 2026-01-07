@@ -12,10 +12,8 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import type {
   PredictionResult,
   PredictionStatus,
-  PredictionType,
   PredictionConfig,
   OptimisticUpdateRequest,
-  OptimisticState,
   DiffOperation,
 } from '@/types/ag-ui';
 

@@ -304,3 +304,96 @@ export interface CustomEvent extends BaseAGUIEvent {
   eventName: string;
   payload: Record<string, unknown>;
 }
+
+// =============================================================================
+// useAGUI Hook Types (Sprint 60+)
+// =============================================================================
+
+/** Message Role */
+export type MessageRole = 'user' | 'assistant' | 'system' | 'tool';
+
+/** Chat Message */
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
+  content: string;
+  timestamp: string;
+  toolCalls?: ToolCallState[];
+  metadata?: Record<string, unknown>;
+}
+
+/** Tool Call Status */
+export type ToolCallStatus =
+  | 'pending'
+  | 'executing'
+  | 'completed'
+  | 'failed'
+  | 'requires_approval'
+  | 'approved'
+  | 'rejected';
+
+/** Tool Call State */
+export interface ToolCallState {
+  id: string;
+  toolCallId: string;
+  name: string;
+  arguments: Record<string, unknown>;
+  status: ToolCallStatus;
+  result?: unknown;
+  error?: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
+/** Risk Level */
+export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+/** Pending Approval */
+export interface PendingApproval {
+  approvalId: string;
+  toolCallId: string;
+  toolName: string;
+  arguments: Record<string, unknown>;
+  riskLevel: RiskLevel;
+  riskScore: number;
+  reasoning: string;
+  runId?: string;
+  sessionId?: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+/** Tool Definition */
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+/** Run Agent Input */
+export interface RunAgentInput {
+  prompt?: string;
+  threadId: string;
+  runId?: string;
+  sessionId?: string;
+  mode?: 'auto' | 'workflow' | 'chat' | 'hybrid';
+  tools?: ToolDefinition[];
+  maxTokens?: number;
+  timeout?: number;
+  metadata?: Record<string, unknown>;
+}
+
+/** SSE Connection Status */
+export type SSEConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+/** Run Status */
+export type RunStatus = 'idle' | 'running' | 'completed' | 'error' | 'cancelled';
+
+/** AG-UI Run State */
+export interface AGUIRunState {
+  runId: string | null;
+  status: RunStatus;
+  error?: string;
+  startedAt?: string;
+  finishedAt?: string;
+}

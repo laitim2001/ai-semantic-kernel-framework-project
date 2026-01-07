@@ -3,6 +3,7 @@
 // =============================================================================
 // Sprint 5: Frontend UI - App Shell
 // Sprint 12: S12-4 UI Integration - Added Performance Monitoring
+// Sprint 61: AG-UI Demo Page Route
 //
 // Root application component with routing configuration.
 //
@@ -25,10 +26,14 @@ import { EditAgentPage } from '@/pages/agents/EditAgentPage';
 import { ApprovalsPage } from '@/pages/approvals/ApprovalsPage';
 import { AuditPage } from '@/pages/audit/AuditPage';
 import { TemplatesPage } from '@/pages/templates/TemplatesPage';
+import { AGUIDemoPage } from '@/pages/ag-ui/AGUIDemoPage';
 
 function App() {
   return (
     <Routes>
+      {/* AG-UI Demo Page (Sprint 61) - Standalone full-screen layout */}
+      <Route path="/ag-ui-demo" element={<AGUIDemoPage />} />
+
       <Route path="/" element={<AppLayout />}>
         {/* Default redirect to dashboard */}
         <Route index element={<Navigate to="/dashboard" replace />} />

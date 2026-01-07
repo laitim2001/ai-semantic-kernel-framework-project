@@ -72,6 +72,9 @@ class TestPhase(Enum):
     PHASE_10 = "phase_10_session_mode"
     PHASE_11 = "phase_11_agent_session_integration"
     PHASE_12 = "phase_12_claude_agent_sdk"
+    PHASE_13 = "phase_13_hybrid_core"
+    PHASE_14 = "phase_14_advanced_hybrid"
+    PHASE_15 = "phase_15_ag_ui_protocol"
 
 
 @dataclass

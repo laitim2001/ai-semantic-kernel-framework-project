@@ -15,7 +15,6 @@ import type {
   StateConflict,
   StateSyncStatus,
   StateSyncEvent,
-  DiffOperation,
   ConflictResolutionStrategy,
   StateVersion,
 } from '@/types/ag-ui';
@@ -36,6 +35,8 @@ export interface UseSharedStateOptions {
   autoSyncInterval?: number;
   /** Enable offline support */
   offlineSupport?: boolean;
+  /** Enable SSE connection (default: false for demo mode) */
+  enableSSE?: boolean;
   /** Callback when state changes */
   onStateChange?: (state: Record<string, unknown>) => void;
   /** Callback when sync status changes */
@@ -146,6 +147,7 @@ export function useSharedState(options: UseSharedStateOptions): UseSharedStateRe
     conflictStrategy = 'last_write_wins',
     autoSyncInterval = 0,
     offlineSupport = true,
+    enableSSE = false, // Default to false - SSE endpoint may not exist
     onStateChange,
     onSyncStatusChange,
     onConflict,
@@ -413,8 +415,15 @@ export function useSharedState(options: UseSharedStateOptions): UseSharedStateRe
     [applyDiffs, onConflict, updateSyncStatus]
   );
 
-  // Setup SSE connection
+  // Setup SSE connection (only if enabled)
   useEffect(() => {
+    // Skip SSE connection if not enabled
+    if (!enableSSE) {
+      // Set initial state as synced for local-only mode
+      updateSyncStatus('synced');
+      return;
+    }
+
     const eventSource = new EventSource(`${sseEndpoint}?sessionId=${sessionId}`);
     eventSourceRef.current = eventSource;
 
@@ -441,7 +450,7 @@ export function useSharedState(options: UseSharedStateOptions): UseSharedStateRe
       eventSource.close();
       eventSourceRef.current = null;
     };
-  }, [sessionId, sseEndpoint, handleSSEEvent, updateSyncStatus]);
+  }, [sessionId, sseEndpoint, enableSSE, handleSSEEvent, updateSyncStatus]);
 
   // Setup auto-sync interval
   useEffect(() => {

@@ -103,6 +103,25 @@ def is_port_available(port: int) -> bool:
             return False
 
 
+def is_process_alive(pid: int) -> bool:
+    """Check if a process with given PID is actually running."""
+    if sys.platform == 'win32':
+        try:
+            result = subprocess.run(
+                ['tasklist', '/FI', f'PID eq {pid}', '/NH'],
+                capture_output=True, text=True, timeout=5, shell=True
+            )
+            return str(pid) in result.stdout
+        except Exception:
+            return False
+    else:
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+
+
 def find_process_on_port(port: int) -> List[int]:
     """Find process IDs using the specified port (supports IPv4 and IPv6)."""
     pids = []
@@ -129,7 +148,10 @@ def find_process_on_port(port: int) -> List[int]:
                         addr_port = local_addr.rsplit(':', 1)[-1]
                         if addr_port == port_str:
                             try:
-                                pids.append(int(parts[-1]))
+                                pid = int(parts[-1])
+                                # Verify process actually exists (netstat can show stale PIDs)
+                                if is_process_alive(pid):
+                                    pids.append(pid)
                             except ValueError:
                                 pass
         except subprocess.TimeoutExpired:
@@ -150,13 +172,35 @@ def find_process_on_port(port: int) -> List[int]:
 
 def kill_process(pid: int, force: bool = False) -> bool:
     """Terminate a process by PID."""
+    # First check if process actually exists
+    if not is_process_alive(pid):
+        return True  # Already dead
+
     try:
         if sys.platform == 'win32':
+            # Try taskkill first
             args = ['taskkill', '/PID', str(pid)]
             if force:
                 args.insert(1, '/F')
-            result = subprocess.run(args, capture_output=True, timeout=10)
-            return result.returncode == 0
+            result = subprocess.run(args, capture_output=True, timeout=10, shell=True)
+
+            if result.returncode == 0:
+                return True
+
+            # Fallback to PowerShell Stop-Process (more reliable)
+            if force:
+                ps_cmd = f'Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue'
+            else:
+                ps_cmd = f'Stop-Process -Id {pid} -ErrorAction SilentlyContinue'
+
+            result = subprocess.run(
+                ['powershell', '-Command', ps_cmd],
+                capture_output=True, timeout=10
+            )
+
+            # Verify process is gone
+            time.sleep(0.5)
+            return not is_process_alive(pid)
         else:
             sig = signal.SIGKILL if force else signal.SIGTERM
             os.kill(pid, sig)

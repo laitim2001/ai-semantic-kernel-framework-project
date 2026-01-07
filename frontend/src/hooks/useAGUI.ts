@@ -274,21 +274,27 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
   const updateCurrentMessage = useCallback((delta: string) => {
     if (!currentMessageRef.current) {
       // Create new assistant message
-      currentMessageRef.current = {
+      const newMessage: ChatMessage = {
         id: generateMessageId(),
         role: 'assistant',
         content: '',
         timestamp: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, currentMessageRef.current!]);
+      currentMessageRef.current = newMessage;
+      setMessages((prev) => [...prev, newMessage]);
     }
 
     // Update content with delta
     currentMessageRef.current.content += delta;
+
+    // Capture current values before setState callback (async safety)
+    const messageId = currentMessageRef.current.id;
+    const newContent = currentMessageRef.current.content;
+
     setMessages((prev) =>
       prev.map((m) =>
-        m.id === currentMessageRef.current!.id
-          ? { ...m, content: currentMessageRef.current!.content }
+        m.id === messageId
+          ? { ...m, content: newContent }
           : m
       )
     );
@@ -531,16 +537,18 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
           onRunComplete?.(false, data.error as string);
           break;
 
-        case 'TEXT_MESSAGE_START':
+        case 'TEXT_MESSAGE_START': {
           // Initialize new message
-          currentMessageRef.current = {
+          const newMessage: ChatMessage = {
             id: data.message_id as string || generateMessageId(),
             role: (data.role as MessageRole) || 'assistant',
             content: '',
             timestamp: data.timestamp as string || new Date().toISOString(),
           };
-          setMessages((prev) => [...prev, currentMessageRef.current!]);
+          currentMessageRef.current = newMessage;
+          setMessages((prev) => [...prev, newMessage]);
           break;
+        }
 
         case 'TEXT_MESSAGE_CONTENT':
           updateCurrentMessage(data.delta as string || '');
@@ -655,16 +663,32 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
       // Create abort controller for this run
       abortControllerRef.current = new AbortController();
 
+      // Build messages array - include prompt as user message if provided
+      const messagesPayload = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      // If prompt is provided and not already in messages, add it as user message
+      if (input?.prompt) {
+        const hasPromptInMessages = messagesPayload.some(
+          (m) => m.role === 'user' && m.content === input.prompt
+        );
+        if (!hasPromptInMessages) {
+          messagesPayload.push({
+            role: 'user',
+            content: input.prompt,
+          });
+        }
+      }
+
       // Build request payload
       const payload = {
         thread_id: threadId,
         run_id: input?.runId || runState.runId || generateRunId(),
         session_id: sessionId,
         mode: input?.mode || mode,
-        messages: messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        messages: messagesPayload,
         tools: (input?.tools || tools).map((t) => ({
           name: t.name,
           description: t.description,
