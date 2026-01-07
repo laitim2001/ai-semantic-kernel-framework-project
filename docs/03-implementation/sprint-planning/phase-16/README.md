@@ -111,13 +111,13 @@ frontend/src/
 
 ## Sprint Overview
 
-| Sprint | Focus | Story Points |
-|--------|-------|--------------|
-| **Sprint 62** | Core Architecture & Adaptive Layout | ~30 pts |
-| **Sprint 63** | Mode Switching & State Management | ~25 pts |
-| **Sprint 64** | Approval Flow & Risk Indicators | ~25 pts |
-| **Sprint 65** | Metrics, Checkpoints & Polish | ~20 pts |
-| **Total** | | **~100 pts** |
+| Sprint | Focus | Story Points | Status | Documents |
+|--------|-------|--------------|--------|-----------|
+| **Sprint 62** | Core Architecture & Adaptive Layout | 30 pts | ✅ Complete | [Plan](sprint-62-plan.md) / [Checklist](sprint-62-checklist.md) |
+| **Sprint 63** | Mode Switching & State Management | 25 pts | ⏳ Planning | [Plan](sprint-63-plan.md) / [Checklist](sprint-63-checklist.md) |
+| **Sprint 64** | Approval Flow & Risk Indicators | 25 pts | ⏳ Planning | [Plan](sprint-64-plan.md) / [Checklist](sprint-64-checklist.md) |
+| **Sprint 65** | Metrics, Checkpoints & Polish | 20 pts | ⏳ Planning | [Plan](sprint-65-plan.md) / [Checklist](sprint-65-checklist.md) |
+| **Total** | | **100 pts** | | |
 
 ## Technology Stack
 
