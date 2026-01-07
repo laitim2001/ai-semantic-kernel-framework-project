@@ -42,22 +42,34 @@ def get_pid_file(port: int) -> Path:
 
 
 def find_process_on_port(port: int) -> List[int]:
-    """Find process IDs using the specified port."""
+    """Find process IDs using the specified port (supports IPv4 and IPv6)."""
     pids = []
     if sys.platform == 'win32':
         try:
+            # Use netstat -ano without -p flag (Windows syntax differs from Linux)
             result = subprocess.run(
-                ['netstat', '-ano', '-p', 'tcp'],
+                ['netstat', '-ano'],
                 capture_output=True, text=True, timeout=10
             )
+            port_str = str(port)
             for line in result.stdout.split('\n'):
-                if f':{port}' in line and 'LISTENING' in line:
-                    parts = line.split()
-                    if parts:
-                        try:
-                            pids.append(int(parts[-1]))
-                        except ValueError:
-                            pass
+                # Only check TCP LISTENING lines
+                if 'LISTENING' not in line or 'TCP' not in line:
+                    continue
+                # Match patterns like:
+                # "  TCP    0.0.0.0:8000           0.0.0.0:0              LISTENING       12345"
+                # "  TCP    [::1]:3005             [::]:0                 LISTENING       12345"
+                parts = line.split()
+                if len(parts) >= 5:
+                    local_addr = parts[1]  # e.g., "0.0.0.0:8000" or "[::1]:3005"
+                    # Extract port from address
+                    if ':' in local_addr:
+                        addr_port = local_addr.rsplit(':', 1)[-1]
+                        if addr_port == port_str:
+                            try:
+                                pids.append(int(parts[-1]))
+                            except ValueError:
+                                pass
         except subprocess.TimeoutExpired:
             print("  Warning: netstat timed out")
     else:

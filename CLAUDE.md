@@ -38,10 +38,70 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 
 ## Development Commands
 
-### Local Development
+### 🔥 統一開發環境管理 (推薦)
+
+本專案提供統一的開發環境管理腳本 `scripts/dev.py`，可以一次性管理所有服務：
 
 ```bash
-# Start all services (PostgreSQL, Redis, RabbitMQ, n8n)
+# 查看所有服務狀態
+python scripts/dev.py status
+
+# 啟動所有服務 (Docker + Backend + Frontend)
+python scripts/dev.py start
+
+# 啟動單一服務
+python scripts/dev.py start docker      # 只啟動 Docker 服務
+python scripts/dev.py start backend     # 只啟動 Backend
+python scripts/dev.py start frontend    # 只啟動 Frontend
+
+# 停止服務
+python scripts/dev.py stop              # 停止所有服務
+python scripts/dev.py stop backend      # 只停止 Backend
+
+# 重啟服務
+python scripts/dev.py restart backend   # 重啟 Backend
+
+# 查看日誌
+python scripts/dev.py logs postgres     # 查看 PostgreSQL 日誌
+python scripts/dev.py logs docker -f    # 追蹤所有 Docker 日誌
+
+# 帶監控服務啟動 (Jaeger, Prometheus, Grafana)
+python scripts/dev.py start docker --monitoring
+```
+
+**首次啟動開發環境 (Quick Start)**：
+```bash
+python scripts/dev.py start             # 一鍵啟動所有服務
+# 或分步啟動：
+python scripts/dev.py start docker      # 1. 先啟動資料庫
+python scripts/dev.py start backend     # 2. 再啟動 API
+python scripts/dev.py start frontend    # 3. 最後啟動前端 (可選)
+```
+
+**服務端口配置**：
+| 服務 | 默認端口 | 說明 |
+|------|----------|------|
+| Backend | 8000 | FastAPI/Uvicorn |
+| Frontend | 3005 | Vite Dev Server |
+| PostgreSQL | 5432 | 資料庫 |
+| Redis | 6379 | 緩存 |
+| RabbitMQ | 5672 | 消息隊列 |
+| RabbitMQ UI | 15672 | 管理界面 |
+
+**自定義端口**：
+```bash
+python scripts/dev.py start backend --backend-port 8080
+python scripts/dev.py start frontend --frontend-port 3000
+```
+
+### 傳統方式 (Manual)
+
+如果需要更精細的控制，也可以使用傳統方式：
+
+#### Docker 服務
+
+```bash
+# Start all services (PostgreSQL, Redis, RabbitMQ)
 docker-compose up -d
 
 # Check health
@@ -51,13 +111,18 @@ curl http://localhost:8000/health
 docker-compose down -v
 ```
 
-### Backend (Python FastAPI)
+#### Backend (Python FastAPI)
 
 ```bash
 cd backend/
 
-# Run backend
+# Run backend (傳統方式)
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# 或使用專用腳本 (解決 Windows 端口問題)
+python scripts/dev_server.py start [port]
+python scripts/dev_server.py stop [port]
+python scripts/dev_server.py status [port]
 
 # Code Quality
 black .                              # Format
@@ -72,7 +137,7 @@ pytest tests/unit/test_agent_service.py::test_function  # Single test
 pytest -v --cov=src                  # With coverage
 ```
 
-### Frontend (React/TypeScript)
+#### Frontend (React/TypeScript)
 
 ```bash
 cd frontend/
@@ -87,7 +152,7 @@ npm run dev
 npm run build
 ```
 
-### Database
+#### Database
 
 ```bash
 # Connect to PostgreSQL
@@ -97,6 +162,14 @@ docker-compose exec postgres psql -U ipa_user -d ipa_platform
 alembic upgrade head
 alembic revision --autogenerate -m "description"
 ```
+
+### Windows 端口問題解決方案
+
+Windows 上 uvicorn 重啟時常遇到端口被佔用問題（TIME_WAIT 狀態），使用 `scripts/dev.py` 可以自動處理：
+- 啟動前自動清理舊進程
+- 智能端口選擇（如果被佔用自動選備用端口）
+- PID 文件管理，支持優雅關閉
+- 優雅關閉超時後強制終止
 
 ---
 
