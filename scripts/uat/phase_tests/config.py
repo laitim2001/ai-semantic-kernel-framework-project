@@ -226,4 +226,50 @@ API_ENDPOINTS = {
         "checkpoint_compare": "/hitl/checkpoint/compare",
         "checkpoint_versions": "/hitl/checkpoint/{checkpoint_id}/versions",
     },
+
+    # Phase 15: AG-UI Protocol Integration
+    "ag_ui": {
+        # SSE Main endpoint
+        "sse_stream": "/ag-ui",
+
+        # Tool approvals
+        "tool_approve": "/ag-ui/tool-calls/{tool_call_id}/approve",
+        "tool_reject": "/ag-ui/tool-calls/{tool_call_id}/reject",
+
+        # Pending approvals
+        "pending_approvals": "/ag-ui/sessions/{session_id}/pending-approvals",
+
+        # Checkpoints
+        "checkpoints": "/ag-ui/checkpoints",
+        "checkpoint_restore": "/ag-ui/checkpoints/{checkpoint_id}/restore",
+
+        # State sync
+        "state_sync": "/ag-ui/state/{session_id}/sync",
+        "state_stream": "/ag-ui/state/stream",
+    },
+
+    # Phase 16: Unified Agentic Chat Interface
+    "unified_chat": {
+        # SSE 主端點
+        "sse_stream": "/ag-ui",
+
+        # 消息操作
+        "send_message": "/ag-ui",
+
+        # 工具審批
+        "tool_approve": "/ag-ui/tool-calls/{tool_call_id}/approve",
+        "tool_reject": "/ag-ui/tool-calls/{tool_call_id}/reject",
+        "pending_approvals": "/ag-ui/sessions/{session_id}/pending-approvals",
+
+        # 檢查點
+        "checkpoints_list": "/ag-ui/checkpoints",
+        "checkpoint_restore": "/ag-ui/checkpoints/{checkpoint_id}/restore",
+
+        # 模式檢測
+        "analyze_intent": "/hybrid/analyze",
+
+        # 狀態同步
+        "state_sync": "/ag-ui/state/{session_id}/sync",
+        "state_stream": "/ag-ui/state/stream",
+    },
 }
