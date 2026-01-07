@@ -168,6 +168,53 @@ const {
 
 ---
 
+## S65-5: CustomUIRenderer Integration (4 pts) 🆕
+
+### Files Modified
+- [ ] `frontend/src/components/unified-chat/MessageList.tsx` - Integrate renderer
+- [ ] `frontend/src/hooks/useUnifiedChat.ts` - Handle UI events
+
+### Implementation Checklist
+- [ ] Import `CustomUIRenderer` from AG-UI components
+- [ ] Add `customUI` field to ChatMessage type
+- [ ] Handle `CUSTOM` events with `RENDER_UI` payload
+- [ ] Conditionally render CustomUIRenderer or MessageBubble
+- [ ] Implement `handleFormSubmit()` callback
+- [ ] Implement `handleUIAction()` callback
+- [ ] Loading state for dynamic UI
+- [ ] Error handling for failed UI render
+
+### Supported UI Components
+- [ ] DynamicForm - Form rendering and submission
+- [ ] DynamicChart - Data visualization (line, bar, pie)
+- [ ] DynamicTable - Tabular data display
+- [ ] Card - Simple content card with actions
+
+### Verification Steps
+```typescript
+// Test CUSTOM event with UI payload
+const uiEvent = {
+  type: 'CUSTOM',
+  payload: {
+    type: 'RENDER_UI',
+    messageId: 'msg-1',
+    component: {
+      type: 'form',
+      schema: { /* form schema */ },
+      onSubmit: 'submit_action_id',
+    },
+  },
+};
+```
+- [ ] Form renders correctly within message
+- [ ] Form submission triggers callback
+- [ ] Chart renders with provided data
+- [ ] Table displays columns and rows
+- [ ] Error boundary catches render failures
+- [ ] Loading spinner shows during component load
+
+---
+
 ## Integration Tests
 
 ### Metrics Display
@@ -240,7 +287,7 @@ const {
 
 ## Definition of Done
 
-- [ ] All 4 stories completed
+- [ ] All 5 stories completed
 - [ ] Manual testing passed
 - [ ] TypeScript compilation succeeds
 - [ ] ESLint passes
@@ -257,10 +304,11 @@ const {
 | S65-2 Complete | ⬜ | | |
 | S65-3 Complete | ⬜ | | |
 | S65-4 Complete | ⬜ | | |
+| S65-5 Complete | ⬜ | | 🆕 CustomUIRenderer |
 | Integration Tested | ⬜ | | |
 | Sprint Complete | ⬜ | | |
 
-**Total Points**: 20 pts
+**Total Points**: 24 pts (Enhanced with Tool-based Generative UI integration)
 **Completion Date**: TBD
 
 ---
@@ -270,10 +318,17 @@ const {
 | Sprint | Points | Status | Date |
 |--------|--------|--------|------|
 | Sprint 62 | 30 pts | ✅ Complete | 2026-01-07 |
-| Sprint 63 | 25 pts | ⬜ | |
-| Sprint 64 | 25 pts | ⬜ | |
-| Sprint 65 | 20 pts | ⬜ | |
-| **Phase 16 Total** | **100 pts** | ⬜ | |
+| Sprint 63 | 30 pts | ⬜ | |
+| Sprint 64 | 29 pts | ⬜ | |
+| Sprint 65 | 24 pts | ⬜ | |
+| **Phase 16 Total** | **113 pts** | ⬜ | |
 
 **Phase 16 Complete**: ⬜
 **Phase Completion Date**: TBD
+
+---
+
+**Enhancement Summary (AG-UI Integration)**:
+- Sprint 63: +5 pts (STATE_SNAPSHOT/DELTA, Optimistic Updates, Mode Switch Reason)
+- Sprint 64: +4 pts (RiskIndicator Tooltip, Mode Switch Confirm Dialog)
+- Sprint 65: +4 pts (CustomUIRenderer Integration)

@@ -7,7 +7,7 @@
 | **Sprint Number** | 65 |
 | **Phase** | 16 - Unified Agentic Chat Interface |
 | **Duration** | 2-3 days |
-| **Total Points** | 20 |
+| **Total Points** | 24 |
 | **Focus** | Execution metrics, checkpoint integration, and UI polish |
 
 ## Sprint Goals
@@ -16,6 +16,7 @@
 2. Integrate checkpoint save/restore functionality
 3. Add robust error handling and recovery
 4. Polish UI with animations and accessibility improvements
+5. **🆕 Integrate CustomUIRenderer** for dynamic UI components from AG-UI
 
 ## Prerequisites
 
@@ -228,6 +229,76 @@ const prefersReducedMotion = window.matchMedia(
 
 ---
 
+### S65-5: CustomUIRenderer Integration (4 pts) 🆕
+
+**Description**: Integrate Phase 15's CustomUIRenderer component to support dynamic Tool-based Generative UI (AG-UI Feature 5) in the unified chat interface.
+
+**Acceptance Criteria**:
+- [ ] Import and integrate `CustomUIRenderer` from AG-UI components
+- [ ] Handle `CUSTOM` events with UI component payloads
+- [ ] Support rendering DynamicForm, DynamicChart, DynamicTable
+- [ ] Pass form submissions back to backend via AG-UI protocol
+- [ ] Handle loading and error states for dynamic UI
+
+**Technical Details**:
+```typescript
+// Message with custom UI component
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'tool';
+  content?: string;
+  customUI?: CustomUIComponent;  // 🆕 Dynamic UI from AG-UI
+  toolCall?: ToolCallInfo;
+}
+
+// CustomUI types from Phase 15
+type CustomUIComponent =
+  | { type: 'form'; schema: FormSchema; onSubmit: string }
+  | { type: 'chart'; data: ChartData; config: ChartConfig }
+  | { type: 'table'; columns: Column[]; data: Row[] }
+  | { type: 'card'; title: string; content: string; actions?: Action[] };
+
+// Render message content with dynamic UI support
+const renderMessageContent = (message: ChatMessage) => {
+  // Check for custom UI component
+  if (message.customUI) {
+    return (
+      <CustomUIRenderer
+        component={message.customUI}
+        onFormSubmit={(data) => handleFormSubmit(message.id, data)}
+        onAction={(action) => handleUIAction(message.id, action)}
+      />
+    );
+  }
+
+  // Standard message bubble
+  return <MessageBubble message={message} />;
+};
+
+// Handle CUSTOM event with UI payload
+const handleCustomEvent = (event: CustomAGUIEvent) => {
+  if (event.payload.type === 'RENDER_UI') {
+    const { messageId, component } = event.payload;
+    updateMessage(messageId, { customUI: component });
+  }
+};
+```
+
+**Files to Modify**:
+- `frontend/src/components/unified-chat/MessageList.tsx` - Integrate CustomUIRenderer
+- `frontend/src/hooks/useUnifiedChat.ts` - Handle CUSTOM events with UI payloads
+
+**Component Integration**:
+```typescript
+// Import from Phase 15 AG-UI components
+import { CustomUIRenderer } from '@/components/ag-ui/advanced/CustomUIRenderer';
+import { DynamicForm } from '@/components/ag-ui/advanced/DynamicForm';
+import { DynamicChart } from '@/components/ag-ui/advanced/DynamicChart';
+import { DynamicTable } from '@/components/ag-ui/advanced/DynamicTable';
+```
+
+---
+
 ## Technical Notes
 
 ### Token Tracking from AG-UI Events
@@ -313,13 +384,14 @@ const motionConfig = {
 
 ## Definition of Done
 
-- [ ] All 4 stories completed and tested
+- [ ] All 5 stories completed and tested
 - [ ] Metrics display correctly in StatusBar
 - [ ] Checkpoint restore works end-to-end
 - [ ] Reconnection handles network issues
 - [ ] Animations smooth and optional
 - [ ] Keyboard navigation complete
 - [ ] Accessibility audit passed
+- [ ] **🆕 CustomUIRenderer** displays forms, charts, tables correctly
 
 ---
 
@@ -358,5 +430,5 @@ After Sprint 65, Phase 16 should achieve:
 
 ## Sprint Velocity Reference
 
-Final sprint with polish work.
-Expected completion: 2-3 days for 20 pts
+Final sprint with polish work and CustomUIRenderer integration.
+Expected completion: 2-3 days for 24 pts (enhanced with Tool-based Generative UI integration)

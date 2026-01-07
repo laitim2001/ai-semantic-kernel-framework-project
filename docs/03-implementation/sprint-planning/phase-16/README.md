@@ -114,10 +114,21 @@ frontend/src/
 | Sprint | Focus | Story Points | Status | Documents |
 |--------|-------|--------------|--------|-----------|
 | **Sprint 62** | Core Architecture & Adaptive Layout | 30 pts | ✅ Complete | [Plan](sprint-62-plan.md) / [Checklist](sprint-62-checklist.md) |
-| **Sprint 63** | Mode Switching & State Management | 25 pts | ⏳ Planning | [Plan](sprint-63-plan.md) / [Checklist](sprint-63-checklist.md) |
-| **Sprint 64** | Approval Flow & Risk Indicators | 25 pts | ⏳ Planning | [Plan](sprint-64-plan.md) / [Checklist](sprint-64-checklist.md) |
-| **Sprint 65** | Metrics, Checkpoints & Polish | 20 pts | ⏳ Planning | [Plan](sprint-65-plan.md) / [Checklist](sprint-65-checklist.md) |
-| **Total** | | **100 pts** | | |
+| **Sprint 63** | Mode Switching & State Management | 30 pts ⬆️ | ⏳ Planning | [Plan](sprint-63-plan.md) / [Checklist](sprint-63-checklist.md) |
+| **Sprint 64** | Approval Flow & Risk Indicators | 29 pts ⬆️ | ⏳ Planning | [Plan](sprint-64-plan.md) / [Checklist](sprint-64-checklist.md) |
+| **Sprint 65** | Metrics, Checkpoints & Polish | 24 pts ⬆️ | ⏳ Planning | [Plan](sprint-65-plan.md) / [Checklist](sprint-65-checklist.md) |
+| **Total** | | **113 pts** | | |
+
+### Enhancement Summary (AG-UI Full Integration)
+
+Phase 16 規劃已增強以完整整合 AG-UI 7 大功能和 Phase 13-14 組件：
+
+| 增強項目 | 點數 | 說明 |
+|----------|------|------|
+| Sprint 63 增強 | +5 pts | STATE_SNAPSHOT/DELTA 處理、樂觀更新、模式切換原因顯示 |
+| Sprint 64 增強 | +4 pts | RiskIndicator 詳情 Tooltip、ModeSwitchConfirmDialog |
+| Sprint 65 增強 | +4 pts | CustomUIRenderer 整合 (Tool-based Generative UI) |
+| **總增量** | **+13 pts** | AG-UI 功能覆蓋率: 71% → 100% |
 
 ## Technology Stack
 
@@ -171,3 +182,4 @@ frontend/src/
 **Phase Status**: Planning
 **Start Date**: TBD (After Phase 15 completion)
 **Estimated Duration**: 4 sprints (~2 weeks)
+**Total Story Points**: 113 pts (Enhanced with full AG-UI integration)

@@ -7,7 +7,7 @@
 | **Sprint Number** | 64 |
 | **Phase** | 16 - Unified Agentic Chat Interface |
 | **Duration** | 3-4 days |
-| **Total Points** | 25 |
+| **Total Points** | 29 |
 | **Focus** | HITL approval workflows and risk visualization |
 
 ## Sprint Goals
@@ -28,9 +28,9 @@
 
 ## Stories
 
-### S64-1: useApprovalFlow Hook (8 pts)
+### S64-1: useApprovalFlow Hook (10 pts) ⬆️ Enhanced
 
-**Description**: Create a dedicated hook for managing approval state, handling approval requests, and coordinating with the backend.
+**Description**: Create a dedicated hook for managing approval state, handling approval requests, coordinating with the backend, and handling mode switch confirmations.
 
 **Acceptance Criteria**:
 - [ ] Create `useApprovalFlow` hook
@@ -40,6 +40,8 @@
 - [ ] Implement `reject()` function with reason
 - [ ] Handle approval timeouts
 - [ ] Integrate with AG-UI events
+- [ ] **🆕 Mode switch confirmation**: Confirm automatic mode switches
+- [ ] **🆕 Mode switch dialog**: Show ModeSwitchConfirmDialog for complex switches
 
 **Technical Details**:
 ```typescript
@@ -73,10 +75,42 @@ interface PendingApproval {
 
 **Files to Create**:
 - `frontend/src/hooks/useApprovalFlow.ts`
+- `frontend/src/components/unified-chat/ModeSwitchConfirmDialog.tsx` - 🆕
 
 **Dependencies**:
 - AG-UI `TOOL_CALL_START` events with approval requirement
 - Backend approval API endpoints
+
+**🆕 Mode Switch Confirmation**:
+```typescript
+// ModeSwitchConfirmDialog for complex mode switches
+interface ModeSwitchConfirmProps {
+  from: ExecutionMode;
+  to: ExecutionMode;
+  reason: string;
+  confidence: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+  open: boolean;
+}
+
+// Trigger confirmation for significant mode switches
+const handleModeSwitch = (event: ModeDetectionPayload) => {
+  // Auto-accept high-confidence simple switches
+  if (event.confidence >= 0.9 && !event.isComplexSwitch) {
+    acceptModeSwitch(event.mode);
+    return;
+  }
+
+  // Require confirmation for complex or lower-confidence switches
+  setModeSwitchPending({
+    from: currentMode,
+    to: event.mode,
+    reason: event.reason,
+    confidence: event.confidence,
+  });
+};
+```
 
 ---
 
@@ -127,9 +161,9 @@ ApprovalDialog/
 
 ---
 
-### S64-3: Risk Indicator System (5 pts)
+### S64-3: Risk Indicator System (7 pts) ⬆️ Enhanced
 
-**Description**: Implement comprehensive risk visualization across the interface.
+**Description**: Implement comprehensive risk visualization across the interface with detailed risk factor information.
 
 **Acceptance Criteria**:
 - [ ] Create `RiskIndicator` component for StatusBar
@@ -138,6 +172,8 @@ ApprovalDialog/
 - [ ] Tooltip with risk details
 - [ ] Animate on risk level change
 - [ ] Support different sizes (sm, md, lg)
+- [ ] **🆕 Display risk factors**: List of specific risk factors from RiskAssessmentEngine
+- [ ] **🆕 Display reasoning**: Explanation of why this risk level was assigned
 
 **Technical Details**:
 ```typescript
@@ -170,6 +206,67 @@ const riskColors: Record<RiskLevel, string> = {
 - Medium: Yellow dot, "Medium" text
 - High: Orange dot with pulse animation, "High" text
 - Critical: Red dot with strong pulse, "Critical!" text
+
+**🆕 Enhanced RiskIndicator with Detailed Tooltip**:
+```typescript
+interface RiskIndicatorProps {
+  level: RiskLevel;
+  score: number;
+  factors?: string[];       // 🆕 Risk factors from backend
+  reasoning?: string;       // 🆕 Risk assessment reasoning
+  size?: 'sm' | 'md' | 'lg';
+  showScore?: boolean;
+  showTooltip?: boolean;
+}
+
+// RiskIndicator with detailed tooltip
+const RiskIndicator: FC<RiskIndicatorProps> = ({
+  level,
+  score,
+  factors = [],
+  reasoning,
+  size = 'md',
+  showTooltip = true,
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <div className={cn("flex items-center gap-1", sizeClasses[size])}>
+        <span className={cn("rounded-full", riskColors[level], pulseClasses[level])} />
+        <span className="capitalize">{level}</span>
+        {showScore && <span className="text-muted-foreground">({score})</span>}
+      </div>
+    </TooltipTrigger>
+    {showTooltip && (
+      <TooltipContent className="max-w-xs">
+        <div className="space-y-2">
+          <div className="font-medium">Risk Assessment: {level.toUpperCase()}</div>
+          <div className="text-sm">Score: {score}/100</div>
+
+          {/* 🆕 Risk Factors */}
+          {factors.length > 0 && (
+            <div>
+              <p className="text-sm font-medium">Risk Factors:</p>
+              <ul className="text-sm text-muted-foreground list-disc list-inside">
+                {factors.map((factor, i) => (
+                  <li key={i}>{factor}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* 🆕 Reasoning */}
+          {reasoning && (
+            <div>
+              <p className="text-sm font-medium">Assessment Reasoning:</p>
+              <p className="text-sm text-muted-foreground">{reasoning}</p>
+            </div>
+          )}
+        </div>
+      </TooltipContent>
+    )}
+  </Tooltip>
+);
+```
 
 ---
 
@@ -323,4 +420,4 @@ const ApprovalTimeout: FC<{ timeoutAt: string }> = ({ timeoutAt }) => {
 ## Sprint Velocity Reference
 
 Based on previous sprints: ~8-10 pts/day
-Expected completion: 3 days for 25 pts
+Expected completion: 3-4 days for 29 pts (enhanced with Risk Detail and Mode Switch Confirmation)

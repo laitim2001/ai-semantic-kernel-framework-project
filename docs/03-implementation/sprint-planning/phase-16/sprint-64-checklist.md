@@ -9,10 +9,11 @@
 
 ---
 
-## S64-1: useApprovalFlow Hook (8 pts)
+## S64-1: useApprovalFlow Hook (10 pts) ⬆️ Enhanced
 
 ### Files Created
 - [ ] `frontend/src/hooks/useApprovalFlow.ts`
+- [ ] `frontend/src/components/unified-chat/ModeSwitchConfirmDialog.tsx` - 🆕
 
 ### Implementation Checklist
 - [ ] Hook tracks `pendingApprovals` array
@@ -23,6 +24,10 @@
 - [ ] `dismissDialog()` function implemented
 - [ ] Timeout handling for expired approvals
 - [ ] Integration with AG-UI TOOL_CALL events
+- [ ] 🆕 Mode switch confirmation state tracking
+- [ ] 🆕 `modeSwitchPending` state for complex switches
+- [ ] 🆕 `confirmModeSwitch()` function implemented
+- [ ] 🆕 `cancelModeSwitch()` function implemented
 
 ### Hook API Verification
 ```typescript
@@ -86,7 +91,7 @@ const {
 
 ---
 
-## S64-3: Risk Indicator System (5 pts)
+## S64-3: Risk Indicator System (7 pts) ⬆️ Enhanced
 
 ### Files Created/Modified
 - [ ] `frontend/src/components/unified-chat/RiskIndicator.tsx` - New
@@ -104,17 +109,29 @@ const {
 - [ ] Size variants (sm, md, lg)
 - [ ] Pulse animation for high/critical
 - [ ] StatusBar integration
+- [ ] 🆕 Display risk factors list in tooltip
+- [ ] 🆕 Display assessment reasoning in tooltip
 
 ### Component Props Verification
 ```typescript
 <RiskIndicator
   level="high"
   score={75}
-  factors={['File deletion', 'External API call']}
+  factors={['File deletion', 'External API call']}  // 🆕
+  reasoning="Operation involves file system changes and external network calls"  // 🆕
   size="md"
   showScore={true}
   showTooltip={true}
 />
+```
+
+### 🆕 Enhanced Tooltip Content
+```typescript
+// Tooltip should display:
+// - Risk level (header)
+// - Score value
+// - Risk Factors (bullet list)
+// - Assessment Reasoning (paragraph)
 ```
 
 ### Verification Steps
@@ -125,6 +142,9 @@ const {
 - [ ] Tooltip displays on hover
 - [ ] Score displays when showScore=true
 - [ ] Different sizes render correctly
+- [ ] 🆕 Risk factors shown as bullet list in tooltip
+- [ ] 🆕 Reasoning paragraph displayed in tooltip
+- [ ] 🆕 Tooltip handles empty factors gracefully
 
 ---
 
@@ -239,5 +259,5 @@ Response: { success: true }
 | Integration Tested | ⬜ | | |
 | Sprint Complete | ⬜ | | |
 
-**Total Points**: 25 pts
+**Total Points**: 29 pts (Enhanced with Risk Detail Tooltip and Mode Switch Confirmation)
 **Completion Date**: TBD

@@ -7,7 +7,7 @@
 | **Sprint Number** | 63 |
 | **Phase** | 16 - Unified Agentic Chat Interface |
 | **Duration** | 3-4 days |
-| **Total Points** | 25 |
+| **Total Points** | 30 |
 | **Focus** | AG-UI SSE integration and real-time state management |
 
 ## Sprint Goals
@@ -72,9 +72,9 @@ interface UseUnifiedChatReturn {
 
 ---
 
-### S63-2: AG-UI Event Integration (7 pts)
+### S63-2: AG-UI Event Integration (11 pts) ⬆️ Enhanced
 
-**Description**: Implement comprehensive AG-UI event handling for all 15 event types.
+**Description**: Implement comprehensive AG-UI event handling for all 15 event types with full Shared State and Predictive State Updates support.
 
 **Acceptance Criteria**:
 - [ ] Handle lifecycle events (RUN_STARTED, RUN_FINISHED, RUN_ERROR)
@@ -82,7 +82,11 @@ interface UseUnifiedChatReturn {
 - [ ] Process tool events (TOOL_CALL_START, ARGS, END)
 - [ ] Handle state events (STATE_SNAPSHOT, STATE_DELTA, CUSTOM)
 - [ ] Update Zustand store based on events
-- [ ] Support optimistic updates
+- [ ] Support optimistic updates with version control
+- [ ] **🆕 STATE_SNAPSHOT**: Complete state replacement from backend
+- [ ] **🆕 STATE_DELTA**: Incremental state merge with conflict detection
+- [ ] **🆕 useSharedState**: Hook for bidirectional state synchronization
+- [ ] **🆕 Optimistic Concurrency**: Version-based conflict resolution
 
 **Technical Details**:
 ```typescript
@@ -114,11 +118,75 @@ const eventHandlers: Record<AGUIEventType, EventHandler> = {
 - Tools: `TOOL_CALL_START`, `TOOL_CALL_ARGS`, `TOOL_CALL_END`
 - State: `STATE_SNAPSHOT`, `STATE_DELTA`, `CUSTOM`
 
+**🆕 Shared State Implementation**:
+```typescript
+// STATE_SNAPSHOT - Complete state replacement
+const handleStateSnapshot = (event: StateSnapshotEvent) => {
+  const { state, version } = event;
+  setSharedState(state);
+  setStateVersion(version);
+  console.log(`[Shared State] Snapshot applied, version: ${version}`);
+};
+
+// STATE_DELTA - Incremental state merge with conflict detection
+const handleStateDelta = (event: StateDeltaEvent) => {
+  const { delta, version, baseVersion } = event;
+
+  // Conflict detection
+  if (baseVersion !== currentVersion) {
+    console.warn(`[Shared State] Version conflict: expected ${baseVersion}, got ${currentVersion}`);
+    // Request full snapshot on conflict
+    requestStateSnapshot();
+    return;
+  }
+
+  setSharedState(prev => ({ ...prev, ...delta }));
+  setStateVersion(version);
+};
+
+// useSharedState hook for bidirectional sync
+interface UseSharedStateReturn<T> {
+  state: T;
+  version: number;
+  updateState: (partial: Partial<T>) => Promise<void>;
+  isStale: boolean;
+}
+```
+
+**🆕 Optimistic Concurrency Control**:
+```typescript
+// Optimistic update with version tracking
+const optimisticUpdate = async <T>(
+  key: string,
+  update: Partial<T>,
+  currentVersion: number
+) => {
+  const optimisticVersion = currentVersion + 1;
+
+  // Apply optimistic update immediately
+  setOptimisticState(prev => ({ ...prev, ...update }));
+  setOptimisticVersion(optimisticVersion);
+
+  try {
+    // Send to backend
+    const result = await api.updateState(key, update, currentVersion);
+    // Backend confirms with new version
+    setConfirmedVersion(result.version);
+  } catch (error) {
+    if (error.code === 'VERSION_CONFLICT') {
+      // Rollback and request fresh state
+      rollbackOptimisticUpdate();
+      requestStateSnapshot();
+    }
+  }
+};
+```
+
 ---
 
-### S63-3: Real Mode Detection (5 pts)
+### S63-3: Real Mode Detection (6 pts) ⬆️ Enhanced
 
-**Description**: Integrate with backend IntentRouter to receive and apply mode detection results.
+**Description**: Integrate with backend IntentRouter to receive and apply mode detection results with full switch reason display.
 
 **Acceptance Criteria**:
 - [ ] Listen for `CUSTOM` events with mode detection payload
@@ -126,6 +194,8 @@ const eventHandlers: Record<AGUIEventType, EventHandler> = {
 - [ ] Respect manual override preference
 - [ ] Show mode change notification/indicator
 - [ ] Log mode changes for debugging
+- [ ] **🆕 Display switch reason**: Show why mode was automatically switched
+- [ ] **🆕 Confidence indicator**: Display confidence level for mode detection
 
 **Technical Details**:
 ```typescript
@@ -137,16 +207,59 @@ interface ModeDetectionPayload {
   reason?: string;
 }
 
+// 🆕 Enhanced ModeState with switch reason
+interface ModeState {
+  autoMode: ExecutionMode;
+  manualOverride: ExecutionMode | null;
+  switchReason: string | null;       // 🆕 Why mode was switched
+  switchConfidence: number;          // 🆕 Detection confidence (0-1)
+  lastSwitchAt: string | null;       // 🆕 Timestamp of last switch
+}
+
 // Update useHybridMode to accept external updates
 const handleModeDetection = (event: CustomAGUIEvent) => {
   if (event.payload.type === 'MODE_DETECTED') {
-    const { mode, confidence } = event.payload;
+    const { mode, confidence, reason } = event.payload;
     // Only update if confidence > threshold
     if (confidence >= 0.7) {
       setAutoMode(mode);
+      setSwitchReason(reason || null);      // 🆕 Store reason
+      setSwitchConfidence(confidence);       // 🆕 Store confidence
+      setLastSwitchAt(new Date().toISOString());
+
+      // 🆕 Show notification with reason
+      if (reason) {
+        showModeChangeNotification(mode, reason, confidence);
+      }
     }
   }
 };
+```
+
+**🆕 Mode Switch Notification UI**:
+```typescript
+// Display mode switch reason in UI
+const ModeIndicator: FC<{ mode: ModeState }> = ({ mode }) => (
+  <div className="flex items-center gap-2">
+    <Badge variant={mode.autoMode === 'workflow' ? 'default' : 'secondary'}>
+      {mode.autoMode}
+    </Badge>
+    {mode.switchReason && (
+      <Tooltip>
+        <TooltipTrigger>
+          <Info className="h-4 w-4 text-muted-foreground" />
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="space-y-1">
+            <p className="font-medium">Auto-switched to {mode.autoMode}</p>
+            <p className="text-sm text-muted-foreground">{mode.switchReason}</p>
+            <p className="text-xs">Confidence: {(mode.switchConfidence * 100).toFixed(0)}%</p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    )}
+  </div>
+);
 ```
 
 **Files to Modify**:
@@ -294,4 +407,4 @@ const sendMessage = async (content: string) => {
 ## Sprint Velocity Reference
 
 Based on Sprint 62: 30 pts completed in ~3 days
-Expected completion: 3 days for 25 pts
+Expected completion: 3-4 days for 30 pts (enhanced with AG-UI Shared State integration)
