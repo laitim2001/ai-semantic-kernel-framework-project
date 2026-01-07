@@ -299,3 +299,27 @@ class HybridOrchestratorV2:
 
 **Phase 13 開始時間**: 待 Phase 12 完成
 **預估完成時間**: 3 週 (3 Sprints)
+
+---
+
+## Hotfix 記錄
+
+### 2026-01-07: LLM 連接修復
+
+**問題**: API 路由層 `core_routes.py` 中的 `get_orchestrator()` 沒有傳入 `claude_executor`，導致 `HybridOrchestratorV2._claude_executor = None`，Chat Mode 返回模擬響應 `[CHAT_MODE] Processed: ...` 而非真實 LLM 響應。
+
+**根本原因**:
+- Phase 13 設計正確，但 API 路由層實現遺漏了 Claude SDK 連接
+- `orchestrator_v2.py` 當 `_claude_executor = None` 時會 fallback 到模擬模式
+
+**修復**:
+- 新增 `backend/src/api/v1/hybrid/dependencies.py` - Claude 依賴注入層
+  - `get_claude_client()` - ClaudeSDKClient singleton
+  - `get_claude_executor()` - 可注入的 executor 函數
+- 修改 `backend/src/api/v1/hybrid/core_routes.py` - 注入 `claude_executor`
+  - 導入 `get_claude_executor` 並傳入 `HybridOrchestratorV2`
+
+**影響**:
+- ✅ Chat Mode 現在調用真實 Claude API
+- ✅ 向後兼容：若 ANTHROPIC_API_KEY 未配置，自動 fallback 到模擬模式
+- ✅ 日誌記錄執行模式 (REAL vs SIMULATION)

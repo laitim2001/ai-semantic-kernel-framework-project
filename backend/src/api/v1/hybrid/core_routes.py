@@ -31,8 +31,8 @@ from src.integrations.hybrid.orchestrator_v2 import (
     HybridOrchestratorV2,
     HybridResultV2,
     OrchestratorConfig,
-    create_orchestrator_v2,
 )
+from .dependencies import get_claude_executor
 from src.integrations.hybrid.context import ContextBridge
 
 logger = logging.getLogger(__name__)
@@ -98,11 +98,21 @@ def get_orchestrator() -> HybridOrchestratorV2:
     if _orchestrator is None:
         _intent_router = get_intent_router()
         _context_bridge = get_context_bridge()
-        _orchestrator = create_orchestrator_v2(
+
+        # 獲取 Claude executor (如果可用)
+        claude_executor = get_claude_executor()
+
+        _orchestrator = HybridOrchestratorV2(
+            config=OrchestratorConfig(),
             intent_router=_intent_router,
             context_bridge=_context_bridge,
+            claude_executor=claude_executor,
         )
-        logger.info("HybridOrchestratorV2 initialized")
+
+        if claude_executor:
+            logger.info("HybridOrchestratorV2 initialized with REAL Claude executor")
+        else:
+            logger.warning("HybridOrchestratorV2 initialized in SIMULATION mode")
     return _orchestrator
 
 
