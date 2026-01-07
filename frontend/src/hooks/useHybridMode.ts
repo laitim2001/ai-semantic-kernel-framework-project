@@ -3,14 +3,21 @@
  *
  * Sprint 62: Core Architecture & Adaptive Layout
  * S62-2: Adaptive Layout Logic
+ * Sprint 63: Mode Switching & State Management
+ * S63-3: Real Mode Detection (Enhanced)
  * Phase 16: Unified Agentic Chat Interface
  *
  * Manages automatic mode detection and manual override for
  * Chat/Workflow mode switching in the unified interface.
+ *
+ * Enhanced in S63-3:
+ * - Added switchReason for displaying why mode was switched
+ * - Added switchConfidence for detection confidence level
+ * - Added lastSwitchAt timestamp
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { UseHybridModeReturn, ExecutionMode } from '@/types/unified-chat';
+import type { ExecutionMode } from '@/types/unified-chat';
 
 /** Mode detection event from AG-UI backend */
 export interface ModeDetectionEvent {
@@ -33,6 +40,26 @@ export interface UseHybridModeConfig {
   onModeChange?: (mode: ExecutionMode, source: 'auto' | 'manual') => void;
   /** Callback when auto mode is detected */
   onAutoModeDetected?: (mode: ExecutionMode, confidence: number) => void;
+}
+
+/** Return type for useHybridMode hook (S63-3 Enhanced) */
+export interface UseHybridModeReturn {
+  /** Current effective mode ('chat' or 'workflow') */
+  currentMode: ExecutionMode;
+  /** Auto-detected mode from IntentRouter */
+  autoMode: ExecutionMode;
+  /** User's manual override (null if using auto mode) */
+  manualOverride: ExecutionMode | null;
+  /** Whether mode is manually overridden */
+  isManuallyOverridden: boolean;
+  /** Set or clear manual override */
+  setManualOverride: (mode: ExecutionMode | null) => void;
+  /** S63-3: Reason for the last mode switch */
+  switchReason: string | null;
+  /** S63-3: Confidence level of the last auto-detection (0-1) */
+  switchConfidence: number;
+  /** S63-3: ISO timestamp of the last mode switch */
+  lastSwitchAt: string | null;
 }
 
 // Session storage key for persisting manual override
@@ -92,6 +119,11 @@ export function useHybridMode(config: UseHybridModeConfig = {}): UseHybridModeRe
     loadPersistedOverride
   );
 
+  // S63-3: Switch tracking state
+  const [switchReason, setSwitchReason] = useState<string | null>(null);
+  const [switchConfidence, setSwitchConfidence] = useState<number>(0);
+  const [lastSwitchAt, setLastSwitchAt] = useState<string | null>(null);
+
   // Ref to track previous mode for change detection
   const prevModeRef = useRef<ExecutionMode | null>(null);
 
@@ -122,9 +154,19 @@ export function useHybridMode(config: UseHybridModeConfig = {}): UseHybridModeRe
       setManualOverrideState(mode);
       persistManualOverride(mode);
 
-      // Trigger callback if mode actually changed
+      // S63-3: Track manual switch metadata
       if (mode !== manualOverride) {
         const newCurrentMode = mode ?? autoMode;
+        if (mode) {
+          setSwitchReason(`Manually switched to ${mode} mode`);
+          setSwitchConfidence(1.0); // Manual override = 100% confidence
+        } else {
+          setSwitchReason('Returned to auto-detected mode');
+          // Keep existing confidence from auto-detection
+        }
+        setLastSwitchAt(new Date().toISOString());
+
+        // Trigger callback
         onModeChange?.(newCurrentMode, mode ? 'manual' : 'auto');
       }
     },
@@ -136,12 +178,17 @@ export function useHybridMode(config: UseHybridModeConfig = {}): UseHybridModeRe
     (event: ModeDetectionEvent) => {
       if (!enableAutoDetection) return;
 
-      const { mode, confidence } = event;
+      const { mode, confidence, reason, timestamp } = event;
 
       // Only update if confidence is high enough (> 0.7)
       if (confidence >= 0.7) {
         setAutoMode(mode);
         onAutoModeDetected?.(mode, confidence);
+
+        // S63-3: Track switch metadata
+        setSwitchReason(reason ?? `Auto-detected ${mode} mode`);
+        setSwitchConfidence(confidence);
+        setLastSwitchAt(timestamp);
 
         // If no manual override, trigger mode change callback
         if (!manualOverride) {
@@ -192,6 +239,10 @@ export function useHybridMode(config: UseHybridModeConfig = {}): UseHybridModeRe
     manualOverride,
     isManuallyOverridden,
     setManualOverride,
+    // S63-3: Switch tracking
+    switchReason,
+    switchConfidence,
+    lastSwitchAt,
   };
 }
 

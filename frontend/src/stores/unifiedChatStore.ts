@@ -3,10 +3,18 @@
  *
  * Sprint 62: Core Architecture & Adaptive Layout
  * S62-2: Adaptive Layout Logic
+ * Sprint 63: Mode Switching & State Management
+ * S63-4: State Persistence (Enhanced)
  * Phase 16: Unified Agentic Chat Interface
  *
  * Central state store for the unified chat interface.
  * Manages mode, messages, workflow state, approvals, and metrics.
+ *
+ * S63-4 Enhancements:
+ * - Messages persistence (limited to 100 messages)
+ * - localStorage instead of sessionStorage for cross-tab persistence
+ * - Storage quota error handling
+ * - Clear history removes persisted data
  */
 
 import { create } from 'zustand';
@@ -172,6 +180,18 @@ export const useUnifiedChatStore = create<UnifiedChatState & UnifiedChatActions>
             false,
             'clearMessages'
           );
+          // S63-4: Clear persisted messages from localStorage
+          // Note: The persist middleware will update storage automatically
+          // but we need to ensure messages are cleared immediately
+        },
+
+        // S63-4: Clear all persisted data
+        clearPersistence: () => {
+          try {
+            localStorage.removeItem('unified-chat-storage');
+          } catch {
+            console.warn('[UnifiedChatStore] Failed to clear persistence');
+          }
         },
 
         // =====================================================================
@@ -371,14 +391,78 @@ export const useUnifiedChatStore = create<UnifiedChatState & UnifiedChatActions>
       }),
       {
         name: 'unified-chat-storage',
-        storage: createJSONStorage(() => sessionStorage),
-        // Only persist certain state
+        // S63-4: Use localStorage for cross-tab persistence
+        storage: createJSONStorage(() => {
+          // Custom storage with quota error handling
+          return {
+            getItem: (name: string) => {
+              try {
+                return localStorage.getItem(name);
+              } catch {
+                // Storage not available or quota exceeded
+                console.warn('[UnifiedChatStore] localStorage read failed');
+                return null;
+              }
+            },
+            setItem: (name: string, value: string) => {
+              try {
+                localStorage.setItem(name, value);
+              } catch (e) {
+                // Handle quota exceeded error
+                if (
+                  e instanceof DOMException &&
+                  (e.code === 22 || // Legacy browsers
+                    e.code === 1014 || // Firefox
+                    e.name === 'QuotaExceededError' ||
+                    e.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+                ) {
+                  console.warn('[UnifiedChatStore] Storage quota exceeded, clearing old data');
+                  // Clear old data and retry
+                  try {
+                    localStorage.removeItem(name);
+                    localStorage.setItem(name, value);
+                  } catch {
+                    console.error('[UnifiedChatStore] Failed to persist state');
+                  }
+                } else {
+                  console.warn('[UnifiedChatStore] localStorage write failed');
+                }
+              }
+            },
+            removeItem: (name: string) => {
+              try {
+                localStorage.removeItem(name);
+              } catch {
+                console.warn('[UnifiedChatStore] localStorage remove failed');
+              }
+            },
+          };
+        }),
+        // S63-4: Persist more state with message limit
         partialize: (state) => ({
           threadId: state.threadId,
           sessionId: state.sessionId,
           mode: state.mode,
           manualOverride: state.manualOverride,
+          autoMode: state.autoMode,
+          // Limit messages to 100 most recent
+          messages: state.messages.slice(-100),
+          // Persist workflow state for recovery
+          workflowState: state.workflowState,
+          // Persist checkpoints
+          checkpoints: state.checkpoints.slice(-20), // Keep last 20 checkpoints
+          currentCheckpoint: state.currentCheckpoint,
         }),
+        // S63-4: Version for migration support
+        version: 1,
+        migrate: (persistedState: unknown, version: number) => {
+          // Handle migrations from older versions if needed
+          if (version === 0) {
+            // Migration from v0 to v1: no changes needed
+            return persistedState as UnifiedChatState;
+          }
+          return persistedState as UnifiedChatState;
+        },
       }
     ),
     { name: 'UnifiedChatStore' }

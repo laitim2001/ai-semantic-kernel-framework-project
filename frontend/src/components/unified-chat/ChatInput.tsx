@@ -3,16 +3,21 @@
  *
  * Sprint 62: Core Architecture & Adaptive Layout
  * S62-1: UnifiedChatWindow Base Architecture
+ * Sprint 65: S65-4 - UI Polish & Accessibility
  *
  * Input area for sending messages with optional file attachments.
+ * Enhanced with keyboard shortcuts and accessibility features.
  */
 
-import { FC, useState, useCallback, KeyboardEvent, useRef, useEffect } from 'react';
+import { FC, useState, useCallback, KeyboardEvent, useRef, useEffect, useMemo } from 'react';
 import { Send, Paperclip, Square, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import type { ChatInputProps } from '@/types/unified-chat';
 import { cn } from '@/lib/utils';
+
+// Detect platform for keyboard shortcut display
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
 /**
  * ChatInput Component
@@ -69,16 +74,33 @@ export const ChatInput: FC<ChatInputProps> = ({
     }
   }, [value, canSubmit, onSend]);
 
-  // Handle key down (Enter to send, Shift+Enter for newline)
+  // Handle key down
+  // - Enter: Send message
+  // - Shift+Enter: New line
+  // - Cmd/Ctrl+Enter: Force send (alternative)
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // Cmd/Ctrl + Enter: Force send
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        handleSend();
+        return;
+      }
+
+      // Enter without Shift: Send
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSend();
+        return;
       }
+
+      // Shift+Enter: Allow default (new line)
     },
     [handleSend]
   );
+
+  // Keyboard shortcut display text
+  const shortcutKey = useMemo(() => (isMac ? '⌘' : 'Ctrl'), []);
 
   // Handle file attachment click
   const handleAttachClick = useCallback(() => {
@@ -165,6 +187,8 @@ export const ChatInput: FC<ChatInputProps> = ({
             )}
             rows={1}
             data-testid="chat-textarea"
+            aria-label="Chat message input"
+            aria-describedby="keyboard-hints"
           />
 
           {/* Streaming indicator inside textarea */}
@@ -203,9 +227,16 @@ export const ChatInput: FC<ChatInputProps> = ({
       </div>
 
       {/* Keyboard Hint */}
-      <div className="px-4 pb-2 text-xs text-gray-400">
-        Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-gray-500">Enter</kbd> to send,{' '}
-        <kbd className="px-1 py-0.5 bg-gray-100 rounded text-gray-500">Shift+Enter</kbd> for new line
+      <div
+        id="keyboard-hints"
+        className="px-4 pb-2 text-xs text-gray-400"
+        aria-live="polite"
+      >
+        <kbd className="px-1 py-0.5 bg-gray-100 rounded text-gray-500">Enter</kbd> to send{' '}
+        <span className="text-gray-300">|</span>{' '}
+        <kbd className="px-1 py-0.5 bg-gray-100 rounded text-gray-500">Shift+Enter</kbd> new line{' '}
+        <span className="text-gray-300">|</span>{' '}
+        <kbd className="px-1 py-0.5 bg-gray-100 rounded text-gray-500">{shortcutKey}+Enter</kbd> send
       </div>
     </div>
   );

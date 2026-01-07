@@ -3,59 +3,18 @@
  *
  * Sprint 62: Core Architecture & Adaptive Layout
  * S62-1: UnifiedChatWindow Base Architecture
+ * Sprint 65: Enhanced with ConnectionStatus component
  *
  * Header component with mode toggle, connection status, and settings.
  */
 
 import { FC, useCallback } from 'react';
-import { MessageSquare, Workflow, Settings, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { MessageSquare, Workflow, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import type { ChatHeaderProps, ExecutionMode, ConnectionStatus } from '@/types/unified-chat';
+import { ConnectionStatus } from './ConnectionStatus';
+import type { ChatHeaderProps, ExecutionMode } from '@/types/unified-chat';
 import { cn } from '@/lib/utils';
-
-/**
- * Get connection status display config
- */
-const getConnectionConfig = (status: ConnectionStatus) => {
-  switch (status) {
-    case 'connected':
-      return {
-        icon: Wifi,
-        label: 'Connected',
-        variant: 'default' as const,
-        className: 'text-green-600',
-      };
-    case 'connecting':
-      return {
-        icon: Loader2,
-        label: 'Connecting',
-        variant: 'secondary' as const,
-        className: 'animate-spin text-yellow-600',
-      };
-    case 'disconnected':
-      return {
-        icon: WifiOff,
-        label: 'Disconnected',
-        variant: 'secondary' as const,
-        className: 'text-gray-400',
-      };
-    case 'error':
-      return {
-        icon: WifiOff,
-        label: 'Error',
-        variant: 'destructive' as const,
-        className: 'text-red-600',
-      };
-    default:
-      return {
-        icon: WifiOff,
-        label: 'Unknown',
-        variant: 'secondary' as const,
-        className: 'text-gray-400',
-      };
-  }
-};
 
 /**
  * ChatHeader Component
@@ -63,7 +22,7 @@ const getConnectionConfig = (status: ConnectionStatus) => {
  * Displays the header with:
  * - Title/Logo
  * - Mode toggle buttons (Chat/Workflow)
- * - Connection status indicator
+ * - Connection status indicator with reconnect
  * - Settings button
  */
 export const ChatHeader: FC<ChatHeaderProps> = ({
@@ -74,10 +33,11 @@ export const ChatHeader: FC<ChatHeaderProps> = ({
   connection,
   onModeChange,
   onSettingsClick,
+  onReconnect,
+  retryCount = 0,
+  maxRetries = 5,
+  connectionError,
 }) => {
-  const connectionConfig = getConnectionConfig(connection);
-  const ConnectionIcon = connectionConfig.icon;
-
   // Handle mode button click
   const handleModeClick = useCallback(
     (mode: ExecutionMode) => {
@@ -140,17 +100,15 @@ export const ChatHeader: FC<ChatHeaderProps> = ({
           </span>
         )}
 
-        {/* Connection Status */}
-        <div
-          className="flex items-center gap-1.5"
-          data-testid="connection-status"
-          title={connectionConfig.label}
-        >
-          <ConnectionIcon className={cn('h-4 w-4', connectionConfig.className)} />
-          <Badge variant={connectionConfig.variant} className="text-xs">
-            {connectionConfig.label}
-          </Badge>
-        </div>
+        {/* Connection Status (Sprint 65 enhancement) */}
+        <ConnectionStatus
+          status={connection}
+          retryCount={retryCount}
+          maxRetries={maxRetries}
+          onReconnect={onReconnect}
+          errorMessage={connectionError}
+          compact={false}
+        />
 
         {/* Settings Button */}
         {onSettingsClick && (

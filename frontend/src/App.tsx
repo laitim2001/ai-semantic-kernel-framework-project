@@ -4,6 +4,7 @@
 // Sprint 5: Frontend UI - App Shell
 // Sprint 12: S12-4 UI Integration - Added Performance Monitoring
 // Sprint 61: AG-UI Demo Page Route
+// Sprint 62: Unified Chat Interface Route (Phase 16)
 //
 // Root application component with routing configuration.
 //
@@ -27,10 +28,14 @@ import { ApprovalsPage } from '@/pages/approvals/ApprovalsPage';
 import { AuditPage } from '@/pages/audit/AuditPage';
 import { TemplatesPage } from '@/pages/templates/TemplatesPage';
 import { AGUIDemoPage } from '@/pages/ag-ui/AGUIDemoPage';
+import { UnifiedChat } from '@/pages/UnifiedChat';
 
 function App() {
   return (
     <Routes>
+      {/* Unified Chat Interface (Sprint 62, Phase 16) - Standalone full-screen layout */}
+      <Route path="/chat" element={<UnifiedChat />} />
+
       {/* AG-UI Demo Page (Sprint 61) - Standalone full-screen layout */}
       <Route path="/ag-ui-demo" element={<AGUIDemoPage />} />
 

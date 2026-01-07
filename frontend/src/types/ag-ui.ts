@@ -320,6 +320,8 @@ export interface ChatMessage {
   timestamp: string;
   toolCalls?: ToolCallState[];
   metadata?: Record<string, unknown>;
+  /** Sprint 65: S65-5 - Custom UI component to render instead of text */
+  customUI?: UIComponentDefinition;
 }
 
 /** Tool Call Status */

@@ -2,8 +2,10 @@
 // IPA Platform - TailwindCSS Configuration
 // =============================================================================
 // Sprint 5: Frontend UI - Styling Configuration
+// Sprint 65: S65-4 - UI Polish & Accessibility
 //
 // TailwindCSS configuration with custom theme colors and Shadcn/ui integration.
+// Includes animations with prefers-reduced-motion support.
 // =============================================================================
 
 /** @type {import('tailwindcss').Config} */
@@ -71,10 +73,57 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: 0 },
         },
+        // Sprint 65: Message entrance animation
+        'message-enter': {
+          '0%': {
+            opacity: '0',
+            transform: 'translateY(12px)',
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'translateY(0)',
+          },
+        },
+        // Sprint 65: Panel slide animation
+        'slide-in-right': {
+          '0%': {
+            opacity: '0',
+            transform: 'translateX(100%)',
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'translateX(0)',
+          },
+        },
+        'slide-out-right': {
+          '0%': {
+            opacity: '1',
+            transform: 'translateX(0)',
+          },
+          '100%': {
+            opacity: '0',
+            transform: 'translateX(100%)',
+          },
+        },
+        // Sprint 65: Fade animations
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'fade-out': {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        // Sprint 65: Custom animations
+        'message-enter': 'message-enter 0.3s ease-out forwards',
+        'slide-in-right': 'slide-in-right 0.3s ease-out forwards',
+        'slide-out-right': 'slide-out-right 0.3s ease-out forwards',
+        'fade-in': 'fade-in 0.2s ease-out forwards',
+        'fade-out': 'fade-out 0.2s ease-out forwards',
       },
     },
   },

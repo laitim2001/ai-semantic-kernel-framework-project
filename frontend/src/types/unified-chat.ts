@@ -99,12 +99,32 @@ export interface ExecutionTime {
   startedAt?: string;
 }
 
+/** Tool call statistics (Sprint 65 enhancement) */
+export interface ToolCallStatistics {
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+}
+
+/** Message statistics by role (Sprint 65 enhancement) */
+export interface MessageStatistics {
+  total: number;
+  user: number;
+  assistant: number;
+  tool: number;
+}
+
 /** Combined execution metrics */
 export interface ExecutionMetrics {
   tokens: TokenUsage;
   time: ExecutionTime;
   toolCallCount: number;
   messageCount: number;
+  /** Sprint 65: Enhanced tool statistics */
+  toolStats?: ToolCallStatistics;
+  /** Sprint 65: Enhanced message statistics */
+  messageStats?: MessageStatistics;
 }
 
 // =============================================================================
@@ -259,6 +279,9 @@ export interface UnifiedChatActions {
 
   // Reset
   reset: () => void;
+
+  // S63-4: Persistence management
+  clearPersistence: () => void;
 }
 
 // =============================================================================
@@ -282,6 +305,14 @@ export interface ChatHeaderProps {
   connection: ConnectionStatus;
   onModeChange: (mode: ExecutionMode) => void;
   onSettingsClick?: () => void;
+  /** Sprint 65: Reconnection support */
+  onReconnect?: () => void;
+  /** Sprint 65: Current retry count */
+  retryCount?: number;
+  /** Sprint 65: Max retry attempts */
+  maxRetries?: number;
+  /** Sprint 65: Error message if connection failed */
+  connectionError?: string;
 }
 
 /** ChatArea props */
