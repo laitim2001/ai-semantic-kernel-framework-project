@@ -7,7 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## AI Assistant Notes (重要)
 
 - **專案位置**: Windows C 槽 (`C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framework-project`)
-- **啟動 Server 方式**: 不要使用 `start /D`，請使用 `cmd /c` 或直接在終端執行
+- **啟動 Server 方式**: 不要使用 `start /D` 或 `start /B`，請使用 `cmd /c` 或直接在終端執行
+  - ❌ `start /B python -m uvicorn ...` — 背景執行會導致無法正確追蹤進程
+  - ❌ `start /D path python ...` — 路徑處理不穩定
+  - ✅ `cmd /c "cd /d path && python -m uvicorn ..."` — 推薦方式
 - **Python 環境**: 請確保在正確的虛擬環境中執行
 
 ```bash
