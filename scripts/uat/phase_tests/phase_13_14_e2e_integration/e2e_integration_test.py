@@ -25,6 +25,7 @@
 # =============================================================================
 
 import asyncio
+import os
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -128,8 +129,8 @@ class E2ETestClient:
     No simulation mode is available - tests will fail if API is unavailable.
     """
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
-        self.base_url = base_url
+    def __init__(self, base_url: str = None):
+        self.base_url = base_url or os.getenv("API_BASE_URL", "http://localhost:8000")
         self.client: Optional[httpx.AsyncClient] = None
         self.context = HybridExecutionContext(
             session_id=f"e2e-test-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",

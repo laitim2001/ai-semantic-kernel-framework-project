@@ -131,12 +131,15 @@ class CommandRiskConfig:
         r">\s*/dev/sda",             # Direct disk write
     ])
 
-    # Risk scores
-    dangerous_score: float = 0.75
+    # Risk scores - Increased to ensure dangerous commands trigger HIGH risk
+    # With HYBRID scoring (70% avg + 30% max), dangerous commands need higher
+    # scores to reliably exceed the 0.7 HIGH threshold after context adjustment
+    dangerous_score: float = 0.85  # Increased from 0.75
     critical_score: float = 0.95
 
-    # Weight for command-based risk factor
-    weight: float = 0.5
+    # Weight for command-based risk factor - Increased to give more influence
+    # to dangerous command detection in the overall risk calculation
+    weight: float = 0.65  # Increased from 0.5
 
 
 class OperationAnalyzer:

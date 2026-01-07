@@ -250,11 +250,28 @@ class RiskAssessmentEngine:
         # Calculate composite score
         scoring_result = self.scorer.calculate(all_factors)
 
-        # Adjust for context
-        adjusted_score = self.scorer.adjust_for_context(
-            scoring_result.score,
-            environment=context.environment,
+        # Check if dangerous/critical command is present
+        dangerous_command_factor = next(
+            (f for f in all_factors
+             if f.factor_type == RiskFactorType.COMMAND
+             and f.metadata.get("severity") in ("dangerous", "critical")),
+            None
         )
+        has_dangerous_command = dangerous_command_factor is not None
+
+        # Adjust for context (skip for dangerous commands)
+        if has_dangerous_command:
+            # Dangerous commands bypass environment multiplier AND
+            # use a minimum HIGH threshold to ensure they always require approval
+            # Critical commands get even higher score
+            severity = dangerous_command_factor.metadata.get("severity", "dangerous")
+            min_score = 0.75 if severity == "dangerous" else 0.92  # HIGH or CRITICAL
+            adjusted_score = max(scoring_result.score, min_score)
+        else:
+            adjusted_score = self.scorer.adjust_for_context(
+                scoring_result.score,
+                environment=context.environment,
+            )
 
         # Determine final level and approval requirement
         final_level = RiskLevel.from_score(adjusted_score, self.config)
