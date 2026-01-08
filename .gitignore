@@ -106,3 +106,11 @@ coverage/
 *.key
 credentials.json
 secrets.json
+
+# Sandbox data directories (Sprint 68)
+# Keep directory structure but ignore user data
+data/uploads/*
+data/sandbox/*
+data/outputs/*
+data/temp/*
+!data/**/.gitkeep

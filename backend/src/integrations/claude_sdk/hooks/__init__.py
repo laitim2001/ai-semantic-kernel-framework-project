@@ -36,7 +36,14 @@ from .base import Hook, HookChain
 from .approval import ApprovalHook, DEFAULT_APPROVAL_TOOLS, WRITE_OPERATIONS
 from .audit import AuditHook, AuditEntry, AuditLog
 from .rate_limit import RateLimitHook, RateLimitConfig, RateLimitStats
-from .sandbox import SandboxHook, StrictSandboxHook, FILE_ACCESS_TOOLS
+from .sandbox import (
+    SandboxHook,
+    StrictSandboxHook,
+    UserSandboxHook,
+    FILE_ACCESS_TOOLS,
+    SOURCE_CODE_BLOCKED_PATTERNS,
+    BLOCKED_WRITE_EXTENSIONS,
+)
 
 __all__ = [
     # Base classes
@@ -57,5 +64,8 @@ __all__ = [
     # Sandbox hook
     "SandboxHook",
     "StrictSandboxHook",
+    "UserSandboxHook",  # Sprint 68
     "FILE_ACCESS_TOOLS",
+    "SOURCE_CODE_BLOCKED_PATTERNS",  # Sprint 68
+    "BLOCKED_WRITE_EXTENSIONS",  # Sprint 68
 ]

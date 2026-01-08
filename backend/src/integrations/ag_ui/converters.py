@@ -3,6 +3,7 @@
 # =============================================================================
 # Sprint 58: AG-UI Core Infrastructure
 # S58-2: HybridEventBridge
+# Sprint 66: S66-2 - Enhanced tool event generation with HITL support
 #
 # Event converters for transforming Hybrid internal events to AG-UI standard
 # events. Provides conversion methods for all event types defined in AG-UI
@@ -428,7 +429,7 @@ class EventConverters:
         Returns:
             CustomEvent instance
         """
-        return CustomEvent(name=name, value=value)
+        return CustomEvent(event_name=name, payload={"value": value})
 
     # =========================================================================
     # Generic Conversion
@@ -571,33 +572,72 @@ class EventConverters:
             events.extend(content_events)
 
         # 4. TOOL_CALL events (from tool_results)
-        for tool_result in result.tool_results:
-            tool_call_id = f"call-{uuid.uuid4().hex[:8]}"
+        # Sprint 66: S66-2, S66-4 - Enhanced tool events with HITL support
+        HIGH_RISK_TOOLS = ["Write", "Edit", "MultiEdit", "Bash", "Task"]
 
-            # Tool call start
-            events.append(
-                self.to_tool_call_start(
-                    tool_call_id=tool_call_id,
-                    tool_name=tool_result.tool_name,
-                    parent_message_id=msg_id,
-                )
+        for tool_result in result.tool_results:
+            # Use execution_id if available, otherwise generate
+            tool_call_id = (
+                tool_result.execution_id
+                if hasattr(tool_result, "execution_id") and tool_result.execution_id
+                else f"call-{uuid.uuid4().hex[:8]}"
             )
 
-            # Tool call args (if available)
+            # Determine if HITL approval is required
+            requires_approval = tool_result.tool_name in HIGH_RISK_TOOLS
+            risk_level = "high" if requires_approval else "low"
+
+            # Tool call start
+            start_event = self.to_tool_call_start(
+                tool_call_id=tool_call_id,
+                tool_name=tool_result.tool_name,
+                parent_message_id=msg_id,
+            )
+            events.append(start_event)
+
+            # Add HITL metadata as separate CUSTOM event (for high-risk tools)
+            if requires_approval:
+                from src.integrations.ag_ui.events.state import CustomEvent
+                hitl_event = CustomEvent(
+                    event_name="HITL_APPROVAL_REQUIRED",
+                    payload={
+                        "tool_call_id": tool_call_id,
+                        "tool_name": tool_result.tool_name,
+                        "risk_level": risk_level,
+                        "requires_approval": True,
+                    },
+                )
+                events.append(hitl_event)
+
+            # Tool call args - check both 'arguments' attribute and 'metadata.args'
+            args = None
             if hasattr(tool_result, "arguments") and tool_result.arguments:
+                args = tool_result.arguments
+            elif hasattr(tool_result, "metadata") and tool_result.metadata:
+                args = tool_result.metadata.get("args")
+
+            if args:
                 events.append(
                     self.to_tool_call_args(
                         tool_call_id=tool_call_id,
-                        args=tool_result.arguments,
+                        args=args,
                     )
                 )
 
             # Tool call end
+            # Extract result from content or metadata
+            tool_result_data = None
+            if tool_result.success:
+                if tool_result.content:
+                    tool_result_data = {"content": tool_result.content}
+                elif hasattr(tool_result, "metadata") and tool_result.metadata:
+                    tool_result_data = tool_result.metadata.get("result")
+
             events.append(
                 self.to_tool_call_end(
                     tool_call_id=tool_call_id,
                     success=tool_result.success,
-                    result=tool_result.result if tool_result.success else None,
+                    result=tool_result_data,
                     error=tool_result.error if not tool_result.success else None,
                 )
             )

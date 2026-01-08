@@ -26,6 +26,14 @@ export { StepProgress } from './StepProgress';
 export { ToolCallTracker } from './ToolCallTracker';
 export { CheckpointList } from './CheckpointList';
 
+// S69-2: Enhanced Step Progress with Sub-steps
+export { StepProgressEnhanced, StatusIcon, SubStepItem } from './StepProgressEnhanced';
+export type {
+  SubStep as StepProgressSubStep,
+  StepProgressEvent,
+  SubStepStatusType,
+} from './StepProgressEnhanced';
+
 // S63-3: Mode Detection
 export { ModeIndicator } from './ModeIndicator';
 export type { ModeIndicatorProps } from './ModeIndicator';
@@ -64,5 +72,5 @@ export type {
   ToolCallTrackerProps,
   CheckpointListProps,
   ExecutionMode,
-  ConnectionStatus,
+  ConnectionStatus as ConnectionStatusType,
 } from '@/types/unified-chat';

@@ -71,6 +71,46 @@ export interface UseAGUIOptions {
   onConnectionChange?: (status: SSEConnectionStatus) => void;
 }
 
+/** Heartbeat state for long-running operations (S67-BF-1) */
+export interface HeartbeatState {
+  count: number;
+  elapsedSeconds: number;
+  message: string;
+  status: 'processing' | 'idle';
+}
+
+/** Sub-step status type (S69-3) */
+export type SubStepStatusType = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+
+/** Sub-step within a main step (S69-3) */
+export interface SubStep {
+  id: string;
+  name: string;
+  status: SubStepStatusType;
+  progress?: number;
+  message?: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
+/** Step progress event from backend (S69-3) */
+export interface StepProgressEvent {
+  stepId: string;
+  stepName: string;
+  current: number;
+  total: number;
+  progress: number;
+  status: SubStepStatusType;
+  substeps: SubStep[];
+  metadata?: Record<string, unknown>;
+}
+
+/** Step progress state for tracking multiple steps (S69-3) */
+export interface StepProgressState {
+  steps: Map<string, StepProgressEvent>;
+  currentStep: string | null;
+}
+
 /** useAGUI Hook Return Value */
 export interface UseAGUIReturn {
   // Connection state
@@ -81,6 +121,13 @@ export interface UseAGUIReturn {
   // Run state
   runState: AGUIRunState;
   isRunning: boolean;
+
+  // Heartbeat state (S67-BF-1)
+  heartbeat: HeartbeatState | null;
+
+  // Step progress state (S69-3)
+  stepProgress: StepProgressState;
+  currentStepProgress: StepProgressEvent | null;
 
   // Messages
   messages: ChatMessage[];
@@ -183,6 +230,11 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
     status: 'idle',
   });
   const [isStreaming, setIsStreaming] = useState(false);
+  const [heartbeat, setHeartbeat] = useState<HeartbeatState | null>(null);  // S67-BF-1
+  const [stepProgress, setStepProgress] = useState<StepProgressState>({  // S69-3
+    steps: new Map(),
+    currentStep: null,
+  });
 
   // Refs
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -219,6 +271,15 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
   const isRunning = useMemo(
     () => runState.status === 'running',
     [runState.status]
+  );
+
+  // S69-3: Current step progress getter
+  const currentStepProgress = useMemo(
+    (): StepProgressEvent | null => {
+      if (!stepProgress.currentStep) return null;
+      return stepProgress.steps.get(stepProgress.currentStep) || null;
+    },
+    [stepProgress]
   );
 
   // ==========================================================================
@@ -509,6 +570,7 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
             startedAt: data.timestamp as string,
           });
           setIsStreaming(true);
+          setHeartbeat(null);  // S67-BF-1: Reset heartbeat on run start
           break;
 
         case 'RUN_FINISHED': {
@@ -520,6 +582,8 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
             finishedAt: data.timestamp as string,
           }));
           setIsStreaming(false);
+          setHeartbeat(null);  // S67-BF-1: Clear heartbeat on run finish
+          setStepProgress({ steps: new Map(), currentStep: null });  // S69-3: Clear step progress
           finalizeCurrentMessage();
           onRunComplete?.(success, data.error as string | undefined);
           break;
@@ -603,7 +667,7 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
           break;
 
         case 'CUSTOM': {
-          // Handle custom events (including approval requests)
+          // Handle custom events (including approval requests and heartbeats)
           const eventName = data.event_name as string;
           if (eventName === 'APPROVAL_REQUIRED') {
             const payload = data.payload as Record<string, unknown>;
@@ -619,6 +683,46 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
               sessionId: payload.session_id as string,
               createdAt: payload.created_at as string,
               expiresAt: payload.expires_at as string,
+            });
+          } else if (eventName === 'heartbeat') {
+            // S67-BF-1: Handle heartbeat events for long-running operations
+            const payload = data.payload as Record<string, unknown>;
+            setHeartbeat({
+              count: payload.count as number,
+              elapsedSeconds: payload.elapsed_seconds as number,
+              message: payload.message as string,
+              status: payload.status as 'processing' | 'idle',
+            });
+          } else if (eventName === 'step_progress') {
+            // S69-3: Handle step progress events for hierarchical progress display
+            const payload = data.payload as Record<string, unknown>;
+            const progressEvent: StepProgressEvent = {
+              stepId: payload.step_id as string,
+              stepName: payload.step_name as string,
+              current: payload.current as number,
+              total: payload.total as number,
+              progress: payload.progress as number,
+              status: payload.status as SubStepStatusType,
+              substeps: (payload.substeps as Array<Record<string, unknown>> || []).map((ss) => ({
+                id: ss.id as string,
+                name: ss.name as string,
+                status: ss.status as SubStepStatusType,
+                progress: ss.progress as number | undefined,
+                message: ss.message as string | undefined,
+                startedAt: ss.started_at as string | undefined,
+                completedAt: ss.completed_at as string | undefined,
+              })),
+              metadata: payload.metadata as Record<string, unknown> | undefined,
+            };
+
+            setStepProgress((prev) => {
+              const newSteps = new Map(prev.steps);
+              newSteps.set(progressEvent.stepId, progressEvent);
+
+              return {
+                steps: newSteps,
+                currentStep: progressEvent.status === 'running' ? progressEvent.stepId : prev.currentStep,
+              };
             });
           }
           break;
@@ -839,6 +943,13 @@ export function useAGUI(options: UseAGUIOptions): UseAGUIReturn {
     // Run state
     runState,
     isRunning,
+
+    // Heartbeat state (S67-BF-1)
+    heartbeat,
+
+    // Step progress state (S69-3)
+    stepProgress,
+    currentStepProgress,
 
     // Messages
     messages,

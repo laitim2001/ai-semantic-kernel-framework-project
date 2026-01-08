@@ -3,10 +3,12 @@ Session Database Models
 
 SQLAlchemy ORM models for Session Mode API.
 Includes SessionModel, MessageModel, and AttachmentModel.
+
+Sprint 72: S72-1 - Added user_id FK to users table (nullable for guest sessions)
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -24,21 +26,38 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from src.infrastructure.database.models.base import Base, TimestampMixin, UUIDMixin
 
+if TYPE_CHECKING:
+    from src.infrastructure.database.models.user import User
+
 
 class SessionModel(Base, UUIDMixin, TimestampMixin):
     """
     Session 數據庫模型
 
     Table: sessions
+
+    Sprint 72: user_id is now nullable to support guest sessions.
+    Guest sessions use a guest-xxx UUID string stored in session_metadata.
     """
     __tablename__ = "sessions"
 
     # 關聯欄位
-    user_id: Mapped[uuid4] = mapped_column(
+    # Sprint 72: user_id is now Optional and has FK to users table
+    user_id: Mapped[Optional[uuid4]] = mapped_column(
         UUID(as_uuid=True),
-        nullable=False,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,  # Allow guest sessions (guest_id stored in session_metadata)
         index=True,
     )
+
+    # Guest user ID (for sessions without authenticated user)
+    # Stored as string to support guest-xxx format
+    guest_user_id: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+    )
+
     agent_id: Mapped[uuid4] = mapped_column(
         UUID(as_uuid=True),
         nullable=False,
@@ -98,9 +117,17 @@ class SessionModel(Base, UUIDMixin, TimestampMixin):
         cascade="all, delete-orphan",
     )
 
+    # Sprint 72: User relationship
+    user: Mapped[Optional["User"]] = relationship(
+        "User",
+        back_populates="sessions",
+        lazy="selectin",
+    )
+
     # 索引
     __table_args__ = (
         Index("idx_sessions_user_status", "user_id", "status"),
+        Index("idx_sessions_guest_user", "guest_user_id"),
         Index("idx_sessions_expires", "expires_at", postgresql_where=(status != "ended")),
     )
 

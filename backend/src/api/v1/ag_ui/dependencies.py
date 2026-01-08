@@ -3,12 +3,14 @@
 # =============================================================================
 # Sprint 58: AG-UI Core Infrastructure
 # S58-1: AG-UI SSE Endpoint
+# Sprint 66: S66-1 - Fix tool parameter passing to Claude SDK
+# Sprint 68: S68-3 - User identification for sandbox isolation
 #
 # Dependency injection providers for AG-UI API endpoints.
 # Provides HybridEventBridge and related dependencies.
 #
 # Supports simulation mode for UAT testing when orchestrator is unavailable.
-# Now supports real Claude API calls via ClaudeSDKClient.
+# Now supports real Claude API calls via ClaudeSDKClient with tool execution.
 #
 # Dependencies:
 #   - HybridEventBridge (src.integrations.ag_ui.bridge)
@@ -23,7 +25,7 @@ from typing import Any, Dict, List, Optional
 
 import redis.asyncio as aioredis
 from dotenv import load_dotenv
-from fastapi import Depends
+from fastapi import Depends, Header, HTTPException, status
 
 # Load .env file from backend directory
 _backend_dir = Path(__file__).parent.parent.parent.parent.parent
@@ -62,7 +64,7 @@ def _try_create_claude_client():
 
         client = ClaudeSDKClient(
             api_key=api_key,
-            model="claude-sonnet-4-20250514",
+            model="claude-haiku-4-5-20251001",
             max_tokens=4096,
             timeout=300,
         )
@@ -93,7 +95,7 @@ def _create_claude_executor(client):
         tools: Optional[List[Dict[str, Any]]] = None,
         max_tokens: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """Execute prompt via Claude SDK."""
+        """Execute prompt via Claude SDK with tool support."""
         try:
             # Build messages from history if available
             messages = []
@@ -104,25 +106,60 @@ def _create_claude_executor(client):
                         "content": msg.get("content", ""),
                     })
 
-            # Execute query
+            # Extract tool names from tool definitions
+            # Claude SDK expects tool names as List[str], not full definitions
+            tool_names: List[str] = []
+            if tools:
+                for tool in tools:
+                    tool_name = tool.get("name") if isinstance(tool, dict) else str(tool)
+                    if tool_name:
+                        tool_names.append(tool_name)
+                logger.info(f"Claude executor using tools: {tool_names}")
+
+            # Execute query with tools
+            # S67-BF-1: Increase timeout to 180s to handle Rate Limit retries
             result = await client.query(
                 prompt=prompt,
+                tools=tool_names if tool_names else None,
                 max_tokens=max_tokens or 4096,
+                timeout=180,  # 3 minutes to allow for 429 retry backoff
             )
+
+            # Extract tool calls from result
+            tool_calls_data = []
+            if hasattr(result, "tool_calls") and result.tool_calls:
+                for tc in result.tool_calls:
+                    tool_calls_data.append({
+                        "id": getattr(tc, "id", None),
+                        "name": getattr(tc, "name", None),
+                        "args": getattr(tc, "args", {}),
+                    })
 
             return {
                 "success": True,
                 "content": result.content if hasattr(result, "content") else str(result),
-                "tool_calls": getattr(result, "tool_calls", []),
+                "tool_calls": tool_calls_data,
                 "tokens_used": getattr(result, "tokens_used", 0),
             }
 
         except Exception as e:
-            logger.error(f"Claude executor error: {e}")
+            # S67-BF-1: Enhanced error logging for debugging
+            error_type = type(e).__name__
+            error_msg = str(e)
+
+            # Check for common error types
+            if "429" in error_msg or "rate" in error_msg.lower():
+                logger.warning(f"Claude API Rate Limited: {error_msg}")
+            elif "timeout" in error_msg.lower():
+                logger.warning(f"Claude API Timeout (180s): {error_msg}")
+            else:
+                logger.error(f"Claude executor error ({error_type}): {error_msg}", exc_info=True)
+
             return {
                 "success": False,
-                "content": f"Claude API error: {str(e)}",
-                "error": str(e),
+                "content": f"Claude API error: {error_msg}",
+                "error": error_msg,
+                "error_type": error_type,
             }
 
     return claude_executor
@@ -357,3 +394,119 @@ def get_bridge_status() -> Dict[str, Any]:
             status["claude_executor_enabled"] = hasattr(orchestrator, "_claude_executor") and orchestrator._claude_executor is not None
 
     return status
+
+
+# =============================================================================
+# Sprint 68: User Identification for Sandbox Isolation
+# Sprint 72: S72-1 - Integrated with auth system (get_current_user_optional)
+# =============================================================================
+
+from src.api.v1.dependencies import get_current_user_optional
+from src.infrastructure.database.models.user import User
+
+
+async def get_user_id_or_guest(
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    x_guest_id: Optional[str] = Header(None),
+) -> str:
+    """Get user ID from auth or guest header.
+
+    Sprint 72: Now integrates with authentication system.
+    Prioritizes authenticated users over guest IDs.
+
+    Args:
+        current_user: Authenticated user from JWT token (optional)
+        x_guest_id: Guest user ID from header (for unauthenticated users)
+
+    Returns:
+        User identifier string (either user UUID or guest-xxx format)
+
+    Raises:
+        HTTPException: If no user identification is provided
+    """
+    if current_user:
+        return str(current_user.id)
+    if x_guest_id:
+        return x_guest_id
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="User identification required. Login or provide X-Guest-Id header.",
+    )
+
+
+async def get_user_id(
+    x_user_id: Optional[str] = Header(None),
+    x_guest_id: Optional[str] = Header(None),
+) -> str:
+    """Get user ID from request headers (legacy support).
+
+    Supports both authenticated users (X-User-Id) and guest users (X-Guest-Id).
+    Phase 17 uses guest IDs; Phase 18 added authenticated user support.
+
+    Note: Prefer get_user_id_or_guest which integrates with auth system.
+
+    Args:
+        x_user_id: Authenticated user ID (from auth middleware, Phase 18)
+        x_guest_id: Guest user ID (from frontend, Phase 17)
+
+    Returns:
+        User identifier string
+
+    Raises:
+        HTTPException: If no user identification is provided
+    """
+    if x_user_id:
+        return x_user_id
+    if x_guest_id:
+        return x_guest_id
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="User identification required. Provide X-User-Id or X-Guest-Id header.",
+    )
+
+
+async def get_user_id_optional(
+    x_user_id: Optional[str] = Header(None),
+    x_guest_id: Optional[str] = Header(None),
+) -> Optional[str]:
+    """Get user ID from request headers (optional).
+
+    Same as get_user_id but returns None instead of raising exception
+    if no user identification is provided.
+
+    Args:
+        x_user_id: Authenticated user ID
+        x_guest_id: Guest user ID
+
+    Returns:
+        User identifier string or None
+    """
+    if x_user_id:
+        return x_user_id
+    if x_guest_id:
+        return x_guest_id
+    return None
+
+
+async def get_user_and_guest_id(
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    x_guest_id: Optional[str] = Header(None),
+) -> tuple[Optional[str], Optional[str]]:
+    """Get both user ID and guest ID for migration support.
+
+    Sprint 72: Returns both authenticated user ID and guest ID.
+    Used by session service to properly associate sessions.
+
+    Args:
+        current_user: Authenticated user from JWT token (optional)
+        x_guest_id: Guest user ID from header (for unauthenticated users)
+
+    Returns:
+        Tuple of (user_id, guest_id) - both can be None or set
+    """
+    user_id = str(current_user.id) if current_user else None
+    guest_id = x_guest_id
+
+    return (user_id, guest_id)

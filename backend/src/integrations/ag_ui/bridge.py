@@ -3,6 +3,7 @@
 # =============================================================================
 # Sprint 58: AG-UI Core Infrastructure
 # S58-2: HybridEventBridge
+# Sprint 67: S67-BF-1 - Add heartbeat mechanism for Rate Limit handling
 #
 # Bridge component that connects HybridOrchestratorV2 to AG-UI protocol.
 # Transforms execution results into AG-UI standard SSE event streams.
@@ -12,6 +13,7 @@
 #   - Generates AG-UI compliant event streams
 #   - Supports SSE (Server-Sent Events) formatting
 #   - Handles tool call events from execution results
+#   - Heartbeat mechanism for long-running operations (Rate Limit retry)
 #
 # Dependencies:
 #   - EventConverters (src.integrations.ag_ui.converters)
@@ -19,7 +21,9 @@
 #   - AG-UI Events (src.integrations.ag_ui.events)
 # =============================================================================
 
+import asyncio
 import logging
+import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Dict, List, Optional, TYPE_CHECKING
@@ -27,6 +31,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, TYPE_CHECKING
 from src.integrations.ag_ui.converters import EventConverters, create_converters
 from src.integrations.ag_ui.events import (
     BaseAGUIEvent,
+    CustomEvent,
     RunStartedEvent,
     RunFinishedEvent,
     RunFinishReason,
@@ -85,12 +90,14 @@ class BridgeConfig:
         include_metadata: Whether to include metadata in events
         emit_state_events: Whether to emit state events
         emit_custom_events: Whether to emit custom events
+        heartbeat_interval: Interval in seconds for heartbeat events (0 = disabled)
     """
 
     chunk_size: int = 100
     include_metadata: bool = True
     emit_state_events: bool = True
     emit_custom_events: bool = True
+    heartbeat_interval: float = 10.0  # S67-BF-1: Send heartbeat every 10 seconds
 
 
 class HybridEventBridge:
@@ -242,10 +249,13 @@ class HybridEventBridge:
         This is the main entry point for streaming execution results.
         The method:
         1. Emits RUN_STARTED event
-        2. Executes via orchestrator
+        2. Executes via orchestrator with heartbeat during wait
         3. Converts result to AG-UI events
         4. Yields each event as SSE string
         5. Emits RUN_FINISHED event
+
+        S67-BF-1: Added heartbeat mechanism to keep SSE connection alive
+        during long-running operations (e.g., Rate Limit retry waits).
 
         Args:
             run_input: RunAgentInput with execution parameters
@@ -268,16 +278,91 @@ class HybridEventBridge:
         yield self._format_sse(run_started)
 
         try:
-            # 2. Execute via orchestrator
-            result = await self._orchestrator.execute(
-                prompt=run_input.prompt,
-                session_id=run_input.session_id,
-                force_mode=run_input.force_mode,
-                tools=run_input.tools,
-                max_tokens=run_input.max_tokens,
-                timeout=run_input.timeout,
-                metadata=run_input.metadata,
-            )
+            # S67-BF-1: Execute with heartbeat mechanism
+            # Use asyncio.Queue to collect events from both heartbeat and execution
+            event_queue: asyncio.Queue[BaseAGUIEvent | None] = asyncio.Queue()
+            execution_done = asyncio.Event()
+            execution_result: Dict[str, Any] = {"result": None, "error": None}
+
+            async def execute_task():
+                """Execute orchestrator and signal completion."""
+                try:
+                    result = await self._orchestrator.execute(
+                        prompt=run_input.prompt,
+                        session_id=run_input.session_id,
+                        force_mode=run_input.force_mode,
+                        tools=run_input.tools,
+                        max_tokens=run_input.max_tokens,
+                        timeout=run_input.timeout,
+                        metadata=run_input.metadata,
+                    )
+                    execution_result["result"] = result
+                except Exception as e:
+                    execution_result["error"] = e
+                finally:
+                    execution_done.set()
+                    await event_queue.put(None)  # Signal end
+
+            async def heartbeat_task():
+                """Send heartbeat events while execution is in progress."""
+                heartbeat_count = 0
+                start_time = time.time()
+                while not execution_done.is_set():
+                    try:
+                        # Wait for heartbeat interval or until execution completes
+                        await asyncio.wait_for(
+                            execution_done.wait(),
+                            timeout=self._config.heartbeat_interval,
+                        )
+                        break  # Execution completed
+                    except asyncio.TimeoutError:
+                        # Execution still in progress, send heartbeat
+                        heartbeat_count += 1
+                        elapsed = time.time() - start_time
+                        heartbeat_event = CustomEvent(
+                            event_name="heartbeat",
+                            payload={
+                                "count": heartbeat_count,
+                                "elapsed_seconds": round(elapsed, 1),
+                                "message": "Processing request... (API may be rate limited)",
+                                "status": "processing",
+                            },
+                        )
+                        await event_queue.put(heartbeat_event)
+                        logger.debug(
+                            f"Heartbeat #{heartbeat_count}: "
+                            f"elapsed={elapsed:.1f}s, thread={thread_id}"
+                        )
+
+            # Start both tasks concurrently
+            exec_task = asyncio.create_task(execute_task())
+            hb_task = asyncio.create_task(heartbeat_task())
+
+            # Yield events from queue (heartbeats) until execution completes
+            while True:
+                try:
+                    event = await asyncio.wait_for(event_queue.get(), timeout=1.0)
+                    if event is None:
+                        break  # Execution completed
+                    yield self._format_sse(event)
+                except asyncio.TimeoutError:
+                    # Check if execution is done
+                    if execution_done.is_set():
+                        break
+
+            # Ensure tasks are cleaned up
+            await exec_task
+            hb_task.cancel()
+            try:
+                await hb_task
+            except asyncio.CancelledError:
+                pass
+
+            # Check for execution error
+            if execution_result["error"]:
+                raise execution_result["error"]
+
+            result = execution_result["result"]
 
             # 3. Convert result to events and yield (excluding RUN_STARTED and RUN_FINISHED)
             message_id = f"msg-{uuid.uuid4().hex[:8]}"

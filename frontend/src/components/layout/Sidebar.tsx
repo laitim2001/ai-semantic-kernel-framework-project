@@ -3,6 +3,7 @@
 // =============================================================================
 // Sprint 5: Frontend UI - Navigation Component
 // Sprint 12: S12-4 UI Integration - Added Performance Monitoring
+// Sprint 69: S69-4 - Added Chat navigation for Dashboard integration
 //
 // Sidebar navigation with links to all main sections.
 //
@@ -21,6 +22,7 @@ import {
   BookTemplate,
   Settings,
   Activity,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +34,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'AI 助手', href: '/chat', icon: MessageSquare },
   { name: '效能監控', href: '/performance', icon: Activity },
   { name: '工作流', href: '/workflows', icon: Workflow },
   { name: 'Agents', href: '/agents', icon: Bot },

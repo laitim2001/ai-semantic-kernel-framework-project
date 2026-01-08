@@ -453,8 +453,50 @@ class HybridOrchestratorV2:
                     framework_used="microsoft_agent_framework",
                     execution_mode=ExecutionMode.WORKFLOW_MODE,
                 )
+        elif self._claude_executor:
+            # Fallback to Claude executor when MAF not available
+            # Sprint 67: Enable workflow mode with Claude SDK as fallback
+            logger.info("MAF executor not available, using Claude executor for workflow mode")
+            try:
+                raw_result = await asyncio.wait_for(
+                    self._claude_executor(
+                        prompt=prompt,
+                        history=context.conversation_history,
+                        tools=tools,
+                        max_tokens=max_tokens,
+                    ),
+                    timeout=timeout or self._config.timeout,
+                )
+
+                return self._convert_to_result_v2(
+                    raw_result,
+                    framework="claude_sdk",
+                    mode=ExecutionMode.WORKFLOW_MODE,
+                )
+            except asyncio.TimeoutError:
+                # S67-BF-1: Explicit timeout error handling
+                logger.error(f"Workflow mode (Claude fallback) timeout after {timeout or self._config.timeout}s")
+                return HybridResultV2(
+                    success=False,
+                    error=f"Request timed out after {timeout or self._config.timeout} seconds. This may be due to API rate limiting.",
+                    framework_used="claude_sdk",
+                    execution_mode=ExecutionMode.WORKFLOW_MODE,
+                )
+            except Exception as e:
+                # S67-BF-1: Enhanced error logging
+                error_msg = str(e)
+                if "429" in error_msg or "rate" in error_msg.lower():
+                    logger.warning(f"Workflow mode (Claude fallback) rate limited: {e}")
+                else:
+                    logger.error(f"Workflow mode (Claude fallback) error: {e}", exc_info=True)
+                return HybridResultV2(
+                    success=False,
+                    error=error_msg,
+                    framework_used="claude_sdk",
+                    execution_mode=ExecutionMode.WORKFLOW_MODE,
+                )
         else:
-            # Simulated response
+            # Simulated response (only when no executor available)
             return HybridResultV2(
                 success=True,
                 content=f"[WORKFLOW_MODE] Processed: {prompt[:100]}...",
@@ -495,11 +537,25 @@ class HybridOrchestratorV2:
                     framework="claude_sdk",
                     mode=ExecutionMode.CHAT_MODE,
                 )
-            except Exception as e:
-                logger.error(f"Chat mode execution error: {e}")
+            except asyncio.TimeoutError:
+                # S67-BF-1: Explicit timeout error handling
+                logger.error(f"Chat mode timeout after {timeout or self._config.timeout}s")
                 return HybridResultV2(
                     success=False,
-                    error=str(e),
+                    error=f"Request timed out after {timeout or self._config.timeout} seconds. This may be due to API rate limiting.",
+                    framework_used="claude_sdk",
+                    execution_mode=ExecutionMode.CHAT_MODE,
+                )
+            except Exception as e:
+                # S67-BF-1: Enhanced error logging
+                error_msg = str(e)
+                if "429" in error_msg or "rate" in error_msg.lower():
+                    logger.warning(f"Chat mode rate limited: {e}")
+                else:
+                    logger.error(f"Chat mode execution error: {e}", exc_info=True)
+                return HybridResultV2(
+                    success=False,
+                    error=error_msg,
                     framework_used="claude_sdk",
                     execution_mode=ExecutionMode.CHAT_MODE,
                 )
@@ -554,10 +610,43 @@ class HybridOrchestratorV2:
         framework: str,
         mode: ExecutionMode,
     ) -> HybridResultV2:
-        """Convert raw result to HybridResultV2."""
+        """
+        Convert raw result to HybridResultV2.
+
+        Sprint 66: S66-2 - Now converts tool_calls to tool_results for AG-UI events.
+        """
         if isinstance(raw_result, HybridResultV2):
             return raw_result
         elif isinstance(raw_result, dict):
+            # Convert tool_calls to ToolExecutionResult list
+            tool_results: List[ToolExecutionResult] = []
+            raw_tool_calls = raw_result.get("tool_calls", [])
+
+            for tc in raw_tool_calls:
+                if isinstance(tc, dict):
+                    tool_results.append(
+                        ToolExecutionResult(
+                            success=True,  # Assume success if in result
+                            content="",  # Content is in main result
+                            tool_name=tc.get("name", ""),
+                            execution_id=tc.get("id", str(uuid.uuid4())),
+                            source=ToolSource.CLAUDE if framework == "claude_sdk" else ToolSource.MAF,
+                            metadata={"args": tc.get("args", {})},
+                        )
+                    )
+                elif hasattr(tc, "name"):
+                    # Handle object-style tool calls
+                    tool_results.append(
+                        ToolExecutionResult(
+                            success=True,
+                            content="",
+                            tool_name=getattr(tc, "name", ""),
+                            execution_id=getattr(tc, "id", str(uuid.uuid4())),
+                            source=ToolSource.CLAUDE if framework == "claude_sdk" else ToolSource.MAF,
+                            metadata={"args": getattr(tc, "args", {})},
+                        )
+                    )
+
             return HybridResultV2(
                 success=raw_result.get("success", True),
                 content=raw_result.get("content", ""),
@@ -566,6 +655,7 @@ class HybridOrchestratorV2:
                 execution_mode=mode,
                 tokens_used=raw_result.get("tokens_used", 0),
                 metadata=raw_result.get("metadata", {}),
+                tool_results=tool_results,
             )
         else:
             return HybridResultV2(

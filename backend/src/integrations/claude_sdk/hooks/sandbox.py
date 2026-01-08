@@ -1,7 +1,10 @@
 """Sandbox Hook for Claude SDK.
 
 Sprint 49: S49-3 - Hooks System (10 pts)
+Sprint 68: S68-2 - UserSandboxHook for Per-User Isolation (5 pts)
+
 Restricts file access to allowed paths and blocks dangerous operations.
+Supports per-user sandbox isolation for secure agent operations.
 """
 
 import os
@@ -287,3 +290,213 @@ class StrictSandboxHook(SandboxHook):
             allow_temp=False,
             working_directory=working_directory,
         )
+
+
+# =============================================================================
+# Sprint 68: Per-User Sandbox Isolation
+# =============================================================================
+
+# Source code directories to block (absolute block, no read or write)
+SOURCE_CODE_BLOCKED_PATTERNS: List[str] = [
+    # Backend source
+    r"^backend/",
+    r"backend/src/",
+    r"backend/tests/",
+    # Frontend source
+    r"^frontend/",
+    r"frontend/src/",
+    r"frontend/node_modules/",
+    # General source
+    r"^src/",
+    r"^scripts/",
+    r"^docs/",
+    r"^tests/",
+    # Configuration
+    r"^\.claude/",
+    r"^\.git/",
+    r"^\.github/",
+    # Config files
+    r"\.env$",
+    r"\.env\.",
+    r"pyproject\.toml$",
+    r"package\.json$",
+    r"tsconfig\.json$",
+    r"alembic\.ini$",
+    r"docker-compose",
+    r"Dockerfile",
+    r"requirements\.txt$",
+]
+
+# File extensions blocked for write operations
+BLOCKED_WRITE_EXTENSIONS: Set[str] = {
+    # Code files
+    ".py", ".pyx", ".pyi",
+    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+    ".java", ".kt", ".scala",
+    ".go", ".rs", ".c", ".cpp", ".h", ".hpp",
+    ".rb", ".php", ".cs", ".fs",
+    # Shell scripts
+    ".sh", ".bash", ".zsh", ".fish",
+    ".bat", ".cmd", ".ps1", ".psm1",
+    # Config files
+    ".yaml", ".yml", ".toml", ".ini", ".cfg",
+    ".json",  # Only block write, allow read
+    # Database
+    ".sql", ".db", ".sqlite", ".sqlite3",
+    # Markup (code)
+    ".vue", ".svelte", ".astro",
+}
+
+
+class UserSandboxHook(SandboxHook):
+    """Per-user sandbox hook for secure agent operations.
+
+    Automatically configures:
+    - Allowed paths: user's data directories (uploads, sandbox, outputs)
+    - Blocked patterns: source code directories and sensitive files
+    - Write restrictions: code files and configuration
+
+    This is the recommended sandbox hook for agentic chat operations.
+
+    Args:
+        user_id: User identifier (e.g., "guest-abc-123" or authenticated user ID)
+        data_base_dir: Base directory for data (default: "data")
+        block_source_code: Whether to block access to source code (default: True)
+        allow_temp: Whether to allow temp directory access (default: True)
+
+    Example:
+        # Create per-user sandbox
+        hook = UserSandboxHook(user_id="guest-abc-123")
+
+        # Add to Claude SDK client
+        client = ClaudeSDKClient(hooks=[hook])
+    """
+
+    name: str = "user_sandbox"
+
+    def __init__(
+        self,
+        user_id: str,
+        data_base_dir: str = "data",
+        block_source_code: bool = True,
+        allow_temp: bool = True,
+    ):
+        self.user_id = user_id
+        self.data_base_dir = data_base_dir
+
+        # Calculate user's allowed paths
+        base = Path.cwd() / data_base_dir
+        user_dirs = [
+            str(base / "uploads" / user_id),
+            str(base / "sandbox" / user_id),
+            str(base / "outputs" / user_id),
+        ]
+
+        # Add temp directory if allowed
+        if allow_temp:
+            user_dirs.append(str(base / "temp"))
+
+        # Build blocked patterns
+        blocked = []
+        if block_source_code:
+            blocked.extend(SOURCE_CODE_BLOCKED_PATTERNS)
+
+        super().__init__(
+            allowed_paths=user_dirs,
+            blocked_patterns=blocked,
+            allow_reads=False,  # Strict mode - only allow sandbox paths
+            allow_temp=allow_temp,
+            working_directory=str(base / "sandbox" / user_id),
+        )
+
+        # Store blocked write extensions
+        self._blocked_write_extensions = BLOCKED_WRITE_EXTENSIONS.copy()
+
+    async def on_tool_call(self, context: ToolCallContext) -> HookResult:
+        """Check if tool call is within user sandbox.
+
+        Extends base implementation with:
+        - Write extension restrictions
+        - Logging of blocked attempts
+        """
+        tool_name = context.tool_name
+
+        # Only check file access tools
+        if tool_name not in FILE_ACCESS_TOOLS:
+            return HookResult.ALLOW
+
+        # Extract file path from args
+        file_path = self._extract_path(context.args)
+        if not file_path:
+            return HookResult.ALLOW
+
+        # Check write extension restrictions
+        if tool_name in self._write_tools:
+            ext = Path(file_path).suffix.lower()
+            if ext in self._blocked_write_extensions:
+                return HookResult.reject(
+                    f"Writing to '{ext}' files is not allowed for security reasons"
+                )
+
+        # Delegate to parent for path validation
+        result = await super().on_tool_call(context)
+
+        # Log blocked attempts (could integrate with audit hook)
+        if result.action == "reject":
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Sandbox blocked: user={self.user_id}, "
+                f"tool={tool_name}, path={file_path}, reason={result.message}"
+            )
+
+        return result
+
+    def ensure_user_dirs(self) -> Dict[str, Path]:
+        """Create user directories if they don't exist.
+
+        Returns:
+            Dictionary mapping directory type to Path
+        """
+        from src.core.sandbox_config import SandboxConfig
+        return SandboxConfig.ensure_user_dirs(self.user_id)
+
+    def get_user_dir(self, dir_type: str) -> Path:
+        """Get a specific user directory.
+
+        Args:
+            dir_type: "uploads", "sandbox", or "outputs"
+
+        Returns:
+            Path to user directory
+        """
+        from src.core.sandbox_config import SandboxConfig
+        return SandboxConfig.get_user_dir(self.user_id, dir_type)
+
+    @classmethod
+    def for_guest(cls, guest_id: str) -> "UserSandboxHook":
+        """Create sandbox hook for guest user.
+
+        Convenience factory for guest users.
+
+        Args:
+            guest_id: Guest user ID (e.g., "guest-abc-123")
+
+        Returns:
+            Configured UserSandboxHook
+        """
+        return cls(user_id=guest_id, block_source_code=True)
+
+    @classmethod
+    def for_authenticated(cls, user_id: str) -> "UserSandboxHook":
+        """Create sandbox hook for authenticated user.
+
+        Same as guest but with potential for extended permissions.
+
+        Args:
+            user_id: Authenticated user ID
+
+        Returns:
+            Configured UserSandboxHook
+        """
+        return cls(user_id=user_id, block_source_code=True)

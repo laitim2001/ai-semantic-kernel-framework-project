@@ -34,6 +34,14 @@ from .tool import (
     ToolCallStartEvent,
     ToolCallStatus,
 )
+from .progress import (
+    SubStep,
+    SubStepStatus,
+    StepProgressPayload,
+    StepProgressTracker,
+    create_step_progress_event,
+    emit_step_progress,
+)
 
 __all__ = [
     # Base
@@ -58,4 +66,11 @@ __all__ = [
     "StateDeltaItem",
     "StateDeltaOperation",
     "CustomEvent",
+    # Progress Events (Sprint 69)
+    "SubStep",
+    "SubStepStatus",
+    "StepProgressPayload",
+    "StepProgressTracker",
+    "create_step_progress_event",
+    "emit_step_progress",
 ]

@@ -158,6 +158,21 @@ export const useUnifiedChatStore = create<UnifiedChatState & UnifiedChatActions>
           );
         },
 
+        // S71: Bulk set messages (for history loading)
+        setMessages: (messages: ChatMessage[]) => {
+          set(
+            {
+              messages,
+              metrics: {
+                ...get().metrics,
+                messageCount: messages.length,
+              },
+            },
+            false,
+            'setMessages'
+          );
+        },
+
         setStreaming: (isStreaming: boolean, messageId?: string) => {
           set(
             {

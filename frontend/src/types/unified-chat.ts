@@ -248,6 +248,7 @@ export interface UnifiedChatActions {
   // Messages
   addMessage: (message: ChatMessage) => void;
   updateMessage: (id: string, content: Partial<ChatMessage>) => void;
+  setMessages: (messages: ChatMessage[]) => void;  // S71: Bulk set messages (for history loading)
   setStreaming: (isStreaming: boolean, messageId?: string) => void;
   clearMessages: () => void;
 
@@ -347,6 +348,14 @@ export interface ChatInputProps {
   onRemoveAttachment?: (id: string) => void;
 }
 
+/** Heartbeat state for long-running operations (S67-BF-1) */
+export interface HeartbeatState {
+  count: number;
+  elapsedSeconds: number;
+  message: string;
+  status: 'processing' | 'idle';
+}
+
 /** StatusBar props */
 export interface StatusBarProps {
   mode: ExecutionMode;
@@ -357,6 +366,7 @@ export interface StatusBarProps {
   hasCheckpoint: boolean;
   canRestore: boolean;
   onRestore?: () => void;
+  heartbeat?: HeartbeatState | null;  // S67-BF-1
 }
 
 /** InlineApproval props */
@@ -372,6 +382,50 @@ export interface StepProgressProps {
   steps: WorkflowStep[];
   currentStep: number;
   totalSteps: number;
+}
+
+// =============================================================================
+// Enhanced Step Progress Types (Sprint 69)
+// =============================================================================
+
+/** Sub-step status for hierarchical progress */
+export type SubStepStatusType = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+
+/** Sub-step within a main step */
+export interface SubStep {
+  id: string;
+  name: string;
+  status: SubStepStatusType;
+  progress?: number;
+  message?: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
+/** Step progress event from backend */
+export interface StepProgressEvent {
+  stepId: string;
+  stepName: string;
+  current: number;
+  total: number;
+  progress: number;
+  status: SubStepStatusType;
+  substeps: SubStep[];
+  metadata?: Record<string, unknown>;
+}
+
+/** Step progress state for tracking multiple steps */
+export interface StepProgressState {
+  steps: Map<string, StepProgressEvent>;
+  currentStep: string | null;
+}
+
+/** StepProgressEnhanced props */
+export interface StepProgressEnhancedProps {
+  step: StepProgressEvent;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+  showSubsteps?: boolean;
 }
 
 /** ToolCallTracker props */

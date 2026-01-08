@@ -1,5 +1,5 @@
 # =============================================================================
-# IPA Platform - AG-UI API Routes (Updated: 2026-01-06 15:30)
+# IPA Platform - AG-UI API Routes (Updated: 2026-01-08)
 # =============================================================================
 # Sprint 58: AG-UI Core Infrastructure
 # S58-1: AG-UI SSE Endpoint
@@ -7,6 +7,7 @@
 # S59-3: Human-in-the-Loop Approval Endpoints
 # Sprint 60: AG-UI Advanced Features
 # S60-2: Shared State Management Endpoints
+# Sprint 68: S68-4 - History API Implementation
 #
 # REST API endpoints for AG-UI protocol integration.
 # Provides SSE streaming endpoint compatible with CopilotKit frontend.
@@ -497,29 +498,103 @@ async def run_agent_sync(
 @router.get(
     "/threads/{thread_id}/history",
     summary="Get Thread History",
-    description="Get conversation history for a thread (placeholder)",
+    description="Get conversation history for a thread with pagination.",
     responses={
-        200: {"description": "Thread history"},
+        200: {"description": "Thread history with messages"},
         404: {"model": ErrorResponse, "description": "Thread not found"},
     },
 )
 async def get_thread_history(
     thread_id: str,
+    offset: int = Query(0, ge=0, description="Number of messages to skip"),
     limit: int = Query(50, ge=1, le=200, description="Maximum messages to return"),
+    bridge: HybridEventBridge = Depends(get_hybrid_bridge),
 ) -> Dict[str, Any]:
     """
     Get thread conversation history.
 
-    This is a placeholder endpoint for future integration
-    with ThreadManager and session management.
+    Sprint 68: S68-4 - Full implementation with pagination.
+
+    Retrieves messages from the session/thread with:
+    - Pagination support (offset, limit)
+    - Tool calls included
+    - Approval states included
+    - Sorted by timestamp (oldest first for display)
+
+    Args:
+        thread_id: Thread/Session identifier
+        offset: Number of messages to skip
+        limit: Maximum messages to return
+        bridge: HybridEventBridge for thread management
+
+    Returns:
+        Thread history with paginated messages
     """
-    # TODO: Integrate with ThreadManager when available
-    return {
-        "thread_id": thread_id,
-        "messages": [],
-        "total": 0,
-        "limit": limit,
-    }
+    try:
+        # Get thread manager from bridge if available
+        thread_manager = getattr(bridge, "_thread_manager", None)
+
+        if thread_manager:
+            # Try to get thread state
+            thread_state = await thread_manager.get_thread(thread_id)
+            if not thread_state:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={"error": "THREAD_NOT_FOUND", "message": f"Thread {thread_id} not found"},
+                )
+
+            # Get messages from thread state
+            all_messages = thread_state.get("messages", [])
+            total = len(all_messages)
+
+            # Apply pagination (oldest first for display)
+            paginated_messages = all_messages[offset : offset + limit]
+
+            # Format messages for response
+            formatted_messages = []
+            for msg in paginated_messages:
+                formatted_messages.append({
+                    "id": msg.get("id", str(uuid.uuid4())),
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", ""),
+                    "tool_calls": msg.get("tool_calls", []),
+                    "approval_state": msg.get("approval_state"),
+                    "created_at": msg.get("created_at", datetime.utcnow().isoformat()),
+                })
+
+            return {
+                "thread_id": thread_id,
+                "messages": formatted_messages,
+                "pagination": {
+                    "offset": offset,
+                    "limit": limit,
+                    "total": total,
+                    "has_more": offset + limit < total,
+                },
+            }
+
+        # Fallback: Return empty history if no thread manager
+        # This supports simulation mode and initial setup
+        logger.warning(f"No thread manager available for history lookup: {thread_id}")
+        return {
+            "thread_id": thread_id,
+            "messages": [],
+            "pagination": {
+                "offset": offset,
+                "limit": limit,
+                "total": 0,
+                "has_more": False,
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting thread history: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "HISTORY_ERROR", "message": str(e)},
+        )
 
 
 # =============================================================================

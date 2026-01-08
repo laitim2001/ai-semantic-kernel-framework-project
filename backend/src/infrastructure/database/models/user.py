@@ -2,6 +2,7 @@
 # IPA Platform - User Model
 # =============================================================================
 # Sprint 1: Core Engine - Agent Framework Integration
+# Sprint 72: S72-1 - Added sessions relationship
 #
 # User model for platform authentication and authorization.
 # Supports role-based access control (admin, operator, viewer).
@@ -20,6 +21,7 @@ from src.infrastructure.database.models.base import Base, TimestampMixin
 if TYPE_CHECKING:
     from src.infrastructure.database.models.workflow import Workflow
     from src.infrastructure.database.models.execution import Execution
+    from src.infrastructure.database.models.session import SessionModel
 
 
 class User(Base, TimestampMixin):
@@ -96,6 +98,13 @@ class User(Base, TimestampMixin):
     executions: Mapped[List["Execution"]] = relationship(
         "Execution",
         back_populates="triggered_by_user",
+        lazy="selectin",
+    )
+
+    # Sprint 72: Sessions relationship
+    sessions: Mapped[List["SessionModel"]] = relationship(
+        "SessionModel",
+        back_populates="user",
         lazy="selectin",
     )
 

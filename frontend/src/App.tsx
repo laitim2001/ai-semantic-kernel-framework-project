@@ -5,6 +5,9 @@
 // Sprint 12: S12-4 UI Integration - Added Performance Monitoring
 // Sprint 61: AG-UI Demo Page Route
 // Sprint 62: Unified Chat Interface Route (Phase 16)
+// Sprint 69: S69-4 - Integrated Chat into AppLayout (Dashboard integration)
+// Sprint 71: S71-2 - Added Login/Signup routes (Phase 18)
+// Sprint 71: S71-3 - Added ProtectedRoute wrapper (Phase 18)
 //
 // Root application component with routing configuration.
 //
@@ -14,6 +17,7 @@
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { PerformancePage } from '@/pages/dashboard/PerformancePage';
 import { WorkflowsPage } from '@/pages/workflows/WorkflowsPage';
@@ -29,22 +33,36 @@ import { AuditPage } from '@/pages/audit/AuditPage';
 import { TemplatesPage } from '@/pages/templates/TemplatesPage';
 import { AGUIDemoPage } from '@/pages/ag-ui/AGUIDemoPage';
 import { UnifiedChat } from '@/pages/UnifiedChat';
+import { LoginPage } from '@/pages/auth/LoginPage';
+import { SignupPage } from '@/pages/auth/SignupPage';
 
 function App() {
   return (
     <Routes>
-      {/* Unified Chat Interface (Sprint 62, Phase 16) - Standalone full-screen layout */}
-      <Route path="/chat" element={<UnifiedChat />} />
+      {/* Auth Pages (Sprint 71) - Standalone full-screen layout */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
 
       {/* AG-UI Demo Page (Sprint 61) - Standalone full-screen layout */}
       <Route path="/ag-ui-demo" element={<AGUIDemoPage />} />
 
-      <Route path="/" element={<AppLayout />}>
+      {/* Protected Routes (Sprint 71) - Require authentication */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
         {/* Default redirect to dashboard */}
         <Route index element={<Navigate to="/dashboard" replace />} />
 
         {/* Dashboard */}
         <Route path="dashboard" element={<DashboardPage />} />
+
+        {/* Unified Chat Interface (Sprint 69: Integrated into AppLayout) */}
+        <Route path="chat" element={<UnifiedChat />} />
 
         {/* Performance Monitoring (Sprint 12 - Phase 2) */}
         <Route path="performance" element={<PerformancePage />} />

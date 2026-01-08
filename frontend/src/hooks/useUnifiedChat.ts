@@ -4,6 +4,7 @@
  * Sprint 63: Mode Switching & State Management
  * S63-1: useUnifiedChat Hook (8 pts)
  * Phase 16: Unified Agentic Chat Interface
+ * Sprint 68: S68-5 - History Loading Integration
  *
  * Main orchestration hook that manages AG-UI connection, message handling,
  * and state coordination for the unified chat interface.
@@ -15,6 +16,7 @@
  * - Zustand store synchronization
  * - STATE_SNAPSHOT/DELTA handling for shared state
  * - Optimistic updates support
+ * - History loading from backend (Sprint 68)
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -124,6 +126,21 @@ export interface UseUnifiedChatReturn {
   // Shared state
   sharedState: Record<string, unknown>;
   updateSharedState: (path: string, value: unknown) => void;
+
+  // Heartbeat (S67-BF-1)
+  heartbeat: HeartbeatState | null;
+
+  // History (S68-5)
+  historyLoading: boolean;
+  loadHistory: () => Promise<void>;
+}
+
+/** Heartbeat state for long-running operations (S67-BF-1) */
+export interface HeartbeatState {
+  count: number;
+  elapsedSeconds: number;
+  message: string;
+  status: 'processing' | 'idle';
 }
 
 // =============================================================================
@@ -228,6 +245,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
   const [tokenUsage, setTokenUsage] = useState({ used: 0, limit: 4000 });
   const [sharedState, setSharedState] = useState<Record<string, unknown>>({});
   const [stateVersion, setStateVersion] = useState(0);
+  const [heartbeat, setHeartbeat] = useState<HeartbeatState | null>(null);  // S67-BF-1
+  const [historyLoading, setHistoryLoading] = useState(false);  // S68-5
 
   // ==========================================================================
   // Refs
@@ -581,12 +600,14 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
           setIsStreaming(true);
           store.setStreaming(true);
           setError(null);
+          setHeartbeat(null);  // S67-BF-1: Reset heartbeat on run start
           break;
 
         case 'RUN_FINISHED': {
           const success = data.finish_reason !== 'error';
           setIsStreaming(false);
           store.setStreaming(false);
+          setHeartbeat(null);  // S67-BF-1: Clear heartbeat on run finish
           finalizeCurrentMessage();
           onRunComplete?.(success, data.error as string | undefined);
           break;
@@ -724,6 +745,16 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
             const wfState = payload.workflow_state as WorkflowState;
             setWorkflowState(wfState);
             store.setWorkflowState(wfState);
+          }
+
+          // S67-BF-1: Handle HEARTBEAT event
+          if (eventName === 'heartbeat') {
+            setHeartbeat({
+              count: payload.count as number,
+              elapsedSeconds: payload.elapsed_seconds as number,
+              message: payload.message as string,
+              status: payload.status as 'processing' | 'idle',
+            });
           }
           break;
         }
@@ -923,6 +954,81 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
   }, [updateConnectionStatus]);
 
   // ==========================================================================
+  // History Loading (Sprint 68: S68-5)
+  // ==========================================================================
+
+  /**
+   * Load conversation history from backend.
+   *
+   * Fetches messages from the history API and replaces local state.
+   * Backend is the source of truth; localStorage is used only as fallback.
+   */
+  const loadHistory = useCallback(async () => {
+    if (!threadId) return;
+
+    setHistoryLoading(true);
+    try {
+      // Build history URL with Guest ID header
+      const guestId = localStorage.getItem('ipa_guest_user_id');
+
+      const response = await fetch(`${apiUrl}/threads/${threadId}/history`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(guestId ? { 'X-Guest-Id': guestId } : {}),
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Thread not found - new conversation, nothing to load
+          console.log('[useUnifiedChat] New thread, no history to load');
+          return;
+        }
+        throw new Error(`Failed to load history: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Convert API response to ChatMessage format
+      if (data.messages && Array.isArray(data.messages)) {
+        const historyMessages: ChatMessage[] = data.messages.map((msg: {
+          id: string;
+          role: MessageRole;
+          content: string;
+          tool_calls?: ToolCallState[];
+          approval_state?: string;
+          created_at: string;
+        }) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          toolCalls: msg.tool_calls || [],
+          timestamp: msg.created_at,
+          metadata: msg.approval_state ? { approvalState: msg.approval_state } : undefined,
+        }));
+
+        // Replace local messages with backend history
+        setMessages(historyMessages);
+        store.setMessages(historyMessages);
+        console.log(`[useUnifiedChat] Loaded ${historyMessages.length} messages from history`);
+      }
+    } catch (err) {
+      console.error('[useUnifiedChat] Failed to load history:', err);
+      // Non-critical - keep local messages if any, or start fresh
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [threadId, apiUrl, store]);
+
+  // Load history on mount when threadId is available
+  useEffect(() => {
+    if (threadId) {
+      loadHistory();
+    }
+  }, [threadId, loadHistory]);
+
+  // ==========================================================================
   // Cleanup on Unmount
   // ==========================================================================
 
@@ -993,6 +1099,13 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
     // Shared state
     sharedState,
     updateSharedState,
+
+    // Heartbeat (S67-BF-1)
+    heartbeat,
+
+    // History (S68-5)
+    historyLoading,
+    loadHistory,
   };
 }
 
