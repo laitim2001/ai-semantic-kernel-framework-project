@@ -1,0 +1,9 @@
+Generic single-database configuration for IPA Platform.
+
+This directory contains Alembic migration scripts for database schema changes.
+
+Usage:
+  alembic revision --autogenerate -m "description"  # Create migration
+  alembic upgrade head                              # Apply all migrations
+  alembic downgrade -1                              # Rollback one migration
+  alembic history                                   # Show migration history
