@@ -30,7 +30,7 @@ from src.domain.auth.schemas import (
     UserResponse,
 )
 from src.domain.auth.service import AuthService
-from src.infrastructure.database.connection import get_session
+from src.infrastructure.database import get_session
 from src.infrastructure.database.models.user import User
 from src.infrastructure.database.repositories.user import UserRepository
 from src.api.v1.dependencies import get_current_user

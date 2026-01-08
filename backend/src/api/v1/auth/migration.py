@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.dependencies import get_current_user
-from src.infrastructure.database.connection import get_session
+from src.infrastructure.database import get_session
 from src.infrastructure.database.models.user import User
 from src.infrastructure.database.models.session import SessionModel
 
