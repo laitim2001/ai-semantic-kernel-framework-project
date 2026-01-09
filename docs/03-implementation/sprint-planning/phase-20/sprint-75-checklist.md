@@ -54,6 +54,29 @@
 
 ---
 
+### S75-BF-4: 切換對話時 AI 回覆跑到錯誤對話 ✅
+
+**Status**: ✅ 已完成 (2026-01-09)
+
+**Issue**: 在對話中發送訊息，AI 回覆前切換到另一個對話，AI 回覆會出現在當前（錯誤的）對話視窗
+**Root Cause**: 切換對話時沒有取消正在進行的 SSE streaming，導致 AI 回覆繼續寫入到新的 activeThreadId 對應的對話中
+**Fix**: 在 `handleSelectThread` 和 `handleNewThread` 中添加 `cancelStream()` 調用：
+```typescript
+const handleSelectThread = useCallback((threadId: string) => {
+  if (isStreaming) {
+    cancelStream();  // 取消正在進行的 streaming
+  }
+  // ... 切換對話邏輯
+}, [isStreaming, cancelStream, ...]);
+```
+
+**Verification**: 使用 Playwright 測試：
+- 發送長訊息（請 AI 寫故事）→ AI 開始回覆 → 立即切換對話 ✓
+- 切換後的對話不會出現原對話的 AI 回覆 ✓
+- 切回原對話：用戶訊息保留，AI 回覆被取消（預期行為）✓
+
+---
+
 ## Stories
 
 ### S75-1: 後端文件上傳 API (5 pts)

@@ -398,17 +398,34 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   }, [setManualOverride]);
 
   // S74-3: Handle new thread creation
+  // S75-BF-4: Cancel streaming before switching threads to prevent message leakage
   const handleNewThread = useCallback(() => {
+    // Cancel any ongoing streaming to prevent messages from appearing in wrong thread
+    if (isStreaming) {
+      cancelStream();
+    }
+
+    // Save current thread's messages before switching (if any)
+    if (activeThreadId && messages.length > 0) {
+      saveMessages(activeThreadId, messages);
+    }
+
     const newId = createThread();
     setActiveThreadId(newId);
     clearMessages();
     resetTimer();
-  }, [createThread, clearMessages, resetTimer]);
+  }, [isStreaming, cancelStream, activeThreadId, messages, saveMessages, createThread, clearMessages, resetTimer]);
 
   // S74-3: Handle thread selection
   // S74-BF-1: Load messages from localStorage when switching threads
+  // S75-BF-4: Cancel streaming before switching threads to prevent message leakage
   const handleSelectThread = useCallback((id: string) => {
     if (id === activeThreadId) return;
+
+    // Cancel any ongoing streaming to prevent messages from appearing in wrong thread
+    if (isStreaming) {
+      cancelStream();
+    }
 
     // Save current thread's messages before switching
     if (activeThreadId && messages.length > 0) {
@@ -426,7 +443,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     } else {
       clearMessages();
     }
-  }, [activeThreadId, messages, saveMessages, getMessages, setMessages, clearMessages, resetTimer]);
+  }, [isStreaming, cancelStream, activeThreadId, messages, saveMessages, getMessages, setMessages, clearMessages, resetTimer]);
 
   // S74-3: Handle thread deletion
   const handleDeleteThread = useCallback((id: string) => {
