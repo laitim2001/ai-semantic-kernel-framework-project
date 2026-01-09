@@ -162,7 +162,8 @@ class FileService:
         # Store metadata in memory (in production, use database)
         self._file_metadata[file_id] = metadata
 
-        logger.info(f"File uploaded: {filename} ({category.value}) for user {user_id}")
+        logger.info(f"[S75-5] File uploaded: {filename} ({category.value}) for user {user_id}")
+        logger.info(f"[S75-5] Stored metadata for file_id={file_id}, total files in memory: {len(self._file_metadata)}")
 
         return FileUploadResponse(
             id=file_id,

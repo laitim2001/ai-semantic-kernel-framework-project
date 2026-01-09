@@ -318,6 +318,16 @@ async def run_agent(
             for tool in request.tools
         ]
 
+    # S75-5: Extract file IDs from attachments
+    file_ids = None
+    # Debug: Always log attachments status
+    logger.info(f"[S75-5] Request attachments field: {request.attachments}")
+    if request.attachments:
+        file_ids = [a.file_id for a in request.attachments]
+        logger.info(f"[S75-5] Received attachments: {file_ids}")
+    else:
+        logger.info("[S75-5] No attachments in request (attachments is None or empty)")
+
     # Create RunAgentInput
     run_input = RunAgentInput(
         prompt=prompt,
@@ -329,11 +339,13 @@ async def run_agent(
         max_tokens=request.max_tokens,
         timeout=request.timeout,
         metadata=request.metadata,
+        file_ids=file_ids,  # S75-5: Pass file IDs
     )
 
     logger.info(
         f"AG-UI run_agent: thread_id={request.thread_id}, "
         f"run_id={run_input.run_id}, mode={request.mode.value}"
+        f"{', attachments=' + str(len(file_ids)) if file_ids else ''}"
     )
 
     # Return streaming response
@@ -408,6 +420,11 @@ async def run_agent_sync(
             for tool in request.tools
         ]
 
+    # S75-5: Extract file IDs from attachments
+    file_ids_sync = None
+    if request.attachments:
+        file_ids_sync = [a.file_id for a in request.attachments]
+
     # Create RunAgentInput
     run_input = RunAgentInput(
         prompt=prompt,
@@ -419,11 +436,13 @@ async def run_agent_sync(
         max_tokens=request.max_tokens,
         timeout=request.timeout,
         metadata=request.metadata,
+        file_ids=file_ids_sync,  # S75-5: Pass file IDs
     )
 
     logger.info(
         f"AG-UI run_agent_sync: thread_id={request.thread_id}, "
         f"run_id={run_input.run_id}, mode={request.mode.value}"
+        f"{', attachments=' + str(len(file_ids_sync)) if file_ids_sync else ''}"
     )
 
     try:

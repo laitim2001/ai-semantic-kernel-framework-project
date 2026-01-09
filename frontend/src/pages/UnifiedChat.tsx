@@ -232,11 +232,13 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
 
   // S74-2/3: Thread management
   // S74-BF-1: Add getMessages and saveMessages for thread switching
+  // S74-BF-3: Add getThread for checking manual rename
   const {
     threads,
     createThread,
     updateThread,
     deleteThread,
+    getThread,
     generateTitle,
     getMessages,
     saveMessages,
@@ -345,7 +347,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     removeAttachment,
     uploadAll,
     clearAttachments,
-    getUploadedFileIds,
+    // Note: getUploadedFileIds removed - using uploadAll return value instead (S75-5 Fix)
   } = useFileUpload({
     maxFiles: 10,
     onUploadComplete: (attachment) => {
@@ -492,6 +494,8 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   }, [deleteThread, activeThreadId, threads, clearMessages, resetTimer]);
 
   // S74-3: Update thread metadata when messages change
+  // S74-BF-3: Only auto-generate title if thread has default title ('新對話')
+  // This preserves user's manual rename
   useEffect(() => {
     if (!activeThreadId || messages.length === 0) return;
 
@@ -501,12 +505,17 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     const firstUserMessage = userMessages[0];
     const lastMessage = messages[messages.length - 1];
 
+    // Get current thread to check if title was manually set
+    const currentThread = getThread(activeThreadId);
+    const isDefaultTitle = !currentThread || currentThread.title === '新對話';
+
+    // Only update title if it's still the default
     updateThread(activeThreadId, {
-      title: generateTitle(firstUserMessage.content),
+      ...(isDefaultTitle && { title: generateTitle(firstUserMessage.content) }),
       lastMessage: lastMessage.content.slice(0, 50),
       messageCount: messages.length,
     });
-  }, [activeThreadId, messages, updateThread, generateTitle]);
+  }, [activeThreadId, messages, updateThread, generateTitle, getThread]);
 
   // S74-BF-1: Auto-save messages to localStorage when they change
   useEffect(() => {
@@ -534,6 +543,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
 
   // S74-3: Handle send message with auto thread creation
   // S75-4: Updated to handle file attachments
+  // S75-5 Fix: Use uploadAll return value to avoid React state sync issue
   const handleSend = useCallback(async (content: string, fileIds?: string[]) => {
     // Auto-create thread if none active
     let threadToUse = activeThreadId;
@@ -542,17 +552,19 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       setActiveThreadId(threadToUse);
     }
 
-    // S75-4: If there are pending uploads, upload them first
-    if (attachments.some((a) => a.status === 'pending')) {
-      await uploadAll();
+    // S75-5 Fix: Get file IDs directly from uploadAll return value
+    // This avoids the React state sync issue where getUploadedFileIds()
+    // returns stale data because state hasn't updated yet
+    let allFileIds: string[] = fileIds || [];
+
+    if (!fileIds && attachments.length > 0) {
+      // Upload pending files and get IDs directly from the result
+      allFileIds = await uploadAll();
+      console.log('[S75-5] Uploaded file IDs:', allFileIds);
     }
 
-    // Get all uploaded file IDs
-    const allFileIds = fileIds || getUploadedFileIds();
-
-    // Send message (with optional file IDs for backend to process)
-    // TODO: S75-5 - Pass fileIds to backend when it supports attachments
-    sendMessage(content).catch((err) => {
+    // S75-5: Send message with file IDs to backend
+    sendMessage(content, allFileIds.length > 0 ? allFileIds : undefined).catch((err) => {
       console.error('[UnifiedChat] Failed to send message:', err);
     });
 
@@ -560,14 +572,16 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     if (allFileIds.length > 0) {
       clearAttachments();
     }
-  }, [activeThreadId, createThread, generateTitle, sendMessage, attachments, uploadAll, getUploadedFileIds, clearAttachments]);
+  }, [activeThreadId, createThread, generateTitle, sendMessage, attachments, uploadAll, clearAttachments]);
 
   // S75-4: Handle file attachment
+  // Note: Files are added to queue and uploaded when message is sent (handleSend)
+  // This avoids race conditions with React's async state updates
   const handleAttach = useCallback((files: File[]) => {
     addFiles(files);
-    // Auto-upload immediately
-    uploadAll();
-  }, [addFiles, uploadAll]);
+    // Do NOT call uploadAll() here - it would use stale attachments state
+    // Upload happens in handleSend when user sends the message
+  }, [addFiles]);
 
   // Handle cancel streaming
   const handleCancel = useCallback(() => {
@@ -628,6 +642,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
         onSelectThread={handleSelectThread}
         onNewThread={handleNewThread}
         onDeleteThread={handleDeleteThread}
+        onRenameThread={(id, newTitle) => updateThread(id, { title: newTitle })}
         isCollapsed={historyCollapsed}
         onToggle={() => setHistoryCollapsed(!historyCollapsed)}
       />

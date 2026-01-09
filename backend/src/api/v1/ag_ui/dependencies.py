@@ -79,6 +79,68 @@ def _try_create_claude_client():
         return None
 
 
+async def _execute_multimodal(
+    client,
+    multimodal_content: List[Dict[str, Any]],
+    max_tokens: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    S75-5: Execute multimodal content (images, PDFs, text) via Claude API.
+
+    This function directly calls the Anthropic API with proper multimodal
+    content format for images and PDFs.
+
+    Args:
+        client: ClaudeSDKClient instance
+        multimodal_content: List of content blocks (text, image, document)
+        max_tokens: Maximum response tokens
+
+    Returns:
+        Dict with success, content, and tokens_used
+    """
+    try:
+        # Access the underlying Anthropic client
+        anthropic_client = client._client
+
+        # Log content types for debugging
+        content_types = [c.get("type") for c in multimodal_content]
+        logger.info(f"[S75-5] Multimodal content types: {content_types}")
+
+        # Call Claude API with multimodal content
+        response = await anthropic_client.messages.create(
+            model=client.config.model,
+            max_tokens=max_tokens or 4096,
+            messages=[{
+                "role": "user",
+                "content": multimodal_content,
+            }],
+        )
+
+        # Extract response content
+        final_content = ""
+        for block in response.content:
+            if hasattr(block, "text"):
+                final_content += block.text
+
+        logger.info(f"[S75-5] Multimodal response received: {len(final_content)} chars")
+
+        return {
+            "success": True,
+            "content": final_content,
+            "tool_calls": [],
+            "tokens_used": response.usage.input_tokens + response.usage.output_tokens,
+        }
+
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"[S75-5] Multimodal execution error: {error_msg}", exc_info=True)
+        return {
+            "success": False,
+            "content": f"Multimodal API error: {error_msg}",
+            "error": error_msg,
+        }
+
+
 def _create_claude_executor(client):
     """
     Create a Claude executor function for HybridOrchestratorV2.
@@ -94,9 +156,29 @@ def _create_claude_executor(client):
         history: Optional[List[Dict[str, Any]]] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
         max_tokens: Optional[int] = None,
+        multimodal_content: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        """Execute prompt via Claude SDK with tool support."""
+        """
+        Execute prompt via Claude SDK with tool support.
+
+        S75-5: Supports multimodal content for images, PDFs, and text files.
+
+        Args:
+            prompt: User prompt text
+            history: Conversation history
+            tools: Available tools
+            max_tokens: Maximum response tokens
+            multimodal_content: Claude API multimodal content blocks (S75-5)
+        """
         try:
+            # S75-5: Check if we have multimodal content (images, PDFs)
+            if multimodal_content and len(multimodal_content) > 1:
+                # Use direct Anthropic API for multimodal content
+                logger.info(f"[S75-5] Using multimodal API with {len(multimodal_content)} content blocks")
+                return await _execute_multimodal(
+                    client, multimodal_content, max_tokens
+                )
+
             # Build messages from history if available
             messages = []
             if history:

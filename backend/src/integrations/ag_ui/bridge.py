@@ -4,6 +4,7 @@
 # Sprint 58: AG-UI Core Infrastructure
 # S58-2: HybridEventBridge
 # Sprint 67: S67-BF-1 - Add heartbeat mechanism for Rate Limit handling
+# Sprint 75: S75-5 - File attachment support
 #
 # Bridge component that connects HybridOrchestratorV2 to AG-UI protocol.
 # Transforms execution results into AG-UI standard SSE event streams.
@@ -14,11 +15,13 @@
 #   - Supports SSE (Server-Sent Events) formatting
 #   - Handles tool call events from execution results
 #   - Heartbeat mechanism for long-running operations (Rate Limit retry)
+#   - File attachment support (S75-5)
 #
 # Dependencies:
 #   - EventConverters (src.integrations.ag_ui.converters)
 #   - HybridOrchestratorV2 (src.integrations.hybrid.orchestrator_v2)
 #   - AG-UI Events (src.integrations.ag_ui.events)
+#   - FileService (src.domain.files.service)
 # =============================================================================
 
 import asyncio
@@ -176,6 +179,172 @@ class HybridEventBridge:
         self._orchestrator = orchestrator
         logger.info("Orchestrator updated in bridge")
 
+    def _build_multimodal_content(
+        self,
+        prompt: str,
+        file_ids: Optional[List[str]],
+    ) -> List[Dict[str, Any]]:
+        """
+        S75-5: Build Claude API multimodal content with files.
+
+        This method constructs the proper multimodal content format for
+        Claude API, supporting images, PDFs, and text files.
+
+        Args:
+            prompt: Original user prompt
+            file_ids: List of file IDs to include
+
+        Returns:
+            List of content blocks for Claude API messages
+        """
+        content: List[Dict[str, Any]] = []
+
+        if not file_ids:
+            logger.debug("[S75-5] No file_ids provided, returning text-only content")
+            return [{"type": "text", "text": prompt}]
+
+        logger.info(f"[S75-5] Building multimodal content with {len(file_ids)} file(s): {file_ids}")
+
+        try:
+            from src.domain.files.service import get_file_service
+
+            file_service = get_file_service()
+
+            # Debug: Log available metadata
+            logger.info(f"[S75-5] FileService metadata count: {len(file_service._file_metadata)}")
+            logger.info(f"[S75-5] Available file IDs: {list(file_service._file_metadata.keys())}")
+
+            for file_id in file_ids:
+                # Get file metadata
+                metadata = file_service.get_file_metadata(file_id)
+                if not metadata:
+                    logger.warning(f"[S75-5] File metadata not found: {file_id}")
+                    continue
+                logger.info(f"[S75-5] Found metadata for file: {file_id} -> {metadata.filename}")
+
+                filename = metadata.filename
+
+                # Handle different file types with proper Claude API format
+                if file_service.is_image_file(file_id):
+                    # Image file - use Claude Vision API format
+                    base64_data = file_service.get_file_base64(file_id, metadata.user_id)
+                    if base64_data:
+                        content.append({
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": metadata.mime_type,
+                                "data": base64_data,
+                            }
+                        })
+                        logger.info(f"[S75-5] Added image to content: {filename} ({metadata.mime_type})")
+                    else:
+                        logger.warning(f"[S75-5] Failed to get base64 for image: {filename}")
+
+                elif file_service.is_pdf_file(file_id):
+                    # PDF file - use Claude Document API format
+                    base64_data = file_service.get_file_base64(file_id, metadata.user_id)
+                    if base64_data:
+                        content.append({
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": base64_data,
+                            }
+                        })
+                        logger.info(f"[S75-5] Added PDF to content: {filename}")
+                    else:
+                        logger.warning(f"[S75-5] Failed to get base64 for PDF: {filename}")
+
+                elif file_service.is_text_file(file_id):
+                    # Text file - include content directly
+                    text_content = file_service.get_file_content_text(file_id, metadata.user_id)
+                    if text_content:
+                        content.append({
+                            "type": "text",
+                            "text": f"[File: {filename}]\n```\n{text_content[:10000]}\n```"
+                        })
+                        logger.info(f"[S75-5] Added text file to content: {filename}")
+                    else:
+                        logger.warning(f"[S75-5] Failed to read text file: {filename}")
+
+                else:
+                    # Other file types - try to read as text
+                    try:
+                        text_content = file_service.get_file_content_text(file_id, metadata.user_id)
+                        if text_content:
+                            content.append({
+                                "type": "text",
+                                "text": f"[File: {filename} ({metadata.mime_type})]\n```\n{text_content[:10000]}\n```"
+                            })
+                            logger.info(f"[S75-5] Added file as text: {filename}")
+                    except Exception as e:
+                        logger.warning(f"[S75-5] Cannot read file {filename}: {e}")
+
+            # Add user prompt as final text block
+            content.append({"type": "text", "text": prompt})
+
+            logger.info(f"[S75-5] Built multimodal content with {len(content)} blocks")
+            return content
+
+        except Exception as e:
+            logger.error(f"[S75-5] Error building multimodal content: {e}", exc_info=True)
+            # Fallback to text-only content
+            return [{"type": "text", "text": prompt}]
+
+    def _enrich_prompt_with_files(
+        self,
+        prompt: str,
+        file_ids: Optional[List[str]],
+    ) -> str:
+        """
+        S75-5: Legacy method - Enrich prompt with file contents as text.
+
+        DEPRECATED: Use _build_multimodal_content() for proper Claude API support.
+        This method is kept for backwards compatibility with text-only mode.
+
+        Args:
+            prompt: Original user prompt
+            file_ids: List of file IDs to include
+
+        Returns:
+            Enriched prompt with file contents prepended
+        """
+        if not file_ids:
+            return prompt
+
+        logger.info(f"[S75-5] (Legacy) Enriching prompt with {len(file_ids)} file(s)")
+
+        try:
+            from src.domain.files.service import get_file_service
+
+            file_service = get_file_service()
+            file_parts: List[str] = []
+
+            for file_id in file_ids:
+                metadata = file_service.get_file_metadata(file_id)
+                if not metadata:
+                    continue
+
+                filename = metadata.filename
+
+                if file_service.is_text_file(file_id):
+                    content = file_service.get_file_content_text(file_id, metadata.user_id)
+                    if content:
+                        file_parts.append(f"[File: {filename}]\n```\n{content[:10000]}\n```")
+                else:
+                    file_parts.append(f"[File: {filename} ({metadata.mime_type})]")
+
+            if file_parts:
+                return "Attached files:\n" + "\n\n".join(file_parts) + "\n\n---\n\n" + prompt
+
+            return prompt
+
+        except Exception as e:
+            logger.error(f"Error enriching prompt: {e}", exc_info=True)
+            return prompt
+
     async def _generate_simulation_events(
         self,
         run_input: RunAgentInput,
@@ -289,14 +458,25 @@ class HybridEventBridge:
             async def execute_task():
                 """Execute orchestrator and signal completion."""
                 try:
+                    # S75-5: Build multimodal content for Claude API
+                    multimodal_content = self._build_multimodal_content(
+                        run_input.prompt, run_input.file_ids
+                    )
+
+                    # Merge multimodal_content into metadata for orchestrator
+                    execution_metadata = run_input.metadata.copy() if run_input.metadata else {}
+                    execution_metadata["multimodal_content"] = multimodal_content
+
+                    logger.info(f"[S75-5] Executing with multimodal content: {len(multimodal_content)} blocks")
+
                     result = await self._orchestrator.execute(
-                        prompt=run_input.prompt,
+                        prompt=run_input.prompt,  # Keep original prompt for logging/history
                         session_id=run_input.session_id,
                         force_mode=run_input.force_mode,
                         tools=run_input.tools,
                         max_tokens=run_input.max_tokens,
                         timeout=run_input.timeout,
-                        metadata=run_input.metadata,
+                        metadata=execution_metadata,
                     )
                     execution_result["result"] = result
                 except Exception as e:
@@ -439,15 +619,24 @@ class HybridEventBridge:
         yield self._converters.to_run_started(thread_id, run_id)
 
         try:
+            # S75-5: Build multimodal content for Claude API
+            multimodal_content = self._build_multimodal_content(
+                run_input.prompt, run_input.file_ids
+            )
+
+            # Merge multimodal_content into metadata for orchestrator
+            execution_metadata = run_input.metadata.copy() if run_input.metadata else {}
+            execution_metadata["multimodal_content"] = multimodal_content
+
             # 2. Execute via orchestrator
             result = await self._orchestrator.execute(
-                prompt=run_input.prompt,
+                prompt=run_input.prompt,  # Keep original prompt for logging/history
                 session_id=run_input.session_id,
                 force_mode=run_input.force_mode,
                 tools=run_input.tools,
                 max_tokens=run_input.max_tokens,
                 timeout=run_input.timeout,
-                metadata=run_input.metadata,
+                metadata=execution_metadata,
             )
 
             # 3. Convert result to events and yield

@@ -69,6 +69,24 @@ class AGUIMessage(BaseModel):
         }
 
 
+class AGUIAttachment(BaseModel):
+    """
+    Attachment in AG-UI format.
+
+    Sprint 75: S75-5 - File Attachment Support
+    """
+    file_id: str = Field(..., description="File ID from upload")
+    type: str = Field("file", description="Attachment type")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "file_id": "file-abc123",
+                "type": "file",
+            }
+        }
+
+
 class RunAgentRequest(BaseModel):
     """
     AG-UI Run Agent Request.
@@ -80,6 +98,9 @@ class RunAgentRequest(BaseModel):
     run_id: Optional[str] = Field(None, description="Optional run ID (generated if not provided)")
     messages: List[AGUIMessage] = Field(default_factory=list, description="Conversation messages")
     tools: Optional[List[AGUIToolDefinition]] = Field(None, description="Available tools")
+
+    # S75-5: File attachments
+    attachments: Optional[List[AGUIAttachment]] = Field(None, description="File attachments")
 
     # Execution options
     mode: AGUIExecutionMode = Field(

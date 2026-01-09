@@ -3,6 +3,7 @@
  *
  * Sprint 74: S74-1 - Chat History Panel
  * Phase 19: UI Enhancement
+ * Bug Fix: S74-BF-3 - Add thread rename functionality
  *
  * Displays a list of conversation threads similar to ChatGPT sidebar.
  * Supports:
@@ -10,16 +11,20 @@
  * - Active thread highlighting
  * - New chat creation
  * - Thread deletion with confirmation
+ * - Thread renaming (S74-BF-3)
  * - Collapsible panel
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Plus,
   MessageSquare,
   Trash2,
+  Pencil,
   ChevronLeft,
   ChevronRight,
+  Check,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -50,6 +55,8 @@ interface ChatHistoryPanelProps {
   onNewThread: () => void;
   /** Callback when a thread is deleted */
   onDeleteThread: (id: string) => void;
+  /** Callback when a thread is renamed (S74-BF-3) */
+  onRenameThread?: (id: string, newTitle: string) => void;
   /** Whether the panel is collapsed */
   isCollapsed?: boolean;
   /** Callback to toggle collapse state */
@@ -64,57 +71,145 @@ interface ThreadItemProps {
   isActive: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onRename?: (newTitle: string) => void;
 }
 
 /**
  * Thread item component
  */
-function ThreadItem({ thread, isActive, onSelect, onDelete }: ThreadItemProps) {
-  const [showDelete, setShowDelete] = useState(false);
+function ThreadItem({ thread, isActive, onSelect, onDelete, onRename }: ThreadItemProps) {
+  const [showActions, setShowActions] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(thread.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus input when entering edit mode
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditTitle(thread.title);
+    setIsEditing(true);
+  };
+
+  const handleConfirmEdit = () => {
+    const trimmed = editTitle.trim();
+    if (trimmed && trimmed !== thread.title && onRename) {
+      onRename(trimmed);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditTitle(thread.title);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleConfirmEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
 
   return (
     <div
-      onClick={onSelect}
-      onMouseEnter={() => setShowDelete(true)}
-      onMouseLeave={() => setShowDelete(false)}
+      onClick={isEditing ? undefined : onSelect}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
       className={cn(
         'p-3 cursor-pointer transition-colors relative group',
         isActive
           ? 'bg-blue-50 border-r-2 border-blue-500'
-          : 'hover:bg-gray-100'
+          : 'hover:bg-gray-100',
+        isEditing && 'cursor-default'
       )}
     >
       <div className="flex items-start gap-2">
         <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-        <div className="flex-1 min-w-0 pr-6">
-          <div className="font-medium text-sm text-gray-900 truncate">
-            {thread.title}
-          </div>
-          {thread.lastMessage && (
-            <div className="text-xs text-gray-500 truncate mt-0.5">
-              {thread.lastMessage}
+        <div className="flex-1 min-w-0 pr-12">
+          {isEditing ? (
+            <div className="flex items-center gap-1">
+              <input
+                ref={inputRef}
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full text-sm px-1.5 py-0.5 border border-blue-400 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                maxLength={50}
+              />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirmEdit();
+                }}
+                className="p-0.5 rounded hover:bg-green-100 text-green-600"
+                aria-label="確認"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCancelEdit();
+                }}
+                className="p-0.5 rounded hover:bg-red-100 text-red-500"
+                aria-label="取消"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
+          ) : (
+            <>
+              <div className="font-medium text-sm text-gray-900 truncate">
+                {thread.title}
+              </div>
+              {thread.lastMessage && (
+                <div className="text-xs text-gray-500 truncate mt-0.5">
+                  {thread.lastMessage}
+                </div>
+              )}
+              <div className="text-xs text-gray-400 mt-1">
+                {formatRelativeTime(thread.updatedAt)}
+              </div>
+            </>
           )}
-          <div className="text-xs text-gray-400 mt-1">
-            {formatRelativeTime(thread.updatedAt)}
-          </div>
         </div>
       </div>
 
-      {/* Delete button - shows on hover */}
-      {showDelete && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (confirm('確定要刪除此對話嗎？')) {
-              onDelete();
-            }
-          }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
-          aria-label="刪除對話"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+      {/* Action buttons - shows on hover (when not editing) */}
+      {showActions && !isEditing && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+          {onRename && (
+            <button
+              onClick={handleStartEdit}
+              className="p-1.5 rounded hover:bg-blue-100 text-gray-400 hover:text-blue-500 transition-colors"
+              aria-label="重命名對話"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm('確定要刪除此對話嗎？')) {
+                onDelete();
+              }
+            }}
+            className="p-1.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
+            aria-label="刪除對話"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       )}
     </div>
   );
@@ -129,6 +224,7 @@ export function ChatHistoryPanel({
   onSelectThread,
   onNewThread,
   onDeleteThread,
+  onRenameThread,
   isCollapsed = false,
   onToggle,
 }: ChatHistoryPanelProps) {
@@ -176,6 +272,7 @@ export function ChatHistoryPanel({
               isActive={activeThreadId === thread.id}
               onSelect={() => onSelectThread(thread.id)}
               onDelete={() => onDeleteThread(thread.id)}
+              onRename={onRenameThread ? (newTitle) => onRenameThread(thread.id, newTitle) : undefined}
             />
           ))
         )}

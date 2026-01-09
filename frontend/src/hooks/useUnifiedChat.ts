@@ -93,7 +93,7 @@ export interface UseUnifiedChatReturn {
   error: Error | null;
 
   // Actions
-  sendMessage: (content: string, attachments?: File[]) => Promise<void>;
+  sendMessage: (content: string, fileIds?: string[]) => Promise<void>;
   cancelStream: () => void;
   clearMessages: () => void;
   setMessages: (messages: ChatMessage[]) => void;  // S74-BF-1: Allow external message setting
@@ -806,7 +806,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
   // ==========================================================================
 
   const sendMessage = useCallback(
-    async (content: string, _attachments?: File[]): Promise<void> => {
+    async (content: string, fileIds?: string[]): Promise<void> => {
       // Cancel any existing run
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -830,6 +830,12 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
           content: m.content,
         }));
 
+      // S75-5: Build attachments payload from file IDs
+      const attachmentsPayload = fileIds?.map((id) => ({
+        file_id: id,
+        type: 'file',
+      }));
+
       const payload = {
         thread_id: threadId,
         run_id: generateRunId(),
@@ -843,7 +849,14 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
         })),
         max_tokens: maxTokens,
         timeout,
+        // S75-5: Include attachments in payload
+        ...(attachmentsPayload && attachmentsPayload.length > 0 && { attachments: attachmentsPayload }),
       };
+
+      // S75-5: Debug log for payload
+      if (attachmentsPayload && attachmentsPayload.length > 0) {
+        console.log('[S75-5] Sending message with attachments:', attachmentsPayload);
+      }
 
       try {
         setIsStreaming(true);

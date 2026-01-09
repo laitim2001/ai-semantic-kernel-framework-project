@@ -44,7 +44,8 @@ export interface UseFileUploadReturn {
   isUploading: boolean;
   addFiles: (files: File[]) => void;
   removeAttachment: (id: string) => void;
-  uploadAll: () => Promise<void>;
+  /** Upload all pending files and return the file IDs */
+  uploadAll: () => Promise<string[]>;
   clearAttachments: () => void;
   getUploadedFileIds: () => string[];
 }
@@ -191,19 +192,34 @@ export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUpload
   }, [onUploadComplete, onUploadError]);
 
   /**
-   * Upload all pending attachments
+   * Upload all pending attachments and return file IDs
+   * S75-5 Fix: Return file IDs directly instead of relying on state update
    */
-  const uploadAll = useCallback(async () => {
+  const uploadAll = useCallback(async (): Promise<string[]> => {
     const pendingAttachments = attachments.filter((a) => a.status === 'pending');
 
     if (pendingAttachments.length === 0) {
-      return;
+      // Return existing uploaded file IDs
+      return attachments
+        .filter((a) => a.status === 'uploaded' && a.serverResponse)
+        .map((a) => a.serverResponse!.id);
     }
 
     setIsUploading(true);
 
     try {
-      await Promise.all(pendingAttachments.map(uploadSingle));
+      const results = await Promise.all(pendingAttachments.map(uploadSingle));
+      // Return file IDs from successfully uploaded files
+      const uploadedIds = results
+        .filter((a) => a.status === 'uploaded' && a.serverResponse)
+        .map((a) => a.serverResponse!.id);
+
+      // Also include any previously uploaded files
+      const existingIds = attachments
+        .filter((a) => a.status === 'uploaded' && a.serverResponse && !pendingAttachments.includes(a))
+        .map((a) => a.serverResponse!.id);
+
+      return [...existingIds, ...uploadedIds];
     } finally {
       setIsUploading(false);
     }

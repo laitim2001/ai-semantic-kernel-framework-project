@@ -282,6 +282,10 @@ class HybridOrchestratorV2:
 
         context.last_activity = time.time()
 
+        # S75-5: Store execution metadata in context (including multimodal_content)
+        if metadata:
+            context.metadata.update(metadata)
+
         try:
             # 1. Intent Analysis (skip if forcing mode or in minimal mode)
             if force_mode:
@@ -517,18 +521,30 @@ class HybridOrchestratorV2:
         Execute in Chat Mode.
 
         Claude 主導執行，直接使用 Claude SDK。
+        S75-5: Supports multimodal content for images, PDFs, and text files.
         """
         logger.info(f"Executing in CHAT_MODE: {prompt[:50]}...")
 
         if self._claude_executor:
             try:
+                # S75-5: Check for multimodal content in metadata
+                multimodal_content = context.metadata.get("multimodal_content")
+
+                # Build executor kwargs
+                executor_kwargs = {
+                    "prompt": prompt,
+                    "history": context.conversation_history,
+                    "tools": tools,
+                    "max_tokens": max_tokens,
+                }
+
+                # S75-5: Add multimodal_content if available
+                if multimodal_content:
+                    executor_kwargs["multimodal_content"] = multimodal_content
+                    logger.info(f"[S75-5] Passing multimodal content to claude_executor: {len(multimodal_content)} blocks")
+
                 raw_result = await asyncio.wait_for(
-                    self._claude_executor(
-                        prompt=prompt,
-                        history=context.conversation_history,
-                        tools=tools,
-                        max_tokens=max_tokens,
-                    ),
+                    self._claude_executor(**executor_kwargs),
                     timeout=timeout or self._config.timeout,
                 )
 
