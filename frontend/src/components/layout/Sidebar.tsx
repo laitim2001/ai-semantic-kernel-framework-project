@@ -4,8 +4,10 @@
 // Sprint 5: Frontend UI - Navigation Component
 // Sprint 12: S12-4 UI Integration - Added Performance Monitoring
 // Sprint 69: S69-4 - Added Chat navigation for Dashboard integration
+// Sprint 73: S73-2 - Collapsible Sidebar Feature
 //
 // Sidebar navigation with links to all main sections.
+// Supports collapse/expand for more screen space.
 //
 // Dependencies:
 //   - React Router (NavLink)
@@ -23,6 +25,8 @@ import {
   Settings,
   Activity,
   MessageSquare,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,49 +47,96 @@ const navigation: NavItem[] = [
   { name: '審計日誌', href: '/audit', icon: FileText },
 ];
 
-export function Sidebar() {
+/**
+ * S73-2: Sidebar Props for collapse functionality
+ */
+interface SidebarProps {
+  isCollapsed: boolean;
+  onToggle: () => void;
+}
+
+export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+    <aside
+      className={cn(
+        'bg-white border-r border-gray-200 flex flex-col transition-all duration-300',
+        isCollapsed ? 'w-16' : 'w-64'
+      )}
+    >
       {/* Logo / Brand */}
-      <div className="h-16 flex items-center px-6 border-b border-gray-200">
+      <div
+        className={cn(
+          'h-16 flex items-center border-b border-gray-200',
+          isCollapsed ? 'px-4 justify-center' : 'px-6'
+        )}
+      >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
             <Bot className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-lg">IPA Platform</span>
+          {!isCollapsed && (
+            <span className="font-bold text-lg whitespace-nowrap">IPA Platform</span>
+          )}
         </div>
       </div>
 
       {/* Navigation links */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => (
           <NavLink
             key={item.name}
             to={item.href}
+            title={isCollapsed ? item.name : undefined}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                isCollapsed && 'justify-center',
                 isActive
                   ? 'bg-primary text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               )
             }
           >
-            <item.icon className="w-5 h-5" />
-            {item.name}
+            <item.icon className="w-5 h-5 shrink-0" />
+            {!isCollapsed && <span>{item.name}</span>}
           </NavLink>
         ))}
       </nav>
 
-      {/* Bottom section */}
-      <div className="p-3 border-t border-gray-200">
+      {/* Bottom section with Settings and Toggle */}
+      <div className="p-2 border-t border-gray-200 space-y-1">
+        {/* Settings link */}
         <NavLink
           to="/settings"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          title={isCollapsed ? '設置' : undefined}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors',
+            isCollapsed && 'justify-center'
+          )}
         >
-          <Settings className="w-5 h-5" />
-          設置
+          <Settings className="w-5 h-5 shrink-0" />
+          {!isCollapsed && <span>設置</span>}
         </NavLink>
+
+        {/* Toggle button */}
+        <button
+          onClick={onToggle}
+          className={cn(
+            'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium',
+            'text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors',
+            isCollapsed && 'justify-center'
+          )}
+          aria-label={isCollapsed ? '展開側邊欄' : '收起側邊欄'}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-5 h-5" />
+          ) : (
+            <>
+              <ChevronLeft className="w-5 h-5" />
+              <span>收起</span>
+            </>
+          )}
+        </button>
       </div>
     </aside>
   );

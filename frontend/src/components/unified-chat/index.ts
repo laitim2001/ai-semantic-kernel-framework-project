@@ -4,7 +4,9 @@
  * Sprint 62: Core Architecture & Adaptive Layout
  * Sprint 65: S65-4 - UI Polish & Accessibility
  * Sprint 65: S65-5 - CustomUIRenderer Integration
+ * Sprint 74: S74-1 - Chat History Panel
  * Phase 16: Unified Agentic Chat Interface
+ * Phase 19: UI Enhancement
  *
  * Export all unified chat components for easy import.
  */
@@ -59,6 +61,10 @@ export { ErrorBoundary, ErrorBoundaryWrapper } from './ErrorBoundary';
 export type { ErrorBoundaryProps, ErrorBoundaryWrapperProps } from './ErrorBoundary';
 export { ConnectionStatus } from './ConnectionStatus';
 export type { ConnectionStatusProps } from './ConnectionStatus';
+
+// S74-1: Chat History Panel
+export { ChatHistoryPanel, ChatHistoryToggleButton } from './ChatHistoryPanel';
+export type { ChatThread } from './ChatHistoryPanel';
 
 // Re-export types for convenience
 export type {
