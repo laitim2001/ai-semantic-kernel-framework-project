@@ -2,15 +2,18 @@
 // IPA Platform - Header Component
 // =============================================================================
 // Sprint 5: Frontend UI - Top Navigation Header
+// Sprint 73: Phase 19 - Integrated UserMenu dropdown
 //
 // Top header with search, notifications, and user menu.
 //
 // Dependencies:
 //   - Lucide React icons
+//   - UserMenu component
 // =============================================================================
 
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { UserMenu } from './UserMenu';
 
 export function Header() {
   return (
@@ -35,13 +38,8 @@ export function Header() {
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
         </Button>
 
-        {/* User menu */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-gray-600" />
-          </div>
-          <span className="text-sm font-medium text-gray-700">Admin</span>
-        </div>
+        {/* User menu with dropdown */}
+        <UserMenu />
       </div>
     </header>
   );
