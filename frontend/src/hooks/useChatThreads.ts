@@ -17,7 +17,7 @@
  * thread history due to save effect running before load effect completed.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import type { ChatMessage } from '@/types/ag-ui';
 
@@ -65,8 +65,6 @@ const GUEST_USER_ID = 'guest';
 const MAX_THREADS = 50;
 // Maximum messages per thread to store
 const MAX_MESSAGES_PER_THREAD = 100;
-// Flag to track if data has been loaded for current user
-const loadedKeys = new Set<string>();
 
 /**
  * useChatThreads Hook
@@ -100,11 +98,19 @@ export function useChatThreads(): UseChatThreadsReturn {
   // Load initial state from localStorage
   const [threads, setThreads] = useState<ChatThread[]>([]);
 
+  // S75-BF-2: Track the last loaded storage key to prevent race condition
+  // When storageKey changes, we need to wait for load to complete before allowing save
+  const lastLoadedKeyRef = useRef<string | null>(null);
+  const isLoadingRef = useRef<boolean>(false);
+
   // S75-BF-1: Load threads when user changes
-  // S75-BF-2: Fix race condition - track loaded keys to prevent overwrite
+  // S75-BF-2: Fix race condition - use refs to track loading state
   useEffect(() => {
-    // Mark that we're loading this key (clear previous marker)
-    loadedKeys.delete(storageKey);
+    // Mark that we're loading (disable saving)
+    isLoadingRef.current = true;
+    lastLoadedKeyRef.current = null;
+
+    let loadedThreads: ChatThread[] = [];
 
     try {
       const saved = localStorage.getItem(storageKey);
@@ -112,32 +118,39 @@ export function useChatThreads(): UseChatThreadsReturn {
         const parsed = JSON.parse(saved);
         // Validate the data structure
         if (Array.isArray(parsed)) {
-          const validThreads = parsed.filter(
+          loadedThreads = parsed.filter(
             (t): t is ChatThread =>
               typeof t === 'object' &&
               typeof t.id === 'string' &&
               typeof t.title === 'string'
           );
-          setThreads(validThreads);
-          // Mark as loaded after setting threads
-          loadedKeys.add(storageKey);
-          return;
         }
       }
     } catch (e) {
       console.warn('[useChatThreads] Failed to load from localStorage:', e);
     }
-    // No saved data or invalid, start fresh
-    setThreads([]);
-    // Mark as loaded even for empty state
-    loadedKeys.add(storageKey);
+
+    // Set the threads state
+    setThreads(loadedThreads);
+
+    // After state is set, mark loading complete and allow saving for this key
+    // Use setTimeout to ensure this runs after the state update is processed
+    setTimeout(() => {
+      lastLoadedKeyRef.current = storageKey;
+      isLoadingRef.current = false;
+    }, 0);
   }, [storageKey]);
 
   // Persist to localStorage whenever threads change
-  // S75-BF-2: Only save after the key has been loaded to prevent race condition
+  // S75-BF-2: Only save if we're not loading and the key matches what was loaded
   useEffect(() => {
-    // Skip if this key hasn't been loaded yet (prevents overwriting on key change)
-    if (!loadedKeys.has(storageKey)) {
+    // Skip if we're currently loading (prevents saving stale data during key transition)
+    if (isLoadingRef.current) {
+      return;
+    }
+    // Skip if the current key doesn't match what was last loaded
+    // This prevents saving when storageKey changed but load hasn't completed
+    if (lastLoadedKeyRef.current !== storageKey) {
       return;
     }
     try {
