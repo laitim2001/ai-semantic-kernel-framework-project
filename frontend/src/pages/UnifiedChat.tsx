@@ -300,6 +300,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     apiUrl,
     tools: effectiveTools,
     modePreference: 'chat',
+    skipAutoLoadHistory: true,  // S74-BF-1: Use localStorage-based persistence instead
     onRunComplete: (success, errorMsg) => {
       if (!success && errorMsg) {
         console.error('[UnifiedChat] Run failed:', errorMsg);

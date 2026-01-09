@@ -68,6 +68,8 @@ export interface UseUnifiedChatOptions {
   reconnectInterval?: number;
   /** Max reconnect attempts */
   maxReconnectAttempts?: number;
+  /** S74-BF-1: Skip automatic history loading on threadId change (for localStorage-based persistence) */
+  skipAutoLoadHistory?: boolean;
   /** Callback when message received */
   onMessage?: (message: ChatMessage) => void;
   /** Callback when tool call occurs */
@@ -196,6 +198,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
     autoReconnect = true,
     reconnectInterval = 3000,
     maxReconnectAttempts = 5,
+    skipAutoLoadHistory = false,  // S74-BF-1
     onMessage,
     onToolCall,
     onApprovalRequired,
@@ -1043,11 +1046,12 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
   }, [threadId, apiUrl, storeSetMessages]);
 
   // Load history on mount when threadId is available
+  // S74-BF-1: Skip if using localStorage-based persistence
   useEffect(() => {
-    if (threadId) {
+    if (threadId && !skipAutoLoadHistory) {
       loadHistory();
     }
-  }, [threadId, loadHistory]);
+  }, [threadId, loadHistory, skipAutoLoadHistory]);
 
   // ==========================================================================
   // Cleanup on Unmount
