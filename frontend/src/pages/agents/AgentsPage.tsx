@@ -32,7 +32,7 @@ export function AgentsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['agents', searchQuery],
-    queryFn: () => api.get<AgentListResponse>(`/agents?search=${searchQuery}`),
+    queryFn: () => api.get<AgentListResponse>(`/agents/?search=${searchQuery}`),
   });
 
   // Use mock data if API not available, handle both array and object response

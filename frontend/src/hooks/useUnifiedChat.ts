@@ -207,7 +207,22 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
   // Zustand Store Integration
   // ==========================================================================
 
-  const store = useUnifiedChatStore();
+  // Use selectors for stable action references (prevents infinite re-renders)
+  const storeSetMode = useUnifiedChatStore((s) => s.setMode);
+  const storeSetConnection = useUnifiedChatStore((s) => s.setConnection);
+  const storeAddMessage = useUnifiedChatStore((s) => s.addMessage);
+  const storeUpdateMessage = useUnifiedChatStore((s) => s.updateMessage);
+  const storeSetMessages = useUnifiedChatStore((s) => s.setMessages);
+  const storeClearMessages = useUnifiedChatStore((s) => s.clearMessages);
+  const storeSetStreaming = useUnifiedChatStore((s) => s.setStreaming);
+  const storeSetError = useUnifiedChatStore((s) => s.setError);
+  const storeAddToolCall = useUnifiedChatStore((s) => s.addToolCall);
+  const storeUpdateToolCall = useUnifiedChatStore((s) => s.updateToolCall);
+  const storeAddPendingApproval = useUnifiedChatStore((s) => s.addPendingApproval);
+  const storeRemovePendingApproval = useUnifiedChatStore((s) => s.removePendingApproval);
+  const storeSetDialogApproval = useUnifiedChatStore((s) => s.setDialogApproval);
+  const storeAddCheckpoint = useUnifiedChatStore((s) => s.addCheckpoint);
+  const storeSetWorkflowState = useUnifiedChatStore((s) => s.setWorkflowState);
 
   // ==========================================================================
   // Mode Management (useHybridMode integration)
@@ -223,7 +238,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
     initialMode: modePreference || 'chat',
     sessionId,
     onModeChange: (mode, source) => {
-      store.setMode(mode);
+      storeSetMode(mode);
       onModeChange?.(mode, source);
     },
   });
@@ -274,10 +289,10 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
   const updateConnectionStatus = useCallback(
     (status: ConnectionStatus) => {
       setConnectionStatus(status);
-      store.setConnection(status);
+      storeSetConnection(status);
       onConnectionChange?.(status);
     },
-    [store, onConnectionChange]
+    [storeSetConnection, onConnectionChange]
   );
 
   // ==========================================================================
@@ -294,11 +309,11 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       };
 
       setMessages((prev) => [...prev, message]);
-      store.addMessage(message);
+      storeAddMessage(message);
       onMessage?.(message);
       return message;
     },
-    [store, onMessage]
+    [storeAddMessage, onMessage]
   );
 
   const updateCurrentMessage = useCallback((delta: string) => {
@@ -312,7 +327,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       };
       currentMessageRef.current = newMessage;
       setMessages((prev) => [...prev, newMessage]);
-      store.addMessage(newMessage);
+      storeAddMessage(newMessage);
     }
 
     // Update content with delta
@@ -326,8 +341,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
         m.id === messageId ? { ...m, content: newContent } : m
       )
     );
-    store.updateMessage(messageId, { content: newContent });
-  }, [store]);
+    storeUpdateMessage(messageId, { content: newContent });
+  }, [storeUpdateMessage]);
 
   const finalizeCurrentMessage = useCallback(() => {
     if (currentMessageRef.current) {
@@ -340,8 +355,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
     setMessages([]);
     setToolCalls([]);
     currentMessageRef.current = null;
-    store.clearMessages();
-  }, [store]);
+    storeClearMessages();
+  }, [storeClearMessages]);
 
   // ==========================================================================
   // Tool Call Management
@@ -361,10 +376,10 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
 
       currentToolCallRef.current = toolCall;
       setToolCalls((prev) => [...prev, toolCall]);
-      store.addToolCall(toolCall);
+      storeAddToolCall(toolCall);
       onToolCall?.(toolCall);
     },
-    [store, onToolCall]
+    [storeAddToolCall, onToolCall]
   );
 
   const updateToolCallArgs = useCallback((args: Record<string, unknown>) => {
@@ -385,8 +400,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
           : tc
       )
     );
-    store.updateToolCall(toolCallId, { arguments: updatedArgs });
-  }, [store]);
+    storeUpdateToolCall(toolCallId, { arguments: updatedArgs });
+  }, [storeUpdateToolCall]);
 
   const completeToolCall = useCallback(
     (toolCallId: string, result: unknown, toolError?: string) => {
@@ -405,7 +420,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
         })
       );
 
-      store.updateToolCall(toolCallId, { status, result, error: toolError, completedAt });
+      storeUpdateToolCall(toolCallId, { status, result, error: toolError, completedAt });
 
       if (currentToolCallRef.current?.toolCallId === toolCallId) {
         const updated = {
@@ -419,7 +434,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
         currentToolCallRef.current = null;
       }
     },
-    [store, onToolCall]
+    [storeUpdateToolCall, onToolCall]
   );
 
   // ==========================================================================
@@ -432,13 +447,13 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
         if (prev.some((a) => a.approvalId === approval.approvalId)) return prev;
         return [...prev, approval];
       });
-      store.addPendingApproval(approval);
+      storeAddPendingApproval(approval);
       onApprovalRequired?.(approval);
 
       // Auto-show dialog for high/critical risk
       if (approval.riskLevel === 'high' || approval.riskLevel === 'critical') {
         setDialogApproval(approval);
-        store.setDialogApproval(approval);
+        storeSetDialogApproval(approval);
       }
 
       // Update tool call status
@@ -450,20 +465,20 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
         )
       );
     },
-    [store, onApprovalRequired]
+    [storeAddPendingApproval, storeSetDialogApproval, onApprovalRequired]
   );
 
   const removePendingApproval = useCallback((approvalId: string) => {
     setPendingApprovals((prev) =>
       prev.filter((a) => a.approvalId !== approvalId)
     );
-    store.removePendingApproval(approvalId);
+    storeRemovePendingApproval(approvalId);
 
     if (dialogApproval?.approvalId === approvalId) {
       setDialogApproval(null);
-      store.setDialogApproval(null);
+      storeSetDialogApproval(null);
     }
-  }, [store, dialogApproval]);
+  }, [storeRemovePendingApproval, storeSetDialogApproval, dialogApproval]);
 
   const approveToolCall = useCallback(
     async (approvalId: string, comment?: string): Promise<boolean> => {
@@ -541,8 +556,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
 
   const dismissDialog = useCallback(() => {
     setDialogApproval(null);
-    store.setDialogApproval(null);
-  }, [store]);
+    storeSetDialogApproval(null);
+  }, [storeSetDialogApproval]);
 
   // ==========================================================================
   // Shared State Management (STATE_SNAPSHOT/DELTA)
@@ -598,7 +613,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       switch (eventType) {
         case 'RUN_STARTED':
           setIsStreaming(true);
-          store.setStreaming(true);
+          storeSetStreaming(true);
           setError(null);
           setHeartbeat(null);  // S67-BF-1: Reset heartbeat on run start
           break;
@@ -606,7 +621,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
         case 'RUN_FINISHED': {
           const success = data.finish_reason !== 'error';
           setIsStreaming(false);
-          store.setStreaming(false);
+          storeSetStreaming(false);
           setHeartbeat(null);  // S67-BF-1: Clear heartbeat on run finish
           finalizeCurrentMessage();
           onRunComplete?.(success, data.error as string | undefined);
@@ -615,9 +630,9 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
 
         case 'RUN_ERROR':
           setIsStreaming(false);
-          store.setStreaming(false);
+          storeSetStreaming(false);
           setError(new Error(data.error as string || 'Unknown error'));
-          store.setError(data.error as string || 'Unknown error');
+          storeSetError(data.error as string || 'Unknown error');
           finalizeCurrentMessage();
           onRunComplete?.(false, data.error as string);
           break;
@@ -631,7 +646,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
           };
           currentMessageRef.current = newMessage;
           setMessages((prev) => [...prev, newMessage]);
-          store.addMessage(newMessage);
+          storeAddMessage(newMessage);
           break;
         }
 
@@ -737,14 +752,14 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
             };
             setCheckpoints((prev) => [...prev, checkpoint]);
             setCurrentCheckpoint(checkpoint.id);
-            store.addCheckpoint(checkpoint);
+            storeAddCheckpoint(checkpoint);
           }
 
           // Handle WORKFLOW_STATE event
           if (eventName === 'WORKFLOW_STATE') {
             const wfState = payload.workflow_state as WorkflowState;
             setWorkflowState(wfState);
-            store.setWorkflowState(wfState);
+            storeSetWorkflowState(wfState);
           }
 
           // S67-BF-1: Handle HEARTBEAT event
@@ -764,7 +779,11 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       }
     },
     [
-      store,
+      storeSetStreaming,
+      storeSetError,
+      storeAddMessage,
+      storeAddCheckpoint,
+      storeSetWorkflowState,
       finalizeCurrentMessage,
       updateCurrentMessage,
       startToolCall,
@@ -791,7 +810,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
 
       // Reset error state
       setError(null);
-      store.setError(null);
+      storeSetError(null);
 
       // Add user message
       const userMessage = addUserMessage(content);
@@ -824,7 +843,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
 
       try {
         setIsStreaming(true);
-        store.setStreaming(true);
+        storeSetStreaming(true);
 
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -873,13 +892,13 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
         if ((err as Error).name === 'AbortError') {
           // Request was cancelled
           setIsStreaming(false);
-          store.setStreaming(false);
+          storeSetStreaming(false);
         } else {
           console.error('[useUnifiedChat] Send message error:', err);
           setError(err as Error);
-          store.setError((err as Error).message);
+          storeSetError((err as Error).message);
           setIsStreaming(false);
-          store.setStreaming(false);
+          storeSetStreaming(false);
           onRunComplete?.(false, (err as Error).message);
 
           // Attempt reconnect if enabled
@@ -892,7 +911,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       }
     },
     [
-      store,
+      storeSetError,
+      storeSetStreaming,
       threadId,
       sessionId,
       currentMode,
@@ -920,9 +940,9 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       abortControllerRef.current = null;
     }
     setIsStreaming(false);
-    store.setStreaming(false);
+    storeSetStreaming(false);
     finalizeCurrentMessage();
-  }, [store, finalizeCurrentMessage]);
+  }, [storeSetStreaming, finalizeCurrentMessage]);
 
   // ==========================================================================
   // Reconnection Logic
@@ -1010,7 +1030,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
 
         // Replace local messages with backend history
         setMessages(historyMessages);
-        store.setMessages(historyMessages);
+        storeSetMessages(historyMessages);
         console.log(`[useUnifiedChat] Loaded ${historyMessages.length} messages from history`);
       }
     } catch (err) {
@@ -1019,7 +1039,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
     } finally {
       setHistoryLoading(false);
     }
-  }, [threadId, apiUrl, store]);
+  }, [threadId, apiUrl, storeSetMessages]);
 
   // Load history on mount when threadId is available
   useEffect(() => {

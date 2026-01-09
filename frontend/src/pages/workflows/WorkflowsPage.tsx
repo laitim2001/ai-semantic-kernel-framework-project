@@ -31,7 +31,7 @@ export function WorkflowsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['workflows', searchQuery],
-    queryFn: () => api.get<WorkflowListResponse>(`/workflows?search=${searchQuery}`),
+    queryFn: () => api.get<WorkflowListResponse>(`/workflows/?search=${searchQuery}`),
   });
 
   // Use mock data if API not available, handle both array and object response
