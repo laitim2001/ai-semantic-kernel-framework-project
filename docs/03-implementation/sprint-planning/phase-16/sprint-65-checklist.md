@@ -215,6 +215,22 @@ const uiEvent = {
 
 ---
 
+## S65-BF-1: CustomEvent Field Name Fix (Bug Fix)
+
+### Files Modified
+- [x] `backend/src/integrations/ag_ui/converters.py`
+
+### Implementation Checklist
+- [x] Line 432: 修正 `name`/`value` → `event_name`/`payload`
+- [x] Lines 601-609: 修正 `custom_event_type`/`data` → `event_name`/`payload`
+
+### Verification Steps
+- [ ] Backend 啟動無 Pydantic 驗證錯誤
+- [ ] Workflow Mode 工具調用正常
+- [ ] HITL approval 事件正確發送
+
+---
+
 ## Integration Tests
 
 ### Metrics Display
@@ -305,6 +321,7 @@ const uiEvent = {
 | S65-3 Complete | ⬜ | | |
 | S65-4 Complete | ⬜ | | |
 | S65-5 Complete | ⬜ | | 🆕 CustomUIRenderer |
+| S65-BF-1 Complete | ⬜ | | CustomEvent Fix |
 | Integration Tested | ⬜ | | |
 | Sprint Complete | ⬜ | | |
 

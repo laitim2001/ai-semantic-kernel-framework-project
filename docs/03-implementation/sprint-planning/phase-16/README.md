@@ -117,7 +117,9 @@ frontend/src/
 | **Sprint 63** | Mode Switching & State Management | 30 pts | ✅ Complete | [Plan](sprint-63-plan.md) / [Checklist](sprint-63-checklist.md) |
 | **Sprint 64** | Approval Flow & Risk Indicators | 29 pts | ✅ Complete | [Plan](sprint-64-plan.md) / [Checklist](sprint-64-checklist.md) |
 | **Sprint 65** | Metrics, Checkpoints & Polish | 24 pts | ✅ Complete | [Plan](sprint-65-plan.md) / [Checklist](sprint-65-checklist.md) |
-| **Total** | | **113 pts** | ✅ **100%** | |
+| **Sprint 66** | Tool Integration Bug Fix | 10 pts | ✅ Complete | [Plan](sprint-66-plan.md) / [Checklist](sprint-66-checklist.md) |
+| **Sprint 67** | UI Component Integration | 8 pts | ✅ Complete | [Plan](sprint-67-plan.md) / [Checklist](sprint-67-checklist.md) |
+| **Total** | | **131 pts** | ✅ **100%** | |
 
 ### Enhancement Summary (AG-UI Full Integration)
 
@@ -179,8 +181,8 @@ Phase 16 規劃已增強以完整整合 AG-UI 7 大功能和 Phase 13-14 組件�
 
 ---
 
-**Phase Status**: ✅ Complete
+**Phase Status**: 🔄 In Progress (Sprint 66 Bug Fix)
 **Start Date**: 2026-01-07
-**Completion Date**: 2026-01-07
-**Duration**: 4 sprints (1 day)
-**Total Story Points**: 113/113 pts (100%)
+**Last Update**: 2026-01-07
+**Duration**: 5 sprints
+**Total Story Points**: 113/123 pts (92%)
