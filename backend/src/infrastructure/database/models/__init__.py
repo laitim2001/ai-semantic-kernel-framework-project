@@ -15,21 +15,26 @@
 #   - AuditLog: Complete audit trail for compliance
 # =============================================================================
 
-from src.infrastructure.database.models.base import Base, TimestampMixin
+from src.infrastructure.database.models.base import Base, TimestampMixin, UUIDMixin
 from src.infrastructure.database.models.user import User
 from src.infrastructure.database.models.agent import Agent
 from src.infrastructure.database.models.workflow import Workflow
 from src.infrastructure.database.models.execution import Execution
 from src.infrastructure.database.models.checkpoint import Checkpoint
 from src.infrastructure.database.models.audit import AuditLog
+from src.infrastructure.database.models.session import SessionModel, MessageModel, AttachmentModel
 
 __all__ = [
     "Base",
     "TimestampMixin",
+    "UUIDMixin",
     "User",
     "Agent",
     "Workflow",
     "Execution",
     "Checkpoint",
     "AuditLog",
+    "SessionModel",
+    "MessageModel",
+    "AttachmentModel",
 ]
