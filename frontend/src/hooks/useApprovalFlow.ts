@@ -127,7 +127,7 @@ export function useApprovalFlow(
 ): UseApprovalFlowReturn {
   const {
     autoShowDialog = true,
-    defaultTimeout = 300, // 5 minutes
+    defaultTimeout: _defaultTimeout = 300, // 5 minutes - reserved for future timeout UI
     onApprovalProcessed,
     onApprovalTimeout,
     onModeSwitchConfirm,

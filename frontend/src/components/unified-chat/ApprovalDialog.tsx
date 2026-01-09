@@ -240,7 +240,7 @@ export const ApprovalDialog: FC<ApprovalDialogProps> = ({
   );
 
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onDismiss()}>
+    <Dialog open={true} onOpenChange={(open: boolean) => !open && onDismiss()}>
       <DialogContent
         className={cn('sm:max-w-lg', riskStyle.border)}
         onKeyDown={handleKeyDown}

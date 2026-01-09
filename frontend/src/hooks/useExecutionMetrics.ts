@@ -281,7 +281,6 @@ export function useExecutionMetrics(
 
     timerRef.current = setInterval(() => {
       if (startTimeRef.current) {
-        const elapsed = Date.now() - startTimeRef.current;
         setMetrics((prev) => ({
           ...prev,
           time: {

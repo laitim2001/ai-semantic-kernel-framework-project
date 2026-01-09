@@ -29,7 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/Tooltip';
-import type { StatusBarProps, ExecutionMetrics } from '@/types/unified-chat';
+import type { StatusBarProps } from '@/types/unified-chat';
 import type { RiskLevel } from '@/types/ag-ui';
 import { cn } from '@/lib/utils';
 
@@ -118,6 +118,7 @@ export const StatusBar: FC<StatusBarProps> = ({
   hasCheckpoint,
   canRestore,
   onRestore,
+  heartbeat,  // S67-BF-1
 }) => {
   const riskConfig = getRiskConfig(riskLevel);
   const RiskIcon = riskConfig.icon;
@@ -274,6 +275,28 @@ export const StatusBar: FC<StatusBarProps> = ({
               <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
             )}
           </div>
+
+          {/* S67-BF-1: Heartbeat Indicator */}
+          {heartbeat && heartbeat.status === 'processing' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 cursor-help">
+                  <Loader2 className="h-3.5 w-3.5 text-amber-600 animate-spin" />
+                  <span className="text-xs text-amber-700 font-medium">
+                    Waiting... ({heartbeat.elapsedSeconds}s)
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="space-y-1">
+                  <p className="font-medium">{heartbeat.message}</p>
+                  <p className="text-xs text-gray-400">
+                    Heartbeat #{heartbeat.count} • {heartbeat.elapsedSeconds}s elapsed
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Checkpoint Indicator */}
           {hasCheckpoint && (

@@ -138,7 +138,7 @@ export const ModeSwitchConfirmDialog: FC<ModeSwitchConfirmDialogProps> = ({
   const ToIcon = toConfig.icon;
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
+    <Dialog open={open} onOpenChange={(isOpen: boolean) => !isOpen && onCancel()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

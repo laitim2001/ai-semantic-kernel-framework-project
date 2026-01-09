@@ -24,7 +24,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/Dialog';
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/Button';
 import type { Checkpoint } from '@/types/unified-chat';
 import { cn } from '@/lib/utils';
@@ -102,7 +102,7 @@ export const RestoreConfirmDialog: FC<RestoreConfirmDialogProps> = ({
   if (!checkpoint) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onCancel()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

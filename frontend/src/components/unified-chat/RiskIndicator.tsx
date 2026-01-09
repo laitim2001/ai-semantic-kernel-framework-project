@@ -17,8 +17,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/Badge';
+} from '@/components/ui/Tooltip';
 import type { RiskLevel } from '@/types/ag-ui';
 
 // =============================================================================
