@@ -8,99 +8,99 @@
 | **Phase** | 19 - UI Enhancement |
 | **Focus** | Chat History Panel |
 | **Points** | 13 pts |
-| **Status** | Pending |
+| **Status** | ✅ Complete |
 
 ---
 
 ## Pre-Sprint Checklist
 
-- [ ] Sprint 73 completed
-- [ ] UnifiedChat page working
-- [ ] localStorage available
+- [x] Sprint 73 completed
+- [x] UnifiedChat page working
+- [x] localStorage available
 
 ---
 
 ## Story Completion Tracking
 
-### S74-1: ChatHistoryPanel Component (5 pts)
+### S74-1: ChatHistoryPanel Component (5 pts) ✅
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Create ChatHistoryPanel.tsx | [ ] | |
-| Implement thread list display | [ ] | |
-| Implement active thread highlight | [ ] | |
-| Add "New Chat" button | [ ] | |
-| Add delete button with confirmation | [ ] | |
-| Add collapse toggle | [ ] | |
-| Add smooth animations | [ ] | transition-all duration-300 |
-| Add empty state message | [ ] | |
-| Add relative time display | [ ] | formatRelativeTime |
+| Create ChatHistoryPanel.tsx | [x] | 206 lines |
+| Implement thread list display | [x] | ThreadItem component |
+| Implement active thread highlight | [x] | blue border-r |
+| Add "New Chat" button | [x] | Plus icon |
+| Add delete button with confirmation | [x] | confirm() dialog |
+| Add collapse toggle | [x] | ChevronLeft/Right |
+| Add smooth animations | [x] | transition-all duration-300 |
+| Add empty state message | [x] | "暫無對話記錄" |
+| Add relative time display | [x] | formatRelativeTime |
 
 **Files Created**:
-- [ ] `frontend/src/components/unified-chat/ChatHistoryPanel.tsx`
+- [x] `frontend/src/components/unified-chat/ChatHistoryPanel.tsx`
 
 **Files Modified**:
-- [ ] `frontend/src/components/unified-chat/index.ts`
+- [x] `frontend/src/components/unified-chat/index.ts`
 
 **Test Cases**:
-- [ ] Panel displays with threads
-- [ ] Panel displays empty state
-- [ ] Click thread selects it
-- [ ] Delete button shows on hover
-- [ ] Delete confirmation works
-- [ ] Panel collapses/expands
+- [x] Panel displays with threads
+- [x] Panel displays empty state
+- [x] Click thread selects it
+- [x] Delete button shows on hover
+- [x] Delete confirmation works
+- [x] Panel collapses/expands
 
 ---
 
-### S74-2: useChatThreads Hook (3 pts)
+### S74-2: useChatThreads Hook (3 pts) ✅
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Create useChatThreads.ts | [ ] | |
-| Load from localStorage on mount | [ ] | |
-| Save to localStorage on change | [ ] | |
-| Implement createThread() | [ ] | |
-| Implement updateThread() | [ ] | |
-| Implement deleteThread() | [ ] | |
-| Implement generateTitle() | [ ] | First 30 chars |
-| Add MAX_THREADS limit | [ ] | 50 threads |
+| Create useChatThreads.ts | [x] | 216 lines |
+| Load from localStorage on mount | [x] | STORAGE_KEY |
+| Save to localStorage on change | [x] | useEffect |
+| Implement createThread() | [x] | Returns new ID |
+| Implement updateThread() | [x] | Partial updates |
+| Implement deleteThread() | [x] | Filter by ID |
+| Implement generateTitle() | [x] | First 30 chars |
+| Add MAX_THREADS limit | [x] | 50 threads |
 
 **Files Created**:
-- [ ] `frontend/src/hooks/useChatThreads.ts`
+- [x] `frontend/src/hooks/useChatThreads.ts`
 
 **Test Cases**:
-- [ ] Create thread returns new ID
-- [ ] Update thread modifies correctly
-- [ ] Delete thread removes from list
-- [ ] Threads persist after refresh
-- [ ] Title generation truncates properly
+- [x] Create thread returns new ID
+- [x] Update thread modifies correctly
+- [x] Delete thread removes from list
+- [x] Threads persist after refresh
+- [x] Title generation truncates properly
 
 ---
 
-### S74-3: UnifiedChat Layout Integration (5 pts)
+### S74-3: UnifiedChat Layout Integration (5 pts) ✅
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Add ChatHistoryPanel to layout | [ ] | |
-| Add historyCollapsed state | [ ] | |
-| Connect useChatThreads hook | [ ] | |
-| Implement handleNewThread | [ ] | |
-| Implement handleSelectThread | [ ] | |
-| Update thread on message send | [ ] | |
-| Auto-create thread on first send | [ ] | |
-| Persist active thread ID | [ ] | |
-| Add collapsed toggle button | [ ] | |
+| Add ChatHistoryPanel to layout | [x] | Left panel |
+| Add historyCollapsed state | [x] | useState(false) |
+| Connect useChatThreads hook | [x] | Destructure all methods |
+| Implement handleNewThread | [x] | createThread + setActive |
+| Implement handleSelectThread | [x] | setActive + clearMessages |
+| Update thread on message send | [x] | useEffect on messages |
+| Auto-create thread on first send | [x] | In handleSend |
+| Persist active thread ID | [x] | localStorage |
+| Add collapsed toggle button | [x] | ChatHistoryToggleButton |
 
 **Files Modified**:
-- [ ] `frontend/src/pages/UnifiedChat.tsx`
+- [x] `frontend/src/pages/UnifiedChat.tsx`
 
 **Test Cases**:
-- [ ] New chat creates thread
-- [ ] Send message updates thread
-- [ ] Switch thread clears messages
-- [ ] Active thread persists on refresh
-- [ ] History panel collapses
-- [ ] Layout doesn't overflow
+- [x] New chat creates thread
+- [x] Send message updates thread
+- [x] Switch thread clears messages
+- [x] Active thread persists on refresh
+- [x] History panel collapses
+- [x] Layout doesn't overflow
 
 ---
 
@@ -108,24 +108,25 @@
 
 | Scenario | Status | Notes |
 |----------|--------|-------|
-| Full flow: new chat -> send -> history shows | [ ] | |
-| Switch between threads | [ ] | |
-| Delete active thread | [ ] | |
-| Refresh page, restore state | [ ] | |
-| Sidebar + History both collapsed | [ ] | |
+| Full flow: new chat -> send -> history shows | [x] | |
+| Switch between threads | [x] | |
+| Delete active thread | [x] | Selects next |
+| Refresh page, restore state | [x] | |
+| Sidebar + History both collapsed | [x] | |
 
 ---
 
 ## Post-Sprint Checklist
 
-- [ ] All stories complete (13 pts)
-- [ ] ChatHistoryPanel works
-- [ ] Thread persistence works
-- [ ] Layout responsive
-- [ ] No visual regressions
-- [ ] Code reviewed
+- [x] All stories complete (13 pts)
+- [x] ChatHistoryPanel works
+- [x] Thread persistence works
+- [x] Layout responsive
+- [x] No visual regressions
+- [x] Code reviewed
 
 ---
 
-**Checklist Status**: Pending
+**Checklist Status**: ✅ Complete
 **Last Updated**: 2026-01-09
+**Commit**: 458349e
