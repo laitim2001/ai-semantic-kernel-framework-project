@@ -243,6 +243,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
 
   // S75-BF-1: Load active thread ID when user changes
+  // S75-BF-3: Messages are loaded by the activeThreadId change effect below
   useEffect(() => {
     if (initialThreadId) {
       setActiveThreadId(initialThreadId);
@@ -470,6 +471,9 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   }, [activeThreadId, messages, isStreaming, saveMessages]);
 
   // S74-BF-1: Load messages on initial mount if activeThreadId exists
+  // Note: S75-BF-3 now handles loading messages when activeThreadId is restored
+  // This effect is kept as a fallback for edge cases where activeThreadId is set
+  // before the restore effect runs (e.g., from props)
   useEffect(() => {
     if (activeThreadId && messages.length === 0) {
       const savedMessages = getMessages(activeThreadId);
@@ -477,9 +481,9 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
         setMessages(savedMessages);
       }
     }
-    // Only run on mount, not on activeThreadId changes (handleSelectThread handles that)
+    // Only run when activeThreadId changes, not on every messages change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeThreadId]);
 
   // S74-3: Handle send message with auto thread creation
   const handleSend = useCallback((content: string) => {
