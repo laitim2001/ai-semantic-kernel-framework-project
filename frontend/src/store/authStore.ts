@@ -69,6 +69,11 @@ async function apiLogin(email: string, password: string): Promise<{
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
+    // Handle 422 validation errors (detail is an array)
+    if (Array.isArray(error.detail)) {
+      const messages = error.detail.map((e: { msg: string }) => e.msg).join('; ');
+      throw new Error(messages || 'Validation failed');
+    }
     throw new Error(error.detail || 'Login failed');
   }
 
@@ -88,6 +93,11 @@ async function apiRegister(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
+    // Handle 422 validation errors (detail is an array)
+    if (Array.isArray(error.detail)) {
+      const messages = error.detail.map((e: { msg: string }) => e.msg).join('; ');
+      throw new Error(messages || 'Validation failed');
+    }
     throw new Error(error.detail || 'Registration failed');
   }
 
