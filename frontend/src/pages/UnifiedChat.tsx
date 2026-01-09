@@ -7,7 +7,9 @@
  * Sprint 66: S66-3 - Default tool configuration for Agentic functionality
  * Sprint 69: S69-4 - Dashboard Layout Integration (h-full instead of h-screen)
  * Sprint 73: S73-1 - Token/Time Metrics Fix
+ * Sprint 73: S73-BF-1 - Token estimation (frontend fallback)
  * Sprint 74: S74-3 - Chat History Panel Integration
+ * Sprint 74: S74-BF-1 - Thread message persistence fix
  * Phase 16: Unified Agentic Chat Interface
  * Phase 19: UI Enhancement
  *
@@ -219,12 +221,15 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
 
   // S74-2/3: Thread management
+  // S74-BF-1: Add getMessages and saveMessages for thread switching
   const {
     threads,
     createThread,
     updateThread,
     deleteThread,
     generateTitle,
+    getMessages,
+    saveMessages,
   } = useChatThreads();
 
   // S74-3: Active thread ID - try to restore from localStorage
@@ -274,6 +279,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     sendMessage,
     cancelStream,
     clearMessages,
+    setMessages,  // S74-BF-1: For loading messages when switching threads
     currentMode,
     autoMode,
     manualOverride: _manualOverride, // Reserved for mode switch UI
@@ -321,18 +327,35 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     }
   }, [isStreaming, startTimer, stopTimer]);
 
+  // S73-BF-1: Estimate token usage from messages (frontend estimation)
+  // Claude tokenizer: ~4 chars per token for English, ~1.5-2 for Chinese
+  // Using a conservative estimate of ~3 chars per token on average
+  const estimatedTokens = useMemo(() => {
+    if (tokenUsage.used > 0) {
+      // If backend sends actual usage, use that
+      return tokenUsage.used;
+    }
+    // Otherwise estimate from message content
+    const totalChars = messages.reduce((sum, msg) => {
+      return sum + (msg.content?.length || 0);
+    }, 0);
+    // Estimate: ~3 characters per token (conservative for mixed content)
+    return Math.ceil(totalChars / 3);
+  }, [messages, tokenUsage.used]);
+
   // Derive metrics from hook state
   // S73-1: Use executionTime from useExecutionMetrics instead of hardcoded value
+  // S73-BF-1: Use estimated tokens when backend doesn't send TOKEN_UPDATE
   const metrics: ExecutionMetrics = useMemo(() => ({
     tokens: {
-      used: tokenUsage.used,
+      used: estimatedTokens,
       limit: tokenUsage.limit,
-      percentage: (tokenUsage.used / tokenUsage.limit) * 100,
+      percentage: (estimatedTokens / tokenUsage.limit) * 100,
     },
     time: executionTime,
     toolCallCount: toolCalls.length,
     messageCount: messages.length,
-  }), [tokenUsage, executionTime, toolCalls.length, messages.length]);
+  }), [estimatedTokens, tokenUsage.limit, executionTime, toolCalls.length, messages.length]);
 
   // Risk state (derived from pending approvals)
   const riskLevel: RiskLevel = useMemo(() => {
@@ -367,13 +390,27 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   }, [createThread, clearMessages, resetTimer]);
 
   // S74-3: Handle thread selection
+  // S74-BF-1: Load messages from localStorage when switching threads
   const handleSelectThread = useCallback((id: string) => {
     if (id === activeThreadId) return;
+
+    // Save current thread's messages before switching
+    if (activeThreadId && messages.length > 0) {
+      saveMessages(activeThreadId, messages);
+    }
+
+    // Switch to new thread
     setActiveThreadId(id);
-    clearMessages();
     resetTimer();
-    // Note: Messages will be loaded via useUnifiedChat when threadId changes
-  }, [activeThreadId, clearMessages, resetTimer]);
+
+    // Load messages for the selected thread
+    const savedMessages = getMessages(id);
+    if (savedMessages.length > 0) {
+      setMessages(savedMessages);
+    } else {
+      clearMessages();
+    }
+  }, [activeThreadId, messages, saveMessages, getMessages, setMessages, clearMessages, resetTimer]);
 
   // S74-3: Handle thread deletion
   const handleDeleteThread = useCallback((id: string) => {
@@ -407,6 +444,27 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       messageCount: messages.length,
     });
   }, [activeThreadId, messages, updateThread, generateTitle]);
+
+  // S74-BF-1: Auto-save messages to localStorage when they change
+  useEffect(() => {
+    if (!activeThreadId || messages.length === 0) return;
+    // Debounce-like: only save when not streaming to avoid excessive writes
+    if (!isStreaming) {
+      saveMessages(activeThreadId, messages);
+    }
+  }, [activeThreadId, messages, isStreaming, saveMessages]);
+
+  // S74-BF-1: Load messages on initial mount if activeThreadId exists
+  useEffect(() => {
+    if (activeThreadId && messages.length === 0) {
+      const savedMessages = getMessages(activeThreadId);
+      if (savedMessages.length > 0) {
+        setMessages(savedMessages);
+      }
+    }
+    // Only run on mount, not on activeThreadId changes (handleSelectThread handles that)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // S74-3: Handle send message with auto thread creation
   const handleSend = useCallback((content: string) => {

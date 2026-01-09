@@ -94,6 +94,7 @@ export interface UseUnifiedChatReturn {
   sendMessage: (content: string, attachments?: File[]) => Promise<void>;
   cancelStream: () => void;
   clearMessages: () => void;
+  setMessages: (messages: ChatMessage[]) => void;  // S74-BF-1: Allow external message setting
   reconnect: () => void;
 
   // Mode integration
@@ -1076,6 +1077,12 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
   // Return
   // ==========================================================================
 
+  // S74-BF-1: Allow external message setting (for thread switching)
+  const setMessagesExternal = useCallback((newMessages: ChatMessage[]) => {
+    setMessages(newMessages);
+    storeSetMessages(newMessages);
+  }, [storeSetMessages]);
+
   return {
     // State
     messages,
@@ -1087,6 +1094,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
     sendMessage,
     cancelStream,
     clearMessages,
+    setMessages: setMessagesExternal,  // S74-BF-1
     reconnect,
 
     // Mode integration
