@@ -37,6 +37,7 @@ import {
 import { useUnifiedChat } from '@/hooks/useUnifiedChat';
 import { useExecutionMetrics } from '@/hooks/useExecutionMetrics';
 import { useChatThreads } from '@/hooks/useChatThreads';
+import { useAuthStore } from '@/store/authStore';
 import type {
   UnifiedChatProps,
   ExecutionMode,
@@ -194,8 +195,9 @@ const DEFAULT_TOOLS: ToolDefinition[] = [
   },
 ];
 
-// localStorage key for active thread ID
-const ACTIVE_THREAD_KEY = 'ipa_active_thread_id';
+// localStorage key prefix for active thread ID (user ID will be appended)
+const ACTIVE_THREAD_KEY_PREFIX = 'ipa_active_thread_id_';
+const GUEST_USER_ID = 'guest';
 
 /**
  * UnifiedChat Page Component
@@ -217,6 +219,11 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   tools = [],
   apiUrl,
 }) => {
+  // S75-BF-1: Get user ID for isolation
+  const user = useAuthStore((state) => state.user);
+  const userId = user?.id || GUEST_USER_ID;
+  const activeThreadKey = useMemo(() => `${ACTIVE_THREAD_KEY_PREFIX}${userId}`, [userId]);
+
   // S74-3: Chat history panel collapse state
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
 
@@ -232,26 +239,33 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     saveMessages,
   } = useChatThreads();
 
-  // S74-3: Active thread ID - try to restore from localStorage
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
-    if (initialThreadId) return initialThreadId;
-    try {
-      return localStorage.getItem(ACTIVE_THREAD_KEY);
-    } catch {
-      return null;
-    }
-  });
+  // S74-3: Active thread ID - try to restore from localStorage (user-isolated)
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
 
-  // Persist active thread ID to localStorage
+  // S75-BF-1: Load active thread ID when user changes
+  useEffect(() => {
+    if (initialThreadId) {
+      setActiveThreadId(initialThreadId);
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(activeThreadKey);
+      setActiveThreadId(saved);
+    } catch {
+      setActiveThreadId(null);
+    }
+  }, [activeThreadKey, initialThreadId]);
+
+  // Persist active thread ID to localStorage (user-isolated)
   useEffect(() => {
     if (activeThreadId) {
       try {
-        localStorage.setItem(ACTIVE_THREAD_KEY, activeThreadId);
+        localStorage.setItem(activeThreadKey, activeThreadId);
       } catch {
         // Ignore storage errors
       }
     }
-  }, [activeThreadId]);
+  }, [activeThreadId, activeThreadKey]);
 
   // Generate IDs if not provided
   // Use active thread ID or generate new one

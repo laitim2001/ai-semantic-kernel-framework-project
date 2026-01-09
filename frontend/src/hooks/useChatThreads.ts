@@ -3,14 +3,18 @@
  *
  * Sprint 74: S74-2 - useChatThreads Hook
  * Sprint 74: S74-BF-1 - Add message persistence for thread switching
+ * Sprint 75: S75-BF-1 - User isolation for chat threads
  * Phase 19: UI Enhancement
+ * Phase 20: File Attachment Support
  *
  * Manages chat threads with localStorage persistence.
  * Provides CRUD operations for thread management.
  * Now includes message persistence per thread.
+ * User-isolated: Each user has their own thread history.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useAuthStore } from '@/store/authStore';
 import type { ChatMessage } from '@/types/ag-ui';
 
 /**
@@ -48,9 +52,11 @@ export interface UseChatThreadsReturn {
   clearThreadMessages: (threadId: string) => void;
 }
 
-// localStorage keys
-const STORAGE_KEY = 'ipa_chat_threads';
+// localStorage key prefixes (user ID will be appended)
+const STORAGE_KEY_PREFIX = 'ipa_chat_threads_';
 const MESSAGES_KEY_PREFIX = 'ipa_thread_messages_';
+// Guest user fallback ID
+const GUEST_USER_ID = 'guest';
 // Maximum number of threads to keep
 const MAX_THREADS = 50;
 // Maximum messages per thread to store
@@ -60,6 +66,7 @@ const MAX_MESSAGES_PER_THREAD = 100;
  * useChatThreads Hook
  *
  * Manages chat threads with localStorage persistence.
+ * User-isolated: Each user has their own thread history.
  *
  * @example
  * ```tsx
@@ -76,32 +83,50 @@ const MAX_MESSAGES_PER_THREAD = 100;
  * ```
  */
 export function useChatThreads(): UseChatThreadsReturn {
+  // S75-BF-1: Get user ID for isolation
+  const user = useAuthStore((state) => state.user);
+  const userId = user?.id || GUEST_USER_ID;
+
+  // S75-BF-1: User-specific storage keys
+  const storageKey = useMemo(() => `${STORAGE_KEY_PREFIX}${userId}`, [userId]);
+  const messagesKeyPrefix = useMemo(() => `${MESSAGES_KEY_PREFIX}${userId}_`, [userId]);
+
   // Load initial state from localStorage
-  const [threads, setThreads] = useState<ChatThread[]>(() => {
+  const [threads, setThreads] = useState<ChatThread[]>([]);
+
+  // S75-BF-1: Load threads when user changes
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         // Validate the data structure
         if (Array.isArray(parsed)) {
-          return parsed.filter(
+          const validThreads = parsed.filter(
             (t): t is ChatThread =>
               typeof t === 'object' &&
               typeof t.id === 'string' &&
               typeof t.title === 'string'
           );
+          setThreads(validThreads);
+          return;
         }
       }
     } catch (e) {
       console.warn('[useChatThreads] Failed to load from localStorage:', e);
     }
-    return [];
-  });
+    // No saved data or invalid, start fresh
+    setThreads([]);
+  }, [storageKey]);
 
   // Persist to localStorage whenever threads change
   useEffect(() => {
+    // Skip initial empty state before user-specific data is loaded
+    if (threads.length === 0 && !localStorage.getItem(storageKey)) {
+      return;
+    }
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(threads));
+      localStorage.setItem(storageKey, JSON.stringify(threads));
     } catch (e) {
       console.warn('[useChatThreads] Failed to save to localStorage:', e);
       // If quota exceeded, try to save fewer threads
@@ -109,13 +134,13 @@ export function useChatThreads(): UseChatThreadsReturn {
         try {
           // Keep only the most recent threads
           const reduced = threads.slice(0, Math.floor(MAX_THREADS / 2));
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(reduced));
+          localStorage.setItem(storageKey, JSON.stringify(reduced));
         } catch {
           // Give up
         }
       }
     }
-  }, [threads]);
+  }, [threads, storageKey]);
 
   /**
    * Create a new thread
@@ -208,7 +233,7 @@ export function useChatThreads(): UseChatThreadsReturn {
   }, []);
 
   // ==========================================================================
-  // Message Persistence (S74-BF-1)
+  // Message Persistence (S74-BF-1, S75-BF-1: User-isolated)
   // ==========================================================================
 
   /**
@@ -218,7 +243,8 @@ export function useChatThreads(): UseChatThreadsReturn {
    */
   const getMessages = useCallback((threadId: string): ChatMessage[] => {
     try {
-      const key = `${MESSAGES_KEY_PREFIX}${threadId}`;
+      // S75-BF-1: Use user-isolated key
+      const key = `${messagesKeyPrefix}${threadId}`;
       const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -230,7 +256,7 @@ export function useChatThreads(): UseChatThreadsReturn {
       console.warn('[useChatThreads] Failed to load messages:', e);
     }
     return [];
-  }, []);
+  }, [messagesKeyPrefix]);
 
   /**
    * Save messages for a specific thread
@@ -239,7 +265,8 @@ export function useChatThreads(): UseChatThreadsReturn {
    */
   const saveMessages = useCallback((threadId: string, messages: ChatMessage[]) => {
     try {
-      const key = `${MESSAGES_KEY_PREFIX}${threadId}`;
+      // S75-BF-1: Use user-isolated key
+      const key = `${messagesKeyPrefix}${threadId}`;
       // Limit messages to prevent localStorage overflow
       const toSave = messages.slice(-MAX_MESSAGES_PER_THREAD);
       localStorage.setItem(key, JSON.stringify(toSave));
@@ -248,7 +275,7 @@ export function useChatThreads(): UseChatThreadsReturn {
       // If quota exceeded, try saving fewer messages
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
         try {
-          const key = `${MESSAGES_KEY_PREFIX}${threadId}`;
+          const key = `${messagesKeyPrefix}${threadId}`;
           const reduced = messages.slice(-Math.floor(MAX_MESSAGES_PER_THREAD / 2));
           localStorage.setItem(key, JSON.stringify(reduced));
         } catch {
@@ -256,7 +283,7 @@ export function useChatThreads(): UseChatThreadsReturn {
         }
       }
     }
-  }, []);
+  }, [messagesKeyPrefix]);
 
   /**
    * Clear messages for a specific thread
@@ -264,12 +291,13 @@ export function useChatThreads(): UseChatThreadsReturn {
    */
   const clearThreadMessages = useCallback((threadId: string) => {
     try {
-      const key = `${MESSAGES_KEY_PREFIX}${threadId}`;
+      // S75-BF-1: Use user-isolated key
+      const key = `${messagesKeyPrefix}${threadId}`;
       localStorage.removeItem(key);
     } catch (e) {
       console.warn('[useChatThreads] Failed to clear messages:', e);
     }
-  }, []);
+  }, [messagesKeyPrefix]);
 
   // Clean up messages when thread is deleted
   const deleteThreadWithMessages = useCallback((id: string) => {
