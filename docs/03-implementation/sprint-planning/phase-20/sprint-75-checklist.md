@@ -39,6 +39,21 @@
 
 ---
 
+### S75-BF-3: 重新登入後訊息不載入 ✅
+
+**Status**: ✅ 已完成 (2026-01-09)
+
+**Issue**: 重新登入後左側顯示對話記錄，但點擊無反應，右側聊天區域不顯示訊息
+**Root Cause**: "Load messages on mount" useEffect 的依賴數組是空的 `[]`，只在組件掛載時運行一次。但此時 `activeThreadId` 還是 `null`（通過另一個 useEffect 從 localStorage 恢復），所以訊息不會被載入。
+**Fix**: 將 useEffect 的依賴改為 `[activeThreadId]`，讓它在 activeThreadId 改變時運行，包括從 localStorage 恢復時。
+
+**Verification**: 使用 Playwright 測試：
+- 頁面載入：訊息自動載入 ✓
+- 登出 → 重新登入：對話記錄和訊息都保留 ✓
+- 點擊對話記錄：訊息正確載入 ✓
+
+---
+
 ## Stories
 
 ### S75-1: 後端文件上傳 API (5 pts)
