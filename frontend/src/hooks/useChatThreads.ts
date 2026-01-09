@@ -4,6 +4,7 @@
  * Sprint 74: S74-2 - useChatThreads Hook
  * Sprint 74: S74-BF-1 - Add message persistence for thread switching
  * Sprint 75: S75-BF-1 - User isolation for chat threads
+ * Sprint 75: S75-BF-2 - Fix race condition on re-login
  * Phase 19: UI Enhancement
  * Phase 20: File Attachment Support
  *
@@ -11,6 +12,9 @@
  * Provides CRUD operations for thread management.
  * Now includes message persistence per thread.
  * User-isolated: Each user has their own thread history.
+ *
+ * Bug Fix S75-BF-2: Fixed race condition where re-login would clear
+ * thread history due to save effect running before load effect completed.
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -61,6 +65,8 @@ const GUEST_USER_ID = 'guest';
 const MAX_THREADS = 50;
 // Maximum messages per thread to store
 const MAX_MESSAGES_PER_THREAD = 100;
+// Flag to track if data has been loaded for current user
+const loadedKeys = new Set<string>();
 
 /**
  * useChatThreads Hook
@@ -95,7 +101,11 @@ export function useChatThreads(): UseChatThreadsReturn {
   const [threads, setThreads] = useState<ChatThread[]>([]);
 
   // S75-BF-1: Load threads when user changes
+  // S75-BF-2: Fix race condition - track loaded keys to prevent overwrite
   useEffect(() => {
+    // Mark that we're loading this key (clear previous marker)
+    loadedKeys.delete(storageKey);
+
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
@@ -109,6 +119,8 @@ export function useChatThreads(): UseChatThreadsReturn {
               typeof t.title === 'string'
           );
           setThreads(validThreads);
+          // Mark as loaded after setting threads
+          loadedKeys.add(storageKey);
           return;
         }
       }
@@ -117,12 +129,15 @@ export function useChatThreads(): UseChatThreadsReturn {
     }
     // No saved data or invalid, start fresh
     setThreads([]);
+    // Mark as loaded even for empty state
+    loadedKeys.add(storageKey);
   }, [storageKey]);
 
   // Persist to localStorage whenever threads change
+  // S75-BF-2: Only save after the key has been loaded to prevent race condition
   useEffect(() => {
-    // Skip initial empty state before user-specific data is loaded
-    if (threads.length === 0 && !localStorage.getItem(storageKey)) {
+    // Skip if this key hasn't been loaded yet (prevents overwriting on key change)
+    if (!loadedKeys.has(storageKey)) {
       return;
     }
     try {

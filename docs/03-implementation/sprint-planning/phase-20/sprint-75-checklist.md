@@ -12,6 +12,28 @@
 
 ---
 
+## Bug Fixes (Pre-Sprint)
+
+### S75-BF-1: 用戶隔離修復 ✅
+
+**Status**: ✅ 已完成 (2026-01-09)
+
+**Issue**: 不同用戶看到相同的對話記錄
+**Root Cause**: `useChatThreads` 使用固定 localStorage key，沒有用戶隔離
+**Fix**: 將 key 改為 `ipa_chat_threads_{userId}`
+
+---
+
+### S75-BF-2: 重新登入後對話記錄消失 ✅
+
+**Status**: ✅ 已完成 (2026-01-09)
+
+**Issue**: 同一用戶重新登入後看不到之前的對話記錄
+**Root Cause**: Race condition - 當 `storageKey` 改變時，保存 useEffect 可能在載入 useEffect 完成前執行，導致空數組覆蓋已有數據
+**Fix**: 使用 `loadedKeys` Set 追蹤哪些 key 已完成載入，只有載入完成後才允許保存
+
+---
+
 ## Stories
 
 ### S75-1: 後端文件上傳 API (5 pts)
