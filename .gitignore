@@ -114,3 +114,8 @@ data/sandbox/*
 data/outputs/*
 data/temp/*
 !data/**/.gitkeep
+
+# Claude Code local settings
+.claude/settings.json
+.claude/settings.local.json
+.pids/
