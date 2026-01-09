@@ -29,8 +29,13 @@
 **Status**: ✅ 已完成 (2026-01-09)
 
 **Issue**: 同一用戶重新登入後看不到之前的對話記錄
-**Root Cause**: Race condition - 當 `storageKey` 改變時，保存 useEffect 可能在載入 useEffect 完成前執行，導致空數組覆蓋已有數據
-**Fix**: 使用 `loadedKeys` Set 追蹤哪些 key 已完成載入，只有載入完成後才允許保存
+**Root Cause**: Race condition - 當 `storageKey` 改變時，兩個 useEffect 同時觸發。`setThreads` 是異步的，新值要到下一個渲染週期才生效，但保存 effect 在當前週期執行時用的是舊的空數組。
+**Fix (v2)**: 使用 `useRef` 追蹤載入狀態：
+- `isLoadingRef`: 載入中為 true，阻止所有保存
+- `lastLoadedKeyRef`: 追蹤已載入的 key，必須匹配 storageKey
+- `setTimeout(0)` 確保 refs 在 React 處理狀態更新後才更新
+
+**Verification**: 使用 Playwright 測試：創建對話 → 登出 → 重新登入 → 對話記錄保留 ✓
 
 ---
 
