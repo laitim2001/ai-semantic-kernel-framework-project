@@ -3,14 +3,17 @@
  *
  * Sprint 61: AG-UI Frontend Integration
  * S61-2: Chat Components
+ * Sprint 76: File Download Feature
  *
  * Displays individual chat messages with role-based styling.
  * Supports user, assistant, system, and tool message types.
+ * Sprint 76: Added file display support.
  */
 
-import { FC, useMemo } from 'react';
+import { FC, useMemo, useCallback } from 'react';
 import type { ChatMessage } from '@/types/ag-ui';
 import { ToolCallCard } from './ToolCallCard';
+import { FileMessageList } from '@/components/unified-chat/FileMessage';
 
 export interface MessageBubbleProps {
   /** Chat message to display */
@@ -19,6 +22,8 @@ export interface MessageBubbleProps {
   isStreaming?: boolean;
   /** Callback when tool call action is triggered */
   onToolCallAction?: (toolCallId: string, action: 'approve' | 'reject') => void;
+  /** Sprint 76: Callback when file download is triggered */
+  onDownload?: (fileId: string) => Promise<void>;
   /** Additional CSS classes */
   className?: string;
 }
@@ -33,9 +38,20 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
   message,
   isStreaming = false,
   onToolCallAction,
+  onDownload,
   className = '',
 }) => {
-  const { role, content, timestamp, toolCalls } = message;
+  const { role, content, timestamp, toolCalls, files } = message;
+
+  // Sprint 76: Handle file download
+  const handleDownload = useCallback(
+    async (fileId: string) => {
+      if (onDownload) {
+        await onDownload(fileId);
+      }
+    },
+    [onDownload]
+  );
 
   // Role-based styling
   const bubbleStyles = useMemo(() => {
@@ -126,6 +142,13 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
                   onAction={onToolCallAction}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Sprint 76: Generated Files */}
+          {files && files.length > 0 && (
+            <div className="mt-3">
+              <FileMessageList files={files} onDownload={handleDownload} />
             </div>
           )}
         </div>

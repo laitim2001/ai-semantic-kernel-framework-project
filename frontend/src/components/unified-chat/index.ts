@@ -66,6 +66,26 @@ export type { ConnectionStatusProps } from './ConnectionStatus';
 export { ChatHistoryPanel, ChatHistoryToggleButton } from './ChatHistoryPanel';
 export type { ChatThread } from './ChatHistoryPanel';
 
+// S75-2: File Upload
+export { FileUpload, AttachButton, HiddenFileInput } from './FileUpload';
+export type { FileUploadProps, AttachButtonProps, HiddenFileInputProps } from './FileUpload';
+
+// S75-3: Attachment Preview
+export { AttachmentPreview, CompactAttachmentPreview } from './AttachmentPreview';
+export type { AttachmentPreviewProps, AttachmentItemProps, CompactAttachmentPreviewProps } from './AttachmentPreview';
+
+// S76-2: FileMessage (for displaying generated files)
+export { FileMessage, FileMessageList, CompactFileMessage } from './FileMessage';
+export type { FileMessageProps, FileMessageListProps, CompactFileMessageProps, DownloadStatus } from './FileMessage';
+
+// S76-3: FileRenderer (type-based file preview)
+export { FileRenderer, getFileType } from './FileRenderer';
+export type { FileRendererProps, FileType } from './FileRenderer';
+
+// S76-3: Individual renderers
+export { ImagePreview, CodePreview, TextPreview } from './renderers';
+export type { ImagePreviewProps, CodePreviewProps, TextPreviewProps } from './renderers';
+
 // Re-export types for convenience
 export type {
   ChatHeaderProps,

@@ -4,6 +4,7 @@
  * Sprint 62: Core Architecture & Adaptive Layout
  * S62-1: UnifiedChatWindow Base Architecture
  * Sprint 65: S65-4 - UI Polish & Accessibility
+ * Sprint 75: S75-4 - File Attachment Integration
  *
  * Input area for sending messages with optional file attachments.
  * Enhanced with keyboard shortcuts and accessibility features.
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import type { ChatInputProps } from '@/types/unified-chat';
 import { cn } from '@/lib/utils';
+import { CompactAttachmentPreview } from './AttachmentPreview';
 
 // Detect platform for keyboard shortcut display
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
@@ -57,8 +59,15 @@ export const ChatInput: FC<ChatInputProps> = ({
     }
   }, [value]);
 
-  // Check if can submit
-  const canSubmit = value.trim().length > 0 && !disabled && !isStreaming;
+  // Sprint 75: Get uploaded file IDs from attachments
+  const uploadedFileIds = useMemo(() => {
+    return (attachments || [])
+      .filter((a) => a.status === 'uploaded' && a.serverFileId)
+      .map((a) => a.serverFileId as string);
+  }, [attachments]);
+
+  // Check if can submit (need text OR uploaded files)
+  const canSubmit = (value.trim().length > 0 || uploadedFileIds.length > 0) && !disabled && !isStreaming;
 
   // Handle send
   const handleSend = useCallback(() => {
@@ -66,13 +75,15 @@ export const ChatInput: FC<ChatInputProps> = ({
 
     const content = value.trim();
     setValue('');
-    onSend(content);
+
+    // Sprint 75: Pass file IDs when sending
+    onSend(content, uploadedFileIds.length > 0 ? uploadedFileIds : undefined);
 
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [value, canSubmit, onSend]);
+  }, [value, canSubmit, onSend, uploadedFileIds]);
 
   // Handle key down
   // - Enter: Send message
@@ -121,27 +132,15 @@ export const ChatInput: FC<ChatInputProps> = ({
   );
 
   return (
-    <div className="border-t bg-white" data-testid="chat-input">
-      {/* Attachments Preview (future) */}
-      {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-4 pt-2">
-          {attachments.map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-sm"
-            >
-              <span className="truncate max-w-[100px]">{file.name}</span>
-              {onRemoveAttachment && (
-                <button
-                  type="button"
-                  onClick={() => onRemoveAttachment(file.id)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  &times;
-                </button>
-              )}
-            </div>
-          ))}
+    <div className="border-t bg-white dark:bg-gray-900" data-testid="chat-input">
+      {/* Sprint 75: Attachments Preview */}
+      {attachments && attachments.length > 0 && onRemoveAttachment && (
+        <div className="px-4 pt-3">
+          <CompactAttachmentPreview
+            attachments={attachments}
+            onRemove={onRemoveAttachment}
+            disabled={disabled || isStreaming}
+          />
         </div>
       )}
 

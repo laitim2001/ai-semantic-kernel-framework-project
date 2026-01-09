@@ -37,7 +37,10 @@ import {
 import { useUnifiedChat } from '@/hooks/useUnifiedChat';
 import { useExecutionMetrics } from '@/hooks/useExecutionMetrics';
 import { useChatThreads } from '@/hooks/useChatThreads';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { filesApi } from '@/api/endpoints/files';
 import { useAuthStore } from '@/store/authStore';
+import type { Attachment } from '@/types/unified-chat';
 import type {
   UnifiedChatProps,
   ExecutionMode,
@@ -334,6 +337,33 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     resetTimer,
   } = useExecutionMetrics();
 
+  // S75-4: File upload management
+  const {
+    attachments,
+    isUploading,
+    addFiles,
+    removeAttachment,
+    uploadAll,
+    clearAttachments,
+    getUploadedFileIds,
+  } = useFileUpload({
+    maxFiles: 10,
+    onUploadComplete: (attachment) => {
+      console.log('[UnifiedChat] File uploaded:', attachment.file.name);
+    },
+    onUploadError: (attachment, error) => {
+      console.error('[UnifiedChat] File upload failed:', attachment.file.name, error);
+    },
+  });
+
+  // S75-4: Convert hook attachments to typed Attachment array
+  const typedAttachments: Attachment[] = useMemo(() => {
+    return attachments.map((a) => ({
+      ...a,
+      serverFileId: a.serverResponse?.id,
+    }));
+  }, [attachments]);
+
   // S73-1: Start/stop timer based on streaming state
   useEffect(() => {
     if (isStreaming) {
@@ -503,7 +533,8 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   }, [activeThreadId]);
 
   // S74-3: Handle send message with auto thread creation
-  const handleSend = useCallback((content: string) => {
+  // S75-4: Updated to handle file attachments
+  const handleSend = useCallback(async (content: string, fileIds?: string[]) => {
     // Auto-create thread if none active
     let threadToUse = activeThreadId;
     if (!threadToUse) {
@@ -511,10 +542,32 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       setActiveThreadId(threadToUse);
     }
 
+    // S75-4: If there are pending uploads, upload them first
+    if (attachments.some((a) => a.status === 'pending')) {
+      await uploadAll();
+    }
+
+    // Get all uploaded file IDs
+    const allFileIds = fileIds || getUploadedFileIds();
+
+    // Send message (with optional file IDs for backend to process)
+    // TODO: S75-5 - Pass fileIds to backend when it supports attachments
     sendMessage(content).catch((err) => {
       console.error('[UnifiedChat] Failed to send message:', err);
     });
-  }, [activeThreadId, createThread, generateTitle, sendMessage]);
+
+    // Clear attachments after sending
+    if (allFileIds.length > 0) {
+      clearAttachments();
+    }
+  }, [activeThreadId, createThread, generateTitle, sendMessage, attachments, uploadAll, getUploadedFileIds, clearAttachments]);
+
+  // S75-4: Handle file attachment
+  const handleAttach = useCallback((files: File[]) => {
+    addFiles(files);
+    // Auto-upload immediately
+    uploadAll();
+  }, [addFiles, uploadAll]);
 
   // Handle cancel streaming
   const handleCancel = useCallback(() => {
@@ -546,6 +599,17 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       console.error('[UnifiedChat] Failed to reject tool call:', err);
     }
   }, [rejectToolCall]);
+
+  // Sprint 76: Handle file download
+  const handleDownload = useCallback(async (fileId: string) => {
+    console.log('[UnifiedChat] Downloading file:', fileId);
+    try {
+      await filesApi.download(fileId);
+    } catch (err) {
+      console.error('[UnifiedChat] Failed to download file:', err);
+      throw err; // Re-throw to let UI handle error state
+    }
+  }, []);
 
   // Determine effective mode (currentMode from hook already handles manual override)
   const effectiveMode = currentMode;
@@ -612,6 +676,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
               pendingApprovals={pendingApprovals}
               onApprove={handleApprove}
               onReject={handleReject}
+              onDownload={handleDownload}
             />
           </div>
 
@@ -626,16 +691,19 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
           )}
         </main>
 
-        {/* Input Area */}
+        {/* Input Area - S75-4: Added file attachment support */}
         <ChatInput
           onSend={handleSend}
-          isStreaming={isStreaming}
+          isStreaming={isStreaming || isUploading}
           onCancel={handleCancel}
           placeholder={
             effectiveMode === 'chat'
               ? 'Type a message...'
               : 'Describe your task...'
           }
+          attachments={typedAttachments}
+          onAttach={handleAttach}
+          onRemoveAttachment={removeAttachment}
         />
 
         {/* Status Bar */}

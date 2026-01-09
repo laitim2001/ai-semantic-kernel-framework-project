@@ -1,7 +1,7 @@
 """One-shot query execution for Claude SDK."""
 
 import time
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 
 from anthropic import AsyncAnthropic
 
@@ -9,6 +9,52 @@ from .config import ClaudeSDKConfig
 from .types import QueryResult, ToolCall, ToolCallContext, ToolResultContext
 from .tools import get_tool_definitions, execute_tool
 from .exceptions import TimeoutError
+
+
+def build_content_with_attachments(
+    message: str,
+    attachments: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """
+    Build content array with text and file attachments.
+
+    Sprint 75: File Attachment Support
+
+    Args:
+        message: User message text
+        attachments: List of attachment dicts
+
+    Returns:
+        Content array for Claude API
+    """
+    content: List[Dict[str, Any]] = []
+
+    # Add text message
+    if message:
+        content.append({"type": "text", "text": message})
+
+    # Add attachments
+    for attachment in attachments:
+        if attachment.get("is_image"):
+            # Image attachment - use base64
+            content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": attachment.get("mime_type", "image/png"),
+                    "data": attachment.get("content", ""),
+                },
+            })
+        else:
+            # Text file attachment - include as context
+            file_name = attachment.get("name", "file")
+            file_content = attachment.get("content", "")
+            content.append({
+                "type": "text",
+                "text": f"\n--- File: {file_name} ---\n{file_content}\n--- End of {file_name} ---\n",
+            })
+
+    return content
 
 
 async def execute_query(
@@ -171,6 +217,121 @@ async def execute_query(
             status="timeout",
             error="Query timed out",
         )
+
+    except Exception as e:
+        return QueryResult(
+            content="",
+            tool_calls=tool_calls,
+            tokens_used=total_tokens,
+            duration=time.time() - start_time,
+            status="error",
+            error=str(e),
+        )
+
+
+async def execute_query_with_attachments(
+    client: AsyncAnthropic,
+    config: ClaudeSDKConfig,
+    message: str,
+    attachments: List[Dict[str, Any]],
+    tools: List[str],
+    max_tokens: int,
+    hooks: List[Any],
+    mcp_servers: List[Any],
+) -> QueryResult:
+    """
+    Execute a query with file attachments.
+
+    Sprint 75: File Attachment Support
+
+    Args:
+        client: Anthropic client instance
+        config: SDK configuration
+        message: User message text
+        attachments: List of attachment dicts
+        tools: List of enabled tool names
+        max_tokens: Maximum response tokens
+        hooks: List of hooks for interception
+        mcp_servers: List of MCP servers
+
+    Returns:
+        QueryResult with response and metadata
+    """
+    start_time = time.time()
+    tool_calls: List[ToolCall] = []
+    total_tokens = 0
+
+    try:
+        # Get tool definitions for enabled tools
+        tool_definitions = get_tool_definitions(tools, mcp_servers)
+
+        # Build content with attachments
+        content = build_content_with_attachments(message, attachments)
+
+        # Build messages with multimodal content
+        messages = [{"role": "user", "content": content}]
+
+        # Agentic loop - continue until task complete
+        while True:
+            # Build request kwargs
+            request_kwargs = {
+                "model": config.model,
+                "max_tokens": max_tokens,
+                "messages": messages,
+            }
+            if config.system_prompt:
+                request_kwargs["system"] = config.system_prompt
+            if tool_definitions:
+                request_kwargs["tools"] = tool_definitions
+
+            response = await client.messages.create(**request_kwargs)
+
+            total_tokens += response.usage.input_tokens + response.usage.output_tokens
+
+            # Check for tool use
+            has_tool_use = any(
+                block.type == "tool_use" for block in response.content
+            )
+
+            if not has_tool_use:
+                # No tool use - extract final response
+                final_content = ""
+                for block in response.content:
+                    if hasattr(block, "text"):
+                        final_content += block.text
+
+                return QueryResult(
+                    content=final_content,
+                    tool_calls=tool_calls,
+                    tokens_used=total_tokens,
+                    duration=time.time() - start_time,
+                    status="success",
+                )
+
+            # Process tool calls (simplified - no tool execution for file analysis)
+            # For file analysis, we typically just want Claude's response
+            for block in response.content:
+                if block.type == "tool_use":
+                    tool_call = ToolCall(
+                        id=block.id,
+                        name=block.name,
+                        args=block.input,
+                    )
+                    tool_calls.append(tool_call)
+
+            # If tool calls but no execution, extract text and return
+            final_content = ""
+            for block in response.content:
+                if hasattr(block, "text"):
+                    final_content += block.text
+
+            return QueryResult(
+                content=final_content,
+                tool_calls=tool_calls,
+                tokens_used=total_tokens,
+                duration=time.time() - start_time,
+                status="success",
+            )
 
     except Exception as e:
         return QueryResult(

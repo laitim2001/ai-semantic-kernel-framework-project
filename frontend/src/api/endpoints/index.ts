@@ -14,3 +14,23 @@ export {
   type CreateThreadResponse,
   type RestoreCheckpointResponse,
 } from './ag-ui';
+
+// Files API (Sprint 75)
+export {
+  filesApi,
+  uploadFile,
+  listFiles,
+  getFile,
+  deleteFile,
+  getFileContentUrl,
+  formatFileSize,
+  getFileCategory,
+  isAllowedFileType,
+  getMaxFileSize,
+  type FileCategory,
+  type FileStatus,
+  type FileMetadata,
+  type FileUploadResponse,
+  type FileListResponse,
+  type FileUploadProgress,
+} from './files';

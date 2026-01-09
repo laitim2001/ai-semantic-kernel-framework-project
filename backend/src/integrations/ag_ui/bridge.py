@@ -62,6 +62,7 @@ class RunAgentInput:
         max_tokens: Maximum tokens for response
         timeout: Execution timeout in seconds
         metadata: Additional metadata
+        file_ids: List of file IDs to include as attachments (Sprint 75)
     """
 
     prompt: str
@@ -73,6 +74,7 @@ class RunAgentInput:
     max_tokens: Optional[int] = None
     timeout: Optional[float] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+    file_ids: Optional[List[str]] = None  # Sprint 75: File attachments
 
     def __post_init__(self):
         """Generate run_id if not provided."""

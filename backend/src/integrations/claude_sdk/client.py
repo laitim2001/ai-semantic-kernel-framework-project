@@ -162,3 +162,42 @@ class ClaudeSDKClient:
             await session.close()
         self._sessions.clear()
         await self._client.close()
+
+    async def send_with_attachments(
+        self,
+        message: str,
+        attachments: List[Dict[str, Any]],
+        tools: Optional[List[str]] = None,
+        max_tokens: Optional[int] = None,
+    ) -> "QueryResult":
+        """
+        Send a message with file attachments.
+
+        Sprint 75: File Attachment Support
+
+        Args:
+            message: User message text
+            attachments: List of attachment dicts with:
+                - id: File ID
+                - name: Filename
+                - mime_type: MIME type
+                - content: File content (text or base64 for images)
+                - is_image: Whether this is an image
+            tools: Override default tools for this query
+            max_tokens: Override default max_tokens
+
+        Returns:
+            QueryResult with content, tool_calls, and metadata
+        """
+        from .query import execute_query_with_attachments
+
+        return await execute_query_with_attachments(
+            client=self._client,
+            config=self.config,
+            message=message,
+            attachments=attachments,
+            tools=tools or self.tools,
+            max_tokens=max_tokens or self.config.max_tokens,
+            hooks=self.hooks,
+            mcp_servers=self.mcp_servers,
+        )

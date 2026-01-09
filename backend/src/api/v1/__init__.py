@@ -41,12 +41,14 @@
 #   - hybrid/risk: Risk Assessment API (Sprint 55)
 #   - hybrid/switch: Mode Switcher API (Sprint 56)
 #   - auth: Authentication API (Sprint 70)
+#   - files: File Upload API (Sprint 75)
 # =============================================================================
 
 from fastapi import APIRouter
 
 from src.api.v1.agents.routes import router as agents_router
 from src.api.v1.auth import router as auth_router  # Sprint 70: Authentication
+from src.api.v1.files import router as files_router  # Sprint 75: File Upload
 from src.api.v1.code_interpreter.routes import router as code_interpreter_router
 from src.api.v1.audit.routes import router as audit_router
 from src.api.v1.cache.routes import router as cache_router
@@ -132,5 +134,8 @@ api_router.include_router(ag_ui_router)  # Sprint 58: AG-UI SSE Endpoint
 
 # Include sub-routers - Phase 18 (Authentication System)
 api_router.include_router(auth_router)  # Sprint 70: Authentication
+
+# Include sub-routers - Phase 20 (File Attachment Support)
+api_router.include_router(files_router)  # Sprint 75: File Upload
 
 __all__ = ["api_router"]

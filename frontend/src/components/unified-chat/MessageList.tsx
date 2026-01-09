@@ -38,6 +38,8 @@ export interface MessageListProps {
   onReject: (toolCallId: string, reason?: string) => void;
   /** Sprint 65: S65-5 - Callback when a custom UI component emits an event */
   onUIEvent?: (event: UIComponentEvent) => void;
+  /** Sprint 76: Callback when file download is triggered */
+  onDownload?: (fileId: string) => Promise<void>;
 }
 
 /**
@@ -59,6 +61,7 @@ export const MessageList: FC<MessageListProps> = ({
   onApprove,
   onReject,
   onUIEvent,
+  onDownload,
 }) => {
   // Track new messages for animation
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
@@ -189,6 +192,7 @@ export const MessageList: FC<MessageListProps> = ({
                 message={message}
                 isStreaming={isCurrentlyStreaming}
                 onToolCallAction={handleToolCallAction}
+                onDownload={onDownload}
               />
             )}
 

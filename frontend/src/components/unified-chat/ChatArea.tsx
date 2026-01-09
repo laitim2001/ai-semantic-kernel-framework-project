@@ -30,6 +30,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
   pendingApprovals,
   onApprove,
   onReject,
+  onDownload,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -61,6 +62,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
               pendingApprovals={pendingApprovals}
               onApprove={onApprove}
               onReject={onReject}
+              onDownload={onDownload}
             />
 
             {/* Streaming Indicator */}

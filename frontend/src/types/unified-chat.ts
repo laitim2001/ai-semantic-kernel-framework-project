@@ -170,7 +170,7 @@ export interface ChatInputState {
   placeholder: string;
 }
 
-/** File attachment (future support) */
+/** File attachment (legacy - for compatibility) */
 export interface FileAttachment {
   id: string;
   name: string;
@@ -178,6 +178,26 @@ export interface FileAttachment {
   size: number;
   url?: string;
   uploading?: boolean;
+}
+
+/**
+ * Attachment status for upload tracking
+ * Sprint 75: File Upload Feature
+ */
+export type AttachmentStatus = 'pending' | 'uploading' | 'uploaded' | 'error';
+
+/**
+ * Attachment with upload status and file reference
+ * Sprint 75: File Upload Feature
+ */
+export interface Attachment {
+  id: string;
+  file: File;
+  preview?: string;  // For images
+  status: AttachmentStatus;
+  progress?: number;
+  error?: string;
+  serverFileId?: string;  // ID from server after upload
 }
 
 // =============================================================================
@@ -324,6 +344,8 @@ export interface ChatAreaProps {
   pendingApprovals: PendingApproval[];
   onApprove: (toolCallId: string) => void;
   onReject: (toolCallId: string, reason?: string) => void;
+  /** Sprint 76: Callback when file download is triggered */
+  onDownload?: (fileId: string) => Promise<void>;
 }
 
 /** WorkflowSidePanel props */
@@ -338,14 +360,17 @@ export interface WorkflowSidePanelProps {
 
 /** ChatInput props */
 export interface ChatInputProps {
-  onSend: (content: string) => void;
+  onSend: (content: string, fileIds?: string[]) => void;
   disabled?: boolean;
   isStreaming?: boolean;
   onCancel?: () => void;
   placeholder?: string;
-  attachments?: FileAttachment[];
+  /** Sprint 75: Attachments with upload status */
+  attachments?: Attachment[];
   onAttach?: (files: File[]) => void;
   onRemoveAttachment?: (id: string) => void;
+  /** Legacy: FileAttachment support (deprecated) */
+  legacyAttachments?: FileAttachment[];
 }
 
 /** Heartbeat state for long-running operations (S67-BF-1) */
