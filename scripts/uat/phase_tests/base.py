@@ -76,6 +76,9 @@ class TestPhase(Enum):
     PHASE_14 = "phase_14_advanced_hybrid"
     PHASE_15 = "phase_15_ag_ui_protocol"
     PHASE_16 = "phase_16_unified_chat"
+    PHASE_21 = "phase_21_sandbox_security"
+    PHASE_22 = "phase_22_learning_system"
+    PHASE_23 = "phase_23_multi_agent"
 
 
 @dataclass

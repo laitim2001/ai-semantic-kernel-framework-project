@@ -23,6 +23,17 @@ from phase_8_code_interpreter.scenario_financial_analysis import FinancialAnalys
 from phase_9_mcp_architecture.scenario_infra_diagnostics import InfraDiagnosticsScenario
 from phase_10_session_mode.scenario_tech_support import TechSupportSessionScenario
 
+# Phase 21-23 測試模組
+from phase_21_sandbox_security.scenario_sandbox_lifecycle import SandboxLifecycleScenario
+from phase_21_sandbox_security.scenario_security_isolation import SecurityIsolationScenario
+from phase_22_learning_system.scenario_fewshot_learning import FewshotLearningScenario
+from phase_22_learning_system.scenario_memory_system import MemorySystemScenario
+from phase_22_learning_system.scenario_autonomous_planning import AutonomousPlanningScenario
+from phase_23_multi_agent.scenario_a2a_protocol import A2AProtocolScenario
+from phase_23_multi_agent.scenario_patrol_mode import PatrolModeScenario
+from phase_23_multi_agent.scenario_correlation_analysis import CorrelationAnalysisScenario
+from phase_23_multi_agent.scenario_rootcause_analysis import RootCauseAnalysisScenario
+
 
 class PhaseTestRunner:
     """Phase 測試執行器"""
@@ -36,23 +47,52 @@ class PhaseTestRunner:
             8: ("Code Interpreter - Financial Analysis", FinancialAnalysisScenario),
             9: ("MCP Architecture - Infrastructure Diagnostics", InfraDiagnosticsScenario),
             10: ("Session Mode - Technical Support", TechSupportSessionScenario),
+            # Phase 21: Sandbox Security
+            21: ("Sandbox Security - Lifecycle & Isolation", [
+                SandboxLifecycleScenario,
+                SecurityIsolationScenario,
+            ]),
+            # Phase 22: Learning System
+            22: ("Learning System - Few-shot, Memory, Autonomous", [
+                FewshotLearningScenario,
+                MemorySystemScenario,
+                AutonomousPlanningScenario,
+            ]),
+            # Phase 23: Multi-Agent Coordination
+            23: ("Multi-Agent - A2A, Patrol, Correlation, RCA", [
+                A2AProtocolScenario,
+                PatrolModeScenario,
+                CorrelationAnalysisScenario,
+                RootCauseAnalysisScenario,
+            ]),
         }
 
-    async def run_phase(self, phase: int) -> ScenarioResult:
+    async def run_phase(self, phase: int) -> List[ScenarioResult]:
         """執行單個 Phase 測試"""
         if phase not in self.scenarios:
             raise ValueError(f"Unknown phase: {phase}")
 
-        name, scenario_class = self.scenarios[phase]
+        name, scenario_classes = self.scenarios[phase]
         print(f"\n{'='*60}")
         print(f"Running Phase {phase}: {name}")
         print(f"{'='*60}")
 
-        scenario = scenario_class(self.config)
-        result = await scenario.execute()
-        self.results.append(result)
+        phase_results = []
 
-        return result
+        # 處理單個場景或多個場景列表
+        if isinstance(scenario_classes, list):
+            for scenario_class in scenario_classes:
+                scenario = scenario_class(self.config)
+                result = await scenario.run()
+                phase_results.append(result)
+                self.results.append(result)
+        else:
+            scenario = scenario_classes(self.config)
+            result = await scenario.execute()
+            phase_results.append(result)
+            self.results.append(result)
+
+        return phase_results
 
     async def run_all(self, phases: List[int] = None) -> Dict[str, Any]:
         """執行多個 Phase 測試"""
@@ -85,11 +125,52 @@ class PhaseTestRunner:
 
     def _generate_summary(self, total_duration: float) -> Dict[str, Any]:
         """生成測試摘要"""
-        passed_phases = sum(1 for r in self.results if r.success)
-        total_phases = len(self.results)
+        # 支援新舊兩種 ScenarioResult 格式
+        def is_passed(r):
+            if hasattr(r, 'success'):
+                return r.success
+            elif hasattr(r, 'status'):
+                return r.status.value == 'passed'
+            return False
 
-        total_steps = sum(r.steps_total for r in self.results)
-        passed_steps = sum(r.steps_passed for r in self.results)
+        def get_steps_total(r):
+            if hasattr(r, 'steps_total'):
+                return r.steps_total
+            elif hasattr(r, 'total_steps'):
+                return r.total_steps
+            return 0
+
+        def get_steps_passed(r):
+            if hasattr(r, 'steps_passed'):
+                return r.steps_passed
+            elif hasattr(r, 'passed'):
+                return r.passed
+            return 0
+
+        def get_duration(r):
+            if hasattr(r, 'duration_seconds'):
+                return r.duration_seconds
+            elif hasattr(r, 'duration_ms'):
+                return r.duration_ms / 1000
+            return 0
+
+        def get_phase(r):
+            if hasattr(r, 'phase'):
+                if hasattr(r.phase, 'value'):
+                    # Extract phase number from enum value like "phase_21_sandbox_security"
+                    phase_str = r.phase.value
+                    parts = phase_str.split('_')
+                    for part in parts:
+                        if part.isdigit():
+                            return int(part)
+                return r.phase
+            return 0
+
+        passed_scenarios = sum(1 for r in self.results if is_passed(r))
+        total_scenarios = len(self.results)
+
+        total_steps = sum(get_steps_total(r) for r in self.results)
+        passed_steps = sum(get_steps_passed(r) for r in self.results)
 
         summary = {
             "run_time": datetime.now().isoformat(),
@@ -100,20 +181,20 @@ class PhaseTestRunner:
                 "llm_deployment": self.config.llm_deployment
             },
             "overall_results": {
-                "phases_passed": passed_phases,
-                "phases_total": total_phases,
+                "scenarios_passed": passed_scenarios,
+                "scenarios_total": total_scenarios,
                 "steps_passed": passed_steps,
                 "steps_total": total_steps,
-                "success_rate": f"{(passed_phases/total_phases*100):.1f}%" if total_phases > 0 else "N/A"
+                "success_rate": f"{(passed_scenarios/total_scenarios*100):.1f}%" if total_scenarios > 0 else "N/A"
             },
             "phase_results": [
                 {
-                    "phase": r.phase,
+                    "phase": get_phase(r),
                     "scenario": r.scenario_name,
-                    "success": r.success,
-                    "steps_passed": r.steps_passed,
-                    "steps_total": r.steps_total,
-                    "duration_seconds": r.duration_seconds
+                    "success": is_passed(r),
+                    "steps_passed": get_steps_passed(r),
+                    "steps_total": get_steps_total(r),
+                    "duration_seconds": get_duration(r)
                 }
                 for r in self.results
             ]
@@ -129,8 +210,11 @@ def print_summary(summary: Dict[str, Any]):
     print("=" * 60)
 
     overall = summary["overall_results"]
-    print(f"\n📊 Overall Results:")
-    print(f"   Phases: {overall['phases_passed']}/{overall['phases_total']} passed")
+    print(f"\n[DATA] Overall Results:")
+    # Support both old and new keys
+    scenarios_passed = overall.get('scenarios_passed', overall.get('phases_passed', 0))
+    scenarios_total = overall.get('scenarios_total', overall.get('phases_total', 0))
+    print(f"   Scenarios: {scenarios_passed}/{scenarios_total} passed")
     print(f"   Steps:  {overall['steps_passed']}/{overall['steps_total']} passed")
     print(f"   Success Rate: {overall['success_rate']}")
     print(f"   Total Duration: {summary['total_duration_seconds']:.2f}s")
@@ -165,7 +249,7 @@ async def main():
         "--phase", "-p",
         type=int,
         nargs="+",
-        help="Specific phase(s) to run (8, 9, 10)"
+        help="Specific phase(s) to run (8, 9, 10, 21, 22, 23)"
     )
     parser.add_argument(
         "--no-llm",

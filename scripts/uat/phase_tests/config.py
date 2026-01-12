@@ -272,4 +272,74 @@ API_ENDPOINTS = {
         "state_sync": "/ag-ui/state/{session_id}/sync",
         "state_stream": "/ag-ui/state/stream",
     },
+
+    # Phase 21: Sandbox Security Architecture
+    "sandbox": {
+        "create": "/sandbox",
+        "status": "/sandbox/{sandbox_id}",
+        "terminate": "/sandbox/{sandbox_id}",
+        "ipc_send": "/sandbox/{sandbox_id}/ipc",
+        "pool_status": "/sandbox/pool/status",
+        "pool_cleanup": "/sandbox/pool/cleanup",
+    },
+
+    # Phase 22: Learning System & Autonomous Capabilities
+    "learning": {
+        "corrections": "/learning/corrections",
+        "cases": "/learning/cases",
+        "case_get": "/learning/cases/{case_id}",
+        "similar": "/learning/similar",
+        "prompt": "/learning/prompt",
+        "approve": "/learning/cases/{case_id}/approve",
+        "reject": "/learning/cases/{case_id}/reject",
+        "effectiveness": "/learning/effectiveness",
+    },
+    "memory": {
+        "store": "/memory/store",
+        "retrieve": "/memory/retrieve",
+        "search": "/memory/search",
+        "layers": "/memory/layers",
+        "migrate": "/memory/migrate",
+        "cleanup": "/memory/cleanup",
+    },
+    "autonomous": {
+        "plan": "/claude/autonomous/plan",
+        "status": "/claude/autonomous/{task_id}",
+        "cancel": "/claude/autonomous/{task_id}/cancel",
+        "history": "/claude/autonomous/history",
+    },
+
+    # Phase 23: Multi-Agent Coordination
+    "a2a": {
+        "message_send": "/a2a/message",
+        "message_status": "/a2a/message/{message_id}",
+        "agents": "/a2a/agents",
+        "agent_register": "/a2a/agents/register",
+        "agent_unregister": "/a2a/agents/{agent_id}",
+        "discover": "/a2a/agents/discover",
+        "capabilities": "/a2a/agents/{agent_id}/capabilities",
+        "heartbeat": "/a2a/agents/{agent_id}/heartbeat",
+    },
+    "patrol": {
+        "trigger": "/patrol/trigger",
+        "reports": "/patrol/reports",
+        "report_get": "/patrol/reports/{report_id}",
+        "schedule": "/patrol/schedule",
+        "schedule_update": "/patrol/schedule",
+        "checks": "/patrol/checks",
+        "check_status": "/patrol/checks/{check_type}",
+    },
+    "correlation": {
+        "analyze": "/correlation/analyze",
+        "event": "/correlation/{event_id}",
+        "graph_json": "/correlation/graph/{event_id}/json",
+        "graph_mermaid": "/correlation/graph/{event_id}/mermaid",
+        "graph_dot": "/correlation/graph/{event_id}/dot",
+    },
+    "rootcause": {
+        "analyze": "/rootcause/analyze",
+        "hypotheses": "/rootcause/{analysis_id}/hypotheses",
+        "recommendations": "/rootcause/{analysis_id}/recommendations",
+        "similar_patterns": "/rootcause/similar",
+    },
 }
