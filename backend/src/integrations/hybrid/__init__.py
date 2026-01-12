@@ -60,6 +60,21 @@ from src.integrations.hybrid.orchestrator_v2 import (
     create_orchestrator_v2,
 )
 
+# Sprint 81: Claude + MAF Fusion
+from src.integrations.hybrid.claude_maf_fusion import (
+    ClaudeMAFFusion,
+    ClaudeDecisionEngine,
+    DynamicWorkflow,
+    WorkflowDefinition,
+    WorkflowStep,
+    WorkflowStepType,
+    DecisionType,
+    ClaudeDecision,
+    ExecutionState,
+    StepResult,
+    WorkflowResult,
+)
+
 __all__ = [
     # Sprint 52: Intent Router
     "ExecutionMode",
@@ -89,4 +104,16 @@ __all__ = [
     "HybridResultV2",
     "OrchestratorMetrics",
     "create_orchestrator_v2",
+    # Sprint 81: Claude + MAF Fusion
+    "ClaudeMAFFusion",
+    "ClaudeDecisionEngine",
+    "DynamicWorkflow",
+    "WorkflowDefinition",
+    "WorkflowStep",
+    "WorkflowStepType",
+    "DecisionType",
+    "ClaudeDecision",
+    "ExecutionState",
+    "StepResult",
+    "WorkflowResult",
 ]
