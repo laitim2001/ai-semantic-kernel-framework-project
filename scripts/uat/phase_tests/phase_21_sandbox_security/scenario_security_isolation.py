@@ -53,22 +53,14 @@ class SecurityIsolationScenario(PhaseTestBase):
 
     async def setup(self) -> bool:
         """Setup test environment"""
-        try:
-            # Verify backend is available
-            response = await self.api_get("/health")
-            if response.status_code == 200:
-                safe_print("[PASS] Backend health check passed")
-            else:
-                safe_print("[INFO] Backend not available, using simulation mode")
+        # 使用正確的 health check 方法
+        backend_available = await self.health_check()
+        if not backend_available:
+            safe_print("[INFO] Continuing in simulation mode")
 
-            # Create sandbox for testing
-            await self._create_test_sandbox()
-            return True
-
-        except Exception as e:
-            safe_print(f"[INFO] Setup in simulation mode: {e}")
-            await self._create_test_sandbox()
-            return True
+        # Create sandbox for testing
+        await self._create_test_sandbox()
+        return True
 
     async def _create_test_sandbox(self):
         """Create a sandbox for security testing"""

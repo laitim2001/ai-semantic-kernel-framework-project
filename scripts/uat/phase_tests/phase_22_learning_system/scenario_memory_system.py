@@ -50,16 +50,10 @@ class MemorySystemScenario(PhaseTestBase):
 
     async def setup(self) -> bool:
         """Setup test environment"""
-        try:
-            response = await self.api_get("/health")
-            if response.status_code == 200:
-                safe_print("[PASS] Backend health check passed")
-                return True
-            safe_print("[INFO] Using simulation mode")
-            return True
-        except Exception as e:
-            safe_print(f"[INFO] Setup in simulation mode: {e}")
-            return True
+        backend_available = await self.health_check()
+        if not backend_available:
+            safe_print("[INFO] Continuing in simulation mode")
+        return True
 
     async def execute(self) -> bool:
         """Execute all test steps"""

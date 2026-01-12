@@ -204,6 +204,21 @@ class PhaseTestBase(ABC):
     # HTTP 請求方法
     # =========================================================================
 
+    async def health_check(self) -> bool:
+        """檢查後端服務健康狀態（使用根路徑的 /health 端點）"""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(self.config.health_url)
+                if response.status_code == 200:
+                    safe_print("[PASS] Backend health check passed")
+                    return True
+                else:
+                    safe_print(f"[INFO] Backend health check returned: {response.status_code}")
+                    return False
+        except Exception as e:
+            safe_print(f"[INFO] Backend not available: {e}")
+            return False
+
     async def api_get(
         self,
         endpoint: str,

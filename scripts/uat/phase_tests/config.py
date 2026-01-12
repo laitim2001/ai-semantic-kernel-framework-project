@@ -9,6 +9,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+# 載入 .env 檔案
+try:
+    from dotenv import load_dotenv
+    # 從專案根目錄載入 .env
+    project_root = Path(__file__).parent.parent.parent.parent
+    env_path = project_root / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    pass  # dotenv 不是必要的
+
 
 @dataclass
 class PhaseTestConfig:
@@ -16,6 +27,7 @@ class PhaseTestConfig:
 
     # API 配置
     base_url: str = "http://localhost:8000/api/v1"
+    health_url: str = "http://localhost:8000/health"  # 健康檢查端點（根路徑）
     timeout_seconds: float = 60.0
 
     # LLM 配置 - 使用真實 AI 模型
