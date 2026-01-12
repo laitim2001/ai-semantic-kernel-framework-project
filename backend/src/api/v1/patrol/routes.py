@@ -410,3 +410,149 @@ async def delete_patrol_schedule(patrol_id: str) -> Dict[str, str]:
         return {"message": f"Schedule {patrol_id} deleted successfully"}
 
     raise HTTPException(status_code=404, detail=f"Schedule not found: {patrol_id}")
+
+
+# ============================================================================
+# Check Types API Endpoints
+# ============================================================================
+
+
+class CheckTypeModel(BaseModel):
+    """檢查類型模型"""
+    check_type: str
+    name: str
+    description: str
+    category: str
+    estimated_duration_seconds: int
+    enabled: bool = True
+    parameters: Dict[str, Any] = {}
+
+
+class CheckExecutionRequest(BaseModel):
+    """執行檢查請求"""
+    target: Optional[str] = None
+    parameters: Dict[str, Any] = {}
+    timeout_seconds: int = 60
+
+
+class CheckExecutionResponse(BaseModel):
+    """執行檢查響應"""
+    check_type: str
+    status: str
+    message: str
+    started_at: datetime
+    completed_at: datetime
+    duration_ms: int
+    result: Dict[str, Any]
+    metrics: Dict[str, float] = {}
+
+
+# Available check types
+_check_types = {
+    "service_health": {
+        "check_type": "service_health",
+        "name": "Service Health Check",
+        "description": "Check if all services are running and healthy",
+        "category": "availability",
+        "estimated_duration_seconds": 30,
+        "enabled": True,
+        "parameters": {"endpoints": [], "timeout": 10},
+    },
+    "api_response": {
+        "check_type": "api_response",
+        "name": "API Response Check",
+        "description": "Verify API response times and status codes",
+        "category": "performance",
+        "estimated_duration_seconds": 45,
+        "enabled": True,
+        "parameters": {"threshold_ms": 500},
+    },
+    "resource_usage": {
+        "check_type": "resource_usage",
+        "name": "Resource Usage Check",
+        "description": "Monitor CPU, memory, and disk usage",
+        "category": "capacity",
+        "estimated_duration_seconds": 20,
+        "enabled": True,
+        "parameters": {"cpu_threshold": 80, "memory_threshold": 85},
+    },
+    "database_connection": {
+        "check_type": "database_connection",
+        "name": "Database Connection Check",
+        "description": "Verify database connectivity and pool status",
+        "category": "connectivity",
+        "estimated_duration_seconds": 15,
+        "enabled": True,
+        "parameters": {"pool_threshold": 90},
+    },
+    "security_scan": {
+        "check_type": "security_scan",
+        "name": "Security Scan",
+        "description": "Run security vulnerability checks",
+        "category": "security",
+        "estimated_duration_seconds": 120,
+        "enabled": True,
+        "parameters": {"scan_level": "standard"},
+    },
+}
+
+
+@router.get("/checks", response_model=List[CheckTypeModel])
+async def list_check_types() -> List[CheckTypeModel]:
+    """
+    列出可用檢查類型
+
+    返回所有可執行的巡檢檢查類型。
+    """
+    return [CheckTypeModel(**ct) for ct in _check_types.values()]
+
+
+@router.get("/checks/{check_type}", response_model=CheckExecutionResponse)
+async def execute_check(
+    check_type: str,
+    target: Optional[str] = Query(None, description="目標系統或服務"),
+) -> CheckExecutionResponse:
+    """
+    執行指定檢查
+
+    對指定的檢查類型執行即時檢查。
+    """
+    if check_type not in _check_types:
+        raise HTTPException(status_code=404, detail=f"Check type not found: {check_type}")
+
+    check_info = _check_types[check_type]
+    start_time = datetime.utcnow()
+
+    # Simulate check execution
+    import time
+    time.sleep(0.1)  # Small delay for realism
+
+    end_time = datetime.utcnow()
+    duration_ms = int((end_time - start_time).total_seconds() * 1000)
+
+    # Generate mock result based on check type
+    result = {
+        "check_type": check_type,
+        "target": target or "default",
+        "items_checked": 5,
+        "items_passed": 5,
+        "items_failed": 0,
+        "details": f"{check_info['name']} completed successfully",
+    }
+
+    metrics = {
+        "check_duration_ms": float(duration_ms),
+        "success_rate": 1.0,
+        "items_checked": 5.0,
+    }
+
+    return CheckExecutionResponse(
+        check_type=check_type,
+        status="healthy",
+        message=f"{check_info['name']} passed all checks",
+        started_at=start_time,
+        completed_at=end_time,
+        duration_ms=duration_ms,
+        result=result,
+        metrics=metrics,
+    )

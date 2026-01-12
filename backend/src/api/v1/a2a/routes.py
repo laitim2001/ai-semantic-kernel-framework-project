@@ -186,6 +186,21 @@ async def discover_agents(request: DiscoverAgentsRequest):
     return result.to_dict()
 
 
+@router.get("/agents/{agent_id}/capabilities")
+async def get_agent_capabilities(agent_id: str):
+    """Get capabilities of a specific agent."""
+    discovery = get_discovery_service()
+    agent = discovery.get_agent(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+    return {
+        "agent_id": agent_id,
+        "capabilities": agent.capabilities,
+        "skills": agent.skills,
+        "tags": agent.tags,
+    }
+
+
 @router.post("/agents/{agent_id}/heartbeat")
 async def agent_heartbeat(agent_id: str):
     discovery = get_discovery_service()

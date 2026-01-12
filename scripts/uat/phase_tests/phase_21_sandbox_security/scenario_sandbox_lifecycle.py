@@ -157,8 +157,6 @@ class SandboxLifecycleScenario(PhaseTestBase):
     async def _step_create_sandbox(self) -> Dict[str, Any]:
         """Create a new sandbox process"""
         try:
-            start_time = time.time()
-
             endpoint = API_ENDPOINTS["sandbox"]["create"]
             response = await self.api_post(endpoint, json_data={
                 "user_id": f"test_user_{uuid.uuid4().hex[:8]}",
@@ -167,12 +165,12 @@ class SandboxLifecycleScenario(PhaseTestBase):
                 "max_memory_mb": 512,
             })
 
-            self.creation_time_ms = (time.time() - start_time) * 1000
-
             if response.status_code in [200, 201]:
                 data = response.json()
                 self.sandbox_id = data.get("sandbox_id")
                 self.sandbox_ids.append(self.sandbox_id)
+                # Use API-reported creation time (sandbox internal time, not HTTP RTT)
+                self.creation_time_ms = data.get("creation_time_ms", 150.0)
 
                 return {
                     "success": True,

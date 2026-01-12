@@ -83,6 +83,18 @@ from src.api.v1.hybrid import risk_router as hybrid_risk_router  # Sprint 55: Ri
 from src.api.v1.hybrid import switch_router as hybrid_switch_router  # Sprint 56: Mode Switcher
 from src.api.v1.ag_ui import router as ag_ui_router  # Sprint 58: AG-UI SSE Endpoint
 
+# Phase 21: Sandbox Security
+from src.api.v1.sandbox import router as sandbox_router  # Sprint 77-78: Sandbox Security
+
+# Phase 22: Autonomous Planning
+from src.api.v1.autonomous import router as autonomous_router  # Sprint 79: Autonomous Planning
+
+# Phase 23: Multi-Agent Coordination
+from src.api.v1.a2a.routes import router as a2a_router  # Sprint 81: A2A Protocol
+from src.api.v1.patrol.routes import router as patrol_router  # Sprint 82: Patrol Mode
+from src.api.v1.correlation.routes import router as correlation_router  # Sprint 82: Correlation Analysis
+from src.api.v1.rootcause import router as rootcause_router  # Sprint 82: Root Cause Analysis
+
 # Create main v1 router
 api_router = APIRouter(prefix="/api/v1")
 
@@ -144,5 +156,17 @@ api_router.include_router(files_router)  # Sprint 75: File Upload
 # Include sub-routers - Phase 22 (Claude 自主能力與學習系統)
 api_router.include_router(memory_router)  # Sprint 79: Memory System
 api_router.include_router(decision_audit_router)  # Sprint 80: Decision Audit
+
+# Include sub-routers - Phase 21 (Sandbox Security)
+api_router.include_router(sandbox_router)  # Sprint 77-78: Sandbox Security
+
+# Include sub-routers - Phase 22 (Autonomous Planning)
+api_router.include_router(autonomous_router)  # Sprint 79: Autonomous Planning
+
+# Include sub-routers - Phase 23 (Multi-Agent Coordination)
+api_router.include_router(a2a_router)  # Sprint 81: A2A Protocol
+api_router.include_router(patrol_router)  # Sprint 82: Patrol Mode
+api_router.include_router(correlation_router)  # Sprint 82: Correlation Analysis
+api_router.include_router(rootcause_router)  # Sprint 82: Root Cause Analysis
 
 __all__ = ["api_router"]

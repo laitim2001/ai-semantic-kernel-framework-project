@@ -352,7 +352,9 @@ class SecurityIsolationScenario(PhaseTestBase):
 
                 if response.status_code == 200:
                     data = response.json()
-                    if data.get("blocked") or data.get("error"):
+                    # Check result.blocked (IPC response wraps result in 'result' field)
+                    result = data.get("result", data)
+                    if result.get("blocked") or data.get("error") or not result.get("allowed", True):
                         blocked_count += 1
                     else:
                         successful_attacks.append(path)
@@ -404,7 +406,9 @@ class SecurityIsolationScenario(PhaseTestBase):
 
             if response.status_code == 200:
                 data = response.json()
-                if data.get("blocked") or data.get("error"):
+                # Check result.blocked (IPC response wraps result in 'result' field)
+                result = data.get("result", data)
+                if result.get("blocked") or data.get("error") or not result.get("allowed", True):
                     return {
                         "success": True,
                         "message": "Symlink attack blocked",

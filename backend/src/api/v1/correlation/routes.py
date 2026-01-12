@@ -503,3 +503,89 @@ async def get_correlation_graph_mermaid(event_id: str) -> Dict[str, str]:
         "format": "mermaid",
         "code": mermaid_code,
     }
+
+
+@router.get("/graph/{event_id}/json")
+async def get_correlation_graph_json(event_id: str) -> Dict[str, Any]:
+    """
+    獲取 JSON 格式的關聯圖譜
+
+    返回圖譜的完整 JSON 結構，適用於前端視覺化。
+    """
+    if event_id not in _correlation_cache:
+        # 先執行分析
+        await analyze_correlation(CorrelationAnalyzeRequest(event_id=event_id))
+
+    cached = _correlation_cache.get(event_id)
+    if not cached or not cached.get("graph"):
+        raise HTTPException(status_code=404, detail="Graph not found")
+
+    graph = cached["graph"]
+
+    return {
+        "event_id": event_id,
+        "format": "json",
+        "graph": {
+            "graph_id": graph["graph_id"],
+            "root_event_id": graph["root_event_id"],
+            "nodes": graph["nodes"],
+            "edges": graph["edges"],
+            "statistics": graph["statistics"],
+        },
+    }
+
+
+@router.get("/graph/{event_id}/dot")
+async def get_correlation_graph_dot(event_id: str) -> Dict[str, str]:
+    """
+    獲取 DOT (Graphviz) 格式的關聯圖譜
+
+    返回 Graphviz DOT 語言格式，可用於生成 PNG/SVG 圖像。
+    """
+    if event_id not in _correlation_cache:
+        # 先執行分析
+        await analyze_correlation(CorrelationAnalyzeRequest(event_id=event_id))
+
+    cached = _correlation_cache.get(event_id)
+    if not cached or not cached.get("graph"):
+        raise HTTPException(status_code=404, detail="Graph not found")
+
+    graph = cached["graph"]
+
+    # 生成 DOT 代碼
+    lines = [
+        "digraph correlation_graph {",
+        "    rankdir=TB;",
+        "    node [shape=box, style=rounded];",
+        "",
+    ]
+
+    # 添加節點
+    for node in graph["nodes"]:
+        safe_label = node["label"].replace('"', '\\"')[:30]
+        color = "lightblue"
+        if node.get("metadata", {}).get("is_root"):
+            color = "lightgreen"
+        elif node.get("severity") == "critical":
+            color = "lightcoral"
+        elif node.get("severity") == "warning":
+            color = "lightyellow"
+
+        lines.append(f'    "{node["id"]}" [label="{safe_label}", fillcolor={color}, style=filled];')
+
+    lines.append("")
+
+    # 添加邊
+    for edge in graph["edges"]:
+        label = f'{edge["type"]}: {edge["weight"]:.2f}'
+        lines.append(f'    "{edge["source"]}" -> "{edge["target"]}" [label="{label}"];')
+
+    lines.append("}")
+
+    dot_code = "\n".join(lines)
+
+    return {
+        "event_id": event_id,
+        "format": "dot",
+        "code": dot_code,
+    }
