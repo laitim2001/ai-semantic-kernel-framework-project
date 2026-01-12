@@ -8,6 +8,11 @@ Sprint 48: Core SDK Integration (35 pts)
 - S48-3: Session 管理實現 (10 pts)
 - S48-4: API 端點整合 (7 pts)
 
+Sprint 80: S80-4 - Claude Session 狀態增強 (5 pts)
+- Session 狀態持久化
+- 跨會話上下文恢復
+- 上下文壓縮策略
+
 Example usage:
     from src.integrations.claude_sdk import ClaudeSDKClient
 
@@ -48,6 +53,14 @@ from .exceptions import (
     MCPToolError,
 )
 
+# Sprint 80: Session State Management
+from .session_state import (
+    SessionStateConfig,
+    SessionState,
+    SessionStateManager,
+    DEFAULT_SESSION_STATE_CONFIG,
+)
+
 __all__ = [
     # Client
     "ClaudeSDKClient",
@@ -73,4 +86,9 @@ __all__ = [
     "MCPError",
     "MCPConnectionError",
     "MCPToolError",
+    # Session State (Sprint 80)
+    "SessionStateConfig",
+    "SessionState",
+    "SessionStateManager",
+    "DEFAULT_SESSION_STATE_CONFIG",
 ]

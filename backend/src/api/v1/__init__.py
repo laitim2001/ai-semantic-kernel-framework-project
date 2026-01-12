@@ -42,6 +42,7 @@
 #   - hybrid/switch: Mode Switcher API (Sprint 56)
 #   - auth: Authentication API (Sprint 70)
 #   - files: File Upload API (Sprint 75)
+#   - memory: Memory System API (Sprint 79)
 # =============================================================================
 
 from fastapi import APIRouter
@@ -49,8 +50,10 @@ from fastapi import APIRouter
 from src.api.v1.agents.routes import router as agents_router
 from src.api.v1.auth import router as auth_router  # Sprint 70: Authentication
 from src.api.v1.files import router as files_router  # Sprint 75: File Upload
+from src.api.v1.memory import router as memory_router  # Sprint 79: Memory System
 from src.api.v1.code_interpreter.routes import router as code_interpreter_router
 from src.api.v1.audit.routes import router as audit_router
+from src.api.v1.audit.decision_routes import router as decision_audit_router  # Sprint 80: Decision Audit
 from src.api.v1.cache.routes import router as cache_router
 from src.api.v1.checkpoints.routes import router as checkpoints_router
 from src.api.v1.concurrent.routes import router as concurrent_router
@@ -137,5 +140,9 @@ api_router.include_router(auth_router)  # Sprint 70: Authentication
 
 # Include sub-routers - Phase 20 (File Attachment Support)
 api_router.include_router(files_router)  # Sprint 75: File Upload
+
+# Include sub-routers - Phase 22 (Claude 自主能力與學習系統)
+api_router.include_router(memory_router)  # Sprint 79: Memory System
+api_router.include_router(decision_audit_router)  # Sprint 80: Decision Audit
 
 __all__ = ["api_router"]
