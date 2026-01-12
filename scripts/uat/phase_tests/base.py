@@ -41,6 +41,7 @@ def safe_print(text: str):
             '📁': '[FILE]',
             '🔧': '[TOOL]',
             '💬': '[MSG]',
+            '🧪': '?',
         }
         safe_text = text
         for char, replacement in replacements.items():

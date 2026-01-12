@@ -105,7 +105,7 @@ class PhaseTestRunner:
             try:
                 await self.run_phase(phase)
             except Exception as e:
-                print(f"❌ Phase {phase} failed with exception: {e}")
+                print(f"[FAIL] Phase {phase} failed with exception: {e}")
                 # 創建失敗結果
                 self.results.append(ScenarioResult(
                     scenario_name=f"Phase {phase}",
@@ -219,15 +219,15 @@ def print_summary(summary: Dict[str, Any]):
     print(f"   Success Rate: {overall['success_rate']}")
     print(f"   Total Duration: {summary['total_duration_seconds']:.2f}s")
 
-    print(f"\n📋 Configuration:")
+    print(f"\n[CONFIG] Configuration:")
     config = summary["config"]
     print(f"   Use Real LLM: {config['use_real_llm']}")
     print(f"   LLM Provider: {config['llm_provider']}")
     print(f"   LLM Deployment: {config['llm_deployment']}")
 
-    print(f"\n📑 Phase Results:")
+    print(f"\n[RESULTS] Phase Results:")
     for result in summary["phase_results"]:
-        status = "✅" if result["success"] else "❌"
+        status = "[PASS]" if result["success"] else "[FAIL]"
         print(f"   {status} Phase {result['phase']}: {result['scenario']}")
         print(f"      Steps: {result['steps_passed']}/{result['steps_total']}, Duration: {result['duration_seconds']:.2f}s")
 
@@ -235,10 +235,10 @@ def print_summary(summary: Dict[str, Any]):
     all_passed = all(r["success"] for r in summary["phase_results"])
     print("\n" + "=" * 60)
     if all_passed:
-        print("🎉 ALL PHASE TESTS PASSED!")
+        print("[SUCCESS] ALL PHASE TESTS PASSED!")
     else:
         failed = [r["phase"] for r in summary["phase_results"] if not r["success"]]
-        print(f"⚠️  Some phases failed: {failed}")
+        print(f"[WARNING] Some phases failed: {failed}")
     print("=" * 60)
 
 
@@ -285,7 +285,7 @@ async def main():
     output_file = args.output or f"phase_tests_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
-    print(f"\n📄 Results saved to: {output_file}")
+    print(f"\n[FILE] Results saved to: {output_file}")
 
     # 返回退出碼
     all_passed = all(r["success"] for r in summary["phase_results"])
