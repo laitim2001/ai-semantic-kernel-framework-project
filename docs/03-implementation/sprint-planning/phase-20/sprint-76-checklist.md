@@ -6,9 +6,10 @@
 |--------|-------|
 | **Total Stories** | 4 |
 | **Total Points** | 16 pts |
-| **Completed** | 0 |
+| **Completed** | 4 |
 | **In Progress** | 0 |
-| **Status** | 待開始 |
+| **Status** | ✅ 已完成 |
+| **Completed Date** | 2026-01-11 |
 
 ---
 

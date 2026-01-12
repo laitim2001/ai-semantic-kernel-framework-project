@@ -8,17 +8,17 @@ Phase 20 為 AI 助手介面添加文件附件支援，實現類似 Claude AI / 
 
 | Status | Value |
 |--------|-------|
-| **Phase Status** | 進行中 |
+| **Phase Status** | ✅ 已完成 |
 | **Duration** | 2 sprints |
 | **Total Story Points** | 34 pts |
-| **Target Start** | 2026-01-09 |
+| **Completed Date** | 2026-01-11 |
 
 ## Sprint Overview
 
 | Sprint | Focus | Story Points | Status | Documents |
 |--------|-------|--------------|--------|-----------|
-| **Sprint 75** | 文件上傳功能 | 18 pts | 待開始 | [Plan](sprint-75-plan.md) / [Checklist](sprint-75-checklist.md) |
-| **Sprint 76** | 文件下載功能 | 16 pts | 待開始 | [Plan](sprint-76-plan.md) / [Checklist](sprint-76-checklist.md) |
+| **Sprint 75** | 文件上傳功能 | 18 pts | ✅ 已完成 | [Plan](sprint-75-plan.md) / [Checklist](sprint-75-checklist.md) |
+| **Sprint 76** | 文件下載功能 | 16 pts | ✅ 已完成 | [Plan](sprint-76-plan.md) / [Checklist](sprint-76-checklist.md) |
 | **Total** | | **34 pts** | | |
 
 ---

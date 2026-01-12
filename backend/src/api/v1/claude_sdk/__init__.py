@@ -46,6 +46,15 @@ Intent Router Endpoints (intent_routes.py) - Sprint 52:
     GET /api/v1/claude-sdk/intent/classifiers - List available classifiers
     GET /api/v1/claude-sdk/intent/stats - Get classification statistics
     PUT /api/v1/claude-sdk/intent/config - Update router configuration
+
+Autonomous Planning Endpoints (autonomous_routes.py) - Sprint 79:
+    POST /api/v1/claude-sdk/autonomous/plan - Generate autonomous plan
+    GET /api/v1/claude-sdk/autonomous/{plan_id} - Get plan details
+    POST /api/v1/claude-sdk/autonomous/{plan_id}/execute - Execute plan (SSE)
+    DELETE /api/v1/claude-sdk/autonomous/{plan_id} - Delete plan
+    GET /api/v1/claude-sdk/autonomous - List all plans
+    POST /api/v1/claude-sdk/autonomous/estimate - Estimate resources
+    POST /api/v1/claude-sdk/autonomous/{plan_id}/verify - Verify execution
 """
 
 from fastapi import APIRouter
@@ -56,6 +65,7 @@ from .hooks_routes import router as hooks_router
 from .mcp_routes import router as mcp_router
 from .hybrid_routes import router as hybrid_router
 from .intent_routes import router as intent_router
+from .autonomous_routes import router as autonomous_router
 from .schemas import (
     QueryRequest,
     QueryResponse,
@@ -77,6 +87,7 @@ router.include_router(hooks_router)
 router.include_router(mcp_router)
 router.include_router(hybrid_router)
 router.include_router(intent_router)
+router.include_router(autonomous_router, prefix="/autonomous")
 
 __all__ = [
     "router",
@@ -86,6 +97,7 @@ __all__ = [
     "mcp_router",
     "hybrid_router",
     "intent_router",
+    "autonomous_router",
     "QueryRequest",
     "QueryResponse",
     "CreateSessionRequest",
