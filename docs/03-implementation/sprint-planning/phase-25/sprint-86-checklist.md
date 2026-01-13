@@ -1,114 +1,181 @@
-# Sprint 86 Checklist: 監控增強與災難恢復
+# Sprint 86 Checklist: mem0 整合完善
 
 ## Sprint Status
 
 | Metric | Value |
 |--------|-------|
-| **Total Stories** | 2 |
-| **Total Points** | 20 pts |
+| **Total Stories** | 5 |
+| **Total Points** | 13 pts |
 | **Completed** | 0 |
 | **In Progress** | 0 |
-| **Status** | 計劃中 |
+| **Status** | 📋 規劃中 |
 
 ---
 
 ## Stories
 
-### S86-1: Prometheus + Grafana 監控 (10 pts)
+### S86-1: 添加 mem0 依賴 (1 pt)
 
 **Status**: ⬜ 待開始
 
 **Tasks**:
-- [ ] 部署 Prometheus（Helm）
-  - [ ] 配置 ServiceMonitor
-  - [ ] 配置 scrape_configs
-  - [ ] 驗證指標收集
-- [ ] 部署 Grafana（Helm）
-  - [ ] 配置數據源
-  - [ ] 配置認證
-- [ ] 創建自定義 Dashboard
-  - [ ] API Performance Dashboard
-  - [ ] Execution Stats Dashboard
-  - [ ] Claude Usage Dashboard
-  - [ ] System Resources Dashboard
-- [ ] 配置告警規則
-  - [ ] HighErrorRate 告警
-  - [ ] HighResponseTime 告警
-  - [ ] ClaudeAPIErrors 告警
-  - [ ] ResourceExhaustion 告警
-- [ ] 配置通知渠道
-  - [ ] Teams Webhook
-  - [ ] Email 通知
+- [ ] 添加 `mem0ai>=0.0.1` 到 `backend/requirements.txt`
+- [ ] 執行 `pip install -r requirements.txt`
+- [ ] 驗證 `import mem0` 無錯誤
+- [ ] 確保現有測試仍通過
 
 **Acceptance Criteria**:
-- [ ] Prometheus 收集指標
-- [ ] Grafana Dashboard 正常
-- [ ] 告警規則生效
-- [ ] 通知配置完成
+- [ ] mem0ai 依賴添加到 requirements.txt
+- [ ] pip install 成功
+- [ ] import mem0 無錯誤
+- [ ] 現有測試不受影響
 
 ---
 
-### S86-2: 災難恢復 (10 pts)
+### S86-2: 環境變數配置 (2 pts)
 
 **Status**: ⬜ 待開始
 
 **Tasks**:
-- [ ] 編寫災難恢復計劃文檔
-  - [ ] 災難類型識別
-  - [ ] 恢復優先級定義
-  - [ ] 聯繫人清單
-  - [ ] 恢復步驟詳細說明
-- [ ] 創建備份腳本
-  - [ ] PostgreSQL 備份
-  - [ ] Redis 備份
-  - [ ] 上傳到 Azure Blob Storage
-  - [ ] 清理舊備份
-- [ ] 創建恢復腳本
-  - [ ] 下載備份
-  - [ ] PostgreSQL 恢復
-  - [ ] Redis 恢復
-  - [ ] 驗證恢復結果
-- [ ] 配置定時備份（CronJob）
-  - [ ] 每日備份
-  - [ ] 備份監控告警
-- [ ] 執行恢復演練
-  - [ ] 模擬災難場景
-  - [ ] 執行恢復流程
-  - [ ] 記錄恢復時間
-  - [ ] 驗證數據完整性
-- [ ] 驗證 RTO < 4h
+- [ ] 更新 `backend/.env.example` 添加 mem0 配置
+- [ ] 更新 `backend/src/integrations/memory/types.py` 支持環境變數讀取
+- [ ] 添加 MEM0_ENABLED 配置
+- [ ] 添加 QDRANT_PATH 配置
+- [ ] 添加 QDRANT_COLLECTION 配置
+- [ ] 添加 EMBEDDING_MODEL 配置
+- [ ] 添加 MEMORY_LLM_PROVIDER 配置
+- [ ] 添加 MEMORY_LLM_MODEL 配置
+- [ ] 添加 WORKING_MEMORY_TTL 配置
+- [ ] 添加 SESSION_MEMORY_TTL 配置
+- [ ] 設定合理的默認值
 
 **Acceptance Criteria**:
-- [ ] 自動備份策略
-- [ ] 恢復文檔完整
-- [ ] 演練成功
-- [ ] RTO < 4 小時
-- [ ] RPO < 1 小時
+- [ ] .env.example 包含所有 mem0 配置
+- [ ] types.py 正確讀取環境變數
+- [ ] 所有配置有合理默認值
+- [ ] 配置說明註釋完整
+
+---
+
+### S86-3: mem0_client.py 單元測試 (5 pts)
+
+**Status**: ⬜ 待開始
+
+**Tasks**:
+- [ ] 創建 `backend/tests/unit/test_mem0_client.py`
+- [ ] 測試 `initialize()` 成功場景
+- [ ] 測試 `initialize()` 失敗場景
+- [ ] 測試 `add_memory()` 功能
+- [ ] 測試 `search_memory()` 功能
+- [ ] 測試 `search_memory()` 帶過濾條件
+- [ ] 測試 `get_all()` 功能
+- [ ] 測試 `get_memory()` 功能
+- [ ] 測試 `update_memory()` 功能
+- [ ] 測試 `delete_memory()` 功能
+- [ ] 測試 `delete_all()` 功能
+- [ ] 測試 `get_history()` 功能
+- [ ] Mock 外部 API 調用
+
+**Acceptance Criteria**:
+- [ ] 所有測試通過
+- [ ] Mock 外部 API 調用
+- [ ] 測試覆蓋率 > 85%
+
+---
+
+### S86-4: Memory API 集成測試 (3 pts)
+
+**Status**: ⬜ 待開始
+
+**Tasks**:
+- [ ] 創建 `backend/tests/integration/test_memory_api.py`
+- [ ] 測試 `POST /memory/add` 端點
+- [ ] 測試 `POST /memory/search` 端點
+- [ ] 測試 `GET /memory/user/{user_id}` 端點
+- [ ] 測試 `GET /memory/{memory_id}` 端點
+- [ ] 測試 `DELETE /memory/{memory_id}` 端點
+- [ ] 測試 `POST /memory/promote` 端點
+- [ ] 測試 `POST /memory/context` 端點
+- [ ] 測試 `GET /memory/health` 端點
+- [ ] 測試驗證錯誤處理
+- [ ] 測試記憶層選擇邏輯
+
+**Acceptance Criteria**:
+- [ ] 所有端點測試通過
+- [ ] 錯誤處理正確
+- [ ] 層級選擇邏輯正確
+
+---
+
+### S86-5: 文檔更新 (2 pts)
+
+**Status**: ⬜ 待開始
+
+**Tasks**:
+- [ ] 創建 `docs/04-usage/memory-configuration.md`
+- [ ] 編寫三層記憶系統概述
+- [ ] 編寫環境變數配置說明
+- [ ] 編寫 API 使用示例
+- [ ] 編寫故障排除章節
+- [ ] 更新 `docs/02-architecture/technical-architecture.md`
+
+**Acceptance Criteria**:
+- [ ] memory-configuration.md 創建完成
+- [ ] 配置說明完整
+- [ ] 包含 API 使用示例
+- [ ] 包含故障排除章節
+- [ ] 架構文檔已更新
+
+---
+
+## Files Summary
+
+### New Files
+| File | Story | Description |
+|------|-------|-------------|
+| `backend/tests/unit/test_mem0_client.py` | S86-3 | mem0 客戶端單元測試 |
+| `backend/tests/integration/test_memory_api.py` | S86-4 | Memory API 集成測試 |
+| `docs/04-usage/memory-configuration.md` | S86-5 | 記憶系統配置文檔 |
+
+### Modified Files
+| File | Story | Changes |
+|------|-------|---------|
+| `backend/requirements.txt` | S86-1 | 添加 mem0ai 依賴 |
+| `backend/.env.example` | S86-2 | 添加 mem0 環境變數 |
+| `backend/src/integrations/memory/types.py` | S86-2 | 支持環境變數讀取 |
+| `docs/02-architecture/technical-architecture.md` | S86-5 | 更新記憶系統章節 |
 
 ---
 
 ## Verification Checklist
 
-### Monitoring Tests
-- [ ] Prometheus 運行正常
-- [ ] 指標收集完整
-- [ ] Grafana Dashboard 渲染正確
-- [ ] 告警觸發正確
-- [ ] 通知發送成功
+### Dependency Tests
+- [ ] mem0ai 安裝成功
+- [ ] import mem0 無錯誤
+- [ ] 無依賴衝突
+- [ ] 現有測試通過
 
-### Backup Tests
-- [ ] 備份 CronJob 執行成功
-- [ ] 備份文件完整
-- [ ] 上傳到 Azure 成功
-- [ ] 舊備份清理正常
+### Configuration Tests
+- [ ] .env.example 完整
+- [ ] 所有配置可讀取
+- [ ] 默認值合理
+- [ ] 環境變數覆蓋正常
 
-### Recovery Tests
-- [ ] 恢復腳本可執行
-- [ ] 數據恢復完整
-- [ ] 服務恢復正常
-- [ ] RTO 達標
-- [ ] RPO 達標
+### Unit Tests
+- [ ] 所有 Mem0Client 測試通過
+- [ ] Mock 正確隔離外部調用
+- [ ] 覆蓋率達標
+
+### Integration Tests
+- [ ] 所有 API 端點測試通過
+- [ ] 錯誤處理正確
+- [ ] 層級選擇正確
+
+### Documentation Tests
+- [ ] 配置說明清晰易懂
+- [ ] 示例代碼可運行
+- [ ] 故障排除實用
 
 ---
 
-**Last Updated**: 2026-01-12
+**Last Updated**: 2026-01-13

@@ -1,178 +1,161 @@
-# Sprint 83: WorkflowViz 與 Dashboard
+# Sprint 83: DevUI 核心頁面
 
-## Sprint Info
-
-| Field | Value |
-|-------|-------|
-| **Sprint Number** | 83 |
-| **Phase** | 24 - 前端完善與生態整合 |
-| **Duration** | 5-7 days |
-| **Story Points** | 18 pts |
-| **Status** | 計劃中 |
-| **Priority** | 🟢 P2 低優先 |
-
----
-
-## Sprint Goal
-
-實現 WorkflowViz 實時更新和 Claude 思考過程可視化，完善 Dashboard 自定義功能。
-
----
-
-## Prerequisites
-
-- Phase 23 完成（多 Agent 協調）✅
-- 前端基礎（Phase 16-19）✅
+> **Sprint**: 83
+> **Story Points**: 14 pts
+> **目標**: 實現 DevUI 的核心頁面框架和基本功能
 
 ---
 
 ## User Stories
 
-### S83-1: WorkflowViz 實時更新 + Claude 思考過程可視化 (10 pts)
+### S83-1: DevUI 頁面路由和布局 (3 pts)
 
-**Description**: 實現工作流可視化的實時更新，包括 Claude 思考過程展示。
+**描述**: 建立 DevUI 的基礎頁面結構和路由配置
 
-**Acceptance Criteria**:
-- [ ] 節點狀態實時更新（< 500ms 延遲）
-- [ ] 執行路徑追蹤和高亮
-- [ ] Claude 思考過程可視化（Extended Thinking）
-- [ ] 支援節點詳情面板
-- [ ] 支援縮放和平移
+**驗收標準**:
+- [ ] 創建 `/devui` 路由
+- [ ] 實現頁面布局 (側邊欄 + 主內容區)
+- [ ] 添加導航菜單
+- [ ] 實現麵包屑導航
 
-**Files to Create/Modify**:
-- `frontend/src/components/workflow/WorkflowViz.tsx` (~300 行)
-- `frontend/src/components/workflow/ThinkingPanel.tsx` (~150 行)
-- `frontend/src/components/workflow/NodeDetailPanel.tsx` (~150 行)
-- `frontend/src/hooks/useWorkflowUpdates.ts` (~100 行)
-
-**Technical Design**:
-```typescript
-// WorkflowViz 組件
-interface WorkflowVizProps {
-  workflowId: string;
-  onNodeClick?: (nodeId: string) => void;
-}
-
-const WorkflowViz: React.FC<WorkflowVizProps> = ({ workflowId, onNodeClick }) => {
-  const { nodes, edges, updateState } = useWorkflowUpdates(workflowId);
-
-  // 使用 @antv/g6 進行圖形渲染
-  const graphRef = useRef<Graph>(null);
-
-  useEffect(() => {
-    // 監聽 WebSocket 更新
-    const ws = new WebSocket(`/api/v1/workflow/${workflowId}/viz/stream`);
-    ws.onmessage = (event) => {
-      const update = JSON.parse(event.data);
-      updateState(update);
-    };
-    return () => ws.close();
-  }, [workflowId]);
-
-  return (
-    <div className="workflow-viz-container">
-      <GraphCanvas ref={graphRef} nodes={nodes} edges={edges} />
-      <ThinkingPanel />
-      <NodeDetailPanel />
-    </div>
-  );
-};
-```
-
-**API Endpoints**:
-```
-GET    /api/v1/workflow/{id}/viz        # 獲取可視化數據
-WS     /api/v1/workflow/{id}/viz/stream # 實時更新 WebSocket
-```
-
-**Dependencies**:
-```bash
-npm install @antv/g6@5.x    # 圖形可視化
-```
+**交付物**:
+- `frontend/src/pages/DevUI/index.tsx`
+- `frontend/src/pages/DevUI/Layout.tsx`
 
 ---
 
-### S83-2: Dashboard 自定義 + 學習效果儀表板 (8 pts)
+### S83-2: 追蹤列表頁面 (5 pts)
 
-**Description**: 實現 Dashboard 自定義功能和學習效果儀表板。
+**描述**: 實現追蹤列表頁面，顯示所有執行追蹤
 
-**Acceptance Criteria**:
-- [ ] 支援卡片拖放排序
-- [ ] 支援卡片添加/移除
-- [ ] 學習效果統計圖表
-- [ ] mem0 記憶使用統計
-- [ ] 布局持久化
+**驗收標準**:
+- [ ] 顯示追蹤列表表格
+- [ ] 實現分頁功能 (每頁 20 條)
+- [ ] 過濾功能：
+  - 按狀態過濾 (running/completed/failed)
+  - 按工作流 ID 過濾
+- [ ] 顯示追蹤信息：
+  - 執行 ID
+  - 工作流 ID
+  - 開始時間
+  - 狀態 (彩色標籤)
+  - 事件數量
+  - 持續時間
+- [ ] 點擊行跳轉到詳情頁
 
-**Files to Create/Modify**:
-- `frontend/src/pages/dashboard/CustomizableDashboard.tsx` (~250 行)
-- `frontend/src/components/dashboard/LearningMetrics.tsx` (~150 行)
-- `frontend/src/components/dashboard/MemoryUsage.tsx` (~100 行)
-- `frontend/src/components/dashboard/DraggableCard.tsx` (~100 行)
-
-**Technical Design**:
+**API 調用**:
 ```typescript
-// CustomizableDashboard 組件
-interface DashboardWidget {
+GET /api/v1/devtools/traces?workflow_id={}&status={}&limit={}
+```
+
+**交付物**:
+- `frontend/src/pages/DevUI/TraceList.tsx`
+- `frontend/src/api/devtools.ts`
+- `frontend/src/hooks/useDevTools.ts`
+
+---
+
+### S83-3: 追蹤詳情頁面 (6 pts)
+
+**描述**: 實現追蹤詳情頁面，顯示執行的完整信息
+
+**驗收標準**:
+- [ ] 顯示追蹤基本信息
+  - 執行 ID、工作流 ID
+  - 開始/結束時間
+  - 狀態、持續時間
+- [ ] 事件列表視圖
+  - 按時間排序
+  - 顯示事件類型、時間戳、嚴重性
+  - 過濾功能
+- [ ] 事件詳情展開
+  - 顯示事件數據 (JSON)
+  - 顯示元數據
+- [ ] 刪除追蹤功能
+
+**API 調用**:
+```typescript
+GET /api/v1/devtools/traces/{execution_id}
+GET /api/v1/devtools/traces/{execution_id}/events
+DELETE /api/v1/devtools/traces/{execution_id}
+```
+
+**交付物**:
+- `frontend/src/pages/DevUI/TraceDetail.tsx`
+- `frontend/src/components/DevUI/EventList.tsx`
+- `frontend/src/components/DevUI/EventDetail.tsx`
+
+---
+
+## 技術實現
+
+### 類型定義
+
+```typescript
+// frontend/src/types/devtools.ts
+interface Trace {
   id: string;
-  type: 'learning-metrics' | 'memory-usage' | 'execution-stats' | 'custom';
-  position: { x: number; y: number };
-  size: { width: number; height: number };
+  execution_id: string;
+  workflow_id: string;
+  started_at: string;
+  ended_at?: string;
+  duration_ms?: number;
+  status: 'running' | 'completed' | 'failed';
+  event_count: number;
+  span_count: number;
+  metadata: Record<string, any>;
 }
 
-const CustomizableDashboard: React.FC = () => {
-  const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
-  const { saveLayout, loadLayout } = useDashboardPersistence();
+interface TraceEvent {
+  id: string;
+  trace_id: string;
+  event_type: string;
+  timestamp: string;
+  data: Record<string, any>;
+  severity: 'debug' | 'info' | 'warning' | 'error' | 'critical';
+  parent_event_id?: string;
+  executor_id?: string;
+  step_number?: number;
+  duration_ms?: number;
+  tags: string[];
+  metadata: Record<string, any>;
+}
+```
 
-  // 拖放處理
-  const handleDragEnd = (result: DropResult) => {
-    const newWidgets = reorderWidgets(widgets, result);
-    setWidgets(newWidgets);
-    saveLayout(newWidgets);
-  };
+### API 客戶端
 
-  return (
-    <DragDropContext onDragEnd={handleDragEnd}>
-      <Droppable droppableId="dashboard">
-        {(provided) => (
-          <div ref={provided.innerRef} {...provided.droppableProps}>
-            {widgets.map((widget, index) => (
-              <DraggableCard key={widget.id} widget={widget} index={index} />
-            ))}
-          </div>
-        )}
-      </Droppable>
-    </DragDropContext>
-  );
+```typescript
+// frontend/src/api/devtools.ts
+export const devToolsApi = {
+  listTraces: (params: ListTracesParams) => 
+    api.get('/devtools/traces', { params }),
+  
+  getTrace: (executionId: string) =>
+    api.get(`/devtools/traces/${executionId}`),
+  
+  getEvents: (executionId: string, params: ListEventsParams) =>
+    api.get(`/devtools/traces/${executionId}/events`, { params }),
+  
+  deleteTrace: (executionId: string) =>
+    api.delete(`/devtools/traces/${executionId}`),
 };
 ```
 
-**Dependencies**:
-```bash
-npm install echarts@5.x           # 統計圖表
-npm install react-beautiful-dnd   # 拖放功能
-```
+---
+
+## 測試計劃
+
+- [ ] 追蹤列表渲染測試
+- [ ] 分頁功能測試
+- [ ] 過濾功能測試
+- [ ] 追蹤詳情渲染測試
+- [ ] 事件列表渲染測試
+- [ ] API 錯誤處理測試
 
 ---
 
-## Definition of Done
+## 更新歷史
 
-- [ ] 所有 Stories 完成
-- [ ] WorkflowViz 實時更新正常
-- [ ] Dashboard 可自定義
-- [ ] 響應式設計驗證通過
-- [ ] 單元測試覆蓋率 > 80%
-
----
-
-## Success Metrics
-
-| Metric | Target |
-|--------|--------|
-| WorkflowViz 更新延遲 | < 500ms |
-| Dashboard 加載時間 | < 2s |
-| 用戶滿意度 | > 4/5 |
-
----
-
-**Created**: 2026-01-12
-**Story Points**: 18 pts
+| 日期 | 說明 |
+|------|------|
+| 2026-01-13 | 初始規劃 |
