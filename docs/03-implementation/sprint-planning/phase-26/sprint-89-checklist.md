@@ -1,4 +1,4 @@
-# Sprint 85 Checklist: 統計和進階功能
+# Sprint 89 Checklist: 統計和進階功能
 
 ## Sprint Status
 
@@ -8,13 +8,13 @@
 | **Total Points** | 12 pts |
 | **Completed** | 0 |
 | **In Progress** | 0 |
-| **Status** | 📋 規劃中 |
+| **Status** | 計劃中 |
 
 ---
 
 ## Stories
 
-### S85-1: 統計儀表板 (5 pts)
+### S89-1: 統計儀表板 (5 pts)
 
 **Status**: ⬜ 待開始
 
@@ -36,7 +36,7 @@
 
 ---
 
-### S85-2: 實時追蹤功能 (5 pts)
+### S89-2: 實時追蹤功能 (5 pts)
 
 **Status**: ⬜ 待開始
 
@@ -60,7 +60,7 @@
 
 ---
 
-### S85-3: 事件過濾和搜索 (2 pts)
+### S89-3: 事件過濾和搜索 (2 pts)
 
 **Status**: ⬜ 待開始
 
@@ -81,21 +81,6 @@
 - [ ] 文本搜索功能正常
 - [ ] 過濾器可組合使用
 - [ ] 清除過濾器功能正常
-
----
-
-## Files Summary
-
-### New Files
-| File | Story | Description |
-|------|-------|-------------|
-| `frontend/src/components/DevUI/Statistics.tsx` | S85-1 | 統計面板組件 |
-| `frontend/src/components/DevUI/StatCard.tsx` | S85-1 | 統計卡片組件 |
-| `frontend/src/components/DevUI/EventPieChart.tsx` | S85-1 | 事件餅圖組件 |
-| `frontend/src/components/DevUI/LiveIndicator.tsx` | S85-2 | 實時狀態指示器 |
-| `frontend/src/components/DevUI/EventFilter.tsx` | S85-3 | 事件過濾器組件 |
-| `frontend/src/hooks/useDevToolsStream.ts` | S85-2 | SSE 連接 Hook |
-| `frontend/src/hooks/useEventFilter.ts` | S85-3 | 過濾器 Hook |
 
 ---
 

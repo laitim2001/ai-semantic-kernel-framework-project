@@ -1,116 +1,127 @@
-# Sprint 84 Checklist: 時間線可視化
+# Sprint 84 Checklist: 生態整合與審批流程
 
 ## Sprint Status
 
 | Metric | Value |
 |--------|-------|
-| **Total Stories** | 3 |
-| **Total Points** | 16 pts |
+| **Total Stories** | 4 |
+| **Total Points** | 20 pts |
 | **Completed** | 0 |
 | **In Progress** | 0 |
-| **Status** | 📋 規劃中 |
+| **Status** | 計劃中 |
 
 ---
 
 ## Stories
 
-### S84-1: 時間線組件設計和實現 (8 pts)
+### S84-1: n8n 觸發整合 (8 pts)
 
 **Status**: ⬜ 待開始
 
 **Tasks**:
-- [ ] 創建 `frontend/src/components/DevUI/Timeline.tsx`
-- [ ] 創建 `frontend/src/components/DevUI/TimelineNode.tsx`
-- [ ] 創建 `frontend/src/components/DevUI/DurationBar.tsx`
-- [ ] 實現垂直時間線布局
-- [ ] 實現事件節點顯示 (類型圖標、時間戳、持續時間條)
-- [ ] 實現事件配對顯示 (LLM_REQUEST ↔ LLM_RESPONSE 等)
-- [ ] 實現持續時間可視化 (條形圖)
-- [ ] 實現滾動和縮放功能
-- [ ] 實現懸停顯示詳情
+- [ ] 創建 `n8n/` 目錄
+- [ ] 實現 N8nTrigger class
+  - [ ] `handle_webhook()` 方法
+  - [ ] `verify_signature()` 方法
+  - [ ] `execute_workflow()` 方法
+- [ ] 實現 N8nCallback class
+  - [ ] `callback_to_n8n()` 方法
+  - [ ] 重試機制
+- [ ] 創建 API 端點
+  - [ ] POST /api/v1/n8n/webhook
+  - [ ] GET /api/v1/n8n/workflows
+  - [ ] POST /api/v1/n8n/trigger
+- [ ] 創建工作流模板
 
 **Acceptance Criteria**:
-- [ ] 時間線正確渲染
-- [ ] 事件配對正確顯示
-- [ ] 持續時間條形圖正確
-- [ ] 滾動和縮放功能正常
-- [ ] 懸停詳情正確顯示
+- [ ] Webhook 配置管理
+- [ ] 簽名驗證
+- [ ] 觸發執行
+- [ ] 結果回饋
+- [ ] 工作流模板
 
 ---
 
-### S84-2: 事件樹形結構顯示 (5 pts)
+### S84-2: 多級審批流程 (5 pts)
 
 **Status**: ⬜ 待開始
 
 **Tasks**:
-- [ ] 創建 `frontend/src/components/DevUI/EventTree.tsx`
-- [ ] 創建 `frontend/src/components/DevUI/TreeNode.tsx`
-- [ ] 實現 parent_event_id 層級結構解析
-- [ ] 實現展開/收起子事件功能
-- [ ] 實現縮進顯示層級關係
-- [ ] 實現連接線顯示父子關係
-- [ ] 實現遞歸渲染子事件
+- [ ] 實現 MultiLevelApproval class
+  - [ ] `submit_for_approval()` 方法
+  - [ ] `determine_approval_chain()` 方法
+  - [ ] `approve()` 方法
+  - [ ] `reject()` 方法
+- [ ] 實現 EscalationManager class
+  - [ ] `handle_escalation()` 方法
+  - [ ] `handle_timeout()` 方法
+- [ ] 實現審批委託
+- [ ] 更新 API 端點
 
 **Acceptance Criteria**:
-- [ ] 樹形結構正確渲染
-- [ ] 展開/收起功能正常
-- [ ] 層級縮進正確
-- [ ] 父子連接線正確顯示
+- [ ] 多級審批配置
+- [ ] 升級路徑管理
+- [ ] 審批超時處理
+- [ ] 審批委託
 
 ---
 
-### S84-3: LLM/Tool 事件詳情面板 (3 pts)
+### S84-3: 效能監控 (5 pts)
 
 **Status**: ⬜ 待開始
 
 **Tasks**:
-- [ ] 創建 `frontend/src/components/DevUI/EventPanel.tsx`
-- [ ] 創建 `frontend/src/components/DevUI/LLMEventPanel.tsx`
-- [ ] 創建 `frontend/src/components/DevUI/ToolEventPanel.tsx`
-- [ ] 實現 LLM 事件面板 (Prompt、Response、Token、模型、耗時)
-- [ ] 實現 Tool 事件面板 (工具名稱、參數、結果、耗時)
-- [ ] 實現複製功能 (複製 prompt/result)
-- [ ] 實現 JSON 格式化顯示
+- [ ] 實現 ClaudeMetrics class
+  - [ ] `record_usage()` 方法
+  - [ ] `get_usage_summary()` 方法
+  - [ ] `get_daily_breakdown()` 方法
+- [ ] 創建 ClaudeUsage 前端組件
+  - [ ] Token 使用圖表
+  - [ ] 調用頻率圖表
+  - [ ] 歷史對比視圖
+- [ ] 實現趨勢預測
 
 **Acceptance Criteria**:
-- [ ] LLM 事件面板正確顯示
-- [ ] Tool 事件面板正確顯示
-- [ ] 複製功能正常
-- [ ] JSON 格式化正確
+- [ ] Claude token 統計
+- [ ] API 調用頻率
+- [ ] 歷史對比
+- [ ] 趨勢預測
 
 ---
 
-## Files Summary
+### S84-4: 通知整合 (2 pts)
 
-### New Files
-| File | Story | Description |
-|------|-------|-------------|
-| `frontend/src/components/DevUI/Timeline.tsx` | S84-1 | 時間線組件 |
-| `frontend/src/components/DevUI/TimelineNode.tsx` | S84-1 | 時間線節點組件 |
-| `frontend/src/components/DevUI/DurationBar.tsx` | S84-1 | 持續時間條組件 |
-| `frontend/src/components/DevUI/EventTree.tsx` | S84-2 | 事件樹組件 |
-| `frontend/src/components/DevUI/TreeNode.tsx` | S84-2 | 樹節點組件 |
-| `frontend/src/components/DevUI/EventPanel.tsx` | S84-3 | 事件面板基礎組件 |
-| `frontend/src/components/DevUI/LLMEventPanel.tsx` | S84-3 | LLM 事件面板 |
-| `frontend/src/components/DevUI/ToolEventPanel.tsx` | S84-3 | Tool 事件面板 |
+**Status**: ⬜ 待開始
+
+**Tasks**:
+- [ ] 創建 `notifications/` 目錄
+- [ ] 實現 EmailNotifier class
+  - [ ] `send()` 方法
+  - [ ] `send_batch()` 方法
+- [ ] 實現 TemplateManager class
+  - [ ] `load_template()` 方法
+  - [ ] `render()` 方法
+- [ ] 實現發送追蹤
+
+**Acceptance Criteria**:
+- [ ] 郵件通知
+- [ ] 模板管理
+- [ ] 發送追蹤
 
 ---
 
 ## Verification Checklist
 
 ### Functional Tests
-- [ ] 時間線正確渲染所有事件
-- [ ] 事件配對邏輯正確
-- [ ] 樹形結構展開/收起正常
-- [ ] 事件詳情面板正確顯示
-- [ ] 複製功能正常
+- [ ] n8n Webhook 正常接收
+- [ ] 審批流程正常
+- [ ] 通知發送成功
+- [ ] 監控數據正確
 
-### UI/UX Tests
-- [ ] 時間線視覺效果良好
-- [ ] 持續時間條形圖直觀
-- [ ] 樹形結構縮進清晰
-- [ ] 事件類型圖標正確
+### Integration Tests
+- [ ] n8n 端到端測試
+- [ ] 審批完整流程測試
 
 ---
 
-**Last Updated**: 2026-01-13
+**Last Updated**: 2026-01-12

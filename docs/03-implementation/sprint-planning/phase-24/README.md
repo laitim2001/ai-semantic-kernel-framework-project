@@ -1,164 +1,120 @@
-# Phase 24: DevUI 前端實現
+# Phase 24: 前端完善與生態整合
 
-> **Phase**: 24
-> **Sprint**: S83-85
-> **Story Points**: 42 pts (預估)
-> **狀態**: 📋 規劃中
+## Overview
 
----
+Phase 24 專注於完善前端介面功能，包括 WorkflowViz 實時更新、Dashboard 自定義，以及 n8n 觸發整合和多級審批流程。
 
-## 概述
+## Phase Status
 
-### 目標
+| Status | Value |
+|--------|-------|
+| **Phase Status** | 計劃中 |
+| **Duration** | 2 sprints |
+| **Total Story Points** | 38 pts |
+| **Priority** | 🟢 P2 低優先 |
+| **Target Start** | Phase 23 完成後 |
 
-實現 DevUI (Developer User Interface) 開發者調試介面的前端 UI，提供完整的執行追蹤、時間線可視化和統計分析功能。
+## Sprint Overview
 
-### 背景
-
-DevUI 後端 API 已在 Phase 16 完成實現，包含：
-- 13 個 REST API 端點 (`/api/v1/devtools/`)
-- 25 種事件類型 (工作流、LLM、工具、檢查點等)
-- 完整的追蹤、事件、時間跨度管理
-- 時間線可視化和統計數據 API
-- 56+ 個測試確保可靠性
-
-現在需要實現對應的前端 UI 來充分利用這些 API。
+| Sprint | Focus | Story Points | Status | Documents |
+|--------|-------|--------------|--------|-----------|
+| **Sprint 83** | WorkflowViz 與 Dashboard | 18 pts | 計劃中 | [Plan](sprint-83-plan.md) / [Checklist](sprint-83-checklist.md) |
+| **Sprint 84** | 生態整合與審批流程 | 20 pts | 計劃中 | [Plan](sprint-84-plan.md) / [Checklist](sprint-84-checklist.md) |
+| **Total** | | **38 pts** | | |
 
 ---
 
-## Sprint 規劃
+## Features
 
-| Sprint | 內容 | Story Points |
-|--------|------|--------------|
-| S83 | DevUI 核心頁面 | 14 pts |
-| S84 | 時間線可視化 | 16 pts |
-| S85 | 統計和進階功能 | 12 pts |
+### Sprint 83: WorkflowViz 與 Dashboard (18 pts)
+
+| Story | Description | Points | Priority |
+|-------|-------------|--------|----------|
+| S83-1 | WorkflowViz 實時更新 + Claude 思考過程可視化 | 10 pts | P2 |
+| S83-2 | Dashboard 自定義 + 學習效果儀表板 | 8 pts | P2 |
+
+### Sprint 84: 生態整合與審批流程 (20 pts)
+
+| Story | Description | Points | Priority |
+|-------|-------------|--------|----------|
+| S84-1 | n8n 觸發整合 | 8 pts | P2 |
+| S84-2 | 多級審批流程 | 5 pts | P2 |
+| S84-3 | 效能監控 + Claude 使用統計 | 5 pts | P2 |
+| S84-4 | 短信/郵件通知整合 | 2 pts | P2 |
 
 ---
 
-## 技術架構
+## Technical Details
+
+### WorkflowViz 增強
+
+- Claude 思考過程可視化
+- 節點狀態實時更新
+- 執行路徑追蹤
+
+### n8n 整合
+
+- Webhook 配置管理
+- 雙向整合 (觸發 + 回饋)
+- 工作流模板
+
+### API Endpoints
 
 ```
-frontend/src/
-├── pages/
-│   └── DevUI/
-│       ├── index.tsx           # 主路由和布局
-│       ├── TraceList.tsx       # 追蹤列表頁面
-│       └── TraceDetail.tsx     # 追蹤詳情頁面
-├── components/
-│   └── DevUI/
-│       ├── Timeline.tsx        # 時間線可視化組件
-│       ├── EventTree.tsx       # 事件樹形結構
-│       ├── EventPanel.tsx      # 事件詳情面板
-│       ├── Statistics.tsx      # 統計儀表板
-│       └── EventFilter.tsx     # 事件過濾器
-├── hooks/
-│   └── useDevTools.ts          # DevTools API hooks
-└── api/
-    └── devtools.ts             # API 客戶端
+# WorkflowViz
+GET    /api/v1/workflow/{id}/viz        # 獲取可視化數據
+WS     /api/v1/workflow/{id}/viz/stream # 實時更新
+
+# Dashboard
+GET    /api/v1/dashboard/stats          # 獲取統計數據
+GET    /api/v1/dashboard/widgets        # 獲取自定義組件
+PUT    /api/v1/dashboard/layout         # 更新佈局
+
+# n8n 整合
+POST   /api/v1/n8n/webhook              # n8n Webhook 端點
+GET    /api/v1/n8n/workflows            # 獲取 n8n 工作流
+POST   /api/v1/n8n/trigger              # 觸發 n8n 工作流
 ```
 
 ---
 
-## 功能需求
+## Dependencies
 
-### 1. 追蹤列表 (TraceList)
+### Prerequisites
+- Phase 23 completed (多 Agent 協調)
+- 前端基礎 (Phase 16-19)
 
-- 顯示所有執行追蹤
-- 支持分頁 (limit: 100)
-- 過濾功能：
-  - 按工作流 ID
-  - 按狀態 (running, completed, failed)
-- 顯示基本信息：
-  - 執行 ID
-  - 開始時間
-  - 狀態
-  - 事件數量
-  - 持續時間
-
-### 2. 追蹤詳情 (TraceDetail)
-
-- 事件列表視圖
-- 時間線視圖
-- 統計面板
-- 事件詳情展開
-
-### 3. 時間線可視化 (Timeline)
-
-- 按時間排序的事件流
-- 事件配對顯示 (如 LLM_REQUEST → LLM_RESPONSE)
-- 持續時間可視化
-- 嵌套事件結構
-
-### 4. 統計儀表板 (Statistics)
-
-- LLM 調用次數和總耗時
-- 工具調用次數和總耗時
-- 錯誤和警告計數
-- 檢查點統計
+### New Dependencies (Frontend)
+```bash
+npm install @antv/g6@5.x    # 圖形可視化
+npm install echarts@5.x      # 統計圖表
+```
 
 ---
 
-## 後端 API 對照
+## Verification
 
-| 前端功能 | 後端 API |
-|---------|---------|
-| 追蹤列表 | `GET /api/v1/devtools/traces` |
-| 追蹤詳情 | `GET /api/v1/devtools/traces/{execution_id}` |
-| 事件列表 | `GET /api/v1/devtools/traces/{execution_id}/events` |
-| 時間線 | `GET /api/v1/devtools/traces/{execution_id}/timeline` |
-| 統計數據 | `GET /api/v1/devtools/traces/{execution_id}/statistics` |
-| 健康檢查 | `GET /api/v1/devtools/health` |
+### Sprint 83 驗證
+- [ ] WorkflowViz 實時更新延遲 < 500ms
+- [ ] Claude 思考過程正確顯示
+- [ ] Dashboard 自定義保存成功
 
----
-
-## 依賴項
-
-### 前端依賴
-
-已有：
-- React 18
-- TypeScript
-- Zustand (狀態管理)
-- TanStack Query (數據獲取)
-- Tailwind CSS
-
-建議新增：
-- `@tanstack/react-virtual` - 虛擬列表 (大量事件時)
-- 或使用現有的組件庫
+### Sprint 84 驗證
+- [ ] n8n 觸發成功率 > 99%
+- [ ] 多級審批流程覆蓋所有場景
+- [ ] 通知正確發送
 
 ---
 
-## 驗收標準
+## Success Metrics
 
-### 功能驗收
-
-- [ ] 可以查看所有追蹤列表
-- [ ] 可以過濾和分頁追蹤
-- [ ] 可以查看追蹤詳情和事件
-- [ ] 時間線正確顯示事件順序
-- [ ] 統計數據準確顯示
-- [ ] 實時追蹤功能正常
-
-### 技術驗收
-
-- [ ] 所有組件有 TypeScript 類型
-- [ ] 響應式設計 (桌面/平板)
-- [ ] 加載狀態和錯誤處理
-- [ ] 單元測試覆蓋
+| Metric | Target |
+|--------|--------|
+| WorkflowViz 更新延遲 | < 500ms |
+| Dashboard 加載時間 | < 2s |
+| n8n 觸發成功率 | > 99% |
 
 ---
 
-## 相關文檔
-
-- 後端 API: `backend/src/api/v1/devtools/routes.py`
-- 領域層: `backend/src/domain/devtools/tracer.py`
-- API 測試: `backend/tests/unit/test_devtools.py`
-
----
-
-## 更新歷史
-
-| 日期 | 版本 | 說明 |
-|------|------|------|
-| 2026-01-13 | 1.0 | 初始規劃 |
+**Created**: 2026-01-12
+**Total Story Points**: 38 pts

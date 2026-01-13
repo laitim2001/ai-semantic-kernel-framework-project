@@ -1,18 +1,37 @@
-# Sprint 85: 統計和進階功能
+# Sprint 89: 統計和進階功能
 
-> **Sprint**: 85
-> **Story Points**: 12 pts
-> **目標**: 實現統計儀表板和進階功能
+## Sprint Info
+
+| Field | Value |
+|-------|-------|
+| **Sprint Number** | 89 |
+| **Phase** | 26 - DevUI 前端實現 |
+| **Duration** | 5-7 days |
+| **Story Points** | 12 pts |
+| **Status** | 計劃中 |
+| **Priority** | 🟡 P1 高優先 |
+
+---
+
+## Sprint Goal
+
+實現統計儀表板和進階功能，包括實時追蹤更新和事件過濾搜索。
+
+---
+
+## Prerequisites
+
+- Sprint 88 完成（時間線可視化）
 
 ---
 
 ## User Stories
 
-### S85-1: 統計儀表板 (5 pts)
+### S89-1: 統計儀表板 (5 pts)
 
-**描述**: 實現執行統計儀表板，展示關鍵指標
+**Description**: 實現執行統計儀表板，展示關鍵指標
 
-**驗收標準**:
+**Acceptance Criteria**:
 - [ ] LLM 調用統計卡片：
   - 調用次數
   - 總耗時
@@ -32,23 +51,23 @@
   - 創建數量
   - 批准/拒絕/超時
 
-**API 調用**:
-```typescript
+**API Endpoints**:
+```
 GET /api/v1/devtools/traces/{execution_id}/statistics
 ```
 
-**交付物**:
+**Files to Create**:
 - `frontend/src/components/DevUI/Statistics.tsx`
 - `frontend/src/components/DevUI/StatCard.tsx`
 - `frontend/src/components/DevUI/EventPieChart.tsx`
 
 ---
 
-### S85-2: 實時追蹤功能 (5 pts)
+### S89-2: 實時追蹤功能 (5 pts)
 
-**描述**: 實現實時追蹤更新功能，支持正在執行的工作流
+**Description**: 實現實時追蹤更新功能，支持正在執行的工作流
 
-**驗收標準**:
+**Acceptance Criteria**:
 - [ ] SSE 連接建立
 - [ ] 實時事件接收和顯示
 - [ ] 自動滾動到最新事件
@@ -69,17 +88,17 @@ eventSource.onmessage = (event) => {
 };
 ```
 
-**交付物**:
+**Files to Create**:
 - `frontend/src/hooks/useDevToolsStream.ts`
 - `frontend/src/components/DevUI/LiveIndicator.tsx`
 
 ---
 
-### S85-3: 事件過濾和搜索 (2 pts)
+### S89-3: 事件過濾和搜索 (2 pts)
 
-**描述**: 實現事件的進階過濾和搜索功能
+**Description**: 實現事件的進階過濾和搜索功能
 
-**驗收標準**:
+**Acceptance Criteria**:
 - [ ] 按事件類型過濾（多選）
 - [ ] 按嚴重性過濾
 - [ ] 按執行器 ID 過濾
@@ -87,7 +106,7 @@ eventSource.onmessage = (event) => {
 - [ ] 過濾器組合
 - [ ] 清除過濾器
 
-**交付物**:
+**Files to Create**:
 - `frontend/src/components/DevUI/EventFilter.tsx`
 - `frontend/src/hooks/useEventFilter.ts`
 
@@ -152,43 +171,49 @@ export function useDevToolsStream(executionId: string) {
   const [events, setEvents] = useState<TraceEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  
+
   useEffect(() => {
     if (isPaused) return;
-    
+
     const eventSource = new EventSource(
       `${API_BASE}/devtools/traces/${executionId}/stream`
     );
-    
+
     eventSource.onopen = () => setIsConnected(true);
     eventSource.onerror = () => setIsConnected(false);
     eventSource.onmessage = (e) => {
       const event = JSON.parse(e.data);
       setEvents(prev => [...prev, event]);
     };
-    
+
     return () => eventSource.close();
   }, [executionId, isPaused]);
-  
+
   return { events, isConnected, isPaused, setIsPaused };
 }
 ```
 
 ---
 
-## 測試計劃
+## Definition of Done
 
-- [ ] 統計數據渲染測試
-- [ ] 餅圖組件測試
-- [ ] SSE 連接測試
-- [ ] 斷線重連測試
-- [ ] 過濾器功能測試
-- [ ] 組合過濾測試
+- [ ] 所有 Stories 完成
+- [ ] 統計數據正確顯示
+- [ ] SSE 實時更新正常
+- [ ] 過濾和搜索功能正常
+- [ ] 單元測試覆蓋率 > 80%
 
 ---
 
-## 更新歷史
+## Success Metrics
 
-| 日期 | 說明 |
-|------|------|
-| 2026-01-13 | 初始規劃 |
+| Metric | Target |
+|--------|--------|
+| 統計載入時間 | < 500ms |
+| 實時更新延遲 | < 1s |
+| 過濾響應時間 | < 200ms |
+
+---
+
+**Created**: 2026-01-13
+**Story Points**: 12 pts
