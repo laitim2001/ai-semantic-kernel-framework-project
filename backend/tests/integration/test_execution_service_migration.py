@@ -64,13 +64,11 @@ def simple_workflow_definition():
     )
 
     edges = [
-        WorkflowEdge(id="e1", source="start", target="agent-1"),
-        WorkflowEdge(id="e2", source="agent-1", target="end"),
+        WorkflowEdge(source="start", target="agent-1"),
+        WorkflowEdge(source="agent-1", target="end"),
     ]
 
     return WorkflowDefinition(
-        id=uuid4(),
-        name="Test Workflow",
         nodes=[start_node, agent_node, end_node],
         edges=edges,
     )
@@ -114,15 +112,13 @@ def multi_agent_workflow_definition():
     )
 
     edges = [
-        WorkflowEdge(id="e1", source="start", target="agent-1"),
-        WorkflowEdge(id="e2", source="agent-1", target="agent-2"),
-        WorkflowEdge(id="e3", source="agent-2", target="agent-3"),
-        WorkflowEdge(id="e4", source="agent-3", target="end"),
+        WorkflowEdge(source="start", target="agent-1"),
+        WorkflowEdge(source="agent-1", target="agent-2"),
+        WorkflowEdge(source="agent-2", target="agent-3"),
+        WorkflowEdge(source="agent-3", target="end"),
     ]
 
     return WorkflowDefinition(
-        id=uuid4(),
-        name="Multi-Agent Workflow",
         nodes=[start_node, agent_1, agent_2, agent_3, end_node],
         edges=edges,
     )
@@ -252,10 +248,8 @@ class TestLegacyModeExecution:
         """Test that invalid workflow raises ValueError."""
         # Create invalid workflow (no start node)
         invalid_def = WorkflowDefinition(
-            id=uuid4(),
-            name="Invalid",
             nodes=[
-                WorkflowNode(id="agent", name="Agent", type=NodeType.AGENT),
+                WorkflowNode(id="agent", name="Agent", type=NodeType.AGENT, agent_id=uuid4()),
             ],
             edges=[],
         )
