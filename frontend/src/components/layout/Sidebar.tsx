@@ -5,6 +5,7 @@
 // Sprint 12: S12-4 UI Integration - Added Performance Monitoring
 // Sprint 69: S69-4 - Added Chat navigation for Dashboard integration
 // Sprint 73: S73-2 - Collapsible Sidebar Feature
+// Sprint 87: S87-1 - Added DevUI navigation (Phase 26)
 //
 // Sidebar navigation with links to all main sections.
 // Supports collapse/expand for more screen space.
@@ -27,6 +28,7 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
+  Bug,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +47,7 @@ const navigation: NavItem[] = [
   { name: '模板市場', href: '/templates', icon: BookTemplate },
   { name: '審批中心', href: '/approvals', icon: ClipboardCheck },
   { name: '審計日誌', href: '/audit', icon: FileText },
+  { name: 'DevUI', href: '/devui', icon: Bug },
 ];
 
 /**

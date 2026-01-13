@@ -8,6 +8,7 @@
 // Sprint 69: S69-4 - Integrated Chat into AppLayout (Dashboard integration)
 // Sprint 71: S71-2 - Added Login/Signup routes (Phase 18)
 // Sprint 71: S71-3 - Added ProtectedRoute wrapper (Phase 18)
+// Sprint 87: S87-1 - Added DevUI routes (Phase 26)
 //
 // Root application component with routing configuration.
 //
@@ -35,6 +36,11 @@ import { AGUIDemoPage } from '@/pages/ag-ui/AGUIDemoPage';
 import { UnifiedChat } from '@/pages/UnifiedChat';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { SignupPage } from '@/pages/auth/SignupPage';
+// Sprint 87: DevUI pages
+import { DevUILayout } from '@/pages/DevUI/Layout';
+import { DevUIOverview } from '@/pages/DevUI/index';
+import { TraceList } from '@/pages/DevUI/TraceList';
+import { TraceDetail } from '@/pages/DevUI/TraceDetail';
 
 function App() {
   return (
@@ -87,6 +93,13 @@ function App() {
 
         {/* Audit */}
         <Route path="audit" element={<AuditPage />} />
+
+        {/* DevUI (Sprint 87) - Developer Tools with nested layout */}
+        <Route path="devui" element={<DevUILayout />}>
+          <Route index element={<DevUIOverview />} />
+          <Route path="traces" element={<TraceList />} />
+          <Route path="traces/:id" element={<TraceDetail />} />
+        </Route>
 
         {/* 404 fallback */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
