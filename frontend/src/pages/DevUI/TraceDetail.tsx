@@ -2,6 +2,7 @@
 // IPA Platform - DevUI Trace Detail Page
 // =============================================================================
 // Sprint 87: S87-3 - DevUI Core Pages
+// Sprint 88: Updated with Timeline, EventTree, and EventPanel components
 //
 // Page displaying detailed trace information with events.
 //
@@ -9,6 +10,7 @@
 //   - React Router
 //   - React Query
 //   - DevTools hooks
+//   - Timeline, EventTree, EventPanel components
 // =============================================================================
 
 import { FC, useState } from 'react';
@@ -24,10 +26,16 @@ import {
   Check,
   Loader2,
   AlertTriangle,
+  LayoutList,
+  GitBranch,
+  Activity,
 } from 'lucide-react';
 import { useTrace, useTraceEvents, useDeleteTrace } from '@/hooks/useDevTools';
 import { EventList } from '@/components/DevUI/EventList';
-import type { TraceStatus } from '@/types/devtools';
+import { Timeline } from '@/components/DevUI/Timeline';
+import { EventTree } from '@/components/DevUI/EventTree';
+import { EventPanel } from '@/components/DevUI/EventPanel';
+import type { TraceStatus, TraceEvent } from '@/types/devtools';
 import { cn } from '@/lib/utils';
 
 /**
@@ -112,6 +120,9 @@ const InfoItem: FC<{ label: string; value: string; copyable?: boolean }> = ({
   </div>
 );
 
+/** View mode for events display */
+type ViewMode = 'timeline' | 'tree' | 'list';
+
 /**
  * Trace Detail Page Component
  */
@@ -119,6 +130,8 @@ export const TraceDetail: FC = () => {
   const { id: executionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
+  const [selectedEvent, setSelectedEvent] = useState<TraceEvent | null>(null);
 
   // Fetch trace data
   const {
@@ -304,12 +317,97 @@ export const TraceDetail: FC = () => {
         )}
       </div>
 
-      {/* Events List */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Events</h2>
+      {/* Events Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Events View */}
+        <div className={cn(
+          'bg-white rounded-lg border border-gray-200 overflow-hidden',
+          selectedEvent ? 'lg:col-span-2' : 'lg:col-span-3'
+        )}>
+          {/* View mode toggle */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Events</h2>
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('timeline')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
+                  viewMode === 'timeline'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                )}
+              >
+                <Activity className="w-4 h-4" />
+                Timeline
+              </button>
+              <button
+                onClick={() => setViewMode('tree')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
+                  viewMode === 'tree'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                )}
+              >
+                <GitBranch className="w-4 h-4" />
+                Tree
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
+                  viewMode === 'list'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                )}
+              >
+                <LayoutList className="w-4 h-4" />
+                List
+              </button>
+            </div>
+          </div>
+
+          {/* Events content based on view mode */}
+          <div className="p-4">
+            {eventsLoading ? (
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
+                <span className="ml-2 text-gray-500">Loading events...</span>
+              </div>
+            ) : viewMode === 'timeline' ? (
+              <Timeline
+                events={eventsData?.items ?? []}
+                selectedEventId={selectedEvent?.id}
+                onEventSelect={setSelectedEvent}
+                maxHeight="500px"
+              />
+            ) : viewMode === 'tree' ? (
+              <EventTree
+                events={eventsData?.items ?? []}
+                selectedEventId={selectedEvent?.id}
+                onEventSelect={setSelectedEvent}
+                maxHeight="500px"
+              />
+            ) : (
+              <EventList
+                events={eventsData?.items ?? []}
+                isLoading={false}
+                onEventSelect={setSelectedEvent}
+                selectedEventId={selectedEvent?.id}
+              />
+            )}
+          </div>
         </div>
-        <EventList events={eventsData?.items ?? []} isLoading={eventsLoading} />
+
+        {/* Event Detail Panel */}
+        {selectedEvent && (
+          <div className="lg:col-span-1">
+            <EventPanel
+              event={selectedEvent}
+              onClose={() => setSelectedEvent(null)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}

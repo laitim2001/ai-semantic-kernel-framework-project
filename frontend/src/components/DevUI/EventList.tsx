@@ -29,6 +29,8 @@ import { cn } from '@/lib/utils';
 interface EventListProps {
   events: TraceEvent[];
   isLoading?: boolean;
+  onEventSelect?: (event: TraceEvent) => void;
+  selectedEventId?: string;
 }
 
 /**
@@ -71,19 +73,32 @@ function formatTime(timestamp: string): string {
 /**
  * Event row component
  */
-const EventRow: FC<{ event: TraceEvent }> = ({ event }) => {
+const EventRow: FC<{
+  event: TraceEvent;
+  onSelect?: (event: TraceEvent) => void;
+  isSelected?: boolean;
+}> = ({ event, onSelect, isSelected }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const styles = severityStyles[event.severity];
   const Icon = severityIcons[event.severity];
+
+  const handleClick = () => {
+    if (onSelect) {
+      onSelect(event);
+    } else {
+      setIsExpanded(!isExpanded);
+    }
+  };
 
   return (
     <div className="border-b border-gray-200 last:border-b-0">
       {/* Event header */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={handleClick}
         className={cn(
           'w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors',
-          isExpanded && 'bg-gray-50'
+          isExpanded && 'bg-gray-50',
+          isSelected && 'bg-purple-50 ring-1 ring-inset ring-purple-200'
         )}
       >
         {/* Expand/Collapse icon */}
@@ -139,7 +154,12 @@ const EventRow: FC<{ event: TraceEvent }> = ({ event }) => {
  * Event List Component
  * Displays a filterable list of trace events
  */
-export const EventList: FC<EventListProps> = ({ events, isLoading }) => {
+export const EventList: FC<EventListProps> = ({
+  events,
+  isLoading,
+  onEventSelect,
+  selectedEventId,
+}) => {
   const [severityFilter, setSeverityFilter] = useState<EventSeverity | ''>('');
   const [typeFilter, setTypeFilter] = useState('');
 
@@ -203,7 +223,14 @@ export const EventList: FC<EventListProps> = ({ events, isLoading }) => {
             No events match the current filters.
           </div>
         ) : (
-          filteredEvents.map((event) => <EventRow key={event.id} event={event} />)
+          filteredEvents.map((event) => (
+            <EventRow
+              key={event.id}
+              event={event}
+              onSelect={onEventSelect}
+              isSelected={event.id === selectedEventId}
+            />
+          ))
         )}
       </div>
     </div>
