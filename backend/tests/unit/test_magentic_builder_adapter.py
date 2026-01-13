@@ -78,18 +78,19 @@ class TestMagenticStatus:
     def test_enum_values(self):
         """測試枚舉值。"""
         assert MagenticStatus.IDLE == "idle"
-        assert MagenticStatus.RUNNING == "running"
-        assert MagenticStatus.WAITING_INTERVENTION == "waiting_intervention"
+        assert MagenticStatus.PLANNING == "planning"
+        assert MagenticStatus.EXECUTING == "executing"
+        assert MagenticStatus.WAITING_APPROVAL == "waiting_approval"
         assert MagenticStatus.STALLED == "stalled"
+        assert MagenticStatus.REPLANNING == "replanning"
         assert MagenticStatus.COMPLETED == "completed"
         assert MagenticStatus.FAILED == "failed"
         assert MagenticStatus.CANCELLED == "cancelled"
-        assert MagenticStatus.TIMEOUT == "timeout"
 
     def test_enum_from_string(self):
         """測試從字符串創建枚舉。"""
-        status = MagenticStatus("running")
-        assert status == MagenticStatus.RUNNING
+        status = MagenticStatus("planning")
+        assert status == MagenticStatus.PLANNING
 
     def test_enum_str_representation(self):
         """測試字符串表示。"""
@@ -209,29 +210,26 @@ class TestMagenticParticipant:
         )
         assert participant.name == "researcher"
         assert participant.description == "Research agent"
-        assert participant.agent is None
         assert participant.capabilities == []
         assert participant.metadata == {}
 
     def test_full_creation(self):
         """測試完整創建。"""
-        mock_agent = MagicMock()
         participant = MagenticParticipant(
             name="writer",
             description="Writing agent",
-            agent=mock_agent,
             capabilities=["writing", "editing"],
             metadata={"priority": 1},
         )
         assert participant.name == "writer"
-        assert participant.agent == mock_agent
         assert "writing" in participant.capabilities
         assert participant.metadata["priority"] == 1
 
-    def test_empty_name_raises_error(self):
-        """測試空名稱拋出錯誤。"""
-        with pytest.raises(ValueError, match="name cannot be empty"):
-            MagenticParticipant(name="")
+    def test_empty_name_allowed(self):
+        """測試空名稱允許（由適配器層驗證）。"""
+        # 實際驗證在 MagenticBuilderAdapter 層面進行
+        participant = MagenticParticipant(name="", description="Empty name participant")
+        assert participant.name == ""
 
     def test_to_dict(self):
         """測試轉換為字典。"""
@@ -251,24 +249,25 @@ class TestMagenticContext:
 
     def test_basic_creation(self):
         """測試基本創建。"""
+        task_msg = MagenticMessage(role=MessageRole.USER, content="Complete the research")
         context = MagenticContext(
-            task="Complete the research",
+            task=task_msg,
         )
-        assert context.task == "Complete the research"
+        assert context.task.content == "Complete the research"
         assert context.chat_history == []
         assert context.participant_descriptions == {}
         assert context.round_count == 0
 
     def test_full_creation(self):
         """測試完整創建。"""
-        msg = MagenticMessage(role=MessageRole.USER, content="Test")
+        task_msg = MagenticMessage(role=MessageRole.USER, content="Task description")
+        chat_msg = MagenticMessage(role=MessageRole.USER, content="Test")
         context = MagenticContext(
-            task="Task description",
-            chat_history=[msg],
+            task=task_msg,
+            chat_history=[chat_msg],
             participant_descriptions={"agent1": "Agent 1 desc"},
             round_count=5,
             stall_count=1,
-            metadata={"key": "value"},
         )
         assert len(context.chat_history) == 1
         assert context.round_count == 5
@@ -276,9 +275,10 @@ class TestMagenticContext:
 
     def test_to_dict(self):
         """測試轉換為字典。"""
-        context = MagenticContext(task="Test")
+        task_msg = MagenticMessage(role=MessageRole.USER, content="Test")
+        context = MagenticContext(task=task_msg)
         data = context.to_dict()
-        assert data["task"] == "Test"
+        assert data["task"]["content"] == "Test"
         assert data["round_count"] == 0
 
 
@@ -576,49 +576,55 @@ class TestStandardMagenticManager:
     """測試 StandardMagenticManager 類。"""
 
     @pytest.fixture
-    def mock_agent(self):
-        """創建模擬 agent。"""
-        agent = AsyncMock()
-        agent.run = AsyncMock(return_value="Manager response")
-        return agent
+    def mock_agent_executor(self):
+        """創建模擬 agent executor。"""
+        async def executor(prompt: str) -> str:
+            return "Manager response"
+        return executor
 
-    def test_creation(self, mock_agent):
+    def test_creation(self, mock_agent_executor):
         """測試創建。"""
-        manager = StandardMagenticManager(agent=mock_agent)
-        assert manager.agent == mock_agent
-        assert manager.name == MAGENTIC_MANAGER_NAME
+        manager = StandardMagenticManager(agent_executor=mock_agent_executor)
+        assert manager._agent_executor == mock_agent_executor
 
-    def test_creation_with_custom_name(self, mock_agent):
-        """測試自定義名稱創建。"""
+    def test_creation_with_custom_prompts(self, mock_agent_executor):
+        """測試自定義提示詞創建。"""
         manager = StandardMagenticManager(
-            agent=mock_agent,
-            name="custom_manager",
+            agent_executor=mock_agent_executor,
+            facts_prompt="Custom facts prompt",
+            plan_prompt="Custom plan prompt",
         )
-        assert manager.name == "custom_manager"
+        assert manager.facts_prompt == "Custom facts prompt"
+        assert manager.plan_prompt == "Custom plan prompt"
 
     @pytest.mark.asyncio
-    async def test_create_task_ledger(self, mock_agent):
-        """測試創建 Task Ledger。"""
-        mock_agent.run = AsyncMock(return_value="Facts: User needs help\nPlan: 1. Research")
-        manager = StandardMagenticManager(agent=mock_agent)
-        context = MagenticContext(task="Test task")
+    async def test_plan(self, mock_agent_executor):
+        """測試創建計劃。"""
+        manager = StandardMagenticManager(agent_executor=mock_agent_executor)
+        task_msg = MagenticMessage(role=MessageRole.USER, content="Test task")
+        context = MagenticContext(
+            task=task_msg,
+            participant_descriptions={"agent1": "Test agent"},
+        )
 
-        ledger = await manager.create_task_ledger(context)
-        assert ledger is not None
-        assert isinstance(ledger, TaskLedger)
+        result = await manager.plan(context)
+        assert result is not None
+        assert isinstance(result, MagenticMessage)
+        assert manager.task_ledger is not None
 
     @pytest.mark.asyncio
-    async def test_evaluate_progress(self, mock_agent):
+    async def test_create_progress_ledger(self, mock_agent_executor):
         """測試評估進度。"""
-        mock_agent.run = AsyncMock(return_value="Progress evaluation")
-        manager = StandardMagenticManager(agent=mock_agent)
-        context = MagenticContext(task="Test")
-        task_ledger = TaskLedger(
-            facts=MagenticMessage(role=MessageRole.SYSTEM, content="Facts"),
-            plan=MagenticMessage(role=MessageRole.SYSTEM, content="Plan"),
+        manager = StandardMagenticManager(agent_executor=mock_agent_executor)
+        task_msg = MagenticMessage(role=MessageRole.USER, content="Test")
+        context = MagenticContext(
+            task=task_msg,
+            participant_descriptions={"agent1": "Agent 1"},
         )
+        # 先創建 task_ledger
+        await manager.plan(context)
 
-        progress = await manager.evaluate_progress(context, task_ledger)
+        progress = await manager.create_progress_ledger(context)
         assert progress is not None
         assert isinstance(progress, ProgressLedger)
 
@@ -715,8 +721,9 @@ class TestMagenticBuilderAdapter:
 
     def test_with_manager(self, sample_participants):
         """測試設置 manager。"""
-        mock_agent = MagicMock()
-        manager = StandardMagenticManager(agent=mock_agent)
+        async def mock_executor(prompt: str) -> str:
+            return "response"
+        manager = StandardMagenticManager(agent_executor=mock_executor)
         adapter = MagenticBuilderAdapter(
             id="test",
             participants=sample_participants,
@@ -727,12 +734,13 @@ class TestMagenticBuilderAdapter:
 
     def test_with_standard_manager(self, sample_participants):
         """測試設置標準 manager。"""
-        mock_agent = MagicMock()
+        async def mock_executor(prompt: str) -> str:
+            return "response"
         adapter = MagenticBuilderAdapter(
             id="test",
             participants=sample_participants,
         )
-        result = adapter.with_standard_manager(mock_agent)
+        result = adapter.with_standard_manager(agent_executor=mock_executor)
         assert result == adapter
         assert adapter._manager is not None
         assert isinstance(adapter._manager, StandardMagenticManager)

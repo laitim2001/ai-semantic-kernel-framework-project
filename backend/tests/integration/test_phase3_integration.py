@@ -142,7 +142,6 @@ class TestConcurrentGroupChatIntegration:
         for i in range(3):
             participants = [
                 GroupChatParticipant(
-                    id=f"p-{i}-{j}",
                     name=f"Participant-{i}-{j}",
                     description=f"Test participant {j} in group {i}",
                 )
@@ -170,12 +169,10 @@ class TestConcurrentGroupChatIntegration:
         # Create GroupChat adapter
         participants = [
             GroupChatParticipant(
-                id="coordinator",
                 name="Coordinator",
                 description="Coordinates parallel tasks",
             ),
             GroupChatParticipant(
-                id="analyzer",
                 name="Analyzer",
                 description="Analyzes results",
             ),
@@ -194,7 +191,7 @@ class TestConcurrentGroupChatIntegration:
         )
 
         # Verify integration setup
-        assert groupchat.participant_count == 2
+        assert len(groupchat.participants) == 2
         assert concurrent.mode == ConcurrentMode.ALL
 
 
@@ -214,12 +211,10 @@ class TestHandoffMagenticIntegration:
 
         # Add participants
         magentic.add_participant(MagenticParticipant(
-            id="planner",
             name="Planner",
             description="Plans the task",
         ))
         magentic.add_participant(MagenticParticipant(
-            id="executor",
             name="Executor",
             description="Executes the plan",
         ))
@@ -237,14 +232,14 @@ class TestHandoffMagenticIntegration:
         # Create Magentic adapter with human intervention enabled
         magentic = create_magentic_adapter(
             id="magentic-hitl",
-            task_description="Process with human review",
+            enable_plan_review=True,
         )
 
         # Create Handoff adapter for human intervention
-        handoff = create_handoff_adapter(
+        handoff = HandoffBuilderAdapter(
             id="hitl-handoff",
-            mode=HandoffMode.HUMAN_IN_LOOP,
         )
+        handoff.with_mode(HandoffMode.HUMAN_IN_LOOP)
 
         # Verify integration setup
         assert magentic.id == "magentic-hitl"
@@ -347,20 +342,20 @@ class TestPhase3E2EIntegration:
         groupchat = create_groupchat_adapter(
             id="collab-chat",
             participants=[
-                GroupChatParticipant(id="a1", name="Agent1", description="Test"),
-                GroupChatParticipant(id="a2", name="Agent2", description="Test"),
+                GroupChatParticipant(name="Agent1", description="Test"),
+                GroupChatParticipant(name="Agent2", description="Test"),
             ],
         )
 
         # Create Handoff for task delegation
-        handoff = create_handoff_adapter(
+        handoff = HandoffBuilderAdapter(
             id="task-handoff",
-            mode=HandoffMode.AUTONOMOUS,
         )
+        handoff.with_mode(HandoffMode.AUTONOMOUS)
 
         # Verify all components created
         assert executor.is_built
-        assert groupchat.participant_count == 2
+        assert len(groupchat.participants) == 2
         assert handoff.mode == HandoffMode.AUTONOMOUS
 
     @pytest.mark.asyncio

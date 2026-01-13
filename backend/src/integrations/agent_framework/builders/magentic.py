@@ -979,6 +979,9 @@ class MagenticBuilderAdapter:
     def __init__(
         self,
         id: str,
+        participants: Optional[List[MagenticParticipant]] = None,
+        max_round_count: int = 20,
+        max_stall_count: int = 3,
         config: Optional[Dict[str, Any]] = None,
     ):
         """
@@ -986,10 +989,21 @@ class MagenticBuilderAdapter:
 
         Args:
             id: Unique identifier for this workflow
+            participants: Optional list of MagenticParticipant (for backward compatibility)
+            max_round_count: Maximum number of execution rounds
+            max_stall_count: Maximum stall count before intervention
             config: Optional configuration dictionary
+
+        Raises:
+            ValueError: If id is empty or participants list is empty (when provided)
         """
+        if not id:
+            raise ValueError("ID cannot be empty")
+
         self._id = id
         self._config = config or {}
+        self._max_round_count = max_round_count
+        self._max_stall_count = max_stall_count
 
         # Builder state
         self._participants: Dict[str, MagenticParticipant] = {}
@@ -1004,8 +1018,20 @@ class MagenticBuilderAdapter:
         self._is_built = False
         self._is_initialized = False
 
+        # Execution tracking
+        self._round_count = 0
+        self._stall_count = 0
+        self._events: List[Dict[str, Any]] = []
+
         # Sprint 19: 使用官方 MagenticBuilder API
         self._builder = MagenticBuilder()
+
+        # Add initial participants if provided (backward compatibility)
+        if participants is not None:
+            if len(participants) == 0:
+                raise ValueError("At least one participant is required")
+            for participant in participants:
+                self._participants[participant.name] = participant
 
     @property
     def id(self) -> str:
@@ -1027,7 +1053,89 @@ class MagenticBuilderAdapter:
         """Check if the workflow has been initialized."""
         return self._is_initialized
 
-    def participants(self, **participants: MagenticParticipant) -> "MagenticBuilderAdapter":
+    @property
+    def participants(self) -> List[MagenticParticipant]:
+        """Get the list of participants."""
+        return list(self._participants.values())
+
+    def add_participant(self, participant: MagenticParticipant) -> "MagenticBuilderAdapter":
+        """
+        Add a single participant to the workflow.
+
+        Args:
+            participant: MagenticParticipant to add
+
+        Returns:
+            Self for method chaining
+
+        Raises:
+            ValueError: If participant with same name already exists
+        """
+        if participant.name in self._participants:
+            raise ValueError(f"Participant '{participant.name}' already exists")
+        self._participants[participant.name] = participant
+        return self
+
+    def remove_participant(self, name: str) -> bool:
+        """
+        Remove a participant by name.
+
+        Args:
+            name: Name of the participant to remove
+
+        Returns:
+            True if participant was removed, False if not found
+        """
+        if name in self._participants:
+            del self._participants[name]
+            return True
+        return False
+
+    def set_max_round_count(self, count: int) -> None:
+        """Set the maximum number of execution rounds."""
+        self._max_round_count = count
+
+    def set_max_stall_count(self, count: int) -> None:
+        """Set the maximum stall count before intervention."""
+        self._max_stall_count = count
+
+    async def initialize(self) -> None:
+        """Initialize the adapter for execution."""
+        self._is_initialized = True
+        self._status = MagenticStatus.IDLE
+
+    async def cleanup(self) -> None:
+        """Cleanup resources after execution."""
+        self._is_initialized = False
+        self._is_built = False
+        self._context = None
+        self._events.clear()
+
+    async def reset(self) -> None:
+        """Reset the adapter state for a new execution."""
+        self._round_count = 0
+        self._stall_count = 0
+        self._status = MagenticStatus.IDLE
+        self._context = None
+
+    def get_ledger(self) -> Optional[Dict[str, Any]]:
+        """Get the current execution ledger."""
+        if self._context:
+            return {
+                "task_ledger": self._context.task_ledger.to_dict() if self._context.task_ledger else None,
+                "progress_ledger": self._context.progress_ledger.to_dict() if self._context.progress_ledger else None,
+            }
+        return None
+
+    def get_events(self) -> List[Dict[str, Any]]:
+        """Get all execution events."""
+        return list(self._events)
+
+    def clear_events(self) -> None:
+        """Clear all execution events."""
+        self._events.clear()
+
+    def set_participants(self, **participants: MagenticParticipant) -> "MagenticBuilderAdapter":
         """
         Add participant agents to the workflow.
 
@@ -1106,6 +1214,10 @@ class MagenticBuilderAdapter:
                 progress_prompt=progress_prompt,
                 final_answer_prompt=final_answer_prompt,
             )
+        # Update adapter's own max values
+        if max_round_count is not None:
+            self._max_round_count = max_round_count
+        self._max_stall_count = max_stall_count
         return self
 
     def with_plan_review(
@@ -1163,17 +1275,27 @@ class MagenticBuilderAdapter:
 
         # Sprint 19: 使用官方 MagenticBuilder API 構建工作流
         # 將 IPA 平台參與者轉換為官方 API 格式
-        participants = [p.agent for p in self._participants.values() if p.agent]
+        # Note: 使用參與者的 metadata.get('agent') 或直接使用參與者名稱列表
+        participant_agents = []
+        for p in self._participants.values():
+            agent = p.metadata.get('agent') if p.metadata else None
+            if agent:
+                participant_agents.append(agent)
 
         try:
-            # 調用官方 MagenticBuilder.participants().build()
-            workflow = (
-                self._builder
-                .participants(participants)
-                .build()
-            )
-            self._workflow = workflow
-            logger.info(f"Official MagenticBuilder workflow created: {self._id}")
+            if participant_agents:
+                # 調用官方 MagenticBuilder.participants().build()
+                workflow = (
+                    self._builder
+                    .participants(participant_agents)
+                    .build()
+                )
+                self._workflow = workflow
+                logger.info(f"Official MagenticBuilder workflow created: {self._id}")
+            else:
+                # 沒有 agent 實例時，使用 Mock 工作流
+                self._workflow = None
+                logger.info(f"Using IPA platform implementation for workflow: {self._id}")
         except Exception as e:
             # 如果官方 API 失敗，記錄警告但繼續使用內部實現
             logger.warning(
@@ -1523,7 +1645,7 @@ class MagenticBuilderAdapter:
 
 def create_magentic_adapter(
     id: str,
-    participants: Optional[Dict[str, Any]] = None,
+    participants: Optional[Union[Dict[str, Any], List[MagenticParticipant]]] = None,
     max_round_count: int = 20,
     max_stall_count: int = 3,
     enable_plan_review: bool = False,
@@ -1534,7 +1656,7 @@ def create_magentic_adapter(
 
     Args:
         id: Workflow identifier
-        participants: Optional participant definitions
+        participants: Optional participant definitions (dict or list)
         max_round_count: Maximum execution rounds
         max_stall_count: Maximum stalls before intervention
         enable_plan_review: Enable plan review
@@ -1546,16 +1668,26 @@ def create_magentic_adapter(
     adapter = MagenticBuilderAdapter(id=id, config=config)
 
     if participants:
-        for name, participant in participants.items():
-            if isinstance(participant, MagenticParticipant):
-                adapter._participants[name] = participant
-            elif isinstance(participant, dict):
-                adapter._participants[name] = MagenticParticipant.from_dict(participant)
-            else:
-                adapter._participants[name] = MagenticParticipant(
-                    name=name,
-                    description=str(participant),
-                )
+        if isinstance(participants, list):
+            # Handle list of MagenticParticipant
+            for participant in participants:
+                if isinstance(participant, MagenticParticipant):
+                    adapter._participants[participant.name] = participant
+                elif isinstance(participant, dict):
+                    p = MagenticParticipant.from_dict(participant)
+                    adapter._participants[p.name] = p
+        elif isinstance(participants, dict):
+            # Handle dict of participants
+            for name, participant in participants.items():
+                if isinstance(participant, MagenticParticipant):
+                    adapter._participants[name] = participant
+                elif isinstance(participant, dict):
+                    adapter._participants[name] = MagenticParticipant.from_dict(participant)
+                else:
+                    adapter._participants[name] = MagenticParticipant(
+                        name=name,
+                        description=str(participant),
+                    )
 
     adapter.with_standard_manager(
         max_round_count=max_round_count,
@@ -1582,29 +1714,25 @@ def create_research_workflow(
     Returns:
         Research workflow adapter
     """
-    return (
-        MagenticBuilderAdapter(id=id)
-        .participants(
-            researcher=MagenticParticipant(
-                name="researcher",
-                description="Research specialist for information gathering",
-                capabilities=["search", "analyze", "summarize"],
-            ),
-            analyst=MagenticParticipant(
-                name="analyst",
-                description="Data analyst for processing and computation",
-                capabilities=["compute", "visualize", "statistics"],
-            ),
-            writer=MagenticParticipant(
-                name="writer",
-                description="Technical writer for documentation",
-                capabilities=["write", "edit", "format"],
-            ),
-        )
-        .with_standard_manager(max_round_count=max_rounds)
-        .with_plan_review(enable=True)
-        .build()
-    )
+    adapter = MagenticBuilderAdapter(id=id)
+    adapter.add_participant(MagenticParticipant(
+        name="researcher",
+        description="Research specialist for information gathering",
+        capabilities=["search", "analyze", "summarize"],
+    ))
+    adapter.add_participant(MagenticParticipant(
+        name="analyst",
+        description="Data analyst for processing and computation",
+        capabilities=["compute", "visualize", "statistics"],
+    ))
+    adapter.add_participant(MagenticParticipant(
+        name="writer",
+        description="Technical writer for documentation",
+        capabilities=["write", "edit", "format"],
+    ))
+    adapter.with_standard_manager(max_round_count=max_rounds)
+    adapter.with_plan_review(enable=True)
+    return adapter
 
 
 def create_coding_workflow(
@@ -1621,29 +1749,25 @@ def create_coding_workflow(
     Returns:
         Coding workflow adapter
     """
-    return (
-        MagenticBuilderAdapter(id=id)
-        .participants(
-            architect=MagenticParticipant(
-                name="architect",
-                description="Software architect for design decisions",
-                capabilities=["design", "architecture", "patterns"],
-            ),
-            coder=MagenticParticipant(
-                name="coder",
-                description="Developer for implementation",
-                capabilities=["code", "implement", "debug"],
-            ),
-            reviewer=MagenticParticipant(
-                name="reviewer",
-                description="Code reviewer for quality assurance",
-                capabilities=["review", "test", "validate"],
-            ),
-        )
-        .with_standard_manager(max_round_count=max_rounds, max_stall_count=5)
-        .with_stall_intervention(enable=True)
-        .build()
-    )
+    adapter = MagenticBuilderAdapter(id=id)
+    adapter.add_participant(MagenticParticipant(
+        name="architect",
+        description="Software architect for design decisions",
+        capabilities=["design", "architecture", "patterns"],
+    ))
+    adapter.add_participant(MagenticParticipant(
+        name="coder",
+        description="Developer for implementation",
+        capabilities=["code", "implement", "debug"],
+    ))
+    adapter.add_participant(MagenticParticipant(
+        name="reviewer",
+        description="Code reviewer for quality assurance",
+        capabilities=["review", "test", "validate"],
+    ))
+    adapter.with_standard_manager(max_round_count=max_rounds, max_stall_count=5)
+    adapter.with_stall_intervention(enable=True)
+    return adapter
 
 
 # =============================================================================
