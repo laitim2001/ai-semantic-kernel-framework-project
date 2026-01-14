@@ -2,11 +2,13 @@
 # IPA Platform - Memory System Types
 # =============================================================================
 # Sprint 79: S79-2 - mem0 長期記憶整合 (10 pts)
+# Sprint 90: S90-2 - 環境變數配置
 #
 # This module defines the data types for the unified memory system,
 # including memory records, search results, and configuration.
 # =============================================================================
 
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -171,27 +173,51 @@ class MemorySearchQuery:
 
 @dataclass
 class MemoryConfig:
-    """Configuration for the memory system."""
+    """
+    Configuration for the memory system.
 
-    # Qdrant settings
-    qdrant_path: str = "/data/mem0/qdrant"
-    qdrant_collection: str = "ipa_memories"
+    All settings can be overridden via environment variables.
+    See .env.example for available configuration options.
+    """
+
+    # Qdrant settings (from environment or defaults)
+    qdrant_path: str = field(
+        default_factory=lambda: os.getenv("QDRANT_PATH", "/data/mem0/qdrant")
+    )
+    qdrant_collection: str = field(
+        default_factory=lambda: os.getenv("QDRANT_COLLECTION", "ipa_memories")
+    )
 
     # Embedding settings
-    embedding_model: str = "text-embedding-3-small"
+    embedding_model: str = field(
+        default_factory=lambda: os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+    )
     embedding_dims: int = 1536
 
     # LLM settings (for mem0 memory extraction)
-    llm_provider: str = "anthropic"
-    llm_model: str = "claude-sonnet-4-20250514"
+    llm_provider: str = field(
+        default_factory=lambda: os.getenv("MEMORY_LLM_PROVIDER", "anthropic")
+    )
+    llm_model: str = field(
+        default_factory=lambda: os.getenv("MEMORY_LLM_MODEL", "claude-sonnet-4-20250514")
+    )
 
-    # TTL settings
-    working_memory_ttl: int = 1800  # 30 minutes
-    session_memory_ttl: int = 604800  # 7 days
+    # TTL settings (in seconds)
+    working_memory_ttl: int = field(
+        default_factory=lambda: int(os.getenv("WORKING_MEMORY_TTL", "1800"))
+    )
+    session_memory_ttl: int = field(
+        default_factory=lambda: int(os.getenv("SESSION_MEMORY_TTL", "604800"))
+    )
 
     # Batch settings
     embedding_batch_size: int = 100
     search_batch_size: int = 50
+
+    # Feature flag
+    enabled: bool = field(
+        default_factory=lambda: os.getenv("MEM0_ENABLED", "true").lower() == "true"
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -206,8 +232,19 @@ class MemoryConfig:
             "session_memory_ttl": self.session_memory_ttl,
             "embedding_batch_size": self.embedding_batch_size,
             "search_batch_size": self.search_batch_size,
+            "enabled": self.enabled,
         }
 
+    @classmethod
+    def from_env(cls) -> "MemoryConfig":
+        """Create configuration from environment variables."""
+        return cls()
 
-# Default memory configuration
+
+def get_memory_config() -> MemoryConfig:
+    """Get the memory configuration from environment variables."""
+    return MemoryConfig.from_env()
+
+
+# Default memory configuration (reads from environment)
 DEFAULT_MEMORY_CONFIG = MemoryConfig()

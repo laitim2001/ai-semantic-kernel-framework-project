@@ -826,7 +826,7 @@ IPA Platform 採用四層功能架構，從基礎設施到業務場景逐層建�
 | 模組 | 功能 | 使用場景 |
 |------|------|----------|
 | **Checkpoint** | 人工審批、關鍵節點確認 | 高風險操作前的確認 |
-| **Memory** | 對話記憶、上下文管理 | 多輪對話、長期學習 |
+| **Memory** | 對話記憶、上下文管理、三層記憶系統 | 多輪對話、長期學習、知識累積 |
 | **Routing** | 智能路由、條件分派 | 工單分類、動態分配 |
 | **Speaker** | 發言選擇、輪流機制 | GroupChat 協調 |
 | **Capability** | Agent 能力匹配 | 任務到 Agent 的最佳配對 |
@@ -1064,3 +1064,122 @@ LLM 可用 → AI 智能處理
 ```
 
 詳細說明請參閱：`backend/src/integrations/llm/README.md`
+
+---
+
+## <a id="memory-system"></a>7. 三層記憶系統架構 (Phase 27)
+
+### 7.1 架構概覽
+
+Phase 27 引入了基於 mem0 的三層記憶系統，提供從短期到長期的完整記憶管理：
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       Three-Layer Memory System                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────────┐   ┌──────────────────┐   ┌──────────────────┐        │
+│  │   Working Layer  │   │   Session Layer  │   │  Long-term Layer │        │
+│  │                  │   │                  │   │                  │        │
+│  │  ┌────────────┐  │   │  ┌────────────┐  │   │  ┌────────────┐  │        │
+│  │  │   Redis    │  │──▶│  │ PostgreSQL │  │──▶│  │  mem0 +    │  │        │
+│  │  │            │  │   │  │            │  │   │  │  Qdrant    │  │        │
+│  │  └────────────┘  │   │  └────────────┘  │   │  └────────────┘  │        │
+│  │                  │   │                  │   │                  │        │
+│  │   TTL: 30 min    │   │   TTL: 7 days    │   │    Permanent     │        │
+│  └──────────────────┘   └──────────────────┘   └──────────────────┘        │
+│                                                                              │
+│  Unified Memory Manager                                                      │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  - Automatic layer selection based on importance                      │  │
+│  │  - Memory promotion between layers                                    │  │
+│  │  - Semantic search across all layers                                  │  │
+│  │  - Context-aware memory retrieval                                     │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.2 記憶層說明
+
+| 層級 | 存儲技術 | TTL | 用途 |
+|------|----------|-----|------|
+| **Working** | Redis | 30 分鐘 | 當前對話上下文、臨時工作狀態 |
+| **Session** | PostgreSQL | 7 天 | 會話歷史、中期任務記憶 |
+| **Long-term** | mem0 + Qdrant | 永久 | 用戶偏好、系統知識、最佳實踐 |
+
+### 7.3 記憶類型
+
+系統支援六種記憶類型：
+
+| 類型 | 說明 | 典型場景 |
+|------|------|----------|
+| `event_resolution` | 事件解決方案 | IT 工單處理經驗 |
+| `user_preference` | 用戶偏好設置 | UI 配置、通知設定 |
+| `system_knowledge` | 系統基礎設施知識 | 服務配置、架構信息 |
+| `best_practice` | 最佳實踐和模式 | 代碼風格、設計模式 |
+| `conversation` | 對話片段 | 短期對話歷史 |
+| `feedback` | 用戶回饋和修正 | 改進建議、錯誤修正 |
+
+### 7.4 核心組件
+
+```
+backend/src/integrations/memory/
+├── __init__.py           # Public API exports
+├── mem0_client.py        # mem0 SDK wrapper
+├── unified_manager.py    # UnifiedMemoryManager
+├── embedding_service.py  # OpenAI embeddings
+└── types.py              # MemoryRecord, MemoryConfig, etc.
+```
+
+### 7.5 API 端點
+
+| 方法 | 端點 | 說明 |
+|------|------|------|
+| POST | `/api/v1/memory/add` | 添加記憶 |
+| POST | `/api/v1/memory/search` | 語義搜索記憶 |
+| GET | `/api/v1/memory/user/{id}` | 獲取用戶記憶 |
+| DELETE | `/api/v1/memory/{id}` | 刪除記憶 |
+| POST | `/api/v1/memory/promote` | 提升記憶層級 |
+| POST | `/api/v1/memory/context` | 獲取上下文記憶 |
+| GET | `/api/v1/memory/health` | 健康檢查 |
+
+### 7.6 配置選項
+
+環境變數配置：
+
+```bash
+# 功能開關
+MEM0_ENABLED=true
+
+# Qdrant 向量存儲
+QDRANT_PATH=/data/mem0/qdrant
+QDRANT_COLLECTION=ipa_memories
+
+# 嵌入模型
+EMBEDDING_MODEL=text-embedding-3-small
+
+# LLM 記憶提取
+MEMORY_LLM_PROVIDER=anthropic
+MEMORY_LLM_MODEL=claude-sonnet-4-20250514
+
+# TTL 設定
+WORKING_MEMORY_TTL=1800
+SESSION_MEMORY_TTL=604800
+```
+
+### 7.7 與其他系統整合
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│   Agent System   │────▶│   Memory API     │────▶│  Context-Aware   │
+│                  │     │                  │     │    Responses     │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+         │                       │                        ▲
+         │                       ▼                        │
+         │              ┌──────────────────┐              │
+         └─────────────▶│ UnifiedMemory-   │──────────────┘
+                        │ Manager          │
+                        └──────────────────┘
+```
+
+**詳細配置指南**: 參見 `docs/04-usage/memory-configuration.md`
