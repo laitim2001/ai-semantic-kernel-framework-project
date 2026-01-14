@@ -62,3 +62,19 @@ export {
   type RestoreConfirmation,
   type RestoreResult,
 } from './useCheckpoints';
+
+// Sprint 89: DevTools Streaming Hook
+export {
+  useDevToolsStream,
+  type ConnectionStatus,
+  type UseDevToolsStreamOptions,
+  type UseDevToolsStreamReturn,
+} from './useDevToolsStream';
+
+// Sprint 89: Event Filter Hook
+export {
+  useEventFilter,
+  type EventFilterState,
+  type UseEventFilterOptions,
+  type UseEventFilterReturn,
+} from './useEventFilter';

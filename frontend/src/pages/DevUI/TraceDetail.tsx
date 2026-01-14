@@ -3,6 +3,7 @@
 // =============================================================================
 // Sprint 87: S87-3 - DevUI Core Pages
 // Sprint 88: Updated with Timeline, EventTree, and EventPanel components
+// Sprint 89: Added Statistics, LiveIndicator, and EventFilter
 //
 // Page displaying detailed trace information with events.
 //
@@ -10,7 +11,7 @@
 //   - React Router
 //   - React Query
 //   - DevTools hooks
-//   - Timeline, EventTree, EventPanel components
+//   - Timeline, EventTree, EventPanel, Statistics, LiveIndicator, EventFilter
 // =============================================================================
 
 import { FC, useState } from 'react';
@@ -29,12 +30,18 @@ import {
   LayoutList,
   GitBranch,
   Activity,
+  BarChart3,
+  Filter,
 } from 'lucide-react';
 import { useTrace, useTraceEvents, useDeleteTrace } from '@/hooks/useDevTools';
+import { useEventFilter } from '@/hooks/useEventFilter';
 import { EventList } from '@/components/DevUI/EventList';
 import { Timeline } from '@/components/DevUI/Timeline';
 import { EventTree } from '@/components/DevUI/EventTree';
 import { EventPanel } from '@/components/DevUI/EventPanel';
+import { Statistics, StatisticsSummary } from '@/components/DevUI/Statistics';
+import { LiveIndicator } from '@/components/DevUI/LiveIndicator';
+import { EventFilter } from '@/components/DevUI/EventFilter';
 import type { TraceStatus, TraceEvent } from '@/types/devtools';
 import { cn } from '@/lib/utils';
 
@@ -121,7 +128,7 @@ const InfoItem: FC<{ label: string; value: string; copyable?: boolean }> = ({
 );
 
 /** View mode for events display */
-type ViewMode = 'timeline' | 'tree' | 'list';
+type ViewMode = 'timeline' | 'tree' | 'list' | 'stats';
 
 /**
  * Trace Detail Page Component
@@ -132,6 +139,7 @@ export const TraceDetail: FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [selectedEvent, setSelectedEvent] = useState<TraceEvent | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Fetch trace data
   const {
@@ -147,6 +155,21 @@ export const TraceDetail: FC = () => {
     isLoading: eventsLoading,
     refetch: refetchEvents,
   } = useTraceEvents(executionId ?? '');
+
+  // Event filtering
+  const {
+    filters,
+    filteredEvents,
+    filterCounts,
+    filterOptions,
+    hasActiveFilters,
+    toggleEventType,
+    toggleSeverity,
+    toggleExecutorId,
+    setSearchQuery,
+    setShowErrorsOnly,
+    clearFilters,
+  } = useEventFilter(eventsData?.items ?? [], { syncToUrl: true });
 
   // Delete mutation
   const deleteMutation = useDeleteTrace();
@@ -317,53 +340,134 @@ export const TraceDetail: FC = () => {
         )}
       </div>
 
+      {/* Live Indicator for running traces */}
+      {trace.status === 'running' && (
+        <div className="mb-6">
+          <LiveIndicator
+            status="connected"
+            isPaused={false}
+            lastUpdate={new Date()}
+            onPause={() => {}}
+            onResume={() => {}}
+            onDisconnect={() => {}}
+          />
+        </div>
+      )}
+
+      {/* Quick Stats Summary */}
+      <div className="mb-6">
+        <StatisticsSummary events={eventsData?.items ?? []} />
+      </div>
+
       {/* Events Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Filters Panel (collapsible) */}
+        {showFilters && viewMode !== 'stats' && (
+          <div className="lg:col-span-1">
+            <EventFilter
+              eventTypes={filterOptions.eventTypes}
+              selectedEventTypes={filters.eventTypes}
+              severities={filterOptions.severities}
+              selectedSeverities={filters.severities}
+              executorIds={filterOptions.executorIds}
+              selectedExecutorIds={filters.executorIds}
+              searchQuery={filters.searchQuery}
+              showErrorsOnly={filters.showErrorsOnly}
+              hasActiveFilters={hasActiveFilters}
+              filterCounts={filterCounts}
+              onToggleEventType={toggleEventType}
+              onToggleSeverity={toggleSeverity}
+              onToggleExecutorId={toggleExecutorId}
+              onSearchChange={setSearchQuery}
+              onShowErrorsOnlyChange={setShowErrorsOnly}
+              onClearFilters={clearFilters}
+            />
+          </div>
+        )}
+
         {/* Events View */}
         <div className={cn(
           'bg-white rounded-lg border border-gray-200 overflow-hidden',
-          selectedEvent ? 'lg:col-span-2' : 'lg:col-span-3'
+          showFilters && viewMode !== 'stats' ? 'lg:col-span-2' : selectedEvent ? 'lg:col-span-3' : 'lg:col-span-4',
+          selectedEvent && showFilters && viewMode !== 'stats' && 'lg:col-span-2'
         )}>
           {/* View mode toggle */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Events</h2>
-            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('timeline')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
-                  viewMode === 'timeline'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                )}
-              >
-                <Activity className="w-4 h-4" />
-                Timeline
-              </button>
-              <button
-                onClick={() => setViewMode('tree')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
-                  viewMode === 'tree'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                )}
-              >
-                <GitBranch className="w-4 h-4" />
-                Tree
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
-                  viewMode === 'list'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                )}
-              >
-                <LayoutList className="w-4 h-4" />
-                List
-              </button>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-gray-900">Events</h2>
+              {hasActiveFilters && viewMode !== 'stats' && (
+                <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded">
+                  {filterCounts.filtered} / {filterCounts.total}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Filter toggle button */}
+              {viewMode !== 'stats' && (
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors',
+                    showFilters || hasActiveFilters
+                      ? 'bg-purple-50 border-purple-200 text-purple-700'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  )}
+                >
+                  <Filter className="w-4 h-4" />
+                  {showFilters ? '隱藏篩選' : '篩選'}
+                </button>
+              )}
+              {/* View mode toggle */}
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('stats')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
+                    viewMode === 'stats'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  )}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Stats
+                </button>
+                <button
+                  onClick={() => setViewMode('timeline')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
+                    viewMode === 'timeline'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  )}
+                >
+                  <Activity className="w-4 h-4" />
+                  Timeline
+                </button>
+                <button
+                  onClick={() => setViewMode('tree')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
+                    viewMode === 'tree'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  )}
+                >
+                  <GitBranch className="w-4 h-4" />
+                  Tree
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
+                    viewMode === 'list'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  )}
+                >
+                  <LayoutList className="w-4 h-4" />
+                  List
+                </button>
+              </div>
             </div>
           </div>
 
@@ -374,23 +478,30 @@ export const TraceDetail: FC = () => {
                 <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
                 <span className="ml-2 text-gray-500">Loading events...</span>
               </div>
+            ) : viewMode === 'stats' ? (
+              <Statistics
+                events={eventsData?.items ?? []}
+                totalDurationMs={trace.duration_ms}
+                showDetails={true}
+                layout="horizontal"
+              />
             ) : viewMode === 'timeline' ? (
               <Timeline
-                events={eventsData?.items ?? []}
+                events={filteredEvents}
                 selectedEventId={selectedEvent?.id}
                 onEventSelect={setSelectedEvent}
                 maxHeight="500px"
               />
             ) : viewMode === 'tree' ? (
               <EventTree
-                events={eventsData?.items ?? []}
+                events={filteredEvents}
                 selectedEventId={selectedEvent?.id}
                 onEventSelect={setSelectedEvent}
                 maxHeight="500px"
               />
             ) : (
               <EventList
-                events={eventsData?.items ?? []}
+                events={filteredEvents}
                 isLoading={false}
                 onEventSelect={setSelectedEvent}
                 selectedEventId={selectedEvent?.id}
@@ -400,7 +511,7 @@ export const TraceDetail: FC = () => {
         </div>
 
         {/* Event Detail Panel */}
-        {selectedEvent && (
+        {selectedEvent && viewMode !== 'stats' && (
           <div className="lg:col-span-1">
             <EventPanel
               event={selectedEvent}
