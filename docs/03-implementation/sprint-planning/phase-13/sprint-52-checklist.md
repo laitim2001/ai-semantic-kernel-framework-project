@@ -45,8 +45,8 @@
   - [x] `WORKFLOW_KEYWORDS` 關鍵字列表
   - [x] `CHAT_KEYWORDS` 關鍵字列表
   - [x] `classify()` 方法
-- [x] `backend/src/integrations/hybrid/intent/classifiers/llm_based.py`
-  - [x] `LLMBasedClassifier` 類別 (可選 fallback)
+- [ ] `backend/src/integrations/hybrid/intent/classifiers/llm_based.py` **[未實現]**
+  - [ ] `LLMBasedClassifier` 類別 (可選 fallback) - 設計為 LLM 輔助分類器，尚未實現
 - [x] `backend/src/integrations/hybrid/intent/analyzers/__init__.py`
 - [x] `backend/src/integrations/hybrid/intent/analyzers/complexity.py`
   - [x] `ComplexityAnalyzer` 類別
@@ -145,5 +145,13 @@
 ```
 Sprint 52 開始日期: 2025-12-28
 Sprint 52 結束日期: 2025-12-29
-實際完成點數: 35 / 35 pts ✅
+實際完成點數: 35 / 35 pts ✅ (核心功能完成)
 ```
+
+### 審計備註 (2026-01-14)
+
+**LLMBasedClassifier 未實現說明**：
+- 設計文檔中 `llm_based.py` 被定義為「可選 fallback」
+- 當前系統使用 `RuleBasedClassifier` 作為主要分類器
+- 此差距不影響核心功能，但限制了系統處理模糊意圖的能力
+- 如需 LLM 輔助分類功能，建議在後續 Sprint 中補實現

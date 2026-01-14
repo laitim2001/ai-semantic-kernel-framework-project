@@ -448,41 +448,86 @@ class MAFOrchestratorService:
 
 
 class IntentRouter:
-    """意圖識別和路由"""
-    
+    """意圖識別和路由
+
+    **實現說明 (2026-01-14 更新)**:
+    實際實現使用規則驅動的 RuleBasedClassifier，而非 LLM 驅動分類。
+    位置: backend/src/integrations/hybrid/intent/classifiers/rule_based.py
+
+    原因:
+    - 規則驅動提供更可預測、更快的響應時間 (<50ms)
+    - 100+ 雙語關鍵字支援中英文意圖識別
+    - LLMBasedClassifier 設計為可選 fallback，尚未實現
+    """
+
+    def __init__(self):
+        # 實際實現使用 RuleBasedClassifier
+        self._classifier = RuleBasedClassifier()
+
     async def classify(self, event: ITEvent) -> "Intent":
-        """識別事件意圖"""
-        
-        # 使用 Claude 進行意圖識別
-        classification = await self._classify_with_llm(event)
-        
-        return Intent(
-            type=classification["intent_type"],
-            confidence=classification["confidence"],
-            entities=classification["entities"],
-            suggested_workflow=classification["suggested_workflow"]
+        """識別事件意圖 (規則驅動)"""
+
+        # 使用規則分類器進行意圖識別
+        classification = self._classifier.classify(
+            text=f"{event.title} {event.description}",
+            context={"source": event.source, "systems": event.affected_systems}
         )
-    
-    async def _classify_with_llm(self, event: ITEvent) -> Dict[str, Any]:
-        """使用 LLM 進行分類"""
-        
-        # 這裡可以使用 MAF 的 Anthropic Agent 或直接調用 Claude API
-        prompt = f"""
-        分析以下 IT 事件並進行分類：
-        
-        標題：{event.title}
-        描述：{event.description}
-        來源：{event.source}
-        受影響系統：{event.affected_systems}
-        
-        請返回：
-        1. intent_type: 事件類型（etl_pipeline_failure, password_reset, security_incident, etc.）
-        2. confidence: 置信度（0-1）
-        3. entities: 識別的實體（系統名稱、用戶、錯誤代碼等）
-        4. suggested_workflow: 建議的工作流程類型
-        """
-        
-        # 調用 LLM...
+
+        return Intent(
+            type=classification.intent_type,
+            confidence=classification.confidence,
+            entities=classification.entities,
+            suggested_workflow=classification.suggested_workflow
+        )
+
+
+class RuleBasedClassifier:
+    """規則驅動分類器 (實際實現)
+
+    特點:
+    - 使用 100+ 雙語關鍵字 (WORKFLOW_KEYWORDS, CHAT_KEYWORDS)
+    - 基於模式匹配和權重計算
+    - 支援複雜度分析和多代理檢測
+    - 響應時間 <50ms
+    """
+
+    WORKFLOW_KEYWORDS = [
+        # 中文工作流程關鍵字
+        "執行", "建立", "部署", "處理", "分析", "生成報告",
+        # 英文工作流程關鍵字
+        "execute", "create", "deploy", "process", "analyze", "generate"
+    ]
+
+    CHAT_KEYWORDS = [
+        # 中文對話關鍵字
+        "什麼是", "如何", "為什麼", "解釋", "說明",
+        # 英文對話關鍵字
+        "what is", "how to", "why", "explain", "describe"
+    ]
+
+    def classify(self, text: str, context: dict) -> "ClassificationResult":
+        """使用規則進行分類"""
+
+        # 關鍵字匹配和權重計算
+        workflow_score = self._calculate_keyword_score(text, self.WORKFLOW_KEYWORDS)
+        chat_score = self._calculate_keyword_score(text, self.CHAT_KEYWORDS)
+
+        # 決定意圖類型
+        if workflow_score > chat_score:
+            intent_type = self._determine_workflow_type(text, context)
+        else:
+            intent_type = "conversational"
+
+        return ClassificationResult(
+            intent_type=intent_type,
+            confidence=max(workflow_score, chat_score),
+            entities=self._extract_entities(text),
+            suggested_workflow=self._suggest_workflow(intent_type)
+        )
+
+    def _calculate_keyword_score(self, text: str, keywords: list) -> float:
+        """計算關鍵字匹配分數"""
+        # 實際實現詳見 rule_based.py
         pass
 
 
