@@ -119,3 +119,16 @@ data/temp/*
 .claude/settings.json
 .claude/settings.local.json
 .pids/
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Test artifacts and results
+phase_tests_results_*.json
+**/test_results.json
+test_upload_file.txt
+fantasy_story.txt
+backend/fantasy_story.txt
+
+# Backend data directory (runtime data)
+backend/data/
