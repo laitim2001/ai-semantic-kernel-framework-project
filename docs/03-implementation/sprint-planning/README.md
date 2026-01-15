@@ -1,9 +1,9 @@
 # IPA Platform - Sprint Planning Overview
 
-**版本**: 7.0 (Phase 27: mem0 整合完善)
+**版本**: 8.0 (Phase 28: 三層意圖路由)
 **創建日期**: 2025-11-29
-**最後更新**: 2026-01-14
-**總開發週期**: 90 Sprints (27 Phases)
+**最後更新**: 2026-01-15
+**總開發週期**: 99 Sprints (28 Phases)
 
 ---
 
@@ -38,8 +38,9 @@
 | Phase 25 | Production Expansion | 85-86 | 45 pts | ✅ 完成 | [README](./phase-25/README.md) |
 | Phase 26 | DevUI Frontend | 87-89 | 42 pts | ✅ 完成 | [README](./phase-26/README.md) |
 | Phase 27 | mem0 整合完善 | 90 | 13 pts | ✅ 完成 | [README](./phase-27/README.md) |
+| Phase 28 | 三層意圖路由 | 91-99 | 235 pts | 📋 計劃中 | [README](./phase-28/README.md) |
 
-**總計**: ~1954 Story Points across 90 Sprints
+**總計**: ~2189 Story Points across 99 Sprints
 
 ---
 
@@ -382,12 +383,19 @@ ANTHROPIC_API_KEY=xxx
 
 ---
 
-**下一步**:
-- 所有 27 個 Phase (90 Sprints) 已完成！
-- 系統進入維護和優化階段
-- 可開始規劃 Phase 28+ 新功能
+**當前進行中**:
+- Phase 28: 三層意圖路由 (Sprint 91-99, 235 pts)
+- 預計完成時間: 8.5 週 + 1 週緩衝 = 9.5 週
 
-**Phase 27 完成成就**:
+**Phase 28 主要目標**:
+- 三層路由: Pattern Matcher → Semantic Router → LLM Classifier
+- BusinessIntentRouter: 業務意圖分類 + 完整度評估
+- GuidedDialogEngine: 引導式對話 + 增量更新
+- InputGateway: 多來源輸入處理 (ServiceNow, Prometheus, 用戶)
+- RiskAssessor: IT Intent → 風險等級映射
+- HITLController: 人機協作審批流程
+
+**Phase 27 完成成就** (2026-01-14):
 - mem0 三層記憶系統完整整合
 - 59 個測試 (34 單元 + 25 集成)
 - 完整的配置文檔和架構文檔

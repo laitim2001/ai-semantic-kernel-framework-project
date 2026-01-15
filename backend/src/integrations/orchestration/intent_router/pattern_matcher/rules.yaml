@@ -1,0 +1,579 @@
+# Pattern Matcher Rules Configuration
+# Sprint 91: Pattern Matcher + Rule Definition (Phase 28)
+#
+# This file defines the pattern matching rules for the first layer
+# of the three-layer routing architecture.
+#
+# Rule Structure:
+#   id: Unique identifier
+#   category: incident/request/change/query
+#   sub_intent: More specific intent type
+#   patterns: List of regex patterns (case-insensitive)
+#   priority: Higher = checked first (default: 100)
+#   workflow_type: magentic/handoff/concurrent/sequential/simple
+#   risk_level: critical/high/medium/low
+#   description: Human-readable description
+#   enabled: true/false (default: true)
+
+rules:
+  # ===================================================
+  # INCIDENT RULES (10+ rules)
+  # Events requiring immediate attention or resolution
+  # ===================================================
+
+  - id: incident_etl_failure
+    category: incident
+    sub_intent: etl_failure
+    patterns:
+      - "ETL.*失敗"
+      - "ETL.*fail"
+      - "ETL.*error"
+      - "ETL.*報錯"
+      - "ETL.*異常"
+      - "pipeline.*fail"
+      - "pipeline.*error"
+      - "資料管線.*失敗"
+      - "數據管道.*失敗"
+    priority: 100
+    workflow_type: magentic
+    risk_level: high
+    description: ETL pipeline failure incidents
+
+  - id: incident_system_down
+    category: incident
+    sub_intent: system_down
+    patterns:
+      - "系統.*當機"
+      - "系統.*掛掉"
+      - "系統.*無法連接"
+      - "系統.*停止"
+      - "service.*down"
+      - "system.*unavailable"
+      - "system.*not responding"
+      - "伺服器.*當機"
+      - "server.*down"
+    priority: 100
+    workflow_type: magentic
+    risk_level: critical
+    description: System down or unavailable incidents
+
+  - id: incident_performance_issue
+    category: incident
+    sub_intent: performance_degradation
+    patterns:
+      - "效能.*問題"
+      - "效能.*下降"
+      - "系統.*很慢"
+      - "系統.*緩慢"
+      - "performance.*issue"
+      - "performance.*degradation"
+      - "slow.*response"
+      - "high.*latency"
+      - "延遲.*過高"
+      - "回應.*太慢"
+    priority: 90
+    workflow_type: magentic
+    risk_level: high
+    description: Performance degradation incidents
+
+  - id: incident_network_issue
+    category: incident
+    sub_intent: network_issue
+    patterns:
+      - "網路.*問題"
+      - "網路.*中斷"
+      - "網路.*斷線"
+      - "無法.*連線"
+      - "network.*issue"
+      - "network.*down"
+      - "connectivity.*issue"
+      - "connection.*lost"
+      - "DNS.*fail"
+      - "DNS.*問題"
+    priority: 95
+    workflow_type: magentic
+    risk_level: high
+    description: Network connectivity incidents
+
+  - id: incident_database_issue
+    category: incident
+    sub_intent: database_issue
+    patterns:
+      - "資料庫.*問題"
+      - "資料庫.*錯誤"
+      - "資料庫.*連接失敗"
+      - "DB.*error"
+      - "database.*issue"
+      - "database.*connection.*fail"
+      - "SQL.*error"
+      - "deadlock"
+      - "死鎖"
+    priority: 95
+    workflow_type: magentic
+    risk_level: critical
+    description: Database-related incidents
+
+  - id: incident_security_alert
+    category: incident
+    sub_intent: security_alert
+    patterns:
+      - "安全.*警報"
+      - "安全.*事件"
+      - "資安.*問題"
+      - "入侵.*偵測"
+      - "security.*alert"
+      - "security.*incident"
+      - "unauthorized.*access"
+      - "breach.*detected"
+      - "suspicious.*activity"
+      - "異常.*登入"
+    priority: 100
+    workflow_type: magentic
+    risk_level: critical
+    description: Security-related incidents
+
+  - id: incident_application_error
+    category: incident
+    sub_intent: application_error
+    patterns:
+      - "應用程式.*錯誤"
+      - "應用程式.*崩潰"
+      - "app.*crash"
+      - "application.*error"
+      - "程式.*當掉"
+      - "500.*error"
+      - "internal.*server.*error"
+      - "exception"
+      - "異常.*終止"
+    priority: 85
+    workflow_type: magentic
+    risk_level: high
+    description: Application error incidents
+
+  - id: incident_disk_space
+    category: incident
+    sub_intent: disk_space_issue
+    patterns:
+      - "磁碟.*空間.*不足"
+      - "磁碟.*滿"
+      - "disk.*space.*low"
+      - "disk.*full"
+      - "storage.*full"
+      - "儲存.*空間.*不夠"
+      - "容量.*不足"
+    priority: 90
+    workflow_type: sequential
+    risk_level: high
+    description: Disk space issues
+
+  - id: incident_memory_issue
+    category: incident
+    sub_intent: memory_issue
+    patterns:
+      - "記憶體.*不足"
+      - "記憶體.*滿"
+      - "memory.*leak"
+      - "out.*of.*memory"
+      - "OOM"
+      - "memory.*exhausted"
+      - "記憶體.*洩漏"
+    priority: 90
+    workflow_type: magentic
+    risk_level: high
+    description: Memory-related issues
+
+  - id: incident_backup_failure
+    category: incident
+    sub_intent: backup_failure
+    patterns:
+      - "備份.*失敗"
+      - "備份.*錯誤"
+      - "backup.*fail"
+      - "backup.*error"
+      - "還原.*失敗"
+      - "restore.*fail"
+    priority: 85
+    workflow_type: sequential
+    risk_level: high
+    description: Backup/restore failures
+
+  - id: incident_certificate_issue
+    category: incident
+    sub_intent: certificate_issue
+    patterns:
+      - "憑證.*過期"
+      - "憑證.*問題"
+      - "SSL.*error"
+      - "certificate.*expir"
+      - "certificate.*invalid"
+      - "TLS.*fail"
+    priority: 90
+    workflow_type: sequential
+    risk_level: high
+    description: Certificate-related issues
+
+  # ===================================================
+  # REQUEST RULES (8+ rules)
+  # Service requests from users
+  # ===================================================
+
+  - id: request_account_creation
+    category: request
+    sub_intent: account_creation
+    patterns:
+      - "申請.*帳號"
+      - "新增.*帳號"
+      - "建立.*帳號"
+      - "create.*account"
+      - "new.*account"
+      - "需要.*帳號"
+      - "開通.*帳號"
+    priority: 80
+    workflow_type: sequential
+    risk_level: medium
+    description: Account creation requests
+
+  - id: request_permission_change
+    category: request
+    sub_intent: permission_change
+    patterns:
+      - "權限.*變更"
+      - "權限.*申請"
+      - "修改.*權限"
+      - "change.*permission"
+      - "access.*request"
+      - "授權.*申請"
+      - "提升.*權限"
+      - "降低.*權限"
+    priority: 80
+    workflow_type: sequential
+    risk_level: medium
+    description: Permission change requests
+
+  - id: request_software_install
+    category: request
+    sub_intent: software_install
+    patterns:
+      - "安裝.*軟體"
+      - "安裝.*程式"
+      - "install.*software"
+      - "software.*install"
+      - "需要.*安裝"
+      - "安裝.*application"
+      - "安裝.*工具"
+    priority: 75
+    workflow_type: sequential
+    risk_level: low
+    description: Software installation requests
+
+  - id: request_password_reset
+    category: request
+    sub_intent: password_reset
+    patterns:
+      - "重設.*密碼"
+      - "重置.*密碼"
+      - "忘記.*密碼"
+      - "reset.*password"
+      - "forgot.*password"
+      - "密碼.*過期"
+      - "更換.*密碼"
+    priority: 85
+    workflow_type: simple
+    risk_level: low
+    description: Password reset requests
+
+  - id: request_resource_provision
+    category: request
+    sub_intent: resource_provision
+    patterns:
+      - "申請.*資源"
+      - "需要.*VM"
+      - "建立.*虛擬機"
+      - "provision.*resource"
+      - "create.*VM"
+      - "需要.*伺服器"
+      - "申請.*server"
+    priority: 75
+    workflow_type: sequential
+    risk_level: medium
+    description: Resource provisioning requests
+
+  - id: request_data_export
+    category: request
+    sub_intent: data_export
+    patterns:
+      - "匯出.*資料"
+      - "導出.*數據"
+      - "export.*data"
+      - "下載.*報表"
+      - "資料.*備份"
+    priority: 70
+    workflow_type: simple
+    risk_level: low
+    description: Data export requests
+
+  - id: request_access_grant
+    category: request
+    sub_intent: access_grant
+    patterns:
+      - "申請.*存取"
+      - "需要.*訪問"
+      - "grant.*access"
+      - "開通.*權限"
+      - "存取.*權限"
+    priority: 80
+    workflow_type: sequential
+    risk_level: medium
+    description: Access grant requests
+
+  - id: request_vpn_setup
+    category: request
+    sub_intent: vpn_setup
+    patterns:
+      - "申請.*VPN"
+      - "設定.*VPN"
+      - "VPN.*連線"
+      - "setup.*VPN"
+      - "VPN.*access"
+      - "遠端.*連線"
+    priority: 75
+    workflow_type: sequential
+    risk_level: medium
+    description: VPN setup requests
+
+  - id: request_email_setup
+    category: request
+    sub_intent: email_setup
+    patterns:
+      - "設定.*郵件"
+      - "設定.*email"
+      - "郵箱.*問題"
+      - "email.*setup"
+      - "mailbox.*setup"
+      - "新增.*郵件帳號"
+    priority: 70
+    workflow_type: simple
+    risk_level: low
+    description: Email setup requests
+
+  # ===================================================
+  # CHANGE RULES (6+ rules)
+  # Change requests for IT infrastructure
+  # ===================================================
+
+  - id: change_system_upgrade
+    category: change
+    sub_intent: system_upgrade
+    patterns:
+      - "系統.*升級"
+      - "版本.*升級"
+      - "upgrade.*system"
+      - "version.*upgrade"
+      - "更新.*系統"
+      - "升級.*版本"
+    priority: 70
+    workflow_type: magentic
+    risk_level: high
+    description: System upgrade change requests
+
+  - id: change_config_update
+    category: change
+    sub_intent: config_update
+    patterns:
+      - "配置.*變更"
+      - "設定.*修改"
+      - "config.*change"
+      - "configuration.*update"
+      - "修改.*設定"
+      - "更改.*配置"
+    priority: 70
+    workflow_type: sequential
+    risk_level: medium
+    description: Configuration change requests
+
+  - id: change_deployment
+    category: change
+    sub_intent: deployment
+    patterns:
+      - "部署.*請求"
+      - "發布.*請求"
+      - "deploy.*request"
+      - "release.*request"
+      - "上線.*申請"
+      - "發版.*申請"
+    priority: 75
+    workflow_type: magentic
+    risk_level: high
+    description: Deployment change requests
+
+  - id: change_network_update
+    category: change
+    sub_intent: network_update
+    patterns:
+      - "網路.*變更"
+      - "防火牆.*規則"
+      - "network.*change"
+      - "firewall.*rule"
+      - "修改.*路由"
+      - "網段.*變更"
+    priority: 75
+    workflow_type: sequential
+    risk_level: high
+    description: Network change requests
+
+  - id: change_database_update
+    category: change
+    sub_intent: database_update
+    patterns:
+      - "資料庫.*變更"
+      - "資料表.*修改"
+      - "database.*change"
+      - "schema.*update"
+      - "修改.*資料表"
+      - "調整.*索引"
+    priority: 75
+    workflow_type: sequential
+    risk_level: high
+    description: Database change requests
+
+  - id: change_maintenance_window
+    category: change
+    sub_intent: maintenance_window
+    patterns:
+      - "維護.*窗口"
+      - "維護.*時間"
+      - "maintenance.*window"
+      - "scheduled.*maintenance"
+      - "計畫性.*維護"
+      - "定期.*維護"
+    priority: 65
+    workflow_type: simple
+    risk_level: medium
+    description: Maintenance window scheduling
+
+  - id: change_security_patch
+    category: change
+    sub_intent: security_patch
+    patterns:
+      - "安全.*更新"
+      - "安全.*補丁"
+      - "security.*patch"
+      - "security.*update"
+      - "漏洞.*修補"
+      - "CVE.*修復"
+    priority: 80
+    workflow_type: magentic
+    risk_level: high
+    description: Security patch requests
+
+  # ===================================================
+  # QUERY RULES (6+ rules)
+  # Information queries and status checks
+  # ===================================================
+
+  - id: query_status_check
+    category: query
+    sub_intent: status_check
+    patterns:
+      - "狀態.*查詢"
+      - "查詢.*狀態"
+      - "目前.*狀態"
+      - "status.*check"
+      - "check.*status"
+      - "什麼.*狀態"
+      - "系統.*狀態"
+    priority: 60
+    workflow_type: simple
+    risk_level: low
+    description: Status inquiry queries
+
+  - id: query_report_request
+    category: query
+    sub_intent: report_request
+    patterns:
+      - "查詢.*報表"
+      - "報表.*查詢"
+      - "generate.*report"
+      - "report.*request"
+      - "產生.*報告"
+      - "需要.*報表"
+    priority: 60
+    workflow_type: simple
+    risk_level: low
+    description: Report generation queries
+
+  - id: query_information_request
+    category: query
+    sub_intent: information_request
+    patterns:
+      - "請問.*"
+      - "想.*了解"
+      - "查詢.*資訊"
+      - "how.*to"
+      - "what.*is"
+      - "如何.*"
+      - "怎麼.*"
+    priority: 50
+    workflow_type: simple
+    risk_level: low
+    description: General information queries
+
+  - id: query_usage_statistics
+    category: query
+    sub_intent: usage_statistics
+    patterns:
+      - "使用.*統計"
+      - "用量.*查詢"
+      - "usage.*statistics"
+      - "resource.*usage"
+      - "查詢.*用量"
+      - "統計.*報告"
+    priority: 55
+    workflow_type: simple
+    risk_level: low
+    description: Usage statistics queries
+
+  - id: query_ticket_status
+    category: query
+    sub_intent: ticket_status
+    patterns:
+      - "工單.*狀態"
+      - "案件.*進度"
+      - "ticket.*status"
+      - "case.*status"
+      - "我的.*申請"
+      - "進度.*查詢"
+    priority: 60
+    workflow_type: simple
+    risk_level: low
+    description: Ticket/case status queries
+
+  - id: query_documentation
+    category: query
+    sub_intent: documentation
+    patterns:
+      - "查詢.*文件"
+      - "找.*文檔"
+      - "documentation"
+      - "知識庫.*查詢"
+      - "操作.*手冊"
+      - "說明.*文件"
+    priority: 50
+    workflow_type: simple
+    risk_level: low
+    description: Documentation queries
+
+  - id: query_policy_inquiry
+    category: query
+    sub_intent: policy_inquiry
+    patterns:
+      - "政策.*查詢"
+      - "規定.*是什麼"
+      - "policy.*inquiry"
+      - "什麼.*規定"
+      - "公司.*政策"
+      - "流程.*是什麼"
+    priority: 50
+    workflow_type: simple
+    risk_level: low
+    description: Policy and procedure queries
