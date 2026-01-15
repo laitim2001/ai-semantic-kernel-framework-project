@@ -6,11 +6,13 @@ This module provides intelligent routing and dialog management:
 - Layer 2: Semantic Router (vector similarity)
 - Layer 3: LLM Classifier (semantic understanding)
 - Guided Dialog Engine (multi-turn information gathering)
+- Input Gateway (source-based routing with simplified paths)
 
 Sprint 91: Pattern Matcher + Rule Definition (Phase 28)
 Sprint 92: Semantic Router + LLM Classifier (Phase 28)
 Sprint 93: BusinessIntentRouter + CompletenessChecker (Phase 28)
 Sprint 94: GuidedDialogEngine + Incremental Update (Phase 28)
+Sprint 95: InputGateway + SourceHandlers (Phase 28)
 """
 
 from .intent_router.models import (
@@ -38,6 +40,31 @@ from .guided_dialog import (
     create_guided_dialog_engine,
     create_mock_dialog_engine,
 )
+from .input_gateway import (
+    # Models
+    SourceType,
+    IncomingRequest,
+    GatewayConfig,
+    GatewayMetrics,
+    # Gateway
+    InputGateway,
+    MockInputGateway,
+    create_input_gateway,
+    create_mock_gateway,
+    # Schema Validator
+    SchemaValidator,
+    MockSchemaValidator,
+    SchemaDefinition,
+    ValidationError,
+    # Source Handlers
+    BaseSourceHandler,
+    ServiceNowHandler,
+    MockServiceNowHandler,
+    PrometheusHandler,
+    MockPrometheusHandler,
+    UserInputHandler,
+    MockUserInputHandler,
+)
 
 __all__ = [
     # Core Models
@@ -63,4 +90,27 @@ __all__ = [
     "RefinementRules",
     "create_guided_dialog_engine",
     "create_mock_dialog_engine",
+    # Input Gateway - Models
+    "SourceType",
+    "IncomingRequest",
+    "GatewayConfig",
+    "GatewayMetrics",
+    # Input Gateway - Core
+    "InputGateway",
+    "MockInputGateway",
+    "create_input_gateway",
+    "create_mock_gateway",
+    # Input Gateway - Schema Validator
+    "SchemaValidator",
+    "MockSchemaValidator",
+    "SchemaDefinition",
+    "ValidationError",
+    # Input Gateway - Source Handlers
+    "BaseSourceHandler",
+    "ServiceNowHandler",
+    "MockServiceNowHandler",
+    "PrometheusHandler",
+    "MockPrometheusHandler",
+    "UserInputHandler",
+    "MockUserInputHandler",
 ]
