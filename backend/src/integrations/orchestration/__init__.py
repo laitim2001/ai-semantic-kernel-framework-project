@@ -7,12 +7,14 @@ This module provides intelligent routing and dialog management:
 - Layer 3: LLM Classifier (semantic understanding)
 - Guided Dialog Engine (multi-turn information gathering)
 - Input Gateway (source-based routing with simplified paths)
+- Risk Assessor (risk evaluation for routing decisions)
 
 Sprint 91: Pattern Matcher + Rule Definition (Phase 28)
 Sprint 92: Semantic Router + LLM Classifier (Phase 28)
 Sprint 93: BusinessIntentRouter + CompletenessChecker (Phase 28)
 Sprint 94: GuidedDialogEngine + Incremental Update (Phase 28)
 Sprint 95: InputGateway + SourceHandlers (Phase 28)
+Sprint 96: RiskAssessor + Policies (Phase 28)
 """
 
 from .intent_router.models import (
@@ -65,6 +67,16 @@ from .input_gateway import (
     UserInputHandler,
     MockUserInputHandler,
 )
+from .risk_assessor import (
+    # Core classes
+    RiskAssessor,
+    RiskAssessment,
+    RiskFactor,
+    AssessmentContext,
+    # Policy classes
+    RiskPolicies,
+    RiskPolicy,
+)
 
 __all__ = [
     # Core Models
@@ -113,4 +125,11 @@ __all__ = [
     "MockPrometheusHandler",
     "UserInputHandler",
     "MockUserInputHandler",
+    # Risk Assessor
+    "RiskAssessor",
+    "RiskAssessment",
+    "RiskFactor",
+    "AssessmentContext",
+    "RiskPolicies",
+    "RiskPolicy",
 ]

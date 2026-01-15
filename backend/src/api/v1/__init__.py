@@ -95,6 +95,10 @@ from src.api.v1.patrol.routes import router as patrol_router  # Sprint 82: Patro
 from src.api.v1.correlation.routes import router as correlation_router  # Sprint 82: Correlation Analysis
 from src.api.v1.rootcause import router as rootcause_router  # Sprint 82: Root Cause Analysis
 
+# Phase 28: Three-Tier Routing Architecture
+from src.api.v1.orchestration import router as orchestration_router  # Sprint 96: Intent Classification
+from src.api.v1.orchestration import intent_router as orchestration_intent_router  # Sprint 96: Intent API
+
 # Create main v1 router
 api_router = APIRouter(prefix="/api/v1")
 
@@ -168,5 +172,9 @@ api_router.include_router(a2a_router)  # Sprint 81: A2A Protocol
 api_router.include_router(patrol_router)  # Sprint 82: Patrol Mode
 api_router.include_router(correlation_router)  # Sprint 82: Correlation Analysis
 api_router.include_router(rootcause_router)  # Sprint 82: Root Cause Analysis
+
+# Include sub-routers - Phase 28 (Three-Tier Routing Architecture)
+api_router.include_router(orchestration_router)  # Sprint 96: Orchestration & Policies
+api_router.include_router(orchestration_intent_router)  # Sprint 96: Intent Classification
 
 __all__ = ["api_router"]
