@@ -294,3 +294,156 @@ class PatternRule:
             "description": self.description,
             "enabled": self.enabled,
         }
+
+
+# =============================================================================
+# Sprint 92: Semantic Router + LLM Classifier Models
+# =============================================================================
+
+
+@dataclass
+class SemanticRouteResult:
+    """
+    Result from the semantic routing layer.
+
+    Attributes:
+        matched: Whether a semantic route was matched above threshold
+        intent_category: Detected intent category
+        sub_intent: More specific intent classification
+        similarity: Similarity score from vector comparison (0.0 to 1.0)
+        route_name: Name of the matched semantic route
+        metadata: Additional route metadata
+    """
+    matched: bool
+    intent_category: Optional[ITIntentCategory] = None
+    sub_intent: Optional[str] = None
+    similarity: float = 0.0
+    route_name: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        """Validate similarity score range."""
+        if not 0.0 <= self.similarity <= 1.0:
+            raise ValueError("similarity must be between 0.0 and 1.0")
+
+    @classmethod
+    def no_match(cls, similarity: float = 0.0) -> "SemanticRouteResult":
+        """Factory method for creating a no-match result."""
+        return cls(matched=False, similarity=similarity)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "matched": self.matched,
+            "intent_category": self.intent_category.value if self.intent_category else None,
+            "sub_intent": self.sub_intent,
+            "similarity": self.similarity,
+            "route_name": self.route_name,
+            "metadata": self.metadata,
+        }
+
+
+@dataclass
+class LLMClassificationResult:
+    """
+    Result from the LLM classification layer.
+
+    Attributes:
+        intent_category: Classified intent category
+        sub_intent: More specific intent classification
+        confidence: Classification confidence score (0.0 to 1.0)
+        completeness: Information completeness assessment
+        reasoning: LLM's reasoning for the classification
+        raw_response: Raw response text from LLM
+        model: Model used for classification
+        usage: Token usage statistics
+    """
+    intent_category: ITIntentCategory
+    sub_intent: Optional[str] = None
+    confidence: float = 0.0
+    completeness: CompletenessInfo = field(default_factory=CompletenessInfo)
+    reasoning: str = ""
+    raw_response: str = ""
+    model: str = ""
+    usage: Dict[str, int] = field(default_factory=dict)
+
+    def __post_init__(self):
+        """Validate confidence score range."""
+        if not 0.0 <= self.confidence <= 1.0:
+            raise ValueError("confidence must be between 0.0 and 1.0")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "intent_category": self.intent_category.value,
+            "sub_intent": self.sub_intent,
+            "confidence": self.confidence,
+            "completeness": {
+                "is_complete": self.completeness.is_complete,
+                "missing_fields": self.completeness.missing_fields,
+                "optional_missing": self.completeness.optional_missing,
+                "completeness_score": self.completeness.completeness_score,
+                "suggestions": self.completeness.suggestions,
+            },
+            "reasoning": self.reasoning,
+            "model": self.model,
+            "usage": self.usage,
+        }
+
+    @classmethod
+    def from_pattern_fallback(
+        cls,
+        pattern_result: PatternMatchResult,
+    ) -> "LLMClassificationResult":
+        """
+        Create LLMClassificationResult from pattern match as fallback.
+
+        Used when pattern match is sufficient and LLM classification is skipped.
+        """
+        return cls(
+            intent_category=pattern_result.intent_category or ITIntentCategory.UNKNOWN,
+            sub_intent=pattern_result.sub_intent,
+            confidence=pattern_result.confidence,
+            reasoning=f"Classified via pattern match: {pattern_result.matched_pattern}",
+        )
+
+
+@dataclass
+class SemanticRoute:
+    """
+    Definition of a semantic route for vector-based matching.
+
+    Attributes:
+        name: Unique route name
+        category: Intent category this route maps to
+        sub_intent: More specific intent classification
+        utterances: Example utterances for this route (used for training)
+        description: Human-readable description
+        workflow_type: Suggested workflow type
+        risk_level: Default risk level
+        enabled: Whether the route is active
+        metadata: Additional route metadata
+    """
+    name: str
+    category: ITIntentCategory
+    sub_intent: str
+    utterances: List[str]
+    description: str = ""
+    workflow_type: WorkflowType = WorkflowType.SIMPLE
+    risk_level: RiskLevel = RiskLevel.MEDIUM
+    enabled: bool = True
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "name": self.name,
+            "category": self.category.value,
+            "sub_intent": self.sub_intent,
+            "utterances": self.utterances,
+            "description": self.description,
+            "workflow_type": self.workflow_type.value,
+            "risk_level": self.risk_level.value,
+            "enabled": self.enabled,
+            "metadata": self.metadata,
+        }
