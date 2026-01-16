@@ -16,7 +16,8 @@ pydantic-settings>=2.1.0
 # ===========================================
 # Preview version (Beta) - monitor for GA release
 # Note: [azure] extra not available, use base package
-agent-framework>=1.0.0b251120
+# Version locked to prevent unintended upgrades (2026-01-16)
+agent-framework>=1.0.0b260114,<2.0.0
 
 # ===========================================
 # Database
@@ -64,6 +65,8 @@ python-dotenv>=1.0.0
 structlog>=24.1.0            # Structured logging
 tenacity>=8.2.0              # Retry logic
 croniter>=2.0.0              # Cron expression parsing
+aiofiles>=23.0.0             # Async file operations
+email-validator>=2.0.0       # Pydantic EmailStr validation
 
 # ===========================================
 # Observability (Optional - Sprint 3)

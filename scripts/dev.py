@@ -84,6 +84,51 @@ class ServiceType(Enum):
 # Utility Functions
 # =============================================================================
 
+def find_python_executable(python_version: Optional[str] = None) -> List[str]:
+    """
+    查找指定版本的 Python 可執行文件。
+
+    Args:
+        python_version: Python 版本號 (如 "3.13", "3.12")，None 表示使用當前 Python
+
+    Returns:
+        可執行命令列表 (如 ['py', '-3.13'] 或 [sys.executable])
+    """
+    if python_version is None:
+        return [sys.executable]
+
+    # Windows: 使用 py launcher
+    if sys.platform == 'win32':
+        try:
+            result = subprocess.run(
+                ['py', f'-{python_version}', '--version'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                print(f"  Found Python {python_version}: {result.stdout.strip()}")
+                return ['py', f'-{python_version}']
+        except Exception as e:
+            print(f"  Warning: Could not find Python {python_version} via py launcher: {e}")
+
+    # Linux/Mac: 嘗試 python3.X
+    else:
+        python_cmd = f'python{python_version}'
+        try:
+            result = subprocess.run(
+                [python_cmd, '--version'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                print(f"  Found Python {python_version}: {result.stdout.strip()}")
+                return [python_cmd]
+        except Exception as e:
+            print(f"  Warning: Could not find {python_cmd}: {e}")
+
+    # 回退到當前 Python
+    print(f"  Falling back to current Python: {sys.executable}")
+    return [sys.executable]
+
+
 def get_pid_file(service: str, port: int = 0) -> Path:
     """Get PID file path for the given service."""
     PID_DIR.mkdir(exist_ok=True)
@@ -334,8 +379,16 @@ def backend_status(port: int = DEFAULT_BACKEND_PORT) -> Dict[str, Any]:
     }
 
 
-def backend_start(port: int = DEFAULT_BACKEND_PORT, foreground: bool = False) -> Optional[int]:
-    """Start the backend server."""
+def backend_start(port: int = DEFAULT_BACKEND_PORT, foreground: bool = False,
+                  python_version: Optional[str] = None) -> Optional[int]:
+    """
+    Start the backend server.
+
+    Args:
+        port: Port number (default: 8000)
+        foreground: Run in foreground mode
+        python_version: Specific Python version to use (e.g., "3.13")
+    """
     print(f"\n🚀 Starting backend server...")
 
     # Check for existing processes
@@ -373,8 +426,13 @@ def backend_start(port: int = DEFAULT_BACKEND_PORT, foreground: bool = False) ->
     # Start uvicorn
     print(f"  Starting uvicorn on port {actual_port}...")
 
+    # Get Python executable
+    python_cmd = find_python_executable(python_version)
+    if python_version:
+        print(f"  Using Python command: {' '.join(python_cmd)}")
+
     uvicorn_args = [
-        sys.executable, '-m', 'uvicorn', 'main:app',
+        *python_cmd, '-m', 'uvicorn', 'main:app',
         '--reload',
         '--host', '0.0.0.0',
         '--port', str(actual_port),
@@ -404,7 +462,13 @@ def backend_start(port: int = DEFAULT_BACKEND_PORT, foreground: bool = False) ->
     else:
         os.chdir(str(BACKEND_DIR))
         print(f"  Running in foreground (Ctrl+C to stop)...")
-        os.execvp(sys.executable, uvicorn_args)
+        # Use subprocess.run to support multi-part python commands (e.g., ['py', '-3.13'])
+        try:
+            subprocess.run(uvicorn_args, check=True)
+        except KeyboardInterrupt:
+            print("\n  Stopped by user")
+        except subprocess.CalledProcessError as e:
+            print(f"  ❌ Server exited with code {e.returncode}")
 
     return actual_port
 
@@ -605,7 +669,8 @@ def cmd_status() -> None:
 
 
 def cmd_start(service: str = "all", backend_port: int = DEFAULT_BACKEND_PORT,
-              frontend_port: int = DEFAULT_FRONTEND_PORT, monitoring: bool = False) -> bool:
+              frontend_port: int = DEFAULT_FRONTEND_PORT, monitoring: bool = False,
+              python_version: Optional[str] = None) -> bool:
     """Start services."""
     success = True
 
@@ -614,7 +679,7 @@ def cmd_start(service: str = "all", backend_port: int = DEFAULT_BACKEND_PORT,
         time.sleep(2)  # Wait for docker services to be ready
 
     if service in ["all", "backend"]:
-        result = backend_start(backend_port)
+        result = backend_start(backend_port, python_version=python_version)
         success = (result is not None) and success
 
     if service in ["all", "frontend"]:
@@ -694,12 +759,14 @@ Services:
 Options:
   --backend-port <port>  - Backend port (default: 8000)
   --frontend-port <port> - Frontend port (default: 3005)
+  --python <version>     - Python version for backend (e.g., 3.13, 3.12)
   --monitoring           - Include monitoring services (jaeger, prometheus, grafana)
   --fg                   - Run in foreground
 
 Examples:
   python scripts/dev.py start              # Start all services
   python scripts/dev.py start backend      # Start backend only
+  python scripts/dev.py start backend --python 3.13  # Start backend with Python 3.13
   python scripts/dev.py start docker --monitoring  # Start docker with monitoring
   python scripts/dev.py stop frontend      # Stop frontend only
   python scripts/dev.py restart backend    # Restart backend
@@ -730,6 +797,7 @@ def main() -> None:
     frontend_port = DEFAULT_FRONTEND_PORT
     monitoring = False
     follow = False
+    python_version = None
 
     args = sys.argv[2:]
     i = 0
@@ -740,6 +808,9 @@ def main() -> None:
             i += 2
         elif arg == '--frontend-port' and i + 1 < len(args):
             frontend_port = int(args[i + 1])
+            i += 2
+        elif arg == '--python' and i + 1 < len(args):
+            python_version = args[i + 1]
             i += 2
         elif arg == '--monitoring':
             monitoring = True
@@ -755,7 +826,7 @@ def main() -> None:
 
     # Execute command
     if command == 'start':
-        success = cmd_start(service, backend_port, frontend_port, monitoring)
+        success = cmd_start(service, backend_port, frontend_port, monitoring, python_version)
         sys.exit(0 if success else 1)
     elif command == 'stop':
         success = cmd_stop(service, backend_port, frontend_port)

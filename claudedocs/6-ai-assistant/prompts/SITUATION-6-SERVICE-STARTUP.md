@@ -240,6 +240,98 @@ pip install watchfiles
 python scripts/dev.py restart backend
 ```
 
+### 問題 7: Python 版本不兼容 (新開發環境)
+
+**症狀**: 系統默認 Python 3.14，但專案需要 Python 3.13
+
+**診斷**:
+```bash
+# 檢查可用的 Python 版本
+py -0p
+
+# 預期輸出類似:
+# -V:3.14 *        C:\...\python.exe  (默認，有問題)
+# -V:3.13          C:\Program Files\Python313\python.exe (需要)
+```
+
+**解決方案**:
+```bash
+# 方案 A: 使用 py launcher 指定版本
+py -3.13 scripts/dev.py start
+
+# 方案 B: 創建並使用 Virtual Environment (推薦)
+# 見下方「問題 8: Virtual Environment 設置」
+```
+
+### 問題 8: Virtual Environment 設置 (新開發環境)
+
+**症狀**: 需要為專案創建獨立的 Python 環境
+
+**注意**: 在 Git Bash 環境下，`python -m venv` 可能有路徑解析問題
+
+**解決方案**:
+```bash
+# 步驟 1: 刪除舊的 venv (如存在)
+rm -rf backend/venv
+
+# 步驟 2: 使用 Python 腳本創建 venv (避免命令行 bug)
+"C:\Program Files\Python313\python.exe" -c "
+import venv
+builder = venv.EnvBuilder(with_pip=True)
+builder.create('C:/path/to/project/backend/venv')
+"
+
+# 步驟 3: 安裝依賴
+backend/venv/Scripts/pip.exe install -r backend/requirements.txt
+
+# 步驟 4: 使用 venv 中的 Python 啟動
+backend/venv/Scripts/python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 問題 9: agent_framework API 變更
+
+**症狀**: ImportError - 類名已更改
+
+**已知變更** (版本 1.0.0b260114):
+| 舊名稱 | 新名稱 | 狀態 |
+|--------|--------|------|
+| `HandoffUserInputRequest` | `HandoffAgentUserRequest` | 已重命名 |
+| `GroupChatDirective` | - | 已移除 |
+| `ManagerSelectionResponse` | - | 已移除 |
+
+**解決方案**:
+```python
+# 修改導入語句
+# 舊:
+from agent_framework import HandoffUserInputRequest
+
+# 新:
+from agent_framework import HandoffAgentUserRequest
+```
+
+**受影響文件**:
+- `backend/src/integrations/agent_framework/builders/handoff.py`
+- `backend/src/integrations/agent_framework/builders/groupchat.py`
+- `backend/scripts/verify_official_api_usage.py`
+
+### 問題 10: 缺失依賴包
+
+**症狀**: `ModuleNotFoundError` 或 `ImportError`
+
+**常見缺失依賴**:
+```bash
+# email-validator (pydantic EmailStr 需要)
+pip install email-validator
+
+# aiofiles (異步文件操作需要)
+pip install aiofiles
+
+# 或一次性安裝
+pip install email-validator aiofiles
+```
+
+**注意**: 這些依賴已添加到 `requirements.txt`，新安裝應自動包含。
+
 ---
 
 ## 🔒 環境變數設定
@@ -378,4 +470,4 @@ python scripts/dev.py start
 
 **維護者**: AI 助手 + 開發團隊
 **最後更新**: 2026-01-16
-**版本**: 1.0
+**版本**: 1.1 (新增問題 7-10: 新開發環境問題排解)

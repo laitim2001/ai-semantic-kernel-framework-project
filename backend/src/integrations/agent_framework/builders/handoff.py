@@ -53,7 +53,7 @@ from ..base import BuilderAdapter
 # =============================================================================
 from agent_framework import (
     HandoffBuilder,
-    HandoffUserInputRequest,
+    HandoffAgentUserRequest,  # Renamed from HandoffUserInputRequest
 )
 
 logger = logging.getLogger(__name__)
@@ -153,7 +153,7 @@ class UserInputRequest:
     """
     用戶輸入請求。
 
-    對應 Agent Framework 的 HandoffUserInputRequest。
+    對應 Agent Framework 的 HandoffAgentUserRequest。
 
     Attributes:
         request_id: 請求 ID

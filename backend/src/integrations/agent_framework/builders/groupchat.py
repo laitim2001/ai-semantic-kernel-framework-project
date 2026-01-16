@@ -82,8 +82,8 @@ from ..exceptions import WorkflowBuildError, AdapterError
 # =============================================================================
 from agent_framework import (
     GroupChatBuilder,
-    GroupChatDirective,
-    ManagerSelectionResponse,
+    # Note: GroupChatDirective and ManagerSelectionResponse were removed in newer API
+    # Now with_select_speaker_func returns str (agent name) directly
 )
 
 logger = logging.getLogger(__name__)

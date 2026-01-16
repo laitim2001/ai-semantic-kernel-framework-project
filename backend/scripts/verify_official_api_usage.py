@@ -23,8 +23,8 @@ from typing import Dict, List, Set, Tuple
 # 每個適配器文件需要導入的官方類
 REQUIRED_IMPORTS: Dict[str, List[str]] = {
     "concurrent.py": ["ConcurrentBuilder"],
-    "groupchat.py": ["GroupChatBuilder", "GroupChatDirective", "ManagerSelectionResponse"],
-    "handoff.py": ["HandoffBuilder", "HandoffUserInputRequest"],
+    "groupchat.py": ["GroupChatBuilder"],  # GroupChatDirective/ManagerSelectionResponse removed in newer API
+    "handoff.py": ["HandoffBuilder", "HandoffAgentUserRequest"],
     "magentic.py": ["MagenticBuilder", "MagenticManagerBase", "StandardMagenticManager"],
     "workflow_executor.py": ["WorkflowExecutor", "SubWorkflowRequestMessage", "SubWorkflowResponseMessage"],
 }

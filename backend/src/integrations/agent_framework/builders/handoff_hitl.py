@@ -5,7 +5,7 @@
 # Phase 3 Feature: P3-F2 (Agent Handoff 重構) - S15-3
 #
 # 此模組實現 Handoff 工作流的人機互動 (Human-in-the-Loop) 功能。
-# 對應 Agent Framework 的 HandoffUserInputRequest 和 RequestInfoEvent。
+# 對應 Agent Framework 的 HandoffAgentUserRequest 和 RequestInfoEvent。
 #
 # 核心功能:
 #   - HITLSession: 管理單次 HITL 對話會話
@@ -26,7 +26,7 @@
 #   - 支持審計日誌
 #
 # References:
-#   - Agent Framework HandoffUserInputRequest
+#   - Agent Framework HandoffAgentUserRequest
 #   - IPA Platform Checkpoint System
 # =============================================================================
 
@@ -98,7 +98,7 @@ class HITLInputRequest:
     """
     HITL 輸入請求。
 
-    對應 Agent Framework 的 HandoffUserInputRequest。
+    對應 Agent Framework 的 HandoffAgentUserRequest。
 
     Attributes:
         request_id: 請求 ID
