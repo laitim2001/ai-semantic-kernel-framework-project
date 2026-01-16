@@ -586,12 +586,13 @@ class TestCreateOrchestratorV2:
         assert orchestrator.config.primary_framework == "microsoft_agent_framework"
 
     def test_create_with_intent_router(self, mock_intent_router):
-        """Test creating orchestrator with intent router."""
+        """Test creating orchestrator with intent router (framework_selector)."""
         orchestrator = create_orchestrator_v2(
             intent_router=mock_intent_router
         )
 
-        assert orchestrator._intent_router == mock_intent_router
+        # Sprint 98: _intent_router renamed to _framework_selector
+        assert orchestrator._framework_selector == mock_intent_router
 
     def test_create_with_context_bridge(self, mock_context_bridge):
         """Test creating orchestrator with context bridge."""
@@ -614,7 +615,8 @@ class TestCreateOrchestratorV2:
             unified_executor=mock_tool_executor,
         )
 
-        assert orchestrator._intent_router == mock_intent_router
+        # Sprint 98: _intent_router renamed to _framework_selector
+        assert orchestrator._framework_selector == mock_intent_router
         assert orchestrator._context_bridge == mock_context_bridge
         assert orchestrator._unified_executor == mock_tool_executor
 

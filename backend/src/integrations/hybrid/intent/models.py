@@ -1,19 +1,22 @@
 # =============================================================================
-# IPA Platform - Intent Analysis Models
+# IPA Platform - Framework Selection Models (formerly Intent Analysis Models)
 # =============================================================================
 # Phase 13: Hybrid Core Architecture
 # Sprint 52: Intent Router & Mode Detection
+# Sprint 98: Added FrameworkAnalysis alias (Phase 28 Integration)
 #
-# Data models for intent analysis and execution mode detection.
+# Data models for framework selection and execution mode detection.
 #
 # Key Models:
 #   - ExecutionMode: Enum for execution modes
-#   - IntentAnalysis: Analysis result with mode and confidence
+#   - IntentAnalysis (FrameworkAnalysis): Analysis result with mode and confidence
 #   - SessionContext: Session context for analysis
 #   - ClassificationResult: Result from individual classifiers
 #
 # Dependencies:
 #   - pydantic (BaseModel, Field)
+#
+# Note: FrameworkAnalysis is an alias for IntentAnalysis for backward compatibility.
 # =============================================================================
 
 from datetime import datetime
@@ -207,3 +210,12 @@ class MultiAgentAnalysis(BaseModel):
     collaboration_pattern: Optional[str] = None
     confidence: float = Field(ge=0.0, le=1.0, default=0.5)
     reasoning: str = ""
+
+
+# =============================================================================
+# Backward Compatibility Aliases (Sprint 98)
+# =============================================================================
+
+# FrameworkAnalysis is an alias for IntentAnalysis
+# Both names can be used interchangeably
+FrameworkAnalysis = IntentAnalysis

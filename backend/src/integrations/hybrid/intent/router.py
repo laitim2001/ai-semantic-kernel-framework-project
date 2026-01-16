@@ -1,10 +1,11 @@
 # =============================================================================
-# IPA Platform - Intent Router
+# IPA Platform - Framework Selector (formerly Intent Router)
 # =============================================================================
 # Phase 13: Hybrid Core Architecture
 # Sprint 52: Intent Router & Mode Detection
+# Sprint 98: Renamed IntentRouter → FrameworkSelector (Phase 28 Integration)
 #
-# Main intent router class that analyzes user input and determines
+# Main framework selector class that analyzes user input and determines
 # the optimal execution mode (Workflow, Chat, or Hybrid).
 #
 # Decision Logic:
@@ -15,7 +16,9 @@
 #
 # Dependencies:
 #   - classifiers/base.py (BaseClassifier)
-#   - models.py (ExecutionMode, IntentAnalysis, SessionContext)
+#   - models.py (ExecutionMode, FrameworkAnalysis, SessionContext)
+#
+# Note: IntentRouter and IntentAnalysis are kept as backward-compatible aliases.
 # =============================================================================
 
 import logging
@@ -35,11 +38,14 @@ from src.integrations.hybrid.intent.models import (
 logger = logging.getLogger(__name__)
 
 
-class IntentRouter:
+class FrameworkSelector:
     """
-    Intent Router for analyzing user input and determining execution mode.
+    Framework Selector for analyzing user input and determining execution mode.
 
-    The IntentRouter uses multiple classifiers to analyze user input and
+    Sprint 98: Renamed from IntentRouter to FrameworkSelector to avoid confusion
+    with Phase 28's BusinessIntentRouter which handles IT intent classification.
+
+    The FrameworkSelector uses multiple classifiers to analyze user input and
     determine the optimal execution mode. It supports rule-based classification,
     complexity analysis, and LLM-based classification as a fallback.
 
@@ -52,11 +58,11 @@ class IntentRouter:
     Example:
         >>> from src.integrations.hybrid.intent.classifiers.rule_based import RuleBasedClassifier
         >>>
-        >>> router = IntentRouter(
+        >>> selector = FrameworkSelector(
         ...     classifiers=[RuleBasedClassifier()],
         ...     confidence_threshold=0.7
         ... )
-        >>> analysis = await router.analyze_intent("Help me create a workflow")
+        >>> analysis = await selector.select_framework("Help me create a workflow")
         >>> print(analysis.mode)  # ExecutionMode.WORKFLOW_MODE
 
     Decision Flow:
@@ -88,7 +94,7 @@ class IntentRouter:
         self.enable_logging = enable_logging
 
         logger.info(
-            f"IntentRouter initialized with {len(self.classifiers)} classifiers, "
+            f"FrameworkSelector initialized with {len(self.classifiers)} classifiers, "
             f"threshold={confidence_threshold}, default={default_mode.value}"
         )
 
@@ -119,16 +125,18 @@ class IntentRouter:
                 return True
         return False
 
-    async def analyze_intent(
+    async def select_framework(
         self,
         user_input: str,
         session_context: Optional[SessionContext] = None,
         history: Optional[List[Message]] = None,
+        routing_decision: Optional["RoutingDecision"] = None,
     ) -> IntentAnalysis:
         """
-        Analyze user intent and determine execution mode.
+        Select the appropriate framework based on user input.
 
-        This is the main entry point for intent analysis. It runs all enabled
+        Sprint 98: Renamed from analyze_intent to select_framework.
+        This is the main entry point for framework selection. It runs all enabled
         classifiers, aggregates their results, and returns a comprehensive
         analysis result.
 
@@ -136,12 +144,13 @@ class IntentRouter:
             user_input: The user's input text to analyze
             session_context: Optional session context for additional info
             history: Optional conversation history
+            routing_decision: Optional routing decision from BusinessIntentRouter (Phase 28)
 
         Returns:
-            IntentAnalysis with the detected mode, confidence, and reasoning
+            IntentAnalysis (FrameworkAnalysis) with the detected mode, confidence, and reasoning
 
         Example:
-            >>> analysis = await router.analyze_intent(
+            >>> analysis = await selector.select_framework(
             ...     "Create a multi-step workflow for data processing",
             ...     session_context=SessionContext(session_id="sess_123")
             ... )
@@ -426,3 +435,43 @@ class IntentRouter:
         """
         self.default_mode = mode
         logger.debug(f"Default mode set to {mode.value}")
+
+    # =========================================================================
+    # Backward Compatibility Methods (Sprint 98)
+    # =========================================================================
+
+    async def analyze_intent(
+        self,
+        user_input: str,
+        session_context: Optional[SessionContext] = None,
+        history: Optional[List[Message]] = None,
+    ) -> IntentAnalysis:
+        """
+        Backward-compatible alias for select_framework().
+
+        Deprecated: Use select_framework() instead.
+
+        Args:
+            user_input: The user's input text to analyze
+            session_context: Optional session context for additional info
+            history: Optional conversation history
+
+        Returns:
+            IntentAnalysis with the detected mode, confidence, and reasoning
+        """
+        return await self.select_framework(
+            user_input=user_input,
+            session_context=session_context,
+            history=history,
+        )
+
+
+# =============================================================================
+# Backward Compatibility Aliases (Sprint 98)
+# =============================================================================
+
+# IntentRouter is now FrameworkSelector
+IntentRouter = FrameworkSelector
+
+# IntentAnalysis is now FrameworkAnalysis (alias defined in models.py)
+# Note: FrameworkAnalysis is the same as IntentAnalysis for backward compatibility

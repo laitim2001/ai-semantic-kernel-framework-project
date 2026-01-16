@@ -2,12 +2,20 @@
 # IPA Platform - Hybrid Orchestrator V2
 # =============================================================================
 # Sprint 54: HybridOrchestrator Refactor (S54-3)
+# Sprint 98: Phase 28 Integration - FrameworkSelector + Phase 28 Components
 #
 # 重構後的混合編排器，整合 Phase 13 所有核心組件:
-#   - IntentRouter: 意圖分析和執行模式選擇
+#   - FrameworkSelector (IntentRouter): 框架選擇和執行模式選擇
 #   - ContextBridge: 跨框架上下文同步
 #   - UnifiedToolExecutor: 統一 Tool 執行層
 #   - MAFToolCallback: MAF Tool 回調整合
+#
+# Phase 28 新增組件:
+#   - InputGateway: 來源識別和分流處理
+#   - BusinessIntentRouter: IT 意圖分類
+#   - GuidedDialogEngine: 引導式對話
+#   - RiskAssessor: 風險評估
+#   - HITLController: 審批流程控制
 #
 # 執行模式:
 #   - WORKFLOW_MODE: 多步驟結構化工作流程 (MAF 主導)
@@ -15,9 +23,10 @@
 #   - HYBRID_MODE: 動態切換模式
 #
 # Dependencies:
-#   - IntentRouter (src.integrations.hybrid.intent)
+#   - FrameworkSelector (src.integrations.hybrid.intent)
 #   - ContextBridge (src.integrations.hybrid.context)
 #   - UnifiedToolExecutor (src.integrations.hybrid.execution)
+#   - Phase 28 Components (src.integrations.orchestration)
 # =============================================================================
 
 import asyncio
@@ -30,6 +39,7 @@ from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 from src.integrations.hybrid.intent import (
     ExecutionMode,
+    FrameworkSelector,
     IntentAnalysis,
     IntentRouter,
     SessionContext,
@@ -47,6 +57,28 @@ from src.integrations.hybrid.execution import (
     ToolExecutionResult,
     MAFToolCallback,
     create_maf_callback,
+)
+
+# Phase 28 Components (Sprint 93-97)
+from src.integrations.orchestration import (
+    # Sprint 93: BusinessIntentRouter
+    BusinessIntentRouter,
+    RoutingDecision,
+    CompletenessInfo,
+    # Sprint 94: GuidedDialogEngine
+    GuidedDialogEngine,
+    DialogResponse,
+    # Sprint 95: InputGateway
+    InputGateway,
+    IncomingRequest,
+    SourceType,
+    # Sprint 96: RiskAssessor
+    RiskAssessor,
+    RiskAssessment,
+    # Sprint 97: HITLController
+    HITLController,
+    ApprovalRequest,
+    ApprovalStatus,
 )
 
 if TYPE_CHECKING:
@@ -117,49 +149,91 @@ class HybridOrchestratorV2:
     整合 Phase 13 所有核心組件，提供智能的執行模式選擇、
     跨框架上下文同步和統一的 Tool 執行。
 
-    Key Features:
-    - 智能意圖分析和模式選擇 (IntentRouter)
+    Key Features (Phase 13):
+    - 智能框架選擇和模式選擇 (FrameworkSelector)
     - 跨框架上下文同步 (ContextBridge)
     - 統一 Tool 執行層 (UnifiedToolExecutor)
     - MAF Tool 回調整合 (MAFToolCallback)
     - 向後兼容 V1 API
+
+    Phase 28 Features (Sprint 98 Integration):
+    - InputGateway: 來源識別和分流處理
+    - BusinessIntentRouter: IT 意圖分類
+    - GuidedDialogEngine: 引導式對話
+    - RiskAssessor: 風險評估
+    - HITLController: 審批流程控制
+
+    Execute Flow (Phase 28):
+    1. InputGateway → 來源識別和處理
+    2. 檢查 completeness.is_sufficient
+    3. GuidedDialogEngine → 資訊收集 (如需要)
+    4. RiskAssessor → 風險評估
+    5. HITLController → 審批 (如需要)
+    6. FrameworkSelector → 框架選擇
+    7. 執行 (Claude SDK / MAF)
     """
 
     def __init__(
         self,
         *,
         config: Optional[OrchestratorConfig] = None,
-        intent_router: Optional[IntentRouter] = None,
+        # Phase 28 Components (Sprint 93-97)
+        input_gateway: Optional[InputGateway] = None,
+        business_router: Optional[BusinessIntentRouter] = None,
+        guided_dialog: Optional[GuidedDialogEngine] = None,
+        risk_assessor: Optional[RiskAssessor] = None,
+        hitl_controller: Optional[HITLController] = None,
+        # Phase 13 Components (Sprint 52-54)
+        framework_selector: Optional[FrameworkSelector] = None,
         context_bridge: Optional[ContextBridge] = None,
         unified_executor: Optional[UnifiedToolExecutor] = None,
         maf_callback: Optional[MAFToolCallback] = None,
-        framework_selector: Optional["FrameworkSelector"] = None,
         claude_executor: Optional[Callable] = None,
         maf_executor: Optional[Callable] = None,
+        # Backward compatibility aliases
+        intent_router: Optional[FrameworkSelector] = None,
     ):
         """
         Initialize HybridOrchestratorV2.
 
         Args:
             config: Orchestrator configuration
-            intent_router: Router for intent analysis (Sprint 52)
+
+            # Phase 28 Components (Sprint 98 Integration)
+            input_gateway: Gateway for source routing (Sprint 95)
+            business_router: Business intent router for IT classification (Sprint 93)
+            guided_dialog: Guided dialog engine for information gathering (Sprint 94)
+            risk_assessor: Risk assessor for operation risk evaluation (Sprint 96)
+            hitl_controller: HITL controller for approval workflow (Sprint 97)
+
+            # Phase 13 Components
+            framework_selector: Framework selector for mode selection (Sprint 98)
             context_bridge: Bridge for context sync (Sprint 53)
             unified_executor: Unified tool executor (Sprint 54)
             maf_callback: MAF tool callback (Sprint 54)
-            framework_selector: Legacy selector for V1 compat
             claude_executor: Executor for Claude SDK
             maf_executor: Executor for MAF
+
+            # Backward Compatibility
+            intent_router: Deprecated - use framework_selector instead
         """
         self._config = config or OrchestratorConfig()
 
-        # Phase 13 components
-        self._intent_router = intent_router or IntentRouter()
+        # Phase 28 Components (Sprint 93-97)
+        self._input_gateway = input_gateway
+        self._business_router = business_router
+        self._guided_dialog = guided_dialog
+        self._risk_assessor = risk_assessor
+        self._hitl_controller = hitl_controller
+
+        # Phase 13 + Sprint 98 components
+        # Support both framework_selector and intent_router (backward compat)
+        self._framework_selector = framework_selector or intent_router or FrameworkSelector()
         self._context_bridge = context_bridge or ContextBridge()
         self._unified_executor = unified_executor
         self._maf_callback = maf_callback
 
-        # Legacy components (for V1 compatibility)
-        self._framework_selector = framework_selector
+        # Executors
         self._claude_executor = claude_executor
         self._maf_executor = maf_executor
 
@@ -172,9 +246,14 @@ class HybridOrchestratorV2:
 
         logger.info(
             f"HybridOrchestratorV2 initialized: mode={self._config.mode.value}, "
-            f"intent_router={intent_router is not None}, "
+            f"framework_selector={self._framework_selector is not None}, "
             f"context_bridge={context_bridge is not None}, "
-            f"unified_executor={unified_executor is not None}"
+            f"unified_executor={unified_executor is not None}, "
+            f"phase_28=[input_gateway={input_gateway is not None}, "
+            f"business_router={business_router is not None}, "
+            f"guided_dialog={guided_dialog is not None}, "
+            f"risk_assessor={risk_assessor is not None}, "
+            f"hitl_controller={hitl_controller is not None}]"
         )
 
     @property
@@ -193,9 +272,57 @@ class HybridOrchestratorV2:
         return len(self._sessions)
 
     @property
-    def intent_router(self) -> IntentRouter:
-        """Get intent router instance."""
-        return self._intent_router
+    def framework_selector(self) -> FrameworkSelector:
+        """Get framework selector instance."""
+        return self._framework_selector
+
+    @property
+    def intent_router(self) -> FrameworkSelector:
+        """Get intent router instance (backward compat alias for framework_selector)."""
+        return self._framework_selector
+
+    # =========================================================================
+    # Phase 28 Component Properties (Sprint 98)
+    # =========================================================================
+
+    @property
+    def input_gateway(self) -> Optional[InputGateway]:
+        """Get input gateway instance (Phase 28, Sprint 95)."""
+        return self._input_gateway
+
+    @property
+    def business_router(self) -> Optional[BusinessIntentRouter]:
+        """Get business intent router instance (Phase 28, Sprint 93)."""
+        return self._business_router
+
+    @property
+    def guided_dialog(self) -> Optional[GuidedDialogEngine]:
+        """Get guided dialog engine instance (Phase 28, Sprint 94)."""
+        return self._guided_dialog
+
+    @property
+    def risk_assessor(self) -> Optional[RiskAssessor]:
+        """Get risk assessor instance (Phase 28, Sprint 96)."""
+        return self._risk_assessor
+
+    @property
+    def hitl_controller(self) -> Optional[HITLController]:
+        """Get HITL controller instance (Phase 28, Sprint 97)."""
+        return self._hitl_controller
+
+    def has_phase_28_components(self) -> bool:
+        """Check if Phase 28 components are configured."""
+        return any([
+            self._input_gateway is not None,
+            self._business_router is not None,
+            self._guided_dialog is not None,
+            self._risk_assessor is not None,
+            self._hitl_controller is not None,
+        ])
+
+    # =========================================================================
+    # Phase 13 Component Properties
+    # =========================================================================
 
     @property
     def context_bridge(self) -> ContextBridge:
@@ -317,7 +444,7 @@ class HybridOrchestratorV2:
                     workflow_active=is_workflow_active,
                     pending_steps=pending_steps,
                 )
-                intent_analysis = await self._intent_router.analyze_intent(
+                intent_analysis = await self._framework_selector.analyze_intent(
                     user_input=prompt,
                     session_context=session_context,
                 )
@@ -397,6 +524,257 @@ class HybridOrchestratorV2:
         result.intent_analysis = context.intent_analysis
 
         return result
+
+    # =========================================================================
+    # Phase 28 Execution Flow (Sprint 98)
+    # =========================================================================
+
+    async def execute_with_routing(
+        self,
+        request: IncomingRequest,
+        *,
+        session_id: Optional[str] = None,
+        requester: str = "system",
+        timeout: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> HybridResultV2:
+        """
+        Execute using Phase 28 routing flow.
+
+        Sprint 98: New execution method integrating all Phase 28 components.
+
+        Flow:
+        1. InputGateway.process() → 來源識別和分流處理
+        2. 檢查 completeness.is_sufficient
+        3. GuidedDialogEngine → 資訊收集 (如需要)
+        4. RiskAssessor.assess() → 風險評估
+        5. HITLController → 審批 (如需要)
+        6. FrameworkSelector.select_framework() → 框架選擇
+        7. 執行 (Claude SDK / MAF)
+
+        Args:
+            request: Incoming request from InputGateway
+            session_id: Optional session ID
+            requester: User or system making the request
+            timeout: Execution timeout in seconds
+            metadata: Additional metadata
+
+        Returns:
+            HybridResultV2 with execution outcome
+
+        Raises:
+            ValueError: If required Phase 28 components are not configured
+        """
+        start_time = time.time()
+
+        # Validate Phase 28 components
+        if not self._input_gateway:
+            raise ValueError("InputGateway not configured. Use execute() for basic execution.")
+
+        # Get or create session
+        if session_id and session_id in self._sessions:
+            context = self._sessions[session_id]
+        else:
+            sid = self.create_session(session_id, metadata)
+            context = self._sessions[sid]
+
+        context.last_activity = time.time()
+
+        try:
+            # Step 1: InputGateway 處理
+            logger.info(f"Phase 28 Step 1: Processing request via InputGateway")
+            routing_decision = await self._input_gateway.process(request)
+
+            # Step 2: 檢查完整度
+            logger.info(f"Phase 28 Step 2: Checking completeness")
+            if not routing_decision.completeness.is_sufficient:
+                # Step 3: 啟動 GuidedDialog (如需要)
+                if self._guided_dialog:
+                    logger.info(f"Phase 28 Step 3: Starting guided dialog for missing info")
+                    dialog_response = await self._handle_guided_dialog(
+                        routing_decision, request, context
+                    )
+                    if dialog_response.needs_more_info:
+                        return HybridResultV2(
+                            success=True,
+                            content=dialog_response.message,
+                            session_id=context.session_id,
+                            execution_mode=ExecutionMode.CHAT_MODE,
+                            framework_used="guided_dialog",
+                            metadata={
+                                "dialog_id": dialog_response.dialog_id,
+                                "questions": [q.dict() if hasattr(q, 'dict') else str(q)
+                                             for q in (dialog_response.questions or [])],
+                                "status": "pending_info",
+                            },
+                        )
+                    # Update routing decision with new info
+                    routing_decision = dialog_response.routing_decision or routing_decision
+
+            # Step 4: 風險評估
+            risk_assessment = None
+            if self._risk_assessor:
+                logger.info(f"Phase 28 Step 4: Assessing risk")
+                risk_assessment = self._risk_assessor.assess(routing_decision)
+
+            # Step 5: HITL 審批 (如需要)
+            if risk_assessment and risk_assessment.requires_approval:
+                if self._hitl_controller:
+                    logger.info(f"Phase 28 Step 5: Starting HITL approval")
+                    approval_result = await self._handle_hitl(
+                        routing_decision, risk_assessment, requester
+                    )
+                    if approval_result.status == ApprovalStatus.PENDING:
+                        return HybridResultV2(
+                            success=True,
+                            content="Operation requires approval. Waiting for authorization.",
+                            session_id=context.session_id,
+                            execution_mode=ExecutionMode.WORKFLOW_MODE,
+                            framework_used="hitl_controller",
+                            metadata={
+                                "approval_id": approval_result.request_id,
+                                "status": "pending_approval",
+                            },
+                        )
+                    if approval_result.status == ApprovalStatus.REJECTED:
+                        return HybridResultV2(
+                            success=False,
+                            content=f"Operation rejected: {approval_result.comment or 'No reason provided'}",
+                            session_id=context.session_id,
+                            execution_mode=ExecutionMode.WORKFLOW_MODE,
+                            framework_used="hitl_controller",
+                            error="Approval rejected",
+                            metadata={
+                                "approval_id": approval_result.request_id,
+                                "status": "rejected",
+                                "rejected_by": approval_result.rejected_by,
+                            },
+                        )
+
+            # Step 6: 框架選擇
+            logger.info(f"Phase 28 Step 6: Selecting framework")
+            session_context = SessionContext(
+                session_id=context.session_id,
+                conversation_history=context.conversation_history,
+                current_mode=context.current_mode,
+            )
+            framework_analysis = await self._framework_selector.select_framework(
+                user_input=request.content,
+                session_context=session_context,
+                routing_decision=routing_decision,
+            )
+
+            context.intent_analysis = framework_analysis
+            context.current_mode = framework_analysis.mode
+
+            # Step 7: 執行
+            logger.info(f"Phase 28 Step 7: Executing in mode {framework_analysis.mode}")
+            if framework_analysis.mode == ExecutionMode.WORKFLOW_MODE:
+                result = await self._execute_workflow_mode(
+                    request.content,
+                    context,
+                    framework_analysis,
+                    tools=None,
+                    max_tokens=None,
+                    timeout=timeout,
+                )
+            else:
+                result = await self._execute_chat_mode(
+                    request.content,
+                    context,
+                    framework_analysis,
+                    tools=None,
+                    max_tokens=None,
+                    timeout=timeout,
+                )
+
+            # Update result metadata with routing info
+            result.metadata = result.metadata or {}
+            result.metadata.update({
+                "routing_decision": routing_decision.to_dict() if hasattr(routing_decision, 'to_dict') else str(routing_decision),
+                "risk_assessment": risk_assessment.to_dict() if risk_assessment and hasattr(risk_assessment, 'to_dict') else None,
+                "phase_28_flow": True,
+            })
+
+            result.session_id = context.session_id
+            result.duration = time.time() - start_time
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Phase 28 execution error: {e}", exc_info=True)
+            return HybridResultV2(
+                success=False,
+                error=str(e),
+                session_id=context.session_id,
+                execution_mode=context.current_mode,
+                duration=time.time() - start_time,
+            )
+
+    async def _handle_guided_dialog(
+        self,
+        routing_decision: RoutingDecision,
+        request: IncomingRequest,
+        context: ExecutionContextV2,
+    ) -> DialogResponse:
+        """
+        Handle guided dialog for missing information.
+
+        Args:
+            routing_decision: Current routing decision
+            request: Original incoming request
+            context: Execution context
+
+        Returns:
+            DialogResponse with questions or updated routing decision
+        """
+        if not self._guided_dialog:
+            raise ValueError("GuidedDialogEngine not configured")
+
+        # Start dialog session
+        response = await self._guided_dialog.start_dialog(
+            request.content,
+            initial_context={
+                "routing_decision": routing_decision,
+                "source_type": request.source_type.value if hasattr(request.source_type, 'value') else str(request.source_type),
+                "session_id": context.session_id,
+            },
+        )
+
+        return response
+
+    async def _handle_hitl(
+        self,
+        routing_decision: RoutingDecision,
+        risk_assessment: RiskAssessment,
+        requester: str,
+    ) -> ApprovalRequest:
+        """
+        Handle HITL approval workflow.
+
+        Args:
+            routing_decision: Routing decision requiring approval
+            risk_assessment: Risk assessment for the operation
+            requester: User requesting the operation
+
+        Returns:
+            ApprovalRequest with status
+        """
+        if not self._hitl_controller:
+            raise ValueError("HITLController not configured")
+
+        # Create approval request
+        approval_request = await self._hitl_controller.request_approval(
+            routing_decision=routing_decision,
+            risk_assessment=risk_assessment,
+            requester=requester,
+        )
+
+        return approval_request
+
+    # =========================================================================
+    # Private Methods
+    # =========================================================================
 
     async def _prepare_hybrid_context(
         self,
@@ -750,7 +1128,7 @@ class HybridOrchestratorV2:
         loop = asyncio.new_event_loop()
         try:
             return loop.run_until_complete(
-                self._intent_router.analyze_intent(prompt)
+                self._framework_selector.analyze_intent(prompt)
             )
         finally:
             loop.close()

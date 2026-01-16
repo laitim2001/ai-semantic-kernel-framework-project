@@ -5,12 +5,13 @@
 # Sprint 52: Intent Router & Mode Detection
 # Sprint 53: Context Bridge & State Sync
 # Sprint 54: HybridOrchestrator V2 Refactor
+# Sprint 98: Renamed IntentRouter → FrameworkSelector (Phase 28 Integration)
 #
 # This module provides the hybrid MAF + Claude SDK integration layer,
 # enabling intelligent routing between workflow and chat execution modes.
 #
 # Key Components:
-#   - IntentRouter: Intelligent intent analysis and mode detection (S52)
+#   - FrameworkSelector (IntentRouter): Intelligent framework selection (S52, S98)
 #   - ContextBridge: Cross-framework context synchronization (S53)
 #   - UnifiedToolExecutor: Central tool execution with hooks (S54)
 #   - HybridOrchestratorV2: Unified orchestration layer (S54)
@@ -20,9 +21,11 @@
 #   - Agent Framework (src.integrations.agent_framework)
 # =============================================================================
 
-# Sprint 52: Intent Router
+# Sprint 52 + Sprint 98: Framework Selector (formerly Intent Router)
 from src.integrations.hybrid.intent import (
     ExecutionMode,
+    FrameworkAnalysis,
+    FrameworkSelector,
     IntentAnalysis,
     IntentRouter,
     SessionContext,
@@ -76,8 +79,10 @@ from src.integrations.hybrid.claude_maf_fusion import (
 )
 
 __all__ = [
-    # Sprint 52: Intent Router
+    # Sprint 52 + Sprint 98: Framework Selector (formerly Intent Router)
     "ExecutionMode",
+    "FrameworkAnalysis",
+    "FrameworkSelector",
     "IntentAnalysis",
     "IntentRouter",
     "SessionContext",
