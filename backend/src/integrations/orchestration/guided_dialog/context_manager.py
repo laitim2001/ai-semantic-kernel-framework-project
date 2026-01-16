@@ -5,14 +5,17 @@ Manages conversation context with incremental update support.
 Key principle: Update sub_intent based on rules, never re-classify via LLM.
 
 Sprint 94: Story 94-2 - Implement ConversationContextManager (Phase 28)
+Sprint 97: Story 97-5 - Enhanced State Management with Redis Persistence (Phase 28)
 """
 
 import copy
+import json
 import logging
 import re
+import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 from ..intent_router.completeness import CompletenessChecker
 from ..intent_router.completeness.rules import CompletenessRules, get_default_rules
@@ -20,6 +23,54 @@ from ..intent_router.models import CompletenessInfo, ITIntentCategory, RoutingDe
 from .refinement_rules import RefinementRules, get_default_refinement_rules
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Dialog Session Configuration
+# =============================================================================
+
+
+@dataclass
+class DialogSessionConfig:
+    """
+    Configuration for dialog sessions.
+
+    Attributes:
+        timeout_minutes: Session timeout in minutes (default: 30)
+        max_turns: Maximum dialog turns allowed (default: 10)
+        persist_history: Whether to persist dialog history
+        auto_expire: Whether to automatically expire sessions
+    """
+
+    timeout_minutes: int = 30
+    max_turns: int = 10
+    persist_history: bool = True
+    auto_expire: bool = True
+
+
+# =============================================================================
+# Dialog Session Storage Protocol
+# =============================================================================
+
+
+class DialogSessionStorage(Protocol):
+    """Protocol for dialog session storage backends."""
+
+    async def save_session(self, session_id: str, state: Dict[str, Any]) -> None:
+        """Save session state."""
+        ...
+
+    async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get session state by ID."""
+        ...
+
+    async def delete_session(self, session_id: str) -> None:
+        """Delete session."""
+        ...
+
+    async def touch_session(self, session_id: str) -> None:
+        """Update session last activity timestamp."""
+        ...
 
 
 @dataclass
@@ -581,14 +632,532 @@ def create_mock_context_manager() -> MockConversationContextManager:
 
 
 # =============================================================================
+# Redis Session Storage
+# =============================================================================
+
+
+class RedisDialogSessionStorage:
+    """
+    Redis-based storage for dialog sessions.
+
+    Provides persistent storage with TTL-based expiration.
+
+    Key Format:
+        - dialog_session:{session_id} -> Session state JSON
+
+    TTL:
+        - Default: 30 minutes (configurable)
+    """
+
+    DEFAULT_TTL = 30 * 60  # 30 minutes
+
+    def __init__(
+        self,
+        redis_client: Any,
+        key_prefix: str = "dialog_session",
+        ttl_seconds: int = DEFAULT_TTL,
+    ):
+        """
+        Initialize Redis storage.
+
+        Args:
+            redis_client: Redis client instance
+            key_prefix: Prefix for all keys
+            ttl_seconds: TTL for sessions
+        """
+        self.redis = redis_client
+        self.key_prefix = key_prefix
+        self.ttl_seconds = ttl_seconds
+
+    def _session_key(self, session_id: str) -> str:
+        """Generate key for session."""
+        return f"{self.key_prefix}:{session_id}"
+
+    async def save_session(self, session_id: str, state: Dict[str, Any]) -> None:
+        """
+        Save session state to Redis.
+
+        Args:
+            session_id: Session identifier
+            state: Session state dictionary
+        """
+        key = self._session_key(session_id)
+        data = json.dumps(state, default=str)
+        await self.redis.setex(key, self.ttl_seconds, data)
+        logger.debug(f"Saved dialog session: {session_id}")
+
+    async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get session state from Redis.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            Session state or None if not found
+        """
+        key = self._session_key(session_id)
+        data = await self.redis.get(key)
+
+        if not data:
+            return None
+
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to deserialize session: {e}")
+            return None
+
+    async def delete_session(self, session_id: str) -> None:
+        """
+        Delete session from Redis.
+
+        Args:
+            session_id: Session identifier
+        """
+        key = self._session_key(session_id)
+        await self.redis.delete(key)
+        logger.debug(f"Deleted dialog session: {session_id}")
+
+    async def touch_session(self, session_id: str) -> None:
+        """
+        Update session TTL (keep alive).
+
+        Args:
+            session_id: Session identifier
+        """
+        key = self._session_key(session_id)
+        await self.redis.expire(key, self.ttl_seconds)
+        logger.debug(f"Touched dialog session: {session_id}")
+
+    async def session_exists(self, session_id: str) -> bool:
+        """
+        Check if session exists.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            True if session exists
+        """
+        key = self._session_key(session_id)
+        return await self.redis.exists(key) > 0
+
+
+# =============================================================================
+# In-Memory Session Storage
+# =============================================================================
+
+
+class InMemoryDialogSessionStorage:
+    """
+    In-memory storage for dialog sessions.
+
+    Suitable for testing and development. Not persistent across restarts.
+    """
+
+    def __init__(self, ttl_seconds: int = 30 * 60):
+        """Initialize in-memory storage."""
+        self._sessions: Dict[str, Dict[str, Any]] = {}
+        self._expiry: Dict[str, datetime] = {}
+        self.ttl_seconds = ttl_seconds
+
+    async def save_session(self, session_id: str, state: Dict[str, Any]) -> None:
+        """Save session state."""
+        self._sessions[session_id] = state
+        self._expiry[session_id] = datetime.utcnow() + timedelta(seconds=self.ttl_seconds)
+
+    async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get session state by ID."""
+        # Check expiry
+        if session_id in self._expiry:
+            if datetime.utcnow() > self._expiry[session_id]:
+                await self.delete_session(session_id)
+                return None
+        return self._sessions.get(session_id)
+
+    async def delete_session(self, session_id: str) -> None:
+        """Delete session."""
+        self._sessions.pop(session_id, None)
+        self._expiry.pop(session_id, None)
+
+    async def touch_session(self, session_id: str) -> None:
+        """Update session expiry."""
+        if session_id in self._sessions:
+            self._expiry[session_id] = datetime.utcnow() + timedelta(seconds=self.ttl_seconds)
+
+    def clear(self) -> None:
+        """Clear all sessions."""
+        self._sessions.clear()
+        self._expiry.clear()
+
+
+# =============================================================================
+# Enhanced Context Manager with Persistence
+# =============================================================================
+
+
+class PersistentConversationContextManager(ConversationContextManager):
+    """
+    Enhanced ConversationContextManager with Redis persistence support.
+
+    Features:
+    - Session persistence with Redis
+    - Automatic timeout handling
+    - Session recovery
+    - Maximum turn limit enforcement
+
+    Example:
+        >>> storage = RedisDialogSessionStorage(redis_client)
+        >>> manager = PersistentConversationContextManager(storage=storage)
+        >>> session_id = await manager.create_session(routing_decision)
+        >>> # ... later, recover session ...
+        >>> await manager.resume_session(session_id)
+        >>> decision = manager.update_with_user_response("ETL 系統報錯")
+    """
+
+    def __init__(
+        self,
+        storage: Optional[DialogSessionStorage] = None,
+        config: Optional[DialogSessionConfig] = None,
+        refinement_rules: Optional[RefinementRules] = None,
+        completeness_rules: Optional[CompletenessRules] = None,
+    ):
+        """
+        Initialize persistent context manager.
+
+        Args:
+            storage: Session storage backend (uses in-memory if None)
+            config: Session configuration
+            refinement_rules: Rules for sub_intent refinement
+            completeness_rules: Rules for completeness checking
+        """
+        super().__init__(
+            refinement_rules=refinement_rules,
+            completeness_rules=completeness_rules,
+        )
+        self.storage = storage or InMemoryDialogSessionStorage()
+        self.config = config or DialogSessionConfig()
+
+        # Session state
+        self._session_id: Optional[str] = None
+        self._session_created_at: Optional[datetime] = None
+        self._last_activity: Optional[datetime] = None
+
+    @property
+    def session_id(self) -> Optional[str]:
+        """Get current session ID."""
+        return self._session_id
+
+    @property
+    def turn_count(self) -> int:
+        """Get current turn count."""
+        return len(self._dialog_history)
+
+    @property
+    def is_max_turns_reached(self) -> bool:
+        """Check if maximum turns reached."""
+        return self.turn_count >= self.config.max_turns
+
+    @property
+    def is_session_expired(self) -> bool:
+        """Check if session has expired due to inactivity."""
+        if not self._last_activity:
+            return False
+        timeout = timedelta(minutes=self.config.timeout_minutes)
+        return datetime.utcnow() > self._last_activity + timeout
+
+    async def create_session(
+        self,
+        routing_decision: RoutingDecision,
+        session_id: Optional[str] = None,
+    ) -> str:
+        """
+        Create a new dialog session.
+
+        Args:
+            routing_decision: Initial routing decision
+            session_id: Optional custom session ID
+
+        Returns:
+            Session ID
+        """
+        # Generate or use provided session ID
+        self._session_id = session_id or str(uuid.uuid4())
+        self._session_created_at = datetime.utcnow()
+        self._last_activity = datetime.utcnow()
+
+        # Initialize parent context
+        self.initialize(routing_decision)
+
+        # Persist session
+        await self._save_session()
+
+        logger.info(f"Created dialog session: {self._session_id}")
+        return self._session_id
+
+    async def resume_session(self, session_id: str) -> bool:
+        """
+        Resume an existing dialog session.
+
+        Args:
+            session_id: Session ID to resume
+
+        Returns:
+            True if session resumed successfully, False if not found or expired
+        """
+        state = await self.storage.get_session(session_id)
+        if not state:
+            logger.warning(f"Session not found: {session_id}")
+            return False
+
+        # Check expiration
+        last_activity_str = state.get("last_activity")
+        if last_activity_str:
+            last_activity = datetime.fromisoformat(last_activity_str)
+            timeout = timedelta(minutes=self.config.timeout_minutes)
+            if self.config.auto_expire and datetime.utcnow() > last_activity + timeout:
+                logger.warning(f"Session expired: {session_id}")
+                await self.storage.delete_session(session_id)
+                return False
+
+        # Restore state
+        self._session_id = session_id
+        self._restore_from_state(state)
+        self._last_activity = datetime.utcnow()
+
+        # Touch session to extend TTL
+        await self.storage.touch_session(session_id)
+
+        logger.info(f"Resumed dialog session: {session_id}")
+        return True
+
+    def update_with_user_response(self, user_response: str) -> RoutingDecision:
+        """
+        Update context with user response.
+
+        Overrides parent to add turn limit check and auto-persist.
+
+        Args:
+            user_response: User's response text
+
+        Returns:
+            Updated RoutingDecision
+
+        Raises:
+            RuntimeError: If context not initialized or max turns reached
+        """
+        if self.is_max_turns_reached:
+            raise RuntimeError(
+                f"Maximum turns ({self.config.max_turns}) reached. "
+                "Session should be concluded."
+            )
+
+        if self.is_session_expired:
+            raise RuntimeError(
+                f"Session expired (timeout: {self.config.timeout_minutes} minutes). "
+                "Please start a new session."
+            )
+
+        # Update last activity
+        self._last_activity = datetime.utcnow()
+
+        # Call parent method
+        result = super().update_with_user_response(user_response)
+
+        return result
+
+    async def update_with_user_response_async(
+        self,
+        user_response: str,
+    ) -> RoutingDecision:
+        """
+        Update context with user response and persist.
+
+        Args:
+            user_response: User's response text
+
+        Returns:
+            Updated RoutingDecision
+        """
+        result = self.update_with_user_response(user_response)
+
+        # Persist updated state
+        if self.config.persist_history:
+            await self._save_session()
+
+        return result
+
+    async def end_session(self, reason: str = "completed") -> None:
+        """
+        End the current session.
+
+        Args:
+            reason: Reason for ending session
+        """
+        if self._session_id:
+            logger.info(f"Ending dialog session: {self._session_id} (reason: {reason})")
+
+            # Add final event to history
+            self._dialog_history.append(
+                DialogTurn(
+                    role="system",
+                    content=f"Session ended: {reason}",
+                    context_snapshot={
+                        "turn_count": self.turn_count,
+                        "is_complete": self.is_complete(),
+                    },
+                )
+            )
+
+            # Final save before deletion (for audit)
+            await self._save_session()
+
+            # Delete session
+            if self.config.auto_expire:
+                await self.storage.delete_session(self._session_id)
+
+            self._session_id = None
+
+    async def _save_session(self) -> None:
+        """Save current session state."""
+        if not self._session_id:
+            return
+
+        state = self._to_state_dict()
+        await self.storage.save_session(self._session_id, state)
+
+    def _to_state_dict(self) -> Dict[str, Any]:
+        """Convert current state to dictionary for persistence."""
+        return {
+            "session_id": self._session_id,
+            "created_at": self._session_created_at.isoformat() if self._session_created_at else None,
+            "last_activity": self._last_activity.isoformat() if self._last_activity else None,
+            "routing_decision": self._routing_decision.to_dict() if self._routing_decision else None,
+            "collected_info": self._collected_info,
+            "dialog_history": [turn.to_dict() for turn in self._dialog_history],
+            "initialized": self._initialized,
+        }
+
+    def _restore_from_state(self, state: Dict[str, Any]) -> None:
+        """Restore state from dictionary."""
+        self._session_created_at = (
+            datetime.fromisoformat(state["created_at"])
+            if state.get("created_at") else None
+        )
+        self._last_activity = (
+            datetime.fromisoformat(state["last_activity"])
+            if state.get("last_activity") else None
+        )
+
+        # Restore routing decision
+        if state.get("routing_decision"):
+            self._routing_decision = RoutingDecision.from_dict(state["routing_decision"])
+
+        # Restore collected info
+        self._collected_info = state.get("collected_info", {})
+
+        # Restore dialog history
+        self._dialog_history = [
+            DialogTurn(
+                role=turn["role"],
+                content=turn["content"],
+                timestamp=datetime.fromisoformat(turn["timestamp"]),
+                extracted=turn.get("extracted", {}),
+                context_snapshot=turn.get("context_snapshot", {}),
+            )
+            for turn in state.get("dialog_history", [])
+        ]
+
+        self._initialized = state.get("initialized", False)
+
+    def get_session_info(self) -> Dict[str, Any]:
+        """Get session information and statistics."""
+        return {
+            "session_id": self._session_id,
+            "created_at": self._session_created_at.isoformat() if self._session_created_at else None,
+            "last_activity": self._last_activity.isoformat() if self._last_activity else None,
+            "turn_count": self.turn_count,
+            "max_turns": self.config.max_turns,
+            "turns_remaining": max(0, self.config.max_turns - self.turn_count),
+            "is_complete": self.is_complete(),
+            "is_expired": self.is_session_expired,
+            "is_max_turns_reached": self.is_max_turns_reached,
+            "collected_fields": list(self._collected_info.keys()),
+            "missing_fields": self.get_missing_fields(),
+        }
+
+
+# =============================================================================
+# Factory Functions (Extended)
+# =============================================================================
+
+
+def create_persistent_context_manager(
+    storage: Optional[DialogSessionStorage] = None,
+    config: Optional[DialogSessionConfig] = None,
+) -> PersistentConversationContextManager:
+    """
+    Factory function to create a persistent context manager.
+
+    Args:
+        storage: Session storage backend
+        config: Session configuration
+
+    Returns:
+        PersistentConversationContextManager instance
+    """
+    return PersistentConversationContextManager(
+        storage=storage,
+        config=config,
+    )
+
+
+def create_redis_dialog_storage(
+    redis_client: Any,
+    key_prefix: str = "dialog_session",
+    ttl_seconds: int = 30 * 60,
+) -> RedisDialogSessionStorage:
+    """
+    Factory function to create Redis dialog storage.
+
+    Args:
+        redis_client: Redis client instance
+        key_prefix: Key prefix for storage
+        ttl_seconds: TTL for sessions
+
+    Returns:
+        RedisDialogSessionStorage instance
+    """
+    return RedisDialogSessionStorage(
+        redis_client=redis_client,
+        key_prefix=key_prefix,
+        ttl_seconds=ttl_seconds,
+    )
+
+
+# =============================================================================
 # Exports
 # =============================================================================
 
 __all__ = [
+    # Config
+    "DialogSessionConfig",
+    # Data classes
     "DialogTurn",
     "ContextState",
+    # Protocols
+    "DialogSessionStorage",
+    # Storage implementations
+    "RedisDialogSessionStorage",
+    "InMemoryDialogSessionStorage",
+    # Context managers
     "ConversationContextManager",
     "MockConversationContextManager",
+    "PersistentConversationContextManager",
+    # Factory functions
     "create_context_manager",
     "create_mock_context_manager",
+    "create_persistent_context_manager",
+    "create_redis_dialog_storage",
 ]

@@ -8,6 +8,7 @@ This module provides intelligent routing and dialog management:
 - Guided Dialog Engine (multi-turn information gathering)
 - Input Gateway (source-based routing with simplified paths)
 - Risk Assessor (risk evaluation for routing decisions)
+- HITL Controller (human-in-the-loop approval workflow)
 
 Sprint 91: Pattern Matcher + Rule Definition (Phase 28)
 Sprint 92: Semantic Router + LLM Classifier (Phase 28)
@@ -15,6 +16,7 @@ Sprint 93: BusinessIntentRouter + CompletenessChecker (Phase 28)
 Sprint 94: GuidedDialogEngine + Incremental Update (Phase 28)
 Sprint 95: InputGateway + SourceHandlers (Phase 28)
 Sprint 96: RiskAssessor + Policies (Phase 28)
+Sprint 97: HITLController + ApprovalHandler (Phase 28)
 """
 
 from .intent_router.models import (
@@ -77,6 +79,29 @@ from .risk_assessor import (
     RiskPolicies,
     RiskPolicy,
 )
+from .hitl import (
+    # Enums
+    ApprovalStatus,
+    ApprovalType,
+    # Data classes
+    ApprovalEvent,
+    ApprovalRequest,
+    ApprovalResult,
+    # Controller and Handler
+    HITLController,
+    ApprovalHandler,
+    # Storage
+    InMemoryApprovalStorage,
+    RedisApprovalStorage,
+    # Notification
+    TeamsNotificationService,
+    TeamsMessageCard,
+    TeamsCardBuilder,
+    MockNotificationService,
+    # Factory functions
+    create_hitl_controller,
+    create_mock_hitl_controller,
+)
 
 __all__ = [
     # Core Models
@@ -132,4 +157,25 @@ __all__ = [
     "AssessmentContext",
     "RiskPolicies",
     "RiskPolicy",
+    # HITL - Enums
+    "ApprovalStatus",
+    "ApprovalType",
+    # HITL - Data classes
+    "ApprovalEvent",
+    "ApprovalRequest",
+    "ApprovalResult",
+    # HITL - Controller and Handler
+    "HITLController",
+    "ApprovalHandler",
+    # HITL - Storage
+    "InMemoryApprovalStorage",
+    "RedisApprovalStorage",
+    # HITL - Notification
+    "TeamsNotificationService",
+    "TeamsMessageCard",
+    "TeamsCardBuilder",
+    "MockNotificationService",
+    # HITL - Factory functions
+    "create_hitl_controller",
+    "create_mock_hitl_controller",
 ]

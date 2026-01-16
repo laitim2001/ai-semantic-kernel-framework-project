@@ -2,18 +2,41 @@
 Question Generator Implementation
 
 Generates follow-up questions based on missing fields.
-Uses template-based generation for consistency and efficiency.
+Supports both template-based and LLM-based generation.
 
 Sprint 94: Story 94-4 - Implement QuestionGenerator (Phase 28)
+Sprint 97: Story 97-4 - Implement LLM QuestionGenerator (Phase 28)
 """
 
+import asyncio
+import json
 import logging
+import re
+import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Protocol, Union
 
 from ..intent_router.models import ITIntentCategory
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# LLM Client Protocol
+# =============================================================================
+
+
+class LLMClient(Protocol):
+    """Protocol for LLM client implementations."""
+
+    async def create_message(
+        self,
+        model: str,
+        max_tokens: int,
+        messages: List[Dict[str, str]],
+    ) -> Dict[str, Any]:
+        """Create a message with the LLM."""
+        ...
 
 
 @dataclass
@@ -551,21 +574,578 @@ def create_mock_generator() -> MockQuestionGenerator:
 
 
 # =============================================================================
+# LLM Question Generator
+# =============================================================================
+
+
+# LLM Prompt Template for question generation
+QUESTION_GENERATION_PROMPT = """你是一個 IT 服務助手。根據以下資訊，生成適當的澄清問題。
+
+## 意圖類別
+{intent_category}
+
+## 子意圖
+{sub_intent}
+
+## 缺失欄位
+{missing_fields}
+
+## 已知資訊
+{collected_info}
+
+## 要求
+1. 生成 1-3 個問題
+2. 問題要具體、易懂
+3. 提供可選答案（如適用）
+4. 使用繁體中文
+5. 問題要針對缺失的欄位
+
+## 輸出格式 (嚴格 JSON)
+{{
+  "questions": [
+    {{
+      "field": "欄位名稱",
+      "question": "問題內容",
+      "options": ["選項1", "選項2"]
+    }}
+  ]
+}}
+
+只輸出 JSON，不要其他文字。"""
+
+
+@dataclass
+class LLMQuestionConfig:
+    """
+    Configuration for LLM question generation.
+
+    Attributes:
+        model: LLM model to use (default: claude-3-haiku)
+        max_tokens: Maximum tokens for response
+        temperature: Generation temperature
+        timeout_ms: Maximum generation time in milliseconds
+        max_questions: Maximum questions to generate
+        fallback_to_templates: Whether to fallback to templates on failure
+    """
+
+    model: str = "claude-3-haiku-20240307"
+    max_tokens: int = 500
+    temperature: float = 0.3
+    timeout_ms: int = 2000
+    max_questions: int = 3
+    fallback_to_templates: bool = True
+
+
+class LLMQuestionGenerator:
+    """
+    LLM-based question generator.
+
+    Uses Claude to generate contextually relevant follow-up questions
+    when template-based generation is insufficient.
+
+    Features:
+    - Dynamic question generation based on context
+    - Option suggestions for closed questions
+    - Fallback to template-based generation
+    - Latency control (< 2000ms target)
+
+    Example:
+        >>> from anthropic import AsyncAnthropic
+        >>> client = AsyncAnthropic()
+        >>> generator = LLMQuestionGenerator(client)
+        >>> questions = await generator.generate(
+        ...     intent_category=ITIntentCategory.INCIDENT,
+        ...     missing_fields=["affected_system", "symptom_type"],
+        ...     collected_info={"urgency": "high"},
+        ... )
+        >>> for q in questions:
+        ...     print(q.question)
+    """
+
+    def __init__(
+        self,
+        client: Any,  # AsyncAnthropic or compatible client
+        config: Optional[LLMQuestionConfig] = None,
+        template_generator: Optional[QuestionGenerator] = None,
+    ):
+        """
+        Initialize LLM question generator.
+
+        Args:
+            client: Anthropic async client or compatible
+            config: Optional configuration
+            template_generator: Optional template generator for fallback
+        """
+        self.client = client
+        self.config = config or LLMQuestionConfig()
+        self.template_generator = template_generator or QuestionGenerator()
+
+        # Metrics
+        self._total_calls = 0
+        self._total_latency_ms = 0
+        self._fallback_count = 0
+
+    async def generate(
+        self,
+        intent_category: ITIntentCategory,
+        missing_fields: List[str],
+        collected_info: Optional[Dict[str, Any]] = None,
+        sub_intent: Optional[str] = None,
+    ) -> List[GeneratedQuestion]:
+        """
+        Generate questions using LLM.
+
+        Args:
+            intent_category: Current intent category
+            missing_fields: List of missing field names
+            collected_info: Information already collected
+            sub_intent: Optional sub-intent for context
+
+        Returns:
+            List of GeneratedQuestion objects
+        """
+        if not missing_fields:
+            return []
+
+        start_time = time.time()
+
+        try:
+            # Build prompt
+            prompt = self._build_prompt(
+                intent_category=intent_category,
+                missing_fields=missing_fields,
+                collected_info=collected_info or {},
+                sub_intent=sub_intent,
+            )
+
+            # Call LLM with timeout
+            response = await asyncio.wait_for(
+                self._call_llm(prompt),
+                timeout=self.config.timeout_ms / 1000,
+            )
+
+            # Parse response
+            questions = self._parse_response(response, missing_fields)
+
+            # Update metrics
+            latency_ms = (time.time() - start_time) * 1000
+            self._total_calls += 1
+            self._total_latency_ms += latency_ms
+
+            logger.debug(
+                f"LLM question generation: {len(questions)} questions "
+                f"in {latency_ms:.0f}ms"
+            )
+
+            return questions[:self.config.max_questions]
+
+        except asyncio.TimeoutError:
+            logger.warning("LLM question generation timeout, falling back to templates")
+            self._fallback_count += 1
+            return self._fallback_to_templates(intent_category, missing_fields)
+
+        except Exception as e:
+            logger.error(f"LLM question generation error: {e}")
+            self._fallback_count += 1
+            if self.config.fallback_to_templates:
+                return self._fallback_to_templates(intent_category, missing_fields)
+            return []
+
+    async def _call_llm(self, prompt: str) -> str:
+        """
+        Call the LLM API.
+
+        Args:
+            prompt: The prompt to send
+
+        Returns:
+            LLM response text
+        """
+        # For Anthropic client
+        if hasattr(self.client, "messages"):
+            response = await self.client.messages.create(
+                model=self.config.model,
+                max_tokens=self.config.max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return response.content[0].text
+        # For generic client with create_message method
+        elif hasattr(self.client, "create_message"):
+            response = await self.client.create_message(
+                model=self.config.model,
+                max_tokens=self.config.max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return response.get("content", "")
+        else:
+            raise ValueError("Unsupported LLM client type")
+
+    def _build_prompt(
+        self,
+        intent_category: ITIntentCategory,
+        missing_fields: List[str],
+        collected_info: Dict[str, Any],
+        sub_intent: Optional[str],
+    ) -> str:
+        """Build the prompt for LLM."""
+        # Format missing fields
+        missing_str = "\n".join(f"- {field}" for field in missing_fields)
+
+        # Format collected info
+        if collected_info:
+            info_str = "\n".join(
+                f"- {k}: {v}" for k, v in collected_info.items()
+            )
+        else:
+            info_str = "無"
+
+        return QUESTION_GENERATION_PROMPT.format(
+            intent_category=intent_category.value,
+            sub_intent=sub_intent or "一般",
+            missing_fields=missing_str,
+            collected_info=info_str,
+        )
+
+    def _parse_response(
+        self,
+        response: str,
+        missing_fields: List[str],
+    ) -> List[GeneratedQuestion]:
+        """
+        Parse LLM response into GeneratedQuestion objects.
+
+        Args:
+            response: LLM response text
+            missing_fields: Expected fields for validation
+
+        Returns:
+            List of GeneratedQuestion objects
+        """
+        questions = []
+
+        try:
+            # Extract JSON from response
+            json_match = re.search(r'\{[\s\S]*\}', response)
+            if not json_match:
+                logger.warning("No JSON found in LLM response")
+                return []
+
+            data = json.loads(json_match.group())
+            question_list = data.get("questions", [])
+
+            for q_data in question_list:
+                field = q_data.get("field", "")
+                question_text = q_data.get("question", "")
+                options = q_data.get("options", [])
+
+                if not question_text:
+                    continue
+
+                # Determine priority based on field position in missing_fields
+                try:
+                    priority = 100 - (missing_fields.index(field) * 10)
+                except ValueError:
+                    priority = 50
+
+                questions.append(
+                    GeneratedQuestion(
+                        question=question_text,
+                        target_field=field,
+                        priority=priority,
+                        context={
+                            "options": options,
+                            "source": "llm",
+                        },
+                    )
+                )
+
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse LLM response as JSON: {e}")
+            return []
+
+        return questions
+
+    def _fallback_to_templates(
+        self,
+        intent_category: ITIntentCategory,
+        missing_fields: List[str],
+    ) -> List[GeneratedQuestion]:
+        """Fallback to template-based generation."""
+        return self.template_generator.generate(
+            intent_category=intent_category,
+            missing_fields=missing_fields,
+        )
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get generation metrics."""
+        avg_latency = (
+            self._total_latency_ms / self._total_calls
+            if self._total_calls > 0 else 0
+        )
+        return {
+            "total_calls": self._total_calls,
+            "total_latency_ms": self._total_latency_ms,
+            "average_latency_ms": avg_latency,
+            "fallback_count": self._fallback_count,
+            "fallback_rate": (
+                self._fallback_count / self._total_calls
+                if self._total_calls > 0 else 0
+            ),
+        }
+
+    def reset_metrics(self) -> None:
+        """Reset metrics counters."""
+        self._total_calls = 0
+        self._total_latency_ms = 0
+        self._fallback_count = 0
+
+
+# =============================================================================
+# Hybrid Question Generator
+# =============================================================================
+
+
+class HybridQuestionGenerator:
+    """
+    Hybrid question generator combining templates and LLM.
+
+    Strategy:
+    1. First try template-based generation for known fields
+    2. Use LLM for fields without templates
+    3. Optional: Always use LLM for better contextual questions
+
+    Attributes:
+        template_generator: Template-based generator
+        llm_generator: LLM-based generator
+        prefer_llm: Whether to prefer LLM over templates
+    """
+
+    def __init__(
+        self,
+        template_generator: Optional[QuestionGenerator] = None,
+        llm_generator: Optional[LLMQuestionGenerator] = None,
+        prefer_llm: bool = False,
+    ):
+        """
+        Initialize hybrid generator.
+
+        Args:
+            template_generator: Template generator (created if None)
+            llm_generator: LLM generator (optional)
+            prefer_llm: Whether to prefer LLM for all questions
+        """
+        self.template_generator = template_generator or QuestionGenerator()
+        self.llm_generator = llm_generator
+        self.prefer_llm = prefer_llm
+
+    async def generate(
+        self,
+        intent_category: ITIntentCategory,
+        missing_fields: List[str],
+        collected_info: Optional[Dict[str, Any]] = None,
+        sub_intent: Optional[str] = None,
+    ) -> List[GeneratedQuestion]:
+        """
+        Generate questions using hybrid approach.
+
+        Args:
+            intent_category: Current intent category
+            missing_fields: List of missing field names
+            collected_info: Information already collected
+            sub_intent: Optional sub-intent for context
+
+        Returns:
+            List of GeneratedQuestion objects
+        """
+        if not missing_fields:
+            return []
+
+        # If LLM is preferred and available, use it
+        if self.prefer_llm and self.llm_generator:
+            return await self.llm_generator.generate(
+                intent_category=intent_category,
+                missing_fields=missing_fields,
+                collected_info=collected_info,
+                sub_intent=sub_intent,
+            )
+
+        # Try template generation first
+        template_questions = self.template_generator.generate(
+            intent_category=intent_category,
+            missing_fields=missing_fields,
+        )
+
+        # Find fields not covered by templates
+        covered_fields = {q.target_field for q in template_questions}
+        uncovered_fields = [f for f in missing_fields if f not in covered_fields]
+
+        # If all fields covered, return template questions
+        if not uncovered_fields or not self.llm_generator:
+            return template_questions
+
+        # Use LLM for uncovered fields
+        llm_questions = await self.llm_generator.generate(
+            intent_category=intent_category,
+            missing_fields=uncovered_fields,
+            collected_info=collected_info,
+            sub_intent=sub_intent,
+        )
+
+        # Combine and sort by priority
+        all_questions = template_questions + llm_questions
+        all_questions.sort(key=lambda q: q.priority, reverse=True)
+
+        return all_questions[:3]  # Limit to 3 questions
+
+
+# =============================================================================
+# Mock LLM Client
+# =============================================================================
+
+
+class MockLLMClient:
+    """
+    Mock LLM client for testing.
+
+    Returns predefined responses without actual API calls.
+    """
+
+    def __init__(self, responses: Optional[Dict[str, str]] = None):
+        """
+        Initialize mock client.
+
+        Args:
+            responses: Map of prompts to responses
+        """
+        self.responses = responses or {}
+        self.call_count = 0
+        self.last_prompt = None
+
+    async def messages_create(self, **kwargs) -> Dict[str, Any]:
+        """Mock messages.create method."""
+        self.call_count += 1
+        self.last_prompt = kwargs.get("messages", [{}])[0].get("content", "")
+
+        # Return a mock response
+        response_text = self.responses.get(
+            "default",
+            '{"questions": [{"field": "affected_system", "question": "請問是哪個系統有問題？", "options": ["ETL", "CRM", "API"]}]}',
+        )
+
+        # Create a mock response object
+        class MockContent:
+            def __init__(self, text):
+                self.text = text
+
+        class MockResponse:
+            def __init__(self, text):
+                self.content = [MockContent(text)]
+
+        return MockResponse(response_text)
+
+    @property
+    def messages(self):
+        """Return self for messages.create() pattern."""
+        return self
+
+    async def create(self, **kwargs) -> Dict[str, Any]:
+        """Mock create method."""
+        return await self.messages_create(**kwargs)
+
+
+# =============================================================================
+# Factory Functions (Extended)
+# =============================================================================
+
+
+def create_llm_question_generator(
+    client: Any,
+    config: Optional[LLMQuestionConfig] = None,
+) -> LLMQuestionGenerator:
+    """
+    Factory function to create an LLM question generator.
+
+    Args:
+        client: Anthropic async client or compatible
+        config: Optional configuration
+
+    Returns:
+        LLMQuestionGenerator instance
+    """
+    return LLMQuestionGenerator(client=client, config=config)
+
+
+def create_hybrid_question_generator(
+    llm_client: Optional[Any] = None,
+    prefer_llm: bool = False,
+) -> HybridQuestionGenerator:
+    """
+    Factory function to create a hybrid question generator.
+
+    Args:
+        llm_client: Optional LLM client for LLM-based generation
+        prefer_llm: Whether to prefer LLM over templates
+
+    Returns:
+        HybridQuestionGenerator instance
+    """
+    template_generator = QuestionGenerator()
+    llm_generator = None
+
+    if llm_client:
+        llm_generator = LLMQuestionGenerator(
+            client=llm_client,
+            template_generator=template_generator,
+        )
+
+    return HybridQuestionGenerator(
+        template_generator=template_generator,
+        llm_generator=llm_generator,
+        prefer_llm=prefer_llm,
+    )
+
+
+def create_mock_llm_generator() -> LLMQuestionGenerator:
+    """
+    Factory function to create a mock LLM generator for testing.
+
+    Returns:
+        LLMQuestionGenerator with mock client
+    """
+    mock_client = MockLLMClient()
+    return LLMQuestionGenerator(client=mock_client)
+
+
+# =============================================================================
 # Exports
 # =============================================================================
 
 __all__ = [
+    # Data classes
     "QuestionTemplate",
     "GeneratedQuestion",
+    "LLMQuestionConfig",
+    # Generators
     "QuestionGenerator",
     "MockQuestionGenerator",
+    "LLMQuestionGenerator",
+    "HybridQuestionGenerator",
+    # Protocol
+    "LLMClient",
+    # Mock
+    "MockLLMClient",
     # Template collections
     "INCIDENT_QUESTION_TEMPLATES",
     "REQUEST_QUESTION_TEMPLATES",
     "CHANGE_QUESTION_TEMPLATES",
     "QUERY_QUESTION_TEMPLATES",
     "GENERAL_QUESTION_TEMPLATES",
+    # Prompt
+    "QUESTION_GENERATION_PROMPT",
     # Factory functions
     "create_question_generator",
     "create_mock_generator",
+    "create_llm_question_generator",
+    "create_hybrid_question_generator",
+    "create_mock_llm_generator",
 ]
