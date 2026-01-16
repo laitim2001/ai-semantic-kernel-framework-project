@@ -17,6 +17,7 @@ Sprint 94: GuidedDialogEngine + Incremental Update (Phase 28)
 Sprint 95: InputGateway + SourceHandlers (Phase 28)
 Sprint 96: RiskAssessor + Policies (Phase 28)
 Sprint 97: HITLController + ApprovalHandler (Phase 28)
+Sprint 99: E2E Tests + Performance + Metrics (Phase 28)
 """
 
 from .intent_router.models import (
@@ -108,6 +109,17 @@ from .hitl import (
     create_hitl_controller,
     create_mock_hitl_controller,
 )
+from .metrics import (
+    # Collector
+    OrchestrationMetricsCollector,
+    # Global Functions
+    get_metrics_collector,
+    reset_metrics_collector,
+    # Decorators
+    track_routing_metrics,
+    # Constants
+    OPENTELEMETRY_AVAILABLE,
+)
 
 __all__ = [
     # Core Models
@@ -186,4 +198,10 @@ __all__ = [
     # HITL - Factory functions
     "create_hitl_controller",
     "create_mock_hitl_controller",
+    # Metrics
+    "OrchestrationMetricsCollector",
+    "get_metrics_collector",
+    "reset_metrics_collector",
+    "track_routing_metrics",
+    "OPENTELEMETRY_AVAILABLE",
 ]
