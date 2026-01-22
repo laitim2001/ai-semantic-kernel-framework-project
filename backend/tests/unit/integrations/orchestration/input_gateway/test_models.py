@@ -13,7 +13,7 @@ Sprint 95: Story 95-1 - Model Tests (Phase 28)
 import pytest
 from datetime import datetime
 
-from backend.src.integrations.orchestration.input_gateway import (
+from src.integrations.orchestration.input_gateway import (
     IncomingRequest,
     SourceType,
     GatewayConfig,

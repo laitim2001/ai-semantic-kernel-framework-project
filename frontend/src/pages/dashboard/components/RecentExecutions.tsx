@@ -25,7 +25,7 @@ export function RecentExecutions() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['recent-executions'],
-    queryFn: () => api.get<ExecutionListResponse>('/executions?limit=10'),
+    queryFn: () => api.get<ExecutionListResponse>('/executions/?page=1&page_size=10'),
   });
 
   if (isLoading) {

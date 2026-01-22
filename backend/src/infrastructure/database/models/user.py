@@ -89,23 +89,24 @@ class User(Base, TimestampMixin):
     )
 
     # Relationships
+    # Note: Using lazy="noload" to avoid auto-loading until DB schema is synced
     workflows: Mapped[List["Workflow"]] = relationship(
         "Workflow",
         back_populates="created_by_user",
-        lazy="selectin",
+        lazy="noload",  # Changed from selectin to avoid schema mismatch issues
     )
 
     executions: Mapped[List["Execution"]] = relationship(
         "Execution",
         back_populates="triggered_by_user",
-        lazy="selectin",
+        lazy="noload",  # Changed from selectin to avoid schema mismatch issues
     )
 
     # Sprint 72: Sessions relationship
     sessions: Mapped[List["SessionModel"]] = relationship(
         "SessionModel",
         back_populates="user",
-        lazy="selectin",
+        lazy="noload",  # Changed from selectin to avoid schema mismatch issues
     )
 
     def __repr__(self) -> str:

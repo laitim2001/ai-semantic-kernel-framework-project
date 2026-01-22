@@ -44,7 +44,7 @@ export function TemplatesPage() {
       // Don't send category param when "全部" is selected
       const categoryParam = selectedCategory === '全部' ? '' : `&category=${selectedCategory}`;
       return api.get<TemplateListResponse>(
-        `/templates?search=${searchQuery}${categoryParam}`
+        `/templates/?search=${searchQuery}${categoryParam}`
       );
     },
   });

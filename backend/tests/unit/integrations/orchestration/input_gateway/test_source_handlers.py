@@ -13,7 +13,7 @@ import pytest
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from backend.src.integrations.orchestration.input_gateway import (
+from src.integrations.orchestration.input_gateway import (
     IncomingRequest,
     ServiceNowHandler,
     MockServiceNowHandler,
@@ -22,7 +22,7 @@ from backend.src.integrations.orchestration.input_gateway import (
     UserInputHandler,
     MockUserInputHandler,
 )
-from backend.src.integrations.orchestration.intent_router.models import (
+from src.integrations.orchestration.intent_router.models import (
     ITIntentCategory,
     PatternMatchResult,
 )
@@ -319,7 +319,7 @@ class TestUserInputHandler:
     @pytest.mark.asyncio
     async def test_process_delegates_to_router(self):
         """Test processing delegates to business router."""
-        from backend.src.integrations.orchestration.intent_router.models import (
+        from src.integrations.orchestration.intent_router.models import (
             CompletenessInfo,
             RoutingDecision,
             WorkflowType,
@@ -352,7 +352,7 @@ class TestUserInputHandler:
     async def test_process_normalizes_input(self):
         """Test input normalization."""
         mock_router = AsyncMock()
-        from backend.src.integrations.orchestration.intent_router.models import (
+        from src.integrations.orchestration.intent_router.models import (
             CompletenessInfo,
             RoutingDecision,
             WorkflowType,

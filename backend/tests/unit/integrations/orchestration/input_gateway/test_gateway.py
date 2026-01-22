@@ -13,14 +13,14 @@ Sprint 95: Story 95-1 - InputGateway Tests (Phase 28)
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from backend.src.integrations.orchestration.input_gateway import (
+from src.integrations.orchestration.input_gateway import (
     InputGateway,
     MockInputGateway,
     IncomingRequest,
     GatewayConfig,
     create_mock_gateway,
 )
-from backend.src.integrations.orchestration.intent_router.models import (
+from src.integrations.orchestration.intent_router.models import (
     ITIntentCategory,
     RoutingDecision,
 )

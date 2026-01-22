@@ -12,7 +12,7 @@ Sprint 95: Story 95-6 - SchemaValidator Tests (Phase 28)
 
 import pytest
 
-from backend.src.integrations.orchestration.input_gateway import (
+from src.integrations.orchestration.input_gateway import (
     SchemaValidator,
     MockSchemaValidator,
     SchemaDefinition,
