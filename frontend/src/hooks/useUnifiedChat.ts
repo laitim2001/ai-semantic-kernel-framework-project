@@ -839,7 +839,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
             const component = payload.component as Record<string, unknown>;
             const action = payload.action as string;
 
-            if (action === 'create' || action === 'update') {
+            // Support both 'create'/'render' for new components, 'update' for modifications
+            if (action === 'create' || action === 'render' || action === 'update') {
               // Create a new message with the UI component
               const uiMessage: ChatMessage = {
                 id: generateMessageId(),

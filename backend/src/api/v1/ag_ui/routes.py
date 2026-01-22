@@ -1353,14 +1353,21 @@ async def test_ui_component(
                 },
             )
 
-    # Build component definition
+    # Build component definition with correct structure for frontend
     component = {
-        "componentId": component_id,
-        "componentType": component_type,
+        "component_id": component_id,
+        "component_type": component_type,
         "props": request.props,
         "title": request.title,
-        "createdAt": time.time(),
+        "created_at": time.time(),
+    }
+
+    # Build full event payload matching frontend expectations
+    payload = {
+        "action": "render",  # Match ToolBasedUIHandler default action
+        "component": component,
         "threadId": request.thread_id,
+        "runId": f"run-test-{uuid.uuid4().hex[:8]}",
     }
 
     logger.info(
@@ -1369,5 +1376,94 @@ async def test_ui_component(
 
     return UIComponentEventResponse(
         event_name="ui_component",
-        component=component,
+        component=payload,  # Include full payload with action
+    )
+
+
+@router.post(
+    "/test/ui-component/stream",
+    summary="Test UI Component via SSE Stream (Feature 5)",
+    description="""
+    Generate and stream a test UI component event via SSE for live testing.
+
+    This endpoint sends the UI component event through an SSE stream,
+    matching the production behavior where UI components are delivered
+    via the main agent execution stream.
+
+    Use this to test Feature 5 (Tool-based UI) in the /chat interface.
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "SSE stream with UI component event"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_ui_component_stream(
+    request: TestUIComponentRequest,
+) -> StreamingResponse:
+    """
+    Generate and stream UI component event via SSE.
+
+    Creates a simulated SSE stream containing an UI component event,
+    matching the format used by the main /ag-ui endpoint.
+    """
+    import time
+    import json
+
+    async def generate_events() -> AsyncGenerator[str, None]:
+        # Generate IDs
+        component_id = f"ui-test-{uuid.uuid4().hex[:12]}"
+        run_id = f"run-test-{uuid.uuid4().hex[:8]}"
+        thread_id = request.thread_id or f"thread-test-{uuid.uuid4().hex[:8]}"
+
+        # 1. Send RUN_STARTED
+        run_started = {
+            "type": "RUN_STARTED",
+            "threadId": thread_id,
+            "runId": run_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(run_started)}\n\n"
+
+        # 2. Send UI_COMPONENT event
+        component_type = request.component_type.value
+        ui_component_event = {
+            "type": "CUSTOM",
+            "eventName": "ui_component",
+            "payload": {
+                "action": "render",
+                "component": {
+                    "component_id": component_id,
+                    "component_type": component_type,
+                    "props": request.props,
+                    "title": request.title,
+                    "created_at": time.time(),
+                },
+                "threadId": thread_id,
+                "runId": run_id,
+            },
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(ui_component_event)}\n\n"
+
+        logger.info(f"Streamed test UI component: type={component_type}, id={component_id}")
+
+        # 3. Send RUN_FINISHED
+        run_finished = {
+            "type": "RUN_FINISHED",
+            "threadId": thread_id,
+            "runId": run_id,
+            "finishReason": "completed",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(run_finished)}\n\n"
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
