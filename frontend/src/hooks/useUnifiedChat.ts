@@ -775,6 +775,78 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
               status: payload.status as 'processing' | 'idle',
             });
           }
+
+          // AG-UI #4/#5: Handle UI_COMPONENT event (Generative UI / Tool-based UI)
+          if (eventName === 'ui_component') {
+            const component = payload.component as Record<string, unknown>;
+            const action = payload.action as string;
+
+            if (action === 'create' || action === 'update') {
+              // Create a new message with the UI component
+              const uiMessage: ChatMessage = {
+                id: generateMessageId(),
+                role: 'assistant',
+                content: '', // Empty content - UI component will be rendered instead
+                timestamp: new Date().toISOString(),
+                customUI: {
+                  componentId: component.component_id as string,
+                  componentType: component.component_type as 'form' | 'chart' | 'card' | 'table' | 'custom',
+                  props: component.props as Record<string, unknown>,
+                  title: component.title as string | undefined,
+                  description: component.description as string | undefined,
+                  createdAt: component.created_at as string || new Date().toISOString(),
+                },
+              };
+              setMessages((prev) => [...prev, uiMessage]);
+              storeAddMessage(uiMessage);
+              onMessage?.(uiMessage);
+            }
+          }
+
+          // AG-UI #7: Handle PREDICTION events (Predictive Updates)
+          if (eventName === 'prediction_confirmed') {
+            console.log('[useUnifiedChat] Prediction confirmed:', payload.prediction_id);
+            // Update optimistic state to confirmed
+          }
+
+          if (eventName === 'prediction_rolled_back') {
+            console.log('[useUnifiedChat] Prediction rolled back:', payload.prediction_id);
+            // Rollback optimistic state
+          }
+
+          if (eventName === 'prediction_conflicted') {
+            console.log('[useUnifiedChat] Prediction conflicted:', payload.prediction_id, payload.reason);
+            // Handle conflict - show indicator to user
+          }
+
+          // Workflow Mode: Handle STEP_PROGRESS event
+          if (eventName === 'step_progress') {
+            const stepProgress = {
+              stepId: payload.step_id as string,
+              stepName: payload.step_name as string,
+              current: payload.current as number,
+              total: payload.total as number,
+              progress: payload.progress as number,
+              status: payload.status as string,
+            };
+            console.log('[useUnifiedChat] Step progress:', stepProgress);
+            // Update workflow state with step progress
+            if (workflowState) {
+              setWorkflowState((prev) => {
+                if (!prev) return prev;
+                const updatedSteps = prev.steps.map((step) =>
+                  step.id === stepProgress.stepId
+                    ? { ...step, status: stepProgress.status as 'pending' | 'running' | 'completed' | 'failed' | 'skipped' }
+                    : step
+                );
+                return {
+                  ...prev,
+                  steps: updatedSteps,
+                  progress: stepProgress.progress,
+                };
+              });
+            }
+          }
           break;
         }
 
@@ -798,6 +870,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       handleStateDelta,
       stateVersion,
       onRunComplete,
+      onMessage,
+      workflowState,
     ]
   );
 
