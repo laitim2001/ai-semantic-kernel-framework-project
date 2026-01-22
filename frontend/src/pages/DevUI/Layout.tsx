@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Activity,
   Settings,
+  TestTube2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ interface DevUINavItem {
 
 const devUINavigation: DevUINavItem[] = [
   { name: 'Overview', href: '/devui', icon: Home },
+  { name: 'AG-UI Test', href: '/devui/ag-ui-test', icon: TestTube2 },
   { name: 'Traces', href: '/devui/traces', icon: ListTree },
   { name: 'Live Monitor', href: '/devui/monitor', icon: Activity },
   { name: 'Settings', href: '/devui/settings', icon: Settings },
@@ -64,6 +66,8 @@ function getBreadcrumbs(pathname: string): BreadcrumbSegment[] {
       if (segments[2]) {
         breadcrumbs.push({ name: `Trace ${segments[2].slice(0, 8)}...` });
       }
+    } else if (segments[1] === 'ag-ui-test') {
+      breadcrumbs.push({ name: 'AG-UI Test' });
     } else if (segments[1] === 'monitor') {
       breadcrumbs.push({ name: 'Live Monitor' });
     } else if (segments[1] === 'settings') {

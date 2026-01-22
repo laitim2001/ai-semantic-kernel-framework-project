@@ -51,15 +51,19 @@ from src.api.v1.ag_ui.schemas import (
     DiffOperationEnum,
     ErrorResponse,
     HealthResponse,
+    HITLEventResponse,
     ModeSwitchEventResponse,
     PendingApprovalsResponse,
+    PredictionEventResponse,
     RiskLevelEnum,
     RunAgentRequest,
     RunAgentResponse,
     StateConflictResponse,
     StateDiffSchema,
     StateUpdateResponse,
+    TestHITLRequest,
     TestModeSwitchRequest,
+    TestPredictionRequest,
     TestUIComponentRequest,
     TestWorkflowProgressRequest,
     ThreadStateResponse,
@@ -1449,6 +1453,404 @@ async def test_ui_component_stream(
         logger.info(f"Streamed test UI component: type={component_type}, id={component_id}")
 
         # 3. Send RUN_FINISHED
+        run_finished = {
+            "type": "RUN_FINISHED",
+            "threadId": thread_id,
+            "runId": run_id,
+            "finishReason": "completed",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(run_finished)}\n\n"
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# =============================================================================
+# AG-UI Feature Testing Endpoints (Sprint 99)
+# =============================================================================
+
+
+@router.post(
+    "/test/hitl",
+    response_model=HITLEventResponse,
+    summary="Test HITL Approval (Feature 3)",
+    description="""
+    Generate a test HITL (Human-in-the-Loop) approval event.
+
+    This simulates the approval_required event that occurs when a high-risk
+    tool call is detected. Use this to test the approval dialog in the UI.
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "HITL event generated successfully"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_hitl_approval(
+    request: TestHITLRequest,
+) -> HITLEventResponse:
+    """Generate a test HITL approval event."""
+    import time
+
+    approval_id = f"apr-test-{uuid.uuid4().hex[:12]}"
+
+    payload = {
+        "approval_id": approval_id,
+        "tool_name": request.tool_name,
+        "tool_input": request.tool_input,
+        "risk_level": request.risk_level.value,
+        "risk_score": request.risk_score,
+        "reason": f"Test approval for {request.tool_name}",
+        "thread_id": request.thread_id,
+        "timestamp": time.time(),
+    }
+
+    logger.info(f"Generated test HITL event: approval_id={approval_id}")
+
+    return HITLEventResponse(
+        event_name="approval_required",
+        payload=payload,
+    )
+
+
+@router.post(
+    "/test/hitl/stream",
+    summary="Test HITL Approval via SSE Stream (Feature 3)",
+    description="""
+    Generate and stream a HITL approval event via SSE for live testing.
+
+    This endpoint sends the approval_required event through an SSE stream,
+    matching the production behavior where approvals are delivered via
+    the main agent execution stream.
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "SSE stream with HITL event"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_hitl_approval_stream(
+    request: TestHITLRequest,
+) -> StreamingResponse:
+    """Generate and stream HITL approval event via SSE."""
+    import time
+    import json
+
+    async def generate_events() -> AsyncGenerator[str, None]:
+        approval_id = f"apr-test-{uuid.uuid4().hex[:12]}"
+        run_id = f"run-test-{uuid.uuid4().hex[:8]}"
+        thread_id = request.thread_id
+
+        # 1. Send RUN_STARTED
+        run_started = {
+            "type": "RUN_STARTED",
+            "threadId": thread_id,
+            "runId": run_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(run_started)}\n\n"
+
+        # 2. Send APPROVAL_REQUIRED event
+        approval_event = {
+            "type": "CUSTOM",
+            "eventName": "approval_required",
+            "payload": {
+                "approval_id": approval_id,
+                "tool_name": request.tool_name,
+                "tool_input": request.tool_input,
+                "risk_level": request.risk_level.value,
+                "risk_score": request.risk_score,
+                "reason": f"Test approval for {request.tool_name}",
+                "thread_id": thread_id,
+                "timestamp": time.time(),
+            },
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(approval_event)}\n\n"
+
+        logger.info(f"Streamed test HITL event: approval_id={approval_id}")
+
+        # Note: Don't send RUN_FINISHED - wait for approval response
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post(
+    "/test/workflow-progress",
+    response_model=WorkflowProgressEventResponse,
+    summary="Test Workflow Progress (Feature 4 - Generative UI)",
+    description="""
+    Generate a test workflow progress event.
+
+    This simulates the workflow_progress event used for Generative UI,
+    showing dynamic progress indicators during multi-step operations.
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "Workflow progress event generated successfully"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_workflow_progress(
+    request: TestWorkflowProgressRequest,
+) -> WorkflowProgressEventResponse:
+    """Generate a test workflow progress event."""
+    import time
+
+    workflow_id = f"wf-test-{uuid.uuid4().hex[:8]}"
+    step_id = f"step-{request.current_step}"
+
+    payload = {
+        "workflow_id": workflow_id,
+        "workflow_name": request.workflow_name,
+        "total_steps": request.total_steps,
+        "completed_steps": request.current_step - 1,
+        "current_step": {
+            "step_id": step_id,
+            "name": f"Step {request.current_step}",
+            "status": request.step_status.value,
+        },
+        "overall_progress": (request.current_step - 1) / request.total_steps,
+        "thread_id": request.thread_id,
+        "timestamp": time.time(),
+    }
+
+    logger.info(f"Generated test workflow progress: workflow_id={workflow_id}")
+
+    return WorkflowProgressEventResponse(
+        event_name="workflow_progress",
+        payload=payload,
+    )
+
+
+@router.post(
+    "/test/workflow-progress/stream",
+    summary="Test Workflow Progress via SSE Stream (Feature 4)",
+    description="""
+    Generate and stream workflow progress events via SSE for live testing.
+
+    This endpoint sends a sequence of workflow_progress events simulating
+    a multi-step workflow execution.
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "SSE stream with workflow progress events"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_workflow_progress_stream(
+    request: TestWorkflowProgressRequest,
+) -> StreamingResponse:
+    """Generate and stream workflow progress events via SSE."""
+    import time
+    import json
+    import asyncio
+
+    async def generate_events() -> AsyncGenerator[str, None]:
+        workflow_id = f"wf-test-{uuid.uuid4().hex[:8]}"
+        run_id = f"run-test-{uuid.uuid4().hex[:8]}"
+        thread_id = request.thread_id
+
+        # 1. Send RUN_STARTED
+        run_started = {
+            "type": "RUN_STARTED",
+            "threadId": thread_id,
+            "runId": run_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(run_started)}\n\n"
+
+        # 2. Send workflow progress events for each step
+        for step in range(1, request.total_steps + 1):
+            step_status = "in_progress" if step < request.total_steps else "completed"
+            if step < request.current_step:
+                step_status = "completed"
+
+            progress_event = {
+                "type": "CUSTOM",
+                "eventName": "workflow_progress",
+                "payload": {
+                    "workflow_id": workflow_id,
+                    "workflow_name": request.workflow_name,
+                    "total_steps": request.total_steps,
+                    "completed_steps": step - 1 if step_status == "in_progress" else step,
+                    "current_step": {
+                        "step_id": f"step-{step}",
+                        "name": f"Step {step}: Processing",
+                        "status": step_status,
+                    },
+                    "overall_progress": step / request.total_steps,
+                    "thread_id": thread_id,
+                    "timestamp": time.time(),
+                },
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+            yield f"data: {json.dumps(progress_event)}\n\n"
+
+            # Brief delay between steps
+            await asyncio.sleep(0.5)
+
+        logger.info(f"Streamed workflow progress: workflow_id={workflow_id}")
+
+        # 3. Send RUN_FINISHED
+        run_finished = {
+            "type": "RUN_FINISHED",
+            "threadId": thread_id,
+            "runId": run_id,
+            "finishReason": "completed",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(run_finished)}\n\n"
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post(
+    "/test/prediction",
+    response_model=PredictionEventResponse,
+    summary="Test Prediction Update (Feature 7)",
+    description="""
+    Generate a test prediction update event.
+
+    This simulates the prediction_update event used for Predictive Updates,
+    showing pending changes before they are confirmed.
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "Prediction event generated successfully"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_prediction(
+    request: TestPredictionRequest,
+) -> PredictionEventResponse:
+    """Generate a test prediction update event."""
+    import time
+
+    prediction_id = f"pred-test-{uuid.uuid4().hex[:12]}"
+
+    payload = {
+        "prediction_id": prediction_id,
+        "prediction_type": request.prediction_type,
+        "file_path": request.file_path,
+        "preview": request.preview,
+        "confidence": request.confidence,
+        "status": "pending",
+        "thread_id": request.thread_id,
+        "timestamp": time.time(),
+    }
+
+    logger.info(f"Generated test prediction: prediction_id={prediction_id}")
+
+    return PredictionEventResponse(
+        event_name="prediction_update",
+        payload=payload,
+    )
+
+
+@router.post(
+    "/test/prediction/stream",
+    summary="Test Prediction via SSE Stream (Feature 7)",
+    description="""
+    Generate and stream prediction events via SSE for live testing.
+
+    This endpoint sends prediction_update events showing the lifecycle:
+    pending -> confirmed or rolled_back.
+    """,
+    tags=["ag-ui", "testing"],
+    responses={
+        200: {"description": "SSE stream with prediction events"},
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+    },
+)
+async def test_prediction_stream(
+    request: TestPredictionRequest,
+) -> StreamingResponse:
+    """Generate and stream prediction events via SSE."""
+    import time
+    import json
+    import asyncio
+
+    async def generate_events() -> AsyncGenerator[str, None]:
+        prediction_id = f"pred-test-{uuid.uuid4().hex[:12]}"
+        run_id = f"run-test-{uuid.uuid4().hex[:8]}"
+        thread_id = request.thread_id
+
+        # 1. Send RUN_STARTED
+        run_started = {
+            "type": "RUN_STARTED",
+            "threadId": thread_id,
+            "runId": run_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(run_started)}\n\n"
+
+        # 2. Send PENDING prediction
+        pending_event = {
+            "type": "CUSTOM",
+            "eventName": "prediction_update",
+            "payload": {
+                "prediction_id": prediction_id,
+                "prediction_type": request.prediction_type,
+                "file_path": request.file_path,
+                "preview": request.preview,
+                "confidence": request.confidence,
+                "status": "pending",
+                "thread_id": thread_id,
+                "timestamp": time.time(),
+            },
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(pending_event)}\n\n"
+
+        # Wait a bit
+        await asyncio.sleep(1.0)
+
+        # 3. Send CONFIRMED prediction
+        confirmed_event = {
+            "type": "CUSTOM",
+            "eventName": "prediction_update",
+            "payload": {
+                "prediction_id": prediction_id,
+                "prediction_type": request.prediction_type,
+                "file_path": request.file_path,
+                "preview": request.preview,
+                "confidence": request.confidence,
+                "status": "confirmed",
+                "thread_id": thread_id,
+                "timestamp": time.time(),
+            },
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        yield f"data: {json.dumps(confirmed_event)}\n\n"
+
+        logger.info(f"Streamed prediction events: prediction_id={prediction_id}")
+
+        # 4. Send RUN_FINISHED
         run_finished = {
             "type": "RUN_FINISHED",
             "threadId": thread_id,

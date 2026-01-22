@@ -41,6 +41,9 @@ import { DevUILayout } from '@/pages/DevUI/Layout';
 import { DevUIOverview } from '@/pages/DevUI/index';
 import { TraceList } from '@/pages/DevUI/TraceList';
 import { TraceDetail } from '@/pages/DevUI/TraceDetail';
+import { LiveMonitor } from '@/pages/DevUI/LiveMonitor';
+import { Settings as DevUISettings } from '@/pages/DevUI/Settings';
+import { AGUITestPanel } from '@/pages/DevUI/AGUITestPanel';
 
 function App() {
   return (
@@ -97,8 +100,11 @@ function App() {
         {/* DevUI (Sprint 87) - Developer Tools with nested layout */}
         <Route path="devui" element={<DevUILayout />}>
           <Route index element={<DevUIOverview />} />
+          <Route path="ag-ui-test" element={<AGUITestPanel />} />
           <Route path="traces" element={<TraceList />} />
           <Route path="traces/:id" element={<TraceDetail />} />
+          <Route path="monitor" element={<LiveMonitor />} />
+          <Route path="settings" element={<DevUISettings />} />
         </Route>
 
         {/* 404 fallback */}

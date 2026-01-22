@@ -631,3 +631,97 @@ class UIComponentEventResponse(BaseModel):
             }
         }
     )
+
+
+# =============================================================================
+# AG-UI Feature Testing Schemas (Sprint 99)
+# =============================================================================
+
+
+class TestHITLRequest(BaseModel):
+    """Request to generate test HITL approval event."""
+    thread_id: str = Field(..., description="Thread ID for the test")
+    tool_name: str = Field("Bash", description="Name of the tool requiring approval")
+    tool_input: Dict[str, Any] = Field(
+        default_factory=lambda: {"command": "rm -rf /test"},
+        description="Tool input parameters"
+    )
+    risk_level: RiskLevelEnum = Field(RiskLevelEnum.HIGH, description="Risk level of the operation")
+    risk_score: float = Field(0.85, ge=0.0, le=1.0, description="Risk score")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "thread_id": "test-123",
+                "tool_name": "Bash",
+                "tool_input": {"command": "rm -rf /test"},
+                "risk_level": "high",
+                "risk_score": 0.85,
+            }
+        }
+    )
+
+
+class TestPredictionRequest(BaseModel):
+    """Request to generate test prediction event."""
+    thread_id: str = Field(..., description="Thread ID for the test")
+    prediction_type: str = Field("file_edit", description="Type of prediction")
+    file_path: Optional[str] = Field(None, description="File path for file predictions")
+    preview: str = Field("// New content here", description="Preview of predicted content")
+    confidence: float = Field(0.9, ge=0.0, le=1.0, description="Prediction confidence")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "thread_id": "test-123",
+                "prediction_type": "file_edit",
+                "file_path": "/src/example.ts",
+                "preview": "// Updated function\nfunction newFunc() { ... }",
+                "confidence": 0.92,
+            }
+        }
+    )
+
+
+class HITLEventResponse(BaseModel):
+    """Response containing HITL approval event data."""
+    event_name: str = Field("approval_required", description="Event name")
+    payload: Dict[str, Any] = Field(..., description="Event payload")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "event_name": "approval_required",
+                "payload": {
+                    "approval_id": "apr-abc123",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "rm -rf /test"},
+                    "risk_level": "high",
+                    "risk_score": 0.85,
+                    "reason": "High-risk shell command execution",
+                },
+            }
+        }
+    )
+
+
+class PredictionEventResponse(BaseModel):
+    """Response containing prediction event data."""
+    event_name: str = Field("prediction_update", description="Event name")
+    payload: Dict[str, Any] = Field(..., description="Event payload")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "event_name": "prediction_update",
+                "payload": {
+                    "prediction_id": "pred-abc123",
+                    "prediction_type": "file_edit",
+                    "file_path": "/src/example.ts",
+                    "preview": "// Updated content",
+                    "confidence": 0.92,
+                    "status": "pending",
+                },
+            }
+        }
+    )
