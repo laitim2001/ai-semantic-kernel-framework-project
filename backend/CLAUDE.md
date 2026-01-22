@@ -1,6 +1,6 @@
 # Backend - FastAPI Application
 
-> IPA Platform 後端服務，基於 Python FastAPI 框架
+> IPA Platform backend service, based on Python FastAPI framework
 
 ---
 
@@ -168,22 +168,22 @@ See: `src/integrations/agent_framework/CLAUDE.md`
 
 When working in `src/integrations/orchestration/`:
 
-**三層意圖路由系統**:
+**Three-tier Intent Routing System**:
 ```
-Layer 1: PatternMatcher (< 10ms) - 規則基礎，正則匹配
-Layer 2: SemanticRouter (< 100ms) - 向量相似度
-Layer 3: LLMClassifier (< 2000ms) - Claude Haiku 兜底
+Layer 1: PatternMatcher (< 10ms) - Rule-based, regex matching
+Layer 2: SemanticRouter (< 100ms) - Vector similarity
+Layer 3: LLMClassifier (< 2000ms) - Claude Haiku fallback
 ```
 
-**核心組件**:
-| 組件 | 位置 | 用途 |
-|------|------|------|
-| BusinessIntentRouter | `intent_router/router.py` | 三層路由協調 |
-| GuidedDialogEngine | `guided_dialog/engine.py` | 多輪對話引導 |
-| InputGateway | `input_gateway/gateway.py` | 多來源輸入處理 |
-| RiskAssessor | `risk_assessor/assessor.py` | 風險評估 |
-| HITLController | `hitl/controller.py` | 人機協作審批 |
-| Metrics | `metrics.py` | OpenTelemetry 監控 |
+**Core Components**:
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| BusinessIntentRouter | `intent_router/router.py` | Three-tier routing coordinator |
+| GuidedDialogEngine | `guided_dialog/engine.py` | Multi-turn dialog guidance |
+| InputGateway | `input_gateway/gateway.py` | Multi-source input processing |
+| RiskAssessor | `risk_assessor/assessor.py` | Risk assessment |
+| HITLController | `hitl/controller.py` | Human-in-the-loop approval |
+| Metrics | `metrics.py` | OpenTelemetry monitoring |
 
 **Quick Usage**:
 ```python
@@ -194,11 +194,11 @@ from src.integrations.orchestration import (
     RoutingDecision,
 )
 
-# 創建路由器
+# Create router
 router = create_mock_router()
 
-# 路由用戶輸入
-decision = await router.route("ETL Pipeline 失敗了")
+# Route user input
+decision = await router.route("ETL Pipeline failed")
 print(decision.intent_category)  # ITIntentCategory.INCIDENT
 print(decision.routing_layer)    # "pattern"
 ```
@@ -285,4 +285,4 @@ logger.error("Error occurred", exc_info=True)
 
 ---
 
-**Last Updated**: 2025-12-18
+**Last Updated**: 2026-01-22

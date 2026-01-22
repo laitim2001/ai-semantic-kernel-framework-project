@@ -250,4 +250,4 @@ The Agent Framework is currently in **Preview/Beta** (version `1.0.0b251204`).
 
 ---
 
-**Last Updated**: 2025-12-18
+**Last Updated**: 2026-01-23

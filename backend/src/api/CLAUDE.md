@@ -1,6 +1,6 @@
 # API Layer
 
-> FastAPI 路由層 - 處理 HTTP 請求和響應
+> FastAPI routing layer - handles HTTP requests and responses
 
 ---
 
@@ -357,4 +357,4 @@ raise HTTPException(
 
 ---
 
-**Last Updated**: 2025-12-24
+**Last Updated**: 2026-01-23

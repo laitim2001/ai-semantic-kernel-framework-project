@@ -1,6 +1,6 @@
 # Sessions Domain
 
-> Phase 11: Agent-Session Integration 業務邏輯層
+> Phase 11: Agent-Session Integration Business Logic Layer
 
 ---
 
@@ -270,4 +270,4 @@ Key test files:
 
 ---
 
-**Last Updated**: 2025-12-24
+**Last Updated**: 2026-01-23

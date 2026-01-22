@@ -1,6 +1,6 @@
 # Domain Layer
 
-> 業務邏輯層 - 核心服務和狀態機
+> Business logic layer - core services and state machines
 
 ---
 
@@ -10,24 +10,24 @@
 domain/
 ├── __init__.py
 │
-├── agents/                 # Agent 管理
+├── agents/                 # Agent management
 │   ├── __init__.py
 │   ├── service.py          # AgentService
 │   ├── models.py           # Domain models
 │   └── tools/              # Agent tools
 │
-├── workflows/              # Workflow 管理
+├── workflows/              # Workflow management
 │   ├── __init__.py
 │   ├── service.py          # WorkflowService
 │   ├── state_machine.py    # Workflow state machine
 │   └── executors/          # Execution strategies
 │
-├── executions/             # 執行生命週期
+├── executions/             # Execution lifecycle
 │   ├── __init__.py
 │   ├── service.py          # ExecutionService
 │   └── state_machine.py    # Execution state machine
 │
-├── checkpoints/            # 人機協作檢查點
+├── checkpoints/            # Human-in-the-loop checkpoints
 │   ├── __init__.py
 │   └── service.py          # CheckpointService
 │
@@ -43,22 +43,22 @@ domain/
 │   ├── recovery.py         # SessionRecoveryManager
 │   └── metrics.py          # MetricsCollector (Prometheus-style)
 │
-├── templates/              # Workflow 模板
-├── triggers/               # 觸發器
-├── connectors/             # 外部連接器
-├── routing/                # 智能路由
-├── notifications/          # 通知
-├── audit/                  # 審計日誌
-├── versioning/             # 版本控制
-├── prompts/                # Prompt 管理
-├── learning/               # 學習系統
-├── devtools/               # 開發工具
+├── templates/              # Workflow templates
+├── triggers/               # Triggers
+├── connectors/             # External connectors
+├── routing/                # Intelligent routing
+├── notifications/          # Notifications
+├── audit/                  # Audit logs
+├── versioning/             # Version control
+├── prompts/                # Prompt management
+├── learning/               # Learning system
+├── devtools/               # Developer tools
 │
-└── orchestration/          # ⚠️ DEPRECATED - 使用 integrations/agent_framework/
-    ├── multiturn/          # → 使用 MultiTurnAdapter
-    ├── memory/             # → 使用 Memory Adapters
-    ├── planning/           # → 使用 PlanningAdapter
-    └── nested/             # → 使用 NestedWorkflowAdapter
+└── orchestration/          # ⚠️ DEPRECATED - use integrations/agent_framework/
+    ├── multiturn/          # → use MultiTurnAdapter
+    ├── memory/             # → use Memory Adapters
+    ├── planning/           # → use PlanningAdapter
+    └── nested/             # → use NestedWorkflowAdapter
 ```
 
 ---
@@ -397,4 +397,4 @@ CREATED → ACTIVE ↔ SUSPENDED → ENDED
 
 ---
 
-**Last Updated**: 2025-12-24
+**Last Updated**: 2026-01-23

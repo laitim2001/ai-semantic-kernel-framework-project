@@ -1,6 +1,6 @@
 # Infrastructure Layer
 
-> 基礎設施層 - 數據庫、緩存、消息隊列
+> Infrastructure layer - database, cache, message queue
 
 ---
 
@@ -10,7 +10,7 @@
 infrastructure/
 ├── __init__.py
 │
-├── database/               # PostgreSQL 整合
+├── database/               # PostgreSQL integration
 │   ├── __init__.py
 │   ├── connection.py       # Database connection management
 │   ├── models/             # SQLAlchemy ORM models
@@ -26,13 +26,13 @@ infrastructure/
 │       ├── workflow_repository.py
 │       └── ...
 │
-├── cache/                  # Redis 整合
+├── cache/                  # Redis integration
 │   ├── __init__.py
 │   ├── client.py           # Redis client
 │   ├── llm_cache.py        # LLM response caching
 │   └── session_cache.py    # Session state caching
 │
-└── messaging/              # RabbitMQ 整合
+└── messaging/              # RabbitMQ integration
     ├── __init__.py
     ├── publisher.py        # Message publishing
     └── consumer.py         # Message consuming
@@ -376,4 +376,4 @@ class MessagePublisher:
 
 ---
 
-**Last Updated**: 2025-12-18
+**Last Updated**: 2026-01-23

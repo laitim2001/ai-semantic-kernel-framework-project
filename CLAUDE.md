@@ -25,7 +25,7 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 | Attribute | Value |
 |-----------|-------|
 | **Core Framework** | Microsoft Agent Framework + Claude Agent SDK + AG-UI Protocol |
-| **Current Status** | Phase 28 已完成 - 三層意圖路由 |
+| **Current Status** | Phase 28 Completed - Three-tier Intent Routing |
 | **Completed** | 28 Phases, 99 Sprints, 2189 Story Points |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis |
 
@@ -147,7 +147,7 @@ REDIS_PORT=6379
 # Azure OpenAI
 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
 AZURE_OPENAI_API_KEY=<key>
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
 ```
 
 ---
@@ -160,77 +160,78 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
 | `docs/01-planning/prd/prd-main.md` | Product requirements |
 | `docs/03-implementation/sprint-planning/README.md` | Sprint planning overview |
 | `docs/api/ag-ui-api-reference.md` | AG-UI API Reference |
-| `claudedocs/CLAUDE.md` | AI 助手執行文檔索引 |
+| `claudedocs/CLAUDE.md` | AI assistant execution docs index |
 
 ---
 
-## ClaudeDocs - AI 助手執行文檔
+## ClaudeDocs - AI Assistant Execution Docs
 
-> **重要**: `claudedocs/` 目錄是 AI 助手與開發團隊協作產出的動態執行文檔，與 `docs/` 的設計文檔分開管理。
+> **Important**: The `claudedocs/` directory contains dynamic execution documentation produced collaboratively by AI assistants and the development team, managed separately from the design docs in `docs/`.
 
-### 目錄結構
+### Directory Structure
 
 ```
 claudedocs/
-├── 1-planning/          # 總體規劃 (epics, architecture, features)
-├── 2-sprints/           # Sprint 執行文檔
-├── 3-progress/          # 進度追蹤 (daily, weekly, milestones)
-├── 4-changes/           # 變更記錄 (bug-fixes, feature-changes)
-├── 5-status/            # 狀態報告 (phase-reports, testing)
-├── 6-ai-assistant/      # AI 助手相關 (prompts, analysis)
-├── 7-archive/           # 歷史歸檔
-├── CLAUDE.md            # 詳細目錄索引
-└── README.md            # 快速導覽
+├── 1-planning/          # Overall planning (epics, architecture, features)
+├── 2-sprints/           # Sprint execution docs
+├── 3-progress/          # Progress tracking (daily, weekly, milestones)
+├── 4-changes/           # Change records (bug-fixes, feature-changes)
+├── 5-status/            # Status reports (phase-reports, testing)
+├── 6-ai-assistant/      # AI assistant related (prompts, analysis)
+├── 7-archive/           # Historical archive
+├── CLAUDE.md            # Detailed directory index
+└── README.md            # Quick navigation
 ```
 
-### AI 助手情境提示詞 (SITUATION)
+### AI Assistant Situation Prompts (SITUATION)
 
-根據當前工作情境，使用對應的提示詞模板：
+Use the corresponding prompt template based on current work context:
 
-| 情境 | 文檔 | 使用時機 |
-|------|------|----------|
-| **SITUATION-1** | `6-ai-assistant/prompts/SITUATION-1-PROJECT-ONBOARDING.md` | 專案入門、首次接觸 |
-| **SITUATION-2** | `6-ai-assistant/prompts/SITUATION-2-FEATURE-DEV-PREP.md` | 功能開發準備 |
-| **SITUATION-3** | `6-ai-assistant/prompts/SITUATION-3-FEATURE-ENHANCEMENT.md` | 功能增強或修正 |
-| **SITUATION-4** | `6-ai-assistant/prompts/SITUATION-4-NEW-FEATURE-DEV.md` | 新功能開發執行 |
-| **SITUATION-5** | `6-ai-assistant/prompts/SITUATION-5-SAVE-PROGRESS.md` | 保存進度、會話結束 |
-| **SITUATION-6** | `6-ai-assistant/prompts/SITUATION-6-SERVICE-STARTUP.md` | 服務啟動、環境檢查 |
-| **SITUATION-7** | `6-ai-assistant/prompts/SITUATION-7-NEW-ENV-SETUP.md` | 新開發環境設置 |
+| Situation | Document | When to Use |
+|-----------|----------|-------------|
+| **SITUATION-1** | `6-ai-assistant/prompts/SITUATION-1-PROJECT-ONBOARDING.md` | Project onboarding, first contact |
+| **SITUATION-2** | `6-ai-assistant/prompts/SITUATION-2-FEATURE-DEV-PREP.md` | Feature development preparation |
+| **SITUATION-3** | `6-ai-assistant/prompts/SITUATION-3-FEATURE-ENHANCEMENT.md` | Feature enhancement or fixes |
+| **SITUATION-4** | `6-ai-assistant/prompts/SITUATION-4-NEW-FEATURE-DEV.md` | New feature development execution |
+| **SITUATION-5** | `6-ai-assistant/prompts/SITUATION-5-SAVE-PROGRESS.md` | Save progress, end session |
+| **SITUATION-6** | `6-ai-assistant/prompts/SITUATION-6-SERVICE-STARTUP.md` | Service startup, environment check |
+| **SITUATION-7** | `6-ai-assistant/prompts/SITUATION-7-NEW-ENV-SETUP.md` | New development environment setup |
 
-### 變更記錄規範
+### Change Record Conventions
 
-當修復 Bug 或實作功能變更時，必須在 `claudedocs/4-changes/` 建立對應文檔：
+When fixing bugs or implementing feature changes, create corresponding docs in `claudedocs/4-changes/`:
 
-| 類型 | 目錄 | 命名格式 | 範例 |
-|------|------|----------|------|
-| Bug 修復 | `4-changes/bug-fixes/` | `FIX-XXX-description.md` | `FIX-001-hitl-approval-wrong-id-type.md` |
-| 功能變更 | `4-changes/feature-changes/` | `CHANGE-XXX-description.md` | `CHANGE-001-hitl-inline-approval-card.md` |
-| 重構 | `4-changes/refactoring/` | `REFACTOR-XXX-description.md` | `REFACTOR-001-api-structure.md` |
+| Type | Directory | Naming Format | Example |
+|------|-----------|---------------|---------|
+| Bug Fix | `4-changes/bug-fixes/` | `FIX-XXX-description.md` | `FIX-001-hitl-approval-wrong-id-type.md` |
+| Feature Change | `4-changes/feature-changes/` | `CHANGE-XXX-description.md` | `CHANGE-001-hitl-inline-approval-card.md` |
+| Refactoring | `4-changes/refactoring/` | `REFACTOR-XXX-description.md` | `REFACTOR-001-api-structure.md` |
 
-### 日常工作流程
+### Daily Workflow
 
-1. **開始工作前**: 查看 `claudedocs/3-progress/daily/` 最新日誌
-2. **修復 Bug**: 在 `claudedocs/4-changes/bug-fixes/` 建立 FIX 文檔
-3. **功能變更**: 在 `claudedocs/4-changes/feature-changes/` 建立 CHANGE 文檔
-4. **會話結束**: 使用 SITUATION-5 保存進度
+1. **Before starting work**: Check `claudedocs/3-progress/daily/` for latest logs
+2. **Fixing bugs**: Create FIX doc in `claudedocs/4-changes/bug-fixes/`
+3. **Feature changes**: Create CHANGE doc in `claudedocs/4-changes/feature-changes/`
+4. **End of session**: Use SITUATION-5 to save progress
 
-### 詳細指引
+### Detailed Guide
 
-- 完整目錄索引: `claudedocs/CLAUDE.md`
-- 快速導覽: `claudedocs/README.md`
-- 文檔命名約定和格式範本請參考 `claudedocs/CLAUDE.md`
+- Full directory index: `claudedocs/CLAUDE.md`
+- Quick navigation: `claudedocs/README.md`
+- Naming conventions and format templates: see `claudedocs/CLAUDE.md`
 
 ---
 
 ## Developer Preferences
 
 ### Communication
-- **Language**: Respond in Traditional Chinese
+- **Language**: Respond in Traditional Chinese (for user communication)
+- **Documentation**: Use English for all CLAUDE.md files
 - **Detail Level**: Provide detailed explanations with reasoning
 - **Confirmation**: Ask before destructive operations
 
 ### Code Style
-- **Comments**: Mixed mode - important explanations in Chinese, short comments in English
+- **Comments**: English for code comments
 - **Git Commit**: Commit only when feature is complete
 - **Testing**: New features must include unit tests
 
@@ -276,7 +277,7 @@ See `.claude/rules/agent-framework.md` for detailed rules.
 
 1. **Agent Framework is Preview**: API may change. Reference docs in `reference/agent-framework/`
 
-2. **Chinese Documentation**: Target market is Taiwan/Hong Kong. Technical terms in English, comments in Traditional Chinese.
+2. **Target Market**: Taiwan/Hong Kong. Technical terms in English, user-facing content in Traditional Chinese.
 
 3. **BMAD Methodology**: Project follows BMad Agile Development workflow. Track status in `docs/bmm-workflow-status.yaml`
 
@@ -284,5 +285,5 @@ See `.claude/rules/agent-framework.md` for detailed rules.
 
 **Last Updated**: 2026-01-22
 **Project Start**: 2025-11-14
-**Status**: Phase 28 已完成 (99 Sprints completed)
+**Status**: Phase 28 Completed (99 Sprints completed)
 **Total Story Points**: 2189 pts across 28 phases

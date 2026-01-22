@@ -1,6 +1,6 @@
 # Frontend - React Application
 
-> IPA Platform 前端應用，基於 React 18 + TypeScript + Vite
+> IPA Platform frontend application, built with React 18 + TypeScript + Vite
 
 ---
 
@@ -347,4 +347,4 @@ const onSubmit = (data: FormData) => {
 
 ---
 
-**Last Updated**: 2025-12-18
+**Last Updated**: 2026-01-23

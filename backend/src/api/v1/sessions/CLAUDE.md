@@ -1,6 +1,6 @@
 # Sessions API
 
-> Phase 11: Agent-Session Integration API 層
+> Phase 11: Agent-Session Integration API Layer
 
 ---
 
@@ -167,4 +167,4 @@ SessionErrorCode.TOOL_EXECUTION_FAILED → 500
 
 ---
 
-**Last Updated**: 2025-12-24
+**Last Updated**: 2026-01-23
