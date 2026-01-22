@@ -382,6 +382,30 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       setToolCalls((prev) => [...prev, toolCall]);
       storeAddToolCall(toolCall);
       onToolCall?.(toolCall);
+
+      // AG-UI Fix: Also add tool call to current message for UI rendering
+      if (currentMessageRef.current) {
+        const toolCallState: ToolCallState = {
+          id: toolCall.id,
+          toolCallId: toolCall.toolCallId,
+          name: toolCall.name,
+          arguments: toolCall.arguments,
+          status: toolCall.status,
+          startedAt: toolCall.startedAt,
+        };
+        currentMessageRef.current.toolCalls = [
+          ...(currentMessageRef.current.toolCalls || []),
+          toolCallState,
+        ];
+        // Trigger re-render with updated message
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === currentMessageRef.current?.id
+              ? { ...msg, toolCalls: currentMessageRef.current.toolCalls }
+              : msg
+          )
+        );
+      }
     },
     [storeAddToolCall, onToolCall]
   );
@@ -405,6 +429,23 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       )
     );
     storeUpdateToolCall(toolCallId, { arguments: updatedArgs });
+
+    // AG-UI Fix: Also update tool call args in messages for UI rendering
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.toolCalls?.some((tc) => tc.toolCallId === toolCallId)) {
+          return {
+            ...msg,
+            toolCalls: msg.toolCalls.map((tc) =>
+              tc.toolCallId === toolCallId
+                ? { ...tc, arguments: updatedArgs }
+                : tc
+            ),
+          };
+        }
+        return msg;
+      })
+    );
   }, [storeUpdateToolCall]);
 
   const completeToolCall = useCallback(
@@ -425,6 +466,23 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       );
 
       storeUpdateToolCall(toolCallId, { status, result, error: toolError, completedAt });
+
+      // AG-UI Fix: Also update tool call status in messages for UI rendering
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.toolCalls?.some((tc) => tc.toolCallId === toolCallId)) {
+            return {
+              ...msg,
+              toolCalls: msg.toolCalls.map((tc) =>
+                tc.toolCallId === toolCallId
+                  ? { ...tc, status, result, error: toolError, completedAt }
+                  : tc
+              ),
+            };
+          }
+          return msg;
+        })
+      );
 
       if (currentToolCallRef.current?.toolCallId === toolCallId) {
         const updated = {
