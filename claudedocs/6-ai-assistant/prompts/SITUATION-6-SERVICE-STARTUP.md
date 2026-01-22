@@ -438,10 +438,19 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
 
 ## 🔗 相關文檔
 
+### 新開發環境
+如果您是在**新環境**首次設置，或遇到以下問題：
+- bcrypt/passlib 版本衝突
+- 資料庫 Schema 不同步
+- Alembic 遷移失敗
+
+請參考 **[情況7: 新開發環境設置](./SITUATION-7-NEW-ENV-SETUP.md)**
+
 ### 開發流程指引
 - [情況1: 專案入門](./SITUATION-1-PROJECT-ONBOARDING.md) - 新開發者了解專案
 - [情況2: 開發前準備](./SITUATION-2-FEATURE-DEV-PREP.md) - 開始開發任務前
 - [情況5: 保存進度](./SITUATION-5-SAVE-PROGRESS.md) - 提交代碼
+- [情況7: 新開發環境設置](./SITUATION-7-NEW-ENV-SETUP.md) - 完整環境初始化
 
 ### 技術文檔
 - [CLAUDE.md](../../../CLAUDE.md) - 專案總覽和開發指南
