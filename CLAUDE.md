@@ -25,8 +25,8 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 | Attribute | Value |
 |-----------|-------|
 | **Core Framework** | Microsoft Agent Framework + Claude Agent SDK + AG-UI Protocol |
-| **Current Phase** | Phase 20 - File Attachment Support (Sprints 75-76) |
-| **Completed** | Phase 1-19 (74 Sprints, 1665 pts) |
+| **Current Status** | Phase 28 已完成 - 三層意圖路由 |
+| **Completed** | 28 Phases, 99 Sprints, 2189 Story Points |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis |
 
 ---
@@ -159,8 +159,66 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.2
 | `docs/02-architecture/technical-architecture.md` | System architecture |
 | `docs/01-planning/prd/prd-main.md` | Product requirements |
 | `docs/03-implementation/sprint-planning/README.md` | Sprint planning overview |
-| `docs/03-implementation/sprint-planning/phase-20/README.md` | Current phase |
 | `docs/api/ag-ui-api-reference.md` | AG-UI API Reference |
+| `claudedocs/CLAUDE.md` | AI 助手執行文檔索引 |
+
+---
+
+## ClaudeDocs - AI 助手執行文檔
+
+> **重要**: `claudedocs/` 目錄是 AI 助手與開發團隊協作產出的動態執行文檔，與 `docs/` 的設計文檔分開管理。
+
+### 目錄結構
+
+```
+claudedocs/
+├── 1-planning/          # 總體規劃 (epics, architecture, features)
+├── 2-sprints/           # Sprint 執行文檔
+├── 3-progress/          # 進度追蹤 (daily, weekly, milestones)
+├── 4-changes/           # 變更記錄 (bug-fixes, feature-changes)
+├── 5-status/            # 狀態報告 (phase-reports, testing)
+├── 6-ai-assistant/      # AI 助手相關 (prompts, analysis)
+├── 7-archive/           # 歷史歸檔
+├── CLAUDE.md            # 詳細目錄索引
+└── README.md            # 快速導覽
+```
+
+### AI 助手情境提示詞 (SITUATION)
+
+根據當前工作情境，使用對應的提示詞模板：
+
+| 情境 | 文檔 | 使用時機 |
+|------|------|----------|
+| **SITUATION-1** | `6-ai-assistant/prompts/SITUATION-1-PROJECT-ONBOARDING.md` | 專案入門、首次接觸 |
+| **SITUATION-2** | `6-ai-assistant/prompts/SITUATION-2-FEATURE-DEV-PREP.md` | 功能開發準備 |
+| **SITUATION-3** | `6-ai-assistant/prompts/SITUATION-3-FEATURE-ENHANCEMENT.md` | 功能增強或修正 |
+| **SITUATION-4** | `6-ai-assistant/prompts/SITUATION-4-NEW-FEATURE-DEV.md` | 新功能開發執行 |
+| **SITUATION-5** | `6-ai-assistant/prompts/SITUATION-5-SAVE-PROGRESS.md` | 保存進度、會話結束 |
+| **SITUATION-6** | `6-ai-assistant/prompts/SITUATION-6-SERVICE-STARTUP.md` | 服務啟動、環境檢查 |
+| **SITUATION-7** | `6-ai-assistant/prompts/SITUATION-7-NEW-ENV-SETUP.md` | 新開發環境設置 |
+
+### 變更記錄規範
+
+當修復 Bug 或實作功能變更時，必須在 `claudedocs/4-changes/` 建立對應文檔：
+
+| 類型 | 目錄 | 命名格式 | 範例 |
+|------|------|----------|------|
+| Bug 修復 | `4-changes/bug-fixes/` | `FIX-XXX-description.md` | `FIX-001-hitl-approval-wrong-id-type.md` |
+| 功能變更 | `4-changes/feature-changes/` | `CHANGE-XXX-description.md` | `CHANGE-001-hitl-inline-approval-card.md` |
+| 重構 | `4-changes/refactoring/` | `REFACTOR-XXX-description.md` | `REFACTOR-001-api-structure.md` |
+
+### 日常工作流程
+
+1. **開始工作前**: 查看 `claudedocs/3-progress/daily/` 最新日誌
+2. **修復 Bug**: 在 `claudedocs/4-changes/bug-fixes/` 建立 FIX 文檔
+3. **功能變更**: 在 `claudedocs/4-changes/feature-changes/` 建立 CHANGE 文檔
+4. **會話結束**: 使用 SITUATION-5 保存進度
+
+### 詳細指引
+
+- 完整目錄索引: `claudedocs/CLAUDE.md`
+- 快速導覽: `claudedocs/README.md`
+- 文檔命名約定和格式範本請參考 `claudedocs/CLAUDE.md`
 
 ---
 
@@ -224,7 +282,7 @@ See `.claude/rules/agent-framework.md` for detailed rules.
 
 ---
 
-**Last Updated**: 2026-01-09
+**Last Updated**: 2026-01-22
 **Project Start**: 2025-11-14
-**Status**: Phase 20 In Progress (74 Sprints completed)
-**Total Story Points**: 1699 pts across 20 phases
+**Status**: Phase 28 已完成 (99 Sprints completed)
+**Total Story Points**: 2189 pts across 28 phases
