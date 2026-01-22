@@ -38,6 +38,15 @@ from src.integrations.ag_ui.bridge import (
     HybridEventBridge,
     BridgeConfig,
 )
+from src.integrations.ag_ui.features.human_in_loop import (
+    HITLHandler,
+    ToolCallInfo,
+    get_hitl_handler,
+    get_approval_storage,
+    ApprovalStatus,
+)
+from src.integrations.claude_sdk.hooks.approval import ApprovalHook
+from src.integrations.claude_sdk.types import ToolCallContext
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +56,91 @@ _hybrid_bridge: Optional[HybridEventBridge] = None
 _claude_client: Optional[Any] = None  # ClaudeSDKClient instance
 
 
+async def _create_approval_callback(context: ToolCallContext) -> bool:
+    """
+    Approval callback for ApprovalHook.
+
+    This callback is invoked when a tool call requires human approval.
+    It creates an approval request and waits for user response.
+
+    Args:
+        context: ToolCallContext with tool_name and args
+
+    Returns:
+        True if approved, False if rejected
+    """
+    try:
+        hitl = get_hitl_handler()
+
+        # Create ToolCallInfo
+        tool_call_info = ToolCallInfo(
+            id=f"tc-{context.tool_name}-{os.urandom(4).hex()}",
+            name=context.tool_name,
+            arguments=context.args or {},
+        )
+
+        # Check if approval is needed
+        needs_approval, assessment = await hitl.check_approval_needed(
+            tool_call=tool_call_info,
+            session_id=context.session_id,
+            environment="development",
+        )
+
+        if not needs_approval:
+            logger.debug(f"Tool {context.tool_name} does not require approval")
+            return True
+
+        # Create approval event (stores in ApprovalStorage)
+        run_id = f"run-approval-{os.urandom(4).hex()}"
+        event = await hitl.create_approval_event(
+            tool_call=tool_call_info,
+            assessment=assessment,
+            run_id=run_id,
+            session_id=context.session_id,
+            timeout_seconds=120,  # 2 minutes for interactive approval
+        )
+
+        approval_id = event.payload["approval_id"]
+        logger.info(
+            f"[HITL] Approval required for {context.tool_name}: {approval_id}"
+        )
+
+        # Wait for approval (polls ApprovalStorage)
+        try:
+            request = await hitl.wait_for_approval(
+                approval_id=approval_id,
+                poll_interval_seconds=0.5,
+            )
+
+            approved = request.status == ApprovalStatus.APPROVED
+
+            if approved:
+                logger.info(f"[HITL] Tool {context.tool_name} approved: {approval_id}")
+            else:
+                logger.info(
+                    f"[HITL] Tool {context.tool_name} rejected: {approval_id}, "
+                    f"status={request.status.value}"
+                )
+
+            return approved
+
+        except Exception as wait_error:
+            logger.warning(f"[HITL] Approval wait failed: {wait_error}")
+            return False
+
+    except Exception as e:
+        logger.error(f"[HITL] Approval callback error: {e}", exc_info=True)
+        # Fail-safe: reject on error
+        return False
+
+
 def _try_create_claude_client():
     """
     Try to create ClaudeSDKClient for Claude API calls.
 
     Returns None if API key is not configured or dependencies unavailable.
+
+    Sprint 59: Now includes ApprovalHook for Human-in-the-Loop (HITL) support.
     """
     try:
         # Check for API key
@@ -62,13 +151,21 @@ def _try_create_claude_client():
 
         from src.integrations.claude_sdk.client import ClaudeSDKClient
 
+        # Create ApprovalHook for HITL
+        approval_hook = ApprovalHook(
+            approval_callback=_create_approval_callback,
+            auto_approve_reads=True,  # Auto-approve Read, Glob, Grep
+            timeout=120.0,  # 2 minutes for interactive approval
+        )
+
         client = ClaudeSDKClient(
             api_key=api_key,
             model="claude-haiku-4-5-20251001",
             max_tokens=4096,
             timeout=300,
+            hooks=[approval_hook],  # Enable HITL
         )
-        logger.info("ClaudeSDKClient created successfully")
+        logger.info("ClaudeSDKClient created successfully with ApprovalHook")
         return client
 
     except ImportError as e:

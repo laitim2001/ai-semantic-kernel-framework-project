@@ -29,6 +29,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional, TYPE_CHECKING
 
 from src.integrations.ag_ui.converters import EventConverters, create_converters
@@ -456,8 +457,64 @@ class HybridEventBridge:
             execution_result: Dict[str, Any] = {"result": None, "error": None}
 
             async def execute_task():
-                """Execute orchestrator and signal completion."""
+                """Execute orchestrator and signal completion.
+
+                S59-4: Emits workflow_progress events for Generative UI.
+                S60-3: Emits prediction_update events for Predictive State Updates.
+                """
+                import time as time_mod
+                workflow_id = f"wf-{run_id}"
+                prediction_id = f"pred-{run_id}"
+                workflow_start = time_mod.time()
+
                 try:
+                    # S60-3: Emit prediction_update - Optimistic state change
+                    prediction_event = CustomEvent(
+                        event_name="prediction_update",
+                        payload={
+                            "predictionId": prediction_id,
+                            "predictionType": "optimistic",
+                            "status": "pending",
+                            "predictedState": {
+                                "isProcessing": True,
+                                "estimatedCompletion": "soon",
+                            },
+                            "originalState": {
+                                "isProcessing": False,
+                            },
+                            "confidence": 0.9,
+                            "createdAt": time_mod.time(),
+                            "expiresAt": time_mod.time() + 120,
+                            "metadata": {
+                                "actionType": "agent_execution",
+                                "threadId": thread_id,
+                                "runId": run_id,
+                            },
+                        },
+                    )
+                    await event_queue.put(prediction_event)
+
+                    # S59-4: Emit workflow_progress - Step 1: Starting
+                    progress_event_1 = CustomEvent(
+                        event_name="workflow_progress",
+                        payload={
+                            "workflow_id": workflow_id,
+                            "workflow_name": "Agent Execution",
+                            "total_steps": 3,
+                            "completed_steps": 0,
+                            "current_step": {
+                                "step_id": "step-1",
+                                "name": "Preparing",
+                                "status": "in_progress",
+                            },
+                            "overall_progress": 0.0,
+                            "started_at": datetime.utcnow().isoformat(),
+                            "run_id": run_id,
+                            "thread_id": thread_id,
+                        },
+                    )
+                    await event_queue.put(progress_event_1)
+
                     # S75-5: Build multimodal content for Claude API
                     multimodal_content = self._build_multimodal_content(
                         run_input.prompt, run_input.file_ids
@@ -469,6 +526,27 @@ class HybridEventBridge:
 
                     logger.info(f"[S75-5] Executing with multimodal content: {len(multimodal_content)} blocks")
 
+                    # S59-4: Emit workflow_progress - Step 2: Executing
+                    progress_event_2 = CustomEvent(
+                        event_name="workflow_progress",
+                        payload={
+                            "workflow_id": workflow_id,
+                            "workflow_name": "Agent Execution",
+                            "total_steps": 3,
+                            "completed_steps": 1,
+                            "current_step": {
+                                "step_id": "step-2",
+                                "name": "Processing with AI",
+                                "status": "in_progress",
+                            },
+                            "overall_progress": 0.33,
+                            "started_at": datetime.utcnow().isoformat(),
+                            "run_id": run_id,
+                            "thread_id": thread_id,
+                        },
+                    )
+                    await event_queue.put(progress_event_2)
+
                     result = await self._orchestrator.execute(
                         prompt=run_input.prompt,  # Keep original prompt for logging/history
                         session_id=run_input.session_id,
@@ -479,16 +557,119 @@ class HybridEventBridge:
                         metadata=execution_metadata,
                     )
                     execution_result["result"] = result
+
+                    # S59-4: Emit workflow_progress - Step 3: Complete
+                    elapsed = time_mod.time() - workflow_start
+                    progress_event_3 = CustomEvent(
+                        event_name="workflow_progress",
+                        payload={
+                            "workflow_id": workflow_id,
+                            "workflow_name": "Agent Execution",
+                            "total_steps": 3,
+                            "completed_steps": 3,
+                            "current_step": {
+                                "step_id": "step-3",
+                                "name": "Completed",
+                                "status": "completed",
+                            },
+                            "overall_progress": 1.0,
+                            "started_at": datetime.utcnow().isoformat(),
+                            "metadata": {
+                                "duration_seconds": round(elapsed, 2),
+                            },
+                            "run_id": run_id,
+                            "thread_id": thread_id,
+                        },
+                    )
+                    await event_queue.put(progress_event_3)
+
+                    # S60-3: Emit prediction_update - Confirmed
+                    prediction_confirmed = CustomEvent(
+                        event_name="prediction_update",
+                        payload={
+                            "predictionId": prediction_id,
+                            "predictionType": "optimistic",
+                            "status": "confirmed",
+                            "predictedState": {
+                                "isProcessing": False,
+                                "result": "completed",
+                            },
+                            "originalState": {
+                                "isProcessing": False,
+                            },
+                            "confidence": 1.0,
+                            "createdAt": workflow_start,
+                            "metadata": {
+                                "actionType": "agent_execution",
+                                "threadId": thread_id,
+                                "runId": run_id,
+                                "duration_seconds": round(elapsed, 2),
+                            },
+                        },
+                    )
+                    await event_queue.put(prediction_confirmed)
+
                 except Exception as e:
+                    # S59-4: Emit workflow_progress - Failed
+                    progress_event_failed = CustomEvent(
+                        event_name="workflow_progress",
+                        payload={
+                            "workflow_id": workflow_id,
+                            "workflow_name": "Agent Execution",
+                            "total_steps": 3,
+                            "completed_steps": 0,
+                            "current_step": {
+                                "step_id": "step-error",
+                                "name": "Error",
+                                "status": "failed",
+                                "error": str(e),
+                            },
+                            "overall_progress": 0.0,
+                            "run_id": run_id,
+                            "thread_id": thread_id,
+                        },
+                    )
+                    await event_queue.put(progress_event_failed)
+
+                    # S60-3: Emit prediction_update - Rolled Back
+                    prediction_rollback = CustomEvent(
+                        event_name="prediction_update",
+                        payload={
+                            "predictionId": prediction_id,
+                            "predictionType": "optimistic",
+                            "status": "rolled_back",
+                            "predictedState": {
+                                "isProcessing": False,
+                            },
+                            "originalState": {
+                                "isProcessing": False,
+                            },
+                            "confidence": 0.0,
+                            "createdAt": workflow_start,
+                            "metadata": {
+                                "actionType": "agent_execution",
+                                "threadId": thread_id,
+                                "runId": run_id,
+                                "rollbackReason": str(e),
+                            },
+                        },
+                    )
+                    await event_queue.put(prediction_rollback)
+
                     execution_result["error"] = e
                 finally:
                     execution_done.set()
                     await event_queue.put(None)  # Signal end
 
             async def heartbeat_task():
-                """Send heartbeat events while execution is in progress."""
+                """Send heartbeat events while execution is in progress.
+
+                S59-3: Also checks for pending approvals and sends approval_required events.
+                """
                 heartbeat_count = 0
                 start_time = time.time()
+                notified_approvals: set = set()  # Track already notified approvals
+
                 while not execution_done.is_set():
                     try:
                         # Wait for heartbeat interval or until execution completes
@@ -501,19 +682,52 @@ class HybridEventBridge:
                         # Execution still in progress, send heartbeat
                         heartbeat_count += 1
                         elapsed = time.time() - start_time
+
+                        # S59-3: Check for pending approvals
+                        pending_approvals = []
+                        try:
+                            from src.integrations.ag_ui.features.human_in_loop import (
+                                get_approval_storage,
+                            )
+                            storage = get_approval_storage()
+                            pending = await storage.get_pending(
+                                session_id=run_input.session_id,
+                            )
+                            for approval in pending:
+                                if approval.approval_id not in notified_approvals:
+                                    # Send approval_required event
+                                    approval_event = CustomEvent(
+                                        event_name="approval_required",
+                                        payload=approval.to_dict(),
+                                    )
+                                    await event_queue.put(approval_event)
+                                    notified_approvals.add(approval.approval_id)
+                                    logger.info(
+                                        f"[HITL] Sent approval_required: {approval.approval_id}"
+                                    )
+
+                            pending_approvals = [a.approval_id for a in pending]
+                        except Exception as e:
+                            logger.debug(f"Could not check pending approvals: {e}")
+
+                        # Regular heartbeat
                         heartbeat_event = CustomEvent(
                             event_name="heartbeat",
                             payload={
                                 "count": heartbeat_count,
                                 "elapsed_seconds": round(elapsed, 1),
-                                "message": "Processing request... (API may be rate limited)",
-                                "status": "processing",
+                                "message": "Processing request..." + (
+                                    " (awaiting approval)" if pending_approvals else ""
+                                ),
+                                "status": "awaiting_approval" if pending_approvals else "processing",
+                                "pending_approvals": pending_approvals,
                             },
                         )
                         await event_queue.put(heartbeat_event)
                         logger.debug(
                             f"Heartbeat #{heartbeat_count}: "
-                            f"elapsed={elapsed:.1f}s, thread={thread_id}"
+                            f"elapsed={elapsed:.1f}s, thread={thread_id}, "
+                            f"pending_approvals={len(pending_approvals)}"
                         )
 
             # Start both tasks concurrently
