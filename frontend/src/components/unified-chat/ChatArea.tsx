@@ -30,15 +30,16 @@ export const ChatArea: FC<ChatAreaProps> = ({
   pendingApprovals,
   onApprove,
   onReject,
+  onExpired,
   onDownload,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new messages or streaming updates
+  // Auto-scroll to bottom on new messages, streaming updates, or new approvals
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isStreaming]);
+  }, [messages, isStreaming, pendingApprovals.length]);
 
   // Check if there are any messages
   const hasMessages = messages.length > 0;
@@ -62,6 +63,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
               pendingApprovals={pendingApprovals}
               onApprove={onApprove}
               onReject={onReject}
+              onExpired={onExpired}
               onDownload={onDownload}
             />
 

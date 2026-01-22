@@ -342,8 +342,12 @@ export interface ChatAreaProps {
   isStreaming: boolean;
   streamingMessageId?: string | null;
   pendingApprovals: PendingApproval[];
-  onApprove: (toolCallId: string) => void;
-  onReject: (toolCallId: string, reason?: string) => void;
+  /** Callback when a tool call is approved (uses approvalId) */
+  onApprove: (approvalId: string) => void;
+  /** Callback when a tool call is rejected (uses approvalId) */
+  onReject: (approvalId: string, reason?: string) => void;
+  /** Callback when an approval expires - removes it to allow new approvals */
+  onExpired?: (approvalId: string) => void;
   /** Sprint 76: Callback when file download is triggered */
   onDownload?: (fileId: string) => Promise<void>;
 }

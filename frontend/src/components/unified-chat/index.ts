@@ -48,6 +48,10 @@ export type { ModeSwitchConfirmDialogProps } from './ModeSwitchConfirmDialog';
 export { ApprovalDialog } from './ApprovalDialog';
 export type { ApprovalDialogProps } from './ApprovalDialog';
 
+// Sprint 99: Approval Message Card (inline approval as AI message)
+export { ApprovalMessageCard } from './ApprovalMessageCard';
+export type { ApprovalMessageCardProps } from './ApprovalMessageCard';
+
 // S64-3: Risk Indicator
 export { RiskIndicator } from './RiskIndicator';
 export type { RiskIndicatorProps } from './RiskIndicator';

@@ -68,6 +68,13 @@ async def _create_approval_callback(context: ToolCallContext) -> bool:
 
     Returns:
         True if approved, False if rejected
+
+    Note:
+        This callback is ONLY called for tools in DEFAULT_APPROVAL_TOOLS
+        (Write, Edit, MultiEdit, Bash). Since the ApprovalHook has already
+        decided these tools need approval, we ALWAYS require approval here
+        regardless of the risk score. The risk assessment is used to inform
+        the user about the risk level, not to override the approval requirement.
     """
     try:
         hitl = get_hitl_handler()
@@ -79,16 +86,32 @@ async def _create_approval_callback(context: ToolCallContext) -> bool:
             arguments=context.args or {},
         )
 
-        # Check if approval is needed
-        needs_approval, assessment = await hitl.check_approval_needed(
+        # Perform risk assessment for informational purposes
+        # Note: We ALWAYS require approval since ApprovalHook already decided
+        # this tool needs it. Risk assessment informs the user, not the decision.
+        _needs_approval, assessment = await hitl.check_approval_needed(
             tool_call=tool_call_info,
             session_id=context.session_id,
             environment="development",
         )
 
-        if not needs_approval:
-            logger.debug(f"Tool {context.tool_name} does not require approval")
-            return True
+        # ALWAYS require approval for tools that reach this callback
+        # (Write, Edit, MultiEdit, Bash are already filtered by ApprovalHook)
+        logger.info(
+            f"[HITL] Tool {context.tool_name} requires approval "
+            f"(risk_level={assessment.overall_level.value if assessment else 'unknown'})"
+        )
+
+        # Create a default HIGH risk assessment if none available
+        if assessment is None:
+            from src.integrations.hybrid.risk.models import RiskAssessment, RiskLevel
+            assessment = RiskAssessment(
+                overall_level=RiskLevel.HIGH,
+                overall_score=0.8,
+                factors=[],
+                requires_approval=True,
+                approval_reason=f"Tool {context.tool_name} requires approval",
+            )
 
         # Create approval event (stores in ApprovalStorage)
         run_id = f"run-approval-{os.urandom(4).hex()}"

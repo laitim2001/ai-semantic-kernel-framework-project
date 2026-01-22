@@ -30,6 +30,8 @@ import { ChatArea } from '@/components/unified-chat/ChatArea';
 import { ChatInput } from '@/components/unified-chat/ChatInput';
 import { WorkflowSidePanel } from '@/components/unified-chat/WorkflowSidePanel';
 import { StatusBar } from '@/components/unified-chat/StatusBar';
+// Sprint 99: ApprovalDialog replaced by inline ApprovalMessageCard in MessageList
+// import { ApprovalDialog } from '@/components/unified-chat/ApprovalDialog';
 import {
   ChatHistoryPanel,
   ChatHistoryToggleButton,
@@ -307,12 +309,15 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     setManualOverride,
     workflowState, // Now used by WorkflowSidePanel
     pendingApprovals,
+    // Sprint 99: dialogApproval and dismissDialog no longer needed
+    // Approvals are now shown inline via ApprovalMessageCard in MessageList
     toolCalls,
     checkpoints,
     currentCheckpoint,
     tokenUsage,
     approveToolCall,
     rejectToolCall,
+    removeExpiredApproval,  // Sprint 99: For cleaning up expired approvals
     heartbeat,  // S67-BF-1: Heartbeat state for Rate Limit handling
   } = useUnifiedChat({
     threadId,
@@ -595,20 +600,20 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   }, []);
 
   // Handle tool call approval
-  const handleApprove = useCallback(async (toolCallId: string) => {
-    console.log('[UnifiedChat] Approving tool call:', toolCallId);
+  const handleApprove = useCallback(async (approvalId: string) => {
+    console.log('[UnifiedChat] Approving tool call:', approvalId);
     try {
-      await approveToolCall(toolCallId);
+      await approveToolCall(approvalId);
     } catch (err) {
       console.error('[UnifiedChat] Failed to approve tool call:', err);
     }
   }, [approveToolCall]);
 
   // Handle tool call rejection
-  const handleReject = useCallback(async (toolCallId: string, reason?: string) => {
-    console.log('[UnifiedChat] Rejecting tool call:', toolCallId, reason);
+  const handleReject = useCallback(async (approvalId: string, reason?: string) => {
+    console.log('[UnifiedChat] Rejecting tool call:', approvalId, reason);
     try {
-      await rejectToolCall(toolCallId, reason);
+      await rejectToolCall(approvalId, reason);
     } catch (err) {
       console.error('[UnifiedChat] Failed to reject tool call:', err);
     }
@@ -691,6 +696,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
               pendingApprovals={pendingApprovals}
               onApprove={handleApprove}
               onReject={handleReject}
+              onExpired={removeExpiredApproval}
               onDownload={handleDownload}
             />
           </div>
@@ -734,6 +740,8 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
           heartbeat={heartbeat}  // S67-BF-1
         />
       </div>
+
+      {/* Sprint 99: HITL approvals now shown inline via ApprovalMessageCard in MessageList */}
     </div>
   );
 };

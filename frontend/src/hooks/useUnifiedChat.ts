@@ -115,6 +115,8 @@ export interface UseUnifiedChatReturn {
   approveToolCall: (approvalId: string, comment?: string) => Promise<boolean>;
   rejectToolCall: (approvalId: string, reason?: string) => Promise<boolean>;
   dismissDialog: () => void;
+  /** Remove expired approval to allow new approvals for same tool */
+  removeExpiredApproval: (approvalId: string) => void;
 
   // Tool calls
   toolCalls: TrackedToolCall[];
@@ -512,11 +514,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
       storeAddPendingApproval(approval);
       onApprovalRequired?.(approval);
 
-      // Auto-show dialog for high/critical risk
-      if (approval.riskLevel === 'high' || approval.riskLevel === 'critical') {
-        setDialogApproval(approval);
-        storeSetDialogApproval(approval);
-      }
+      // Sprint 99: No longer using dialog - approvals are shown inline via ApprovalMessageCard
+      // This provides a more natural conversation flow experience
 
       // Update tool call status
       setToolCalls((prev) =>
@@ -527,20 +526,41 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
         )
       );
     },
-    [storeAddPendingApproval, storeSetDialogApproval, onApprovalRequired]
+    [storeAddPendingApproval, onApprovalRequired]
   );
 
-  const removePendingApproval = useCallback((approvalId: string) => {
+  // Resolve approval - update status instead of removing (keeps history)
+  const resolveApproval = useCallback((
+    approvalId: string,
+    status: 'approved' | 'rejected' | 'expired',
+    rejectReason?: string
+  ) => {
     setPendingApprovals((prev) =>
-      prev.filter((a) => a.approvalId !== approvalId)
+      prev.map((a) =>
+        a.approvalId === approvalId
+          ? {
+              ...a,
+              status,
+              resolvedAt: new Date().toISOString(),
+              rejectReason: rejectReason,
+            }
+          : a
+      )
     );
-    storeRemovePendingApproval(approvalId);
 
     if (dialogApproval?.approvalId === approvalId) {
       setDialogApproval(null);
       storeSetDialogApproval(null);
     }
-  }, [storeRemovePendingApproval, storeSetDialogApproval, dialogApproval]);
+  }, [storeSetDialogApproval, dialogApproval]);
+
+  // Remove expired approval completely (to allow new approvals)
+  const removeExpiredApproval = useCallback((approvalId: string) => {
+    setPendingApprovals((prev) =>
+      prev.filter((a) => a.approvalId !== approvalId)
+    );
+    storeRemovePendingApproval(approvalId);
+  }, [storeRemovePendingApproval]);
 
   const approveToolCall = useCallback(
     async (approvalId: string, comment?: string): Promise<boolean> => {
@@ -569,14 +589,15 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
           );
         }
 
-        removePendingApproval(approvalId);
+        // Update status instead of removing - keeps history visible
+        resolveApproval(approvalId, 'approved');
         return result.success;
       } catch (err) {
         console.error('[useUnifiedChat] Approval error:', err);
         return false;
       }
     },
-    [apiUrl, pendingApprovals, removePendingApproval]
+    [apiUrl, pendingApprovals, resolveApproval]
   );
 
   const rejectToolCall = useCallback(
@@ -606,14 +627,15 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
           );
         }
 
-        removePendingApproval(approvalId);
+        // Update status instead of removing - keeps history visible
+        resolveApproval(approvalId, 'rejected', reason);
         return result.success;
       } catch (err) {
         console.error('[useUnifiedChat] Rejection error:', err);
         return false;
       }
     },
-    [apiUrl, pendingApprovals, removePendingApproval]
+    [apiUrl, pendingApprovals, resolveApproval]
   );
 
   const dismissDialog = useCallback(() => {
@@ -778,8 +800,8 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
             }
           }
 
-          // Handle APPROVAL_REQUIRED event
-          if (eventName === 'APPROVAL_REQUIRED') {
+          // Handle APPROVAL_REQUIRED event (backend sends lowercase 'approval_required')
+          if (eventName === 'APPROVAL_REQUIRED' || eventName === 'approval_required') {
             addPendingApproval({
               approvalId: payload.approval_id as string,
               toolCallId: payload.tool_call_id as string,
@@ -1263,6 +1285,7 @@ export function useUnifiedChat(options: UseUnifiedChatOptions): UseUnifiedChatRe
     approveToolCall,
     rejectToolCall,
     dismissDialog,
+    removeExpiredApproval,
 
     // Tool calls
     toolCalls,

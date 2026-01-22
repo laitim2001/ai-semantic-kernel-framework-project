@@ -14,7 +14,7 @@ import { FC, useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import type { ChatMessage, PendingApproval, UIComponentEvent } from '@/types/ag-ui';
 import { MessageBubble } from '@/components/ag-ui/chat/MessageBubble';
 import { CustomUIRenderer } from '@/components/ag-ui/advanced/CustomUIRenderer';
-import { InlineApproval } from './InlineApproval';
+import { ApprovalMessageCard } from './ApprovalMessageCard';
 import { cn } from '@/lib/utils';
 
 // Check for reduced motion preference
@@ -32,10 +32,12 @@ export interface MessageListProps {
   streamingMessageId?: string | null;
   /** List of pending tool call approvals */
   pendingApprovals: PendingApproval[];
-  /** Callback when a tool call is approved */
-  onApprove: (toolCallId: string) => void;
-  /** Callback when a tool call is rejected */
-  onReject: (toolCallId: string, reason?: string) => void;
+  /** Callback when a tool call is approved (uses approvalId) */
+  onApprove: (approvalId: string) => void;
+  /** Callback when a tool call is rejected (uses approvalId) */
+  onReject: (approvalId: string, reason?: string) => void;
+  /** Callback when an approval expires - removes it to allow new approvals */
+  onExpired?: (approvalId: string) => void;
   /** Sprint 65: S65-5 - Callback when a custom UI component emits an event */
   onUIEvent?: (event: UIComponentEvent) => void;
   /** Sprint 76: Callback when file download is triggered */
@@ -60,6 +62,7 @@ export const MessageList: FC<MessageListProps> = ({
   pendingApprovals,
   onApprove,
   onReject,
+  onExpired,
   onUIEvent,
   onDownload,
 }) => {
@@ -95,14 +98,6 @@ export const MessageList: FC<MessageListProps> = ({
     }
     prevMessagesLength.current = messages.length;
   }, [messages]);
-  // Create a map of tool call IDs to pending approvals for quick lookup
-  const approvalsByToolCallId = useMemo(() => {
-    const map = new Map<string, PendingApproval>();
-    for (const approval of pendingApprovals) {
-      map.set(approval.toolCallId, approval);
-    }
-    return map;
-  }, [pendingApprovals]);
 
   // Handle tool call action from MessageBubble
   const handleToolCallAction = (toolCallId: string, action: 'approve' | 'reject') => {
@@ -151,16 +146,6 @@ export const MessageList: FC<MessageListProps> = ({
           message.role === 'assistant' &&
           (streamingMessageId === message.id || !streamingMessageId);
 
-        // Check if this message has any tool calls that need approval
-        const messageToolCallApprovals = message.toolCalls
-          ?.map((tc) => approvalsByToolCallId.get(tc.toolCallId))
-          .filter((a): a is PendingApproval => a !== undefined) ?? [];
-
-        // Filter to only show inline approvals for low/medium risk
-        const inlineApprovals = messageToolCallApprovals.filter(
-          (a) => a.riskLevel === 'low' || a.riskLevel === 'medium'
-        );
-
         // Message aria label
         const messageLabel =
           message.role === 'user'
@@ -196,26 +181,28 @@ export const MessageList: FC<MessageListProps> = ({
               />
             )}
 
-            {/* Inline Approvals (for low/medium risk) - only show for non-customUI messages */}
-            {!message.customUI && inlineApprovals.length > 0 && (
-              <div
-                className="ml-12 mt-2 space-y-2"
-                role="group"
-                aria-label="Tool call approvals"
-              >
-                {inlineApprovals.map((approval) => (
-                  <InlineApproval
-                    key={approval.approvalId}
-                    approval={approval}
-                    onApprove={() => onApprove(approval.toolCallId)}
-                    onReject={(reason) => onReject(approval.toolCallId, reason)}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         );
       })}
+
+      {/* Pending Approvals - displayed as AI message cards at the end of the chat */}
+      {pendingApprovals.length > 0 && (
+        <div
+          className="space-y-2"
+          role="group"
+          aria-label="Pending tool call approvals"
+        >
+          {pendingApprovals.map((approval) => (
+            <ApprovalMessageCard
+              key={approval.approvalId}
+              approval={approval}
+              onApprove={() => onApprove(approval.approvalId)}
+              onReject={(reason) => onReject(approval.approvalId, reason)}
+              onExpired={() => onExpired?.(approval.approvalId)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

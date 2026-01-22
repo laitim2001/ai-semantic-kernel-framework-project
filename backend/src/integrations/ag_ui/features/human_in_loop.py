@@ -337,7 +337,12 @@ class ApprovalStorage:
             ]
 
             if session_id:
-                pending = [r for r in pending if r.session_id == session_id]
+                # Include approvals with matching session_id OR with None session_id
+                # (approvals created without session context should be visible to all)
+                pending = [
+                    r for r in pending
+                    if r.session_id == session_id or r.session_id is None
+                ]
             if run_id:
                 pending = [r for r in pending if r.run_id == run_id]
 

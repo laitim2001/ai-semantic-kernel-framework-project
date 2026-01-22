@@ -363,6 +363,9 @@ export interface ToolCallState {
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
 /** Pending Approval */
+/** Approval Status */
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+
 export interface PendingApproval {
   approvalId: string;
   toolCallId: string;
@@ -375,6 +378,12 @@ export interface PendingApproval {
   sessionId?: string;
   createdAt: string;
   expiresAt: string;
+  /** Approval status - defaults to 'pending' */
+  status?: ApprovalStatus;
+  /** Timestamp when resolved (approved/rejected/expired) */
+  resolvedAt?: string;
+  /** User's rejection reason if rejected */
+  rejectReason?: string;
 }
 
 /** Tool Definition */

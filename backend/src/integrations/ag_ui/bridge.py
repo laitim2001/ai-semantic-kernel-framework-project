@@ -103,7 +103,7 @@ class BridgeConfig:
     include_metadata: bool = True
     emit_state_events: bool = True
     emit_custom_events: bool = True
-    heartbeat_interval: float = 10.0  # S67-BF-1: Send heartbeat every 10 seconds
+    heartbeat_interval: float = 2.0  # S67-BF-1: Send heartbeat every 2 seconds (faster for HITL)
 
 
 class HybridEventBridge:
