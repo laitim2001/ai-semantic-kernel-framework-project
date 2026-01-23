@@ -125,6 +125,33 @@ export const MessageList: FC<MessageListProps> = ({
     return '';
   };
 
+  // Sprint 99: Merge messages and approvals into a single timeline based on timestamps
+  // This ensures approval cards appear at the correct position in the conversation flow
+  type TimelineItem =
+    | { type: 'message'; data: ChatMessage; timestamp: number }
+    | { type: 'approval'; data: PendingApproval; timestamp: number };
+
+  const timeline = useMemo(() => {
+    const items: TimelineItem[] = [];
+
+    // Add messages
+    messages.forEach((msg) => {
+      const ts = msg.timestamp ? new Date(msg.timestamp).getTime() : 0;
+      items.push({ type: 'message', data: msg, timestamp: ts });
+    });
+
+    // Add approvals
+    pendingApprovals.forEach((approval) => {
+      const ts = approval.createdAt ? new Date(approval.createdAt).getTime() : Date.now();
+      items.push({ type: 'approval', data: approval, timestamp: ts });
+    });
+
+    // Sort by timestamp
+    items.sort((a, b) => a.timestamp - b.timestamp);
+
+    return items;
+  }, [messages, pendingApprovals]);
+
   return (
     <div
       className="space-y-2"
@@ -138,8 +165,28 @@ export const MessageList: FC<MessageListProps> = ({
         {isStreaming && 'AI is typing a response...'}
       </div>
 
-      {messages.map((message, index) => {
-        const isLastMessage = index === messages.length - 1;
+      {timeline.map((item, index) => {
+        if (item.type === 'approval') {
+          const approval = item.data;
+          return (
+            <div
+              key={`approval-${approval.approvalId}`}
+              role="group"
+              aria-label="Tool call approval request"
+            >
+              <ApprovalMessageCard
+                approval={approval}
+                onApprove={() => onApprove(approval.approvalId)}
+                onReject={(reason) => onReject(approval.approvalId, reason)}
+                onExpired={() => onExpired?.(approval.approvalId)}
+              />
+            </div>
+          );
+        }
+
+        // Message item
+        const message = item.data;
+        const isLastMessage = index === timeline.length - 1 && item.type === 'message';
         const isCurrentlyStreaming =
           isStreaming &&
           isLastMessage &&
@@ -180,29 +227,9 @@ export const MessageList: FC<MessageListProps> = ({
                 onDownload={onDownload}
               />
             )}
-
           </div>
         );
       })}
-
-      {/* Pending Approvals - displayed as AI message cards at the end of the chat */}
-      {pendingApprovals.length > 0 && (
-        <div
-          className="space-y-2"
-          role="group"
-          aria-label="Pending tool call approvals"
-        >
-          {pendingApprovals.map((approval) => (
-            <ApprovalMessageCard
-              key={approval.approvalId}
-              approval={approval}
-              onApprove={() => onApprove(approval.approvalId)}
-              onReject={(reason) => onReject(approval.approvalId, reason)}
-              onExpired={() => onExpired?.(approval.approvalId)}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 };
