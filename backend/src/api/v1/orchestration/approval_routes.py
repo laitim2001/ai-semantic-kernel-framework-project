@@ -195,7 +195,7 @@ def get_hitl_controller() -> HITLController:
 # Router
 # =============================================================================
 
-approval_router = APIRouter(prefix="/approvals", tags=["HITL Approvals"])
+approval_router = APIRouter(prefix="/orchestration/approvals", tags=["HITL Approvals"])
 
 
 # =============================================================================

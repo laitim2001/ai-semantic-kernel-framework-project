@@ -34,3 +34,27 @@ export {
   type FileListResponse,
   type FileUploadProgress,
 } from './files';
+
+// Orchestration API (Sprint 99 - Phase 28)
+export {
+  orchestrationApi,
+  type ITIntentCategory,
+  type RiskLevel,
+  type WorkflowType,
+  type CompletenessInfo,
+  type RoutingDecision,
+  type RiskFactor,
+  type RiskAssessment,
+  type IntentClassifyResponse,
+  type IntentClassifyRequest,
+  type DialogQuestion,
+  type DialogStatusResponse,
+  type StartDialogRequest,
+  type RespondToDialogRequest,
+  type ApprovalSummary,
+  type ApprovalListResponse,
+  type ApprovalDecisionRequest,
+  type ApprovalDecisionResponse,
+  type HybridExecuteRequest,
+  type HybridExecuteResponse,
+} from './orchestration';

@@ -98,6 +98,8 @@ from src.api.v1.rootcause import router as rootcause_router  # Sprint 82: Root C
 # Phase 28: Three-Tier Routing Architecture
 from src.api.v1.orchestration import router as orchestration_router  # Sprint 96: Intent Classification
 from src.api.v1.orchestration import intent_router as orchestration_intent_router  # Sprint 96: Intent API
+from src.api.v1.orchestration import dialog_router as orchestration_dialog_router  # Sprint 98: Guided Dialog
+from src.api.v1.orchestration import approval_router as orchestration_approval_router  # Sprint 98: HITL Approval
 
 # Create main v1 router
 api_router = APIRouter(prefix="/api/v1")
@@ -176,5 +178,7 @@ api_router.include_router(rootcause_router)  # Sprint 82: Root Cause Analysis
 # Include sub-routers - Phase 28 (Three-Tier Routing Architecture)
 api_router.include_router(orchestration_router)  # Sprint 96: Orchestration & Policies
 api_router.include_router(orchestration_intent_router)  # Sprint 96: Intent Classification
+api_router.include_router(orchestration_dialog_router)  # Sprint 98: Guided Dialog
+api_router.include_router(orchestration_approval_router)  # Sprint 98: HITL Approval
 
 __all__ = ["api_router"]

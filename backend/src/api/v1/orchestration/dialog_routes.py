@@ -166,7 +166,7 @@ def get_dialog_engine() -> GuidedDialogEngine:
 # Router
 # =============================================================================
 
-dialog_router = APIRouter(prefix="/dialog", tags=["Guided Dialog"])
+dialog_router = APIRouter(prefix="/orchestration/dialog", tags=["Guided Dialog"])
 
 
 # =============================================================================
@@ -198,29 +198,27 @@ async def start_dialog(request: StartDialogRequest) -> DialogStatusResponse:
         # Generate dialog ID
         dialog_id = str(uuid4())
 
-        # Prepare initial context
+        # Prepare initial context (stored in session for later use)
         initial_context = request.initial_context or {}
         if request.user_id:
             initial_context["user_id"] = request.user_id
         if request.session_id:
             initial_context["session_id"] = request.session_id
 
-        # Start dialog
-        response = await engine.start_dialog(
-            user_input=request.content,
-            initial_context=initial_context,
-        )
+        # Start dialog (engine only accepts user_input)
+        response = await engine.start_dialog(user_input=request.content)
 
-        # Store session
+        # Store session with context
         now = datetime.utcnow()
         _dialog_sessions[dialog_id] = {
-            "engine_dialog_id": response.dialog_id,
+            "engine_dialog_id": dialog_id,  # Use our generated ID
             "status": "active",
             "created_at": now,
             "updated_at": now,
             "turn_count": 1,
             "user_id": request.user_id,
             "session_id": request.session_id,
+            "initial_context": initial_context,
         }
 
         # Convert questions to response format
@@ -237,18 +235,24 @@ async def start_dialog(request: StartDialogRequest) -> DialogStatusResponse:
                 for q in response.questions
             ]
 
+        # Extract intent and completeness from state if available
+        current_intent = None
+        completeness_score = 0.0
+        if response.state:
+            if response.state.routing_decision:
+                rd = response.state.routing_decision
+                current_intent = rd.intent_category.value if rd.intent_category else None
+                if rd.completeness:
+                    completeness_score = rd.completeness.completeness_score
+
         return DialogStatusResponse(
             dialog_id=dialog_id,
             status="active",
-            needs_more_info=response.needs_more_info,
+            needs_more_info=response.should_continue,  # Use should_continue
             message=response.message,
             questions=questions,
-            current_intent=response.intent_category.value
-            if hasattr(response, "intent_category") and response.intent_category
-            else None,
-            completeness_score=response.completeness_score
-            if hasattr(response, "completeness_score")
-            else 0.0,
+            current_intent=current_intent,
+            completeness_score=completeness_score,
             turn_count=1,
             created_at=now,
             updated_at=now,
@@ -301,20 +305,25 @@ async def respond_to_dialog(
     engine = get_dialog_engine()
 
     try:
-        # Process response
-        response = await engine.process_response(
-            dialog_id=session["engine_dialog_id"],
-            responses=request.responses,
-            additional_message=request.additional_message,
-        )
+        # Convert responses dict to a string format for the engine
+        # The engine expects a single user_response string
+        response_parts = []
+        for field_name, value in request.responses.items():
+            response_parts.append(f"{field_name}: {value}")
+        if request.additional_message:
+            response_parts.append(request.additional_message)
+        user_response = "; ".join(response_parts) if response_parts else ""
+
+        # Process response (engine only accepts user_response: str)
+        response = await engine.process_response(user_response=user_response)
 
         # Update session
         now = datetime.utcnow()
         session["updated_at"] = now
         session["turn_count"] += 1
 
-        # Check if dialog is complete
-        if not response.needs_more_info:
+        # Check if dialog is complete (use should_continue from DialogResponse)
+        if not response.should_continue:
             session["status"] = "completed"
 
         # Convert questions
@@ -331,18 +340,24 @@ async def respond_to_dialog(
                 for q in response.questions
             ]
 
+        # Extract intent and completeness from state if available
+        current_intent = None
+        completeness_score = 0.0
+        if response.state:
+            if response.state.routing_decision:
+                rd = response.state.routing_decision
+                current_intent = rd.intent_category.value if rd.intent_category else None
+                if rd.completeness:
+                    completeness_score = rd.completeness.completeness_score
+
         return DialogStatusResponse(
             dialog_id=dialog_id,
             status=session["status"],
-            needs_more_info=response.needs_more_info,
+            needs_more_info=response.should_continue,  # Use should_continue
             message=response.message,
             questions=questions,
-            current_intent=response.intent_category.value
-            if hasattr(response, "intent_category") and response.intent_category
-            else None,
-            completeness_score=response.completeness_score
-            if hasattr(response, "completeness_score")
-            else 0.0,
+            current_intent=current_intent,
+            completeness_score=completeness_score,
             turn_count=session["turn_count"],
             created_at=session["created_at"],
             updated_at=now,

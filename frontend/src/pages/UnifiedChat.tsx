@@ -24,12 +24,13 @@
  *   - Works alongside Sidebar navigation
  */
 
-import { FC, useCallback, useMemo, useEffect, useState } from 'react';
+import { FC, useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { ChatHeader } from '@/components/unified-chat/ChatHeader';
 import { ChatArea } from '@/components/unified-chat/ChatArea';
 import { ChatInput } from '@/components/unified-chat/ChatInput';
 import { WorkflowSidePanel } from '@/components/unified-chat/WorkflowSidePanel';
 import { StatusBar } from '@/components/unified-chat/StatusBar';
+import { OrchestrationPanel } from '@/components/unified-chat/OrchestrationPanel';
 // Sprint 99: ApprovalDialog replaced by inline ApprovalMessageCard in MessageList
 // import { ApprovalDialog } from '@/components/unified-chat/ApprovalDialog';
 import {
@@ -40,8 +41,10 @@ import { useUnifiedChat } from '@/hooks/useUnifiedChat';
 import { useExecutionMetrics } from '@/hooks/useExecutionMetrics';
 import { useChatThreads } from '@/hooks/useChatThreads';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { useOrchestration } from '@/hooks/useOrchestration';
 import { filesApi } from '@/api/endpoints/files';
 import { useAuthStore } from '@/store/authStore';
+import type { DialogQuestion } from '@/api/endpoints/orchestration';
 import type { Attachment } from '@/types/unified-chat';
 import type {
   UnifiedChatProps,
@@ -232,6 +235,16 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   // S74-3: Chat history panel collapse state
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
 
+  // Sprint 99: Phase 28 Orchestration state
+  // TODO: Add UI toggles in ChatHeader to control these settings
+  const [orchestrationEnabled, _setOrchestrationEnabled] = useState(true);
+  const [showOrchestrationPanel, _setShowOrchestrationPanel] = useState(true);
+  const [dialogQuestions, setDialogQuestions] = useState<DialogQuestion[] | null>(null);
+
+  // Suppress unused warnings (will be used when UI toggles are added)
+  void _setOrchestrationEnabled;
+  void _setShowOrchestrationPanel;
+
   // S74-2/3: Thread management
   // S74-BF-1: Add getMessages and saveMessages for thread switching
   // S74-BF-3: Add getThread for checking manual rename
@@ -360,6 +373,73 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     },
     onUploadError: (attachment, error) => {
       console.error('[UnifiedChat] File upload failed:', attachment.file.name, error);
+    },
+  });
+
+  // Sprint 99: Track pending orchestration message for later execution
+  const pendingOrchestrationMessage = useRef<string | null>(null);
+  // Sprint 99: Track current messages for orchestration callbacks
+  // (setMessages doesn't support functional updates, so we need a ref)
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
+  // Sprint 99: Phase 28 Orchestration hook
+  const {
+    state: orchestrationState,
+    startOrchestration,
+    respondToDialog,
+    proceedWithExecution,
+    reset: resetOrchestration,
+  } = useOrchestration({
+    sessionId,
+    userId,
+    includeRiskAssessment: true,
+    autoExecute: false, // We'll handle execution ourselves after orchestration
+    onRoutingComplete: (decision) => {
+      console.log('[UnifiedChat] Routing complete:', decision.intent_category, decision.routing_layer);
+    },
+    onDialogQuestions: (questions) => {
+      console.log('[UnifiedChat] Dialog questions received:', questions.length);
+      setDialogQuestions(questions);
+    },
+    onApprovalRequired: (assessment) => {
+      console.log('[UnifiedChat] Approval required:', assessment.level, assessment.score);
+    },
+    onExecutionComplete: (result) => {
+      console.log('[UnifiedChat] Orchestration execution complete:', result.success);
+      // Add execution result as assistant message
+      if (result.content) {
+        const assistantMessage = {
+          id: `orch-${Date.now()}`,
+          role: 'assistant' as const,
+          content: result.content,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages([...messagesRef.current, assistantMessage]);
+      } else if (result.error) {
+        // Show error message if execution failed
+        const errorMessage = {
+          id: `orch-err-${Date.now()}`,
+          role: 'assistant' as const,
+          content: `執行失敗: ${result.error}`,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages([...messagesRef.current, errorMessage]);
+      }
+      // Clear pending message
+      pendingOrchestrationMessage.current = null;
+    },
+    onError: (error) => {
+      console.error('[UnifiedChat] Orchestration error:', error);
+      // Add error message to chat
+      const errorMessage = {
+        id: `orch-err-${Date.now()}`,
+        role: 'assistant' as const,
+        content: `Orchestration 錯誤: ${error}`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages([...messagesRef.current, errorMessage]);
+      pendingOrchestrationMessage.current = null;
     },
   });
 
@@ -549,6 +629,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   // S74-3: Handle send message with auto thread creation
   // S75-4: Updated to handle file attachments
   // S75-5 Fix: Use uploadAll return value to avoid React state sync issue
+  // Sprint 99: Phase 28 - Optional orchestration flow before sending
   const handleSend = useCallback(async (content: string, fileIds?: string[]) => {
     // Auto-create thread if none active
     let threadToUse = activeThreadId;
@@ -558,17 +639,39 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     }
 
     // S75-5 Fix: Get file IDs directly from uploadAll return value
-    // This avoids the React state sync issue where getUploadedFileIds()
-    // returns stale data because state hasn't updated yet
     let allFileIds: string[] = fileIds || [];
 
     if (!fileIds && attachments.length > 0) {
-      // Upload pending files and get IDs directly from the result
       allFileIds = await uploadAll();
       console.log('[S75-5] Uploaded file IDs:', allFileIds);
     }
 
-    // S75-5: Send message with file IDs to backend
+    // Sprint 99: Phase 28 - Route through orchestration if enabled
+    if (orchestrationEnabled) {
+      console.log('[UnifiedChat] Starting orchestration flow for:', content.slice(0, 50));
+      resetOrchestration(); // Reset previous state
+      setDialogQuestions(null); // Clear previous questions
+
+      // Add user message to chat immediately
+      const userMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user' as const,
+        content: content,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages([...messagesRef.current, userMessage]);
+      pendingOrchestrationMessage.current = content;
+
+      // Start orchestration - this will handle routing, dialog, and risk assessment
+      // The actual message will be sent after orchestration completes (via proceedWithExecution)
+      await startOrchestration(content);
+
+      // Store message content and file IDs for later execution
+      // The actual sendMessage will be called when user approves or orchestration completes
+      return; // Don't send message yet - wait for orchestration flow
+    }
+
+    // Direct send without orchestration
     sendMessage(content, allFileIds.length > 0 ? allFileIds : undefined).catch((err) => {
       console.error('[UnifiedChat] Failed to send message:', err);
     });
@@ -577,7 +680,37 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     if (allFileIds.length > 0) {
       clearAttachments();
     }
-  }, [activeThreadId, createThread, generateTitle, sendMessage, attachments, uploadAll, clearAttachments]);
+  }, [
+    activeThreadId, createThread, generateTitle, sendMessage, attachments,
+    uploadAll, clearAttachments, orchestrationEnabled, startOrchestration,
+    resetOrchestration
+  ]);
+
+  // Sprint 99: Handle orchestration approval - proceed with message
+  const handleOrchestrationApprove = useCallback(async () => {
+    console.log('[UnifiedChat] Orchestration approved, proceeding with execution');
+    await proceedWithExecution();
+  }, [proceedWithExecution]);
+
+  // Sprint 99: Handle orchestration rejection
+  const handleOrchestrationReject = useCallback(() => {
+    console.log('[UnifiedChat] Orchestration rejected');
+    resetOrchestration();
+    setDialogQuestions(null);
+  }, [resetOrchestration]);
+
+  // Sprint 99: Handle dialog response
+  const handleDialogResponse = useCallback(async (responses: Record<string, string>) => {
+    console.log('[UnifiedChat] Dialog response:', responses);
+    await respondToDialog(responses);
+  }, [respondToDialog]);
+
+  // Sprint 99: Handle skip dialog - execute directly without completing dialog
+  const handleSkipDialog = useCallback(async () => {
+    console.log('[UnifiedChat] Skipping dialog, executing directly');
+    setDialogQuestions(null);
+    await proceedWithExecution();
+  }, [proceedWithExecution]);
 
   // S75-4: Handle file attachment
   // Note: Files are added to queue and uploaded when message is sent (handleSend)
@@ -708,6 +841,23 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
               toolCalls={toolCalls}
               checkpoints={checkpoints}
               onRestoreCheckpoint={handleRestore}
+            />
+          )}
+
+          {/* Sprint 99: Orchestration Panel (Phase 28 debug view) */}
+          {showOrchestrationPanel && (
+            <OrchestrationPanel
+              phase={orchestrationState.phase}
+              routingDecision={orchestrationState.routingDecision}
+              riskAssessment={orchestrationState.riskAssessment}
+              dialogQuestions={dialogQuestions}
+              isLoading={orchestrationState.isLoading}
+              error={orchestrationState.error}
+              onDialogResponse={handleDialogResponse}
+              onApprove={handleOrchestrationApprove}
+              onReject={handleOrchestrationReject}
+              onSkipDialog={handleSkipDialog}
+              defaultCollapsed={false}
             />
           )}
         </main>
