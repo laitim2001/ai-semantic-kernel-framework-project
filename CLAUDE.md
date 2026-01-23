@@ -69,12 +69,12 @@ python scripts/dev.py logs docker -f
 ## Architecture Overview
 
 ```
-Frontend (React 18 + TypeScript)
-    ↓ HTTPS (port 3005)
+Frontend (React 18 + TypeScript + Fetch API)
+    ↓ HTTP (port 3005)
 Backend (FastAPI, port 8000)
-    ├─ api/v1/           # 20+ API route modules
-    ├─ integrations/     # MAF + Claude SDK + MCP
-    ├─ domain/           # Business logic
+    ├─ api/v1/           # 38 API route modules
+    ├─ integrations/     # 15 integration modules (see below)
+    ├─ domain/           # Business logic (20 domain modules)
     └─ infrastructure/   # Database, Cache, Messaging
     ↓
 PostgreSQL 16 + Redis 7 + RabbitMQ
@@ -84,20 +84,36 @@ PostgreSQL 16 + Redis 7 + RabbitMQ
 
 ```
 backend/src/
-├── api/v1/              # API routes (agents, workflows, sessions, ag-ui, claude_sdk)
-├── integrations/        # Framework integrations
-│   ├── agent_framework/ # MAF Adapters (GroupChat, Handoff, Concurrent, etc.)
-│   ├── claude_sdk/      # Claude SDK (Client, Tools, Hooks, MCP)
-│   └── ag_ui/           # AG-UI Protocol (SSE, Events, Handlers)
-├── domain/              # Business logic (agents, workflows, sessions)
-└── infrastructure/      # Database, Cache, Messaging
+├── api/v1/              # 38 API route modules
+│   ├── agents, workflows, sessions, executions
+│   ├── ag_ui, claude_sdk, hybrid, mcp
+│   ├── orchestration, autonomous, routing
+│   ├── patrol, correlation, rootcause, audit
+│   └── auth, files, sandbox, checkpoints, etc.
+├── integrations/        # 15 integration modules
+│   ├── agent_framework/ # MAF Adapters (30+ builders)
+│   ├── claude_sdk/      # Claude SDK (autonomous, hooks, hybrid, mcp, tools)
+│   ├── ag_ui/           # AG-UI Protocol (SSE, Events, Handlers)
+│   ├── hybrid/          # Hybrid MAF+SDK (context, intent, risk, switching)
+│   ├── orchestration/   # Three-tier Intent Routing (Phase 28)
+│   ├── mcp/             # MCP servers (Azure, Filesystem, LDAP, Shell, SSH)
+│   └── memory, patrol, correlation, rootcause, audit, learning, llm
+├── domain/              # 20 domain modules (business logic)
+├── infrastructure/      # Database, Cache, Messaging, Storage
+└── core/                # Performance, Sandbox, Security utilities
 
 frontend/src/
-├── pages/               # Page components
-├── components/          # Reusable UI components
-├── hooks/               # Custom React hooks
-├── api/                 # API client
-└── store/               # Zustand state management
+├── pages/               # Page components (agents, workflows, dashboard, DevUI, etc.)
+├── components/          # UI components
+│   ├── unified-chat/    # Main chat interface (25+ components)
+│   ├── ag-ui/           # Agentic UI components (chat, hitl, advanced)
+│   ├── ui/              # Shadcn UI components
+│   └── layout, shared, auth, DevUI
+├── hooks/               # Custom React hooks (14+ hooks)
+├── api/                 # API client (Fetch API, NOT Axios)
+├── store/, stores/      # Zustand state management
+├── types/               # TypeScript type definitions
+└── utils/               # Utility functions
 ```
 
 ---
@@ -130,7 +146,7 @@ cd frontend && npm run lint && npm run build
 
 ## Environment Setup
 
-Copy `.env.example` to `.env`:
+Copy `.env.example` to `.env`. Key variables:
 
 ```bash
 # Database
@@ -143,12 +159,30 @@ DB_PORT=5432
 # Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_PASSWORD=             # Optional, for production
+
+# RabbitMQ
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
 
 # Azure OpenAI
 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
 AZURE_OPENAI_API_KEY=<key>
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
+# Optional: Additional LLM providers (in backend/.env.example)
+# ANTHROPIC_API_KEY=<key>
+# OPENAI_API_KEY=<key>
+
+# Optional: mem0 Memory System (in backend/.env.example)
+# MEM0_ENABLED=false
+# QDRANT_PATH=./qdrant_data
 ```
+
+> **Note**: See `backend/.env.example` for full configuration including mem0 memory system settings.
 
 ---
 
@@ -283,7 +317,7 @@ See `.claude/rules/agent-framework.md` for detailed rules.
 
 ---
 
-**Last Updated**: 2026-01-22
+**Last Updated**: 2026-01-23
 **Project Start**: 2025-11-14
 **Status**: Phase 28 Completed (99 Sprints completed)
 **Total Story Points**: 2189 pts across 28 phases
