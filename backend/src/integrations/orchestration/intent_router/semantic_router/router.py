@@ -5,11 +5,13 @@ Uses Aurelio Semantic Router for vector-based semantic matching.
 Provides Layer 2 routing with configurable similarity threshold.
 
 Sprint 92: Semantic Router + LLM Classifier (Phase 28)
+Updated: Support for Azure OpenAI Encoder
 """
 
 import logging
+import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from ..models import (
     ITIntentCategory,
@@ -27,6 +29,7 @@ _SEMANTIC_ROUTER_AVAILABLE = False
 _Route = None
 _AurelioRouter = None
 _OpenAIEncoder = None
+_AzureOpenAIEncoder = None
 
 try:
     from semantic_router import Route
@@ -38,6 +41,15 @@ try:
     _OpenAIEncoder = OpenAIEncoder
     _SEMANTIC_ROUTER_AVAILABLE = True
     logger.info("Semantic Router library loaded successfully")
+
+    # Try to import Azure OpenAI Encoder
+    try:
+        from semantic_router.encoders import AzureOpenAIEncoder
+        _AzureOpenAIEncoder = AzureOpenAIEncoder
+        logger.info("Azure OpenAI Encoder available")
+    except ImportError:
+        logger.warning("AzureOpenAIEncoder not available in semantic-router")
+
 except ImportError:
     logger.warning(
         "semantic-router library not installed. "
@@ -52,13 +64,24 @@ class SemanticRouter:
     Uses vector similarity to match user inputs against predefined routes.
     Each route contains example utterances that define the semantic space.
 
+    Supports both OpenAI and Azure OpenAI encoders.
+
     Attributes:
         threshold: Minimum similarity score to consider a match (default: 0.85)
         routes: List of SemanticRoute definitions
         encoder_name: Name of the encoder model to use
+        encoder_type: Type of encoder ('openai' or 'azure')
 
     Example:
+        >>> # Using OpenAI
         >>> router = SemanticRouter(routes=routes, threshold=0.85)
+        >>>
+        >>> # Using Azure OpenAI
+        >>> router = SemanticRouter(
+        ...     routes=routes,
+        ...     encoder_type="azure",
+        ...     azure_deployment_name="text-embedding-ada-002",
+        ... )
         >>> result = await router.route("ETL 今天跑失敗了")
         >>> print(result.intent_category)  # ITIntentCategory.INCIDENT
     """
@@ -68,7 +91,13 @@ class SemanticRouter:
         routes: Optional[List[SemanticRoute]] = None,
         threshold: float = 0.85,
         encoder_name: str = "text-embedding-3-small",
+        encoder_type: Literal["openai", "azure"] = "openai",
         openai_api_key: Optional[str] = None,
+        # Azure OpenAI specific parameters
+        azure_api_key: Optional[str] = None,
+        azure_endpoint: Optional[str] = None,
+        azure_deployment_name: Optional[str] = None,
+        azure_api_version: str = "2024-02-15-preview",
     ):
         """
         Initialize the Semantic Router.
@@ -76,8 +105,13 @@ class SemanticRouter:
         Args:
             routes: List of SemanticRoute definitions
             threshold: Minimum similarity for a match (0.0 to 1.0)
-            encoder_name: OpenAI encoder model name
-            openai_api_key: OpenAI API key (optional, uses env var if not provided)
+            encoder_name: OpenAI encoder model name (for openai encoder_type)
+            encoder_type: Type of encoder ('openai' or 'azure')
+            openai_api_key: OpenAI API key (for openai encoder_type)
+            azure_api_key: Azure OpenAI API key (for azure encoder_type, uses env var if not provided)
+            azure_endpoint: Azure OpenAI endpoint (for azure encoder_type, uses env var if not provided)
+            azure_deployment_name: Azure deployment name for embeddings
+            azure_api_version: Azure API version (default: 2024-02-15-preview)
         """
         if not 0.0 <= threshold <= 1.0:
             raise ValueError("threshold must be between 0.0 and 1.0")
@@ -85,7 +119,17 @@ class SemanticRouter:
         self.threshold = threshold
         self.routes = routes or []
         self.encoder_name = encoder_name
+        self.encoder_type = encoder_type
         self._openai_api_key = openai_api_key
+
+        # Azure OpenAI configuration
+        self._azure_api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY")
+        self._azure_endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
+        self._azure_deployment_name = azure_deployment_name or os.getenv(
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002"
+        )
+        self._azure_api_version = azure_api_version
+
         self._router: Optional[Any] = None
         self._route_metadata: Dict[str, SemanticRoute] = {}
         self._initialized = False
@@ -98,6 +142,50 @@ class SemanticRouter:
     def is_available(self) -> bool:
         """Check if semantic-router library is available."""
         return _SEMANTIC_ROUTER_AVAILABLE
+
+    def _create_encoder(self) -> Optional[Any]:
+        """
+        Create the appropriate encoder based on encoder_type.
+
+        Returns:
+            Encoder instance or None if creation failed
+        """
+        if self.encoder_type == "azure":
+            # Use Azure OpenAI Encoder
+            if _AzureOpenAIEncoder is None:
+                logger.error(
+                    "AzureOpenAIEncoder not available. "
+                    "Please upgrade semantic-router: pip install -U semantic-router"
+                )
+                return None
+
+            if not self._azure_api_key or not self._azure_endpoint:
+                logger.error(
+                    "Azure OpenAI configuration missing. "
+                    "Set AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT"
+                )
+                return None
+
+            logger.info(
+                f"Creating Azure OpenAI encoder: "
+                f"deployment={self._azure_deployment_name}, "
+                f"endpoint={self._azure_endpoint[:30]}..."
+            )
+
+            return _AzureOpenAIEncoder(
+                api_key=self._azure_api_key,
+                azure_endpoint=self._azure_endpoint,
+                deployment_name=self._azure_deployment_name,
+                api_version=self._azure_api_version,
+            )
+        else:
+            # Use standard OpenAI Encoder
+            encoder_kwargs = {"name": self.encoder_name}
+            if self._openai_api_key:
+                encoder_kwargs["openai_api_key"] = self._openai_api_key
+
+            logger.info(f"Creating OpenAI encoder: model={self.encoder_name}")
+            return _OpenAIEncoder(**encoder_kwargs)
 
     def _initialize_router(self) -> bool:
         """
@@ -118,12 +206,10 @@ class SemanticRouter:
             return False
 
         try:
-            # Create encoder
-            encoder_kwargs = {"name": self.encoder_name}
-            if self._openai_api_key:
-                encoder_kwargs["openai_api_key"] = self._openai_api_key
-
-            encoder = _OpenAIEncoder(**encoder_kwargs)
+            # Create encoder based on encoder_type
+            encoder = self._create_encoder()
+            if encoder is None:
+                return False
 
             # Convert SemanticRoute to Aurelio Route format
             aurelio_routes = []

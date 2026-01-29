@@ -4,11 +4,14 @@ Intent Classification API Routes
 Routes for intent classification and testing endpoints.
 
 Sprint 96: Story 96-5 - API Route Implementation (Phase 28)
+Updated: Switch to real three-tier routing with Azure OpenAI support
 """
 
 import logging
+import os
 import time
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, Optional, Union
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -18,10 +21,15 @@ from src.integrations.orchestration import (
     RiskAssessor,
     RiskPolicies,
     RouterConfig,
+    create_router,
+    create_mock_router,
 )
 from src.integrations.orchestration.intent_router.models import (
     ITIntentCategory,
     RiskLevel,
+)
+from src.integrations.orchestration.intent_router.semantic_router.routes import (
+    get_default_routes,
 )
 from src.integrations.orchestration.risk_assessor import AssessmentContext
 
@@ -40,24 +48,103 @@ intent_router = APIRouter(
 
 
 # =============================================================================
+# Configuration
+# =============================================================================
+
+# Set to True to use real three-tier routing, False for mock
+USE_REAL_ROUTER = os.getenv("USE_REAL_ROUTER", "true").lower() == "true"
+
+# Path to pattern rules YAML file
+RULES_YAML_PATH = Path(__file__).parent.parent.parent.parent / (
+    "integrations/orchestration/intent_router/pattern_matcher/rules.yaml"
+)
+
+
+# =============================================================================
 # Singleton Router Instance
 # =============================================================================
 
-_router_instance: Optional[MockBusinessIntentRouter] = None
+_router_instance: Optional[Union[BusinessIntentRouter, MockBusinessIntentRouter]] = None
 
 
-def get_router() -> MockBusinessIntentRouter:
-    """Get or create router singleton."""
+def get_router() -> Union[BusinessIntentRouter, MockBusinessIntentRouter]:
+    """
+    Get or create router singleton.
+
+    Uses real three-tier routing if:
+    - USE_REAL_ROUTER is True
+    - Required API keys are configured (ANTHROPIC_API_KEY)
+
+    Falls back to mock router if configuration is missing.
+    """
     global _router_instance
-    if _router_instance is None:
-        _router_instance = MockBusinessIntentRouter(
-            config=RouterConfig(
-                pattern_threshold=0.90,
-                semantic_threshold=0.85,
-                enable_llm_fallback=True,
-                enable_completeness=True,
+    if _router_instance is not None:
+        return _router_instance
+
+    config = RouterConfig(
+        pattern_threshold=0.90,
+        semantic_threshold=0.85,
+        enable_llm_fallback=True,
+        enable_completeness=True,
+        track_latency=True,
+    )
+
+    # Check if we should use real router
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    azure_key = os.getenv("AZURE_OPENAI_API_KEY")
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+
+    if USE_REAL_ROUTER and anthropic_key:
+        try:
+            logger.info("Initializing REAL three-tier intent router...")
+
+            # Get semantic routes
+            semantic_routes = get_default_routes()
+            logger.info(f"Loaded {len(semantic_routes)} semantic routes")
+
+            # Check rules file exists
+            rules_path = str(RULES_YAML_PATH) if RULES_YAML_PATH.exists() else None
+            if rules_path:
+                logger.info(f"Using pattern rules from: {rules_path}")
+            else:
+                logger.warning("Pattern rules file not found, using empty rules")
+
+            # Create real router with Azure OpenAI for semantic routing
+            _router_instance = create_router(
+                pattern_rules_path=rules_path,
+                semantic_routes=semantic_routes,
+                llm_api_key=anthropic_key,
+                config=config,
             )
-        )
+
+            # Configure semantic router to use Azure OpenAI if available
+            if azure_key and azure_endpoint:
+                _router_instance.semantic_router.encoder_type = "azure"
+                _router_instance.semantic_router._azure_api_key = azure_key
+                _router_instance.semantic_router._azure_endpoint = azure_endpoint
+                logger.info("Semantic router configured to use Azure OpenAI encoder")
+
+            logger.info(
+                f"✅ Real router initialized: "
+                f"Pattern rules: {len(_router_instance.pattern_matcher.rules)}, "
+                f"Semantic routes: {len(_router_instance.semantic_router.routes)}, "
+                f"LLM: Claude Haiku"
+            )
+            return _router_instance
+
+        except Exception as e:
+            logger.error(f"Failed to initialize real router: {e}", exc_info=True)
+            logger.warning("Falling back to mock router")
+    else:
+        if not USE_REAL_ROUTER:
+            logger.info("USE_REAL_ROUTER is False, using mock router")
+        elif not anthropic_key:
+            logger.warning("ANTHROPIC_API_KEY not set, using mock router")
+
+    # Fallback to mock router
+    logger.info("Initializing mock intent router...")
+    _router_instance = create_mock_router(config=config)
+    logger.info("✅ Mock router initialized")
     return _router_instance
 
 
