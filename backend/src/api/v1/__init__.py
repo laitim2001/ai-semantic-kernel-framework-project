@@ -101,6 +101,9 @@ from src.api.v1.orchestration import intent_router as orchestration_intent_route
 from src.api.v1.orchestration import dialog_router as orchestration_dialog_router  # Sprint 98: Guided Dialog
 from src.api.v1.orchestration import approval_router as orchestration_approval_router  # Sprint 98: HITL Approval
 
+# Phase 29: Agent Swarm Visualization
+from src.api.v1.swarm import router as swarm_router  # Sprint 100: Swarm Status API
+
 # Create main v1 router
 api_router = APIRouter(prefix="/api/v1")
 
@@ -180,5 +183,8 @@ api_router.include_router(orchestration_router)  # Sprint 96: Orchestration & Po
 api_router.include_router(orchestration_intent_router)  # Sprint 96: Intent Classification
 api_router.include_router(orchestration_dialog_router)  # Sprint 98: Guided Dialog
 api_router.include_router(orchestration_approval_router)  # Sprint 98: HITL Approval
+
+# Include sub-routers - Phase 29 (Agent Swarm Visualization)
+api_router.include_router(swarm_router)  # Sprint 100: Swarm Status API
 
 __all__ = ["api_router"]

@@ -11,7 +11,7 @@
 import logging
 import time
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 from uuid import uuid4
 
 from .types import (
@@ -29,6 +29,9 @@ from .types import (
 )
 from .task_allocator import TaskAllocator, AgentExecutor
 from .context_manager import ContextManager
+
+if TYPE_CHECKING:
+    from src.integrations.swarm import SwarmIntegration
 
 
 logger = logging.getLogger(__name__)
@@ -50,6 +53,7 @@ class ClaudeCoordinator:
         self,
         claude_client: Optional[Any] = None,
         default_agents: Optional[List[AgentInfo]] = None,
+        swarm_integration: Optional["SwarmIntegration"] = None,
     ):
         """
         Initialize the coordinator.
@@ -57,11 +61,13 @@ class ClaudeCoordinator:
         Args:
             claude_client: Claude SDK client for intelligent decisions.
             default_agents: Default list of available agents.
+            swarm_integration: Optional SwarmIntegration for tracking swarm state.
         """
         self._claude_client = claude_client
         self._default_agents = default_agents or []
         self._context_manager = ContextManager()
         self._task_allocator = TaskAllocator(context_manager=self._context_manager)
+        self._swarm_integration = swarm_integration
 
         # Agent registry
         self._registered_agents: Dict[str, AgentInfo] = {}
@@ -159,21 +165,47 @@ class ClaudeCoordinator:
                     f"Only {len(selections)}/{len(subtasks)} subtasks have agents"
                 )
 
+            # Notify SwarmIntegration: coordination started
+            if self._swarm_integration:
+                try:
+                    from src.integrations.swarm import SwarmMode
+                    mode_map = {
+                        ExecutionMode.SEQUENTIAL: SwarmMode.SEQUENTIAL,
+                        ExecutionMode.PARALLEL: SwarmMode.PARALLEL,
+                        ExecutionMode.PIPELINE: SwarmMode.SEQUENTIAL,
+                        ExecutionMode.HYBRID: SwarmMode.HIERARCHICAL,
+                    }
+                    swarm_mode = mode_map.get(analysis.execution_mode, SwarmMode.SEQUENTIAL)
+                    self._swarm_integration.on_coordination_started(
+                        swarm_id=task.task_id,
+                        mode=swarm_mode,
+                        subtasks=[
+                            {"subtask_id": st.subtask_id, "description": st.description}
+                            for st in subtasks
+                        ],
+                        metadata={"task_description": task.description},
+                    )
+                except Exception as e:
+                    logger.warning(f"SwarmIntegration notification failed: {e}")
+
             # Phase 3: Execute
             logger.info(f"Executing with mode: {analysis.execution_mode.value}")
             executor = executor or self._default_executor
 
+            # Wrap executor to notify SwarmIntegration
+            wrapped_executor = self._wrap_executor_for_swarm(executor, task.task_id)
+
             if analysis.execution_mode == ExecutionMode.PARALLEL:
                 results = await self._task_allocator.execute_parallel(
-                    subtasks, selections, executor
+                    subtasks, selections, wrapped_executor
                 )
             elif analysis.execution_mode == ExecutionMode.PIPELINE:
                 results = await self._task_allocator.execute_pipeline(
-                    subtasks, selections, executor
+                    subtasks, selections, wrapped_executor
                 )
             else:
                 results = await self._task_allocator.execute_sequential(
-                    subtasks, selections, executor, context
+                    subtasks, selections, wrapped_executor, context
                 )
 
             context.results = results
@@ -203,6 +235,22 @@ class ClaudeCoordinator:
             # Store in history
             self._coordination_history.append(result)
 
+            # Notify SwarmIntegration: coordination completed
+            if self._swarm_integration:
+                try:
+                    from src.integrations.swarm import SwarmStatus
+                    swarm_status = (
+                        SwarmStatus.COMPLETED
+                        if result.status == CoordinationStatus.COMPLETED
+                        else SwarmStatus.FAILED
+                    )
+                    self._swarm_integration.on_coordination_completed(
+                        swarm_id=task.task_id,
+                        status=swarm_status,
+                    )
+                except Exception as e:
+                    logger.warning(f"SwarmIntegration notification failed: {e}")
+
             logger.info(
                 f"Coordination completed: {result.status.value} "
                 f"(success rate: {success_rate:.1%})"
@@ -212,6 +260,18 @@ class ClaudeCoordinator:
 
         except Exception as e:
             logger.error(f"Coordination failed: {e}")
+
+            # Notify SwarmIntegration: coordination failed
+            if self._swarm_integration:
+                try:
+                    from src.integrations.swarm import SwarmStatus
+                    self._swarm_integration.on_coordination_completed(
+                        swarm_id=task.task_id,
+                        status=SwarmStatus.FAILED,
+                    )
+                except Exception as notify_error:
+                    logger.warning(f"SwarmIntegration notification failed: {notify_error}")
+
             return CoordinationResult(
                 task_id=task.task_id,
                 status=CoordinationStatus.FAILED,
@@ -219,6 +279,72 @@ class ClaudeCoordinator:
                 total_execution_time_seconds=time.time() - start_time,
                 completed_at=datetime.utcnow(),
             )
+
+    def _wrap_executor_for_swarm(
+        self,
+        executor: AgentExecutor,
+        swarm_id: str,
+    ) -> AgentExecutor:
+        """
+        Wrap executor to notify SwarmIntegration of subtask events.
+
+        Args:
+            executor: Original executor function.
+            swarm_id: The swarm/task ID.
+
+        Returns:
+            Wrapped executor that notifies SwarmIntegration.
+        """
+        if not self._swarm_integration:
+            return executor
+
+        def wrapped(agent_id: str, subtask: Subtask) -> SubtaskResult:
+            # Notify subtask started
+            try:
+                from src.integrations.swarm import WorkerType
+                worker_type = WorkerType.CUSTOM
+                # Try to infer worker type from capabilities
+                if subtask.required_capabilities:
+                    cap = subtask.required_capabilities[0].lower()
+                    if "research" in cap:
+                        worker_type = WorkerType.RESEARCH
+                    elif "write" in cap:
+                        worker_type = WorkerType.WRITER
+                    elif "review" in cap:
+                        worker_type = WorkerType.REVIEWER
+                    elif "code" in cap:
+                        worker_type = WorkerType.CODER
+
+                self._swarm_integration.on_subtask_started(
+                    swarm_id=swarm_id,
+                    worker_id=subtask.subtask_id,
+                    worker_name=f"Agent {agent_id}",
+                    worker_type=worker_type,
+                    role=", ".join(subtask.required_capabilities) if subtask.required_capabilities else "Worker",
+                    task_description=subtask.description,
+                )
+            except Exception as e:
+                logger.warning(f"SwarmIntegration subtask start notification failed: {e}")
+
+            # Execute the actual subtask
+            result = executor(agent_id, subtask)
+
+            # Notify subtask completed
+            try:
+                from src.integrations.swarm import WorkerStatus
+                status = WorkerStatus.COMPLETED if result.success else WorkerStatus.FAILED
+                self._swarm_integration.on_subtask_completed(
+                    swarm_id=swarm_id,
+                    worker_id=subtask.subtask_id,
+                    status=status,
+                    error=result.error if hasattr(result, 'error') else None,
+                )
+            except Exception as e:
+                logger.warning(f"SwarmIntegration subtask complete notification failed: {e}")
+
+            return result
+
+        return wrapped
 
     async def analyze_task(self, task: ComplexTask) -> TaskAnalysis:
         """
