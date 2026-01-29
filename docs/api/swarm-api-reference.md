@@ -342,24 +342,280 @@ curl -X GET "http://localhost:8000/api/v1/swarm/swarm-123/workers/worker-1"
 
 ---
 
-## SSE Events (Sprint 101)
+## SSE Events
 
-Real-time swarm events will be available via Server-Sent Events in Sprint 101:
+Real-time swarm events are delivered via Server-Sent Events (SSE) through the AG-UI CustomEvent format.
 
-| Event | Description |
-|-------|-------------|
-| `swarm:created` | Swarm was created |
-| `swarm:status_update` | Swarm status changed |
-| `swarm:completed` | Swarm finished |
-| `worker:started` | Worker started |
-| `worker:progress` | Worker progress updated |
-| `worker:thinking` | Extended thinking content |
-| `worker:tool_call` | Tool call started/completed |
-| `worker:message` | Worker message added |
-| `worker:completed` | Worker finished |
+### Event Format
+
+All swarm events follow the AG-UI CustomEvent structure:
+
+```
+data: {"type":"CUSTOM","event_name":"swarm_created","payload":{...}}
+```
+
+### Event Types
+
+#### Swarm Lifecycle Events
+
+| Event Name | Description | Priority |
+|------------|-------------|----------|
+| `swarm_created` | Swarm was created | High (immediate) |
+| `swarm_status_update` | Swarm status snapshot | Throttled |
+| `swarm_completed` | Swarm finished | High (immediate) |
+
+#### Worker Lifecycle Events
+
+| Event Name | Description | Priority |
+|------------|-------------|----------|
+| `worker_started` | Worker started execution | High (immediate) |
+| `worker_progress` | Worker progress updated | Throttled |
+| `worker_thinking` | Extended thinking content | Throttled |
+| `worker_tool_call` | Tool call started/completed | High (immediate) |
+| `worker_message` | Worker message added | Batched |
+| `worker_completed` | Worker finished | High (immediate) |
+
+### Event Payloads
+
+#### swarm_created
+
+```json
+{
+  "swarm_id": "swarm-123",
+  "session_id": "session-456",
+  "mode": "parallel",
+  "workers": [
+    {
+      "worker_id": "worker-1",
+      "worker_name": "DiagnosticWorker",
+      "worker_type": "analyst",
+      "role": "diagnostic"
+    }
+  ],
+  "created_at": "2026-01-29T10:00:00Z"
+}
+```
+
+#### swarm_status_update
+
+```json
+{
+  "swarm_id": "swarm-123",
+  "session_id": "session-456",
+  "mode": "parallel",
+  "status": "running",
+  "total_workers": 3,
+  "overall_progress": 65,
+  "workers": [
+    {
+      "worker_id": "worker-1",
+      "worker_name": "DiagnosticWorker",
+      "worker_type": "analyst",
+      "role": "diagnostic",
+      "status": "completed",
+      "progress": 100,
+      "current_action": null,
+      "tool_calls_count": 3
+    }
+  ],
+  "metadata": {}
+}
+```
+
+#### swarm_completed
+
+```json
+{
+  "swarm_id": "swarm-123",
+  "status": "completed",
+  "summary": "Analysis complete with 3 issues found",
+  "total_duration_ms": 45000,
+  "completed_at": "2026-01-29T10:00:45Z"
+}
+```
+
+#### worker_started
+
+```json
+{
+  "swarm_id": "swarm-123",
+  "worker_id": "worker-1",
+  "worker_name": "DiagnosticWorker",
+  "worker_type": "analyst",
+  "role": "diagnostic",
+  "task_description": "Analyzing ETL Pipeline errors",
+  "started_at": "2026-01-29T10:00:01Z"
+}
+```
+
+#### worker_progress
+
+```json
+{
+  "swarm_id": "swarm-123",
+  "worker_id": "worker-1",
+  "progress": 65,
+  "current_action": "Querying error logs",
+  "status": "running",
+  "updated_at": "2026-01-29T10:00:15Z"
+}
+```
+
+#### worker_thinking
+
+```json
+{
+  "swarm_id": "swarm-123",
+  "worker_id": "worker-1",
+  "thinking_content": "I need to analyze the error patterns in the APAC region...",
+  "token_count": 245,
+  "timestamp": "2026-01-29T10:00:10Z"
+}
+```
+
+#### worker_tool_call
+
+```json
+{
+  "swarm_id": "swarm-123",
+  "worker_id": "worker-1",
+  "tool_call_id": "tc-001",
+  "tool_name": "azure:query_adf_logs",
+  "status": "completed",
+  "input_args": {
+    "pipeline": "APAC_Glider",
+    "time_range": "24h"
+  },
+  "output_result": {
+    "error_count": 47,
+    "errors": ["Connection timeout"]
+  },
+  "error": null,
+  "duration_ms": 1245,
+  "timestamp": "2026-01-29T10:00:12Z"
+}
+```
+
+#### worker_message
+
+```json
+{
+  "swarm_id": "swarm-123",
+  "worker_id": "worker-1",
+  "role": "assistant",
+  "content": "Found 47 connection timeout errors in the APAC region.",
+  "tool_call_id": null,
+  "timestamp": "2026-01-29T10:00:20Z"
+}
+```
+
+#### worker_completed
+
+```json
+{
+  "swarm_id": "swarm-123",
+  "worker_id": "worker-1",
+  "status": "completed",
+  "result": null,
+  "error": null,
+  "duration_ms": 30000,
+  "completed_at": "2026-01-29T10:00:31Z"
+}
+```
+
+### Event Throttling
+
+To prevent overwhelming clients, some events are throttled:
+
+| Event Type | Throttle Interval | Notes |
+|------------|-------------------|-------|
+| `worker_progress` | 200ms | Only latest progress sent |
+| `worker_thinking` | 200ms | Only latest thinking sent |
+| `swarm_status_update` | 200ms | Full status snapshot |
+
+### Consuming SSE Events
+
+#### JavaScript/TypeScript
+
+```typescript
+const eventSource = new EventSource('/api/v1/ag-ui?session_id=session-123');
+
+eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  if (data.type === 'CUSTOM') {
+    const { event_name, payload } = data;
+
+    switch (event_name) {
+      case 'swarm_created':
+        console.log('Swarm created:', payload.swarm_id);
+        break;
+      case 'worker_progress':
+        console.log(`Worker ${payload.worker_id}: ${payload.progress}%`);
+        break;
+      case 'worker_thinking':
+        console.log(`Thinking: ${payload.thinking_content}`);
+        break;
+      // ... handle other events
+    }
+  }
+};
+
+eventSource.onerror = (error) => {
+  console.error('SSE error:', error);
+};
+```
+
+#### Python
+
+```python
+import httpx
+import json
+
+async def consume_events(session_id: str):
+    async with httpx.AsyncClient() as client:
+        async with client.stream(
+            'GET',
+            f'http://localhost:8000/api/v1/ag-ui?session_id={session_id}'
+        ) as response:
+            async for line in response.aiter_lines():
+                if line.startswith('data: '):
+                    event_data = json.loads(line[6:])
+
+                    if event_data.get('type') == 'CUSTOM':
+                        event_name = event_data['event_name']
+                        payload = event_data['payload']
+
+                        if event_name == 'worker_thinking':
+                            print(f"💭 {payload['thinking_content']}")
+                        elif event_name == 'worker_progress':
+                            print(f"📊 Worker {payload['worker_id']}: {payload['progress']}%")
+```
 
 ---
 
-**Last Updated:** 2026-01-30
-**Version:** 1.0.0
-**Sprint:** 100
+## Performance Characteristics
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| SSE Event Latency | < 100ms | For priority events |
+| API Response Time (P95) | < 200ms | GET /swarm/{id} |
+| Worker Detail API (P95) | < 300ms | GET /swarm/{id}/workers/{id} |
+| Event Throughput | > 50 events/sec | Sustained load |
+| Memory Usage | < 50MB | Per 1000 events |
+
+---
+
+## Rate Limiting
+
+Currently, no rate limiting is applied to the Swarm API. For production deployments, consider implementing:
+
+- Request rate limiting per session
+- Event throttling for high-frequency updates
+- Connection limits for SSE streams
+
+---
+
+**Last Updated:** 2026-01-29
+**Version:** 1.1.0
+**Sprint:** 106 (Phase 29)
