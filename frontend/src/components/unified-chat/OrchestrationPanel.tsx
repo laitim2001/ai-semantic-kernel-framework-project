@@ -2,12 +2,14 @@
  * OrchestrationPanel - Debug Panel for Phase 28 Orchestration Flow
  *
  * Sprint 99: Phase 28 Integration
+ * Sprint 105: Agent Swarm Integration
  *
  * Displays:
  * - Three-layer routing decision details
  * - Risk assessment information
  * - Guided dialog questions
  * - Execution status
+ * - Agent Swarm visualization (Sprint 105)
  */
 
 import { FC, useState } from 'react';
@@ -24,6 +26,7 @@ import {
   Loader2,
   Info,
   X,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -34,6 +37,11 @@ import type {
   DialogQuestion,
 } from '@/api/endpoints/orchestration';
 import type { OrchestrationPhase } from '@/hooks/useOrchestration';
+import {
+  AgentSwarmPanel,
+  WorkerDetailDrawer,
+  useSwarmStatus,
+} from './agent-swarm';
 
 // =============================================================================
 // Types
@@ -62,6 +70,8 @@ interface OrchestrationPanelProps {
   onSkipDialog?: () => void;
   /** Whether to show as collapsed */
   defaultCollapsed?: boolean;
+  /** Whether to show Agent Swarm Panel (Sprint 105) */
+  showSwarmPanel?: boolean;
   /** Class name */
   className?: string;
 }
@@ -169,18 +179,34 @@ export const OrchestrationPanel: FC<OrchestrationPanelProps> = ({
   onReject,
   onSkipDialog,
   defaultCollapsed = false,
+  showSwarmPanel = true,
   className,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   const [routingOpen, setRoutingOpen] = useState(true);
   const [riskOpen, setRiskOpen] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(true);
+  const [swarmOpen, setSwarmOpen] = useState(true);
   const [dialogResponses, setDialogResponses] = useState<Record<string, string>>({});
+
+  // Sprint 105: Swarm state management
+  const {
+    swarmStatus,
+    selectedWorkerId,
+    isDrawerOpen,
+    handleWorkerSelect,
+    handleDrawerClose,
+  } = useSwarmStatus();
 
   const handleDialogSubmit = () => {
     onDialogResponse?.(dialogResponses);
     setDialogResponses({});
   };
+
+  // Find selected worker from swarm status
+  const selectedWorker = swarmStatus?.workers.find(
+    (w: { workerId: string }) => w.workerId === selectedWorkerId
+  ) || null;
 
   if (isCollapsed) {
     return (
@@ -433,14 +459,48 @@ export const OrchestrationPanel: FC<OrchestrationPanelProps> = ({
           </div>
         )}
 
+        {/* Sprint 105: Agent Swarm Panel */}
+        {showSwarmPanel && swarmStatus && (
+          <div className="border rounded-lg overflow-hidden">
+            <SectionHeader
+              title="Agent Swarm"
+              icon={<Users className="w-4 h-4 text-indigo-600" />}
+              isOpen={swarmOpen}
+              onToggle={() => setSwarmOpen(!swarmOpen)}
+              badge={
+                <Badge className="bg-indigo-100 text-indigo-800 text-xs">
+                  {swarmStatus.workers.length} workers
+                </Badge>
+              }
+            />
+            {swarmOpen && (
+              <div className="p-2">
+                <AgentSwarmPanel
+                  swarmStatus={swarmStatus}
+                  onWorkerClick={handleWorkerSelect}
+                  className="border-0 shadow-none"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Idle State */}
-        {phase === 'idle' && !routingDecision && (
+        {phase === 'idle' && !routingDecision && !swarmStatus && (
           <div className="text-center py-8 text-gray-500">
             <Info className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">Send a message to see orchestration details</p>
           </div>
         )}
       </div>
+
+      {/* Sprint 105: Worker Detail Drawer */}
+      <WorkerDetailDrawer
+        open={isDrawerOpen}
+        onClose={handleDrawerClose}
+        swarmId={swarmStatus?.swarmId || ''}
+        worker={selectedWorker}
+      />
     </div>
   );
 };
