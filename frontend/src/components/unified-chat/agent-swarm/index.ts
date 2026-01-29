@@ -5,6 +5,7 @@
  * Sprint 101: Event system and SSE integration
  * Sprint 102: UI components (Panel, Cards, Badges)
  * Sprint 103: WorkerDetailDrawer and sub-components
+ * Sprint 104: ExtendedThinking + WorkerActionList
  */
 
 // =============================================================================
@@ -37,3 +38,10 @@ export { ToolCallItem } from './ToolCallItem';
 export { ToolCallsPanel } from './ToolCallsPanel';
 export { MessageHistory } from './MessageHistory';
 export { CheckpointPanel } from './CheckpointPanel';
+
+// =============================================================================
+// Components (Sprint 104)
+// =============================================================================
+export { ExtendedThinkingPanel } from './ExtendedThinkingPanel';
+export { WorkerActionList, inferActionType } from './WorkerActionList';
+export type { ActionType, WorkerAction } from './WorkerActionList';

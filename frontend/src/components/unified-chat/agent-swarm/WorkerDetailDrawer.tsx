@@ -22,6 +22,7 @@ import { CurrentTask } from './CurrentTask';
 import { ToolCallsPanel } from './ToolCallsPanel';
 import { MessageHistory } from './MessageHistory';
 import { CheckpointPanel } from './CheckpointPanel';
+import { ExtendedThinkingPanel } from './ExtendedThinkingPanel';
 import { useWorkerDetail } from './hooks/useWorkerDetail';
 import type { UIWorkerSummary } from './types';
 
@@ -195,6 +196,19 @@ export const WorkerDetailDrawer: FC<WorkerDetailDrawerProps> = ({
               <CurrentTask
                 taskDescription={workerDetail.taskDescription}
               />
+
+              {/* Extended Thinking (Sprint 104) */}
+              {workerDetail.thinkingHistory && workerDetail.thinkingHistory.length > 0 && (
+                <>
+                  <Separator />
+                  <ExtendedThinkingPanel
+                    thinkingHistory={workerDetail.thinkingHistory}
+                    defaultExpanded={true}
+                    autoScroll={true}
+                    maxHeight={250}
+                  />
+                </>
+              )}
 
               <Separator />
 

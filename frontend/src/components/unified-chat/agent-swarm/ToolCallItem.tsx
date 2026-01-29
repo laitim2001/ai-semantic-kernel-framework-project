@@ -3,9 +3,10 @@
  *
  * Displays a single tool call with expandable input/output details.
  * Sprint 103: WorkerDetailDrawer
+ * Sprint 104: Enhanced with real-time timer and animations
  */
 
-import { FC, useState } from 'react';
+import { FC, useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
@@ -22,6 +23,7 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
+  Timer,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ToolCallInfo } from './types';
@@ -33,6 +35,8 @@ import type { ToolCallInfo } from './types';
 interface ToolCallItemProps {
   toolCall: ToolCallInfo;
   defaultExpanded?: boolean;
+  /** Enable real-time elapsed timer for running tools */
+  showLiveTimer?: boolean;
 }
 
 // =============================================================================
@@ -87,36 +91,114 @@ function isMcpTool(toolName: string): boolean {
 }
 
 // =============================================================================
+// Live Timer Hook (Sprint 104)
+// =============================================================================
+
+/**
+ * Hook for real-time elapsed time tracking
+ */
+function useLiveTimer(startTime: string | undefined, isActive: boolean): number | null {
+  const [elapsed, setElapsed] = useState<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isActive && startTime) {
+      const startMs = new Date(startTime).getTime();
+
+      // Initial calculation
+      setElapsed(Date.now() - startMs);
+
+      // Update every 100ms for smooth display
+      intervalRef.current = setInterval(() => {
+        setElapsed(Date.now() - startMs);
+      }, 100);
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
+    } else {
+      setElapsed(null);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    }
+  }, [startTime, isActive]);
+
+  return elapsed;
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
 /**
- * ToolCallItem - Displays a single tool call
+ * ToolCallItem - Displays a single tool call with real-time updates
+ *
+ * Sprint 104 Enhancements:
+ * - Real-time elapsed timer for running tools
+ * - Status transition animations
+ * - Improved visual feedback
  *
  * @param toolCall - Tool call information
  * @param defaultExpanded - Whether to expand by default
+ * @param showLiveTimer - Enable live timer for running tools (default: true)
  */
 export const ToolCallItem: FC<ToolCallItemProps> = ({
   toolCall,
   defaultExpanded = false,
+  showLiveTimer = true,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultExpanded);
+  const [prevStatus, setPrevStatus] = useState<ToolCallStatus>(toolCall.status);
+
+  // Real-time timer for running tools
+  const isRunning = toolCall.status === 'running';
+  const liveElapsed = useLiveTimer(toolCall.startedAt, isRunning && showLiveTimer);
+
+  // Track status changes for animation
+  useEffect(() => {
+    if (prevStatus !== toolCall.status) {
+      setPrevStatus(toolCall.status);
+    }
+  }, [toolCall.status, prevStatus]);
 
   const statusConfig = STATUS_CONFIG[toolCall.status];
   const StatusIcon = statusConfig.icon;
   const ToolIcon = isMcpTool(toolCall.toolName) ? Cloud : Terminal;
 
+  // Determine displayed duration
+  const displayedDuration = isRunning && liveElapsed !== null
+    ? liveElapsed
+    : toolCall.durationMs;
+
   return (
-    <Card className="overflow-hidden">
+    <Card
+      className={cn(
+        'overflow-hidden transition-all duration-300',
+        // Status-based styling (Sprint 104)
+        isRunning && 'ring-2 ring-blue-400/50 shadow-lg shadow-blue-500/10',
+        toolCall.status === 'completed' && 'border-green-200 dark:border-green-800/50',
+        toolCall.status === 'failed' && 'border-red-200 dark:border-red-800/50',
+      )}
+    >
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <Button
             variant="ghost"
-            className="w-full justify-between p-3 h-auto hover:bg-accent rounded-none"
+            className={cn(
+              'w-full justify-between p-3 h-auto hover:bg-accent rounded-none',
+              // Running state background pulse
+              isRunning && 'animate-pulse bg-blue-50/50 dark:bg-blue-950/30',
+            )}
           >
             {/* Left side - Tool icon and name */}
             <div className="flex items-center gap-2 min-w-0">
-              <ToolIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <ToolIcon className={cn(
+                'h-4 w-4 flex-shrink-0 transition-colors',
+                isRunning ? 'text-blue-500' : 'text-muted-foreground',
+              )} />
               <span className="font-mono text-sm truncate">
                 {toolCall.toolName}
               </span>
@@ -124,18 +206,31 @@ export const ToolCallItem: FC<ToolCallItemProps> = ({
 
             {/* Right side - Status and duration */}
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Live timer indicator */}
+              {isRunning && showLiveTimer && (
+                <Timer className="h-3 w-3 text-blue-500 animate-pulse" />
+              )}
+
               <StatusIcon
                 className={cn(
-                  'h-4 w-4',
+                  'h-4 w-4 transition-all',
                   statusConfig.color,
-                  toolCall.status === 'running' && 'animate-spin'
+                  isRunning && 'animate-spin',
+                  // Completion animation
+                  toolCall.status === 'completed' && 'scale-110',
                 )}
               />
-              {toolCall.durationMs !== undefined && (
-                <span className="text-xs text-muted-foreground font-mono">
-                  {formatDuration(toolCall.durationMs)}
+
+              {/* Duration display - real-time for running, final for completed */}
+              {(displayedDuration !== undefined && displayedDuration !== null) && (
+                <span className={cn(
+                  'text-xs font-mono tabular-nums min-w-[50px] text-right',
+                  isRunning ? 'text-blue-500 font-medium' : 'text-muted-foreground',
+                )}>
+                  {formatDuration(displayedDuration)}
                 </span>
               )}
+
               {isOpen ? (
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               ) : (

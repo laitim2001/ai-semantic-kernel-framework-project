@@ -1,7 +1,7 @@
 """Claude Agent SDK Client wrapper."""
 
 import uuid
-from typing import Optional, List, Any, Dict, TYPE_CHECKING
+from typing import Optional, List, Any, Dict, Callable, Awaitable, AsyncGenerator, TYPE_CHECKING
 
 from anthropic import AsyncAnthropic
 
@@ -9,8 +9,11 @@ from .config import ClaudeSDKConfig
 from .exceptions import ClaudeSDKError
 
 if TYPE_CHECKING:
-    from .types import QueryResult, Message
+    from .types import QueryResult, Message, ThinkingEvent
     from .session import Session
+
+# Type alias for thinking callback
+ThinkingCallback = Callable[[str, int], Awaitable[None]]
 
 
 class ClaudeSDKClient:
@@ -201,3 +204,153 @@ class ClaudeSDKClient:
             hooks=self.hooks,
             mcp_servers=self.mcp_servers,
         )
+
+    async def execute_with_thinking(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        thinking_callback: Optional[ThinkingCallback] = None,
+        max_tokens: int = 16000,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Execute Claude API call with Extended Thinking content capture.
+
+        Sprint 104: Extended Thinking Support
+
+        This method streams the response and captures extended thinking
+        (anthropic-beta: extended-thinking) content, calling the callback
+        for each thinking update.
+
+        Args:
+            messages: List of message dicts for the conversation
+            tools: Tool definitions for the request
+            thinking_callback: Async callback (thinking_content: str, token_count: int) -> None
+            max_tokens: Maximum tokens per response (default: 16000 for thinking)
+
+        Yields:
+            Event dicts from the streaming response
+
+        Example:
+            async def on_thinking(content: str, tokens: int):
+                print(f"Thinking ({tokens} tokens): {content[:50]}...")
+
+            async for event in client.execute_with_thinking(
+                messages=[{"role": "user", "content": "Analyze this problem"}],
+                thinking_callback=on_thinking,
+            ):
+                if event.get("type") == "text":
+                    print(event.get("text"))
+        """
+        try:
+            # Build request kwargs
+            request_kwargs: Dict[str, Any] = {
+                "model": self.config.model,
+                "max_tokens": max_tokens,
+                "messages": messages,
+            }
+
+            if self.config.system_prompt:
+                request_kwargs["system"] = self.config.system_prompt
+
+            if tools:
+                request_kwargs["tools"] = tools
+
+            # Use streaming API with extended thinking beta
+            # Note: Extended thinking requires anthropic-beta header
+            extra_headers = {"anthropic-beta": "extended-thinking-2024-10"}
+
+            async with self._client.messages.stream(
+                **request_kwargs,
+                extra_headers=extra_headers,
+            ) as stream:
+                current_thinking = ""
+                current_block_type: Optional[str] = None
+
+                async for event in stream:
+                    event_type = getattr(event, "type", None)
+
+                    if event_type == "content_block_start":
+                        # Check if this is a thinking block
+                        content_block = getattr(event, "content_block", None)
+                        if content_block:
+                            block_type = getattr(content_block, "type", None)
+                            if block_type == "thinking":
+                                current_block_type = "thinking"
+                                current_thinking = ""
+                            else:
+                                current_block_type = block_type
+
+                        yield {
+                            "type": "content_block_start",
+                            "block_type": current_block_type,
+                        }
+
+                    elif event_type == "content_block_delta":
+                        delta = getattr(event, "delta", None)
+                        if delta:
+                            # Check for thinking delta
+                            thinking_delta = getattr(delta, "thinking", None)
+                            if thinking_delta:
+                                current_thinking += thinking_delta
+                                # Estimate token count (rough: ~4 chars per token)
+                                token_count = len(current_thinking.split())
+
+                                # Call thinking callback
+                                if thinking_callback:
+                                    await thinking_callback(current_thinking, token_count)
+
+                                yield {
+                                    "type": "thinking_delta",
+                                    "thinking": current_thinking,
+                                    "token_count": token_count,
+                                }
+
+                            # Check for text delta
+                            text_delta = getattr(delta, "text", None)
+                            if text_delta:
+                                yield {
+                                    "type": "text_delta",
+                                    "text": text_delta,
+                                }
+
+                            # Check for tool use delta
+                            if hasattr(delta, "type") and delta.type == "input_json_delta":
+                                yield {
+                                    "type": "tool_input_delta",
+                                    "partial_json": getattr(delta, "partial_json", ""),
+                                }
+
+                    elif event_type == "content_block_stop":
+                        if current_block_type == "thinking":
+                            # Final thinking block complete
+                            yield {
+                                "type": "thinking_complete",
+                                "content": current_thinking,
+                                "token_count": len(current_thinking.split()),
+                            }
+                        current_block_type = None
+                        yield {"type": "content_block_stop"}
+
+                    elif event_type == "message_start":
+                        yield {
+                            "type": "message_start",
+                            "message": {
+                                "id": getattr(event.message, "id", None) if hasattr(event, "message") else None,
+                                "model": getattr(event.message, "model", None) if hasattr(event, "message") else None,
+                            },
+                        }
+
+                    elif event_type == "message_delta":
+                        yield {
+                            "type": "message_delta",
+                            "stop_reason": getattr(event.delta, "stop_reason", None) if hasattr(event, "delta") else None,
+                        }
+
+                    elif event_type == "message_stop":
+                        yield {"type": "message_stop"}
+
+        except Exception as e:
+            yield {
+                "type": "error",
+                "error": str(e),
+            }
