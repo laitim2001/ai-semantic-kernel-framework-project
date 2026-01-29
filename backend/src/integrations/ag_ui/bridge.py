@@ -30,7 +30,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Optional, TYPE_CHECKING
 
 from src.integrations.ag_ui.converters import EventConverters, create_converters
 from src.integrations.ag_ui.events import (
@@ -43,6 +43,7 @@ from src.integrations.ag_ui.events import (
     TextMessageContentEvent,
     TextMessageEndEvent,
 )
+from src.integrations.swarm.events import SwarmEventEmitter, create_swarm_emitter
 
 if TYPE_CHECKING:
     from src.integrations.hybrid.orchestrator_v2 import HybridOrchestratorV2, HybridResultV2
@@ -97,6 +98,9 @@ class BridgeConfig:
         emit_state_events: Whether to emit state events
         emit_custom_events: Whether to emit custom events
         heartbeat_interval: Interval in seconds for heartbeat events (0 = disabled)
+        enable_swarm_events: Whether to enable Swarm event emitter (Sprint 101)
+        swarm_throttle_interval_ms: Throttle interval for swarm events (Sprint 101)
+        swarm_batch_size: Batch size for swarm events (Sprint 101)
     """
 
     chunk_size: int = 100
@@ -104,6 +108,10 @@ class BridgeConfig:
     emit_state_events: bool = True
     emit_custom_events: bool = True
     heartbeat_interval: float = 2.0  # S67-BF-1: Send heartbeat every 2 seconds (faster for HITL)
+    # Sprint 101: Swarm event configuration
+    enable_swarm_events: bool = True
+    swarm_throttle_interval_ms: int = 200
+    swarm_batch_size: int = 5
 
 
 class HybridEventBridge:
@@ -149,6 +157,9 @@ class HybridEventBridge:
             include_metadata=self._config.include_metadata,
         )
 
+        # Sprint 101: Swarm event emitter
+        self._swarm_emitter: Optional[SwarmEventEmitter] = None
+
         logger.info(
             f"HybridEventBridge initialized: "
             f"orchestrator={orchestrator is not None}, "
@@ -179,6 +190,89 @@ class HybridEventBridge:
         """
         self._orchestrator = orchestrator
         logger.info("Orchestrator updated in bridge")
+
+    # =========================================================================
+    # Sprint 101: Swarm Event Integration
+    # =========================================================================
+
+    @property
+    def swarm_emitter(self) -> Optional[SwarmEventEmitter]:
+        """Get the Swarm event emitter instance."""
+        return self._swarm_emitter
+
+    def configure_swarm_emitter(
+        self,
+        event_callback: Optional[Callable[[CustomEvent], Awaitable[None]]] = None,
+        throttle_interval_ms: Optional[int] = None,
+        batch_size: Optional[int] = None,
+    ) -> SwarmEventEmitter:
+        """
+        Configure and return the Swarm event emitter.
+
+        Sprint 101: Creates or reconfigures the Swarm event emitter.
+
+        Args:
+            event_callback: Custom callback for events. If None, uses _send_custom_event.
+            throttle_interval_ms: Override throttle interval. If None, uses config.
+            batch_size: Override batch size. If None, uses config.
+
+        Returns:
+            Configured SwarmEventEmitter instance
+        """
+        if not self._config.enable_swarm_events:
+            logger.warning("Swarm events are disabled in configuration")
+            return None
+
+        # Use provided callback or default to _send_custom_event
+        callback = event_callback or self._send_custom_event
+
+        self._swarm_emitter = create_swarm_emitter(
+            event_callback=callback,
+            throttle_interval_ms=throttle_interval_ms or self._config.swarm_throttle_interval_ms,
+            batch_size=batch_size or self._config.swarm_batch_size,
+        )
+
+        logger.info(
+            f"Swarm emitter configured: "
+            f"throttle={throttle_interval_ms or self._config.swarm_throttle_interval_ms}ms, "
+            f"batch_size={batch_size or self._config.swarm_batch_size}"
+        )
+
+        return self._swarm_emitter
+
+    async def _send_custom_event(self, event: CustomEvent) -> None:
+        """
+        Default callback for sending custom events.
+
+        This method is used by SwarmEventEmitter to send events.
+        Override this method to customize event delivery.
+
+        Args:
+            event: CustomEvent to send
+        """
+        # Log the event for debugging
+        logger.debug(f"Sending custom event: {event.event_name}")
+        # The actual sending is handled by the SSE stream in stream_events
+
+    async def start_swarm_emitter(self) -> None:
+        """
+        Start the Swarm event emitter.
+
+        Should be called before streaming events that include Swarm updates.
+        """
+        if self._swarm_emitter and not self._swarm_emitter.is_running:
+            await self._swarm_emitter.start()
+            logger.info("Swarm emitter started")
+
+    async def stop_swarm_emitter(self) -> None:
+        """
+        Stop the Swarm event emitter.
+
+        Should be called when the stream ends or on cleanup.
+        """
+        if self._swarm_emitter and self._swarm_emitter.is_running:
+            await self._swarm_emitter.stop()
+            logger.info("Swarm emitter stopped")
 
     def _build_multimodal_content(
         self,

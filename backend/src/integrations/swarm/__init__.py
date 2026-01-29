@@ -65,6 +65,23 @@ from .swarm_integration import (
     create_swarm_integration,
 )
 
+from .events import (
+    # Event types
+    SwarmEventNames,
+    SwarmCreatedPayload,
+    SwarmStatusUpdatePayload,
+    SwarmCompletedPayload,
+    WorkerStartedPayload,
+    WorkerProgressPayload,
+    WorkerThinkingPayload,
+    WorkerToolCallPayload,
+    WorkerMessagePayload,
+    WorkerCompletedPayload,
+    # Emitter
+    SwarmEventEmitter,
+    create_swarm_emitter,
+)
+
 __all__ = [
     # Enums
     "WorkerType",
@@ -88,6 +105,20 @@ __all__ = [
     # Integration
     "SwarmIntegration",
     "create_swarm_integration",
+    # Event types (Sprint 101)
+    "SwarmEventNames",
+    "SwarmCreatedPayload",
+    "SwarmStatusUpdatePayload",
+    "SwarmCompletedPayload",
+    "WorkerStartedPayload",
+    "WorkerProgressPayload",
+    "WorkerThinkingPayload",
+    "WorkerToolCallPayload",
+    "WorkerMessagePayload",
+    "WorkerCompletedPayload",
+    # Emitter (Sprint 101)
+    "SwarmEventEmitter",
+    "create_swarm_emitter",
 ]
 
 # Version info
