@@ -1,6 +1,6 @@
 # Infrastructure Layer
 
-> Infrastructure layer - database, cache, message queue
+> Infrastructure layer — Database, Cache, Messaging (stub), Storage (empty)
 
 ---
 
@@ -10,33 +10,41 @@
 infrastructure/
 ├── __init__.py
 │
-├── database/               # PostgreSQL integration
+├── database/               # PostgreSQL integration (18 files) ✅ ACTIVE
 │   ├── __init__.py
-│   ├── connection.py       # Database connection management
-│   ├── models/             # SQLAlchemy ORM models
-│   │   ├── __init__.py
+│   ├── session.py          # Database session management
+│   ├── models/             # SQLAlchemy ORM models (8 files)
+│   │   ├── base.py         # Base model class
 │   │   ├── agent.py
 │   │   ├── workflow.py
 │   │   ├── execution.py
-│   │   └── ...
-│   └── repositories/       # Data access layer
-│       ├── __init__.py
-│       ├── base.py         # BaseRepository
-│       ├── agent_repository.py
-│       ├── workflow_repository.py
-│       └── ...
+│   │   ├── checkpoint.py
+│   │   ├── session.py
+│   │   ├── audit.py
+│   │   └── user.py
+│   └── repositories/       # Data access layer (7 files)
+│       ├── base.py         # BaseRepository (Generic CRUD)
+│       ├── agent.py
+│       ├── workflow.py
+│       ├── execution.py
+│       ├── checkpoint.py
+│       ├── user.py
+│       └── workflow.py
 │
-├── cache/                  # Redis integration
+├── cache/                  # Redis integration (2 files) ✅ ACTIVE
 │   ├── __init__.py
-│   ├── client.py           # Redis client
-│   ├── llm_cache.py        # LLM response caching
-│   └── session_cache.py    # Session state caching
+│   └── llm_cache.py        # LLM response caching
 │
-└── messaging/              # RabbitMQ integration
-    ├── __init__.py
-    ├── publisher.py        # Message publishing
-    └── consumer.py         # Message consuming
+├── messaging/              # ⚠️ STUB — Only __init__.py exists
+│   └── __init__.py         # Comment: "# Messaging infrastructure"
+│
+└── storage/                # ⚠️ EMPTY — No files or subdirectories
 ```
+
+> **IMPORTANT**: `messaging/` and `storage/` are known gaps.
+> - RabbitMQ integration is NOT implemented (only an empty __init__.py)
+> - File storage layer does not exist yet
+> - See Known Critical Issues in project memory
 
 ---
 
@@ -304,50 +312,34 @@ class LLMCache:
 
 ## Messaging Layer
 
-### RabbitMQ Publisher
+> **STATUS: NOT IMPLEMENTED** — Only `__init__.py` exists with a comment.
+
+RabbitMQ is configured in Docker Compose (ports 5672/15672) but no Python publisher/consumer code exists. When implementing, follow this pattern:
 
 ```python
-# messaging/publisher.py
-import json
+# messaging/publisher.py (TO BE IMPLEMENTED)
 import pika
-from typing import Any
-
 from src.core.config import settings
 
-
 class MessagePublisher:
-    """
-    RabbitMQ message publisher.
-
-    Queues:
-    - workflow.execute: Workflow execution requests
-    - notification.send: Notification requests
-    - audit.log: Audit log events
-    """
+    """RabbitMQ message publisher. Queues: workflow.execute, notification.send, audit.log"""
 
     def __init__(self):
-        self.connection = pika.BlockingConnection(
-            pika.URLParameters(settings.RABBITMQ_URL)
-        )
+        self.connection = pika.BlockingConnection(pika.URLParameters(settings.RABBITMQ_URL))
         self.channel = self.connection.channel()
 
     def publish(self, queue: str, message: dict) -> None:
-        """Publish message to queue."""
         self.channel.queue_declare(queue=queue, durable=True)
-        self.channel.basic_publish(
-            exchange="",
-            routing_key=queue,
-            body=json.dumps(message),
-            properties=pika.BasicProperties(
-                delivery_mode=2,  # Persistent
-                content_type="application/json",
-            ),
-        )
-
-    def close(self):
-        """Close connection."""
-        self.connection.close()
+        self.channel.basic_publish(exchange="", routing_key=queue, body=json.dumps(message))
 ```
+
+---
+
+## Storage Layer
+
+> **STATUS: NOT IMPLEMENTED** — Empty directory, no files.
+
+File storage (for uploaded attachments, generated files) needs to be implemented.
 
 ---
 
@@ -367,13 +359,6 @@ class MessagePublisher:
 - Don't cache sensitive data
 - Handle cache misses gracefully
 
-### Messaging
-
-- Use durable queues for important messages
-- Implement retry logic
-- Handle message acknowledgments properly
-- Monitor queue depth
-
 ---
 
-**Last Updated**: 2026-01-23
+**Last Updated**: 2026-02-09

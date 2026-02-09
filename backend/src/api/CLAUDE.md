@@ -1,52 +1,198 @@
 # API Layer
 
-> FastAPI routing layer - handles HTTP requests and responses
+> FastAPI routing layer — 39 route modules, ~540 endpoints, 47 registered routers
 
 ---
 
 ## Directory Structure
 
 ```
-api/
-├── __init__.py
-├── v1/                     # API v1 namespace
-│   ├── __init__.py
-│   ├── agents/             # Agent management
-│   ├── workflows/          # Workflow management
-│   ├── executions/         # Execution lifecycle
-│   ├── checkpoints/        # Checkpoint/approval
-│   ├── templates/          # Workflow templates
-│   ├── triggers/           # Workflow triggers
-│   ├── connectors/         # External connectors
-│   ├── routing/            # Intelligent routing
-│   ├── notifications/      # Notifications
-│   ├── audit/              # Audit logs
-│   ├── versioning/         # Version control
-│   ├── cache/              # Cache management
-│   ├── prompts/            # Prompt management
-│   ├── learning/           # Learning system
-│   ├── devtools/           # Developer tools
-│   ├── dashboard/          # Dashboard analytics
-│   ├── performance/        # Performance metrics
-│   │
-│   │  # Agent Framework Features (→ Adapters)
-│   ├── groupchat/          # GroupChat API → GroupChatBuilderAdapter
-│   ├── handoff/            # Handoff API → HandoffBuilderAdapter
-│   ├── concurrent/         # Concurrent API → ConcurrentBuilderAdapter
-│   ├── nested/             # Nested Workflow API → NestedWorkflowAdapter
-│   ├── planning/           # Planning API → PlanningAdapter
-│   │
-│   │  # Phase 11: Agent-Session Integration
-│   ├── sessions/           # 🆕 Session-based conversations
-│   │   ├── routes.py       # Session CRUD, Chat, Messages, Approvals
-│   │   └── schemas.py      # Session/Message/ToolCall schemas
-│   ├── code_interpreter/   # 🆕 Phase 8: Code execution
-│   │
-│   │  # Phase 13: Hybrid MAF + Claude SDK Architecture
-│   └── hybrid/             # 🆕 Hybrid context management
-│       ├── context_routes.py   # Context bridge & sync API
-│       └── schemas.py          # Hybrid context schemas
+api/v1/
+├── __init__.py             # Router aggregation (47 routers registered)
+├── dependencies.py         # Shared dependencies (auth, DB, etc.)
+│
+│  # Phase 1: Foundation (17 modules)
+├── agents/                 # Agent CRUD and management
+├── workflows/              # Workflow CRUD and validation
+├── executions/             # Execution tracking and state management
+├── checkpoints/            # Human-in-the-loop checkpoint management
+├── templates/              # Workflow template marketplace
+├── triggers/               # Webhook trigger management (n8n)
+├── connectors/             # Cross-system connector management
+├── routing/                # Cross-scenario routing and decision logic
+├── notifications/          # Teams and notification integration
+├── audit/                  # Audit logging + decision audit (2 route files)
+├── cache/                  # LLM response caching management
+├── prompts/                # Prompt template management
+├── learning/               # Few-shot learning mechanism
+├── devtools/               # Execution tracing and debugging tools
+├── dashboard/              # Dashboard analytics
+├── versioning/             # Template version management
+├── performance/            # Performance monitoring and optimization
+│
+│  # Phase 2: Advanced Orchestration (5 modules)
+├── concurrent/             # Concurrent execution (Fork-Join)
+├── handoff/                # Agent handoff and collaboration
+├── groupchat/              # GroupChat multi-turn conversations
+├── planning/               # Dynamic planning and autonomous decisions
+├── nested/                 # Nested workflows and advanced orchestration
+│
+│  # Phase 8-10: Code Interpreter + MCP + Sessions
+├── code_interpreter/       # Code execution and interpretation
+├── mcp/                    # MCP server management and tool discovery
+├── sessions/               # Session mode, multi-turn, WebSocket
+│
+│  # Phase 12: Claude Agent SDK (7 route files)
+├── claude_sdk/             # Claude SDK integration
+│   ├── routes.py           # Core SDK (6 endpoints)
+│   ├── autonomous_routes.py # Autonomous execution (7 endpoints)
+│   ├── hooks_routes.py     # Hook lifecycle (6 endpoints)
+│   ├── hybrid_routes.py    # Hybrid context (5 endpoints)
+│   ├── intent_routes.py    # Intent classification (6 endpoints)
+│   ├── mcp_routes.py       # MCP integration (6 endpoints)
+│   └── tools_routes.py     # Tool management (4 endpoints)
+│
+│  # Phase 13-14: Hybrid MAF+Claude SDK (4 route files)
+├── hybrid/                 # Hybrid bridge
+│   ├── context_routes.py   # Context synchronization
+│   ├── core_routes.py      # Core hybrid operations
+│   ├── risk_routes.py      # Risk assessment
+│   └── switch_routes.py    # Mode switching
+│
+│  # Phase 15: AG-UI Protocol
+├── ag_ui/                  # Agentic UI SSE streaming (25 endpoints)
+│
+│  # Phase 18-22: Platform Features
+├── auth/                   # Authentication and authorization
+├── files/                  # File upload and attachment management
+├── memory/                 # Memory system (semantic, episodic, procedural)
+├── sandbox/                # Sandbox security and isolated execution
+├── autonomous/             # Autonomous decision-making and planning
+│
+│  # Phase 23: Observability
+├── a2a/                    # Agent-to-Agent communication protocol
+├── patrol/                 # Patrol mode for continuous monitoring
+├── correlation/            # Multi-agent event correlation analysis
+├── rootcause/              # Root cause analysis for incidents
+│
+│  # Phase 28: Three-tier Intent Routing (4 route files)
+├── orchestration/          # Intent routing system
+│   ├── routes.py           # Policy management (9 endpoints)
+│   ├── intent_routes.py    # Intent classification (18 endpoints)
+│   ├── dialog_routes.py    # Guided dialog (4 endpoints)
+│   └── approval_routes.py  # HITL approval (4 endpoints)
+│
+│  # Phase 29: Agent Swarm (2 route files)
+└── swarm/                  # Agent swarm visualization
+    ├── routes.py           # Swarm status API (3 endpoints)
+    └── demo.py             # Swarm demo/test API with SSE (5 endpoints)
 ```
+
+---
+
+## Complete Route Module Inventory
+
+### Phase 1: Foundation
+
+| Module | Endpoints | Purpose |
+|--------|-----------|---------|
+| `agents/` | 6 | Agent CRUD and management |
+| `workflows/` | 9 | Workflow CRUD and validation |
+| `executions/` | 11 | Execution tracking and state management |
+| `checkpoints/` | 10 | HITL checkpoint management |
+| `templates/` | 11 | Workflow template marketplace |
+| `triggers/` | 8 | Webhook trigger management |
+| `connectors/` | 9 | Cross-system connector management |
+| `routing/` | 14 | Cross-scenario routing |
+| `notifications/` | 11 | Teams and notification integration |
+| `audit/` | 15 | Audit logging + decision audit (2 route files) |
+| `cache/` | 9 | LLM response caching |
+| `prompts/` | 11 | Prompt template management |
+| `learning/` | 13 | Few-shot learning mechanism |
+| `devtools/` | 12 | Execution tracing and debugging |
+| `dashboard/` | 2 | Dashboard analytics |
+| `versioning/` | 14 | Template version management |
+| `performance/` | 11 | Performance monitoring |
+
+### Phase 2: Advanced Orchestration
+
+| Module | Endpoints | Purpose | Adapter |
+|--------|-----------|---------|---------|
+| `concurrent/` | 13 | Fork-Join concurrent execution | ConcurrentBuilderAdapter |
+| `handoff/` | 14 | Agent handoff and collaboration | HandoffBuilderAdapter |
+| `groupchat/` | 42 | GroupChat multi-turn conversations | GroupChatBuilderAdapter |
+| `planning/` | 46 | Dynamic planning and decisions | MagenticBuilder |
+| `nested/` | 16 | Nested workflows | NestedWorkflowAdapter |
+
+### Phase 8-10: Extended Features
+
+| Module | Endpoints | Purpose |
+|--------|-----------|---------|
+| `code_interpreter/` | 11 | Code execution (Responses API) |
+| `mcp/` | 13 | MCP server management and tool discovery |
+| `sessions/` | 14 | Session mode, multi-turn, WebSocket |
+
+### Phase 12: Claude Agent SDK
+
+| Route File | Endpoints | Purpose |
+|------------|-----------|---------|
+| `claude_sdk/routes.py` | 6 | Core SDK integration |
+| `claude_sdk/autonomous_routes.py` | 7 | Autonomous execution |
+| `claude_sdk/hooks_routes.py` | 6 | Hook lifecycle management |
+| `claude_sdk/hybrid_routes.py` | 5 | Hybrid context integration |
+| `claude_sdk/intent_routes.py` | 6 | Intent classification |
+| `claude_sdk/mcp_routes.py` | 6 | MCP integration |
+| `claude_sdk/tools_routes.py` | 4 | Tool management |
+
+### Phase 13-14: Hybrid MAF+Claude SDK
+
+| Route File | Endpoints | Purpose |
+|------------|-----------|---------|
+| `hybrid/context_routes.py` | 5 | Context synchronization |
+| `hybrid/core_routes.py` | 4 | Core hybrid operations |
+| `hybrid/risk_routes.py` | 7 | Risk assessment |
+| `hybrid/switch_routes.py` | 7 | Mode switching |
+
+### Phase 15: AG-UI Protocol
+
+| Module | Endpoints | Purpose |
+|--------|-----------|---------|
+| `ag_ui/` | 25 | SSE streaming, event handling |
+
+### Phase 18-22: Platform Features
+
+| Module | Endpoints | Phase | Purpose |
+|--------|-----------|-------|---------|
+| `auth/` | 4 | 18 | Authentication (JWT) |
+| `files/` | 6 | 20 | File upload and attachment |
+| `memory/` | 7 | 22 | Memory system (mem0) |
+| `sandbox/` | 6 | 21 | Sandboxed execution |
+| `autonomous/` | 4 | 22 | Autonomous decision-making |
+
+### Phase 23: Observability
+
+| Module | Endpoints | Purpose |
+|--------|-----------|---------|
+| `a2a/` | 14 | Agent-to-Agent protocol |
+| `patrol/` | 9 | Continuous monitoring |
+| `correlation/` | 7 | Multi-agent event correlation |
+| `rootcause/` | 4 | Root cause analysis |
+
+### Phase 28: Three-tier Intent Routing
+
+| Route File | Endpoints | Purpose |
+|------------|-----------|---------|
+| `orchestration/routes.py` | 9 | Policy management |
+| `orchestration/intent_routes.py` | 18 | Intent classification API |
+| `orchestration/dialog_routes.py` | 4 | Guided dialog |
+| `orchestration/approval_routes.py` | 4 | HITL approval |
+
+### Phase 29: Agent Swarm
+
+| Route File | Endpoints | Purpose |
+|------------|-----------|---------|
+| `swarm/routes.py` | 3 | Swarm status API |
+| `swarm/demo.py` | 5 | Swarm demo/test API (SSE) |
 
 ---
 
@@ -54,235 +200,82 @@ api/
 
 ### RESTful Conventions
 
-| Operation | Method | Route | Description |
-|-----------|--------|-------|-------------|
-| List | GET | `/api/v1/{resource}` | Get all items |
-| Get | GET | `/api/v1/{resource}/{id}` | Get single item |
-| Create | POST | `/api/v1/{resource}` | Create new item |
-| Update | PUT | `/api/v1/{resource}/{id}` | Update item |
-| Delete | DELETE | `/api/v1/{resource}/{id}` | Delete item |
-| Action | POST | `/api/v1/{resource}/{id}/{action}` | Execute action |
+| Operation | Method | Route Pattern |
+|-----------|--------|---------------|
+| List | GET | `/api/v1/{resource}` |
+| Get | GET | `/api/v1/{resource}/{id}` |
+| Create | POST | `/api/v1/{resource}` |
+| Update | PUT | `/api/v1/{resource}/{id}` |
+| Delete | DELETE | `/api/v1/{resource}/{id}` |
+| Action | POST | `/api/v1/{resource}/{id}/{action}` |
 
-### Route File Structure
+### Route File Template
 
 ```python
-# routes.py template
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from src.core.database import get_db
 from src.domain.{module}.service import {Module}Service
 from . import schemas
 
 router = APIRouter(prefix="/{module}", tags=["{Module}"])
 
-
 @router.get("/", response_model=list[schemas.{Module}Response])
-async def list_{module}s(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """List all {module}s with pagination."""
+async def list_{module}s(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     service = {Module}Service(db)
     return service.get_all(skip=skip, limit=limit)
 
-
 @router.get("/{id}", response_model=schemas.{Module}Response)
 async def get_{module}(id: str, db: Session = Depends(get_db)):
-    """Get single {module} by ID."""
     service = {Module}Service(db)
     item = service.get_by_id(id)
     if not item:
         raise HTTPException(status_code=404, detail="{Module} not found")
     return item
 
-
 @router.post("/", response_model=schemas.{Module}Response, status_code=status.HTTP_201_CREATED)
-async def create_{module}(
-    data: schemas.{Module}Create,
-    db: Session = Depends(get_db)
-):
-    """Create new {module}."""
+async def create_{module}(data: schemas.{Module}Create, db: Session = Depends(get_db)):
     service = {Module}Service(db)
     return service.create(data)
-
-
-@router.put("/{id}", response_model=schemas.{Module}Response)
-async def update_{module}(
-    id: str,
-    data: schemas.{Module}Update,
-    db: Session = Depends(get_db)
-):
-    """Update existing {module}."""
-    service = {Module}Service(db)
-    return service.update(id, data)
-
-
-@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_{module}(id: str, db: Session = Depends(get_db)):
-    """Delete {module}."""
-    service = {Module}Service(db)
-    service.delete(id)
 ```
 
----
-
-## Schema Design
-
-### Pydantic Schema Patterns
+### Schema Pattern
 
 ```python
-# schemas.py template
-from datetime import datetime
-from typing import Optional
 from pydantic import BaseModel, Field
 
-
 class {Module}Base(BaseModel):
-    """Base schema with common fields."""
     name: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = None
-
+    description: str | None = None
 
 class {Module}Create({Module}Base):
-    """Schema for creating new {module}."""
     pass
 
-
 class {Module}Update(BaseModel):
-    """Schema for updating {module} (all fields optional)."""
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = None
-
+    name: str | None = Field(None, min_length=1, max_length=100)
 
 class {Module}Response({Module}Base):
-    """Schema for API response."""
     id: str
     created_at: datetime
     updated_at: datetime
-
     class Config:
-        from_attributes = True  # Enable ORM mode
+        from_attributes = True
 ```
 
 ---
 
 ## Response Format
 
-### Success Response
-
 ```python
-# Single item
-{
-    "id": "uuid",
-    "name": "Item Name",
-    "created_at": "2025-12-18T10:00:00Z"
-}
+# Success (single)
+{"id": "uuid", "name": "Item", "created_at": "2026-01-01T00:00:00Z"}
 
-# List with pagination
-{
-    "data": [...],
-    "total": 100,
-    "page": 1,
-    "page_size": 20,
-    "total_pages": 5
-}
-```
+# Success (list with pagination)
+{"data": [...], "total": 100, "page": 1, "page_size": 20, "total_pages": 5}
 
-### Error Response
-
-```python
-# HTTPException format
-{
-    "detail": "Error message"
-}
-
-# Custom error format
-{
-    "error": "VALIDATION_ERROR",
-    "message": "Invalid input data",
-    "details": {
-        "field": "name",
-        "issue": "Field is required"
-    }
-}
-```
-
----
-
-## Agent Framework API Routes
-
-These routes connect to **Adapter Layer** (`src/integrations/agent_framework/`):
-
-| Route Module | Adapter | Official API |
-|--------------|---------|--------------|
-| `/groupchat` | GroupChatBuilderAdapter | GroupChatBuilder |
-| `/handoff` | HandoffBuilderAdapter | HandoffBuilder |
-| `/concurrent` | ConcurrentBuilderAdapter | ConcurrentBuilder |
-| `/nested` | NestedWorkflowAdapter | WorkflowExecutor |
-| `/planning` | PlanningAdapter | MagenticBuilder |
-| `/sessions` | SessionAgentBridge | AgentExecutor |
-| `/code_interpreter` | CodeInterpreterAdapter | Responses API |
-
----
-
-## Sessions API Routes (Phase 11)
-
-| Method | Route | Description |
-|--------|-------|-------------|
-| POST | `/sessions` | Create new session |
-| GET | `/sessions/{id}` | Get session by ID |
-| DELETE | `/sessions/{id}` | Delete session |
-| GET | `/sessions/{id}/messages` | List session messages |
-| POST | `/sessions/{id}/chat` | Send chat message |
-| POST | `/sessions/{id}/chat/stream` | Stream chat response (SSE) |
-| GET | `/sessions/{id}/tool-calls` | List tool calls |
-| POST | `/sessions/{id}/tool-calls/{id}/approve` | Approve tool call |
-| POST | `/sessions/{id}/tool-calls/{id}/reject` | Reject tool call |
-
----
-
-## Hybrid Context API Routes (Phase 13)
-
-| Method | Route | Description |
-|--------|-------|-------------|
-| GET | `/hybrid/context/{session_id}` | Get hybrid context |
-| GET | `/hybrid/context/{session_id}/status` | Get sync status |
-| POST | `/hybrid/context/sync` | Trigger manual sync |
-| POST | `/hybrid/context/merge` | Merge MAF and Claude contexts |
-| GET | `/hybrid/context` | List all cached contexts |
-
----
-
-## Risk Assessment API Routes (Phase 14)
-
-| Method | Route | Description |
-|--------|-------|-------------|
-| POST | `/hybrid/risk/assess` | Assess single operation risk |
-| POST | `/hybrid/risk/assess-batch` | Assess multiple operations |
-| GET | `/hybrid/risk/session/{session_id}` | Get session risk profile |
-| GET | `/hybrid/risk/metrics` | Get engine performance metrics |
-| DELETE | `/hybrid/risk/session/{session_id}/history` | Clear session history |
-| POST | `/hybrid/risk/metrics/reset` | Reset engine metrics |
-| GET | `/hybrid/risk/config` | Get current risk configuration |
-
-### Example: GroupChat Route
-
-```python
-# api/v1/groupchat/routes.py
-from fastapi import APIRouter
-from src.integrations.agent_framework.builders.groupchat import GroupChatBuilderAdapter
-
-router = APIRouter(prefix="/groupchat", tags=["GroupChat"])
-
-@router.post("/sessions")
-async def create_groupchat_session(config: GroupChatConfig):
-    """Create a new GroupChat session."""
-    adapter = GroupChatBuilderAdapter()
-    # Uses official GroupChatBuilder internally
-    session = adapter.create_session(config)
-    return session
+# Error
+{"detail": "Error message"}
+{"error": "VALIDATION_ERROR", "message": "Invalid input", "details": {"field": "name"}}
 ```
 
 ---
@@ -293,8 +286,6 @@ async def create_groupchat_session(config: GroupChatConfig):
 
 ```python
 from fastapi import Depends
-from src.core.database import get_db
-from src.domain.agents.service import AgentService
 
 def get_agent_service(db: Session = Depends(get_db)) -> AgentService:
     return AgentService(db)
@@ -304,57 +295,16 @@ async def list_agents(service: AgentService = Depends(get_agent_service)):
     return service.get_all()
 ```
 
-### Query Parameters
-
-```python
-@router.get("/")
-async def list_items(
-    skip: int = Query(0, ge=0, description="Number of items to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Number of items to return"),
-    status: Optional[str] = Query(None, description="Filter by status"),
-    sort_by: str = Query("created_at", description="Sort field"),
-    order: str = Query("desc", enum=["asc", "desc"]),
-):
-    ...
-```
-
-### Path Parameters Validation
-
-```python
-from uuid import UUID
-
-@router.get("/{agent_id}")
-async def get_agent(agent_id: UUID):
-    """Agent ID is automatically validated as UUID."""
-    ...
-```
-
----
-
-## Error Handling
+### Error Handling
 
 ```python
 from fastapi import HTTPException, status
 
-# Not Found
-raise HTTPException(
-    status_code=status.HTTP_404_NOT_FOUND,
-    detail="Agent not found"
-)
-
-# Validation Error
-raise HTTPException(
-    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-    detail={"error": "VALIDATION_ERROR", "message": "Invalid config"}
-)
-
-# Business Logic Error
-raise HTTPException(
-    status_code=status.HTTP_400_BAD_REQUEST,
-    detail="Cannot delete agent with active workflows"
-)
+raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete active agent")
+raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"error": "VALIDATION_ERROR"})
 ```
 
 ---
 
-**Last Updated**: 2026-01-23
+**Last Updated**: 2026-02-09

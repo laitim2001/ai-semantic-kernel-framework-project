@@ -19,6 +19,8 @@ mypy .                  # Type check
 # Testing
 pytest                  # All tests
 pytest tests/unit/      # Unit tests only
+pytest tests/e2e/       # E2E tests
+pytest tests/performance/ # Performance tests
 pytest -v --cov=src     # With coverage
 ```
 
@@ -28,24 +30,30 @@ pytest -v --cov=src     # With coverage
 
 ```
 backend/
-├── main.py                 # FastAPI application entry point
+├── main.py                 # FastAPI entry point (47 registered routers)
 ├── requirements.txt        # Python dependencies
 ├── pyproject.toml          # Project configuration
 │
-├── src/                    # Source code
-│   ├── api/                # REST API routes (FastAPI routers)
-│   ├── domain/             # Business logic services
-│   ├── infrastructure/     # External integrations (DB, cache, messaging)
-│   ├── integrations/       # Agent Framework adapters (CRITICAL)
-│   └── core/               # Cross-cutting concerns
+├── src/                    # Source code (~630+ .py files)
+│   ├── api/v1/             # 39 API route modules (~540 endpoints)
+│   ├── domain/             # 20 business logic modules
+│   ├── infrastructure/     # Database, Cache (messaging/storage stubs)
+│   ├── integrations/       # 15 integration modules (216 .py files)
+│   └── core/               # Performance, Sandbox, Security utilities
 │
-├── tests/                  # Test suite
-│   ├── unit/               # Unit tests
-│   ├── integration/        # Integration tests
+├── tests/                  # Test suite (~303 test files)
+│   ├── unit/               # Unit tests (~241 files)
+│   ├── integration/        # Integration tests (~24 files)
+│   ├── e2e/                # End-to-end tests (~19 files)
+│   ├── performance/        # Performance benchmarks (~10 files)
+│   ├── security/           # Security tests (~5 files)
+│   ├── load/               # Load tests (~2 files)
+│   ├── mocks/              # Shared mock objects (~2 files)
 │   └── conftest.py         # Pytest fixtures
 │
 └── scripts/                # Utility scripts
-    └── verify_official_api_usage.py
+    ├── verify_official_api_usage.py
+    └── verify_env.py
 ```
 
 ---
@@ -57,8 +65,8 @@ backend/
 | **API** | `src/api/` | HTTP routes, request/response handling |
 | **Domain** | `src/domain/` | Business logic, state machines |
 | **Infrastructure** | `src/infrastructure/` | Database, cache, messaging |
-| **Integrations** | `src/integrations/` | Agent Framework adapters |
-| **Core** | `src/core/` | Config, logging, shared utilities |
+| **Integrations** | `src/integrations/` | 15 modules: MAF, Claude SDK, AG-UI, Hybrid, MCP, Swarm, etc. |
+| **Core** | `src/core/` | Config + 3 subsystems (performance, sandbox, security) |
 
 ### Data Flow
 
@@ -73,6 +81,43 @@ Infrastructure Layer (Repository/Cache)
     ↓
 Database/External Service
 ```
+
+### Core Subsystems (`src/core/`)
+
+```
+core/
+├── config.py               # Application configuration
+├── sandbox_config.py       # Sandbox configuration
+├── performance/            # Performance optimization (8 files)
+│   ├── benchmark.py, cache_optimizer.py, concurrent_optimizer.py
+│   ├── db_optimizer.py, metric_collector.py, middleware.py
+│   ├── optimizer.py, profiler.py
+├── sandbox/                # Sandbox execution (7 files)
+│   ├── adapter.py, config.py, ipc.py
+│   ├── orchestrator.py, worker.py, worker_main.py
+└── security/               # Security utilities (4 files)
+    ├── audit_report.py, jwt.py, password.py
+```
+
+### Integration Modules (`src/integrations/`)
+
+| Module | Files | Purpose |
+|--------|-------|---------|
+| `agent_framework/` | 50 | MAF Adapters (builders, memory, multiturn, tools) |
+| `claude_sdk/` | 44 | Claude SDK (autonomous, hooks, hybrid, mcp, tools) |
+| `hybrid/` | 25 | Hybrid MAF+SDK (context, intent, risk, switching) |
+| `orchestration/` | 21 | Three-tier Intent Routing (Phase 28) |
+| `ag_ui/` | 18 | AG-UI Protocol (SSE, events, features) |
+| `mcp/` | 12 | MCP Servers (Azure, Filesystem, LDAP, Shell, SSH) |
+| `patrol/` | 10 | Continuous monitoring (Phase 23) |
+| `swarm/` | 6 | Agent Swarm System (Phase 29) |
+| `llm/` | 6 | LLM client integration |
+| `memory/` | 5 | mem0 memory system |
+| `learning/` | 5 | Few-shot learning |
+| `audit/` | 4 | Audit integration |
+| `correlation/` | 4 | Multi-agent event correlation |
+| `a2a/` | 3 | Agent-to-Agent protocol |
+| `rootcause/` | 3 | Root cause analysis |
 
 ---
 
@@ -205,6 +250,23 @@ print(decision.routing_layer)    # "pattern"
 
 See: `docs/03-implementation/sprint-planning/phase-28/ARCHITECTURE.md`
 
+### Agent Swarm System (Phase 29)
+
+When working in `src/integrations/swarm/`:
+
+**Core Components**:
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| SwarmManager | `manager.py` | Swarm lifecycle and coordination |
+| WorkerAgent | `worker.py` | Individual worker execution |
+| SwarmEvents | `events/` | SSE event streaming |
+
+**API Routes**: `src/api/v1/swarm/`
+- `routes.py` — Swarm status API (3 endpoints)
+- `demo.py` — Swarm demo/test API with SSE (5 endpoints)
+
+**Frontend**: `frontend/src/components/unified-chat/agent-swarm/` (17 components)
+
 ### Testing Requirements
 
 - New features **MUST** include unit tests
@@ -285,4 +347,4 @@ logger.error("Error occurred", exc_info=True)
 
 ---
 
-**Last Updated**: 2026-01-22
+**Last Updated**: 2026-02-09

@@ -1,6 +1,6 @@
 # Domain Layer
 
-> Business logic layer - core services and state machines
+> Business logic layer — 20 modules, ~112 Python files
 
 ---
 
@@ -10,29 +10,25 @@
 domain/
 ├── __init__.py
 │
-├── agents/                 # Agent management
-│   ├── __init__.py
+│  # Core Business Modules
+├── agents/                 # Agent management (7 files)
 │   ├── service.py          # AgentService
 │   ├── models.py           # Domain models
 │   └── tools/              # Agent tools
 │
-├── workflows/              # Workflow management
-│   ├── __init__.py
+├── workflows/              # Workflow management (11 files)
 │   ├── service.py          # WorkflowService
 │   ├── state_machine.py    # Workflow state machine
 │   └── executors/          # Execution strategies
 │
-├── executions/             # Execution lifecycle
-│   ├── __init__.py
+├── executions/             # Execution lifecycle (2 files)
 │   ├── service.py          # ExecutionService
 │   └── state_machine.py    # Execution state machine
 │
-├── checkpoints/            # Human-in-the-loop checkpoints
-│   ├── __init__.py
+├── checkpoints/            # Human-in-the-loop checkpoints (3 files)
 │   └── service.py          # CheckpointService
 │
-├── sessions/               # 🆕 Phase 11: Agent-Session Integration
-│   ├── __init__.py
+├── sessions/               # Phase 11: Agent-Session Integration (33 files - largest)
 │   ├── models.py           # Session, Message, Attachment, ToolCall models
 │   ├── service.py          # SessionService (lifecycle management)
 │   ├── events.py           # SessionEventPublisher (15 event types)
@@ -43,16 +39,20 @@ domain/
 │   ├── recovery.py         # SessionRecoveryManager
 │   └── metrics.py          # MetricsCollector (Prometheus-style)
 │
-├── templates/              # Workflow templates
-├── triggers/               # Triggers
-├── connectors/             # External connectors
-├── routing/                # Intelligent routing
-├── notifications/          # Notifications
-├── audit/                  # Audit logs
-├── versioning/             # Version control
-├── prompts/                # Prompt management
-├── learning/               # Learning system
-├── devtools/               # Developer tools
+│  # Supporting Modules
+├── auth/                   # Authentication (3 files)
+├── files/                  # File handling (3 files)
+├── sandbox/                # Sandboxed execution (2 files)
+├── templates/              # Workflow templates (3 files)
+├── triggers/               # Triggers (2 files)
+├── connectors/             # External connectors (6 files)
+├── routing/                # Intelligent routing (2 files)
+├── notifications/          # Notifications (2 files)
+├── audit/                  # Audit logs (2 files)
+├── versioning/             # Version control (2 files)
+├── prompts/                # Prompt management (2 files)
+├── learning/               # Learning system (2 files)
+├── devtools/               # Developer tools (2 files)
 │
 └── orchestration/          # ⚠️ DEPRECATED - use integrations/agent_framework/
     ├── multiturn/          # → use MultiTurnAdapter
@@ -397,4 +397,4 @@ CREATED → ACTIVE ↔ SUSPENDED → ENDED
 
 ---
 
-**Last Updated**: 2026-01-23
+**Last Updated**: 2026-02-09

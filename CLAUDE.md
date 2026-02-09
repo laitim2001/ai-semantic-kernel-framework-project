@@ -25,8 +25,8 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 | Attribute | Value |
 |-----------|-------|
 | **Core Framework** | Microsoft Agent Framework + Claude Agent SDK + AG-UI Protocol |
-| **Current Status** | Phase 28 Completed - Three-tier Intent Routing |
-| **Completed** | 28 Phases, 99 Sprints, 2189 Story Points |
+| **Current Status** | Phase 29 Completed - Agent Swarm Visualization |
+| **Completed** | 29 Phases, 106 Sprints, ~2379 Story Points |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis |
 
 ---
@@ -72,9 +72,9 @@ python scripts/dev.py logs docker -f
 Frontend (React 18 + TypeScript + Fetch API)
     ↓ HTTP (port 3005)
 Backend (FastAPI, port 8000)
-    ├─ api/v1/           # 38 API route modules
+    ├─ api/v1/           # 39 API route modules
     ├─ integrations/     # 15 integration modules (see below)
-    ├─ domain/           # Business logic (20 domain modules)
+    ├─ domain/           # Business logic (19 domain modules)
     └─ infrastructure/   # Database, Cache, Messaging
     ↓
 PostgreSQL 16 + Redis 7 + RabbitMQ
@@ -84,11 +84,12 @@ PostgreSQL 16 + Redis 7 + RabbitMQ
 
 ```
 backend/src/
-├── api/v1/              # 38 API route modules
+├── api/v1/              # 39 API route modules
 │   ├── agents, workflows, sessions, executions
 │   ├── ag_ui, claude_sdk, hybrid, mcp
 │   ├── orchestration, autonomous, routing
 │   ├── patrol, correlation, rootcause, audit
+│   ├── swarm, a2a                          # Phase 29 + A2A
 │   └── auth, files, sandbox, checkpoints, etc.
 ├── integrations/        # 15 integration modules
 │   ├── agent_framework/ # MAF Adapters (30+ builders)
@@ -96,20 +97,23 @@ backend/src/
 │   ├── ag_ui/           # AG-UI Protocol (SSE, Events, Handlers)
 │   ├── hybrid/          # Hybrid MAF+SDK (context, intent, risk, switching)
 │   ├── orchestration/   # Three-tier Intent Routing (Phase 28)
+│   ├── swarm/           # Agent Swarm System (Phase 29)
 │   ├── mcp/             # MCP servers (Azure, Filesystem, LDAP, Shell, SSH)
-│   └── memory, patrol, correlation, rootcause, audit, learning, llm
-├── domain/              # 20 domain modules (business logic)
+│   └── a2a, memory, patrol, correlation, rootcause, audit, learning, llm
+├── domain/              # 19 domain modules (business logic)
 ├── infrastructure/      # Database, Cache, Messaging, Storage
 └── core/                # Performance, Sandbox, Security utilities
 
 frontend/src/
 ├── pages/               # Page components (agents, workflows, dashboard, DevUI, etc.)
 ├── components/          # UI components
-│   ├── unified-chat/    # Main chat interface (25+ components)
+│   ├── unified-chat/    # Main chat interface (27+ components)
+│   │   └── agent-swarm/ # Agent Swarm visualization (17 components, Phase 29)
 │   ├── ag-ui/           # Agentic UI components (chat, hitl, advanced)
+│   ├── DevUI/           # Developer tools (15 components)
 │   ├── ui/              # Shadcn UI components
-│   └── layout, shared, auth, DevUI
-├── hooks/               # Custom React hooks (14+ hooks)
+│   └── layout, shared, auth
+├── hooks/               # Custom React hooks (17 hooks)
 ├── api/                 # API client (Fetch API, NOT Axios)
 ├── store/, stores/      # Zustand state management
 ├── types/               # TypeScript type definitions
@@ -317,7 +321,7 @@ See `.claude/rules/agent-framework.md` for detailed rules.
 
 ---
 
-**Last Updated**: 2026-01-23
+**Last Updated**: 2026-02-09
 **Project Start**: 2025-11-14
-**Status**: Phase 28 Completed (99 Sprints completed)
-**Total Story Points**: 2189 pts across 28 phases
+**Status**: Phase 29 Completed (106 Sprints completed, Sprint 107 in progress)
+**Total Story Points**: ~2379 pts across 29 phases
