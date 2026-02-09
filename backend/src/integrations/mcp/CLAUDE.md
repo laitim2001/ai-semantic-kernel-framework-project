@@ -1,6 +1,9 @@
 # MCP — Model Context Protocol Integration
 
-> Phase 9-10 | 45 Python files, ~3,900 LOC | Protocol infrastructure + 5 server implementations
+> Phase 9-10 | 43 Python files, ~3,900 LOC | Protocol infrastructure + 5 server implementations
+>
+> File count breakdown: core(4) + registry(2) + security(2) + servers(30: azure 10, filesystem 5, shell 5, ldap 5, ssh 5) + __init__.py files(5) = 43
+> *(directory tree below shows key files only; `__init__.py` and `__main__.py` omitted for brevity)*
 
 ---
 

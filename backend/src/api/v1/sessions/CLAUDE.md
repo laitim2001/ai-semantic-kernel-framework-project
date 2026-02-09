@@ -167,4 +167,26 @@ SessionErrorCode.TOOL_EXECUTION_FAILED → 500
 
 ---
 
-**Last Updated**: 2026-01-23
+## Phase 28-29 Integration Points
+
+### Phase 28: Three-tier Intent Routing
+
+Sessions integrate with the orchestration layer for intelligent message routing:
+
+- User messages are routed through `BusinessIntentRouter` (Pattern → Semantic → LLM)
+- Routing decisions determine which agent/workflow handles the session
+- Risk assessment may trigger HITL approval before execution
+- Related API: `api/v1/orchestration/` (35 endpoints)
+
+### Phase 29: Agent Swarm
+
+Sessions can spawn agent swarm executions for complex multi-agent tasks:
+
+- Swarm workers operate within a session context
+- Real-time swarm progress via SSE events (`/api/v1/swarm/demo/events/{id}`)
+- Worker results are aggregated back into the session message history
+- Related API: `api/v1/swarm/` (8 endpoints)
+
+---
+
+**Last Updated**: 2026-02-09

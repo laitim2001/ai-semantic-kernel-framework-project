@@ -1,6 +1,6 @@
 # Integrations Layer
 
-> 15 integration modules, ~216 Python files — External framework adapters and protocol implementations
+> 16 integration modules, ~315 Python files — External framework adapters and protocol implementations
 
 ---
 
@@ -8,14 +8,14 @@
 
 | Module | Files | LOC | Phase | Purpose |
 |--------|-------|-----|-------|---------|
-| **[agent_framework/](agent_framework/CLAUDE.md)** | 50 | ~15K | 1-4 | MAF Adapters (builders, memory, multiturn, tools) |
-| **[claude_sdk/](claude_sdk/CLAUDE.md)** | 44 | ~15K | 12 | Claude Agent SDK (autonomous, hooks, hybrid, mcp, tools) |
-| **[hybrid/](hybrid/CLAUDE.md)** | 25 | ~21K | 13-14 | Hybrid MAF+Claude SDK bridge |
-| **[orchestration/](orchestration/CLAUDE.md)** | 21 | ~16K | 28 | Three-tier Intent Routing system |
+| **[agent_framework/](agent_framework/CLAUDE.md)** | 53 | ~15K | 1-4 | MAF Adapters (builders, memory, multiturn, tools) |
+| **[claude_sdk/](claude_sdk/CLAUDE.md)** | 47 | ~15K | 12 | Claude Agent SDK (autonomous, hooks, hybrid, mcp, tools) |
+| **[hybrid/](hybrid/CLAUDE.md)** | 60 | ~21K | 13-14 | Hybrid MAF+Claude SDK bridge |
+| **[orchestration/](orchestration/CLAUDE.md)** | 39 | ~16K | 28 | Three-tier Intent Routing system |
 | **[ag_ui/](ag_ui/)** | 18 | — | 15 | AG-UI Protocol (SSE events, features, threads) |
-| **[mcp/](mcp/CLAUDE.md)** | 12 | ~4K | 9-10 | MCP servers (Azure, Filesystem, LDAP, Shell, SSH) |
+| **[mcp/](mcp/CLAUDE.md)** | 43 | ~4K | 9-10 | MCP servers (Azure, Filesystem, LDAP, Shell, SSH) |
 | **[patrol/](patrol/)** | 10 | — | 23 | Continuous monitoring checks |
-| **[swarm/](swarm/CLAUDE.md)** | 6 | ~1K | 29 | Agent Swarm state tracking + SSE events |
+| **[swarm/](swarm/CLAUDE.md)** | 7 | ~1K | 29 | Agent Swarm state tracking + SSE events |
 | **[llm/](llm/)** | 6 | — | 1 | LLM client integration (Azure OpenAI) |
 | **[memory/](memory/)** | 5 | — | 22 | mem0 memory system |
 | **[learning/](learning/)** | 5 | — | 4 | Few-shot learning mechanism |

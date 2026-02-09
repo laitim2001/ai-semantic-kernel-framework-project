@@ -70,7 +70,7 @@ frontend/
 │   │       ├── files.ts        # File management endpoints
 │   │       └── orchestration.ts # Orchestration endpoints
 │   │
-│   ├── components/             # UI Components (~127 files)
+│   ├── components/             # UI Components (~115 files)
 │   │   ├── ag-ui/              # AG-UI Protocol components
 │   │   │   ├── advanced/       # Advanced AG-UI features
 │   │   │   ├── chat/           # AG-UI chat components
@@ -81,7 +81,7 @@ frontend/
 │   │   ├── shared/             # Shared/reusable components
 │   │   ├── ui/                 # Shadcn UI base components
 │   │   └── unified-chat/       # Main chat interface (27+ files)
-│   │       ├── agent-swarm/    # Agent Swarm components (17 files)
+│   │       ├── agent-swarm/    # Agent Swarm (15 components + 4 hooks + types)
 │   │       │   ├── hooks/      # Swarm-specific hooks
 │   │       │   ├── types/      # Swarm type definitions
 │   │       │   └── __tests__/  # Swarm component tests
@@ -372,7 +372,7 @@ Main chat interface with 27+ components:
 
 ### Agent Swarm (`components/unified-chat/agent-swarm/`)
 
-Phase 29 Agent Swarm visualization (17 components):
+Phase 29 Agent Swarm visualization (15 components + 4 hooks):
 - `AgentSwarmPanel.tsx` - Main swarm container
 - `WorkerCard.tsx` / `WorkerCardList.tsx` - Worker agent cards
 - `WorkerDetailDrawer.tsx` - Worker detail side panel

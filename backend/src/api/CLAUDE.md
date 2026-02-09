@@ -1,6 +1,6 @@
 # API Layer
 
-> FastAPI routing layer — 39 route modules, ~540 endpoints, 47 registered routers
+> FastAPI routing layer — 41 route modules, ~540 endpoints, 47 registered routers
 
 ---
 
@@ -60,7 +60,7 @@ api/v1/
 │   └── switch_routes.py    # Mode switching
 │
 │  # Phase 15: AG-UI Protocol
-├── ag_ui/                  # Agentic UI SSE streaming (25 endpoints)
+├── ag_ui/                  # Agentic UI SSE streaming (29 endpoints)
 │
 │  # Phase 18-22: Platform Features
 ├── auth/                   # Authentication and authorization
@@ -157,13 +157,13 @@ api/v1/
 
 | Module | Endpoints | Purpose |
 |--------|-----------|---------|
-| `ag_ui/` | 25 | SSE streaming, event handling |
+| `ag_ui/` | 29 | SSE streaming, event handling |
 
 ### Phase 18-22: Platform Features
 
 | Module | Endpoints | Phase | Purpose |
 |--------|-----------|-------|---------|
-| `auth/` | 4 | 18 | Authentication (JWT) |
+| `auth/` | 7 | 18 | Authentication (JWT) |
 | `files/` | 6 | 20 | File upload and attachment |
 | `memory/` | 7 | 22 | Memory system (mem0) |
 | `sandbox/` | 6 | 21 | Sandboxed execution |

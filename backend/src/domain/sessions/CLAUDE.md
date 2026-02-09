@@ -270,4 +270,26 @@ Key test files:
 
 ---
 
-**Last Updated**: 2026-01-23
+## Phase 28-29 Integration Points
+
+### Phase 28: Three-tier Intent Routing
+
+Sessions interact with the orchestration layer (`integrations/orchestration/`):
+
+- **Intent Classification**: User messages are analyzed by `BusinessIntentRouter` to determine the appropriate handling agent
+- **Risk Assessment**: `RiskAssessor` evaluates session actions; high-risk operations trigger HITL approval via the existing `ToolApprovalManager`
+- **Guided Dialog**: `GuidedDialogEngine` manages multi-turn information gathering within a session context
+- **Related Domain**: `integrations/orchestration/hitl/` for approval workflows
+
+### Phase 29: Agent Swarm
+
+Sessions support multi-agent swarm execution (`integrations/swarm/`):
+
+- **Swarm Lifecycle**: A session can initiate a swarm execution where multiple worker agents collaborate on a complex task
+- **Event Integration**: Swarm events (`SwarmEventEmitter`) are compatible with `SessionEventPublisher` — both use SSE streaming
+- **State Tracking**: `SwarmTracker` monitors worker progress; results flow back into session message history
+- **Related API**: `api/v1/swarm/` (routes.py + demo.py)
+
+---
+
+**Last Updated**: 2026-02-09

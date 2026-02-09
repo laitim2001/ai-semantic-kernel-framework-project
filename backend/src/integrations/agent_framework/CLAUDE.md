@@ -250,4 +250,16 @@ The Agent Framework is currently in **Preview/Beta** (version `1.0.0b251204`).
 
 ---
 
-**Last Updated**: 2026-01-23
+## Cross-Phase Integration
+
+### Phase 28: Three-tier Intent Routing
+
+The orchestration layer (`integrations/orchestration/`) uses the agent framework for LLM-based intent classification (Tier 3). The `BusinessIntentRouter` delegates to agent framework adapters when LLM classification is needed.
+
+### Phase 29: Agent Swarm Visualization
+
+The swarm system (`integrations/swarm/`) coordinates multiple worker agents. Each worker may use agent framework adapters for task execution. The `SwarmTracker` monitors agent lifecycle events that originate from framework execution.
+
+---
+
+**Last Updated**: 2026-02-09

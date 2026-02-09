@@ -73,8 +73,8 @@ Frontend (React 18 + TypeScript + Fetch API)
     ↓ HTTP (port 3005)
 Backend (FastAPI, port 8000)
     ├─ api/v1/           # 39 API route modules
-    ├─ integrations/     # 15 integration modules (see below)
-    ├─ domain/           # Business logic (19 domain modules)
+    ├─ integrations/     # 16 integration modules (see below)
+    ├─ domain/           # Business logic (20 domain modules)
     └─ infrastructure/   # Database, Cache, Messaging
     ↓
 PostgreSQL 16 + Redis 7 + RabbitMQ
@@ -91,7 +91,7 @@ backend/src/
 │   ├── patrol, correlation, rootcause, audit
 │   ├── swarm, a2a                          # Phase 29 + A2A
 │   └── auth, files, sandbox, checkpoints, etc.
-├── integrations/        # 15 integration modules
+├── integrations/        # 16 integration modules
 │   ├── agent_framework/ # MAF Adapters (30+ builders)
 │   ├── claude_sdk/      # Claude SDK (autonomous, hooks, hybrid, mcp, tools)
 │   ├── ag_ui/           # AG-UI Protocol (SSE, Events, Handlers)
@@ -100,7 +100,7 @@ backend/src/
 │   ├── swarm/           # Agent Swarm System (Phase 29)
 │   ├── mcp/             # MCP servers (Azure, Filesystem, LDAP, Shell, SSH)
 │   └── a2a, memory, patrol, correlation, rootcause, audit, learning, llm
-├── domain/              # 19 domain modules (business logic)
+├── domain/              # 20 domain modules (business logic)
 ├── infrastructure/      # Database, Cache, Messaging, Storage
 └── core/                # Performance, Sandbox, Security utilities
 
@@ -108,7 +108,7 @@ frontend/src/
 ├── pages/               # Page components (agents, workflows, dashboard, DevUI, etc.)
 ├── components/          # UI components
 │   ├── unified-chat/    # Main chat interface (27+ components)
-│   │   └── agent-swarm/ # Agent Swarm visualization (17 components, Phase 29)
+│   │   └── agent-swarm/ # Agent Swarm visualization (15 components + 4 hooks, Phase 29)
 │   ├── ag-ui/           # Agentic UI components (chat, hitl, advanced)
 │   ├── DevUI/           # Developer tools (15 components)
 │   ├── ui/              # Shadcn UI components

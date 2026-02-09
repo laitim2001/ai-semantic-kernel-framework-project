@@ -38,7 +38,7 @@ backend/
 │   ├── api/v1/             # 39 API route modules (~540 endpoints)
 │   ├── domain/             # 20 business logic modules
 │   ├── infrastructure/     # Database, Cache (messaging/storage stubs)
-│   ├── integrations/       # 15 integration modules (216 .py files)
+│   ├── integrations/       # 16 integration modules (~315 .py files)
 │   └── core/               # Performance, Sandbox, Security utilities
 │
 ├── tests/                  # Test suite (~303 test files)
@@ -65,7 +65,7 @@ backend/
 | **API** | `src/api/` | HTTP routes, request/response handling |
 | **Domain** | `src/domain/` | Business logic, state machines |
 | **Infrastructure** | `src/infrastructure/` | Database, cache, messaging |
-| **Integrations** | `src/integrations/` | 15 modules: MAF, Claude SDK, AG-UI, Hybrid, MCP, Swarm, etc. |
+| **Integrations** | `src/integrations/` | 16 modules: MAF, Claude SDK, AG-UI, Hybrid, MCP, Swarm, etc. |
 | **Core** | `src/core/` | Config + 3 subsystems (performance, sandbox, security) |
 
 ### Data Flow
@@ -88,7 +88,7 @@ Database/External Service
 core/
 ├── config.py               # Application configuration
 ├── sandbox_config.py       # Sandbox configuration
-├── performance/            # Performance optimization (8 files)
+├── performance/            # Performance optimization (9 files)
 │   ├── benchmark.py, cache_optimizer.py, concurrent_optimizer.py
 │   ├── db_optimizer.py, metric_collector.py, middleware.py
 │   ├── optimizer.py, profiler.py
@@ -103,14 +103,14 @@ core/
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| `agent_framework/` | 50 | MAF Adapters (builders, memory, multiturn, tools) |
-| `claude_sdk/` | 44 | Claude SDK (autonomous, hooks, hybrid, mcp, tools) |
-| `hybrid/` | 25 | Hybrid MAF+SDK (context, intent, risk, switching) |
-| `orchestration/` | 21 | Three-tier Intent Routing (Phase 28) |
+| `agent_framework/` | 53 | MAF Adapters (builders, memory, multiturn, tools) |
+| `claude_sdk/` | 47 | Claude SDK (autonomous, hooks, hybrid, mcp, tools) |
+| `hybrid/` | 60 | Hybrid MAF+SDK (context, intent, risk, switching) |
+| `orchestration/` | 39 | Three-tier Intent Routing (Phase 28) |
 | `ag_ui/` | 18 | AG-UI Protocol (SSE, events, features) |
-| `mcp/` | 12 | MCP Servers (Azure, Filesystem, LDAP, Shell, SSH) |
+| `mcp/` | 43 | MCP Servers (Azure, Filesystem, LDAP, Shell, SSH) |
 | `patrol/` | 10 | Continuous monitoring (Phase 23) |
-| `swarm/` | 6 | Agent Swarm System (Phase 29) |
+| `swarm/` | 7 | Agent Swarm System (Phase 29) |
 | `llm/` | 6 | LLM client integration |
 | `memory/` | 5 | mem0 memory system |
 | `learning/` | 5 | Few-shot learning |
@@ -265,7 +265,7 @@ When working in `src/integrations/swarm/`:
 - `routes.py` — Swarm status API (3 endpoints)
 - `demo.py` — Swarm demo/test API with SSE (5 endpoints)
 
-**Frontend**: `frontend/src/components/unified-chat/agent-swarm/` (17 components)
+**Frontend**: `frontend/src/components/unified-chat/agent-swarm/` (15 components + 4 hooks)
 
 ### Testing Requirements
 
