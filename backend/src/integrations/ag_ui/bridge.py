@@ -43,11 +43,11 @@ from src.integrations.ag_ui.events import (
     TextMessageContentEvent,
     TextMessageEndEvent,
 )
-from src.integrations.swarm.events import SwarmEventEmitter, create_swarm_emitter
 
 if TYPE_CHECKING:
     from src.integrations.hybrid.orchestrator_v2 import HybridOrchestratorV2, HybridResultV2
     from src.integrations.hybrid.intent import ExecutionMode
+    from src.integrations.swarm.events import SwarmEventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +158,7 @@ class HybridEventBridge:
         )
 
         # Sprint 101: Swarm event emitter
-        self._swarm_emitter: Optional[SwarmEventEmitter] = None
+        self._swarm_emitter: Optional["SwarmEventEmitter"] = None
 
         logger.info(
             f"HybridEventBridge initialized: "
@@ -196,7 +196,7 @@ class HybridEventBridge:
     # =========================================================================
 
     @property
-    def swarm_emitter(self) -> Optional[SwarmEventEmitter]:
+    def swarm_emitter(self) -> Optional["SwarmEventEmitter"]:
         """Get the Swarm event emitter instance."""
         return self._swarm_emitter
 
@@ -205,7 +205,7 @@ class HybridEventBridge:
         event_callback: Optional[Callable[[CustomEvent], Awaitable[None]]] = None,
         throttle_interval_ms: Optional[int] = None,
         batch_size: Optional[int] = None,
-    ) -> SwarmEventEmitter:
+    ) -> "SwarmEventEmitter":
         """
         Configure and return the Swarm event emitter.
 
@@ -222,6 +222,9 @@ class HybridEventBridge:
         if not self._config.enable_swarm_events:
             logger.warning("Swarm events are disabled in configuration")
             return None
+
+        # Lazy import to avoid circular dependency
+        from src.integrations.swarm.events import create_swarm_emitter
 
         # Use provided callback or default to _send_custom_event
         callback = event_callback or self._send_custom_event

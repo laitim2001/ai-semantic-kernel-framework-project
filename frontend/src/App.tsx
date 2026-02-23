@@ -44,6 +44,8 @@ import { TraceDetail } from '@/pages/DevUI/TraceDetail';
 import { LiveMonitor } from '@/pages/DevUI/LiveMonitor';
 import { Settings as DevUISettings } from '@/pages/DevUI/Settings';
 import { AGUITestPanel } from '@/pages/DevUI/AGUITestPanel';
+// Phase 29: Agent Swarm Test Page
+import { SwarmTestPage } from '@/pages/SwarmTestPage';
 
 function App() {
   return (
@@ -54,6 +56,9 @@ function App() {
 
       {/* AG-UI Demo Page (Sprint 61) - Standalone full-screen layout */}
       <Route path="/ag-ui-demo" element={<AGUIDemoPage />} />
+
+      {/* Phase 29: Agent Swarm Test Page - Standalone full-screen layout */}
+      <Route path="/swarm-test" element={<SwarmTestPage />} />
 
       {/* Protected Routes (Sprint 71) - Require authentication */}
       <Route

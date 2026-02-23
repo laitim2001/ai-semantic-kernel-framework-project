@@ -24,7 +24,7 @@ import { MessageHistory } from './MessageHistory';
 import { CheckpointPanel } from './CheckpointPanel';
 import { ExtendedThinkingPanel } from './ExtendedThinkingPanel';
 import { useWorkerDetail } from './hooks/useWorkerDetail';
-import type { UIWorkerSummary } from './types';
+import type { UIWorkerSummary, WorkerDetail } from './types';
 
 // =============================================================================
 // Types
@@ -39,6 +39,8 @@ interface WorkerDetailDrawerProps {
   swarmId: string;
   /** Selected worker summary (used to initiate fetch) */
   worker: UIWorkerSummary | null;
+  /** External worker detail (optional - for mock/test scenarios) */
+  workerDetail?: WorkerDetail | null;
   /** Optional class name */
   className?: string;
 }
@@ -134,6 +136,7 @@ const ErrorDisplay: FC<ErrorDisplayProps> = ({ error, onRetry }) => (
  * @param onClose - Close handler
  * @param swarmId - Swarm ID
  * @param worker - Selected worker summary
+ * @param workerDetail - External worker detail (optional - for mock/test scenarios)
  * @param className - Additional CSS classes
  */
 export const WorkerDetailDrawer: FC<WorkerDetailDrawerProps> = ({
@@ -141,21 +144,25 @@ export const WorkerDetailDrawer: FC<WorkerDetailDrawerProps> = ({
   onClose,
   swarmId,
   worker,
+  workerDetail: externalWorkerDetail,
   className,
 }) => {
-  // Fetch worker details
+  // Fetch worker details (skip if external detail is provided)
   const {
-    worker: workerDetail,
+    worker: fetchedWorkerDetail,
     isLoading,
     error,
     refetch,
   } = useWorkerDetail({
     swarmId,
     workerId: worker?.workerId || '',
-    enabled: open && !!worker,
+    enabled: open && !!worker && !externalWorkerDetail,
     // Poll every 2 seconds if worker is running
     pollInterval: worker?.status === 'running' ? 2000 : undefined,
   });
+
+  // Use external detail if provided, otherwise use fetched detail
+  const workerDetail = externalWorkerDetail || fetchedWorkerDetail;
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>

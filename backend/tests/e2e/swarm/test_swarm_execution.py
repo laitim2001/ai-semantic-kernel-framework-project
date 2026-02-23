@@ -195,7 +195,7 @@ class TestSwarmE2E:
         tracker.update_tool_call_result(
             swarm_id="exec-test-swarm",
             worker_id="worker-a",
-            tool_call_id="tc-001",
+            tool_id="tc-001",
             result={"error_count": 47, "errors": ["Connection timeout"]},
         )
 
@@ -356,11 +356,11 @@ class TestSwarmE2E:
             input_params={"query": "SELECT * FROM logs"},
         )
 
-        # Verify pending tool call
+        # Verify running tool call (add_worker_tool_call sets status to RUNNING)
         response = sync_client.get(f"/api/v1/swarm/{swarm_id}/workers/{worker_id}")
         data = response.json()
         assert len(data["tool_calls"]) == 1
-        assert data["tool_calls"][0]["status"] == "pending"
+        assert data["tool_calls"][0]["status"] == "running"
 
         # 5. Complete tool call
         tracker.update_tool_call_result(

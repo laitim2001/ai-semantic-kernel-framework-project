@@ -127,7 +127,8 @@ class TestGetSwarmStatus:
         )
         assert research_worker["worker_name"] == "Research Agent"
         assert research_worker["worker_type"] == "research"
-        assert research_worker["status"] == "running"
+        # Worker status is "thinking" because add_worker_thinking was called in fixture
+        assert research_worker["status"] == "thinking"
         assert research_worker["progress"] == 75
         assert research_worker["tool_calls_count"] == 1
 

@@ -103,6 +103,7 @@ from src.api.v1.orchestration import approval_router as orchestration_approval_r
 
 # Phase 29: Agent Swarm Visualization
 from src.api.v1.swarm import router as swarm_router  # Sprint 100: Swarm Status API
+from src.api.v1.swarm import demo_router as swarm_demo_router  # Sprint 107: Swarm Demo API
 
 # Create main v1 router
 api_router = APIRouter(prefix="/api/v1")
@@ -186,5 +187,6 @@ api_router.include_router(orchestration_approval_router)  # Sprint 98: HITL Appr
 
 # Include sub-routers - Phase 29 (Agent Swarm Visualization)
 api_router.include_router(swarm_router)  # Sprint 100: Swarm Status API
+api_router.include_router(swarm_demo_router)  # Sprint 107: Swarm Demo API
 
 __all__ = ["api_router"]
