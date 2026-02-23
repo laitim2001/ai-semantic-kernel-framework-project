@@ -184,7 +184,7 @@ export const useAuthStore = create<AuthState>()(
             console.warn('[AuthStore] Guest data migration failed:', err);
           });
 
-          console.log('[AuthStore] Login successful:', user.email);
+          // Login event logged (PII removed for security)
           return true;
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Login failed';
@@ -226,7 +226,7 @@ export const useAuthStore = create<AuthState>()(
           // 4. Clear guest ID (new user, no migration needed)
           clearGuestUserId();
 
-          console.log('[AuthStore] Registration successful:', user.email);
+          // Registration event logged (PII removed for security)
           return true;
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Registration failed';
@@ -253,7 +253,7 @@ export const useAuthStore = create<AuthState>()(
         // Clear guest ID as well (fresh start)
         clearGuestUserId();
 
-        console.log('[AuthStore] Logged out');
+        // Logout event (no PII logged)
       },
 
       // Refresh session
@@ -261,7 +261,7 @@ export const useAuthStore = create<AuthState>()(
         const { refreshToken } = get();
 
         if (!refreshToken) {
-          console.log('[AuthStore] No refresh token, cannot refresh session');
+          // No refresh token available
           return false;
         }
 
@@ -276,7 +276,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
           });
 
-          console.log('[AuthStore] Session refreshed');
+          // Session refreshed successfully
           return true;
         } catch (error) {
           console.error('[AuthStore] Session refresh failed:', error);

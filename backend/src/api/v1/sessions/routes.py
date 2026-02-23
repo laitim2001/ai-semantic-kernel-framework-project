@@ -28,6 +28,7 @@ from src.api.v1.sessions.schemas import (
     ToolCallResponse,
     ErrorResponse,
 )
+from src.core.auth import require_auth
 from src.core.config import get_settings
 from src.domain.sessions.models import SessionStatus
 from src.domain.sessions.service import (
@@ -90,17 +91,17 @@ async def get_session_service(
     yield service
 
 
-async def get_current_user_id() -> str:
-    """獲取當前用戶 ID (依賴注入)
+async def get_current_user_id(
+    auth_claims: dict = Depends(require_auth),
+) -> str:
+    """Extract current user ID from JWT token.
 
-    NOTE: 目前返回預設用戶 ID，實際應用需整合認證系統
-    - 整合 JWT Token 驗證
-    - 從 Authorization header 提取用戶 ID
-    - 驗證用戶權限
+    Uses the lightweight require_auth dependency (no DB lookup)
+    to extract the user_id from the JWT token claims.
+
+    Sprint 111: Replaced hardcoded UUID with real JWT extraction.
     """
-    # 預設用戶 ID (開發/測試用) - 必須是有效的 UUID 格式
-    # 在生產環境中，應從 JWT token 或 session 提取
-    return "00000000-0000-0000-0000-000000000001"
+    return auth_claims["user_id"]
 
 
 # ===== Session CRUD =====

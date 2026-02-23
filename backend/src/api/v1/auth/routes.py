@@ -18,7 +18,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +34,7 @@ from src.infrastructure.database import get_session
 from src.infrastructure.database.models.user import User
 from src.infrastructure.database.repositories.user import UserRepository
 from src.api.v1.dependencies import get_current_user
+from src.middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,9 @@ async def get_auth_service(
     summary="Register new user",
     description="Create a new user account and return access token.",
 )
+@limiter.limit("10/minute")
 async def register(
+    request: Request,
     data: UserCreate,
     auth_service: AuthService = Depends(get_auth_service),
 ) -> TokenResponse:
@@ -108,7 +111,9 @@ async def register(
     summary="User login",
     description="Authenticate with email and password to get tokens.",
 )
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     auth_service: AuthService = Depends(get_auth_service),
 ) -> TokenResponse:

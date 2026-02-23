@@ -48,6 +48,7 @@ mem0ai>=0.0.1                # mem0 SDK for long-term memory
 # ===========================================
 # Authentication & Security
 # ===========================================
+slowapi>=0.1.9                   # Rate limiting middleware (Sprint 111)
 python-jose[cryptography]>=3.3.0
 # Note: bcrypt 5.x breaks passlib compatibility, must use 4.x
 passlib[bcrypt]>=1.7.4

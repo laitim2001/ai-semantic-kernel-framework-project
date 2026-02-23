@@ -50,6 +50,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"IPA Platform v{__version__} starting...")
     logger.info(f"Environment: {settings.app_env}")
 
+    # Validate security settings (warns in dev, raises in production)
+    settings.validate_security_settings()
+
     # Initialize database
     try:
         from src.infrastructure.database.session import init_db
@@ -160,6 +163,10 @@ def create_app() -> FastAPI:
             }
         )
 
+    # Rate limiting middleware (Sprint 111)
+    from src.middleware.rate_limit import setup_rate_limiting
+    setup_rate_limiting(app)
+
     # Register routes
     register_routes(app)
 
@@ -233,12 +240,16 @@ app = create_app()
 
 
 if __name__ == "__main__":
+    import os
+
     import uvicorn
 
+    env = os.environ.get("APP_ENV", "development")
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,
+        reload=(env == "development"),
+        workers=1 if env == "development" else 4,
         log_level="info",
     )

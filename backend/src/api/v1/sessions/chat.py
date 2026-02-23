@@ -22,6 +22,7 @@ from datetime import datetime
 import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.auth import require_auth
 from src.core.config import get_settings
 from src.domain.sessions.bridge import (
     SessionAgentBridge,
@@ -214,9 +215,14 @@ async def get_session_bridge(
     return bridge
 
 
-async def get_current_user_id() -> str:
-    """獲取當前用戶 ID"""
-    return "00000000-0000-0000-0000-000000000001"
+async def get_current_user_id(
+    auth_claims: dict = Depends(require_auth),
+) -> str:
+    """Extract current user ID from JWT token.
+
+    Sprint 111: Replaced hardcoded UUID with real JWT extraction.
+    """
+    return auth_claims["user_id"]
 
 
 # =============================================================================

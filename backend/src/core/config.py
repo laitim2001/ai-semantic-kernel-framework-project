@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # ==========================================================================
     app_env: Literal["development", "staging", "production"] = "development"
     log_level: str = "INFO"
-    secret_key: str = "change-this-to-a-secure-random-string"
+    secret_key: str = ""
 
     # ==========================================================================
     # Database (PostgreSQL)
@@ -128,14 +128,14 @@ class Settings(BaseSettings):
     # ==========================================================================
     # JWT Authentication
     # ==========================================================================
-    jwt_secret_key: str = "change-this-to-a-secure-random-string"
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60
 
     # ==========================================================================
     # CORS
     # ==========================================================================
-    cors_origins: str = "http://localhost:3000,http://localhost:8000"
+    cors_origins: str = "http://localhost:3005,http://localhost:8000"
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -174,6 +174,35 @@ class Settings(BaseSettings):
         if v_upper not in valid_levels:
             raise ValueError(f"Invalid log level: {v}. Must be one of {valid_levels}")
         return v_upper
+
+    def validate_security_settings(self) -> None:
+        """Validate security-sensitive settings at startup.
+
+        Logs warnings for unsafe default values in development,
+        raises errors in production.
+        """
+        import logging
+
+        logger = logging.getLogger("src.core.config")
+        unsafe_values = {
+            "",
+            "secret",
+            "your-secret-key",
+            "changeme",
+            "jwt-secret",
+            "change-this-to-a-secure-random-string",
+        }
+
+        for field_name in ("secret_key", "jwt_secret_key"):
+            value = getattr(self, field_name)
+            if value in unsafe_values:
+                msg = (
+                    f"{field_name.upper()} is set to an unsafe value! "
+                    f"Set the {field_name.upper()} environment variable to a secure random string."
+                )
+                if self.app_env == "production":
+                    raise ValueError(msg)
+                logger.warning(msg)
 
 
 @lru_cache()
