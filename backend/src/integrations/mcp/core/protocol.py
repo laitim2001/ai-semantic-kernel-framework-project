@@ -63,6 +63,11 @@ class MCPProtocol:
         self._request_id = 0
         self._client_info: Optional[Dict[str, Any]] = None
 
+        # Permission checking (Sprint 113)
+        self._permission_checker: Optional[Any] = None
+        self._server_name: str = ""
+        self._tool_permission_levels: Dict[str, int] = {}
+
     def register_tool(
         self,
         name: str,
@@ -82,6 +87,32 @@ class MCPProtocol:
         self._tools[name] = handler
         self._tool_schemas[name] = schema
         logger.info(f"Registered MCP tool: {name}")
+
+    def set_permission_checker(
+        self,
+        checker: Any,
+        server_name: str,
+    ) -> None:
+        """Set permission checker for tool call authorization.
+
+        Args:
+            checker: MCPPermissionChecker instance
+            server_name: Server name for permission context
+        """
+        self._permission_checker = checker
+        self._server_name = server_name
+        logger.info(
+            f"Permission checker configured for server: {server_name}"
+        )
+
+    def set_tool_permission_level(self, tool_name: str, level: int) -> None:
+        """Set the required permission level for a tool.
+
+        Args:
+            tool_name: Tool name
+            level: Required PermissionLevel value (0-3)
+        """
+        self._tool_permission_levels[tool_name] = level
 
     def unregister_tool(self, name: str) -> bool:
         """Unregister a tool.
@@ -268,6 +299,22 @@ class MCPProtocol:
             }
 
         handler = self._tools[tool_name]
+
+        # Permission check (Sprint 113)
+        if self._permission_checker is not None:
+            required_level = self._tool_permission_levels.get(tool_name, 2)
+            try:
+                self._permission_checker.check_tool_permission(
+                    server_name=self._server_name,
+                    tool_name=tool_name,
+                    required_level=required_level,
+                    context={"arguments": arguments},
+                )
+            except PermissionError as e:
+                return {
+                    "isError": True,
+                    "content": [{"type": "text", "text": str(e)}],
+                }
 
         try:
             result = await handler(**arguments)

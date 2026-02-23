@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 from ...core.protocol import MCPProtocol
 from ...core.types import MCPRequest, MCPResponse, ToolSchema, ToolResult
+from ...security.permission_checker import MCPPermissionChecker
 from .client import SSHConfig, SSHConnectionManager
 from .tools import SSHTools
 
@@ -71,6 +72,10 @@ class SSHMCPServer:
         # Register all tools
         self._register_all_tools()
 
+        # Initialize permission checker (Sprint 113)
+        self._permission_checker = MCPPermissionChecker()
+        self._protocol.set_permission_checker(self._permission_checker, "ssh")
+
         logger.info(
             f"SSHMCPServer initialized: {self.SERVER_NAME} v{self.SERVER_VERSION}"
         )
@@ -81,6 +86,10 @@ class SSHMCPServer:
             handler = getattr(self._tools, schema.name)
             self._protocol.register_tool(schema.name, handler, schema)
             logger.debug(f"Registered tool: {schema.name}")
+
+        # Register permission levels from SSHTools (Sprint 113)
+        for tool_name, level in SSHTools.PERMISSION_LEVELS.items():
+            self._protocol.set_tool_permission_level(tool_name, level)
 
         logger.info(f"Registered {len(self._protocol.list_tools())} tools")
 

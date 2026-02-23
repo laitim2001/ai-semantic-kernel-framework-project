@@ -5,6 +5,12 @@ Provides tool definitions for shell command execution.
 Tools:
     - run_command: Execute a shell command
     - run_script: Execute a script file
+
+Security:
+    Commands are checked against CommandWhitelist (Sprint 113):
+    - allowed: Whitelisted commands execute immediately
+    - blocked: Dangerous commands are rejected with error
+    - requires_approval: Non-whitelisted commands log warning (HITL in future sprint)
 """
 
 import logging
@@ -16,6 +22,7 @@ from ...core.types import (
     ToolInputType,
     ToolResult,
 )
+from ...security.command_whitelist import CommandWhitelist
 from .executor import ShellExecutor
 
 logger = logging.getLogger(__name__)
@@ -25,11 +32,16 @@ class ShellTools:
     """Shell tools for MCP Server.
 
     Provides safe shell command execution tools with
-    proper security controls.
+    proper security controls and command whitelisting.
 
     Permission Levels:
         - run_command: Level 3 (HIGH) - Requires human approval
         - run_script: Level 3 (HIGH) - Requires human approval
+
+    Command Security (Sprint 113):
+        Commands are validated against a three-tier whitelist before execution.
+        Blocked commands are rejected immediately. Non-whitelisted commands
+        require HITL approval (log-only mode in Phase 1).
 
     Example:
         >>> executor = ShellExecutor(config)
@@ -51,6 +63,7 @@ class ShellTools:
             executor: Shell executor instance
         """
         self._executor = executor
+        self._whitelist = CommandWhitelist()
 
     @staticmethod
     def get_schemas() -> List[ToolSchema]:
@@ -132,6 +145,24 @@ class ShellTools:
             ToolResult with command output
         """
         try:
+            # Command whitelist check (Sprint 113)
+            check_result = self._whitelist.check_command(command)
+
+            if check_result == "blocked":
+                logger.warning(f"Command blocked by whitelist: {command[:80]}")
+                return ToolResult(
+                    success=False,
+                    content=None,
+                    error="Command blocked by security policy",
+                    metadata={"security": "blocked", "command": command[:80]},
+                )
+
+            if check_result == "requires_approval":
+                logger.warning(
+                    f"HITL_APPROVAL_REQUIRED: command='{command[:80]}' "
+                    f"(proceeding in log-only mode)"
+                )
+
             # Validate timeout
             effective_timeout = min(timeout or 60, 300)
 
@@ -183,6 +214,24 @@ class ShellTools:
             ToolResult with script output
         """
         try:
+            # Command whitelist check for script interpreter (Sprint 113)
+            check_result = self._whitelist.check_command(script_path)
+
+            if check_result == "blocked":
+                logger.warning(f"Script blocked by whitelist: {script_path}")
+                return ToolResult(
+                    success=False,
+                    content=None,
+                    error="Script blocked by security policy",
+                    metadata={"security": "blocked", "script_path": script_path},
+                )
+
+            if check_result == "requires_approval":
+                logger.warning(
+                    f"HITL_APPROVAL_REQUIRED: script='{script_path}' "
+                    f"(proceeding in log-only mode)"
+                )
+
             # Validate timeout
             effective_timeout = min(timeout or 60, 300)
 

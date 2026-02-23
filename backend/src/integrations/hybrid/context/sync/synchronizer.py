@@ -110,6 +110,9 @@ class ContextSynchronizer:
         self._timeout_ms = timeout_ms
         self._auto_resolve_conflicts = auto_resolve_conflicts
 
+        # Lock for thread-safe access to shared mutable state
+        self._lock = asyncio.Lock()
+
         # Version tracking per context
         self._context_versions: Dict[str, int] = {}
 
@@ -158,8 +161,9 @@ class ContextSynchronizer:
         )
 
         try:
-            # Save snapshot for rollback
-            self._save_snapshot(source)
+            # Save snapshot for rollback (under lock)
+            async with self._lock:
+                self._save_snapshot(source)
 
             # Perform sync with retry logic
             result = await self._sync_with_retry(
@@ -170,9 +174,10 @@ class ContextSynchronizer:
                 correlation_id=correlation_id,
             )
 
-            # Update version tracking
+            # Update version tracking (under lock)
             if result.success:
-                self._context_versions[context_id] = result.target_version
+                async with self._lock:
+                    self._context_versions[context_id] = result.target_version
 
             # Calculate duration
             result.duration_ms = int((time.time() - start_time) * 1000)
@@ -516,42 +521,44 @@ class ContextSynchronizer:
             SyncResult with rolled back context
         """
         start_time = time.time()
-        snapshots = self._rollback_snapshots.get(context_id, [])
 
-        if not snapshots:
-            return SyncResult(
-                success=False,
-                direction=SyncDirection.BIDIRECTIONAL,
-                strategy=SyncStrategy.SOURCE_WINS,
-                source_version=0,
-                target_version=0,
-                error="No snapshots available for rollback",
-                duration_ms=0,
-            )
+        async with self._lock:
+            snapshots = self._rollback_snapshots.get(context_id, [])
 
-        # Find target snapshot
-        if to_version is not None:
-            target = next(
-                (s for s in snapshots if s.version == to_version),
-                None,
-            )
-            if not target:
+            if not snapshots:
                 return SyncResult(
                     success=False,
                     direction=SyncDirection.BIDIRECTIONAL,
                     strategy=SyncStrategy.SOURCE_WINS,
                     source_version=0,
                     target_version=0,
-                    error=f"Version {to_version} not found in snapshots",
+                    error="No snapshots available for rollback",
                     duration_ms=0,
                 )
-        else:
-            target = snapshots[-1]
 
-        # Get current version for event
-        current_version = self._context_versions.get(context_id, 0)
+            # Find target snapshot
+            if to_version is not None:
+                target = next(
+                    (s for s in snapshots if s.version == to_version),
+                    None,
+                )
+                if not target:
+                    return SyncResult(
+                        success=False,
+                        direction=SyncDirection.BIDIRECTIONAL,
+                        strategy=SyncStrategy.SOURCE_WINS,
+                        source_version=0,
+                        target_version=0,
+                        error=f"Version {to_version} not found in snapshots",
+                        duration_ms=0,
+                    )
+            else:
+                target = snapshots[-1]
 
-        # Publish rollback started
+            # Get current version for event
+            current_version = self._context_versions.get(context_id, 0)
+
+        # Publish rollback started (outside lock to avoid holding lock during I/O)
         await self._event_publisher.publish_rollback_started(
             session_id=context_id,
             from_version=current_version,
@@ -559,8 +566,9 @@ class ContextSynchronizer:
         )
 
         try:
-            # Update context version
-            self._context_versions[context_id] = target.version
+            # Update context version (under lock)
+            async with self._lock:
+                self._context_versions[context_id] = target.version
 
             # Publish rollback completed
             await self._event_publisher.publish_rollback_completed(
@@ -605,18 +613,21 @@ class ContextSynchronizer:
         if len(snapshots) > self._max_snapshots:
             self._rollback_snapshots[context_id] = snapshots[-self._max_snapshots:]
 
-    def get_version(self, context_id: str) -> int:
+    async def get_version(self, context_id: str) -> int:
         """Get current version for a context."""
-        return self._context_versions.get(context_id, 0)
+        async with self._lock:
+            return self._context_versions.get(context_id, 0)
 
-    def get_snapshots(self, context_id: str) -> List[HybridContext]:
+    async def get_snapshots(self, context_id: str) -> List[HybridContext]:
         """Get available snapshots for a context."""
-        return self._rollback_snapshots.get(context_id, []).copy()
+        async with self._lock:
+            return self._rollback_snapshots.get(context_id, []).copy()
 
-    def clear_snapshots(self, context_id: str) -> None:
+    async def clear_snapshots(self, context_id: str) -> None:
         """Clear snapshots for a context."""
-        if context_id in self._rollback_snapshots:
-            del self._rollback_snapshots[context_id]
+        async with self._lock:
+            if context_id in self._rollback_snapshots:
+                del self._rollback_snapshots[context_id]
 
     @property
     def event_publisher(self) -> SyncEventPublisher:

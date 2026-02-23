@@ -9,6 +9,12 @@ Tools:
     - ssh_download: Download file via SFTP
     - ssh_list_directory: List remote directory
     - ssh_disconnect: Disconnect from SSH server
+
+Security:
+    Remote commands are checked against CommandWhitelist (Sprint 113):
+    - allowed: Whitelisted commands execute immediately
+    - blocked: Dangerous commands are rejected with error
+    - requires_approval: Non-whitelisted commands log warning (HITL in future sprint)
 """
 
 import logging
@@ -20,6 +26,7 @@ from ...core.types import (
     ToolInputType,
     ToolResult,
 )
+from ...security.command_whitelist import CommandWhitelist
 from .client import SSHConnectionManager, SSHConfig
 
 logger = logging.getLogger(__name__)
@@ -64,6 +71,7 @@ class SSHTools:
             connection_manager: SSH connection manager
         """
         self._manager = connection_manager
+        self._whitelist = CommandWhitelist()
 
     @staticmethod
     def get_schemas() -> List[ToolSchema]:
@@ -364,6 +372,24 @@ class SSHTools:
             ToolResult with command output
         """
         try:
+            # Command whitelist check (Sprint 113)
+            check_result = self._whitelist.check_command(command)
+
+            if check_result == "blocked":
+                logger.warning(f"SSH command blocked by whitelist: {command[:80]}")
+                return ToolResult(
+                    success=False,
+                    content=None,
+                    error="Command blocked by security policy",
+                    metadata={"security": "blocked", "command": command[:80]},
+                )
+
+            if check_result == "requires_approval":
+                logger.warning(
+                    f"HITL_APPROVAL_REQUIRED (SSH): command='{command[:80]}' "
+                    f"(proceeding in log-only mode)"
+                )
+
             # Get existing connection
             key = f"{username}@{host}:{port}"
             client = self._manager._connections.get(key)

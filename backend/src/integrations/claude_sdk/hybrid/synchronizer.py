@@ -15,6 +15,7 @@ Key Features:
 
 import hashlib
 import json
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -295,6 +296,7 @@ class ContextSynchronizer:
         """
         self._config = config or HybridSessionConfig()
         self._conflict_resolution = conflict_resolution
+        self._lock = threading.Lock()
         self._contexts: Dict[str, ContextState] = {}
         self._snapshots: Dict[str, List[ContextSnapshot]] = {}
         self._sync_listeners: List[Callable[[ContextState, SyncDirection], None]] = []
@@ -314,7 +316,8 @@ class ContextSynchronizer:
     @property
     def context_count(self) -> int:
         """Get number of active contexts."""
-        return len(self._contexts)
+        with self._lock:
+            return len(self._contexts)
 
     def create_context(
         self,
@@ -338,13 +341,18 @@ class ContextSynchronizer:
             metadata=metadata or {},
         )
         context.update_hash()
-        self._contexts[context.context_id] = context
-        self._snapshots[context.context_id] = []
+        with self._lock:
+            self._contexts[context.context_id] = context
+            self._snapshots[context.context_id] = []
         return context
 
     def get_context(self, context_id: str) -> Optional[ContextState]:
-        """Get context by ID."""
-        return self._contexts.get(context_id)
+        """Get context by ID (returns a deep copy for thread safety)."""
+        with self._lock:
+            ctx = self._contexts.get(context_id)
+            if ctx is None:
+                return None
+            return ContextState.from_dict(ctx.to_dict())
 
     def remove_context(self, context_id: str) -> bool:
         """Remove a context.
@@ -355,12 +363,13 @@ class ContextSynchronizer:
         Returns:
             True if removed, False if not found
         """
-        if context_id in self._contexts:
-            del self._contexts[context_id]
-            if context_id in self._snapshots:
-                del self._snapshots[context_id]
-            return True
-        return False
+        with self._lock:
+            if context_id in self._contexts:
+                del self._contexts[context_id]
+                if context_id in self._snapshots:
+                    del self._snapshots[context_id]
+                return True
+            return False
 
     def convert_to_claude(
         self, context: ContextState
@@ -705,40 +714,44 @@ class ContextSynchronizer:
         Returns:
             Diff of changes applied
         """
-        source = self._contexts.get(source_id)
-        target = self._contexts.get(target_id)
+        with self._lock:
+            source = self._contexts.get(source_id)
+            target = self._contexts.get(target_id)
 
-        if not source:
-            raise ValueError(f"Source context not found: {source_id}")
-        if not target:
-            raise ValueError(f"Target context not found: {target_id}")
+            if not source:
+                raise ValueError(f"Source context not found: {source_id}")
+            if not target:
+                raise ValueError(f"Target context not found: {target_id}")
 
-        # Compute diff
-        diff = self.diff(source, target)
+            # Compute diff
+            diff = self.diff(source, target)
 
-        if diff.is_empty():
-            return diff
+            if diff.is_empty():
+                return diff
 
-        # Apply sync based on direction
-        if direction == SyncDirection.BIDIRECTIONAL:
-            merged = self.merge(source, target)
-            self._contexts[source_id] = ContextState.from_dict(merged.to_dict())
-            self._contexts[source_id].context_id = source_id
-            self._contexts[target_id] = merged
-        elif direction == SyncDirection.CLAUDE_TO_MS:
-            # Source overwrites target
-            merged = self.merge(target, source, ConflictResolution.TARGET_WINS)
-            self._contexts[target_id] = merged
-        elif direction == SyncDirection.MS_TO_CLAUDE:
-            merged = self.merge(source, target, ConflictResolution.TARGET_WINS)
-            self._contexts[source_id] = merged
+            # Apply sync based on direction
+            if direction == SyncDirection.BIDIRECTIONAL:
+                merged = self.merge(source, target)
+                self._contexts[source_id] = ContextState.from_dict(merged.to_dict())
+                self._contexts[source_id].context_id = source_id
+                self._contexts[target_id] = merged
+            elif direction == SyncDirection.CLAUDE_TO_MS:
+                # Source overwrites target
+                merged = self.merge(target, source, ConflictResolution.TARGET_WINS)
+                self._contexts[target_id] = merged
+            elif direction == SyncDirection.MS_TO_CLAUDE:
+                merged = self.merge(source, target, ConflictResolution.TARGET_WINS)
+                self._contexts[source_id] = merged
 
-        self._sync_count += 1
-        self._last_sync_time = time.time()
+            self._sync_count += 1
+            self._last_sync_time = time.time()
 
-        # Notify listeners
+            # Capture target context for listeners before releasing lock
+            target_context = self._contexts[target_id]
+
+        # Notify listeners outside lock to avoid potential deadlocks
         for listener in self._sync_listeners:
-            listener(self._contexts[target_id], direction)
+            listener(target_context, direction)
 
         return diff
 
@@ -754,19 +767,20 @@ class ContextSynchronizer:
         Returns:
             Created snapshot
         """
-        context = self._contexts.get(context_id)
-        if not context:
-            raise ValueError(f"Context not found: {context_id}")
+        with self._lock:
+            context = self._contexts.get(context_id)
+            if not context:
+                raise ValueError(f"Context not found: {context_id}")
 
-        snapshot = ContextSnapshot(
-            context_id=context_id,
-            state=ContextState.from_dict(context.to_dict()),
-            label=label,
-        )
+            snapshot = ContextSnapshot(
+                context_id=context_id,
+                state=ContextState.from_dict(context.to_dict()),
+                label=label,
+            )
 
-        if context_id not in self._snapshots:
-            self._snapshots[context_id] = []
-        self._snapshots[context_id].append(snapshot)
+            if context_id not in self._snapshots:
+                self._snapshots[context_id] = []
+            self._snapshots[context_id].append(snapshot)
 
         return snapshot
 
@@ -779,12 +793,13 @@ class ContextSynchronizer:
         Returns:
             Restored context state
         """
-        for snapshots in self._snapshots.values():
-            for snapshot in snapshots:
-                if snapshot.snapshot_id == snapshot_id:
-                    restored = snapshot.restore()
-                    self._contexts[restored.context_id] = restored
-                    return restored
+        with self._lock:
+            for snapshots in self._snapshots.values():
+                for snapshot in snapshots:
+                    if snapshot.snapshot_id == snapshot_id:
+                        restored = snapshot.restore()
+                        self._contexts[restored.context_id] = restored
+                        return restored
 
         raise ValueError(f"Snapshot not found: {snapshot_id}")
 
@@ -795,9 +810,10 @@ class ContextSynchronizer:
             context_id: Context ID
 
         Returns:
-            List of snapshots
+            List of snapshots (copy for thread safety)
         """
-        return self._snapshots.get(context_id, [])
+        with self._lock:
+            return list(self._snapshots.get(context_id, []))
 
     def add_sync_listener(
         self, listener: Callable[[ContextState, SyncDirection], None]

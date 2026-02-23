@@ -197,7 +197,7 @@ class TestSync:
     @pytest.mark.asyncio
     async def test_sync_updates_version_tracking(self, synchronizer, hybrid_context):
         """Test sync updates version tracking."""
-        assert synchronizer.get_version(hybrid_context.context_id) == 0
+        assert await synchronizer.get_version(hybrid_context.context_id) == 0
 
         await synchronizer.sync(
             source=hybrid_context,
@@ -205,7 +205,7 @@ class TestSync:
             strategy=SyncStrategy.MERGE,
         )
 
-        assert synchronizer.get_version(hybrid_context.context_id) == 2
+        assert await synchronizer.get_version(hybrid_context.context_id) == 2
 
     @pytest.mark.asyncio
     async def test_sync_saves_snapshot(self, synchronizer, hybrid_context):
@@ -216,7 +216,7 @@ class TestSync:
             strategy=SyncStrategy.MERGE,
         )
 
-        snapshots = synchronizer.get_snapshots(hybrid_context.context_id)
+        snapshots = await synchronizer.get_snapshots(hybrid_context.context_id)
         assert len(snapshots) == 1
         assert snapshots[0].version == 1
 
@@ -466,7 +466,7 @@ class TestRollback:
 
         await synchronizer.rollback(context_id="sess-123")
 
-        assert synchronizer.get_version("sess-123") == 5
+        assert await synchronizer.get_version("sess-123") == 5
 
 
 class TestSnapshotManagement:
@@ -478,41 +478,45 @@ class TestSnapshotManagement:
         publisher = SyncEventPublisher(enable_logging=False)
         return ContextSynchronizer(event_publisher=publisher)
 
-    def test_save_snapshot(self, synchronizer):
+    @pytest.mark.asyncio
+    async def test_save_snapshot(self, synchronizer):
         """Test saving a snapshot."""
         context = HybridContext(context_id="sess-123", version=1)
         synchronizer._save_snapshot(context)
 
-        snapshots = synchronizer.get_snapshots("sess-123")
+        snapshots = await synchronizer.get_snapshots("sess-123")
         assert len(snapshots) == 1
 
-    def test_snapshot_limit_enforced(self, synchronizer):
+    @pytest.mark.asyncio
+    async def test_snapshot_limit_enforced(self, synchronizer):
         """Test snapshot limit is enforced."""
         for i in range(10):
             context = HybridContext(context_id="sess-123", version=i)
             synchronizer._save_snapshot(context)
 
-        snapshots = synchronizer.get_snapshots("sess-123")
+        snapshots = await synchronizer.get_snapshots("sess-123")
         assert len(snapshots) == 5  # Max snapshots
 
-    def test_get_snapshots_returns_copy(self, synchronizer):
+    @pytest.mark.asyncio
+    async def test_get_snapshots_returns_copy(self, synchronizer):
         """Test get_snapshots returns a copy."""
         context = HybridContext(context_id="sess-123", version=1)
         synchronizer._save_snapshot(context)
 
-        snapshots1 = synchronizer.get_snapshots("sess-123")
-        snapshots2 = synchronizer.get_snapshots("sess-123")
+        snapshots1 = await synchronizer.get_snapshots("sess-123")
+        snapshots2 = await synchronizer.get_snapshots("sess-123")
 
         assert snapshots1 is not snapshots2
 
-    def test_clear_snapshots(self, synchronizer):
+    @pytest.mark.asyncio
+    async def test_clear_snapshots(self, synchronizer):
         """Test clearing snapshots."""
         context = HybridContext(context_id="sess-123", version=1)
         synchronizer._save_snapshot(context)
 
-        synchronizer.clear_snapshots("sess-123")
+        await synchronizer.clear_snapshots("sess-123")
 
-        assert len(synchronizer.get_snapshots("sess-123")) == 0
+        assert len(await synchronizer.get_snapshots("sess-123")) == 0
 
 
 class TestEventPublishing:

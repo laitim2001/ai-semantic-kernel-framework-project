@@ -15,8 +15,6 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import AsyncGenerator
 
-import traceback
-
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -146,22 +144,31 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Global exception handler for debugging
+    # Global exception handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        """Catch all unhandled exceptions and log details."""
-        logger.error(f"Unhandled exception at {request.url}")
-        logger.error(f"Exception type: {type(exc).__name__}")
-        logger.error(f"Exception message: {str(exc)}")
-        logger.error(f"Traceback:\n{traceback.format_exc()}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "detail": "Internal Server Error",
-                "error_type": type(exc).__name__,
-                "message": str(exc) if settings.app_env == "development" else None,
-            }
+        """Catch all unhandled exceptions with environment-aware responses."""
+        logger.error(
+            f"Unhandled exception: {type(exc).__name__}: {exc}",
+            exc_info=True,
+            extra={"request_path": str(request.url.path)},
         )
+
+        if settings.app_env == "development":
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": "Internal server error",
+                    "detail": str(exc),
+                },
+            )
+        else:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": "Internal server error",
+                },
+            )
 
     # Rate limiting middleware (Sprint 111)
     from src.middleware.rate_limit import setup_rate_limiting

@@ -384,11 +384,14 @@ class TestContextManagement:
         assert context.metadata["user"] == "test-user"
 
     def test_get_context(self, synchronizer):
-        """Test getting context."""
+        """Test getting context (returns deep copy for thread safety)."""
         created = synchronizer.create_context(context_id="test-get")
         retrieved = synchronizer.get_context("test-get")
 
-        assert retrieved is created
+        assert retrieved is not created  # Deep copy, not same object
+        assert retrieved.context_id == created.context_id
+        assert retrieved.system_prompt == created.system_prompt
+        assert len(retrieved.messages) == len(created.messages)
 
     def test_get_nonexistent_context(self, synchronizer):
         """Test getting non-existent context."""
