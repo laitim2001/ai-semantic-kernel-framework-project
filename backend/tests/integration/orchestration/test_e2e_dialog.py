@@ -18,9 +18,7 @@ import pytest
 
 from src.integrations.orchestration import (
     # Router
-    MockBusinessIntentRouter,
     RouterConfig,
-    create_mock_router,
     # Models
     ITIntentCategory,
     CompletenessInfo,
@@ -29,12 +27,16 @@ from src.integrations.orchestration import (
     WorkflowType,
     # Guided Dialog
     GuidedDialogEngine,
-    MockGuidedDialogEngine,
     DialogState,
     DialogResponse,
     ConversationContextManager,
     QuestionGenerator,
     RefinementRules,
+)
+from tests.mocks.orchestration import (
+    MockBusinessIntentRouter,
+    create_mock_router,
+    MockGuidedDialogEngine,
     create_mock_dialog_engine,
 )
 

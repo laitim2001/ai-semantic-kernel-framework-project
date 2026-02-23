@@ -25,10 +25,8 @@ from .controller import (
     HITLController,
     # Implementations
     InMemoryApprovalStorage,
-    MockNotificationService,
     # Factory functions
     create_hitl_controller,
-    create_mock_hitl_controller,
 )
 
 from .approval_handler import (
@@ -83,10 +81,8 @@ __all__ = [
     "TeamsNotificationService",
     "EmailNotificationService",
     "CompositeNotificationService",
-    "MockNotificationService",
     # Factory functions
     "create_hitl_controller",
-    "create_mock_hitl_controller",
     "create_approval_handler",
     "create_redis_storage",
     "create_teams_notification_service",

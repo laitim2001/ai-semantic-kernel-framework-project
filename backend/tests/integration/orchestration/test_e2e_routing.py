@@ -20,9 +20,7 @@ import pytest
 from src.integrations.orchestration import (
     # Router
     BusinessIntentRouter,
-    MockBusinessIntentRouter,
     RouterConfig,
-    create_mock_router,
     # Models
     ITIntentCategory,
     CompletenessInfo,
@@ -32,9 +30,13 @@ from src.integrations.orchestration import (
     WorkflowType,
     # Input Gateway
     InputGateway,
-    MockInputGateway,
     IncomingRequest,
     SourceType,
+)
+from tests.mocks.orchestration import (
+    MockBusinessIntentRouter,
+    create_mock_router,
+    MockInputGateway,
     create_mock_gateway,
 )
 from src.integrations.orchestration.intent_router.pattern_matcher import PatternMatcher

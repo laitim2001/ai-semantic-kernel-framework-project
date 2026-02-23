@@ -195,8 +195,15 @@ class LLMServiceFactory:
 
         根據環境變量決定使用哪個提供者。
 
+        - production: 必須配置真實 LLM，否則拋出異常
+        - development: 未配置時 fallback 到 mock，帶 WARNING
+        - testing: 直接使用 mock
+
         Returns:
             提供者名稱
+
+        Raises:
+            RuntimeError: production 環境未配置 LLM 時
         """
         # 檢查是否有 Azure OpenAI 配置
         if os.getenv("AZURE_OPENAI_ENDPOINT") and os.getenv("AZURE_OPENAI_API_KEY"):
@@ -206,10 +213,20 @@ class LLMServiceFactory:
         if os.getenv("TESTING") == "true" or os.getenv("LLM_MOCK") == "true":
             return "mock"
 
-        # 預設使用 mock（避免意外調用真實 API）
+        # 環境感知 fallback（Sprint 112: 移除靜默 fallback）
+        env = os.getenv("APP_ENV", "development")
+        if env == "production":
+            raise RuntimeError(
+                "LLM service unavailable in production. "
+                "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY "
+                "environment variables to configure Azure OpenAI."
+            )
+
+        # Development: fallback with explicit warning
         logger.warning(
-            "No LLM provider configured. Using mock service. "
-            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY for real LLM."
+            f"No LLM provider configured in {env} environment. "
+            f"Using mock service. This is NOT acceptable in production. "
+            f"Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY for real LLM."
         )
         return "mock"
 

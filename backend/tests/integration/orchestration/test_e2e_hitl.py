@@ -19,9 +19,6 @@ from typing import Any, Dict, List, Optional
 import pytest
 
 from src.integrations.orchestration import (
-    # Router
-    MockBusinessIntentRouter,
-    create_mock_router,
     # Models
     ITIntentCategory,
     CompletenessInfo,
@@ -44,8 +41,12 @@ from src.integrations.orchestration import (
     ApprovalRequest,
     ApprovalResult,
     InMemoryApprovalStorage,
-    MockNotificationService,
     create_hitl_controller,
+)
+from tests.mocks.orchestration import (
+    MockBusinessIntentRouter,
+    create_mock_router,
+    MockNotificationService,
     create_mock_hitl_controller,
 )
 

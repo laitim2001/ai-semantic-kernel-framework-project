@@ -301,40 +301,6 @@ class InputGateway:
             logger.info(f"Unregistered handler for source type: {source_type}")
 
 
-class MockInputGateway(InputGateway):
-    """
-    Mock InputGateway for testing without external dependencies.
-
-    Uses mock implementations of all components.
-    """
-
-    def __init__(
-        self,
-        config: Optional[GatewayConfig] = None,
-    ):
-        """
-        Initialize mock gateway with mock handlers.
-
-        Args:
-            config: Gateway configuration (optional)
-        """
-        from .source_handlers.servicenow_handler import MockServiceNowHandler
-        from .source_handlers.prometheus_handler import MockPrometheusHandler
-        from .source_handlers.user_input_handler import MockUserInputHandler
-        from ..intent_router.router import MockBusinessIntentRouter
-
-        source_handlers = {
-            "servicenow": MockServiceNowHandler(),
-            "prometheus": MockPrometheusHandler(),
-            "user": MockUserInputHandler(),
-        }
-
-        super().__init__(
-            source_handlers=source_handlers,
-            business_router=MockBusinessIntentRouter(),
-            config=config or GatewayConfig(),
-        )
-
 
 # =============================================================================
 # Factory Functions
@@ -392,20 +358,6 @@ def create_input_gateway(
     )
 
 
-def create_mock_gateway(
-    config: Optional[GatewayConfig] = None,
-) -> MockInputGateway:
-    """
-    Factory function to create a mock gateway for testing.
-
-    Args:
-        config: Gateway configuration
-
-    Returns:
-        MockInputGateway instance
-    """
-    return MockInputGateway(config=config)
-
 
 # =============================================================================
 # Exports
@@ -413,7 +365,5 @@ def create_mock_gateway(
 
 __all__ = [
     "InputGateway",
-    "MockInputGateway",
     "create_input_gateway",
-    "create_mock_gateway",
 ]

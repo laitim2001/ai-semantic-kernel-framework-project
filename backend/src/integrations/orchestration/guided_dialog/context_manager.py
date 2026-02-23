@@ -543,59 +543,6 @@ class ConversationContextManager:
         self._initialized = False
 
 
-class MockConversationContextManager(ConversationContextManager):
-    """
-    Mock context manager for testing.
-
-    Provides deterministic behavior based on input length.
-    """
-
-    def __init__(self, **kwargs):
-        """Initialize mock context manager."""
-        super().__init__(**kwargs)
-        self._mock_completeness_score = 0.5
-
-    def update_with_user_response(
-        self,
-        user_response: str,
-    ) -> RoutingDecision:
-        """
-        Mock update with deterministic behavior.
-
-        Args:
-            user_response: User's response text
-
-        Returns:
-            Updated RoutingDecision with mock values
-        """
-        if not self._initialized or not self._routing_decision:
-            raise RuntimeError("Context not initialized")
-
-        # Simple heuristic based on response length
-        response_length = len(user_response)
-
-        if response_length >= 30:
-            self._mock_completeness_score = min(1.0, self._mock_completeness_score + 0.3)
-        elif response_length >= 15:
-            self._mock_completeness_score = min(1.0, self._mock_completeness_score + 0.2)
-        else:
-            self._mock_completeness_score = min(1.0, self._mock_completeness_score + 0.1)
-
-        # Update completeness
-        self._routing_decision.completeness = CompletenessInfo(
-            is_complete=self._mock_completeness_score >= 0.6,
-            completeness_score=self._mock_completeness_score,
-            missing_fields=[] if self._mock_completeness_score >= 0.6 else ["details"],
-        )
-
-        # Mock sub_intent refinement
-        if "ETL" in user_response.upper() or "etl" in user_response:
-            self._routing_decision.sub_intent = "etl_failure"
-        elif "網路" in user_response or "network" in user_response.lower():
-            self._routing_decision.sub_intent = "network_failure"
-
-        return self._routing_decision
-
 
 # =============================================================================
 # Factory Functions
@@ -620,15 +567,6 @@ def create_context_manager(
         completeness_rules=completeness_rules,
     )
 
-
-def create_mock_context_manager() -> MockConversationContextManager:
-    """
-    Factory function to create a mock context manager for testing.
-
-    Returns:
-        MockConversationContextManager instance
-    """
-    return MockConversationContextManager()
 
 
 # =============================================================================
@@ -1153,11 +1091,9 @@ __all__ = [
     "InMemoryDialogSessionStorage",
     # Context managers
     "ConversationContextManager",
-    "MockConversationContextManager",
     "PersistentConversationContextManager",
     # Factory functions
     "create_context_manager",
-    "create_mock_context_manager",
     "create_persistent_context_manager",
     "create_redis_dialog_storage",
 ]

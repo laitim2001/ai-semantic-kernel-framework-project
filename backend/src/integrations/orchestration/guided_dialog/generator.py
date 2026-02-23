@@ -509,35 +509,6 @@ class QuestionGenerator:
         return self._templates.copy()
 
 
-class MockQuestionGenerator(QuestionGenerator):
-    """
-    Mock question generator for testing.
-
-    Returns fixed questions regardless of input.
-    """
-
-    def __init__(self, **kwargs):
-        """Initialize mock generator."""
-        super().__init__(**kwargs)
-        self._mock_questions = [
-            GeneratedQuestion(
-                question="請提供更多資訊",
-                target_field="details",
-                priority=100,
-            ),
-        ]
-
-    def generate(
-        self,
-        intent_category: ITIntentCategory,
-        missing_fields: List[str],
-        context: Optional[Dict[str, Any]] = None,
-    ) -> List[GeneratedQuestion]:
-        """Return fixed mock questions."""
-        if not missing_fields:
-            return []
-        return self._mock_questions[:len(missing_fields)]
-
 
 # =============================================================================
 # Factory Functions
@@ -562,15 +533,6 @@ def create_question_generator(
         max_questions=max_questions,
     )
 
-
-def create_mock_generator() -> MockQuestionGenerator:
-    """
-    Factory function to create a mock generator for testing.
-
-    Returns:
-        MockQuestionGenerator instance
-    """
-    return MockQuestionGenerator()
 
 
 # =============================================================================
@@ -998,60 +960,6 @@ class HybridQuestionGenerator:
         return all_questions[:3]  # Limit to 3 questions
 
 
-# =============================================================================
-# Mock LLM Client
-# =============================================================================
-
-
-class MockLLMClient:
-    """
-    Mock LLM client for testing.
-
-    Returns predefined responses without actual API calls.
-    """
-
-    def __init__(self, responses: Optional[Dict[str, str]] = None):
-        """
-        Initialize mock client.
-
-        Args:
-            responses: Map of prompts to responses
-        """
-        self.responses = responses or {}
-        self.call_count = 0
-        self.last_prompt = None
-
-    async def messages_create(self, **kwargs) -> Dict[str, Any]:
-        """Mock messages.create method."""
-        self.call_count += 1
-        self.last_prompt = kwargs.get("messages", [{}])[0].get("content", "")
-
-        # Return a mock response
-        response_text = self.responses.get(
-            "default",
-            '{"questions": [{"field": "affected_system", "question": "請問是哪個系統有問題？", "options": ["ETL", "CRM", "API"]}]}',
-        )
-
-        # Create a mock response object
-        class MockContent:
-            def __init__(self, text):
-                self.text = text
-
-        class MockResponse:
-            def __init__(self, text):
-                self.content = [MockContent(text)]
-
-        return MockResponse(response_text)
-
-    @property
-    def messages(self):
-        """Return self for messages.create() pattern."""
-        return self
-
-    async def create(self, **kwargs) -> Dict[str, Any]:
-        """Mock create method."""
-        return await self.messages_create(**kwargs)
-
 
 # =============================================================================
 # Factory Functions (Extended)
@@ -1105,16 +1013,6 @@ def create_hybrid_question_generator(
     )
 
 
-def create_mock_llm_generator() -> LLMQuestionGenerator:
-    """
-    Factory function to create a mock LLM generator for testing.
-
-    Returns:
-        LLMQuestionGenerator with mock client
-    """
-    mock_client = MockLLMClient()
-    return LLMQuestionGenerator(client=mock_client)
-
 
 # =============================================================================
 # Exports
@@ -1127,13 +1025,10 @@ __all__ = [
     "LLMQuestionConfig",
     # Generators
     "QuestionGenerator",
-    "MockQuestionGenerator",
     "LLMQuestionGenerator",
     "HybridQuestionGenerator",
     # Protocol
     "LLMClient",
-    # Mock
-    "MockLLMClient",
     # Template collections
     "INCIDENT_QUESTION_TEMPLATES",
     "REQUEST_QUESTION_TEMPLATES",
@@ -1144,8 +1039,6 @@ __all__ = [
     "QUESTION_GENERATION_PROMPT",
     # Factory functions
     "create_question_generator",
-    "create_mock_generator",
     "create_llm_question_generator",
     "create_hybrid_question_generator",
-    "create_mock_llm_generator",
 ]

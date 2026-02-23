@@ -244,45 +244,6 @@ class UserInputHandler(BaseSourceHandler):
         )
 
 
-class MockUserInputHandler(UserInputHandler):
-    """
-    Mock user input handler for testing.
-
-    Uses MockBusinessIntentRouter internally.
-    """
-
-    def __init__(self):
-        """Initialize mock handler."""
-        from ...intent_router.router import MockBusinessIntentRouter
-        super().__init__(
-            business_router=MockBusinessIntentRouter(),
-            enable_metrics=False,
-        )
-
-    async def process(self, request: IncomingRequest) -> "RoutingDecision":
-        """Process with mock router."""
-        from ...intent_router.models import ITIntentCategory
-
-        start_time = time.perf_counter()
-
-        # Get normalized text
-        user_text = self._normalize_input(request)
-
-        if not user_text:
-            return self._build_empty_decision(start_time)
-
-        # Use parent's business router (MockBusinessIntentRouter)
-        decision = await self.business_router.route(user_text)
-
-        latency_ms = (time.perf_counter() - start_time) * 1000
-
-        # Enhance with mock metadata
-        decision.metadata["handler_type"] = "user_mock"
-        decision.metadata["original_input_length"] = len(user_text)
-        decision.processing_time_ms = latency_ms
-
-        return decision
-
 
 # =============================================================================
 # Exports
@@ -290,5 +251,4 @@ class MockUserInputHandler(UserInputHandler):
 
 __all__ = [
     "UserInputHandler",
-    "MockUserInputHandler",
 ]

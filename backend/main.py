@@ -202,14 +202,41 @@ def register_routes(app: FastAPI) -> None:
             logger.warning(f"Database health check failed: {e}")
             db_status = "degraded"
 
+        # Check Redis connectivity (Sprint 112)
+        redis_status = "ok"
+        try:
+            import os
+            redis_host = os.environ.get("REDIS_HOST")
+            if redis_host:
+                from redis.asyncio import Redis as AsyncRedis
+                redis_port = int(os.environ.get("REDIS_PORT", "6379"))
+                redis_password = os.environ.get("REDIS_PASSWORD")
+                redis_client = AsyncRedis(
+                    host=redis_host,
+                    port=redis_port,
+                    password=redis_password,
+                )
+                await redis_client.ping()
+                await redis_client.aclose()
+            else:
+                redis_status = "not_configured"
+        except Exception as e:
+            logger.warning(f"Redis health check failed: {e}")
+            redis_status = "degraded"
+
+        overall = "healthy"
+        if db_status != "ok" or redis_status == "degraded":
+            overall = "degraded"
+
         return JSONResponse(
             content={
-                "status": "healthy" if db_status == "ok" else "degraded",
+                "status": overall,
                 "version": __version__,
                 "timestamp": datetime.utcnow().isoformat(),
                 "checks": {
                     "api": "ok",
                     "database": db_status,
+                    "redis": redis_status,
                 },
             },
             status_code=200,

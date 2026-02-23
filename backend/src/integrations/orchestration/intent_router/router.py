@@ -13,8 +13,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
-from .completeness import CompletenessChecker, MockCompletenessChecker
-from .llm_classifier import LLMClassifier, MockLLMClassifier
+from .completeness import CompletenessChecker
+from .llm_classifier import LLMClassifier
 from .models import (
     CompletenessInfo,
     ITIntentCategory,
@@ -26,7 +26,7 @@ from .models import (
     WorkflowType,
 )
 from .pattern_matcher import PatternMatcher
-from .semantic_router import MockSemanticRouter, SemanticRouter
+from .semantic_router import SemanticRouter
 
 logger = logging.getLogger(__name__)
 
@@ -524,41 +524,6 @@ class BusinessIntentRouter:
         self._metrics = RoutingMetrics()
 
 
-class MockBusinessIntentRouter(BusinessIntentRouter):
-    """
-    Mock BusinessIntentRouter for testing without external dependencies.
-
-    Uses mock implementations of all components.
-    """
-
-    def __init__(
-        self,
-        pattern_rules: Optional[Dict[str, Any]] = None,
-        semantic_routes: Optional[List[Any]] = None,
-        config: Optional[RouterConfig] = None,
-    ):
-        """
-        Initialize mock router with optional test configurations.
-
-        Args:
-            pattern_rules: Pattern rules dictionary (optional)
-            semantic_routes: List of semantic routes (optional)
-            config: Router configuration (optional)
-        """
-        # Create mock components
-        pattern_matcher = PatternMatcher(rules_dict=pattern_rules or {"rules": []})
-        semantic_router = MockSemanticRouter(routes=semantic_routes or [])
-        llm_classifier = MockLLMClassifier()
-        completeness_checker = MockCompletenessChecker()
-
-        super().__init__(
-            pattern_matcher=pattern_matcher,
-            semantic_router=semantic_router,
-            llm_classifier=llm_classifier,
-            completeness_checker=completeness_checker,
-            config=config or RouterConfig(),
-        )
-
 
 # =============================================================================
 # Factory Functions
@@ -610,20 +575,6 @@ def create_router(
     )
 
 
-def create_mock_router(
-    config: Optional[RouterConfig] = None,
-) -> MockBusinessIntentRouter:
-    """
-    Factory function to create a mock router for testing.
-
-    Args:
-        config: Router configuration
-
-    Returns:
-        MockBusinessIntentRouter instance
-    """
-    return MockBusinessIntentRouter(config=config)
-
 
 # =============================================================================
 # Exports
@@ -633,7 +584,5 @@ __all__ = [
     "RouterConfig",
     "RoutingMetrics",
     "BusinessIntentRouter",
-    "MockBusinessIntentRouter",
     "create_router",
-    "create_mock_router",
 ]

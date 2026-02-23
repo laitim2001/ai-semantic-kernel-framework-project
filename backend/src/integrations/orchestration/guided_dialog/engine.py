@@ -18,16 +18,14 @@ from ..intent_router.models import (
     RoutingDecision,
     WorkflowType,
 )
-from ..intent_router.router import BusinessIntentRouter, MockBusinessIntentRouter
+from ..intent_router.router import BusinessIntentRouter
 from .context_manager import (
     ConversationContextManager,
     ContextState,
     DialogTurn,
-    MockConversationContextManager,
 )
 from .generator import (
     GeneratedQuestion,
-    MockQuestionGenerator,
     QuestionGenerator,
 )
 from .refinement_rules import RefinementRules
@@ -502,34 +500,6 @@ class GuidedDialogEngine:
         logger.info("Dialog reset")
 
 
-class MockGuidedDialogEngine(GuidedDialogEngine):
-    """
-    Mock guided dialog engine for testing.
-
-    Uses mock components for deterministic behavior.
-    """
-
-    def __init__(
-        self,
-        max_turns: int = 5,
-    ):
-        """
-        Initialize mock engine with mock components.
-
-        Args:
-            max_turns: Maximum dialog turns
-        """
-        router = MockBusinessIntentRouter()
-        context_manager = MockConversationContextManager()
-        question_generator = MockQuestionGenerator()
-
-        super().__init__(
-            router=router,
-            context_manager=context_manager,
-            question_generator=question_generator,
-            max_turns=max_turns,
-        )
-
 
 # =============================================================================
 # Factory Functions
@@ -564,20 +534,6 @@ def create_guided_dialog_engine(
     )
 
 
-def create_mock_dialog_engine(
-    max_turns: int = 5,
-) -> MockGuidedDialogEngine:
-    """
-    Factory function to create a mock engine for testing.
-
-    Args:
-        max_turns: Maximum dialog turns
-
-    Returns:
-        MockGuidedDialogEngine instance
-    """
-    return MockGuidedDialogEngine(max_turns=max_turns)
-
 
 # =============================================================================
 # Exports
@@ -587,7 +543,5 @@ __all__ = [
     "DialogState",
     "DialogResponse",
     "GuidedDialogEngine",
-    "MockGuidedDialogEngine",
     "create_guided_dialog_engine",
-    "create_mock_dialog_engine",
 ]

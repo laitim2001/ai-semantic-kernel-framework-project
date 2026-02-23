@@ -24,21 +24,18 @@ from .models import (
     LLMClassificationResult,
 )
 from .pattern_matcher import PatternMatcher
-from .semantic_router import SemanticRouter, MockSemanticRouter, get_default_routes, IT_SEMANTIC_ROUTES
-from .llm_classifier import LLMClassifier, MockLLMClassifier, CLASSIFICATION_PROMPT
+from .semantic_router import SemanticRouter, get_default_routes, IT_SEMANTIC_ROUTES
+from .llm_classifier import LLMClassifier, CLASSIFICATION_PROMPT
 
 # Sprint 93: BusinessIntentRouter + CompletenessChecker
 from .router import (
     RouterConfig,
     RoutingMetrics,
     BusinessIntentRouter,
-    MockBusinessIntentRouter,
     create_router,
-    create_mock_router,
 )
 from .completeness import (
     CompletenessChecker,
-    MockCompletenessChecker,
     CompletenessRules,
     CompletenessRule,
     FieldDefinition,
@@ -67,23 +64,18 @@ __all__ = [
     "PatternMatcher",
     # Semantic Router (Layer 2)
     "SemanticRouter",
-    "MockSemanticRouter",
     "get_default_routes",
     "IT_SEMANTIC_ROUTES",
     # LLM Classifier (Layer 3)
     "LLMClassifier",
-    "MockLLMClassifier",
     "CLASSIFICATION_PROMPT",
     # Sprint 93: BusinessIntentRouter (Coordinator)
     "RouterConfig",
     "RoutingMetrics",
     "BusinessIntentRouter",
-    "MockBusinessIntentRouter",
     "create_router",
-    "create_mock_router",
     # Sprint 93: CompletenessChecker
     "CompletenessChecker",
-    "MockCompletenessChecker",
     "CompletenessRules",
     "CompletenessRule",
     "FieldDefinition",

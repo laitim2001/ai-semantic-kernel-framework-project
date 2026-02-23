@@ -19,13 +19,9 @@ from typing import Any, Dict, List
 
 from src.integrations.orchestration.intent_router import (
     BusinessIntentRouter,
-    MockBusinessIntentRouter,
     RouterConfig,
     PatternMatcher,
-    MockSemanticRouter,
-    MockLLMClassifier,
     CompletenessChecker,
-    MockCompletenessChecker,
     ITIntentCategory,
     SemanticRoute,
     RiskLevel,
@@ -34,12 +30,18 @@ from src.integrations.orchestration.intent_router import (
 from src.integrations.orchestration import (
     # Guided Dialog
     GuidedDialogEngine,
-    MockGuidedDialogEngine,
-    create_mock_dialog_engine,
     # Input Gateway
     InputGateway,
-    MockInputGateway,
     IncomingRequest,
+)
+from tests.mocks.orchestration import (
+    MockBusinessIntentRouter,
+    MockSemanticRouter,
+    MockLLMClassifier,
+    MockCompletenessChecker,
+    MockGuidedDialogEngine,
+    create_mock_dialog_engine,
+    MockInputGateway,
     create_mock_gateway,
 )
 

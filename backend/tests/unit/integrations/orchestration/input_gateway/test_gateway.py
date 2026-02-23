@@ -15,9 +15,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.integrations.orchestration.input_gateway import (
     InputGateway,
-    MockInputGateway,
     IncomingRequest,
     GatewayConfig,
+)
+from tests.mocks.orchestration import (
+    MockInputGateway,
     create_mock_gateway,
 )
 from src.integrations.orchestration.intent_router.models import (

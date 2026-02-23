@@ -402,25 +402,6 @@ class SchemaValidator:
         return list(self._schemas.keys())
 
 
-class MockSchemaValidator(SchemaValidator):
-    """
-    Mock schema validator for testing.
-
-    Always passes validation without checks.
-    """
-
-    def __init__(self):
-        """Initialize mock validator."""
-        super().__init__(strict_mode=False, allow_extra_fields=True)
-
-    def validate(
-        self,
-        data: Dict[str, Any],
-        schema: str,
-    ) -> Dict[str, Any]:
-        """Always return data without validation."""
-        return data
-
 
 # =============================================================================
 # Exports
@@ -428,7 +409,6 @@ class MockSchemaValidator(SchemaValidator):
 
 __all__ = [
     "SchemaValidator",
-    "MockSchemaValidator",
     "SchemaDefinition",
     "ValidationError",
 ]

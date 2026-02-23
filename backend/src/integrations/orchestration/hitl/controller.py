@@ -683,40 +683,6 @@ class InMemoryApprovalStorage:
         self._requests.clear()
 
 
-# =============================================================================
-# Mock Notification Service
-# =============================================================================
-
-
-class MockNotificationService:
-    """
-    Mock notification service for testing.
-
-    Records all notifications without actually sending them.
-    """
-
-    def __init__(self) -> None:
-        """Initialize mock notification service."""
-        self.sent_requests: List[ApprovalRequest] = []
-        self.sent_results: List[tuple[ApprovalRequest, bool]] = []
-
-    async def send_approval_request(self, request: ApprovalRequest) -> bool:
-        """Record approval request notification."""
-        self.sent_requests.append(request)
-        return True
-
-    async def send_approval_result(
-        self, request: ApprovalRequest, approved: bool
-    ) -> bool:
-        """Record approval result notification."""
-        self.sent_results.append((request, approved))
-        return True
-
-    def clear(self) -> None:
-        """Clear recorded notifications."""
-        self.sent_requests.clear()
-        self.sent_results.clear()
-
 
 # =============================================================================
 # Factory Functions
@@ -731,36 +697,101 @@ def create_hitl_controller(
     """
     Factory function to create a HITLController.
 
+    Storage selection (Sprint 112: environment-aware):
+        - If storage is provided, use it directly
+        - production: Redis required, raises if unavailable
+        - development: Redis preferred, fallback to InMemory with WARNING
+        - testing: InMemory directly
+
     Args:
-        storage: Storage backend (uses InMemoryApprovalStorage if None)
+        storage: Storage backend (auto-detected if None)
         notification_service: Notification service (optional)
         default_timeout_minutes: Default timeout for requests
 
     Returns:
         HITLController instance
     """
+    if storage is None:
+        storage = _create_default_storage()
+
     return HITLController(
-        storage=storage or InMemoryApprovalStorage(),
+        storage=storage,
         notification_service=notification_service,
         default_timeout_minutes=default_timeout_minutes,
     )
 
 
-def create_mock_hitl_controller() -> tuple[HITLController, InMemoryApprovalStorage, MockNotificationService]:
-    """
-    Factory function to create a mock HITL controller for testing.
+def _create_default_storage() -> ApprovalStorage:
+    """Create the default approval storage based on environment.
 
-    Returns:
-        Tuple of (HITLController, storage, notification_service)
+    - production: Redis (raises RuntimeError if unavailable)
+    - development: Redis preferred, InMemory fallback with WARNING
+    - testing: InMemory directly
     """
-    storage = InMemoryApprovalStorage()
-    notification = MockNotificationService()
-    controller = HITLController(
-        storage=storage,
-        notification_service=notification,
-        default_timeout_minutes=30,
+    import os
+
+    env = os.environ.get("APP_ENV", "development")
+
+    if env == "testing":
+        return InMemoryApprovalStorage()
+
+    # Try Redis
+    try:
+        redis_client = _get_redis_client()
+        if redis_client is not None:
+            from .approval_handler import RedisApprovalStorage
+            logger.info("HITL using Redis approval storage")
+            return RedisApprovalStorage(redis_client=redis_client)
+    except Exception as e:
+        if env == "production":
+            raise RuntimeError(
+                f"Redis unavailable for HITL approval storage in production: {e}. "
+                f"Set REDIS_HOST environment variable."
+            ) from e
+        logger.warning(
+            f"Redis unavailable for HITL storage in {env}: {e}. "
+            f"Falling back to InMemory storage. "
+            f"This is NOT acceptable in production."
+        )
+
+    if env == "production":
+        raise RuntimeError(
+            "Redis is required for HITL approval storage in production. "
+            "Set REDIS_HOST environment variable."
+        )
+
+    logger.warning(
+        "HITL using InMemory approval storage. "
+        "Data will be lost on restart. Configure Redis for persistence."
     )
-    return controller, storage, notification
+    return InMemoryApprovalStorage()
+
+
+def _get_redis_client():
+    """Get async Redis client for approval storage."""
+    import os
+
+    redis_host = os.environ.get("REDIS_HOST")
+    if not redis_host:
+        return None
+
+    redis_port = int(os.environ.get("REDIS_PORT", "6379"))
+    redis_password = os.environ.get("REDIS_PASSWORD")
+
+    try:
+        from redis.asyncio import Redis
+        client = Redis(
+            host=redis_host,
+            port=redis_port,
+            password=redis_password,
+            decode_responses=True,
+        )
+        logger.debug(f"Redis client created: {redis_host}:{redis_port}")
+        return client
+    except ImportError:
+        logger.warning("redis package not installed, cannot use Redis storage")
+        return None
+
 
 
 # =============================================================================
@@ -781,8 +812,6 @@ __all__ = [
     "HITLController",
     # Implementations
     "InMemoryApprovalStorage",
-    "MockNotificationService",
     # Factory functions
     "create_hitl_controller",
-    "create_mock_hitl_controller",
 ]

@@ -354,53 +354,6 @@ class PrometheusHandler(BaseSourceHandler):
         )
 
 
-class MockPrometheusHandler(PrometheusHandler):
-    """
-    Mock Prometheus handler for testing.
-
-    Processes requests without actual schema validation.
-    """
-
-    def __init__(self):
-        """Initialize mock handler."""
-        super().__init__(
-            schema_validator=None,
-            enable_metrics=False,
-        )
-
-    async def process(self, request: IncomingRequest) -> "RoutingDecision":
-        """Process with mock logic - simplified for testing."""
-        from ...intent_router.models import ITIntentCategory
-
-        start_time = time.perf_counter()
-
-        # Extract basic fields
-        data = request.data
-        alerts = data.get("alerts", [])
-
-        if alerts:
-            alert = alerts[0]
-            alertname = alert.get("alertname", "")
-            intent_category, sub_intent, workflow_str = self._match_alert(alertname)
-        else:
-            intent_category = ITIntentCategory.INCIDENT
-            sub_intent = "general_incident"
-
-        latency_ms = (time.perf_counter() - start_time) * 1000
-
-        return self.build_routing_decision(
-            intent_category=intent_category,
-            sub_intent=sub_intent,
-            confidence=0.95,
-            layer_used="prometheus_mock",
-            reasoning="Mock Prometheus handler response",
-            metadata={
-                "alertname": alerts[0].get("alertname") if alerts else None,
-                "alert_count": len(alerts),
-            },
-            processing_time_ms=latency_ms,
-        )
-
 
 # =============================================================================
 # Exports
@@ -408,5 +361,4 @@ class MockPrometheusHandler(PrometheusHandler):
 
 __all__ = [
     "PrometheusHandler",
-    "MockPrometheusHandler",
 ]

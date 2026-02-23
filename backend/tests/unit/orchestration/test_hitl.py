@@ -21,11 +21,13 @@ from src.integrations.orchestration.hitl import (
     ApprovalType,
     HITLController,
     InMemoryApprovalStorage,
-    MockNotificationService,
     TeamsCardBuilder,
     TeamsMessageCard,
     TeamsNotificationService,
     create_hitl_controller,
+)
+from tests.mocks.orchestration import (
+    MockNotificationService,
     create_mock_hitl_controller,
 )
 from src.integrations.orchestration.intent_router.models import (

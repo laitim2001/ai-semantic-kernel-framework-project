@@ -24,9 +24,6 @@ from src.integrations.orchestration.guided_dialog import (
     DialogTurn,
     GeneratedQuestion,
     GuidedDialogEngine,
-    MockConversationContextManager,
-    MockGuidedDialogEngine,
-    MockQuestionGenerator,
     QuestionGenerator,
     QuestionTemplate,
     RefinementCondition,
@@ -34,10 +31,15 @@ from src.integrations.orchestration.guided_dialog import (
     RefinementRules,
     create_context_manager,
     create_guided_dialog_engine,
-    create_mock_context_manager,
-    create_mock_dialog_engine,
     create_question_generator,
     get_default_refinement_rules,
+)
+from tests.mocks.orchestration import (
+    MockConversationContextManager,
+    MockGuidedDialogEngine,
+    MockQuestionGenerator,
+    create_mock_context_manager,
+    create_mock_dialog_engine,
 )
 
 

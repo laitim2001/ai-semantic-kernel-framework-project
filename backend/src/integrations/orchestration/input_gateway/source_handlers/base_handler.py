@@ -284,55 +284,6 @@ class BaseSourceHandler(ABC):
         self._metrics = HandlerMetrics()
 
 
-class MockBaseHandler(BaseSourceHandler):
-    """
-    Mock base handler for testing.
-
-    Returns configurable responses based on input.
-    """
-
-    def __init__(
-        self,
-        handler_type_name: str = "mock",
-        default_intent: str = "incident",
-        default_sub_intent: str = "general",
-    ):
-        """
-        Initialize mock handler.
-
-        Args:
-            handler_type_name: Handler type identifier
-            default_intent: Default intent category to return
-            default_sub_intent: Default sub-intent to return
-        """
-        super().__init__(enable_metrics=False)
-        self._handler_type = handler_type_name
-        self._default_intent = default_intent
-        self._default_sub_intent = default_sub_intent
-
-    @property
-    def handler_type(self) -> str:
-        """Return the handler type identifier."""
-        return self._handler_type
-
-    async def process(self, request: IncomingRequest) -> "RoutingDecision":
-        """Process request with mock logic."""
-        from ...intent_router.models import ITIntentCategory
-
-        start_time = time.perf_counter()
-
-        intent_category = ITIntentCategory.from_string(self._default_intent)
-
-        return self.build_routing_decision(
-            intent_category=intent_category,
-            sub_intent=self._default_sub_intent,
-            confidence=0.95,
-            layer_used=f"{self.handler_type}_mock",
-            reasoning="Mock handler response",
-            metadata=self.extract_metadata(request),
-            processing_time_ms=(time.perf_counter() - start_time) * 1000,
-        )
-
 
 # =============================================================================
 # Exports
@@ -340,6 +291,5 @@ class MockBaseHandler(BaseSourceHandler):
 
 __all__ = [
     "BaseSourceHandler",
-    "MockBaseHandler",
     "HandlerMetrics",
 ]

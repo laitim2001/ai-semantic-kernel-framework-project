@@ -27,8 +27,6 @@ from src.integrations.orchestration import (
     ApprovalStatus,
     ApprovalType,
     create_hitl_controller,
-    create_mock_hitl_controller,
-    InMemoryApprovalStorage,
 )
 
 logger = logging.getLogger(__name__)
@@ -178,16 +176,16 @@ _hitl_controller: Optional[HITLController] = None
 
 
 def get_hitl_controller() -> HITLController:
-    """Get or create the HITL controller instance."""
+    """Get or create the HITL controller instance.
+
+    Sprint 112: create_hitl_controller() is environment-aware:
+    - production: Redis required, raises if unavailable
+    - development: Redis preferred, InMemory fallback with WARNING
+    - testing: InMemory directly
+    """
     global _hitl_controller
     if _hitl_controller is None:
-        try:
-            # Try to create with in-memory storage for now
-            # In production, use Redis storage
-            _hitl_controller = create_hitl_controller()
-        except Exception as e:
-            logger.warning(f"Failed to create HITL controller, using mock: {e}")
-            _hitl_controller, _, _ = create_mock_hitl_controller()
+        _hitl_controller = create_hitl_controller()
     return _hitl_controller
 
 

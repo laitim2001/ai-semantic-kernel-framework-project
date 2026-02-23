@@ -336,58 +336,6 @@ class ServiceNowHandler(BaseSourceHandler):
         )
 
 
-class MockServiceNowHandler(ServiceNowHandler):
-    """
-    Mock ServiceNow handler for testing.
-
-    Processes requests without actual schema validation or pattern matching.
-    """
-
-    def __init__(self):
-        """Initialize mock handler."""
-        super().__init__(
-            schema_validator=None,
-            pattern_matcher=None,
-            enable_metrics=False,
-        )
-
-    async def process(self, request: IncomingRequest) -> "RoutingDecision":
-        """Process with mock logic - simplified for testing."""
-        from ...intent_router.models import ITIntentCategory
-
-        start_time = time.perf_counter()
-
-        # Extract basic fields
-        data = request.data
-        category = data.get("category", "incident").lower()
-        subcategory = data.get("subcategory", "").lower()
-
-        # Try mapping
-        mapping_key = f"{category}/{subcategory}"
-        mapping = self.CATEGORY_MAPPING.get(mapping_key)
-
-        if mapping:
-            intent_str, sub_intent = mapping
-            intent_category = ITIntentCategory.from_string(intent_str)
-        else:
-            intent_category = ITIntentCategory.INCIDENT
-            sub_intent = "general_incident"
-
-        latency_ms = (time.perf_counter() - start_time) * 1000
-
-        return self.build_routing_decision(
-            intent_category=intent_category,
-            sub_intent=sub_intent,
-            confidence=0.95,
-            layer_used="servicenow_mock",
-            reasoning="Mock ServiceNow handler response",
-            metadata={
-                "servicenow_number": data.get("number"),
-                "servicenow_category": category,
-            },
-            processing_time_ms=latency_ms,
-        )
-
 
 # =============================================================================
 # Exports
@@ -395,5 +343,4 @@ class MockServiceNowHandler(ServiceNowHandler):
 
 __all__ = [
     "ServiceNowHandler",
-    "MockServiceNowHandler",
 ]

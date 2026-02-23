@@ -26,7 +26,6 @@ from src.integrations.orchestration import (
     DialogResponse,
     DialogState,
     create_guided_dialog_engine,
-    create_mock_dialog_engine,
 )
 
 logger = logging.getLogger(__name__)
@@ -154,11 +153,17 @@ def get_dialog_engine() -> GuidedDialogEngine:
     global _dialog_engine
     if _dialog_engine is None:
         try:
-            # Try to create real engine, fall back to mock
+            # Try to create real engine
             _dialog_engine = create_guided_dialog_engine()
         except Exception as e:
+            # Sprint 112: lazy import mock from tests.mocks
             logger.warning(f"Failed to create dialog engine, using mock: {e}")
+            from tests.mocks.orchestration import create_mock_dialog_engine
             _dialog_engine = create_mock_dialog_engine()
+            logger.warning(
+                "⚠️ Using mock dialog engine. "
+                "This is NOT acceptable in production."
+            )
     return _dialog_engine
 
 

@@ -8,9 +8,7 @@ Sprint 93: CompletenessChecker + Rules Definition (Phase 28)
 
 from .checker import (
     CompletenessChecker,
-    MockCompletenessChecker,
     create_completeness_checker,
-    create_mock_checker,
 )
 from .rules import (
     FieldDefinition,
@@ -36,9 +34,7 @@ from .rules import (
 __all__ = [
     # Checker classes
     "CompletenessChecker",
-    "MockCompletenessChecker",
     "create_completeness_checker",
-    "create_mock_checker",
     # Rule classes
     "FieldDefinition",
     "CompletenessRule",

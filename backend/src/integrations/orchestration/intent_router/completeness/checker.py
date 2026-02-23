@@ -344,61 +344,6 @@ class CompletenessChecker:
         return is_valid, missing
 
 
-class MockCompletenessChecker(CompletenessChecker):
-    """
-    Mock completeness checker for testing.
-
-    Always returns a deterministic result based on input length.
-    """
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def check(
-        self,
-        intent_category: ITIntentCategory,
-        user_input: str,
-        collected_info: Optional[Dict[str, Any]] = None,
-    ) -> CompletenessInfo:
-        """
-        Mock completeness check based on input length.
-
-        Args:
-            intent_category: The intent category
-            user_input: The user's input text
-            collected_info: Previously collected info (optional)
-
-        Returns:
-            CompletenessInfo with mock assessment
-        """
-        # Simple heuristic based on input length
-        input_length = len(user_input)
-
-        if input_length >= 50:
-            score = 1.0
-            is_complete = True
-            missing = []
-        elif input_length >= 30:
-            score = 0.8
-            is_complete = True
-            missing = []
-        elif input_length >= 15:
-            score = 0.6
-            is_complete = True
-            missing = ["additional_details"]
-        else:
-            score = 0.3
-            is_complete = False
-            missing = ["description", "context"]
-
-        return CompletenessInfo(
-            is_complete=is_complete,
-            completeness_score=score,
-            missing_fields=missing,
-            optional_missing=[],
-            suggestions=[f"請提供更多詳細資訊"] if not is_complete else [],
-        )
-
 
 # =============================================================================
 # Factory Functions
@@ -421,23 +366,11 @@ def create_completeness_checker(
     return CompletenessChecker(rules=rules, strict_mode=strict_mode)
 
 
-def create_mock_checker() -> MockCompletenessChecker:
-    """
-    Factory function to create a mock checker for testing.
-
-    Returns:
-        MockCompletenessChecker instance
-    """
-    return MockCompletenessChecker()
-
-
 # =============================================================================
 # Exports
 # =============================================================================
 
 __all__ = [
     "CompletenessChecker",
-    "MockCompletenessChecker",
     "create_completeness_checker",
-    "create_mock_checker",
 ]

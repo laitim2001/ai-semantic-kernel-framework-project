@@ -14,16 +14,12 @@ from typing import Any, Dict, List
 
 from src.integrations.orchestration.intent_router import (
     BusinessIntentRouter,
-    MockBusinessIntentRouter,
     RouterConfig,
     RoutingMetrics,
     PatternMatcher,
     SemanticRouter,
-    MockSemanticRouter,
     LLMClassifier,
-    MockLLMClassifier,
     CompletenessChecker,
-    MockCompletenessChecker,
     ITIntentCategory,
     RoutingDecision,
     RiskLevel,
@@ -31,6 +27,12 @@ from src.integrations.orchestration.intent_router import (
     PatternRule,
     SemanticRoute,
     create_router,
+)
+from tests.mocks.orchestration import (
+    MockBusinessIntentRouter,
+    MockSemanticRouter,
+    MockLLMClassifier,
+    MockCompletenessChecker,
     create_mock_router,
 )
 

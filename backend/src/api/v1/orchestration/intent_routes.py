@@ -11,18 +11,16 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, status
 
 from src.integrations.orchestration import (
     BusinessIntentRouter,
-    MockBusinessIntentRouter,
     RiskAssessor,
     RiskPolicies,
     RouterConfig,
     create_router,
-    create_mock_router,
 )
 from src.integrations.orchestration.intent_router.models import (
     ITIntentCategory,
@@ -64,10 +62,10 @@ RULES_YAML_PATH = Path(__file__).parent.parent.parent.parent / (
 # Singleton Router Instance
 # =============================================================================
 
-_router_instance: Optional[Union[BusinessIntentRouter, MockBusinessIntentRouter]] = None
+_router_instance: Optional[BusinessIntentRouter] = None
 
 
-def get_router() -> Union[BusinessIntentRouter, MockBusinessIntentRouter]:
+def get_router() -> BusinessIntentRouter:
     """
     Get or create router singleton.
 
@@ -141,10 +139,14 @@ def get_router() -> Union[BusinessIntentRouter, MockBusinessIntentRouter]:
         elif not anthropic_key:
             logger.warning("ANTHROPIC_API_KEY not set, using mock router")
 
-    # Fallback to mock router
+    # Fallback to mock router (Sprint 112: lazy import from tests.mocks)
     logger.info("Initializing mock intent router...")
+    from tests.mocks.orchestration import create_mock_router
     _router_instance = create_mock_router(config=config)
-    logger.info("✅ Mock router initialized")
+    logger.warning(
+        "⚠️ Using mock router. This is NOT acceptable in production. "
+        "Set ANTHROPIC_API_KEY or USE_REAL_ROUTER=true for real routing."
+    )
     return _router_instance
 
 
