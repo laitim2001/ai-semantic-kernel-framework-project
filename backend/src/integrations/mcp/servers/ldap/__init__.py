@@ -18,10 +18,16 @@ Security:
 
 from .client import LDAPClient, LDAPConfig, LDAPConnectionManager
 from .server import LDAPMCPServer
+from .ad_config import ADConfig
+from .ad_operations import ADOperations, ADOperationResult
 
 __all__ = [
     "LDAPClient",
     "LDAPConfig",
     "LDAPConnectionManager",
     "LDAPMCPServer",
+    # Sprint 114: AD Account Management
+    "ADConfig",
+    "ADOperations",
+    "ADOperationResult",
 ]

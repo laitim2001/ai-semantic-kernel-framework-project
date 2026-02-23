@@ -577,3 +577,107 @@ rules:
     workflow_type: simple
     risk_level: low
     description: Policy and procedure queries
+
+  # ===================================================
+  # AD ACCOUNT MANAGEMENT RULES (Sprint 114, Phase 32)
+  # Active Directory account lifecycle operations
+  # ===================================================
+
+  - id: ad_account_unlock
+    category: request
+    sub_intent: ad_account_unlock
+    patterns:
+      - "unlock.*account"
+      - "account.*unlock"
+      - "account.*locked.*out"
+      - "帳號.*解鎖"
+      - "解鎖.*帳號"
+      - "AD.*帳號.*鎖定"
+      - "帳號.*被鎖"
+      - "AD.*account.*lock"
+    priority: 90
+    workflow_type: sequential
+    risk_level: medium
+    description: AD account unlock requests
+    required_tools:
+      - ldap_mcp
+    ad_intent: "ad.account.unlock"
+
+  - id: ad_password_reset
+    category: request
+    sub_intent: ad_password_reset
+    patterns:
+      - "reset.*AD.*password"
+      - "AD.*password.*reset"
+      - "AD.*密碼.*重設"
+      - "重設.*AD.*密碼"
+      - "AD.*密碼.*過期"
+      - "AD.*password.*expir"
+      - "password.*expired.*AD"
+      - "AD.*密碼.*重置"
+    priority: 90
+    workflow_type: sequential
+    risk_level: medium
+    description: AD password reset requests
+    required_tools:
+      - ldap_mcp
+    ad_intent: "ad.password.reset"
+
+  - id: ad_group_membership
+    category: request
+    sub_intent: ad_group_modify
+    patterns:
+      - "add.*to.*group"
+      - "remove.*from.*group"
+      - "群組.*異動"
+      - "群組.*新增.*成員"
+      - "群組.*移除.*成員"
+      - "AD.*群組.*新增"
+      - "AD.*群組.*移除"
+      - "modify.*group.*member"
+      - "change.*group.*member"
+    priority: 85
+    workflow_type: sequential
+    risk_level: high
+    description: AD group membership change requests
+    required_tools:
+      - ldap_mcp
+    ad_intent: "ad.group.modify"
+
+  - id: ad_account_create
+    category: request
+    sub_intent: ad_account_create
+    patterns:
+      - "create.*AD.*account"
+      - "new.*AD.*account"
+      - "新建.*AD.*帳號"
+      - "建立.*AD.*帳號"
+      - "AD.*新增.*帳號"
+      - "create.*directory.*account"
+      - "provision.*AD.*user"
+    priority: 85
+    workflow_type: sequential
+    risk_level: high
+    description: AD account creation requests
+    required_tools:
+      - ldap_mcp
+    ad_intent: "ad.account.create"
+
+  - id: ad_account_disable
+    category: request
+    sub_intent: ad_account_disable
+    patterns:
+      - "disable.*AD.*account"
+      - "deactivate.*AD.*user"
+      - "停用.*AD.*帳號"
+      - "AD.*帳號.*停用"
+      - "關閉.*AD.*帳號"
+      - "AD.*account.*disable"
+      - "suspend.*AD.*account"
+    priority: 85
+    workflow_type: sequential
+    risk_level: high
+    description: AD account disable/deactivation requests
+    required_tools:
+      - ldap_mcp
+    ad_intent: "ad.account.disable"

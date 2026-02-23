@@ -1,0 +1,52 @@
+# RITM → IPA Intent Mapping Configuration
+# Sprint 114: AD 場景基礎建設 (Phase 32)
+#
+# Maps ServiceNow Catalog Items to IPA Business Intents.
+# Each mapping defines:
+#   - cat_item_name: ServiceNow Catalog Item display name
+#   - intent: IPA business intent identifier
+#   - extract_variables: Mapping of IPA variable names to RITM event paths
+#
+# Variable path syntax:
+#   - "field_name" → top-level event field
+#   - "variables.key" → nested key in event.variables dict
+
+mappings:
+  - cat_item_name: "AD Account Unlock"
+    intent: "ad.account.unlock"
+    extract_variables:
+      target_user: "variables.affected_user"
+      reason: "short_description"
+
+  - cat_item_name: "AD Password Reset"
+    intent: "ad.password.reset"
+    extract_variables:
+      target_user: "variables.affected_user"
+      temporary_password: "variables.temp_password"
+
+  - cat_item_name: "AD Group Membership Change"
+    intent: "ad.group.modify"
+    extract_variables:
+      target_user: "variables.affected_user"
+      group_name: "variables.group_name"
+      action: "variables.action_type"
+
+  - cat_item_name: "New AD Account"
+    intent: "ad.account.create"
+    extract_variables:
+      display_name: "variables.display_name"
+      department: "variables.department"
+      manager: "variables.manager"
+      email: "variables.email"
+
+  - cat_item_name: "Disable AD Account"
+    intent: "ad.account.disable"
+    extract_variables:
+      target_user: "variables.affected_user"
+      reason: "variables.disable_reason"
+      effective_date: "variables.effective_date"
+
+# Fallback strategy for unmapped Catalog Items
+fallback:
+  strategy: "semantic_router"
+  log_unmatched: true

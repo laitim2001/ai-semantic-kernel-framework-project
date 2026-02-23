@@ -86,6 +86,7 @@ from src.api.v1.orchestration import router as orchestration_router  # Sprint 96
 from src.api.v1.orchestration import intent_router as orchestration_intent_router
 from src.api.v1.orchestration import dialog_router as orchestration_dialog_router
 from src.api.v1.orchestration import approval_router as orchestration_approval_router
+from src.api.v1.orchestration import webhook_router as orchestration_webhook_router  # Sprint 114
 
 # Phase 29: Agent Swarm Visualization
 from src.api.v1.swarm import router as swarm_router  # Sprint 100
@@ -189,6 +190,7 @@ protected_router.include_router(orchestration_router)  # Sprint 96
 protected_router.include_router(orchestration_intent_router)  # Sprint 96
 protected_router.include_router(orchestration_dialog_router)  # Sprint 98
 protected_router.include_router(orchestration_approval_router)  # Sprint 98
+protected_router.include_router(orchestration_webhook_router)  # Sprint 114
 
 # Phase 29: Agent Swarm Visualization
 protected_router.include_router(swarm_router)  # Sprint 100

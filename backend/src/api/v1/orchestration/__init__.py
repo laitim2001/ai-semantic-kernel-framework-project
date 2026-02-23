@@ -14,5 +14,12 @@ from src.api.v1.orchestration.routes import router
 from src.api.v1.orchestration.intent_routes import intent_router
 from src.api.v1.orchestration.dialog_routes import dialog_router
 from src.api.v1.orchestration.approval_routes import approval_router
+from src.api.v1.orchestration.webhook_routes import webhook_router  # Sprint 114
 
-__all__ = ["router", "intent_router", "dialog_router", "approval_router"]
+__all__ = [
+    "router",
+    "intent_router",
+    "dialog_router",
+    "approval_router",
+    "webhook_router",
+]
