@@ -81,6 +81,14 @@ from src.integrations.orchestration import (
     ApprovalStatus,
 )
 
+# Sprint 116: Swarm Mode
+from src.integrations.hybrid.swarm_mode import (
+    SwarmModeHandler,
+    SwarmExecutionConfig,
+    SwarmExecutionResult,
+    SwarmTaskDecomposition,
+)
+
 if TYPE_CHECKING:
     from src.integrations.claude_sdk.hybrid.selector import FrameworkSelector
 
@@ -163,12 +171,16 @@ class HybridOrchestratorV2:
     - RiskAssessor: 風險評估
     - HITLController: 審批流程控制
 
-    Execute Flow (Phase 28):
+    Sprint 116 Features:
+    - SwarmModeHandler: Multi-agent swarm collaboration via execute_with_routing()
+
+    Execute Flow (Phase 28 + Sprint 116):
     1. InputGateway → 來源識別和處理
     2. 檢查 completeness.is_sufficient
     3. GuidedDialogEngine → 資訊收集 (如需要)
     4. RiskAssessor → 風險評估
     5. HITLController → 審批 (如需要)
+    5.5. SwarmModeHandler → Swarm 模式判定與執行 (Sprint 116)
     6. FrameworkSelector → 框架選擇
     7. 執行 (Claude SDK / MAF)
     """
@@ -183,6 +195,8 @@ class HybridOrchestratorV2:
         guided_dialog: Optional[GuidedDialogEngine] = None,
         risk_assessor: Optional[RiskAssessor] = None,
         hitl_controller: Optional[HITLController] = None,
+        # Sprint 116: Swarm Mode
+        swarm_handler: Optional[SwarmModeHandler] = None,
         # Phase 13 Components (Sprint 52-54)
         framework_selector: Optional[FrameworkSelector] = None,
         context_bridge: Optional[ContextBridge] = None,
@@ -206,6 +220,9 @@ class HybridOrchestratorV2:
             risk_assessor: Risk assessor for operation risk evaluation (Sprint 96)
             hitl_controller: HITL controller for approval workflow (Sprint 97)
 
+            # Sprint 116
+            swarm_handler: Swarm mode handler for multi-agent collaboration
+
             # Phase 13 Components
             framework_selector: Framework selector for mode selection (Sprint 98)
             context_bridge: Bridge for context sync (Sprint 53)
@@ -225,6 +242,9 @@ class HybridOrchestratorV2:
         self._guided_dialog = guided_dialog
         self._risk_assessor = risk_assessor
         self._hitl_controller = hitl_controller
+
+        # Sprint 116: Swarm Mode
+        self._swarm_handler = swarm_handler
 
         # Phase 13 + Sprint 98 components
         # Support both framework_selector and intent_router (backward compat)
@@ -253,7 +273,8 @@ class HybridOrchestratorV2:
             f"business_router={business_router is not None}, "
             f"guided_dialog={guided_dialog is not None}, "
             f"risk_assessor={risk_assessor is not None}, "
-            f"hitl_controller={hitl_controller is not None}]"
+            f"hitl_controller={hitl_controller is not None}], "
+            f"sprint_116=[swarm_handler={swarm_handler is not None}]"
         )
 
     @property
@@ -319,6 +340,15 @@ class HybridOrchestratorV2:
             self._risk_assessor is not None,
             self._hitl_controller is not None,
         ])
+
+    # =========================================================================
+    # Sprint 116: Swarm Mode Properties
+    # =========================================================================
+
+    @property
+    def swarm_handler(self) -> Optional[SwarmModeHandler]:
+        """Get swarm mode handler instance (Sprint 116)."""
+        return self._swarm_handler
 
     # =========================================================================
     # Phase 13 Component Properties
@@ -650,6 +680,49 @@ class HybridOrchestratorV2:
                                 "rejected_by": approval_result.rejected_by,
                             },
                         )
+
+            # Step 5.5: Swarm Mode Check (Sprint 116)
+            if self._swarm_handler and self._swarm_handler.is_enabled:
+                logger.info(
+                    "Sprint 116 Step 5.5: Checking Swarm mode eligibility"
+                )
+                swarm_decomposition = self._swarm_handler.analyze_for_swarm(
+                    routing_decision=routing_decision,
+                    context=metadata or {},
+                )
+                if swarm_decomposition.should_use_swarm:
+                    logger.info(
+                        f"Sprint 116: Executing in SWARM_MODE with "
+                        f"{len(swarm_decomposition.subtasks)} subtasks"
+                    )
+                    swarm_result = await self._swarm_handler.execute_swarm(
+                        intent=request.content,
+                        decomposition=swarm_decomposition,
+                        routing_decision=routing_decision,
+                        session_id=context.session_id,
+                        timeout=timeout,
+                    )
+                    return HybridResultV2(
+                        success=swarm_result.success,
+                        content=swarm_result.content,
+                        error=swarm_result.error,
+                        session_id=context.session_id,
+                        execution_mode=ExecutionMode.SWARM_MODE,
+                        framework_used="swarm",
+                        duration=time.time() - start_time,
+                        metadata={
+                            "swarm_id": swarm_result.swarm_id,
+                            "swarm_mode": swarm_decomposition.swarm_mode,
+                            "worker_count": len(swarm_decomposition.subtasks),
+                            "worker_results": swarm_result.worker_results,
+                            "routing_decision": (
+                                routing_decision.to_dict()
+                                if hasattr(routing_decision, "to_dict")
+                                else str(routing_decision)
+                            ),
+                            "phase_28_flow": True,
+                        },
+                    )
 
             # Step 6: 框架選擇
             logger.info(f"Phase 28 Step 6: Selecting framework")
@@ -1152,10 +1225,12 @@ class OrchestratorMetrics:
         "WORKFLOW_MODE": 0,
         "CHAT_MODE": 0,
         "HYBRID_MODE": 0,
+        "SWARM_MODE": 0,  # Sprint 116
     })
     framework_usage: Dict[str, int] = field(default_factory=lambda: {
         "claude_sdk": 0,
         "microsoft_agent_framework": 0,
+        "swarm": 0,  # Sprint 116
     })
     success_count: int = 0
     failure_count: int = 0
@@ -1185,10 +1260,12 @@ class OrchestratorMetrics:
             "WORKFLOW_MODE": 0,
             "CHAT_MODE": 0,
             "HYBRID_MODE": 0,
+            "SWARM_MODE": 0,  # Sprint 116
         }
         self.framework_usage = {
             "claude_sdk": 0,
             "microsoft_agent_framework": 0,
+            "swarm": 0,  # Sprint 116
         }
         self.success_count = 0
         self.failure_count = 0

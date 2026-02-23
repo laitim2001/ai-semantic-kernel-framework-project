@@ -34,11 +34,13 @@ class ExecutionMode(str, Enum):
         WORKFLOW_MODE: Multi-step workflows with MAF orchestration
         CHAT_MODE: Simple conversational interactions with Claude
         HYBRID_MODE: Dynamic mode that can switch between workflow and chat
+        SWARM_MODE: Multi-agent swarm collaboration (Sprint 116)
     """
 
     WORKFLOW_MODE = "workflow"
     CHAT_MODE = "chat"
     HYBRID_MODE = "hybrid"
+    SWARM_MODE = "swarm"  # Sprint 116: Multi-agent swarm collaboration
 
 
 class SuggestedFramework(str, Enum):

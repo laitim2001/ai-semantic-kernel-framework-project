@@ -8,6 +8,7 @@ Implements a three-layer routing architecture:
 3. LLM Classifier - LLM-based intent classification (Sprint 92)
 4. BusinessIntentRouter - Unified coordinator (Sprint 93)
 5. CompletenessChecker - Information completeness (Sprint 93)
+6. L4b Decision Engine Contracts (Sprint 116)
 """
 
 from .models import (
@@ -45,6 +46,14 @@ from .completeness import (
     REQUEST_RULE,
     CHANGE_RULE,
     QUERY_RULE,
+)
+
+# Sprint 116: L4b Decision Engine Contracts
+from .contracts import (
+    DecisionEngineProtocol,
+    LayerExecutionMetric,
+    RoutingLayerProtocol,
+    RoutingPipelineResult,
 )
 
 __all__ = [
@@ -85,4 +94,9 @@ __all__ = [
     "REQUEST_RULE",
     "CHANGE_RULE",
     "QUERY_RULE",
+    # Sprint 116: L4b Decision Engine Contracts
+    "DecisionEngineProtocol",
+    "LayerExecutionMetric",
+    "RoutingLayerProtocol",
+    "RoutingPipelineResult",
 ]

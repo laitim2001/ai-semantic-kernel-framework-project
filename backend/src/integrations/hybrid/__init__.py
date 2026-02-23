@@ -63,6 +63,14 @@ from src.integrations.hybrid.orchestrator_v2 import (
     create_orchestrator_v2,
 )
 
+# Sprint 116: Swarm Mode Handler
+from src.integrations.hybrid.swarm_mode import (
+    SwarmModeHandler,
+    SwarmExecutionConfig,
+    SwarmExecutionResult,
+    SwarmTaskDecomposition,
+)
+
 # Sprint 81: Claude + MAF Fusion
 from src.integrations.hybrid.claude_maf_fusion import (
     ClaudeMAFFusion,
@@ -109,6 +117,11 @@ __all__ = [
     "HybridResultV2",
     "OrchestratorMetrics",
     "create_orchestrator_v2",
+    # Sprint 116: Swarm Mode Handler
+    "SwarmModeHandler",
+    "SwarmExecutionConfig",
+    "SwarmExecutionResult",
+    "SwarmTaskDecomposition",
     # Sprint 81: Claude + MAF Fusion
     "ClaudeMAFFusion",
     "ClaudeDecisionEngine",

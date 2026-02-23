@@ -18,7 +18,19 @@ Sprint 95: InputGateway + SourceHandlers (Phase 28)
 Sprint 96: RiskAssessor + Policies (Phase 28)
 Sprint 97: HITLController + ApprovalHandler (Phase 28)
 Sprint 99: E2E Tests + Performance + Metrics (Phase 28)
+Sprint 116: L4a/L4b Layer Split Contracts (Phase 34)
 """
+
+# Sprint 116: L4a/L4b Contracts
+from .contracts import (
+    InputGatewayProtocol,
+    InputSource,
+    RouterProtocol,
+    RoutingRequest,
+    RoutingResult,
+    incoming_request_to_routing_request,
+    routing_decision_to_routing_result,
+)
 
 from .intent_router.models import (
     ITIntentCategory,
@@ -110,6 +122,14 @@ from .metrics import (
 )
 
 __all__ = [
+    # Sprint 116: L4a/L4b Contracts
+    "InputSource",
+    "RoutingRequest",
+    "RoutingResult",
+    "InputGatewayProtocol",
+    "RouterProtocol",
+    "incoming_request_to_routing_request",
+    "routing_decision_to_routing_result",
     # Core Models
     "ITIntentCategory",
     "CompletenessInfo",
