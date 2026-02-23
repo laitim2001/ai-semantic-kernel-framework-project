@@ -1,0 +1,90 @@
+{
+  "name": "semantic-routes",
+  "fields": [
+    {
+      "name": "id",
+      "type": "Edm.String",
+      "key": true,
+      "filterable": true
+    },
+    {
+      "name": "route_name",
+      "type": "Edm.String",
+      "filterable": true,
+      "searchable": true
+    },
+    {
+      "name": "category",
+      "type": "Edm.String",
+      "filterable": true,
+      "facetable": true
+    },
+    {
+      "name": "sub_intent",
+      "type": "Edm.String",
+      "filterable": true
+    },
+    {
+      "name": "utterance",
+      "type": "Edm.String",
+      "searchable": true
+    },
+    {
+      "name": "utterance_vector",
+      "type": "Collection(Edm.Single)",
+      "dimensions": 1536,
+      "vectorSearchProfile": "vector-profile",
+      "searchable": true
+    },
+    {
+      "name": "workflow_type",
+      "type": "Edm.String",
+      "filterable": true
+    },
+    {
+      "name": "risk_level",
+      "type": "Edm.String",
+      "filterable": true
+    },
+    {
+      "name": "description",
+      "type": "Edm.String",
+      "searchable": true
+    },
+    {
+      "name": "enabled",
+      "type": "Edm.Boolean",
+      "filterable": true
+    },
+    {
+      "name": "created_at",
+      "type": "Edm.DateTimeOffset",
+      "sortable": true
+    },
+    {
+      "name": "updated_at",
+      "type": "Edm.DateTimeOffset",
+      "sortable": true
+    }
+  ],
+  "vectorSearch": {
+    "algorithms": [
+      {
+        "name": "hnsw-algorithm",
+        "kind": "hnsw",
+        "hnswParameters": {
+          "m": 4,
+          "efConstruction": 400,
+          "efSearch": 500,
+          "metric": "cosine"
+        }
+      }
+    ],
+    "profiles": [
+      {
+        "name": "vector-profile",
+        "algorithmConfigurationName": "hnsw-algorithm"
+      }
+    ]
+  }
+}
