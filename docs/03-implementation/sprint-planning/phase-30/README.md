@@ -1,5 +1,10 @@
 # Phase 30: Azure AI Search 整合 SemanticRouter
 
+> **⏸️ 狀態: 延後執行** — 本 Phase 的工作已被納入 Phase 32 Sprint 115 (SemanticRouter Real Implementation)。
+> 安全加固（Phase 31）必須先完成。Sprint 107-110 的詳細計劃可作為 Phase 32 Sprint 115 的參考。
+>
+> **執行順序**: Phase 31 (Security) → Phase 32 (包含本 Phase 工作) → Phase 33 (Production)
+
 ## 概述
 
 Phase 30 專注於將 **SemanticRouter** 從內存實現遷移到 **Azure AI Search**，實現持久化向量存儲、動態路由管理和企業級搜索能力。
@@ -151,6 +156,7 @@ USE_AZURE_SEARCH=false
 
 ---
 
-**Phase 30 開始時間**: TBD
-**預估完成時間**: 3.5 週 (3 週 + 0.5 週緩衝)
+**Phase 30 狀態**: ⏸️ 延後（工作納入 Phase 32 Sprint 115）
+**原始預估**: 3.5 週 (3 週 + 0.5 週緩衝)
 **總 Story Points**: 75 pts
+**參見**: [Phase 32 README](../phase-32/README.md) — Sprint 115 引用本 Phase 的 Sprint 107-110 計劃
