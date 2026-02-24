@@ -13,7 +13,7 @@
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,12 +21,24 @@ from fastapi.responses import JSONResponse
 
 from src.core.config import get_settings
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+# Configure logging — use structlog if enabled, otherwise basic config
+_settings = get_settings()
+if _settings.structured_logging_enabled:
+    from src.core.logging import setup_logging
+    setup_logging(
+        json_output=True,
+        log_level=_settings.log_level,
+        enable_otel_correlation=_settings.otel_enabled,
+    )
+else:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 logger = logging.getLogger(__name__)
+
+# Observability shutdown callback (set during lifespan startup)
+_otel_shutdown: Optional[Callable[[], None]] = None
 
 # Version
 __version__ = "0.2.0"
@@ -42,6 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         - Agent Framework service
         - Redis cache (future)
     """
+    global _otel_shutdown
     settings = get_settings()
 
     # Startup
@@ -50,6 +63,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Validate security settings (warns in dev, raises in production)
     settings.validate_security_settings()
+
+    # Initialize OpenTelemetry observability (Sprint 122)
+    if settings.otel_enabled:
+        try:
+            from src.core.observability import setup_observability
+
+            _otel_shutdown = setup_observability(
+                service_name=settings.otel_service_name,
+                connection_string=settings.applicationinsights_connection_string,
+                otel_enabled=True,
+                sampling_rate=settings.otel_sampling_rate,
+            )
+            logger.info("OpenTelemetry observability initialized")
+        except Exception as e:
+            logger.warning(f"OpenTelemetry initialization failed: {e}")
+            _otel_shutdown = None
 
     # Initialize database
     try:
@@ -93,6 +122,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.error(f"Error shutting down agent service: {e}")
 
+    # Shutdown OpenTelemetry (Sprint 122)
+    if _otel_shutdown:
+        try:
+            _otel_shutdown()
+            logger.info("OpenTelemetry shutdown complete")
+        except Exception as e:
+            logger.error(f"Error shutting down OpenTelemetry: {e}")
+
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
@@ -134,6 +171,10 @@ def create_app() -> FastAPI:
         # Disable automatic redirect from /path to /path/ to avoid 307 responses
         redirect_slashes=False,
     )
+
+    # Request ID middleware (Sprint 122) — must be added before CORS
+    from src.core.logging.middleware import RequestIdMiddleware
+    app.add_middleware(RequestIdMiddleware)
 
     # CORS middleware
     app.add_middleware(

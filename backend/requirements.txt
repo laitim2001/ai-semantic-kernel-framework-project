@@ -72,12 +72,17 @@ aiofiles>=23.0.0             # Async file operations
 email-validator>=2.0.0       # Pydantic EmailStr validation
 
 # ===========================================
-# Observability (Optional - Sprint 3)
+# Observability (Sprint 3 + Sprint 122)
 # ===========================================
 opentelemetry-api>=1.22.0
 opentelemetry-sdk>=1.22.0
 opentelemetry-instrumentation-fastapi>=0.43b0
+opentelemetry-instrumentation-httpx>=0.43b0       # Sprint 122: httpx auto-instrumentation
+opentelemetry-instrumentation-redis>=0.43b0       # Sprint 122: Redis auto-instrumentation
+opentelemetry-instrumentation-asyncpg>=0.43b0     # Sprint 122: asyncpg auto-instrumentation
 opentelemetry-exporter-otlp>=1.22.0
+opentelemetry-semantic-conventions>=0.43b0         # Sprint 122: Semantic conventions
+azure-monitor-opentelemetry-exporter>=1.0.0b21    # Sprint 122: Azure Monitor export
 prometheus-client>=0.19.0
 
 # ===========================================

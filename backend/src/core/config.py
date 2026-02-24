@@ -156,11 +156,18 @@ class Settings(BaseSettings):
     enable_sql_logging: bool = False
 
     # ==========================================================================
-    # Observability
+    # Observability (Sprint 122)
     # ==========================================================================
     otel_enabled: bool = False
     otel_service_name: str = "ipa-platform"
     otel_exporter_otlp_endpoint: str = "http://localhost:4317"
+    otel_sampling_rate: float = 1.0
+    applicationinsights_connection_string: str = ""
+
+    # ==========================================================================
+    # Structured Logging (Sprint 122)
+    # ==========================================================================
+    structured_logging_enabled: bool = False
 
     # ==========================================================================
     # Validators

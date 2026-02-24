@@ -133,7 +133,7 @@ jobs:
           docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:latest
 
   # ===========================================================================
-  # Deploy to Staging
+  # Deploy to Staging (Sprint 122: Backend + Frontend)
   # ===========================================================================
   deploy-staging:
     name: Deploy to Staging
@@ -147,28 +147,49 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to staging slot
+      - name: Deploy backend to staging slot
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_APP_NAME }}
           slot-name: staging
           images: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ needs.build-and-test.outputs.version }}
 
+      - name: Deploy frontend to staging slot
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: app-ipa-platform-frontend
+          slot-name: staging
+          images: ${{ env.ACR_NAME }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${{ needs.build-and-test.outputs.version }}
+
       - name: Wait for deployment
         run: sleep 60
 
-      - name: Health check staging
+      - name: Health check backend staging
         run: |
           for i in {1..10}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.AZURE_APP_NAME }}-staging.azurewebsites.net/health)
             if [ "$STATUS" -eq 200 ]; then
-              echo "Health check passed!"
+              echo "Backend health check passed!"
               exit 0
             fi
             echo "Attempt $i: Status $STATUS"
             sleep 10
           done
-          echo "Health check failed"
+          echo "Backend health check failed"
+          exit 1
+
+      - name: Health check frontend staging
+        run: |
+          for i in {1..5}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://app-ipa-platform-frontend-staging.azurewebsites.net/)
+            if [ "$STATUS" -eq 200 ]; then
+              echo "Frontend health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i: Status $STATUS"
+            sleep 10
+          done
+          echo "Frontend health check failed"
           exit 1
 
   # ===========================================================================
