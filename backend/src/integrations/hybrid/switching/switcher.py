@@ -273,7 +273,14 @@ class ModeSwitcher:
         self.config = config or SwitchConfig()
         self.trigger_detectors = trigger_detectors or []
         self.state_migrator = state_migrator
-        self.checkpoint_storage = checkpoint_storage or InMemoryCheckpointStorage()
+        if checkpoint_storage is not None:
+            self.checkpoint_storage = checkpoint_storage
+        else:
+            logger.warning(
+                "ModeSwitcher: using InMemoryCheckpointStorage. "
+                "Use create_switch_checkpoint_storage() factory for production."
+            )
+            self.checkpoint_storage = InMemoryCheckpointStorage()
         self.context_bridge = context_bridge
         self.metrics = SwitcherMetrics()
         self._transition_history: List[ModeTransition] = []

@@ -445,7 +445,14 @@ class AuditLogger:
             storage: Storage backend (defaults to in-memory)
             enabled: Enable/disable logging
         """
-        self._storage = storage or InMemoryAuditStorage()
+        if storage is not None:
+            self._storage = storage
+        else:
+            logger.warning(
+                "AuditLogger: using InMemoryAuditStorage. "
+                "Use create_audit_storage() factory for production."
+            )
+            self._storage = InMemoryAuditStorage()
         self._enabled = enabled
         self._handlers: List[AuditEventHandler] = []
 

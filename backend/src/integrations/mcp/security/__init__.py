@@ -16,7 +16,10 @@ from .audit import (
     AuditEventType,
     AuditLogger,
     AuditFilter,
+    AuditStorage,
+    InMemoryAuditStorage,
 )
+from .redis_audit import RedisAuditStorage
 from .command_whitelist import CommandWhitelist
 
 __all__ = [
@@ -32,6 +35,9 @@ __all__ = [
     "AuditEventType",
     "AuditLogger",
     "AuditFilter",
+    "AuditStorage",
+    "InMemoryAuditStorage",
+    "RedisAuditStorage",
     # Command Whitelist
     "CommandWhitelist",
 ]

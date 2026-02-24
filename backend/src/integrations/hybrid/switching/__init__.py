@@ -37,6 +37,9 @@ from src.integrations.hybrid.switching.switcher import (
     StateMigratorProtocol,
     TriggerDetectorProtocol,
 )
+from src.integrations.hybrid.switching.redis_checkpoint import (
+    RedisSwitchCheckpointStorage,
+)
 from src.integrations.hybrid.switching.migration import (
     MigrationConfig,
     MigrationError,
@@ -75,6 +78,7 @@ __all__ = [
     # Implementations
     "ModeSwitcher",
     "InMemoryCheckpointStorage",
+    "RedisSwitchCheckpointStorage",
     "StateMigrator",
     "MigrationValidator",
 ]

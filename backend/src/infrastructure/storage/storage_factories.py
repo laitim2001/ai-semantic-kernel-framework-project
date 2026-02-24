@@ -1,11 +1,14 @@
 """
-Domain-Specific Storage Factories — Sprint 119
+Domain-Specific Storage Factories — Sprint 119 + Sprint 120
 
 Environment-aware factory functions for each storage consumer:
 1. ApprovalStorage (HITL)
 2. DialogSessionStorage (Guided Dialog)
 3. AG-UI ThreadRepository + CacheProtocol
 4. ConversationMemoryStore (Orchestration Memory)
+5. SwitchCheckpointStorage (Mode Switcher) — Sprint 120
+6. AuditStorage (MCP Audit) — Sprint 120
+7. AgentFrameworkCheckpointStorage (MultiTurn) — Sprint 120
 
 Each factory follows the pattern:
   - production: Redis required
@@ -213,3 +216,116 @@ async def create_conversation_memory_store():
 
     _handle_redis_unavailable(backend, app_env, "ConversationMemoryStore")
     return InMemoryConversationMemoryStore()
+
+
+# =============================================================================
+# 5. SwitchCheckpointStorage Factory — Sprint 120
+# =============================================================================
+
+
+async def create_switch_checkpoint_storage():
+    """
+    Create CheckpointStorageProtocol instance for ModeSwitcher.
+
+    Returns:
+        CheckpointStorageProtocol (Redis or InMemory).
+    """
+    from src.integrations.hybrid.switching.switcher import InMemoryCheckpointStorage
+
+    backend, app_env = _get_env_config()
+
+    if _should_use_memory(backend, app_env):
+        logger.info("SwitchCheckpointStorage: using InMemory")
+        return InMemoryCheckpointStorage()
+
+    redis_client = await _get_redis_or_none()
+    if redis_client is not None:
+        from src.integrations.hybrid.switching.redis_checkpoint import (
+            RedisSwitchCheckpointStorage,
+        )
+        logger.info("SwitchCheckpointStorage: using Redis")
+        return RedisSwitchCheckpointStorage(redis_client=redis_client)
+
+    _handle_redis_unavailable(backend, app_env, "SwitchCheckpointStorage")
+    return InMemoryCheckpointStorage()
+
+
+# =============================================================================
+# 6. AuditStorage Factory — Sprint 120
+# =============================================================================
+
+
+async def create_audit_storage(max_size: int = 10000):
+    """
+    Create AuditStorage instance for MCP audit logging.
+
+    Args:
+        max_size: Maximum number of events to retain (default: 10000).
+
+    Returns:
+        AuditStorage (Redis or InMemory).
+    """
+    from src.integrations.mcp.security.audit import InMemoryAuditStorage
+
+    backend, app_env = _get_env_config()
+
+    if _should_use_memory(backend, app_env):
+        logger.info("AuditStorage: using InMemory")
+        return InMemoryAuditStorage(max_size=max_size)
+
+    redis_client = await _get_redis_or_none()
+    if redis_client is not None:
+        from src.integrations.mcp.security.redis_audit import RedisAuditStorage
+        logger.info("AuditStorage: using Redis")
+        return RedisAuditStorage(redis_client=redis_client, max_size=max_size)
+
+    _handle_redis_unavailable(backend, app_env, "AuditStorage")
+    return InMemoryAuditStorage(max_size=max_size)
+
+
+# =============================================================================
+# 7. AgentFrameworkCheckpointStorage Factory — Sprint 120
+# =============================================================================
+
+
+async def create_agent_framework_checkpoint_storage(
+    namespace: str = "multiturn",
+    ttl_seconds: int = 86400,
+):
+    """
+    Create BaseCheckpointStorage instance for Agent Framework multi-turn.
+
+    This wraps the existing RedisCheckpointStorage / InMemoryCheckpointStorage
+    from agent_framework.multiturn with environment-aware selection.
+
+    Args:
+        namespace: Storage namespace for key isolation.
+        ttl_seconds: TTL for checkpoint data in seconds.
+
+    Returns:
+        BaseCheckpointStorage (Redis or InMemory).
+    """
+    from agent_framework import InMemoryCheckpointStorage as AFInMemoryCheckpointStorage
+
+    backend, app_env = _get_env_config()
+
+    if _should_use_memory(backend, app_env):
+        logger.info("AgentFrameworkCheckpointStorage: using InMemory")
+        return AFInMemoryCheckpointStorage()
+
+    redis_client = await _get_redis_or_none()
+    if redis_client is not None:
+        from src.integrations.agent_framework.multiturn.checkpoint_storage import (
+            RedisCheckpointStorage as AFRedisCheckpointStorage,
+        )
+        logger.info("AgentFrameworkCheckpointStorage: using Redis")
+        return AFRedisCheckpointStorage(
+            redis_client=redis_client,
+            namespace=namespace,
+            ttl_seconds=ttl_seconds,
+        )
+
+    _handle_redis_unavailable(
+        backend, app_env, "AgentFrameworkCheckpointStorage"
+    )
+    return AFInMemoryCheckpointStorage()
