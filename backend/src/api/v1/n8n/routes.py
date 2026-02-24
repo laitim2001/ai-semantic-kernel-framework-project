@@ -27,6 +27,8 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 
 from .schemas import (
+    N8nCallbackPayload,
+    N8nCallbackResponse,
     N8nConfigResponse,
     N8nConfigUpdate,
     N8nConnectionStatus,
@@ -439,3 +441,82 @@ async def update_n8n_config(update: N8nConfigUpdate) -> N8nConfigResponse:
         api_key_configured=bool(os.environ.get("N8N_API_KEY", "")),
         webhook_hmac_configured=bool(_WEBHOOK_HMAC_SECRET),
     )
+
+
+# ---------------------------------------------------------------------------
+# Sprint 125: Mode 3 — Callback Store & Endpoints
+# ---------------------------------------------------------------------------
+
+# In-memory callback store (production should use Redis/DB)
+_callback_store: Dict[str, Dict[str, Any]] = {}
+
+
+@router.post(
+    "/callback",
+    response_model=N8nCallbackResponse,
+    status_code=status.HTTP_200_OK,
+    summary="n8n execution callback (Mode 3)",
+    description=(
+        "Receives callback notifications from n8n during bidirectional "
+        "orchestration (Mode 3). n8n calls this endpoint to report "
+        "execution progress, completion, or failure."
+    ),
+)
+async def n8n_callback(
+    request: Request,
+    payload: N8nCallbackPayload,
+    x_n8n_signature: Optional[str] = Header(None, alias="X-N8N-Signature"),
+) -> N8nCallbackResponse:
+    """Handle n8n execution callback for Mode 3 orchestration."""
+    # Verify HMAC signature
+    body = await request.body()
+    if not _verify_hmac_signature(body, x_n8n_signature):
+        logger.warning(
+            f"Callback HMAC verification failed for orchestration "
+            f"{payload.orchestration_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid callback signature",
+        )
+
+    logger.info(
+        f"n8n callback received: orchestration_id={payload.orchestration_id}, "
+        f"execution_id={payload.execution_id}, status={payload.status}"
+    )
+
+    # Store callback data for the orchestrator to consume
+    _callback_store[payload.orchestration_id] = {
+        "execution_id": payload.execution_id,
+        "status": payload.status,
+        "data": payload.data,
+        "error": payload.error,
+        "progress": payload.progress,
+        "metadata": payload.metadata,
+        "received_at": datetime.utcnow().isoformat(),
+    }
+
+    return N8nCallbackResponse(
+        success=True,
+        orchestration_id=payload.orchestration_id,
+        message=f"Callback accepted for orchestration {payload.orchestration_id}",
+    )
+
+
+@router.get(
+    "/callback/{orchestration_id}",
+    summary="Get callback result for an orchestration",
+    description=(
+        "Retrieve the latest callback data received from n8n "
+        "for a specific orchestration."
+    ),
+)
+async def get_callback_result(orchestration_id: str) -> Dict[str, Any]:
+    """Get stored callback result for an orchestration."""
+    result = _callback_store.get(orchestration_id)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No callback found for orchestration {orchestration_id}",
+        )
+    return {"orchestration_id": orchestration_id, "callback": result}

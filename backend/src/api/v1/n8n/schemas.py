@@ -210,3 +210,72 @@ class WebhookVerificationError(BaseModel):
     error: str = "WEBHOOK_VERIFICATION_FAILED"
     message: str
     details: Optional[Dict[str, Any]] = None
+
+
+# ---------------------------------------------------------------------------
+# Sprint 125: Mode 3 — Callback schemas
+# ---------------------------------------------------------------------------
+
+
+class N8nCallbackPayload(BaseModel):
+    """Callback payload from n8n during bidirectional orchestration (Mode 3).
+
+    n8n sends this when a workflow execution completes, fails, or needs
+    to report progress during an ongoing orchestration.
+
+    Attributes:
+        orchestration_id: IPA orchestration request ID
+        execution_id: n8n execution ID
+        status: Execution status from n8n
+        data: Result data from n8n workflow
+        error: Error information if execution failed
+        progress: Optional progress percentage (0-100)
+        metadata: Additional metadata from n8n
+    """
+
+    orchestration_id: str = Field(
+        ...,
+        min_length=1,
+        description="IPA orchestration request ID",
+    )
+    execution_id: str = Field(
+        ...,
+        min_length=1,
+        description="n8n execution ID",
+    )
+    status: str = Field(
+        ...,
+        description="Execution status (success, error, running, waiting)",
+    )
+    data: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Result data from n8n workflow",
+    )
+    error: Optional[str] = Field(
+        None,
+        description="Error message if execution failed",
+    )
+    progress: Optional[float] = Field(
+        None,
+        ge=0.0,
+        le=100.0,
+        description="Progress percentage (0-100)",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata from n8n",
+    )
+
+
+class N8nCallbackResponse(BaseModel):
+    """Response to an n8n callback.
+
+    Attributes:
+        success: Whether the callback was accepted
+        orchestration_id: The orchestration request ID
+        message: Status message
+    """
+
+    success: bool
+    orchestration_id: str
+    message: str
