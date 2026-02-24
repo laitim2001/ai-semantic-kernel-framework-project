@@ -34,6 +34,9 @@ from .storage import (
     ThreadRepository,
 )
 
+# Sprint 119: Redis storage implementations
+from .redis_storage import RedisCacheBackend, RedisThreadRepository
+
 __all__ = [
     # Manager
     "ThreadManager",
@@ -51,4 +54,7 @@ __all__ = [
     "InMemoryThreadRepository",
     "InMemoryCache",
     "CacheProtocol",
+    # Sprint 119: Redis implementations
+    "RedisCacheBackend",
+    "RedisThreadRepository",
 ]

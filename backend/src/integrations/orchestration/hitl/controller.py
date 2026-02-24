@@ -724,6 +724,9 @@ def create_hitl_controller(
 def _create_default_storage() -> ApprovalStorage:
     """Create the default approval storage based on environment.
 
+    Sprint 119: Uses centralized Redis client via storage_factories.
+    Falls back to InMemory for testing or when Redis is unavailable.
+
     - production: Redis (raises RuntimeError if unavailable)
     - development: Redis preferred, InMemory fallback with WARNING
     - testing: InMemory directly
@@ -735,12 +738,12 @@ def _create_default_storage() -> ApprovalStorage:
     if env == "testing":
         return InMemoryApprovalStorage()
 
-    # Try Redis
+    # Sprint 119: Use centralized Redis client
     try:
         redis_client = _get_redis_client()
         if redis_client is not None:
             from .approval_handler import RedisApprovalStorage
-            logger.info("HITL using Redis approval storage")
+            logger.info("HITL using Redis approval storage (centralized client)")
             return RedisApprovalStorage(redis_client=redis_client)
     except Exception as e:
         if env == "production":
@@ -768,7 +771,20 @@ def _create_default_storage() -> ApprovalStorage:
 
 
 def _get_redis_client():
-    """Get async Redis client for approval storage."""
+    """Get async Redis client for approval storage.
+
+    Sprint 119: Attempts centralized client first, falls back to direct creation.
+    """
+    # Try centralized client first (Sprint 119)
+    try:
+        from src.infrastructure.redis_client import is_redis_available
+        if is_redis_available():
+            from src.infrastructure.redis_client import _redis_client
+            return _redis_client
+    except ImportError:
+        pass
+
+    # Fallback: create directly (backwards compatibility)
     import os
 
     redis_host = os.environ.get("REDIS_HOST")
@@ -786,7 +802,7 @@ def _get_redis_client():
             password=redis_password,
             decode_responses=True,
         )
-        logger.debug(f"Redis client created: {redis_host}:{redis_port}")
+        logger.debug(f"Redis client created (direct): {redis_host}:{redis_port}")
         return client
     except ImportError:
         logger.warning("redis package not installed, cannot use Redis storage")

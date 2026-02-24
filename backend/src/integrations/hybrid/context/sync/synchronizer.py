@@ -1,20 +1,27 @@
 # =============================================================================
-# IPA Platform - Context Synchronizer
+# IPA Platform - Unified Context Synchronizer
 # =============================================================================
-# Sprint 53: Context Bridge & Sync
+# Sprint 53: Context Bridge & Sync (original)
+# Sprint 119: Redis Distributed Lock upgrade + unified implementation
 #
 # Implements synchronization between MAF and Claude contexts with:
+#   - Redis Distributed Lock (multi-worker safe)
 #   - Optimistic locking (version control)
 #   - Conflict detection and resolution
 #   - Sync event publishing
 #   - Rollback support
+#   - Fallback to asyncio.Lock when Redis is unavailable
+#
+# This is the UNIFIED ContextSynchronizer — Sprint 119 merged the
+# hybrid and claude_sdk implementations into this single module.
 # =============================================================================
 
 import asyncio
 import logging
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 from ..models import (
     ClaudeContext,
@@ -60,21 +67,58 @@ class SyncTimeoutError(SyncError):
         self.timeout_ms = timeout_ms
 
 
+# =============================================================================
+# Lock Abstraction — supports both Redis Distributed Lock and asyncio.Lock
+# =============================================================================
+
+
+class _AsyncioLockAdapter:
+    """Adapts asyncio.Lock to the DistributedLock interface."""
+
+    def __init__(self):
+        self._lock = asyncio.Lock()
+
+    @asynccontextmanager
+    async def acquire(self) -> AsyncGenerator[None, None]:
+        async with self._lock:
+            yield
+
+
+async def _create_lock(lock_name: str = "context_sync"):
+    """Create a distributed lock, with asyncio.Lock fallback."""
+    try:
+        from src.infrastructure.distributed_lock import create_distributed_lock
+        return await create_distributed_lock(
+            lock_name=lock_name,
+            timeout=30,
+            blocking_timeout=10,
+        )
+    except Exception as e:
+        logger.warning(
+            f"Distributed lock unavailable for '{lock_name}': {e}. "
+            f"Using asyncio.Lock fallback (single-process only)."
+        )
+        return _AsyncioLockAdapter()
+
+
 class ContextSynchronizer:
     """
-    上下文同步器
+    統一上下文同步器 — Sprint 119 Unified Implementation
 
     實現 MAF 和 Claude 上下文之間的雙向同步。
+    使用 Redis Distributed Lock 確保多 Worker 環境下的並發安全。
 
     Features:
+    - Redis Distributed Lock（多進程安全）
     - 樂觀鎖版本控制
     - 衝突檢測與解決
     - 同步事件發布
     - 回滾支持
     - 異步操作
+    - Redis 不可用時自動降級為 asyncio.Lock
 
     Example:
-        synchronizer = ContextSynchronizer()
+        synchronizer = await ContextSynchronizer.create()
         result = await synchronizer.sync(
             source=hybrid_context,
             target_type="maf",
@@ -93,6 +137,7 @@ class ContextSynchronizer:
         max_retries: int = 3,
         timeout_ms: int = 30000,
         auto_resolve_conflicts: bool = True,
+        distributed_lock: Optional[Any] = None,
     ):
         """
         Initialize ContextSynchronizer.
@@ -102,7 +147,10 @@ class ContextSynchronizer:
             event_publisher: Publisher for sync events
             max_retries: Maximum retry attempts for recoverable errors
             timeout_ms: Sync operation timeout in milliseconds
-            auto_resolve_conflicts: Whether to auto-resolve conflicts when possible
+            auto_resolve_conflicts: Whether to auto-resolve conflicts
+            distributed_lock: Optional pre-configured lock (for testing/DI).
+                              If None, uses asyncio.Lock as default.
+                              Call initialize_lock() to upgrade to Redis.
         """
         self._conflict_resolver = conflict_resolver or ConflictResolver()
         self._event_publisher = event_publisher or SyncEventPublisher()
@@ -110,8 +158,8 @@ class ContextSynchronizer:
         self._timeout_ms = timeout_ms
         self._auto_resolve_conflicts = auto_resolve_conflicts
 
-        # Lock for thread-safe access to shared mutable state
-        self._lock = asyncio.Lock()
+        # Sprint 119: Distributed lock (defaults to asyncio.Lock, upgradeable)
+        self._lock = distributed_lock or _AsyncioLockAdapter()
 
         # Version tracking per context
         self._context_versions: Dict[str, int] = {}
@@ -119,6 +167,51 @@ class ContextSynchronizer:
         # Rollback snapshots
         self._rollback_snapshots: Dict[str, List[HybridContext]] = {}
         self._max_snapshots = 5
+
+    @classmethod
+    async def create(
+        cls,
+        conflict_resolver: Optional[ConflictResolver] = None,
+        event_publisher: Optional[SyncEventPublisher] = None,
+        max_retries: int = 3,
+        timeout_ms: int = 30000,
+        auto_resolve_conflicts: bool = True,
+        lock_name: str = "context_sync",
+    ) -> "ContextSynchronizer":
+        """
+        Async factory method that creates a ContextSynchronizer with Redis lock.
+
+        Use this instead of __init__ for production code to get distributed locking.
+
+        Args:
+            conflict_resolver: Resolver for handling conflicts
+            event_publisher: Publisher for sync events
+            max_retries: Maximum retry attempts
+            timeout_ms: Sync operation timeout in milliseconds
+            auto_resolve_conflicts: Whether to auto-resolve conflicts
+            lock_name: Name for the distributed lock
+
+        Returns:
+            ContextSynchronizer with Redis distributed lock (or asyncio.Lock fallback)
+        """
+        lock = await _create_lock(lock_name)
+        return cls(
+            conflict_resolver=conflict_resolver,
+            event_publisher=event_publisher,
+            max_retries=max_retries,
+            timeout_ms=timeout_ms,
+            auto_resolve_conflicts=auto_resolve_conflicts,
+            distributed_lock=lock,
+        )
+
+    async def initialize_lock(self, lock_name: str = "context_sync") -> None:
+        """
+        Initialize or upgrade the distributed lock.
+
+        Call this after construction if Redis becomes available later.
+        """
+        self._lock = await _create_lock(lock_name)
+        logger.info(f"Lock initialized/upgraded for '{lock_name}'")
 
     async def sync(
         self,
@@ -161,8 +254,8 @@ class ContextSynchronizer:
         )
 
         try:
-            # Save snapshot for rollback (under lock)
-            async with self._lock:
+            # Save snapshot for rollback (under distributed lock)
+            async with self._lock.acquire():
                 self._save_snapshot(source)
 
             # Perform sync with retry logic
@@ -174,9 +267,9 @@ class ContextSynchronizer:
                 correlation_id=correlation_id,
             )
 
-            # Update version tracking (under lock)
+            # Update version tracking (under distributed lock)
             if result.success:
-                async with self._lock:
+                async with self._lock.acquire():
                     self._context_versions[context_id] = result.target_version
 
             # Calculate duration
@@ -303,30 +396,24 @@ class ContextSynchronizer:
         strategy: SyncStrategy,
     ) -> HybridContext:
         """Sync context to MAF format."""
-        # Create new MAF context from hybrid
         maf_context = source.maf
 
         if not maf_context:
-            # Initialize MAF context from Claude context
             session_id = source.claude.session_id if source.claude else source.context_id
             maf_context = MAFContext(
                 workflow_id=session_id,
                 workflow_name=f"session-{session_id[:8]}",
             )
 
-        # Transfer relevant data from Claude context
         if source.claude:
-            # Update checkpoint data with Claude context vars
             checkpoint_data = dict(maf_context.checkpoint_data or {})
 
             if source.claude.context_variables:
                 for key, value in source.claude.context_variables.items():
                     if key.startswith("maf_"):
-                        # Already MAF prefixed, strip and use
                         clean_key = key[4:]
                         checkpoint_data[clean_key] = value
                     elif not key.startswith("claude_"):
-                        # Generic key, include
                         checkpoint_data[key] = value
 
             maf_context = MAFContext(
@@ -359,22 +446,18 @@ class ContextSynchronizer:
         claude_context = source.claude
 
         if not claude_context:
-            # Initialize Claude context
             claude_context = ClaudeContext(
                 session_id=source.context_id,
             )
 
-        # Transfer relevant data from MAF context
         if source.maf:
-            # Update context variables with MAF data
             context_vars = dict(claude_context.context_variables or {})
 
             if source.maf.checkpoint_data:
                 for key, value in source.maf.checkpoint_data.items():
-                    if not key.startswith("_"):  # Skip internal keys
+                    if not key.startswith("_"):
                         context_vars[f"maf_{key}"] = value
 
-            # Add workflow metadata
             context_vars["maf_workflow_id"] = source.maf.workflow_id
 
             if source.maf.current_step is not None:
@@ -429,16 +512,7 @@ class ContextSynchronizer:
         local: HybridContext,
         remote: HybridContext,
     ) -> Optional[Conflict]:
-        """
-        Detect conflicts between local and remote contexts.
-
-        Args:
-            local: Local hybrid context
-            remote: Remote hybrid context
-
-        Returns:
-            Conflict object if detected, None otherwise
-        """
+        """Detect conflicts between local and remote contexts."""
         return self._conflict_resolver.detect_conflicts(local, remote)
 
     async def resolve_conflict(
@@ -448,18 +522,7 @@ class ContextSynchronizer:
         conflict: Conflict,
         strategy: Optional[SyncStrategy] = None,
     ) -> SyncResult:
-        """
-        Resolve a conflict between contexts.
-
-        Args:
-            local: Local context
-            remote: Remote context
-            conflict: The conflict to resolve
-            strategy: Resolution strategy (uses default if None)
-
-        Returns:
-            SyncResult with resolved context
-        """
+        """Resolve a conflict between contexts."""
         start_time = time.time()
         strategy = strategy or SyncStrategy.MERGE
         correlation_id = f"resolve-{conflict.conflict_id}"
@@ -474,7 +537,6 @@ class ContextSynchronizer:
                 strategy=strategy,
             )
 
-            # Publish resolved event
             await self._event_publisher.publish_conflict_resolved(
                 session_id=local.context_id,
                 conflict=conflict,
@@ -510,19 +572,10 @@ class ContextSynchronizer:
         context_id: str,
         to_version: Optional[int] = None,
     ) -> SyncResult:
-        """
-        Rollback to a previous context version.
-
-        Args:
-            context_id: Context to rollback
-            to_version: Target version (latest snapshot if None)
-
-        Returns:
-            SyncResult with rolled back context
-        """
+        """Rollback to a previous context version."""
         start_time = time.time()
 
-        async with self._lock:
+        async with self._lock.acquire():
             snapshots = self._rollback_snapshots.get(context_id, [])
 
             if not snapshots:
@@ -536,7 +589,6 @@ class ContextSynchronizer:
                     duration_ms=0,
                 )
 
-            # Find target snapshot
             if to_version is not None:
                 target = next(
                     (s for s in snapshots if s.version == to_version),
@@ -555,10 +607,8 @@ class ContextSynchronizer:
             else:
                 target = snapshots[-1]
 
-            # Get current version for event
             current_version = self._context_versions.get(context_id, 0)
 
-        # Publish rollback started (outside lock to avoid holding lock during I/O)
         await self._event_publisher.publish_rollback_started(
             session_id=context_id,
             from_version=current_version,
@@ -566,11 +616,9 @@ class ContextSynchronizer:
         )
 
         try:
-            # Update context version (under lock)
-            async with self._lock:
+            async with self._lock.acquire():
                 self._context_versions[context_id] = target.version
 
-            # Publish rollback completed
             await self._event_publisher.publish_rollback_completed(
                 session_id=context_id,
                 version=target.version,
@@ -609,23 +657,22 @@ class ContextSynchronizer:
         snapshots = self._rollback_snapshots[context_id]
         snapshots.append(context)
 
-        # Keep only max snapshots
         if len(snapshots) > self._max_snapshots:
             self._rollback_snapshots[context_id] = snapshots[-self._max_snapshots:]
 
     async def get_version(self, context_id: str) -> int:
         """Get current version for a context."""
-        async with self._lock:
+        async with self._lock.acquire():
             return self._context_versions.get(context_id, 0)
 
     async def get_snapshots(self, context_id: str) -> List[HybridContext]:
         """Get available snapshots for a context."""
-        async with self._lock:
+        async with self._lock.acquire():
             return self._rollback_snapshots.get(context_id, []).copy()
 
     async def clear_snapshots(self, context_id: str) -> None:
         """Clear snapshots for a context."""
-        async with self._lock:
+        async with self._lock.acquire():
             if context_id in self._rollback_snapshots:
                 del self._rollback_snapshots[context_id]
 

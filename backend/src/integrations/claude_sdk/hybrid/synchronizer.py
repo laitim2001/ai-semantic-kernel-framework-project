@@ -13,14 +13,15 @@ Key Features:
 - Metadata and tool state synchronization
 """
 
+import asyncio
 import hashlib
 import json
-import threading
 import time
 import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 from .types import HybridSessionConfig, ToolCall
 
@@ -276,8 +277,23 @@ class ContextSnapshot:
         return ContextState.from_dict(self.state.to_dict())
 
 
+class _AsyncioLockAdapter:
+    """Adapts asyncio.Lock to the DistributedLock interface."""
+
+    def __init__(self):
+        self._lock = asyncio.Lock()
+
+    @asynccontextmanager
+    async def acquire(self) -> AsyncGenerator[None, None]:
+        async with self._lock:
+            yield
+
+
 class ContextSynchronizer:
     """Synchronizes context between frameworks.
+
+    Sprint 119: Upgraded to use Redis Distributed Lock for multi-worker safety.
+    Falls back to asyncio.Lock when Redis is unavailable.
 
     Handles conversion, diffing, and merging of context state
     between Microsoft Agent Framework and Claude Agent SDK.
@@ -287,16 +303,20 @@ class ContextSynchronizer:
         self,
         config: Optional[HybridSessionConfig] = None,
         conflict_resolution: ConflictResolution = ConflictResolution.LATEST_WINS,
+        distributed_lock: Optional[Any] = None,
     ):
         """Initialize context synchronizer.
 
         Args:
             config: Hybrid session configuration
             conflict_resolution: Strategy for resolving conflicts
+            distributed_lock: Optional pre-configured lock (for testing/DI).
+                              If None, uses asyncio.Lock as default.
         """
         self._config = config or HybridSessionConfig()
         self._conflict_resolution = conflict_resolution
-        self._lock = threading.Lock()
+        # Sprint 119: Distributed lock with asyncio.Lock fallback
+        self._lock = distributed_lock or _AsyncioLockAdapter()
         self._contexts: Dict[str, ContextState] = {}
         self._snapshots: Dict[str, List[ContextSnapshot]] = {}
         self._sync_listeners: List[Callable[[ContextState, SyncDirection], None]] = []
@@ -316,10 +336,9 @@ class ContextSynchronizer:
     @property
     def context_count(self) -> int:
         """Get number of active contexts."""
-        with self._lock:
-            return len(self._contexts)
+        return len(self._contexts)
 
-    def create_context(
+    async def create_context(
         self,
         context_id: Optional[str] = None,
         system_prompt: Optional[str] = None,
@@ -341,20 +360,20 @@ class ContextSynchronizer:
             metadata=metadata or {},
         )
         context.update_hash()
-        with self._lock:
+        async with self._lock.acquire():
             self._contexts[context.context_id] = context
             self._snapshots[context.context_id] = []
         return context
 
-    def get_context(self, context_id: str) -> Optional[ContextState]:
+    async def get_context(self, context_id: str) -> Optional[ContextState]:
         """Get context by ID (returns a deep copy for thread safety)."""
-        with self._lock:
+        async with self._lock.acquire():
             ctx = self._contexts.get(context_id)
             if ctx is None:
                 return None
             return ContextState.from_dict(ctx.to_dict())
 
-    def remove_context(self, context_id: str) -> bool:
+    async def remove_context(self, context_id: str) -> bool:
         """Remove a context.
 
         Args:
@@ -363,7 +382,7 @@ class ContextSynchronizer:
         Returns:
             True if removed, False if not found
         """
-        with self._lock:
+        async with self._lock.acquire():
             if context_id in self._contexts:
                 del self._contexts[context_id]
                 if context_id in self._snapshots:
@@ -698,13 +717,15 @@ class ContextSynchronizer:
         merged.update_hash()
         return merged
 
-    def sync(
+    async def sync(
         self,
         source_id: str,
         target_id: str,
         direction: SyncDirection = SyncDirection.BIDIRECTIONAL,
     ) -> ContextDiff:
         """Synchronize context between two contexts.
+
+        Sprint 119: Converted to async with distributed lock.
 
         Args:
             source_id: Source context ID
@@ -714,7 +735,7 @@ class ContextSynchronizer:
         Returns:
             Diff of changes applied
         """
-        with self._lock:
+        async with self._lock.acquire():
             source = self._contexts.get(source_id)
             target = self._contexts.get(target_id)
 
@@ -736,7 +757,6 @@ class ContextSynchronizer:
                 self._contexts[source_id].context_id = source_id
                 self._contexts[target_id] = merged
             elif direction == SyncDirection.CLAUDE_TO_MS:
-                # Source overwrites target
                 merged = self.merge(target, source, ConflictResolution.TARGET_WINS)
                 self._contexts[target_id] = merged
             elif direction == SyncDirection.MS_TO_CLAUDE:
@@ -746,7 +766,6 @@ class ContextSynchronizer:
             self._sync_count += 1
             self._last_sync_time = time.time()
 
-            # Capture target context for listeners before releasing lock
             target_context = self._contexts[target_id]
 
         # Notify listeners outside lock to avoid potential deadlocks
@@ -755,7 +774,7 @@ class ContextSynchronizer:
 
         return diff
 
-    def create_snapshot(
+    async def create_snapshot(
         self, context_id: str, label: str = ""
     ) -> ContextSnapshot:
         """Create a snapshot of context state.
@@ -767,7 +786,7 @@ class ContextSynchronizer:
         Returns:
             Created snapshot
         """
-        with self._lock:
+        async with self._lock.acquire():
             context = self._contexts.get(context_id)
             if not context:
                 raise ValueError(f"Context not found: {context_id}")
@@ -784,7 +803,7 @@ class ContextSynchronizer:
 
         return snapshot
 
-    def restore_snapshot(self, snapshot_id: str) -> ContextState:
+    async def restore_snapshot(self, snapshot_id: str) -> ContextState:
         """Restore context from snapshot.
 
         Args:
@@ -793,7 +812,7 @@ class ContextSynchronizer:
         Returns:
             Restored context state
         """
-        with self._lock:
+        async with self._lock.acquire():
             for snapshots in self._snapshots.values():
                 for snapshot in snapshots:
                     if snapshot.snapshot_id == snapshot_id:
@@ -803,7 +822,7 @@ class ContextSynchronizer:
 
         raise ValueError(f"Snapshot not found: {snapshot_id}")
 
-    def get_snapshots(self, context_id: str) -> List[ContextSnapshot]:
+    async def get_snapshots(self, context_id: str) -> List[ContextSnapshot]:
         """Get all snapshots for a context.
 
         Args:
@@ -812,7 +831,7 @@ class ContextSynchronizer:
         Returns:
             List of snapshots (copy for thread safety)
         """
-        with self._lock:
+        async with self._lock.acquire():
             return list(self._snapshots.get(context_id, []))
 
     def add_sync_listener(

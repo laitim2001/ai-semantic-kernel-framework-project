@@ -774,6 +774,8 @@ class PersistentConversationContextManager(ConversationContextManager):
             refinement_rules=refinement_rules,
             completeness_rules=completeness_rules,
         )
+        # Sprint 119: Default remains InMemory for backwards compatibility.
+        # Use create_dialog_session_storage() factory for Redis in production.
         self.storage = storage or InMemoryDialogSessionStorage()
         self.config = config or DialogSessionConfig()
 
