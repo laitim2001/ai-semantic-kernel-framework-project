@@ -2,14 +2,17 @@
 ServiceNow Webhook API Routes.
 
 Sprint 114: AD 場景基礎建設 (Phase 32)
-Provides the webhook endpoint for receiving ServiceNow RITM events.
+Sprint 126: IT Incident Handler (Phase 34)
 
-Endpoints:
-    POST /api/v1/orchestration/webhooks/servicenow
+Provides webhook endpoints for receiving ServiceNow events:
+    POST /api/v1/orchestration/webhooks/servicenow          — RITM events
+    POST /api/v1/orchestration/webhooks/servicenow/incident — INC events
 """
 
 import logging
 import os
+import uuid
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, status
@@ -23,6 +26,13 @@ from src.integrations.orchestration.input.servicenow_webhook import (
 )
 from src.integrations.orchestration.input.ritm_intent_mapper import (
     RITMIntentMapper,
+)
+from src.integrations.orchestration.input.incident_handler import (
+    IncidentHandler,
+    ServiceNowINCEvent,
+)
+from src.api.v1.orchestration.schemas import (
+    IncidentWebhookResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -71,6 +81,7 @@ class WebhookErrorResponse(BaseModel):
 
 _webhook_receiver: Optional[ServiceNowWebhookReceiver] = None
 _intent_mapper: Optional[RITMIntentMapper] = None
+_incident_handler: Optional[IncidentHandler] = None
 
 
 def get_webhook_receiver() -> ServiceNowWebhookReceiver:
@@ -106,6 +117,18 @@ def get_intent_mapper() -> RITMIntentMapper:
     if _intent_mapper is None:
         _intent_mapper = RITMIntentMapper()
     return _intent_mapper
+
+
+def get_incident_handler() -> IncidentHandler:
+    """Get or create the Incident handler singleton.
+
+    Returns:
+        Configured IncidentHandler instance
+    """
+    global _incident_handler
+    if _incident_handler is None:
+        _incident_handler = IncidentHandler()
+    return _incident_handler
 
 
 # ---------------------------------------------------------------------------
@@ -217,3 +240,115 @@ async def webhook_health() -> Dict[str, Any]:
         "auth_type": receiver._auth_config.auth_type,
         "ip_whitelist_configured": len(receiver._auth_config.allowed_ips) > 0,
     }
+
+
+# ---------------------------------------------------------------------------
+# Sprint 126: Incident (INC) Webhook Endpoint
+# ---------------------------------------------------------------------------
+
+
+@webhook_router.post(
+    "/servicenow/incident",
+    response_model=IncidentWebhookResponse,
+    summary="接收 ServiceNow Incident (INC) Webhook",
+    description=(
+        "接收並處理 ServiceNow Incident (INC) 事件，"
+        "自動分類事件子類別、評估風險等級，"
+        "並觸發 IPA 事件分析管線。"
+    ),
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def receive_servicenow_incident(
+    request: Request,
+    payload: ServiceNowINCEvent,
+    x_servicenow_secret: Optional[str] = Header(
+        None, alias="X-ServiceNow-Secret"
+    ),
+) -> IncidentWebhookResponse:
+    """Receive and process a ServiceNow Incident webhook event.
+
+    Flow:
+        1. Validate authentication (shared secret + IP)
+        2. Parse INC event payload via IncidentHandler
+        3. Classify incident subcategory
+        4. Map priority to risk level
+        5. Return tracking ID + classification results
+
+    Args:
+        request: FastAPI request object
+        payload: Validated INC event data
+        x_servicenow_secret: Shared secret header
+
+    Returns:
+        IncidentWebhookResponse with tracking ID, subcategory, risk level
+
+    Raises:
+        HTTPException: On authentication failure or processing error
+    """
+    receiver = get_webhook_receiver()
+    handler = get_incident_handler()
+
+    # Extract client IP
+    client_ip = None
+    if request.client:
+        client_ip = request.client.host
+
+    try:
+        # Validate request (reuse RITM auth infrastructure)
+        await receiver.validate_request(
+            secret_header=x_servicenow_secret,
+            client_ip=client_ip,
+        )
+
+        # Verify handler can process this payload
+        if not handler.can_handle(payload.model_dump()):
+            raise ValueError(
+                f"Payload does not look like a ServiceNow INC event: "
+                f"number={payload.number}"
+            )
+
+        # Process via IncidentHandler → RoutingRequest
+        routing_request = await handler.process(payload.model_dump())
+
+        # Build response from routing request context
+        ctx = routing_request.context or {}
+        tracking_id = routing_request.request_id or str(uuid.uuid4())
+        now_str = datetime.utcnow().isoformat() + "Z"
+
+        logger.info(
+            f"Incident webhook accepted: {payload.number} → "
+            f"tracking_id={tracking_id}, "
+            f"subcategory={ctx.get('subcategory', '')}, "
+            f"risk_level={ctx.get('risk_level', 'medium')}"
+        )
+
+        return IncidentWebhookResponse(
+            status="accepted",
+            tracking_id=tracking_id,
+            incident_number=payload.number,
+            subcategory=ctx.get("subcategory", ""),
+            risk_level=ctx.get("risk_level", "medium"),
+            intent="incident",
+            received_at=now_str,
+        )
+
+    except WebhookValidationError as e:
+        logger.warning(f"Incident webhook validation failed: {e}")
+        raise HTTPException(
+            status_code=e.status_code,
+            detail={"error": "WEBHOOK_VALIDATION_ERROR", "message": str(e)},
+        )
+    except ValueError as e:
+        logger.error(f"Incident payload processing failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "INVALID_PAYLOAD", "message": str(e)},
+        )
+    except Exception as e:
+        logger.error(
+            f"Incident webhook processing failed: {e}", exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "PROCESSING_ERROR", "message": "Internal error"},
+        )

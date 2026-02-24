@@ -306,3 +306,34 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error code")
     message: str = Field(..., description="Error message")
     details: Optional[Dict[str, Any]] = Field(default=None, description="Error details")
+
+
+# =============================================================================
+# Sprint 126: Incident Webhook Schemas
+# =============================================================================
+
+
+class IncidentWebhookResponse(BaseModel):
+    """Response for ServiceNow Incident webhook acceptance."""
+
+    status: str = Field(..., description="Processing status")
+    tracking_id: str = Field(..., description="Unique tracking identifier")
+    incident_number: str = Field(..., description="ServiceNow INC number")
+    subcategory: str = Field(default="", description="Classified incident subcategory")
+    risk_level: str = Field(default="medium", description="Assessed risk level")
+    intent: str = Field(default="incident", description="Mapped IPA intent")
+    received_at: str = Field(..., description="Reception timestamp")
+
+
+class IncidentAnalysisTriggerResponse(BaseModel):
+    """Response when incident analysis pipeline is triggered."""
+
+    status: str = Field(..., description="Pipeline status")
+    tracking_id: str = Field(..., description="Tracking identifier")
+    incident_number: str = Field(..., description="INC number")
+    analysis_id: Optional[str] = Field(None, description="Analysis task ID")
+    subcategory: str = Field(default="", description="Incident subcategory")
+    risk_level: str = Field(default="medium", description="Risk level")
+    pipeline_stage: str = Field(
+        default="queued", description="Current pipeline stage"
+    )

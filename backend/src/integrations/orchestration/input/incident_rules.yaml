@@ -1,0 +1,384 @@
+# =============================================================================
+# IT Incident Pattern Matcher Rules
+#
+# Sprint 126: Story 126-1 — 30+ rules for incident classification
+# Used by PatternMatcher to classify incoming IT incidents
+#
+# Rule format follows existing PatternMatcher YAML structure:
+#   id: unique rule identifier
+#   category: intent category (always "incident" here)
+#   sub_intent: specific incident subcategory
+#   patterns: list of regex patterns (case-insensitive)
+#   priority: rule priority (higher = checked first)
+#   workflow_type: recommended workflow type
+#   risk_level: default risk level for matching incidents
+# =============================================================================
+
+rules:
+  # ===========================================================================
+  # Network Incident Rules (6 rules)
+  # ===========================================================================
+
+  - id: inc_network_switch_failure
+    category: incident
+    sub_intent: network_switch_failure
+    patterns:
+      - "switch.*(fail|down|故障|異常)"
+      - "交換機.*(fail|down|故障)"
+    priority: 100
+    workflow_type: magentic
+    risk_level: critical
+    description: "Network switch failure or outage"
+
+  - id: inc_network_router_failure
+    category: incident
+    sub_intent: network_router_failure
+    patterns:
+      - "router.*(fail|down|故障|異常)"
+      - "路由器.*(fail|down|故障)"
+    priority: 100
+    workflow_type: magentic
+    risk_level: critical
+    description: "Network router failure or outage"
+
+  - id: inc_network_connectivity_loss
+    category: incident
+    sub_intent: network_connectivity_loss
+    patterns:
+      - "(connectivity|connection).*(loss|lost|down|fail)"
+      - "network.*(down|outage|unreachable)"
+      - "網路.*(中斷|故障|連線失敗)"
+    priority: 95
+    workflow_type: magentic
+    risk_level: high
+    description: "Network connectivity loss"
+
+  - id: inc_network_dns_failure
+    category: incident
+    sub_intent: network_dns_failure
+    patterns:
+      - "dns.*(fail|down|不通|無法解析)"
+      - "name.resolution.*(fail|error)"
+      - "DNS.*(故障|異常)"
+    priority: 90
+    workflow_type: sequential
+    risk_level: high
+    description: "DNS resolution failure"
+
+  - id: inc_network_vpn_issue
+    category: incident
+    sub_intent: network_vpn_issue
+    patterns:
+      - "vpn.*(fail|disconnect|error|無法連線)"
+      - "VPN.*(故障|斷線)"
+    priority: 80
+    workflow_type: sequential
+    risk_level: medium
+    description: "VPN connectivity issue"
+
+  - id: inc_network_bandwidth
+    category: incident
+    sub_intent: network_bandwidth
+    patterns:
+      - "(bandwidth|頻寬).*(exhaust|full|saturate|滿載)"
+      - "network.*(slow|latency|延遲)"
+    priority: 75
+    workflow_type: sequential
+    risk_level: medium
+    description: "Network bandwidth or latency issue"
+
+  # ===========================================================================
+  # Server Incident Rules (5 rules)
+  # ===========================================================================
+
+  - id: inc_server_down
+    category: incident
+    sub_intent: server_down
+    patterns:
+      - "server.*(down|unresponsive|unreachable|crash)"
+      - "(主機|伺服器).*(當機|故障|無回應)"
+    priority: 100
+    workflow_type: magentic
+    risk_level: critical
+    description: "Server down or unresponsive"
+
+  - id: inc_server_cpu_high
+    category: incident
+    sub_intent: server_cpu_high
+    patterns:
+      - "cpu.*(100%|high|spike|exhaust|過高)"
+      - "processor.*(overload|utilization)"
+      - "CPU.*(使用率過高|滿載)"
+    priority: 85
+    workflow_type: sequential
+    risk_level: high
+    description: "High CPU utilization"
+
+  - id: inc_server_memory_full
+    category: incident
+    sub_intent: server_memory_full
+    patterns:
+      - "(memory|ram).*(full|exhaust|leak|不足)"
+      - "(out.of.memory|oom|記憶體不足)"
+    priority: 85
+    workflow_type: sequential
+    risk_level: high
+    description: "Memory exhaustion or leak"
+
+  - id: inc_server_reboot
+    category: incident
+    sub_intent: server_unexpected_reboot
+    patterns:
+      - "(unexpected|unplanned).*(reboot|restart)"
+      - "server.*(reboot|restart).*unexpected"
+      - "(意外|非預期).*(重啟|重開機)"
+    priority: 80
+    workflow_type: sequential
+    risk_level: high
+    description: "Unexpected server reboot"
+
+  - id: inc_server_hardware
+    category: incident
+    sub_intent: server_hardware_failure
+    patterns:
+      - "(hardware|硬體).*(fail|error|故障)"
+      - "(disk|raid).*(fail|degrade|故障)"
+    priority: 90
+    workflow_type: magentic
+    risk_level: critical
+    description: "Server hardware failure"
+
+  # ===========================================================================
+  # Application Incident Rules (5 rules)
+  # ===========================================================================
+
+  - id: inc_app_crash
+    category: incident
+    sub_intent: application_crash
+    patterns:
+      - "(application|app|service).*(crash|down|fail|中斷)"
+      - "(應用程式|服務).*(當機|故障|中斷)"
+    priority: 90
+    workflow_type: magentic
+    risk_level: high
+    description: "Application crash or service failure"
+
+  - id: inc_app_error_500
+    category: incident
+    sub_intent: application_error
+    patterns:
+      - "(500|502|503|504).*(error|internal server)"
+      - "http.*(5\\d{2})"
+      - "(internal server error|bad gateway|service unavailable)"
+    priority: 85
+    workflow_type: sequential
+    risk_level: high
+    description: "HTTP 5xx server error"
+
+  - id: inc_app_timeout
+    category: incident
+    sub_intent: application_timeout
+    patterns:
+      - "(timeout|timed?.out|逾時)"
+      - "(response time|延遲).*(exceed|超過)"
+    priority: 75
+    workflow_type: sequential
+    risk_level: medium
+    description: "Application timeout or slow response"
+
+  - id: inc_app_deployment_fail
+    category: incident
+    sub_intent: deployment_failure
+    patterns:
+      - "(deploy|deployment|release).*(fail|error|rollback)"
+      - "(部署|發佈).*(失敗|錯誤)"
+    priority: 80
+    workflow_type: sequential
+    risk_level: high
+    description: "Deployment or release failure"
+
+  - id: inc_app_config_error
+    category: incident
+    sub_intent: configuration_error
+    patterns:
+      - "(config|configuration).*(error|invalid|missing)"
+      - "(設定|配置).*(錯誤|遺失)"
+    priority: 70
+    workflow_type: simple
+    risk_level: medium
+    description: "Application configuration error"
+
+  # ===========================================================================
+  # Database Incident Rules (3 rules)
+  # ===========================================================================
+
+  - id: inc_db_down
+    category: incident
+    sub_intent: database_down
+    patterns:
+      - "(database|db).*(down|fail|unreachable|crash)"
+      - "資料庫.*(故障|當機|無法連線)"
+    priority: 100
+    workflow_type: magentic
+    risk_level: critical
+    description: "Database service failure"
+
+  - id: inc_db_connection_pool
+    category: incident
+    sub_intent: database_connection_pool
+    patterns:
+      - "(connection pool|連線池).*(exhaust|full|depleted)"
+      - "(too many connections|max connections)"
+    priority: 85
+    workflow_type: sequential
+    risk_level: high
+    description: "Database connection pool exhaustion"
+
+  - id: inc_db_replication_lag
+    category: incident
+    sub_intent: database_replication_lag
+    patterns:
+      - "(replication|sync).*(lag|delay|behind)"
+      - "(同步|複寫).*(延遲|落後)"
+    priority: 75
+    workflow_type: sequential
+    risk_level: medium
+    description: "Database replication lag"
+
+  # ===========================================================================
+  # Security Incident Rules (3 rules)
+  # ===========================================================================
+
+  - id: inc_security_breach
+    category: incident
+    sub_intent: security_breach
+    patterns:
+      - "(security breach|資安事件|入侵|unauthorized access)"
+      - "(malware|virus|ransomware|惡意程式)"
+    priority: 100
+    workflow_type: magentic
+    risk_level: critical
+    description: "Security breach or malware detection"
+
+  - id: inc_security_suspicious
+    category: incident
+    sub_intent: security_suspicious_activity
+    patterns:
+      - "(suspicious|異常).*(activity|behavior|login|登入)"
+      - "(brute.force|暴力破解)"
+    priority: 90
+    workflow_type: magentic
+    risk_level: high
+    description: "Suspicious activity detected"
+
+  - id: inc_security_vulnerability
+    category: incident
+    sub_intent: security_vulnerability
+    patterns:
+      - "(vulnerability|CVE|漏洞).*(found|detect|discover)"
+      - "(zero.day|critical patch)"
+    priority: 85
+    workflow_type: sequential
+    risk_level: high
+    description: "Security vulnerability found"
+
+  # ===========================================================================
+  # Storage Incident Rules (3 rules)
+  # ===========================================================================
+
+  - id: inc_storage_disk_full
+    category: incident
+    sub_intent: storage_disk_full
+    patterns:
+      - "(disk|磁碟).*(full|space.*low|容量不足|空間不足|滿)"
+      - "(no space|空間不足|quota exceeded)"
+      - "(/dev/sd|/dev/nvme).*(100%|9[5-9]%)"
+    priority: 90
+    workflow_type: sequential
+    risk_level: high
+    description: "Disk space critical"
+
+  - id: inc_storage_nas_san
+    category: incident
+    sub_intent: storage_nas_san
+    patterns:
+      - "(nas|san|storage array).*(fail|error|unreachable)"
+      - "(儲存|存儲).*(故障|異常)"
+    priority: 85
+    workflow_type: magentic
+    risk_level: high
+    description: "NAS/SAN storage failure"
+
+  - id: inc_storage_backup_fail
+    category: incident
+    sub_intent: storage_backup_failure
+    patterns:
+      - "(backup|備份).*(fail|error|incomplete|失敗)"
+    priority: 75
+    workflow_type: sequential
+    risk_level: medium
+    description: "Backup job failure"
+
+  # ===========================================================================
+  # Authentication Incident Rules (3 rules)
+  # ===========================================================================
+
+  - id: inc_auth_account_lockout
+    category: incident
+    sub_intent: auth_account_lockout
+    patterns:
+      - "(account|帳號).*(lock|鎖定|locked out)"
+      - "(lockout|鎖定).*(ad|active directory|ldap)"
+    priority: 80
+    workflow_type: simple
+    risk_level: low
+    description: "AD account lockout"
+
+  - id: inc_auth_login_failure
+    category: incident
+    sub_intent: auth_login_failure
+    patterns:
+      - "(login|登入).*(fail|error|失敗|無法)"
+      - "(authentication|認證).*(fail|error|失敗)"
+    priority: 75
+    workflow_type: simple
+    risk_level: low
+    description: "Login or authentication failure"
+
+  - id: inc_auth_sso_mfa
+    category: incident
+    sub_intent: auth_sso_mfa_issue
+    patterns:
+      - "(sso|single sign.on).*(fail|error|issue)"
+      - "(mfa|multi.factor|二次驗證|兩步驗證).*(fail|error|issue)"
+    priority: 80
+    workflow_type: sequential
+    risk_level: medium
+    description: "SSO or MFA authentication issue"
+
+  # ===========================================================================
+  # Performance Incident Rules (2 rules)
+  # ===========================================================================
+
+  - id: inc_perf_slow_response
+    category: incident
+    sub_intent: performance_slow
+    patterns:
+      - "(slow|緩慢).*(response|page|load|回應)"
+      - "(performance|效能).*(degrad|drop|下降)"
+      - "(high latency|高延遲)"
+    priority: 70
+    workflow_type: sequential
+    risk_level: medium
+    description: "Slow response or performance degradation"
+
+  - id: inc_perf_high_load
+    category: incident
+    sub_intent: performance_high_load
+    patterns:
+      - "(high load|heavy load|overload|過載)"
+      - "(load average|負載).*(high|過高)"
+    priority: 75
+    workflow_type: sequential
+    risk_level: medium
+    description: "System overload or high load"
