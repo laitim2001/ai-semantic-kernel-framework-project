@@ -274,16 +274,18 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    import os
-
     import uvicorn
 
-    env = os.environ.get("APP_ENV", "development")
+    from src.core.server_config import ServerConfig
+
+    server_config = ServerConfig()
+    logger.info(f"Starting with config: {server_config}")
+
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=(env == "development"),
-        workers=1 if env == "development" else 4,
-        log_level="info",
+        host=server_config.host,
+        port=server_config.port,
+        reload=server_config.reload,
+        workers=server_config.workers,
+        log_level=server_config.log_level,
     )
