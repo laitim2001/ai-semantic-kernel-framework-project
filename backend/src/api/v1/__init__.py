@@ -21,7 +21,8 @@
 #         ├── Phase 18-22: Platform Features
 #         ├── Phase 23: Multi-Agent Coordination
 #         ├── Phase 28: Three-Tier Routing
-#         └── Phase 29: Agent Swarm
+#         ├── Phase 29: Agent Swarm
+#         └── Phase 34: n8n Integration
 # =============================================================================
 
 from fastapi import APIRouter, Depends
@@ -92,6 +93,9 @@ from src.api.v1.orchestration import route_management_router as orchestration_ro
 # Phase 29: Agent Swarm Visualization
 from src.api.v1.swarm import router as swarm_router  # Sprint 100
 from src.api.v1.swarm import demo_router as swarm_demo_router  # Sprint 107
+
+# Phase 34: n8n Integration
+from src.api.v1.n8n import router as n8n_router  # Sprint 124
 
 # =============================================================================
 # Router Assembly
@@ -197,6 +201,9 @@ protected_router.include_router(orchestration_route_mgmt_router)  # Sprint 115
 # Phase 29: Agent Swarm Visualization
 protected_router.include_router(swarm_router)  # Sprint 100
 protected_router.include_router(swarm_demo_router)  # Sprint 107
+
+# Phase 34: n8n Integration
+protected_router.include_router(n8n_router)  # Sprint 124
 
 # -----------------------------------------------------------------------------
 # Assemble into main api_router
