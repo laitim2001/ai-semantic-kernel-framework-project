@@ -41,6 +41,7 @@ env:
   AZURE_APP_NAME: app-ipa-platform-production
   ACR_NAME: ipaplatformacr
   IMAGE_NAME: ipa-platform
+  FRONTEND_IMAGE_NAME: ipa-frontend
 
 jobs:
   # ===========================================================================
@@ -105,7 +106,7 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build and push image
+      - name: Build and push backend image
         run: |
           VERSION=${{ needs.build-and-test.outputs.version }}
           docker build \
@@ -118,6 +119,18 @@ jobs:
 
           docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${VERSION}
           docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+
+      - name: Build and push frontend image
+        run: |
+          VERSION=${{ needs.build-and-test.outputs.version }}
+          docker build \
+            -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${VERSION} \
+            -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:latest \
+            -f frontend/Dockerfile \
+            frontend/
+
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${VERSION}
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:latest
 
   # ===========================================================================
   # Deploy to Staging
