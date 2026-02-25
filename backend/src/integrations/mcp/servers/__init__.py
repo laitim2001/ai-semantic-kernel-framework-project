@@ -6,11 +6,13 @@ Available Servers:
     - azure: Azure cloud resource management
     - n8n: n8n workflow automation (Sprint 124)
     - adf: Azure Data Factory pipeline management (Sprint 125)
+    - d365: Dynamics 365 entity management (Sprint 129)
 """
 
 from .azure import AzureMCPServer, AzureClientManager, AzureConfig
 from .n8n import N8nMCPServer, N8nApiClient, N8nConfig
 from .adf import AdfMCPServer, AdfApiClient, AdfConfig
+from .d365 import D365MCPServer, D365ApiClient, D365Config
 
 __all__ = [
     "AzureMCPServer",
@@ -22,4 +24,7 @@ __all__ = [
     "AdfMCPServer",
     "AdfApiClient",
     "AdfConfig",
+    "D365MCPServer",
+    "D365ApiClient",
+    "D365Config",
 ]
