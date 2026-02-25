@@ -97,6 +97,9 @@ from src.api.v1.swarm import demo_router as swarm_demo_router  # Sprint 107
 # Phase 34: n8n Integration
 from src.api.v1.n8n import router as n8n_router  # Sprint 124
 
+# Phase 34: Workflow Graph Visualization
+from src.api.v1.workflows.graph_routes import router as workflow_graph_router  # Sprint 133
+
 # =============================================================================
 # Router Assembly
 # =============================================================================
@@ -204,6 +207,9 @@ protected_router.include_router(swarm_demo_router)  # Sprint 107
 
 # Phase 34: n8n Integration
 protected_router.include_router(n8n_router)  # Sprint 124
+
+# Phase 34: Workflow Graph Visualization
+protected_router.include_router(workflow_graph_router)  # Sprint 133
 
 # -----------------------------------------------------------------------------
 # Assemble into main api_router

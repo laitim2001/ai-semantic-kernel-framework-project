@@ -46,6 +46,8 @@ import { Settings as DevUISettings } from '@/pages/DevUI/Settings';
 import { AGUITestPanel } from '@/pages/DevUI/AGUITestPanel';
 // Phase 29: Agent Swarm Test Page
 import { SwarmTestPage } from '@/pages/SwarmTestPage';
+// Sprint 133: Workflow DAG Editor (Phase 34)
+import { WorkflowEditorPage } from '@/pages/workflows/WorkflowEditorPage';
 
 function App() {
   return (
@@ -86,6 +88,7 @@ function App() {
         <Route path="workflows/new" element={<CreateWorkflowPage />} />
         <Route path="workflows/:id" element={<WorkflowDetailPage />} />
         <Route path="workflows/:id/edit" element={<EditWorkflowPage />} />
+        <Route path="workflows/:id/editor" element={<WorkflowEditorPage />} />
 
         {/* Agents */}
         <Route path="agents" element={<AgentsPage />} />

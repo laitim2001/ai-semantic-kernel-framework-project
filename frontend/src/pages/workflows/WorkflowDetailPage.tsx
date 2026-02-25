@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Play, Settings, History, AlertCircle, CheckCircle, XCircle, Power, PowerOff } from 'lucide-react';
+import { ArrowLeft, Play, Settings, History, AlertCircle, CheckCircle, XCircle, Power, PowerOff, LayoutGrid } from 'lucide-react';
 import { api } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -127,6 +127,12 @@ export function WorkflowDetailPage() {
           <p className="text-gray-500">{wf.description}</p>
         </div>
         <div className="flex gap-2">
+          <Link to={`/workflows/${id}/editor`}>
+            <Button variant="outline">
+              <LayoutGrid className="w-4 h-4 mr-2" />
+              DAG Editor
+            </Button>
+          </Link>
           <Link to={`/workflows/${id}/edit`}>
             <Button variant="outline">
               <Settings className="w-4 h-4 mr-2" />
