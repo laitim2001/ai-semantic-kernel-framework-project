@@ -2,6 +2,7 @@
 Correlation Analyzer - 關聯分析器
 
 Sprint 82 - S82-2: 智能關聯與根因分析
+Sprint 130 - Story 130-1: 移除偽造資料，接入真實事件資料來源
 """
 
 import asyncio
@@ -10,6 +11,8 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from .data_source import AzureMonitorConfig, EventDataSource
+from .event_collector import CollectionConfig, EventCollector
 from .types import (
     Correlation,
     CorrelationGraph,
@@ -36,6 +39,9 @@ class CorrelationAnalyzer:
     - 系統依賴關聯分析
     - 語義相似關聯分析
     - 綜合關聯評分
+
+    Sprint 130: 接入真實事件資料來源，移除所有偽造資料返回。
+    當未配置資料來源時，返回空結果（不再製造假資料）。
     """
 
     def __init__(
@@ -43,10 +49,21 @@ class CorrelationAnalyzer:
         event_store: Optional[Any] = None,
         cmdb_client: Optional[Any] = None,
         memory_client: Optional[Any] = None,
+        data_source: Optional[EventDataSource] = None,
+        event_collector: Optional[EventCollector] = None,
     ):
+        # Legacy params (kept for backward compatibility)
         self._event_store = event_store
-        self._cmdb_client = cmdb_client  # CMDB 客戶端
-        self._memory_client = memory_client  # mem0 客戶端
+        self._cmdb_client = cmdb_client
+        self._memory_client = memory_client
+
+        # Sprint 130: Real data source
+        self._data_source = data_source
+        self._event_collector = event_collector
+
+        # If data_source provided but no collector, create one
+        if self._data_source and not self._event_collector:
+            self._event_collector = EventCollector(self._data_source)
 
         # 配置
         self._time_decay_factor = 0.1  # 時間衰減因子
@@ -125,7 +142,7 @@ class CorrelationAnalyzer:
         start_time = event.timestamp - time_window
         end_time = event.timestamp + time_window
 
-        # 獲取時間窗口內的事件（模擬）
+        # Sprint 130: 使用真實資料來源
         nearby_events = await self._get_events_in_range(start_time, end_time)
 
         for other_event in nearby_events:
@@ -175,7 +192,7 @@ class CorrelationAnalyzer:
         """
         correlations: List[Correlation] = []
 
-        # 獲取受影響組件的依賴關係
+        # Sprint 130: 使用真實資料來源
         dependencies = await self._get_dependencies(event.affected_components)
 
         # 查找依賴組件的相關事件
@@ -223,14 +240,14 @@ class CorrelationAnalyzer:
         """
         語義相似關聯分析
 
-        使用 mem0 向量搜索找出語義相似的事件
+        使用文字搜索找出語義相似的事件
         """
         correlations: List[Correlation] = []
 
         # 構建搜索文本
         search_text = f"{event.title} {event.description}"
 
-        # 使用 mem0 進行向量搜索
+        # Sprint 130: 使用真實資料來源搜索
         similar_events = await self._search_similar_events(search_text)
 
         for item in similar_events:
@@ -421,103 +438,102 @@ class CorrelationAnalyzer:
         )
 
     # ========================================================================
-    # Helper methods (模擬實現，實際應連接真實數據源)
+    # Data Source Methods (Sprint 130: Real data, graceful fallback)
     # ========================================================================
 
     async def _get_event(self, event_id: str) -> Optional[Event]:
-        """獲取事件（模擬）"""
-        # 模擬事件數據
-        return Event(
-            event_id=event_id,
-            event_type=EventType.ALERT,
-            title=f"Event {event_id}",
-            description=f"Description for event {event_id}",
-            severity=EventSeverity.WARNING,
-            timestamp=datetime.utcnow(),
-            source_system="monitoring",
-            affected_components=["service-a", "service-b"],
+        """
+        獲取事件
+
+        Sprint 130: 從真實資料來源獲取。
+        無資料來源時返回 None（不再返回偽造資料）。
+        """
+        if self._data_source:
+            return await self._data_source.get_event(event_id)
+
+        logger.warning(
+            f"No data source configured — cannot retrieve event {event_id}"
         )
+        return None
 
     async def _get_events_in_range(
         self,
         start_time: datetime,
         end_time: datetime,
     ) -> List[Event]:
-        """獲取時間範圍內的事件（模擬）"""
-        # 模擬一些事件
-        events = []
-        for i in range(5):
-            events.append(Event(
-                event_id=f"event_time_{i}",
-                event_type=EventType.ALERT,
-                title=f"Related Event {i}",
-                description=f"Description {i}",
-                severity=EventSeverity.WARNING,
-                timestamp=start_time + timedelta(minutes=i * 10),
-                source_system="monitoring",
-            ))
-        return events
+        """
+        獲取時間範圍內的事件
+
+        Sprint 130: 從真實資料來源獲取。
+        無資料來源時返回空列表（不再返回偽造事件）。
+        """
+        if self._event_collector:
+            return await self._event_collector.collect_events(
+                start_time=start_time,
+                end_time=end_time,
+            )
+
+        if self._data_source:
+            return await self._data_source.get_events_in_range(
+                start_time=start_time,
+                end_time=end_time,
+            )
+
+        logger.warning("No data source configured — returning empty event list")
+        return []
 
     async def _get_dependencies(
         self,
         components: List[str],
     ) -> List[Dict[str, Any]]:
-        """獲取組件依賴（模擬）"""
-        dependencies = []
-        for comp in components:
-            dependencies.append({
-                "component_id": f"{comp}_downstream",
-                "relationship": "depends_on",
-                "type": "critical",
-                "distance": 1,
-            })
-        return dependencies
+        """
+        獲取組件依賴
+
+        Sprint 130: 從真實資料來源獲取。
+        無資料來源時返回空列表（不再返回偽造依賴）。
+        """
+        if self._event_collector:
+            return await self._event_collector.get_dependencies(components)
+
+        if self._data_source:
+            return await self._data_source.get_dependencies(components)
+
+        logger.warning("No data source configured — returning empty dependencies")
+        return []
 
     async def _get_events_for_component(
         self,
         component_id: str,
     ) -> List[Event]:
-        """獲取組件相關事件（模擬）"""
-        return [Event(
-            event_id=f"event_dep_{component_id}",
-            event_type=EventType.ALERT,
-            title=f"Event for {component_id}",
-            description=f"Component event",
-            severity=EventSeverity.WARNING,
-            timestamp=datetime.utcnow(),
-            source_system="monitoring",
-            affected_components=[component_id],
-        )]
+        """
+        獲取組件相關事件
+
+        Sprint 130: 從真實資料來源獲取。
+        無資料來源時返回空列表（不再返回偽造事件）。
+        """
+        if self._data_source:
+            return await self._data_source.get_events_for_component(component_id)
+
+        logger.warning(
+            f"No data source configured — cannot get events for {component_id}"
+        )
+        return []
 
     async def _search_similar_events(
         self,
         search_text: str,
     ) -> List[Dict[str, Any]]:
-        """搜索語義相似事件（模擬）"""
-        # 模擬語義搜索結果
-        return [
-            {
-                "event": Event(
-                    event_id="event_sem_1",
-                    event_type=EventType.ALERT,
-                    title="Similar Event 1",
-                    description="Similar description",
-                    severity=EventSeverity.WARNING,
-                    timestamp=datetime.utcnow(),
-                    source_system="monitoring",
-                ),
-                "similarity": 0.85,
-            },
-            {
-                "event": Event(
-                    event_id="event_sem_2",
-                    event_type=EventType.INCIDENT,
-                    title="Similar Event 2",
-                    description="Another similar event",
-                    severity=EventSeverity.ERROR,
-                    timestamp=datetime.utcnow(),
-                    source_system="alerting",
-                ),
-                "similarity": 0.72,
-            },
-        ]
+        """
+        搜索語義相似事件
+
+        Sprint 130: 從真實資料來源搜索。
+        無資料來源時返回空列表（不再返回偽造相似事件）。
+        """
+        if self._event_collector:
+            return await self._event_collector.search_similar(search_text)
+
+        if self._data_source:
+            return await self._data_source.search_similar_events(search_text)
+
+        logger.warning("No data source configured — returning empty similar events")
+        return []

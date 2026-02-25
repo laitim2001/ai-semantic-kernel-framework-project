@@ -2,6 +2,7 @@
 Root Cause Analyzer - 根因分析器
 
 Sprint 82 - S82-2: 智能關聯與根因分析
+Sprint 130 - Story 130-2: 移除硬編碼案例，接入真實案例庫
 """
 
 import logging
@@ -15,6 +16,8 @@ from ..correlation import (
     CorrelationGraph,
     Event,
 )
+from .case_matcher import CaseMatcher
+from .case_repository import CaseRepository
 from .types import (
     AnalysisContext,
     AnalysisRequest,
@@ -40,8 +43,10 @@ class RootCauseAnalyzer:
     功能:
     - 基於關聯圖譜分析根因
     - Claude 驅動的智能推理
-    - 歷史案例匹配
+    - 歷史案例匹配（Sprint 130: 真實案例庫）
     - 修復建議生成
+
+    Sprint 130: 移除硬編碼 HistoricalCase，接入 CaseRepository + CaseMatcher。
     """
 
     def __init__(
@@ -49,10 +54,20 @@ class RootCauseAnalyzer:
         claude_client: Optional[Any] = None,
         correlation_analyzer: Optional[CorrelationAnalyzer] = None,
         knowledge_base: Optional[Any] = None,
+        case_repository: Optional[CaseRepository] = None,
+        case_matcher: Optional[CaseMatcher] = None,
     ):
         self._claude_client = claude_client
         self._correlation_analyzer = correlation_analyzer or CorrelationAnalyzer()
         self._knowledge_base = knowledge_base
+
+        # Sprint 130: Real case repository
+        self._case_repository = case_repository
+        self._case_matcher = case_matcher
+
+        # If repository provided but no matcher, create one
+        if self._case_repository and not self._case_matcher:
+            self._case_matcher = CaseMatcher(self._case_repository)
 
         # 分析配置
         self._default_depth = "standard"
@@ -83,7 +98,7 @@ class RootCauseAnalyzer:
             # 1. 構建分析上下文
             context = await self._build_analysis_context(event, correlations, graph)
 
-            # 2. 獲取歷史相似案例
+            # 2. 獲取歷史相似案例 (Sprint 130: 真實案例庫)
             historical_cases = await self.get_similar_patterns(event)
 
             # 3. 生成根因假設
@@ -123,6 +138,7 @@ class RootCauseAnalyzer:
                     "correlation_count": len(correlations),
                     "hypothesis_count": len(hypotheses),
                     "evidence_count": len(evidence_chain),
+                    "data_source": "case_repository" if self._case_matcher else "none",
                 },
             )
 
@@ -193,49 +209,30 @@ class RootCauseAnalyzer:
         """
         獲取歷史相似案例
 
+        Sprint 130: 使用 CaseMatcher 從真實案例庫查詢。
+        無案例庫時返回空列表（不再返回硬編碼案例）。
+
         Args:
             event: 目標事件
             max_results: 最大返回數量
 
         Returns:
-            歷史案例列表
+            歷史案例列表（按相似度排序）
         """
-        # 模擬歷史案例查詢
-        # 實際應該從知識庫或歷史數據庫查詢
-        cases = [
-            HistoricalCase(
-                case_id="case_001",
-                title="Database Connection Pool Exhaustion",
-                description="Similar database connection issues causing service degradation",
-                root_cause="Connection pool size too small for traffic spike",
-                resolution="Increased connection pool size and added auto-scaling",
-                occurred_at=datetime.utcnow(),
-                resolved_at=datetime.utcnow(),
-                similarity_score=0.85,
-                lessons_learned=[
-                    "Monitor connection pool utilization",
-                    "Set up alerts for high connection usage",
-                    "Implement connection timeout policies",
-                ],
-            ),
-            HistoricalCase(
-                case_id="case_002",
-                title="Memory Leak in Service",
-                description="Gradual memory increase leading to OOM",
-                root_cause="Unclosed HTTP connections in client library",
-                resolution="Updated client library and added explicit cleanup",
-                occurred_at=datetime.utcnow(),
-                resolved_at=datetime.utcnow(),
-                similarity_score=0.72,
-                lessons_learned=[
-                    "Regular dependency updates",
-                    "Memory profiling in staging",
-                    "Set memory limits with proper restart policies",
-                ],
-            ),
-        ]
+        if self._case_matcher:
+            cases = await self._case_matcher.find_similar_cases(
+                event=event,
+                max_results=max_results,
+            )
+            logger.info(
+                f"Found {len(cases)} similar cases for event {event.event_id}"
+            )
+            return cases
 
-        return cases[:max_results]
+        logger.warning(
+            "No case repository configured — returning empty historical cases"
+        )
+        return []
 
     async def _generate_hypotheses(
         self,
@@ -271,8 +268,8 @@ class RootCauseAnalyzer:
             hypotheses.append(hypothesis)
 
         # 基於歷史案例生成假設
-        for case in historical_cases[:2]:
-            if case.similarity_score >= 0.7:
+        for case in historical_cases[:3]:
+            if case.similarity_score >= 0.3:
                 hypothesis = RootCauseHypothesis(
                     hypothesis_id=f"hyp_{uuid4().hex[:8]}",
                     description=f"Similar to historical case: {case.root_cause}",
@@ -282,7 +279,7 @@ class RootCauseAnalyzer:
                             evidence_id=f"ev_{uuid4().hex[:8]}",
                             evidence_type=EvidenceType.PATTERN,
                             description=f"Similar to case {case.case_id}: {case.title}",
-                            source="knowledge_base",
+                            source="case_repository",
                             timestamp=datetime.utcnow(),
                             relevance_score=case.similarity_score,
                             data={
