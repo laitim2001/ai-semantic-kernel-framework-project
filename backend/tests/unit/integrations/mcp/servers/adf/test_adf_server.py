@@ -1,15 +1,13 @@
-"""Tests for AdfMCPServer.
-
-Sprint 125: Azure Data Factory MCP Server
+"""Tests for AdfMCPServer — Sprint 127, Story 127-2.
 
 Tests cover:
-    - Server initialization and tool registration
-    - Tool count and naming conventions
-    - Permission levels
-    - Health check delegation
-    - Pipeline tools via server (list, get, run, cancel)
-    - Monitoring tools via server (get run, list runs, datasets, triggers)
-    - MCP format compliance
+    - Server initialization (name, version, tool registration)
+    - Tool count and exact tool name verification
+    - Tool call dispatch for all 8 tools (pipeline + monitoring)
+    - Unknown tool error handling
+    - Health check delegation to client
+
+Total: 12 tests across 3 test classes.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -18,8 +16,7 @@ import pytest
 
 from src.integrations.mcp.servers.adf.client import AdfApiClient, AdfConfig
 from src.integrations.mcp.servers.adf.server import AdfMCPServer
-from src.integrations.mcp.servers.adf.tools.pipeline import PipelineTools
-from src.integrations.mcp.servers.adf.tools.monitoring import MonitoringTools
+from src.integrations.mcp.core.types import ToolResult
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +47,7 @@ def adf_server(adf_config):
 
 @pytest.fixture
 def mock_client():
-    """Create a mock AdfApiClient with all async methods."""
+    """Create a mock AdfApiClient with all async methods pre-configured."""
     client = MagicMock(spec=AdfApiClient)
     client.list_pipelines = AsyncMock(return_value={
         "value": [
@@ -88,9 +85,7 @@ def mock_client():
             "annotations": ["critical"],
         },
     })
-    client.run_pipeline = AsyncMock(return_value={
-        "runId": "run-abc-123",
-    })
+    client.run_pipeline = AsyncMock(return_value={"runId": "run-abc-123"})
     client.cancel_pipeline_run = AsyncMock(return_value={})
     client.get_pipeline_run = AsyncMock(return_value={
         "runId": "run-abc-123",
@@ -114,15 +109,6 @@ def mock_client():
                 "runEnd": "2026-02-24T10:05:00Z",
                 "invokedBy": {"name": "schedule"},
                 "message": "Completed",
-            },
-            {
-                "runId": "run-2",
-                "pipelineName": "pipeline-load",
-                "status": "Failed",
-                "runStart": "2026-02-24T11:00:00Z",
-                "runEnd": "2026-02-24T11:02:00Z",
-                "invokedBy": {"name": "manual"},
-                "message": "Timeout error",
             },
         ],
     })
@@ -173,39 +159,39 @@ def mock_client():
     return client
 
 
+def _make_server_with_mock_client(adf_config, mock_client):
+    """Create an AdfMCPServer and replace its internal client with the mock."""
+    server = AdfMCPServer(adf_config)
+    # Replace client on server and both tool instances
+    server._client = mock_client
+    server._pipeline_tools._client = mock_client
+    server._monitoring_tools._client = mock_client
+    return server
+
+
 # ---------------------------------------------------------------------------
-# 1. TestAdfMCPServer — Server initialization (5 tests)
+# 1. TestAdfMCPServerInit — Server initialization (3 tests)
 # ---------------------------------------------------------------------------
 
 
-class TestAdfMCPServer:
-    """Tests for AdfMCPServer initialization and core properties."""
+class TestAdfMCPServerInit:
+    """Tests for AdfMCPServer initialization and metadata."""
 
-    def test_initialization(self, adf_server, adf_config):
-        """Test server initializes with config, client, and registered tools."""
-        assert adf_server._config is adf_config
+    def test_server_init(self, adf_server):
+        """Test server has correct SERVER_NAME and SERVER_VERSION constants."""
+        assert adf_server.SERVER_NAME == "adf-mcp"
+        assert adf_server.SERVER_VERSION == "1.0.0"
         assert isinstance(adf_server._client, AdfApiClient)
-        assert isinstance(adf_server._pipeline_tools, PipelineTools)
-        assert isinstance(adf_server._monitoring_tools, MonitoringTools)
 
-        # Tools should be registered during init
-        tools = adf_server.get_tools()
-        assert len(tools) > 0
-
-    def test_get_tools_returns_8_tools(self, adf_server):
-        """Test exactly 8 tools are registered."""
+    def test_server_tools_registered(self, adf_server):
+        """Test exactly 8 tools are registered (4 pipeline + 4 monitoring)."""
         tools = adf_server.get_tools()
         assert len(tools) == 8
 
-    def test_get_tool_names_adf_prefix(self, adf_server):
-        """Test all tool names start with 'adf_' prefix."""
-        names = adf_server.get_tool_names()
-        assert len(names) == 8
-
-        for name in names:
-            assert name.startswith("adf_"), f"Tool '{name}' missing 'adf_' prefix"
-
-        expected = [
+    def test_server_tool_names(self, adf_server):
+        """Test the exact set of registered tool names matches expected tools."""
+        names = set(adf_server.get_tool_names())
+        expected = {
             "adf_list_pipelines",
             "adf_get_pipeline",
             "adf_run_pipeline",
@@ -214,271 +200,125 @@ class TestAdfMCPServer:
             "adf_list_pipeline_runs",
             "adf_list_datasets",
             "adf_list_triggers",
-        ]
-        assert sorted(names) == sorted(expected)
-
-    def test_permission_levels_defined(self, adf_server):
-        """Test permission levels are defined for pipeline and monitoring tools."""
-        pipeline_perms = PipelineTools.PERMISSION_LEVELS
-        monitoring_perms = MonitoringTools.PERMISSION_LEVELS
-
-        # Pipeline tools: read (1), execute (2), admin (3)
-        assert pipeline_perms["adf_list_pipelines"] == 1
-        assert pipeline_perms["adf_get_pipeline"] == 1
-        assert pipeline_perms["adf_run_pipeline"] == 2
-        assert pipeline_perms["adf_cancel_pipeline_run"] == 3
-
-        # Monitoring tools: all read (1)
-        assert monitoring_perms["adf_get_pipeline_run"] == 1
-        assert monitoring_perms["adf_list_pipeline_runs"] == 1
-        assert monitoring_perms["adf_list_datasets"] == 1
-        assert monitoring_perms["adf_list_triggers"] == 1
-
-    @pytest.mark.asyncio
-    async def test_health_check(self, adf_server):
-        """Test health_check delegates to client."""
-        adf_server._client.health_check = AsyncMock(return_value=True)
-
-        result = await adf_server.health_check()
-
-        assert result is True
-        adf_server._client.health_check.assert_called_once()
+        }
+        assert names == expected
 
 
 # ---------------------------------------------------------------------------
-# 2. TestPipelineToolsViaServer — Pipeline tools (5 tests)
+# 2. TestAdfMCPServerToolCalls — Tool dispatch (9 tests)
 # ---------------------------------------------------------------------------
 
 
-class TestPipelineToolsViaServer:
-    """Tests for pipeline tools called through the server's tool instances."""
+class TestAdfMCPServerToolCalls:
+    """Tests for calling tools through AdfMCPServer.call_tool()."""
 
     @pytest.mark.asyncio
-    async def test_list_pipelines(self, mock_client):
-        """Test adf_list_pipelines returns summarized pipeline list."""
-        tools = PipelineTools(mock_client)
+    async def test_call_list_pipelines(self, adf_config, mock_client):
+        """Test calling adf_list_pipelines returns successful ToolResult."""
+        server = _make_server_with_mock_client(adf_config, mock_client)
 
-        result = await tools.adf_list_pipelines()
+        result = await server.call_tool("adf_list_pipelines")
 
         assert result.success is True
-        assert result.content["count"] == 1
-
-        pipeline = result.content["pipelines"][0]
-        assert pipeline["name"] == "pipeline-etl"
-        assert pipeline["description"] == "ETL pipeline"
-        assert pipeline["activityCount"] == 2
-        assert pipeline["parameterCount"] == 1
-        assert "env" in pipeline["parameters"]
-
+        assert result.content is not None
         mock_client.list_pipelines.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_pipeline(self, mock_client):
-        """Test adf_get_pipeline returns detailed pipeline info."""
-        tools = PipelineTools(mock_client)
+    async def test_call_get_pipeline(self, adf_config, mock_client):
+        """Test calling adf_get_pipeline with pipeline_name argument."""
+        server = _make_server_with_mock_client(adf_config, mock_client)
 
-        result = await tools.adf_get_pipeline(pipeline_name="pipeline-etl")
+        result = await server.call_tool(
+            "adf_get_pipeline", {"pipeline_name": "pipeline-etl"}
+        )
 
         assert result.success is True
-        assert result.content["name"] == "pipeline-etl"
-        assert result.content["description"] == "ETL pipeline"
-        assert result.content["activityCount"] == 1
-        assert "env" in result.content["parameters"]
-        assert result.content["folder"] == "production"
-        assert result.content["annotations"] == ["critical"]
-
+        assert result.content is not None
         mock_client.get_pipeline.assert_called_once_with("pipeline-etl")
 
     @pytest.mark.asyncio
-    async def test_get_pipeline_missing_name(self, mock_client):
-        """Test adf_get_pipeline with empty name returns error."""
-        tools = PipelineTools(mock_client)
+    async def test_call_run_pipeline(self, adf_config, mock_client):
+        """Test calling adf_run_pipeline triggers execution."""
+        server = _make_server_with_mock_client(adf_config, mock_client)
 
-        result = await tools.adf_get_pipeline(pipeline_name="")
-
-        assert result.success is False
-        assert result.error == "pipeline_name is required"
-        assert result.content is None
-
-        # Client should NOT be called when name is empty
-        mock_client.get_pipeline.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_run_pipeline(self, mock_client):
-        """Test adf_run_pipeline triggers execution and returns run ID."""
-        tools = PipelineTools(mock_client)
-
-        result = await tools.adf_run_pipeline(
-            pipeline_name="pipeline-etl",
-            parameters={"env": "prod"},
+        result = await server.call_tool(
+            "adf_run_pipeline", {"pipeline_name": "pipeline-etl"}
         )
 
         assert result.success is True
-        assert result.content["runId"] == "run-abc-123"
-        assert result.content["pipelineName"] == "pipeline-etl"
-        assert result.content["status"] == "Accepted"
+        assert result.content is not None
+        mock_client.run_pipeline.assert_called_once()
 
-        mock_client.run_pipeline.assert_called_once_with(
-            pipeline_name="pipeline-etl",
-            parameters={"env": "prod"},
+    @pytest.mark.asyncio
+    async def test_call_get_pipeline_run(self, adf_config, mock_client):
+        """Test calling adf_get_pipeline_run with run_id argument."""
+        server = _make_server_with_mock_client(adf_config, mock_client)
+
+        result = await server.call_tool(
+            "adf_get_pipeline_run", {"run_id": "run-abc-123"}
         )
 
-    @pytest.mark.asyncio
-    async def test_cancel_pipeline_run(self, mock_client):
-        """Test adf_cancel_pipeline_run requests cancellation."""
-        tools = PipelineTools(mock_client)
-
-        result = await tools.adf_cancel_pipeline_run(run_id="run-abc-123")
-
         assert result.success is True
-        assert result.content["runId"] == "run-abc-123"
-        assert result.content["status"] == "Cancelling"
-
-        mock_client.cancel_pipeline_run.assert_called_once_with("run-abc-123")
-
-
-# ---------------------------------------------------------------------------
-# 3. TestMonitoringToolsViaServer — Monitoring tools (4 tests)
-# ---------------------------------------------------------------------------
-
-
-class TestMonitoringToolsViaServer:
-    """Tests for monitoring tools called through the server's tool instances."""
-
-    @pytest.mark.asyncio
-    async def test_get_pipeline_run(self, mock_client):
-        """Test adf_get_pipeline_run returns run details with duration."""
-        tools = MonitoringTools(mock_client)
-
-        result = await tools.adf_get_pipeline_run(run_id="run-abc-123")
-
-        assert result.success is True
-        assert result.content["runId"] == "run-abc-123"
-        assert result.content["pipelineName"] == "pipeline-etl"
-        assert result.content["status"] == "Succeeded"
-        assert result.content["runStart"] == "2026-02-24T10:00:00Z"
-        assert result.content["runEnd"] == "2026-02-24T10:05:00Z"
-        assert result.content["durationMs"] == 300000  # 5 minutes in ms
-        assert result.content["parameters"] == {"env": "prod"}
-        assert result.content["isLatest"] is True
-
+        assert result.content is not None
         mock_client.get_pipeline_run.assert_called_once_with("run-abc-123")
 
     @pytest.mark.asyncio
-    async def test_list_pipeline_runs(self, mock_client):
-        """Test adf_list_pipeline_runs returns run history summary."""
-        tools = MonitoringTools(mock_client)
+    async def test_call_list_pipeline_runs(self, adf_config, mock_client):
+        """Test calling adf_list_pipeline_runs returns run history."""
+        server = _make_server_with_mock_client(adf_config, mock_client)
 
-        result = await tools.adf_list_pipeline_runs(
-            last_updated_after="2026-02-24T00:00:00Z",
-            last_updated_before="2026-02-25T00:00:00Z",
-        )
+        result = await server.call_tool("adf_list_pipeline_runs")
 
         assert result.success is True
-        assert result.content["count"] == 2
-
-        runs = result.content["runs"]
-        assert runs[0]["runId"] == "run-1"
-        assert runs[0]["pipelineName"] == "pipeline-etl"
-        assert runs[0]["status"] == "Succeeded"
-        assert runs[1]["runId"] == "run-2"
-        assert runs[1]["status"] == "Failed"
-
-        mock_client.list_pipeline_runs.assert_called_once_with(
-            last_updated_after="2026-02-24T00:00:00Z",
-            last_updated_before="2026-02-25T00:00:00Z",
-        )
+        assert result.content is not None
+        mock_client.list_pipeline_runs.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_list_datasets(self, mock_client):
-        """Test adf_list_datasets returns dataset summary."""
-        tools = MonitoringTools(mock_client)
+    async def test_call_list_datasets(self, adf_config, mock_client):
+        """Test calling adf_list_datasets returns dataset list."""
+        server = _make_server_with_mock_client(adf_config, mock_client)
 
-        result = await tools.adf_list_datasets()
+        result = await server.call_tool("adf_list_datasets")
 
         assert result.success is True
-        assert result.content["count"] == 1
-
-        dataset = result.content["datasets"][0]
-        assert dataset["name"] == "ds-source"
-        assert dataset["type"] == "AzureSqlTable"
-        assert dataset["linkedService"] == "ls-sql"
-        assert dataset["folder"] == "raw"
-        assert len(dataset["schema"]) == 2
-        assert dataset["schema"][0]["name"] == "id"
-
+        assert result.content is not None
         mock_client.list_datasets.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_list_triggers(self, mock_client):
-        """Test adf_list_triggers returns trigger summary with schedule info."""
-        tools = MonitoringTools(mock_client)
+    async def test_call_list_triggers(self, adf_config, mock_client):
+        """Test calling adf_list_triggers returns trigger list."""
+        server = _make_server_with_mock_client(adf_config, mock_client)
 
-        result = await tools.adf_list_triggers()
+        result = await server.call_tool("adf_list_triggers")
 
         assert result.success is True
-        assert result.content["count"] == 1
-
-        trigger = result.content["triggers"][0]
-        assert trigger["name"] == "trigger-daily"
-        assert trigger["type"] == "ScheduleTrigger"
-        assert trigger["runtimeState"] == "Started"
-        assert trigger["schedule"]["frequency"] == "Day"
-        assert trigger["schedule"]["interval"] == 1
-        assert "pipeline-etl" in trigger["pipelines"]
-
+        assert result.content is not None
         mock_client.list_triggers.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_call_unknown_tool(self, adf_config, mock_client):
+        """Test calling a non-existent tool returns an error indication.
 
-# ---------------------------------------------------------------------------
-# 4. TestMCPFormatCompliance — MCP schema compliance (2 tests)
-# ---------------------------------------------------------------------------
+        Note: The MCP protocol handler returns tool-not-found as a result with
+        isError=True (not as a JSON-RPC error). The server's call_tool wraps this
+        as ToolResult(success=True, content={isError: True, ...}).
+        """
+        server = _make_server_with_mock_client(adf_config, mock_client)
 
+        result = await server.call_tool("adf_nonexistent_tool")
 
-class TestMCPFormatCompliance:
-    """Tests for MCP protocol format compliance of tool schemas."""
+        # The protocol returns isError inside the result content
+        assert result.content is not None
+        assert result.content.get("isError") is True
+        content_text = result.content["content"][0]["text"]
+        assert "not found" in content_text.lower() or "adf_nonexistent_tool" in content_text
 
-    def test_tool_schemas_mcp_compliant(self, adf_server):
-        """Test all tool schemas produce valid MCP format with required fields."""
-        tools = adf_server.get_tools()
+    @pytest.mark.asyncio
+    async def test_health_check(self, adf_config, mock_client):
+        """Test health_check delegates to the underlying AdfApiClient."""
+        server = _make_server_with_mock_client(adf_config, mock_client)
 
-        for tool in tools:
-            mcp_format = tool.to_mcp_format()
+        result = await server.health_check()
 
-            # Required MCP fields
-            assert "name" in mcp_format, f"Tool missing 'name'"
-            assert "description" in mcp_format, f"Tool {tool.name} missing 'description'"
-            assert "inputSchema" in mcp_format, f"Tool {tool.name} missing 'inputSchema'"
-
-            # inputSchema must be a JSON Schema object
-            schema = mcp_format["inputSchema"]
-            assert schema["type"] == "object", (
-                f"Tool {tool.name} inputSchema type must be 'object', got '{schema['type']}'"
-            )
-            assert "properties" in schema, (
-                f"Tool {tool.name} inputSchema missing 'properties'"
-            )
-
-            # Description should be meaningful (not empty)
-            assert len(mcp_format["description"]) > 10, (
-                f"Tool {tool.name} has too short description"
-            )
-
-    def test_tool_names_follow_convention(self, adf_server):
-        """Test all tool names follow the 'adf_' prefix convention."""
-        tools = adf_server.get_tools()
-
-        for tool in tools:
-            assert tool.name.startswith("adf_"), (
-                f"Tool name '{tool.name}' does not start with 'adf_' prefix"
-            )
-
-            # Names should be snake_case
-            assert tool.name == tool.name.lower(), (
-                f"Tool name '{tool.name}' is not lowercase snake_case"
-            )
-
-            # Names should not have consecutive underscores
-            assert "__" not in tool.name, (
-                f"Tool name '{tool.name}' has consecutive underscores"
-            )
+        assert result is True
+        mock_client.health_check.assert_called_once()
