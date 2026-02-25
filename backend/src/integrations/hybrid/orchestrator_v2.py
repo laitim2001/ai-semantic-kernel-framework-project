@@ -33,6 +33,7 @@ import asyncio
 import logging
 import time
 import uuid
+import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
@@ -154,6 +155,11 @@ class HybridOrchestratorV2:
     """
     重構後的混合編排器 V2。
 
+    .. deprecated:: Sprint 132
+        This class is deprecated. Use :class:`OrchestratorMediator` instead.
+        HybridOrchestratorV2 now delegates to OrchestratorMediator internally
+        and is maintained only for backward compatibility.
+
     整合 Phase 13 所有核心組件，提供智能的執行模式選擇、
     跨框架上下文同步和統一的 Tool 執行。
 
@@ -173,6 +179,11 @@ class HybridOrchestratorV2:
 
     Sprint 116 Features:
     - SwarmModeHandler: Multi-agent swarm collaboration via execute_with_routing()
+
+    Sprint 132: Mediator Pattern
+    - Internal delegation to OrchestratorMediator
+    - All public methods preserved for backward compatibility
+    - New code should use OrchestratorMediator directly
 
     Execute Flow (Phase 28 + Sprint 116):
     1. InputGateway → 來源識別和處理
@@ -264,6 +275,9 @@ class HybridOrchestratorV2:
         # Metrics
         self._metrics = OrchestratorMetrics()
 
+        # Sprint 132: Create OrchestratorMediator for delegation
+        self._mediator = self._create_mediator()
+
         logger.info(
             f"HybridOrchestratorV2 initialized: mode={self._config.mode.value}, "
             f"framework_selector={self._framework_selector is not None}, "
@@ -274,13 +288,63 @@ class HybridOrchestratorV2:
             f"guided_dialog={guided_dialog is not None}, "
             f"risk_assessor={risk_assessor is not None}, "
             f"hitl_controller={hitl_controller is not None}], "
-            f"sprint_116=[swarm_handler={swarm_handler is not None}]"
+            f"sprint_116=[swarm_handler={swarm_handler is not None}], "
+            f"sprint_132=[mediator=True]"
+        )
+
+    def _create_mediator(self):
+        """Create OrchestratorMediator with handlers from current dependencies.
+
+        Sprint 132: Internal factory that wires all existing dependencies
+        into the Mediator Pattern handlers.
+        """
+        from src.integrations.hybrid.orchestrator.mediator import OrchestratorMediator
+        from src.integrations.hybrid.orchestrator.handlers.routing import RoutingHandler
+        from src.integrations.hybrid.orchestrator.handlers.dialog import DialogHandler
+        from src.integrations.hybrid.orchestrator.handlers.approval import ApprovalHandler
+        from src.integrations.hybrid.orchestrator.handlers.execution import ExecutionHandler
+        from src.integrations.hybrid.orchestrator.handlers.context import ContextHandler
+        from src.integrations.hybrid.orchestrator.handlers.observability import ObservabilityHandler
+
+        routing = RoutingHandler(
+            input_gateway=self._input_gateway,
+            business_router=self._business_router,
+            framework_selector=self._framework_selector,
+            swarm_handler=self._swarm_handler,
+        )
+        dialog = DialogHandler(guided_dialog=self._guided_dialog)
+        approval = ApprovalHandler(
+            risk_assessor=self._risk_assessor,
+            hitl_controller=self._hitl_controller,
+        )
+        execution = ExecutionHandler(
+            claude_executor=self._claude_executor,
+            maf_executor=self._maf_executor,
+            maf_callback=self._maf_callback,
+            swarm_handler=self._swarm_handler,
+            default_timeout=self._config.timeout,
+        )
+        context_h = ContextHandler(context_bridge=self._context_bridge)
+        observability = ObservabilityHandler(metrics=self._metrics)
+
+        return OrchestratorMediator(
+            routing_handler=routing,
+            dialog_handler=dialog,
+            approval_handler=approval,
+            execution_handler=execution,
+            context_handler=context_h,
+            observability_handler=observability,
         )
 
     @property
     def config(self) -> OrchestratorConfig:
         """Get current configuration."""
         return self._config
+
+    @property
+    def mediator(self):
+        """Get the underlying OrchestratorMediator instance (Sprint 132)."""
+        return self._mediator
 
     @property
     def active_session_id(self) -> Optional[str]:

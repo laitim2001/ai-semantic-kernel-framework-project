@@ -71,6 +71,26 @@ from src.integrations.hybrid.swarm_mode import (
     SwarmTaskDecomposition,
 )
 
+# Sprint 132: Orchestrator Mediator
+from src.integrations.hybrid.orchestrator import (
+    OrchestratorMediator,
+    Handler,
+    HandlerResult,
+    HandlerType,
+    OrchestratorRequest,
+    OrchestratorResponse,
+    EventType,
+    OrchestratorEvent,
+)
+from src.integrations.hybrid.orchestrator.handlers import (
+    RoutingHandler,
+    DialogHandler,
+    ApprovalHandler,
+    ExecutionHandler,
+    ContextHandler,
+    ObservabilityHandler,
+)
+
 # Sprint 81: Claude + MAF Fusion
 from src.integrations.hybrid.claude_maf_fusion import (
     ClaudeMAFFusion,
@@ -122,6 +142,21 @@ __all__ = [
     "SwarmExecutionConfig",
     "SwarmExecutionResult",
     "SwarmTaskDecomposition",
+    # Sprint 132: Orchestrator Mediator
+    "OrchestratorMediator",
+    "Handler",
+    "HandlerResult",
+    "HandlerType",
+    "OrchestratorRequest",
+    "OrchestratorResponse",
+    "EventType",
+    "OrchestratorEvent",
+    "RoutingHandler",
+    "DialogHandler",
+    "ApprovalHandler",
+    "ExecutionHandler",
+    "ContextHandler",
+    "ObservabilityHandler",
     # Sprint 81: Claude + MAF Fusion
     "ClaudeMAFFusion",
     "ClaudeDecisionEngine",
