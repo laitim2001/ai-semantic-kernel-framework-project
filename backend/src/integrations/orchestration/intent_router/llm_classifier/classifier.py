@@ -1,17 +1,18 @@
 """
 LLM Classifier Implementation
 
-Uses Claude Haiku for intent classification with multi-task output.
+Uses LLMServiceProtocol for intent classification with multi-task output.
 Provides Layer 3 routing with confidence scoring and completeness assessment.
 
 Sprint 92: Story 92-3 - Implement LLM Classifier
+Sprint 128: Story 128-1 - Migrate from anthropic SDK to LLMServiceProtocol
 """
 
 import json
 import logging
 import re
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from ..models import (
     CompletenessInfo,
@@ -20,98 +21,67 @@ from ..models import (
 )
 from .prompts import get_classification_prompt
 
+if TYPE_CHECKING:
+    from src.integrations.llm import LLMServiceProtocol
+    from .cache import ClassificationCache
+
 logger = logging.getLogger(__name__)
 
 
-# Flag to track if anthropic is available
-_ANTHROPIC_AVAILABLE = False
-_AsyncAnthropic = None
-
-try:
-    from anthropic import AsyncAnthropic
-
-    _AsyncAnthropic = AsyncAnthropic
-    _ANTHROPIC_AVAILABLE = True
-    logger.info("Anthropic SDK loaded successfully")
-except ImportError:
-    logger.warning(
-        "anthropic library not installed. "
-        "Install with: pip install anthropic"
-    )
+# Default model configuration
+DEFAULT_MAX_TOKENS = 500
+DEFAULT_TEMPERATURE = 0.0
 
 
 class LLMClassifier:
     """
-    LLM-based Intent Classifier using Claude Haiku.
+    LLM-based Intent Classifier using LLMServiceProtocol.
 
-    Uses Claude's language understanding to classify intents when
-    pattern matching and semantic routing are insufficient.
+    Uses the platform's LLM service abstraction for intent classification,
+    supporting Azure OpenAI, Claude, and mock implementations via the
+    LLMServiceProtocol interface.
+
+    When llm_service is None, returns UNKNOWN for all classifications
+    (graceful degradation).
 
     Attributes:
-        model: Claude model to use (default: claude-3-haiku-20240307)
         max_tokens: Maximum tokens in response
         temperature: Sampling temperature (lower = more deterministic)
 
     Example:
-        >>> classifier = LLMClassifier(api_key="...")
+        >>> from src.integrations.llm import LLMServiceFactory
+        >>> llm_service = LLMServiceFactory.create()
+        >>> classifier = LLMClassifier(llm_service=llm_service)
         >>> result = await classifier.classify("我需要申請一個新帳號")
         >>> print(result.intent_category)  # ITIntentCategory.REQUEST
     """
 
-    # Default model configuration
-    DEFAULT_MODEL = "claude-3-haiku-20240307"
-    DEFAULT_MAX_TOKENS = 500
-    DEFAULT_TEMPERATURE = 0.0
-
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model: str = DEFAULT_MODEL,
+        llm_service: Optional["LLMServiceProtocol"] = None,
+        classification_cache: Optional["ClassificationCache"] = None,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         temperature: float = DEFAULT_TEMPERATURE,
-        client: Optional[Any] = None,
     ):
         """
         Initialize the LLM Classifier.
 
         Args:
-            api_key: Anthropic API key (uses ANTHROPIC_API_KEY env var if not provided)
-            model: Claude model to use
+            llm_service: LLMServiceProtocol implementation for LLM calls.
+                         If None, classifier returns UNKNOWN for all inputs.
+            classification_cache: Optional cache for classification results.
             max_tokens: Maximum tokens in response
             temperature: Sampling temperature
-            client: Pre-configured AsyncAnthropic client (optional)
         """
-        self.model = model
+        self._llm_service = llm_service
+        self._cache = classification_cache
         self.max_tokens = max_tokens
         self.temperature = temperature
-        self._api_key = api_key
-        self._client = client
-        self._initialized = False
 
     @property
     def is_available(self) -> bool:
-        """Check if Anthropic SDK is available."""
-        return _ANTHROPIC_AVAILABLE
-
-    def _get_client(self) -> Any:
-        """
-        Get or create the Anthropic client.
-
-        Returns:
-            AsyncAnthropic client instance
-        """
-        if self._client is not None:
-            return self._client
-
-        if not _ANTHROPIC_AVAILABLE:
-            raise RuntimeError("Anthropic SDK not installed")
-
-        client_kwargs = {}
-        if self._api_key:
-            client_kwargs["api_key"] = self._api_key
-
-        self._client = _AsyncAnthropic(**client_kwargs)
-        return self._client
+        """Check if LLM service is available."""
+        return self._llm_service is not None
 
     async def classify(
         self,
@@ -120,7 +90,7 @@ class LLMClassifier:
         simplified: bool = False,
     ) -> LLMClassificationResult:
         """
-        Classify user input using Claude Haiku.
+        Classify user input using the LLM service.
 
         Args:
             user_input: The user's input text to classify
@@ -129,23 +99,30 @@ class LLMClassifier:
 
         Returns:
             LLMClassificationResult with classification details
-
-        Raises:
-            RuntimeError: If Anthropic SDK is not available
         """
         start_time = time.perf_counter()
 
-        if not _ANTHROPIC_AVAILABLE:
-            logger.error("LLM classification unavailable: SDK not installed")
+        # Graceful degradation: no LLM service → UNKNOWN
+        if self._llm_service is None:
+            logger.warning("LLM classification unavailable: no LLM service configured")
             return LLMClassificationResult(
                 intent_category=ITIntentCategory.UNKNOWN,
                 confidence=0.0,
-                reasoning="LLM classifier unavailable",
+                reasoning="LLM classifier unavailable: no service configured",
             )
 
-        try:
-            client = self._get_client()
+        # Check cache first
+        if self._cache is not None:
+            cached = await self._cache.get(user_input, include_completeness, simplified)
+            if cached is not None:
+                processing_time = (time.perf_counter() - start_time) * 1000
+                logger.info(
+                    f"LLM classification from cache: {cached.intent_category.value} "
+                    f"(time: {processing_time:.0f}ms)"
+                )
+                return cached
 
+        try:
             # Generate prompt
             prompt = get_classification_prompt(
                 user_input=user_input,
@@ -153,29 +130,17 @@ class LLMClassifier:
                 simplified=simplified,
             )
 
-            # Call Claude API
-            response = await client.messages.create(
-                model=self.model,
+            # Call LLM service
+            raw_response = await self._llm_service.generate(
+                prompt=prompt,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
             )
 
             processing_time = (time.perf_counter() - start_time) * 1000
 
-            # Extract response text
-            raw_response = response.content[0].text
-
             # Parse JSON response
             result = self._parse_response(raw_response)
-
-            # Build usage stats
-            usage = {
-                "input_tokens": response.usage.input_tokens,
-                "output_tokens": response.usage.output_tokens,
-            }
 
             # Build completeness info
             completeness = CompletenessInfo()
@@ -194,7 +159,7 @@ class LLMClassifier:
                 f"time: {processing_time:.0f}ms)"
             )
 
-            return LLMClassificationResult(
+            classification_result = LLMClassificationResult(
                 intent_category=ITIntentCategory.from_string(
                     result.get("intent_category", "unknown")
                 ),
@@ -203,9 +168,17 @@ class LLMClassifier:
                 completeness=completeness,
                 reasoning=result.get("reasoning", ""),
                 raw_response=raw_response,
-                model=self.model,
-                usage=usage,
+                model=getattr(self._llm_service, "model", ""),
+                usage={},
             )
+
+            # Cache the result
+            if self._cache is not None:
+                await self._cache.set(
+                    user_input, include_completeness, simplified, classification_result
+                )
+
+            return classification_result
 
         except Exception as e:
             processing_time = (time.perf_counter() - start_time) * 1000
@@ -220,7 +193,7 @@ class LLMClassifier:
 
     def _parse_response(self, response_text: str) -> Dict[str, Any]:
         """
-        Parse the JSON response from Claude.
+        Parse the JSON response from the LLM.
 
         Handles various response formats including:
         - Pure JSON
@@ -228,7 +201,7 @@ class LLMClassifier:
         - Partial/malformed JSON
 
         Args:
-            response_text: Raw response text from Claude
+            response_text: Raw response text from LLM
 
         Returns:
             Parsed dictionary with classification results
@@ -300,25 +273,21 @@ class LLMClassifier:
 
     async def health_check(self) -> bool:
         """
-        Check if the classifier is healthy and can make API calls.
+        Check if the classifier is healthy and can make LLM calls.
 
         Returns:
             True if healthy, False otherwise
         """
-        if not _ANTHROPIC_AVAILABLE:
+        if self._llm_service is None:
             return False
 
         try:
-            client = self._get_client()
-            # Make a minimal API call
-            response = await client.messages.create(
-                model=self.model,
+            response = await self._llm_service.generate(
+                prompt="Hi",
                 max_tokens=10,
-                messages=[{"role": "user", "content": "Hi"}],
+                temperature=0.0,
             )
-            return response is not None
+            return response is not None and len(response) > 0
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return False
-
-

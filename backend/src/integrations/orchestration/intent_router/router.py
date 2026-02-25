@@ -533,6 +533,7 @@ def create_router(
     pattern_rules_path: Optional[str] = None,
     pattern_rules_dict: Optional[Dict[str, Any]] = None,
     semantic_routes: Optional[List[Any]] = None,
+    llm_service: Optional[Any] = None,
     llm_api_key: Optional[str] = None,
     config: Optional[RouterConfig] = None,
 ) -> BusinessIntentRouter:
@@ -543,7 +544,8 @@ def create_router(
         pattern_rules_path: Path to pattern rules YAML file
         pattern_rules_dict: Pattern rules dictionary (alternative to file)
         semantic_routes: List of SemanticRoute definitions
-        llm_api_key: Anthropic API key for LLM classifier
+        llm_service: LLMServiceProtocol instance for LLM classifier (Sprint 128)
+        llm_api_key: Deprecated. Use llm_service instead.
         config: Router configuration
 
     Returns:
@@ -560,8 +562,8 @@ def create_router(
     # Create semantic router
     semantic_router = SemanticRouter(routes=semantic_routes or [])
 
-    # Create LLM classifier
-    llm_classifier = LLMClassifier(api_key=llm_api_key)
+    # Create LLM classifier with LLMServiceProtocol (Sprint 128)
+    llm_classifier = LLMClassifier(llm_service=llm_service)
 
     # Create completeness checker
     completeness_checker = CompletenessChecker()
@@ -575,6 +577,37 @@ def create_router(
     )
 
 
+def create_router_with_llm(
+    config: Optional[RouterConfig] = None,
+) -> BusinessIntentRouter:
+    """
+    Production factory: auto-creates LLM service from environment.
+
+    Uses LLMServiceFactory to create the appropriate LLM service
+    (Azure OpenAI in production, Mock in development) and wires it
+    into the BusinessIntentRouter.
+
+    Args:
+        config: Router configuration (optional)
+
+    Returns:
+        Configured BusinessIntentRouter with LLM service
+
+    Example:
+        >>> router = create_router_with_llm()
+        >>> decision = await router.route("ETL failed")
+    """
+    try:
+        from src.integrations.llm import LLMServiceFactory
+
+        llm_service = LLMServiceFactory.create(use_cache=True, cache_ttl=1800)
+        logger.info("LLM service created via LLMServiceFactory")
+    except Exception as e:
+        logger.warning(f"LLM service unavailable: {e}, Layer 3 will return UNKNOWN")
+        llm_service = None
+
+    return create_router(llm_service=llm_service, config=config)
+
 
 # =============================================================================
 # Exports
@@ -585,4 +618,5 @@ __all__ = [
     "RoutingMetrics",
     "BusinessIntentRouter",
     "create_router",
+    "create_router_with_llm",
 ]

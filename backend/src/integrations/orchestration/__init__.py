@@ -45,6 +45,7 @@ from .intent_router.router import (
     BusinessIntentRouter,
     RouterConfig,
     create_router,
+    create_router_with_llm,
 )
 from .guided_dialog import (
     # Engine
@@ -143,6 +144,7 @@ __all__ = [
     "BusinessIntentRouter",
     "RouterConfig",
     "create_router",
+    "create_router_with_llm",
     # Guided Dialog
     "DialogResponse",
     "DialogState",
