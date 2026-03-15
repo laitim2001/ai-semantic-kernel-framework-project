@@ -305,7 +305,7 @@ async def create_agent_framework_checkpoint_storage(
     Returns:
         BaseCheckpointStorage (Redis or InMemory).
     """
-    from agent_framework.workflows import InMemoryCheckpointStorage as AFInMemoryCheckpointStorage  # TODO: verify submodule path
+    from agent_framework import InMemoryCheckpointStorage as AFInMemoryCheckpointStorage
 
     backend, app_env = _get_env_config()
 
