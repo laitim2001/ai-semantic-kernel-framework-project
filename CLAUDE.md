@@ -200,6 +200,28 @@ AZURE_OPENAI_API_VERSION=2024-02-15-preview
 | `docs/api/ag-ui-api-reference.md` | AG-UI API Reference |
 | `claudedocs/CLAUDE.md` | AI assistant execution docs index |
 
+### V8 Codebase Analysis Reports (2026-03-15, Most Accurate)
+
+> **Important**: V8 reports supersede all previous analysis versions (V1-V7). Based on 28 agents full code reading + AST 100% scan of 939+ source files.
+
+| Document | Lines | Purpose |
+|----------|-------|---------|
+| `docs/07-analysis/Overview/full-codebase-analysis/MAF-Claude-Hybrid-Architecture-V8.md` | 2,721 | **11-layer architecture deep analysis**, E2E flow validation, 62 issues registry, security/checkpoint/InMemory analysis |
+| `docs/07-analysis/Overview/full-codebase-analysis/MAF-Features-Architecture-Mapping-V8.md` | 1,518 | **70+ features verification** (84.3% complete), 9 capability categories, per-feature evidence, maturity matrix |
+| `docs/07-analysis/Overview/full-codebase-analysis/phase4-validation/phase4-validation-issue-registry.md` | — | **62 deduplicated issues** (8 CRITICAL, 16 HIGH, 22 MEDIUM, 16 LOW) |
+| `docs/07-analysis/Overview/full-codebase-analysis/phase4-validation/phase4-validation-e2e-flows.md` | — | **5 E2E user journey validations** (Chat, CRUD, Workflow, HITL, Swarm) |
+| `docs/07-analysis/Overview/full-codebase-analysis/phase4-validation/phase4-validation-plan-vs-reality.md` | — | **70 features plan vs reality** comparison |
+| `docs/07-analysis/Overview/full-codebase-analysis/Architecture-Review-Board-Consensus-Report.md` | 499 | **Architecture Review Board 共識報告** — 6 專家 + 3 圓桌討論者, 6 CRITICAL + 10 HIGH + 修復路線圖 |
+
+Supporting data in subdirectories:
+- `expert-analysis/` — 6 PhD-level expert deep analysis reports (Security, API, Software Arch, Distributed, Frontend, Data)
+- `phase2-planning/` — Sprint planning baseline
+- `phase3-source-reading/` — 22 module analysis reports (`phase3a-*` to `phase3e-*`)
+- `phase4-validation/` — 3 cross-validation reports
+- `format-audit/` — V7↔V8 format audit reports
+- `sdk-version-gap/` — MAF & Claude SDK version gap analysis + **MAF RC4 Upgrade Master Plan** (6 reports)
+- AST scan JSON: `scripts/analysis/*_result.json`
+
 ---
 
 ## ClaudeDocs - AI Assistant Execution Docs

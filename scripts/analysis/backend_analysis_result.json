@@ -1,0 +1,2932 @@
+{
+  "summary": {
+    "scan_date": "2026-03-15",
+    "scan_scope": "C:\\Users\\Chris\\Downloads\\ai-semantic-kernel-framework-project\\backend\\src",
+    "total_files": 725,
+    "total_lines": 258904,
+    "total_code_lines": 197671,
+    "total_functions_and_methods": 7607,
+    "implemented": 7322,
+    "empty_stub": 285,
+    "implementation_rate": 96.3,
+    "total_endpoints": 560,
+    "auth_endpoints": 31,
+    "no_auth_endpoints": 529,
+    "optional_auth_endpoints": 0,
+    "auth_coverage_rate": 5.5,
+    "total_classes": 2316,
+    "inmemory_patterns": 30,
+    "mock_patterns": 119,
+    "test_files": 360,
+    "test_functions": 9965,
+    "parse_errors": 6
+  },
+  "module_stats": {
+    "__init__.py": {
+      "files": 1,
+      "lines": 2,
+      "code_lines": 1,
+      "functions": 0,
+      "empty_functions": 0,
+      "implemented_functions": 0,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "api/__init__.py": {
+      "files": 1,
+      "lines": 2,
+      "code_lines": 1,
+      "functions": 0,
+      "empty_functions": 0,
+      "implemented_functions": 0,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "api/v1": {
+      "files": 143,
+      "lines": 46133,
+      "code_lines": 34496,
+      "functions": 896,
+      "empty_functions": 0,
+      "implemented_functions": 896,
+      "classes": 701,
+      "endpoints": 560,
+      "auth_endpoints": 31,
+      "no_auth_endpoints": 529
+    },
+    "core/__init__.py": {
+      "files": 1,
+      "lines": 6,
+      "code_lines": 3,
+      "functions": 0,
+      "empty_functions": 0,
+      "implemented_functions": 0,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/auth.py": {
+      "files": 1,
+      "lines": 115,
+      "code_lines": 74,
+      "functions": 2,
+      "empty_functions": 0,
+      "implemented_functions": 2,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/config.py": {
+      "files": 1,
+      "lines": 223,
+      "code_lines": 146,
+      "functions": 11,
+      "empty_functions": 0,
+      "implemented_functions": 11,
+      "classes": 1,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/factories.py": {
+      "files": 1,
+      "lines": 188,
+      "code_lines": 137,
+      "functions": 7,
+      "empty_functions": 0,
+      "implemented_functions": 7,
+      "classes": 1,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/logging": {
+      "files": 4,
+      "lines": 426,
+      "code_lines": 313,
+      "functions": 10,
+      "empty_functions": 0,
+      "implemented_functions": 10,
+      "classes": 2,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/observability": {
+      "files": 4,
+      "lines": 699,
+      "code_lines": 546,
+      "functions": 15,
+      "empty_functions": 0,
+      "implemented_functions": 15,
+      "classes": 1,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/performance": {
+      "files": 9,
+      "lines": 4772,
+      "code_lines": 3763,
+      "functions": 171,
+      "empty_functions": 0,
+      "implemented_functions": 171,
+      "classes": 43,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/sandbox": {
+      "files": 7,
+      "lines": 2555,
+      "code_lines": 1824,
+      "functions": 76,
+      "empty_functions": 1,
+      "implemented_functions": 75,
+      "classes": 19,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/sandbox_config.py": {
+      "files": 1,
+      "lines": 322,
+      "code_lines": 214,
+      "functions": 12,
+      "empty_functions": 0,
+      "implemented_functions": 12,
+      "classes": 1,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/security": {
+      "files": 4,
+      "lines": 724,
+      "code_lines": 575,
+      "functions": 14,
+      "empty_functions": 0,
+      "implemented_functions": 14,
+      "classes": 6,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "core/server_config.py": {
+      "files": 1,
+      "lines": 147,
+      "code_lines": 119,
+      "functions": 13,
+      "empty_functions": 0,
+      "implemented_functions": 13,
+      "classes": 2,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/__init__.py": {
+      "files": 1,
+      "lines": 2,
+      "code_lines": 1,
+      "functions": 0,
+      "empty_functions": 0,
+      "implemented_functions": 0,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/agents": {
+      "files": 7,
+      "lines": 1911,
+      "code_lines": 1382,
+      "functions": 53,
+      "empty_functions": 1,
+      "implemented_functions": 52,
+      "classes": 16,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/audit": {
+      "files": 2,
+      "lines": 760,
+      "code_lines": 564,
+      "functions": 24,
+      "empty_functions": 0,
+      "implemented_functions": 24,
+      "classes": 7,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/auth": {
+      "files": 3,
+      "lines": 353,
+      "code_lines": 233,
+      "functions": 8,
+      "empty_functions": 0,
+      "implemented_functions": 8,
+      "classes": 7,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/checkpoints": {
+      "files": 3,
+      "lines": 1020,
+      "code_lines": 771,
+      "functions": 26,
+      "empty_functions": 4,
+      "implemented_functions": 22,
+      "classes": 5,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/connectors": {
+      "files": 6,
+      "lines": 3686,
+      "code_lines": 2862,
+      "functions": 90,
+      "empty_functions": 4,
+      "implemented_functions": 86,
+      "classes": 10,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/devtools": {
+      "files": 2,
+      "lines": 803,
+      "code_lines": 583,
+      "functions": 30,
+      "empty_functions": 0,
+      "implemented_functions": 30,
+      "classes": 9,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/executions": {
+      "files": 2,
+      "lines": 467,
+      "code_lines": 348,
+      "functions": 21,
+      "empty_functions": 0,
+      "implemented_functions": 21,
+      "classes": 3,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/files": {
+      "files": 3,
+      "lines": 557,
+      "code_lines": 402,
+      "functions": 28,
+      "empty_functions": 0,
+      "implemented_functions": 28,
+      "classes": 3,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/learning": {
+      "files": 2,
+      "lines": 680,
+      "code_lines": 480,
+      "functions": 27,
+      "empty_functions": 0,
+      "implemented_functions": 27,
+      "classes": 5,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/notifications": {
+      "files": 2,
+      "lines": 816,
+      "code_lines": 671,
+      "functions": 25,
+      "empty_functions": 0,
+      "implemented_functions": 25,
+      "classes": 7,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/orchestration": {
+      "files": 22,
+      "lines": 11487,
+      "code_lines": 8680,
+      "functions": 424,
+      "empty_functions": 43,
+      "implemented_functions": 381,
+      "classes": 82,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/prompts": {
+      "files": 2,
+      "lines": 599,
+      "code_lines": 417,
+      "functions": 24,
+      "empty_functions": 0,
+      "implemented_functions": 24,
+      "classes": 7,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/routing": {
+      "files": 2,
+      "lines": 689,
+      "code_lines": 549,
+      "functions": 22,
+      "empty_functions": 0,
+      "implemented_functions": 22,
+      "classes": 7,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/sandbox": {
+      "files": 2,
+      "lines": 365,
+      "code_lines": 294,
+      "functions": 14,
+      "empty_functions": 0,
+      "implemented_functions": 14,
+      "classes": 5,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/sessions": {
+      "files": 33,
+      "lines": 15506,
+      "code_lines": 12272,
+      "functions": 537,
+      "empty_functions": 35,
+      "implemented_functions": 502,
+      "classes": 123,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/templates": {
+      "files": 3,
+      "lines": 947,
+      "code_lines": 665,
+      "functions": 31,
+      "empty_functions": 0,
+      "implemented_functions": 31,
+      "classes": 9,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/triggers": {
+      "files": 2,
+      "lines": 681,
+      "code_lines": 493,
+      "functions": 20,
+      "empty_functions": 0,
+      "implemented_functions": 20,
+      "classes": 11,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/versioning": {
+      "files": 2,
+      "lines": 771,
+      "code_lines": 547,
+      "functions": 30,
+      "empty_functions": 0,
+      "implemented_functions": 30,
+      "classes": 10,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "domain/workflows": {
+      "files": 11,
+      "lines": 5226,
+      "code_lines": 4048,
+      "functions": 170,
+      "empty_functions": 0,
+      "implemented_functions": 170,
+      "classes": 47,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "infrastructure/__init__.py": {
+      "files": 1,
+      "lines": 2,
+      "code_lines": 1,
+      "functions": 0,
+      "empty_functions": 0,
+      "implemented_functions": 0,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "infrastructure/cache": {
+      "files": 2,
+      "lines": 626,
+      "code_lines": 449,
+      "functions": 20,
+      "empty_functions": 0,
+      "implemented_functions": 20,
+      "classes": 4,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "infrastructure/checkpoint": {
+      "files": 8,
+      "lines": 1876,
+      "code_lines": 1497,
+      "functions": 47,
+      "empty_functions": 5,
+      "implemented_functions": 42,
+      "classes": 7,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "infrastructure/database": {
+      "files": 18,
+      "lines": 2793,
+      "code_lines": 2035,
+      "functions": 71,
+      "empty_functions": 0,
+      "implemented_functions": 71,
+      "classes": 18,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "infrastructure/distributed_lock": {
+      "files": 2,
+      "lines": 274,
+      "code_lines": 223,
+      "functions": 13,
+      "empty_functions": 3,
+      "implemented_functions": 10,
+      "classes": 3,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "infrastructure/messaging": {
+      "files": 1,
+      "lines": 2,
+      "code_lines": 1,
+      "functions": 0,
+      "empty_functions": 0,
+      "implemented_functions": 0,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "infrastructure/redis_client.py": {
+      "files": 1,
+      "lines": 160,
+      "code_lines": 119,
+      "functions": 5,
+      "empty_functions": 0,
+      "implemented_functions": 5,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "infrastructure/storage": {
+      "files": 6,
+      "lines": 1048,
+      "code_lines": 800,
+      "functions": 58,
+      "empty_functions": 10,
+      "implemented_functions": 48,
+      "classes": 4,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/__init__.py": {
+      "files": 1,
+      "lines": 38,
+      "code_lines": 28,
+      "functions": 0,
+      "empty_functions": 0,
+      "implemented_functions": 0,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/a2a": {
+      "files": 4,
+      "lines": 892,
+      "code_lines": 669,
+      "functions": 46,
+      "empty_functions": 0,
+      "implemented_functions": 46,
+      "classes": 10,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/ag_ui": {
+      "files": 24,
+      "lines": 9836,
+      "code_lines": 7554,
+      "functions": 290,
+      "empty_functions": 11,
+      "implemented_functions": 279,
+      "classes": 85,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/agent_framework": {
+      "files": 57,
+      "lines": 38040,
+      "code_lines": 28248,
+      "functions": 1311,
+      "empty_functions": 63,
+      "implemented_functions": 1248,
+      "classes": 296,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/audit": {
+      "files": 4,
+      "lines": 1170,
+      "code_lines": 856,
+      "functions": 34,
+      "empty_functions": 1,
+      "implemented_functions": 33,
+      "classes": 12,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/claude_sdk": {
+      "files": 47,
+      "lines": 15180,
+      "code_lines": 11625,
+      "functions": 493,
+      "empty_functions": 12,
+      "implemented_functions": 481,
+      "classes": 145,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/correlation": {
+      "files": 6,
+      "lines": 2187,
+      "code_lines": 1695,
+      "functions": 62,
+      "empty_functions": 0,
+      "implemented_functions": 62,
+      "classes": 16,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/hybrid": {
+      "files": 73,
+      "lines": 24252,
+      "code_lines": 18152,
+      "functions": 749,
+      "empty_functions": 45,
+      "implemented_functions": 704,
+      "classes": 208,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/incident": {
+      "files": 6,
+      "lines": 2105,
+      "code_lines": 1748,
+      "functions": 36,
+      "empty_functions": 0,
+      "implemented_functions": 36,
+      "classes": 12,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/learning": {
+      "files": 5,
+      "lines": 1497,
+      "code_lines": 1102,
+      "functions": 46,
+      "empty_functions": 0,
+      "implemented_functions": 46,
+      "classes": 11,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/llm": {
+      "files": 6,
+      "lines": 1771,
+      "code_lines": 1297,
+      "functions": 54,
+      "empty_functions": 2,
+      "implemented_functions": 52,
+      "classes": 10,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/mcp": {
+      "files": 73,
+      "lines": 20920,
+      "code_lines": 17000,
+      "functions": 583,
+      "empty_functions": 8,
+      "implemented_functions": 575,
+      "classes": 117,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/memory": {
+      "files": 5,
+      "lines": 1817,
+      "code_lines": 1333,
+      "functions": 53,
+      "empty_functions": 0,
+      "implemented_functions": 53,
+      "classes": 11,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/n8n": {
+      "files": 3,
+      "lines": 1191,
+      "code_lines": 976,
+      "functions": 23,
+      "empty_functions": 0,
+      "implemented_functions": 23,
+      "classes": 10,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/orchestration": {
+      "files": 54,
+      "lines": 19766,
+      "code_lines": 15570,
+      "functions": 559,
+      "empty_functions": 27,
+      "implemented_functions": 532,
+      "classes": 116,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/patrol": {
+      "files": 11,
+      "lines": 2552,
+      "code_lines": 2054,
+      "functions": 67,
+      "empty_functions": 2,
+      "implemented_functions": 65,
+      "classes": 21,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/rootcause": {
+      "files": 5,
+      "lines": 1925,
+      "code_lines": 1547,
+      "functions": 43,
+      "empty_functions": 0,
+      "implemented_functions": 43,
+      "classes": 14,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/shared": {
+      "files": 2,
+      "lines": 481,
+      "code_lines": 373,
+      "functions": 14,
+      "empty_functions": 8,
+      "implemented_functions": 6,
+      "classes": 10,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "integrations/swarm": {
+      "files": 7,
+      "lines": 2754,
+      "code_lines": 2202,
+      "functions": 96,
+      "empty_functions": 0,
+      "implemented_functions": 96,
+      "classes": 26,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "middleware/__init__.py": {
+      "files": 1,
+      "lines": 11,
+      "code_lines": 2,
+      "functions": 0,
+      "empty_functions": 0,
+      "implemented_functions": 0,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    },
+    "middleware/rate_limit.py": {
+      "files": 1,
+      "lines": 98,
+      "code_lines": 41,
+      "functions": 3,
+      "empty_functions": 0,
+      "implemented_functions": 3,
+      "classes": 0,
+      "endpoints": 0,
+      "auth_endpoints": 0,
+      "no_auth_endpoints": 0
+    }
+  },
+  "empty_functions_by_file": {
+    "backend\\src\\integrations\\agent_framework\\multiturn\\adapter.py": [
+      "create_redis_multiturn_adapter:823 [not_implemented]"
+    ],
+    "backend\\src\\core\\sandbox\\adapter.py": [
+      "SandboxExecutionContext.__aexit__:272 [pass]"
+    ],
+    "backend\\src\\domain\\agents\\tools\\base.py": [
+      "BaseTool.execute:169 [pass]"
+    ],
+    "backend\\src\\domain\\checkpoints\\storage.py": [
+      "CheckpointStorage.save_checkpoint:42 [pass]",
+      "CheckpointStorage.load_checkpoint:64 [pass]",
+      "CheckpointStorage.list_checkpoints:77 [pass]",
+      "CheckpointStorage.delete_checkpoint:95 [pass]"
+    ],
+    "backend\\src\\domain\\connectors\\base.py": [
+      "BaseConnector.connect:355 [pass]",
+      "BaseConnector.disconnect:368 [pass]",
+      "BaseConnector.execute:377 [pass]",
+      "BaseConnector.health_check:394 [pass]"
+    ],
+    "backend\\src\\domain\\orchestration\\memory\\base.py": [
+      "ConversationMemoryStore.add_message:47 [pass]",
+      "ConversationMemoryStore.get_messages:58 [pass]",
+      "ConversationMemoryStore.get_message_count:79 [pass]",
+      "ConversationMemoryStore.delete_messages:93 [pass]",
+      "ConversationMemoryStore.save_session:111 [pass]",
+      "ConversationMemoryStore.load_session:122 [pass]",
+      "ConversationMemoryStore.delete_session:136 [pass]",
+      "ConversationMemoryStore.list_sessions:150 [pass]",
+      "ConversationMemoryStore.update_session_status:173 [pass]",
+      "ConversationMemoryStore.save_turn:196 [pass]",
+      "ConversationMemoryStore.get_turns:212 [pass]",
+      "ConversationMemoryStore.get_turn:231 [pass]",
+      "ConversationMemoryStore.search_by_content:254 [pass]",
+      "ConversationMemoryStore.get_session_summary:279 [pass]",
+      "ConversationMemoryStore.get_statistics:296 [pass]",
+      "ConversationMemoryStore.cleanup_expired_sessions:311 [pass]",
+      "ConversationMemoryStore.archive_session:322 [pass]"
+    ],
+    "backend\\src\\domain\\orchestration\\memory\\postgres_store.py": [
+      "DatabaseSessionProtocol.execute:35 [docstring_only]",
+      "DatabaseSessionProtocol.fetch_all:36 [docstring_only]",
+      "DatabaseSessionProtocol.fetch_one:37 [docstring_only]"
+    ],
+    "backend\\src\\domain\\orchestration\\memory\\redis_store.py": [
+      "RedisClientProtocol.rpush:35 [docstring_only]",
+      "RedisClientProtocol.lrange:36 [docstring_only]",
+      "RedisClientProtocol.llen:37 [docstring_only]",
+      "RedisClientProtocol.delete:38 [docstring_only]",
+      "RedisClientProtocol.expire:39 [docstring_only]",
+      "RedisClientProtocol.hset:40 [docstring_only]",
+      "RedisClientProtocol.hgetall:41 [docstring_only]",
+      "RedisClientProtocol.keys:42 [docstring_only]",
+      "RedisClientProtocol.exists:43 [docstring_only]",
+      "RedisClientProtocol.scan:44 [docstring_only]"
+    ],
+    "backend\\src\\domain\\orchestration\\nested\\sub_executor.py": [
+      "WorkflowEngineProtocol.execute:53 [ellipsis]",
+      "CheckpointServiceProtocol.save_checkpoint:65 [ellipsis]"
+    ],
+    "backend\\src\\domain\\orchestration\\nested\\workflow_manager.py": [
+      "WorkflowServiceProtocol.get_workflow:67 [ellipsis]",
+      "ExecutionServiceProtocol.execute_workflow:75 [ellipsis]",
+      "ExecutionServiceProtocol.execute_workflow_definition:84 [ellipsis]",
+      "ExecutionServiceProtocol.cancel_execution:93 [ellipsis]"
+    ],
+    "backend\\src\\domain\\orchestration\\planning\\decision_engine.py": [
+      "LLMServiceProtocol.generate:45 [ellipsis]"
+    ],
+    "backend\\src\\domain\\orchestration\\planning\\dynamic_planner.py": [
+      "LLMServiceProtocol.generate:64 [ellipsis]",
+      "DecisionEngineProtocol.make_decision:72 [ellipsis]"
+    ],
+    "backend\\src\\domain\\orchestration\\planning\\task_decomposer.py": [
+      "LLMServiceProtocol.generate:61 [ellipsis]",
+      "AgentRegistryProtocol.get_agent_capabilities:69 [ellipsis]",
+      "AgentRegistryProtocol.find_agents_by_capability:73 [ellipsis]"
+    ],
+    "backend\\src\\domain\\orchestration\\planning\\trial_error.py": [
+      "LLMServiceProtocol.generate:46 [ellipsis]"
+    ],
+    "backend\\src\\domain\\sessions\\approval.py": [
+      "ApprovalCacheProtocol.get:121 [ellipsis]",
+      "ApprovalCacheProtocol.setex:125 [ellipsis]",
+      "ApprovalCacheProtocol.delete:129 [ellipsis]",
+      "ApprovalCacheProtocol.scan:133 [ellipsis]",
+      "ApprovalCacheProtocol.keys:137 [ellipsis]"
+    ],
+    "backend\\src\\domain\\sessions\\bridge.py": [
+      "SessionServiceProtocol.get_session:82 [ellipsis]",
+      "SessionServiceProtocol.send_message:90 [ellipsis]",
+      "SessionServiceProtocol.add_assistant_message:100 [ellipsis]",
+      "SessionServiceProtocol.get_messages:110 [ellipsis]",
+      "SessionServiceProtocol.get_conversation_for_llm:119 [ellipsis]",
+      "AgentRepositoryProtocol.get:134 [ellipsis]"
+    ],
+    "backend\\src\\domain\\sessions\\executor.py": [
+      "MCPClientProtocol.call_tool:200 [ellipsis]",
+      "MCPClientProtocol.get_available_tools:216 [ellipsis]"
+    ],
+    "backend\\src\\domain\\sessions\\files\\analyzer.py": [
+      "BaseAnalyzer.analyze:32 [pass]",
+      "BaseAnalyzer.supports:50 [pass]"
+    ],
+    "backend\\src\\domain\\sessions\\files\\generator.py": [
+      "BaseGenerator.generate:37 [pass]",
+      "BaseGenerator.supports:55 [pass]"
+    ],
+    "backend\\src\\domain\\sessions\\recovery.py": [
+      "CacheProtocol.get:78 [ellipsis]",
+      "CacheProtocol.set:82 [ellipsis]",
+      "CacheProtocol.delete:86 [ellipsis]",
+      "CacheProtocol.exists:90 [ellipsis]"
+    ],
+    "backend\\src\\domain\\sessions\\repository.py": [
+      "SessionRepository.create:37 [pass]",
+      "SessionRepository.get:42 [pass]",
+      "SessionRepository.update:47 [pass]",
+      "SessionRepository.delete:52 [pass]",
+      "SessionRepository.list_by_user:57 [pass]",
+      "SessionRepository.add_message:68 [pass]",
+      "SessionRepository.get_messages:73 [pass]",
+      "SessionRepository.cleanup_expired:83 [pass]"
+    ],
+    "backend\\src\\domain\\sessions\\tool_handler.py": [
+      "ToolRegistryProtocol.get:75 [ellipsis]",
+      "ToolRegistryProtocol.get_all:79 [ellipsis]",
+      "ToolRegistryProtocol.get_schemas:83 [ellipsis]",
+      "MCPClientProtocol.call_tool:95 [ellipsis]",
+      "MCPClientProtocol.list_tools:105 [ellipsis]",
+      "MCPClientProtocol.connected_servers:114 [ellipsis]"
+    ],
+    "backend\\src\\infrastructure\\checkpoint\\protocol.py": [
+      "CheckpointProvider.provider_name:103 [ellipsis]",
+      "CheckpointProvider.save_checkpoint:107 [ellipsis]",
+      "CheckpointProvider.load_checkpoint:125 [ellipsis]",
+      "CheckpointProvider.list_checkpoints:139 [ellipsis]",
+      "CheckpointProvider.delete_checkpoint:155 [ellipsis]"
+    ],
+    "backend\\src\\infrastructure\\distributed_lock\\redis_lock.py": [
+      "DistributedLock.lock_name:38 [ellipsis]",
+      "DistributedLock.acquire:43 [ellipsis]",
+      "DistributedLock.is_locked:47 [ellipsis]"
+    ],
+    "backend\\src\\infrastructure\\storage\\protocol.py": [
+      "StorageBackend.prefix:25 [ellipsis]",
+      "StorageBackend.get:29 [ellipsis]",
+      "StorageBackend.set:41 [ellipsis]",
+      "StorageBackend.delete:52 [ellipsis]",
+      "StorageBackend.exists:64 [ellipsis]",
+      "StorageBackend.list_keys:76 [ellipsis]",
+      "StorageBackend.set_add:89 [ellipsis]",
+      "StorageBackend.set_remove:102 [ellipsis]",
+      "StorageBackend.set_members:115 [ellipsis]",
+      "StorageBackend.clear_all:127 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\ag_ui\\thread\\storage.py": [
+      "CacheProtocol.get:39 [ellipsis]",
+      "CacheProtocol.set:43 [ellipsis]",
+      "CacheProtocol.delete:47 [ellipsis]",
+      "CacheProtocol.exists:51 [ellipsis]",
+      "RepositoryProtocol.save:199 [ellipsis]",
+      "RepositoryProtocol.get_by_id:203 [ellipsis]",
+      "RepositoryProtocol.delete:207 [ellipsis]",
+      "ThreadRepository.save:220 [pass]",
+      "ThreadRepository.get_by_id:230 [pass]",
+      "ThreadRepository.delete:243 [pass]",
+      "ThreadRepository.list_by_status:256 [pass]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\acl\\interfaces.py": [
+      "AgentBuilderInterface.add_agent:100 [ellipsis]",
+      "AgentBuilderInterface.build:110 [ellipsis]",
+      "AgentBuilderInterface.validate:123 [ellipsis]",
+      "AgentRunnerInterface.execute:147 [ellipsis]",
+      "AgentRunnerInterface.execute_stream:170 [ellipsis]",
+      "AgentRunnerInterface.cancel:193 [ellipsis]",
+      "ToolInterface.get_name:223 [ellipsis]",
+      "ToolInterface.get_description:233 [ellipsis]",
+      "ToolInterface.get_schema:243 [ellipsis]",
+      "ToolInterface.execute:253 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\base.py": [
+      "BaseAdapter.initialize:88 [pass]",
+      "BaseAdapter.cleanup:101 [pass]",
+      "BuilderAdapter.build:208 [pass]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\builders\\concurrent.py": [
+      "ExecutorProtocol.id:251 [ellipsis]",
+      "ExecutorProtocol.handle:255 [ellipsis]",
+      "BaseAggregator.aggregate:405 [not_implemented]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\builders\\handoff_hitl.py": [
+      "HITLCallback.on_input_requested:231 [ellipsis]",
+      "HITLCallback.on_input_received:239 [ellipsis]",
+      "HITLCallback.on_session_completed:247 [ellipsis]",
+      "HITLCallback.on_session_timeout:254 [ellipsis]",
+      "HITLCallback.on_session_escalated:261 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\builders\\magentic.py": [
+      "MagenticManagerBase.plan:618 [ellipsis]",
+      "MagenticManagerBase.replan:631 [ellipsis]",
+      "MagenticManagerBase.create_progress_ledger:644 [ellipsis]",
+      "MagenticManagerBase.prepare_final_answer:657 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\builders\\nested_workflow.py": [
+      "SubWorkflowProtocol.build:165 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\builders\\workflow_executor.py": [
+      "WorkflowProtocol.id:323 [ellipsis]",
+      "WorkflowProtocol.input_types:328 [ellipsis]",
+      "WorkflowProtocol.output_types:333 [ellipsis]",
+      "WorkflowProtocol.run:337 [ellipsis]",
+      "WorkflowProtocol.send_responses:341 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\checkpoint.py": [
+      "CheckpointStorageAdapter.save_checkpoint:151 [pass]",
+      "CheckpointStorageAdapter.load_checkpoint:167 [pass]",
+      "CheckpointStorageAdapter.list_checkpoint_ids:183 [pass]",
+      "CheckpointStorageAdapter.list_checkpoints:196 [pass]",
+      "CheckpointStorageAdapter.delete_checkpoint:209 [pass]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\core\\context.py": [
+      "WorkflowContextAdapter.sync_from_domain:342 [pass]",
+      "WorkflowContextAdapter.sync_to_domain:351 [pass]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\memory\\base.py": [
+      "MemoryStorageProtocol.store:178 [ellipsis]",
+      "MemoryStorageProtocol.retrieve:188 [ellipsis]",
+      "MemoryStorageProtocol.search:200 [ellipsis]",
+      "MemoryStorageProtocol.delete:213 [ellipsis]",
+      "BaseMemoryStorageAdapter.store:278 [pass]",
+      "BaseMemoryStorageAdapter.retrieve:283 [pass]",
+      "BaseMemoryStorageAdapter.search:288 [pass]",
+      "BaseMemoryStorageAdapter.delete:293 [pass]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\memory\\postgres_storage.py": [
+      "PostgresConnectionProtocol.execute:51 [docstring_only]",
+      "PostgresConnectionProtocol.fetch:52 [docstring_only]",
+      "PostgresConnectionProtocol.fetchrow:53 [docstring_only]",
+      "PostgresConnectionProtocol.fetchval:54 [docstring_only]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\memory\\redis_storage.py": [
+      "RedisClientProtocol.set:51 [docstring_only]",
+      "RedisClientProtocol.get:52 [docstring_only]",
+      "RedisClientProtocol.delete:53 [docstring_only]",
+      "RedisClientProtocol.exists:54 [docstring_only]",
+      "RedisClientProtocol.expire:55 [docstring_only]",
+      "RedisClientProtocol.keys:56 [docstring_only]",
+      "RedisClientProtocol.scan:57 [docstring_only]",
+      "RedisClientProtocol.mget:58 [docstring_only]",
+      "RedisClientProtocol.mset:59 [docstring_only]",
+      "RedisMemoryStorage._update_search_index:416 [pass]",
+      "RedisMemoryStorage._remove_from_search_index:426 [pass]"
+    ],
+    "backend\\src\\integrations\\agent_framework\\tools\\base.py": [
+      "BaseTool.run:219 [pass]"
+    ],
+    "backend\\src\\integrations\\audit\\report_generator.py": [
+      "AuditReportGenerator.__init__:37 [pass]"
+    ],
+    "backend\\src\\integrations\\claude_sdk\\hooks\\base.py": [
+      "Hook.on_session_start:49 [pass]",
+      "Hook.on_session_end:57 [pass]",
+      "Hook.on_query_end:76 [pass]",
+      "Hook.on_tool_result:102 [pass]",
+      "Hook.on_error:110 [pass]"
+    ],
+    "backend\\src\\integrations\\claude_sdk\\mcp\\base.py": [
+      "MCPServer._connect:284 [pass]",
+      "MCPServer._disconnect:292 [pass]",
+      "MCPServer._send_message:300 [pass]",
+      "MCPServer._execute_tool:309 [pass]"
+    ],
+    "backend\\src\\integrations\\claude_sdk\\mcp\\http.py": [
+      "MCPHTTPServer._send_message:129 [pass]"
+    ],
+    "backend\\src\\integrations\\claude_sdk\\tools\\base.py": [
+      "Tool.execute:34 [pass]",
+      "Tool.get_schema:47 [pass]"
+    ],
+    "backend\\src\\integrations\\hybrid\\checkpoint\\storage.py": [
+      "CheckpointStorageProtocol.save:152 [ellipsis]",
+      "CheckpointStorageProtocol.load:156 [ellipsis]",
+      "CheckpointStorageProtocol.delete:160 [ellipsis]",
+      "CheckpointStorageProtocol.exists:164 [ellipsis]",
+      "UnifiedCheckpointStorage.save:202 [pass]",
+      "UnifiedCheckpointStorage.load:218 [pass]",
+      "UnifiedCheckpointStorage.delete:231 [pass]",
+      "UnifiedCheckpointStorage.exists:244 [pass]",
+      "UnifiedCheckpointStorage.query:257 [pass]",
+      "UnifiedCheckpointStorage.get_stats:270 [pass]",
+      "UnifiedCheckpointStorage.cleanup_expired:280 [pass]"
+    ],
+    "backend\\src\\integrations\\hybrid\\checkpoint\\version.py": [
+      "VersionMigrator.from_version:104 [pass]",
+      "VersionMigrator.to_version:110 [pass]",
+      "VersionMigrator.migrate:115 [pass]",
+      "VersionMigrator.validate:128 [pass]"
+    ],
+    "backend\\src\\integrations\\hybrid\\context\\bridge.py": [
+      "MAFMapperProtocol.to_claude_context_vars:54 [ellipsis]",
+      "MAFMapperProtocol.to_claude_history:61 [ellipsis]",
+      "MAFMapperProtocol.agent_state_to_system_prompt:69 [ellipsis]",
+      "ClaudeMapperProtocol.to_maf_checkpoint:80 [ellipsis]",
+      "ClaudeMapperProtocol.to_execution_records:88 [ellipsis]",
+      "SynchronizerProtocol.sync:99 [ellipsis]",
+      "SynchronizerProtocol.detect_conflict:108 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\hybrid\\context\\mappers\\base.py": [
+      "BaseMapper.map:67 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\hybrid\\execution\\result_handler.py": [
+      "ResultTransformer.transform:54 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\hybrid\\execution\\tool_callback.py": [
+      "MAFToolRequest.function_name:41 [ellipsis]",
+      "MAFToolRequest.arguments:46 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\hybrid\\execution\\unified_executor.py": [
+      "ToolRegistryProtocol.get_tool_instance:128 [ellipsis]",
+      "ToolRegistryProtocol.get_available_tools:132 [ellipsis]",
+      "HookChainProtocol.run_tool_call:140 [ellipsis]",
+      "HookChainProtocol.run_tool_result:144 [ellipsis]",
+      "ContextBridgeProtocol.get_hybrid_context:152 [ellipsis]",
+      "MetricsCollectorProtocol.record_tool_execution:160 [ellipsis]",
+      "ApprovalServiceProtocol.request_approval:174 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\hybrid\\intent\\classifiers\\base.py": [
+      "BaseClassifier.classify:67 [not_implemented]"
+    ],
+    "backend\\src\\integrations\\hybrid\\orchestrator\\contracts.py": [
+      "Handler.handler_type:104 [ellipsis]",
+      "Handler.handle:109 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\hybrid\\risk\\engine.py": [
+      "AnalyzerProtocol.analyze:39 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\hybrid\\switching\\switcher.py": [
+      "TriggerDetectorProtocol.detect:58 [ellipsis]",
+      "StateMigratorProtocol.migrate:71 [ellipsis]",
+      "CheckpointStorageProtocol.save_checkpoint:84 [ellipsis]",
+      "CheckpointStorageProtocol.get_checkpoint:88 [ellipsis]",
+      "CheckpointStorageProtocol.delete_checkpoint:92 [ellipsis]",
+      "ContextBridgeProtocol.get_context:100 [ellipsis]",
+      "ContextBridgeProtocol.update_context:104 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\hybrid\\switching\\triggers\\base.py": [
+      "BaseTriggerDetector.detect:114 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\llm\\protocol.py": [
+      "LLMServiceProtocol.generate:48 [ellipsis]",
+      "LLMServiceProtocol.generate_structured:90 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\mcp\\core\\transport.py": [
+      "BaseTransport.start:51 [pass]",
+      "BaseTransport.stop:56 [pass]",
+      "BaseTransport.send:61 [pass]",
+      "BaseTransport.is_connected:73 [pass]"
+    ],
+    "backend\\src\\integrations\\mcp\\security\\audit.py": [
+      "AuditStorage.store:226 [pass]",
+      "AuditStorage.query:238 [pass]",
+      "AuditStorage.delete_before:253 [pass]"
+    ],
+    "backend\\src\\integrations\\mcp\\servers\\azure\\client.py": [
+      "AzureClient.close:86 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\orchestration\\contracts.py": [
+      "InputGatewayProtocol.receive:169 [ellipsis]",
+      "InputGatewayProtocol.validate:182 [ellipsis]",
+      "RouterProtocol.route:204 [ellipsis]",
+      "RouterProtocol.get_available_layers:217 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\orchestration\\guided_dialog\\context_manager.py": [
+      "DialogSessionStorage.save_session:59 [ellipsis]",
+      "DialogSessionStorage.get_session:63 [ellipsis]",
+      "DialogSessionStorage.delete_session:67 [ellipsis]",
+      "DialogSessionStorage.touch_session:71 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\orchestration\\guided_dialog\\generator.py": [
+      "LLMClient.create_message:32 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\orchestration\\hitl\\controller.py": [
+      "ApprovalStorage.save:193 [ellipsis]",
+      "ApprovalStorage.get:197 [ellipsis]",
+      "ApprovalStorage.update:201 [ellipsis]",
+      "ApprovalStorage.delete:205 [ellipsis]",
+      "ApprovalStorage.list_pending:209 [ellipsis]",
+      "NotificationService.send_approval_request:221 [ellipsis]",
+      "NotificationService.send_approval_result:225 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\orchestration\\input\\contracts.py": [
+      "InputProcessorProtocol.process:24 [ellipsis]",
+      "InputProcessorProtocol.can_handle:37 [ellipsis]",
+      "InputProcessorProtocol.get_source_type:50 [ellipsis]",
+      "InputValidatorProtocol.validate:81 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\orchestration\\input_gateway\\source_handlers\\base_handler.py": [
+      "BaseSourceHandler.handler_type:111 [pass]",
+      "BaseSourceHandler.process:123 [pass]"
+    ],
+    "backend\\src\\integrations\\orchestration\\intent_router\\contracts.py": [
+      "RoutingLayerProtocol.classify:24 [ellipsis]",
+      "RoutingLayerProtocol.get_layer_name:39 [ellipsis]",
+      "RoutingLayerProtocol.get_confidence_threshold:44 [ellipsis]",
+      "DecisionEngineProtocol.route:111 [ellipsis]",
+      "DecisionEngineProtocol.get_pipeline_config:127 [ellipsis]"
+    ],
+    "backend\\src\\integrations\\patrol\\agent.py": [
+      "PatrolCheck.execute:36 [not_implemented]"
+    ],
+    "backend\\src\\integrations\\patrol\\checks\\base.py": [
+      "BaseCheck.execute:35 [pass]"
+    ],
+    "backend\\src\\integrations\\shared\\protocols.py": [
+      "ToolCallbackProtocol.on_tool_call:267 [ellipsis]",
+      "ToolCallbackProtocol.on_tool_result:281 [ellipsis]",
+      "ExecutionEngineProtocol.execute:314 [ellipsis]",
+      "ExecutionEngineProtocol.is_available:328 [ellipsis]",
+      "OrchestrationCallbackProtocol.on_execution_started:347 [ellipsis]",
+      "OrchestrationCallbackProtocol.on_execution_completed:353 [ellipsis]",
+      "OrchestrationCallbackProtocol.on_execution_error:359 [ellipsis]",
+      "SwarmCallbackProtocol.on_swarm_event:375 [ellipsis]"
+    ]
+  },
+  "no_auth_endpoints": {
+    "backend\\src\\api\\v1\\a2a\\routes.py": [
+      "POST   send_message:84",
+      "GET    get_message_status:108",
+      "GET    get_pending_messages:117",
+      "GET    get_conversation:124",
+      "POST   register_agent:131",
+      "DELETE unregister_agent:150",
+      "GET    list_agents:159",
+      "GET    get_agent:166",
+      "POST   discover_agents:175",
+      "GET    get_agent_capabilities:190",
+      "POST   agent_heartbeat:205",
+      "PUT    update_agent_status:214",
+      "GET    get_statistics:227",
+      "POST   run_cleanup:234"
+    ],
+    "backend\\src\\api\\v1\\ag_ui\\routes.py": [
+      "GET    health_check:105",
+      "GET    bridge_status:133",
+      "POST   reset_bridge:153",
+      "POST   run_agent:276",
+      "POST   run_agent_sync:378",
+      "GET    get_thread_history:530",
+      "GET    list_pending_approvals:680",
+      "GET    get_approval_stats:707",
+      "GET    get_approval:727",
+      "POST   approve_tool_call:764",
+      "POST   reject_tool_call:827",
+      "POST   cancel_approval:885",
+      "GET    get_thread_state:1009",
+      "PATCH  update_thread_state:1049",
+      "DELETE clear_thread_state:1131",
+      "POST   test_workflow_progress:1170",
+      "POST   test_mode_switch:1247",
+      "POST   test_ui_component:1310",
+      "POST   test_ui_component_stream:1405",
+      "POST   test_hitl_approval:1497",
+      "POST   test_hitl_approval_stream:1540",
+      "POST   test_workflow_progress:1610",
+      "POST   test_workflow_progress_stream:1657",
+      "POST   test_prediction:1748",
+      "POST   test_prediction_stream:1790"
+    ],
+    "backend\\src\\api\\v1\\ag_ui\\upload.py": [
+      "POST   upload_file:116",
+      "GET    list_uploads:179",
+      "DELETE delete_upload:219",
+      "GET    get_storage_usage:264"
+    ],
+    "backend\\src\\api\\v1\\agents\\routes.py": [
+      "POST   create_agent:72",
+      "GET    list_agents:126",
+      "GET    get_agent:188",
+      "PUT    update_agent:222",
+      "DELETE delete_agent:299",
+      "POST   run_agent:325"
+    ],
+    "backend\\src\\api\\v1\\audit\\decision_routes.py": [
+      "GET    list_decisions:245",
+      "GET    get_decision:319",
+      "GET    get_decision_report:341",
+      "POST   add_feedback:380",
+      "GET    get_statistics:412",
+      "GET    get_summary_report:441",
+      "GET    health_check:479"
+    ],
+    "backend\\src\\api\\v1\\audit\\routes.py": [
+      "GET    list_audit_logs:81",
+      "GET    get_audit_entry:179",
+      "GET    get_execution_trail:217",
+      "GET    get_statistics:274",
+      "GET    export_logs:299",
+      "GET    list_actions:370",
+      "GET    list_resources:385",
+      "GET    health_check:399"
+    ],
+    "backend\\src\\api\\v1\\autonomous\\routes.py": [
+      "POST   create_plan:290",
+      "GET    get_task_history:303",
+      "GET    get_task_status:326",
+      "POST   cancel_task:345"
+    ],
+    "backend\\src\\api\\v1\\cache\\routes.py": [
+      "GET    get_cache_stats:99",
+      "GET    get_cache_config:140",
+      "POST   enable_cache:159",
+      "POST   disable_cache:179",
+      "POST   get_cache_entry:204",
+      "POST   set_cache_entry:245",
+      "POST   clear_cache:281",
+      "POST   warm_cache:320",
+      "POST   reset_cache_stats:350"
+    ],
+    "backend\\src\\api\\v1\\checkpoints\\routes.py": [
+      "GET    list_pending_checkpoints:165",
+      "GET    get_checkpoint:227",
+      "POST   approve_checkpoint:278",
+      "POST   reject_checkpoint:351",
+      "GET    list_checkpoints_by_execution:423",
+      "GET    get_checkpoint_stats:478",
+      "POST   create_checkpoint:519",
+      "POST   expire_checkpoints:594",
+      "GET    get_pending_approval_requests:629",
+      "POST   respond_to_approval:654"
+    ],
+    "backend\\src\\api\\v1\\claude_sdk\\autonomous_routes.py": [
+      "POST   generate_plan:256",
+      "GET    get_plan:284",
+      "POST   execute_plan:301",
+      "DELETE delete_plan:347",
+      "GET    list_plans:362",
+      "POST   estimate_resources:389",
+      "POST   verify_plan:411"
+    ],
+    "backend\\src\\api\\v1\\claude_sdk\\hooks_routes.py": [
+      "GET    list_hooks:226",
+      "GET    get_hook:242",
+      "POST   register_hook:261",
+      "DELETE remove_hook:285",
+      "PUT    enable_hook:302",
+      "PUT    disable_hook:321"
+    ],
+    "backend\\src\\api\\v1\\claude_sdk\\hybrid_routes.py": [
+      "POST   execute_hybrid_task:197",
+      "POST   analyze_task:264",
+      "GET    get_metrics:310",
+      "POST   sync_context:339",
+      "GET    list_capabilities:379"
+    ],
+    "backend\\src\\api\\v1\\claude_sdk\\intent_routes.py": [
+      "POST   classify_intent:263",
+      "POST   analyze_complexity:349",
+      "POST   detect_multi_agent:382",
+      "GET    list_classifiers:419",
+      "GET    get_stats:447",
+      "PUT    update_config:473"
+    ],
+    "backend\\src\\api\\v1\\claude_sdk\\mcp_routes.py": [
+      "GET    list_mcp_servers:167",
+      "POST   connect_mcp_server:231",
+      "POST   disconnect_mcp_server:328",
+      "GET    check_mcp_server_health:352",
+      "GET    list_mcp_tools:386",
+      "POST   execute_mcp_tool:422"
+    ],
+    "backend\\src\\api\\v1\\claude_sdk\\routes.py": [
+      "POST   execute_query:54",
+      "POST   create_session:89",
+      "POST   session_query:115",
+      "DELETE close_session:149",
+      "GET    get_session_history:168",
+      "GET    health_check:203"
+    ],
+    "backend\\src\\api\\v1\\claude_sdk\\tools_routes.py": [
+      "GET    list_tools:102",
+      "GET    get_tool:158",
+      "POST   execute_tool_endpoint:200",
+      "POST   validate_tool_parameters:265"
+    ],
+    "backend\\src\\api\\v1\\code_interpreter\\routes.py": [
+      "GET    health_check:77",
+      "POST   execute_code:112",
+      "POST   analyze_task:206",
+      "POST   create_session:294",
+      "DELETE delete_session:363",
+      "GET    get_session:410",
+      "POST   upload_file:451",
+      "GET    list_files:520",
+      "GET    download_file:572",
+      "DELETE delete_file:628",
+      "GET    download_sandbox_file:688"
+    ],
+    "backend\\src\\api\\v1\\code_interpreter\\visualization.py": [
+      "GET    get_chart_types:164",
+      "GET    get_visualization:182",
+      "POST   generate_visualization:240"
+    ],
+    "backend\\src\\api\\v1\\concurrent\\routes.py": [
+      "POST   execute_concurrent:213",
+      "GET    get_execution_status:291",
+      "GET    get_branches:414",
+      "GET    get_branch_status:490",
+      "POST   cancel_execution:560",
+      "POST   cancel_branch:649",
+      "GET    get_stats:725",
+      "GET    health_check:798",
+      "POST   execute_concurrent_v2:857",
+      "GET    get_execution_v2:934",
+      "GET    get_stats_v2:988",
+      "GET    health_check_v2:1019",
+      "GET    list_executions_v2:1057"
+    ],
+    "backend\\src\\api\\v1\\concurrent\\websocket.py": [
+      "WEBSOCKET websocket_execution:372",
+      "WEBSOCKET websocket_global:421"
+    ],
+    "backend\\src\\api\\v1\\connectors\\routes.py": [
+      "GET    list_connectors:128",
+      "GET    list_connector_types:187",
+      "GET    health_check_all:228",
+      "GET    get_connector:281",
+      "GET    get_connector_status:340",
+      "GET    health_check_connector:390",
+      "POST   execute_operation:447",
+      "POST   connect_connector:505",
+      "POST   disconnect_connector:553"
+    ],
+    "backend\\src\\api\\v1\\correlation\\routes.py": [
+      "POST   analyze_correlation:174",
+      "GET    get_event_correlations:294",
+      "POST   analyze_root_cause:324",
+      "GET    get_root_cause_analysis:454",
+      "GET    get_correlation_graph_mermaid:467",
+      "GET    get_correlation_graph_json:509",
+      "GET    get_correlation_graph_dot:539"
+    ],
+    "backend\\src\\api\\v1\\dashboard\\routes.py": [
+      "GET    get_dashboard_stats:48",
+      "GET    get_execution_chart_data:128"
+    ],
+    "backend\\src\\api\\v1\\devtools\\routes.py": [
+      "GET    health_check:148",
+      "GET    list_traces:160",
+      "POST   start_trace:186",
+      "GET    get_trace:200",
+      "POST   end_trace:212",
+      "DELETE delete_trace:229",
+      "POST   add_event:245",
+      "GET    get_events:287",
+      "POST   start_span:333",
+      "POST   end_span:351",
+      "GET    get_timeline:368",
+      "GET    get_statistics:392"
+    ],
+    "backend\\src\\api\\v1\\executions\\routes.py": [
+      "GET    list_executions:124",
+      "POST   create_execution:209",
+      "GET    get_execution:264",
+      "POST   cancel_execution:319",
+      "GET    get_valid_transitions:384",
+      "GET    get_running_executions:438",
+      "GET    get_recent_executions:481",
+      "GET    get_workflow_stats:525",
+      "POST   resume_execution:570",
+      "GET    get_resume_status:661",
+      "POST   shutdown_execution:713"
+    ],
+    "backend\\src\\api\\v1\\groupchat\\routes.py": [
+      "POST   create_group_chat:305",
+      "GET    list_group_chats:371",
+      "GET    get_group_chat:402",
+      "PATCH  update_group_config:427",
+      "POST   add_agent_to_group:455",
+      "DELETE remove_agent_from_group:493",
+      "POST   start_conversation:522",
+      "POST   send_message:567",
+      "GET    get_messages:611",
+      "GET    get_transcript:643",
+      "GET    get_summary:666",
+      "POST   terminate_group_chat:702",
+      "DELETE delete_group_chat:736",
+      "WEBSOCKET websocket_endpoint:764",
+      "POST   create_session:842",
+      "GET    list_sessions:868",
+      "GET    get_session:904",
+      "POST   execute_turn:929",
+      "GET    get_session_history:981",
+      "PATCH  update_session_context:1032",
+      "POST   close_session:1051",
+      "DELETE delete_session:1067",
+      "POST   create_voting_session:1089",
+      "GET    list_voting_sessions:1142",
+      "GET    get_voting_session:1188",
+      "POST   cast_vote:1218",
+      "PATCH  change_vote:1261",
+      "DELETE withdraw_vote:1300",
+      "GET    get_votes:1323",
+      "POST   calculate_voting_result:1349",
+      "GET    get_voting_statistics:1409",
+      "POST   close_voting_session:1439",
+      "POST   cancel_voting_session:1456",
+      "DELETE delete_voting_session:1476",
+      "POST   create_groupchat_adapter:1530",
+      "GET    list_groupchat_adapters:1589",
+      "GET    get_groupchat_adapter:1611",
+      "POST   run_groupchat_adapter:1632",
+      "POST   add_adapter_participant:1681",
+      "DELETE remove_adapter_participant:1705",
+      "DELETE delete_groupchat_adapter:1722",
+      "POST   orchestrator_select_speaker:1742"
+    ],
+    "backend\\src\\api\\v1\\handoff\\routes.py": [
+      "POST   trigger_handoff:196",
+      "GET    get_handoff_status:251",
+      "POST   cancel_handoff:296",
+      "GET    get_handoff_history:344",
+      "POST   match_capabilities:431",
+      "GET    get_agent_capabilities:507",
+      "POST   register_capability:547",
+      "DELETE remove_capability:614",
+      "GET    list_hitl_sessions:654",
+      "GET    get_hitl_session:734",
+      "GET    get_pending_hitl_requests:784",
+      "POST   submit_hitl_input:839",
+      "POST   cancel_hitl_session:914",
+      "POST   escalate_hitl_session:963"
+    ],
+    "backend\\src\\api\\v1\\hybrid\\context_routes.py": [
+      "GET    get_hybrid_context:186",
+      "GET    get_sync_status:221",
+      "POST   trigger_sync:257",
+      "POST   merge_contexts:411",
+      "GET    list_hybrid_contexts:475"
+    ],
+    "backend\\src\\api\\v1\\hybrid\\core_routes.py": [
+      "POST   analyze_intent:289",
+      "POST   execute_hybrid:365",
+      "GET    get_unified_metrics:452",
+      "GET    get_system_status:541"
+    ],
+    "backend\\src\\api\\v1\\hybrid\\risk_routes.py": [
+      "POST   assess_risk:167",
+      "POST   assess_risk_batch:220",
+      "GET    get_session_risk:269",
+      "GET    get_metrics:318",
+      "DELETE clear_session_history:345",
+      "POST   reset_metrics:381",
+      "GET    get_config:403"
+    ],
+    "backend\\src\\api\\v1\\hybrid\\switch_routes.py": [
+      "POST   trigger_switch:322",
+      "GET    get_switch_status:472",
+      "POST   rollback_switch:519",
+      "GET    get_switch_history:623",
+      "GET    list_checkpoints:659",
+      "DELETE delete_checkpoint:698",
+      "DELETE clear_switch_history:732"
+    ],
+    "backend\\src\\api\\v1\\learning\\routes.py": [
+      "GET    health_check:112",
+      "GET    get_statistics:126",
+      "POST   record_correction:148",
+      "GET    list_cases:172",
+      "GET    get_case:208",
+      "DELETE delete_case:220",
+      "POST   approve_case:236",
+      "POST   reject_case:248",
+      "POST   bulk_approve_cases:260",
+      "POST   find_similar_cases:278",
+      "POST   build_few_shot_prompt:307",
+      "POST   record_effectiveness:341",
+      "GET    get_scenario_statistics:363"
+    ],
+    "backend\\src\\api\\v1\\mcp\\routes.py": [
+      "GET    list_servers:101",
+      "POST   register_server:127",
+      "GET    get_server:183",
+      "DELETE unregister_server:212",
+      "POST   connect_server:246",
+      "POST   disconnect_server:283",
+      "GET    list_server_tools:323",
+      "GET    list_all_tools:373",
+      "POST   execute_tool:416",
+      "GET    get_status:509",
+      "GET    query_audit:545",
+      "POST   connect_all_servers:608",
+      "POST   disconnect_all_servers:631"
+    ],
+    "backend\\src\\api\\v1\\memory\\routes.py": [
+      "POST   add_memory:120",
+      "POST   search_memory:162",
+      "GET    get_user_memories:218",
+      "DELETE delete_memory:276",
+      "POST   promote_memory:318",
+      "POST   get_context_memories:367",
+      "GET    health_check:414"
+    ],
+    "backend\\src\\api\\v1\\n8n\\routes.py": [
+      "POST   n8n_webhook:242",
+      "POST   n8n_webhook_by_workflow:295",
+      "GET    get_n8n_status:352",
+      "GET    get_n8n_config:403",
+      "PUT    update_n8n_config:423",
+      "POST   n8n_callback:465",
+      "GET    get_callback_result:514"
+    ],
+    "backend\\src\\api\\v1\\nested\\routes.py": [
+      "POST   create_nested_config:438",
+      "GET    list_nested_configs:486",
+      "GET    get_nested_config:546",
+      "DELETE delete_nested_config:578",
+      "POST   execute_sub_workflow:605",
+      "POST   batch_execute_sub_workflows:658",
+      "GET    get_sub_workflow_status:705",
+      "POST   cancel_sub_workflow:746",
+      "POST   execute_recursive:784",
+      "GET    get_recursion_status:836",
+      "POST   create_composition:881",
+      "POST   execute_composition:936",
+      "POST   propagate_context:980",
+      "GET    get_data_flow_events:1039",
+      "GET    get_tracker_stats:1075",
+      "GET    get_nested_stats:1102"
+    ],
+    "backend\\src\\api\\v1\\notifications\\routes.py": [
+      "POST   send_approval_notification:76",
+      "POST   send_completion_notification:112",
+      "POST   send_error_alert:142",
+      "POST   send_custom_notification:177",
+      "GET    get_notification_history:215",
+      "GET    get_notification_statistics:263",
+      "DELETE clear_notification_history:285",
+      "GET    get_configuration:302",
+      "PUT    update_configuration:324",
+      "GET    list_notification_types:369",
+      "GET    health_check:379"
+    ],
+    "backend\\src\\api\\v1\\orchestration\\approval_routes.py": [
+      "GET    list_approvals:208",
+      "GET    get_approval:287",
+      "POST   submit_decision:386",
+      "POST   teams_callback:447"
+    ],
+    "backend\\src\\api\\v1\\orchestration\\dialog_routes.py": [
+      "POST   start_dialog:187",
+      "POST   respond_to_dialog:278",
+      "GET    get_dialog_status:383",
+      "DELETE cancel_dialog:455"
+    ],
+    "backend\\src\\api\\v1\\orchestration\\intent_routes.py": [
+      "POST   classify_intent:184",
+      "POST   test_intent:285",
+      "POST   batch_classify:426",
+      "POST   quick_classify:455"
+    ],
+    "backend\\src\\api\\v1\\orchestration\\route_management.py": [
+      "POST   create_route:197",
+      "GET    list_routes:240",
+      "GET    get_route:272",
+      "PUT    update_route:309",
+      "DELETE delete_route:354",
+      "POST   sync_routes:390",
+      "POST   search_test:418"
+    ],
+    "backend\\src\\api\\v1\\orchestration\\routes.py": [
+      "GET    list_policies:72",
+      "GET    list_policies_by_category:111",
+      "POST   switch_policy_mode:156",
+      "POST   assess_risk:207",
+      "GET    get_metrics:274",
+      "POST   reset_metrics:302",
+      "GET    health_check:327"
+    ],
+    "backend\\src\\api\\v1\\orchestration\\webhook_routes.py": [
+      "POST   receive_servicenow_webhook:147",
+      "GET    webhook_health:229",
+      "POST   receive_servicenow_incident:261"
+    ],
+    "backend\\src\\api\\v1\\patrol\\routes.py": [
+      "POST   trigger_patrol:143",
+      "GET    get_patrol_reports:183",
+      "GET    get_patrol_report:246",
+      "GET    get_patrol_schedules:289",
+      "POST   create_patrol_schedule:331",
+      "PUT    update_patrol_schedule:360",
+      "DELETE delete_patrol_schedule:401",
+      "GET    list_check_types:501",
+      "GET    execute_check:511"
+    ],
+    "backend\\src\\api\\v1\\performance\\routes.py": [
+      "GET    get_performance_metrics:134",
+      "POST   start_profiling_session:245",
+      "POST   stop_profiling_session:263",
+      "POST   record_metric:285",
+      "GET    list_profiling_sessions:304",
+      "GET    get_session_summary:326",
+      "POST   run_optimization:353",
+      "GET    get_collector_summary:384",
+      "GET    get_alerts:390",
+      "POST   set_threshold:400",
+      "GET    performance_health:416"
+    ],
+    "backend\\src\\api\\v1\\planning\\routes.py": [
+      "POST   decompose_task:83",
+      "POST   refine_decomposition:129",
+      "POST   create_plan:180",
+      "GET    get_plan:213",
+      "GET    get_plan_execution_status:232",
+      "POST   approve_plan:251",
+      "POST   execute_plan:270",
+      "POST   pause_plan:307",
+      "POST   approve_adjustment:326",
+      "GET    list_plans:348",
+      "DELETE delete_plan:372",
+      "POST   make_decision:395",
+      "GET    explain_decision:442",
+      "POST   approve_decision:465",
+      "POST   reject_decision:484",
+      "GET    list_decisions:505",
+      "GET    list_decision_rules:529",
+      "POST   execute_with_trial:545",
+      "GET    get_learning_insights:585",
+      "GET    get_recommendations:609",
+      "GET    get_trial_statistics:635",
+      "GET    get_trial_history:646",
+      "DELETE clear_trial_history:683",
+      "POST   create_magentic_adapter:729",
+      "GET    get_magentic_adapter_state:793",
+      "DELETE delete_magentic_adapter:839",
+      "POST   run_magentic_workflow:856",
+      "POST   respond_to_intervention:939",
+      "GET    list_magentic_adapters:997",
+      "GET    get_magentic_ledger:1027",
+      "POST   reset_magentic_adapter:1054",
+      "POST   create_planning_adapter:1090",
+      "GET    get_planning_adapter:1174",
+      "POST   run_planning_adapter:1195",
+      "DELETE delete_planning_adapter:1224",
+      "GET    list_planning_adapters:1234",
+      "POST   create_multiturn_adapter:1257",
+      "GET    get_multiturn_adapter:1322",
+      "POST   add_multiturn_turn:1345",
+      "GET    get_multiturn_history:1374",
+      "POST   save_multiturn_checkpoint:1394",
+      "POST   restore_multiturn_checkpoint:1405",
+      "POST   complete_multiturn_session:1419",
+      "DELETE delete_multiturn_adapter:1440",
+      "GET    list_multiturn_adapters:1452",
+      "GET    health_check:1474"
+    ],
+    "backend\\src\\api\\v1\\prompts\\routes.py": [
+      "GET    list_templates:92",
+      "GET    get_template:142",
+      "POST   create_template:179",
+      "PUT    update_template:245",
+      "DELETE delete_template:306",
+      "POST   render_template:329",
+      "POST   validate_template:381",
+      "GET    list_categories:430",
+      "GET    search_templates:456",
+      "POST   reload_templates:491",
+      "GET    health_check:510"
+    ],
+    "backend\\src\\api\\v1\\rootcause\\routes.py": [
+      "POST   analyze_root_cause:340",
+      "GET    get_hypotheses:364",
+      "GET    get_recommendations:391",
+      "POST   find_similar_patterns:420"
+    ],
+    "backend\\src\\api\\v1\\routing\\routes.py": [
+      "POST   route_to_scenario:80",
+      "POST   create_relation:129",
+      "GET    get_execution_relations:172",
+      "GET    get_execution_chain:217",
+      "GET    get_relation:252",
+      "DELETE delete_relation:273",
+      "GET    list_scenarios:288",
+      "GET    get_scenario_config:312",
+      "PUT    configure_scenario:335",
+      "POST   set_default_workflow:377",
+      "GET    list_relation_types:400",
+      "GET    get_statistics:408",
+      "DELETE clear_all_relations:423",
+      "GET    health_check:432"
+    ],
+    "backend\\src\\api\\v1\\sandbox\\routes.py": [
+      "GET    get_pool_status:36",
+      "POST   cleanup_pool:44",
+      "POST   create_sandbox:53",
+      "GET    get_sandbox:66",
+      "DELETE delete_sandbox:79",
+      "POST   send_ipc_message:94"
+    ],
+    "backend\\src\\api\\v1\\sessions\\websocket.py": [
+      "WEBSOCKET websocket_endpoint:546",
+      "GET    get_websocket_status:630",
+      "POST   broadcast_to_session:647"
+    ],
+    "backend\\src\\api\\v1\\swarm\\demo.py": [
+      "POST   start_demo:438",
+      "GET    get_demo_status:502",
+      "POST   stop_demo:540",
+      "GET    list_scenarios:557",
+      "GET    subscribe_swarm_events:684"
+    ],
+    "backend\\src\\api\\v1\\swarm\\routes.py": [
+      "GET    get_swarm_status:98",
+      "GET    list_swarm_workers:140",
+      "GET    get_worker_details:176"
+    ],
+    "backend\\src\\api\\v1\\templates\\routes.py": [
+      "GET    health_check:158",
+      "GET    get_statistics:172",
+      "GET    list_categories:188",
+      "GET    get_popular_templates:207",
+      "GET    get_top_rated_templates:224",
+      "POST   search_templates:241",
+      "GET    list_templates:273",
+      "GET    get_similar_templates:342",
+      "GET    get_template:364",
+      "POST   instantiate_template:381",
+      "POST   rate_template:415"
+    ],
+    "backend\\src\\api\\v1\\triggers\\routes.py": [
+      "POST   trigger_workflow:85",
+      "GET    list_webhook_configs:172",
+      "POST   create_webhook_config:205",
+      "GET    get_webhook_config:269",
+      "PUT    update_webhook_config:302",
+      "DELETE delete_webhook_config:350",
+      "POST   test_signature:373",
+      "GET    health_check:412"
+    ],
+    "backend\\src\\api\\v1\\versioning\\routes.py": [
+      "GET    health_check:150",
+      "GET    get_statistics:162",
+      "POST   compare_versions:177",
+      "POST   create_version:197",
+      "GET    list_all_versions:224",
+      "GET    get_version:261",
+      "DELETE delete_version:273",
+      "POST   publish_version:292",
+      "POST   deprecate_version:309",
+      "POST   archive_version:324",
+      "GET    list_template_versions:341",
+      "GET    get_latest_version:370",
+      "POST   rollback_version:400",
+      "GET    get_template_statistics:416"
+    ],
+    "backend\\src\\api\\v1\\workflows\\graph_routes.py": [
+      "GET    get_workflow_graph:241",
+      "PUT    update_workflow_graph:265",
+      "POST   auto_layout_workflow_graph:312"
+    ],
+    "backend\\src\\api\\v1\\workflows\\routes.py": [
+      "POST   create_workflow:150",
+      "GET    list_workflows:195",
+      "GET    get_workflow:241",
+      "PUT    update_workflow:262",
+      "DELETE delete_workflow:326",
+      "POST   execute_workflow:352",
+      "POST   validate_workflow:479",
+      "POST   activate_workflow:542",
+      "POST   deactivate_workflow:564"
+    ]
+  },
+  "inmemory_details": [
+    {
+      "name": "tool_calls_data",
+      "line": 331,
+      "type": "empty_list",
+      "file": "backend\\src\\api\\v1\\ag_ui\\dependencies.py"
+    },
+    {
+      "name": "update_data",
+      "line": 250,
+      "type": "empty_dict",
+      "file": "backend\\src\\api\\v1\\agents\\routes.py"
+    },
+    {
+      "name": "items",
+      "line": 394,
+      "type": "empty_list",
+      "file": "backend\\src\\api\\v1\\handoff\\routes.py"
+    },
+    {
+      "name": "tool_records",
+      "line": 266,
+      "type": "empty_list",
+      "file": "backend\\src\\api\\v1\\hybrid\\switch_routes.py"
+    },
+    {
+      "name": "tool_records",
+      "line": 273,
+      "type": "empty_list",
+      "file": "backend\\src\\api\\v1\\hybrid\\switch_routes.py"
+    },
+    {
+      "name": "items",
+      "line": 510,
+      "type": "empty_list",
+      "file": "backend\\src\\api\\v1\\nested\\routes.py"
+    },
+    {
+      "name": "update_data",
+      "line": 283,
+      "type": "empty_dict",
+      "file": "backend\\src\\api\\v1\\workflows\\routes.py"
+    },
+    {
+      "name": "session_data",
+      "line": 208,
+      "type": "empty_dict",
+      "file": "backend\\src\\domain\\orchestration\\memory\\redis_store.py"
+    },
+    {
+      "name": "subtasks_data",
+      "line": 476,
+      "type": "empty_list",
+      "file": "backend\\src\\domain\\orchestration\\planning\\task_decomposer.py"
+    },
+    {
+      "name": "data",
+      "line": 478,
+      "type": "empty_list",
+      "file": "backend\\src\\domain\\sessions\\files\\data_exporter.py"
+    },
+    {
+      "name": "toc_items",
+      "line": 333,
+      "type": "empty_list",
+      "file": "backend\\src\\domain\\sessions\\files\\report_generator.py"
+    },
+    {
+      "name": "toc_items",
+      "line": 350,
+      "type": "empty_list",
+      "file": "backend\\src\\domain\\sessions\\files\\report_generator.py"
+    },
+    {
+      "name": "entry_metadata",
+      "line": 297,
+      "type": "empty_dict",
+      "file": "backend\\src\\infrastructure\\checkpoint\\adapters\\agent_framework_adapter.py"
+    },
+    {
+      "name": "events",
+      "line": 293,
+      "type": "empty_list",
+      "file": "backend\\src\\integrations\\ag_ui\\converters.py"
+    },
+    {
+      "name": "metadata",
+      "line": 335,
+      "type": "empty_dict",
+      "file": "backend\\src\\integrations\\ag_ui\\events\\progress.py"
+    },
+    {
+      "name": "executor_states",
+      "line": 1123,
+      "type": "empty_dict",
+      "file": "backend\\src\\integrations\\agent_framework\\builders\\workflow_executor_migration.py"
+    },
+    {
+      "name": "records",
+      "line": 747,
+      "type": "empty_list",
+      "file": "backend\\src\\integrations\\hybrid\\context\\bridge.py"
+    },
+    {
+      "name": "metadata",
+      "line": 495,
+      "type": "empty_dict",
+      "file": "backend\\src\\integrations\\hybrid\\context\\bridge.py"
+    },
+    {
+      "name": "metadata",
+      "line": 511,
+      "type": "empty_dict",
+      "file": "backend\\src\\integrations\\hybrid\\context\\bridge.py"
+    },
+    {
+      "name": "records",
+      "line": 183,
+      "type": "empty_list",
+      "file": "backend\\src\\integrations\\hybrid\\context\\mappers\\claude_mapper.py"
+    },
+    {
+      "name": "tool_call_records",
+      "line": 416,
+      "type": "empty_list",
+      "file": "backend\\src\\integrations\\hybrid\\switching\\migration\\state_migrator.py"
+    },
+    {
+      "name": "preserved_data",
+      "line": 421,
+      "type": "empty_dict",
+      "file": "backend\\src\\integrations\\hybrid\\switching\\migration\\state_migrator.py"
+    },
+    {
+      "name": "tool_call_records",
+      "line": 468,
+      "type": "empty_list",
+      "file": "backend\\src\\integrations\\hybrid\\switching\\migration\\state_migrator.py"
+    },
+    {
+      "name": "preserved_data",
+      "line": 480,
+      "type": "empty_dict",
+      "file": "backend\\src\\integrations\\hybrid\\switching\\migration\\state_migrator.py"
+    },
+    {
+      "name": "events",
+      "line": 341,
+      "type": "empty_list",
+      "file": "backend\\src\\integrations\\mcp\\security\\audit.py"
+    },
+    {
+      "name": "data_disks",
+      "line": 366,
+      "type": "empty_list",
+      "file": "backend\\src\\integrations\\mcp\\servers\\azure\\tools\\vm.py"
+    },
+    {
+      "name": "records",
+      "line": 271,
+      "type": "empty_list",
+      "file": "backend\\src\\integrations\\memory\\mem0_client.py"
+    },
+    {
+      "name": "metadata",
+      "line": 277,
+      "type": "empty_dict",
+      "file": "backend\\src\\integrations\\orchestration\\contracts.py"
+    },
+    {
+      "name": "metadata",
+      "line": 346,
+      "type": "empty_dict",
+      "file": "backend\\src\\integrations\\orchestration\\contracts.py"
+    },
+    {
+      "name": "hist_data",
+      "line": 739,
+      "type": "empty_dict",
+      "file": "backend\\src\\integrations\\orchestration\\metrics.py"
+    }
+  ],
+  "mock_details": [
+    {
+      "line": 502,
+      "keyword": "placeholder",
+      "content": "This is a placeholder for session/auth middleware integration.",
+      "file": "backend\\src\\api\\v1\\ag_ui\\dependencies.py"
+    },
+    {
+      "line": 82,
+      "keyword": "MOCK_",
+      "content": "mock_client = AsyncMock()",
+      "file": "backend\\src\\api\\v1\\cache\\routes.py"
+    },
+    {
+      "line": 83,
+      "keyword": "MOCK_",
+      "content": "_cache_service = LLMCacheService(mock_client, enabled=False)",
+      "file": "backend\\src\\api\\v1\\cache\\routes.py"
+    },
+    {
+      "line": 172,
+      "keyword": "placeholder",
+      "content": "# Register default tool executors (placeholder)",
+      "file": "backend\\src\\api\\v1\\claude_sdk\\autonomous_routes.py"
+    },
+    {
+      "line": 498,
+      "keyword": "placeholder",
+      "content": "# callback registration methods. For now, this is a placeholder.",
+      "file": "backend\\src\\api\\v1\\concurrent\\websocket.py"
+    },
+    {
+      "line": 946,
+      "keyword": "MOCK_",
+      "content": "def mock_agent_handler(agent_id: str, user_input: str, history: list) -> str:",
+      "file": "backend\\src\\api\\v1\\groupchat\\routes.py"
+    },
+    {
+      "line": 953,
+      "keyword": "MOCK_",
+      "content": "agent_handler=mock_agent_handler,",
+      "file": "backend\\src\\api\\v1\\groupchat\\routes.py"
+    },
+    {
+      "line": 432,
+      "keyword": "placeholder",
+      "content": "# Create placeholder contexts if IDs provided",
+      "file": "backend\\src\\api\\v1\\hybrid\\context_routes.py"
+    },
+    {
+      "line": 161,
+      "keyword": "MOCK_",
+      "content": "from tests.mocks.orchestration import create_mock_dialog_engine",
+      "file": "backend\\src\\api\\v1\\orchestration\\dialog_routes.py"
+    },
+    {
+      "line": 162,
+      "keyword": "MOCK_",
+      "content": "_dialog_engine = create_mock_dialog_engine()",
+      "file": "backend\\src\\api\\v1\\orchestration\\dialog_routes.py"
+    },
+    {
+      "line": 164,
+      "keyword": "MOCK_",
+      "content": "from tests.mocks.orchestration import create_mock_router",
+      "file": "backend\\src\\api\\v1\\orchestration\\intent_routes.py"
+    },
+    {
+      "line": 165,
+      "keyword": "MOCK_",
+      "content": "_router_instance = create_mock_router(config=config)",
+      "file": "backend\\src\\api\\v1\\orchestration\\intent_routes.py"
+    },
+    {
+      "line": 278,
+      "keyword": "placeholder",
+      "content": "# For now, return placeholder metrics",
+      "file": "backend\\src\\api\\v1\\orchestration\\routes.py"
+    },
+    {
+      "line": 195,
+      "keyword": "SAMPLE_",
+      "content": "sample_reports = [",
+      "file": "backend\\src\\api\\v1\\patrol\\routes.py"
+    },
+    {
+      "line": 197,
+      "keyword": "SAMPLE_",
+      "content": "\"report_id\": \"report_sample_001\",",
+      "file": "backend\\src\\api\\v1\\patrol\\routes.py"
+    },
+    {
+      "line": 231,
+      "keyword": "SAMPLE_",
+      "content": "sample_reports.append(report)",
+      "file": "backend\\src\\api\\v1\\patrol\\routes.py"
+    },
+    {
+      "line": 235,
+      "keyword": "SAMPLE_",
+      "content": "sample_reports = [r for r in sample_reports if r.get(\"overall_status\") == status]",
+      "file": "backend\\src\\api\\v1\\patrol\\routes.py"
+    },
+    {
+      "line": 237,
+      "keyword": "SAMPLE_",
+      "content": "sample_reports = [r for r in sample_reports if r.get(\"patrol_id\") == patrol_id]",
+      "file": "backend\\src\\api\\v1\\patrol\\routes.py"
+    },
+    {
+      "line": 240,
+      "keyword": "SAMPLE_",
+      "content": "paginated = sample_reports[offset : offset + limit]",
+      "file": "backend\\src\\api\\v1\\patrol\\routes.py"
+    },
+    {
+      "line": 558,
+      "keyword": "DUMMY_",
+      "content": "async def dummy_execution(**kwargs):",
+      "file": "backend\\src\\api\\v1\\planning\\routes.py"
+    },
+    {
+      "line": 568,
+      "keyword": "DUMMY_",
+      "content": "execution_fn=dummy_execution,",
+      "file": "backend\\src\\api\\v1\\planning\\routes.py"
+    },
+    {
+      "line": 186,
+      "keyword": "# TODO",
+      "content": "# TODO: \u6574\u5408\u5be6\u969b\u7684 Agent Repository",
+      "file": "backend\\src\\api\\v1\\sessions\\chat.py"
+    },
+    {
+      "line": 223,
+      "keyword": "hardcoded",
+      "content": "Sprint 111: Replaced hardcoded UUID with real JWT extraction.",
+      "file": "backend\\src\\api\\v1\\sessions\\chat.py"
+    },
+    {
+      "line": 561,
+      "keyword": "# TODO",
+      "content": "\"is_processing\": False,  # TODO: \u8ffd\u8e64\u5be6\u969b\u8655\u7406\u72c0\u614b",
+      "file": "backend\\src\\api\\v1\\sessions\\chat.py"
+    },
+    {
+      "line": 102,
+      "keyword": "hardcoded",
+      "content": "Sprint 111: Replaced hardcoded UUID with real JWT extraction.",
+      "file": "backend\\src\\api\\v1\\sessions\\routes.py"
+    },
+    {
+      "line": 558,
+      "keyword": "# TODO",
+      "content": "# TODO: \u5be6\u73fe\u5be6\u969b\u7684\u9644\u4ef6\u5b58\u5132",
+      "file": "backend\\src\\api\\v1\\sessions\\routes.py"
+    },
+    {
+      "line": 591,
+      "keyword": "# TODO",
+      "content": "# TODO: \u5be6\u73fe\u5be6\u969b\u7684\u9644\u4ef6\u4e0b\u8f09",
+      "file": "backend\\src\\api\\v1\\sessions\\routes.py"
+    },
+    {
+      "line": 37,
+      "keyword": "MOCK_",
+      "content": "mock_factory=create_mock_router,",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 49,
+      "keyword": "MOCK_",
+      "content": "mock_factory: Optional[Callable[..., Any]] = None,",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 56,
+      "keyword": "MOCK_",
+      "content": "mock_factory: Callable that creates the mock implementation",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 60,
+      "keyword": "MOCK_",
+      "content": "\"mock\": mock_factory,",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 88,
+      "keyword": "MOCK_",
+      "content": "mock_factory = entry[\"mock\"]",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 91,
+      "keyword": "MOCK_",
+      "content": "if env == \"testing\" and mock_factory is not None:",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 93,
+      "keyword": "MOCK_",
+      "content": "return mock_factory(**kwargs)",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 108,
+      "keyword": "MOCK_",
+      "content": "if mock_factory is not None:",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 114,
+      "keyword": "MOCK_",
+      "content": "return mock_factory(**kwargs)",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 156,
+      "keyword": "MOCK_",
+      "content": "def _mock_router(**kwargs: Any) -> Any:",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 157,
+      "keyword": "MOCK_",
+      "content": "from tests.mocks.orchestration import create_mock_router",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 158,
+      "keyword": "MOCK_",
+      "content": "return create_mock_router(**kwargs)",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 160,
+      "keyword": "MOCK_",
+      "content": "def _mock_dialog_engine(**kwargs: Any) -> Any:",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 161,
+      "keyword": "MOCK_",
+      "content": "from tests.mocks.orchestration import create_mock_dialog_engine",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 162,
+      "keyword": "MOCK_",
+      "content": "return create_mock_dialog_engine(**kwargs)",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 164,
+      "keyword": "MOCK_",
+      "content": "def _mock_hitl_controller(**kwargs: Any) -> Any:",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 165,
+      "keyword": "MOCK_",
+      "content": "from tests.mocks.orchestration import create_mock_hitl_controller",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 166,
+      "keyword": "MOCK_",
+      "content": "controller, _, _ = create_mock_hitl_controller(**kwargs)",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 172,
+      "keyword": "MOCK_",
+      "content": "mock_factory=_mock_router,",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 177,
+      "keyword": "MOCK_",
+      "content": "mock_factory=_mock_dialog_engine,",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 182,
+      "keyword": "MOCK_",
+      "content": "mock_factory=_mock_hitl_controller,",
+      "file": "backend\\src\\core\\factories.py"
+    },
+    {
+      "line": 230,
+      "keyword": "SAMPLE_",
+      "content": "sample_count: int",
+      "file": "backend\\src\\core\\performance\\metric_collector.py"
+    },
+    {
+      "line": 580,
+      "keyword": "SAMPLE_",
+      "content": "sample_count=len(samples),",
+      "file": "backend\\src\\core\\performance\\metric_collector.py"
+    },
+    {
+      "line": 134,
+      "keyword": "placeholder",
+      "content": "# Fallback mode: Return a placeholder when sandbox is disabled",
+      "file": "backend\\src\\core\\sandbox\\adapter.py"
+    },
+    {
+      "line": 135,
+      "keyword": "placeholder",
+      "content": "logger.warning(\"Sandbox disabled, returning placeholder response\")",
+      "file": "backend\\src\\core\\sandbox\\adapter.py"
+    },
+    {
+      "line": 183,
+      "keyword": "placeholder",
+      "content": "# Fallback mode: Yield a placeholder when sandbox is disabled",
+      "file": "backend\\src\\core\\sandbox\\adapter.py"
+    },
+    {
+      "line": 184,
+      "keyword": "placeholder",
+      "content": "logger.warning(\"Sandbox disabled, returning placeholder events\")",
+      "file": "backend\\src\\core\\sandbox\\adapter.py"
+    },
+    {
+      "line": 84,
+      "keyword": "# TODO",
+      "content": "# TODO: Sprint 78 will integrate with actual Claude SDK",
+      "file": "backend\\src\\core\\sandbox\\worker_main.py"
+    },
+    {
+      "line": 115,
+      "keyword": "# TODO",
+      "content": "# TODO: Sprint 78 - Full Claude SDK integration",
+      "file": "backend\\src\\core\\sandbox\\worker_main.py"
+    },
+    {
+      "line": 116,
+      "keyword": "placeholder",
+      "content": "# For now, return a placeholder response that demonstrates",
+      "file": "backend\\src\\core\\sandbox\\worker_main.py"
+    },
+    {
+      "line": 417,
+      "keyword": "MOCK_",
+      "content": "mock_weather = {",
+      "file": "backend\\src\\domain\\agents\\tools\\builtin.py"
+    },
+    {
+      "line": 426,
+      "keyword": "MOCK_",
+      "content": "weather = mock_weather.get(location_lower, mock_weather[\"default\"])",
+      "file": "backend\\src\\domain\\agents\\tools\\builtin.py"
+    },
+    {
+      "line": 471,
+      "keyword": "MOCK_",
+      "content": "mock_results = [",
+      "file": "backend\\src\\domain\\agents\\tools\\builtin.py"
+    },
+    {
+      "line": 497,
+      "keyword": "MOCK_",
+      "content": "mock_results = [r for r in mock_results if r[\"category\"] == category]",
+      "file": "backend\\src\\domain\\agents\\tools\\builtin.py"
+    },
+    {
+      "line": 500,
+      "keyword": "MOCK_",
+      "content": "results = mock_results[:max_results]",
+      "file": "backend\\src\\domain\\agents\\tools\\builtin.py"
+    },
+    {
+      "line": 435,
+      "keyword": "placeholder",
+      "content": "placeholders = \", \".join(f\"${i}\" for i in range(2, len(session_ids) + 2))",
+      "file": "backend\\src\\domain\\orchestration\\memory\\postgres_store.py"
+    },
+    {
+      "line": 436,
+      "keyword": "placeholder",
+      "content": "conditions.append(f\"session_id IN ({placeholders})\")",
+      "file": "backend\\src\\domain\\orchestration\\memory\\postgres_store.py"
+    },
+    {
+      "line": 172,
+      "keyword": "SAMPLE_",
+      "content": "\"sample_keys\": list(data[0].keys()) if data and isinstance(data[0], dict) else [],",
+      "file": "backend\\src\\domain\\sessions\\files\\data_analyzer.py"
+    },
+    {
+      "line": 652,
+      "keyword": "# TODO",
+      "content": "# TODO: MCP \u5de5\u5177 schema",
+      "file": "backend\\src\\domain\\sessions\\tool_handler.py"
+    },
+    {
+      "line": 83,
+      "keyword": "placeholder",
+      "content": "placeholder: Placeholder text",
+      "file": "backend\\src\\integrations\\ag_ui\\features\\advanced\\tool_ui.py"
+    },
+    {
+      "line": 93,
+      "keyword": "placeholder",
+      "content": "placeholder: Optional[str] = None",
+      "file": "backend\\src\\integrations\\ag_ui\\features\\advanced\\tool_ui.py"
+    },
+    {
+      "line": 106,
+      "keyword": "placeholder",
+      "content": "if self.placeholder:",
+      "file": "backend\\src\\integrations\\ag_ui\\features\\advanced\\tool_ui.py"
+    },
+    {
+      "line": 107,
+      "keyword": "placeholder",
+      "content": "result[\"placeholder\"] = self.placeholder",
+      "file": "backend\\src\\integrations\\ag_ui\\features\\advanced\\tool_ui.py"
+    },
+    {
+      "line": 420,
+      "keyword": "NotImplementedError",
+      "content": "raise NotImplementedError",
+      "file": "backend\\src\\integrations\\agent_framework\\builders\\concurrent.py"
+    },
+    {
+      "line": 488,
+      "keyword": "# TODO",
+      "content": "# TODO: \u6574\u5408\u5be6\u969b agent_service",
+      "file": "backend\\src\\integrations\\agent_framework\\builders\\handoff_migration.py"
+    },
+    {
+      "line": 492,
+      "keyword": "MOCK_",
+      "content": "return {\"agent_id\": str(agent_id), \"type\": \"mock_executor\"}",
+      "file": "backend\\src\\integrations\\agent_framework\\builders\\handoff_migration.py"
+    },
+    {
+      "line": 509,
+      "keyword": "# TODO",
+      "content": "# TODO: \u5be6\u73fe\u5b8c\u6574\u7684\u689d\u4ef6\u8a55\u4f30\u908f\u8f2f",
+      "file": "backend\\src\\integrations\\agent_framework\\builders\\handoff_migration.py"
+    },
+    {
+      "line": 414,
+      "keyword": "DUMMY_",
+      "content": "dummy_workflow = workflow or Workflow(executors=[], edges=[])",
+      "file": "backend\\src\\integrations\\agent_framework\\core\\approval_workflow.py"
+    },
+    {
+      "line": 416,
+      "keyword": "DUMMY_",
+      "content": "workflow=dummy_workflow,",
+      "file": "backend\\src\\integrations\\agent_framework\\core\\approval_workflow.py"
+    },
+    {
+      "line": 848,
+      "keyword": "NotImplementedError",
+      "content": "NotImplementedError: \u6b64\u51fd\u6578\u76ee\u524d\u66ab\u505c\u4f7f\u7528",
+      "file": "backend\\src\\integrations\\agent_framework\\multiturn\\adapter.py"
+    },
+    {
+      "line": 856,
+      "keyword": "NotImplementedError",
+      "content": "raise NotImplementedError(",
+      "file": "backend\\src\\integrations\\agent_framework\\multiturn\\adapter.py"
+    },
+    {
+      "line": 318,
+      "keyword": "placeholder",
+      "content": "# Check for manual/placeholder tools",
+      "file": "backend\\src\\integrations\\claude_sdk\\autonomous\\executor.py"
+    },
+    {
+      "line": 80,
+      "keyword": "# TODO",
+      "content": "# TODO: Add MCP server tools when implemented",
+      "file": "backend\\src\\integrations\\claude_sdk\\tools\\registry.py"
+    },
+    {
+      "line": 85,
+      "keyword": "NotImplementedError",
+      "content": "NotImplementedError: If not implemented by subclass",
+      "file": "backend\\src\\integrations\\hybrid\\intent\\classifiers\\base.py"
+    },
+    {
+      "line": 87,
+      "keyword": "NotImplementedError",
+      "content": "raise NotImplementedError(\"Subclasses must implement classify()\")",
+      "file": "backend\\src\\integrations\\hybrid\\intent\\classifiers\\base.py"
+    },
+    {
+      "line": 628,
+      "keyword": "placeholder",
+      "content": "# This is a placeholder - actual implementation would",
+      "file": "backend\\src\\integrations\\hybrid\\switching\\switcher.py"
+    },
+    {
+      "line": 329,
+      "keyword": "placeholder",
+      "content": "# Substitute placeholders in MCP params",
+      "file": "backend\\src\\integrations\\incident\\recommender.py"
+    },
+    {
+      "line": 358,
+      "keyword": "placeholder",
+      "content": "\"\"\"Substitute placeholders in MCP parameters.",
+      "file": "backend\\src\\integrations\\incident\\recommender.py"
+    },
+    {
+      "line": 360,
+      "keyword": "placeholder",
+      "content": "Supported placeholders:",
+      "file": "backend\\src\\integrations\\incident\\recommender.py"
+    },
+    {
+      "line": 367,
+      "keyword": "placeholder",
+      "content": "params: Parameter dict with possible placeholders",
+      "file": "backend\\src\\integrations\\incident\\recommender.py"
+    },
+    {
+      "line": 371,
+      "keyword": "placeholder",
+      "content": "Params with placeholders replaced",
+      "file": "backend\\src\\integrations\\incident\\recommender.py"
+    },
+    {
+      "line": 383,
+      "keyword": "placeholder",
+      "content": "for placeholder, replacement in substitutions.items():",
+      "file": "backend\\src\\integrations\\incident\\recommender.py"
+    },
+    {
+      "line": 384,
+      "keyword": "placeholder",
+      "content": "value = value.replace(placeholder, replacement)",
+      "file": "backend\\src\\integrations\\incident\\recommender.py"
+    },
+    {
+      "line": 96,
+      "keyword": "MOCK_",
+      "content": "service = cls._create_mock_service(**kwargs)",
+      "file": "backend\\src\\integrations\\llm\\factory.py"
+    },
+    {
+      "line": 253,
+      "keyword": "MOCK_",
+      "content": "def _create_mock_service(cls, **kwargs: Any) -> MockLLMService:",
+      "file": "backend\\src\\integrations\\llm\\factory.py"
+    },
+    {
+      "line": 265,
+      "keyword": "MOCK_",
+      "content": "result[key] = f\"mock_{key}\"",
+      "file": "backend\\src\\integrations\\llm\\mock.py"
+    },
+    {
+      "line": 275,
+      "keyword": "MOCK_",
+      "content": "result[key] = f\"mock_{key}\"",
+      "file": "backend\\src\\integrations\\llm\\mock.py"
+    },
+    {
+      "line": 617,
+      "keyword": "placeholder",
+      "content": "\"\"\"Default reasoning function (placeholder).",
+      "file": "backend\\src\\integrations\\n8n\\orchestrator.py"
+    },
+    {
+      "line": 533,
+      "keyword": "placeholder",
+      "content": "# Email Notification Service (Placeholder)",
+      "file": "backend\\src\\integrations\\orchestration\\hitl\\notification.py"
+    },
+    {
+      "line": 539,
+      "keyword": "placeholder",
+      "content": "Email notification service placeholder.",
+      "file": "backend\\src\\integrations\\orchestration\\hitl\\notification.py"
+    },
+    {
+      "line": 559,
+      "keyword": "placeholder",
+      "content": "# Placeholder - implement with smtplib or external email service",
+      "file": "backend\\src\\integrations\\orchestration\\hitl\\notification.py"
+    },
+    {
+      "line": 569,
+      "keyword": "placeholder",
+      "content": "# Placeholder",
+      "file": "backend\\src\\integrations\\orchestration\\hitl\\notification.py"
+    },
+    {
+      "line": 124,
+      "keyword": "SAMPLE_",
+      "content": "sample_valid = False",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 126,
+      "keyword": "SAMPLE_",
+      "content": "sample_vector = await embedding_service.get_embedding(\"ETL job failure\")",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 127,
+      "keyword": "SAMPLE_",
+      "content": "sample_results = await search_client.vector_search(",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 128,
+      "keyword": "SAMPLE_",
+      "content": "vector=sample_vector, top_k=3",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 130,
+      "keyword": "SAMPLE_",
+      "content": "sample_valid = len(sample_results) > 0",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 136,
+      "keyword": "SAMPLE_",
+      "content": "f\"{doc_count} total in index, sample_search_valid={sample_valid}\"",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 144,
+      "keyword": "SAMPLE_",
+      "content": "\"sample_search_valid\": sample_valid,",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 193,
+      "keyword": "SAMPLE_",
+      "content": "sample_results_valid = False",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 195,
+      "keyword": "SAMPLE_",
+      "content": "sample_vector = await embedding_service.get_embedding(\"system is down\")",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 196,
+      "keyword": "SAMPLE_",
+      "content": "sample_results = await search_client.vector_search(",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 197,
+      "keyword": "SAMPLE_",
+      "content": "vector=sample_vector, top_k=3",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 199,
+      "keyword": "SAMPLE_",
+      "content": "if sample_results:",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 200,
+      "keyword": "SAMPLE_",
+      "content": "top_route = sample_results[0].get(\"route_name\", \"\")",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 202,
+      "keyword": "SAMPLE_",
+      "content": "sample_results_valid = True",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 226,
+      "keyword": "SAMPLE_",
+      "content": "\"sample_search_valid\": sample_results_valid,",
+      "file": "backend\\src\\integrations\\orchestration\\intent_router\\semantic_router\\migration.py"
+    },
+    {
+      "line": 38,
+      "keyword": "NotImplementedError",
+      "content": "raise NotImplementedError(\"Subclasses must implement execute()\")",
+      "file": "backend\\src\\integrations\\patrol\\agent.py"
+    },
+    {
+      "line": 31,
+      "keyword": "hardcoded",
+      "content": "(r\"password\\s*[=:]\\s*['\\\"][^'\\\"]+['\\\"]\", \"Hardcoded password\"),",
+      "file": "backend\\src\\integrations\\patrol\\checks\\security_scan.py"
+    },
+    {
+      "line": 32,
+      "keyword": "hardcoded",
+      "content": "(r\"api[_-]?key\\s*[=:]\\s*['\\\"][^'\\\"]+['\\\"]\", \"Hardcoded API key\"),",
+      "file": "backend\\src\\integrations\\patrol\\checks\\security_scan.py"
+    },
+    {
+      "line": 33,
+      "keyword": "hardcoded",
+      "content": "(r\"secret\\s*[=:]\\s*['\\\"][^'\\\"]+['\\\"]\", \"Hardcoded secret\"),",
+      "file": "backend\\src\\integrations\\patrol\\checks\\security_scan.py"
+    },
+    {
+      "line": 34,
+      "keyword": "hardcoded",
+      "content": "(r\"token\\s*[=:]\\s*['\\\"][^'\\\"]+['\\\"]\", \"Hardcoded token\"),",
+      "file": "backend\\src\\integrations\\patrol\\checks\\security_scan.py"
+    }
+  ],
+  "test_details": {
+    "by_dir": {
+      ".": 1,
+      "e2e": 19,
+      "integration": 6,
+      "load": 1,
+      "mocks": 3,
+      "performance": 8,
+      "security": 4,
+      "unit": 84,
+      "e2e\\ag_ui": 1,
+      "e2e\\orchestration": 4,
+      "e2e\\swarm": 1,
+      "integration\\adf": 1,
+      "integration\\correlation": 1,
+      "integration\\d365": 1,
+      "integration\\hybrid": 5,
+      "integration\\mcp": 2,
+      "integration\\n8n": 2,
+      "integration\\orchestration": 4,
+      "integration\\rootcause": 1,
+      "integration\\security": 1,
+      "integration\\swarm": 2,
+      "integration\\api\\v1\\sessions": 1,
+      "performance\\orchestration": 1,
+      "performance\\swarm": 1,
+      "unit\\auth": 5,
+      "unit\\core": 7,
+      "unit\\infrastructure": 3,
+      "unit\\mcp": 2,
+      "unit\\orchestration": 16,
+      "unit\\performance": 5,
+      "unit\\swarm": 5,
+      "unit\\api\\n8n": 1,
+      "unit\\api\\workflows": 1,
+      "unit\\api\\v1\\ag_ui": 2,
+      "unit\\api\\v1\\claude_sdk": 6,
+      "unit\\api\\v1\\code_interpreter": 1,
+      "unit\\api\\v1\\hybrid": 3,
+      "unit\\api\\v1\\sessions": 1,
+      "unit\\domain\\sessions": 5,
+      "unit\\infrastructure\\checkpoint": 2,
+      "unit\\infrastructure\\storage": 1,
+      "unit\\infrastructure\\checkpoint\\adapters": 5,
+      "unit\\integrations\\agent_framework": 2,
+      "unit\\integrations\\ag_ui": 2,
+      "unit\\integrations\\claude_sdk": 9,
+      "unit\\integrations\\correlation": 2,
+      "unit\\integrations\\hybrid": 6,
+      "unit\\integrations\\incident": 4,
+      "unit\\integrations\\llm": 5,
+      "unit\\integrations\\mcp": 1,
+      "unit\\integrations\\n8n": 2,
+      "unit\\integrations\\orchestration": 7,
+      "unit\\integrations\\rootcause": 2,
+      "unit\\integrations\\shared": 1,
+      "unit\\integrations\\agent_framework\\assistant": 5,
+      "unit\\integrations\\agent_framework\\builders": 1,
+      "unit\\integrations\\agent_framework\\tools": 2,
+      "unit\\integrations\\ag_ui\\events": 5,
+      "unit\\integrations\\ag_ui\\features": 4,
+      "unit\\integrations\\ag_ui\\thread": 3,
+      "unit\\integrations\\ag_ui\\features\\advanced": 3,
+      "unit\\integrations\\claude_sdk\\hybrid": 4,
+      "unit\\integrations\\claude_sdk\\mcp": 5,
+      "unit\\integrations\\hybrid\\checkpoint": 5,
+      "unit\\integrations\\hybrid\\context": 2,
+      "unit\\integrations\\hybrid\\execution": 2,
+      "unit\\integrations\\hybrid\\hooks": 1,
+      "unit\\integrations\\hybrid\\intent": 2,
+      "unit\\integrations\\hybrid\\risk": 6,
+      "unit\\integrations\\hybrid\\switching": 3,
+      "unit\\integrations\\hybrid\\context\\mappers": 2,
+      "unit\\integrations\\hybrid\\context\\sync": 3,
+      "unit\\integrations\\hybrid\\intent\\analyzers": 2,
+      "unit\\integrations\\hybrid\\intent\\classifiers": 1,
+      "unit\\integrations\\hybrid\\switching\\migration": 1,
+      "unit\\integrations\\hybrid\\switching\\triggers": 2,
+      "unit\\integrations\\mcp\\core": 3,
+      "unit\\integrations\\mcp\\security": 4,
+      "unit\\integrations\\mcp\\servers\\adf": 2,
+      "unit\\integrations\\mcp\\servers\\azure": 3,
+      "unit\\integrations\\mcp\\servers\\d365": 4,
+      "unit\\integrations\\mcp\\servers\\n8n": 2,
+      "unit\\integrations\\orchestration\\input_gateway": 4,
+      "unit\\integrations\\orchestration\\intent_router": 5
+    },
+    "functions_by_dir": {
+      ".": 0,
+      "e2e": 248,
+      "integration": 160,
+      "load": 1,
+      "mocks": 0,
+      "performance": 108,
+      "security": 36,
+      "unit": 3330,
+      "e2e\\ag_ui": 27,
+      "e2e\\orchestration": 42,
+      "e2e\\swarm": 10,
+      "integration\\adf": 6,
+      "integration\\correlation": 12,
+      "integration\\d365": 9,
+      "integration\\hybrid": 141,
+      "integration\\mcp": 40,
+      "integration\\n8n": 20,
+      "integration\\orchestration": 88,
+      "integration\\rootcause": 12,
+      "integration\\security": 33,
+      "integration\\swarm": 25,
+      "integration\\api\\v1\\sessions": 30,
+      "performance\\orchestration": 11,
+      "performance\\swarm": 14,
+      "unit\\auth": 44,
+      "unit\\core": 121,
+      "unit\\infrastructure": 74,
+      "unit\\mcp": 88,
+      "unit\\orchestration": 608,
+      "unit\\performance": 118,
+      "unit\\swarm": 113,
+      "unit\\api\\n8n": 25,
+      "unit\\api\\workflows": 21,
+      "unit\\api\\v1\\ag_ui": 60,
+      "unit\\api\\v1\\claude_sdk": 127,
+      "unit\\api\\v1\\code_interpreter": 20,
+      "unit\\api\\v1\\hybrid": 68,
+      "unit\\api\\v1\\sessions": 21,
+      "unit\\domain\\sessions": 172,
+      "unit\\infrastructure\\checkpoint": 29,
+      "unit\\infrastructure\\storage": 8,
+      "unit\\infrastructure\\checkpoint\\adapters": 65,
+      "unit\\integrations\\agent_framework": 32,
+      "unit\\integrations\\ag_ui": 68,
+      "unit\\integrations\\claude_sdk": 246,
+      "unit\\integrations\\correlation": 49,
+      "unit\\integrations\\hybrid": 172,
+      "unit\\integrations\\incident": 84,
+      "unit\\integrations\\llm": 106,
+      "unit\\integrations\\mcp": 12,
+      "unit\\integrations\\n8n": 55,
+      "unit\\integrations\\orchestration": 164,
+      "unit\\integrations\\rootcause": 61,
+      "unit\\integrations\\shared": 39,
+      "unit\\integrations\\agent_framework\\assistant": 129,
+      "unit\\integrations\\agent_framework\\builders": 21,
+      "unit\\integrations\\agent_framework\\tools": 35,
+      "unit\\integrations\\ag_ui\\events": 73,
+      "unit\\integrations\\ag_ui\\features": 247,
+      "unit\\integrations\\ag_ui\\thread": 89,
+      "unit\\integrations\\ag_ui\\features\\advanced": 159,
+      "unit\\integrations\\claude_sdk\\hybrid": 154,
+      "unit\\integrations\\claude_sdk\\mcp": 171,
+      "unit\\integrations\\hybrid\\checkpoint": 143,
+      "unit\\integrations\\hybrid\\context": 85,
+      "unit\\integrations\\hybrid\\execution": 60,
+      "unit\\integrations\\hybrid\\hooks": 29,
+      "unit\\integrations\\hybrid\\intent": 61,
+      "unit\\integrations\\hybrid\\risk": 212,
+      "unit\\integrations\\hybrid\\switching": 127,
+      "unit\\integrations\\hybrid\\context\\mappers": 71,
+      "unit\\integrations\\hybrid\\context\\sync": 83,
+      "unit\\integrations\\hybrid\\intent\\analyzers": 110,
+      "unit\\integrations\\hybrid\\intent\\classifiers": 45,
+      "unit\\integrations\\hybrid\\switching\\migration": 44,
+      "unit\\integrations\\hybrid\\switching\\triggers": 43,
+      "unit\\integrations\\mcp\\core": 39,
+      "unit\\integrations\\mcp\\security": 76,
+      "unit\\integrations\\mcp\\servers\\adf": 42,
+      "unit\\integrations\\mcp\\servers\\azure": 44,
+      "unit\\integrations\\mcp\\servers\\d365": 86,
+      "unit\\integrations\\mcp\\servers\\n8n": 40,
+      "unit\\integrations\\orchestration\\input_gateway": 84,
+      "unit\\integrations\\orchestration\\intent_router": 90
+    },
+    "empty_files": [
+      "backend\\tests\\e2e\\orchestration\\test_ad_scenario_fixtures.py"
+    ],
+    "skip_files": []
+  }
+}

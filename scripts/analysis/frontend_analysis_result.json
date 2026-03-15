@@ -1,0 +1,1761 @@
+{
+  "summary": {
+    "scan_date": "2026-03-15",
+    "total_files": 214,
+    "total_lines": 49357,
+    "total_code_lines": 37428,
+    "total_components": 153,
+    "components_with_props": 80,
+    "any_type_count": 0,
+    "console_log_count": 99,
+    "todo_count": 9,
+    "mock_data_count": 115,
+    "api_call_sites": 99,
+    "interfaces_types": 579,
+    "test_files": 38,
+    "test_cases": 306
+  },
+  "any_types_detail": [],
+  "console_logs_detail": [
+    {
+      "line": 87,
+      "method": "log",
+      "content": "console.log('[SwarmEventHandler] swarm_created', payload);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 125,
+      "method": "log",
+      "content": "console.log('[SwarmEventHandler] swarm_status_update', payload);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 162,
+      "method": "log",
+      "content": "console.log('[SwarmEventHandler] swarm_completed', payload);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 177,
+      "method": "log",
+      "content": "console.log('[SwarmEventHandler] worker_started', payload);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 204,
+      "method": "log",
+      "content": "console.log('[SwarmEventHandler] worker_progress', payload);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 218,
+      "method": "log",
+      "content": "console.log('[SwarmEventHandler] worker_thinking', payload);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 232,
+      "method": "log",
+      "content": "console.log('[SwarmEventHandler] worker_tool_call', payload);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 246,
+      "method": "log",
+      "content": "console.log('[SwarmEventHandler] worker_message', payload);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 262,
+      "method": "log",
+      "content": "console.log('[SwarmEventHandler] worker_completed', payload);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 276,
+      "method": "error",
+      "content": "console.error('[SwarmEventHandler] error', error);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEventHandler.ts"
+    },
+    {
+      "line": 122,
+      "method": "error",
+      "content": "console.error('Failed to parse swarm event:', error);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEvents.ts"
+    },
+    {
+      "line": 133,
+      "method": "error",
+      "content": "console.error('Swarm EventSource error:', event);",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\hooks\\useSwarmEvents.ts"
+    },
+    {
+      "line": 78,
+      "method": "error",
+      "content": "console.error('[ErrorBoundary] Caught error:', error, errorInfo);",
+      "file": "frontend\\src\\components\\unified-chat\\ErrorBoundary.tsx"
+    },
+    {
+      "line": 102,
+      "method": "error",
+      "content": "console.error('Failed to copy code:', err);",
+      "file": "frontend\\src\\components\\unified-chat\\renderers\\CodePreview.tsx"
+    },
+    {
+      "line": 75,
+      "method": "error",
+      "content": "console.error('Failed to copy content:', err);",
+      "file": "frontend\\src\\components\\unified-chat\\renderers\\TextPreview.tsx"
+    },
+    {
+      "line": 178,
+      "method": "warn",
+      "content": "console.warn('Failed to parse SSE data:', data);",
+      "file": "frontend\\src\\hooks\\useAGUI.ts"
+    },
+    {
+      "line": 488,
+      "method": "error",
+      "content": "console.error('Approval failed:', await response.text());",
+      "file": "frontend\\src\\hooks\\useAGUI.ts"
+    },
+    {
+      "line": 509,
+      "method": "error",
+      "content": "console.error('Approval error:', error);",
+      "file": "frontend\\src\\hooks\\useAGUI.ts"
+    },
+    {
+      "line": 526,
+      "method": "error",
+      "content": "console.error('Rejection failed:', await response.text());",
+      "file": "frontend\\src\\hooks\\useAGUI.ts"
+    },
+    {
+      "line": 547,
+      "method": "error",
+      "content": "console.error('Rejection error:', error);",
+      "file": "frontend\\src\\hooks\\useAGUI.ts"
+    },
+    {
+      "line": 732,
+      "method": "log",
+      "content": "console.log('Unhandled SSE event:', eventType, data);",
+      "file": "frontend\\src\\hooks\\useAGUI.ts"
+    },
+    {
+      "line": 860,
+      "method": "error",
+      "content": "console.error('Run agent error:', error);",
+      "file": "frontend\\src\\hooks\\useAGUI.ts"
+    },
+    {
+      "line": 279,
+      "method": "error",
+      "content": "console.error('[useApprovalFlow] Failed to approve:', error);",
+      "file": "frontend\\src\\hooks\\useApprovalFlow.ts"
+    },
+    {
+      "line": 324,
+      "method": "error",
+      "content": "console.error('[useApprovalFlow] Failed to reject:', error);",
+      "file": "frontend\\src\\hooks\\useApprovalFlow.ts"
+    },
+    {
+      "line": 130,
+      "method": "warn",
+      "content": "console.warn('[useChatThreads] Failed to load from localStorage:', e);",
+      "file": "frontend\\src\\hooks\\useChatThreads.ts"
+    },
+    {
+      "line": 159,
+      "method": "warn",
+      "content": "console.warn('[useChatThreads] Failed to save to localStorage:', e);",
+      "file": "frontend\\src\\hooks\\useChatThreads.ts"
+    },
+    {
+      "line": 284,
+      "method": "warn",
+      "content": "console.warn('[useChatThreads] Failed to load messages:', e);",
+      "file": "frontend\\src\\hooks\\useChatThreads.ts"
+    },
+    {
+      "line": 302,
+      "method": "warn",
+      "content": "console.warn('[useChatThreads] Failed to save messages:', e);",
+      "file": "frontend\\src\\hooks\\useChatThreads.ts"
+    },
+    {
+      "line": 326,
+      "method": "warn",
+      "content": "console.warn('[useChatThreads] Failed to clear messages:', e);",
+      "file": "frontend\\src\\hooks\\useChatThreads.ts"
+    },
+    {
+      "line": 168,
+      "method": "error",
+      "content": "console.error('[useCheckpoints] Failed to load checkpoints:', err);",
+      "file": "frontend\\src\\hooks\\useCheckpoints.ts"
+    },
+    {
+      "line": 216,
+      "method": "error",
+      "content": "console.error('[useCheckpoints] Checkpoint not found:', checkpointId);",
+      "file": "frontend\\src\\hooks\\useCheckpoints.ts"
+    },
+    {
+      "line": 221,
+      "method": "error",
+      "content": "console.error('[useCheckpoints] Checkpoint cannot be restored:', checkpointId);",
+      "file": "frontend\\src\\hooks\\useCheckpoints.ts"
+    },
+    {
+      "line": 291,
+      "method": "error",
+      "content": "console.error('[useCheckpoints] Failed to restore checkpoint:', err);",
+      "file": "frontend\\src\\hooks\\useCheckpoints.ts"
+    },
+    {
+      "line": 143,
+      "method": "error",
+      "content": "console.error('Failed to parse SSE event:', err);",
+      "file": "frontend\\src\\hooks\\useDevToolsStream.ts"
+    },
+    {
+      "line": 148,
+      "method": "error",
+      "content": "console.error('SSE connection error:', e);",
+      "file": "frontend\\src\\hooks\\useDevToolsStream.ts"
+    },
+    {
+      "line": 236,
+      "method": "warn",
+      "content": "console.warn('Max pending predictions reached, applying directly');",
+      "file": "frontend\\src\\hooks\\useOptimisticState.ts"
+    },
+    {
+      "line": 290,
+      "method": "error",
+      "content": "console.error('Failed to send prediction to server:', error);",
+      "file": "frontend\\src\\hooks\\useOptimisticState.ts"
+    },
+    {
+      "line": 320,
+      "method": "error",
+      "content": "console.error('Sync error:', error);",
+      "file": "frontend\\src\\hooks\\useSharedState.ts"
+    },
+    {
+      "line": 440,
+      "method": "error",
+      "content": "console.error('SSE parse error:', error);",
+      "file": "frontend\\src\\hooks\\useSharedState.ts"
+    },
+    {
+      "line": 218,
+      "method": "error",
+      "content": "console.error('Failed to load scenarios:', err);",
+      "file": "frontend\\src\\hooks\\useSwarmReal.ts"
+    },
+    {
+      "line": 299,
+      "method": "log",
+      "content": "console.log('Swarm completed:', eventData);",
+      "file": "frontend\\src\\hooks\\useSwarmReal.ts"
+    },
+    {
+      "line": 337,
+      "method": "error",
+      "content": "console.error('Failed to start demo:', err);",
+      "file": "frontend\\src\\hooks\\useSwarmReal.ts"
+    },
+    {
+      "line": 350,
+      "method": "error",
+      "content": "console.error('Failed to stop demo:', err);",
+      "file": "frontend\\src\\hooks\\useSwarmReal.ts"
+    },
+    {
+      "line": 170,
+      "method": "warn",
+      "content": "console.warn('[useUnifiedChat] Failed to parse SSE data:', data);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 575,
+      "method": "error",
+      "content": "console.error('[useUnifiedChat] Approval failed:', await response.text());",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 596,
+      "method": "error",
+      "content": "console.error('[useUnifiedChat] Approval error:', err);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 613,
+      "method": "error",
+      "content": "console.error('[useUnifiedChat] Rejection failed:', await response.text());",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 634,
+      "method": "error",
+      "content": "console.error('[useUnifiedChat] Rejection error:', err);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 653,
+      "method": "log",
+      "content": "console.log(`[useUnifiedChat] State snapshot applied, version: ${version}`);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 659,
+      "method": "warn",
+      "content": "console.warn(`[useUnifiedChat] State version conflict: expected ${baseVersion}, got ${stateVersion}`);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 666,
+      "method": "log",
+      "content": "console.log(`[useUnifiedChat] State delta applied, version: ${version}`);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 889,
+      "method": "log",
+      "content": "console.log('[useUnifiedChat] Prediction confirmed:', payload.prediction_id);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 894,
+      "method": "log",
+      "content": "console.log('[useUnifiedChat] Prediction rolled back:', payload.prediction_id);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 899,
+      "method": "log",
+      "content": "console.log('[useUnifiedChat] Prediction conflicted:', payload.prediction_id, payload.reason);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 913,
+      "method": "log",
+      "content": "console.log('[useUnifiedChat] Step progress:', stepProgress);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 935,
+      "method": "log",
+      "content": "console.log('[useUnifiedChat] Unhandled SSE event:', eventType, data);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 1013,
+      "method": "log",
+      "content": "console.log('[S75-5] Sending message with attachments:', attachmentsPayload);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 1069,
+      "method": "error",
+      "content": "console.error('[useUnifiedChat] Send message error:', err);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 1136,
+      "method": "log",
+      "content": "console.log(`[useUnifiedChat] Reconnect attempt ${reconnectAttemptsRef.current}`);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 1177,
+      "method": "log",
+      "content": "console.log('[useUnifiedChat] New thread, no history to load');",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 1206,
+      "method": "log",
+      "content": "console.log(`[useUnifiedChat] Loaded ${historyMessages.length} messages from history`);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 1209,
+      "method": "error",
+      "content": "console.error('[useUnifiedChat] Failed to load history:', err);",
+      "file": "frontend\\src\\hooks\\useUnifiedChat.ts"
+    },
+    {
+      "line": 184,
+      "method": "error",
+      "content": "console.error('Failed to delete trace:', error);",
+      "file": "frontend\\src\\pages\\DevUI\\TraceDetail.tsx"
+    },
+    {
+      "line": 344,
+      "method": "error",
+      "content": "console.error('[UnifiedChat] Run failed:', errorMsg);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 372,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] File uploaded:', attachment.file.name);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 375,
+      "method": "error",
+      "content": "console.error('[UnifiedChat] File upload failed:', attachment.file.name, error);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 399,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Routing complete:', decision.intent_category, decision.routing_layer);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 402,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Dialog questions received:', questions.length);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 406,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Approval required:', assessment.level, assessment.score);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 409,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Orchestration execution complete:', result.success);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 433,
+      "method": "error",
+      "content": "console.error('[UnifiedChat] Orchestration error:', error);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 646,
+      "method": "log",
+      "content": "console.log('[S75-5] Uploaded file IDs:', allFileIds);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 651,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Starting orchestration flow for:', content.slice(0, 50));",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 676,
+      "method": "error",
+      "content": "console.error('[UnifiedChat] Failed to send message:', err);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 691,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Orchestration approved, proceeding with execution');",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 697,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Orchestration rejected');",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 704,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Dialog response:', responses);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 710,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Skipping dialog, executing directly');",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 731,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Restore checkpoint triggered:', checkpointId);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 737,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Approving tool call:', approvalId);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 741,
+      "method": "error",
+      "content": "console.error('[UnifiedChat] Failed to approve tool call:', err);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 747,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Rejecting tool call:', approvalId, reason);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 751,
+      "method": "error",
+      "content": "console.error('[UnifiedChat] Failed to reject tool call:', err);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 757,
+      "method": "log",
+      "content": "console.log('[UnifiedChat] Downloading file:', fileId);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 761,
+      "method": "error",
+      "content": "console.error('[UnifiedChat] Failed to download file:', err);",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 184,
+      "method": "warn",
+      "content": "console.warn('[AuthStore] Guest data migration failed:', err);",
+      "file": "frontend\\src\\store\\authStore.ts"
+    },
+    {
+      "line": 196,
+      "method": "error",
+      "content": "console.error('[AuthStore] Login failed:', message);",
+      "file": "frontend\\src\\store\\authStore.ts"
+    },
+    {
+      "line": 238,
+      "method": "error",
+      "content": "console.error('[AuthStore] Registration failed:', message);",
+      "file": "frontend\\src\\store\\authStore.ts"
+    },
+    {
+      "line": 282,
+      "method": "error",
+      "content": "console.error('[AuthStore] Session refresh failed:', error);",
+      "file": "frontend\\src\\store\\authStore.ts"
+    },
+    {
+      "line": 208,
+      "method": "warn",
+      "content": "console.warn('[UnifiedChatStore] Failed to clear persistence');",
+      "file": "frontend\\src\\stores\\unifiedChatStore.ts"
+    },
+    {
+      "line": 418,
+      "method": "warn",
+      "content": "console.warn('[UnifiedChatStore] localStorage read failed');",
+      "file": "frontend\\src\\stores\\unifiedChatStore.ts"
+    },
+    {
+      "line": 434,
+      "method": "warn",
+      "content": "console.warn('[UnifiedChatStore] Storage quota exceeded, clearing old data');",
+      "file": "frontend\\src\\stores\\unifiedChatStore.ts"
+    },
+    {
+      "line": 440,
+      "method": "error",
+      "content": "console.error('[UnifiedChatStore] Failed to persist state');",
+      "file": "frontend\\src\\stores\\unifiedChatStore.ts"
+    },
+    {
+      "line": 443,
+      "method": "warn",
+      "content": "console.warn('[UnifiedChatStore] localStorage write failed');",
+      "file": "frontend\\src\\stores\\unifiedChatStore.ts"
+    },
+    {
+      "line": 451,
+      "method": "warn",
+      "content": "console.warn('[UnifiedChatStore] localStorage remove failed');",
+      "file": "frontend\\src\\stores\\unifiedChatStore.ts"
+    },
+    {
+      "line": 36,
+      "method": "log",
+      "content": "console.log('[GuestUser] Created new guest user:', userId);",
+      "file": "frontend\\src\\utils\\guestUser.ts"
+    },
+    {
+      "line": 62,
+      "method": "log",
+      "content": "console.log('[GuestUser] Cleared guest user:', guestId);",
+      "file": "frontend\\src\\utils\\guestUser.ts"
+    },
+    {
+      "line": 117,
+      "method": "log",
+      "content": "console.log('[GuestUser] Migration complete:', result);",
+      "file": "frontend\\src\\utils\\guestUser.ts"
+    },
+    {
+      "line": 124,
+      "method": "error",
+      "content": "console.error('[GuestUser] Migration failed:', error);",
+      "file": "frontend\\src\\utils\\guestUser.ts"
+    }
+  ],
+  "todo_detail": [
+    {
+      "line": 304,
+      "content": "it('should infer todo types correctly', () => {",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\WorkerActionList.test.tsx"
+    },
+    {
+      "line": 91,
+      "content": "read_todo: FileText,",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\WorkerActionList.tsx"
+    },
+    {
+      "line": 92,
+      "content": "write_todo: Edit,",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\WorkerActionList.tsx"
+    },
+    {
+      "line": 112,
+      "content": "read_todo: 'text-blue-500',",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\WorkerActionList.tsx"
+    },
+    {
+      "line": 113,
+      "content": "write_todo: 'text-green-500',",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\WorkerActionList.tsx"
+    },
+    {
+      "line": 133,
+      "content": "read_todo: 'Read',",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\WorkerActionList.tsx"
+    },
+    {
+      "line": 134,
+      "content": "write_todo: 'Write',",
+      "file": "frontend\\src\\components\\unified-chat\\agent-swarm\\WorkerActionList.tsx"
+    },
+    {
+      "line": 239,
+      "content": "// TODO: Add UI toggles in ChatHeader to control these settings",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 732,
+      "content": "// TODO: Implement checkpoint restoration via API",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    }
+  ],
+  "mock_detail": [
+    {
+      "line": 10,
+      "keyword": "placeholder",
+      "content": "* Note: This component provides a placeholder implementation.",
+      "file": "frontend\\src\\components\\ag-ui\\advanced\\DynamicChart.tsx"
+    },
+    {
+      "line": 173,
+      "keyword": "placeholder",
+      "content": "placeholder={field.placeholder}",
+      "file": "frontend\\src\\components\\ag-ui\\advanced\\DynamicForm.tsx"
+    },
+    {
+      "line": 185,
+      "keyword": "placeholder",
+      "content": "placeholder={field.placeholder}",
+      "file": "frontend\\src\\components\\ag-ui\\advanced\\DynamicForm.tsx"
+    },
+    {
+      "line": 196,
+      "keyword": "placeholder",
+      "content": "placeholder={field.placeholder}",
+      "file": "frontend\\src\\components\\ag-ui\\advanced\\DynamicForm.tsx"
+    },
+    {
+      "line": 209,
+      "keyword": "placeholder",
+      "content": "<SelectValue placeholder={field.placeholder || 'Select...'} />",
+      "file": "frontend\\src\\components\\ag-ui\\advanced\\DynamicForm.tsx"
+    },
+    {
+      "line": 290,
+      "keyword": "placeholder",
+      "content": "placeholder={field.placeholder}",
+      "file": "frontend\\src\\components\\ag-ui\\advanced\\DynamicForm.tsx"
+    },
+    {
+      "line": 202,
+      "keyword": "placeholder",
+      "content": "placeholder={`Filter ${column.header}...`}",
+      "file": "frontend\\src\\components\\ag-ui\\advanced\\DynamicTable.tsx"
+    },
+    {
+      "line": 213,
+      "keyword": "placeholder",
+      "content": "placeholder={",
+      "file": "frontend\\src\\components\\ag-ui\\chat\\ChatContainer.tsx"
+    },
+    {
+      "line": 21,
+      "keyword": "placeholder",
+      "content": "placeholder?: string;",
+      "file": "frontend\\src\\components\\ag-ui\\chat\\MessageInput.tsx"
+    },
+    {
+      "line": 41,
+      "keyword": "placeholder",
+      "content": "placeholder = 'Type a message...',",
+      "file": "frontend\\src\\components\\ag-ui\\chat\\MessageInput.tsx"
+    },
+    {
+      "line": 100,
+      "keyword": "placeholder",
+      "content": "placeholder={placeholder}",
+      "file": "frontend\\src\\components\\ag-ui\\chat\\MessageInput.tsx"
+    },
+    {
+      "line": 206,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Add a comment for audit log...\"",
+      "file": "frontend\\src\\components\\ag-ui\\hitl\\ApprovalDialog.tsx"
+    },
+    {
+      "line": 194,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u641c\u7d22\u4e8b\u4ef6...\"",
+      "file": "frontend\\src\\components\\DevUI\\EventFilter.tsx"
+    },
+    {
+      "line": 377,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u641c\u7d22\u4e8b\u4ef6...\"",
+      "file": "frontend\\src\\components\\DevUI\\EventFilter.tsx"
+    },
+    {
+      "line": 206,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Filter by event type...\"",
+      "file": "frontend\\src\\components\\DevUI\\EventList.tsx"
+    },
+    {
+      "line": 206,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Search events...\"",
+      "file": "frontend\\src\\components\\DevUI\\EventTree.tsx"
+    },
+    {
+      "line": 231,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Filter events...\"",
+      "file": "frontend\\src\\components\\DevUI\\Timeline.tsx"
+    },
+    {
+      "line": 27,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u641c\u7d22\u5de5\u4f5c\u6d41\u3001Agent...\"",
+      "file": "frontend\\src\\components\\layout\\Header.tsx"
+    },
+    {
+      "line": 24,
+      "keyword": "placeholder",
+      "content": "'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 fi",
+      "file": "frontend\\src\\components\\ui\\Input.tsx"
+    },
+    {
+      "line": 33,
+      "keyword": "placeholder",
+      "content": "'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offse",
+      "file": "frontend\\src\\components\\ui\\Select.tsx"
+    },
+    {
+      "line": 173,
+      "keyword": "placeholder",
+      "content": "placeholder?: string;",
+      "file": "frontend\\src\\components\\ui\\Select.tsx"
+    },
+    {
+      "line": 177,
+      "keyword": "placeholder",
+      "content": "({ className, options, error, placeholder, ...props }, ref) => {",
+      "file": "frontend\\src\\components\\ui\\Select.tsx"
+    },
+    {
+      "line": 189,
+      "keyword": "placeholder",
+      "content": "{placeholder && (",
+      "file": "frontend\\src\\components\\ui\\Select.tsx"
+    },
+    {
+      "line": 191,
+      "keyword": "placeholder",
+      "content": "{placeholder}",
+      "file": "frontend\\src\\components\\ui\\Select.tsx"
+    },
+    {
+      "line": 23,
+      "keyword": "placeholder",
+      "content": "'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placehol",
+      "file": "frontend\\src\\components\\ui\\Textarea.tsx"
+    },
+    {
+      "line": 326,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Explain why you're rejecting this operation...\"",
+      "file": "frontend\\src\\components\\unified-chat\\ApprovalDialog.tsx"
+    },
+    {
+      "line": 412,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Reason for rejection (optional)\"",
+      "file": "frontend\\src\\components\\unified-chat\\ApprovalMessageCard.tsx"
+    },
+    {
+      "line": 38,
+      "keyword": "placeholder",
+      "content": "placeholder = 'Type a message...',",
+      "file": "frontend\\src\\components\\unified-chat\\ChatInput.tsx"
+    },
+    {
+      "line": 180,
+      "keyword": "placeholder",
+      "content": "placeholder={isStreaming ? 'AI is responding...' : placeholder}",
+      "file": "frontend\\src\\components\\unified-chat\\ChatInput.tsx"
+    },
+    {
+      "line": 195,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Reason for rejection (optional)\"",
+      "file": "frontend\\src\\components\\unified-chat\\InlineApproval.tsx"
+    },
+    {
+      "line": 429,
+      "keyword": "placeholder",
+      "content": "placeholder={`Enter ${q.field_name}`}",
+      "file": "frontend\\src\\components\\unified-chat\\OrchestrationPanel.tsx"
+    },
+    {
+      "line": 174,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Search in file...\"",
+      "file": "frontend\\src\\components\\unified-chat\\renderers\\TextPreview.tsx"
+    },
+    {
+      "line": 154,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Type something...\"",
+      "file": "frontend\\src\\pages\\ag-ui\\components\\SharedStateDemo.tsx"
+    },
+    {
+      "line": 166,
+      "keyword": "placeholder",
+      "content": "placeholder=\"New item...\"",
+      "file": "frontend\\src\\pages\\ag-ui\\components\\SharedStateDemo.tsx"
+    },
+    {
+      "line": 81,
+      "keyword": "placeholder",
+      "content": "{ name: 'name', label: 'Full Name', fieldType: 'text', required: true, placeholder: 'Enter your name' },",
+      "file": "frontend\\src\\pages\\ag-ui\\components\\ToolUIDemo.tsx"
+    },
+    {
+      "line": 82,
+      "keyword": "placeholder",
+      "content": "{ name: 'email', label: 'Email', fieldType: 'email', required: true, placeholder: 'Enter your email' },",
+      "file": "frontend\\src\\pages\\ag-ui\\components\\ToolUIDemo.tsx"
+    },
+    {
+      "line": 88,
+      "keyword": "placeholder",
+      "content": "{ name: 'bio', label: 'Bio', fieldType: 'textarea', required: false, placeholder: 'Tell us about yourself' },",
+      "file": "frontend\\src\\pages\\ag-ui\\components\\ToolUIDemo.tsx"
+    },
+    {
+      "line": 273,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u8f38\u5165\u8a0a\u606f...\"",
+      "file": "frontend\\src\\pages\\agents\\AgentDetailPage.tsx"
+    },
+    {
+      "line": 77,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u641c\u7d22 Agent...\"",
+      "file": "frontend\\src\\pages\\agents\\AgentsPage.tsx"
+    },
+    {
+      "line": 249,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u4f8b\u5982\uff1acustomer-support-agent\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 266,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u63cf\u8ff0\u9019\u500b Agent \u7684\u7528\u9014\u548c\u529f\u80fd...\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 294,
+      "keyword": "placeholder",
+      "content": "placeholder={`\u4f60\u662f\u4e00\u500b\u5c08\u696d\u7684\u5ba2\u670d\u4ee3\u7406\uff0c\u8ca0\u8cac\u5e6b\u52a9\u7528\u6236\u89e3\u6c7a\u554f\u984c\u3002",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 408,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u4f8b\u5982\uff1agpt-4o\u3001gpt-4\u3001gpt-35-turbo\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 469,
+      "keyword": "placeholder",
+      "content": "placeholder=\"https://your-resource.openai.azure.com/\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 489,
+      "keyword": "placeholder",
+      "content": "placeholder=\"gpt-4o-deployment\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 509,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u4f8b\u5982\uff1a2024-10-21\u30012024-08-01-preview\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 530,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u8f38\u5165 Azure OpenAI API \u91d1\u9470\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 556,
+      "keyword": "placeholder",
+      "content": "placeholder=\"sk-...\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 576,
+      "keyword": "placeholder",
+      "content": "placeholder=\"org-...\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 597,
+      "keyword": "placeholder",
+      "content": "placeholder=\"https://api.openai.com/v1\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 623,
+      "keyword": "placeholder",
+      "content": "placeholder=\"sk-ant-...\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 644,
+      "keyword": "placeholder",
+      "content": "placeholder=\"https://api.anthropic.com\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 670,
+      "keyword": "placeholder",
+      "content": "placeholder=\"AIza...\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 690,
+      "keyword": "placeholder",
+      "content": "placeholder=\"my-project-123\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 716,
+      "keyword": "placeholder",
+      "content": "placeholder=\"http://localhost:11434\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 737,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u5982\u6709\u8a2d\u5b9a API \u91d1\u9470\uff0c\u8acb\u5728\u6b64\u8f38\u5165\"",
+      "file": "frontend\\src\\pages\\agents\\CreateAgentPage.tsx"
+    },
+    {
+      "line": 499,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u4f8b\u5982\uff1agpt-4o\u3001gpt-4\u3001gpt-35-turbo\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 550,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u8f38\u5165\u6a21\u578b\u540d\u7a31\uff0c\u4f8b\u5982\uff1allama-3.2-8b\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 587,
+      "keyword": "placeholder",
+      "content": "placeholder=\"https://your-resource.openai.azure.com/\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 607,
+      "keyword": "placeholder",
+      "content": "placeholder=\"gpt-4o-deployment\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 627,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u4f8b\u5982\uff1a2024-10-21\u30012024-08-01-preview\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 648,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u8f38\u5165 Azure OpenAI API \u91d1\u9470\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 674,
+      "keyword": "placeholder",
+      "content": "placeholder=\"sk-...\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 694,
+      "keyword": "placeholder",
+      "content": "placeholder=\"org-...\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 715,
+      "keyword": "placeholder",
+      "content": "placeholder=\"https://api.openai.com/v1\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 741,
+      "keyword": "placeholder",
+      "content": "placeholder=\"sk-ant-...\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 762,
+      "keyword": "placeholder",
+      "content": "placeholder=\"https://api.anthropic.com\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 788,
+      "keyword": "placeholder",
+      "content": "placeholder=\"AIza...\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 808,
+      "keyword": "placeholder",
+      "content": "placeholder=\"my-project-123\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 834,
+      "keyword": "placeholder",
+      "content": "placeholder=\"http://localhost:11434\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 855,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u5982\u6709\u8a2d\u5b9a API \u91d1\u9470\uff0c\u8acb\u5728\u6b64\u8f38\u5165\"",
+      "file": "frontend\\src\\pages\\agents\\EditAgentPage.tsx"
+    },
+    {
+      "line": 162,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u8f38\u5165\u53cd\u994b\u6216\u5099\u8a3b...\"",
+      "file": "frontend\\src\\pages\\approvals\\ApprovalsPage.tsx"
+    },
+    {
+      "line": 50,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u641c\u7d22\u65e5\u8a8c...\"",
+      "file": "frontend\\src\\pages\\audit\\AuditPage.tsx"
+    },
+    {
+      "line": 123,
+      "keyword": "placeholder",
+      "content": "placeholder=\"name@example.com\"",
+      "file": "frontend\\src\\pages\\auth\\LoginPage.tsx"
+    },
+    {
+      "line": 147,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\"",
+      "file": "frontend\\src\\pages\\auth\\LoginPage.tsx"
+    },
+    {
+      "line": 138,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u60a8\u7684\u59d3\u540d\"",
+      "file": "frontend\\src\\pages\\auth\\SignupPage.tsx"
+    },
+    {
+      "line": 162,
+      "keyword": "placeholder",
+      "content": "placeholder=\"name@example.com\"",
+      "file": "frontend\\src\\pages\\auth\\SignupPage.tsx"
+    },
+    {
+      "line": 185,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\"",
+      "file": "frontend\\src\\pages\\auth\\SignupPage.tsx"
+    },
+    {
+      "line": 211,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\"",
+      "file": "frontend\\src\\pages\\auth\\SignupPage.tsx"
+    },
+    {
+      "line": 345,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Enter thread ID or leave empty for auto-generated\"",
+      "file": "frontend\\src\\pages\\DevUI\\AGUITestPanel.tsx"
+    },
+    {
+      "line": 7,
+      "keyword": "placeholder",
+      "content": "// Currently a placeholder - full implementation planned for future sprints.",
+      "file": "frontend\\src\\pages\\DevUI\\LiveMonitor.tsx"
+    },
+    {
+      "line": 19,
+      "keyword": "placeholder",
+      "content": "* Real-time execution monitoring (placeholder)",
+      "file": "frontend\\src\\pages\\DevUI\\LiveMonitor.tsx"
+    },
+    {
+      "line": 7,
+      "keyword": "placeholder",
+      "content": "// Currently a placeholder - full implementation planned for future sprints.",
+      "file": "frontend\\src\\pages\\DevUI\\Settings.tsx"
+    },
+    {
+      "line": 19,
+      "keyword": "placeholder",
+      "content": "* Configuration and preferences (placeholder)",
+      "file": "frontend\\src\\pages\\DevUI\\Settings.tsx"
+    },
+    {
+      "line": 158,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Filter by Workflow ID...\"",
+      "file": "frontend\\src\\pages\\DevUI\\TraceList.tsx"
+    },
+    {
+      "line": 539,
+      "keyword": "placeholder",
+      "content": "placeholder=\"Worker \u540d\u7a31\"",
+      "file": "frontend\\src\\pages\\SwarmTestPage.tsx"
+    },
+    {
+      "line": 556,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u89d2\u8272 (\u53ef\u9078)\"",
+      "file": "frontend\\src\\pages\\SwarmTestPage.tsx"
+    },
+    {
+      "line": 636,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u8f38\u5165\u601d\u8003\u5167\u5bb9...\"",
+      "file": "frontend\\src\\pages\\SwarmTestPage.tsx"
+    },
+    {
+      "line": 658,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u5de5\u5177\u540d\u7a31 (e.g., query_adf_logs)\"",
+      "file": "frontend\\src\\pages\\SwarmTestPage.tsx"
+    },
+    {
+      "line": 768,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u8f38\u5165\u6e2c\u8a66\u8a0a\u606f...\"",
+      "file": "frontend\\src\\pages\\SwarmTestPage.tsx"
+    },
+    {
+      "line": 82,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u641c\u7d22\u6a21\u677f...\"",
+      "file": "frontend\\src\\pages\\templates\\TemplatesPage.tsx"
+    },
+    {
+      "line": 480,
+      "keyword": "hardcoded",
+      "content": "// S73-1: Use executionTime from useExecutionMetrics instead of hardcoded value",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 870,
+      "keyword": "placeholder",
+      "content": "placeholder={",
+      "file": "frontend\\src\\pages\\UnifiedChat.tsx"
+    },
+    {
+      "line": 343,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u4f8b\u5982\uff1acustomer-support-workflow\"",
+      "file": "frontend\\src\\pages\\workflows\\CreateWorkflowPage.tsx"
+    },
+    {
+      "line": 357,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u63cf\u8ff0\u9019\u500b\u5de5\u4f5c\u6d41\u7684\u7528\u9014...\"",
+      "file": "frontend\\src\\pages\\workflows\\CreateWorkflowPage.tsx"
+    },
+    {
+      "line": 491,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u9078\u64c7\u8981\u57f7\u884c\u7684 Agent\"",
+      "file": "frontend\\src\\pages\\workflows\\CreateWorkflowPage.tsx"
+    },
+    {
+      "line": 555,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u4f86\u6e90\u7bc0\u9ede\"",
+      "file": "frontend\\src\\pages\\workflows\\CreateWorkflowPage.tsx"
+    },
+    {
+      "line": 575,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u76ee\u6a19\u7bc0\u9ede\"",
+      "file": "frontend\\src\\pages\\workflows\\CreateWorkflowPage.tsx"
+    },
+    {
+      "line": 612,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u689d\u4ef6 (\u53ef\u9078)\"",
+      "file": "frontend\\src\\pages\\workflows\\CreateWorkflowPage.tsx"
+    },
+    {
+      "line": 653,
+      "keyword": "placeholder",
+      "content": "placeholder=\"0 9 * * *\"",
+      "file": "frontend\\src\\pages\\workflows\\CreateWorkflowPage.tsx"
+    },
+    {
+      "line": 675,
+      "keyword": "placeholder",
+      "content": "placeholder=\"/webhooks/my-workflow\"",
+      "file": "frontend\\src\\pages\\workflows\\CreateWorkflowPage.tsx"
+    },
+    {
+      "line": 694,
+      "keyword": "placeholder",
+      "content": "placeholder=\"ticket.created\"",
+      "file": "frontend\\src\\pages\\workflows\\CreateWorkflowPage.tsx"
+    },
+    {
+      "line": 429,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u4f8b\u5982\uff1acustomer-support-workflow\"",
+      "file": "frontend\\src\\pages\\workflows\\EditWorkflowPage.tsx"
+    },
+    {
+      "line": 454,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u63cf\u8ff0\u9019\u500b\u5de5\u4f5c\u6d41\u7684\u7528\u9014...\"",
+      "file": "frontend\\src\\pages\\workflows\\EditWorkflowPage.tsx"
+    },
+    {
+      "line": 588,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u9078\u64c7\u8981\u57f7\u884c\u7684 Agent\"",
+      "file": "frontend\\src\\pages\\workflows\\EditWorkflowPage.tsx"
+    },
+    {
+      "line": 652,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u4f86\u6e90\u7bc0\u9ede\"",
+      "file": "frontend\\src\\pages\\workflows\\EditWorkflowPage.tsx"
+    },
+    {
+      "line": 672,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u76ee\u6a19\u7bc0\u9ede\"",
+      "file": "frontend\\src\\pages\\workflows\\EditWorkflowPage.tsx"
+    },
+    {
+      "line": 709,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u689d\u4ef6 (\u53ef\u9078)\"",
+      "file": "frontend\\src\\pages\\workflows\\EditWorkflowPage.tsx"
+    },
+    {
+      "line": 750,
+      "keyword": "placeholder",
+      "content": "placeholder=\"0 9 * * *\"",
+      "file": "frontend\\src\\pages\\workflows\\EditWorkflowPage.tsx"
+    },
+    {
+      "line": 772,
+      "keyword": "placeholder",
+      "content": "placeholder=\"/webhooks/my-workflow\"",
+      "file": "frontend\\src\\pages\\workflows\\EditWorkflowPage.tsx"
+    },
+    {
+      "line": 791,
+      "keyword": "placeholder",
+      "content": "placeholder=\"ticket.created\"",
+      "file": "frontend\\src\\pages\\workflows\\EditWorkflowPage.tsx"
+    },
+    {
+      "line": 69,
+      "keyword": "placeholder",
+      "content": "placeholder=\"\u641c\u7d22\u5de5\u4f5c\u6d41...\"",
+      "file": "frontend\\src\\pages\\workflows\\WorkflowsPage.tsx"
+    },
+    {
+      "line": 42,
+      "keyword": "placeholder",
+      "content": "placeholder?: string;",
+      "file": "frontend\\src\\types\\ag-ui.ts"
+    },
+    {
+      "line": 170,
+      "keyword": "placeholder",
+      "content": "placeholder: string;",
+      "file": "frontend\\src\\types\\unified-chat.ts"
+    },
+    {
+      "line": 371,
+      "keyword": "placeholder",
+      "content": "placeholder?: string;",
+      "file": "frontend\\src\\types\\unified-chat.ts"
+    }
+  ],
+  "test_results": {
+    "component_tests": [
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\AgentSwarmPanel.test.tsx",
+        "describes": 1,
+        "test_cases": 10
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\ExtendedThinkingPanel.test.tsx",
+        "describes": 8,
+        "test_cases": 17
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\MessageHistory.test.tsx",
+        "describes": 1,
+        "test_cases": 8
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\OverallProgress.test.tsx",
+        "describes": 1,
+        "test_cases": 8
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\SwarmHeader.test.tsx",
+        "describes": 1,
+        "test_cases": 9
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\SwarmStatusBadges.test.tsx",
+        "describes": 1,
+        "test_cases": 6
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\ToolCallItem.test.tsx",
+        "describes": 1,
+        "test_cases": 8
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\useWorkerDetail.test.ts",
+        "describes": 1,
+        "test_cases": 8
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\WorkerActionList.test.tsx",
+        "describes": 9,
+        "test_cases": 27
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\WorkerCard.test.tsx",
+        "describes": 1,
+        "test_cases": 16
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\WorkerCardList.test.tsx",
+        "describes": 1,
+        "test_cases": 6
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\WorkerDetailDrawer.test.tsx",
+        "describes": 1,
+        "test_cases": 6
+      },
+      {
+        "path": "frontend\\src\\stores\\__tests__\\swarmStore.test.ts",
+        "describes": 7,
+        "test_cases": 24
+      },
+      {
+        "path": "frontend\\src\\stores\\__tests__\\swarmStore.test.ts",
+        "describes": 7,
+        "test_cases": 24
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\AgentSwarmPanel.test.tsx",
+        "describes": 1,
+        "test_cases": 10
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\ExtendedThinkingPanel.test.tsx",
+        "describes": 8,
+        "test_cases": 17
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\MessageHistory.test.tsx",
+        "describes": 1,
+        "test_cases": 8
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\OverallProgress.test.tsx",
+        "describes": 1,
+        "test_cases": 8
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\SwarmHeader.test.tsx",
+        "describes": 1,
+        "test_cases": 9
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\SwarmStatusBadges.test.tsx",
+        "describes": 1,
+        "test_cases": 6
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\ToolCallItem.test.tsx",
+        "describes": 1,
+        "test_cases": 8
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\useWorkerDetail.test.ts",
+        "describes": 1,
+        "test_cases": 8
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\WorkerActionList.test.tsx",
+        "describes": 9,
+        "test_cases": 27
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\WorkerCard.test.tsx",
+        "describes": 1,
+        "test_cases": 16
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\WorkerCardList.test.tsx",
+        "describes": 1,
+        "test_cases": 6
+      },
+      {
+        "path": "frontend\\src\\components\\unified-chat\\agent-swarm\\__tests__\\WorkerDetailDrawer.test.tsx",
+        "describes": 1,
+        "test_cases": 6
+      }
+    ],
+    "e2e_tests": [
+      {
+        "path": "frontend\\e2e\\approvals.spec.ts",
+        "test_cases": 14
+      },
+      {
+        "path": "frontend\\e2e\\dashboard.spec.ts",
+        "test_cases": 12
+      },
+      {
+        "path": "frontend\\e2e\\workflows.spec.ts",
+        "test_cases": 13
+      },
+      {
+        "path": "frontend\\e2e\\ag-ui\\agentic-chat.spec.ts",
+        "test_cases": 10
+      },
+      {
+        "path": "frontend\\e2e\\ag-ui\\generative-ui.spec.ts",
+        "test_cases": 11
+      },
+      {
+        "path": "frontend\\e2e\\ag-ui\\hitl.spec.ts",
+        "test_cases": 10
+      },
+      {
+        "path": "frontend\\e2e\\ag-ui\\integration.spec.ts",
+        "test_cases": 12
+      },
+      {
+        "path": "frontend\\e2e\\ag-ui\\predictive-state.spec.ts",
+        "test_cases": 11
+      },
+      {
+        "path": "frontend\\e2e\\ag-ui\\shared-state.spec.ts",
+        "test_cases": 13
+      },
+      {
+        "path": "frontend\\e2e\\ag-ui\\tool-rendering.spec.ts",
+        "test_cases": 8
+      },
+      {
+        "path": "frontend\\e2e\\ag-ui\\tool-ui.spec.ts",
+        "test_cases": 11
+      },
+      {
+        "path": "frontend\\tests\\e2e\\swarm.spec.ts",
+        "test_cases": 19
+      }
+    ]
+  },
+  "module_stats": {
+    "api": {
+      "files": 6,
+      "code_lines": 797,
+      "components": 3,
+      "any_types": 0,
+      "console_logs": 0,
+      "todos": 0,
+      "api_calls": 8,
+      "interfaces": 65,
+      "hooks_used": []
+    },
+    "App.tsx": {
+      "files": 1,
+      "code_lines": 89,
+      "components": 1,
+      "any_types": 0,
+      "console_logs": 0,
+      "todos": 0,
+      "api_calls": 0,
+      "interfaces": 0,
+      "hooks_used": []
+    },
+    "components": {
+      "files": 137,
+      "code_lines": 18538,
+      "components": 90,
+      "any_types": 0,
+      "console_logs": 15,
+      "todos": 7,
+      "api_calls": 8,
+      "interfaces": 220,
+      "hooks_used": [
+        "useNavigate",
+        "useState",
+        "useCallback",
+        "useWorkflowData",
+        "useSwarmEvents",
+        "useEffect",
+        "useLiveTimer",
+        "useMemo",
+        "useAGUI",
+        "useSwarmStore",
+        "useSwarmEventHandler",
+        "useMutation",
+        "useAuthStore",
+        "useLocation",
+        "useNodesState",
+        "useSwarmStatus",
+        "useEdgesState",
+        "useQuery",
+        "useRef",
+        "useWorkerDetail",
+        "useEventSource",
+        "useQueryClient",
+        "useNodeDrag"
+      ]
+    },
+    "hooks": {
+      "files": 17,
+      "code_lines": 5304,
+      "components": 16,
+      "any_types": 0,
+      "console_logs": 47,
+      "todos": 0,
+      "api_calls": 18,
+      "interfaces": 101,
+      "hooks_used": [
+        "useCheckpoints",
+        "useState",
+        "useUnifiedChatStore",
+        "useCallback",
+        "useEffect",
+        "useDeleteTrace",
+        "useExecutionMetrics",
+        "useHybridMode",
+        "useSharedState",
+        "useMemo",
+        "useSwarmReal",
+        "useTraceEvents",
+        "useAGUI",
+        "useChatThreads",
+        "useFileUpload",
+        "useMutation",
+        "useUnifiedChat",
+        "useDevToolsStream",
+        "useAuthStore",
+        "useOptimisticState",
+        "useOrchestration",
+        "useQuery",
+        "useApprovalFlow",
+        "useSearchParams",
+        "useRef",
+        "useTrace",
+        "useTraces",
+        "useEventFilter",
+        "useQueryClient"
+      ]
+    },
+    "lib": {
+      "files": 1,
+      "code_lines": 104,
+      "components": 1,
+      "any_types": 0,
+      "console_logs": 0,
+      "todos": 0,
+      "api_calls": 0,
+      "interfaces": 1,
+      "hooks_used": []
+    },
+    "main.tsx": {
+      "files": 1,
+      "code_lines": 24,
+      "components": 0,
+      "any_types": 0,
+      "console_logs": 0,
+      "todos": 0,
+      "api_calls": 0,
+      "interfaces": 0,
+      "hooks_used": []
+    },
+    "pages": {
+      "files": 40,
+      "code_lines": 10467,
+      "components": 38,
+      "any_types": 0,
+      "console_logs": 23,
+      "todos": 2,
+      "api_calls": 60,
+      "interfaces": 67,
+      "hooks_used": [
+        "useNavigate",
+        "useSwarmMock",
+        "useState",
+        "useCallback",
+        "useEffect",
+        "useDeleteTrace",
+        "useExecutionMetrics",
+        "useMemo",
+        "useSwarmReal",
+        "useTraceEvents",
+        "useChatThreads",
+        "useFileUpload",
+        "useMutation",
+        "useUnifiedChat",
+        "useAuthStore",
+        "useLocation",
+        "useOrchestration",
+        "useQuery",
+        "useRef",
+        "useTrace",
+        "useTraces",
+        "useEventFilter",
+        "useQueryClient"
+      ]
+    },
+    "store": {
+      "files": 1,
+      "code_lines": 224,
+      "components": 1,
+      "any_types": 0,
+      "console_logs": 4,
+      "todos": 0,
+      "api_calls": 4,
+      "interfaces": 2,
+      "hooks_used": []
+    },
+    "stores": {
+      "files": 3,
+      "code_lines": 984,
+      "components": 2,
+      "any_types": 0,
+      "console_logs": 6,
+      "todos": 0,
+      "api_calls": 0,
+      "interfaces": 3,
+      "hooks_used": []
+    },
+    "test": {
+      "files": 1,
+      "code_lines": 1,
+      "components": 0,
+      "any_types": 0,
+      "console_logs": 0,
+      "todos": 0,
+      "api_calls": 0,
+      "interfaces": 0,
+      "hooks_used": []
+    },
+    "types": {
+      "files": 4,
+      "code_lines": 816,
+      "components": 0,
+      "any_types": 0,
+      "console_logs": 0,
+      "todos": 0,
+      "api_calls": 0,
+      "interfaces": 118,
+      "hooks_used": []
+    },
+    "utils": {
+      "files": 1,
+      "code_lines": 73,
+      "components": 1,
+      "any_types": 0,
+      "console_logs": 4,
+      "todos": 0,
+      "api_calls": 1,
+      "interfaces": 0,
+      "hooks_used": []
+    },
+    "vite-env.d.ts": {
+      "files": 1,
+      "code_lines": 7,
+      "components": 0,
+      "any_types": 0,
+      "console_logs": 0,
+      "todos": 0,
+      "api_calls": 0,
+      "interfaces": 2,
+      "hooks_used": []
+    }
+  }
+}
