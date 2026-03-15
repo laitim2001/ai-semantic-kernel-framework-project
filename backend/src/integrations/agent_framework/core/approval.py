@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 
 # Official Agent Framework Imports - MUST use these
 # Note: Classes are directly under agent_framework, not agent_framework.workflows
-from agent_framework import Executor, handler, WorkflowContext
+from agent_framework.workflows import Executor, handler, WorkflowContext
 
 # RequestResponseExecutor not directly available - use Executor as base
 # This will be updated when official API is finalized

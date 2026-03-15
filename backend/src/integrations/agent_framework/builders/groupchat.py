@@ -80,7 +80,7 @@ from ..exceptions import WorkflowBuildError, AdapterError
 # =============================================================================
 # 官方 Agent Framework API 導入 (Sprint 19 整合)
 # =============================================================================
-from agent_framework import (
+from agent_framework.workflows.orchestrations import (
     GroupChatBuilder,
     # Note: GroupChatDirective and ManagerSelectionResponse were removed in newer API
     # Now with_select_speaker_func returns str (agent name) directly

@@ -28,7 +28,7 @@ import json
 import logging
 
 # 官方 Agent Framework API
-from agent_framework import CheckpointStorage, InMemoryCheckpointStorage
+from agent_framework.workflows import CheckpointStorage, InMemoryCheckpointStorage  # TODO: verify submodule path
 
 logger = logging.getLogger(__name__)
 

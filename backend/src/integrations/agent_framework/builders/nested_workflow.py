@@ -68,7 +68,7 @@ from ..exceptions import ExecutionError, RecursionError, ValidationError, Workfl
 # =============================================================================
 # 官方 Agent Framework API 導入 (Sprint 23 整合)
 # =============================================================================
-from agent_framework import WorkflowBuilder, Workflow, WorkflowExecutor
+from agent_framework.workflows import WorkflowBuilder, Workflow, WorkflowExecutor
 
 logger = logging.getLogger(__name__)
 

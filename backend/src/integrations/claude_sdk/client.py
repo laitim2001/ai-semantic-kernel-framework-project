@@ -35,7 +35,7 @@ class ClaudeSDKClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = "claude-sonnet-4-6-20260217",
         max_tokens: int = 4096,
         timeout: int = 300,
         system_prompt: Optional[str] = None,
@@ -257,7 +257,7 @@ class ClaudeSDKClient:
 
             # Use streaming API with extended thinking beta
             # Note: Extended thinking requires anthropic-beta header
-            extra_headers = {"anthropic-beta": "extended-thinking-2024-10"}
+            extra_headers = {"anthropic-beta": "interleaved-thinking-2025-05-14"}
 
             async with self._client.messages.stream(
                 **request_kwargs,

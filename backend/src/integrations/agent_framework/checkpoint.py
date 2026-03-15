@@ -99,7 +99,7 @@ class WorkflowCheckpointData:
             agent_framework.WorkflowCheckpoint 實例
         """
         try:
-            from agent_framework import WorkflowCheckpoint
+            from agent_framework.workflows import WorkflowCheckpoint
             return WorkflowCheckpoint(
                 checkpoint_id=self.checkpoint_id,
                 workflow_id=self.workflow_id,

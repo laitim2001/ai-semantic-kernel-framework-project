@@ -31,7 +31,7 @@ import logging
 
 # Official Agent Framework Imports - MUST use these
 # Note: Classes are directly under agent_framework, not agent_framework.workflows
-from agent_framework import WorkflowStatusEvent
+from agent_framework.workflows import WorkflowStatusEvent
 
 
 logger = logging.getLogger(__name__)

@@ -8,7 +8,7 @@
 # Microsoft Agent Framework Executor interface.
 #
 # Official API Pattern (from agent_framework samples):
-#   from agent_framework import Executor, WorkflowContext, handler
+#   from agent_framework.workflows import Executor, WorkflowContext, handler
 #
 #   class MyExecutor(Executor):
 #       @handler
@@ -22,7 +22,7 @@
 #   - Proper error handling with success/failure status
 #
 # IMPORTANT: Uses official Agent Framework API with @handler decorator
-#   from agent_framework import Executor, WorkflowContext, handler
+#   from agent_framework.workflows import Executor, WorkflowContext, handler
 # =============================================================================
 
 from typing import Any, Dict, List, Optional, Callable, Union
@@ -35,7 +35,7 @@ from pydantic import BaseModel, Field
 
 # Official Agent Framework Import - MUST use this
 # Note: Classes are directly under agent_framework, not agent_framework.workflows
-from agent_framework import Executor, WorkflowContext, handler
+from agent_framework.workflows import Executor, WorkflowContext, handler
 
 # Import domain models directly from models (not from __init__ to avoid circular imports)
 from src.domain.workflows.models import WorkflowNode, NodeType

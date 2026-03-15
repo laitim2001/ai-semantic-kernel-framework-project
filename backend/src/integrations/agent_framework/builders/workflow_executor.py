@@ -49,7 +49,7 @@ import time
 # =============================================================================
 # 官方 Agent Framework API 導入 (Sprint 19 整合)
 # =============================================================================
-from agent_framework import (
+from agent_framework.workflows import (
     WorkflowExecutor,
     SubWorkflowRequestMessage,
     SubWorkflowResponseMessage,

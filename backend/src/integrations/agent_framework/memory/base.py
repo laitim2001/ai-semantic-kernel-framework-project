@@ -22,7 +22,7 @@ from uuid import UUID, uuid4
 # =============================================================================
 # Note: 官方 API 使用 Context 和 ContextProvider 進行上下文/記憶管理
 # 我們定義自己的 MemoryStorage Protocol 以兼容自定義存儲後端
-from agent_framework import Context, ContextProvider
+from agent_framework.agents import Context, ContextProvider
 
 logger = logging.getLogger(__name__)
 

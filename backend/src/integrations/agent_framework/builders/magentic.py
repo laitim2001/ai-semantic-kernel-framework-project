@@ -36,7 +36,7 @@ import logging
 # =============================================================================
 # 官方 Agent Framework API 導入 (Sprint 19 整合)
 # =============================================================================
-from agent_framework import (
+from agent_framework.workflows.orchestrations import (
     MagenticBuilder,
     MagenticManagerBase,
     StandardMagenticManager,
