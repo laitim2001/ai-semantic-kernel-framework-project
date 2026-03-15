@@ -233,8 +233,8 @@ class PlanningAdapter:
         # LLM 服務 (Phase 7 - 啟用 AI 自主決策)
         self._llm_service = llm_service
 
-        # 官方 Builder 實例
-        self._magentic_builder = MagenticBuilder()
+        # 官方 Builder 實例 (延遲初始化 — rc4 要求 participants 為必填參數)
+        self._magentic_builder = None
 
         # Phase 2 擴展功能（可選）
         self._task_decomposer: Optional[TaskDecomposer] = None
@@ -515,6 +515,8 @@ class PlanningAdapter:
             構建的 Workflow 實例
         """
         logger.info(f"PlanningAdapter '{self._id}' 構建工作流")
+        if self._magentic_builder is None:
+            self._magentic_builder = MagenticBuilder(participants=[])
         return self._magentic_builder.build()
 
     async def initialize(self) -> None:
