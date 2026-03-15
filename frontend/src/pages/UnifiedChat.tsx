@@ -394,7 +394,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     sessionId,
     userId,
     includeRiskAssessment: true,
-    autoExecute: false, // We'll handle execution ourselves after orchestration
+    autoExecute: true, // FIX-006: Auto-execute after orchestration when no approval needed
     onRoutingComplete: (decision) => {
       console.log('[UnifiedChat] Routing complete:', decision.intent_category, decision.routing_layer);
     },

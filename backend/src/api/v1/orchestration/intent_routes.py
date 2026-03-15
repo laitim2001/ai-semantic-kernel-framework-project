@@ -21,6 +21,7 @@ from src.integrations.orchestration import (
     RiskPolicies,
     RouterConfig,
     create_router,
+    create_router_with_llm,
 )
 from src.integrations.orchestration.intent_router.models import (
     ITIntentCategory,
@@ -69,11 +70,11 @@ def get_router() -> BusinessIntentRouter:
     """
     Get or create router singleton.
 
-    Uses real three-tier routing if:
-    - USE_REAL_ROUTER is True
-    - Required API keys are configured (ANTHROPIC_API_KEY)
+    Uses real three-tier routing with LLMServiceFactory (Sprint 128+):
+    - Auto-detects LLM provider from environment (Azure OpenAI / Anthropic)
+    - Creates LLM service via LLMServiceFactory for Layer 3 classifier
 
-    Falls back to mock router if configuration is missing.
+    Falls back to mock router if USE_REAL_ROUTER is False.
     """
     global _router_instance
     if _router_instance is not None:
@@ -87,12 +88,15 @@ def get_router() -> BusinessIntentRouter:
         track_latency=True,
     )
 
-    # Check if we should use real router
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    azure_key = os.getenv("AZURE_OPENAI_API_KEY")
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    # FIX-005: Read Azure credentials from Settings (pydantic-settings loads .env)
+    # instead of os.getenv() which may not have .env values in os.environ
+    from src.core.config import get_settings
+    settings = get_settings()
+    azure_endpoint = settings.azure_openai_endpoint
+    azure_key = settings.azure_openai_api_key
+    azure_deployment = settings.azure_openai_deployment_name
 
-    if USE_REAL_ROUTER and anthropic_key:
+    if USE_REAL_ROUTER:
         try:
             logger.info("Initializing REAL three-tier intent router...")
 
@@ -107,11 +111,30 @@ def get_router() -> BusinessIntentRouter:
             else:
                 logger.warning("Pattern rules file not found, using empty rules")
 
-            # Create real router with Azure OpenAI for semantic routing
+            # FIX-005: Create LLM service via LLMServiceFactory and pass to create_router()
+            # Previously used deprecated llm_api_key parameter which was silently ignored
+            llm_service = None
+            try:
+                from src.integrations.llm import LLMServiceFactory
+                if azure_endpoint and azure_key:
+                    llm_service = LLMServiceFactory.create(
+                        provider="azure",
+                        use_cache=True,
+                        cache_ttl=1800,
+                        endpoint=azure_endpoint,
+                        api_key=azure_key,
+                        deployment_name=azure_deployment,
+                    )
+                else:
+                    llm_service = LLMServiceFactory.create(use_cache=True, cache_ttl=1800)
+                logger.info(f"LLM service created for intent router: {type(llm_service).__name__}")
+            except Exception as llm_err:
+                logger.warning(f"LLM service unavailable for intent router: {llm_err}")
+
             _router_instance = create_router(
                 pattern_rules_path=rules_path,
                 semantic_routes=semantic_routes,
-                llm_api_key=anthropic_key,
+                llm_service=llm_service,
                 config=config,
             )
 
@@ -123,10 +146,10 @@ def get_router() -> BusinessIntentRouter:
                 logger.info("Semantic router configured to use Azure OpenAI encoder")
 
             logger.info(
-                f"✅ Real router initialized: "
+                f"Real router initialized: "
                 f"Pattern rules: {len(_router_instance.pattern_matcher.rules)}, "
                 f"Semantic routes: {len(_router_instance.semantic_router.routes)}, "
-                f"LLM: Claude Haiku"
+                f"LLM: {type(llm_service).__name__ if llm_service else 'None'}"
             )
             return _router_instance
 
@@ -134,10 +157,7 @@ def get_router() -> BusinessIntentRouter:
             logger.error(f"Failed to initialize real router: {e}", exc_info=True)
             logger.warning("Falling back to mock router")
     else:
-        if not USE_REAL_ROUTER:
-            logger.info("USE_REAL_ROUTER is False, using mock router")
-        elif not anthropic_key:
-            logger.warning("ANTHROPIC_API_KEY not set, using mock router")
+        logger.info("USE_REAL_ROUTER is False, using mock router")
 
     # Fallback to mock router (Sprint 112: lazy import from tests.mocks)
     logger.info("Initializing mock intent router...")
@@ -145,7 +165,7 @@ def get_router() -> BusinessIntentRouter:
     _router_instance = create_mock_router(config=config)
     logger.warning(
         "⚠️ Using mock router. This is NOT acceptable in production. "
-        "Set ANTHROPIC_API_KEY or USE_REAL_ROUTER=true for real routing."
+        "Set USE_REAL_ROUTER=true and configure LLM provider env vars for real routing."
     )
     return _router_instance
 
