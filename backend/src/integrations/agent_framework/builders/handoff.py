@@ -298,7 +298,8 @@ class HandoffBuilderAdapter(BuilderAdapter[Any, HandoffExecutionResult]):
         self._on_completion: List[Callable] = []
 
         # Sprint 19: 使用官方 HandoffBuilder API
-        self._builder = HandoffBuilder()
+        # rc4: participants/participant_factories 為必填，延遲初始化
+        self._builder = None
 
         # 註冊參與者
         if participants:
@@ -579,10 +580,10 @@ class HandoffBuilderAdapter(BuilderAdapter[Any, HandoffExecutionResult]):
         coordinator = self._participants.get(self._coordinator_id)
 
         try:
-            # 調用官方 HandoffBuilder.participants().build()
+            # 調用官方 HandoffBuilder (rc4: participants 為必填建構參數)
+            self._builder = HandoffBuilder(participants=participants)
             workflow = (
                 self._builder
-                .participants(participants)
                 .build()
             )
             self._workflow = workflow
