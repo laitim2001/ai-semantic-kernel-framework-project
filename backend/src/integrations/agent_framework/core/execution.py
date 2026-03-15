@@ -31,9 +31,8 @@ import logging
 # Official Agent Framework Imports - MUST use these
 # Note: Classes are directly under agent_framework, not agent_framework.workflows
 # SequentialOrchestration was renamed to SequentialBuilder in the official API
-from agent_framework.agents import ChatAgent
-from agent_framework.workflows.orchestrations import SequentialBuilder
-from agent_framework.workflows import Workflow
+from agent_framework import Agent as ChatAgent, Workflow
+from agent_framework.orchestrations import SequentialBuilder
 
 # Alias for backward compatibility
 SequentialOrchestration = SequentialBuilder

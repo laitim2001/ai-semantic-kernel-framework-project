@@ -34,7 +34,7 @@ import logging
 
 # Official Agent Framework Imports - MUST use these
 # Note: Classes are directly under agent_framework
-from agent_framework.workflows import Workflow, WorkflowBuilder, Edge, Executor
+from agent_framework import Workflow, WorkflowBuilder, Edge, Executor
 
 # Import our adapters
 from .executor import WorkflowNodeExecutor, NodeInput, NodeOutput

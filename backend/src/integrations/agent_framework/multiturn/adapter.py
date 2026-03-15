@@ -24,7 +24,7 @@ import logging
 import uuid
 
 # 官方 Agent Framework API
-from agent_framework.workflows import (  # TODO: verify submodule path
+from agent_framework import (
     CheckpointStorage,
     InMemoryCheckpointStorage,
     WorkflowCheckpoint,

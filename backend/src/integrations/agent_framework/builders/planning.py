@@ -28,8 +28,8 @@ import asyncio
 import logging
 
 # 官方 Agent Framework API
-from agent_framework.workflows.orchestrations import MagenticBuilder
-from agent_framework.workflows import Workflow
+from agent_framework.orchestrations import MagenticBuilder
+from agent_framework import Workflow
 
 # Phase 2 擴展功能 (內部使用，對外通過 PlanningAdapter 暴露)
 from src.domain.orchestration.planning.task_decomposer import (

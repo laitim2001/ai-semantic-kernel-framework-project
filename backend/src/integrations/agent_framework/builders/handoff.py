@@ -51,8 +51,7 @@ from ..base import BuilderAdapter
 # =============================================================================
 # 官方 Agent Framework API 導入 (Sprint 19 整合)
 # =============================================================================
-from agent_framework.workflows.orchestrations import HandoffBuilder
-from agent_framework.workflows import HandoffAgentUserRequest  # Renamed from HandoffUserInputRequest
+from agent_framework.orchestrations import HandoffBuilder, HandoffAgentUserRequest
 
 logger = logging.getLogger(__name__)
 

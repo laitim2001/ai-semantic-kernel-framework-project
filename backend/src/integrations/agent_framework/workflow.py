@@ -422,7 +422,7 @@ class WorkflowAdapter(BuilderAdapter):
         """
         try:
             # 延遲導入以避免循環依賴
-            from agent_framework.workflows import WorkflowBuilder
+            from agent_framework import WorkflowBuilder
 
             self._logger.info(f"Building workflow: {self._config.id}")
 

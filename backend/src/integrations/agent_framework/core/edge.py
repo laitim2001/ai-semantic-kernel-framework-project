@@ -17,7 +17,7 @@
 #   - Factory methods for start/end edges
 #
 # IMPORTANT: Uses official Agent Framework API
-#   from agent_framework.workflows import Edge
+#   from agent_framework import Edge
 # =============================================================================
 
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -26,7 +26,7 @@ import logging
 
 # Official Agent Framework Import - MUST use this
 # Note: Classes are directly under agent_framework, not agent_framework.workflows
-from agent_framework.workflows import Edge
+from agent_framework import Edge
 
 # Import existing domain models
 from src.domain.workflows.models import WorkflowEdge

@@ -80,7 +80,7 @@ from ..exceptions import ExecutionError, ValidationError, WorkflowBuildError
 # =============================================================================
 # 官方 Agent Framework API 導入 (Sprint 19 整合)
 # =============================================================================
-from agent_framework.workflows.orchestrations import ConcurrentBuilder
+from agent_framework.orchestrations import ConcurrentBuilder
 
 logger = logging.getLogger(__name__)
 

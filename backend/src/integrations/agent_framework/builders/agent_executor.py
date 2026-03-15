@@ -152,7 +152,7 @@ class AgentExecutorAdapter:
 
         try:
             # 導入官方 Agent Framework API
-            from agent_framework.agents import ChatAgent, ChatMessage, Role
+            from agent_framework import Agent as ChatAgent, Message as ChatMessage, Role
             from agent_framework.azure import AzureOpenAIResponsesClient
             from azure.identity import DefaultAzureCredential
 
