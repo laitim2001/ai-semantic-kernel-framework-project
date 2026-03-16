@@ -17,7 +17,7 @@ class ClaudeSDKConfig:
     base_url: Optional[str] = None
 
     # Model Configuration
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4-6-20260217"
     max_tokens: int = 4096
     timeout: int = 300
 
@@ -52,7 +52,7 @@ class ClaudeSDKConfig:
         """Create config from environment variables."""
         return cls(
             api_key=os.getenv("ANTHROPIC_API_KEY"),
-            model=os.getenv("CLAUDE_SDK_MODEL", "claude-sonnet-4-20250514"),
+            model=os.getenv("CLAUDE_SDK_MODEL", "claude-sonnet-4-6-20260217"),
             max_tokens=int(os.getenv("CLAUDE_SDK_MAX_TOKENS", "4096")),
             timeout=int(os.getenv("CLAUDE_SDK_TIMEOUT", "300")),
         )

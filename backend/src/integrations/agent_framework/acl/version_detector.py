@@ -133,7 +133,16 @@ class MAFVersionDetector:
         """
         try:
             import agent_framework
-            return hasattr(agent_framework, api_name)
+            if hasattr(agent_framework, api_name):
+                return True
+            # rc4: orchestration builders moved to agent_framework.orchestrations
+            try:
+                import agent_framework.orchestrations as orch
+                if hasattr(orch, api_name):
+                    return True
+            except ImportError:
+                pass
+            return False
         except ImportError:
             return False
 
@@ -155,7 +164,7 @@ class MAFVersionDetector:
             "GroupChatBuilder",
             "HandoffBuilder",
             "MagenticBuilder",
-            "ChatAgent",
+            "Agent",
             "BaseAgent",
             "CheckpointStorage",
         ]
@@ -163,8 +172,15 @@ class MAFVersionDetector:
         available = []
         try:
             import agent_framework
+            orch = None
+            try:
+                import agent_framework.orchestrations as orch
+            except ImportError:
+                pass
             for api_name in expected_apis:
                 if hasattr(agent_framework, api_name):
+                    available.append(api_name)
+                elif orch and hasattr(orch, api_name):
                     available.append(api_name)
         except ImportError:
             pass

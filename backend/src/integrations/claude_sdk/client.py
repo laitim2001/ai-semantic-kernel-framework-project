@@ -48,7 +48,7 @@ class ClaudeSDKClient:
 
         Args:
             api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
-            model: Model to use (default: claude-sonnet-4-20250514)
+            model: Model to use (default: claude-sonnet-4-6-20260217)
             max_tokens: Maximum tokens per response
             timeout: Request timeout in seconds
             system_prompt: System prompt for all queries

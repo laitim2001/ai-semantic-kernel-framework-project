@@ -199,7 +199,7 @@ class MemoryConfig:
         default_factory=lambda: os.getenv("MEMORY_LLM_PROVIDER", "anthropic")
     )
     llm_model: str = field(
-        default_factory=lambda: os.getenv("MEMORY_LLM_MODEL", "claude-sonnet-4-20250514")
+        default_factory=lambda: os.getenv("MEMORY_LLM_MODEL", "claude-sonnet-4-6-20260217")
     )
 
     # TTL settings (in seconds)
