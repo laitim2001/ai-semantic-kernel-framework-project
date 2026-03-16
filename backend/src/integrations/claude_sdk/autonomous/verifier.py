@@ -89,7 +89,7 @@ class ResultVerifier:
     def __init__(
         self,
         client: AsyncAnthropic,
-        model: str = "claude-sonnet-4-6-20260217",
+        model: str = "claude-haiku-4-5-20251001",
     ):
         """
         Initialize the ResultVerifier.

@@ -35,7 +35,7 @@ class ClaudeSDKClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "claude-sonnet-4-6-20260217",
+        model: str = "claude-haiku-4-5-20251001",
         max_tokens: int = 4096,
         timeout: int = 300,
         system_prompt: Optional[str] = None,
@@ -48,7 +48,7 @@ class ClaudeSDKClient:
 
         Args:
             api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
-            model: Model to use (default: claude-sonnet-4-6-20260217)
+            model: Model to use (default: claude-haiku-4-5-20251001)
             max_tokens: Maximum tokens per response
             timeout: Request timeout in seconds
             system_prompt: System prompt for all queries
@@ -63,7 +63,6 @@ class ClaudeSDKClient:
             timeout=timeout,
             system_prompt=system_prompt,
         )
-
         self._client = AsyncAnthropic(
             api_key=self.config.api_key,
             base_url=self.config.base_url,
