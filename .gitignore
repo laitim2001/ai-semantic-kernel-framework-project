@@ -132,3 +132,4 @@ backend/fantasy_story.txt
 
 # Backend data directory (runtime data)
 backend/data/
+backend/.venv-rc4/

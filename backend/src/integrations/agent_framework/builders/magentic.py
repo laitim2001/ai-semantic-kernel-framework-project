@@ -36,7 +36,7 @@ import logging
 # =============================================================================
 # 官方 Agent Framework API 導入 (Sprint 19 整合)
 # =============================================================================
-from agent_framework import (
+from agent_framework.orchestrations import (
     MagenticBuilder,
     MagenticManagerBase,
     StandardMagenticManager,
@@ -1024,7 +1024,8 @@ class MagenticBuilderAdapter:
         self._events: List[Dict[str, Any]] = []
 
         # Sprint 19: 使用官方 MagenticBuilder API
-        self._builder = MagenticBuilder()
+        # rc4: participants 為必填建構參數，延遲初始化
+        self._builder = None
 
         # Add initial participants if provided (backward compatibility)
         if participants is not None:
@@ -1284,10 +1285,10 @@ class MagenticBuilderAdapter:
 
         try:
             if participant_agents:
-                # 調用官方 MagenticBuilder.participants().build()
+                # 調用官方 MagenticBuilder (rc4: participants 為必填建構參數)
+                self._builder = MagenticBuilder(participants=participant_agents)
                 workflow = (
                     self._builder
-                    .participants(participant_agents)
                     .build()
                 )
                 self._workflow = workflow

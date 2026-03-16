@@ -80,7 +80,7 @@ from ..exceptions import WorkflowBuildError, AdapterError
 # =============================================================================
 # 官方 Agent Framework API 導入 (Sprint 19 整合)
 # =============================================================================
-from agent_framework import (
+from agent_framework.orchestrations import (
     GroupChatBuilder,
     # Note: GroupChatDirective and ManagerSelectionResponse were removed in newer API
     # Now with_select_speaker_func returns str (agent name) directly
@@ -1098,7 +1098,8 @@ class GroupChatBuilderAdapter(BuilderAdapter):
         self._events: List[Dict[str, Any]] = []
 
         # Sprint 19: 使用官方 GroupChatBuilder API
-        self._builder = GroupChatBuilder()
+        # rc4: participants/participant_factories 為必填，延遲初始化
+        self._builder = None
 
     @property
     def id(self) -> str:
@@ -1332,10 +1333,10 @@ class GroupChatBuilderAdapter(BuilderAdapter):
             participants = [p.agent for p in self._participants.values() if p.agent]
 
             try:
-                # 調用官方 GroupChatBuilder.participants().build()
+                # 調用官方 GroupChatBuilder (rc4: participants 為必填建構參數)
+                self._builder = GroupChatBuilder(participants=participants)
                 workflow = (
                     self._builder
-                    .participants(participants)
                     .build()
                 )
                 self._workflow = workflow

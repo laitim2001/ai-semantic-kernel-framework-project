@@ -17,7 +17,7 @@ pydantic-settings>=2.1.0
 # Preview version (Beta) - monitor for GA release
 # Note: [azure] extra not available, use base package
 # Version locked to prevent unintended upgrades (2026-01-16)
-agent-framework>=1.0.0b260114,<2.0.0
+agent-framework>=1.0.0rc4,<2.0.0
 
 # ===========================================
 # Database
@@ -39,6 +39,11 @@ aio-pika>=9.3.0              # RabbitMQ async client
 azure-identity>=1.15.0
 azure-keyvault-secrets>=4.7.0
 azure-servicebus>=7.11.0     # Production message queue
+
+# ===========================================
+# Anthropic Claude SDK
+# ===========================================
+anthropic>=0.84.0
 
 # ===========================================
 # Long-term Memory (mem0)

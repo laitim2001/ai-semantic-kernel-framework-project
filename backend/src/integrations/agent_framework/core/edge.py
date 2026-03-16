@@ -17,7 +17,7 @@
 #   - Factory methods for start/end edges
 #
 # IMPORTANT: Uses official Agent Framework API
-#   from agent_framework.workflows import Edge
+#   from agent_framework import Edge
 # =============================================================================
 
 from typing import Any, Callable, Dict, List, Optional, Union

@@ -187,7 +187,7 @@ class BuilderAdapter(BaseAdapter, Generic[T, R]):
     Example:
         class MyConcurrentAdapter(BuilderAdapter[ConcurrentBuilder, WorkflowRunResult]):
             def build(self) -> Workflow:
-                self._builder = ConcurrentBuilder()
+                self._builder = ConcurrentBuilder(participants=[])
                 # 配置 builder
                 return self._builder.build()
     """

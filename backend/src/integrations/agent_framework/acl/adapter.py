@@ -138,7 +138,25 @@ class MAFAdapter:
         try:
             import agent_framework
 
+            # rc4: orchestration builders moved to agent_framework.orchestrations
             builder_cls = getattr(agent_framework, maf_class_name, None)
+            if builder_cls is None:
+                try:
+                    from agent_framework.orchestrations import (
+                        ConcurrentBuilder, GroupChatBuilder, HandoffBuilder,
+                        MagenticBuilder, SequentialBuilder,
+                    )
+                    _orchestration_map = {
+                        "ConcurrentBuilder": ConcurrentBuilder,
+                        "GroupChatBuilder": GroupChatBuilder,
+                        "HandoffBuilder": HandoffBuilder,
+                        "MagenticBuilder": MagenticBuilder,
+                        "SequentialBuilder": SequentialBuilder,
+                    }
+                    builder_cls = _orchestration_map.get(maf_class_name)
+                except ImportError:
+                    pass
+
             if builder_cls is None:
                 raise WorkflowBuildError(
                     f"MAF class not found: {maf_class_name}",

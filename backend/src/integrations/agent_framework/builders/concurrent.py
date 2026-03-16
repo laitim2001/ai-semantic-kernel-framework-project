@@ -80,7 +80,7 @@ from ..exceptions import ExecutionError, ValidationError, WorkflowBuildError
 # =============================================================================
 # 官方 Agent Framework API 導入 (Sprint 19 整合)
 # =============================================================================
-from agent_framework import ConcurrentBuilder
+from agent_framework.orchestrations import ConcurrentBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -793,7 +793,8 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
         self._workflow: Optional[Any] = None
 
         # Sprint 19: 使用官方 ConcurrentBuilder API
-        self._builder = ConcurrentBuilder()
+        # rc4: participants 為必填參數，延遲初始化
+        self._builder = None
 
         # Sprint 54: MAF Tool Callback for unified tool execution
         self._tool_callback = tool_callback
@@ -1067,11 +1068,11 @@ class ConcurrentBuilderAdapter(BuilderAdapter[Any, ConcurrentExecutionResult]):
         # 將 IPA 平台任務轉換為官方 API 格式
         participants = [task.executor for task in self._tasks]
 
-        # 調用官方 ConcurrentBuilder.participants().build()
+        # 調用官方 ConcurrentBuilder (rc4: participants 為必填建構參數)
         try:
+            self._builder = ConcurrentBuilder(participants=participants)
             self._workflow = (
                 self._builder
-                .participants(participants)
                 .with_aggregator(self._aggregator)
                 .build()
             )

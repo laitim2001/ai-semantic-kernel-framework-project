@@ -18,7 +18,7 @@
 #   - Event handler registration and management
 #
 # IMPORTANT: Uses official Agent Framework API
-#   from agent_framework.workflows import WorkflowStatusEvent
+#   from agent_framework import WorkflowEvent as WorkflowStatusEvent
 # =============================================================================
 
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -31,7 +31,7 @@ import logging
 
 # Official Agent Framework Imports - MUST use these
 # Note: Classes are directly under agent_framework, not agent_framework.workflows
-from agent_framework import WorkflowStatusEvent
+from agent_framework import WorkflowEvent as WorkflowStatusEvent
 
 
 logger = logging.getLogger(__name__)
