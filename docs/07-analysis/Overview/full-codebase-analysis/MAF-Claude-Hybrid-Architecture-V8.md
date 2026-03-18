@@ -1,13 +1,14 @@
 # 智能體編排平台：MAF + Claude Agent SDK 混合架構實現
 
-> **文件版本**: 8.0
-> **最後更新**: 2026-03-15
+> **文件版本**: 8.1
+> **最後更新**: 2026-03-16
 > **定位**: Agent Orchestration Platform (智能體編排平台)
 > **狀態**: Phase 34 已完成 (133 Sprints, ~2500+ Story Points)
 > **代碼庫規模**: Backend 725 .py files, 258,904 LOC | Frontend 214 .tsx/.ts files, 49,357 LOC
 > **驗證方式**: AST 靜態分析 + 8 Agent 並行深度代碼庫驗證 + 5 端到端流程追蹤 + 22 份分析報告交叉驗證
-> **前版**: V7.0 (2026-02-11, Phase 29), V6.0, V3.0
+> **前版**: V8.0 (2026-03-15, Phase 34), V7.0 (2026-02-11, Phase 29), V6.0, V3.0
 > **分析基準日期**: 2026-03-15
+> **V8.1 更新**: MAF RC4 升級 (`1.0.0b260114` → `1.0.0rc4`) + Claude SDK 同步更新反映至分析內容
 
 ---
 
@@ -977,7 +978,27 @@ HybridOrchestratorV2 (God Object)     OrchestratorMediator
 
 **定位**: Microsoft Agent Framework 官方 API 封裝層
 
-**合規性審計結果**: 7/7 Primary Builders **COMPLIANT**
+> **V8.1 更新 — MAF RC4 升級影響 (2026-03-16)**:
+> - **MAF 版本**: `agent-framework>=1.0.0rc4,<2.0.0` (原 `1.0.0b260114`)
+> - **Import 路徑遷移**: 6 條 Orchestration Builder import 從頂層遷移至 `agent_framework.orchestrations` 子模組
+>   - `from agent_framework.orchestrations import ConcurrentBuilder` (concurrent.py)
+>   - `from agent_framework.orchestrations import HandoffBuilder` (handoff.py)
+>   - `from agent_framework.orchestrations import GroupChatBuilder` (groupchat.py)
+>   - `from agent_framework.orchestrations import MagenticBuilder` (magentic.py, planning.py)
+>   - 其餘核心類別 (Workflow, Edge, Agent, WorkflowExecutor 等) 仍從頂層 `agent_framework` import (RC4 re-export，GA 可能移除)
+> - **Builder Constructor API 變更**: Fluent API → kwarg 方式
+>   - 修正前: `Builder()` + `.participants(list)` (fluent chain)
+>   - 修正後: `Builder(participants=list)` (constructor kwarg)
+>   - 影響: MagenticBuilder, ConcurrentBuilder, GroupChatBuilder, HandoffBuilder
+> - **類別重命名 (向後相容別名)**:
+>   - `ChatAgent` → `Agent` (使用 `Agent as ChatAgent`)
+>   - `ChatMessage` → `Message` (使用 `Message as ChatMessage`)
+>   - `WorkflowStatusEvent` → `WorkflowEvent` (使用 `WorkflowEvent as WorkflowStatusEvent`)
+>   - `ContextProvider` → `BaseContextProvider` (使用 `BaseContextProvider as ContextProvider`)
+> - **ACL Layer**: `acl/adapter.py` 新增 `agent_framework.orchestrations` 子模組 fallback 映射
+> - **驗證**: 17/17 integration tests pass, 221/222 adapter unit tests pass (詳見 `sdk-version-gap/POST-UPGRADE-Verification-Consensus.md`)
+
+**合規性審計結果**: 7/7 Primary Builders **COMPLIANT** (RC4 import 路徑 + constructor 已更新)
 
 | Builder | LOC | 職責 | 合規 |
 |---------|-----|------|------|
@@ -1022,12 +1043,21 @@ HybridOrchestratorV2 (God Object)     OrchestratorMediator
 | C-07 | postgres_store.py f-string SQL injection | CRITICAL |
 | H-05 | Checkpoint storage 非官方 API (save/load/delete) | HIGH |
 | W-1 | edge_routing.py 缺少 MAF imports | WARNING |
+| R8 | *(V8.1 新增)* GA 升級風險：15 條頂層 import 在 RC4 仍有效 (re-export)，GA 可能移除 | MEDIUM |
+| R6 | *(V8.1 新增)* BC-11/15/16 行為變更 (Checkpoint source_id, 模型重構, 輸出標準化) 未經功能測試驗證 | MEDIUM |
 
 ---
 
 ### 2.7 Layer 7: Claude SDK (47 files, 15,180 LOC)
 
 **定位**: Anthropic Claude SDK 真正整合層 (非 Mock)
+
+> **V8.1 更新 — Claude SDK 同步更新 (2026-03-16)**:
+> - **anthropic 依賴**: `anthropic>=0.84.0` 正式加入 `requirements.txt` (原僅隱含依賴)
+> - **預設模型 ID**: `claude-haiku-4-5-20251001` (client.py:38) — 經 commit `944034d` 修正，原升級時誤設為不存在的 `claude-sonnet-4-6-20260217`
+> - **Extended Thinking header**: `interleaved-thinking-2025-05-14` (client.py:259) — 原 `extended-thinking-2025-04-30`
+> - **殘留問題 (R1)**: 5 個源碼檔 + 8 個測試檔仍用舊模型 ID `claude-sonnet-4-20250514`，待下個 Sprint 統一
+> - **殘留問題 (R5)**: client.py:221 docstring 仍提及 `extended-thinking`，應更新為 `interleaved-thinking`
 
 **模組架構**:
 
@@ -2526,6 +2556,7 @@ V8 (Phase 34, 現在): + 3 MCP Servers (n8n, ADF, D365) + Mediator Pattern
 
 | 版本 | 日期 | 變更 |
 |------|------|------|
+| 8.1 | 2026-03-16 | **MAF RC4 升級反映**: MAF `1.0.0b260114`→`1.0.0rc4`; 6 條 orchestration builder import 遷移至 `agent_framework.orchestrations`; 4 個 builder constructor 改為 kwarg 方式; 4 組類別重命名別名; Claude SDK 同步 (`anthropic>=0.84.0`, 模型 ID 修正, Extended Thinking header 更新); ACL fallback 新增; 新增 GA 升級風險 (R8) 追蹤; 驗證報告: `sdk-version-gap/POST-UPGRADE-Verification-Consensus.md` |
 | 8.0 | 2026-03-15 | V8 全面 AST 分析: Phase 34 (S130-133); Backend 725 files, 258,904 LOC; 8 Agent 並行 + E2E 驗證 + 22 份報告; 62 項問題統一 Registry; Mediator Pattern 重構; Correlation/RootCause STUB→REAL; +3 MCP servers; ReactFlow DAG |
 | 7.0 | 2026-02-11 | V7 交叉驗證: Backend LOC 重大修正 (130K→229K); 端到端流程驗證 (37 路徑); 4 Checkpoint 系統發現; 27 問題列表; 並行架構分析 |
 | 6.0 | 2026-02-11 | V6 Agent Team 分析: Mock 18 個, Endpoints 530, 新增 Auth/Rate Limiting/CORS/Docker 問題 |
