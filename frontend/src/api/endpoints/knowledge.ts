@@ -118,7 +118,7 @@ export const knowledgeApi = {
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     const response = await fetch(
-      `${API_BASE_URL}/knowledge/documents`,
+      `${API_BASE_URL}/knowledge/ingest`,
       {
         method: 'POST',
         headers,
@@ -157,15 +157,15 @@ export const knowledgeApi = {
     if (filters?.offset) params.set('offset', String(filters.offset));
     const query = params.toString();
     return api.get<DocumentListResponse>(
-      `/knowledge/documents${query ? `?${query}` : ''}`
+      `/knowledge/collections${query ? `?${query}` : ''}`
     );
   },
 
   /**
-   * Delete a document
+   * Delete a document/collection
    */
   deleteDocument: (id: string): Promise<void> =>
-    api.delete(`/knowledge/documents/${id}`),
+    api.delete(`/knowledge/collections/${id}`),
 
   /**
    * Get available skills
@@ -177,7 +177,7 @@ export const knowledgeApi = {
    * Get knowledge service status
    */
   getStatus: (): Promise<KnowledgeStatusResponse> =>
-    api.get<KnowledgeStatusResponse>('/knowledge/status'),
+    api.get<KnowledgeStatusResponse>('/knowledge/collections'),
 };
 
 export default knowledgeApi;

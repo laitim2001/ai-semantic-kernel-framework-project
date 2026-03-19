@@ -94,8 +94,8 @@ export interface TaskFilters {
   priority?: TaskPriority;
   agent_id?: string;
   session_id?: string;
-  page?: number;
-  page_size?: number;
+  limit?: number;
+  offset?: number;
 }
 
 // =============================================================================
@@ -106,16 +106,21 @@ export const tasksApi = {
   /**
    * List tasks with optional filters
    */
-  getTasks: (filters?: TaskFilters): Promise<TaskListResponse> => {
+  getTasks: async (filters?: TaskFilters): Promise<TaskListResponse> => {
     const params = new URLSearchParams();
     if (filters?.status) params.set('status', filters.status);
-    if (filters?.priority) params.set('priority', filters.priority);
-    if (filters?.agent_id) params.set('agent_id', filters.agent_id);
     if (filters?.session_id) params.set('session_id', filters.session_id);
-    if (filters?.page) params.set('page', String(filters.page));
-    if (filters?.page_size) params.set('page_size', String(filters.page_size));
+    if (filters?.limit) params.set('limit', String(filters.limit));
+    if (filters?.offset) params.set('offset', String(filters.offset));
     const query = params.toString();
-    return api.get<TaskListResponse>(`/tasks${query ? `?${query}` : ''}`);
+    // Backend returns List[TaskResponse], wrap into TaskListResponse
+    const tasks = await api.get<TaskSummary[]>(`/tasks${query ? `?${query}` : ''}`);
+    return {
+      tasks: Array.isArray(tasks) ? tasks : [],
+      total: Array.isArray(tasks) ? tasks.length : 0,
+      page: filters?.offset ? Math.floor(filters.offset / (filters?.limit || 20)) + 1 : 1,
+      page_size: filters?.limit || 20,
+    };
   },
 
   /**

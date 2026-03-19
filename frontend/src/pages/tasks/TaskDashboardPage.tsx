@@ -88,9 +88,8 @@ export function TaskDashboardPage() {
 
   const { data, isLoading, error, refetch } = useTasks({
     ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
-    ...(priorityFilter !== 'all' ? { priority: priorityFilter } : {}),
-    page,
-    page_size: pageSize,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
   });
 
   const cancelMutation = useCancelTask();

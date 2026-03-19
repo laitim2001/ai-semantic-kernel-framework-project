@@ -84,15 +84,15 @@ export const memoryApi = {
     if (options?.offset) params.set('offset', String(options.offset));
     const query = params.toString();
     return api.get<UserMemoriesResponse>(
-      `/memory/users/${userId}${query ? `?${query}` : ''}`
+      `/memory/user/${userId}${query ? `?${query}` : ''}`
     );
   },
 
   /**
-   * Get memory statistics
+   * Get memory health/stats
    */
   getMemoryStats: (): Promise<MemoryStats> =>
-    api.get<MemoryStats>('/memory/stats'),
+    api.get<MemoryStats>('/memory/health'),
 
   /**
    * Delete a memory

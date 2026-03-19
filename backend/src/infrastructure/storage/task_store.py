@@ -42,8 +42,8 @@ class TaskStore:
         """Lazy-initialise the storage backend."""
         if self._backend is None:
             self._backend = await StorageFactory.create(
-                preferred="postgresql",
-                fallback="memory",
+                name="task_store",
+                backend_type="auto",
             )
             self._initialized = True
             logger.info(
