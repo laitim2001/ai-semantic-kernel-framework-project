@@ -41,15 +41,21 @@
 | Phase 28 | 三層意圖路由 | 91-99 | 235 pts | ✅ 完成 | [README](./phase-28/README.md) |
 | Phase 29 | Agent Swarm 可視化 | 100-106 | 190 pts | ✅ 完成 | [README](./phase-29/README.md) |
 | Phase 30 | Azure AI Search (延後) | 107-110 | 75 pts | ⏸️ 延後 | [README](./phase-30/README.md) |
-| Phase 31 | Security Hardening + Quick Wins | 111-113 | ~125 pts | 📋 計劃中 | [README](./phase-31/README.md) |
-| Phase 32 | Core Business Scenario + Architecture | 114-118 | ~205 pts | 📋 計劃中 | [README](./phase-32/README.md) |
-| Phase 33 | Production Readiness + Quality | 119-123 | ~205 pts | 📋 計劃中 | [README](./phase-33/README.md) |
-| Phase 34 | Feature Expansion | TBD | TBD | 📋 大綱 | [README](./phase-34/README.md) |
+| Phase 31 | Security Hardening + Quick Wins | 111-113 | ~125 pts | ⏸️ 被 Phase 35-38 取代 | [README](./phase-31/README.md) |
+| Phase 32 | Core Business Scenario + Architecture | 114-118 | ~205 pts | ⏸️ 被 Phase 35-38 取代 | [README](./phase-32/README.md) |
+| Phase 33 | Production Readiness + Quality | 119-123 | ~205 pts | ⏸️ 被 Phase 35-38 取代 | [README](./phase-33/README.md) |
+| Phase 34 | Feature Expansion | TBD | TBD | ⏸️ 被 Phase 35-38 取代 | [README](./phase-34/README.md) |
+| **Phase 35** | **E2E Assembly A0 — 核心假設驗證** | **107-108** | **~15 pts** | **📋 計劃中** | [README](./phase-35/README.md) |
+| **Phase 36** | **E2E Assembly A1 — 基礎組裝** | **109-112** | **~48 pts** | **📋 計劃中** | [README](./phase-36/README.md) |
+| **Phase 37** | **E2E Assembly B — 任務執行組裝** | **113-116** | **~48 pts** | **📋 計劃中** | [README](./phase-37/README.md) |
+| **Phase 38** | **E2E Assembly C — 記憶與知識組裝** | **117-120** | **~38 pts** | **📋 計劃中** | [README](./phase-38/README.md) |
 
-**總計**: ~2989 Story Points across 123 Sprints (34 Phases)
+**總計**: ~2528 Story Points across 120 Sprints (38 Phases, 其中 Phase 30-34 已暫停/取代)
 
-> **執行順序**: Phase 31 → Phase 32 (吸收 Phase 30 工作) → Phase 33 → Phase 34
-> Phase 30 的 Azure AI Search 工作被納入 Phase 32 Sprint 115，不再獨立執行。
+> **當前執行順序**: Phase 35 (A0 驗證) → Phase 36 (A1 基礎) → Phase 37 (B 任務執行) → Phase 38 (C 記憶+知識)
+> Phase 31-34 的安全/持久化/品質工作已整合到 Phase 35-38 的 E2E Assembly 計劃中。
+> Phase 35 (A0) 是 Go/No-Go 門檻：如果核心假設驗證失敗，需重新評估後續計劃。
+> 基於三份專家分析報告：Architecture Review、Codebase Verification、Business Panel Analysis。
 
 ---
 
