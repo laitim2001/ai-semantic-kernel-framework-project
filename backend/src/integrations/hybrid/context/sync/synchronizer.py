@@ -161,6 +161,11 @@ class ContextSynchronizer:
         # Sprint 119: Distributed lock (defaults to asyncio.Lock, upgradeable)
         self._lock = distributed_lock or _AsyncioLockAdapter()
 
+        # Sprint 109 H-04 fix: dedicated asyncio.Lock for in-memory state
+        # Protects _context_versions and _rollback_snapshots from concurrent access
+        # even when called outside the distributed lock context.
+        self._state_lock = asyncio.Lock()
+
         # Version tracking per context
         self._context_versions: Dict[str, int] = {}
 
@@ -254,9 +259,8 @@ class ContextSynchronizer:
         )
 
         try:
-            # Save snapshot for rollback (under distributed lock)
-            async with self._lock.acquire():
-                self._save_snapshot(source)
+            # Save snapshot for rollback (under state lock)
+            await self._save_snapshot(source)
 
             # Perform sync with retry logic
             result = await self._sync_with_retry(
@@ -267,9 +271,9 @@ class ContextSynchronizer:
                 correlation_id=correlation_id,
             )
 
-            # Update version tracking (under distributed lock)
+            # Update version tracking (under state lock)
             if result.success:
-                async with self._lock.acquire():
+                async with self._state_lock:
                     self._context_versions[context_id] = result.target_version
 
             # Calculate duration
@@ -575,7 +579,7 @@ class ContextSynchronizer:
         """Rollback to a previous context version."""
         start_time = time.time()
 
-        async with self._lock.acquire():
+        async with self._state_lock:
             snapshots = self._rollback_snapshots.get(context_id, [])
 
             if not snapshots:
@@ -616,7 +620,7 @@ class ContextSynchronizer:
         )
 
         try:
-            async with self._lock.acquire():
+            async with self._state_lock:
                 self._context_versions[context_id] = target.version
 
             await self._event_publisher.publish_rollback_completed(
@@ -647,32 +651,33 @@ class ContextSynchronizer:
                 duration_ms=int((time.time() - start_time) * 1000),
             )
 
-    def _save_snapshot(self, context: HybridContext) -> None:
-        """Save a context snapshot for rollback."""
+    async def _save_snapshot(self, context: HybridContext) -> None:
+        """Save a context snapshot for rollback (state-lock protected)."""
         context_id = context.context_id
 
-        if context_id not in self._rollback_snapshots:
-            self._rollback_snapshots[context_id] = []
+        async with self._state_lock:
+            if context_id not in self._rollback_snapshots:
+                self._rollback_snapshots[context_id] = []
 
-        snapshots = self._rollback_snapshots[context_id]
-        snapshots.append(context)
+            snapshots = self._rollback_snapshots[context_id]
+            snapshots.append(context)
 
-        if len(snapshots) > self._max_snapshots:
-            self._rollback_snapshots[context_id] = snapshots[-self._max_snapshots:]
+            if len(snapshots) > self._max_snapshots:
+                self._rollback_snapshots[context_id] = snapshots[-self._max_snapshots:]
 
     async def get_version(self, context_id: str) -> int:
         """Get current version for a context."""
-        async with self._lock.acquire():
+        async with self._state_lock:
             return self._context_versions.get(context_id, 0)
 
     async def get_snapshots(self, context_id: str) -> List[HybridContext]:
         """Get available snapshots for a context."""
-        async with self._lock.acquire():
+        async with self._state_lock:
             return self._rollback_snapshots.get(context_id, []).copy()
 
     async def clear_snapshots(self, context_id: str) -> None:
         """Clear snapshots for a context."""
-        async with self._lock.acquire():
+        async with self._state_lock:
             if context_id in self._rollback_snapshots:
                 del self._rollback_snapshots[context_id]
 

@@ -55,6 +55,16 @@ from .notification import (
     create_composite_notification_service,
 )
 
+from .unified_manager import (
+    # Enums
+    ApprovalSource,
+    ApprovalPriority,
+    # Data classes
+    ApprovalRequest as UnifiedApprovalRequest,
+    # Manager
+    UnifiedApprovalManager,
+)
+
 
 __all__ = [
     # Enums
@@ -87,4 +97,9 @@ __all__ = [
     "create_redis_storage",
     "create_teams_notification_service",
     "create_composite_notification_service",
+    # Sprint 111: Unified Approval Manager
+    "ApprovalSource",
+    "ApprovalPriority",
+    "UnifiedApprovalRequest",
+    "UnifiedApprovalManager",
 ]

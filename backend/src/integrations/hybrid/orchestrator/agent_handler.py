@@ -9,7 +9,7 @@ Sprint 107 — Phase 35 A0 core assumption validation.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from src.integrations.hybrid.orchestrator.contracts import (
     Handler,
@@ -19,6 +19,9 @@ from src.integrations.hybrid.orchestrator.contracts import (
 )
 from src.integrations.hybrid.prompts.orchestrator import ORCHESTRATOR_SYSTEM_PROMPT
 from src.integrations.llm.protocol import LLMServiceProtocol
+
+if TYPE_CHECKING:
+    from src.integrations.hybrid.orchestrator.tools import OrchestratorToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +43,13 @@ class AgentHandler(Handler):
             returns a graceful fallback response instead of raising.
     """
 
-    def __init__(self, llm_service: Optional[LLMServiceProtocol] = None) -> None:
+    def __init__(
+        self,
+        llm_service: Optional[LLMServiceProtocol] = None,
+        tool_registry: Optional["OrchestratorToolRegistry"] = None,
+    ) -> None:
         self._llm_service = llm_service
+        self._tool_registry = tool_registry
 
     @property
     def handler_type(self) -> HandlerType:
@@ -91,8 +99,10 @@ class AgentHandler(Handler):
 
         # --- Build the full prompt -----------------------------------------
         context_prompt = self._build_context_prompt(routing_decision)
+        tools_prompt = self._build_tools_prompt(request)
         full_prompt = (
             f"{ORCHESTRATOR_SYSTEM_PROMPT}\n\n"
+            f"{tools_prompt}"
             f"--- 分析上下文 ---\n{context_prompt}\n\n"
             f"--- 用戶輸入 ---\n{user_input}"
         )
@@ -156,6 +166,23 @@ class AgentHandler(Handler):
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    def _build_tools_prompt(self, request: OrchestratorRequest) -> str:
+        """Build the tools description section for the system prompt.
+
+        If no tool registry is configured an empty string is returned so
+        the prompt remains unchanged.
+
+        The caller's role is extracted from ``request.metadata`` (key
+        ``"user_role"``), defaulting to ``"operator"``.
+        """
+        if self._tool_registry is None:
+            return ""
+        role = "operator"
+        if request.metadata and "user_role" in request.metadata:
+            role = request.metadata["user_role"]
+        tools_text = self._tool_registry.get_tools_prompt(role=role)
+        return f"--- 可用工具 ---\n{tools_text}\n\n"
 
     @staticmethod
     def _build_context_prompt(

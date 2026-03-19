@@ -20,6 +20,20 @@ from src.core.security.password import (
     hash_password,
     verify_password,
 )
+from src.core.security.tool_gateway import (
+    ToolSecurityGateway,
+    ToolCallValidation,
+    UserRole,
+)
+from src.core.security.prompt_guard import (
+    PromptGuard,
+    SanitizedInput,
+)
+from src.core.security.rbac import (
+    RBACManager,
+    Role,
+    Permission,
+)
 
 __all__ = [
     # JWT
@@ -29,4 +43,15 @@ __all__ = [
     # Password
     "hash_password",
     "verify_password",
+    # Tool Security Gateway (Sprint 109)
+    "ToolSecurityGateway",
+    "ToolCallValidation",
+    "UserRole",
+    # Prompt Injection Guard (Sprint 109)
+    "PromptGuard",
+    "SanitizedInput",
+    # RBAC (Sprint 112)
+    "RBACManager",
+    "Role",
+    "Permission",
 ]

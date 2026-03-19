@@ -2,6 +2,8 @@
 Orchestrator Chat API — E2E pipeline endpoint.
 
 Sprint 108 — Phase 35 A0 core hypothesis validation.
+Sprint 112 — Phase 36 Orchestrator completeness (SessionFactory + ToolRegistry).
+
 Provides a simple chat endpoint that wires:
   InputGateway -> BusinessIntentRouter -> OrchestratorMediator -> AgentHandler -> LLM response
 """
@@ -13,10 +15,52 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from src.integrations.contracts.pipeline import PipelineRequest, PipelineResponse
+from src.integrations.hybrid.orchestrator.tools import OrchestratorToolRegistry
+from src.integrations.hybrid.orchestrator.session_factory import OrchestratorSessionFactory
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orchestrator", tags=["orchestrator"])
+
+# ---------------------------------------------------------------------------
+# Module-level singletons (shared across requests)
+# ---------------------------------------------------------------------------
+_tool_registry: Optional[OrchestratorToolRegistry] = None
+_session_factory: Optional[OrchestratorSessionFactory] = None
+
+
+def _get_tool_registry() -> OrchestratorToolRegistry:
+    """Lazy-initialise and return the shared tool registry."""
+    global _tool_registry
+    if _tool_registry is None:
+        _tool_registry = OrchestratorToolRegistry()
+        logger.info("Orchestrator: Tool registry initialized with %d tools",
+                     len(_tool_registry.list_tools(role="admin")))
+    return _tool_registry
+
+
+def _get_session_factory() -> OrchestratorSessionFactory:
+    """Lazy-initialise and return the shared session factory.
+
+    The factory is created with the current LLM service (if available)
+    and the shared tool registry.
+    """
+    global _session_factory
+    if _session_factory is None:
+        llm_service = None
+        try:
+            from src.integrations.llm.factory import LLMServiceFactory
+            llm_service = LLMServiceFactory.create(use_cache=True, cache_ttl=1800)
+        except Exception as e:
+            logger.warning("Session factory: LLM service unavailable: %s", e)
+
+        _session_factory = OrchestratorSessionFactory(
+            llm_service=llm_service,
+            tool_registry=_get_tool_registry(),
+            max_sessions=200,
+        )
+        logger.info("Orchestrator: Session factory initialized (max_sessions=200)")
+    return _session_factory
 
 
 # =============================================================================
@@ -50,6 +94,17 @@ async def orchestrator_health() -> Dict[str, Any]:
     except Exception as e:
         router_status = f"error: {e}"
 
+    # Check session factory and tool registry
+    factory_status = "unknown"
+    tool_count = 0
+    try:
+        factory = _get_session_factory()
+        factory_status = f"available (active_sessions={factory.active_count})"
+        registry = _get_tool_registry()
+        tool_count = len(registry.list_tools(role="admin"))
+    except Exception as e:
+        factory_status = f"error: {e}"
+
     return {
         "status": "ok",
         "pipeline": "orchestrator_chat",
@@ -58,6 +113,8 @@ async def orchestrator_health() -> Dict[str, Any]:
             "intent_router": router_status,
             "mediator": "available",
             "agent_handler": "available",
+            "session_factory": factory_status,
+            "tool_registry": f"{tool_count} tools registered",
         },
     }
 
@@ -181,15 +238,19 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
         except Exception as e:
             logger.warning("Orchestrator chat: Intent routing failed: %s", e)
 
-    # --- Step 4: Create AgentHandler + OrchestratorMediator ----------------
+    # --- Step 4: Get or create per-session Orchestrator via SessionFactory --
     try:
-        from src.integrations.hybrid.orchestrator.agent_handler import AgentHandler
-        from src.integrations.hybrid.orchestrator.mediator import OrchestratorMediator
         from src.integrations.hybrid.orchestrator.contracts import OrchestratorRequest
 
-        agent_handler = AgentHandler(llm_service=llm_service)
-        mediator = OrchestratorMediator(agent_handler=agent_handler)
-        logger.info("Orchestrator chat: Mediator created with AgentHandler")
+        session_id = request.session_id or "default"
+        factory = _get_session_factory()
+        mediator = factory.get_or_create(session_id)
+        logger.info(
+            "Orchestrator chat: Mediator obtained for session '%s' "
+            "(active sessions: %d)",
+            session_id,
+            factory.active_count,
+        )
     except Exception as e:
         logger.error("Orchestrator chat: Mediator creation failed: %s", e, exc_info=True)
         elapsed_ms = (time.perf_counter() - start_time) * 1000
