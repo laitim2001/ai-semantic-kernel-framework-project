@@ -25,67 +25,61 @@ router = APIRouter(prefix="/orchestrator", tags=["orchestrator"])
 # ---------------------------------------------------------------------------
 # Module-level singletons (shared across requests)
 # ---------------------------------------------------------------------------
+_bootstrap: Optional[Any] = None
 _tool_registry: Optional[OrchestratorToolRegistry] = None
 _session_factory: Optional[OrchestratorSessionFactory] = None
 
 
-def _get_tool_registry() -> OrchestratorToolRegistry:
-    """Lazy-initialise and return the shared tool registry.
+def _get_bootstrap() -> Any:
+    """Lazy-initialise the OrchestratorBootstrap (Phase 39 assembly)."""
+    global _bootstrap
+    if _bootstrap is None:
+        try:
+            from src.integrations.hybrid.orchestrator.bootstrap import (
+                OrchestratorBootstrap,
+            )
+            _bootstrap = OrchestratorBootstrap()
+            # Build triggers full pipeline assembly
+            _bootstrap.build()
+            logger.info("Orchestrator: Bootstrap assembly complete — %s",
+                         _bootstrap.health_check())
+        except Exception as e:
+            logger.warning("Orchestrator: Bootstrap failed: %s", e)
+    return _bootstrap
 
-    Registers real dispatch handlers (Phase 37) so that tools are no
-    longer stubs.
-    """
+
+def _get_tool_registry() -> OrchestratorToolRegistry:
+    """Return the shared tool registry (via Bootstrap if available)."""
     global _tool_registry
     if _tool_registry is None:
-        _tool_registry = OrchestratorToolRegistry()
-
-        # --- Phase 37: Wire real handlers ---
-        try:
-            from src.integrations.hybrid.orchestrator.dispatch_handlers import (
-                DispatchHandlers,
-            )
-            from src.domain.tasks.service import TaskService
-            from src.infrastructure.storage.task_store import TaskStore
-
-            from src.integrations.hybrid.orchestrator.result_synthesiser import (
-                ResultSynthesiser,
-            )
-            task_store = TaskStore()
-            task_service = TaskService(task_store=task_store)
-            synthesiser = ResultSynthesiser()  # LLM injected via session factory
-            handlers = DispatchHandlers(
-                task_service=task_service,
-                result_synthesiser=synthesiser,
-            )
-            handlers.register_all(_tool_registry)
-            logger.info(
-                "Orchestrator: Dispatch handlers registered (%d tools wired)",
-                len(_tool_registry._handlers),
-            )
-        except Exception as e:
-            logger.warning(
-                "Orchestrator: Failed to register dispatch handlers: %s", e
-            )
-
-        logger.info("Orchestrator: Tool registry initialized with %d tools",
-                     len(_tool_registry.list_tools(role="admin")))
+        bootstrap = _get_bootstrap()
+        if bootstrap and bootstrap.tool_registry:
+            _tool_registry = bootstrap.tool_registry
+        else:
+            # Fallback: standalone registry
+            _tool_registry = OrchestratorToolRegistry()
+            logger.info("Orchestrator: Using standalone tool registry (bootstrap unavailable)")
     return _tool_registry
 
 
 def _get_session_factory() -> OrchestratorSessionFactory:
     """Lazy-initialise and return the shared session factory.
 
-    The factory is created with the current LLM service (if available)
-    and the shared tool registry.
+    Uses the Bootstrap's LLM service and tool registry when available.
     """
     global _session_factory
     if _session_factory is None:
         llm_service = None
-        try:
-            from src.integrations.llm.factory import LLMServiceFactory
-            llm_service = LLMServiceFactory.create(use_cache=True, cache_ttl=1800)
-        except Exception as e:
-            logger.warning("Session factory: LLM service unavailable: %s", e)
+        bootstrap = _get_bootstrap()
+
+        if bootstrap and bootstrap._llm_service:
+            llm_service = bootstrap._llm_service
+        else:
+            try:
+                from src.integrations.llm.factory import LLMServiceFactory
+                llm_service = LLMServiceFactory.create(use_cache=True, cache_ttl=1800)
+            except Exception as e:
+                logger.warning("Session factory: LLM service unavailable: %s", e)
 
         _session_factory = OrchestratorSessionFactory(
             llm_service=llm_service,

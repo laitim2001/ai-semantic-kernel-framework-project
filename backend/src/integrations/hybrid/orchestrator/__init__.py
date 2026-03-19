@@ -63,6 +63,12 @@ from src.integrations.hybrid.orchestrator.observability_bridge import (
 from src.integrations.hybrid.orchestrator.memory_manager import (
     OrchestratorMemoryManager,
 )
+from src.integrations.hybrid.orchestrator.bootstrap import (
+    OrchestratorBootstrap,
+)
+from src.integrations.hybrid.orchestrator.mcp_tool_bridge import (
+    MCPToolBridge,
+)
 
 __all__ = [
     # Contracts
@@ -105,4 +111,7 @@ __all__ = [
     "ObservabilityBridge",
     # Memory Manager (Sprint 117)
     "OrchestratorMemoryManager",
+    # Bootstrap + MCP Bridge (Sprint 134)
+    "OrchestratorBootstrap",
+    "MCPToolBridge",
 ]
