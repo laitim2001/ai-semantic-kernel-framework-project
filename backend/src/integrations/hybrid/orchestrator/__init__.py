@@ -39,6 +39,9 @@ from src.integrations.hybrid.orchestrator.tools import (
 from src.integrations.hybrid.orchestrator.session_factory import (
     OrchestratorSessionFactory,
 )
+from src.integrations.hybrid.orchestrator.dispatch_handlers import (
+    DispatchHandlers,
+)
 
 __all__ = [
     # Contracts
@@ -64,4 +67,6 @@ __all__ = [
     "ToolType",
     # Session Factory (Sprint 112)
     "OrchestratorSessionFactory",
+    # Dispatch Handlers (Sprint 113)
+    "DispatchHandlers",
 ]

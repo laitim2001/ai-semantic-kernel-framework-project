@@ -124,6 +124,17 @@ class OrchestratorToolRegistry:
                 parameters={"task_description": "str", "worker_count": "int"},
                 required_role="admin",
             ),
+            ToolDefinition(
+                name="update_task_status",
+                description="更新任務狀態和進度",
+                tool_type=ToolType.SYNC,
+                parameters={
+                    "task_id": "str",
+                    "status": "str",
+                    "progress": "Optional[float]",
+                },
+                required_role="operator",
+            ),
         ]
         for tool in builtins:
             self._tools[tool.name] = tool
