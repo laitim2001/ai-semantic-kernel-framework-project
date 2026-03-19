@@ -144,7 +144,16 @@ class OrchestratorBootstrap:
 
     def _create_tool_registry(self) -> OrchestratorToolRegistry:
         """Create tool registry and wire dispatch handlers."""
-        registry = OrchestratorToolRegistry()
+        # Sprint 137: Wire ToolSecurityGateway
+        security_gateway = None
+        try:
+            from src.core.security.tool_gateway import ToolSecurityGateway
+            security_gateway = ToolSecurityGateway()
+            logger.info("Bootstrap: ToolSecurityGateway wired into ToolRegistry")
+        except Exception as e:
+            logger.warning("Bootstrap: ToolSecurityGateway unavailable: %s", e)
+
+        registry = OrchestratorToolRegistry(security_gateway=security_gateway)
         try:
             from src.integrations.hybrid.orchestrator.dispatch_handlers import (
                 DispatchHandlers,
