@@ -103,6 +103,9 @@ from src.api.v1.workflows.graph_routes import router as workflow_graph_router  #
 # Phase 35: Orchestrator Chat E2E Pipeline
 from src.api.v1.orchestrator.routes import router as orchestrator_chat_router  # Sprint 108
 
+# Sprint 111: Chat History Sync
+from src.api.v1.chat_history import router as chat_history_router  # Sprint 111
+
 # =============================================================================
 # Router Assembly
 # =============================================================================
@@ -216,6 +219,9 @@ protected_router.include_router(workflow_graph_router)  # Sprint 133
 
 # Phase 35: Orchestrator Chat E2E Pipeline
 protected_router.include_router(orchestrator_chat_router)  # Sprint 108
+
+# Sprint 111: Chat History Sync
+protected_router.include_router(chat_history_router)  # Sprint 111
 
 # -----------------------------------------------------------------------------
 # Assemble into main api_router
