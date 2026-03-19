@@ -12,6 +12,7 @@ Connects the OrchestratorToolRegistry stubs to actual platform services:
 
 Sprint 113 — Phase 37 E2E Assembly B.
 Sprint 114 — Phase 37: TaskResult Protocol + framework dispatch integration.
+Sprint 136 — Phase 39: ARQ background execution for async dispatch.
 """
 
 import logging
@@ -44,9 +45,11 @@ class DispatchHandlers:
         self,
         task_service: Any = None,
         result_synthesiser: Any = None,
+        arq_client: Any = None,
     ) -> None:
         self._task_service = task_service
         self._synthesiser = result_synthesiser
+        self._arq_client = arq_client  # Sprint 136: ARQ background execution
 
     # ------------------------------------------------------------------
     # Task Management Tools
@@ -134,7 +137,25 @@ class DispatchHandlers:
             envelope.task_id = task_id
             await self._task_service.start_task(task_id, assigned_agent="maf_workflow")
 
-        # Attempt MAF workflow dispatch
+        # Sprint 136: Try ARQ background execution first
+        arq_job_id = await self._enqueue_arq(
+            "execute_workflow_task",
+            task_id=task_id,
+            session_id=kwargs.get("session_id", ""),
+            workflow_type=workflow_type,
+            input_data=input_data or {},
+        )
+        if arq_job_id:
+            return {
+                "task_id": task_id,
+                "status": "queued",
+                "workflow_type": workflow_type,
+                "arq_job_id": arq_job_id,
+                "message": f"Workflow '{workflow_type}' queued for background execution",
+                "envelope": envelope.model_dump(mode="json"),
+            }
+
+        # Fallback: direct execution
         try:
             from src.integrations.agent_framework.builders.workflow_executor import (
                 WorkflowExecutorAdapter,
@@ -197,7 +218,25 @@ class DispatchHandlers:
             envelope.task_id = task_id
             await self._task_service.start_task(task_id, assigned_agent="swarm_engine")
 
-        # Attempt swarm dispatch
+        # Sprint 136: Try ARQ background execution first
+        arq_job_id = await self._enqueue_arq(
+            "execute_swarm_task",
+            task_id=task_id,
+            session_id=kwargs.get("session_id", ""),
+            task_description=task_description,
+            worker_count=worker_count,
+        )
+        if arq_job_id:
+            return {
+                "task_id": task_id,
+                "status": "queued",
+                "worker_count": worker_count,
+                "arq_job_id": arq_job_id,
+                "message": f"Swarm queued for background execution",
+                "envelope": envelope.model_dump(mode="json"),
+            }
+
+        # Fallback: direct execution
         try:
             from src.integrations.swarm.swarm_integration import SwarmIntegration
             swarm = SwarmIntegration()
@@ -391,6 +430,24 @@ class DispatchHandlers:
         except Exception as e:
             logger.error("Knowledge search failed: %s", e, exc_info=True)
             return {"results": [], "error": str(e)}
+
+    # ------------------------------------------------------------------
+    # ARQ Background Execution (Sprint 136)
+    # ------------------------------------------------------------------
+
+    async def _enqueue_arq(self, func_name: str, **kwargs: Any) -> Optional[str]:
+        """Try to enqueue a job via ARQ. Returns job_id or None."""
+        if self._arq_client is None:
+            try:
+                from src.infrastructure.workers.arq_client import get_arq_client
+                self._arq_client = get_arq_client()
+                await self._arq_client.initialize()
+            except Exception:
+                return None
+
+        if self._arq_client and self._arq_client.is_available:
+            return await self._arq_client.enqueue(func_name, **kwargs)
+        return None
 
     # ------------------------------------------------------------------
     # Registration helper
