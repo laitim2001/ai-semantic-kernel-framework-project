@@ -26,6 +26,7 @@ class HandlerType(str, Enum):
     ROUTING = "routing"
     DIALOG = "dialog"
     APPROVAL = "approval"
+    AGENT = "agent"
     EXECUTION = "execution"
     CONTEXT = "context"
     OBSERVABILITY = "observability"

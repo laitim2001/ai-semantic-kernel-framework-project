@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Protocol, Tuple
 
@@ -34,6 +35,59 @@ from .base import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# SQL Injection Prevention (C-07 Fix)
+# =============================================================================
+
+# Pre-compiled regex for valid SQL identifiers
+_VALID_SQL_IDENTIFIER = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+def _validate_table_name(name: str) -> str:
+    """Validate and sanitize table name to prevent SQL injection.
+
+    Only allows alphanumeric characters and underscores, and the name
+    must start with a letter or underscore.
+
+    Args:
+        name: The table name to validate.
+
+    Returns:
+        The validated table name.
+
+    Raises:
+        ValueError: If the table name contains invalid characters.
+    """
+    if not _VALID_SQL_IDENTIFIER.match(name):
+        raise ValueError(
+            f"Invalid table name: {name!r}. "
+            f"Only letters, digits, and underscores are allowed."
+        )
+    return name
+
+
+def _validate_jsonb_path_part(part: str) -> str:
+    """Validate a single JSONB path segment to prevent SQL injection.
+
+    Only allows alphanumeric characters, underscores, and hyphens.
+
+    Args:
+        part: A single path segment (e.g. 'name', 'address').
+
+    Returns:
+        The validated path segment.
+
+    Raises:
+        ValueError: If the path segment contains invalid characters.
+    """
+    if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_\-]*$", part):
+        raise ValueError(
+            f"Invalid JSONB path segment: {part!r}. "
+            f"Only letters, digits, underscores, and hyphens are allowed."
+        )
+    return part
 
 
 # =============================================================================
@@ -132,6 +186,9 @@ class PostgresMemoryStorage(BaseMemoryStorageAdapter):
         self._conn = connection
         self._auto_create_table = auto_create_table
         self._table_created = False
+
+        # Validate table name at init to prevent SQL injection (C-07 fix)
+        _validate_table_name(self.TABLE_NAME)
 
         logger.info(
             f"PostgresMemoryStorage initialized: namespace={namespace}, "
@@ -501,8 +558,11 @@ class PostgresMemoryStorage(BaseMemoryStorageAdapter):
         """
         await self._ensure_table()
 
-        # 構建 JSONB 路徑查詢
+        # 構建 JSONB 路徑查詢 (validate each segment to prevent SQL injection)
         path_parts = path.split(".")
+        for part in path_parts:
+            _validate_jsonb_path_part(part)
+
         jsonb_path = "value"
         for part in path_parts:
             jsonb_path = f"{jsonb_path}->'{part}'"

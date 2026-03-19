@@ -82,6 +82,7 @@ from src.integrations.hybrid.orchestrator import (
     EventType,
     OrchestratorEvent,
 )
+from src.integrations.hybrid.orchestrator.agent_handler import AgentHandler
 from src.integrations.hybrid.orchestrator.handlers import (
     RoutingHandler,
     DialogHandler,
@@ -151,6 +152,7 @@ __all__ = [
     "OrchestratorResponse",
     "EventType",
     "OrchestratorEvent",
+    "AgentHandler",
     "RoutingHandler",
     "DialogHandler",
     "ApprovalHandler",

@@ -100,6 +100,9 @@ from src.api.v1.n8n import router as n8n_router  # Sprint 124
 # Phase 34: Workflow Graph Visualization
 from src.api.v1.workflows.graph_routes import router as workflow_graph_router  # Sprint 133
 
+# Phase 35: Orchestrator Chat E2E Pipeline
+from src.api.v1.orchestrator.routes import router as orchestrator_chat_router  # Sprint 108
+
 # =============================================================================
 # Router Assembly
 # =============================================================================
@@ -210,6 +213,9 @@ protected_router.include_router(n8n_router)  # Sprint 124
 
 # Phase 34: Workflow Graph Visualization
 protected_router.include_router(workflow_graph_router)  # Sprint 133
+
+# Phase 35: Orchestrator Chat E2E Pipeline
+protected_router.include_router(orchestrator_chat_router)  # Sprint 108
 
 # -----------------------------------------------------------------------------
 # Assemble into main api_router
