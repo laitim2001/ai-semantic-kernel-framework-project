@@ -205,7 +205,15 @@ class LLMServiceFactory:
         Raises:
             RuntimeError: production 環境未配置 LLM 時
         """
-        # 檢查是否有 Azure OpenAI 配置
+        # 檢查是否有 Azure OpenAI 配置（優先用 pydantic Settings，fallback os.getenv）
+        try:
+            from src.core.config import get_settings
+            settings = get_settings()
+            if settings.azure_openai_endpoint and settings.azure_openai_api_key:
+                return "azure"
+        except Exception:
+            pass
+        # Fallback: 直接讀環境變量
         if os.getenv("AZURE_OPENAI_ENDPOINT") and os.getenv("AZURE_OPENAI_API_KEY"):
             return "azure"
 

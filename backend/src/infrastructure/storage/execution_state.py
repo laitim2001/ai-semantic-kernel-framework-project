@@ -94,8 +94,8 @@ class ExecutionStateStore:
     async def _ensure_backend(self) -> StorageBackendABC:
         if self._backend is None:
             self._backend = await StorageFactory.create(
-                preferred="postgresql",
-                fallback="memory",
+                name="execution_state",
+                backend_type="auto",
             )
             logger.info(
                 "ExecutionStateStore: backend=%s",

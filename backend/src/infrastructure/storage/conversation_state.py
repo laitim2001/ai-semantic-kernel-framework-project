@@ -81,8 +81,8 @@ class ConversationStateStore:
     async def _ensure_backend(self) -> StorageBackendABC:
         if self._backend is None:
             self._backend = await StorageFactory.create(
-                preferred="redis",
-                fallback="memory",
+                name="conversation_state",
+                backend_type="auto",
             )
             logger.info(
                 "ConversationStateStore: backend=%s ttl=%s",

@@ -29,6 +29,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Bug,
+  Clock,
+  ListTodo,
+  BookOpen,
+  BrainCircuit,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -41,6 +45,10 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'AI 助手', href: '/chat', icon: MessageSquare },
+  { name: 'Sessions 管理', href: '/sessions', icon: Clock },
+  { name: '任務中心', href: '/tasks', icon: ListTodo },
+  { name: '知識庫', href: '/knowledge', icon: BookOpen },
+  { name: '記憶系統', href: '/memory', icon: BrainCircuit },
   { name: '效能監控', href: '/performance', icon: Activity },
   { name: '工作流', href: '/workflows', icon: Workflow },
   { name: 'Agents', href: '/agents', icon: Bot },

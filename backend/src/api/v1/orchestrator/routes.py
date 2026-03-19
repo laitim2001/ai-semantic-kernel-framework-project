@@ -113,52 +113,66 @@ async def orchestrator_validate() -> Dict[str, Any]:
 
 @router.get("/health")
 async def orchestrator_health() -> Dict[str, Any]:
-    """Health check for the orchestrator pipeline."""
-    llm_status = "unknown"
-    router_status = "unknown"
+    """Lightweight health check for the orchestrator pipeline.
 
-    # Check LLM availability
+    Avoids heavy initialisation (Bootstrap, LLM connections) to prevent
+    worker crashes when external services are unavailable.
+    """
+    components: Dict[str, str] = {}
+
+    # Check LLM config (without connecting)
     try:
-        from src.integrations.llm.factory import LLMServiceFactory
-
-        llm_service = LLMServiceFactory.create(use_cache=True, cache_ttl=1800)
-        llm_status = "available" if llm_service else "unavailable"
-    except Exception as e:
-        llm_status = f"error: {e}"
-
-    # Check router availability
-    try:
-        from src.integrations.orchestration.intent_router.router import (
-            create_router_with_llm,
+        from src.core.config import get_settings
+        settings = get_settings()
+        has_azure = bool(getattr(settings, "AZURE_OPENAI_ENDPOINT", None))
+        has_anthropic = bool(getattr(settings, "ANTHROPIC_API_KEY", None))
+        components["llm_service"] = (
+            "configured" if (has_azure or has_anthropic) else "not_configured"
         )
-
-        intent_router = create_router_with_llm()
-        router_status = "available" if intent_router else "unavailable"
     except Exception as e:
-        router_status = f"error: {e}"
+        components["llm_service"] = f"error: {e}"
 
-    # Check session factory and tool registry
-    factory_status = "unknown"
-    tool_count = 0
+    # Check if bootstrap singleton exists (don't create it)
+    components["bootstrap"] = "initialized" if _bootstrap is not None else "not_initialized"
+
+    # Check session factory (don't create it)
+    components["session_factory"] = (
+        f"available (active_sessions={_session_factory.active_count})"
+        if _session_factory is not None
+        else "not_initialized"
+    )
+
+    # Check tool registry (don't create it)
     try:
-        factory = _get_session_factory()
-        factory_status = f"available (active_sessions={factory.active_count})"
-        registry = _get_tool_registry()
-        tool_count = len(registry.list_tools(role="admin"))
+        if _tool_registry is not None:
+            tool_count = len(_tool_registry.list_tools(role="admin"))
+            components["tool_registry"] = f"{tool_count} tools registered"
+        else:
+            components["tool_registry"] = "not_initialized"
     except Exception as e:
-        factory_status = f"error: {e}"
+        components["tool_registry"] = f"error: {e}"
+
+    # Check Redis
+    try:
+        import redis
+        from src.core.config import get_settings
+        s = get_settings()
+        r = redis.Redis(
+            host=getattr(s, "REDIS_HOST", "localhost"),
+            port=int(getattr(s, "REDIS_PORT", 6379)),
+            socket_connect_timeout=1,
+        )
+        r.ping()
+        components["redis"] = "healthy"
+    except Exception:
+        components["redis"] = "unavailable"
+
+    overall = "healthy" if components.get("redis") == "healthy" else "degraded"
 
     return {
-        "status": "ok",
+        "status": overall,
         "pipeline": "orchestrator_chat",
-        "components": {
-            "llm_service": llm_status,
-            "intent_router": router_status,
-            "mediator": "available",
-            "agent_handler": "available",
-            "session_factory": factory_status,
-            "tool_registry": f"{tool_count} tools registered",
-        },
+        "components": components,
     }
 
 

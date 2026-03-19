@@ -55,6 +55,85 @@ class Mem0Client:
         self._memory = None
         self._initialized = False
 
+    def _build_embedder_config(self) -> Dict[str, Any]:
+        """Build embedder config based on provider setting.
+
+        mem0 Azure OpenAI uses ``azure_kwargs`` (an ``AzureConfig`` dict)
+        inside the embedder config, not top-level keys.
+        """
+        provider = self.config.embedding_provider
+
+        if provider == "azure_openai":
+            azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+            azure_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+            return {
+                "provider": "azure_openai",
+                "config": {
+                    "model": self.config.embedding_model,
+                    "azure_kwargs": {
+                        "api_key": azure_key,
+                        "azure_deployment": self.config.azure_embedding_deployment,
+                        "azure_endpoint": azure_endpoint,
+                        "api_version": os.getenv(
+                            "AZURE_OPENAI_EMBEDDING_API_VERSION", "2024-02-01"
+                        ),
+                    },
+                },
+            }
+        else:
+            # Default: openai provider
+            return {
+                "provider": "openai",
+                "config": {
+                    "model": self.config.embedding_model,
+                },
+            }
+
+    def _build_llm_config(self) -> Dict[str, Any]:
+        """Build LLM config for mem0.
+
+        Anthropic requires either temperature OR top_p, not both.
+        Azure OpenAI is used as fallback if configured.
+        """
+        provider = self.config.llm_provider
+
+        if provider == "azure_openai":
+            azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+            azure_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+            deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.2")
+            return {
+                "provider": "azure_openai",
+                "config": {
+                    "model": deployment,
+                    "azure_kwargs": {
+                        "api_key": azure_key,
+                        "azure_deployment": deployment,
+                        "azure_endpoint": azure_endpoint,
+                        "api_version": os.getenv(
+                            "AZURE_OPENAI_API_VERSION", "2024-12-01-preview"
+                        ),
+                    },
+                },
+            }
+        elif provider == "anthropic":
+            # Fix: Anthropic API rejects temperature + top_p together.
+            # Set top_p to None so only temperature is sent.
+            return {
+                "provider": "anthropic",
+                "config": {
+                    "model": self.config.llm_model,
+                    "temperature": 0.1,
+                    "top_p": None,
+                },
+            }
+        else:
+            return {
+                "provider": provider,
+                "config": {
+                    "model": self.config.llm_model,
+                },
+            }
+
     async def initialize(self) -> None:
         """
         Initialize the mem0 Memory instance.
@@ -75,20 +154,11 @@ class Mem0Client:
                     "config": {
                         "path": self.config.qdrant_path,
                         "collection_name": self.config.qdrant_collection,
+                        "embedding_model_dims": self.config.embedding_dims,
                     },
                 },
-                "embedder": {
-                    "provider": "openai",
-                    "config": {
-                        "model": self.config.embedding_model,
-                    },
-                },
-                "llm": {
-                    "provider": self.config.llm_provider,
-                    "config": {
-                        "model": self.config.llm_model,
-                    },
-                },
+                "embedder": self._build_embedder_config(),
+                "llm": self._build_llm_config(),
             }
 
             # Create Memory instance
@@ -206,7 +276,20 @@ class Mem0Client:
 
             # Convert to MemorySearchResult objects
             search_results = []
+
+            # mem0 v1.0.5+ may return {"results": [...]} or list directly
+            logger.debug(f"mem0 raw search result type={type(results).__name__}, value={str(results)[:200]}")
+            if isinstance(results, dict):
+                results = results.get("results", results.get("memories", []))
+            if not isinstance(results, list):
+                logger.warning(f"mem0 search returned unexpected type: {type(results).__name__}")
+                return []
+
             for item in results:
+                # Skip non-dict items (mem0 format may vary)
+                if not isinstance(item, dict):
+                    logger.debug(f"Skipping non-dict search result item: {type(item).__name__}={str(item)[:80]}")
+                    continue
                 # Extract memory data
                 memory_data = item.get("memory", {})
                 metadata_data = item.get("metadata", {})

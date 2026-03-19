@@ -35,6 +35,71 @@ export {
   type FileUploadProgress,
 } from './files';
 
+// Orchestrator Chat API (Sprint 138 - Phase 40)
+export {
+  orchestratorApi,
+  type OrchestratorMessage,
+  type OrchestratorMessageMetadata,
+  type OrchestratorToolCall,
+  type SendOrchestratorMessageRequest,
+  type SendOrchestratorMessageResponse,
+  type OrchestratorHealthResponse,
+  type OrchestratorSSEEventType,
+  type OrchestratorSSEEvent,
+} from './orchestrator';
+
+// Sessions API (Sprint 138 - Phase 40)
+export {
+  sessionsApi,
+  type SessionStatus,
+  type SessionSummary,
+  type SessionDetail,
+  type SessionMessage,
+  type SessionListResponse,
+  type SessionMessagesResponse,
+  type SessionResumeResponse,
+  type SessionFilters,
+} from './sessions';
+
+// Tasks API (Sprint 139 - Phase 40)
+export {
+  tasksApi,
+  type TaskStatus,
+  type TaskPriority,
+  type TaskStepStatus,
+  type TaskSummary,
+  type TaskStep,
+  type TaskDetail,
+  type TaskListResponse,
+  type TaskStepsResponse,
+  type TaskFilters,
+} from './tasks';
+
+// Knowledge API (Sprint 140 - Phase 40)
+export {
+  knowledgeApi,
+  type DocumentStatus,
+  type KnowledgeDocument,
+  type DocumentListResponse,
+  type KnowledgeSearchResult,
+  type KnowledgeSearchResponse,
+  type KnowledgeSearchOptions,
+  type AgentSkill,
+  type SkillsResponse,
+  type KnowledgeStatusResponse,
+  type DocumentFilters,
+} from './knowledge';
+
+// Memory API (Sprint 140 - Phase 40)
+export {
+  memoryApi,
+  type MemoryItem,
+  type MemorySearchResponse,
+  type UserMemoriesResponse,
+  type MemoryStats,
+  type UserMemoryOptions,
+} from './memory';
+
 // Orchestration API (Sprint 99 - Phase 28)
 export {
   orchestrationApi,

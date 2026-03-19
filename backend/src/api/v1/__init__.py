@@ -172,6 +172,9 @@ protected_router.include_router(code_interpreter_router)  # Sprint 37
 # Phase 9: MCP Architecture
 protected_router.include_router(mcp_router)  # Sprint 39-41
 
+# Phase 37: Session Resume (MUST be before sessions_router to avoid /{session_id} collision)
+protected_router.include_router(session_resume_router)  # Sprint 115
+
 # Phase 10: Session Mode
 protected_router.include_router(sessions_router)  # Sprint 42-44
 
@@ -235,8 +238,7 @@ protected_router.include_router(chat_history_router)  # Sprint 111
 # Phase 37: Task Management
 protected_router.include_router(tasks_router)  # Sprint 113
 
-# Phase 37: Session Resume
-protected_router.include_router(session_resume_router)  # Sprint 115
+# Phase 37: Session Resume (moved above sessions_router to prevent route collision)
 
 # Phase 38: Knowledge Management
 protected_router.include_router(knowledge_router)  # Sprint 119

@@ -16,10 +16,13 @@
 #   GET    /api/v1/memory/health        - Health check
 # =============================================================================
 
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+logger = logging.getLogger(__name__)
 
 from src.integrations.memory import (
     UnifiedMemoryManager,
@@ -53,11 +56,19 @@ _memory_manager: Optional[UnifiedMemoryManager] = None
 
 
 async def get_memory_manager() -> UnifiedMemoryManager:
-    """Get or create the memory manager instance."""
+    """Get or create the memory manager instance.
+
+    Retries initialization on failure (does not cache broken instances).
+    """
     global _memory_manager
     if _memory_manager is None:
-        _memory_manager = UnifiedMemoryManager()
-        await _memory_manager.initialize()
+        manager = UnifiedMemoryManager()
+        try:
+            await manager.initialize()
+        except Exception as e:
+            logger.warning(f"Memory manager initialization failed: {e}")
+            # Still return it — health endpoint will show degraded status
+        _memory_manager = manager
     return _memory_manager
 
 

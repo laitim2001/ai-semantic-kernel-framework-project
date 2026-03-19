@@ -25,10 +25,15 @@ import {
   ChevronRight,
   Check,
   X,
+  RefreshCw,
+  AlertCircle,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/utils';
+import { useRecoverableSessions, useResumeSession } from '@/hooks/useSessions';
 
 /**
  * Chat thread data structure
@@ -57,6 +62,8 @@ interface ChatHistoryPanelProps {
   onDeleteThread: (id: string) => void;
   /** Callback when a thread is renamed (S74-BF-3) */
   onRenameThread?: (id: string, newTitle: string) => void;
+  /** Callback when a session is resumed (Sprint 138) */
+  onResumeSession?: (sessionId: string) => void;
   /** Whether the panel is collapsed */
   isCollapsed?: boolean;
   /** Callback to toggle collapse state */
@@ -225,6 +232,7 @@ export function ChatHistoryPanel({
   onNewThread,
   onDeleteThread,
   onRenameThread,
+  onResumeSession,
   isCollapsed = false,
   onToggle,
 }: ChatHistoryPanelProps) {
@@ -256,6 +264,9 @@ export function ChatHistoryPanel({
         )}
       </div>
 
+      {/* Sprint 138: Recoverable Sessions Section */}
+      <RecoverableSessionsSection onResumeSession={onResumeSession} />
+
       {/* Thread List */}
       <div className="flex-1 overflow-y-auto">
         {threads.length === 0 ? (
@@ -277,6 +288,107 @@ export function ChatHistoryPanel({
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Sprint 138: Recoverable Sessions Section
+ * Shows interrupted sessions that can be resumed.
+ */
+function RecoverableSessionsSection({
+  onResumeSession,
+}: {
+  onResumeSession?: (sessionId: string) => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const { data, isLoading } = useRecoverableSessions();
+  const resumeMutation = useResumeSession();
+
+  const sessions = data?.sessions || [];
+
+  // Don't render section if no recoverable sessions and not loading
+  if (!isLoading && sessions.length === 0) return null;
+
+  const handleResume = async (sessionId: string) => {
+    try {
+      await resumeMutation.mutateAsync(sessionId);
+      onResumeSession?.(sessionId);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  return (
+    <div className="border-b border-gray-200">
+      {/* Section header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+      >
+        <span className="flex items-center gap-1.5">
+          <AlertCircle className="h-3 w-3" />
+          可恢復 Sessions ({sessions.length})
+        </span>
+        <ChevronDown
+          className={cn(
+            'h-3 w-3 transition-transform',
+            isExpanded && 'rotate-180'
+          )}
+        />
+      </button>
+
+      {/* Session list */}
+      {isExpanded && (
+        <div className="max-h-48 overflow-y-auto">
+          {isLoading ? (
+            <div className="p-3 flex items-center justify-center">
+              <RefreshCw className="h-4 w-4 animate-spin text-gray-400" />
+            </div>
+          ) : (
+            sessions.map((session) => (
+              <div
+                key={session.session_id}
+                className="px-3 py-2 border-b border-gray-100 last:border-b-0 hover:bg-amber-50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-700 truncate">
+                      {session.last_message || '(無訊息)'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1 py-0 h-4 border-amber-300 text-amber-700"
+                      >
+                        已中斷
+                      </Badge>
+                      <span className="text-[10px] text-gray-400">
+                        {formatRelativeTime(session.updated_at)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                    onClick={() => handleResume(session.session_id)}
+                    disabled={resumeMutation.isPending}
+                  >
+                    <RefreshCw
+                      className={cn(
+                        'h-3 w-3 mr-1',
+                        resumeMutation.isPending && 'animate-spin'
+                      )}
+                    />
+                    恢復
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

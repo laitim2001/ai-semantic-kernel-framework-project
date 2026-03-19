@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Body, HTTPException, status
 
 from src.integrations.orchestration import (
     BusinessIntentRouter,
@@ -453,7 +453,7 @@ async def batch_classify(
     description="Simplified classification returning only essential fields.",
 )
 async def quick_classify(
-    content: str,
+    content: str = Body(..., embed=True),
 ) -> Dict[str, Any]:
     """
     Quick classification with minimal response.
