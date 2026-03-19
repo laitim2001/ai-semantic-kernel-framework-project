@@ -43,11 +43,13 @@ export interface OrchestratorToolCall {
   result?: string;
 }
 
-/** Request to send a message via orchestrator */
+/** Request to send a message via orchestrator (matches PipelineRequest) */
 export interface SendOrchestratorMessageRequest {
-  message: string;
+  content: string;
+  source?: 'user' | 'servicenow' | 'prometheus';
+  user_id?: string;
   session_id?: string;
-  context?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 /** Response from orchestrator chat */

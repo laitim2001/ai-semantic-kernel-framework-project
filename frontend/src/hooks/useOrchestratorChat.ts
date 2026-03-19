@@ -257,7 +257,7 @@ export function useOrchestratorChat(
         } else {
           // Use regular POST
           const response = await orchestratorApi.sendMessage({
-            message: content,
+            content,
             session_id: sessionId ?? undefined,
           });
 
