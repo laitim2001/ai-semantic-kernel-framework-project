@@ -81,6 +81,14 @@ from .llm_pool import (
     LLMCallToken,
 )
 
+# Circuit Breaker (Sprint 116)
+from .circuit_breaker import (
+    CircuitBreaker,
+    CircuitOpenError,
+    CircuitState,
+    get_llm_circuit_breaker,
+)
+
 __all__ = [
     # Middleware
     "CompressionMiddleware",
@@ -126,4 +134,9 @@ __all__ = [
     "CallPriority",
     "LLMCallPool",
     "LLMCallToken",
+    # Circuit Breaker (Sprint 116)
+    "CircuitBreaker",
+    "CircuitOpenError",
+    "CircuitState",
+    "get_llm_circuit_breaker",
 ]

@@ -39,6 +39,27 @@ from src.integrations.hybrid.orchestrator.tools import (
 from src.integrations.hybrid.orchestrator.session_factory import (
     OrchestratorSessionFactory,
 )
+from src.integrations.hybrid.orchestrator.dispatch_handlers import (
+    DispatchHandlers,
+)
+from src.integrations.hybrid.orchestrator.task_result_protocol import (
+    TaskResultEnvelope,
+    TaskResultNormaliser,
+    WorkerResult,
+    WorkerType,
+    ResultStatus,
+)
+from src.integrations.hybrid.orchestrator.result_synthesiser import (
+    ResultSynthesiser,
+)
+from src.integrations.hybrid.orchestrator.session_recovery import (
+    SessionRecoveryManager,
+    SessionSummary,
+    RecoveryResult,
+)
+from src.integrations.hybrid.orchestrator.observability_bridge import (
+    ObservabilityBridge,
+)
 
 __all__ = [
     # Contracts
@@ -64,4 +85,19 @@ __all__ = [
     "ToolType",
     # Session Factory (Sprint 112)
     "OrchestratorSessionFactory",
+    # Dispatch Handlers (Sprint 113)
+    "DispatchHandlers",
+    # TaskResult Protocol + Synthesiser (Sprint 114)
+    "TaskResultEnvelope",
+    "TaskResultNormaliser",
+    "WorkerResult",
+    "WorkerType",
+    "ResultStatus",
+    "ResultSynthesiser",
+    # Session Recovery (Sprint 115)
+    "SessionRecoveryManager",
+    "SessionSummary",
+    "RecoveryResult",
+    # Observability Bridge (Sprint 116)
+    "ObservabilityBridge",
 ]

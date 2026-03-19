@@ -106,6 +106,12 @@ from src.api.v1.orchestrator.routes import router as orchestrator_chat_router  #
 # Sprint 111: Chat History Sync
 from src.api.v1.chat_history import router as chat_history_router  # Sprint 111
 
+# Phase 37: Task Management
+from src.api.v1.tasks import router as tasks_router  # Sprint 113
+
+# Phase 37: Session Resume
+from src.api.v1.orchestrator.session_routes import router as session_resume_router  # Sprint 115
+
 # =============================================================================
 # Router Assembly
 # =============================================================================
@@ -222,6 +228,12 @@ protected_router.include_router(orchestrator_chat_router)  # Sprint 108
 
 # Sprint 111: Chat History Sync
 protected_router.include_router(chat_history_router)  # Sprint 111
+
+# Phase 37: Task Management
+protected_router.include_router(tasks_router)  # Sprint 113
+
+# Phase 37: Session Resume
+protected_router.include_router(session_resume_router)  # Sprint 115
 
 # -----------------------------------------------------------------------------
 # Assemble into main api_router

@@ -30,10 +30,43 @@ _session_factory: Optional[OrchestratorSessionFactory] = None
 
 
 def _get_tool_registry() -> OrchestratorToolRegistry:
-    """Lazy-initialise and return the shared tool registry."""
+    """Lazy-initialise and return the shared tool registry.
+
+    Registers real dispatch handlers (Phase 37) so that tools are no
+    longer stubs.
+    """
     global _tool_registry
     if _tool_registry is None:
         _tool_registry = OrchestratorToolRegistry()
+
+        # --- Phase 37: Wire real handlers ---
+        try:
+            from src.integrations.hybrid.orchestrator.dispatch_handlers import (
+                DispatchHandlers,
+            )
+            from src.domain.tasks.service import TaskService
+            from src.infrastructure.storage.task_store import TaskStore
+
+            from src.integrations.hybrid.orchestrator.result_synthesiser import (
+                ResultSynthesiser,
+            )
+            task_store = TaskStore()
+            task_service = TaskService(task_store=task_store)
+            synthesiser = ResultSynthesiser()  # LLM injected via session factory
+            handlers = DispatchHandlers(
+                task_service=task_service,
+                result_synthesiser=synthesiser,
+            )
+            handlers.register_all(_tool_registry)
+            logger.info(
+                "Orchestrator: Dispatch handlers registered (%d tools wired)",
+                len(_tool_registry._handlers),
+            )
+        except Exception as e:
+            logger.warning(
+                "Orchestrator: Failed to register dispatch handlers: %s", e
+            )
+
         logger.info("Orchestrator: Tool registry initialized with %d tools",
                      len(_tool_registry.list_tools(role="admin")))
     return _tool_registry
