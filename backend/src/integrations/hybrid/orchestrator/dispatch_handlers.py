@@ -366,6 +366,33 @@ class DispatchHandlers:
         }
 
     # ------------------------------------------------------------------
+    # Knowledge Tool
+    # ------------------------------------------------------------------
+
+    async def handle_search_knowledge(
+        self,
+        query: str,
+        collection: Optional[str] = None,
+        limit: int = 5,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Search the enterprise knowledge base via RAG pipeline."""
+        try:
+            from src.integrations.knowledge.rag_pipeline import RAGPipeline
+            pipeline = RAGPipeline()
+            return await pipeline.handle_search_knowledge(
+                query=query,
+                collection=collection,
+                limit=limit,
+            )
+        except ImportError:
+            logger.warning("RAGPipeline not available")
+            return {"results": [], "count": 0, "message": "Knowledge base not available"}
+        except Exception as e:
+            logger.error("Knowledge search failed: %s", e, exc_info=True)
+            return {"results": [], "error": str(e)}
+
+    # ------------------------------------------------------------------
     # Registration helper
     # ------------------------------------------------------------------
 
@@ -379,6 +406,7 @@ class DispatchHandlers:
             "assess_risk": self.handle_assess_risk,
             "search_memory": self.handle_search_memory,
             "request_approval": self.handle_request_approval,
+            "search_knowledge": self.handle_search_knowledge,
         }
         for tool_name, handler in handler_map.items():
             registry.register_handler(tool_name, handler)

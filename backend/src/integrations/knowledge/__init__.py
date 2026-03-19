@@ -9,6 +9,7 @@ from src.integrations.knowledge.embedder import EmbeddingManager
 from src.integrations.knowledge.vector_store import VectorStoreManager
 from src.integrations.knowledge.retriever import KnowledgeRetriever
 from src.integrations.knowledge.rag_pipeline import RAGPipeline
+from src.integrations.knowledge.agent_skills import AgentSkillsProvider, AgentSkill, SkillCategory
 
 __all__ = [
     "DocumentParser",
@@ -18,4 +19,7 @@ __all__ = [
     "VectorStoreManager",
     "KnowledgeRetriever",
     "RAGPipeline",
+    "AgentSkillsProvider",
+    "AgentSkill",
+    "SkillCategory",
 ]
