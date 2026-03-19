@@ -52,6 +52,11 @@ from src.integrations.hybrid.orchestrator.task_result_protocol import (
 from src.integrations.hybrid.orchestrator.result_synthesiser import (
     ResultSynthesiser,
 )
+from src.integrations.hybrid.orchestrator.session_recovery import (
+    SessionRecoveryManager,
+    SessionSummary,
+    RecoveryResult,
+)
 
 __all__ = [
     # Contracts
@@ -86,4 +91,8 @@ __all__ = [
     "WorkerType",
     "ResultStatus",
     "ResultSynthesiser",
+    # Session Recovery (Sprint 115)
+    "SessionRecoveryManager",
+    "SessionSummary",
+    "RecoveryResult",
 ]
