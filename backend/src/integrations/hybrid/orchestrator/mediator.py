@@ -26,6 +26,7 @@ from src.integrations.hybrid.orchestrator.contracts import (
     OrchestratorRequest,
     OrchestratorResponse,
 )
+from src.integrations.hybrid.orchestrator.agent_handler import AgentHandler
 from src.integrations.hybrid.orchestrator.handlers.routing import RoutingHandler
 from src.integrations.hybrid.orchestrator.handlers.dialog import DialogHandler
 from src.integrations.hybrid.orchestrator.handlers.approval import ApprovalHandler
@@ -50,8 +51,9 @@ class OrchestratorMediator:
     2. RoutingHandler   — Route request and determine execution mode
     3. DialogHandler    — Gather missing information (conditional)
     4. ApprovalHandler  — Risk assessment and HITL approval (conditional)
-    5. ExecutionHandler  — Dispatch to MAF/Claude/Swarm
-    6. ObservabilityHandler — Record metrics
+    5. AgentHandler     — LLM-powered response generation (may short-circuit)
+    6. ExecutionHandler  — Dispatch to MAF/Claude/Swarm
+    7. ObservabilityHandler — Record metrics
     """
 
     def __init__(
@@ -60,6 +62,7 @@ class OrchestratorMediator:
         routing_handler: Optional[RoutingHandler] = None,
         dialog_handler: Optional[DialogHandler] = None,
         approval_handler: Optional[ApprovalHandler] = None,
+        agent_handler: Optional[AgentHandler] = None,
         execution_handler: Optional[ExecutionHandler] = None,
         context_handler: Optional[ContextHandler] = None,
         observability_handler: Optional[ObservabilityHandler] = None,
@@ -73,6 +76,8 @@ class OrchestratorMediator:
             self._handlers[HandlerType.DIALOG] = dialog_handler
         if approval_handler:
             self._handlers[HandlerType.APPROVAL] = approval_handler
+        if agent_handler:
+            self._handlers[HandlerType.AGENT] = agent_handler
         if execution_handler:
             self._handlers[HandlerType.EXECUTION] = execution_handler
         if context_handler:
@@ -213,7 +218,29 @@ class OrchestratorMediator:
                         mode=ExecutionMode.WORKFLOW_MODE,
                     )
 
-            # Step 5: Execution
+            # Step 5: Agent (LLM response generation)
+            agent_result = await self._run_handler(
+                HandlerType.AGENT, request, pipeline_context
+            )
+            if agent_result:
+                handler_results["agent"] = agent_result
+                pipeline_context["agent_response"] = agent_result.data
+                if agent_result.should_short_circuit:
+                    # Agent produced a direct response — skip execution dispatch
+                    return self._build_short_circuit_response(
+                        agent_result, session, start_time, handler_results,
+                        framework=agent_result.data.get(
+                            "framework_used",
+                            agent_result.short_circuit_response.get(
+                                "framework_used", "orchestrator_agent"
+                            ) if agent_result.short_circuit_response else "orchestrator_agent",
+                        ),
+                        mode=pipeline_context.get(
+                            "execution_mode", ExecutionMode.CHAT_MODE
+                        ),
+                    )
+
+            # Step 6: Execution
             exec_result = await self._run_handler(
                 HandlerType.EXECUTION, request, pipeline_context
             )
@@ -228,7 +255,7 @@ class OrchestratorMediator:
                 pipeline_context["execution_success"] = exec_result.success
                 pipeline_context["execution_duration"] = time.time() - start_time
 
-            # Step 6: Context sync after execution
+            # Step 7: Context sync after execution
             context_handler = self._handlers.get(HandlerType.CONTEXT)
             if context_handler and hasattr(context_handler, "sync_after_execution"):
                 hybrid_ctx = pipeline_context.get("hybrid_context")
@@ -239,7 +266,7 @@ class OrchestratorMediator:
                     )
                     pipeline_context["sync_result"] = sync_result
 
-            # Step 7: Observability
+            # Step 8: Observability
             obs_result = await self._run_handler(
                 HandlerType.OBSERVABILITY, request, pipeline_context
             )
