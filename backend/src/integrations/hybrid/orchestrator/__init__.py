@@ -57,6 +57,9 @@ from src.integrations.hybrid.orchestrator.session_recovery import (
     SessionSummary,
     RecoveryResult,
 )
+from src.integrations.hybrid.orchestrator.observability_bridge import (
+    ObservabilityBridge,
+)
 
 __all__ = [
     # Contracts
@@ -95,4 +98,6 @@ __all__ = [
     "SessionRecoveryManager",
     "SessionSummary",
     "RecoveryResult",
+    # Observability Bridge (Sprint 116)
+    "ObservabilityBridge",
 ]

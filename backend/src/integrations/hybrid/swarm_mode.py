@@ -47,7 +47,7 @@ class SwarmExecutionConfig:
         min_subtasks: Minimum subtasks required to justify swarm mode
     """
 
-    enabled: bool = False
+    enabled: bool = True  # Sprint 116: Feature flag enabled for E2E Assembly B
     default_mode: str = "parallel"
     max_workers: int = 5
     worker_timeout: float = 120.0
