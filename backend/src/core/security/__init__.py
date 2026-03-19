@@ -29,6 +29,11 @@ from src.core.security.prompt_guard import (
     PromptGuard,
     SanitizedInput,
 )
+from src.core.security.rbac import (
+    RBACManager,
+    Role,
+    Permission,
+)
 
 __all__ = [
     # JWT
@@ -45,4 +50,8 @@ __all__ = [
     # Prompt Injection Guard (Sprint 109)
     "PromptGuard",
     "SanitizedInput",
+    # RBAC (Sprint 112)
+    "RBACManager",
+    "Role",
+    "Permission",
 ]

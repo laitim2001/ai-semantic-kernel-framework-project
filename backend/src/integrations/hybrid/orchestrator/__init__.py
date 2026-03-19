@@ -30,6 +30,15 @@ from src.integrations.hybrid.orchestrator.events import (
     ObservabilityEvent,
 )
 from src.integrations.hybrid.orchestrator.mediator import OrchestratorMediator
+from src.integrations.hybrid.orchestrator.tools import (
+    OrchestratorToolRegistry,
+    ToolDefinition,
+    ToolResult,
+    ToolType,
+)
+from src.integrations.hybrid.orchestrator.session_factory import (
+    OrchestratorSessionFactory,
+)
 
 __all__ = [
     # Contracts
@@ -48,4 +57,11 @@ __all__ = [
     "ObservabilityEvent",
     # Mediator
     "OrchestratorMediator",
+    # Tools (Sprint 112)
+    "OrchestratorToolRegistry",
+    "ToolDefinition",
+    "ToolResult",
+    "ToolType",
+    # Session Factory (Sprint 112)
+    "OrchestratorSessionFactory",
 ]
