@@ -131,7 +131,7 @@ export function SessionsPage() {
         </Select>
         {data && (
           <span className="text-sm text-gray-500">
-            共 {data.total} 個 Sessions
+            共 {data.total ?? 0} 個 Sessions
           </span>
         )}
       </div>
@@ -167,7 +167,7 @@ export function SessionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.sessions.length === 0 ? (
+              {!data.sessions?.length ? (
                 <TableRow>
                   <TableCell
                     colSpan={7}
@@ -178,7 +178,7 @@ export function SessionsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                data.sessions.map((session) => {
+                (data.sessions || []).map((session) => {
                   const config =
                     statusConfig[session.status] || statusConfig.active;
                   return (

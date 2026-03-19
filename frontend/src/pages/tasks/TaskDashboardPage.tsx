@@ -164,7 +164,7 @@ export function TaskDashboardPage() {
         </Select>
         {data && (
           <span className="text-sm text-gray-500">
-            共 {data.total} 個任務
+            共 {data.total ?? 0} 個任務
           </span>
         )}
       </div>
@@ -203,7 +203,7 @@ export function TaskDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.tasks.length === 0 ? (
+                {!data.tasks?.length ? (
                   <TableRow>
                     <TableCell
                       colSpan={9}
@@ -214,7 +214,7 @@ export function TaskDashboardPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.tasks.map((task) => {
+                  (data.tasks || []).map((task) => {
                     const sConfig = statusConfig[task.status] || statusConfig.pending;
                     const pConfig = priorityConfig[task.priority] || priorityConfig.MEDIUM;
                     return (
