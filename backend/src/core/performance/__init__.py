@@ -74,6 +74,13 @@ from .benchmark import (
     benchmark,
 )
 
+# LLM Call Pool (Sprint 109)
+from .llm_pool import (
+    CallPriority,
+    LLMCallPool,
+    LLMCallToken,
+)
+
 __all__ = [
     # Middleware
     "CompressionMiddleware",
@@ -115,4 +122,8 @@ __all__ = [
     "BenchmarkReport",
     "BenchmarkRunner",
     "benchmark",
+    # LLM Call Pool (Sprint 109)
+    "CallPriority",
+    "LLMCallPool",
+    "LLMCallToken",
 ]
