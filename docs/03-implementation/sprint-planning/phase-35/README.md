@@ -27,8 +27,8 @@ IPA Platform 歷經 29 個 Phase、106 個 Sprint、累計 ~2379 Story Points，
 
 | Sprint | 名稱 | Story Points | 狀態 |
 |--------|------|--------------|------|
-| [Sprint 107](./sprint-107-plan.md) | Orchestrator Agent 原型 | ~8 點 | 📋 計劃中 |
-| [Sprint 108](./sprint-108-plan.md) | 最短路徑端到端接通 | ~7 點 | 📋 計劃中 |
+| [Sprint 107](./sprint-107-plan.md) | Orchestrator Agent 原型 | ~8 點 | ✅ 完成 |
+| [Sprint 108](./sprint-108-plan.md) | 最短路徑端到端接通 | ~7 點 | ✅ 完成 |
 
 **總計**: ~15 Story Points (2 Sprints)
 **預估時程**: 1.5 週

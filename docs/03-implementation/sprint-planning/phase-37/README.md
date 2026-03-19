@@ -27,10 +27,10 @@ Phase 37 專注於實現 **任務執行組裝（E2E Assembly B）**，讓 Orches
 
 | Sprint | 名稱 | Story Points | 狀態 |
 |--------|------|--------------|------|
-| [Sprint 113](./sprint-113-plan.md) | 任務分派 Tools + Task Registry | ~12 點 | 📋 計劃中 |
-| [Sprint 114](./sprint-114-plan.md) | MAF Workflow + Claude Worker 接通 | ~12 點 | 📋 計劃中 |
-| [Sprint 115](./sprint-115-plan.md) | 三層 Checkpoint + Session Resume | ~12 點 | 📋 計劃中 |
-| [Sprint 116](./sprint-116-plan.md) | Swarm 整合 + 可觀測性接通 | ~12 點 | 📋 計劃中 |
+| [Sprint 113](./sprint-113-plan.md) | 任務分派 Tools + Task Registry | ~12 點 | ✅ 完成 |
+| [Sprint 114](./sprint-114-plan.md) | MAF Workflow + Claude Worker 接通 | ~12 點 | ✅ 完成 |
+| [Sprint 115](./sprint-115-plan.md) | 三層 Checkpoint + Session Resume | ~12 點 | ✅ 完成 |
+| [Sprint 116](./sprint-116-plan.md) | Swarm 整合 + 可觀測性接通 | ~12 點 | ✅ 完成 |
 
 **總計**: ~48 Story Points (4 Sprints)
 
