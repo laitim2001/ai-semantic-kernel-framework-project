@@ -719,7 +719,8 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
         content: content,
         timestamp: new Date().toISOString(),
       };
-      setMessages([...messagesRef.current, userMessage]);
+      const messagesWithUser = [...messagesRef.current, userMessage];
+      setMessages(messagesWithUser);
 
       try {
         const response: SendOrchestratorMessageResponse = await orchestratorApi.sendMessage({
@@ -735,10 +736,12 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
         }
 
         // Build orchestration metadata from PipelineResponse
+        // Normalize risk_level to uppercase (backend may return lowercase)
+        const normalizedRisk = response.risk_level?.toUpperCase() as OrchestrationMetadata['riskLevel'];
         const orchMetadata: OrchestrationMetadata = {
           intent: response.intent_category || response.intent,
-          riskLevel: response.risk_level,
-          executionMode: response.execution_mode,
+          riskLevel: normalizedRisk,
+          executionMode: response.execution_mode || response.framework_used,
           routingLayer: response.routing_layer,
           confidence: response.confidence,
           processingTimeMs: response.processing_time_ms,
@@ -789,7 +792,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
             detail: detailParts.length > 0 ? detailParts.join('\n') : undefined,
           },
         };
-        setMessages([...messagesRef.current, userMessage, assistantMessage]);
+        setMessages([...messagesWithUser, assistantMessage]);
 
         // Trigger typewriter effect
         setTypewriterContent(responseContent);
@@ -830,14 +833,14 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
 
       } catch (err) {
         console.error('[UnifiedChat] Pipeline send failed:', err);
-        // Fallback: show error
+        // Fallback: show error (use messagesWithUser which already has user message)
         const errorMessage = {
           id: `orch-err-${Date.now()}`,
           role: 'assistant' as const,
           content: `Pipeline 錯誤: ${err instanceof Error ? err.message : String(err)}`,
           timestamp: new Date().toISOString(),
         };
-        setMessages([...messagesRef.current, userMessage, errorMessage]);
+        setMessages([...messagesWithUser, errorMessage]);
       }
 
       if (allFileIds.length > 0) clearAttachments();
