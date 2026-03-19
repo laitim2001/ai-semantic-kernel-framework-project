@@ -90,6 +90,12 @@ export type { FileRendererProps, FileType } from './FileRenderer';
 export { ImagePreview, CodePreview, TextPreview } from './renderers';
 export type { ImagePreviewProps, CodePreviewProps, TextPreviewProps } from './renderers';
 
+// Phase 41: Pipeline Integration Components
+export { IntentStatusChip } from './IntentStatusChip';
+export type { IntentStatusChipProps } from './IntentStatusChip';
+export { TaskProgressCard } from './TaskProgressCard';
+export { MemoryHint } from './MemoryHint';
+
 // Re-export types for convenience
 export type {
   ChatHeaderProps,

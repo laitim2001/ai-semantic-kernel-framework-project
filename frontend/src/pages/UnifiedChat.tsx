@@ -42,10 +42,17 @@ import { useExecutionMetrics } from '@/hooks/useExecutionMetrics';
 import { useChatThreads } from '@/hooks/useChatThreads';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useOrchestration } from '@/hooks/useOrchestration';
+import { orchestratorApi } from '@/api/endpoints/orchestrator';
+import type { SendOrchestratorMessageResponse } from '@/api/endpoints/orchestrator';
+import { memoryApi } from '@/api/endpoints/memory';
+import { sessionsApi } from '@/api/endpoints/sessions';
 import { filesApi } from '@/api/endpoints/files';
 import { useAuthStore } from '@/store/authStore';
 import type { DialogQuestion } from '@/api/endpoints/orchestration';
 import type { Attachment } from '@/types/unified-chat';
+import type { OrchestrationMetadata } from '@/types/ag-ui';
+import { MemoryHint } from '@/components/unified-chat/MemoryHint';
+import type { MemoryHintItem } from '@/components/unified-chat/MemoryHint';
 import type {
   UnifiedChatProps,
   ExecutionMode,
@@ -236,10 +243,19 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
 
   // Sprint 99: Phase 28 Orchestration state
-  // TODO: Add UI toggles in ChatHeader to control these settings
+  // Phase 41: orchestrationEnabled now controls pipeline routing
   const [orchestrationEnabled, _setOrchestrationEnabled] = useState(true);
   const [showOrchestrationPanel, _setShowOrchestrationPanel] = useState(true);
   const [dialogQuestions, setDialogQuestions] = useState<DialogQuestion[] | null>(null);
+  // Phase 41: Track orchestrator pipeline session ID
+  const [orchestratorSessionId, setOrchestratorSessionId] = useState<string | null>(null);
+  // Phase 41: Track typewriter animation state
+  const [typewriterContent, setTypewriterContent] = useState<string | null>(null);
+  const [typewriterMessageId, setTypewriterMessageId] = useState<string | null>(null);
+  // Phase 41 S143-1: Memory hint state
+  const [relatedMemories, setRelatedMemories] = useState<MemoryHintItem[]>([]);
+  const [showMemoryHint, setShowMemoryHint] = useState(true);
+  const isFirstMessage = useRef(true);
 
   // Suppress unused warnings (will be used when UI toggles are added)
   void _setOrchestrationEnabled;
@@ -383,10 +399,10 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
-  // Sprint 99: Phase 28 Orchestration hook
+  // Sprint 99: Phase 28 Orchestration hook (kept for OrchestrationPanel debug view)
   const {
     state: orchestrationState,
-    startOrchestration,
+    startOrchestration: _startOrchestration, // Phase 41: replaced by direct pipeline call
     respondToDialog,
     proceedWithExecution,
     reset: resetOrchestration,
@@ -442,6 +458,52 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       pendingOrchestrationMessage.current = null;
     },
   });
+  void _startOrchestration; // Phase 41: replaced by direct pipeline call
+
+  // Phase 41: Typewriter effect — progressively reveal assistant response
+  useEffect(() => {
+    if (!typewriterContent || !typewriterMessageId) return;
+
+    let index = 0;
+    let rafId = 0;
+    let lastTime = 0;
+    const speed = 15; // ms per character
+
+    const animate = (timestamp: number) => {
+      if (!lastTime) lastTime = timestamp;
+      const elapsed = timestamp - lastTime;
+
+      if (elapsed >= speed) {
+        const charsToAdd = Math.max(1, Math.floor(elapsed / speed));
+        index = Math.min(index + charsToAdd, typewriterContent.length);
+        lastTime = timestamp;
+
+        // Update the specific message content
+        const currentMsgs = messagesRef.current;
+        const msgIdx = currentMsgs.findIndex(m => m.id === typewriterMessageId);
+        if (msgIdx >= 0) {
+          const updated = [...currentMsgs];
+          updated[msgIdx] = { ...updated[msgIdx], content: typewriterContent.slice(0, index) };
+          setMessages(updated);
+        }
+
+        if (index >= typewriterContent.length) {
+          setTypewriterContent(null);
+          setTypewriterMessageId(null);
+          return;
+        }
+      }
+
+      rafId = requestAnimationFrame(animate);
+    };
+
+    rafId = requestAnimationFrame(animate);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typewriterContent, typewriterMessageId]);
 
   // S75-4: Convert hook attachments to typed Attachment array
   const typedAttachments: Attachment[] = useMemo(() => {
@@ -646,11 +708,9 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       console.log('[S75-5] Uploaded file IDs:', allFileIds);
     }
 
-    // Sprint 99: Phase 28 - Route through orchestration if enabled
+    // Phase 41: Unified pipeline — POST /orchestrator/chat
     if (orchestrationEnabled) {
-      console.log('[UnifiedChat] Starting orchestration flow for:', content.slice(0, 50));
-      resetOrchestration(); // Reset previous state
-      setDialogQuestions(null); // Clear previous questions
+      console.log('[UnifiedChat] Pipeline send via /orchestrator/chat:', content.slice(0, 50));
 
       // Add user message to chat immediately
       const userMessage = {
@@ -660,18 +720,131 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
         timestamp: new Date().toISOString(),
       };
       setMessages([...messagesRef.current, userMessage]);
-      pendingOrchestrationMessage.current = content;
 
-      // Start orchestration - this will handle routing, dialog, and risk assessment
-      // The actual message will be sent after orchestration completes (via proceedWithExecution)
-      await startOrchestration(content);
+      try {
+        const response: SendOrchestratorMessageResponse = await orchestratorApi.sendMessage({
+          content,
+          source: 'user',
+          session_id: orchestratorSessionId || undefined,
+          user_id: userId,
+        });
 
-      // Store message content and file IDs for later execution
-      // The actual sendMessage will be called when user approves or orchestration completes
-      return; // Don't send message yet - wait for orchestration flow
+        // Track pipeline session
+        if (response.session_id) {
+          setOrchestratorSessionId(response.session_id);
+        }
+
+        // Build orchestration metadata from PipelineResponse
+        const orchMetadata: OrchestrationMetadata = {
+          intent: response.intent_category || response.intent,
+          riskLevel: response.risk_level,
+          executionMode: response.execution_mode,
+          routingLayer: response.routing_layer,
+          confidence: response.confidence,
+          processingTimeMs: response.processing_time_ms,
+          taskId: response.task_id,
+          sessionId: response.session_id,
+          frameworkUsed: response.framework_used,
+          requiresApproval: response.requires_approval,
+        };
+
+        // S142-2: Extract tool calls from message metadata
+        const rawToolCalls = response.message?.metadata?.tool_calls as
+          | Array<{ tool_name?: string; status?: string; result?: string; duration_ms?: number }>
+          | undefined;
+        if (Array.isArray(rawToolCalls) && rawToolCalls.length > 0) {
+          orchMetadata.pipelineToolCalls = rawToolCalls.map((tc, idx) => ({
+            id: `tc-${Date.now()}-${idx}`,
+            toolName: tc.tool_name || 'unknown',
+            status: (tc.status as 'pending' | 'running' | 'completed' | 'failed') || 'completed',
+            result: tc.result,
+            durationMs: tc.duration_ms,
+          }));
+        }
+
+        // Extract response content
+        const responseContent =
+          response.content ||
+          response.message?.content ||
+          '(No response content)';
+
+        // Build detail string for IntentStatusChip expandable section
+        const detailParts: string[] = [];
+        if (orchMetadata.routingLayer) detailParts.push(`路由層: ${orchMetadata.routingLayer}`);
+        if (orchMetadata.confidence != null) detailParts.push(`信心度: ${(orchMetadata.confidence * 100).toFixed(0)}%`);
+        if (orchMetadata.processingTimeMs != null) detailParts.push(`處理時間: ${orchMetadata.processingTimeMs}ms`);
+        if (orchMetadata.frameworkUsed) detailParts.push(`框架: ${orchMetadata.frameworkUsed}`);
+        if (orchMetadata.taskId) detailParts.push(`任務: ${orchMetadata.taskId}`);
+        if (orchMetadata.pipelineToolCalls?.length) detailParts.push(`工具調用: ${orchMetadata.pipelineToolCalls.length} 個`);
+
+        // Create assistant message with orchestration metadata
+        const assistantMessageId = `orch-${Date.now()}`;
+        const assistantMessage = {
+          id: assistantMessageId,
+          role: 'assistant' as const,
+          content: '', // Start empty for typewriter effect
+          timestamp: new Date().toISOString(),
+          orchestrationMetadata: {
+            ...orchMetadata,
+            detail: detailParts.length > 0 ? detailParts.join('\n') : undefined,
+          },
+        };
+        setMessages([...messagesRef.current, userMessage, assistantMessage]);
+
+        // Trigger typewriter effect
+        setTypewriterContent(responseContent);
+        setTypewriterMessageId(assistantMessageId);
+
+        // S143-1: Search for related memories on first message
+        if (isFirstMessage.current) {
+          isFirstMessage.current = false;
+          memoryApi.searchMemories(content, userId)
+            .then((res) => {
+              if (res.memories && res.memories.length > 0) {
+                setRelatedMemories(res.memories.map((m) => ({
+                  id: m.id,
+                  content: m.content,
+                  created_at: m.created_at,
+                  score: m.score,
+                })));
+                setShowMemoryHint(true);
+              }
+            })
+            .catch(() => { /* memory search is non-critical */ });
+        }
+
+        // S143-3: Extract memory_context from pipeline response metadata
+        const msgMeta = response.message?.metadata as Record<string, unknown> | undefined;
+        const memCtx = msgMeta?.memory_context as
+          | Array<{ id: string; content: string; created_at: string; score?: number }>
+          | undefined;
+        if (Array.isArray(memCtx) && memCtx.length > 0) {
+          setRelatedMemories(memCtx.map((m) => ({
+            id: m.id,
+            content: m.content,
+            created_at: m.created_at,
+            score: m.score,
+          })));
+          setShowMemoryHint(true);
+        }
+
+      } catch (err) {
+        console.error('[UnifiedChat] Pipeline send failed:', err);
+        // Fallback: show error
+        const errorMessage = {
+          id: `orch-err-${Date.now()}`,
+          role: 'assistant' as const,
+          content: `Pipeline 錯誤: ${err instanceof Error ? err.message : String(err)}`,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages([...messagesRef.current, userMessage, errorMessage]);
+      }
+
+      if (allFileIds.length > 0) clearAttachments();
+      return;
     }
 
-    // Direct send without orchestration
+    // Fallback: Direct send without orchestration (AG-UI SSE path)
     sendMessage(content, allFileIds.length > 0 ? allFileIds : undefined).catch((err) => {
       console.error('[UnifiedChat] Failed to send message:', err);
     });
@@ -682,9 +855,34 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
     }
   }, [
     activeThreadId, createThread, generateTitle, sendMessage, attachments,
-    uploadAll, clearAttachments, orchestrationEnabled, startOrchestration,
-    resetOrchestration
+    uploadAll, clearAttachments, orchestrationEnabled, orchestratorSessionId,
+    userId
   ]);
+
+  // Phase 41 S143-2: Handle session resume from ChatHistoryPanel
+  const handleResumeSession = useCallback(async (resumedSessionId: string) => {
+    console.log('[UnifiedChat] Resuming session:', resumedSessionId);
+    // Update orchestrator session ID
+    setOrchestratorSessionId(resumedSessionId);
+
+    // Load conversation history
+    try {
+      const historyResponse = await sessionsApi.getSessionMessages(resumedSessionId);
+      const historyMessages = (historyResponse.messages || []).map((msg, idx) => ({
+        id: msg.id || `resumed-${resumedSessionId}-${idx}`,
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        orchestrationMetadata: msg.metadata?.orchestration
+          ? (msg.metadata.orchestration as OrchestrationMetadata)
+          : undefined,
+      }));
+      setMessages(historyMessages);
+      isFirstMessage.current = false;
+    } catch (err) {
+      console.error('[UnifiedChat] Failed to load session history:', err);
+    }
+  }, [setMessages]);
 
   // Sprint 99: Handle orchestration approval - proceed with message
   const handleOrchestrationApprove = useCallback(async () => {
@@ -781,6 +979,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
         onNewThread={handleNewThread}
         onDeleteThread={handleDeleteThread}
         onRenameThread={(id, newTitle) => updateThread(id, { title: newTitle })}
+        onResumeSession={handleResumeSession}
         isCollapsed={historyCollapsed}
         onToggle={() => setHistoryCollapsed(!historyCollapsed)}
       />
@@ -857,10 +1056,19 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
               onApprove={handleOrchestrationApprove}
               onReject={handleOrchestrationReject}
               onSkipDialog={handleSkipDialog}
-              defaultCollapsed={false}
+              defaultCollapsed={true}
             />
           )}
         </main>
+
+        {/* Phase 41 S143-1: MemoryHint above ChatInput */}
+        {relatedMemories.length > 0 && (
+          <MemoryHint
+            memories={relatedMemories}
+            isVisible={showMemoryHint}
+            onDismiss={() => setShowMemoryHint(false)}
+          />
+        )}
 
         {/* Input Area - S75-4: Added file attachment support */}
         <ChatInput

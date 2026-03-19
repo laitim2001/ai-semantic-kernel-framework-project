@@ -52,14 +52,24 @@ export interface SendOrchestratorMessageRequest {
   metadata?: Record<string, unknown>;
 }
 
-/** Response from orchestrator chat */
+/** Response from orchestrator chat (aligned with PipelineResponse) */
 export interface SendOrchestratorMessageResponse {
   session_id: string;
   message: OrchestratorMessage;
+  /** PipelineResponse fields */
+  content?: string;
   intent?: string;
+  intent_category?: string;
+  confidence?: number;
   risk_level?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  routing_layer?: string;
   execution_mode?: string;
+  framework_used?: string;
+  task_id?: string;
   task_ids?: string[];
+  processing_time_ms?: number;
+  is_complete?: boolean;
+  requires_approval?: boolean;
 }
 
 /** Orchestrator health status */
