@@ -173,7 +173,7 @@ class OrchestratorBootstrap:
     # ------------------------------------------------------------------
 
     def _wire_context_handler(self) -> Any:
-        """Wire ContextHandler with ContextBridge."""
+        """Wire ContextHandler with ContextBridge + MemoryManager."""
         try:
             from src.integrations.hybrid.orchestrator.handlers.context import ContextHandler
             context_bridge = None
@@ -183,8 +183,37 @@ class OrchestratorBootstrap:
             except Exception as e:
                 logger.warning("Bootstrap: ContextBridge unavailable: %s", e)
 
-            handler = ContextHandler(context_bridge=context_bridge)
-            logger.info("Bootstrap: ContextHandler wired (bridge=%s)", context_bridge is not None)
+            # Sprint 135: Wire MemoryManager for auto-memory injection
+            memory_manager = None
+            try:
+                from src.integrations.hybrid.orchestrator.memory_manager import (
+                    OrchestratorMemoryManager,
+                )
+                conv_store = None
+                try:
+                    from src.infrastructure.storage.conversation_state import (
+                        ConversationStateStore,
+                    )
+                    conv_store = ConversationStateStore()
+                except Exception:
+                    pass
+                memory_manager = OrchestratorMemoryManager(
+                    llm_service=self._llm_service,
+                    conversation_store=conv_store,
+                )
+                logger.info("Bootstrap: MemoryManager created for ContextHandler")
+            except Exception as e:
+                logger.warning("Bootstrap: MemoryManager unavailable: %s", e)
+
+            handler = ContextHandler(
+                context_bridge=context_bridge,
+                memory_manager=memory_manager,
+            )
+            logger.info(
+                "Bootstrap: ContextHandler wired (bridge=%s, memory=%s)",
+                context_bridge is not None,
+                memory_manager is not None,
+            )
             return handler
         except Exception as e:
             logger.error("Bootstrap: ContextHandler failed: %s", e)
