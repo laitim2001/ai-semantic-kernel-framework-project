@@ -56,11 +56,15 @@ class OrchestratorToolRegistry:
     callables.  When ``execute()`` is called the registry delegates to the
     registered handler; if no handler exists a stub result is returned so that
     the pipeline remains functional before handlers are wired in Phase 37.
+
+    Sprint 137: ToolSecurityGateway integration — all tool calls pass through
+    security checks before execution.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, security_gateway: Any = None) -> None:
         self._tools: Dict[str, ToolDefinition] = {}
         self._handlers: Dict[str, Callable[..., Any]] = {}  # tool_name -> callable
+        self._security_gateway = security_gateway  # Sprint 137
         self._register_builtin_tools()
 
     # ------------------------------------------------------------------
@@ -251,6 +255,25 @@ class OrchestratorToolRegistry:
                 ),
             )
 
+        # Sprint 137: ToolSecurityGateway check
+        if self._security_gateway:
+            try:
+                security_result = await self._run_security_check(
+                    tool_name, params, user_id, role
+                )
+                if security_result and not security_result.get("allowed", True):
+                    logger.warning(
+                        "Tool '%s' blocked by SecurityGateway: %s",
+                        tool_name, security_result.get("reason", "unknown"),
+                    )
+                    return ToolResult(
+                        tool_name=tool_name,
+                        success=False,
+                        error=f"Security check failed: {security_result.get('reason', 'blocked')}",
+                    )
+            except Exception as e:
+                logger.warning("SecurityGateway check error (non-blocking): %s", e)
+
         handler = self._handlers.get(tool_name)
         if not handler:
             # No handler registered yet — return stub for Sprint 112
@@ -282,3 +305,33 @@ class OrchestratorToolRegistry:
                 "Tool '%s' execution failed: %s", tool_name, e, exc_info=True
             )
             return ToolResult(tool_name=tool_name, success=False, error=str(e))
+
+    async def _run_security_check(
+        self,
+        tool_name: str,
+        params: Dict[str, Any],
+        user_id: Optional[str],
+        role: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Run ToolSecurityGateway validation (Sprint 137)."""
+        if self._security_gateway is None:
+            return None
+        try:
+            if hasattr(self._security_gateway, "validate_tool_call"):
+                result = await self._security_gateway.validate_tool_call(
+                    tool_name=tool_name,
+                    params=params,
+                    user_id=user_id,
+                    role=role,
+                )
+                return result if isinstance(result, dict) else {"allowed": bool(result)}
+            if hasattr(self._security_gateway, "check"):
+                result = self._security_gateway.check(
+                    tool_name=tool_name,
+                    params=params,
+                    user_id=user_id,
+                )
+                return result if isinstance(result, dict) else {"allowed": bool(result)}
+        except Exception as e:
+            logger.warning("SecurityGateway check error: %s", e)
+        return None

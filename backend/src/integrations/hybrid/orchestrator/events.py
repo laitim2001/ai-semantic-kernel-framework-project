@@ -31,6 +31,10 @@ class EventType(str, Enum):
     PIPELINE_STARTED = "pipeline.started"
     PIPELINE_COMPLETED = "pipeline.completed"
     PIPELINE_ERROR = "pipeline.error"
+    # Sprint 135: Intermediate streaming events
+    THINKING_TOKEN = "thinking.token"
+    TOOL_CALL_PROGRESS = "tool_call.progress"
+    STEP_PROGRESS = "step.progress"
 
 
 @dataclass

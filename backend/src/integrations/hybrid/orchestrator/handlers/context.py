@@ -27,8 +27,14 @@ class ContextHandler(Handler):
     - Post-execution: Sync context after execution
     """
 
-    def __init__(self, *, context_bridge: Optional[ContextBridge] = None):
+    def __init__(
+        self,
+        *,
+        context_bridge: Optional[ContextBridge] = None,
+        memory_manager: Optional[Any] = None,
+    ):
         self._context_bridge = context_bridge or ContextBridge()
+        self._memory_manager = memory_manager  # Sprint 135: auto-memory injection
 
     @property
     def handler_type(self) -> HandlerType:
@@ -44,10 +50,33 @@ class ContextHandler(Handler):
         request: OrchestratorRequest,
         context: Dict[str, Any],
     ) -> HandlerResult:
-        """Prepare hybrid context before execution."""
+        """Prepare hybrid context before execution.
+
+        Sprint 135: Also retrieves relevant memories and injects them
+        into the pipeline context for the AgentHandler to use.
+        """
         try:
             hybrid_context = await self._prepare_context(request.session_id or "")
             context["hybrid_context"] = hybrid_context
+
+            # Sprint 135: Auto-inject relevant memories
+            if self._memory_manager:
+                try:
+                    memories = await self._memory_manager.retrieve_relevant_memories(
+                        query=request.content,
+                        user_id=request.metadata.get("user_id") if request.metadata else None,
+                        limit=5,
+                    )
+                    if memories:
+                        memory_context = self._memory_manager.build_memory_context(memories)
+                        context["memory_context"] = memory_context
+                        context["retrieved_memories"] = memories
+                        logger.info(
+                            "ContextHandler: injected %d memories into context",
+                            len(memories),
+                        )
+                except Exception as e:
+                    logger.warning("ContextHandler: memory injection failed: %s", e)
 
             return HandlerResult(
                 success=True,
