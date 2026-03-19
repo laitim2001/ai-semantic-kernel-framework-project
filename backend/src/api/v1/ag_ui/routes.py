@@ -992,6 +992,24 @@ def _apply_diff_to_state(
 
 
 @router.get(
+    "/threads",
+    summary="List Threads",
+    description="List all known threads with their state metadata.",
+)
+async def list_threads() -> Dict[str, Any]:
+    """List all threads that have state stored."""
+    threads = []
+    for thread_id, state in _thread_states.items():
+        threads.append({
+            "thread_id": thread_id,
+            "version": _thread_versions.get(thread_id, 0),
+            "updated_at": _thread_timestamps.get(thread_id, datetime.utcnow()).isoformat(),
+            "state_keys": list(state.keys()) if state else [],
+        })
+    return {"threads": threads, "total": len(threads)}
+
+
+@router.get(
     "/threads/{thread_id}/state",
     response_model=ThreadStateResponse,
     summary="Get Thread State",

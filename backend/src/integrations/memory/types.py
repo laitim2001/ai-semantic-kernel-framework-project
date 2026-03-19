@@ -189,17 +189,31 @@ class MemoryConfig:
     )
 
     # Embedding settings
-    embedding_model: str = field(
-        default_factory=lambda: os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+    embedding_provider: str = field(
+        default_factory=lambda: os.getenv("MEMORY_EMBEDDING_PROVIDER", "azure_openai")
     )
-    embedding_dims: int = 1536
+    embedding_model: str = field(
+        default_factory=lambda: os.getenv(
+            "AZURE_OPENAI_EMBEDDING_MODEL",
+            os.getenv("EMBEDDING_MODEL", "text-embedding-3-large"),
+        )
+    )
+    embedding_dims: int = 3072  # text-embedding-3-large = 3072, text-embedding-3-small = 1536
+    azure_embedding_deployment: str = field(
+        default_factory=lambda: os.getenv(
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-large"
+        )
+    )
 
     # LLM settings (for mem0 memory extraction)
     llm_provider: str = field(
-        default_factory=lambda: os.getenv("MEMORY_LLM_PROVIDER", "anthropic")
+        default_factory=lambda: os.getenv("MEMORY_LLM_PROVIDER", "azure_openai")
     )
     llm_model: str = field(
-        default_factory=lambda: os.getenv("MEMORY_LLM_MODEL", "claude-haiku-4-5-20251001")
+        default_factory=lambda: os.getenv(
+            "MEMORY_LLM_MODEL",
+            os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.2"),
+        )
     )
 
     # TTL settings (in seconds)
