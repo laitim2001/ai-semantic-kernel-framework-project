@@ -47,9 +47,16 @@ def _get_tool_registry() -> OrchestratorToolRegistry:
             from src.domain.tasks.service import TaskService
             from src.infrastructure.storage.task_store import TaskStore
 
+            from src.integrations.hybrid.orchestrator.result_synthesiser import (
+                ResultSynthesiser,
+            )
             task_store = TaskStore()
             task_service = TaskService(task_store=task_store)
-            handlers = DispatchHandlers(task_service=task_service)
+            synthesiser = ResultSynthesiser()  # LLM injected via session factory
+            handlers = DispatchHandlers(
+                task_service=task_service,
+                result_synthesiser=synthesiser,
+            )
             handlers.register_all(_tool_registry)
             logger.info(
                 "Orchestrator: Dispatch handlers registered (%d tools wired)",

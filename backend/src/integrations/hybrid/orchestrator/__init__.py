@@ -42,6 +42,16 @@ from src.integrations.hybrid.orchestrator.session_factory import (
 from src.integrations.hybrid.orchestrator.dispatch_handlers import (
     DispatchHandlers,
 )
+from src.integrations.hybrid.orchestrator.task_result_protocol import (
+    TaskResultEnvelope,
+    TaskResultNormaliser,
+    WorkerResult,
+    WorkerType,
+    ResultStatus,
+)
+from src.integrations.hybrid.orchestrator.result_synthesiser import (
+    ResultSynthesiser,
+)
 
 __all__ = [
     # Contracts
@@ -69,4 +79,11 @@ __all__ = [
     "OrchestratorSessionFactory",
     # Dispatch Handlers (Sprint 113)
     "DispatchHandlers",
+    # TaskResult Protocol + Synthesiser (Sprint 114)
+    "TaskResultEnvelope",
+    "TaskResultNormaliser",
+    "WorkerResult",
+    "WorkerType",
+    "ResultStatus",
+    "ResultSynthesiser",
 ]
