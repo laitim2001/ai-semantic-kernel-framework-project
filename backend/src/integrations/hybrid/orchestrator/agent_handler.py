@@ -64,7 +64,12 @@ class AgentHandler(Handler):
         If the LLM service is unavailable the handler returns a fallback message
         without raising, ensuring the pipeline does not crash.
         """
-        routing_decision = context.get("routing_decision")
+        # Look up routing_decision from pipeline context first, then fall
+        # back to request.metadata (used by the orchestrator chat endpoint
+        # which runs routing externally before calling the mediator).
+        routing_decision = context.get("routing_decision") or (
+            request.metadata.get("routing_decision") if request.metadata else None
+        )
         user_input = request.content
 
         # --- Graceful degradation when LLM is not available ----------------
