@@ -304,6 +304,48 @@ When fixing bugs or implementing feature changes, create corresponding docs in `
 
 ---
 
+## CRITICAL: Sprint Execution Workflow
+
+> **This rule is mandatory for all sprint work. Violation occurred in Phase 35-38 (Sprint 107-120) and must never be repeated.**
+
+Every sprint MUST follow this workflow in order:
+
+### Step 1: Create Plan File
+Before writing ANY code, create `docs/03-implementation/sprint-planning/phase-XX/sprint-XXX-plan.md`:
+- User Stories (作為/我希望/以便 format)
+- Technical specifications
+- File change list
+- Acceptance criteria
+
+### Step 2: Create Checklist File
+Create `docs/03-implementation/sprint-planning/phase-XX/sprint-XXX-checklist.md`:
+- Checkbox items (`- [ ]`) for every deliverable
+- Verification criteria
+- Links to plan file
+
+### Step 3: Implement Code
+Only after plan + checklist exist, begin coding.
+
+### Step 4: Update Checklist
+As work progresses, mark items `[x]` in the checklist.
+
+### Step 5: Create Progress Doc
+Create `docs/03-implementation/sprint-execution/sprint-XXX/progress.md` with execution details.
+
+### Correct Flow
+```
+Phase README → Sprint Plan → Sprint Checklist → Code → Update Checklist → Progress Doc
+```
+
+### WRONG Flow (what happened in Phase 35-38)
+```
+Phase README → Code → Progress Doc  (SKIPPED plan + checklist)
+```
+
+Reference existing examples: `docs/03-implementation/sprint-planning/phase-29/sprint-100-plan.md` and `sprint-100-checklist.md`
+
+---
+
 ## CRITICAL: Microsoft Agent Framework API Usage
 
 > **This is the most important rule for this project.**
