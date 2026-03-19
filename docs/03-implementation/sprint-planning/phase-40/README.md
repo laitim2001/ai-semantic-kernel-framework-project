@@ -6,7 +6,7 @@ Phase 40 專注於 **前端改善**，建立缺少的 UI 頁面和組件，讓 E
 
 基於 Agent Team 討論結論（前端架構師 + UX 設計師 + 後端顧問），後端 API 已 95% 就緒，前端需要 5 個新頁面/改造才能支持完整的 10 步 E2E 流程。
 
-> **Status**: 📋 規劃中 — 3 Sprints (138-140), ~30 SP
+> **Status**: ✅ 已完成 — 3 Sprints (138-140), 30 SP
 
 ## 核心問題
 
@@ -32,9 +32,9 @@ Phase 40 專注於 **前端改善**，建立缺少的 UI 頁面和組件，讓 E
 
 | Sprint | 名稱 | Story Points | 狀態 |
 |--------|------|--------------|------|
-| [Sprint 138](./sprint-138-plan.md) | Orchestrator Chat 增強 + Session 管理 | ~12 點 | 📋 計劃中 |
-| [Sprint 139](./sprint-139-plan.md) | Task Dashboard + 內聯進度組件 | ~10 點 | 📋 計劃中 |
-| [Sprint 140](./sprint-140-plan.md) | Knowledge 管理 + Memory 檢視 + 導航更新 | ~8 點 | 📋 計劃中 |
+| [Sprint 138](./sprint-138-plan.md) | Orchestrator Chat 增強 + Session 管理 | 12 點 | ✅ 已完成 |
+| [Sprint 139](./sprint-139-plan.md) | Task Dashboard + 內聯進度組件 | 10 點 | ✅ 已完成 |
+| [Sprint 140](./sprint-140-plan.md) | Knowledge 管理 + Memory 檢視 + 導航更新 | 8 點 | ✅ 已完成 |
 
 **總計**: ~30 Story Points (3 Sprints)
 

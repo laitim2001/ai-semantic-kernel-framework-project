@@ -71,6 +71,54 @@ export {
   type UseDevToolsStreamReturn,
 } from './useDevToolsStream';
 
+// Sprint 138: Orchestrator Chat Hook (Phase 40)
+export {
+  useOrchestratorChat,
+  type UseOrchestratorChatOptions,
+  type UseOrchestratorChatReturn,
+} from './useOrchestratorChat';
+
+// Sprint 138: Session Management Hooks (Phase 40)
+export {
+  useSessions,
+  useSession,
+  useSessionMessages,
+  useRecoverableSessions,
+  useResumeSession,
+  useDeleteSession,
+  sessionKeys,
+} from './useSessions';
+
+// Sprint 139: Task Management Hooks (Phase 40)
+export {
+  useTasks,
+  useTask,
+  useTaskSteps,
+  useCancelTask,
+  useRetryTask,
+  taskKeys,
+} from './useTasks';
+
+// Sprint 140: Knowledge Management Hooks (Phase 40)
+export {
+  useKnowledgeSearch,
+  useDocuments,
+  useUploadDocument,
+  useDeleteDocument,
+  useSkills,
+  useKnowledgeStatus,
+  knowledgeKeys,
+} from './useKnowledge';
+
+// Sprint 140: Memory System Hooks (Phase 40)
+export {
+  useMemorySearch,
+  useUserMemories,
+  useMemoryStats,
+  useDeleteMemory,
+  memoryKeys,
+} from './useMemory';
+
 // Sprint 89: Event Filter Hook
 export {
   useEventFilter,

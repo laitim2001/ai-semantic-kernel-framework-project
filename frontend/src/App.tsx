@@ -48,6 +48,15 @@ import { AGUITestPanel } from '@/pages/DevUI/AGUITestPanel';
 import { SwarmTestPage } from '@/pages/SwarmTestPage';
 // Sprint 133: Workflow DAG Editor (Phase 34)
 import { WorkflowEditorPage } from '@/pages/workflows/WorkflowEditorPage';
+// Sprint 138: Session Management Pages (Phase 40)
+import { SessionsPage } from '@/pages/sessions/SessionsPage';
+import { SessionDetailPage } from '@/pages/sessions/SessionDetailPage';
+// Sprint 139: Task Dashboard Pages (Phase 40)
+import { TaskDashboardPage } from '@/pages/tasks/TaskDashboardPage';
+import { TaskDetailPage } from '@/pages/tasks/TaskDetailPage';
+// Sprint 140: Knowledge + Memory Pages (Phase 40)
+import { KnowledgePage } from '@/pages/knowledge/KnowledgePage';
+import { MemoryPage } from '@/pages/memory/MemoryPage';
 
 function App() {
   return (
@@ -98,6 +107,20 @@ function App() {
 
         {/* Templates */}
         <Route path="templates" element={<TemplatesPage />} />
+
+        {/* Sessions (Sprint 138 - Phase 40) */}
+        <Route path="sessions" element={<SessionsPage />} />
+        <Route path="sessions/:id" element={<SessionDetailPage />} />
+
+        {/* Tasks (Sprint 139 - Phase 40) */}
+        <Route path="tasks" element={<TaskDashboardPage />} />
+        <Route path="tasks/:id" element={<TaskDetailPage />} />
+
+        {/* Knowledge (Sprint 140 - Phase 40) */}
+        <Route path="knowledge" element={<KnowledgePage />} />
+
+        {/* Memory (Sprint 140 - Phase 40) */}
+        <Route path="memory" element={<MemoryPage />} />
 
         {/* Approvals */}
         <Route path="approvals" element={<ApprovalsPage />} />
