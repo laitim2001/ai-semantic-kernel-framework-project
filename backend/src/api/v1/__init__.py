@@ -112,6 +112,9 @@ from src.api.v1.tasks import router as tasks_router  # Sprint 113
 # Phase 37: Session Resume
 from src.api.v1.orchestrator.session_routes import router as session_resume_router  # Sprint 115
 
+# Phase 38: Knowledge Management
+from src.api.v1.knowledge import router as knowledge_router  # Sprint 119
+
 # =============================================================================
 # Router Assembly
 # =============================================================================
@@ -234,6 +237,9 @@ protected_router.include_router(tasks_router)  # Sprint 113
 
 # Phase 37: Session Resume
 protected_router.include_router(session_resume_router)  # Sprint 115
+
+# Phase 38: Knowledge Management
+protected_router.include_router(knowledge_router)  # Sprint 119
 
 # -----------------------------------------------------------------------------
 # Assemble into main api_router

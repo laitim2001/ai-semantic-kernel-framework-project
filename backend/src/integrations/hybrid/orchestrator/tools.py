@@ -135,6 +135,17 @@ class OrchestratorToolRegistry:
                 },
                 required_role="operator",
             ),
+            ToolDefinition(
+                name="search_knowledge",
+                description="搜尋企業知識庫（ITIL SOP、技術文檔、最佳實踐）",
+                tool_type=ToolType.SYNC,
+                parameters={
+                    "query": "str",
+                    "collection": "Optional[str]",
+                    "limit": "int",
+                },
+                required_role="viewer",
+            ),
         ]
         for tool in builtins:
             self._tools[tool.name] = tool

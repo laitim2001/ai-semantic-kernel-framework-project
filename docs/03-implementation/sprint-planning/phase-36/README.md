@@ -6,7 +6,7 @@ Phase 36 專注於 **端到端基礎組裝**，在 Phase 35 (A0) 驗證通過的
 
 本 Phase 是 IPA Platform 從「模組可用」邁向「流程可用」的關鍵里程碑，聚焦於安全基礎、持久化遷移、審批統一、以及 Orchestrator 完整化四大主軸。
 
-> **Status**: 📋 規劃中 — 4 Sprints (109-112), ~48 SP
+> **Status**: ✅ 完成 — 4 Sprints (109-112), ~48 SP
 
 ## 目標
 
@@ -19,20 +19,20 @@ Phase 36 專注於 **端到端基礎組裝**，在 Phase 35 (A0) 驗證通過的
 
 ## 前置條件
 
-- ⬜ Phase 35 (A0) 驗證通過（核心模組可獨立運作）
-- ⬜ Orchestrator 基礎意圖路由可用（Phase 28 三層路由）
-- ⬜ AG-UI SSE 基礎設施就緒
-- ⬜ PostgreSQL + Redis 基礎設施可用
-- ⬜ Claude SDK / MAF 整合層穩定
+- ✅ Phase 35 (A0) 驗證通過（核心模組可獨立運作）
+- ✅ Orchestrator 基礎意圖路由可用（Phase 28 三層路由）
+- ✅ AG-UI SSE 基礎設施就緒
+- ✅ PostgreSQL + Redis 基礎設施可用
+- ✅ Claude SDK / MAF 整合層穩定
 
 ## Sprint 規劃
 
 | Sprint | 名稱 | Story Points | 狀態 |
 |--------|------|-------------|------|
-| [Sprint 109](./sprint-109-plan.md) | 安全基礎 + LLM Call Pool | ~12 pts | 📋 規劃中 |
-| [Sprint 110](./sprint-110-plan.md) | InMemory → Redis/PostgreSQL 遷移（核心模組） | ~12 pts | 📋 規劃中 |
-| [Sprint 111](./sprint-111-plan.md) | 統一審批系統 + Chat History 後端同步 | ~12 pts | 📋 規劃中 |
-| [Sprint 112](./sprint-112-plan.md) | Orchestrator 完整化 + 更多 Tools | ~12 pts | 📋 規劃中 |
+| [Sprint 109](./sprint-109-plan.md) | 安全基礎 + LLM Call Pool | ~12 pts | ✅ 完成 |
+| [Sprint 110](./sprint-110-plan.md) | InMemory → Redis/PostgreSQL 遷移（核心模組） | ~12 pts | ✅ 完成 |
+| [Sprint 111](./sprint-111-plan.md) | 統一審批系統 + Chat History 後端同步 | ~12 pts | ✅ 完成 |
+| [Sprint 112](./sprint-112-plan.md) | Orchestrator 完整化 + 更多 Tools | ~12 pts | ✅ 完成 |
 
 **總計**: ~48 Story Points（4 Sprints）
 

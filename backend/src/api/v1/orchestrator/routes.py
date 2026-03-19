@@ -97,6 +97,22 @@ def _get_session_factory() -> OrchestratorSessionFactory:
 
 
 # =============================================================================
+# E2E Validation (Sprint 120)
+# =============================================================================
+
+
+@router.get("/validate")
+async def orchestrator_validate() -> Dict[str, Any]:
+    """Run comprehensive E2E pipeline validation.
+
+    Checks all components assembled across Phase 35-38.
+    """
+    from src.integrations.hybrid.orchestrator.e2e_validator import E2EValidator
+    validator = E2EValidator()
+    return await validator.validate_all()
+
+
+# =============================================================================
 # Health Check
 # =============================================================================
 
