@@ -287,10 +287,23 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
         request_metadata: Dict[str, Any] = dict(request.metadata) if request.metadata else {}
         request_metadata["user_id"] = request.user_id or request.source or "anonymous"
 
+        # Sprint 144: Map user-selected mode to force_mode
+        force_mode = None
+        if request.mode:
+            from src.integrations.hybrid.intent import ExecutionMode
+            mode_map = {
+                "chat": ExecutionMode.CHAT_MODE,
+                "workflow": ExecutionMode.WORKFLOW_MODE,
+                "swarm": ExecutionMode.SWARM_MODE,
+                "hybrid": ExecutionMode.HYBRID_MODE,
+            }
+            force_mode = mode_map.get(request.mode.lower())
+
         orchestrator_request = OrchestratorRequest(
             content=request.content,
             session_id=request.session_id,
             user_id=request.user_id or request.source or "anonymous",
+            force_mode=force_mode,
             metadata=request_metadata,
         )
 
@@ -339,15 +352,35 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
         )
         routing_layer_str = rd.routing_layer
 
+    # Sprint 144: Extract execution_mode from response object
+    execution_mode_str: Optional[str] = None
+    if hasattr(response, "execution_mode") and response.execution_mode:
+        em = response.execution_mode
+        execution_mode_str = em.value if hasattr(em, "value") else str(em)
+
+    # Sprint 144: Extract tool_calls from agent_response
+    tool_calls_list = None
+    agent_resp = meta.get("agent_response") or {}
+    if isinstance(agent_resp, dict) and agent_resp.get("tool_calls"):
+        tool_calls_list = agent_resp["tool_calls"]
+
+    # Sprint 144: Extract suggested_mode from metadata
+    suggested_mode_str = meta.get("suggested_mode") or (
+        context.get("suggested_mode") if hasattr(response, "metadata") else None
+    )
+
     return PipelineResponse(
         content=response.content or "",
         intent_category=intent_category_str,
         confidence=confidence_val,
         risk_level=risk_level_str,
         routing_layer=routing_layer_str,
+        execution_mode=execution_mode_str,
+        suggested_mode=suggested_mode_str,
         framework_used=response.framework_used or "orchestrator_agent",
         session_id=response.session_id,
         is_complete=response.success,
+        tool_calls=tool_calls_list,
         processing_time_ms=round(elapsed_ms, 2),
     )
 

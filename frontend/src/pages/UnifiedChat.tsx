@@ -251,6 +251,10 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const [dialogQuestions, setDialogQuestions] = useState<DialogQuestion[] | null>(null);
   // Phase 41: Track orchestrator pipeline session ID
   const [orchestratorSessionId, setOrchestratorSessionId] = useState<string | null>(null);
+  const [isPipelineSending, setIsPipelineSending] = useState(false);
+  // Sprint 144: User-controlled pipeline mode
+  const [pipelineMode, setPipelineMode] = useState<'chat' | 'workflow' | 'swarm'>('chat');
+  const [suggestedMode, setSuggestedMode] = useState<string | null>(null);
   // Phase 41: Track typewriter animation state
   const [typewriterContent, setTypewriterContent] = useState<string | null>(null);
   const [typewriterMessageId, setTypewriterMessageId] = useState<string | null>(null);
@@ -724,10 +728,14 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       const messagesWithUser = [...messagesRef.current, userMessage];
       setMessages(messagesWithUser);
 
+      // Sprint 144: Show loading state while pipeline is processing
+      setIsPipelineSending(true);
+
       try {
         const response: SendOrchestratorMessageResponse = await orchestratorApi.sendMessage({
           content,
           source: 'user',
+          mode: pipelineMode,
           session_id: orchestratorSessionId || undefined,
           user_id: userId,
         });
@@ -735,6 +743,11 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
         // Track pipeline session
         if (response.session_id) {
           setOrchestratorSessionId(response.session_id);
+        }
+
+        // Sprint 144: Show suggested mode from routing
+        if (response.suggested_mode && response.suggested_mode !== pipelineMode) {
+          setSuggestedMode(response.suggested_mode);
         }
 
         // Build orchestration metadata from PipelineResponse
@@ -835,7 +848,6 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
 
       } catch (err) {
         console.error('[UnifiedChat] Pipeline send failed:', err);
-        // Fallback: show error (use messagesWithUser which already has user message)
         const errorMessage = {
           id: `orch-err-${Date.now()}`,
           role: 'assistant' as const,
@@ -843,6 +855,9 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
           timestamp: new Date().toISOString(),
         };
         setMessages([...messagesWithUser, errorMessage]);
+      } finally {
+        // Sprint 144: Clear loading state
+        setIsPipelineSending(false);
       }
 
       if (allFileIds.length > 0) clearAttachments();
@@ -1075,15 +1090,54 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
           />
         )}
 
+        {/* Sprint 144: Mode Selector + Suggested Mode Banner */}
+        {suggestedMode && suggestedMode !== pipelineMode && (
+          <div className="mx-4 mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-sm">
+            <span className="text-amber-800">
+              路由建議切換到 <strong>{suggestedMode}</strong> 模式
+            </span>
+            <button
+              className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded text-xs font-medium"
+              onClick={() => {
+                setPipelineMode(suggestedMode as 'chat' | 'workflow' | 'swarm');
+                setSuggestedMode(null);
+              }}
+            >
+              切換
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-1 px-4 pb-1">
+          {(['chat', 'workflow', 'swarm'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => { setPipelineMode(m); setSuggestedMode(null); }}
+              className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
+                pipelineMode === m
+                  ? m === 'chat'
+                    ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-300'
+                    : m === 'workflow'
+                    ? 'bg-purple-100 text-purple-800 ring-1 ring-purple-300'
+                    : 'bg-orange-100 text-orange-800 ring-1 ring-orange-300'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              {m === 'chat' ? 'Chat' : m === 'workflow' ? 'Workflow' : 'Swarm'}
+            </button>
+          ))}
+        </div>
+
         {/* Input Area - S75-4: Added file attachment support */}
         <ChatInput
           onSend={handleSend}
-          isStreaming={isStreaming || isUploading}
+          isStreaming={isStreaming || isUploading || isPipelineSending}
           onCancel={handleCancel}
           placeholder={
-            effectiveMode === 'chat'
+            pipelineMode === 'chat'
               ? 'Type a message...'
-              : 'Describe your task...'
+              : pipelineMode === 'workflow'
+              ? 'Describe your workflow task...'
+              : 'Describe the incident for swarm agents...'
           }
           attachments={typedAttachments}
           onAttach={handleAttach}

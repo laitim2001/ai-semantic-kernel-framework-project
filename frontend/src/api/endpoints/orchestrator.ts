@@ -47,6 +47,7 @@ export interface OrchestratorToolCall {
 export interface SendOrchestratorMessageRequest {
   content: string;
   source?: 'user' | 'servicenow' | 'prometheus';
+  mode?: 'chat' | 'workflow' | 'swarm';  // Sprint 144: user-selected mode
   user_id?: string;
   session_id?: string;
   metadata?: Record<string, unknown>;
@@ -64,9 +65,11 @@ export interface SendOrchestratorMessageResponse {
   risk_level?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   routing_layer?: string;
   execution_mode?: string;
+  suggested_mode?: string;  // Sprint 144: routing suggestion
   framework_used?: string;
   task_id?: string;
   task_ids?: string[];
+  tool_calls?: Array<Record<string, unknown>>;
   processing_time_ms?: number;
   is_complete?: boolean;
   requires_approval?: boolean;

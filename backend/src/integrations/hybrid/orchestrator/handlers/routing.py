@@ -193,8 +193,24 @@ class RoutingHandler(Handler):
                     session_context=session_context,
                 )
 
+        # Sprint 144: Generate mode suggestion from routing_decision
+        # (for display only — user controls actual mode via force_mode)
+        suggested_mode = None
+        if routing_decision:
+            rd_intent = str(getattr(routing_decision, "intent_category", "")).lower()
+            rd_risk = str(getattr(routing_decision, "risk_level", "")).lower()
+
+            if "incident" in rd_intent and "critical" in rd_risk:
+                suggested_mode = "swarm"
+            elif "incident" in rd_intent and "high" in rd_risk:
+                suggested_mode = "workflow"
+            elif "request" in rd_intent or "change" in rd_intent:
+                suggested_mode = "workflow"
+
         context["intent_analysis"] = intent_analysis
         context["execution_mode"] = intent_analysis.mode
+        if suggested_mode:
+            context["suggested_mode"] = suggested_mode
 
         return HandlerResult(
             success=True,
@@ -203,5 +219,6 @@ class RoutingHandler(Handler):
                 "routing_decision": routing_decision,
                 "intent_analysis": intent_analysis,
                 "execution_mode": intent_analysis.mode,
+                "suggested_mode": suggested_mode,
             },
         )

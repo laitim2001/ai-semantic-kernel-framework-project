@@ -171,6 +171,26 @@ class FrameworkSelector:
             user_input, session_context, history
         )
 
+        # Sprint 144: If routing_decision is available but no RoutingDecisionClassifier
+        # produced a result (e.g. import mismatch), create a synthetic result directly.
+        if routing_decision and not any(
+            r.classifier_name == "routing_decision" for r in classification_results
+        ):
+            from src.integrations.hybrid.intent.classifiers.routing_decision import (
+                RoutingDecisionClassifier,
+            )
+            fallback_rd = RoutingDecisionClassifier(weight=1.5)
+            fallback_rd.set_routing_decision(routing_decision)
+            try:
+                rd_result = await fallback_rd.classify(user_input, session_context, history)
+                classification_results.append(rd_result)
+                logger.info(
+                    "FrameworkSelector: injected routing_decision result: mode=%s, conf=%.2f",
+                    rd_result.mode.value, rd_result.confidence,
+                )
+            except Exception as e:
+                logger.warning("FrameworkSelector: routing_decision fallback failed: %s", e)
+
         # If no classifiers or all failed, return default
         if not classification_results:
             return self._create_default_analysis(

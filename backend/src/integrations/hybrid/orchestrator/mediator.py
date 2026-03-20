@@ -471,13 +471,33 @@ class OrchestratorMediator:
     ) -> OrchestratorResponse:
         """Build final response from execution result."""
         exec_data = (exec_result.data if exec_result else {}) or {}
-        mode = exec_data.get("execution_mode", ExecutionMode.CHAT_MODE)
+
+        # Sprint 144: Use pipeline_context execution_mode (set by RoutingHandler)
+        mode = context.get("execution_mode", ExecutionMode.CHAT_MODE)
         if isinstance(mode, str):
-            mode = ExecutionMode(mode) if mode else ExecutionMode.CHAT_MODE
+            try:
+                mode = ExecutionMode(mode) if mode else ExecutionMode.CHAT_MODE
+            except ValueError:
+                mode = ExecutionMode.CHAT_MODE
+
+        # Sprint 144: If ExecutionHandler returned empty content, fall back to
+        # AgentHandler response (common when WORKFLOW/SWARM dispatch is not
+        # yet fully connected).
+        content = exec_data.get("content", "")
+        if not content:
+            agent_resp = context.get("agent_response") or {}
+            if isinstance(agent_resp, dict):
+                content = agent_resp.get("content", "")
+
+        # Sprint 144: Collect tool_calls from agent_response
+        agent_resp = context.get("agent_response") or {}
+        agent_tool_calls = (
+            agent_resp.get("tool_calls") if isinstance(agent_resp, dict) else None
+        )
 
         return OrchestratorResponse(
-            success=exec_result.success if exec_result else False,
-            content=exec_data.get("content", ""),
+            success=exec_result.success if exec_result else (bool(content)),
+            content=content,
             error=exec_data.get("error"),
             framework_used=exec_data.get("framework_used", ""),
             execution_mode=mode,
@@ -489,6 +509,11 @@ class OrchestratorMediator:
             tokens_used=exec_data.get("tokens_used", 0),
             metadata={
                 **exec_data.get("metadata", {}),
+                "execution_mode": mode,
+                "suggested_mode": context.get("suggested_mode"),
+                "agent_response": {"tool_calls": agent_tool_calls}
+                if agent_tool_calls
+                else {},
                 "routing_decision": (
                     context["routing_decision"].to_dict()
                     if context.get("routing_decision")

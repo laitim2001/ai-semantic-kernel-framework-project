@@ -27,6 +27,7 @@ class PipelineRequest(BaseModel):
 
     content: str
     source: PipelineSource = PipelineSource.USER
+    mode: Optional[str] = None  # Sprint 144: user-selected mode (chat/workflow/swarm)
     user_id: Optional[str] = None
     session_id: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -41,8 +42,11 @@ class PipelineResponse(BaseModel):
     confidence: Optional[float] = None
     risk_level: Optional[str] = None
     routing_layer: Optional[str] = None
+    execution_mode: Optional[str] = None  # Sprint 144: user-selected or auto-detected mode
+    suggested_mode: Optional[str] = None  # Sprint 144: routing suggestion (user can ignore)
     framework_used: str = "orchestrator_agent"
     session_id: Optional[str] = None
     is_complete: bool = True
     task_id: Optional[str] = None
+    tool_calls: Optional[List[Dict[str, Any]]] = None  # Sprint 144: function calling results
     processing_time_ms: Optional[float] = None
