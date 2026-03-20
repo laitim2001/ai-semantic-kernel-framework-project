@@ -52,6 +52,8 @@ import type { DialogQuestion } from '@/api/endpoints/orchestration';
 import type { Attachment } from '@/types/unified-chat';
 import type { OrchestrationMetadata } from '@/types/ag-ui';
 import { MemoryHint } from '@/components/unified-chat/MemoryHint';
+import { AgentSwarmPanel } from '@/components/unified-chat/agent-swarm/AgentSwarmPanel';
+import { useSwarmStore } from '@/stores/swarmStore';
 import type { MemoryHintItem } from '@/components/unified-chat/MemoryHint';
 import type {
   UnifiedChatProps,
@@ -254,6 +256,25 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const [isPipelineSending] = useState(false); // kept for non-SSE fallback
   // Sprint 145: SSE streaming hook
   const { sendSSE, isStreaming: isSSEStreaming } = useSSEChat();
+  // Sprint 146: Swarm store for AgentSwarmPanel
+  const swarmStatus = useSwarmStore((s) => s.swarmStatus);
+  const _swarmReset = useSwarmStore((s) => s.reset);
+  void _swarmReset; // used on session change (future)
+  const swarmSetStatus = useSwarmStore((s) => s.setSwarmStatus);
+  const swarmAddWorker = useSwarmStore((s) => s.addWorker);
+  const swarmUpdateProgress = useSwarmStore((s) => s.updateWorkerProgress);
+  const _swarmCompleteWorker = useSwarmStore((s) => s.completeWorker);
+  const _swarmComplete = useSwarmStore((s) => s.completeSwarm);
+  void _swarmCompleteWorker; void _swarmComplete; // used by SWARM_COMPLETE events (future)
+  const [showSwarmPanel, setShowSwarmPanel] = useState(false);
+  // Sprint 146: HITL approval state
+  const [pendingApproval, setPendingApproval] = useState<{
+    approvalId: string;
+    action: string;
+    riskLevel: string;
+    description: string;
+    details?: Record<string, unknown>;
+  } | null>(null);
   // Sprint 144: User-controlled pipeline mode
   const [pipelineMode, setPipelineMode] = useState<'chat' | 'workflow' | 'swarm'>('chat');
   const [suggestedMode, setSuggestedMode] = useState<string | null>(null);
@@ -845,6 +866,54 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
             );
             setMessages(updated);
           },
+          onSwarmWorkerStart: (data) => {
+            console.log('[SSE] Swarm worker started:', data);
+            setShowSwarmPanel(true);
+            if (!swarmStatus) {
+              swarmSetStatus({
+                swarmId: `swarm-${Date.now()}`,
+                sessionId: orchestratorSessionId || '',
+                mode: 'parallel',
+                status: 'executing',
+                totalWorkers: 0,
+                overallProgress: 0,
+                workers: [],
+                createdAt: new Date().toISOString(),
+                startedAt: new Date().toISOString(),
+                metadata: {},
+              });
+            }
+            swarmAddWorker({
+              workerId: (data.worker_id as string) || `w-${Date.now()}`,
+              workerName: (data.agent_name as string) || 'Worker',
+              workerType: 'hybrid',
+              role: (data.role as string) || 'worker',
+              status: 'running',
+              progress: 0,
+              toolCallsCount: 0,
+              createdAt: new Date().toISOString(),
+              startedAt: new Date().toISOString(),
+            });
+          },
+          onSwarmProgress: (data) => {
+            swarmUpdateProgress({
+              swarm_id: '',
+              worker_id: data.worker_id as string,
+              progress: data.progress as number,
+              status: (data.status as string) || 'running',
+              updated_at: new Date().toISOString(),
+            });
+          },
+          onApprovalRequired: (data) => {
+            console.log('[SSE] Approval required:', data);
+            setPendingApproval({
+              approvalId: data.approval_id as string,
+              action: data.action as string,
+              riskLevel: data.risk_level as string,
+              description: data.description as string,
+              details: data.details as Record<string, unknown>,
+            });
+          },
           onPipelineError: (error) => {
             console.error('[SSE] Pipeline error:', error);
             const updated = messagesRef.current.map(m =>
@@ -1056,6 +1125,60 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
               </div>
             )}
 
+            {/* Sprint 146: HITL Inline Approval */}
+            {pendingApproval && (
+              <div className="mx-4 my-2 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="text-red-500 text-xl mt-0.5">&#9888;</div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-red-800 text-sm">
+                      {pendingApproval.riskLevel} 風險操作需要審批
+                    </h4>
+                    <p className="text-sm text-red-700 mt-1">{pendingApproval.description}</p>
+                    {pendingApproval.details && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {JSON.stringify(pendingApproval.details)}
+                      </p>
+                    )}
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                        onClick={async () => {
+                          try {
+                            const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+                            await fetch(`${API_BASE}/orchestrator/approval/${pendingApproval.approvalId}`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'approve' }),
+                            });
+                          } catch { /* non-critical */ }
+                          setPendingApproval(null);
+                        }}
+                      >
+                        批准
+                      </button>
+                      <button
+                        className="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
+                        onClick={async () => {
+                          try {
+                            const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+                            await fetch(`${API_BASE}/orchestrator/approval/${pendingApproval.approvalId}`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'reject' }),
+                            });
+                          } catch { /* non-critical */ }
+                          setPendingApproval(null);
+                        }}
+                      >
+                        拒絕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Messages Area - Using ChatArea component with tool support */}
             <ChatArea
               messages={messages}
@@ -1076,6 +1199,17 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
               checkpoints={checkpoints}
               onRestoreCheckpoint={handleRestore}
             />
+          )}
+
+          {/* Sprint 146: Agent Swarm Panel (visible in Swarm mode) */}
+          {(pipelineMode === 'swarm' || showSwarmPanel) && (
+            <div className="w-[360px] border-l bg-white overflow-y-auto hidden xl:block">
+              <AgentSwarmPanel
+                swarmStatus={swarmStatus}
+                onWorkerClick={() => {}}
+                isLoading={isSSEStreaming && pipelineMode === 'swarm'}
+              />
+            </div>
           )}
 
           {/* Sprint 99: Orchestration Panel (Phase 28 debug view) */}

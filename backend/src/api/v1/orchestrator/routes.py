@@ -244,6 +244,34 @@ async def test_intent(
 # =============================================================================
 
 
+@router.post("/approval/{approval_id}")
+async def orchestrator_approval(approval_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle HITL approval response.
+
+    Sprint 146: User approves or rejects a high-risk pipeline operation.
+    Unblocks the waiting pipeline via asyncio.Event.
+    """
+    action = body.get("action", "reject")
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="action must be 'approve' or 'reject'")
+
+    # Find the mediator with the pending approval
+    factory = _get_session_factory()
+    resolved = False
+    for sid in list(factory._sessions.keys()):
+        mediator = factory._sessions.get(sid, {}).get("mediator")
+        if mediator and hasattr(mediator, "resolve_approval"):
+            if mediator.resolve_approval(approval_id, action):
+                resolved = True
+                break
+
+    if not resolved:
+        raise HTTPException(status_code=404, detail=f"Approval {approval_id} not found or expired")
+
+    logger.info("HITL approval %s: %s", approval_id, action)
+    return {"approval_id": approval_id, "action": action, "status": "resolved"}
+
+
 @router.post("/chat/stream")
 async def orchestrator_chat_stream(request: PipelineRequest):
     """SSE streaming endpoint for the orchestration pipeline.

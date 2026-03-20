@@ -87,6 +87,9 @@ class OrchestratorMediator:
 
         # Session state
         self._sessions: Dict[str, Dict[str, Any]] = {}
+        # Sprint 146: HITL approval state
+        self._pending_approvals: Dict[str, Any] = {}  # approval_id -> asyncio.Event
+        self._approval_results: Dict[str, str] = {}  # approval_id -> "approve"/"reject"
 
         logger.info(
             f"OrchestratorMediator initialized with handlers: "
@@ -146,6 +149,23 @@ class OrchestratorMediator:
     def session_count(self) -> int:
         """Get number of active sessions."""
         return len(self._sessions)
+
+    # =========================================================================
+    # Sprint 146: HITL Approval
+    # =========================================================================
+
+    def resolve_approval(self, approval_id: str, action: str) -> bool:
+        """Resolve a pending HITL approval.
+
+        Called by the approval endpoint when user approves/rejects.
+        Sets the event to unblock the waiting pipeline.
+        """
+        event = self._pending_approvals.get(approval_id)
+        if not event:
+            return False
+        self._approval_results[approval_id] = action
+        event.set()
+        return True
 
     # =========================================================================
     # Core Execution
@@ -265,6 +285,55 @@ class OrchestratorMediator:
                         mode=ExecutionMode.WORKFLOW_MODE,
                         pipeline_context=pipeline_context,
                     )
+
+            # Sprint 146: HITL approval via SSE for high-risk operations
+            routing_decision = pipeline_context.get("routing_decision")
+            if routing_decision and event_emitter:
+                rd_risk = str(getattr(routing_decision, "risk_level", "")).lower()
+                if "high" in rd_risk or "critical" in rd_risk:
+                    import asyncio as _aio
+                    approval_id = str(uuid.uuid4())
+                    approval_event = _aio.Event()
+                    self._pending_approvals[approval_id] = approval_event
+
+                    await _emit("APPROVAL_REQUIRED", {
+                        "approval_id": approval_id,
+                        "action": "pipeline_execution",
+                        "risk_level": rd_risk,
+                        "description": f"高風險操作需要審批 (risk={rd_risk})",
+                        "details": {
+                            "intent": str(getattr(routing_decision, "intent_category", "")),
+                            "content_preview": request.content[:100],
+                        },
+                    })
+
+                    # Wait for approval (timeout 120s)
+                    try:
+                        await _aio.wait_for(approval_event.wait(), timeout=120)
+                        result = self._approval_results.pop(approval_id, "approve")
+                        self._pending_approvals.pop(approval_id, None)
+                        if result == "reject":
+                            await _emit("PIPELINE_COMPLETE", {
+                                "content": "操作已被拒絕。",
+                                "mode": _enum_val(pipeline_context.get("execution_mode")),
+                            })
+                            return self._build_short_circuit_response(
+                                HandlerResult(
+                                    success=True,
+                                    handler_type=HandlerType.APPROVAL,
+                                    data={"content": "操作已被用戶拒絕。"},
+                                    should_short_circuit=True,
+                                    short_circuit_response={"content": "操作已被用戶拒絕。"},
+                                ),
+                                session, start_time, handler_results,
+                                framework="hitl_approval",
+                                mode=pipeline_context.get("execution_mode", ExecutionMode.CHAT_MODE),
+                                pipeline_context=pipeline_context,
+                            )
+                        logger.info("HITL: approval granted for %s", approval_id)
+                    except _aio.TimeoutError:
+                        self._pending_approvals.pop(approval_id, None)
+                        logger.warning("HITL: approval timeout for %s", approval_id)
 
             # Step 5: Agent (LLM response generation)
             await _emit("AGENT_THINKING", {"status": "thinking"})
