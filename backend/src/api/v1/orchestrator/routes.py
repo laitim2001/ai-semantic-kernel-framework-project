@@ -312,43 +312,32 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
     # --- Step 3: Build PipelineResponse from mediator results --------------
     elapsed_ms = (time.perf_counter() - start_time) * 1000
 
-    # Extract routing info from mediator response handler_results
+    # Extract routing info from mediator response metadata
     intent_category_str: Optional[str] = None
     confidence_val: Optional[float] = None
     risk_level_str: Optional[str] = None
     routing_layer_str: Optional[str] = None
 
-    # Try to get routing decision from handler results
-    handler_results = response.handler_results or {}
-    routing_result = handler_results.get("routing")
-    if routing_result and routing_result.data:
-        rd = routing_result.data.get("routing_decision")
-        if rd:
-            intent_category_str = (
-                rd.intent_category.value
-                if hasattr(rd, "intent_category") and hasattr(rd.intent_category, "value")
-                else str(rd.get("intent_category", "")) if isinstance(rd, dict) else None
-            )
-            confidence_val = (
-                rd.confidence if hasattr(rd, "confidence")
-                else rd.get("confidence") if isinstance(rd, dict) else None
-            )
-            risk_level_str = (
-                rd.risk_level.value
-                if hasattr(rd, "risk_level") and hasattr(rd.risk_level, "value")
-                else str(rd.get("risk_level", "")) if isinstance(rd, dict) else None
-            )
-            routing_layer_str = (
-                rd.routing_layer if hasattr(rd, "routing_layer")
-                else rd.get("routing_layer") if isinstance(rd, dict) else None
-            )
-
-    # Fallback: check pipeline context stored in response metadata
-    if not intent_category_str and response.metadata:
-        intent_category_str = response.metadata.get("intent_category")
-        confidence_val = response.metadata.get("confidence")
-        risk_level_str = response.metadata.get("risk_level")
-        routing_layer_str = response.metadata.get("routing_layer")
+    meta = response.metadata or {}
+    rd = meta.get("routing_decision")
+    if rd and isinstance(rd, dict):
+        intent_category_str = str(rd.get("intent_category", ""))
+        confidence_val = rd.get("confidence")
+        risk_level_str = str(rd.get("risk_level", ""))
+        routing_layer_str = rd.get("routing_layer")
+    elif rd and hasattr(rd, "intent_category"):
+        intent_category_str = (
+            rd.intent_category.value
+            if hasattr(rd.intent_category, "value")
+            else str(rd.intent_category)
+        )
+        confidence_val = rd.confidence
+        risk_level_str = (
+            rd.risk_level.value
+            if hasattr(rd.risk_level, "value")
+            else str(rd.risk_level)
+        )
+        routing_layer_str = rd.routing_layer
 
     return PipelineResponse(
         content=response.content or "",
