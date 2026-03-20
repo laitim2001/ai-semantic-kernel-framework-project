@@ -83,7 +83,6 @@ def _get_session_factory() -> OrchestratorSessionFactory:
 
         _session_factory = OrchestratorSessionFactory(
             llm_service=llm_service,
-            tool_registry=_get_tool_registry(),
             max_sessions=200,
         )
         logger.info("Orchestrator: Session factory initialized (max_sessions=200)")
@@ -249,53 +248,18 @@ async def test_intent(
 async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
     """Execute the full E2E orchestration pipeline.
 
-    Flow:
-      1. Create LLM service (or fallback to mock)
-      2. Create BusinessIntentRouter with LLM
-      3. Route user input to get RoutingDecision
-      4. Create AgentHandler + OrchestratorMediator
-      5. Execute mediator pipeline
-      6. Return PipelineResponse
+    Phase 41: All 7 pipeline steps are handled by the mediator internally:
+      1. ContextHandler  — memory read + context preparation
+      2. RoutingHandler  — 3-tier intent routing + framework selection
+      3. DialogHandler   — guided dialog (if needed)
+      4. ApprovalHandler — risk assessment + HITL approval
+      5. AgentHandler    — LLM response generation
+      6. ExecutionHandler — MAF/Claude/Swarm task dispatch
+      7. ObservabilityHandler — metrics
     """
     start_time = time.perf_counter()
 
-    # --- Step 1: Create LLM service ----------------------------------------
-    llm_service = None
-    try:
-        from src.integrations.llm.factory import LLMServiceFactory
-
-        llm_service = LLMServiceFactory.create(use_cache=True, cache_ttl=1800)
-        logger.info("Orchestrator chat: LLM service created successfully")
-    except Exception as e:
-        logger.warning("Orchestrator chat: LLM service unavailable: %s", e)
-
-    # --- Step 2: Create intent router --------------------------------------
-    routing_decision = None
-    try:
-        from src.integrations.orchestration.intent_router.router import (
-            create_router_with_llm,
-        )
-
-        intent_router = create_router_with_llm()
-        logger.info("Orchestrator chat: Intent router created")
-    except Exception as e:
-        logger.warning("Orchestrator chat: Intent router creation failed: %s", e)
-        intent_router = None
-
-    # --- Step 3: Route user input ------------------------------------------
-    if intent_router:
-        try:
-            routing_decision = await intent_router.route(request.content)
-            logger.info(
-                "Orchestrator chat: Routed intent=%s, layer=%s, confidence=%.2f",
-                routing_decision.intent_category,
-                routing_decision.routing_layer,
-                routing_decision.confidence,
-            )
-        except Exception as e:
-            logger.warning("Orchestrator chat: Intent routing failed: %s", e)
-
-    # --- Step 4: Get or create per-session Orchestrator via SessionFactory --
+    # --- Step 1: Get or create per-session Orchestrator via SessionFactory --
     try:
         from src.integrations.hybrid.orchestrator.contracts import OrchestratorRequest
 
@@ -304,9 +268,10 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
         mediator = factory.get_or_create(session_id)
         logger.info(
             "Orchestrator chat: Mediator obtained for session '%s' "
-            "(active sessions: %d)",
+            "(active sessions: %d, handlers: %s)",
             session_id,
             factory.active_count,
+            mediator.registered_handlers,
         )
     except Exception as e:
         logger.error("Orchestrator chat: Mediator creation failed: %s", e, exc_info=True)
@@ -317,16 +282,9 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
             is_complete=False,
         )
 
-    # --- Step 5: Execute mediator pipeline ---------------------------------
+    # --- Step 2: Execute full mediator pipeline ----------------------------
     try:
-        # Build metadata with routing decision for AgentHandler to consume
         request_metadata: Dict[str, Any] = dict(request.metadata) if request.metadata else {}
-        if routing_decision:
-            request_metadata["routing_decision"] = _serialize_routing_decision(
-                routing_decision
-            )
-
-        # Phase 41: Pass user_id for memory operations
         request_metadata["user_id"] = request.user_id or request.source or "anonymous"
 
         orchestrator_request = OrchestratorRequest(
@@ -351,27 +309,46 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
             is_complete=False,
         )
 
-    # --- Step 6: Build PipelineResponse ------------------------------------
+    # --- Step 3: Build PipelineResponse from mediator results --------------
     elapsed_ms = (time.perf_counter() - start_time) * 1000
 
+    # Extract routing info from mediator response handler_results
     intent_category_str: Optional[str] = None
     confidence_val: Optional[float] = None
     risk_level_str: Optional[str] = None
     routing_layer_str: Optional[str] = None
 
-    if routing_decision:
-        intent_category_str = (
-            routing_decision.intent_category.value
-            if hasattr(routing_decision.intent_category, "value")
-            else str(routing_decision.intent_category)
-        )
-        confidence_val = routing_decision.confidence
-        risk_level_str = (
-            routing_decision.risk_level.value
-            if hasattr(routing_decision.risk_level, "value")
-            else str(routing_decision.risk_level)
-        )
-        routing_layer_str = routing_decision.routing_layer
+    # Try to get routing decision from handler results
+    handler_results = response.handler_results or {}
+    routing_result = handler_results.get("routing")
+    if routing_result and routing_result.data:
+        rd = routing_result.data.get("routing_decision")
+        if rd:
+            intent_category_str = (
+                rd.intent_category.value
+                if hasattr(rd, "intent_category") and hasattr(rd.intent_category, "value")
+                else str(rd.get("intent_category", "")) if isinstance(rd, dict) else None
+            )
+            confidence_val = (
+                rd.confidence if hasattr(rd, "confidence")
+                else rd.get("confidence") if isinstance(rd, dict) else None
+            )
+            risk_level_str = (
+                rd.risk_level.value
+                if hasattr(rd, "risk_level") and hasattr(rd.risk_level, "value")
+                else str(rd.get("risk_level", "")) if isinstance(rd, dict) else None
+            )
+            routing_layer_str = (
+                rd.routing_layer if hasattr(rd, "routing_layer")
+                else rd.get("routing_layer") if isinstance(rd, dict) else None
+            )
+
+    # Fallback: check pipeline context stored in response metadata
+    if not intent_category_str and response.metadata:
+        intent_category_str = response.metadata.get("intent_category")
+        confidence_val = response.metadata.get("confidence")
+        risk_level_str = response.metadata.get("risk_level")
+        routing_layer_str = response.metadata.get("routing_layer")
 
     return PipelineResponse(
         content=response.content or "",

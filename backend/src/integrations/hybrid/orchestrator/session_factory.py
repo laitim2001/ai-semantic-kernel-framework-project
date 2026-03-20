@@ -1,10 +1,11 @@
 """
 Per-Session Orchestrator Factory — creates independent Orchestrator instances per session.
 
-Each session gets its own OrchestratorMediator + AgentHandler instance,
+Each session gets its own fully-wired OrchestratorMediator via OrchestratorBootstrap,
 sharing the global LLM Pool and Tool Registry.
 
 Sprint 112 — Phase 36 Orchestrator completeness.
+Phase 41 — Refactored to use OrchestratorBootstrap for full 7-handler wiring.
 """
 
 import logging
@@ -12,9 +13,7 @@ import time
 from collections import OrderedDict
 from typing import Any, Dict, Optional
 
-from src.integrations.hybrid.orchestrator.agent_handler import AgentHandler
 from src.integrations.hybrid.orchestrator.mediator import OrchestratorMediator
-from src.integrations.hybrid.orchestrator.tools import OrchestratorToolRegistry
 from src.integrations.llm.protocol import LLMServiceProtocol
 
 logger = logging.getLogger(__name__)
@@ -23,33 +22,27 @@ logger = logging.getLogger(__name__)
 class OrchestratorSessionFactory:
     """Creates and manages per-session Orchestrator instances.
 
-    Every session receives its own ``OrchestratorMediator`` (and therefore its
-    own ``AgentHandler``), while sharing the global LLM service and tool
-    registry.  An LRU eviction policy prevents unbounded memory growth.
+    Every session receives a fully-wired ``OrchestratorMediator`` via
+    ``OrchestratorBootstrap.build()`` with all 7 handlers:
+    1. ContextHandler (memory read/write)
+    2. RoutingHandler (3-tier intent routing + framework selection)
+    3. DialogHandler (guided dialog)
+    4. ApprovalHandler (risk assessment + HITL)
+    5. AgentHandler (LLM response)
+    6. ExecutionHandler (MAF/Claude/Swarm dispatch)
+    7. ObservabilityHandler (metrics)
 
-    Usage::
-
-        factory = OrchestratorSessionFactory(
-            llm_service=llm,
-            tool_registry=registry,
-        )
-        orchestrator = factory.get_or_create("session_123")
-        response = await orchestrator.execute(request)
+    An LRU eviction policy prevents unbounded memory growth.
     """
 
     def __init__(
         self,
         llm_service: Optional[LLMServiceProtocol] = None,
-        tool_registry: Optional[OrchestratorToolRegistry] = None,
         max_sessions: int = 100,
     ) -> None:
         self._llm_service = llm_service
-        self._tool_registry = tool_registry
         self._max_sessions = max_sessions
-        # OrderedDict for LRU eviction: most-recently-used items are moved
-        # to the end via ``move_to_end()``.
         self._sessions: OrderedDict[str, OrchestratorMediator] = OrderedDict()
-        # Track creation timestamps for diagnostics
         self._created_at: Dict[str, float] = {}
 
     # ------------------------------------------------------------------
@@ -57,13 +50,8 @@ class OrchestratorSessionFactory:
     # ------------------------------------------------------------------
 
     def get_or_create(self, session_id: str) -> OrchestratorMediator:
-        """Get existing or create new orchestrator for *session_id*.
-
-        Accessing an existing session marks it as recently used so that
-        LRU eviction targets stale sessions first.
-        """
+        """Get existing or create new orchestrator for *session_id*."""
         if session_id in self._sessions:
-            # Mark as recently used
             self._sessions.move_to_end(session_id)
             return self._sessions[session_id]
 
@@ -74,8 +62,8 @@ class OrchestratorSessionFactory:
         self._sessions[session_id] = mediator
         self._created_at[session_id] = time.time()
         logger.info(
-            "OrchestratorSessionFactory: created new orchestrator for session '%s' "
-            "(active: %d/%d)",
+            "OrchestratorSessionFactory: created fully-wired orchestrator for "
+            "session '%s' (active: %d/%d)",
             session_id,
             len(self._sessions),
             self._max_sessions,
@@ -83,10 +71,7 @@ class OrchestratorSessionFactory:
         return mediator
 
     def remove_session(self, session_id: str) -> bool:
-        """Remove an orchestrator instance for the given session.
-
-        Returns ``True`` if the session existed and was removed.
-        """
+        """Remove an orchestrator instance for the given session."""
         if session_id in self._sessions:
             del self._sessions[session_id]
             self._created_at.pop(session_id, None)
@@ -108,40 +93,45 @@ class OrchestratorSessionFactory:
     # ------------------------------------------------------------------
 
     def _create_orchestrator(self, session_id: str) -> OrchestratorMediator:
-        """Create a fresh OrchestratorMediator with AgentHandler and ContextHandler."""
-        agent_handler = AgentHandler(
-            llm_service=self._llm_service,
-            tool_registry=self._tool_registry,
-        )
-        mediator = OrchestratorMediator(agent_handler=agent_handler)
+        """Create a fully-wired OrchestratorMediator via OrchestratorBootstrap.
 
-        # Phase 41: Register ContextHandler with memory_manager for memory R/W
+        Uses Bootstrap.build() to wire all 7 handlers with real dependencies:
+        ContextHandler, RoutingHandler, DialogHandler, ApprovalHandler,
+        AgentHandler, ExecutionHandler, ObservabilityHandler.
+
+        Falls back to minimal AgentHandler-only mediator if Bootstrap fails.
+        """
         try:
-            from src.integrations.hybrid.orchestrator.handlers.context import ContextHandler
-            from src.integrations.hybrid.orchestrator.memory_manager import OrchestratorMemoryManager
-            from src.integrations.memory.unified_memory import UnifiedMemoryManager
-
-            # Create memory manager (shares the global UnifiedMemoryManager singleton)
-            if not hasattr(self, '_unified_memory') or self._unified_memory is None:
-                self._unified_memory = UnifiedMemoryManager()
-
-            orch_memory = OrchestratorMemoryManager(
-                llm_service=self._llm_service,
-                memory_client=self._unified_memory,
+            from src.integrations.hybrid.orchestrator.bootstrap import (
+                OrchestratorBootstrap,
             )
-            context_handler = ContextHandler(memory_manager=orch_memory)
-            mediator.register_handler(context_handler)
-            logger.info("SessionFactory: ContextHandler with memory registered for session '%s'", session_id)
-        except Exception as e:
-            logger.warning("SessionFactory: ContextHandler setup failed (non-critical): %s", e)
 
-        return mediator
+            bootstrap = OrchestratorBootstrap(llm_service=self._llm_service)
+            mediator = bootstrap.build()
+            logger.info(
+                "SessionFactory: full pipeline assembled via Bootstrap for '%s'",
+                session_id,
+            )
+            return mediator
+
+        except Exception as e:
+            logger.error(
+                "SessionFactory: Bootstrap failed, falling back to minimal "
+                "mediator for '%s': %s",
+                session_id,
+                e,
+                exc_info=True,
+            )
+            # Fallback: minimal mediator with just AgentHandler
+            from src.integrations.hybrid.orchestrator.agent_handler import AgentHandler
+
+            agent_handler = AgentHandler(llm_service=self._llm_service)
+            return OrchestratorMediator(agent_handler=agent_handler)
 
     def _evict_oldest(self) -> None:
         """Evict the least-recently-used session to make room."""
         if not self._sessions:
             return
-        # OrderedDict.popitem(last=False) removes the oldest entry
         oldest_id, _ = self._sessions.popitem(last=False)
         self._created_at.pop(oldest_id, None)
         logger.info(
