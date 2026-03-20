@@ -137,9 +137,30 @@ class RoutingHandler(Handler):
         request: OrchestratorRequest,
         context: Dict[str, Any],
     ) -> HandlerResult:
-        """Direct routing flow via FrameworkSelector only."""
-        logger.info("RoutingHandler: Direct intent analysis")
+        """Direct routing with 3-tier intent router + FrameworkSelector.
 
+        Phase 41: Uses BusinessIntentRouter (Pattern→Semantic→LLM) when
+        available, instead of only FrameworkSelector.
+        """
+        logger.info("RoutingHandler: Direct intent routing")
+
+        routing_decision = None
+
+        # Phase 41: Try 3-tier intent routing via _intent_router
+        if self._business_router and not request.force_mode:
+            try:
+                routing_decision = await self._business_router.route(request.content)
+                context["routing_decision"] = routing_decision
+                logger.info(
+                    "RoutingHandler: 3-tier routed intent=%s, layer=%s, confidence=%.2f",
+                    routing_decision.intent_category,
+                    routing_decision.routing_layer,
+                    routing_decision.confidence,
+                )
+            except Exception as e:
+                logger.warning("RoutingHandler: 3-tier routing failed, using fallback: %s", e)
+
+        # Framework selection
         if request.force_mode:
             intent_analysis = IntentAnalysis(
                 mode=request.force_mode,
@@ -159,10 +180,18 @@ class RoutingHandler(Handler):
                 workflow_active=is_workflow_active,
                 pending_steps=pending_steps,
             )
-            intent_analysis = await self._framework_selector.analyze_intent(
-                user_input=request.content,
-                session_context=session_context,
-            )
+
+            if routing_decision:
+                intent_analysis = await self._framework_selector.select_framework(
+                    user_input=request.content,
+                    session_context=session_context,
+                    routing_decision=routing_decision,
+                )
+            else:
+                intent_analysis = await self._framework_selector.analyze_intent(
+                    user_input=request.content,
+                    session_context=session_context,
+                )
 
         context["intent_analysis"] = intent_analysis
         context["execution_mode"] = intent_analysis.mode
@@ -171,6 +200,7 @@ class RoutingHandler(Handler):
             success=True,
             handler_type=HandlerType.ROUTING,
             data={
+                "routing_decision": routing_decision,
                 "intent_analysis": intent_analysis,
                 "execution_mode": intent_analysis.mode,
             },
