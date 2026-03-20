@@ -301,6 +301,8 @@ When fixing bugs or implementing feature changes, create corresponding docs in `
 - **Deep Error Analysis**: Analyze root cause thoroughly
 - **Never Delete Tests**: Do not delete or skip tests to solve problems
 - **Never Delete Docs**: Do not delete documentation without asking
+- **Never Delete Checklist Items**: When updating checklists, only change `[ ]` to `[x]`. Never remove unchecked items — they represent pending work. Violation occurred in Phase 42 Sprint 147.
+- **Check Existing Before Building**: Before creating new infrastructure (SSE, tools, memory), verify MAF/AG-UI/Claude SDK doesn't already provide it. Violation occurred in Phase 42 Sprint 145.
 
 ---
 
