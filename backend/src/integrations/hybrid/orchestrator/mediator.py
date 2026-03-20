@@ -189,10 +189,14 @@ class OrchestratorMediator:
 
         async def _emit(event_type: str, data: Optional[Dict[str, Any]] = None) -> None:
             if event_emitter and hasattr(event_emitter, "emit"):
+                import asyncio as _aio
                 from src.integrations.hybrid.orchestrator.sse_events import SSEEventType
                 try:
                     et = SSEEventType(event_type)
                     await event_emitter.emit(et, data or {})
+                    # Yield control so SSE stream can send this event
+                    # before the next pipeline step starts
+                    await _aio.sleep(0)
                 except (ValueError, Exception):
                     pass
 
