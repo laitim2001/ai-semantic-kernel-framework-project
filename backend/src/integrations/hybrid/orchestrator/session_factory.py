@@ -119,7 +119,6 @@ class OrchestratorSessionFactory:
         try:
             from src.integrations.hybrid.orchestrator.handlers.context import ContextHandler
             from src.integrations.hybrid.orchestrator.memory_manager import OrchestratorMemoryManager
-            from src.integrations.hybrid.orchestrator.contracts import HandlerType
             from src.integrations.memory.unified_memory import UnifiedMemoryManager
 
             # Create memory manager (shares the global UnifiedMemoryManager singleton)
@@ -131,7 +130,7 @@ class OrchestratorSessionFactory:
                 memory_client=self._unified_memory,
             )
             context_handler = ContextHandler(memory_manager=orch_memory)
-            mediator.register_handler(HandlerType.CONTEXT, context_handler)
+            mediator.register_handler(context_handler)
             logger.info("SessionFactory: ContextHandler with memory registered for session '%s'", session_id)
         except Exception as e:
             logger.warning("SessionFactory: ContextHandler setup failed (non-critical): %s", e)
