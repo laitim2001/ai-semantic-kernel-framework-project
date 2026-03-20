@@ -244,6 +244,13 @@ class OrchestratorMediator:
                     except Exception as mem_err:
                         logger.warning(f"Memory write failed (non-critical): {mem_err}")
 
+                    # Phase 41: Update session conversation history for short-circuit path
+                    response_content = agent_result.data.get("content", "") if agent_result.data else ""
+                    history = session.setdefault("conversation_history", [])
+                    history.append({"role": "user", "content": request.content, "timestamp": time.time()})
+                    if response_content:
+                        history.append({"role": "assistant", "content": response_content, "timestamp": time.time()})
+
                     # Agent produced a direct response — skip execution dispatch
                     return self._build_short_circuit_response(
                         agent_result, session, start_time, handler_results,

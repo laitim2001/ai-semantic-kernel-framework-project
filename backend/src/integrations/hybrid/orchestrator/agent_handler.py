@@ -107,10 +107,24 @@ class AgentHandler(Handler):
         if memory_context:
             memory_section = f"--- 相關記憶 ---\n{memory_context}\n\n"
 
+        # Phase 41: Inject conversation history for multi-turn context
+        history_section = ""
+        conversation_history = context.get("conversation_history", [])
+        if conversation_history:
+            history_lines = []
+            # Keep last 10 messages to avoid prompt overflow
+            for msg in conversation_history[-10:]:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")[:300]
+                history_lines.append(f"{'用戶' if role == 'user' else '助手'}: {content}")
+            if history_lines:
+                history_section = "--- 對話歷史 ---\n" + "\n".join(history_lines) + "\n\n"
+
         full_prompt = (
             f"{ORCHESTRATOR_SYSTEM_PROMPT}\n\n"
             f"{tools_prompt}"
             f"{memory_section}"
+            f"{history_section}"
             f"--- 分析上下文 ---\n{context_prompt}\n\n"
             f"--- 用戶輸入 ---\n{user_input}"
         )
