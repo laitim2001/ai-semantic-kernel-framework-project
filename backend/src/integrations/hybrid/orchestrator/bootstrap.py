@@ -371,7 +371,7 @@ class OrchestratorBootstrap:
                 from src.integrations.agent_framework.builders.workflow_executor import (
                     WorkflowExecutorAdapter,
                 )
-                adapter = WorkflowExecutorAdapter()
+                adapter = WorkflowExecutorAdapter(id="orchestrator-maf-executor")
                 maf_executor = adapter.execute if hasattr(adapter, "execute") else None
             except Exception as e:
                 logger.warning("Bootstrap: MAF executor unavailable: %s", e)
