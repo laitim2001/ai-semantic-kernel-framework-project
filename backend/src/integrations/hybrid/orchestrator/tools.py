@@ -196,6 +196,62 @@ class OrchestratorToolRegistry:
         return "\n".join(lines)
 
     # ------------------------------------------------------------------
+    # OpenAI Function Calling Schema (Sprint 144)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _param_type_to_json_schema(type_str: str) -> Dict[str, Any]:
+        """Convert simple type string to JSON Schema type."""
+        mapping: Dict[str, Dict[str, Any]] = {
+            "str": {"type": "string"},
+            "string": {"type": "string"},
+            "int": {"type": "integer"},
+            "integer": {"type": "integer"},
+            "float": {"type": "number"},
+            "number": {"type": "number"},
+            "bool": {"type": "boolean"},
+            "boolean": {"type": "boolean"},
+            "dict": {"type": "object"},
+            "list": {"type": "array"},
+        }
+        cleaned = type_str.strip()
+        if cleaned.startswith("Optional["):
+            inner = cleaned[9:-1]
+            return mapping.get(inner.lower(), {"type": "string"})
+        return mapping.get(cleaned.lower(), {"type": "string"})
+
+    def get_openai_tool_schemas(self, role: str = "operator") -> List[Dict[str, Any]]:
+        """Convert tool definitions to OpenAI function calling format.
+
+        Returns a list of tool dicts compatible with Azure OpenAI
+        ``chat.completions.create(tools=...)``.
+        """
+        tools = self.list_tools(role)
+        schemas: List[Dict[str, Any]] = []
+        for t in tools:
+            required_params = []
+            properties: Dict[str, Any] = {}
+            for param_name, param_type in t.parameters.items():
+                properties[param_name] = self._param_type_to_json_schema(str(param_type))
+                if not str(param_type).startswith("Optional"):
+                    required_params.append(param_name)
+
+            schema: Dict[str, Any] = {
+                "type": "function",
+                "function": {
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": required_params,
+                    },
+                },
+            }
+            schemas.append(schema)
+        return schemas
+
+    # ------------------------------------------------------------------
     # Handler registration & execution
     # ------------------------------------------------------------------
 

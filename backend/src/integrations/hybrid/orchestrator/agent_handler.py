@@ -1,15 +1,17 @@
 """
-AgentHandler — LLM Decision Engine
+AgentHandler — LLM Decision Engine with Function Calling.
 
 Serves as the Agent backend within the OrchestratorMediator pipeline,
 receiving results from upstream Handlers (Routing, Dialog, Approval)
 and using LLM to generate intelligent responses.
 
 Sprint 107 — Phase 35 A0 core assumption validation.
+Sprint 144 — Phase 42 Function Calling integration.
 """
 
+import json
 import logging
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from src.integrations.hybrid.orchestrator.contracts import (
     Handler,
@@ -30,6 +32,9 @@ _LLM_NOT_CONFIGURED_RESPONSE = (
     "LLM 服務尚未配置，無法生成智能回應。請聯繫系統管理員配置 LLM 服務。"
 )
 
+# Maximum iterations for the function calling loop
+_MAX_TOOL_ITERATIONS = 5
+
 
 class AgentHandler(Handler):
     """Handler that uses LLM to generate intelligent responses.
@@ -38,9 +43,10 @@ class AgentHandler(Handler):
     For simple conversational requests, the AgentHandler can produce
     a direct response and short-circuit the pipeline (skipping Execution).
 
-    Args:
-        llm_service: Optional LLM service instance. When ``None``, the handler
-            returns a graceful fallback response instead of raising.
+    Sprint 144: Now supports Azure OpenAI function calling.  When tools
+    are available, the handler sends tool schemas to the LLM and executes
+    any tool_calls the model requests, looping until the model produces
+    a final text response (or hits max iterations).
     """
 
     def __init__(
@@ -50,6 +56,7 @@ class AgentHandler(Handler):
     ) -> None:
         self._llm_service = llm_service
         self._tool_registry = tool_registry
+        self._openai_client: Optional[Any] = None
 
     @property
     def handler_type(self) -> HandlerType:
@@ -64,17 +71,12 @@ class AgentHandler(Handler):
         """Generate an LLM-powered response using pipeline context.
 
         Steps:
-            1. Extract ``routing_decision`` from *context* (set by RoutingHandler).
-            2. Build a full prompt from system prompt + routing context + user input.
-            3. Call ``LLMServiceProtocol.generate()`` to obtain a response.
-            4. Return the response wrapped in a ``HandlerResult``.
-
-        If the LLM service is unavailable the handler returns a fallback message
-        without raising, ensuring the pipeline does not crash.
+            1. Extract routing_decision from context.
+            2. Build messages for chat completions.
+            3. If tools available, use function calling loop.
+            4. Otherwise, fall back to generate().
+            5. Return the response wrapped in a HandlerResult.
         """
-        # Look up routing_decision from pipeline context first, then fall
-        # back to request.metadata (used by the orchestrator chat endpoint
-        # which runs routing externally before calling the mediator).
         routing_decision = context.get("routing_decision") or (
             request.metadata.get("routing_decision") if request.metadata else None
         )
@@ -97,76 +99,53 @@ class AgentHandler(Handler):
                 },
             )
 
-        # --- Build the full prompt -----------------------------------------
-        context_prompt = self._build_context_prompt(routing_decision)
-        tools_prompt = self._build_tools_prompt(request)
+        # --- Build messages -------------------------------------------------
+        messages = self._build_messages(request, context, routing_decision)
 
-        # Phase 41: Inject memory context from ContextHandler (if available)
-        memory_section = ""
-        memory_context = context.get("memory_context", "")
-        if memory_context:
-            memory_section = f"--- 相關記憶 ---\n{memory_context}\n\n"
-
-        # Phase 41: Inject conversation history for multi-turn context
-        history_section = ""
-        conversation_history = context.get("conversation_history", [])
-        if conversation_history:
-            history_lines = []
-            # Keep last 10 messages to avoid prompt overflow
-            for msg in conversation_history[-10:]:
-                role = msg.get("role", "user")
-                content = msg.get("content", "")[:300]
-                history_lines.append(f"{'用戶' if role == 'user' else '助手'}: {content}")
-            if history_lines:
-                history_section = "--- 對話歷史 ---\n" + "\n".join(history_lines) + "\n\n"
-
-        full_prompt = (
-            f"{ORCHESTRATOR_SYSTEM_PROMPT}\n\n"
-            f"{tools_prompt}"
-            f"{memory_section}"
-            f"{history_section}"
-            f"--- 分析上下文 ---\n{context_prompt}\n\n"
-            f"--- 用戶輸入 ---\n{user_input}"
-        )
-
-        # --- Call LLM ------------------------------------------------------
+        # --- Try function calling first, fall back to generate() -----------
+        tool_calls_made: List[Dict[str, Any]] = []
         try:
+            client = self._get_openai_client()
+            tool_schemas = self._get_tool_schemas(request)
+
+            if client and tool_schemas:
+                llm_response, tool_calls_made = await self._function_calling_loop(
+                    client, messages, tool_schemas, request, context,
+                )
+            else:
+                llm_response = await self._fallback_generate(messages, request)
+
             logger.info(
-                "AgentHandler: generating LLM response for request %s",
+                "AgentHandler: response generated for request %s "
+                "(tool_calls=%d)",
                 request.request_id,
-            )
-            llm_response = await self._llm_service.generate(
-                prompt=full_prompt,
-                max_tokens=2048,
-                temperature=0.7,
-            )
-            logger.info(
-                "AgentHandler: LLM response generated successfully for request %s",
-                request.request_id,
+                len(tool_calls_made),
             )
 
-            # Phase 41: Only short-circuit for CHAT_MODE.
-            # WORKFLOW_MODE / HYBRID_MODE should proceed to ExecutionHandler
-            # for MAF/Claude/Swarm task dispatch.
+            # Determine short-circuit
             from src.integrations.hybrid.intent import ExecutionMode
             exec_mode = context.get("execution_mode", ExecutionMode.CHAT_MODE)
             is_chat_mode = exec_mode in (ExecutionMode.CHAT_MODE, "chat")
             needs_swarm = bool(context.get("swarm_decomposition"))
-
             should_sc = is_chat_mode and not needs_swarm
+
+            result_data: Dict[str, Any] = {
+                "content": llm_response,
+                "agent_source": "llm",
+                "framework_used": "orchestrator_agent",
+            }
+            if tool_calls_made:
+                result_data["tool_calls"] = tool_calls_made
 
             return HandlerResult(
                 success=True,
                 handler_type=HandlerType.AGENT,
-                data={
-                    "content": llm_response,
-                    "agent_source": "llm",
-                    "framework_used": "orchestrator_agent",
-                },
+                data=result_data,
                 should_short_circuit=should_sc,
                 short_circuit_response={
                     "content": llm_response,
                     "framework_used": "orchestrator_agent",
+                    "tool_calls": tool_calls_made if tool_calls_made else None,
                 } if should_sc else None,
             )
 
@@ -197,18 +176,264 @@ class AgentHandler(Handler):
             )
 
     # ------------------------------------------------------------------
+    # Function Calling Loop (Sprint 144)
+    # ------------------------------------------------------------------
+
+    async def _function_calling_loop(
+        self,
+        client: Any,
+        messages: List[Dict[str, str]],
+        tool_schemas: List[Dict[str, Any]],
+        request: OrchestratorRequest,
+        context: Dict[str, Any],
+    ) -> tuple:
+        """Execute the function calling loop.
+
+        Sends messages + tools to Azure OpenAI.  If the model returns
+        tool_calls, execute them via the ToolRegistry, append results,
+        and call the model again.  Repeat until the model produces a
+        text response or max iterations is reached.
+
+        Returns:
+            (response_text, list_of_tool_calls_made)
+        """
+        from src.core.config import get_settings
+        settings = get_settings()
+
+        tool_calls_made: List[Dict[str, Any]] = []
+        working_messages = list(messages)
+
+        for iteration in range(_MAX_TOOL_ITERATIONS):
+            try:
+                response = await client.chat.completions.create(
+                    model=settings.azure_openai_deployment_name,
+                    messages=working_messages,
+                    tools=tool_schemas,
+                    tool_choice="auto",
+                    max_tokens=2048,
+                    temperature=0.7,
+                )
+            except Exception as e:
+                logger.warning(
+                    "AgentHandler: function calling API failed (iter=%d): %s",
+                    iteration, e,
+                )
+                # Fall back to generate() on API error
+                return await self._fallback_generate(messages, request), tool_calls_made
+
+            choice = response.choices[0]
+            message = choice.message
+
+            # If the model produced tool calls, execute them
+            if message.tool_calls:
+                # Append the assistant's message with tool_calls
+                working_messages.append({
+                    "role": "assistant",
+                    "content": message.content or "",
+                    "tool_calls": [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            },
+                        }
+                        for tc in message.tool_calls
+                    ],
+                })
+
+                for tc in message.tool_calls:
+                    tool_name = tc.function.name
+                    try:
+                        tool_args = json.loads(tc.function.arguments)
+                    except json.JSONDecodeError:
+                        tool_args = {}
+
+                    logger.info(
+                        "AgentHandler: executing tool '%s' (iter=%d)",
+                        tool_name, iteration,
+                    )
+
+                    # Execute via registry
+                    tool_result = await self._execute_tool(
+                        tool_name, tool_args, request, context,
+                    )
+
+                    tool_calls_made.append({
+                        "tool_name": tool_name,
+                        "arguments": tool_args,
+                        "result": tool_result,
+                        "iteration": iteration,
+                    })
+
+                    # Append tool result as a message
+                    working_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": json.dumps(
+                            tool_result, ensure_ascii=False, default=str,
+                        ),
+                    })
+            else:
+                # Model produced a text response — done
+                return message.content or "", tool_calls_made
+
+        # Max iterations reached — return last content or summary
+        logger.warning(
+            "AgentHandler: max tool iterations (%d) reached",
+            _MAX_TOOL_ITERATIONS,
+        )
+        return (
+            message.content
+            or f"已執行 {len(tool_calls_made)} 個工具操作。"
+        ), tool_calls_made
+
+    async def _execute_tool(
+        self,
+        tool_name: str,
+        tool_args: Dict[str, Any],
+        request: OrchestratorRequest,
+        context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Execute a tool via the OrchestratorToolRegistry."""
+        if self._tool_registry is None:
+            return {"error": f"Tool registry not available for '{tool_name}'"}
+
+        user_id = getattr(request, "user_id", None) or "system"
+        role = "admin"  # Pipeline runs with admin privileges
+        if request.metadata and "user_role" in request.metadata:
+            role = request.metadata["user_role"]
+
+        try:
+            result = await self._tool_registry.execute(
+                tool_name=tool_name,
+                params=tool_args,
+                user_id=user_id,
+                role=role,
+            )
+            return {
+                "success": result.success,
+                "data": result.data,
+                "error": result.error,
+                "task_id": result.task_id,
+            }
+        except Exception as e:
+            logger.error("Tool execution error for '%s': %s", tool_name, e)
+            return {"success": False, "error": str(e)}
+
+    # ------------------------------------------------------------------
+    # Fallback to generate()
+    # ------------------------------------------------------------------
+
+    async def _fallback_generate(
+        self,
+        messages: List[Dict[str, str]],
+        request: OrchestratorRequest,
+    ) -> str:
+        """Fall back to LLMServiceProtocol.generate() for simple text."""
+        full_prompt = "\n\n".join(
+            f"[{m.get('role', 'user')}]\n{m.get('content', '')}"
+            for m in messages
+        )
+        return await self._llm_service.generate(
+            prompt=full_prompt,
+            max_tokens=2048,
+            temperature=0.7,
+        )
+
+    # ------------------------------------------------------------------
+    # Message Building
+    # ------------------------------------------------------------------
+
+    def _build_messages(
+        self,
+        request: OrchestratorRequest,
+        context: Dict[str, Any],
+        routing_decision: Any,
+    ) -> List[Dict[str, str]]:
+        """Build chat messages array for Azure OpenAI."""
+        context_prompt = self._build_context_prompt(routing_decision)
+        tools_text = self._build_tools_prompt(request)
+
+        # Memory context from ContextHandler
+        memory_section = ""
+        memory_context = context.get("memory_context", "")
+        if memory_context:
+            memory_section = f"\n--- 相關記憶 ---\n{memory_context}"
+
+        system_content = (
+            f"{ORCHESTRATOR_SYSTEM_PROMPT}\n\n"
+            f"{tools_text}"
+            f"{memory_section}\n"
+            f"--- 分析上下文 ---\n{context_prompt}"
+        )
+
+        messages: List[Dict[str, str]] = [
+            {"role": "system", "content": system_content},
+        ]
+
+        # Add conversation history
+        conversation_history = context.get("conversation_history", [])
+        for msg in conversation_history[-10:]:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")[:500]
+            if role in ("user", "assistant"):
+                messages.append({"role": role, "content": content})
+
+        # Add current user message
+        messages.append({"role": "user", "content": request.content})
+
+        return messages
+
+    # ------------------------------------------------------------------
+    # OpenAI Client & Tool Schema Access
+    # ------------------------------------------------------------------
+
+    def _get_openai_client(self) -> Optional[Any]:
+        """Get or create an AsyncAzureOpenAI client."""
+        if self._openai_client is not None:
+            return self._openai_client
+
+        # Try to extract client from the LLM service
+        if self._llm_service and hasattr(self._llm_service, "_client"):
+            self._openai_client = self._llm_service._client
+            return self._openai_client
+
+        # Create client from settings
+        try:
+            from openai import AsyncAzureOpenAI
+            from src.core.config import get_settings
+            settings = get_settings()
+
+            if not settings.is_azure_openai_configured:
+                return None
+
+            self._openai_client = AsyncAzureOpenAI(
+                azure_endpoint=settings.azure_openai_endpoint,
+                api_key=settings.azure_openai_api_key,
+                api_version=settings.azure_openai_api_version,
+            )
+            return self._openai_client
+        except Exception as e:
+            logger.warning("AgentHandler: cannot create OpenAI client: %s", e)
+            return None
+
+    def _get_tool_schemas(self, request: OrchestratorRequest) -> List[Dict[str, Any]]:
+        """Get OpenAI-format tool schemas from registry."""
+        if self._tool_registry is None:
+            return []
+        role = "operator"
+        if request.metadata and "user_role" in request.metadata:
+            role = request.metadata["user_role"]
+        return self._tool_registry.get_openai_tool_schemas(role=role)
+
+    # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
 
     def _build_tools_prompt(self, request: OrchestratorRequest) -> str:
-        """Build the tools description section for the system prompt.
-
-        If no tool registry is configured an empty string is returned so
-        the prompt remains unchanged.
-
-        The caller's role is extracted from ``request.metadata`` (key
-        ``"user_role"``), defaulting to ``"operator"``.
-        """
+        """Build the tools description section for the system prompt."""
         if self._tool_registry is None:
             return ""
         role = "operator"
@@ -218,25 +443,11 @@ class AgentHandler(Handler):
         return f"--- 可用工具 ---\n{tools_text}\n\n"
 
     @staticmethod
-    def _build_context_prompt(
-        routing_decision: Any,
-    ) -> str:
-        """Convert a routing decision into a human-readable context summary.
-
-        Handles both ``RoutingDecision`` objects (with attributes) and plain
-        ``dict`` representations produced by serialization.
-
-        Args:
-            routing_decision: The routing decision from the RoutingHandler,
-                either a ``RoutingDecision`` dataclass or a ``dict``.
-
-        Returns:
-            A formatted string summarising intent, risk, and completeness.
-        """
+    def _build_context_prompt(routing_decision: Any) -> str:
+        """Convert a routing decision into a human-readable context summary."""
         if routing_decision is None:
             return "No routing context available."
 
-        # Support both object attribute access and dict key access
         if isinstance(routing_decision, dict):
             intent_category = routing_decision.get("intent_category", "unknown")
             sub_intent = routing_decision.get("sub_intent", "N/A")

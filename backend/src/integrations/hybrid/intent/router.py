@@ -136,9 +136,8 @@ class FrameworkSelector:
         Select the appropriate framework based on user input.
 
         Sprint 98: Renamed from analyze_intent to select_framework.
-        This is the main entry point for framework selection. It runs all enabled
-        classifiers, aggregates their results, and returns a comprehensive
-        analysis result.
+        Sprint 144: Now uses routing_decision to influence mode selection
+        via RoutingDecisionClassifier.
 
         Args:
             user_input: The user's input text to analyze
@@ -148,13 +147,6 @@ class FrameworkSelector:
 
         Returns:
             IntentAnalysis (FrameworkAnalysis) with the detected mode, confidence, and reasoning
-
-        Example:
-            >>> analysis = await selector.select_framework(
-            ...     "Create a multi-step workflow for data processing",
-            ...     session_context=SessionContext(session_id="sess_123")
-            ... )
-            >>> print(f"Mode: {analysis.mode}, Confidence: {analysis.confidence}")
         """
         start_time = time.time()
 
@@ -164,6 +156,15 @@ class FrameworkSelector:
                 reasoning="Empty input, using default mode",
                 analysis_time_ms=(time.time() - start_time) * 1000,
             )
+
+        # Sprint 144: Inject routing_decision into RoutingDecisionClassifier
+        if routing_decision:
+            from src.integrations.hybrid.intent.classifiers.routing_decision import (
+                RoutingDecisionClassifier,
+            )
+            for classifier in self.classifiers:
+                if isinstance(classifier, RoutingDecisionClassifier):
+                    classifier.set_routing_decision(routing_decision)
 
         # Run all enabled classifiers
         classification_results = await self._run_classifiers(
@@ -337,6 +338,8 @@ class FrameworkSelector:
             return SuggestedFramework.MAF
         elif mode == ExecutionMode.CHAT_MODE:
             return SuggestedFramework.CLAUDE
+        elif mode == ExecutionMode.SWARM_MODE:
+            return SuggestedFramework.MAF
         else:
             # HYBRID_MODE - check context for hints
             if context and context.workflow_active:
