@@ -372,7 +372,7 @@ class OrchestratorBootstrap:
                     WorkflowExecutorAdapter,
                 )
                 adapter = WorkflowExecutorAdapter(id="orchestrator-maf-executor")
-                maf_executor = adapter.execute if hasattr(adapter, "execute") else None
+                maf_executor = adapter.run if hasattr(adapter, "run") else None
             except Exception as e:
                 logger.warning("Bootstrap: MAF executor unavailable: %s", e)
 
