@@ -164,7 +164,20 @@ class OrchestratorMemoryManager:
                     limit=limit,
                 )
                 if isinstance(results, list):
-                    return results
+                    # Convert MemorySearchResult objects to dicts for build_memory_context
+                    converted = []
+                    for r in results:
+                        if isinstance(r, dict):
+                            converted.append(r)
+                        elif hasattr(r, 'memory'):
+                            converted.append({
+                                "content": r.memory.content,
+                                "score": r.score,
+                                "metadata": {"created_at": str(getattr(r.memory, 'created_at', ''))},
+                            })
+                        else:
+                            converted.append({"content": str(r)})
+                    return converted
 
             # Fallback: Try Mem0Client.search_memory()
             if hasattr(self._memory, "search_memory"):
@@ -384,18 +397,19 @@ class OrchestratorMemoryManager:
 
         try:
             if hasattr(self._memory, "add"):
+                # UnifiedMemoryManager.add() expects MemoryMetadata or None, not dict
+                from src.integrations.memory.types import MemoryType as MemType
                 result = await self._memory.add(
                     content=content,
                     user_id=user_id,
-                    metadata=metadata,
+                    memory_type=MemType.CONVERSATION,
                 )
-                return result if isinstance(result, dict) else {"id": str(result)}
+                return result if isinstance(result, dict) else {"id": getattr(result, 'id', str(result))}
 
             if hasattr(self._memory, "add_memory"):
                 result = await self._memory.add_memory(
                     content=content,
                     user_id=user_id,
-                    metadata=metadata,
                 )
                 return result.to_dict() if hasattr(result, "to_dict") else {"id": str(result)}
 
