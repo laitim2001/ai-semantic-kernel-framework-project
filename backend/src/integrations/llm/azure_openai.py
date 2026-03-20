@@ -337,6 +337,97 @@ IMPORTANT:
             cause=last_error,
         )
 
+    async def chat_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: str = "auto",
+        max_tokens: int = 2048,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Chat completion with function calling support.
+
+        REFACTOR-001: Native function calling through the LLM protocol.
+
+        Args:
+            messages: Chat messages array
+            tools: OpenAI function calling tool schemas
+            tool_choice: Tool selection strategy
+            max_tokens: Maximum tokens
+            temperature: Creativity parameter
+
+        Returns:
+            Dict with content, tool_calls, and finish_reason.
+        """
+        last_error: Optional[Exception] = None
+
+        for attempt in range(self.max_retries):
+            try:
+                create_kwargs: Dict[str, Any] = {
+                    "model": self.deployment_name,
+                    "messages": messages,
+                    "max_completion_tokens": max_tokens,
+                    "temperature": temperature,
+                }
+                if tools:
+                    create_kwargs["tools"] = tools
+                    create_kwargs["tool_choice"] = tool_choice
+
+                response = await self._client.chat.completions.create(**create_kwargs)
+                choice = response.choices[0]
+                message = choice.message
+
+                tool_calls_out = None
+                if message.tool_calls:
+                    tool_calls_out = [
+                        {
+                            "id": tc.id,
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            },
+                        }
+                        for tc in message.tool_calls
+                    ]
+
+                return {
+                    "content": message.content,
+                    "tool_calls": tool_calls_out,
+                    "finish_reason": choice.finish_reason,
+                }
+
+            except APITimeoutError as e:
+                last_error = e
+                if attempt < self.max_retries - 1:
+                    await self._exponential_backoff(attempt)
+                else:
+                    raise LLMTimeoutError(
+                        f"chat_with_tools timed out after {self.max_retries} attempts",
+                        cause=e,
+                    )
+            except RateLimitError as e:
+                retry_after = self._extract_retry_after(e)
+                last_error = e
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(retry_after or (2 ** attempt))
+                else:
+                    raise LLMRateLimitError(
+                        f"Rate limit exceeded after {self.max_retries} attempts",
+                        retry_after=retry_after,
+                        cause=e,
+                    )
+            except APIError as e:
+                last_error = e
+                if attempt < self.max_retries - 1:
+                    await self._exponential_backoff(attempt)
+                else:
+                    raise LLMServiceError(f"chat_with_tools API error: {e}", cause=e)
+            except Exception as e:
+                raise LLMServiceError(f"Unexpected error: {e}", cause=e)
+
+        raise LLMServiceError(f"All {self.max_retries} attempts failed", cause=last_error)
+
     async def _exponential_backoff(self, attempt: int) -> None:
         """指數退避等待。
 

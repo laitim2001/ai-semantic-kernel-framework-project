@@ -131,6 +131,49 @@ class LLMServiceProtocol(Protocol):
         """
         ...
 
+    async def chat_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: str = "auto",
+        max_tokens: int = 2048,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Chat completion with function calling support.
+
+        REFACTOR-001: Added to support Azure OpenAI function calling
+        through the protocol abstraction instead of direct client access.
+
+        Args:
+            messages: Chat messages array ([{"role": "...", "content": "..."}])
+            tools: OpenAI function calling tool schemas (optional)
+            tool_choice: Tool selection strategy ("auto", "none", or specific)
+            max_tokens: Maximum tokens to generate
+            temperature: Creativity parameter (0-1)
+            **kwargs: Additional implementation-specific parameters
+
+        Returns:
+            Dict with keys:
+                - content: str | None (text response)
+                - tool_calls: list | None (function calls requested by model)
+                - finish_reason: str ("stop", "tool_calls", etc.)
+
+        Note:
+            Default implementation falls back to generate() for providers
+            that don't support function calling.
+        """
+        # Default fallback: concatenate messages and use generate()
+        prompt = "\n\n".join(
+            f"[{m.get('role', 'user')}]\n{m.get('content', '')}"
+            for m in messages
+            if m.get("role") != "tool"
+        )
+        content = await self.generate(
+            prompt=prompt, max_tokens=max_tokens, temperature=temperature, **kwargs
+        )
+        return {"content": content, "tool_calls": None, "finish_reason": "stop"}
+
 
 # =============================================================================
 # Exception Classes

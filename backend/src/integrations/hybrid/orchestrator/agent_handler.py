@@ -56,7 +56,6 @@ class AgentHandler(Handler):
     ) -> None:
         self._llm_service = llm_service
         self._tool_registry = tool_registry
-        self._openai_client: Optional[Any] = None
 
     @property
     def handler_type(self) -> HandlerType:
@@ -102,15 +101,15 @@ class AgentHandler(Handler):
         # --- Build messages -------------------------------------------------
         messages = self._build_messages(request, context, routing_decision)
 
-        # --- Try function calling first, fall back to generate() -----------
+        # --- REFACTOR-001: Use llm_service.chat_with_tools() ---------------
         tool_calls_made: List[Dict[str, Any]] = []
         try:
-            client = self._get_openai_client()
             tool_schemas = self._get_tool_schemas(request)
+            has_tools_support = hasattr(self._llm_service, "chat_with_tools")
 
-            if client and tool_schemas:
+            if tool_schemas and has_tools_support:
                 llm_response, tool_calls_made = await self._function_calling_loop(
-                    client, messages, tool_schemas, request, context,
+                    messages, tool_schemas, request, context,
                 )
             else:
                 llm_response = await self._fallback_generate(messages, request)
@@ -181,32 +180,26 @@ class AgentHandler(Handler):
 
     async def _function_calling_loop(
         self,
-        client: Any,
         messages: List[Dict[str, str]],
         tool_schemas: List[Dict[str, Any]],
         request: OrchestratorRequest,
         context: Dict[str, Any],
     ) -> tuple:
-        """Execute the function calling loop.
+        """Execute the function calling loop via LLMServiceProtocol.
 
-        Sends messages + tools to Azure OpenAI.  If the model returns
-        tool_calls, execute them via the ToolRegistry, append results,
-        and call the model again.  Repeat until the model produces a
-        text response or max iterations is reached.
+        REFACTOR-001: Uses llm_service.chat_with_tools() instead of
+        direct OpenAI client access.
 
         Returns:
             (response_text, list_of_tool_calls_made)
         """
-        from src.core.config import get_settings
-        settings = get_settings()
-
         tool_calls_made: List[Dict[str, Any]] = []
         working_messages = list(messages)
+        last_content = ""
 
         for iteration in range(_MAX_TOOL_ITERATIONS):
             try:
-                response = await client.chat.completions.create(
-                    model=settings.azure_openai_deployment_name,
+                result = await self._llm_service.chat_with_tools(
                     messages=working_messages,
                     tools=tool_schemas,
                     tool_choice="auto",
@@ -215,38 +208,30 @@ class AgentHandler(Handler):
                 )
             except Exception as e:
                 logger.warning(
-                    "AgentHandler: function calling API failed (iter=%d): %s",
+                    "AgentHandler: chat_with_tools failed (iter=%d): %s",
                     iteration, e,
                 )
-                # Fall back to generate() on API error
                 return await self._fallback_generate(messages, request), tool_calls_made
 
-            choice = response.choices[0]
-            message = choice.message
+            content = result.get("content") or ""
+            tool_calls = result.get("tool_calls")
+            last_content = content
 
-            # If the model produced tool calls, execute them
-            if message.tool_calls:
-                # Append the assistant's message with tool_calls
+            if tool_calls:
+                # Append assistant message with tool_calls
                 working_messages.append({
                     "role": "assistant",
-                    "content": message.content or "",
+                    "content": content,
                     "tool_calls": [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function.name,
-                                "arguments": tc.function.arguments,
-                            },
-                        }
-                        for tc in message.tool_calls
+                        {"id": tc["id"], "type": "function", "function": tc["function"]}
+                        for tc in tool_calls
                     ],
                 })
 
-                for tc in message.tool_calls:
-                    tool_name = tc.function.name
+                for tc in tool_calls:
+                    tool_name = tc["function"]["name"]
                     try:
-                        tool_args = json.loads(tc.function.arguments)
+                        tool_args = json.loads(tc["function"]["arguments"])
                     except json.JSONDecodeError:
                         tool_args = {}
 
@@ -255,7 +240,6 @@ class AgentHandler(Handler):
                         tool_name, iteration,
                     )
 
-                    # Execute via registry
                     tool_result = await self._execute_tool(
                         tool_name, tool_args, request, context,
                     )
@@ -267,26 +251,22 @@ class AgentHandler(Handler):
                         "iteration": iteration,
                     })
 
-                    # Append tool result as a message
                     working_messages.append({
                         "role": "tool",
-                        "tool_call_id": tc.id,
+                        "tool_call_id": tc["id"],
                         "content": json.dumps(
                             tool_result, ensure_ascii=False, default=str,
                         ),
                     })
             else:
-                # Model produced a text response — done
-                return message.content or "", tool_calls_made
+                return content, tool_calls_made
 
-        # Max iterations reached — return last content or summary
         logger.warning(
             "AgentHandler: max tool iterations (%d) reached",
             _MAX_TOOL_ITERATIONS,
         )
         return (
-            message.content
-            or f"已執行 {len(tool_calls_made)} 個工具操作。"
+            last_content or f"已執行 {len(tool_calls_made)} 個工具操作。"
         ), tool_calls_made
 
     async def _execute_tool(
@@ -387,37 +367,8 @@ class AgentHandler(Handler):
         return messages
 
     # ------------------------------------------------------------------
-    # OpenAI Client & Tool Schema Access
+    # Tool Schema Access
     # ------------------------------------------------------------------
-
-    def _get_openai_client(self) -> Optional[Any]:
-        """Get or create an AsyncAzureOpenAI client."""
-        if self._openai_client is not None:
-            return self._openai_client
-
-        # Try to extract client from the LLM service
-        if self._llm_service and hasattr(self._llm_service, "_client"):
-            self._openai_client = self._llm_service._client
-            return self._openai_client
-
-        # Create client from settings
-        try:
-            from openai import AsyncAzureOpenAI
-            from src.core.config import get_settings
-            settings = get_settings()
-
-            if not settings.is_azure_openai_configured:
-                return None
-
-            self._openai_client = AsyncAzureOpenAI(
-                azure_endpoint=settings.azure_openai_endpoint,
-                api_key=settings.azure_openai_api_key,
-                api_version=settings.azure_openai_api_version,
-            )
-            return self._openai_client
-        except Exception as e:
-            logger.warning("AgentHandler: cannot create OpenAI client: %s", e)
-            return None
 
     def _get_tool_schemas(self, request: OrchestratorRequest) -> List[Dict[str, Any]]:
         """Get OpenAI-format tool schemas from registry."""
