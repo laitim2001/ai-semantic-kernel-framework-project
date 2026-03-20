@@ -237,7 +237,9 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   // S75-BF-1: Get user ID for isolation
   const user = useAuthStore((state) => state.user);
   const userId = user?.id || GUEST_USER_ID;
-  const activeThreadKey = useMemo(() => `${ACTIVE_THREAD_KEY_PREFIX}${userId}`, [userId]);
+  // Phase 41: Use email for stable storage key across logins
+  const userKey = user?.email || userId;
+  const activeThreadKey = useMemo(() => `${ACTIVE_THREAD_KEY_PREFIX}${userKey}`, [userKey]);
 
   // S74-3: Chat history panel collapse state
   const [historyCollapsed, setHistoryCollapsed] = useState(false);

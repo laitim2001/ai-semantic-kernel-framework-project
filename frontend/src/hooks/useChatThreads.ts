@@ -87,13 +87,14 @@ const MAX_MESSAGES_PER_THREAD = 100;
  * ```
  */
 export function useChatThreads(): UseChatThreadsReturn {
-  // S75-BF-1: Get user ID for isolation
+  // S75-BF-1: Get user for isolation
+  // Phase 41: Use email instead of UUID for stable storage key across logins
   const user = useAuthStore((state) => state.user);
-  const userId = user?.id || GUEST_USER_ID;
+  const userKey = user?.email || user?.id || GUEST_USER_ID;
 
   // S75-BF-1: User-specific storage keys
-  const storageKey = useMemo(() => `${STORAGE_KEY_PREFIX}${userId}`, [userId]);
-  const messagesKeyPrefix = useMemo(() => `${MESSAGES_KEY_PREFIX}${userId}_`, [userId]);
+  const storageKey = useMemo(() => `${STORAGE_KEY_PREFIX}${userKey}`, [userKey]);
+  const messagesKeyPrefix = useMemo(() => `${MESSAGES_KEY_PREFIX}${userKey}_`, [userKey]);
 
   // Load initial state from localStorage
   const [threads, setThreads] = useState<ChatThread[]>([]);
