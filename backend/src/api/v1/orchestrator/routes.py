@@ -365,9 +365,7 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
         tool_calls_list = agent_resp["tool_calls"]
 
     # Sprint 144: Extract suggested_mode from metadata
-    suggested_mode_str = meta.get("suggested_mode") or (
-        context.get("suggested_mode") if hasattr(response, "metadata") else None
-    )
+    suggested_mode_str = meta.get("suggested_mode")
 
     return PipelineResponse(
         content=response.content or "",
