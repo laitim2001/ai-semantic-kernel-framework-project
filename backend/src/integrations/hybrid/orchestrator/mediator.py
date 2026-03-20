@@ -85,8 +85,30 @@ class OrchestratorMediator:
         if observability_handler:
             self._handlers[HandlerType.OBSERVABILITY] = observability_handler
 
-        # Session state
+        # Sprint 147: Session state — use ConversationStateStore when available
         self._sessions: Dict[str, Dict[str, Any]] = {}
+        self._conversation_store: Optional[Any] = None
+        try:
+            from src.infrastructure.storage.conversation_state import ConversationStateStore
+            self._conversation_store = ConversationStateStore()
+            logger.info("Mediator: ConversationStateStore wired for session persistence")
+        except Exception as e:
+            logger.warning("Mediator: ConversationStateStore unavailable, using in-memory: %s", e)
+
+        # Sprint 147: Checkpoint storage — use Redis/Postgres when available
+        self._checkpoint_storage: Optional[Any] = None
+        try:
+            from src.integrations.hybrid.checkpoint.backends.redis import RedisCheckpointStorage
+            self._checkpoint_storage = RedisCheckpointStorage()
+            logger.info("Mediator: RedisCheckpointStorage wired")
+        except Exception:
+            try:
+                from src.integrations.hybrid.checkpoint.backends.memory import MemoryCheckpointStorage
+                self._checkpoint_storage = MemoryCheckpointStorage()
+                logger.info("Mediator: MemoryCheckpointStorage fallback")
+            except Exception:
+                pass
+
         # Sprint 146: HITL approval state
         self._pending_approvals: Dict[str, Any] = {}  # approval_id -> asyncio.Event
         self._approval_results: Dict[str, str] = {}  # approval_id -> "approve"/"reject"
@@ -221,6 +243,24 @@ class OrchestratorMediator:
                     pass
 
         try:
+            # Sprint 147: Helper to save checkpoint after each handler
+            async def _save_checkpoint(step_name: str, step_index: int) -> None:
+                if self._checkpoint_storage and hasattr(self._checkpoint_storage, "save"):
+                    try:
+                        from src.integrations.hybrid.checkpoint.models import HybridCheckpoint
+                        cp = HybridCheckpoint(
+                            session_id=session["session_id"],
+                            step_name=step_name,
+                            step_index=step_index,
+                            state={
+                                "execution_mode": str(pipeline_context.get("execution_mode", "")),
+                                "handler_results_keys": list(handler_results.keys()),
+                            },
+                        )
+                        await self._checkpoint_storage.save(cp)
+                    except Exception as cp_err:
+                        logger.debug("Checkpoint save failed for step '%s': %s", step_name, cp_err)
+
             # Sprint 145: Emit pipeline start
             await _emit("PIPELINE_START", {
                 "session_id": session["session_id"],
@@ -257,6 +297,8 @@ class OrchestratorMediator:
                     "routing_layer": getattr(routing_decision, "routing_layer", None) if routing_decision else None,
                     "suggested_mode": rd.get("suggested_mode"),
                 })
+
+            await _save_checkpoint("routing", 2)
 
             # Step 3: Dialog (conditional)
             dialog_result = await self._run_handler(
@@ -403,6 +445,8 @@ class OrchestratorMediator:
                         ),
                         pipeline_context=pipeline_context,
                     )
+
+            await _save_checkpoint("agent", 5)
 
             # Step 6: Execution
             await _emit("TASK_DISPATCHED", {
@@ -576,11 +620,37 @@ class OrchestratorMediator:
     def _get_or_create_session(
         self, request: OrchestratorRequest
     ) -> Dict[str, Any]:
-        """Get existing session or create new one."""
-        if request.session_id and request.session_id in self._sessions:
-            return self._sessions[request.session_id]
-        sid = self.create_session(request.session_id, request.metadata)
-        return self._sessions[sid]
+        """Get existing session or create new one.
+
+        Sprint 147: Tries ConversationStateStore first for persistence,
+        falls back to in-memory dict.
+        """
+        sid = request.session_id
+
+        # Check in-memory cache first
+        if sid and sid in self._sessions:
+            return self._sessions[sid]
+
+        # Sprint 147: Try loading from persistent store
+        if sid and self._conversation_store:
+            try:
+                stored = self._conversation_store.load(sid)
+                if stored:
+                    session = {
+                        "session_id": sid,
+                        "conversation_history": getattr(stored, "messages", []),
+                        "current_mode": ExecutionMode.CHAT_MODE,
+                        "metadata": getattr(stored, "context", {}),
+                        "last_activity": time.time(),
+                    }
+                    self._sessions[sid] = session
+                    logger.info("Mediator: restored session '%s' from store", sid)
+                    return session
+            except Exception as e:
+                logger.debug("Mediator: store load failed for '%s': %s", sid, e)
+
+        new_sid = self.create_session(sid, request.metadata)
+        return self._sessions[new_sid]
 
     def _update_session_after_execution(
         self,
@@ -589,7 +659,10 @@ class OrchestratorMediator:
         exec_result: Optional[HandlerResult],
         context: Dict[str, Any],
     ) -> None:
-        """Update session state after execution."""
+        """Update session state after execution.
+
+        Sprint 147: Persists to ConversationStateStore after each execution.
+        """
         intent = context.get("intent_analysis")
         if intent:
             session["current_mode"] = intent.mode
@@ -600,14 +673,29 @@ class OrchestratorMediator:
             "content": request.content,
             "timestamp": time.time(),
         })
+
+        response_content = ""
         if exec_result and exec_result.data:
+            response_content = exec_result.data.get("content", "")
             history.append({
                 "role": "assistant",
-                "content": exec_result.data.get("content", ""),
+                "content": response_content,
                 "mode": str(context.get("execution_mode", "")),
                 "framework": exec_result.data.get("framework_used", ""),
                 "timestamp": time.time(),
             })
+
+        # Sprint 147: Persist to store
+        if self._conversation_store:
+            try:
+                self._conversation_store.save(
+                    session_id=session["session_id"],
+                    messages=history,
+                    routing_decision=context.get("routing_decision"),
+                    context=session.get("metadata", {}),
+                )
+            except Exception as e:
+                logger.debug("Mediator: session persist failed: %s", e)
 
     def _build_response(
         self,
