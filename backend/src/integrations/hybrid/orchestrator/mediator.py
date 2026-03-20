@@ -151,11 +151,20 @@ class OrchestratorMediator:
     # Core Execution
     # =========================================================================
 
-    async def execute(self, request: OrchestratorRequest) -> OrchestratorResponse:
+    async def execute(
+        self,
+        request: OrchestratorRequest,
+        event_emitter: Optional[Any] = None,
+    ) -> OrchestratorResponse:
         """Execute the full mediator pipeline.
 
         Coordinates all registered handlers in sequence, handling
         short-circuit responses from dialog and approval handlers.
+
+        Args:
+            request: The orchestrator request.
+            event_emitter: Optional PipelineEventEmitter for SSE streaming.
+                When provided, events are emitted at each pipeline step.
         """
         start_time = time.time()
 
@@ -173,7 +182,23 @@ class OrchestratorMediator:
 
         handler_results: Dict[str, HandlerResult] = {}
 
+        # Sprint 145: Helper to emit SSE events when emitter is available
+        async def _emit(event_type: str, data: Optional[Dict[str, Any]] = None) -> None:
+            if event_emitter and hasattr(event_emitter, "emit"):
+                from src.integrations.hybrid.orchestrator.sse_events import SSEEventType
+                try:
+                    et = SSEEventType(event_type)
+                    await event_emitter.emit(et, data or {})
+                except (ValueError, Exception):
+                    pass
+
         try:
+            # Sprint 145: Emit pipeline start
+            await _emit("PIPELINE_START", {
+                "session_id": session["session_id"],
+                "mode": str(request.force_mode or "auto"),
+            })
+
             # Step 1: Context preparation
             context_result = await self._run_handler(
                 HandlerType.CONTEXT, request, pipeline_context
@@ -188,9 +213,21 @@ class OrchestratorMediator:
             if routing_result:
                 handler_results["routing"] = routing_result
                 if not routing_result.success:
+                    await _emit("PIPELINE_ERROR", {"error": routing_result.error or "routing failed"})
                     return self._build_error_response(
                         routing_result, session, start_time, handler_results
                     )
+
+                # Sprint 145: Emit routing complete
+                rd = routing_result.data or {}
+                routing_decision = rd.get("routing_decision")
+                await _emit("ROUTING_COMPLETE", {
+                    "intent": str(getattr(routing_decision, "intent_category", "")) if routing_decision else None,
+                    "risk_level": str(getattr(routing_decision, "risk_level", "")) if routing_decision else None,
+                    "mode": str(pipeline_context.get("execution_mode", "")),
+                    "confidence": getattr(routing_decision, "confidence", None) if routing_decision else None,
+                    "suggested_mode": rd.get("suggested_mode"),
+                })
 
             # Step 3: Dialog (conditional)
             dialog_result = await self._run_handler(
@@ -221,12 +258,24 @@ class OrchestratorMediator:
                     )
 
             # Step 5: Agent (LLM response generation)
+            await _emit("AGENT_THINKING", {"status": "thinking"})
             agent_result = await self._run_handler(
                 HandlerType.AGENT, request, pipeline_context
             )
             if agent_result:
                 handler_results["agent"] = agent_result
                 pipeline_context["agent_response"] = agent_result.data
+
+                # Sprint 145: Emit tool calls if any
+                agent_data = agent_result.data or {}
+                tool_calls = agent_data.get("tool_calls", [])
+                for tc in tool_calls:
+                    await _emit("TOOL_CALL_END", {
+                        "tool_name": tc.get("tool_name", ""),
+                        "result": tc.get("result"),
+                        "iteration": tc.get("iteration", 0),
+                    })
+
                 if agent_result.should_short_circuit:
                     # Phase 41: Write conversation to memory before short-circuit return
                     try:
@@ -253,6 +302,15 @@ class OrchestratorMediator:
                     if response_content:
                         history.append({"role": "assistant", "content": response_content, "timestamp": time.time()})
 
+                    # Sprint 145: Emit complete before short-circuit return
+                    sc_content = agent_result.data.get("content", "") if agent_result.data else ""
+                    await _emit("TEXT_DELTA", {"delta": sc_content})
+                    await _emit("PIPELINE_COMPLETE", {
+                        "content": sc_content,
+                        "mode": str(pipeline_context.get("execution_mode", "")),
+                        "processing_time_ms": round((time.time() - start_time) * 1000, 2),
+                    })
+
                     # Agent produced a direct response — skip execution dispatch
                     return self._build_short_circuit_response(
                         agent_result, session, start_time, handler_results,
@@ -269,6 +327,10 @@ class OrchestratorMediator:
                     )
 
             # Step 6: Execution
+            await _emit("TASK_DISPATCHED", {
+                "mode": str(pipeline_context.get("execution_mode", "")),
+                "description": request.content[:100],
+            })
             exec_result = await self._run_handler(
                 HandlerType.EXECUTION, request, pipeline_context
             )
@@ -335,10 +397,18 @@ class OrchestratorMediator:
                 session, request, exec_result, pipeline_context
             )
 
-            # Build final response
-            return self._build_response(
+            # Sprint 145: Emit final response
+            final_resp = self._build_response(
                 exec_result, session, pipeline_context, start_time, handler_results
             )
+            await _emit("TEXT_DELTA", {"delta": final_resp.content})
+            await _emit("PIPELINE_COMPLETE", {
+                "content": final_resp.content,
+                "mode": str(pipeline_context.get("execution_mode", "")),
+                "processing_time_ms": round((time.time() - start_time) * 1000, 2),
+            })
+
+            return final_resp
 
         except Exception as e:
             logger.error(f"Mediator pipeline error: {e}", exc_info=True)

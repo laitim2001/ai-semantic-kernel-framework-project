@@ -244,6 +244,74 @@ async def test_intent(
 # =============================================================================
 
 
+@router.post("/chat/stream")
+async def orchestrator_chat_stream(request: PipelineRequest):
+    """SSE streaming endpoint for the orchestration pipeline.
+
+    Sprint 145: Returns a Server-Sent Events stream with real-time
+    pipeline step events (ROUTING_COMPLETE, AGENT_THINKING, TEXT_DELTA,
+    TOOL_CALL_END, PIPELINE_COMPLETE).
+
+    The frontend can consume this with fetch() + ReadableStream.
+    """
+    import asyncio
+    from fastapi.responses import StreamingResponse
+    from src.integrations.hybrid.orchestrator.sse_events import PipelineEventEmitter
+    from src.integrations.hybrid.orchestrator.contracts import OrchestratorRequest
+    from src.integrations.hybrid.intent import ExecutionMode
+
+    session_id = request.session_id or "default"
+    factory = _get_session_factory()
+    mediator = factory.get_or_create(session_id)
+
+    # Create event emitter for this request
+    emitter = PipelineEventEmitter()
+
+    # Build OrchestratorRequest
+    request_metadata: Dict[str, Any] = dict(request.metadata) if request.metadata else {}
+    request_metadata["user_id"] = request.user_id or request.source or "anonymous"
+
+    force_mode = None
+    if request.mode:
+        mode_map = {
+            "chat": ExecutionMode.CHAT_MODE,
+            "workflow": ExecutionMode.WORKFLOW_MODE,
+            "swarm": ExecutionMode.SWARM_MODE,
+            "hybrid": ExecutionMode.HYBRID_MODE,
+        }
+        force_mode = mode_map.get(request.mode.lower())
+
+    orchestrator_request = OrchestratorRequest(
+        content=request.content,
+        session_id=request.session_id,
+        user_id=request.user_id or request.source or "anonymous",
+        force_mode=force_mode,
+        metadata=request_metadata,
+    )
+
+    async def run_pipeline():
+        """Run pipeline in background, pushing events to emitter."""
+        try:
+            await mediator.execute(orchestrator_request, event_emitter=emitter)
+        except Exception as e:
+            logger.error("SSE pipeline error: %s", e, exc_info=True)
+            await emitter.emit_error(str(e))
+
+    # Start pipeline in background task
+    asyncio.create_task(run_pipeline())
+
+    # Stream events to client
+    return StreamingResponse(
+        emitter.stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.post("/chat", response_model=PipelineResponse)
 async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
     """Execute the full E2E orchestration pipeline.

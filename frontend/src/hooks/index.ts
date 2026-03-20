@@ -129,6 +129,11 @@ export {
   useToolCallEvents,
 } from './useToolCallEvents';
 
+// Sprint 145: SSE Chat Hook
+export {
+  useSSEChat,
+} from './useSSEChat';
+
 // Sprint 89: Event Filter Hook
 export {
   useEventFilter,

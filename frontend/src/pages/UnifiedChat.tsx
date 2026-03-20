@@ -42,8 +42,8 @@ import { useExecutionMetrics } from '@/hooks/useExecutionMetrics';
 import { useChatThreads } from '@/hooks/useChatThreads';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useOrchestration } from '@/hooks/useOrchestration';
-import { orchestratorApi } from '@/api/endpoints/orchestrator';
-import type { SendOrchestratorMessageResponse } from '@/api/endpoints/orchestrator';
+import { useSSEChat } from '@/hooks/useSSEChat';
+import type { OrchestrationMetadata as _OrchestratorApiType } from '@/types/ag-ui'; // SSE replaces orchestratorApi
 import { memoryApi } from '@/api/endpoints/memory';
 import { sessionsApi } from '@/api/endpoints/sessions';
 import { filesApi } from '@/api/endpoints/files';
@@ -251,7 +251,9 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const [dialogQuestions, setDialogQuestions] = useState<DialogQuestion[] | null>(null);
   // Phase 41: Track orchestrator pipeline session ID
   const [orchestratorSessionId, setOrchestratorSessionId] = useState<string | null>(null);
-  const [isPipelineSending, setIsPipelineSending] = useState(false);
+  const [isPipelineSending] = useState(false); // kept for non-SSE fallback
+  // Sprint 145: SSE streaming hook
+  const { sendSSE, isStreaming: isSSEStreaming } = useSSEChat();
   // Sprint 144: User-controlled pipeline mode
   const [pipelineMode, setPipelineMode] = useState<'chat' | 'workflow' | 'swarm'>('chat');
   const [suggestedMode, setSuggestedMode] = useState<string | null>(null);
@@ -714,9 +716,9 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       console.log('[S75-5] Uploaded file IDs:', allFileIds);
     }
 
-    // Phase 41: Unified pipeline — POST /orchestrator/chat
+    // Phase 41 / Sprint 145: Unified pipeline via SSE streaming
     if (orchestrationEnabled) {
-      console.log('[UnifiedChat] Pipeline send via /orchestrator/chat:', content.slice(0, 50));
+      console.log('[UnifiedChat] Pipeline SSE send:', content.slice(0, 50));
 
       // Add user message to chat immediately
       const userMessage = {
@@ -728,136 +730,149 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       const messagesWithUser = [...messagesRef.current, userMessage];
       setMessages(messagesWithUser);
 
-      // Sprint 144: Show loading state while pipeline is processing
-      setIsPipelineSending(true);
+      // Create assistant message placeholder
+      const assistantMessageId = `orch-${Date.now()}`;
+      let accumulatedContent = '';
+      const orchMetadata: OrchestrationMetadata = {
+        executionMode: pipelineMode,
+      };
 
-      try {
-        const response: SendOrchestratorMessageResponse = await orchestratorApi.sendMessage({
+      const assistantMessage = {
+        id: assistantMessageId,
+        role: 'assistant' as const,
+        content: '',
+        timestamp: new Date().toISOString(),
+        orchestrationMetadata: orchMetadata,
+      };
+      setMessages([...messagesWithUser, assistantMessage]);
+
+      // Sprint 145: SSE event handlers for real-time updates
+      await sendSSE(
+        {
           content,
-          source: 'user',
           mode: pipelineMode,
+          source: 'user',
           session_id: orchestratorSessionId || undefined,
           user_id: userId,
-        });
-
-        // Track pipeline session
-        if (response.session_id) {
-          setOrchestratorSessionId(response.session_id);
-        }
-
-        // Sprint 144: Show suggested mode from routing
-        if (response.suggested_mode && response.suggested_mode !== pipelineMode) {
-          setSuggestedMode(response.suggested_mode);
-        }
-
-        // Build orchestration metadata from PipelineResponse
-        // Normalize risk_level to uppercase (backend may return lowercase)
-        const normalizedRisk = response.risk_level?.toUpperCase() as OrchestrationMetadata['riskLevel'];
-        const orchMetadata: OrchestrationMetadata = {
-          intent: response.intent_category || response.intent,
-          riskLevel: normalizedRisk,
-          executionMode: response.execution_mode || response.framework_used,
-          routingLayer: response.routing_layer,
-          confidence: response.confidence,
-          processingTimeMs: response.processing_time_ms,
-          taskId: response.task_id,
-          sessionId: response.session_id,
-          frameworkUsed: response.framework_used,
-          requiresApproval: response.requires_approval,
-        };
-
-        // S142-2: Extract tool calls from message metadata
-        const rawToolCalls = response.message?.metadata?.tool_calls as
-          | Array<{ tool_name?: string; status?: string; result?: string; duration_ms?: number }>
-          | undefined;
-        if (Array.isArray(rawToolCalls) && rawToolCalls.length > 0) {
-          orchMetadata.pipelineToolCalls = rawToolCalls.map((tc, idx) => ({
-            id: `tc-${Date.now()}-${idx}`,
-            toolName: tc.tool_name || 'unknown',
-            status: (tc.status as 'pending' | 'running' | 'completed' | 'failed') || 'completed',
-            result: tc.result,
-            durationMs: tc.duration_ms,
-          }));
-        }
-
-        // Extract response content
-        const responseContent =
-          response.content ||
-          response.message?.content ||
-          '(No response content)';
-
-        // Build detail string for IntentStatusChip expandable section
-        const detailParts: string[] = [];
-        if (orchMetadata.routingLayer) detailParts.push(`路由層: ${orchMetadata.routingLayer}`);
-        if (orchMetadata.confidence != null) detailParts.push(`信心度: ${(orchMetadata.confidence * 100).toFixed(0)}%`);
-        if (orchMetadata.processingTimeMs != null) detailParts.push(`處理時間: ${orchMetadata.processingTimeMs}ms`);
-        if (orchMetadata.frameworkUsed) detailParts.push(`框架: ${orchMetadata.frameworkUsed}`);
-        if (orchMetadata.taskId) detailParts.push(`任務: ${orchMetadata.taskId}`);
-        if (orchMetadata.pipelineToolCalls?.length) detailParts.push(`工具調用: ${orchMetadata.pipelineToolCalls.length} 個`);
-
-        // Create assistant message with orchestration metadata
-        const assistantMessageId = `orch-${Date.now()}`;
-        const assistantMessage = {
-          id: assistantMessageId,
-          role: 'assistant' as const,
-          content: '', // Start empty for typewriter effect
-          timestamp: new Date().toISOString(),
-          orchestrationMetadata: {
-            ...orchMetadata,
-            detail: detailParts.length > 0 ? detailParts.join('\n') : undefined,
+        },
+        {
+          onPipelineStart: (data) => {
+            console.log('[SSE] Pipeline started:', data);
+            if (data.session_id) {
+              setOrchestratorSessionId(data.session_id as string);
+            }
           },
-        };
-        setMessages([...messagesWithUser, assistantMessage]);
+          onRoutingComplete: (data) => {
+            console.log('[SSE] Routing complete:', data);
+            const intent = data.intent as string;
+            const riskLevel = (data.risk_level as string)?.toUpperCase() as OrchestrationMetadata['riskLevel'];
+            const mode = data.mode as string;
+            const confidence = data.confidence as number;
+            const suggested = data.suggested_mode as string;
 
-        // Trigger typewriter effect
-        setTypewriterContent(responseContent);
-        setTypewriterMessageId(assistantMessageId);
+            orchMetadata.intent = intent;
+            orchMetadata.riskLevel = riskLevel;
+            orchMetadata.executionMode = mode || pipelineMode;
+            orchMetadata.confidence = confidence;
 
-        // S143-1: Search for related memories on first message
-        if (isFirstMessage.current) {
-          isFirstMessage.current = false;
-          memoryApi.searchMemories(content, userId)
-            .then((res) => {
-              if (res.memories && res.memories.length > 0) {
-                setRelatedMemories(res.memories.map((m) => ({
-                  id: m.id,
-                  content: m.content,
-                  created_at: m.created_at,
-                  score: m.score,
-                })));
-                setShowMemoryHint(true);
-              }
-            })
-            .catch(() => { /* memory search is non-critical */ });
+            // Update message with routing metadata
+            const routingUpdated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, orchestrationMetadata: { ...orchMetadata } }
+                : m
+            );
+            setMessages(routingUpdated);
+
+            if (suggested && suggested !== pipelineMode) {
+              setSuggestedMode(suggested);
+            }
+          },
+          onAgentThinking: () => {
+            // Could show a thinking indicator
+          },
+          onToolCallEnd: (data) => {
+            const toolName = data.tool_name as string;
+            console.log('[SSE] Tool call:', toolName);
+            if (!orchMetadata.pipelineToolCalls) orchMetadata.pipelineToolCalls = [];
+            orchMetadata.pipelineToolCalls.push({
+              id: `tc-${Date.now()}`,
+              toolName: toolName || 'unknown',
+              status: 'completed',
+            });
+            const updated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, orchestrationMetadata: { ...orchMetadata } }
+                : m
+            );
+            setMessages(updated);
+          },
+          onTextDelta: (delta) => {
+            accumulatedContent += delta;
+            const updated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, content: accumulatedContent }
+                : m
+            );
+            setMessages(updated);
+          },
+          onTaskDispatched: (data) => {
+            console.log('[SSE] Task dispatched:', data);
+            orchMetadata.taskId = data.task_id as string;
+          },
+          onPipelineComplete: (data) => {
+            console.log('[SSE] Pipeline complete:', data);
+            const finalContent = (data.content as string) || accumulatedContent;
+            const processingTime = data.processing_time_ms as number;
+
+            orchMetadata.processingTimeMs = processingTime;
+
+            const detailParts: string[] = [];
+            if (orchMetadata.confidence != null) detailParts.push(`信心度: ${(orchMetadata.confidence * 100).toFixed(0)}%`);
+            if (processingTime != null) detailParts.push(`處理時間: ${processingTime}ms`);
+            if (orchMetadata.pipelineToolCalls?.length) detailParts.push(`工具調用: ${orchMetadata.pipelineToolCalls.length} 個`);
+
+            const updated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? {
+                    ...m,
+                    content: finalContent || '(No response content)',
+                    orchestrationMetadata: {
+                      ...orchMetadata,
+                      detail: detailParts.length > 0 ? detailParts.join('\n') : undefined,
+                    },
+                  }
+                : m
+            );
+            setMessages(updated);
+          },
+          onPipelineError: (error) => {
+            console.error('[SSE] Pipeline error:', error);
+            const updated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, content: `Pipeline 錯誤: ${error}` }
+                : m
+            );
+            setMessages(updated);
+          },
         }
+      );
 
-        // S143-3: Extract memory_context from pipeline response metadata
-        const msgMeta = response.message?.metadata as Record<string, unknown> | undefined;
-        const memCtx = msgMeta?.memory_context as
-          | Array<{ id: string; content: string; created_at: string; score?: number }>
-          | undefined;
-        if (Array.isArray(memCtx) && memCtx.length > 0) {
-          setRelatedMemories(memCtx.map((m) => ({
-            id: m.id,
-            content: m.content,
-            created_at: m.created_at,
-            score: m.score,
-          })));
-          setShowMemoryHint(true);
-        }
-
-      } catch (err) {
-        console.error('[UnifiedChat] Pipeline send failed:', err);
-        const errorMessage = {
-          id: `orch-err-${Date.now()}`,
-          role: 'assistant' as const,
-          content: `Pipeline 錯誤: ${err instanceof Error ? err.message : String(err)}`,
-          timestamp: new Date().toISOString(),
-        };
-        setMessages([...messagesWithUser, errorMessage]);
-      } finally {
-        // Sprint 144: Clear loading state
-        setIsPipelineSending(false);
+      // S143-1: Search for related memories on first message
+      if (isFirstMessage.current) {
+        isFirstMessage.current = false;
+        memoryApi.searchMemories(content, userId)
+          .then((res) => {
+            if (res.memories && res.memories.length > 0) {
+              setRelatedMemories(res.memories.map((m) => ({
+                id: m.id,
+                content: m.content,
+                created_at: m.created_at,
+                score: m.score,
+              })));
+              setShowMemoryHint(true);
+            }
+          })
+          .catch(() => { /* memory search is non-critical */ });
       }
 
       if (allFileIds.length > 0) clearAttachments();
@@ -1130,7 +1145,7 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
         {/* Input Area - S75-4: Added file attachment support */}
         <ChatInput
           onSend={handleSend}
-          isStreaming={isStreaming || isUploading || isPipelineSending}
+          isStreaming={isStreaming || isUploading || isPipelineSending || isSSEStreaming}
           onCancel={handleCancel}
           placeholder={
             pipelineMode === 'chat'
