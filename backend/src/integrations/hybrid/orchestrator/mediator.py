@@ -261,6 +261,27 @@ class OrchestratorMediator:
                     except Exception as cp_err:
                         logger.debug("Checkpoint save failed for step '%s': %s", step_name, cp_err)
 
+            # Sprint 147: Check for existing checkpoint to resume from
+            resume_step = -1
+            if self._checkpoint_storage and hasattr(self._checkpoint_storage, "load_latest"):
+                try:
+                    latest_cp = await self._checkpoint_storage.load_latest(
+                        session_id=session["session_id"]
+                    )
+                    if latest_cp:
+                        resume_step = getattr(latest_cp, "step_index", -1)
+                        logger.info(
+                            "Mediator: found checkpoint at step %d (%s), resuming",
+                            resume_step,
+                            getattr(latest_cp, "step_name", "unknown"),
+                        )
+                        await _emit("CHECKPOINT_RESTORED", {
+                            "step_name": getattr(latest_cp, "step_name", ""),
+                            "step_index": resume_step,
+                        })
+                except Exception as cp_err:
+                    logger.debug("Mediator: checkpoint load failed: %s", cp_err)
+
             # Sprint 145: Emit pipeline start
             await _emit("PIPELINE_START", {
                 "session_id": session["session_id"],
