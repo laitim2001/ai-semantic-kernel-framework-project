@@ -203,6 +203,7 @@ class OrchestratorMediator:
                         dialog_result, session, start_time, handler_results,
                         framework="guided_dialog",
                         mode=ExecutionMode.CHAT_MODE,
+                        pipeline_context=pipeline_context,
                     )
 
             # Step 4: Approval (conditional)
@@ -216,6 +217,7 @@ class OrchestratorMediator:
                         approval_result, session, start_time, handler_results,
                         framework="hitl_controller",
                         mode=ExecutionMode.WORKFLOW_MODE,
+                        pipeline_context=pipeline_context,
                     )
 
             # Step 5: Agent (LLM response generation)
@@ -263,6 +265,7 @@ class OrchestratorMediator:
                         mode=pipeline_context.get(
                             "execution_mode", ExecutionMode.CHAT_MODE
                         ),
+                        pipeline_context=pipeline_context,
                     )
 
             # Step 6: Execution
@@ -511,9 +514,23 @@ class OrchestratorMediator:
         handler_results: Dict[str, HandlerResult],
         framework: str,
         mode: ExecutionMode,
+        pipeline_context: Optional[Dict[str, Any]] = None,
     ) -> OrchestratorResponse:
         """Build response for short-circuit (dialog/approval pending)."""
         sc = result.short_circuit_response or {}
+        ctx = pipeline_context or {}
+
+        # Include routing/risk metadata from pipeline context
+        meta = {k: v for k, v in sc.items() if k not in ("content", "error")}
+        rd = ctx.get("routing_decision")
+        if rd and hasattr(rd, "to_dict"):
+            meta["routing_decision"] = rd.to_dict()
+        elif rd and isinstance(rd, dict):
+            meta["routing_decision"] = rd
+        ra = ctx.get("risk_assessment")
+        if ra and hasattr(ra, "to_dict"):
+            meta["risk_assessment"] = ra.to_dict()
+
         return OrchestratorResponse(
             success=result.success,
             content=sc.get("content", ""),
@@ -522,7 +539,7 @@ class OrchestratorMediator:
             execution_mode=mode,
             session_id=session["session_id"],
             duration=time.time() - start_time,
-            metadata={k: v for k, v in sc.items() if k not in ("content", "error")},
+            metadata=meta,
             handler_results=handler_results,
         )
 
