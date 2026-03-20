@@ -59,8 +59,15 @@ class ContextHandler(Handler):
             hybrid_context = await self._prepare_context(request.session_id or "")
             context["hybrid_context"] = hybrid_context
 
-            # Phase 41: Store memory_manager ref in context for later memory write
+            # Phase 41: Ensure memory client is initialized + store ref for later write
             if self._memory_manager:
+                # Initialize underlying memory client if needed
+                if hasattr(self._memory_manager, '_memory') and self._memory_manager._memory is not None:
+                    if hasattr(self._memory_manager._memory, '_initialized') and not self._memory_manager._memory._initialized:
+                        try:
+                            await self._memory_manager._memory.initialize()
+                        except Exception as init_err:
+                            logger.warning("ContextHandler: memory init failed: %s", init_err)
                 context["memory_manager"] = self._memory_manager
 
             # Sprint 135: Auto-inject relevant memories

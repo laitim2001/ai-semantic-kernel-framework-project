@@ -108,12 +108,34 @@ class OrchestratorSessionFactory:
     # ------------------------------------------------------------------
 
     def _create_orchestrator(self, session_id: str) -> OrchestratorMediator:
-        """Create a fresh OrchestratorMediator with AgentHandler."""
+        """Create a fresh OrchestratorMediator with AgentHandler and ContextHandler."""
         agent_handler = AgentHandler(
             llm_service=self._llm_service,
             tool_registry=self._tool_registry,
         )
         mediator = OrchestratorMediator(agent_handler=agent_handler)
+
+        # Phase 41: Register ContextHandler with memory_manager for memory R/W
+        try:
+            from src.integrations.hybrid.orchestrator.handlers.context import ContextHandler
+            from src.integrations.hybrid.orchestrator.memory_manager import OrchestratorMemoryManager
+            from src.integrations.hybrid.orchestrator.contracts import HandlerType
+            from src.integrations.memory.unified_memory import UnifiedMemoryManager
+
+            # Create memory manager (shares the global UnifiedMemoryManager singleton)
+            if not hasattr(self, '_unified_memory') or self._unified_memory is None:
+                self._unified_memory = UnifiedMemoryManager()
+
+            orch_memory = OrchestratorMemoryManager(
+                llm_service=self._llm_service,
+                memory_client=self._unified_memory,
+            )
+            context_handler = ContextHandler(memory_manager=orch_memory)
+            mediator.register_handler(HandlerType.CONTEXT, context_handler)
+            logger.info("SessionFactory: ContextHandler with memory registered for session '%s'", session_id)
+        except Exception as e:
+            logger.warning("SessionFactory: ContextHandler setup failed (non-critical): %s", e)
+
         return mediator
 
     def _evict_oldest(self) -> None:
