@@ -183,6 +183,10 @@ class OrchestratorMediator:
         handler_results: Dict[str, HandlerResult] = {}
 
         # Sprint 145: Helper to emit SSE events when emitter is available
+        def _enum_val(v: Any) -> Any:
+            """Convert enum to its .value string."""
+            return v.value if hasattr(v, "value") else str(v) if v else None
+
         async def _emit(event_type: str, data: Optional[Dict[str, Any]] = None) -> None:
             if event_emitter and hasattr(event_emitter, "emit"):
                 from src.integrations.hybrid.orchestrator.sse_events import SSEEventType
@@ -196,7 +200,7 @@ class OrchestratorMediator:
             # Sprint 145: Emit pipeline start
             await _emit("PIPELINE_START", {
                 "session_id": session["session_id"],
-                "mode": str(request.force_mode or "auto"),
+                "mode": _enum_val(request.force_mode) or "auto",
             })
 
             # Step 1: Context preparation
@@ -222,10 +226,11 @@ class OrchestratorMediator:
                 rd = routing_result.data or {}
                 routing_decision = rd.get("routing_decision")
                 await _emit("ROUTING_COMPLETE", {
-                    "intent": str(getattr(routing_decision, "intent_category", "")) if routing_decision else None,
-                    "risk_level": str(getattr(routing_decision, "risk_level", "")) if routing_decision else None,
-                    "mode": str(pipeline_context.get("execution_mode", "")),
+                    "intent": _enum_val(getattr(routing_decision, "intent_category", None)) if routing_decision else None,
+                    "risk_level": _enum_val(getattr(routing_decision, "risk_level", None)) if routing_decision else None,
+                    "mode": _enum_val(pipeline_context.get("execution_mode")),
                     "confidence": getattr(routing_decision, "confidence", None) if routing_decision else None,
+                    "routing_layer": getattr(routing_decision, "routing_layer", None) if routing_decision else None,
                     "suggested_mode": rd.get("suggested_mode"),
                 })
 
@@ -307,7 +312,7 @@ class OrchestratorMediator:
                     await _emit("TEXT_DELTA", {"delta": sc_content})
                     await _emit("PIPELINE_COMPLETE", {
                         "content": sc_content,
-                        "mode": str(pipeline_context.get("execution_mode", "")),
+                        "mode": _enum_val(pipeline_context.get("execution_mode")),
                         "processing_time_ms": round((time.time() - start_time) * 1000, 2),
                     })
 
@@ -328,7 +333,7 @@ class OrchestratorMediator:
 
             # Step 6: Execution
             await _emit("TASK_DISPATCHED", {
-                "mode": str(pipeline_context.get("execution_mode", "")),
+                "mode": _enum_val(pipeline_context.get("execution_mode")),
                 "description": request.content[:100],
             })
             exec_result = await self._run_handler(
