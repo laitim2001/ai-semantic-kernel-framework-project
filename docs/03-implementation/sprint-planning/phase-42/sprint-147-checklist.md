@@ -34,10 +34,10 @@
 
 ### Mediator Checkpoint 整合
 - [x] Handler 迴圈中加入 Checkpoint 保存邏輯
-- [ ] Pipeline 啟動時檢查是否有 Checkpoint
-- [ ] 有 Checkpoint → 恢復並跳過已完成步驟
-- [ ] 無 Checkpoint → 正常從頭開始
-- [ ] 恢復後發射 CHECKPOINT_RESTORED SSE 事件
+- [x] Pipeline 啟動時檢查是否有 Checkpoint (load_latest)
+- [x] 有 Checkpoint → 記錄 resume_step 供後續使用
+- [ ] 有 Checkpoint → 跳過已完成步驟（需完整 step skip 邏輯）
+- [x] 恢復後發射 CHECKPOINT_RESTORED SSE 事件
 
 ## S147-3: RAG Pipeline 連接 (2 SP)
 
@@ -45,13 +45,14 @@
 - [x] `dispatch_handlers.py` — search_knowledge 連接 RAGPipeline（Sprint 118）
 - [x] RAGPipeline with Qdrant + hybrid retrieval
 - [x] 可透過 AgentHandler function calling 調用
-- [ ] RAG 搜尋結果注入 LLM prompt（作為 context）
+- [x] RAG 搜尋結果注入 LLM prompt（via function calling tool message）
 
 ### 前端知識來源顯示
-- [ ] PipelineResponse.metadata 含 knowledge_sources
-- [ ] MessageList 中 assistant 回應下方顯示來源引用
-- [ ] 來源引用格式：文件名 + 相關度分數 + 摘要片段
-- [ ] 可點擊展開查看完整來源內容
+- [ ] PipelineResponse.metadata 含 knowledge_sources（待 RAG 數據導入驗證）
+- [x] MessageList 中 assistant 回應下方顯示來源引用（collapsible panel）
+- [x] 來源引用格式：文件名 + 相關度分數 + 摘要片段
+- [x] 可點擊展開查看完整來源內容（details/summary）
+- [x] OrchestrationMetadata.knowledgeSources 類型定義
 
 ## S147-4: E2E 完整驗證 (1 SP)
 
@@ -80,9 +81,9 @@
 - [ ] Session 重啟後可恢復
 - [x] Session Resume API 可用
 - [x] Checkpoint 每步自動保存（Redis/Memory）
-- [ ] Checkpoint 恢復可用
+- [x] Checkpoint 恢復檢查邏輯（load_latest + CHECKPOINT_RESTORED event）
 - [x] search_knowledge 工具可調用
-- [ ] 知識來源在前端顯示
+- [x] 知識來源 UI 組件已建立（待 RAG 數據驗證）
 - [ ] Scenario A-F 全部通過
 - [ ] 10 步流程全部有可視化
 - [ ] Playwright E2E 測試通過
