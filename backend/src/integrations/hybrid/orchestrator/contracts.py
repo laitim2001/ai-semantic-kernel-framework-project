@@ -42,6 +42,7 @@ class OrchestratorRequest:
 
     content: str
     session_id: Optional[str] = None
+    user_id: Optional[str] = None  # Phase 41: for memory operations
     requester: str = "system"
     force_mode: Optional[ExecutionMode] = None
     tools: Optional[List[Dict[str, Any]]] = None

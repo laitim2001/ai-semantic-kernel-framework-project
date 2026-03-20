@@ -59,6 +59,10 @@ class ContextHandler(Handler):
             hybrid_context = await self._prepare_context(request.session_id or "")
             context["hybrid_context"] = hybrid_context
 
+            # Phase 41: Store memory_manager ref in context for later memory write
+            if self._memory_manager:
+                context["memory_manager"] = self._memory_manager
+
             # Sprint 135: Auto-inject relevant memories
             if self._memory_manager:
                 try:

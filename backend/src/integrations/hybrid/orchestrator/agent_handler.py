@@ -100,9 +100,17 @@ class AgentHandler(Handler):
         # --- Build the full prompt -----------------------------------------
         context_prompt = self._build_context_prompt(routing_decision)
         tools_prompt = self._build_tools_prompt(request)
+
+        # Phase 41: Inject memory context from ContextHandler (if available)
+        memory_section = ""
+        memory_context = context.get("memory_context", "")
+        if memory_context:
+            memory_section = f"--- 相關記憶 ---\n{memory_context}\n\n"
+
         full_prompt = (
             f"{ORCHESTRATOR_SYSTEM_PROMPT}\n\n"
             f"{tools_prompt}"
+            f"{memory_section}"
             f"--- 分析上下文 ---\n{context_prompt}\n\n"
             f"--- 用戶輸入 ---\n{user_input}"
         )

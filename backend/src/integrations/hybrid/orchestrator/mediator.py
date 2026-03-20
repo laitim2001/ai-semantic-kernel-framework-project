@@ -226,6 +226,24 @@ class OrchestratorMediator:
                 handler_results["agent"] = agent_result
                 pipeline_context["agent_response"] = agent_result.data
                 if agent_result.should_short_circuit:
+                    # Phase 41: Write conversation to memory before short-circuit return
+                    try:
+                        memory_mgr = pipeline_context.get("memory_manager")
+                        response_content = agent_result.data.get("content", "") if agent_result.data else ""
+                        if memory_mgr and hasattr(memory_mgr, "_write_to_longterm") and response_content and request.content:
+                            conversation = f"User: {request.content}\nAssistant: {response_content[:500]}"
+                            await memory_mgr._write_to_longterm(
+                                content=conversation,
+                                user_id=request.user_id or session.get("user_id", "system"),
+                                metadata={
+                                    "session_id": session.get("session_id", ""),
+                                    "source": "auto_conversation",
+                                    "intent": pipeline_context.get("intent_category", ""),
+                                },
+                            )
+                    except Exception as mem_err:
+                        logger.warning(f"Memory write failed (non-critical): {mem_err}")
+
                     # Agent produced a direct response — skip execution dispatch
                     return self._build_short_circuit_response(
                         agent_result, session, start_time, handler_results,
@@ -272,6 +290,35 @@ class OrchestratorMediator:
             )
             if obs_result:
                 handler_results["observability"] = obs_result
+
+            # Step 9: Write conversation to memory (Phase 41)
+            try:
+                memory_mgr = pipeline_context.get("memory_manager")
+                if memory_mgr and hasattr(memory_mgr, "_write_to_longterm"):
+                    # Get response content
+                    response_content = ""
+                    if exec_result and exec_result.data:
+                        response_content = exec_result.data.get("content", "")
+                    elif agent_result and agent_result.data:
+                        response_content = agent_result.data.get("content", "")
+
+                    if response_content and request.content:
+                        conversation = (
+                            f"User: {request.content}\n"
+                            f"Assistant: {response_content[:500]}"
+                        )
+                        await memory_mgr._write_to_longterm(
+                            content=conversation,
+                            user_id=request.user_id or session.get("user_id", "system"),
+                            metadata={
+                                "session_id": session.get("session_id", ""),
+                                "source": "auto_conversation",
+                                "intent": pipeline_context.get("intent_category", ""),
+                            },
+                        )
+                        logger.info("Memory: conversation written to long-term memory")
+            except Exception as mem_err:
+                logger.warning(f"Memory write failed (non-critical): {mem_err}")
 
             # Update session
             self._update_session_after_execution(

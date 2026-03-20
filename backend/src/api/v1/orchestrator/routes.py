@@ -326,9 +326,13 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
                 routing_decision
             )
 
+        # Phase 41: Pass user_id for memory operations
+        request_metadata["user_id"] = request.user_id or request.source or "anonymous"
+
         orchestrator_request = OrchestratorRequest(
             content=request.content,
             session_id=request.session_id,
+            user_id=request.user_id or request.source or "anonymous",
             metadata=request_metadata,
         )
 
