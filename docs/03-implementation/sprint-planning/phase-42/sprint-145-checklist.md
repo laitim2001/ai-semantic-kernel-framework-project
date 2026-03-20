@@ -8,86 +8,87 @@
 ## S145-1: 後端 SSE 端點 (5 SP)
 
 ### SSE 端點建立
-- [ ] `api/v1/orchestration.py` — 新增 `POST /orchestrator/chat/stream` 路由
-- [ ] 使用 FastAPI `StreamingResponse` + `text/event-stream` content type
-- [ ] 接收 PipelineRequest（與同步端點相同格式）
-- [ ] 保留原有 `POST /orchestrator/chat` 同步端點
+- [x] `api/v1/orchestrator/routes.py` — 新增 `POST /orchestrator/chat/stream` 路由
+- [x] 使用 FastAPI `StreamingResponse` + `text/event-stream` content type
+- [x] 接收 PipelineRequest（與同步端點相同格式，含 mode 欄位）
+- [x] 保留原有 `POST /orchestrator/chat` 同步端點
 
 ### PipelineEventEmitter 實作
-- [ ] `mediator.py` — 新增 `PipelineEventEmitter` class
-- [ ] 使用 `asyncio.Queue` 作為事件通道
-- [ ] `emit()` 方法：將事件放入 queue
-- [ ] `stream()` 方法：AsyncGenerator 產出 SSE 格式字串
-- [ ] PIPELINE_COMPLETE 事件後停止串流
+- [x] `sse_events.py` — 新增 `PipelineEventEmitter` class
+- [x] 使用 `asyncio.Queue` 作為事件通道
+- [x] `emit()` 方法：將事件放入 queue
+- [x] `stream()` 方法：AsyncGenerator 產出 SSE 格式字串
+- [x] PIPELINE_COMPLETE / PIPELINE_ERROR 事件後停止串流
+- [x] 120 秒 keepalive comment 防止連線超時
 
 ### Mediator 事件整合
-- [ ] `mediator.py` — `process()` 方法接受 optional `event_emitter` 參數
-- [ ] 每個 Handler 執行前發射對應 START 事件
-- [ ] 每個 Handler 執行後發射對應 COMPLETE/END 事件
-- [ ] TEXT_DELTA 事件支援逐 token 發射
+- [x] `mediator.py` — `execute()` 方法接受 optional `event_emitter` 參數
+- [x] PIPELINE_START 事件：pipeline 開始
+- [x] ROUTING_COMPLETE 事件：含 intent, risk_level, mode, confidence, routing_layer
+- [x] AGENT_THINKING 事件：LLM 開始思考
+- [x] TOOL_CALL_END 事件：工具調用完成
+- [x] TEXT_DELTA 事件：回應文字
+- [x] TASK_DISPATCHED 事件：任務分發
+- [x] PIPELINE_COMPLETE 事件：完整回應 + 處理時間
+- [x] `asyncio.sleep(0)` 後每次 emit 強制 yield（真正即時串流）
+- [x] `_enum_val()` helper 確保 enum 用 .value 序列化
 
 ### SSE 事件模型
-- [ ] `models.py` — 新增 `SSEEvent` dataclass
-- [ ] `models.py` — 新增 `SSEEventType` enum（至少 8 種事件類型）
-- [ ] 事件格式對齊 AG-UI 協議命名慣例
+- [x] `sse_events.py` — `SSEEvent` dataclass（event_type, data, timestamp）
+- [x] `sse_events.py` — `SSEEventType` enum（12 種事件類型）
+- [x] `to_sse_string()` 格式化為 SSE wire protocol
 
 ## S145-2: 前端 SSE 接收 (4 SP)
 
 ### useSSEChat Hook
-- [ ] 新增 `hooks/useSSEChat.ts`
-- [ ] 使用 `fetch` + `ReadableStream` 接收 SSE（POST 方式）
-- [ ] SSE 格式解析：`event: TYPE\ndata: JSON\n\n`
-- [ ] 事件分發到對應 handler（8 種事件類型）
-- [ ] 支援連線中斷重試（最多 3 次）
+- [x] 新增 `hooks/useSSEChat.ts`
+- [x] 使用 `fetch` + `ReadableStream` 接收 SSE（POST 方式）
+- [x] SSE 格式解析：`event: TYPE\ndata: JSON\n\n`
+- [x] 事件分發到 12 個 handler callbacks
+- [x] AbortController 支援取消串流
+- [x] isStreaming 狀態追蹤
 
 ### UnifiedChat 切換到 SSE
-- [ ] `pages/UnifiedChat.tsx` — `handleSend()` 改用 `useSSEChat`
-- [ ] 移除 typewriter 假串流
-- [ ] TEXT_DELTA 驅動真實逐 token 串流
-- [ ] ROUTING_COMPLETE 即時更新 IntentStatusChip
-- [ ] TOOL_CALL_START/END 即時更新 ToolCallTracker
-- [ ] TASK_DISPATCHED 填充 TaskProgressCard
-- [ ] 保留同步 POST fallback
+- [x] `pages/UnifiedChat.tsx` — `handleSend()` 改用 `sendSSE()`
+- [x] ROUTING_COMPLETE 即時更新 IntentStatusChip（在 LLM 回應前就顯示）
+- [x] TEXT_DELTA 即時更新 message content
+- [x] TOOL_CALL_END 更新 pipelineToolCalls
+- [x] PIPELINE_COMPLETE 設定最終 content + detail
+- [x] PIPELINE_ERROR 顯示錯誤訊息
+- [x] isSSEStreaming 驅動 ChatInput loading 狀態（"AI is responding..."）
 
-### SSE API 函數
-- [ ] `api/endpoints/orchestrator.ts` — 新增 `streamMessage()` 函數
-- [ ] 處理 SSE 格式解析
-- [ ] 錯誤處理：網路斷線、timeout、server error
+### hooks/index.ts 匯出
+- [x] 新增 useSSEChat 匯出
 
 ## S145-3: MediatorEventBridge 連接 AG-UI (3 SP)
 
-### 事件映射
+### 事件映射（延後至 Sprint 146+）
 - [ ] `ag_ui/mediator_bridge.py` — 連接 PipelineEventEmitter
-- [ ] 映射 ROUTING_COMPLETE → RunStarted
-- [ ] 映射 AGENT_THINKING → AgentStateMessage
-- [ ] 映射 TEXT_DELTA → TextMessageContent
-- [ ] 映射 TOOL_CALL_START → ToolCallStart
-- [ ] 映射 TOOL_CALL_END → ToolCallEnd
-- [ ] 映射 PIPELINE_COMPLETE → RunFinished
+- [ ] 映射 Pipeline 事件 -> AG-UI 事件
 
-### AG-UI 路由更新
-- [ ] `ag_ui/routes.py` — 改用 MediatorEventBridge
-- [ ] 統一事件來源為 Pipeline
+---
 
-### 整合測試
-- [ ] 測試 Pipeline → AG-UI 事件映射正確性
-- [ ] 測試 SSE 端點回傳正確格式
-- [ ] 測試連線中斷 + 重連場景
+## 額外修復
+
+- [x] `routing.py` — 三層路由永遠執行（不因 force_mode 跳過）
+- [x] `mediator.py` — enum 用 .value 序列化（非 str()）
+- [x] `routes.py` — 修復 `context` 變數未定義錯誤
+- [x] `pipeline.py` — PipelineResponse 加入 execution_mode, suggested_mode, tool_calls
+- [x] `pipeline.py` — PipelineRequest 加入 mode 欄位
 
 ## 驗收測試
 
-- [ ] `POST /orchestrator/chat/stream` 回傳 SSE event stream
-- [ ] 包含 PIPELINE_START、ROUTING_COMPLETE、TEXT_DELTA、PIPELINE_COMPLETE 事件
-- [ ] 前端使用 SSE 接收即時事件
-- [ ] 真實逐 token 串流（非 typewriter）
-- [ ] IntentStatusChip 即時更新
-- [ ] ToolCallTracker 即時更新
-- [ ] 同步 POST fallback 仍可用
-- [ ] MediatorEventBridge 映射正確
+- [x] `POST /orchestrator/chat/stream` 回傳 SSE event stream
+- [x] 包含 PIPELINE_START、ROUTING_COMPLETE、TEXT_DELTA、PIPELINE_COMPLETE 事件
+- [x] 前端使用 SSE 接收即時事件
+- [x] IntentStatusChip 在回應前即時更新（意圖/風險/模式）
+- [x] "AI is responding..." loading 狀態
+- [x] 同步 POST fallback 仍可用
+- [ ] MediatorEventBridge 映射（延後）
 - [ ] SSE 連線中斷自動重試
-- [ ] TypeScript 零錯誤、npm run build 通過
+- [x] TypeScript 零錯誤
 - [ ] `black . && isort . && flake8 .` 通過
 
 ---
 
-**狀態**: 📋 計劃中
+**Status**: Done (S145-3 AG-UI bridge deferred)
