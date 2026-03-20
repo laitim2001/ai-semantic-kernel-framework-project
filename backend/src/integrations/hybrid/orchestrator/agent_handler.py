@@ -145,18 +145,29 @@ class AgentHandler(Handler):
                 request.request_id,
             )
 
+            # Phase 41: Only short-circuit for CHAT_MODE.
+            # WORKFLOW_MODE / HYBRID_MODE should proceed to ExecutionHandler
+            # for MAF/Claude/Swarm task dispatch.
+            from src.integrations.hybrid.intent import ExecutionMode
+            exec_mode = context.get("execution_mode", ExecutionMode.CHAT_MODE)
+            is_chat_mode = exec_mode in (ExecutionMode.CHAT_MODE, "chat")
+            needs_swarm = bool(context.get("swarm_decomposition"))
+
+            should_sc = is_chat_mode and not needs_swarm
+
             return HandlerResult(
                 success=True,
                 handler_type=HandlerType.AGENT,
                 data={
                     "content": llm_response,
                     "agent_source": "llm",
+                    "framework_used": "orchestrator_agent",
                 },
-                should_short_circuit=True,
+                should_short_circuit=should_sc,
                 short_circuit_response={
                     "content": llm_response,
                     "framework_used": "orchestrator_agent",
-                },
+                } if should_sc else None,
             )
 
         except Exception as exc:
