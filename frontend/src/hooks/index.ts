@@ -119,6 +119,16 @@ export {
   memoryKeys,
 } from './useMemory';
 
+// Phase 41: Typewriter Effect Hook (Sprint 141)
+export {
+  useTypewriterEffect,
+} from './useTypewriterEffect';
+
+// Phase 41: Tool Call Events Hook (Sprint 142)
+export {
+  useToolCallEvents,
+} from './useToolCallEvents';
+
 // Sprint 89: Event Filter Hook
 export {
   useEventFilter,

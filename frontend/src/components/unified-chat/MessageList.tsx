@@ -15,6 +15,10 @@ import type { ChatMessage, PendingApproval, UIComponentEvent } from '@/types/ag-
 import { MessageBubble } from '@/components/ag-ui/chat/MessageBubble';
 import { CustomUIRenderer } from '@/components/ag-ui/advanced/CustomUIRenderer';
 import { ApprovalMessageCard } from './ApprovalMessageCard';
+import { IntentStatusChip } from './IntentStatusChip';
+import { TaskProgressCard } from './TaskProgressCard';
+import { ToolCallTracker } from './ToolCallTracker';
+import type { TrackedToolCall } from '@/types/unified-chat';
 import { cn } from '@/lib/utils';
 
 // Check for reduced motion preference
@@ -199,6 +203,21 @@ export const MessageList: FC<MessageListProps> = ({
             ? `You said: ${message.content?.substring(0, 50)}${message.content && message.content.length > 50 ? '...' : ''}`
             : `AI response: ${message.content?.substring(0, 50)}${message.content && message.content.length > 50 ? '...' : ''}`;
 
+        // Phase 41: Extract orchestration metadata for inline components
+        const orchMeta = message.orchestrationMetadata;
+
+        // Phase 41 S142-2: Convert pipeline tool calls to TrackedToolCall format
+        const inlineToolCalls: TrackedToolCall[] = orchMeta?.pipelineToolCalls?.map((tc) => ({
+          id: tc.id,
+          toolCallId: tc.id,
+          name: tc.toolName,
+          arguments: tc.args ? { raw: tc.args } : {},
+          status: tc.status === 'running' ? 'executing' as const : tc.status,
+          result: tc.result,
+          duration: tc.durationMs,
+          startedAt: new Date().toISOString(),
+        })) || [];
+
         return (
           <div
             key={message.id || index}
@@ -209,6 +228,31 @@ export const MessageList: FC<MessageListProps> = ({
             role="article"
             aria-label={messageLabel}
           >
+            {/* Phase 41: IntentStatusChip above assistant messages with pipeline metadata */}
+            {message.role === 'assistant' && orchMeta && (
+              <div className="mx-4 mb-1">
+                <IntentStatusChip
+                  intent={orchMeta.intent}
+                  riskLevel={orchMeta.riskLevel}
+                  executionMode={orchMeta.executionMode}
+                  detail={orchMeta.detail}
+                />
+              </div>
+            )}
+
+            {/* Phase 41 S142-2: ToolCallTracker inline (before message content) */}
+            {message.role === 'assistant' && inlineToolCalls.length > 0 && (
+              <div className="mx-4 mb-1">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-2">
+                  <ToolCallTracker
+                    toolCalls={inlineToolCalls}
+                    maxVisible={5}
+                    showTimings
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Sprint 65: S65-5 - Render CustomUIRenderer if message has customUI */}
             {message.customUI ? (
               <div className="mx-4 my-2">
@@ -226,6 +270,13 @@ export const MessageList: FC<MessageListProps> = ({
                 onToolCallAction={handleToolCallAction}
                 onDownload={onDownload}
               />
+            )}
+
+            {/* Phase 41 S142-1: TaskProgressCard below assistant messages with taskId */}
+            {message.role === 'assistant' && orchMeta?.taskId && (
+              <div className="mx-4 mt-1">
+                <TaskProgressCard taskId={orchMeta.taskId} />
+              </div>
             )}
           </div>
         );
