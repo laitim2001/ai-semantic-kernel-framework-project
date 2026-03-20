@@ -17,6 +17,23 @@ from typing import Any, AsyncGenerator, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+# Sprint 145-3: Mapping from Pipeline SSE events to AG-UI protocol events.
+# This bridge allows AG-UI components to consume Pipeline events.
+PIPELINE_TO_AGUI_MAP = {
+    "PIPELINE_START": "RUN_STARTED",
+    "ROUTING_COMPLETE": "STEP_FINISHED",
+    "AGENT_THINKING": "TEXT_MESSAGE_START",
+    "TOOL_CALL_START": "TOOL_CALL_START",
+    "TOOL_CALL_END": "TOOL_CALL_END",
+    "TEXT_DELTA": "TEXT_MESSAGE_CONTENT",
+    "TASK_DISPATCHED": "STEP_STARTED",
+    "SWARM_WORKER_START": "STEP_STARTED",
+    "SWARM_PROGRESS": "STATE_SNAPSHOT",
+    "APPROVAL_REQUIRED": "STATE_SNAPSHOT",
+    "PIPELINE_COMPLETE": "RUN_FINISHED",
+    "PIPELINE_ERROR": "RUN_ERROR",
+}
+
 
 class SSEEventType(str, Enum):
     """Event types emitted during pipeline execution."""
@@ -44,10 +61,29 @@ class SSEEvent:
     timestamp: datetime = field(default_factory=datetime.utcnow)
 
     def to_sse_string(self) -> str:
-        """Format as SSE wire protocol."""
+        """Format as SSE wire protocol (Pipeline event names)."""
         payload = {**self.data, "timestamp": self.timestamp.isoformat()}
         return (
             f"event: {self.event_type.value}\n"
+            f"data: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
+        )
+
+    def to_agui_sse_string(self) -> str:
+        """Format as AG-UI protocol SSE event.
+
+        Sprint 145-3: Maps Pipeline event type to AG-UI event type,
+        preserving the original pipeline_type in the data payload.
+        """
+        agui_type = PIPELINE_TO_AGUI_MAP.get(
+            self.event_type.value, "STATE_SNAPSHOT"
+        )
+        payload = {
+            **self.data,
+            "pipeline_type": self.event_type.value,
+            "timestamp": self.timestamp.isoformat(),
+        }
+        return (
+            f"event: {agui_type}\n"
             f"data: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
         )
 
@@ -99,14 +135,21 @@ class PipelineEventEmitter:
         await self.emit(SSEEventType.PIPELINE_ERROR, {"error": error})
         self._closed = True
 
-    async def stream(self) -> AsyncGenerator[str, None]:
-        """Yield SSE-formatted strings until PIPELINE_COMPLETE or ERROR."""
+    async def stream(self, agui_format: bool = False) -> AsyncGenerator[str, None]:
+        """Yield SSE-formatted strings until PIPELINE_COMPLETE or ERROR.
+
+        Args:
+            agui_format: If True, output AG-UI protocol event names
+                instead of Pipeline event names (Sprint 145-3).
+        """
         while True:
             try:
                 event = await asyncio.wait_for(self._queue.get(), timeout=120)
-                yield event.to_sse_string()
+                if agui_format:
+                    yield event.to_agui_sse_string()
+                else:
+                    yield event.to_sse_string()
                 if event.event_type in (SSEEventType.PIPELINE_COMPLETE, SSEEventType.PIPELINE_ERROR):
                     break
             except asyncio.TimeoutError:
-                # Send keepalive comment to prevent connection timeout
                 yield ": keepalive\n\n"

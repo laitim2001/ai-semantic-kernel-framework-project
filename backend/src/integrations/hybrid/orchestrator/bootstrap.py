@@ -330,13 +330,21 @@ class OrchestratorBootstrap:
             return None
 
     def _wire_dialog_handler(self) -> Any:
-        """Wire DialogHandler with GuidedDialogEngine."""
+        """Wire DialogHandler with GuidedDialogEngine.
+
+        Sprint 146-3: GuidedDialogEngine requires a router parameter.
+        """
         try:
             from src.integrations.hybrid.orchestrator.handlers.dialog import DialogHandler
             guided_dialog = None
             try:
                 from src.integrations.orchestration.guided_dialog.engine import GuidedDialogEngine
-                guided_dialog = GuidedDialogEngine()
+                from src.integrations.orchestration.intent_router.router import (
+                    create_router_with_llm,
+                )
+                router = create_router_with_llm()
+                guided_dialog = GuidedDialogEngine(router=router)
+                logger.info("Bootstrap: GuidedDialogEngine wired with router")
             except Exception as e:
                 logger.warning("Bootstrap: GuidedDialogEngine unavailable: %s", e)
 
@@ -348,7 +356,10 @@ class OrchestratorBootstrap:
             return None
 
     def _wire_approval_handler(self) -> Any:
-        """Wire ApprovalHandler with RiskAssessor + HITLController."""
+        """Wire ApprovalHandler with RiskAssessor + HITLController.
+
+        Sprint 146-3: HITLController requires a storage parameter.
+        """
         try:
             from src.integrations.hybrid.orchestrator.handlers.approval import ApprovalHandler
 
@@ -361,8 +372,23 @@ class OrchestratorBootstrap:
 
             hitl_controller = None
             try:
-                from src.integrations.orchestration.hitl.controller import HITLController
-                hitl_controller = HITLController()
+                from src.integrations.orchestration.hitl.controller import (
+                    HITLController,
+                    create_hitl_controller,
+                )
+                hitl_controller = create_hitl_controller()
+                logger.info("Bootstrap: HITLController wired via factory")
+            except ImportError:
+                try:
+                    from src.integrations.orchestration.hitl.controller import HITLController
+                    from src.integrations.orchestration.hitl.approval_handler import (
+                        InMemoryApprovalStorage,
+                    )
+                    storage = InMemoryApprovalStorage()
+                    hitl_controller = HITLController(storage=storage)
+                    logger.info("Bootstrap: HITLController wired with InMemoryStorage")
+                except Exception as e2:
+                    logger.warning("Bootstrap: HITLController unavailable: %s", e2)
             except Exception as e:
                 logger.warning("Bootstrap: HITLController unavailable: %s", e)
 
