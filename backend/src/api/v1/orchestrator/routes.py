@@ -259,7 +259,7 @@ async def orchestrator_approval(approval_id: str, body: Dict[str, Any]) -> Dict[
     factory = _get_session_factory()
     resolved = False
     for sid in list(factory._sessions.keys()):
-        mediator = factory._sessions.get(sid, {}).get("mediator")
+        mediator = factory._sessions.get(sid)
         if mediator and hasattr(mediator, "resolve_approval"):
             if mediator.resolve_approval(approval_id, action):
                 resolved = True
