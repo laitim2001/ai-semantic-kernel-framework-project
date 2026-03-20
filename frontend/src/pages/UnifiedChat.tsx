@@ -1146,9 +1146,12 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
                         onClick={async () => {
                           try {
                             const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+                            const authToken = useAuthStore.getState().token;
+                            const hdrs: Record<string, string> = { 'Content-Type': 'application/json' };
+                            if (authToken) hdrs['Authorization'] = `Bearer ${authToken}`;
                             await fetch(`${API_BASE}/orchestrator/approval/${pendingApproval.approvalId}`, {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
+                              headers: hdrs,
                               body: JSON.stringify({ action: 'approve' }),
                             });
                           } catch { /* non-critical */ }
@@ -1162,9 +1165,12 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
                         onClick={async () => {
                           try {
                             const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+                            const authToken = useAuthStore.getState().token;
+                            const hdrs: Record<string, string> = { 'Content-Type': 'application/json' };
+                            if (authToken) hdrs['Authorization'] = `Bearer ${authToken}`;
                             await fetch(`${API_BASE}/orchestrator/approval/${pendingApproval.approvalId}`, {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
+                              headers: hdrs,
                               body: JSON.stringify({ action: 'reject' }),
                             });
                           } catch { /* non-critical */ }
