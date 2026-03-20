@@ -61,14 +61,16 @@ async def get_memory_manager() -> UnifiedMemoryManager:
     Retries initialization on failure (does not cache broken instances).
     """
     global _memory_manager
-    if _memory_manager is None:
-        manager = UnifiedMemoryManager()
-        try:
-            await manager.initialize()
-        except Exception as e:
-            logger.warning(f"Memory manager initialization failed: {e}")
-            # Still return it — health endpoint will show degraded status
+    if _memory_manager is not None and _memory_manager._initialized:
+        return _memory_manager
+    # (Re)try initialization
+    manager = UnifiedMemoryManager()
+    try:
+        await manager.initialize()
         _memory_manager = manager
+    except Exception as e:
+        logger.warning(f"Memory manager initialization failed: {e}")
+        _memory_manager = manager  # cache for health endpoint
     return _memory_manager
 
 
