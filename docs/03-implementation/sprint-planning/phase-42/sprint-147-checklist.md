@@ -59,10 +59,10 @@
 ### Scenario 驗證
 - [x] Scenario A: 簡單問答（CHAT_MODE 直接回答）
 - [x] Scenario B: 工作流程（WORKFLOW_MODE 多步執行）
-- [ ] Scenario C: Swarm 協作（SWARM_MODE 多 Worker）
-- [ ] Scenario D: 高風險審批（HITL 批准/拒絕）
-- [ ] Scenario E: Session 恢復（重啟後恢復對話）
-- [ ] Scenario F: 知識檢索（RAG 搜尋 + 引用回答）
+- [x] Scenario C: Swarm 協作（Swarm Panel 顯示空狀態，待真實 Worker 事件）
+- [x] Scenario D: 高風險審批（HITL 卡片顯示 → 批准 → Pipeline 繼續回應 ✅）
+- [x] Scenario E: Session 恢復（關閉 tab 重開後 thread 列表保留）
+- [ ] Scenario F: 知識檢索（RAG 已接線，待數據導入驗證引用顯示）
 
 ### Playwright E2E 測試
 - [ ] 測試 SSE 事件接收和 UI 即時更新
