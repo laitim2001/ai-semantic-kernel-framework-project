@@ -219,9 +219,12 @@ async def search_memory(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to search memories: {str(e)}",
+        logger.warning(f"Memory search failed (non-critical): {e}")
+        # Return empty results instead of 500 when memory system is unavailable
+        return SearchMemoryResponse(
+            results=[],
+            total=0,
+            query=request.query,
         )
 
 
