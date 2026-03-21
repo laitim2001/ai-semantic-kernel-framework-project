@@ -53,6 +53,7 @@ import type { Attachment } from '@/types/unified-chat';
 import type { OrchestrationMetadata } from '@/types/ag-ui';
 import { MemoryHint } from '@/components/unified-chat/MemoryHint';
 import { AgentSwarmPanel } from '@/components/unified-chat/agent-swarm/AgentSwarmPanel';
+import { WorkerDetailDrawer } from '@/components/unified-chat/agent-swarm/WorkerDetailDrawer';
 import { useSwarmStore } from '@/stores/swarmStore';
 import type { MemoryHintItem } from '@/components/unified-chat/MemoryHint';
 import type {
@@ -260,12 +261,12 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const swarmStatus = useSwarmStore((s) => s.swarmStatus);
   const _swarmReset = useSwarmStore((s) => s.reset);
   void _swarmReset; // used on session change (future)
-  const swarmSetStatus = useSwarmStore((s) => s.setSwarmStatus);
-  const swarmAddWorker = useSwarmStore((s) => s.addWorker);
-  const swarmUpdateProgress = useSwarmStore((s) => s.updateWorkerProgress);
-  const _swarmCompleteWorker = useSwarmStore((s) => s.completeWorker);
-  const _swarmComplete = useSwarmStore((s) => s.completeSwarm);
-  void _swarmCompleteWorker; void _swarmComplete; // used by SWARM_COMPLETE events (future)
+  void useSwarmStore; // accessed via getState() in SSE handlers
+  const swarmSelectWorker = useSwarmStore((s) => s.selectWorker);
+  const swarmSelectedDetail = useSwarmStore((s) => s.selectedWorkerDetail);
+  const swarmIsDrawerOpen = useSwarmStore((s) => s.isDrawerOpen);
+  const swarmOpenDrawer = useSwarmStore((s) => s.openDrawer);
+  const swarmCloseDrawer = useSwarmStore((s) => s.closeDrawer);
   const [showSwarmPanel, setShowSwarmPanel] = useState(false);
   // Sprint 146: HITL approval state
   const [pendingApproval, setPendingApproval] = useState<{
@@ -869,40 +870,100 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
           onSwarmWorkerStart: (data) => {
             console.log('[SSE] Swarm worker started:', data);
             setShowSwarmPanel(true);
-            if (!swarmStatus) {
-              swarmSetStatus({
-                swarmId: `swarm-${Date.now()}`,
+            const subtype = data.event_subtype as string;
+
+            if (subtype === 'SWARM_STARTED') {
+              // Initial swarm setup — use getState() to avoid stale closure
+              const totalWorkers = (data.total_workers as number) || 0;
+              useSwarmStore.getState().setSwarmStatus({
+                swarmId: (data.swarm_id as string) || `swarm-${Date.now()}`,
                 sessionId: orchestratorSessionId || '',
-                mode: 'parallel',
+                mode: (data.mode as 'parallel' | 'sequential' | 'pipeline' | 'hierarchical' | 'hybrid') || 'parallel',
                 status: 'executing',
-                totalWorkers: 0,
+                totalWorkers,
                 overallProgress: 0,
                 workers: [],
                 createdAt: new Date().toISOString(),
                 startedAt: new Date().toISOString(),
                 metadata: {},
               });
+            } else {
+              // Individual worker start — ensure status exists first
+              const store = useSwarmStore.getState();
+              if (!store.swarmStatus) {
+                store.setSwarmStatus({
+                  swarmId: `swarm-${Date.now()}`,
+                  sessionId: orchestratorSessionId || '',
+                  mode: 'parallel',
+                  status: 'executing',
+                  totalWorkers: 4,
+                  overallProgress: 0,
+                  workers: [],
+                  createdAt: new Date().toISOString(),
+                  startedAt: new Date().toISOString(),
+                  metadata: {},
+                });
+              }
+              store.addWorker({
+                workerId: (data.worker_id as string) || `w-${Date.now()}`,
+                workerName: (data.display_name as string) || (data.agent_name as string) || 'Worker',
+                workerType: 'hybrid',
+                role: (data.role as string) || 'worker',
+                status: 'running',
+                progress: 0,
+                toolCallsCount: 0,
+                createdAt: new Date().toISOString(),
+                startedAt: new Date().toISOString(),
+              });
             }
-            swarmAddWorker({
-              workerId: (data.worker_id as string) || `w-${Date.now()}`,
-              workerName: (data.agent_name as string) || 'Worker',
-              workerType: 'hybrid',
-              role: (data.role as string) || 'worker',
-              status: 'running',
-              progress: 0,
-              toolCallsCount: 0,
-              createdAt: new Date().toISOString(),
-              startedAt: new Date().toISOString(),
-            });
           },
           onSwarmProgress: (data) => {
-            swarmUpdateProgress({
-              swarm_id: '',
-              worker_id: data.worker_id as string,
-              progress: data.progress as number,
-              status: (data.status as string) || 'running',
-              updated_at: new Date().toISOString(),
-            });
+            const subtype = data.event_subtype as string;
+            const store = useSwarmStore.getState();
+
+            if (subtype === 'SWARM_WORKER_COMPLETED') {
+              store.completeWorker({
+                swarm_id: '',
+                worker_id: data.worker_id as string,
+                status: 'completed',
+                duration_ms: (data.duration_ms as number) || 0,
+                completed_at: new Date().toISOString(),
+              });
+            } else if (subtype === 'SWARM_WORKER_THINKING') {
+              store.updateWorkerThinking({
+                swarm_id: '',
+                worker_id: data.worker_id as string,
+                thinking_content: (data.content as string) || '',
+                timestamp: new Date().toISOString(),
+              });
+            } else if (subtype === 'SWARM_WORKER_TOOL_CALL') {
+              if ((data.status as string) === 'completed') {
+                store.updateWorkerToolCall({
+                  swarm_id: '',
+                  worker_id: data.worker_id as string,
+                  tool_call_id: `tc-${Date.now()}`,
+                  tool_name: (data.tool_name as string) || '',
+                  status: 'completed',
+                  input_args: (data.arguments as Record<string, unknown>) || {},
+                  output_result: data.result as Record<string, unknown>,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+            } else if (subtype === 'SWARM_COMPLETED') {
+              const total = (data.total_workers as number) || 0;
+              const completed = (data.completed_workers as number) || 0;
+              store.updateSwarmProgress(total > 0 ? Math.round((completed / total) * 100) : 100);
+              store.completeSwarm('completed');
+            } else {
+              // Generic progress update
+              store.updateWorkerProgress({
+                swarm_id: '',
+                worker_id: data.worker_id as string,
+                progress: (data.progress as number) || 0,
+                status: (data.status as string) || 'running',
+                updated_at: new Date().toISOString(),
+              });
+            }
           },
           onApprovalRequired: (data) => {
             console.log('[SSE] Approval required:', data);
@@ -1207,13 +1268,25 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
             />
           )}
 
-          {/* Sprint 146: Agent Swarm Panel (visible in Swarm mode) */}
+          {/* Sprint 146/149: Agent Swarm Panel + Worker Detail Drawer */}
           {(pipelineMode === 'swarm' || showSwarmPanel) && (
             <div className="w-[360px] border-l bg-white overflow-y-auto hidden xl:block">
               <AgentSwarmPanel
                 swarmStatus={swarmStatus}
-                onWorkerClick={() => {}}
+                onWorkerClick={(worker) => {
+                  swarmSelectWorker(worker);
+                  swarmOpenDrawer();
+                }}
                 isLoading={isSSEStreaming && pipelineMode === 'swarm'}
+              />
+              <WorkerDetailDrawer
+                open={swarmIsDrawerOpen}
+                onClose={swarmCloseDrawer}
+                swarmId={swarmStatus?.swarmId || ''}
+                worker={swarmStatus?.workers?.find(
+                  w => w.workerId === useSwarmStore.getState().selectedWorkerId
+                ) || null}
+                workerDetail={swarmSelectedDetail}
               />
             </div>
           )}
