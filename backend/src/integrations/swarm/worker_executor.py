@@ -246,11 +246,28 @@ class SwarmWorkerExecutor:
                         messages.append({"role": "tool", "tool_name": tool_name, "result": tool_result})
                 else:
                     # No tool calls — final response
-                    messages.append({"role": "assistant", "content": content})
+                    # If content is empty, do a fallback generate() call
+                    if not content.strip():
+                        logger.info("Worker %s: empty content, running fallback generate()", self._worker_id)
+                        try:
+                            content = await self._llm.generate(
+                                prompt=(
+                                    f"{self._role_def.get('system_prompt', '')}\n\n"
+                                    f"## 任務\n{self._task.description}\n\n"
+                                    f"請直接用你的專業知識分析並回答。"
+                                ),
+                                max_tokens=2048,
+                                temperature=0.7,
+                            )
+                        except Exception as gen_err:
+                            logger.warning("Worker %s: fallback generate failed: %s", self._worker_id, gen_err)
+                            # Use last thinking step if available
+                            if thinking_steps:
+                                content = thinking_steps[-1].get("content", "")
 
+                    messages.append({"role": "assistant", "content": content})
                     duration_ms = (time.time() - start_time) * 1000
 
-                    # Emit completed
                     await self._emit("SWARM_WORKER_COMPLETED", {
                         "worker_id": self._worker_id,
                         "status": "completed",
@@ -271,9 +288,22 @@ class SwarmWorkerExecutor:
                         duration_ms=duration_ms,
                     )
 
-            # Max iterations reached
+            # Max iterations reached — fallback generate if no content
             duration_ms = (time.time() - start_time) * 1000
             last_content = thinking_steps[-1]["content"] if thinking_steps else ""
+            if not last_content.strip():
+                try:
+                    last_content = await self._llm.generate(
+                        prompt=(
+                            f"{self._role_def.get('system_prompt', '')}\n\n"
+                            f"## 任務\n{self._task.description}\n\n"
+                            f"請直接用你的專業知識分析並回答。"
+                        ),
+                        max_tokens=2048,
+                        temperature=0.7,
+                    )
+                except Exception:
+                    last_content = f"Worker {self._worker_id} 已完成分析但無法生成摘要。"
 
             await self._emit("SWARM_WORKER_COMPLETED", {
                 "worker_id": self._worker_id,

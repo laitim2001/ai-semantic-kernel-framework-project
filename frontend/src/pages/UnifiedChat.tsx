@@ -262,10 +262,8 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const _swarmReset = useSwarmStore((s) => s.reset);
   void _swarmReset; // used on session change (future)
   void useSwarmStore; // accessed via getState() in SSE handlers
-  const swarmSelectWorker = useSwarmStore((s) => s.selectWorker);
   const swarmSelectedDetail = useSwarmStore((s) => s.selectedWorkerDetail);
   const swarmIsDrawerOpen = useSwarmStore((s) => s.isDrawerOpen);
-  const swarmOpenDrawer = useSwarmStore((s) => s.openDrawer);
   const swarmCloseDrawer = useSwarmStore((s) => s.closeDrawer);
   const [showSwarmPanel, setShowSwarmPanel] = useState(false);
   // Sprint 146: HITL approval state
@@ -1274,8 +1272,19 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
               <AgentSwarmPanel
                 swarmStatus={swarmStatus}
                 onWorkerClick={(worker) => {
-                  swarmSelectWorker(worker);
-                  swarmOpenDrawer();
+                  // Build WorkerDetail from store data so Drawer doesn't need to fetch
+                  const store = useSwarmStore.getState();
+                  store.selectWorker(worker);
+                  // Build minimal WorkerDetail from UIWorkerSummary
+                  store.setWorkerDetail({
+                    ...worker,
+                    taskId: worker.workerId,
+                    taskDescription: worker.currentAction || '',
+                    thinkingHistory: [],
+                    toolCalls: [],
+                    messages: [],
+                  });
+                  store.openDrawer();
                 }}
                 isLoading={isSSEStreaming && pipelineMode === 'swarm'}
               />
