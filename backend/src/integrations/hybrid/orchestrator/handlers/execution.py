@@ -66,15 +66,19 @@ class ExecutionHandler(Handler):
     ) -> HandlerResult:
         """Dispatch execution to the appropriate framework."""
         try:
-            # Check for swarm mode first
+            # Check for swarm mode — by decomposition OR by execution_mode
             swarm_decomposition = context.get("swarm_decomposition")
-            if swarm_decomposition and self._swarm_handler:
-                return await self._execute_swarm(request, context, swarm_decomposition)
-
             intent = context.get("intent_analysis")
             mode = context.get("execution_mode", ExecutionMode.CHAT_MODE)
             if isinstance(mode, str):
-                mode = ExecutionMode(mode)
+                try:
+                    mode = ExecutionMode(mode)
+                except ValueError:
+                    mode = ExecutionMode.CHAT_MODE
+
+            # Sprint 148: Trigger swarm by decomposition OR user-selected SWARM_MODE
+            if mode == ExecutionMode.SWARM_MODE or (swarm_decomposition and self._swarm_handler):
+                return await self._execute_swarm(request, context, swarm_decomposition)
 
             if mode == ExecutionMode.WORKFLOW_MODE:
                 return await self._execute_workflow(request, context, intent)
