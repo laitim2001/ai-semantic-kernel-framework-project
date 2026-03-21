@@ -220,6 +220,8 @@ class OrchestratorMediator:
             "conversation_history": session.get("conversation_history", []),
             "current_mode": session.get("current_mode", ExecutionMode.CHAT_MODE),
             "metadata": {**(request.metadata or {}), **(session.get("metadata", {}))},
+            # Sprint 148: Pass event_emitter so ExecutionHandler/Swarm can emit events
+            "event_emitter": event_emitter,
         }
 
         handler_results: Dict[str, HandlerResult] = {}

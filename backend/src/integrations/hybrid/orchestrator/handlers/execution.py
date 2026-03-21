@@ -222,34 +222,170 @@ class ExecutionHandler(Handler):
         context: Dict[str, Any],
         decomposition: Any,
     ) -> HandlerResult:
-        """Execute in SWARM_MODE (multi-agent)."""
+        """Execute in SWARM_MODE (multi-agent).
+
+        Sprint 148: Uses new SwarmWorkerExecutor with real LLM + tools.
+        Falls back to legacy execute_swarm() if new engine unavailable.
+        """
         logger.info(
-            f"ExecutionHandler: SWARM_MODE — {len(decomposition.subtasks)} subtasks"
+            "ExecutionHandler: SWARM_MODE — %d subtasks",
+            len(decomposition.subtasks) if hasattr(decomposition, "subtasks") else 0,
         )
         routing_decision = context.get("routing_decision")
+        event_emitter = context.get("event_emitter")
 
-        swarm_result = await self._swarm_handler.execute_swarm(
-            intent=request.content,
-            decomposition=decomposition,
-            routing_decision=routing_decision,
-            session_id=request.session_id or "",
-            timeout=request.timeout,
-        )
+        # Sprint 148: Try new parallel engine first
+        try:
+            from src.integrations.swarm.task_decomposer import TaskDecomposer
+            from src.integrations.swarm.worker_executor import SwarmWorkerExecutor, WorkerResult
+            import asyncio
+            import uuid
 
-        return HandlerResult(
-            success=swarm_result.success,
-            handler_type=HandlerType.EXECUTION,
-            data={
-                "content": swarm_result.content,
-                "error": swarm_result.error,
-                "framework_used": "swarm",
-                "execution_mode": ExecutionMode.SWARM_MODE,
-                "swarm_id": swarm_result.swarm_id,
-                "swarm_mode": decomposition.swarm_mode,
-                "worker_count": len(decomposition.subtasks),
-                "worker_results": swarm_result.worker_results,
-            },
-        )
+            # Get LLM service from bootstrap
+            llm_service = context.get("llm_service")
+            if not llm_service:
+                from src.integrations.llm.factory import LLMServiceFactory
+                llm_service = LLMServiceFactory.create(use_cache=True)
+
+            tool_registry = context.get("tool_registry")
+            if not tool_registry:
+                from src.integrations.hybrid.orchestrator.tools import OrchestratorToolRegistry
+                tool_registry = OrchestratorToolRegistry()
+
+            # Decompose task
+            decomposer = TaskDecomposer(
+                llm_service=llm_service,
+                tool_names=[t.name for t in tool_registry.list_tools(role="admin")],
+            )
+            task_decomposition = await decomposer.decompose(request.content)
+
+            logger.info(
+                "ExecutionHandler: Decomposed into %d sub-tasks (mode=%s)",
+                len(task_decomposition.sub_tasks),
+                task_decomposition.mode,
+            )
+
+            # Emit SWARM_STARTED
+            if event_emitter and hasattr(event_emitter, "emit"):
+                from src.integrations.hybrid.orchestrator.sse_events import SSEEventType
+                await event_emitter.emit(SSEEventType.SWARM_WORKER_START, {
+                    "event_subtype": "SWARM_STARTED",
+                    "swarm_id": f"swarm-{uuid.uuid4().hex[:8]}",
+                    "mode": task_decomposition.mode,
+                    "total_workers": len(task_decomposition.sub_tasks),
+                    "tasks": [
+                        {"title": t.title, "role": t.role}
+                        for t in task_decomposition.sub_tasks
+                    ],
+                })
+
+            # Create worker executors
+            max_concurrent = 3
+            semaphore = asyncio.Semaphore(max_concurrent)
+
+            async def run_worker(sub_task):
+                async with semaphore:
+                    worker_id = f"w-{sub_task.task_id}"
+                    executor = SwarmWorkerExecutor(
+                        worker_id=worker_id,
+                        task=sub_task,
+                        llm_service=llm_service,
+                        tool_registry=tool_registry,
+                        event_emitter=event_emitter,
+                        timeout=60.0,
+                    )
+                    return await executor.execute()
+
+            # Execute in parallel
+            worker_results: list = await asyncio.gather(
+                *[run_worker(t) for t in task_decomposition.sub_tasks],
+                return_exceptions=True,
+            )
+
+            # Process results
+            completed_results: list[WorkerResult] = []
+            for r in worker_results:
+                if isinstance(r, Exception):
+                    logger.error("Worker exception: %s", r)
+                elif isinstance(r, WorkerResult):
+                    completed_results.append(r)
+
+            # Build combined content
+            content_parts = []
+            for wr in completed_results:
+                role_name = wr.role
+                from src.integrations.swarm.worker_roles import get_role
+                display = get_role(role_name).get("display_name", role_name)
+                content_parts.append(f"### {display}: {wr.task_title}\n{wr.content}")
+
+            combined_content = "\n\n".join(content_parts) if content_parts else "(No worker results)"
+
+            # Emit SWARM_COMPLETED
+            if event_emitter and hasattr(event_emitter, "emit"):
+                from src.integrations.hybrid.orchestrator.sse_events import SSEEventType
+                await event_emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                    "event_subtype": "SWARM_COMPLETED",
+                    "total_workers": len(task_decomposition.sub_tasks),
+                    "completed_workers": len(completed_results),
+                    "failed_workers": len(worker_results) - len(completed_results),
+                })
+
+            return HandlerResult(
+                success=len(completed_results) > 0,
+                handler_type=HandlerType.EXECUTION,
+                data={
+                    "content": combined_content,
+                    "framework_used": "swarm",
+                    "execution_mode": ExecutionMode.SWARM_MODE,
+                    "worker_count": len(task_decomposition.sub_tasks),
+                    "completed_workers": len(completed_results),
+                    "worker_results": [
+                        {
+                            "worker_id": wr.worker_id,
+                            "role": wr.role,
+                            "status": wr.status,
+                            "content": wr.content[:500],
+                            "tool_calls": len(wr.tool_calls_made),
+                            "duration_ms": wr.duration_ms,
+                        }
+                        for wr in completed_results
+                    ],
+                },
+            )
+
+        except Exception as e:
+            logger.warning("ExecutionHandler: New swarm engine failed, trying legacy: %s", e)
+
+        # Fallback to legacy execute_swarm
+        try:
+            swarm_result = await self._swarm_handler.execute_swarm(
+                intent=request.content,
+                decomposition=decomposition,
+                routing_decision=routing_decision,
+                session_id=request.session_id or "",
+                timeout=request.timeout,
+            )
+
+            return HandlerResult(
+                success=swarm_result.success,
+                handler_type=HandlerType.EXECUTION,
+                data={
+                    "content": swarm_result.content,
+                    "error": swarm_result.error,
+                    "framework_used": "swarm",
+                    "execution_mode": ExecutionMode.SWARM_MODE,
+                    "swarm_id": swarm_result.swarm_id,
+                    "worker_results": swarm_result.worker_results,
+                },
+            )
+        except Exception as legacy_err:
+            logger.error("ExecutionHandler: Legacy swarm also failed: %s", legacy_err)
+            return HandlerResult(
+                success=False,
+                handler_type=HandlerType.EXECUTION,
+                error=str(legacy_err),
+                data={"content": f"Swarm execution failed: {legacy_err}", "framework_used": "swarm"},
+            )
 
     def _build_result(
         self,
