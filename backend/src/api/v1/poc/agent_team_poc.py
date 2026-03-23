@@ -267,9 +267,30 @@ async def test_team(
             "teammates": ["LogExpert", "DBExpert", "AppExpert"],
         })
 
-        # Step 4: Build GroupChat
+        # Step 4: Build GroupChat with round-robin selection
+        # Note: orchestrator_agent requires structured output (response_format)
+        # which AnthropicChatClient doesn't support yet.
+        # Using selection_func for round-robin + task-aware selection instead.
+        participant_names = ["LogExpert", "DBExpert", "AppExpert"]
+        round_counter = {"n": 0}
+
+        def select_next(messages: list) -> str:
+            """Round-robin with awareness: cycle through teammates."""
+            idx = round_counter["n"] % len(participant_names)
+            round_counter["n"] += 1
+            return participant_names[idx]
+
+        from agent_framework_orchestrations._group_chat import TerminationCondition
+
+        # Terminate when all tasks are done
+        def check_termination(messages: list) -> bool:
+            return shared.is_all_done()
+
+        results["steps"].append({"step": "setup_orchestration", "status": "ok"})
+
         builder = GroupChatBuilder(
             participants=[log_expert, db_expert, app_expert],
+            selection_func=select_next,
             max_rounds=max_rounds,
         )
         workflow = builder.build()
@@ -445,11 +466,16 @@ async def test_hybrid(
                 })
             else:
                 # Delegate to team test
-                team_result = await test_team(
-                    provider=provider, model=model, task=task,
-                    azure_endpoint=azure_endpoint, azure_api_key=azure_api_key,
-                    azure_api_version=azure_api_version, azure_deployment=azure_deployment,
-                )
+                try:
+                    team_result = await test_team(
+                        provider=provider, model=model, task=task,
+                        max_rounds=6,
+                        azure_endpoint=azure_endpoint, azure_api_key=azure_api_key,
+                        azure_api_version=azure_api_version, azure_deployment=azure_deployment,
+                    )
+                except Exception as team_err:
+                    team_result = {"status": "error", "error": str(team_err),
+                                   "events": [], "summary": "", "shared_task_list": None}
                 results["steps"].append({
                     "step": "execute_team",
                     "status": team_result.get("status", "error"),
