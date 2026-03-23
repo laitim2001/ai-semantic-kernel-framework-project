@@ -101,12 +101,36 @@ async def test_subagent(
         t1 = time.time()
         try:
             stream = workflow.run(message=task, stream=True, include_status_events=True)
+            agent_responses: list[dict[str, Any]] = []
 
             async for event in stream:
                 event_type = type(event).__name__
                 event_info: dict[str, Any] = {"type": event_type}
                 if hasattr(event, "data") and event.data:
-                    event_info["data_preview"] = str(event.data)[:300]
+                    data = event.data
+                    data_str = str(data)[:300]
+                    event_info["data_preview"] = data_str
+
+                    # Extract actual Agent response text
+                    if hasattr(data, '__iter__') and not isinstance(data, str):
+                        for item in data:
+                            if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
+                                resp = item.agent_response
+                                text = ""
+                                if hasattr(resp, 'text') and resp.text:
+                                    text = resp.text
+                                elif hasattr(resp, 'messages') and resp.messages:
+                                    for msg in resp.messages:
+                                        if hasattr(msg, 'text') and msg.text:
+                                            text += msg.text
+                                if text:
+                                    agent_responses.append({
+                                        "agent": item.executor_id,
+                                        "response": text[:500],
+                                    })
+                                    event_info["agent_name"] = item.executor_id
+                                    event_info["agent_response"] = text[:300]
+
                 results["events"].append(event_info)
 
             run_time = round((time.time() - t1) * 1000)
@@ -117,18 +141,11 @@ async def test_subagent(
                 "total_events": len(results["events"]),
             })
 
-            # Extract results from events
-            agent_results = []
-            for evt in results["events"]:
-                preview = evt.get("data_preview", "")
-                if "AgentExecutorResponse" in preview:
-                    agent_results.append(preview[:200])
-
+            results["agent_responses"] = agent_responses
             results["steps"].append({
                 "step": "collect_results",
                 "status": "ok",
-                "agent_results_count": len(agent_results),
-                "results_preview": agent_results,
+                "agent_results_count": len(agent_responses),
             })
 
         except Exception as e:
@@ -309,16 +326,40 @@ async def test_team(
             )
 
             stream = workflow.run(message=initial_msg, stream=True, include_status_events=True)
+            agent_responses: list[dict[str, Any]] = []
 
             async for event in stream:
                 event_type = type(event).__name__
                 event_info: dict[str, Any] = {"type": event_type}
                 if hasattr(event, "data") and event.data:
-                    data_str = str(event.data)
-                    event_info["data_preview"] = data_str[:300]
+                    data = event.data
+                    data_str = str(data)[:300]
+                    event_info["data_preview"] = data_str
+
+                    # Extract Agent response text
+                    if hasattr(data, '__iter__') and not isinstance(data, str):
+                        for item in data:
+                            if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
+                                resp = item.agent_response
+                                text = ""
+                                if hasattr(resp, 'text') and resp.text:
+                                    text = resp.text
+                                elif hasattr(resp, 'messages') and resp.messages:
+                                    for msg in resp.messages:
+                                        if hasattr(msg, 'text') and msg.text:
+                                            text += msg.text
+                                if text:
+                                    agent_responses.append({
+                                        "agent": item.executor_id,
+                                        "response": text[:500],
+                                    })
+                                    event_info["agent_name"] = item.executor_id
+                                    event_info["agent_response"] = text[:300]
+
                 results["events"].append(event_info)
 
             run_time = round((time.time() - t1) * 1000)
+            results["agent_responses"] = agent_responses
             results["steps"].append({
                 "step": "run_groupchat",
                 "status": "ok",
@@ -458,6 +499,8 @@ async def test_hybrid(
                     azure_endpoint=azure_endpoint, azure_api_key=azure_api_key,
                     azure_api_version=azure_api_version, azure_deployment=azure_deployment,
                 )
+                results["agent_responses"] = sub_result.get("agent_responses", [])
+                results["events"] = sub_result.get("events", [])
                 results["steps"].append({
                     "step": "execute_subagent",
                     "status": sub_result.get("status", "error"),
@@ -475,7 +518,10 @@ async def test_hybrid(
                     )
                 except Exception as team_err:
                     team_result = {"status": "error", "error": str(team_err),
-                                   "events": [], "summary": "", "shared_task_list": None}
+                                   "events": [], "summary": "", "shared_task_list": None,
+                                   "agent_responses": []}
+                results["agent_responses"] = team_result.get("agent_responses", [])
+                results["events"] = team_result.get("events", [])
                 results["steps"].append({
                     "step": "execute_team",
                     "status": team_result.get("status", "error"),

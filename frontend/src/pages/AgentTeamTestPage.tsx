@@ -248,6 +248,14 @@ export const AgentTeamTestPage: FC = () => {
             )}
           </Section>
 
+          {/* Azure Warning for Team/Hybrid */}
+          {(mode === 'team' || mode === 'hybrid') && provider === 'anthropic' && (
+            <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+              <strong>Warning:</strong> Team and Hybrid modes require <strong>Azure OpenAI</strong> for function calling (tool use).
+              Claude Haiku cannot call tools like claim_task/report_result. Switch to Azure provider above.
+            </div>
+          )}
+
           {/* Run Button */}
           <Button
             onClick={handleRun}
@@ -335,6 +343,28 @@ export const AgentTeamTestPage: FC = () => {
                       {s.selected_mode && (
                         <p className="ml-6 text-xs font-medium text-purple-700 mt-0.5">Mode: {s.selected_mode}</p>
                       )}
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Agent Responses (Subagent mode) */}
+            {result.agent_responses?.length > 0 && (
+              <Section
+                title="Agent Responses"
+                icon={<Brain className="w-4 h-4 text-purple-600" />}
+                badge={`${result.agent_responses.length} agents`}
+              >
+                <div className="space-y-3">
+                  {result.agent_responses.map((r: any, i: number) => (
+                    <div key={i} className="bg-white rounded-lg border p-3">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                          {r.agent}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{r.response}</p>
                     </div>
                   ))}
                 </div>
