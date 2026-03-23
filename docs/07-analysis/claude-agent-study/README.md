@@ -26,16 +26,36 @@
 ## 核心結論
 
 1. **現有架構是「路由器」不是「思考者」** — Mediator 7-handler 是固定 Chain of Responsibility
-2. **MAF 原生支援 per-agent 模型** — `Agent(chat_client=...)` + `BaseChatClient` 抽象
+2. **MAF 原生支援 per-agent 模型** — `Agent(client, ...)` positional + `BaseChatClient` 抽象
 3. **MAF 沒有 Anthropic ChatClient** — 需要自建 `AnthropicChatClient(BaseChatClient)`
-4. **ManagerModelRegistry + Selector 可行** — YAML 零代碼切換，~44 SP (5 Sprints)
+4. **ManagerModelRegistry + Selector 可行** — YAML 零代碼切換
 5. **L1-L4 不需改動** — 安全閘門保留，只在 L5-L7 新增/修改
+
+## PoC 驗證結果（2026-03-23）
+
+### PoC-1: AnthropicChatClient + MagenticOne（分支 `poc/anthropic-chatclient`）
+- ✅ Claude Haiku 和 Azure GPT-5.2 都可作為 MagenticOne Manager
+- ✅ MagenticOne 完整迴圈運作（PLAN → Worker → Progress Ledger → Replan）
+- ⚠️ AnthropicChatClient 不支持 function calling（需加 FUNCTION_INVOKING 標記）
+- 詳見 [poc-findings.md](poc-findings.md)
+
+### PoC-2: Agent Team + Subagent（分支 `poc/agent-team`）
+- ✅ ConcurrentBuilder 3 agent 真正並行（4.4s）
+- ✅ GroupChatBuilder + SharedTaskList 協作模式（4/4 tasks, 6 team messages）
+- ✅ Orchestrator 能正確判斷用 subagent 或 team 模式
+- ⚠️ GroupChatBuilder 的 orchestrator_agent 需要 Structured Output（Claude 不支持）
+- 詳見 [../poc-agent-team/](../poc-agent-team/)
 
 ## 下一步
 
-基於此研究，建立正式的 Phase 規劃（Sprint 151-155），實現：
-- AnthropicChatClient + AnthropicLLMService
+基於 PoC 驗證結果，Phase 44 規劃（Sprint 151-152, ~16 SP）：
+- AnthropicChatClient（PoC 代碼可直接複製）
 - ManagerModelRegistry + YAML 配置
 - ManagerModelSelector + routing rules
-- MagenticBuilderAdapter per-agent model 注入
-- Orchestrator Agent（MagenticOne Manager = Claude Opus）
+- MagenticBuilderAdapter 構造函數注入 `manager_agent=`
+
+後續 Phase 待規劃：
+- AnthropicChatClient function calling 支持
+- Agent Team 整合（SharedTaskList + GroupChatBuilder）
+- Orchestrator Agent（頂層路由 + 工具 + 記憶）
+- MagenticEventBridge（MagenticOne → AG-UI SSE）
