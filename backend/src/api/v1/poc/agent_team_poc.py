@@ -838,16 +838,18 @@ async def test_orchestrator(
             cp = HybridCheckpoint(
                 session_id=f"poc-{user_id}",
                 checkpoint_type=CheckpointType.AUTO,
-                data={"summary": checkpoint_summary, "route": selected_mode},
+                execution_mode=selected_mode,
+                metadata={"summary": checkpoint_summary, "route": selected_mode},
             )
             cp_id = await storage.save(cp)
             checkpoint_text = f"Saved to Redis: id={cp_id}"
         except Exception as e:
-            checkpoint_text = f"Checkpoint saved (simulated): {checkpoint_summary[:100]}"
+            logger.error(f"Checkpoint save failed: {e}")
+            checkpoint_text = f"Checkpoint failed: {str(e)[:150]}"
 
         results["steps"].append({
             "step": "5_save_checkpoint",
-            "status": "ok" if "Redis" in checkpoint_text else "simulated",
+            "status": "ok" if "Redis" in checkpoint_text else "failed",
             "result_preview": checkpoint_text[:200],
         })
         results["orchestrator_actions"].append({
@@ -869,12 +871,13 @@ async def test_orchestrator(
                 memory_type=MemoryType.INSIGHT,
             )
             save_text = f"Memory saved: {memory_content[:100]}"
-        except Exception:
-            save_text = f"Memory saved (simulated): {memory_content[:100]}"
+        except Exception as mem_err:
+            logger.error(f"Memory save failed: {mem_err}")
+            save_text = f"Memory save failed: {str(mem_err)[:100]}"
 
         results["steps"].append({
             "step": "6_save_memory",
-            "status": "ok" if "simulated" not in save_text.lower() else "simulated",
+            "status": "ok" if "saved:" in save_text.lower() and "failed" not in save_text.lower() else "failed",
             "result_preview": save_text[:200],
         })
         results["orchestrator_actions"].append({
