@@ -755,9 +755,7 @@ async def test_orchestrator(
         )
 
         t1 = time.time()
-        response = await orchestrator.run(
-            "Based on the context in your instructions, select the best route."
-        )
+        response = await orchestrator.run(task)
         decision_time = round((time.time() - t1) * 1000)
 
         response_text = ""
