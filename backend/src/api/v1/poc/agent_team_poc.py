@@ -594,3 +594,158 @@ async def test_hybrid(
         results["traceback"] = traceback.format_exc()[-500:]
 
     return results
+
+
+# ── Test D: Orchestrator Agent (top-level router with memory + RAG + routing) ──
+
+@router.post("/test-orchestrator")
+async def test_orchestrator(
+    provider: str = Query("anthropic"),
+    model: str = Query("claude-haiku-4-5-20251001"),
+    task: str = Query(
+        "APAC Glider ETL Pipeline has been failing for 3 days, affecting financial reports.",
+    ),
+    user_id: str = Query("user-chris", description="User ID for memory lookup"),
+    azure_endpoint: str = Query(""),
+    azure_api_key: str = Query(""),
+    azure_api_version: str = Query("2025-03-01-preview"),
+    azure_deployment: str = Query(""),
+):
+    """Test D: Full Orchestrator Agent with all 5 capabilities."""
+    results: dict[str, Any] = {
+        "test": "orchestrator",
+        "provider": provider,
+        "model": model,
+        "task": task,
+        "user_id": user_id,
+        "steps": [],
+        "orchestrator_actions": [],
+    }
+
+    try:
+        from agent_framework import Agent
+        from src.integrations.poc.orchestrator_tools import create_orchestrator_tools
+
+        t0 = time.time()
+
+        client = _create_client(provider, model, azure_endpoint, azure_api_key,
+                                azure_api_version, azure_deployment, max_tokens=4096)
+
+        orch_tools = create_orchestrator_tools()
+        sdk_tools = _get_claude_sdk_tools()
+        all_tools = orch_tools + sdk_tools
+
+        orchestrator = Agent(
+            client,
+            name="Orchestrator",
+            instructions=(
+                "You are the top-level IT Operations Orchestrator Agent.\n\n"
+                "YOUR ROLE: Receive user requests, gather context, decide the best "
+                "execution strategy, and coordinate the response.\n\n"
+                "WORKFLOW — follow these steps IN ORDER:\n"
+                "1. get_user_memory — Check if user has relevant past interactions\n"
+                "2. search_knowledge — Search knowledge base for relevant SOPs/docs\n"
+                "3. analyze_intent — Analyze request's intent and risk level\n"
+                "4. DECIDE which route based on gathered context:\n"
+                "   - route_to_direct_answer: simple questions, low risk\n"
+                "   - route_to_subagent: independent parallel checks\n"
+                "   - route_to_team: complex investigations, expert collaboration\n"
+                "   - route_to_swarm: critical incidents, deep Manager analysis\n"
+                "   - route_to_workflow: structured processes (deploy, change mgmt)\n"
+                "5. save_session_checkpoint — Save decision for session continuity\n"
+                "6. save_memory — Save key findings for future reference\n\n"
+                "IMPORTANT: Call ALL tools in order. Show your reasoning.\n"
+                "AVAILABLE TOOLS: get_user_memory, save_memory, analyze_intent, "
+                "search_knowledge, route_to_direct_answer, route_to_subagent, "
+                "route_to_team, route_to_swarm, route_to_workflow, "
+                "save_session_checkpoint, deep_analysis, run_diagnostic_command, "
+                "search_knowledge_base"
+            ),
+            tools=all_tools,
+        )
+
+        results["steps"].append({
+            "step": "create_orchestrator",
+            "status": "ok",
+            "tools_count": len(all_tools),
+            "tool_names": [t.name for t in all_tools],
+        })
+
+        # Run Orchestrator
+        t1 = time.time()
+        try:
+            response = await orchestrator.run(task)
+            run_time = round((time.time() - t1) * 1000)
+
+            response_text = ""
+            if hasattr(response, "text") and response.text:
+                response_text = response.text
+            elif hasattr(response, "messages") and response.messages:
+                for msg in response.messages:
+                    if hasattr(msg, "text") and msg.text:
+                        response_text += msg.text + "\n"
+
+            # Extract tool calls
+            tool_calls = []
+            if hasattr(response, "messages") and response.messages:
+                for msg in response.messages:
+                    if hasattr(msg, "contents") and msg.contents:
+                        for c in msg.contents:
+                            c_type = getattr(c, "type", None)
+                            if c_type and hasattr(c_type, "value"):
+                                c_type = c_type.value
+                            if c_type == "function_call":
+                                tool_calls.append({
+                                    "tool": getattr(c, "name", ""),
+                                    "args": str(getattr(c, "arguments", ""))[:200],
+                                })
+                            elif c_type == "function_result":
+                                tool_calls.append({
+                                    "tool_result": getattr(c, "name", getattr(c, "call_id", "")),
+                                    "result": str(getattr(c, "result", ""))[:300],
+                                })
+
+            results["steps"].append({
+                "step": "run_orchestrator",
+                "status": "ok",
+                "duration_ms": run_time,
+            })
+
+            results["orchestrator_actions"] = tool_calls
+            results["orchestrator_response"] = response_text[:1000]
+
+            # Detect selected mode
+            selected_mode = "unknown"
+            for tc in tool_calls:
+                tool_name = tc.get("tool", "")
+                if "route_to_" in tool_name:
+                    selected_mode = tool_name.replace("route_to_", "")
+                    break
+
+            results["steps"].append({
+                "step": "mode_decision",
+                "status": "ok",
+                "selected_mode": selected_mode,
+                "total_tool_calls": len([t for t in tool_calls if "tool" in t]),
+            })
+
+        except Exception as e:
+            run_time = round((time.time() - t1) * 1000)
+            results["steps"].append({
+                "step": "run_orchestrator",
+                "status": "error",
+                "duration_ms": run_time,
+                "error": str(e),
+                "traceback": traceback.format_exc()[-500:],
+            })
+
+        total_time = round((time.time() - t0) * 1000)
+        results["status"] = "ok" if all(s.get("status") == "ok" for s in results["steps"]) else "partial"
+        results["summary"] = f"Orchestrator: {len(results.get('orchestrator_actions', []))} actions, total {total_time}ms"
+
+    except Exception as e:
+        results["status"] = "error"
+        results["error"] = str(e)
+        results["traceback"] = traceback.format_exc()[-500:]
+
+    return results

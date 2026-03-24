@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/Button';
 // Types
 // =============================================================================
 
-type TestMode = 'subagent' | 'team' | 'hybrid';
+type TestMode = 'subagent' | 'team' | 'hybrid' | 'orchestrator';
 type Provider = 'anthropic' | 'azure';
 
 interface TaskItem {
@@ -109,6 +109,8 @@ export const AgentTeamTestPage: FC = () => {
       'Investigate APAC ETL Pipeline failure. Multiple experts needed: analyze application logs, check database changes, and verify network connectivity.',
     hybrid:
       'Check VPN connectivity for Taipei, Hong Kong, and Singapore offices.',
+    orchestrator:
+      'APAC Glider ETL Pipeline has been failing for 3 days, affecting financial reports. Please investigate.',
   };
 
   const handleModeChange = (m: TestMode) => {
@@ -126,12 +128,13 @@ export const AgentTeamTestPage: FC = () => {
     setLoading(true);
     setResult(null);
 
-    const endpoint =
-      mode === 'subagent'
-        ? '/api/v1/poc/agent-team/test-subagent'
-        : mode === 'team'
-          ? '/api/v1/poc/agent-team/test-team'
-          : '/api/v1/poc/agent-team/test-hybrid';
+    const endpointMap: Record<TestMode, string> = {
+      subagent: '/api/v1/poc/agent-team/test-subagent',
+      team: '/api/v1/poc/agent-team/test-team',
+      hybrid: '/api/v1/poc/agent-team/test-hybrid',
+      orchestrator: '/api/v1/poc/agent-team/test-orchestrator',
+    };
+    const endpoint = endpointMap[mode];
 
     const params = new URLSearchParams({
       provider,
@@ -175,7 +178,7 @@ export const AgentTeamTestPage: FC = () => {
           {/* Mode Selection */}
           <Section title="Execution Mode" icon={<GitBranch className="w-4 h-4 text-purple-600" />}>
             <div className="flex gap-1">
-              {(['subagent', 'team', 'hybrid'] as TestMode[]).map((m) => (
+              {(['orchestrator', 'subagent', 'team', 'hybrid'] as TestMode[]).map((m) => (
                 <button
                   key={m}
                   onClick={() => handleModeChange(m)}
@@ -186,14 +189,15 @@ export const AgentTeamTestPage: FC = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   )}
                 >
-                  {m === 'subagent' ? 'Subagent' : m === 'team' ? 'Team' : 'Hybrid'}
+                  {m === 'orchestrator' ? 'Orchestrator' : m === 'subagent' ? 'Subagent' : m === 'team' ? 'Team' : 'Hybrid'}
                 </button>
               ))}
             </div>
             <p className="text-[10px] text-gray-500 mt-2">
+              {mode === 'orchestrator' && 'Full Orchestrator: memory + RAG + intent routing + mode decision + checkpoint'}
               {mode === 'subagent' && 'ConcurrentBuilder: 3 Agents parallel, independent, results aggregated'}
               {mode === 'team' && 'GroupChatBuilder + SharedTaskList: Teammates claim tasks, communicate, collaborate'}
-              {mode === 'hybrid' && 'Orchestrator Agent decides subagent or team mode via function calling'}
+              {mode === 'hybrid' && 'Orchestrator decides subagent or team mode via function calling'}
             </p>
           </Section>
 
@@ -267,7 +271,7 @@ export const AgentTeamTestPage: FC = () => {
             ) : (
               <Play className="w-4 h-4 mr-2" />
             )}
-            Run {mode === 'subagent' ? 'Subagent' : mode === 'team' ? 'Team' : 'Hybrid'} Test
+            Run {mode === 'orchestrator' ? 'Orchestrator' : mode === 'subagent' ? 'Subagent' : mode === 'team' ? 'Team' : 'Hybrid'} Test
           </Button>
         </div>
       </div>
@@ -367,6 +371,46 @@ export const AgentTeamTestPage: FC = () => {
                       <p className="text-sm text-gray-700 whitespace-pre-wrap">{r.response}</p>
                     </div>
                   ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Orchestrator Actions */}
+            {result.orchestrator_actions?.length > 0 && (
+              <Section
+                title="Orchestrator Actions"
+                icon={<Zap className="w-4 h-4 text-orange-600" />}
+                badge={`${result.orchestrator_actions.length} actions`}
+              >
+                <div className="space-y-1.5">
+                  {result.orchestrator_actions.map((a: any, i: number) => (
+                    <div key={i} className={cn(
+                      'p-2 rounded border text-sm',
+                      a.tool ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                    )}>
+                      {a.tool && (
+                        <div>
+                          <span className="font-medium text-blue-700">{a.tool}</span>
+                          {a.args && <span className="text-xs text-gray-500 ml-2">{a.args.slice(0, 100)}</span>}
+                        </div>
+                      )}
+                      {a.result && (
+                        <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap">{a.result.slice(0, 200)}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Orchestrator Response */}
+            {result.orchestrator_response && (
+              <Section
+                title="Orchestrator Response"
+                icon={<Brain className="w-4 h-4 text-indigo-600" />}
+              >
+                <div className="bg-white rounded border p-3 text-sm whitespace-pre-wrap">
+                  {result.orchestrator_response}
                 </div>
               </Section>
             )}
