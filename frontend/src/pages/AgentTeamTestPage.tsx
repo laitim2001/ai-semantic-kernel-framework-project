@@ -332,10 +332,22 @@ export const AgentTeamTestPage: FC = () => {
                       <div className="flex items-center gap-2">
                         {s.status === 'ok' ? (
                           <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        ) : s.status === 'partial' ? (
+                          <Zap className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                        ) : s.status === 'simulated' ? (
+                          <Zap className="w-4 h-4 text-blue-400 flex-shrink-0" />
                         ) : (
                           <XCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
                         )}
                         <span className="font-medium">{s.step}</span>
+                        {s.status && s.status !== 'ok' && (
+                          <span className={cn(
+                            'text-[10px] px-1 py-0.5 rounded font-medium',
+                            s.status === 'partial' ? 'bg-yellow-100 text-yellow-700' :
+                            s.status === 'simulated' ? 'bg-blue-100 text-blue-700' :
+                            'bg-red-100 text-red-700'
+                          )}>{s.status}</span>
+                        )}
                         {s.duration_ms != null && (
                           <span className="text-xs text-gray-400">({s.duration_ms}ms)</span>
                         )}

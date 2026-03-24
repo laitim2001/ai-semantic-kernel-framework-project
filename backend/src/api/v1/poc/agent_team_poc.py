@@ -646,7 +646,7 @@ async def test_orchestrator(
 
         results["steps"].append({
             "step": "1_read_memory",
-            "status": "ok",
+            "status": "ok" if "unavailable" not in memory_text.lower() and "failed" not in memory_text.lower() else "failed",
             "result_preview": memory_text[:200],
         })
         results["orchestrator_actions"].append({
@@ -657,28 +657,28 @@ async def test_orchestrator(
 
         # ── Step 2: SEARCH KNOWLEDGE (deterministic — always execute) ──
         try:
-            from src.integrations.knowledge.retriever import KnowledgeRetriever
-            retriever = KnowledgeRetriever()
-            kb_results = await retriever.retrieve(query=task, limit=3)
+            import os
+            from openai import AzureOpenAI
+            from qdrant_client import QdrantClient
+
+            az = AzureOpenAI(
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                api_version="2024-02-01",
+            )
+            q_emb = az.embeddings.create(input=task[:500], model="text-embedding-ada-002").data[0].embedding
+            qd = QdrantClient(host="localhost", port=6333)
+            search_results = qd.query_points("ipa_knowledge", query=q_emb, limit=3)
             knowledge_text = "\n".join(
-                f"[{getattr(r, 'source', '?')}] {getattr(r, 'content', str(r))[:150]}"
-                for r in (kb_results or [])
+                f"[{r.payload.get('source','?')}] (score={r.score:.2f}) {r.payload.get('content','')[:150]}"
+                for r in search_results.points
             ) or "No knowledge found"
         except Exception as e:
-            # Fallback: use Claude SDK for knowledge search
-            try:
-                sdk_tools = _get_claude_sdk_tools()
-                kb_tool = next((t for t in sdk_tools if t.name == "search_knowledge_base"), None)
-                if kb_tool:
-                    knowledge_text = kb_tool.func(query=task)
-                else:
-                    knowledge_text = f"Knowledge base unavailable: {str(e)[:100]}"
-            except Exception:
-                knowledge_text = f"Knowledge base unavailable: {str(e)[:100]}"
+            knowledge_text = f"Knowledge search failed: {str(e)[:150]}"
 
         results["steps"].append({
             "step": "2_search_knowledge",
-            "status": "ok",
+            "status": "ok" if "failed" not in knowledge_text.lower() and "No knowledge" not in knowledge_text else "failed",
             "result_preview": knowledge_text[:200],
         })
         results["orchestrator_actions"].append({
@@ -694,16 +694,50 @@ async def test_orchestrator(
             from src.integrations.orchestration.intent_router.semantic_router.router import SemanticRouter
             from src.integrations.orchestration.intent_router.llm_classifier.classifier import LLMClassifier
 
+            matcher = PatternMatcher()
+            # Add ETL/pipeline/incident patterns so common IT tasks get matched
+            try:
+                matcher.add_rule({
+                    "pattern": r"(?i)(etl|pipeline|data.?flow|batch.?job).*(fail|error|down|broken|stuck)",
+                    "category": "INCIDENT", "sub_intent": "etl_failure",
+                    "risk_level": "HIGH", "workflow_type": "MAGENTIC",
+                })
+                matcher.add_rule({
+                    "pattern": r"(?i)(server|service|system|database).*(down|fail|error|crash|outage|unavailable)",
+                    "category": "INCIDENT", "sub_intent": "system_outage",
+                    "risk_level": "CRITICAL", "workflow_type": "MAGENTIC",
+                })
+                matcher.add_rule({
+                    "pattern": r"(?i)(deploy|release|rollout|update|upgrade|migration)",
+                    "category": "CHANGE", "sub_intent": "deployment",
+                    "risk_level": "MEDIUM", "workflow_type": "SEQUENTIAL",
+                })
+                matcher.add_rule({
+                    "pattern": r"(?i)(check|status|monitor|health|ping|query|what.?is)",
+                    "category": "QUERY", "sub_intent": "status_check",
+                    "risk_level": "LOW", "workflow_type": "HANDOFF",
+                })
+            except Exception:
+                pass  # If add_rule format differs, fallback to defaults
+
+            # Create LLMClassifier with LLM service for fallback
+            try:
+                from src.integrations.llm.factory import LLMServiceFactory
+                llm_svc = LLMServiceFactory.create(use_cache=True)
+                llm_cls = LLMClassifier(llm_service=llm_svc)
+            except Exception:
+                llm_cls = LLMClassifier()
+
             router_inst = BusinessIntentRouter(
-                pattern_matcher=PatternMatcher(),
+                pattern_matcher=matcher,
                 semantic_router=SemanticRouter(),
-                llm_classifier=LLMClassifier(),
+                llm_classifier=llm_cls,
             )
             decision = await router_inst.route(task)
             intent_text = (
                 f"Category: {decision.intent_category}, "
                 f"Risk: {decision.risk_level}, "
-                f"Confidence: {decision.confidence}, "
+                f"Confidence: {decision.confidence:.2f}, "
                 f"Workflow: {decision.workflow_type}"
             )
         except Exception as e:
@@ -711,7 +745,7 @@ async def test_orchestrator(
 
         results["steps"].append({
             "step": "3_analyze_intent",
-            "status": "ok",
+            "status": "ok" if "UNKNOWN" not in intent_text and "partial" not in intent_text.lower() else "partial",
             "result_preview": intent_text[:200],
         })
         results["orchestrator_actions"].append({
@@ -785,7 +819,7 @@ async def test_orchestrator(
             "args": f"route={selected_mode}",
             "result": response_text[:300],
         })
-        results["orchestrator_response"] = response_text[:1000]
+        results["orchestrator_response"] = response_text[:3000]
 
         # ── Step 5: SAVE CHECKPOINT (deterministic — always execute) ──
         checkpoint_summary = (
@@ -793,26 +827,27 @@ async def test_orchestrator(
             f"Intent: {intent_text[:100]}. Memory: {memory_text[:50]}"
         )
         try:
+            import redis.asyncio as aioredis
             from src.integrations.hybrid.checkpoint.models import HybridCheckpoint, CheckpointType
-            try:
-                from src.integrations.hybrid.checkpoint.backends.redis import RedisCheckpointStorage
-                storage = RedisCheckpointStorage()
-            except Exception:
-                from src.integrations.hybrid.checkpoint.backends.memory import MemoryCheckpointStorage
-                storage = MemoryCheckpointStorage()
+            from src.integrations.hybrid.checkpoint.backends.redis import RedisCheckpointStorage
+
+            redis_client = aioredis.from_url(
+                f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+            )
+            storage = RedisCheckpointStorage(redis_client=redis_client)
             cp = HybridCheckpoint(
                 session_id=f"poc-{user_id}",
-                checkpoint_type=CheckpointType.ORCHESTRATOR,
+                checkpoint_type=CheckpointType.AUTO,
                 data={"summary": checkpoint_summary, "route": selected_mode},
             )
             cp_id = await storage.save(cp)
-            checkpoint_text = f"Saved: id={cp_id}"
+            checkpoint_text = f"Saved to Redis: id={cp_id}"
         except Exception as e:
             checkpoint_text = f"Checkpoint saved (simulated): {checkpoint_summary[:100]}"
 
         results["steps"].append({
             "step": "5_save_checkpoint",
-            "status": "ok",
+            "status": "ok" if "Redis" in checkpoint_text else "simulated",
             "result_preview": checkpoint_text[:200],
         })
         results["orchestrator_actions"].append({
@@ -839,7 +874,7 @@ async def test_orchestrator(
 
         results["steps"].append({
             "step": "6_save_memory",
-            "status": "ok",
+            "status": "ok" if "simulated" not in save_text.lower() else "simulated",
             "result_preview": save_text[:200],
         })
         results["orchestrator_actions"].append({
