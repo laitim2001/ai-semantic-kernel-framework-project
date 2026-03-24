@@ -43,6 +43,7 @@ def create_claude_sdk_tools(
         """Run a deep analysis task using Claude Agent SDK."""
         try:
             import asyncio
+            import concurrent.futures
             from src.integrations.claude_sdk.client import ClaudeSDKClient
 
             client = ClaudeSDKClient(
@@ -51,14 +52,16 @@ def create_claude_sdk_tools(
                 max_tokens=2048,
                 timeout=60,
             )
-            result = client.query(
-                prompt=task,
-                max_tokens=2048,
-                timeout=60,
-            )
+
+            def _run():
+                return asyncio.run(client.query(prompt=task, max_tokens=2048, timeout=60))
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = pool.submit(_run).result(timeout=65)
+
             content = getattr(result, "content", None) or str(result)
             logger.info(f"Claude SDK deep_analysis completed: {len(content)} chars")
-            return content[:1000]  # Cap output for GroupChat context
+            return content[:1000]
         except Exception as e:
             logger.error(f"Claude SDK deep_analysis failed: {e}")
             return f"Analysis failed: {str(e)[:200]}"
@@ -71,6 +74,8 @@ def create_claude_sdk_tools(
     def run_diagnostic_command(command_description: str) -> str:
         """Run a diagnostic using Claude Agent SDK with command capabilities."""
         try:
+            import asyncio
+            import concurrent.futures
             from src.integrations.claude_sdk.client import ClaudeSDKClient
 
             client = ClaudeSDKClient(
@@ -83,11 +88,13 @@ def create_claude_sdk_tools(
                     "and provide realistic results. Format output as a command result."
                 ),
             )
-            result = client.query(
-                prompt=f"Run diagnostic: {command_description}",
-                max_tokens=1024,
-                timeout=30,
-            )
+
+            def _run():
+                return asyncio.run(client.query(prompt=f"Run diagnostic: {command_description}", max_tokens=1024, timeout=30))
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = pool.submit(_run).result(timeout=35)
+
             content = getattr(result, "content", None) or str(result)
             logger.info(f"Claude SDK diagnostic completed: {len(content)} chars")
             return content[:800]
@@ -117,11 +124,14 @@ def create_claude_sdk_tools(
                     "Include specific details, dates, and references."
                 ),
             )
-            result = client.query(
-                prompt=f"Search knowledge base for: {query}",
-                max_tokens=1024,
-                timeout=30,
-            )
+            def _run():
+                return asyncio.run(client.query(prompt=f"Search knowledge base for: {query}", max_tokens=1024, timeout=30))
+
+            import asyncio
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = pool.submit(_run).result(timeout=35)
+
             content = getattr(result, "content", None) or str(result)
             logger.info(f"Claude SDK KB search completed: {len(content)} chars")
             return content[:800]
