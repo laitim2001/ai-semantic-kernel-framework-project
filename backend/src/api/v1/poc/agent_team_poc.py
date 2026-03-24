@@ -635,6 +635,7 @@ async def test_orchestrator(
         try:
             from src.integrations.memory.unified_memory import UnifiedMemoryManager
             mgr = UnifiedMemoryManager()
+            await mgr.initialize()
             memory_context = await mgr.get_context(user_id=user_id, query=task, limit=5)
             memory_text = "\n".join(
                 f"[{getattr(r, 'layer', '?')}] {getattr(r, 'content', str(r))[:150]}"
@@ -792,9 +793,13 @@ async def test_orchestrator(
             f"Intent: {intent_text[:100]}. Memory: {memory_text[:50]}"
         )
         try:
-            from src.integrations.hybrid.checkpoint.backends.memory import MemoryCheckpointStorage
             from src.integrations.hybrid.checkpoint.models import HybridCheckpoint, CheckpointType
-            storage = MemoryCheckpointStorage()
+            try:
+                from src.integrations.hybrid.checkpoint.backends.redis import RedisCheckpointStorage
+                storage = RedisCheckpointStorage()
+            except Exception:
+                from src.integrations.hybrid.checkpoint.backends.memory import MemoryCheckpointStorage
+                storage = MemoryCheckpointStorage()
             cp = HybridCheckpoint(
                 session_id=f"poc-{user_id}",
                 checkpoint_type=CheckpointType.ORCHESTRATOR,
@@ -822,6 +827,7 @@ async def test_orchestrator(
             from src.integrations.memory.unified_memory import UnifiedMemoryManager
             from src.integrations.memory.types import MemoryType
             mgr2 = UnifiedMemoryManager()
+            await mgr2.initialize()
             await mgr2.add(
                 content=memory_content,
                 user_id=user_id,
