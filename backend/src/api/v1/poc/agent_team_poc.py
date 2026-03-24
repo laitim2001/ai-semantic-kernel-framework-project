@@ -19,6 +19,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/poc/agent-team", tags=["PoC: Agent Team"])
 
 
+def _get_claude_sdk_tools():
+    """Lazy-load Claude SDK tools."""
+    try:
+        from src.integrations.poc.claude_sdk_tools import create_claude_sdk_tools
+        return create_claude_sdk_tools()
+    except Exception as e:
+        logger.warning(f"Claude SDK tools not available: {e}")
+        return []
+
+
 def _create_client(provider: str, model: str, azure_endpoint: str = "",
                    azure_api_key: str = "", azure_api_version: str = "2025-03-01-preview",
                    azure_deployment: str = "", max_tokens: int = 1024):
@@ -77,18 +87,40 @@ async def test_subagent(
         client = _create_client(provider, model, azure_endpoint, azure_api_key,
                                 azure_api_version, azure_deployment)
 
-        # Create 3 independent subagents
+        # Load Claude SDK tools for enhanced capabilities
+        sdk_tools = _get_claude_sdk_tools()
+
+        # Create 3 independent subagents with Claude SDK tools
         sub1 = Agent(client, name="ETL-Checker",
-                     instructions="You are an ETL pipeline specialist. Check the ETL pipeline status and report findings concisely.")
+                     instructions=(
+                         "You are an ETL pipeline specialist. Check the ETL pipeline status.\n"
+                         "You have access to powerful tools:\n"
+                         "- deep_analysis: for complex multi-step reasoning\n"
+                         "- run_diagnostic_command: to simulate running diagnostic commands\n"
+                         "- search_knowledge_base: to find past incidents and SOPs\n"
+                         "Use these tools to provide thorough findings. Be concise in your final report."
+                     ),
+                     tools=sdk_tools)
         sub2 = Agent(client, name="CRM-Checker",
-                     instructions="You are a CRM service specialist. Check the CRM service health and report findings concisely.")
+                     instructions=(
+                         "You are a CRM service specialist. Check the CRM service health.\n"
+                         "You have access to: deep_analysis, run_diagnostic_command, search_knowledge_base.\n"
+                         "Use these tools to investigate. Be concise."
+                     ),
+                     tools=sdk_tools)
         sub3 = Agent(client, name="Email-Checker",
-                     instructions="You are an email server specialist. Check the email server status and report findings concisely.")
+                     instructions=(
+                         "You are an email server specialist. Check the email server status.\n"
+                         "You have access to: deep_analysis, run_diagnostic_command, search_knowledge_base.\n"
+                         "Use these tools to investigate. Be concise."
+                     ),
+                     tools=sdk_tools)
 
         results["steps"].append({
             "step": "create_agents",
             "status": "ok",
             "agents": ["ETL-Checker", "CRM-Checker", "Email-Checker"],
+            "sdk_tools": len(sdk_tools),
         })
 
         # Build with ConcurrentBuilder
@@ -222,11 +254,16 @@ async def test_team(
             "tasks": 4,
         })
 
-        # Step 2: Create team tools bound to this SharedTaskList
-        tools = create_team_tools(shared)
-        results["steps"].append({"step": "create_tools", "status": "ok", "tools": len(tools)})
+        # Step 2: Create team tools + Claude SDK tools
+        team_tools = create_team_tools(shared)
+        sdk_tools = _get_claude_sdk_tools()
+        all_tools = team_tools + sdk_tools
+        results["steps"].append({
+            "step": "create_tools", "status": "ok",
+            "team_tools": len(team_tools), "sdk_tools": len(sdk_tools),
+        })
 
-        # Step 3: Create Teammate agents with tools
+        # Step 3: Create Teammate agents with team + SDK tools
         client = _create_client(provider, model, azure_endpoint, azure_api_key,
                                 azure_api_version, azure_deployment)
 
@@ -234,48 +271,57 @@ async def test_team(
             client, name="LogExpert",
             instructions=(
                 "You are a log analysis expert on an IT investigation team.\n"
-                "WORKFLOW:\n"
-                "1. Use claim_next_task with your name 'LogExpert' to get a task\n"
-                "2. Analyze the task (simulate analysis based on your expertise)\n"
+                "IMPORTANT: Act immediately. Do NOT just observe or coordinate.\n\n"
+                "WORKFLOW (do ALL steps in ONE turn):\n"
+                "1. Use claim_next_task with your name 'LogExpert' to claim a task\n"
+                "2. Use deep_analysis or run_diagnostic_command to investigate\n"
                 "3. Use report_task_result to submit your findings\n"
-                "4. Use send_team_message to share important discoveries with teammates\n"
-                "5. Use read_team_messages to check if teammates found anything relevant\n"
-                "6. If there are more unclaimed tasks you can handle, claim another\n"
+                "4. Use send_team_message to share key discoveries\n"
+                "5. Use read_team_messages to check teammate findings\n\n"
+                "AVAILABLE TOOLS: claim_next_task, report_task_result, view_team_status, "
+                "send_team_message, read_team_messages, deep_analysis, "
+                "run_diagnostic_command, search_knowledge_base\n"
                 "Be concise. Focus on actionable findings."
             ),
-            tools=tools,
+            tools=all_tools,
         )
 
         db_expert = Agent(
             client, name="DBExpert",
             instructions=(
                 "You are a database expert on an IT investigation team.\n"
-                "WORKFLOW:\n"
-                "1. Use claim_next_task with your name 'DBExpert' to get a task\n"
-                "2. Analyze the task (simulate analysis based on your expertise)\n"
+                "IMPORTANT: Act immediately. Do NOT just observe or coordinate.\n\n"
+                "WORKFLOW (do ALL steps in ONE turn):\n"
+                "1. Use claim_next_task with your name 'DBExpert' to claim a task\n"
+                "2. Use deep_analysis or run_diagnostic_command to investigate\n"
                 "3. Use report_task_result to submit your findings\n"
-                "4. Use send_team_message to share important discoveries with teammates\n"
-                "5. Use read_team_messages to check if teammates found anything relevant\n"
-                "6. If there are more unclaimed tasks you can handle, claim another\n"
-                "Be concise. Focus on schema changes, query performance, and data integrity."
+                "4. Use send_team_message to share key discoveries\n"
+                "5. Use read_team_messages to check teammate findings\n\n"
+                "AVAILABLE TOOLS: claim_next_task, report_task_result, view_team_status, "
+                "send_team_message, read_team_messages, deep_analysis, "
+                "run_diagnostic_command, search_knowledge_base\n"
+                "Focus on schema changes, query performance, data integrity."
             ),
-            tools=tools,
+            tools=all_tools,
         )
 
         app_expert = Agent(
             client, name="AppExpert",
             instructions=(
                 "You are an application infrastructure expert on an IT investigation team.\n"
-                "WORKFLOW:\n"
-                "1. Use claim_next_task with your name 'AppExpert' to get a task\n"
-                "2. Analyze the task (simulate analysis based on your expertise)\n"
+                "IMPORTANT: Act immediately. Do NOT just observe or coordinate.\n\n"
+                "WORKFLOW (do ALL steps in ONE turn):\n"
+                "1. Use claim_next_task with your name 'AppExpert' to claim a task\n"
+                "2. Use deep_analysis or run_diagnostic_command to investigate\n"
                 "3. Use report_task_result to submit your findings\n"
-                "4. Use send_team_message to share important discoveries with teammates\n"
-                "5. Use read_team_messages to check if teammates found anything relevant\n"
-                "6. If there are more unclaimed tasks you can handle, claim another\n"
-                "Be concise. Focus on network, infrastructure, and configuration issues."
+                "4. Use send_team_message to share key discoveries\n"
+                "5. Use read_team_messages to check teammate findings\n\n"
+                "AVAILABLE TOOLS: claim_next_task, report_task_result, view_team_status, "
+                "send_team_message, read_team_messages, deep_analysis, "
+                "run_diagnostic_command, search_knowledge_base\n"
+                "Focus on network, infrastructure, and configuration issues."
             ),
-            tools=tools,
+            tools=all_tools,
         )
 
         results["steps"].append({
