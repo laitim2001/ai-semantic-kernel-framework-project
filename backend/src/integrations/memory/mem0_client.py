@@ -147,15 +147,27 @@ class Mem0Client:
             # Import mem0 SDK
             from mem0 import Memory
 
-            # Configure mem0
+            # Configure mem0 — use Docker Qdrant if QDRANT_HOST is set, else local path
+            import os
+            qdrant_host = os.getenv("QDRANT_HOST")
+            qdrant_port = int(os.getenv("QDRANT_PORT", "6333"))
+            if qdrant_host:
+                qdrant_config = {
+                    "host": qdrant_host,
+                    "port": qdrant_port,
+                    "collection_name": self.config.qdrant_collection,
+                    "embedding_model_dims": self.config.embedding_dims,
+                }
+            else:
+                qdrant_config = {
+                    "path": self.config.qdrant_path,
+                    "collection_name": self.config.qdrant_collection,
+                    "embedding_model_dims": self.config.embedding_dims,
+                }
             config = {
                 "vector_store": {
                     "provider": "qdrant",
-                    "config": {
-                        "path": self.config.qdrant_path,
-                        "collection_name": self.config.qdrant_collection,
-                        "embedding_model_dims": self.config.embedding_dims,
-                    },
+                    "config": qdrant_config,
                 },
                 "embedder": self._build_embedder_config(),
                 "llm": self._build_llm_config(),
