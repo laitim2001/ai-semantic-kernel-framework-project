@@ -30,16 +30,21 @@ def _get_claude_sdk_tools():
 
 
 def _create_client(provider: str, model: str, azure_endpoint: str = "",
-                   azure_api_key: str = "", azure_api_version: str = "2025-03-01-preview",
+                   azure_api_key: str = "", azure_api_version: str = "2024-12-01-preview",
                    azure_deployment: str = "", max_tokens: int = 1024):
     """Create a ChatClient based on provider."""
     if provider == "azure":
+        import os
         from agent_framework.azure import AzureOpenAIResponsesClient
+        endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT", "")
+        api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY", "")
+        deployment = azure_deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", model)
+        version = azure_api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
         return AzureOpenAIResponsesClient(
-            endpoint=azure_endpoint,
-            api_key=azure_api_key,
-            deployment_name=azure_deployment or model,
-            api_version=azure_api_version,
+            endpoint=endpoint,
+            api_key=api_key,
+            deployment_name=deployment,
+            api_version=version,
         )
     else:
         from src.integrations.agent_framework.clients.anthropic_chat_client import (
@@ -52,8 +57,8 @@ def _create_client(provider: str, model: str, azure_endpoint: str = "",
 
 @router.post("/test-subagent")
 async def test_subagent(
-    provider: str = Query("anthropic"),
-    model: str = Query("claude-haiku-4-5-20251001"),
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
     task: str = Query(
         "Check the status of three systems: "
         "1) APAC ETL Pipeline, 2) CRM Service, 3) Email Server. "
@@ -205,8 +210,8 @@ async def test_subagent(
 
 @router.post("/test-team")
 async def test_team(
-    provider: str = Query("anthropic"),
-    model: str = Query("claude-haiku-4-5-20251001"),
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
     task: str = Query(
         "Investigate APAC ETL Pipeline failure. Multiple experts needed: "
         "analyze application logs, check database changes, and verify network connectivity.",
@@ -214,7 +219,7 @@ async def test_team(
     max_rounds: int = Query(8, description="Max GroupChat rounds"),
     azure_endpoint: str = Query(""),
     azure_api_key: str = Query(""),
-    azure_api_version: str = Query("2025-03-01-preview"),
+    azure_api_version: str = Query("2024-12-01-preview"),
     azure_deployment: str = Query(""),
 ):
     """Test B: Agent Team with GroupChatBuilder + SharedTaskList.
@@ -265,7 +270,7 @@ async def test_team(
 
         # Step 3: Create Teammate agents with team + SDK tools
         client = _create_client(provider, model, azure_endpoint, azure_api_key,
-                                azure_api_version, azure_deployment)
+                                azure_api_version, azure_deployment, max_tokens=2048)
 
         log_expert = Agent(
             client, name="LogExpert",
@@ -454,8 +459,8 @@ async def test_team(
 
 @router.post("/test-hybrid")
 async def test_hybrid(
-    provider: str = Query("anthropic"),
-    model: str = Query("claude-haiku-4-5-20251001"),
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
     task: str = Query(
         "Check VPN connectivity for Taipei, Hong Kong, and Singapore offices.",
     ),
@@ -600,8 +605,8 @@ async def test_hybrid(
 
 @router.post("/test-orchestrator")
 async def test_orchestrator(
-    provider: str = Query("anthropic"),
-    model: str = Query("claude-haiku-4-5-20251001"),
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
     task: str = Query(
         "APAC Glider ETL Pipeline has been failing for 3 days, affecting financial reports.",
     ),

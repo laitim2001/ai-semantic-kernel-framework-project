@@ -89,14 +89,14 @@ const Section: FC<{
 export const AgentTeamTestPage: FC = () => {
   // State
   const [mode, setMode] = useState<TestMode>('subagent');
-  const [provider, setProvider] = useState<Provider>('anthropic');
-  const [model, setModel] = useState('claude-haiku-4-5-20251001');
+  const [provider, setProvider] = useState<Provider>('azure');
+  const [model, setModel] = useState('gpt-5.4-mini');
   const [task, setTask] = useState('');
   const [maxRounds, setMaxRounds] = useState(8);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
 
-  // Azure config
+  // Azure config — credentials loaded from server .env by default
   const [azureEndpoint, setAzureEndpoint] = useState('');
   const [azureKey, setAzureKey] = useState('');
   const [azureDeployment, setAzureDeployment] = useState('');
@@ -210,7 +210,7 @@ export const AgentTeamTestPage: FC = () => {
                 onChange={(e) => {
                   const p = e.target.value as Provider;
                   setProvider(p);
-                  setModel(p === 'azure' ? 'gpt-5.2' : 'claude-haiku-4-5-20251001');
+                  setModel(p === 'azure' ? 'gpt-5.4-mini' : 'claude-haiku-4-5-20251001');
                 }}
               >
                 <option value="anthropic">Anthropic (Claude)</option>
@@ -227,9 +227,14 @@ export const AgentTeamTestPage: FC = () => {
 
               {provider === 'azure' && (
                 <div className="space-y-1.5">
-                  <input className="w-full p-1.5 text-xs border rounded" placeholder="Azure Endpoint" value={azureEndpoint} onChange={(e) => setAzureEndpoint(e.target.value)} />
-                  <input className="w-full p-1.5 text-xs border rounded" placeholder="API Key" type="password" value={azureKey} onChange={(e) => setAzureKey(e.target.value)} />
-                  <input className="w-full p-1.5 text-xs border rounded" placeholder="Deployment (e.g. gpt-5.2)" value={azureDeployment} onChange={(e) => setAzureDeployment(e.target.value)} />
+                  <select className="w-full p-2 text-sm border rounded" value={model} onChange={(e) => setModel(e.target.value)}>
+                    <option value="gpt-5.4-nano">GPT-5.4 Nano (fastest/cheapest)</option>
+                    <option value="gpt-5.4-mini">GPT-5.4 Mini (best small model)</option>
+                    <option value="gpt-5-mini">GPT-5 Mini</option>
+                    <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-5.2">GPT-5.2 (deep reasoning)</option>
+                  </select>
+                  <p className="text-[10px] text-gray-400">Azure credentials loaded from server .env</p>
                 </div>
               )}
             </div>
@@ -252,11 +257,11 @@ export const AgentTeamTestPage: FC = () => {
             )}
           </Section>
 
-          {/* Azure Warning for Team/Hybrid */}
+          {/* Provider hint for Team/Hybrid */}
           {(mode === 'team' || mode === 'hybrid') && provider === 'anthropic' && (
             <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
-              <strong>Warning:</strong> Team and Hybrid modes require <strong>Azure OpenAI</strong> for function calling (tool use).
-              Claude Haiku cannot call tools like claim_task/report_result. Switch to Azure provider above.
+              <strong>Tip:</strong> Team and Hybrid modes work best with <strong>Azure OpenAI</strong> (no rate limiting).
+              Switch to Azure provider above for better results.
             </div>
           )}
 

@@ -24,6 +24,8 @@ class MemoryType(str, Enum):
     BEST_PRACTICE = "best_practice"  # Best practices and patterns
     CONVERSATION = "conversation"  # Conversation snippets
     FEEDBACK = "feedback"  # User feedback and corrections
+    INSIGHT = "insight"  # Orchestrator insights and analysis
+    DECISION = "decision"  # Routing and decision records
 
 
 class MemoryLayer(str, Enum):
