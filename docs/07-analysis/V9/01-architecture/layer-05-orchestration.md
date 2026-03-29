@@ -1,7 +1,7 @@
 # Layer 05: Hybrid Orchestration
 
 > **V9 Architecture Analysis** | 2026-03-29
-> **Scope**: `backend/src/integrations/hybrid/` — 85 Python files, ~24K LOC
+> **Scope**: `backend/src/integrations/hybrid/` — 90+ Python files, ~26K LOC
 > **Role**: Central mediation layer between MAF (Layer 06) and Claude SDK (Layer 07)
 > **Phase History**: Phase 13-14 (S52-S57), Phase 28 (S93-S98), Phase 29 (S116), Phase 35 (S107), Phase 39-42 (S132-S148)
 
@@ -24,20 +24,20 @@ The layer has undergone a major architectural evolution: from the monolithic `Hy
 
 ## 2. File Inventory
 
-### 2.1 Complete File Map (85 files)
+### 2.1 Complete File Map (90+ files)
 
 | Subsystem | Directory | Files | Est. LOC | Primary Class |
 |-----------|-----------|-------|----------|---------------|
-| **Root** | `hybrid/` | 3 | ~2,300 | `HybridOrchestratorV2`, `ClaudeMAFFusion`, `SwarmModeHandler` |
+| **Root** | `hybrid/` | 4 | ~2,850 | `HybridOrchestratorV2`, `ClaudeMAFFusion`, `SwarmModeHandler`, `__init__.py` |
 | **orchestrator/** | `hybrid/orchestrator/` | 18 | ~5,500 | `OrchestratorMediator`, `OrchestratorBootstrap`, `AgentHandler` |
 | **orchestrator/handlers/** | `hybrid/orchestrator/handlers/` | 7 | ~1,200 | `RoutingHandler`, `ExecutionHandler`, etc. |
-| **intent/** | `hybrid/intent/` | 8 | ~1,500 | `FrameworkSelector`, `RuleBasedClassifier` |
-| **context/** | `hybrid/context/` | 9 | ~3,100 | `ContextBridge`, `ContextSynchronizer` |
-| **execution/** | `hybrid/execution/` | 5 | ~2,200 | `UnifiedToolExecutor`, `ToolRouter` |
-| **risk/** | `hybrid/risk/` | 7 | ~2,400 | `RiskAssessmentEngine`, `RiskScorer` |
-| **switching/** | `hybrid/switching/` | 10 | ~2,900 | `ModeSwitcher`, `StateMigrator` |
-| **checkpoint/** | `hybrid/checkpoint/` | 8 | ~4,300 | `UnifiedCheckpointStorage`, 4 backends |
-| **hooks/** | `hybrid/hooks/` | 2 | ~450 | `ApprovalHook` |
+| **intent/** | `hybrid/intent/` | 9 | ~2,500 | `FrameworkSelector`, `RuleBasedClassifier`, `RoutingDecisionClassifier` |
+| **context/** | `hybrid/context/` | 9 | ~3,700 | `ContextBridge`, `ContextSynchronizer` |
+| **execution/** | `hybrid/execution/` | 5 | ~2,235 | `UnifiedToolExecutor`, `ToolRouter` |
+| **risk/** | `hybrid/risk/` | 7 | ~2,535 | `RiskAssessmentEngine`, `RiskScorer` |
+| **switching/** | `hybrid/switching/` | 11 | ~3,370 | `ModeSwitcher`, `StateMigrator`, `RedisSwitchCheckpointStorage` |
+| **checkpoint/** | `hybrid/checkpoint/` | 9 | ~4,300 | `UnifiedCheckpointStorage`, 4 backends |
+| **hooks/** | `hybrid/hooks/` | 2 | ~450 | `RiskDrivenApprovalHook` |
 | **prompts/** | `hybrid/prompts/` | 2 | ~200 | `ORCHESTRATOR_SYSTEM_PROMPT` |
 
 ### 2.2 Key File Reference
@@ -57,11 +57,19 @@ The layer has undergone a major architectural evolution: from the monolithic `Hy
 | `orchestrator/handlers/context.py` | ~131 | S132 | **ContextHandler** — ContextBridge + MemoryManager |
 | `orchestrator/handlers/observability.py` | ~91 | S132 | **ObservabilityHandler** — Metrics recording |
 | `intent/router.py` | ~501 | S52/S98 | **FrameworkSelector** — Weighted classifier aggregation |
-| `intent/models.py` | ~224 | S52 | ExecutionMode (4 modes), IntentAnalysis, SessionContext |
-| `intent/classifiers/rule_based.py` | ~300+ | S52 | RuleBasedClassifier — keyword patterns (EN + zh-TW) |
-| `intent/classifiers/routing_decision.py` | ~185 | S144 | RoutingDecisionClassifier — IT intent to ExecutionMode bridge |
-| `context/bridge.py` | ~933 | S53 | **ContextBridge** — Bidirectional MAF-Claude sync |
-| `context/sync/synchronizer.py` | ~629 | S53 | ContextSynchronizer — Sync lifecycle & versioning |
+| `intent/models.py` | 224 | S52/S98/S116 | ExecutionMode (4 modes: WORKFLOW/CHAT/HYBRID/SWARM), IntentAnalysis, SessionContext, ClassificationResult, ComplexityScore, MultiAgentAnalysis. `FrameworkAnalysis` alias (S98) |
+| `intent/classifiers/rule_based.py` | 468 | S52 | RuleBasedClassifier — 50+ workflow keywords, 20+ chat keywords, 18+ phrase patterns (EN + zh-TW). Context boost for active workflows |
+| `intent/classifiers/routing_decision.py` | 185 | S144 | RoutingDecisionClassifier — IT intent to ExecutionMode bridge (weight=1.5, higher than rule-based) |
+| `intent/analyzers/complexity.py` | 428 | S52 | ComplexityAnalyzer — heuristic scoring via step/dependency/persistence/time indicators. Bilingual keywords |
+| `intent/analyzers/multi_agent.py` | 567 | S52 | MultiAgentDetector — 8 skill domains, role references, collaboration patterns. Returns agent count estimate |
+| `context/bridge.py` | 933 | S53 | **ContextBridge** — Bidirectional MAF-Claude sync with `_context_cache`, `sync_after_execution()`, `validate_context()` |
+| `context/models.py` | 590 | S53 | MAFContext, ClaudeContext, HybridContext + 7 enums (SyncStatus, SyncDirection, SyncStrategy, AgentStatus, ApprovalStatus, MessageRole, ToolCallStatus) + supporting dataclasses |
+| `context/mappers/base.py` | 332 | S53 | `BaseMapper[T,U]` generic ABC + `MappingError` exception + utility methods |
+| `context/mappers/claude_mapper.py` | 467 | S53 | `ClaudeMapper`: Claude->MAF with prefix stripping, message->ExecutionRecord, tool call->ApprovalRequest |
+| `context/mappers/maf_mapper.py` | 416 | S53 | `MAFMapper`: MAF->Claude with prefix adding, execution records->messages, agent states->system prompt |
+| `context/sync/synchronizer.py` | 693 | S53/S119 | ContextSynchronizer — Redis distributed lock (with asyncio.Lock fallback), retry logic (max 3), version tracking, rollback snapshots (max 5) |
+| `context/sync/conflict.py` | 498 | S53 | `ConflictResolver` — 6 strategies (SOURCE_WINS, TARGET_WINS, MAF_PRIMARY, CLAUDE_PRIMARY, MERGE, MANUAL). Intelligent merge by recency |
+| `context/sync/events.py` | 443 | S53 | `SyncEventPublisher` — async pub/sub for 10 sync event types. Filtered subscriptions, event history (max 100) |
 | `execution/unified_executor.py` | ~797 | S54 | **UnifiedToolExecutor** — Hook pipeline + tool dispatch |
 | `risk/engine.py` | ~561 | S55 | **RiskAssessmentEngine** — Multi-dimensional scoring |
 | `risk/models.py` | ~200+ | S55 | RiskLevel (4 levels), RiskFactor (9 types), RiskConfig |
@@ -560,13 +568,17 @@ class CheckpointStatus(str, Enum):
 
 ### 4.8 hooks/ — Execution Hooks
 
-#### 4.8.1 ApprovalHook (`approval_hook.py`, ~439 LOC)
+#### 4.8.1 RiskDrivenApprovalHook (`approval_hook.py`, 440 LOC)
 
-Pre-execution hook that:
-1. Evaluates risk of tool call
-2. If `requires_approval`, blocks execution
-3. Waits for HITL approval response
-4. Returns `HookExecutionResult(allowed/blocked)`
+Full risk-driven approval hook with 3 modes (AUTO/MANUAL/RISK_DRIVEN):
+1. Auto-approve read-only tools (Read, Glob, Grep)
+2. Run RiskAssessmentEngine with all 3 analyzers (OperationAnalyzer, ContextEvaluator, PatternDetector)
+3. If `requires_approval`, blocks execution and invokes `approval_callback`
+4. Session-scoped approval caching for deduplication
+5. `from_tool_call_context()` helper for Claude SDK integration
+6. Returns `ApprovalDecision(approved, reason, risk_assessment)`
+
+**NOTE**: The class is named `RiskDrivenApprovalHook` (not `ApprovalHook`). V8 used the generic name.
 
 ### 4.9 prompts/ — Orchestrator Prompts
 
@@ -787,11 +799,17 @@ The `ContextBridge` uses a plain Python `dict` (`_context_cache`) without any `a
 
 **Fix**: Add `asyncio.Lock` per session_id or use a concurrent-safe cache.
 
-### 8.2 CRITICAL: ContextSynchronizer Thread-Safety
+### 8.2 ~~CRITICAL~~ RESOLVED (Sprint 119): ContextSynchronizer Thread-Safety
 
 **Location**: `context/sync/synchronizer.py`
 
-The `ContextSynchronizer` (629 LOC) uses in-memory dict without locks, same pattern as ContextBridge. This is documented in the module's `CLAUDE.md`.
+**Status: FIXED in Sprint 119.** The `ContextSynchronizer` was upgraded to use:
+1. `self._lock` — Redis distributed lock (via `_create_lock()`) with `_AsyncioLockAdapter` fallback
+2. `self._state_lock` — dedicated `asyncio.Lock` protecting `_context_versions` and `_rollback_snapshots`
+
+The V8 analysis documented this as an in-memory dict without locks, but Sprint 109 (H-04 fix) added `_state_lock` and Sprint 119 added the full distributed lock. The `CLAUDE.md` known issue description is now outdated.
+
+**Remaining risk**: `ContextBridge._context_cache` (Issue 8.1) is still unprotected — the Synchronizer fix does NOT cover the Bridge's cache.
 
 ### 8.3 HIGH: MemoryCheckpointStorage as Default
 
@@ -835,6 +853,24 @@ HITL approval uses `asyncio.wait_for(event.wait(), timeout=120)`. If timeout occ
 **Location**: Multiple files
 
 Several places use string matching on enum values (e.g., `"high" in rd_risk`) instead of proper enum comparison, which is fragile.
+
+### 8.9 MEDIUM: ModeSwitcher InMemoryCheckpointStorage Default (R4 finding)
+
+**Location**: `switching/switcher.py:277-283`
+
+`ModeSwitcher.__init__()` falls back to `InMemoryCheckpointStorage()` with only a warning log when no `checkpoint_storage` is provided. Sprint 120 added `RedisSwitchCheckpointStorage` but it is not wired as default. Rollback checkpoints are lost on restart.
+
+### 8.10 LOW: datetime.utcnow() Widespread Usage (R4 finding)
+
+**Location**: `context/models.py`, `checkpoint/models.py`, `risk/models.py`, `switching/models.py`, `execution/unified_executor.py`, and ~20 more files
+
+Almost all dataclass `default_factory` uses `datetime.utcnow()` which is deprecated in Python 3.12+. Only Sprint 111+ files use `datetime.now(timezone.utc)`.
+
+### 8.11 LOW: ComplexityAnalyzer and MultiAgentDetector Not Wired (R4 finding)
+
+**Location**: `intent/analyzers/complexity.py`, `intent/analyzers/multi_agent.py`
+
+Both analyzers exist (428 + 567 LOC) but are not registered as classifiers in the `FrameworkSelector` pipeline. The Bootstrap wires only `RuleBasedClassifier` and `RoutingDecisionClassifier`. The complexity and multi-agent analysis is duplicated — similar logic exists in the `ComplexityTriggerDetector` (switching/triggers/complexity.py) and `SwarmModeHandler`.
 
 ---
 

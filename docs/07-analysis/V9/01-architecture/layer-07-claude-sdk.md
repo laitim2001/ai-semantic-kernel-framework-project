@@ -2,7 +2,7 @@
 
 ## Identity
 
-- Files: 47 | LOC: ~15,000
+- Files: 47 | LOC: **15,406** (R4 verified via `wc -l`)
 - Directory: `backend/src/integrations/claude_sdk/`
 - Phase introduced: 12 (Sprint 48) | Phase last modified: 29 (Sprint 111)
 - External dependency: `anthropic.AsyncAnthropic` (Anthropic Python SDK)
@@ -62,7 +62,7 @@
 | **orchestrator/task_allocator.py** | 484 | Subtask distribution + execution | `TaskAllocator` (select_agents, execute_parallel, execute_sequential, execute_pipeline) |
 | **orchestrator/context_manager.py** | 315 | Cross-agent context transfer | `ContextManager` (transfer_context, merge_results, aggregate_final_result) |
 
-**Total: 47 files, ~15,000 LOC**
+**Total: 47 files, 15,406 LOC (R4 verified)**
 
 ---
 

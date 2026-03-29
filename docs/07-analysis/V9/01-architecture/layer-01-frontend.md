@@ -1,7 +1,7 @@
 # Layer 01: Frontend (React 18 + TypeScript)
 
-> V9 Architecture Analysis | Layer 01 | 2026-03-29
-> Scope: `frontend/src/` -- 236 files, ~54K LOC
+> V9 Architecture Analysis | Layer 01 | 2026-03-29 | R4 Updated
+> Scope: `frontend/src/` -- 210 source files (236 including tests), ~54K LOC
 
 ---
 
@@ -29,23 +29,43 @@
 
 | Module | Path | Files | Description |
 |--------|------|-------|-------------|
-| **components/unified-chat** | `components/unified-chat/` | 68 | Main chat interface + agent-swarm sub-module |
-| **components/ag-ui** | `components/ag-ui/` | 15 | AG-UI Protocol components (advanced, chat, hitl) |
-| **components/DevUI** | `components/DevUI/` | 14 | Developer tools (event timeline, statistics) |
-| **components/ui** | `components/ui/` | 16 | Shadcn UI base components (Button, Card, Dialog...) |
-| **components/layout** | `components/layout/` | 4 | AppLayout, Header, Sidebar, UserMenu |
-| **components/shared** | `components/shared/` | 4 | EmptyState, LoadingSpinner, StatusBadge |
+| **components/unified-chat** | `components/unified-chat/` | 58 (27 core + 4 renderers + 16 swarm + 5 swarm hooks + 2 swarm types + 4 barrel) | Main chat interface + agent-swarm sub-module |
+| **components/ag-ui** | `components/ag-ui/` | 19 | AG-UI Protocol components (7 advanced, 6 chat, 5 hitl, 1 barrel) |
+| **components/DevUI** | `components/DevUI/` | 15 | Developer tools (event timeline, statistics) |
+| **components/ui** | `components/ui/` | 18 | Shadcn UI base components (Button, Card, Dialog, Sheet, ScrollArea...) |
+| **components/layout** | `components/layout/` | 5 | AppLayout, Header, Sidebar, UserMenu + barrel |
+| **components/shared** | `components/shared/` | 4 | EmptyState, LoadingSpinner, StatusBadge + barrel |
 | **components/auth** | `components/auth/` | 1 | ProtectedRoute |
-| **pages** | `pages/` | 46 | Route-level page components (11 modules) |
+| **pages** | `pages/` | 46 | Route-level page components (13 modules) |
 | **hooks** | `hooks/` | 25 | Custom React hooks (SSE, chat, swarm, orchestration) |
-| **stores** | `stores/` | 2+tests | Zustand feature stores (unifiedChat, swarm) |
+| **stores** | `stores/` | 2 (+1 test) | Zustand feature stores (unifiedChat, swarm) |
 | **store** | `store/` | 1 | Zustand auth store (persisted) |
-| **api** | `api/` | 6+ | Fetch wrapper + domain endpoint modules |
+| **api** | `api/` | 11 | Fetch wrapper + 8 endpoint modules + barrel + devtools |
 | **types** | `types/` | 4 | TypeScript type definitions |
 | **utils** | `utils/` | 1 | guestUser utility |
 | **lib** | `lib/` | 1 | Tailwind merge helper `cn()` |
+| **root** | `src/` | 3 | main.tsx, App.tsx, vite-env.d.ts |
 
-**Total: ~236 TypeScript files**
+**Total: 210 source files (excluding 26 test files = 236 with tests)**
+
+### Component Count Breakdown
+
+| Sub-module | Source Files | Test Files | Total |
+|------------|-------------|------------|-------|
+| unified-chat (core) | 27 | 0 | 27 |
+| unified-chat/renderers | 4 | 0 | 4 |
+| unified-chat/agent-swarm (components) | 16 | 11 | 27 |
+| unified-chat/agent-swarm/hooks | 5 | 0 | 5 |
+| unified-chat/agent-swarm/types | 2 | 0 | 2 |
+| ag-ui/advanced | 8 | 0 | 8 |
+| ag-ui/chat | 6 | 0 | 6 |
+| ag-ui/hitl | 5 | 0 | 5 |
+| DevUI | 15 | 0 | 15 |
+| ui | 18 | 0 | 18 |
+| layout | 5 | 0 | 5 |
+| shared | 4 | 0 | 4 |
+| auth | 1 | 0 | 1 |
+| **Component total** | **116** | **11** | **127** |
 
 ---
 
@@ -57,14 +77,21 @@
 | 2 | `hooks/useUnifiedChat.ts` | 1,313 | AG-UI SSE hook (event handler, state sync) |
 | 3 | `hooks/useSwarmMock.ts` | 623 | Mock swarm data for testing |
 | 4 | `hooks/useSwarmReal.ts` | 603 | Real swarm SSE connection |
-| 5 | `stores/unifiedChatStore.ts` | 508 | Chat Zustand store |
-| 6 | `types/unified-chat.ts` | 505 | Chat type definitions |
-| 7 | `types/ag-ui.ts` | 457 | AG-UI Protocol types |
-| 8 | `stores/swarmStore.ts` | 444 | Swarm Zustand store (immer) |
-| 9 | `store/authStore.ts` | 322 | Auth Zustand store (persisted) |
-| 10 | `hooks/useSSEChat.ts` | 212 | Pipeline SSE hook (fetch ReadableStream) |
+| 5 | `hooks/useAGUI.ts` | 983 | Low-level AG-UI protocol hook (SSE, tools, approvals) |
+| 6 | `stores/unifiedChatStore.ts` | 509 | Chat Zustand store |
+| 7 | `types/unified-chat.ts` | 506 | Chat type definitions |
+| 8 | `hooks/useExecutionMetrics.ts` | 464 | Execution metrics tracking |
+| 9 | `hooks/useApprovalFlow.ts` | 461 | HITL approval workflow |
+| 10 | `types/ag-ui.ts` | 458 | AG-UI Protocol types |
+| 11 | `stores/swarmStore.ts` | 445 | Swarm Zustand store (immer) |
+| 12 | `api/endpoints/files.ts` | 389 | File upload/download API |
+| 13 | `hooks/useCheckpoints.ts` | 368 | Checkpoint management |
+| 14 | `api/endpoints/ag-ui.ts` | 333 | AG-UI API endpoints |
+| 15 | `api/endpoints/orchestration.ts` | 326 | Orchestration API endpoints |
+| 16 | `store/authStore.ts` | 323 | Auth Zustand store (persisted) |
 
-> The top 2 files alone (UnifiedChat.tsx + useUnifiedChat.ts) account for ~2,716 LOC -- roughly 5% of the total codebase but nearly all the business logic.
+> The top 4 files alone (UnifiedChat.tsx + useUnifiedChat.ts + useAGUI.ts + useSwarmMock.ts) account for ~4,322 LOC.
+> The top 16 files above total ~8,500 LOC -- roughly 16% of the frontend codebase.
 
 ---
 
@@ -304,13 +331,17 @@ export const api = {
 
 ### 8.2 Endpoint Modules (`api/endpoints/`)
 
-| Module | Key Functions |
-|--------|--------------|
-| `ag-ui.ts` | AG-UI session/event endpoints |
-| `files.ts` | File upload/download |
-| `orchestration.ts` | Orchestration pipeline endpoints |
-| `memory.ts` | mem0 memory search/CRUD |
-| `sessions.ts` | Session management + message history |
+| Module | LOC | Key Functions |
+|--------|-----|--------------|
+| `ag-ui.ts` | 333 | approve, reject, getPendingApprovals, createThread, getThread, cancelRun, getCheckpoints, restoreCheckpoint |
+| `files.ts` | 389 | uploadFile (XHR + progress), listFiles, getFile, deleteFile, downloadFile, getFileContentText/Blob |
+| `orchestration.ts` | 326 | classify, quickClassify, startDialog, respondToDialog, assessRisk, listApprovals, submitDecision, execute |
+| `orchestrator.ts` | 145 | sendMessage (POST /orchestrator/chat), getHealth, createStream (SSE EventSource) |
+| `sessions.ts` | 142 | getSessions, getSession, getSessionMessages, getRecoverableSessions, resumeSession, deleteSession |
+| `tasks.ts` | 152 | getTasks (wraps array->paginated), getTask, getTaskSteps, cancelTask, retryTask |
+| `knowledge.ts` | 184 | uploadDocument (FormData), searchKnowledge, getDocuments, deleteDocument, getSkills, getStatus |
+| `memory.ts` | 105 | searchMemories, getUserMemories, getMemoryStats, deleteMemory |
+| `index.ts` | 126 | Central barrel export for all 7 endpoint modules + types |
 
 ### 8.3 Guest User Isolation
 
@@ -334,8 +365,8 @@ Unauthenticated users get a UUID-based guest ID. On login, guest data is migrate
 |------|-----|-------|
 | `types/ag-ui.ts` | 457 | AG-UI protocol types: events, messages, tools, approvals, shared state, predictions |
 | `types/unified-chat.ts` | 505 | Chat UI types: modes, workflows, metrics, component props, hook returns |
-| `types/index.ts` | ~50 | Core shared types (Agent, Workflow, Execution) |
-| `types/devtools.ts` | ~80 | DevTools event types |
+| `types/index.ts` | 232 | Core shared types (Agent, Workflow, Execution, Template, Checkpoint, AuditLog, DashboardStats) |
+| `types/devtools.ts` | 105 | DevTools event types (Trace, TraceEvent, severity, params) |
 | `agent-swarm/types/index.ts` | 180 | Swarm UI types: WorkerSummary, WorkerDetail, SwarmStatus, component props |
 | `agent-swarm/types/events.ts` | ~170 | Swarm SSE event payloads (snake_case) |
 
@@ -411,15 +442,15 @@ The mock/real hooks duplicate ~1,200 LOC of state management that the swarmStore
 | `useSSEChat` | `useSSEChat.ts` | 212 | Pipeline SSE (fetch ReadableStream) |
 | `useSwarmMock` | `useSwarmMock.ts` | 623 | Mock swarm for testing |
 | `useSwarmReal` | `useSwarmReal.ts` | 603 | Real swarm SSE demo |
-| `useAGUI` | `useAGUI.ts` | ~400 | Low-level AG-UI hook (superseded by useUnifiedChat) |
-| `useHybridMode` | `useHybridMode.ts` | ~200 | MAF/Claude SDK mode detection |
+| `useAGUI` | `useAGUI.ts` | 983 | Low-level AG-UI hook (superseded by useUnifiedChat) |
+| `useHybridMode` | `useHybridMode.ts` | 270 | MAF/Claude SDK mode detection |
 | `useOrchestration` | `useOrchestration.ts` | ~350 | Phase 28 orchestration (partially superseded) |
 | `useOrchestratorChat` | `useOrchestratorChat.ts` | ~200 | Orchestrator chat integration |
-| `useApprovalFlow` | `useApprovalFlow.ts` | ~150 | HITL approval workflow |
-| `useExecutionMetrics` | `useExecutionMetrics.ts` | ~100 | Timer + token tracking |
+| `useApprovalFlow` | `useApprovalFlow.ts` | 461 | HITL approval workflow |
+| `useExecutionMetrics` | `useExecutionMetrics.ts` | 464 | Timer + token tracking |
 | `useFileUpload` | `useFileUpload.ts` | ~200 | File upload queue management |
 | `useChatThreads` | `useChatThreads.ts` | ~200 | Thread CRUD (localStorage) |
-| `useCheckpoints` | `useCheckpoints.ts` | ~100 | Checkpoint management |
+| `useCheckpoints` | `useCheckpoints.ts` | 368 | Checkpoint management |
 | `useSharedState` | `useSharedState.ts` | ~100 | AG-UI shared state |
 | `useOptimisticState` | `useOptimisticState.ts` | ~100 | Optimistic UI updates |
 | `useDevTools` | `useDevTools.ts` | ~150 | DevUI data fetching |
@@ -589,5 +620,6 @@ App.tsx
 
 ---
 
-*Analysis conducted on 2026-03-29 based on source reading of 14 key files.*
+*Initial analysis conducted on 2026-03-29 based on source reading of 14 key files.*
+*R4 update on 2026-03-29: Full source reading of all 210 non-test files. File counts verified and corrected.*
 *V9 Layer 01 -- Frontend Architecture Report*

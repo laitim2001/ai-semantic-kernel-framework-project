@@ -9,7 +9,7 @@
 | Metric | Value |
 |--------|-------|
 | **Total Source Files** | 1,090 (793 .py + 297 .ts/.tsx) |
-| **Total LOC (estimated)** | ~184,000+ (130K backend + 54K frontend) |
+| **Total LOC (estimated)** | ~250,000+ (196K backend + 54K frontend) |
 | **Total Phases** | 44 |
 | **Total Sprints** | 152+ |
 | **Total Story Points** | ~2,500+ |
@@ -18,7 +18,7 @@
 
 ---
 
-## 2. Backend Breakdown (793 Python files, ~130K LOC)
+## 2. Backend Breakdown (793 Python files, ~196K LOC)
 
 ### By Architectural Layer
 
@@ -31,11 +31,11 @@
 | L7: Claude SDK | integrations/claude_sdk/ | 39 | ~15,000 | 11.5% |
 | L8: MCP Tools | integrations/mcp/ | 43 | ~21,000 | 16.2% |
 | L3: AG-UI Protocol | integrations/ag_ui/ | 22 | ~10,000 | 7.7% |
-| L9: Supporting Integrations | integrations/{swarm,patrol,...} | ~50 | ~18,000 | 13.8% |
-| L10: Domain Layer | domain/ | 86 | ~10,000 | 7.7% |
-| L11: Infrastructure | infrastructure/ | 42 | ~4,000 | 3.1% |
-| L11: Core | core/ | 33 | ~1,500 | 1.2% |
-| Middleware | middleware/ | 1 | ~100 | 0.1% |
+| L9: Supporting Integrations | integrations/{swarm,patrol,...} | 75 | ~21,300 | 12.4% |
+| L10: Domain Layer | domain/ | 117 | ~47,637 | 27.8% |
+| L11: Infrastructure | infrastructure/ | 54 | ~9,901 | 5.8% |
+| L11: Core | core/ | 39 | ~11,945 | 7.0% |
+| Middleware | middleware/ | 2 | ~107 | 0.1% |
 
 ### By Module Category
 
@@ -43,11 +43,11 @@
 |----------|---------|-------|--------------|
 | Integrations | 19 | 340 | 42.9% |
 | API Routes | 48 | 107 | 13.5% |
-| Domain | 21 | 86 | 10.8% |
-| Infrastructure | 4 | 42 | 5.3% |
-| Core | 5 | 33 | 4.2% |
+| Domain | 21 | 117 | 14.8% |
+| Infrastructure | 7 | 54 | 6.8% |
+| Core | 5 | 39 | 4.9% |
 | __init__.py | — | 184 | 23.2% |
-| Middleware | 1 | 1 | 0.1% |
+| Middleware | 1 | 2 | 0.3% |
 
 ### Top 10 Largest Backend Modules (by file count)
 
@@ -58,11 +58,11 @@
 | 3 | integrations/mcp/ | 43 | ~21,000 |
 | 4 | integrations/orchestration/ | 39 | ~16,000 |
 | 5 | integrations/claude_sdk/ | 39 | ~15,000 |
-| 6 | domain/sessions/ | 26 | ~12,000 |
+| 6 | domain/sessions/ | 33 | ~15,473 |
 | 7 | integrations/ag_ui/ | 22 | ~10,000 |
-| 8 | domain/orchestration/ | 17 | ~11,000 |
-| 9 | infrastructure/database/ | 15 | ~3,000 |
-| 10 | infrastructure/storage/ | 16 | ~3,000 |
+| 8 | domain/orchestration/ | 22 | ~11,465 |
+| 9 | core/performance/ | 10 | ~5,100 |
+| 10 | infrastructure/storage/ | 14 | ~3,800 |
 
 ---
 
@@ -193,6 +193,6 @@
 | Phases | 1-34 | 1-44 | +10 phases |
 | Sprints | ~133 | ~152 | +19 sprints |
 | Source Files | 939 | 1,090 | +151 files |
-| LOC | ~160K | ~184K | +24K LOC |
+| LOC | ~160K | ~250K | +90K LOC (R4 corrected; prior V9 estimate was ~184K) |
 | Features Tracked | 70+15 | TBD (V9 analysis) | — |
 | Issues Tracked | 62 | TBD (V9 analysis) | — |

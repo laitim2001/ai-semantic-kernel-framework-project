@@ -1,7 +1,7 @@
 # Layer 04: Input & Routing
 
 > **V9 Deep Analysis** | Orchestration Module (`backend/src/integrations/orchestration/`)
-> Phase 28 (Sprints 91-99) + Sprint 111/116/119 | **55 files, ~16,000 LOC**
+> Phase 28 (Sprints 91-99) + Sprint 111/116/119/128 | **55+ files, ~16,000 LOC**
 
 ---
 
@@ -25,7 +25,7 @@
 
 | File | LOC | Sprint | Purpose |
 |------|-----|--------|---------|
-| `intent_router/router.py` | 623 | S93 | `BusinessIntentRouter` — 3-layer coordinator with metrics |
+| `intent_router/router.py` | 639 | S93 | `BusinessIntentRouter` — 3-layer coordinator with metrics, `RouterConfig.from_env()`, factory functions `create_router()` + `create_router_with_llm()` |
 | `intent_router/models.py` | 450 | S91 | `ITIntentCategory`, `RiskLevel`, `WorkflowType`, `RoutingDecision`, `PatternMatchResult`, `SemanticRouteResult`, `LLMClassificationResult`, `CompletenessInfo`, `PatternRule`, `SemanticRoute` |
 | `intent_router/pattern_matcher/matcher.py` | 411 | S91 | `PatternMatcher` — YAML-loaded regex rules, priority-sorted, pre-compiled |
 | `intent_router/pattern_matcher/__init__.py` | ~10 | S91 | Re-exports |
@@ -53,7 +53,7 @@
 
 | File | LOC | Sprint | Purpose |
 |------|-----|--------|---------|
-| `guided_dialog/engine.py` | 548 | S94 | `GuidedDialogEngine` — multi-turn orchestration, max 5 turns |
+| `guided_dialog/engine.py` | 593 | S94 | `GuidedDialogEngine` — multi-turn orchestration (max 5 turns), phases: initial->gathering->complete->handoff. Integrates BusinessIntentRouter, ConversationContextManager, QuestionGenerator, RefinementRules |
 | `guided_dialog/context_manager.py` | 1,102 | S94/S97 | `ConversationContextManager` + `PersistentConversationContextManager` (Redis) + `RedisDialogSessionStorage` + `InMemoryDialogSessionStorage` |
 | `guided_dialog/generator.py` | ~1,151 | S94 | `QuestionGenerator` — template-based question generation per intent |
 | `guided_dialog/refinement_rules.py` | ~622 | S94 | `RefinementRules` — rule-based sub-intent refinement (NOT LLM) |
@@ -85,7 +85,7 @@
 
 | File | LOC | Sprint | Purpose |
 |------|-----|--------|---------|
-| `hitl/controller.py` | 834 | S97/S119 | `HITLController`, `InMemoryApprovalStorage`, approval lifecycle, Redis factory |
+| `hitl/controller.py` | 834 | S97/S112/S119 | `HITLController`, `InMemoryApprovalStorage`, approval lifecycle (PENDING/APPROVED/REJECTED/EXPIRED/CANCELLED), Redis factory, quorum-based multi-approver support |
 | `hitl/approval_handler.py` | 694 | S97 | `ApprovalHandler`, `RedisApprovalStorage` with TTL |
 | `hitl/notification.py` | 733 | S97 | `TeamsNotificationService`, `TeamsCardBuilder`, `CompositeNotificationService` |
 | `hitl/unified_manager.py` | 546 | S111 | `UnifiedApprovalManager` — consolidated approval for 5 sources |

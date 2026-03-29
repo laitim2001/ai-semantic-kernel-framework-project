@@ -14,8 +14,8 @@
 | **Layer Name** | MCP Tool Layer |
 | **Purpose** | Model Context Protocol infrastructure + 9 enterprise tool servers |
 | **Location** | `backend/src/integrations/mcp/` |
-| **Total Files** | 75 Python files |
-| **Total LOC** | ~20,847 (estimated from source reading) |
+| **Total Files** | 73 Python files (R4 verified via `find | wc`) |
+| **Total LOC** | **20,847** (R4 verified via `wc -l`) |
 | **Phase Origin** | Phase 9-10 (core), Sprint 113 (security), Sprint 117 (ServiceNow), Sprint 120 (Redis audit), Sprint 129 (D365), later sprints (n8n, ADF) |
 | **Protocol** | JSON-RPC 2.0 over stdio, conforming to MCP Specification 2024-11-05 |
 | **Total Tools** | 70 tools across 9 MCP servers |
@@ -78,12 +78,12 @@
 | Shell Server | 5 | 5 | 990 |
 | LDAP Server | 7 | 5 | 1,458 |
 | SSH Server | 5 | 4 | 1,502 |
-| n8n Server | 6 | 5 | ~900 |
-| ADF Server | 6 | 5 | ~950 |
-| D365 Server | 7 | 6 | ~1,000 |
-| ServiceNow (root) | 3 | 3 | ~800 |
+| n8n Server | 6 | 5 | ~1,434 |
+| ADF Server | 6 | 5 | ~1,715 |
+| D365 Server | 7 | 6 | ~2,201 |
+| ServiceNow (root) | 3 | 3 | ~1,246 |
 | Package init/main | ~10 | -- | ~500 |
-| **Total** | **75** | **~72** | **~16,806** |
+| **Total** | **73** | **~72** | **20,847** (R4 verified) |
 
 ---
 

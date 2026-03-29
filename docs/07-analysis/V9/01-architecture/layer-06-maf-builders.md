@@ -1,7 +1,7 @@
 # Layer 06: MAF Builder Layer
 
 > **V9 Codebase Analysis** | Analysis Date: 2026-03-29
-> Scope: `backend/src/integrations/agent_framework/` — 57 Python files across 7 subdirectories
+> Scope: `backend/src/integrations/agent_framework/` — 56 Python files across 8 subdirectories
 
 ---
 
@@ -16,8 +16,8 @@
 | **MAF Version** | `1.0.0b251204` (Preview/Beta, Dec 2025) |
 | **Python Version** | >= 3.11 |
 | **Internal Version** | `0.1.0` |
-| **Total Files** | 57 `.py` files (excluding `__pycache__`) |
-| **Estimated LOC** | ~15,000+ lines |
+| **Total Files** | 56 `.py` files (excluding `__pycache__`) |
+| **Verified LOC** | **38,082 lines** (R4 verified via `wc -l`, root=2,194 + builders=24,215 + core=5,695 + acl/memory/multiturn/assistant/tools=5,978) |
 | **Phase Coverage** | Phase 1-4 (Sprint 14-24), Phase 5 (Sprint 26-28), Phase 6 (Sprint 31), Phase 7 (Sprint 37-38), Phase 8 (Sprint 54), Phase 42 (Sprint 126-128) |
 
 ### Design Principle
@@ -44,98 +44,98 @@ Microsoft Agent Framework Core API
 
 | File | LOC (est.) | Sprint | Purpose |
 |------|-----------|--------|---------|
-| `__init__.py` | 167 | S14 | Unified re-exports, version info, public API surface |
-| `base.py` | 329 | S13 | `BaseAdapter` (ABC) + `BuilderAdapter[T, R]` (Generic) — lifecycle, build, run, run_stream |
-| `exceptions.py` | 400 | S13 | 7 exception classes: `AdapterError`, `AdapterInitializationError`, `WorkflowBuildError`, `ExecutionError`, `CheckpointError`, `ValidationError`, `ConfigurationError`, `RecursionError` |
-| `workflow.py` | ~300 | S13 | `WorkflowAdapter` + `WorkflowConfig` — wraps `WorkflowBuilder` |
-| `checkpoint.py` | ~250 | S13 | `CheckpointStorageAdapter`, `PostgresCheckpointStorage`, `RedisCheckpointCache`, `CachedCheckpointStorage` |
+| `__init__.py` | 166 | S14 | Unified re-exports, version info, public API surface |
+| `base.py` | 328 | S13 | `BaseAdapter` (ABC) + `BuilderAdapter[T, R]` (Generic) — lifecycle, build, run, run_stream |
+| `exceptions.py` | 399 | S13 | 7 exception classes: `AdapterError`, `AdapterInitializationError`, `WorkflowBuildError`, `ExecutionError`, `CheckpointError`, `ValidationError`, `ConfigurationError`, `RecursionError` |
+| `workflow.py` | 590 | S13 | `WorkflowAdapter` + `WorkflowConfig` — wraps `WorkflowBuilder` |
+| `checkpoint.py` | 711 | S13 | `CheckpointStorageAdapter`, `PostgresCheckpointStorage`, `RedisCheckpointCache`, `CachedCheckpointStorage`, `InMemoryCheckpointStorage` |
 
 ### 2.2 builders/ (22 files)
 
 | File | LOC (est.) | Sprint | Purpose |
 |------|-----------|--------|---------|
-| `__init__.py` | 806 | S14-37 | Massive re-export hub — 200+ symbols from all builder modules |
-| `concurrent.py` | ~600 | S14, S22 | `ConcurrentBuilderAdapter` — wraps `ConcurrentBuilder`, 4 modes (ALL/ANY/MAJORITY/FIRST_SUCCESS), Gateway types |
-| `concurrent_migration.py` | ~400 | S14 | `ConcurrentExecutorAdapter` — Phase 2 migration shim |
-| `edge_routing.py` | ~350 | S14 | FanOut/FanIn edge routing — `FanOutRouter`, `FanInAggregator`, `ConditionalRouter` |
-| `handoff.py` | 993 | S15, S19 | `HandoffBuilderAdapter` — wraps `HandoffBuilder`, HITL + autonomous modes |
-| `handoff_migration.py` | ~350 | S15 | `HandoffControllerAdapter` — Phase 2 migration shim |
-| `handoff_hitl.py` | ~500 | S15 | `HITLManager`, `HITLSession`, `HITLCheckpointAdapter` — Human-in-the-Loop |
-| `handoff_policy.py` | ~300 | S21 | `HandoffPolicyAdapter` — Phase 2 policy mapping (IMMEDIATE/GRACEFUL/CONDITIONAL) |
-| `handoff_capability.py` | ~400 | S21 | `CapabilityMatcherAdapter` — 4 match strategies (BEST_FIT/FIRST_FIT/ROUND_ROBIN/LEAST_LOADED) |
-| `handoff_context.py` | ~300 | S21 | `ContextTransferAdapter` — context transfer between agents |
-| `handoff_service.py` | ~300 | S21 | `HandoffService` — unified facade integrating all handoff adapters |
-| `groupchat.py` | ~1,500 | S16, S19, S20 | `GroupChatBuilderAdapter` — wraps `GroupChatBuilder`, 7 speaker selection methods, termination conditions |
-| `groupchat_voting.py` | ~500 | S20 | `GroupChatVotingAdapter` — 5 voting methods (MAJORITY/UNANIMOUS/RANKED/WEIGHTED/APPROVAL) |
-| `groupchat_orchestrator.py` | ~400 | S16 | `GroupChatOrchestrator` — manager-based orchestration |
-| `groupchat_migration.py` | ~500 | S16 | `GroupChatManagerAdapter` — Phase 2 migration shim |
-| `magentic.py` | ~1,500 | S17, S19 | `MagenticBuilderAdapter` — wraps `MagenticBuilder`, Task/Progress Ledger, Human Intervention |
-| `magentic_migration.py` | ~500 | S17 | `MagenticManagerAdapter` — Phase 2 DynamicPlanner migration shim |
-| `workflow_executor.py` | ~600 | S18, S19 | `WorkflowExecutorAdapter` — wraps `WorkflowExecutor`, sub-workflow request/response |
-| `workflow_executor_migration.py` | ~500 | S18 | `NestedWorkflowManagerAdapter` — Phase 2 migration shim |
-| `nested_workflow.py` | ~600 | S23 | `NestedWorkflowAdapter` — wraps `WorkflowBuilder`+`WorkflowExecutor`, context propagation, recursion control |
-| `planning.py` | ~500 | S24 | `PlanningAdapter` — wraps `MagenticBuilder`, task decomposition, decision engine |
-| `agent_executor.py` | ~300 | S31 | `AgentExecutorAdapter` — wraps `ChatAgent`+`AzureOpenAIResponsesClient` |
-| `code_interpreter.py` | ~300 | S37 | `CodeInterpreterAdapter` — Code Interpreter via Responses API or Assistants API |
+| `__init__.py` | 805 | S14-37 | Massive re-export hub — 200+ symbols from all builder modules |
+| `concurrent.py` | 1,634 | S14, S22 | `ConcurrentBuilderAdapter` — wraps `ConcurrentBuilder`, 4 modes (ALL/ANY/MAJORITY/FIRST_SUCCESS), Gateway types |
+| `concurrent_migration.py` | 688 | S14 | `ConcurrentExecutorAdapter` — Phase 2 migration shim |
+| `edge_routing.py` | 884 | S14 | FanOut/FanIn edge routing — `FanOutRouter`, `FanInAggregator`, `ConditionalRouter` |
+| `handoff.py` | 992 | S15, S19 | `HandoffBuilderAdapter` — wraps `HandoffBuilder`, HITL + autonomous modes |
+| `handoff_migration.py` | 734 | S15 | `HandoffControllerAdapter` — Phase 2 migration shim |
+| `handoff_hitl.py` | 1,005 | S15 | `HITLManager`, `HITLSession`, `HITLCheckpointAdapter` — Human-in-the-Loop |
+| `handoff_policy.py` | 513 | S21 | `HandoffPolicyAdapter` — Phase 2 policy mapping (IMMEDIATE/GRACEFUL/CONDITIONAL) |
+| `handoff_capability.py` | 1,050 | S21 | `CapabilityMatcherAdapter` — 4 match strategies (BEST_FIT/FIRST_FIT/ROUND_ROBIN/LEAST_LOADED) |
+| `handoff_context.py` | 855 | S21 | `ContextTransferAdapter` — context transfer between agents |
+| `handoff_service.py` | 821 | S21 | `HandoffService` — unified facade integrating all handoff adapters |
+| `groupchat.py` | 1,913 | S16, S19, S20 | `GroupChatBuilderAdapter` — wraps `GroupChatBuilder`, 7 speaker selection methods, termination conditions |
+| `groupchat_voting.py` | 736 | S20 | `GroupChatVotingAdapter` — 5 voting methods (MAJORITY/UNANIMOUS/RANKED/WEIGHTED/APPROVAL) |
+| `groupchat_orchestrator.py` | 883 | S16 | `GroupChatOrchestrator` — manager-based orchestration |
+| `groupchat_migration.py` | 1,028 | S16 | `GroupChatManagerAdapter` — Phase 2 migration shim |
+| `magentic.py` | 1,810 | S17, S19 | `MagenticBuilderAdapter` — wraps `MagenticBuilder`, Task/Progress Ledger, Human Intervention |
+| `magentic_migration.py` | 1,038 | S17 | `MagenticManagerAdapter` — Phase 2 DynamicPlanner migration shim |
+| `workflow_executor.py` | 1,308 | S18, S19 | `WorkflowExecutorAdapter` — wraps `WorkflowExecutor`, sub-workflow request/response |
+| `workflow_executor_migration.py` | 1,277 | S18 | `NestedWorkflowManagerAdapter` — Phase 2 migration shim |
+| `nested_workflow.py` | 1,307 | S23 | `NestedWorkflowAdapter` — wraps `WorkflowBuilder`+`WorkflowExecutor`, context propagation, recursion control |
+| `planning.py` | 1,367 | S24 | `PlanningAdapter` — wraps `MagenticBuilder`, task decomposition, decision engine |
+| `agent_executor.py` | 699 | S31 | `AgentExecutorAdapter` — wraps `ChatAgent`+`AzureOpenAIResponsesClient` |
+| `code_interpreter.py` | 868 | S37 | `CodeInterpreterAdapter` — Code Interpreter via Responses API or Assistants API |
 
 ### 2.3 core/ (9 files)
 
 | File | LOC (est.) | Sprint | Purpose |
 |------|-----------|--------|---------|
-| `__init__.py` | 190 | S26-28 | Re-exports from all core modules |
-| `executor.py` | ~300 | S26 | `WorkflowNodeExecutor` — adapts `WorkflowNode` to MAF `Executor` |
-| `edge.py` | ~300 | S26 | `WorkflowEdgeAdapter` — adapts `WorkflowEdge` to MAF `Edge` |
-| `workflow.py` | ~300 | S26 | `WorkflowDefinitionAdapter` — adapts `WorkflowDefinition` to MAF `Workflow` |
-| `context.py` | ~200 | S26 | `WorkflowContextAdapter` — context adaptation utilities |
-| `execution.py` | ~400 | S27 | `SequentialOrchestrationAdapter`, `ExecutorAgentWrapper`, `ExecutionAdapter` |
-| `events.py` | ~300 | S27 | `WorkflowStatusEventAdapter` — processes MAF `WorkflowStatusEvent` |
-| `state_machine.py` | ~300 | S27 | `EnhancedExecutionStateMachine` — state machine with domain status mapping |
-| `approval.py` | ~400 | S28 | `HumanApprovalExecutor` — HITL approval via MAF `RequestResponseExecutor` |
-| `approval_workflow.py` | ~300 | S28 | `WorkflowApprovalAdapter`, `ApprovalWorkflowManager` |
+| `__init__.py` | 189 | S26-28 | Re-exports from all core modules |
+| `executor.py` | 577 | S26 | `WorkflowNodeExecutor` — adapts `WorkflowNode` to MAF `Executor` |
+| `edge.py` | 448 | S26 | `WorkflowEdgeAdapter` — adapts `WorkflowEdge` to MAF `Edge` |
+| `workflow.py` | 569 | S26 | `WorkflowDefinitionAdapter` — adapts `WorkflowDefinition` to MAF `Workflow` |
+| `context.py` | 454 | S26 | `WorkflowContextAdapter` — context adaptation utilities |
+| `execution.py` | 797 | S27 | `SequentialOrchestrationAdapter`, `ExecutorAgentWrapper`, `ExecutionAdapter` |
+| `events.py` | 614 | S27 | `WorkflowStatusEventAdapter` — processes MAF `WorkflowStatusEvent` |
+| `state_machine.py` | 599 | S27 | `EnhancedExecutionStateMachine` — state machine with domain status mapping |
+| `approval.py` | 884 | S28 | `HumanApprovalExecutor` — HITL approval via MAF `RequestResponseExecutor` |
+| `approval_workflow.py` | 564 | S28 | `WorkflowApprovalAdapter`, `ApprovalWorkflowManager` |
 
 ### 2.4 acl/ (4 files)
 
 | File | LOC (est.) | Sprint | Purpose |
 |------|-----------|--------|---------|
-| `__init__.py` | 47 | S128 | Re-exports ACL interfaces and adapter |
-| `interfaces.py` | ~200 | S128 | `AgentBuilderInterface` (ABC), `AgentRunnerInterface` (ABC), `ToolInterface` (ABC), frozen `AgentConfig`, frozen `WorkflowResult` |
-| `adapter.py` | ~200 | S128 | `MAFAdapter` — singleton version-aware adapter, builder class lookup |
-| `version_detector.py` | ~150 | S128 | `MAFVersionDetector` — detects installed MAF version, checks API compatibility |
+| `__init__.py` | 46 | S128 | Re-exports ACL interfaces and adapter |
+| `interfaces.py` | 266 | S128 | `AgentBuilderInterface` (ABC), `AgentRunnerInterface` (ABC), `ToolInterface` (ABC), frozen `AgentConfig`, frozen `WorkflowResult` |
+| `adapter.py` | 252 | S128 | `MAFAdapter` — singleton version-aware adapter, builder class lookup |
+| `version_detector.py` | 244 | S128 | `MAFVersionDetector` — detects installed MAF version, checks API compatibility |
 
 ### 2.5 memory/ (4 files)
 
 | File | LOC (est.) | Sprint | Purpose |
 |------|-----------|--------|---------|
-| `__init__.py` | 70 | S22 | Re-exports memory storage types |
-| `base.py` | ~300 | S22 | `MemoryStorageProtocol`, `MemoryRecord`, `MemorySearchResult` — wraps MAF `BaseContextProvider` |
-| `redis_storage.py` | ~250 | S22 | `RedisMemoryStorage` — Redis-backed implementation |
-| `postgres_storage.py` | ~250 | S22 | `PostgresMemoryStorage` — PostgreSQL-backed implementation |
+| `__init__.py` | 69 | S22 | Re-exports memory storage types |
+| `base.py` | 452 | S22 | `MemoryStorageProtocol`, `MemoryRecord`, `MemorySearchResult` — wraps MAF `BaseContextProvider` |
+| `redis_storage.py` | 482 | S22 | `RedisMemoryStorage` — Redis-backed implementation |
+| `postgres_storage.py` | 729 | S22 | `PostgresMemoryStorage` — PostgreSQL-backed implementation |
 
 ### 2.6 multiturn/ (3 files)
 
 | File | LOC (est.) | Sprint | Purpose |
 |------|-----------|--------|---------|
-| `__init__.py` | 52 | S24 | Re-exports multiturn types |
-| `adapter.py` | ~400 | S24 | `MultiTurnAdapter` — wraps MAF `CheckpointStorage` for multi-turn conversation management |
-| `checkpoint_storage.py` | ~500 | S24 | `RedisCheckpointStorage`, `PostgresCheckpointStorage`, `FileCheckpointStorage` — extends MAF `CheckpointStorage` |
+| `__init__.py` | 51 | S24 | Re-exports multiturn types |
+| `adapter.py` | 860 | S24 | `MultiTurnAdapter` — wraps MAF `CheckpointStorage` for multi-turn conversation management |
+| `checkpoint_storage.py` | 491 | S24 | `RedisCheckpointStorage`, `PostgresCheckpointStorage`, `FileCheckpointStorage` — extends MAF `CheckpointStorage` |
 
 ### 2.7 tools/ (3 files)
 
 | File | LOC (est.) | Sprint | Purpose |
 |------|-----------|--------|---------|
-| `__init__.py` | 62 | S38 | Re-exports + `register_default_tools()` |
-| `base.py` | ~300 | S38 | `BaseTool`, `ToolResult`, `ToolSchema`, `ToolParameter`, `ToolRegistry` |
-| `code_interpreter_tool.py` | ~200 | S38 | `CodeInterpreterTool` — tool wrapper for Code Interpreter |
+| `__init__.py` | 61 | S38 | Re-exports + `register_default_tools()` |
+| `base.py` | 344 | S38 | `BaseTool`, `ToolResult`, `ToolSchema`, `ToolParameter`, `ToolRegistry` |
+| `code_interpreter_tool.py` | 414 | S38 | `CodeInterpreterTool` — tool wrapper for Code Interpreter |
 
 ### 2.8 assistant/ (5 files)
 
 | File | LOC (est.) | Sprint | Purpose |
 |------|-----------|--------|---------|
-| `__init__.py` | 96 | S37 | Re-exports assistant types |
-| `models.py` | ~200 | S37 | `CodeExecutionResult`, `AssistantConfig`, `AssistantInfo`, `ThreadMessage`, `FileInfo` |
-| `exceptions.py` | ~100 | S37 | 8 exception classes for assistant operations |
-| `manager.py` | ~400 | S37 | `AssistantManagerService` — manages Azure OpenAI Assistants |
-| `files.py` | ~200 | S38 | `FileStorageService` — file management for Code Interpreter |
+| `__init__.py` | 95 | S37 | Re-exports assistant types |
+| `models.py` | 146 | S37 | `CodeExecutionResult`, `AssistantConfig`, `AssistantInfo`, `ThreadMessage`, `FileInfo` |
+| `exceptions.py` | 167 | S37 | 8 exception classes for assistant operations |
+| `manager.py` | 414 | S37 | `AssistantManagerService` — manages Azure OpenAI Assistants |
+| `files.py` | 395 | S38 | `FileStorageService` — file management for Code Interpreter |
 
 ---
 
@@ -143,7 +143,7 @@ Microsoft Agent Framework Core API
 
 ### 3.1 HandoffBuilderAdapter (Sprint 15, 19, 21)
 
-**File**: `builders/handoff.py` (993 LOC)
+**File**: `builders/handoff.py` (992 LOC)
 **MAF Class**: `agent_framework.orchestrations.HandoffBuilder`
 **Import**: `from agent_framework.orchestrations import HandoffBuilder, HandoffAgentUserRequest`
 
@@ -167,7 +167,7 @@ Microsoft Agent Framework Core API
 
 ### 3.2 GroupChatBuilderAdapter (Sprint 16, 19, 20)
 
-**File**: `builders/groupchat.py` (~1,500 LOC)
+**File**: `builders/groupchat.py` (1,913 LOC)
 **MAF Class**: `agent_framework.orchestrations.GroupChatBuilder`
 **Import**: `from agent_framework.orchestrations import GroupChatBuilder`
 
@@ -189,7 +189,7 @@ Microsoft Agent Framework Core API
 
 ### 3.3 ConcurrentBuilderAdapter (Sprint 14, 22)
 
-**File**: `builders/concurrent.py` (~600 LOC)
+**File**: `builders/concurrent.py` (1,634 LOC)
 **MAF Class**: `agent_framework.orchestrations.ConcurrentBuilder`
 **Import**: `from agent_framework.orchestrations import ConcurrentBuilder`
 
@@ -211,7 +211,7 @@ Microsoft Agent Framework Core API
 
 ### 3.4 MagenticBuilderAdapter (Sprint 17, 19)
 
-**File**: `builders/magentic.py` (~1,500 LOC)
+**File**: `builders/magentic.py` (1,810 LOC)
 **MAF Class**: `agent_framework.orchestrations.MagenticBuilder`, `MagenticManagerBase`, `StandardMagenticManager`
 **Import**: `from agent_framework.orchestrations import MagenticBuilder, MagenticManagerBase, StandardMagenticManager`
 
@@ -233,7 +233,7 @@ Microsoft Agent Framework Core API
 
 ### 3.5 WorkflowExecutorAdapter (Sprint 18, 19)
 
-**File**: `builders/workflow_executor.py` (~600 LOC)
+**File**: `builders/workflow_executor.py` (1,308 LOC)
 **MAF Class**: `agent_framework.WorkflowExecutor`, `SubWorkflowRequestMessage`, `SubWorkflowResponseMessage`
 **Import**: `from agent_framework import WorkflowExecutor, SubWorkflowRequestMessage, SubWorkflowResponseMessage`
 
@@ -248,7 +248,7 @@ Microsoft Agent Framework Core API
 
 ### 3.6 NestedWorkflowAdapter (Sprint 23)
 
-**File**: `builders/nested_workflow.py` (~600 LOC)
+**File**: `builders/nested_workflow.py` (1,307 LOC)
 **MAF Class**: `agent_framework.WorkflowBuilder`, `agent_framework.Workflow`, `agent_framework.WorkflowExecutor`
 **Import**: `from agent_framework import WorkflowBuilder, Workflow, WorkflowExecutor`
 
@@ -264,7 +264,7 @@ Microsoft Agent Framework Core API
 
 ### 3.7 PlanningAdapter (Sprint 24)
 
-**File**: `builders/planning.py` (~500 LOC)
+**File**: `builders/planning.py` (1,367 LOC)
 **MAF Class**: `agent_framework.orchestrations.MagenticBuilder`, `agent_framework.Workflow`
 **Import**: `from agent_framework.orchestrations import MagenticBuilder` + `from agent_framework import Workflow`
 
@@ -280,7 +280,7 @@ Microsoft Agent Framework Core API
 
 ### 3.8 AgentExecutorAdapter (Sprint 31)
 
-**File**: `builders/agent_executor.py` (~300 LOC)
+**File**: `builders/agent_executor.py` (699 LOC)
 **MAF Class**: `agent_framework.Agent` (ChatAgent), `agent_framework.Message` (ChatMessage), `agent_framework.Role`
 **Import**: Lazy import in `initialize()` — `from agent_framework import Agent as ChatAgent, Message as ChatMessage, Role` + `from agent_framework.azure import AzureOpenAIResponsesClient`
 
@@ -294,7 +294,7 @@ Microsoft Agent Framework Core API
 
 ### 3.9 CodeInterpreterAdapter (Sprint 37)
 
-**File**: `builders/code_interpreter.py` (~300 LOC)
+**File**: `builders/code_interpreter.py` (868 LOC)
 **MAF Class**: N/A (uses Azure OpenAI Responses/Assistants API directly)
 **Import**: None from `agent_framework` — delegates to `assistant.AssistantManagerService`
 

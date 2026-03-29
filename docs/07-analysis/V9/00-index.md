@@ -9,9 +9,9 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total V9 Files** | 32 (.md) |
-| **Total V9 Size** | ~1,145 KB (1.12 MB) |
-| **Analysis Scope** | 1,090 source files (793 .py + 297 .ts/.tsx), ~184K LOC |
+| **Total V9 Files** | 52+ (.md + .json) |
+| **Total V9 Size** | ~6.7 MB (1.7 MB .md + 5 MB metadata JSON) |
+| **Analysis Scope** | 1,029 source files (793 .py + 236 .ts/.tsx), ~327K LOC |
 | **Phases Covered** | 1-44 (152+ sprints, ~2,500+ story points) |
 | **Categories** | 13 topical directories + 2 root files |
 | **Date** | 2026-03-29 |
@@ -27,8 +27,15 @@
 | `ANALYSIS-PLAN-V9.md` | 26 KB | V9 analysis methodology, V8 gap analysis, 13-category plan | `plan`, `methodology`, `v8-gap`, `scope` |
 | `00-stats.md` | 7 KB | Codebase statistics: file counts, LOC, layer breakdown | `statistics`, `metrics`, `loc`, `file-count` |
 | `00-index.md` | — | This file. Master navigation index | `index`, `navigation` |
+| `00-r3-final-report.md` | 8 KB | Round 3 final report: programmatic AST verification results | `report`, `round-3`, `ast`, `verification` |
+| `00-r4-final-report.md` | 14 KB | Round 4 final report: full semantic coverage, corrected statistics, new issues | `report`, `round-4`, `semantic`, `final` |
+| `00-verification-report.md` | 10 KB | Round 2 verification report: agent-driven source reading | `report`, `round-2`, `verification` |
+| `VERIFICATION-PLAN.md` | 5 KB | Round 2 verification methodology and agent assignments | `plan`, `round-2`, `verification` |
+| `ROUND3-PLAN.md` | 4 KB | Round 3 programmatic scan methodology | `plan`, `round-3`, `ast` |
+| `ROUND4-PLAN.md` | 4 KB | Round 4 full semantic coverage methodology | `plan`, `round-4`, `semantic` |
+| `enhanced-backend-metadata.json` | ~5 MB | Enhanced AST metadata: all 793 .py files with docstrings, enums, TODOs, configs, errors, decorators | `metadata`, `ast`, `json`, `backend`, `round-4` |
 
-### 01-architecture (11 files)
+### 01-architecture (11 files + 8 verification files)
 
 | File | Size | Description | Tags |
 |------|------|-------------|------|
@@ -43,6 +50,16 @@
 | `layer-09-integrations.md` | 45 KB | L9: Integration modules — A2A, memory, patrol, correlation, learning | `integrations`, `a2a`, `memory`, `patrol`, `correlation` |
 | `layer-10-domain.md` | 44 KB | L10: Domain layer — 20 domain modules, business logic, services | `domain`, `business-logic`, `services`, `models` |
 | `layer-11-infrastructure.md` | 44 KB | L11: Infrastructure — DB, cache, messaging, storage, migrations | `infrastructure`, `database`, `redis`, `rabbitmq`, `storage` |
+| `layer-05-verification.md` | — | R2: Layer 5 hybrid orchestration verification | `verification`, `round-2`, `hybrid` |
+| `layer-06-07-verification.md` | — | R2: Layer 6-7 MAF + Claude SDK verification | `verification`, `round-2`, `maf`, `claude-sdk` |
+| `layer-04-08-09-verification.md` | — | R2: Layer 4, 8, 9 routing + MCP + integrations verification | `verification`, `round-2`, `routing`, `mcp` |
+| `layer-10-verification.md` | — | R2: Layer 10 domain verification | `verification`, `round-2`, `domain` |
+| `layer-11-verification.md` | — | R2: Layer 11 infrastructure verification | `verification`, `round-2`, `infrastructure` |
+| `layer-01-pages-hooks-verification.md` | — | R2: Frontend pages + hooks verification | `verification`, `round-2`, `frontend`, `hooks` |
+| `layer-01-components-verification.md` | — | R2: Frontend components verification | `verification`, `round-2`, `frontend`, `components` |
+| `domain-r3-verification.md` | — | R3: Domain layer AST verification | `verification`, `round-3`, `domain` |
+| `infra-r3-verification.md` | — | R3: Infrastructure layer AST verification | `verification`, `round-3`, `infrastructure` |
+| `frontend-r3-verification.md` | — | R3: Frontend regex scan verification | `verification`, `round-3`, `frontend` |
 
 ### 02-modules (4 files)
 
@@ -98,6 +115,8 @@
 | File | Size | Description | Tags |
 |------|------|-------------|------|
 | `api-reference.md` | 79 KB | Complete API reference: all 39 route modules, endpoints, request/response schemas | `api`, `endpoints`, `routes`, `rest`, `schemas`, `reference` |
+| `api-verification.md` | — | R2: API gateway verification report | `verification`, `round-2`, `api` |
+| `api-r3-verification.md` | — | R3: API layer AST verification report | `verification`, `round-3`, `api` |
 
 ### 10-event-contracts (1 file)
 
@@ -123,6 +142,16 @@
 |------|------|-------------|------|
 | `mock-real-map.md` | 28 KB | Mock vs real implementation map: what is stub/mock vs production-ready | `mock`, `real`, `implementation`, `stub`, `production-ready` |
 
+### R4-semantic (5 files — Round 4 per-file semantic summaries)
+
+| File | Size | Description | Tags |
+|------|------|-------------|------|
+| `api-v1-semantic.md` | ~80 KB | Per-file semantic summaries: 107 API route files, 594 endpoints, 634 schemas | `semantic`, `round-4`, `api`, `endpoints`, `per-file` |
+| `integrations-hybrid-orch-agui-semantic.md` | ~60 KB | Per-file semantic summaries: hybrid/ + orchestration/ + ag_ui/ (~130 files, ~50K LOC) | `semantic`, `round-4`, `hybrid`, `orchestration`, `ag-ui`, `per-file` |
+| `integrations-maf-claude-mcp-semantic.md` | ~70 KB | Per-file semantic summaries: agent_framework/ + claude_sdk/ + mcp/ (176 files, 74K LOC) | `semantic`, `round-4`, `maf`, `claude-sdk`, `mcp`, `per-file` |
+| `backend-remaining-semantic.md` | ~50 KB | Per-file semantic summaries: remaining integrations + domain/ + infrastructure/ + core/ (~287 files, ~91K LOC) | `semantic`, `round-4`, `domain`, `infrastructure`, `swarm`, `patrol`, `per-file` |
+| `frontend-semantic.md` | ~40 KB | Per-file semantic summaries: all frontend src/ files (236 files, 54K LOC) | `semantic`, `round-4`, `frontend`, `react`, `hooks`, `per-file` |
+
 ---
 
 ## 3. Category Index
@@ -142,6 +171,9 @@
 | 11 | Config & Deploy | 1 | 39 KB | Environment, Docker, settings, ports |
 | 12 | Testing | 1 | 38 KB | Test inventory, coverage, gaps |
 | 13 | Mock/Real Map | 1 | 28 KB | Implementation maturity per component |
+| R4 | Semantic Summaries | 5 | ~300 KB | Per-file semantic summaries for all 832+ source files |
+| — | Root Reports | 7 | ~120 KB | Plans, stats, index, round reports, metadata JSON |
+| — | Enhanced Metadata | 1 | ~5 MB | Machine-readable AST metadata for all 793 .py files |
 
 ---
 
@@ -175,6 +207,12 @@
 | What are the E2E user journeys? | `04-flows/flows-01-to-05.md` + `flows-06-to-08.md` |
 | What is the codebase size? | `00-stats.md` |
 | What was the V9 analysis plan? | `ANALYSIS-PLAN-V9.md` |
+| What does a specific file do? | `R4-semantic/` — search the 5 semantic summary files for per-file summaries |
+| What are the Round 4 corrections? | `00-r4-final-report.md` |
+| What are the Round 3 AST results? | `00-r3-final-report.md` |
+| What are the Round 2 verification results? | `00-verification-report.md` |
+| What metadata exists for backend files? | `enhanced-backend-metadata.json` |
+| How many TODOs/configs/errors exist? | `enhanced-backend-metadata.json` summary section |
 
 ---
 
@@ -183,8 +221,8 @@
 | Dimension | V8 (2026-03-15) | V9 (2026-03-29) |
 |-----------|-----------------|-----------------|
 | **Phase Coverage** | Phase 1-34 | Phase 1-44 (+10 phases) |
-| **Source Files Scanned** | 939 | 1,090 (+151 files) |
-| **LOC Estimated** | ~140K | ~184K (+44K) |
+| **Source Files Scanned** | 939 | 1,029 (793 .py + 236 .ts/.tsx) |
+| **LOC Verified** | ~140K | **327,583** (273K backend + 54K frontend) |
 | **Architecture Depth** | 2 monolithic docs (2,721 + 1,518 lines) | 11 per-layer files (455 KB total) |
 | **Module Analysis** | Embedded in architecture doc | 4 dedicated module files (148 KB) |
 | **Feature Verification** | 70 features in single doc | Split A-E / F-J for searchability (61 KB) |
@@ -199,6 +237,10 @@
 | **Mock/Real Map** | Not covered | Implementation maturity map (28 KB) |
 | **Cross-Cutting** | Partially in architecture doc | Dedicated analysis (28 KB) |
 | **Machine Readability** | Narrative format | Structured tables, tags, quick lookup |
+| **Semantic Coverage** | Manual reading of ~100 key files | 100% per-file semantic summaries (R4) |
+| **Metadata Extraction** | None | Enhanced AST metadata for all 793 .py files |
+| **Analysis Rounds** | 1 (snapshot) | 4 (structural → verification → AST → semantic) |
+| **Total V9 Output** | — | 52+ files, ~6.7 MB |
 
 ### V9 New Categories (Not in V8)
 - **07-delta**: Phase-by-phase incremental changes (V8 was a single snapshot)
@@ -208,6 +250,19 @@
 - **11-config-deploy**: Configuration and deployment analysis
 - **12-testing**: Test landscape and coverage analysis
 - **13-mock-real**: Mock vs real implementation maturity
+- **R4-semantic**: Per-file semantic summaries for all 832+ source files (Round 4)
+- **Root reports**: Round 2/3/4 reports, verification plans, enhanced metadata JSON
+
+---
+
+### V9 Round History
+
+| Round | Date | Method | Coverage | Key Output |
+|-------|------|--------|----------|------------|
+| R1 | 2026-03-29 | Structural estimates from file inventory | 14% (121/832 files) | 32 analysis docs, ~1.1 MB |
+| R2 | 2026-03-29 | Agent-driven source reading + verification | 54% (~450/832 files) | 8 verification reports |
+| R3 | 2026-03-29 | Programmatic AST + regex scan | 100% structural (1,029 files) | 2 metadata JSONs, 1 final report |
+| R4 | 2026-03-29 | Full semantic reading + enhanced AST + V9 sync | **100% semantic** (1,029 files) | 5 semantic files, enhanced metadata, 10 new issues |
 
 ---
 

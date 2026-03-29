@@ -2,7 +2,7 @@
 
 ## Identity
 
-- Files: 27 | LOC: 10,329
+- Files: 27 (+ 1 mediator_bridge.py = 28 effective) | LOC: ~10,500
 - Directory: `backend/src/integrations/ag_ui/`
 - Phase introduced: 15 (Sprint 58) | Phase last modified: 39 (Sprint 135)
 
@@ -517,6 +517,22 @@ from src.integrations.ag_ui.events import CustomEvent
 **Location**: `mediator_bridge.py:182`
 
 **Description**: Uses `asyncio.get_event_loop().create_task()` which is deprecated in Python 3.10+.
+
+### Issue 7 — SSEEventBuffer In-Memory Fallback (R4 Finding)
+
+**Severity**: LOW
+
+**Location**: `sse_buffer.py:43`
+
+**Description**: `SSEEventBuffer` falls back to `self._memory_buffer: Dict[str, List]` when `redis_backend` is None. This means SSE reconnection replay is lost on server restart. The buffer's `max_size=100` is enforced but TTL (5 min) is only applied to the Redis backend, not the in-memory fallback.
+
+### Issue 8 — Dual Bridge Pattern Creates Maintenance Burden (R4 Finding)
+
+**Severity**: MEDIUM
+
+**Location**: `bridge.py` (1,079 LOC) + `mediator_bridge.py` (191 LOC)
+
+**Description**: Two parallel bridge implementations exist: `HybridEventBridge` (connects to deprecated `HybridOrchestratorV2`) and `MediatorEventBridge` (connects to `OrchestratorMediator`). Both convert to AG-UI SSE events but use different chunking (100-char vs 50-char), different event mapping logic, and different heartbeat mechanisms. API routes must choose which bridge to use. The old `HybridEventBridge` should be deprecated once `MediatorEventBridge` is stable.
 
 ---
 

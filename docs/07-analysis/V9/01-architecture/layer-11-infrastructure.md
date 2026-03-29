@@ -10,11 +10,13 @@
 
 | Directory | File Count | Responsibility |
 |-----------|-----------|----------------|
-| `backend/src/infrastructure/` | 53 files | Database, Storage, Cache, Checkpoint, Workers, Messaging, Distributed Lock |
-| `backend/src/core/` | 38 files | Config, Security, Performance, Sandbox, Observability, Logging, Auth |
-| `backend/src/middleware/` | 2 files | Rate Limiting |
+| `backend/src/infrastructure/` | 54 files (~9,901 LOC) | Database, Storage, Cache, Checkpoint, Workers, Messaging, Distributed Lock |
+| `backend/src/core/` | 39 files (~11,945 LOC) | Config, Security, Performance, Sandbox, Observability, Logging, Auth |
+| `backend/src/middleware/` | 2 files (~107 LOC) | Rate Limiting |
 
-**Total: 93 Python files** forming the platform's persistence, security, and operational backbone.
+**Total: 95 Python files, ~21,953 LOC** forming the platform's persistence, security, and operational backbone.
+
+> **R4 LOC Correction**: V9 `00-stats.md` originally claimed ~5,600 LOC for Layer 11. Actual verified count via ripgrep is **21,953 LOC** (3.9x higher). Infrastructure alone is 9,901 LOC (not ~4,000), Core is 11,945 LOC (not ~1,500). Fixed in R4 round.
 
 ---
 

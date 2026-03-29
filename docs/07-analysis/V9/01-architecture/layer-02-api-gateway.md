@@ -2,13 +2,14 @@
 
 ## Identity
 
-- Files: 152 | LOC: 47,376
+- Files: 152 (107 non-init, 45 `__init__.py`) | LOC: 46,341
 - Directory: `backend/src/api/v1/`
 - Framework: FastAPI 0.100+ | Port: 8000
 - Phase introduced: 1 (Sprint 1) | Phase last modified: 38 (Sprint 119)
-- Route modules: 48 directories | Route files: 64 `.py` files
+- Route modules: 43 directories | Route files: 70 files containing endpoints
 - Registered routers: 47 (1 public + 46 protected)
-- Total endpoints: 560+ (REST) + 3 WebSocket
+- Total endpoints: **594** (verified R3/R4 grep count across 70 files)
+- Pydantic schema classes: 634 (BaseModel subclasses)
 
 ---
 
@@ -21,7 +22,7 @@
 | `__init__.py` | 252 | Router aggregation — assembles api_router, public_router, protected_router |
 | `dependencies.py` | 181 | Shared DI providers — `get_current_user`, `get_current_user_optional`, `get_current_active_admin`, `get_current_operator_or_admin` |
 
-### Route Module Inventory (48 modules, 64 route files)
+### Route Module Inventory (43 modules, 70 endpoint-bearing files)
 
 #### Phase 1: Foundation (17 modules)
 
@@ -88,7 +89,7 @@
 
 | Module | Route Files | Endpoints | Prefix | Tags |
 |--------|-------------|-----------|--------|------|
-| `ag_ui/` | `routes.py`, `upload.py` | 29 + 4 = 33 | `/ag-ui`, `/ag-ui/upload` | ag-ui, File Upload |
+| `ag_ui/` | `routes.py`, `upload.py` | 26 + 4 = 30 | `/ag-ui`, `/ag-ui/upload` | ag-ui, File Upload |
 
 #### Phase 18-22: Platform Features (5 modules)
 
@@ -544,7 +545,7 @@ Sessions, chat, AG-UI streaming, and swarm visualization.
 | POST | `/chat-history/sync` | JWT | chat_history | Sync history |
 | GET | `/chat-history/{session_id}` | JWT | chat_history | Get history |
 | DELETE | `/chat-history/{session_id}` | JWT | chat_history | Delete history |
-| **AG-UI** (29 endpoints) | | | | |
+| **AG-UI** (26 + 4 upload = 30 endpoints) | | | | |
 | GET | `/ag-ui/health` | JWT | ag_ui | Health check |
 | GET | `/ag-ui/config` | JWT | ag_ui | Get config |
 | POST | `/ag-ui/run` | JWT | ag_ui | Run agent (SSE stream) |
@@ -993,7 +994,7 @@ Tag names mix conventions: PascalCase (`"Agents"`, `"GroupChat"`), lowercase (`"
 Several route files are excessively large:
 - `planning/routes.py` — 46 endpoints (decomposition + plans + decisions + trial + magentic + planning adapter + multiturn)
 - `groupchat/routes.py` — 42 endpoints (groups + sessions + voting + adapter + orchestrator)
-- `ag_ui/routes.py` — 29 endpoints (run + threads + HITL + tool-ui + shared-state + predictive)
+- `ag_ui/routes.py` — 26 endpoints (run + threads + HITL + tool-ui + shared-state + predictive)
 
 These could benefit from splitting into sub-route files.
 
@@ -1032,7 +1033,7 @@ A few endpoints (e.g., some in `planning/routes.py`, `orchestrator/routes.py`) r
 | 10 | 42-47 | sessions (routes + chat + websocket) | 23 | Session mode, multi-turn, WebSocket |
 | 12 | 48-51 | claude_sdk (7 route files) | 40 | Claude Agent SDK integration |
 | 13-14 | 52-56 | hybrid (4 route files) | 23 | Hybrid MAF+Claude SDK |
-| 15 | 58-60 | ag_ui | 33 | AG-UI Protocol SSE streaming |
+| 15 | 58-60 | ag_ui | 30 | AG-UI Protocol SSE streaming |
 | 18 | 70-72 | auth | 5 | JWT authentication |
 | 20 | 75 | files | 6 | File attachment |
 | 21 | 77-78 | sandbox | 6 | Sandbox security |
@@ -1046,6 +1047,8 @@ A few endpoints (e.g., some in `planning/routes.py`, `orchestrator/routes.py`) r
 | 37 | 113, 115 | tasks, session_resume | 11 | Task management, session resume |
 | 38 | 119 | knowledge | 7 | Knowledge management |
 
+> **R4 Verified Total**: 594 endpoints across 70 files (2026-03-29)
+
 ### Growth Trajectory
 
 ```
@@ -1053,12 +1056,12 @@ Phase  1:  166 endpoints  (Foundation)
 Phase  2:  268 endpoints  (+102 orchestration)
 Phase 10:  318 endpoints  (+50 code/mcp/sessions)
 Phase 12:  358 endpoints  (+40 Claude SDK)
-Phase 15:  414 endpoints  (+56 hybrid/ag-ui)
-Phase 22:  438 endpoints  (+24 auth/files/memory/sandbox)
-Phase 23:  472 endpoints  (+34 observability)
-Phase 28:  501 endpoints  (+29 three-tier routing)
-Phase 29:  509 endpoints  (+8 swarm)
-Phase 38:  560 endpoints  (+51 n8n/orchestrator/tasks/knowledge)
+Phase 15:  411 endpoints  (+53 hybrid/ag-ui)
+Phase 22:  435 endpoints  (+24 auth/files/memory/sandbox)
+Phase 23:  469 endpoints  (+34 observability)
+Phase 28:  498 endpoints  (+29 three-tier routing)
+Phase 29:  506 endpoints  (+8 swarm)
+Phase 38:  594 endpoints  (+88 n8n/orchestrator/tasks/knowledge/graph/chat_history)
 ```
 
 ---
@@ -1067,19 +1070,26 @@ Phase 38:  560 endpoints  (+51 n8n/orchestrator/tasks/knowledge)
 
 | Metric | Value |
 |--------|-------|
-| Total Python files | 152 |
-| Total LOC | 47,376 |
-| Route modules (directories) | 48 |
-| Route files | 64 |
+| Total Python files | 152 (107 non-init + 45 `__init__.py`) |
+| Total LOC | 46,341 |
+| Route modules (directories) | 43 |
+| Endpoint-bearing files | 70 |
+| Pydantic schema classes | 634 |
 | Registered routers | 47 |
-| REST endpoints | ~560 |
-| WebSocket endpoints | 3 |
-| SSE streaming endpoints | 4 |
+| **Total endpoints** | **594** (R3/R4 verified) |
+| WebSocket endpoints | 5 (groupchat, concurrent x2, sessions x2) |
+| SSE streaming endpoints | 4 (ag_ui, swarm demo, orchestrator, claude_sdk autonomous) |
 | Public endpoints | 5 (auth) + 3 (health) = 8 |
-| Protected endpoints | ~555 |
+| Protected endpoints | ~586 |
 | Largest module (endpoints) | planning (46) |
+| Second largest (endpoints) | groupchat (42) |
 | Smallest module (endpoints) | dashboard (2) |
 | Phases spanning | Phase 1 through Phase 38 |
 | Authentication | JWT (two-layer: global guard + per-route user) |
 | Rate limiting | slowapi (Sprint 111) |
 | Middleware layers | 3 (RequestID, CORS, RateLimit) |
+
+> **R4 Verification Note** (2026-03-29): Endpoint count of 594 confirmed by
+> `grep -rn "@\w+\.(get|post|put|delete|patch|websocket)\("` across all 70
+> endpoint-bearing files. See `docs/07-analysis/V9/R4-semantic/api-v1-semantic.md`
+> for per-file semantic summaries.

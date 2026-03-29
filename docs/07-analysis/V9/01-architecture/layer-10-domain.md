@@ -3,7 +3,7 @@
 > V9 Deep Architecture Analysis — Domain Business Logic Layer
 > Analysis Date: 2026-03-29
 > Analyst: Claude Opus 4.6 (1M context)
-> Source: 14 files deep-read, full AST cross-reference
+> Source: 117 files deep-read (R4 full coverage), ripgrep LOC verification (47,637 LOC confirmed)
 
 ---
 

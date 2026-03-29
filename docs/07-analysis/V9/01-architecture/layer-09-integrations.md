@@ -1,6 +1,7 @@
 # Layer 09: Supporting Integrations
 
-> **V9 Analysis** | **Date**: 2026-03-29 | **Scope**: 14 modules, 75 Python files | **Path**: `backend/src/integrations/`
+> **V9 Analysis** | **Date**: 2026-03-29 | **Scope**: 14 modules, 75 Python files, ~21,300 LOC | **Path**: `backend/src/integrations/`
+> **R4 Verification**: All files read in full. Per-file semantic summaries in `R4-semantic/backend-remaining-semantic.md`.
 
 This document provides a comprehensive analysis of the 14 supporting integration modules that serve as the operational backbone of the IPA Platform. These modules handle LLM communication, memory, knowledge retrieval, event correlation, incident response, agent coordination, and cross-module contracts.
 
@@ -341,10 +342,10 @@ The module was significantly refactored in Sprint 130 to remove all fake/stub da
 | File | LOC (est.) | Purpose |
 |------|-----------|---------|
 | `__init__.py` | ~20 | Package exports |
-| `types.py` | ~300 | RootCauseAnalysis, RootCauseHypothesis, Evidence, Recommendation |
-| `analyzer.py` | ~517 | RootCauseAnalyzer -- hypothesis generation + Claude analysis |
-| `case_repository.py` | ~150 | CaseRepository -- historical case storage |
-| `case_matcher.py` | ~150 | CaseMatcher -- case similarity matching |
+| `types.py` | 191 | RootCauseAnalysis, RootCauseHypothesis, Evidence, Recommendation, AnalysisRequest, AnalysisContext |
+| `analyzer.py` | 517 | RootCauseAnalyzer -- 6-step pipeline: context + cases + hypotheses + Claude + factors + recommendations |
+| `case_repository.py` | 637 | CaseRepository -- 15 IT ops seed cases + CRUD + ServiceNow import |
+| `case_matcher.py` | 520 | CaseMatcher -- multi-dimensional scoring (text 45%, category 25%, severity 15%, recency 15%) + LLM reranking |
 
 ### Architecture
 
@@ -390,11 +391,11 @@ Similar to `correlation/`, Sprint 130 removed all hardcoded `HistoricalCase` dat
 | File | LOC (est.) | Purpose |
 |------|-----------|---------|
 | `__init__.py` | ~68 | Package exports (3 classes, 9 types) |
-| `types.py` | ~250 | IncidentContext, IncidentAnalysis, RemediationAction |
-| `analyzer.py` | ~200 | IncidentAnalyzer -- root cause with correlation + LLM |
-| `recommender.py` | ~200 | ActionRecommender -- rule-based + LLM remediation |
-| `executor.py` | ~200 | IncidentExecutor -- auto-execute + HITL + ServiceNow writeback |
-| `prompts.py` | ~150 | LLM prompt templates |
+| `types.py` | 326 | IncidentContext, IncidentAnalysis, RemediationAction, ExecutionResult + 6 enums |
+| `analyzer.py` | 454 | IncidentAnalyzer -- 5-step pipeline: event conversion + correlation + RCA + LLM enhance + merge |
+| `recommender.py` | 550 | ActionRecommender -- 8-category rule templates + LLM suggestions + severity confidence adjustment |
+| `executor.py` | 591 | IncidentExecutor -- risk-based routing (auto/HITL) + MCP dispatch + ServiceNow writeback |
+| `prompts.py` | 116 | 2 LLM prompt templates: INCIDENT_ANALYSIS_PROMPT + REMEDIATION_SUGGESTION_PROMPT |
 
 ### Architecture
 
