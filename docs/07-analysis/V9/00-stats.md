@@ -8,8 +8,8 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total Source Files** | 1,090 (793 .py + 297 .ts/.tsx) |
-| **Total LOC (estimated)** | ~250,000+ (196K backend + 54K frontend) |
+| **Total Source Files** | 1,029 (793 .py + 236 .ts/.tsx) |
+| **Total LOC** | 327,583 (273,345 backend + 54,238 frontend) |
 | **Total Phases** | 44 |
 | **Total Sprints** | 152+ |
 | **Total Story Points** | ~2,500+ |
@@ -21,7 +21,7 @@
 ```mermaid
 graph TB
     subgraph "Layer 1: Frontend"
-        FE["React 18 + TypeScript<br/>236 files | 54,238 LOC"]
+        FE["React 18 + TypeScript<br/>236 files | 54,238 LOC (wc -l)"]
     end
     subgraph "Layer 2: API Gateway"
         API["FastAPI<br/>152 files | 47,377 LOC<br/>588 endpoints"]
@@ -72,13 +72,13 @@ graph TB
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
 │                IPA Platform V9 端到端執行流程圖                                      │
-│                1,090 files (793 .py + 297 .ts/.tsx) | ~327,583 LOC                  │
+│                1,029 files (793 .py + 236 .ts/.tsx) | 327,583 LOC                   │
 │                Phase 1-44 | 152+ Sprints | agent_framework 1.0.0rc4                 │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 1: Frontend (使用者介面)                                              ║    │
-│  ║  297 .ts/.tsx | 54,238 LOC | 39 pages | 261 components | 17 hooks          ║    │
+│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 143 components | 33 hooks          ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   React 18 + TypeScript + Vite (port 3005) + ReactFlow + Shadcn UI         ║    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐                   ║    │
@@ -95,7 +95,7 @@ graph TB
 │                                 │ Fetch API + SSE (port 3005 → 8000)               │
 │  ╔══════════════════════════════│════════════════════════════════════════════════╗    │
 │  ║  Layer 2: API Gateway (588 endpoints, 39 route modules)                      ║    │
-│  ║  152 files | 47,377 LOC | FastAPI (port 8000)                                ║    │
+│  ║  152 files | 47,376 LOC | FastAPI (port 8000)                                ║    │
 │  ║  Auth: JWT (HS256) + protected_router 全域保護                               ║    │
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
 │                                 │                                                    │
@@ -107,7 +107,7 @@ graph TB
 │                                 │                                                    │
 │  ╔══════════════════════════════│════════════════════════════════════════════════╗    │
 │  ║  Layer 4: Input & Routing (輸入閘道 + 三層意圖路由)                          ║    │
-│  ║  55 files, ~19,400 LOC | Phase 35 Breakpoint #1 #2 修復完成                 ║    │
+│  ║  55 files, 20,272 LOC | Phase 35 Breakpoint #1 #2 修復完成                  ║    │
 │  ╠══════════════════════════════│════════════════════════════════════════════════╣    │
 │  ║                              ▼                                                ║    │
 │  ║   ┌────────────────────────────────────────────────────────────────────────┐  ║    │
@@ -152,7 +152,7 @@ graph TB
 │                     │                                                                │
 │  ╔══════════════════│════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 5: Hybrid Orchestration (Mediator Pattern, Phase 39 Bootstrap)        ║    │
-│  ║  88 files, ~28,800 LOC — OrchestratorBootstrap 一鍵初始化 (Phase 39)         ║    │
+│  ║  89 files, 28,800 LOC — OrchestratorBootstrap 一鍵初始化 (Phase 39)          ║    │
 │  ╠══════════════════│════════════════════════════════════════════════════════════╣    │
 │  ║                  ▼                                                             ║    │
 │  ║   ┌────────────────────────────────────────────────────────────────────────┐   ║    │
@@ -301,13 +301,13 @@ graph TB
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
 │                    IPA Platform：智能體編排平台架構 (V9)                              │
-│                    793 .py + 297 .ts/.tsx = 1,090 files, ~327,583 LOC               │
+│                    793 .py + 236 .ts/.tsx = 1,029 files, 327,583 LOC                │
 │                    agent_framework 1.0.0rc4 | Phase 1-44 | 152+ Sprints            │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 1: Frontend (使用者介面)                                              ║    │
-│  ║  297 .ts/.tsx | 54,238 LOC | 39 pages | 261 components | 17 hooks          ║    │
+│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 143 components | 33 hooks          ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   React 18 + TypeScript + Vite (port 3005) + ReactFlow + Shadcn UI         ║    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    ║    │
@@ -322,8 +322,8 @@ graph TB
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (588 endpoints, 39 route modules, 48 routers)         ║    │
-│  ║  152 files | 47,377 LOC | FastAPI (port 8000)                               ║    │
+│  ║  Layer 2: API Gateway (575 endpoints, 39 route modules, 48 routers)         ║    │
+│  ║  152 files | 47,376 LOC | FastAPI (port 8000)                               ║    │
 │  ║  Auth: JWT (HS256) + protected_router | 31 auth endpoints (5.3%)            ║    │
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
@@ -336,7 +336,7 @@ graph TB
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 4: Input & Routing (輸入閘道 + 三層意圖路由 + 風險評估)              ║    │
-│  ║  55 files, ~19,400 LOC | Phase 35 Breakpoint 修復 | OrchestrationMetrics    ║    │
+│  ║  55 files, 20,272 LOC | Phase 35 Breakpoint 修復 | OrchestrationMetrics     ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   ┌──────────────────┐  ┌──────────────────┐  ┌────────────────────┐        ║    │
 │  ║   │  InputGateway    │  │ BusinessIntent   │  │ GuidedDialog       │        ║    │
@@ -353,7 +353,7 @@ graph TB
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 5: Hybrid Orchestration (混合編排層)                                  ║    │
-│  ║  88 files, ~28,800 LOC — Phase 39 OrchestratorBootstrap 組裝完成            ║    │
+│  ║  89 files, 28,800 LOC — Phase 39 OrchestratorBootstrap 組裝完成             ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   ┌────────────────────────────────────────────────────────────────────┐     ║    │
 │  ║   │  OrchestratorMediator (7-Handler Pipeline)                        │     ║    │
@@ -372,7 +372,7 @@ graph TB
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 6: MAF Builder Layer (MAF 編排模式層)                                ║    │
-│  ║  56 files, 38,082 LOC — 9 Builder Adapters (7 MAF compliant)               ║    │
+│  ║  57 files, 38,082 LOC — 9 Builder Adapters (7 MAF compliant)               ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   ┌────────────────────────────────────────────────────────────────────┐     ║    │
 │  ║   │  9 Builders via BuilderAdapter[T,R] (Generic Abstract Base)       │     ║    │
@@ -393,7 +393,7 @@ graph TB
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 7: Claude SDK Worker Layer (Claude 自主執行層)                        ║    │
-│  ║  46 files, 15,406 LOC                                                        ║    │
+│  ║  48 files, 15,406 LOC                                                        ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   ┌────────────────────────────────────────────────────────────────────┐     ║    │
 │  ║   │  ClaudeSDKClient (AsyncAnthropic) — 真實 SDK 整合                 │     ║    │
@@ -424,7 +424,7 @@ graph TB
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
-│  ║  Layer 9: Supporting Integrations (14 modules, 75 files, ~21,300 LOC)       ║    │
+│  ║  Layer 9: Supporting Integrations (14 modules, 77 files, 22,604 LOC)        ║    │
 │  ║  swarm(10) | llm(6) | memory(5) | knowledge(8) | patrol(11)                ║    │
 │  ║  correlation(6) | rootcause(5) | incident(6) | learning(5) | audit(4)      ║    │
 │  ║  a2a(4) | n8n(3) | contracts(2) | shared(2)                                ║    │
@@ -454,24 +454,24 @@ graph TB
 
 ---
 
-## 2. Backend Breakdown (793 Python files, ~196K LOC)
+## 2. Backend Breakdown (793 Python files, 273,345 LOC)
 
 ### By Architectural Layer
 
 | Layer | Directory | Files | Est. LOC | % of Backend |
 |-------|-----------|-------|----------|--------------|
-| L2: API Gateway | api/v1/ | 107 | ~40,000 | 30.8% |
-| L4: Orchestration/Routing | integrations/orchestration/ | 39 | ~16,000 | 12.3% |
-| L5: Hybrid Orchestration | integrations/hybrid/ | 75 | ~24,000 | 18.5% |
-| L6: MAF Builders | integrations/agent_framework/ | 62 | ~38,000 | 29.2% |
-| L7: Claude SDK | integrations/claude_sdk/ | 39 | ~15,000 | 11.5% |
-| L8: MCP Tools | integrations/mcp/ | 43 | ~21,000 | 16.2% |
-| L3: AG-UI Protocol | integrations/ag_ui/ | 22 | ~10,000 | 7.7% |
-| L9: Supporting Integrations | integrations/{swarm,patrol,...} | 75 | ~21,300 | 12.4% |
-| L10: Domain Layer | domain/ | 117 | ~47,637 | 27.8% |
-| L11: Infrastructure | infrastructure/ | 54 | ~9,901 | 5.8% |
-| L11: Core | core/ | 39 | ~11,945 | 7.0% |
-| Middleware | middleware/ | 2 | ~107 | 0.1% |
+| L2: API Gateway | api/v1/ | 152 | 47,376 | 17.3% |
+| L3: AG-UI Protocol | integrations/ag_ui/ | 27 | 10,329 | 3.8% |
+| L4: Orchestration/Routing | integrations/orchestration/ | 55 | 20,272 | 7.4% |
+| L5: Hybrid Orchestration | integrations/hybrid/ | 89 | 28,800 | 10.5% |
+| L6: MAF Builders | integrations/agent_framework/ | 57 | 38,082 | 13.9% |
+| L7: Claude SDK | integrations/claude_sdk/ | 48 | 15,406 | 5.6% |
+| L8: MCP Tools | integrations/mcp/ | 73 | 20,847 | 7.6% |
+| L9: Supporting Integrations | integrations/{swarm,patrol,...} | 77 | 22,604 | 8.3% |
+| L10: Domain Layer | domain/ | 117 | 47,637 | 17.4% |
+| L11: Infrastructure | infrastructure/ | 54 | 9,901 | 3.6% |
+| L11: Core | core/ | 39 | 11,945 | 4.4% |
+| Middleware | middleware/ | 2 | 107 | 0.04% |
 
 ### By Module Category
 
@@ -489,20 +489,20 @@ graph TB
 
 | # | Module | Files | Est. LOC |
 |---|--------|-------|----------|
-| 1 | integrations/hybrid/ | 75 | ~24,000 |
-| 2 | integrations/agent_framework/ | 62 | ~38,000 |
-| 3 | integrations/mcp/ | 43 | ~21,000 |
-| 4 | integrations/orchestration/ | 39 | ~16,000 |
-| 5 | integrations/claude_sdk/ | 39 | ~15,000 |
+| 1 | integrations/hybrid/ | 89 | 28,800 |
+| 2 | integrations/agent_framework/ | 57 | 38,082 |
+| 3 | integrations/mcp/ | 73 | 20,847 |
+| 4 | integrations/orchestration/ | 55 | 20,272 |
+| 5 | integrations/claude_sdk/ | 48 | 15,406 |
 | 6 | domain/sessions/ | 33 | ~15,473 |
-| 7 | integrations/ag_ui/ | 22 | ~10,000 |
+| 7 | integrations/ag_ui/ | 27 | 10,329 |
 | 8 | domain/orchestration/ | 22 | ~11,465 |
-| 9 | core/performance/ | 10 | ~5,100 |
+| 9 | core/ | 39 | 11,945 |
 | 10 | infrastructure/storage/ | 14 | ~3,800 |
 
 ---
 
-## 3. Frontend Breakdown (297 TypeScript/React files, ~54K LOC)
+## 3. Frontend Breakdown (236 TypeScript/React files, 54,238 LOC)
 
 ### By Module
 
