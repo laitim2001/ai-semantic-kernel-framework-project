@@ -122,8 +122,13 @@ erDiagram
     workflows {
         uuid id PK
         string name
-        json definition
-        string builder_type
+        string description
+        json graph_definition
+        string trigger_type
+        json trigger_config
+        string status
+        integer version
+        uuid created_by FK
     }
 
     executions ||--o{ checkpoints : "saves"
@@ -132,14 +137,19 @@ erDiagram
         uuid workflow_id FK
         string status
         json result
-        json error
+        text error
+        json input_data
+        string triggered_by
     }
 
     checkpoints {
         uuid id PK
         uuid execution_id FK
         json state
-        integer step_number
+        string step
+        string node_id
+        string checkpoint_type
+        string status
     }
 ```
 
