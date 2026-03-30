@@ -186,7 +186,7 @@ execute_query() — agentic loop
 
 ## Autonomous Planning Engine (4-Phase Cycle)
 
-The autonomous engine (Sprint 79-80) provides a full Analyze-Plan-Execute-Verify cycle for IT event handling, distinct from the basic agentic loop above.
+The autonomous engine (Sprint 79-80) provides a full Analyze-Plan-Execute-Verify cycle for IT event handling. Note: `AutonomousPlanner` handles Phase 1 (Analyze) + Phase 2 (Plan) only; Execute and Verify are in separate classes (`PlanExecutor`, `ResultVerifier`).
 
 ### Phase 1: Analysis (`EventAnalyzer`)
 
@@ -355,7 +355,7 @@ Pattern Learning:
 
 ## Hook Chain (Priority-Sorted Interception)
 
-Hooks intercept tool calls, queries, and session lifecycle events. The `HookChain` executes hooks in descending priority order. If any hook rejects, execution halts immediately. Modified args propagate to subsequent hooks.
+Hooks intercept tool calls, queries, and session lifecycle events. The `HookChain` runs hooks in descending priority order via `run_tool_call()`, `run_query_start()`, `run_session_start()` (not a generic `execute()` method). Hook interface methods are `on_tool_call()` (pre) and `on_tool_result()` (post). If any hook rejects, execution halts immediately. Modified args propagate to subsequent hooks.
 
 ### Hook Execution Order
 

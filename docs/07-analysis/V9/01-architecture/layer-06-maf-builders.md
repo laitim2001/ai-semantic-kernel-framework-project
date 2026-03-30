@@ -50,7 +50,7 @@ Microsoft Agent Framework Core API
 │       ↓                                                                     │
 │  ┌──────────────────────────────────────────────────────────────────┐       │
 │  │  BuilderAdapter[T, R] (Abstract Generic Base)                    │       │
-│  │  base.py — lifecycle: init → configure → build → run/run_stream  │       │
+│  │  base.py — lifecycle: init → build (lazy) → run/run_stream       │       │
 │  └───────────────────────────┬──────────────────────────────────────┘       │
 │                              │                                              │
 │       ┌──────────┬───────────┼───────────┬───────────┐                      │
@@ -58,7 +58,7 @@ Microsoft Agent Framework Core API
 │  ┌─────────┐┌─────────┐┌─────────┐┌──────────┐┌──────────┐                │
 │  │Concurrent││ Handoff ││GroupChat││ Magentic ││  Swarm   │                │
 │  │Builder  ││Builder  ││Builder  ││ Builder  ││ Builder  │                │
-│  │1,634 LOC││1,427 LOC││1,466 LOC││1,903 LOC ││1,800 LOC │                │
+│  │1,634 LOC││1,427 LOC││1,466 LOC││1,810 LOC ││1,800 LOC │                │
 │  │4 modes  ││策略交接 ││群聊投票 ││多Agent   ││並行群集  │                │
 │  └─────────┘└─────────┘└─────────┘└──────────┘└──────────┘                │
 │       ┌──────────┬───────────┬───────────┐                                  │
@@ -101,7 +101,7 @@ Microsoft Agent Framework Core API
 │  │ PostgresCheckpoint   │  │ RedisCheckpointCache  │                        │
 │  │ Storage (持久化)      │  │ (快取加速)            │                        │
 │  │                      │  │                      │                        │
-│  │ • SQLAlchemy ORM     │  │ • TTL: 3600s (1hr)  │                        │
+│  │ • SQLAlchemy text()  │  │ • TTL: 3600s (1hr)  │                        │
 │  │ • 永久保存           │  │ • 自動過期            │                        │
 │  │ • 查詢歷史記錄       │  │ • 高速讀取            │                        │
 │  └──────────────────────┘  └──────────────────────┘                        │
@@ -155,7 +155,7 @@ sequenceDiagram
 |------|-----------|--------|---------|
 | `__init__.py` | 166 | S14 | Unified re-exports, version info, public API surface |
 | `base.py` | 328 | S13 | `BaseAdapter` (ABC) + `BuilderAdapter[T, R]` (Generic) — lifecycle, build, run, run_stream |
-| `exceptions.py` | 399 | S13 | 7 exception classes: `AdapterError`, `AdapterInitializationError`, `WorkflowBuildError`, `ExecutionError`, `CheckpointError`, `ValidationError`, `ConfigurationError`, `RecursionError` |
+| `exceptions.py` | 399 | S13 | 8 exception classes: `AdapterError`, `AdapterInitializationError`, `WorkflowBuildError`, `ExecutionError`, `CheckpointError`, `ValidationError`, `ConfigurationError`, `RecursionError` |
 | `workflow.py` | 590 | S13 | `WorkflowAdapter` + `WorkflowConfig` — wraps `WorkflowBuilder` |
 | `checkpoint.py` | 711 | S13 | `CheckpointStorageAdapter`, `PostgresCheckpointStorage`, `RedisCheckpointCache`, `CachedCheckpointStorage`, `InMemoryCheckpointStorage` |
 
