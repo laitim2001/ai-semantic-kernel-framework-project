@@ -38,7 +38,7 @@
 ### A2: Workflow Definition + Execution
 - **V8 Status**: COMPLETE
 - **V9 Status**: COMPLETE
-- **Evidence**: `backend/src/api/v1/workflows/` (12 endpoints), `frontend/src/pages/workflows/` (5 files: WorkflowsPage, WorkflowDetailPage, CreateWorkflowPage, EditWorkflowPage, WorkflowEditorPage)
+- **Evidence**: `backend/src/api/v1/workflows/` (588 endpoints), `frontend/src/pages/workflows/` (5 files: WorkflowsPage, WorkflowDetailPage, CreateWorkflowPage, EditWorkflowPage, WorkflowEditorPage)
 - **Test**: `backend/tests/unit/test_workflow_models.py`, `backend/tests/unit/test_workflow_resume_service.py`
 - **Changes since V8**: None detected
 

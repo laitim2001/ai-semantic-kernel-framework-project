@@ -16,6 +16,57 @@
 | **Project Start** | 2025-11-14 |
 | **Current Branch** | feature/phase-42-deep-integration |
 
+### Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Layer 1: Frontend"
+        FE["React 18 + TypeScript<br/>236 files | 54,238 LOC"]
+    end
+    subgraph "Layer 2: API Gateway"
+        API["FastAPI<br/>152 files | 47,377 LOC<br/>588 endpoints"]
+    end
+    subgraph "Layer 3: AG-UI"
+        AGUI["SSE Protocol<br/>27 files | 10,329 LOC"]
+    end
+    subgraph "Layer 4: Routing"
+        ROUTE["3-Tier Intent Router<br/>55 files | ~19,400 LOC"]
+    end
+    subgraph "Layer 5: Hybrid Orchestration"
+        HYBRID["Mediator Pattern<br/>88 files | ~28,800 LOC"]
+    end
+    subgraph "Layer 6: MAF Builders"
+        MAF["9 Builder Adapters<br/>56 files | 38,082 LOC"]
+    end
+    subgraph "Layer 7: Claude SDK"
+        CLAUDE["Autonomous Engine<br/>46 files | 15,406 LOC"]
+    end
+    subgraph "Layer 8: MCP Tools"
+        MCP["9 Servers, 70 Tools<br/>73 files | 20,847 LOC"]
+    end
+    subgraph "Layer 9: Integrations"
+        INT["14 Sub-modules<br/>75 files | ~21,300 LOC"]
+    end
+    subgraph "Layer 10: Domain"
+        DOM["21 Modules<br/>117 files | 47,637 LOC"]
+    end
+    subgraph "Layer 11: Infrastructure"
+        INFRA["DB + Cache + Storage<br/>95 files | 21,953 LOC"]
+    end
+
+    FE -->|"Fetch API + SSE"| API
+    API --> AGUI
+    API --> ROUTE
+    ROUTE --> HYBRID
+    HYBRID --> MAF
+    HYBRID --> CLAUDE
+    MAF --> MCP
+    CLAUDE --> MCP
+    HYBRID --> INT
+    API --> DOM
+    DOM --> INFRA
+```
+
 ---
 
 ## 2. Backend Breakdown (793 Python files, ~196K LOC)

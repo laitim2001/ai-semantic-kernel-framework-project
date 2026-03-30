@@ -18,6 +18,27 @@
 
 ## 1. Security Analysis
 
+### Module Dependency Overview
+
+```mermaid
+graph LR
+    API["api/v1<br/>fan-out: 225"] --> HYBRID["hybrid<br/>fan-in: 58"]
+    API --> AF["agent_framework<br/>fan-in: 36"]
+    API --> ORCH["orchestration<br/>fan-in: 35"]
+    API --> DB["database<br/>fan-in: 38"]
+    HYBRID --> AF
+    HYBRID --> ORCH
+    HYBRID --> AGUI["ag_ui<br/>fan-in: 12"]
+    HYBRID --> SWARM["swarm<br/>fan-in: 9"]
+    AF --> DB
+    ORCH --> DB
+    STORAGE["storage<br/>fan-out: 18"] --> DB
+    AGUI --> HYBRID
+    style HYBRID fill:#f96,stroke:#333
+    style API fill:#69f,stroke:#333
+    style DB fill:#9f6,stroke:#333
+```
+
 ### 1.1 Authentication Architecture
 
 **JWT Token Management** (`core/security/jwt.py`)

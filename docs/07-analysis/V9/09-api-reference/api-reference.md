@@ -2,19 +2,19 @@
 
 > **Generated**: 2026-03-29 | **Source**: V9 codebase analysis + AST scan of 64 route files across 48 modules
 > **Base URL**: `http://localhost:8000/api/v1` | **Framework**: FastAPI 0.100+
-> **Total Endpoints**: 563 REST + 3 WebSocket = **566 endpoints**
+> **Total Endpoints**: 563 REST + 3 WebSocket = **588 endpoints**
 
 ---
 
 ## Table of Contents
 
 1. [System Endpoints (No Auth)](#system-endpoints)
-2. [Domain A: Core Entity Management (78 endpoints)](#domain-a-core-entity-management)
-3. [Domain B: AI Agent Operations (148 endpoints)](#domain-b-ai-agent-operations)
-4. [Domain C: Real-Time & Collaboration (56 endpoints)](#domain-c-real-time--collaboration)
-5. [Domain D: Orchestration & Routing (58 endpoints)](#domain-d-orchestration--routing)
-6. [Domain E: Monitoring & Observability (80 endpoints)](#domain-e-monitoring--observability)
-7. [Domain F: Platform Infrastructure (143 endpoints)](#domain-f-platform-infrastructure)
+2. [Domain A: Core Entity Management (588 endpoints)](#domain-a-core-entity-management)
+3. [Domain B: AI Agent Operations (588 endpoints)](#domain-b-ai-agent-operations)
+4. [Domain C: Real-Time & Collaboration (588 endpoints)](#domain-c-real-time--collaboration)
+5. [Domain D: Orchestration & Routing (588 endpoints)](#domain-d-orchestration--routing)
+6. [Domain E: Monitoring & Observability (588 endpoints)](#domain-e-monitoring--observability)
+7. [Domain F: Platform Infrastructure (588 endpoints)](#domain-f-platform-infrastructure)
 8. [Authentication](#authentication)
 9. [Common Patterns](#common-patterns)
 10. [Error Codes](#error-codes)
@@ -48,7 +48,7 @@
 
 ## Domain A: Core Entity Management
 
-> 78 endpoints across 9 modules — CRUD for primary platform resources.
+> 588 endpoints across 9 modules — CRUD for primary platform resources.
 
 ### A1. Agents (`/agents`) — 6 endpoints
 
@@ -63,7 +63,7 @@
 | 5 | DELETE | `/agents/{agent_id}` | `delete_agent` | JWT | Delete agent |
 | 6 | POST | `/agents/{agent_id}/run` | `run_agent` | JWT | Run agent with a message |
 
-### A2. Workflows (`/workflows`) — 12 endpoints
+### A2. Workflows (`/workflows`) — 588 endpoints
 
 **Module**: `api/v1/workflows/routes.py`, `graph_routes.py` | **Tags**: `Workflows`, `Workflow Graph`
 
@@ -82,7 +82,7 @@
 | 11 | PUT | `/workflows/{workflow_id}/graph` | `update_workflow_graph` | JWT | Update workflow graph |
 | 12 | POST | `/workflows/{workflow_id}/graph/layout` | `auto_layout_graph` | JWT | Auto-layout graph |
 
-### A3. Executions (`/executions`) — 11 endpoints
+### A3. Executions (`/executions`) — 588 endpoints
 
 **Module**: `api/v1/executions/routes.py` | **Tags**: `Executions`
 
@@ -117,7 +117,7 @@
 | 9 | GET | `/checkpoints/approval/pending` | `list_pending_approvals` | JWT | List pending approvals |
 | 10 | POST | `/checkpoints/approval/{executor_name}/respond` | `respond_to_approval` | JWT | Respond to approval request |
 
-### A5. Templates (`/templates`) — 11 endpoints
+### A5. Templates (`/templates`) — 588 endpoints
 
 **Module**: `api/v1/templates/routes.py` | **Tags**: `templates`
 
@@ -182,7 +182,7 @@
 | 8 | POST | `/tasks/{task_id}/fail` | `fail_task` | JWT | Mark task failed |
 | 9 | POST | `/tasks/{task_id}/progress` | `update_progress` | JWT | Update task progress |
 
-### A9. Routing (`/routing`) — 14 endpoints
+### A9. Routing (`/routing`) — 588 endpoints
 
 **Module**: `api/v1/routing/routes.py` | **Tags**: `routing`
 
@@ -207,7 +207,7 @@
 
 ## Domain B: AI Agent Operations
 
-> 148 endpoints across 17 route files — Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent, and nested workflows.
+> 588 endpoints across 17 route files — Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent, and nested workflows.
 
 ### B1. Claude SDK Core (`/claude-sdk`) — 6 endpoints
 
@@ -349,7 +349,7 @@
 | 6 | DELETE | `/hybrid/switch/checkpoints/{session_id}/{checkpoint_id}` | `delete_checkpoint` | JWT | Delete checkpoint |
 | 7 | DELETE | `/hybrid/switch/history/{session_id}` | `clear_history` | JWT | Clear switch history |
 
-### B12. Planning (`/planning`) — 46 endpoints
+### B12. Planning (`/planning`) — 588 endpoints
 
 **Module**: `api/v1/planning/routes.py` | **Tags**: `Planning`
 
@@ -434,7 +434,7 @@
 |---|--------|------|---------|------|-------------|
 | 46 | GET | `/planning/health` | `health_check` | JWT | Planning health check |
 
-### B13. GroupChat (`/groupchat`) — 42 endpoints
+### B13. GroupChat (`/groupchat`) — 588 endpoints
 
 **Module**: `api/v1/groupchat/routes.py` | **Tags**: `GroupChat`
 
@@ -505,7 +505,7 @@
 |---|--------|------|---------|------|-------------|
 | 42 | POST | `/groupchat/orchestrator/select` | `orchestrator_select_speaker` | JWT | Manager speaker selection |
 
-### B14. Handoff (`/handoff`) — 14 endpoints
+### B14. Handoff (`/handoff`) — 588 endpoints
 
 **Module**: `api/v1/handoff/routes.py` | **Tags**: `Handoff`
 
@@ -526,7 +526,7 @@
 | 13 | POST | `/handoff/hitl/sessions/{session_id}/cancel` | `cancel_hitl_session` | JWT | Cancel HITL session |
 | 14 | POST | `/handoff/hitl/sessions/{session_id}/escalate` | `escalate_hitl_session` | JWT | Escalate HITL session |
 
-### B15. Concurrent (`/concurrent`) — 15 endpoints (13 REST + 2 WS)
+### B15. Concurrent (`/concurrent`) — 588 endpoints (13 REST + 2 WS)
 
 **Module**: `api/v1/concurrent/routes.py`, `websocket.py` | **Tags**: `concurrent`, `concurrent-websocket`
 
@@ -548,7 +548,7 @@
 | 14 | WS | `/concurrent/ws/{execution_id}` | `websocket_execution` | — | Execution WebSocket |
 | 15 | WS | `/concurrent/ws` | `websocket_global` | — | Global WebSocket |
 
-### B16. Nested (`/nested`) — 16 endpoints
+### B16. Nested (`/nested`) — 588 endpoints
 
 **Module**: `api/v1/nested/routes.py` | **Tags**: `Nested`
 
@@ -575,9 +575,9 @@
 
 ## Domain C: Real-Time & Collaboration
 
-> 56 endpoints across 8 route files — Sessions, chat, AG-UI streaming, and swarm visualization.
+> 588 endpoints across 8 route files — Sessions, chat, AG-UI streaming, and swarm visualization.
 
-### C1. Sessions (`/sessions`) — 14 endpoints
+### C1. Sessions (`/sessions`) — 588 endpoints
 
 **Module**: `api/v1/sessions/routes.py` | **Tags**: `sessions`
 
@@ -642,7 +642,7 @@
 | 2 | GET | `/chat-history/{session_id}` | `get_chat_history` | JWT | Get chat history |
 | 3 | DELETE | `/chat-history/{session_id}` | `delete_chat_history` | JWT | Delete chat history |
 
-### C6. AG-UI Protocol (`/ag-ui`) — 33 endpoints
+### C6. AG-UI Protocol (`/ag-ui`) — 588 endpoints
 
 **Module**: `api/v1/ag_ui/routes.py`, `upload.py` | **Tags**: `ag-ui`, `File Upload`
 
@@ -720,7 +720,7 @@
 
 ## Domain D: Orchestration & Routing
 
-> 58 endpoints across 10 route files — Three-tier intent routing, orchestrator chat pipeline, and n8n integration.
+> 588 endpoints across 10 route files — Three-tier intent routing, orchestrator chat pipeline, and n8n integration.
 
 ### D1. Orchestration Policies (`/orchestration`) — 7 endpoints
 
@@ -806,7 +806,7 @@
 | 5 | POST | `/orchestrator/chat/stream` | `orchestrator_chat_stream` | JWT | Chat with SSE stream |
 | 6 | POST | `/orchestrator/chat` | `orchestrator_chat` | JWT | Chat sync response |
 
-### D8. Cross-Scenario Routing (`/routing`) — 14 endpoints
+### D8. Cross-Scenario Routing (`/routing`) — 588 endpoints
 
 > See [A9. Routing](#a9-routing-routing--14-endpoints) above.
 
@@ -828,7 +828,7 @@
 
 ## Domain E: Monitoring & Observability
 
-> 80 endpoints across 8 modules — Audit, performance, patrol, correlation, root cause, devtools, notifications, and dashboard.
+> 588 endpoints across 8 modules — Audit, performance, patrol, correlation, root cause, devtools, notifications, and dashboard.
 
 ### E1. Audit (`/audit`) — 8 endpoints
 
@@ -859,7 +859,7 @@
 | 6 | GET | `/audit/decisions/summary` | `get_summary` | JWT | Decision summary |
 | 7 | GET | `/audit/decisions/health` | `health_check` | JWT | Decision audit health |
 
-### E3. Performance (`/performance`) — 11 endpoints
+### E3. Performance (`/performance`) — 588 endpoints
 
 **Module**: `api/v1/performance/routes.py` | **Tags**: `Performance`
 
@@ -918,7 +918,7 @@
 | 3 | GET | `/rootcause/{analysis_id}/recommendations` | `get_recommendations` | JWT | Get recommendations |
 | 4 | POST | `/rootcause/similar` | `find_similar_patterns` | JWT | Find similar patterns |
 
-### E7. DevTools (`/devtools`) — 12 endpoints
+### E7. DevTools (`/devtools`) — 588 endpoints
 
 **Module**: `api/v1/devtools/routes.py` | **Tags**: `devtools`
 
@@ -937,7 +937,7 @@
 | 11 | GET | `/devtools/traces/{execution_id}/timeline` | `get_timeline` | JWT | Get timeline |
 | 12 | GET | `/devtools/traces/{execution_id}/statistics` | `get_statistics` | JWT | Trace statistics |
 
-### E8. Notifications (`/notifications`) — 11 endpoints
+### E8. Notifications (`/notifications`) — 588 endpoints
 
 **Module**: `api/v1/notifications/routes.py` | **Tags**: `notifications`
 
@@ -968,7 +968,7 @@
 
 ## Domain F: Platform Infrastructure
 
-> 143 endpoints across 16 modules — Auth, files, memory, sandbox, cache, knowledge, versioning, prompts, learning, code interpreter, MCP, A2A, and autonomous.
+> 588 endpoints across 16 modules — Auth, files, memory, sandbox, cache, knowledge, versioning, prompts, learning, code interpreter, MCP, A2A, and autonomous.
 
 ### F1. Authentication (`/auth`) — 5 endpoints
 
@@ -1054,7 +1054,7 @@
 | 6 | GET | `/knowledge/skills/{skill_id}` | `get_skill` | JWT | Get skill detail |
 | 7 | GET | `/knowledge/skills/search/query` | `search_skills` | JWT | Search skills |
 
-### F7. Versioning (`/versions`) — 14 endpoints
+### F7. Versioning (`/versions`) — 588 endpoints
 
 **Module**: `api/v1/versioning/routes.py` | **Tags**: `versioning`
 
@@ -1075,7 +1075,7 @@
 | 13 | POST | `/versions/templates/{template_id}/rollback` | `rollback_version` | JWT | Rollback to previous |
 | 14 | GET | `/versions/templates/{template_id}/statistics` | `get_template_statistics` | JWT | Template version stats |
 
-### F8. Prompts (`/prompts`) — 11 endpoints
+### F8. Prompts (`/prompts`) — 588 endpoints
 
 **Module**: `api/v1/prompts/routes.py` | **Tags**: `Prompts`
 
@@ -1093,7 +1093,7 @@
 | 10 | POST | `/prompts/reload` | `reload_prompts` | JWT | Reload prompt store |
 | 11 | GET | `/prompts/health` | `health_check` | JWT | Health check |
 
-### F9. Learning (`/learning`) — 13 endpoints
+### F9. Learning (`/learning`) — 588 endpoints
 
 **Module**: `api/v1/learning/routes.py` | **Tags**: `learning`
 
@@ -1113,7 +1113,7 @@
 | 12 | POST | `/learning/cases/{case_id}/effectiveness` | `record_effectiveness` | JWT | Record effectiveness |
 | 13 | GET | `/learning/scenarios/{scenario_name}/statistics` | `get_scenario_statistics` | JWT | Scenario statistics |
 
-### F10. Code Interpreter (`/code-interpreter`) — 14 endpoints
+### F10. Code Interpreter (`/code-interpreter`) — 588 endpoints
 
 **Module**: `api/v1/code_interpreter/routes.py`, `visualization.py` | **Tags**: `Code Interpreter`
 
@@ -1134,7 +1134,7 @@
 | 13 | GET | `/code-interpreter/visualizations/{file_id}` | `get_visualization` | JWT | Get visualization |
 | 14 | POST | `/code-interpreter/visualizations/generate` | `generate_visualization` | JWT | Generate visualization |
 
-### F11. MCP (`/mcp`) — 13 endpoints
+### F11. MCP (`/mcp`) — 588 endpoints
 
 **Module**: `api/v1/mcp/routes.py` | **Tags**: `MCP`
 
@@ -1154,7 +1154,7 @@
 | 12 | POST | `/mcp/connect-all` | `connect_all` | JWT | Connect all servers |
 | 13 | POST | `/mcp/disconnect-all` | `disconnect_all` | JWT | Disconnect all servers |
 
-### F12. A2A Protocol (`/a2a`) — 14 endpoints
+### F12. A2A Protocol (`/a2a`) — 588 endpoints
 
 **Module**: `api/v1/a2a/routes.py` | **Tags**: `A2A Communication`
 

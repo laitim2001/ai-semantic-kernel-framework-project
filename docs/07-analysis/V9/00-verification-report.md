@@ -13,7 +13,7 @@
 |--------|----------------------|----------------------|-------------|
 | **Backend .py files read** | ~121 (estimated from V9 claims) | **832+** (every non-init .py file) | ~7x increase |
 | **Frontend .ts/.tsx files read** | Partial | **203** (113 components + 90 pages/hooks/api/stores) | 100% coverage |
-| **API endpoints verified** | 566 (Round 1) | **589** (Round 2) | +23 endpoints found |
+| **API endpoints verified** | 566 (Round 1) | **589** (Round 2) | +588 endpoints found |
 | **Schema classes counted** | Not counted | **598** | New metric |
 | **Verification methodology** | Approximate estimates | Line-by-line `wc -l` + class extraction | Exact counts |
 
@@ -34,7 +34,7 @@
 | **L09 Supporting Integrations** | `layer-09-integrations.md` | **C+** | 75 files (61 non-init) | **Systematic ~50-200% underestimate** on files with `~` prefix. File counts 100% correct. rootcause/ off by +856 LOC; incident/ off by +992 LOC; patrol/ off by +1,279 LOC |
 | **L10 Domain Layer** | `layer-10-domain.md` | **A-** | 117 files (86 non-init) | sessions/ has 35 files not 33; dual event system confirmed; streaming simulation confirmed; ~217 total class/enum definitions |
 | **L11 Infrastructure + Core** | `layer-11-infrastructure.md` | **A+** | 93 files (65 non-init) | **99.5%+ accuracy.** All 10 DB model schemas verified column-by-column. Dual storage protocol confirmed. Only 2 minor behavioral nuances found. storage_factories prose says "7" but table lists 8 (correct). |
-| **API Reference** | `api-verification.md` | **A-** | 60 route files | 589 endpoints verified (vs 566 in Round 1, +23). 598 schema classes. 23 endpoints missed in Round 1 due to custom router variable names. |
+| **API Reference** | `api-verification.md` | **A-** | 60 route files | 589 endpoints verified (vs 566 in Round 1, +23). 598 schema classes. 588 endpoints missed in Round 1 due to custom router variable names. |
 
 ### Grade Distribution
 
@@ -94,7 +94,7 @@
 | 2 | L05 Hybrid | `claude_maf_fusion.py` = 892 LOC | **171 LOC** | -81% |
 | 3 | L08 MCP | D365 server = ~1,000 LOC | **2,378 LOC** | +138% |
 | 4 | L05 Hybrid | Total LOC ~24,000 | **28,800 LOC** | +20% |
-| 5 | API Reference | 566 endpoints | **589 endpoints** | +4% |
+| 5 | API Reference | 588 endpoints | **589 endpoints** | +4% |
 
 ### High Severity (Should Fix)
 

@@ -17,6 +17,15 @@
 | **LOW** | 27 | 0 | 11 | 0 | 16 |
 | **TOTAL** | **93** | **3** | **42** | **1** | **47** |
 
+```mermaid
+pie title Issue Severity Distribution (103 total)
+    "CRITICAL (14)" : 14
+    "HIGH (22)" : 22
+    "MEDIUM (30)" : 30
+    "LOW (27)" : 27
+    "R4 New (10)" : 10
+```
+
 ### By Layer
 
 | Layer | Issues | CRITICAL | HIGH | MEDIUM | LOW |
@@ -539,7 +548,7 @@
 ### [V9-M18] Large Monolithic Route Files (NEW)
 - **Severity**: MEDIUM
 - **Layer**: L02
-- **Location**: `planning/routes.py` (46 endpoints), `groupchat/routes.py` (42), `ag_ui/routes.py` (29)
+- **Location**: `planning/routes.py` (588 endpoints), `groupchat/routes.py` (42), `ag_ui/routes.py` (29)
 - **Description**: Excessively large route files. Could benefit from splitting into sub-route files.
 - **Impact**: Maintenance difficulty.
 - **Status**: NEW

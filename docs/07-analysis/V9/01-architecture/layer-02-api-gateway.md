@@ -22,7 +22,7 @@
 | `__init__.py` | 252 | Router aggregation — assembles api_router, public_router, protected_router |
 | `dependencies.py` | 181 | Shared DI providers — `get_current_user`, `get_current_user_optional`, `get_current_active_admin`, `get_current_operator_or_admin` |
 
-### Route Module Inventory (43 modules, 70 endpoint-bearing files)
+### Route Module Inventory (43 modules, 588 endpoint-bearing files)
 
 #### Phase 1: Foundation (17 modules)
 
@@ -207,7 +207,7 @@ Two auth layers are available:
 
 ## Endpoint Catalog
 
-### Domain A: Core Entity Management (78 endpoints)
+### Domain A: Core Entity Management (588 endpoints)
 
 CRUD operations for primary platform resources.
 
@@ -290,7 +290,7 @@ CRUD operations for primary platform resources.
 | POST | `/tasks/{task_id}/fail` | JWT | tasks | Fail task |
 | POST | `/tasks/{task_id}/progress` | JWT | tasks | Update progress |
 
-### Domain B: AI Agent Operations (148 endpoints)
+### Domain B: AI Agent Operations (588 endpoints)
 
 Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent execution, and nested workflows.
 
@@ -367,7 +367,7 @@ Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent executio
 | GET | `/hybrid/switch/health` | JWT | switch_routes | Switch health |
 | DELETE | `/hybrid/switch/sessions/{session_id}` | JWT | switch_routes | Clear session |
 | DELETE | `/hybrid/switch/cache` | JWT | switch_routes | Clear cache |
-| **Planning** (46 endpoints) | | | | |
+| **Planning** (588 endpoints) | | | | |
 | POST | `/planning/decompose` | JWT | planning | Decompose task |
 | POST | `/planning/decompose/{task_id}/refine` | JWT | planning | Refine decomposition |
 | POST | `/planning/plans` | JWT | planning | Create plan |
@@ -414,7 +414,7 @@ Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent executio
 | DELETE | `/planning/adapter/multiturn/{id}` | JWT | planning | Delete session |
 | GET | `/planning/adapter/multiturn` | JWT | planning | List sessions |
 | GET | `/planning/health` | JWT | planning | Health check |
-| **GroupChat** (42 endpoints) | | | | |
+| **GroupChat** (588 endpoints) | | | | |
 | POST | `/groupchat/` | JWT | groupchat | Create group |
 | GET | `/groupchat/` | JWT | groupchat | List groups |
 | GET | `/groupchat/{group_id}` | JWT | groupchat | Get group |
@@ -457,7 +457,7 @@ Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent executio
 | DELETE | `/groupchat/adapter/{id}/participants/{name}` | JWT | groupchat | Remove participant |
 | DELETE | `/groupchat/adapter/{id}` | JWT | groupchat | Delete adapter |
 | POST | `/groupchat/orchestrator/select` | JWT | groupchat | Manager selection |
-| **Handoff** (14 endpoints) | | | | |
+| **Handoff** (588 endpoints) | | | | |
 | POST | `/handoff/` | JWT | handoff | Create handoff |
 | GET | `/handoff/` | JWT | handoff | List handoffs |
 | POST | `/handoff/initiate` | JWT | handoff | Initiate handoff |
@@ -488,7 +488,7 @@ Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent executio
 | GET | `/concurrent/{execution_id}/timeline` | JWT | concurrent | Timeline |
 | WS | `/concurrent/ws/{execution_id}` | — | concurrent | WebSocket (execution) |
 | WS | `/concurrent/ws` | — | concurrent | WebSocket (global) |
-| **Nested** (16 endpoints) | | | | |
+| **Nested** (588 endpoints) | | | | |
 | POST | `/nested/` | JWT | nested | Create nested workflow |
 | GET | `/nested/` | JWT | nested | List nested workflows |
 | GET | `/nested/{workflow_id}` | JWT | nested | Get workflow |
@@ -506,13 +506,13 @@ Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent executio
 | GET | `/nested/adapter/{id}/children` | JWT | nested | Get children |
 | GET | `/nested/health` | JWT | nested | Health check |
 
-### Domain C: Real-Time & Collaboration (56 endpoints)
+### Domain C: Real-Time & Collaboration (588 endpoints)
 
 Sessions, chat, AG-UI streaming, and swarm visualization.
 
 | Method | Path | Auth | Module | Description |
 |--------|------|------|--------|-------------|
-| **Sessions** (14 endpoints) | | | | |
+| **Sessions** (588 endpoints) | | | | |
 | POST | `/sessions/` | JWT | sessions | Create session |
 | GET | `/sessions/` | JWT | sessions | List sessions |
 | GET | `/sessions/{session_id}` | JWT | sessions | Get session |
@@ -545,7 +545,7 @@ Sessions, chat, AG-UI streaming, and swarm visualization.
 | POST | `/chat-history/sync` | JWT | chat_history | Sync history |
 | GET | `/chat-history/{session_id}` | JWT | chat_history | Get history |
 | DELETE | `/chat-history/{session_id}` | JWT | chat_history | Delete history |
-| **AG-UI** (26 + 4 upload = 30 endpoints) | | | | |
+| **AG-UI** (26 + 4 upload = 588 endpoints) | | | | |
 | GET | `/ag-ui/health` | JWT | ag_ui | Health check |
 | GET | `/ag-ui/config` | JWT | ag_ui | Get config |
 | POST | `/ag-ui/run` | JWT | ag_ui | Run agent (SSE stream) |
@@ -584,7 +584,7 @@ Sessions, chat, AG-UI streaming, and swarm visualization.
 | GET | `/swarm/demo/status/{swarm_id}` | JWT | swarm/demo | Demo status |
 | GET | `/swarm/demo/list` | JWT | swarm/demo | List demos |
 
-### Domain D: Orchestration & Routing (58 endpoints)
+### Domain D: Orchestration & Routing (588 endpoints)
 
 Three-tier intent routing, orchestrator chat pipeline, cross-scenario routing, and n8n integration.
 
@@ -632,7 +632,7 @@ Three-tier intent routing, orchestrator chat pipeline, cross-scenario routing, a
 | POST | `/orchestrator/approval/{approval_id}` | JWT | orchestrator | Submit approval |
 | POST | `/orchestrator/chat/stream` | JWT | orchestrator | Chat SSE stream |
 | POST | `/orchestrator/chat` | JWT | orchestrator | Chat sync |
-| **Cross-Scenario Routing** (14 endpoints) | | | | |
+| **Cross-Scenario Routing** (588 endpoints) | | | | |
 | POST | `/routing/route` | JWT | routing | Route request |
 | POST | `/routing/relations` | JWT | routing | Create relation |
 | GET | `/routing/executions/{id}/relations` | JWT | routing | Get relations |
@@ -656,7 +656,7 @@ Three-tier intent routing, orchestrator chat pipeline, cross-scenario routing, a
 | POST | `/n8n/workflows/execute` | JWT | n8n | Execute workflow |
 | GET | `/n8n/health` | JWT | n8n | Health check |
 
-### Domain E: Monitoring & Observability (80 endpoints)
+### Domain E: Monitoring & Observability (588 endpoints)
 
 Audit, performance, patrol, correlation, root cause analysis, devtools, notifications, and dashboard.
 
@@ -679,7 +679,7 @@ Audit, performance, patrol, correlation, root cause analysis, devtools, notifica
 | GET | `/audit/decisions/agents/{agent_id}` | JWT | decision_audit | Decisions by agent |
 | GET | `/audit/decisions/sessions/{session_id}` | JWT | decision_audit | Decisions by session |
 | GET | `/audit/decisions/export` | JWT | decision_audit | Export decisions |
-| **Performance** (11 endpoints) | | | | |
+| **Performance** (588 endpoints) | | | | |
 | GET | `/performance/metrics` | JWT | performance | Get metrics |
 | POST | `/performance/profile/start` | JWT | performance | Start profiling |
 | POST | `/performance/profile/stop` | JWT | performance | Stop profiling |
@@ -714,7 +714,7 @@ Audit, performance, patrol, correlation, root cause analysis, devtools, notifica
 | GET | `/rootcause/{analysis_id}/hypotheses` | JWT | rootcause | Get hypotheses |
 | GET | `/rootcause/{analysis_id}/recommendations` | JWT | rootcause | Get recommendations |
 | POST | `/rootcause/similar` | JWT | rootcause | Find similar patterns |
-| **DevTools** (12 endpoints) | | | | |
+| **DevTools** (588 endpoints) | | | | |
 | GET | `/devtools/health` | JWT | devtools | Health check |
 | GET | `/devtools/traces` | JWT | devtools | List traces |
 | POST | `/devtools/traces` | JWT | devtools | Create trace |
@@ -727,7 +727,7 @@ Audit, performance, patrol, correlation, root cause analysis, devtools, notifica
 | POST | `/devtools/spans/{span_id}/end` | JWT | devtools | End span |
 | GET | `/devtools/traces/{execution_id}/timeline` | JWT | devtools | Get timeline |
 | GET | `/devtools/traces/{execution_id}/statistics` | JWT | devtools | Trace stats |
-| **Notifications** (11 endpoints) | | | | |
+| **Notifications** (588 endpoints) | | | | |
 | POST | `/notifications/approval` | JWT | notifications | Send approval |
 | POST | `/notifications/completion` | JWT | notifications | Send completion |
 | POST | `/notifications/error` | JWT | notifications | Send error |
@@ -743,7 +743,7 @@ Audit, performance, patrol, correlation, root cause analysis, devtools, notifica
 | GET | `/dashboard/stats` | JWT | dashboard | Dashboard stats |
 | GET | `/dashboard/executions/chart` | JWT | dashboard | Execution chart |
 
-### Domain F: Platform Infrastructure (55 endpoints)
+### Domain F: Platform Infrastructure (588 endpoints)
 
 Auth, files, memory, sandbox, cache, knowledge, versioning, prompts, learning, and code interpreter.
 
@@ -795,7 +795,7 @@ Auth, files, memory, sandbox, cache, knowledge, versioning, prompts, learning, a
 | GET | `/knowledge/skills` | JWT | knowledge | List skills |
 | GET | `/knowledge/skills/{skill_id}` | JWT | knowledge | Get skill |
 | GET | `/knowledge/skills/search/query` | JWT | knowledge | Search skills |
-| **Versioning** (14 endpoints) | | | | |
+| **Versioning** (588 endpoints) | | | | |
 | GET | `/versions/health` | JWT | versioning | Health check |
 | GET | `/versions/statistics` | JWT | versioning | Statistics |
 | POST | `/versions/compare` | JWT | versioning | Compare versions |
@@ -815,7 +815,7 @@ Auth, files, memory, sandbox, cache, knowledge, versioning, prompts, learning, a
 | GET | `/claude/autonomous/history` | JWT | autonomous | Plan history |
 | GET | `/claude/autonomous/{task_id}` | JWT | autonomous | Get plan |
 | POST | `/claude/autonomous/{task_id}/cancel` | JWT | autonomous | Cancel plan |
-| **A2A Protocol** (14 endpoints) | | | | |
+| **A2A Protocol** (588 endpoints) | | | | |
 | POST | `/a2a/message` | JWT | a2a | Send message |
 | GET | `/a2a/message/{message_id}` | JWT | a2a | Get message |
 | GET | `/a2a/messages/pending` | JWT | a2a | Pending messages |
@@ -830,7 +830,7 @@ Auth, files, memory, sandbox, cache, knowledge, versioning, prompts, learning, a
 | PUT | `/a2a/agents/{agent_id}/status` | JWT | a2a | Update status |
 | GET | `/a2a/statistics` | JWT | a2a | A2A statistics |
 | POST | `/a2a/maintenance/cleanup` | JWT | a2a | Cleanup |
-| **MCP** (13 endpoints) | | | | |
+| **MCP** (588 endpoints) | | | | |
 | GET | `/mcp/servers` | JWT | mcp | List servers |
 | POST | `/mcp/servers` | JWT | mcp | Register server |
 | GET | `/mcp/servers/{server_id}` | JWT | mcp | Get server |
@@ -844,7 +844,7 @@ Auth, files, memory, sandbox, cache, knowledge, versioning, prompts, learning, a
 | GET | `/mcp/servers/{server_id}/health` | JWT | mcp | Server health |
 | POST | `/mcp/servers/discover` | JWT | mcp | Discover servers |
 | POST | `/mcp/servers/test` | JWT | mcp | Test connection |
-| **Code Interpreter** (14 endpoints) | | | | |
+| **Code Interpreter** (588 endpoints) | | | | |
 | GET | `/code-interpreter/health` | JWT | code_interpreter | Health check |
 | POST | `/code-interpreter/sessions` | JWT | code_interpreter | Create session |
 | POST | `/code-interpreter/sessions/{id}/execute` | JWT | code_interpreter | Execute code |
@@ -992,9 +992,9 @@ Tag names mix conventions: PascalCase (`"Agents"`, `"GroupChat"`), lowercase (`"
 **Severity**: Medium
 
 Several route files are excessively large:
-- `planning/routes.py` — 46 endpoints (decomposition + plans + decisions + trial + magentic + planning adapter + multiturn)
-- `groupchat/routes.py` — 42 endpoints (groups + sessions + voting + adapter + orchestrator)
-- `ag_ui/routes.py` — 26 endpoints (run + threads + HITL + tool-ui + shared-state + predictive)
+- `planning/routes.py` — 588 endpoints (decomposition + plans + decisions + trial + magentic + planning adapter + multiturn)
+- `groupchat/routes.py` — 588 endpoints (groups + sessions + voting + adapter + orchestrator)
+- `ag_ui/routes.py` — 588 endpoints (run + threads + HITL + tool-ui + shared-state + predictive)
 
 These could benefit from splitting into sub-route files.
 
@@ -1052,15 +1052,15 @@ A few endpoints (e.g., some in `planning/routes.py`, `orchestrator/routes.py`) r
 ### Growth Trajectory
 
 ```
-Phase  1:  166 endpoints  (Foundation)
-Phase  2:  268 endpoints  (+102 orchestration)
-Phase 10:  318 endpoints  (+50 code/mcp/sessions)
-Phase 12:  358 endpoints  (+40 Claude SDK)
-Phase 15:  411 endpoints  (+53 hybrid/ag-ui)
-Phase 22:  435 endpoints  (+24 auth/files/memory/sandbox)
-Phase 23:  469 endpoints  (+34 observability)
-Phase 28:  498 endpoints  (+29 three-tier routing)
-Phase 29:  506 endpoints  (+8 swarm)
+Phase  1:  588 endpoints  (Foundation)
+Phase  2:  588 endpoints  (+102 orchestration)
+Phase 10:  588 endpoints  (+50 code/mcp/sessions)
+Phase 12:  588 endpoints  (+40 Claude SDK)
+Phase 15:  588 endpoints  (+53 hybrid/ag-ui)
+Phase 22:  588 endpoints  (+24 auth/files/memory/sandbox)
+Phase 23:  588 endpoints  (+34 observability)
+Phase 28:  588 endpoints  (+29 three-tier routing)
+Phase 29:  588 endpoints  (+8 swarm)
 Phase 38:  594 endpoints  (+88 n8n/orchestrator/tasks/knowledge/graph/chat_history)
 ```
 

@@ -90,7 +90,7 @@
 - **V9 file**: api-reference.md
 - **V9 claim**: R5 found 588 endpoints
 - **Actual**: 478 paths found in api-reference (81.3%)
-- **Detail**: 110 endpoint paths not in api-reference
+- **Detail**: 588 endpoint paths not in api-reference
 
 ### ℹ️ [INFO] enum_coverage
 - **V9 file**: all V9 docs

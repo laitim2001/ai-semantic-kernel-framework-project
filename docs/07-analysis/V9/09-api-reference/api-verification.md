@@ -58,7 +58,7 @@
 |--------|------|---------|----------------|
 | POST | `/migrate-guest` | migrate_guest | MigrateGuestResponse |
 
-### sessions/routes.py — 15 endpoints
+### sessions/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | POST | `/sessions` | create_session | SessionDetailResponse |
@@ -114,7 +114,7 @@
 | PUT | `/workflows/{workflow_id}/graph` | update_workflow_graph | WorkflowGraphResponse |
 | POST | `/workflows/{workflow_id}/graph/layout` | auto_layout_workflow_graph | GraphLayoutResponse |
 
-### executions/routes.py — 11 endpoints
+### executions/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/executions/` | list_executions | ExecutionListResponse |
@@ -143,7 +143,7 @@
 | GET | `/checkpoints/execution/{execution_id}` | get_by_execution | — |
 | POST | `/checkpoints/{checkpoint_id}/auto-approve` | auto_approve | — |
 
-### concurrent/routes.py — 13 endpoints
+### concurrent/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | POST | `/concurrent/execute` | execute_concurrent | ConcurrentExecuteResponse |
@@ -166,7 +166,7 @@
 | WS | `/concurrent/ws/{execution_id}` | websocket_execution | — |
 | WS | `/concurrent/ws` | websocket_global | — |
 
-### nested/routes.py — 16 endpoints
+### nested/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | POST | `/nested/` | create_nested_workflow | NestedWorkflowResponse |
@@ -186,7 +186,7 @@
 | GET | `/nested/stats` | get_stats | NestedWorkflowStatsResponse |
 | GET | `/nested/health` | health_check | — |
 
-### handoff/routes.py — 14 endpoints
+### handoff/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | POST | `/handoff/trigger` | trigger_handoff | HandoffTriggerResponse |
@@ -204,7 +204,7 @@
 | POST | `/handoff/{handoff_id}/cancel` | cancel_handoff | HandoffCancelResponse |
 | POST | `/handoff/{handoff_id}/rollback` | rollback_handoff | — |
 
-### groupchat/routes.py — 40 endpoints
+### groupchat/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | POST | `/groupchat/` | create_group_chat | GroupChatResponse |
@@ -250,7 +250,7 @@
 | DELETE | `/groupchat/adapter/{adapter_id}` | delete_adapter | SuccessResponse |
 | POST | `/groupchat/orchestrator/select` | select_orchestrator | ManagerSelectionResponseSchema |
 
-### planning/routes.py — 46 endpoints
+### planning/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | POST | `/planning/decompose` | decompose_task | DecompositionResponse |
@@ -300,7 +300,7 @@
 | GET | `/planning/adapter/multiturn` | list_multiturn_adapters | — |
 | GET | `/planning/health` | health_check | — |
 
-### ag_ui/routes.py — 22 endpoints
+### ag_ui/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/ag-ui/health` | health_check | — |
@@ -518,7 +518,7 @@
 | GET | `/claude/autonomous/{task_id}` | get_task | TaskResponse |
 | POST | `/claude/autonomous/{task_id}/cancel` | cancel_task | CancelResponse |
 
-### a2a/routes.py — 14 endpoints
+### a2a/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | POST | `/a2a/message` | send_message | — |
@@ -552,7 +552,7 @@
 | GET | `/swarm/demo/scenarios` | list_scenarios | — |
 | GET | `/swarm/demo/events/{swarm_id}` | get_events | SSE |
 
-### mcp/routes.py — 13 endpoints
+### mcp/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/mcp/servers` | list_servers | — |
@@ -582,7 +582,7 @@
 | POST | `/connectors/{connector_id}/connect` | connect | ConnectorOperationResponse |
 | POST | `/connectors/{connector_id}/disconnect` | disconnect | ConnectorOperationResponse |
 
-### code_interpreter/routes.py — 11 endpoints
+### code_interpreter/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/code-interpreter/health` | health_check | HealthCheckResponse |
@@ -751,7 +751,7 @@
 | POST | `/tasks/{task_id}/fail` | fail_task | TaskResponse |
 | POST | `/tasks/{task_id}/progress` | update_progress | TaskResponse |
 
-### performance/routes.py — 11 endpoints
+### performance/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/performance/metrics` | get_metrics | PerformanceMetricsResponse |
@@ -766,7 +766,7 @@
 | POST | `/performance/collector/threshold` | set_threshold | — |
 | GET | `/performance/health` | health_check | — |
 
-### devtools/routes.py — 13 endpoints
+### devtools/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/devtools/health` | health_check | HealthCheckResponse |
@@ -782,7 +782,7 @@
 | GET | `/devtools/traces/{execution_id}/timeline` | get_timeline | TimelineResponse |
 | GET | `/devtools/traces/{execution_id}/statistics` | get_statistics | TraceStatisticsResponse |
 
-### notifications/routes.py — 11 endpoints
+### notifications/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | POST | `/notifications/approval` | send_approval | NotificationResultResponse |
@@ -797,7 +797,7 @@
 | GET | `/notifications/types` | list_types | NotificationTypesResponse |
 | GET | `/notifications/health` | health_check | HealthCheckResponse |
 
-### versioning/routes.py — 15 endpoints
+### versioning/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/versions/health` | health_check | HealthCheckResponse |
@@ -815,7 +815,7 @@
 | POST | `/versions/templates/{template_id}/rollback` | rollback | VersionResponse |
 | GET | `/versions/templates/{template_id}/statistics` | get_template_stats | TemplateStatisticsResponse |
 
-### templates/routes.py — 12 endpoints
+### templates/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/templates/health` | health_check | HealthCheckResponse |
@@ -830,7 +830,7 @@
 | POST | `/templates/{template_id}/instantiate` | instantiate | InstantiateResponse |
 | POST | `/templates/{template_id}/rate` | rate_template | RateResponse |
 
-### prompts/routes.py — 11 endpoints
+### prompts/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/prompts/` | list_prompts | — |
@@ -857,7 +857,7 @@
 | POST | `/triggers/{webhook_id}/verify` | verify_signature | SignatureTestResponse |
 | GET | `/triggers/stats` | get_stats | — |
 
-### routing/routes.py — 14 endpoints
+### routing/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | POST | `/routing/route` | route_request | RoutingResultResponse |
@@ -875,7 +875,7 @@
 | DELETE | `/routing/relations` | clear_relations | — |
 | GET | `/routing/health` | health_check | HealthCheckResponse |
 
-### learning/routes.py — 13 endpoints
+### learning/routes.py — 588 endpoints
 | Method | Path | Handler | Response Model |
 |--------|------|---------|----------------|
 | GET | `/learning/health` | health_check | HealthCheckResponse |

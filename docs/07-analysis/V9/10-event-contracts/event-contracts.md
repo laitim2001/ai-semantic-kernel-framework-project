@@ -8,6 +8,35 @@
 
 ---
 
+## Event Flow Overview
+
+```mermaid
+graph LR
+    subgraph "Backend Events"
+        PIPE["Pipeline SSE<br/>14 types"]
+        AGUI["AG-UI Protocol<br/>11 types"]
+        SWARM["Swarm Events<br/>9 types"]
+    end
+    subgraph "Bridge Layer"
+        EMT["PipelineEventEmitter"]
+        CONV["EventConverters"]
+        MBRD["MediatorBridge"]
+    end
+    subgraph "Frontend"
+        USSE["useSSEChat"]
+        UUNI["useUnifiedChat"]
+        USWM["useSwarmEventHandler"]
+    end
+
+    PIPE --> EMT --> USSE
+    AGUI --> CONV --> UUNI
+    SWARM --> AGUI
+    PIPE --> MBRD --> UUNI
+    USWM --> USSE
+```
+
+---
+
 ## Table of Contents
 
 1. [Pipeline SSE Events (13 types)](#1-pipeline-sse-events)

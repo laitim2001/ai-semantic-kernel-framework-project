@@ -6,6 +6,34 @@
 
 ---
 
+## Sequence Diagram
+
+### Flow 6 — 10-Step Pipeline E2E
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant SSE as SSE Stream
+    participant BOOT as Bootstrap
+    participant ROUTE as RoutingHandler
+    participant DIALOG as DialogHandler
+    participant EXEC as ExecutionHandler
+    participant AGENT as AgentHandler
+
+    U->>SSE: POST /chat/stream
+    SSE->>BOOT: OrchestratorRequest
+    BOOT->>ROUTE: Step 1: Route
+    ROUTE-->>SSE: ROUTING_COMPLETE
+    BOOT->>DIALOG: Step 2: Check completeness
+    BOOT->>EXEC: Step 3: Risk + Approval
+    BOOT->>AGENT: Step 4: Execute
+    AGENT-->>SSE: TEXT_DELTA (streaming)
+    AGENT-->>SSE: TOOL_CALL events
+    AGENT-->>SSE: PIPELINE_COMPLETE
+```
+
+---
+
 ## Flow 6: 10-Step Pipeline E2E (Phase 39-42)
 
 **Entry Point**: `POST /api/v1/orchestrator/chat` (sync) or `POST /api/v1/orchestrator/chat/stream` (SSE)

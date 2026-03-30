@@ -6,6 +6,60 @@
 
 ---
 
+## Sequence Diagrams
+
+### Flow 1 — Chat Message E2E
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend (SSE)
+    participant API as API Gateway
+    participant RT as 3-Tier Router
+    participant MED as Mediator
+    participant LLM as LLM Service
+    participant MCP as MCP Tools
+
+    U->>FE: Send message
+    FE->>API: POST /orchestrator/chat/stream
+    API->>RT: Route intent
+    RT-->>API: RoutingDecision
+    API->>MED: Execute pipeline
+    MED->>LLM: Generate response
+    LLM-->>MED: Text + tool_calls
+    opt Tool Calls
+        MED->>MCP: Execute tools
+        MCP-->>MED: Tool results
+        MED->>LLM: Continue with results
+    end
+    MED-->>API: SSE events
+    API-->>FE: TEXT_DELTA stream
+    FE-->>U: Animated response
+```
+
+### Flow 4 — HITL Approval
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend
+    participant API as API Gateway
+    participant RISK as Risk Assessor
+    participant HITL as HITL Controller
+    participant TEAMS as Teams Notification
+
+    API->>RISK: Assess risk
+    RISK-->>API: HIGH/CRITICAL
+    API->>HITL: Request approval
+    HITL->>TEAMS: Send Adaptive Card
+    TEAMS-->>U: Approval notification
+    U->>TEAMS: Approve/Reject
+    TEAMS->>HITL: Approval response
+    HITL-->>API: Resume execution
+```
+
+---
+
 ## Flow 1: Chat Message (User -> Response)
 
 **Path**: User types message -> SSE stream -> LLM response displayed
