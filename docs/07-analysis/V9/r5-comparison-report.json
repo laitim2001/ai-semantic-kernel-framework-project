@@ -1,0 +1,132 @@
+{
+  "summary": {
+    "MATCH": 0,
+    "MINOR": 1,
+    "MAJOR": 0,
+    "CRITICAL": 0,
+    "INFO": 14
+  },
+  "total_findings": 15,
+  "findings": [
+    {
+      "category": "Pydantic Schemas (stats)",
+      "severity": "MINOR",
+      "v9_file": "00-stats.md",
+      "v9_claim": "690",
+      "actual": "691",
+      "detail": "Off by 1 (0.1%)"
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-01-frontend.md",
+      "v9_claim": "LOC claims found: 0, File claims found: 0",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-02-api-gateway.md",
+      "v9_claim": "LOC claims found: 1, File claims found: 1",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-03-ag-ui.md",
+      "v9_claim": "LOC claims found: 1, File claims found: 1",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-04-routing.md",
+      "v9_claim": "LOC claims found: 0, File claims found: 0",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-05-orchestration.md",
+      "v9_claim": "LOC claims found: 0, File claims found: 0",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-06-maf-builders.md",
+      "v9_claim": "LOC claims found: 0, File claims found: 0",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-07-claude-sdk.md",
+      "v9_claim": "LOC claims found: 0, File claims found: 1",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-08-mcp-tools.md",
+      "v9_claim": "LOC claims found: 0, File claims found: 0",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-09-integrations.md",
+      "v9_claim": "LOC claims found: 0, File claims found: 0",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-10-domain.md",
+      "v9_claim": "LOC claims found: 2, File claims found: 0",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "layer_check",
+      "severity": "INFO",
+      "v9_file": "layer-11-infrastructure.md",
+      "v9_claim": "LOC claims found: 0, File claims found: 0",
+      "actual": "See detailed comparison",
+      "detail": ""
+    },
+    {
+      "category": "class_coverage",
+      "severity": "INFO",
+      "v9_file": "all V9 docs",
+      "v9_claim": "R5 found 2174 unique classes",
+      "actual": "1053 mentioned in V9 (48.4%)",
+      "detail": "1113 significant classes not mentioned"
+    },
+    {
+      "category": "endpoint_coverage",
+      "severity": "INFO",
+      "v9_file": "api-reference.md",
+      "v9_claim": "R5 found 588 endpoints",
+      "actual": "478 paths found in api-reference (81.3%)",
+      "detail": "110 endpoint paths not in api-reference"
+    },
+    {
+      "category": "enum_coverage",
+      "severity": "INFO",
+      "v9_file": "all V9 docs",
+      "v9_claim": "R5 found 282 enums",
+      "actual": "215 mentioned (76.2%)",
+      "detail": "67 enums not in V9"
+    }
+  ]
+}
