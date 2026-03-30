@@ -391,7 +391,7 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |     v  指令前綴剝離: sudo, nohup, env, time                            |
 |     |  路徑剝離: /usr/bin/ls -> ls                                      |
 |     v                                                                   |
-|  +-- Tier 1: BLOCKED_PATTERNS (26 compiled regex) -----------------+   |
+|  +-- Tier 1: BLOCKED_PATTERNS (24 compiled regex) -----------------+   |
 |  |  破壞性檔案操作: rm -rf /, rm -rf *, del /s, format C:, mkfs   |   |
 |  |  權限提升: chmod 777 /, chown .* /$                              |   |
 |  |  遠端程式碼管道: curl...|sh, wget...|sh                          |   |
@@ -403,7 +403,7 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |  +-------------------------------+----------------------------------+   |
 |                                  | No match                             |
 |                                  v                                      |
-|  +-- Tier 2: DEFAULT_WHITELIST (65 command names) -----------------+   |
+|  +-- Tier 2: DEFAULT_WHITELIST (79 command names) -----------------+   |
 |  |  系統資訊: whoami, hostname, date, uptime, uname                 |   |
 |  |  檔案檢視: ls, dir, cat, head, tail, wc, find, grep, stat       |   |
 |  |  網路診斷: ping, nslookup, dig, traceroute, curl, wget          |   |
@@ -436,7 +436,7 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 | `PermissionPolicy` | `mcp/security/permissions.py` | -- | Glob-based policy with servers, tools, level, deny_list, conditions, priority |
 | `PermissionManager` | `mcp/security/permissions.py` | -- | Policy evaluation engine with deny-list precedence |
 | `MCPPermissionChecker` | `mcp/security/permission_checker.py` | 183 | Runtime facade: log/enforce modes, dev default policy, statistics |
-| `CommandWhitelist` | `mcp/security/command_whitelist.py` | 225 | 3-tier command decision: blocked(26) / allowed(65) / requires_approval |
+| `CommandWhitelist` | `mcp/security/command_whitelist.py` | 225 | 3-tier command decision: blocked(24) / allowed(79) / requires_approval |
 
 ### Whitelist Security Concerns
 

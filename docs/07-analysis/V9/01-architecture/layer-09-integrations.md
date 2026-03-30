@@ -45,7 +45,7 @@ This document provides a comprehensive analysis of the 14 supporting integration
 | 7 | `incident/` | 6 | 34 | S126 | IncidentAnalyzer, ActionRecommender, IncidentExecutor | Stable |
 | 8 | `patrol/` | 11 | 23 | S82 | PatrolAgent, ScheduledPatrol, check classes (5 concrete: ServiceHealth, APIResponse, ResourceUsage, LogAnalysis, SecurityScan) | Active (base + 5 concrete check implementations) |
 | 9 | `learning/` | 5 | 4 | S80 | FewShotLearner, SimilarityCalculator, CaseExtractor | Stable |
-| 10 | `audit/` | 4 | 23 | S80 | DecisionTracker | InMemory-only |
+| 10 | `audit/` | 4 | 23 | S80 | DecisionTracker | InMemory + optional Redis persistence |
 | 11 | `a2a/` | 4 | 23 | S81 | A2AMessage, AgentCapability, DiscoveryQuery, MessageRouter (18 methods), AgentDiscoveryService (16 methods) | Stable |
 | 12 | `n8n/` | 3 | 38 | S125 | N8nOrchestrator, ExecutionMonitor | Stable |
 | 13 | `contracts/` | 2 | 35 | S108 | PipelineRequest, PipelineResponse | Stable |
