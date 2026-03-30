@@ -80,9 +80,13 @@ erDiagram
         uuid id PK
         string name
         string description
-        json capabilities
-        string framework_type
-        boolean is_active
+        text instructions
+        json tools
+        json model_config
+        integer max_iterations
+        string category
+        string status
+        integer version
     }
 
     sessions ||--o{ messages : "contains"

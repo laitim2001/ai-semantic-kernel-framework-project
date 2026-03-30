@@ -43,7 +43,7 @@
 │  │  └──────────────────────────────────────────────────────┘       │      │
 │  │                                                                   │      │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │      │
-│  │  │ cache/   │  │messaging/│  │monitoring/│  │  workers/ │        │      │
+│  │  │ cache/   │  │messaging/│  │dist_lock/ │  │  workers/ │        │      │
 │  │  │LLM Cache │  │ STUB ⚠   │  │ Metrics  │  │ ARQ Queue │        │      │
 │  │  │(Redis)   │  │ (1 line) │  │          │  │ (Redis)   │        │      │
 │  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │      │
@@ -160,7 +160,7 @@ infrastructure/
 ├── messaging/                               # STUB (1 file)
 │   └── __init__.py                          # "# Messaging infrastructure" (1 line)
 │
-├── storage/                                 # Key-value storage layer (14 files)
+├── storage/                                 # Key-value storage layer (18 files incl. backends/)
 │   ├── __init__.py
 │   ├── protocol.py                          # StorageBackend Protocol (Sprint 119) -- TTL=int
 │   ├── redis_backend.py                     # RedisStorageBackend (Sprint 119) -- implements Protocol
@@ -180,7 +180,7 @@ infrastructure/
 │   ├── audit_store.py                       # AuditStore (Sprint 110)
 │   └── task_store.py                        # TaskStore (Sprint 113)
 │
-├── checkpoint/                              # Unified checkpoint system (7 files)
+├── checkpoint/                              # Unified checkpoint system (8 files incl. adapters/)
 │   ├── __init__.py
 │   ├── protocol.py                          # CheckpointEntry + CheckpointProvider Protocol (Sprint 120)
 │   ├── unified_registry.py                  # UnifiedCheckpointRegistry (Sprint 120)
