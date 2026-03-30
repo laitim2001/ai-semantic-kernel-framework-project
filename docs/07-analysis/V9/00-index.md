@@ -9,12 +9,12 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total V9 Files** | 52+ (.md + .json) |
-| **Total V9 Size** | ~6.7 MB (1.7 MB .md + 5 MB metadata JSON) |
-| **Analysis Scope** | 1,029 source files (793 .py + 236 .ts/.tsx), ~327K LOC |
+| **Total V9 Files** | 34 analysis .md files + verification archive |
+| **Analysis Scope** | 1,029 source files (793 .py + 236 .ts/.tsx), 327,583 LOC |
 | **Phases Covered** | 1-44 (152+ sprints, ~2,500+ story points) |
-| **Categories** | 13 topical directories + 2 root files |
-| **Date** | 2026-03-29 |
+| **Categories** | 13 topical directories + _verification/ archive |
+| **Verification Rounds** | R1-R8 (8 rounds, 94.5% programmatic + AI semantic) |
+| **Last Updated** | 2026-03-31 |
 
 ---
 
