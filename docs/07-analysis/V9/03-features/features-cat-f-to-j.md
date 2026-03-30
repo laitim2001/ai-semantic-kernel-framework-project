@@ -19,6 +19,118 @@
 
 ---
 
+### F-J 類功能狀態總覽
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Categories F-J 功能完成度與演進                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  F. Intelligent Decision (7)  ██████░          6/7    86% (F7 API stub)    │
+│     F1 LLM ✓ → F2 IntentRouter ✓ → F3 3-Tier ✓ → F4 Dialog ✓            │
+│     F5 BizRouter ✓ → F6 LLMClassifier ✓ → F7 Autonomous ◐               │
+│                                                                             │
+│  G. Observability (5)         ██░░░            2/5    40% (3 stubs)        │
+│     G1 Metrics ✓ → G2 HealthCheck ✓                                       │
+│     G3 Tracing ◐ → G4 AlertRules ◐ → G5 Dashboard ◐                      │
+│                                                                             │
+│  H. Agent Swarm (4)           ████             4/4   100% ↑ UPGRADED      │
+│     H1 SwarmEngine ✓ → H2 Visualization ✓ → H3 Events ✓ → H4 Tools ✓   │
+│     Phase 43: mock → real LLM execution engine                             │
+│                                                                             │
+│  I. Security (4)              ████             4/4   100% ↑ EXPANDED      │
+│     I1 PromptGuard ✓ → I2 ToolGateway ✓ → I3 Sandbox ✓ → I4 AuditLog ✓ │
+│     Phase 36: +PromptGuard +ToolGateway                                    │
+│                                                                             │
+│  J. Unplanned + New (26+)     ██████████████████████████   Phase 35-44    │
+│     三層路由 / OrchestratorMediator / ContextBridge / Bootstrap             │
+│     Agent Team PoC / Swarm Real Engine / MediatorEventBridge               │
+│     +11 NEW features since V8                                              │
+│                                                                             │
+│  ✓ = COMPLETE   ◐ = PARTIAL/STUB   ↑ = V8→V9 升級                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 智慧決策功能鏈 (Category F)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Intelligent Decision 功能流程                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  用戶輸入                                                                   │
+│     │                                                                       │
+│     ↓                                                                       │
+│  F1 LLM Service Layer ──→ Azure OpenAI / Claude / Mock                     │
+│     │  (llm/ 6 files, 1,907 LOC)                                           │
+│     ↓                                                                       │
+│  F2 Intent Router (Hybrid) ──→ IT意圖分類 + 框架選擇                       │
+│     │  (hybrid/intent/ 10 files, 2,367 LOC)                                │
+│     ↓                                                                       │
+│  F3 Three-tier Routing ──→ L1 Pattern → L2 Semantic → L3 LLM              │
+│     │  (orchestration/intent_router/ 23 files, 5,213 LOC)                  │
+│     │                                                                       │
+│     ├──→ 需要澄清? ──→ F4 Guided Dialog Engine                            │
+│     │                    (4 files, 3,314 LOC)                               │
+│     │                                                                       │
+│     ├──→ 業務意圖? ──→ F5 Business Intent Router                           │
+│     │                    (router.py, 622 LOC)                               │
+│     │                                                                       │
+│     └──→ 複雜推理? ──→ F6 LLM Classifier                                  │
+│                          (4 files, 1,269 LOC)                               │
+│                             │                                               │
+│                             ↓                                               │
+│                       F7 Autonomous Planning                                │
+│                          SDK: ✓ (8 files, 2,823 LOC)                       │
+│                          API: ◐ (STUB, 未接線)                             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Swarm 與 Security 功能演進時間線
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│               Phase 演進時間線 (Category H + I)                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Phase:  29      36       39       42       43       44                     │
+│          │       │        │        │        │        │                      │
+│  ────────┼───────┼────────┼────────┼────────┼────────┼──→                  │
+│          │       │        │        │        │        │                      │
+│  H1 ─────┤       │        │        │    ┌───┤        │  SwarmEngine         │
+│  Swarm   │ mock  │        │        │    │real│       │  mock → real LLM    │
+│  Engine  │events │        │        │    │exec│       │                      │
+│          │       │        │        │        │        │                      │
+│  H2 ─────┤       │        │        │    ┌───┤        │  SwarmVisualization  │
+│  Viz     │ basic │        │        │    │fix │       │  bug fixes Phase 43 │
+│          │       │        │        │        │        │                      │
+│  H3 ─────┤       │        │        │        │        │  SwarmEvents         │
+│  Events  │ SSE   │        │        │        │        │  (stable since P29) │
+│          │       │        │        │        │        │                      │
+│  H4 ─────┤       │        │        │    ┌───┤        │  SwarmTools          │
+│  Tools   │ none  │        │        │    │tool│       │  per-worker registry │
+│          │       │        │        │    │reg │       │                      │
+│  ────────┼───────┼────────┼────────┼────────┼────────┼──→                  │
+│          │       │        │        │        │        │                      │
+│  I1 ─────│───────┤        │        │        │        │  PromptGuard         │
+│          │       │ new    │        │        │        │  Phase 36 新增       │
+│          │       │        │        │        │        │                      │
+│  I2 ─────│───────┤        │        │        │        │  ToolGateway         │
+│          │       │ new    │        │        │        │  Phase 36 新增       │
+│          │       │        │        │        │        │                      │
+│  I3 ─────┤       │        │        │        │        │  Sandbox             │
+│          │ exist │        │        │        │        │  (stable since P1)  │
+│          │       │        │        │        │        │                      │
+│  I4 ─────┤       │        │        │        │        │  AuditLog            │
+│          │ exist │        │        │        │        │  (stable since P1)  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Category F: Intelligent Decision (7 features)
 
 ### Feature List

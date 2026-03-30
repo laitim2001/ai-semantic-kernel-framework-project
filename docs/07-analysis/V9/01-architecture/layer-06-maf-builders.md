@@ -38,6 +38,115 @@ Microsoft Agent Framework Core API
 
 ---
 
+### MAF Builder Adapter 架構總覽
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    MAF Builder Adapter 架構                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  IPA Platform Application Layer                                             │
+│       │                                                                     │
+│       ↓                                                                     │
+│  ┌──────────────────────────────────────────────────────────────────┐       │
+│  │  BuilderAdapter[T, R] (Abstract Generic Base)                    │       │
+│  │  base.py — lifecycle: init → configure → build → run/run_stream  │       │
+│  └───────────────────────────┬──────────────────────────────────────┘       │
+│                              │                                              │
+│       ┌──────────┬───────────┼───────────┬───────────┐                      │
+│       ↓          ↓           ↓           ↓           ↓                      │
+│  ┌─────────┐┌─────────┐┌─────────┐┌──────────┐┌──────────┐                │
+│  │Concurrent││ Handoff ││GroupChat││ Magentic ││  Swarm   │                │
+│  │Builder  ││Builder  ││Builder  ││ Builder  ││ Builder  │                │
+│  │1,634 LOC││1,427 LOC││1,466 LOC││1,903 LOC ││1,800 LOC │                │
+│  │4 modes  ││策略交接 ││群聊投票 ││多Agent   ││並行群集  │                │
+│  └─────────┘└─────────┘└─────────┘└──────────┘└──────────┘                │
+│       ┌──────────┬───────────┬───────────┐                                  │
+│       ↓          ↓           ↓           ↓                                  │
+│  ┌─────────┐┌─────────┐┌─────────┐┌──────────┐                             │
+│  │ Custom  ││ A2A     ││ Edge    ││Assistant │                             │
+│  │ Builder ││ Builder ││Routing  ││(Code Int)│                             │
+│  │3,024 LOC││1,321 LOC││ 884 LOC ││ 923 LOC  │                             │
+│  │DSL 定義 ││跨系統   ││條件路由 ││程式解讀  │                             │
+│  └─────────┘└─────────┘└─────────┘└──────────┘                             │
+│       │          │           │           │                                  │
+│       └──────────┴───────────┴───────────┘                                  │
+│                              │                                              │
+│                              ↓                                              │
+│  ┌──────────────────────────────────────────────────────────────────┐       │
+│  │  Microsoft Agent Framework Core API (agent_framework 1.0.0rc4)   │       │
+│  │  ConcurrentBuilder, HandoffBuilder, GroupChatBuilder, etc.       │       │
+│  └──────────────────────────────────────────────────────────────────┘       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Checkpoint 存儲後端
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Checkpoint 三層存儲架構                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Agent Execution (run/run_stream)                                           │
+│       │                                                                     │
+│       ↓  save_checkpoint() / load_checkpoint()                             │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │          CachedCheckpointStorage (組合模式)                   │          │
+│  │          primary + cache 雙層寫入                             │          │
+│  └──────────────┬───────────────────────┬───────────────────────┘          │
+│                 │ write-through          │ read (cache-first)               │
+│                 ↓                        ↓                                  │
+│  ┌──────────────────────┐  ┌──────────────────────┐                        │
+│  │ PostgresCheckpoint   │  │ RedisCheckpointCache  │                        │
+│  │ Storage (持久化)      │  │ (快取加速)            │                        │
+│  │                      │  │                      │                        │
+│  │ • SQLAlchemy ORM     │  │ • TTL: 3600s (1hr)  │                        │
+│  │ • 永久保存           │  │ • 自動過期            │                        │
+│  │ • 查詢歷史記錄       │  │ • 高速讀取            │                        │
+│  └──────────────────────┘  └──────────────────────┘                        │
+│                                                                             │
+│  ⚠️ InMemoryCheckpointStorage (開發/測試用)                                │
+│  • 進程重啟後資料遺失  • 不適合生產環境  • ⚠ VOLATILE                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Builder 生命週期
+
+```mermaid
+sequenceDiagram
+    participant App as IPA Platform
+    participant Adapter as BuilderAdapter
+    participant MAF as MAF Core API
+    participant CP as CheckpointStorage
+
+    App->>Adapter: create(config)
+    Adapter->>MAF: OfficialBuilder()
+    Adapter->>CP: init storage backend
+
+    App->>Adapter: build()
+    Adapter->>MAF: builder.build()
+    MAF-->>Adapter: built workflow
+
+    App->>Adapter: run_stream(input)
+    Adapter->>CP: load_checkpoint(session_id)
+    CP-->>Adapter: previous state (or None)
+    Adapter->>MAF: workflow.run(input, state)
+
+    loop Streaming
+        MAF-->>Adapter: execution event
+        Adapter->>CP: save_checkpoint(state)
+        Adapter-->>App: yield event
+    end
+
+    MAF-->>Adapter: execution complete
+    Adapter->>CP: final save_checkpoint
+    Adapter-->>App: yield done event
+```
+
+---
+
 ## 2. File Inventory
 
 ### 2.1 Root Files (5 files)

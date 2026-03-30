@@ -17,6 +17,102 @@
 
 ---
 
+### Mock/Real 實作光譜
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Mock / Real 實作光譜總覽                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  REAL only          REAL + fallback      InMemory ⚠       Mock fallback    │
+│  (純實作)           (降級保護)           (揮發性風險)      (假資料)          │
+│  ──────────        ─────────────        ────────────      ────────────     │
+│                                                                             │
+│  correlation/      llm/                 agent_framework/   patrol/          │
+│  a2a/              claude_sdk/          hybrid/             domain/agents/  │
+│  memory/           swarm/               orchestration/      domain/routing/ │
+│  learning/         knowledge/           ag_ui/              domain/orch./   │
+│                    incident/            mcp/                                │
+│                                         rootcause/                          │
+│                                                                             │
+│  ←──────────── Production Ready ──────────── Risk Zone ──────────────→     │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Fallback 策略層級:                                                         │
+│                                                                             │
+│  ┌─── LLM Service ──────────────────────────────────────────────┐          │
+│  │  Primary: Azure OpenAI (gpt-4o)                              │          │
+│  │     │ 失敗                                                    │          │
+│  │     ↓                                                         │          │
+│  │  Fallback: Claude SDK (SmartFallback with retry chain)        │          │
+│  │     │ 失敗                                                    │          │
+│  │     ↓                                                         │          │
+│  │  Dev only: MockLLMService (WARNING log)                       │          │
+│  │  Prod: RuntimeError (不允許靜默降級)                          │          │
+│  └───────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+│  ┌─── Knowledge/RAG ────────────────────────────────────────────┐          │
+│  │  Primary: Qdrant vector store                                 │          │
+│  │     │ qdrant_client 不可用                                    │          │
+│  │     ↓                                                         │          │
+│  │  Fallback: In-memory hash (偽 embedding, 搜尋品質大幅下降)    │          │
+│  └───────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+│  ┌─── Patrol ───────────────────────────────────────────────────┐          │
+│  │  Primary: psutil (系統資源監控)                                │          │
+│  │     │ psutil 未安裝                                           │          │
+│  │     ↓                                                         │          │
+│  │  Fallback: 偽造監控數據 (fabricated metrics)                   │          │
+│  └───────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 揮發性儲存風險圖
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    InMemory 揮發性儲存 — 資料遺失風險                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Component                    Module              Risk    Impact            │
+│  ─────────                   ──────              ────    ──────            │
+│                                                                             │
+│  InMemoryCheckpointStorage   agent_framework/    🔴 HIGH  工作流狀態全部遺失│
+│                              hybrid/                      進程重啟=從頭開始 │
+│                                                                             │
+│  InMemoryApprovalStorage     orchestration/hitl  🔴 HIGH  待審批項目消失    │
+│                              incident/                    安全審批斷裂     │
+│                                                                             │
+│  InMemoryThreadRepository    ag_ui/thread        🟡 MED   對話歷史遺失     │
+│                                                           用戶體驗中斷     │
+│                                                                             │
+│  InMemoryCache               ag_ui/              🟡 MED   快取失效         │
+│                                                           效能短暫下降     │
+│                                                                             │
+│  InMemoryDialogSession       orchestration/      🟡 MED   引導對話中斷     │
+│  Storage                     guided_dialog                需重新開始對話   │
+│                                                                             │
+│  InMemoryConversationMemory  domain/orch         🟢 LOW   已 deprecated    │
+│  Store                                                    影響範圍小       │
+│                                                                             │
+│  InMemoryAuditStorage        mcp/security        🟡 MED   稽核軌跡遺失    │
+│                                                           合規風險         │
+│                                                                             │
+│  InMemoryTransport           mcp/core            🟢 LOW   僅測試用途      │
+│                                                           生產用 Stdio     │
+│                                                                             │
+│  ─────────────────────────────────────────────────────────────────          │
+│  建議: 🔴 HIGH → 立即遷移至 Redis/PostgreSQL                               │
+│        🟡 MED  → 下一 Sprint 遷移                                          │
+│        🟢 LOW  → 可接受 (測試/已棄用)                                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 1. Per-Module Status Matrix
 
 ### 1.1 integrations/ Modules

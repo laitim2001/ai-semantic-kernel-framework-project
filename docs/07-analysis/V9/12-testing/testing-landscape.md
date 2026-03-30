@@ -36,6 +36,82 @@
 
 ---
 
+### 測試覆蓋金字塔
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    IPA Platform 測試金字塔                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│                        ╱╲                                                   │
+│                       ╱  ╲     Load Tests (1 file)                         │
+│                      ╱ 🔥 ╲    locustfile.py                              │
+│                     ╱──────╲                                                │
+│                    ╱        ╲   Security Tests (3 files)                   │
+│                   ╱   🛡️    ╲                                              │
+│                  ╱────────────╲                                             │
+│                 ╱              ╲  E2E Tests (19 backend + 11 frontend)     │
+│                ╱    🌐 E2E     ╲  Playwright browser automation            │
+│               ╱────────────────╲                                           │
+│              ╱                  ╲  Performance Tests (12 files)            │
+│             ╱    ⚡ Perf         ╲                                          │
+│            ╱──────────────────────╲                                        │
+│           ╱                        ╲  Integration Tests (24 files)         │
+│          ╱    🔗 Integration        ╲  API endpoint testing               │
+│         ╱────────────────────────────╲                                     │
+│        ╱                              ╲  Unit Tests (145 + 13 files)      │
+│       ╱        🧪 Unit Tests          ╲  Backend: 145 files               │
+│      ╱          (最大覆蓋面積)          ╲  Frontend: 13 files             │
+│     ╱────────────────────────────────────╲                                 │
+│                                                                             │
+│  Total: ~185 backend + 24 frontend = ~209 test files                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 測試缺口熱力圖
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    模組測試覆蓋熱力圖                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Integration Modules          Coverage    Status                            │
+│  ──────────────────          ────────    ──────                            │
+│  agent_framework/        ████████████  ✅ GOOD  (~30+ test files)          │
+│  claude_sdk/             ███████████   ✅ GOOD  (~25+ test files)          │
+│  hybrid/                 ██████████    ✅ GOOD  (~20+ test files)          │
+│  ag_ui/                  █████████     ✅ GOOD  (~15+ test files)          │
+│  orchestration/          ████████      ✅ GOOD  (~12+ test files)          │
+│  mcp/                    ███████       ✅ FAIR  (~10+ test files)          │
+│  llm/                    ████          ⚠️ LOW   (~4 test files)            │
+│  swarm/                  ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
+│  memory/                 ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
+│  knowledge/              ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
+│  learning/               ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
+│  a2a/                    ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
+│  patrol/                 ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
+│  audit/                  ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
+│                                                                             │
+│  Domain Modules                                                             │
+│  ──────────────                                                            │
+│  sessions/               ████████████  ✅ GOOD  (19/24 domain tests)       │
+│  workflows/              ████           ⚠️ SOME                             │
+│  agents/                 ████           ⚠️ SOME                             │
+│  其他 18 domain modules  ░░░░░░░░░░░░  🔴 ZERO                             │
+│                                                                             │
+│  Frontend                                                                   │
+│  ────────                                                                  │
+│  agent-swarm/ components ████████      ✅ GOOD  (13 unit tests)            │
+│  其他所有 UI              ░░░░░░░░░░░░  🔴 ZERO  (0 unit tests)            │
+│                                                                             │
+│  █ = covered   ░ = NO coverage   🔴 = 7 critical modules with ZERO tests  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 2. Test Inventory
 
 ### 2.1 Backend Tests

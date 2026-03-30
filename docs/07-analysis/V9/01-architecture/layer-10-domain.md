@@ -31,6 +31,129 @@
 
 ---
 
+### Domain 模組階層圖
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              Layer 10: Domain Layer — 21 模組 (117 files, 47,637 LOC)       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ★ CRITICAL PATH (佔 Layer 56.6%)                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐       │
+│  │  sessions/ (33 files, 15,473 LOC) — Agent-Session 整合          │       │
+│  │  • Session 生命週期   • Message 處理   • ToolCall 審批          │       │
+│  │  • AgentExecutor      • SSE Events    • SessionAgentBridge      │       │
+│  ├──────────────────────────────────────────────────────────────────┤       │
+│  │  ⚠ orchestration/ (22 files, 11,465 LOC) — DEPRECATED          │       │
+│  │  • 已被 integrations/hybrid/ 取代  • 保留供向後相容             │       │
+│  └──────────────────────────────────────────────────────────────────┘       │
+│                                                                             │
+│  ■ ACTIVE MODULES                                                           │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐                │
+│  │ workflows/ (11)│  │ agents/ (7)    │  │ connectors/ (6)│                │
+│  │ ~5,500 LOC     │  │ ~2,500 LOC     │  │ ~1,800 LOC     │                │
+│  │ 工作流定義/執行│  │ Agent CRUD/工具│  │ 外部連接器     │                │
+│  │ 持久化: DB     │  │ 持久化: DB     │  │ 持久化: 無     │                │
+│  └────────────────┘  └────────────────┘  └────────────────┘                │
+│                                                                             │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐                │
+│  │ executions/ (2)│  │checkpoints/ (3)│  │ templates/ (3) │                │
+│  │ ~800 LOC       │  │ ~1,500 LOC     │  │ ~700 LOC       │                │
+│  │ 狀態機 6 states│  │ 檢查點存儲     │  │ 工作流模板     │                │
+│  │ 持久化: DB     │  │ 持久化: DB     │  │ 持久化: DB     │                │
+│  └────────────────┘  └────────────────┘  └────────────────┘                │
+│                                                                             │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐                │
+│  │ auth/ (3)      │  │ files/ (3)     │  │ triggers/ (2)  │                │
+│  │ ~600 LOC       │  │ ~600 LOC       │  │ ~500 LOC       │                │
+│  │ 持久化: DB     │  │ 持久化: FS     │  │ 持久化: DB     │                │
+│  └────────────────┘  └────────────────┘  └────────────────┘                │
+│                                                                             │
+│  ⚠ InMemory RISK (資料遺失風險)                                            │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐                │
+│  │ audit/ (2)     │  │ routing/ (2)   │  │ learning/ (2)  │                │
+│  │ InMemory ⚠     │  │ InMemory ⚠     │  │ InMemory ⚠     │                │
+│  ├────────────────┤  ├────────────────┤  ├────────────────┤                │
+│  │ versioning/ (2)│  │ devtools/ (2)  │  │ sandbox/ (2)   │                │
+│  │ InMemory ⚠     │  │ InMemory ⚠     │  │ Stateless      │                │
+│  └────────────────┘  └────────────────┘  └────────────────┘                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Session 生命週期狀態機
+
+```mermaid
+stateDiagram-v2
+    [*] --> CREATED: create_session()
+
+    CREATED --> ACTIVE: activate_session()
+    ACTIVE --> SUSPENDED: suspend_session()
+    SUSPENDED --> ACTIVE: resume_session()
+    ACTIVE --> ENDED: end_session()
+    SUSPENDED --> ENDED: end_session()
+
+    state ACTIVE {
+        [*] --> Idle
+        Idle --> Processing: send_message()
+        Processing --> ToolPending: tool_call_requested
+        ToolPending --> ToolRunning: approve_tool_call()
+        ToolPending --> Idle: reject_tool_call()
+        ToolRunning --> Idle: tool_completed/failed
+        Processing --> Idle: response_complete
+    }
+
+    note right of ACTIVE
+        核心操作:
+        • send_message() → AgentExecutor
+        • 工具審批 (HITL)
+        • SSE 事件串流
+        • Checkpoint 存儲
+    end note
+
+    note right of ENDED
+        清理操作:
+        • cleanup_expired_sessions()
+        • 記憶體釋放
+        • 最終 Checkpoint
+    end note
+```
+
+### 模組持久化矩陣
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Domain 模組持久化方式對照                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  持久化方式        模組                            資料遺失風險             │
+│  ─────────────    ─────────────────────            ────────────             │
+│                                                                             │
+│  PostgreSQL DB    sessions, workflows, agents,     ✅ 安全                  │
+│                   executions, checkpoints,                                  │
+│                   templates, auth, triggers,                                │
+│                   prompts, chat_history, tasks                              │
+│                                                                             │
+│  Redis Cache      sessions (快取層)                ⚠ TTL 過期              │
+│                   orchestration (部分)                                      │
+│                                                                             │
+│  Filesystem       files (上傳檔案)                 ✅ 安全                  │
+│                                                                             │
+│  InMemory ⚠       audit, routing, learning,        🔴 進程重啟即遺失       │
+│                   versioning, devtools                                      │
+│                   (共 5 模組, ~2,100 LOC)                                   │
+│                                                                             │
+│  Stateless        connectors, sandbox,             ✅ N/A                   │
+│                   notifications                                             │
+│                                                                             │
+│  ⚠ 風險說明: InMemory 模組在進程重啟時會遺失所有資料                       │
+│    建議: 遷移至 Redis 或 PostgreSQL 持久化                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 2. File Inventory
 
 ### 2.1 Module Summary Table

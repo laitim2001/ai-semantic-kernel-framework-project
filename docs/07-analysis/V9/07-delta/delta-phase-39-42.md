@@ -5,6 +5,79 @@
 
 ---
 
+### Phase 39-42 組裝缺口與解決方案
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              Phase 39-42 三大組裝缺口 → 解決方案                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  問題: Phase 35-38 建了 ~60 files / 10K+ LOC，但各模組獨立無法運行         │
+│                                                                             │
+│  ┌─── Gap #1: Assembly Gap ──────────────────────────────────────┐          │
+│  │  OrchestratorMediator 7 handlers 全部 = None                  │          │
+│  │                    ↓ 解決方案                                  │          │
+│  │  OrchestratorBootstrap (factory method)                        │          │
+│  │  一次初始化: 7 handlers + MCP + Memory + ToolSecurity          │          │
+│  └───────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+│  ┌─── Gap #2: No Background Execution ───────────────────────────┐          │
+│  │  所有執行綁定 HTTP request lifecycle                           │          │
+│  │                    ↓ 解決方案                                  │          │
+│  │  ARQ Redis-backed queue                                        │          │
+│  │  dispatch_workflow / dispatch_swarm → background workers        │          │
+│  └───────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+│  ┌─── Gap #3: Old/New System Coexistence ────────────────────────┐          │
+│  │  AG-UI bridge 仍連接舊 HybridOrchestratorV2                   │          │
+│  │                    ↓ 解決方案                                  │          │
+│  │  MediatorEventBridge                                           │          │
+│  │  Mediator events → AG-UI SSE format (thinking, tool-call)      │          │
+│  └───────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Handler 接線拓撲
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              OrchestratorBootstrap → 7 Handler 接線拓撲                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  OrchestratorBootstrap.create()                                             │
+│       │                                                                     │
+│       ├──→ ContextHandler ────────→ MemoryManager                          │
+│       │                              (自動記憶注入)                         │
+│       │                                                                     │
+│       ├──→ RoutingHandler ────────→ InputGateway                           │
+│       │                           → FrameworkSelector                       │
+│       │                           → BusinessIntentRouter                    │
+│       │                                                                     │
+│       ├──→ DialogHandler ─────────→ GuidedDialogEngine                     │
+│       │                              (條件觸發: 資訊不完整時)              │
+│       │                                                                     │
+│       ├──→ ApprovalHandler ───────→ RiskAssessor (7 維度)                  │
+│       │                           → UnifiedApprovalManager                  │
+│       │                           → HITL Controller (PostgreSQL)            │
+│       │                                                                     │
+│       ├──→ AgentHandler ──────────→ Azure OpenAI (function calling)         │
+│       │                           → FrameworkSelector (MAF/Claude/Swarm)    │
+│       │                                                                     │
+│       ├──→ ExecutionHandler ──────→ MAF Executor                           │
+│       │                           → Claude Executor                         │
+│       │                           → SwarmHandler                            │
+│       │                           → ARQ BackgroundQueue                     │
+│       │                                                                     │
+│       └──→ ObservabilityHandler ──→ Metrics Collector                      │
+│                                   → CheckpointStorage                       │
+│                                   → PipelineEventEmitter → SSE             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Phase 39: E2E Assembly D — Pipeline Assembly & Wiring
 - **Sprints**: 134-137
 - **Story Points**: ~44

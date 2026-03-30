@@ -6,6 +6,79 @@
 
 ---
 
+### Swarm 執行引擎架構 (Phase 43 目標)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              Phase 43 Swarm Engine — Mock → Real 架構轉換                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  用戶複雜任務 (e.g. "診斷伺服器故障")                                      │
+│       │                                                                     │
+│       ↓                                                                     │
+│  ┌──────────────────────────────────────────┐                               │
+│  │  TaskDecomposer (LLM 分析)              │                               │
+│  │  複雜任務 → 子任務分解 → Worker 分配     │                               │
+│  └─────────────────┬────────────────────────┘                               │
+│                    │                                                         │
+│       ┌────────────┼────────────┐                                           │
+│       ↓            ↓            ↓                                           │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐     asyncio.gather()                 │
+│  │Worker A │ │Worker B │ │Worker C │     (真正並行, 非 for 迴圈)           │
+│  │Network  │ │Database │ │App      │                                        │
+│  │Expert   │ │Expert   │ │Expert   │                                        │
+│  │         │ │         │ │         │                                        │
+│  │┌───────┐│ │┌───────┐│ │┌───────┐│                                       │
+│  ││ Tool  ││ ││ Tool  ││ ││ Tool  ││  每個 Worker 獨立工具註冊表            │
+│  ││Registry││ ││Registry││ ││Registry││                                      │
+│  │└───────┘│ │└───────┘│ │└───────┘│                                       │
+│  └────┬────┘ └────┬────┘ └────┬────┘                                       │
+│       │           │           │                                             │
+│       └─────┬─────┴─────┬─────┘                                             │
+│             │           │                                                    │
+│             ↓           ↓                                                    │
+│  ┌──────────────┐  ┌──────────────────────┐                                 │
+│  │SwarmEvent    │  │ SwarmTracker          │                                 │
+│  │Emitter       │  │ (thread-safe state)   │                                 │
+│  │→ SSE 即時串流│  │ 進度追蹤 + 結果聚合  │                                 │
+│  └──────────────┘  └──────────────────────┘                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6 個缺口封閉路線圖
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              Phase 43 缺口封閉計劃                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Gap   Current State              Target State              Priority        │
+│  ───   ─────────────              ────────────              ────────        │
+│                                                                             │
+│  #1    for loop (sequential)  →   asyncio.gather()          🔴 CRITICAL    │
+│        Workers 逐一執行           真正並行執行                              │
+│                                                                             │
+│  #2    tools=None             →   Per-worker ToolRegistry   🔴 CRITICAL    │
+│        Worker 無工具存取          獨立工具 + function call                  │
+│                                                                             │
+│  #3    SwarmEventEmitter      →   Connected to SSE          🟡 HIGH        │
+│        已建但未接線               PipelineEventEmitter                      │
+│                                                                             │
+│  #4    只有最終結果            →   即時 think/tool events    🟡 HIGH        │
+│        無中間過程事件             每步驟串流到前端                          │
+│                                                                             │
+│  #5    demo.py polling        →   AG-UI CustomEvent format  🟢 MEDIUM      │
+│        格式不相容                 統一 SSE 格式                             │
+│                                                                             │
+│  #6    swarmStore unused      →   Single source of truth    🟢 MEDIUM      │
+│        多 hooks 各管各的          Zustand 統一管理                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Phase 43: Agent Swarm Complete Implementation — True Multi-Agent Parallel Collaboration
 - **Sprints**: 148-150
 - **Story Points**: ~36

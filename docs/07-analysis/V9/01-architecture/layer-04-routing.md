@@ -19,6 +19,119 @@
 
 ---
 
+### 三層意圖路由總覽
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    L04 三層意圖分類管線                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  用戶輸入 (Web UI / API / ServiceNow / Prometheus)                         │
+│       │                                                                     │
+│       ↓                                                                     │
+│  ┌──────────────────────────────────────────────────────────┐               │
+│  │  L1: PatternMatcher (規則匹配)                           │               │
+│  │  • YAML-loaded regex rules, priority-sorted              │               │
+│  │  • 411 LOC | 速度: <1ms                                  │               │
+│  │  • 匹配 → confidence ≥ 0.8? ──→ ✓ 直接路由              │               │
+│  └─────────────┬────────────────────────────────────────────┘               │
+│                │ 未匹配 (confidence < 0.8)                                  │
+│                ↓                                                             │
+│  ┌──────────────────────────────────────────────────────────┐               │
+│  │  L2: SemanticRouter (語義路由)                            │               │
+│  │  • Aurelio 向量相似度 / Azure AI Search                   │               │
+│  │  • 15 predefined routes, 75 utterances                   │               │
+│  │  • 匹配 → confidence ≥ 0.7? ──→ ✓ 語義路由              │               │
+│  └─────────────┬────────────────────────────────────────────┘               │
+│                │ 未匹配 (confidence < 0.7)                                  │
+│                ↓                                                             │
+│  ┌──────────────────────────────────────────────────────────┐               │
+│  │  L3: LLMClassifier (LLM 分類)                            │               │
+│  │  • Azure OpenAI GPT-4o, Traditional Chinese prompts      │               │
+│  │  • 294 LOC | 帶快取 (ClassificationCache)                │               │
+│  │  • 多任務: 意圖 + 風險 + 完整度 一次推理                 │               │
+│  └─────────────┬────────────────────────────────────────────┘               │
+│                │                                                             │
+│                ↓                                                             │
+│  ┌──────────────────────────────────────────────────────────┐               │
+│  │  CompletenessChecker (資訊完整度)                         │               │
+│  │  • 缺少必要欄位? ──→ GuidedDialogEngine (引導式對話)     │               │
+│  │  • 資訊完整 ──→ RiskAssessor (風險評估)                   │               │
+│  └──────────────────────────────────────────────────────────┘               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Intent → 工作流類型映射
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                 ITIntentCategory → WorkflowType 映射                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ITIntentCategory          RiskLevel        WorkflowType                    │
+│  ─────────────────         ─────────        ────────────                    │
+│  INCIDENT (事件)     ──→   HIGH        ──→  MAGENTIC (多Agent協作)          │
+│    ├ server_down                             需要診斷+修復+驗證             │
+│    └ service_outage                                                         │
+│                                                                             │
+│  REQUEST (請求)      ──→   MEDIUM      ──→  HANDOFF (逐步交接)             │
+│    ├ access_request                          需要多部門審批                 │
+│    └ resource_provision                                                     │
+│                                                                             │
+│  CHANGE (變更)       ──→   HIGH        ──→  SEQUENTIAL (順序執行)           │
+│    ├ config_change                           需要嚴格步驟控制               │
+│    └ deployment                                                             │
+│                                                                             │
+│  QUERY (查詢)        ──→   LOW         ──→  SIMPLE (直接回答)               │
+│    ├ status_check                            單輪對話即可                   │
+│    └ knowledge_lookup                                                       │
+│                                                                             │
+│  UNKNOWN (未知)      ──→   MEDIUM      ──→  GuidedDialog (引導澄清)        │
+│    └ ambiguous_input                         需要更多資訊                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 風險評估與 HITL 審批流程
+
+```mermaid
+stateDiagram-v2
+    [*] --> RiskAssessment: 路由結果輸入
+
+    RiskAssessment --> LOW_RISK: score < 0.3
+    RiskAssessment --> MEDIUM_RISK: 0.3 ≤ score < 0.7
+    RiskAssessment --> HIGH_RISK: score ≥ 0.7
+
+    LOW_RISK --> AutoApproved: 自動放行
+    MEDIUM_RISK --> HITL_Review: 需人工審查
+    HIGH_RISK --> HITL_Review: 強制人工審批
+
+    state HITL_Review {
+        PENDING --> APPROVED: 審批通過
+        PENDING --> REJECTED: 審批拒絕
+        PENDING --> EXPIRED: 逾時 (timeout)
+    }
+
+    AutoApproved --> ExecutionDispatch
+    APPROVED --> ExecutionDispatch
+    REJECTED --> UserNotified: 通知用戶被拒
+    EXPIRED --> UserNotified: 通知逾時
+
+    note right of RiskAssessment
+        7 維度風險評估:
+        1. 操作影響範圍
+        2. 資料敏感度
+        3. 可逆性
+        4. 系統穩定性
+        5. 合規要求
+        6. 時間緊迫性
+        7. 歷史風險記錄
+    end note
+```
+
+---
+
 ## 2. File Inventory (55 files)
 
 ### 2.1 Intent Router (14 files, ~3,815 LOC)

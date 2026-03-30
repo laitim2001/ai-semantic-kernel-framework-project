@@ -18,6 +18,129 @@
 
 ---
 
+### 資料模型層堆疊
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    IPA Platform 全棧資料模型                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌───────────────────── Frontend ────────────────────────────────┐          │
+│  │                                                                │          │
+│  │  Zustand Stores (3)           TypeScript Types (4 files)       │          │
+│  │  ┌──────────────┐            ┌──────────────────┐             │          │
+│  │  │ agentStore   │            │ types/agent.ts   │             │          │
+│  │  │ sessionStore │            │ types/session.ts │             │          │
+│  │  │ workflowStore│            │ types/workflow.ts│             │          │
+│  │  └──────┬───────┘            │ types/common.ts  │             │          │
+│  │         │ state = TS types   └────────┬─────────┘             │          │
+│  │         └────────────────────────────┘                        │          │
+│  └────────────────────────────────┬───────────────────────────────┘          │
+│                                   │ JSON (Fetch API)                        │
+│                                   ↓                                         │
+│  ┌───────────────────── API Layer ───────────────────────────────┐          │
+│  │                                                                │          │
+│  │  Pydantic Schemas (30 files)                                   │          │
+│  │  ┌──────────────────────────────────────┐                     │          │
+│  │  │ Request:  AgentCreate, SessionCreate │  ← 驗證 + 序列化    │          │
+│  │  │ Response: AgentResponse, SessionResp │  → JSON 輸出        │          │
+│  │  │ Internal: OrchestratorRequest, etc.  │  ← 管線內部傳遞     │          │
+│  │  └──────────────────┬───────────────────┘                     │          │
+│  └─────────────────────┼──────────────────────────────────────────┘          │
+│                        │ model_validate / model_dump                        │
+│                        ↓                                                    │
+│  ┌───────────────────── Data Layer ──────────────────────────────┐          │
+│  │                                                                │          │
+│  │  SQLAlchemy ORM Models (8 tables)                              │          │
+│  │  ┌──────────────────────────────────────┐                     │          │
+│  │  │ User, Agent, Workflow, Session       │                     │          │
+│  │  │ Execution, Checkpoint, Message       │                     │          │
+│  │  │ ToolApproval                         │                     │          │
+│  │  └──────────────────┬───────────────────┘                     │          │
+│  │                     │ async SQLAlchemy                         │          │
+│  │                     ↓                                         │          │
+│  │  ┌──────────────────────────────────────┐                     │          │
+│  │  │        PostgreSQL 16 Database        │                     │          │
+│  │  └──────────────────────────────────────┘                     │          │
+│  └────────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 實體關係圖
+
+```mermaid
+erDiagram
+    users ||--o{ agents : "creates"
+    users ||--o{ sessions : "owns"
+    users ||--o{ workflows : "creates"
+
+    agents ||--o{ sessions : "assigned to"
+    agents {
+        uuid id PK
+        string name
+        string description
+        json capabilities
+        string framework_type
+        boolean is_active
+    }
+
+    sessions ||--o{ messages : "contains"
+    sessions ||--o{ tool_approvals : "requires"
+    sessions {
+        uuid id PK
+        uuid user_id FK
+        uuid agent_id FK
+        string status
+        json config
+        json metadata
+    }
+
+    messages {
+        uuid id PK
+        uuid session_id FK
+        string role
+        text content
+        json attachments
+        json tool_calls
+    }
+
+    tool_approvals {
+        uuid id PK
+        uuid session_id FK
+        string tool_name
+        json arguments
+        string status
+        string resolved_by
+    }
+
+    workflows ||--o{ executions : "triggers"
+    workflows {
+        uuid id PK
+        string name
+        json definition
+        string builder_type
+    }
+
+    executions ||--o{ checkpoints : "saves"
+    executions {
+        uuid id PK
+        uuid workflow_id FK
+        string status
+        json result
+        json error
+    }
+
+    checkpoints {
+        uuid id PK
+        uuid execution_id FK
+        json state
+        integer step_number
+    }
+```
+
+---
+
 ## 1. Database Models (SQLAlchemy ORM)
 
 **Location**: `backend/src/infrastructure/database/models/`

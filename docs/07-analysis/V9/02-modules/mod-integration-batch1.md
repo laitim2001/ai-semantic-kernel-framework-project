@@ -20,6 +20,50 @@
 
 ---
 
+### 整合模組中心樞紐架構
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                Integration Modules 中心樞紐 (Batch 1)                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────┐   ┌──────────────┐   ┌───────────────┐                    │
+│  │orchestration│   │agent_framework│   │  claude_sdk   │                    │
+│  │ 三層意圖路由 │   │ MAF Adapters  │   │ Claude Agent  │                    │
+│  │ (22 files)  │   │ (30+ builders)│   │  SDK (40 files)│                   │
+│  └──────┬──────┘   └──────┬───────┘   └──────┬────────┘                    │
+│         │                 │                   │                              │
+│         └────────────┬────┴───────────────────┘                              │
+│                      │                                                       │
+│                      ↓                                                       │
+│         ┌────────────────────────────┐                                       │
+│         │     hybrid/ (89 files)     │  ← 中央協調器                         │
+│         │  OrchestratorMediator      │                                       │
+│         │  ContextBridge             │                                       │
+│         │  FrameworkSelector         │                                       │
+│         │  MediatorEventBridge       │                                       │
+│         └────────────┬───────────────┘                                       │
+│                      │                                                       │
+│         ┌────────────┼─────────────────┐                                     │
+│         │            │                 │                                     │
+│         ↓            ↓                 ↓                                     │
+│  ┌──────────┐  ┌──────────┐   ┌──────────────┐                              │
+│  │  ag_ui/  │  │   mcp/   │   │   swarm/     │                              │
+│  │ AG-UI SSE│  │ 5 Servers│   │ 多Agent協作  │                              │
+│  │(14 files)│  │(25 files)│   │ (21 files)   │                              │
+│  └──────────┘  └──────────┘   └──────────────┘                              │
+│                                                                             │
+│  ┌──────────┐  ┌──────────┐   ┌──────────────┐                              │
+│  │   llm/   │  │knowledge/│   │   memory/    │                              │
+│  │ LLM 抽象 │  │RAG Pipeline│  │ 統一記憶    │                              │
+│  │(14 files)│  │(14 files)│   │ (11 files)   │                              │
+│  └──────────┘  └──────────┘   └──────────────┘                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 <a id="module-hybrid"></a>
 ## Module: hybrid
 
@@ -48,6 +92,42 @@ class OrchestratorMediator:
 ```
 
 **Pipeline**: Context → Routing → Dialog (conditional) → Approval (conditional) → Agent (LLM) → Execution → Observability
+
+#### OrchestratorMediator 7-Handler Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                  OrchestratorMediator 處理管線                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  OrchestratorRequest                                                    │
+│       │                                                                 │
+│       ↓                                                                 │
+│  ① CONTEXT Handler ──→ 載入 Session/Memory/Checkpoint 上下文            │
+│       │                                                                 │
+│       ↓                                                                 │
+│  ② ROUTING Handler ──→ 三層意圖路由 (Pattern→Semantic→LLM)             │
+│       │                  ↓ 判斷意圖類型 + 風險等級                       │
+│       ↓                                                                 │
+│  ③ DIALOG Handler ──→ [條件] 需要澄清? → 引導式對話                    │
+│       │                  ↓ short_circuit 如需更多資訊                    │
+│       ↓                                                                 │
+│  ④ APPROVAL Handler ─→ [條件] 高風險? → HITL 審批閘門                  │
+│       │                  ↓ 等待人工審批或自動放行                        │
+│       ↓                                                                 │
+│  ⑤ AGENT Handler ────→ 選擇框架 (MAF / Claude / Hybrid / Swarm)        │
+│       │                  ↓ LLM 推理 + 工具調用                          │
+│       ↓                                                                 │
+│  ⑥ EXECUTION Handler → 執行工具/子任務 + 結果整合                      │
+│       │                                                                 │
+│       ↓                                                                 │
+│  ⑦ OBSERVABILITY Handler → 指標收集 + SSE 事件串流 + Audit Log         │
+│       │                                                                 │
+│       ↓                                                                 │
+│  OrchestratorResponse                                                   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
 #### Contracts (`orchestrator/contracts.py`)
 ```python

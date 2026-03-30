@@ -26,6 +26,61 @@ pie title Issue Severity Distribution (103 total)
     "R4 New (10)" : 10
 ```
 
+### 問題嚴重度分佈
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    V9 Issue Severity Distribution                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CRITICAL (14)  🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴                            │
+│                 ├─ FIXED: 2    ├─ OPEN: 4    ├─ NEW: 8                     │
+│                                                                             │
+│  HIGH (22)      🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠        │
+│                 ├─ FIXED: 1    ├─ OPEN: 11   ├─ WORSENED: 1  ├─ NEW: 9    │
+│                                                                             │
+│  MEDIUM (30)    🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡│
+│                 ├─ FIXED: 0    ├─ OPEN: 16   ├─ NEW: 14                    │
+│                                                                             │
+│  LOW (27)       🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢│
+│                 ├─ FIXED: 0    ├─ OPEN: 11   ├─ NEW: 16                    │
+│                                                                             │
+│  V8→V9 對比:  V8 有 62 issues → V9 有 93 issues (+31)                     │
+│  原因: V9 分析涵蓋更多模組 (Phase 35-44 新增碼約 30K LOC)                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 各層問題修復優先路線圖
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              修復優先順序路線圖                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Phase N (當前)                                                             │
+│  ├─ 🔴 C01: InMemory → Redis/PG 遷移 (跨層, 20+ modules)                 │
+│  ├─ 🔴 C03: MAF API 棄用方法替換 (agent_framework)                        │
+│  ├─ 🔴 C06: 死碼/孤立端點清理 (L02/L10)                                   │
+│  └─ 🔴 C09: SSE 記憶體洩漏修復 (L03 AG-UI)                               │
+│                                                                             │
+│  Phase N+1                                                                  │
+│  ├─ 🟠 H01-H11: 11 HIGH severity issues                                   │
+│  │   ├─ MAF checkpoint InMemory 替換                                       │
+│  │   ├─ domain/orchestration deprecated 清理                               │
+│  │   └─ Zero test coverage modules 補測試                                  │
+│  └─ 🟠 H-NEW: 9 new HIGH issues from Phase 35-44                          │
+│                                                                             │
+│  Phase N+2                                                                  │
+│  ├─ 🟡 M01-M30: 30 MEDIUM severity issues                                 │
+│  │   ├─ HS256 → RS256 JWT 升級                                            │
+│  │   ├─ datetime.utcnow() → datetime.now(UTC) 遷移                        │
+│  │   └─ Config 散落問題統一 (15+ 硬編碼值)                                 │
+│  └─ 🟢 L01-L27: LOW priority (tech debt, style)                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ### By Layer
 
 | Layer | Issues | CRITICAL | HIGH | MEDIUM | LOW |

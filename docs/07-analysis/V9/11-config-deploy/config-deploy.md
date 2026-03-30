@@ -34,6 +34,71 @@
 
 ---
 
+### 環境與配置串聯總覽
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    IPA Platform 配置與部署架構                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ① 配置載入鏈                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
+│  │ .env 檔案     │──→│ Pydantic     │──→│ Settings     │                  │
+│  │ (root + back) │    │ BaseSettings │    │ 單例實例     │                  │
+│  │ 118 + 197 行  │    │ case_insensit│    │ get_settings()│                 │
+│  └──────────────┘    └──────────────┘    └──────┬───────┘                  │
+│                                                  │                          │
+│                                                  ↓                          │
+│  ② Docker Compose 服務拓撲                                                 │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │                    docker-compose.yml                         │          │
+│  │                                                              │          │
+│  │  ┌─────────┐  ┌─────────┐  ┌──────────┐  ┌──────────┐      │          │
+│  │  │Backend  │  │Frontend │  │PostgreSQL│  │  Redis   │      │          │
+│  │  │:8000    │  │:3005    │  │:5432     │  │:6379     │      │          │
+│  │  │FastAPI  │  │Vite/Nginx│  │ v16      │  │  v7      │      │          │
+│  │  └────┬────┘  └────┬────┘  └──────────┘  └──────────┘      │          │
+│  │       │            │                                         │          │
+│  │  ┌────┴────────────┴─────────────────────────────┐          │          │
+│  │  │              ipa-network (bridge)              │          │          │
+│  │  └───────────────────────────────────────────────┘          │          │
+│  │                                                              │          │
+│  │  ┌──────────┐  (docker-compose.prod.yml 額外)               │          │
+│  │  │ RabbitMQ │                                                │          │
+│  │  │:5672     │                                                │          │
+│  │  │:15672 UI │                                                │          │
+│  │  └──────────┘                                                │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+│  ③ CI/CD 管線 (.github/workflows/)                                         │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │                                                              │          │
+│  │  Push/PR ──→ ci.yml (253 LOC)                               │          │
+│  │              │                                               │          │
+│  │              ├─→ Lint (black, isort, flake8, ESLint)        │          │
+│  │              ├─→ Unit Tests (pytest)                         │          │
+│  │              ├─→ Type Check (mypy)                           │          │
+│  │              └─→ Build Check (frontend build)               │          │
+│  │                                                              │          │
+│  │  PR Merge ──→ e2e-tests.yml (198 LOC)                       │          │
+│  │              │                                               │          │
+│  │              ├─→ Docker Compose Up                          │          │
+│  │              ├─→ Integration Tests                          │          │
+│  │              └─→ Playwright E2E Tests                       │          │
+│  │                                                              │          │
+│  │  Tag Push ──→ deploy-production.yml (297 LOC)               │          │
+│  │              │                                               │          │
+│  │              ├─→ Build Docker Images                        │          │
+│  │              ├─→ Push to Registry                           │          │
+│  │              └─→ Deploy to K8s/AKS                          │          │
+│  │                                                              │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 1. Environment Variables
 
 All environment variables are loaded via Pydantic `BaseSettings` in `backend/src/core/config.py`, with `.env` file support (`env_file=".env"`, case-insensitive, extra fields ignored).

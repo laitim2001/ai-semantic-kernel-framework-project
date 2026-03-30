@@ -23,6 +23,126 @@
 
 ---
 
+### MCP 協議棧總覽
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    MCP Protocol Stack 架構                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  IPA Platform (OrchestratorMediator / AgentExecutor)                       │
+│       │                                                                     │
+│       ↓  tool_call(server, tool_name, arguments)                           │
+│  ┌──────────────────────────────────────────────────────────────────┐       │
+│  │  MCPClient (core/client.py, 446 LOC)                             │       │
+│  │  • Multi-server management (connect/disconnect)                  │       │
+│  │  • Tool discovery (tools/list)                                   │       │
+│  │  • Tool invocation (tools/call)                                  │       │
+│  └───────────────────────────┬──────────────────────────────────────┘       │
+│                              │                                              │
+│                              ↓  JSON-RPC 2.0                               │
+│  ┌──────────────────────────────────────────────────────────────────┐       │
+│  │  MCPProtocol (core/protocol.py, 408 LOC)                         │       │
+│  │  • 8 methods: initialize, tools/list, tools/call,                │       │
+│  │    resources/list, resources/read, prompts/list, prompts/get,    │       │
+│  │    ping                                                          │       │
+│  │  • Tool registration + Permission checking                       │       │
+│  └───────────────────────────┬──────────────────────────────────────┘       │
+│                              │                                              │
+│            ┌─────────────────┼─────────────────┐                            │
+│            ↓                                   ↓                            │
+│  ┌──────────────────┐              ┌──────────────────┐                     │
+│  │  StdioTransport   │              │ InMemoryTransport│                     │
+│  │  (生產環境)       │              │ (測試環境)       │                     │
+│  │  • subprocess     │              │ • 直接記憶體呼叫 │                     │
+│  │  • async read     │              │ • 無需進程管理   │                     │
+│  │  • write lock     │              │                  │                     │
+│  └──────────────────┘              └──────────────────┘                     │
+│            │                                                                │
+│            ↓                                                                │
+│  ┌──────────────────────────────────────────────────────────────────┐       │
+│  │  9 MCP Tool Servers (70 tools total)                             │       │
+│  │                                                                  │       │
+│  │  Azure(10)  Filesystem(8)  Shell(8)  SSH(8)  LDAP(9)            │       │
+│  │  ServiceNow(10)  n8n(6)  D365(6)  ADF(5)                       │       │
+│  └──────────────────────────────────────────────────────────────────┘       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 權限執行金字塔
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    MCP 4 級 RBAC 權限模型                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│                          ┌───────┐                                          │
+│                          │ ADMIN │  Level 3                                 │
+│                          │  (3)  │  • 完全控制: 配置/管理/執行/讀取         │
+│                        ┌─┴───────┴─┐                                        │
+│                        │  EXECUTE  │  Level 2                               │
+│                        │   (2)     │  • 執行工具 + 讀取資源                 │
+│                      ┌─┴───────────┴─┐                                      │
+│                      │     READ      │  Level 1                             │
+│                      │     (1)       │  • 僅讀取資源/列表                   │
+│                    ┌─┴───────────────┴─┐                                    │
+│                    │       NONE        │  Level 0                           │
+│                    │       (0)         │  • 完全禁止                        │
+│                    └───────────────────┘                                    │
+│                                                                             │
+│  Policy 評估順序:                                                           │
+│  ① Deny-list (黑名單優先)                                                  │
+│  ② Priority-based (高優先級策略先評估)                                     │
+│  ③ Glob-pattern matching (server:*/tool:vm_*)                              │
+│  ④ Dynamic conditions (time_range, ip_whitelist, custom)                   │
+│                                                                             │
+│  執行模式 (MCP_PERMISSION_MODE):                                           │
+│  • "log"     → Phase 1: 僅記錄，不阻擋 (開發期)                           │
+│  • "enforce" → Phase 2: 實際阻擋未授權操作 (生產期)                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Tool Server 狀態機
+
+```mermaid
+stateDiagram-v2
+    [*] --> REGISTERED: register_server()
+
+    REGISTERED --> CONNECTING: connect()
+    CONNECTING --> CONNECTED: 連接成功
+    CONNECTING --> ERROR: 連接失敗
+
+    CONNECTED --> DISCONNECTING: disconnect()
+    CONNECTED --> ERROR: 運行時錯誤
+
+    DISCONNECTING --> DISCONNECTED: 斷開完成
+
+    ERROR --> RECONNECTING: auto_reconnect (指數退避)
+    RECONNECTING --> CONNECTING: retry
+    RECONNECTING --> ERROR: max retries exceeded
+
+    DISCONNECTED --> CONNECTING: reconnect()
+    DISCONNECTED --> [*]: unregister()
+
+    note right of CONNECTED
+        工具可用狀態:
+        • tools/list 可查詢
+        • tools/call 可執行
+        • 健康檢查 (ping)
+    end note
+
+    note right of RECONNECTING
+        指數退避策略:
+        • 初始: 1s
+        • 最大: 60s
+        • 係數: 2x
+    end note
+```
+
+---
+
 ## 2. File Inventory
 
 ### 2.1 Core Protocol (4 files)

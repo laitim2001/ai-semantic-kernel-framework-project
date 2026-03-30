@@ -29,6 +29,46 @@
 
 ---
 
+### 三層架構堆疊總覽
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        IPA Platform 三層架構                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌───────────────────── Domain Layer (業務邏輯) ──────────────────────┐     │
+│  │  sessions/ (33 files) ★ CRITICAL    orchestration/ (22 files) ⚠    │     │
+│  │  workflows/ (8 files)               agents/ (7 files)              │     │
+│  │  connectors/ (6 files)              executions/ (4 files)          │     │
+│  │  hitl/ (3)  tools/ (3)  skills/ (3) checkpoints/ (3)              │     │
+│  │  llm/ (2)   audit/ (2)  routing/ (2) sandbox/ (2)                 │     │
+│  │  monitoring/ (2) auth/ (2) notifications/ (2)                      │     │
+│  └────────────────────────────┬────────────────────────────────────────┘     │
+│                               │ depends on                                  │
+│                               ↓                                             │
+│  ┌───────────────────── Infrastructure Layer (基礎設施) ─────────────┐     │
+│  │  database/ (15 files)       storage/ (16 files)                    │     │
+│  │  checkpoint/ (6 files)      cache/ (5 files)                       │     │
+│  │  messaging/ (4 files)       monitoring/ (3 files)                  │     │
+│  │                                                                    │     │
+│  │  PostgreSQL ←→ SQLAlchemy   Redis ←→ aioredis                     │     │
+│  │  RabbitMQ ←→ aio-pika      S3/Local ←→ storage abstraction        │     │
+│  └────────────────────────────┬────────────────────────────────────────┘     │
+│                               │ depends on                                  │
+│                               ↓                                             │
+│  ┌───────────────────── Core Layer (跨切面工具) ─────────────────────┐     │
+│  │  security/ (6 files)        performance/ (10 files)                │     │
+│  │  sandbox/ (6 files)         config (settings.py, constants.py)     │     │
+│  │                                                                    │     │
+│  │  JWT Auth │ RBAC │ Rate Limiting │ Metrics │ Profiling │ Sandbox   │     │
+│  └────────────────────────────────────────────────────────────────────┘     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+  ★ CRITICAL = 系統核心    ⚠ DEPRECATED = 已被 integrations/hybrid 取代
+```
+
+---
+
 ## 1. Domain Modules
 
 ### 1.1 sessions/ (33 files)
@@ -63,8 +103,24 @@
 #### State Machine
 
 ```
-Session: CREATED -> ACTIVE <-> SUSPENDED -> ENDED
-ToolCall: PENDING -> APPROVED/REJECTED -> RUNNING -> COMPLETED/FAILED
+┌──────────────────────────── Session 生命週期 ─────────────────────────────┐
+│                                                                           │
+│   CREATED ──activate()──→ ACTIVE ←──resume()──→ SUSPENDED                │
+│                             │  ↑                    │                     │
+│                             │  └──resume()──────────┘                     │
+│                             │                                             │
+│                          end()                                            │
+│                             │                                             │
+│                             ↓                                             │
+│                           ENDED                                           │
+│                                                                           │
+├──────────────────────────── ToolCall 生命週期 ────────────────────────────┤
+│                                                                           │
+│   PENDING ──┬── approve() ──→ APPROVED ──→ RUNNING ──┬──→ COMPLETED      │
+│             │                                        │                    │
+│             └── reject() ───→ REJECTED               └──→ FAILED         │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
 
 #### Dependencies
