@@ -146,7 +146,7 @@ stateDiagram-v2
 | `intent_router/semantic_router/routes.py` | 373 | S92 | 15 predefined `SemanticRoute` definitions (75 utterances) |
 | `intent_router/semantic_router/route_manager.py` | ~200 | S92 | Route CRUD management |
 | `intent_router/semantic_router/azure_semantic_router.py` | ~300 | S116 | Azure AI Search backed semantic router |
-| `intent_router/semantic_router/azure_search_client.py` | ~200 | S116 | Azure AI Search client wrapper |
+| `intent_router/semantic_router/azure_search_client.py` | ~200 | S116 | `AzureSearchClient` — Azure AI Search client wrapper (17 methods: `__init__`, `_retry_with_backoff`, `_vector_search_sync`, `_hybrid_search_sync`, `_upload_documents_sync`, `search`, `upload_routes`, `delete_routes`, `ensure_index`) |
 | `intent_router/semantic_router/embedding_service.py` | ~150 | S116 | Embedding generation service |
 | `intent_router/semantic_router/setup_index.py` | ~100 | S116 | Index setup script |
 | `intent_router/semantic_router/migration.py` | ~100 | S116 | Migration utilities |

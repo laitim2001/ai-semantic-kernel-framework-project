@@ -178,8 +178,8 @@ stateDiagram-v2
 | `servers/azure/` | 10 | `AzureMCPServer`, `AzureClientManager`, `AzureConfig`, `VMTools`, `ResourceTools`, `MonitorTools`, `NetworkTools`, `StorageTools` |
 | `servers/filesystem/` | 5 | `FilesystemMCPServer`, `FilesystemTools`, `FilesystemSandbox`, `SandboxConfig` |
 | `servers/shell/` | 5 | `ShellMCPServer`, `ShellTools`, `ShellExecutor`, `ShellConfig`, `ShellType` |
-| `servers/ldap/` | 7 | `LDAPMCPServer`, `LDAPTools`, `LDAPConnectionManager`, `LDAPConfig` + AD-specific (`ad_config.py`, `ad_operations.py`) |
-| `servers/ssh/` | 5 | `SSHMCPServer`, `SSHTools`, `SSHConnectionManager`, `SSHConfig` |
+| `servers/ldap/` | 7 | `LDAPMCPServer`, `LDAPTools`, `LDAPConnectionManager`, `LDAPConfig`, `LDAPClient` (15 methods: connect, disconnect, search, find_user, unlock_account, reset_password, add_to_group, remove_from_group), `ADOperations` (8 methods: find_user, unlock_account, reset_password, check_lockout, get_group_members, add_to_group, remove_from_group, get_user_groups) |
+| `servers/ssh/` | 5 | `SSHMCPServer`, `SSHTools`, `SSHConnectionManager`, `SSHConfig`, `SSHClient` (12 methods: connect, disconnect, execute, upload_file, download_file, list_directory, check_connection, execute_sudo, get_system_info, tail_log, find_files, check_service) |
 | `servers/n8n/` | 6 | `N8nMCPServer`, `N8nApiClient`, `N8nConfig`, `WorkflowTools`, `ExecutionTools` |
 | `servers/adf/` | 6 | `AdfMCPServer`, `AdfApiClient`, `AdfConfig`, `PipelineTools`, `MonitoringTools` |
 | `servers/d365/` | 7 | `D365MCPServer`, `D365ApiClient`, `D365Config`, `QueryTools`, `CrudTools` + `auth.py` |

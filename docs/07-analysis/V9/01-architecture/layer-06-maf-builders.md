@@ -635,6 +635,28 @@ The `builders/__init__.py` re-exports **200+ symbols**, making it the largest pu
 
 ---
 
+## R8 Supplement: Previously Underdocumented Classes
+
+The following important classes (5+ public methods) were identified by R8 gap detection as insufficiently documented:
+
+### Core Adapters (Root + core/)
+
+| Class | File | Methods | Purpose |
+|-------|------|---------|---------|
+| `PlanningAdapter` | builders/magentic_planning.py | 42 | Magentic One planning workflow — analyze, plan, execute, evaluate, replan cycle. Largest adapter in L06 |
+| `EnhancedExecutionStateMachine` | core/execution.py | 35 | Extended FSM with sub-states, timeouts, retry logic, and event hooks for workflow execution tracking |
+| `WorkflowExecutorAdapter` | core/workflow.py | 32 | Core workflow execution engine wrapping MAF's WorkflowBuilder with checkpoint and streaming support |
+| `WorkflowContextAdapter` | core/context.py | 23 | Cross-workflow context propagation, variable scoping (ISOLATED/INHERITED/SHARED), and state merging |
+| `CodeInterpreterAdapter` | assistant/code_interpreter.py | 22 | Code Interpreter integration — sandbox execution, file I/O, result streaming |
+| `CapabilityMatcherAdapter` | builders/handoff_capability.py | 22 | Agent capability matching for handoff decisions — skill vectors, compatibility scoring |
+| `NestedWorkflowAdapter` | builders/nested_workflow.py | 24 | Sub-workflow composition (INLINE/REFERENCE/DYNAMIC/RECURSIVE) with depth tracking |
+| `BaseMemoryStorageAdapter` | memory/base.py | 18 | Abstract memory storage interface — namespace management, TTL, key-value operations for agent memory |
+| `ConditionEvaluator` | core/edge.py | 8 | Expression parser for edge routing conditions — supports comparison, logical, and list operators |
+| `SwarmOrchestrationBuilder` | builders/swarm.py | ~15 | Swarm-mode MAF builder — parallel worker dispatch, tool registry per worker, result aggregation |
+| `CustomWorkflowBuilder` | builders/custom.py | ~20 | DSL-based custom workflow definition — node/edge/condition graph builder with validation |
+
+---
+
 ## 10. Known Issues
 
 ### 10.1 CRITICAL Issues
