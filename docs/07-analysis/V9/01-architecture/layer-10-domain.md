@@ -856,6 +856,17 @@ No actual circular imports detected. The codebase uses:
 
 ---
 
+## R8 Supplement: Previously Underdocumented Classes
+
+| Class | Module | Methods | Purpose |
+|-------|--------|---------|---------|
+| `ExecutionTracer` | sessions/tracing | 23 | Execution tracer service for debugging and visualization — traces agent execution steps, tool calls, and decision paths |
+| `MetricsCollector` | sessions/metrics | 19 | Centralized metrics collector for session-agent integration (NOT Prometheus-style — tracks session-level counters/histograms for agent performance) |
+
+> **R8 Note**: `MetricsCollector` was previously described as "Prometheus-style counters/histograms" but the actual docstring reads "Centralized metrics collector for session-agent integration." The class belongs to the sessions module and focuses on session-agent performance metrics, not generic observability.
+
+---
+
 ## 13. Known Issues
 
 ### CRITICAL

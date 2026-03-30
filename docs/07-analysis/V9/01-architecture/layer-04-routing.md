@@ -33,7 +33,7 @@
 │  │  L1: PatternMatcher (規則匹配)                           │               │
 │  │  • YAML-loaded regex rules, priority-sorted              │               │
 │  │  • 411 LOC | 速度: <1ms                                  │               │
-│  │  • 匹配 → confidence ≥ 0.8? ──→ ✓ 直接路由              │               │
+│  │  • 匹配 → confidence ≥ 0.90? ──→ ✓ 直接路由             │               │
 │  └─────────────┬────────────────────────────────────────────┘               │
 │                │ 未匹配 (confidence < 0.8)                                  │
 │                ↓                                                             │

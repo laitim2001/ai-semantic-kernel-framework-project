@@ -13,10 +13,10 @@
 | **Location** | `backend/src/integrations/agent_framework/` |
 | **Purpose** | Adapter layer wrapping Microsoft Agent Framework (MAF) official API for IPA Platform integration |
 | **Pattern** | Adapter Pattern — every builder wraps an official MAF `XxxBuilder` class |
-| **MAF Version** | `1.0.0b251204` (Preview/Beta, Dec 2025) |
+| **MAF Version** | `1.0.0rc4` (Release Candidate, upgraded from 1.0.0b251204) |
 | **Python Version** | >= 3.11 |
 | **Internal Version** | `0.1.0` |
-| **Total Files** | 56 `.py` files (excluding `__pycache__`) |
+| **Total Files** | 57 `.py` files (excluding `__pycache__`, R7 verified) |
 | **Verified LOC** | **38,082 lines** (R4 verified via `wc -l`, root=2,194 + builders=24,215 + core=5,695 + acl/memory/multiturn/assistant/tools=5,978) |
 | **Phase Coverage** | Phase 1-4 (Sprint 14-24), Phase 5 (Sprint 26-28), Phase 6 (Sprint 31), Phase 7 (Sprint 37-38), Phase 8 (Sprint 54), Phase 42 (Sprint 126-128) |
 

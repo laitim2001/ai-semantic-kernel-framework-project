@@ -1,0 +1,123 @@
+{
+  "layer": "L02",
+  "files": 152,
+  "loc": 47528,
+  "total_classes": 713,
+  "shown_classes": 8,
+  "classes": [
+    {
+      "name": "ConcurrentAPIService",
+      "bases": [],
+      "doc": "並行執行 API 服務。",
+      "pub_methods": [
+        "__init__",
+        "register_task_executor",
+        "execute",
+        "get_execution",
+        "list_executions",
+        "get_statistics"
+      ],
+      "total_methods": 10
+    },
+    {
+      "name": "MultiTurnAPIService",
+      "bases": [],
+      "doc": "Multi-turn API Service wrapping MultiTurnAdapter.",
+      "pub_methods": [
+        "__init__",
+        "create_session",
+        "get_session",
+        "update_session",
+        "close_session",
+        "delete_session",
+        "execute_turn",
+        "get_history",
+        "list_sessions"
+      ],
+      "total_methods": 10
+    },
+    {
+      "name": "SessionWebSocketManager",
+      "bases": [],
+      "doc": "Session WebSocket 連接管理器",
+      "pub_methods": [
+        "__init__",
+        "connect",
+        "disconnect",
+        "send_message",
+        "send_event",
+        "broadcast_to_session",
+        "start_heartbeat",
+        "get_connection_count",
+        "is_connected"
+      ],
+      "total_methods": 9
+    },
+    {
+      "name": "AutonomousTaskStore",
+      "bases": [],
+      "doc": "In-memory storage for autonomous tasks.",
+      "pub_methods": [
+        "__init__",
+        "create_task",
+        "get_task",
+        "cancel_task",
+        "get_history",
+        "count_tasks"
+      ],
+      "total_methods": 8
+    },
+    {
+      "name": "HookManager",
+      "bases": [],
+      "doc": "Manages hook registration and lifecycle.",
+      "pub_methods": [
+        "__init__",
+        "list_hooks",
+        "get_hook",
+        "register_hook",
+        "remove_hook",
+        "enable_hook",
+        "disable_hook",
+        "chain"
+      ],
+      "total_methods": 8
+    },
+    {
+      "name": "ConcurrentConnectionManager",
+      "bases": [],
+      "doc": "Manages WebSocket connections for concurrent execution monitoring.",
+      "pub_methods": [
+        "__init__",
+        "connect",
+        "disconnect",
+        "broadcast",
+        "send_personal",
+        "get_connection_count"
+      ],
+      "total_methods": 6
+    },
+    {
+      "name": "RootCauseStore",
+      "bases": [],
+      "doc": "In-memory storage for root cause analyses.",
+      "pub_methods": [
+        "__init__",
+        "create_analysis",
+        "get_analysis",
+        "find_similar_patterns"
+      ],
+      "total_methods": 6
+    },
+    {
+      "name": "WebSocketMessageHandler",
+      "bases": [],
+      "doc": "WebSocket 訊息處理器",
+      "pub_methods": [
+        "__init__",
+        "handle_message"
+      ],
+      "total_methods": 6
+    }
+  ]
+}

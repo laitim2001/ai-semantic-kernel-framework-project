@@ -863,6 +863,17 @@ Replaces 5+ scattered `get_redis()` singletons. Uses `redis.asyncio` with:
 
 ---
 
+## R8 Supplement: Previously Underdocumented Classes
+
+| Class | Module | Methods | Purpose |
+|-------|--------|---------|---------|
+| `MetricCollector` | core/performance/metric_collector.py | 21 | Central metric collection and aggregation service — start/stop, record_request, aggregate, export metrics |
+| `PerformanceOptimizer` | core/performance/optimizer.py | 15 | Performance optimization engine — identifies bottlenecks, suggests optimizations, applies caching strategies |
+| `PerformanceProfiler` | core/performance/profiler.py | 12 | Runtime performance profiler — function-level timing, memory tracking, call graph analysis |
+| `SandboxOrchestrator` | core/sandbox/orchestrator.py | 12 | Orchestrator for managing sandbox worker processes — execute_stream, get_pool_stats, resource isolation |
+
+---
+
 ## 13. Known Issues (14 Issues)
 
 ### Issue 1: DUAL STORAGE PROTOCOL (HIGH)

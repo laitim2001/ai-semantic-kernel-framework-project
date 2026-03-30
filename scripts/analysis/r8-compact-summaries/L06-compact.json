@@ -1,0 +1,289 @@
+{
+  "layer": "L06",
+  "files": 57,
+  "loc": 38139,
+  "total_classes": 296,
+  "shown_classes": 15,
+  "classes": [
+    {
+      "name": "PlanningAdapter",
+      "bases": [],
+      "doc": "動態規劃適配器。",
+      "pub_methods": [
+        "__init__",
+        "id",
+        "mode",
+        "config",
+        "llm_service",
+        "with_llm_service",
+        "with_task_decomposition",
+        "with_decision_engine",
+        "with_trial_error",
+        "with_task_callback"
+      ],
+      "total_methods": 42
+    },
+    {
+      "name": "EnhancedExecutionStateMachine",
+      "bases": [],
+      "doc": "Enhanced execution state machine with event system integration.",
+      "pub_methods": [
+        "__init__",
+        "execution_id",
+        "status",
+        "event_status",
+        "started_at",
+        "completed_at",
+        "llm_calls",
+        "llm_tokens",
+        "llm_cost",
+        "current_node_id"
+      ],
+      "total_methods": 35
+    },
+    {
+      "name": "WorkflowExecutorAdapter",
+      "bases": [],
+      "doc": "Adapter for Agent Framework WorkflowExecutor.",
+      "pub_methods": [
+        "__init__",
+        "id",
+        "workflow",
+        "status",
+        "is_built",
+        "is_initialized",
+        "allow_direct_output",
+        "input_types",
+        "output_types",
+        "active_execution_count"
+      ],
+      "total_methods": 32
+    },
+    {
+      "name": "MagenticBuilderAdapter",
+      "bases": [],
+      "doc": "Adapter for Agent Framework MagenticBuilder.",
+      "pub_methods": [
+        "__init__",
+        "id",
+        "status",
+        "is_built",
+        "is_initialized",
+        "participants",
+        "add_participant",
+        "remove_participant",
+        "set_max_round_count",
+        "set_max_stall_count"
+      ],
+      "total_methods": 26
+    },
+    {
+      "name": "MultiTurnAdapter",
+      "bases": [],
+      "doc": "多輪對話適配器。",
+      "pub_methods": [
+        "__init__",
+        "session_id",
+        "state",
+        "turn_count",
+        "config",
+        "start",
+        "pause",
+        "resume",
+        "complete",
+        "add_turn"
+      ],
+      "total_methods": 25
+    },
+    {
+      "name": "NestedWorkflowAdapter",
+      "bases": [
+        "BuilderAdapter"
+      ],
+      "doc": "嵌套工作流適配器。",
+      "pub_methods": [
+        "__init__",
+        "id",
+        "max_depth",
+        "context_strategy",
+        "execution_mode",
+        "sub_workflow_names",
+        "current_depth",
+        "add_sub_workflow",
+        "remove_sub_workflow",
+        "get_sub_workflow"
+      ],
+      "total_methods": 24
+    },
+    {
+      "name": "HandoffBuilderAdapter",
+      "bases": [
+        "BuilderAdapter[Any, HandoffExecutionResult]"
+      ],
+      "doc": "HandoffBuilder 適配器。",
+      "pub_methods": [
+        "__init__",
+        "id",
+        "mode",
+        "coordinator_id",
+        "participants",
+        "handoff_routes",
+        "add_participant",
+        "set_coordinator",
+        "add_handoff",
+        "with_mode"
+      ],
+      "total_methods": 23
+    },
+    {
+      "name": "WorkflowContextAdapter",
+      "bases": [],
+      "doc": "Adapter that provides official Agent Framework context interface.",
+      "pub_methods": [
+        "__init__",
+        "run_id",
+        "execution_id",
+        "workflow_id",
+        "current_node",
+        "current_node",
+        "get",
+        "set",
+        "delete",
+        "has"
+      ],
+      "total_methods": 23
+    },
+    {
+      "name": "CodeInterpreterAdapter",
+      "bases": [],
+      "doc": "Code Interpreter 適配器。",
+      "pub_methods": [
+        "__init__",
+        "execute",
+        "analyze_task",
+        "execute_simple",
+        "download_file",
+        "cleanup",
+        "is_initialized",
+        "active_api_mode",
+        "assistant_id",
+        "assistant_info"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "CapabilityMatcherAdapter",
+      "bases": [],
+      "doc": "能力匹配適配器。",
+      "pub_methods": [
+        "__init__",
+        "register_agent",
+        "unregister_agent",
+        "update_availability",
+        "get_agent_capabilities",
+        "has_capability",
+        "get_capability",
+        "find_capable_agents",
+        "get_best_match",
+        "calculate_handoff_score"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "ConcurrentBuilderAdapter",
+      "bases": [
+        "BuilderAdapter[Any, ConcurrentExecutionResult]"
+      ],
+      "doc": "ConcurrentBuilder 適配器。",
+      "pub_methods": [
+        "__init__",
+        "id",
+        "mode",
+        "task_count",
+        "add_executor",
+        "add_executors",
+        "with_mode",
+        "with_timeout",
+        "with_max_concurrency",
+        "with_gateway_config"
+      ],
+      "total_methods": 21
+    },
+    {
+      "name": "GroupChatBuilderAdapter",
+      "bases": [
+        "BuilderAdapter"
+      ],
+      "doc": "Agent Framework GroupChatBuilder 適配器。",
+      "pub_methods": [
+        "__init__",
+        "id",
+        "participants",
+        "selection_method",
+        "status",
+        "state",
+        "add_participant",
+        "remove_participant",
+        "set_selection_method",
+        "set_manager_agent"
+      ],
+      "total_methods": 21
+    },
+    {
+      "name": "NestedWorkflowManagerAdapter",
+      "bases": [],
+      "doc": "Adapter bridging Phase 2 NestedWorkflowManager to WorkflowExecutor.",
+      "pub_methods": [
+        "__init__",
+        "id",
+        "max_global_depth",
+        "executor_count",
+        "register_sub_workflow",
+        "unregister_sub_workflow",
+        "get_sub_workflows",
+        "execute_sub_workflow",
+        "get_execution_tree",
+        "get_active_executions"
+      ],
+      "total_methods": 21
+    },
+    {
+      "name": "GroupChatManagerAdapter",
+      "bases": [],
+      "doc": "Phase 2 GroupChatManager API 兼容適配器。",
+      "pub_methods": [
+        "__init__",
+        "chat_id",
+        "state",
+        "context",
+        "add_participant",
+        "remove_participant",
+        "get_participant",
+        "get_participants",
+        "set_selection_method",
+        "set_max_rounds"
+      ],
+      "total_methods": 18
+    },
+    {
+      "name": "BaseMemoryStorageAdapter",
+      "bases": [
+        "ABC"
+      ],
+      "doc": "Memory 存儲適配器基類。",
+      "pub_methods": [
+        "__init__",
+        "namespace",
+        "store",
+        "retrieve",
+        "search",
+        "delete",
+        "store_record",
+        "retrieve_record",
+        "search_advanced",
+        "exists"
+      ],
+      "total_methods": 18
+    }
+  ]
+}

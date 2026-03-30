@@ -382,7 +382,7 @@ HybridContext:
   primary_framework, sync_status, version, last_sync_at
 ```
 
-#### 4.3.3 Context Synchronizer (`sync/synchronizer.py`, 629 LOC)
+#### 4.3.3 Context Synchronizer (`sync/synchronizer.py`, 692 LOC)
 
 Manages the sync lifecycle with version tracking. Includes:
 - `SyncEventPublisher` — publishes sync events
