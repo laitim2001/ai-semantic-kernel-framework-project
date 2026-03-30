@@ -1,0 +1,1222 @@
+{
+  "unmentiond_important_classes": [
+    {
+      "name": "HookManager",
+      "file": "api\\v1\\claude_sdk\\hooks_routes.py",
+      "method_count": 8,
+      "methods": [
+        "__init__",
+        "list_hooks",
+        "get_hook",
+        "register_hook",
+        "remove_hook",
+        "enable_hook",
+        "disable_hook",
+        "chain"
+      ]
+    },
+    {
+      "name": "ConcurrentAPIService",
+      "file": "api\\v1\\concurrent\\adapter_service.py",
+      "method_count": 10,
+      "methods": [
+        "__init__",
+        "register_task_executor",
+        "execute",
+        "_execute_with_adapter",
+        "_execute_with_legacy",
+        "_create_default_executor",
+        "_convert_task_results_to_branches",
+        "get_execution",
+        "list_executions",
+        "get_statistics"
+      ]
+    },
+    {
+      "name": "ConcurrentConnectionManager",
+      "file": "api\\v1\\concurrent\\websocket.py",
+      "method_count": 6,
+      "methods": [
+        "__init__",
+        "connect",
+        "disconnect",
+        "broadcast",
+        "send_personal",
+        "get_connection_count"
+      ]
+    },
+    {
+      "name": "MultiTurnAPIService",
+      "file": "api\\v1\\groupchat\\multiturn_service.py",
+      "method_count": 10,
+      "methods": [
+        "__init__",
+        "create_session",
+        "get_session",
+        "update_session",
+        "close_session",
+        "delete_session",
+        "execute_turn",
+        "get_history",
+        "list_sessions",
+        "_expire_session"
+      ]
+    },
+    {
+      "name": "SessionWebSocketManager",
+      "file": "api\\v1\\sessions\\websocket.py",
+      "method_count": 9,
+      "methods": [
+        "__init__",
+        "connect",
+        "disconnect",
+        "send_message",
+        "send_event",
+        "broadcast_to_session",
+        "start_heartbeat",
+        "get_connection_count",
+        "is_connected"
+      ]
+    },
+    {
+      "name": "WebSocketMessageHandler",
+      "file": "api\\v1\\sessions\\websocket.py",
+      "method_count": 6,
+      "methods": [
+        "__init__",
+        "handle_message",
+        "_handle_user_message",
+        "_handle_approval",
+        "_handle_cancel",
+        "_send_error"
+      ]
+    },
+    {
+      "name": "ConditionEvaluator",
+      "file": "integrations\\agent_framework\\core\\edge.py",
+      "method_count": 8,
+      "methods": [
+        "__init__",
+        "expression",
+        "_parse",
+        "_parse_value",
+        "_parse_list",
+        "evaluate",
+        "_get_value",
+        "__repr__"
+      ]
+    },
+    {
+      "name": "BaseMemoryStorageAdapter",
+      "file": "integrations\\agent_framework\\memory\\base.py",
+      "method_count": 18,
+      "methods": [
+        "__init__",
+        "namespace",
+        "_make_key",
+        "_strip_namespace",
+        "store",
+        "retrieve",
+        "search",
+        "delete",
+        "store_record",
+        "retrieve_record"
+      ]
+    },
+    {
+      "name": "GraphBuilder",
+      "file": "integrations\\correlation\\graph.py",
+      "method_count": 12,
+      "methods": [
+        "__init__",
+        "build_from_correlations",
+        "_create_node_from_event",
+        "_create_edge_from_correlation",
+        "find_critical_path",
+        "get_subgraph",
+        "to_json",
+        "to_mermaid",
+        "to_dot",
+        "analyze_clusters"
+      ]
+    },
+    {
+      "name": "BaseMapper",
+      "file": "integrations\\hybrid\\context\\mappers\\base.py",
+      "method_count": 13,
+      "methods": [
+        "__init__",
+        "map",
+        "reset_counters",
+        "error_count",
+        "warning_count",
+        "_safe_get",
+        "_safe_map_list",
+        "_truncate_string",
+        "_parse_datetime",
+        "_format_datetime"
+      ]
+    },
+    {
+      "name": "IncidentExecutor",
+      "file": "integrations\\incident\\executor.py",
+      "method_count": 12,
+      "methods": [
+        "__init__",
+        "execute",
+        "_execute_single_action",
+        "_should_auto_execute",
+        "_auto_execute",
+        "_dispatch_action",
+        "_request_hitl_approval",
+        "_risk_to_score",
+        "_writeback_servicenow",
+        "_update_servicenow_state"
+      ]
+    },
+    {
+      "name": "AgentSkillsProvider",
+      "file": "integrations\\knowledge\\agent_skills.py",
+      "method_count": 7,
+      "methods": [
+        "__init__",
+        "_register_builtins",
+        "register_skill",
+        "get_skill",
+        "list_skills",
+        "get_skill_context",
+        "search_skills"
+      ]
+    },
+    {
+      "name": "D365AuthProvider",
+      "file": "integrations\\mcp\\servers\\d365\\auth.py",
+      "method_count": 9,
+      "methods": [
+        "__init__",
+        "ensure_token",
+        "_acquire_token",
+        "is_token_valid",
+        "invalidate_token",
+        "get_auth_headers",
+        "close",
+        "__aenter__",
+        "__aexit__"
+      ]
+    },
+    {
+      "name": "ADOperations",
+      "file": "integrations\\mcp\\servers\\ldap\\ad_operations.py",
+      "method_count": 8,
+      "methods": [
+        "__init__",
+        "_get_client",
+        "find_user",
+        "unlock_account",
+        "reset_password",
+        "find_group",
+        "modify_group_membership",
+        "get_group_members"
+      ]
+    },
+    {
+      "name": "LDAPClient",
+      "file": "integrations\\mcp\\servers\\ldap\\client.py",
+      "method_count": 15,
+      "methods": [
+        "__init__",
+        "connect",
+        "disconnect",
+        "_check_operation_allowed",
+        "search",
+        "get_entry",
+        "search_users",
+        "search_groups",
+        "add_entry",
+        "modify_entry"
+      ]
+    },
+    {
+      "name": "SSHClient",
+      "file": "integrations\\mcp\\servers\\ssh\\client.py",
+      "method_count": 12,
+      "methods": [
+        "__init__",
+        "_validate_host",
+        "connect",
+        "disconnect",
+        "execute",
+        "upload_file",
+        "download_file",
+        "list_directory",
+        "is_connected",
+        "host"
+      ]
+    },
+    {
+      "name": "EmbeddingCache",
+      "file": "integrations\\memory\\embeddings.py",
+      "method_count": 6,
+      "methods": [
+        "__init__",
+        "_get_key",
+        "get",
+        "set",
+        "clear",
+        "cleanup_expired"
+      ]
+    },
+    {
+      "name": "FallbackHistogram",
+      "file": "integrations\\orchestration\\metrics.py",
+      "method_count": 5,
+      "methods": [
+        "__init__",
+        "record",
+        "get_values",
+        "get_percentile",
+        "reset"
+      ]
+    },
+    {
+      "name": "LLMQuestionGenerator",
+      "file": "integrations\\orchestration\\guided_dialog\\generator.py",
+      "method_count": 8,
+      "methods": [
+        "__init__",
+        "generate",
+        "_call_llm",
+        "_build_prompt",
+        "_parse_response",
+        "_fallback_to_templates",
+        "get_metrics",
+        "reset_metrics"
+      ]
+    },
+    {
+      "name": "RITMIntentMapper",
+      "file": "integrations\\orchestration\\input\\ritm_intent_mapper.py",
+      "method_count": 9,
+      "methods": [
+        "__init__",
+        "_load_from_file",
+        "_load_from_dict",
+        "map_ritm_to_intent",
+        "_extract_variables",
+        "_resolve_path",
+        "get_mappings_count",
+        "get_supported_intents",
+        "get_fallback_strategy"
+      ]
+    },
+    {
+      "name": "ServiceNowWebhookReceiver",
+      "file": "integrations\\orchestration\\input\\servicenow_webhook.py",
+      "method_count": 9,
+      "methods": [
+        "__init__",
+        "validate_shared_secret",
+        "validate_hmac",
+        "validate_ip",
+        "validate_request",
+        "parse_ritm_event",
+        "is_duplicate",
+        "mark_processed",
+        "process_event"
+      ]
+    },
+    {
+      "name": "SchemaValidator",
+      "file": "integrations\\orchestration\\input_gateway\\schema_validator.py",
+      "method_count": 9,
+      "methods": [
+        "__init__",
+        "register_schema",
+        "validate",
+        "_validate_required_fields",
+        "_validate_field_types",
+        "_validate_nested",
+        "_check_unknown_fields",
+        "get_schema",
+        "list_schemas"
+      ]
+    },
+    {
+      "name": "CompletenessRules",
+      "file": "integrations\\orchestration\\intent_router\\completeness\\rules.py",
+      "method_count": 7,
+      "methods": [
+        "__init__",
+        "get_rule",
+        "set_rule",
+        "get_all_rules",
+        "get_rule_categories",
+        "to_dict",
+        "from_dict"
+      ]
+    },
+    {
+      "name": "AzureSearchClient",
+      "file": "integrations\\orchestration\\intent_router\\semantic_router\\azure_search_client.py",
+      "method_count": 17,
+      "methods": [
+        "__init__",
+        "_run_in_executor",
+        "_retry_with_backoff",
+        "_vector_search_sync",
+        "_hybrid_search_sync",
+        "_upload_documents_sync",
+        "_delete_documents_sync",
+        "_get_document_sync",
+        "_get_document_count_sync",
+        "_health_check_sync"
+      ]
+    },
+    {
+      "name": "AzureSemanticRouter",
+      "file": "integrations\\orchestration\\intent_router\\semantic_router\\azure_semantic_router.py",
+      "method_count": 7,
+      "methods": [
+        "__init__",
+        "_extract_similarity",
+        "_document_to_result",
+        "route",
+        "route_with_scores",
+        "is_available",
+        "check_availability"
+      ]
+    },
+    {
+      "name": "RouteManager",
+      "file": "integrations\\orchestration\\intent_router\\semantic_router\\route_manager.py",
+      "method_count": 9,
+      "methods": [
+        "__init__",
+        "create_route",
+        "get_routes",
+        "get_route",
+        "update_route",
+        "delete_route",
+        "sync_from_yaml",
+        "search_test",
+        "_get_documents_by_route"
+      ]
+    },
+    {
+      "name": "BaseCheck",
+      "file": "integrations\\patrol\\checks\\base.py",
+      "method_count": 10,
+      "methods": [
+        "__init__",
+        "execute",
+        "_start_check",
+        "_create_result",
+        "_healthy",
+        "_warning",
+        "_critical",
+        "_unknown",
+        "get_config_value",
+        "__repr__"
+      ]
+    },
+    {
+      "name": "LogAnalysisCheck",
+      "file": "integrations\\patrol\\checks\\log_analysis.py",
+      "method_count": 5,
+      "methods": [
+        "__init__",
+        "execute",
+        "_find_log_files",
+        "_analyze_log_file",
+        "_summarize_issues"
+      ]
+    },
+    {
+      "name": "ResourceUsageCheck",
+      "file": "integrations\\patrol\\checks\\resource_usage.py",
+      "method_count": 5,
+      "methods": [
+        "__init__",
+        "execute",
+        "_check_cpu",
+        "_check_memory",
+        "_check_disk"
+      ]
+    },
+    {
+      "name": "SecurityScanCheck",
+      "file": "integrations\\patrol\\checks\\security_scan.py",
+      "method_count": 7,
+      "methods": [
+        "__init__",
+        "execute",
+        "_scan_sensitive_data",
+        "_scan_dangerous_config",
+        "_check_file_permissions",
+        "_check_environment",
+        "_get_files_to_scan"
+      ]
+    }
+  ],
+  "undocumented_db_columns": [
+    {
+      "model": "Agent",
+      "column": "__tablename__",
+      "file": "agent.py"
+    },
+    {
+      "model": "AuditLog",
+      "column": "__tablename__",
+      "file": "audit.py"
+    },
+    {
+      "model": "Checkpoint",
+      "column": "__tablename__",
+      "file": "checkpoint.py"
+    },
+    {
+      "model": "Execution",
+      "column": "__tablename__",
+      "file": "execution.py"
+    },
+    {
+      "model": "SessionModel",
+      "column": "__tablename__",
+      "file": "session.py"
+    },
+    {
+      "model": "SessionModel",
+      "column": "__table_args__",
+      "file": "session.py"
+    },
+    {
+      "model": "MessageModel",
+      "column": "__tablename__",
+      "file": "session.py"
+    },
+    {
+      "model": "MessageModel",
+      "column": "__table_args__",
+      "file": "session.py"
+    },
+    {
+      "model": "AttachmentModel",
+      "column": "__tablename__",
+      "file": "session.py"
+    },
+    {
+      "model": "User",
+      "column": "__tablename__",
+      "file": "user.py"
+    },
+    {
+      "model": "Workflow",
+      "column": "__tablename__",
+      "file": "workflow.py"
+    }
+  ],
+  "undocumented_endpoints": [
+    {
+      "method": "GET",
+      "path": "/protected",
+      "function": "protected_route",
+      "file": "api\\v1\\dependencies.py"
+    },
+    {
+      "method": "GET",
+      "path": "/public",
+      "function": "public_route",
+      "file": "api\\v1\\dependencies.py"
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin-only/{id}",
+      "function": "admin_route",
+      "file": "api\\v1\\dependencies.py"
+    },
+    {
+      "method": "POST",
+      "path": "/operator-action",
+      "function": "operator_route",
+      "file": "api\\v1\\dependencies.py"
+    },
+    {
+      "method": "GET",
+      "path": "/my-resource",
+      "function": "my_route",
+      "file": "api\\v1\\auth\\dependencies.py"
+    },
+    {
+      "method": "GET",
+      "path": "/public",
+      "function": "public_route",
+      "file": "api\\v1\\auth\\dependencies.py"
+    }
+  ],
+  "undocumented_enums": [
+    {
+      "name": "WorkflowStepStatusEnum",
+      "file": "api\\v1\\ag_ui\\schemas.py",
+      "values": [
+        "PENDING",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "FAILED",
+        "SKIPPED"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "UIComponentTypeEnum",
+      "file": "api\\v1\\ag_ui\\schemas.py",
+      "values": [
+        "FORM",
+        "CHART",
+        "CARD",
+        "TABLE",
+        "CUSTOM"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "HookType",
+      "file": "api\\v1\\claude_sdk\\hooks_routes.py",
+      "values": [
+        "APPROVAL",
+        "AUDIT",
+        "RATE_LIMIT",
+        "SANDBOX",
+        "CUSTOM"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "HookPriority",
+      "file": "api\\v1\\claude_sdk\\hooks_routes.py",
+      "values": [
+        "LOW",
+        "NORMAL",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "FrameworkType",
+      "file": "api\\v1\\claude_sdk\\hybrid_routes.py",
+      "values": [
+        "CLAUDE_SDK",
+        "MICROSOFT_AGENT",
+        "AUTO"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "TaskCapabilityType",
+      "file": "api\\v1\\claude_sdk\\hybrid_routes.py",
+      "values": [
+        "MULTI_AGENT",
+        "HANDOFF",
+        "FILE_OPERATIONS",
+        "CODE_EXECUTION",
+        "WEB_SEARCH",
+        "TOOL_USE",
+        "CONVERSATION",
+        "PLANNING"
+      ],
+      "value_count": 8
+    },
+    {
+      "name": "ExecutionModeType",
+      "file": "api\\v1\\claude_sdk\\intent_routes.py",
+      "values": [
+        "CHAT_MODE",
+        "WORKFLOW_MODE",
+        "HYBRID_MODE"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "CollaborationType",
+      "file": "api\\v1\\claude_sdk\\intent_routes.py",
+      "values": [
+        "NONE",
+        "HANDOFF",
+        "GROUPCHAT",
+        "ROUND_ROBIN",
+        "COLLABORATION",
+        "MULTI_SPECIALIST",
+        "COORDINATION",
+        "DUAL_AGENT"
+      ],
+      "value_count": 8
+    },
+    {
+      "name": "MCPTransport",
+      "file": "api\\v1\\claude_sdk\\mcp_routes.py",
+      "values": [
+        "STDIO",
+        "HTTP",
+        "WEBSOCKET"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "MCPServerStatus",
+      "file": "api\\v1\\claude_sdk\\mcp_routes.py",
+      "values": [
+        "CONNECTED",
+        "DISCONNECTED",
+        "CONNECTING",
+        "ERROR"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "ConcurrentModeEnum",
+      "file": "api\\v1\\concurrent\\schemas.py",
+      "values": [
+        "ALL",
+        "ANY",
+        "MAJORITY",
+        "FIRST_SUCCESS"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "BranchStatusEnum",
+      "file": "api\\v1\\concurrent\\schemas.py",
+      "values": [
+        "PENDING",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED",
+        "TIMED_OUT"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "ExecutionStatusEnum",
+      "file": "api\\v1\\concurrent\\schemas.py",
+      "values": [
+        "PENDING",
+        "RUNNING",
+        "WAITING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED",
+        "TIMED_OUT"
+      ],
+      "value_count": 7
+    },
+    {
+      "name": "WebSocketMessageType",
+      "file": "api\\v1\\concurrent\\schemas.py",
+      "values": [
+        "EXECUTION_STARTED",
+        "EXECUTION_COMPLETED",
+        "EXECUTION_FAILED",
+        "EXECUTION_CANCELLED",
+        "BRANCH_STARTED",
+        "BRANCH_COMPLETED",
+        "BRANCH_FAILED",
+        "BRANCH_PROGRESS",
+        "DEADLOCK_DETECTED",
+        "DEADLOCK_RESOLVED"
+      ],
+      "value_count": 11
+    },
+    {
+      "name": "FileCategory",
+      "file": "api\\v1\\files\\schemas.py",
+      "values": [
+        "TEXT",
+        "IMAGE",
+        "PDF"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "FileStatus",
+      "file": "api\\v1\\files\\schemas.py",
+      "values": [
+        "PENDING",
+        "UPLOADED",
+        "ERROR"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "VoteType",
+      "file": "api\\v1\\groupchat\\routes.py",
+      "values": [
+        "YES_NO",
+        "MULTI_CHOICE",
+        "RANKING",
+        "WEIGHTED",
+        "APPROVAL"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "VotingSessionStatus",
+      "file": "api\\v1\\groupchat\\routes.py",
+      "values": [
+        "PENDING",
+        "ACTIVE",
+        "CLOSED",
+        "CANCELLED"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "VoteResult",
+      "file": "api\\v1\\groupchat\\routes.py",
+      "values": [
+        "PENDING",
+        "PASSED",
+        "REJECTED",
+        "TIE",
+        "NO_QUORUM"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "HandoffPolicyEnum",
+      "file": "api\\v1\\handoff\\schemas.py",
+      "values": [
+        "IMMEDIATE",
+        "GRACEFUL",
+        "CONDITIONAL"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "HandoffStatusEnum",
+      "file": "api\\v1\\handoff\\schemas.py",
+      "values": [
+        "INITIATED",
+        "VALIDATING",
+        "TRANSFERRING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED",
+        "ROLLED_BACK"
+      ],
+      "value_count": 7
+    },
+    {
+      "name": "TriggerTypeEnum",
+      "file": "api\\v1\\handoff\\schemas.py",
+      "values": [
+        "CONDITION",
+        "EVENT",
+        "TIMEOUT",
+        "ERROR",
+        "CAPABILITY",
+        "EXPLICIT"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "CapabilityCategoryEnum",
+      "file": "api\\v1\\handoff\\schemas.py",
+      "values": [
+        "LANGUAGE",
+        "REASONING",
+        "KNOWLEDGE",
+        "ACTION",
+        "INTEGRATION",
+        "COMMUNICATION"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "MatchStrategyEnum",
+      "file": "api\\v1\\handoff\\schemas.py",
+      "values": [
+        "BEST_FIT",
+        "FIRST_FIT",
+        "ROUND_ROBIN",
+        "LEAST_LOADED"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "HITLInputTypeEnum",
+      "file": "api\\v1\\handoff\\schemas.py",
+      "values": [
+        "TEXT",
+        "CHOICE",
+        "CONFIRMATION",
+        "FILE",
+        "FORM"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "HITLSessionStatusEnum",
+      "file": "api\\v1\\handoff\\schemas.py",
+      "values": [
+        "ACTIVE",
+        "INPUT_RECEIVED",
+        "PROCESSING",
+        "COMPLETED",
+        "TIMEOUT",
+        "CANCELLED",
+        "ESCALATED"
+      ],
+      "value_count": 7
+    },
+    {
+      "name": "WebhookAction",
+      "file": "api\\v1\\n8n\\schemas.py",
+      "values": [
+        "ANALYZE",
+        "CLASSIFY",
+        "EXECUTE",
+        "QUERY",
+        "NOTIFY"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "N8nConnectionStatus",
+      "file": "api\\v1\\n8n\\schemas.py",
+      "values": [
+        "CONNECTED",
+        "DISCONNECTED",
+        "ERROR",
+        "UNKNOWN"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "NestedWorkflowTypeEnum",
+      "file": "api\\v1\\nested\\schemas.py",
+      "values": [
+        "INLINE",
+        "REFERENCE",
+        "DYNAMIC",
+        "RECURSIVE"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "WorkflowScopeEnum",
+      "file": "api\\v1\\nested\\schemas.py",
+      "values": [
+        "ISOLATED",
+        "INHERITED",
+        "SHARED"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "SubWorkflowExecutionModeEnum",
+      "file": "api\\v1\\nested\\schemas.py",
+      "values": [
+        "SYNC",
+        "ASYNC",
+        "FIRE_AND_FORGET",
+        "CALLBACK"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "RecursionStrategyEnum",
+      "file": "api\\v1\\nested\\schemas.py",
+      "values": [
+        "DEPTH_FIRST",
+        "BREADTH_FIRST",
+        "PARALLEL"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "TerminationTypeEnum",
+      "file": "api\\v1\\nested\\schemas.py",
+      "values": [
+        "CONDITION",
+        "MAX_DEPTH",
+        "MAX_ITERATIONS",
+        "TIMEOUT",
+        "CONVERGENCE",
+        "USER_ABORT"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "CompositionTypeEnum",
+      "file": "api\\v1\\nested\\schemas.py",
+      "values": [
+        "SEQUENCE",
+        "PARALLEL",
+        "CONDITIONAL",
+        "LOOP",
+        "SWITCH"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "ExecutionStatusEnum",
+      "file": "api\\v1\\nested\\schemas.py",
+      "values": [
+        "PENDING",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED",
+        "TIMEOUT"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "PropagationTypeEnum",
+      "file": "api\\v1\\nested\\schemas.py",
+      "values": [
+        "COPY",
+        "REFERENCE",
+        "MERGE",
+        "FILTER"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "IntentCategoryEnum",
+      "file": "api\\v1\\orchestration\\schemas.py",
+      "values": [
+        "INCIDENT",
+        "REQUEST",
+        "CHANGE",
+        "QUERY",
+        "UNKNOWN"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "WorkflowTypeEnum",
+      "file": "api\\v1\\orchestration\\schemas.py",
+      "values": [
+        "MAGENTIC",
+        "HANDOFF",
+        "CONCURRENT",
+        "SEQUENTIAL",
+        "SIMPLE"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "DemoScenario",
+      "file": "api\\v1\\swarm\\demo.py",
+      "values": [
+        "SECURITY_AUDIT",
+        "ETL_PIPELINE",
+        "DATA_PIPELINE",
+        "CUSTOM"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "GroupChatStatus",
+      "file": "integrations\\agent_framework\\builders\\groupchat.py",
+      "values": [
+        "IDLE",
+        "RUNNING",
+        "WAITING",
+        "PAUSED",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED"
+      ],
+      "value_count": 7
+    },
+    {
+      "name": "SpeakerSelectionMethodLegacy",
+      "file": "integrations\\agent_framework\\builders\\groupchat_migration.py",
+      "values": [
+        "AUTO",
+        "ROUND_ROBIN",
+        "RANDOM",
+        "MANUAL",
+        "PRIORITY",
+        "WEIGHTED"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "GroupChatStateLegacy",
+      "file": "integrations\\agent_framework\\builders\\groupchat_migration.py",
+      "values": [
+        "IDLE",
+        "ACTIVE",
+        "SELECTING",
+        "SPEAKING",
+        "TERMINATED",
+        "ERROR"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "HumanInterventionKind",
+      "file": "integrations\\agent_framework\\builders\\magentic.py",
+      "values": [
+        "PLAN_REVIEW",
+        "TOOL_APPROVAL",
+        "STALL"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "HumanInterventionDecision",
+      "file": "integrations\\agent_framework\\builders\\magentic.py",
+      "values": [
+        "APPROVE",
+        "REVISE",
+        "REJECT",
+        "CONTINUE",
+        "REPLAN",
+        "GUIDANCE"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "PlannerActionTypeLegacy",
+      "file": "integrations\\agent_framework\\builders\\magentic_migration.py",
+      "values": [
+        "ANALYZE",
+        "PLAN",
+        "EXECUTE",
+        "EVALUATE",
+        "REPLAN",
+        "COMPLETE",
+        "FAIL"
+      ],
+      "value_count": 7
+    },
+    {
+      "name": "RecursionStatus",
+      "file": "integrations\\agent_framework\\builders\\nested_workflow.py",
+      "values": [
+        "PENDING",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "DEPTH_EXCEEDED",
+        "TIMEOUT"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "NestedWorkflowTypeLegacy",
+      "file": "integrations\\agent_framework\\builders\\workflow_executor_migration.py",
+      "values": [
+        "INLINE",
+        "REFERENCE",
+        "DYNAMIC",
+        "RECURSIVE"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "WorkflowScopeLegacy",
+      "file": "integrations\\agent_framework\\builders\\workflow_executor_migration.py",
+      "values": [
+        "ISOLATED",
+        "INHERITED",
+        "SHARED"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "NestedExecutionStatusLegacy",
+      "file": "integrations\\agent_framework\\builders\\workflow_executor_migration.py",
+      "values": [
+        "PENDING",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "TIMEOUT",
+        "CANCELLED"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "ToolStatus",
+      "file": "integrations\\agent_framework\\tools\\base.py",
+      "values": [
+        "SUCCESS",
+        "FAILURE",
+        "PARTIAL",
+        "TIMEOUT",
+        "ERROR"
+      ],
+      "value_count": 5
+    },
+    {
+      "name": "SkillCategory",
+      "file": "integrations\\knowledge\\agent_skills.py",
+      "values": [
+        "INCIDENT_MANAGEMENT",
+        "CHANGE_MANAGEMENT",
+        "ENTERPRISE_ARCHITECTURE",
+        "GENERAL_IT"
+      ],
+      "value_count": 4
+    },
+    {
+      "name": "ChunkingStrategy",
+      "file": "integrations\\knowledge\\chunker.py",
+      "values": [
+        "RECURSIVE",
+        "FIXED_SIZE",
+        "SEMANTIC"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "DocumentFormat",
+      "file": "integrations\\knowledge\\document_parser.py",
+      "values": [
+        "PDF",
+        "DOCX",
+        "HTML",
+        "MARKDOWN",
+        "TEXT",
+        "UNKNOWN"
+      ],
+      "value_count": 6
+    },
+    {
+      "name": "MemoryLayer",
+      "file": "integrations\\memory\\types.py",
+      "values": [
+        "WORKING",
+        "SESSION",
+        "LONG_TERM"
+      ],
+      "value_count": 3
+    },
+    {
+      "name": "ApprovalType",
+      "file": "integrations\\orchestration\\hitl\\controller.py",
+      "values": [
+        "NONE",
+        "SINGLE",
+        "MULTI"
+      ],
+      "value_count": 3
+    }
+  ],
+  "summary": {
+    "total_classes_in_codebase": 2168,
+    "important_classes_unmentioned": 30,
+    "total_db_columns": 115,
+    "undocumented_db_columns": 11,
+    "total_api_endpoints": 572,
+    "undocumented_endpoints": 6,
+    "total_enums": 339,
+    "undocumented_enums": 55
+  }
+}

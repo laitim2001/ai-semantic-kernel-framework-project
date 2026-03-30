@@ -1,0 +1,1426 @@
+{
+  "layer": "L01",
+  "files": [
+    {
+      "path": "frontend/src/App.tsx",
+      "loc": 149,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "loc": 41,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/vite-env.d.ts",
+      "loc": 11,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/client.ts",
+      "loc": 173,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/devtools.ts",
+      "loc": 88,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/endpoints/ag-ui.ts",
+      "loc": 333,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/endpoints/files.ts",
+      "loc": 389,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/endpoints/index.ts",
+      "loc": 126,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/endpoints/knowledge.ts",
+      "loc": 184,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/endpoints/memory.ts",
+      "loc": 105,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/endpoints/orchestration.ts",
+      "loc": 326,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/endpoints/orchestrator.ts",
+      "loc": 145,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/endpoints/sessions.ts",
+      "loc": 142,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/api/endpoints/tasks.ts",
+      "loc": 152,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/CustomUIRenderer.tsx",
+      "loc": 179,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/DynamicCard.tsx",
+      "loc": 101,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/DynamicChart.tsx",
+      "loc": 387,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/DynamicForm.tsx",
+      "loc": 335,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/DynamicTable.tsx",
+      "loc": 304,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/index.ts",
+      "loc": 35,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/OptimisticIndicator.tsx",
+      "loc": 295,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/StateDebugger.tsx",
+      "loc": 347,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/ChatContainer.tsx",
+      "loc": 237,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/index.ts",
+      "loc": 30,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/MessageBubble.tsx",
+      "loc": 161,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/MessageInput.tsx",
+      "loc": 152,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/StreamingIndicator.tsx",
+      "loc": 76,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/ToolCallCard.tsx",
+      "loc": 212,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/ApprovalBanner.tsx",
+      "loc": 142,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/ApprovalDialog.tsx",
+      "loc": 245,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/ApprovalList.tsx",
+      "loc": 227,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/index.ts",
+      "loc": 26,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/RiskBadge.tsx",
+      "loc": 101,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/auth/ProtectedRoute.tsx",
+      "loc": 129,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/DurationBar.tsx",
+      "loc": 121,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventDetail.tsx",
+      "loc": 167,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventFilter.tsx",
+      "loc": 417,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventList.tsx",
+      "loc": 241,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventPanel.tsx",
+      "loc": 279,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventPieChart.tsx",
+      "loc": 304,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventTree.tsx",
+      "loc": 276,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/LiveIndicator.tsx",
+      "loc": 295,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/LLMEventPanel.tsx",
+      "loc": 310,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/StatCard.tsx",
+      "loc": 197,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/Statistics.tsx",
+      "loc": 370,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/Timeline.tsx",
+      "loc": 330,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/TimelineNode.tsx",
+      "loc": 302,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/ToolEventPanel.tsx",
+      "loc": 266,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/DevUI/TreeNode.tsx",
+      "loc": 248,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/layout/AppLayout.tsx",
+      "loc": 45,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/layout/Header.tsx",
+      "loc": 47,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/layout/index.ts",
+      "loc": 9,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/layout/Sidebar.tsx",
+      "loc": 155,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/layout/UserMenu.tsx",
+      "loc": 171,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/shared/EmptyState.tsx",
+      "loc": 41,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/shared/index.ts",
+      "loc": 8,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/shared/LoadingSpinner.tsx",
+      "loc": 44,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/shared/StatusBadge.tsx",
+      "loc": 39,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Badge.tsx",
+      "loc": 50,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Button.tsx",
+      "loc": 69,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Card.tsx",
+      "loc": 88,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Checkbox.tsx",
+      "loc": 36,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Collapsible.tsx",
+      "loc": 18,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/dialog.tsx",
+      "loc": 133,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/index.ts",
+      "loc": 12,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Input.tsx",
+      "loc": 37,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Label.tsx",
+      "loc": 38,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Progress.tsx",
+      "loc": 39,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/RadioGroup.tsx",
+      "loc": 50,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/ScrollArea.tsx",
+      "loc": 53,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Select.tsx",
+      "loc": 220,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Separator.tsx",
+      "loc": 39,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Sheet.tsx",
+      "loc": 150,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Table.tsx",
+      "loc": 125,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Textarea.tsx",
+      "loc": 36,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/ui/Tooltip.tsx",
+      "loc": 36,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ApprovalDialog.tsx",
+      "loc": 384,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ApprovalMessageCard.tsx",
+      "loc": 491,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/AttachmentPreview.tsx",
+      "loc": 337,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ChatArea.tsx",
+      "loc": 123,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ChatHeader.tsx",
+      "loc": 131,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ChatHistoryPanel.tsx",
+      "loc": 416,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ChatInput.tsx",
+      "loc": 245,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/CheckpointList.tsx",
+      "loc": 205,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ConnectionStatus.tsx",
+      "loc": 239,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ErrorBoundary.tsx",
+      "loc": 221,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/FileMessage.tsx",
+      "loc": 313,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/FileRenderer.tsx",
+      "loc": 257,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/FileUpload.tsx",
+      "loc": 323,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/index.ts",
+      "loc": 113,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/InlineApproval.tsx",
+      "loc": 233,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/IntentStatusChip.tsx",
+      "loc": 172,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/MemoryHint.tsx",
+      "loc": 117,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/MessageList.tsx",
+      "loc": 314,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ModeIndicator.tsx",
+      "loc": 188,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ModeSwitchConfirmDialog.tsx",
+      "loc": 241,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/OrchestrationPanel.tsx",
+      "loc": 509,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/RestoreConfirmDialog.tsx",
+      "loc": 201,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/RiskIndicator.tsx",
+      "loc": 292,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/StatusBar.tsx",
+      "loc": 328,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/StepProgress.tsx",
+      "loc": 191,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/StepProgressEnhanced.tsx",
+      "loc": 287,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/TaskProgressCard.tsx",
+      "loc": 177,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ToolCallTracker.tsx",
+      "loc": 198,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/WorkflowSidePanel.tsx",
+      "loc": 192,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/AgentSwarmPanel.tsx",
+      "loc": 147,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/CheckpointPanel.tsx",
+      "loc": 103,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/CurrentTask.tsx",
+      "loc": 106,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/ExtendedThinkingPanel.tsx",
+      "loc": 232,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/index.ts",
+      "loc": 48,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/MessageHistory.tsx",
+      "loc": 238,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/OverallProgress.tsx",
+      "loc": 69,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/SwarmHeader.tsx",
+      "loc": 146,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/SwarmStatusBadges.tsx",
+      "loc": 111,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/ToolCallItem.tsx",
+      "loc": 298,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/ToolCallsPanel.tsx",
+      "loc": 94,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerActionList.tsx",
+      "loc": 334,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerCard.tsx",
+      "loc": 229,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerCardList.tsx",
+      "loc": 60,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerDetailDrawer.tsx",
+      "loc": 285,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerDetailHeader.tsx",
+      "loc": 180,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/index.ts",
+      "loc": 27,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/useSwarmEventHandler.ts",
+      "loc": 304,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/useSwarmEvents.ts",
+      "loc": 210,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/useSwarmStatus.ts",
+      "loc": 222,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/useWorkerDetail.ts",
+      "loc": 199,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/types/events.ts",
+      "loc": 211,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/types/index.ts",
+      "loc": 180,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/AgentSwarmPanel.test.tsx",
+      "loc": 138,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/ExtendedThinkingPanel.test.tsx",
+      "loc": 227,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/MessageHistory.test.tsx",
+      "loc": 104,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/OverallProgress.test.tsx",
+      "loc": 80,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/SwarmHeader.test.tsx",
+      "loc": 84,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/SwarmStatusBadges.test.tsx",
+      "loc": 81,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/ToolCallItem.test.tsx",
+      "loc": 108,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/useWorkerDetail.test.ts",
+      "loc": 203,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/WorkerActionList.test.tsx",
+      "loc": 316,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/WorkerCard.test.tsx",
+      "loc": 158,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/WorkerCardList.test.tsx",
+      "loc": 78,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/WorkerDetailDrawer.test.tsx",
+      "loc": 177,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/renderers/CodePreview.tsx",
+      "loc": 222,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/renderers/ImagePreview.tsx",
+      "loc": 228,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/renderers/index.ts",
+      "loc": 18,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/unified-chat/renderers/TextPreview.tsx",
+      "loc": 245,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/WorkflowCanvas.tsx",
+      "loc": 449,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/edges/ConditionalEdge.tsx",
+      "loc": 81,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/edges/DefaultEdge.tsx",
+      "loc": 73,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/hooks/useNodeDrag.ts",
+      "loc": 77,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/hooks/useWorkflowData.ts",
+      "loc": 324,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/nodes/ActionNode.tsx",
+      "loc": 87,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/nodes/AgentNode.tsx",
+      "loc": 85,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/nodes/ConditionNode.tsx",
+      "loc": 93,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/nodes/StartEndNode.tsx",
+      "loc": 79,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/utils/layoutEngine.ts",
+      "loc": 145,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/index.ts",
+      "loc": 144,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useAGUI.ts",
+      "loc": 983,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useApprovalFlow.ts",
+      "loc": 461,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useChatThreads.ts",
+      "loc": 351,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useCheckpoints.ts",
+      "loc": 368,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useDevTools.ts",
+      "loc": 77,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useDevToolsStream.ts",
+      "loc": 259,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useEventFilter.ts",
+      "loc": 380,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useExecutionMetrics.ts",
+      "loc": 464,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useFileUpload.ts",
+      "loc": 260,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useHybridMode.ts",
+      "loc": 270,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useKnowledge.ts",
+      "loc": 121,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useMemory.ts",
+      "loc": 84,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useOptimisticState.ts",
+      "loc": 409,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useOrchestration.ts",
+      "loc": 353,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useOrchestratorChat.ts",
+      "loc": 325,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useSessions.ts",
+      "loc": 117,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useSharedState.ts",
+      "loc": 506,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useSSEChat.ts",
+      "loc": 212,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useSwarmMock.ts",
+      "loc": 624,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useSwarmReal.ts",
+      "loc": 604,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useTasks.ts",
+      "loc": 106,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useToolCallEvents.ts",
+      "loc": 73,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useTypewriterEffect.ts",
+      "loc": 118,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/hooks/useUnifiedChat.ts",
+      "loc": 1314,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/lib/utils.ts",
+      "loc": 171,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/SwarmTestPage.tsx",
+      "loc": 845,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/UnifiedChat.tsx",
+      "loc": 1404,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/AGUIDemoPage.tsx",
+      "loc": 200,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/AgenticChatDemo.tsx",
+      "loc": 109,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/EventLogPanel.tsx",
+      "loc": 193,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/GenerativeUIDemo.tsx",
+      "loc": 228,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/HITLDemo.tsx",
+      "loc": 178,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/index.ts",
+      "loc": 41,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/PredictiveDemo.tsx",
+      "loc": 251,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/SharedStateDemo.tsx",
+      "loc": 201,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/ToolRenderingDemo.tsx",
+      "loc": 158,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/ToolUIDemo.tsx",
+      "loc": 174,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/agents/AgentDetailPage.tsx",
+      "loc": 314,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/agents/AgentsPage.tsx",
+      "loc": 189,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/agents/CreateAgentPage.tsx",
+      "loc": 1016,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/agents/EditAgentPage.tsx",
+      "loc": 959,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/approvals/ApprovalsPage.tsx",
+      "loc": 239,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/audit/AuditPage.tsx",
+      "loc": 162,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/auth/LoginPage.tsx",
+      "loc": 209,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/auth/SignupPage.tsx",
+      "loc": 273,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "loc": 87,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/dashboard/PerformancePage.tsx",
+      "loc": 469,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/ExecutionChart.tsx",
+      "loc": 104,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/index.ts",
+      "loc": 9,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/PendingApprovals.tsx",
+      "loc": 100,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/RecentExecutions.tsx",
+      "loc": 108,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/StatsCards.tsx",
+      "loc": 75,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/DevUI/AGUITestPanel.tsx",
+      "loc": 461,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/DevUI/index.tsx",
+      "loc": 216,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/DevUI/Layout.tsx",
+      "loc": 166,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/DevUI/LiveMonitor.tsx",
+      "loc": 67,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/DevUI/Settings.tsx",
+      "loc": 67,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/DevUI/TraceDetail.tsx",
+      "loc": 563,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/DevUI/TraceList.tsx",
+      "loc": 304,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/knowledge/KnowledgePage.tsx",
+      "loc": 400,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/memory/MemoryPage.tsx",
+      "loc": 290,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/sessions/SessionDetailPage.tsx",
+      "loc": 280,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/sessions/SessionsPage.tsx",
+      "loc": 259,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/tasks/TaskDashboardPage.tsx",
+      "loc": 330,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/tasks/TaskDetailPage.tsx",
+      "loc": 315,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/templates/TemplatesPage.tsx",
+      "loc": 230,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/workflows/CreateWorkflowPage.tsx",
+      "loc": 888,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/workflows/EditWorkflowPage.tsx",
+      "loc": 1041,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/workflows/WorkflowDetailPage.tsx",
+      "loc": 355,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/workflows/WorkflowEditorPage.tsx",
+      "loc": 22,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/pages/workflows/WorkflowsPage.tsx",
+      "loc": 166,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/store/authStore.ts",
+      "loc": 323,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/stores/swarmStore.ts",
+      "loc": 445,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/stores/unifiedChatStore.ts",
+      "loc": 509,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/stores/__tests__/swarmStore.test.ts",
+      "loc": 420,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/test/setup.ts",
+      "loc": 9,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/types/ag-ui.ts",
+      "loc": 458,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/types/devtools.ts",
+      "loc": 105,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/types/index.ts",
+      "loc": 232,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/types/unified-chat.ts",
+      "loc": 506,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "frontend/src/utils/guestUser.ts",
+      "loc": 171,
+      "classes": [],
+      "functions": []
+    }
+  ],
+  "classes": [],
+  "key_functions": [],
+  "imports_from": [],
+  "total_files": 236,
+  "total_loc": 54474
+}
