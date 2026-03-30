@@ -49,7 +49,7 @@
 │  │  L3: LLMClassifier (LLM 分類)                            │               │
 │  │  • Azure OpenAI GPT-4o, Traditional Chinese prompts      │               │
 │  │  • 294 LOC | 帶快取 (ClassificationCache)                │               │
-│  │  • 多任務: 意圖 + 風險 + 完整度 一次推理                 │               │
+│  │  • 多任務: 意圖 + 完整度 一次推理 (風險由 RiskAssessor 獨立處理) │         │
 │  └─────────────┬────────────────────────────────────────────┘               │
 │                │                                                             │
 │                ↓                                                             │
@@ -71,17 +71,17 @@
 │                                                                             │
 │  ITIntentCategory          RiskLevel        WorkflowType                    │
 │  ─────────────────         ─────────        ────────────                    │
-│  INCIDENT (事件)     ──→   HIGH        ──→  MAGENTIC (多Agent協作)          │
-│    ├ server_down                             需要診斷+修復+驗證             │
-│    └ service_outage                                                         │
+│  INCIDENT (事件)                                                            │
+│    ├ system_unavailable / system_down ──→ HIGH ──→ MAGENTIC (多Agent協作)   │
+│    └ 其他 sub_intent ──────────────────→ HIGH ──→ SEQUENTIAL (順序執行)     │
 │                                                                             │
-│  REQUEST (請求)      ──→   MEDIUM      ──→  HANDOFF (逐步交接)             │
-│    ├ access_request                          需要多部門審批                 │
+│  REQUEST (請求)      ──→   MEDIUM      ──→  SIMPLE (直接處理)              │
+│    ├ access_request                                                         │
 │    └ resource_provision                                                     │
 │                                                                             │
-│  CHANGE (變更)       ──→   HIGH        ──→  SEQUENTIAL (順序執行)           │
-│    ├ config_change                           需要嚴格步驟控制               │
-│    └ deployment                                                             │
+│  CHANGE (變更)                                                              │
+│    ├ release_deployment / database_change ─→ HIGH ──→ MAGENTIC             │
+│    └ 其他 sub_intent ────────────────────→ HIGH ──→ SEQUENTIAL             │
 │                                                                             │
 │  QUERY (查詢)        ──→   LOW         ──→  SIMPLE (直接回答)               │
 │    ├ status_check                            單輪對話即可                   │
@@ -152,7 +152,7 @@ stateDiagram-v2
 | `intent_router/semantic_router/migration.py` | ~100 | S116 | Migration utilities |
 | `intent_router/semantic_router/__init__.py` | ~10 | S92 | Re-exports |
 | `intent_router/llm_classifier/classifier.py` | 294 | S92/S128 | `LLMClassifier` — uses `LLMServiceProtocol`, graceful degradation |
-| `intent_router/llm_classifier/prompts.py` | 231 | S92 | Multi-task classification prompt (Traditional Chinese), simplified prompt variant |
+| `intent_router/llm_classifier/prompts.py` | 231 | S92 | Multi-task prompt: intent + completeness (NOT risk — risk is by RiskAssessor). Traditional Chinese, simplified variant |
 | `intent_router/llm_classifier/cache.py` | ~150 | S92 | `ClassificationCache` for LLM result caching |
 | `intent_router/llm_classifier/evaluation.py` | ~200 | S99 | Classification quality evaluation |
 | `intent_router/llm_classifier/__init__.py` | ~10 | S92 | Re-exports |
@@ -166,7 +166,7 @@ stateDiagram-v2
 
 | File | LOC | Sprint | Purpose |
 |------|-----|--------|---------|
-| `guided_dialog/engine.py` | 593 | S94 | `GuidedDialogEngine` — multi-turn orchestration (max 5 turns), phases: initial->gathering->complete->handoff. Integrates BusinessIntentRouter, ConversationContextManager, QuestionGenerator, RefinementRules |
+| `guided_dialog/engine.py` | 593 | S94 | `GuidedDialogEngine` — multi-turn orchestration (max 5 turns), 5 phases: initial→gathering→complete→handoff→clarification. Direct deps: BusinessIntentRouter, ConversationContextManager (optional), QuestionGenerator (optional). RefinementRules is indirect via ContextManager |
 | `guided_dialog/context_manager.py` | 1,102 | S94/S97 | `ConversationContextManager` + `PersistentConversationContextManager` (Redis) + `RedisDialogSessionStorage` + `InMemoryDialogSessionStorage` |
 | `guided_dialog/generator.py` | ~1,151 | S94 | `QuestionGenerator` — template-based question generation per intent |
 | `guided_dialog/refinement_rules.py` | ~622 | S94 | `RefinementRules` — rule-based sub-intent refinement (NOT LLM) |
@@ -310,7 +310,7 @@ stateDiagram-v2
      ┌──────▼──────┐          │
      │RiskAssessor │◄─────────┘
      │7 dimensions │
-     │26 policies  │
+     │25+1 policies│
      └──────┬──────┘
             │
      ┌──────▼──────┐
@@ -657,7 +657,7 @@ final_score = clamp(base_score + factor_adjustment, 0.0, 1.0)
 **Policy Lookup Order**: Exact match (category:sub_intent) → Category default (category:*) → Global default
 
 **Policy Factory Functions**:
-- `create_default_policies()` — Standard 26-policy set
+- `create_default_policies()` — 25 policies in DEFAULT_POLICIES + 1 GLOBAL_DEFAULT_POLICY (fallback)
 - `create_strict_policies()` — Elevated: all incidents and changes require approval
 - `create_relaxed_policies()` — Reduced: changes auto-approved in dev
 

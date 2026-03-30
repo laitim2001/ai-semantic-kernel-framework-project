@@ -124,7 +124,7 @@ Phase 13-14 (S52-S57):           Phase 28 (S93-S98):           Phase 39-42 (S132
                      │       + FrameworkSelector       │    + RoutingDecisionClassifier
                      │               │                │
                      │  Step 3: DialogHandler          │──→ GuidedDialogEngine (conditional)
-                     │       (short-circuit?)          │    short-circuit if needs_more_info
+                     │       (short-circuit?)          │    short-circuit if should_short_circuit
                      │               │                │
                      │  Step 4: ApprovalHandler         │──→ RiskAssessor + HITLController
                      │       (short-circuit?)          │    short-circuit if pending/rejected
@@ -235,7 +235,7 @@ class Handler(ABC):
 |---|---------|-----------|---------------|---------|
 | 1 | **ContextHandler** | Always | No | Prepare HybridContext + inject memories |
 | 2 | **RoutingHandler** | Always | No (error stops pipeline) | 3-tier routing + framework selection |
-| 3 | **DialogHandler** | `needs_dialog=True` | Yes (needs_more_info) | Gather missing information |
+| 3 | **DialogHandler** | `needs_dialog=True` | Yes (`should_short_circuit`) | Gather missing information |
 | 4 | **ApprovalHandler** | `source_request` present | Yes (pending/rejected) | Risk assessment + HITL |
 | 5 | **AgentHandler** | Always | Yes (CHAT_MODE) | LLM response + Function Calling |
 | 6 | **ExecutionHandler** | Always | No | Framework dispatch (MAF/Claude/Swarm) |
@@ -770,7 +770,7 @@ The `pipeline_context` dict is shared across all handlers as the communication m
 
 Three handlers support short-circuiting:
 
-1. **DialogHandler**: When `response.needs_more_info` — returns questions to user
+1. **DialogHandler**: When `result.should_short_circuit` — returns questions to user
 2. **ApprovalHandler**: When `approval_result.status == PENDING/REJECTED` — blocks execution
 3. **AgentHandler**: When `CHAT_MODE` and no swarm needed — returns direct LLM response
 
