@@ -41,7 +41,7 @@
 │  │  L2: SemanticRouter (語義路由)                            │               │
 │  │  • Aurelio 向量相似度 / Azure AI Search                   │               │
 │  │  • 15 predefined routes, 75 utterances                   │               │
-│  │  • 匹配 → confidence ≥ 0.7? ──→ ✓ 語義路由              │               │
+│  │  • 匹配 → confidence ≥ 0.85? ──→ ✓ 語義路由             │               │
 │  └─────────────┬────────────────────────────────────────────┘               │
 │                │ 未匹配 (confidence < 0.7)                                  │
 │                ↓                                                             │

@@ -43,7 +43,7 @@ This document provides a comprehensive analysis of the 14 supporting integration
 | 5 | `correlation/` | 6 | 23 + 42 | S82, S130 | CorrelationAnalyzer, EventCollector, EventDataSource (Azure Monitor/App Insights) | Refactored (S130: real data) |
 | 6 | `rootcause/` | 5 | 23 + 42 | S82, S130 | RootCauseAnalyzer, CaseMatcher | Refactored (S130: real cases) |
 | 7 | `incident/` | 6 | 34 | S126 | IncidentAnalyzer, ActionRecommender, IncidentExecutor | Stable |
-| 8 | `patrol/` | 11 | 23 | S82 | PatrolAgent, ScheduledPatrol, check classes | Types-only (no concrete impls) |
+| 8 | `patrol/` | 11 | 23 | S82 | PatrolAgent, ScheduledPatrol, check classes (5 concrete: ServiceHealth, APIResponse, ResourceUsage, LogAnalysis, SecurityScan) | Active (base + 5 concrete check implementations) |
 | 9 | `learning/` | 5 | 4 | S80 | FewShotLearner, SimilarityCalculator, CaseExtractor | Stable |
 | 10 | `audit/` | 4 | 23 | S80 | DecisionTracker | InMemory-only |
 | 11 | `a2a/` | 4 | 23 | S81 | A2AMessage, AgentCapability, DiscoveryQuery, MessageRouter (18 methods), AgentDiscoveryService (16 methods) | Stable |

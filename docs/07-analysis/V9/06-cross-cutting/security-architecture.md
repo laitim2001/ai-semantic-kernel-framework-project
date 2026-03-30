@@ -73,7 +73,7 @@ IPA Platform employs a 6-layer Defense-in-Depth architecture. Each layer address
 |  |  +---------------------------------------------------------------+   |      |
 |  |  |  core/security/tool_gateway.py + mcp/security/*                |   |      |
 |  |  |  MCP PermissionChecker: 4 級 RBAC (NONE/READ/EXECUTE/ADMIN)   |   |      |
-|  |  |  CommandWhitelist: 65 白名單 + 26 黑名單 regex                 |   |      |
+|  |  |  CommandWhitelist: 79 白名單 + 24 黑名單 regex                 |   |      |
 |  |  |  Glob-pattern 匹配 + 優先級策略評估 + Deny-list 優先           |   |      |
 |  |  |  WARNING: 目前預設 mode=log (僅記錄不阻擋)                     |   |      |
 |  |  +---------------------------------------------------------------+   |      |
@@ -95,7 +95,7 @@ IPA Platform employs a 6-layer Defense-in-Depth architecture. Each layer address
 |  |  第六層: Audit Trail 稽核軌跡                                          |      |
 |  |  +---------------------------------------------------------------+   |      |
 |  |  |  mcp/security/audit.py + redis_audit.py                        |   |      |
-|  |  |  AuditLogger: 13 事件類型 (4 類別)                             |   |      |
+|  |  |  AuditLogger: 12 事件類型 (5 類別)                             |   |      |
 |  |  |  3 儲存後端: InMemory (dev) / File (簡易) / Redis (生產)       |   |      |
 |  |  |  敏感欄位自動遮蔽 (password, secret, token, api_key 等)        |   |      |
 |  |  |  + orchestration/audit/logger.py -- 路由決策稽核               |   |      |
@@ -525,7 +525,7 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 | Field | Type | Description |
 |-------|------|-------------|
 | `event_id` | UUID4 | Unique event identifier |
-| `event_type` | AuditEventType | One of 13 event types |
+| `event_type` | AuditEventType | One of 12 event types |
 | `timestamp` | datetime (UTC) | Event time |
 | `user_id` | str | Acting user |
 | `server` | str | MCP server name |

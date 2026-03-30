@@ -33,7 +33,7 @@
 │  │  │              │  │              │  │              │           │      │
 │  │  │ AsyncEngine  │  │ S3 + Local   │  │ PG + Redis   │           │      │
 │  │  │ SQLAlchemy   │  │ File Storage │  │ + InMemory   │           │      │
-│  │  │ 8 ORM Models │  │ Sandbox FS   │  │ CachedStore  │           │      │
+│  │  │ 9 ORM Models │  │ Sandbox FS   │  │ CachedStore  │           │      │
 │  │  │ 6 Repos      │  │              │  │              │           │      │
 │  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘           │      │
 │  │         │                 │                  │                    │      │
@@ -88,7 +88,7 @@
 │  │  └→ AsyncEngine (create_async_engine)                 │                  │
 │  │      ├─ pool_size: 5 (default)                        │                  │
 │  │      ├─ max_overflow: 10                              │                  │
-│  │      ├─ pool_recycle: 3600s                           │                  │
+│  │      ├─ (pool_recycle: not set, relies on pool_pre_ping)│                  │
 │  │      └─ pool_pre_ping: True (連接健康檢查)            │                  │
 │  └───────────────────────────┬───────────────────────────┘                  │
 │                              ↓                                              │
@@ -134,7 +134,7 @@ infrastructure/
 ├── database/                                # PostgreSQL via SQLAlchemy async (18 files)
 │   ├── __init__.py
 │   ├── session.py                           # AsyncEngine + async_sessionmaker + get_session DI
-│   ├── models/                              # 9 files (base + 8 models)
+│   ├── models/                              # 9 files (base + 8 model files = 9 ORM classes)
 │   │   ├── __init__.py
 │   │   ├── base.py                          # Base, TimestampMixin, UUIDMixin
 │   │   ├── user.py                          # User (Sprint 1 + Sprint 72)

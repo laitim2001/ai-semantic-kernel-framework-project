@@ -43,7 +43,7 @@
 │                              ↓  JSON-RPC 2.0                               │
 │  ┌──────────────────────────────────────────────────────────────────┐       │
 │  │  MCPProtocol (core/protocol.py, 408 LOC)                         │       │
-│  │  • 8 methods: initialize, tools/list, tools/call,                │       │
+│  │  • 9 methods: initialize, initialized, tools/list, tools/call,    │       │
 │  │    resources/list, resources/read, prompts/list, prompts/get,    │       │
 │  │    ping                                                          │       │
 │  │  • Tool registration + Permission checking                       │       │
@@ -150,7 +150,7 @@ stateDiagram-v2
 | File | LOC | Key Classes | Purpose |
 |------|-----|-------------|---------|
 | `core/types.py` | 417 | `ToolInputType`, `ToolParameter`, `ToolSchema`, `ToolResult`, `MCPRequest`, `MCPResponse`, `MCPErrorCode` | Type system: 7 JSON Schema types, bidirectional MCP format conversion, JSON-RPC 2.0 request/response with error codes |
-| `core/protocol.py` | 408 | `MCPProtocol` | JSON-RPC 2.0 handler: 8 methods (initialize, initialized, tools/list, tools/call, resources/list, resources/read, prompts/list, prompts/get, ping). Tool registration, permission checking integration |
+| `core/protocol.py` | 408 | `MCPProtocol` | JSON-RPC 2.0 handler: 9 methods (initialize, initialized, tools/list, tools/call, resources/list, resources/read, prompts/list, prompts/get, ping). Tool registration, permission checking integration |
 | `core/transport.py` | 372 | `BaseTransport` (ABC), `StdioTransport`, `InMemoryTransport` | Transport abstraction: StdioTransport manages subprocess lifecycle with async read loop, write lock, pending request matching. InMemoryTransport for testing |
 | `core/client.py` | 446 | `MCPClient`, `ServerConfig` | Multi-server client: connect/disconnect lifecycle, tool discovery via tools/list, tool invocation via tools/call, async context manager |
 
@@ -167,8 +167,8 @@ stateDiagram-v2
 |------|-----|-------------|---------|
 | `security/permissions.py` | 458 | `PermissionLevel` (IntEnum), `Permission`, `PermissionPolicy`, `PermissionManager` | 4-level RBAC: NONE(0)/READ(1)/EXECUTE(2)/ADMIN(3). Glob-pattern matching for servers/tools, priority-based policy evaluation, deny-list precedence, dynamic conditions (time_range, ip_whitelist, custom evaluators) |
 | `security/permission_checker.py` | 183 | `MCPPermissionChecker` | Runtime enforcement facade: two modes via `MCP_PERMISSION_MODE` env var -- "log" (Phase 1, log-only) and "enforce" (Phase 2, raises PermissionError). Dev/testing gets permissive ADMIN default policy. Stats tracking |
-| `security/command_whitelist.py` | 225 | `CommandWhitelist` | Three-tier command security: 65 DEFAULT_WHITELIST commands, 26 BLOCKED_PATTERNS regex, everything else requires_approval. Extensible via `MCP_ADDITIONAL_WHITELIST` env var |
-| `security/audit.py` | 679 | `AuditEventType` (13 types), `AuditEvent`, `AuditFilter`, `AuditStorage` (ABC), `InMemoryAuditStorage`, `FileAuditStorage`, `AuditLogger` | Comprehensive audit: 13 event types across 4 categories. Sensitive field redaction. Pluggable storage with deque-based in-memory (bounded), JSON Lines file, event handler pipeline |
+| `security/command_whitelist.py` | 225 | `CommandWhitelist` | Three-tier command security: 79 DEFAULT_WHITELIST commands, 24 BLOCKED_PATTERNS regex, everything else requires_approval. Extensible via `MCP_ADDITIONAL_WHITELIST` env var |
+| `security/audit.py` | 679 | `AuditEventType` (13 types), `AuditEvent`, `AuditFilter`, `AuditStorage` (ABC), `InMemoryAuditStorage`, `FileAuditStorage`, `AuditLogger` | Comprehensive audit: 12 event types across 5 categories. Sensitive field redaction. Pluggable storage with deque-based in-memory (bounded), JSON Lines file, event handler pipeline |
 | `security/redis_audit.py` | ~120 | `RedisAuditStorage` | Production audit backend: Redis Sorted Set (score=timestamp) for efficient time-range queries, auto-trimming to max_size, key `mcp:audit:events` |
 
 ### 2.4 Servers (59 files across 8 directories + 3 root-level ServiceNow files)
@@ -657,7 +657,7 @@ stateDiagram-v2
 
 ### 6.4 Audit Logging System
 
-**AuditEventType** -- 13 event types across 4 categories:
+**AuditEventType** -- 12 event types across 5 categories:
 
 | Category | Event Types |
 |----------|-------------|

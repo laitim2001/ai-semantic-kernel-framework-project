@@ -16,7 +16,7 @@ Layer 05 is the **Hybrid Orchestration Layer** — the largest and most architec
 3. **Assesses** operational risk and triggers HITL approval for high-risk operations
 4. **Executes** requests through the selected framework via a unified pipeline
 5. **Persists** execution checkpoints across 4 storage backends
-6. **Streams** real-time pipeline events via 14 SSE event types
+6. **Streams** real-time pipeline events via 13 SSE event types
 
 The layer has undergone a major architectural evolution: from the monolithic `HybridOrchestratorV2` (Sprint 54, ~1,254 LOC God Object) to the current **Mediator Pattern** with 7 specialized handlers (Sprint 132+).
 
@@ -48,7 +48,7 @@ The layer has undergone a major architectural evolution: from the monolithic `Hy
 | `orchestrator_v2.py` | ~1,254 | S54 | **HybridOrchestratorV2** — DEPRECATED God Object facade |
 | `orchestrator/bootstrap.py` | ~512 | S134 | **OrchestratorBootstrap** — Full pipeline DI assembly |
 | `orchestrator/contracts.py` | ~133 | S132 | Handler ABC, OrchestratorRequest/Response, HandlerResult |
-| `orchestrator/sse_events.py` | ~158 | S145 | 14 SSE event types + PipelineEventEmitter |
+| `orchestrator/sse_events.py` | ~158 | S145 | 13 SSE event types + PipelineEventEmitter |
 | `orchestrator/agent_handler.py` | ~426 | S107/S144 | **AgentHandler** — LLM + Function Calling loop |
 | `orchestrator/handlers/routing.py` | ~227 | S132 | **RoutingHandler** — 3-tier routing + FrameworkSelector |
 | `orchestrator/handlers/execution.py` | ~459 | S132 | **ExecutionHandler** — MAF/Claude/Hybrid/Swarm dispatch |
@@ -283,7 +283,7 @@ Renamed from `IntentRouter` (Sprint 98) to avoid confusion with `BusinessIntentR
 **Decision Flow:**
 1. Run all enabled classifiers on user input
 2. Aggregate results using **weighted voting**
-3. If confidence >= threshold (default 0.6), use detected mode
+3. If confidence >= threshold (default 0.7), use detected mode
 4. Otherwise, use default mode (`CHAT_MODE`)
 
 **Classifier Chain (Sprint 144 Bootstrap):**
@@ -722,7 +722,7 @@ elif "request" in intent or "change" in intent:
                 Weighted Aggregation
                         │
                     ExecutionMode
-                 (if confidence >= 0.6)
+                 (if confidence >= 0.7)
 ```
 
 ---
@@ -886,7 +886,7 @@ Both analyzers exist (428 + 567 LOC) but are not registered as classifiers in th
 | **Phase 35** | S107 | A0 Validation | `AgentHandler` — first LLM-powered handler in pipeline |
 | **Phase 39** | S132-S134 | Mediator Refactor | `OrchestratorMediator`, 6 Handlers, `OrchestratorBootstrap`, `contracts.py` |
 | **Phase 41** | S135 | Memory Integration | `ContextHandler` + `OrchestratorMemoryManager`, long-term memory writes |
-| **Phase 42** | S144-S148 | Deep Integration | Function Calling, `RoutingDecisionClassifier`, 14 SSE events, HITL via SSE, session persistence, checkpoint resume, Swarm parallel execution |
+| **Phase 42** | S144-S148 | Deep Integration | Function Calling, `RoutingDecisionClassifier`, 13 SSE events, HITL via SSE, session persistence, checkpoint resume, Swarm parallel execution |
 
 ---
 
