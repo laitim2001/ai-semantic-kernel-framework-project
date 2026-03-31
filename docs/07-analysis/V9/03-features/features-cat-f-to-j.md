@@ -475,7 +475,7 @@ All 4 security features remain COMPLETE. V9 notes that Phase 36 (Sprint 109) add
 | U8 | Routing Engine API | COMPLETE | COMPLETE | `api/v1/routing/` — 14 endpoints, ScenarioRouter |
 | U9 | Version Control API | COMPLETE | COMPLETE | `api/v1/versioning/` — 14 endpoints |
 | U10 | Trigger/Webhook API | COMPLETE | COMPLETE | `api/v1/triggers/` — 9 endpoints |
-| U11 | Mediator Pattern Refactor | COMPLETE | COMPLETE (Expanded) | `hybrid/orchestrator/mediator.py` (844 LOC) + 6 handlers (1,160 LOC) |
+| U11 | Mediator Pattern Refactor | COMPLETE | COMPLETE (Expanded) | `hybrid/orchestrator/mediator.py` (844 LOC) + 7 handlers (1,160 LOC in handlers/ + AgentHandler) |
 | U12 | Extended Thinking (Claude) | COMPLETE | COMPLETE | `claude_sdk/client.py` — beta header streaming |
 | U13 | Multi-Agent Coordinator | COMPLETE | COMPLETE | `claude_sdk/orchestrator/coordinator.py` — ClaudeCoordinator + TaskAllocator |
 | U14 | Orchestration Metrics (OTel) | COMPLETE | COMPLETE | `orchestration/metrics.py` (893 LOC) — dual-mode OTel + fallback |

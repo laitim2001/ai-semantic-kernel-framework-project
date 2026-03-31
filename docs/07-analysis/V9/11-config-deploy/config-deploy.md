@@ -7,8 +7,8 @@
 > **Source Files Analyzed**:
 > - `backend/src/core/config.py` (Settings class, 223 lines)
 > - `backend/src/core/server_config.py` (ServerConfig class, 147 lines)
-> - `.env.example` (root, 118 lines)
-> - `backend/.env.example` (197 lines)
+> - `.env.example` (root, 117 lines)
+> - `backend/.env.example` (198 lines)
 > - `docker-compose.yml` (195 lines)
 > - `docker-compose.prod.yml` (125 lines)
 > - `backend/Dockerfile` (96 lines, 3-stage)
@@ -45,7 +45,7 @@
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
 │  │ .env 檔案     │──→│ Pydantic     │──→│ Settings     │                  │
 │  │ (root + back) │    │ BaseSettings │    │ 單例實例     │                  │
-│  │ 118 + 197 行  │    │ case_insensit│    │ get_settings()│                 │
+│  │ 117 + 198 行  │    │ case_insensit│    │ get_settings()│                 │
 │  └──────────────┘    └──────────────┘    └──────┬───────┘                  │
 │                                                  │                          │
 │                                                  ↓                          │
@@ -104,8 +104,8 @@
 All environment variables are loaded via Pydantic `BaseSettings` in `backend/src/core/config.py`, with `.env` file support (`env_file=".env"`, case-insensitive, extra fields ignored).
 
 There are **two** `.env.example` files:
-- **Root** `.env.example` — covers core platform settings (118 lines)
-- **Backend** `backend/.env.example` — extended version with mem0, LDAP, ServiceNow, Swarm, Azure Search, server config (197 lines)
+- **Root** `.env.example` — covers core platform settings (117 lines)
+- **Backend** `backend/.env.example` — extended version with mem0, LDAP, ServiceNow, Swarm, Azure Search, server config (198 lines)
 
 ### 1.1 Application Settings
 

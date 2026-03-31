@@ -896,7 +896,7 @@ Both analyzers exist (428 + 567 LOC) but are not registered as classifiers in th
 | **Phase 28** | S93-S98 | Three-Tier Routing | Phase 28 component integration, `FrameworkSelector` rename (was `IntentRouter`) |
 | **Phase 29** | S116 | Agent Swarm | `SwarmModeHandler`, `SwarmExecutionConfig`, SWARM_MODE execution mode |
 | **Phase 35** | S107 | A0 Validation | `AgentHandler` — first LLM-powered handler in pipeline |
-| **Phase 39** | S132-S134 | Mediator Refactor | `OrchestratorMediator`, 6 Handlers, `OrchestratorBootstrap`, `contracts.py` |
+| **Phase 39** | S132-S134 | Mediator Refactor | `OrchestratorMediator`, 7 Handlers (6 new + AgentHandler), `OrchestratorBootstrap`, `contracts.py` |
 | **Phase 41** | S135 | Memory Integration | `ContextHandler` + `OrchestratorMemoryManager`, long-term memory writes |
 | **Phase 42** | S144-S148 | Deep Integration | Function Calling, `RoutingDecisionClassifier`, 13 SSE events, HITL via SSE, session persistence, checkpoint resume, Swarm parallel execution |
 
@@ -942,7 +942,7 @@ The `hybrid/__init__.py` exports 42 symbols organized by sprint:
 | S54 | `UnifiedToolExecutor`, `ToolSource`, `ToolExecutionResult`, `ToolRouter`, `MAFToolCallback`, `MAFToolResult` |
 | S54 | `HybridOrchestratorV2`, `OrchestratorMode`, `OrchestratorConfig`, `ExecutionContextV2`, `HybridResultV2`, `OrchestratorMetrics`, `create_orchestrator_v2` |
 | S116 | `SwarmModeHandler`, `SwarmExecutionConfig`, `SwarmExecutionResult`, `SwarmTaskDecomposition` |
-| S132 | `OrchestratorMediator`, `Handler`, `HandlerResult`, `HandlerType`, `OrchestratorRequest`, `OrchestratorResponse`, `EventType`, `OrchestratorEvent`, `AgentHandler`, all 6 handler classes |
+| S132 | `OrchestratorMediator`, `Handler`, `HandlerResult`, `HandlerType`, `OrchestratorRequest`, `OrchestratorResponse`, `EventType`, `OrchestratorEvent`, `AgentHandler`, all 7 handler classes (Context, Routing, Dialog, Approval, Agent, Execution, Observability) |
 | S81 | `ClaudeMAFFusion`, `ClaudeDecisionEngine`, `DynamicWorkflow`, `WorkflowDefinition`, `WorkflowStep`, `WorkflowStepType`, `DecisionType`, `ClaudeDecision`, `ExecutionState`, `StepResult`, `WorkflowResult` |
 
 ---

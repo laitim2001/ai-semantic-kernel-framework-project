@@ -16,7 +16,7 @@
 | `__init__.py` | 95 | Package root, 41 exports | — |
 | `config.py` | 76 | Configuration dataclass | `ClaudeSDKConfig`, `from_env()`, `from_yaml()` |
 | `types.py` | 131 | Shared type definitions | `ToolCall`, `Message`, `ToolCallContext`, `ToolResultContext`, `QueryContext`, `HookResult`, `QueryResult`, `SessionResponse`, `ALLOW` |
-| `exceptions.py` | 76 | Exception hierarchy (8 types) | `ClaudeSDKError`, `AuthenticationError`, `RateLimitError`, `TimeoutError`, `ToolError`, `HookRejectionError`, `MCPError`, `MCPConnectionError`, `MCPToolError` |
+| `exceptions.py` | 76 | Exception hierarchy (9 types) | `ClaudeSDKError`, `AuthenticationError`, `RateLimitError`, `TimeoutError`, `ToolError`, `HookRejectionError`, `MCPError`, `MCPConnectionError`, `MCPToolError` |
 | `client.py` | 356 | Main entry point | `ClaudeSDKClient` (query, create_session, send_with_attachments, execute_with_thinking) |
 | `query.py` | 345 | One-shot query execution | `execute_query()`, `execute_query_with_attachments()`, `build_content_with_attachments()` |
 | `session.py` | 287 | Multi-turn conversation | `Session` (query, fork, close, agentic loop) |
@@ -50,7 +50,7 @@
 | **hybrid/synchronizer.py** | ~892 | Context format sync (5 formats) | `ContextSynchronizer` |
 | **mcp/__init__.py** | — | MCP sub-package exports | — |
 | **mcp/types.py** | 260 | MCP protocol types | `MCPServerConfig`, `MCPServerState`, `MCPTransportType`, `MCPToolDefinition`, `MCPToolResult`, `MCPMessage`, `MCPErrorCode` |
-| **mcp/exceptions.py** | — | 11 MCP exception types | `MCPError`, `MCPConnectionError`, `MCPToolNotFoundError`, `MCPTimeoutError`, `MCPToolExecutionError`, `MCPServerError`, `MCPDisconnectedError` |
+| **mcp/exceptions.py** | — | 12 MCP exception types | `MCPError`, `MCPConnectionError`, `MCPDisconnectedError`, `MCPTimeoutError`, `MCPToolNotFoundError`, `MCPToolExecutionError`, `MCPParseError`, `MCPInvalidRequestError`, `MCPMethodNotFoundError`, `MCPInvalidParamsError`, `MCPServerError`, `MCPConfigurationError` |
 | **mcp/base.py** | 381 | Abstract MCP server | `MCPServer` (connect, disconnect, list_tools, execute_tool, send_request, JSON-RPC) |
 | **mcp/stdio.py** | — | Local process transport | `MCPStdioServer` |
 | **mcp/http.py** | — | Remote HTTP transport | `MCPHTTPServer` |
@@ -265,7 +265,7 @@ PlanExecutor.execute_stream()     (AsyncGenerator[ExecutionEvent])
     │
     └── Supports cancel_execution() → marks remaining steps as SKIPPED
 
-ExecutionEventType enum:
+ExecutionEventType (class with string constants, not Enum):
   PLAN_STARTED, STEP_STARTED, STEP_PROGRESS, STEP_COMPLETED,
   STEP_FAILED, PLAN_COMPLETED, PLAN_FAILED, APPROVAL_REQUIRED
 ```
@@ -287,7 +287,7 @@ ResultVerifier.verify()
     ├── Parses → VerificationResult
     │     success: bool
     │     quality_score: 0.0-1.0
-    │     outcomes_met[] / outcomes_failed[]
+    │     expected_outcomes_met[] / expected_outcomes_failed[]
     │     lessons_learned[]
     │     recommendations[]
     │
@@ -307,8 +307,8 @@ Error occurs
 SmartFallback.analyze_failure()
     │
     ├── RetryPolicy.classify_failure() → TRANSIENT | RECOVERABLE | FATAL | UNKNOWN
-    │     TRANSIENT patterns: timeout, connection, 429, 503, gateway
-    │     FATAL patterns: authentication, forbidden, invalid_request, 401, 403
+    │     TRANSIENT patterns: timeout, connection, network, rate_limit, 429, 503, 504, gateway, temporarily, retry, overloaded
+    │     FATAL patterns: authentication, authorization, forbidden, invalid_api_key, not_found, invalid_request, invalid_parameter, permission, 401, 403, 404
     │
     ├── _categorize_error() → network | authentication | resource |
     │     rate_limit | validation | service | configuration
@@ -388,7 +388,7 @@ class Hook(ABC):
 ```
 HookResult.ALLOW                    — Pass through (singleton)
 HookResult.reject(reason: str)      — Block execution, provide reason
-HookResult.modify(new_args: dict)   — Allow but transform arguments
+HookResult.modify(modified_args: dict) — Allow but transform arguments
 ```
 
 ### ApprovalHook (Priority 90)
@@ -458,7 +458,7 @@ All tools inherit from `Tool` ABC and are auto-registered via `_register_builtin
 | `Task` | Subagent delegation | prompt, tools[], agent_type (code/research/analysis/writing/debug), system_prompt |
 
 **Bash Security Patterns** (blocked by default):
-- `rm -rf /`, fork bomb, `dd if=`, `curl | bash`, `wget | sh`, `mkfs.`, `format c:`, `del /fqs`
+- `rm -rf /`, fork bomb, `> /dev/sd`, `mkfs.`, `dd if=`, `curl | bash`, `wget | sh`, `format c:`, `del /fqs`
 
 **Task Subagent**: Creates a new `ClaudeSDKClient` instance per delegation with specialized system prompts per agent_type.
 

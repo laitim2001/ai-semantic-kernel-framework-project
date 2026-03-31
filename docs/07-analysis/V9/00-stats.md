@@ -8,8 +8,8 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total Source Files** | 1,029 (793 .py + 236 .ts/.tsx) |
-| **Total LOC** | 327,583 (273,345 backend + 54,238 frontend) |
+| **Total Source Files** | 1,028 (792 .py + 236 .ts/.tsx) |
+| **Total LOC** | 326,547 (272,309 backend + 54,238 frontend) |
 | **Total Phases** | 44 |
 | **Total Sprints** | 152+ |
 | **Total Story Points** | ~2,500+ |
@@ -21,10 +21,10 @@
 ```mermaid
 graph TB
     subgraph "Layer 1: Frontend"
-        FE["React 18 + TypeScript<br/>236 files | 54,238 LOC (wc -l)"]
+        FE["React 18 + TypeScript<br/>236 files | 54,238 LOC (wc -l)<br/>117 components | 25 hooks"]
     end
     subgraph "Layer 2: API Gateway"
-        API["FastAPI<br/>153 files | 47,377 LOC<br/>591 endpoints"]
+        API["FastAPI<br/>152 files | 46,341 LOC<br/>591 endpoints"]
     end
     subgraph "Layer 3: AG-UI"
         AGUI["SSE Protocol<br/>27 files | 10,329 LOC"]
@@ -72,13 +72,13 @@ graph TB
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
 │                IPA Platform V9 端到端執行流程圖                                      │
-│                1,029 files (793 .py + 236 .ts/.tsx) | 327,583 LOC                   │
+│                1,028 files (792 .py + 236 .ts/.tsx) | 326,547 LOC                   │
 │                Phase 1-44 | 152+ Sprints | agent_framework 1.0.0rc4                 │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 1: Frontend (使用者介面)                                              ║    │
-│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 120 components | 25 hooks          ║    │
+│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 117 components | 25 hooks          ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   React 18 + TypeScript + Vite (port 3005) + ReactFlow + Shadcn UI         ║    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐                   ║    │
@@ -95,7 +95,7 @@ graph TB
 │                                 │ Fetch API + SSE (port 3005 → 8000)               │
 │  ╔══════════════════════════════│════════════════════════════════════════════════╗    │
 │  ║  Layer 2: API Gateway (591 endpoints, 43 route modules)                      ║    │
-│  ║  153 files | 47,377 LOC | FastAPI (port 8000)                                ║    │
+│  ║  152 files | 46,341 LOC | FastAPI (port 8000)                                ║    │
 │  ║  Auth: JWT (HS256) + protected_router 全域保護                               ║    │
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
 │                                 │                                                    │
@@ -301,13 +301,13 @@ graph TB
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
 │                    IPA Platform：智能體編排平台架構 (V9)                              │
-│                    793 .py + 236 .ts/.tsx = 1,029 files, 327,583 LOC                │
+│                    792 .py + 236 .ts/.tsx = 1,028 files, 326,547 LOC                │
 │                    agent_framework 1.0.0rc4 | Phase 1-44 | 152+ Sprints            │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 1: Frontend (使用者介面)                                              ║    │
-│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 120 components | 25 hooks          ║    │
+│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 117 components | 25 hooks          ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   React 18 + TypeScript + Vite (port 3005) + ReactFlow + Shadcn UI         ║    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    ║    │
@@ -322,8 +322,8 @@ graph TB
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (591 endpoints, 43 route modules, 48 routers)         ║    │
-│  ║  153 files | 47,377 LOC | FastAPI (port 8000)                               ║    │
+│  ║  Layer 2: API Gateway (591 endpoints, 43 route modules, 56 routers)         ║    │
+│  ║  152 files | 46,341 LOC | FastAPI (port 8000)                               ║    │
 │  ║  Auth: JWT (HS256) + protected_router | 7 auth endpoints (1.2%)             ║    │
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
@@ -454,13 +454,13 @@ graph TB
 
 ---
 
-## 2. Backend Breakdown (793 Python files, 273,345 LOC)
+## 2. Backend Breakdown (792 Python files, 272,309 LOC)
 
 ### By Architectural Layer
 
 | Layer | Directory | Files | LOC (wc -l) | % of Backend |
 |-------|-----------|-------|-------------|--------------|
-| L2: API Gateway | api/v1/ | 153 | 47,377 | 17.3% |
+| L2: API Gateway | api/v1/ | 152 | 46,341 | 17.0% |
 | L3: AG-UI Protocol | integrations/ag_ui/ | 27 | 10,329 | 3.8% |
 | L4: Orchestration/Routing | integrations/orchestration/ | 55 | 20,272 | 7.4% |
 | L5: Hybrid Orchestration | integrations/hybrid/ | 89 | 28,800 | 10.5% |
@@ -472,9 +472,9 @@ graph TB
 | L11: Infrastructure | infrastructure/ | 54 | 9,901 | 3.6% |
 | L11: Core | core/ | 39 | 11,945 | 4.4% |
 | Middleware | middleware/ | 2 | 107 | 0.04% |
-| **Subtotal (layers)** | | **791** | **273,307** | **99.99%** |
+| **Subtotal (layers)** | | **790** | **272,271** | **99.99%** |
 | Root __init__.py* | src/, integrations/ | 2 | 38 | 0.01% |
-| **Total** | | **793** | **273,345** | **100%** |
+| **Total** | | **792** | **272,309** | **100%** |
 
 > *2 root-level `__init__.py` files (src/__init__.py: 1 LOC, integrations/__init__.py: 37 LOC) not assigned to any specific layer.
 
@@ -483,13 +483,13 @@ graph TB
 | Category | Modules | Files (non-init) | __init__.py | Total Files | % of Backend |
 |----------|---------|-------------------|-------------|-------------|--------------|
 | Integrations | 19 | 340 | 87 | 427 | 53.8% |
-| API Routes | 48 | 107 | 46 | 153 | 19.3% |
+| API Routes | 48 | 107 | 45 | 152 | 19.2% |
 | Domain | 21 | 86 | 31 | 117 | 14.8% |
 | Infrastructure | 7 | 42 | 12 | 54 | 6.8% |
 | Core | 5 | 33 | 6 | 39 | 4.9% |
 | Middleware | 1 | 1 | 1 | 2 | 0.3% |
 | src/ root | — | 0 | 1 | 1 | 0.1% |
-| **Total** | — | **609** | **184** | **793** | **100%** |
+| **Total** | — | **609** | **183** | **792** | **100%** |
 
 ### Top 10 Largest Backend Modules (by file count)
 
@@ -636,7 +636,7 @@ graph TB
 |--------|-----------------|-----------------|-------|
 | Phases | 1-34 | 1-44 | +10 phases |
 | Sprints | ~133 | ~152 | +19 sprints |
-| Source Files | 939 | 1,029 | +90 files |
-| LOC (source only) | ~160K | ~328K (273K backend + 54K frontend) | +168K LOC |
+| Source Files | 939 | 1,028 | +89 files |
+| LOC (source only) | ~160K | ~327K (272K backend + 54K frontend) | +167K LOC |
 | Features Tracked | 70+15 | TBD (V9 analysis) | — |
 | Issues Tracked | 62 | TBD (V9 analysis) | — |
