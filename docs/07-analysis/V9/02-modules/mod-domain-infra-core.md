@@ -24,7 +24,7 @@
    - 3.1 [security/ (7 files)](#31-security-7-files)
    - 3.2 [performance/ (11 files)](#32-performance-11-files)
    - 3.3 [sandbox/ (7 files)](#33-sandbox-7-files)
-   - 3.4 [logging/ + observability/ (6 files)](#34-logging--observability-6-files)
+   - 3.4 [logging/ + observability/ (8 files)](#34-logging--observability-8-files)
    - 3.5 [Root Config](#35-root-config)
 4. [Cross-Cutting Findings](#4-cross-cutting-findings)
 
@@ -40,7 +40,7 @@
 │  ┌───────────────────── Domain Layer (業務邏輯) ──────────────────────┐     │
 │  │  sessions/ (33 files) ★ CRITICAL    orchestration/ (22 files) ⚠    │     │
 │  │  workflows/ (11 files)              agents/ (7 files)              │     │
-│  │  connectors/ (6 files)              executions/ (4 files)          │     │
+│  │  connectors/ (6 files)              executions/ (2 files)          │     │
 │  │  tasks/ (3)  checkpoints/ (3)       chat_history/ (2)             │     │
 │  │  devtools/ (2) prompts/ (2)         templates/ (3)                │     │
 │  │  triggers/ (2) versioning/ (2)      files/ (3)                    │     │
@@ -62,7 +62,7 @@
 │  ┌───────────────────── Core Layer (跨切面工具) ─────────────────────┐     │
 │  │  security/ (7 files)        performance/ (11 files)                │     │
 │  │  sandbox/ (7 files)         config (settings.py, constants.py)     │     │
-│  │  logging/ (3 files)         observability/ (3 files)               │     │
+│  │  logging/ (4 files)         observability/ (4 files)               │     │
 │  │                                                                    │     │
 │  │  JWT Auth │ RBAC │ Rate Limiting │ Metrics │ Profiling │ Sandbox   │     │
 │  └────────────────────────────────────────────────────────────────────┘     │
@@ -730,11 +730,11 @@ SandboxOrchestrator
 
 ---
 
-### 3.4 logging/ + observability/ (6 files)
+### 3.4 logging/ + observability/ (8 files)
 
 **Role**: Structured logging and OpenTelemetry observability infrastructure.
 
-#### core/logging/ (3 files)
+#### core/logging/ (4 files)
 
 | File | Purpose |
 |------|---------|
@@ -742,7 +742,7 @@ SandboxOrchestrator
 | `middleware.py` | Request/response logging middleware |
 | `setup.py` | Logging configuration and initialization |
 
-#### core/observability/ (3 files)
+#### core/observability/ (4 files)
 
 | File | Purpose |
 |------|---------|
