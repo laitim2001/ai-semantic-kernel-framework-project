@@ -32,7 +32,7 @@
 │                                                                             │
 │  G. Observability (5)         ██░░░            2/5    40% (3 stubs)        │
 │     G1 Metrics ✓ → G2 HealthCheck ✓                                       │
-│     G3 Tracing ◐ → G4 AlertRules ◐ → G5 Dashboard ◐                      │
+│     G3 Patrol ◐ → G4 Correlation ◐ → G5 RootCause ◐                      │
 │                                                                             │
 │  H. Agent Swarm (4)           ████             4/4   100% ↑ UPGRADED      │
 │     H1 SwarmEngine ✓ → H2 Visualization ✓ → H3 Events ✓ → H4 Tools ✓   │
