@@ -194,7 +194,7 @@ class SSEEvent:
 
 **High-priority (sent immediately)**: `swarm_created`, `swarm_completed`, `worker_started`, `worker_completed`, `worker_tool_call`
 
-**Throttled (100ms default interval)**: `swarm_status_update`, `worker_progress`, `worker_thinking`
+**Throttled (200ms default interval)**: `swarm_status_update`, `worker_progress`, `worker_thinking`
 
 ### 3.3 Swarm Status Values
 

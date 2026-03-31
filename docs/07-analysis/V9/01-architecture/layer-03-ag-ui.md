@@ -362,8 +362,8 @@ Dependencies: imports from `src.integrations.orchestration.hitl.unified_manager`
 ### features/advanced/shared_state.py — Sprint 60
 
 **Classes:**
-- `DiffOperation(str, Enum)` — `ADD`, `REMOVE`, `REPLACE`, `MOVE`, `COPY`, `TEST`
-- `ConflictResolutionStrategy(str, Enum)` — `SERVER_WINS`, `CLIENT_WINS`, `MANUAL`, `MERGE`
+- `DiffOperation(str, Enum)` — `ADD`, `REMOVE`, `REPLACE`, `MOVE`
+- `ConflictResolutionStrategy(str, Enum)` — `SERVER_WINS`, `CLIENT_WINS`, `LAST_WRITE_WINS`, `MERGE`, `MANUAL`
 - `StateDiff`, `StateVersion`, `StateConflict` — CRDT-style state tracking
 - `StateSyncManager` — manages version vectors and conflict detection
 - `SharedStateHandler` — bi-directional state sync via `STATE_SNAPSHOT`/`STATE_DELTA` events

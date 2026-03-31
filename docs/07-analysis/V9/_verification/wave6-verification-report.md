@@ -170,7 +170,7 @@
 
 | Check | Verdict |
 |-------|---------|
-| P38: PromptGuard: 17 regex patterns + 2 XSS = 19 input filtering patterns | ✅ PASS: Consistent across files |
+| P38: PromptGuard: 19 injection regex patterns + 2 XSS escape patterns = 21 total patterns | ✅ PASS: Consistent across files |
 | P39: CommandWhitelist: "blocked(24) / allowed(79)" at line 439 | ✅ PASS: Matches actual source code counts (24 BLOCKED_PATTERNS, 79 DEFAULT_WHITELIST) |
 | P40: MCP tool distribution table: 69 tools across 9 servers (including ServiceNow) | ⚠️ WARNING: 00-stats says "70 tools" while security-architecture says "69 tools". Minor discrepancy. MCP servers = 8 subdirs + ServiceNow root files = 9 logical servers (consistent). |
 

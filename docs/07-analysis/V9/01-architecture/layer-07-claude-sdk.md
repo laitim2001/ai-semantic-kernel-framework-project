@@ -408,7 +408,7 @@ HookResult.modify(modified_args: dict) — Allow but transform arguments
 | `StrictSandboxHook` | Allowlist only | Blocked | Blocked | High-security |
 | `UserSandboxHook` | Per-user directories | Blocked | Allowed | Agentic chat (S68) |
 
-**Default Blocked Patterns** (23 regex patterns):
+**Default Blocked Patterns** (24 regex patterns):
 - System directories: `/etc/`, `/usr/`, `C:\Windows\`, `C:\Program Files`
 - Sensitive files: `.ssh/`, `.aws/`, `.env`, `credentials`, `*.pem`, `*.key`, `id_rsa`
 
@@ -458,7 +458,7 @@ All tools inherit from `Tool` ABC and are auto-registered via `_register_builtin
 | `Task` | Subagent delegation | prompt, tools[], agent_type (code/research/analysis/writing/debug), system_prompt |
 
 **Bash Security Patterns** (blocked by default):
-- `rm -rf /`, fork bomb, `> /dev/sd`, `mkfs.`, `dd if=`, `curl | bash`, `wget | sh`, `format c:`, `del /fqs`
+- `rm -rf /`, fork bomb, `> /dev/sd`, `mkfs.`, `dd if=`, `curl | bash`, `wget | sh`, `format c:`, `del /[fqs]`
 
 **Task Subagent**: Creates a new `ClaudeSDKClient` instance per delegation with specialized system prompts per agent_type.
 

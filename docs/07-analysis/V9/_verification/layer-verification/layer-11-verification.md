@@ -192,14 +192,14 @@ All 11 columns match V9: `id`, `action` (VARCHAR(50) INDEX), `resource_type` (VA
 ### 6.3 PromptGuard — VERIFIED CORRECT
 
 3 layers confirmed:
-- L1: 18 injection patterns (7 role_confusion + 6 boundary_escape + 3 exfiltration + 2 code_injection) + 2 escape patterns (xss). Max input 4000 chars.
+- L1: 19 injection patterns (7 role_confusion + 7 boundary_escape + 3 exfiltration + 2 code_injection) + 2 escape patterns (xss). Max input 4000 chars.
 - L2: `<user_message>` wrapper tags
 - L3: Tool whitelist + arg key safety regex + arg value injection check
 
 ### 6.4 ToolSecurityGateway — VERIFIED CORRECT
 
 4 layers confirmed:
-- L1: 17 regex patterns for SQL/XSS/prompt/code injection. Max param value 10,000 chars.
+- L1: 18 regex patterns for SQL/XSS/prompt/code injection. Max param value 10,000 chars.
 - L2: Role-based tool whitelist (Admin=empty frozenset=all, Operator=5 tools, Viewer=3 tools)
 - L3: In-memory sliding window rate limit (30/min default, 5/min for `dispatch_workflow`/`dispatch_swarm`)
 - L4: Structured audit logging

@@ -146,7 +146,7 @@
 | Module | Status | Evidence | Notes |
 |--------|--------|----------|-------|
 | **agents/** | MOCK | `service.py:228` — `[Mock Response]` prefix; `tools/builtin.py:415-500` — `mock_weather`, `mock_results` | Agent chat returns mock responses; built-in tools use hardcoded fake data |
-| **orchestration/** | MOCK + InMemory | `nested/sub_executor.py:264` — "Mock execution without engine"; `nested/recursive_handler.py:334` — "Mock execution"; `memory/in_memory.py:29` — `InMemoryConversationMemoryStore` | Sub-workflow execution is mocked; conversation memory volatile |
+| **orchestration/** | MOCK + InMemory | `nested/sub_executor.py:264` — "Mock execution without engine"; `nested/recursive_handler.py:334` — "Mock execution"; `nested/workflow_manager.py:566,599,637` — "returning mock result" for reference/parallel/conditional execution; `memory/in_memory.py:29` — `InMemoryConversationMemoryStore` | Sub-workflow execution is mocked (5 locations across 3 files); conversation memory volatile |
 | **routing/** | MOCK | `scenario_router.py:355` — "Mock execution for MVP" | Scenario routing uses mock execution path |
 | **sandbox/** | SIMULATED | `service.py:91` — "Fast sandbox creation - simulated startup time < 200ms" | No real process isolation; simulated sandbox |
 | **triggers/** | MOCK | `webhook.py:548` — "Mock 執行 - 開發測試用" | Webhook trigger workflow execution is mocked |
@@ -242,7 +242,7 @@
 
 | # | Location | Purpose | Mechanism |
 |---|----------|---------|-----------|
-| A | `integrations/claude_sdk/autonomous/fallback.py` | `SmartFallback` — Multi-strategy retry + escalation chain | RETRY > SIMPLIFY > SKIP > HUMAN_ESCALATION |
+| A | `integrations/claude_sdk/autonomous/fallback.py` | `SmartFallback` — Multi-strategy retry + escalation chain | RETRY > ALTERNATIVE > SKIP > ESCALATE > ROLLBACK > ABORT |
 | B | `integrations/orchestration/intent_router/` | Three-tier routing with cascading fallback | Pattern (<10ms) > Semantic (<100ms) > LLM (<2s) |
 | C | `domain/orchestration/planning/task_decomposer.py:544` | Rule-based decomposition when LLM unavailable | Structural analysis without LLM |
 | D | `integrations/learning/similarity.py:264` | Word overlap similarity when no embeddings | Simple but functional text matching |
@@ -371,7 +371,7 @@ const realHook = useSwarmReal();
 | `integrations/shared` | REAL | No mock/fallback found |
 | `integrations/contracts` | REAL | No mock/fallback found |
 | `domain/agents` | MOCK | `service.py:228` — [Mock Response]; `tools/builtin.py:415` — mock_weather |
-| `domain/orchestration` | MOCK + InMemory | `nested/sub_executor.py:264` — mock execution; `memory/in_memory.py:29` |
+| `domain/orchestration` | MOCK + InMemory | `nested/sub_executor.py:264`, `recursive_handler.py:334`, `workflow_manager.py:566,599,637` — mock execution (5 locations); `memory/in_memory.py:29` |
 | `domain/routing` | MOCK | `scenario_router.py:355` — mock execution for MVP |
 | `domain/sandbox` | SIMULATED | `service.py:91` — simulated startup |
 | `domain/triggers` | MOCK | `webhook.py:548` — mock execution |
