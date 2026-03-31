@@ -165,7 +165,7 @@
 
 | File | Size | Description | Tags |
 |------|------|-------------|------|
-| `api-v1-semantic.md` | ~80 KB | Per-file semantic summaries: 107 API route files, 572 endpoints, 634 schemas | `semantic`, `round-4`, `api`, `endpoints`, `per-file` |
+| `api-v1-semantic.md` | ~80 KB | Per-file semantic summaries: 107 API route files, 591 endpoints, 634 schemas | `semantic`, `round-4`, `api`, `endpoints`, `per-file` |
 | `integrations-hybrid-orch-agui-semantic.md` | ~60 KB | Per-file semantic summaries: hybrid/ + orchestration/ + ag_ui/ (~130 files, ~50K LOC) | `semantic`, `round-4`, `hybrid`, `orchestration`, `ag-ui`, `per-file` |
 | `integrations-maf-claude-mcp-semantic.md` | ~70 KB | Per-file semantic summaries: agent_framework/ + claude_sdk/ + mcp/ (176 files, 74K LOC) | `semantic`, `round-4`, `maf`, `claude-sdk`, `mcp`, `per-file` |
 | `backend-remaining-semantic.md` | ~50 KB | Per-file semantic summaries: remaining integrations + domain/ + infrastructure/ + core/ (~287 files, ~91K LOC) | `semantic`, `round-4`, `domain`, `infrastructure`, `swarm`, `patrol`, `per-file` |

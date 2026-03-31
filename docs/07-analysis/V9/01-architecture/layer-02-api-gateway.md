@@ -8,7 +8,7 @@
 - Phase introduced: 1 (Sprint 1) | Phase last modified: 38 (Sprint 119)
 - Route modules: 43 directories | Route files: 70 files containing endpoints
 - Registered routers: 47 (1 public + 46 protected)
-- Total endpoints: **572** (568 REST + 4 WebSocket, verified Wave 33 re-count)
+- Total endpoints: **591** (587 REST + 4 WebSocket, verified Wave 43 re-count)
 - Pydantic schema classes: 634 (BaseModel subclasses)
 
 ---
@@ -1047,14 +1047,14 @@ A few endpoints (e.g., some in `planning/routes.py`, `orchestrator/routes.py`) r
 | 37 | 113, 115 | tasks, session_resume | 11 | Task management, session resume |
 | 38 | 119 | knowledge | 7 | Knowledge management |
 
-> **Wave 33 Verified Total**: 572 endpoints across 70 files (2026-03-31)
-> (568 REST + 4 WebSocket, counted via `grep -rn "@router\.(get|post|put|delete|patch)" | wc -l`)
+> **Wave 43 Verified Total**: 591 endpoints across 70 files (2026-03-31)
+> (587 REST + 4 WebSocket, counted via per-file `@router.*` grep)
 
 ### Growth Trajectory
 
 ```
 Phase  1–29: incremental growth across 29 phases
-Phase 38:    572 endpoints  (final count including n8n/orchestrator/tasks/knowledge/graph/chat_history)
+Phase 38:    591 endpoints  (final count including n8n/orchestrator/tasks/knowledge/graph/chat_history)
 ```
 
 ---
@@ -1069,11 +1069,11 @@ Phase 38:    572 endpoints  (final count including n8n/orchestrator/tasks/knowle
 | Endpoint-bearing files | 70 |
 | Pydantic schema classes | 634 |
 | Registered routers | 47 |
-| **Total endpoints** | **572** (568 REST + 4 WebSocket, Wave 33 verified) |
+| **Total endpoints** | **591** (587 REST + 4 WebSocket, Wave 43 verified) |
 | WebSocket endpoints | 4 (groupchat, concurrent, sessions x2) |
 | SSE streaming endpoints | 4 (ag_ui, swarm demo, orchestrator, claude_sdk autonomous) |
 | Public endpoints | 5 (auth) + 3 (health) = 8 |
-| Protected endpoints | ~564 |
+| Protected endpoints | ~583 |
 | Largest module (endpoints) | planning (46) |
 | Second largest (endpoints) | groupchat (42) |
 | Smallest module (endpoints) | dashboard (2) |
@@ -1082,6 +1082,6 @@ Phase 38:    572 endpoints  (final count including n8n/orchestrator/tasks/knowle
 | Rate limiting | slowapi (Sprint 111) |
 | Middleware layers | 3 (RequestID, CORS, RateLimit) |
 
-> **Wave 33 Verification Note** (2026-03-31): Endpoint count of 572 confirmed by
-> `grep -rn "@router\.(get|post|put|delete|patch|websocket)" backend/src/api/v1/`
-> yielding 568 REST + 4 WebSocket decorators. Prior R3/R4 count of 594 was overcounted.
+> **Wave 43 Verification Note** (2026-03-31): Endpoint count of 591 confirmed by
+> per-file `@router.*` grep across `backend/src/api/v1/`
+> yielding 587 REST + 4 WebSocket decorators. Prior Wave 33 count of 572 was undercounted.

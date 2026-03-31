@@ -23,14 +23,14 @@
 | **Total Backend Test Files** | 361 (excluding `__init__.py`) |
 | **Backend Unit Tests** | 289 files |
 | **Backend Integration Tests** | 28 files |
-| **Backend E2E Tests** | 25 files |
+| **Backend E2E Tests** | 23 files |
 | **Backend Performance Tests** | 10 files |
-| **Backend Security Tests** | 4 files |
+| **Backend Security Tests** | 3 files |
 | **Backend Load Tests** | 1 file |
 | **Backend Mocks** | 3 files |
-| **Backend Root (conftest)** | 1 file |
+| **Backend conftest.py** | 4 files |
 | **Frontend Unit Tests** | 13 files |
-| **Frontend E2E Tests** | 11 files (Playwright) |
+| **Frontend E2E Tests** | 12 files (Playwright) |
 | **Source Modules (backend)** | 16 integration + 20 domain + 6 infrastructure + 6 core |
 | **Modules with ZERO Unit Tests** | 7 critical modules identified |
 
@@ -52,10 +52,10 @@
 │                    ╱        ╲   Security Tests (3 files)                   │
 │                   ╱   🛡️    ╲                                              │
 │                  ╱────────────╲                                             │
-│                 ╱              ╲  E2E Tests (23 backend + 11 frontend)     │
+│                 ╱              ╲  E2E Tests (23 backend + 12 frontend)     │
 │                ╱    🌐 E2E     ╲  Playwright browser automation            │
 │               ╱────────────────╲                                           │
-│              ╱                  ╲  Performance Tests (15 files)            │
+│              ╱                  ╲  Performance Tests (10 files)            │
 │             ╱    ⚡ Perf         ╲                                          │
 │            ╱──────────────────────╲                                        │
 │           ╱                        ╲  Integration Tests (28 files)         │
@@ -66,7 +66,7 @@
 │      ╱          (最大覆蓋面積)          ╲  Frontend: 13 files             │
 │     ╱────────────────────────────────────╲                                 │
 │                                                                             │
-│  Total: 361 backend + 13 frontend = 374 test files                         │
+│  Total: 361 backend + 25 frontend = 386 test files                         │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -443,21 +443,22 @@
 | `components/unified-chat/agent-swarm/__tests__/ExtendedThinkingPanel.test.tsx` | Extended thinking panel |
 | `stores/__tests__/swarmStore.test.ts` | Swarm Zustand store |
 
-#### `frontend/e2e/` -- E2E Tests (11 files, Playwright)
+#### `frontend/e2e/` + `frontend/tests/e2e/` -- E2E Tests (12 files, Playwright)
 
 | File | Covers |
 |------|--------|
-| `approvals.spec.ts` | Approval workflows |
-| `dashboard.spec.ts` | Dashboard page |
-| `workflows.spec.ts` | Workflow management |
-| `ag-ui/agentic-chat.spec.ts` | AG-UI agentic chat |
-| `ag-ui/tool-rendering.spec.ts` | AG-UI tool rendering |
-| `ag-ui/hitl.spec.ts` | AG-UI human-in-the-loop |
-| `ag-ui/generative-ui.spec.ts` | AG-UI generative UI |
-| `ag-ui/tool-ui.spec.ts` | AG-UI tool UI |
-| `ag-ui/shared-state.spec.ts` | AG-UI shared state |
-| `ag-ui/predictive-state.spec.ts` | AG-UI predictive state |
-| `ag-ui/integration.spec.ts` | AG-UI integration |
+| `e2e/approvals.spec.ts` | Approval workflows |
+| `e2e/dashboard.spec.ts` | Dashboard page |
+| `e2e/workflows.spec.ts` | Workflow management |
+| `e2e/ag-ui/agentic-chat.spec.ts` | AG-UI agentic chat |
+| `e2e/ag-ui/tool-rendering.spec.ts` | AG-UI tool rendering |
+| `e2e/ag-ui/hitl.spec.ts` | AG-UI human-in-the-loop |
+| `e2e/ag-ui/generative-ui.spec.ts` | AG-UI generative UI |
+| `e2e/ag-ui/tool-ui.spec.ts` | AG-UI tool UI |
+| `e2e/ag-ui/shared-state.spec.ts` | AG-UI shared state |
+| `e2e/ag-ui/predictive-state.spec.ts` | AG-UI predictive state |
+| `e2e/ag-ui/integration.spec.ts` | AG-UI integration |
+| `tests/e2e/swarm.spec.ts` | Agent swarm E2E |
 
 ---
 

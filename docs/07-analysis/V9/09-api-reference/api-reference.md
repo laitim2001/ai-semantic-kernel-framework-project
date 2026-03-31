@@ -1280,7 +1280,7 @@ Endpoints returning `text/event-stream` (Server-Sent Events):
 | **F** | Platform Infrastructure | 123 |
 | | **Total (with cross-refs)** | **591** |
 
-> Note: Some endpoints appear in multiple domain categories for cross-reference convenience (e.g., Routing 14 endpoints appears in both A9 and D8; Session Resume 2 endpoints overlaps C and D). The unique count across all route files is **568 REST + 4 WebSocket = 572** (Wave 33 re-verified via `@router.*` grep).
+> Note: Some endpoints appear in multiple domain categories for cross-reference convenience (e.g., Routing 14 endpoints appears in both A9 and D8; Session Resume 2 endpoints overlaps C and D). The unique count across all route files is **587 REST + 4 WebSocket = 591** (Wave 43 re-verified via per-file `@router.*` grep).
 
 ---
 

@@ -24,7 +24,7 @@ graph TB
         FE["React 18 + TypeScript<br/>236 files | 54,238 LOC (wc -l)"]
     end
     subgraph "Layer 2: API Gateway"
-        API["FastAPI<br/>153 files | 47,377 LOC<br/>572 endpoints"]
+        API["FastAPI<br/>153 files | 47,377 LOC<br/>591 endpoints"]
     end
     subgraph "Layer 3: AG-UI"
         AGUI["SSE Protocol<br/>27 files | 10,329 LOC"]
@@ -94,7 +94,7 @@ graph TB
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
 │                                 │ Fetch API + SSE (port 3005 → 8000)               │
 │  ╔══════════════════════════════│════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (572 endpoints, 43 route modules)                      ║    │
+│  ║  Layer 2: API Gateway (591 endpoints, 43 route modules)                      ║    │
 │  ║  153 files | 47,377 LOC | FastAPI (port 8000)                                ║    │
 │  ║  Auth: JWT (HS256) + protected_router 全域保護                               ║    │
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
@@ -322,7 +322,7 @@ graph TB
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (572 endpoints, 43 route modules, 48 routers)         ║    │
+│  ║  Layer 2: API Gateway (591 endpoints, 43 route modules, 48 routers)         ║    │
 │  ║  153 files | 47,377 LOC | FastAPI (port 8000)                               ║    │
 │  ║  Auth: JWT (HS256) + protected_router | 31 auth endpoints (5.3%)            ║    │
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
@@ -553,8 +553,8 @@ graph TB
 | Metric | Count |
 |--------|-------|
 | API Route Modules | 43 |
-| Total Endpoints | 572 (568 REST + 4 WebSocket) |
-| Auth-Protected Routes | ~564 (via protected_router) |
+| Total Endpoints | 591 (587 REST + 4 WebSocket) |
+| Auth-Protected Routes | ~583 (via protected_router) |
 | Public Routes | 8 (5 auth + 3 health) |
 
 ---
@@ -588,16 +588,17 @@ graph TB
 
 | Category | Files | Coverage Target |
 |----------|-------|-----------------|
-| Backend Unit Tests | 345 | 80% fail_under |
-| Backend Integration Tests | 43 | — |
-| Backend E2E Tests | 29 | — |
-| Backend Security Tests | 5 | — |
-| Backend Performance Tests | 13 | — |
-| Backend Load Tests | 2 | — |
-| Backend Mocks | 4 | — |
-| Backend Root (conftest etc.) | 2 | — |
+| Backend Unit Tests | 289 | 80% fail_under |
+| Backend Integration Tests | 28 | — |
+| Backend E2E Tests | 23 | — |
+| Backend Security Tests | 3 | — |
+| Backend Performance Tests | 10 | — |
+| Backend Load Tests | 1 | — |
+| Backend Mocks | 3 | — |
+| Backend conftest.py | 4 | — |
 | Frontend Unit Tests | 13 (12 swarm + 1 store) | — |
-| **Total Test Files** | **456** (443 backend + 13 frontend) | |
+| Frontend E2E Tests | 12 (8 ag-ui + 3 root + 1 swarm) | — |
+| **Total Test Files** | **386** (361 backend + 25 frontend) | |
 
 ---
 
