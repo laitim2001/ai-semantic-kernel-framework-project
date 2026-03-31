@@ -169,11 +169,11 @@ The platform has **two parallel RBAC implementations** that are NOT integrated:
 
 | Layer | Function | Coverage |
 |-------|----------|----------|
-| L1: Input Filtering | `sanitize_input()` | 17 regex patterns: role confusion (7), boundary escape (7), data exfiltration (3) + 2 XSS escape patterns |
+| L1: Input Filtering | `sanitize_input()` | 19 regex patterns: role confusion (7), boundary escape (7), data exfiltration (3), code injection (2) + 2 XSS escape patterns |
 | L2: System Prompt Isolation | `wrap_user_input()` | Wraps user text in `<user_message>` tags |
 | L3: Tool Call Validation | `validate_tool_call()` | Whitelist check + arg key safety + arg value injection scan |
 
-**ToolSecurityGateway** (`core/security/tool_gateway.py`) adds a second injection scan specifically for tool call parameters, with 17 additional patterns covering SQL injection (`; DROP`, `UNION SELECT`), code injection (`exec(`, `eval(`, `__import__(`), and prompt injection (`IGNORE PREVIOUS`).
+**ToolSecurityGateway** (`core/security/tool_gateway.py`) adds a second injection scan specifically for tool call parameters, with 18 additional patterns covering SQL injection (`; DROP`, `UNION SELECT`), code injection (`exec(`, `eval(`, `__import__(`), and prompt injection (`IGNORE PREVIOUS`).
 
 **Assessment**:
 - **Strength**: Defense-in-depth with two independent scanning layers.
@@ -191,7 +191,7 @@ The platform has **two parallel RBAC implementations** that are NOT integrated:
 **Permission Manager** (`mcp/security/permissions.py`):
 - Supports policy-based ABAC with glob patterns, priority ordering, and deny lists.
 - Supports dynamic conditions (time range, IP whitelist, custom evaluators).
-- **Gap**: No default policies are loaded at startup. The system starts with an empty policy set, meaning all access is denied by default (safe) but no policies are pre-configured for the 5 MCP server implementations.
+- **Gap**: No default policies are loaded at startup. The system starts with an empty policy set, meaning all access is denied by default (safe) but no policies are pre-configured for the 9 MCP server implementations.
 
 ### 1.5 SQL Injection Risk
 
@@ -380,7 +380,7 @@ USER INPUT (browser/API client)
     |   Hook pipeline: Approval -> Audit -> RateLimit -> Sandbox
     |   ToolSecurityGateway.validate_tool_call() (4-layer security)
     |   MCPClient -> MCPProtocol -> Transport -> MCP Server
-    |   5 servers: Azure, Filesystem, Shell, LDAP, SSH
+    |   9 servers: Azure, Filesystem, Shell, LDAP, SSH, ServiceNow, n8n, ADF, D365
     |   CommandWhitelist for Shell/SSH (allowed/blocked/requires_approval)
     | Tool results fed back to LLM for next iteration
     v

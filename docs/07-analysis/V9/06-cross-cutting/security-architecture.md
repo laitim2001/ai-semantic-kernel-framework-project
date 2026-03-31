@@ -95,7 +95,7 @@ IPA Platform employs a 6-layer Defense-in-Depth architecture. Each layer address
 |  |  第六層: Audit Trail 稽核軌跡                                          |      |
 |  |  +---------------------------------------------------------------+   |      |
 |  |  |  mcp/security/audit.py + redis_audit.py                        |   |      |
-|  |  |  AuditLogger: 12 事件類型 (4 類別)                             |   |      |
+|  |  |  AuditLogger: 12 事件類型 (5 類別)                             |   |      |
 |  |  |  3 儲存後端: InMemory (dev) / File (簡易) / Redis (生產)       |   |      |
 |  |  |  敏感欄位自動遮蔽 (password, secret, token, api_key 等)        |   |      |
 |  |  |  + orchestration/audit/logger.py -- 路由決策稽核               |   |      |
@@ -496,7 +496,7 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 
 ```
 +------------------------------------------------------------------------+
-|  稽核事件分類 (4 Categories, 12 Event Types)                            |
+|  稽核事件分類 (5 Categories, 12 Event Types)                            |
 +------------------------------------------------------------------------+
 |                                                                         |
 |  +-- Connection (連線) -----------------------------------------+      |
@@ -516,9 +516,12 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |  |  ACCESS_DENIED      -- 權限檢查拒絕                           |      |
 |  +---------------------------------------------------------------+      |
 |                                                                         |
-|  +-- Admin/System (管理/系統) -----------------------------------+      |
+|  +-- Admin (管理) -----------------------------------------------+      |
 |  |  CONFIG_CHANGE      -- 配置變更                               |      |
 |  |  POLICY_CHANGE      -- 權限策略變更                           |      |
+|  +---------------------------------------------------------------+      |
+|                                                                         |
+|  +-- System (系統) -----------------------------------------------+     |
 |  |  SYSTEM_START       -- 系統啟動                               |      |
 |  |  SYSTEM_SHUTDOWN    -- 系統關閉                               |      |
 |  +---------------------------------------------------------------+      |

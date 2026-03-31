@@ -1,6 +1,6 @@
 # V9 Dependency & Coupling Analysis
 
-> **Scope**: Full backend dependency graph across 27 top-level modules, 793 Python files
+> **Scope**: Full backend dependency graph across 27 top-level modules, 792 Python files
 > **Date**: 2026-03-30
 > **Method**: AST-based import extraction (`r5_extract_imports.py`) + source reading verification
 > **Data Source**: `r5-imports.json` -- 219 files with internal imports, 121 cross-module edges, 11 circular dependencies
@@ -543,8 +543,8 @@ core/config (fan-in: 24)
 | `docs/07-analysis/V9/r5-imports.json` | Raw extraction output (219 files, 27 modules, 121 edges, 11 cycles) |
 | `docs/07-analysis/V9/06-cross-cutting/cross-cutting-analysis.md` | V9 cross-cutting analysis with security, performance, data flow |
 | `docs/07-analysis/V9/01-architecture/layer-09-integrations.md` | Layer 09 integration module analysis |
-| `scripts/analysis/r7-codebase-truth.json` | Codebase truth: 1029 files, 327,583 LOC |
+| `scripts/analysis/r7-codebase-truth.json` | Codebase truth: 1028 files, 326,547 LOC |
 
 ---
 
-*Analysis based on AST extraction of 793 backend Python files and source code reading verification of 939+ files across V9 analysis rounds.*
+*Analysis based on AST extraction of 792 backend Python files and source code reading verification of 939+ files across V9 analysis rounds.*

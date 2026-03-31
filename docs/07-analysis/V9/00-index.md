@@ -10,7 +10,7 @@
 | Metric | Value |
 |--------|-------|
 | **Total V9 Files** | 36 analysis .md files (13 dirs) + 60+ verification archive files |
-| **Analysis Scope** | 1,029 source files (793 .py + 236 .ts/.tsx), 327,583 LOC |
+| **Analysis Scope** | 1,028 source files (792 .py + 236 .ts/.tsx), 326,547 LOC |
 | **Phases Covered** | 1-44 (152+ sprints, ~2,500+ story points) |
 | **Categories** | 13 topical directories (01-13) + _verification/ archive |
 | **Verification Rounds** | R1-R9 (9 rounds, 94.5% programmatic + AI semantic) |
@@ -49,7 +49,7 @@
 | `r8-gap-report.md` | `_verification/reports/` | — | Round 8 gap analysis report | `report`, `round-8`, `gap` |
 | `r8-per-layer-coverage.md` | `_verification/reports/` | — | Round 8 per-layer coverage report | `report`, `round-8`, `coverage` |
 | `r9-semantic-verification-report.md` | `_verification/reports/` | — | Round 9 semantic verification report | `report`, `round-9`, `semantic` |
-| `enhanced-backend-metadata.json` | `_verification/r5-data/` | ~5 MB | Enhanced AST metadata: all 793 .py files with docstrings, enums, TODOs, configs, errors, decorators | `metadata`, `ast`, `json`, `backend` |
+| `enhanced-backend-metadata.json` | `_verification/r5-data/` | ~5 MB | Enhanced AST metadata: all 792 .py files with docstrings, enums, TODOs, configs, errors, decorators | `metadata`, `ast`, `json`, `backend` |
 | `backend-metadata.json` | `_verification/r5-data/` | — | Backend AST metadata (base) | `metadata`, `ast`, `json`, `backend` |
 | `frontend-metadata.json` | `_verification/r5-data/` | — | Frontend metadata scan results | `metadata`, `json`, `frontend` |
 | `r5-comparison-report.md` | `_verification/r5-data/` | — | Round 5 comparison report (markdown) | `report`, `round-5`, `comparison` |
@@ -109,7 +109,7 @@
 |------|------|-------------|------|
 | `cross-cutting-analysis.md` | 28 KB | Cross-cutting concerns: error handling, logging, performance, i18n | `cross-cutting`, `error-handling`, `logging`, `performance` |
 | `security-architecture.md` | — | 6-Layer Defense-in-Depth security model analysis | `security`, `defense-in-depth`, `authentication`, `authorization` |
-| `dependency-analysis.md` | — | Full backend dependency graph across 27 top-level modules, 793 Python files | `dependencies`, `imports`, `coupling`, `fan-in`, `fan-out` |
+| `dependency-analysis.md` | — | Full backend dependency graph across 27 top-level modules, 792 Python files | `dependencies`, `imports`, `coupling`, `fan-in`, `fan-out` |
 | `enum-registry.md` | — | Consolidated registry of all enums across backend and frontend | `enums`, `registry`, `constants`, `types` |
 | `memory-architecture.md` | — | Memory system architecture analysis (mem0, Qdrant, session memory) | `memory`, `mem0`, `qdrant`, `session`, `architecture` |
 
@@ -298,8 +298,8 @@
 | Dimension | V8 (2026-03-15) | V9 (2026-03-29) |
 |-----------|-----------------|-----------------|
 | **Phase Coverage** | Phase 1-34 | Phase 1-44 (+10 phases) |
-| **Source Files Scanned** | 939 | 1,029 (793 .py + 236 .ts/.tsx) |
-| **LOC Verified** | ~140K | **327,583** (273K backend + 54K frontend) |
+| **Source Files Scanned** | 939 | 1,028 (792 .py + 236 .ts/.tsx) |
+| **LOC Verified** | ~140K | **326,547** (272K backend + 54K frontend) |
 | **Architecture Depth** | 2 monolithic docs (2,721 + 1,518 lines) | 11 per-layer files (455 KB total) |
 | **Module Analysis** | Embedded in architecture doc | 4 dedicated module files (148 KB) |
 | **Feature Verification** | 70 features in single doc | Split A-E / F-J for searchability (61 KB) |
@@ -315,7 +315,7 @@
 | **Cross-Cutting** | Partially in architecture doc | 5 dedicated files: analysis + security + dependencies + enums + memory (~80 KB) |
 | **Machine Readability** | Narrative format | Structured tables, tags, quick lookup |
 | **Semantic Coverage** | Manual reading of ~100 key files | 100% per-file semantic summaries (R4) |
-| **Metadata Extraction** | None | Enhanced AST metadata for all 793 .py files |
+| **Metadata Extraction** | None | Enhanced AST metadata for all 792 .py files |
 | **Analysis Rounds** | 1 (snapshot) | 9 rounds (structural → verification → AST → semantic → programmatic → validation x3 → semantic verification) |
 | **Total V9 Output** | — | 36 analysis + 60+ verification files, ~8+ MB |
 
@@ -339,8 +339,8 @@
 |-------|------|--------|----------|------------|
 | R1 | 2026-03-29 | Structural estimates from file inventory | 14% (121/832 files) | 32 analysis docs, ~1.1 MB |
 | R2 | 2026-03-29 | Agent-driven source reading + verification | 54% (~450/832 files) | 12 verification reports |
-| R3 | 2026-03-29 | Programmatic AST + regex scan | 100% structural (1,029 files) | 2 metadata JSONs, 1 final report |
-| R4 | 2026-03-29 | Full semantic reading + enhanced AST + V9 sync | **100% semantic** (1,029 files) | 5 semantic files, enhanced metadata, 10 new issues |
+| R3 | 2026-03-29 | Programmatic AST + regex scan | 100% structural (1,028 files) | 2 metadata JSONs, 1 final report |
+| R4 | 2026-03-29 | Full semantic reading + enhanced AST + V9 sync | **100% semantic** (1,028 files) | 5 semantic files, enhanced metadata, 10 new issues |
 | R5 | 2026-03-30 | Programmatic re-scan + comparison | 100% | r5-data JSON artifacts, comparison report |
 | R6 | 2026-03-30 | Cross-file validation | 100% | Validation report (md + json) |
 | R7 | 2026-03-30 | Enhanced 7-dimension validation | 100% | 2 validation reports |

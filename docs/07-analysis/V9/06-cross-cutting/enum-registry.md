@@ -14,6 +14,7 @@
 | API Schema Enums | 26 | MEDIUM — API documentation completeness |
 | Legacy Enums | 6 | LOW — deprecated, note only |
 | Other | 1 | LOW — utility/minor |
+| L09 Integration Enums (Wave 72) | 42 | HIGH — 12 modules, cross-doc sync |
 
 ---
 
@@ -134,9 +135,114 @@
 
 ---
 
+## 5. Layer 09 Integration Enums (Wave 72 Sync)
+
+> **Source**: layer-09-integrations.md Section 17 "Enum Registry" — Wave 72 deep-dive additions.
+> These enums were documented in L09 but not yet synced to this central registry.
+
+### swarm/models.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `WorkerType` | integrations/swarm/models.py | RESEARCH, WRITER, DESIGNER, REVIEWER, COORDINATOR, ANALYST, CODER, TESTER, CUSTOM | 9 |
+| `WorkerStatus` | integrations/swarm/models.py | PENDING, RUNNING, THINKING, TOOL_CALLING, COMPLETED, FAILED, CANCELLED | 7 |
+| `SwarmMode` | integrations/swarm/models.py | SEQUENTIAL, PARALLEL, HIERARCHICAL | 3 |
+| `SwarmStatus` | integrations/swarm/models.py | INITIALIZING, RUNNING, PAUSED, COMPLETED, FAILED | 5 |
+| `ToolCallStatus` | integrations/swarm/models.py | PENDING, RUNNING, COMPLETED, FAILED | 4 |
+
+### contracts/pipeline.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `PipelineSource` | integrations/contracts/pipeline.py | USER, SERVICENOW, PROMETHEUS, API | 4 |
+
+### shared/protocols.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `ToolCallStatus` | integrations/shared/protocols.py | PENDING, RUNNING, COMPLETED, FAILED, CANCELLED | 5 |
+
+> **Note**: `ToolCallStatus` is defined in both `swarm/models.py` (4 values) and `shared/protocols.py` (5 values, adds CANCELLED). These are independent definitions — see layer-09-integrations.md Issue 1 for unification recommendation.
+
+### a2a/protocol.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `MessageType` | integrations/a2a/protocol.py | TASK_REQUEST, TASK_RESPONSE, TASK_PROGRESS, TASK_CANCEL, STATUS_UPDATE, HEARTBEAT, CAPABILITY_QUERY, CAPABILITY_RESPONSE, REGISTER, UNREGISTER, ERROR, ACK | 12 |
+| `MessagePriority` | integrations/a2a/protocol.py | LOW, NORMAL, HIGH, URGENT | 4 |
+| `MessageStatus` | integrations/a2a/protocol.py | PENDING, SENT, DELIVERED, PROCESSED, FAILED, EXPIRED | 6 |
+| `A2AAgentStatus` | integrations/a2a/protocol.py | ONLINE, BUSY, OFFLINE, MAINTENANCE | 4 |
+
+### patrol/types.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `PatrolStatus` | integrations/patrol/types.py | HEALTHY, WARNING, CRITICAL, UNKNOWN | 4 |
+| `CheckType` | integrations/patrol/types.py | SERVICE_HEALTH, API_RESPONSE, RESOURCE_USAGE, LOG_ANALYSIS, SECURITY_SCAN | 5 |
+| `ScheduleFrequency` | integrations/patrol/types.py | EVERY_5_MINUTES through WEEKLY | 7 |
+| `PatrolPriority` | integrations/patrol/types.py | LOW, MEDIUM, HIGH, CRITICAL | 4 |
+
+### memory/types.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `MemoryType` | integrations/memory/types.py | EVENT_RESOLUTION, USER_PREFERENCE, SYSTEM_KNOWLEDGE, BEST_PRACTICE, CONVERSATION, FEEDBACK | 6 |
+
+> **Note**: `MemoryLayer` (WORKING, SESSION, LONG_TERM) was already documented in Section 1 above.
+
+### correlation/types.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `CorrelationType` | integrations/correlation/types.py | TIME, DEPENDENCY, SEMANTIC, CAUSAL | 4 |
+| `EventSeverity` | integrations/correlation/types.py | INFO, WARNING, ERROR, CRITICAL | 4 |
+| `EventType` | integrations/correlation/types.py | ALERT, INCIDENT, CHANGE, DEPLOYMENT, METRIC_ANOMALY, LOG_PATTERN, SECURITY | 7 |
+
+### rootcause/types.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `AnalysisStatus` | integrations/rootcause/types.py | PENDING, ANALYZING, COMPLETED, FAILED | 4 |
+| `EvidenceType` | integrations/rootcause/types.py | LOG, METRIC, TRACE, CORRELATION, PATTERN, EXPERT | 6 |
+| `RecommendationType` | integrations/rootcause/types.py | IMMEDIATE, SHORT_TERM, LONG_TERM, PREVENTIVE | 4 |
+
+### incident/types.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `IncidentSeverity` | integrations/incident/types.py | P1 (Critical), P2 (High), P3 (Medium), P4 (Low) | 4 |
+| `IncidentCategory` | integrations/incident/types.py | NETWORK, SERVER, APPLICATION, DATABASE, SECURITY, STORAGE, PERFORMANCE, AUTHENTICATION, OTHER | 9 |
+| `RemediationRisk` | integrations/incident/types.py | AUTO, LOW, MEDIUM, HIGH, CRITICAL | 5 |
+| `RemediationActionType` | integrations/incident/types.py | RESTART_SERVICE, CLEAR_DISK_SPACE, AD_ACCOUNT_UNLOCK, SCALE_RESOURCE, NETWORK_ACL_CHANGE, FIREWALL_RULE_CHANGE, RESTART_DATABASE, CLEAR_CACHE, ROTATE_CREDENTIALS, CUSTOM | 10 |
+| `ExecutionStatus` | integrations/incident/types.py | PENDING, EXECUTING, COMPLETED, FAILED, AWAITING_APPROVAL, APPROVED, REJECTED, SKIPPED | 8 |
+
+### learning/types.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `CaseOutcome` | integrations/learning/types.py | SUCCESS, PARTIAL_SUCCESS, FAILURE, UNKNOWN | 4 |
+| `CaseCategory` | integrations/learning/types.py | INCIDENT_RESOLUTION, PERFORMANCE_OPTIMIZATION, SECURITY_RESPONSE, DEPLOYMENT_ISSUE, CONFIGURATION_CHANGE, USER_SUPPORT, SYSTEM_MAINTENANCE, OTHER | 8 |
+
+### audit/types.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `DecisionType` | integrations/audit/types.py | PLAN_GENERATION, STEP_EXECUTION, TOOL_SELECTION, FALLBACK_SELECTION, RISK_ASSESSMENT, APPROVAL_REQUEST, OTHER | 7 |
+| `DecisionOutcome` | integrations/audit/types.py | SUCCESS, PARTIAL_SUCCESS, FAILURE, PENDING, CANCELLED | 5 |
+| `QualityRating` | integrations/audit/types.py | EXCELLENT (>=0.9), GOOD (>=0.7), ACCEPTABLE (>=0.5), POOR (>=0.3), UNACCEPTABLE (<0.3) | 5 |
+
+### n8n/orchestrator.py + monitor.py
+
+| Enum | File | Values | Count |
+|------|------|--------|-------|
+| `OrchestrationStatus` | integrations/n8n/orchestrator.py | PENDING, REASONING, TRANSLATING, EXECUTING, MONITORING, COMPLETED, FAILED, TIMEOUT, CANCELLED | 9 |
+| `ExecutionState` | integrations/n8n/monitor.py | PENDING, RUNNING, COMPLETED, FAILED, TIMED_OUT, CANCELLED, UNKNOWN | 7 |
+
+---
+
 ## Coverage After This Supplement
 
-| Metric | Before R8 | After R8 |
-|--------|-----------|----------|
-| Documented Enums | 284/339 | 339/339 |
-| Enum Coverage | 83.8% | **100%** |
+| Metric | Before R8 | After R8 | After Wave 72 Sync |
+|--------|-----------|----------|---------------------|
+| Documented Enums | 284/339 | 339/339 | 339 + 42 L09 enums verified |
+| Enum Coverage | 83.8% | **100%** | **100%** (cross-doc synced) |

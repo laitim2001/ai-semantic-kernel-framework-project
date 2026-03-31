@@ -32,9 +32,9 @@
 | **Frontend Unit Tests** | 13 files |
 | **Frontend E2E Tests** | 12 files (Playwright) |
 | **Source Modules (backend)** | 16 integration + 20 domain + 6 infrastructure + 6 core |
-| **Modules with ZERO Unit Tests** | 7 critical modules identified |
+| **Modules with ZERO Unit Tests** | 6 critical modules identified (memory, knowledge, learning, patrol, audit, a2a) |
 
-**Overall Assessment**: Backend has extensive test coverage for integration-layer modules (agent_framework, claude_sdk, hybrid, ag_ui, orchestration, mcp), but critical gaps exist in swarm/, memory/, knowledge/, learning/, a2a/, patrol/, and audit/ integration modules. Frontend testing is narrowly focused on swarm components only -- all other UI areas lack unit tests. Domain layer testing is concentrated in sessions/ with 19 of 24 domain modules untested.
+**Overall Assessment**: Backend has extensive test coverage for integration-layer modules (agent_framework, claude_sdk, hybrid, ag_ui, orchestration, mcp), with additional top-level test directories for auth (5), orchestration (16), swarm (5), and mcp (2). Critical gaps remain in memory/, knowledge/, learning/, a2a/, patrol/, and audit/ integration modules. Frontend testing is narrowly focused on swarm components only -- all other UI areas lack unit tests. Domain layer testing is concentrated in sessions/ with 19 of 24 domain modules untested.
 
 ---
 
@@ -87,7 +87,7 @@
 │  orchestration/          ████████      ✅ GOOD  (~12+ test files)          │
 │  mcp/                    ███████       ✅ FAIR  (~10+ test files)          │
 │  llm/                    ████          ⚠️ LOW   (~4 test files)            │
-│  swarm/                  ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
+│  swarm/                  ████          ⚠️ PARTIAL (5 top-level unit tests) │
 │  memory/                 ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
 │  knowledge/              ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
 │  learning/               ░░░░░░░░░░░░  🔴 ZERO  (0 test files)            │
@@ -107,7 +107,7 @@
 │  agent-swarm/ components ████████      ✅ GOOD  (13 unit tests)            │
 │  其他所有 UI              ░░░░░░░░░░░░  🔴 ZERO  (0 unit tests)            │
 │                                                                             │
-│  █ = covered   ░ = NO coverage   🔴 = 7 critical modules with ZERO tests  │
+│  █ = covered   ░ = NO coverage   🔴 = 6 critical modules with ZERO tests  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -263,6 +263,7 @@
 | `hybrid/` | `test_capability.py` | Hybrid capability |
 | `hybrid/` | `test_selector.py` | Hybrid selector |
 | `hybrid/` | `test_orchestrator.py` | Hybrid orchestrator |
+| `hybrid/` | `test_synchronizer.py` | Hybrid synchronizer |
 
 #### `backend/tests/unit/integrations/hybrid/` (38 test files)
 
@@ -323,7 +324,59 @@
 | `incident/` | `test_types.py`, `test_recommender.py`, `test_executor.py`, `test_analyzer.py` | Full incident subsystem |
 | `shared/` | `test_protocols.py` | Shared protocols |
 
-#### `backend/tests/unit/api/` (11 test files)
+#### `backend/tests/unit/auth/` (5 test files)
+
+| File | Covers |
+|------|--------|
+| `test_auth_service.py` | Auth service |
+| `test_jwt.py` | JWT token handling |
+| `test_password.py` | Password hashing |
+| `test_rate_limit.py` | Rate limiting |
+| `test_require_auth.py` | Auth requirement decorator |
+
+#### `backend/tests/unit/orchestration/` (16 test files)
+
+> **Note**: These are top-level orchestration tests, separate from `integrations/orchestration/` tests.
+
+| File | Covers |
+|------|--------|
+| `test_approval_handler.py` | Approval handler |
+| `test_business_intent_router.py` | Business intent router |
+| `test_dialog_context_manager.py` | Dialog context manager |
+| `test_dialog_engine_deep.py` | Dialog engine deep tests |
+| `test_guided_dialog.py` | Guided dialog |
+| `test_hitl.py` | HITL core |
+| `test_hitl_controller_deep.py` | HITL controller deep tests |
+| `test_hitl_notification.py` | HITL notification |
+| `test_input_gateway.py` | Input gateway |
+| `test_layer_contracts.py` | Layer contracts |
+| `test_llm_classifier.py` | LLM classifier |
+| `test_orchestration_metrics.py` | Orchestration metrics |
+| `test_pattern_matcher.py` | Pattern matcher |
+| `test_risk_assessor.py` | Risk assessor |
+| `test_schema_validator.py` | Schema validator |
+| `test_semantic_router.py` | Semantic router |
+
+#### `backend/tests/unit/swarm/` (5 test files)
+
+| File | Covers |
+|------|--------|
+| `test_emitter.py` | Event emitter |
+| `test_event_types.py` | Event type definitions |
+| `test_models.py` | Swarm data models |
+| `test_thinking_events.py` | Thinking events |
+| `test_tracker.py` | Swarm progress tracker |
+
+#### `backend/tests/unit/mcp/` (2 test files)
+
+> **Note**: These are top-level MCP tests, separate from `integrations/mcp/` tests.
+
+| File | Covers |
+|------|--------|
+| `test_servicenow_client.py` | ServiceNow client |
+| `test_servicenow_server.py` | ServiceNow server |
+
+#### `backend/tests/unit/api/` (15 test files)
 
 | Subdirectory | Files | Covers |
 |-------------|-------|--------|
@@ -341,7 +394,7 @@
 |-------------|-------|--------|
 | `sessions/` | `test_approval.py`, `test_bridge.py`, `test_error_handler.py`, `test_recovery.py`, `test_metrics.py` | Session domain logic |
 
-#### `backend/tests/unit/infrastructure/` (10 test files)
+#### `backend/tests/unit/infrastructure/` (11 test files)
 
 | Subdirectory | Files | Covers |
 |-------------|-------|--------|
@@ -471,11 +524,11 @@
 | `agent_framework/` | ~53 | YES | 10 | PARTIAL -- builders/ lightly covered, memory/multiturn under-tested |
 | `claude_sdk/` | ~47 | YES | 18 | GOOD -- config, session, client, tools, MCP, hybrid |
 | `hybrid/` | ~60 | YES | 38 | GOOD -- intent, context, risk, switching, checkpoint all covered |
-| `orchestration/` | ~39 | YES | 16 | MODERATE -- input_gateway + intent_router covered, guided_dialog/risk_assessor/hitl gaps |
+| `orchestration/` | ~39 | YES | 16 + 16 top-level | GOOD -- input_gateway + intent_router under integrations/; guided_dialog, hitl, risk_assessor covered in top-level `tests/unit/orchestration/` |
 | `ag_ui/` | ~18 | YES | 17 | GOOD -- events, thread, features, advanced all covered |
-| `mcp/` | ~43 | YES | 19 | MODERATE -- Azure, n8n, ADF, D365, security, core covered; Filesystem, LDAP, Shell, SSH missing |
+| `mcp/` | ~43 | YES | 19 + 2 top-level | MODERATE -- Azure, n8n, ADF, D365, security, core, ServiceNow covered; Filesystem, LDAP, Shell, SSH missing |
 | `llm/` | ~6 | YES | 5 | GOOD -- protocol, cached, mock, factory, azure_openai |
-| `swarm/` | ~7 | NO | 0 | **ZERO** -- worker_executor.py, tracker.py, task_decomposer.py untested |
+| `swarm/` | ~7 | YES (top-level) | 5 (in `tests/unit/swarm/`) | PARTIAL -- emitter, event_types, models, thinking_events, tracker covered; worker_executor.py, task_decomposer.py still untested |
 | `memory/` | ~5 | NO | 0 | **ZERO** -- unified_memory.py, embeddings.py, types.py untested |
 | `knowledge/` | ~8 | NO | 0 | **ZERO** -- rag_pipeline.py, vector_store.py, retriever.py, chunker.py all untested |
 | `learning/` | ~5 | NO | 0 | **ZERO** -- despite `test_learning.py` in root unit/, no dedicated module tests |
@@ -495,7 +548,7 @@
 |--------|----------------|-----------------|-------|
 | `agents/` | NO (dedicated) | 0 | Covered partially by root `test_agent_service.py` |
 | `audit/` | NO (dedicated) | 0 | Covered partially by root `test_audit.py` |
-| `auth/` | NO | 0 | **GAP** |
+| `auth/` | YES (in `tests/unit/auth/`) | 5 | Covered by top-level auth tests (jwt, password, auth_service, rate_limit, require_auth) |
 | `chat_history/` | NO | 0 | **GAP** |
 | `checkpoints/` | NO (dedicated) | 0 | Covered by root `test_checkpoint_service.py` |
 | `connectors/` | NO (dedicated) | 0 | Covered by root `test_connectors.py` |
@@ -526,7 +579,7 @@
 | `database/` | NO | 0 | **GAP** -- no database layer tests |
 | `distributed_lock/` | YES | 1 | `test_distributed_lock.py` |
 | `messaging/` | NO | 0 | **GAP** -- RabbitMQ layer untested |
-| `storage/` | YES | 2 | `test_storage_backends.py`, `test_storage_factories_sprint120.py` |
+| `storage/` | YES | 3 | `test_storage_backends.py`, `test_storage_factory.py` (root), `test_storage_factories_sprint120.py` (subdirectory) |
 | `workers/` | NO | 0 | **GAP** |
 | `redis_client.py` | NO | 0 | **GAP** |
 
@@ -542,7 +595,7 @@
 | `observability/` | YES | 3 | `test_observability_setup.py`, `test_spans.py`, `test_metrics.py` |
 | `performance/` | YES | 5 | Full coverage via `unit/performance/` |
 | `sandbox/` | NO (dedicated) | 0 | Root `test_sandbox_security.py` only |
-| `security/` | NO (dedicated) | 0 | **GAP** -- jwt.py, password.py untested in unit |
+| `security/` | YES (in `tests/unit/auth/`) | 5 | jwt.py, password.py covered by `tests/unit/auth/test_jwt.py`, `test_password.py`; also test_auth_service, test_rate_limit, test_require_auth |
 | `sandbox_config.py` | NO | 0 | **GAP** |
 
 ### 3.5 Frontend Coverage
@@ -590,7 +643,7 @@
 - `mock_workflow` -- Workflow mock
 - `redis_client` -- Redis client fixture
 
-**E2E conftest** (`backend/tests/e2e/conftest.py`) and **orchestration conftest** (`backend/tests/e2e/orchestration/conftest.py`) exist but were not read for this analysis.
+**E2E conftest** (`backend/tests/e2e/conftest.py`), **orchestration conftest** (`backend/tests/e2e/orchestration/conftest.py`), and **security conftest** (`backend/tests/security/conftest.py`) exist but were not read for this analysis.
 
 **Shared mocks** (`backend/tests/mocks/`):
 - `agent_framework_mocks.py` -- Reusable MAF mock objects
@@ -705,16 +758,16 @@ exclude_lines = ["pragma: no cover", "def __repr__", "raise NotImplementedError"
 
 #### `integrations/swarm/` -- Agent Swarm System (Phase 29)
 
-| Source File | Purpose | Risk |
-|-------------|---------|------|
-| `worker_executor.py` | Worker agent execution logic | **HIGH** -- core execution path |
-| `tracker.py` | Swarm progress tracking | MEDIUM |
-| `task_decomposer.py` | Task decomposition into subtasks | **HIGH** -- affects task distribution |
-| `worker_roles.py` | Worker role definitions | LOW |
-| `models.py` | Swarm data models | MEDIUM |
-| `swarm_integration.py` | Swarm integration layer | **HIGH** -- bridges to rest of system |
+| Source File | Purpose | Risk | Test Status |
+|-------------|---------|------|-------------|
+| `worker_executor.py` | Worker agent execution logic | **HIGH** -- core execution path | **UNTESTED** |
+| `tracker.py` | Swarm progress tracking | MEDIUM | Covered by `tests/unit/swarm/test_tracker.py` |
+| `task_decomposer.py` | Task decomposition into subtasks | **HIGH** -- affects task distribution | **UNTESTED** |
+| `worker_roles.py` | Worker role definitions | LOW | **UNTESTED** |
+| `models.py` | Swarm data models | MEDIUM | Covered by `tests/unit/swarm/test_models.py` |
+| `swarm_integration.py` | Swarm integration layer | **HIGH** -- bridges to rest of system | **UNTESTED** |
 
-**Integration tests exist** (`tests/integration/swarm/test_bridge_integration.py`, `test_api.py`) and **E2E tests exist** (`tests/e2e/swarm/test_swarm_execution.py`), but **no unit tests** for the core module.
+**Unit tests exist** in `tests/unit/swarm/` (5 files: emitter, event_types, models, thinking_events, tracker). **Integration tests exist** (`tests/integration/swarm/test_bridge_integration.py`, `test_api.py`) and **E2E tests exist** (`tests/e2e/swarm/test_swarm_execution.py`). Remaining gap: worker_executor, task_decomposer, swarm_integration.
 
 #### `integrations/memory/` -- Memory System (mem0)
 
@@ -832,8 +885,8 @@ The following domain modules have **no dedicated test files** under `tests/unit/
 | Backend Integration | ~28 | ~35 | ~7 files |
 | Backend E2E | ~23 | ~30 | ~7 files |
 | Frontend Unit | 13 | ~60 | ~47 files |
-| Frontend E2E | 11 | ~20 | ~9 files |
-| **Total** | **~364** | **~505** | **~141 files** |
+| Frontend E2E | 12 | ~20 | ~8 files |
+| **Total** | **~365** | **~505** | **~140 files** |
 
 ---
 

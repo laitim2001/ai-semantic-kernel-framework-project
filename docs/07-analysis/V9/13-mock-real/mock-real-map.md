@@ -32,8 +32,9 @@
 │  a2a/              claude_sdk/          hybrid/             domain/agents/  │
 │  memory/           swarm/               orchestration/      domain/routing/ │
 │  learning/         knowledge/           ag_ui/              domain/orch./   │
-│                    incident/            mcp/                                │
-│                                         rootcause/                          │
+│  n8n/              incident/            mcp/                                │
+│  shared/                                rootcause/                          │
+│  contracts/                                                                 │
 │                                                                             │
 │  ←──────────── Production Ready ──────────── Risk Zone ──────────────→     │
 │                                                                             │
@@ -136,6 +137,9 @@
 | **rootcause/** | InMemory | `case_repository.py:13` — "In-memory mode for testing and fallback"; `:582` — heuristic fallback | Case data volatile; heuristic analysis when LLM unavailable |
 | **incident/** | REAL + InMemory | `executor.py:24` — imports `InMemoryApprovalStorage`; `recommender.py:289` — rule-based fallback; `analyzer.py:142` — rule-based fallback | Approval storage volatile; LLM analysis degrades to rule-based |
 | **a2a/** | REAL | No mock/fallback patterns found | Protocol implementation |
+| **n8n/** | REAL | `orchestrator.py:617` — placeholder reasoning function | Operational; minor placeholder in default reasoning |
+| **shared/** | REAL | No mock/fallback patterns found | Protocol definitions |
+| **contracts/** | REAL | No mock/fallback patterns found | Interface contracts |
 
 ### 1.2 domain/ Modules
 
@@ -161,7 +165,7 @@
 | **storage/backends/** | REAL + FALLBACK | `factory.py:86-252` — `StorageFactory` with auto-detection: Redis > Postgres > InMemory | Production: raises `RuntimeError`. Dev: InMemory fallback with warning |
 | **distributed_lock/** | FALLBACK | `redis_lock.py:154` — `InMemoryLock`; `:242` — "using in-memory lock (single-process only)" | Silent degradation to single-process lock when Redis unavailable |
 | **messaging/** | STUB | Only `__init__.py` exists | RabbitMQ integration NOT implemented |
-| **storage/ (file)** | REAL (partial) | Storage abstraction layer 完整實作（13+ files: factory, backends, protocol, redis_backend, memory_backend, approval_store, audit_store, conversation_state, execution_state, session_store, task_store, storage_factories） | File blob storage (S3/Azure Blob) 未實作；key-value storage abstraction 已完整實作 |
+| **storage/ (file)** | REAL (partial) | Storage abstraction layer 完整實作（16 files: factory, backends/base, backends/factory, backends/memory, backends/postgres_backend, backends/redis_backend, protocol, redis_backend, memory_backend, approval_store, audit_store, conversation_state, execution_state, session_store, task_store, storage_factories） | File blob storage (S3/Azure Blob) 未實作；key-value storage abstraction 已完整實作 |
 
 ### 1.4 api/ Layer (In-Memory Stores)
 
@@ -363,6 +367,9 @@ const realHook = useSwarmReal();
 | `integrations/rootcause` | InMemory | `case_repository.py:13` — in-memory mode |
 | `integrations/incident` | REAL + InMemory | `executor.py:24` — InMemoryApprovalStorage import |
 | `integrations/a2a` | REAL | No mock/fallback found |
+| `integrations/n8n` | REAL | `orchestrator.py:617` — placeholder reasoning function |
+| `integrations/shared` | REAL | No mock/fallback found |
+| `integrations/contracts` | REAL | No mock/fallback found |
 | `domain/agents` | MOCK | `service.py:228` — [Mock Response]; `tools/builtin.py:415` — mock_weather |
 | `domain/orchestration` | MOCK + InMemory | `nested/sub_executor.py:264` — mock execution; `memory/in_memory.py:29` |
 | `domain/routing` | MOCK | `scenario_router.py:355` — mock execution for MVP |
@@ -442,7 +449,7 @@ The two critical factories (LLM and Storage) correctly implement **fail-fast in 
 
 ### Mock vs Real Ratio
 
-- **Fully Real (production-ready)**: 12 modules (correlation, a2a, audit, learning, swarm, memory, sessions, checkpoints, database, cache, workflows, executions)
+- **Fully Real (production-ready)**: 15 modules (correlation, a2a, audit, learning, swarm, memory, sessions, checkpoints, database, cache, workflows, executions, n8n, shared, contracts)
 - **Real with InMemory risk**: 8 modules (agent_framework, ag_ui, orchestration, hybrid, mcp, rootcause, incident, storage)
 - **Real with Mock fallback**: 4 modules (llm, orchestration routes, dialog routes, cache routes)
 - **Predominantly Mock/Simulated**: 5 modules (agents, routing, sandbox, triggers, domain/orchestration nested)
