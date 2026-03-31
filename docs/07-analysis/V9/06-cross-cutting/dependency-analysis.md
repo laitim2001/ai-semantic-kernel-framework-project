@@ -543,7 +543,7 @@ core/config (fan-in: 24)
 | `docs/07-analysis/V9/r5-imports.json` | Raw extraction output (219 files, 27 modules, 121 edges, 11 cycles) |
 | `docs/07-analysis/V9/06-cross-cutting/cross-cutting-analysis.md` | V9 cross-cutting analysis with security, performance, data flow |
 | `docs/07-analysis/V9/01-architecture/layer-09-integrations.md` | Layer 09 integration module analysis |
-| `scripts/analysis/r7-codebase-truth.json` | Codebase truth: 1028 files, 326,547 LOC |
+| `scripts/analysis/r7-codebase-truth.json` | Codebase truth: 1028 files, 327,582 LOC |
 
 ---
 

@@ -69,10 +69,10 @@
 │     │  (hybrid/intent/ 10 files, 2,367 LOC)                                │
 │     ↓                                                                       │
 │  F3 Three-tier Routing ──→ L1 Pattern → L2 Semantic → L3 LLM              │
-│     │  (orchestration/intent_router/ 23 files, 5,213 LOC)                  │
+│     │  (orchestration/intent_router/ 23 files, ~7,115 LOC)                 │
 │     │                                                                       │
 │     ├──→ 需要澄清? ──→ F4 Guided Dialog Engine                            │
-│     │                    (4 files, 3,314 LOC)                               │
+│     │                    (4 files, ~3,407 LOC)                              │
 │     │                                                                       │
 │     ├──→ 業務意圖? ──→ F5 Business Intent Router                           │
 │     │                    (router.py, 622 LOC)                               │
@@ -139,8 +139,8 @@
 |----|---------|-----------|-----------|----------|-------|-------|
 | F1 | LLM Service Layer | COMPLETE | COMPLETE | `integrations/llm/` (6 files, 1,907 LOC) | 1 | L9 |
 | F2 | Intent Router (Hybrid) | COMPLETE | COMPLETE | `hybrid/intent/` (10 files, 2,367 LOC) | 13 | L5 |
-| F3 | Three-tier Routing | COMPLETE | COMPLETE | `orchestration/intent_router/` (23 files, 5,213 LOC) | 28 | L4 |
-| F4 | Guided Dialog Engine | COMPLETE | COMPLETE | `orchestration/guided_dialog/` (4 files, 3,314 LOC) | 28 | L4 |
+| F3 | Three-tier Routing | COMPLETE | COMPLETE | `orchestration/intent_router/` (23 files, ~7,115 LOC) | 28 | L4 |
+| F4 | Guided Dialog Engine | COMPLETE | COMPLETE | `orchestration/guided_dialog/` (4 files, ~3,407 LOC) | 28 | L4 |
 | F5 | Business Intent Router | COMPLETE | COMPLETE | `orchestration/intent_router/router.py` (622 LOC) | 28 | L4 |
 | F6 | LLM Classifier | COMPLETE | COMPLETE | `orchestration/intent_router/llm_classifier/` (4 files, 1,269 LOC) | 28 | L4 |
 | F7 | Claude Autonomous Planning | SPLIT | SPLIT | API: `api/v1/autonomous/` (STUB) / Integration: `claude_sdk/autonomous/` (8 files, 2,823 LOC, COMPLETE) | 22 | L7/L2 |
@@ -190,7 +190,7 @@
   - `orchestration/intent_router/completeness/rules.py` (658 LOC) — Per-intent field rules
   - `orchestration/intent_router/models.py` (449 LOC) — ITIntentCategory, RoutingDecision, RiskLevel
   - `orchestration/intent_router/contracts.py` (134 LOC) — Protocol definitions
-- **Total LOC**: 5,213 (across 14 counted files)
+- **Total LOC**: ~7,115 (across 23 files, including Azure Semantic Router + __init__.py files)
 - **Dependencies**: LLMServiceProtocol, Azure OpenAI (embeddings), Azure AI Search
 - **Data persistence**: InMemory (classification cache)
 - **Known issues**: None — uses real embeddings, not mock
@@ -203,7 +203,7 @@
   - `orchestration/guided_dialog/context_manager.py` (1,101 LOC) — ConversationContextManager, incremental field extraction
   - `orchestration/guided_dialog/generator.py` (1,044 LOC) — QuestionGenerator, template-based (ZH-TW)
   - `orchestration/guided_dialog/refinement_rules.py` (622 LOC) — Sub-intent refinement
-- **Total LOC**: 3,314
+- **Total LOC**: ~3,407 (including __init__.py; 3,314 non-init)
 - **Dependencies**: BusinessIntentRouter (initial classification), CompletenessChecker
 - **Data persistence**: InMemory (`_dialog_sessions` dict)
 - **Known issues**: In-memory session storage (C-01)
@@ -575,8 +575,8 @@ All 4 security features remain COMPLETE. V9 notes that Phase 36 (Sprint 109) add
 
 | Area | V8 LOC | V9 LOC | Delta |
 |------|--------|--------|-------|
-| Orchestration intent_router/ | ~5,000 | 5,213 | +213 |
-| Orchestration guided_dialog/ | ~3,529 | 3,314 | -215 (refactored) |
+| Orchestration intent_router/ | ~5,000 | ~7,115 | +2,115 |
+| Orchestration guided_dialog/ | ~3,529 | ~3,407 | -122 (refactored) |
 | Swarm integrations/ | ~1,100 | 3,461 | **+2,361** |
 | Hybrid orchestrator/ | — (new) | 6,073 | **+6,073** |
 | Knowledge/ | — (new) | 1,318 | **+1,318** |

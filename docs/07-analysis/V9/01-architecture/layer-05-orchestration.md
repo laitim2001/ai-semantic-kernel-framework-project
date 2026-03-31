@@ -1,7 +1,7 @@
 # Layer 05: Hybrid Orchestration
 
 > **V9 Architecture Analysis** | 2026-03-29
-> **Scope**: `backend/src/integrations/hybrid/` — 90+ Python files, ~26K LOC
+> **Scope**: `backend/src/integrations/hybrid/` — 89 Python files, 28,800 LOC
 > **Role**: Central mediation layer between MAF (Layer 06) and Claude SDK (Layer 07)
 > **Phase History**: Phase 13-14 (S52-S57), Phase 28 (S93-S98), Phase 29 (S116), Phase 35 (S107), Phase 39-42 (S132-S148)
 
@@ -24,7 +24,7 @@ The layer has undergone a major architectural evolution: from the monolithic `Hy
 
 ## 2. File Inventory
 
-### 2.1 Complete File Map (90+ files)
+### 2.1 Complete File Map (89 files)
 
 | Subsystem | Directory | Files | Est. LOC | Primary Class |
 |-----------|-----------|-------|----------|---------------|

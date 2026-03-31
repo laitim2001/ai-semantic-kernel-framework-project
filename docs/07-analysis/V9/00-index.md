@@ -10,7 +10,7 @@
 | Metric | Value |
 |--------|-------|
 | **Total V9 Files** | 36 analysis .md files (13 dirs) + 60+ verification archive files |
-| **Analysis Scope** | 1,028 source files (792 .py + 236 .ts/.tsx), 326,547 LOC |
+| **Analysis Scope** | 1,028 source files (792 .py + 236 .ts/.tsx), 327,582 LOC |
 | **Phases Covered** | 1-44 (152+ sprints, ~2,500+ story points) |
 | **Categories** | 13 topical directories (01-13) + _verification/ archive |
 | **Verification Rounds** | R1-R9 (9 rounds, 94.5% programmatic + AI semantic) |
@@ -299,7 +299,7 @@
 |-----------|-----------------|-----------------|
 | **Phase Coverage** | Phase 1-34 | Phase 1-44 (+10 phases) |
 | **Source Files Scanned** | 939 | 1,028 (792 .py + 236 .ts/.tsx) |
-| **LOC Verified** | ~140K | **326,547** (272K backend + 54K frontend) |
+| **LOC Verified** | ~140K | **327,582** (273K backend + 54K frontend) |
 | **Architecture Depth** | 2 monolithic docs (2,721 + 1,518 lines) | 11 per-layer files (455 KB total) |
 | **Module Analysis** | Embedded in architecture doc | 4 dedicated module files (148 KB) |
 | **Feature Verification** | 70 features in single doc | Split A-E / F-J for searchability (61 KB) |

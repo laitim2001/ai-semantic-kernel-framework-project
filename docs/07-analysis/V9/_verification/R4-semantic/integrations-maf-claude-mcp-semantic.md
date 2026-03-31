@@ -9,14 +9,14 @@
 
 | Module | Directory | Files | LOC (verified) | Purpose |
 |--------|-----------|-------|----------------|---------|
-| MAF Builder Layer | `integrations/agent_framework/` | 56 | **38,082** | Adapter layer wrapping Microsoft Agent Framework official API |
-| Claude SDK Worker Layer | `integrations/claude_sdk/` | 47 | **15,406** | Claude Agent SDK integration (autonomous, hooks, tools, MCP client) |
+| MAF Builder Layer | `integrations/agent_framework/` | 57 | **38,082** | Adapter layer wrapping Microsoft Agent Framework official API |
+| Claude SDK Worker Layer | `integrations/claude_sdk/` | 48 | **15,406** | Claude Agent SDK integration (autonomous, hooks, tools, MCP client) |
 | MCP Tool Layer | `integrations/mcp/` | 73 | **20,847** | Model Context Protocol infrastructure + 9 enterprise tool servers |
-| **Total** | | **176** | **74,335** | |
+| **Total** | | **178** | **74,335** | |
 
 ---
 
-## 1. MAF Builder Layer (`agent_framework/`) — 56 files, 38,082 LOC
+## 1. MAF Builder Layer (`agent_framework/`) — 57 files, 38,082 LOC
 
 ### 1.1 Root Files (5 files, 2,194 LOC)
 
@@ -117,7 +117,7 @@
 
 ---
 
-## 2. Claude SDK Worker Layer (`claude_sdk/`) — 47 files, 15,406 LOC
+## 2. Claude SDK Worker Layer (`claude_sdk/`) — 48 files, 15,406 LOC
 
 ### 2.1 Root Files (8 files, 3,330 LOC)
 
@@ -228,8 +228,8 @@
 |------|-----|------------------|
 | `security/permissions.py` | 458 | 4-level RBAC: `PermissionLevel` (NONE=0/READ=1/EXECUTE=2/ADMIN=3). `Permission`, `PermissionPolicy` with glob-pattern matching for servers/tools. `PermissionManager`: priority-based policy evaluation, deny-list precedence, dynamic conditions (time_range, ip_whitelist, custom evaluators). |
 | `security/permission_checker.py` | 183 | `MCPPermissionChecker`: runtime enforcement facade. Two modes via `MCP_PERMISSION_MODE` env var: "log" (Phase 1, WARNING log + continue) and "enforce" (Phase 2, raises PermissionError). Dev/testing gets permissive ADMIN default. Stats tracking (allowed/denied counts). |
-| `security/command_whitelist.py` | 225 | `CommandWhitelist`: three-tier command security. 65 `DEFAULT_WHITELIST` commands (ls, cat, grep, etc.). 26 `BLOCKED_PATTERNS` regex (rm -rf /, chmod 777, etc.). Everything else `requires_approval`. Extensible via `MCP_ADDITIONAL_WHITELIST` env var. |
-| `security/audit.py` | 686 | `AuditEventType` (13 types across 4 categories: connection, tool, security, system). `AuditEvent`, `AuditFilter`. `AuditStorage` (ABC). `InMemoryAuditStorage` (bounded deque). `FileAuditStorage` (JSON Lines). `AuditLogger`: sensitive field redaction (password, token, key, secret patterns), event handler pipeline. |
+| `security/command_whitelist.py` | 225 | `CommandWhitelist`: three-tier command security. 79 `DEFAULT_WHITELIST` commands (ls, cat, grep, etc.). 24 `BLOCKED_PATTERNS` regex (rm -rf /, chmod 777, etc.). Everything else `requires_approval`. Extensible via `MCP_ADDITIONAL_WHITELIST` env var. |
+| `security/audit.py` | 686 | `AuditEventType` (12 types across 5 categories: connection, tool, access, admin, system). `AuditEvent`, `AuditFilter`. `AuditStorage` (ABC). `InMemoryAuditStorage` (bounded deque). `FileAuditStorage` (JSON Lines). `AuditLogger`: sensitive field redaction (password, token, key, secret patterns), event handler pipeline. |
 | `security/redis_audit.py` | ~120 | `RedisAuditStorage`: production audit backend. Redis Sorted Set (score=timestamp) for efficient time-range queries. Auto-trimming to max_size. Key: `mcp:audit:events`. |
 
 ### 3.4 Azure MCP Server (10 files, ~3,048 LOC)
