@@ -11,20 +11,21 @@
 1. [Domain Modules](#1-domain-modules)
    - 1.1 [sessions/ (33 files)](#11-sessions-33-files)
    - 1.2 [orchestration/ (22 files) -- DEPRECATED](#12-orchestration-22-files----deprecated)
-   - 1.3 [workflows/ (8 files)](#13-workflows-8-files)
+   - 1.3 [workflows/ (11 files)](#13-workflows-11-files)
    - 1.4 [agents/ (7 files)](#14-agents-7-files)
    - 1.5 [connectors/ (6 files)](#15-connectors-6-files)
    - 1.6 [Small Domain Modules](#16-small-domain-modules)
 2. [Infrastructure Modules](#2-infrastructure-modules)
-   - 2.1 [database/ (15 files)](#21-database-15-files)
-   - 2.2 [storage/ (16 files)](#22-storage-16-files)
-   - 2.3 [checkpoint/ (6 files)](#23-checkpoint-6-files)
+   - 2.1 [database/ (18 files)](#21-database-18-files)
+   - 2.2 [storage/ (18 files)](#22-storage-18-files)
+   - 2.3 [checkpoint/ (8 files)](#23-checkpoint-8-files)
    - 2.4 [Remaining Infrastructure](#24-remaining-infrastructure)
 3. [Core Modules](#3-core-modules)
-   - 3.1 [security/ (6 files)](#31-security-6-files)
-   - 3.2 [performance/ (10 files)](#32-performance-10-files)
-   - 3.3 [sandbox/ (6 files)](#33-sandbox-6-files)
-   - 3.4 [Root Config](#34-root-config)
+   - 3.1 [security/ (7 files)](#31-security-7-files)
+   - 3.2 [performance/ (11 files)](#32-performance-11-files)
+   - 3.3 [sandbox/ (7 files)](#33-sandbox-7-files)
+   - 3.4 [logging/ + observability/ (6 files)](#34-logging--observability-6-files)
+   - 3.5 [Root Config](#35-root-config)
 4. [Cross-Cutting Findings](#4-cross-cutting-findings)
 
 ---
@@ -38,18 +39,20 @@
 │                                                                             │
 │  ┌───────────────────── Domain Layer (業務邏輯) ──────────────────────┐     │
 │  │  sessions/ (33 files) ★ CRITICAL    orchestration/ (22 files) ⚠    │     │
-│  │  workflows/ (8 files)               agents/ (7 files)              │     │
+│  │  workflows/ (11 files)              agents/ (7 files)              │     │
 │  │  connectors/ (6 files)              executions/ (4 files)          │     │
-│  │  hitl/ (3)  tools/ (3)  skills/ (3) checkpoints/ (3)              │     │
-│  │  llm/ (2)   audit/ (2)  routing/ (2) sandbox/ (2)                 │     │
-│  │  monitoring/ (2) auth/ (2) notifications/ (2)                      │     │
+│  │  tasks/ (3)  checkpoints/ (3)       chat_history/ (2)             │     │
+│  │  devtools/ (2) prompts/ (2)         templates/ (3)                │     │
+│  │  triggers/ (2) versioning/ (2)      files/ (3)                    │     │
+│  │  learning/ (2) auth/ (3)            notifications/ (2)             │     │
+│  │  audit/ (2) routing/ (2) sandbox/ (2) llm/ (2)                    │     │
 │  └────────────────────────────┬────────────────────────────────────────┘     │
 │                               │ depends on                                  │
 │                               ↓                                             │
 │  ┌───────────────────── Infrastructure Layer (基礎設施) ─────────────┐     │
-│  │  database/ (15 files)       storage/ (16 files)                    │     │
-│  │  checkpoint/ (6 files)      cache/ (5 files)                       │     │
-│  │  messaging/ (4 files)       monitoring/ (3 files)                  │     │
+│  │  database/ (18 files)       storage/ (18 files)                    │     │
+│  │  checkpoint/ (8 files)      cache/ (2 files)                       │     │
+│  │  messaging/ (1 file, STUB)                                         │     │
 │  │                                                                    │     │
 │  │  PostgreSQL ←→ SQLAlchemy   Redis ←→ aioredis                     │     │
 │  │  RabbitMQ ←→ aio-pika      S3/Local ←→ storage abstraction        │     │
@@ -57,8 +60,9 @@
 │                               │ depends on                                  │
 │                               ↓                                             │
 │  ┌───────────────────── Core Layer (跨切面工具) ─────────────────────┐     │
-│  │  security/ (6 files)        performance/ (10 files)                │     │
-│  │  sandbox/ (6 files)         config (settings.py, constants.py)     │     │
+│  │  security/ (7 files)        performance/ (11 files)                │     │
+│  │  sandbox/ (7 files)         config (settings.py, constants.py)     │     │
+│  │  logging/ (3 files)         observability/ (3 files)               │     │
 │  │                                                                    │     │
 │  │  JWT Auth │ RBAC │ Rate Limiting │ Metrics │ Profiling │ Sandbox   │     │
 │  └────────────────────────────────────────────────────────────────────┘     │
@@ -206,7 +210,7 @@ Implements `ConversationMemoryStore` ABC with:
 
 ---
 
-### 1.3 workflows/ (8 files)
+### 1.3 workflows/ (11 files)
 
 **Role**: Workflow execution engine with sequential agent orchestration and state management.
 
@@ -369,7 +373,7 @@ Implements `ConversationMemoryStore` ABC with:
 | **versioning/** | 2 | Version control data | InMemory | Versioning for workflows/agents |
 | **templates/** | 3 | Workflow templates | InMemory | Workflow template management |
 | **triggers/** | 2 | Trigger definitions | InMemory | Workflow trigger management |
-| **tasks/** | -- | (No files found) | N/A | N/A |
+| **tasks/** | 3 | `TaskModels` / `TaskService` | InMemory | `__init__.py`, `models.py`, `service.py` — Task data models and service |
 
 #### InMemory Status Summary for Small Modules
 
@@ -379,7 +383,7 @@ Nearly all small domain modules use **InMemory storage** (Python dicts/lists). O
 
 ## 2. Infrastructure Modules
 
-### 2.1 database/ (15 files)
+### 2.1 database/ (18 files)
 
 **Role**: Async SQLAlchemy ORM with connection pooling and repository pattern.
 
@@ -425,7 +429,7 @@ Generic `BaseRepository[ModelT]` with:
 
 ---
 
-### 2.2 storage/ (16 files)
+### 2.2 storage/ (18 files)
 
 **Role**: Key-value storage abstraction with 3 backends and 6 domain-specific stores.
 
@@ -490,7 +494,7 @@ Auto-detection priority: STORAGE_BACKEND env > APP_ENV=testing -> memory > REDIS
 
 ---
 
-### 2.3 checkpoint/ (6 files)
+### 2.3 checkpoint/ (8 files)
 
 **Role**: Unified checkpoint system coordinating 4 independent checkpoint providers.
 
@@ -600,7 +604,7 @@ Only `__init__.py` with comment `"# Messaging infrastructure"`. RabbitMQ integra
 
 ## 3. Core Modules
 
-### 3.1 security/ (6 files)
+### 3.1 security/ (7 files)
 
 #### JWT (`jwt.py`)
 
@@ -657,7 +661,7 @@ Only `__init__.py` with comment `"# Messaging infrastructure"`. RabbitMQ integra
 
 ---
 
-### 3.2 performance/ (10 files)
+### 3.2 performance/ (11 files)
 
 #### CircuitBreaker (`circuit_breaker.py`)
 
@@ -696,7 +700,7 @@ States: `CLOSED -> OPEN -> HALF_OPEN -> CLOSED`
 
 ---
 
-### 3.3 sandbox/ (6 files)
+### 3.3 sandbox/ (7 files)
 
 **Role**: Secure code execution environment with process pool management.
 
@@ -726,7 +730,29 @@ SandboxOrchestrator
 
 ---
 
-### 3.4 Root Config
+### 3.4 logging/ + observability/ (6 files)
+
+**Role**: Structured logging and OpenTelemetry observability infrastructure.
+
+#### core/logging/ (3 files)
+
+| File | Purpose |
+|------|---------|
+| `filters.py` | Log filtering and formatting |
+| `middleware.py` | Request/response logging middleware |
+| `setup.py` | Logging configuration and initialization |
+
+#### core/observability/ (3 files)
+
+| File | Purpose |
+|------|---------|
+| `metrics.py` | OpenTelemetry metrics collection |
+| `setup.py` | Observability initialization |
+| `spans.py` | Distributed tracing spans |
+
+---
+
+### 3.5 Root Config
 
 #### Settings (`config.py`)
 

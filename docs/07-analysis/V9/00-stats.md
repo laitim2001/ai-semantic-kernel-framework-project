@@ -24,13 +24,13 @@ graph TB
         FE["React 18 + TypeScript<br/>236 files | 54,238 LOC (wc -l)"]
     end
     subgraph "Layer 2: API Gateway"
-        API["FastAPI<br/>153 files | 47,376 LOC<br/>575 endpoints"]
+        API["FastAPI<br/>153 files | 47,377 LOC<br/>575 endpoints"]
     end
     subgraph "Layer 3: AG-UI"
         AGUI["SSE Protocol<br/>27 files | 10,329 LOC"]
     end
     subgraph "Layer 4: Routing"
-        ROUTE["3-Tier Intent Router<br/>55 files | ~19,400 LOC"]
+        ROUTE["3-Tier Intent Router<br/>55 files | 20,272 LOC"]
     end
     subgraph "Layer 5: Hybrid Orchestration"
         HYBRID["Mediator Pattern<br/>89 files | 28,800 LOC"]
@@ -39,13 +39,13 @@ graph TB
         MAF["9 Builder Adapters<br/>57 files | 38,082 LOC"]
     end
     subgraph "Layer 7: Claude SDK"
-        CLAUDE["Autonomous Engine<br/>46 files | 15,406 LOC"]
+        CLAUDE["Autonomous Engine<br/>48 files | 15,406 LOC"]
     end
     subgraph "Layer 8: MCP Tools"
         MCP["9 Servers, 70 Tools<br/>73 files | 20,847 LOC"]
     end
     subgraph "Layer 9: Integrations"
-        INT["14 Sub-modules<br/>75 files | ~21,300 LOC"]
+        INT["14 Sub-modules<br/>77 files | 22,604 LOC"]
     end
     subgraph "Layer 10: Domain"
         DOM["21 Modules<br/>117 files | 47,637 LOC"]
@@ -95,7 +95,7 @@ graph TB
 │                                 │ Fetch API + SSE (port 3005 → 8000)               │
 │  ╔══════════════════════════════│════════════════════════════════════════════════╗    │
 │  ║  Layer 2: API Gateway (575 endpoints, 43 route modules)                      ║    │
-│  ║  152 files | 47,376 LOC | FastAPI (port 8000)                                ║    │
+│  ║  153 files | 47,377 LOC | FastAPI (port 8000)                                ║    │
 │  ║  Auth: JWT (HS256) + protected_router 全域保護                               ║    │
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
 │                                 │                                                    │
@@ -224,7 +224,7 @@ graph TB
 │  ║   │   │(10 tool)│  │(6 tl) │  │(6 tl)  │  │(5 tl)│                           │  ║   │
 │  ║   │   └─────────┘  └───────┘  └────────┘  └──────┘                           │  ║   │
 │  ║   │   Security: 4-level RBAC (NONE/READ/EXECUTE/ADMIN)                        │  ║   │
-│  ║   │   CommandWhitelist: 26 blocked + 65 allowed                               │  ║   │
+│  ║   │   CommandWhitelist: 24 blocked + 79 allowed                               │  ║   │
 │  ║   │   + PromptGuard (Phase 36) + ToolGateway (Phase 36)                       │  ║   │
 │  ║   │   Permission mode: 'log' (Phase 1) → 'enforce' (目標)                     │  ║   │
 │  ║   └───────────────────────────────────────────────────────────────────────────┘  ║   │
@@ -232,7 +232,7 @@ graph TB
 │                                                                                         │
 │  ╔══════════════════════════════════════════════════════════════════════════════════╗   │
 │  ║  Layer 9: Supporting Integrations (14 modules) + Swarm 群集執行層               ║   │
-│  ║  75 files, ~21,300 LOC | Swarm: Phase 43 升級為真實 LLM 並行執行               ║   │
+│  ║  77 files, 22,604 LOC | Swarm: Phase 43 升級為真實 LLM 並行執行                ║   │
 │  ╠══════════════════════════════════════════════════════════════════════════════════╣   │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        ║   │
 │  ║   │  swarm/  │  │  llm/   │  │ memory/  │  │knowledge/│  │ patrol/  │        ║   │
@@ -323,7 +323,7 @@ graph TB
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 2: API Gateway (575 endpoints, 43 route modules, 48 routers)         ║    │
-│  ║  152 files | 47,376 LOC | FastAPI (port 8000)                               ║    │
+│  ║  153 files | 47,377 LOC | FastAPI (port 8000)                               ║    │
 │  ║  Auth: JWT (HS256) + protected_router | 31 auth endpoints (5.3%)            ║    │
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
@@ -460,7 +460,7 @@ graph TB
 
 | Layer | Directory | Files | Est. LOC | % of Backend |
 |-------|-----------|-------|----------|--------------|
-| L2: API Gateway | api/v1/ | 152 | 47,376 | 17.3% |
+| L2: API Gateway | api/v1/ | 153 | 47,377 | 17.3% |
 | L3: AG-UI Protocol | integrations/ag_ui/ | 27 | 10,329 | 3.8% |
 | L4: Orchestration/Routing | integrations/orchestration/ | 55 | 20,272 | 7.4% |
 | L5: Hybrid Orchestration | integrations/hybrid/ | 89 | 28,800 | 10.5% |
@@ -582,15 +582,16 @@ graph TB
 
 | Category | Files | Coverage Target |
 |----------|-------|-----------------|
-| Backend Unit Tests | 241 | 80% fail_under |
-| Backend Integration Tests | 24 | — |
-| Backend E2E Tests | 19 | — |
+| Backend Unit Tests | 345 | 80% fail_under |
+| Backend Integration Tests | 43 | — |
+| Backend E2E Tests | 29 | — |
 | Backend Security Tests | 5 | — |
-| Backend Performance Tests | 5 | — |
+| Backend Performance Tests | 13 | — |
 | Backend Load Tests | 2 | — |
+| Backend Root (conftest etc.) | 6 | — |
 | Frontend Unit Tests | 13 (12 swarm + 1 store) | — |
-| Frontend E2E Tests | 9 | — |
-| **Total Test Files** | **318** | |
+| Frontend E2E Tests | 13 | — |
+| **Total Test Files** | **469** | |
 
 ---
 

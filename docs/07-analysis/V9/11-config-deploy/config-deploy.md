@@ -815,6 +815,7 @@ See Section 2.5 above for full details. Key points:
 |---|----------|-------|---------|----------------|
 | 14 | **HIGH** | Secret validation only checks specific unsafe values | `validate_security_settings()` checks against a hardcoded set of unsafe strings. | Add minimum length requirement (e.g., 32+ chars) for production secrets. |
 | 15 | **MEDIUM** | Redis password defaults differ | Root `.env.example` has `redis_password`; `backend/.env.example` has empty; Docker Compose defaults to `redis_password`. | Align all examples to same default. |
+| 15b | **LOW** | Grafana password defaults differ | Root `.env.example` has `admin`; `backend/.env.example` and Docker Compose default to `please-change-me`. | Align all examples to same default (`please-change-me`). |
 | 16 | **MEDIUM** | Missing `Content-Security-Policy` header | Nginx config has basic security headers but no CSP. | Add CSP header appropriate for SPA. |
 | 17 | **LOW** | `X-XSS-Protection` is deprecated | Modern browsers have removed this feature. | Replace with `Content-Security-Policy` directives. |
 

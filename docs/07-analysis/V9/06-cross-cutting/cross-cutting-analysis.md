@@ -101,7 +101,7 @@ graph LR
 │  ┌──── Layer 4: ToolGateway ─────────────────────────┤───────────┐          │
 │  │  orchestration/tool_gateway/ — 工具存取閘門         │           │          │
 │  │  + MCP PermissionChecker (4-level RBAC)            │           │          │
-│  │  + CommandWhitelist (65 白名單 + 26 黑名單)        │           │          │
+│  │  + CommandWhitelist (79 白名單 + 24 黑名單)        │           │          │
 │  └───────────────────────────────────────────────────┤───────────┘          │
 │                                                      │ ✓ 工具已授權        │
 │  ┌──── Layer 5: Sandbox ─────────────────────────────┤───────────┐          │
@@ -183,7 +183,7 @@ The platform has **two parallel RBAC implementations** that are NOT integrated:
 ### 1.4 MCP Security
 
 **Command Whitelist** (`mcp/security/command_whitelist.py`):
-- 3-tier classification: `allowed` (71 whitelisted commands) / `blocked` (23 dangerous patterns) / `requires_approval` (everything else triggers HITL).
+- 3-tier classification: `allowed` (79 whitelisted commands) / `blocked` (24 dangerous regex patterns) / `requires_approval` (everything else triggers HITL).
 - Blocked patterns cover destructive operations (`rm -rf /`, `format C:`, `shutdown`, fork bombs).
 - Whitelist includes potentially dangerous commands: `sed`, `awk`, `tar`, `gzip` can modify files. `curl`, `wget` can exfiltrate data. `env`, `printenv` expose environment variables (including secrets).
 - `sudo` prefix is stripped before whitelist check, meaning `sudo rm` extracts `rm` (which is not in blocked patterns without `-rf /`).

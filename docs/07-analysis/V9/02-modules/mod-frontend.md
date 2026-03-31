@@ -27,7 +27,7 @@
 ## Module: unified-chat
 
 - **Path**: `frontend/src/components/unified-chat/`
-- **Files**: 29 (+ 3 renderers sub-module)
+- **Files**: 29 (+ 4 renderers sub-module: 3 components + 1 barrel)
 - **Sprint Origin**: Sprint 62 (Phase 16) through Sprint 147
 
 ### Public API / Exports
@@ -129,7 +129,7 @@ UnifiedChat (page)
 
 ### Known Issues
 
-1. **UnifiedChat.tsx is 450+ lines** — heavy page component with 15+ state hooks, mixing orchestration logic, SSE handlers, memory fetching, and swarm integration. Candidate for extraction into sub-hooks.
+1. **UnifiedChat.tsx is 1403 lines** — heavy page component with 15+ state hooks, mixing orchestration logic, SSE handlers, memory fetching, and swarm integration. Candidate for extraction into sub-hooks.
 2. **Dual streaming paths**: `useUnifiedChat` (AG-UI SSE) and `useSSEChat` (pipeline SSE) coexist. The page component manually bridges them via `sendSSE` handlers that update `messages` state directly.
 3. **Unused variables suppressed**: Multiple `void varName` patterns in UnifiedChat.tsx to suppress TypeScript warnings for imported-but-not-yet-used symbols.
 4. **localStorage for thread persistence**: Thread messages are stored in localStorage (via `useChatThreads.saveMessages`), bypassing the Zustand persist middleware. Two parallel persistence mechanisms.
@@ -303,7 +303,7 @@ EventSource (SSE)
 | Component | Purpose |
 |-----------|---------|
 | `EventFilter` | Multi-faceted filter panel (event type, severity, executor, search) |
-| `FilterBar` | Compact inline filter bar |
+| `FilterBar` | Compact inline filter bar (inline sub-component within `EventFilter.tsx`, not a separate file) |
 | `Timeline` | Main execution timeline with zoom, filter, view modes |
 | `TimelineNode` | Individual timeline event node |
 | `EventList` | Flat event list view |
@@ -428,7 +428,7 @@ None — uses React Query for server state, local state for UI.
 ## Module: pages
 
 - **Path**: `frontend/src/pages/`
-- **Files**: 43 files across 12 subdirectories + 2 standalone pages
+- **Files**: 46 files across 14 subdirectories + 2 standalone pages
 - **Sprint Origin**: Sprint 5 through Sprint 140
 
 ### Page Inventory
@@ -507,7 +507,7 @@ The main chat page (`/chat`) is the most complex page component:
 
 ### Known Issues
 
-1. **UnifiedChat.tsx god-component**: 450+ lines, 15+ hooks, 20+ state vars. Should be decomposed into `usePipelineChat`, `useMemoryIntegration`, `useSwarmIntegration` sub-hooks.
+1. **UnifiedChat.tsx god-component**: 1403 lines, 15+ hooks, 20+ state vars. Should be decomposed into `usePipelineChat`, `useMemoryIntegration`, `useSwarmIntegration` sub-hooks.
 2. **4 standalone (unprotected) routes**: `/login`, `/signup`, `/ag-ui-demo`, `/swarm-test` bypass `ProtectedRoute`. The demo/test pages should be dev-only.
 
 ---
@@ -515,7 +515,7 @@ The main chat page (`/chat`) is the most complex page component:
 ## Module: hooks
 
 - **Path**: `frontend/src/hooks/`
-- **Files**: 25 hook files + 1 index
+- **Files**: 24 hook files + 1 index
 - **Sprint Origin**: Sprint 60 through Sprint 145
 
 ### Hook API Reference
@@ -564,7 +564,7 @@ The main chat page (`/chat`) is the most complex page component:
 ## Module: api
 
 - **Path**: `frontend/src/api/`
-- **Files**: 11 files (1 client + 1 devtools + 9 endpoint modules)
+- **Files**: 11 files (1 client + 1 devtools + 8 endpoint modules + 1 barrel index)
 
 ### fetchApi Pattern
 
@@ -789,7 +789,7 @@ pages/workflows/WorkflowEditorPage.tsx
 
 | # | Severity | Module | Description |
 |---|----------|--------|-------------|
-| FE-001 | HIGH | unified-chat | `UnifiedChat.tsx` god-component (450+ lines, 15+ hooks, 20+ state vars) |
+| FE-001 | HIGH | unified-chat | `UnifiedChat.tsx` god-component (1403 lines, 15+ hooks, 20+ state vars) |
 | FE-002 | HIGH | hooks | Dual SSE streaming paths (`useUnifiedChat` AG-UI SSE vs `useSSEChat` pipeline SSE) coexist without clear boundary |
 | FE-003 | MEDIUM | stores | Two store directories (`store/` vs `stores/`) with inconsistent naming |
 | FE-004 | MEDIUM | stores | `authStore` uses raw `fetch()` bypassing shared `api` client |

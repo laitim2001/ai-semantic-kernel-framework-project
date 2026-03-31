@@ -75,7 +75,7 @@
 ## Module: patrol
 
 - **Path**: `backend/src/integrations/patrol/`
-- **Files**: 4 (types.py, agent.py, scheduler.py, __init__.py) | **Phase**: 23 (Sprint 82)
+- **Files**: 11 (types.py, agent.py, scheduler.py, __init__.py + checks/: __init__.py, base.py, service_health.py, api_response.py, resource_usage.py, log_analysis.py, security_scan.py) | **Phase**: 23 (Sprint 82)
 - **Purpose**: Proactive system health patrol — scheduled checks with risk scoring and Claude-powered analysis
 
 ### Public API
@@ -124,7 +124,7 @@
 | ID | Severity | Description |
 |---|---|---|
 | PAT-1 | MEDIUM | `observability_bridge.py` imports `PatrolEngine` but the module only defines `PatrolAgent` — likely naming mismatch or missing wrapper |
-| PAT-2 | MEDIUM | No concrete `PatrolCheck` implementations exist in the module — only the abstract base class. Checks must be registered externally |
+| PAT-2 | ~~MEDIUM~~ RESOLVED | ~~No concrete `PatrolCheck` implementations exist~~ — `checks/` subdirectory contains 5 concrete implementations: `ServiceHealthCheck`, `APIResponseCheck`, `ResourceUsageCheck`, `LogAnalysisCheck`, `SecurityScanCheck` (exported via `__init__.py`) |
 | PAT-3 | LOW | `datetime.utcnow()` used throughout (deprecated in Python 3.12+) |
 | PAT-4 | HIGH | Zero test coverage for this module |
 | PAT-5 | LOW | `_running_patrols` is a plain dict without lock protection — concurrent executions could have race conditions |
@@ -146,6 +146,7 @@
 | `CorrelationAnalyzer.analyze(query: DiscoveryQuery) -> CorrelationResult` | analyzer.py | Full analysis: correlations + graph + summary |
 | `calculate_combined_score(time, dep, semantic) -> float` | types.py | Weighted: time=0.40, dependency=0.35, semantic=0.25 |
 | `CorrelationGraph` | types.py | In-memory graph with add_node/add_edge/get_neighbors |
+| `GraphBuilder` | graph.py | Builds `CorrelationGraph` from correlation lists; provides graph analysis and traversal |
 
 **Key Data Types**: `Event`, `Correlation`, `GraphNode`, `GraphEdge`, `CorrelationGraph`, `DiscoveryQuery`, `CorrelationResult`
 
@@ -499,7 +500,7 @@ base_score = 0.5
 ## Module: a2a
 
 - **Path**: `backend/src/integrations/a2a/`
-- **Files**: 3 (protocol.py, router.py, __init__.py) | **Phase**: 23 (Sprint 81)
+- **Files**: 4 (protocol.py, discovery.py, router.py, __init__.py) | **Phase**: 23 (Sprint 81)
 - **Purpose**: Agent-to-Agent communication protocol with message routing, capability discovery, and delivery tracking
 
 ### Public API
@@ -517,6 +518,7 @@ base_score = 0.5
 | `MessageRouter.process_queue(agent_id) -> int` | router.py | Drain queued messages for newly-online agent |
 | `MessageRouter.get_conversation_messages(correlation_id) -> List` | router.py | Get all messages in a conversation chain |
 | `MessageRouter.cleanup_expired() -> int` | router.py | Remove expired messages from tracking and queues |
+| `AgentDiscoveryService` | discovery.py | Agent registration, discovery, heartbeat tracking, and stale-agent cleanup |
 | `DiscoveryQuery` / `DiscoveryResult` | protocol.py | Agent discovery by capabilities, tags, availability |
 
 **Enums**: `MessageType` (12 types across task/status/discovery/error categories), `MessagePriority` (low/normal/high/urgent), `MessageStatus` (6 states), `A2AAgentStatus` (online/busy/offline/maintenance)
@@ -560,7 +562,7 @@ route_message(msg) → handler registered?
 | A2A-2 | MEDIUM | All state (messages, queues, handlers) is in-memory — no persistence |
 | A2A-3 | LOW | `process_queue()` uses `queue.pop(0)` — O(N) operation; should use `collections.deque` |
 | A2A-4 | LOW | Priority is stored on messages but not used in queue ordering — FIFO regardless of priority |
-| A2A-5 | INFO | No `DiscoveryService` implementation exists — only data types defined |
+| A2A-5 | ~~INFO~~ RESOLVED | ~~No `DiscoveryService` implementation exists~~ — `AgentDiscoveryService` class exists in `discovery.py` with full registration, discovery, heartbeat tracking, and cleanup functionality |
 
 ---
 
@@ -778,9 +780,9 @@ Simple keyword-based classification (placeholder for production router):
 | Severity | Count | IDs |
 |---|---|---|
 | HIGH | 4 | PAT-4, AUD-1, A2A-1, CTR-1 |
-| MEDIUM | 6 | PAT-1, PAT-2, COR-1, AUD-2, AUD-3, LRN-1 |
-| LOW | 11 | PAT-3, PAT-5, COR-2, RCA-1, RCA-3, INC-2, INC-3, AUD-4, LRN-2, LRN-3, A2A-3, A2A-4, N8N-1, N8N-2 |
-| INFO | 5 | COR-3, RCA-2, A2A-5, CTR-2, CTR-3, N8N-3 |
+| MEDIUM | 5 | PAT-1, ~~PAT-2 (RESOLVED)~~, COR-1, AUD-2, AUD-3, LRN-1 |
+| LOW | 14 | PAT-3, PAT-5, COR-2, RCA-1, RCA-3, INC-2, INC-3, AUD-4, LRN-2, LRN-3, A2A-3, A2A-4, N8N-1, N8N-2 |
+| INFO | 5 | COR-3, RCA-2, ~~A2A-5 (RESOLVED)~~, CTR-2, CTR-3, N8N-3 |
 
 ### Top Priority Actions
 
@@ -788,19 +790,19 @@ Simple keyword-based classification (placeholder for production router):
 2. **Data persistence** (AUD-1): DecisionTracker uses volatile in-memory dict; Redis TTL expires data
 3. **Dead protocols** (CTR-1): shared/protocols.py protocols are not imported by any production code
 4. **Naming mismatches** (PAT-1, COR-1): observability_bridge imports `PatrolEngine` and `CorrelationEngine` but modules define `PatrolAgent` and `CorrelationAnalyzer`
-5. **No concrete PatrolCheck implementations** (PAT-2): module provides only the abstract base class
+5. ~~**No concrete PatrolCheck implementations** (PAT-2)~~: RESOLVED — `checks/` subdirectory has 5 implementations
 6. **Priority queue not implemented** (A2A-4): messages have priority field but routing is FIFO
 
 ### Module Maturity Summary
 
 | Module | Files | Tests | Data Source | Production Ready? |
 |---|---|---|---|---|
-| patrol | 4 | 0 | N/A (abstract) | No — no checks, no tests |
+| patrol | 11 | 0 | N/A (5 concrete checks) | Partial — has check implementations, but no tests |
 | correlation | 6 | 2 | Sprint 130 real | Partial — needs data source config |
 | rootcause | 5 | 1 | Sprint 130 real | Partial — needs case repo + Claude |
 | incident | 6 | 3 | Via correlation/rootcause | Best in batch — full pipeline |
 | audit | 4 | 1 | In-memory + Redis cache | No — volatile storage |
 | learning | 5 | 1 | Via memory_manager DI | Partial — needs embedding service |
-| a2a | 3 | 0 | In-memory only | No — no tests, no persistence |
+| a2a | 4 | 0 | In-memory only | No — no tests, no persistence (but has AgentDiscoveryService) |
 | n8n | 3 | 6+ | Via n8n API client | Yes — best tested |
 | contracts+shared | 3 | 1 | N/A (interfaces) | Partial — protocols unused |

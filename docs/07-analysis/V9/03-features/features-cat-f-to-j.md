@@ -379,7 +379,7 @@ The observability category remains the weakest at 40% full completion (only G1+G
 - **Status**: COMPLETE
 - **Implementation files**: `frontend/src/components/unified-chat/agent-swarm/` — 15 components + 4 hooks + 2 type files (~4,700 LOC)
   - AgentSwarmPanel, WorkerCard, WorkerCardList, WorkerDetailDrawer, ExtendedThinkingPanel, ToolCallsPanel, ToolCallItem, OverallProgress, SwarmHeader
-  - Hooks: useSwarmMock, useSwarmReal (SSE), useSwarmStore (Zustand)
+  - Hooks: useSwarmEvents, useWorkerDetail, useSwarmStatus, useSwarmEventHandler
 - **Dependencies**: Backend swarm SSE API, Zustand store
 - **V9 Delta**: Phase 43 fixed worker card accumulation bug, improved detail drawer auth display
 - **Known issues**: None
@@ -404,7 +404,7 @@ Phase 43 represents a qualitative upgrade for the Swarm system. V8 documented a 
 | ID | Feature | V8 Status | V9 Status | Evidence | Phase | Layer |
 |----|---------|-----------|-----------|----------|-------|-------|
 | I1 | JWT Authentication | COMPLETE | COMPLETE | `core/security/jwt.py` (164 LOC) + `core/security/password.py` (58 LOC) | 22 | L10 |
-| I2 | Global Auth Middleware | COMPLETE | COMPLETE | `core/auth.py` (protected_router) | 35 | L10 |
+| I2 | Global Auth Middleware | COMPLETE | COMPLETE | `core/auth.py` (require_auth) | 35 | L10 |
 | I3 | Sandbox Isolation | COMPLETE | COMPLETE | `core/sandbox/` (7 files) | 22 | L10 |
 | I4 | MCP Permission System | COMPLETE | COMPLETE | `mcp/security/` (6 files, 1,818 LOC) | 9 | L8 |
 
@@ -423,10 +423,10 @@ Phase 43 represents a qualitative upgrade for the Swarm system. V8 documented a 
 #### I2: Global Auth Middleware
 - **Status**: COMPLETE
 - **Implementation files**:
-  - `core/auth.py` — protected_router with auth dependency injection
+  - `core/auth.py` — `require_auth` with auth dependency injection
 - **Dependencies**: JWT auth (I1)
 - **Known issues**: No RBAC role checks on destructive operations (H-01). Rate limiter is in-memory (H-14)
-- **V9 Delta**: `core/security/rbac.py` (153 LOC) exists now, providing basic UserRole enum and permission checking — but it is NOT wired into the auth middleware. RBAC remains a separate unused utility
+- **V9 Delta**: `core/security/rbac.py` (153 LOC) exists now, providing basic `Role` enum (ADMIN/OPERATOR/VIEWER) and permission checking — but it is NOT wired into the auth middleware. RBAC remains a separate unused utility
 - **Phase history**: Introduced Phase 35 (S111)
 
 #### I3: Sandbox Isolation

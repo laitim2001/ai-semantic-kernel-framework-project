@@ -30,7 +30,7 @@
 │  ┌─────────────┐   ┌──────────────┐   ┌───────────────┐                    │
 │  │orchestration│   │agent_framework│   │  claude_sdk   │                    │
 │  │ 三層意圖路由 │   │ MAF Adapters  │   │ Claude Agent  │                    │
-│  │ (55 files)  │   │ (30+ builders)│   │  SDK (40 files)│                   │
+│  │ (55 files)  │   │(23 bldr files)│   │  SDK (48 files)│                   │
 │  └──────┬──────┘   └──────┬───────┘   └──────┬────────┘                    │
 │         │                 │                   │                              │
 │         └────────────┬────┴───────────────────┘                              │
@@ -244,7 +244,7 @@ class StorageBackend(Enum): REDIS, POSTGRES, FILESYSTEM, MEMORY
 
 ### Public API
 
-**`builders/__init__.py`** exports 200+ symbols across 12 builder adapters + migration layers:
+**`builders/__init__.py`** exports 200+ symbols across 15 builder adapters + 5 migration layers:
 
 | Builder Adapter | Official MAF Class | Sprint | Key Factory Functions |
 |---|---|---|---|
@@ -422,14 +422,16 @@ class Session:
     async def close(self) -> None
 ```
 
-#### Autonomous Engine (`autonomous/engine.py`)
+#### PlanExecutor (`autonomous/executor.py`)
 - Full autonomous agent loop with tool use
+- Streaming plan execution with step-level control
 - Extended thinking support
 - Hook chain integration
 
 #### Hook Chain (`hooks/`)
-- Approval → Audit → RateLimit → Sandbox
+- Approval → Audit → RateLimit → Sandbox → ApprovalDelegate
 - Each hook implements `HookResult` protocol
+- `approval_delegate.py` — `ClaudeApprovalDelegate` bridges to AG-UI approval
 
 #### Tools Registry (`tools/`)
 - Tool registration and discovery
@@ -582,16 +584,16 @@ class HybridEventBridge:
 ```
 
 #### Events (`events/`)
-11 event types across 6 files:
+13+ event classes across 6 files:
 
 | File | Events |
 |---|---|
-| `base.py` | `BaseAGUIEvent`, `RunStartedEvent`, `RunFinishedEvent`, `CustomEvent` |
+| `base.py` | `AGUIEventType` enum, `RunFinishReason` enum, `BaseAGUIEvent` |
+| `lifecycle.py` | `RunStartedEvent`, `RunFinishedEvent` |
 | `message.py` | `TextMessageStartEvent`, `TextMessageContentEvent`, `TextMessageEndEvent` |
-| `tool.py` | `ToolCallStartEvent`, `ToolCallEndEvent` |
-| `state.py` | `StateSnapshotEvent` |
-| `lifecycle.py` | `RunFinishReason` enum |
-| `progress.py` | Progress-related events |
+| `tool.py` | `ToolCallStartEvent`, `ToolCallArgsEvent`, `ToolCallEndEvent` |
+| `state.py` | `StateSnapshotEvent`, `StateDeltaEvent`, `CustomEvent` |
+| `progress.py` | `StepProgressPayload`, `StepProgressTracker`, `SubStep` |
 
 #### ThreadManager (`thread/manager.py`)
 - Thread state management

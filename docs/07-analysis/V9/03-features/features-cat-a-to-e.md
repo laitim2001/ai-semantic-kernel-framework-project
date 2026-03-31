@@ -101,7 +101,7 @@
 ### A2: Workflow Definition + Execution
 - **V8 Status**: COMPLETE
 - **V9 Status**: COMPLETE
-- **Evidence**: `backend/src/api/v1/workflows/` (588 endpoints), `frontend/src/pages/workflows/` (5 files: WorkflowsPage, WorkflowDetailPage, CreateWorkflowPage, EditWorkflowPage, WorkflowEditorPage)
+- **Evidence**: `backend/src/api/v1/workflows/` (12 endpoints: routes.py 9 + graph_routes.py 3, ~940 LOC), `frontend/src/pages/workflows/` (5 files: WorkflowsPage, WorkflowDetailPage, CreateWorkflowPage, EditWorkflowPage, WorkflowEditorPage)
 - **Test**: `backend/tests/unit/test_workflow_models.py`, `backend/tests/unit/test_workflow_resume_service.py`
 - **Changes since V8**: None detected
 
@@ -394,7 +394,7 @@
 ### D9: Agent Swarm Visualization
 - **V8 Status**: COMPLETE
 - **V9 Status**: COMPLETE
-- **Evidence**: `frontend/src/components/unified-chat/agent-swarm/` — 18 component files + `hooks/` + `types/` + `index.ts`; Components: `AgentSwarmPanel.tsx`, `SwarmHeader.tsx`, `OverallProgress.tsx`, `WorkerCardList.tsx`, `WorkerCard.tsx`, `WorkerDetailDrawer.tsx`, `WorkerDetailHeader.tsx`, `WorkerActionList.tsx`, `MessageHistory.tsx`, `ToolCallsPanel.tsx`, `ToolCallItem.tsx`, `ExtendedThinkingPanel.tsx`, `CheckpointPanel.tsx`, `CurrentTask.tsx`, `SwarmStatusBadges.tsx`; `frontend/src/pages/SwarmTestPage.tsx`
+- **Evidence**: `frontend/src/components/unified-chat/agent-swarm/` — 15 component .tsx files + `hooks/` + `types/` + `index.ts`; Components: `AgentSwarmPanel.tsx`, `SwarmHeader.tsx`, `OverallProgress.tsx`, `WorkerCardList.tsx`, `WorkerCard.tsx`, `WorkerDetailDrawer.tsx`, `WorkerDetailHeader.tsx`, `WorkerActionList.tsx`, `MessageHistory.tsx`, `ToolCallsPanel.tsx`, `ToolCallItem.tsx`, `ExtendedThinkingPanel.tsx`, `CheckpointPanel.tsx`, `CurrentTask.tsx`, `SwarmStatusBadges.tsx`; `frontend/src/pages/SwarmTestPage.tsx`
 - **Test**: `frontend/src/components/unified-chat/agent-swarm/__tests__/` — 12 test files (AgentSwarmPanel, ExtendedThinkingPanel, MessageHistory, OverallProgress, SwarmHeader, SwarmStatusBadges, ToolCallItem, useWorkerDetail, WorkerActionList, WorkerCard, WorkerCardList, WorkerDetailDrawer)
 - **Changes since V8**: Phase 43 bug fixes — worker card accumulation fix, detail drawer auth fix, worker empty content fallback (commits `acdb213`, `39dc356`). No structural changes.
 

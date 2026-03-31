@@ -13,7 +13,7 @@
 ```mermaid
 graph LR
     subgraph "Backend Events"
-        PIPE["Pipeline SSE<br/>14 types"]
+        PIPE["Pipeline SSE<br/>13 types"]
         AGUI["AG-UI Protocol<br/>11 types"]
         SWARM["Swarm Events<br/>9 types"]
     end

@@ -2,7 +2,7 @@
 
 > **Generated**: 2026-03-29
 > **Scope**: Full-stack data model audit across DB models, Pydantic schemas, TypeScript types, and Zustand stores
-> **Files Analyzed**: 8 DB models, 30 Pydantic schema files (12 read in detail), 4 TypeScript type files, 3 Zustand stores
+> **Files Analyzed**: 9 DB tables across 6 model files, 30 Pydantic schema files (12 read in detail), 4 TypeScript type files, 3 Zustand stores
 
 ---
 
@@ -51,11 +51,11 @@
 │                        ↓                                                    │
 │  ┌───────────────────── Data Layer ──────────────────────────────┐          │
 │  │                                                                │          │
-│  │  SQLAlchemy ORM Models (8 tables)                              │          │
+│  │  SQLAlchemy ORM Models (9 tables across 6 model files)         │          │
 │  │  ┌──────────────────────────────────────┐                     │          │
 │  │  │ User, Agent, Workflow, Session       │                     │          │
 │  │  │ Execution, Checkpoint, Message       │                     │          │
-│  │  │ ToolApproval                         │                     │          │
+│  │  │ Attachment, AuditLog                 │                     │          │
 │  │  └──────────────────┬───────────────────┘                     │          │
 │  │                     │ async SQLAlchemy                         │          │
 │  │                     ↓                                         │          │
@@ -90,7 +90,7 @@ erDiagram
     }
 
     sessions ||--o{ messages : "contains"
-    sessions ||--o{ tool_approvals : "requires"
+    sessions ||--o{ attachments : "stores"
     sessions {
         uuid id PK
         uuid user_id FK
@@ -100,23 +100,47 @@ erDiagram
         json metadata
     }
 
+    messages ||--o{ attachments : "has"
+    messages ||--o{ messages : "parent_id self-ref"
     messages {
         uuid id PK
         uuid session_id FK
         string role
         text content
-        json attachments
-        json tool_calls
+        json attachments_json
+        json tool_calls_json
+        json message_metadata
     }
 
-    tool_approvals {
+    attachments {
         uuid id PK
         uuid session_id FK
-        string tool_name
-        json arguments
-        string status
-        string resolved_by
+        uuid message_id FK
+        string filename
+        string content_type
+        integer size
+        string storage_path
+        string attachment_type
+        datetime uploaded_at
+        json attachment_metadata
     }
+
+    audit_logs {
+        uuid id PK
+        string action
+        string resource_type
+        string resource_id
+        uuid actor_id FK
+        string actor_ip
+        json old_value
+        json new_value
+        json extra_data
+        text description
+        datetime timestamp
+    }
+
+    users ||--o{ audit_logs : "performs"
+    users ||--o{ checkpoints : "responds to"
 
     workflows ||--o{ executions : "triggers"
     workflows {
@@ -322,6 +346,8 @@ erDiagram
 - `messages` -> `MessageModel` (cascade="all, delete-orphan", order_by=created_at)
 - `attachments` -> `AttachmentModel` (cascade="all, delete-orphan")
 - `user` -> `User` (back_populates="sessions", lazy="selectin") [Sprint 72]
+
+**ORM Cascade Note**: Both `messages` and `attachments` relationships use `cascade="all, delete-orphan"`, meaning deleting a SessionModel will automatically delete all associated MessageModel and AttachmentModel records at the ORM level (in addition to FK-level ondelete=CASCADE).
 
 #### MessageModel
 
@@ -882,7 +908,7 @@ backend/src/infrastructure/database/models/__init__.py exports:
   SessionModel, MessageModel, AttachmentModel
 ```
 
-**Total DB Tables**: 8 tables (`users`, `agents`, `workflows`, `executions`, `checkpoints`, `audit_logs`, `sessions`, `messages`, `attachments`)
+**Total DB Tables**: 9 tables (`users`, `agents`, `workflows`, `executions`, `checkpoints`, `audit_logs`, `sessions`, `messages`, `attachments`)
 
 **Total Pydantic Schema Files**: 30 files across `api/v1/*/schemas.py`
 
