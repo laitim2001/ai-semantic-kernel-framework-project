@@ -95,8 +95,8 @@
 **Backend — Orchestrator Core**
 | File | Purpose |
 |------|---------|
-| `backend/src/integrations/hybrid/orchestrator/agent_handler.py` | LLM decision engine for OrchestratorMediator; uses Azure OpenAI function calling with `route_intent()` and `respond_to_user()` tools |
-| `backend/src/integrations/hybrid/orchestrator/contracts.py` | Cross-module contract interfaces (IntentResult, AgentRequest, AgentResponse, OrchestratorConfig) between `orchestration/` and `hybrid/` |
+| `backend/src/integrations/hybrid/orchestrator/agent_handler.py` | LLM decision engine for OrchestratorMediator; uses Azure OpenAI function calling with `assess_risk()`, `search_memory()`, `request_approval()` and other registered tools via OrchestratorToolRegistry |
+| `backend/src/integrations/hybrid/orchestrator/contracts.py` | Cross-module contract interfaces (Handler, HandlerResult, HandlerType, OrchestratorRequest) between `orchestration/` and `hybrid/` |
 | `backend/src/integrations/orchestration/contracts.py` | Orchestration-side contract definitions |
 
 ### Modified Files
@@ -113,7 +113,7 @@
 - **FrameworkSelector**: Routes to Azure OpenAI (gpt-4o) as default, Claude as fallback
 - **Three-layer Intent Routing**: L1 PatternMatcher (fast regex) + L3 LLMClassifier (semantic). L2 skipped this phase
 - **Cross-module Contracts**: Pydantic-based interface definitions between orchestration/ and hybrid/ modules
-- **C-07 SQL Injection Fix**: Security prerequisite in InputGateway
+- **C-07 SQL Injection Fix**: Security prerequisite fixed in `agent_framework/memory/postgres_storage.py` (parameterized queries)
 
 ### Features Added
 - AgentHandler receives user input, calls LLM, returns structured responses
@@ -122,7 +122,7 @@
 - Zero-mock validation (real Azure OpenAI API throughout)
 
 ### Issues Fixed
-- **C-07 SQL Injection** (CRITICAL): Fixed in InputGateway with parameterized queries
+- **C-07 SQL Injection** (CRITICAL): Fixed in `agent_framework/memory/postgres_storage.py` with parameterized queries
 - **Breakpoint #1**: AG-UI -> InputGateway data flow disconnection
 - **Breakpoint #2**: InputGateway -> OrchestratorMediator data flow disconnection
 
@@ -335,7 +335,7 @@
 ### V8 Issues Resolved
 | Issue ID | Severity | Description |
 |----------|----------|-------------|
-| C-07 | CRITICAL | SQL Injection in InputGateway |
+| C-07 | CRITICAL | SQL Injection in `agent_framework/memory/postgres_storage.py` |
 | H-04 | HIGH | ContextSynchronizer race condition |
 | InMemory stores | CRITICAL | 15+ InMemory stores migrated to Redis/PostgreSQL |
 | Approval fragmentation | HIGH | 4-5 scattered approval systems unified |

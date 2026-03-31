@@ -20,11 +20,11 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total Backend Test Files** | ~185 (excluding `__init__.py`) |
-| **Backend Unit Tests** | ~145 files |
-| **Backend Integration Tests** | ~24 files |
-| **Backend E2E Tests** | ~19 files |
-| **Backend Performance Tests** | ~12 files |
+| **Total Backend Test Files** | ~354 (excluding `__init__.py`) |
+| **Backend Unit Tests** | ~289 files |
+| **Backend Integration Tests** | ~28 files |
+| **Backend E2E Tests** | ~23 files |
+| **Backend Performance Tests** | ~15 files (10 in performance/ + 5 in unit/performance/) |
 | **Backend Security Tests** | 3 files |
 | **Backend Load Tests** | 1 file (locustfile.py) |
 | **Frontend Unit Tests** | 13 files |
@@ -50,21 +50,21 @@
 │                    ╱        ╲   Security Tests (3 files)                   │
 │                   ╱   🛡️    ╲                                              │
 │                  ╱────────────╲                                             │
-│                 ╱              ╲  E2E Tests (19 backend + 11 frontend)     │
+│                 ╱              ╲  E2E Tests (23 backend + 11 frontend)     │
 │                ╱    🌐 E2E     ╲  Playwright browser automation            │
 │               ╱────────────────╲                                           │
-│              ╱                  ╲  Performance Tests (12 files)            │
+│              ╱                  ╲  Performance Tests (15 files)            │
 │             ╱    ⚡ Perf         ╲                                          │
 │            ╱──────────────────────╲                                        │
-│           ╱                        ╲  Integration Tests (24 files)         │
+│           ╱                        ╲  Integration Tests (28 files)         │
 │          ╱    🔗 Integration        ╲  API endpoint testing               │
 │         ╱────────────────────────────╲                                     │
-│        ╱                              ╲  Unit Tests (145 + 13 files)      │
-│       ╱        🧪 Unit Tests          ╲  Backend: 145 files               │
+│        ╱                              ╲  Unit Tests (289 + 13 files)      │
+│       ╱        🧪 Unit Tests          ╲  Backend: 289 files               │
 │      ╱          (最大覆蓋面積)          ╲  Frontend: 13 files             │
 │     ╱────────────────────────────────────╲                                 │
 │                                                                             │
-│  Total: ~185 backend + 24 frontend = ~209 test files                       │
+│  Total: ~354 backend + 24 frontend = ~378 test files                       │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -116,7 +116,7 @@
 
 ### 2.1 Backend Tests
 
-#### `backend/tests/unit/` -- Root Level (82 test files)
+#### `backend/tests/unit/` -- Root Level (84 test files)
 
 | File | Covers |
 |------|--------|
@@ -225,7 +225,7 @@
 | `test_factory.py` | LLM factory |
 | `test_azure_openai.py` | Azure OpenAI client |
 
-#### `backend/tests/unit/integrations/agent_framework/` (8 test files)
+#### `backend/tests/unit/integrations/agent_framework/` (10 test files)
 
 | Subdirectory | File | Covers |
 |-------------|------|--------|
@@ -237,8 +237,10 @@
 | `assistant/` | `test_code_interpreter.py` | Code interpreter |
 | `tools/` | `test_base.py` | Tool base |
 | `tools/` | `test_code_interpreter_tool.py` | Code interpreter tool |
+| (root) | `test_acl_interfaces.py` | ACL interfaces |
+| (root) | `test_acl_adapter.py` | ACL adapter |
 
-#### `backend/tests/unit/integrations/claude_sdk/` (15 test files)
+#### `backend/tests/unit/integrations/claude_sdk/` (18 test files)
 
 | Subdirectory | File | Covers |
 |-------------|------|--------|
@@ -260,7 +262,7 @@
 | `hybrid/` | `test_selector.py` | Hybrid selector |
 | `hybrid/` | `test_orchestrator.py` | Hybrid orchestrator |
 
-#### `backend/tests/unit/integrations/hybrid/` (31 test files)
+#### `backend/tests/unit/integrations/hybrid/` (38 test files)
 
 | Subdirectory | Files | Covers |
 |-------------|-------|--------|
@@ -279,7 +281,7 @@
 | `checkpoint/` | `test_models.py`, `test_version.py`, `test_serialization.py`, `test_storage.py`, `test_memory_storage.py` | Full checkpoint subsystem |
 | (root) | `test_orchestrator_v2.py`, `test_swarm_mode.py`, `test_mediator.py`, `test_routing_handler.py`, `test_execution_handler.py`, `test_backward_compat.py`, `test_redis_checkpoint.py` (in switching/) | V2 orchestrator, swarm mode, mediator, handlers |
 
-#### `backend/tests/unit/integrations/ag_ui/` (14 test files)
+#### `backend/tests/unit/integrations/ag_ui/` (17 test files)
 
 | Subdirectory | Files | Covers |
 |-------------|-------|--------|
@@ -289,7 +291,7 @@
 | `features/` | `test_tool_rendering.py`, `test_human_in_loop.py`, `test_generative_ui.py`, `test_agentic_chat.py` | All AG-UI features |
 | `features/advanced/` | `test_predictive.py`, `test_tool_ui.py`, `test_shared_state.py` | Advanced features |
 
-#### `backend/tests/unit/integrations/orchestration/` (10 test files)
+#### `backend/tests/unit/integrations/orchestration/` (16 test files)
 
 | Subdirectory | Files | Covers |
 |-------------|-------|--------|
@@ -297,7 +299,7 @@
 | `intent_router/` | `test_ad_pattern_rules.py`, `test_llm_classifier_real.py`, `test_classification_prompt.py`, `test_llm_cache.py`, `test_llm_fallback.py` | Intent router subsystem |
 | (root) | `test_servicenow_webhook.py`, `test_ritm_intent_mapper.py`, `test_azure_semantic_router.py`, `test_embedding_service.py`, `test_route_manager.py`, `test_route_api.py`, `test_incident_handler.py` | Core orchestration components |
 
-#### `backend/tests/unit/integrations/mcp/` (15 test files)
+#### `backend/tests/unit/integrations/mcp/` (19 test files)
 
 | Subdirectory | Files | Covers |
 |-------------|-------|--------|
@@ -358,7 +360,7 @@
 | `test_sensitive_filter.py` | Sensitive data filter |
 | `test_structured_logging.py` | Structured logging |
 
-#### `backend/tests/integration/` (24 test files)
+#### `backend/tests/integration/` (28 test files)
 
 | Subdirectory | Files | Covers |
 |-------------|-------|--------|
@@ -381,7 +383,7 @@
 | `correlation/` | `test_correlation_real.py` | Correlation integration |
 | `rootcause/` | `test_rootcause_real.py` | Root cause integration |
 
-#### `backend/tests/e2e/` (19 test files)
+#### `backend/tests/e2e/` (23 test files)
 
 | Subdirectory | Files | Covers |
 |-------------|-------|--------|
@@ -395,7 +397,7 @@
 | `swarm/` | `test_swarm_execution.py` | Swarm execution |
 | `orchestration/` | `test_ad_scenario_fixtures.py`, `test_ad_scenario_e2e.py`, `test_semantic_routing_e2e.py` | Orchestration scenarios |
 
-#### `backend/tests/performance/` (9 test files)
+#### `backend/tests/performance/` (10 test files)
 
 | Subdirectory | Files | Covers |
 |-------------|-------|--------|
@@ -463,12 +465,12 @@
 
 | Module | Source Files | Has Unit Tests | Test File Count | Coverage |
 |--------|-------------|----------------|-----------------|----------|
-| `agent_framework/` | ~53 | YES | 8 | PARTIAL -- builders/ lightly covered, memory/multiturn under-tested |
-| `claude_sdk/` | ~47 | YES | 15 | GOOD -- config, session, client, tools, MCP, hybrid |
-| `hybrid/` | ~60 | YES | 31 | GOOD -- intent, context, risk, switching, checkpoint all covered |
-| `orchestration/` | ~39 | YES | 10 | MODERATE -- input_gateway + intent_router covered, guided_dialog/risk_assessor/hitl gaps |
-| `ag_ui/` | ~18 | YES | 14 | GOOD -- events, thread, features, advanced all covered |
-| `mcp/` | ~43 | YES | 15 | MODERATE -- Azure, n8n, ADF, D365, security, core covered; Filesystem, LDAP, Shell, SSH missing |
+| `agent_framework/` | ~53 | YES | 10 | PARTIAL -- builders/ lightly covered, memory/multiturn under-tested |
+| `claude_sdk/` | ~47 | YES | 18 | GOOD -- config, session, client, tools, MCP, hybrid |
+| `hybrid/` | ~60 | YES | 38 | GOOD -- intent, context, risk, switching, checkpoint all covered |
+| `orchestration/` | ~39 | YES | 16 | MODERATE -- input_gateway + intent_router covered, guided_dialog/risk_assessor/hitl gaps |
+| `ag_ui/` | ~18 | YES | 17 | GOOD -- events, thread, features, advanced all covered |
+| `mcp/` | ~43 | YES | 19 | MODERATE -- Azure, n8n, ADF, D365, security, core covered; Filesystem, LDAP, Shell, SSH missing |
 | `llm/` | ~6 | YES | 5 | GOOD -- protocol, cached, mock, factory, azure_openai |
 | `swarm/` | ~7 | NO | 0 | **ZERO** -- worker_executor.py, tracker.py, task_decomposer.py untested |
 | `memory/` | ~5 | NO | 0 | **ZERO** -- unified_memory.py, embeddings.py, types.py untested |
@@ -587,7 +589,10 @@
 
 **E2E conftest** (`backend/tests/e2e/conftest.py`) and **orchestration conftest** (`backend/tests/e2e/orchestration/conftest.py`) exist but were not read for this analysis.
 
-**Shared mocks**: `backend/tests/mocks/agent_framework_mocks.py` -- Reusable MAF mock objects.
+**Shared mocks** (`backend/tests/mocks/`):
+- `agent_framework_mocks.py` -- Reusable MAF mock objects
+- `llm.py` -- LLM mock client
+- `orchestration.py` -- Orchestration mock objects
 
 ### 4.2 Frontend Playwright Fixtures (`frontend/e2e/ag-ui/fixtures.ts`)
 
@@ -820,12 +825,12 @@ The following domain modules have **no dedicated test files** under `tests/unit/
 
 | Category | Current Files | Estimated Need | Gap |
 |----------|--------------|----------------|-----|
-| Backend Unit | ~145 | ~220 | ~75 files |
-| Backend Integration | ~24 | ~35 | ~11 files |
-| Backend E2E | ~19 | ~25 | ~6 files |
+| Backend Unit | ~289 | ~360 | ~71 files |
+| Backend Integration | ~28 | ~35 | ~7 files |
+| Backend E2E | ~23 | ~30 | ~7 files |
 | Frontend Unit | 13 | ~60 | ~47 files |
 | Frontend E2E | 11 | ~20 | ~9 files |
-| **Total** | **~212** | **~360** | **~148 files** |
+| **Total** | **~364** | **~505** | **~141 files** |
 
 ---
 

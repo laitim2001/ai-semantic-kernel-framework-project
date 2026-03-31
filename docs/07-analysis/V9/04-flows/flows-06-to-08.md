@@ -44,11 +44,11 @@ sequenceDiagram
 
 | # | Component | File:Line | Action |
 |---|-----------|-----------|--------|
-| 0a | FastAPI route (sync) | `backend/src/api/v1/orchestrator/routes.py:343-479` | Receives `PipelineRequest` (content, mode, session_id, user_id, metadata) |
+| 0a | FastAPI route (sync) | `backend/src/api/v1/orchestrator/routes.py:343-479` | Receives `PipelineRequest` (content, source, mode, user_id, session_id, metadata, timestamp) |
 | 0b | FastAPI route (SSE) | `backend/src/api/v1/orchestrator/routes.py:275-340` | SSE variant: creates `PipelineEventEmitter`, starts pipeline as `asyncio.create_task` |
 | 0c | PipelineRequest contract | `backend/src/integrations/contracts/pipeline.py:25-34` | Pydantic model: content, source, mode, user_id, session_id, metadata |
-| 0d | Lazy Bootstrap | `backend/src/api/v1/orchestrator/routes.py:33-48` | `_get_bootstrap()` lazy-initialises `OrchestratorBootstrap().build()` on first call |
-| 0e | SessionFactory | `backend/src/integrations/hybrid/orchestrator/session_factory.py:52-71` | `get_or_create(session_id)` returns per-session `OrchestratorMediator` via `OrchestratorBootstrap.build()` |
+| 0d | Lazy Bootstrap (singleton) | `backend/src/api/v1/orchestrator/routes.py:33-48` | `_get_bootstrap()` lazy-initialises `OrchestratorBootstrap().build()` — used only for health check and tool registry; **NOT** used to create per-session mediators |
+| 0e | SessionFactory | `backend/src/integrations/hybrid/orchestrator/session_factory.py:52-71` | Routes call `_get_session_factory().get_or_create(session_id)` (routes.py:293,364); factory creates per-session mediator via `_create_orchestrator()` (line 95) which instantiates a **separate** `OrchestratorBootstrap` per session |
 | 0f | Bootstrap assembly | `backend/src/integrations/hybrid/orchestrator/bootstrap.py:39-101` | Wires all 7 handlers with real deps (LLM, ToolRegistry, ContextBridge, etc.) |
 
 **Mode mapping** (routes.py:304-310):
@@ -148,7 +148,7 @@ sequenceDiagram
 |---|-----------|-----------|--------|
 | 8a | Auto memory write | `mediator.py:512-538` | Formats `"User: {content}\nAssistant: {response[:500]}"` and calls `memory_mgr._write_to_longterm()` |
 | 8b | Session update | `mediator.py:541-543` | `_update_session_after_execution()` appends to conversation_history |
-| 8c | Session persist | `mediator.py:712-721` | `ConversationStateStore.save()` with messages, routing_decision, context |
+| 8c | Session persist | `mediator.py:712-721` | `ConversationStateStore.save(state: ConversationState)` — see A3b note on signature mismatch |
 
 #### Step 9: Response Build + Final SSE
 
@@ -157,7 +157,7 @@ sequenceDiagram
 | 9a | Build response | `mediator.py:546-556` | `_build_response()` aggregates content, framework_used, execution_mode, tool_calls, routing_decision |
 | 9b | TEXT_DELTA SSE | `mediator.py:549` | Emits final `TEXT_DELTA` with complete content |
 | 9c | PIPELINE_COMPLETE SSE | `mediator.py:550-554` | Emits `PIPELINE_COMPLETE` with content, mode, processing_time_ms |
-| 9d | PipelineResponse build | `routes.py:422-479` | Maps response fields to `PipelineResponse` Pydantic model |
+| 9d | PipelineResponse build | `routes.py:422-479` | Maps response fields to `PipelineResponse` Pydantic model (fields: content, intent_category, confidence, risk_level, routing_layer, execution_mode, suggested_mode, framework_used, session_id, is_complete, **task_id**, tool_calls, processing_time_ms) |
 
 #### Step 10: Frontend SSE Consumption
 
@@ -168,7 +168,7 @@ sequenceDiagram
 | 10c | Event dispatch | `useSSEChat.ts:168-211` | `dispatchEvent()` maps 12 SSE event types to handler callbacks |
 | 10d | AbortController | `useSSEChat.ts:71-76,157-163` | Supports stream cancellation via `cancelStream()` |
 
-### SSE Event Type Registry (14 types)
+### SSE Event Type Registry (13 Types)
 
 Defined in `backend/src/integrations/hybrid/orchestrator/sse_events.py:39-54`:
 
@@ -215,7 +215,7 @@ AG-UI bridge mapping: `sse_events.py:22-36` (`PIPELINE_TO_AGUI_MAP`). AG-UI form
 |---|-----------|-----------|--------|
 | 1a | AgentHandler tool loop | agent_handler.py | LLM returns tool_call with name=`dispatch_workflow` or `dispatch_swarm` |
 | 1b | ToolRegistry.execute() | `backend/src/integrations/hybrid/orchestrator/tools.py` | Routes to registered handler callable |
-| 1c | DispatchHandlers | `backend/src/integrations/hybrid/orchestrator/dispatch_handlers.py:456-469` | `register_all()` maps 8 tool names to handler methods |
+| 1c | DispatchHandlers | `backend/src/integrations/hybrid/orchestrator/dispatch_handlers.py:456-469` | `register_all()` maps 8 tool names to handler methods. Note: `dispatch_to_claude` exists as `handle_dispatch_to_claude()` (line 282) but is **NOT registered** in `register_all()` |
 
 #### Step 2: Task Record Creation
 
@@ -287,7 +287,7 @@ AG-UI bridge mapping: `sse_events.py:22-36` (`PIPELINE_TO_AGUI_MAP`). AG-UI form
 
 ```
 Layer 1: Working Memory  (Redis, TTL 30 min)
-Layer 2: Session Memory  (Redis/PostgreSQL, TTL 7 days)
+Layer 2: Session Memory  (Redis (PostgreSQL planned), TTL 7 days)
 Layer 3: Long-term Memory (mem0 + Qdrant, permanent)
 
 ConversationStateStore (Redis, TTL 24h) -- separate from 3-layer memory
@@ -306,8 +306,8 @@ ConversationStateStore (Redis, TTL 24h) -- separate from 3-layer memory
 
 | # | Component | File:Line | Action |
 |---|-----------|-----------|--------|
-| A2a | OrchestratorMemoryManager._write_to_longterm() | `backend/src/integrations/hybrid/orchestrator/memory_manager.py:387-418` | Entry point for memory write |
-| A2b | UnifiedMemoryManager.add() | `backend/src/integrations/memory/unified_memory.py:173-238` | Selects layer based on `MemoryType` + `importance` score |
+| A2a | OrchestratorMemoryManager._write_to_longterm() | `backend/src/integrations/hybrid/orchestrator/memory_manager.py:387-418` | Entry point for memory write. **Misleading name**: calls `add()` with `MemType.CONVERSATION` and no explicit `importance`, so default importance=0.0 applies → layer selection routes to **WORKING** layer, not long-term |
+| A2b | UnifiedMemoryManager.add() | `backend/src/integrations/memory/unified_memory.py:173-238` | Selects layer based on `MemoryType` + `importance` score (see A2c). Without explicit importance override, CONVERSATION type defaults to WORKING layer |
 | A2c | Layer selection | `unified_memory.py:130-171` | CONVERSATION type + importance <0.5 -> WORKING; >=0.5 -> SESSION; >=0.8 -> LONG_TERM |
 | A2d | Working Memory store | `unified_memory.py:240-257` | Redis `SETEX` with key `memory:working:{user_id}:{id}`, TTL from config (30 min default) |
 | A2e | Session Memory store | `unified_memory.py:259-288` | Redis `SETEX` with key `memory:session:{user_id}:{id}`, TTL from config (7 days default) |
@@ -318,7 +318,7 @@ ConversationStateStore (Redis, TTL 24h) -- separate from 3-layer memory
 | # | Component | File:Line | Action |
 |---|-----------|-----------|--------|
 | A3a | Session update | `mediator.py:678-721` | `_update_session_after_execution()` appends user + assistant messages to history |
-| A3b | ConversationStateStore.save() | `mediator.py:712-721` | Persists messages, routing_decision, context to Redis (TTL 24h) |
+| A3b | ConversationStateStore.save() | `mediator.py:712-721` | `save(state: ConversationState)` accepts a single `ConversationState` object (conversation_state.py:96), **not** keyword args. Mediator at lines 714-719 passes keyword args — signature mismatch (likely runtime error or alternate code path). Persists to Redis (TTL 24h) |
 | A3c | Backend auto-select | `conversation_state.py:81-91` | `StorageFactory.create(backend_type="auto")` -- Redis preferred, memory fallback |
 
 #### Step A4: Summarisation (Session End)
@@ -366,9 +366,9 @@ ConversationStateStore (Redis, TTL 24h) -- separate from 3-layer memory
 |---|-----------|-----------|--------|
 | C1a | RAGPipeline.ingest_file() | `backend/src/integrations/knowledge/rag_pipeline.py:58-79` | Entry: file_path + metadata |
 | C1b | DocumentParser.parse() | `rag_pipeline.py:75` | Parse document to `ParsedDocument` |
-| C1c | DocumentChunker.chunk() | `rag_pipeline.py:104` | Split by `ChunkingStrategy.RECURSIVE` (1000 chars, 200 overlap) |
-| C1d | EmbeddingManager.embed_batch() | `rag_pipeline.py:110` | Batch embed all chunks |
-| C1e | VectorStoreManager.index_documents() | `rag_pipeline.py:126` | Index `IndexedDocument` objects into Qdrant collection |
+| C1c | DocumentChunker.chunk() | `rag_pipeline.py:104` (via `_ingest_parsed()` at line 91) | Split by `ChunkingStrategy.RECURSIVE` (1000 chars, 200 overlap) |
+| C1d | EmbeddingManager.embed_batch() | `rag_pipeline.py:110` (via `_ingest_parsed()`) | Batch embed all chunks |
+| C1e | VectorStoreManager.index_documents() | `rag_pipeline.py:126` (via `_ingest_parsed()`) | Index `IndexedDocument` objects into Qdrant collection |
 
 #### Step C2: Retrieval Pipeline (via Tool)
 
@@ -428,4 +428,4 @@ Flow 8 (Memory)
 |------|---------------|-------------------|---------------------|
 | **Flow 6: Pipeline** | SSE streaming works E2E. 7 handlers wired via Bootstrap. Routing, approval, memory injection all functional. | ExecutionHandler returns stubs when MAF/Claude unavailable. Checkpoint fallback to memory. | **70%** -- works for chat mode; workflow/swarm dispatch needs real executors |
 | **Flow 7: Async Dispatch** | Task creation + ARQ submission functional. Status tracking works. | MAF workflow execution is TODO (task_functions.py:53). ARQ package may not be installed. No result-to-SSE push. | **30%** -- infrastructure exists but actual execution not connected |
-| **Flow 8: Memory** | 3-layer architecture implemented. Retrieval + injection into pipeline works. RAG pipeline complete. | Requires mem0 + Qdrant + Redis + embedding API. Session memory uses Redis not PostgreSQL. No auto-summarisation trigger. | **50%** -- works when all external services available; fragile dependency chain |
+| **Flow 8: Memory** | 3-layer architecture implemented. Retrieval + injection into pipeline works. RAG pipeline complete. | Requires mem0 + Qdrant + Redis + embedding API. Session memory uses Redis not PostgreSQL. No auto-summarisation trigger. `_write_to_longterm()` defaults to WORKING layer (importance=0.0). | **45%** -- works when all external services available; fragile dependency chain; per-message writes go to working memory, not long-term despite method name |

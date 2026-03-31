@@ -111,7 +111,7 @@ sequenceDiagram
 - **Function**: `OrchestratorSessionFactory.get_or_create(session_id: str) -> OrchestratorMediator`
 - **Input**: `session_id` string (default "default")
 - **Output**: Fully-wired `OrchestratorMediator` with 7 handlers
-- **Mock/Real**: REAL — LRU cache with `OrderedDict`, max 200 sessions
+- **Mock/Real**: REAL — LRU cache with `OrderedDict`, max 100 sessions (default)
 - **Potential failure**: `_create_orchestrator()` catches all exceptions and falls back to minimal mediator with only `AgentHandler`.
 
 **Details**: Uses `OrchestratorBootstrap.build()` which wires all 7 handlers: ContextHandler, RoutingHandler, DialogHandler, ApprovalHandler, AgentHandler, ExecutionHandler, ObservabilityHandler. Each handler uses graceful degradation — if a dependency is unavailable, handler is created with `None` dependency.
@@ -168,7 +168,7 @@ sequenceDiagram
 
 ### Step 7: Backend — RoutingHandler performs 3-tier intent classification
 
-- **File**: `backend/src/integrations/hybrid/orchestrator/handlers/routing.py:135-220`
+- **File**: `backend/src/integrations/hybrid/orchestrator/handlers/routing.py:135-226`
 - **Function**: `RoutingHandler._handle_direct_routing(request, context) -> HandlerResult`
 - **Input**: `OrchestratorRequest` content string
 - **Output**: `HandlerResult` with `routing_decision`, `intent_analysis`, `execution_mode`
@@ -328,9 +328,9 @@ For CHAT_MODE: `should_short_circuit=True` -> pipeline skips ExecutionHandler an
 - **File**: `frontend/src/pages/agents/CreateAgentPage.tsx` (within `useMutation` config)
 - **Function**: `onSuccess` callback
 - **Input**: `AgentResponse` from API
-- **Output**: `queryClient.invalidateQueries({ queryKey: ['agents'] })` + navigate to agent list
+- **Output**: `navigate('/agents')` only (no cache invalidation)
 - **Mock/Real**: REAL
-- **Potential failure**: Navigation failure. Cache invalidation timing.
+- **Potential failure**: Navigation failure.
 
 ---
 
@@ -380,7 +380,7 @@ For CHAT_MODE: `should_short_circuit=True` -> pipeline skips ExecutionHandler an
 
 ### Step 3: Backend — Create WorkflowDefinitionAdapter
 
-- **File**: `backend/src/integrations/agent_framework/core/workflow.py:37-80`
+- **File**: `backend/src/integrations/agent_framework/core/workflow.py:113+` (imports at line 37)
 - **Function**: `WorkflowDefinitionAdapter(definition=definition)` constructor
 - **Input**: `WorkflowDefinition` domain model
 - **Output**: Adapter wrapping official `WorkflowBuilder` from `agent_framework`
@@ -486,6 +486,7 @@ This flow has **3 separate approval systems** in the codebase:
 - **Output**: `ApprovalRequest { request_id, status: PENDING, ... }`
 - **Mock/Real**: REAL — creates `ApprovalRequest` dataclass with UUID, stores in `InMemoryApprovalStorage` (not persistent)
 - **Potential failure**: `InMemoryApprovalStorage` loses data on server restart. No Redis/DB persistence.
+- **Note**: `ApprovalType.MULTI` enum is defined in `controller.py` for quorum-based approval, but is not implemented in the current pipeline flow — only single-approver requests are created.
 
 ---
 
@@ -665,7 +666,7 @@ Each `DecomposedTask` has: `task_id`, `title`, `description`, `role`, `priority`
 
 ### Step B3: ExecutionHandler creates parallel worker executors
 
-- **File**: `backend/src/integrations/hybrid/orchestrator/handlers/execution.py:223-300`
+- **File**: `backend/src/integrations/hybrid/orchestrator/handlers/execution.py:223-360+`
 - **Function**: `ExecutionHandler._execute_swarm(request, context, decomposition)`
 - **Input**: `TaskDecomposition` with sub-tasks
 - **Output**: Aggregated `HandlerResult` with all worker results
@@ -714,20 +715,19 @@ Worker SSE events are mapped to Pipeline SSE types:
 
 ### Step B5: Result aggregation and synthesis
 
-- **File**: `backend/src/integrations/hybrid/orchestrator/handlers/execution.py:300+` (continuation of `_execute_swarm`)
-- **Function**: Result collection from `asyncio.gather()` + synthesis
+- **File**: `backend/src/integrations/hybrid/orchestrator/handlers/execution.py:317+` (continuation of `_execute_swarm`)
+- **Function**: Result collection from `asyncio.gather()` + aggregation
 - **Input**: List of `WorkerResult` from all workers
 - **Output**: `HandlerResult` with aggregated content
-- **Mock/Real**: REAL structure. Synthesis may use `ResultSynthesiser` (LLM-powered) if available.
-- **Potential failure**: All workers failed -> error result. Synthesis LLM call failure.
+- **Mock/Real**: REAL structure. Aggregation is concatenation with role headers (no ResultSynthesiser in current code).
+- **Potential failure**: All workers failed -> error result.
 
 **Details**: After `asyncio.gather()` completes:
 1. Collects all `WorkerResult` objects
 2. Counts completed vs failed workers
-3. If `ResultSynthesiser` available: calls LLM to synthesize all worker outputs into coherent response
-4. Otherwise: concatenates worker outputs with role headers
-5. Emits final `PIPELINE_COMPLETE` SSE event
-6. Returns `HandlerResult` with aggregated content and worker metadata
+3. Concatenates worker outputs with role display names as headers: `"\n\n".join(content_parts)`
+4. Emits final `PIPELINE_COMPLETE` SSE event
+5. Returns `HandlerResult` with aggregated content and worker metadata
 
 ---
 
@@ -760,7 +760,7 @@ Worker SSE events are mapped to Pipeline SSE types:
 | Tool Calls | Simulated | Real via OrchestratorToolRegistry |
 | SSE Events | SwarmEventEmitter (AG-UI) | PipelineEventEmitter (Pipeline SSE) |
 | Frontend | Same components | Same components |
-| Result Synthesis | N/A | ResultSynthesiser (LLM) or concatenation |
+| Result Synthesis | N/A | Concatenation with role headers (no ResultSynthesiser in current code) |
 
 | Aspect | Status |
 |--------|--------|
@@ -770,7 +770,7 @@ Worker SSE events are mapped to Pipeline SSE types:
 | Worker LLM Calls | REAL (independent chat_with_tools loops) |
 | Worker Tool Calls | REAL (OrchestratorToolRegistry) |
 | SSE Streaming | REAL (mapped to Pipeline SSE events) |
-| Result Synthesis | REAL when ResultSynthesiser available |
+| Result Synthesis | REAL — concatenation with role headers |
 | Mock Barriers | Requires Azure OpenAI config for LLM calls |
 | Critical Issues | Phase 29 event format (AG-UI CustomEvent) vs Phase 43 format (Pipeline SSE) are different protocols — frontend must handle both |
 

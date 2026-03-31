@@ -13,7 +13,7 @@
 | Core Flow Enums | 15 | HIGH — affect architecture understanding |
 | API Schema Enums | 26 | MEDIUM — API documentation completeness |
 | Legacy Enums | 6 | LOW — deprecated, note only |
-| Other | 8 | LOW — utility/minor |
+| Other | 1 | LOW — utility/minor |
 
 ---
 
@@ -25,7 +25,7 @@
 |------|------|--------|---------|
 | `IntentCategoryEnum` | api/v1/orchestration/schemas.py | INCIDENT, REQUEST, CHANGE, QUERY, UNKNOWN | API-level mirror of ITIntentCategory for routing |
 | `WorkflowTypeEnum` | api/v1/orchestration/schemas.py | MAGENTIC, HANDOFF, CONCURRENT, SEQUENTIAL, SIMPLE | Maps intent → workflow execution mode |
-| `ApprovalType` | integrations/orchestration/hitl/controller.py | NONE, SINGLE, MULTI | HITL approval granularity (single vs multi-approver) |
+| `ApprovalType` | integrations/orchestration/hitl/controller.py | NONE, SINGLE, MULTI | HITL approval granularity (single vs multi-approver). Base: `Enum` (not `str, Enum`) |
 
 ### L05: Hybrid Orchestration
 
@@ -40,10 +40,10 @@
 
 | Enum | File | Values | Purpose |
 |------|------|--------|---------|
-| `GroupChatStatus` | integrations/agent_framework/builders/groupchat | IDLE, RUNNING, WAITING, PAUSED, COMPLETED, FAILED, CANCELLED | GroupChat session lifecycle state |
-| `HumanInterventionDecision` | integrations/agent_framework/builders/magentic | APPROVE, REVISE, REJECT, CONTINUE, REPLAN, GUIDANCE | Magentic Orchestrator HITL decision options |
-| `HumanInterventionKind` | integrations/agent_framework/builders/magentic | PLAN_REVIEW, TOOL_APPROVAL, STALL | Type of human intervention trigger |
-| `ToolStatus` | integrations/agent_framework/tools/base.py | SUCCESS, FAILURE, PARTIAL, TIMEOUT, ERROR | Tool execution result status |
+| `GroupChatStatus` | integrations/agent_framework/builders/groupchat.py | IDLE, RUNNING, WAITING, PAUSED, COMPLETED, FAILED, CANCELLED | GroupChat session lifecycle state |
+| `HumanInterventionDecision` | integrations/agent_framework/builders/magentic.py | APPROVE, REVISE, REJECT, CONTINUE, REPLAN, GUIDANCE | Magentic Orchestrator HITL decision options |
+| `HumanInterventionKind` | integrations/agent_framework/builders/magentic.py | PLAN_REVIEW, TOOL_APPROVAL, STALL | Type of human intervention trigger |
+| `ToolStatus` | integrations/agent_framework/tools/base.py | SUCCESS, FAILURE, PARTIAL, TIMEOUT, ERROR | Tool execution result status. Base: `Enum` (not `str, Enum`) |
 
 ### L09: Supporting Integrations
 
@@ -62,7 +62,7 @@
 
 | Enum | File | Values | Count |
 |------|------|--------|-------|
-| `WebSocketMessageType` | api/v1/concurrent/schemas.py | EXECUTION_STARTED, EXECUTION_COMPLETED, EXECUTION_FAILED, EXECUTION_CANCELLED, BRANCH_STARTED, BRANCH_COMPLETED, BRANCH_FAILED, BRANCH_PROGRESS, TASK_UPDATE, ERROR | 11 |
+| `WebSocketMessageType` | api/v1/concurrent/schemas.py | EXECUTION_STARTED, EXECUTION_COMPLETED, EXECUTION_FAILED, EXECUTION_CANCELLED, BRANCH_STARTED, BRANCH_COMPLETED, BRANCH_FAILED, BRANCH_PROGRESS, DEADLOCK_DETECTED, DEADLOCK_RESOLVED, ERROR | 11 |
 | `ExecutionStatusEnum` | api/v1/concurrent/schemas.py | PENDING, RUNNING, WAITING, COMPLETED, FAILED, CANCELLED, TIMED_OUT | 7 |
 | `BranchStatusEnum` | api/v1/concurrent/schemas.py | PENDING, RUNNING, COMPLETED, FAILED, CANCELLED, TIMED_OUT | 6 |
 | `ConcurrentModeEnum` | api/v1/concurrent/schemas.py | ALL, ANY, MAJORITY, FIRST_SUCCESS | 4 |
@@ -117,12 +117,12 @@
 
 | Enum | File | Values | Count | Note |
 |------|------|--------|-------|------|
-| `PlannerActionTypeLegacy` | integrations/agent_framework/builders/magentic | ANALYZE, PLAN, EXECUTE, EVALUATE, REPLAN, COMPLETE, FAIL | 7 | Replaced by new Magentic planner |
-| `GroupChatStateLegacy` | integrations/agent_framework/builders/groupchat | IDLE, ACTIVE, SELECTING, SPEAKING, TERMINATED, ERROR | 6 | Replaced by GroupChatStatus |
-| `SpeakerSelectionMethodLegacy` | integrations/agent_framework/builders/groupchat | AUTO, ROUND_ROBIN, RANDOM, MANUAL, PRIORITY, WEIGHTED | 6 | Retained for backward compat |
-| `NestedExecutionStatusLegacy` | integrations/agent_framework/builders/workflow | PENDING, RUNNING, COMPLETED, FAILED, TIMEOUT, CANCELLED | 6 | Replaced by ExecutionStatusEnum |
-| `NestedWorkflowTypeLegacy` | integrations/agent_framework/builders/workflow | INLINE, REFERENCE, DYNAMIC, RECURSIVE | 4 | Replaced by NestedWorkflowTypeEnum |
-| `WorkflowScopeLegacy` | integrations/agent_framework/builders/workflow | ISOLATED, INHERITED, SHARED | 3 | Replaced by WorkflowScopeEnum |
+| `PlannerActionTypeLegacy` | integrations/agent_framework/builders/magentic_migration.py | ANALYZE, PLAN, EXECUTE, EVALUATE, REPLAN, COMPLETE, FAIL | 7 | Replaced by new Magentic planner |
+| `GroupChatStateLegacy` | integrations/agent_framework/builders/groupchat_migration.py | IDLE, ACTIVE, SELECTING, SPEAKING, TERMINATED, ERROR | 6 | Replaced by GroupChatStatus |
+| `SpeakerSelectionMethodLegacy` | integrations/agent_framework/builders/groupchat_migration.py | AUTO, ROUND_ROBIN, RANDOM, MANUAL, PRIORITY, WEIGHTED | 6 | Retained for backward compat |
+| `NestedExecutionStatusLegacy` | integrations/agent_framework/builders/workflow_executor_migration.py | PENDING, RUNNING, COMPLETED, FAILED, TIMEOUT, CANCELLED | 6 | Replaced by ExecutionStatusEnum |
+| `NestedWorkflowTypeLegacy` | integrations/agent_framework/builders/workflow_executor_migration.py | INLINE, REFERENCE, DYNAMIC, RECURSIVE | 4 | Replaced by NestedWorkflowTypeEnum |
+| `WorkflowScopeLegacy` | integrations/agent_framework/builders/workflow_executor_migration.py | ISOLATED, INHERITED, SHARED | 3 | Replaced by WorkflowScopeEnum |
 
 ---
 
@@ -130,7 +130,7 @@
 
 | Enum | File | Values | Count |
 |------|------|--------|-------|
-| `RecursionStatus` | integrations/agent_framework/builders/nested_workflow | PENDING, RUNNING, COMPLETED, FAILED, DEPTH_EXCEEDED, TIMEOUT | 6 |
+| `RecursionStatus` | integrations/agent_framework/builders/nested_workflow.py | PENDING, RUNNING, COMPLETED, FAILED, DEPTH_EXCEEDED, TIMEOUT | 6 |
 
 ---
 

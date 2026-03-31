@@ -1,7 +1,7 @@
 # Delta Report: Phase 43-44 (True Swarm + Magentic Orchestrator)
 
 > V8 -> V9 Changes | Sprints 148-152 | ~52 Story Points
-> Status: Both phases in planning; no code committed yet
+> Status: Phase 43 partially implemented (Sprint 148); Phase 44 in planning
 > Period: Planned for post-Phase 42 completion
 
 ---
@@ -82,7 +82,7 @@
 ## Phase 43: Agent Swarm Complete Implementation — True Multi-Agent Parallel Collaboration
 - **Sprints**: 148-150
 - **Story Points**: ~36
-- **Status**: In Planning
+- **Status**: Partially Implemented (Sprint 148 completed via commit `a0438f1`; Sprints 149-150 planned)
 
 ### Core Problem (6 Key Gaps)
 Phase 42 connected Swarm UI framework (AgentSwarmPanel in Chat, SSE event definitions, swarmStore), but the **core execution engine** remains stub/mock:
@@ -104,16 +104,16 @@ Phase 42 connected Swarm UI framework (AgentSwarmPanel in Chat, SSE event defini
 - swarmStore (Zustand) — store with complete actions
 - AG-UI Swarm event type definitions (events.ts: 9 event types)
 
-### Planned New Files
+### New Files (Sprint 148)
 
 **Backend — Swarm Engine**
-| Planned File | Purpose |
-|-------------|---------|
+| File | Purpose |
+|------|---------|
 | `backend/src/integrations/swarm/worker_executor.py` | SwarmWorkerExecutor: independent executor per worker with LLM `chat_with_tools()` + tool registry + event emitter |
 | `backend/src/integrations/swarm/task_decomposer.py` | TaskDecomposer: LLM analyzes complex tasks and breaks into subtasks for worker distribution |
 | `backend/src/integrations/swarm/worker_roles.py` | Worker role definitions (NetworkExpert, DatabaseExpert, ApplicationExpert, etc.) |
 
-> **Note**: `worker_executor.py`, `task_decomposer.py`, and `worker_roles.py` already exist in the codebase (likely stubs from Phase 29). Phase 43 will replace stub implementations with real logic.
+> **Note**: These files were first created in Phase 43 Sprint 148 (commit `a0438f1`). They did NOT exist before Phase 43 — `git diff --diff-filter=A` confirms first addition in Sprint 148.
 
 ### Planned Modifications
 | File | Change |
@@ -294,7 +294,7 @@ User Input + Mode Selection
 | Total Story Points | ~52 |
 | New Backend Files (Planned) | ~8 (3 swarm + 5 magentic) |
 | Modified Files (Planned) | ~8 |
-| Status | Both phases in planning, not yet implemented |
+| Status | Phase 43: Partially implemented (Sprint 148 done) / Phase 44: In Planning |
 
 ### Key Transformation (Planned)
 **Before (Post Phase 42)**: Swarm UI connected but engine is stub/mock; Workers execute sequentially with no tools; MagenticBuilder uses default StandardMagenticManager with fixed model.

@@ -132,7 +132,7 @@
 | **patrol/** | MOCK FALLBACK | `checks/resource_usage.py:54` — "psutil not installed, using mock data" | Resource monitoring returns fabricated metrics without psutil |
 | **learning/** | REAL | `similarity.py:264` — word-overlap fallback when no embeddings | Graceful degradation to simpler algorithm |
 | **audit/** | REAL | `types.py:22` — `FALLBACK_SELECTION` event type | Tracks fallback events in audit trail |
-| **correlation/** | REAL | No mock/fallback patterns found | Pure logic module |
+| **correlation/** | REAL | No mock patterns; operational graceful fallback in `analyzer.py:441` ("Sprint 130: Real data, graceful fallback") | Pure logic module with graceful fallback on data source methods |
 | **rootcause/** | InMemory | `case_repository.py:13` — "In-memory mode for testing and fallback"; `:582` — heuristic fallback | Case data volatile; heuristic analysis when LLM unavailable |
 | **incident/** | REAL + InMemory | `executor.py:24` — imports `InMemoryApprovalStorage`; `recommender.py:289` — rule-based fallback; `analyzer.py:142` — rule-based fallback | Approval storage volatile; LLM analysis degrades to rule-based |
 | **a2a/** | REAL | No mock/fallback patterns found | Protocol implementation |
@@ -161,7 +161,7 @@
 | **storage/backends/** | REAL + FALLBACK | `factory.py:86-252` — `StorageFactory` with auto-detection: Redis > Postgres > InMemory | Production: raises `RuntimeError`. Dev: InMemory fallback with warning |
 | **distributed_lock/** | FALLBACK | `redis_lock.py:154` — `InMemoryLock`; `:242` — "using in-memory lock (single-process only)" | Silent degradation to single-process lock when Redis unavailable |
 | **messaging/** | STUB | Only `__init__.py` exists | RabbitMQ integration NOT implemented |
-| **storage/ (file)** | STUB | Empty directory | File storage NOT implemented |
+| **storage/ (file)** | REAL (partial) | Storage abstraction layer 完整實作（13+ files: factory, backends, protocol, redis_backend, memory_backend, approval_store, audit_store, conversation_state, execution_state, session_store, task_store, storage_factories） | File blob storage (S3/Azure Blob) 未實作；key-value storage abstraction 已完整實作 |
 
 ### 1.4 api/ Layer (In-Memory Stores)
 

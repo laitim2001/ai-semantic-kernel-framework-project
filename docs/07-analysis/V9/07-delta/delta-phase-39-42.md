@@ -15,10 +15,10 @@
 │  問題: Phase 35-38 建了 ~60 files / 10K+ LOC，但各模組獨立無法運行         │
 │                                                                             │
 │  ┌─── Gap #1: Assembly Gap ──────────────────────────────────────┐          │
-│  │  OrchestratorMediator 7 handlers 全部 = None                  │          │
+│  │  OrchestratorMediator 6 handlers 全部 = None                  │          │
 │  │                    ↓ 解決方案                                  │          │
 │  │  OrchestratorBootstrap (factory method)                        │          │
-│  │  一次初始化: 7 handlers + MCP + Memory + ToolSecurity          │          │
+│  │  一次初始化: 6 handlers + MCP + Memory + ToolSecurity          │          │
 │  └───────────────────────────────────────────────────────────────┘          │
 │                                                                             │
 │  ┌─── Gap #2: No Background Execution ───────────────────────────┐          │
@@ -42,7 +42,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│              OrchestratorBootstrap → 7 Handler 接線拓撲                     │
+│              OrchestratorBootstrap → 6 Handler 接線拓撲                     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  OrchestratorBootstrap.create()                                             │
@@ -85,7 +85,7 @@
 
 ### Core Problem
 Phase 35-38 built ~60 files / ~10K+ LOC of core modules, but they existed independently without startup code to wire them into a runnable end-to-end pipeline. Three CRITICAL gaps:
-1. **Assembly Gap**: OrchestratorMediator's 7 handlers all default to `None` — no bootstrap code
+1. **Assembly Gap**: OrchestratorMediator's 6 handlers all default to `None` — no bootstrap code
 2. **No Background Execution**: All execution tied to HTTP request lifecycle
 3. **Old/New System Coexistence**: AG-UI bridge still connected to old `HybridOrchestratorV2`
 
@@ -94,10 +94,14 @@ Phase 35-38 built ~60 files / ~10K+ LOC of core modules, but they existed indepe
 **Backend — Bootstrap & Wiring**
 | File | Purpose |
 |------|---------|
-| `backend/src/integrations/hybrid/orchestrator/bootstrap.py` | OrchestratorBootstrap: factory method wiring all 7 handlers + MCP + Memory + ToolSecurity in one initialization |
-| `backend/src/integrations/hybrid/orchestrator/events.py` | MediatorEventBridge: adapts OrchestratorMediator events to AG-UI event format |
+| `backend/src/integrations/hybrid/orchestrator/bootstrap.py` | OrchestratorBootstrap: factory method wiring all 6 handlers + MCP + Memory + ToolSecurity in one initialization |
+| `backend/src/integrations/hybrid/orchestrator/events.py` | OrchestratorEvent class definitions for pipeline events |
+| `backend/src/integrations/ag_ui/mediator_bridge.py` | MediatorEventBridge: adapts OrchestratorMediator events to AG-UI SSE event format (Sprint 135, commit `659c789`) |
+| `backend/src/integrations/ag_ui/sse_buffer.py` | SSEEventBuffer for buffering and delivering SSE events (Sprint 135) |
 | `backend/src/integrations/hybrid/orchestrator/mcp_tool_bridge.py` | MCP tool dynamic registration into OrchestratorToolRegistry |
 | `backend/src/integrations/hybrid/orchestrator/sse_events.py` | SSE event definitions for pipeline streaming |
+| `backend/src/infrastructure/workers/arq_client.py` | ARQ Redis-backed queue client for background task execution (Sprint 136, commit `68e3145`) |
+| `backend/src/infrastructure/workers/task_functions.py` | ARQ task function definitions for background workers (Sprint 136) |
 
 **Backend — Handler Wiring**
 | File | Purpose |
@@ -139,7 +143,7 @@ Phase 35-38 built ~60 files / ~10K+ LOC of core modules, but they existed indepe
 - E2E 10-step smoke test passing
 
 ### Issues Fixed
-- **Assembly Gap** (CRITICAL): All 7 handlers wired to real dependencies
+- **Assembly Gap** (CRITICAL): All 6 handlers wired to real dependencies
 - **No HTTP Entry Point** (CRITICAL): OrchestratorMediator now accessible via AG-UI endpoints
 - **Old/New Coexistence** (HIGH): AG-UI bridge fully migrated to new system
 - **Background Execution** (CRITICAL): ARQ integration for async task execution
@@ -228,19 +232,19 @@ Backend API was 95% ready (~50+ endpoints), but frontend lacked pages and compon
 ## Phase 41: Chat Pipeline Integration — E2E Visualization
 - **Sprints**: 141-143
 - **Story Points**: ~28
-- **Status**: In Planning
+- **Status**: Completed (commit `dee9290`, merged `4bb2cfc`)
 
 ### Core Problem
 Phase 40 built standalone pages and components, but UnifiedChat still used old orchestration flow (REST one-shot call), not connected to the new `/orchestrator/chat` SSE streaming pipeline. Users couldn't see intent classification, task dispatch, tool calls, or memory retrieval steps in real-time.
 
-### Planned Changes
+### Changes Implemented
 
 **Architecture Decision**: Unified SSE Pipeline (Plan A selected)
 - POST `/orchestrator/chat` sends message, gets session_id + sync response
 - SSE `/ag-ui/run-v2` receives intermediate events (thinking, tools, progress)
 - Frontend-only changes, no backend modifications needed
 
-**Key Modifications Planned**
+**Key Modifications**
 | File | Change |
 |------|--------|
 | `pages/UnifiedChat.tsx` | Eliminate dual path, unify to orchestrator pipeline |
@@ -253,7 +257,7 @@ Phase 40 built standalone pages and components, but UnifiedChat still used old o
 **Sprint 142 (~10 SP)**: Inline component embedding + tool call display
 **Sprint 143 (~8 SP)**: Memory integration + Session Resume UI + polish
 
-### Planned Features
+### Features Implemented
 - IntentStatusChip displayed after each user message (intent + risk + execution mode)
 - TaskProgressCard with real-time progress when tasks are dispatched
 - ToolCallTracker showing tool execution in real-time
@@ -267,7 +271,7 @@ Phase 40 built standalone pages and components, but UnifiedChat still used old o
 ## Phase 42: E2E Pipeline Deep Integration — SSE + Task Dispatch + Swarm UI
 - **Sprints**: 144-147
 - **Story Points**: ~40
-- **Status**: In Planning (current branch: feature/phase-42-deep-integration)
+- **Status**: Completed on feature branch (branch: feature/phase-42-deep-integration, Sprint 144-147 all committed)
 
 ### Core Problem
 Phase 41 connected Chat to the pipeline, but 5 critical blockers remained:
@@ -277,7 +281,7 @@ Phase 41 connected Chat to the pipeline, but 5 critical blockers remained:
 4. **OrchestratorMemoryManager.memory_client=None**: Bootstrap doesn't pass mem0/UnifiedMemoryManager
 5. **Session/Checkpoint in-memory only**: Mediator uses Python dict, SessionRecoveryManager has no API
 
-### Planned Changes
+### Changes Implemented
 
 **Sprint 144 (~10 SP)**: FrameworkSelector + Function Calling + Memory Fix
 | Story | Description |
@@ -308,7 +312,7 @@ Phase 41 connected Chat to the pipeline, but 5 critical blockers remained:
 | S147-3 | search_knowledge tool callable via function calling; results injected into LLM prompt |
 | S147-4 | 6 scenarios (A-F) fully demonstrable in Chat; Playwright automation |
 
-### Planned Architecture Changes
+### Architecture Changes
 - **New SSE Endpoint**: `POST /orchestrator/chat/stream` with pipeline events: PIPELINE_START -> ROUTING_COMPLETE -> APPROVAL_REQUIRED -> AGENT_THINKING -> TOOL_CALL_START -> TOOL_CALL_END -> TEXT_DELTA -> TASK_DISPATCHED -> SWARM_WORKER_START -> SWARM_PROGRESS -> PIPELINE_COMPLETE
 - **Function Calling**: AgentHandler switches from text generation to Azure OpenAI function calling with 6 tool schemas (create_task, dispatch_workflow, dispatch_swarm, assess_risk, search_memory, search_knowledge)
 - **Intelligent Mode Selection**: FrameworkSelector uses keyword + RoutingDecision combination rules instead of empty classifiers
@@ -317,7 +321,7 @@ Phase 41 connected Chat to the pipeline, but 5 critical blockers remained:
 - **Session Persistence**: Mediator state migrated from Python dict to Redis/PostgreSQL
 - **RAG in Pipeline**: search_knowledge available as function calling tool; results feed into LLM context
 
-### Planned Features
+### Features Implemented
 - FrameworkSelector correctly routes to CHAT/WORKFLOW/SWARM modes
 - LLM autonomously invokes tools via function calling
 - True SSE streaming with per-step pipeline events
@@ -338,10 +342,10 @@ Phase 41 connected Chat to the pipeline, but 5 critical blockers remained:
 | Total Story Points | ~142 |
 | New Backend Files | ~12+ (bootstrap, handlers, events, SSE) |
 | New Frontend Files | ~18+ (5 API, 5 hooks, 5 pages, 3 chat components) |
-| Status | Phase 39-40: Completed / Phase 41-42: In Planning |
+| Status | Phase 39-41: Completed / Phase 42: Completed on feature branch |
 
 ### Key Transformation
-**Before (Post Phase 38)**: All modules exist but unassembled — 7 handlers default to None, AG-UI uses old bridge, no background execution, no frontend for new features.
+**Before (Post Phase 38)**: All modules exist but unassembled — 6 handlers default to None, AG-UI uses old bridge, no background execution, no frontend for new features.
 
 **After (Post Phase 42)**: Complete assembled pipeline with OrchestratorBootstrap, SSE streaming, function calling, Swarm UI in Chat, HITL approval flow, session persistence, and RAG integration. Frontend fully connected with 5 new pages and 3 inline chat components.
 

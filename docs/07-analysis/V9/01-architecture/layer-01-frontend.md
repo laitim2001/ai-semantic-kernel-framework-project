@@ -126,6 +126,7 @@
   /approvals          -> ApprovalsPage
   /audit              -> AuditPage
   /devui              -> DevUILayout (nested)
+    /devui            -> DevUIOverview (index)
     /devui/ag-ui-test -> AGUITestPanel
     /devui/traces     -> TraceList
     /devui/traces/:id -> TraceDetail
@@ -134,7 +135,7 @@
   *                   -> redirect to /dashboard
 ```
 
-**30 routes total** (4 standalone + 26 protected under AppLayout).
+**31 routes total** (4 standalone + 27 protected under AppLayout, including DevUI index route).
 
 ---
 
@@ -246,7 +247,7 @@ UnifiedChat.handleSend()
     │
     └── [orchestrationEnabled=false] ──► useUnifiedChat.sendMessage()
             │
-            │   EventSource GET /api/v1/ag-ui/run
+            │   fetch POST /api/v1/ag-ui + ReadableStream
             │
             │   ◄── SSE events (AG-UI Protocol)
             │   TEXT_MESSAGE_START/CONTENT/END
@@ -261,18 +262,18 @@ UnifiedChat.handleSend()
 
 ## 7. Dual SSE Transport Mechanisms
 
-The frontend has **two independent SSE implementations** that coexist:
+The frontend has **two independent SSE implementations** that coexist. Both use `fetch() + ReadableStream.getReader()` (POST); the difference is the **endpoint and event schema**, not the transport mechanism.
 
-### 7.1 AG-UI EventSource (GET) -- `useUnifiedChat.ts`
+### 7.1 AG-UI Fetch ReadableStream (POST) -- `useUnifiedChat.ts`
 
 | Attribute | Value |
 |-----------|-------|
-| **Transport** | `new EventSource(url)` (browser native) |
-| **HTTP Method** | GET |
-| **Endpoint** | `/api/v1/ag-ui/run?thread_id=X&session_id=Y` |
+| **Transport** | `fetch() + response.body.getReader()` |
+| **HTTP Method** | POST |
+| **Endpoint** | `/api/v1/ag-ui` |
 | **Event Types** | 15 AG-UI events (RUN_STARTED, TEXT_MESSAGE_*, TOOL_CALL_*, STATE_*, CUSTOM) |
 | **Reconnect** | Auto-reconnect with exponential backoff (3s base, 5 max attempts) |
-| **Auth** | Query params (no headers on EventSource) |
+| **Auth** | Headers (Content-Type: application/json, Accept: text/event-stream) |
 | **State Target** | `useUnifiedChatStore` (dual-write: local state + Zustand) |
 | **LOC** | ~600 lines in useUnifiedChat.ts |
 
@@ -289,6 +290,8 @@ The frontend has **two independent SSE implementations** that coexist:
 | **State Target** | Direct `setMessages()` via `messagesRef.current` |
 | **LOC** | 212 lines in useSSEChat.ts |
 | **Abort** | `AbortController` for cancellation |
+
+> **Note**: The only hooks using browser-native `new EventSource()` are: `useDevToolsStream.ts`, `useSharedState.ts`, `useSwarmReal.ts`.
 
 ### 7.3 Selection Logic
 
