@@ -611,11 +611,11 @@ Sprint 116 handler that:
 
 ---
 
-## 5. Pipeline SSE Events (14 Types)
+## 5. Pipeline SSE Events (13 Types)
 
 ### 5.1 SSEEventType Enum
 
-Sprint 145 (Phase 42) introduced 14 pipeline SSE event types for real-time streaming:
+Sprint 145 (Phase 42) introduced 13 pipeline SSE event types for real-time streaming:
 
 | # | Event Type | Emitted At | Data Fields |
 |---|-----------|------------|-------------|
