@@ -511,10 +511,9 @@ All utterances are in **Traditional Chinese**, targeting Taiwan/Hong Kong enterp
 | QUERY | Query content (what) |
 
 **Response Parsing** (3-level fallback):
-1. Direct JSON parse
-2. Extract JSON from markdown code blocks
-3. Regex extract `{...}` from text
-4. Keyword-based text extraction (incident/request/change/query keywords)
+1. Direct JSON parse (strips markdown code block markers first, then `json.loads`)
+2. Regex extract `{...}` from text
+3. Keyword-based text extraction (incident/request/change/query keywords)
 
 ---
 
@@ -579,7 +578,7 @@ process_response(user_response)     [max 5 turns]
 | 3 | Production Environment | `is_production` | 0.3 (fixed) | `context.is_production == True` |
 | 4 | Weekend Execution | `is_weekend` | 0.2 (fixed) | `context.is_weekend == True` |
 | 5 | Urgency Flag | `is_urgent` | 0.15 (fixed) | `context.is_urgent == True` |
-| 6 | Affected Systems Count | `affected_systems` | 0.1 * count (cap 0.3) | `len(systems) > 0` |
+| 6 | Affected Systems Count | `affected_systems` | 0.1 * count (cap 0.3) | `len(systems) > 0` (impact=increase only if > 2, else neutral) |
 | 7 | Low Routing Confidence | `low_confidence` | 0.2 * (1 - confidence) | `confidence < 0.8` |
 
 **Category Base Weights**:

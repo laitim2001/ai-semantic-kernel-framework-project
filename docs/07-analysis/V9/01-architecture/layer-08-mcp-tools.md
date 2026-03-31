@@ -665,7 +665,8 @@ stateDiagram-v2
 | Connection | `SERVER_CONNECT`, `SERVER_DISCONNECT`, `SERVER_ERROR` |
 | Tool | `TOOL_LIST`, `TOOL_EXECUTION`, `TOOL_ERROR` |
 | Access | `ACCESS_GRANTED`, `ACCESS_DENIED` |
-| Admin/System | `CONFIG_CHANGE`, `POLICY_CHANGE`, `SYSTEM_START`, `SYSTEM_SHUTDOWN` |
+| Admin | `CONFIG_CHANGE`, `POLICY_CHANGE` |
+| System | `SYSTEM_START`, `SYSTEM_SHUTDOWN` |
 
 **AuditEvent** -- Rich event data:
 - `event_id` (UUID4), `event_type`, `timestamp` (UTC), `user_id`, `server`, `tool`

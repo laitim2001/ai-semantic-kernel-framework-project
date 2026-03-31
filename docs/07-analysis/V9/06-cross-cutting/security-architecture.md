@@ -253,20 +253,20 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |  |  19 regex patterns:                                              |   |
 |  |    +-- 角色混淆 (7 patterns):                                    |   |
 |  |    |    "ignore previous instructions"                           |   |
-|  |    |    "you are now [role]"                                     |   |
-|  |    |    "pretend to be"                                          |   |
-|  |    |    "act as if you are"                                      |   |
-|  |    |    "your new role is"                                       |   |
-|  |    |    "forget your instructions"                               |   |
-|  |    |    "override your system prompt"                            |   |
+|  |    |    "disregard previous instructions/prompts/rules"          |   |
+|  |    |    "forget previous instructions/rules"                     |   |
+|  |    |    "you are now (a|an|the)"                                 |   |
+|  |    |    "act as (a|an|if)"                                       |   |
+|  |    |    "pretend (you are|to be)"                                |   |
+|  |    |    "new instructions:"                                      |   |
 |  |    +-- 邊界逃逸 (7 patterns):                                    |   |
-|  |    |    "</system>", "```system", "[SYSTEM]"                     |   |
-|  |    |    "BEGIN SYSTEM PROMPT"                                    |   |
-|  |    |    multi-line boundary markers                              |   |
+|  |    |    "^system:", "^assistant:", "^user:" (role prefixes)      |   |
+|  |    |    "[INST]", "<<SYS>>" (Llama chat template)               |   |
+|  |    |    "<|im_start|>", "<|im_end|>" (ChatML markers)           |   |
 |  |    +-- 資料外洩 (3 patterns):                                    |   |
-|  |    |    "repeat the system prompt"                               |   |
-|  |    |    "show me your instructions"                              |   |
-|  |    |    "what are your rules"                                    |   |
+|  |    |    "reveal (your)? (system)? prompt"                        |   |
+|  |    |    "show (me)? (your)? (system)? instructions"              |   |
+|  |    |    "what (are|is) your (system)? (prompt|instructions)"     |   |
 |  |    +-- 程式碼注入 (2 patterns):                                   |   |
 |  |    |    template interpolation ({{}}), variable interpolation (${}) |   |
 |  |    +-- XSS 逃逸 (2 escape patterns, 獨立於 19 個注入 regex):      |   |
@@ -288,9 +288,13 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |                                                                         |
 |  +-- Additional: ToolSecurityGateway (tool_gateway.py) -------------+   |
 |  |  第二道獨立注入掃描 (18 additional patterns):                    |   |
-|  |    +-- SQL injection: "; DROP TABLE", "UNION SELECT", "OR 1=1"   |   |
-|  |    +-- Code injection: "exec(", "eval(", "__import__("           |   |
-|  |    +-- Prompt injection: "IGNORE PREVIOUS", "SYSTEM OVERRIDE"    |   |
+|  |    +-- SQL injection (6): "; DROP/DELETE/UPDATE/INSERT",          |   |
+|  |    |    "--" (SQL comment), "UNION SELECT"                       |   |
+|  |    +-- XSS (3): "<script>", "</script>", "javascript:"          |   |
+|  |    +-- Code injection (5): "exec(", "eval(", "__import__(",     |   |
+|  |    |    "os.system(", "subprocess."                              |   |
+|  |    +-- Prompt injection (4): "IGNORE PREVIOUS",                  |   |
+|  |         "DISREGARD PREVIOUS", "you are now", "system:"          |   |
 |  +------------------------------------------------------------------+   |
 |                                                                         |
 |  WARNING: PromptGuard is per-use instantiation, not middleware           |

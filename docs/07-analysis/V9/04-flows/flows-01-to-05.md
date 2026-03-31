@@ -224,7 +224,7 @@ sequenceDiagram
 - **Function**: `OrchestratorSessionFactory.get_or_create(session_id: str) -> OrchestratorMediator`
 - **Input**: `session_id` string (default "default")
 - **Output**: Fully-wired `OrchestratorMediator` with 7 handlers
-- **Mock/Real**: REAL — LRU cache with `OrderedDict`, max 100 sessions (default)
+- **Mock/Real**: REAL — LRU cache with `OrderedDict`, max 200 sessions (routes.py:86 overrides class default of 100)
 - **Potential failure**: `_create_orchestrator()` catches all exceptions and falls back to minimal mediator with only `AgentHandler`.
 
 **Details**: Uses `OrchestratorBootstrap.build()` which wires all 7 handlers: ContextHandler, RoutingHandler, DialogHandler, ApprovalHandler, AgentHandler, ExecutionHandler, ObservabilityHandler. Each handler uses graceful degradation — if a dependency is unavailable, handler is created with `None` dependency.

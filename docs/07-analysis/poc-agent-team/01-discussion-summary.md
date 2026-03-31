@@ -16,7 +16,7 @@ Main Agent
   └── Spawn Subagent 3 → Work → Result ─┘
 ```
 
-核心特點：
+核心特點： 
 - Main Agent 動態 Spawn 多個 Subagent
 - 每個 Subagent **獨立工作**（互不溝通）
 - 每個產生 Result

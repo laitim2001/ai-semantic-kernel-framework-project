@@ -296,8 +296,8 @@
 
 - Document: `memory_manager.py:387-418` is the entry point
 - Source: `memory_manager.py:387` `async def _write_to_longterm()` starts at line 387, ends at line 418. Confirmed line range.
-- Document says it calls `UnifiedMemoryManager.add()` -> selects layer. Source: `memory_manager.py:399-406` calls `self._memory.add(content=content, user_id=user_id, memory_type=MemType.CONVERSATION)` **without passing importance**, so default MemoryMetadata importance=0.0 will be used. With CONVERSATION type and importance < 0.5, it will go to WORKING layer, NOT long-term. The doc claims the method writes to "Long-term Memory" but in practice, without importance override, it goes to Working Memory.
-- **Fix needed**: Document that `_write_to_longterm()` actually writes to the layer selected by `UnifiedMemoryManager._select_layer()` based on default importance (0.0 for CONVERSATION = WORKING layer), not necessarily long-term. The name is misleading.
+- Document says it calls `UnifiedMemoryManager.add()` -> selects layer. Source: `memory_manager.py:399-406` calls `self._memory.add(content=content, user_id=user_id, memory_type=MemType.CONVERSATION)` **without passing metadata**, so default `MemoryMetadata(importance=0.5)` is used (types.py:45). With CONVERSATION type and importance=0.5 (>= 0.5), `_select_layer()` returns SESSION layer (unified_memory.py:166-167), NOT working or long-term. The method name `_write_to_longterm()` is misleading; it writes to SESSION memory (Redis, TTL 7 days).
+- **Fix applied**: Document corrected to note that `_write_to_longterm()` actually writes to SESSION layer due to `MemoryMetadata` default `importance=0.5`, not WORKING layer as previously stated (the prior claim of importance=0.0 was wrong).
 
 ### P38: Layer selection logic
 
@@ -402,7 +402,7 @@
 | 1 | Flow 6, SSE Registry heading | Says "14 types" but only 13 exist | Change to "13 types" |
 | 2 | Flow 6, Step 0e | Conflates routes.py _get_bootstrap() with SessionFactory bootstrap | Clarify that routes.py uses SessionFactory.get_or_create() which internally creates per-session Bootstrap |
 | 3 | Flow 7, Step 1c intro | Lists `dispatch_to_claude` as registered tool | Note it exists as method but is NOT in register_all() |
-| 4 | Flow 8, Part A Step A2 | `_write_to_longterm()` implies long-term layer | Note that without explicit importance, CONVERSATION type goes to WORKING layer by default |
+| 4 | Flow 8, Part A Step A2 | `_write_to_longterm()` implies long-term layer | Fixed: without explicit metadata, `MemoryMetadata(importance=0.5)` default routes CONVERSATION to SESSION layer (not WORKING as previously claimed — prior analysis incorrectly assumed importance=0.0) |
 | 5 | Flow 8, Step A3b | Claims save() takes keyword args `(session_id, messages, routing_decision, context)` | ConversationStateStore.save() takes single `ConversationState` object |
 
 ### Minor (8 partial issues)
@@ -437,4 +437,4 @@ The cross-flow integration map at the end of the document is **accurate**:
 |------|-----------|-------------------|
 | Flow 6: Pipeline | 70% | ✅ Agree — chat mode works E2E, workflow/swarm dispatch needs real executors |
 | Flow 7: Async Dispatch | 30% | ✅ Agree — infrastructure exists, actual execution not connected (TODO at task_functions.py:53) |
-| Flow 8: Memory | 50% | ⚠️ Slightly optimistic — _write_to_longterm defaults to WORKING layer, not truly long-term without importance tuning. Suggest 40-45%. |
+| Flow 8: Memory | 50% | ⚠️ Slightly optimistic — _write_to_longterm defaults to SESSION layer (importance=0.5), not truly long-term without importance >= 0.8. Method name is misleading. Suggest 45%. |

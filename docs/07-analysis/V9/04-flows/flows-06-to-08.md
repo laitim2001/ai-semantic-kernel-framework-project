@@ -131,7 +131,7 @@ sequenceDiagram
 |---|-----------|-----------|--------|
 | 0a | FastAPI route (sync) | `backend/src/api/v1/orchestrator/routes.py:343-479` | Receives `PipelineRequest` (content, source, mode, user_id, session_id, metadata, timestamp) |
 | 0b | FastAPI route (SSE) | `backend/src/api/v1/orchestrator/routes.py:275-340` | SSE variant: creates `PipelineEventEmitter`, starts pipeline as `asyncio.create_task` |
-| 0c | PipelineRequest contract | `backend/src/integrations/contracts/pipeline.py:25-34` | Pydantic model: content, source, mode, user_id, session_id, metadata |
+| 0c | PipelineRequest contract | `backend/src/integrations/contracts/pipeline.py:25-34` | Pydantic model: content, source, mode, user_id, session_id, metadata, timestamp |
 | 0d | Lazy Bootstrap (singleton) | `backend/src/api/v1/orchestrator/routes.py:33-48` | `_get_bootstrap()` lazy-initialises `OrchestratorBootstrap().build()` — used only for health check and tool registry; **NOT** used to create per-session mediators |
 | 0e | SessionFactory | `backend/src/integrations/hybrid/orchestrator/session_factory.py:52-71` | Routes call `_get_session_factory().get_or_create(session_id)` (routes.py:293,364); factory creates per-session mediator via `_create_orchestrator()` (line 95) which instantiates a **separate** `OrchestratorBootstrap` per session |
 | 0f | Bootstrap assembly | `backend/src/integrations/hybrid/orchestrator/bootstrap.py:39-101` | Wires all 7 handlers with real deps (LLM, ToolRegistry, ContextBridge, etc.) |
@@ -391,8 +391,8 @@ ConversationStateStore (Redis, TTL 24h) -- separate from 3-layer memory
 
 | # | Component | File:Line | Action |
 |---|-----------|-----------|--------|
-| A2a | OrchestratorMemoryManager._write_to_longterm() | `backend/src/integrations/hybrid/orchestrator/memory_manager.py:387-418` | Entry point for memory write. **Misleading name**: calls `add()` with `MemType.CONVERSATION` and no explicit `importance`, so default importance=0.0 applies → layer selection routes to **WORKING** layer, not long-term |
-| A2b | UnifiedMemoryManager.add() | `backend/src/integrations/memory/unified_memory.py:173-238` | Selects layer based on `MemoryType` + `importance` score (see A2c). Without explicit importance override, CONVERSATION type defaults to WORKING layer |
+| A2a | OrchestratorMemoryManager._write_to_longterm() | `backend/src/integrations/hybrid/orchestrator/memory_manager.py:387-418` | Entry point for memory write. **Misleading name**: calls `add()` with `MemType.CONVERSATION` and no explicit `metadata`, so default `MemoryMetadata(importance=0.5)` applies (types.py:45) → layer selection routes to **SESSION** layer (TTL 7d), not long-term |
+| A2b | UnifiedMemoryManager.add() | `backend/src/integrations/memory/unified_memory.py:173-238` | Selects layer based on `MemoryType` + `importance` score (see A2c). Without explicit metadata override, `MemoryMetadata()` defaults to `importance=0.5` → CONVERSATION type routes to SESSION layer |
 | A2c | Layer selection | `unified_memory.py:130-171` | CONVERSATION type + importance <0.5 -> WORKING; >=0.5 -> SESSION; >=0.8 -> LONG_TERM |
 | A2d | Working Memory store | `unified_memory.py:240-257` | Redis `SETEX` with key `memory:working:{user_id}:{id}`, TTL from config (30 min default) |
 | A2e | Session Memory store | `unified_memory.py:259-288` | Redis `SETEX` with key `memory:session:{user_id}:{id}`, TTL from config (7 days default) |
@@ -513,4 +513,4 @@ Flow 8 (Memory)
 |------|---------------|-------------------|---------------------|
 | **Flow 6: Pipeline** | SSE streaming works E2E. 7 handlers wired via Bootstrap. Routing, approval, memory injection all functional. | ExecutionHandler returns stubs when MAF/Claude unavailable. Checkpoint fallback to memory. | **70%** -- works for chat mode; workflow/swarm dispatch needs real executors |
 | **Flow 7: Async Dispatch** | Task creation + ARQ submission functional. Status tracking works. | MAF workflow execution is TODO (task_functions.py:53). ARQ package may not be installed. No result-to-SSE push. | **30%** -- infrastructure exists but actual execution not connected |
-| **Flow 8: Memory** | 3-layer architecture implemented. Retrieval + injection into pipeline works. RAG pipeline complete. | Requires mem0 + Qdrant + Redis + embedding API. Session memory uses Redis not PostgreSQL. No auto-summarisation trigger. `_write_to_longterm()` defaults to WORKING layer (importance=0.0). | **45%** -- works when all external services available; fragile dependency chain; per-message writes go to working memory, not long-term despite method name |
+| **Flow 8: Memory** | 3-layer architecture implemented. Retrieval + injection into pipeline works. RAG pipeline complete. | Requires mem0 + Qdrant + Redis + embedding API. Session memory uses Redis not PostgreSQL. No auto-summarisation trigger. `_write_to_longterm()` defaults to SESSION layer (MemoryMetadata default importance=0.5). | **45%** -- works when all external services available; fragile dependency chain; per-message writes go to session memory (TTL 7d), not long-term despite method name |
