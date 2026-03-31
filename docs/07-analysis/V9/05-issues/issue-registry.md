@@ -11,11 +11,11 @@
 
 | Severity | Total | FIXED | STILL_OPEN | WORSENED | NEW |
 |----------|-------|-------|------------|----------|-----|
-| **CRITICAL** | 14 | 2 | 4 | 0 | 8 |
-| **HIGH** | 22 | 1 | 11 | 1 | 9 |
+| **CRITICAL** | 14 | 3 | 6 | 0 | 5 |
+| **HIGH** | 22 | 0 | 13 | 0 | 9 |
 | **MEDIUM** | 30 | 0 | 16 | 0 | 14 |
 | **LOW** | 27 | 0 | 11 | 0 | 16 |
-| **TOTAL** | **93** | **3** | **42** | **1** | **47** |
+| **TOTAL** | **93** | **3** | **46** | **0** | **44** |
 
 ```mermaid
 pie title Issue Severity Distribution (93 total)
@@ -33,10 +33,10 @@ pie title Issue Severity Distribution (93 total)
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  CRITICAL (14)  🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴                            │
-│                 ├─ FIXED: 2    ├─ OPEN: 4    ├─ NEW: 8                     │
+│                 ├─ FIXED: 3    ├─ OPEN: 6    ├─ NEW: 5                     │
 │                                                                             │
 │  HIGH (22)      🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠        │
-│                 ├─ FIXED: 1    ├─ OPEN: 11   ├─ WORSENED: 1  ├─ NEW: 9    │
+│                 ├─ FIXED: 0    ├─ OPEN: 13   ├─ NEW: 9                     │
 │                                                                             │
 │  MEDIUM (30)    🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡│
 │                 ├─ FIXED: 0    ├─ OPEN: 16   ├─ NEW: 14                    │
@@ -84,18 +84,20 @@ pie title Issue Severity Distribution (93 total)
 
 | Layer | Issues | CRITICAL | HIGH | MEDIUM | LOW |
 |-------|--------|----------|------|--------|-----|
-| L01 Frontend | 13 | 0 | 3 | 7 | 3 |
-| L02 API Gateway | 6 | 0 | 0 | 3 | 3 |
-| L03 AG-UI Protocol | 6 | 0 | 1 | 2 | 3 |
-| L04 Routing | 6 | 1 | 1 | 1 | 3 |
-| L05 Orchestration | 8 | 2 | 2 | 2 | 2 |
-| L06 MAF Builders | 10 | 2 | 5 | 3 | 0 |
-| L07 Claude SDK | 8 | 0 | 0 | 2 | 6 |
-| L08 MCP Tools | 7 | 0 | 0 | 4 | 3 |
-| L09 Integrations | 12 | 0 | 3 | 6 | 3 |
-| L10 Domain | 14 | 3 | 5 | 3 | 3 |
-| L11 Infrastructure | 14 | 2 | 2 | 6 | 4 |
-| **Cross-Layer** | *counted in primary layer* | | | | |
+| L01 Frontend | 17 | 0 | 6 | 5 | 6 |
+| L02 API Gateway | 11 | 1 | 2 | 5 | 3 |
+| L03 AG-UI Protocol | 6 | 1 | 0 | 0 | 5 |
+| L04 Routing | 3 | 0 | 0 | 0 | 3 |
+| L05 Orchestration | 6 | 2 | 2 | 2 | 0 |
+| L06 MAF Builders | 7 | 2 | 3 | 1 | 1 |
+| L07 Claude SDK | 5 | 0 | 0 | 2 | 3 |
+| L08 MCP Tools | 6 | 0 | 3 | 3 | 0 |
+| L09 Integrations | 14 | 3 | 0 | 9 | 2 |
+| L10 Domain | 9 | 3 | 3 | 0 | 3 |
+| L11 Infrastructure | 9 | 2 | 3 | 3 | 1 |
+| **TOTAL** | **93** | **14** | **22** | **30** | **27** |
+
+> **Note**: 每個 issue 只在 primary layer 計數。跨層問題（如 V9-C01 涵蓋 L09/L10/L11）按其根因所在的主要層歸類。
 
 ---
 
@@ -603,7 +605,7 @@ pie title Issue Severity Distribution (93 total)
 ### [V9-M18] Large Monolithic Route Files (NEW)
 - **Severity**: MEDIUM
 - **Layer**: L02
-- **Location**: `planning/routes.py` (588 endpoints), `groupchat/routes.py` (42), `ag_ui/routes.py` (29)
+- **Location**: `planning/routes.py` (46 endpoints), `groupchat/routes.py` (42), `ag_ui/routes.py` (29)
 - **Description**: Excessively large route files. Could benefit from splitting into sub-route files.
 - **Impact**: Maintenance difficulty.
 - **Status**: NEW
@@ -1052,8 +1054,8 @@ pie title Issue Severity Distribution (93 total)
 
 ### Pattern 3: Thread Safety / Race Conditions — WORSENED
 - **V8**: H-04 (ContextBridge)
-- **V9**: ContextBridge (V9-C09 elevated to CRITICAL), ContextSynchronizer (V9-C10 NEW), RoutingMetrics (V9-L17 NEW), Bridge._active_contexts (L10 M3 NEW), builder state (L06-M1 NEW)
-- **Assessment**: More race condition risks identified; original issue not fixed.
+- **V9**: ContextBridge (V9-C09 elevated to CRITICAL), ~~ContextSynchronizer (V9-C10)~~ (false positive — has asyncio.Lock), RoutingMetrics (V9-L17 NEW), Bridge._active_contexts (L10 M3 NEW), builder state (L06-M1 NEW)
+- **Assessment**: More race condition risks identified; original ContextBridge issue not fixed. C10 confirmed as false positive (Sprint 109 fix verified).
 
 ### Pattern 4: Deprecated/Stale Code Not Removed — STILL SYSTEMIC
 - **V8**: H-10, L-13
@@ -1081,7 +1083,7 @@ pie title Issue Severity Distribution (93 total)
 5. **V9-M25**: Replace `os.getenv()` with `get_settings()` in LLM factory
 
 ### Short-term (1-2 sprints)
-6. **V9-C09/C10**: Add `asyncio.Lock` to ContextBridge and ContextSynchronizer
+6. **V9-C09**: Add `asyncio.Lock` to ContextBridge (V9-C10 已確認為 false positive — ContextSynchronizer 已有 lock)
 7. **V9-H02**: Gate test endpoints behind `APP_ENV != production`
 8. **V9-H01**: Add role-based checks on destructive API operations
 9. **V9-H05/H06**: Wire MCP AuditLogger and set permission mode to enforce in production
@@ -1106,5 +1108,6 @@ pie title Issue Severity Distribution (93 total)
 
 *V9 Issue Registry compiled from 11 layer analysis files on 2026-03-29.*
 *Cross-referenced against V8 Issue Registry (62 issues, 2026-03-15).*
+*Updated 2026-03-31: V9-C10 confirmed false positive (FIXED); Summary/By-Layer tables corrected; per-layer counts deduplicated to primary layer only.*
 *Total: 93 issues (14 CRITICAL, 22 HIGH, 30 MEDIUM, 27 LOW).*
-*3 FIXED, 42 STILL_OPEN, 1 WORSENED, 47 NEW.*
+*3 FIXED (C02, C04, C10), 46 STILL_OPEN, 0 WORSENED, 44 NEW.*

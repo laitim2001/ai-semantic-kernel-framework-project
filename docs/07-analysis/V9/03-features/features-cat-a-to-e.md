@@ -423,10 +423,10 @@
 - **Test**: `backend/tests/unit/test_connectors.py`
 - **Changes since V8**: None. Still UAT-only, not production-ready.
 
-### E2: MCP Architecture (8 Servers, 64 Tools)
+### E2: MCP Architecture (9 Servers, 70 Tools)
 - **V8 Status**: EXCEEDED (planned 5, delivered 8)
-- **V9 Status**: EXCEEDED (8 servers confirmed)
-- **Evidence**: `backend/src/integrations/mcp/servers/` — 8 directories: `azure/`, `filesystem/`, `shell/`, `ldap/`, `ssh/`, `n8n/`, `adf/`, `d365/`
+- **V9 Status**: EXCEEDED (9 servers confirmed — 8 subdirectories + ServiceNow root-level)
+- **Evidence**: `backend/src/integrations/mcp/servers/` — 8 directories: `azure/`, `filesystem/`, `shell/`, `ldap/`, `ssh/`, `n8n/`, `adf/`, `d365/` + `mcp/servicenow_*.py` (root-level server)
 - **Test**: (MCP integration tests)
 - **Changes since V8**: None detected.
 

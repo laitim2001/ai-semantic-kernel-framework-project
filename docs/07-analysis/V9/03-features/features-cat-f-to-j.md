@@ -276,7 +276,7 @@
 - **Status**: COMPLETE
 - **Implementation files**:
   - `domain/devtools/tracer.py` (777 LOC) — ExecutionTracer, trace/span/event system
-  - `api/v1/devtools/` — 588 endpoints, timeline visualization, event filtering, statistics
+  - `api/v1/devtools/` — 12 endpoints, timeline visualization, event filtering, statistics
 - **Data persistence**: **InMemory** (traces dict, can grow unbounded)
 - **Known issues**: In-memory traces can grow unbounded (C-01), no eviction policy
 - **Phase history**: Introduced Phase 4 (S66-68)
@@ -465,15 +465,15 @@ All 4 security features remain COMPLETE. V9 notes that Phase 36 (Sprint 109) add
 
 | # | Feature | V8 Status | V9 Status | Evidence |
 |---|---------|-----------|-----------|----------|
-| U1 | 3 Extra MCP Servers (n8n, ADF, D365) | COMPLETE | COMPLETE | `mcp/servers/{n8n,adf,d365}/` — 64 tools total |
+| U1 | 3 Extra MCP Servers (n8n, ADF, D365) | COMPLETE | COMPLETE | `mcp/servers/{n8n,adf,d365}/` — 70 tools total (across all 9 servers) |
 | U2 | Learning / Few-Shot System | COMPLETE | COMPLETE | `integrations/learning/` — LearningService + SequenceMatcher |
-| U3 | Notification System | COMPLETE | COMPLETE | `api/v1/notifications/` — 588 endpoints, Adaptive Cards v1.4 |
+| U3 | Notification System | COMPLETE | COMPLETE | `api/v1/notifications/` — 11 endpoints, Adaptive Cards v1.4 |
 | U4 | IT Incident Processing | COMPLETE | COMPLETE | `integrations/incident/` — full correlation + rootcause + LLM pipeline |
 | U5 | Shared Protocols Module | COMPLETE | COMPLETE | `integrations/shared/protocols.py` |
-| U6 | Performance Monitoring API | PARTIAL | PARTIAL | `api/v1/performance/` — 588 endpoints, Phase2 stats hardcoded |
-| U7 | Prompt Management API | COMPLETE | COMPLETE | `api/v1/prompts/` — 588 endpoints |
-| U8 | Routing Engine API | COMPLETE | COMPLETE | `api/v1/routing/` — 588 endpoints, ScenarioRouter |
-| U9 | Version Control API | COMPLETE | COMPLETE | `api/v1/versioning/` — 588 endpoints |
+| U6 | Performance Monitoring API | PARTIAL | PARTIAL | `api/v1/performance/` — 11 endpoints, Phase2 stats hardcoded |
+| U7 | Prompt Management API | COMPLETE | COMPLETE | `api/v1/prompts/` — 11 endpoints |
+| U8 | Routing Engine API | COMPLETE | COMPLETE | `api/v1/routing/` — 14 endpoints, ScenarioRouter |
+| U9 | Version Control API | COMPLETE | COMPLETE | `api/v1/versioning/` — 14 endpoints |
 | U10 | Trigger/Webhook API | COMPLETE | COMPLETE | `api/v1/triggers/` — 9 endpoints |
 | U11 | Mediator Pattern Refactor | COMPLETE | COMPLETE (Expanded) | `hybrid/orchestrator/mediator.py` (844 LOC) + 6 handlers (1,160 LOC) |
 | U12 | Extended Thinking (Claude) | COMPLETE | COMPLETE | `claude_sdk/client.py` — beta header streaming |

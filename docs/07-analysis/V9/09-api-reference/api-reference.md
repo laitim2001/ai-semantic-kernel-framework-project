@@ -2,15 +2,15 @@
 
 > **Generated**: 2026-03-29 | **Source**: V9 codebase analysis + AST scan of 64 route files across 48 modules
 > **Base URL**: `http://localhost:8000/api/v1` | **Framework**: FastAPI 0.100+
-> **Total Endpoints**: 568 REST + 4 WebSocket = **572 endpoints**
+> **Total Endpoints**: 587 REST + 4 WebSocket = **591 endpoints**
 
 ---
 
 ## Table of Contents
 
 1. [System Endpoints (No Auth)](#system-endpoints)
-2. [Domain A: Core Entity Management (80 endpoints)](#domain-a-core-entity-management)
-3. [Domain B: AI Agent Operations (148 endpoints)](#domain-b-ai-agent-operations)
+2. [Domain A: Core Entity Management (90 endpoints)](#domain-a-core-entity-management)
+3. [Domain B: AI Agent Operations (196 endpoints)](#domain-b-ai-agent-operations)
 4. [Domain C: Real-Time & Collaboration (66 endpoints)](#domain-c-real-time--collaboration)
 5. [Domain D: Orchestration & Routing (42 endpoints)](#domain-d-orchestration--routing)
 6. [Domain E: Monitoring & Observability (71 endpoints)](#domain-e-monitoring--observability)
@@ -48,7 +48,7 @@
 
 ## Domain A: Core Entity Management
 
-> 80 endpoints across 9 modules — CRUD for primary platform resources.
+> 90 endpoints across 9 modules — CRUD for primary platform resources.
 
 ### A1. Agents (`/agents`) — 6 endpoints
 
@@ -207,7 +207,7 @@
 
 ## Domain B: AI Agent Operations
 
-> 148 endpoints across 17 route files — Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent, and nested workflows.
+> 196 endpoints across 17 route files — Claude SDK, hybrid operations, planning, groupchat, handoff, concurrent, and nested workflows.
 
 ### B1. Claude SDK Core (`/claude-sdk`) — 6 endpoints
 
@@ -816,13 +816,13 @@
 
 | # | Method | Path | Handler | Auth | Description |
 |---|--------|------|---------|------|-------------|
-| 1 | POST | `/n8n/webhook` | `receive_webhook` | JWT | Receive n8n webhook |
-| 2 | POST | `/n8n/webhook/{workflow_id}` | `receive_workflow_webhook` | JWT | Receive workflow-specific webhook |
-| 3 | GET | `/n8n/status` | `get_status` | JWT | n8n integration status |
-| 4 | GET | `/n8n/config` | `get_config` | JWT | Get n8n config |
-| 5 | PUT | `/n8n/config` | `update_config` | JWT | Update n8n config |
-| 6 | POST | `/n8n/callback` | `receive_callback` | JWT | Receive orchestration callback |
-| 7 | GET | `/n8n/callback/{orchestration_id}` | `get_callback_status` | JWT | Get callback status |
+| 1 | POST | `/n8n/webhook` | `n8n_webhook` | JWT | Receive n8n webhook |
+| 2 | POST | `/n8n/webhook/{workflow_id}` | `n8n_webhook_by_workflow` | JWT | Receive workflow-specific webhook |
+| 3 | GET | `/n8n/status` | `get_n8n_status` | JWT | n8n integration status |
+| 4 | GET | `/n8n/config` | `get_n8n_config` | JWT | Get n8n config |
+| 5 | PUT | `/n8n/config` | `update_n8n_config` | JWT | Update n8n config |
+| 6 | POST | `/n8n/callback` | `n8n_callback` | JWT | Receive orchestration callback |
+| 7 | GET | `/n8n/callback/{orchestration_id}` | `get_callback_result` | JWT | Get callback status |
 
 ---
 

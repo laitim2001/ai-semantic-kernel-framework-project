@@ -92,13 +92,13 @@ IPA Platform 採用三層記憶體架構，由 `integrations/memory/unified_memo
 
 | Memory Type | Importance | Target Layer | Rationale |
 |-------------|-----------|-------------|-----------|
-| `EVENT_RESOLUTION` | any | L3 Long-Term | 事件解決經驗需永久保存 |
-| `BEST_PRACTICE` | any | L3 Long-Term | 最佳實踐為組織知識 |
-| `SYSTEM_KNOWLEDGE` | any | L3 Long-Term | 系統知識需跨 Session 存取 |
-| `USER_PREFERENCE` | any | L3 Long-Term | 使用者偏好需持久化 |
-| `FEEDBACK` | any | L2 Session | 回饋在 Session 期間有效 |
-| `CONVERSATION` | >= 0.8 | L3 Long-Term | 高價值對話永久保存 |
-| `CONVERSATION` | >= 0.5 | L2 Session | 中等對話 Session 級保存 |
+| *(any type)* | >= 0.8 | L3 Long-Term | **全域規則**: 高重要性記憶一律永久保存 (最先檢查) |
+| `EVENT_RESOLUTION` | < 0.8 | L3 Long-Term | 事件解決經驗需永久保存 |
+| `BEST_PRACTICE` | < 0.8 | L3 Long-Term | 最佳實踐為組織知識 |
+| `SYSTEM_KNOWLEDGE` | < 0.8 | L3 Long-Term | 系統知識需跨 Session 存取 |
+| `USER_PREFERENCE` | < 0.8 | L3 Long-Term | 使用者偏好需持久化 |
+| `FEEDBACK` | < 0.8 | L2 Session | 回饋在 Session 期間有效 |
+| `CONVERSATION` | >= 0.5, < 0.8 | L2 Session | 中等對話 Session 級保存 |
 | `CONVERSATION` | < 0.5 | L1 Working | 低價值對話短暫保存 |
 | Default | < 0.8 | L2 Session | 預設路由至 Session 層 |
 
@@ -311,7 +311,7 @@ See [Section 3: Checkpoint Unification](#3-checkpoint-unification) for full deta
 │  ⑥ 查詢向量化           ⑦ 語義檢索              ⑧ 重排序                  │
 │  ┌──────────────┐       ┌──────────────┐       ┌──────────────┐            │
 │  │ User Query   │──────→│ Knowledge    │──────→│  Reranker    │            │
-│  │ → embed_text()│       │ Retriever    │       │ (交叉注意力) │            │
+│  │ → embed_text()│       │ Retriever    │       │ (詞重疊排序) │            │
 │  └──────────────┘       │ (top-K 候選) │       │ → top-N 精排 │            │
 │                          └──────────────┘       └──────┬───────┘            │
 │                                                        │                    │

@@ -222,16 +222,16 @@ L11: Core             --> can import from: (nothing -- leaf layer)
 
 | Violation Direction | Count | Severity Breakdown |
 |--------------------|-------|-------------------|
-| Infrastructure -> Integration | 9 | 3 CRITICAL, 3 HIGH, 3 MEDIUM |
+| Infrastructure -> Integration | 9 | 3 CRITICAL, 4 HIGH, 2 MEDIUM |
 | Domain -> Integration | 3 | 2 HIGH, 1 MEDIUM |
 | Infrastructure -> Domain | 1 | 1 HIGH |
 | Domain -> API | 1 | 1 CRITICAL |
 | Core -> Integration | 1 | 1 HIGH |
-| **Total** | **15** | **4 CRITICAL, 6 HIGH, 4 MEDIUM, 1 LOW** |
+| **Total** | **15** | **4 CRITICAL, 8 HIGH, 3 MEDIUM** |
 
 ### 4.4 Root Cause Analysis
 
-**`infrastructure/storage/` is the worst offender** with 7 violations. Root cause: `storage_factories.py` acts as a service locator that knows about all storage backends across all layers. It imports concrete implementations from ag_ui, hybrid, orchestration, agent_framework, and domain -- turning the infrastructure layer into a dependency magnet.
+**`infrastructure/storage/` is the worst offender** with 6 violations (V1-V5, V10). Root cause: `storage_factories.py` acts as a service locator that knows about all storage backends across all layers. It imports concrete implementations from ag_ui, hybrid, orchestration, agent_framework, and domain -- turning the infrastructure layer into a dependency magnet.
 
 **`domain/files/` -> `api/v1`** is the most severe architectural violation. A domain service importing from the API layer completely inverts the dependency direction.
 

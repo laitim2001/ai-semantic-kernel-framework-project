@@ -634,7 +634,7 @@ prompt → CapabilityMatcher.analyze() → TaskAnalysis
 - **Metrics**: Tracks execution_count, total_duration, framework_usage breakdown
 - **Factory**: `create_orchestrator(primary_framework, auto_switch, switch_threshold)`
 
-### ContextSynchronizer (~892 LOC)
+### ContextSynchronizer (~927 LOC)
 
 Converts context between 5 formats: Claude messages, MAF messages, AG-UI events, Hybrid internal, and raw dict. This is the largest single class in the module.
 

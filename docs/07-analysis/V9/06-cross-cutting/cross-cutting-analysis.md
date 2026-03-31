@@ -354,7 +354,7 @@ USER INPUT (browser/API client)
     |   4. ContextHandler -- ContextBridge (MAF <-> Claude state sync)
     |   5. ExecutionHandler -- Dispatch to selected framework
     |   6. ObservabilityHandler -- Metrics recording
-    | SSE: PipelineEventEmitter -> 14 event types
+    | SSE: PipelineEventEmitter -> 13 event types
     v
 [L06: MAF Builders] agent_framework/builders/
     | OR

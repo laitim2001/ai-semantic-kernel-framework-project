@@ -458,8 +458,8 @@ graph TB
 
 ### By Architectural Layer
 
-| Layer | Directory | Files | Est. LOC | % of Backend |
-|-------|-----------|-------|----------|--------------|
+| Layer | Directory | Files | LOC (wc -l) | % of Backend |
+|-------|-----------|-------|-------------|--------------|
 | L2: API Gateway | api/v1/ | 153 | 47,377 | 17.3% |
 | L3: AG-UI Protocol | integrations/ag_ui/ | 27 | 10,329 | 3.8% |
 | L4: Orchestration/Routing | integrations/orchestration/ | 55 | 20,272 | 7.4% |
@@ -467,23 +467,29 @@ graph TB
 | L6: MAF Builders | integrations/agent_framework/ | 57 | 38,082 | 13.9% |
 | L7: Claude SDK | integrations/claude_sdk/ | 48 | 15,406 | 5.6% |
 | L8: MCP Tools | integrations/mcp/ | 73 | 20,847 | 7.6% |
-| L9: Supporting Integrations | integrations/{swarm,patrol,...} | 77 | 22,604 | 8.3% |
+| L9: Supporting Integrations | integrations/{swarm,llm,patrol,...} | 77 | 22,604 | 8.3% |
 | L10: Domain Layer | domain/ | 117 | 47,637 | 17.4% |
 | L11: Infrastructure | infrastructure/ | 54 | 9,901 | 3.6% |
 | L11: Core | core/ | 39 | 11,945 | 4.4% |
 | Middleware | middleware/ | 2 | 107 | 0.04% |
+| **Subtotal (layers)** | | **791** | **273,307** | **99.99%** |
+| Root __init__.py* | src/, integrations/ | 2 | 38 | 0.01% |
+| **Total** | | **793** | **273,345** | **100%** |
+
+> *2 root-level `__init__.py` files (src/__init__.py: 1 LOC, integrations/__init__.py: 37 LOC) not assigned to any specific layer.
 
 ### By Module Category
 
-| Category | Modules | Files | % of Backend |
-|----------|---------|-------|--------------|
-| Integrations | 19 | 340 | 42.9% |
-| API Routes | 48 | 107 | 13.5% |
-| Domain | 21 | 117 | 14.8% |
-| Infrastructure | 7 | 54 | 6.8% |
-| Core | 5 | 39 | 4.9% |
-| __init__.py | — | 184 | 23.2% |
-| Middleware | 1 | 2 | 0.3% |
+| Category | Modules | Files (non-init) | __init__.py | Total Files | % of Backend |
+|----------|---------|-------------------|-------------|-------------|--------------|
+| Integrations | 19 | 340 | 87 | 427 | 53.8% |
+| API Routes | 48 | 107 | 46 | 153 | 19.3% |
+| Domain | 21 | 86 | 31 | 117 | 14.8% |
+| Infrastructure | 7 | 42 | 12 | 54 | 6.8% |
+| Core | 5 | 33 | 6 | 39 | 4.9% |
+| Middleware | 1 | 1 | 1 | 2 | 0.3% |
+| src/ root | — | 0 | 1 | 1 | 0.1% |
+| **Total** | — | **609** | **184** | **793** | **100%** |
 
 ### Top 10 Largest Backend Modules (by file count)
 
@@ -506,24 +512,24 @@ graph TB
 
 ### By Module
 
-| Module | Files | LOC | % of Frontend |
-|--------|-------|-----|---------------|
-| components/unified-chat/ (core) | 29 | ~9,346 | 17.2% |
-| components/unified-chat/agent-swarm/ | 16 + 12 tests + 5 hooks + 2 types | ~5,500 | 10.1% |
-| components/unified-chat/renderers/ | 4 | ~709 | 1.3% |
-| components/ag-ui/ | 19 | ~3,400 | 6.3% |
-| components/DevUI/ | 15 | ~4,644 | 8.6% |
-| components/ui/ | 18 | ~1,471 | 2.7% |
-| components/workflow-editor/ | 10 | ~1,383 | 2.6% |
-| components/layout/ | 5 | ~422 | 0.8% |
-| components/shared/ | 4 | ~128 | 0.2% |
-| components/auth/ | 1 | ~128 | 0.2% |
-| hooks/ | 25 | ~11,286 | 20.8% |
-| pages/ (all) | 38 | ~12,500 | 23.1% |
-| api/ | 11 | ~1,824 | 3.4% |
-| stores/ + store/ | 3 + 1 | ~1,693 | 3.1% |
-| types/ | 4 | ~1,297 | 2.4% |
-| utils/ + lib/ | 2 | ~340 | 0.6% |
+| Module | Files | LOC (wc -l) | % of Frontend |
+|--------|-------|-------------|---------------|
+| components/unified-chat/ (core) | 29 | 7,409 | 13.7% |
+| components/unified-chat/agent-swarm/ | 16 + 12 tests + 5 hooks + 2 types | 5,752 | 10.6% |
+| components/unified-chat/renderers/ | 4 | 709 | 1.3% |
+| components/ag-ui/ | 19 | 3,573 | 6.6% |
+| components/DevUI/ | 15 | 4,108 | 7.6% |
+| components/ui/ | 18 | 1,211 | 2.2% |
+| components/workflow-editor/ | 10 | 1,483 | 2.7% |
+| components/layout/ | 5 | 422 | 0.8% |
+| components/shared/ | 4 | 128 | 0.2% |
+| components/auth/ | 1 | 128 | 0.2% |
+| hooks/ | 25 | 8,958 | 16.5% |
+| pages/ (all) | 46 | 14,669 | 27.0% |
+| api/ | 11 | 2,152 | 4.0% |
+| stores/ + store/ | 3 + 1 | 1,693 | 3.1% |
+| types/ | 4 | 1,297 | 2.4% |
+| utils/ + lib/ | 2 | 340 | 0.6% |
 
 ### Top 10 Largest Frontend Files
 
@@ -570,7 +576,7 @@ graph TB
 
 | System | Event Types | Location |
 |--------|-------------|----------|
-| Pipeline SSE | 14 | integrations/hybrid/orchestrator/sse_events.py |
+| Pipeline SSE | 13 | integrations/hybrid/orchestrator/sse_events.py |
 | AG-UI Protocol | 11 | integrations/ag_ui/events/ |
 | Swarm Events | 9 | integrations/swarm/events/ |
 | Routing Contracts | 6 enums + 2 models | integrations/orchestration/contracts.py |
@@ -582,16 +588,16 @@ graph TB
 
 | Category | Files | Coverage Target |
 |----------|-------|-----------------|
-| Backend Unit Tests | 289 | 80% fail_under |
-| Backend Integration Tests | 28 | — |
-| Backend E2E Tests | 25 | — |
-| Backend Security Tests | 4 | — |
-| Backend Performance Tests | 10 | — |
-| Backend Load Tests | 1 | — |
-| Backend Mocks | 3 | — |
-| Backend Root (conftest etc.) | 1 | — |
+| Backend Unit Tests | 345 | 80% fail_under |
+| Backend Integration Tests | 43 | — |
+| Backend E2E Tests | 29 | — |
+| Backend Security Tests | 5 | — |
+| Backend Performance Tests | 13 | — |
+| Backend Load Tests | 2 | — |
+| Backend Mocks | 4 | — |
+| Backend Root (conftest etc.) | 2 | — |
 | Frontend Unit Tests | 13 (12 swarm + 1 store) | — |
-| **Total Test Files** | **374** (361 backend + 13 frontend) | |
+| **Total Test Files** | **456** (443 backend + 13 frontend) | |
 
 ---
 
@@ -630,6 +636,6 @@ graph TB
 | Phases | 1-34 | 1-44 | +10 phases |
 | Sprints | ~133 | ~152 | +19 sprints |
 | Source Files | 939 | 1,029 | +90 files |
-| LOC | ~160K | ~328K | +168K LOC (src 85K + tests 186K + frontend 54K + misc 3K) |
+| LOC (source only) | ~160K | ~328K (273K backend + 54K frontend) | +168K LOC |
 | Features Tracked | 70+15 | TBD (V9 analysis) | — |
 | Issues Tracked | 62 | TBD (V9 analysis) | — |

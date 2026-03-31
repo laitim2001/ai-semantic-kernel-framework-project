@@ -60,10 +60,10 @@ IPA Platform employs a 6-layer Defense-in-Depth architecture. Each layer address
 |  |  第三層: PromptGuard 提示注入防護                                      |      |
 |  |  +---------------------------------------------------------------+   |      |
 |  |  |  core/security/prompt_guard.py (Phase 36)                      |   |      |
-|  |  |  L1: 17 regex 輸入過濾 + 2 XSS 逃逸偵測                       |   |      |
+|  |  |  L1: 19 regex 輸入過濾 + 2 XSS 逃逸偵測                       |   |      |
 |  |  |  L2: <user_message> 標籤隔離系統提示                           |   |      |
 |  |  |  L3: 工具呼叫白名單 + 參數注入掃描                             |   |      |
-|  |  |  + ToolSecurityGateway: 17 額外注入模式 (SQL/Code/Prompt)      |   |      |
+|  |  |  + ToolSecurityGateway: 18 額外注入模式 (SQL/Code/Prompt)      |   |      |
 |  |  +---------------------------------------------------------------+   |      |
 |  +--------------------------------------+-------------------------------+      |
 |                                         | [ok] 輸入已淨化                       |
@@ -95,7 +95,7 @@ IPA Platform employs a 6-layer Defense-in-Depth architecture. Each layer address
 |  |  第六層: Audit Trail 稽核軌跡                                          |      |
 |  |  +---------------------------------------------------------------+   |      |
 |  |  |  mcp/security/audit.py + redis_audit.py                        |   |      |
-|  |  |  AuditLogger: 12 事件類型 (5 類別)                             |   |      |
+|  |  |  AuditLogger: 12 事件類型 (4 類別)                             |   |      |
 |  |  |  3 儲存後端: InMemory (dev) / File (簡易) / Redis (生產)       |   |      |
 |  |  |  敏感欄位自動遮蔽 (password, secret, token, api_key 等)        |   |      |
 |  |  |  + orchestration/audit/logger.py -- 路由決策稽核               |   |      |
@@ -250,7 +250,7 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |     v                                                                   |
 |  +-- L1: Input Filtering ------------------------------------------+   |
 |  |  sanitize_input()                                                |   |
-|  |  17 regex patterns:                                              |   |
+|  |  19 regex patterns:                                              |   |
 |  |    +-- 角色混淆 (7 patterns):                                    |   |
 |  |    |    "ignore previous instructions"                           |   |
 |  |    |    "you are now [role]"                                     |   |
@@ -267,8 +267,10 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |  |    |    "repeat the system prompt"                               |   |
 |  |    |    "show me your instructions"                              |   |
 |  |    |    "what are your rules"                                    |   |
-|  |    +-- XSS 逃逸 (2 patterns):                                    |   |
-|  |         HTML entity encoding, unicode escapes                    |   |
+|  |    +-- 程式碼注入 (2 patterns):                                   |   |
+|  |    |    template interpolation ({{}}), variable interpolation (${}) |   |
+|  |    +-- XSS 逃逸 (2 escape patterns, 獨立於 19 個注入 regex):      |   |
+|  |         script tags, javascript: protocol                        |   |
 |  +--------------------------------------+---------------------------+   |
 |                                         v                               |
 |  +-- L2: System Prompt Isolation -----------------------------------+   |
@@ -285,7 +287,7 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |  +------------------------------------------------------------------+   |
 |                                                                         |
 |  +-- Additional: ToolSecurityGateway (tool_gateway.py) -------------+   |
-|  |  第二道獨立注入掃描 (17 additional patterns):                    |   |
+|  |  第二道獨立注入掃描 (18 additional patterns):                    |   |
 |  |    +-- SQL injection: "; DROP TABLE", "UNION SELECT", "OR 1=1"   |   |
 |  |    +-- Code injection: "exec(", "eval(", "__import__("           |   |
 |  |    +-- Prompt injection: "IGNORE PREVIOUS", "SYSTEM OVERRIDE"    |   |
@@ -302,7 +304,7 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 | Class | File | LOC | Responsibility |
 |-------|------|-----|----------------|
 | `PromptGuard` | `core/security/prompt_guard.py` | ~300 | 3-layer input defense (sanitize, wrap, validate tool calls) |
-| `ToolSecurityGateway` | `core/security/tool_gateway.py` | ~500 | Second injection scan (17 SQL/code/prompt patterns) + rate limiting |
+| `ToolSecurityGateway` | `core/security/tool_gateway.py` | ~500 | Second injection scan (18 SQL/code/prompt patterns) + rate limiting |
 
 ### Assessment
 
@@ -335,12 +337,13 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |                |        (0)          |  完全禁止                        |
 |                +---------------------+                                  |
 |                                                                         |
-|  Tool Permission Distribution (69 tools across 9 servers):              |
+|  Tool Permission Distribution (69 tools with RBAC across 9 servers):    |
+|  (+ 1 unassigned get_shell_info = 70 ToolSchema total)                  |
 |                                                                         |
 |  +----------+------+---------+-------+-------+                         |
 |  | Server   | READ | EXECUTE | ADMIN | Total |                         |
 |  +----------+------+---------+-------+-------+                         |
-|  | Azure    |  18  |    1    |   4   |  23   |                         |
+|  | Azure    |  19  |    1    |   3   |  23   |                         |
 |  | Filesys. |   4  |    1    |   1   |   6   |                         |
 |  | Shell    |   0  |    0    |   2   |   2   |                         |
 |  | LDAP     |   5  |    1    |   0   |   6   |                         |
@@ -350,8 +353,11 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 |  | ADF      |   6  |    1    |   1   |   8   |                         |
 |  | D365     |   4  |    2    |   0   |   6   |                         |
 |  +----------+------+---------+-------+-------+                         |
-|  | Total    |  44  |   13    |  12   |  69   |                         |
+|  | Total    |  45  |   13    |  11   |  69   |                         |
 |  +----------+------+---------+-------+-------+                         |
+|                                                                         |
+|  NOTE: ServiceNow 位於 mcp/servicenow_*.py (非 mcp/servers/ 子目錄)    |
+|  NOTE: Shell get_shell_info 有 ToolSchema 但無 PERMISSION_LEVELS 設定  |
 |                                                                         |
 +------------------------------------------------------------------------+
 ```
@@ -486,11 +492,11 @@ The platform maintains **3 independent RBAC implementations** that are NOT integ
 
 ## 7. Layer 6: Audit Trail
 
-### MCP AuditLogger -- 13 Event Types
+### MCP AuditLogger -- 12 Event Types
 
 ```
 +------------------------------------------------------------------------+
-|  稽核事件分類 (4 Categories, 13 Event Types)                            |
+|  稽核事件分類 (4 Categories, 12 Event Types)                            |
 +------------------------------------------------------------------------+
 |                                                                         |
 |  +-- Connection (連線) -----------------------------------------+      |

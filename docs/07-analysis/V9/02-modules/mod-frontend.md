@@ -713,7 +713,7 @@ interface SwarmState {
 
 **Predictive State types**: `PredictionResult`, `PredictionConfig`, `OptimisticUpdateRequest`, `OptimisticState<T>`
 
-**AG-UI Event types**: `AGUIEventType` (15 event types), `BaseAGUIEvent`, `StateSnapshotEvent`, `StateDeltaEvent`, `CustomEvent`
+**AG-UI Event types**: `AGUIEventType` (16 event types), `BaseAGUIEvent`, `StateSnapshotEvent`, `StateDeltaEvent`, `CustomEvent`
 
 **Core types**: `ChatMessage`, `ToolCallState`, `ToolCallStatus`, `RiskLevel`, `PendingApproval`, `ApprovalStatus`, `ToolDefinition`, `RunAgentInput`, `SSEConnectionStatus`, `RunStatus`, `AGUIRunState`, `MessageRole`, `GeneratedFile`, `PipelineToolCall`, `OrchestrationMetadata`
 

@@ -266,6 +266,13 @@ The following variables appear in `backend/.env.example` but are **not** defined
 | `WORKING_MEMORY_TTL` | `1800` | Working memory TTL (30 min) |
 | `SESSION_MEMORY_TTL` | `604800` | Session memory TTL (7 days) |
 
+**Discrepancy**: Three mem0 variables have code defaults (in `integrations/memory/types.py`) that differ from `backend/.env.example`:
+- `EMBEDDING_MODEL`: `.env.example` = `text-embedding-3-small`; code default = `text-embedding-3-large` (dims 3072)
+- `MEMORY_LLM_PROVIDER`: `.env.example` = `anthropic`; code default = `azure_openai`
+- `MEMORY_LLM_MODEL`: `.env.example` = `claude-sonnet-4-20250514`; code default = `gpt-5.2` (via `AZURE_OPENAI_DEPLOYMENT_NAME` fallback)
+
+These should be aligned. The `.env.example` reflects the Anthropic-based setup while the code defaults assume Azure OpenAI.
+
 #### LDAP / Active Directory (Sprint 114)
 
 | Variable | Default | Description |
@@ -791,33 +798,34 @@ See Section 2.5 above for full details. Key points:
 | 4 | **MEDIUM** | Azure OpenAI version drift | Three different default values across root `.env.example`, `backend/.env.example`, and `config.py`. | Align all to single authoritative default (recommend `config.py` as source of truth). |
 | 5 | **LOW** | `httpx` listed twice in requirements.txt | HTTP Client section and Testing section both list `httpx>=0.26.0`. | Remove duplicate entry. |
 | 6 | **LOW** | Dev/test deps mixed with production in requirements.txt | No separation between production and dev dependencies. | Split into `requirements.txt` (prod) and `requirements-dev.txt` (dev/test). |
+| 7 | **MEDIUM** | mem0 config defaults mismatch between `.env.example` and code | `EMBEDDING_MODEL` (.env=`text-embedding-3-small`, code=`text-embedding-3-large`), `MEMORY_LLM_PROVIDER` (.env=`anthropic`, code=`azure_openai`), `MEMORY_LLM_MODEL` (.env=`claude-sonnet-4-20250514`, code=`gpt-5.2`). | Align `.env.example` to match code defaults, or vice versa. Document which is authoritative. |
 
 ### 6.2 Docker Issues
 
 | # | Severity | Issue | Details | Recommendation |
 |---|----------|-------|---------|----------------|
-| 7 | **MEDIUM** | Production ports exposed externally | `docker-compose.prod.yml` exposes PostgreSQL 5432 and Redis 6379 to host. | Remove host port mappings for DB/Redis in production; only expose via internal network. |
-| 8 | **LOW** | Gunicorn workers hardcoded in Dockerfile | Dockerfile CMD uses `-w 4` but `ServerConfig` calculates dynamically. | Use `ServerConfig` via `__main__` block or env-based worker count in CMD. |
-| 9 | **LOW** | No `.dockerignore` verified | Large context may include unnecessary files. | Ensure `.dockerignore` excludes `tests/`, `docs/`, `*.md`, `.git/`, `__pycache__/`. |
+| 8 | **MEDIUM** | Production ports exposed externally | `docker-compose.prod.yml` exposes PostgreSQL 5432 and Redis 6379 to host. | Remove host port mappings for DB/Redis in production; only expose via internal network. |
+| 9 | **LOW** | Gunicorn workers hardcoded in Dockerfile | Dockerfile CMD uses `-w 4` but `ServerConfig` calculates dynamically. | Use `ServerConfig` via `__main__` block or env-based worker count in CMD. |
+| 10 | **LOW** | No `.dockerignore` verified | Large context may include unnecessary files. | Ensure `.dockerignore` excludes `tests/`, `docs/`, `*.md`, `.git/`, `__pycache__/`. |
 
 ### 6.3 CI/CD Issues
 
 | # | Severity | Issue | Details | Recommendation |
 |---|----------|-------|---------|----------------|
-| 10 | **MEDIUM** | Node version mismatch | `e2e-tests.yml` uses Node 18; `ci.yml` uses Node 20; Dockerfile uses Node 20. | Standardize on Node 20 across all workflows and Dockerfile. |
-| 11 | **MEDIUM** | Load test job is no-op | `e2e-tests.yml` load test just echoes a message. | Either implement actual staging load test or remove the job. |
-| 12 | **LOW** | ACR push not implemented | `ci.yml` build job has commented-out ACR push. | Implement or remove TODO comment. |
-| 13 | **LOW** | `actions/create-release@v1` is deprecated | GitHub recommends using `softprops/action-gh-release` or v2. | Upgrade to maintained action. |
+| 11 | **MEDIUM** | Node version mismatch | `e2e-tests.yml` uses Node 18; `ci.yml` uses Node 20; Dockerfile uses Node 20. | Standardize on Node 20 across all workflows and Dockerfile. |
+| 12 | **MEDIUM** | Load test job is no-op | `e2e-tests.yml` load test just echoes a message. | Either implement actual staging load test or remove the job. |
+| 13 | **LOW** | ACR push not implemented | `ci.yml` build job has commented-out ACR push. | Implement or remove TODO comment. |
+| 14 | **LOW** | `actions/create-release@v1` is deprecated | GitHub recommends using `softprops/action-gh-release` or v2. | Upgrade to maintained action. |
 
 ### 6.4 Security Observations
 
 | # | Severity | Issue | Details | Recommendation |
 |---|----------|-------|---------|----------------|
-| 14 | **HIGH** | Secret validation only checks specific unsafe values | `validate_security_settings()` checks against a hardcoded set of unsafe strings. | Add minimum length requirement (e.g., 32+ chars) for production secrets. |
-| 15 | **MEDIUM** | Redis password defaults differ | Root `.env.example` has `redis_password`; `backend/.env.example` has empty; Docker Compose defaults to `redis_password`. | Align all examples to same default. |
-| 15b | **LOW** | Grafana password defaults differ | Root `.env.example` has `admin`; `backend/.env.example` and Docker Compose default to `please-change-me`. | Align all examples to same default (`please-change-me`). |
-| 16 | **MEDIUM** | Missing `Content-Security-Policy` header | Nginx config has basic security headers but no CSP. | Add CSP header appropriate for SPA. |
-| 17 | **LOW** | `X-XSS-Protection` is deprecated | Modern browsers have removed this feature. | Replace with `Content-Security-Policy` directives. |
+| 15 | **HIGH** | Secret validation only checks specific unsafe values | `validate_security_settings()` checks against a hardcoded set of unsafe strings. | Add minimum length requirement (e.g., 32+ chars) for production secrets. |
+| 16 | **MEDIUM** | Redis password defaults differ | Root `.env.example` has `redis_password`; `backend/.env.example` has empty; Docker Compose defaults to `redis_password`. | Align all examples to same default. |
+| 16b | **LOW** | Grafana password defaults differ | Root `.env.example` has `admin`; `backend/.env.example` and Docker Compose default to `please-change-me`. | Align all examples to same default (`please-change-me`). |
+| 17 | **MEDIUM** | Missing `Content-Security-Policy` header | Nginx config has basic security headers but no CSP. | Add CSP header appropriate for SPA. |
+| 18 | **LOW** | `X-XSS-Protection` is deprecated | Modern browsers have removed this feature. | Replace with `Content-Security-Policy` directives. |
 
 ### 6.5 Summary Statistics
 
