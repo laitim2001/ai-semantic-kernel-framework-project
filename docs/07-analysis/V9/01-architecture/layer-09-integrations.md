@@ -194,7 +194,7 @@ flowchart TD
 | `worker_executor.py` | ~403 | Phase 43: Individual worker execution with function calling |
 | `events/__init__.py` | ~10 | Event sub-package exports |
 | `events/types.py` | ~443 | 9 event payload dataclasses |
-| `events/emitter.py` | ~634 | SwarmEventEmitter with 100ms throttling |
+| `events/emitter.py` | ~634 | SwarmEventEmitter with 200ms throttling |
 
 ### Architecture
 

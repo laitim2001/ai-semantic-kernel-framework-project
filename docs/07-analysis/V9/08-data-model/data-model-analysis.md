@@ -71,11 +71,10 @@
 
 ```mermaid
 erDiagram
-    users ||--o{ agents : "creates"
     users ||--o{ sessions : "owns"
     users ||--o{ workflows : "creates"
 
-    agents ||--o{ sessions : "assigned to"
+    agents }o..o{ sessions : "referenced by (NO FK)"
     agents {
         uuid id PK
         string name

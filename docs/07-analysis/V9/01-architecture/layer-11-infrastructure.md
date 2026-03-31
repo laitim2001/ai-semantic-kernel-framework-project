@@ -672,11 +672,11 @@ Central coordinator with thread-safe provider management (asyncio.Lock):
 
 | Layer | Function | Mechanism |
 |-------|----------|-----------|
-| **L1: Input Filtering** | `sanitize_input()` | 18 regex patterns detecting role confusion, boundary escape, data exfiltration, code injection. Replaces matches with `[FILTERED]`/`[ESCAPED]`. Max input 4000 chars. |
+| **L1: Input Filtering** | `sanitize_input()` | 19 regex patterns detecting role confusion, boundary escape, data exfiltration, code injection. Replaces matches with `[FILTERED]`/`[ESCAPED]`. Max input 4000 chars. |
 | **L2: System Prompt Isolation** | `wrap_user_input()` | Wraps in `<user_message>...</user_message>` tags after sanitization |
 | **L3: Tool Call Validation** | `validate_tool_call()` | Whitelist check + arg key safety (alphanumeric+underscore) + arg value injection check |
 
-**Pattern Categories**: `role_confusion` (7 patterns), `boundary_escape` (6 patterns), `exfiltration` (3 patterns), `code_injection` (2 patterns), `xss` (2 escape patterns)
+**Pattern Categories**: `role_confusion` (7 patterns), `boundary_escape` (7 patterns), `exfiltration` (3 patterns), `code_injection` (2 patterns), `xss` (2 escape patterns)
 
 ### 7.4 ToolSecurityGateway (4-Layer Defense)
 
@@ -684,7 +684,7 @@ Central coordinator with thread-safe provider management (asyncio.Lock):
 
 | Layer | Function | Mechanism |
 |-------|----------|-----------|
-| **L1: Input Sanitization** | `_sanitize_params()` | 17 regex patterns (SQL injection, XSS, prompt injection, code execution). Recursive validation of dicts/lists. Max param value 10,000 chars. |
+| **L1: Input Sanitization** | `_sanitize_params()` | 18 regex patterns (SQL injection, XSS, prompt injection, code execution). Recursive validation of dicts/lists. Max param value 10,000 chars. |
 | **L2: Permission Check** | `_check_permission()` | Role-based tool whitelist. Admin = empty frozenset (all allowed). |
 | **L3: Rate Limiting** | `_check_rate_limit()` | In-memory sliding window per user per tool. Default: 30/min, high-risk: 5/min. High-risk tools: `dispatch_workflow`, `dispatch_swarm`. |
 | **L4: Audit Logging** | `_audit_log()` | Structured logging of every tool call with allowed/denied status. |

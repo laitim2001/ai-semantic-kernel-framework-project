@@ -443,7 +443,7 @@ Phase 43 represents a qualitative upgrade for the Swarm system. V8 documented a 
 - **Status**: COMPLETE
 - **Implementation files**:
   - `mcp/security/permissions.py` (458 LOC) — 4-level RBAC (NONE/READ/EXECUTE/ADMIN), glob patterns, priority-based evaluation, deny-first
-  - `mcp/security/permission_checker.py` (182 LOC) — PermissionChecker
+  - `mcp/security/permission_checker.py` (182 LOC) — MCPPermissionChecker
   - `mcp/security/audit.py` (686 LOC) — MCP audit logging
   - `mcp/security/command_whitelist.py` (224 LOC) — Shell command whitelist
   - `mcp/security/redis_audit.py` (225 LOC) — Redis-backed audit persistence
@@ -506,7 +506,7 @@ All 4 security features remain COMPLETE. V9 notes that Phase 36 (Sprint 109) add
 | J19 | Swarm Worker Roles | 43 | S148 | COMPLETE | `integrations/swarm/worker_roles.py` (91 LOC) — 5 specialist roles (network, db, app, security, general) with ZH-TW system prompts and tool whitelists | 91 |
 | J20 | MagenticBuilder Multi-Model | 44 | S17+ | COMPLETE | `agent_framework/builders/magentic.py` (1,810 LOC) — MagenticBuilderAdapter wrapping official MagenticBuilder. Dynamic planning, task/progress ledger, human intervention (PLAN_REVIEW, TOOL_APPROVAL, STALL). Imports from `agent_framework.orchestrations` | 1,810 |
 | J21 | Security Audit Report | 36 | S109 | COMPLETE | `core/security/audit_report.py` (466 LOC) — Structured security audit report generation | 466 |
-| J22 | RBAC Utility | 35 | S111 | PARTIAL | `core/security/rbac.py` (153 LOC) — UserRole enum + permission checking utility. **NOT wired** into auth middleware | 153 |
+| J22 | RBAC Utility | 35 | S111 | PARTIAL | `core/security/rbac.py` (153 LOC) — Role enum (ADMIN/OPERATOR/VIEWER) + RBACManager permission checking utility. **NOT wired** into auth middleware | 153 |
 
 ### Per-Feature Detail (Key New Features)
 

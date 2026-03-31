@@ -510,14 +510,14 @@ The `InMemoryConversationMemoryStore` is the most characteristic file in the dep
 
 ### 4.3 Deprecation Status
 
-**The module is marked DEPRECATED in CLAUDE.md** but:
+**The module is marked DEPRECATED in CLAUDE.md**:
 - All 22 files are still present and importable
-- No deprecation warnings in code (unlike `checkpoints/service.py` which has `warnings.warn()`)
-- `__init__.py` files still export symbols
+- ~~No deprecation warnings in code~~ **[V9-CORRECTED]** All 5 `__init__.py` files DO emit `warnings.warn(DeprecationWarning)` — root `orchestration/__init__.py`, `planning/__init__.py`, `multiturn/__init__.py`, `memory/__init__.py`, `nested/__init__.py`
+- `__init__.py` files still export symbols (alongside the deprecation warning)
 - No redirect imports pointing to replacements
-- **Still reachable** from any code that imports from `src.domain.orchestration`
+- **Still reachable** from any code that imports from `src.domain.orchestration` (but will trigger DeprecationWarning)
 
-**Risk**: New developers may accidentally use deprecated orchestration code instead of the official MAF adapters in `integrations/agent_framework/`.
+**Risk**: Reduced after deprecation warnings were added, but new developers should still be directed to MAF adapters in `integrations/agent_framework/`.
 
 ---
 
@@ -888,7 +888,7 @@ No actual circular imports detected. The codebase uses:
 |---|-------|----------|--------|
 | H1 | **Dual event system** with overlapping concerns, no bridge | `events.py` | ExecutionEvents (client) and SessionEvents (internal) independently track tool call state |
 | H2 | **7 modules InMemory-only** in production domain layer | audit, learning, routing, versioning, devtools, sessions/metrics, orchestration/memory | Data loss on restart; no multi-instance support |
-| H3 | **orchestration/ DEPRECATED but reachable** — no runtime warnings | `orchestration/` (22 files) | Developers may accidentally use deprecated code |
+| ~~H3~~ | ~~**orchestration/ DEPRECATED but reachable** — no runtime warnings~~ | ~~`orchestration/` (22 files)~~ | **[V9-CORRECTED]** All 5 `__init__.py` files DO emit `DeprecationWarning`. Issue removed. |
 | H4 | **SessionService.approve_tool_call()** is event-only | `service.py:507-531` | Publishes event but does not mutate ToolCall state; real approval lives in Redis |
 | H5 | **MCP tool schemas not advertised** to LLM | `tool_handler.py:652` | LLM cannot initiate MCP tool calls via function calling |
 
@@ -951,9 +951,9 @@ Create a `tool_approvals` PostgreSQL table and modify `ToolApprovalManager` to w
 
 Create an `EventBridge` that translates between `ExecutionEvent` and `SessionEvent`. When an `ExecutionEvent.TOOL_CALL` fires, automatically publish `SessionEventType.TOOL_CALL_REQUESTED`. This resolves issue H1.
 
-### Priority 4: Add Deprecation Warnings to orchestration/
+### ~~Priority 4: Add Deprecation Warnings to orchestration/~~ **[V9-CORRECTED: ALREADY DONE]**
 
-Add `warnings.warn(DeprecationWarning)` to all `orchestration/` module `__init__.py` files, following the pattern already established in `checkpoints/service.py`. This resolves issue H3.
+~~Add `warnings.warn(DeprecationWarning)` to all `orchestration/` module `__init__.py` files.~~ All 5 `__init__.py` files already have `warnings.warn(DeprecationWarning)`. Issue H3 was factually incorrect; this recommendation is no longer needed.
 
 ### Priority 5: Migrate InMemory Modules
 
@@ -986,7 +986,7 @@ Note: There are **two different `MCPClientProtocol`** definitions — one in `ex
 | `_agent_service` | `agents/service.py` | `get_agent_service()` | N/A |
 | `_registry_instance` | `agents/tools/registry.py` | `get_tool_registry()` | `reset_tool_registry()` |
 | `_event_publisher` | `sessions/events.py` | `get_event_publisher()` | `reset_event_publisher()` |
-| `_workflow_execution_service` | `workflows/service.py` | `get_workflow_execution_service()` | `reset_workflow_execution_service()` |
+| `_workflow_execution_service` + `_workflow_execution_service_official` | `workflows/service.py` | `get_workflow_execution_service(use_official_api)` | `reset_workflow_execution_service()` |
 | `_detector` | `workflows/deadlock_detector.py` | `get_deadlock_detector()` | `reset_deadlock_detector()` |
 
 All singletons follow the same pattern: module-level `Optional[T] = None` with a `get_*()` function that lazily initializes. Most have a `reset_*()` for testing.

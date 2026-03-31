@@ -292,7 +292,7 @@ The frontend has **two independent SSE implementations** that coexist. Both use 
 | **LOC** | 212 lines in useSSEChat.ts |
 | **Abort** | `AbortController` for cancellation |
 
-> **Note**: The only hooks using browser-native `new EventSource()` are: `useDevToolsStream.ts`, `useSharedState.ts`, `useSwarmReal.ts`.
+> **Note**: The only hooks using browser-native `new EventSource()` are: `useDevToolsStream.ts`, `useOrchestratorChat.ts`, `useSharedState.ts`, `useSwarmReal.ts`.
 
 ### 7.3 Selection Logic
 
@@ -627,4 +627,5 @@ App.tsx
 *Initial analysis conducted on 2026-03-29 based on source reading of 14 key files.*
 *R4 update on 2026-03-29: Full source reading of all 210 non-test files. File counts verified and corrected.*
 *R5 update on 2026-03-31: V9 deep semantic name verification (50-point). Fixed: TaskProgressCard missing from hierarchy and core count (27->28), ag-ui barrel description (no top-level barrel), endpoint index barrel count (7->8 modules).*
+*R6 update on 2026-03-31: V9 deep semantic behavior verification (50-point). Fixed: EventSource hook list missing useOrchestratorChat.ts (3->4 hooks). All other behavioral descriptions verified correct.*
 *V9 Layer 01 -- Frontend Architecture Report*

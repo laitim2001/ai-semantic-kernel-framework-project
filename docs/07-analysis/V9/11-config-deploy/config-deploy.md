@@ -51,46 +51,56 @@
 │                                                  ↓                          │
 │  ② Docker Compose 服務拓撲                                                 │
 │  ┌──────────────────────────────────────────────────────────────┐          │
-│  │                    docker-compose.yml                         │          │
+│  │              docker-compose.yml (Dev Infra)                   │          │
 │  │                                                              │          │
-│  │  ┌─────────┐  ┌─────────┐  ┌──────────┐  ┌──────────┐      │          │
-│  │  │Backend  │  │Frontend │  │PostgreSQL│  │  Redis   │      │          │
-│  │  │:8000    │  │:3005    │  │:5432     │  │:6379     │      │          │
-│  │  │FastAPI  │  │Vite/Nginx│  │ v16      │  │  v7      │      │          │
-│  │  └────┬────┘  └────┬────┘  └──────────┘  └──────────┘      │          │
-│  │       │            │                                         │          │
-│  │  ┌────┴────────────┴─────────────────────────────┐          │          │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                  │          │
+│  │  │PostgreSQL│  │  Redis   │  │ RabbitMQ │                  │          │
+│  │  │:5432     │  │:6379     │  │:5672     │                  │          │
+│  │  │ v16      │  │  v7      │  │:15672 UI │                  │          │
+│  │  └──────────┘  └──────────┘  └──────────┘                  │          │
+│  │  + monitoring profile: Jaeger, Prometheus, Grafana           │          │
+│  │  ┌───────────────────────────────────────────────┐          │          │
 │  │  │              ipa-network (bridge)              │          │          │
 │  │  └───────────────────────────────────────────────┘          │          │
-│  │                                                              │          │
-│  │  ┌──────────┐  (docker-compose.prod.yml 額外)               │          │
-│  │  │ RabbitMQ │                                                │          │
-│  │  │:5672     │                                                │          │
-│  │  │:15672 UI │                                                │          │
-│  │  └──────────┘                                                │          │
 │  └──────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │              docker-compose.prod.yml (Production)             │          │
+│  │                                                              │          │
+│  │  ┌─────────┐  ┌─────────┐  ┌──────────┐  ┌──────────┐      │          │
+│  │  │Backend  │→ │Frontend │  │PostgreSQL│  │  Redis   │      │          │
+│  │  │:8000    │  │:80      │  │:5432     │  │:6379     │      │          │
+│  │  │Gunicorn │  │ Nginx   │  │ v16      │  │  v7      │      │          │
+│  │  └────┬────┘  └────┬────┘  └──────────┘  └──────────┘      │          │
+│  │       │            │       (No RabbitMQ — uses Azure SB)     │          │
+│  │  ┌────┴────────────┴─────────────────────────────┐          │          │
+│  │  │            ipa-prod-network (bridge)           │          │          │
+│  │  └───────────────────────────────────────────────┘          │          │
+│  └──────────────────────────────────────────────────────────────┘          │
+│                                                                             │
+│  Dev 模式: Backend (uvicorn :8000) + Frontend (Vite :3005) 原生執行         │
 │                                                                             │
 │  ③ CI/CD 管線 (.github/workflows/)                                         │
 │  ┌──────────────────────────────────────────────────────────────┐          │
 │  │                                                              │          │
 │  │  Push/PR ──→ ci.yml (253 LOC)                               │          │
 │  │              │                                               │          │
-│  │              ├─→ Lint (black, isort, flake8, ESLint)        │          │
-│  │              ├─→ Unit Tests (pytest)                         │          │
-│  │              ├─→ Type Check (mypy)                           │          │
-│  │              └─→ Build Check (frontend build)               │          │
+│  │              ├─→ Lint (black, isort, ruff, mypy)            │          │
+│  │              ├─→ Unit Tests (pytest + coverage)              │          │
+│  │              ├─→ Frontend (ESLint, tsc, build)              │          │
+│  │              └─→ Build Docker Images (main only)            │          │
 │  │                                                              │          │
-│  │  PR Merge ──→ e2e-tests.yml (198 LOC)                       │          │
+│  │  Push/PR ──→ e2e-tests.yml (198 LOC)                         │          │
 │  │              │                                               │          │
-│  │              ├─→ Docker Compose Up                          │          │
-│  │              ├─→ Integration Tests                          │          │
-│  │              └─→ Playwright E2E Tests                       │          │
+│  │              ├─→ Backend E2E (pytest tests/e2e/)            │          │
+│  │              ├─→ Frontend E2E (Playwright, Chromium)        │          │
+│  │              └─→ Load Tests (placeholder)                   │          │
 │  │                                                              │          │
-│  │  Tag Push ──→ deploy-production.yml (297 LOC)               │          │
+│  │  Main Push / Manual ──→ deploy-production.yml (297 LOC)     │          │
 │  │              │                                               │          │
-│  │              ├─→ Build Docker Images                        │          │
-│  │              ├─→ Push to Registry                           │          │
-│  │              └─→ Deploy to K8s/AKS                          │          │
+│  │              ├─→ Build + Push to ACR                        │          │
+│  │              ├─→ Deploy to Staging (slot)                   │          │
+│  │              └─→ Swap to Production (blue-green)            │          │
 │  │                                                              │          │
 │  └──────────────────────────────────────────────────────────────┘          │
 │                                                                             │

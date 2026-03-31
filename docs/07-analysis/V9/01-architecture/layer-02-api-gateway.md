@@ -755,8 +755,8 @@ Auth, files, memory, sandbox, cache, knowledge, versioning, prompts, learning, a
 | POST | `/auth/register` | Public | auth | Register user |
 | POST | `/auth/login` | Public | auth | Login (get JWT) |
 | POST | `/auth/refresh` | Public | auth | Refresh token |
-| GET | `/auth/me` | Public | auth | Get current user |
-| POST | `/auth/migrate` | Public | auth/migration | Migrate guest data |
+| GET | `/auth/me` | JWT* | auth | Get current user |
+| POST | `/auth/migrate-guest` | JWT* | auth/migration | Migrate guest data |
 | **Files** (6 endpoints) | | | | |
 | POST | `/files/` | JWT | files | Upload file |
 | GET | `/files/` | JWT | files | List files |
@@ -970,8 +970,8 @@ Applied in order (outermost first):
 
 1. **RequestIdMiddleware** (Sprint 122) — Adds `X-Request-ID` header
 2. **CORSMiddleware** — Configurable origins via settings
-3. **RateLimitMiddleware** (Sprint 111) — slowapi-based rate limiting
-4. **Global Exception Handler** — Environment-aware error responses
+3. **Global Exception Handler** — Environment-aware error responses
+4. **RateLimit** (Sprint 111) — slowapi decorator-based, per-route rate limiting with global exception handler (not a traditional ASGI middleware layer)
 
 ---
 
@@ -1074,7 +1074,7 @@ Phase 38:    591 endpoints  (final count including n8n/orchestrator/tasks/knowle
 | **Total endpoints** | **591** (587 REST + 4 WebSocket, Wave 47 verified) — 588 route-file + 3 main.py |
 | WebSocket endpoints | 4 (concurrent x2, sessions x1, groupchat x1) |
 | SSE streaming endpoints | 5 (ag_ui, sessions/chat, swarm demo, orchestrator, claude_sdk autonomous) |
-| Public endpoints | 5 (auth) + 3 (health) = 8 |
+| Public endpoints | 5 (auth*) + 3 (health) = 8 — *`/me` and `/migrate-guest` enforce JWT via handler-level `Depends(get_current_user)` |
 | Protected endpoints | ~583 |
 | Largest module (endpoints) | planning (46) |
 | Second largest (endpoints) | groupchat (42) |
@@ -1082,7 +1082,7 @@ Phase 38:    591 endpoints  (final count including n8n/orchestrator/tasks/knowle
 | Phases spanning | Phase 1 through Phase 38 |
 | Authentication | JWT (two-layer: global guard + per-route user) |
 | Rate limiting | slowapi (Sprint 111) |
-| Middleware layers | 3 (RequestID, CORS, RateLimit) |
+| Middleware layers | 2 ASGI middleware (RequestID, CORS) + 1 decorator-based rate limiter (slowapi) |
 
 > **Wave 47 Verification Note** (2026-03-31): Endpoint count of 591 confirmed by
 > per-file `@router.*` / `@*_router.*` grep across 68 route files in `backend/src/api/v1/`
