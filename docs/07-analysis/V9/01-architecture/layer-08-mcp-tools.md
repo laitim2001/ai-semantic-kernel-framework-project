@@ -18,7 +18,7 @@
 | **Total LOC** | **20,847** (R4 verified via `wc -l`) |
 | **Phase Origin** | Phase 9-10 (core), Sprint 113 (security), Sprint 117 (ServiceNow), Sprint 120 (Redis audit), Sprint 129 (D365), later sprints (n8n, ADF) |
 | **Protocol** | JSON-RPC 2.0 over stdio, conforming to MCP Specification 2024-11-05 |
-| **Total Tools** | 70 tools across 9 MCP servers |
+| **Total Tools** | 69 tools across 9 MCP servers |
 | **External SDKs** | azure-identity, azure-mgmt-*, paramiko, ldap3, redis.asyncio, httpx (ServiceNow/n8n/D365) |
 
 ---
@@ -61,9 +61,9 @@
 │            │                                                                │
 │            ↓                                                                │
 │  ┌──────────────────────────────────────────────────────────────────┐       │
-│  │  9 MCP Tool Servers (70 tools total)                             │       │
+│  │  9 MCP Tool Servers (69 tools total)                             │       │
 │  │                                                                  │       │
-│  │  Azure(23)  Filesystem(6)  Shell(3)  SSH(6)  LDAP(6)            │       │
+│  │  Azure(23)  Filesystem(6)  Shell(2)  SSH(6)  LDAP(6)            │       │
 │  │  ServiceNow(6)  n8n(6)  D365(6)  ADF(8)                        │       │
 │  └──────────────────────────────────────────────────────────────────┘       │
 │                                                                             │
@@ -272,7 +272,7 @@ stateDiagram-v2
 +-------------------------------+------------------------+--------------+
                                 |                        |
 +-------------------------------v------------------------v--------------+
-|                    9 MCP Servers (70 tools)                            |
+|                    9 MCP Servers (69 tools)                            |
 |                                                                       |
 |  +--------+ +--------+ +-------+ +------+ +-----+                    |
 |  | Azure  | |Filesys.| | Shell | | LDAP | | SSH |                    |
@@ -515,7 +515,7 @@ stateDiagram-v2
 | D365 | 4 | 2 | 0 | **6** |
 | **Total** | **44** | **13** | **12** | **69** |
 
-> **Note**: The task description states 70 tools total. The verified count from source code `PERMISSION_LEVELS` dicts is **69 tools**. The +1 difference may come from an unlisted tool or counting variant. For practical purposes, the layer provides ~70 tools.
+> **Note**: The verified count from source code `PERMISSION_LEVELS` dicts is **69 tools** across 9 servers.
 
 ---
 
@@ -762,7 +762,7 @@ Commands returning `"requires_approval"` only log a warning/info message. The pl
 | **Sprint ~127** | n8n Server | 6 tools (workflow management + run monitoring) |
 | **Sprint ~128** | ADF Server | 8 tools (pipeline management + run monitoring + datasets/triggers) |
 | **Sprint 129** | D365 Server | 6 tools (OData query + CRUD). Story 129-2 |
-| **Current** | 9 servers, ~70 tools | Full enterprise IT operations coverage |
+| **Current** | 9 servers, 69 tools | Full enterprise IT operations coverage |
 
 ### Evolution Timeline
 
@@ -775,7 +775,7 @@ Sprint ~127:  n8n (+6 tools = 55)                  -- Workflow automation
 Sprint ~128:  ADF (+8 tools = 63)                  -- Data pipeline management
 Sprint 129:   D365 (+6 tools = 69)                 -- CRM/ERP integration
 --------------------------------------------------------------
-Total:        9 servers, ~70 tools, 75 files, ~20K LOC
+Total:        9 servers, 69 tools, 75 files, ~20K LOC
 ```
 
 ---
@@ -876,4 +876,4 @@ This consistency enables automated server discovery, unified permission enforcem
 
 ---
 
-> **Analysis completed**: 2026-03-29 | 75 files read | 9 servers verified | 69-70 tools catalogued | 7 issues identified
+> **Analysis completed**: 2026-03-29 | 75 files read | 9 servers verified | 69 tools catalogued | 7 issues identified

@@ -102,7 +102,7 @@
 | `AttachmentType` | IMAGE, DOCUMENT, CODE, DATA, OTHER |
 | `ToolCallStatus` | PENDING, APPROVED, REJECTED, RUNNING, COMPLETED, FAILED |
 | `ExecutionEventType` | CONTENT, CONTENT_DELTA, TOOL_CALL, TOOL_RESULT, APPROVAL_REQUIRED, APPROVAL_RESPONSE, STARTED, DONE, ERROR, HEARTBEAT |
-| `SessionEventType` | 15 types: session lifecycle (6), message (3), tool_call (5), attachment (2), error (1) |
+| `SessionEventType` | 17 types: session lifecycle (6), message (3), tool_call (5), attachment (2), error (1) |
 
 #### State Machine
 

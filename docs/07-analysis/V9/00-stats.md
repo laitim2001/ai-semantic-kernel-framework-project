@@ -24,7 +24,7 @@ graph TB
         FE["React 18 + TypeScript<br/>236 files | 54,238 LOC (wc -l)"]
     end
     subgraph "Layer 2: API Gateway"
-        API["FastAPI<br/>153 files | 47,377 LOC<br/>575 endpoints"]
+        API["FastAPI<br/>153 files | 47,377 LOC<br/>566 endpoints"]
     end
     subgraph "Layer 3: AG-UI"
         AGUI["SSE Protocol<br/>27 files | 10,329 LOC"]
@@ -42,7 +42,7 @@ graph TB
         CLAUDE["Autonomous Engine<br/>48 files | 15,406 LOC"]
     end
     subgraph "Layer 8: MCP Tools"
-        MCP["9 Servers, 70 Tools<br/>73 files | 20,847 LOC"]
+        MCP["9 Servers, 69 Tools<br/>73 files | 20,847 LOC"]
     end
     subgraph "Layer 9: Integrations"
         INT["14 Sub-modules<br/>77 files | 22,604 LOC"]
@@ -94,7 +94,7 @@ graph TB
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
 │                                 │ Fetch API + SSE (port 3005 → 8000)               │
 │  ╔══════════════════════════════│════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (575 endpoints, 43 route modules)                      ║    │
+│  ║  Layer 2: API Gateway (566 endpoints, 43 route modules)                      ║    │
 │  ║  153 files | 47,377 LOC | FastAPI (port 8000)                                ║    │
 │  ║  Auth: JWT (HS256) + protected_router 全域保護                               ║    │
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
@@ -210,18 +210,18 @@ graph TB
 │                   └──────────────────┬────────────────────┘                             │
 │                                      │                                                  │
 │  ╔═══════════════════════════════════│══════════════════════════════════════════════╗   │
-│  ║                     Layer 8: 統一 MCP 工具層 (9 Servers, 70 Tools)               ║   │
+│  ║                     Layer 8: 統一 MCP 工具層 (9 Servers, 69 Tools)               ║   │
 │  ║                     73 files, 20,847 LOC                                         ║   │
 │  ╠═══════════════════════════════════│══════════════════════════════════════════════╣   │
 │  ║   ┌───────────────────────────────────────────────────────────────────────────┐  ║   │
 │  ║   │                         MCP Gateway Service                               │  ║   │
 │  ║   │   ┌─────────┐  ┌───────┐  ┌────────┐  ┌──────┐  ┌─────┐                 │  ║   │
 │  ║   │   │  Azure   │  │ Shell │  │Filesys │  │ SSH  │  │LDAP │                 │  ║   │
-│  ║   │   │ (10 tool)│  │(8 tl) │  │(8 tl)  │  │(8 tl)│  │(9tl)│                 │  ║   │
+│  ║   │   │(23 tool)│  │(2 tl) │  │(6 tl)  │  │(6 tl)│  │(6tl)│                 │  ║   │
 │  ║   │   └─────────┘  └───────┘  └────────┘  └──────┘  └─────┘                 │  ║   │
 │  ║   │   ┌─────────┐  ┌───────┐  ┌────────┐  ┌──────┐                           │  ║   │
 │  ║   │   │Srv.Now  │  │  n8n  │  │  D365  │  │ ADF  │  ← Phase 33-37 新增      │  ║   │
-│  ║   │   │(10 tool)│  │(6 tl) │  │(6 tl)  │  │(5 tl)│                           │  ║   │
+│  ║   │   │ (6 tool)│  │(6 tl) │  │(6 tl)  │  │(8 tl)│                           │  ║   │
 │  ║   │   └─────────┘  └───────┘  └────────┘  └──────┘                           │  ║   │
 │  ║   │   Security: 4-level RBAC (NONE/READ/EXECUTE/ADMIN)                        │  ║   │
 │  ║   │   CommandWhitelist: 24 blocked + 79 allowed                               │  ║   │
@@ -322,7 +322,7 @@ graph TB
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (575 endpoints, 43 route modules, 48 routers)         ║    │
+│  ║  Layer 2: API Gateway (566 endpoints, 43 route modules, 48 routers)         ║    │
 │  ║  153 files | 47,377 LOC | FastAPI (port 8000)                               ║    │
 │  ║  Auth: JWT (HS256) + protected_router | 31 auth endpoints (5.3%)            ║    │
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
@@ -410,15 +410,15 @@ graph TB
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 8: MCP Tool Layer (統一工具存取層)                                    ║    │
-│  ║  73 files, 20,847 LOC | 9 servers, 70 tools | 4-level RBAC                 ║    │
+│  ║  73 files, 20,847 LOC | 9 servers, 69 tools | 4-level RBAC                 ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    ║    │
 │  ║   │  Azure   │  │  Shell   │  │Filesystem│  │   SSH    │  │  LDAP   │    ║    │
-│  ║   │ (10 tool)│  │ (8 tool) │  │ (8 tool) │  │ (8 tool) │  │ (9 tool) │    ║    │
+│  ║   │(23 tool) │  │ (2 tool) │  │ (6 tool) │  │ (6 tool) │  │ (6 tool) │    ║    │
 │  ║   └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘    ║    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐                  ║    │
 │  ║   │Srv.Now   │  │   n8n    │  │   D365   │  │   ADF    │  (P33-37)       ║    │
-│  ║   │ (10 tool)│  │ (6 tool) │  │ (6 tool) │  │ (5 tool) │                  ║    │
+│  ║   │ (6 tool) │  │ (6 tool) │  │ (6 tool) │  │ (8 tool) │                  ║    │
 │  ║   └──────────┘  └──────────┘  └──────────┘  └──────────┘                  ║    │
 │  ║   Security: PromptGuard + ToolGateway + CommandWhitelist (P36)             ║    │
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │

@@ -304,7 +304,7 @@ sequenceDiagram
 
 | Aspect | Detail |
 |--------|--------|
-| **Base Class** | `BuilderAdapter` |
+| **Base Class** | `BuilderAdapter[Any, ConcurrentExecutionResult]` |
 | **Modes** | `ConcurrentMode`: ALL, ANY, MAJORITY, FIRST_SUCCESS |
 | **Gateway Types** | `GatewayType`: PARALLEL_SPLIT, PARALLEL_JOIN, INCLUSIVE_GATEWAY (Sprint 22) |
 | **Join Conditions** | `JoinCondition`: ALL, ANY, FIRST, N_OF_M |
