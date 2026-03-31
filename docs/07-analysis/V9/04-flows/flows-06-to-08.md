@@ -6,30 +6,115 @@
 
 ---
 
-## Sequence Diagram
+## Sequence Diagrams
 
 ### Flow 6 — 10-Step Pipeline E2E
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant SSE as SSE Stream
-    participant BOOT as Bootstrap
+    participant SSE as PipelineEventEmitter
+    participant API as FastAPI Route
+    participant SF as SessionFactory
+    participant MED as OrchestratorMediator
+    participant CTX as ContextHandler
     participant ROUTE as RoutingHandler
     participant DIALOG as DialogHandler
-    participant EXEC as ExecutionHandler
+    participant APPR as ApprovalHandler
     participant AGENT as AgentHandler
+    participant EXEC as ExecutionHandler
+    participant OBS as ObservabilityHandler
 
-    U->>SSE: POST /chat/stream
-    SSE->>BOOT: OrchestratorRequest
-    BOOT->>ROUTE: Step 1: Route
+    U->>API: POST /orchestrator/chat/stream
+    API->>SF: get_or_create(session_id)
+    SF->>MED: OrchestratorMediator (7 handlers)
+    API->>MED: execute(OrchestratorRequest, emitter)
+    MED-->>SSE: PIPELINE_START
+    MED->>CTX: Step 1: Context + Memory read
+    MED->>ROUTE: Step 2: 3-tier intent routing
     ROUTE-->>SSE: ROUTING_COMPLETE
-    BOOT->>DIALOG: Step 2: Check completeness
-    BOOT->>EXEC: Step 3: Risk + Approval
-    BOOT->>AGENT: Step 4: Execute
-    AGENT-->>SSE: TEXT_DELTA (streaming)
-    AGENT-->>SSE: TOOL_CALL events
-    AGENT-->>SSE: PIPELINE_COMPLETE
+    MED->>DIALOG: Step 3: Check completeness (conditional)
+    MED->>APPR: Step 4: Risk + Approval (conditional)
+    opt High/Critical Risk
+        APPR-->>SSE: APPROVAL_REQUIRED
+        U->>API: POST /orchestrator/approval/{id}
+        API->>MED: resolve_approval()
+    end
+    MED-->>SSE: AGENT_THINKING
+    MED->>AGENT: Step 5: LLM response + tool loop
+    AGENT-->>SSE: TOOL_CALL_END (per tool)
+    opt Workflow/Swarm Mode
+        MED-->>SSE: TASK_DISPATCHED
+        MED->>EXEC: Step 6: Execution dispatch
+        EXEC-->>SSE: SWARM_WORKER_START / SWARM_PROGRESS
+    end
+    MED->>CTX: Step 7: Context sync
+    MED->>OBS: Step 7: Observability metrics
+    MED-->>SSE: TEXT_DELTA
+    MED-->>SSE: PIPELINE_COMPLETE
+```
+
+### Flow 7 — Async Task Dispatch
+
+```mermaid
+sequenceDiagram
+    participant AGENT as AgentHandler
+    participant REG as OrchestratorToolRegistry
+    participant DH as DispatchHandlers
+    participant TS as TaskService
+    participant ARQ as ARQClient
+    participant REDIS as Redis Queue
+    participant WKR as task_functions (Worker)
+
+    AGENT->>REG: tool_call: dispatch_workflow
+    REG->>DH: handle_dispatch_workflow()
+    DH->>TS: create_task(task_id, type)
+    DH->>TS: start_task(task_id)
+    DH->>ARQ: enqueue(execute_workflow_task)
+    alt ARQ Available
+        ARQ->>REDIS: enqueue_job()
+        REDIS->>WKR: pickup job
+        WKR->>TS: update_task(in_progress)
+        WKR->>TS: update_task(completed)
+    else ARQ Unavailable
+        DH->>DH: Fallback: synchronous execution
+    end
+```
+
+### Flow 8 — Cross-Conversation Memory
+
+```mermaid
+sequenceDiagram
+    participant MED as OrchestratorMediator
+    participant CTX as ContextHandler
+    participant OMM as OrchestratorMemoryManager
+    participant UMM as UnifiedMemoryManager
+    participant REDIS as Redis (Working+Session)
+    participant MEM0 as Mem0Client (Qdrant)
+    participant LLM as LLM Service
+
+    Note over MED,MEM0: Part B: Memory Retrieval (Pipeline Step 1)
+    MED->>CTX: handle(request, context)
+    CTX->>OMM: retrieve_relevant_memories(query, user_id)
+    OMM->>UMM: search(query, user_id)
+    par 3-Layer Search
+        UMM->>REDIS: SCAN memory:working:{user_id}:*
+        UMM->>REDIS: SCAN memory:session:{user_id}:*
+        UMM->>MEM0: search_memory(query)
+    end
+    UMM-->>OMM: merged + deduped results
+    OMM-->>CTX: build_memory_context()
+
+    Note over MED,MEM0: Part A: Memory Write (Pipeline Step 8)
+    MED->>OMM: _write_to_longterm(conversation)
+    OMM->>UMM: add(content, MemType.CONVERSATION)
+    alt importance < 0.5
+        UMM->>REDIS: SETEX memory:working (TTL 30min)
+    else importance >= 0.5
+        UMM->>REDIS: SETEX memory:session (TTL 7d)
+    else importance >= 0.8
+        UMM->>MEM0: add_memory() (permanent)
+    end
 ```
 
 ---

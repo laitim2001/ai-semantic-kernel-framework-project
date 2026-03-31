@@ -13,28 +13,94 @@
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant FE as Frontend (SSE)
-    participant API as API Gateway
-    participant RT as 3-Tier Router
-    participant MED as Mediator
-    participant LLM as LLM Service
-    participant MCP as MCP Tools
+    participant FE as useSSEChat (Frontend)
+    participant API as FastAPI Route
+    participant SF as SessionFactory
+    participant MED as OrchestratorMediator
+    participant ROUTE as RoutingHandler
+    participant AGENT as AgentHandler
+    participant LLM as LLMService
+    participant TOOLS as OrchestratorToolRegistry
 
     U->>FE: Send message
     FE->>API: POST /orchestrator/chat/stream
-    API->>RT: Route intent
-    RT-->>API: RoutingDecision
-    API->>MED: Execute pipeline
-    MED->>LLM: Generate response
-    LLM-->>MED: Text + tool_calls
-    opt Tool Calls
-        MED->>MCP: Execute tools
-        MCP-->>MED: Tool results
-        MED->>LLM: Continue with results
+    API->>SF: get_or_create(session_id)
+    SF-->>API: OrchestratorMediator
+    API->>MED: execute(OrchestratorRequest, emitter)
+    MED->>ROUTE: 3-tier intent routing
+    ROUTE-->>MED: RoutingDecision
+    MED->>AGENT: LLM response generation
+    AGENT->>LLM: generate() with tools + memory
+    LLM-->>AGENT: Text + tool_calls
+    opt Tool Calls (max 5 iterations)
+        AGENT->>TOOLS: execute(tool_name, args)
+        TOOLS-->>AGENT: Tool results
+        AGENT->>LLM: Continue with results
     end
-    MED-->>API: SSE events
-    API-->>FE: TEXT_DELTA stream
+    AGENT-->>MED: HandlerResult (short-circuit for chat)
+    MED-->>FE: SSE: TEXT_DELTA + PIPELINE_COMPLETE
     FE-->>U: Animated response
+```
+
+### Flow 2 — Agent CRUD (Create)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as CreateAgentPage
+    participant CLIENT as api/client (Fetch)
+    participant API as FastAPI Route
+    participant SCHEMA as AgentCreateRequest
+    participant REPO as AgentRepository
+    participant DB as PostgreSQL
+
+    U->>FE: Fill form + submit
+    FE->>CLIENT: api.post('/agents', formData)
+    CLIENT->>API: POST /api/v1/agents
+    API->>SCHEMA: Pydantic validation
+    API->>REPO: get_by_name() (duplicate check)
+    REPO->>DB: SELECT by name
+    DB-->>REPO: null (no duplicate)
+    API->>REPO: create(fields)
+    REPO->>DB: INSERT Agent
+    DB-->>REPO: Agent row
+    REPO-->>API: Agent model
+    API-->>CLIENT: AgentResponse (201)
+    CLIENT-->>FE: Success
+    FE->>FE: navigate('/agents')
+```
+
+### Flow 3 — Workflow Execute
+
+```mermaid
+sequenceDiagram
+    participant API as FastAPI Route
+    participant REPO as WorkflowRepository
+    participant DB as PostgreSQL
+    participant ADAPT as WorkflowDefinitionAdapter
+    participant WB as WorkflowBuilder (MAF)
+    participant EXEC as WorkflowNodeExecutor
+    participant LLM as LLMService
+
+    API->>REPO: get(workflow_id)
+    REPO->>DB: SELECT workflow
+    DB-->>REPO: Workflow + graph_definition
+    API->>ADAPT: WorkflowDefinitionAdapter(definition)
+    ADAPT->>WB: register executors + edges
+    API->>ADAPT: run(input_data)
+    ADAPT->>WB: workflow.run(message)
+    loop Each node in DAG order
+        WB->>EXEC: handle(NodeInput)
+        alt AGENT node
+            EXEC->>LLM: generate()
+            LLM-->>EXEC: response
+        else GATEWAY node
+            EXEC->>EXEC: evaluate condition
+        end
+        EXEC-->>WB: NodeOutput
+    end
+    WB-->>ADAPT: WorkflowRunResult
+    ADAPT-->>API: success + node_results + stats
 ```
 
 ### Flow 4 — HITL Approval
@@ -42,20 +108,67 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant FE as Frontend
-    participant API as API Gateway
-    participant RISK as Risk Assessor
-    participant HITL as HITL Controller
-    participant TEAMS as Teams Notification
+    participant FE as InlineApproval (Frontend)
+    participant API as FastAPI Route
+    participant MED as OrchestratorMediator
+    participant APPR as ApprovalHandler
+    participant RISK as RiskAssessor
+    participant HITL as HITLController
+    participant TEAMS as TeamsNotificationService
 
-    API->>RISK: Assess risk
-    RISK-->>API: HIGH/CRITICAL
-    API->>HITL: Request approval
-    HITL->>TEAMS: Send Adaptive Card
+    Note over MED,HITL: System A: Phase 28 (source_request flow)
+    MED->>APPR: handle(request, context)
+    APPR->>RISK: assess(routing_decision)
+    RISK-->>APPR: requires_approval=true
+    APPR->>HITL: request_approval()
+    HITL->>TEAMS: Send Adaptive Card (webhook)
     TEAMS-->>U: Approval notification
     U->>TEAMS: Approve/Reject
     TEAMS->>HITL: Approval response
-    HITL-->>API: Resume execution
+    HITL-->>APPR: ApprovalRequest (approved)
+
+    Note over MED,FE: System B: Phase 42 (SSE inline flow)
+    MED-->>FE: SSE: APPROVAL_REQUIRED
+    FE-->>U: Render approve/reject buttons
+    U->>FE: Click approve
+    FE->>API: POST /orchestrator/approval/{id}
+    API->>MED: resolve_approval(id, action)
+    MED->>MED: asyncio.Event.set()
+    MED->>MED: Pipeline resumes
+```
+
+### Flow 5 — Swarm Multi-Agent
+
+```mermaid
+sequenceDiagram
+    participant MED as OrchestratorMediator
+    participant EXEC as ExecutionHandler
+    participant TD as TaskDecomposer
+    participant LLM as LLMService
+    participant W1 as SwarmWorkerExecutor [1..N]
+    participant TOOLS as OrchestratorToolRegistry
+    participant SSE as PipelineEventEmitter
+    participant FE as AgentSwarmPanel
+
+    MED->>EXEC: handle(request, context) [SWARM_MODE]
+    EXEC->>TD: decompose(task)
+    TD->>LLM: Structured prompt -> JSON
+    LLM-->>TD: TaskDecomposition (2-5 sub_tasks)
+    TD-->>EXEC: DecomposedTask[]
+    EXEC-->>SSE: SWARM_WORKER_START
+    par Parallel Workers (Semaphore=3)
+        EXEC->>W1: execute()
+        W1->>LLM: chat_with_tools() (max 5 iterations)
+        opt Tool Calls
+            W1->>TOOLS: execute(tool_name)
+            TOOLS-->>W1: result
+        end
+        W1-->>SSE: SWARM_PROGRESS events
+        W1-->>EXEC: WorkerResult
+    end
+    EXEC->>EXEC: Aggregate results
+    EXEC-->>SSE: PIPELINE_COMPLETE
+    SSE-->>FE: Real-time worker cards + progress
 ```
 
 ---

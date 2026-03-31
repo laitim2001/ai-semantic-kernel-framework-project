@@ -164,12 +164,14 @@ class OrchestratorBootstrap:
         #    ApprovalHandler (RiskAssessor + HITLController)
         #    AgentHandler    (LLM + ToolRegistry)
         #    ExecutionHandler(ClaudeCoordinator + MAF WorkflowExecutor + SwarmHandler)
-        #    ObservabilityHandler (ObservabilityBridge)
+        #    ObservabilityHandler (ObservabilityBridge ⚠️ — see Issue 8.11)
         # 4. Register MCP tools via MCPToolBridge
         # 5. Assemble OrchestratorMediator
 ```
 
 All wiring uses **graceful degradation**: if any dependency is unavailable (ImportError, missing config), the handler is created with a `None` dependency and a warning is logged.
+
+> **⚠️ V9 Wiring Bug**: Bootstrap injects `ObservabilityBridge` (G3/G4/G5 dispatcher) as `metrics` into `ObservabilityHandler`, but the handler expects an object with `record_execution()` / `to_dict()` / `reset()` (i.e., `OrchestratorMetrics`). See Issue 8.11.
 
 ---
 
@@ -235,8 +237,8 @@ class Handler(ABC):
 |---|---------|-----------|---------------|---------|
 | 1 | **ContextHandler** | Always | No | Prepare HybridContext + inject memories |
 | 2 | **RoutingHandler** | Always | No (error stops pipeline) | 3-tier routing + framework selection |
-| 3 | **DialogHandler** | `needs_dialog=True` | Yes (`should_short_circuit`) | Gather missing information |
-| 4 | **ApprovalHandler** | `source_request` present | Yes (pending/rejected) | Risk assessment + HITL |
+| 3 | **DialogHandler** | `guided_dialog` configured AND `needs_dialog=True` | Yes (`should_short_circuit`) | Gather missing information |
+| 4 | **ApprovalHandler** | `source_request` AND (`risk_assessor` OR `hitl_controller`) | Yes (pending/rejected) | Risk assessment + HITL |
 | 5 | **AgentHandler** | Always | Yes (CHAT_MODE) | LLM response + Function Calling |
 | 6 | **ExecutionHandler** | Always | No | Framework dispatch (MAF/Claude/Swarm) |
 | 7 | **ObservabilityHandler** | Always | No | Metrics recording |
@@ -283,7 +285,7 @@ Renamed from `IntentRouter` (Sprint 98) to avoid confusion with `BusinessIntentR
 **Decision Flow:**
 1. Run all enabled classifiers on user input
 2. Aggregate results using **weighted voting**
-3. If confidence >= threshold (default 0.7), use detected mode
+3. If confidence >= threshold (class default 0.7, **Bootstrap overrides to 0.6**), use detected mode
 4. Otherwise, use default mode (`CHAT_MODE`)
 
 **Classifier Chain (Sprint 144 Bootstrap):**
@@ -722,7 +724,7 @@ elif "request" in intent or "change" in intent:
                 Weighted Aggregation
                         │
                     ExecutionMode
-                 (if confidence >= 0.7)
+                 (if confidence >= 0.6, Bootstrap override)
 ```
 
 ---
@@ -866,7 +868,17 @@ Several places use string matching on enum values (e.g., `"high" in rd_risk`) in
 
 Almost all dataclass `default_factory` uses `datetime.utcnow()` which is deprecated in Python 3.12+. Only Sprint 111+ files use `datetime.now(timezone.utc)`.
 
-### 8.11 LOW: ComplexityAnalyzer and MultiAgentDetector Not Wired (R4 finding)
+### 8.11 MEDIUM: ObservabilityHandler Wiring Mismatch (V9 finding)
+
+**Location**: `orchestrator/bootstrap.py:472-489`, `orchestrator/handlers/observability.py:31-35`
+
+`OrchestratorBootstrap._wire_observability_handler()` injects `ObservabilityBridge` as the `metrics` parameter. However, `ObservabilityBridge` is a G3/G4/G5 subsystem dispatcher (Patrol, Correlation, RootCause) and does NOT implement the `record_execution()`, `execution_count`, `to_dict()`, or `reset()` methods that `ObservabilityHandler.handle()` calls. The handler's fallback (`metrics or OrchestratorMetrics()`) does not trigger because the injected `ObservabilityBridge` is not `None`.
+
+**Impact**: Every pipeline execution hits the `except` branch in `ObservabilityHandler.handle()`, returning `recorded: False`. Metrics are silently lost.
+
+**Fix**: Bootstrap should inject `OrchestratorMetrics()` (from `orchestrator_v2.py`) as `metrics`, or create a new `PipelineMetrics` class. `ObservabilityBridge` should be wired separately for G3/G4/G5 dispatch.
+
+### 8.12 LOW: ComplexityAnalyzer and MultiAgentDetector Not Wired (R4 finding)
 
 **Location**: `intent/analyzers/complexity.py`, `intent/analyzers/multi_agent.py`
 
@@ -944,6 +956,8 @@ Tracks per-execution metrics:
 - `success_rate` per framework
 - `average_duration` per mode
 - Exportable via `ObservabilityHandler.get_metrics()`
+
+> **⚠️ V9 Note**: Due to Issue 8.11 (Bootstrap wires `ObservabilityBridge` instead of `OrchestratorMetrics`), pipeline metrics recording and `get_metrics()` are currently non-functional in the bootstrapped pipeline. The `OrchestratorMetrics` class itself works correctly when instantiated directly.
 
 ### 12.2 RiskAssessmentEngine Metrics
 

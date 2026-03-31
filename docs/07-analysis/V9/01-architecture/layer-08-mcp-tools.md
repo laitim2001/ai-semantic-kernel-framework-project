@@ -168,7 +168,7 @@ stateDiagram-v2
 | `security/permissions.py` | 458 | `PermissionLevel` (IntEnum), `Permission`, `PermissionPolicy`, `PermissionManager` | 4-level RBAC: NONE(0)/READ(1)/EXECUTE(2)/ADMIN(3). Glob-pattern matching for servers/tools, priority-based policy evaluation, deny-list precedence, dynamic conditions (time_range, ip_whitelist, custom evaluators) |
 | `security/permission_checker.py` | 183 | `MCPPermissionChecker` | Runtime enforcement facade: two modes via `MCP_PERMISSION_MODE` env var -- "log" (Phase 1, log-only) and "enforce" (Phase 2, raises PermissionError). Dev/testing gets permissive ADMIN default policy. Stats tracking |
 | `security/command_whitelist.py` | 225 | `CommandWhitelist` | Three-tier command security: 79 DEFAULT_WHITELIST commands, 24 BLOCKED_PATTERNS regex, everything else requires_approval. Extensible via `MCP_ADDITIONAL_WHITELIST` env var. Command name extraction strips sudo/nohup/env/time prefixes and path prefixes |
-| `security/audit.py` | 679 | `AuditEventType` (13 types), `AuditEvent`, `AuditFilter`, `AuditStorage` (ABC), `InMemoryAuditStorage`, `FileAuditStorage`, `AuditLogger` | Comprehensive audit: 12 event types across 5 categories. Sensitive field redaction. Pluggable storage with deque-based in-memory (bounded), JSON Lines file, event handler pipeline |
+| `security/audit.py` | 679 | `AuditEventType` (12 types), `AuditEvent`, `AuditFilter`, `AuditStorage` (ABC), `InMemoryAuditStorage`, `FileAuditStorage`, `AuditLogger` | Comprehensive audit: 12 event types across 5 categories. Sensitive field redaction. Pluggable storage with deque-based in-memory (bounded), JSON Lines file, event handler pipeline |
 | `security/redis_audit.py` | ~120 | `RedisAuditStorage` | Production audit backend: Redis Sorted Set (score=timestamp) for efficient time-range queries, auto-trimming to max_size, key `mcp:audit:events` |
 
 ### 2.4 Servers (59 files across 8 directories + 3 root-level ServiceNow files)
@@ -258,7 +258,7 @@ stateDiagram-v2
 |  +------------------+  +----------------+  +------------------------+ |
 |  |PermissionChecker |  | CommandWhite-  |  |    AuditLogger         | |
 |  | log/enforce mode |  | list (79+24)   |  | InMemory/File/Redis    | |
-|  | RBAC 4-level     |  | 3-tier check   |  | 13 event types         | |
+|  | RBAC 4-level     |  | 3-tier check   |  | 12 event types         | |
 |  +--------+---------+  +-------+--------+  +-----------+------------+ |
 |           |                    |                        |              |
 |  +--------v---------+         |                        |              |
@@ -757,7 +757,7 @@ Commands returning `"requires_approval"` only log a warning/info message. The pl
 |-------------|-----------|---------------|
 | **Phase 9** | MCP Core Infrastructure | `core/` (types, protocol, transport, client), initial server structure |
 | **Phase 10** | First 5 MCP Servers | Azure (23 tools), Filesystem (6), Shell (3), LDAP (6), SSH (6) = 44 tools |
-| **Sprint 113** | Security Layer | `MCPPermissionChecker` (log/enforce modes), `CommandWhitelist` (65+26), permission levels on all existing tools |
+| **Sprint 113** | Security Layer | `MCPPermissionChecker` (log/enforce modes), `CommandWhitelist` (79+24), permission levels on all existing tools |
 | **Sprint 117** | ServiceNow Server | 6 tools (Incident CRUD, RITM, Attachments). Root-level files |
 | **Sprint 120** | Redis Audit Storage | `RedisAuditStorage` -- production-grade audit backend replacing InMemory |
 | **Sprint ~127** | n8n Server | 6 tools (workflow management + run monitoring) |

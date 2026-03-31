@@ -32,10 +32,10 @@
 │  ┌──────────────────────────────────────────────────────────┐               │
 │  │  L1: PatternMatcher (規則匹配)                           │               │
 │  │  • YAML-loaded regex rules, priority-sorted              │               │
-│  │  • 411 LOC | 速度: <1ms                                  │               │
+│  │  • 410 LOC | 速度: <1ms                                  │               │
 │  │  • 匹配 → confidence ≥ 0.90? ──→ ✓ 直接路由             │               │
 │  └─────────────┬────────────────────────────────────────────┘               │
-│                │ 未匹配 (confidence < 0.8)                                  │
+│                │ 未匹配 (confidence < 0.90)                                 │
 │                ↓                                                             │
 │  ┌──────────────────────────────────────────────────────────┐               │
 │  │  L2: SemanticRouter (語義路由)                            │               │
@@ -43,12 +43,12 @@
 │  │  • 15 predefined routes, 75 utterances                   │               │
 │  │  • 匹配 → confidence ≥ 0.85? ──→ ✓ 語義路由             │               │
 │  └─────────────┬────────────────────────────────────────────┘               │
-│                │ 未匹配 (confidence < 0.7)                                  │
+│                │ 未匹配 (confidence < 0.85)                                 │
 │                ↓                                                             │
 │  ┌──────────────────────────────────────────────────────────┐               │
 │  │  L3: LLMClassifier (LLM 分類)                            │               │
 │  │  • Azure OpenAI GPT-4o, Traditional Chinese prompts      │               │
-│  │  • 294 LOC | 帶快取 (ClassificationCache)                │               │
+│  │  • 293 LOC | 帶快取 (ClassificationCache)                │               │
 │  │  • 多任務: 意圖 + 完整度 一次推理 (風險由 RiskAssessor 獨立處理) │         │
 │  └─────────────┬────────────────────────────────────────────┘               │
 │                │                                                             │
@@ -134,55 +134,55 @@ stateDiagram-v2
 
 ## 2. File Inventory (55 files)
 
-### 2.1 Intent Router (14 files, ~3,815 LOC)
+### 2.1 Intent Router (23 files, ~7,115 LOC)
 
 | File | LOC | Sprint | Purpose |
 |------|-----|--------|---------|
 | `intent_router/router.py` | 622 | S93 | `BusinessIntentRouter` — 3-layer coordinator with metrics, `RouterConfig.from_env()`, factory functions `create_router()` + `create_router_with_llm()` |
-| `intent_router/models.py` | 450 | S91 | `ITIntentCategory`, `RiskLevel`, `WorkflowType`, `RoutingDecision`, `PatternMatchResult`, `SemanticRouteResult`, `LLMClassificationResult`, `CompletenessInfo`, `PatternRule`, `SemanticRoute` |
-| `intent_router/pattern_matcher/matcher.py` | 411 | S91 | `PatternMatcher` — YAML-loaded regex rules, priority-sorted, pre-compiled |
+| `intent_router/models.py` | 449 | S91 | `ITIntentCategory`, `RiskLevel`, `WorkflowType`, `RoutingDecision`, `PatternMatchResult`, `SemanticRouteResult`, `LLMClassificationResult`, `CompletenessInfo`, `PatternRule`, `SemanticRoute` |
+| `intent_router/pattern_matcher/matcher.py` | 410 | S91 | `PatternMatcher` — YAML-loaded regex rules, priority-sorted, pre-compiled |
 | `intent_router/pattern_matcher/__init__.py` | ~10 | S91 | Re-exports |
-| `intent_router/semantic_router/router.py` | ~350 | S92 | `SemanticRouter` — vector similarity via Aurelio library |
+| `intent_router/semantic_router/router.py` | ~375 | S92 | `SemanticRouter` — vector similarity via Aurelio library |
 | `intent_router/semantic_router/routes.py` | 373 | S92 | 15 predefined `SemanticRoute` definitions (75 utterances) |
-| `intent_router/semantic_router/route_manager.py` | ~200 | S92 | Route CRUD management |
-| `intent_router/semantic_router/azure_semantic_router.py` | ~300 | S116 | Azure AI Search backed semantic router |
-| `intent_router/semantic_router/azure_search_client.py` | ~200 | S116 | `AzureSearchClient` — Azure AI Search client wrapper (17 methods: `__init__`, `_retry_with_backoff`, `_vector_search_sync`, `_hybrid_search_sync`, `_upload_documents_sync`, `search`, `upload_routes`, `delete_routes`, `ensure_index`) |
-| `intent_router/semantic_router/embedding_service.py` | ~150 | S116 | Embedding generation service |
-| `intent_router/semantic_router/setup_index.py` | ~100 | S116 | Index setup script |
-| `intent_router/semantic_router/migration.py` | ~100 | S116 | Migration utilities |
+| `intent_router/semantic_router/route_manager.py` | ~536 | S92 | Route CRUD management |
+| `intent_router/semantic_router/azure_semantic_router.py` | ~273 | S116 | Azure AI Search backed semantic router |
+| `intent_router/semantic_router/azure_search_client.py` | ~379 | S116 | `AzureSearchClient` — Azure AI Search client wrapper (17 methods: `__init__`, `_retry_with_backoff`, `_vector_search_sync`, `_hybrid_search_sync`, `_upload_documents_sync`, `search`, `upload_routes`, `delete_routes`, `ensure_index`) |
+| `intent_router/semantic_router/embedding_service.py` | ~275 | S116 | Embedding generation service |
+| `intent_router/semantic_router/setup_index.py` | ~409 | S116 | Index setup script |
+| `intent_router/semantic_router/migration.py` | ~332 | S116 | Migration utilities |
 | `intent_router/semantic_router/__init__.py` | ~10 | S92 | Re-exports |
-| `intent_router/llm_classifier/classifier.py` | 294 | S92/S128 | `LLMClassifier` — uses `LLMServiceProtocol`, graceful degradation |
+| `intent_router/llm_classifier/classifier.py` | 293 | S92/S128 | `LLMClassifier` — uses `LLMServiceProtocol`, graceful degradation |
 | `intent_router/llm_classifier/prompts.py` | 231 | S92 | Multi-task prompt: intent + completeness (NOT risk — risk is by RiskAssessor). Traditional Chinese, simplified variant |
-| `intent_router/llm_classifier/cache.py` | ~150 | S92 | `ClassificationCache` for LLM result caching |
-| `intent_router/llm_classifier/evaluation.py` | ~200 | S99 | Classification quality evaluation |
+| `intent_router/llm_classifier/cache.py` | ~274 | S92 | `ClassificationCache` for LLM result caching |
+| `intent_router/llm_classifier/evaluation.py` | ~472 | S99 | Classification quality evaluation |
 | `intent_router/llm_classifier/__init__.py` | ~10 | S92 | Re-exports |
-| `intent_router/completeness/checker.py` | ~250 | S93 | `CompletenessChecker` — field validation per intent |
-| `intent_router/completeness/rules.py` | ~200 | S93 | Completeness field requirement rules |
+| `intent_router/completeness/checker.py` | ~376 | S93 | `CompletenessChecker` — field validation per intent |
+| `intent_router/completeness/rules.py` | ~658 | S93 | Completeness field requirement rules |
 | `intent_router/completeness/__init__.py` | ~10 | S93 | Re-exports |
 | `intent_router/contracts.py` | ~100 | S116 | Intent router specific contracts |
 | `intent_router/__init__.py` | ~50 | S91 | Re-exports |
 
-### 2.2 Guided Dialog (4 files, ~3,530 LOC)
+### 2.2 Guided Dialog (4 files, ~3,407 LOC)
 
 | File | LOC | Sprint | Purpose |
 |------|-----|--------|---------|
-| `guided_dialog/engine.py` | 593 | S94 | `GuidedDialogEngine` — multi-turn orchestration (max 5 turns), 5 phases: initial→gathering→complete→handoff→clarification. Direct deps: BusinessIntentRouter, ConversationContextManager (optional), QuestionGenerator (optional). RefinementRules is indirect via ContextManager |
+| `guided_dialog/engine.py` | 547 | S94 | `GuidedDialogEngine` — multi-turn orchestration (max 5 turns), 5 phases: initial→gathering→complete→handoff→clarification. Direct deps: BusinessIntentRouter, ConversationContextManager (optional), QuestionGenerator (optional). RefinementRules is indirect via ContextManager |
 | `guided_dialog/context_manager.py` | 1,101 | S94/S97 | `ConversationContextManager` + `PersistentConversationContextManager` (Redis) + `RedisDialogSessionStorage` + `InMemoryDialogSessionStorage` |
-| `guided_dialog/generator.py` | ~1,151 | S94 | `QuestionGenerator` — template-based question generation per intent |
+| `guided_dialog/generator.py` | ~1,044 | S94 | `QuestionGenerator` — template-based question generation per intent |
 | `guided_dialog/refinement_rules.py` | ~622 | S94 | `RefinementRules` — rule-based sub-intent refinement (NOT LLM) |
 | `guided_dialog/__init__.py` | ~10 | S94 | Re-exports |
 
-### 2.3 Input Gateway (8 files, ~2,302 LOC)
+### 2.3 Input Gateway (8 files, ~2,451 LOC)
 
 | File | LOC | Sprint | Purpose |
 |------|-----|--------|---------|
-| `input_gateway/gateway.py` | 370 | S95 | `InputGateway` — source detection, handler dispatch |
-| `input_gateway/models.py` | 278 | S95 | `IncomingRequest`, `SourceType`, `GatewayConfig`, `GatewayMetrics` |
-| `input_gateway/schema_validator.py` | ~200 | S95 | JSON schema validation for webhooks |
-| `input_gateway/source_handlers/base_handler.py` | ~100 | S95 | `BaseSourceHandler` abstract class |
-| `input_gateway/source_handlers/servicenow_handler.py` | ~300 | S95 | ServiceNow ticket field mapping |
-| `input_gateway/source_handlers/prometheus_handler.py` | ~250 | S95 | Prometheus alert mapping |
-| `input_gateway/source_handlers/user_input_handler.py` | ~200 | S95 | User text to full routing pipeline |
+| `input_gateway/gateway.py` | 369 | S95 | `InputGateway` — source detection, handler dispatch |
+| `input_gateway/models.py` | 277 | S95 | `IncomingRequest`, `SourceType`, `GatewayConfig`, `GatewayMetrics` |
+| `input_gateway/schema_validator.py` | ~414 | S95 | JSON schema validation for webhooks |
+| `input_gateway/source_handlers/base_handler.py` | ~295 | S95 | `BaseSourceHandler` abstract class |
+| `input_gateway/source_handlers/servicenow_handler.py` | ~346 | S95 | ServiceNow ticket field mapping |
+| `input_gateway/source_handlers/prometheus_handler.py` | ~364 | S95 | Prometheus alert mapping |
+| `input_gateway/source_handlers/user_input_handler.py` | ~254 | S95 | User text to full routing pipeline |
 | `input_gateway/source_handlers/__init__.py` | ~10 | S95 | Re-exports |
 | `input_gateway/__init__.py` | ~10 | S95 | Re-exports |
 

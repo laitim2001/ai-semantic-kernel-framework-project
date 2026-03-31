@@ -1,7 +1,7 @@
 # Layer 01: Frontend (React 18 + TypeScript)
 
 > V9 Architecture Analysis | Layer 01 | 2026-03-29 | R4 Updated
-> Scope: `frontend/src/` -- 210 source files (236 including tests), ~54K LOC
+> Scope: `frontend/src/` -- 211 source files (237 including tests), ~54K LOC
 
 ---
 
@@ -29,8 +29,8 @@
 
 | Module | Path | Files | Description |
 |--------|------|-------|-------------|
-| **components/unified-chat** | `components/unified-chat/` | 58 (27 core + 4 renderers + 16 swarm + 5 swarm hooks + 2 swarm types + 4 barrel) | Main chat interface + agent-swarm sub-module |
-| **components/ag-ui** | `components/ag-ui/` | 19 | AG-UI Protocol components (7 advanced, 6 chat, 5 hitl, 1 barrel) |
+| **components/unified-chat** | `components/unified-chat/` | 59 (28 core + 4 renderers + 16 swarm + 5 swarm hooks + 2 swarm types + 4 barrel) | Main chat interface + agent-swarm sub-module |
+| **components/ag-ui** | `components/ag-ui/` | 19 | AG-UI Protocol components (8 advanced, 6 chat, 5 hitl) |
 | **components/DevUI** | `components/DevUI/` | 15 | Developer tools (event timeline, statistics) |
 | **components/ui** | `components/ui/` | 18 | Shadcn UI base components (Button, Card, Dialog, Sheet, ScrollArea...) |
 | **components/layout** | `components/layout/` | 5 | AppLayout, Header, Sidebar, UserMenu + barrel |
@@ -46,13 +46,13 @@
 | **lib** | `lib/` | 1 | Tailwind merge helper `cn()` |
 | **root** | `src/` | 3 | main.tsx, App.tsx, vite-env.d.ts |
 
-**Total: 210 source files (excluding 26 test files = 236 with tests)**
+**Total: 211 source files (excluding 26 test files = 237 with tests)**
 
 ### Component Count Breakdown
 
 | Sub-module | Source Files | Test Files | Total |
 |------------|-------------|------------|-------|
-| unified-chat (core) | 27 | 0 | 27 |
+| unified-chat (core) | 28 | 0 | 28 |
 | unified-chat/renderers | 4 | 0 | 4 |
 | unified-chat/agent-swarm (components) | 16 | 11 | 27 |
 | unified-chat/agent-swarm/hooks | 5 | 0 | 5 |
@@ -65,7 +65,7 @@
 | layout | 5 | 0 | 5 |
 | shared | 4 | 0 | 4 |
 | auth | 1 | 0 | 1 |
-| **Component total** | **116** | **11** | **127** |
+| **Component total** | **117** | **11** | **128** |
 
 ---
 
@@ -161,6 +161,7 @@ UnifiedChat (1,403 LOC page orchestrator)
 │   │   │   │       ├── DynamicChart
 │   │   │   │       ├── DynamicCard
 │   │   │   │       └── DynamicTable
+│   │   │   ├── TaskProgressCard      -- orchestration task progress (when taskId present)
 │   │   │   └── StreamingIndicator
 │   │   └── InlineApproval (legacy)
 │   ├── WorkflowSidePanel     -- Right panel (workflow mode only)
@@ -344,7 +345,7 @@ export const api = {
 | `tasks.ts` | 152 | getTasks (wraps array->paginated), getTask, getTaskSteps, cancelTask, retryTask |
 | `knowledge.ts` | 184 | uploadDocument (FormData), searchKnowledge, getDocuments, deleteDocument, getSkills, getStatus |
 | `memory.ts` | 105 | searchMemories, getUserMemories, getMemoryStats, deleteMemory |
-| `index.ts` | 126 | Central barrel export for all 7 endpoint modules + types |
+| `index.ts` | 126 | Central barrel export for all 8 endpoint modules + types |
 
 ### 8.3 Guest User Isolation
 
@@ -466,7 +467,7 @@ The mock/real hooks duplicate ~1,200 LOC of state management that the swarmStore
 | `useToolCallEvents` | `useToolCallEvents.ts` | ~100 | Tool call event tracking |
 | `useTypewriterEffect` | `useTypewriterEffect.ts` | ~80 | Text animation |
 
-**25 hooks total**, with `useUnifiedChat` being the central orchestrator.
+**24 hooks total** (+ 1 barrel index = 25 files), with `useUnifiedChat` being the central orchestrator.
 
 ---
 
@@ -625,4 +626,5 @@ App.tsx
 
 *Initial analysis conducted on 2026-03-29 based on source reading of 14 key files.*
 *R4 update on 2026-03-29: Full source reading of all 210 non-test files. File counts verified and corrected.*
+*R5 update on 2026-03-31: V9 deep semantic name verification (50-point). Fixed: TaskProgressCard missing from hierarchy and core count (27->28), ag-ui barrel description (no top-level barrel), endpoint index barrel count (7->8 modules).*
 *V9 Layer 01 -- Frontend Architecture Report*

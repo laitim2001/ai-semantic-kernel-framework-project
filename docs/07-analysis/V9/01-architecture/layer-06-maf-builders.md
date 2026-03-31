@@ -159,7 +159,7 @@ sequenceDiagram
 | `workflow.py` | 590 | S13 | `WorkflowAdapter` + `WorkflowConfig` — wraps `WorkflowBuilder` |
 | `checkpoint.py` | 711 | S13 | `CheckpointStorageAdapter`, `PostgresCheckpointStorage`, `RedisCheckpointCache`, `CachedCheckpointStorage`, `InMemoryCheckpointStorage` |
 
-### 2.2 builders/ (22 files)
+### 2.2 builders/ (23 files)
 
 | File | LOC (est.) | Sprint | Purpose |
 |------|-----------|--------|---------|
@@ -643,17 +643,17 @@ The following important classes (5+ public methods) were identified by R8 gap de
 
 | Class | File | Methods | Purpose |
 |-------|------|---------|---------|
-| `PlanningAdapter` | builders/magentic_planning.py | 42 | Magentic One planning workflow — analyze, plan, execute, evaluate, replan cycle. Largest adapter in L06 |
-| `EnhancedExecutionStateMachine` | core/execution.py | 35 | Extended FSM with sub-states, timeouts, retry logic, and event hooks for workflow execution tracking |
-| `WorkflowExecutorAdapter` | core/workflow.py | 32 | Core workflow execution engine wrapping MAF's WorkflowBuilder with checkpoint and streaming support |
+| `PlanningAdapter` | builders/planning.py | 42 | Magentic One planning workflow — analyze, plan, execute, evaluate, replan cycle. Largest adapter in L06 |
+| `EnhancedExecutionStateMachine` | core/state_machine.py | 35 | Extended FSM with sub-states, timeouts, retry logic, and event hooks for workflow execution tracking |
+| `WorkflowDefinitionAdapter` | core/workflow.py | 32 | Core workflow definition adapter wrapping MAF's WorkflowBuilder with checkpoint and streaming support |
 | `WorkflowContextAdapter` | core/context.py | 23 | Cross-workflow context propagation, variable scoping (ISOLATED/INHERITED/SHARED), and state merging |
-| `CodeInterpreterAdapter` | assistant/code_interpreter.py | 22 | Code Interpreter integration — sandbox execution, file I/O, result streaming |
+| `CodeInterpreterAdapter` | builders/code_interpreter.py | 22 | Code Interpreter integration — sandbox execution, file I/O, result streaming |
 | `CapabilityMatcherAdapter` | builders/handoff_capability.py | 22 | Agent capability matching for handoff decisions — skill vectors, compatibility scoring |
 | `NestedWorkflowAdapter` | builders/nested_workflow.py | 24 | Sub-workflow composition (INLINE/REFERENCE/DYNAMIC/RECURSIVE) with depth tracking |
 | `BaseMemoryStorageAdapter` | memory/base.py | 18 | Abstract memory storage interface — namespace management, TTL, key-value operations for agent memory |
 | `ConditionEvaluator` | core/edge.py | 8 | Expression parser for edge routing conditions — supports comparison, logical, and list operators |
-| `SwarmOrchestrationBuilder` | builders/swarm.py | ~15 | Swarm-mode MAF builder — parallel worker dispatch, tool registry per worker, result aggregation |
-| `CustomWorkflowBuilder` | builders/custom.py | ~20 | DSL-based custom workflow definition — node/edge/condition graph builder with validation |
+
+> **V9 Correction**: R8 gap detection listed `SwarmOrchestrationBuilder` (builders/swarm.py) and `CustomWorkflowBuilder` (builders/custom.py) — these files do NOT exist in the codebase. They were phantom entries from R8 hallucination and have been removed.
 
 ---
 
@@ -672,7 +672,7 @@ The following important classes (5+ public methods) were identified by R8 gap de
 |----|-------|----------|--------|
 | L06-H1 | **MagenticBuilderAdapter does not inherit BuilderAdapter**: Unlike all other adapters, `MagenticBuilderAdapter` is a standalone class. This breaks the polymorphic contract and means it cannot be used interchangeably with other adapters | `magentic.py:957` | Architectural inconsistency |
 | L06-H2 | **Lazy imports in AgentExecutorAdapter**: Uses `from agent_framework import ...` inside `initialize()` rather than at module level, violating the CLAUDE.md compliance rule | `agent_executor.py:155-156` | Inconsistent with other builders |
-| L06-H3 | **Massive `__init__.py` re-export**: `builders/__init__.py` is 806 lines with 200+ symbols. Any import error in any builder crashes the entire module | `builders/__init__.py` | Fragile import chain |
+| L06-H3 | **Massive `__init__.py` re-export**: `builders/__init__.py` is 805 lines with 200+ symbols. Any import error in any builder crashes the entire module | `builders/__init__.py` | Fragile import chain |
 | L06-H4 | **Root `__init__.py` outdated**: Only exports ConcurrentBuilder symbols. HandoffBuilder, GroupChatBuilder, MagenticBuilder, etc. are commented out (lines 114-121) | `__init__.py:114-121` | Root module API incomplete |
 | L06-H5 | **No real LLM integration in StandardMagenticManager**: `_execute_prompt()` falls back to `"[Simulated response for: ...]"` when no `agent_executor` is provided | `magentic.py:778-785` | Manager operates in simulation mode |
 
@@ -683,8 +683,8 @@ The following important classes (5+ public methods) were identified by R8 gap de
 | L06-M1 | **Thread safety**: No locking on mutable execution state across all builders (conversation lists, counters, status flags) | All builder `run()` methods | Race conditions under concurrent use |
 | L06-M2 | **Sleep in simulation**: `_simulate_agent_response` uses `await asyncio.sleep(0.01)` for fake latency | `handoff.py:779` | Unnecessary in production |
 | L06-M3 | **Version detector has limited known versions**: Only 2 versions in `KNOWN_COMPATIBLE` dict | `acl/version_detector.py:19-21` | Any new MAF version reports "unknown" compatibility |
-| L06-M4 | **Migration layers still present**: 4 migration files (`*_migration.py`) from Phase 2 still active. Should be deprecated or removed if Phase 2 code is no longer in use | Multiple `*_migration.py` files | Dead code if Phase 2 deprecated |
-| L06-M5 | **GroupChatBuilderAdapter import collision**: `create_priority_selector` is exported from both `groupchat.py` and `groupchat_migration.py` in `builders/__init__.py` | `builders/__init__.py:176, 248` | Import shadowing |
+| L06-M4 | **Migration layers still present**: 5 migration files (`*_migration.py`) from Phase 2 still active. Should be deprecated or removed if Phase 2 code is no longer in use | Multiple `*_migration.py` files | Dead code if Phase 2 deprecated |
+| L06-M5 | **GroupChatBuilderAdapter import collision**: `create_priority_selector` is exported from both `groupchat.py` and `groupchat_migration.py` in `builders/__init__.py` | `builders/__init__.py:176, 247` | Import shadowing |
 
 ---
 
@@ -773,7 +773,7 @@ The Sprint 128 ACL provides stable interfaces that shield platform code from MAF
 | Metric | Value |
 |--------|-------|
 | Total Python files | 57 |
-| Builder adapter files | 22 (in `builders/`) |
+| Builder adapter files | 23 (in `builders/`) |
 | Core adapter files | 9 (in `core/`) |
 | Support modules | 4 directories (memory, multiturn, tools, assistant) + ACL |
 | MAF-compliant builders | 7 of 9 fully compliant |
@@ -782,7 +782,7 @@ The Sprint 128 ACL provides stable interfaces that shield platform code from MAF
 | Data classes | ~50 |
 | Enum types | ~25 |
 | Exception types | 7 (base) + 8 (assistant) = 15 total |
-| Migration files | 4 (`*_migration.py`) |
+| Migration files | 5 (`*_migration.py`) |
 | Sprint coverage | S13-S24, S26-S28, S31, S37-S38, S54, S126-S128 |
 
 ---
