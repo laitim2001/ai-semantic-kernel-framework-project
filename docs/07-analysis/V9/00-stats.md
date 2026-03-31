@@ -504,7 +504,7 @@ graph TB
 | 7 | integrations/ag_ui/ | 27 | 10,329 |
 | 8 | domain/orchestration/ | 22 | ~11,465 |
 | 9 | core/ | 39 | 11,945 |
-| 10 | infrastructure/storage/ | 16 | ~4,200 |
+| 10 | infrastructure/storage/ | 18 | ~4,200 |
 
 ---
 

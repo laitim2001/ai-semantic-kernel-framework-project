@@ -3,7 +3,7 @@
 > **Scan Date**: 2026-03-29
 > **Scanner**: Claude Opus 4.6 (1M context) — Phase C Module Deep-Dive
 > **Scope**: All frontend modules under `frontend/src/`
-> **Total Files Analyzed**: ~170 source files (excluding node_modules, dist)
+> **Total Files Analyzed**: ~211 source files (excluding node_modules, dist, test files)
 
 ---
 
@@ -140,7 +140,7 @@ UnifiedChat (page)
 ## Module: agent-swarm
 
 - **Path**: `frontend/src/components/unified-chat/agent-swarm/`
-- **Files**: 16 components + 4 hooks + 2 type files + 12 test files = 34 total
+- **Files**: 16 components + 5 hooks (4 hooks + 1 barrel) + 2 type files + 12 test files = 35 total
 - **Sprint Origin**: Sprint 101-105 (Phase 29)
 
 ### Public API / Exports
