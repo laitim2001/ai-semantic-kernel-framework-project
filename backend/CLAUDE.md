@@ -34,14 +34,14 @@ backend/
 ├── requirements.txt        # Python dependencies
 ├── pyproject.toml          # Project configuration
 │
-├── src/                    # Source code (~630+ .py files)
-│   ├── api/v1/             # 39 API route modules (~540 endpoints)
+├── src/                    # Source code (~792 .py files, per V9 analysis)
+│   ├── api/v1/             # 41 API route modules (~591 endpoints)
 │   ├── domain/             # 20 business logic modules
 │   ├── infrastructure/     # Database, Cache (messaging/storage stubs)
 │   ├── integrations/       # 16 integration modules (~315 .py files)
 │   └── core/               # Performance, Sandbox, Security utilities
 │
-├── tests/                  # Test suite (~303 test files)
+├── tests/                  # Test suite (~386 test files)
 │   ├── unit/               # Unit tests (~241 files)
 │   ├── integration/        # Integration tests (~24 files)
 │   ├── e2e/                # End-to-end tests (~19 files)
@@ -118,6 +118,30 @@ core/
 | `correlation/` | 4 | Multi-agent event correlation |
 | `a2a/` | 3 | Agent-to-Agent protocol |
 | `rootcause/` | 3 | Root cause analysis |
+
+---
+
+## V9 Deep Dive Reference
+
+> For detailed analysis of each backend layer, refer to the V9 codebase analysis (Phase 1-44, 2026-03-31 baseline).
+
+| Backend Layer | V9 Document | Key Content |
+|---------------|-------------|-------------|
+| API Gateway | `docs/07-analysis/V9/01-architecture/layer-02-api-gateway.md` | 41 routers, 591 endpoints, middleware chain |
+| AG-UI Protocol | `docs/07-analysis/V9/01-architecture/layer-03-ag-ui.md` | SSE streaming, events, handlers |
+| Intent Routing | `docs/07-analysis/V9/01-architecture/layer-04-routing.md` | Three-tier orchestration, classification |
+| Orchestration | `docs/07-analysis/V9/01-architecture/layer-05-orchestration.md` | Hybrid MAF+SDK switching, context, risk |
+| MAF Builders | `docs/07-analysis/V9/01-architecture/layer-06-maf-builders.md` | 23 builders, GroupChat, Handoff patterns |
+| Claude SDK | `docs/07-analysis/V9/01-architecture/layer-07-claude-sdk.md` | Autonomous, hooks, hybrid, MCP, tools |
+| MCP Tools | `docs/07-analysis/V9/01-architecture/layer-08-mcp-tools.md` | Azure, Filesystem, LDAP, Shell, SSH |
+| Integrations | `docs/07-analysis/V9/01-architecture/layer-09-integrations.md` | A2A, memory, patrol, correlation, learning |
+| Domain | `docs/07-analysis/V9/01-architecture/layer-10-domain.md` | 20 domain modules, business logic |
+| Infrastructure | `docs/07-analysis/V9/01-architecture/layer-11-infrastructure.md` | DB, cache, messaging, storage |
+| Known Issues | `docs/07-analysis/V9/05-issues/issue-registry.md` | 62 issues (8 CRITICAL, 16 HIGH) |
+| API Catalog | `docs/07-analysis/V9/09-api-reference/` | Complete 591-endpoint catalog |
+| Mock vs Real | `docs/07-analysis/V9/13-mock-real/` | Implementation maturity map |
+
+> **Note**: V9 is baselined at Phase 44. Cross-check against current source for post-Phase-44 changes.
 
 ---
 
@@ -347,4 +371,4 @@ logger.error("Error occurred", exc_info=True)
 
 ---
 
-**Last Updated**: 2026-02-09
+**Last Updated**: 2026-03-31

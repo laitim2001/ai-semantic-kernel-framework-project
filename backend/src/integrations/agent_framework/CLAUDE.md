@@ -262,4 +262,10 @@ The swarm system (`integrations/swarm/`) coordinates multiple worker agents. Eac
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-06-maf-builders.md` — Full MAF builders analysis (23 builders, LOC, patterns, known issues)
+
+---
+
+**Last Updated**: 2026-03-31

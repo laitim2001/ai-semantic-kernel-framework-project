@@ -307,4 +307,11 @@ raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"e
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-02-api-gateway.md` — Full API layer analysis (41 routers, 591 endpoints, middleware chain)
+> `docs/07-analysis/V9/09-api-reference/` — Complete endpoint catalog with method, path, and parameters
+
+---
+
+**Last Updated**: 2026-03-31

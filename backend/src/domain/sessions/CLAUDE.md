@@ -292,4 +292,12 @@ Sessions support multi-agent swarm execution (`integrations/swarm/`):
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-10-domain.md` — Session domain module within the full domain layer analysis
+> `docs/07-analysis/V9/04-flows/` — E2E session lifecycle flows (Chat, HITL, Swarm)
+> `docs/07-analysis/V9/10-event-contracts/` — Session event specifications
+
+---
+
+**Last Updated**: 2026-03-31

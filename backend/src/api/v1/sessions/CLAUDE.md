@@ -189,4 +189,11 @@ Sessions can spawn agent swarm executions for complex multi-agent tasks:
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-02-api-gateway.md` — Session API endpoints within the full API gateway analysis
+> `docs/07-analysis/V9/04-flows/` — E2E session-related user journeys (Chat, HITL, Swarm)
+
+---
+
+**Last Updated**: 2026-03-31

@@ -361,4 +361,12 @@ File storage (for uploaded attachments, generated files) needs to be implemented
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-11-infrastructure.md` — Full infrastructure analysis (DB, cache, messaging stubs, storage, migrations)
+> `docs/07-analysis/V9/08-data-model/` — ORM schema, column-level verification
+> `docs/07-analysis/V9/11-config-deploy/` — Configuration and deployment analysis
+
+---
+
+**Last Updated**: 2026-03-31

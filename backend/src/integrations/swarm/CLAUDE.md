@@ -131,4 +131,10 @@ See `frontend/src/components/unified-chat/agent-swarm/` (17 components):
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-09-integrations.md` — Swarm system analysis within integrations layer (lifecycle, SSE events, coordination)
+
+---
+
+**Last Updated**: 2026-03-31

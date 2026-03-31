@@ -142,8 +142,11 @@ claudedocs/
 | Phase 27 | mem0 Integration Polish | 90 | 13 pts | ✅ Completed |
 | Phase 28 | Three-tier Intent Routing | 91-99 | 235 pts | ✅ Completed |
 | Phase 29 | Agent Swarm Visualization | 100-106 | ~190 pts | ✅ Completed |
+| Phase 30-34 | MAF RC4 Upgrade & Stabilization | 107-120 | ~300 pts | ✅ Completed |
+| Phase 35-39 | Claude SDK Enhancement & Hybrid Polish | 121-135 | ~280 pts | ✅ Completed |
+| Phase 40-44 | Deep Integration & Optimization | 136-152+ | ~300 pts | ✅ Completed |
 
-**Total**: ~2379 Story Points across 106 Sprints (29 Phases)
+**Total**: ~2500+ Story Points across 152+ Sprints (44 Phases)
 
 ### Latest Bug Fixes (Sprint 99)
 
@@ -162,6 +165,30 @@ claudedocs/
 | CHANGE-002 | Concurrency architecture improvement | 99+ | ✅ Completed |
 | CHANGE-003 | Three-tier router real implementation | 99+ | ✅ Completed |
 | CHANGE-004 | Swarm test page real execution mode | 107 | ✅ Completed |
+
+---
+
+## V9 Codebase Analysis Reference
+
+> The V9 analysis (`docs/07-analysis/V9/`) provides the most comprehensive and verified codebase analysis available. It covers Phase 1-44 with 1,028 source files, 327,582 LOC, verified through 130 waves at 9.2/10 quality.
+
+### Quick Access
+
+| Need | V9 Document |
+|------|-------------|
+| Project overview & navigation | `V9/00-index.md` (master index) |
+| Codebase statistics | `V9/00-stats.md` |
+| Architecture by layer (L01-L11) | `V9/01-architecture/layer-XX-*.md` |
+| Feature completeness & maturity | `V9/03-features/` + `V9/13-mock-real/` |
+| Known issues (62 total, 8 CRITICAL) | `V9/05-issues/issue-registry.md` |
+| API endpoint catalog (591 endpoints) | `V9/09-api-reference/` |
+| Phase change history (30-44) | `V9/07-delta/` |
+
+### Usage Notes
+
+- V9 is baselined at Phase 44 (2026-03-31). Content may diverge as new development proceeds
+- Verified numbers (endpoints, enums, ORM columns) are high-confidence; behavioral descriptions should be cross-checked against current source
+- Combine V9 with `git log --since="2026-03-31"` to understand changes since the analysis baseline
 
 ---
 
@@ -273,6 +300,7 @@ claudedocs/6-ai-assistant/prompts/
 | Document Path | Purpose |
 |---------------|---------|
 | `CLAUDE.md` (root) | Project master guide |
+| `docs/07-analysis/V9/00-index.md` | V9 codebase analysis master index |
 | `docs/01-planning/prd/` | Product requirements docs |
 | `docs/02-architecture/` | System architecture design |
 | `docs/03-implementation/sprint-planning/` | Sprint planning tracking |
@@ -357,5 +385,5 @@ claudedocs/6-ai-assistant/prompts/
 ---
 
 **Maintainer**: AI Assistant + Development Team
-**Last Updated**: 2026-02-09
-**Document Version**: 3.1.0
+**Last Updated**: 2026-03-31
+**Document Version**: 3.2.0

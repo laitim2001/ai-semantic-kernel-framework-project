@@ -362,4 +362,40 @@
 
 ---
 
+## 8. Sync Infrastructure
+
+V9 is maintained as a **living document** with AI-driven incremental synchronization after each sprint/phase.
+
+### Sync Skill
+
+| Item | Detail |
+|------|--------|
+| **Skill** | `/v9-sync` — AI-driven codebase analysis sync |
+| **Definition** | `.claude/skills/v9-sync/SKILL.md` |
+| **Modes** | Full sync, `--report-only`, `--file <name>`, `--stats-only` |
+
+### Sync State Files
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `v9-sync-state.json` | `_verification/` | Tracks last sync commit, date, phase, sprint, per-file update dates |
+| `v9-sync-log.md` | `_verification/` | Audit trail of all sync events with AI summaries |
+
+### How It Works
+
+1. AI reads `git diff` since last sync to identify changed source files
+2. Maps changed directories to affected V9 files using built-in layer mapping
+3. AI reads the actual changed source code and semantically compares against V9 content
+4. Updates V9 files — numbers, class inventories, behavioral descriptions, issue status
+5. Verifies stats cascade consistency and logs the sync event
+
+### Freshness Policy
+
+- **Baseline**: Phase 44, 2026-03-31, commit 50ec420
+- **Update cadence**: After each sprint (Tier 1: numbers) or phase (Tier 2: architecture)
+- **Quality standard**: Updates must maintain 9.2/10 quality. Conservative principle — flag uncertain items for review rather than making potentially incorrect changes
+- **Re-baseline**: Consider a full re-verification pass every ~10 phases or after major architectural changes
+
+---
+
 *End of V9 Master Index*
