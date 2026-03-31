@@ -15,10 +15,10 @@
 │  問題: Phase 35-38 建了 ~60 files / 10K+ LOC，但各模組獨立無法運行         │
 │                                                                             │
 │  ┌─── Gap #1: Assembly Gap ──────────────────────────────────────┐          │
-│  │  OrchestratorMediator 6 handlers 全部 = None                  │          │
+│  │  OrchestratorMediator 7 handlers 全部 = None                  │          │
 │  │                    ↓ 解決方案                                  │          │
 │  │  OrchestratorBootstrap (factory method)                        │          │
-│  │  一次初始化: 6 handlers + MCP + Memory + ToolSecurity          │          │
+│  │  一次初始化: 7 handlers + MCP + Memory + ToolSecurity          │          │
 │  └───────────────────────────────────────────────────────────────┘          │
 │                                                                             │
 │  ┌─── Gap #2: No Background Execution ───────────────────────────┐          │
@@ -85,7 +85,7 @@
 
 ### Core Problem
 Phase 35-38 built ~60 files / ~10K+ LOC of core modules, but they existed independently without startup code to wire them into a runnable end-to-end pipeline. Three CRITICAL gaps:
-1. **Assembly Gap**: OrchestratorMediator's 6 handlers all default to `None` — no bootstrap code
+1. **Assembly Gap**: OrchestratorMediator's 7 handlers all default to `None` — no bootstrap code
 2. **No Background Execution**: All execution tied to HTTP request lifecycle
 3. **Old/New System Coexistence**: AG-UI bridge still connected to old `HybridOrchestratorV2`
 
@@ -94,7 +94,7 @@ Phase 35-38 built ~60 files / ~10K+ LOC of core modules, but they existed indepe
 **Backend — Bootstrap & Wiring**
 | File | Purpose |
 |------|---------|
-| `backend/src/integrations/hybrid/orchestrator/bootstrap.py` | OrchestratorBootstrap: factory method wiring all 6 handlers + MCP + Memory + ToolSecurity in one initialization |
+| `backend/src/integrations/hybrid/orchestrator/bootstrap.py` | OrchestratorBootstrap: factory method wiring all 7 handlers + MCP + Memory + ToolSecurity in one initialization |
 | `backend/src/integrations/hybrid/orchestrator/events.py` | OrchestratorEvent class definitions for pipeline events |
 | `backend/src/integrations/ag_ui/mediator_bridge.py` | MediatorEventBridge: adapts OrchestratorMediator events to AG-UI SSE event format (Sprint 135, commit `659c789`) |
 | `backend/src/integrations/ag_ui/sse_buffer.py` | SSEEventBuffer for buffering and delivering SSE events (Sprint 135) |
@@ -143,7 +143,7 @@ Phase 35-38 built ~60 files / ~10K+ LOC of core modules, but they existed indepe
 - E2E 10-step smoke test passing
 
 ### Issues Fixed
-- **Assembly Gap** (CRITICAL): All 6 handlers wired to real dependencies
+- **Assembly Gap** (CRITICAL): All 7 handlers wired to real dependencies
 - **No HTTP Entry Point** (CRITICAL): OrchestratorMediator now accessible via AG-UI endpoints
 - **Old/New Coexistence** (HIGH): AG-UI bridge fully migrated to new system
 - **Background Execution** (CRITICAL): ARQ integration for async task execution
@@ -345,7 +345,7 @@ Phase 41 connected Chat to the pipeline, but 5 critical blockers remained:
 | Status | Phase 39-41: Completed / Phase 42: Completed on feature branch |
 
 ### Key Transformation
-**Before (Post Phase 38)**: All modules exist but unassembled — 6 handlers default to None, AG-UI uses old bridge, no background execution, no frontend for new features.
+**Before (Post Phase 38)**: All modules exist but unassembled — 7 handlers default to None, AG-UI uses old bridge, no background execution, no frontend for new features.
 
 **After (Post Phase 42)**: Complete assembled pipeline with OrchestratorBootstrap, SSE streaming, function calling, Swarm UI in Chat, HITL approval flow, session persistence, and RAG integration. Frontend fully connected with 5 new pages and 3 inline chat components.
 

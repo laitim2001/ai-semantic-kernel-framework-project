@@ -289,10 +289,11 @@ User HTTP Request
 ```
 
 **State Transitions** (from `Session` dataclass):
-- `CREATED -> ACTIVE`: `activate()` — checks not expired
+- `CREATED -> ACTIVE`: `activate()` — checks not expired, extends expiry
+- `SUSPENDED -> ACTIVE`: `activate()` OR `resume()` — both check not expired, extend expiry (`activate()` accepts CREATED or SUSPENDED; `resume()` only accepts SUSPENDED)
 - `ACTIVE -> SUSPENDED`: `suspend()` — connection lost
-- `SUSPENDED -> ACTIVE`: `resume()` — checks not expired, extends expiry
 - `ACTIVE -> ENDED`: `end()` — sets ended_at, idempotent
+- `SUSPENDED -> ENDED`: `end()` — sets ended_at, idempotent
 - `CREATED -> ACTIVE -> SUSPENDED -> ACTIVE -> ENDED` (full lifecycle)
 
 **Key Design Decisions**:
@@ -313,7 +314,7 @@ PENDING --> APPROVED --> RUNNING --> COMPLETED
 
 The events module contains **two independent event systems** that coexist but serve different purposes:
 
-#### System 1: ExecutionEventFactory (Sprint 45) — 11 Event Types
+#### System 1: ExecutionEventFactory (Sprint 45) — 10 Event Types
 
 Used by `AgentExecutor` and `SessionAgentBridge` for **real-time streaming** to the client.
 
@@ -607,8 +608,12 @@ Central registry for tools available to agents:
 | `create_checkpoint()` | Active | Still primary |
 | `get_checkpoint()` | Active | Still primary |
 | `get_pending_approvals()` | Active | Still primary |
+| `get_checkpoints_by_execution()` | Active | Still primary |
 | `approve_checkpoint()` | **DEPRECATED** | `HumanApprovalExecutor.respond()` |
 | `reject_checkpoint()` | **DEPRECATED** | `HumanApprovalExecutor.respond()` |
+| `expire_old_checkpoints()` | Active | Still primary |
+| `get_stats()` | Active | Still primary |
+| `delete_checkpoint()` | Active | Still primary |
 | `create_checkpoint_with_approval()` | Active | Bridges legacy + new API |
 | `handle_approval_response()` | Active | Bridges new API -> legacy storage |
 
@@ -636,7 +641,7 @@ All connectors are **stateless** with no persistence layer.
 
 | Module | Key Class | Purpose | Notes |
 |--------|-----------|---------|-------|
-| `executions/` | `ExecutionStateMachine` | 8-state execution lifecycle (PENDING->RUNNING->COMPLETED etc.) | Used by workflow execution |
+| `executions/` | `ExecutionStateMachine` | 6-state execution lifecycle (PENDING→RUNNING→PAUSED→COMPLETED/FAILED/CANCELLED) | Used by workflow execution |
 | `auth/` | Auth models | Authentication domain logic | Integrates with `core/security/` |
 | `files/` | File domain models | File handling business logic | Supports upload/download |
 | `templates/` | `TemplateService` | Workflow template management | 5 system templates |

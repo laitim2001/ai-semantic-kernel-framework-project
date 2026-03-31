@@ -2,7 +2,7 @@
 
 > **V9 Deep Analysis** | Date: 2026-03-29 | Analyst: Claude Opus 4.6 (1M context)
 >
-> Full source reading of all 75 Python files in `backend/src/integrations/mcp/`.
+> Full source reading of all 73 Python files in `backend/src/integrations/mcp/`.
 > Every class, method signature, permission level, and tool schema verified against source code.
 
 ---
@@ -18,7 +18,7 @@
 | **Total LOC** | **20,847** (R4 verified via `wc -l`) |
 | **Phase Origin** | Phase 9-10 (core), Sprint 113 (security), Sprint 117 (ServiceNow), Sprint 120 (Redis audit), Sprint 129 (D365), later sprints (n8n, ADF) |
 | **Protocol** | JSON-RPC 2.0 over stdio, conforming to MCP Specification 2024-11-05 |
-| **Total Tools** | 69 tools across 9 MCP servers |
+| **Total Tools** | 70 tools across 9 MCP servers |
 | **External SDKs** | azure-identity, azure-mgmt-*, paramiko, ldap3, redis.asyncio, httpx (ServiceNow/n8n/D365) |
 
 ---
@@ -42,7 +42,7 @@
 │                              │                                              │
 │                              ↓  JSON-RPC 2.0                               │
 │  ┌──────────────────────────────────────────────────────────────────┐       │
-│  │  MCPProtocol (core/protocol.py, 408 LOC)                         │       │
+│  │  MCPProtocol (core/protocol.py, 407 LOC)                         │       │
 │  │  • 9 methods: initialize, initialized, tools/list, tools/call,    │       │
 │  │    resources/list, resources/read, prompts/list, prompts/get,    │       │
 │  │    ping                                                          │       │
@@ -61,9 +61,9 @@
 │            │                                                                │
 │            ↓                                                                │
 │  ┌──────────────────────────────────────────────────────────────────┐       │
-│  │  9 MCP Tool Servers (69 tools total)                             │       │
+│  │  9 MCP Tool Servers (70 tools total)                             │       │
 │  │                                                                  │       │
-│  │  Azure(23)  Filesystem(6)  Shell(2)  SSH(6)  LDAP(6)            │       │
+│  │  Azure(23)  Filesystem(6)  Shell(3)  SSH(6)  LDAP(6)            │       │
 │  │  ServiceNow(6)  n8n(6)  D365(6)  ADF(8)                        │       │
 │  └──────────────────────────────────────────────────────────────────┘       │
 │                                                                             │
@@ -150,7 +150,7 @@ stateDiagram-v2
 | File | LOC | Key Classes | Purpose |
 |------|-----|-------------|---------|
 | `core/types.py` | 417 | `ToolInputType`, `ToolParameter`, `ToolSchema`, `ToolResult`, `MCPRequest`, `MCPResponse`, `MCPErrorCode` | Type system: 7 JSON Schema types, bidirectional MCP format conversion, JSON-RPC 2.0 request/response with error codes |
-| `core/protocol.py` | 408 | `MCPProtocol` | JSON-RPC 2.0 handler: 9 methods (initialize, initialized, tools/list, tools/call, resources/list, resources/read, prompts/list, prompts/get, ping). Tool registration, permission checking integration |
+| `core/protocol.py` | 407 | `MCPProtocol` | JSON-RPC 2.0 handler: 9 methods (initialize, initialized, tools/list, tools/call, resources/list, resources/read, prompts/list, prompts/get, ping). Tool registration, permission checking integration |
 | `core/transport.py` | 372 | `BaseTransport` (ABC), `StdioTransport`, `InMemoryTransport` | Transport abstraction: StdioTransport manages subprocess lifecycle with async read loop, write lock, pending request matching. InMemoryTransport for testing |
 | `core/client.py` | 446 | `MCPClient`, `ServerConfig` | Multi-server client: connect/disconnect lifecycle, tool discovery via tools/list, tool invocation via tools/call, async context manager |
 
@@ -167,7 +167,7 @@ stateDiagram-v2
 |------|-----|-------------|---------|
 | `security/permissions.py` | 458 | `PermissionLevel` (IntEnum), `Permission`, `PermissionPolicy`, `PermissionManager` | 4-level RBAC: NONE(0)/READ(1)/EXECUTE(2)/ADMIN(3). Glob-pattern matching for servers/tools, priority-based policy evaluation, deny-list precedence, dynamic conditions (time_range, ip_whitelist, custom evaluators) |
 | `security/permission_checker.py` | 183 | `MCPPermissionChecker` | Runtime enforcement facade: two modes via `MCP_PERMISSION_MODE` env var -- "log" (Phase 1, log-only) and "enforce" (Phase 2, raises PermissionError). Dev/testing gets permissive ADMIN default policy. Stats tracking |
-| `security/command_whitelist.py` | 225 | `CommandWhitelist` | Three-tier command security: 79 DEFAULT_WHITELIST commands, 24 BLOCKED_PATTERNS regex, everything else requires_approval. Extensible via `MCP_ADDITIONAL_WHITELIST` env var |
+| `security/command_whitelist.py` | 225 | `CommandWhitelist` | Three-tier command security: 79 DEFAULT_WHITELIST commands, 24 BLOCKED_PATTERNS regex, everything else requires_approval. Extensible via `MCP_ADDITIONAL_WHITELIST` env var. Command name extraction strips sudo/nohup/env/time prefixes and path prefixes |
 | `security/audit.py` | 679 | `AuditEventType` (13 types), `AuditEvent`, `AuditFilter`, `AuditStorage` (ABC), `InMemoryAuditStorage`, `FileAuditStorage`, `AuditLogger` | Comprehensive audit: 12 event types across 5 categories. Sensitive field redaction. Pluggable storage with deque-based in-memory (bounded), JSON Lines file, event handler pipeline |
 | `security/redis_audit.py` | ~120 | `RedisAuditStorage` | Production audit backend: Redis Sorted Set (score=timestamp) for efficient time-range queries, auto-trimming to max_size, key `mcp:audit:events` |
 
@@ -257,7 +257,7 @@ stateDiagram-v2
 |                    Security Layer                                      |
 |  +------------------+  +----------------+  +------------------------+ |
 |  |PermissionChecker |  | CommandWhite-  |  |    AuditLogger         | |
-|  | log/enforce mode |  | list (65+26)   |  | InMemory/File/Redis    | |
+|  | log/enforce mode |  | list (79+24)   |  | InMemory/File/Redis    | |
 |  | RBAC 4-level     |  | 3-tier check   |  | 13 event types         | |
 |  +--------+---------+  +-------+--------+  +-----------+------------+ |
 |           |                    |                        |              |
@@ -272,11 +272,11 @@ stateDiagram-v2
 +-------------------------------+------------------------+--------------+
                                 |                        |
 +-------------------------------v------------------------v--------------+
-|                    9 MCP Servers (69 tools)                            |
+|                    9 MCP Servers (70 tools)                            |
 |                                                                       |
 |  +--------+ +--------+ +-------+ +------+ +-----+                    |
 |  | Azure  | |Filesys.| | Shell | | LDAP | | SSH |                    |
-|  |23 tools| |6 tools | |2 tools| |6 tool| |6 tls|                    |
+|  |23 tools| |6 tools | |3 tools| |6 tool| |6 tls|                    |
 |  +--------+ +--------+ +-------+ +------+ +-----+                    |
 |                                                                       |
 |  +-----------+ +------+ +------+ +----------+                        |
@@ -395,7 +395,7 @@ stateDiagram-v2
 | `get_file_info` | READ (1) | Get file metadata (size, dates) |
 | `delete_file` | ADMIN (3) | Delete a file (requires human approval) |
 
-### 4.3 Shell MCP Server (2 tools)
+### 4.3 Shell MCP Server (3 tools)
 
 **Server Class**: `ShellMCPServer` | **Name**: `shell-mcp` | **External SDK**: `subprocess` (stdlib)
 
@@ -405,6 +405,7 @@ stateDiagram-v2
 |-----------|------------|-------------|
 | `run_command` | ADMIN (3) | Run a shell command (whitelist-checked) |
 | `run_script` | ADMIN (3) | Run a script file (whitelist-checked) |
+| `get_shell_info` | READ (1) | Get information about the shell configuration |
 
 ### 4.4 LDAP MCP Server (6 tools)
 
@@ -506,16 +507,16 @@ stateDiagram-v2
 |--------|------|---------|-------|-------|
 | Azure | 18 | 1 | 4 | **23** |
 | Filesystem | 4 | 1 | 1 | **6** |
-| Shell | 0 | 0 | 2 | **2** |
+| Shell | 1 | 0 | 2 | **3** |
 | LDAP | 5 | 1 | 0 | **6** |
 | SSH | 1 | 2 | 3 | **6** |
 | ServiceNow | 2 | 4 | 0 | **6** |
 | n8n | 4 | 1 | 1 | **6** |
 | ADF | 6 | 1 | 1 | **8** |
 | D365 | 4 | 2 | 0 | **6** |
-| **Total** | **44** | **13** | **12** | **69** |
+| **Total** | **45** | **13** | **12** | **70** |
 
-> **Note**: The verified count from source code `PERMISSION_LEVELS` dicts is **69 tools** across 9 servers.
+> **Note**: The verified count from source code `PERMISSION_LEVELS` dicts + tool schemas is **70 tools** across 9 servers. Shell's `get_shell_info` is defined in schemas but not in `PERMISSION_LEVELS` (no explicit permission level set).
 
 ---
 
@@ -629,11 +630,11 @@ stateDiagram-v2
 
 | Tier | Check | Decision | Action |
 |------|-------|----------|--------|
-| 1st | BLOCKED_PATTERNS (26 compiled regex) | `"blocked"` | Reject immediately, log WARNING |
-| 2nd | DEFAULT_WHITELIST (65 command names) | `"allowed"` | Allow immediately, log DEBUG |
+| 1st | BLOCKED_PATTERNS (24 compiled regex) | `"blocked"` | Reject immediately, log WARNING |
+| 2nd | DEFAULT_WHITELIST (79 command names) | `"allowed"` | Allow immediately, log DEBUG |
 | 3rd | Everything else | `"requires_approval"` | Log INFO (HITL approval planned) |
 
-**Whitelisted categories** (65 commands):
+**Whitelisted categories** (79 commands):
 - **System info**: whoami, hostname, date, uptime, uname
 - **File viewing**: ls, dir, cat, head, tail, wc, find, grep, file, stat, readlink, realpath
 - **Network diagnostics**: ping, nslookup, dig, traceroute, tracert, curl, wget, netstat, ss, ip
@@ -645,7 +646,7 @@ stateDiagram-v2
 - **Environment**: env, printenv, echo, printf
 - **PowerShell read-only**: Get-Process, Get-Service, Get-EventLog, Get-ChildItem, Get-Content, Get-Item, Get-WmiObject, Get-CimInstance, Test-Connection, Test-Path, Select-Object, Where-Object, Format-Table
 
-**Blocked patterns** (26 regex, compiled with `re.IGNORECASE`):
+**Blocked patterns** (24 regex, compiled with `re.IGNORECASE`):
 - **Destructive file ops**: `rm -rf /`, `rm -rf *`, `rm -rf .`, `del /s`, `format [drive]:`, `mkfs.*`, `dd if=...of=/dev`
 - **Privilege escalation**: `chmod 777 /`, `chown .* /$`
 - **Remote code piping**: `curl...|sh`, `wget...|sh`
@@ -755,27 +756,27 @@ Commands returning `"requires_approval"` only log a warning/info message. The pl
 | Phase/Sprint | Milestone | Key Additions |
 |-------------|-----------|---------------|
 | **Phase 9** | MCP Core Infrastructure | `core/` (types, protocol, transport, client), initial server structure |
-| **Phase 10** | First 5 MCP Servers | Azure (23 tools), Filesystem (6), Shell (2), LDAP (6), SSH (6) = 43 tools |
+| **Phase 10** | First 5 MCP Servers | Azure (23 tools), Filesystem (6), Shell (3), LDAP (6), SSH (6) = 44 tools |
 | **Sprint 113** | Security Layer | `MCPPermissionChecker` (log/enforce modes), `CommandWhitelist` (65+26), permission levels on all existing tools |
 | **Sprint 117** | ServiceNow Server | 6 tools (Incident CRUD, RITM, Attachments). Root-level files |
 | **Sprint 120** | Redis Audit Storage | `RedisAuditStorage` -- production-grade audit backend replacing InMemory |
 | **Sprint ~127** | n8n Server | 6 tools (workflow management + run monitoring) |
 | **Sprint ~128** | ADF Server | 8 tools (pipeline management + run monitoring + datasets/triggers) |
 | **Sprint 129** | D365 Server | 6 tools (OData query + CRUD). Story 129-2 |
-| **Current** | 9 servers, 69 tools | Full enterprise IT operations coverage |
+| **Current** | 9 servers, 70 tools | Full enterprise IT operations coverage |
 
 ### Evolution Timeline
 
 ```
-Phase 9-10:   Core + 5 servers (43 tools)         -- Infrastructure foundation
+Phase 9-10:   Core + 5 servers (44 tools)         -- Infrastructure foundation
 Sprint 113:   Security overlay (RBAC + Whitelist)  -- Governance layer
-Sprint 117:   ServiceNow (+6 tools = 49)           -- ITSM integration
+Sprint 117:   ServiceNow (+6 tools = 50)           -- ITSM integration
 Sprint 120:   Redis audit backend                  -- Production readiness
-Sprint ~127:  n8n (+6 tools = 55)                  -- Workflow automation
-Sprint ~128:  ADF (+8 tools = 63)                  -- Data pipeline management
-Sprint 129:   D365 (+6 tools = 69)                 -- CRM/ERP integration
+Sprint ~127:  n8n (+6 tools = 56)                  -- Workflow automation
+Sprint ~128:  ADF (+8 tools = 64)                  -- Data pipeline management
+Sprint 129:   D365 (+6 tools = 70)                 -- CRM/ERP integration
 --------------------------------------------------------------
-Total:        9 servers, 69 tools, 75 files, ~20K LOC
+Total:        9 servers, 70 tools, 73 files, ~20.8K LOC
 ```
 
 ---
@@ -876,4 +877,4 @@ This consistency enables automated server discovery, unified permission enforcem
 
 ---
 
-> **Analysis completed**: 2026-03-29 | 75 files read | 9 servers verified | 69 tools catalogued | 7 issues identified
+> **Analysis completed**: 2026-03-29 | 73 files read | 9 servers verified | 70 tools catalogued | 7 issues identified

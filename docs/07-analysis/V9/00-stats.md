@@ -24,7 +24,7 @@ graph TB
         FE["React 18 + TypeScript<br/>236 files | 54,238 LOC (wc -l)"]
     end
     subgraph "Layer 2: API Gateway"
-        API["FastAPI<br/>153 files | 47,377 LOC<br/>566 endpoints"]
+        API["FastAPI<br/>153 files | 47,377 LOC<br/>572 endpoints"]
     end
     subgraph "Layer 3: AG-UI"
         AGUI["SSE Protocol<br/>27 files | 10,329 LOC"]
@@ -42,7 +42,7 @@ graph TB
         CLAUDE["Autonomous Engine<br/>48 files | 15,406 LOC"]
     end
     subgraph "Layer 8: MCP Tools"
-        MCP["9 Servers, 69 Tools<br/>73 files | 20,847 LOC"]
+        MCP["9 Servers, 70 Tools<br/>73 files | 20,847 LOC"]
     end
     subgraph "Layer 9: Integrations"
         INT["14 Sub-modules<br/>77 files | 22,604 LOC"]
@@ -78,7 +78,7 @@ graph TB
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 1: Frontend (使用者介面)                                              ║    │
-│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 143 components | 33 hooks          ║    │
+│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 120 components | 25 hooks          ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   React 18 + TypeScript + Vite (port 3005) + ReactFlow + Shadcn UI         ║    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐                   ║    │
@@ -94,7 +94,7 @@ graph TB
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
 │                                 │ Fetch API + SSE (port 3005 → 8000)               │
 │  ╔══════════════════════════════│════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (566 endpoints, 43 route modules)                      ║    │
+│  ║  Layer 2: API Gateway (572 endpoints, 43 route modules)                      ║    │
 │  ║  153 files | 47,377 LOC | FastAPI (port 8000)                                ║    │
 │  ║  Auth: JWT (HS256) + protected_router 全域保護                               ║    │
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
@@ -210,14 +210,14 @@ graph TB
 │                   └──────────────────┬────────────────────┘                             │
 │                                      │                                                  │
 │  ╔═══════════════════════════════════│══════════════════════════════════════════════╗   │
-│  ║                     Layer 8: 統一 MCP 工具層 (9 Servers, 69 Tools)               ║   │
+│  ║                     Layer 8: 統一 MCP 工具層 (9 Servers, 70 Tools)               ║   │
 │  ║                     73 files, 20,847 LOC                                         ║   │
 │  ╠═══════════════════════════════════│══════════════════════════════════════════════╣   │
 │  ║   ┌───────────────────────────────────────────────────────────────────────────┐  ║   │
 │  ║   │                         MCP Gateway Service                               │  ║   │
 │  ║   │   ┌─────────┐  ┌───────┐  ┌────────┐  ┌──────┐  ┌─────┐                 │  ║   │
 │  ║   │   │  Azure   │  │ Shell │  │Filesys │  │ SSH  │  │LDAP │                 │  ║   │
-│  ║   │   │(23 tool)│  │(2 tl) │  │(6 tl)  │  │(6 tl)│  │(6tl)│                 │  ║   │
+│  ║   │   │(23 tool)│  │(3 tl) │  │(6 tl)  │  │(6 tl)│  │(6tl)│                 │  ║   │
 │  ║   │   └─────────┘  └───────┘  └────────┘  └──────┘  └─────┘                 │  ║   │
 │  ║   │   ┌─────────┐  ┌───────┐  ┌────────┐  ┌──────┐                           │  ║   │
 │  ║   │   │Srv.Now  │  │  n8n  │  │  D365  │  │ ADF  │  ← Phase 33-37 新增      │  ║   │
@@ -307,7 +307,7 @@ graph TB
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 1: Frontend (使用者介面)                                              ║    │
-│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 143 components | 33 hooks          ║    │
+│  ║  236 .ts/.tsx | 54,238 LOC | 46 pages | 120 components | 25 hooks          ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   React 18 + TypeScript + Vite (port 3005) + ReactFlow + Shadcn UI         ║    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    ║    │
@@ -322,7 +322,7 @@ graph TB
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (566 endpoints, 43 route modules, 48 routers)         ║    │
+│  ║  Layer 2: API Gateway (572 endpoints, 43 route modules, 48 routers)         ║    │
 │  ║  153 files | 47,377 LOC | FastAPI (port 8000)                               ║    │
 │  ║  Auth: JWT (HS256) + protected_router | 31 auth endpoints (5.3%)            ║    │
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
@@ -410,11 +410,11 @@ graph TB
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
 │  ║  Layer 8: MCP Tool Layer (統一工具存取層)                                    ║    │
-│  ║  73 files, 20,847 LOC | 9 servers, 69 tools | 4-level RBAC                 ║    │
+│  ║  73 files, 20,847 LOC | 9 servers, 70 tools | 4-level RBAC                 ║    │
 │  ╠══════════════════════════════════════════════════════════════════════════════╣    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    ║    │
 │  ║   │  Azure   │  │  Shell   │  │Filesystem│  │   SSH    │  │  LDAP   │    ║    │
-│  ║   │(23 tool) │  │ (2 tool) │  │ (6 tool) │  │ (6 tool) │  │ (6 tool) │    ║    │
+│  ║   │(23 tool) │  │ (3 tool) │  │ (6 tool) │  │ (6 tool) │  │ (6 tool) │    ║    │
 │  ║   └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘    ║    │
 │  ║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐                  ║    │
 │  ║   │Srv.Now   │  │   n8n    │  │   D365   │  │   ADF    │  (P33-37)       ║    │
@@ -546,10 +546,10 @@ graph TB
 
 | Metric | Count |
 |--------|-------|
-| API Route Modules | 48 |
-| Estimated Endpoints | 560+ |
-| Auth-Protected Routes | ~530 (via protected_router) |
-| Public Routes | ~30 (health, auth/login, auth/signup) |
+| API Route Modules | 43 |
+| Total Endpoints | 572 (568 REST + 4 WebSocket) |
+| Auth-Protected Routes | ~564 (via protected_router) |
+| Public Routes | 8 (5 auth + 3 health) |
 
 ---
 
@@ -582,16 +582,16 @@ graph TB
 
 | Category | Files | Coverage Target |
 |----------|-------|-----------------|
-| Backend Unit Tests | 345 | 80% fail_under |
-| Backend Integration Tests | 43 | — |
-| Backend E2E Tests | 29 | — |
-| Backend Security Tests | 5 | — |
-| Backend Performance Tests | 13 | — |
-| Backend Load Tests | 2 | — |
-| Backend Root (conftest etc.) | 6 | — |
+| Backend Unit Tests | 289 | 80% fail_under |
+| Backend Integration Tests | 28 | — |
+| Backend E2E Tests | 25 | — |
+| Backend Security Tests | 4 | — |
+| Backend Performance Tests | 10 | — |
+| Backend Load Tests | 1 | — |
+| Backend Mocks | 3 | — |
+| Backend Root (conftest etc.) | 1 | — |
 | Frontend Unit Tests | 13 (12 swarm + 1 store) | — |
-| Frontend E2E Tests | 13 | — |
-| **Total Test Files** | **469** | |
+| **Total Test Files** | **374** (361 backend + 13 frontend) | |
 
 ---
 
@@ -604,8 +604,8 @@ graph TB
 | Docker Services (prod) | 4 (backend, frontend, postgres, redis) |
 | Python Dependencies | 40+ packages |
 | npm Dependencies | 30+ packages |
-| MCP Servers | 8 |
-| MCP Tools | 64 |
+| MCP Servers | 9 (8 under servers/ + ServiceNow root-level) |
+| MCP Tools | 70 (azure:23 + adf:8 + servicenow:6 + d365:6 + n8n:6 + filesystem:6 + ldap:6 + ssh:6 + shell:3) |
 
 ---
 
@@ -629,7 +629,7 @@ graph TB
 |--------|-----------------|-----------------|-------|
 | Phases | 1-34 | 1-44 | +10 phases |
 | Sprints | ~133 | ~152 | +19 sprints |
-| Source Files | 939 | 1,090 | +151 files |
-| LOC | ~160K | ~250K | +90K LOC (R4 corrected; prior V9 estimate was ~184K) |
+| Source Files | 939 | 1,029 | +90 files |
+| LOC | ~160K | ~328K | +168K LOC (src 85K + tests 186K + frontend 54K + misc 3K) |
 | Features Tracked | 70+15 | TBD (V9 analysis) | — |
 | Issues Tracked | 62 | TBD (V9 analysis) | — |

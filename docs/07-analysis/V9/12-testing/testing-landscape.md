@@ -20,13 +20,15 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total Backend Test Files** | ~354 (excluding `__init__.py`) |
-| **Backend Unit Tests** | ~289 files |
-| **Backend Integration Tests** | ~28 files |
-| **Backend E2E Tests** | ~23 files |
-| **Backend Performance Tests** | ~15 files (10 in performance/ + 5 in unit/performance/) |
-| **Backend Security Tests** | 3 files |
-| **Backend Load Tests** | 1 file (locustfile.py) |
+| **Total Backend Test Files** | 361 (excluding `__init__.py`) |
+| **Backend Unit Tests** | 289 files |
+| **Backend Integration Tests** | 28 files |
+| **Backend E2E Tests** | 25 files |
+| **Backend Performance Tests** | 10 files |
+| **Backend Security Tests** | 4 files |
+| **Backend Load Tests** | 1 file |
+| **Backend Mocks** | 3 files |
+| **Backend Root (conftest)** | 1 file |
 | **Frontend Unit Tests** | 13 files |
 | **Frontend E2E Tests** | 11 files (Playwright) |
 | **Source Modules (backend)** | 16 integration + 20 domain + 6 infrastructure + 6 core |
@@ -64,7 +66,7 @@
 │      ╱          (最大覆蓋面積)          ╲  Frontend: 13 files             │
 │     ╱────────────────────────────────────╲                                 │
 │                                                                             │
-│  Total: ~354 backend + 24 frontend = ~378 test files                       │
+│  Total: 361 backend + 13 frontend = 374 test files                         │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

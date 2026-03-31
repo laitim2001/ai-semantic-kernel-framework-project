@@ -53,7 +53,7 @@
 │  │                                                                   │      │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │      │
 │  │  │  security/   │  │ performance/ │  │  sandbox/    │           │      │
-│  │  │  (6 files)   │  │ (10 files)   │  │  (6 files)   │           │      │
+│  │  │  (7 files)   │  │ (11 files)   │  │  (7 files)   │           │      │
 │  │  │              │  │              │  │              │           │      │
 │  │  │  JWT Auth    │  │  Profiler    │  │  Code Exec   │           │      │
 │  │  │  RBAC        │  │  Metrics     │  │  Resource    │           │      │
@@ -124,7 +124,7 @@
 
 ## 2. File Inventory
 
-### 2.1 infrastructure/ (53 files)
+### 2.1 infrastructure/ (54 files)
 
 ```
 infrastructure/
@@ -201,7 +201,7 @@ infrastructure/
     └── task_functions.py                    # execute_workflow_task + execute_swarm_task (Sprint 136)
 ```
 
-### 2.2 core/ (38 files)
+### 2.2 core/ (39 files)
 
 ```
 core/
@@ -212,7 +212,7 @@ core/
 ├── server_config.py                         # (server configuration)
 ├── sandbox_config.py                        # (sandbox configuration)
 │
-├── security/                                # 6 files
+├── security/                                # 7 files
 │   ├── __init__.py
 │   ├── jwt.py                               # JWT create/decode (HS256) (Sprint 70)
 │   ├── password.py                          # bcrypt hash/verify via passlib (Sprint 70)
@@ -221,7 +221,7 @@ core/
 │   ├── tool_gateway.py                      # ToolSecurityGateway 4-layer (Sprint 109)
 │   └── audit_report.py                      # SecurityAuditReport OWASP generator
 │
-├── performance/                             # 10 files
+├── performance/                             # 11 files
 │   ├── __init__.py
 │   ├── circuit_breaker.py                   # CircuitBreaker CLOSED/OPEN/HALF_OPEN (Sprint 116)
 │   ├── llm_pool.py                          # LLMCallPool priority semaphore (Sprint 109)
@@ -303,7 +303,7 @@ All models use `postgresql+asyncpg://` via SQLAlchemy 2.0+ mapped_column syntax.
 | `description` | TEXT | nullable | |
 | `instructions` | TEXT | NOT NULL | System prompt |
 | `category` | VARCHAR(100) | nullable, INDEX | |
-| `tools` | JSONB | NOT NULL, default=list | Tool names list |
+| `tools` | JSONB | NOT NULL, default=list | Tool names list (Mapped type annotation is `Dict[str, Any]` despite `default=list`) |
 | `model_config` | JSONB | NOT NULL, default=dict | LLM config (temp, max_tokens) |
 | `max_iterations` | INTEGER | NOT NULL, default=10 | |
 | `status` | VARCHAR(50) | NOT NULL, default="active", INDEX | active/inactive/deprecated |
@@ -553,7 +553,7 @@ The storage layer has TWO incompatible interfaces created in different sprints:
 
 **Location**: `storage/storage_factories.py` (Sprint 119-120)
 
-7 factory functions creating specific storage consumers with environment-aware backend selection:
+8 factory functions creating specific storage consumers with environment-aware backend selection:
 
 | Factory | Consumer | Preferred Backend |
 |---------|----------|-------------------|

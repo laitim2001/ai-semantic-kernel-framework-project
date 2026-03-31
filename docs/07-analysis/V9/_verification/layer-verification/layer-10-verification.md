@@ -48,7 +48,7 @@
 | 2 | service.py | 626 | SessionServiceError, SessionNotFoundError, SessionExpiredError, SessionNotActiveError, MessageLimitExceededError, SessionService | PostgreSQL+Redis (via repository+cache) |
 | 3 | cache.py | 390 | SessionCache | Redis |
 | 4 | repository.py | 406 | SessionRepository(ABC), SQLAlchemySessionRepository | PostgreSQL |
-| 5 | events.py | 830 | ExecutionEventType(Enum, 10 values), ToolCallInfo(@dataclass), ToolResultInfo(@dataclass), UsageInfo(@dataclass), ExecutionEvent(@dataclass), ExecutionEventFactory, SessionEventType(Enum, 15 values), SessionEvent(@dataclass), SessionEventPublisher | InMemory (pub/sub) |
+| 5 | events.py | 830 | ExecutionEventType(Enum, 10 values), ToolCallInfo(@dataclass), ToolResultInfo(@dataclass), UsageInfo(@dataclass), ExecutionEvent(@dataclass), ExecutionEventFactory, SessionEventType(Enum, 17 values), SessionEvent(@dataclass), SessionEventPublisher | InMemory (pub/sub) |
 | 6 | executor.py | 668 | MessageRole(Enum), ChatMessage(@dataclass), AgentConfig(@dataclass), ExecutionConfig(@dataclass), ExecutionResult(@dataclass), MCPClientProtocol(Protocol), AgentExecutor | Stateless |
 | 7 | streaming.py | 748 | StreamState(Enum), StreamConfig(@dataclass), StreamStats(@dataclass), ToolCallDelta(@dataclass), TokenCounter, StreamingLLMHandler | External (Azure OpenAI) |
 | 8 | tool_handler.py | 1020 | ToolSource(Enum), ToolPermission(Enum), ToolRegistryProtocol(Protocol), MCPClientProtocol(Protocol), ParsedToolCall(@dataclass), ToolExecutionResult(@dataclass), ToolHandlerConfig(@dataclass), ToolHandlerStats(@dataclass), ToolCallParser, ToolCallHandler | Stateless |
@@ -77,7 +77,7 @@
 **CORRECTION**: The file count is actually **29 non-init files** (not 27 as initially counted from glob). The 6 `__init__.py` files bring the total to **35 files** in sessions/, exceeding the CLAUDE.md claim of 33.
 
 **Dual Event System — VERIFIED**:
-- `SessionEventType` (15 values): Session lifecycle events (session.created, message.sent, tool_call.requested, etc.) — managed by `SessionEventPublisher` with async handler pub/sub
+- `SessionEventType` (17 values): Session lifecycle events (6 session + 3 message + 5 tool_call + 2 attachment + 1 error) — managed by `SessionEventPublisher` with async handler pub/sub
 - `ExecutionEventType` (10 values): Agent execution events (content_delta, tool_call, approval_required, etc.) — managed by `ExecutionEventFactory` for SSE/WebSocket streaming
 - These are two **independent** event systems coexisting in `events.py`. The comment "Sprint 45 新增: ExecutionEventType" confirms the dual system was intentional.
 
@@ -268,7 +268,7 @@
 ### 3.2 Dual Event System
 
 **CONFIRMED**: events.py contains two independent event systems:
-1. `SessionEventType` (15 event types) + `SessionEventPublisher` — local async pub/sub for session lifecycle
+1. `SessionEventType` (17 event types) + `SessionEventPublisher` — local async pub/sub for session lifecycle
 2. `ExecutionEventType` (10 event types) + `ExecutionEventFactory` — SSE/WebSocket streaming for agent execution
 
 ### 3.3 Streaming Simulation

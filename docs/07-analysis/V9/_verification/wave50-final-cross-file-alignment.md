@@ -36,9 +36,9 @@
 
 | # | 項目 | 00-stats.md | testing-landscape.md | 判定 |
 |---|------|-------------|---------------------|------|
-| P10 | 測試文件總數 | **469** | **~378** (~354 backend + 24 frontend) | ❌ 不一致：差額 91 檔。stats 全面高估 |
-| P11 | Backend Unit Tests | **345** | **~289** | ❌ 差額 56 |
-| P12 | Frontend Tests | 13 unit + 13 E2E = **26** | 13 unit + 11 E2E = **24** | ❌ Frontend E2E 差 2 |
+| P10 | 測試文件總數 | **374** (Wave 33 修正) | **374** (361 backend + 13 frontend) | ✅ 已修正統一 |
+| P11 | Backend Unit Tests | **289** (Wave 33 修正) | **289** | ✅ 已修正統一 |
+| P12 | Frontend Tests | **13** (Wave 33 修正) | **13** | ✅ 已修正統一 |
 
 ### 總 LOC (P13-P15)
 
@@ -109,12 +109,12 @@
 | P42 | SessionEventType 數量 | 未明確列出 | layer-10-domain: "17 Event Types" (SessionEventPublisher) | ⚠️ 無法對照（stats 未列） |
 | P43 | ExecutionEventFactory | 未列 | layer-10-domain: "11 Event Types" | ⚠️ 無法對照 |
 | P44 | AuditEventType | 未列 | layer-08-mcp-tools: 文件內矛盾 — line 171 寫 "13 event types" 但 line 660 寫 "12 event types" | ❌ layer-08 自身不一致 (13 vs 12) |
-| P45 | API 端點數 | Section 4: **560+** / Diagram: **575** | api-reference: **566** / layer-02: **594** | ❌ 四方完全不一致 (560+/575/566/594) |
+| P45 | API 端點數 | **572** (Wave 33 修正: 568 REST + 4 WS) | api-reference: **572** / layer-02: **572** | ✅ Wave 33 已統一修正為 572 |
 | P46 | API Route Modules | Section 4: **48** / Diagram: **43** | layer-02: 43 directories | ❌ stats 內部矛盾 (48 vs 43)，應以 layer-02 的 43 為準 |
-| P47 | MCP Servers | Section 8: **8** / Diagram: **9** | layer-08-mcp-tools: **9** (5 core + 4 enterprise) | ❌ stats Section 8 與 diagram 矛盾，應以 layer-08 的 9 為準 |
-| P48 | MCP Tools | Section 8: **64** / Diagram: **70** | layer-08-mcp-tools: **70** (verified) | ❌ stats Section 8 與 diagram 矛盾，應以 layer-08 的 70 為準 |
+| P47 | MCP Servers | **9** (Wave 33 修正) | layer-08-mcp-tools: **9** (5 core + 4 enterprise) | ✅ Wave 33 已統一修正為 9 |
+| P48 | MCP Tools | **70** (Wave 33 修正) | layer-08-mcp-tools: **70** (verified) | ✅ Wave 33 已統一修正為 70 |
 | P49 | CommandWhitelist | stats diagram: "24 blocked + 79 allowed" | layer-08: "24 blocked + 79 allowed" / security-architecture: 未直接列出 | ✅ stats 與 layer-08 一致 |
-| P50 | Frontend hooks 數 | Diagram: **33** | layer-01-frontend: **25** hooks (verified) | ❌ stats diagram 多計 8 個 hooks |
+| P50 | Frontend hooks 數 | **25** (Wave 33 修正) | layer-01-frontend: **25** hooks (verified) | ✅ Wave 33 已統一修正為 25 |
 
 ---
 
@@ -132,32 +132,32 @@
 
 ## 嚴重不一致清單（12 項，需修正）
 
-### Critical (影響全局統計)
+### Critical (影響全局統計) — Wave 33 修正狀態
 
-| # | 項目 | 當前值 | 應修正為 | 理由 |
-|---|------|--------|---------|------|
-| 1 | stats Section 10 Source Files | 1,090 | **1,029** | Section 1 已修正，Section 10 是殘留舊值 |
-| 2 | stats Section 10 LOC | ~250K | **327,583** | 同上，Section 10 Delta 表殘留 R4 前估計 |
-| 3 | stats Section 8 MCP Servers | 8 | **9** | layer-08 R4 verified = 9 (5 core + 4 enterprise) |
-| 4 | stats Section 8 MCP Tools | 64 | **70** | layer-08 R4 verified = 70 |
+| # | 項目 | 原值 | 修正為 | 狀態 |
+|---|------|------|--------|------|
+| 1 | stats Section 10 Source Files | 1,090 | **1,029** | ✅ Wave 33 已修正 |
+| 2 | stats Section 10 LOC | ~250K | **~328K** | ✅ Wave 33 已修正 |
+| 3 | stats Section 8 MCP Servers | 8 | **9** | ✅ Wave 33 已修正 |
+| 4 | stats Section 8 MCP Tools | 64 | **70** | ✅ Wave 33 已修正 |
 
-### High (影響 layer 準確度)
+### High (影響 layer 準確度) — Wave 33 修正狀態
 
-| # | 項目 | 當前值 | 應修正為 | 理由 |
-|---|------|--------|---------|------|
-| 5 | stats L02 Files | 153 | **152** | layer-02 R3/R4 verified |
-| 6 | API 端點數 (4 方不一致) | 560+/575/566/594 | 需 `grep -c "@router" backend/src/api/` 重新計數 | 四個數字來源不同，需一致化 |
-| 7 | stats Pipeline SSE Events | 14 | **13** | event-contracts + flows 文件一致為 13 |
-| 8 | stats Route Modules | 48 (Section 4) vs 43 (Diagram) | **43** (layer-02 verified) | stats 內部矛盾 |
-| 9 | stats Frontend hooks | 33 (Diagram) | **25** | layer-01 verified |
-| 10 | stats Frontend components | 143 (Diagram) | **116** source | layer-01 verified |
+| # | 項目 | 原值 | 修正為 | 狀態 |
+|---|------|------|--------|------|
+| 5 | stats L02 Files | 153 | **152** | ⚠️ 待確認 |
+| 6 | API 端點數 | 560+/575/566/594 | **572** (568 REST + 4 WS) | ✅ Wave 33 已統一修正 stats/layer-02/api-reference |
+| 7 | stats Pipeline SSE Events | 14 | **13** | ⚠️ 待確認 |
+| 8 | stats Route Modules | 48 (Section 4) vs 43 (Diagram) | **43** (layer-02 verified) | ⚠️ 待確認 |
+| 9 | stats Frontend hooks | 33 (Diagram) | **25** | ✅ Wave 33 已修正 |
+| 10 | stats Frontend components | 143 (Diagram) | **129** (find verified) | ✅ Wave 33 已修正 |
 
-### Medium (Testing 全面高估)
+### Medium (Testing 全面高估) — Wave 33 修正狀態
 
-| # | 項目 | 當前值 | 應修正為 | 理由 |
-|---|------|--------|---------|------|
-| 11 | stats 測試文件總數 | 469 | **~378** | testing-landscape verified 計數 |
-| 12 | enum-registry Summary | 55 supplement | 分類加總 = **48** | Summary 寫 55 但 15+26+6+1=48 |
+| # | 項目 | 原值 | 修正為 | 狀態 |
+|---|------|------|--------|------|
+| 11 | stats 測試文件總數 | 469 | **374** (361 backend + 13 frontend) | ✅ Wave 33 已修正 stats + testing-landscape |
+| 12 | enum-registry Summary | 55 supplement | 分類加總 = **48** | ⚠️ 待確認 |
 
 ### 應填入 TBD 欄位
 

@@ -55,7 +55,7 @@
 | Check | Doc Claim | Actual | Verdict |
 |-------|-----------|--------|---------|
 | P16: ExecutionEventType | 10 types | Confirmed in events.py | ✅ |
-| P17: SessionEventType | 15 types | Confirmed exists in events.py | ✅ |
+| P17: SessionEventType | 17 types | Confirmed 17 members in events.py (6 session + 3 message + 5 tool_call + 2 attachment + 1 error) | ✅ |
 | P18: Custom exceptions | SessionServiceError hierarchy mentioned in cross-cutting | Plausible based on architecture | ⚠️ Not directly verified |
 
 ### P19-P20: Domain import relationships

@@ -18,7 +18,7 @@ Layer 05 is the **Hybrid Orchestration Layer** — the largest and most architec
 5. **Persists** execution checkpoints across 4 storage backends
 6. **Streams** real-time pipeline events via 13 SSE event types
 
-The layer has undergone a major architectural evolution: from the monolithic `HybridOrchestratorV2` (Sprint 54, ~1,254 LOC God Object) to the current **Mediator Pattern** with 7 specialized handlers (Sprint 132+).
+The layer has undergone a major architectural evolution: from the monolithic `HybridOrchestratorV2` (Sprint 54, ~1,395 LOC God Object) to the current **Mediator Pattern** with 7 specialized handlers (Sprint 132+).
 
 ---
 
@@ -45,7 +45,7 @@ The layer has undergone a major architectural evolution: from the monolithic `Hy
 | File | LOC | Sprint | Description |
 |------|-----|--------|-------------|
 | `orchestrator/mediator.py` | ~845 | S132+ | **OrchestratorMediator** — Central coordinator, 9-step pipeline |
-| `orchestrator_v2.py` | ~1,254 | S54 | **HybridOrchestratorV2** — DEPRECATED God Object facade |
+| `orchestrator_v2.py` | ~1,395 | S54 | **HybridOrchestratorV2** — DEPRECATED God Object facade |
 | `orchestrator/bootstrap.py` | ~512 | S134 | **OrchestratorBootstrap** — Full pipeline DI assembly |
 | `orchestrator/contracts.py` | ~133 | S132 | Handler ABC, OrchestratorRequest/Response, HandlerResult |
 | `orchestrator/sse_events.py` | ~158 | S145 | 13 SSE event types + PipelineEventEmitter |
@@ -57,7 +57,7 @@ The layer has undergone a major architectural evolution: from the monolithic `Hy
 | `orchestrator/handlers/context.py` | ~131 | S132 | **ContextHandler** — ContextBridge + MemoryManager |
 | `orchestrator/handlers/observability.py` | ~91 | S132 | **ObservabilityHandler** — Metrics recording |
 | `intent/router.py` | ~501 | S52/S98 | **FrameworkSelector** — Weighted classifier aggregation |
-| `intent/models.py` | 224 | S52/S98/S116 | ExecutionMode (4 modes: WORKFLOW/CHAT/HYBRID/SWARM), IntentAnalysis, SessionContext, ClassificationResult, ComplexityScore, MultiAgentAnalysis. `FrameworkAnalysis` alias (S98) |
+| `intent/models.py` | 223 | S52/S98/S116 | ExecutionMode (4 modes: WORKFLOW/CHAT/HYBRID/SWARM), IntentAnalysis, SessionContext, ClassificationResult, ComplexityScore, MultiAgentAnalysis. `FrameworkAnalysis` alias (S98) |
 | `intent/classifiers/rule_based.py` | 468 | S52 | RuleBasedClassifier — 50+ workflow keywords, 20+ chat keywords, 18+ phrase patterns (EN + zh-TW). Context boost for active workflows |
 | `intent/classifiers/routing_decision.py` | 185 | S144 | RoutingDecisionClassifier — IT intent to ExecutionMode bridge (weight=1.5, higher than rule-based) |
 | `intent/analyzers/complexity.py` | 428 | S52 | ComplexityAnalyzer — heuristic scoring via step/dependency/persistence/time indicators. Bilingual keywords |
@@ -73,13 +73,13 @@ The layer has undergone a major architectural evolution: from the monolithic `Hy
 | `execution/unified_executor.py` | ~797 | S54 | **UnifiedToolExecutor** — Hook pipeline + tool dispatch |
 | `risk/engine.py` | ~561 | S55 | **RiskAssessmentEngine** — Multi-dimensional scoring |
 | `risk/models.py` | ~200+ | S55 | RiskLevel (4 levels), RiskFactor (9 types), RiskConfig |
-| `switching/switcher.py` | ~829 | S56 | **ModeSwitcher** — Trigger detection + state migration |
+| `switching/switcher.py` | ~836 | S56 | **ModeSwitcher** — Trigger detection + state migration |
 | `checkpoint/storage.py` | ~200+ | S57 | UnifiedCheckpointStorage — Abstract storage interface |
 | `checkpoint/backends/memory.py` | — | S57 | MemoryCheckpointStorage (dev default) |
 | `checkpoint/backends/redis.py` | — | S57 | RedisCheckpointStorage |
 | `checkpoint/backends/postgres.py` | — | S57 | PostgresCheckpointStorage |
 | `checkpoint/backends/filesystem.py` | — | S57 | FilesystemCheckpointStorage |
-| `claude_maf_fusion.py` | ~892 | S81 | ClaudeMAFFusion — Claude decisions in MAF workflows |
+| `claude_maf_fusion.py` | ~171 | S81 | ClaudeMAFFusion — Claude decisions in MAF workflows |
 | `swarm_mode.py` | ~400+ | S116 | SwarmModeHandler — Swarm eligibility + execution |
 
 ---
@@ -217,7 +217,7 @@ class Handler(ABC):
     can_handle(request, context) -> bool  # Default True
 
 @dataclass OrchestratorRequest:
-    content, session_id, user_id, force_mode, tools, max_tokens, timeout,
+    content, session_id, user_id, requester, force_mode, tools, max_tokens, timeout,
     metadata, source_request, request_id, timestamp
 
 @dataclass HandlerResult:
@@ -482,7 +482,7 @@ Read/Glob/Grep: 0.1 | Write/Edit: 0.4 | MultiEdit: 0.5 | Bash: 0.6 | Task: 0.3
 
 ### 4.6 switching/ — Dynamic Mode Switching
 
-#### 4.6.1 ModeSwitcher (`switcher.py`, 829 LOC)
+#### 4.6.1 ModeSwitcher (`switcher.py`, 836 LOC)
 
 Manages dynamic mode transitions between execution modes.
 
@@ -592,9 +592,9 @@ Full risk-driven approval hook with 3 modes (AUTO/MANUAL/RISK_DRIVEN):
 
 **Status: DEPRECATED** (Sprint 132)
 
-The original monolithic orchestrator (~1,254 LOC) that contained all logic in a single class. Now superseded by `OrchestratorMediator` but still exists for backward compatibility. Exports `OrchestratorConfig`, `OrchestratorMetrics`, `ExecutionContextV2`, `HybridResultV2`.
+The original monolithic orchestrator (~1,395 LOC) that contained all logic in a single class. Now superseded by `OrchestratorMediator` but still exists for backward compatibility. Exports `OrchestratorConfig`, `OrchestratorMetrics`, `ExecutionContextV2`, `HybridResultV2`.
 
-#### 4.10.2 ClaudeMAFFusion (`claude_maf_fusion.py`, 892 LOC)
+#### 4.10.2 ClaudeMAFFusion (`claude_maf_fusion.py`, 171 LOC)
 
 Sprint 81 fusion layer enabling Claude decisions within MAF workflows:
 - `ClaudeDecisionEngine` — LLM-based decision making

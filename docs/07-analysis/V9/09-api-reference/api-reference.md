@@ -2,7 +2,7 @@
 
 > **Generated**: 2026-03-29 | **Source**: V9 codebase analysis + AST scan of 64 route files across 48 modules
 > **Base URL**: `http://localhost:8000/api/v1` | **Framework**: FastAPI 0.100+
-> **Total Endpoints**: 563 REST + 3 WebSocket = **566 endpoints**
+> **Total Endpoints**: 568 REST + 4 WebSocket = **572 endpoints**
 
 ---
 
@@ -1280,7 +1280,7 @@ Endpoints returning `text/event-stream` (Server-Sent Events):
 | **F** | Platform Infrastructure | 123 |
 | | **Total (with cross-refs)** | **591** |
 
-> Note: Some endpoints appear in multiple domain categories for cross-reference convenience (e.g., Routing 14 endpoints appears in both A9 and D8; Session Resume 2 endpoints overlaps C and D). The unique count across all route files is **563 REST + 3 WebSocket = 566**.
+> Note: Some endpoints appear in multiple domain categories for cross-reference convenience (e.g., Routing 14 endpoints appears in both A9 and D8; Session Resume 2 endpoints overlaps C and D). The unique count across all route files is **568 REST + 4 WebSocket = 572** (Wave 33 re-verified via `@router.*` grep).
 
 ---
 
