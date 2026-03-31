@@ -2,7 +2,7 @@
 
 ## Identity
 
-- Files: 27 (+ 1 mediator_bridge.py = 28 effective) | LOC: ~10,500
+- Files: 27 (+ 1 mediator_bridge.py = 28 effective) | LOC: ~10,329
 - Directory: `backend/src/integrations/ag_ui/`
 - Phase introduced: 15 (Sprint 58) | Phase last modified: 39 (Sprint 135)
 

@@ -1,7 +1,7 @@
 # Layer 06: MAF Builder Layer
 
 > **V9 Codebase Analysis** | Analysis Date: 2026-03-29
-> Scope: `backend/src/integrations/agent_framework/` — 56 Python files across 8 subdirectories
+> Scope: `backend/src/integrations/agent_framework/` — 57 Python files across 8 subdirectories
 
 ---
 

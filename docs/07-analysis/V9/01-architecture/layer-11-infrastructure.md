@@ -29,7 +29,7 @@
 │  │                                                                   │      │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │      │
 │  │  │ database/    │  │  storage/    │  │ checkpoint/  │           │      │
-│  │  │ (18 files)   │  │ (16 files)   │  │ (6 files)    │           │      │
+│  │  │ (18 files)   │  │ (18 files)   │  │ (8 files)    │           │      │
 │  │  │              │  │              │  │              │           │      │
 │  │  │ AsyncEngine  │  │ S3 + Local   │  │ PG + Redis   │           │      │
 │  │  │ SQLAlchemy   │  │ File Storage │  │ + InMemory   │           │      │
@@ -165,7 +165,7 @@ infrastructure/
 │   ├── protocol.py                          # StorageBackend Protocol (Sprint 119) -- TTL=int
 │   ├── redis_backend.py                     # RedisStorageBackend (Sprint 119) -- implements Protocol
 │   ├── memory_backend.py                    # InMemoryStorageBackend (Sprint 119) -- implements Protocol
-│   ├── storage_factories.py                 # 7 domain-specific factories (Sprint 119-120)
+│   ├── storage_factories.py                 # 8 domain-specific factories (Sprint 119-120)
 │   ├── backends/                            # Sprint 110 ABC-based backends (6 files)
 │   │   ├── __init__.py
 │   │   ├── base.py                          # StorageBackendABC (Sprint 110) -- TTL=timedelta
@@ -504,7 +504,7 @@ The storage layer has TWO incompatible interfaces created in different sprints:
 | **Prefix** | Constructor param, internal | `@property prefix` required |
 | **Batch ops** | `get_many`, `set_many`, `count` | Not defined |
 | **Implementations** | `InMemoryBackend`, `RedisBackend`, `PostgresBackend` | `RedisStorageBackend`, `InMemoryStorageBackend` |
-| **Used by** | 6 high-level stores (SessionStore, ConversationStateStore, ExecutionStateStore, ApprovalStore, AuditStore, TaskStore) | 7 domain-specific factories in `storage_factories.py` |
+| **Used by** | 6 high-level stores (SessionStore, ConversationStateStore, ExecutionStateStore, ApprovalStore, AuditStore, TaskStore) | 8 domain-specific factories in `storage_factories.py` |
 
 **Impact**: Code must choose which interface to use. The Sprint 110 ABC stores cannot be passed to Sprint 119 consumers and vice versa. The `storage_factories.py` file (Sprint 119-120) creates backends that implement the Protocol, while `backends/factory.py` (Sprint 110) creates ABC instances.
 
@@ -938,7 +938,7 @@ Database models define the schema but no Alembic migration files are referenced 
 | **Sprint 113** | Phase 37: E2E | TaskStore |
 | **Sprint 115** | Phase 37: E2E | ConversationStateStore (L1), ExecutionStateStore (L3) |
 | **Sprint 116** | Phase 37: E2E | CircuitBreaker |
-| **Sprint 119** | Phase 38: Storage | StorageBackend Protocol, RedisStorageBackend, InMemoryStorageBackend, 7 domain factories, redis_client.py centralized, RedisDistributedLock |
+| **Sprint 119** | Phase 38: Storage | StorageBackend Protocol, RedisStorageBackend, InMemoryStorageBackend, 8 domain factories, redis_client.py centralized, RedisDistributedLock |
 | **Sprint 120** | Phase 38: Checkpoint | CheckpointProvider Protocol, CheckpointEntry, UnifiedCheckpointRegistry, HybridCheckpointAdapter, 3 additional factory functions |
 | **Sprint 121** | Phase 38: Checkpoint | DomainCheckpointAdapter, AgentFrameworkCheckpointAdapter, SessionRecoveryCheckpointAdapter |
 | **Sprint 122** | Phase 38: Observability | OpenTelemetry config fields in Settings |
@@ -950,8 +950,8 @@ Database models define the schema but no Alembic migration files are referenced 
 
 | Metric | Count |
 |--------|-------|
-| Total Python files | 93 |
-| SQLAlchemy models | 10 (User, Agent, Workflow, Execution, Checkpoint, SessionModel, MessageModel, AttachmentModel, AuditLog + Base) |
+| Total Python files | 95 |
+| SQLAlchemy models | 9 (User, Agent, Workflow, Execution, Checkpoint, SessionModel, MessageModel, AttachmentModel, AuditLog) + Base mixin |
 | DB tables | 9 (users, agents, workflows, executions, checkpoints, sessions, messages, attachments, audit_logs) |
 | Repositories | 6 (Base + Agent + Workflow + Execution + Checkpoint + User) |
 | Storage backends (ABC) | 3 (InMemory, Redis, Postgres) |

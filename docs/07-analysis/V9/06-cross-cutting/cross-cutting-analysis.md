@@ -28,8 +28,8 @@ graph LR
     API --> DB["database<br/>fan-in: 38"]
     HYBRID --> AF
     HYBRID --> ORCH
-    HYBRID --> AGUI["ag_ui<br/>fan-in: 12"]
-    HYBRID --> SWARM["swarm<br/>fan-in: 9"]
+    HYBRID --> AGUI["ag_ui<br/>fan-in: 11"]
+    HYBRID --> SWARM["swarm<br/>fan-in: 21"]
     AF --> DB
     ORCH --> DB
     STORAGE["storage<br/>fan-out: 18"] --> DB

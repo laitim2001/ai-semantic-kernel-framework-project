@@ -179,8 +179,8 @@ stateDiagram-v2
 | `versioning/` | 2 | ~400 | P8 | Active | **InMemory** |
 | `devtools/` | 2 | ~350 | P10 | Active | **InMemory** |
 | `sandbox/` | 2 | ~300 | P5 | Active | None |
-| `chat_history/` | ~2 | ~300 | P11 | Active | DB |
-| `tasks/` | ~2 | ~300 | P9 | Active | DB |
+| `chat_history/` | 2 | ~300 | P11 | Active | DB |
+| `tasks/` | 3 | ~300 | P9 | Active | DB |
 
 ### 2.2 sessions/ Deep File Inventory
 

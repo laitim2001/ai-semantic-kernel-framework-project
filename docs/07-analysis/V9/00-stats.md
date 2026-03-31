@@ -642,6 +642,6 @@ graph TB
 | Phases | 1-34 | 1-44 | +10 phases |
 | Sprints | ~133 | ~152 | +19 sprints |
 | Source Files | 939 | 1,028 | +89 files |
-| LOC (source only) | ~160K | ~327K (272K backend + 54K frontend) | +167K LOC |
+| LOC (source only) | ~160K | ~327K (273K backend + 54K frontend) | +167K LOC |
 | Features Tracked | 70+15 | TBD (V9 analysis) | — |
 | Issues Tracked | 62 | TBD (V9 analysis) | — |

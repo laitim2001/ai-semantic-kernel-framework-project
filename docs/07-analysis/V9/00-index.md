@@ -9,7 +9,7 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total V9 Files** | 36 analysis .md files (13 dirs) + 60+ verification archive files |
+| **Total V9 Files** | 37 analysis .md files (13 dirs) + 74 verification .md files + JSON data |
 | **Analysis Scope** | 1,028 source files (792 .py + 236 .ts/.tsx), 327,582 LOC |
 | **Phases Covered** | 1-44 (152+ sprints, ~2,500+ story points) |
 | **Categories** | 13 topical directories (01-13) + _verification/ archive |
@@ -121,11 +121,12 @@
 | `delta-phase-39-42.md` | 16 KB | Delta: Phase 39-42 changes (pipeline assembly, UI, chat integration, deep integration) | `delta`, `phase-39`, `phase-40`, `phase-41`, `phase-42`, `pipeline` |
 | `delta-phase-43-44.md` | 14 KB | Delta: Phase 43-44 changes (swarm deep dive, agent team PoC) | `delta`, `phase-43`, `phase-44`, `swarm`, `agent-team`, `poc` |
 
-### 08-data-model (1 file)
+### 08-data-model (2 files)
 
 | File | Size | Description | Tags |
 |------|------|-------------|------|
 | `data-model-analysis.md` | 45 KB | Data model: all SQLAlchemy models, relationships, migrations, schema | `data-model`, `database`, `sqlalchemy`, `models`, `migrations`, `schema` |
+| `verification-wave29-fix-50pt.md` | — | Wave 29 data model 50-point verification and fixes | `data-model`, `verification`, `wave-29`, `fixes` |
 
 ### 09-api-reference (1 file)
 
@@ -175,7 +176,7 @@
 
 > Complete listing of the `_verification/` directory. These files provide evidence trails for each analysis round.
 
-#### _verification/layer-verification/ (12 files)
+#### _verification/layer-verification/ (14 files)
 
 | File | Description |
 |------|-------------|
@@ -191,8 +192,10 @@
 | `domain-r3-verification.md` | R3: Domain layer AST verification |
 | `infra-r3-verification.md` | R3: Infrastructure layer AST verification |
 | `frontend-r3-verification.md` | R3: Frontend regex scan verification |
+| `wave34-layer04-05-reverification.md` | Wave 34: Layer 4-5 re-verification |
+| `wave35-layer07-deep-verification.md` | Wave 35: Layer 7 deep verification |
 
-#### _verification/ top-level wave verification files (29 files)
+#### _verification/ top-level wave verification files (39 files)
 
 | File | Description |
 |------|-------------|
@@ -207,12 +210,16 @@
 | `wave6-verification-report.md` | Wave 6: consolidated verification report |
 | `wave14-re-verification-results.md` | Wave 14: re-verification of flows |
 | `wave-14-15-28-re-verification-report.md` | Wave 14/15/28 re-verification report |
+| `wave22-25-re-verification-report.md` | Wave 22-25: re-verification report |
 | `wave26-verification-cat-a-to-e.md` | Wave 26: Features categories A-E verification |
 | `wave32-stats-cross-file-alignment.md` | Wave 32: Stats + cross-file alignment check |
+| `wave-37-revalidation.md` | Wave 37: revalidation report |
+| `wave40R-verification-report.md` | Wave 40R: verification report |
 | `wave50-final-cross-file-alignment.md` | Wave 50: Final cross-file alignment verification |
 | `wave-re-verify-flows-01-to-08.md` | Re-verification of all 8 E2E flows |
 | `mod-integration-batch1-verification.md` | Module integration batch 1 verification |
 | `mod-integration-batch2-verification.md` | Module integration batch 2 verification |
+| `mod-integration-batch2-re-verification.md` | Module integration batch 2 re-verification |
 | `mod-domain-infra-core-verification.md` | Domain/Infra/Core module verification |
 | `mod-frontend-verification.md` | Frontend module verification |
 | `testing-landscape-verification.md` | Testing landscape verification |
@@ -225,6 +232,12 @@
 | `enum-registry-verification-report.md` | Enum registry verification |
 | `flows-01-to-05-verification-report.md` | Flows 1-5 verification |
 | `flows-06-to-08-verification-results.md` | Flows 6-8 verification |
+| `dependency-analysis-verification.md` | Dependency analysis verification |
+| `e2e-diagram-verification.md` | E2E diagram verification |
+| `deep-verification-architecture-overview-chart.md` | Architecture overview chart deep verification |
+| `v9-50pt-re-verification-report.md` | V9 50-point re-verification report |
+| `v9-final-quality-assessment.md` | V9 final quality assessment |
+| `v9-final-quality-assessment-post-wave85.md` | V9 final quality assessment (post Wave 85) |
 
 ---
 
@@ -239,14 +252,14 @@
 | 05 | Issues | 1 | 54 KB | Consolidated issue registry with severity and status |
 | 06 | Cross-Cutting | 5 | ~80 KB | Security, dependencies, enums, memory, error handling, logging |
 | 07 | Delta | 3 | 46 KB | Phase 35-44 incremental changes (V8 was Phase 1-34) |
-| 08 | Data Model | 1 | 45 KB | SQLAlchemy models, relationships, schema |
+| 08 | Data Model | 2 | 45 KB+ | SQLAlchemy models, relationships, schema + verification |
 | 09 | API Reference | 1 | 79 KB | Complete REST API endpoint catalog |
 | 10 | Event Contracts | 1 | 27 KB | SSE/WebSocket/AG-UI event specifications |
 | 11 | Config & Deploy | 1 | 39 KB | Environment, Docker, settings, ports |
 | 12 | Testing | 1 | 38 KB | Test inventory, coverage, gaps |
 | 13 | Mock/Real Map | 1 | 28 KB | Implementation maturity per component |
 | — | Root Files | 2 | ~10 KB | Stats, index (+ r5-imports.json) |
-| — | _verification/ | 60+ | ~2 MB | Plans (6), reports (10), R4-semantic (5), layer verifications (11), wave verifications (20+), r5-data (10+) |
+| — | _verification/ | 74 .md + 11 JSON | ~2 MB | Plans (6), reports (9 .md + 1 JSON), R4-semantic (5), layer verifications (14), wave verifications (39), r5-data (1 .md + 10 JSON) |
 
 ---
 
@@ -317,7 +330,7 @@
 | **Semantic Coverage** | Manual reading of ~100 key files | 100% per-file semantic summaries (R4) |
 | **Metadata Extraction** | None | Enhanced AST metadata for all 792 .py files |
 | **Analysis Rounds** | 1 (snapshot) | 9 rounds (structural → verification → AST → semantic → programmatic → validation x3 → semantic verification) |
-| **Total V9 Output** | — | 36 analysis + 60+ verification files, ~8+ MB |
+| **Total V9 Output** | — | 37 analysis + 74 verification .md files + JSON data, ~8+ MB |
 
 ### V9 New Categories (Not in V8)
 - **07-delta**: Phase-by-phase incremental changes (V8 was a single snapshot)
@@ -327,9 +340,9 @@
 - **11-config-deploy**: Configuration and deployment analysis
 - **12-testing**: Test landscape and coverage analysis
 - **13-mock-real**: Mock vs real implementation maturity
-- **R4-semantic** (in `_verification/`): Per-file semantic summaries for all 832+ source files (Round 4)
+- **R4-semantic** (in `_verification/`): Per-file semantic summaries for all 1,028 source files (Round 4)
 - **06-cross-cutting** expanded: security architecture, dependency analysis, enum registry, memory architecture (4 new files)
-- **_verification/**: 60+ files across plans (6), reports (10), R4-semantic (5), layer verifications (12), wave verifications (29), r5-data (10+)
+- **_verification/**: 74+ .md files across plans (6), reports (10), R4-semantic (5), layer verifications (14), wave verifications (39), r5-data (1 .md + 10+ JSON)
 
 ---
 
