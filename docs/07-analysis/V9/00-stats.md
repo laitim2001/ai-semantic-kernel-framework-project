@@ -482,7 +482,7 @@ graph TB
 
 | Category | Modules | Files (non-init) | __init__.py | Total Files | % of Backend |
 |----------|---------|-------------------|-------------|-------------|--------------|
-| Integrations | 19 | 340 | 87 | 427 | 53.8% |
+| Integrations | 20 | 340 | 87 | 427 | 53.8% |
 | API Routes | 48 | 107 | 45 | 152 | 19.2% |
 | Domain | 21 | 86 | 31 | 117 | 14.8% |
 | Infrastructure | 7 | 42 | 12 | 54 | 6.8% |
@@ -504,7 +504,7 @@ graph TB
 | 7 | integrations/ag_ui/ | 27 | 10,329 |
 | 8 | domain/orchestration/ | 22 | ~11,465 |
 | 9 | core/ | 39 | 11,945 |
-| 10 | infrastructure/storage/ | 14 | ~3,800 |
+| 10 | infrastructure/storage/ | 16 | ~4,200 |
 
 ---
 
@@ -580,7 +580,8 @@ graph TB
 | AG-UI Protocol | 11 | integrations/ag_ui/events/ |
 | Swarm Events | 9 | integrations/swarm/events/ |
 | Routing Contracts | 6 enums + 2 models | integrations/orchestration/contracts.py |
-| **Total** | **40+** | |
+| **Total Events** | **40+** | |
+| **Total Enums** | **381** (339 base + 42 L09 integration) | See `06-cross-cutting/enum-registry.md` |
 
 ---
 
@@ -618,6 +619,8 @@ graph TB
 
 ## 9. Mock vs Real Status
 
+> Full detail: `13-mock-real/mock-real-map.md` (33 modules analysed, 15 InMemory locations, 15 silent fallback paths)
+
 | Category | Real | Mock/InMemory | Stub |
 |----------|------|---------------|------|
 | LLM Service | Azure OpenAI (if configured) | MockLLMService (default) | — |
@@ -626,6 +629,8 @@ graph TB
 | Message Queue | — | — | RabbitMQ (STUB, 1 line) |
 | Approval Storage | 3 independent systems | All InMemory | — |
 | Domain Storage | 4/21 modules use DB | 6+ modules InMemory only | — |
+| Infra Storage | 16 files (factory, backends, stores) | InMemory fallback in dev | — |
+| Integration Modules (REAL only) | correlation, a2a, memory, learning, n8n, shared, contracts | — | — |
 | Frontend Swarm | useSwarmReal.ts | useSwarmMock.ts | — |
 
 ---

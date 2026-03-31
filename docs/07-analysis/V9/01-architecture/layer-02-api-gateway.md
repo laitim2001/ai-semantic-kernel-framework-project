@@ -2,11 +2,11 @@
 
 ## Identity
 
-- Files: 152 (107 non-init, 45 `__init__.py`) | LOC: 46,341
+- Files: 152 (107 non-init, 45 `__init__.py`) | LOC: 47,376
 - Directory: `backend/src/api/v1/`
 - Framework: FastAPI 0.100+ | Port: 8000
 - Phase introduced: 1 (Sprint 1) | Phase last modified: 38 (Sprint 119)
-- Route modules: 43 directories | Route files: 68 files containing endpoints (2 dependency files contain only docstring examples)
+- Route modules: 44 directories | Route files: 68 files containing endpoints (2 dependency files contain only docstring examples)
 - Registered routers: 56 (1 public + 55 protected) — verified by `include_router` count in `__init__.py`
 - Total endpoints: **591** (587 REST + 4 WebSocket, verified Wave 47 re-count) — 588 in route files + 3 in `main.py` (/, /health, /ready)
 - Pydantic schema classes: 634 (BaseModel subclasses)
@@ -22,7 +22,7 @@
 | `__init__.py` | 252 | Router aggregation — assembles api_router, public_router, protected_router |
 | `dependencies.py` | 181 | Shared DI providers — `get_current_user`, `get_current_user_optional`, `get_current_active_admin`, `get_current_operator_or_admin` |
 
-### Route Module Inventory (43 modules, 68 endpoint-bearing files)
+### Route Module Inventory (44 modules, 68 endpoint-bearing files)
 
 #### Phase 1: Foundation (17 modules)
 
@@ -1066,14 +1066,14 @@ Phase 38:    591 endpoints  (final count including n8n/orchestrator/tasks/knowle
 | Metric | Value |
 |--------|-------|
 | Total Python files | 152 (107 non-init + 45 `__init__.py`) |
-| Total LOC | 46,341 |
-| Route modules (directories) | 43 |
+| Total LOC | 47,376 |
+| Route modules (directories) | 44 |
 | Endpoint-bearing files | 68 |
 | Pydantic schema classes | 634 |
 | Registered routers | 56 (1 public + 55 protected) |
 | **Total endpoints** | **591** (587 REST + 4 WebSocket, Wave 47 verified) — 588 route-file + 3 main.py |
 | WebSocket endpoints | 4 (concurrent x2, sessions x1, groupchat x1) |
-| SSE streaming endpoints | 4 (ag_ui, swarm demo, orchestrator, claude_sdk autonomous) |
+| SSE streaming endpoints | 5 (ag_ui, sessions/chat, swarm demo, orchestrator, claude_sdk autonomous) |
 | Public endpoints | 5 (auth) + 3 (health) = 8 |
 | Protected endpoints | ~583 |
 | Largest module (endpoints) | planning (46) |
@@ -1090,3 +1090,8 @@ Phase 38:    591 endpoints  (final count including n8n/orchestrator/tasks/knowle
 > (/, /health, /ready) = 587 REST + 4 WebSocket = 591 total.
 > Also corrected: registered routers = 56 (was 47), endpoint-bearing files = 68 (was 70).
 > Prior Wave 43 count of 591 was correct but miscounted file count and router count.
+>
+> **Final 50-pt Verification** (2026-03-31): LOC updated 46,341 → 47,376 (wc -l re-verified).
+> Route modules corrected 43 → 44 directories. SSE streaming endpoints corrected 4 → 5
+> (added sessions/chat). All 44 per-module endpoint counts verified exact match.
+> No stale values (594, 572, 153, 47377) found. 47/50 points passed before corrections.

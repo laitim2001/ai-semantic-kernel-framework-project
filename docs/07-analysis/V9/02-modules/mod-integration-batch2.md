@@ -1,4 +1,4 @@
-# V9 Module Deep-Dive: Integration Batch 2 (9 Smaller Modules)
+# V9 Module Deep-Dive: Integration Batch 2 (10 Smaller Modules, 9 Sections)
 
 > **Scope**: patrol, correlation, rootcause, incident, audit, learning, a2a, n8n, contracts, shared
 > **Analyst**: Claude Opus 4.6 | **Date**: 2026-03-29
@@ -85,7 +85,8 @@
 | `PatrolAgent` | agent.py | Orchestrates patrol execution: runs registered checks, assesses risk, generates Claude-analyzed reports |
 | `PatrolAgent.register_check(check_type, check_class)` | agent.py | Register a `PatrolCheck` subclass for a given `CheckType` |
 | `PatrolAgent.execute_patrol(config, execution_id?) -> PatrolReport` | agent.py | Execute all checks for a config, return full report |
-| `PatrolCheck` | agent.py | Abstract base class for check implementations; subclasses override `execute() -> CheckResult` |
+| `PatrolCheck` | agent.py | Inline abstract base class with `execute()` and `_create_result()` helper; **note**: concrete checks in `checks/` inherit from `BaseCheck` (checks/base.py), not `PatrolCheck` |
+| `BaseCheck(ABC)` | checks/base.py | ABC base class for 5 concrete check implementations (ServiceHealthCheck, APIResponseCheck, ResourceUsageCheck, LogAnalysisCheck, SecurityScanCheck) |
 | `PatrolScheduler` | scheduler.py | Cron-based scheduling via APScheduler (optional dep); supports manual trigger |
 | `PatrolScheduler.schedule_patrol(config, callback) -> job_id` | scheduler.py | Register a patrol with cron expression |
 | `PatrolScheduler.trigger_patrol(patrol_id, priority?) -> execution_id` | scheduler.py | Manual trigger of a registered patrol |
@@ -175,6 +176,7 @@
 ### Test Coverage
 
 - `tests/unit/integrations/correlation/test_correlation_data_source.py` — unit test for data source
+- `tests/unit/integrations/correlation/test_event_collector.py` — unit test for event collector
 - `tests/integration/correlation/test_correlation_real.py` — integration test with real data
 
 ### Known Issues
@@ -247,6 +249,8 @@ contradiction_penalty = min(0.3, contradicting_events_count * 0.1)
 
 ### Test Coverage
 
+- `tests/unit/integrations/rootcause/test_case_matcher.py` — unit test for case matcher
+- `tests/unit/integrations/rootcause/test_case_repository.py` — unit test for case repository
 - `tests/integration/rootcause/test_rootcause_real.py` — integration test
 
 ### Known Issues
@@ -273,6 +277,8 @@ contradiction_penalty = min(0.3, contradicting_events_count * 0.1)
 | `IncidentAnalyzer.analyze(context: IncidentContext) -> IncidentAnalysis` | analyzer.py | Full incident analysis with optional LLM enhancement |
 | `ActionRecommender` | recommender.py | 2-tier remediation: rule templates + optional LLM augmentation |
 | `ActionRecommender.recommend(analysis, context) -> List[RemediationAction]` | recommender.py | Generate sorted remediation actions |
+| `IncidentExecutor` | executor.py | Risk-based execution routing: auto-execute (low risk), HITL approval (medium/high risk), MCP dispatch, ServiceNow writeback |
+| `IncidentExecutor.execute(analysis, context, actions) -> List[ExecutionResult]` | executor.py | Execute remediation actions with risk-based routing |
 
 **Key Data Types**: `IncidentContext`, `IncidentAnalysis`, `RemediationAction`, `ExecutionResult`
 
@@ -334,6 +340,10 @@ When LLM enhancement is available:
 
 ### Test Coverage
 
+- `tests/unit/integrations/incident/test_analyzer.py` — unit test for incident analyzer
+- `tests/unit/integrations/incident/test_executor.py` — unit test for incident executor
+- `tests/unit/integrations/incident/test_recommender.py` — unit test for recommender
+- `tests/unit/integrations/incident/test_types.py` — unit test for types
 - `tests/unit/integrations/orchestration/test_incident_handler.py` — unit test for incident handler
 - `tests/e2e/test_incident_pipeline.py` — E2E pipeline test
 - `tests/e2e/test_incident_e2e_verification.py` — E2E verification
@@ -364,6 +374,9 @@ When LLM enhancement is available:
 | `DecisionTracker.add_feedback(decision_id, feedback, quality_score?) -> DecisionAudit?` | decision_tracker.py | Manual feedback/scoring |
 | `DecisionTracker.query_decisions(query: AuditQuery) -> List[DecisionAudit]` | decision_tracker.py | Multi-criteria query |
 | `DecisionTracker.get_statistics(user_id?, start?, end?) -> Dict` | decision_tracker.py | Aggregate stats: by_type, by_outcome, avg_confidence, avg_quality, success_rate |
+| `AuditReportGenerator` | report_generator.py | Generates human-readable audit reports from DecisionAudit records |
+| `AuditReportGenerator.generate_report(audit) -> AuditReport` | report_generator.py | Single decision report with title, summary, explanation, risk analysis, recommendations |
+| `AuditReportGenerator.generate_summary_report(audits, title?, ...) -> AuditReport` | report_generator.py | Aggregate summary report across multiple decisions |
 
 **Key Data Types**: `DecisionAudit`, `DecisionContext`, `ThinkingProcess`, `AlternativeConsidered`, `AuditReport`, `AuditQuery`, `AuditConfig`
 
@@ -569,7 +582,7 @@ route_message(msg) → handler registered?
 ## Module: n8n
 
 - **Path**: `backend/src/integrations/n8n/`
-- **Files**: 3 (orchestrator.py, monitor.py, __init__.py) | **Phase**: 35+ (Sprint 126+)
+- **Files**: 3 (orchestrator.py, monitor.py, __init__.py) | **Phase**: 38 (Sprint 125+)
 - **Purpose**: Bidirectional IPA-n8n orchestration — IPA reasoning + n8n workflow execution + monitoring
 
 ### Public API
@@ -654,7 +667,7 @@ Simple keyword-based classification (placeholder for production router):
 ## Module: contracts + shared
 
 - **Path**: `backend/src/integrations/contracts/` + `backend/src/integrations/shared/`
-- **Files**: 3 total (contracts: pipeline.py, __init__.py; shared: protocols.py, __init__.py) | **Phase**: 35 (Sprint 108) + 35 (Sprint 116)
+- **Files**: 4 total (contracts: pipeline.py, __init__.py; shared: protocols.py, __init__.py) | **Phase**: 35 (Sprint 108) + 36 (Sprint 116)
 - **Purpose**: Cross-module DTOs and Protocol interfaces for loose coupling between L5 (orchestration) and L6 (execution)
 
 ### contracts/pipeline.py — Pipeline DTOs
@@ -798,11 +811,11 @@ Simple keyword-based classification (placeholder for production router):
 | Module | Files | Tests | Data Source | Production Ready? |
 |---|---|---|---|---|
 | patrol | 11 | 0 | N/A (5 concrete checks) | Partial — has check implementations, but no tests |
-| correlation | 6 | 2 | Sprint 130 real | Partial — needs data source config |
-| rootcause | 5 | 1 | Sprint 130 real | Partial — needs case repo + Claude |
-| incident | 6 | 3 | Via correlation/rootcause | Best in batch — full pipeline |
+| correlation | 6 | 3 | Sprint 130 real | Partial — needs data source config |
+| rootcause | 5 | 3 | Sprint 130 real | Partial — needs case repo + Claude |
+| incident | 6 | 7 | Via correlation/rootcause | Best in batch — full pipeline |
 | audit | 4 | 1 | In-memory + Redis cache | No — volatile storage |
 | learning | 5 | 1 | Via memory_manager DI | Partial — needs embedding service |
 | a2a | 4 | 0 | In-memory only | No — no tests, no persistence (but has AgentDiscoveryService) |
 | n8n | 3 | 6+ | Via n8n API client | Yes — best tested |
-| contracts+shared | 3 | 1 | N/A (interfaces) | Partial — protocols unused |
+| contracts+shared | 4 | 1 | N/A (interfaces) | Partial — protocols unused |

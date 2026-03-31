@@ -314,7 +314,7 @@ Verification: `python scripts/verify_official_api_usage.py` (5 checks must pass)
 ## Module: orchestration
 
 - **Path**: `backend/src/integrations/orchestration/`
-- **Files**: 39 `.py` files | **Phase**: 28 (Sprint 91–99) + Sprint 116
+- **Files**: 55 `.py` files | **Phase**: 28 (Sprint 91–99) + Sprint 116
 
 ### Public API
 
@@ -483,7 +483,7 @@ class Session:
 ## Module: mcp
 
 - **Path**: `backend/src/integrations/mcp/`
-- **Files**: 43 `.py` files | **Phase**: 9–10 (Sprint 36–40)
+- **Files**: 73 `.py` files | **Phase**: 9–10 (Sprint 36–40)
 
 ### Public API
 
@@ -512,7 +512,7 @@ class MCPClient:
 - `AuditLogger` — Event logging with InMemory and File backends
 - `CommandWhitelist` — Shell command restrictions
 
-### 9 MCP Server Implementations
+### 8 MCP Server Implementations
 
 | Server | Directory | Tools | External SDK |
 |---|---|---|---|
@@ -639,7 +639,7 @@ class HybridEventBridge:
 ## Module: swarm
 
 - **Path**: `backend/src/integrations/swarm/`
-- **Files**: 8 `.py` files | **Phase**: 29 (Sprint 100–106)
+- **Files**: 10 `.py` files | **Phase**: 29 (Sprint 100–106)
 
 ### Public API
 
@@ -719,7 +719,7 @@ Key dataclasses: `AgentSwarmStatus`, `WorkerExecution`, `ToolCallInfo`, `Thinkin
 ## Module: llm
 
 - **Path**: `backend/src/integrations/llm/`
-- **Files**: 5 `.py` files | **Phase**: 1 (Sprint 34)
+- **Files**: 6 `.py` files | **Phase**: 1 (Sprint 34)
 
 ### Public API
 
@@ -881,7 +881,7 @@ class VectorStoreManager:
 ## Module: memory
 
 - **Path**: `backend/src/integrations/memory/`
-- **Files**: 4 `.py` files | **Phase**: 22 (Sprint 79)
+- **Files**: 5 `.py` files | **Phase**: 22 (Sprint 79)
 
 ### Public API
 
@@ -1008,13 +1008,13 @@ class MemoryType(Enum): CONVERSATION, EVENT_RESOLUTION, BEST_PRACTICE, SYSTEM_KN
 | Module | Files | Key Classes | Phases | Test Files |
 |---|---|---|---|---|
 | hybrid/ | 89 | OrchestratorMediator, ContextBridge, RiskAssessmentEngine | 13–42 | 34+ |
-| agent_framework/ | 57 | 12 Builder Adapters, 5 Migration Layers | 1–37 | 20+ |
-| orchestration/ | 39 | BusinessIntentRouter, GuidedDialogEngine, HITLController | 28 | 18+ |
+| agent_framework/ | 57 | 15 Builder Adapters, 5 Migration Layers | 1–37 | 20+ |
+| orchestration/ | 55 | BusinessIntentRouter, GuidedDialogEngine, HITLController | 28 | 18+ |
 | claude_sdk/ | 48 | ClaudeSDKClient, Session, AutonomousEngine | 12, 29, 41 | 18+ |
-| mcp/ | 43 | MCPClient, ServerRegistry, PermissionManager | 9–10 | 10+ |
-| ag_ui/ | 27 | HybridEventBridge, 11 Event Types, ThreadManager | 15 | 9+ |
-| swarm/ | 8 | SwarmTracker, 9 SSE Event Types | 29 | 3+ |
-| llm/ | 5 | LLMServiceProtocol, LLMServiceFactory | 1 | 3+ |
+| mcp/ | 73 | MCPClient, ServerRegistry, PermissionManager | 9–10 | 10+ |
+| ag_ui/ | 27 | HybridEventBridge, 13+ Event Types, ThreadManager | 15 | 9+ |
+| swarm/ | 10 | SwarmTracker, 9 SSE Event Types | 29 | 3+ |
+| llm/ | 6 | LLMServiceProtocol, LLMServiceFactory | 1 | 3+ |
 | knowledge/ | 8 | RAGPipeline, VectorStoreManager | 38 | 0 |
-| memory/ | 4 | UnifiedMemoryManager, Mem0Client | 22 | 0 |
-| **Total** | **328** | — | — | **115+** |
+| memory/ | 5 | UnifiedMemoryManager, Mem0Client | 22 | 0 |
+| **Total** | **378** | — | — | **115+** |

@@ -31,7 +31,7 @@
 | **Backend conftest.py** | 4 files |
 | **Frontend Unit Tests** | 13 files |
 | **Frontend E2E Tests** | 12 files (Playwright) |
-| **Source Modules (backend)** | 16 integration + 20 domain + 6 infrastructure + 6 core |
+| **Source Modules (backend)** | 20 integration + 21 domain + 7 infrastructure + 5 core |
 | **Modules with ZERO Unit Tests** | 6 critical modules identified (memory, knowledge, learning, patrol, audit, a2a) |
 
 **Overall Assessment**: Backend has extensive test coverage for integration-layer modules (agent_framework, claude_sdk, hybrid, ag_ui, orchestration, mcp), with additional top-level test directories for auth (5), orchestration (16), swarm (5), and mcp (2). Critical gaps remain in memory/, knowledge/, learning/, a2a/, patrol/, and audit/ integration modules. Frontend testing is narrowly focused on swarm components only -- all other UI areas lack unit tests. Domain layer testing is concentrated in sessions/ with 19 of 24 domain modules untested.
