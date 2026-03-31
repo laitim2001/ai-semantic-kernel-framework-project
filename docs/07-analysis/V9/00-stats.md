@@ -24,7 +24,7 @@ graph TB
         FE["React 18 + TypeScript<br/>236 files | 54,238 LOC (wc -l)"]
     end
     subgraph "Layer 2: API Gateway"
-        API["FastAPI<br/>152 files | 47,377 LOC<br/>588 endpoints"]
+        API["FastAPI<br/>153 files | 47,376 LOC<br/>575 endpoints"]
     end
     subgraph "Layer 3: AG-UI"
         AGUI["SSE Protocol<br/>27 files | 10,329 LOC"]
@@ -33,10 +33,10 @@ graph TB
         ROUTE["3-Tier Intent Router<br/>55 files | ~19,400 LOC"]
     end
     subgraph "Layer 5: Hybrid Orchestration"
-        HYBRID["Mediator Pattern<br/>88 files | ~28,800 LOC"]
+        HYBRID["Mediator Pattern<br/>89 files | 28,800 LOC"]
     end
     subgraph "Layer 6: MAF Builders"
-        MAF["9 Builder Adapters<br/>56 files | 38,082 LOC"]
+        MAF["9 Builder Adapters<br/>57 files | 38,082 LOC"]
     end
     subgraph "Layer 7: Claude SDK"
         CLAUDE["Autonomous Engine<br/>46 files | 15,406 LOC"]
@@ -94,7 +94,7 @@ graph TB
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
 │                                 │ Fetch API + SSE (port 3005 → 8000)               │
 │  ╔══════════════════════════════│════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (588 endpoints, 39 route modules)                      ║    │
+│  ║  Layer 2: API Gateway (575 endpoints, 43 route modules)                      ║    │
 │  ║  152 files | 47,376 LOC | FastAPI (port 8000)                                ║    │
 │  ║  Auth: JWT (HS256) + protected_router 全域保護                               ║    │
 │  ╚══════════════════════════════│════════════════════════════════════════════════╝    │
@@ -189,7 +189,7 @@ graph TB
 │              ▼                                         ▼                               │
 │  ╔══════════════════════════════╗  ╔═══════════════════════════════════════════╗       │
 │  ║  Layer 6: MAF Builder Layer  ║  ║  Layer 7: Claude SDK Worker Layer         ║       │
-│  ║  56 files, 38,082 LOC        ║  ║  46 files, 15,406 LOC                    ║       │
+│  ║  57 files, 38,082 LOC        ║  ║  48 files, 15,406 LOC                    ║       │
 │  ╠══════════════════════════════╣  ╠═══════════════════════════════════════════╣       │
 │  ║  9 Builder Adapters (7 MAF   ║  ║  ClaudeSDKClient (AsyncAnthropic)        ║       │
 │  ║  compliant, 100% API usage)  ║  ║                                           ║       │
@@ -322,7 +322,7 @@ graph TB
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
 │                                                                                     │
 │  ╔══════════════════════════════════════════════════════════════════════════════╗    │
-│  ║  Layer 2: API Gateway (575 endpoints, 39 route modules, 48 routers)         ║    │
+│  ║  Layer 2: API Gateway (575 endpoints, 43 route modules, 48 routers)         ║    │
 │  ║  152 files | 47,376 LOC | FastAPI (port 8000)                               ║    │
 │  ║  Auth: JWT (HS256) + protected_router | 31 auth endpoints (5.3%)            ║    │
 │  ╚══════════════════════════════════════════════════════════════════════════════╝    │
