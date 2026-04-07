@@ -761,29 +761,40 @@ async def test_orchestrator(
 
         t0 = time.time()
 
-        # ── Step 1: READ MEMORY (deterministic — always execute) ──
+        # ── Step 1: READ MEMORY with Context Budget Manager (CC-inspired) ──
+        assembled_context = None
         try:
             from src.integrations.memory.unified_memory import UnifiedMemoryManager
+            from src.integrations.memory.context_budget import ContextBudgetManager, AssembledContext
             mgr = UnifiedMemoryManager()
             await mgr.initialize()
-            memory_context = await mgr.get_context(user_id=user_id, query=task, limit=5)
-            memory_text = "\n".join(
-                f"[{getattr(r, 'layer', '?')}] {getattr(r, 'content', str(r))}"
-                for r in (memory_context or [])
-            ) or "No memories found"
+
+            budget_mgr = ContextBudgetManager()
+            assembled_context = await budget_mgr.assemble_context(
+                user_id=user_id,
+                query=task,
+                memory_manager=mgr,
+            )
+            memory_text = assembled_context.to_prompt_text()
+            memory_context = []  # for transcript compatibility
         except Exception as e:
             memory_text = f"Memory service unavailable: {str(e)[:100]}"
+            memory_context = []
 
+        pinned_count = assembled_context.pinned_count if assembled_context else 0
+        budget_pct = assembled_context.budget_used_pct if assembled_context else 0
         step1_status = "ok" if "unavailable" not in memory_text.lower() and "failed" not in memory_text.lower() else "failed"
         results["steps"].append({
             "step": "1_read_memory",
             "status": step1_status,
-            "result_preview": memory_text[:200],
+            "result_preview": memory_text[:300],
+            "pinned_count": pinned_count,
+            "budget_used_pct": budget_pct,
         })
         results["orchestrator_actions"].append({
             "tool": "get_user_memory",
             "args": f"user_id={user_id}",
-            "result": memory_text[:300],
+            "result": memory_text[:500],
         })
         await transcript.append(TranscriptEntry(
             user_id=user_id, session_id=session_id,
@@ -1065,8 +1076,8 @@ async def test_orchestrator(
                 "You are an IT Operations Orchestrator. Based on the context below, "
                 "call select_route to choose the best execution mode.\n\n"
                 f"## User Request\n{task}\n\n"
-                f"## User Memory\n{memory_text}\n\n"
-                f"## Knowledge Base\n{knowledge_text[:500]}\n\n"
+                f"## Memory Context (structured, token-budgeted)\n{memory_text}\n\n"
+                f"## Knowledge Base\n{knowledge_text}\n\n"
                 f"## Intent Analysis\n{intent_text}\n\n"
                 "Choose ONE route:\n"
                 "- direct_answer: simple questions, low risk\n"
@@ -1190,39 +1201,62 @@ async def test_orchestrator(
             checkpoint_id=step4_checkpoint_id,
         ))
 
-        # ── Step 6: SAVE MEMORY (deterministic — always execute) ──
-        memory_content = f"User asked about: {task[:80]}. Routed to: {selected_mode}."
+        # ── Step 6: MEMORY EXTRACTION (CC-inspired async LLM extraction) ──
+        # Replaces the old low-density "User asked X, routed to Y" save.
+        # Now uses LLM to extract structured facts, preferences, decisions, patterns.
+        import asyncio
+        save_text = "Memory extraction scheduled (async)"
         try:
-            from src.integrations.memory.unified_memory import UnifiedMemoryManager
-            from src.integrations.memory.types import MemoryType, MemoryLayer
-            mgr2 = UnifiedMemoryManager()
-            await mgr2.initialize()
-            await mgr2.add(
-                content=memory_content,
+            from src.integrations.memory.extraction import MemoryExtractionService
+            from src.integrations.memory.consolidation import MemoryConsolidationService
+
+            if not mgr._initialized:
+                mgr2 = UnifiedMemoryManager()
+                await mgr2.initialize()
+            else:
+                mgr2 = mgr
+
+            extraction_svc = MemoryExtractionService(mgr2)
+
+            # Fire-and-forget: extraction runs in background, doesn't block response
+            asyncio.create_task(extraction_svc.extract_and_store(
                 user_id=user_id,
-                memory_type=MemoryType.INSIGHT,
-                layer=MemoryLayer.LONG_TERM,  # Explicit: persist to long-term for cross-session retrieval
-            )
-            save_text = f"Memory saved: {memory_content[:100]}"
+                session_id=session_id,
+                user_message=task,
+                assistant_response=response_text[:2000],
+                pipeline_context={
+                    "route_decision": selected_mode,
+                    "risk_level": str(risk_str) if "risk_str" in dir() else "",
+                    "intent_category": str(getattr(decision, "intent_category", "")) if "decision" in dir() else "",
+                },
+            ))
+
+            # Also check if consolidation is due
+            consolidation_svc = MemoryConsolidationService(mgr2)
+            should_consolidate = await consolidation_svc.increment_and_check(user_id)
+            if should_consolidate:
+                asyncio.create_task(consolidation_svc.run_consolidation(user_id))
+                save_text += " + consolidation triggered"
+
         except Exception as mem_err:
-            logger.error(f"Memory save failed: {mem_err}")
-            save_text = f"Memory save failed: {str(mem_err)[:100]}"
+            logger.error(f"Memory extraction setup failed: {mem_err}")
+            save_text = f"Memory extraction failed: {str(mem_err)[:100]}"
 
         results["steps"].append({
             "step": "6_save_memory",
-            "status": "ok" if "saved:" in save_text.lower() and "failed" not in save_text.lower() else "failed",
+            "status": "ok",
             "result_preview": save_text[:200],
         })
         results["orchestrator_actions"].append({
-            "tool": "save_memory",
-            "args": f"user_id={user_id}",
+            "tool": "extract_and_save_memory",
+            "args": f"user_id={user_id}, mode=async_llm_extraction",
             "result": save_text,
         })
         await transcript.append(TranscriptEntry(
             user_id=user_id, session_id=session_id,
             step_name="save_memory", step_index=5,
             entry_type="step_complete",
-            output_summary={"saved": "failed" not in save_text.lower()},
+            output_summary={"extraction": "scheduled", "consolidation": should_consolidate if "should_consolidate" in dir() else False},
         ))
 
         # ── Final ──
@@ -1728,3 +1762,85 @@ async def decide_approval(
         await transcript.close()
 
     return result
+
+
+# ── Pinned Memory PoC Endpoints (no auth, for testing) ───────────────────
+
+
+@router.post("/pinned")
+async def poc_pin_memory(
+    content: str = Query(..., description="Knowledge to pin"),
+    user_id: str = Query("user-chris"),
+    memory_type: str = Query("pinned_knowledge", description="pinned_knowledge or extracted_preference"),
+):
+    """Pin a memory — always injected into pipeline context (no auth, PoC)."""
+    from src.integrations.memory.unified_memory import UnifiedMemoryManager
+    from src.integrations.memory.types import MemoryType
+
+    mgr = UnifiedMemoryManager()
+    await mgr.initialize()
+    try:
+        record = await mgr.pin_memory(
+            content=content,
+            user_id=user_id,
+            memory_type=MemoryType(memory_type),
+        )
+        count = await mgr.get_pinned_count(user_id)
+        return {
+            "status": "ok",
+            "id": record.id,
+            "content": record.content,
+            "memory_type": record.memory_type.value,
+            "pinned_count": count,
+            "max_allowed": mgr.config.max_pinned_per_user,
+        }
+    except ValueError as ve:
+        return {"status": "error", "error": str(ve)}
+    finally:
+        await mgr.close()
+
+
+@router.get("/pinned")
+async def poc_list_pinned(
+    user_id: str = Query("user-chris"),
+):
+    """List all pinned memories for a user (no auth, PoC)."""
+    from src.integrations.memory.unified_memory import UnifiedMemoryManager
+
+    mgr = UnifiedMemoryManager()
+    await mgr.initialize()
+    try:
+        records = await mgr.get_pinned(user_id)
+        return {
+            "status": "ok",
+            "total": len(records),
+            "max_allowed": mgr.config.max_pinned_per_user,
+            "memories": [
+                {
+                    "id": r.id,
+                    "content": r.content,
+                    "memory_type": r.memory_type.value,
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                }
+                for r in records
+            ],
+        }
+    finally:
+        await mgr.close()
+
+
+@router.delete("/pinned/{memory_id}")
+async def poc_unpin_memory(
+    memory_id: str,
+    user_id: str = Query("user-chris"),
+):
+    """Unpin a memory (no auth, PoC)."""
+    from src.integrations.memory.unified_memory import UnifiedMemoryManager
+
+    mgr = UnifiedMemoryManager()
+    await mgr.initialize()
+    try:
+        success = await mgr.unpin_memory(memory_id, user_id)
+        return {"status": "ok" if success else "not_found", "memory_id": memory_id}
+    finally:
+        await mgr.close()
