@@ -29,6 +29,10 @@ import {
   ShieldCheck,
   ArrowRightLeft,
   History,
+  Pin,
+  PinOff,
+  Plus,
+  Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -106,6 +110,56 @@ export const AgentTeamTestPage: FC = () => {
   const [azureEndpoint, setAzureEndpoint] = useState('');
   const [azureKey, setAzureKey] = useState('');
   const [azureDeployment, setAzureDeployment] = useState('');
+
+  // Pinned Memory state (CC's CLAUDE.md equivalent)
+  const [pinnedMemories, setPinnedMemories] = useState<any[]>([]);
+  const [pinnedTotal, setPinnedTotal] = useState(0);
+  const [pinnedMax, setPinnedMax] = useState(20);
+  const [pinnedLoading, setPinnedLoading] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinType, setPinType] = useState('pinned_knowledge');
+
+  const fetchPinned = useCallback(async () => {
+    setPinnedLoading(true);
+    try {
+      const r = await fetch('/api/v1/poc/agent-team/pinned?user_id=user-chris');
+      const data = await r.json();
+      setPinnedMemories(data.memories || []);
+      setPinnedTotal(data.total || 0);
+      setPinnedMax(data.max_allowed || 20);
+    } catch (e) {
+      console.error('Failed to fetch pinned:', e);
+    }
+    setPinnedLoading(false);
+  }, []);
+
+  const handlePin = useCallback(async () => {
+    if (!pinInput.trim()) return;
+    try {
+      const params = new URLSearchParams({
+        content: pinInput.trim(),
+        user_id: 'user-chris',
+        memory_type: pinType,
+      });
+      await fetch(`/api/v1/poc/agent-team/pinned?${params}`, { method: 'POST' });
+      setPinInput('');
+      await fetchPinned();
+    } catch (e) {
+      console.error('Failed to pin:', e);
+    }
+  }, [pinInput, pinType, fetchPinned]);
+
+  const handleUnpin = useCallback(async (memoryId: string) => {
+    try {
+      await fetch(`/api/v1/poc/agent-team/pinned/${memoryId}?user_id=user-chris`, { method: 'DELETE' });
+      await fetchPinned();
+    } catch (e) {
+      console.error('Failed to unpin:', e);
+    }
+  }, [fetchPinned]);
+
+  // Load pinned on mount
+  React.useEffect(() => { fetchPinned(); }, []);
 
   // Default tasks per mode
   const defaultTasks: Record<TestMode, string> = {
@@ -886,6 +940,109 @@ export const AgentTeamTestPage: FC = () => {
             )}
           </div>
         )}
+
+        {/* ── Pinned Memory Panel (always visible, CC's CLAUDE.md equivalent) ── */}
+        <div className="mt-4 border rounded-lg bg-white">
+          <div className="flex items-center justify-between px-3 py-2 border-b bg-amber-50">
+            <div className="flex items-center gap-2">
+              <Pin className="w-4 h-4 text-amber-600" />
+              <span className="text-sm font-medium text-amber-800">
+                Pinned Knowledge
+              </span>
+              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded">
+                {pinnedTotal}/{pinnedMax}
+              </span>
+              <span className="text-[10px] text-gray-400">CC&apos;s CLAUDE.md equivalent — always injected</span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={fetchPinned}
+              disabled={pinnedLoading}
+              className="h-6 px-2 text-xs"
+            >
+              {pinnedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+            </Button>
+          </div>
+
+          {/* Pin input */}
+          <div className="p-3 border-b bg-gray-50">
+            <div className="flex gap-2">
+              <input
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handlePin()}
+                placeholder="Pin stable knowledge (role, preference, infrastructure)..."
+                className="flex-1 px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-amber-400"
+              />
+              <select
+                value={pinType}
+                onChange={(e) => setPinType(e.target.value)}
+                className="px-2 py-1.5 text-xs border rounded bg-white"
+              >
+                <option value="pinned_knowledge">Knowledge</option>
+                <option value="extracted_preference">Preference</option>
+                <option value="system_knowledge">System</option>
+              </select>
+              <Button
+                size="sm"
+                onClick={handlePin}
+                disabled={!pinInput.trim()}
+                className="h-8 px-3 bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                <Plus className="w-3 h-3 mr-1" /> Pin
+              </Button>
+            </div>
+          </div>
+
+          {/* Pinned list */}
+          <div className="p-2 max-h-60 overflow-auto">
+            {pinnedMemories.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">
+                No pinned memories. Pin stable knowledge that should always be visible to the orchestrator.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {pinnedMemories.map((m: any) => (
+                  <div
+                    key={m.id}
+                    className="flex items-start justify-between gap-2 px-2 py-1.5 text-sm bg-amber-50 rounded border border-amber-100 group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className={cn(
+                        "inline-block px-1 py-0 text-[9px] font-medium rounded mr-1",
+                        m.memory_type === 'extracted_preference' ? "bg-blue-100 text-blue-700" :
+                        m.memory_type === 'system_knowledge' ? "bg-green-100 text-green-700" :
+                        "bg-amber-100 text-amber-700"
+                      )}>
+                        {m.memory_type === 'extracted_preference' ? 'PREF' :
+                         m.memory_type === 'system_knowledge' ? 'SYS' : 'KNOW'}
+                      </span>
+                      <span className="text-gray-700">{m.content}</span>
+                    </div>
+                    <button
+                      onClick={() => handleUnpin(m.id)}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-red-500 transition-opacity"
+                      title="Unpin"
+                    >
+                      <PinOff className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Memory budget info (from last orchestrator run) */}
+          {result?.steps?.find((s: any) => s.step === '1_read_memory') && (
+            <div className="px-3 py-1.5 border-t bg-gray-50 flex items-center gap-4 text-[10px] text-gray-500">
+              <Database className="w-3 h-3" />
+              <span>Last run: Pinned={result.steps.find((s: any) => s.step === '1_read_memory').pinned_count}</span>
+              <span>Budget={result.steps.find((s: any) => s.step === '1_read_memory').budget_used_pct}%</span>
+              <span>of 6000 tokens</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
