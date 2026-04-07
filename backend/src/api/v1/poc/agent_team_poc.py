@@ -840,30 +840,53 @@ async def test_orchestrator(
             from src.integrations.orchestration.intent_router.llm_classifier.classifier import LLMClassifier
 
             matcher = PatternMatcher()
-            # Add ETL/pipeline/incident patterns so common IT tasks get matched
-            try:
-                matcher.add_rule({
-                    "pattern": r"(?i)(etl|pipeline|data.?flow|batch.?job).*(fail|error|down|broken|stuck)",
-                    "category": "INCIDENT", "sub_intent": "etl_failure",
-                    "risk_level": "HIGH", "workflow_type": "MAGENTIC",
-                })
-                matcher.add_rule({
-                    "pattern": r"(?i)(server|service|system|database).*(down|fail|error|crash|outage|unavailable)",
-                    "category": "INCIDENT", "sub_intent": "system_outage",
-                    "risk_level": "CRITICAL", "workflow_type": "MAGENTIC",
-                })
-                matcher.add_rule({
-                    "pattern": r"(?i)(deploy|release|rollout|update|upgrade|migration)",
-                    "category": "CHANGE", "sub_intent": "deployment",
-                    "risk_level": "MEDIUM", "workflow_type": "SEQUENTIAL",
-                })
-                matcher.add_rule({
-                    "pattern": r"(?i)(check|status|monitor|health|ping|query|what.?is)",
-                    "category": "QUERY", "sub_intent": "status_check",
-                    "risk_level": "LOW", "workflow_type": "HANDOFF",
-                })
-            except Exception:
-                pass  # If add_rule format differs, fallback to defaults
+            # Add patterns using proper PatternRule objects
+            from src.integrations.orchestration.intent_router.models import (
+                PatternRule, ITIntentCategory, RiskLevel, WorkflowType,
+            )
+            poc_rules = [
+                PatternRule(
+                    id="poc-etl-failure", category=ITIntentCategory.INCIDENT,
+                    sub_intent="etl_failure", priority=90,
+                    patterns=[r"(?i)(etl|pipeline|data.?flow|batch.?job).*(fail|error|down|broken|stuck)"],
+                    risk_level=RiskLevel.HIGH, workflow_type=WorkflowType.MAGENTIC,
+                ),
+                PatternRule(
+                    id="poc-system-outage", category=ITIntentCategory.INCIDENT,
+                    sub_intent="system_outage", priority=95,
+                    patterns=[r"(?i)(server|service|system|database).*(down|fail|error|crash|outage|unavailable)"],
+                    risk_level=RiskLevel.CRITICAL, workflow_type=WorkflowType.MAGENTIC,
+                ),
+                PatternRule(
+                    id="poc-prod-restart", category=ITIntentCategory.CHANGE,
+                    sub_intent="production_restart", priority=95,
+                    patterns=[r"(?i)(restart|reboot|shutdown|stop|kill).*(prod|production|server|database|db)"],
+                    risk_level=RiskLevel.CRITICAL, workflow_type=WorkflowType.MAGENTIC,
+                ),
+                PatternRule(
+                    id="poc-destructive-op", category=ITIntentCategory.CHANGE,
+                    sub_intent="destructive_operation", priority=95,
+                    patterns=[r"(?i)(delete|drop|truncate|wipe|purge).*(data|table|database|prod|production)"],
+                    risk_level=RiskLevel.CRITICAL, workflow_type=WorkflowType.MAGENTIC,
+                ),
+                PatternRule(
+                    id="poc-deployment", category=ITIntentCategory.CHANGE,
+                    sub_intent="deployment", priority=50,
+                    patterns=[r"(?i)(deploy|release|rollout|update|upgrade|migration)"],
+                    risk_level=RiskLevel.MEDIUM, workflow_type=WorkflowType.SEQUENTIAL,
+                ),
+                PatternRule(
+                    id="poc-status-check", category=ITIntentCategory.QUERY,
+                    sub_intent="status_check", priority=30,
+                    patterns=[r"(?i)(check|status|monitor|health|ping|query|what.?is)"],
+                    risk_level=RiskLevel.LOW, workflow_type=WorkflowType.HANDOFF,
+                ),
+            ]
+            for rule in poc_rules:
+                try:
+                    matcher.add_rule(rule)
+                except Exception as rule_err:
+                    logger.warning(f"Failed to add pattern rule {rule.id}: {rule_err}")
 
             # Create LLMClassifier with LLM service for fallback
             try:
@@ -878,15 +901,32 @@ async def test_orchestrator(
                 semantic_router=SemanticRouter(),
                 llm_classifier=llm_cls,
             )
+            # Check pattern matcher FIRST for high-risk detection (before router may dilute it)
+            pattern_result = matcher.match(task)
+            pattern_risk = getattr(pattern_result, "risk_level", None)
+
             decision = await router_inst.route(task)
+
+            # Use pattern matcher's risk if it matched with higher severity
+            effective_risk = decision.risk_level
+            if pattern_result.matched and pattern_risk:
+                risk_order = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+                pattern_rank = risk_order.get(str(pattern_risk).split(".")[-1], 0)
+                decision_rank = risk_order.get(str(effective_risk).split(".")[-1], 0)
+                if pattern_rank > decision_rank:
+                    effective_risk = pattern_risk
+                    logger.info(f"Pattern matcher elevated risk: {decision.risk_level} → {pattern_risk}")
+
             intent_text = (
                 f"Category: {decision.intent_category}, "
-                f"Risk: {decision.risk_level}, "
+                f"Risk: {effective_risk}, "
                 f"Confidence: {decision.confidence:.2f}, "
                 f"Workflow: {decision.workflow_type}"
             )
         except Exception as e:
             intent_text = f"Intent analysis partial: {str(e)[:100]}"
+            effective_risk = None
+            pattern_result = None
 
         step3_status = "ok" if "UNKNOWN" not in intent_text and "partial" not in intent_text.lower() else "partial"
         results["steps"].append({
@@ -902,8 +942,8 @@ async def test_orchestrator(
 
         # Conditional checkpoint: HIGH/CRITICAL risk → HITL pauses pipeline
         step3_checkpoint_id = None
-        risk_str = getattr(decision, "risk_level", "") if "decision" in dir() else ""
-        is_high_risk = "HIGH" in str(risk_str) or "CRITICAL" in str(risk_str)
+        risk_str = str(effective_risk) if "effective_risk" in dir() and effective_risk else ""
+        is_high_risk = "HIGH" in risk_str or "CRITICAL" in risk_str
         if is_high_risk:
             try:
                 from agent_framework import WorkflowCheckpoint
