@@ -1844,3 +1844,49 @@ async def poc_unpin_memory(
         return {"status": "ok" if success else "not_found", "memory_id": memory_id}
     finally:
         await mgr.close()
+
+
+@router.get("/extracted-memories")
+async def poc_list_extracted_memories(
+    user_id: str = Query("user-chris"),
+    limit: int = Query(30, description="Max memories to return"),
+):
+    """List all LONG_TERM extracted memories for a user (no auth, PoC).
+
+    Shows what the MemoryExtractionService has produced — the CC Memory Files equivalent.
+    """
+    from src.integrations.memory.unified_memory import UnifiedMemoryManager
+    from src.integrations.memory.types import MemoryLayer
+
+    mgr = UnifiedMemoryManager()
+    await mgr.initialize()
+    try:
+        records = await mgr.get_user_memories(
+            user_id=user_id,
+            layers=[MemoryLayer.LONG_TERM],
+        )
+
+        # Sort by created_at descending (newest first)
+        records.sort(key=lambda r: r.created_at, reverse=True)
+        records = records[:limit]
+
+        return {
+            "status": "ok",
+            "total": len(records),
+            "memories": [
+                {
+                    "id": r.id,
+                    "content": r.content,
+                    "memory_type": r.memory_type.value,
+                    "layer": r.layer.value,
+                    "importance": r.metadata.importance if r.metadata else 0.5,
+                    "source": r.metadata.source if r.metadata else "",
+                    "tags": r.metadata.tags if r.metadata else [],
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                    "access_count": r.access_count,
+                }
+                for r in records
+            ],
+        }
+    finally:
+        await mgr.close()

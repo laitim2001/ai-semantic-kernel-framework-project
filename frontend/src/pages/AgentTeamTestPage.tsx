@@ -158,8 +158,26 @@ export const AgentTeamTestPage: FC = () => {
     }
   }, [fetchPinned]);
 
-  // Load pinned on mount
-  React.useEffect(() => { fetchPinned(); }, []);
+  // Extracted Memories state (LONG_TERM layer — CC's Memory Files equivalent)
+  const [extractedMemories, setExtractedMemories] = useState<any[]>([]);
+  const [extractedTotal, setExtractedTotal] = useState(0);
+  const [extractedLoading, setExtractedLoading] = useState(false);
+
+  const fetchExtracted = useCallback(async () => {
+    setExtractedLoading(true);
+    try {
+      const r = await fetch('/api/v1/poc/agent-team/extracted-memories?user_id=user-chris&limit=30');
+      const data = await r.json();
+      setExtractedMemories(data.memories || []);
+      setExtractedTotal(data.total || 0);
+    } catch (e) {
+      console.error('Failed to fetch extracted:', e);
+    }
+    setExtractedLoading(false);
+  }, []);
+
+  // Load pinned + extracted on mount
+  React.useEffect(() => { fetchPinned(); fetchExtracted(); }, []);
 
   // Default tasks per mode
   const defaultTasks: Record<TestMode, string> = {
@@ -215,12 +233,15 @@ export const AgentTeamTestPage: FC = () => {
       const r = await fetch(`${endpoint}?${params}`, { method: 'POST' });
       const data = await r.json();
       setResult(data);
+      // Auto-refresh pinned + extracted after pipeline (extraction is async, wait a bit)
+      fetchPinned();
+      setTimeout(() => { fetchExtracted(); }, 8000);
     } catch (e: any) {
       setResult({ status: 'error', error: e.message });
     }
 
     setLoading(false);
-  }, [mode, provider, model, task, maxRounds, azureEndpoint, azureKey, azureDeployment]);
+  }, [mode, provider, model, task, maxRounds, azureEndpoint, azureKey, azureDeployment, fetchPinned, fetchExtracted]);
 
   const handleResume = useCallback(async (checkpointId: string, type: 'reroute' | 'hitl_approve' | 'hitl_reject', overrideRoute?: string) => {
     setResumeLoading(true);
@@ -1043,6 +1064,72 @@ export const AgentTeamTestPage: FC = () => {
             </div>
           )}
         </div>
+
+        {/* ── Extracted Memories Panel (LONG_TERM — CC's Memory Files equivalent) ── */}
+        <Section
+          title="Extracted Memories (LONG_TERM)"
+          icon={<Database className="w-4 h-4 text-indigo-600" />}
+          badge={`${extractedTotal} memories`}
+          defaultOpen={false}
+        >
+          <div className="px-2 pb-2">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] text-gray-400">
+                AI-extracted facts, preferences, decisions, patterns from pipeline conversations.
+                Retrieved via semantic search when relevant.
+              </p>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={fetchExtracted}
+                disabled={extractedLoading}
+                className="h-6 px-2 text-xs"
+              >
+                {extractedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+              </Button>
+            </div>
+
+            {extractedMemories.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-3">
+                No extracted memories yet. Run an Orchestrator task to trigger extraction.
+              </p>
+            ) : (
+              <div className="space-y-1 max-h-72 overflow-auto">
+                {extractedMemories.map((m: any) => (
+                  <div
+                    key={m.id}
+                    className="px-2 py-1.5 text-sm bg-indigo-50 rounded border border-indigo-100"
+                  >
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={cn(
+                        "inline-block px-1 py-0 text-[9px] font-medium rounded",
+                        m.memory_type === 'extracted_fact' ? "bg-purple-100 text-purple-700" :
+                        m.memory_type === 'extracted_preference' ? "bg-blue-100 text-blue-700" :
+                        m.memory_type === 'extracted_pattern' ? "bg-teal-100 text-teal-700" :
+                        m.memory_type === 'decision' ? "bg-orange-100 text-orange-700" :
+                        m.memory_type === 'insight' ? "bg-gray-100 text-gray-600" :
+                        "bg-gray-100 text-gray-600"
+                      )}>
+                        {m.memory_type === 'extracted_fact' ? 'FACT' :
+                         m.memory_type === 'extracted_preference' ? 'PREF' :
+                         m.memory_type === 'extracted_pattern' ? 'PATTERN' :
+                         m.memory_type === 'decision' ? 'DECISION' :
+                         m.memory_type.toUpperCase().slice(0, 7)}
+                      </span>
+                      {m.source === 'extraction' && (
+                        <span className="text-[9px] text-indigo-400">via LLM extraction</span>
+                      )}
+                      <span className="text-[9px] text-gray-400 ml-auto">
+                        imp={m.importance?.toFixed(1)} acc={m.access_count}
+                      </span>
+                    </div>
+                    <span className="text-gray-700">{m.content}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Section>
       </div>
     </div>
   );
