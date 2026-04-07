@@ -684,8 +684,8 @@ export const AgentTeamTestPage: FC = () => {
                           </button>
                         ))}
 
-                        {/* HITL Approve/Reject */}
-                        {cp.reason === 'high_risk_hitl' && (
+                        {/* HITL Approve/Reject (only if not already handled by top panel) */}
+                        {cp.reason === 'high_risk_hitl' && result.status !== 'pending_approval' && (
                           <>
                             <button
                               onClick={() => handleResume(cp.id, 'hitl_approve')}
