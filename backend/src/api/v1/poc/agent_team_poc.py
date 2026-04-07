@@ -940,10 +940,13 @@ async def test_orchestrator(
             "result": intent_text,
         })
 
-        # Conditional checkpoint: HIGH/CRITICAL risk → HITL pauses pipeline
+        # Conditional checkpoint: HIGH/CRITICAL risk + CHANGE category → HITL pauses pipeline
+        # INCIDENT (investigation) and QUERY (read-only) don't require approval
         step3_checkpoint_id = None
         risk_str = str(effective_risk) if "effective_risk" in dir() and effective_risk else ""
-        is_high_risk = "HIGH" in risk_str or "CRITICAL" in risk_str
+        intent_category_str = str(getattr(decision, "intent_category", "")) if "decision" in dir() else ""
+        is_actionable = "CHANGE" in intent_category_str  # Only changes need approval
+        is_high_risk = ("HIGH" in risk_str or "CRITICAL" in risk_str) and is_actionable
         if is_high_risk:
             try:
                 from agent_framework import WorkflowCheckpoint
