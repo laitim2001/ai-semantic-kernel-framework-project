@@ -337,25 +337,137 @@ export const AgentTeamTestPage: FC = () => {
             <div className={cn(
               'p-4 rounded-lg border',
               result.status === 'ok' ? 'bg-green-50 border-green-200' :
+              result.status === 'pending_approval' ? 'bg-amber-50 border-amber-300' :
               result.status === 'partial' ? 'bg-yellow-50 border-yellow-200' :
               'bg-red-50 border-red-200'
             )}>
               <div className="flex items-center gap-2">
                 {result.status === 'ok' ? (
                   <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : result.status === 'pending_approval' ? (
+                  <ShieldCheck className="w-5 h-5 text-amber-600" />
                 ) : result.status === 'partial' ? (
                   <Zap className="w-5 h-5 text-yellow-600" />
                 ) : (
                   <XCircle className="w-5 h-5 text-red-600" />
                 )}
                 <span className="font-medium text-lg">
-                  {result.status === 'ok' ? 'SUCCESS' : result.status === 'partial' ? 'PARTIAL' : 'FAILED'}
+                  {result.status === 'ok' ? 'SUCCESS' :
+                   result.status === 'pending_approval' ? 'AWAITING APPROVAL' :
+                   result.status === 'partial' ? 'PARTIAL' : 'FAILED'}
                 </span>
                 <span className="text-sm text-gray-500">({result.test})</span>
               </div>
               {result.summary && <p className="text-sm mt-1">{result.summary}</p>}
               {result.error && <p className="text-sm text-red-600 mt-1">{result.error}</p>}
             </div>
+
+            {/* HITL Approval Panel */}
+            {result.status === 'pending_approval' && result.approval && (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShieldCheck className="w-5 h-5 text-amber-600" />
+                  <span className="font-bold text-amber-800 text-lg">需要主管審批</span>
+                  <span className="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700 font-medium">
+                    {result.approval.risk_level}
+                  </span>
+                </div>
+
+                <div className="bg-white rounded border p-3 mb-3 text-sm space-y-1">
+                  <p><span className="text-gray-500">操作:</span> <span className="font-medium">{result.task}</span></p>
+                  <p><span className="text-gray-500">Session:</span> <span className="font-mono text-xs">{result.session_id}</span></p>
+                  <p><span className="text-gray-500">Checkpoint:</span> <span className="font-mono text-xs">{result.approval.checkpoint_id?.slice(0, 16)}...</span></p>
+                  <p><span className="text-gray-500">Approval ID:</span> <span className="font-mono text-xs">{result.approval.id}</span></p>
+                  <p className="text-amber-700 font-medium mt-2">{result.approval.message}</p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={async () => {
+                      setResumeLoading(true);
+                      setResumeResult(null);
+                      try {
+                        const params = new URLSearchParams({
+                          user_id: result.user_id || 'user-chris',
+                          action: 'approve',
+                          decided_by: 'manager-ui',
+                          auto_resume: 'true',
+                          provider: 'azure',
+                          model: 'gpt-5.4-mini',
+                        });
+                        const r = await fetch(`/api/v1/poc/agent-team/approvals/${result.approval.id}/decide?${params}`, { method: 'POST' });
+                        const data = await r.json();
+                        setResumeResult(data);
+                      } catch (e: any) {
+                        setResumeResult({ status: 'error', error: e.message });
+                      }
+                      setResumeLoading(false);
+                    }}
+                    disabled={resumeLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {resumeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    批准並繼續執行
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setResumeLoading(true);
+                      setResumeResult(null);
+                      try {
+                        const params = new URLSearchParams({
+                          user_id: result.user_id || 'user-chris',
+                          action: 'reject',
+                          decided_by: 'manager-ui',
+                          reason: 'Risk too high, need more investigation',
+                        });
+                        const r = await fetch(`/api/v1/poc/agent-team/approvals/${result.approval.id}/decide?${params}`, { method: 'POST' });
+                        const data = await r.json();
+                        setResumeResult(data);
+                      } catch (e: any) {
+                        setResumeResult({ status: 'error', error: e.message });
+                      }
+                      setResumeLoading(false);
+                    }}
+                    disabled={resumeLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-100 text-red-700 font-medium border border-red-300 hover:bg-red-200 disabled:opacity-50"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    拒絕
+                  </button>
+                </div>
+
+                {/* Approval Result */}
+                {resumeLoading && (
+                  <div className="flex items-center gap-2 mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span className="text-sm text-blue-700">正在處理審批並恢復執行...</span>
+                  </div>
+                )}
+                {resumeResult && (
+                  <div className={cn(
+                    'mt-3 p-3 rounded border text-sm',
+                    resumeResult.status === 'ok' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                  )}>
+                    <div className="flex items-center gap-2 mb-1">
+                      {resumeResult.status === 'ok' ? <CheckCircle className="w-4 h-4 text-green-600" /> : <XCircle className="w-4 h-4 text-red-600" />}
+                      <span className="font-medium">
+                        {resumeResult.action === 'approve' ? '已批准' : '已拒絕'}
+                        {resumeResult.resume?.status === 'ok' ? ' — 執行已恢復' : ''}
+                      </span>
+                    </div>
+                    {resumeResult.resume?.orchestrator_response && (
+                      <details className="mt-2" open>
+                        <summary className="text-xs text-indigo-600 cursor-pointer font-medium">LLM 恢復執行結果</summary>
+                        <div className="text-xs text-gray-700 mt-1 bg-white p-2 rounded border whitespace-pre-wrap max-h-64 overflow-auto">
+                          {resumeResult.resume.orchestrator_response}
+                        </div>
+                      </details>
+                    )}
+                    {resumeResult.error && <p className="text-xs text-red-600 mt-1">{resumeResult.error}</p>}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Steps */}
             {result.steps && (

@@ -900,7 +900,7 @@ async def test_orchestrator(
             "result": intent_text,
         })
 
-        # Conditional checkpoint: HIGH/CRITICAL risk → HITL may pause here
+        # Conditional checkpoint: HIGH/CRITICAL risk → HITL pauses pipeline
         step3_checkpoint_id = None
         risk_str = getattr(decision, "risk_level", "") if "decision" in dir() else ""
         is_high_risk = "HIGH" in str(risk_str) or "CRITICAL" in str(risk_str)
@@ -908,6 +908,9 @@ async def test_orchestrator(
             try:
                 from agent_framework import WorkflowCheckpoint
                 from src.integrations.agent_framework.ipa_checkpoint_storage import IPACheckpointStorage
+                from src.integrations.orchestration.approval import ApprovalService, ApprovalRequest as ApprovalReq
+
+                # 1. Create checkpoint
                 cp_storage = IPACheckpointStorage(redis_url=redis_url, user_id=user_id)
                 await cp_storage.initialize()
                 cp3 = WorkflowCheckpoint(
@@ -927,17 +930,72 @@ async def test_orchestrator(
                 )
                 step3_checkpoint_id = await cp_storage.save(cp3)
                 await cp_storage.close()
+
+                # 2. Create approval request
+                approval_svc = ApprovalService(redis_url=redis_url)
+                await approval_svc.initialize()
+                approval_req = ApprovalReq(
+                    user_id=user_id,
+                    session_id=session_id,
+                    checkpoint_id=step3_checkpoint_id,
+                    task=task[:200],
+                    risk_level=str(risk_str),
+                    intent_category=str(getattr(decision, "intent_category", "")),
+                    confidence=getattr(decision, "confidence", 0.0),
+                    context_summary={
+                        "memory": memory_text[:200],
+                        "knowledge": knowledge_text[:200],
+                        "intent": intent_text,
+                    },
+                )
+                approval_id = await approval_svc.create(approval_req)
+                await approval_svc.close()
+
+                # 3. Record in transcript
+                await transcript.append(TranscriptEntry(
+                    user_id=user_id, session_id=session_id,
+                    step_name="analyze_intent", step_index=2,
+                    entry_type="approval_required",
+                    output_summary={"intent": intent_text[:150], "high_risk": True, "approval_id": approval_id},
+                    checkpoint_id=step3_checkpoint_id,
+                ))
+                await transcript.close()
+
+                # 4. ⛔ PAUSE PIPELINE — return early
+                total_time = round((time.time() - t0) * 1000)
+                results["status"] = "pending_approval"
                 results["checkpoints"].append({
                     "id": step3_checkpoint_id, "step": 3, "reason": "high_risk_hitl",
                     "risk": str(risk_str),
                 })
+                results["approval"] = {
+                    "id": approval_id,
+                    "status": "pending",
+                    "checkpoint_id": step3_checkpoint_id,
+                    "risk_level": str(risk_str),
+                    "message": f"此操作風險等級為 {risk_str}，需要主管審批後才能繼續執行",
+                }
+                results["summary"] = (
+                    f"Orchestrator: PAUSED at step 3 (risk={risk_str}), "
+                    f"awaiting approval, total {total_time}ms"
+                )
+                results["steps"].append({
+                    "step": "3_hitl_pause",
+                    "status": "pending_approval",
+                    "approval_id": approval_id,
+                    "checkpoint_id": step3_checkpoint_id,
+                    "risk": str(risk_str),
+                })
+                return results
+
             except Exception as cp_err:
-                logger.warning(f"Step 3 checkpoint failed: {cp_err}")
+                logger.warning(f"Step 3 HITL checkpoint/approval failed: {cp_err}")
+                # If HITL setup fails, continue pipeline (graceful degradation)
 
         await transcript.append(TranscriptEntry(
             user_id=user_id, session_id=session_id,
             step_name="analyze_intent", step_index=2,
-            entry_type="approval_required" if is_high_risk else "step_complete",
+            entry_type="step_complete",
             output_summary={"intent": intent_text[:150], "high_risk": is_high_risk},
             checkpoint_id=step3_checkpoint_id,
             metadata={"duration_ms": round((time.time() - t0) * 1000)},
@@ -1480,3 +1538,150 @@ async def get_transcript(
         "total_entries": count,
         "entries": [e.to_dict() for e in entries],
     }
+
+
+# ── Approval Management ──────────────────────────────────────────────────
+
+@router.get("/approvals")
+async def list_pending_approvals():
+    """List all pending HITL approval requests (manager view)."""
+    import os
+    from src.integrations.orchestration.approval import ApprovalService
+
+    redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+    svc = ApprovalService(redis_url=redis_url)
+    await svc.initialize()
+
+    pending = await svc.list_pending()
+    await svc.close()
+
+    return {
+        "pending_count": len(pending),
+        "approvals": [a.to_dict() for a in pending],
+    }
+
+
+@router.post("/approvals/{approval_id}/decide")
+async def decide_approval(
+    approval_id: str,
+    user_id: str = Query("user-chris", description="The user who requested the action"),
+    action: str = Query(..., description="approve or reject"),
+    decided_by: str = Query("manager", description="Who is deciding"),
+    reason: str = Query("", description="Rejection reason (if rejecting)"),
+    auto_resume: bool = Query(True, description="Auto-resume pipeline on approval"),
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
+):
+    """Approve or reject a HITL request. Optionally auto-resumes the pipeline."""
+    import os
+    from src.integrations.orchestration.approval import ApprovalService, ApprovalStatus
+
+    redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+    svc = ApprovalService(redis_url=redis_url)
+    await svc.initialize()
+
+    # Validate action
+    if action not in ("approve", "reject"):
+        await svc.close()
+        return {"status": "error", "error": f"Invalid action: {action}. Use 'approve' or 'reject'."}
+
+    status = ApprovalStatus.APPROVED if action == "approve" else ApprovalStatus.REJECTED
+    updated = await svc.decide(user_id, approval_id, status, decided_by=decided_by, reason=reason or None)
+    await svc.close()
+
+    if not updated:
+        return {"status": "error", "error": f"Approval not found: {approval_id}"}
+
+    result = {
+        "status": "ok",
+        "approval": updated.to_dict(),
+        "action": action,
+        "decided_by": decided_by,
+    }
+
+    # Auto-resume on approval
+    if action == "approve" and auto_resume and updated.checkpoint_id:
+        from src.integrations.agent_framework.ipa_checkpoint_storage import IPACheckpointStorage
+        from src.integrations.orchestration.transcript import TranscriptService, TranscriptEntry
+        from src.integrations.orchestration.resume import ResumeService
+        from src.integrations.orchestration.resume.service import ResumeRequest
+
+        storage = IPACheckpointStorage(redis_url=redis_url, user_id=user_id)
+        await storage.initialize()
+        transcript = TranscriptService(redis_url=redis_url)
+        await transcript.initialize()
+
+        resume_svc = ResumeService(checkpoint_storage=storage, transcript_service=transcript)
+
+        resume_req = ResumeRequest(
+            checkpoint_id=updated.checkpoint_id,
+            user_id=user_id,
+            approval_result={"status": "approved", "approver": decided_by},
+        )
+        resume_result = await resume_svc.resume(resume_req)
+
+        # If resume validated OK, do real LLM execution
+        if resume_result.status == "ok":
+            try:
+                from agent_framework import Agent
+
+                checkpoint = await storage.load(updated.checkpoint_id)
+                state = checkpoint.state
+                task_text = updated.task or checkpoint.metadata.get("task_preview", "")
+                if checkpoint.messages.get("orchestrator"):
+                    for msg in checkpoint.messages["orchestrator"]:
+                        if msg.get("role") == "user" and msg.get("content"):
+                            task_text = msg["content"]
+                            break
+
+                client = _create_client(provider, model, azure_api_version="2025-03-01-preview", max_tokens=2048)
+                orchestrator = Agent(
+                    client,
+                    name="Orchestrator-HITL-Resume",
+                    instructions=(
+                        f"You are an IT Operations Orchestrator. A manager has APPROVED this operation.\n\n"
+                        f"## Approved Request\n{task_text}\n\n"
+                        f"## Context (restored from checkpoint)\n"
+                        f"### Memory\n{state.get('memory_context', '')}\n\n"
+                        f"### Knowledge Base\n{state.get('knowledge_results', '')}\n\n"
+                        f"### Intent Analysis\n{state.get('intent_analysis', '')}\n\n"
+                        f"The request was flagged as {updated.risk_level} risk and has been approved by {decided_by}.\n"
+                        f"Proceed with the appropriate execution plan."
+                    ),
+                )
+
+                response = await orchestrator.run(task_text)
+                response_text = ""
+                if hasattr(response, "text") and response.text:
+                    response_text = response.text
+                elif hasattr(response, "messages") and response.messages:
+                    for msg in response.messages:
+                        if hasattr(msg, "text") and msg.text:
+                            response_text += msg.text
+
+                await transcript.append(TranscriptEntry(
+                    user_id=user_id, session_id=updated.session_id,
+                    step_name="hitl_resume_execute", step_index=7,
+                    entry_type="step_complete",
+                    output_summary={"response_preview": response_text[:150], "approved_by": decided_by},
+                    checkpoint_id=updated.checkpoint_id,
+                ))
+
+                result["resume"] = {
+                    "status": "ok",
+                    "resume_type": "hitl",
+                    "orchestrator_response": response_text[:3000],
+                    "session_id": updated.session_id,
+                    "checkpoint_id": updated.checkpoint_id,
+                }
+
+            except Exception as exec_err:
+                result["resume"] = {
+                    "status": "error",
+                    "error": str(exec_err)[:300],
+                }
+
+        await storage.close()
+        await transcript.close()
+
+    return result
