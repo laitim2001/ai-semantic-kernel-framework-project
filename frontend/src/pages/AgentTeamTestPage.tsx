@@ -405,6 +405,11 @@ export const AgentTeamTestPage: FC = () => {
                             status: 'ok',
                             summary: `Approved by ${data.decided_by} — pipeline resumed`,
                             orchestrator_response: data.resume?.orchestrator_response || prev.orchestrator_response,
+                            steps: prev.steps?.map((s: any) =>
+                              s.step === '3_hitl_pause'
+                                ? { ...s, status: 'ok', approval_result: 'approved' }
+                                : s
+                            ),
                           }));
                         }
                       } catch (e: any) {
@@ -437,6 +442,11 @@ export const AgentTeamTestPage: FC = () => {
                             ...prev,
                             status: 'error',
                             summary: `Rejected by ${data.decided_by} — pipeline terminated`,
+                            steps: prev.steps?.map((s: any) =>
+                              s.step === '3_hitl_pause'
+                                ? { ...s, status: 'failed', approval_result: 'rejected' }
+                                : s
+                            ),
                           }));
                         }
                       } catch (e: any) {
