@@ -1870,6 +1870,15 @@ async def poc_list_extracted_memories(
         records.sort(key=lambda r: r.created_at, reverse=True)
         records = records[:limit]
 
+        def _safe_metadata(r):
+            """Extract metadata safely — mem0 may return varied formats."""
+            meta = r.metadata
+            if meta and hasattr(meta, 'importance'):
+                return meta.importance, meta.source, meta.tags
+            if meta and isinstance(meta, dict):
+                return meta.get('importance', 0.5), meta.get('source', ''), meta.get('tags', [])
+            return 0.5, '', []
+
         return {
             "status": "ok",
             "total": len(records),
@@ -1877,13 +1886,13 @@ async def poc_list_extracted_memories(
                 {
                     "id": r.id,
                     "content": r.content,
-                    "memory_type": r.memory_type.value,
-                    "layer": r.layer.value,
-                    "importance": r.metadata.importance if r.metadata else 0.5,
-                    "source": r.metadata.source if r.metadata else "",
-                    "tags": r.metadata.tags if r.metadata else [],
-                    "created_at": r.created_at.isoformat() if r.created_at else None,
-                    "access_count": r.access_count,
+                    "memory_type": r.memory_type.value if hasattr(r.memory_type, 'value') else str(r.memory_type),
+                    "layer": r.layer.value if hasattr(r.layer, 'value') else str(r.layer),
+                    "importance": _safe_metadata(r)[0],
+                    "source": _safe_metadata(r)[1],
+                    "tags": _safe_metadata(r)[2],
+                    "created_at": r.created_at.isoformat() if hasattr(r.created_at, 'isoformat') else str(r.created_at) if r.created_at else None,
+                    "access_count": getattr(r, 'access_count', 0),
                 }
                 for r in records
             ],

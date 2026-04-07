@@ -360,7 +360,15 @@ class Mem0Client:
 
         try:
             # Get all memories for user
-            results = self._memory.get_all(user_id=user_id)
+            raw_results = self._memory.get_all(user_id=user_id)
+
+            # mem0 may return dict {"results": [...]} or plain list
+            if isinstance(raw_results, dict):
+                results = raw_results.get("results", [])
+            elif isinstance(raw_results, list):
+                results = raw_results
+            else:
+                results = []
 
             # Convert to MemoryRecord objects
             records = []
