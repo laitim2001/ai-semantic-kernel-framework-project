@@ -1257,86 +1257,165 @@ async def resume_from_checkpoint(
 
     try:
         t0 = time.time()
-
-        # Create LLM agent with restored context to generate response for the new route
         client = _create_client(provider, model, azure_api_version="2025-03-01-preview", max_tokens=2048)
 
-        orchestrator = Agent(
-            client,
-            name="Orchestrator-Resume",
-            instructions=(
-                f"You are an IT Operations Orchestrator resuming from a checkpoint.\n"
-                f"The user's original request was analyzed and a route was selected. "
-                f"{'The route has been CHANGED by the user.' if resume_result.resume_type == 'reroute' else 'A manager has APPROVED this operation.'}\n\n"
-                f"## User Request\n{task}\n\n"
-                f"## Restored Context (from checkpoint)\n"
-                f"### Memory\n{memory_text}\n\n"
-                f"### Knowledge Base\n{knowledge_text}\n\n"
-                f"### Intent Analysis\n{intent_text}\n\n"
-                f"## Execution Mode: {effective_route}\n\n"
-                f"Based on the restored context and the execution mode '{effective_route}', "
-                f"provide your response. Explain how you would handle this using the "
-                f"'{effective_route}' approach:\n"
-                f"- direct_answer: Give a concise direct answer\n"
-                f"- subagent: Explain what parallel independent checks you'd dispatch\n"
-                f"- team: Explain what expert team collaboration you'd organize\n"
-                f"- swarm: Explain what deep multi-agent investigation you'd launch\n"
-                f"- workflow: Provide a structured step-by-step workflow plan\n"
-            ),
-        )
+        if resume_result.resume_type == "agent_retry":
+            # ── Agent Retry: re-run only failed agents ──
+            from src.integrations.orchestration.transcript.models import AgentSidechainEntry
+            retry_list = resume_result.metadata.get("retry_agents", [])
+            existing_states = resume_result.metadata.get("subagent_states", {})
+            sdk_tools = _get_claude_sdk_tools()
 
-        response = await orchestrator.run(task)
-        decision_time = round((time.time() - t0) * 1000)
+            agent_responses = []
+            retry_states = {}
 
-        response_text = ""
-        if hasattr(response, "text") and response.text:
-            response_text = response.text
-        elif hasattr(response, "messages") and response.messages:
-            for msg in response.messages:
-                if hasattr(msg, "text") and msg.text:
-                    response_text += msg.text
+            for agent_name in retry_list:
+                try:
+                    retry_agent = Agent(
+                        client,
+                        name=f"{agent_name}-Retry",
+                        instructions=(
+                            f"You are {agent_name}, retrying a failed task.\n"
+                            f"Original task: {task}\n\n"
+                            f"Context from previous run:\n"
+                            f"- Memory: {memory_text[:300]}\n"
+                            f"- Knowledge: {knowledge_text[:300]}\n"
+                            f"- Intent: {intent_text}\n\n"
+                            f"Investigate thoroughly and provide your findings. Be concise."
+                        ),
+                        tools=sdk_tools,
+                    )
 
-        execution_result["orchestrator_response"] = response_text[:3000]
-        execution_result["steps_executed"].append({
-            "step": f"llm_execute_{effective_route}",
-            "status": "ok",
-            "duration_ms": decision_time,
-            "route": effective_route,
-        })
+                    # Sidechain: record retry start
+                    await transcript.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=resume_result.session_id,
+                        agent_name=agent_name,
+                        event_type="retry_start",
+                        content={"task": task[:100], "attempt": 2},
+                    ))
+
+                    agent_resp = await retry_agent.run(task)
+                    resp_text = ""
+                    if hasattr(agent_resp, "text") and agent_resp.text:
+                        resp_text = agent_resp.text
+                    elif hasattr(agent_resp, "messages") and agent_resp.messages:
+                        for msg in agent_resp.messages:
+                            if hasattr(msg, "text") and msg.text:
+                                resp_text += msg.text
+
+                    agent_responses.append({"agent": agent_name, "response": resp_text[:500], "status": "retry_complete"})
+                    retry_states[agent_name] = "complete"
+
+                    # Sidechain: record retry complete
+                    await transcript.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=resume_result.session_id,
+                        agent_name=agent_name,
+                        event_type="retry_complete",
+                        content={"response_preview": resp_text[:200]},
+                    ))
+
+                except Exception as agent_err:
+                    agent_responses.append({"agent": agent_name, "response": str(agent_err)[:200], "status": "retry_failed"})
+                    retry_states[agent_name] = "retry_failed"
+
+                    await transcript.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=resume_result.session_id,
+                        agent_name=agent_name,
+                        event_type="retry_error",
+                        content={"error": str(agent_err)[:200]},
+                    ))
+
+            decision_time = round((time.time() - t0) * 1000)
+
+            # Merge: kept agents + retried agents
+            kept_agents = [
+                name for name, s in existing_states.items()
+                if s == "complete" and name not in retry_list
+            ]
+
+            execution_result["agent_responses"] = agent_responses
+            execution_result["agent_states"] = {**{k: "kept" for k in kept_agents}, **retry_states}
+            execution_result["steps_executed"].append({
+                "step": "agent_retry_execute",
+                "status": "ok",
+                "duration_ms": decision_time,
+                "retried": retry_list,
+                "kept": kept_agents,
+                "results": len(agent_responses),
+            })
+
+        else:
+            # ── Re-Route / HITL: LLM generates new response ──
+            orchestrator = Agent(
+                client,
+                name="Orchestrator-Resume",
+                instructions=(
+                    f"You are an IT Operations Orchestrator resuming from a checkpoint.\n"
+                    f"The user's original request was analyzed and a route was selected. "
+                    f"{'The route has been CHANGED by the user.' if resume_result.resume_type == 'reroute' else 'A manager has APPROVED this operation.'}\n\n"
+                    f"## User Request\n{task}\n\n"
+                    f"## Restored Context (from checkpoint)\n"
+                    f"### Memory\n{memory_text}\n\n"
+                    f"### Knowledge Base\n{knowledge_text}\n\n"
+                    f"### Intent Analysis\n{intent_text}\n\n"
+                    f"## Execution Mode: {effective_route}\n\n"
+                    f"Based on the restored context and the execution mode '{effective_route}', "
+                    f"provide your response tailored specifically to the '{effective_route}' approach."
+                ),
+            )
+
+            response = await orchestrator.run(task)
+            decision_time = round((time.time() - t0) * 1000)
+
+            response_text = ""
+            if hasattr(response, "text") and response.text:
+                response_text = response.text
+            elif hasattr(response, "messages") and response.messages:
+                for msg in response.messages:
+                    if hasattr(msg, "text") and msg.text:
+                        response_text += msg.text
+
+            execution_result["orchestrator_response"] = response_text[:3000]
+            execution_result["steps_executed"].append({
+                "step": f"llm_execute_{effective_route}",
+                "status": "ok",
+                "duration_ms": decision_time,
+                "route": effective_route,
+            })
 
         # Record execution in transcript
         await transcript.append(TranscriptEntry(
             user_id=user_id, session_id=resume_result.session_id,
-            step_name=f"resume_execute_{effective_route}", step_index=7,
+            step_name=f"resume_{resume_result.resume_type}", step_index=7,
             entry_type="step_complete",
             output_summary={
+                "resume_type": resume_result.resume_type,
                 "route": effective_route,
-                "response_preview": response_text[:150],
                 "duration_ms": decision_time,
             },
             checkpoint_id=checkpoint_id,
         ))
 
-        # Save memory for the resumed execution
+        # Save memory
         try:
             from src.integrations.memory.unified_memory import UnifiedMemoryManager
             from src.integrations.memory.types import MemoryType, MemoryLayer
             mgr = UnifiedMemoryManager()
             await mgr.initialize()
             await mgr.add(
-                content=f"Resumed from checkpoint. Route: {resume_result.original_route}→{effective_route}. Task: {task[:80]}",
+                content=f"Resumed ({resume_result.resume_type}). Route: {effective_route}. Task: {task[:80]}",
                 user_id=user_id,
                 memory_type=MemoryType.INSIGHT,
                 layer=MemoryLayer.LONG_TERM,
             )
         except Exception:
-            pass  # Memory save is best-effort
+            pass
 
     except Exception as e:
         execution_result["status"] = "error"
         execution_result["error"] = str(e)
         execution_result["steps_executed"].append({
-            "step": "llm_execute",
+            "step": "resume_execute",
             "status": "error",
             "error": str(e)[:200],
         })

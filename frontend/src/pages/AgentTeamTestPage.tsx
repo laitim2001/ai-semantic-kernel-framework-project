@@ -399,20 +399,100 @@ export const AgentTeamTestPage: FC = () => {
               </Section>
             )}
 
-            {/* Agent Responses (Subagent mode) */}
-            {result.agent_responses?.length > 0 && (
+            {/* Agent States & Responses */}
+            {(result.agent_responses?.length > 0 || result.agent_states) && (
               <Section
                 title="Agent Responses"
                 icon={<Brain className="w-4 h-4 text-purple-600" />}
-                badge={`${result.agent_responses.length} agents`}
+                badge={`${result.agent_responses?.length || 0} responses`}
               >
                 <div className="space-y-3">
-                  {result.agent_responses.map((r: any, i: number) => (
-                    <div key={i} className="bg-white rounded-lg border p-3">
+                  {/* Agent State Summary with Retry */}
+                  {result.agent_states && Object.keys(result.agent_states).length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 rounded border">
+                      {Object.entries(result.agent_states).map(([name, status]: [string, any]) => (
+                        <div key={name} className="flex items-center gap-1.5">
+                          <span className={cn(
+                            'px-2 py-0.5 text-[11px] font-medium rounded',
+                            status === 'complete' || status === 'kept' ? 'bg-green-100 text-green-700' :
+                            status === 'running' ? 'bg-blue-100 text-blue-700' :
+                            status === 'error' || status === 'no_response' || status === 'retry_failed' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          )}>
+                            {status === 'complete' || status === 'kept' ? '✓' : status === 'running' ? '⟳' : '✗'} {name}
+                          </span>
+                          {(status === 'error' || status === 'no_response' || status === 'retry_failed') && result.checkpoints?.[0]?.id && (
+                            <button
+                              onClick={() => handleResume(result.checkpoints[0].id, 'reroute', undefined)}
+                              disabled={resumeLoading}
+                              className="text-[10px] px-1.5 py-0.5 rounded border bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 disabled:opacity-50"
+                            >
+                              <RotateCcw className="w-3 h-3 inline mr-0.5" />Retry
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Agent Response Cards */}
+                  {result.agent_responses?.map((r: any, i: number) => (
+                    <div key={i} className={cn(
+                      'bg-white rounded-lg border p-3',
+                      r.status === 'retry_complete' ? 'border-orange-200 bg-orange-50/30' :
+                      r.status === 'retry_failed' ? 'border-red-200 bg-red-50/30' : ''
+                    )}>
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
                           {r.agent}
                         </span>
+                        {r.status === 'retry_complete' && (
+                          <span className="px-1.5 py-0.5 text-[10px] bg-orange-100 text-orange-700 rounded font-medium">
+                            <RotateCcw className="w-3 h-3 inline mr-0.5" />retried
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{r.response}</p>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Resume Agent Retry Results */}
+            {resumeResult?.agent_responses?.length > 0 && (
+              <Section
+                title="Agent Retry Results"
+                icon={<RotateCcw className="w-4 h-4 text-orange-600" />}
+                badge={`${resumeResult.agent_responses.length} retried`}
+              >
+                <div className="space-y-2">
+                  {resumeResult.agent_states && (
+                    <div className="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 rounded border">
+                      {Object.entries(resumeResult.agent_states).map(([name, status]: [string, any]) => (
+                        <span key={name} className={cn(
+                          'px-2 py-0.5 text-[11px] font-medium rounded',
+                          status === 'complete' || status === 'kept' ? 'bg-green-100 text-green-700' :
+                          'bg-red-100 text-red-700'
+                        )}>
+                          {status === 'kept' ? '⟶' : status === 'complete' ? '✓' : '✗'} {name}: {status}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {resumeResult.agent_responses.map((r: any, i: number) => (
+                    <div key={i} className={cn(
+                      'bg-white rounded-lg border p-3',
+                      r.status === 'retry_complete' ? 'border-green-200' : 'border-red-200'
+                    )}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-800 rounded">
+                          {r.agent} (retry)
+                        </span>
+                        <span className={cn(
+                          'text-[10px] px-1 py-0.5 rounded',
+                          r.status === 'retry_complete' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        )}>{r.status}</span>
                       </div>
                       <p className="text-sm text-gray-700 whitespace-pre-wrap">{r.response}</p>
                     </div>
