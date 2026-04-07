@@ -64,6 +64,8 @@ async def test_subagent(
         "1) APAC ETL Pipeline, 2) CRM Service, 3) Email Server. "
         "Report the health status of each.",
     ),
+    user_id: str = Query("user-chris"),
+    session_id: str = Query("", description="Link to orchestrator session for sidechain"),
     azure_endpoint: str = Query(""),
     azure_api_key: str = Query(""),
     azure_api_version: str = Query("2025-03-01-preview"),
@@ -74,13 +76,21 @@ async def test_subagent(
     3 Agents run in parallel, each checking one system independently.
     Results are aggregated by a custom aggregator function.
     """
+    import os
+    import uuid as _uuid
+
+    if not session_id:
+        session_id = f"{user_id}-sub-{int(time.time())}-{str(_uuid.uuid4())[:8]}"
+
     results: dict[str, Any] = {
         "test": "subagent",
         "provider": provider,
         "model": model,
         "task": task,
+        "session_id": session_id,
         "steps": [],
         "events": [],
+        "agent_states": {},
     }
 
     try:
@@ -134,6 +144,21 @@ async def test_subagent(
         build_time = round((time.time() - t0) * 1000)
         results["steps"].append({"step": "build_concurrent", "status": "ok", "duration_ms": build_time})
 
+        # Initialize sidechain transcript
+        from src.integrations.orchestration.transcript import TranscriptService
+        from src.integrations.orchestration.transcript.models import AgentSidechainEntry
+        redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+        sidechain = TranscriptService(redis_url=redis_url)
+        await sidechain.initialize()
+
+        agent_names = ["ETL-Checker", "CRM-Checker", "Email-Checker"]
+        for name in agent_names:
+            await sidechain.append_agent(AgentSidechainEntry(
+                user_id=user_id, session_id=session_id, agent_name=name,
+                event_type="start", content={"task": task[:100]},
+            ))
+            results["agent_states"][name] = "running"
+
         # Run
         t1 = time.time()
         try:
@@ -167,6 +192,14 @@ async def test_subagent(
                                     })
                                     event_info["agent_name"] = item.executor_id
                                     event_info["agent_response"] = text[:300]
+                                    # Sidechain: record agent completion
+                                    await sidechain.append_agent(AgentSidechainEntry(
+                                        user_id=user_id, session_id=session_id,
+                                        agent_name=item.executor_id,
+                                        event_type="complete",
+                                        content={"response_preview": text[:200]},
+                                    ))
+                                    results["agent_states"][item.executor_id] = "complete"
 
                 results["events"].append(event_info)
 
@@ -179,6 +212,15 @@ async def test_subagent(
             })
 
             results["agent_responses"] = agent_responses
+            # Mark any agents that didn't respond as failed
+            for name in agent_names:
+                if results["agent_states"].get(name) == "running":
+                    results["agent_states"][name] = "no_response"
+                    await sidechain.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=session_id, agent_name=name,
+                        event_type="error", content={"error": "No response received"},
+                    ))
+
             results["steps"].append({
                 "step": "collect_results",
                 "status": "ok",
@@ -187,6 +229,14 @@ async def test_subagent(
 
         except Exception as e:
             run_time = round((time.time() - t1) * 1000)
+            # Sidechain: record error for all running agents
+            for name in agent_names:
+                if results["agent_states"].get(name) == "running":
+                    results["agent_states"][name] = "error"
+                    await sidechain.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=session_id, agent_name=name,
+                        event_type="error", content={"error": str(e)[:200]},
+                    ))
             results["steps"].append({
                 "step": "run_concurrent",
                 "status": "error",
@@ -195,8 +245,14 @@ async def test_subagent(
                 "traceback": traceback.format_exc()[-500:],
             })
 
+        await sidechain.close()
+
+        completed = sum(1 for s in results["agent_states"].values() if s == "complete")
         results["status"] = "ok" if all(s.get("status") == "ok" for s in results["steps"]) else "partial"
-        results["summary"] = f"Subagent: 3 agents parallel, {len(results['events'])} events"
+        results["summary"] = (
+            f"Subagent: {completed}/{len(agent_names)} agents complete, "
+            f"{len(results['events'])} events, session={session_id[:20]}..."
+        )
 
     except Exception as e:
         results["status"] = "error"
@@ -217,6 +273,8 @@ async def test_team(
         "analyze application logs, check database changes, and verify network connectivity.",
     ),
     max_rounds: int = Query(8, description="Max GroupChat rounds"),
+    user_id: str = Query("user-chris"),
+    session_id: str = Query("", description="Link to orchestrator session for sidechain"),
     azure_endpoint: str = Query(""),
     azure_api_key: str = Query(""),
     azure_api_version: str = Query("2024-12-01-preview"),
@@ -227,15 +285,23 @@ async def test_team(
     3 Teammates collaborate via shared conversation, claim tasks from
     a SharedTaskList, and communicate findings to each other.
     """
+    import os
+    import uuid as _uuid
+
+    if not session_id:
+        session_id = f"{user_id}-team-{int(time.time())}-{str(_uuid.uuid4())[:8]}"
+
     results: dict[str, Any] = {
         "test": "agent_team",
         "provider": provider,
         "model": model,
         "task": task,
         "max_rounds": max_rounds,
+        "session_id": session_id,
         "steps": [],
         "events": [],
         "shared_task_list": None,
+        "agent_states": {},
     }
 
     try:
@@ -365,6 +431,21 @@ async def test_team(
         build_time = round((time.time() - t0) * 1000)
         results["steps"].append({"step": "build_groupchat", "status": "ok", "duration_ms": build_time})
 
+        # Initialize sidechain transcript for team agents
+        from src.integrations.orchestration.transcript import TranscriptService
+        from src.integrations.orchestration.transcript.models import AgentSidechainEntry
+        redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+        sidechain = TranscriptService(redis_url=redis_url)
+        await sidechain.initialize()
+
+        team_agent_names = ["LogExpert", "DBExpert", "AppExpert"]
+        for name in team_agent_names:
+            await sidechain.append_agent(AgentSidechainEntry(
+                user_id=user_id, session_id=session_id, agent_name=name,
+                event_type="start", content={"task": task[:100]},
+            ))
+            results["agent_states"][name] = "running"
+
         # Step 5: Run GroupChat
         t1 = time.time()
         try:
@@ -406,11 +487,29 @@ async def test_team(
                                     })
                                     event_info["agent_name"] = item.executor_id
                                     event_info["agent_response"] = text[:300]
+                                    # Sidechain: record agent response
+                                    await sidechain.append_agent(AgentSidechainEntry(
+                                        user_id=user_id, session_id=session_id,
+                                        agent_name=item.executor_id,
+                                        event_type="complete",
+                                        content={"response_preview": text[:200]},
+                                    ))
+                                    results["agent_states"][item.executor_id] = "complete"
 
                 results["events"].append(event_info)
 
             run_time = round((time.time() - t1) * 1000)
             results["agent_responses"] = agent_responses
+
+            # Mark agents that never responded
+            for name in team_agent_names:
+                if results["agent_states"].get(name) == "running":
+                    results["agent_states"][name] = "no_response"
+                    await sidechain.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=session_id, agent_name=name,
+                        event_type="error", content={"error": "No response in groupchat"},
+                    ))
+
             results["steps"].append({
                 "step": "run_groupchat",
                 "status": "ok",
@@ -421,6 +520,13 @@ async def test_team(
 
         except Exception as e:
             run_time = round((time.time() - t1) * 1000)
+            for name in team_agent_names:
+                if results["agent_states"].get(name) == "running":
+                    results["agent_states"][name] = "error"
+                    await sidechain.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=session_id, agent_name=name,
+                        event_type="error", content={"error": str(e)[:200]},
+                    ))
             results["steps"].append({
                 "step": "run_groupchat",
                 "status": "error",
@@ -428,6 +534,8 @@ async def test_team(
                 "error": str(e),
                 "traceback": traceback.format_exc()[-500:],
             })
+
+        await sidechain.close()
 
         # Step 6: Capture final SharedTaskList state
         results["shared_task_list"] = shared.to_dict()
@@ -440,11 +548,13 @@ async def test_team(
             "all_done": shared.is_all_done(),
         })
 
+        completed_agents = sum(1 for s in results["agent_states"].values() if s == "complete")
         results["status"] = "ok" if all(s.get("status") == "ok" for s in results["steps"]) else "partial"
         results["summary"] = (
-            f"Team: 3 agents, {max_rounds} rounds, "
+            f"Team: {completed_agents}/{len(team_agent_names)} agents responded, "
+            f"{max_rounds} rounds, "
             f"{shared.to_dict()['progress']['completed']}/{shared.to_dict()['progress']['total']} tasks done, "
-            f"{len(shared.to_dict()['messages'])} messages"
+            f"{len(shared.to_dict()['messages'])} messages, session={session_id[:20]}..."
         )
 
     except Exception as e:
