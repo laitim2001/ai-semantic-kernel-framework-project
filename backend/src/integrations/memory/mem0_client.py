@@ -279,11 +279,11 @@ class Mem0Client:
         self._ensure_initialized()
 
         try:
-            # Perform semantic search
+            # Perform semantic search (guard: Qdrant rejects limit=0)
             results = self._memory.search(
                 query=query.query,
                 user_id=query.user_id,
-                limit=query.limit,
+                limit=max(1, query.limit),
             )
 
             # Convert to MemorySearchResult objects

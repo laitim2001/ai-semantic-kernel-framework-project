@@ -25,6 +25,10 @@ import {
   MessageSquare,
   ListChecks,
   Zap,
+  RotateCcw,
+  ShieldCheck,
+  ArrowRightLeft,
+  History,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -94,6 +98,8 @@ export const AgentTeamTestPage: FC = () => {
   const [task, setTask] = useState('');
   const [maxRounds, setMaxRounds] = useState(8);
   const [loading, setLoading] = useState(false);
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeResult, setResumeResult] = useState<any>(null);
   const [result, setResult] = useState<any>(null);
 
   // Azure config — credentials loaded from server .env by default
@@ -161,6 +167,29 @@ export const AgentTeamTestPage: FC = () => {
 
     setLoading(false);
   }, [mode, provider, model, task, maxRounds, azureEndpoint, azureKey, azureDeployment]);
+
+  const handleResume = useCallback(async (checkpointId: string, type: 'reroute' | 'hitl_approve' | 'hitl_reject', overrideRoute?: string) => {
+    setResumeLoading(true);
+    setResumeResult(null);
+
+    const params = new URLSearchParams({
+      checkpoint_id: checkpointId,
+      user_id: 'user-chris',
+      ...(type === 'reroute' && overrideRoute ? { override_route: overrideRoute } : {}),
+      ...(type === 'hitl_approve' ? { approval_status: 'approved', approval_approver: 'manager-ui' } : {}),
+      ...(type === 'hitl_reject' ? { approval_status: 'rejected' } : {}),
+    });
+
+    try {
+      const r = await fetch(`/api/v1/poc/agent-team/resume?${params}`, { method: 'POST' });
+      const data = await r.json();
+      setResumeResult(data);
+    } catch (e: any) {
+      setResumeResult({ status: 'error', error: e.message });
+    }
+
+    setResumeLoading(false);
+  }, []);
 
   return (
     <div className="flex h-full bg-gray-100">
@@ -412,10 +441,139 @@ export const AgentTeamTestPage: FC = () => {
                         </div>
                       )}
                       {a.result && (
-                        <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap">{a.result.slice(0, 200)}</p>
+                        <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap">{a.result}</p>
                       )}
                     </div>
                   ))}
+                </div>
+              </Section>
+            )}
+
+            {/* IPA Checkpoints & Resume */}
+            {result.checkpoints?.length > 0 && (
+              <Section
+                title="IPA Checkpoints & Resume"
+                icon={<History className="w-4 h-4 text-emerald-600" />}
+                badge={`${result.checkpoints.length} checkpoint(s)`}
+              >
+                <div className="space-y-2">
+                  {result.checkpoints.map((cp: any, i: number) => (
+                    <div key={i} className="bg-white rounded-lg border p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                          <span className="text-sm font-medium">Step {cp.step}: {cp.reason}</span>
+                          {cp.route && (
+                            <span className="px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-700 font-medium">
+                              route: {cp.route}
+                            </span>
+                          )}
+                          {cp.risk && (
+                            <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-100 text-red-700 font-medium">
+                              {cp.risk}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-gray-400 font-mono">{cp.id?.slice(0, 12)}...</span>
+                      </div>
+
+                      {/* Resume Actions */}
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {/* Re-Route buttons */}
+                        {cp.step === 4 && ['direct_answer', 'subagent', 'team', 'swarm', 'workflow'].filter(r => r !== cp.route).map((route) => (
+                          <button
+                            key={route}
+                            onClick={() => handleResume(cp.id, 'reroute', route)}
+                            disabled={resumeLoading}
+                            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                          >
+                            <ArrowRightLeft className="w-3 h-3" />
+                            Re-route → {route}
+                          </button>
+                        ))}
+
+                        {/* HITL Approve/Reject */}
+                        {cp.reason === 'high_risk_hitl' && (
+                          <>
+                            <button
+                              onClick={() => handleResume(cp.id, 'hitl_approve')}
+                              disabled={resumeLoading}
+                              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border bg-green-50 border-green-200 text-green-700 hover:bg-green-100 disabled:opacity-50"
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleResume(cp.id, 'hitl_reject')}
+                              disabled={resumeLoading}
+                              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border bg-red-50 border-red-200 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                            >
+                              <XCircle className="w-3 h-3" />
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Resume Result */}
+                  {resumeLoading && (
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded border border-blue-200">
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                      <span className="text-sm text-blue-700">Resuming from checkpoint...</span>
+                    </div>
+                  )}
+                  {resumeResult && (
+                    <div className={cn(
+                      'p-3 rounded border text-sm',
+                      resumeResult.status === 'ok' ? 'bg-green-50 border-green-200' :
+                      resumeResult.status === 'rejected' ? 'bg-yellow-50 border-yellow-200' :
+                      'bg-red-50 border-red-200'
+                    )}>
+                      <div className="flex items-center gap-2 mb-1">
+                        {resumeResult.status === 'ok' ? <CheckCircle className="w-4 h-4 text-green-600" /> :
+                         resumeResult.status === 'rejected' ? <XCircle className="w-4 h-4 text-yellow-600" /> :
+                         <XCircle className="w-4 h-4 text-red-600" />}
+                        <span className="font-medium">
+                          Resume: {resumeResult.resume_type} — {resumeResult.status}
+                        </span>
+                      </div>
+                      {resumeResult.original_route && resumeResult.new_route && (
+                        <p className="text-xs text-gray-600">
+                          Route changed: <span className="line-through">{resumeResult.original_route}</span> → <span className="font-medium text-purple-700">{resumeResult.new_route}</span>
+                        </p>
+                      )}
+                      {resumeResult.error && <p className="text-xs text-red-600 mt-1">{resumeResult.error}</p>}
+                      {resumeResult.effective_route && (
+                        <p className="text-xs mt-1">
+                          <span className="text-gray-500">Executing as: </span>
+                          <span className="font-medium text-purple-700">{resumeResult.effective_route}</span>
+                          {resumeResult.steps_executed?.find((s: any) => s.duration_ms) && (
+                            <span className="text-gray-400 ml-2">
+                              ({resumeResult.steps_executed.find((s: any) => s.duration_ms)?.duration_ms}ms)
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      {resumeResult.orchestrator_response && (
+                        <details className="mt-2" open>
+                          <summary className="text-xs text-indigo-600 cursor-pointer font-medium">LLM Response</summary>
+                          <div className="text-xs text-gray-700 mt-1 bg-white p-2 rounded border whitespace-pre-wrap max-h-64 overflow-auto">
+                            {resumeResult.orchestrator_response}
+                          </div>
+                        </details>
+                      )}
+                      {resumeResult.metadata?.restored_state && (
+                        <details className="mt-2">
+                          <summary className="text-[10px] text-gray-400 cursor-pointer">Restored state</summary>
+                          <pre className="text-[10px] text-gray-500 mt-1 bg-white p-1 rounded overflow-auto max-h-32">
+                            {JSON.stringify(resumeResult.metadata.restored_state, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Section>
             )}

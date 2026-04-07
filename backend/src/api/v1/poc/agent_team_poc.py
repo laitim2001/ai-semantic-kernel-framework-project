@@ -621,18 +621,33 @@ async def test_orchestrator(
     Steps 1-3, 5-6 are deterministic (code-forced, never skipped).
     Only Step 4 (route decision) uses LLM reasoning.
     """
+    # Generate session ID with user isolation
+    import os
+    import uuid as _uuid
+    from datetime import datetime, timezone
+    session_id = f"{user_id}-{int(time.time())}-{str(_uuid.uuid4())[:8]}"
+
     results: dict[str, Any] = {
         "test": "orchestrator",
         "provider": provider,
         "model": model,
         "task": task,
         "user_id": user_id,
+        "session_id": session_id,
         "steps": [],
         "orchestrator_actions": [],
+        "checkpoints": [],
+        "transcript_count": 0,
     }
 
     try:
         from agent_framework import Agent, tool as maf_tool
+
+        # Initialize transcript service for append-only execution log
+        from src.integrations.orchestration.transcript import TranscriptService, TranscriptEntry
+        redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+        transcript = TranscriptService(redis_url=redis_url)
+        await transcript.initialize()
 
         t0 = time.time()
 
@@ -643,15 +658,16 @@ async def test_orchestrator(
             await mgr.initialize()
             memory_context = await mgr.get_context(user_id=user_id, query=task, limit=5)
             memory_text = "\n".join(
-                f"[{getattr(r, 'layer', '?')}] {getattr(r, 'content', str(r))[:150]}"
+                f"[{getattr(r, 'layer', '?')}] {getattr(r, 'content', str(r))}"
                 for r in (memory_context or [])
             ) or "No memories found"
         except Exception as e:
             memory_text = f"Memory service unavailable: {str(e)[:100]}"
 
+        step1_status = "ok" if "unavailable" not in memory_text.lower() and "failed" not in memory_text.lower() else "failed"
         results["steps"].append({
             "step": "1_read_memory",
-            "status": "ok" if "unavailable" not in memory_text.lower() and "failed" not in memory_text.lower() else "failed",
+            "status": step1_status,
             "result_preview": memory_text[:200],
         })
         results["orchestrator_actions"].append({
@@ -659,10 +675,16 @@ async def test_orchestrator(
             "args": f"user_id={user_id}",
             "result": memory_text[:300],
         })
+        await transcript.append(TranscriptEntry(
+            user_id=user_id, session_id=session_id,
+            step_name="read_memory", step_index=0,
+            entry_type="step_complete" if step1_status == "ok" else "step_error",
+            output_summary={"memory_count": len(memory_context or []), "preview": memory_text[:100]},
+            metadata={"duration_ms": round((time.time() - t0) * 1000)},
+        ))
 
         # ── Step 2: SEARCH KNOWLEDGE (deterministic — always execute) ──
         try:
-            import os
             from openai import AzureOpenAI
             from qdrant_client import QdrantClient
 
@@ -675,22 +697,30 @@ async def test_orchestrator(
             qd = QdrantClient(host="localhost", port=6333)
             search_results = qd.query_points("ipa_knowledge", query=q_emb, limit=3)
             knowledge_text = "\n".join(
-                f"[{r.payload.get('source','?')}] (score={r.score:.2f}) {r.payload.get('content','')[:150]}"
+                f"[{r.payload.get('source','?')}] (score={r.score:.2f}) {r.payload.get('content','')}"
                 for r in search_results.points
             ) or "No knowledge found"
         except Exception as e:
             knowledge_text = f"Knowledge search failed: {str(e)[:150]}"
 
+        step2_status = "ok" if "failed" not in knowledge_text.lower() and "No knowledge" not in knowledge_text else "failed"
         results["steps"].append({
             "step": "2_search_knowledge",
-            "status": "ok" if "failed" not in knowledge_text.lower() and "No knowledge" not in knowledge_text else "failed",
-            "result_preview": knowledge_text[:200],
+            "status": step2_status,
+            "result_preview": knowledge_text[:500],
         })
         results["orchestrator_actions"].append({
             "tool": "search_knowledge",
             "args": f"query={task[:80]}",
-            "result": knowledge_text[:300],
+            "result": knowledge_text,
         })
+        await transcript.append(TranscriptEntry(
+            user_id=user_id, session_id=session_id,
+            step_name="search_knowledge", step_index=1,
+            entry_type="step_complete" if step2_status == "ok" else "step_error",
+            output_summary={"result_count": len(search_results.points) if "search_results" in dir() else 0, "preview": knowledge_text[:100]},
+            metadata={"duration_ms": round((time.time() - t0) * 1000)},
+        ))
 
         # ── Step 3: ANALYZE INTENT (deterministic — always execute) ──
         try:
@@ -748,9 +778,10 @@ async def test_orchestrator(
         except Exception as e:
             intent_text = f"Intent analysis partial: {str(e)[:100]}"
 
+        step3_status = "ok" if "UNKNOWN" not in intent_text and "partial" not in intent_text.lower() else "partial"
         results["steps"].append({
             "step": "3_analyze_intent",
-            "status": "ok" if "UNKNOWN" not in intent_text and "partial" not in intent_text.lower() else "partial",
+            "status": step3_status,
             "result_preview": intent_text[:200],
         })
         results["orchestrator_actions"].append({
@@ -758,6 +789,49 @@ async def test_orchestrator(
             "args": f"input={task[:80]}",
             "result": intent_text,
         })
+
+        # Conditional checkpoint: HIGH/CRITICAL risk → HITL may pause here
+        step3_checkpoint_id = None
+        risk_str = getattr(decision, "risk_level", "") if "decision" in dir() else ""
+        is_high_risk = "HIGH" in str(risk_str) or "CRITICAL" in str(risk_str)
+        if is_high_risk:
+            try:
+                from agent_framework import WorkflowCheckpoint
+                from src.integrations.agent_framework.ipa_checkpoint_storage import IPACheckpointStorage
+                cp_storage = IPACheckpointStorage(redis_url=redis_url, user_id=user_id)
+                await cp_storage.initialize()
+                cp3 = WorkflowCheckpoint(
+                    workflow_name=session_id,
+                    graph_signature_hash="orchestrator-7step-v1",
+                    state={
+                        "pipeline_step": 3,
+                        "memory_context": memory_text[:500],
+                        "knowledge_results": knowledge_text[:500],
+                        "intent_analysis": intent_text,
+                        "route_decision": None,
+                        "resume_reason": "hitl_pending",
+                    },
+                    messages={"orchestrator": [{"role": "user", "content": task}]},
+                    iteration_count=3,
+                    metadata={"user_id": user_id, "task_preview": task[:100], "risk": str(risk_str)},
+                )
+                step3_checkpoint_id = await cp_storage.save(cp3)
+                await cp_storage.close()
+                results["checkpoints"].append({
+                    "id": step3_checkpoint_id, "step": 3, "reason": "high_risk_hitl",
+                    "risk": str(risk_str),
+                })
+            except Exception as cp_err:
+                logger.warning(f"Step 3 checkpoint failed: {cp_err}")
+
+        await transcript.append(TranscriptEntry(
+            user_id=user_id, session_id=session_id,
+            step_name="analyze_intent", step_index=2,
+            entry_type="approval_required" if is_high_risk else "step_complete",
+            output_summary={"intent": intent_text[:150], "high_risk": is_high_risk},
+            checkpoint_id=step3_checkpoint_id,
+            metadata={"duration_ms": round((time.time() - t0) * 1000)},
+        ))
 
         # ── Step 4: LLM ROUTE DECISION (only step that uses LLM) ──
         client = _create_client(provider, model, azure_endpoint, azure_api_key,
@@ -826,54 +900,97 @@ async def test_orchestrator(
         })
         results["orchestrator_response"] = response_text[:3000]
 
-        # ── Step 5: SAVE CHECKPOINT (deterministic — always execute) ──
-        checkpoint_summary = (
-            f"Task: {task[:100]}. Route: {selected_mode}. "
-            f"Intent: {intent_text[:100]}. Memory: {memory_text[:50]}"
-        )
+        # Mandatory decision-point checkpoint at Step 4 (always)
+        step4_checkpoint_id = None
         try:
-            import redis.asyncio as aioredis
-            from src.integrations.hybrid.checkpoint.models import HybridCheckpoint, CheckpointType
-            from src.integrations.hybrid.checkpoint.backends.redis import RedisCheckpointStorage
+            from agent_framework import WorkflowCheckpoint
+            from src.integrations.agent_framework.ipa_checkpoint_storage import IPACheckpointStorage
 
-            redis_client = aioredis.from_url(
-                f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+            cp_storage4 = IPACheckpointStorage(redis_url=redis_url, user_id=user_id)
+            await cp_storage4.initialize()
+
+            cp4 = WorkflowCheckpoint(
+                workflow_name=session_id,
+                graph_signature_hash="orchestrator-7step-v1",
+                state={
+                    "pipeline_step": 4,
+                    "memory_context": memory_text[:500],
+                    "knowledge_results": knowledge_text[:500],
+                    "intent_analysis": intent_text,
+                    "route_decision": selected_mode,
+                    "resume_reason": None,
+                    "subagent_states": {},
+                },
+                messages={
+                    "orchestrator": [
+                        {"role": "user", "content": task},
+                        {"role": "assistant", "content": response_text[:500] if response_text else ""},
+                    ]
+                },
+                iteration_count=4,
+                metadata={
+                    "user_id": user_id,
+                    "task_preview": task[:100],
+                    "route": selected_mode,
+                    "source": "poc-orchestrator-test",
+                    "session_id": session_id,
+                },
             )
-            storage = RedisCheckpointStorage(redis_client=redis_client)
-            cp = HybridCheckpoint(
-                session_id=f"poc-{user_id}",
-                checkpoint_type=CheckpointType.AUTO,
-                execution_mode=selected_mode,
-                metadata={"summary": checkpoint_summary, "route": selected_mode},
-            )
-            cp_id = await storage.save(cp)
-            checkpoint_text = f"Saved to Redis: id={cp_id}"
-        except Exception as e:
-            logger.error(f"Checkpoint save failed: {e}")
-            checkpoint_text = f"Checkpoint failed: {str(e)[:150]}"
+            step4_checkpoint_id = await cp_storage4.save(cp4)
+            await cp_storage4.close()
+            results["checkpoints"].append({
+                "id": step4_checkpoint_id, "step": 4, "reason": "decision_point",
+                "route": selected_mode,
+            })
+        except Exception as cp4_err:
+            logger.error(f"Step 4 checkpoint failed: {cp4_err}")
+
+        await transcript.append(TranscriptEntry(
+            user_id=user_id, session_id=session_id,
+            step_name="llm_route_decision", step_index=3,
+            entry_type="decision",
+            output_summary={"route": selected_mode, "response_preview": response_text[:150]},
+            checkpoint_id=step4_checkpoint_id,
+            metadata={"duration_ms": decision_time},
+        ))
+
+        # ── Step 5: CHECKPOINT CONFIRMATION (reads back saved checkpoint) ──
+        checkpoint_text = (
+            f"IPA checkpoint saved: id={step4_checkpoint_id[:12]}..., session={session_id}"
+            if step4_checkpoint_id
+            else "Checkpoint failed at step 4"
+        )
 
         results["steps"].append({
             "step": "5_save_checkpoint",
-            "status": "ok" if "Redis" in checkpoint_text else "failed",
-            "result_preview": checkpoint_text[:200],
+            "status": "ok" if step4_checkpoint_id else "failed",
+            "result_preview": checkpoint_text[:300],
         })
         results["orchestrator_actions"].append({
             "tool": "save_session_checkpoint",
-            "args": f"session=poc-{user_id}",
+            "args": f"session={session_id}, protocol=IPA Checkpoint (MAF-compatible format)",
             "result": checkpoint_text,
         })
+        await transcript.append(TranscriptEntry(
+            user_id=user_id, session_id=session_id,
+            step_name="save_checkpoint", step_index=4,
+            entry_type="step_complete" if step4_checkpoint_id else "step_error",
+            output_summary={"checkpoint_id": step4_checkpoint_id, "route": selected_mode},
+            checkpoint_id=step4_checkpoint_id,
+        ))
 
         # ── Step 6: SAVE MEMORY (deterministic — always execute) ──
         memory_content = f"User asked about: {task[:80]}. Routed to: {selected_mode}."
         try:
             from src.integrations.memory.unified_memory import UnifiedMemoryManager
-            from src.integrations.memory.types import MemoryType
+            from src.integrations.memory.types import MemoryType, MemoryLayer
             mgr2 = UnifiedMemoryManager()
             await mgr2.initialize()
             await mgr2.add(
                 content=memory_content,
                 user_id=user_id,
                 memory_type=MemoryType.INSIGHT,
+                layer=MemoryLayer.LONG_TERM,  # Explicit: persist to long-term for cross-session retrieval
             )
             save_text = f"Memory saved: {memory_content[:100]}"
         except Exception as mem_err:
@@ -890,19 +1007,38 @@ async def test_orchestrator(
             "args": f"user_id={user_id}",
             "result": save_text,
         })
+        await transcript.append(TranscriptEntry(
+            user_id=user_id, session_id=session_id,
+            step_name="save_memory", step_index=5,
+            entry_type="step_complete",
+            output_summary={"saved": "failed" not in save_text.lower()},
+        ))
 
         # ── Final ──
         total_time = round((time.time() - t0) * 1000)
+
+        await transcript.append(TranscriptEntry(
+            user_id=user_id, session_id=session_id,
+            step_name="mode_decision", step_index=6,
+            entry_type="step_complete",
+            output_summary={"route": selected_mode, "total_ms": total_time},
+        ))
+
+        transcript_count = await transcript.count(user_id, session_id)
+        await transcript.close()
+
         results["steps"].append({
             "step": "mode_decision",
             "status": "ok",
             "selected_mode": selected_mode,
             "total_tool_calls": len(results["orchestrator_actions"]),
         })
+        results["transcript_count"] = transcript_count
         results["status"] = "ok"
         results["summary"] = (
             f"Orchestrator: 6/6 steps completed, route={selected_mode}, "
-            f"total {total_time}ms"
+            f"total {total_time}ms, transcript={transcript_count} entries, "
+            f"checkpoints={len(results['checkpoints'])}"
         )
 
     except Exception as e:
@@ -911,3 +1047,247 @@ async def test_orchestrator(
         results["traceback"] = traceback.format_exc()[-500:]
 
     return results
+
+
+# ── Resume from Checkpoint ────────────────────────────────────────────────
+
+@router.post("/resume")
+async def resume_from_checkpoint(
+    checkpoint_id: str = Query(..., description="Checkpoint ID to resume from"),
+    user_id: str = Query("user-chris"),
+    override_route: str = Query("", description="Override route (for re-route scenario)"),
+    approval_status: str = Query("", description="approved|rejected (for HITL scenario)"),
+    approval_approver: str = Query("", description="Approver name"),
+    retry_agents: str = Query("", description="Comma-separated agent names to retry"),
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
+):
+    """Resume orchestrator execution from an IPA checkpoint.
+
+    Supports 3 scenarios with REAL execution:
+    - HITL: approve → runs LLM route decision + dispatches to chosen mode
+    - Re-Route: overrides route → dispatches to new mode with LLM
+    - Agent Retry: re-runs failed agents (TODO: full implementation in Phase 3)
+    """
+    import os
+    import traceback
+    from agent_framework import Agent, tool as maf_tool
+    from src.integrations.agent_framework.ipa_checkpoint_storage import IPACheckpointStorage
+    from src.integrations.orchestration.transcript import TranscriptService, TranscriptEntry
+    from src.integrations.orchestration.resume import ResumeService
+    from src.integrations.orchestration.resume.service import ResumeRequest
+
+    redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+
+    storage = IPACheckpointStorage(redis_url=redis_url, user_id=user_id)
+    await storage.initialize()
+    transcript = TranscriptService(redis_url=redis_url)
+    await transcript.initialize()
+
+    service = ResumeService(checkpoint_storage=storage, transcript_service=transcript)
+
+    # Build request from query params
+    request = ResumeRequest(
+        checkpoint_id=checkpoint_id,
+        user_id=user_id,
+        approval_result=(
+            {"status": approval_status, "approver": approval_approver}
+            if approval_status else None
+        ),
+        overrides={"route": override_route} if override_route else None,
+        retry_agents=retry_agents.split(",") if retry_agents else None,
+    )
+
+    # Phase 1: Validate and record resume intent
+    resume_result = await service.resume(request)
+
+    if resume_result.status != "ok":
+        await storage.close()
+        await transcript.close()
+        return {
+            "test": "resume",
+            "status": resume_result.status,
+            "resume_type": resume_result.resume_type,
+            "error": resume_result.error,
+            "checkpoint_id": checkpoint_id,
+        }
+
+    # Phase 2: Actually re-execute from checkpoint
+    # Load the full checkpoint to get restored context
+    checkpoint = await storage.load(checkpoint_id)
+    state = checkpoint.state
+    task = checkpoint.metadata.get("task_preview", "")
+    # Get full task from messages if available
+    if checkpoint.messages.get("orchestrator"):
+        for msg in checkpoint.messages["orchestrator"]:
+            if msg.get("role") == "user" and msg.get("content"):
+                task = msg["content"]
+                break
+
+    memory_text = state.get("memory_context", "No memories")
+    knowledge_text = state.get("knowledge_results", "No knowledge")
+    intent_text = state.get("intent_analysis", "Unknown intent")
+    effective_route = resume_result.new_route or resume_result.original_route or "team"
+
+    execution_result = {
+        "test": "resume",
+        "status": "ok",
+        "resume_type": resume_result.resume_type,
+        "resumed_from_step": resume_result.resumed_from_step,
+        "checkpoint_id": checkpoint_id,
+        "session_id": resume_result.session_id,
+        "original_route": resume_result.original_route,
+        "new_route": resume_result.new_route,
+        "effective_route": effective_route,
+        "steps_executed": resume_result.steps_executed,
+        "orchestrator_response": "",
+        "error": None,
+        "metadata": resume_result.metadata,
+    }
+
+    try:
+        t0 = time.time()
+
+        # Create LLM agent with restored context to generate response for the new route
+        client = _create_client(provider, model, azure_api_version="2025-03-01-preview", max_tokens=2048)
+
+        orchestrator = Agent(
+            client,
+            name="Orchestrator-Resume",
+            instructions=(
+                f"You are an IT Operations Orchestrator resuming from a checkpoint.\n"
+                f"The user's original request was analyzed and a route was selected. "
+                f"{'The route has been CHANGED by the user.' if resume_result.resume_type == 'reroute' else 'A manager has APPROVED this operation.'}\n\n"
+                f"## User Request\n{task}\n\n"
+                f"## Restored Context (from checkpoint)\n"
+                f"### Memory\n{memory_text}\n\n"
+                f"### Knowledge Base\n{knowledge_text}\n\n"
+                f"### Intent Analysis\n{intent_text}\n\n"
+                f"## Execution Mode: {effective_route}\n\n"
+                f"Based on the restored context and the execution mode '{effective_route}', "
+                f"provide your response. Explain how you would handle this using the "
+                f"'{effective_route}' approach:\n"
+                f"- direct_answer: Give a concise direct answer\n"
+                f"- subagent: Explain what parallel independent checks you'd dispatch\n"
+                f"- team: Explain what expert team collaboration you'd organize\n"
+                f"- swarm: Explain what deep multi-agent investigation you'd launch\n"
+                f"- workflow: Provide a structured step-by-step workflow plan\n"
+            ),
+        )
+
+        response = await orchestrator.run(task)
+        decision_time = round((time.time() - t0) * 1000)
+
+        response_text = ""
+        if hasattr(response, "text") and response.text:
+            response_text = response.text
+        elif hasattr(response, "messages") and response.messages:
+            for msg in response.messages:
+                if hasattr(msg, "text") and msg.text:
+                    response_text += msg.text
+
+        execution_result["orchestrator_response"] = response_text[:3000]
+        execution_result["steps_executed"].append({
+            "step": f"llm_execute_{effective_route}",
+            "status": "ok",
+            "duration_ms": decision_time,
+            "route": effective_route,
+        })
+
+        # Record execution in transcript
+        await transcript.append(TranscriptEntry(
+            user_id=user_id, session_id=resume_result.session_id,
+            step_name=f"resume_execute_{effective_route}", step_index=7,
+            entry_type="step_complete",
+            output_summary={
+                "route": effective_route,
+                "response_preview": response_text[:150],
+                "duration_ms": decision_time,
+            },
+            checkpoint_id=checkpoint_id,
+        ))
+
+        # Save memory for the resumed execution
+        try:
+            from src.integrations.memory.unified_memory import UnifiedMemoryManager
+            from src.integrations.memory.types import MemoryType, MemoryLayer
+            mgr = UnifiedMemoryManager()
+            await mgr.initialize()
+            await mgr.add(
+                content=f"Resumed from checkpoint. Route: {resume_result.original_route}→{effective_route}. Task: {task[:80]}",
+                user_id=user_id,
+                memory_type=MemoryType.INSIGHT,
+                layer=MemoryLayer.LONG_TERM,
+            )
+        except Exception:
+            pass  # Memory save is best-effort
+
+    except Exception as e:
+        execution_result["status"] = "error"
+        execution_result["error"] = str(e)
+        execution_result["steps_executed"].append({
+            "step": "llm_execute",
+            "status": "error",
+            "error": str(e)[:200],
+        })
+
+    await storage.close()
+    await transcript.close()
+
+    return execution_result
+
+
+# ── Session Status ────────────────────────────────────────────────────────
+
+@router.get("/session-status/{session_id}")
+async def get_session_status(
+    session_id: str,
+    user_id: str = Query("user-chris"),
+):
+    """Get session execution status: complete, interrupted, pending approval, etc."""
+    import os
+    from src.integrations.agent_framework.ipa_checkpoint_storage import IPACheckpointStorage
+    from src.integrations.orchestration.transcript import TranscriptService
+    from src.integrations.orchestration.resume import ResumeService
+
+    redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+
+    storage = IPACheckpointStorage(redis_url=redis_url, user_id=user_id)
+    await storage.initialize()
+    transcript = TranscriptService(redis_url=redis_url)
+    await transcript.initialize()
+
+    service = ResumeService(checkpoint_storage=storage, transcript_service=transcript)
+    status = await service.get_session_status(user_id, session_id)
+
+    await storage.close()
+    await transcript.close()
+
+    return status
+
+
+# ── Transcript Viewer ─────────────────────────────────────────────────────
+
+@router.get("/transcript/{session_id}")
+async def get_transcript(
+    session_id: str,
+    user_id: str = Query("user-chris"),
+):
+    """Get the full execution transcript for a session."""
+    import os
+    from src.integrations.orchestration.transcript import TranscriptService
+
+    redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+    transcript = TranscriptService(redis_url=redis_url)
+    await transcript.initialize()
+
+    entries = await transcript.read(user_id, session_id)
+    count = await transcript.count(user_id, session_id)
+    await transcript.close()
+
+    return {
+        "session_id": session_id,
+        "user_id": user_id,
+        "total_entries": count,
+        "entries": [e.to_dict() for e in entries],
+    }

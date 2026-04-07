@@ -499,13 +499,31 @@ class UnifiedMemoryManager:
             except Exception as e:
                 logger.warning(f"Failed to get working memory context: {e}")
 
+        # Get recent session memories (fix: SESSION layer was previously skipped)
+        if self._redis:
+            try:
+                session_pattern = f"memory:session:{user_id}:*"
+                session_keys = []
+                async for key in self._redis.scan_iter(match=session_pattern, count=50):
+                    session_keys.append(key)
+
+                for key in session_keys[:5]:  # Get 5 most recent
+                    data = await self._redis.get(key)
+                    if data:
+                        record = MemoryRecord.from_dict(json.loads(data))
+                        memories.append(record)
+
+            except Exception as e:
+                logger.warning(f"Failed to get session memory context: {e}")
+
         # If query provided, search for relevant memories
-        if query:
+        remaining = limit - len(memories)
+        if query and remaining > 0:
             search_results = await self.search(
                 query=query,
                 user_id=user_id,
                 layers=[MemoryLayer.LONG_TERM],
-                limit=limit - len(memories),
+                limit=max(1, remaining),
             )
             memories.extend([r.memory for r in search_results])
 
