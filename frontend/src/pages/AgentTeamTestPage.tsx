@@ -398,6 +398,15 @@ export const AgentTeamTestPage: FC = () => {
                         const r = await fetch(`/api/v1/poc/agent-team/approvals/${result.approval.id}/decide?${params}`, { method: 'POST' });
                         const data = await r.json();
                         setResumeResult(data);
+                        // Update result status after successful approval
+                        if (data.status === 'ok' && data.action === 'approve') {
+                          setResult((prev: any) => ({
+                            ...prev,
+                            status: 'ok',
+                            summary: `Approved by ${data.decided_by} — pipeline resumed`,
+                            orchestrator_response: data.resume?.orchestrator_response || prev.orchestrator_response,
+                          }));
+                        }
                       } catch (e: any) {
                         setResumeResult({ status: 'error', error: e.message });
                       }
@@ -423,6 +432,13 @@ export const AgentTeamTestPage: FC = () => {
                         const r = await fetch(`/api/v1/poc/agent-team/approvals/${result.approval.id}/decide?${params}`, { method: 'POST' });
                         const data = await r.json();
                         setResumeResult(data);
+                        if (data.status === 'ok' && data.action === 'reject') {
+                          setResult((prev: any) => ({
+                            ...prev,
+                            status: 'error',
+                            summary: `Rejected by ${data.decided_by} — pipeline terminated`,
+                          }));
+                        }
                       } catch (e: any) {
                         setResumeResult({ status: 'error', error: e.message });
                       }
