@@ -66,16 +66,18 @@ export function useOrchestratorSSE() {
   const [state, setState] = useState<OrchestratorStreamState>(initialState);
   const abortRef = useRef<AbortController | null>(null);
 
-  const startStream = useCallback(async (params: URLSearchParams) => {
+  const startStream = useCallback(async (params: URLSearchParams, endpoint?: string) => {
     // Reset state
     setState({ ...initialState, isStreaming: true, phase: 'orchestrator' });
 
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const url = endpoint || '/api/v1/poc/agent-team/test-orchestrator-stream';
+
     try {
       const response = await fetch(
-        `/api/v1/poc/agent-team/test-orchestrator-stream?${params}`,
+        `${url}?${params}`,
         { method: 'POST', signal: controller.signal }
       );
 

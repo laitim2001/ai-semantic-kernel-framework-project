@@ -217,13 +217,20 @@ export const AgentTeamTestPage: FC = () => {
   }, []);
 
   const handleRun = useCallback(async () => {
-    // Streaming mode for orchestrator
-    if (mode === 'orchestrator' && streamMode) {
+    // Streaming mode for all modes
+    if (streamMode) {
+      const streamEndpoints: Record<TestMode, string> = {
+        orchestrator: '/api/v1/poc/agent-team/test-orchestrator-stream',
+        subagent: '/api/v1/poc/agent-team/test-subagent-stream',
+        team: '/api/v1/poc/agent-team/test-team-stream',
+        hybrid: '/api/v1/poc/agent-team/test-hybrid-stream',
+      };
       const params = new URLSearchParams({
         provider,
         model,
         task,
         user_id: 'user-chris',
+        ...(mode === 'team' ? { max_rounds: String(maxRounds) } : {}),
         ...(provider === 'azure'
           ? {
               azure_endpoint: azureEndpoint,
@@ -234,7 +241,7 @@ export const AgentTeamTestPage: FC = () => {
           : {}),
       });
       setResult(null); // clear old result
-      startStream(params);
+      startStream(params, streamEndpoints[mode]);
       return;
     }
 
@@ -341,19 +348,17 @@ export const AgentTeamTestPage: FC = () => {
             </p>
           </Section>
 
-          {/* Stream Mode toggle (orchestrator only) */}
-          {mode === 'orchestrator' && (
-            <label className="flex items-center gap-2 px-3 py-1 text-sm text-gray-600 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={streamMode}
-                onChange={(e) => setStreamMode(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              <Zap className="w-3.5 h-3.5 text-yellow-500" />
-              Stream Mode (real-time events)
-            </label>
-          )}
+          {/* Stream Mode toggle (all modes) */}
+          <label className="flex items-center gap-2 px-3 py-1 text-sm text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={streamMode}
+              onChange={(e) => setStreamMode(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <Zap className="w-3.5 h-3.5 text-yellow-500" />
+            Stream Mode (real-time events)
+          </label>
 
           {/* Provider + Model */}
           <Section title="LLM Provider" icon={<Brain className="w-4 h-4 text-blue-600" />}>

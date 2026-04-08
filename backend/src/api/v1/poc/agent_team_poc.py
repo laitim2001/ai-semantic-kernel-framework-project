@@ -2533,3 +2533,697 @@ async def test_orchestrator_stream(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Test F: Subagent Stream (SSE) ───────────────────────────────────────
+
+@router.post("/test-subagent-stream")
+async def test_subagent_stream(
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
+    task: str = Query(
+        "Check the status of three systems: "
+        "1) APAC ETL Pipeline, 2) CRM Service, 3) Email Server. "
+        "Report the health status of each.",
+    ),
+    user_id: str = Query("user-chris"),
+    session_id: str = Query("", description="Link to orchestrator session for sidechain"),
+    azure_endpoint: str = Query(""),
+    azure_api_key: str = Query(""),
+    azure_api_version: str = Query("2025-03-01-preview"),
+    azure_deployment: str = Query(""),
+):
+    """Test F: SSE Streaming Subagent — same logic as test_subagent but streams events.
+
+    Returns a text/event-stream response. Each agent event is forwarded
+    as SSE so the frontend can show real-time progress.
+    """
+    import asyncio
+    from starlette.responses import StreamingResponse
+    from src.integrations.hybrid.orchestrator.sse_events import PipelineEventEmitter, SSEEventType
+
+    emitter = PipelineEventEmitter()
+
+    async def _run():
+        import os
+        import uuid as _uuid
+
+        if not session_id:
+            _session_id = f"{user_id}-sub-{int(time.time())}-{str(_uuid.uuid4())[:8]}"
+        else:
+            _session_id = session_id
+
+        t0 = time.time()
+
+        try:
+            from agent_framework import Agent
+            from agent_framework.orchestrations import ConcurrentBuilder
+
+            await emitter.emit(SSEEventType.PIPELINE_START, {
+                "mode": "subagent",
+                "session_id": _session_id,
+                "task": task[:200],
+                "provider": provider,
+                "model": model,
+            })
+
+            client = _create_client(provider, model, azure_endpoint, azure_api_key,
+                                    azure_api_version, azure_deployment)
+            sdk_tools = _get_claude_sdk_tools()
+
+            # Create 3 independent subagents
+            agent_defs = [
+                ("ETL-Checker", (
+                    "You are an ETL pipeline specialist. Check the ETL pipeline status.\n"
+                    "You have access to powerful tools:\n"
+                    "- deep_analysis: for complex multi-step reasoning\n"
+                    "- run_diagnostic_command: to simulate running diagnostic commands\n"
+                    "- search_knowledge_base: to find past incidents and SOPs\n"
+                    "Use these tools to provide thorough findings. Be concise in your final report."
+                )),
+                ("CRM-Checker", (
+                    "You are a CRM service specialist. Check the CRM service health.\n"
+                    "You have access to: deep_analysis, run_diagnostic_command, search_knowledge_base.\n"
+                    "Use these tools to investigate. Be concise."
+                )),
+                ("Email-Checker", (
+                    "You are an email server specialist. Check the email server status.\n"
+                    "You have access to: deep_analysis, run_diagnostic_command, search_knowledge_base.\n"
+                    "Use these tools to investigate. Be concise."
+                )),
+            ]
+
+            agents = []
+            agent_names = []
+            for name, instructions in agent_defs:
+                agent = Agent(client, name=name, instructions=instructions, tools=sdk_tools)
+                agents.append(agent)
+                agent_names.append(name)
+                await emitter.emit(SSEEventType.SWARM_WORKER_START, {
+                    "agent": name, "status": "created",
+                })
+
+            # Build with ConcurrentBuilder
+            builder = ConcurrentBuilder(participants=agents)
+            workflow = builder.build()
+
+            # Initialize sidechain transcript
+            from src.integrations.orchestration.transcript import TranscriptService
+            from src.integrations.orchestration.transcript.models import AgentSidechainEntry
+            redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+            sidechain = TranscriptService(redis_url=redis_url)
+            await sidechain.initialize()
+
+            for name in agent_names:
+                await sidechain.append_agent(AgentSidechainEntry(
+                    user_id=user_id, session_id=_session_id, agent_name=name,
+                    event_type="start", content={"task": task[:100]},
+                ))
+
+            # Stream workflow events → forward to emitter
+            stream = workflow.run(message=task, stream=True, include_status_events=True)
+            agent_responses: list[dict[str, Any]] = []
+
+            async for event in stream:
+                event_type_name = type(event).__name__
+                if hasattr(event, "data") and event.data:
+                    data = event.data
+                    if hasattr(data, '__iter__') and not isinstance(data, str):
+                        for item in data:
+                            if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
+                                resp = item.agent_response
+                                text = ""
+                                if hasattr(resp, 'text') and resp.text:
+                                    text = resp.text
+                                elif hasattr(resp, 'messages') and resp.messages:
+                                    for msg in resp.messages:
+                                        if hasattr(msg, 'text') and msg.text:
+                                            text += msg.text
+                                if text:
+                                    await emitter.emit(SSEEventType.TEXT_DELTA, {
+                                        "agent": item.executor_id, "delta": text,
+                                    })
+                                    agent_responses.append({
+                                        "agent": item.executor_id,
+                                        "response": text[:500],
+                                    })
+                                    await sidechain.append_agent(AgentSidechainEntry(
+                                        user_id=user_id, session_id=_session_id,
+                                        agent_name=item.executor_id,
+                                        event_type="complete",
+                                        content={"response_preview": text[:200]},
+                                    ))
+                    await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                        "event_type": event_type_name,
+                        "preview": str(event.data)[:200] if event.data else "",
+                    })
+
+            await sidechain.close()
+
+            total_time = round((time.time() - t0) * 1000)
+            await emitter.emit_complete("Subagent pipeline complete", {
+                "total_ms": total_time,
+                "mode": "subagent",
+                "session_id": _session_id,
+                "agent_count": len(agent_names),
+                "responses_count": len(agent_responses),
+            })
+
+        except Exception as e:
+            logger.error(f"Subagent stream error: {e}\n{traceback.format_exc()[-500:]}")
+            await emitter.emit_error(f"Subagent pipeline failed: {str(e)[:300]}")
+
+    asyncio.create_task(_run())
+
+    return StreamingResponse(
+        emitter.stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ── Test G: Team Stream (SSE) ───────────────────────────────────────────
+
+@router.post("/test-team-stream")
+async def test_team_stream(
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
+    task: str = Query(
+        "Investigate APAC ETL Pipeline failure. Multiple experts needed: "
+        "analyze application logs, check database changes, and verify network connectivity.",
+    ),
+    max_rounds: int = Query(8, description="Max GroupChat rounds"),
+    user_id: str = Query("user-chris"),
+    session_id: str = Query("", description="Link to orchestrator session for sidechain"),
+    azure_endpoint: str = Query(""),
+    azure_api_key: str = Query(""),
+    azure_api_version: str = Query("2024-12-01-preview"),
+    azure_deployment: str = Query(""),
+):
+    """Test G: SSE Streaming Team — same logic as test_team but streams events.
+
+    Returns a text/event-stream response. Each GroupChat round emits SSE
+    events so the frontend can show real-time collaboration.
+    """
+    import asyncio
+    from starlette.responses import StreamingResponse
+    from src.integrations.hybrid.orchestrator.sse_events import PipelineEventEmitter, SSEEventType
+
+    emitter = PipelineEventEmitter()
+
+    async def _run():
+        import os
+        import uuid as _uuid
+
+        if not session_id:
+            _session_id = f"{user_id}-team-{int(time.time())}-{str(_uuid.uuid4())[:8]}"
+        else:
+            _session_id = session_id
+
+        t0 = time.time()
+
+        try:
+            from agent_framework import Agent
+            from agent_framework.orchestrations import GroupChatBuilder
+            from src.integrations.poc.shared_task_list import SharedTaskList
+            from src.integrations.poc.team_tools import create_team_tools
+
+            await emitter.emit(SSEEventType.PIPELINE_START, {
+                "mode": "team",
+                "session_id": _session_id,
+                "task": task[:200],
+                "provider": provider,
+                "model": model,
+                "max_rounds": max_rounds,
+            })
+
+            # Step 1: Create SharedTaskList with initial tasks
+            shared = SharedTaskList()
+            shared.add_task("T1", "Analyze ETL application logs for error patterns and root cause", priority=1)
+            shared.add_task("T2", "Check database schema changes in the last 7 days", priority=1)
+            shared.add_task("T3", "Verify network connectivity between ETL and database servers", priority=2)
+            shared.add_task("T4", "Review ETL scheduling configuration for recent modifications", priority=3)
+
+            # Step 2: Create team tools + Claude SDK tools
+            team_tools = create_team_tools(shared)
+            sdk_tools = _get_claude_sdk_tools()
+            all_tools = team_tools + sdk_tools
+
+            # Step 3: Create Teammate agents
+            client = _create_client(provider, model, azure_endpoint, azure_api_key,
+                                    azure_api_version, azure_deployment, max_tokens=2048)
+
+            team_defs = [
+                ("LogExpert", (
+                    "You are a log analysis expert on an IT investigation team.\n"
+                    "IMPORTANT: Act immediately. Do NOT just observe or coordinate.\n\n"
+                    "WORKFLOW (do ALL steps in ONE turn):\n"
+                    "1. Use claim_next_task with your name 'LogExpert' to claim a task\n"
+                    "2. Use deep_analysis or run_diagnostic_command to investigate\n"
+                    "3. Use report_task_result to submit your findings\n"
+                    "4. Use send_team_message to share key discoveries\n"
+                    "5. Use read_team_messages to check teammate findings\n\n"
+                    "AVAILABLE TOOLS: claim_next_task, report_task_result, view_team_status, "
+                    "send_team_message, read_team_messages, deep_analysis, "
+                    "run_diagnostic_command, search_knowledge_base\n"
+                    "Be concise. Focus on actionable findings."
+                )),
+                ("DBExpert", (
+                    "You are a database expert on an IT investigation team.\n"
+                    "IMPORTANT: Act immediately. Do NOT just observe or coordinate.\n\n"
+                    "WORKFLOW (do ALL steps in ONE turn):\n"
+                    "1. Use claim_next_task with your name 'DBExpert' to claim a task\n"
+                    "2. Use deep_analysis or run_diagnostic_command to investigate\n"
+                    "3. Use report_task_result to submit your findings\n"
+                    "4. Use send_team_message to share key discoveries\n"
+                    "5. Use read_team_messages to check teammate findings\n\n"
+                    "AVAILABLE TOOLS: claim_next_task, report_task_result, view_team_status, "
+                    "send_team_message, read_team_messages, deep_analysis, "
+                    "run_diagnostic_command, search_knowledge_base\n"
+                    "Focus on schema changes, query performance, data integrity."
+                )),
+                ("AppExpert", (
+                    "You are an application infrastructure expert on an IT investigation team.\n"
+                    "IMPORTANT: Act immediately. Do NOT just observe or coordinate.\n\n"
+                    "WORKFLOW (do ALL steps in ONE turn):\n"
+                    "1. Use claim_next_task with your name 'AppExpert' to claim a task\n"
+                    "2. Use deep_analysis or run_diagnostic_command to investigate\n"
+                    "3. Use report_task_result to submit your findings\n"
+                    "4. Use send_team_message to share key discoveries\n"
+                    "5. Use read_team_messages to check teammate findings\n\n"
+                    "AVAILABLE TOOLS: claim_next_task, report_task_result, view_team_status, "
+                    "send_team_message, read_team_messages, deep_analysis, "
+                    "run_diagnostic_command, search_knowledge_base\n"
+                    "Focus on network, infrastructure, and configuration issues."
+                )),
+            ]
+
+            team_agent_names = []
+            team_agents = []
+            for name, instructions in team_defs:
+                agent = Agent(client, name=name, instructions=instructions, tools=all_tools)
+                team_agents.append(agent)
+                team_agent_names.append(name)
+                await emitter.emit(SSEEventType.SWARM_WORKER_START, {
+                    "agent": name, "status": "created",
+                })
+
+            # Step 4: Build GroupChat
+            participant_names = list(team_agent_names)
+            round_counter = {"n": 0}
+
+            def select_next(messages: list) -> str:
+                idx = round_counter["n"] % len(participant_names)
+                round_counter["n"] += 1
+                return participant_names[idx]
+
+            builder = GroupChatBuilder(
+                participants=team_agents,
+                selection_func=select_next,
+                max_rounds=max_rounds,
+            )
+            workflow = builder.build()
+
+            # Initialize sidechain transcript
+            from src.integrations.orchestration.transcript import TranscriptService
+            from src.integrations.orchestration.transcript.models import AgentSidechainEntry
+            redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+            sidechain = TranscriptService(redis_url=redis_url)
+            await sidechain.initialize()
+
+            for name in team_agent_names:
+                await sidechain.append_agent(AgentSidechainEntry(
+                    user_id=user_id, session_id=_session_id, agent_name=name,
+                    event_type="start", content={"task": task[:100]},
+                ))
+
+            # Step 5: Run GroupChat — stream events
+            initial_msg = (
+                f"Team, we have an urgent investigation:\n{task}\n\n"
+                f"Here is the current task list:\n{shared.get_status()}\n\n"
+                "Each of you should claim a task, work on it, report results, "
+                "and share important findings with the team. Check team messages "
+                "for discoveries from other teammates."
+            )
+
+            stream = workflow.run(message=initial_msg, stream=True, include_status_events=True)
+            agent_responses: list[dict[str, Any]] = []
+
+            async for event in stream:
+                event_type_name = type(event).__name__
+                if hasattr(event, "data") and event.data:
+                    data = event.data
+                    if hasattr(data, '__iter__') and not isinstance(data, str):
+                        for item in data:
+                            if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
+                                resp = item.agent_response
+                                text = ""
+                                if hasattr(resp, 'text') and resp.text:
+                                    text = resp.text
+                                elif hasattr(resp, 'messages') and resp.messages:
+                                    for msg in resp.messages:
+                                        if hasattr(msg, 'text') and msg.text:
+                                            text += msg.text
+                                if text:
+                                    await emitter.emit(SSEEventType.TEXT_DELTA, {
+                                        "agent": item.executor_id, "delta": text,
+                                    })
+                                    agent_responses.append({
+                                        "agent": item.executor_id,
+                                        "response": text[:500],
+                                    })
+                                    await sidechain.append_agent(AgentSidechainEntry(
+                                        user_id=user_id, session_id=_session_id,
+                                        agent_name=item.executor_id,
+                                        event_type="complete",
+                                        content={"response_preview": text[:200]},
+                                    ))
+                    await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                        "event_type": event_type_name,
+                        "preview": str(event.data)[:200] if event.data else "",
+                    })
+
+            await sidechain.close()
+
+            total_time = round((time.time() - t0) * 1000)
+            task_state = shared.to_dict()
+            await emitter.emit_complete("Team pipeline complete", {
+                "total_ms": total_time,
+                "mode": "team",
+                "session_id": _session_id,
+                "agent_count": len(team_agent_names),
+                "responses_count": len(agent_responses),
+                "rounds": max_rounds,
+                "tasks_completed": task_state["progress"]["completed"],
+                "tasks_total": task_state["progress"]["total"],
+                "team_messages": len(task_state["messages"]),
+            })
+
+        except Exception as e:
+            logger.error(f"Team stream error: {e}\n{traceback.format_exc()[-500:]}")
+            await emitter.emit_error(f"Team pipeline failed: {str(e)[:300]}")
+
+    asyncio.create_task(_run())
+
+    return StreamingResponse(
+        emitter.stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ── Test H: Hybrid Stream (SSE) ─────────────────────────────────────────
+
+@router.post("/test-hybrid-stream")
+async def test_hybrid_stream(
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
+    task: str = Query(
+        "Check VPN connectivity for Taipei, Hong Kong, and Singapore offices.",
+    ),
+    user_id: str = Query("user-chris"),
+    azure_endpoint: str = Query(""),
+    azure_api_key: str = Query(""),
+    azure_api_version: str = Query("2025-03-01-preview"),
+    azure_deployment: str = Query(""),
+):
+    """Test H: SSE Streaming Hybrid — Orchestrator decides mode, then streams agent execution.
+
+    Returns a text/event-stream response. The mode selection LLM call emits
+    AGENT_THINKING, then routes to subagent or team execution with streaming.
+    """
+    import asyncio
+    from starlette.responses import StreamingResponse
+    from src.integrations.hybrid.orchestrator.sse_events import PipelineEventEmitter, SSEEventType
+
+    emitter = PipelineEventEmitter()
+
+    async def _run():
+        import os
+        import uuid as _uuid
+
+        _session_id = f"{user_id}-hybrid-{int(time.time())}-{str(_uuid.uuid4())[:8]}"
+        t0 = time.time()
+
+        try:
+            from agent_framework import Agent, tool as maf_tool
+
+            await emitter.emit(SSEEventType.PIPELINE_START, {
+                "mode": "hybrid",
+                "session_id": _session_id,
+                "task": task[:200],
+                "provider": provider,
+                "model": model,
+            })
+
+            client = _create_client(provider, model, azure_endpoint, azure_api_key,
+                                    azure_api_version, azure_deployment, max_tokens=2048)
+
+            # Step 1: Mode selection via LLM
+            await emitter.emit(SSEEventType.AGENT_THINKING, {
+                "step": "mode_selection", "status": "running",
+                "label": "Orchestrator deciding execution mode...",
+            })
+
+            @maf_tool(name="select_execution_mode", description=(
+                "Decide the execution mode for the task. "
+                "Use 'subagent' for independent parallel tasks (e.g., checking 3 separate systems). "
+                "Use 'team' for tasks requiring expert collaboration (e.g., investigating a complex failure). "
+                "Return your reasoning."
+            ))
+            def select_execution_mode(mode: str, reasoning: str) -> str:
+                """Select execution mode: 'subagent' or 'team'."""
+                return f"Selected mode: {mode}. Reasoning: {reasoning}"
+
+            orchestrator = Agent(
+                client,
+                name="Orchestrator",
+                instructions=(
+                    "You are an IT operations orchestrator. Analyze the user's request and decide:\n"
+                    "- Use 'subagent' mode if the task has independent subtasks that can run in parallel\n"
+                    "- Use 'team' mode if the task requires expert collaboration and information sharing\n"
+                    "Call select_execution_mode with your decision and reasoning."
+                ),
+                tools=[select_execution_mode],
+            )
+
+            t1 = time.time()
+            response = await orchestrator.run(task)
+            decision_time = round((time.time() - t1) * 1000)
+
+            response_text = ""
+            if hasattr(response, "text") and response.text:
+                response_text = response.text
+            elif hasattr(response, "messages") and response.messages:
+                for msg in response.messages:
+                    if hasattr(msg, "text") and msg.text:
+                        response_text += msg.text
+
+            selected_mode = "subagent"  # default
+            if "team" in response_text.lower():
+                selected_mode = "team"
+
+            await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
+                "step": "mode_selection", "status": "complete",
+                "selected_mode": selected_mode,
+                "reasoning": response_text[:500],
+                "duration_ms": decision_time,
+            })
+
+            # Step 2: Execute the chosen mode with streaming
+            sdk_tools = _get_claude_sdk_tools()
+
+            # Initialize sidechain transcript
+            from src.integrations.orchestration.transcript import TranscriptService
+            from src.integrations.orchestration.transcript.models import AgentSidechainEntry
+            redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+            sidechain = TranscriptService(redis_url=redis_url)
+            await sidechain.initialize()
+
+            if selected_mode == "subagent":
+                # Subagent execution (same agents as test_subagent)
+                from agent_framework.orchestrations import ConcurrentBuilder
+
+                agent_defs = [
+                    ("ETL-Checker", (
+                        "You are an ETL pipeline specialist. Check the ETL pipeline status.\n"
+                        "You have access to: deep_analysis, run_diagnostic_command, search_knowledge_base.\n"
+                        "Use these tools to investigate. Be concise."
+                    )),
+                    ("CRM-Checker", (
+                        "You are a CRM service specialist. Check the CRM service health.\n"
+                        "You have access to: deep_analysis, run_diagnostic_command, search_knowledge_base.\n"
+                        "Use these tools to investigate. Be concise."
+                    )),
+                    ("Email-Checker", (
+                        "You are an email server specialist. Check the email server status.\n"
+                        "You have access to: deep_analysis, run_diagnostic_command, search_knowledge_base.\n"
+                        "Use these tools to investigate. Be concise."
+                    )),
+                ]
+
+                agents = []
+                agent_names = []
+                for name, instructions in agent_defs:
+                    agent = Agent(client, name=name, instructions=instructions, tools=sdk_tools)
+                    agents.append(agent)
+                    agent_names.append(name)
+                    await emitter.emit(SSEEventType.SWARM_WORKER_START, {
+                        "agent": name, "status": "created",
+                    })
+                    await sidechain.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=_session_id, agent_name=name,
+                        event_type="start", content={"task": task[:100]},
+                    ))
+
+                builder = ConcurrentBuilder(participants=agents)
+                workflow = builder.build()
+
+                stream = workflow.run(message=task, stream=True, include_status_events=True)
+                async for event in stream:
+                    event_type_name = type(event).__name__
+                    if hasattr(event, "data") and event.data:
+                        data = event.data
+                        if hasattr(data, '__iter__') and not isinstance(data, str):
+                            for item in data:
+                                if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
+                                    resp = item.agent_response
+                                    text = ""
+                                    if hasattr(resp, 'text') and resp.text:
+                                        text = resp.text
+                                    elif hasattr(resp, 'messages') and resp.messages:
+                                        for m in resp.messages:
+                                            if hasattr(m, 'text') and m.text:
+                                                text += m.text
+                                    if text:
+                                        await emitter.emit(SSEEventType.TEXT_DELTA, {
+                                            "agent": item.executor_id, "delta": text,
+                                        })
+                                        await sidechain.append_agent(AgentSidechainEntry(
+                                            user_id=user_id, session_id=_session_id,
+                                            agent_name=item.executor_id,
+                                            event_type="complete",
+                                            content={"response_preview": text[:200]},
+                                        ))
+                        await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                            "event_type": event_type_name,
+                            "preview": str(event.data)[:200] if event.data else "",
+                        })
+
+            else:
+                # Team execution (same agents as test_team)
+                from agent_framework.orchestrations import GroupChatBuilder
+                from src.integrations.poc.shared_task_list import SharedTaskList
+                from src.integrations.poc.team_tools import create_team_tools
+
+                shared = SharedTaskList()
+                shared.add_task("T1", "Analyze application logs for error patterns and root cause", priority=1)
+                shared.add_task("T2", "Check database schema changes in the last 7 days", priority=1)
+                shared.add_task("T3", "Verify network connectivity between relevant servers", priority=2)
+
+                team_tools = create_team_tools(shared)
+                all_tools = team_tools + sdk_tools
+
+                team_defs = [
+                    ("LogExpert", (
+                        "You are a log analysis expert. Claim a task, investigate, report results, "
+                        "and share findings with the team. Be concise."
+                    )),
+                    ("DBExpert", (
+                        "You are a database expert. Claim a task, investigate, report results, "
+                        "and share findings with the team. Focus on schema and data."
+                    )),
+                    ("AppExpert", (
+                        "You are an infrastructure expert. Claim a task, investigate, report results, "
+                        "and share findings with the team. Focus on network and config."
+                    )),
+                ]
+
+                team_agent_names = []
+                team_agents = []
+                for name, instructions in team_defs:
+                    agent = Agent(client, name=name, instructions=instructions, tools=all_tools)
+                    team_agents.append(agent)
+                    team_agent_names.append(name)
+                    await emitter.emit(SSEEventType.SWARM_WORKER_START, {
+                        "agent": name, "status": "created",
+                    })
+                    await sidechain.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=_session_id, agent_name=name,
+                        event_type="start", content={"task": task[:100]},
+                    ))
+
+                round_counter = {"n": 0}
+                _participant_names = list(team_agent_names)
+
+                def select_next(messages: list) -> str:
+                    idx = round_counter["n"] % len(_participant_names)
+                    round_counter["n"] += 1
+                    return _participant_names[idx]
+
+                builder = GroupChatBuilder(
+                    participants=team_agents,
+                    selection_func=select_next,
+                    max_rounds=6,
+                )
+                workflow = builder.build()
+
+                initial_msg = (
+                    f"Team, we have an urgent investigation:\n{task}\n\n"
+                    f"Task list:\n{shared.get_status()}\n\n"
+                    "Claim a task, investigate, report results, share findings."
+                )
+
+                stream = workflow.run(message=initial_msg, stream=True, include_status_events=True)
+                async for event in stream:
+                    event_type_name = type(event).__name__
+                    if hasattr(event, "data") and event.data:
+                        data = event.data
+                        if hasattr(data, '__iter__') and not isinstance(data, str):
+                            for item in data:
+                                if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
+                                    resp = item.agent_response
+                                    text = ""
+                                    if hasattr(resp, 'text') and resp.text:
+                                        text = resp.text
+                                    elif hasattr(resp, 'messages') and resp.messages:
+                                        for m in resp.messages:
+                                            if hasattr(m, 'text') and m.text:
+                                                text += m.text
+                                    if text:
+                                        await emitter.emit(SSEEventType.TEXT_DELTA, {
+                                            "agent": item.executor_id, "delta": text,
+                                        })
+                                        await sidechain.append_agent(AgentSidechainEntry(
+                                            user_id=user_id, session_id=_session_id,
+                                            agent_name=item.executor_id,
+                                            event_type="complete",
+                                            content={"response_preview": text[:200]},
+                                        ))
+                        await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                            "event_type": event_type_name,
+                            "preview": str(event.data)[:200] if event.data else "",
+                        })
+
+            await sidechain.close()
+
+            total_time = round((time.time() - t0) * 1000)
+            await emitter.emit_complete("Hybrid pipeline complete", {
+                "total_ms": total_time,
+                "mode": "hybrid",
+                "selected_mode": selected_mode,
+                "session_id": _session_id,
+                "decision_ms": decision_time,
+            })
+
+        except Exception as e:
+            logger.error(f"Hybrid stream error: {e}\n{traceback.format_exc()[-500:]}")
+            await emitter.emit_error(f"Hybrid pipeline failed: {str(e)[:300]}")
+
+    asyncio.create_task(_run())
+
+    return StreamingResponse(
+        emitter.stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
