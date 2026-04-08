@@ -2267,6 +2267,13 @@ async def test_orchestrator_stream(
                 "duration_ms": decision_time,
             })
 
+            # Emit the orchestrator's full response as TEXT_DELTA (the AI's actual reply)
+            if response_text:
+                await emitter.emit(SSEEventType.TEXT_DELTA, {
+                    "delta": response_text[:3000],
+                    "source": "orchestrator",
+                })
+
             # ── Step 5: SAVE CHECKPOINT ──
             await emitter.emit(SSEEventType.TASK_DISPATCHED, {
                 "step": "5_checkpoint", "status": "running",
