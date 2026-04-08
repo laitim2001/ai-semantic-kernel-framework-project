@@ -691,13 +691,13 @@ export const AgentTeamTestPage: FC = () => {
 
             {/* LLM Response (accumulated TEXT_DELTA) */}
             {sseState.llmResponse && (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="px-3 py-1.5 bg-green-50 text-xs font-medium text-green-600 border-b flex items-center gap-2">
-                  <Brain className="w-3.5 h-3.5" />
-                  Orchestrator Response
+              <div className="border-2 border-green-200 rounded-lg overflow-hidden">
+                <div className="px-3 py-2 bg-green-50 text-sm font-medium text-green-700 border-b flex items-center gap-2">
+                  <Brain className="w-4 h-4" />
+                  TeamLead Synthesis — Unified Analysis Report
                   {sseState.isStreaming && <Loader2 className="w-3 h-3 animate-spin" />}
                 </div>
-                <div className="p-3 text-sm whitespace-pre-wrap max-h-80 overflow-auto">
+                <div className="p-4 text-sm whitespace-pre-wrap max-h-[600px] overflow-auto prose prose-sm max-w-none">
                   {sseState.llmResponse}
                 </div>
               </div>

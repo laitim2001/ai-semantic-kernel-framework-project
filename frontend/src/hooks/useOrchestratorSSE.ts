@@ -228,11 +228,23 @@ function dispatchEvent(
 
     case 'AGENT_THINKING':
       setState(s => {
+        // If status=complete, update existing step
+        if (data.step && data.status === 'complete') {
+          const steps = [...s.steps];
+          let idx = -1;
+          for (let i = steps.length - 1; i >= 0; i--) {
+            if (steps[i].step === data.step) { idx = i; break; }
+          }
+          if (idx >= 0) {
+            steps[idx] = { ...steps[idx], status: 'complete', data: { ...steps[idx].data, ...data } };
+            return { ...s, steps };
+          }
+        }
         // If this is step start, add to steps
         if (data.step && data.status === 'running') {
           return {
             ...s,
-            steps: [...s.steps, { step: data.step, status: 'running', label: data.label || 'LLM Thinking...', data }],
+            steps: [...s.steps, { step: data.step, status: 'running', label: data.label || data.agent || 'LLM Thinking...', data }],
             thinkingText: data.thinking || s.thinkingText,
           };
         }
@@ -242,6 +254,10 @@ function dispatchEvent(
 
     case 'TEXT_DELTA':
       setState(s => {
+        // Synthesis from TeamLead → goes to llmResponse (main response panel)
+        if (data.source === 'synthesis') {
+          return { ...s, llmResponse: s.llmResponse + (data.delta || '') };
+        }
         // If from an agent, add to agent events
         if (data.agent) {
           return {
