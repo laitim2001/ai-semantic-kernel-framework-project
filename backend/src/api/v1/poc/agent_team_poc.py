@@ -389,9 +389,11 @@ async def test_team(
             "lead_tools": len(lead_tools),
         })
 
-        # Step 2: Create client + agent configs
-        client = _create_client(provider, model, azure_endpoint, azure_api_key,
-                                azure_api_version, azure_deployment, max_tokens=2048)
+        # Step 2: Create client factory + agent configs
+        # Each agent gets its OWN client to avoid connection serialization
+        def make_client():
+            return _create_client(provider, model, azure_endpoint, azure_api_key,
+                                  azure_api_version, azure_deployment, max_tokens=2048)
 
         agents_config = _build_team_agents_config(all_tools)
 
@@ -418,12 +420,12 @@ async def test_team(
         # Step 4: Run parallel team (Phase 0 + Phase 1)
         team_result = await run_parallel_team(
             task=task,
-            context="",  # no orchestrator context in direct test_team
+            context="",
             agents_config=agents_config,
             shared=shared,
-            client=client,
+            client_factory=make_client,
             lead_tools=lead_tools,
-            emitter=None,  # no SSE in JSON endpoint
+            emitter=None,
             timeout=timeout,
         )
 
@@ -2710,9 +2712,10 @@ async def test_team_stream(
             real_tools = _get_real_tools()  # V2: real subprocess tools
             all_tools = team_tools + real_tools
 
-            # Step 2: Create client + agent configs
-            client = _create_client(provider, model, azure_endpoint, azure_api_key,
-                                    azure_api_version, azure_deployment, max_tokens=2048)
+            # Step 2: Create client factory + agent configs
+            def make_client():
+                return _create_client(provider, model, azure_endpoint, azure_api_key,
+                                      azure_api_version, azure_deployment, max_tokens=2048)
 
             agents_config = _build_team_agents_config(all_tools)
 
@@ -2737,7 +2740,7 @@ async def test_team_stream(
                 context="",
                 agents_config=agents_config,
                 shared=shared,
-                client=client,
+                client_factory=make_client,
                 lead_tools=lead_tools,
                 emitter=emitter,
                 timeout=timeout,

@@ -320,10 +320,9 @@ async def run_parallel_team(
     context: str,
     agents_config: list[AgentConfig],
     shared,
-    client,
+    client_factory,
     lead_tools: list,
     emitter=None,
-    llm_concurrency: int = 3,
     timeout: float = 120.0,
     no_progress_timeout: float = 30.0,
 ) -> TeamResult:
@@ -339,28 +338,27 @@ async def run_parallel_team(
         context: Memory/knowledge context from orchestrator
         agents_config: List of AgentConfig for each worker agent
         shared: SharedTaskList instance (empty, populated by Phase 0)
-        client: MAF ChatClient
+        client_factory: Callable that returns a NEW ChatClient instance.
+            Each agent gets its own client to avoid connection serialization.
         lead_tools: Tools for TeamLead (decompose_and_assign_tasks)
         emitter: PipelineEventEmitter for SSE (optional)
-        llm_concurrency: Max concurrent LLM calls
         timeout: Total execution timeout (seconds)
         no_progress_timeout: Per-agent no-progress timeout (seconds)
     """
     t_start = time.time()
-    llm_semaphore = asyncio.Semaphore(llm_concurrency)
     agent_results: dict[str, str] = {}
     termination_reason = "all_done"
 
     if emitter:
         _patch_emitter(emitter)
 
-    # ── Phase 0: TeamLead decomposition ──
+    # ── Phase 0: TeamLead decomposition (own client) ──
     phase0_ms = 0
     try:
-        phase0_ms = await phase0_decompose(task, context, client, lead_tools, emitter)
+        lead_client = client_factory()
+        phase0_ms = await phase0_decompose(task, context, lead_client, lead_tools, emitter)
     except Exception as e:
         logger.error(f"Phase 0 failed, falling back to single task: {e}")
-        # Fallback: add the entire task as a single item
         shared.add_task("T-fallback", task, priority=1)
 
     task_count = len(shared._tasks)
@@ -374,16 +372,18 @@ async def run_parallel_team(
         })
 
     # ── Phase 1: Parallel agent execution ──
-    # Build Agent instances
+    # Each agent gets its OWN client instance — prevents connection serialization
     from agent_framework import Agent
 
     for cfg in agents_config:
+        agent_client = client_factory()  # ← independent client per agent
         cfg.agent = Agent(
-            client,
+            agent_client,
             name=cfg.name,
             instructions=cfg.instructions,
             tools=cfg.tools,
         )
+        logger.info(f"Agent {cfg.name} created with independent client")
 
     agent_tasks = [
         asyncio.create_task(
