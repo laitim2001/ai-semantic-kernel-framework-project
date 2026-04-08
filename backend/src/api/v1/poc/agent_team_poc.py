@@ -2644,8 +2644,10 @@ async def test_subagent_stream(
             stream = workflow.run(message=task, stream=True, include_status_events=True)
             agent_responses: list[dict[str, Any]] = []
 
+            seen_agents = set()
             async for event in stream:
                 event_type_name = type(event).__name__
+                got_agent_response = False
                 if hasattr(event, "data") and event.data:
                     data = event.data
                     if hasattr(data, '__iter__') and not isinstance(data, str):
@@ -2659,13 +2661,15 @@ async def test_subagent_stream(
                                     for msg in resp.messages:
                                         if hasattr(msg, 'text') and msg.text:
                                             text += msg.text
-                                if text:
+                                if text and item.executor_id not in seen_agents:
+                                    seen_agents.add(item.executor_id)
+                                    got_agent_response = True
                                     await emitter.emit(SSEEventType.TEXT_DELTA, {
                                         "agent": item.executor_id, "delta": text,
                                     })
                                     agent_responses.append({
                                         "agent": item.executor_id,
-                                        "response": text[:500],
+                                        "response": text,
                                     })
                                     await sidechain.append_agent(AgentSidechainEntry(
                                         user_id=user_id, session_id=_session_id,
@@ -2673,12 +2677,29 @@ async def test_subagent_stream(
                                         event_type="complete",
                                         content={"response_preview": text[:200]},
                                     ))
-                    await emitter.emit(SSEEventType.SWARM_PROGRESS, {
-                        "event_type": event_type_name,
-                        "preview": str(event.data)[:200] if event.data else "",
-                    })
+
+                # Only emit SWARM_PROGRESS for non-agent events (skip raw object noise)
+                if not got_agent_response and event_type_name not in ("AgentExecutorResponse",):
+                    preview = str(event.data)[:200] if hasattr(event, "data") and event.data else ""
+                    # Filter out raw Python object representations
+                    if "object at 0x" not in preview:
+                        await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                            "event_type": event_type_name,
+                            "preview": preview,
+                        })
 
             await sidechain.close()
+
+            # Emit consolidated response as TEXT_DELTA (the AI's actual reply)
+            if agent_responses:
+                summary_parts = []
+                for ar in agent_responses:
+                    summary_parts.append(f"## {ar['agent']}\n{ar['response']}")
+                consolidated = "\n\n".join(summary_parts)
+                await emitter.emit(SSEEventType.TEXT_DELTA, {
+                    "delta": consolidated,
+                    "source": "aggregated",
+                })
 
             total_time = round((time.time() - t0) * 1000)
             await emitter.emit_complete("Subagent pipeline complete", {
@@ -2871,6 +2892,7 @@ async def test_team_stream(
 
             async for event in stream:
                 event_type_name = type(event).__name__
+                got_agent_response = False
                 if hasattr(event, "data") and event.data:
                     data = event.data
                     if hasattr(data, '__iter__') and not isinstance(data, str):
@@ -2885,12 +2907,13 @@ async def test_team_stream(
                                         if hasattr(msg, 'text') and msg.text:
                                             text += msg.text
                                 if text:
+                                    got_agent_response = True
                                     await emitter.emit(SSEEventType.TEXT_DELTA, {
                                         "agent": item.executor_id, "delta": text,
                                     })
                                     agent_responses.append({
                                         "agent": item.executor_id,
-                                        "response": text[:500],
+                                        "response": text,
                                     })
                                     await sidechain.append_agent(AgentSidechainEntry(
                                         user_id=user_id, session_id=_session_id,
@@ -2898,12 +2921,26 @@ async def test_team_stream(
                                         event_type="complete",
                                         content={"response_preview": text[:200]},
                                     ))
-                    await emitter.emit(SSEEventType.SWARM_PROGRESS, {
-                        "event_type": event_type_name,
-                        "preview": str(event.data)[:200] if event.data else "",
-                    })
+
+                if not got_agent_response and event_type_name not in ("AgentExecutorResponse",):
+                    preview = str(event.data)[:500] if hasattr(event, "data") and event.data else ""
+                    if "object at 0x" not in preview:
+                        await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                            "event_type": event_type_name,
+                            "preview": preview,
+                        })
 
             await sidechain.close()
+
+            # Consolidated response
+            if agent_responses:
+                summary_parts = []
+                for ar in agent_responses:
+                    summary_parts.append(f"## {ar['agent']}\n{ar['response']}")
+                await emitter.emit(SSEEventType.TEXT_DELTA, {
+                    "delta": "\n\n".join(summary_parts),
+                    "source": "aggregated",
+                })
 
             total_time = round((time.time() - t0) * 1000)
             task_state = shared.to_dict()
@@ -3080,8 +3117,11 @@ async def test_hybrid_stream(
                 workflow = builder.build()
 
                 stream = workflow.run(message=task, stream=True, include_status_events=True)
+                _seen_sub = set()
+                _sub_responses = []
                 async for event in stream:
                     event_type_name = type(event).__name__
+                    _got = False
                     if hasattr(event, "data") and event.data:
                         data = event.data
                         if hasattr(data, '__iter__') and not isinstance(data, str):
@@ -3095,20 +3135,25 @@ async def test_hybrid_stream(
                                         for m in resp.messages:
                                             if hasattr(m, 'text') and m.text:
                                                 text += m.text
-                                    if text:
+                                    if text and item.executor_id not in _seen_sub:
+                                        _seen_sub.add(item.executor_id)
+                                        _got = True
                                         await emitter.emit(SSEEventType.TEXT_DELTA, {
                                             "agent": item.executor_id, "delta": text,
                                         })
+                                        _sub_responses.append({"agent": item.executor_id, "response": text})
                                         await sidechain.append_agent(AgentSidechainEntry(
                                             user_id=user_id, session_id=_session_id,
                                             agent_name=item.executor_id,
                                             event_type="complete",
                                             content={"response_preview": text[:200]},
                                         ))
-                        await emitter.emit(SSEEventType.SWARM_PROGRESS, {
-                            "event_type": event_type_name,
-                            "preview": str(event.data)[:200] if event.data else "",
-                        })
+                    if not _got and event_type_name not in ("AgentExecutorResponse",):
+                        _p = str(event.data)[:500] if hasattr(event, "data") and event.data else ""
+                        if "object at 0x" not in _p:
+                            await emitter.emit(SSEEventType.SWARM_PROGRESS, {"event_type": event_type_name, "preview": _p})
+                if _sub_responses:
+                    await emitter.emit(SSEEventType.TEXT_DELTA, {"delta": "\n\n".join(f"## {r['agent']}\n{r['response']}" for r in _sub_responses), "source": "aggregated"})
 
             else:
                 # Team execution (same agents as test_team)
@@ -3175,8 +3220,10 @@ async def test_hybrid_stream(
                 )
 
                 stream = workflow.run(message=initial_msg, stream=True, include_status_events=True)
+                _team_responses = []
                 async for event in stream:
                     event_type_name = type(event).__name__
+                    _got = False
                     if hasattr(event, "data") and event.data:
                         data = event.data
                         if hasattr(data, '__iter__') and not isinstance(data, str):
@@ -3191,19 +3238,23 @@ async def test_hybrid_stream(
                                             if hasattr(m, 'text') and m.text:
                                                 text += m.text
                                     if text:
+                                        _got = True
                                         await emitter.emit(SSEEventType.TEXT_DELTA, {
                                             "agent": item.executor_id, "delta": text,
                                         })
+                                        _team_responses.append({"agent": item.executor_id, "response": text})
                                         await sidechain.append_agent(AgentSidechainEntry(
                                             user_id=user_id, session_id=_session_id,
                                             agent_name=item.executor_id,
                                             event_type="complete",
                                             content={"response_preview": text[:200]},
                                         ))
-                        await emitter.emit(SSEEventType.SWARM_PROGRESS, {
-                            "event_type": event_type_name,
-                            "preview": str(event.data)[:200] if event.data else "",
-                        })
+                    if not _got and event_type_name not in ("AgentExecutorResponse",):
+                        _p = str(event.data)[:500] if hasattr(event, "data") and event.data else ""
+                        if "object at 0x" not in _p:
+                            await emitter.emit(SSEEventType.SWARM_PROGRESS, {"event_type": event_type_name, "preview": _p})
+                if _team_responses:
+                    await emitter.emit(SSEEventType.TEXT_DELTA, {"delta": "\n\n".join(f"## {r['agent']}\n{r['response']}" for r in _team_responses), "source": "aggregated"})
 
             await sidechain.close()
 
