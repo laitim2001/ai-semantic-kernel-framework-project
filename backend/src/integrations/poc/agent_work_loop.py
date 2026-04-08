@@ -275,13 +275,20 @@ async def _agent_work_loop(
         await emitter.emit_event("SWARM_WORKER_START", {"agent": name})
 
     iteration = 0
-    max_iterations = 5  # V2: agents should finish in 1-2 iterations, 5 is safety cap
+    max_iterations = 5  # safety cap: prevents infinite loops
 
-    while not shared.is_all_done() and iteration < max_iterations:
+    while iteration < max_iterations:
         iteration += 1
 
         # 1. Check inbox for directed messages
         inbox_msgs = shared.get_inbox(name, unread_only=True)
+
+        # Exit condition: all tasks done AND no unread inbox messages
+        # This ensures agents process incoming messages even after tasks complete,
+        # enabling real bidirectional communication (not just one-way notifications)
+        if shared.is_all_done() and not inbox_msgs:
+            if iteration > 1:  # always do at least 1 iteration
+                break
 
         # Emit INBOX_RECEIVED if there are directed messages
         if inbox_msgs and emitter:
@@ -333,7 +340,7 @@ async def _agent_work_loop(
         # 7. Process results + emit events (including TEAM_MESSAGE for new msgs)
         await _process_agent_result(name, result_text, current_task, shared, emitter, msg_count_before)
 
-        # 7. If task was not completed by tool calls, auto-complete with LLM output
+        # 8. If task was not completed by tool calls, auto-complete with LLM output
         if current_task and current_task.status.value == "in_progress":
             shared.complete_task(current_task.task_id, result_text[:2000])
             if emitter:
@@ -341,6 +348,11 @@ async def _agent_work_loop(
                     "agent": name,
                     "task_id": current_task.task_id,
                 })
+
+        # 9. Brief pause after task completion — let other agents' messages arrive
+        #    before next loop iteration checks inbox (enables bidirectional comms)
+        if shared.is_all_done():
+            await asyncio.sleep(1.0)  # wait for peer messages to land
 
     if emitter:
         await emitter.emit_event("SWARM_WORKER_END", {
