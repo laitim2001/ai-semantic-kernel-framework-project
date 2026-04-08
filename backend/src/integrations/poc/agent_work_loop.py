@@ -201,8 +201,7 @@ async def _process_agent_result(
 
         # If agent completed a task, emit task completion
         if current_task and current_task.status.value == "completed":
-            await emitter.emit_event("SWARM_PROGRESS", {
-                "event_type": "task_completed",
+            await emitter.emit_event("TASK_COMPLETED", {
                 "agent": agent_name,
                 "task_id": current_task.task_id,
             })
@@ -282,16 +281,15 @@ async def _agent_work_loop(
         if current_task and current_task.status.value == "in_progress":
             shared.complete_task(current_task.task_id, result_text[:2000])
             if emitter:
-                await emitter.emit_event("SWARM_PROGRESS", {
-                    "event_type": "task_completed",
+                await emitter.emit_event("TASK_COMPLETED", {
                     "agent": name,
                     "task_id": current_task.task_id,
                 })
 
     if emitter:
-        await emitter.emit_event("SWARM_PROGRESS", {
-            "event_type": "agent_finished",
+        await emitter.emit_event("SWARM_WORKER_END", {
             "agent": name,
+            "status": "completed",
             "iterations": iteration,
         })
 

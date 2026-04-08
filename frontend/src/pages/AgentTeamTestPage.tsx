@@ -10,7 +10,7 @@
  * PoC: poc/agent-team branch
  */
 
-import React, { FC, useState, useCallback } from 'react';
+import React, { FC, useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import {
   Play,
@@ -112,6 +112,21 @@ export const AgentTeamTestPage: FC = () => {
   // Streaming mode for orchestrator
   const [streamMode, setStreamMode] = useState(true); // default ON for orchestrator
   const { state: sseState, startStream, cancelStream } = useOrchestratorSSE();
+
+  // V2: Elapsed time timer
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (sseState.isStreaming || loading) {
+      const start = Date.now();
+      setElapsedMs(0);
+      timerRef.current = setInterval(() => setElapsedMs(Date.now() - start), 100);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [sseState.isStreaming, loading]);
 
   // Azure config — credentials loaded from server .env by default
   const [azureEndpoint, setAzureEndpoint] = useState('');
@@ -456,7 +471,7 @@ export const AgentTeamTestPage: FC = () => {
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-purple-600" />
-              <p className="text-gray-600">Running {mode} test...</p>
+              <p className="text-gray-600">Running {mode} test... <span className="font-mono text-purple-600">{(elapsedMs / 1000).toFixed(1)}s</span></p>
               <p className="text-xs text-gray-400 mt-1">This may take 30-120 seconds</p>
             </div>
           </div>
@@ -465,7 +480,7 @@ export const AgentTeamTestPage: FC = () => {
         {/* Streaming Results (SSE mode) */}
         {(sseState.phase !== 'idle') && (
           <div className="space-y-3 max-w-4xl">
-            {/* Phase indicator */}
+            {/* Phase indicator + elapsed timer */}
             <div className="flex items-center gap-2 text-sm font-medium">
               {sseState.isStreaming && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
               {sseState.phase === 'complete' && <CheckCircle className="w-4 h-4 text-green-600" />}
@@ -473,10 +488,18 @@ export const AgentTeamTestPage: FC = () => {
               {sseState.phase === 'pending_approval' && <ShieldCheck className="w-4 h-4 text-amber-600" />}
               <span>
                 {sseState.phase === 'orchestrator' && 'Phase 1: Orchestrator Pipeline'}
-                {sseState.phase === 'agents' && `Phase 2: ${sseState.selectedMode} Execution`}
-                {sseState.phase === 'complete' && `Complete — ${sseState.selectedMode} mode (${sseState.metadata.total_ms || '?'}ms)`}
+                {sseState.phase === 'agents' && `Phase 2: Parallel Agent Execution`}
+                {sseState.phase === 'complete' && `Complete — ${sseState.terminationReason || sseState.selectedMode || 'done'}`}
                 {sseState.phase === 'error' && `Error: ${sseState.error}`}
                 {sseState.phase === 'pending_approval' && 'HITL Approval Required'}
+              </span>
+              {/* Elapsed timer */}
+              <span className="ml-2 font-mono text-xs text-gray-400">
+                {sseState.phase === 'complete'
+                  ? `${((sseState.metadata.total_ms || elapsedMs) / 1000).toFixed(1)}s`
+                  : sseState.isStreaming
+                  ? `${(elapsedMs / 1000).toFixed(1)}s`
+                  : ''}
               </span>
               {sseState.isStreaming && (
                 <button onClick={cancelStream} className="ml-auto text-xs text-red-500 hover:text-red-700">Cancel</button>
@@ -603,26 +626,49 @@ export const AgentTeamTestPage: FC = () => {
               </div>
             )}
 
-            {/* Agent Events (Phase 2) */}
+            {/* Agent Activity Log — filtered, no raw workflow noise */}
             {sseState.agentEvents.length > 0 && (
               <div className="border rounded-lg overflow-hidden">
                 <div className="px-3 py-1.5 bg-indigo-50 text-xs font-medium text-indigo-600 border-b flex items-center gap-2">
-                  <Users className="w-3.5 h-3.5" />
-                  Agent Events ({sseState.agentEvents.length})
+                  <ListChecks className="w-3.5 h-3.5" />
+                  Activity Log
                   {sseState.terminationReason && (
-                    <span className="ml-auto text-[10px] text-gray-500">
-                      Ended: {sseState.terminationReason}
+                    <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+                      {sseState.terminationReason}
                     </span>
                   )}
                 </div>
                 <div className="max-h-60 overflow-auto divide-y">
-                  {sseState.agentEvents.map((evt: AgentEvent, i: number) => (
-                    <div key={i} className={`px-3 py-1.5 text-sm ${
+                  {sseState.agentEvents
+                    .filter((evt) => {
+                      // Filter out raw workflow noise — keep only meaningful events
+                      if (evt.agent === 'workflow' && evt.type === 'progress') {
+                        const text = evt.text || '';
+                        // Keep phase0_complete, team_complete; skip WorkflowEvent noise
+                        return text.includes('phase0') || text.includes('team_complete') || text.includes('task_');
+                      }
+                      return true;
+                    })
+                    .map((evt: AgentEvent, i: number) => (
+                    <div key={i} className={`px-3 py-1 text-xs ${
+                      evt.type === 'start' ? 'bg-blue-50/50' :
                       evt.type === 'message_sent' ? 'bg-purple-50/30' :
                       evt.type === 'task_completed' ? 'bg-green-50/30' :
-                      evt.type === 'finished' ? 'bg-gray-50' : ''
+                      evt.type === 'finished' ? 'bg-gray-100' :
+                      evt.type === 'response' ? '' : ''
                     }`}>
-                      <span className="font-medium text-indigo-700">[{evt.agent}]</span>{' '}
+                      <span className={`font-medium ${
+                        evt.agent === 'system' ? 'text-gray-500' :
+                        evt.type === 'message_sent' ? 'text-purple-700' :
+                        'text-indigo-700'
+                      }`}>
+                        {evt.type === 'start' && '🟢 '}
+                        {evt.type === 'task_completed' && '✅ '}
+                        {evt.type === 'message_sent' && '💬 '}
+                        {evt.type === 'message_received' && '📨 '}
+                        {evt.type === 'finished' && '🏁 '}
+                        [{evt.agent}]
+                      </span>{' '}
                       <span className="text-gray-600">{evt.text}</span>
                     </div>
                   ))}
