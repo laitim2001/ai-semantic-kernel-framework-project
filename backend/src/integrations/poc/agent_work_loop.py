@@ -228,10 +228,10 @@ async def _process_agent_result(
     TEAM_MESSAGE SSE events for each.
     """
     if emitter:
-        # Emit the agent's response as a text delta
+        # Emit the agent's response as a text delta (no truncation)
         await emitter.emit_event("TEXT_DELTA", {
             "agent": agent_name,
-            "delta": result_text[:500],
+            "delta": result_text,
         })
 
         # If agent completed a task, emit task completion
@@ -249,7 +249,7 @@ async def _process_agent_result(
                 await emitter.emit_event("TEAM_MESSAGE", {
                     "from": msg.from_agent,
                     "to": msg.to_agent,
-                    "content": msg.content[:200],
+                    "content": msg.content,
                     "directed": msg.to_agent is not None,
                 })
 

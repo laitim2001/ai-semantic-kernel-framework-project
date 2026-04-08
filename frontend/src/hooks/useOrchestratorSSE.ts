@@ -361,8 +361,8 @@ function dispatchEvent(
         agentEvents: [...s.agentEvents, {
           agent: data.from || '?',
           text: data.to
-            ? `→ ${data.to}: ${(data.content || data.message || '').slice(0, 100)}`
-            : `[broadcast]: ${(data.content || data.message || '').slice(0, 100)}`,
+            ? `→ ${data.to}: ${data.content || data.message || ''}`
+            : `[broadcast]: ${data.content || data.message || ''}`,
           to_agent: data.to,
           directed: data.directed || !!data.to,
           timestamp: data.timestamp,
