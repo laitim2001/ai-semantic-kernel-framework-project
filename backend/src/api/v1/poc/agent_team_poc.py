@@ -2634,7 +2634,7 @@ async def test_subagent_stream(
     )
 
 
-# ── Test G: Team Stream (SSE) ───────────────────────────────────────────
+# ── Test G: Team Stream (SSE) — V2 Parallel Engine ────────────────────
 
 @router.post("/test-team-stream")
 async def test_team_stream(
@@ -2644,18 +2644,19 @@ async def test_team_stream(
         "Investigate APAC ETL Pipeline failure. Multiple experts needed: "
         "analyze application logs, check database changes, and verify network connectivity.",
     ),
-    max_rounds: int = Query(8, description="Max GroupChat rounds"),
     user_id: str = Query("user-chris"),
     session_id: str = Query("", description="Link to orchestrator session for sidechain"),
     azure_endpoint: str = Query(""),
     azure_api_key: str = Query(""),
     azure_api_version: str = Query("2024-12-01-preview"),
     azure_deployment: str = Query(""),
+    timeout: float = Query(120.0, description="Max execution timeout in seconds"),
 ):
-    """Test G: SSE Streaming Team — same logic as test_team but streams events.
+    """Test G: SSE Streaming Team — V2 Parallel Engine.
 
-    Returns a text/event-stream response. Each GroupChat round emits SSE
-    events so the frontend can show real-time collaboration.
+    Phase 0: TeamLead decomposes task (SSE events for progress).
+    Phase 1: 3 agents run IN PARALLEL — SSE events interleaved in real-time.
+    Returns text/event-stream with concurrent agent activity.
     """
     import asyncio
     from starlette.responses import StreamingResponse
@@ -2675,108 +2676,90 @@ async def test_team_stream(
         t0 = time.time()
 
         try:
-            from agent_framework import Agent
-            from agent_framework.orchestrations import GroupChatBuilder
             from src.integrations.poc.shared_task_list import SharedTaskList
-            from src.integrations.poc.team_tools import create_team_tools
+            from src.integrations.poc.team_tools import create_team_tools, create_lead_tools
+            from src.integrations.poc.agent_work_loop import (
+                AgentConfig, run_parallel_team, _patch_emitter,
+            )
+
+            _patch_emitter(emitter)
 
             await emitter.emit(SSEEventType.PIPELINE_START, {
-                "mode": "team",
+                "mode": "team_v2_parallel",
                 "session_id": _session_id,
                 "task": task[:200],
                 "provider": provider,
                 "model": model,
-                "max_rounds": max_rounds,
             })
 
-            # Step 1: Create SharedTaskList with initial tasks
+            # Step 1: Create SharedTaskList + tools
             shared = SharedTaskList()
-            shared.add_task("T1", "Analyze ETL application logs for error patterns and root cause", priority=1)
-            shared.add_task("T2", "Check database schema changes in the last 7 days", priority=1)
-            shared.add_task("T3", "Verify network connectivity between ETL and database servers", priority=2)
-            shared.add_task("T4", "Review ETL scheduling configuration for recent modifications", priority=3)
-
-            # Step 2: Create team tools + Claude SDK tools
             team_tools = create_team_tools(shared)
+            lead_tools = create_lead_tools(shared)
             sdk_tools = _get_claude_sdk_tools()
             all_tools = team_tools + sdk_tools
 
-            # Step 3: Create Teammate agents
+            # Step 2: Create client + agent configs
             client = _create_client(provider, model, azure_endpoint, azure_api_key,
                                     azure_api_version, azure_deployment, max_tokens=2048)
 
-            team_defs = [
-                ("LogExpert", (
-                    "You are a log analysis expert on an IT investigation team.\n"
-                    "IMPORTANT: Act immediately. Do NOT just observe or coordinate.\n\n"
-                    "WORKFLOW (do ALL steps in ONE turn):\n"
-                    "1. Use claim_next_task with your name 'LogExpert' to claim a task\n"
-                    "2. Use deep_analysis or run_diagnostic_command to investigate\n"
-                    "3. Use report_task_result to submit your findings\n"
-                    "4. Use send_team_message to share key discoveries\n"
-                    "5. Use read_team_messages to check teammate findings\n\n"
-                    "AVAILABLE TOOLS: claim_next_task, report_task_result, view_team_status, "
-                    "send_team_message, read_team_messages, deep_analysis, "
-                    "run_diagnostic_command, search_knowledge_base\n"
-                    "Be concise. Focus on actionable findings."
-                )),
-                ("DBExpert", (
-                    "You are a database expert on an IT investigation team.\n"
-                    "IMPORTANT: Act immediately. Do NOT just observe or coordinate.\n\n"
-                    "WORKFLOW (do ALL steps in ONE turn):\n"
-                    "1. Use claim_next_task with your name 'DBExpert' to claim a task\n"
-                    "2. Use deep_analysis or run_diagnostic_command to investigate\n"
-                    "3. Use report_task_result to submit your findings\n"
-                    "4. Use send_team_message to share key discoveries\n"
-                    "5. Use read_team_messages to check teammate findings\n\n"
-                    "AVAILABLE TOOLS: claim_next_task, report_task_result, view_team_status, "
-                    "send_team_message, read_team_messages, deep_analysis, "
-                    "run_diagnostic_command, search_knowledge_base\n"
-                    "Focus on schema changes, query performance, data integrity."
-                )),
-                ("AppExpert", (
-                    "You are an application infrastructure expert on an IT investigation team.\n"
-                    "IMPORTANT: Act immediately. Do NOT just observe or coordinate.\n\n"
-                    "WORKFLOW (do ALL steps in ONE turn):\n"
-                    "1. Use claim_next_task with your name 'AppExpert' to claim a task\n"
-                    "2. Use deep_analysis or run_diagnostic_command to investigate\n"
-                    "3. Use report_task_result to submit your findings\n"
-                    "4. Use send_team_message to share key discoveries\n"
-                    "5. Use read_team_messages to check teammate findings\n\n"
-                    "AVAILABLE TOOLS: claim_next_task, report_task_result, view_team_status, "
-                    "send_team_message, read_team_messages, deep_analysis, "
-                    "run_diagnostic_command, search_knowledge_base\n"
-                    "Focus on network, infrastructure, and configuration issues."
-                )),
+            agents_config = [
+                AgentConfig(
+                    name="LogExpert",
+                    instructions=(
+                        "You are a log analysis expert on an IT investigation team.\n"
+                        "You work IN PARALLEL with other experts. Act independently.\n\n"
+                        "EACH WORK CYCLE:\n"
+                        "1. Check check_my_inbox for directed messages from teammates\n"
+                        "2. Use claim_next_task with your name 'LogExpert'\n"
+                        "3. Use deep_analysis or run_diagnostic_command to investigate\n"
+                        "4. Use report_task_result to submit findings\n"
+                        "5. If you find something relevant to another expert, use "
+                        "send_team_message with to_agent to notify them directly\n\n"
+                        "Be concise. Focus on log patterns, error traces, timestamps."
+                    ),
+                    expertise="log analysis error pattern trace timestamp",
+                    tools=all_tools,
+                ),
+                AgentConfig(
+                    name="DBExpert",
+                    instructions=(
+                        "You are a database expert on an IT investigation team.\n"
+                        "You work IN PARALLEL with other experts. Act independently.\n\n"
+                        "EACH WORK CYCLE:\n"
+                        "1. Check check_my_inbox for directed messages from teammates\n"
+                        "2. Use claim_next_task with your name 'DBExpert'\n"
+                        "3. Use deep_analysis or run_diagnostic_command to investigate\n"
+                        "4. Use report_task_result to submit findings\n"
+                        "5. If you find something relevant to another expert, use "
+                        "send_team_message with to_agent to notify them directly\n\n"
+                        "Focus on schema changes, query performance, connection pools, data integrity."
+                    ),
+                    expertise="database sql schema query connection pool migration",
+                    tools=all_tools,
+                ),
+                AgentConfig(
+                    name="AppExpert",
+                    instructions=(
+                        "You are an application infrastructure expert on an IT investigation team.\n"
+                        "You work IN PARALLEL with other experts. Act independently.\n\n"
+                        "EACH WORK CYCLE:\n"
+                        "1. Check check_my_inbox for directed messages from teammates\n"
+                        "2. Use claim_next_task with your name 'AppExpert'\n"
+                        "3. Use deep_analysis or run_diagnostic_command to investigate\n"
+                        "4. Use report_task_result to submit findings\n"
+                        "5. If you find something relevant to another expert, use "
+                        "send_team_message with to_agent to notify them directly\n\n"
+                        "Focus on network, infrastructure, configuration, scheduling."
+                    ),
+                    expertise="network infrastructure configuration scheduling connectivity",
+                    tools=all_tools,
+                ),
             ]
 
-            team_agent_names = []
-            team_agents = []
-            for name, instructions in team_defs:
-                agent = Agent(client, name=name, instructions=instructions, tools=all_tools)
-                team_agents.append(agent)
-                team_agent_names.append(name)
-                await emitter.emit(SSEEventType.SWARM_WORKER_START, {
-                    "agent": name, "status": "created",
-                })
+            team_agent_names = [c.name for c in agents_config]
 
-            # Step 4: Build GroupChat
-            participant_names = list(team_agent_names)
-            round_counter = {"n": 0}
-
-            def select_next(messages: list) -> str:
-                idx = round_counter["n"] % len(participant_names)
-                round_counter["n"] += 1
-                return participant_names[idx]
-
-            builder = GroupChatBuilder(
-                participants=team_agents,
-                selection_func=select_next,
-                max_rounds=max_rounds,
-            )
-            workflow = builder.build()
-
-            # Initialize sidechain transcript
+            # Step 3: Initialize sidechain transcript
             from src.integrations.orchestration.transcript import TranscriptService
             from src.integrations.orchestration.transcript.models import AgentSidechainEntry
             redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
@@ -2789,65 +2772,36 @@ async def test_team_stream(
                     event_type="start", content={"task": task[:100]},
                 ))
 
-            # Step 5: Run GroupChat — stream events
-            initial_msg = (
-                f"Team, we have an urgent investigation:\n{task}\n\n"
-                f"Here is the current task list:\n{shared.get_status()}\n\n"
-                "Each of you should claim a task, work on it, report results, "
-                "and share important findings with the team. Check team messages "
-                "for discoveries from other teammates."
+            # Step 4: Run parallel team (Phase 0 + Phase 1) with SSE
+            team_result = await run_parallel_team(
+                task=task,
+                context="",
+                agents_config=agents_config,
+                shared=shared,
+                client=client,
+                lead_tools=lead_tools,
+                emitter=emitter,
+                timeout=timeout,
             )
 
-            stream = workflow.run(message=initial_msg, stream=True, include_status_events=True)
-            agent_responses: list[dict[str, Any]] = []
-
-            async for event in stream:
-                event_type_name = type(event).__name__
-                got_agent_response = False
-                if hasattr(event, "data") and event.data:
-                    data = event.data
-                    if hasattr(data, '__iter__') and not isinstance(data, str):
-                        for item in data:
-                            if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
-                                resp = item.agent_response
-                                text = ""
-                                if hasattr(resp, 'text') and resp.text:
-                                    text = resp.text
-                                elif hasattr(resp, 'messages') and resp.messages:
-                                    for msg in resp.messages:
-                                        if hasattr(msg, 'text') and msg.text:
-                                            text += msg.text
-                                if text:
-                                    got_agent_response = True
-                                    await emitter.emit(SSEEventType.TEXT_DELTA, {
-                                        "agent": item.executor_id, "delta": text,
-                                    })
-                                    agent_responses.append({
-                                        "agent": item.executor_id,
-                                        "response": text,
-                                    })
-                                    await sidechain.append_agent(AgentSidechainEntry(
-                                        user_id=user_id, session_id=_session_id,
-                                        agent_name=item.executor_id,
-                                        event_type="complete",
-                                        content={"response_preview": text[:200]},
-                                    ))
-
-                if not got_agent_response and event_type_name not in ("AgentExecutorResponse",):
-                    preview = str(event.data)[:500] if hasattr(event, "data") and event.data else ""
-                    if "object at 0x" not in preview:
-                        await emitter.emit(SSEEventType.SWARM_PROGRESS, {
-                            "event_type": event_type_name,
-                            "preview": preview,
-                        })
+            # Step 5: Sidechain completion records
+            for name in team_agent_names:
+                agent_output = team_result.agent_results.get(name, "")
+                event_type = "complete" if not agent_output.startswith("ERROR") else "error"
+                await sidechain.append_agent(AgentSidechainEntry(
+                    user_id=user_id, session_id=_session_id, agent_name=name,
+                    event_type=event_type,
+                    content={"response_preview": agent_output[:200]},
+                ))
 
             await sidechain.close()
 
             # Consolidated response
-            if agent_responses:
-                summary_parts = []
-                for ar in agent_responses:
-                    summary_parts.append(f"## {ar['agent']}\n{ar['response']}")
+            summary_parts = []
+            for name, output in team_result.agent_results.items():
+                if output and not output.startswith("ERROR") and not output.startswith("CANCELLED"):
+                    summary_parts.append(f"## {name}\n{output}")
+            if summary_parts:
                 await emitter.emit(SSEEventType.TEXT_DELTA, {
                     "delta": "\n\n".join(summary_parts),
                     "source": "aggregated",
@@ -2855,13 +2809,13 @@ async def test_team_stream(
 
             total_time = round((time.time() - t0) * 1000)
             task_state = shared.to_dict()
-            await emitter.emit_complete("Team pipeline complete", {
+            await emitter.emit_complete("Team V2 parallel pipeline complete", {
                 "total_ms": total_time,
-                "mode": "team",
+                "mode": "team_v2_parallel",
                 "session_id": _session_id,
                 "agent_count": len(team_agent_names),
-                "responses_count": len(agent_responses),
-                "rounds": max_rounds,
+                "termination_reason": team_result.termination_reason,
+                "phase0_duration_ms": team_result.phase0_duration_ms,
                 "tasks_completed": task_state["progress"]["completed"],
                 "tasks_total": task_state["progress"]["total"],
                 "team_messages": len(task_state["messages"]),
