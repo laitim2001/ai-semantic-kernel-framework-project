@@ -103,7 +103,7 @@ async def phase0_decompose(
 
     t0 = time.time()
     try:
-        response = await lead.run(prompt)
+        response = await asyncio.to_thread(_sync_agent_run, lead, prompt)
         duration_ms = round((time.time() - t0) * 1000)
         logger.info(f"Phase 0 decomposition completed in {duration_ms}ms")
 
@@ -128,13 +128,29 @@ async def phase0_decompose(
 # Phase 1: Parallel agent execution
 # ---------------------------------------------------------------------------
 
+def _sync_agent_run(agent, context: str):
+    """Run agent.run() in a fresh event loop for true thread parallelism.
+
+    MAF Agent.run() may use synchronous HTTP internally, blocking the
+    asyncio event loop. Running each agent in its own thread with a
+    dedicated event loop enables true concurrent execution.
+    """
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(agent.run(context))
+    finally:
+        loop.close()
+
+
 async def _execute_agent_turn(agent, context: str, emitter, agent_name: str) -> str:
     """Execute a single LLM turn for an agent (with tool calls).
 
-    Returns the agent's text response.
+    Uses asyncio.to_thread() for true parallelism — each agent.run()
+    gets its own thread + event loop, so 3 agents execute simultaneously.
     """
     try:
-        response = await agent.run(context)
+        response = await asyncio.to_thread(_sync_agent_run, agent, context)
         # Extract text content from response
         if hasattr(response, "content"):
             return str(response.content)
@@ -265,12 +281,11 @@ async def _agent_work_loop(
         # 4. Build context
         context = _build_agent_context(name, current_task, inbox_msgs, shared)
 
-        # 5. Execute LLM turn (rate-limited)
+        # 5. Execute LLM turn (each agent in its own thread — true parallel)
         if emitter:
             await emitter.emit_event("AGENT_THINKING", {"agent": name})
 
-        async with llm_semaphore:
-            result_text = await _execute_agent_turn(agent, context, emitter, name)
+        result_text = await _execute_agent_turn(agent, context, emitter, name)
 
         final_output = result_text
 
