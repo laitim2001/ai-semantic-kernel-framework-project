@@ -62,7 +62,9 @@ with a JSON array of sub-tasks. Each sub-task should have:
 - "priority": 1 (highest) to 5 (lowest)
 - "required_expertise": Keywords describing what expertise is needed (e.g. "database sql", "log analysis", "network")
 
-Create 2-6 sub-tasks depending on complexity. Be specific — each task should be independently actionable.
+IMPORTANT: Create exactly 3 sub-tasks (one per available team expert).
+The team has 3 experts: LogExpert (logs/errors), DBExpert (database/schema), AppExpert (network/infra).
+Each task should be specific, actionable, and require THOROUGH investigation (not just surface-level checks).
 Do NOT create vague tasks like "investigate further". Each task should tell the agent exactly what to check."""
 
 

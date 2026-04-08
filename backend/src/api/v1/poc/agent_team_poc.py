@@ -50,18 +50,28 @@ def _build_team_agents_config(all_tools: list) -> list:
     from src.integrations.poc.agent_work_loop import AgentConfig
 
     _SHARED_WORKFLOW = (
-        "WORKFLOW — execute ALL steps in ONE turn, be CONCISE:\n"
+        "WORKFLOW — execute ALL steps in ONE turn:\n"
         "1. call check_my_inbox(agent_name=YOUR_NAME) for directed messages\n"
         "2. call claim_next_task(agent_name=YOUR_NAME) to get your task\n"
-        "3. call run_diagnostic_command with REAL commands (ping, curl, dig, "
-        "docker ps, tail, df, etc.) to investigate\n"
-        "4. call report_task_result(task_id, result) with your SHORT findings\n"
+        "3. INVESTIGATE THOROUGHLY using your tools:\n"
+        "   - call run_diagnostic_command with commands (ping, curl, hostname, "
+        "df, free, uptime, etc.) to gather real data\n"
+        "   - call deep_analysis for complex reasoning and root cause analysis\n"
+        "   - call search_knowledge_base for past incidents and SOPs\n"
+        "   - If a tool returns NOT_FOUND or no data, use deep_analysis instead\n"
+        "4. call report_task_result(task_id, result) with your DETAILED findings\n"
+        "   Include: what you checked, what you found, your analysis, and "
+        "   specific recommendations\n"
         "5. call send_team_message(from_agent=YOUR_NAME, message='...', "
         "to_agent='TEAMMATE_NAME') to notify a SPECIFIC teammate about "
-        "findings relevant to THEIR work\n\n"
-        "IMPORTANT: Use send_team_message with to_agent= for DIRECTED messages. "
-        "Teammates: LogExpert, DBExpert, AppExpert.\n"
-        "Keep responses SHORT (under 200 words). Focus on actionable findings."
+        "findings relevant to THEIR expertise\n\n"
+        "IMPORTANT RULES:\n"
+        "- Use send_team_message with to_agent= for DIRECTED messages to specific teammates\n"
+        "- Teammates: LogExpert, DBExpert, AppExpert\n"
+        "- Provide THOROUGH analysis — explain your reasoning, list evidence, "
+        "give actionable recommendations\n"
+        "- If tools can't access the actual system, use deep_analysis to provide "
+        "expert-level analysis based on your domain knowledge"
     )
 
     return [
@@ -93,7 +103,7 @@ def _build_team_agents_config(all_tools: list) -> list:
 
 
 def _create_client(provider: str, model: str, azure_endpoint: str = "",
-                   azure_api_key: str = "", azure_api_version: str = "2024-12-01-preview",
+                   azure_api_key: str = "", azure_api_version: str = "2025-03-01-preview",
                    azure_deployment: str = "", max_tokens: int = 1024):
     """Create a ChatClient based on provider.
 
@@ -122,6 +132,93 @@ def _create_client(provider: str, model: str, azure_endpoint: str = "",
             AnthropicChatClient,
         )
         return AnthropicChatClient(model=model, max_tokens=max_tokens)
+
+
+# ── Diagnostic: Parallel LLM Test ──
+
+@router.get("/test-parallel-diag")
+async def test_parallel_diag(
+    model: str = Query("gpt-5.4-mini"),
+    azure_endpoint: str = Query(""),
+    azure_api_key: str = Query(""),
+    azure_api_version: str = Query("2024-12-01-preview"),
+    azure_deployment: str = Query(""),
+):
+    """Diagnostic: Test whether 3 independent LLM calls run in parallel.
+
+    Returns timestamps for each call to prove parallelism.
+    Access via: GET /api/v1/poc/agent-team/test-parallel-diag
+    """
+    import asyncio
+    import concurrent.futures
+
+    def make_client():
+        return _create_client("azure", model, azure_endpoint, azure_api_key,
+                              azure_api_version, azure_deployment, max_tokens=256)
+
+    from agent_framework import Agent
+
+    prompts = [
+        ("Agent-A", "Reply with exactly: 'Hello from A'. Nothing else."),
+        ("Agent-B", "Reply with exactly: 'Hello from B'. Nothing else."),
+        ("Agent-C", "Reply with exactly: 'Hello from C'. Nothing else."),
+    ]
+
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5, thread_name_prefix="diag")
+    t_start = time.time()
+    results = []
+
+    def run_one(name, prompt):
+        """Run a single agent in its own thread + event loop."""
+        import asyncio as _aio
+        loop = _aio.new_event_loop()
+        _aio.set_event_loop(loop)
+        try:
+            client = make_client()
+            agent = Agent(client, name=name, instructions="Be extremely brief.")
+            t0 = time.time()
+            resp = loop.run_until_complete(agent.run(prompt))
+            t1 = time.time()
+            text = str(getattr(resp, "content", resp))[:100]
+            return {
+                "agent": name,
+                "start_offset_s": round(t0 - t_start, 2),
+                "end_offset_s": round(t1 - t_start, 2),
+                "duration_s": round(t1 - t0, 2),
+                "response": text,
+            }
+        finally:
+            loop.close()
+
+    # Submit all 3 simultaneously
+    futures = [executor.submit(run_one, name, prompt) for name, prompt in prompts]
+
+    # Wait for all
+    for f in concurrent.futures.as_completed(futures):
+        results.append(f.result())
+
+    total_s = round(time.time() - t_start, 2)
+    results.sort(key=lambda r: r["start_offset_s"])
+
+    # Determine if parallel
+    starts = [r["start_offset_s"] for r in results]
+    ends = [r["end_offset_s"] for r in results]
+    max_start_gap = round(max(starts) - min(starts), 2)
+    is_parallel = max_start_gap < 1.0  # all started within 1s = parallel
+
+    return {
+        "test": "parallel_diag",
+        "model": model,
+        "total_s": total_s,
+        "is_parallel": is_parallel,
+        "max_start_gap_s": max_start_gap,
+        "verdict": (
+            f"PARALLEL ✅ (3 calls in {total_s}s, gap {max_start_gap}s)"
+            if is_parallel
+            else f"SEQUENTIAL ❌ (3 calls in {total_s}s, gap {max_start_gap}s)"
+        ),
+        "agents": results,
+    }
 
 
 # ── Test A: Subagent (ConcurrentBuilder) ──
@@ -388,8 +485,9 @@ async def test_team(
         shared = SharedTaskList()
         team_tools = create_team_tools(shared)
         lead_tools = create_lead_tools(shared)
-        real_tools = _get_real_tools()  # V2: real subprocess tools, not LLM-simulated
-        all_tools = team_tools + real_tools
+        real_tools = _get_real_tools()  # V2: real subprocess tools
+        sdk_tools = _get_claude_sdk_tools()  # deep_analysis fallback for thorough analysis
+        all_tools = team_tools + real_tools + sdk_tools
 
         results["steps"].append({
             "step": "create_tools", "status": "ok",
