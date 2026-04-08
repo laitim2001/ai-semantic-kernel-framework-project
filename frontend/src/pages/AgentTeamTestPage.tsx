@@ -528,16 +528,99 @@ export const AgentTeamTestPage: FC = () => {
               </div>
             </div>
 
+            {/* V2: Parallel Agent Status Cards */}
+            {Object.keys(sseState.agentStatuses).length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="px-3 py-1.5 bg-indigo-50 text-xs font-medium text-indigo-600 border-b flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5" />
+                  Parallel Agents
+                  {sseState.taskProgress.total > 0 && (
+                    <span className="ml-auto text-xs text-gray-500">
+                      Tasks: {sseState.taskProgress.completed}/{sseState.taskProgress.total}
+                    </span>
+                  )}
+                </div>
+                {/* Task progress bar */}
+                {sseState.taskProgress.total > 0 && (
+                  <div className="px-3 py-1.5 border-b bg-gray-50">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(sseState.taskProgress.completed / sseState.taskProgress.total) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {/* Agent cards — all shown simultaneously */}
+                <div className="grid grid-cols-3 gap-2 p-2">
+                  {Object.values(sseState.agentStatuses).map((agent) => (
+                    <div
+                      key={agent.name}
+                      className={`rounded-lg p-2 text-xs border ${
+                        agent.status === 'running'
+                          ? 'bg-blue-50 border-blue-200'
+                          : agent.status === 'completed'
+                          ? 'bg-green-50 border-green-200'
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1 font-medium">
+                        {agent.status === 'running' && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                        {agent.status === 'completed' && <span className="text-green-600">✓</span>}
+                        {agent.status === 'error' && <span className="text-red-600">✗</span>}
+                        {agent.name}
+                      </div>
+                      {agent.currentTaskDesc && (
+                        <div className="text-[10px] text-gray-500 mt-0.5 truncate" title={agent.currentTaskDesc}>
+                          {agent.currentTaskId}: {agent.currentTaskDesc}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* V2: Team Messages (directed + broadcast) */}
+            {sseState.teamMessages.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="px-3 py-1.5 bg-purple-50 text-xs font-medium text-purple-600 border-b">
+                  Team Communication ({sseState.teamMessages.length})
+                </div>
+                <div className="max-h-40 overflow-auto divide-y">
+                  {sseState.teamMessages.map((msg, i) => (
+                    <div key={i} className={`px-3 py-1 text-xs ${msg.directed ? 'bg-purple-50/50' : ''}`}>
+                      <span className="font-medium text-purple-700">{msg.agent}</span>
+                      {msg.directed && msg.to_agent && (
+                        <span className="text-purple-500"> → {msg.to_agent}</span>
+                      )}
+                      {!msg.directed && <span className="text-gray-400"> [broadcast]</span>}
+                      <span className="text-gray-600 ml-1">{msg.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Agent Events (Phase 2) */}
             {sseState.agentEvents.length > 0 && (
               <div className="border rounded-lg overflow-hidden">
                 <div className="px-3 py-1.5 bg-indigo-50 text-xs font-medium text-indigo-600 border-b flex items-center gap-2">
                   <Users className="w-3.5 h-3.5" />
-                  Agent Execution ({sseState.agentEvents.length} events)
+                  Agent Events ({sseState.agentEvents.length})
+                  {sseState.terminationReason && (
+                    <span className="ml-auto text-[10px] text-gray-500">
+                      Ended: {sseState.terminationReason}
+                    </span>
+                  )}
                 </div>
                 <div className="max-h-60 overflow-auto divide-y">
                   {sseState.agentEvents.map((evt: AgentEvent, i: number) => (
-                    <div key={i} className="px-3 py-1.5 text-sm">
+                    <div key={i} className={`px-3 py-1.5 text-sm ${
+                      evt.type === 'message_sent' ? 'bg-purple-50/30' :
+                      evt.type === 'task_completed' ? 'bg-green-50/30' :
+                      evt.type === 'finished' ? 'bg-gray-50' : ''
+                    }`}>
                       <span className="font-medium text-indigo-700">[{evt.agent}]</span>{' '}
                       <span className="text-gray-600">{evt.text}</span>
                     </div>

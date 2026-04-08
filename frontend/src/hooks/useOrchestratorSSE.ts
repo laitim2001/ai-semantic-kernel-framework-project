@@ -10,8 +10,14 @@ type SSEEventType =
   | 'TOOL_CALL_START'
   | 'TOOL_CALL_END'
   | 'SWARM_WORKER_START'
+  | 'SWARM_WORKER_END'
   | 'SWARM_PROGRESS'
   | 'APPROVAL_REQUIRED'
+  // V2: Parallel team events
+  | 'TEAM_MESSAGE'
+  | 'INBOX_RECEIVED'
+  | 'TASK_COMPLETED'
+  | 'ALL_TASKS_DONE'
   | 'PIPELINE_COMPLETE'
   | 'PIPELINE_ERROR';
 
@@ -27,6 +33,26 @@ interface AgentEvent {
   agent: string;
   text: string;
   timestamp?: string;
+  type?: 'start' | 'thinking' | 'response' | 'tool_call' | 'message_sent' | 'message_received' | 'task_claimed' | 'task_completed' | 'finished' | 'progress';
+  to_agent?: string;  // V2: directed message target
+  directed?: boolean; // V2: is this a directed message?
+}
+
+// V2: Per-agent status tracking for parallel execution
+interface AgentStatus {
+  name: string;
+  status: 'idle' | 'running' | 'completed' | 'error';
+  currentTaskId?: string;
+  currentTaskDesc?: string;
+  iterations?: number;
+}
+
+// V2: Task progress tracking
+interface TaskProgress {
+  total: number;
+  completed: number;
+  in_progress: number;
+  pending: number;
 }
 
 interface ApprovalInfo {
@@ -47,6 +73,11 @@ interface OrchestratorStreamState {
   approval: ApprovalInfo | null;
   error: string | null;
   metadata: Record<string, any>;
+  // V2: Parallel team tracking
+  agentStatuses: Record<string, AgentStatus>;  // per-agent live status
+  taskProgress: TaskProgress;                  // task completion progress
+  teamMessages: AgentEvent[];                  // directed + broadcast messages
+  terminationReason: string;                   // "all_done" | "timeout" | "no_progress"
 }
 
 const initialState: OrchestratorStreamState = {
@@ -60,6 +91,10 @@ const initialState: OrchestratorStreamState = {
   approval: null,
   error: null,
   metadata: {},
+  agentStatuses: {},
+  taskProgress: { total: 0, completed: 0, in_progress: 0, pending: 0 },
+  teamMessages: [],
+  terminationReason: '',
 };
 
 export function useOrchestratorSSE() {
@@ -207,18 +242,144 @@ function dispatchEvent(
     case 'SWARM_WORKER_START':
       setState(s => ({
         ...s,
-        agentEvents: [...s.agentEvents, { agent: data.agent || data.worker || '?', text: '[Started]', timestamp: data.timestamp }],
+        phase: 'agents',
+        agentEvents: [...s.agentEvents, {
+          agent: data.agent || data.worker || '?', text: '[Started]',
+          timestamp: data.timestamp, type: 'start',
+        }],
+        agentStatuses: {
+          ...s.agentStatuses,
+          [data.agent || '']: { name: data.agent || '', status: 'running' },
+        },
+      }));
+      break;
+
+    case 'SWARM_WORKER_END':
+      setState(s => ({
+        ...s,
+        agentEvents: [...s.agentEvents, {
+          agent: data.agent || '?', text: `[Finished: ${data.status || 'done'}]`,
+          timestamp: data.timestamp, type: 'finished',
+        }],
+        agentStatuses: {
+          ...s.agentStatuses,
+          [data.agent || '']: {
+            ...s.agentStatuses[data.agent || ''],
+            status: 'completed',
+            iterations: data.iterations,
+          },
+        },
       }));
       break;
 
     case 'SWARM_PROGRESS':
-      // Raw workflow event — can show as debug
+      setState(s => {
+        const updates: Partial<OrchestratorStreamState> = {};
+
+        // V2: Handle specific parallel event types within SWARM_PROGRESS
+        if (data.event_type === 'task_claimed') {
+          updates.agentStatuses = {
+            ...s.agentStatuses,
+            [data.agent || '']: {
+              ...s.agentStatuses[data.agent || ''],
+              status: 'running',
+              currentTaskId: data.task_id,
+              currentTaskDesc: data.description,
+            },
+          };
+        } else if (data.event_type === 'task_completed') {
+          const prog = { ...s.taskProgress };
+          prog.completed = (prog.completed || 0) + 1;
+          prog.in_progress = Math.max(0, (prog.in_progress || 0) - 1);
+          updates.taskProgress = prog;
+        } else if (data.event_type === 'phase0_complete') {
+          updates.taskProgress = {
+            total: data.tasks_created || 0,
+            completed: 0,
+            in_progress: 0,
+            pending: data.tasks_created || 0,
+          };
+        } else if (data.event_type === 'team_complete') {
+          updates.terminationReason = data.termination_reason || '';
+        }
+
+        return {
+          ...s,
+          ...updates,
+          agentEvents: [...s.agentEvents, {
+            agent: data.agent || 'workflow',
+            text: data.preview || data.event_type || '',
+            timestamp: data.timestamp,
+            type: 'progress',
+          }],
+        };
+      });
+      break;
+
+    // V2: Parallel team communication events
+    case 'TEAM_MESSAGE':
+      setState(s => ({
+        ...s,
+        teamMessages: [...s.teamMessages, {
+          agent: data.from || data.agent || '?',
+          text: data.content || data.message || '',
+          to_agent: data.to,
+          directed: data.directed || !!data.to,
+          timestamp: data.timestamp,
+          type: 'message_sent',
+        }],
+        agentEvents: [...s.agentEvents, {
+          agent: data.from || '?',
+          text: data.to
+            ? `→ ${data.to}: ${(data.content || data.message || '').slice(0, 100)}`
+            : `[broadcast]: ${(data.content || data.message || '').slice(0, 100)}`,
+          to_agent: data.to,
+          directed: data.directed || !!data.to,
+          timestamp: data.timestamp,
+          type: 'message_sent',
+        }],
+      }));
+      break;
+
+    case 'INBOX_RECEIVED':
       setState(s => ({
         ...s,
         agentEvents: [...s.agentEvents, {
-          agent: data.agent || 'workflow',
-          text: data.preview || data.event_type || '',
+          agent: data.agent || '?',
+          text: `[inbox] from ${data.from || '?'}`,
           timestamp: data.timestamp,
+          type: 'message_received',
+        }],
+      }));
+      break;
+
+    case 'TASK_COMPLETED':
+      setState(s => {
+        const prog = { ...s.taskProgress };
+        prog.completed = (prog.completed || 0) + 1;
+        prog.in_progress = Math.max(0, (prog.in_progress || 0) - 1);
+        return {
+          ...s,
+          taskProgress: prog,
+          agentEvents: [...s.agentEvents, {
+            agent: data.agent || '?',
+            text: `[task ${data.task_id} completed]`,
+            timestamp: data.timestamp,
+            type: 'task_completed',
+          }],
+        };
+      });
+      break;
+
+    case 'ALL_TASKS_DONE':
+      setState(s => ({
+        ...s,
+        terminationReason: data.reason || 'all_completed',
+        agentEvents: [...s.agentEvents, {
+          agent: 'system',
+          text: `All tasks done: ${data.reason || 'completed'}`,
+          timestamp: data.timestamp,
+          type: 'finished',
         }],
       }));
       break;
@@ -260,4 +421,4 @@ function dispatchEvent(
   }
 }
 
-export type { OrchestratorStreamState, StepEvent, AgentEvent, ApprovalInfo };
+export type { OrchestratorStreamState, StepEvent, AgentEvent, ApprovalInfo, AgentStatus, TaskProgress };
