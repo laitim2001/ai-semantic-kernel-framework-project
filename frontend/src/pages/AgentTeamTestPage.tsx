@@ -225,6 +225,10 @@ export const AgentTeamTestPage: FC = () => {
     setMode(m);
     setTask(defaultTasks[m]);
     setResult(null);
+    // V2: Set default model per mode
+    if (provider === 'azure') {
+      setModel(m === 'subagent' ? 'gpt-5.4-nano' : 'gpt-5.4-mini');
+    }
   };
 
   // Initialize default task

@@ -95,14 +95,22 @@ def _build_team_agents_config(all_tools: list) -> list:
 def _create_client(provider: str, model: str, azure_endpoint: str = "",
                    azure_api_key: str = "", azure_api_version: str = "2024-12-01-preview",
                    azure_deployment: str = "", max_tokens: int = 1024):
-    """Create a ChatClient based on provider."""
+    """Create a ChatClient based on provider.
+
+    Deployment resolution priority:
+      1. azure_deployment (explicit UI override)
+      2. model (UI dropdown selection — e.g. gpt-5.4-mini)
+      3. AZURE_OPENAI_DEPLOYMENT_NAME env var (fallback)
+    """
     if provider == "azure":
         import os
         from agent_framework.azure import AzureOpenAIResponsesClient
         endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT", "")
         api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY", "")
-        deployment = azure_deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", model)
+        # V2: model param takes priority over env var
+        deployment = azure_deployment or model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini")
         version = azure_api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+        logger.info(f"Creating Azure client: deployment={deployment}, endpoint={endpoint[:40]}...")
         return AzureOpenAIResponsesClient(
             endpoint=endpoint,
             api_key=api_key,
@@ -121,7 +129,7 @@ def _create_client(provider: str, model: str, azure_endpoint: str = "",
 @router.post("/test-subagent")
 async def test_subagent(
     provider: str = Query("azure"),
-    model: str = Query("gpt-5.4-mini"),
+    model: str = Query("gpt-5.4-nano"),
     task: str = Query(
         "Check the status of three systems: "
         "1) APAC ETL Pipeline, 2) CRM Service, 3) Email Server. "
@@ -2464,7 +2472,7 @@ async def test_orchestrator_stream(
 @router.post("/test-subagent-stream")
 async def test_subagent_stream(
     provider: str = Query("azure"),
-    model: str = Query("gpt-5.4-mini"),
+    model: str = Query("gpt-5.4-nano"),
     task: str = Query(
         "Check the status of three systems: "
         "1) APAC ETL Pipeline, 2) CRM Service, 3) Email Server. "
