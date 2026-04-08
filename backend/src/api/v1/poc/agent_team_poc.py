@@ -20,13 +20,76 @@ router = APIRouter(prefix="/poc/agent-team", tags=["PoC: Agent Team"])
 
 
 def _get_claude_sdk_tools():
-    """Lazy-load Claude SDK tools."""
+    """Lazy-load Claude SDK tools (LLM-simulated, slower)."""
     try:
         from src.integrations.poc.claude_sdk_tools import create_claude_sdk_tools
         return create_claude_sdk_tools()
     except Exception as e:
         logger.warning(f"Claude SDK tools not available: {e}")
         return []
+
+
+def _get_real_tools():
+    """Lazy-load real diagnostic tools (subprocess, instant).
+
+    V2: Replaces SDK simulated tools for team mode — no extra LLM calls.
+    """
+    try:
+        from src.integrations.poc.real_tools import create_real_tools
+        return create_real_tools()
+    except Exception as e:
+        logger.warning(f"Real tools not available, falling back to SDK: {e}")
+        return _get_claude_sdk_tools()
+
+
+def _build_team_agents_config(all_tools: list) -> list:
+    """Build V2 parallel team agent configs with improved prompts.
+
+    Shared between test_team and test_team_stream to avoid duplication.
+    """
+    from src.integrations.poc.agent_work_loop import AgentConfig
+
+    _SHARED_WORKFLOW = (
+        "WORKFLOW — execute ALL steps in ONE turn, be CONCISE:\n"
+        "1. call check_my_inbox(agent_name=YOUR_NAME) for directed messages\n"
+        "2. call claim_next_task(agent_name=YOUR_NAME) to get your task\n"
+        "3. call run_diagnostic_command with REAL commands (ping, curl, dig, "
+        "docker ps, tail, df, etc.) to investigate\n"
+        "4. call report_task_result(task_id, result) with your SHORT findings\n"
+        "5. call send_team_message(from_agent=YOUR_NAME, message='...', "
+        "to_agent='TEAMMATE_NAME') to notify a SPECIFIC teammate about "
+        "findings relevant to THEIR work\n\n"
+        "IMPORTANT: Use send_team_message with to_agent= for DIRECTED messages. "
+        "Teammates: LogExpert, DBExpert, AppExpert.\n"
+        "Keep responses SHORT (under 200 words). Focus on actionable findings."
+    )
+
+    return [
+        AgentConfig(
+            name="LogExpert",
+            instructions=(
+                "You are a log analysis expert. " + _SHARED_WORKFLOW.replace("YOUR_NAME", "LogExpert")
+            ),
+            expertise="log analysis error pattern trace timestamp",
+            tools=all_tools,
+        ),
+        AgentConfig(
+            name="DBExpert",
+            instructions=(
+                "You are a database expert. " + _SHARED_WORKFLOW.replace("YOUR_NAME", "DBExpert")
+            ),
+            expertise="database sql schema query connection pool migration",
+            tools=all_tools,
+        ),
+        AgentConfig(
+            name="AppExpert",
+            instructions=(
+                "You are an infrastructure/network expert. " + _SHARED_WORKFLOW.replace("YOUR_NAME", "AppExpert")
+            ),
+            expertise="network infrastructure configuration scheduling connectivity",
+            tools=all_tools,
+        ),
+    ]
 
 
 def _create_client(provider: str, model: str, azure_endpoint: str = "",
@@ -317,8 +380,8 @@ async def test_team(
         shared = SharedTaskList()
         team_tools = create_team_tools(shared)
         lead_tools = create_lead_tools(shared)
-        sdk_tools = _get_claude_sdk_tools()
-        all_tools = team_tools + sdk_tools
+        real_tools = _get_real_tools()  # V2: real subprocess tools, not LLM-simulated
+        all_tools = team_tools + real_tools
 
         results["steps"].append({
             "step": "create_tools", "status": "ok",
@@ -330,59 +393,7 @@ async def test_team(
         client = _create_client(provider, model, azure_endpoint, azure_api_key,
                                 azure_api_version, azure_deployment, max_tokens=2048)
 
-        agents_config = [
-            AgentConfig(
-                name="LogExpert",
-                instructions=(
-                    "You are a log analysis expert on an IT investigation team.\n"
-                    "You work IN PARALLEL with other experts. Act independently.\n\n"
-                    "EACH WORK CYCLE:\n"
-                    "1. Check check_my_inbox for directed messages from teammates\n"
-                    "2. Use claim_next_task with your name 'LogExpert'\n"
-                    "3. Use deep_analysis or run_diagnostic_command to investigate\n"
-                    "4. Use report_task_result to submit findings\n"
-                    "5. If you find something relevant to another expert, use "
-                    "send_team_message with to_agent to notify them directly\n\n"
-                    "Be concise. Focus on log patterns, error traces, timestamps."
-                ),
-                expertise="log analysis error pattern trace timestamp",
-                tools=all_tools,
-            ),
-            AgentConfig(
-                name="DBExpert",
-                instructions=(
-                    "You are a database expert on an IT investigation team.\n"
-                    "You work IN PARALLEL with other experts. Act independently.\n\n"
-                    "EACH WORK CYCLE:\n"
-                    "1. Check check_my_inbox for directed messages from teammates\n"
-                    "2. Use claim_next_task with your name 'DBExpert'\n"
-                    "3. Use deep_analysis or run_diagnostic_command to investigate\n"
-                    "4. Use report_task_result to submit findings\n"
-                    "5. If you find something relevant to another expert, use "
-                    "send_team_message with to_agent to notify them directly\n\n"
-                    "Focus on schema changes, query performance, connection pools, data integrity."
-                ),
-                expertise="database sql schema query connection pool migration",
-                tools=all_tools,
-            ),
-            AgentConfig(
-                name="AppExpert",
-                instructions=(
-                    "You are an application infrastructure expert on an IT investigation team.\n"
-                    "You work IN PARALLEL with other experts. Act independently.\n\n"
-                    "EACH WORK CYCLE:\n"
-                    "1. Check check_my_inbox for directed messages from teammates\n"
-                    "2. Use claim_next_task with your name 'AppExpert'\n"
-                    "3. Use deep_analysis or run_diagnostic_command to investigate\n"
-                    "4. Use report_task_result to submit findings\n"
-                    "5. If you find something relevant to another expert, use "
-                    "send_team_message with to_agent to notify them directly\n\n"
-                    "Focus on network, infrastructure, configuration, scheduling."
-                ),
-                expertise="network infrastructure configuration scheduling connectivity",
-                tools=all_tools,
-            ),
-        ]
+        agents_config = _build_team_agents_config(all_tools)
 
         team_agent_names = [c.name for c in agents_config]
         results["steps"].append({
@@ -2696,66 +2707,14 @@ async def test_team_stream(
             shared = SharedTaskList()
             team_tools = create_team_tools(shared)
             lead_tools = create_lead_tools(shared)
-            sdk_tools = _get_claude_sdk_tools()
-            all_tools = team_tools + sdk_tools
+            real_tools = _get_real_tools()  # V2: real subprocess tools
+            all_tools = team_tools + real_tools
 
             # Step 2: Create client + agent configs
             client = _create_client(provider, model, azure_endpoint, azure_api_key,
                                     azure_api_version, azure_deployment, max_tokens=2048)
 
-            agents_config = [
-                AgentConfig(
-                    name="LogExpert",
-                    instructions=(
-                        "You are a log analysis expert on an IT investigation team.\n"
-                        "You work IN PARALLEL with other experts. Act independently.\n\n"
-                        "EACH WORK CYCLE:\n"
-                        "1. Check check_my_inbox for directed messages from teammates\n"
-                        "2. Use claim_next_task with your name 'LogExpert'\n"
-                        "3. Use deep_analysis or run_diagnostic_command to investigate\n"
-                        "4. Use report_task_result to submit findings\n"
-                        "5. If you find something relevant to another expert, use "
-                        "send_team_message with to_agent to notify them directly\n\n"
-                        "Be concise. Focus on log patterns, error traces, timestamps."
-                    ),
-                    expertise="log analysis error pattern trace timestamp",
-                    tools=all_tools,
-                ),
-                AgentConfig(
-                    name="DBExpert",
-                    instructions=(
-                        "You are a database expert on an IT investigation team.\n"
-                        "You work IN PARALLEL with other experts. Act independently.\n\n"
-                        "EACH WORK CYCLE:\n"
-                        "1. Check check_my_inbox for directed messages from teammates\n"
-                        "2. Use claim_next_task with your name 'DBExpert'\n"
-                        "3. Use deep_analysis or run_diagnostic_command to investigate\n"
-                        "4. Use report_task_result to submit findings\n"
-                        "5. If you find something relevant to another expert, use "
-                        "send_team_message with to_agent to notify them directly\n\n"
-                        "Focus on schema changes, query performance, connection pools, data integrity."
-                    ),
-                    expertise="database sql schema query connection pool migration",
-                    tools=all_tools,
-                ),
-                AgentConfig(
-                    name="AppExpert",
-                    instructions=(
-                        "You are an application infrastructure expert on an IT investigation team.\n"
-                        "You work IN PARALLEL with other experts. Act independently.\n\n"
-                        "EACH WORK CYCLE:\n"
-                        "1. Check check_my_inbox for directed messages from teammates\n"
-                        "2. Use claim_next_task with your name 'AppExpert'\n"
-                        "3. Use deep_analysis or run_diagnostic_command to investigate\n"
-                        "4. Use report_task_result to submit findings\n"
-                        "5. If you find something relevant to another expert, use "
-                        "send_team_message with to_agent to notify them directly\n\n"
-                        "Focus on network, infrastructure, configuration, scheduling."
-                    ),
-                    expertise="network infrastructure configuration scheduling connectivity",
-                    tools=all_tools,
-                ),
-            ]
+            agents_config = _build_team_agents_config(all_tools)
 
             team_agent_names = [c.name for c in agents_config]
 

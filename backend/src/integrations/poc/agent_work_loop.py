@@ -228,7 +228,7 @@ async def _agent_work_loop(
         await emitter.emit_event("SWARM_WORKER_START", {"agent": name})
 
     iteration = 0
-    max_iterations = 20  # safety: prevent infinite loops
+    max_iterations = 5  # V2: agents should finish in 1-2 iterations, 5 is safety cap
 
     while not shared.is_all_done() and iteration < max_iterations:
         iteration += 1

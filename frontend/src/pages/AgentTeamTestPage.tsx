@@ -649,15 +649,23 @@ export const AgentTeamTestPage: FC = () => {
                       }
                       return true;
                     })
-                    .map((evt: AgentEvent, i: number) => (
-                    <div key={i} className={`px-3 py-1 text-xs ${
+                    .map((evt: AgentEvent, i: number, arr) => {
+                      // Calculate relative time from first event
+                      const firstTs = arr[0]?.timestamp ? new Date(arr[0].timestamp).getTime() : 0;
+                      const evtTs = evt.timestamp ? new Date(evt.timestamp).getTime() : 0;
+                      const relSec = firstTs && evtTs ? ((evtTs - firstTs) / 1000).toFixed(1) : '';
+                      return (
+                    <div key={i} className={`px-3 py-1 text-xs flex items-start gap-1 ${
                       evt.type === 'start' ? 'bg-blue-50/50' :
                       evt.type === 'message_sent' ? 'bg-purple-50/30' :
                       evt.type === 'task_completed' ? 'bg-green-50/30' :
-                      evt.type === 'finished' ? 'bg-gray-100' :
-                      evt.type === 'response' ? '' : ''
+                      evt.type === 'finished' ? 'bg-gray-100' : ''
                     }`}>
-                      <span className={`font-medium ${
+                      {/* Timestamp — verifies parallelism */}
+                      {relSec && (
+                        <span className="text-[10px] text-gray-400 font-mono w-10 shrink-0 text-right">{relSec}s</span>
+                      )}
+                      <span className={`font-medium shrink-0 ${
                         evt.agent === 'system' ? 'text-gray-500' :
                         evt.type === 'message_sent' ? 'text-purple-700' :
                         'text-indigo-700'
@@ -668,10 +676,11 @@ export const AgentTeamTestPage: FC = () => {
                         {evt.type === 'message_received' && '📨 '}
                         {evt.type === 'finished' && '🏁 '}
                         [{evt.agent}]
-                      </span>{' '}
-                      <span className="text-gray-600">{evt.text}</span>
+                      </span>
+                      <span className="text-gray-600 break-words min-w-0">{evt.text}</span>
                     </div>
-                  ))}
+                      );
+                    })}
                 </div>
               </div>
             )}
