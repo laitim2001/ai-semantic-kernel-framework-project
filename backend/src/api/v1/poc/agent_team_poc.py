@@ -2489,9 +2489,15 @@ async def test_orchestrator_stream(
                         "delta": response_text[:2000],
                     })
 
+                # Mark step 7 complete
+                await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
+                    "step": "7_agent_execution", "status": "complete",
+                    "mode": selected_mode,
+                })
+
             except Exception as exec_err:
                 logger.error(f"Stream: Agent execution failed: {exec_err}")
-                await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
                     "step": "7_agent_execution", "status": "error",
                     "error": str(exec_err)[:300],
                 })
