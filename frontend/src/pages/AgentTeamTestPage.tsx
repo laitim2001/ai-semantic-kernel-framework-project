@@ -102,7 +102,8 @@ export const AgentTeamTestPage: FC = () => {
   const [provider, setProvider] = useState<Provider>('azure');
   const [model, setModel] = useState('gpt-5.4-mini');
   const [task, setTask] = useState('');
-  const [maxRounds, setMaxRounds] = useState(8);
+  const [maxRounds, setMaxRounds] = useState(8);  // kept for subagent/hybrid backward compat
+  const [teamTimeout, setTeamTimeout] = useState(120);  // V2: parallel team timeout (seconds)
   const [loading, setLoading] = useState(false);
   const [resumeLoading, setResumeLoading] = useState(false);
   const [resumeResult, setResumeResult] = useState<any>(null);
@@ -230,7 +231,7 @@ export const AgentTeamTestPage: FC = () => {
         model,
         task,
         user_id: 'user-chris',
-        ...(mode === 'team' ? { max_rounds: String(maxRounds) } : {}),
+        ...(mode === 'team' ? { timeout: String(teamTimeout) } : {}),
         ...(provider === 'azure'
           ? {
               azure_endpoint: azureEndpoint,
@@ -261,7 +262,7 @@ export const AgentTeamTestPage: FC = () => {
       provider,
       model,
       task,
-      ...(mode === 'team' ? { max_rounds: String(maxRounds) } : {}),
+      ...(mode === 'team' ? { timeout: String(teamTimeout) } : {}),
       ...(provider === 'azure'
         ? {
             azure_endpoint: azureEndpoint,
@@ -284,7 +285,7 @@ export const AgentTeamTestPage: FC = () => {
     }
 
     setLoading(false);
-  }, [mode, provider, model, task, maxRounds, azureEndpoint, azureKey, azureDeployment, fetchPinned, fetchExtracted, streamMode, startStream]);
+  }, [mode, provider, model, task, maxRounds, teamTimeout, azureEndpoint, azureKey, azureDeployment, fetchPinned, fetchExtracted, streamMode, startStream]);
 
   const handleResume = useCallback(async (checkpointId: string, type: 'reroute' | 'hitl_approve' | 'hitl_reject', overrideRoute?: string) => {
     setResumeLoading(true);
@@ -343,7 +344,7 @@ export const AgentTeamTestPage: FC = () => {
             <p className="text-[10px] text-gray-500 mt-2">
               {mode === 'orchestrator' && 'Full Orchestrator: memory + RAG + intent routing + mode decision + checkpoint'}
               {mode === 'subagent' && 'ConcurrentBuilder: 3 Agents parallel, independent, results aggregated'}
-              {mode === 'team' && 'GroupChatBuilder + SharedTaskList: Teammates claim tasks, communicate, collaborate'}
+              {mode === 'team' && 'V2 Parallel Engine: Agents work simultaneously, real-time communication, auto-stop on completion'}
               {mode === 'hybrid' && 'Orchestrator decides subagent or team mode via function calling'}
             </p>
           </Section>
@@ -410,8 +411,8 @@ export const AgentTeamTestPage: FC = () => {
             />
             {mode === 'team' && (
               <div className="mt-2">
-                <label className="text-xs text-gray-500">Max Rounds: {maxRounds}</label>
-                <input type="range" min="3" max="15" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} className="w-full" />
+                <label className="text-xs text-gray-500">Timeout: {teamTimeout}s (parallel agents auto-stop when tasks complete)</label>
+                <input type="range" min="30" max="300" step="10" value={teamTimeout} onChange={(e) => setTeamTimeout(Number(e.target.value))} className="w-full" />
               </div>
             )}
           </Section>
