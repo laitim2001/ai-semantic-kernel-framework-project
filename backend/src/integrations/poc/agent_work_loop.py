@@ -258,64 +258,46 @@ async def _agent_work_loop(
     cfg: AgentConfig,
     shared,
     emitter,
-    no_progress_timeout: float = 30.0,
+    shutdown_event: asyncio.Event,
     executor=None,
 ) -> str:
-    """Single agent's autonomous work loop — runs as independent asyncio.Task.
+    """CC-like persistent agent loop with 3-phase lifecycle.
 
-    Loop: check inbox → claim task → build context → LLM call → process result
-    Exit: shared.is_all_done() OR no_progress timeout
+    Mirrors CC's inProcessRunner.ts pattern:
+      Phase A: Active work — execute task or process inbox messages
+      Phase B: Idle — no work available, notify team
+      Phase C: Poll mailbox every 500ms — wait for messages or shutdown
+
+    Agent NEVER exits on its own. Only exits when:
+      - shutdown_event is set (by Lead after communication window)
+      - Safety: max 10 LLM turns to prevent runaway costs
     """
     name = cfg.name
     agent = cfg.agent
-    tools = cfg.tools
     final_output = ""
+    llm_turns = 0
+    max_llm_turns = 10  # safety cap on LLM calls, not on loop iterations
 
     if emitter:
         await emitter.emit_event("SWARM_WORKER_START", {"agent": name})
 
-    iteration = 0
-    max_iterations = 5  # safety cap: prevents infinite loops
+    while not shutdown_event.is_set():
+        # ── Phase A: Active Work ──────────────────────────────────
 
-    while iteration < max_iterations:
-        iteration += 1
-
-        # 1. Check inbox for directed messages
+        # A1. Check inbox for directed messages
         inbox_msgs = shared.get_inbox(name, unread_only=True)
 
-        # Exit condition: all tasks done AND no unread inbox messages
-        # This ensures agents process incoming messages even after tasks complete,
-        # enabling real bidirectional communication (not just one-way notifications)
-        if shared.is_all_done() and not inbox_msgs:
-            if iteration > 1:  # always do at least 1 iteration
-                break
-
-        # Emit INBOX_RECEIVED if there are directed messages
         if inbox_msgs and emitter:
             await emitter.emit_event("INBOX_RECEIVED", {
                 "agent": name,
-                "message_count": inbox_msgs.count("["),  # rough count
+                "message_count": inbox_msgs.count("["),
             })
 
-        # 2. Check if we have an in-progress task
+        # A2. Check for in-progress or claimable task
         current_task = shared.get_agent_current_task(name)
-
-        # 3. If no current task and no inbox, try to claim one
-        if not current_task and not inbox_msgs:
-            new_task = shared.claim_task(name)
-            if not new_task:
-                # Nothing to do — check if everyone's done
-                if shared.is_all_done():
-                    break
-                # Check no-progress timeout
-                if shared.seconds_since_last_progress() > no_progress_timeout:
-                    logger.warning(f"Agent {name}: no progress for {no_progress_timeout}s, exiting")
-                    break
-                await asyncio.sleep(0.5)
-                continue
-            current_task = new_task
-
-            if emitter:
+        if not current_task:
+            current_task = shared.claim_task(name)
+            if current_task and emitter:
                 await emitter.emit_event("SWARM_PROGRESS", {
                     "event_type": "task_claimed",
                     "agent": name,
@@ -323,42 +305,75 @@ async def _agent_work_loop(
                     "description": current_task.description[:100],
                 })
 
-        # 4. Build context
-        context = _build_agent_context(name, current_task, inbox_msgs, shared)
+        # A3. If we have work (task or inbox), execute LLM turn
+        if current_task or inbox_msgs:
+            if llm_turns >= max_llm_turns:
+                logger.warning(f"Agent {name}: max LLM turns ({max_llm_turns}) reached, entering idle")
+            else:
+                llm_turns += 1
+                context = _build_agent_context(name, current_task, inbox_msgs, shared)
+                msg_count_before = len(shared._messages)
 
-        # 5. Capture message count BEFORE agent.run (to detect new messages)
-        msg_count_before = len(shared._messages)
+                if emitter:
+                    await emitter.emit_event("AGENT_THINKING", {"agent": name})
 
-        # 6. Execute LLM turn (each agent in its own thread — true parallel)
+                result_text = await _execute_agent_turn(
+                    agent, context, emitter, name, executor=executor
+                )
+                final_output = result_text
+
+                await _process_agent_result(
+                    name, result_text, current_task, shared, emitter, msg_count_before
+                )
+
+                # Auto-complete task if still in_progress
+                if current_task and current_task.status.value == "in_progress":
+                    shared.complete_task(current_task.task_id, result_text[:2000])
+                    if emitter:
+                        await emitter.emit_event("TASK_COMPLETED", {
+                            "agent": name,
+                            "task_id": current_task.task_id,
+                        })
+
+                continue  # immediately check for more work (Phase A again)
+
+        # ── Phase B: Idle — no task, no inbox ─────────────────────
         if emitter:
-            await emitter.emit_event("AGENT_THINKING", {"agent": name})
+            await emitter.emit_event("SWARM_PROGRESS", {
+                "event_type": "agent_idle",
+                "agent": name,
+                "llm_turns": llm_turns,
+            })
 
-        result_text = await _execute_agent_turn(agent, context, emitter, name, executor=executor)
+        # ── Phase C: Poll mailbox every 500ms (CC pattern) ────────
+        while not shutdown_event.is_set():
+            await asyncio.sleep(0.5)
 
-        final_output = result_text
+            # Check for new directed messages
+            new_inbox = shared.get_inbox(name, unread_only=True)
+            if new_inbox:
+                logger.info(f"Agent {name}: received message during idle, resuming")
+                break  # back to Phase A
 
-        # 7. Process results + emit events (including TEAM_MESSAGE for new msgs)
-        await _process_agent_result(name, result_text, current_task, shared, emitter, msg_count_before)
+            # Check for new unclaimed tasks
+            new_task = shared.claim_task(name)
+            if new_task:
+                logger.info(f"Agent {name}: claimed new task during idle, resuming")
+                if emitter:
+                    await emitter.emit_event("SWARM_PROGRESS", {
+                        "event_type": "task_claimed",
+                        "agent": name,
+                        "task_id": new_task.task_id,
+                        "description": new_task.description[:100],
+                    })
+                break  # back to Phase A
 
-        # 8. If task was not completed by tool calls, auto-complete with LLM output
-        if current_task and current_task.status.value == "in_progress":
-            shared.complete_task(current_task.task_id, result_text[:2000])
-            if emitter:
-                await emitter.emit_event("TASK_COMPLETED", {
-                    "agent": name,
-                    "task_id": current_task.task_id,
-                })
-
-        # 9. Brief pause after task completion — let other agents' messages arrive
-        #    before next loop iteration checks inbox (enables bidirectional comms)
-        if shared.is_all_done():
-            await asyncio.sleep(1.0)  # wait for peer messages to land
-
+    # ── Shutdown ──────────────────────────────────────────────────
     if emitter:
         await emitter.emit_event("SWARM_WORKER_END", {
             "agent": name,
-            "status": "completed",
-            "iterations": iteration,
+            "status": "shutdown",
+            "llm_turns": llm_turns,
         })
 
     return final_output
@@ -377,35 +392,37 @@ async def run_parallel_team(
     lead_tools: list,
     emitter=None,
     timeout: float = 120.0,
-    no_progress_timeout: float = 30.0,
+    comm_window: float = 15.0,
 ) -> TeamResult:
-    """Run a team of agents in parallel with real-time communication.
+    """V3: Run agents in parallel with CC-like lifecycle management.
 
     Full flow:
-      Phase 0: TeamLead decomposes task → SharedTaskList populated
-      Phase 1: All agents run in parallel via asyncio.gather
-      Phase 2: Collect results
+      Phase 0: TeamLead decomposes task
+      Phase 1: Agents run in parallel (persistent loop + idle polling)
+      Phase 1.5: Communication window — agents stay alive 15s after all tasks done
+      Lead shutdown: signal all agents to exit
+      Phase 2: Lead Synthesis — unified report
 
     Args:
         task: User's original request
         context: Memory/knowledge context from orchestrator
         agents_config: List of AgentConfig for each worker agent
         shared: SharedTaskList instance (empty, populated by Phase 0)
-        client_factory: Callable that returns a NEW ChatClient instance.
-            Each agent gets its own client to avoid connection serialization.
+        client_factory: Callable → new ChatClient (independent per agent)
         lead_tools: Tools for TeamLead (decompose_and_assign_tasks)
         emitter: PipelineEventEmitter for SSE (optional)
         timeout: Total execution timeout (seconds)
-        no_progress_timeout: Per-agent no-progress timeout (seconds)
+        comm_window: Communication window after all tasks done (seconds)
     """
     t_start = time.time()
     agent_results: dict[str, str] = {}
     termination_reason = "all_done"
+    shutdown_event = asyncio.Event()
 
     if emitter:
         _patch_emitter(emitter)
 
-    # ── Phase 0: TeamLead decomposition (own client) ──
+    # ── Phase 0: TeamLead decomposition ──
     phase0_ms = 0
     try:
         lead_client = client_factory()
@@ -424,8 +441,7 @@ async def run_parallel_team(
             "phase0_duration_ms": phase0_ms,
         })
 
-    # ── Phase 1: Parallel agent execution ──
-    # Each agent gets its OWN client instance — prevents connection serialization
+    # ── Phase 1: Launch persistent agents ──
     from agent_framework import Agent
     import concurrent.futures
 
@@ -433,10 +449,7 @@ async def run_parallel_team(
         max_workers=len(agents_config) + 2,
         thread_name_prefix="agent-worker",
     )
-    logger.warning(
-        f"=== V2 PARALLEL ENGINE: {len(agents_config)} agents, "
-        f"ThreadPool({len(agents_config) + 2}), client_factory={client_factory.__name__ if hasattr(client_factory, '__name__') else 'lambda'} ==="
-    )
+    logger.info(f"=== V3 PARALLEL ENGINE: {len(agents_config)} agents, comm_window={comm_window}s ===")
 
     for cfg in agents_config:
         agent_client = client_factory()
@@ -446,60 +459,70 @@ async def run_parallel_team(
             instructions=cfg.instructions,
             tools=cfg.tools,
         )
-        logger.warning(f"Agent {cfg.name} created with INDEPENDENT client id={id(agent_client)}")
 
     agent_tasks = [
         asyncio.create_task(
-            _agent_work_loop(cfg, shared, emitter, no_progress_timeout, executor=_executor),
+            _agent_work_loop(cfg, shared, emitter, shutdown_event, executor=_executor),
             name=f"agent-{cfg.name}",
         )
         for cfg in agents_config
     ]
 
+    # ── Monitor: wait for all TASKS to complete (not agents) ──
     try:
-        results = await asyncio.wait_for(
-            asyncio.gather(*agent_tasks, return_exceptions=True),
-            timeout=timeout,
-        )
-        # Collect results
-        for cfg, result in zip(agents_config, results):
-            if isinstance(result, Exception):
-                agent_results[cfg.name] = f"ERROR: {result}"
-                logger.error(f"Agent {cfg.name} failed: {result}")
-            else:
-                agent_results[cfg.name] = str(result)
+        while not shared.is_all_done():
+            await asyncio.sleep(1.0)
+            elapsed = time.time() - t_start
+            if elapsed > timeout:
+                termination_reason = "timeout"
+                logger.warning(f"Team timed out after {timeout}s")
+                break
 
-    except asyncio.TimeoutError:
-        termination_reason = "timeout"
-        logger.warning(f"Team execution timed out after {timeout}s")
-        for t in agent_tasks:
-            if not t.done():
-                t.cancel()
-        # Collect whatever completed
-        for cfg, t in zip(agents_config, agent_tasks):
-            if t.done() and not t.cancelled():
-                try:
-                    agent_results[cfg.name] = str(t.result())
-                except Exception as e:
-                    agent_results[cfg.name] = f"ERROR: {e}"
-            else:
-                agent_results[cfg.name] = "CANCELLED: timeout"
+        # ── Phase 1.5: Communication Window ──
+        # Keep agents alive to process cross-agent messages (CC pattern)
+        if termination_reason == "all_done":
+            if emitter:
+                await emitter.emit_event("ALL_TASKS_DONE", {
+                    "reason": "all_done",
+                    "tasks_completed": len(shared._tasks),
+                    "tasks_total": len(shared._tasks),
+                })
+                await emitter.emit_event("SWARM_PROGRESS", {
+                    "event_type": "communication_window",
+                    "duration_s": comm_window,
+                })
 
-    # Check if no-progress was the cause
-    if termination_reason == "all_done" and not shared.is_all_done():
-        termination_reason = "no_progress"
+            logger.info(f"All tasks done. Communication window: {comm_window}s")
+            await asyncio.sleep(comm_window)
 
-    # Emit ALL_TASKS_DONE event
+    except Exception as e:
+        logger.error(f"Monitor loop error: {e}")
+        termination_reason = "error"
+
+    # ── Lead Shutdown: signal all agents to exit ──
     if emitter:
-        await emitter.emit_event("ALL_TASKS_DONE", {
-            "reason": termination_reason,
-            "tasks_completed": sum(
-                1 for t in shared._tasks.values() if t.status.value == "completed"
-            ),
-            "tasks_total": len(shared._tasks),
+        await emitter.emit_event("SWARM_PROGRESS", {
+            "event_type": "shutdown_signal",
         })
+    shutdown_event.set()
+    logger.info("Shutdown signal sent to all agents")
 
-    # ── Phase 2: Lead Synthesis — unified report from all agent findings ──
+    # Wait for agents to exit (with short timeout for cleanup)
+    done, pending = await asyncio.wait(agent_tasks, timeout=5.0)
+    for t in pending:
+        t.cancel()
+
+    # Collect results
+    for cfg, at in zip(agents_config, agent_tasks):
+        try:
+            if at.done() and not at.cancelled():
+                agent_results[cfg.name] = str(at.result())
+            else:
+                agent_results[cfg.name] = "CANCELLED: shutdown"
+        except Exception as e:
+            agent_results[cfg.name] = f"ERROR: {e}"
+
+    # ── Phase 2: Lead Synthesis ──
     synthesis = ""
     phase2_ms = 0
     if agent_results:
@@ -516,8 +539,7 @@ async def run_parallel_team(
             if output and not output.startswith("ERROR") and not output.startswith("CANCELLED")
         )
 
-        # Also include team messages for cross-agent communication context
-        team_msgs = shared.get_messages(last_n=20)
+        team_msgs = shared.get_messages(last_n=30)
 
         synthesis_prompt = (
             f"You are the TeamLead synthesizing findings from your expert team.\n\n"
@@ -554,7 +576,7 @@ async def run_parallel_team(
             logger.info(f"Phase 2 synthesis completed in {phase2_ms}ms")
         except Exception as e:
             logger.error(f"Phase 2 synthesis failed: {e}")
-            synthesis = findings  # fallback to raw concatenation
+            synthesis = findings
 
         if emitter:
             await emitter.emit_event("AGENT_THINKING", {
@@ -577,7 +599,6 @@ async def run_parallel_team(
             "tasks_total": len(shared._tasks),
         })
 
-    # Use synthesis as the primary result, keep individual results for detail
     result = TeamResult(
         shared_state=shared.to_dict(),
         agent_results=agent_results,

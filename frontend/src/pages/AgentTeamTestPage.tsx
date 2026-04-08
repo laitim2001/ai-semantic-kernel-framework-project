@@ -587,6 +587,8 @@ export const AgentTeamTestPage: FC = () => {
                       className={`rounded-lg p-2 text-xs border ${
                         agent.status === 'running'
                           ? 'bg-blue-50 border-blue-200'
+                          : agent.status === 'idle'
+                          ? 'bg-amber-50 border-amber-200'
                           : agent.status === 'completed'
                           ? 'bg-green-50 border-green-200'
                           : 'bg-gray-50 border-gray-200'
@@ -594,6 +596,7 @@ export const AgentTeamTestPage: FC = () => {
                     >
                       <div className="flex items-center gap-1 font-medium">
                         {agent.status === 'running' && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                        {agent.status === 'idle' && <span className="text-amber-500">⏳</span>}
                         {agent.status === 'completed' && <span className="text-green-600">✓</span>}
                         {agent.status === 'error' && <span className="text-red-600">✗</span>}
                         {agent.name}

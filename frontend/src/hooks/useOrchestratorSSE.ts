@@ -331,6 +331,23 @@ function dispatchEvent(
           };
         } else if (data.event_type === 'team_complete') {
           updates.terminationReason = data.termination_reason || '';
+        } else if (data.event_type === 'agent_idle') {
+          // V3: agent completed task, now polling for messages
+          if (data.agent) {
+            updates.agentStatuses = {
+              ...s.agentStatuses,
+              [data.agent]: {
+                ...s.agentStatuses[data.agent],
+                status: 'idle' as any,
+              },
+            };
+          }
+        } else if (data.event_type === 'communication_window') {
+          // V3: all tasks done, agents staying alive for cross-agent messaging
+          updates.terminationReason = `communication window (${data.duration_s || 15}s)`;
+        } else if (data.event_type === 'shutdown_signal') {
+          // V3: lead shutting down all agents
+          updates.terminationReason = 'shutdown';
         }
 
         return {
