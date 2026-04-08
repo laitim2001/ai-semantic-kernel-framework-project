@@ -54,8 +54,13 @@ class SharedTaskList:
 
     V2: Supports directed messaging (per-agent inboxes), unread tracking,
     required_expertise on tasks, and agent current-task lookup.
-    Threading.Lock retained for GroupChat backward compat; async callers
-    can safely use these from coroutines (single-thread asyncio).
+
+    Locking strategy (V2 parallel engine):
+      - Uses threading.Lock (NOT asyncio.Lock) because MAF Agent.run()
+        calls tools in ThreadPoolExecutor threads. threading.Lock is
+        safe across both threads and the main asyncio event loop.
+      - asyncio.Lock would NOT work here because tool functions run in
+        real OS threads (via asyncio.to_thread), not coroutines.
     """
 
     def __init__(self):

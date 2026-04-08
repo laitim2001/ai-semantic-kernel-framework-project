@@ -3098,105 +3098,66 @@ async def test_hybrid_stream(
                     await emitter.emit(SSEEventType.TEXT_DELTA, {"delta": "\n\n".join(f"## {r['agent']}\n{r['response']}" for r in _sub_responses), "source": "aggregated"})
 
             else:
-                # Team execution (same agents as test_team)
-                from agent_framework.orchestrations import GroupChatBuilder
+                # Team execution — V2 parallel engine
                 from src.integrations.poc.shared_task_list import SharedTaskList
-                from src.integrations.poc.team_tools import create_team_tools
+                from src.integrations.poc.team_tools import create_team_tools, create_lead_tools
+                from src.integrations.poc.agent_work_loop import (
+                    AgentConfig, run_parallel_team, _patch_emitter,
+                )
+
+                _patch_emitter(emitter)
 
                 shared = SharedTaskList()
-                shared.add_task("T1", "Analyze application logs for error patterns and root cause", priority=1)
-                shared.add_task("T2", "Check database schema changes in the last 7 days", priority=1)
-                shared.add_task("T3", "Verify network connectivity between relevant servers", priority=2)
-
                 team_tools = create_team_tools(shared)
-                all_tools = team_tools + sdk_tools
+                lead_tools = create_lead_tools(shared)
+                real_tools = _get_real_tools()
+                sdk_tools_team = _get_claude_sdk_tools()
+                all_tools = team_tools + real_tools + sdk_tools_team
 
-                team_defs = [
-                    ("LogExpert", (
-                        "You are a log analysis expert. Claim a task, investigate, report results, "
-                        "and share findings with the team. Be concise."
-                    )),
-                    ("DBExpert", (
-                        "You are a database expert. Claim a task, investigate, report results, "
-                        "and share findings with the team. Focus on schema and data."
-                    )),
-                    ("AppExpert", (
-                        "You are an infrastructure expert. Claim a task, investigate, report results, "
-                        "and share findings with the team. Focus on network and config."
-                    )),
-                ]
+                def make_team_client():
+                    return _create_client(provider, model, azure_endpoint, azure_api_key,
+                                          azure_api_version, azure_deployment, max_tokens=2048)
 
-                team_agent_names = []
-                team_agents = []
-                for name, instructions in team_defs:
-                    agent = Agent(client, name=name, instructions=instructions, tools=all_tools)
-                    team_agents.append(agent)
-                    team_agent_names.append(name)
-                    await emitter.emit(SSEEventType.SWARM_WORKER_START, {
-                        "agent": name, "status": "created",
-                    })
+                agents_config = _build_team_agents_config(all_tools)
+                team_agent_names = [c.name for c in agents_config]
+
+                for name in team_agent_names:
                     await sidechain.append_agent(AgentSidechainEntry(
                         user_id=user_id, session_id=_session_id, agent_name=name,
                         event_type="start", content={"task": task[:100]},
                     ))
 
-                round_counter = {"n": 0}
-                _participant_names = list(team_agent_names)
-
-                def select_next(messages: list) -> str:
-                    idx = round_counter["n"] % len(_participant_names)
-                    round_counter["n"] += 1
-                    return _participant_names[idx]
-
-                builder = GroupChatBuilder(
-                    participants=team_agents,
-                    selection_func=select_next,
-                    max_rounds=6,
-                )
-                workflow = builder.build()
-
-                initial_msg = (
-                    f"Team, we have an urgent investigation:\n{task}\n\n"
-                    f"Task list:\n{shared.get_status()}\n\n"
-                    "Claim a task, investigate, report results, share findings."
+                team_result = await run_parallel_team(
+                    task=task,
+                    context="",
+                    agents_config=agents_config,
+                    shared=shared,
+                    client_factory=make_team_client,
+                    lead_tools=lead_tools,
+                    emitter=emitter,
+                    timeout=120.0,
                 )
 
-                stream = workflow.run(message=initial_msg, stream=True, include_status_events=True)
-                _team_responses = []
-                async for event in stream:
-                    event_type_name = type(event).__name__
-                    _got = False
-                    if hasattr(event, "data") and event.data:
-                        data = event.data
-                        if hasattr(data, '__iter__') and not isinstance(data, str):
-                            for item in data:
-                                if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
-                                    resp = item.agent_response
-                                    text = ""
-                                    if hasattr(resp, 'text') and resp.text:
-                                        text = resp.text
-                                    elif hasattr(resp, 'messages') and resp.messages:
-                                        for m in resp.messages:
-                                            if hasattr(m, 'text') and m.text:
-                                                text += m.text
-                                    if text:
-                                        _got = True
-                                        await emitter.emit(SSEEventType.TEXT_DELTA, {
-                                            "agent": item.executor_id, "delta": text,
-                                        })
-                                        _team_responses.append({"agent": item.executor_id, "response": text})
-                                        await sidechain.append_agent(AgentSidechainEntry(
-                                            user_id=user_id, session_id=_session_id,
-                                            agent_name=item.executor_id,
-                                            event_type="complete",
-                                            content={"response_preview": text[:200]},
-                                        ))
-                    if not _got and event_type_name not in ("AgentExecutorResponse",):
-                        _p = str(event.data)[:500] if hasattr(event, "data") and event.data else ""
-                        if "object at 0x" not in _p:
-                            await emitter.emit(SSEEventType.SWARM_PROGRESS, {"event_type": event_type_name, "preview": _p})
-                if _team_responses:
-                    await emitter.emit(SSEEventType.TEXT_DELTA, {"delta": "\n\n".join(f"## {r['agent']}\n{r['response']}" for r in _team_responses), "source": "aggregated"})
+                for name in team_agent_names:
+                    output = team_result.agent_results.get(name, "")
+                    evt = "complete" if not output.startswith("ERROR") else "error"
+                    await sidechain.append_agent(AgentSidechainEntry(
+                        user_id=user_id, session_id=_session_id, agent_name=name,
+                        event_type=evt, content={"response_preview": output[:200]},
+                    ))
+
+                synthesis = getattr(team_result, "synthesis", "")
+                if synthesis:
+                    await emitter.emit(SSEEventType.TEXT_DELTA, {
+                        "delta": synthesis, "source": "synthesis", "agent": "TeamLead",
+                    })
+                else:
+                    parts = [f"## {n}\n{o}" for n, o in team_result.agent_results.items()
+                             if o and not o.startswith("ERROR")]
+                    if parts:
+                        await emitter.emit(SSEEventType.TEXT_DELTA, {
+                            "delta": "\n\n".join(parts), "source": "aggregated",
+                        })
 
             await sidechain.close()
 

@@ -220,8 +220,13 @@ async def _process_agent_result(
     current_task,
     shared,
     emitter,
+    msg_count_before: int = 0,
 ) -> None:
-    """Process an agent's LLM response — emit SSE events."""
+    """Process an agent's LLM response — emit SSE events.
+
+    Checks for new team messages added during agent.run() and emits
+    TEAM_MESSAGE SSE events for each.
+    """
     if emitter:
         # Emit the agent's response as a text delta
         await emitter.emit_event("TEXT_DELTA", {
@@ -235,6 +240,18 @@ async def _process_agent_result(
                 "agent": agent_name,
                 "task_id": current_task.task_id,
             })
+
+        # Emit TEAM_MESSAGE for any new messages added during this turn
+        all_msgs = shared._messages  # direct access for SSE emission
+        new_msgs = all_msgs[msg_count_before:]
+        for msg in new_msgs:
+            if msg.from_agent == agent_name:
+                await emitter.emit_event("TEAM_MESSAGE", {
+                    "from": msg.from_agent,
+                    "to": msg.to_agent,
+                    "content": msg.content[:200],
+                    "directed": msg.to_agent is not None,
+                })
 
 
 async def _agent_work_loop(
@@ -266,6 +283,13 @@ async def _agent_work_loop(
         # 1. Check inbox for directed messages
         inbox_msgs = shared.get_inbox(name, unread_only=True)
 
+        # Emit INBOX_RECEIVED if there are directed messages
+        if inbox_msgs and emitter:
+            await emitter.emit_event("INBOX_RECEIVED", {
+                "agent": name,
+                "message_count": inbox_msgs.count("["),  # rough count
+            })
+
         # 2. Check if we have an in-progress task
         current_task = shared.get_agent_current_task(name)
 
@@ -295,7 +319,10 @@ async def _agent_work_loop(
         # 4. Build context
         context = _build_agent_context(name, current_task, inbox_msgs, shared)
 
-        # 5. Execute LLM turn (each agent in its own thread — true parallel)
+        # 5. Capture message count BEFORE agent.run (to detect new messages)
+        msg_count_before = len(shared._messages)
+
+        # 6. Execute LLM turn (each agent in its own thread — true parallel)
         if emitter:
             await emitter.emit_event("AGENT_THINKING", {"agent": name})
 
@@ -303,8 +330,8 @@ async def _agent_work_loop(
 
         final_output = result_text
 
-        # 6. Process results + emit events
-        await _process_agent_result(name, result_text, current_task, shared, emitter)
+        # 7. Process results + emit events (including TEAM_MESSAGE for new msgs)
+        await _process_agent_result(name, result_text, current_task, shared, emitter, msg_count_before)
 
         # 7. If task was not completed by tool calls, auto-complete with LLM output
         if current_task and current_task.status.value == "in_progress":
@@ -449,6 +476,16 @@ async def run_parallel_team(
     # Check if no-progress was the cause
     if termination_reason == "all_done" and not shared.is_all_done():
         termination_reason = "no_progress"
+
+    # Emit ALL_TASKS_DONE event
+    if emitter:
+        await emitter.emit_event("ALL_TASKS_DONE", {
+            "reason": termination_reason,
+            "tasks_completed": sum(
+                1 for t in shared._tasks.values() if t.status.value == "completed"
+            ),
+            "tasks_total": len(shared._tasks),
+        })
 
     # ── Phase 2: Lead Synthesis — unified report from all agent findings ──
     synthesis = ""
