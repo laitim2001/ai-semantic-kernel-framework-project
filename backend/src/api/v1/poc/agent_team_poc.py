@@ -1988,7 +1988,7 @@ async def test_orchestrator_stream(
             await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
                 "step": "1_read_memory", "status": "complete",
                 "pinned_count": pinned_count, "budget_pct": budget_pct,
-                "preview": memory_text[:400],
+                "preview": memory_text,
             })
 
             # ── Step 2: SEARCH KNOWLEDGE (Qdrant) ──
@@ -2020,7 +2020,7 @@ async def test_orchestrator_stream(
             await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
                 "step": "2_search_knowledge", "status": "complete",
                 "results_count": search_results_count,
-                "preview": knowledge_text[:400],
+                "preview": knowledge_text,
             })
 
             # ── Step 3: ANALYZE INTENT (PatternMatcher + Router) ──
@@ -2411,7 +2411,7 @@ async def test_orchestrator_stream(
                                                         text += m.text
                                             if text:
                                                 await emitter.emit(SSEEventType.TEXT_DELTA, {
-                                                    "agent": item.executor_id, "delta": text[:500],
+                                                    "agent": item.executor_id, "delta": text,
                                                 })
                                 await emitter.emit(SSEEventType.SWARM_PROGRESS, {
                                     "event_type": event_type_name,
@@ -2460,7 +2460,7 @@ async def test_orchestrator_stream(
                                                         text += m.text
                                             if text:
                                                 await emitter.emit(SSEEventType.TEXT_DELTA, {
-                                                    "agent": item.executor_id, "delta": text[:500],
+                                                    "agent": item.executor_id, "delta": text,
                                                 })
                                 await emitter.emit(SSEEventType.SWARM_PROGRESS, {
                                     "event_type": event_type_name,
