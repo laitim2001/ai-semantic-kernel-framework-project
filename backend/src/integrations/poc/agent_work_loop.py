@@ -288,9 +288,13 @@ async def _agent_work_loop(
         inbox_msgs = shared.get_inbox(name, unread_only=True)
 
         if inbox_msgs and emitter:
+            # Extract sender names from inbox text for SSE
+            import re
+            senders = re.findall(r'\[(\w+) → you\]', inbox_msgs)
             await emitter.emit_event("INBOX_RECEIVED", {
                 "agent": name,
-                "message_count": inbox_msgs.count("["),
+                "from": ", ".join(senders) if senders else "teammate",
+                "message_count": len(senders) or 1,
             })
 
         # A2. Check for in-progress or claimable task
@@ -349,11 +353,11 @@ async def _agent_work_loop(
         while not shutdown_event.is_set():
             await asyncio.sleep(0.5)
 
-            # Check for new directed messages
-            new_inbox = shared.get_inbox(name, unread_only=True)
-            if new_inbox:
+            # Peek for new directed messages (without marking read — Phase A will read them)
+            has_unread = shared.get_inbox_count(name, unread_only=True) > 0
+            if has_unread:
                 logger.info(f"Agent {name}: received message during idle, resuming")
-                break  # back to Phase A
+                break  # back to Phase A (which will read + process them)
 
             # Check for new unclaimed tasks
             new_task = shared.claim_task(name)
