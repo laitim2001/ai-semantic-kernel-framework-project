@@ -35,6 +35,8 @@ import {
   Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useOrchestratorSSE } from '@/hooks/useOrchestratorSSE';
+import type { StepEvent, AgentEvent } from '@/hooks/useOrchestratorSSE';
 
 // =============================================================================
 // Types
@@ -105,6 +107,10 @@ export const AgentTeamTestPage: FC = () => {
   const [resumeLoading, setResumeLoading] = useState(false);
   const [resumeResult, setResumeResult] = useState<any>(null);
   const [result, setResult] = useState<any>(null);
+
+  // Streaming mode for orchestrator
+  const [streamMode, setStreamMode] = useState(true); // default ON for orchestrator
+  const { state: sseState, startStream, cancelStream } = useOrchestratorSSE();
 
   // Azure config — credentials loaded from server .env by default
   const [azureEndpoint, setAzureEndpoint] = useState('');
@@ -179,6 +185,14 @@ export const AgentTeamTestPage: FC = () => {
   // Load pinned + extracted on mount
   React.useEffect(() => { fetchPinned(); fetchExtracted(); }, []);
 
+  // Auto-refresh pinned + extracted when SSE stream completes
+  React.useEffect(() => {
+    if (sseState.phase === 'complete') {
+      fetchPinned();
+      setTimeout(() => { fetchExtracted(); }, 8000);
+    }
+  }, [sseState.phase, fetchPinned, fetchExtracted]);
+
   // Default tasks per mode
   const defaultTasks: Record<TestMode, string> = {
     subagent:
@@ -203,6 +217,28 @@ export const AgentTeamTestPage: FC = () => {
   }, []);
 
   const handleRun = useCallback(async () => {
+    // Streaming mode for orchestrator
+    if (mode === 'orchestrator' && streamMode) {
+      const params = new URLSearchParams({
+        provider,
+        model,
+        task,
+        user_id: 'user-chris',
+        ...(provider === 'azure'
+          ? {
+              azure_endpoint: azureEndpoint,
+              azure_api_key: azureKey,
+              azure_deployment: azureDeployment,
+              azure_api_version: '2025-03-01-preview',
+            }
+          : {}),
+      });
+      setResult(null); // clear old result
+      startStream(params);
+      return;
+    }
+
+    // Non-streaming (existing logic)
     setLoading(true);
     setResult(null);
 
@@ -241,7 +277,7 @@ export const AgentTeamTestPage: FC = () => {
     }
 
     setLoading(false);
-  }, [mode, provider, model, task, maxRounds, azureEndpoint, azureKey, azureDeployment, fetchPinned, fetchExtracted]);
+  }, [mode, provider, model, task, maxRounds, azureEndpoint, azureKey, azureDeployment, fetchPinned, fetchExtracted, streamMode, startStream]);
 
   const handleResume = useCallback(async (checkpointId: string, type: 'reroute' | 'hitl_approve' | 'hitl_reject', overrideRoute?: string) => {
     setResumeLoading(true);
@@ -304,6 +340,20 @@ export const AgentTeamTestPage: FC = () => {
               {mode === 'hybrid' && 'Orchestrator decides subagent or team mode via function calling'}
             </p>
           </Section>
+
+          {/* Stream Mode toggle (orchestrator only) */}
+          {mode === 'orchestrator' && (
+            <label className="flex items-center gap-2 px-3 py-1 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={streamMode}
+                onChange={(e) => setStreamMode(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <Zap className="w-3.5 h-3.5 text-yellow-500" />
+              Stream Mode (real-time events)
+            </label>
+          )}
 
           {/* Provider + Model */}
           <Section title="LLM Provider" icon={<Brain className="w-4 h-4 text-blue-600" />}>
@@ -372,22 +422,22 @@ export const AgentTeamTestPage: FC = () => {
           {/* Run Button */}
           <Button
             onClick={handleRun}
-            disabled={loading || !task.trim()}
+            disabled={loading || sseState.isStreaming || !task.trim()}
             className="w-full bg-purple-600 hover:bg-purple-700"
           >
-            {loading ? (
+            {loading || sseState.isStreaming ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
             ) : (
               <Play className="w-4 h-4 mr-2" />
             )}
-            Run {mode === 'orchestrator' ? 'Orchestrator' : mode === 'subagent' ? 'Subagent' : mode === 'team' ? 'Team' : 'Hybrid'} Test
+            {sseState.isStreaming ? 'Streaming...' : `Run ${mode === 'orchestrator' ? 'Orchestrator' : mode === 'subagent' ? 'Subagent' : mode === 'team' ? 'Team' : 'Hybrid'} Test`}
           </Button>
         </div>
       </div>
 
       {/* Right: Results */}
       <div className="flex-1 overflow-y-auto p-4">
-        {!result && !loading && (
+        {!result && !loading && sseState.phase === 'idle' && (
           <div className="flex items-center justify-center h-full text-gray-400">
             <div className="text-center">
               <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -403,6 +453,134 @@ export const AgentTeamTestPage: FC = () => {
               <p className="text-gray-600">Running {mode} test...</p>
               <p className="text-xs text-gray-400 mt-1">This may take 30-120 seconds</p>
             </div>
+          </div>
+        )}
+
+        {/* Streaming Results (SSE mode) */}
+        {(sseState.phase !== 'idle') && (
+          <div className="space-y-3 max-w-4xl">
+            {/* Phase indicator */}
+            <div className="flex items-center gap-2 text-sm font-medium">
+              {sseState.isStreaming && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
+              {sseState.phase === 'complete' && <CheckCircle className="w-4 h-4 text-green-600" />}
+              {sseState.phase === 'error' && <XCircle className="w-4 h-4 text-red-600" />}
+              {sseState.phase === 'pending_approval' && <ShieldCheck className="w-4 h-4 text-amber-600" />}
+              <span>
+                {sseState.phase === 'orchestrator' && 'Phase 1: Orchestrator Pipeline'}
+                {sseState.phase === 'agents' && `Phase 2: ${sseState.selectedMode} Execution`}
+                {sseState.phase === 'complete' && `Complete — ${sseState.selectedMode} mode (${sseState.metadata.total_ms || '?'}ms)`}
+                {sseState.phase === 'error' && `Error: ${sseState.error}`}
+                {sseState.phase === 'pending_approval' && 'HITL Approval Required'}
+              </span>
+              {sseState.isStreaming && (
+                <button onClick={cancelStream} className="ml-auto text-xs text-red-500 hover:text-red-700">Cancel</button>
+              )}
+            </div>
+
+            {/* Pipeline Steps */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="px-3 py-1.5 bg-gray-50 text-xs font-medium text-gray-500 border-b flex items-center gap-2">
+                <ListChecks className="w-3.5 h-3.5" />
+                Pipeline Steps ({sseState.steps.length})
+              </div>
+              <div className="divide-y">
+                {sseState.steps.map((step: StepEvent, i: number) => (
+                  <div key={i} className="px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      {step.status === 'running' && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />}
+                      {step.status === 'complete' && <CheckCircle className="w-3.5 h-3.5 text-green-500" />}
+                      {step.status === 'error' && <XCircle className="w-3.5 h-3.5 text-red-500" />}
+                      <span className="font-medium">{step.label || step.step}</span>
+                      {step.data?.duration_ms && (
+                        <span className="text-xs text-gray-400 ml-auto">{step.data.duration_ms}ms</span>
+                      )}
+                    </div>
+                    {/* Step details (expandable content) */}
+                    {step.status === 'complete' && step.data && (
+                      <div className="mt-1 ml-6 text-xs text-gray-500 space-y-0.5">
+                        {step.data.pinned_count !== undefined && (
+                          <div>Pinned: {step.data.pinned_count} | Budget: {step.data.budget_pct}%</div>
+                        )}
+                        {step.data.results_count !== undefined && (
+                          <div>Found {step.data.results_count} knowledge articles</div>
+                        )}
+                        {step.data.intent_category && (
+                          <div>Intent: {step.data.intent_category} | Risk: {step.data.risk_level} | Confidence: {step.data.confidence}</div>
+                        )}
+                        {step.data.selected_mode && (
+                          <div className="font-medium text-purple-600">&rarr; Route: {step.data.selected_mode}</div>
+                        )}
+                        {step.data.preview && (
+                          <details className="mt-1">
+                            <summary className="cursor-pointer text-blue-500 hover:text-blue-700">Show details</summary>
+                            <pre className="mt-1 p-2 bg-gray-50 rounded text-[11px] whitespace-pre-wrap max-h-40 overflow-auto">{step.data.preview}</pre>
+                          </details>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Agent Events (Phase 2) */}
+            {sseState.agentEvents.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="px-3 py-1.5 bg-indigo-50 text-xs font-medium text-indigo-600 border-b flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5" />
+                  Agent Execution ({sseState.agentEvents.length} events)
+                </div>
+                <div className="max-h-60 overflow-auto divide-y">
+                  {sseState.agentEvents.map((evt: AgentEvent, i: number) => (
+                    <div key={i} className="px-3 py-1.5 text-sm">
+                      <span className="font-medium text-indigo-700">[{evt.agent}]</span>{' '}
+                      <span className="text-gray-600">{evt.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* LLM Response (accumulated TEXT_DELTA) */}
+            {sseState.llmResponse && (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="px-3 py-1.5 bg-green-50 text-xs font-medium text-green-600 border-b flex items-center gap-2">
+                  <Brain className="w-3.5 h-3.5" />
+                  Orchestrator Response
+                  {sseState.isStreaming && <Loader2 className="w-3 h-3 animate-spin" />}
+                </div>
+                <div className="p-3 text-sm whitespace-pre-wrap max-h-80 overflow-auto">
+                  {sseState.llmResponse}
+                </div>
+              </div>
+            )}
+
+            {/* HITL Approval */}
+            {sseState.approval && (
+              <div className="border-2 border-amber-300 rounded-lg p-4 bg-amber-50">
+                <div className="flex items-center gap-2 text-amber-800 font-medium mb-2">
+                  <ShieldCheck className="w-5 h-5" />
+                  {sseState.approval.message}
+                </div>
+                <div className="text-sm text-amber-700 mb-3">
+                  Risk: {sseState.approval.risk_level} | Checkpoint: {sseState.approval.checkpoint_id.slice(0, 12)}...
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleResume(sseState.approval!.checkpoint_id, 'hitl_approve')}
+                    className="px-4 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleResume(sseState.approval!.checkpoint_id, 'hitl_reject')}
+                    className="px-4 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

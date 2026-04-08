@@ -1899,3 +1899,624 @@ async def poc_list_extracted_memories(
         }
     finally:
         await mgr.close()
+
+
+# ── Test E: Orchestrator Stream (SSE streaming version of test_orchestrator) ──
+
+@router.post("/test-orchestrator-stream")
+async def test_orchestrator_stream(
+    provider: str = Query("azure"),
+    model: str = Query("gpt-5.4-mini"),
+    task: str = Query(
+        "APAC Glider ETL Pipeline has been failing for 3 days, affecting financial reports.",
+    ),
+    user_id: str = Query("user-chris", description="User ID for memory lookup"),
+    azure_endpoint: str = Query(""),
+    azure_api_key: str = Query(""),
+    azure_api_version: str = Query("2025-03-01-preview"),
+    azure_deployment: str = Query(""),
+):
+    """Test E: SSE Streaming Orchestrator — same pipeline as test_orchestrator but streams events.
+
+    Returns a text/event-stream response. Each pipeline step emits SSE events
+    so the frontend can show real-time progress.
+    """
+    import asyncio
+    from starlette.responses import StreamingResponse
+    from src.integrations.hybrid.orchestrator.sse_events import PipelineEventEmitter, SSEEventType
+
+    emitter = PipelineEventEmitter()
+
+    async def _run_pipeline():
+        """Execute the orchestrator pipeline, emitting SSE events at each step."""
+        import os
+        import uuid as _uuid
+
+        session_id = f"{user_id}-{int(time.time())}-{str(_uuid.uuid4())[:8]}"
+        t0 = time.time()
+        transcript_count = 0
+        selected_mode = "team"  # default
+        response_text = ""
+        memory_text = "No memories"
+        knowledge_text = "No knowledge"
+        intent_text = "Unknown intent"
+
+        try:
+            from agent_framework import Agent, tool as maf_tool
+            from src.integrations.orchestration.transcript import TranscriptService, TranscriptEntry
+
+            redis_url = f"redis://:{os.getenv('REDIS_PASSWORD', 'redis_password')}@localhost:6379/0"
+            transcript = TranscriptService(redis_url=redis_url)
+            await transcript.initialize()
+
+            # Emit pipeline start
+            await emitter.emit(SSEEventType.PIPELINE_START, {
+                "session_id": session_id,
+                "user_id": user_id,
+                "task": task[:200],
+                "provider": provider,
+                "model": model,
+            })
+
+            # ── Step 1: READ MEMORY with Context Budget Manager ──
+            await emitter.emit(SSEEventType.TASK_DISPATCHED, {
+                "step": "1_read_memory", "status": "running", "label": "Reading Memory...",
+            })
+
+            assembled_context = None
+            mgr = None
+            try:
+                from src.integrations.memory.unified_memory import UnifiedMemoryManager
+                from src.integrations.memory.context_budget import ContextBudgetManager, AssembledContext
+
+                mgr = UnifiedMemoryManager()
+                await mgr.initialize()
+
+                budget_mgr = ContextBudgetManager()
+                assembled_context = await budget_mgr.assemble_context(
+                    user_id=user_id,
+                    query=task,
+                    memory_manager=mgr,
+                )
+                memory_text = assembled_context.to_prompt_text()
+            except Exception as e:
+                memory_text = f"Memory service unavailable: {str(e)[:100]}"
+
+            pinned_count = assembled_context.pinned_count if assembled_context else 0
+            budget_pct = assembled_context.budget_used_pct if assembled_context else 0
+
+            await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
+                "step": "1_read_memory", "status": "complete",
+                "pinned_count": pinned_count, "budget_pct": budget_pct,
+                "preview": memory_text[:400],
+            })
+
+            # ── Step 2: SEARCH KNOWLEDGE (Qdrant) ──
+            await emitter.emit(SSEEventType.TASK_DISPATCHED, {
+                "step": "2_search_knowledge", "status": "running", "label": "Searching Knowledge...",
+            })
+
+            search_results_count = 0
+            try:
+                from openai import AzureOpenAI
+                from qdrant_client import QdrantClient
+
+                az = AzureOpenAI(
+                    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                    api_version="2024-02-01",
+                )
+                q_emb = az.embeddings.create(input=task[:500], model="text-embedding-ada-002").data[0].embedding
+                qd = QdrantClient(host="localhost", port=6333)
+                search_results = qd.query_points("ipa_knowledge", query=q_emb, limit=3)
+                knowledge_text = "\n".join(
+                    f"[{r.payload.get('source', '?')}] (score={r.score:.2f}) {r.payload.get('content', '')}"
+                    for r in search_results.points
+                ) or "No knowledge found"
+                search_results_count = len(search_results.points)
+            except Exception as e:
+                knowledge_text = f"Knowledge search failed: {str(e)[:150]}"
+
+            await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
+                "step": "2_search_knowledge", "status": "complete",
+                "results_count": search_results_count,
+                "preview": knowledge_text[:400],
+            })
+
+            # ── Step 3: ANALYZE INTENT (PatternMatcher + Router) ──
+            await emitter.emit(SSEEventType.TASK_DISPATCHED, {
+                "step": "3_analyze_intent", "status": "running", "label": "Analyzing Intent...",
+            })
+
+            effective_risk = None
+            pattern_result = None
+            decision = None
+            is_high_risk = False
+            risk_str = ""
+            try:
+                from src.integrations.orchestration.intent_router.router import BusinessIntentRouter
+                from src.integrations.orchestration.intent_router.pattern_matcher.matcher import PatternMatcher
+                from src.integrations.orchestration.intent_router.semantic_router.router import SemanticRouter
+                from src.integrations.orchestration.intent_router.llm_classifier.classifier import LLMClassifier
+                from src.integrations.orchestration.intent_router.models import (
+                    PatternRule, ITIntentCategory, RiskLevel, WorkflowType,
+                )
+
+                matcher = PatternMatcher()
+                poc_rules = [
+                    PatternRule(
+                        id="poc-etl-failure", category=ITIntentCategory.INCIDENT,
+                        sub_intent="etl_failure", priority=90,
+                        patterns=[r"(?i)(etl|pipeline|data.?flow|batch.?job).*(fail|error|down|broken|stuck)"],
+                        risk_level=RiskLevel.HIGH, workflow_type=WorkflowType.MAGENTIC,
+                    ),
+                    PatternRule(
+                        id="poc-system-outage", category=ITIntentCategory.INCIDENT,
+                        sub_intent="system_outage", priority=95,
+                        patterns=[r"(?i)(server|service|system|database).*(down|fail|error|crash|outage|unavailable)"],
+                        risk_level=RiskLevel.CRITICAL, workflow_type=WorkflowType.MAGENTIC,
+                    ),
+                    PatternRule(
+                        id="poc-prod-restart", category=ITIntentCategory.CHANGE,
+                        sub_intent="production_restart", priority=95,
+                        patterns=[r"(?i)(restart|reboot|shutdown|stop|kill).*(prod|production|server|database|db)"],
+                        risk_level=RiskLevel.CRITICAL, workflow_type=WorkflowType.MAGENTIC,
+                    ),
+                    PatternRule(
+                        id="poc-destructive-op", category=ITIntentCategory.CHANGE,
+                        sub_intent="destructive_operation", priority=95,
+                        patterns=[r"(?i)(delete|drop|truncate|wipe|purge).*(data|table|database|prod|production)"],
+                        risk_level=RiskLevel.CRITICAL, workflow_type=WorkflowType.MAGENTIC,
+                    ),
+                    PatternRule(
+                        id="poc-deployment", category=ITIntentCategory.CHANGE,
+                        sub_intent="deployment", priority=50,
+                        patterns=[r"(?i)(deploy|release|rollout|update|upgrade|migration)"],
+                        risk_level=RiskLevel.MEDIUM, workflow_type=WorkflowType.SEQUENTIAL,
+                    ),
+                    PatternRule(
+                        id="poc-status-check", category=ITIntentCategory.QUERY,
+                        sub_intent="status_check", priority=30,
+                        patterns=[r"(?i)(check|status|monitor|health|ping|query|what.?is)"],
+                        risk_level=RiskLevel.LOW, workflow_type=WorkflowType.HANDOFF,
+                    ),
+                ]
+                for rule in poc_rules:
+                    try:
+                        matcher.add_rule(rule)
+                    except Exception as rule_err:
+                        logger.warning(f"Failed to add pattern rule {rule.id}: {rule_err}")
+
+                try:
+                    from src.integrations.llm.factory import LLMServiceFactory
+                    llm_svc = LLMServiceFactory.create(use_cache=True)
+                    llm_cls = LLMClassifier(llm_service=llm_svc)
+                except Exception:
+                    llm_cls = LLMClassifier()
+
+                router_inst = BusinessIntentRouter(
+                    pattern_matcher=matcher,
+                    semantic_router=SemanticRouter(),
+                    llm_classifier=llm_cls,
+                )
+
+                pattern_result = matcher.match(task)
+                pattern_risk = getattr(pattern_result, "risk_level", None)
+
+                decision = await router_inst.route(task)
+
+                effective_risk = decision.risk_level
+                if pattern_result.matched and pattern_risk:
+                    risk_order = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+                    pattern_rank = risk_order.get(str(pattern_risk).split(".")[-1], 0)
+                    decision_rank = risk_order.get(str(effective_risk).split(".")[-1], 0)
+                    if pattern_rank > decision_rank:
+                        effective_risk = pattern_risk
+                        logger.info(f"Pattern matcher elevated risk: {decision.risk_level} → {pattern_risk}")
+
+                intent_text = (
+                    f"Category: {decision.intent_category}, "
+                    f"Risk: {effective_risk}, "
+                    f"Confidence: {decision.confidence:.2f}, "
+                    f"Workflow: {decision.workflow_type}"
+                )
+            except Exception as e:
+                intent_text = f"Intent analysis partial: {str(e)[:100]}"
+
+            # Check HITL condition
+            risk_str = str(effective_risk) if effective_risk else ""
+            intent_category_str = str(getattr(decision, "intent_category", "")) if decision else ""
+            is_actionable = "CHANGE" in intent_category_str
+            is_high_risk = ("HIGH" in risk_str or "CRITICAL" in risk_str) and is_actionable
+
+            if is_high_risk:
+                # Create checkpoint + approval, then pause pipeline
+                try:
+                    from agent_framework import WorkflowCheckpoint
+                    from src.integrations.agent_framework.ipa_checkpoint_storage import IPACheckpointStorage
+                    from src.integrations.orchestration.approval import ApprovalService, ApprovalRequest as ApprovalReq
+
+                    cp_storage = IPACheckpointStorage(redis_url=redis_url, user_id=user_id)
+                    await cp_storage.initialize()
+                    cp3 = WorkflowCheckpoint(
+                        workflow_name=session_id,
+                        graph_signature_hash="orchestrator-7step-v1",
+                        state={
+                            "pipeline_step": 3,
+                            "memory_context": memory_text[:500],
+                            "knowledge_results": knowledge_text[:500],
+                            "intent_analysis": intent_text,
+                            "route_decision": None,
+                            "resume_reason": "hitl_pending",
+                        },
+                        messages={"orchestrator": [{"role": "user", "content": task}]},
+                        iteration_count=3,
+                        metadata={"user_id": user_id, "task_preview": task[:100], "risk": str(risk_str)},
+                    )
+                    step3_checkpoint_id = await cp_storage.save(cp3)
+                    await cp_storage.close()
+
+                    approval_svc = ApprovalService(redis_url=redis_url)
+                    await approval_svc.initialize()
+                    approval_req = ApprovalReq(
+                        user_id=user_id,
+                        session_id=session_id,
+                        checkpoint_id=step3_checkpoint_id,
+                        task=task[:200],
+                        risk_level=str(risk_str),
+                        intent_category=str(getattr(decision, "intent_category", "")),
+                        confidence=getattr(decision, "confidence", 0.0),
+                        context_summary={
+                            "memory": memory_text[:200],
+                            "knowledge": knowledge_text[:200],
+                            "intent": intent_text,
+                        },
+                    )
+                    approval_id = await approval_svc.create(approval_req)
+                    await approval_svc.close()
+
+                    await emitter.emit(SSEEventType.APPROVAL_REQUIRED, {
+                        "step": "3_hitl_pause",
+                        "approval_id": approval_id,
+                        "checkpoint_id": step3_checkpoint_id,
+                        "risk_level": str(risk_str),
+                        "message": "需要主管審批",
+                    })
+                    await transcript.close()
+                    await emitter.emit_complete(
+                        "Pipeline paused for HITL approval",
+                        {"status": "pending_approval", "session_id": session_id},
+                    )
+                    return  # End stream — pipeline paused
+
+                except Exception as cp_err:
+                    logger.warning(f"Stream: Step 3 HITL checkpoint/approval failed: {cp_err}")
+                    # Graceful degradation — continue pipeline
+
+            await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
+                "step": "3_analyze_intent", "status": "complete",
+                "intent_category": str(getattr(decision, "intent_category", "")) if decision else "",
+                "risk_level": str(effective_risk) if effective_risk else "",
+                "confidence": getattr(decision, "confidence", 0.0) if decision else 0.0,
+            })
+
+            # ── Step 4: LLM ROUTE DECISION ──
+            await emitter.emit(SSEEventType.AGENT_THINKING, {
+                "step": "4_route_decision", "status": "running", "label": "LLM Route Decision...",
+            })
+
+            client = _create_client(
+                provider, model, azure_endpoint, azure_api_key,
+                azure_api_version, azure_deployment, max_tokens=2048,
+            )
+
+            @maf_tool(name="select_route", description=(
+                "Select the execution route for this task. Options: "
+                "'direct_answer' (simple Q&A), 'subagent' (parallel independent), "
+                "'team' (expert collaboration), 'swarm' (deep Manager analysis), "
+                "'workflow' (structured process)."
+            ))
+            def select_route(route: str, reasoning: str) -> str:
+                """Select execution route with reasoning."""
+                return f"Route: {route}. Reason: {reasoning}"
+
+            orchestrator = Agent(
+                client,
+                name="Orchestrator",
+                instructions=(
+                    "You are an IT Operations Orchestrator. Based on the context below, "
+                    "call select_route to choose the best execution mode.\n\n"
+                    f"## User Request\n{task}\n\n"
+                    f"## Memory Context (structured, token-budgeted)\n{memory_text}\n\n"
+                    f"## Knowledge Base\n{knowledge_text}\n\n"
+                    f"## Intent Analysis\n{intent_text}\n\n"
+                    "Choose ONE route:\n"
+                    "- direct_answer: simple questions, low risk\n"
+                    "- subagent: independent parallel checks (e.g., check 3 systems)\n"
+                    "- team: complex investigation needing expert collaboration\n"
+                    "- swarm: critical incidents needing deep Manager-driven analysis\n"
+                    "- workflow: structured processes (deploy, change management)\n\n"
+                    "Call select_route with your choice and reasoning."
+                ),
+                tools=[select_route],
+            )
+
+            t1 = time.time()
+            response = await orchestrator.run(task)
+            decision_time = round((time.time() - t1) * 1000)
+
+            response_text = ""
+            if hasattr(response, "text") and response.text:
+                response_text = response.text
+            elif hasattr(response, "messages") and response.messages:
+                for msg in response.messages:
+                    if hasattr(msg, "text") and msg.text:
+                        response_text += msg.text
+
+            # Extract selected route
+            selected_mode = "team"  # default
+            for keyword in ["direct_answer", "subagent", "team", "swarm", "workflow"]:
+                if keyword in response_text.lower():
+                    selected_mode = keyword
+                    break
+
+            await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
+                "step": "4_route_decision", "status": "complete",
+                "selected_mode": selected_mode,
+                "reasoning": response_text[:500],
+                "duration_ms": decision_time,
+            })
+
+            # ── Step 5: SAVE CHECKPOINT ──
+            await emitter.emit(SSEEventType.TASK_DISPATCHED, {
+                "step": "5_checkpoint", "status": "running",
+            })
+
+            step4_checkpoint_id = None
+            try:
+                from agent_framework import WorkflowCheckpoint
+                from src.integrations.agent_framework.ipa_checkpoint_storage import IPACheckpointStorage
+
+                cp_storage4 = IPACheckpointStorage(redis_url=redis_url, user_id=user_id)
+                await cp_storage4.initialize()
+
+                cp4 = WorkflowCheckpoint(
+                    workflow_name=session_id,
+                    graph_signature_hash="orchestrator-7step-v1",
+                    state={
+                        "pipeline_step": 4,
+                        "memory_context": memory_text[:500],
+                        "knowledge_results": knowledge_text[:500],
+                        "intent_analysis": intent_text,
+                        "route_decision": selected_mode,
+                        "resume_reason": None,
+                        "subagent_states": {},
+                    },
+                    messages={
+                        "orchestrator": [
+                            {"role": "user", "content": task},
+                            {"role": "assistant", "content": response_text[:500] if response_text else ""},
+                        ]
+                    },
+                    iteration_count=4,
+                    metadata={
+                        "user_id": user_id,
+                        "task_preview": task[:100],
+                        "route": selected_mode,
+                        "source": "poc-orchestrator-stream",
+                        "session_id": session_id,
+                    },
+                )
+                step4_checkpoint_id = await cp_storage4.save(cp4)
+                await cp_storage4.close()
+            except Exception as cp4_err:
+                logger.error(f"Stream: Step 4 checkpoint failed: {cp4_err}")
+
+            await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
+                "step": "5_checkpoint", "status": "complete",
+                "checkpoint_id": step4_checkpoint_id,
+            })
+
+            # ── Step 6: MEMORY EXTRACTION (async background) ──
+            await emitter.emit(SSEEventType.TASK_DISPATCHED, {
+                "step": "6_extraction", "status": "running",
+            })
+
+            try:
+                from src.integrations.memory.extraction import MemoryExtractionService
+                from src.integrations.memory.consolidation import MemoryConsolidationService
+
+                if mgr is None or not mgr._initialized:
+                    from src.integrations.memory.unified_memory import UnifiedMemoryManager as _UMM
+                    mgr2 = _UMM()
+                    await mgr2.initialize()
+                else:
+                    mgr2 = mgr
+
+                extraction_svc = MemoryExtractionService(mgr2)
+                asyncio.create_task(extraction_svc.extract_and_store(
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_message=task,
+                    assistant_response=response_text[:2000],
+                    pipeline_context={
+                        "route_decision": selected_mode,
+                        "risk_level": risk_str,
+                        "intent_category": str(getattr(decision, "intent_category", "")) if decision else "",
+                    },
+                ))
+
+                consolidation_svc = MemoryConsolidationService(mgr2)
+                should_consolidate = await consolidation_svc.increment_and_check(user_id)
+                if should_consolidate:
+                    asyncio.create_task(consolidation_svc.run_consolidation(user_id))
+            except Exception as mem_err:
+                logger.error(f"Stream: Memory extraction setup failed: {mem_err}")
+
+            await emitter.emit(SSEEventType.ROUTING_COMPLETE, {
+                "step": "6_extraction", "status": "complete", "note": "async scheduled",
+            })
+
+            # ── Phase 2: Agent Execution ──
+            await emitter.emit(SSEEventType.TASK_DISPATCHED, {
+                "step": "7_agent_execution", "status": "running",
+                "mode": selected_mode, "label": f"Executing {selected_mode} mode...",
+            })
+
+            try:
+                if selected_mode in ("subagent", "team"):
+                    if selected_mode == "subagent":
+                        from agent_framework.orchestrations import ConcurrentBuilder
+
+                        systems = ["APAC ETL Pipeline", "CRM Service", "Email Server"]
+                        sdk_tools = _get_claude_sdk_tools()
+
+                        builder = ConcurrentBuilder()
+                        for sys_name in systems:
+                            agent = Agent(
+                                client,
+                                name=f"{sys_name.replace(' ', '-')}-Checker",
+                                instructions=(
+                                    f"You are a system health checker for {sys_name}. "
+                                    f"Check its status based on: {task}\n\n"
+                                    f"Context:\n{memory_text[:300]}\n{knowledge_text[:300]}"
+                                ),
+                                tools=sdk_tools,
+                            )
+                            builder.add(agent)
+
+                        workflow = builder.build()
+                        stream = workflow.run(message=task, stream=True, include_status_events=True)
+                        async for event in stream:
+                            event_type_name = type(event).__name__
+                            if hasattr(event, "data") and event.data:
+                                data = event.data
+                                if hasattr(data, '__iter__') and not isinstance(data, str):
+                                    for item in data:
+                                        if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
+                                            resp = item.agent_response
+                                            text = ""
+                                            if hasattr(resp, 'text') and resp.text:
+                                                text = resp.text
+                                            elif hasattr(resp, 'messages') and resp.messages:
+                                                for m in resp.messages:
+                                                    if hasattr(m, 'text') and m.text:
+                                                        text += m.text
+                                            if text:
+                                                await emitter.emit(SSEEventType.TEXT_DELTA, {
+                                                    "agent": item.executor_id, "delta": text[:500],
+                                                })
+                                await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                                    "event_type": event_type_name,
+                                    "preview": str(event.data)[:200] if event.data else "",
+                                })
+
+                    else:  # team
+                        from agent_framework.orchestrations import GroupChatBuilder
+
+                        sdk_tools = _get_claude_sdk_tools()
+                        roles = [
+                            ("Incident-Lead", "You lead incident investigation. Coordinate findings."),
+                            ("System-Analyst", "You analyze system logs and metrics for root cause."),
+                            ("Comms-Lead", "You draft status updates and stakeholder communications."),
+                        ]
+
+                        builder = GroupChatBuilder()
+                        for name, desc in roles:
+                            agent = Agent(
+                                client,
+                                name=name,
+                                instructions=(
+                                    f"{desc}\n\nTask: {task}\n\n"
+                                    f"Context:\n{memory_text[:300]}\n{knowledge_text[:300]}"
+                                ),
+                                tools=sdk_tools,
+                            )
+                            builder.add(agent)
+
+                        workflow = builder.build()
+                        stream = workflow.run(message=task, stream=True, include_status_events=True)
+                        async for event in stream:
+                            event_type_name = type(event).__name__
+                            if hasattr(event, "data") and event.data:
+                                data = event.data
+                                if hasattr(data, '__iter__') and not isinstance(data, str):
+                                    for item in data:
+                                        if hasattr(item, 'executor_id') and hasattr(item, 'agent_response'):
+                                            resp = item.agent_response
+                                            text = ""
+                                            if hasattr(resp, 'text') and resp.text:
+                                                text = resp.text
+                                            elif hasattr(resp, 'messages') and resp.messages:
+                                                for m in resp.messages:
+                                                    if hasattr(m, 'text') and m.text:
+                                                        text += m.text
+                                            if text:
+                                                await emitter.emit(SSEEventType.TEXT_DELTA, {
+                                                    "agent": item.executor_id, "delta": text[:500],
+                                                })
+                                await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                                    "event_type": event_type_name,
+                                    "preview": str(event.data)[:200] if event.data else "",
+                                })
+
+                elif selected_mode == "direct_answer":
+                    direct_agent = Agent(
+                        client,
+                        name="DirectAnswer",
+                        instructions=(
+                            f"Answer directly: {task}\n\n"
+                            f"Context:\n{memory_text}\n{knowledge_text}"
+                        ),
+                    )
+                    direct_response = await direct_agent.run(task)
+                    resp_text = ""
+                    if hasattr(direct_response, "text") and direct_response.text:
+                        resp_text = direct_response.text
+                    elif hasattr(direct_response, "messages") and direct_response.messages:
+                        for m in direct_response.messages:
+                            if hasattr(m, "text") and m.text:
+                                resp_text += m.text
+                    # Emit in chunks to simulate streaming
+                    for i in range(0, len(resp_text), 100):
+                        await emitter.emit(SSEEventType.TEXT_DELTA, {
+                            "delta": resp_text[i:i + 100],
+                        })
+
+                else:
+                    # swarm/workflow — emit the route decision response as content
+                    await emitter.emit(SSEEventType.TEXT_DELTA, {
+                        "delta": response_text[:2000],
+                    })
+
+            except Exception as exec_err:
+                logger.error(f"Stream: Agent execution failed: {exec_err}")
+                await emitter.emit(SSEEventType.SWARM_PROGRESS, {
+                    "step": "7_agent_execution", "status": "error",
+                    "error": str(exec_err)[:300],
+                })
+
+            # ── Final: Pipeline Complete ──
+            transcript_count = await transcript.count(user_id, session_id)
+            await transcript.close()
+
+            total_time = round((time.time() - t0) * 1000)
+            await emitter.emit_complete("Pipeline complete", {
+                "total_ms": total_time,
+                "route": selected_mode,
+                "session_id": session_id,
+                "transcript_count": transcript_count,
+            })
+
+        except Exception as e:
+            logger.error(f"Stream pipeline error: {e}\n{traceback.format_exc()[-500:]}")
+            await emitter.emit_error(f"Pipeline failed: {str(e)[:300]}")
+
+    # Launch pipeline as background task; return SSE stream immediately
+    asyncio.create_task(_run_pipeline())
+
+    return StreamingResponse(
+        emitter.stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
