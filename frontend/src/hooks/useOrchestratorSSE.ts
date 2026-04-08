@@ -180,17 +180,31 @@ function dispatchEvent(
       break;
 
     case 'TASK_DISPATCHED':
-      setState(s => ({
-        ...s,
-        phase: data.step?.startsWith('7_') ? 'agents' : 'orchestrator',
-        steps: [...s.steps, {
-          step: data.step || '',
-          status: 'running',
-          label: data.label || data.step,
-          data,
-          timestamp: data.timestamp,
-        }],
-      }));
+      setState(s => {
+        // If status=complete, update existing step instead of adding new one
+        if (data.status === 'complete' || data.status === 'error') {
+          const steps = [...s.steps];
+          let idx = -1;
+          for (let i = steps.length - 1; i >= 0; i--) {
+            if (steps[i].step === data.step) { idx = i; break; }
+          }
+          if (idx >= 0) {
+            steps[idx] = { ...steps[idx], status: data.status, data: { ...steps[idx].data, ...data } };
+            return { ...s, steps };
+          }
+        }
+        return {
+          ...s,
+          phase: data.step?.startsWith('7_') ? 'agents' : 'orchestrator',
+          steps: [...s.steps, {
+            step: data.step || '',
+            status: data.status || 'running',
+            label: data.label || data.step,
+            data,
+            timestamp: data.timestamp,
+          }],
+        };
+      });
       break;
 
     case 'ROUTING_COMPLETE':

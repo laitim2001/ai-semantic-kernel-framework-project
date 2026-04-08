@@ -450,6 +450,71 @@ async def run_parallel_team(
     if termination_reason == "all_done" and not shared.is_all_done():
         termination_reason = "no_progress"
 
+    # ── Phase 2: Lead Synthesis — unified report from all agent findings ──
+    synthesis = ""
+    phase2_ms = 0
+    if agent_results:
+        if emitter:
+            await emitter.emit_event("AGENT_THINKING", {
+                "agent": "TeamLead",
+                "step": "synthesis",
+                "status": "running",
+            })
+
+        findings = "\n\n".join(
+            f"## {name}\n{output[:2000]}"
+            for name, output in agent_results.items()
+            if output and not output.startswith("ERROR") and not output.startswith("CANCELLED")
+        )
+
+        # Also include team messages for cross-agent communication context
+        team_msgs = shared.get_messages(last_n=20)
+
+        synthesis_prompt = (
+            f"You are the TeamLead synthesizing findings from your expert team.\n\n"
+            f"ORIGINAL TASK:\n{task}\n\n"
+            f"TEAM FINDINGS:\n{findings}\n\n"
+        )
+        if team_msgs and "No team messages" not in team_msgs:
+            synthesis_prompt += f"TEAM COMMUNICATION LOG:\n{team_msgs}\n\n"
+
+        synthesis_prompt += (
+            "Produce a UNIFIED ANALYSIS REPORT that:\n"
+            "1. Summarizes the key findings from each expert\n"
+            "2. Identifies cross-cutting patterns and correlations between findings\n"
+            "3. Provides a prioritized root cause assessment\n"
+            "4. Gives specific, actionable next steps\n"
+            "5. Highlights any gaps or areas needing further investigation\n\n"
+            "Write as a professional incident report, not a collection of individual reports."
+        )
+
+        t2 = time.time()
+        try:
+            synthesis_client = client_factory()
+            from agent_framework import Agent as _Agent
+            synthesis_agent = _Agent(
+                synthesis_client,
+                name="TeamLead-Synthesis",
+                instructions="You produce clear, actionable synthesis reports from multi-expert investigations.",
+            )
+            synthesis_resp = await asyncio.to_thread(
+                _sync_agent_run, synthesis_agent, synthesis_prompt
+            )
+            synthesis = str(getattr(synthesis_resp, "content", synthesis_resp))
+            phase2_ms = round((time.time() - t2) * 1000)
+            logger.info(f"Phase 2 synthesis completed in {phase2_ms}ms")
+        except Exception as e:
+            logger.error(f"Phase 2 synthesis failed: {e}")
+            synthesis = findings  # fallback to raw concatenation
+
+        if emitter:
+            await emitter.emit_event("AGENT_THINKING", {
+                "agent": "TeamLead",
+                "step": "synthesis",
+                "status": "complete",
+                "duration_ms": phase2_ms,
+            })
+
     total_ms = round((time.time() - t_start) * 1000)
 
     if emitter:
@@ -463,13 +528,17 @@ async def run_parallel_team(
             "tasks_total": len(shared._tasks),
         })
 
-    return TeamResult(
+    # Use synthesis as the primary result, keep individual results for detail
+    result = TeamResult(
         shared_state=shared.to_dict(),
         agent_results=agent_results,
         termination_reason=termination_reason,
         total_duration_ms=total_ms,
         phase0_duration_ms=phase0_ms,
     )
+    result.synthesis = synthesis  # type: ignore[attr-defined]
+    result.phase2_duration_ms = phase2_ms  # type: ignore[attr-defined]
+    return result
 
 
 # ---------------------------------------------------------------------------

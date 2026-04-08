@@ -2864,16 +2864,25 @@ async def test_team_stream(
 
             await sidechain.close()
 
-            # Consolidated response
-            summary_parts = []
-            for name, output in team_result.agent_results.items():
-                if output and not output.startswith("ERROR") and not output.startswith("CANCELLED"):
-                    summary_parts.append(f"## {name}\n{output}")
-            if summary_parts:
+            # Phase 2 synthesis — unified report from TeamLead
+            synthesis = getattr(team_result, "synthesis", "")
+            if synthesis:
                 await emitter.emit(SSEEventType.TEXT_DELTA, {
-                    "delta": "\n\n".join(summary_parts),
-                    "source": "aggregated",
+                    "delta": synthesis,
+                    "source": "synthesis",
+                    "agent": "TeamLead",
                 })
+            else:
+                # Fallback to raw concatenation
+                summary_parts = []
+                for name, output in team_result.agent_results.items():
+                    if output and not output.startswith("ERROR") and not output.startswith("CANCELLED"):
+                        summary_parts.append(f"## {name}\n{output}")
+                if summary_parts:
+                    await emitter.emit(SSEEventType.TEXT_DELTA, {
+                        "delta": "\n\n".join(summary_parts),
+                        "source": "aggregated",
+                    })
 
             total_time = round((time.time() - t0) * 1000)
             task_state = shared.to_dict()
