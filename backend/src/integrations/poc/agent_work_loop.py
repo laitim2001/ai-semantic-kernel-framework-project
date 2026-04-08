@@ -143,15 +143,27 @@ def _sync_agent_run(agent, context: str):
         loop.close()
 
 
-async def _execute_agent_turn(agent, context: str, emitter, agent_name: str) -> str:
+async def _execute_agent_turn(agent, context: str, emitter, agent_name: str,
+                              executor=None) -> str:
     """Execute a single LLM turn for an agent (with tool calls).
 
-    Uses asyncio.to_thread() for true parallelism — each agent.run()
-    gets its own thread + event loop, so 3 agents execute simultaneously.
+    Uses explicit ThreadPoolExecutor for true parallelism — each agent.run()
+    gets its own thread + event loop, preventing connection serialization.
     """
     try:
-        response = await asyncio.to_thread(_sync_agent_run, agent, context)
-        # Extract text content from response
+        loop = asyncio.get_running_loop()
+        t0 = time.time()
+        logger.warning(f"Agent {agent_name} submitting to thread pool...")
+
+        if executor:
+            future = executor.submit(_sync_agent_run, agent, context)
+            response = await asyncio.wrap_future(future)
+        else:
+            response = await asyncio.to_thread(_sync_agent_run, agent, context)
+
+        duration = round((time.time() - t0) * 1000)
+        logger.warning(f"Agent {agent_name} LLM turn completed in {duration}ms")
+
         if hasattr(response, "content"):
             return str(response.content)
         return str(response)
@@ -227,8 +239,8 @@ async def _agent_work_loop(
     cfg: AgentConfig,
     shared,
     emitter,
-    llm_semaphore: asyncio.Semaphore,
     no_progress_timeout: float = 30.0,
+    executor=None,
 ) -> str:
     """Single agent's autonomous work loop — runs as independent asyncio.Task.
 
@@ -285,7 +297,7 @@ async def _agent_work_loop(
         if emitter:
             await emitter.emit_event("AGENT_THINKING", {"agent": name})
 
-        result_text = await _execute_agent_turn(agent, context, emitter, name)
+        result_text = await _execute_agent_turn(agent, context, emitter, name, executor=executor)
 
         final_output = result_text
 
@@ -374,20 +386,30 @@ async def run_parallel_team(
     # ── Phase 1: Parallel agent execution ──
     # Each agent gets its OWN client instance — prevents connection serialization
     from agent_framework import Agent
+    import concurrent.futures
+
+    _executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=len(agents_config) + 2,
+        thread_name_prefix="agent-worker",
+    )
+    logger.warning(
+        f"=== V2 PARALLEL ENGINE: {len(agents_config)} agents, "
+        f"ThreadPool({len(agents_config) + 2}), client_factory={client_factory.__name__ if hasattr(client_factory, '__name__') else 'lambda'} ==="
+    )
 
     for cfg in agents_config:
-        agent_client = client_factory()  # ← independent client per agent
+        agent_client = client_factory()
         cfg.agent = Agent(
             agent_client,
             name=cfg.name,
             instructions=cfg.instructions,
             tools=cfg.tools,
         )
-        logger.info(f"Agent {cfg.name} created with independent client")
+        logger.warning(f"Agent {cfg.name} created with INDEPENDENT client id={id(agent_client)}")
 
     agent_tasks = [
         asyncio.create_task(
-            _agent_work_loop(cfg, shared, emitter, llm_semaphore, no_progress_timeout),
+            _agent_work_loop(cfg, shared, emitter, no_progress_timeout, executor=_executor),
             name=f"agent-{cfg.name}",
         )
         for cfg in agents_config
