@@ -718,37 +718,52 @@ export const AgentTeamTestPage: FC = () => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={async () => {
+                    id="v4-approve-btn"
+                    onClick={async (e) => {
+                      const btn = e.currentTarget;
+                      btn.textContent = 'Approving...';
+                      btn.disabled = true;
                       const aid = sseState.approval?.approval_id || sseState.approval?.checkpoint_id || '';
                       try {
                         const params = new URLSearchParams({ action: 'approve', decided_by: 'manager-ui' });
                         const r = await fetch(`/api/v1/poc/agent-team/team-approval/${aid}/decide?${params}`, { method: 'POST' });
                         const data = await r.json();
-                        if (data.status === 'ok') {
-                          setState((s: any) => ({ ...s, approval: null, phase: 'agents' }));
-                        }
-                      } catch (e) { console.error('Approve failed:', e); }
+                        btn.textContent = data.status === 'ok' ? 'Approved!' : `Error: ${data.error}`;
+                        btn.className = 'px-4 py-1.5 bg-green-800 text-white rounded text-sm';
+                      } catch (e: any) {
+                        btn.textContent = `Failed: ${e.message || 'network error'}`;
+                        btn.className = 'px-4 py-1.5 bg-red-800 text-white rounded text-sm';
+                      }
                     }}
                     className="px-4 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                   >
                     Approve
                   </button>
                   <button
-                    onClick={async () => {
+                    id="v4-reject-btn"
+                    onClick={async (e) => {
+                      const btn = e.currentTarget;
+                      btn.textContent = 'Rejecting...';
+                      btn.disabled = true;
                       const aid = sseState.approval?.approval_id || sseState.approval?.checkpoint_id || '';
                       try {
                         const params = new URLSearchParams({ action: 'reject', decided_by: 'manager-ui' });
                         const r = await fetch(`/api/v1/poc/agent-team/team-approval/${aid}/decide?${params}`, { method: 'POST' });
                         const data = await r.json();
-                        if (data.status === 'ok') {
-                          setState((s: any) => ({ ...s, approval: null, phase: 'agents' }));
-                        }
-                      } catch (e) { console.error('Reject failed:', e); }
+                        btn.textContent = data.status === 'ok' ? 'Rejected!' : `Error: ${data.error}`;
+                        btn.className = 'px-4 py-1.5 bg-red-800 text-white rounded text-sm';
+                      } catch (e: any) {
+                        btn.textContent = `Failed: ${e.message || 'network error'}`;
+                        btn.className = 'px-4 py-1.5 bg-gray-600 text-white rounded text-sm';
+                      }
                     }}
                     className="px-4 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700"
                   >
                     Reject
                   </button>
+                </div>
+                <div className="text-xs text-amber-600 mt-2">
+                  Note: Backend must have multiple workers to process approval during SSE stream.
                 </div>
               </div>
             )}
