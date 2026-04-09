@@ -23,6 +23,22 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Module-level HITLController singleton (shared between work loop + API)
+# ---------------------------------------------------------------------------
+_active_hitl_controller = None
+
+
+def get_active_hitl_controller():
+    """Get the HITLController used by the current team execution."""
+    return _active_hitl_controller
+
+
+def set_active_hitl_controller(controller):
+    """Set the HITLController for the current team execution."""
+    global _active_hitl_controller
+    _active_hitl_controller = controller
+
 
 # ---------------------------------------------------------------------------
 # Risk classification (PoC — tool-name whitelist)

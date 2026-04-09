@@ -1836,6 +1836,48 @@ async def decide_approval(
     return result
 
 
+# ── V4: Team HITL Approval Endpoint ──────────────────────────────────────
+
+
+@router.post("/team-approval/{approval_id}/decide")
+async def decide_team_approval(
+    approval_id: str,
+    action: str = Query(..., description="approve or reject"),
+    decided_by: str = Query("manager-ui", description="Who is deciding"),
+):
+    """V4: Approve or reject a team agent's tool call.
+
+    Routes to the shared HITLController used by the active team execution.
+    This is separate from the orchestrator approval endpoints.
+    """
+    from src.integrations.poc.approval_gate import get_active_hitl_controller
+
+    controller = get_active_hitl_controller()
+    if controller is None:
+        return {"status": "error", "error": "No active team execution with HITL controller"}
+
+    if action not in ("approve", "reject"):
+        return {"status": "error", "error": f"Invalid action: {action}"}
+
+    try:
+        approved = action == "approve"
+        result = await controller.process_approval(
+            request_id=approval_id,
+            approved=approved,
+            approver=decided_by,
+            comment=f"{'Approved' if approved else 'Rejected'} via team UI",
+        )
+        return {
+            "status": "ok",
+            "action": action,
+            "decided_by": decided_by,
+            "approval_id": approval_id,
+            "approval_status": result.status.value if hasattr(result, "status") else str(result),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 # ── Pinned Memory PoC Endpoints (no auth, for testing) ───────────────────
 
 

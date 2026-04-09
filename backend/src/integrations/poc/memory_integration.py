@@ -193,9 +193,10 @@ class TeamMemoryIntegration:
 # Factory
 # ---------------------------------------------------------------------------
 
-def create_memory_integration() -> Optional[TeamMemoryIntegration]:
+async def create_memory_integration() -> Optional[TeamMemoryIntegration]:
     """Create TeamMemoryIntegration if memory services are available.
 
+    Must be called in async context — initializes UnifiedMemoryManager.
     Returns None if memory is disabled or dependencies unavailable.
     """
     try:
@@ -208,8 +209,10 @@ def create_memory_integration() -> Optional[TeamMemoryIntegration]:
         try:
             from src.integrations.memory.unified_memory import UnifiedMemoryManager
             memory_client = UnifiedMemoryManager()
-        except Exception:
-            pass
+            await memory_client.initialize()  # Required before search/add
+        except Exception as e:
+            logger.info(f"Memory: UnifiedMemoryManager init failed: {e}")
+            memory_client = None
 
         if memory_client is None:
             logger.info("Memory: UnifiedMemoryManager unavailable, skipping integration")

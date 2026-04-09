@@ -706,7 +706,7 @@ export const AgentTeamTestPage: FC = () => {
               </div>
             )}
 
-            {/* HITL Approval */}
+            {/* HITL Approval — V4 Team Approval Gate */}
             {sseState.approval && (
               <div className="border-2 border-amber-300 rounded-lg p-4 bg-amber-50">
                 <div className="flex items-center gap-2 text-amber-800 font-medium mb-2">
@@ -714,17 +714,37 @@ export const AgentTeamTestPage: FC = () => {
                   {sseState.approval.message}
                 </div>
                 <div className="text-sm text-amber-700 mb-3">
-                  Risk: {sseState.approval.risk_level} | Checkpoint: {sseState.approval.checkpoint_id.slice(0, 12)}...
+                  Risk: {sseState.approval.risk_level} | Approval ID: {(sseState.approval.approval_id || sseState.approval.checkpoint_id || '').slice(0, 16)}...
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleResume(sseState.approval!.checkpoint_id, 'hitl_approve')}
+                    onClick={async () => {
+                      const aid = sseState.approval?.approval_id || sseState.approval?.checkpoint_id || '';
+                      try {
+                        const params = new URLSearchParams({ action: 'approve', decided_by: 'manager-ui' });
+                        const r = await fetch(`/api/v1/poc/agent-team/team-approval/${aid}/decide?${params}`, { method: 'POST' });
+                        const data = await r.json();
+                        if (data.status === 'ok') {
+                          setState((s: any) => ({ ...s, approval: null, phase: 'agents' }));
+                        }
+                      } catch (e) { console.error('Approve failed:', e); }
+                    }}
                     className="px-4 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                   >
                     Approve
                   </button>
                   <button
-                    onClick={() => handleResume(sseState.approval!.checkpoint_id, 'hitl_reject')}
+                    onClick={async () => {
+                      const aid = sseState.approval?.approval_id || sseState.approval?.checkpoint_id || '';
+                      try {
+                        const params = new URLSearchParams({ action: 'reject', decided_by: 'manager-ui' });
+                        const r = await fetch(`/api/v1/poc/agent-team/team-approval/${aid}/decide?${params}`, { method: 'POST' });
+                        const data = await r.json();
+                        if (data.status === 'ok') {
+                          setState((s: any) => ({ ...s, approval: null, phase: 'agents' }));
+                        }
+                      } catch (e) { console.error('Reject failed:', e); }
+                    }}
                     className="px-4 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700"
                   >
                     Reject

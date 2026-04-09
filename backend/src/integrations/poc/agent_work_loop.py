@@ -617,7 +617,7 @@ async def run_parallel_team(
     memory_context = ""
     try:
         from src.integrations.poc.memory_integration import create_memory_integration
-        memory_integration = create_memory_integration()
+        memory_integration = await create_memory_integration()
         if memory_integration:
             memory_context = await memory_integration.retrieve_for_goal(
                 goal=task, user_id="system"
@@ -681,11 +681,13 @@ async def run_parallel_team(
             tools=cfg.tools,
         )
 
-    # V4: Initialize HITL controller if available
+    # V4: Initialize HITL controller if available (shared via module-level singleton)
     _hitl_controller = None
     try:
         from src.integrations.orchestration.hitl.controller import create_hitl_controller
+        from src.integrations.poc.approval_gate import set_active_hitl_controller
         _hitl_controller = create_hitl_controller(default_timeout_minutes=5)
+        set_active_hitl_controller(_hitl_controller)
         logger.info("HITL approval gate enabled for agent team")
     except Exception as e:
         logger.info(f"HITL controller not available (approval gate disabled): {e}")
