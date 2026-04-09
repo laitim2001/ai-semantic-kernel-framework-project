@@ -167,25 +167,37 @@ def _sync_agent_run(agent, context: str):
 
 
 async def _execute_agent_turn(agent, context: str, emitter, agent_name: str,
-                              executor=None) -> str:
+                              executor=None, llm_pool=None) -> str:
     """Execute a single LLM turn for an agent (with tool calls).
 
     Uses explicit ThreadPoolExecutor for true parallelism — each agent.run()
     gets its own thread + event loop, preventing connection serialization.
+
+    V4: Optional LLMCallPool integration for rate-limited concurrent access.
+    Acquire slot in async context → run LLM in OS thread → release on exit.
     """
     try:
-        loop = asyncio.get_running_loop()
         t0 = time.time()
-        logger.warning(f"Agent {agent_name} submitting to thread pool...")
 
-        if executor:
-            future = executor.submit(_sync_agent_run, agent, context)
-            response = await asyncio.wrap_future(future)
+        if llm_pool:
+            # Acquire LLM slot (async context) — blocks until slot available
+            from src.core.performance.llm_pool import CallPriority
+            async with await llm_pool.acquire(CallPriority.SWARM_WORKER) as token:
+                logger.info(f"Agent {agent_name}: acquired LLM pool slot")
+                if executor:
+                    future = executor.submit(_sync_agent_run, agent, context)
+                    response = await asyncio.wrap_future(future)
+                else:
+                    response = await asyncio.to_thread(_sync_agent_run, agent, context)
         else:
-            response = await asyncio.to_thread(_sync_agent_run, agent, context)
+            if executor:
+                future = executor.submit(_sync_agent_run, agent, context)
+                response = await asyncio.wrap_future(future)
+            else:
+                response = await asyncio.to_thread(_sync_agent_run, agent, context)
 
         duration = round((time.time() - t0) * 1000)
-        logger.warning(f"Agent {agent_name} LLM turn completed in {duration}ms")
+        logger.info(f"Agent {agent_name} LLM turn completed in {duration}ms")
 
         if hasattr(response, "content"):
             return str(response.content)
@@ -212,7 +224,7 @@ def _classify_error(e: Exception) -> str:
 
 async def _execute_agent_turn_with_retry(
     agent, context: str, emitter, agent_name: str,
-    executor=None, max_retries: int = 2,
+    executor=None, max_retries: int = 2, llm_pool=None,
 ) -> str:
     """V4: Execute agent turn with retry for transient errors.
 
@@ -221,7 +233,9 @@ async def _execute_agent_turn_with_retry(
     """
     for attempt in range(max_retries + 1):
         try:
-            return await _execute_agent_turn(agent, context, emitter, agent_name, executor)
+            return await _execute_agent_turn(
+                agent, context, emitter, agent_name, executor, llm_pool=llm_pool
+            )
         except Exception as e:
             failure_type = _classify_error(e)
 
@@ -379,6 +393,7 @@ async def _agent_work_loop(
     executor=None,
     approval_manager=None,
     session_id: str = "",
+    llm_pool=None,
 ) -> str:
     """CC-like persistent agent loop with 3-phase lifecycle.
 
@@ -460,7 +475,8 @@ async def _agent_work_loop(
                     await emitter.emit_event("AGENT_THINKING", {"agent": name})
 
                 result_text = await _execute_agent_turn_with_retry(
-                    agent, context, emitter, name, executor=executor
+                    agent, context, emitter, name, executor=executor,
+                    llm_pool=llm_pool,
                 )
                 final_output = result_text
 
@@ -687,6 +703,18 @@ async def run_parallel_team(
     except Exception as e:
         logger.info(f"Approval manager not available (gate disabled): {e}")
 
+    # V4: LLMCallPool for rate-limited concurrent LLM access (CC flat model scaling)
+    _llm_pool = None
+    try:
+        from src.core.performance.llm_pool import LLMCallPool
+        _llm_pool = LLMCallPool.get_instance()
+        logger.info(
+            f"LLMCallPool enabled: max_concurrent={_llm_pool._max_concurrent}, "
+            f"max_per_minute={_llm_pool._max_per_minute}"
+        )
+    except Exception as e:
+        logger.info(f"LLMCallPool not available (no rate limiting): {e}")
+
     agent_tasks = [
         asyncio.create_task(
             _agent_work_loop(
@@ -694,6 +722,7 @@ async def run_parallel_team(
                 executor=_executor,
                 approval_manager=_approval_manager,
                 session_id=session_id,
+                llm_pool=_llm_pool,
             ),
             name=f"agent-{cfg.name}",
         )

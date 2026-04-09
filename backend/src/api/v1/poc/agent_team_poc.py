@@ -96,6 +96,42 @@ def _build_team_agents_config(all_tools: list, max_agents: int = 0) -> list:
             "role": "You are a performance engineering expert.",
             "expertise": "performance optimization latency throughput profiling caching",
         },
+        # V4 scalability: 7 additional roles (total 15)
+        {
+            "name": "DataEngineer",
+            "role": "You are a data engineering expert specializing in ETL pipelines and data flows.",
+            "expertise": "etl pipeline data flow transformation scheduling batch streaming",
+        },
+        {
+            "name": "NetworkExpert",
+            "role": "You are a network engineering expert.",
+            "expertise": "dns routing firewall latency tcp udp proxy load balancer",
+        },
+        {
+            "name": "ComplianceExpert",
+            "role": "You are a compliance and audit expert.",
+            "expertise": "compliance audit regulatory policy governance risk soc2 gdpr",
+        },
+        {
+            "name": "IncidentExpert",
+            "role": "You are an incident response and management expert.",
+            "expertise": "incident response escalation timeline postmortem sla slo",
+        },
+        {
+            "name": "StorageExpert",
+            "role": "You are a storage and backup infrastructure expert.",
+            "expertise": "disk nfs s3 backup replication snapshot storage capacity",
+        },
+        {
+            "name": "APIExpert",
+            "role": "You are an API and integration expert.",
+            "expertise": "rest grpc api gateway integration webhook rate limit versioning",
+        },
+        {
+            "name": "QAExpert",
+            "role": "You are a quality assurance and testing expert.",
+            "expertise": "testing validation regression smoke canary test coverage assertion",
+        },
     ]
 
     # Select up to max_agents roles
