@@ -206,6 +206,19 @@ class TeamApprovalManager:
                 p.decision = "expired"
                 p.event.set()
         self._pending.clear()
+        self._tool_approvals.clear()
+
+    # ── Per-tool-call permission (CC 9-step cascade equivalent) ──
+
+    _tool_approvals: dict[str, set[str]] = {}  # tool_name → {approved agent names}
+
+    def approve_tool_for_agent(self, agent_name: str, tool_name: str) -> None:
+        """Mark a tool as approved for a specific agent (after user approves)."""
+        self._tool_approvals.setdefault(tool_name, set()).add(agent_name)
+
+    def is_tool_approved(self, agent_name: str, tool_name: str) -> bool:
+        """Check if an agent has approval to use a specific tool."""
+        return agent_name in self._tool_approvals.get(tool_name, set())
 
 
 # ---------------------------------------------------------------------------
@@ -288,6 +301,56 @@ async def request_and_await_approval(
 
     logger.info(f"Agent {agent_name}: tool '{tool_name}' → {decision}")
     return decision
+
+
+# ---------------------------------------------------------------------------
+# Per-tool-call permission check (called from tool functions in OS threads)
+# ---------------------------------------------------------------------------
+
+# Thread-local storage to track which agent is currently executing
+import threading
+_current_agent = threading.local()
+
+
+def set_current_agent(name: str) -> None:
+    """Set the agent name for the current OS thread (called before agent.run)."""
+    _current_agent.name = name
+
+
+def get_current_agent() -> str:
+    """Get the agent name for the current OS thread."""
+    return getattr(_current_agent, "name", "")
+
+
+def check_tool_permission(tool_name: str) -> Optional[str]:
+    """Check if the current agent has permission to use this tool.
+
+    Called from inside tool functions (which run in OS threads).
+    Returns None if allowed, or a BLOCKED message string if not.
+
+    This is the CC 9-step cascade equivalent for server-side:
+    - LOW risk tools → always allowed
+    - HIGH risk tools → require explicit approval via TeamApprovalManager
+    """
+    if not requires_approval(tool_name):
+        return None  # LOW/MEDIUM risk — always allowed
+
+    agent_name = get_current_agent()
+    if not agent_name:
+        return None  # No agent context — allow (non-team execution)
+
+    manager = get_approval_manager()
+    if manager is None:
+        return None  # No approval manager active — allow
+
+    if manager.is_tool_approved(agent_name, tool_name):
+        return None  # Already approved — allow
+
+    return (
+        f"BLOCKED: Tool '{tool_name}' requires human approval. "
+        f"An approval request has been sent. Please wait for the operator to approve, "
+        f"then try again."
+    )
 
 
 def _safe_args(args: dict[str, Any], max_len: int = 500) -> dict[str, str]:

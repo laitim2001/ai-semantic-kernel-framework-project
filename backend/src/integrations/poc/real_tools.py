@@ -190,6 +190,12 @@ def create_real_tools() -> list:
     ))
     def run_diagnostic_command(command: str) -> str:
         """Execute a real diagnostic command (read-only, sandboxed)."""
+        # V4: Per-tool-call permission check (CC cascade equivalent)
+        from src.integrations.poc.approval_gate import check_tool_permission
+        blocked = check_tool_permission("run_diagnostic_command")
+        if blocked:
+            return blocked
+
         try:
             parsed = _validate_command(command)
             timeout = _get_timeout(command)
@@ -303,6 +309,12 @@ def create_real_tools() -> list:
     ))
     def query_database(sql: str) -> str:
         """Execute a read-only SQL query."""
+        # V4: Per-tool-call permission check (CC cascade equivalent)
+        from src.integrations.poc.approval_gate import check_tool_permission
+        blocked = check_tool_permission("query_database")
+        if blocked:
+            return blocked
+
         try:
             validated_sql = _validate_sql(sql)
         except ValueError as e:

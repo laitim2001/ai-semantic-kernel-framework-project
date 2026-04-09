@@ -158,6 +158,13 @@ def _sync_agent_run(agent, context: str):
     asyncio event loop. Running each agent in its own thread with a
     dedicated event loop enables true concurrent execution.
     """
+    # V4: Set agent name in thread-local for per-tool-call permission checks
+    try:
+        from src.integrations.poc.approval_gate import set_current_agent
+        set_current_agent(agent.name if hasattr(agent, 'name') else "")
+    except Exception:
+        pass
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -451,18 +458,24 @@ async def _agent_work_loop(
                 logger.warning(f"Agent {name}: max LLM turns ({max_llm_turns}) reached, entering idle")
             else:
                 # V4: HITL approval gate — check if agent's tools need approval
+                # Pre-flight: triggers SSE + waits. On approve, marks tool
+                # in TeamApprovalManager so per-tool-call check also passes.
                 if approval_manager and current_task and llm_turns == 0:
                     approval_result = await _check_task_approval(
                         name, current_task, session_id, emitter, approval_manager
                     )
-                    if approval_result == "rejected":
+                    if approval_result == "approved":
+                        # Mark HIGH_RISK tools as approved for this agent
+                        for tn in ("run_diagnostic_command", "query_database"):
+                            approval_manager.approve_tool_for_agent(name, tn)
+                    elif approval_result == "rejected":
                         shared.fail_task(current_task.task_id, "Rejected by human reviewer")
                         if emitter:
                             await emitter.emit_event("TASK_COMPLETED", {
                                 "agent": name, "task_id": current_task.task_id,
                                 "status": "rejected",
                             })
-                        continue  # skip to next task
+                        continue
                     elif approval_result == "expired":
                         shared.fail_task(current_task.task_id, "Approval timed out")
                         continue
