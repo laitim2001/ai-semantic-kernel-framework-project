@@ -54,7 +54,7 @@ class TeamResult:
 # Phase 0: TeamLead task decomposition
 # ---------------------------------------------------------------------------
 
-TEAM_LEAD_PROMPT = """You are a TeamLead responsible for breaking down a complex task into specific sub-tasks.
+TEAM_LEAD_PROMPT_TEMPLATE = """You are a TeamLead responsible for breaking down a complex task into specific sub-tasks.
 
 Analyze the user's request and the available context, then call the `decompose_and_assign_tasks` tool
 with a JSON array of sub-tasks. Each sub-task should have:
@@ -62,10 +62,29 @@ with a JSON array of sub-tasks. Each sub-task should have:
 - "priority": 1 (highest) to 5 (lowest)
 - "required_expertise": Keywords describing what expertise is needed (e.g. "database sql", "log analysis", "network")
 
-IMPORTANT: Create exactly 3 sub-tasks (one per available team expert).
-The team has 3 experts: LogExpert (logs/errors), DBExpert (database/schema), AppExpert (network/infra).
+IMPORTANT: Create between {min_agents} and {max_agents} sub-tasks based on the complexity of the request.
+- Simple tasks (single domain): {min_agents} sub-tasks
+- Moderate tasks (2-3 domains): 3-4 sub-tasks
+- Complex tasks (cross-domain investigation): {max_agents} sub-tasks
+
+Available experts: {expert_names}
 Each task should be specific, actionable, and require THOROUGH investigation (not just surface-level checks).
 Do NOT create vague tasks like "investigate further". Each task should tell the agent exactly what to check."""
+
+
+def _build_team_lead_prompt(agent_names: list[str], min_agents: int = 2, max_agents: int = 5) -> str:
+    """Build TeamLead prompt with dynamic agent count based on available experts."""
+    return TEAM_LEAD_PROMPT_TEMPLATE.format(
+        min_agents=min_agents,
+        max_agents=min(max_agents, len(agent_names)),
+        expert_names=", ".join(agent_names),
+    )
+
+
+# V3 backward compat: default prompt for 3 agents
+TEAM_LEAD_PROMPT = _build_team_lead_prompt(
+    ["LogExpert", "DBExpert", "AppExpert"], min_agents=3, max_agents=3
+)
 
 
 async def phase0_decompose(
@@ -74,6 +93,7 @@ async def phase0_decompose(
     client,
     lead_tools: list,
     emitter=None,
+    lead_prompt: str = "",
 ) -> None:
     """TeamLead: single LLM call to decompose task into sub-tasks.
 
@@ -83,6 +103,7 @@ async def phase0_decompose(
         client: MAF ChatClient (Azure/OpenAI)
         lead_tools: [decompose_and_assign_tasks] from create_lead_tools()
         emitter: PipelineEventEmitter for SSE events (optional)
+        lead_prompt: Custom TeamLead prompt (V4: dynamic agent count)
     """
     from agent_framework import Agent
 
@@ -95,7 +116,7 @@ async def phase0_decompose(
     lead = Agent(
         client,
         name="TeamLead",
-        instructions=TEAM_LEAD_PROMPT,
+        instructions=lead_prompt or TEAM_LEAD_PROMPT,
         tools=lead_tools,
     )
 
@@ -171,7 +192,61 @@ async def _execute_agent_turn(agent, context: str, emitter, agent_name: str,
         return str(response)
     except Exception as e:
         logger.error(f"Agent {agent_name} LLM call failed: {e}")
-        return f"ERROR: {str(e)[:200]}"
+        raise  # V4: let retry wrapper handle it
+
+
+# V4: Error classification for retry decisions
+def _classify_error(e: Exception) -> str:
+    """Classify an error as transient, fatal, or unknown."""
+    err_str = str(e).lower()
+    # Transient: worth retrying
+    if any(kw in err_str for kw in ("timeout", "429", "503", "504", "rate_limit",
+                                      "overloaded", "connection", "reset")):
+        return "transient"
+    # Fatal: don't retry
+    if any(kw in err_str for kw in ("401", "403", "authentication", "forbidden",
+                                      "invalid", "not_found", "404")):
+        return "fatal"
+    return "unknown"
+
+
+async def _execute_agent_turn_with_retry(
+    agent, context: str, emitter, agent_name: str,
+    executor=None, max_retries: int = 2,
+) -> str:
+    """V4: Execute agent turn with retry for transient errors.
+
+    Retries up to max_retries times with exponential backoff.
+    Fatal errors fail immediately.
+    """
+    for attempt in range(max_retries + 1):
+        try:
+            return await _execute_agent_turn(agent, context, emitter, agent_name, executor)
+        except Exception as e:
+            failure_type = _classify_error(e)
+
+            if failure_type == "fatal" or attempt >= max_retries:
+                if attempt > 0:
+                    logger.warning(f"Agent {agent_name}: exhausted {attempt} retries, failing")
+                return f"ERROR: {str(e)[:200]}"
+
+            delay = min(2 ** attempt, 10)  # 1s, 2s, 4s... capped at 10s
+            logger.warning(
+                f"Agent {agent_name}: {failure_type} error, retry {attempt + 1}/{max_retries} "
+                f"in {delay}s — {str(e)[:100]}"
+            )
+            if emitter:
+                await emitter.emit_event("SWARM_PROGRESS", {
+                    "event_type": "agent_retry",
+                    "agent": agent_name,
+                    "attempt": attempt + 1,
+                    "max_retries": max_retries,
+                    "reason": str(e)[:200],
+                    "failure_type": failure_type,
+                })
+            await asyncio.sleep(delay)
+
+    return "ERROR: max retries exceeded"  # should not reach here
 
 
 def _build_agent_context(
@@ -214,6 +289,52 @@ def _build_agent_context(
     return "\n".join(parts)
 
 
+async def _check_task_approval(
+    agent_name: str,
+    current_task,
+    session_id: str,
+    emitter,
+    hitl_controller,
+) -> str:
+    """V4: Check if the agent's task involves high-risk tools.
+
+    If the task description implies high-risk tool usage (e.g., database queries,
+    system commands), request human approval before the agent starts working.
+
+    Returns "approved", "rejected", or "expired".
+    """
+    from src.integrations.poc.approval_gate import requires_approval
+
+    # Determine which tools the agent will likely use based on task keywords
+    task_desc = (current_task.description or "").lower()
+    tools_needing_approval = []
+
+    # Match task description to high-risk tools
+    if any(kw in task_desc for kw in ("command", "diagnostic", "ping", "curl", "shell")):
+        tools_needing_approval.append("run_diagnostic_command")
+    if any(kw in task_desc for kw in ("database", "sql", "query", "schema", "table")):
+        tools_needing_approval.append("query_database")
+
+    if not tools_needing_approval:
+        return "approved"  # no high-risk tools expected
+
+    # Request approval for the most critical tool
+    from src.integrations.poc.approval_gate import request_and_await_approval
+
+    tool_name = tools_needing_approval[0]
+    logger.info(f"Agent {agent_name}: task requires approval for '{tool_name}'")
+
+    return await request_and_await_approval(
+        agent_name=agent_name,
+        tool_name=tool_name,
+        tool_args={"task_id": current_task.task_id, "description": task_desc[:200]},
+        session_id=session_id,
+        emitter=emitter,
+        hitl_controller=hitl_controller,
+        timeout_seconds=300.0,
+    )
+
+
 async def _process_agent_result(
     agent_name: str,
     result_text: str,
@@ -242,8 +363,7 @@ async def _process_agent_result(
             })
 
         # Emit TEAM_MESSAGE for any new messages added during this turn
-        all_msgs = shared._messages  # direct access for SSE emission
-        new_msgs = all_msgs[msg_count_before:]
+        new_msgs = shared.get_messages_since(msg_count_before)
         for msg in new_msgs:
             if msg.from_agent == agent_name:
                 await emitter.emit_event("TEAM_MESSAGE", {
@@ -260,6 +380,8 @@ async def _agent_work_loop(
     emitter,
     shutdown_event: asyncio.Event,
     executor=None,
+    hitl_controller=None,
+    session_id: str = "",
 ) -> str:
     """CC-like persistent agent loop with 3-phase lifecycle.
 
@@ -271,6 +393,8 @@ async def _agent_work_loop(
     Agent NEVER exits on its own. Only exits when:
       - shutdown_event is set (by Lead after communication window)
       - Safety: max 10 LLM turns to prevent runaway costs
+
+    V4 (Sprint 154): hitl_controller + session_id for approval gate.
     """
     name = cfg.name
     agent = cfg.agent
@@ -314,17 +438,60 @@ async def _agent_work_loop(
             if llm_turns >= max_llm_turns:
                 logger.warning(f"Agent {name}: max LLM turns ({max_llm_turns}) reached, entering idle")
             else:
+                # V4: HITL approval gate — check if agent's tools need approval
+                if hitl_controller and current_task and llm_turns == 0:
+                    approval_result = await _check_task_approval(
+                        name, current_task, session_id, emitter, hitl_controller
+                    )
+                    if approval_result == "rejected":
+                        shared.fail_task(current_task.task_id, "Rejected by human reviewer")
+                        if emitter:
+                            await emitter.emit_event("TASK_COMPLETED", {
+                                "agent": name, "task_id": current_task.task_id,
+                                "status": "rejected",
+                            })
+                        continue  # skip to next task
+                    elif approval_result == "expired":
+                        shared.fail_task(current_task.task_id, "Approval timed out")
+                        continue
+
                 llm_turns += 1
                 context = _build_agent_context(name, current_task, inbox_msgs, shared)
-                msg_count_before = len(shared._messages)
+                msg_count_before = shared.message_count()
 
                 if emitter:
                     await emitter.emit_event("AGENT_THINKING", {"agent": name})
 
-                result_text = await _execute_agent_turn(
+                result_text = await _execute_agent_turn_with_retry(
                     agent, context, emitter, name, executor=executor
                 )
                 final_output = result_text
+
+                # V4: Check if result is an error — handle task reassignment
+                if result_text.startswith("ERROR:") and current_task:
+                    retry_count = shared.get_task_retry_count(current_task.task_id)
+                    if retry_count < 2:
+                        shared.reassign_task(current_task.task_id)
+                        logger.warning(
+                            f"Agent {name}: task {current_task.task_id} reassigned "
+                            f"(retry {retry_count + 1}/2)"
+                        )
+                        if emitter:
+                            await emitter.emit_event("SWARM_PROGRESS", {
+                                "event_type": "task_reassigned",
+                                "agent": name,
+                                "task_id": current_task.task_id,
+                                "retry_number": retry_count + 1,
+                            })
+                    else:
+                        shared.fail_task(current_task.task_id, result_text[:500])
+                        if emitter:
+                            await emitter.emit_event("TASK_COMPLETED", {
+                                "agent": name,
+                                "task_id": current_task.task_id,
+                                "status": "failed",
+                            })
+                    continue  # try next task
 
                 await _process_agent_result(
                     name, result_text, current_task, shared, emitter, msg_count_before
@@ -350,8 +517,21 @@ async def _agent_work_loop(
             })
 
         # ── Phase C: Poll mailbox every 500ms (CC pattern) ────────
+        _shutdown_received = False
         while not shutdown_event.is_set():
             await asyncio.sleep(0.5)
+
+            # V4: Check for SHUTDOWN_REQUEST in inbox (graceful shutdown)
+            inbox_text = shared.get_inbox(name, unread_only=True)
+            if inbox_text and "SHUTDOWN_REQUEST" in inbox_text:
+                logger.info(f"Agent {name}: received SHUTDOWN_REQUEST, sending ACK")
+                shared.add_message(from_agent=name, content="SHUTDOWN_ACK", to_agent="TeamLead")
+                if emitter:
+                    await emitter.emit_event("SWARM_PROGRESS", {
+                        "event_type": "shutdown_ack", "agent": name,
+                    })
+                _shutdown_received = True
+                break  # exit Phase C → exit main loop
 
             # Peek for new directed messages (without marking read — Phase A will read them)
             has_unread = shared.get_inbox_count(name, unread_only=True) > 0
@@ -371,6 +551,10 @@ async def _agent_work_loop(
                         "description": new_task.description[:100],
                     })
                 break  # back to Phase A
+
+        # V4: If shutdown was received in Phase C, exit main loop
+        if _shutdown_received:
+            break
 
     # ── Shutdown ──────────────────────────────────────────────────
     if emitter:
@@ -397,8 +581,9 @@ async def run_parallel_team(
     emitter=None,
     timeout: float = 120.0,
     comm_window: float = 15.0,
+    session_id: str = "",
 ) -> TeamResult:
-    """V3: Run agents in parallel with CC-like lifecycle management.
+    """V3/V4: Run agents in parallel with CC-like lifecycle management.
 
     Full flow:
       Phase 0: TeamLead decomposes task
@@ -417,6 +602,7 @@ async def run_parallel_team(
         emitter: PipelineEventEmitter for SSE (optional)
         timeout: Total execution timeout (seconds)
         comm_window: Communication window after all tasks done (seconds)
+        session_id: Unique session ID (V4: used for Redis key prefix)
     """
     t_start = time.time()
     agent_results: dict[str, str] = {}
@@ -426,16 +612,47 @@ async def run_parallel_team(
     if emitter:
         _patch_emitter(emitter)
 
+    # ── V4: Pre-Phase 0 memory retrieval ──
+    memory_integration = None
+    memory_context = ""
+    try:
+        from src.integrations.poc.memory_integration import create_memory_integration
+        memory_integration = create_memory_integration()
+        if memory_integration:
+            memory_context = await memory_integration.retrieve_for_goal(
+                goal=task, user_id="system"
+            )
+            if memory_context:
+                logger.info(f"Memory: injecting {len(memory_context)} chars of past findings")
+    except Exception as e:
+        logger.info(f"Memory retrieval skipped: {e}")
+
+    # ── V4: Build dynamic TeamLead prompt based on available agents ──
+    import os
+    max_agents = int(os.getenv("TEAM_MAX_AGENTS", str(len(agents_config))))
+    agent_names = [cfg.name for cfg in agents_config]
+    dynamic_lead_prompt = _build_team_lead_prompt(
+        agent_names, min_agents=2, max_agents=max_agents
+    )
+
     # ── Phase 0: TeamLead decomposition ──
+    # Inject memory context into the decomposition prompt
+    enriched_context = context
+    if memory_context:
+        enriched_context = f"{memory_context}\n\n{context}" if context else memory_context
+
     phase0_ms = 0
     try:
         lead_client = client_factory()
-        phase0_ms = await phase0_decompose(task, context, lead_client, lead_tools, emitter)
+        phase0_ms = await phase0_decompose(
+            task, enriched_context, lead_client, lead_tools, emitter,
+            lead_prompt=dynamic_lead_prompt,
+        )
     except Exception as e:
         logger.error(f"Phase 0 failed, falling back to single task: {e}")
         shared.add_task("T-fallback", task, priority=1)
 
-    task_count = len(shared._tasks)
+    task_count = shared.task_count()
     logger.info(f"Phase 0 complete: {task_count} tasks created")
 
     if emitter:
@@ -464,9 +681,23 @@ async def run_parallel_team(
             tools=cfg.tools,
         )
 
+    # V4: Initialize HITL controller if available
+    _hitl_controller = None
+    try:
+        from src.integrations.orchestration.hitl.controller import create_hitl_controller
+        _hitl_controller = create_hitl_controller(default_timeout_minutes=5)
+        logger.info("HITL approval gate enabled for agent team")
+    except Exception as e:
+        logger.info(f"HITL controller not available (approval gate disabled): {e}")
+
     agent_tasks = [
         asyncio.create_task(
-            _agent_work_loop(cfg, shared, emitter, shutdown_event, executor=_executor),
+            _agent_work_loop(
+                cfg, shared, emitter, shutdown_event,
+                executor=_executor,
+                hitl_controller=_hitl_controller,
+                session_id=session_id,
+            ),
             name=f"agent-{cfg.name}",
         )
         for cfg in agents_config
@@ -488,8 +719,8 @@ async def run_parallel_team(
             if emitter:
                 await emitter.emit_event("ALL_TASKS_DONE", {
                     "reason": "all_done",
-                    "tasks_completed": len(shared._tasks),
-                    "tasks_total": len(shared._tasks),
+                    "tasks_completed": shared.task_count(),
+                    "tasks_total": shared.task_count(),
                 })
                 await emitter.emit_event("SWARM_PROGRESS", {
                     "event_type": "communication_window",
@@ -503,15 +734,48 @@ async def run_parallel_team(
         logger.error(f"Monitor loop error: {e}")
         termination_reason = "error"
 
-    # ── Lead Shutdown: signal all agents to exit ──
+    # ── V4: Graceful Shutdown Protocol (CC-like) ──
+    # Step 1: Send SHUTDOWN_REQUEST to each agent via inbox
+    agent_names = [cfg.name for cfg in agents_config]
+    for agent_name in agent_names:
+        shared.add_message(from_agent="TeamLead", content="SHUTDOWN_REQUEST", to_agent=agent_name)
+    logger.info(f"Sent SHUTDOWN_REQUEST to {len(agent_names)} agents")
+
     if emitter:
         await emitter.emit_event("SWARM_PROGRESS", {
-            "event_type": "shutdown_signal",
+            "event_type": "shutdown_request",
+            "agents": agent_names,
         })
-    shutdown_event.set()
-    logger.info("Shutdown signal sent to all agents")
 
-    # Wait for agents to exit (with short timeout for cleanup)
+    # Step 2: Wait for SHUTDOWN_ACK from each agent (up to 10s)
+    ack_deadline = time.time() + 10.0
+    acked = set()
+    while time.time() < ack_deadline and len(acked) < len(agent_names):
+        # Check for ACK messages in TeamLead's inbox
+        lead_inbox = shared.get_inbox("TeamLead", unread_only=True)
+        if lead_inbox:
+            for agent_name in agent_names:
+                if agent_name not in acked and agent_name in lead_inbox:
+                    acked.add(agent_name)
+                    logger.info(f"Received SHUTDOWN_ACK from {agent_name}")
+        await asyncio.sleep(0.5)
+
+    not_acked = set(agent_names) - acked
+    if not_acked:
+        logger.warning(f"Force-killing agents that didn't ACK: {not_acked}")
+
+    # Step 3: Force shutdown (for any agents that didn't ACK)
+    shutdown_event.set()
+    logger.info(f"Shutdown complete: {len(acked)} ACKed, {len(not_acked)} force-killed")
+
+    if emitter:
+        await emitter.emit_event("SWARM_PROGRESS", {
+            "event_type": "shutdown_complete",
+            "acked": list(acked),
+            "force_killed": list(not_acked),
+        })
+
+    # Wait for agent tasks to finish
     done, pending = await asyncio.wait(agent_tasks, timeout=5.0)
     for t in pending:
         t.cancel()
@@ -597,10 +861,8 @@ async def run_parallel_team(
             "event_type": "team_complete",
             "termination_reason": termination_reason,
             "total_duration_ms": total_ms,
-            "tasks_completed": sum(
-                1 for t in shared._tasks.values() if t.status.value == "completed"
-            ),
-            "tasks_total": len(shared._tasks),
+            "tasks_completed": shared.completed_count(),
+            "tasks_total": shared.task_count(),
         })
 
     result = TeamResult(
@@ -612,6 +874,36 @@ async def run_parallel_team(
     )
     result.synthesis = synthesis  # type: ignore[attr-defined]
     result.phase2_duration_ms = phase2_ms  # type: ignore[attr-defined]
+
+    # ── V4: Post-Phase 2 memory storage ──
+    if memory_integration and synthesis:
+        try:
+            # Store synthesis as long-term memory
+            await memory_integration.store_synthesis(
+                session_id=session_id or "unknown",
+                goal=task,
+                synthesis=synthesis,
+                agent_results=agent_results,
+            )
+            # Store full transcript
+            transcript = {
+                "session_id": session_id,
+                "goal": task,
+                "agent_results": {
+                    name: output[:1000] for name, output in agent_results.items()
+                },
+                "synthesis": synthesis[:2000],
+                "termination_reason": termination_reason,
+                "total_duration_ms": total_ms,
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }
+            await memory_integration.store_transcript(
+                session_id=session_id or "unknown",
+                transcript=transcript,
+            )
+        except Exception as e:
+            logger.warning(f"Post-execution memory storage failed (non-fatal): {e}")
+
     return result
 
 

@@ -348,6 +348,29 @@ function dispatchEvent(
         } else if (data.event_type === 'shutdown_signal') {
           // V3: lead shutting down all agents
           updates.terminationReason = 'shutdown';
+        } else if (data.event_type === 'shutdown_request') {
+          // V4: graceful shutdown — mark all agents as shutting down
+          if (data.agents && Array.isArray(data.agents)) {
+            const newStatuses = { ...s.agentStatuses };
+            for (const name of data.agents) {
+              if (newStatuses[name]) {
+                newStatuses[name] = { ...newStatuses[name], status: 'idle' as any };
+              }
+            }
+            updates.agentStatuses = newStatuses;
+          }
+          updates.terminationReason = 'shutting down (awaiting ACK)';
+        } else if (data.event_type === 'shutdown_ack') {
+          // V4: agent acknowledged shutdown
+          if (data.agent && s.agentStatuses[data.agent]) {
+            updates.agentStatuses = {
+              ...s.agentStatuses,
+              [data.agent]: { ...s.agentStatuses[data.agent], status: 'completed' },
+            };
+          }
+        } else if (data.event_type === 'shutdown_complete') {
+          // V4: all agents shut down
+          updates.terminationReason = `shutdown (${data.acked?.length || 0} ACKed, ${data.force_killed?.length || 0} force-killed)`;
         }
 
         return {

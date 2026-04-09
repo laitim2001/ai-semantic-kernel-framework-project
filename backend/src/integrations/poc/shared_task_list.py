@@ -10,14 +10,20 @@ Provides a shared state that Teammate Agents can interact with via tools:
 Thread-safe for GroupChatBuilder (sequential rounds) but also safe
 for ConcurrentBuilder (parallel execution) via simple locking.
 
+V4 (Sprint 153): Added SharedTaskListProtocol and create_shared_task_list()
+factory for Redis/in-memory backend selection.
+
 PoC: Agent Team — poc/agent-team branch.
 """
 
+import logging
 import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Optional, Protocol, runtime_checkable
+
+logger = logging.getLogger(__name__)
 
 
 class TaskStatus(str, Enum):
@@ -38,6 +44,7 @@ class TaskItem:
     claimed_at: float | None = None
     completed_at: float | None = None
     required_expertise: str = ""  # V2: keyword hints for task-agent matching
+    retry_count: int = 0  # V4: number of times this task has been reassigned
 
 
 @dataclass
@@ -119,6 +126,32 @@ class SharedTaskList:
             task.completed_at = time.time()
             self._last_progress_time = time.time()  # V2: track progress
             return True
+
+    # ── V4: Error recovery (Sprint 157) ──
+
+    def reassign_task(self, task_id: str) -> bool:
+        """Reset a failed/in-progress task back to PENDING for reassignment.
+
+        Increments retry_count. Returns False if task not found or max retries hit.
+        """
+        with self._lock:
+            task = self._tasks.get(task_id)
+            if not task:
+                return False
+            task.retry_count += 1
+            task.status = TaskStatus.PENDING
+            task.claimed_by = None
+            task.claimed_at = None
+            task.result = None
+            task.completed_at = None
+            self._last_progress_time = time.time()
+            return True
+
+    def get_task_retry_count(self, task_id: str) -> int:
+        """Get the number of times a task has been reassigned."""
+        with self._lock:
+            task = self._tasks.get(task_id)
+            return task.retry_count if task else 0
 
     def add_message(
         self, from_agent: str, content: str, to_agent: str | None = None,
@@ -207,6 +240,26 @@ class SharedTaskList:
         with self._lock:
             return time.time() - self._last_progress_time
 
+    def task_count(self) -> int:
+        """Return total number of tasks."""
+        with self._lock:
+            return len(self._tasks)
+
+    def completed_count(self) -> int:
+        """Return number of completed tasks."""
+        with self._lock:
+            return sum(1 for t in self._tasks.values() if t.status == TaskStatus.COMPLETED)
+
+    def message_count(self) -> int:
+        """Return total number of messages."""
+        with self._lock:
+            return len(self._messages)
+
+    def get_messages_since(self, offset: int) -> list[TeamMessage]:
+        """Return messages added since offset index (for SSE emission)."""
+        with self._lock:
+            return list(self._messages[offset:])
+
     def to_dict(self) -> dict[str, Any]:
         with self._lock:
             return {
@@ -237,3 +290,80 @@ class SharedTaskList:
                     "pending": sum(1 for t in self._tasks.values() if t.status == TaskStatus.PENDING),
                 },
             }
+
+
+# ---------------------------------------------------------------------------
+# V4: Protocol + Factory (Sprint 153)
+# ---------------------------------------------------------------------------
+
+@runtime_checkable
+class SharedTaskListProtocol(Protocol):
+    """Protocol defining the SharedTaskList interface.
+
+    Both SharedTaskList (in-memory) and RedisSharedTaskList implement this.
+    """
+
+    def add_task(self, task_id: str, description: str, priority: int = 1,
+                 required_expertise: str = "") -> TaskItem: ...
+    def claim_task(self, agent_name: str) -> Optional[TaskItem]: ...
+    def complete_task(self, task_id: str, result: str) -> bool: ...
+    def fail_task(self, task_id: str, error: str) -> bool: ...
+    def add_message(self, from_agent: str, content: str,
+                    to_agent: Optional[str] = None) -> None: ...
+    def get_status(self) -> str: ...
+    def get_messages(self, last_n: int = 10) -> str: ...
+    def is_all_done(self) -> bool: ...
+    def get_inbox(self, agent_name: str, last_n: int = 10,
+                  unread_only: bool = False) -> str: ...
+    def get_inbox_count(self, agent_name: str, unread_only: bool = False) -> int: ...
+    def get_agent_current_task(self, agent_name: str) -> Optional[TaskItem]: ...
+    def seconds_since_last_progress(self) -> float: ...
+    def task_count(self) -> int: ...
+    def completed_count(self) -> int: ...
+    def message_count(self) -> int: ...
+    def get_messages_since(self, offset: int) -> list[TeamMessage]: ...
+    def reassign_task(self, task_id: str) -> bool: ...
+    def get_task_retry_count(self, task_id: str) -> int: ...
+    def to_dict(self) -> dict[str, Any]: ...
+
+
+def create_shared_task_list(
+    session_id: str = "",
+    use_redis: bool = True,
+) -> SharedTaskListProtocol:
+    """Factory: returns RedisSharedTaskList if Redis available, else in-memory.
+
+    Args:
+        session_id: Unique session identifier for Redis key prefix.
+        use_redis: Whether to attempt Redis backend. Falls back on failure.
+
+    Returns:
+        A SharedTaskListProtocol implementation.
+    """
+    if use_redis and session_id:
+        try:
+            import redis as redis_lib
+            from src.core.config import get_settings
+
+            settings = get_settings()
+            if settings.redis_host:
+                client = redis_lib.Redis(
+                    host=settings.redis_host,
+                    port=settings.redis_port,
+                    password=getattr(settings, "redis_password", None) or None,
+                    decode_responses=True,
+                    socket_connect_timeout=3,
+                    socket_timeout=5,
+                )
+                client.ping()  # verify connectivity
+                from src.integrations.poc.redis_task_list import RedisSharedTaskList
+                logger.info(
+                    f"Using RedisSharedTaskList for session {session_id} "
+                    f"({settings.redis_host}:{settings.redis_port})"
+                )
+                return RedisSharedTaskList(session_id, client)
+        except Exception as e:
+            logger.warning(f"Redis unavailable, falling back to in-memory: {e}")
+
+    logger.info("Using in-memory SharedTaskList")
+    return SharedTaskList()

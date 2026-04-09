@@ -42,12 +42,66 @@ def _get_real_tools():
         return _get_claude_sdk_tools()
 
 
-def _build_team_agents_config(all_tools: list) -> list:
-    """Build V2 parallel team agent configs with improved prompts.
+def _build_team_agents_config(all_tools: list, max_agents: int = 0) -> list:
+    """Build V4 parallel team agent configs with expandable role library.
 
+    V4: Supports 2-8 agents. max_agents=0 means use TEAM_MAX_AGENTS env var.
     Shared between test_team and test_team_stream to avoid duplication.
     """
+    import os
     from src.integrations.poc.agent_work_loop import AgentConfig
+
+    if max_agents <= 0:
+        max_agents = int(os.getenv("TEAM_MAX_AGENTS", "5"))
+
+    # Full role library (V4: 8 roles)
+    _ROLE_LIBRARY = [
+        {
+            "name": "LogExpert",
+            "role": "You are a log analysis expert.",
+            "expertise": "log analysis error pattern trace timestamp",
+        },
+        {
+            "name": "DBExpert",
+            "role": "You are a database expert.",
+            "expertise": "database sql schema query connection pool migration",
+        },
+        {
+            "name": "AppExpert",
+            "role": "You are an infrastructure/network expert.",
+            "expertise": "network infrastructure configuration scheduling connectivity",
+        },
+        {
+            "name": "SecurityExpert",
+            "role": "You are a security and compliance expert.",
+            "expertise": "security vulnerability access control audit compliance",
+        },
+        {
+            "name": "CloudExpert",
+            "role": "You are a cloud infrastructure and deployment expert.",
+            "expertise": "cloud aws azure kubernetes container deployment scaling",
+        },
+        {
+            "name": "MonitoringExpert",
+            "role": "You are a monitoring and observability expert.",
+            "expertise": "monitoring metrics alerting dashboard grafana prometheus",
+        },
+        {
+            "name": "AutomationExpert",
+            "role": "You are an automation and CI/CD expert.",
+            "expertise": "automation cicd pipeline scripting terraform ansible",
+        },
+        {
+            "name": "PerformanceExpert",
+            "role": "You are a performance engineering expert.",
+            "expertise": "performance optimization latency throughput profiling caching",
+        },
+    ]
+
+    # Select up to max_agents roles
+    selected_roles = _ROLE_LIBRARY[:max_agents]
+    all_names = [r["name"] for r in selected_roles]
+    teammates_str = ", ".join(all_names)
 
     _SHARED_WORKFLOW = (
         "You work IN PARALLEL with other experts. You will be called MULTIPLE times.\n\n"
@@ -63,46 +117,30 @@ def _build_team_agents_config(all_tools: list) -> list:
         "   - search_knowledge_base: past incidents and SOPs\n"
         "4. call report_task_result(task_id, result) with DETAILED findings\n"
         "5. Send DIRECTED messages to SPECIFIC teammates about relevant findings:\n"
-        "   send_team_message(from_agent=YOUR_NAME, message='...', to_agent='DBExpert')\n\n"
+        "   send_team_message(from_agent=YOUR_NAME, message='...', to_agent='TARGET')\n\n"
         "COMMUNICATION RULES:\n"
         "- ALWAYS respond to inbox messages — this is how the team collaborates\n"
         "- When you discover something relevant to another expert, message them DIRECTLY\n"
         "- Include specific questions or requests in your messages\n"
-        "- Teammates: LogExpert, DBExpert, AppExpert\n"
-        "- Example: send_team_message(from_agent='YOUR_NAME', "
-        "message='Found DB timeout errors in logs — can you check connection pool settings?', "
-        "to_agent='DBExpert')\n\n"
+        f"- Teammates: {teammates_str}\n\n"
         "ANALYSIS RULES:\n"
         "- Provide THOROUGH analysis with evidence and recommendations\n"
         "- If tools can't access the system, use deep_analysis for expert reasoning"
     )
 
-    return [
-        AgentConfig(
-            name="LogExpert",
+    configs = []
+    for role in selected_roles:
+        name = role["name"]
+        configs.append(AgentConfig(
+            name=name,
             instructions=(
-                "You are a log analysis expert. " + _SHARED_WORKFLOW.replace("YOUR_NAME", "LogExpert")
+                role["role"] + " " + _SHARED_WORKFLOW.replace("YOUR_NAME", name)
             ),
-            expertise="log analysis error pattern trace timestamp",
+            expertise=role["expertise"],
             tools=all_tools,
-        ),
-        AgentConfig(
-            name="DBExpert",
-            instructions=(
-                "You are a database expert. " + _SHARED_WORKFLOW.replace("YOUR_NAME", "DBExpert")
-            ),
-            expertise="database sql schema query connection pool migration",
-            tools=all_tools,
-        ),
-        AgentConfig(
-            name="AppExpert",
-            instructions=(
-                "You are an infrastructure/network expert. " + _SHARED_WORKFLOW.replace("YOUR_NAME", "AppExpert")
-            ),
-            expertise="network infrastructure configuration scheduling connectivity",
-            tools=all_tools,
-        ),
-    ]
+        ))
+
+    return configs
 
 
 def _create_client(provider: str, model: str, azure_endpoint: str = "",
@@ -476,7 +514,7 @@ async def test_team(
     }
 
     try:
-        from src.integrations.poc.shared_task_list import SharedTaskList
+        from src.integrations.poc.shared_task_list import create_shared_task_list
         from src.integrations.poc.team_tools import create_team_tools, create_lead_tools
         from src.integrations.poc.agent_work_loop import (
             AgentConfig, run_parallel_team,
@@ -484,8 +522,8 @@ async def test_team(
 
         t0 = time.time()
 
-        # Step 1: Create empty SharedTaskList (Phase 0 will populate it)
-        shared = SharedTaskList()
+        # Step 1: Create SharedTaskList (V4: Redis-backed if available)
+        shared = create_shared_task_list(session_id=session_id)
         team_tools = create_team_tools(shared)
         lead_tools = create_lead_tools(shared)
         real_tools = _get_real_tools()  # V2: real subprocess tools
@@ -535,6 +573,7 @@ async def test_team(
             client_factory=make_client,
             lead_tools=lead_tools,
             emitter=None,
+            session_id=session_id,
             timeout=timeout,
         )
 
@@ -2798,7 +2837,7 @@ async def test_team_stream(
         t0 = time.time()
 
         try:
-            from src.integrations.poc.shared_task_list import SharedTaskList
+            from src.integrations.poc.shared_task_list import create_shared_task_list
             from src.integrations.poc.team_tools import create_team_tools, create_lead_tools
             from src.integrations.poc.agent_work_loop import (
                 AgentConfig, run_parallel_team, _patch_emitter,
@@ -2814,8 +2853,8 @@ async def test_team_stream(
                 "model": model,
             })
 
-            # Step 1: Create SharedTaskList + tools
-            shared = SharedTaskList()
+            # Step 1: Create SharedTaskList + tools (V4: Redis-backed if available)
+            shared = create_shared_task_list(session_id=_session_id)
             team_tools = create_team_tools(shared)
             lead_tools = create_lead_tools(shared)
             real_tools = _get_real_tools()  # V2: real subprocess tools
@@ -2853,6 +2892,7 @@ async def test_team_stream(
                 lead_tools=lead_tools,
                 emitter=emitter,
                 timeout=timeout,
+                session_id=_session_id,
             )
 
             # Step 5: Sidechain completion records
@@ -3102,7 +3142,7 @@ async def test_hybrid_stream(
 
             else:
                 # Team execution — V2 parallel engine
-                from src.integrations.poc.shared_task_list import SharedTaskList
+                from src.integrations.poc.shared_task_list import create_shared_task_list
                 from src.integrations.poc.team_tools import create_team_tools, create_lead_tools
                 from src.integrations.poc.agent_work_loop import (
                     AgentConfig, run_parallel_team, _patch_emitter,
@@ -3110,7 +3150,7 @@ async def test_hybrid_stream(
 
                 _patch_emitter(emitter)
 
-                shared = SharedTaskList()
+                shared = create_shared_task_list(session_id=_session_id)
                 team_tools = create_team_tools(shared)
                 lead_tools = create_lead_tools(shared)
                 real_tools = _get_real_tools()
@@ -3139,6 +3179,7 @@ async def test_hybrid_stream(
                     lead_tools=lead_tools,
                     emitter=emitter,
                     timeout=120.0,
+                    session_id=_session_id,
                 )
 
                 for name in team_agent_names:
