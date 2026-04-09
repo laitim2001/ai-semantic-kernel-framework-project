@@ -1847,35 +1847,34 @@ async def decide_team_approval(
 ):
     """V4: Approve or reject a team agent's tool call.
 
-    Routes to the shared HITLController used by the active team execution.
-    This is separate from the orchestrator approval endpoints.
+    Event-driven: calls TeamApprovalManager.resolve() which sets an
+    asyncio.Event — the waiting agent coroutine wakes up immediately.
+    CC equivalent: resolve(permissionDecision).
     """
-    from src.integrations.poc.approval_gate import get_active_hitl_controller
+    from src.integrations.poc.approval_gate import get_approval_manager
 
-    controller = get_active_hitl_controller()
-    if controller is None:
-        return {"status": "error", "error": "No active team execution with HITL controller"}
+    manager = get_approval_manager()
+    if manager is None:
+        return {"status": "error", "error": "No active team execution with approval manager"}
 
     if action not in ("approve", "reject"):
         return {"status": "error", "error": f"Invalid action: {action}"}
 
-    try:
-        approved = action == "approve"
-        result = await controller.process_approval(
-            request_id=approval_id,
-            approved=approved,
-            approver=decided_by,
-            comment=f"{'Approved' if approved else 'Rejected'} via team UI",
-        )
-        return {
-            "status": "ok",
-            "action": action,
-            "decided_by": decided_by,
-            "approval_id": approval_id,
-            "approval_status": result.status.value if hasattr(result, "status") else str(result),
-        }
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
+    resolved = await manager.resolve(
+        approval_id=approval_id,
+        decision="approved" if action == "approve" else "rejected",
+        decided_by=decided_by,
+    )
+
+    if not resolved:
+        return {"status": "error", "error": f"Approval {approval_id} not found or already resolved"}
+
+    return {
+        "status": "ok",
+        "action": action,
+        "decided_by": decided_by,
+        "approval_id": approval_id,
+    }
 
 
 # ── Pinned Memory PoC Endpoints (no auth, for testing) ───────────────────

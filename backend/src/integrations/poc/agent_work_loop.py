@@ -294,31 +294,28 @@ async def _check_task_approval(
     current_task,
     session_id: str,
     emitter,
-    hitl_controller,
+    approval_manager,
 ) -> str:
     """V4: Check if the agent's task involves high-risk tools.
 
-    If the task description implies high-risk tool usage (e.g., database queries,
-    system commands), request human approval before the agent starts working.
+    If the task description implies high-risk tool usage, request human
+    approval via event-driven TeamApprovalManager (CC PermissionDecision
+    equivalent — zero CPU wait, single worker OK).
 
     Returns "approved", "rejected", or "expired".
     """
-    from src.integrations.poc.approval_gate import requires_approval
-
     # Determine which tools the agent will likely use based on task keywords
     task_desc = (current_task.description or "").lower()
     tools_needing_approval = []
 
-    # Match task description to high-risk tools
     if any(kw in task_desc for kw in ("command", "diagnostic", "ping", "curl", "shell")):
         tools_needing_approval.append("run_diagnostic_command")
     if any(kw in task_desc for kw in ("database", "sql", "query", "schema", "table")):
         tools_needing_approval.append("query_database")
 
     if not tools_needing_approval:
-        return "approved"  # no high-risk tools expected
+        return "approved"
 
-    # Request approval for the most critical tool
     from src.integrations.poc.approval_gate import request_and_await_approval
 
     tool_name = tools_needing_approval[0]
@@ -330,7 +327,7 @@ async def _check_task_approval(
         tool_args={"task_id": current_task.task_id, "description": task_desc[:200]},
         session_id=session_id,
         emitter=emitter,
-        hitl_controller=hitl_controller,
+        manager=approval_manager,
         timeout_seconds=300.0,
     )
 
@@ -380,7 +377,7 @@ async def _agent_work_loop(
     emitter,
     shutdown_event: asyncio.Event,
     executor=None,
-    hitl_controller=None,
+    approval_manager=None,
     session_id: str = "",
 ) -> str:
     """CC-like persistent agent loop with 3-phase lifecycle.
@@ -394,7 +391,7 @@ async def _agent_work_loop(
       - shutdown_event is set (by Lead after communication window)
       - Safety: max 10 LLM turns to prevent runaway costs
 
-    V4 (Sprint 154): hitl_controller + session_id for approval gate.
+    V4: approval_manager (event-driven, CC PermissionDecision equivalent).
     """
     name = cfg.name
     agent = cfg.agent
@@ -439,9 +436,9 @@ async def _agent_work_loop(
                 logger.warning(f"Agent {name}: max LLM turns ({max_llm_turns}) reached, entering idle")
             else:
                 # V4: HITL approval gate — check if agent's tools need approval
-                if hitl_controller and current_task and llm_turns == 0:
+                if approval_manager and current_task and llm_turns == 0:
                     approval_result = await _check_task_approval(
-                        name, current_task, session_id, emitter, hitl_controller
+                        name, current_task, session_id, emitter, approval_manager
                     )
                     if approval_result == "rejected":
                         shared.fail_task(current_task.task_id, "Rejected by human reviewer")
@@ -681,23 +678,21 @@ async def run_parallel_team(
             tools=cfg.tools,
         )
 
-    # V4: Initialize HITL controller if available (shared via module-level singleton)
-    _hitl_controller = None
+    # V4: Event-driven approval manager (CC PermissionDecision equivalent)
+    _approval_manager = None
     try:
-        from src.integrations.orchestration.hitl.controller import create_hitl_controller
-        from src.integrations.poc.approval_gate import set_active_hitl_controller
-        _hitl_controller = create_hitl_controller(default_timeout_minutes=5)
-        set_active_hitl_controller(_hitl_controller)
-        logger.info("HITL approval gate enabled for agent team")
+        from src.integrations.poc.approval_gate import create_approval_manager
+        _approval_manager = create_approval_manager()
+        logger.info("HITL approval gate enabled (event-driven, single worker OK)")
     except Exception as e:
-        logger.info(f"HITL controller not available (approval gate disabled): {e}")
+        logger.info(f"Approval manager not available (gate disabled): {e}")
 
     agent_tasks = [
         asyncio.create_task(
             _agent_work_loop(
                 cfg, shared, emitter, shutdown_event,
                 executor=_executor,
-                hitl_controller=_hitl_controller,
+                approval_manager=_approval_manager,
                 session_id=session_id,
             ),
             name=f"agent-{cfg.name}",

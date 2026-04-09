@@ -763,7 +763,7 @@ export const AgentTeamTestPage: FC = () => {
                   </button>
                 </div>
                 <div className="text-xs text-amber-600 mt-2">
-                  Note: Backend must have multiple workers to process approval during SSE stream.
+                  Event-driven approval — agent pauses with zero CPU until you decide.
                 </div>
               </div>
             )}
