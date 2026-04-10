@@ -1,0 +1,531 @@
+{
+  "1_key_components": {
+    "total": 66,
+    "found": 66,
+    "missing": []
+  },
+  "2_class_methods": {
+    "total_checked": 135,
+    "found": 119,
+    "not_found": [
+      {
+        "class": "ContextHandler",
+        "method": "sync",
+        "file": "01-architecture\\layer-05-orchestration.md",
+        "line": 140
+      },
+      {
+        "class": "FrameworkSelector",
+        "method": "select",
+        "file": "01-architecture\\layer-07-claude-sdk.md",
+        "line": 620
+      },
+      {
+        "class": "CaseExtractor",
+        "method": "extract",
+        "file": "01-architecture\\layer-09-integrations.md",
+        "line": 607
+      },
+      {
+        "class": "SimilarityCalculator",
+        "method": "compute",
+        "file": "01-architecture\\layer-09-integrations.md",
+        "line": 608
+      },
+      {
+        "class": "HumanApprovalExecutor",
+        "method": "respond",
+        "file": "01-architecture\\layer-10-domain.md",
+        "line": 610
+      },
+      {
+        "class": "AgentConfig",
+        "method": "from_agent",
+        "file": "01-architecture\\layer-10-domain.md",
+        "line": 726
+      },
+      {
+        "class": "AgentRepository",
+        "method": "create",
+        "file": "04-flows\\flows-01-to-05.md",
+        "line": 302
+      },
+      {
+        "class": "Workflow",
+        "method": "run",
+        "file": "04-flows\\flows-01-to-05.md",
+        "line": 400
+      },
+      {
+        "class": "WorkflowNodeExecutor",
+        "method": "handle",
+        "file": "04-flows\\flows-01-to-05.md",
+        "line": 416
+      },
+      {
+        "class": "RedisCheckpointStorage",
+        "method": "load_latest",
+        "file": "04-flows\\flows-06-to-08.md",
+        "line": 68
+      },
+      {
+        "class": "ToolRegistry",
+        "method": "execute",
+        "file": "04-flows\\flows-06-to-08.md",
+        "line": 217
+      },
+      {
+        "class": "BaseRepository",
+        "method": "get_all",
+        "file": "06-cross-cutting\\cross-cutting-analysis.md",
+        "line": 285
+      },
+      {
+        "class": "CircuitBreaker",
+        "method": "execute",
+        "file": "06-cross-cutting\\cross-cutting-analysis.md",
+        "line": 372
+      },
+      {
+        "class": "OrchestratorBootstrap",
+        "method": "create",
+        "file": "07-delta\\delta-phase-39-42.md",
+        "line": 48
+      },
+      {
+        "class": "HITLController",
+        "method": "check",
+        "file": "07-delta\\delta-phase-43-44.md",
+        "line": 235
+      },
+      {
+        "class": "MagenticBuilderAdapter",
+        "method": "build_with_model_selection",
+        "file": "07-delta\\delta-phase-43-44.md",
+        "line": 238
+      }
+    ]
+  },
+  "3_file_paths": {
+    "total_checked": 398,
+    "exists": 382,
+    "not_found": [
+      {
+        "path": "frontend/hooks/useChatThreads.ts",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "infrastructure/middleware/rate_limit.py",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/components/unified-chat/ErrorBoundary.tsx",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/hooks/useSwarmMock.ts",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/hooks/useSwarmReal.ts",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/pages/UnifiedChat.tsx",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/hooks/useUnifiedChat.ts",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/hooks/useSSEChat.ts",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/components/ui/index.ts",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/components/ui/dialog.tsx",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/components/layout/Header.tsx",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/components/DevUI/LiveMonitor.tsx",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "frontend/pages/TemplatesPage.tsx",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "integrations/orchestration/routing/prompts.py",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "path": "backend/src/integrations/agent_framework/clients/anthropic_chat_client.py",
+        "source": "07-delta\\delta-phase-43-44.md"
+      },
+      {
+        "path": "api/v1/common/schemas.py",
+        "source": "08-data-model\\data-model-analysis.md"
+      }
+    ]
+  },
+  "4_feature_evidence": {
+    "total_features": 47,
+    "evidence_verified": 41,
+    "evidence_missing": [
+      {
+        "feature": "A11: MAF Builder — ConcurrentBuilder Adapter",
+        "status": "COMPLETE",
+        "evidence_path": "builders/concurrent.py",
+        "source": "03-features\\features-cat-a-to-e.md",
+        "line": 167
+      },
+      {
+        "feature": "A12: MAF Builder — HandoffBuilder Adapter",
+        "status": "COMPLETE",
+        "evidence_path": "builders/handoff.py",
+        "source": "03-features\\features-cat-a-to-e.md",
+        "line": 174
+      },
+      {
+        "feature": "A13: MAF Builder — GroupChatBuilder Adapter",
+        "status": "COMPLETE",
+        "evidence_path": "builders/groupchat.py",
+        "source": "03-features\\features-cat-a-to-e.md",
+        "line": 181
+      },
+      {
+        "feature": "A14: MAF Builder — MagenticBuilder Adapter",
+        "status": "COMPLETE",
+        "evidence_path": "builders/magentic.py",
+        "source": "03-features\\features-cat-a-to-e.md",
+        "line": 188
+      },
+      {
+        "feature": "A15: MAF Builder — WorkflowExecutor Adapter",
+        "status": "COMPLETE",
+        "evidence_path": "builders/workflow_executor.py",
+        "source": "03-features\\features-cat-a-to-e.md",
+        "line": 195
+      },
+      {
+        "feature": "A16: MAF Builder — Extension Adapters (edge_routing, planning, etc.)",
+        "status": "COMPLETE",
+        "evidence_path": "builders/edge_routing.py",
+        "source": "03-features\\features-cat-a-to-e.md",
+        "line": 202
+      }
+    ]
+  },
+  "5_enum_completeness": {
+    "total_checked": 52,
+    "complete": 47,
+    "incomplete": [
+      {
+        "enum": "WorkflowType",
+        "missing_values": [
+          "CONCURRENT",
+          "HANDOFF",
+          "SIMPLE"
+        ],
+        "claimed_count": 2,
+        "actual_count": 5,
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "enum": "WorkflowType",
+        "missing_values": [
+          "CONCURRENT",
+          "HANDOFF"
+        ],
+        "claimed_count": 3,
+        "actual_count": 5,
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "enum": "ServerStatus",
+        "missing_values": [
+          "RECONNECTING",
+          "REGISTERED"
+        ],
+        "claimed_count": 6,
+        "actual_count": 7,
+        "source": "01-architecture\\layer-08-mcp-tools.md"
+      }
+    ],
+    "extra_values": [
+      {
+        "enum": "ServerStatus",
+        "extra": [
+          "RECONNECTING)"
+        ],
+        "source": "01-architecture\\layer-08-mcp-tools.md"
+      },
+      {
+        "enum": "ToolCallStatus",
+        "extra": [
+          "APPROVED",
+          "REJECTED"
+        ],
+        "source": "02-modules\\mod-domain-infra-core.md"
+      },
+      {
+        "enum": "ToolCallStatus",
+        "extra": [
+          "APPROVED",
+          "REJECTED"
+        ],
+        "source": "02-modules\\mod-domain-infra-core.md"
+      }
+    ]
+  },
+  "6_diagram_components": {
+    "total_checked": 157,
+    "found": 107,
+    "not_found": [
+      {
+        "name": "DevUI",
+        "source": "00-stats.md"
+      },
+      {
+        "name": "EdgeRouting",
+        "source": "00-stats.md"
+      },
+      {
+        "name": "EventSource",
+        "source": "01-architecture\\layer-01-frontend.md"
+      },
+      {
+        "name": "STATE",
+        "source": "01-architecture\\layer-01-frontend.md"
+      },
+      {
+        "name": "CUSTOM",
+        "source": "01-architecture\\layer-01-frontend.md"
+      },
+      {
+        "name": "INCIDENT",
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "name": "REQUEST",
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "name": "CHANGE",
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "name": "QUERY",
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "name": "UNKNOWN",
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "name": "PROCESSING",
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "name": "PrometheusHdlr",
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "name": "ENGINE",
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "name": "DEFAULT",
+        "source": "01-architecture\\layer-04-routing.md"
+      },
+      {
+        "name": "APPROVAL",
+        "source": "01-architecture\\layer-05-orchestration.md"
+      },
+      {
+        "name": "TRANSIENT",
+        "source": "01-architecture\\layer-07-claude-sdk.md"
+      },
+      {
+        "name": "FATAL",
+        "source": "01-architecture\\layer-07-claude-sdk.md"
+      },
+      {
+        "name": "ADMIN",
+        "source": "01-architecture\\layer-08-mcp-tools.md"
+      },
+      {
+        "name": "EXECUTE",
+        "source": "01-architecture\\layer-08-mcp-tools.md"
+      },
+      {
+        "name": "CREATED",
+        "source": "01-architecture\\layer-10-domain.md"
+      },
+      {
+        "name": "ACTIVE",
+        "source": "01-architecture\\layer-10-domain.md"
+      },
+      {
+        "name": "SUSPENDED",
+        "source": "01-architecture\\layer-10-domain.md"
+      },
+      {
+        "name": "ENDED",
+        "source": "01-architecture\\layer-10-domain.md"
+      },
+      {
+        "name": "UnifiedChat",
+        "source": "01-architecture\\layer-10-domain.md"
+      },
+      {
+        "name": "STARTED",
+        "source": "01-architecture\\layer-10-domain.md"
+      },
+      {
+        "name": "CONTENT",
+        "source": "01-architecture\\layer-10-domain.md"
+      },
+      {
+        "name": "APPROVAL",
+        "source": "01-architecture\\layer-10-domain.md"
+      },
+      {
+        "name": "AsyncEngine",
+        "source": "01-architecture\\layer-11-infrastructure.md"
+      },
+      {
+        "name": "CachedStore",
+        "source": "01-architecture\\layer-11-infrastructure.md"
+      },
+      {
+        "name": "RabbitMQ",
+        "source": "02-modules\\mod-domain-infra-core.md"
+      },
+      {
+        "name": "CREATED",
+        "source": "02-modules\\mod-domain-infra-core.md"
+      },
+      {
+        "name": "ENDED",
+        "source": "02-modules\\mod-domain-infra-core.md"
+      },
+      {
+        "name": "PENDING",
+        "source": "02-modules\\mod-domain-infra-core.md"
+      },
+      {
+        "name": "CONTEXT",
+        "source": "02-modules\\mod-integration-batch1.md"
+      },
+      {
+        "name": "ROUTING",
+        "source": "02-modules\\mod-integration-batch1.md"
+      },
+      {
+        "name": "DIALOG",
+        "source": "02-modules\\mod-integration-batch1.md"
+      },
+      {
+        "name": "APPROVAL",
+        "source": "02-modules\\mod-integration-batch1.md"
+      },
+      {
+        "name": "AGENT",
+        "source": "02-modules\\mod-integration-batch1.md"
+      },
+      {
+        "name": "EXECUTION",
+        "source": "02-modules\\mod-integration-batch1.md"
+      },
+      {
+        "name": "OBSERVABILITY",
+        "source": "02-modules\\mod-integration-batch1.md"
+      },
+      {
+        "name": "MultiLevel",
+        "source": "03-features\\features-cat-a-to-e.md"
+      },
+      {
+        "name": "DevUI",
+        "source": "03-features\\features-cat-a-to-e.md"
+      },
+      {
+        "name": "BizRouter",
+        "source": "03-features\\features-cat-f-to-j.md"
+      },
+      {
+        "name": "SwarmEngine",
+        "source": "03-features\\features-cat-f-to-j.md"
+      },
+      {
+        "name": "SwarmVisualization",
+        "source": "03-features\\features-cat-f-to-j.md"
+      },
+      {
+        "name": "SwarmTools",
+        "source": "03-features\\features-cat-f-to-j.md"
+      },
+      {
+        "name": "ToolGateway",
+        "source": "03-features\\features-cat-f-to-j.md"
+      },
+      {
+        "name": "CRITICAL",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "name": "MEDIUM",
+        "source": "05-issues\\issue-registry.md"
+      },
+      {
+        "name": "RabbitMQ",
+        "source": "11-config-deploy\\config-deploy.md"
+      }
+    ]
+  },
+  "7_delta_files": {
+    "total_checked": 86,
+    "exists": 82,
+    "not_found": [
+      {
+        "path": "backend/src/integrations/agent_framework/clients/anthropic_chat_client.py",
+        "source": "07-delta\\delta-phase-43-44.md"
+      },
+      {
+        "path": "backend/src/integrations/hybrid/orchestrator/manager_model_registry.py",
+        "source": "07-delta\\delta-phase-43-44.md"
+      },
+      {
+        "path": "backend/src/integrations/hybrid/orchestrator/manager_model_selector.py",
+        "source": "07-delta\\delta-phase-43-44.md"
+      },
+      {
+        "path": "backend/src/api/v1/orchestration/manager_model_routes.py",
+        "source": "07-delta\\delta-phase-43-44.md"
+      }
+    ]
+  },
+  "8_import_claims": {
+    "total_checked": 47,
+    "verified": 45,
+    "not_found": [
+      {
+        "module": "src.core.config.get_settings",
+        "source": "02-modules\\mod-domain-infra-core.md"
+      },
+      {
+        "module": "src.infrastructure.redis_client.get_redis_client",
+        "source": "02-modules\\mod-domain-infra-core.md"
+      }
+    ]
+  }
+}

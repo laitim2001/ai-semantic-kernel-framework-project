@@ -397,4 +397,11 @@ CREATED → ACTIVE ↔ SUSPENDED → ENDED
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-10-domain.md` — Full domain layer analysis (20 modules, services, models, state machines)
+> `docs/07-analysis/V9/08-data-model/` — ORM schema and data model analysis
+
+---
+
+**Last Updated**: 2026-03-31

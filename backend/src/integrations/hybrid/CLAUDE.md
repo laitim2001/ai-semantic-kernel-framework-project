@@ -134,4 +134,10 @@ ModeSwitcher (if mode change detected)
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-05-orchestration.md` — Full hybrid orchestration analysis (MAF+SDK switching, context sync, risk assessment)
+
+---
+
+**Last Updated**: 2026-03-31

@@ -1,0 +1,267 @@
+{
+  "layer": "L05",
+  "files": 89,
+  "loc": 28889,
+  "total_classes": 233,
+  "shown_classes": 15,
+  "classes": [
+    {
+      "name": "HybridOrchestratorV2",
+      "bases": [],
+      "doc": "重構後的混合編排器 V2。",
+      "pub_methods": [
+        "__init__",
+        "config",
+        "mediator",
+        "active_session_id",
+        "session_count",
+        "framework_selector",
+        "intent_router",
+        "input_gateway",
+        "business_router",
+        "guided_dialog"
+      ],
+      "total_methods": 35
+    },
+    {
+      "name": "ContextBridge",
+      "bases": [],
+      "doc": "跨框架上下文橋接器",
+      "pub_methods": [
+        "__init__",
+        "maf_mapper",
+        "claude_mapper",
+        "synchronizer",
+        "sync_to_claude",
+        "sync_to_maf",
+        "merge_contexts",
+        "get_hybrid_context",
+        "get_or_create_hybrid",
+        "sync_after_execution"
+      ],
+      "total_methods": 24
+    },
+    {
+      "name": "UnifiedCheckpointStorage",
+      "bases": [
+        "ABC"
+      ],
+      "doc": "Abstract base class for checkpoint storage backends.",
+      "pub_methods": [
+        "__init__",
+        "save",
+        "load",
+        "delete",
+        "exists",
+        "query",
+        "get_stats",
+        "cleanup_expired",
+        "save_with_restore_point",
+        "load_by_session"
+      ],
+      "total_methods": 20
+    },
+    {
+      "name": "SyncEventPublisher",
+      "bases": [],
+      "doc": "同步事件發布器",
+      "pub_methods": [
+        "__init__",
+        "subscribe",
+        "unsubscribe",
+        "publish",
+        "publish_sync_started",
+        "publish_sync_completed",
+        "publish_sync_failed",
+        "publish_sync_progress",
+        "publish_conflict_detected",
+        "publish_conflict_resolved"
+      ],
+      "total_methods": 20
+    },
+    {
+      "name": "ContextSynchronizer",
+      "bases": [],
+      "doc": "統一上下文同步器 — Sprint 119 Unified Implementation",
+      "pub_methods": [
+        "__init__",
+        "create",
+        "initialize_lock",
+        "sync",
+        "detect_conflict",
+        "resolve_conflict",
+        "rollback",
+        "get_version",
+        "get_snapshots",
+        "clear_snapshots"
+      ],
+      "total_methods": 19
+    },
+    {
+      "name": "OrchestratorMediator",
+      "bases": [],
+      "doc": "Central coordinator for the orchestration pipeline.",
+      "pub_methods": [
+        "__init__",
+        "register_handler",
+        "get_handler",
+        "registered_handlers",
+        "create_session",
+        "get_session",
+        "close_session",
+        "session_count",
+        "resolve_approval",
+        "execute"
+      ],
+      "total_methods": 19
+    },
+    {
+      "name": "RiskDrivenApprovalHook",
+      "bases": [],
+      "doc": "Approval hook driven by multi-dimensional risk assessment.",
+      "pub_methods": [
+        "__init__",
+        "check_approval",
+        "on_session_start",
+        "on_session_end",
+        "set_mode",
+        "add_auto_approve_tool",
+        "remove_auto_approve_tool",
+        "clear_approved_operations",
+        "get_pending_approvals",
+        "get_decision_history"
+      ],
+      "total_methods": 18
+    },
+    {
+      "name": "ConflictResolver",
+      "bases": [],
+      "doc": "衝突解決器",
+      "pub_methods": [
+        "__init__",
+        "detect_conflicts",
+        "resolve",
+        "can_auto_resolve",
+        "get_conflict_history",
+        "clear_conflict_history"
+      ],
+      "total_methods": 17
+    },
+    {
+      "name": "ModeSwitcher",
+      "bases": [],
+      "doc": "Core ModeSwitcher for dynamic mode switching.",
+      "pub_methods": [
+        "__init__",
+        "should_switch",
+        "execute_switch",
+        "rollback_switch",
+        "manual_switch",
+        "register_detector",
+        "unregister_detector",
+        "get_metrics",
+        "get_transition_history",
+        "clear_transition_history"
+      ],
+      "total_methods": 17
+    },
+    {
+      "name": "UnifiedToolExecutor",
+      "bases": [],
+      "doc": "統一 Tool 執行層",
+      "pub_methods": [
+        "__init__",
+        "tool_registry",
+        "hook_chain",
+        "context_bridge",
+        "metrics",
+        "execute",
+        "execute_batch",
+        "get_execution_log",
+        "clear_execution_log",
+        "get_available_tools"
+      ],
+      "total_methods": 16
+    },
+    {
+      "name": "FilesystemCheckpointStorage",
+      "bases": [
+        "UnifiedCheckpointStorage"
+      ],
+      "doc": "Filesystem storage backend for checkpoints.",
+      "pub_methods": [
+        "__init__",
+        "save",
+        "load",
+        "delete",
+        "exists",
+        "query",
+        "get_stats",
+        "cleanup_expired",
+        "clear_all"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "ContextEvaluator",
+      "bases": [],
+      "doc": "Evaluates context-based risk factors.",
+      "pub_methods": [
+        "__init__",
+        "analyze",
+        "update_user_trust",
+        "update_session",
+        "get_user_trust_level",
+        "set_user_trust_level",
+        "get_session_context",
+        "clear_session",
+        "get_environment_multiplier"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "PatternDetector",
+      "bases": [],
+      "doc": "Detects risk patterns in operation sequences.",
+      "pub_methods": [
+        "__init__",
+        "analyze",
+        "get_session_patterns",
+        "clear_session",
+        "clear_all",
+        "get_user_baseline"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "SwarmModeHandler",
+      "bases": [],
+      "doc": "Swarm Mode Handler -- integrates multi-agent swarm execution into main flow.",
+      "pub_methods": [
+        "__init__",
+        "is_enabled",
+        "config",
+        "analyze_for_swarm",
+        "execute_swarm"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "FrameworkSelector",
+      "bases": [],
+      "doc": "Framework Selector for analyzing user input and determining execution mode.",
+      "pub_methods": [
+        "__init__",
+        "add_classifier",
+        "remove_classifier",
+        "select_framework",
+        "get_classifiers",
+        "get_enabled_classifiers",
+        "set_confidence_threshold",
+        "set_default_mode",
+        "analyze_intent"
+      ],
+      "total_methods": 14
+    }
+  ]
+}

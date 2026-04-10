@@ -1,0 +1,6537 @@
+{
+  "layer": "L03",
+  "files": [
+    {
+      "path": "backend/src/integrations/ag_ui/bridge.py",
+      "loc": 1080,
+      "classes": [
+        {
+          "name": "RunAgentInput",
+          "bases": [],
+          "docstring": "\n    Input for running an agent through the bridge.\n\n    Attributes:\n        prompt: User prompt/message\n        thread_id: Thread ID for conversation context\n        run_id: Unique run ID (generated ",
+          "methods": [
+            {
+              "name": "__post_init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        },
+        {
+          "name": "BridgeConfig",
+          "bases": [],
+          "docstring": "\n    Configuration for HybridEventBridge.\n\n    Attributes:\n        chunk_size: Size of text chunks for streaming\n        include_metadata: Whether to include metadata in events\n        emit_state_even",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "HybridEventBridge",
+          "bases": [],
+          "docstring": "\n    AG-UI Event Bridge for HybridOrchestratorV2.\n\n    Bridges the HybridOrchestratorV2 execution model to AG-UI protocol,\n    converting execution results into standardized SSE event streams.\n\n    Th",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "orchestrator",
+              "args": [],
+              "returns": "Optional['HybridOrchestratorV2']",
+              "is_async": false
+            },
+            {
+              "name": "converters",
+              "args": [],
+              "returns": "EventConverters",
+              "is_async": false
+            },
+            {
+              "name": "config",
+              "args": [],
+              "returns": "BridgeConfig",
+              "is_async": false
+            },
+            {
+              "name": "set_orchestrator",
+              "args": [
+                "orchestrator"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "swarm_emitter",
+              "args": [],
+              "returns": "Optional['SwarmEventEmitter']",
+              "is_async": false
+            },
+            {
+              "name": "configure_swarm_emitter",
+              "args": [
+                "event_callback",
+                "throttle_interval_ms",
+                "batch_size"
+              ],
+              "returns": "'SwarmEventEmitter'",
+              "is_async": false
+            },
+            {
+              "name": "_send_custom_event",
+              "args": [
+                "event"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "start_swarm_emitter",
+              "args": [],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "stop_swarm_emitter",
+              "args": [],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "_build_multimodal_content",
+              "args": [
+                "prompt",
+                "file_ids"
+              ],
+              "returns": "List[Dict[str, Any]]",
+              "is_async": false
+            },
+            {
+              "name": "_enrich_prompt_with_files",
+              "args": [
+                "prompt",
+                "file_ids"
+              ],
+              "returns": "str",
+              "is_async": false
+            },
+            {
+              "name": "_generate_simulation_events",
+              "args": [
+                "run_input"
+              ],
+              "returns": "AsyncGenerator[BaseAGUIEvent, None]",
+              "is_async": true
+            },
+            {
+              "name": "stream_events",
+              "args": [
+                "run_input"
+              ],
+              "returns": "AsyncGenerator[str, None]",
+              "is_async": true
+            },
+            {
+              "name": "stream_events_raw",
+              "args": [
+                "run_input"
+              ],
+              "returns": "AsyncGenerator[BaseAGUIEvent, None]",
+              "is_async": true
+            },
+            {
+              "name": "execute_and_collect",
+              "args": [
+                "run_input"
+              ],
+              "returns": "List[BaseAGUIEvent]",
+              "is_async": true
+            },
+            {
+              "name": "_format_sse",
+              "args": [
+                "event"
+              ],
+              "returns": "str",
+              "is_async": false
+            },
+            {
+              "name": "create_run_started",
+              "args": [
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "RunStartedEvent",
+              "is_async": false
+            },
+            {
+              "name": "create_run_finished",
+              "args": [
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "RunFinishedEvent",
+              "is_async": false
+            },
+            {
+              "name": "format_event",
+              "args": [
+                "event"
+              ],
+              "returns": "str",
+              "is_async": false
+            }
+          ],
+          "method_count": 20
+        }
+      ],
+      "functions": [
+        "create_bridge"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/converters.py",
+      "loc": 691,
+      "classes": [
+        {
+          "name": "HybridEventType",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "\n    Hybrid 內部事件類型枚舉。\n\n    定義所有 Hybrid Orchestrator 可能產生的內部事件類型。\n    這些事件將被轉換為對應的 AG-UI 事件。\n    ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "HybridEvent",
+          "bases": [],
+          "docstring": "\n    Hybrid 內部事件數據類。\n\n    Attributes:\n        type: 事件類型\n        data: 事件數據\n        thread_id: 對話線程 ID\n        run_id: 執行 ID\n        message_id: 訊息 ID (適用於訊息事件)\n        tool_call_id: 工具調用 ID (適用於工具事件)",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "EventConverters",
+          "bases": [],
+          "docstring": "\n    AG-UI 事件轉換器。\n\n    將 Hybrid 內部事件轉換為 AG-UI 協議標準事件。\n    支持所有 AG-UI 事件類型的轉換。\n\n    Example:\n        >>> converters = EventConverters()\n        >>> event = converters.to_run_started(\"thread-123\", \"run-",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "chunk_size",
+              "args": [],
+              "returns": "int",
+              "is_async": false
+            },
+            {
+              "name": "to_run_started",
+              "args": [
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "RunStartedEvent",
+              "is_async": false
+            },
+            {
+              "name": "to_run_finished",
+              "args": [
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "RunFinishedEvent",
+              "is_async": false
+            },
+            {
+              "name": "to_text_message_start",
+              "args": [
+                "message_id"
+              ],
+              "returns": "TextMessageStartEvent",
+              "is_async": false
+            },
+            {
+              "name": "to_text_message_content",
+              "args": [
+                "message_id",
+                "delta"
+              ],
+              "returns": "TextMessageContentEvent",
+              "is_async": false
+            },
+            {
+              "name": "to_text_message_end",
+              "args": [
+                "message_id"
+              ],
+              "returns": "TextMessageEndEvent",
+              "is_async": false
+            },
+            {
+              "name": "content_to_chunks",
+              "args": [
+                "content",
+                "message_id"
+              ],
+              "returns": "List[TextMessageContentEvent]",
+              "is_async": false
+            },
+            {
+              "name": "to_tool_call_start",
+              "args": [
+                "tool_call_id",
+                "tool_name"
+              ],
+              "returns": "ToolCallStartEvent",
+              "is_async": false
+            },
+            {
+              "name": "to_tool_call_args",
+              "args": [
+                "tool_call_id",
+                "args"
+              ],
+              "returns": "ToolCallArgsEvent",
+              "is_async": false
+            },
+            {
+              "name": "to_tool_call_end",
+              "args": [
+                "tool_call_id"
+              ],
+              "returns": "ToolCallEndEvent",
+              "is_async": false
+            },
+            {
+              "name": "to_state_snapshot",
+              "args": [
+                "state"
+              ],
+              "returns": "StateSnapshotEvent",
+              "is_async": false
+            },
+            {
+              "name": "to_state_delta",
+              "args": [
+                "delta"
+              ],
+              "returns": "StateDeltaEvent",
+              "is_async": false
+            },
+            {
+              "name": "to_custom_event",
+              "args": [
+                "name",
+                "value"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "convert",
+              "args": [
+                "hybrid_event"
+              ],
+              "returns": "Optional[BaseAGUIEvent]",
+              "is_async": false
+            },
+            {
+              "name": "from_result",
+              "args": [
+                "result"
+              ],
+              "returns": "List[BaseAGUIEvent]",
+              "is_async": false
+            }
+          ],
+          "method_count": 16
+        }
+      ],
+      "functions": [
+        "create_converters"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/mediator_bridge.py",
+      "loc": 192,
+      "classes": [
+        {
+          "name": "MediatorEventBridge",
+          "bases": [],
+          "docstring": "Bridges OrchestratorMediator to AG-UI SSE protocol.\n\n    Converts internal mediator events into AG-UI standard SSE events\n    for real-time frontend streaming.\n\n    Args:\n        sse_buffer: Optional ",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "sse_buffer"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "stream_events",
+              "args": [
+                "mediator",
+                "request",
+                "thread_id"
+              ],
+              "returns": "AsyncGenerator[str, None]",
+              "is_async": true
+            },
+            {
+              "name": "convert_event",
+              "args": [
+                "mediator_event_type",
+                "data"
+              ],
+              "returns": "Optional[str]",
+              "is_async": false
+            },
+            {
+              "name": "_format_sse",
+              "args": [
+                "event_type",
+                "data"
+              ],
+              "returns": "str",
+              "is_async": false
+            }
+          ],
+          "method_count": 4
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/sse_buffer.py",
+      "loc": 109,
+      "classes": [
+        {
+          "name": "SSEEventBuffer",
+          "bases": [],
+          "docstring": "Redis-backed SSE event buffer for reconnection support.\n\n    Stores recent events per session so clients can replay missed\n    events after a disconnection.\n\n    Args:\n        redis_backend: Storage b",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "redis_backend",
+                "ttl",
+                "max_size"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "buffer_event",
+              "args": [
+                "session_id",
+                "event"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "replay_from",
+              "args": [
+                "session_id",
+                "last_event_id"
+              ],
+              "returns": "List[Dict[str, Any]]",
+              "is_async": true
+            },
+            {
+              "name": "cleanup",
+              "args": [
+                "session_id"
+              ],
+              "returns": "None",
+              "is_async": true
+            }
+          ],
+          "method_count": 4
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/__init__.py",
+      "loc": 112,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/events/base.py",
+      "loc": 116,
+      "classes": [
+        {
+          "name": "AGUIEventType",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "\n    AG-UI 事件類型枚舉。\n\n    定義所有 AG-UI 協議支持的事件類型，用於 Agent-UI 通訊。\n\n    Categories:\n        - Lifecycle: RUN_STARTED, RUN_FINISHED\n        - Text Message: TEXT_MESSAGE_START, TEXT_MESSAGE_CONTENT, TEXT_MESS",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "RunFinishReason",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "\n    Run 結束原因枚舉。\n\n    Attributes:\n        COMPLETE: 正常完成\n        ERROR: 發生錯誤\n        CANCELLED: 用戶取消\n        TIMEOUT: 執行超時\n    ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "BaseAGUIEvent",
+          "bases": [
+            "BaseModel"
+          ],
+          "docstring": "\n    AG-UI 事件基類。\n\n    所有 AG-UI 事件都繼承自此基類，提供共同的字段和序列化行為。\n\n    Attributes:\n        type: 事件類型\n        timestamp: 事件產生時間 (UTC)\n\n    Example:\n        >>> event = BaseAGUIEvent(type=AGUIEventType.RUN_START",
+          "methods": [
+            {
+              "name": "to_sse",
+              "args": [],
+              "returns": "str",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/events/lifecycle.py",
+      "loc": 89,
+      "classes": [
+        {
+          "name": "RunStartedEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    Run 開始事件。\n\n    當 Agent 開始執行時發送此事件，標記一個新的執行週期開始。\n\n    Attributes:\n        type: 固定為 RUN_STARTED\n        thread_id: 對話線程 ID\n        run_id: 本次執行的唯一 ID\n\n    Example:\n        >>> event = RunStartedEv",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "RunFinishedEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    Run 結束事件。\n\n    當 Agent 執行完成時發送此事件，標記執行週期結束。\n    包含執行結果摘要和結束原因。\n\n    Attributes:\n        type: 固定為 RUN_FINISHED\n        thread_id: 對話線程 ID\n        run_id: 本次執行的唯一 ID\n        finish_reason: 結束原因 (c",
+          "methods": [],
+          "method_count": 0
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/events/message.py",
+      "loc": 100,
+      "classes": [
+        {
+          "name": "TextMessageStartEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    文字訊息開始事件。\n\n    當 Agent 開始生成文字回應時發送此事件，標記一個新訊息的開始。\n\n    Attributes:\n        type: 固定為 TEXT_MESSAGE_START\n        message_id: 訊息唯一 ID\n        role: 訊息角色 (assistant, user, system)\n\n    Example:\n    ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "TextMessageContentEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    文字訊息內容事件。\n\n    當 Agent 生成文字內容時持續發送此事件，用於串流輸出文字。\n    每個事件包含一小段增量文字 (delta)。\n\n    Attributes:\n        type: 固定為 TEXT_MESSAGE_CONTENT\n        message_id: 訊息唯一 ID\n        delta: 增量文字內容\n\n    Example:\n",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "TextMessageEndEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    文字訊息結束事件。\n\n    當 Agent 完成文字回應生成時發送此事件，標記訊息結束。\n\n    Attributes:\n        type: 固定為 TEXT_MESSAGE_END\n        message_id: 訊息唯一 ID\n\n    Example:\n        >>> event = TextMessageEndEvent(message_id=\"msg",
+          "methods": [],
+          "method_count": 0
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/events/progress.py",
+      "loc": 423,
+      "classes": [
+        {
+          "name": "SubStepStatus",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "\n    Sub-step status enumeration.\n\n    Attributes:\n        PENDING: Not yet started\n        RUNNING: Currently executing\n        COMPLETED: Successfully completed\n        FAILED: Execution failed\n    ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "SubStep",
+          "bases": [],
+          "docstring": "\n    Sub-step within a main step.\n\n    Represents a sub-task within a workflow step for granular progress tracking.\n\n    Attributes:\n        id: Unique identifier for the sub-step\n        name: Displa",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "mark_running",
+              "args": [
+                "message"
+              ],
+              "returns": "'SubStep'",
+              "is_async": false
+            },
+            {
+              "name": "mark_completed",
+              "args": [
+                "message"
+              ],
+              "returns": "'SubStep'",
+              "is_async": false
+            },
+            {
+              "name": "mark_failed",
+              "args": [
+                "message"
+              ],
+              "returns": "'SubStep'",
+              "is_async": false
+            }
+          ],
+          "method_count": 4
+        },
+        {
+          "name": "StepProgressPayload",
+          "bases": [],
+          "docstring": "\n    Payload for step_progress custom event.\n\n    Provides hierarchical step information for Claude Code-style progress display.\n\n    Attributes:\n        step_id: Unique identifier for the step\n      ",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "calculate_progress",
+              "args": [
+                "substeps"
+              ],
+              "returns": "int",
+              "is_async": false
+            }
+          ],
+          "method_count": 2
+        },
+        {
+          "name": "StepProgressTracker",
+          "bases": [],
+          "docstring": "\n    Tracker for step progress during workflow execution.\n\n    Manages step state and generates progress events.\n\n    Example:\n        >>> tracker = StepProgressTracker(total_steps=5)\n        >>> trac",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "total_steps",
+                "emit_callback"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "start_step",
+              "args": [
+                "step_id",
+                "step_name",
+                "substep_names",
+                "metadata"
+              ],
+              "returns": "StepProgressPayload",
+              "is_async": false
+            },
+            {
+              "name": "update_substep",
+              "args": [
+                "substep_id",
+                "status",
+                "progress",
+                "message"
+              ],
+              "returns": "Optional[StepProgressPayload]",
+              "is_async": false
+            },
+            {
+              "name": "complete_step",
+              "args": [
+                "success",
+                "message"
+              ],
+              "returns": "Optional[StepProgressPayload]",
+              "is_async": false
+            },
+            {
+              "name": "get_progress_event",
+              "args": [],
+              "returns": "Optional[CustomEvent]",
+              "is_async": false
+            },
+            {
+              "name": "_emit_event",
+              "args": [
+                "force"
+              ],
+              "returns": "None",
+              "is_async": false
+            }
+          ],
+          "method_count": 6
+        }
+      ],
+      "functions": [
+        "create_step_progress_event",
+        "emit_step_progress"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/events/state.py",
+      "loc": 169,
+      "classes": [
+        {
+          "name": "StateSnapshotEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    狀態快照事件。\n\n    發送完整的狀態快照，用於初始化或同步前端狀態。\n    通常在連接建立或狀態重置時發送。\n\n    Attributes:\n        type: 固定為 STATE_SNAPSHOT\n        snapshot: 完整的狀態物件\n        metadata: 事件元數據 (threadId, runId, version 等)\n\n    Exa",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "StateDeltaOperation",
+          "bases": [
+            "str"
+          ],
+          "docstring": "\n    狀態變更操作類型。\n\n    用於定義 StateDelta 中的變更操作：\n    - set: 設置值\n    - delete: 刪除值\n    - append: 追加到陣列\n    - increment: 數值增加\n    ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "StateDeltaItem",
+          "bases": [],
+          "docstring": "\n    狀態變更項目。\n\n    表示單一狀態變更操作。\n\n    Attributes:\n        path: 狀態路徑 (如 \"user.name\" 或 \"conversation.turn\")\n        operation: 操作類型\n        value: 變更值 (對於 delete 操作可為 None)\n    ",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "path",
+                "operation",
+                "value"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            }
+          ],
+          "method_count": 2
+        },
+        {
+          "name": "StateDeltaEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    狀態增量更新事件。\n\n    發送狀態的增量變更，而非完整快照。\n    用於高效的狀態同步，減少傳輸數據量。\n\n    Attributes:\n        type: 固定為 STATE_DELTA\n        delta: 狀態變更列表\n\n    Example:\n        >>> event = StateDeltaEvent(\n        ...     del",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "CustomEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    自定義事件。\n\n    用於擴展 AG-UI 協議，發送應用特定的事件。\n    可用於進度更新、通知、自定義 UI 指令等。\n\n    Attributes:\n        type: 固定為 CUSTOM\n        event_name: 自定義事件名稱\n        payload: 事件數據\n\n    Example:\n        >>> # 進度更新\n      ",
+          "methods": [],
+          "method_count": 0
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/events/tool.py",
+      "loc": 147,
+      "classes": [
+        {
+          "name": "ToolCallStatus",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "\n    工具調用狀態枚舉。\n\n    Attributes:\n        PENDING: 等待執行\n        RUNNING: 執行中\n        SUCCESS: 執行成功\n        ERROR: 執行失敗\n    ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ToolCallStartEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    工具調用開始事件。\n\n    當 Agent 決定調用工具時發送此事件，標記工具調用的開始。\n\n    Attributes:\n        type: 固定為 TOOL_CALL_START\n        tool_call_id: 工具調用唯一 ID\n        tool_name: 工具名稱\n        parent_message_id: 父訊息 ID (可選，用於關",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ToolCallArgsEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    工具調用參數事件。\n\n    用於串流傳輸工具調用的參數。對於大型參數，可以分多次發送。\n\n    Attributes:\n        type: 固定為 TOOL_CALL_ARGS\n        tool_call_id: 工具調用唯一 ID\n        delta: 增量參數 JSON 字串\n\n    Example:\n        >>> event = ToolCa",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ToolCallEndEvent",
+          "bases": [
+            "BaseAGUIEvent"
+          ],
+          "docstring": "\n    工具調用結束事件。\n\n    當工具調用完成時發送此事件，包含執行結果或錯誤訊息。\n\n    Attributes:\n        type: 固定為 TOOL_CALL_END\n        tool_call_id: 工具調用唯一 ID\n        status: 調用狀態 (success, error)\n        result: 執行結果 (可選)\n        ",
+          "methods": [],
+          "method_count": 0
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/events/__init__.py",
+      "loc": 77,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/agentic_chat.py",
+      "loc": 544,
+      "classes": [
+        {
+          "name": "ChatRole",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Role of the message sender.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ChatMessage",
+          "bases": [],
+          "docstring": "\n    A single chat message.\n\n    Attributes:\n        role: Role of the message sender\n        content: Message content\n        id: Unique message ID\n        timestamp: Message timestamp\n        tool_c",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "from_dict",
+              "args": [
+                "cls",
+                "data"
+              ],
+              "returns": "'ChatMessage'",
+              "is_async": false
+            }
+          ],
+          "method_count": 2
+        },
+        {
+          "name": "ChatConfig",
+          "bases": [],
+          "docstring": "\n    Configuration for chat handling.\n\n    Attributes:\n        max_history_length: Maximum number of messages to keep in history\n        enable_intent_analysis: Whether to enable intent analysis\n     ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ChatSession",
+          "bases": [],
+          "docstring": "\n    Chat session state.\n\n    Attributes:\n        session_id: Unique session ID\n        thread_id: Associated thread ID\n        messages: Conversation messages\n        metadata: Session metadata\n     ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "AgenticChatHandler",
+          "bases": [],
+          "docstring": "\n    Agentic Chat feature handler.\n\n    Provides real-time streaming conversation with agents using\n    the AG-UI protocol and HybridOrchestratorV2 for intelligent execution.\n\n    Key Features:\n    - ",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "orchestrator",
+              "args": [],
+              "returns": "'HybridOrchestratorV2'",
+              "is_async": false
+            },
+            {
+              "name": "event_bridge",
+              "args": [],
+              "returns": "HybridEventBridge",
+              "is_async": false
+            },
+            {
+              "name": "config",
+              "args": [],
+              "returns": "ChatConfig",
+              "is_async": false
+            },
+            {
+              "name": "get_session",
+              "args": [
+                "session_id"
+              ],
+              "returns": "Optional[ChatSession]",
+              "is_async": false
+            },
+            {
+              "name": "create_session",
+              "args": [
+                "thread_id",
+                "session_id",
+                "metadata"
+              ],
+              "returns": "ChatSession",
+              "is_async": false
+            },
+            {
+              "name": "get_or_create_session",
+              "args": [
+                "thread_id",
+                "session_id"
+              ],
+              "returns": "ChatSession",
+              "is_async": false
+            },
+            {
+              "name": "close_session",
+              "args": [
+                "session_id"
+              ],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "add_message",
+              "args": [
+                "session_id",
+                "message"
+              ],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "handle_chat",
+              "args": [
+                "thread_id",
+                "message"
+              ],
+              "returns": "AsyncGenerator[BaseAGUIEvent, None]",
+              "is_async": true
+            },
+            {
+              "name": "handle_chat_sse",
+              "args": [
+                "thread_id",
+                "message"
+              ],
+              "returns": "AsyncGenerator[str, None]",
+              "is_async": true
+            },
+            {
+              "name": "get_conversation_history",
+              "args": [
+                "session_id"
+              ],
+              "returns": "List[Dict[str, Any]]",
+              "is_async": false
+            },
+            {
+              "name": "emit_typing_indicator",
+              "args": [
+                "thread_id",
+                "run_id",
+                "is_typing"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            }
+          ],
+          "method_count": 13
+        }
+      ],
+      "functions": [
+        "create_chat_handler"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/approval_delegate.py",
+      "loc": 219,
+      "classes": [
+        {
+          "name": "AGUIApprovalDelegate",
+          "bases": [],
+          "docstring": "\n    Delegates AG-UI approval operations to UnifiedApprovalManager.\n\n    Provides the same interface as the original AG-UI approval handler\n    but stores state in the unified system. This ensures all",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "unified_manager"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "create_approval_request",
+              "args": [
+                "tool_name",
+                "tool_args",
+                "session_id",
+                "user_id",
+                "priority",
+                "title",
+                "description",
+                "timeout_minutes"
+              ],
+              "returns": "str",
+              "is_async": true
+            },
+            {
+              "name": "handle_approval_response",
+              "args": [
+                "request_id",
+                "approved",
+                "approver_id",
+                "comment"
+              ],
+              "returns": "Dict[str, Any]",
+              "is_async": true
+            },
+            {
+              "name": "get_pending_approvals",
+              "args": [
+                "session_id"
+              ],
+              "returns": "List[Dict[str, Any]]",
+              "is_async": true
+            },
+            {
+              "name": "get_approval_status",
+              "args": [
+                "request_id"
+              ],
+              "returns": "Optional[Dict[str, Any]]",
+              "is_async": true
+            },
+            {
+              "name": "cancel_approval",
+              "args": [
+                "request_id",
+                "reason"
+              ],
+              "returns": "bool",
+              "is_async": true
+            }
+          ],
+          "method_count": 6
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/generative_ui.py",
+      "loc": 893,
+      "classes": [
+        {
+          "name": "ProgressStatus",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "\n    Status of workflow progress.\n\n    Attributes:\n        PENDING: Step not yet started\n        IN_PROGRESS: Step is currently executing\n        COMPLETED: Step completed successfully\n        FAILED:",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ModeSwitchReason",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "\n    Reason for mode switch.\n\n    Attributes:\n        COMPLEXITY: Task complexity requires mode change\n        USER_REQUEST: User explicitly requested mode switch\n        FAILURE_RECOVERY: Recovery fr",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "WorkflowStep",
+          "bases": [],
+          "docstring": "\n    A single step in a workflow.\n\n    Attributes:\n        step_id: Unique step identifier\n        name: Human-readable step name\n        description: Step description\n        status: Current step sta",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        },
+        {
+          "name": "WorkflowProgress",
+          "bases": [],
+          "docstring": "\n    Progress information for a multi-step workflow.\n\n    Attributes:\n        workflow_id: Unique workflow identifier\n        workflow_name: Human-readable workflow name\n        total_steps: Total num",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "calculate_progress",
+              "args": [],
+              "returns": "float",
+              "is_async": false
+            }
+          ],
+          "method_count": 2
+        },
+        {
+          "name": "ModeSwitchInfo",
+          "bases": [],
+          "docstring": "\n    Information about a mode switch event.\n\n    Attributes:\n        switch_id: Unique switch identifier\n        source_mode: Mode before switch\n        target_mode: Mode after switch\n        reason: ",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        },
+        {
+          "name": "GenerativeUIHandler",
+          "bases": [],
+          "docstring": "\n    Handler for Agentic Generative UI events.\n\n    Manages the emission of progress events and mode switch notifications\n    following the AG-UI protocol specification.\n\n    Attributes:\n        mode_",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "mode_switcher",
+                "max_event_history"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "emit_progress_event",
+              "args": [
+                "run_id",
+                "progress"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "emit_step_started",
+              "args": [
+                "run_id",
+                "workflow_id",
+                "step"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "emit_step_completed",
+              "args": [
+                "run_id",
+                "workflow_id",
+                "step",
+                "result"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "emit_step_failed",
+              "args": [
+                "run_id",
+                "workflow_id",
+                "step",
+                "error"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "emit_mode_switch_event",
+              "args": [
+                "run_id",
+                "switch_info"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "emit_mode_switch_from_result",
+              "args": [
+                "run_id",
+                "result"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "emit_mode_switch_started",
+              "args": [
+                "run_id",
+                "trigger"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "emit_mode_switch_completed",
+              "args": [
+                "run_id",
+                "result"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "handle_switch_trigger",
+              "args": [
+                "run_id",
+                "trigger",
+                "context",
+                "session_id"
+              ],
+              "returns": "AsyncGenerator[CustomEvent, None]",
+              "is_async": true
+            },
+            {
+              "name": "start_workflow",
+              "args": [
+                "workflow_id",
+                "workflow_name",
+                "steps"
+              ],
+              "returns": "WorkflowProgress",
+              "is_async": false
+            },
+            {
+              "name": "get_workflow_progress",
+              "args": [
+                "workflow_id"
+              ],
+              "returns": "Optional[WorkflowProgress]",
+              "is_async": false
+            },
+            {
+              "name": "complete_workflow",
+              "args": [
+                "workflow_id"
+              ],
+              "returns": "Optional[WorkflowProgress]",
+              "is_async": false
+            },
+            {
+              "name": "cancel_workflow",
+              "args": [
+                "workflow_id"
+              ],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "_generate_switch_message",
+              "args": [
+                "result"
+              ],
+              "returns": "str",
+              "is_async": false
+            },
+            {
+              "name": "_add_to_history",
+              "args": [
+                "event"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "get_event_history",
+              "args": [
+                "limit",
+                "event_name"
+              ],
+              "returns": "List[CustomEvent]",
+              "is_async": false
+            },
+            {
+              "name": "get_active_workflow_count",
+              "args": [],
+              "returns": "int",
+              "is_async": false
+            },
+            {
+              "name": "get_active_workflow_ids",
+              "args": [],
+              "returns": "List[str]",
+              "is_async": false
+            },
+            {
+              "name": "clear_event_history",
+              "args": [],
+              "returns": "None",
+              "is_async": false
+            }
+          ],
+          "method_count": 20
+        }
+      ],
+      "functions": [
+        "create_generative_ui_handler"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/human_in_loop.py",
+      "loc": 745,
+      "classes": [
+        {
+          "name": "ApprovalStatus",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "\n    Approval status for pending tool calls.\n\n    Attributes:\n        PENDING: Awaiting user decision\n        APPROVED: User approved the operation\n        REJECTED: User rejected the operation\n      ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ToolCallInfo",
+          "bases": [],
+          "docstring": "\n    Information about a tool call requiring approval.\n\n    Attributes:\n        id: Unique tool call identifier\n        name: Tool name\n        arguments: Tool call arguments\n    ",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ApprovalRequest",
+          "bases": [],
+          "docstring": "\n    Approval request for a high-risk operation.\n\n    Attributes:\n        approval_id: Unique approval request ID\n        tool_call_id: Associated tool call ID\n        tool_name: Tool being called\n   ",
+          "methods": [
+            {
+              "name": "is_expired",
+              "args": [],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "is_pending",
+              "args": [],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            }
+          ],
+          "method_count": 3
+        },
+        {
+          "name": "ApprovalStorage",
+          "bases": [],
+          "docstring": "\n    In-memory storage for approval requests.\n\n    Manages pending approval requests with automatic expiration cleanup.\n    For production use, consider implementing Redis-based storage.\n\n    Example:",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "default_timeout_seconds"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "create_pending",
+              "args": [
+                "tool_call_id",
+                "tool_name",
+                "arguments",
+                "risk_level",
+                "risk_score",
+                "reasoning",
+                "run_id",
+                "session_id"
+              ],
+              "returns": "str",
+              "is_async": true
+            },
+            {
+              "name": "get",
+              "args": [
+                "approval_id"
+              ],
+              "returns": "Optional[ApprovalRequest]",
+              "is_async": true
+            },
+            {
+              "name": "update_status",
+              "args": [
+                "approval_id",
+                "approved",
+                "user_comment"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "get_pending",
+              "args": [
+                "session_id",
+                "run_id"
+              ],
+              "returns": "List[ApprovalRequest]",
+              "is_async": true
+            },
+            {
+              "name": "cancel",
+              "args": [
+                "approval_id"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "cleanup_expired",
+              "args": [
+                "max_age_seconds"
+              ],
+              "returns": "int",
+              "is_async": true
+            },
+            {
+              "name": "get_stats",
+              "args": [],
+              "returns": "Dict[str, int]",
+              "is_async": false
+            }
+          ],
+          "method_count": 8
+        },
+        {
+          "name": "HITLHandler",
+          "bases": [],
+          "docstring": "\n    Human-in-the-Loop handler for AG-UI protocol.\n\n    Integrates with RiskAssessmentEngine to determine when\n    human approval is required for tool operations.\n\n    Example:\n        >>> risk_engine",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "risk_engine",
+                "approval_storage",
+                "default_timeout_seconds"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "check_approval_needed",
+              "args": [
+                "tool_call",
+                "session_id",
+                "environment"
+              ],
+              "returns": "tuple[bool, Optional[RiskAssessment]]",
+              "is_async": true
+            },
+            {
+              "name": "create_approval_event",
+              "args": [
+                "tool_call",
+                "assessment",
+                "run_id",
+                "session_id",
+                "timeout_seconds"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "handle_approval_response",
+              "args": [
+                "approval_id",
+                "approved",
+                "user_comment"
+              ],
+              "returns": "tuple[bool, Optional[ApprovalRequest]]",
+              "is_async": true
+            },
+            {
+              "name": "wait_for_approval",
+              "args": [
+                "approval_id",
+                "poll_interval_seconds"
+              ],
+              "returns": "ApprovalRequest",
+              "is_async": true
+            },
+            {
+              "name": "create_approval_resolved_event",
+              "args": [
+                "request"
+              ],
+              "returns": "CustomEvent",
+              "is_async": true
+            },
+            {
+              "name": "_generate_reasoning",
+              "args": [
+                "assessment"
+              ],
+              "returns": "str",
+              "is_async": false
+            }
+          ],
+          "method_count": 7
+        }
+      ],
+      "functions": [
+        "create_hitl_handler",
+        "get_approval_storage",
+        "get_hitl_handler"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/tool_rendering.py",
+      "loc": 660,
+      "classes": [
+        {
+          "name": "ResultType",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Type of tool execution result.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ToolExecutionStatus",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Status of tool execution.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ToolCall",
+          "bases": [],
+          "docstring": "\n    Represents a tool call request.\n\n    Attributes:\n        id: Unique identifier for the tool call\n        name: Tool name\n        arguments: Tool arguments\n        status: Current execution status",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "from_dict",
+              "args": [
+                "cls",
+                "data"
+              ],
+              "returns": "'ToolCall'",
+              "is_async": false
+            }
+          ],
+          "method_count": 2
+        },
+        {
+          "name": "FormattedResult",
+          "bases": [],
+          "docstring": "\n    Formatted tool result for frontend rendering.\n\n    Attributes:\n        data: The actual result data\n        result_type: Type of the result\n        formatted: Whether the data has been formatted\n",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        },
+        {
+          "name": "ToolRenderingConfig",
+          "bases": [],
+          "docstring": "\n    Configuration for tool rendering.\n\n    Attributes:\n        max_text_length: Maximum text length before truncation\n        max_json_depth: Maximum JSON depth for display\n        max_table_rows: Ma",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ToolRenderingHandler",
+          "bases": [],
+          "docstring": "\n    Backend tool rendering handler.\n\n    Provides standardized formatting for tool execution results,\n    enabling consistent display across different result types.\n\n    Key Features:\n    - Automatic",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "executor",
+              "args": [],
+              "returns": "'UnifiedToolExecutor'",
+              "is_async": false
+            },
+            {
+              "name": "config",
+              "args": [],
+              "returns": "ToolRenderingConfig",
+              "is_async": false
+            },
+            {
+              "name": "detect_result_type",
+              "args": [
+                "result",
+                "tool_name"
+              ],
+              "returns": "ResultType",
+              "is_async": false
+            },
+            {
+              "name": "_looks_like_code",
+              "args": [
+                "text"
+              ],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "format_result",
+              "args": [
+                "result",
+                "result_type",
+                "tool_name"
+              ],
+              "returns": "FormattedResult",
+              "is_async": false
+            },
+            {
+              "name": "_format_text",
+              "args": [
+                "result"
+              ],
+              "returns": "FormattedResult",
+              "is_async": false
+            },
+            {
+              "name": "_format_json",
+              "args": [
+                "result"
+              ],
+              "returns": "FormattedResult",
+              "is_async": false
+            },
+            {
+              "name": "_format_table",
+              "args": [
+                "result"
+              ],
+              "returns": "FormattedResult",
+              "is_async": false
+            },
+            {
+              "name": "_format_image",
+              "args": [
+                "result"
+              ],
+              "returns": "FormattedResult",
+              "is_async": false
+            },
+            {
+              "name": "_format_code",
+              "args": [
+                "result",
+                "tool_name"
+              ],
+              "returns": "FormattedResult",
+              "is_async": false
+            },
+            {
+              "name": "_format_error",
+              "args": [
+                "result"
+              ],
+              "returns": "FormattedResult",
+              "is_async": false
+            },
+            {
+              "name": "execute_and_format",
+              "args": [
+                "tool_call",
+                "session_id"
+              ],
+              "returns": "ToolCallEndEvent",
+              "is_async": true
+            },
+            {
+              "name": "create_start_event",
+              "args": [
+                "tool_call",
+                "run_id"
+              ],
+              "returns": "ToolCallStartEvent",
+              "is_async": true
+            },
+            {
+              "name": "create_status_event",
+              "args": [
+                "tool_call",
+                "status",
+                "progress"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            }
+          ],
+          "method_count": 15
+        }
+      ],
+      "functions": [
+        "create_tool_rendering_handler"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/__init__.py",
+      "loc": 83,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/advanced/predictive.py",
+      "loc": 711,
+      "classes": [
+        {
+          "name": "PredictionStatus",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Status of a prediction.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "PredictionType",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Type of prediction being made.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "PredictionResult",
+          "bases": [],
+          "docstring": "\n    Result of a prediction operation.\n\n    Attributes:\n        prediction_id: Unique prediction identifier\n        prediction_type: Type of prediction\n        status: Current status\n        predicted",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "from_dict",
+              "args": [
+                "cls",
+                "data"
+              ],
+              "returns": "'PredictionResult'",
+              "is_async": false
+            },
+            {
+              "name": "is_expired",
+              "args": [],
+              "returns": "bool",
+              "is_async": false
+            }
+          ],
+          "method_count": 3
+        },
+        {
+          "name": "PredictionConfig",
+          "bases": [],
+          "docstring": "\n    Configuration for predictive state handling.\n\n    Attributes:\n        default_ttl: Default time-to-live for predictions in seconds\n        min_confidence: Minimum confidence score to apply predic",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "PredictiveStateHandler",
+          "bases": [],
+          "docstring": "\n    Handler for predictive/optimistic state updates.\n\n    Provides optimistic UI updates by predicting state changes and applying\n    them immediately, with confirmation and rollback mechanisms for w",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "state_handler"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "config",
+              "args": [],
+              "returns": "PredictionConfig",
+              "is_async": false
+            },
+            {
+              "name": "state_handler",
+              "args": [],
+              "returns": "SharedStateHandler",
+              "is_async": false
+            },
+            {
+              "name": "get_prediction",
+              "args": [
+                "prediction_id"
+              ],
+              "returns": "Optional[PredictionResult]",
+              "is_async": false
+            },
+            {
+              "name": "list_pending_predictions",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "List[PredictionResult]",
+              "is_async": false
+            },
+            {
+              "name": "_calculate_confidence",
+              "args": [
+                "action_type",
+                "predicted_changes"
+              ],
+              "returns": "float",
+              "is_async": false
+            },
+            {
+              "name": "_count_changes",
+              "args": [
+                "changes",
+                "depth"
+              ],
+              "returns": "int",
+              "is_async": false
+            },
+            {
+              "name": "_update_pattern_confidence",
+              "args": [
+                "action_type",
+                "success"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "predict_state",
+              "args": [
+                "thread_id",
+                "run_id",
+                "predicted_changes"
+              ],
+              "returns": "Tuple[PredictionResult, StateDeltaEvent]",
+              "is_async": false
+            },
+            {
+              "name": "confirm_prediction",
+              "args": [
+                "prediction_id",
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "Tuple[PredictionResult, Optional[StateDe",
+              "is_async": false
+            },
+            {
+              "name": "rollback_prediction",
+              "args": [
+                "prediction_id",
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "Tuple[PredictionResult, StateDeltaEvent]",
+              "is_async": false
+            },
+            {
+              "name": "check_and_expire_predictions",
+              "args": [
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "List[Tuple[PredictionResult, StateDeltaE",
+              "is_async": false
+            },
+            {
+              "name": "handle_server_update",
+              "args": [
+                "thread_id",
+                "run_id",
+                "server_state"
+              ],
+              "returns": "List[Tuple[PredictionResult, Optional[St",
+              "is_async": false
+            },
+            {
+              "name": "_check_conflict",
+              "args": [
+                "predicted",
+                "actual",
+                "path"
+              ],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "emit_prediction_event",
+              "args": [
+                "prediction",
+                "event_type"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "cleanup_completed_predictions",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "int",
+              "is_async": false
+            },
+            {
+              "name": "clear_thread_predictions",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "clear_all",
+              "args": [],
+              "returns": "None",
+              "is_async": false
+            }
+          ],
+          "method_count": 18
+        }
+      ],
+      "functions": [
+        "create_predictive_handler"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/advanced/shared_state.py",
+      "loc": 806,
+      "classes": [
+        {
+          "name": "DiffOperation",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Type of diff operation.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ConflictResolutionStrategy",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Strategy for resolving state conflicts.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "StateDiff",
+          "bases": [],
+          "docstring": "\n    Represents a difference between two states.\n\n    Attributes:\n        path: JSON path to the changed value (e.g., \"user.profile.name\")\n        operation: Type of operation\n        old_value: Previ",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "from_dict",
+              "args": [
+                "cls",
+                "data"
+              ],
+              "returns": "'StateDiff'",
+              "is_async": false
+            }
+          ],
+          "method_count": 2
+        },
+        {
+          "name": "StateVersion",
+          "bases": [],
+          "docstring": "\n    State version information.\n\n    Attributes:\n        version: Version number\n        timestamp: When this version was created\n        checksum: Optional checksum for integrity verification\n    ",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        },
+        {
+          "name": "StateConflict",
+          "bases": [],
+          "docstring": "\n    Represents a state conflict.\n\n    Attributes:\n        path: Path where conflict occurred\n        server_value: Value on server\n        client_value: Value from client\n        resolution: How it w",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        },
+        {
+          "name": "StateSyncManager",
+          "bases": [],
+          "docstring": "\n    Manages state synchronization between server and clients.\n\n    Provides algorithms for state diffing, merging, and conflict resolution.\n\n    Example:\n        >>> manager = StateSyncManager()\n    ",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "conflict_strategy",
+              "args": [],
+              "returns": "ConflictResolutionStrategy",
+              "is_async": false
+            },
+            {
+              "name": "diff_state",
+              "args": [
+                "old_state",
+                "new_state"
+              ],
+              "returns": "List[StateDiff]",
+              "is_async": false
+            },
+            {
+              "name": "apply_diffs",
+              "args": [
+                "state",
+                "diffs"
+              ],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "_apply_single_diff",
+              "args": [
+                "state",
+                "diff"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "merge_state",
+              "args": [
+                "server_state",
+                "client_state"
+              ],
+              "returns": "Tuple[Dict[str, Any], List[StateConflict",
+              "is_async": false
+            },
+            {
+              "name": "_resolve_conflict",
+              "args": [
+                "conflict",
+                "server_version",
+                "client_version"
+              ],
+              "returns": "Any",
+              "is_async": false
+            }
+          ],
+          "method_count": 7
+        },
+        {
+          "name": "SharedStateHandler",
+          "bases": [],
+          "docstring": "\n    Handler for shared state between backend and frontend.\n\n    Provides state management with snapshot and delta event emission,\n    version tracking, and synchronization utilities.\n\n    Key Feature",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "sync_manager",
+              "args": [],
+              "returns": "StateSyncManager",
+              "is_async": false
+            },
+            {
+              "name": "get_state",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "Optional[Dict[str, Any]]",
+              "is_async": false
+            },
+            {
+              "name": "get_version",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "Optional[StateVersion]",
+              "is_async": false
+            },
+            {
+              "name": "set_state",
+              "args": [
+                "thread_id",
+                "state"
+              ],
+              "returns": "Optional[StateSnapshotEvent]",
+              "is_async": false
+            },
+            {
+              "name": "update_state",
+              "args": [
+                "thread_id",
+                "run_id",
+                "updates"
+              ],
+              "returns": "StateDeltaEvent",
+              "is_async": false
+            },
+            {
+              "name": "_deep_update",
+              "args": [
+                "base",
+                "updates"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "emit_state_snapshot",
+              "args": [
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "StateSnapshotEvent",
+              "is_async": false
+            },
+            {
+              "name": "emit_state_delta",
+              "args": [
+                "thread_id",
+                "run_id",
+                "diffs"
+              ],
+              "returns": "StateDeltaEvent",
+              "is_async": false
+            },
+            {
+              "name": "apply_client_update",
+              "args": [
+                "thread_id",
+                "run_id",
+                "client_state"
+              ],
+              "returns": "Tuple[StateDeltaEvent, List[StateConflic",
+              "is_async": false
+            },
+            {
+              "name": "get_state_at_version",
+              "args": [
+                "thread_id",
+                "version"
+              ],
+              "returns": "Optional[Dict[str, Any]]",
+              "is_async": false
+            },
+            {
+              "name": "rollback_to_version",
+              "args": [
+                "thread_id",
+                "run_id",
+                "version"
+              ],
+              "returns": "Optional[StateSnapshotEvent]",
+              "is_async": false
+            },
+            {
+              "name": "clear_state",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "clear_all",
+              "args": [],
+              "returns": "None",
+              "is_async": false
+            }
+          ],
+          "method_count": 14
+        }
+      ],
+      "functions": [
+        "create_shared_state_handler"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/advanced/tool_ui.py",
+      "loc": 880,
+      "classes": [
+        {
+          "name": "UIComponentType",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Type of UI component to render.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ChartType",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Type of chart for chart components.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "FormFieldType",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Type of form field.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "FormFieldDefinition",
+          "bases": [],
+          "docstring": "\n    Definition of a form field.\n\n    Attributes:\n        name: Field name (used as key in form data)\n        label: Display label\n        field_type: Type of form field\n        required: Whether the ",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        },
+        {
+          "name": "TableColumnDefinition",
+          "bases": [],
+          "docstring": "\n    Definition of a table column.\n\n    Attributes:\n        key: Column key (matches data key)\n        label: Display header\n        sortable: Whether column is sortable\n        filterable: Whether co",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        },
+        {
+          "name": "UIComponentSchema",
+          "bases": [],
+          "docstring": "\n    Schema for UI component validation.\n\n    Attributes:\n        component_type: Type of component\n        required_fields: Required fields in the definition\n        optional_fields: Optional fields ",
+          "methods": [
+            {
+              "name": "for_form",
+              "args": [
+                "cls"
+              ],
+              "returns": "'UIComponentSchema'",
+              "is_async": false
+            },
+            {
+              "name": "for_chart",
+              "args": [
+                "cls"
+              ],
+              "returns": "'UIComponentSchema'",
+              "is_async": false
+            },
+            {
+              "name": "for_card",
+              "args": [
+                "cls"
+              ],
+              "returns": "'UIComponentSchema'",
+              "is_async": false
+            },
+            {
+              "name": "for_table",
+              "args": [
+                "cls"
+              ],
+              "returns": "'UIComponentSchema'",
+              "is_async": false
+            },
+            {
+              "name": "for_custom",
+              "args": [
+                "cls"
+              ],
+              "returns": "'UIComponentSchema'",
+              "is_async": false
+            },
+            {
+              "name": "get_schema",
+              "args": [
+                "cls",
+                "component_type"
+              ],
+              "returns": "'UIComponentSchema'",
+              "is_async": false
+            }
+          ],
+          "method_count": 6
+        },
+        {
+          "name": "UIComponentDefinition",
+          "bases": [],
+          "docstring": "\n    Definition of a UI component to be rendered.\n\n    Attributes:\n        component_type: Type of UI component\n        component_id: Unique component identifier\n        props: Component properties\n  ",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "from_dict",
+              "args": [
+                "cls",
+                "data"
+              ],
+              "returns": "'UIComponentDefinition'",
+              "is_async": false
+            }
+          ],
+          "method_count": 2
+        },
+        {
+          "name": "ValidationResult",
+          "bases": [],
+          "docstring": "Result of component validation.",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "ToolBasedUIHandler",
+          "bases": [],
+          "docstring": "\n    Handler for tool-based generative UI.\n\n    Provides dynamic UI component generation based on tool execution results.\n    Integrates with AG-UI event streaming to deliver UI updates to clients.\n\n ",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "validate_schema",
+              "args": [],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "strict_mode",
+              "args": [],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "get_component",
+              "args": [
+                "component_id"
+              ],
+              "returns": "Optional[UIComponentDefinition]",
+              "is_async": false
+            },
+            {
+              "name": "list_components",
+              "args": [],
+              "returns": "List[UIComponentDefinition]",
+              "is_async": false
+            },
+            {
+              "name": "validate_component_schema",
+              "args": [
+                "component"
+              ],
+              "returns": "ValidationResult",
+              "is_async": false
+            },
+            {
+              "name": "_build_component_event",
+              "args": [
+                "component",
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "emit_ui_component",
+              "args": [
+                "component_type",
+                "props",
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "emit_form_component",
+              "args": [
+                "thread_id",
+                "run_id",
+                "fields"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "emit_chart_component",
+              "args": [
+                "thread_id",
+                "run_id",
+                "chart_type",
+                "data"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "emit_card_component",
+              "args": [
+                "thread_id",
+                "run_id",
+                "title"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "emit_table_component",
+              "args": [
+                "thread_id",
+                "run_id",
+                "columns",
+                "data"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "emit_custom_component",
+              "args": [
+                "thread_id",
+                "run_id",
+                "component_name"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "emit_update_component",
+              "args": [
+                "component_id",
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "Optional[CustomEvent]",
+              "is_async": false
+            },
+            {
+              "name": "emit_remove_component",
+              "args": [
+                "component_id",
+                "thread_id",
+                "run_id"
+              ],
+              "returns": "CustomEvent",
+              "is_async": false
+            },
+            {
+              "name": "clear_components",
+              "args": [],
+              "returns": "None",
+              "is_async": false
+            }
+          ],
+          "method_count": 16
+        }
+      ],
+      "functions": [
+        "create_tool_ui_handler"
+      ]
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/features/advanced/__init__.py",
+      "loc": 55,
+      "classes": [],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/thread/manager.py",
+      "loc": 472,
+      "classes": [
+        {
+          "name": "ThreadManager",
+          "bases": [],
+          "docstring": "\n    Thread Manager for AG-UI conversations.\n\n    Manages the lifecycle of conversation threads including creation,\n    retrieval, message storage, and state management. Uses Write-Through\n    caching",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "cache",
+                "repository",
+                "default_ttl"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "get_or_create",
+              "args": [
+                "thread_id",
+                "metadata"
+              ],
+              "returns": "AGUIThread",
+              "is_async": true
+            },
+            {
+              "name": "get",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "Optional[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "append_messages",
+              "args": [
+                "thread_id",
+                "messages"
+              ],
+              "returns": "AGUIThread",
+              "is_async": true
+            },
+            {
+              "name": "append_message",
+              "args": [
+                "thread_id",
+                "role",
+                "content",
+                "message_id",
+                "metadata",
+                "tool_calls",
+                "tool_call_id"
+              ],
+              "returns": "AGUIThread",
+              "is_async": true
+            },
+            {
+              "name": "update_state",
+              "args": [
+                "thread_id",
+                "state_updates"
+              ],
+              "returns": "AGUIThread",
+              "is_async": true
+            },
+            {
+              "name": "set_state",
+              "args": [
+                "thread_id",
+                "state"
+              ],
+              "returns": "AGUIThread",
+              "is_async": true
+            },
+            {
+              "name": "increment_run_count",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "int",
+              "is_async": true
+            },
+            {
+              "name": "archive",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "AGUIThread",
+              "is_async": true
+            },
+            {
+              "name": "delete",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "list_active",
+              "args": [
+                "limit",
+                "offset"
+              ],
+              "returns": "List[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "_create_thread",
+              "args": [
+                "metadata"
+              ],
+              "returns": "AGUIThread",
+              "is_async": true
+            },
+            {
+              "name": "_save",
+              "args": [
+                "thread"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "get_messages",
+              "args": [
+                "thread_id",
+                "limit",
+                "offset"
+              ],
+              "returns": "List[AGUIMessage]",
+              "is_async": true
+            },
+            {
+              "name": "get_state",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "Dict[str, Any]",
+              "is_async": true
+            },
+            {
+              "name": "clear_messages",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "AGUIThread",
+              "is_async": true
+            }
+          ],
+          "method_count": 16
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/thread/models.py",
+      "loc": 267,
+      "classes": [
+        {
+          "name": "ThreadStatus",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "Thread 狀態枚舉",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "MessageRole",
+          "bases": [
+            "str",
+            "Enum"
+          ],
+          "docstring": "訊息角色枚舉",
+          "methods": [],
+          "method_count": 0
+        },
+        {
+          "name": "AGUIMessage",
+          "bases": [],
+          "docstring": "\n    AG-UI Message (對話訊息)\n\n    Represents a single message in a conversation thread.\n\n    Attributes:\n        message_id: Unique identifier for the message\n        role: Message role (user, assistant,",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "from_dict",
+              "args": [
+                "cls",
+                "data"
+              ],
+              "returns": "'AGUIMessage'",
+              "is_async": false
+            }
+          ],
+          "method_count": 2
+        },
+        {
+          "name": "AGUIThread",
+          "bases": [],
+          "docstring": "\n    AG-UI Thread (對話線程)\n\n    Represents a conversation thread that can contain multiple runs.\n    Threads persist conversation state and history across multiple\n    interactions.\n\n    Attributes:\n   ",
+          "methods": [
+            {
+              "name": "to_dict",
+              "args": [],
+              "returns": "Dict[str, Any]",
+              "is_async": false
+            },
+            {
+              "name": "from_dict",
+              "args": [
+                "cls",
+                "data"
+              ],
+              "returns": "'AGUIThread'",
+              "is_async": false
+            },
+            {
+              "name": "add_message",
+              "args": [
+                "message"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "update_state",
+              "args": [
+                "updates"
+              ],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "increment_run_count",
+              "args": [],
+              "returns": "int",
+              "is_async": false
+            },
+            {
+              "name": "archive",
+              "args": [],
+              "returns": "None",
+              "is_async": false
+            },
+            {
+              "name": "is_active",
+              "args": [],
+              "returns": "bool",
+              "is_async": false
+            },
+            {
+              "name": "message_count",
+              "args": [],
+              "returns": "int",
+              "is_async": false
+            }
+          ],
+          "method_count": 8
+        },
+        {
+          "name": "AGUIMessageSchema",
+          "bases": [
+            "BaseModel"
+          ],
+          "docstring": "Pydantic schema for AGUIMessage API responses.",
+          "methods": [
+            {
+              "name": "from_dataclass",
+              "args": [
+                "cls",
+                "message"
+              ],
+              "returns": "'AGUIMessageSchema'",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        },
+        {
+          "name": "AGUIThreadSchema",
+          "bases": [
+            "BaseModel"
+          ],
+          "docstring": "Pydantic schema for AGUIThread API responses.",
+          "methods": [
+            {
+              "name": "from_dataclass",
+              "args": [
+                "cls",
+                "thread"
+              ],
+              "returns": "'AGUIThreadSchema'",
+              "is_async": false
+            }
+          ],
+          "method_count": 1
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/thread/redis_storage.py",
+      "loc": 276,
+      "classes": [
+        {
+          "name": "RedisCacheBackend",
+          "bases": [],
+          "docstring": "\n    Redis implementation of CacheProtocol.\n\n    Replaces InMemoryCache for production use with ThreadCache.\n    Provides actual TTL expiration and persistence across restarts.\n\n    Args:\n        redi",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "redis_client",
+                "key_prefix"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "_make_key",
+              "args": [
+                "key"
+              ],
+              "returns": "str",
+              "is_async": false
+            },
+            {
+              "name": "get",
+              "args": [
+                "key"
+              ],
+              "returns": "Optional[str]",
+              "is_async": true
+            },
+            {
+              "name": "set",
+              "args": [
+                "key",
+                "value",
+                "ttl"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "delete",
+              "args": [
+                "key"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "exists",
+              "args": [
+                "key"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "clear",
+              "args": [],
+              "returns": "None",
+              "is_async": true
+            }
+          ],
+          "method_count": 7
+        },
+        {
+          "name": "RedisThreadRepository",
+          "bases": [
+            "ThreadRepository"
+          ],
+          "docstring": "\n    Redis implementation of ThreadRepository.\n\n    Replaces InMemoryThreadRepository for production use.\n    Stores threads as JSON with status indexing via Redis sets.\n\n    Key Formats:\n        - ag",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "redis_client",
+                "key_prefix",
+                "default_ttl"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "_thread_key",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "str",
+              "is_async": false
+            },
+            {
+              "name": "_status_set_key",
+              "args": [
+                "status"
+              ],
+              "returns": "str",
+              "is_async": false
+            },
+            {
+              "name": "_all_threads_key",
+              "args": [],
+              "returns": "str",
+              "is_async": false
+            },
+            {
+              "name": "save",
+              "args": [
+                "thread"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "get_by_id",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "Optional[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "delete",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "list_by_status",
+              "args": [
+                "status",
+                "limit",
+                "offset"
+              ],
+              "returns": "List[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "list_all",
+              "args": [
+                "limit",
+                "offset"
+              ],
+              "returns": "List[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "count",
+              "args": [],
+              "returns": "int",
+              "is_async": true
+            },
+            {
+              "name": "clear",
+              "args": [],
+              "returns": "None",
+              "is_async": true
+            }
+          ],
+          "method_count": 11
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/thread/storage.py",
+      "loc": 379,
+      "classes": [
+        {
+          "name": "CacheProtocol",
+          "bases": [
+            "Protocol"
+          ],
+          "docstring": "Protocol for cache implementations.",
+          "methods": [
+            {
+              "name": "get",
+              "args": [
+                "key"
+              ],
+              "returns": "Optional[str]",
+              "is_async": true
+            },
+            {
+              "name": "set",
+              "args": [
+                "key",
+                "value",
+                "ttl"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "delete",
+              "args": [
+                "key"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "exists",
+              "args": [
+                "key"
+              ],
+              "returns": "bool",
+              "is_async": true
+            }
+          ],
+          "method_count": 4
+        },
+        {
+          "name": "ThreadCache",
+          "bases": [],
+          "docstring": "\n    Redis-based cache for AG-UI Threads.\n\n    Provides fast read access to thread data with configurable TTL.\n    Uses Write-Through pattern with ThreadRepository.\n\n    Attributes:\n        cache: Red",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "cache",
+                "key_prefix",
+                "default_ttl"
+              ],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "_make_key",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "str",
+              "is_async": false
+            },
+            {
+              "name": "get",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "Optional[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "set",
+              "args": [
+                "thread",
+                "ttl"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "delete",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "exists",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "refresh_ttl",
+              "args": [
+                "thread_id",
+                "ttl"
+              ],
+              "returns": "bool",
+              "is_async": true
+            }
+          ],
+          "method_count": 7
+        },
+        {
+          "name": "RepositoryProtocol",
+          "bases": [
+            "Protocol"
+          ],
+          "docstring": "Protocol for repository implementations.",
+          "methods": [
+            {
+              "name": "save",
+              "args": [
+                "thread"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "get_by_id",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "Optional[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "delete",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "bool",
+              "is_async": true
+            }
+          ],
+          "method_count": 3
+        },
+        {
+          "name": "ThreadRepository",
+          "bases": [
+            "ABC"
+          ],
+          "docstring": "\n    Abstract base class for Thread persistence.\n\n    Subclasses implement specific storage backends (PostgreSQL, etc.)\n    ",
+          "methods": [
+            {
+              "name": "save",
+              "args": [
+                "thread"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "get_by_id",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "Optional[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "delete",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "list_by_status",
+              "args": [
+                "status",
+                "limit",
+                "offset"
+              ],
+              "returns": "List[AGUIThread]",
+              "is_async": true
+            }
+          ],
+          "method_count": 4
+        },
+        {
+          "name": "InMemoryThreadRepository",
+          "bases": [
+            "ThreadRepository"
+          ],
+          "docstring": "\n    In-memory implementation of ThreadRepository.\n\n    Useful for testing and development. Data is lost on restart.\n    ",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "save",
+              "args": [
+                "thread"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "get_by_id",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "Optional[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "delete",
+              "args": [
+                "thread_id"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "list_by_status",
+              "args": [
+                "status",
+                "limit",
+                "offset"
+              ],
+              "returns": "List[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "list_all",
+              "args": [
+                "limit",
+                "offset"
+              ],
+              "returns": "List[AGUIThread]",
+              "is_async": true
+            },
+            {
+              "name": "count",
+              "args": [],
+              "returns": "int",
+              "is_async": true
+            },
+            {
+              "name": "clear",
+              "args": [],
+              "returns": "None",
+              "is_async": true
+            }
+          ],
+          "method_count": 8
+        },
+        {
+          "name": "InMemoryCache",
+          "bases": [],
+          "docstring": "\n    In-memory implementation of CacheProtocol.\n\n    Useful for testing. Does not support actual TTL expiration.\n    ",
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [],
+              "returns": "",
+              "is_async": false
+            },
+            {
+              "name": "get",
+              "args": [
+                "key"
+              ],
+              "returns": "Optional[str]",
+              "is_async": true
+            },
+            {
+              "name": "set",
+              "args": [
+                "key",
+                "value",
+                "ttl"
+              ],
+              "returns": "None",
+              "is_async": true
+            },
+            {
+              "name": "delete",
+              "args": [
+                "key"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "exists",
+              "args": [
+                "key"
+              ],
+              "returns": "bool",
+              "is_async": true
+            },
+            {
+              "name": "clear",
+              "args": [],
+              "returns": "None",
+              "is_async": true
+            }
+          ],
+          "method_count": 6
+        }
+      ],
+      "functions": []
+    },
+    {
+      "path": "backend/src/integrations/ag_ui/thread/__init__.py",
+      "loc": 61,
+      "classes": [],
+      "functions": []
+    }
+  ],
+  "classes": [
+    {
+      "name": "RunAgentInput",
+      "bases": [],
+      "docstring": "\n    Input for running an agent through the bridge.\n\n    Attributes:\n        prompt: User prompt/message\n        thread_id: Thread ID for conversation context\n        run_id: Unique run ID (generated ",
+      "methods": [
+        {
+          "name": "__post_init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "BridgeConfig",
+      "bases": [],
+      "docstring": "\n    Configuration for HybridEventBridge.\n\n    Attributes:\n        chunk_size: Size of text chunks for streaming\n        include_metadata: Whether to include metadata in events\n        emit_state_even",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "HybridEventBridge",
+      "bases": [],
+      "docstring": "\n    AG-UI Event Bridge for HybridOrchestratorV2.\n\n    Bridges the HybridOrchestratorV2 execution model to AG-UI protocol,\n    converting execution results into standardized SSE event streams.\n\n    Th",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "orchestrator",
+          "args": [],
+          "returns": "Optional['HybridOrchestratorV2']",
+          "is_async": false
+        },
+        {
+          "name": "converters",
+          "args": [],
+          "returns": "EventConverters",
+          "is_async": false
+        },
+        {
+          "name": "config",
+          "args": [],
+          "returns": "BridgeConfig",
+          "is_async": false
+        },
+        {
+          "name": "set_orchestrator",
+          "args": [
+            "orchestrator"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "swarm_emitter",
+          "args": [],
+          "returns": "Optional['SwarmEventEmitter']",
+          "is_async": false
+        },
+        {
+          "name": "configure_swarm_emitter",
+          "args": [
+            "event_callback",
+            "throttle_interval_ms",
+            "batch_size"
+          ],
+          "returns": "'SwarmEventEmitter'",
+          "is_async": false
+        },
+        {
+          "name": "_send_custom_event",
+          "args": [
+            "event"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "start_swarm_emitter",
+          "args": [],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "stop_swarm_emitter",
+          "args": [],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "_build_multimodal_content",
+          "args": [
+            "prompt",
+            "file_ids"
+          ],
+          "returns": "List[Dict[str, Any]]",
+          "is_async": false
+        },
+        {
+          "name": "_enrich_prompt_with_files",
+          "args": [
+            "prompt",
+            "file_ids"
+          ],
+          "returns": "str",
+          "is_async": false
+        },
+        {
+          "name": "_generate_simulation_events",
+          "args": [
+            "run_input"
+          ],
+          "returns": "AsyncGenerator[BaseAGUIEvent, None]",
+          "is_async": true
+        },
+        {
+          "name": "stream_events",
+          "args": [
+            "run_input"
+          ],
+          "returns": "AsyncGenerator[str, None]",
+          "is_async": true
+        },
+        {
+          "name": "stream_events_raw",
+          "args": [
+            "run_input"
+          ],
+          "returns": "AsyncGenerator[BaseAGUIEvent, None]",
+          "is_async": true
+        },
+        {
+          "name": "execute_and_collect",
+          "args": [
+            "run_input"
+          ],
+          "returns": "List[BaseAGUIEvent]",
+          "is_async": true
+        },
+        {
+          "name": "_format_sse",
+          "args": [
+            "event"
+          ],
+          "returns": "str",
+          "is_async": false
+        },
+        {
+          "name": "create_run_started",
+          "args": [
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "RunStartedEvent",
+          "is_async": false
+        },
+        {
+          "name": "create_run_finished",
+          "args": [
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "RunFinishedEvent",
+          "is_async": false
+        },
+        {
+          "name": "format_event",
+          "args": [
+            "event"
+          ],
+          "returns": "str",
+          "is_async": false
+        }
+      ],
+      "method_count": 20
+    },
+    {
+      "name": "HybridEventType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "\n    Hybrid 內部事件類型枚舉。\n\n    定義所有 Hybrid Orchestrator 可能產生的內部事件類型。\n    這些事件將被轉換為對應的 AG-UI 事件。\n    ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "HybridEvent",
+      "bases": [],
+      "docstring": "\n    Hybrid 內部事件數據類。\n\n    Attributes:\n        type: 事件類型\n        data: 事件數據\n        thread_id: 對話線程 ID\n        run_id: 執行 ID\n        message_id: 訊息 ID (適用於訊息事件)\n        tool_call_id: 工具調用 ID (適用於工具事件)",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "EventConverters",
+      "bases": [],
+      "docstring": "\n    AG-UI 事件轉換器。\n\n    將 Hybrid 內部事件轉換為 AG-UI 協議標準事件。\n    支持所有 AG-UI 事件類型的轉換。\n\n    Example:\n        >>> converters = EventConverters()\n        >>> event = converters.to_run_started(\"thread-123\", \"run-",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "chunk_size",
+          "args": [],
+          "returns": "int",
+          "is_async": false
+        },
+        {
+          "name": "to_run_started",
+          "args": [
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "RunStartedEvent",
+          "is_async": false
+        },
+        {
+          "name": "to_run_finished",
+          "args": [
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "RunFinishedEvent",
+          "is_async": false
+        },
+        {
+          "name": "to_text_message_start",
+          "args": [
+            "message_id"
+          ],
+          "returns": "TextMessageStartEvent",
+          "is_async": false
+        },
+        {
+          "name": "to_text_message_content",
+          "args": [
+            "message_id",
+            "delta"
+          ],
+          "returns": "TextMessageContentEvent",
+          "is_async": false
+        },
+        {
+          "name": "to_text_message_end",
+          "args": [
+            "message_id"
+          ],
+          "returns": "TextMessageEndEvent",
+          "is_async": false
+        },
+        {
+          "name": "content_to_chunks",
+          "args": [
+            "content",
+            "message_id"
+          ],
+          "returns": "List[TextMessageContentEvent]",
+          "is_async": false
+        },
+        {
+          "name": "to_tool_call_start",
+          "args": [
+            "tool_call_id",
+            "tool_name"
+          ],
+          "returns": "ToolCallStartEvent",
+          "is_async": false
+        },
+        {
+          "name": "to_tool_call_args",
+          "args": [
+            "tool_call_id",
+            "args"
+          ],
+          "returns": "ToolCallArgsEvent",
+          "is_async": false
+        },
+        {
+          "name": "to_tool_call_end",
+          "args": [
+            "tool_call_id"
+          ],
+          "returns": "ToolCallEndEvent",
+          "is_async": false
+        },
+        {
+          "name": "to_state_snapshot",
+          "args": [
+            "state"
+          ],
+          "returns": "StateSnapshotEvent",
+          "is_async": false
+        },
+        {
+          "name": "to_state_delta",
+          "args": [
+            "delta"
+          ],
+          "returns": "StateDeltaEvent",
+          "is_async": false
+        },
+        {
+          "name": "to_custom_event",
+          "args": [
+            "name",
+            "value"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "convert",
+          "args": [
+            "hybrid_event"
+          ],
+          "returns": "Optional[BaseAGUIEvent]",
+          "is_async": false
+        },
+        {
+          "name": "from_result",
+          "args": [
+            "result"
+          ],
+          "returns": "List[BaseAGUIEvent]",
+          "is_async": false
+        }
+      ],
+      "method_count": 16
+    },
+    {
+      "name": "MediatorEventBridge",
+      "bases": [],
+      "docstring": "Bridges OrchestratorMediator to AG-UI SSE protocol.\n\n    Converts internal mediator events into AG-UI standard SSE events\n    for real-time frontend streaming.\n\n    Args:\n        sse_buffer: Optional ",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "sse_buffer"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "stream_events",
+          "args": [
+            "mediator",
+            "request",
+            "thread_id"
+          ],
+          "returns": "AsyncGenerator[str, None]",
+          "is_async": true
+        },
+        {
+          "name": "convert_event",
+          "args": [
+            "mediator_event_type",
+            "data"
+          ],
+          "returns": "Optional[str]",
+          "is_async": false
+        },
+        {
+          "name": "_format_sse",
+          "args": [
+            "event_type",
+            "data"
+          ],
+          "returns": "str",
+          "is_async": false
+        }
+      ],
+      "method_count": 4
+    },
+    {
+      "name": "SSEEventBuffer",
+      "bases": [],
+      "docstring": "Redis-backed SSE event buffer for reconnection support.\n\n    Stores recent events per session so clients can replay missed\n    events after a disconnection.\n\n    Args:\n        redis_backend: Storage b",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "redis_backend",
+            "ttl",
+            "max_size"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "buffer_event",
+          "args": [
+            "session_id",
+            "event"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "replay_from",
+          "args": [
+            "session_id",
+            "last_event_id"
+          ],
+          "returns": "List[Dict[str, Any]]",
+          "is_async": true
+        },
+        {
+          "name": "cleanup",
+          "args": [
+            "session_id"
+          ],
+          "returns": "None",
+          "is_async": true
+        }
+      ],
+      "method_count": 4
+    },
+    {
+      "name": "AGUIEventType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "\n    AG-UI 事件類型枚舉。\n\n    定義所有 AG-UI 協議支持的事件類型，用於 Agent-UI 通訊。\n\n    Categories:\n        - Lifecycle: RUN_STARTED, RUN_FINISHED\n        - Text Message: TEXT_MESSAGE_START, TEXT_MESSAGE_CONTENT, TEXT_MESS",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "RunFinishReason",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "\n    Run 結束原因枚舉。\n\n    Attributes:\n        COMPLETE: 正常完成\n        ERROR: 發生錯誤\n        CANCELLED: 用戶取消\n        TIMEOUT: 執行超時\n    ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "BaseAGUIEvent",
+      "bases": [
+        "BaseModel"
+      ],
+      "docstring": "\n    AG-UI 事件基類。\n\n    所有 AG-UI 事件都繼承自此基類，提供共同的字段和序列化行為。\n\n    Attributes:\n        type: 事件類型\n        timestamp: 事件產生時間 (UTC)\n\n    Example:\n        >>> event = BaseAGUIEvent(type=AGUIEventType.RUN_START",
+      "methods": [
+        {
+          "name": "to_sse",
+          "args": [],
+          "returns": "str",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "RunStartedEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    Run 開始事件。\n\n    當 Agent 開始執行時發送此事件，標記一個新的執行週期開始。\n\n    Attributes:\n        type: 固定為 RUN_STARTED\n        thread_id: 對話線程 ID\n        run_id: 本次執行的唯一 ID\n\n    Example:\n        >>> event = RunStartedEv",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "RunFinishedEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    Run 結束事件。\n\n    當 Agent 執行完成時發送此事件，標記執行週期結束。\n    包含執行結果摘要和結束原因。\n\n    Attributes:\n        type: 固定為 RUN_FINISHED\n        thread_id: 對話線程 ID\n        run_id: 本次執行的唯一 ID\n        finish_reason: 結束原因 (c",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "TextMessageStartEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    文字訊息開始事件。\n\n    當 Agent 開始生成文字回應時發送此事件，標記一個新訊息的開始。\n\n    Attributes:\n        type: 固定為 TEXT_MESSAGE_START\n        message_id: 訊息唯一 ID\n        role: 訊息角色 (assistant, user, system)\n\n    Example:\n    ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "TextMessageContentEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    文字訊息內容事件。\n\n    當 Agent 生成文字內容時持續發送此事件，用於串流輸出文字。\n    每個事件包含一小段增量文字 (delta)。\n\n    Attributes:\n        type: 固定為 TEXT_MESSAGE_CONTENT\n        message_id: 訊息唯一 ID\n        delta: 增量文字內容\n\n    Example:\n",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "TextMessageEndEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    文字訊息結束事件。\n\n    當 Agent 完成文字回應生成時發送此事件，標記訊息結束。\n\n    Attributes:\n        type: 固定為 TEXT_MESSAGE_END\n        message_id: 訊息唯一 ID\n\n    Example:\n        >>> event = TextMessageEndEvent(message_id=\"msg",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "SubStepStatus",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "\n    Sub-step status enumeration.\n\n    Attributes:\n        PENDING: Not yet started\n        RUNNING: Currently executing\n        COMPLETED: Successfully completed\n        FAILED: Execution failed\n    ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "SubStep",
+      "bases": [],
+      "docstring": "\n    Sub-step within a main step.\n\n    Represents a sub-task within a workflow step for granular progress tracking.\n\n    Attributes:\n        id: Unique identifier for the sub-step\n        name: Displa",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "mark_running",
+          "args": [
+            "message"
+          ],
+          "returns": "'SubStep'",
+          "is_async": false
+        },
+        {
+          "name": "mark_completed",
+          "args": [
+            "message"
+          ],
+          "returns": "'SubStep'",
+          "is_async": false
+        },
+        {
+          "name": "mark_failed",
+          "args": [
+            "message"
+          ],
+          "returns": "'SubStep'",
+          "is_async": false
+        }
+      ],
+      "method_count": 4
+    },
+    {
+      "name": "StepProgressPayload",
+      "bases": [],
+      "docstring": "\n    Payload for step_progress custom event.\n\n    Provides hierarchical step information for Claude Code-style progress display.\n\n    Attributes:\n        step_id: Unique identifier for the step\n      ",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "calculate_progress",
+          "args": [
+            "substeps"
+          ],
+          "returns": "int",
+          "is_async": false
+        }
+      ],
+      "method_count": 2
+    },
+    {
+      "name": "StepProgressTracker",
+      "bases": [],
+      "docstring": "\n    Tracker for step progress during workflow execution.\n\n    Manages step state and generates progress events.\n\n    Example:\n        >>> tracker = StepProgressTracker(total_steps=5)\n        >>> trac",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "total_steps",
+            "emit_callback"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "start_step",
+          "args": [
+            "step_id",
+            "step_name",
+            "substep_names",
+            "metadata"
+          ],
+          "returns": "StepProgressPayload",
+          "is_async": false
+        },
+        {
+          "name": "update_substep",
+          "args": [
+            "substep_id",
+            "status",
+            "progress",
+            "message"
+          ],
+          "returns": "Optional[StepProgressPayload]",
+          "is_async": false
+        },
+        {
+          "name": "complete_step",
+          "args": [
+            "success",
+            "message"
+          ],
+          "returns": "Optional[StepProgressPayload]",
+          "is_async": false
+        },
+        {
+          "name": "get_progress_event",
+          "args": [],
+          "returns": "Optional[CustomEvent]",
+          "is_async": false
+        },
+        {
+          "name": "_emit_event",
+          "args": [
+            "force"
+          ],
+          "returns": "None",
+          "is_async": false
+        }
+      ],
+      "method_count": 6
+    },
+    {
+      "name": "StateSnapshotEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    狀態快照事件。\n\n    發送完整的狀態快照，用於初始化或同步前端狀態。\n    通常在連接建立或狀態重置時發送。\n\n    Attributes:\n        type: 固定為 STATE_SNAPSHOT\n        snapshot: 完整的狀態物件\n        metadata: 事件元數據 (threadId, runId, version 等)\n\n    Exa",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "StateDeltaOperation",
+      "bases": [
+        "str"
+      ],
+      "docstring": "\n    狀態變更操作類型。\n\n    用於定義 StateDelta 中的變更操作：\n    - set: 設置值\n    - delete: 刪除值\n    - append: 追加到陣列\n    - increment: 數值增加\n    ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "StateDeltaItem",
+      "bases": [],
+      "docstring": "\n    狀態變更項目。\n\n    表示單一狀態變更操作。\n\n    Attributes:\n        path: 狀態路徑 (如 \"user.name\" 或 \"conversation.turn\")\n        operation: 操作類型\n        value: 變更值 (對於 delete 操作可為 None)\n    ",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "path",
+            "operation",
+            "value"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        }
+      ],
+      "method_count": 2
+    },
+    {
+      "name": "StateDeltaEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    狀態增量更新事件。\n\n    發送狀態的增量變更，而非完整快照。\n    用於高效的狀態同步，減少傳輸數據量。\n\n    Attributes:\n        type: 固定為 STATE_DELTA\n        delta: 狀態變更列表\n\n    Example:\n        >>> event = StateDeltaEvent(\n        ...     del",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "CustomEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    自定義事件。\n\n    用於擴展 AG-UI 協議，發送應用特定的事件。\n    可用於進度更新、通知、自定義 UI 指令等。\n\n    Attributes:\n        type: 固定為 CUSTOM\n        event_name: 自定義事件名稱\n        payload: 事件數據\n\n    Example:\n        >>> # 進度更新\n      ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ToolCallStatus",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "\n    工具調用狀態枚舉。\n\n    Attributes:\n        PENDING: 等待執行\n        RUNNING: 執行中\n        SUCCESS: 執行成功\n        ERROR: 執行失敗\n    ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ToolCallStartEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    工具調用開始事件。\n\n    當 Agent 決定調用工具時發送此事件，標記工具調用的開始。\n\n    Attributes:\n        type: 固定為 TOOL_CALL_START\n        tool_call_id: 工具調用唯一 ID\n        tool_name: 工具名稱\n        parent_message_id: 父訊息 ID (可選，用於關",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ToolCallArgsEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    工具調用參數事件。\n\n    用於串流傳輸工具調用的參數。對於大型參數，可以分多次發送。\n\n    Attributes:\n        type: 固定為 TOOL_CALL_ARGS\n        tool_call_id: 工具調用唯一 ID\n        delta: 增量參數 JSON 字串\n\n    Example:\n        >>> event = ToolCa",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ToolCallEndEvent",
+      "bases": [
+        "BaseAGUIEvent"
+      ],
+      "docstring": "\n    工具調用結束事件。\n\n    當工具調用完成時發送此事件，包含執行結果或錯誤訊息。\n\n    Attributes:\n        type: 固定為 TOOL_CALL_END\n        tool_call_id: 工具調用唯一 ID\n        status: 調用狀態 (success, error)\n        result: 執行結果 (可選)\n        ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ChatRole",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Role of the message sender.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ChatMessage",
+      "bases": [],
+      "docstring": "\n    A single chat message.\n\n    Attributes:\n        role: Role of the message sender\n        content: Message content\n        id: Unique message ID\n        timestamp: Message timestamp\n        tool_c",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "from_dict",
+          "args": [
+            "cls",
+            "data"
+          ],
+          "returns": "'ChatMessage'",
+          "is_async": false
+        }
+      ],
+      "method_count": 2
+    },
+    {
+      "name": "ChatConfig",
+      "bases": [],
+      "docstring": "\n    Configuration for chat handling.\n\n    Attributes:\n        max_history_length: Maximum number of messages to keep in history\n        enable_intent_analysis: Whether to enable intent analysis\n     ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ChatSession",
+      "bases": [],
+      "docstring": "\n    Chat session state.\n\n    Attributes:\n        session_id: Unique session ID\n        thread_id: Associated thread ID\n        messages: Conversation messages\n        metadata: Session metadata\n     ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "AgenticChatHandler",
+      "bases": [],
+      "docstring": "\n    Agentic Chat feature handler.\n\n    Provides real-time streaming conversation with agents using\n    the AG-UI protocol and HybridOrchestratorV2 for intelligent execution.\n\n    Key Features:\n    - ",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "orchestrator",
+          "args": [],
+          "returns": "'HybridOrchestratorV2'",
+          "is_async": false
+        },
+        {
+          "name": "event_bridge",
+          "args": [],
+          "returns": "HybridEventBridge",
+          "is_async": false
+        },
+        {
+          "name": "config",
+          "args": [],
+          "returns": "ChatConfig",
+          "is_async": false
+        },
+        {
+          "name": "get_session",
+          "args": [
+            "session_id"
+          ],
+          "returns": "Optional[ChatSession]",
+          "is_async": false
+        },
+        {
+          "name": "create_session",
+          "args": [
+            "thread_id",
+            "session_id",
+            "metadata"
+          ],
+          "returns": "ChatSession",
+          "is_async": false
+        },
+        {
+          "name": "get_or_create_session",
+          "args": [
+            "thread_id",
+            "session_id"
+          ],
+          "returns": "ChatSession",
+          "is_async": false
+        },
+        {
+          "name": "close_session",
+          "args": [
+            "session_id"
+          ],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "add_message",
+          "args": [
+            "session_id",
+            "message"
+          ],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "handle_chat",
+          "args": [
+            "thread_id",
+            "message"
+          ],
+          "returns": "AsyncGenerator[BaseAGUIEvent, None]",
+          "is_async": true
+        },
+        {
+          "name": "handle_chat_sse",
+          "args": [
+            "thread_id",
+            "message"
+          ],
+          "returns": "AsyncGenerator[str, None]",
+          "is_async": true
+        },
+        {
+          "name": "get_conversation_history",
+          "args": [
+            "session_id"
+          ],
+          "returns": "List[Dict[str, Any]]",
+          "is_async": false
+        },
+        {
+          "name": "emit_typing_indicator",
+          "args": [
+            "thread_id",
+            "run_id",
+            "is_typing"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        }
+      ],
+      "method_count": 13
+    },
+    {
+      "name": "AGUIApprovalDelegate",
+      "bases": [],
+      "docstring": "\n    Delegates AG-UI approval operations to UnifiedApprovalManager.\n\n    Provides the same interface as the original AG-UI approval handler\n    but stores state in the unified system. This ensures all",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "unified_manager"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "create_approval_request",
+          "args": [
+            "tool_name",
+            "tool_args",
+            "session_id",
+            "user_id",
+            "priority",
+            "title",
+            "description",
+            "timeout_minutes"
+          ],
+          "returns": "str",
+          "is_async": true
+        },
+        {
+          "name": "handle_approval_response",
+          "args": [
+            "request_id",
+            "approved",
+            "approver_id",
+            "comment"
+          ],
+          "returns": "Dict[str, Any]",
+          "is_async": true
+        },
+        {
+          "name": "get_pending_approvals",
+          "args": [
+            "session_id"
+          ],
+          "returns": "List[Dict[str, Any]]",
+          "is_async": true
+        },
+        {
+          "name": "get_approval_status",
+          "args": [
+            "request_id"
+          ],
+          "returns": "Optional[Dict[str, Any]]",
+          "is_async": true
+        },
+        {
+          "name": "cancel_approval",
+          "args": [
+            "request_id",
+            "reason"
+          ],
+          "returns": "bool",
+          "is_async": true
+        }
+      ],
+      "method_count": 6
+    },
+    {
+      "name": "ProgressStatus",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "\n    Status of workflow progress.\n\n    Attributes:\n        PENDING: Step not yet started\n        IN_PROGRESS: Step is currently executing\n        COMPLETED: Step completed successfully\n        FAILED:",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ModeSwitchReason",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "\n    Reason for mode switch.\n\n    Attributes:\n        COMPLEXITY: Task complexity requires mode change\n        USER_REQUEST: User explicitly requested mode switch\n        FAILURE_RECOVERY: Recovery fr",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "WorkflowStep",
+      "bases": [],
+      "docstring": "\n    A single step in a workflow.\n\n    Attributes:\n        step_id: Unique step identifier\n        name: Human-readable step name\n        description: Step description\n        status: Current step sta",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "WorkflowProgress",
+      "bases": [],
+      "docstring": "\n    Progress information for a multi-step workflow.\n\n    Attributes:\n        workflow_id: Unique workflow identifier\n        workflow_name: Human-readable workflow name\n        total_steps: Total num",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "calculate_progress",
+          "args": [],
+          "returns": "float",
+          "is_async": false
+        }
+      ],
+      "method_count": 2
+    },
+    {
+      "name": "ModeSwitchInfo",
+      "bases": [],
+      "docstring": "\n    Information about a mode switch event.\n\n    Attributes:\n        switch_id: Unique switch identifier\n        source_mode: Mode before switch\n        target_mode: Mode after switch\n        reason: ",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "GenerativeUIHandler",
+      "bases": [],
+      "docstring": "\n    Handler for Agentic Generative UI events.\n\n    Manages the emission of progress events and mode switch notifications\n    following the AG-UI protocol specification.\n\n    Attributes:\n        mode_",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "mode_switcher",
+            "max_event_history"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "emit_progress_event",
+          "args": [
+            "run_id",
+            "progress"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "emit_step_started",
+          "args": [
+            "run_id",
+            "workflow_id",
+            "step"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "emit_step_completed",
+          "args": [
+            "run_id",
+            "workflow_id",
+            "step",
+            "result"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "emit_step_failed",
+          "args": [
+            "run_id",
+            "workflow_id",
+            "step",
+            "error"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "emit_mode_switch_event",
+          "args": [
+            "run_id",
+            "switch_info"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "emit_mode_switch_from_result",
+          "args": [
+            "run_id",
+            "result"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "emit_mode_switch_started",
+          "args": [
+            "run_id",
+            "trigger"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "emit_mode_switch_completed",
+          "args": [
+            "run_id",
+            "result"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "handle_switch_trigger",
+          "args": [
+            "run_id",
+            "trigger",
+            "context",
+            "session_id"
+          ],
+          "returns": "AsyncGenerator[CustomEvent, None]",
+          "is_async": true
+        },
+        {
+          "name": "start_workflow",
+          "args": [
+            "workflow_id",
+            "workflow_name",
+            "steps"
+          ],
+          "returns": "WorkflowProgress",
+          "is_async": false
+        },
+        {
+          "name": "get_workflow_progress",
+          "args": [
+            "workflow_id"
+          ],
+          "returns": "Optional[WorkflowProgress]",
+          "is_async": false
+        },
+        {
+          "name": "complete_workflow",
+          "args": [
+            "workflow_id"
+          ],
+          "returns": "Optional[WorkflowProgress]",
+          "is_async": false
+        },
+        {
+          "name": "cancel_workflow",
+          "args": [
+            "workflow_id"
+          ],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "_generate_switch_message",
+          "args": [
+            "result"
+          ],
+          "returns": "str",
+          "is_async": false
+        },
+        {
+          "name": "_add_to_history",
+          "args": [
+            "event"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "get_event_history",
+          "args": [
+            "limit",
+            "event_name"
+          ],
+          "returns": "List[CustomEvent]",
+          "is_async": false
+        },
+        {
+          "name": "get_active_workflow_count",
+          "args": [],
+          "returns": "int",
+          "is_async": false
+        },
+        {
+          "name": "get_active_workflow_ids",
+          "args": [],
+          "returns": "List[str]",
+          "is_async": false
+        },
+        {
+          "name": "clear_event_history",
+          "args": [],
+          "returns": "None",
+          "is_async": false
+        }
+      ],
+      "method_count": 20
+    },
+    {
+      "name": "ApprovalStatus",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "\n    Approval status for pending tool calls.\n\n    Attributes:\n        PENDING: Awaiting user decision\n        APPROVED: User approved the operation\n        REJECTED: User rejected the operation\n      ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ToolCallInfo",
+      "bases": [],
+      "docstring": "\n    Information about a tool call requiring approval.\n\n    Attributes:\n        id: Unique tool call identifier\n        name: Tool name\n        arguments: Tool call arguments\n    ",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ApprovalRequest",
+      "bases": [],
+      "docstring": "\n    Approval request for a high-risk operation.\n\n    Attributes:\n        approval_id: Unique approval request ID\n        tool_call_id: Associated tool call ID\n        tool_name: Tool being called\n   ",
+      "methods": [
+        {
+          "name": "is_expired",
+          "args": [],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "is_pending",
+          "args": [],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        }
+      ],
+      "method_count": 3
+    },
+    {
+      "name": "ApprovalStorage",
+      "bases": [],
+      "docstring": "\n    In-memory storage for approval requests.\n\n    Manages pending approval requests with automatic expiration cleanup.\n    For production use, consider implementing Redis-based storage.\n\n    Example:",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "default_timeout_seconds"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "create_pending",
+          "args": [
+            "tool_call_id",
+            "tool_name",
+            "arguments",
+            "risk_level",
+            "risk_score",
+            "reasoning",
+            "run_id",
+            "session_id"
+          ],
+          "returns": "str",
+          "is_async": true
+        },
+        {
+          "name": "get",
+          "args": [
+            "approval_id"
+          ],
+          "returns": "Optional[ApprovalRequest]",
+          "is_async": true
+        },
+        {
+          "name": "update_status",
+          "args": [
+            "approval_id",
+            "approved",
+            "user_comment"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "get_pending",
+          "args": [
+            "session_id",
+            "run_id"
+          ],
+          "returns": "List[ApprovalRequest]",
+          "is_async": true
+        },
+        {
+          "name": "cancel",
+          "args": [
+            "approval_id"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "cleanup_expired",
+          "args": [
+            "max_age_seconds"
+          ],
+          "returns": "int",
+          "is_async": true
+        },
+        {
+          "name": "get_stats",
+          "args": [],
+          "returns": "Dict[str, int]",
+          "is_async": false
+        }
+      ],
+      "method_count": 8
+    },
+    {
+      "name": "HITLHandler",
+      "bases": [],
+      "docstring": "\n    Human-in-the-Loop handler for AG-UI protocol.\n\n    Integrates with RiskAssessmentEngine to determine when\n    human approval is required for tool operations.\n\n    Example:\n        >>> risk_engine",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "risk_engine",
+            "approval_storage",
+            "default_timeout_seconds"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "check_approval_needed",
+          "args": [
+            "tool_call",
+            "session_id",
+            "environment"
+          ],
+          "returns": "tuple[bool, Optional[RiskAssessment]]",
+          "is_async": true
+        },
+        {
+          "name": "create_approval_event",
+          "args": [
+            "tool_call",
+            "assessment",
+            "run_id",
+            "session_id",
+            "timeout_seconds"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "handle_approval_response",
+          "args": [
+            "approval_id",
+            "approved",
+            "user_comment"
+          ],
+          "returns": "tuple[bool, Optional[ApprovalRequest]]",
+          "is_async": true
+        },
+        {
+          "name": "wait_for_approval",
+          "args": [
+            "approval_id",
+            "poll_interval_seconds"
+          ],
+          "returns": "ApprovalRequest",
+          "is_async": true
+        },
+        {
+          "name": "create_approval_resolved_event",
+          "args": [
+            "request"
+          ],
+          "returns": "CustomEvent",
+          "is_async": true
+        },
+        {
+          "name": "_generate_reasoning",
+          "args": [
+            "assessment"
+          ],
+          "returns": "str",
+          "is_async": false
+        }
+      ],
+      "method_count": 7
+    },
+    {
+      "name": "ResultType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Type of tool execution result.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ToolExecutionStatus",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Status of tool execution.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ToolCall",
+      "bases": [],
+      "docstring": "\n    Represents a tool call request.\n\n    Attributes:\n        id: Unique identifier for the tool call\n        name: Tool name\n        arguments: Tool arguments\n        status: Current execution status",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "from_dict",
+          "args": [
+            "cls",
+            "data"
+          ],
+          "returns": "'ToolCall'",
+          "is_async": false
+        }
+      ],
+      "method_count": 2
+    },
+    {
+      "name": "FormattedResult",
+      "bases": [],
+      "docstring": "\n    Formatted tool result for frontend rendering.\n\n    Attributes:\n        data: The actual result data\n        result_type: Type of the result\n        formatted: Whether the data has been formatted\n",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "ToolRenderingConfig",
+      "bases": [],
+      "docstring": "\n    Configuration for tool rendering.\n\n    Attributes:\n        max_text_length: Maximum text length before truncation\n        max_json_depth: Maximum JSON depth for display\n        max_table_rows: Ma",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ToolRenderingHandler",
+      "bases": [],
+      "docstring": "\n    Backend tool rendering handler.\n\n    Provides standardized formatting for tool execution results,\n    enabling consistent display across different result types.\n\n    Key Features:\n    - Automatic",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "executor",
+          "args": [],
+          "returns": "'UnifiedToolExecutor'",
+          "is_async": false
+        },
+        {
+          "name": "config",
+          "args": [],
+          "returns": "ToolRenderingConfig",
+          "is_async": false
+        },
+        {
+          "name": "detect_result_type",
+          "args": [
+            "result",
+            "tool_name"
+          ],
+          "returns": "ResultType",
+          "is_async": false
+        },
+        {
+          "name": "_looks_like_code",
+          "args": [
+            "text"
+          ],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "format_result",
+          "args": [
+            "result",
+            "result_type",
+            "tool_name"
+          ],
+          "returns": "FormattedResult",
+          "is_async": false
+        },
+        {
+          "name": "_format_text",
+          "args": [
+            "result"
+          ],
+          "returns": "FormattedResult",
+          "is_async": false
+        },
+        {
+          "name": "_format_json",
+          "args": [
+            "result"
+          ],
+          "returns": "FormattedResult",
+          "is_async": false
+        },
+        {
+          "name": "_format_table",
+          "args": [
+            "result"
+          ],
+          "returns": "FormattedResult",
+          "is_async": false
+        },
+        {
+          "name": "_format_image",
+          "args": [
+            "result"
+          ],
+          "returns": "FormattedResult",
+          "is_async": false
+        },
+        {
+          "name": "_format_code",
+          "args": [
+            "result",
+            "tool_name"
+          ],
+          "returns": "FormattedResult",
+          "is_async": false
+        },
+        {
+          "name": "_format_error",
+          "args": [
+            "result"
+          ],
+          "returns": "FormattedResult",
+          "is_async": false
+        },
+        {
+          "name": "execute_and_format",
+          "args": [
+            "tool_call",
+            "session_id"
+          ],
+          "returns": "ToolCallEndEvent",
+          "is_async": true
+        },
+        {
+          "name": "create_start_event",
+          "args": [
+            "tool_call",
+            "run_id"
+          ],
+          "returns": "ToolCallStartEvent",
+          "is_async": true
+        },
+        {
+          "name": "create_status_event",
+          "args": [
+            "tool_call",
+            "status",
+            "progress"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        }
+      ],
+      "method_count": 15
+    },
+    {
+      "name": "PredictionStatus",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Status of a prediction.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "PredictionType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Type of prediction being made.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "PredictionResult",
+      "bases": [],
+      "docstring": "\n    Result of a prediction operation.\n\n    Attributes:\n        prediction_id: Unique prediction identifier\n        prediction_type: Type of prediction\n        status: Current status\n        predicted",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "from_dict",
+          "args": [
+            "cls",
+            "data"
+          ],
+          "returns": "'PredictionResult'",
+          "is_async": false
+        },
+        {
+          "name": "is_expired",
+          "args": [],
+          "returns": "bool",
+          "is_async": false
+        }
+      ],
+      "method_count": 3
+    },
+    {
+      "name": "PredictionConfig",
+      "bases": [],
+      "docstring": "\n    Configuration for predictive state handling.\n\n    Attributes:\n        default_ttl: Default time-to-live for predictions in seconds\n        min_confidence: Minimum confidence score to apply predic",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "PredictiveStateHandler",
+      "bases": [],
+      "docstring": "\n    Handler for predictive/optimistic state updates.\n\n    Provides optimistic UI updates by predicting state changes and applying\n    them immediately, with confirmation and rollback mechanisms for w",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "state_handler"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "config",
+          "args": [],
+          "returns": "PredictionConfig",
+          "is_async": false
+        },
+        {
+          "name": "state_handler",
+          "args": [],
+          "returns": "SharedStateHandler",
+          "is_async": false
+        },
+        {
+          "name": "get_prediction",
+          "args": [
+            "prediction_id"
+          ],
+          "returns": "Optional[PredictionResult]",
+          "is_async": false
+        },
+        {
+          "name": "list_pending_predictions",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "List[PredictionResult]",
+          "is_async": false
+        },
+        {
+          "name": "_calculate_confidence",
+          "args": [
+            "action_type",
+            "predicted_changes"
+          ],
+          "returns": "float",
+          "is_async": false
+        },
+        {
+          "name": "_count_changes",
+          "args": [
+            "changes",
+            "depth"
+          ],
+          "returns": "int",
+          "is_async": false
+        },
+        {
+          "name": "_update_pattern_confidence",
+          "args": [
+            "action_type",
+            "success"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "predict_state",
+          "args": [
+            "thread_id",
+            "run_id",
+            "predicted_changes"
+          ],
+          "returns": "Tuple[PredictionResult, StateDeltaEvent]",
+          "is_async": false
+        },
+        {
+          "name": "confirm_prediction",
+          "args": [
+            "prediction_id",
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "Tuple[PredictionResult, Optional[StateDe",
+          "is_async": false
+        },
+        {
+          "name": "rollback_prediction",
+          "args": [
+            "prediction_id",
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "Tuple[PredictionResult, StateDeltaEvent]",
+          "is_async": false
+        },
+        {
+          "name": "check_and_expire_predictions",
+          "args": [
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "List[Tuple[PredictionResult, StateDeltaE",
+          "is_async": false
+        },
+        {
+          "name": "handle_server_update",
+          "args": [
+            "thread_id",
+            "run_id",
+            "server_state"
+          ],
+          "returns": "List[Tuple[PredictionResult, Optional[St",
+          "is_async": false
+        },
+        {
+          "name": "_check_conflict",
+          "args": [
+            "predicted",
+            "actual",
+            "path"
+          ],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "emit_prediction_event",
+          "args": [
+            "prediction",
+            "event_type"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "cleanup_completed_predictions",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "int",
+          "is_async": false
+        },
+        {
+          "name": "clear_thread_predictions",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "clear_all",
+          "args": [],
+          "returns": "None",
+          "is_async": false
+        }
+      ],
+      "method_count": 18
+    },
+    {
+      "name": "DiffOperation",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Type of diff operation.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ConflictResolutionStrategy",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Strategy for resolving state conflicts.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "StateDiff",
+      "bases": [],
+      "docstring": "\n    Represents a difference between two states.\n\n    Attributes:\n        path: JSON path to the changed value (e.g., \"user.profile.name\")\n        operation: Type of operation\n        old_value: Previ",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "from_dict",
+          "args": [
+            "cls",
+            "data"
+          ],
+          "returns": "'StateDiff'",
+          "is_async": false
+        }
+      ],
+      "method_count": 2
+    },
+    {
+      "name": "StateVersion",
+      "bases": [],
+      "docstring": "\n    State version information.\n\n    Attributes:\n        version: Version number\n        timestamp: When this version was created\n        checksum: Optional checksum for integrity verification\n    ",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "StateConflict",
+      "bases": [],
+      "docstring": "\n    Represents a state conflict.\n\n    Attributes:\n        path: Path where conflict occurred\n        server_value: Value on server\n        client_value: Value from client\n        resolution: How it w",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "StateSyncManager",
+      "bases": [],
+      "docstring": "\n    Manages state synchronization between server and clients.\n\n    Provides algorithms for state diffing, merging, and conflict resolution.\n\n    Example:\n        >>> manager = StateSyncManager()\n    ",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "conflict_strategy",
+          "args": [],
+          "returns": "ConflictResolutionStrategy",
+          "is_async": false
+        },
+        {
+          "name": "diff_state",
+          "args": [
+            "old_state",
+            "new_state"
+          ],
+          "returns": "List[StateDiff]",
+          "is_async": false
+        },
+        {
+          "name": "apply_diffs",
+          "args": [
+            "state",
+            "diffs"
+          ],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "_apply_single_diff",
+          "args": [
+            "state",
+            "diff"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "merge_state",
+          "args": [
+            "server_state",
+            "client_state"
+          ],
+          "returns": "Tuple[Dict[str, Any], List[StateConflict",
+          "is_async": false
+        },
+        {
+          "name": "_resolve_conflict",
+          "args": [
+            "conflict",
+            "server_version",
+            "client_version"
+          ],
+          "returns": "Any",
+          "is_async": false
+        }
+      ],
+      "method_count": 7
+    },
+    {
+      "name": "SharedStateHandler",
+      "bases": [],
+      "docstring": "\n    Handler for shared state between backend and frontend.\n\n    Provides state management with snapshot and delta event emission,\n    version tracking, and synchronization utilities.\n\n    Key Feature",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "sync_manager",
+          "args": [],
+          "returns": "StateSyncManager",
+          "is_async": false
+        },
+        {
+          "name": "get_state",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "Optional[Dict[str, Any]]",
+          "is_async": false
+        },
+        {
+          "name": "get_version",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "Optional[StateVersion]",
+          "is_async": false
+        },
+        {
+          "name": "set_state",
+          "args": [
+            "thread_id",
+            "state"
+          ],
+          "returns": "Optional[StateSnapshotEvent]",
+          "is_async": false
+        },
+        {
+          "name": "update_state",
+          "args": [
+            "thread_id",
+            "run_id",
+            "updates"
+          ],
+          "returns": "StateDeltaEvent",
+          "is_async": false
+        },
+        {
+          "name": "_deep_update",
+          "args": [
+            "base",
+            "updates"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "emit_state_snapshot",
+          "args": [
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "StateSnapshotEvent",
+          "is_async": false
+        },
+        {
+          "name": "emit_state_delta",
+          "args": [
+            "thread_id",
+            "run_id",
+            "diffs"
+          ],
+          "returns": "StateDeltaEvent",
+          "is_async": false
+        },
+        {
+          "name": "apply_client_update",
+          "args": [
+            "thread_id",
+            "run_id",
+            "client_state"
+          ],
+          "returns": "Tuple[StateDeltaEvent, List[StateConflic",
+          "is_async": false
+        },
+        {
+          "name": "get_state_at_version",
+          "args": [
+            "thread_id",
+            "version"
+          ],
+          "returns": "Optional[Dict[str, Any]]",
+          "is_async": false
+        },
+        {
+          "name": "rollback_to_version",
+          "args": [
+            "thread_id",
+            "run_id",
+            "version"
+          ],
+          "returns": "Optional[StateSnapshotEvent]",
+          "is_async": false
+        },
+        {
+          "name": "clear_state",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "clear_all",
+          "args": [],
+          "returns": "None",
+          "is_async": false
+        }
+      ],
+      "method_count": 14
+    },
+    {
+      "name": "UIComponentType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Type of UI component to render.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ChartType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Type of chart for chart components.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "FormFieldType",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Type of form field.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "FormFieldDefinition",
+      "bases": [],
+      "docstring": "\n    Definition of a form field.\n\n    Attributes:\n        name: Field name (used as key in form data)\n        label: Display label\n        field_type: Type of form field\n        required: Whether the ",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "TableColumnDefinition",
+      "bases": [],
+      "docstring": "\n    Definition of a table column.\n\n    Attributes:\n        key: Column key (matches data key)\n        label: Display header\n        sortable: Whether column is sortable\n        filterable: Whether co",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "UIComponentSchema",
+      "bases": [],
+      "docstring": "\n    Schema for UI component validation.\n\n    Attributes:\n        component_type: Type of component\n        required_fields: Required fields in the definition\n        optional_fields: Optional fields ",
+      "methods": [
+        {
+          "name": "for_form",
+          "args": [
+            "cls"
+          ],
+          "returns": "'UIComponentSchema'",
+          "is_async": false
+        },
+        {
+          "name": "for_chart",
+          "args": [
+            "cls"
+          ],
+          "returns": "'UIComponentSchema'",
+          "is_async": false
+        },
+        {
+          "name": "for_card",
+          "args": [
+            "cls"
+          ],
+          "returns": "'UIComponentSchema'",
+          "is_async": false
+        },
+        {
+          "name": "for_table",
+          "args": [
+            "cls"
+          ],
+          "returns": "'UIComponentSchema'",
+          "is_async": false
+        },
+        {
+          "name": "for_custom",
+          "args": [
+            "cls"
+          ],
+          "returns": "'UIComponentSchema'",
+          "is_async": false
+        },
+        {
+          "name": "get_schema",
+          "args": [
+            "cls",
+            "component_type"
+          ],
+          "returns": "'UIComponentSchema'",
+          "is_async": false
+        }
+      ],
+      "method_count": 6
+    },
+    {
+      "name": "UIComponentDefinition",
+      "bases": [],
+      "docstring": "\n    Definition of a UI component to be rendered.\n\n    Attributes:\n        component_type: Type of UI component\n        component_id: Unique component identifier\n        props: Component properties\n  ",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "from_dict",
+          "args": [
+            "cls",
+            "data"
+          ],
+          "returns": "'UIComponentDefinition'",
+          "is_async": false
+        }
+      ],
+      "method_count": 2
+    },
+    {
+      "name": "ValidationResult",
+      "bases": [],
+      "docstring": "Result of component validation.",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "ToolBasedUIHandler",
+      "bases": [],
+      "docstring": "\n    Handler for tool-based generative UI.\n\n    Provides dynamic UI component generation based on tool execution results.\n    Integrates with AG-UI event streaming to deliver UI updates to clients.\n\n ",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "validate_schema",
+          "args": [],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "strict_mode",
+          "args": [],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "get_component",
+          "args": [
+            "component_id"
+          ],
+          "returns": "Optional[UIComponentDefinition]",
+          "is_async": false
+        },
+        {
+          "name": "list_components",
+          "args": [],
+          "returns": "List[UIComponentDefinition]",
+          "is_async": false
+        },
+        {
+          "name": "validate_component_schema",
+          "args": [
+            "component"
+          ],
+          "returns": "ValidationResult",
+          "is_async": false
+        },
+        {
+          "name": "_build_component_event",
+          "args": [
+            "component",
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "emit_ui_component",
+          "args": [
+            "component_type",
+            "props",
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "emit_form_component",
+          "args": [
+            "thread_id",
+            "run_id",
+            "fields"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "emit_chart_component",
+          "args": [
+            "thread_id",
+            "run_id",
+            "chart_type",
+            "data"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "emit_card_component",
+          "args": [
+            "thread_id",
+            "run_id",
+            "title"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "emit_table_component",
+          "args": [
+            "thread_id",
+            "run_id",
+            "columns",
+            "data"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "emit_custom_component",
+          "args": [
+            "thread_id",
+            "run_id",
+            "component_name"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "emit_update_component",
+          "args": [
+            "component_id",
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "Optional[CustomEvent]",
+          "is_async": false
+        },
+        {
+          "name": "emit_remove_component",
+          "args": [
+            "component_id",
+            "thread_id",
+            "run_id"
+          ],
+          "returns": "CustomEvent",
+          "is_async": false
+        },
+        {
+          "name": "clear_components",
+          "args": [],
+          "returns": "None",
+          "is_async": false
+        }
+      ],
+      "method_count": 16
+    },
+    {
+      "name": "ThreadManager",
+      "bases": [],
+      "docstring": "\n    Thread Manager for AG-UI conversations.\n\n    Manages the lifecycle of conversation threads including creation,\n    retrieval, message storage, and state management. Uses Write-Through\n    caching",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "cache",
+            "repository",
+            "default_ttl"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "get_or_create",
+          "args": [
+            "thread_id",
+            "metadata"
+          ],
+          "returns": "AGUIThread",
+          "is_async": true
+        },
+        {
+          "name": "get",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "Optional[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "append_messages",
+          "args": [
+            "thread_id",
+            "messages"
+          ],
+          "returns": "AGUIThread",
+          "is_async": true
+        },
+        {
+          "name": "append_message",
+          "args": [
+            "thread_id",
+            "role",
+            "content",
+            "message_id",
+            "metadata",
+            "tool_calls",
+            "tool_call_id"
+          ],
+          "returns": "AGUIThread",
+          "is_async": true
+        },
+        {
+          "name": "update_state",
+          "args": [
+            "thread_id",
+            "state_updates"
+          ],
+          "returns": "AGUIThread",
+          "is_async": true
+        },
+        {
+          "name": "set_state",
+          "args": [
+            "thread_id",
+            "state"
+          ],
+          "returns": "AGUIThread",
+          "is_async": true
+        },
+        {
+          "name": "increment_run_count",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "int",
+          "is_async": true
+        },
+        {
+          "name": "archive",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "AGUIThread",
+          "is_async": true
+        },
+        {
+          "name": "delete",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "list_active",
+          "args": [
+            "limit",
+            "offset"
+          ],
+          "returns": "List[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "_create_thread",
+          "args": [
+            "metadata"
+          ],
+          "returns": "AGUIThread",
+          "is_async": true
+        },
+        {
+          "name": "_save",
+          "args": [
+            "thread"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "get_messages",
+          "args": [
+            "thread_id",
+            "limit",
+            "offset"
+          ],
+          "returns": "List[AGUIMessage]",
+          "is_async": true
+        },
+        {
+          "name": "get_state",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "Dict[str, Any]",
+          "is_async": true
+        },
+        {
+          "name": "clear_messages",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "AGUIThread",
+          "is_async": true
+        }
+      ],
+      "method_count": 16
+    },
+    {
+      "name": "ThreadStatus",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "Thread 狀態枚舉",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "MessageRole",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "docstring": "訊息角色枚舉",
+      "methods": [],
+      "method_count": 0
+    },
+    {
+      "name": "AGUIMessage",
+      "bases": [],
+      "docstring": "\n    AG-UI Message (對話訊息)\n\n    Represents a single message in a conversation thread.\n\n    Attributes:\n        message_id: Unique identifier for the message\n        role: Message role (user, assistant,",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "from_dict",
+          "args": [
+            "cls",
+            "data"
+          ],
+          "returns": "'AGUIMessage'",
+          "is_async": false
+        }
+      ],
+      "method_count": 2
+    },
+    {
+      "name": "AGUIThread",
+      "bases": [],
+      "docstring": "\n    AG-UI Thread (對話線程)\n\n    Represents a conversation thread that can contain multiple runs.\n    Threads persist conversation state and history across multiple\n    interactions.\n\n    Attributes:\n   ",
+      "methods": [
+        {
+          "name": "to_dict",
+          "args": [],
+          "returns": "Dict[str, Any]",
+          "is_async": false
+        },
+        {
+          "name": "from_dict",
+          "args": [
+            "cls",
+            "data"
+          ],
+          "returns": "'AGUIThread'",
+          "is_async": false
+        },
+        {
+          "name": "add_message",
+          "args": [
+            "message"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "update_state",
+          "args": [
+            "updates"
+          ],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "increment_run_count",
+          "args": [],
+          "returns": "int",
+          "is_async": false
+        },
+        {
+          "name": "archive",
+          "args": [],
+          "returns": "None",
+          "is_async": false
+        },
+        {
+          "name": "is_active",
+          "args": [],
+          "returns": "bool",
+          "is_async": false
+        },
+        {
+          "name": "message_count",
+          "args": [],
+          "returns": "int",
+          "is_async": false
+        }
+      ],
+      "method_count": 8
+    },
+    {
+      "name": "AGUIMessageSchema",
+      "bases": [
+        "BaseModel"
+      ],
+      "docstring": "Pydantic schema for AGUIMessage API responses.",
+      "methods": [
+        {
+          "name": "from_dataclass",
+          "args": [
+            "cls",
+            "message"
+          ],
+          "returns": "'AGUIMessageSchema'",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "AGUIThreadSchema",
+      "bases": [
+        "BaseModel"
+      ],
+      "docstring": "Pydantic schema for AGUIThread API responses.",
+      "methods": [
+        {
+          "name": "from_dataclass",
+          "args": [
+            "cls",
+            "thread"
+          ],
+          "returns": "'AGUIThreadSchema'",
+          "is_async": false
+        }
+      ],
+      "method_count": 1
+    },
+    {
+      "name": "RedisCacheBackend",
+      "bases": [],
+      "docstring": "\n    Redis implementation of CacheProtocol.\n\n    Replaces InMemoryCache for production use with ThreadCache.\n    Provides actual TTL expiration and persistence across restarts.\n\n    Args:\n        redi",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "redis_client",
+            "key_prefix"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "_make_key",
+          "args": [
+            "key"
+          ],
+          "returns": "str",
+          "is_async": false
+        },
+        {
+          "name": "get",
+          "args": [
+            "key"
+          ],
+          "returns": "Optional[str]",
+          "is_async": true
+        },
+        {
+          "name": "set",
+          "args": [
+            "key",
+            "value",
+            "ttl"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "delete",
+          "args": [
+            "key"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "exists",
+          "args": [
+            "key"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "clear",
+          "args": [],
+          "returns": "None",
+          "is_async": true
+        }
+      ],
+      "method_count": 7
+    },
+    {
+      "name": "RedisThreadRepository",
+      "bases": [
+        "ThreadRepository"
+      ],
+      "docstring": "\n    Redis implementation of ThreadRepository.\n\n    Replaces InMemoryThreadRepository for production use.\n    Stores threads as JSON with status indexing via Redis sets.\n\n    Key Formats:\n        - ag",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "redis_client",
+            "key_prefix",
+            "default_ttl"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "_thread_key",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "str",
+          "is_async": false
+        },
+        {
+          "name": "_status_set_key",
+          "args": [
+            "status"
+          ],
+          "returns": "str",
+          "is_async": false
+        },
+        {
+          "name": "_all_threads_key",
+          "args": [],
+          "returns": "str",
+          "is_async": false
+        },
+        {
+          "name": "save",
+          "args": [
+            "thread"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "get_by_id",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "Optional[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "delete",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "list_by_status",
+          "args": [
+            "status",
+            "limit",
+            "offset"
+          ],
+          "returns": "List[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "list_all",
+          "args": [
+            "limit",
+            "offset"
+          ],
+          "returns": "List[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "count",
+          "args": [],
+          "returns": "int",
+          "is_async": true
+        },
+        {
+          "name": "clear",
+          "args": [],
+          "returns": "None",
+          "is_async": true
+        }
+      ],
+      "method_count": 11
+    },
+    {
+      "name": "CacheProtocol",
+      "bases": [
+        "Protocol"
+      ],
+      "docstring": "Protocol for cache implementations.",
+      "methods": [
+        {
+          "name": "get",
+          "args": [
+            "key"
+          ],
+          "returns": "Optional[str]",
+          "is_async": true
+        },
+        {
+          "name": "set",
+          "args": [
+            "key",
+            "value",
+            "ttl"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "delete",
+          "args": [
+            "key"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "exists",
+          "args": [
+            "key"
+          ],
+          "returns": "bool",
+          "is_async": true
+        }
+      ],
+      "method_count": 4
+    },
+    {
+      "name": "ThreadCache",
+      "bases": [],
+      "docstring": "\n    Redis-based cache for AG-UI Threads.\n\n    Provides fast read access to thread data with configurable TTL.\n    Uses Write-Through pattern with ThreadRepository.\n\n    Attributes:\n        cache: Red",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [
+            "cache",
+            "key_prefix",
+            "default_ttl"
+          ],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "_make_key",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "str",
+          "is_async": false
+        },
+        {
+          "name": "get",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "Optional[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "set",
+          "args": [
+            "thread",
+            "ttl"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "delete",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "exists",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "refresh_ttl",
+          "args": [
+            "thread_id",
+            "ttl"
+          ],
+          "returns": "bool",
+          "is_async": true
+        }
+      ],
+      "method_count": 7
+    },
+    {
+      "name": "RepositoryProtocol",
+      "bases": [
+        "Protocol"
+      ],
+      "docstring": "Protocol for repository implementations.",
+      "methods": [
+        {
+          "name": "save",
+          "args": [
+            "thread"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "get_by_id",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "Optional[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "delete",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "bool",
+          "is_async": true
+        }
+      ],
+      "method_count": 3
+    },
+    {
+      "name": "ThreadRepository",
+      "bases": [
+        "ABC"
+      ],
+      "docstring": "\n    Abstract base class for Thread persistence.\n\n    Subclasses implement specific storage backends (PostgreSQL, etc.)\n    ",
+      "methods": [
+        {
+          "name": "save",
+          "args": [
+            "thread"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "get_by_id",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "Optional[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "delete",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "list_by_status",
+          "args": [
+            "status",
+            "limit",
+            "offset"
+          ],
+          "returns": "List[AGUIThread]",
+          "is_async": true
+        }
+      ],
+      "method_count": 4
+    },
+    {
+      "name": "InMemoryThreadRepository",
+      "bases": [
+        "ThreadRepository"
+      ],
+      "docstring": "\n    In-memory implementation of ThreadRepository.\n\n    Useful for testing and development. Data is lost on restart.\n    ",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "save",
+          "args": [
+            "thread"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "get_by_id",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "Optional[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "delete",
+          "args": [
+            "thread_id"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "list_by_status",
+          "args": [
+            "status",
+            "limit",
+            "offset"
+          ],
+          "returns": "List[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "list_all",
+          "args": [
+            "limit",
+            "offset"
+          ],
+          "returns": "List[AGUIThread]",
+          "is_async": true
+        },
+        {
+          "name": "count",
+          "args": [],
+          "returns": "int",
+          "is_async": true
+        },
+        {
+          "name": "clear",
+          "args": [],
+          "returns": "None",
+          "is_async": true
+        }
+      ],
+      "method_count": 8
+    },
+    {
+      "name": "InMemoryCache",
+      "bases": [],
+      "docstring": "\n    In-memory implementation of CacheProtocol.\n\n    Useful for testing. Does not support actual TTL expiration.\n    ",
+      "methods": [
+        {
+          "name": "__init__",
+          "args": [],
+          "returns": "",
+          "is_async": false
+        },
+        {
+          "name": "get",
+          "args": [
+            "key"
+          ],
+          "returns": "Optional[str]",
+          "is_async": true
+        },
+        {
+          "name": "set",
+          "args": [
+            "key",
+            "value",
+            "ttl"
+          ],
+          "returns": "None",
+          "is_async": true
+        },
+        {
+          "name": "delete",
+          "args": [
+            "key"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "exists",
+          "args": [
+            "key"
+          ],
+          "returns": "bool",
+          "is_async": true
+        },
+        {
+          "name": "clear",
+          "args": [],
+          "returns": "None",
+          "is_async": true
+        }
+      ],
+      "method_count": 6
+    }
+  ],
+  "key_functions": [
+    "backend/src/integrations/ag_ui/bridge.py:create_bridge",
+    "backend/src/integrations/ag_ui/converters.py:create_converters",
+    "backend/src/integrations/ag_ui/events/progress.py:create_step_progress_event",
+    "backend/src/integrations/ag_ui/events/progress.py:emit_step_progress",
+    "backend/src/integrations/ag_ui/features/agentic_chat.py:create_chat_handler",
+    "backend/src/integrations/ag_ui/features/generative_ui.py:create_generative_ui_handler",
+    "backend/src/integrations/ag_ui/features/human_in_loop.py:create_hitl_handler",
+    "backend/src/integrations/ag_ui/features/human_in_loop.py:get_approval_storage",
+    "backend/src/integrations/ag_ui/features/human_in_loop.py:get_hitl_handler",
+    "backend/src/integrations/ag_ui/features/tool_rendering.py:create_tool_rendering_handler",
+    "backend/src/integrations/ag_ui/features/advanced/predictive.py:create_predictive_handler",
+    "backend/src/integrations/ag_ui/features/advanced/shared_state.py:create_shared_state_handler",
+    "backend/src/integrations/ag_ui/features/advanced/tool_ui.py:create_tool_ui_handler"
+  ],
+  "imports_from": [
+    "src.integrations.ag_ui.bridge",
+    "src.integrations.ag_ui.converters",
+    "src.integrations.ag_ui.events",
+    "src.integrations.ag_ui.features.advanced.predictive",
+    "src.integrations.ag_ui.features.advanced.shared_state",
+    "src.integrations.ag_ui.features.advanced.tool_ui",
+    "src.integrations.hybrid.risk",
+    "src.integrations.hybrid.risk.models",
+    "src.integrations.hybrid.switching.models",
+    "src.integrations.orchestration.hitl.unified_manager"
+  ],
+  "total_files": 27,
+  "total_loc": 10356
+}

@@ -1,0 +1,255 @@
+{
+  "layer": "L04",
+  "files": 55,
+  "loc": 20327,
+  "total_classes": 120,
+  "shown_classes": 15,
+  "classes": [
+    {
+      "name": "OrchestrationMetricsCollector",
+      "bases": [],
+      "doc": "Centralized metrics collector for the orchestration module.",
+      "pub_methods": [
+        "__init__",
+        "record_routing_request",
+        "routing_timer",
+        "record_dialog_round",
+        "record_dialog_completion",
+        "set_active_dialogs",
+        "set_dialog_completion_rate",
+        "record_hitl_request",
+        "record_hitl_approval_time",
+        "set_hitl_pending_count"
+      ],
+      "total_methods": 19
+    },
+    {
+      "name": "AzureSearchClient",
+      "bases": [],
+      "doc": "Azure AI Search client wrapper for semantic route operations.",
+      "pub_methods": [
+        "__init__",
+        "vector_search",
+        "hybrid_search",
+        "upload_documents",
+        "delete_documents",
+        "get_document",
+        "get_document_count",
+        "health_check"
+      ],
+      "total_methods": 17
+    },
+    {
+      "name": "ConversationContextManager",
+      "bases": [],
+      "doc": "Conversation context manager with incremental update support.",
+      "pub_methods": [
+        "__init__",
+        "routing_decision",
+        "collected_info",
+        "dialog_history",
+        "is_initialized",
+        "initialize",
+        "update_with_user_response",
+        "add_assistant_turn",
+        "get_missing_fields",
+        "get_collected_fields"
+      ],
+      "total_methods": 16
+    },
+    {
+      "name": "PatternMatcher",
+      "bases": [],
+      "doc": "Rule-based pattern matcher for IT intent classification.",
+      "pub_methods": [
+        "__init__",
+        "match",
+        "match_all",
+        "get_rules_count",
+        "get_rules_by_category",
+        "reload_rules",
+        "add_rule",
+        "remove_rule",
+        "get_statistics"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "PersistentConversationContextManager",
+      "bases": [
+        "ConversationContextManager"
+      ],
+      "doc": "Enhanced ConversationContextManager with Redis persistence support.",
+      "pub_methods": [
+        "__init__",
+        "session_id",
+        "turn_count",
+        "is_max_turns_reached",
+        "is_session_expired",
+        "create_session",
+        "resume_session",
+        "update_with_user_response",
+        "update_with_user_response_async",
+        "end_session"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "GuidedDialogEngine",
+      "bases": [],
+      "doc": "Guided dialog engine for multi-turn information gathering.",
+      "pub_methods": [
+        "__init__",
+        "is_active",
+        "current_state",
+        "start_dialog",
+        "process_response",
+        "generate_questions",
+        "get_dialog_summary",
+        "reset"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "RedisApprovalStorage",
+      "bases": [],
+      "doc": "Redis-based storage for approval requests.",
+      "pub_methods": [
+        "__init__",
+        "save",
+        "get",
+        "update",
+        "delete",
+        "list_pending",
+        "get_history"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "RiskAssessor",
+      "bases": [],
+      "doc": "Risk assessment engine for IT service management.",
+      "pub_methods": [
+        "__init__",
+        "assess",
+        "assess_from_intent"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "RiskPolicies",
+      "bases": [],
+      "doc": "Collection of risk policies with lookup capabilities.",
+      "pub_methods": [
+        "__init__",
+        "get_policy",
+        "add_policy",
+        "remove_policy",
+        "get_all_policies",
+        "get_policies_for_category",
+        "to_dict",
+        "from_dict",
+        "from_yaml"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "TeamsCardBuilder",
+      "bases": [],
+      "doc": "Builder for creating Teams MessageCard objects.",
+      "pub_methods": [
+        "__init__",
+        "with_title",
+        "with_summary",
+        "with_theme_color",
+        "with_risk_level_color",
+        "add_section",
+        "add_fact",
+        "add_text",
+        "add_approve_button",
+        "add_reject_button"
+      ],
+      "total_methods": 12
+    },
+    {
+      "name": "BusinessIntentRouter",
+      "bases": [],
+      "doc": "Three-layer intent router with completeness checking.",
+      "pub_methods": [
+        "__init__",
+        "route",
+        "get_metrics",
+        "reset_metrics"
+      ],
+      "total_methods": 12
+    },
+    {
+      "name": "ClassificationCache",
+      "bases": [],
+      "doc": "Redis-backed cache for LLM classification results.",
+      "pub_methods": [
+        "__init__",
+        "enabled",
+        "hit_rate",
+        "get",
+        "set",
+        "get_stats",
+        "reset_stats"
+      ],
+      "total_methods": 12
+    },
+    {
+      "name": "BaseSourceHandler",
+      "bases": [
+        "ABC"
+      ],
+      "doc": "Abstract base class for source handlers.",
+      "pub_methods": [
+        "__init__",
+        "handler_type",
+        "process",
+        "build_routing_decision",
+        "extract_metadata",
+        "get_metrics",
+        "reset_metrics"
+      ],
+      "total_methods": 11
+    },
+    {
+      "name": "HITLController",
+      "bases": [],
+      "doc": "Human-in-the-Loop Controller for approval workflow management.",
+      "pub_methods": [
+        "__init__",
+        "request_approval",
+        "check_status",
+        "get_request",
+        "process_approval",
+        "cancel_approval",
+        "list_pending_requests",
+        "on_approved",
+        "on_rejected",
+        "on_expired"
+      ],
+      "total_methods": 10
+    },
+    {
+      "name": "UnifiedApprovalManager",
+      "bases": [],
+      "doc": "Single entry point for all HITL approval workflows.",
+      "pub_methods": [
+        "__init__",
+        "submit_approval",
+        "resolve_approval",
+        "get_pending",
+        "get_status",
+        "cancel_approval",
+        "check_expired",
+        "register_callback",
+        "unregister_callback",
+        "get_stats"
+      ],
+      "total_methods": 10
+    }
+  ]
+}

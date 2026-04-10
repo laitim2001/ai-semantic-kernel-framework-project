@@ -919,7 +919,7 @@ api_router (/api/v1)
 **本層問題**:
 | ID | 問題 | 嚴重度 |
 |----|------|--------|
-| M-06 | report_generator.py 含空函數體 | MEDIUM |
+| M-06 | ~~report_generator.py 含空函數體~~ **(V9 已修復: 8 個函數均已實現)** | ~~MEDIUM~~ RESOLVED |
 | C-01 | OrchestrationMetrics, Dialog sessions = InMemory | CRITICAL |
 
 ---
@@ -1040,7 +1040,7 @@ HybridOrchestratorV2 (God Object)     OrchestratorMediator
 **本層問題**:
 | ID | 問題 | 嚴重度 |
 |----|------|--------|
-| C-07 | postgres_store.py f-string SQL injection | CRITICAL |
+| C-07 | postgres_storage.py f-string SQL injection **(V9 修正: 檔名為 postgres_storage.py; 已添加 `_validate_table_name()` regex 驗證，風險降低)** | CRITICAL→MEDIUM |
 | H-05 | Checkpoint storage 非官方 API (save/load/delete) | HIGH |
 | W-1 | edge_routing.py 缺少 MAF imports | WARNING |
 | R8 | *(V8.1 新增)* GA 升級風險：15 條頂層 import 在 RC4 仍有效 (re-export)，GA 可能移除 | MEDIUM |
@@ -1133,7 +1133,7 @@ HybridOrchestratorV2 (God Object)     OrchestratorMediator
 | H-06 | MCP AuditLogger 未接線 (8 servers) | HIGH |
 | H-12 | Shell/SSH HITL = log-only (不阻擋) | HIGH |
 | H-13 | Azure run_command 可執行任意 VM 指令 | HIGH |
-| M-05 | ServiceNow server 未呼叫 set_permission_checker() | MEDIUM |
+| M-05 | ServiceNow server 未呼叫 set_permission_checker() **(V9 路徑修正: mcp/servicenow_server.py, 非 mcp/servers/)** | MEDIUM |
 
 ---
 
@@ -1961,8 +1961,12 @@ Task Analysis → Agent Selection → Subtask Allocation → Execution → Aggre
 # 無 asyncio.Lock 保護，同 session 多個並行操作時
 # 可能導致 context 損壞或讀取不一致
 #
+# V9 補充: ContextSynchronizer (synchronizer.py:164-167) 已在 Sprint 109 添加
+# self._state_lock = asyncio.Lock()，但此 lock 僅保護 Synchronizer 內部狀態，
+# ContextBridge._context_cache 本身仍無 lock 保護。
+#
 # 建議:
-# - 添加 asyncio.Lock (self._lock = asyncio.Lock())
+# - 在 bridge.py 添加 asyncio.Lock (self._lock = asyncio.Lock())
 # - 或遷移到 Redis (已有 redis_store.py 可復用)
 ```
 
@@ -2514,7 +2518,7 @@ Layer 11: Infrastructure  ████████████░░░░░░
 | 優先級 | 項目 | 原因 |
 |--------|------|------|
 | **P0** | InMemory 存儲遷移 (C-01) | 20+ 模組重啟遺失所有狀態 |
-| **P0** | SQL injection 修復 (C-07) | postgres_store.py f-string 直接拼接 |
+| **P0→P1** | SQL injection 修復 (C-07) | postgres_storage.py f-string (已有 _validate_table_name 緩解，降級為 P1) |
 | **P0** | API Key 暴露修復 (C-08) | AG-UI 回應中洩露 key prefix |
 | **P0** | Mock API 路由清理 (C-02~C-05) | Correlation/RootCause/Patrol/Autonomous 100% Mock |
 | **P0** | ContextBridge 並行安全 (H-04) | 無 asyncio.Lock，生產環境必要 |
@@ -2629,12 +2633,12 @@ V8 (Phase 34, 現在): + 3 MCP Servers (n8n, ADF, D365) + Mediator Pattern
 | ID | 問題 | 影響模組 | 報告來源 |
 |----|------|---------|---------|
 | C-01 | 全域 InMemory 存儲 — 重啟遺失所有狀態 | 20+ modules (API, Domain, Integration) | 3A-1/2/3, 3B-3, 3C-ag-ui, 3C-remaining |
-| C-02 | Correlation API routes 100% Mock — 未連接真實 CorrelationAnalyzer | api/v1/correlation/ (7 endpoints) | 3A-1, 3C-remaining |
+| C-02 | Correlation API routes 100% Mock — 未連接真實 CorrelationAnalyzer **(V9 精化: S130 已修復 integration 模組，但 API routes 仍未接線)** | api/v1/correlation/ (7 endpoints) | 3A-1, 3C-remaining |
 | C-03 | Autonomous API routes 100% Mock — UAT stub 無真實規劃引擎 | api/v1/autonomous/ | 3A-1 |
 | C-04 | RootCause API routes 100% Mock — 未連接真實 RootCauseAnalyzer | api/v1/rootcause/ (4 endpoints) | 3A-3, 3C-remaining |
 | C-05 | Patrol API routes 100% Mock — 未連接真實 PatrolAgent | api/v1/patrol/ (9 endpoints) | 3A-3, 3C-remaining |
 | C-06 | messaging/ infrastructure STUB — RabbitMQ 僅 1 行註解 | infrastructure/messaging/ | 3D-core-infra |
-| C-07 | SQL injection via f-string table name — postgres_store.py | agent_framework/memory/postgres_store.py | 3C-af-part2 |
+| C-07 | SQL injection via f-string table name — postgres_storage.py **(V9 修正: 檔名 postgres_storage.py; 已添加 _validate_table_name() 緩解)** | agent_framework/memory/postgres_storage.py | 3C-af-part2 |
 | C-08 | API key prefix 暴露於 AG-UI 回應 | ag_ui/ response data | 3A-1 |
 
 #### HIGH (16 項)
@@ -2666,8 +2670,8 @@ V8 (Phase 34, 現在): + 3 MCP Servers (n8n, ADF, D365) + Mediator Pattern
 | M-02 | Health check 使用 os.environ 違反 pydantic Settings 規則 | main.py |
 | M-03 | Dashboard chart N+1 查詢 (7天×3查詢=21) | api/v1/dashboard/ |
 | M-04 | Dashboard stats 靜默吞掉異常 | api/v1/dashboard/ |
-| M-05 | ServiceNow MCP server 未呼叫 set_permission_checker() | mcp/servers/servicenow/ |
-| M-06 | report_generator.py 含空函數體 | integrations/audit/ |
+| M-05 | ServiceNow MCP server 未呼叫 set_permission_checker() **(V9 路徑修正: mcp/servicenow_server.py)** | mcp/servicenow_server.py |
+| M-06 | ~~report_generator.py 含空函數體~~ **(V9 已修復: 8 個函數均已實現)** | ~~integrations/audit/~~ RESOLVED |
 | M-07 | Session.query() streaming 參數接受但未實現 | claude_sdk/session.py |
 | M-08 | Registry MCP tool integration = TODO stub | claude_sdk/registry.py |
 | M-09 | CaseRepository PostgreSQL = interface-only (fallback InMemory) | integrations/rootcause/ |

@@ -1,0 +1,272 @@
+{
+  "layer": "L07",
+  "files": 48,
+  "loc": 15454,
+  "total_classes": 146,
+  "shown_classes": 15,
+  "classes": [
+    {
+      "name": "ContextSynchronizer",
+      "bases": [],
+      "doc": "Synchronizes context between frameworks.",
+      "pub_methods": [
+        "__init__",
+        "config",
+        "sync_count",
+        "context_count",
+        "create_context",
+        "get_context",
+        "remove_context",
+        "convert_to_claude",
+        "convert_to_ms_agent",
+        "convert_from_claude"
+      ],
+      "total_methods": 23
+    },
+    {
+      "name": "MCPManager",
+      "bases": [],
+      "doc": "Manager for coordinating multiple MCP servers.",
+      "pub_methods": [
+        "__init__",
+        "servers",
+        "server_count",
+        "connected_count",
+        "tools",
+        "tool_count",
+        "add_server",
+        "remove_server",
+        "get_server",
+        "connect_server"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "MCPServer",
+      "bases": [
+        "ABC"
+      ],
+      "doc": "Abstract base class for MCP servers.",
+      "pub_methods": [
+        "__init__",
+        "state",
+        "is_connected",
+        "tools",
+        "get_tool",
+        "has_tool",
+        "connect",
+        "disconnect",
+        "list_tools",
+        "execute_tool"
+      ],
+      "total_methods": 21
+    },
+    {
+      "name": "SessionStateManager",
+      "bases": [],
+      "doc": "Manages session state persistence and recovery.",
+      "pub_methods": [
+        "__init__",
+        "initialize",
+        "save_state",
+        "restore_state",
+        "delete_state",
+        "compress_context",
+        "cleanup_expired_sessions",
+        "get_session_stats"
+      ],
+      "total_methods": 18
+    },
+    {
+      "name": "ToolDiscovery",
+      "bases": [],
+      "doc": "Tool discovery and indexing service.",
+      "pub_methods": [
+        "__init__",
+        "tool_count",
+        "index_tools",
+        "remove_server_tools",
+        "get_tool",
+        "find_tool",
+        "get_by_category",
+        "get_by_server",
+        "get_by_tag",
+        "search"
+      ],
+      "total_methods": 18
+    },
+    {
+      "name": "HybridOrchestrator",
+      "bases": [],
+      "doc": "Orchestrates task execution between MS Agent Framework and Claude SDK.",
+      "pub_methods": [
+        "__init__",
+        "config",
+        "active_session_id",
+        "session_count",
+        "create_session",
+        "get_session",
+        "close_session",
+        "execute",
+        "execute_stream",
+        "analyze_task"
+      ],
+      "total_methods": 17
+    },
+    {
+      "name": "ContextManager",
+      "bases": [],
+      "doc": "Manages context transfer and result merging for multi-agent coordination.",
+      "pub_methods": [
+        "__init__",
+        "transfer_context",
+        "merge_results",
+        "update_shared_context",
+        "get_shared_context",
+        "get_all_shared_context",
+        "prepare_subtask_context",
+        "aggregate_final_result",
+        "get_transfers",
+        "clear"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "AuditHook",
+      "bases": [
+        "Hook"
+      ],
+      "doc": "Hook that logs all activities with sensitive data redaction.",
+      "pub_methods": [
+        "__init__",
+        "on_session_start",
+        "on_session_end",
+        "on_query_start",
+        "on_query_end",
+        "on_tool_call",
+        "on_tool_result",
+        "on_error",
+        "get_session_log",
+        "get_all_logs"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "FrameworkSelector",
+      "bases": [],
+      "doc": "Selects the optimal framework for task execution.",
+      "pub_methods": [
+        "__init__",
+        "strategy",
+        "strategy",
+        "select",
+        "add_custom_rule",
+        "remove_custom_rules",
+        "get_framework_profile",
+        "get_task_type_framework",
+        "compare_frameworks"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "SandboxHook",
+      "bases": [
+        "Hook"
+      ],
+      "doc": "Hook that restricts file access to allowed paths.",
+      "pub_methods": [
+        "__init__",
+        "on_tool_call",
+        "add_allowed_path",
+        "remove_allowed_path",
+        "add_blocked_pattern",
+        "set_working_directory",
+        "get_allowed_paths",
+        "get_blocked_patterns"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "ClaudeCoordinator",
+      "bases": [],
+      "doc": "Claude-led multi-agent coordinator.",
+      "pub_methods": [
+        "__init__",
+        "register_agent",
+        "unregister_agent",
+        "get_available_agents",
+        "coordinate_agents",
+        "analyze_task",
+        "select_agents",
+        "get_coordination_history",
+        "get_statistics",
+        "clear_history"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "SmartFallback",
+      "bases": [],
+      "doc": "Smart fallback system for autonomous operations.",
+      "pub_methods": [
+        "__init__",
+        "analyze_failure",
+        "generate_alternative",
+        "record_failure_pattern",
+        "execute_with_fallback",
+        "get_failure_patterns",
+        "get_statistics",
+        "clear_patterns"
+      ],
+      "total_methods": 12
+    },
+    {
+      "name": "HookChain",
+      "bases": [],
+      "doc": "Manages a chain of hooks with priority-based execution.",
+      "pub_methods": [
+        "__init__",
+        "add",
+        "remove",
+        "clear",
+        "hooks",
+        "run_session_start",
+        "run_session_end",
+        "run_query_start",
+        "run_query_end",
+        "run_tool_call"
+      ],
+      "total_methods": 12
+    },
+    {
+      "name": "PlanExecutor",
+      "bases": [],
+      "doc": "Executes autonomous plans step by step.",
+      "pub_methods": [
+        "__init__",
+        "register_tool",
+        "register_approval_callback",
+        "execute",
+        "execute_stream",
+        "cancel_execution",
+        "get_execution_progress"
+      ],
+      "total_methods": 11
+    },
+    {
+      "name": "AutonomousPlanner",
+      "bases": [],
+      "doc": "Autonomous planning engine for IT event handling.",
+      "pub_methods": [
+        "__init__",
+        "generate_plan",
+        "get_plan",
+        "list_plans",
+        "delete_plan",
+        "estimate_complexity",
+        "estimate_resources"
+      ],
+      "total_methods": 11
+    }
+  ]
+}

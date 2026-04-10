@@ -1,0 +1,277 @@
+{
+  "layer": "L10",
+  "files": 117,
+  "loc": 47754,
+  "total_classes": 382,
+  "shown_classes": 15,
+  "classes": [
+    {
+      "name": "WorkflowCompositionBuilder",
+      "bases": [],
+      "doc": "工作流組合建構器",
+      "pub_methods": [
+        "__init__",
+        "sequence",
+        "parallel",
+        "conditional",
+        "loop",
+        "switch",
+        "case",
+        "default",
+        "add_workflow",
+        "add_inline"
+      ],
+      "total_methods": 24
+    },
+    {
+      "name": "ExecutionTracer",
+      "bases": [],
+      "doc": "Execution tracer service for debugging and visualization.",
+      "pub_methods": [
+        "__init__",
+        "start_trace",
+        "end_trace",
+        "get_trace",
+        "delete_trace",
+        "list_traces",
+        "add_event",
+        "get_events",
+        "start_span",
+        "end_span"
+      ],
+      "total_methods": 23
+    },
+    {
+      "name": "TrialAndErrorEngine",
+      "bases": [],
+      "doc": "Trial and Error Learning Engine.",
+      "pub_methods": [
+        "__init__",
+        "execute_with_retry",
+        "learn_from_history",
+        "get_recommendations",
+        "get_trial_history",
+        "get_statistics",
+        "clear_history"
+      ],
+      "total_methods": 23
+    },
+    {
+      "name": "MetricsCollector",
+      "bases": [],
+      "doc": "Centralized metrics collector for session-agent integration.",
+      "pub_methods": [
+        "__init__",
+        "record_message",
+        "record_user_message",
+        "record_assistant_message",
+        "record_system_message",
+        "record_tool_call",
+        "record_tool_success",
+        "record_tool_failure",
+        "record_tool_timeout",
+        "record_tool_execution_time"
+      ],
+      "total_methods": 23
+    },
+    {
+      "name": "ConnectorRegistry",
+      "bases": [],
+      "doc": "Central registry for managing connector instances.",
+      "pub_methods": [
+        "__init__",
+        "register_type",
+        "register",
+        "register_from_config",
+        "unregister",
+        "get",
+        "get_or_raise",
+        "get_by_type",
+        "list_connectors",
+        "list_types"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "LearningService",
+      "bases": [],
+      "doc": "Few-shot Learning Service.",
+      "pub_methods": [
+        "__init__",
+        "record_correction",
+        "get_case",
+        "list_cases",
+        "delete_case",
+        "approve_case",
+        "reject_case",
+        "bulk_approve",
+        "get_similar_cases",
+        "build_few_shot_prompt"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "TeamsNotificationService",
+      "bases": [],
+      "doc": "Microsoft Teams notification service.",
+      "pub_methods": [
+        "__init__",
+        "config",
+        "is_enabled",
+        "configure",
+        "send_approval_request",
+        "send_execution_completed",
+        "send_error_alert",
+        "send_custom_notification",
+        "get_history",
+        "get_statistics"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "RedisConversationMemoryStore",
+      "bases": [
+        "ConversationMemoryStore"
+      ],
+      "doc": "Redis-based implementation of conversation memory storage.",
+      "pub_methods": [
+        "__init__",
+        "add_message",
+        "get_messages",
+        "get_message_count",
+        "delete_messages",
+        "save_session",
+        "load_session",
+        "delete_session",
+        "list_sessions",
+        "update_session_status"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "MultiTurnSessionManager",
+      "bases": [],
+      "doc": "Manages multi-turn conversation sessions.",
+      "pub_methods": [
+        "__init__",
+        "create_session",
+        "get_session",
+        "update_session",
+        "close_session",
+        "delete_session",
+        "start_session",
+        "pause_session",
+        "resume_session",
+        "start_turn"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "DynamicPlanner",
+      "bases": [],
+      "doc": "Dynamic Planning Engine.",
+      "pub_methods": [
+        "__init__",
+        "create_plan",
+        "approve_plan",
+        "execute_plan",
+        "on_event",
+        "off_event",
+        "pause_plan",
+        "resume_plan",
+        "approve_adjustment",
+        "get_plan"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "DataAnalyzer",
+      "bases": [
+        "BaseAnalyzer"
+      ],
+      "doc": "數據分析器",
+      "pub_methods": [
+        "__init__",
+        "supports",
+        "analyze"
+      ],
+      "total_methods": 22
+    },
+    {
+      "name": "AuditLogger",
+      "bases": [],
+      "doc": "審計日誌服務.",
+      "pub_methods": [
+        "__init__",
+        "log",
+        "log_workflow_event",
+        "log_agent_event",
+        "log_checkpoint_event",
+        "log_user_event",
+        "log_system_event",
+        "log_error",
+        "query",
+        "get_entry"
+      ],
+      "total_methods": 21
+    },
+    {
+      "name": "ConversationMemoryStore",
+      "bases": [
+        "ABC"
+      ],
+      "doc": "Abstract base class for conversation memory storage.",
+      "pub_methods": [
+        "add_message",
+        "get_messages",
+        "get_message_count",
+        "delete_messages",
+        "save_session",
+        "load_session",
+        "delete_session",
+        "list_sessions",
+        "update_session_status",
+        "save_turn"
+      ],
+      "total_methods": 21
+    },
+    {
+      "name": "InMemoryConversationMemoryStore",
+      "bases": [
+        "ConversationMemoryStore"
+      ],
+      "doc": "In-memory implementation of conversation memory storage.",
+      "pub_methods": [
+        "__init__",
+        "add_message",
+        "get_messages",
+        "get_message_count",
+        "delete_messages",
+        "save_session",
+        "load_session",
+        "delete_session",
+        "list_sessions",
+        "update_session_status"
+      ],
+      "total_methods": 21
+    },
+    {
+      "name": "NestedWorkflowManager",
+      "bases": [],
+      "doc": "嵌套工作流管理器",
+      "pub_methods": [
+        "__init__",
+        "register_sub_workflow",
+        "unregister_sub_workflow",
+        "get_sub_workflows",
+        "get_dependency_chain",
+        "execute_sub_workflow",
+        "get_execution_tree",
+        "get_active_executions",
+        "cancel_nested_execution",
+        "clear_completed_executions"
+      ],
+      "total_methods": 21
+    }
+  ]
+}

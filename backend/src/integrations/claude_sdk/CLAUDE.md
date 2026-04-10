@@ -161,4 +161,10 @@ ClaudeSDKError
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-07-claude-sdk.md` — Full Claude SDK analysis (autonomous, hooks, hybrid, MCP, tools, blocked patterns)
+
+---
+
+**Last Updated**: 2026-03-31

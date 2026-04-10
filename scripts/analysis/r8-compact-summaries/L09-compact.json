@@ -1,0 +1,256 @@
+{
+  "layer": "L09",
+  "files": 77,
+  "loc": 22681,
+  "total_classes": 186,
+  "shown_classes": 15,
+  "classes": [
+    {
+      "name": "SwarmTracker",
+      "bases": [],
+      "doc": "Agent Swarm state tracker.",
+      "pub_methods": [
+        "__init__",
+        "create_swarm",
+        "get_swarm",
+        "complete_swarm",
+        "update_swarm_status",
+        "start_worker",
+        "update_worker_progress",
+        "update_worker_status",
+        "add_worker_thinking",
+        "add_worker_tool_call"
+      ],
+      "total_methods": 26
+    },
+    {
+      "name": "SwarmEventEmitter",
+      "bases": [],
+      "doc": "Swarm 事件發送器.",
+      "pub_methods": [
+        "__init__",
+        "is_running",
+        "start",
+        "stop",
+        "emit_swarm_created",
+        "emit_swarm_status_update",
+        "emit_swarm_completed",
+        "emit_worker_started",
+        "emit_worker_progress",
+        "emit_worker_thinking"
+      ],
+      "total_methods": 19
+    },
+    {
+      "name": "MessageRouter",
+      "bases": [],
+      "doc": "Routes messages between agents and tracks delivery status.",
+      "pub_methods": [
+        "__init__",
+        "register_handler",
+        "unregister_handler",
+        "route_message",
+        "process_queue",
+        "track_message",
+        "get_message_status",
+        "get_pending_messages",
+        "get_conversation_messages",
+        "on_delivery"
+      ],
+      "total_methods": 18
+    },
+    {
+      "name": "UnifiedMemoryManager",
+      "bases": [],
+      "doc": "Unified interface for the three-layer memory system.",
+      "pub_methods": [
+        "__init__",
+        "initialize",
+        "add",
+        "search",
+        "get_context",
+        "promote",
+        "delete",
+        "get_user_memories",
+        "close"
+      ],
+      "total_methods": 16
+    },
+    {
+      "name": "AgentDiscoveryService",
+      "bases": [],
+      "doc": "Service for agent registration and discovery.",
+      "pub_methods": [
+        "__init__",
+        "register_agent",
+        "unregister_agent",
+        "update_heartbeat",
+        "update_status",
+        "get_agent",
+        "get_all_agents",
+        "query_capability",
+        "discover_agents",
+        "cleanup_stale_agents"
+      ],
+      "total_methods": 16
+    },
+    {
+      "name": "SwarmIntegration",
+      "bases": [],
+      "doc": "Integration layer connecting ClaudeCoordinator to SwarmTracker.",
+      "pub_methods": [
+        "__init__",
+        "tracker",
+        "on_coordination_started",
+        "on_subtask_started",
+        "on_subtask_progress",
+        "on_tool_call",
+        "on_tool_result",
+        "on_thinking",
+        "on_message",
+        "on_subtask_completed"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "MockLLMService",
+      "bases": [],
+      "doc": "Mock LLM 服務實現。",
+      "pub_methods": [
+        "__init__",
+        "generate",
+        "generate_structured",
+        "reset",
+        "set_response",
+        "assert_called",
+        "assert_called_times",
+        "assert_last_prompt_contains",
+        "close"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "Mem0Client",
+      "bases": [],
+      "doc": "Wrapper for mem0 SDK providing long-term memory operations.",
+      "pub_methods": [
+        "__init__",
+        "initialize",
+        "add_memory",
+        "search_memory",
+        "get_all",
+        "get_memory",
+        "update_memory",
+        "delete_memory",
+        "delete_all",
+        "get_history"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "CorrelationAnalyzer",
+      "bases": [],
+      "doc": "關聯分析器",
+      "pub_methods": [
+        "__init__",
+        "find_correlations",
+        "analyze"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "CaseExtractor",
+      "bases": [],
+      "doc": "Extracts historical cases from memory for Few-shot learning.",
+      "pub_methods": [
+        "__init__",
+        "initialize",
+        "extract_from_memory",
+        "filter_quality_cases",
+        "filter_recent_cases",
+        "create_case_from_resolution",
+        "get_cached_case",
+        "clear_cache"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "DecisionTracker",
+      "bases": [],
+      "doc": "Tracks and audits AI decisions.",
+      "pub_methods": [
+        "__init__",
+        "initialize",
+        "record_decision",
+        "update_outcome",
+        "add_feedback",
+        "get_decision",
+        "query_decisions",
+        "get_statistics",
+        "close"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "N8nOrchestrator",
+      "bases": [],
+      "doc": "Bidirectional orchestrator for IPA + n8n collaboration.",
+      "pub_methods": [
+        "__init__",
+        "set_reasoning_fn",
+        "register_progress_callback",
+        "orchestrate",
+        "handle_callback",
+        "get_status",
+        "get_active_count",
+        "close"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "EventDataSource",
+      "bases": [],
+      "doc": "真實事件資料來源 — Azure Monitor / Application Insights.",
+      "pub_methods": [
+        "__init__",
+        "close",
+        "get_event",
+        "get_events_in_range",
+        "get_events_for_component",
+        "search_similar_events",
+        "get_dependencies"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "PatrolAgent",
+      "bases": [],
+      "doc": "巡檢代理",
+      "pub_methods": [
+        "__init__",
+        "register_check",
+        "execute_patrol",
+        "is_patrol_running",
+        "registered_checks"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "FewShotLearner",
+      "bases": [],
+      "doc": "Few-shot learning system for enhancing AI decision-making.",
+      "pub_methods": [
+        "__init__",
+        "initialize",
+        "get_similar_cases",
+        "enhance_prompt",
+        "track_effectiveness",
+        "get_effectiveness_stats",
+        "get_learning_result",
+        "store_successful_resolution",
+        "clear_history"
+      ],
+      "total_methods": 13
+    }
+  ]
+}

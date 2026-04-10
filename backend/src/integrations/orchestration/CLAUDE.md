@@ -158,4 +158,10 @@ print(decision.risk_level)       # RiskLevel.HIGH
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-04-routing.md` — Full intent routing analysis (three-tier, classification, patterns, performance)
+
+---
+
+**Last Updated**: 2026-03-31

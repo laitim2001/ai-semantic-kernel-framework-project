@@ -1,0 +1,280 @@
+{
+  "layer": "L11",
+  "files": 95,
+  "loc": 22048,
+  "total_classes": 149,
+  "shown_classes": 15,
+  "classes": [
+    {
+      "name": "MetricCollector",
+      "bases": [],
+      "doc": "Central metric collection and aggregation service.",
+      "pub_methods": [
+        "__init__",
+        "start",
+        "stop",
+        "collect_system_metrics",
+        "record",
+        "record_request",
+        "get_application_metrics",
+        "reset_application_metrics",
+        "get_samples",
+        "aggregate"
+      ],
+      "total_methods": 21
+    },
+    {
+      "name": "RedisStorageBackend",
+      "bases": [],
+      "doc": "Redis-based storage backend.",
+      "pub_methods": [
+        "__init__",
+        "prefix",
+        "get",
+        "set",
+        "delete",
+        "exists",
+        "list_keys",
+        "set_add",
+        "set_remove",
+        "set_members"
+      ],
+      "total_methods": 17
+    },
+    {
+      "name": "PostgresBackend",
+      "bases": [
+        "StorageBackendABC"
+      ],
+      "doc": "PostgreSQL-based persistent key-value storage.",
+      "pub_methods": [
+        "__init__",
+        "get",
+        "set",
+        "delete",
+        "exists",
+        "keys",
+        "clear",
+        "get_many",
+        "count",
+        "cleanup_expired"
+      ],
+      "total_methods": 17
+    },
+    {
+      "name": "PerformanceOptimizer",
+      "bases": [],
+      "doc": "效能優化器",
+      "pub_methods": [
+        "__init__",
+        "analyze_and_optimize",
+        "get_result",
+        "get_all_results",
+        "get_results_for_target",
+        "clear_results"
+      ],
+      "total_methods": 16
+    },
+    {
+      "name": "InMemoryStorageBackend",
+      "bases": [],
+      "doc": "In-memory storage backend with TTL support.",
+      "pub_methods": [
+        "__init__",
+        "prefix",
+        "get",
+        "set",
+        "delete",
+        "exists",
+        "list_keys",
+        "set_add",
+        "set_remove",
+        "set_members"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "InMemoryBackend",
+      "bases": [
+        "StorageBackendABC"
+      ],
+      "doc": "In-memory storage backend with TTL support.",
+      "pub_methods": [
+        "__init__",
+        "get",
+        "set",
+        "delete",
+        "exists",
+        "keys",
+        "clear",
+        "get_many",
+        "set_many",
+        "count"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "RedisBackend",
+      "bases": [
+        "StorageBackendABC"
+      ],
+      "doc": "Redis-based storage backend.",
+      "pub_methods": [
+        "__init__",
+        "get",
+        "set",
+        "delete",
+        "exists",
+        "keys",
+        "clear",
+        "get_many",
+        "set_many",
+        "count"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "PerformanceProfiler",
+      "bases": [],
+      "doc": "效能分析器",
+      "pub_methods": [
+        "__init__",
+        "start_session",
+        "end_session",
+        "record_metric",
+        "measure_latency",
+        "measure_throughput",
+        "get_recommendations",
+        "get_session",
+        "get_all_sessions",
+        "get_active_session"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "LLMCacheService",
+      "bases": [],
+      "doc": "LLM response caching service using Redis.",
+      "pub_methods": [
+        "__init__",
+        "enabled",
+        "enable",
+        "disable",
+        "get",
+        "set",
+        "delete",
+        "clear",
+        "get_stats",
+        "reset_stats"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "ServerConfig",
+      "bases": [],
+      "doc": "Environment-aware server configuration.",
+      "pub_methods": [
+        "__init__",
+        "workers",
+        "reload",
+        "host",
+        "port",
+        "log_level",
+        "access_log",
+        "worker_class",
+        "is_development",
+        "is_production"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "ExecutionRepository",
+      "bases": [
+        "BaseRepository[Execution]"
+      ],
+      "doc": "Repository for Execution model operations.",
+      "pub_methods": [
+        "get_by_workflow",
+        "get_by_status",
+        "get_running",
+        "get_recent",
+        "start",
+        "complete",
+        "fail",
+        "cancel",
+        "pause",
+        "resume"
+      ],
+      "total_methods": 12
+    },
+    {
+      "name": "BenchmarkResult",
+      "bases": [],
+      "doc": "Result of a single benchmark run.",
+      "pub_methods": [
+        "mean_ms",
+        "median_ms",
+        "std_ms",
+        "min_ms",
+        "max_ms",
+        "p50_ms",
+        "p90_ms",
+        "p95_ms",
+        "p99_ms",
+        "ops_per_second"
+      ],
+      "total_methods": 12
+    },
+    {
+      "name": "SandboxOrchestrator",
+      "bases": [],
+      "doc": "Orchestrator for managing sandbox worker processes.",
+      "pub_methods": [
+        "__init__",
+        "start",
+        "shutdown",
+        "execute",
+        "execute_stream",
+        "get_pool_stats",
+        "is_running"
+      ],
+      "total_methods": 12
+    },
+    {
+      "name": "UnifiedCheckpointRegistry",
+      "bases": [],
+      "doc": "Central registry for all checkpoint providers.",
+      "pub_methods": [
+        "__init__",
+        "register_provider",
+        "unregister_provider",
+        "list_providers",
+        "save",
+        "load",
+        "delete",
+        "list_all",
+        "cleanup_expired",
+        "get_stats"
+      ],
+      "total_methods": 11
+    },
+    {
+      "name": "SessionStore",
+      "bases": [],
+      "doc": "Dict-like session store backed by StorageBackendABC.",
+      "pub_methods": [
+        "__init__",
+        "create",
+        "get",
+        "set",
+        "delete",
+        "exists",
+        "list_sessions",
+        "count",
+        "get_many",
+        "update"
+      ],
+      "total_methods": 11
+    }
+  ]
+}

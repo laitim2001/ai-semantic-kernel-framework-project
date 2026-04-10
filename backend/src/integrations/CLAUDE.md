@@ -96,4 +96,16 @@ See individual module CLAUDE.md files for detailed documentation.
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> V9 covers each integration module in dedicated layer files:
+> - `docs/07-analysis/V9/01-architecture/layer-05-orchestration.md` — Hybrid orchestration
+> - `docs/07-analysis/V9/01-architecture/layer-06-maf-builders.md` — MAF builders (23 builders)
+> - `docs/07-analysis/V9/01-architecture/layer-07-claude-sdk.md` — Claude SDK integration
+> - `docs/07-analysis/V9/01-architecture/layer-08-mcp-tools.md` — MCP tool servers
+> - `docs/07-analysis/V9/01-architecture/layer-09-integrations.md` — A2A, memory, patrol, correlation, etc.
+> - `docs/07-analysis/V9/02-modules/` — Module-level cross-cutting analysis
+
+---
+
+**Last Updated**: 2026-03-31

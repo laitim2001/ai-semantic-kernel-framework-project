@@ -18,6 +18,37 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 
 ---
 
+## Core Vision & Design Philosophy
+
+> **This section defines the project's fundamental direction. Every design decision, suggestion, and implementation MUST align with these principles.**
+
+### Mission
+Build enterprise AI agent teams that work like **human professional teams** — not just using existing frameworks, but designing **novel agentic capabilities** that don't exist yet.
+
+### Agent Team Design Principles
+The platform delivers agents that are:
+1. **Professional** — domain expertise, not generic chatbots
+2. **Planned** — structured approach to tasks, not ad-hoc
+3. **Memory-equipped** — remember past interactions, decisions, context
+4. **Autonomous** — self-organize, plan, execute, and retry
+5. **Controllable** — human oversight at all times
+6. **Transparent** — all processes and decisions are visible/auditable
+7. **Security-compliant** — follows enterprise-specific regulations
+8. **Multi-intelligent** — multiple specialized agents collaborating
+9. **Knowledge-aware** — RAG/knowledge base for enterprise-specific knowledge
+10. **Action-capable** — real tool execution, not just conversation
+
+### Development Philosophy
+- MAF, Claude SDK, AG-UI, Claude Code patterns are **building blocks and inspiration**, NOT design boundaries
+- Many capabilities require **novel architecture** that doesn't exist in any single framework
+- Current agentic frameworks are all very new — none fully addresses enterprise production needs
+- **DO NOT** default to "MAF has feature X, let's use it" — instead ask "what effect is needed?" then **co-design** a solution
+- Reference multiple sources (MAF internals, CC source patterns, Claude SDK, industry research) as **design inspiration**
+- The hybrid orchestrator (code-enforced steps + LLM routing) is an **intentional novel design**, not a workaround
+- **User provides ideas and vision; AI assistant (Claude) is executor and coordinator** — together we design what doesn't exist yet
+
+---
+
 ## Project Overview
 
 **IPA Platform** (Intelligent Process Automation) - Enterprise AI Agent orchestration platform
@@ -25,8 +56,8 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 | Attribute | Value |
 |-----------|-------|
 | **Core Framework** | Microsoft Agent Framework + Claude Agent SDK + AG-UI Protocol |
-| **Current Status** | Phase 29 Completed - Agent Swarm Visualization |
-| **Completed** | 29 Phases, 106 Sprints, ~2379 Story Points |
+| **Current Status** | Phase 44 Completed - Deep Integration & Optimization |
+| **Completed** | 44 Phases, 152+ Sprints, ~2500+ Story Points |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis |
 
 ---
@@ -84,12 +115,12 @@ PostgreSQL 16 + Redis 7 + RabbitMQ
 
 ```
 backend/src/
-├── api/v1/              # 39 API route modules
+├── api/v1/              # 41 API route modules (~591 endpoints)
 │   ├── agents, workflows, sessions, executions
 │   ├── ag_ui, claude_sdk, hybrid, mcp
 │   ├── orchestration, autonomous, routing
 │   ├── patrol, correlation, rootcause, audit
-│   ├── swarm, a2a                          # Phase 29 + A2A
+│   ├── swarm, a2a                          # Phase 29+ A2A
 │   └── auth, files, sandbox, checkpoints, etc.
 ├── integrations/        # 16 integration modules
 │   ├── agent_framework/ # MAF Adapters (30+ builders)
@@ -200,27 +231,60 @@ AZURE_OPENAI_API_VERSION=2024-02-15-preview
 | `docs/api/ag-ui-api-reference.md` | AG-UI API Reference |
 | `claudedocs/CLAUDE.md` | AI assistant execution docs index |
 
-### V8 Codebase Analysis Reports (2026-03-15, Most Accurate)
+### V9 Codebase Analysis (2026-03-31, Latest & Most Accurate)
 
-> **Important**: V8 reports supersede all previous analysis versions (V1-V7). Based on 28 agents full code reading + AST 100% scan of 939+ source files.
+> **Important**: V9 supersedes all previous versions (V1-V8). Covers Phase 1-44 with 130 verification waves (9.2/10 quality score). Based on 1,028 source files (792 .py + 236 .ts/.tsx), 327,582 LOC.
 
-| Document | Lines | Purpose |
-|----------|-------|---------|
-| `docs/07-analysis/Overview/full-codebase-analysis/MAF-Claude-Hybrid-Architecture-V8.md` | 2,721 | **11-layer architecture deep analysis**, E2E flow validation, 62 issues registry, security/checkpoint/InMemory analysis |
-| `docs/07-analysis/Overview/full-codebase-analysis/MAF-Features-Architecture-Mapping-V8.md` | 1,518 | **70+ features verification** (84.3% complete), 9 capability categories, per-feature evidence, maturity matrix |
-| `docs/07-analysis/Overview/full-codebase-analysis/phase4-validation/phase4-validation-issue-registry.md` | — | **62 deduplicated issues** (8 CRITICAL, 16 HIGH, 22 MEDIUM, 16 LOW) |
-| `docs/07-analysis/Overview/full-codebase-analysis/phase4-validation/phase4-validation-e2e-flows.md` | — | **5 E2E user journey validations** (Chat, CRUD, Workflow, HITL, Swarm) |
-| `docs/07-analysis/Overview/full-codebase-analysis/phase4-validation/phase4-validation-plan-vs-reality.md` | — | **70 features plan vs reality** comparison |
-| `docs/07-analysis/Overview/full-codebase-analysis/Architecture-Review-Board-Consensus-Report.md` | 499 | **Architecture Review Board 共識報告** — 6 專家 + 3 圓桌討論者, 6 CRITICAL + 10 HIGH + 修復路線圖 |
+**Master Index**: `docs/07-analysis/V9/00-index.md` — Start here for full navigation
 
-Supporting data in subdirectories:
-- `expert-analysis/` — 6 PhD-level expert deep analysis reports (Security, API, Software Arch, Distributed, Frontend, Data)
-- `phase2-planning/` — Sprint planning baseline
-- `phase3-source-reading/` — 22 module analysis reports (`phase3a-*` to `phase3e-*`)
-- `phase4-validation/` — 3 cross-validation reports
-- `format-audit/` — V7↔V8 format audit reports
-- `sdk-version-gap/` — MAF & Claude SDK version gap analysis + **MAF RC4 Upgrade Master Plan** (6 reports)
-- AST scan JSON: `scripts/analysis/*_result.json`
+| Directory | Key Files | Purpose |
+|-----------|-----------|---------|
+| `V9/01-architecture/` | 11 layer files (L01-L11) | **11-layer architecture deep analysis** — Frontend → API → AG-UI → Routing → Orchestration → MAF → Claude SDK → MCP → Integrations → Domain → Infrastructure |
+| `V9/02-modules/` | 4 module files | Module-level analysis (4 groupings) |
+| `V9/03-features/` | 2 category files | **70+ features verification** with maturity matrix |
+| `V9/04-flows/` | 2 E2E files | **5 E2E user journey validations** (Chat, CRUD, Workflow, HITL, Swarm) |
+| `V9/05-issues/` | issue-registry.md | **62 deduplicated issues** (8 CRITICAL, 16 HIGH, 22 MEDIUM, 16 LOW) |
+| `V9/06-cross-cutting/` | 5 files | Enum registry, error handling, logging, auth, cross-cutting concerns |
+| `V9/07-delta/` | 3 phase-delta files | Phase 30-44 change tracking (new files, endpoints, features per phase) |
+| `V9/08-data-model/` | 2 files | ORM schema, data model analysis |
+| `V9/09-api-reference/` | 1 catalog | **591 API endpoints** complete catalog |
+| `V9/10-event-contracts/` | 1 spec | Event specifications and contracts |
+| `V9/11-config-deploy/` | 1 file | Configuration and deployment analysis |
+| `V9/12-testing/` | 1 file | Testing landscape (386 test files) |
+| `V9/13-mock-real/` | 1 map | **Implementation maturity map** — mock vs real for all features |
+
+#### V9 Usage Scenarios — What to Read When
+
+| Scenario | Start Here | Then Read |
+|----------|-----------|-----------|
+| **Project Onboarding** — First time understanding the project | `V9/00-index.md` → `V9/00-stats.md` | `V9/01-architecture/` layer files top-down |
+| **Bug Investigation** — Researching known issues | `V9/05-issues/issue-registry.md` | Corresponding layer file for the affected module |
+| **Feature Planning** — Planning new Phase/Sprint | `V9/03-features/` + `V9/13-mock-real/` | `V9/07-delta/` to see recent phase changes |
+| **Architecture Decision** — Cross-layer modifications | `V9/01-architecture/` relevant layers | `V9/04-flows/` for E2E impact analysis |
+| **Security/Quality Audit** — Code review preparation | `V9/05-issues/` (8 CRITICAL issues) | `V9/06-cross-cutting/` for auth, logging, error handling |
+| **API Development** — Adding/modifying endpoints | `V9/09-api-reference/` | `V9/08-data-model/` + `V9/02-modules/` |
+| **Phase Delta Tracking** — What changed in Phase X | `V9/07-delta/` (Phase 30-34, 35-39, 40-44) | Combined with `git log` for complete history |
+| **Testing & Deployment** — Writing tests or deploying | `V9/12-testing/` + `V9/11-config-deploy/` | `V9/06-cross-cutting/` for enum registry |
+
+#### V9 Freshness Policy
+
+- **Baseline**: Phase 1-44, snapshot date 2026-03-31
+- **Verification Quality**: 130 waves, 9.2/10 score, ~6,860 verification points
+- **Staleness**: V9 content may diverge as new Phases are developed. Numbers (file counts, endpoints, LOC) will become increasingly approximate after Phase 44
+- **Update Strategy**: Consider a V10 refresh after every 5 Phases or major architectural changes. Use `git log --since="2026-03-31"` + V9 as baseline to understand delta
+- **Trust Level**: Verified statistics (endpoints, enums, ORM columns) are high-confidence. Behavioral descriptions and flow narratives should be cross-checked against current source code
+
+### V8 Codebase Analysis (2026-03-15, Archived)
+
+> V8 reports are archived at `docs/07-analysis/Overview/full-codebase-analysis/`. V9 is the current authoritative analysis. V8 remains useful for historical comparison (Phase 1-34 baseline).
+
+| Document | Purpose |
+|----------|---------|
+| `MAF-Claude-Hybrid-Architecture-V8.md` | V8 11-layer architecture (Phase 1-34 baseline) |
+| `MAF-Features-Architecture-Mapping-V8.md` | V8 70+ features verification |
+| `Architecture-Review-Board-Consensus-Report.md` | Architecture Review Board consensus |
+| `phase4-validation/` | V8 cross-validation reports |
+| `sdk-version-gap/` | MAF & Claude SDK version gap analysis + MAF RC4 Upgrade Master Plan |
 
 ---
 
@@ -387,7 +451,8 @@ See `.claude/rules/agent-framework.md` for detailed rules.
 
 ---
 
-**Last Updated**: 2026-02-09
+**Last Updated**: 2026-03-31
 **Project Start**: 2025-11-14
-**Status**: Phase 29 Completed (106 Sprints completed, Sprint 107 in progress)
-**Total Story Points**: ~2379 pts across 29 phases
+**Status**: Phase 44 Completed (152+ Sprints completed)
+**Total Story Points**: ~2500+ pts across 44 phases
+**V9 Analysis**: `docs/07-analysis/V9/00-index.md` (1,028 files, 327,582 LOC, 9.2/10 quality)

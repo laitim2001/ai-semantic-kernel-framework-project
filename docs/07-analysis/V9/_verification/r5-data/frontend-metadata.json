@@ -1,0 +1,7279 @@
+{
+  "summary": {
+    "total_files": 236,
+    "test_files": 13,
+    "code_files": 223,
+    "total_loc": 54238,
+    "total_exports": 643,
+    "total_interfaces": 437,
+    "total_types": 64,
+    "total_components": 265,
+    "modules": {
+      "src/components": {
+        "files": 140,
+        "loc": 24923,
+        "exports": 228,
+        "components": 206
+      },
+      "src/pages": {
+        "files": 46,
+        "loc": 14669,
+        "exports": 53,
+        "components": 58
+      },
+      "src/hooks": {
+        "files": 25,
+        "loc": 8958,
+        "exports": 106,
+        "components": 0
+      },
+      "src/api": {
+        "files": 11,
+        "loc": 2152,
+        "exports": 90,
+        "components": 0
+      },
+      "src/stores": {
+        "files": 3,
+        "loc": 1371,
+        "exports": 21,
+        "components": 0
+      },
+      "src/types": {
+        "files": 4,
+        "loc": 1297,
+        "exports": 117,
+        "components": 0
+      },
+      "src/store": {
+        "files": 1,
+        "loc": 322,
+        "exports": 8,
+        "components": 0
+      },
+      "src/lib": {
+        "files": 1,
+        "loc": 170,
+        "exports": 12,
+        "components": 0
+      },
+      "src/utils": {
+        "files": 1,
+        "loc": 170,
+        "exports": 7,
+        "components": 0
+      },
+      "src/App.tsx": {
+        "files": 1,
+        "loc": 148,
+        "exports": 1,
+        "components": 1
+      },
+      "src/main.tsx": {
+        "files": 1,
+        "loc": 40,
+        "exports": 0,
+        "components": 0
+      },
+      "src/vite-env.d.ts": {
+        "files": 1,
+        "loc": 10,
+        "exports": 0,
+        "components": 0
+      },
+      "src/test": {
+        "files": 1,
+        "loc": 8,
+        "exports": 0,
+        "components": 0
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "frontend/src/api/client.ts",
+      "loc": 172,
+      "exports": [
+        "ApiResponse",
+        "ApiError",
+        "api"
+      ],
+      "interfaces": [
+        "ApiResponse"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAuthStore"
+      ],
+      "imports_from": [
+        "@/utils/guestUser",
+        "@/store/authStore"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/devtools.ts",
+      "loc": 87,
+      "exports": [
+        "devToolsApi"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./client",
+        "@/types/devtools"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/endpoints/ag-ui.ts",
+      "loc": 332,
+      "exports": [
+        "ApprovalResponse",
+        "RejectRequest",
+        "ThreadInfo",
+        "CreateThreadRequest",
+        "CreateThreadResponse",
+        "RestoreCheckpointResponse",
+        "aguiApi"
+      ],
+      "interfaces": [
+        "ApprovalResponse",
+        "RejectRequest",
+        "ThreadInfo",
+        "CreateThreadRequest",
+        "CreateThreadResponse",
+        "RestoreCheckpointResponse"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "../client",
+        "@/types/ag-ui",
+        "@/types/unified-chat"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/endpoints/files.ts",
+      "loc": 388,
+      "exports": [
+        "FileCategory",
+        "FileStatus",
+        "FileMetadata",
+        "GeneratedFile",
+        "FileUploadResponse",
+        "FileListResponse",
+        "FileUploadProgress",
+        "formatFileSize",
+        "getFileCategory",
+        "isAllowedFileType",
+        "getMaxFileSize",
+        "getFileContentUrl",
+        "getFileDownloadUrl",
+        "filesApi"
+      ],
+      "interfaces": [
+        "FileMetadata",
+        "GeneratedFile",
+        "FileUploadResponse",
+        "FileListResponse",
+        "FileUploadProgress"
+      ],
+      "types": [
+        "FileCategory",
+        "FileStatus"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAuthStore"
+      ],
+      "imports_from": [
+        "../client",
+        "@/store/authStore",
+        "@/utils/guestUser"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/endpoints/index.ts",
+      "loc": 125,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./ag-ui",
+        "./files",
+        "./orchestrator",
+        "./sessions",
+        "./tasks",
+        "./knowledge",
+        "./memory",
+        "./orchestration"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/endpoints/knowledge.ts",
+      "loc": 183,
+      "exports": [
+        "DocumentStatus",
+        "KnowledgeDocument",
+        "DocumentListResponse",
+        "KnowledgeSearchResult",
+        "KnowledgeSearchResponse",
+        "KnowledgeSearchOptions",
+        "AgentSkill",
+        "SkillsResponse",
+        "KnowledgeStatusResponse",
+        "DocumentFilters",
+        "knowledgeApi"
+      ],
+      "interfaces": [
+        "KnowledgeDocument",
+        "DocumentListResponse",
+        "KnowledgeSearchResult",
+        "KnowledgeSearchResponse",
+        "KnowledgeSearchOptions",
+        "AgentSkill",
+        "SkillsResponse",
+        "KnowledgeStatusResponse",
+        "DocumentFilters"
+      ],
+      "types": [
+        "DocumentStatus"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAuthStore"
+      ],
+      "imports_from": [
+        "../client",
+        "@/store/authStore",
+        "@/utils/guestUser"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/endpoints/memory.ts",
+      "loc": 104,
+      "exports": [
+        "MemoryItem",
+        "MemorySearchResponse",
+        "UserMemoriesResponse",
+        "MemoryStats",
+        "UserMemoryOptions",
+        "memoryApi"
+      ],
+      "interfaces": [
+        "MemoryItem",
+        "MemorySearchResponse",
+        "UserMemoriesResponse",
+        "MemoryStats",
+        "UserMemoryOptions"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "../client"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/endpoints/orchestration.ts",
+      "loc": 325,
+      "exports": [
+        "ITIntentCategory",
+        "RiskLevel",
+        "WorkflowType",
+        "CompletenessInfo",
+        "RoutingDecision",
+        "RiskFactor",
+        "RiskAssessment",
+        "IntentClassifyResponse",
+        "IntentClassifyRequest",
+        "DialogQuestion",
+        "DialogStatusResponse",
+        "StartDialogRequest",
+        "RespondToDialogRequest",
+        "ApprovalSummary",
+        "ApprovalListResponse",
+        "ApprovalDecisionRequest",
+        "ApprovalDecisionResponse",
+        "HybridExecuteRequest",
+        "HybridExecuteResponse",
+        "orchestrationApi"
+      ],
+      "interfaces": [
+        "CompletenessInfo",
+        "RoutingDecision",
+        "RiskFactor",
+        "RiskAssessment",
+        "IntentClassifyResponse",
+        "IntentClassifyRequest",
+        "DialogQuestion",
+        "DialogStatusResponse",
+        "StartDialogRequest",
+        "RespondToDialogRequest",
+        "ApprovalSummary",
+        "ApprovalListResponse",
+        "ApprovalDecisionRequest",
+        "ApprovalDecisionResponse",
+        "HybridExecuteRequest",
+        "HybridExecuteResponse"
+      ],
+      "types": [
+        "ITIntentCategory",
+        "RiskLevel",
+        "WorkflowType"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "../client"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/endpoints/orchestrator.ts",
+      "loc": 144,
+      "exports": [
+        "OrchestratorMessage",
+        "OrchestratorMessageMetadata",
+        "OrchestratorToolCall",
+        "SendOrchestratorMessageRequest",
+        "SendOrchestratorMessageResponse",
+        "OrchestratorHealthResponse",
+        "OrchestratorSSEEventType",
+        "OrchestratorSSEEvent",
+        "orchestratorApi"
+      ],
+      "interfaces": [
+        "OrchestratorMessage",
+        "OrchestratorMessageMetadata",
+        "OrchestratorToolCall",
+        "SendOrchestratorMessageRequest",
+        "SendOrchestratorMessageResponse",
+        "OrchestratorHealthResponse",
+        "OrchestratorSSEEvent"
+      ],
+      "types": [
+        "OrchestratorSSEEventType"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAuthStore"
+      ],
+      "imports_from": [
+        "../client",
+        "@/store/authStore",
+        "@/utils/guestUser"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/endpoints/sessions.ts",
+      "loc": 141,
+      "exports": [
+        "SessionStatus",
+        "SessionSummary",
+        "SessionDetail",
+        "SessionMessage",
+        "SessionListResponse",
+        "SessionMessagesResponse",
+        "SessionResumeResponse",
+        "SessionFilters",
+        "sessionsApi"
+      ],
+      "interfaces": [
+        "SessionSummary",
+        "SessionDetail",
+        "SessionMessage",
+        "SessionListResponse",
+        "SessionMessagesResponse",
+        "SessionResumeResponse",
+        "SessionFilters"
+      ],
+      "types": [
+        "SessionStatus"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "../client"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/api/endpoints/tasks.ts",
+      "loc": 151,
+      "exports": [
+        "TaskStatus",
+        "TaskPriority",
+        "TaskStepStatus",
+        "TaskSummary",
+        "TaskStep",
+        "TaskDetail",
+        "TaskListResponse",
+        "TaskStepsResponse",
+        "TaskFilters",
+        "tasksApi"
+      ],
+      "interfaces": [
+        "TaskSummary",
+        "TaskStep",
+        "TaskDetail",
+        "TaskListResponse",
+        "TaskStepsResponse",
+        "TaskFilters"
+      ],
+      "types": [
+        "TaskStatus",
+        "TaskPriority",
+        "TaskStepStatus"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "../client"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/index.ts",
+      "loc": 34,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./CustomUIRenderer",
+        "./CustomUIRenderer",
+        "./DynamicForm",
+        "./DynamicForm",
+        "./DynamicChart",
+        "./DynamicChart",
+        "./DynamicCard",
+        "./DynamicCard",
+        "./DynamicTable",
+        "./DynamicTable",
+        "./StateDebugger",
+        "./StateDebugger",
+        "./OptimisticIndicator",
+        "./OptimisticIndicator"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/index.ts",
+      "loc": 29,
+      "exports": [],
+      "interfaces": [
+        "components"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./ChatContainer",
+        "./ChatContainer",
+        "./MessageBubble",
+        "./MessageBubble",
+        "./MessageInput",
+        "./MessageInput",
+        "./ToolCallCard",
+        "./ToolCallCard",
+        "./StreamingIndicator",
+        "./StreamingIndicator"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/index.ts",
+      "loc": 25,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./ApprovalDialog",
+        "./ApprovalDialog",
+        "./ApprovalBanner",
+        "./ApprovalBanner",
+        "./RiskBadge",
+        "./RiskBadge",
+        "./ApprovalList",
+        "./ApprovalList"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/layout/index.ts",
+      "loc": 8,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./AppLayout",
+        "./Sidebar",
+        "./Header",
+        "./UserMenu"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/shared/index.ts",
+      "loc": 7,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./LoadingSpinner",
+        "./StatusBadge",
+        "./EmptyState"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/index.ts",
+      "loc": 11,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./Button",
+        "./Card",
+        "./Badge"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/useWorkerDetail.test.ts",
+      "loc": 202,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useWorkerDetail"
+      ],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../hooks/useWorkerDetail"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/index.ts",
+      "loc": 26,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useSwarmEventHandler",
+        "useSwarmEvents",
+        "useSwarmStatus",
+        "useWorkerDetail"
+      ],
+      "imports_from": [
+        "./useSwarmEvents",
+        "./useWorkerDetail",
+        "./useWorkerDetail",
+        "./useSwarmStatus",
+        "./useSwarmStatus",
+        "./useSwarmEventHandler",
+        "./useSwarmEventHandler"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/useSwarmEventHandler.ts",
+      "loc": 303,
+      "exports": [
+        "UseSwarmEventHandlerOptions",
+        "useSwarmEventHandler"
+      ],
+      "interfaces": [
+        "UseSwarmEventHandlerOptions"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ChatContainer"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEventSource",
+        "useSwarmEventHandler",
+        "useSwarmEvents",
+        "useSwarmStatus",
+        "useSwarmStore",
+        "useWorkerDetail"
+      ],
+      "imports_from": [
+        "react",
+        "@/stores/swarmStore",
+        "./useSwarmEvents",
+        "../types/events",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/useSwarmEvents.ts",
+      "loc": 209,
+      "exports": [
+        "useSwarmEvents",
+        "isSwarmEvent",
+        "getSwarmEventCategory"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SwarmPanel"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useRef",
+        "useState",
+        "useSwarmEvents"
+      ],
+      "imports_from": [
+        "react",
+        "../types/events"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/useSwarmStatus.ts",
+      "loc": 221,
+      "exports": [
+        "UseSwarmStatusReturn",
+        "useSwarmStatus"
+      ],
+      "interfaces": [
+        "UseSwarmStatusReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SwarmDisplay"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useSwarmStatus",
+        "useSwarmStore"
+      ],
+      "imports_from": [
+        "react",
+        "@/stores/swarmStore",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/hooks/useWorkerDetail.ts",
+      "loc": 198,
+      "exports": [
+        "UseWorkerDetailOptions",
+        "UseWorkerDetailResult",
+        "useWorkerDetail"
+      ],
+      "interfaces": [
+        "UseWorkerDetailOptions",
+        "UseWorkerDetailResult"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useRef",
+        "useState",
+        "useWorkerDetail"
+      ],
+      "imports_from": [
+        "react",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/index.ts",
+      "loc": 47,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./types",
+        "./hooks",
+        "./AgentSwarmPanel",
+        "./SwarmHeader",
+        "./OverallProgress",
+        "./WorkerCard",
+        "./WorkerCardList",
+        "./SwarmStatusBadges",
+        "./WorkerDetailDrawer",
+        "./WorkerDetailHeader",
+        "./CurrentTask",
+        "./ToolCallItem",
+        "./ToolCallsPanel",
+        "./MessageHistory",
+        "./CheckpointPanel",
+        "./ExtendedThinkingPanel",
+        "./WorkerActionList",
+        "./WorkerActionList"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/types/events.ts",
+      "loc": 210,
+      "exports": [
+        "SwarmEventNames",
+        "SwarmEventName",
+        "WorkerSummary",
+        "SwarmCreatedPayload",
+        "SwarmStatusUpdatePayload",
+        "SwarmCompletedPayload",
+        "WorkerStartedPayload",
+        "WorkerProgressPayload",
+        "WorkerThinkingPayload",
+        "WorkerToolCallPayload",
+        "WorkerMessagePayload",
+        "WorkerCompletedPayload",
+        "SwarmEventPayload",
+        "SwarmSSEEvent",
+        "SwarmEventHandlers"
+      ],
+      "interfaces": [
+        "WorkerSummary",
+        "SwarmCreatedPayload",
+        "SwarmStatusUpdatePayload",
+        "SwarmCompletedPayload",
+        "WorkerStartedPayload",
+        "WorkerProgressPayload",
+        "WorkerThinkingPayload",
+        "WorkerToolCallPayload",
+        "WorkerMessagePayload",
+        "WorkerCompletedPayload",
+        "SwarmSSEEvent",
+        "SwarmEventHandlers"
+      ],
+      "types": [
+        "SwarmEventName",
+        "SwarmEventPayload"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/types/index.ts",
+      "loc": 179,
+      "exports": [
+        "WorkerType",
+        "WorkerStatus",
+        "SwarmMode",
+        "SwarmStatus",
+        "ToolCallInfo",
+        "ThinkingContent",
+        "WorkerMessage",
+        "UIWorkerSummary",
+        "WorkerDetail",
+        "UIAgentSwarmStatus",
+        "AgentSwarmPanelProps",
+        "SwarmHeaderProps",
+        "OverallProgressProps",
+        "WorkerCardProps",
+        "WorkerCardListProps",
+        "SwarmStatusBadgesProps",
+        "SnakeToCamelCase",
+        "StatusConfig",
+        "WorkerTypeConfig"
+      ],
+      "interfaces": [
+        "ToolCallInfo",
+        "ThinkingContent",
+        "WorkerMessage",
+        "UIWorkerSummary",
+        "WorkerDetail",
+        "UIAgentSwarmStatus",
+        "AgentSwarmPanelProps",
+        "SwarmHeaderProps",
+        "OverallProgressProps",
+        "WorkerCardProps",
+        "WorkerCardListProps",
+        "SwarmStatusBadgesProps",
+        "StatusConfig",
+        "WorkerTypeConfig"
+      ],
+      "types": [
+        "WorkerType",
+        "WorkerStatus",
+        "SwarmMode",
+        "SwarmStatus"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./events"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/index.ts",
+      "loc": 112,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./ChatHeader",
+        "./ChatInput",
+        "./StatusBar",
+        "./ChatArea",
+        "./MessageList",
+        "./MessageList",
+        "./InlineApproval",
+        "./WorkflowSidePanel",
+        "./StepProgress",
+        "./ToolCallTracker",
+        "./CheckpointList",
+        "./StepProgressEnhanced",
+        "./StepProgressEnhanced",
+        "./ModeIndicator",
+        "./ModeIndicator",
+        "./ModeSwitchConfirmDialog",
+        "./ModeSwitchConfirmDialog",
+        "./ApprovalDialog",
+        "./ApprovalDialog",
+        "./ApprovalMessageCard",
+        "./ApprovalMessageCard",
+        "./RiskIndicator",
+        "./RiskIndicator",
+        "./RestoreConfirmDialog",
+        "./RestoreConfirmDialog",
+        "./ErrorBoundary",
+        "./ErrorBoundary",
+        "./ConnectionStatus",
+        "./ConnectionStatus",
+        "./ChatHistoryPanel",
+        "./ChatHistoryPanel",
+        "./FileUpload",
+        "./FileUpload",
+        "./AttachmentPreview",
+        "./AttachmentPreview",
+        "./FileMessage",
+        "./FileMessage",
+        "./FileRenderer",
+        "./FileRenderer",
+        "./renderers",
+        "./renderers",
+        "./IntentStatusChip",
+        "./IntentStatusChip",
+        "./TaskProgressCard",
+        "./MemoryHint",
+        "@/types/unified-chat"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/renderers/index.ts",
+      "loc": 17,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./ImagePreview",
+        "./ImagePreview",
+        "./CodePreview",
+        "./CodePreview",
+        "./TextPreview",
+        "./TextPreview"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/hooks/useNodeDrag.ts",
+      "loc": 76,
+      "exports": [
+        "useNodeDrag"
+      ],
+      "interfaces": [
+        "UseNodeDragOptions",
+        "UseNodeDragResult"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useNodeDrag",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@xyflow/react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/hooks/useWorkflowData.ts",
+      "loc": 323,
+      "exports": [
+        "useWorkflowData"
+      ],
+      "interfaces": [
+        "WorkflowGraphResponse",
+        "GraphLayoutRequest",
+        "UseWorkflowDataResult"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useMutation",
+        "useQuery",
+        "useQueryClient",
+        "useWorkflowData"
+      ],
+      "imports_from": [
+        "react",
+        "@tanstack/react-query",
+        "@xyflow/react",
+        "@/api/client",
+        "@/types",
+        "../utils/layoutEngine"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/utils/layoutEngine.ts",
+      "loc": 144,
+      "exports": [
+        "LayoutDirection",
+        "applyDagreLayout",
+        "getNodesBounds"
+      ],
+      "interfaces": [
+        "LayoutOptions"
+      ],
+      "types": [
+        "LayoutDirection"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "dagre",
+        "@xyflow/react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/index.ts",
+      "loc": 143,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAGUI",
+        "useApprovalFlow",
+        "useCancelTask",
+        "useCheckpoints",
+        "useDeleteDocument",
+        "useDeleteMemory",
+        "useDeleteSession",
+        "useDevToolsStream",
+        "useDocuments",
+        "useEventFilter",
+        "useExecutionMetrics",
+        "useHybridMode",
+        "useKnowledge",
+        "useKnowledgeSearch",
+        "useKnowledgeStatus",
+        "useMemory",
+        "useMemorySearch",
+        "useMemoryStats",
+        "useOptimisticState",
+        "useOrchestratorChat",
+        "useRecoverableSessions",
+        "useResumeSession",
+        "useRetryTask",
+        "useSSEChat",
+        "useSession",
+        "useSessionMessages",
+        "useSessions",
+        "useSharedState",
+        "useSkills",
+        "useTask",
+        "useTaskSteps",
+        "useTasks",
+        "useToolCallEvents",
+        "useTypewriterEffect",
+        "useUnifiedChat",
+        "useUploadDocument",
+        "useUserMemories"
+      ],
+      "imports_from": [
+        "./useAGUI",
+        "./useSharedState",
+        "./useOptimisticState",
+        "./useHybridMode",
+        "./useUnifiedChat",
+        "./useApprovalFlow",
+        "./useExecutionMetrics",
+        "./useCheckpoints",
+        "./useDevToolsStream",
+        "./useOrchestratorChat",
+        "./useSessions",
+        "./useTasks",
+        "./useKnowledge",
+        "./useMemory",
+        "./useTypewriterEffect",
+        "./useToolCallEvents",
+        "./useSSEChat",
+        "./useEventFilter"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useAGUI.ts",
+      "loc": 982,
+      "exports": [
+        "UseAGUIOptions",
+        "HeartbeatState",
+        "SubStepStatusType",
+        "SubStep",
+        "StepProgressEvent",
+        "StepProgressState",
+        "UseAGUIReturn",
+        "useAGUI"
+      ],
+      "interfaces": [
+        "UseAGUIOptions",
+        "HeartbeatState",
+        "SubStep",
+        "StepProgressEvent",
+        "StepProgressState",
+        "UseAGUIReturn"
+      ],
+      "types": [
+        "SubStepStatusType"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAGUI",
+        "useCallback",
+        "useEffect",
+        "useMemo",
+        "useOptimisticState",
+        "useRef",
+        "useSharedState",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "./useSharedState",
+        "./useOptimisticState"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useApprovalFlow.ts",
+      "loc": 460,
+      "exports": [
+        "ModeSwitchPending",
+        "UseApprovalFlowOptions",
+        "UseApprovalFlowReturn",
+        "useApprovalFlow"
+      ],
+      "interfaces": [
+        "ModeSwitchPending",
+        "UseApprovalFlowOptions",
+        "UseApprovalFlowReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useApprovalFlow",
+        "useCallback",
+        "useEffect",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "@/types/unified-chat",
+        "@/api/endpoints/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useChatThreads.ts",
+      "loc": 350,
+      "exports": [
+        "ChatThread",
+        "UseChatThreadsReturn",
+        "useChatThreads"
+      ],
+      "interfaces": [
+        "ChatThread",
+        "UseChatThreadsReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAuthStore",
+        "useCallback",
+        "useChatThreads",
+        "useEffect",
+        "useMemo",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/store/authStore",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useCheckpoints.ts",
+      "loc": 367,
+      "exports": [
+        "RestoreConfirmation",
+        "RestoreResult",
+        "UseCheckpointsOptions",
+        "UseCheckpointsReturn",
+        "useCheckpoints"
+      ],
+      "interfaces": [
+        "RestoreConfirmation",
+        "RestoreResult",
+        "UseCheckpointsOptions",
+        "UseCheckpointsReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useCheckpoints",
+        "useEffect",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/unified-chat",
+        "@/api/endpoints/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useDevTools.ts",
+      "loc": 76,
+      "exports": [
+        "devToolsKeys",
+        "useTraces",
+        "useTrace",
+        "useTraceEvents",
+        "useDeleteTrace"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useDeleteTrace",
+        "useMutation",
+        "useQuery",
+        "useQueryClient",
+        "useTrace",
+        "useTraceEvents",
+        "useTraces"
+      ],
+      "imports_from": [
+        "@tanstack/react-query",
+        "@/api/devtools",
+        "@/types/devtools"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useDevToolsStream.ts",
+      "loc": 258,
+      "exports": [
+        "ConnectionStatus",
+        "UseDevToolsStreamOptions",
+        "UseDevToolsStreamReturn",
+        "useDevToolsStream"
+      ],
+      "interfaces": [
+        "UseDevToolsStreamOptions",
+        "UseDevToolsStreamReturn"
+      ],
+      "types": [
+        "ConnectionStatus"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useDevToolsStream",
+        "useEffect",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/devtools"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useEventFilter.ts",
+      "loc": 379,
+      "exports": [
+        "EventFilterState",
+        "UseEventFilterOptions",
+        "UseEventFilterReturn",
+        "useEventFilter"
+      ],
+      "interfaces": [
+        "EventFilterState",
+        "UseEventFilterOptions",
+        "UseEventFilterReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useEventFilter",
+        "useMemo",
+        "useSearchParams",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@/types/devtools"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useExecutionMetrics.ts",
+      "loc": 463,
+      "exports": [
+        "TokenMetrics",
+        "TimeMetrics",
+        "ToolMetrics",
+        "MessageMetrics",
+        "ExecutionMetricsState",
+        "UseExecutionMetricsOptions",
+        "UseExecutionMetricsReturn",
+        "useExecutionMetrics"
+      ],
+      "interfaces": [
+        "TokenMetrics",
+        "TimeMetrics",
+        "ToolMetrics",
+        "MessageMetrics",
+        "ExecutionMetricsState",
+        "UseExecutionMetricsOptions",
+        "UseExecutionMetricsReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useExecutionMetrics",
+        "useMemo",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useFileUpload.ts",
+      "loc": 259,
+      "exports": [
+        "AttachmentStatus",
+        "Attachment",
+        "UseFileUploadOptions",
+        "UseFileUploadReturn",
+        "useFileUpload"
+      ],
+      "interfaces": [
+        "Attachment",
+        "UseFileUploadOptions",
+        "UseFileUploadReturn"
+      ],
+      "types": [
+        "AttachmentStatus"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useFileUpload",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/api/endpoints/files"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useHybridMode.ts",
+      "loc": 269,
+      "exports": [
+        "ModeDetectionEvent",
+        "UseHybridModeConfig",
+        "UseHybridModeReturn",
+        "useHybridMode",
+        "dispatchModeDetection"
+      ],
+      "interfaces": [
+        "ModeDetectionEvent",
+        "UseHybridModeConfig",
+        "UseHybridModeReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAGUI",
+        "useCallback",
+        "useEffect",
+        "useHybridMode",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/unified-chat"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useKnowledge.ts",
+      "loc": 120,
+      "exports": [
+        "knowledgeKeys",
+        "useKnowledgeSearch",
+        "useDocuments",
+        "useUploadDocument",
+        "useDeleteDocument",
+        "useSkills",
+        "useKnowledgeStatus"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useDeleteDocument",
+        "useDocuments",
+        "useKnowledge",
+        "useKnowledgeSearch",
+        "useKnowledgeStatus",
+        "useMutation",
+        "useQuery",
+        "useQueryClient",
+        "useSkills",
+        "useUploadDocument"
+      ],
+      "imports_from": [
+        "@tanstack/react-query",
+        "@/api/endpoints/knowledge"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useMemory.ts",
+      "loc": 83,
+      "exports": [
+        "memoryKeys",
+        "useMemorySearch",
+        "useUserMemories",
+        "useMemoryStats",
+        "useDeleteMemory"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useDeleteMemory",
+        "useMemory",
+        "useMemorySearch",
+        "useMemoryStats",
+        "useMutation",
+        "useQuery",
+        "useQueryClient",
+        "useUserMemories"
+      ],
+      "imports_from": [
+        "@tanstack/react-query",
+        "@/api/endpoints/memory"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useOptimisticState.ts",
+      "loc": 408,
+      "exports": [
+        "UseOptimisticStateOptions",
+        "UseOptimisticStateReturn",
+        "useOptimisticState"
+      ],
+      "interfaces": [
+        "UseOptimisticStateOptions",
+        "UseOptimisticStateReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useMemo",
+        "useOptimisticState",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useOrchestration.ts",
+      "loc": 352,
+      "exports": [
+        "OrchestrationPhase",
+        "OrchestrationState",
+        "OrchestrationOptions",
+        "UseOrchestrationReturn",
+        "useOrchestration"
+      ],
+      "interfaces": [
+        "OrchestrationState",
+        "OrchestrationOptions",
+        "UseOrchestrationReturn"
+      ],
+      "types": [
+        "OrchestrationPhase"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useOrchestration",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/api/endpoints/orchestration"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useOrchestratorChat.ts",
+      "loc": 324,
+      "exports": [
+        "UseOrchestratorChatOptions",
+        "UseOrchestratorChatReturn",
+        "useOrchestratorChat"
+      ],
+      "interfaces": [
+        "UseOrchestratorChatOptions",
+        "UseOrchestratorChatReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useOrchestratorChat",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/api/endpoints/orchestrator"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useSessions.ts",
+      "loc": 116,
+      "exports": [
+        "sessionKeys",
+        "useSessions",
+        "useSession",
+        "useSessionMessages",
+        "useRecoverableSessions",
+        "useResumeSession",
+        "useDeleteSession"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useDeleteSession",
+        "useMutation",
+        "useQuery",
+        "useQueryClient",
+        "useRecoverableSessions",
+        "useResumeSession",
+        "useSession",
+        "useSessionMessages",
+        "useSessions"
+      ],
+      "imports_from": [
+        "@tanstack/react-query",
+        "@/api/endpoints/sessions"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useSharedState.ts",
+      "loc": 505,
+      "exports": [
+        "UseSharedStateOptions",
+        "UseSharedStateReturn",
+        "useSharedState"
+      ],
+      "interfaces": [
+        "UseSharedStateOptions",
+        "UseSharedStateReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useMemo",
+        "useRef",
+        "useSharedState",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useSSEChat.ts",
+      "loc": 211,
+      "exports": [
+        "PipelineSSEEventType",
+        "PipelineSSEEvent",
+        "SSEEventHandlers",
+        "SSEChatRequest",
+        "useSSEChat"
+      ],
+      "interfaces": [
+        "PipelineSSEEvent",
+        "SSEEventHandlers",
+        "SSEChatRequest"
+      ],
+      "types": [
+        "PipelineSSEEventType"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAuthStore",
+        "useCallback",
+        "useRef",
+        "useSSEChat",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/store/authStore",
+        "@/utils/guestUser"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useSwarmMock.ts",
+      "loc": 623,
+      "exports": [
+        "MockMessage",
+        "useSwarmMock"
+      ],
+      "interfaces": [
+        "MockSwarmConfig",
+        "UseSwarmMockReturn",
+        "MockMessage"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useState",
+        "useSwarmMock"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/unified-chat/agent-swarm/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useSwarmReal.ts",
+      "loc": 603,
+      "exports": [
+        "DemoScenario",
+        "MockMessage",
+        "useSwarmReal"
+      ],
+      "interfaces": [
+        "DemoScenario",
+        "DemoStartRequest",
+        "DemoStartResponse",
+        "SwarmUpdateEvent",
+        "WorkerEventData",
+        "MockMessage",
+        "UseSwarmRealReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useRef",
+        "useState",
+        "useSwarmReal"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/unified-chat/agent-swarm/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useTasks.ts",
+      "loc": 105,
+      "exports": [
+        "taskKeys",
+        "useTasks",
+        "useTask",
+        "useTaskSteps",
+        "useCancelTask",
+        "useRetryTask"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCancelTask",
+        "useMutation",
+        "useQuery",
+        "useQueryClient",
+        "useRetryTask",
+        "useTask",
+        "useTaskSteps",
+        "useTasks"
+      ],
+      "imports_from": [
+        "@tanstack/react-query",
+        "@/api/endpoints/tasks"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useToolCallEvents.ts",
+      "loc": 72,
+      "exports": [
+        "useToolCallEvents"
+      ],
+      "interfaces": [
+        "UseToolCallEventsReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useState",
+        "useToolCallEvents"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/unified-chat",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useTypewriterEffect.ts",
+      "loc": 117,
+      "exports": [
+        "useTypewriterEffect"
+      ],
+      "interfaces": [
+        "UseTypewriterEffectOptions",
+        "UseTypewriterEffectReturn"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useRef",
+        "useState",
+        "useTypewriterEffect"
+      ],
+      "imports_from": [
+        "react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/hooks/useUnifiedChat.ts",
+      "loc": 1313,
+      "exports": [
+        "UseUnifiedChatOptions",
+        "UseUnifiedChatReturn",
+        "HeartbeatState",
+        "useUnifiedChat"
+      ],
+      "interfaces": [
+        "UseUnifiedChatOptions",
+        "UseUnifiedChatReturn",
+        "HeartbeatState"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useHybridMode",
+        "useMemo",
+        "useRef",
+        "useState",
+        "useUnifiedChat",
+        "useUnifiedChatStore"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "@/types/unified-chat",
+        "@/stores/unifiedChatStore",
+        "./useHybridMode"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/lib/utils.ts",
+      "loc": 170,
+      "exports": [
+        "cn",
+        "formatRelativeTime",
+        "formatDate",
+        "formatDateTime",
+        "truncateText",
+        "sleep",
+        "generateId",
+        "formatNumber",
+        "formatCurrency",
+        "formatPercent",
+        "formatPercentage",
+        "formatDuration"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "clsx",
+        "tailwind-merge"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/index.ts",
+      "loc": 40,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./EventLogPanel",
+        "./EventLogPanel",
+        "./AgenticChatDemo",
+        "./AgenticChatDemo",
+        "./ToolRenderingDemo",
+        "./ToolRenderingDemo",
+        "./HITLDemo",
+        "./HITLDemo",
+        "./GenerativeUIDemo",
+        "./GenerativeUIDemo",
+        "./ToolUIDemo",
+        "./ToolUIDemo",
+        "./SharedStateDemo",
+        "./SharedStateDemo",
+        "./PredictiveDemo",
+        "./PredictiveDemo"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/index.ts",
+      "loc": 8,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "./StatsCards",
+        "./ExecutionChart",
+        "./RecentExecutions",
+        "./PendingApprovals"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/store/authStore.ts",
+      "loc": 322,
+      "exports": [
+        "User",
+        "AuthState",
+        "useAuthStore",
+        "selectUser",
+        "selectIsAuthenticated",
+        "selectIsLoading",
+        "selectError",
+        "selectToken"
+      ],
+      "interfaces": [
+        "User",
+        "AuthState"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAuthStore"
+      ],
+      "imports_from": [
+        "zustand",
+        "zustand/middleware",
+        "@/utils/guestUser"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/stores/__tests__/swarmStore.test.ts",
+      "loc": 419,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useSwarmStore"
+      ],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../swarmStore",
+        "@/components/unified-chat/agent-swarm/types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/stores/swarmStore.ts",
+      "loc": 444,
+      "exports": [
+        "useSwarmStore",
+        "selectSwarmStatus",
+        "selectWorkers",
+        "selectSelectedWorkerId",
+        "selectSelectedWorkerDetail",
+        "selectIsDrawerOpen",
+        "selectIsLoading",
+        "selectError",
+        "selectCompletedWorkers",
+        "selectRunningWorkers",
+        "selectFailedWorkers",
+        "selectIsSwarmActive"
+      ],
+      "interfaces": [
+        "SwarmState",
+        "SwarmActions"
+      ],
+      "types": [
+        "SwarmStore"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useSwarmStore"
+      ],
+      "imports_from": [
+        "zustand",
+        "zustand/middleware/immer",
+        "zustand/middleware",
+        "@/components/unified-chat/agent-swarm/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/stores/unifiedChatStore.ts",
+      "loc": 508,
+      "exports": [
+        "useUnifiedChatStore",
+        "initializeUnifiedChat",
+        "selectMode",
+        "selectMessages",
+        "selectIsStreaming",
+        "selectPendingApprovals",
+        "selectWorkflowState",
+        "selectMetrics",
+        "selectConnection"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useUnifiedChatStore"
+      ],
+      "imports_from": [
+        "zustand",
+        "zustand/middleware",
+        "@/types/unified-chat",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/test/setup.ts",
+      "loc": 8,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/types/ag-ui.ts",
+      "loc": 457,
+      "exports": [
+        "UIComponentType",
+        "ChartType",
+        "FormFieldType",
+        "FormFieldDefinition",
+        "TableColumnDefinition",
+        "ChartDataPoint",
+        "ChartDataset",
+        "ChartData",
+        "CardAction",
+        "UIComponentSchema",
+        "UIComponentDefinition",
+        "UIComponentEvent",
+        "DiffOperation",
+        "ConflictResolutionStrategy",
+        "StateDiff",
+        "StateVersion",
+        "StateConflict",
+        "SharedState",
+        "StateSyncStatus",
+        "StateSyncEvent",
+        "PredictionStatus",
+        "PredictionType",
+        "PredictionResult",
+        "PredictionConfig",
+        "OptimisticUpdateRequest",
+        "OptimisticState",
+        "AGUIEventType",
+        "BaseAGUIEvent",
+        "StateSnapshotEvent",
+        "StateDeltaItem",
+        "StateDeltaEvent",
+        "CustomEvent",
+        "MessageRole",
+        "GeneratedFile",
+        "PipelineToolCall",
+        "OrchestrationMetadata",
+        "ChatMessage",
+        "ToolCallStatus",
+        "ToolCallState",
+        "RiskLevel",
+        "ApprovalStatus",
+        "PendingApproval",
+        "ToolDefinition",
+        "RunAgentInput",
+        "SSEConnectionStatus",
+        "RunStatus",
+        "AGUIRunState"
+      ],
+      "interfaces": [
+        "FormFieldDefinition",
+        "TableColumnDefinition",
+        "ChartDataPoint",
+        "ChartDataset",
+        "ChartData",
+        "CardAction",
+        "UIComponentSchema",
+        "UIComponentDefinition",
+        "UIComponentEvent",
+        "StateDiff",
+        "StateVersion",
+        "StateConflict",
+        "SharedState",
+        "StateSyncEvent",
+        "PredictionResult",
+        "PredictionConfig",
+        "OptimisticUpdateRequest",
+        "OptimisticState",
+        "BaseAGUIEvent",
+        "StateSnapshotEvent",
+        "StateDeltaItem",
+        "StateDeltaEvent",
+        "CustomEvent",
+        "GeneratedFile",
+        "PipelineToolCall",
+        "OrchestrationMetadata",
+        "ChatMessage",
+        "ToolCallState",
+        "PendingApproval",
+        "ToolDefinition",
+        "RunAgentInput",
+        "AGUIRunState"
+      ],
+      "types": [
+        "UIComponentType",
+        "ChartType",
+        "FormFieldType",
+        "DiffOperation",
+        "ConflictResolutionStrategy",
+        "StateSyncStatus",
+        "PredictionStatus",
+        "PredictionType",
+        "AGUIEventType",
+        "MessageRole",
+        "ToolCallStatus",
+        "RiskLevel",
+        "ApprovalStatus",
+        "SSEConnectionStatus",
+        "RunStatus"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useAGUI"
+      ],
+      "imports_from": [],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/types/devtools.ts",
+      "loc": 104,
+      "exports": [
+        "TraceStatus",
+        "EventSeverity",
+        "Trace",
+        "TraceEvent",
+        "ListTracesParams",
+        "ListEventsParams",
+        "PaginatedResponse",
+        "TraceDetail",
+        "DeleteTraceResponse"
+      ],
+      "interfaces": [
+        "Trace",
+        "TraceEvent",
+        "ListTracesParams",
+        "ListEventsParams",
+        "PaginatedResponse",
+        "TraceDetail",
+        "DeleteTraceResponse"
+      ],
+      "types": [
+        "TraceStatus",
+        "EventSeverity"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/types/index.ts",
+      "loc": 231,
+      "exports": [
+        "Status",
+        "PaginatedResponse",
+        "Workflow",
+        "WorkflowDefinition",
+        "WorkflowGraphDefinition",
+        "WorkflowNode",
+        "WorkflowGraphNode",
+        "WorkflowEdge",
+        "WorkflowGraphEdge",
+        "Execution",
+        "ExecutionStep",
+        "Agent",
+        "ModelConfig",
+        "Template",
+        "Checkpoint",
+        "AuditLog",
+        "DashboardStats",
+        "ExecutionChartData",
+        "CostChartData"
+      ],
+      "interfaces": [
+        "PaginatedResponse",
+        "Workflow",
+        "WorkflowDefinition",
+        "WorkflowGraphDefinition",
+        "WorkflowNode",
+        "WorkflowGraphNode",
+        "WorkflowEdge",
+        "WorkflowGraphEdge",
+        "Execution",
+        "ExecutionStep",
+        "Agent",
+        "ModelConfig",
+        "Template",
+        "Checkpoint",
+        "AuditLog",
+        "DashboardStats",
+        "ExecutionChartData",
+        "CostChartData"
+      ],
+      "types": [
+        "Status"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/types/unified-chat.ts",
+      "loc": 505,
+      "exports": [
+        "ExecutionMode",
+        "ModeSource",
+        "WorkflowStepStatus",
+        "WorkflowStep",
+        "WorkflowState",
+        "TrackedToolCall",
+        "Checkpoint",
+        "TokenUsage",
+        "ExecutionTime",
+        "ToolCallStatistics",
+        "MessageStatistics",
+        "ExecutionMetrics",
+        "ConnectionStatus",
+        "StatusBarState",
+        "ModeToggleState",
+        "ChatInputState",
+        "FileAttachment",
+        "AttachmentStatus",
+        "Attachment",
+        "ApprovalAction",
+        "ApprovalFlowState",
+        "UnifiedChatState",
+        "UnifiedChatActions",
+        "UnifiedChatProps",
+        "ChatHeaderProps",
+        "ChatAreaProps",
+        "WorkflowSidePanelProps",
+        "ChatInputProps",
+        "HeartbeatState",
+        "StatusBarProps",
+        "InlineApprovalProps",
+        "StepProgressProps",
+        "SubStepStatusType",
+        "SubStep",
+        "StepProgressEvent",
+        "StepProgressState",
+        "StepProgressEnhancedProps",
+        "ToolCallTrackerProps",
+        "CheckpointListProps",
+        "UseHybridModeReturn",
+        "UseApprovalFlowReturn",
+        "UseExecutionMetricsReturn"
+      ],
+      "interfaces": [
+        "WorkflowStep",
+        "WorkflowState",
+        "TrackedToolCall",
+        "Checkpoint",
+        "TokenUsage",
+        "ExecutionTime",
+        "ToolCallStatistics",
+        "MessageStatistics",
+        "ExecutionMetrics",
+        "StatusBarState",
+        "ModeToggleState",
+        "ChatInputState",
+        "FileAttachment",
+        "Attachment",
+        "ApprovalFlowState",
+        "UnifiedChatState",
+        "UnifiedChatActions",
+        "UnifiedChatProps",
+        "ChatHeaderProps",
+        "ChatAreaProps",
+        "WorkflowSidePanelProps",
+        "ChatInputProps",
+        "HeartbeatState",
+        "StatusBarProps",
+        "InlineApprovalProps",
+        "StepProgressProps",
+        "SubStep",
+        "StepProgressEvent",
+        "StepProgressState",
+        "StepProgressEnhancedProps",
+        "ToolCallTrackerProps",
+        "CheckpointListProps",
+        "UseHybridModeReturn",
+        "UseApprovalFlowReturn",
+        "UseExecutionMetricsReturn"
+      ],
+      "types": [
+        "ExecutionMode",
+        "ModeSource",
+        "WorkflowStepStatus",
+        "ConnectionStatus",
+        "AttachmentStatus",
+        "ApprovalAction",
+        "SubStepStatusType"
+      ],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useApprovalFlow",
+        "useExecutionMetrics",
+        "useHybridMode"
+      ],
+      "imports_from": [
+        "./ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/utils/guestUser.ts",
+      "loc": 170,
+      "exports": [
+        "GUEST_USER_KEY",
+        "getGuestUserId",
+        "isGuestUser",
+        "clearGuestUserId",
+        "hasGuestData",
+        "getGuestHeaders",
+        "ensureGuestUserId"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/vite-env.d.ts",
+      "loc": 10,
+      "exports": [],
+      "interfaces": [
+        "ImportMetaEnv",
+        "ImportMeta"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/App.tsx",
+      "loc": 148,
+      "exports": [
+        "App"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "App"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react-router-dom",
+        "@/components/layout/AppLayout",
+        "@/components/auth/ProtectedRoute",
+        "@/pages/dashboard/DashboardPage",
+        "@/pages/dashboard/PerformancePage",
+        "@/pages/workflows/WorkflowsPage",
+        "@/pages/workflows/WorkflowDetailPage",
+        "@/pages/workflows/CreateWorkflowPage",
+        "@/pages/workflows/EditWorkflowPage",
+        "@/pages/agents/AgentsPage",
+        "@/pages/agents/AgentDetailPage",
+        "@/pages/agents/CreateAgentPage",
+        "@/pages/agents/EditAgentPage",
+        "@/pages/approvals/ApprovalsPage",
+        "@/pages/audit/AuditPage",
+        "@/pages/templates/TemplatesPage",
+        "@/pages/ag-ui/AGUIDemoPage",
+        "@/pages/UnifiedChat",
+        "@/pages/auth/LoginPage",
+        "@/pages/auth/SignupPage",
+        "@/pages/DevUI/Layout",
+        "@/pages/DevUI/index",
+        "@/pages/DevUI/TraceList",
+        "@/pages/DevUI/TraceDetail",
+        "@/pages/DevUI/LiveMonitor",
+        "@/pages/DevUI/Settings",
+        "@/pages/DevUI/AGUITestPanel",
+        "@/pages/SwarmTestPage",
+        "@/pages/workflows/WorkflowEditorPage",
+        "@/pages/sessions/SessionsPage",
+        "@/pages/sessions/SessionDetailPage",
+        "@/pages/tasks/TaskDashboardPage",
+        "@/pages/tasks/TaskDetailPage",
+        "@/pages/knowledge/KnowledgePage",
+        "@/pages/memory/MemoryPage"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/CustomUIRenderer.tsx",
+      "loc": 178,
+      "exports": [
+        "CustomUIRendererProps",
+        "CustomUIRenderer"
+      ],
+      "interfaces": [
+        "CustomUIRendererProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "CustomUIRenderer"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "@/components/ui/Card",
+        "@/types/ag-ui",
+        "./DynamicForm",
+        "./DynamicChart",
+        "./DynamicCard",
+        "./DynamicTable"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/DynamicCard.tsx",
+      "loc": 100,
+      "exports": [
+        "DynamicCardProps",
+        "DynamicCard"
+      ],
+      "interfaces": [
+        "DynamicCardProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "DynamicCard"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/DynamicChart.tsx",
+      "loc": 386,
+      "exports": [
+        "DynamicChartProps",
+        "DynamicChart"
+      ],
+      "interfaces": [
+        "DynamicChartProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "BarChart",
+        "PieChart",
+        "LineChart",
+        "ScatterChart",
+        "DynamicChart"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "@/components/ui/Card",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/DynamicForm.tsx",
+      "loc": 334,
+      "exports": [
+        "DynamicFormProps",
+        "DynamicForm"
+      ],
+      "interfaces": [
+        "DynamicFormProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "DynamicForm"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "@/components/ui/Button",
+        "@/components/ui/Input",
+        "@/components/ui/Label",
+        "@/components/ui/Textarea",
+        "@/components/ui/Select",
+        "@/components/ui/Checkbox",
+        "@/components/ui/RadioGroup",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/DynamicTable.tsx",
+      "loc": 303,
+      "exports": [
+        "DynamicTableProps",
+        "DynamicTable"
+      ],
+      "interfaces": [
+        "DynamicTableProps",
+        "SortState"
+      ],
+      "types": [
+        "SortDirection"
+      ],
+      "enums": [],
+      "components": [
+        "DynamicTable"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "@/components/ui/Button",
+        "@/components/ui/Input",
+        "@/components/ui/Table",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/OptimisticIndicator.tsx",
+      "loc": 294,
+      "exports": [
+        "OptimisticIndicatorProps",
+        "STATUS_LABELS",
+        "OptimisticIndicator"
+      ],
+      "interfaces": [
+        "OptimisticIndicatorProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "PredictionItem",
+        "CompactIndicator",
+        "OptimisticIndicator"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "@/components/ui/Badge",
+        "@/components/ui/Tooltip",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/advanced/StateDebugger.tsx",
+      "loc": 346,
+      "exports": [
+        "StateDebuggerProps",
+        "StateDebugger"
+      ],
+      "interfaces": [
+        "StateDebuggerProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "JsonTreeViewer",
+        "DiffViewer",
+        "ConflictViewer",
+        "StateDebugger"
+      ],
+      "hooks_used": [
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Card",
+        "@/components/ui/Collapsible",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/ChatContainer.tsx",
+      "loc": 236,
+      "exports": [
+        "ChatContainerProps",
+        "ChatContainer"
+      ],
+      "interfaces": [
+        "that",
+        "ChatContainerProps",
+        "with"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ChatContainer"
+      ],
+      "hooks_used": [
+        "useAGUI",
+        "useCallback",
+        "useEffect",
+        "useRef"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "@/hooks/useAGUI",
+        "./MessageBubble",
+        "./MessageInput",
+        "./StreamingIndicator",
+        "@/components/ui/Badge"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/MessageBubble.tsx",
+      "loc": 160,
+      "exports": [
+        "MessageBubbleProps",
+        "MessageBubble"
+      ],
+      "interfaces": [
+        "MessageBubbleProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "MessageBubble"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "./ToolCallCard",
+        "@/components/unified-chat/FileMessage"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/MessageInput.tsx",
+      "loc": 151,
+      "exports": [
+        "MessageInputProps",
+        "MessageInput"
+      ],
+      "interfaces": [
+        "MessageInputProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "MessageInput"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Button",
+        "@/components/ui/Textarea"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/StreamingIndicator.tsx",
+      "loc": 75,
+      "exports": [
+        "StreamingIndicatorProps",
+        "StreamingIndicator"
+      ],
+      "interfaces": [
+        "StreamingIndicatorProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StreamingIndicator"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/chat/ToolCallCard.tsx",
+      "loc": 211,
+      "exports": [
+        "ToolCallCardProps",
+        "ToolCallCard"
+      ],
+      "interfaces": [
+        "ToolCallCardProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ToolCallCard"
+      ],
+      "hooks_used": [
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "@/components/ui/Badge",
+        "@/components/ui/Button"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/ApprovalBanner.tsx",
+      "loc": 141,
+      "exports": [
+        "ApprovalBannerProps",
+        "ApprovalBanner"
+      ],
+      "interfaces": [
+        "ApprovalBannerProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ApprovalBanner"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "@/components/ui/Button",
+        "./RiskBadge"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/ApprovalDialog.tsx",
+      "loc": 244,
+      "exports": [
+        "ApprovalDialogProps",
+        "ApprovalDialog"
+      ],
+      "interfaces": [
+        "ApprovalDialogProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ApprovalDialog"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "@/components/ui/Button",
+        "@/components/ui/Textarea",
+        "./RiskBadge"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/ApprovalList.tsx",
+      "loc": 226,
+      "exports": [
+        "ApprovalListProps",
+        "ApprovalList"
+      ],
+      "interfaces": [
+        "ApprovalListProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ApprovalList"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "@/components/ui/Button",
+        "./ApprovalBanner"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ag-ui/hitl/RiskBadge.tsx",
+      "loc": 100,
+      "exports": [
+        "RiskBadgeProps",
+        "RiskBadge"
+      ],
+      "interfaces": [
+        "RiskBadgeProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "RiskBadge"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/auth/ProtectedRoute.tsx",
+      "loc": 128,
+      "exports": [
+        "ProtectedRoute",
+        "AdminRoute",
+        "OperatorRoute"
+      ],
+      "interfaces": [
+        "ProtectedRouteProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ProtectedRoute",
+        "AdminRoute",
+        "OperatorRoute"
+      ],
+      "hooks_used": [
+        "useAuthStore",
+        "useEffect",
+        "useLocation",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@/store/authStore",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/DurationBar.tsx",
+      "loc": 120,
+      "exports": [
+        "DurationBar",
+        "DurationBadge"
+      ],
+      "interfaces": [
+        "DurationBarProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "DurationBar",
+        "DurationBadge"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventDetail.tsx",
+      "loc": 166,
+      "exports": [
+        "EventDetail"
+      ],
+      "interfaces": [
+        "EventDetailProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "JsonViewer",
+        "EventDetail"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventFilter.tsx",
+      "loc": 416,
+      "exports": [
+        "EventFilter",
+        "FilterBar"
+      ],
+      "interfaces": [
+        "EventFilterProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "EventFilter",
+        "FilterBar"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/lib/utils",
+        "@/types/devtools"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventList.tsx",
+      "loc": 240,
+      "exports": [
+        "EventList"
+      ],
+      "interfaces": [
+        "EventListProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "EventRow",
+        "EventList"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools",
+        "./EventDetail",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventPanel.tsx",
+      "loc": 278,
+      "exports": [
+        "EventPanel"
+      ],
+      "interfaces": [
+        "EventPanelProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "DefaultEventPanel",
+        "EventPanel"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools",
+        "./LLMEventPanel",
+        "./ToolEventPanel",
+        "./DurationBar",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventPieChart.tsx",
+      "loc": 303,
+      "exports": [
+        "EventPieChart",
+        "getEventTypeColor"
+      ],
+      "interfaces": [
+        "PieChartData",
+        "EventPieChartProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "EventPieChart"
+      ],
+      "hooks_used": [
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/EventTree.tsx",
+      "loc": 275,
+      "exports": [
+        "EventTree"
+      ],
+      "interfaces": [
+        "EventTreeProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "EventTree"
+      ],
+      "hooks_used": [
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools",
+        "./TreeNode"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/LiveIndicator.tsx",
+      "loc": 294,
+      "exports": [
+        "LiveIndicator",
+        "LiveDot",
+        "ConnectionBadge"
+      ],
+      "interfaces": [
+        "LiveIndicatorProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "LiveIndicator",
+        "LiveDot",
+        "ConnectionBadge"
+      ],
+      "hooks_used": [
+        "useDevToolsStream"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/lib/utils",
+        "@/hooks/useDevToolsStream"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/LLMEventPanel.tsx",
+      "loc": 309,
+      "exports": [
+        "LLMEventPanel"
+      ],
+      "interfaces": [
+        "LLMEventPanelProps",
+        "LLMEventData"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "CollapsibleText",
+        "TokenUsage",
+        "LLMEventPanel"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools",
+        "./DurationBar"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/StatCard.tsx",
+      "loc": 196,
+      "exports": [
+        "StatCardProps",
+        "StatCard",
+        "MiniStatCard"
+      ],
+      "interfaces": [
+        "StatCardProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StatCard",
+        "MiniStatCard"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/Statistics.tsx",
+      "loc": 369,
+      "exports": [
+        "Statistics",
+        "StatisticsSummary"
+      ],
+      "interfaces": [
+        "StatisticsProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Statistics",
+        "StatisticsSummary"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools",
+        "./StatCard",
+        "./EventPieChart",
+        "./DurationBar",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/Timeline.tsx",
+      "loc": 329,
+      "exports": [
+        "Timeline"
+      ],
+      "interfaces": [
+        "TimelineProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Timeline"
+      ],
+      "hooks_used": [
+        "useEffect",
+        "useMemo",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools",
+        "./TimelineNode",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/TimelineNode.tsx",
+      "loc": 301,
+      "exports": [
+        "TimelineNode"
+      ],
+      "interfaces": [
+        "TimelineNodeProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TimelineNode"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools",
+        "./DurationBar",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/ToolEventPanel.tsx",
+      "loc": 265,
+      "exports": [
+        "ToolEventPanel"
+      ],
+      "interfaces": [
+        "ToolEventPanelProps",
+        "ToolEventData"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "JsonViewer",
+        "ToolEventPanel"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools",
+        "./DurationBar",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/DevUI/TreeNode.tsx",
+      "loc": 247,
+      "exports": [
+        "EventTreeNode",
+        "TreeNode"
+      ],
+      "interfaces": [
+        "EventTreeNode",
+        "TreeNodeProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TreeNode"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/devtools",
+        "./DurationBar",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/layout/AppLayout.tsx",
+      "loc": 44,
+      "exports": [
+        "AppLayout"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "AppLayout"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "./Sidebar",
+        "./Header"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/layout/Header.tsx",
+      "loc": 46,
+      "exports": [
+        "Header"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Header"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "lucide-react",
+        "@/components/ui/Button",
+        "./UserMenu"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/layout/Sidebar.tsx",
+      "loc": 154,
+      "exports": [
+        "Sidebar"
+      ],
+      "interfaces": [
+        "NavItem",
+        "SidebarProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Sidebar"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react-router-dom",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/layout/UserMenu.tsx",
+      "loc": 170,
+      "exports": [
+        "UserMenu"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "UserMenu"
+      ],
+      "hooks_used": [
+        "useAuthStore",
+        "useEffect",
+        "useNavigate",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "lucide-react",
+        "@/store/authStore",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/shared/EmptyState.tsx",
+      "loc": 40,
+      "exports": [
+        "EmptyState"
+      ],
+      "interfaces": [
+        "EmptyStateProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "EmptyState"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "lucide-react",
+        "@/components/ui/Button"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/shared/LoadingSpinner.tsx",
+      "loc": 43,
+      "exports": [
+        "LoadingSpinner",
+        "PageLoading"
+      ],
+      "interfaces": [
+        "LoadingSpinnerProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "LoadingSpinner",
+        "PageLoading"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/shared/StatusBadge.tsx",
+      "loc": 38,
+      "exports": [
+        "StatusBadge"
+      ],
+      "interfaces": [
+        "StatusBadgeProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StatusBadge"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "@/components/ui/Badge",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Badge.tsx",
+      "loc": 49,
+      "exports": [
+        "BadgeProps"
+      ],
+      "interfaces": [
+        "BadgeProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Badge"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "class-variance-authority",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Button.tsx",
+      "loc": 68,
+      "exports": [
+        "ButtonProps"
+      ],
+      "interfaces": [
+        "ButtonProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Button"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@radix-ui/react-slot",
+        "class-variance-authority",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Card.tsx",
+      "loc": 87,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Card",
+        "CardHeader",
+        "CardTitle",
+        "CardDescription",
+        "CardContent",
+        "CardFooter"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Checkbox.tsx",
+      "loc": 35,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Checkbox"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@radix-ui/react-checkbox",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Collapsible.tsx",
+      "loc": 17,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "@radix-ui/react-collapsible"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/dialog.tsx",
+      "loc": 132,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "DialogOverlay",
+        "DialogContent",
+        "DialogHeader",
+        "DialogFooter",
+        "DialogTitle",
+        "DialogDescription"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@radix-ui/react-dialog",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Input.tsx",
+      "loc": 36,
+      "exports": [
+        "InputProps"
+      ],
+      "interfaces": [
+        "InputProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Input"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Label.tsx",
+      "loc": 37,
+      "exports": [
+        "LabelProps"
+      ],
+      "interfaces": [
+        "LabelProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Label"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Progress.tsx",
+      "loc": 38,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Progress"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@radix-ui/react-progress",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/RadioGroup.tsx",
+      "loc": 49,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "RadioGroup",
+        "RadioGroupItem"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@radix-ui/react-radio-group",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/ScrollArea.tsx",
+      "loc": 52,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ScrollArea",
+        "ScrollBar"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@radix-ui/react-scroll-area",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Select.tsx",
+      "loc": 219,
+      "exports": [
+        "SelectOption",
+        "SimpleSelectProps"
+      ],
+      "interfaces": [
+        "SelectOption",
+        "SimpleSelectProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SelectTrigger",
+        "SelectScrollUpButton",
+        "SelectScrollDownButton",
+        "SelectContent",
+        "SelectLabel",
+        "SelectItem",
+        "SelectSeparator",
+        "SimpleSelect"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@radix-ui/react-select",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Separator.tsx",
+      "loc": 38,
+      "exports": [],
+      "interfaces": [
+        "SeparatorProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Separator"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Sheet.tsx",
+      "loc": 149,
+      "exports": [],
+      "interfaces": [
+        "SheetContentProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SheetOverlay",
+        "SheetContent",
+        "SheetHeader",
+        "SheetFooter",
+        "SheetTitle",
+        "SheetDescription"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@radix-ui/react-dialog",
+        "class-variance-authority",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Table.tsx",
+      "loc": 124,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Table",
+        "TableHeader",
+        "TableBody",
+        "TableFooter",
+        "TableRow",
+        "TableHead",
+        "TableCell",
+        "TableCaption"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Textarea.tsx",
+      "loc": 35,
+      "exports": [
+        "TextareaProps"
+      ],
+      "interfaces": [
+        "TextareaProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Textarea"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/ui/Tooltip.tsx",
+      "loc": 35,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TooltipContent"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@radix-ui/react-tooltip",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/AgentSwarmPanel.test.tsx",
+      "loc": 137,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../AgentSwarmPanel",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/ExtendedThinkingPanel.test.tsx",
+      "loc": 226,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../ExtendedThinkingPanel",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/MessageHistory.test.tsx",
+      "loc": 103,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../MessageHistory",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/OverallProgress.test.tsx",
+      "loc": 79,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../OverallProgress",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/SwarmHeader.test.tsx",
+      "loc": 83,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../SwarmHeader",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/SwarmStatusBadges.test.tsx",
+      "loc": 80,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../SwarmStatusBadges",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/ToolCallItem.test.tsx",
+      "loc": 107,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../ToolCallItem",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/WorkerActionList.test.tsx",
+      "loc": 315,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../WorkerActionList"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/WorkerCard.test.tsx",
+      "loc": 157,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../WorkerCard",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/WorkerCardList.test.tsx",
+      "loc": 77,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../WorkerCardList",
+        "../types"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/__tests__/WorkerDetailDrawer.test.tsx",
+      "loc": 176,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [
+        "useWorkerDetail"
+      ],
+      "imports_from": [
+        "vitest",
+        "@testing-library/react",
+        "../WorkerDetailDrawer",
+        "../types",
+        "../hooks/useWorkerDetail"
+      ],
+      "parse_error": null,
+      "is_test": true
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/AgentSwarmPanel.tsx",
+      "loc": 146,
+      "exports": [
+        "AgentSwarmPanel"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Skeleton",
+        "LoadingState",
+        "EmptyState",
+        "AgentSwarmPanel"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/components/ui/Card",
+        "@/lib/utils",
+        "./SwarmHeader",
+        "./OverallProgress",
+        "./WorkerCardList",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/CheckpointPanel.tsx",
+      "loc": 102,
+      "exports": [
+        "CheckpointPanel"
+      ],
+      "interfaces": [
+        "CheckpointPanelProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "CheckpointPanel"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/components/ui/Badge",
+        "@/components/ui/Button",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/CurrentTask.tsx",
+      "loc": 105,
+      "exports": [
+        "CurrentTask"
+      ],
+      "interfaces": [
+        "CurrentTaskProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "CurrentTask"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Button",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/ExtendedThinkingPanel.tsx",
+      "loc": 231,
+      "exports": [
+        "ExtendedThinkingPanel"
+      ],
+      "interfaces": [
+        "ExtendedThinkingPanelProps",
+        "ThinkingBlockProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ThinkingBlock",
+        "ExtendedThinkingPanel"
+      ],
+      "hooks_used": [
+        "useEffect",
+        "useMemo",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Card",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/ScrollArea",
+        "@/components/ui/Collapsible",
+        "lucide-react",
+        "@/lib/utils",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/MessageHistory.tsx",
+      "loc": 237,
+      "exports": [
+        "MessageHistory"
+      ],
+      "interfaces": [
+        "MessageHistoryProps",
+        "RoleConfig",
+        "MessageItemProps"
+      ],
+      "types": [
+        "MessageRole"
+      ],
+      "enums": [],
+      "components": [
+        "MessageItem",
+        "MessageHistory"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Badge",
+        "@/components/ui/Button",
+        "@/components/ui/Collapsible",
+        "lucide-react",
+        "@/lib/utils",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/OverallProgress.tsx",
+      "loc": 68,
+      "exports": [
+        "OverallProgress"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "OverallProgress"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/SwarmHeader.tsx",
+      "loc": 145,
+      "exports": [
+        "SwarmHeader"
+      ],
+      "interfaces": [
+        "StatusConfigItem"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SwarmHeader"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/components/ui/Badge",
+        "lucide-react",
+        "@/lib/utils",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/SwarmStatusBadges.tsx",
+      "loc": 110,
+      "exports": [
+        "SwarmStatusBadges"
+      ],
+      "interfaces": [
+        "StatusConfigItem"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SwarmStatusBadges"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/components/ui/Badge",
+        "@/components/ui/Tooltip",
+        "lucide-react",
+        "@/lib/utils",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/ToolCallItem.tsx",
+      "loc": 297,
+      "exports": [
+        "ToolCallItem"
+      ],
+      "interfaces": [
+        "ToolCallItemProps",
+        "StatusConfigItem"
+      ],
+      "types": [
+        "ToolCallStatus"
+      ],
+      "enums": [],
+      "components": [
+        "ToolCallItem"
+      ],
+      "hooks_used": [
+        "useEffect",
+        "useLiveTimer",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Card",
+        "@/components/ui/Button",
+        "@/components/ui/Collapsible",
+        "lucide-react",
+        "@/lib/utils",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/ToolCallsPanel.tsx",
+      "loc": 93,
+      "exports": [
+        "ToolCallsPanel"
+      ],
+      "interfaces": [
+        "ToolCallsPanelProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ToolCallsPanel"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/lib/utils",
+        "./ToolCallItem",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerActionList.tsx",
+      "loc": 333,
+      "exports": [
+        "ActionType",
+        "WorkerAction",
+        "WorkerActionList",
+        "inferActionType"
+      ],
+      "interfaces": [
+        "WorkerAction",
+        "WorkerActionListProps",
+        "ActionItemProps"
+      ],
+      "types": [
+        "ActionType"
+      ],
+      "enums": [],
+      "components": [
+        "ActionItem",
+        "WorkerActionList"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerCard.tsx",
+      "loc": 228,
+      "exports": [
+        "WorkerCard"
+      ],
+      "interfaces": [
+        "StatusConfigItem",
+        "TypeConfigItem"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "WorkerCard"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/components/ui/Card",
+        "@/components/ui/Badge",
+        "@/components/ui/Button",
+        "lucide-react",
+        "@/lib/utils",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerCardList.tsx",
+      "loc": 59,
+      "exports": [
+        "WorkerCardList"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "WorkerCardList"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "./WorkerCard",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerDetailDrawer.tsx",
+      "loc": 284,
+      "exports": [
+        "WorkerDetailDrawer"
+      ],
+      "interfaces": [
+        "WorkerDetailDrawerProps",
+        "ErrorDisplayProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Skeleton",
+        "LoadingSkeleton",
+        "ErrorDisplay",
+        "WorkerDetailDrawer"
+      ],
+      "hooks_used": [
+        "useWorkerDetail"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Sheet",
+        "@/components/ui/Separator",
+        "lucide-react",
+        "@/lib/utils",
+        "./WorkerDetailHeader",
+        "./CurrentTask",
+        "./ToolCallsPanel",
+        "./MessageHistory",
+        "./CheckpointPanel",
+        "./ExtendedThinkingPanel",
+        "./hooks/useWorkerDetail",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/agent-swarm/WorkerDetailHeader.tsx",
+      "loc": 179,
+      "exports": [
+        "WorkerDetailHeader"
+      ],
+      "interfaces": [
+        "WorkerDetailHeaderProps",
+        "StatusConfigItem",
+        "TypeConfigItem"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "WorkerDetailHeader"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@/components/ui/Badge",
+        "@/components/ui/Button",
+        "lucide-react",
+        "@/lib/utils",
+        "./types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ApprovalDialog.tsx",
+      "loc": 383,
+      "exports": [
+        "ApprovalDialogProps",
+        "ApprovalDialog"
+      ],
+      "interfaces": [
+        "ApprovalDialogProps",
+        "TimeoutCountdownProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TimeoutCountdown",
+        "ApprovalDialog"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/dialog",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Textarea",
+        "@/lib/utils",
+        "./RiskIndicator",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ApprovalMessageCard.tsx",
+      "loc": 490,
+      "exports": [
+        "ApprovalMessageCardProps",
+        "ApprovalMessageCard"
+      ],
+      "interfaces": [
+        "ApprovalMessageCardProps",
+        "TimeoutCountdownProps",
+        "ResolvedStatusProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TimeoutCountdown",
+        "ResolvedStatus",
+        "ApprovalMessageCard"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/lib/utils",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/AttachmentPreview.tsx",
+      "loc": 336,
+      "exports": [
+        "AttachmentPreviewProps",
+        "AttachmentItemProps",
+        "AttachmentPreview",
+        "CompactAttachmentPreviewProps",
+        "CompactAttachmentPreview"
+      ],
+      "interfaces": [
+        "AttachmentPreviewProps",
+        "AttachmentItemProps",
+        "CompactAttachmentPreviewProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StatusIndicator",
+        "AttachmentItem",
+        "AttachmentPreview",
+        "CompactAttachmentPreview"
+      ],
+      "hooks_used": [
+        "useFileUpload",
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/lib/utils",
+        "@/api/endpoints/files",
+        "@/hooks/useFileUpload"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ChatArea.tsx",
+      "loc": 122,
+      "exports": [
+        "ChatArea"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ChatArea",
+        "EmptyState"
+      ],
+      "hooks_used": [
+        "useEffect",
+        "useRef"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/unified-chat",
+        "./MessageList",
+        "@/components/ag-ui/chat/StreamingIndicator"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ChatHeader.tsx",
+      "loc": 130,
+      "exports": [
+        "ChatHeader"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ChatHeader"
+      ],
+      "hooks_used": [
+        "useCallback"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "./ConnectionStatus",
+        "@/types/unified-chat",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ChatHistoryPanel.tsx",
+      "loc": 415,
+      "exports": [
+        "ChatThread",
+        "ChatHistoryPanel",
+        "ChatHistoryToggleButton"
+      ],
+      "interfaces": [
+        "ChatThread",
+        "ChatHistoryPanelProps",
+        "ThreadItemProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ThreadItem",
+        "ChatHistoryPanel",
+        "RecoverableSessionsSection",
+        "ChatHistoryToggleButton"
+      ],
+      "hooks_used": [
+        "useEffect",
+        "useRecoverableSessions",
+        "useRef",
+        "useResumeSession",
+        "useSessions",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/lib/utils",
+        "@/lib/utils",
+        "@/hooks/useSessions"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ChatInput.tsx",
+      "loc": 244,
+      "exports": [
+        "ChatInput"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ChatInput"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useMemo",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Textarea",
+        "@/types/unified-chat",
+        "@/lib/utils",
+        "./AttachmentPreview"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/CheckpointList.tsx",
+      "loc": 204,
+      "exports": [
+        "CheckpointList"
+      ],
+      "interfaces": [
+        "CheckpointItemProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "CheckpointList",
+        "CheckpointItem"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/types/unified-chat",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ConnectionStatus.tsx",
+      "loc": 238,
+      "exports": [
+        "ConnectionStatusProps",
+        "ConnectionStatus"
+      ],
+      "interfaces": [
+        "ConnectionStatusProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ConnectionStatus"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Tooltip",
+        "@/types/unified-chat",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ErrorBoundary.tsx",
+      "loc": 220,
+      "exports": [
+        "ErrorBoundaryProps",
+        "ErrorBoundary",
+        "ErrorBoundaryWrapperProps",
+        "ErrorBoundaryWrapper"
+      ],
+      "interfaces": [
+        "ErrorBoundaryProps",
+        "ErrorBoundaryState",
+        "ErrorBoundaryWrapperProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ErrorBoundaryWrapper"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/FileMessage.tsx",
+      "loc": 312,
+      "exports": [
+        "DownloadStatus",
+        "FileMessageProps",
+        "FileMessageListProps",
+        "FileMessage",
+        "FileMessageList",
+        "CompactFileMessageProps",
+        "CompactFileMessage"
+      ],
+      "interfaces": [
+        "FileMessageProps",
+        "FileMessageListProps",
+        "CompactFileMessageProps"
+      ],
+      "types": [
+        "DownloadStatus"
+      ],
+      "enums": [],
+      "components": [
+        "FileMessage",
+        "FileMessageList",
+        "CompactFileMessage"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/lib/utils",
+        "@/api/endpoints/files",
+        "@/api/endpoints/files"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/FileRenderer.tsx",
+      "loc": 256,
+      "exports": [
+        "FileType",
+        "FileRendererProps",
+        "getFileType",
+        "FileRenderer"
+      ],
+      "interfaces": [
+        "FileRendererProps",
+        "GenericFileCardProps"
+      ],
+      "types": [
+        "FileType"
+      ],
+      "enums": [],
+      "components": [
+        "FileRenderer",
+        "GenericFileCard"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/lib/utils",
+        "@/api/endpoints/files",
+        "@/api/endpoints/files",
+        "./renderers/ImagePreview",
+        "./renderers/CodePreview",
+        "./renderers/TextPreview"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/FileUpload.tsx",
+      "loc": 322,
+      "exports": [
+        "FileUploadProps",
+        "FileUpload",
+        "AttachButtonProps",
+        "AttachButton",
+        "HiddenFileInputProps",
+        "HiddenFileInput"
+      ],
+      "interfaces": [
+        "FileUploadProps",
+        "AttachButtonProps",
+        "HiddenFileInputProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "FileUpload",
+        "AttachButton",
+        "HiddenFileInput"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/InlineApproval.tsx",
+      "loc": 232,
+      "exports": [
+        "InlineApproval"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "InlineApproval"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/types/unified-chat",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/IntentStatusChip.tsx",
+      "loc": 171,
+      "exports": [
+        "IntentStatusChipProps",
+        "IntentStatusChip"
+      ],
+      "interfaces": [
+        "IntentStatusChipProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "IntentStatusChip"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Badge",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/MemoryHint.tsx",
+      "loc": 116,
+      "exports": [
+        "MemoryHintItem",
+        "MemoryHintProps",
+        "MemoryHint"
+      ],
+      "interfaces": [
+        "MemoryHintItem",
+        "MemoryHintProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "MemoryHint"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/lib/utils",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/MessageList.tsx",
+      "loc": 313,
+      "exports": [
+        "MessageListProps",
+        "MessageList"
+      ],
+      "interfaces": [
+        "MessageListProps"
+      ],
+      "types": [
+        "TimelineItem"
+      ],
+      "enums": [],
+      "components": [
+        "MessageList"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useMemo",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "@/components/ag-ui/chat/MessageBubble",
+        "@/components/ag-ui/advanced/CustomUIRenderer",
+        "./ApprovalMessageCard",
+        "./IntentStatusChip",
+        "./TaskProgressCard",
+        "./ToolCallTracker",
+        "@/types/unified-chat",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ModeIndicator.tsx",
+      "loc": 187,
+      "exports": [
+        "ModeIndicatorProps",
+        "ModeIndicator"
+      ],
+      "interfaces": [
+        "ModeIndicatorProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ModeIndicator"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/lib/utils",
+        "@/components/ui/Tooltip",
+        "@/components/ui/Badge",
+        "@/types/unified-chat"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ModeSwitchConfirmDialog.tsx",
+      "loc": 240,
+      "exports": [
+        "ModeSwitchConfirmDialogProps",
+        "ModeSwitchConfirmDialog"
+      ],
+      "interfaces": [
+        "ModeSwitchConfirmDialogProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ModeSwitchConfirmDialog"
+      ],
+      "hooks_used": [
+        "useApprovalFlow"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/dialog",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Progress",
+        "@/lib/utils",
+        "@/types/unified-chat"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/OrchestrationPanel.tsx",
+      "loc": 508,
+      "exports": [
+        "OrchestrationPanel"
+      ],
+      "interfaces": [
+        "OrchestrationPanelProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SectionHeader",
+        "RiskBadge",
+        "LayerBadge",
+        "PhaseIndicator",
+        "OrchestrationPanel"
+      ],
+      "hooks_used": [
+        "useOrchestration",
+        "useState",
+        "useSwarmStatus"
+      ],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Input",
+        "@/api/endpoints/orchestration",
+        "@/hooks/useOrchestration",
+        "./agent-swarm"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/renderers/CodePreview.tsx",
+      "loc": 221,
+      "exports": [
+        "CodePreviewProps",
+        "CodePreview"
+      ],
+      "interfaces": [
+        "CodePreviewProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "CodePreview"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/renderers/ImagePreview.tsx",
+      "loc": 227,
+      "exports": [
+        "ImagePreviewProps",
+        "ImagePreview"
+      ],
+      "interfaces": [
+        "ImagePreviewProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ImagePreview"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/renderers/TextPreview.tsx",
+      "loc": 244,
+      "exports": [
+        "TextPreviewProps",
+        "TextPreview"
+      ],
+      "interfaces": [
+        "TextPreviewProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TextPreview"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/RestoreConfirmDialog.tsx",
+      "loc": 200,
+      "exports": [
+        "RestoreConfirmDialogProps",
+        "RestoreConfirmDialog"
+      ],
+      "interfaces": [
+        "RestoreConfirmDialogProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "RestoreConfirmDialog"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/dialog",
+        "@/components/ui/Button",
+        "@/types/unified-chat",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/RiskIndicator.tsx",
+      "loc": 291,
+      "exports": [
+        "RiskIndicatorProps",
+        "RiskIndicator"
+      ],
+      "interfaces": [
+        "RiskIndicatorProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "RiskIndicator"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/lib/utils",
+        "@/components/ui/Tooltip",
+        "@/types/ag-ui"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/StatusBar.tsx",
+      "loc": 327,
+      "exports": [
+        "StatusBar"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StatusBar"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Badge",
+        "@/components/ui/Button",
+        "@/components/ui/Tooltip",
+        "@/types/unified-chat",
+        "@/types/ag-ui",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/StepProgress.tsx",
+      "loc": 190,
+      "exports": [
+        "StepProgress"
+      ],
+      "interfaces": [
+        "StepItemProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StepProgress",
+        "StepItem"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/unified-chat",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/StepProgressEnhanced.tsx",
+      "loc": 286,
+      "exports": [
+        "SubStepStatusType",
+        "SubStep",
+        "StepProgressEvent",
+        "StepProgressEnhancedProps",
+        "StatusIcon",
+        "SubStepItem",
+        "StepProgressEnhanced"
+      ],
+      "interfaces": [
+        "SubStep",
+        "StepProgressEvent",
+        "StepProgressEnhancedProps",
+        "StatusIconProps",
+        "SubStepItemProps"
+      ],
+      "types": [
+        "SubStepStatusType"
+      ],
+      "enums": [],
+      "components": [
+        "StatusIcon",
+        "SubStepItem",
+        "StepProgressEnhanced"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/TaskProgressCard.tsx",
+      "loc": 176,
+      "exports": [
+        "TaskProgressCardProps",
+        "TaskProgressCard"
+      ],
+      "interfaces": [
+        "TaskProgressCardProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TaskProgressCard"
+      ],
+      "hooks_used": [
+        "useNavigate",
+        "useState",
+        "useTask",
+        "useTasks"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "lucide-react",
+        "@/components/ui/Badge",
+        "@/components/ui/Progress",
+        "@/lib/utils",
+        "@/hooks/useTasks",
+        "@/api/endpoints/tasks"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/ToolCallTracker.tsx",
+      "loc": 197,
+      "exports": [
+        "ToolCallTracker"
+      ],
+      "interfaces": [
+        "ToolCallItemProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ToolCallTracker",
+        "ToolCallItem"
+      ],
+      "hooks_used": [
+        "useMemo"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/types/unified-chat",
+        "@/types/ag-ui",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/unified-chat/WorkflowSidePanel.tsx",
+      "loc": 191,
+      "exports": [
+        "WorkflowSidePanel"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "WorkflowSidePanel"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/types/unified-chat",
+        "./StepProgress",
+        "./ToolCallTracker",
+        "./CheckpointList",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/edges/ConditionalEdge.tsx",
+      "loc": 80,
+      "exports": [
+        "ConditionalEdge"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ConditionalEdgeComponent",
+        "ConditionalEdge"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@xyflow/react",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/edges/DefaultEdge.tsx",
+      "loc": 72,
+      "exports": [
+        "DefaultEdge"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "DefaultEdgeComponent",
+        "DefaultEdge"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@xyflow/react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/nodes/ActionNode.tsx",
+      "loc": 86,
+      "exports": [
+        "ActionNodeData",
+        "ActionNode"
+      ],
+      "interfaces": [
+        "ActionNodeData"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ActionNodeComponent",
+        "ActionNode"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@xyflow/react",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/nodes/AgentNode.tsx",
+      "loc": 84,
+      "exports": [
+        "AgentNodeData",
+        "AgentNode"
+      ],
+      "interfaces": [
+        "AgentNodeData"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "AgentNodeComponent",
+        "AgentNode"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@xyflow/react",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/nodes/ConditionNode.tsx",
+      "loc": 92,
+      "exports": [
+        "ConditionNodeData",
+        "ConditionNode"
+      ],
+      "interfaces": [
+        "ConditionNodeData"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ConditionNodeComponent",
+        "ConditionNode"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@xyflow/react",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/nodes/StartEndNode.tsx",
+      "loc": 78,
+      "exports": [
+        "StartEndNodeData",
+        "StartEndNode"
+      ],
+      "interfaces": [
+        "StartEndNodeData"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StartEndNodeComponent",
+        "StartEndNode"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "@xyflow/react",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/components/workflow-editor/WorkflowCanvas.tsx",
+      "loc": 448,
+      "exports": [
+        "WorkflowCanvas"
+      ],
+      "interfaces": [
+        "WorkflowCanvasProps",
+        "DetailPanelProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "DetailPanel",
+        "WorkflowCanvas"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEdgesState",
+        "useMemo",
+        "useNodeDrag",
+        "useNodesState",
+        "useState",
+        "useWorkflowData"
+      ],
+      "imports_from": [
+        "react",
+        "@xyflow/react",
+        "lucide-react",
+        "react-router-dom",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Badge",
+        "./nodes/AgentNode",
+        "./nodes/ConditionNode",
+        "./nodes/ActionNode",
+        "./nodes/StartEndNode",
+        "./edges/DefaultEdge",
+        "./edges/ConditionalEdge",
+        "./hooks/useWorkflowData",
+        "./hooks/useNodeDrag",
+        "./utils/layoutEngine"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "loc": 40,
+      "exports": [],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "react-dom/client",
+        "react-router-dom",
+        "@tanstack/react-query",
+        "./App"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/AGUIDemoPage.tsx",
+      "loc": 199,
+      "exports": [
+        "AGUIDemoPage"
+      ],
+      "interfaces": [
+        "FeatureTab"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "AGUIDemoPage"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useMemo",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "./components"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/AgenticChatDemo.tsx",
+      "loc": 108,
+      "exports": [
+        "AgenticChatDemoProps",
+        "AgenticChatDemo"
+      ],
+      "interfaces": [
+        "AgenticChatDemoProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "AgenticChatDemo"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ag-ui/chat",
+        "@/types/ag-ui",
+        "./EventLogPanel"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/EventLogPanel.tsx",
+      "loc": 192,
+      "exports": [
+        "EventLogEntry",
+        "EventLogPanelProps",
+        "EventLogPanel"
+      ],
+      "interfaces": [
+        "EventLogEntry",
+        "EventLogPanelProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "EventLogPanel"
+      ],
+      "hooks_used": [
+        "useEffect",
+        "useMemo",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/types/ag-ui",
+        "@/components/ui/Badge",
+        "@/components/ui/Button"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/GenerativeUIDemo.tsx",
+      "loc": 227,
+      "exports": [
+        "GenerativeUIDemoProps",
+        "GenerativeUIDemo"
+      ],
+      "interfaces": [
+        "GenerativeUIDemoProps",
+        "ProgressStep"
+      ],
+      "types": [
+        "DemoMode"
+      ],
+      "enums": [],
+      "components": [
+        "GenerativeUIDemo"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useEffect",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "./EventLogPanel"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/HITLDemo.tsx",
+      "loc": 177,
+      "exports": [
+        "HITLDemoProps",
+        "HITLDemo"
+      ],
+      "interfaces": [
+        "HITLDemoProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "HITLDemo"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ag-ui/hitl",
+        "@/types/ag-ui",
+        "@/components/ui/Button",
+        "./EventLogPanel"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/PredictiveDemo.tsx",
+      "loc": 250,
+      "exports": [
+        "PredictiveDemoProps",
+        "PredictiveDemo"
+      ],
+      "interfaces": [
+        "PredictiveDemoProps",
+        "Task"
+      ],
+      "types": [
+        "PredictionStatus"
+      ],
+      "enums": [],
+      "components": [
+        "PredictiveDemo"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Badge",
+        "./EventLogPanel"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/SharedStateDemo.tsx",
+      "loc": 200,
+      "exports": [
+        "SharedStateDemoProps",
+        "SharedStateDemo"
+      ],
+      "interfaces": [
+        "SharedStateDemoProps",
+        "DemoState"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SharedStateDemo"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ui/Button",
+        "@/components/ui/Input",
+        "./EventLogPanel"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/ToolRenderingDemo.tsx",
+      "loc": 157,
+      "exports": [
+        "ToolRenderingDemoProps",
+        "ToolRenderingDemo"
+      ],
+      "interfaces": [
+        "ToolRenderingDemoProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ToolRenderingDemo"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ag-ui/chat",
+        "@/types/ag-ui",
+        "@/components/ui/Button",
+        "./EventLogPanel"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/ag-ui/components/ToolUIDemo.tsx",
+      "loc": 173,
+      "exports": [
+        "ToolUIDemoProps",
+        "ToolUIDemo"
+      ],
+      "interfaces": [
+        "ToolUIDemoProps"
+      ],
+      "types": [
+        "UIType"
+      ],
+      "enums": [],
+      "components": [
+        "ToolUIDemo"
+      ],
+      "hooks_used": [
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/ag-ui/advanced",
+        "@/components/ui/Button",
+        "./EventLogPanel"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/agents/AgentDetailPage.tsx",
+      "loc": 313,
+      "exports": [
+        "AgentDetailPage"
+      ],
+      "interfaces": [
+        "ChatMessage"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "AgentDetailPage"
+      ],
+      "hooks_used": [
+        "useEffect",
+        "useMutation",
+        "useParams",
+        "useQuery",
+        "useRef",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@tanstack/react-query",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Badge",
+        "@/components/shared/StatusBadge",
+        "@/components/shared/LoadingSpinner",
+        "@/components/shared/LoadingSpinner",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/agents/AgentsPage.tsx",
+      "loc": 188,
+      "exports": [
+        "AgentsPage"
+      ],
+      "interfaces": [
+        "AgentListResponse"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "AgentsPage"
+      ],
+      "hooks_used": [
+        "useQuery",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@tanstack/react-query",
+        "react-router-dom",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Badge",
+        "@/components/shared/StatusBadge",
+        "@/components/shared/LoadingSpinner",
+        "@/components/shared/EmptyState",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/agents/CreateAgentPage.tsx",
+      "loc": 1015,
+      "exports": [
+        "CreateAgentPage"
+      ],
+      "interfaces": [
+        "AgentFormData",
+        "FormErrors"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "CreateAgentPage"
+      ],
+      "hooks_used": [
+        "useMutation",
+        "useNavigate",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@tanstack/react-query",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Input",
+        "@/components/ui/Textarea",
+        "@/components/ui/Label",
+        "@/components/ui/Select",
+        "@/components/ui/Badge"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/agents/EditAgentPage.tsx",
+      "loc": 958,
+      "exports": [
+        "EditAgentPage"
+      ],
+      "interfaces": [
+        "AgentResponse",
+        "AgentFormData",
+        "FormErrors"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "EditAgentPage"
+      ],
+      "hooks_used": [
+        "useEffect",
+        "useMutation",
+        "useNavigate",
+        "useParams",
+        "useQuery",
+        "useQueryClient",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@tanstack/react-query",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Input",
+        "@/components/ui/Textarea",
+        "@/components/ui/Label",
+        "@/components/ui/Select",
+        "@/components/shared/LoadingSpinner"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/approvals/ApprovalsPage.tsx",
+      "loc": 238,
+      "exports": [
+        "ApprovalsPage"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ApprovalsPage"
+      ],
+      "hooks_used": [
+        "useMutation",
+        "useQuery",
+        "useQueryClient",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@tanstack/react-query",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Badge",
+        "@/components/shared/LoadingSpinner",
+        "@/components/shared/EmptyState",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/audit/AuditPage.tsx",
+      "loc": 161,
+      "exports": [
+        "AuditPage"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "AuditPage"
+      ],
+      "hooks_used": [
+        "useQuery",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@tanstack/react-query",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Badge",
+        "@/components/shared/LoadingSpinner",
+        "@/components/shared/EmptyState",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/auth/LoginPage.tsx",
+      "loc": 208,
+      "exports": [
+        "LoginPage"
+      ],
+      "interfaces": [
+        "FormErrors"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "LoginPage"
+      ],
+      "hooks_used": [
+        "useAuthStore",
+        "useLocation",
+        "useNavigate",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@/store/authStore",
+        "@/components/ui/Button",
+        "@/components/ui/Input",
+        "@/components/ui/Label",
+        "@/components/ui/Card",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/auth/SignupPage.tsx",
+      "loc": 272,
+      "exports": [
+        "SignupPage"
+      ],
+      "interfaces": [
+        "FormErrors"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SignupPage"
+      ],
+      "hooks_used": [
+        "useAuthStore",
+        "useNavigate",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@/store/authStore",
+        "@/components/ui/Button",
+        "@/components/ui/Input",
+        "@/components/ui/Label",
+        "@/components/ui/Card",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/ExecutionChart.tsx",
+      "loc": 103,
+      "exports": [
+        "ExecutionChart"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "ExecutionChart"
+      ],
+      "hooks_used": [
+        "useQuery"
+      ],
+      "imports_from": [
+        "@tanstack/react-query",
+        "recharts",
+        "@/api/client",
+        "@/components/shared/LoadingSpinner",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/PendingApprovals.tsx",
+      "loc": 99,
+      "exports": [
+        "PendingApprovals"
+      ],
+      "interfaces": [
+        "PendingApprovalsResponse"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "PendingApprovals"
+      ],
+      "hooks_used": [
+        "useQuery"
+      ],
+      "imports_from": [
+        "@tanstack/react-query",
+        "react-router-dom",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/shared/LoadingSpinner",
+        "@/components/shared/EmptyState",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/RecentExecutions.tsx",
+      "loc": 107,
+      "exports": [
+        "RecentExecutions"
+      ],
+      "interfaces": [
+        "ExecutionListResponse"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "RecentExecutions"
+      ],
+      "hooks_used": [
+        "useQuery"
+      ],
+      "imports_from": [
+        "@tanstack/react-query",
+        "react-router-dom",
+        "@/api/client",
+        "@/components/shared/StatusBadge",
+        "@/components/shared/LoadingSpinner",
+        "@/components/shared/EmptyState",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/dashboard/components/StatsCards.tsx",
+      "loc": 74,
+      "exports": [
+        "StatsCards"
+      ],
+      "interfaces": [
+        "StatsCardsProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StatsCards"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "@/components/ui/Card",
+        "lucide-react",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "loc": 86,
+      "exports": [
+        "DashboardPage"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "DashboardPage"
+      ],
+      "hooks_used": [
+        "useQuery"
+      ],
+      "imports_from": [
+        "@tanstack/react-query",
+        "@/api/client",
+        "@/components/ui/Card",
+        "@/components/shared/LoadingSpinner",
+        "./components/StatsCards",
+        "./components/ExecutionChart",
+        "./components/RecentExecutions",
+        "./components/PendingApprovals",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/dashboard/PerformancePage.tsx",
+      "loc": 468,
+      "exports": [
+        "PerformancePage"
+      ],
+      "interfaces": [
+        "SystemMetrics",
+        "Phase2Stats",
+        "PerformanceRecommendation",
+        "PerformanceData",
+        "MetricCardProps",
+        "FeatureStatCardProps",
+        "RecommendationCardProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "PerformancePage",
+        "MetricCard",
+        "FeatureStatCard",
+        "RecommendationCard"
+      ],
+      "hooks_used": [
+        "useQuery",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@tanstack/react-query",
+        "@/api/client",
+        "@/components/ui/Card",
+        "@/components/shared/LoadingSpinner",
+        "@/components/ui/Badge",
+        "lucide-react",
+        "recharts"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/DevUI/AGUITestPanel.tsx",
+      "loc": 460,
+      "exports": [
+        "AGUITestPanel"
+      ],
+      "interfaces": [
+        "AGUIFeature",
+        "TestResult"
+      ],
+      "types": [
+        "TestStatus"
+      ],
+      "enums": [],
+      "components": [
+        "AGUITestPanel"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/DevUI/index.tsx",
+      "loc": 215,
+      "exports": [
+        "DevUIOverview"
+      ],
+      "interfaces": [
+        "StatCardProps"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StatCard",
+        "DevUIOverview"
+      ],
+      "hooks_used": [
+        "useDevTools",
+        "useTraces"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "lucide-react",
+        "@/hooks/useDevTools"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/DevUI/Layout.tsx",
+      "loc": 165,
+      "exports": [
+        "DevUILayout"
+      ],
+      "interfaces": [
+        "DevUINavItem",
+        "BreadcrumbSegment"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "DevUILayout"
+      ],
+      "hooks_used": [
+        "useLocation"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "lucide-react",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/DevUI/LiveMonitor.tsx",
+      "loc": 66,
+      "exports": [
+        "LiveMonitor"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "LiveMonitor"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/DevUI/Settings.tsx",
+      "loc": 66,
+      "exports": [
+        "Settings"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "Settings"
+      ],
+      "hooks_used": [],
+      "imports_from": [
+        "react",
+        "lucide-react"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/DevUI/TraceDetail.tsx",
+      "loc": 562,
+      "exports": [
+        "TraceDetail"
+      ],
+      "interfaces": [],
+      "types": [
+        "ViewMode"
+      ],
+      "enums": [],
+      "components": [
+        "CopyButton",
+        "InfoItem",
+        "TraceDetail"
+      ],
+      "hooks_used": [
+        "useDeleteTrace",
+        "useDevTools",
+        "useEventFilter",
+        "useNavigate",
+        "useParams",
+        "useState",
+        "useTrace",
+        "useTraceEvents"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "lucide-react",
+        "@/hooks/useDevTools",
+        "@/hooks/useEventFilter",
+        "@/components/DevUI/EventList",
+        "@/components/DevUI/Timeline",
+        "@/components/DevUI/EventTree",
+        "@/components/DevUI/EventPanel",
+        "@/components/DevUI/Statistics",
+        "@/components/DevUI/LiveIndicator",
+        "@/components/DevUI/EventFilter",
+        "@/types/devtools",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/DevUI/TraceList.tsx",
+      "loc": 303,
+      "exports": [
+        "TraceList"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "StatusBadge",
+        "TraceList"
+      ],
+      "hooks_used": [
+        "useDevTools",
+        "useMemo",
+        "useState",
+        "useTraces"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "lucide-react",
+        "@/hooks/useDevTools",
+        "@/types/devtools",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/knowledge/KnowledgePage.tsx",
+      "loc": 399,
+      "exports": [
+        "KnowledgePage"
+      ],
+      "interfaces": [],
+      "types": [
+        "TabId"
+      ],
+      "enums": [],
+      "components": [
+        "KnowledgePage",
+        "DocumentsTab",
+        "SearchTab",
+        "SkillsTab"
+      ],
+      "hooks_used": [
+        "useDeleteDocument",
+        "useDocuments",
+        "useKnowledge",
+        "useKnowledgeSearch",
+        "useKnowledgeStatus",
+        "useRef",
+        "useSkills",
+        "useState",
+        "useUploadDocument"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Card",
+        "@/components/ui/Input",
+        "@/components/ui/Table",
+        "@/lib/utils",
+        "@/lib/utils",
+        "@/hooks/useKnowledge"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/memory/MemoryPage.tsx",
+      "loc": 289,
+      "exports": [
+        "MemoryPage"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "MemoryPage",
+        "MemoryCard"
+      ],
+      "hooks_used": [
+        "useDeleteMemory",
+        "useMemory",
+        "useMemorySearch",
+        "useMemoryStats",
+        "useState",
+        "useUserMemories"
+      ],
+      "imports_from": [
+        "react",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Card",
+        "@/components/ui/Input",
+        "@/lib/utils",
+        "@/hooks/useMemory"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/sessions/SessionDetailPage.tsx",
+      "loc": 279,
+      "exports": [
+        "SessionDetailPage"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SessionDetailPage"
+      ],
+      "hooks_used": [
+        "useNavigate",
+        "useParams",
+        "useResumeSession",
+        "useSession",
+        "useSessionMessages",
+        "useSessions"
+      ],
+      "imports_from": [
+        "react-router-dom",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Card",
+        "@/components/ui/Separator",
+        "@/lib/utils",
+        "@/lib/utils",
+        "@/hooks/useSessions",
+        "@/api/endpoints/sessions"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/sessions/SessionsPage.tsx",
+      "loc": 258,
+      "exports": [
+        "SessionsPage"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "SessionsPage"
+      ],
+      "hooks_used": [
+        "useDeleteSession",
+        "useNavigate",
+        "useResumeSession",
+        "useSessions",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Select",
+        "@/components/ui/Table",
+        "@/lib/utils",
+        "@/lib/utils",
+        "@/hooks/useSessions",
+        "@/api/endpoints/sessions"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/SwarmTestPage.tsx",
+      "loc": 844,
+      "exports": [
+        "SwarmTestPage"
+      ],
+      "interfaces": [
+        "ControlSectionProps"
+      ],
+      "types": [
+        "TestMode"
+      ],
+      "enums": [],
+      "components": [
+        "ControlSection",
+        "MockMessageItem",
+        "ModeSwitch",
+        "SwarmTestPage"
+      ],
+      "hooks_used": [
+        "useCallback",
+        "useState",
+        "useSwarmMock",
+        "useSwarmReal"
+      ],
+      "imports_from": [
+        "react",
+        "@/lib/utils",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Input",
+        "@/components/ui/Badge",
+        "@/components/ui/Card",
+        "@/components/unified-chat/agent-swarm",
+        "@/hooks/useSwarmMock",
+        "@/hooks/useSwarmReal",
+        "@/components/unified-chat/agent-swarm/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/tasks/TaskDashboardPage.tsx",
+      "loc": 329,
+      "exports": [
+        "TaskDashboardPage"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TaskDashboardPage"
+      ],
+      "hooks_used": [
+        "useCancelTask",
+        "useNavigate",
+        "useRetryTask",
+        "useState",
+        "useTasks"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Progress",
+        "@/components/ui/Select",
+        "@/components/ui/Table",
+        "@/lib/utils",
+        "@/lib/utils",
+        "@/hooks/useTasks",
+        "@/api/endpoints/tasks"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/tasks/TaskDetailPage.tsx",
+      "loc": 314,
+      "exports": [
+        "TaskDetailPage"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TaskDetailPage"
+      ],
+      "hooks_used": [
+        "useCancelTask",
+        "useNavigate",
+        "useParams",
+        "useRetryTask",
+        "useTask",
+        "useTaskSteps",
+        "useTasks"
+      ],
+      "imports_from": [
+        "react-router-dom",
+        "lucide-react",
+        "@/components/ui/Button",
+        "@/components/ui/Badge",
+        "@/components/ui/Progress",
+        "@/components/ui/Card",
+        "@/components/ui/Separator",
+        "@/lib/utils",
+        "@/lib/utils",
+        "@/hooks/useTasks",
+        "@/api/endpoints/tasks"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/templates/TemplatesPage.tsx",
+      "loc": 229,
+      "exports": [
+        "TemplatesPage"
+      ],
+      "interfaces": [
+        "TemplateListResponse"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "TemplatesPage"
+      ],
+      "hooks_used": [
+        "useQuery",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@tanstack/react-query",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Badge",
+        "@/components/shared/LoadingSpinner",
+        "@/components/shared/EmptyState",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/UnifiedChat.tsx",
+      "loc": 1403,
+      "exports": [
+        "UnifiedChat"
+      ],
+      "interfaces": [
+        "with"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "UnifiedChat"
+      ],
+      "hooks_used": [
+        "useAuthStore",
+        "useCallback",
+        "useChatThreads",
+        "useEffect",
+        "useExecutionMetrics",
+        "useFileUpload",
+        "useMemo",
+        "useOrchestration",
+        "useRef",
+        "useSSEChat",
+        "useState",
+        "useSwarmStore",
+        "useUnifiedChat"
+      ],
+      "imports_from": [
+        "react",
+        "@/components/unified-chat/ChatHeader",
+        "@/components/unified-chat/ChatArea",
+        "@/components/unified-chat/ChatInput",
+        "@/components/unified-chat/WorkflowSidePanel",
+        "@/components/unified-chat/StatusBar",
+        "@/components/unified-chat/OrchestrationPanel",
+        "@/components/unified-chat/ApprovalDialog",
+        "@/components/unified-chat/ChatHistoryPanel",
+        "@/hooks/useUnifiedChat",
+        "@/hooks/useExecutionMetrics",
+        "@/hooks/useChatThreads",
+        "@/hooks/useFileUpload",
+        "@/hooks/useOrchestration",
+        "@/hooks/useSSEChat",
+        "@/types/ag-ui",
+        "@/api/endpoints/memory",
+        "@/api/endpoints/sessions",
+        "@/api/endpoints/files",
+        "@/store/authStore",
+        "@/api/endpoints/orchestration",
+        "@/types/unified-chat",
+        "@/types/ag-ui",
+        "@/components/unified-chat/MemoryHint",
+        "@/components/unified-chat/agent-swarm/AgentSwarmPanel",
+        "@/components/unified-chat/agent-swarm/WorkerDetailDrawer",
+        "@/stores/swarmStore",
+        "@/components/unified-chat/MemoryHint",
+        "@/types/unified-chat",
+        "@/types/ag-ui",
+        "@/lib/utils"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/workflows/CreateWorkflowPage.tsx",
+      "loc": 887,
+      "exports": [
+        "CreateWorkflowPage"
+      ],
+      "interfaces": [
+        "WorkflowNode",
+        "WorkflowEdge",
+        "WorkflowFormData",
+        "AgentOption",
+        "FormErrors"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "CreateWorkflowPage"
+      ],
+      "hooks_used": [
+        "useMutation",
+        "useNavigate",
+        "useQuery",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@tanstack/react-query",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Input",
+        "@/components/ui/Textarea",
+        "@/components/ui/Label",
+        "@/components/ui/Select",
+        "@/components/ui/Badge"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/workflows/EditWorkflowPage.tsx",
+      "loc": 1040,
+      "exports": [
+        "EditWorkflowPage"
+      ],
+      "interfaces": [
+        "WorkflowNode",
+        "WorkflowEdge",
+        "WorkflowFormData",
+        "WorkflowResponse",
+        "AgentOption",
+        "FormErrors"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "EditWorkflowPage"
+      ],
+      "hooks_used": [
+        "useEffect",
+        "useMutation",
+        "useNavigate",
+        "useParams",
+        "useQuery",
+        "useQueryClient",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@tanstack/react-query",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Input",
+        "@/components/ui/Textarea",
+        "@/components/ui/Label",
+        "@/components/ui/Select",
+        "@/components/ui/Badge",
+        "@/components/shared/LoadingSpinner"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/workflows/WorkflowDetailPage.tsx",
+      "loc": 354,
+      "exports": [
+        "WorkflowDetailPage"
+      ],
+      "interfaces": [
+        "ExecutionResult",
+        "ExecutionListResponse"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "WorkflowDetailPage"
+      ],
+      "hooks_used": [
+        "useMutation",
+        "useParams",
+        "useQuery",
+        "useQueryClient",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "react-router-dom",
+        "@tanstack/react-query",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/ui/Badge",
+        "@/components/shared/StatusBadge",
+        "@/components/shared/LoadingSpinner",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/workflows/WorkflowEditorPage.tsx",
+      "loc": 21,
+      "exports": [
+        "WorkflowEditorPage"
+      ],
+      "interfaces": [],
+      "types": [],
+      "enums": [],
+      "components": [
+        "WorkflowEditorPage"
+      ],
+      "hooks_used": [
+        "useParams"
+      ],
+      "imports_from": [
+        "react-router-dom",
+        "@/components/workflow-editor/WorkflowCanvas"
+      ],
+      "parse_error": null,
+      "is_test": false
+    },
+    {
+      "path": "frontend/src/pages/workflows/WorkflowsPage.tsx",
+      "loc": 165,
+      "exports": [
+        "WorkflowsPage"
+      ],
+      "interfaces": [
+        "WorkflowListResponse"
+      ],
+      "types": [],
+      "enums": [],
+      "components": [
+        "WorkflowsPage"
+      ],
+      "hooks_used": [
+        "useQuery",
+        "useState"
+      ],
+      "imports_from": [
+        "react",
+        "@tanstack/react-query",
+        "react-router-dom",
+        "lucide-react",
+        "@/api/client",
+        "@/components/ui/Button",
+        "@/components/ui/Card",
+        "@/components/shared/StatusBadge",
+        "@/components/shared/LoadingSpinner",
+        "@/components/shared/EmptyState",
+        "@/lib/utils",
+        "@/types"
+      ],
+      "parse_error": null,
+      "is_test": false
+    }
+  ]
+}

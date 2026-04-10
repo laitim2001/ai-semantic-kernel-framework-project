@@ -1,0 +1,261 @@
+{
+  "layer": "L08",
+  "files": 73,
+  "loc": 20920,
+  "total_classes": 117,
+  "shown_classes": 15,
+  "classes": [
+    {
+      "name": "ServerRegistry",
+      "bases": [],
+      "doc": "Central registry for MCP servers.",
+      "pub_methods": [
+        "__init__",
+        "servers",
+        "connected_servers",
+        "register",
+        "unregister",
+        "connect",
+        "disconnect",
+        "connect_all",
+        "disconnect_all",
+        "reconnect"
+      ],
+      "total_methods": 21
+    },
+    {
+      "name": "MCPProtocol",
+      "bases": [],
+      "doc": "MCP Protocol Handler.",
+      "pub_methods": [
+        "__init__",
+        "register_tool",
+        "set_permission_checker",
+        "set_tool_permission_level",
+        "unregister_tool",
+        "get_tool_schema",
+        "registered_tools",
+        "list_tools",
+        "is_initialized",
+        "handle_request"
+      ],
+      "total_methods": 20
+    },
+    {
+      "name": "ServiceNowMCPServer",
+      "bases": [],
+      "doc": "MCP Server for ServiceNow operations.",
+      "pub_methods": [
+        "__init__",
+        "get_tool_schemas",
+        "get_tools",
+        "get_tool_names",
+        "call_tool"
+      ],
+      "total_methods": 17
+    },
+    {
+      "name": "AzureClientManager",
+      "bases": [],
+      "doc": "Azure SDK client manager.",
+      "pub_methods": [
+        "__init__",
+        "compute",
+        "resource",
+        "network",
+        "monitor",
+        "storage",
+        "subscription_id",
+        "default_resource_group",
+        "default_location",
+        "get_client"
+      ],
+      "total_methods": 17
+    },
+    {
+      "name": "AdfApiClient",
+      "bases": [],
+      "doc": "Azure Data Factory REST API client.",
+      "pub_methods": [
+        "__init__",
+        "health_check",
+        "is_healthy",
+        "list_pipelines",
+        "get_pipeline",
+        "run_pipeline",
+        "cancel_pipeline_run",
+        "get_pipeline_run",
+        "list_pipeline_runs",
+        "list_datasets"
+      ],
+      "total_methods": 16
+    },
+    {
+      "name": "D365ApiClient",
+      "bases": [],
+      "doc": "Dynamics 365 Web API client.",
+      "pub_methods": [
+        "__init__",
+        "query_entities",
+        "query_entities_all",
+        "get_record",
+        "create_record",
+        "update_record",
+        "delete_record",
+        "get_entity_metadata",
+        "list_entity_types",
+        "health_check"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "LDAPClient",
+      "bases": [],
+      "doc": "LDAP client wrapper.",
+      "pub_methods": [
+        "__init__",
+        "connect",
+        "disconnect",
+        "search",
+        "get_entry",
+        "search_users",
+        "search_groups",
+        "add_entry",
+        "modify_entry",
+        "delete_entry"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "ServiceNowClient",
+      "bases": [],
+      "doc": "Async client for ServiceNow Table API.",
+      "pub_methods": [
+        "__init__",
+        "close",
+        "create_incident",
+        "update_incident",
+        "get_incident",
+        "create_ritm",
+        "get_ritm_status",
+        "add_work_notes",
+        "add_attachment"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "AdfMCPServer",
+      "bases": [],
+      "doc": "Azure Data Factory MCP Server.",
+      "pub_methods": [
+        "__init__",
+        "get_tools",
+        "get_tool_names",
+        "call_tool",
+        "health_check",
+        "is_healthy",
+        "run",
+        "stop",
+        "cleanup"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "AzureMCPServer",
+      "bases": [],
+      "doc": "Azure MCP Server.",
+      "pub_methods": [
+        "__init__",
+        "get_tools",
+        "get_tool_names",
+        "call_tool",
+        "run",
+        "stop",
+        "cleanup"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "D365MCPServer",
+      "bases": [],
+      "doc": "Dynamics 365 MCP Server.",
+      "pub_methods": [
+        "__init__",
+        "get_tools",
+        "get_tool_names",
+        "call_tool",
+        "health_check",
+        "is_healthy",
+        "run",
+        "stop",
+        "cleanup"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "FilesystemMCPServer",
+      "bases": [],
+      "doc": "Filesystem MCP Server.",
+      "pub_methods": [
+        "__init__",
+        "get_tools",
+        "get_tool_names",
+        "call_tool",
+        "run",
+        "stop",
+        "cleanup"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "N8nMCPServer",
+      "bases": [],
+      "doc": "n8n MCP Server.",
+      "pub_methods": [
+        "__init__",
+        "get_tools",
+        "get_tool_names",
+        "call_tool",
+        "health_check",
+        "is_healthy",
+        "run",
+        "stop",
+        "cleanup"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "ShellMCPServer",
+      "bases": [],
+      "doc": "Shell MCP Server.",
+      "pub_methods": [
+        "__init__",
+        "get_tools",
+        "get_tool_names",
+        "call_tool",
+        "run",
+        "stop",
+        "cleanup"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "MCPClient",
+      "bases": [],
+      "doc": "MCP Client for managing server connections.",
+      "pub_methods": [
+        "__init__",
+        "connect",
+        "disconnect",
+        "list_tools",
+        "get_tool_schema",
+        "call_tool",
+        "is_connected",
+        "connected_servers",
+        "get_server_info",
+        "close"
+      ],
+      "total_methods": 13
+    }
+  ]
+}

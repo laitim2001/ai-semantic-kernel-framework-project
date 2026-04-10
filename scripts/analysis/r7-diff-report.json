@@ -1,0 +1,4448 @@
+{
+  "layer_diffs": [
+    {
+      "layer": "L10",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 117,
+      "claimed_files": 117,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 47637,
+      "claimed_loc": 47637,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L10",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 117,
+      "claimed_files": 117,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 47637,
+      "claimed_loc": 47637,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L10",
+      "source_file": "01-architecture/layer-10-domain.md",
+      "metric": "files+loc",
+      "actual_files": 117,
+      "claimed_files": 117,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 47637,
+      "claimed_loc": 47637,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L10",
+      "source_file": "01-architecture/layer-10-domain.md",
+      "metric": "files+loc",
+      "actual_files": 117,
+      "claimed_files": 117,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 47637,
+      "claimed_loc": 47637,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L06",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 57,
+      "claimed_files": 56,
+      "file_diff": 1,
+      "file_pct": 1.8,
+      "actual_loc": 38082,
+      "claimed_loc": 38082,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L06",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 57,
+      "claimed_files": 57,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 38082,
+      "claimed_loc": 38082,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L06",
+      "source_file": "00-verification-report.md",
+      "metric": "files+loc",
+      "actual_files": 57,
+      "claimed_files": 68,
+      "file_diff": -11,
+      "file_pct": 16.2,
+      "actual_loc": 38082,
+      "claimed_loc": 1400,
+      "loc_diff": 36682,
+      "loc_pct": 2620.1,
+      "status": "FAIL"
+    },
+    {
+      "layer": "L03",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 27,
+      "claimed_files": 27,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 10329,
+      "claimed_loc": 10329,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L03",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 27,
+      "claimed_files": 27,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 10329,
+      "claimed_loc": 10329,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L03",
+      "source_file": "03-features/features-cat-f-to-j.md",
+      "metric": "files+loc",
+      "actual_files": 27,
+      "claimed_files": 23,
+      "file_diff": 4,
+      "file_pct": 17.4,
+      "actual_loc": 10329,
+      "claimed_loc": 5213,
+      "loc_diff": 5116,
+      "loc_pct": 98.1,
+      "status": "FAIL"
+    },
+    {
+      "layer": "L07",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 48,
+      "claimed_files": 48,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 15406,
+      "claimed_loc": 15406,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L07",
+      "source_file": "01-architecture/layer-06-07-verification.md",
+      "metric": "files+loc",
+      "actual_files": 48,
+      "claimed_files": 47,
+      "file_diff": 1,
+      "file_pct": 2.1,
+      "actual_loc": 15406,
+      "claimed_loc": 15000,
+      "loc_diff": 406,
+      "loc_pct": 2.7,
+      "status": "PASS"
+    },
+    {
+      "layer": "L05",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 89,
+      "claimed_files": 89,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 28800,
+      "claimed_loc": 28800,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L05",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 89,
+      "claimed_files": 89,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 28800,
+      "claimed_loc": 28800,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L08",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 73,
+      "claimed_files": 73,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 20847,
+      "claimed_loc": 20847,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L08",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 73,
+      "claimed_files": 73,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 20847,
+      "claimed_loc": 20847,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L04",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 55,
+      "claimed_files": 55,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 20272,
+      "claimed_loc": 20272,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L04",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 55,
+      "claimed_files": 55,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 20272,
+      "claimed_loc": 20272,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L09",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 77,
+      "claimed_files": 75,
+      "file_diff": 2,
+      "file_pct": 2.7,
+      "actual_loc": 22604,
+      "claimed_loc": 21300,
+      "loc_diff": 1304,
+      "loc_pct": 6.1,
+      "status": "PASS"
+    },
+    {
+      "layer": "L09",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 77,
+      "claimed_files": 77,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 22604,
+      "claimed_loc": 22604,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L11",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 95,
+      "claimed_files": 95,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 21953,
+      "claimed_loc": 21953,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L11",
+      "source_file": "00-stats.md",
+      "metric": "files+loc",
+      "actual_files": 95,
+      "claimed_files": 95,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 21953,
+      "claimed_loc": 21953,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    },
+    {
+      "layer": "L11",
+      "source_file": "01-architecture/infra-r3-verification.md",
+      "metric": "files+loc",
+      "actual_files": 95,
+      "claimed_files": 2,
+      "file_diff": 93,
+      "file_pct": 4650.0,
+      "actual_loc": 21953,
+      "claimed_loc": 11589,
+      "loc_diff": 10364,
+      "loc_pct": 89.4,
+      "status": "FAIL"
+    },
+    {
+      "layer": "L11",
+      "source_file": "01-architecture/layer-11-infrastructure.md",
+      "metric": "files+loc",
+      "actual_files": 95,
+      "claimed_files": 95,
+      "file_diff": 0,
+      "file_pct": 0.0,
+      "actual_loc": 21953,
+      "claimed_loc": 21953,
+      "loc_diff": 0,
+      "loc_pct": 0.0,
+      "status": "PASS"
+    }
+  ],
+  "missing_classes": [
+    {
+      "class_name": "SyntaxError",
+      "exists": false,
+      "first_mentioned_in": "00-r3-final-report.md"
+    },
+    {
+      "class_name": "AuditAction",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "AuditResource",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "AuditSeverity",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "CheckpointStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "AuthType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ConnectorStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TraceEventType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TraceSeverity",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ExecutionStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "CaseStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "NotificationPriority",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "NotificationType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "CompositionType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ContextScope",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "DataFlowDirection",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "DecisionConfidence",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "DecisionType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "DecompositionStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "DependencyType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "LearningType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "NestedWorkflowType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "PlanEvent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "PlanStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "PropagationType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "RecursionStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "SessionStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "SubWorkflowExecutionMode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TaskPriority",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TaskStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TerminationType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TrialStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TurnStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "VariableScopeType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "WorkflowScope",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "PromptCategory",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "RelationType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "Scenario",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "IPCMessageType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "SandboxStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "AnalysisType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ApprovalStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "AttachmentType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "CheckpointType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ExportFormat",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "GenerationType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "MessageRole",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "MetricType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "SearchScope",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "SearchSortBy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "SessionErrorCode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "SessionEventType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "StreamState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TemplateCategory",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ToolCallStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ToolPermission",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ToolSource",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TaskType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ParameterType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TemplateStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "SignatureAlgorithm",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "WebhookStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ChangeType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "VersionStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ApprovalAction",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "BranchStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ConcurrentMode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "DeadlockResolutionStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "GatewayType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "JoinStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "MergeStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "NodeType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "ResumeStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "TriggerType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "CodeAnalyzer",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/domain-r3-verification.md"
+    },
+    {
+      "class_name": "BarChart",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "PieChart",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "LineChart",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "ScatterChart",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "Skeleton",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "LoadingState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "EmptyState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "CardHeader",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "CardTitle",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "CardDescription",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "CardContent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "CardFooter",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "DialogOverlay",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "DialogContent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "DialogHeader",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "DialogFooter",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "DialogTitle",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "DialogDescription",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/frontend-r3-verification.md"
+    },
+    {
+      "class_name": "BenchmarkStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "ComparisonResult",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "CircuitState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "CallPriority",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "CollectorType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "AggregationType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "OptimizationStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "RecommendationSeverity",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "IPCEventType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "IPCMethod",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "Severity",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "ComplianceStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "Role",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "UserRole",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "ServerEnvironment",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/infra-r3-verification.md"
+    },
+    {
+      "class_name": "EmptyStateProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Button",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "LoadingSpinner",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "PageLoading",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "LoadingSpinnerProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StatusBadge",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StatusBadgeProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Badge",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ProtectedRoute",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "AdminRoute",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "OperatorRoute",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ProtectedRouteProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Navigate",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Loader2",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "AppLayout",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Sidebar",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Header",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Outlet",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "UserMenu",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SidebarProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "NavLink",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "BadgeProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ButtonProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Card",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Checkbox",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Collapsible",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CollapsibleTrigger",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CollapsibleContent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Dialog",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DialogPortal",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DialogClose",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DialogTrigger",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Input",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "InputProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Label",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "LabelProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Textarea",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TextareaProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Progress",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "RadioGroup",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "RadioGroupItem",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Select",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SelectGroup",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SelectValue",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SelectTrigger",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SelectContent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SelectLabel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SelectItem",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SelectSeparator",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SelectScrollUpButton",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SelectScrollDownButton",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SimpleSelect",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TableHeader",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TableBody",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TableFooter",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TableHead",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TableRow",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TableCell",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TableCaption",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Tooltip",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TooltipTrigger",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TooltipContent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TooltipProvider",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ScrollArea",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ScrollBar",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Separator",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Sheet",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SheetPortal",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SheetOverlay",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SheetTrigger",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SheetClose",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SheetContent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SheetHeader",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SheetFooter",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SheetTitle",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SheetDescription",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CustomUIRenderer",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CustomUIRendererProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DynamicForm",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DynamicChart",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DynamicCard",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DynamicTable",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DynamicCardProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DynamicChartProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DynamicFormProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DynamicTableProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "OptimisticIndicator",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "OptimisticIndicatorProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StateDebugger",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StateDebuggerProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatContainer",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatContainerProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MessageBubble",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MessageInput",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StreamingIndicator",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MessageBubbleProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ToolCallCard",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "FileMessageList",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MessageInputProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StreamingIndicatorProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ToolCallCardProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ApprovalBanner",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ApprovalBannerProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "RiskBadge",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ApprovalDialog",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ApprovalDialogProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ApprovalList",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ApprovalListProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "RiskBadgeProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DurationBar",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DurationBadge",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DurationBarProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventDetail",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventDetailProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "FilterBar",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventFilterProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventList",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventListProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventPanelProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventPieChart",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventPieChartProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventTree",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventTreeProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "LiveIndicator",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "LiveDot",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ConnectionBadge",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "LiveIndicatorProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "LLMEventPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "LLMEventPanelProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StatCard",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MiniStatCard",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StatCardProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Statistics",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StatisticsSummary",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StatisticsProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "Timeline",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TimelineProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TimelineNode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TimelineNodeProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ToolEventPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ToolEventPanelProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TreeNode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "EventTreeNode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TreeNodeProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatArea",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatAreaProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatInput",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatInputProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatHeader",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatHeaderProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatHistoryPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatHistoryToggleButton",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatThread",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ChatHistoryPanelProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MessageList",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MessageListProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ApprovalMessageCard",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ApprovalMessageCardProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "AttachmentPreview",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CompactAttachmentPreview",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "AttachmentPreviewProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CheckpointList",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CheckpointListProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ConnectionStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ConnectionStatusProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ErrorBoundary",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ErrorBoundaryWrapper",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ErrorBoundaryProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "FileMessage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CompactFileMessage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "FileMessageProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "FileRenderer",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "FileRendererProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "FileUpload",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "AttachButton",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "HiddenFileInput",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "FileUploadProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "InlineApproval",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "InlineApprovalProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "IntentStatusChip",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "IntentStatusChipProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MemoryHint",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MemoryHintProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MemoryHintItem",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ModeIndicator",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ModeIndicatorProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ModeSwitchConfirmDialog",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ModeSwitchConfirmDialogProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "OrchestrationPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "OrchestrationPanelProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "RestoreConfirmDialog",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "RestoreConfirmDialogProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "RiskIndicator",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "RiskIndicatorProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StatusBar",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StatusBarProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StepProgress",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StepProgressProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StepProgressEnhanced",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StatusIcon",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SubStepItem",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StepProgressEnhancedProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TaskProgressCard",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TaskProgressCardProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ToolCallTracker",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ToolCallTrackerProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkflowSidePanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkflowSidePanelProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ImagePreview",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CodePreview",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TextPreview",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ImagePreviewProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CodePreviewProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "TextPreviewProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "AgentSwarmPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "AgentSwarmPanelProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SwarmHeader",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SwarmHeaderProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "OverallProgress",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "OverallProgressProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerCard",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerCardProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerCardList",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerCardListProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SwarmStatusBadges",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SwarmStatusBadgesProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerDetailDrawer",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerDetailHeader",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CurrentTask",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ToolCallItem",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ToolCallsPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "MessageHistory",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "CheckpointPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ExtendedThinkingPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerActionList",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ActionType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerAction",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "UseSwarmEventHandlerOptions",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "UseSwarmStatusReturn",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SwarmSSEEvent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SwarmEventHandlers",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SwarmMode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "SwarmStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "UIWorkerSummary",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkerDetail",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "UIAgentSwarmStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "WorkflowCanvas",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ActionNode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "AgentNode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ConditionNode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "StartEndNode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "DefaultEdge",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ConditionalEdge",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "LayoutDirection",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "RecoverableSessionsSection",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "ThreadItem",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-components-verification.md"
+    },
+    {
+      "class_name": "UnifiedChat",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-frontend.md"
+    },
+    {
+      "class_name": "AbortController",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-frontend.md"
+    },
+    {
+      "class_name": "AGUIDemoPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-frontend.md"
+    },
+    {
+      "class_name": "SnakeToCamelCase",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-frontend.md"
+    },
+    {
+      "class_name": "DashboardPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "PerformancePage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "StatsCards",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ExecutionChart",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "PendingApprovals",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "RecentExecutions",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "AgentsPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "AgentDetailPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "CreateAgentPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "EditAgentPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "WorkflowsPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "WorkflowDetailPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "CreateWorkflowPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "EditWorkflowPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "WorkflowEditorPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "LoginPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "SignupPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ApprovalsPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "AuditPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "TemplatesPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "SessionsPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "SessionDetailPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "TaskDashboardPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "TaskDetailPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "KnowledgePage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "MemoryPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "AgenticChatDemo",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ToolRenderingDemo",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "HITLDemo",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "GenerativeUIDemo",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ToolUIDemo",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "SharedStateDemo",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "PredictiveDemo",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "EventLogPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "DevUILayout",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "DevUIOverview",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "AGUITestPanel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "TraceList",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "TraceDetail",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "LiveMonitor",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "SwarmTestPage",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ApiError",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "WorkflowGraphDefinition",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "WorkflowGraphNode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "WorkflowGraphEdge",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ExecutionStep",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ModelConfig",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "Template",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "CostChartData",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "UIComponentType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ChartType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "FormFieldType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ChartData",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "CardAction",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "AGUIEventType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ToolCallState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "PendingApproval",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "RiskLevel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "SSEConnectionStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "AGUIRunState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "SharedState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "OrchestrationMetadata",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "PipelineToolCall",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ExecutionMode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ModeSource",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "WorkflowStepStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "WorkflowState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "TrackedToolCall",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ExecutionMetrics",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "UnifiedChatState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "UnifiedChatActions",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "UnifiedChatProps",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "TraceStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "EventSeverity",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "Trace",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ListTracesParams",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "ListEventsParams",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "DeleteTraceResponse",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "DevUISettings",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-01-pages-hooks-verification.md"
+    },
+    {
+      "class_name": "HTTPException",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-02-api-gateway.md"
+    },
+    {
+      "class_name": "HybridEventType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "RunFinishReason",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "SubStepStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ThreadStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ChatRole",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ResultType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ToolExecutionStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ModeSwitchReason",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ProgressStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "DiffOperation",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ConflictResolutionStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "PredictionStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "PredictionType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "CUSTOM",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "USER",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ASSISTANT",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "SYSTEM",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "JSON",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "TABLE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "TEXT",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "CODE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "IMAGE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ERROR",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "PENDING",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "RUNNING",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "SUCCESS",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "CANCELLED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "APPROVED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "REJECTED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "TIMEOUT",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "COMPLETED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "FAILED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ADD",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "REMOVE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "REPLACE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "MOVE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "COPY",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "TEST",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "MANUAL",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "MERGE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "FORM",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "CHART",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "CARD",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "BUTTON",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "LINE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "BAR",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "PIE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "SCATTER",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "NUMBER",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "SELECT",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "CHECKBOX",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "DATE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "CONFIRMED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "EXPIRED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "OPTIMISTIC",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "SPECULATIVE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "CACHED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ApprovalSource",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "ApprovalPriority",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "Redis",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "RedisError",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "BaseModel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "Field",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-03-ag-ui.md"
+    },
+    {
+      "class_name": "IncidentSubCategory",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-04-08-09-verification.md"
+    },
+    {
+      "class_name": "WorkflowStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-04-08-09-verification.md"
+    },
+    {
+      "class_name": "PipelineRunStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-04-08-09-verification.md"
+    },
+    {
+      "class_name": "AuditEventType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-04-08-09-verification.md"
+    },
+    {
+      "class_name": "ITIntentCategory",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-04-routing.md"
+    },
+    {
+      "class_name": "WorkflowType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-04-routing.md"
+    },
+    {
+      "class_name": "SourceType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-04-routing.md"
+    },
+    {
+      "class_name": "InputSource",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-04-routing.md"
+    },
+    {
+      "class_name": "ORCHESTRATION",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-04-routing.md"
+    },
+    {
+      "class_name": "ClaudeMAFFusion",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "FrameworkAnalysis",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "HandlerType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "IntentRouter",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "OPERATION",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "CONTEXT",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "PATTERN",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "PATH",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "COMMAND",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "FREQUENCY",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "ESCALATION",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "ENVIRONMENT",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "COMPLEXITY",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "FAILURE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "RESOURCE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "CompressionAlgorithm",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "ClaudeDecisionEngine",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "DynamicWorkflow",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "List",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "Dict",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "SyncDirection",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "SyncStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "OrchestratorMode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "EventType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "WorkflowStepType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "ClaudeDecision",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "StepResult",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-orchestration.md"
+    },
+    {
+      "class_name": "SSEEventType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "ToolType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "ResultStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "SuggestedFramework",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "SyncStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "AgentStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "ConflictType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "ConflictSeverity",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "SyncEventType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "RoutingStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "ResultFormat",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "RiskFactorType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "UserTrustLevel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "PatternType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "ScoringStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "SwitchTriggerType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "SwitchStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "MigrationDirection",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "ValidationStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "MigrationStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "RestoreStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "CheckpointVersion",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "ApprovalMode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-05-verification.md"
+    },
+    {
+      "class_name": "ConcurrentBuilder",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "APIMode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "SequentialBuilder",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "AsyncAnthropic",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "EventComplexity",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "StepStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "FailureType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "FallbackStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "SelectionStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "ContextFormat",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "ConflictResolution",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "Framework",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "TaskCapability",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "ToolCategory",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "MCPServerState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "MCPTransportType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "TaskComplexity",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "SubtaskStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "CoordinationStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "HandoffBuilder",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "HandoffAgentUserRequest",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "GroupChatBuilder",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "MagenticBuilder",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "WorkflowBuilder",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "WorkflowExecutor",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "AzureOpenAIResponsesClient",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "Executor",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "WorkflowEvent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "BaseContextProvider",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "WorkflowCheckpoint",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-07-verification.md"
+    },
+    {
+      "class_name": "XxxBuilder",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "ChatAgent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "WorkflowStatusEvent",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "RequestResponseExecutor",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "JoinCondition",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "MagenticStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "WorkflowExecutorStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "WorkflowRunState",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "ContextPropagationStrategy",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "PlanningMode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "HandoffMode",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "SpeakerSelectionMethod",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-06-maf-builders.md"
+    },
+    {
+      "class_name": "ALLOW",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-07-claude-sdk.md"
+    },
+    {
+      "class_name": "ToolInputType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "ServerStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "PermissionLevel",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "ShellType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "DefaultAzureCredential",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "STRING",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "INTEGER",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "BOOLEAN",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "OBJECT",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "ARRAY",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "NULL",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "PermissionError",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "ADMIN",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "ValueError",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "SSETransport",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "XxxMCPServer",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "XxxTools",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-08-mcp-tools.md"
+    },
+    {
+      "class_name": "RuntimeError",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "IMMEDIATE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "PREVENTIVE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "CONFIDENCE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "EVIDENCE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "IncidentSeverity",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "IncidentCategory",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "RemediationRisk",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "RemediationActionType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "PatrolStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "CheckType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "ScheduleFrequency",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "PatrolPriority",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "CaseOutcome",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "CaseCategory",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "MessageType",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "MessagePriority",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "MessageStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "A2AAgentStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "OrchestrationStatus",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "PipelineSource",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-09-integrations.md"
+    },
+    {
+      "class_name": "STARTED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "CONTENT",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "DONE",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "HEARTBEAT",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "AsyncAzureOpenAI",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "AUTO",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "NOTIFY",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "DENIED",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "TODO",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "APITimeoutError",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "APIError",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "AdapterResult",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "WebhookTrigger",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "TeamsNotification",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "Tracer",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "Protocol",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "StreamingAgentExecutor",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "EventBridge",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-10-domain.md"
+    },
+    {
+      "class_name": "DeclarativeBase",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-11-infrastructure.md"
+    },
+    {
+      "class_name": "AsyncSession",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-11-infrastructure.md"
+    },
+    {
+      "class_name": "DatabaseSession",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-11-infrastructure.md"
+    },
+    {
+      "class_name": "VIEWER",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-11-infrastructure.md"
+    },
+    {
+      "class_name": "SettingsConfigDict",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-11-infrastructure.md"
+    },
+    {
+      "class_name": "AsyncEngine",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-11-infrastructure.md"
+    },
+    {
+      "class_name": "HTTPBearer",
+      "exists": false,
+      "first_mentioned_in": "01-architecture/layer-11-verification.md"
+    },
+    {
+      "class_name": "DeprecationWarning",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-domain-infra-core.md"
+    },
+    {
+      "class_name": "FewShotService",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-domain-infra-core.md"
+    },
+    {
+      "class_name": "PromptTemplateService",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-domain-infra-core.md"
+    },
+    {
+      "class_name": "ChatHistoryModels",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-domain-infra-core.md"
+    },
+    {
+      "class_name": "Depends",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-domain-infra-core.md"
+    },
+    {
+      "class_name": "Audit",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-domain-infra-core.md"
+    },
+    {
+      "class_name": "ConnectionPool",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-domain-infra-core.md"
+    },
+    {
+      "class_name": "OPERATOR",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-domain-infra-core.md"
+    },
+    {
+      "class_name": "Layout",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-frontend.md"
+    },
+    {
+      "class_name": "Authorization",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-frontend.md"
+    },
+    {
+      "class_name": "UIComponentEvent",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-frontend.md"
+    },
+    {
+      "class_name": "StateSyncStatus",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-frontend.md"
+    },
+    {
+      "class_name": "StateSyncEvent",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-frontend.md"
+    },
+    {
+      "class_name": "OptimisticUpdateRequest",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-frontend.md"
+    },
+    {
+      "class_name": "RunStatus",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-frontend.md"
+    },
+    {
+      "class_name": "GeneratedFile",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-frontend.md"
+    },
+    {
+      "class_name": "TraceSession",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-frontend.md"
+    },
+    {
+      "class_name": "UnifiedHITLManager",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch1.md"
+    },
+    {
+      "class_name": "TESTING",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch1.md"
+    },
+    {
+      "class_name": "MemoryLayer",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch1.md"
+    },
+    {
+      "class_name": "MemoryType",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch1.md"
+    },
+    {
+      "class_name": "PatrolEngine",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch2.md"
+    },
+    {
+      "class_name": "CorrelationType",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch2.md"
+    },
+    {
+      "class_name": "CorrelationEngine",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch2.md"
+    },
+    {
+      "class_name": "AnalysisStatus",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch2.md"
+    },
+    {
+      "class_name": "EvidenceType",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch2.md"
+    },
+    {
+      "class_name": "RecommendationType",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch2.md"
+    },
+    {
+      "class_name": "DecisionOutcome",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch2.md"
+    },
+    {
+      "class_name": "QualityRating",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch2.md"
+    },
+    {
+      "class_name": "DiscoveryService",
+      "exists": false,
+      "first_mentioned_in": "02-modules/mod-integration-batch2.md"
+    },
+    {
+      "class_name": "Bearer",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "ReadableStream",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "TextDecoder",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "PipelineSSEEventType",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "StreamingResponse",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "OrderedDict",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "AbortError",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "START",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "END",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "AGENT",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "GATEWAY",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-01-to-05.md"
+    },
+    {
+      "class_name": "ImportError",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-06-to-08.md"
+    },
+    {
+      "class_name": "SETEX",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-06-to-08.md"
+    },
+    {
+      "class_name": "SCAN",
+      "exists": false,
+      "first_mentioned_in": "04-flows/flows-06-to-08.md"
+    },
+    {
+      "class_name": "NullPool",
+      "exists": false,
+      "first_mentioned_in": "06-cross-cutting/cross-cutting-analysis.md"
+    },
+    {
+      "class_name": "BaseChatClient",
+      "exists": false,
+      "first_mentioned_in": "07-delta/delta-phase-43-44.md"
+    },
+    {
+      "class_name": "UUID",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "String",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "Boolean",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "DateTime",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "Text",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "JSONB",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "Integer",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "Numeric",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "TokenUsage",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "Decimal",
+      "exists": false,
+      "first_mentioned_in": "08-data-model/data-model-analysis.md"
+    },
+    {
+      "class_name": "Agents",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Workflows",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Executions",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Checkpoints",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Triggers",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Connectors",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Hybrid",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Planning",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "GroupChat",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Handoff",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Nested",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Swarm",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Orchestration",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Performance",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Dashboard",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Authentication",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Files",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Memory",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Cache",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "Prompts",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "MCP",
+      "exists": false,
+      "first_mentioned_in": "09-api-reference/api-reference.md"
+    },
+    {
+      "class_name": "UNKNOWN",
+      "exists": false,
+      "first_mentioned_in": "10-event-contracts/event-contracts.md"
+    },
+    {
+      "class_name": "RAW",
+      "exists": false,
+      "first_mentioned_in": "10-event-contracts/event-contracts.md"
+    },
+    {
+      "class_name": "StateSnapshot",
+      "exists": false,
+      "first_mentioned_in": "10-event-contracts/event-contracts.md"
+    },
+    {
+      "class_name": "StateDelta",
+      "exists": false,
+      "first_mentioned_in": "10-event-contracts/event-contracts.md"
+    },
+    {
+      "class_name": "BaseSettings",
+      "exists": false,
+      "first_mentioned_in": "11-config-deploy/config-deploy.md"
+    },
+    {
+      "class_name": "DEBUG",
+      "exists": false,
+      "first_mentioned_in": "11-config-deploy/config-deploy.md"
+    },
+    {
+      "class_name": "RELOAD",
+      "exists": false,
+      "first_mentioned_in": "11-config-deploy/config-deploy.md"
+    },
+    {
+      "class_name": "FastAPI",
+      "exists": false,
+      "first_mentioned_in": "11-config-deploy/config-deploy.md"
+    },
+    {
+      "class_name": "CORSMiddleware",
+      "exists": false,
+      "first_mentioned_in": "11-config-deploy/config-deploy.md"
+    },
+    {
+      "class_name": "TestClient",
+      "exists": false,
+      "first_mentioned_in": "12-testing/testing-landscape.md"
+    },
+    {
+      "class_name": "AGUITestPage",
+      "exists": false,
+      "first_mentioned_in": "12-testing/testing-landscape.md"
+    },
+    {
+      "class_name": "NotImplementedError",
+      "exists": false,
+      "first_mentioned_in": "12-testing/testing-landscape.md"
+    },
+    {
+      "class_name": "Mock",
+      "exists": false,
+      "first_mentioned_in": "13-mock-real/mock-real-map.md"
+    },
+    {
+      "class_name": "InMemory",
+      "exists": false,
+      "first_mentioned_in": "13-mock-real/mock-real-map.md"
+    },
+    {
+      "class_name": "EventSource",
+      "exists": false,
+      "first_mentioned_in": "13-mock-real/mock-real-map.md"
+    }
+  ],
+  "inconsistencies": [
+    {
+      "layer": "L03",
+      "metric": "loc",
+      "values": [
+        {
+          "value": 10329,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 10329,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 5213,
+          "source": "03-features/features-cat-f-to-j.md"
+        }
+      ]
+    },
+    {
+      "layer": "L03",
+      "metric": "files",
+      "values": [
+        {
+          "value": 27,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 27,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 23,
+          "source": "03-features/features-cat-f-to-j.md"
+        }
+      ]
+    },
+    {
+      "layer": "L06",
+      "metric": "loc",
+      "values": [
+        {
+          "value": 38082,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 38082,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 1400,
+          "source": "00-verification-report.md"
+        }
+      ]
+    },
+    {
+      "layer": "L06",
+      "metric": "files",
+      "values": [
+        {
+          "value": 56,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 57,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 68,
+          "source": "00-verification-report.md"
+        }
+      ]
+    },
+    {
+      "layer": "L09",
+      "metric": "loc",
+      "values": [
+        {
+          "value": 21300,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 22604,
+          "source": "00-stats.md"
+        }
+      ]
+    },
+    {
+      "layer": "L09",
+      "metric": "files",
+      "values": [
+        {
+          "value": 75,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 77,
+          "source": "00-stats.md"
+        }
+      ]
+    },
+    {
+      "layer": "L11",
+      "metric": "loc",
+      "values": [
+        {
+          "value": 21953,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 21953,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 11589,
+          "source": "01-architecture/infra-r3-verification.md"
+        },
+        {
+          "value": 21953,
+          "source": "01-architecture/layer-11-infrastructure.md"
+        }
+      ]
+    },
+    {
+      "layer": "L11",
+      "metric": "files",
+      "values": [
+        {
+          "value": 95,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 95,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 2,
+          "source": "01-architecture/infra-r3-verification.md"
+        },
+        {
+          "value": 95,
+          "source": "01-architecture/layer-11-infrastructure.md"
+        }
+      ]
+    },
+    {
+      "layer": "L07",
+      "metric": "loc",
+      "values": [
+        {
+          "value": 15406,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 15000,
+          "source": "01-architecture/layer-06-07-verification.md"
+        }
+      ]
+    },
+    {
+      "layer": "L07",
+      "metric": "files",
+      "values": [
+        {
+          "value": 48,
+          "source": "00-stats.md"
+        },
+        {
+          "value": 47,
+          "source": "01-architecture/layer-06-07-verification.md"
+        }
+      ]
+    }
+  ],
+  "total_checks": [
+    {
+      "metric": "total_endpoints",
+      "actual": 575,
+      "claimed": 588,
+      "diff": -13,
+      "pct": 2.2,
+      "source": "00-stats.md",
+      "status": "PASS"
+    },
+    {
+      "metric": "total_endpoints",
+      "actual": 575,
+      "claimed": 588,
+      "diff": -13,
+      "pct": 2.2,
+      "source": "00-stats.md",
+      "status": "PASS"
+    },
+    {
+      "metric": "total_endpoints",
+      "actual": 575,
+      "claimed": 575,
+      "diff": 0,
+      "pct": 0.0,
+      "source": "00-stats.md",
+      "status": "PASS"
+    },
+    {
+      "metric": "backend_py_files",
+      "actual": 793,
+      "claimed": 793,
+      "diff": 0,
+      "source": "00-stats.md",
+      "status": "PASS"
+    },
+    {
+      "metric": "backend_py_files",
+      "actual": 793,
+      "claimed": 793,
+      "diff": 0,
+      "source": "00-stats.md",
+      "status": "PASS"
+    },
+    {
+      "metric": "backend_py_files",
+      "actual": 793,
+      "claimed": 793,
+      "diff": 0,
+      "source": "00-stats.md",
+      "status": "PASS"
+    },
+    {
+      "metric": "backend_py_files",
+      "actual": 793,
+      "claimed": 793,
+      "diff": 0,
+      "source": "00-stats.md",
+      "status": "PASS"
+    },
+    {
+      "metric": "backend_py_files",
+      "actual": 793,
+      "claimed": 793,
+      "diff": 0,
+      "source": "00-stats.md",
+      "status": "PASS"
+    },
+    {
+      "metric": "backend_py_files",
+      "actual": 793,
+      "claimed": 793,
+      "diff": 0,
+      "source": "00-stats.md",
+      "status": "PASS"
+    }
+  ]
+}

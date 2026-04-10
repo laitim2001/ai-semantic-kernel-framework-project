@@ -27,19 +27,26 @@
 ### 3. 需要自建 AnthropicChatClient
 
 ```python
-from agent_framework import BaseChatClient
+from agent_framework import BaseChatClient, ChatResponse, Content, Message, ResponseStream
 
 class AnthropicChatClient(BaseChatClient):
     """把 Anthropic API 包裝成 MAF 的 ChatClient 介面"""
 
-    def __init__(self, model: str = "claude-sonnet-4-20250514", api_key: str = ...):
+    def __init__(self, *, model: str = "claude-sonnet-4-6", api_key=None, **kwargs):
+        super().__init__(**kwargs)  # MUST call super
         self._client = AsyncAnthropic(api_key=api_key)
         self._model = model
 
-    async def get_response(self, messages, options) -> ChatResponse:
-        # 轉換 MAF Message → Anthropic format → 呼叫 API → 轉換回 MAF format
-        ...
+    # PoC 驗證：ONE method, NOT async, stream param decides return type
+    def _inner_get_response(self, *, messages, stream, options, **kwargs):
+        if stream:
+            return self._build_response_stream(self._stream_anthropic(messages, options))
+        else:
+            return self._call_anthropic(messages, options)
 ```
+
+> **PoC 驗證（2026-03-23）**：以上代碼已在 `poc/anthropic-chatclient` 分支實測通過。
+> Claude Haiku 和 Azure GPT-5.2 都可作為 MagenticOne Manager。
 
 ### 4. 項目已有的基礎
 

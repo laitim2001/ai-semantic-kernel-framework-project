@@ -139,4 +139,10 @@ Server Execution
 
 ---
 
-**Last Updated**: 2026-02-09
+## V9 Deep Dive
+
+> `docs/07-analysis/V9/01-architecture/layer-08-mcp-tools.md` — Full MCP tool servers analysis (Azure, Filesystem, LDAP, Shell, SSH, security patterns)
+
+---
+
+**Last Updated**: 2026-03-31

@@ -1,0 +1,264 @@
+{
+  "layer": "L03",
+  "files": 27,
+  "loc": 10356,
+  "total_classes": 88,
+  "shown_classes": 15,
+  "classes": [
+    {
+      "name": "HybridEventBridge",
+      "bases": [],
+      "doc": "AG-UI Event Bridge for HybridOrchestratorV2.",
+      "pub_methods": [
+        "__init__",
+        "orchestrator",
+        "converters",
+        "config",
+        "set_orchestrator",
+        "swarm_emitter",
+        "configure_swarm_emitter",
+        "start_swarm_emitter",
+        "stop_swarm_emitter",
+        "stream_events"
+      ],
+      "total_methods": 20
+    },
+    {
+      "name": "GenerativeUIHandler",
+      "bases": [],
+      "doc": "Handler for Agentic Generative UI events.",
+      "pub_methods": [
+        "__init__",
+        "emit_progress_event",
+        "emit_step_started",
+        "emit_step_completed",
+        "emit_step_failed",
+        "emit_mode_switch_event",
+        "emit_mode_switch_from_result",
+        "emit_mode_switch_started",
+        "emit_mode_switch_completed",
+        "handle_switch_trigger"
+      ],
+      "total_methods": 20
+    },
+    {
+      "name": "PredictiveStateHandler",
+      "bases": [],
+      "doc": "Handler for predictive/optimistic state updates.",
+      "pub_methods": [
+        "__init__",
+        "config",
+        "state_handler",
+        "get_prediction",
+        "list_pending_predictions",
+        "predict_state",
+        "confirm_prediction",
+        "rollback_prediction",
+        "check_and_expire_predictions",
+        "handle_server_update"
+      ],
+      "total_methods": 18
+    },
+    {
+      "name": "EventConverters",
+      "bases": [],
+      "doc": "AG-UI 事件轉換器。",
+      "pub_methods": [
+        "__init__",
+        "chunk_size",
+        "to_run_started",
+        "to_run_finished",
+        "to_text_message_start",
+        "to_text_message_content",
+        "to_text_message_end",
+        "content_to_chunks",
+        "to_tool_call_start",
+        "to_tool_call_args"
+      ],
+      "total_methods": 16
+    },
+    {
+      "name": "ToolBasedUIHandler",
+      "bases": [],
+      "doc": "Handler for tool-based generative UI.",
+      "pub_methods": [
+        "__init__",
+        "validate_schema",
+        "strict_mode",
+        "get_component",
+        "list_components",
+        "validate_component_schema",
+        "emit_ui_component",
+        "emit_form_component",
+        "emit_chart_component",
+        "emit_card_component"
+      ],
+      "total_methods": 16
+    },
+    {
+      "name": "ThreadManager",
+      "bases": [],
+      "doc": "Thread Manager for AG-UI conversations.",
+      "pub_methods": [
+        "__init__",
+        "get_or_create",
+        "get",
+        "append_messages",
+        "append_message",
+        "update_state",
+        "set_state",
+        "increment_run_count",
+        "archive",
+        "delete"
+      ],
+      "total_methods": 16
+    },
+    {
+      "name": "ToolRenderingHandler",
+      "bases": [],
+      "doc": "Backend tool rendering handler.",
+      "pub_methods": [
+        "__init__",
+        "executor",
+        "config",
+        "detect_result_type",
+        "format_result",
+        "execute_and_format",
+        "create_start_event",
+        "create_status_event"
+      ],
+      "total_methods": 15
+    },
+    {
+      "name": "SharedStateHandler",
+      "bases": [],
+      "doc": "Handler for shared state between backend and frontend.",
+      "pub_methods": [
+        "__init__",
+        "sync_manager",
+        "get_state",
+        "get_version",
+        "set_state",
+        "update_state",
+        "emit_state_snapshot",
+        "emit_state_delta",
+        "apply_client_update",
+        "get_state_at_version"
+      ],
+      "total_methods": 14
+    },
+    {
+      "name": "AgenticChatHandler",
+      "bases": [],
+      "doc": "Agentic Chat feature handler.",
+      "pub_methods": [
+        "__init__",
+        "orchestrator",
+        "event_bridge",
+        "config",
+        "get_session",
+        "create_session",
+        "get_or_create_session",
+        "close_session",
+        "add_message",
+        "handle_chat"
+      ],
+      "total_methods": 13
+    },
+    {
+      "name": "RedisThreadRepository",
+      "bases": [
+        "ThreadRepository"
+      ],
+      "doc": "Redis implementation of ThreadRepository.",
+      "pub_methods": [
+        "__init__",
+        "save",
+        "get_by_id",
+        "delete",
+        "list_by_status",
+        "list_all",
+        "count",
+        "clear"
+      ],
+      "total_methods": 11
+    },
+    {
+      "name": "ApprovalStorage",
+      "bases": [],
+      "doc": "In-memory storage for approval requests.",
+      "pub_methods": [
+        "__init__",
+        "create_pending",
+        "get",
+        "update_status",
+        "get_pending",
+        "cancel",
+        "cleanup_expired",
+        "get_stats"
+      ],
+      "total_methods": 8
+    },
+    {
+      "name": "AGUIThread",
+      "bases": [],
+      "doc": "AG-UI Thread (對話線程)",
+      "pub_methods": [
+        "to_dict",
+        "from_dict",
+        "add_message",
+        "update_state",
+        "increment_run_count",
+        "archive",
+        "is_active",
+        "message_count"
+      ],
+      "total_methods": 8
+    },
+    {
+      "name": "InMemoryThreadRepository",
+      "bases": [
+        "ThreadRepository"
+      ],
+      "doc": "In-memory implementation of ThreadRepository.",
+      "pub_methods": [
+        "__init__",
+        "save",
+        "get_by_id",
+        "delete",
+        "list_by_status",
+        "list_all",
+        "count",
+        "clear"
+      ],
+      "total_methods": 8
+    },
+    {
+      "name": "HITLHandler",
+      "bases": [],
+      "doc": "Human-in-the-Loop handler for AG-UI protocol.",
+      "pub_methods": [
+        "__init__",
+        "check_approval_needed",
+        "create_approval_event",
+        "handle_approval_response",
+        "wait_for_approval",
+        "create_approval_resolved_event"
+      ],
+      "total_methods": 7
+    },
+    {
+      "name": "StateSyncManager",
+      "bases": [],
+      "doc": "Manages state synchronization between server and clients.",
+      "pub_methods": [
+        "__init__",
+        "conflict_strategy",
+        "diff_state",
+        "apply_diffs",
+        "merge_state"
+      ],
+      "total_methods": 7
+    }
+  ]
+}

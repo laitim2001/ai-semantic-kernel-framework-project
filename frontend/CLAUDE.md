@@ -397,6 +397,21 @@ AG-UI Protocol components organized in 3 subdirectories:
 
 ---
 
+## V9 Deep Dive Reference
+
+> For detailed analysis of the frontend layer, refer to the V9 codebase analysis (Phase 1-44, 2026-03-31 baseline).
+
+| Topic | V9 Document |
+|-------|-------------|
+| Frontend Architecture | `docs/07-analysis/V9/01-architecture/layer-01-frontend.md` — Pages, components, hooks, stores, routing (236 .ts/.tsx files) |
+| E2E User Journeys | `docs/07-analysis/V9/04-flows/` — Chat, CRUD, Workflow, HITL, Swarm flows |
+| Feature Completeness | `docs/07-analysis/V9/03-features/` — Frontend feature maturity matrix |
+| Mock vs Real | `docs/07-analysis/V9/13-mock-real/` — Which frontend features use mock data vs real API |
+
+> **Note**: V9 is baselined at Phase 44. Cross-check against current source for post-Phase-44 changes.
+
+---
+
 ## Styling
 
 ### Tailwind CSS
@@ -476,4 +491,4 @@ eventSource.onmessage = (event) => {
 
 ---
 
-**Last Updated**: 2026-02-09
+**Last Updated**: 2026-03-31
