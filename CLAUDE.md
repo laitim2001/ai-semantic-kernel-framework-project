@@ -18,6 +18,37 @@ cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framewor
 
 ---
 
+## Core Vision & Design Philosophy
+
+> **This section defines the project's fundamental direction. Every design decision, suggestion, and implementation MUST align with these principles.**
+
+### Mission
+Build enterprise AI agent teams that work like **human professional teams** — not just using existing frameworks, but designing **novel agentic capabilities** that don't exist yet.
+
+### Agent Team Design Principles
+The platform delivers agents that are:
+1. **Professional** — domain expertise, not generic chatbots
+2. **Planned** — structured approach to tasks, not ad-hoc
+3. **Memory-equipped** — remember past interactions, decisions, context
+4. **Autonomous** — self-organize, plan, execute, and retry
+5. **Controllable** — human oversight at all times
+6. **Transparent** — all processes and decisions are visible/auditable
+7. **Security-compliant** — follows enterprise-specific regulations
+8. **Multi-intelligent** — multiple specialized agents collaborating
+9. **Knowledge-aware** — RAG/knowledge base for enterprise-specific knowledge
+10. **Action-capable** — real tool execution, not just conversation
+
+### Development Philosophy
+- MAF, Claude SDK, AG-UI, Claude Code patterns are **building blocks and inspiration**, NOT design boundaries
+- Many capabilities require **novel architecture** that doesn't exist in any single framework
+- Current agentic frameworks are all very new — none fully addresses enterprise production needs
+- **DO NOT** default to "MAF has feature X, let's use it" — instead ask "what effect is needed?" then **co-design** a solution
+- Reference multiple sources (MAF internals, CC source patterns, Claude SDK, industry research) as **design inspiration**
+- The hybrid orchestrator (code-enforced steps + LLM routing) is an **intentional novel design**, not a workaround
+- **User provides ideas and vision; AI assistant (Claude) is executor and coordinator** — together we design what doesn't exist yet
+
+---
+
 ## Project Overview
 
 **IPA Platform** (Intelligent Process Automation) - Enterprise AI Agent orchestration platform
