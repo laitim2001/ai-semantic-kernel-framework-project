@@ -136,9 +136,8 @@ class FrameworkSelector:
         Select the appropriate framework based on user input.
 
         Sprint 98: Renamed from analyze_intent to select_framework.
-        This is the main entry point for framework selection. It runs all enabled
-        classifiers, aggregates their results, and returns a comprehensive
-        analysis result.
+        Sprint 144: Now uses routing_decision to influence mode selection
+        via RoutingDecisionClassifier.
 
         Args:
             user_input: The user's input text to analyze
@@ -148,13 +147,6 @@ class FrameworkSelector:
 
         Returns:
             IntentAnalysis (FrameworkAnalysis) with the detected mode, confidence, and reasoning
-
-        Example:
-            >>> analysis = await selector.select_framework(
-            ...     "Create a multi-step workflow for data processing",
-            ...     session_context=SessionContext(session_id="sess_123")
-            ... )
-            >>> print(f"Mode: {analysis.mode}, Confidence: {analysis.confidence}")
         """
         start_time = time.time()
 
@@ -165,10 +157,39 @@ class FrameworkSelector:
                 analysis_time_ms=(time.time() - start_time) * 1000,
             )
 
+        # Sprint 144: Inject routing_decision into RoutingDecisionClassifier
+        if routing_decision:
+            from src.integrations.hybrid.intent.classifiers.routing_decision import (
+                RoutingDecisionClassifier,
+            )
+            for classifier in self.classifiers:
+                if isinstance(classifier, RoutingDecisionClassifier):
+                    classifier.set_routing_decision(routing_decision)
+
         # Run all enabled classifiers
         classification_results = await self._run_classifiers(
             user_input, session_context, history
         )
+
+        # Sprint 144: If routing_decision is available but no RoutingDecisionClassifier
+        # produced a result (e.g. import mismatch), create a synthetic result directly.
+        if routing_decision and not any(
+            r.classifier_name == "routing_decision" for r in classification_results
+        ):
+            from src.integrations.hybrid.intent.classifiers.routing_decision import (
+                RoutingDecisionClassifier,
+            )
+            fallback_rd = RoutingDecisionClassifier(weight=1.5)
+            fallback_rd.set_routing_decision(routing_decision)
+            try:
+                rd_result = await fallback_rd.classify(user_input, session_context, history)
+                classification_results.append(rd_result)
+                logger.info(
+                    "FrameworkSelector: injected routing_decision result: mode=%s, conf=%.2f",
+                    rd_result.mode.value, rd_result.confidence,
+                )
+            except Exception as e:
+                logger.warning("FrameworkSelector: routing_decision fallback failed: %s", e)
 
         # If no classifiers or all failed, return default
         if not classification_results:
@@ -337,6 +358,8 @@ class FrameworkSelector:
             return SuggestedFramework.MAF
         elif mode == ExecutionMode.CHAT_MODE:
             return SuggestedFramework.CLAUDE
+        elif mode == ExecutionMode.SWARM_MODE:
+            return SuggestedFramework.MAF
         else:
             # HYBRID_MODE - check context for hints
             if context and context.workflow_active:

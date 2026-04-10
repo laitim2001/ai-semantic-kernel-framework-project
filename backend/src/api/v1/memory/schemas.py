@@ -190,3 +190,55 @@ class ContextRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Session ID")
     query: Optional[str] = Field(None, description="Optional query for relevance")
     limit: int = Field(10, ge=1, le=50, description="Maximum memories")
+
+
+# ── Pinned Memory Schemas (CC's CLAUDE.md equivalent) ──
+
+
+class PinMemoryRequest(BaseModel):
+    """Request schema for pinning a memory."""
+
+    content: str = Field(..., min_length=1, description="Knowledge to pin (always visible)")
+    user_id: str = Field(..., description="User identifier")
+    memory_type: str = Field(
+        "pinned_knowledge",
+        description="Memory type: pinned_knowledge, extracted_preference, etc.",
+    )
+    metadata: Optional[MemoryMetadataSchema] = Field(None, description="Optional metadata")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "content": "User is responsible for APAC ETL Pipeline and CRM Service",
+                "user_id": "user-chris",
+                "memory_type": "pinned_knowledge",
+            }
+        }
+
+
+class UpdatePinnedRequest(BaseModel):
+    """Request schema for updating a pinned memory."""
+
+    content: Optional[str] = Field(None, min_length=1, description="New content")
+    metadata: Optional[MemoryMetadataSchema] = Field(None, description="New metadata")
+
+
+class PinnedMemoryResponse(BaseModel):
+    """Response schema for pinned memory operations."""
+
+    id: str = Field(..., description="Memory ID")
+    user_id: str = Field(..., description="User ID")
+    content: str = Field(..., description="Pinned content")
+    memory_type: str = Field(..., description="Memory type")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+    metadata: Optional[MemoryMetadataSchema] = None
+
+
+class PinnedListResponse(BaseModel):
+    """Response schema for listing pinned memories."""
+
+    memories: List[PinnedMemoryResponse] = Field(..., description="Pinned memories")
+    total: int = Field(..., description="Total pinned count")
+    max_allowed: int = Field(..., description="Max pinned memories per user")
+    user_id: str = Field(..., description="User ID")

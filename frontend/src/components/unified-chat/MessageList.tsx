@@ -278,6 +278,31 @@ export const MessageList: FC<MessageListProps> = ({
                 <TaskProgressCard taskId={orchMeta.taskId} />
               </div>
             )}
+
+            {/* Sprint 147: Knowledge source citations from RAG */}
+            {message.role === 'assistant' && orchMeta?.knowledgeSources && orchMeta.knowledgeSources.length > 0 && (
+              <div className="mx-4 mt-1 mb-2">
+                <details className="group">
+                  <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-800 flex items-center gap-1">
+                    <span>📚</span>
+                    <span>{orchMeta.knowledgeSources.length} 個知識來源</span>
+                  </summary>
+                  <div className="mt-1 space-y-1 pl-4 border-l-2 border-blue-100">
+                    {orchMeta.knowledgeSources.map((src: { title?: string; score?: number; snippet?: string }, idx: number) => (
+                      <div key={idx} className="text-xs text-gray-600 py-1">
+                        <span className="font-medium text-gray-800">{src.title || `Source ${idx + 1}`}</span>
+                        {src.score != null && (
+                          <span className="ml-2 text-gray-400">({(src.score * 100).toFixed(0)}%)</span>
+                        )}
+                        {src.snippet && (
+                          <p className="text-gray-500 mt-0.5 line-clamp-2">{src.snippet}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              </div>
+            )}
           </div>
         );
       })}

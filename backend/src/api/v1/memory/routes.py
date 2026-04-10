@@ -41,9 +41,13 @@ from .schemas import (
     MemoryMetadataSchema,
     MemoryResponse,
     MemorySearchResultSchema,
+    PinMemoryRequest,
+    PinnedListResponse,
+    PinnedMemoryResponse,
     PromoteMemoryRequest,
     SearchMemoryRequest,
     SearchMemoryResponse,
+    UpdatePinnedRequest,
 )
 
 
@@ -423,6 +427,170 @@ async def get_context_memories(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get context memories: {str(e)}",
+        )
+
+
+# ── Pinned Memory Endpoints (CC's CLAUDE.md equivalent) ──────────────
+
+
+@router.post("/pin", response_model=PinnedMemoryResponse, status_code=status.HTTP_201_CREATED)
+async def pin_memory(
+    request: PinMemoryRequest,
+    manager: UnifiedMemoryManager = Depends(get_memory_manager),
+):
+    """Pin a memory — it will ALWAYS be injected into every pipeline context.
+
+    This is the server-side equivalent of CC's CLAUDE.md: stable knowledge
+    that the system should always remember regardless of query relevance.
+    Max 20 pinned memories per user.
+    """
+    try:
+        memory_type = _memory_type_from_str(request.memory_type)
+        metadata = _metadata_schema_to_obj(request.metadata)
+
+        record = await manager.pin_memory(
+            content=request.content,
+            user_id=request.user_id,
+            memory_type=memory_type,
+            metadata=metadata,
+        )
+
+        return PinnedMemoryResponse(
+            id=record.id,
+            user_id=record.user_id,
+            content=record.content,
+            memory_type=record.memory_type.value,
+            created_at=record.created_at,
+            updated_at=record.updated_at,
+            metadata=_metadata_obj_to_schema(record.metadata) if record.metadata else None,
+        )
+
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(ve))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to pin memory: {str(e)}",
+        )
+
+
+@router.get("/pin/{user_id}", response_model=PinnedListResponse)
+async def list_pinned_memories(
+    user_id: str,
+    manager: UnifiedMemoryManager = Depends(get_memory_manager),
+):
+    """List all pinned memories for a user."""
+    try:
+        records = await manager.get_pinned(user_id)
+
+        memories = [
+            PinnedMemoryResponse(
+                id=r.id,
+                user_id=r.user_id,
+                content=r.content,
+                memory_type=r.memory_type.value,
+                created_at=r.created_at,
+                updated_at=r.updated_at,
+                metadata=_metadata_obj_to_schema(r.metadata) if r.metadata else None,
+            )
+            for r in records
+        ]
+
+        return PinnedListResponse(
+            memories=memories,
+            total=len(memories),
+            max_allowed=manager.config.max_pinned_per_user,
+            user_id=user_id,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list pinned memories: {str(e)}",
+        )
+
+
+@router.put("/pin/{memory_id}", response_model=PinnedMemoryResponse)
+async def update_pinned_memory(
+    memory_id: str,
+    request: UpdatePinnedRequest,
+    user_id: str = Query(..., description="User ID"),
+    manager: UnifiedMemoryManager = Depends(get_memory_manager),
+):
+    """Update a pinned memory's content or metadata."""
+    try:
+        metadata = _metadata_schema_to_obj(request.metadata) if request.metadata else None
+
+        record = await manager.update_pinned(
+            memory_id=memory_id,
+            user_id=user_id,
+            content=request.content,
+            metadata=metadata,
+        )
+
+        if not record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Pinned memory {memory_id} not found for user {user_id}",
+            )
+
+        return PinnedMemoryResponse(
+            id=record.id,
+            user_id=record.user_id,
+            content=record.content,
+            memory_type=record.memory_type.value,
+            created_at=record.created_at,
+            updated_at=record.updated_at,
+            metadata=_metadata_obj_to_schema(record.metadata) if record.metadata else None,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update pinned memory: {str(e)}",
+        )
+
+
+@router.delete("/pin/{memory_id}")
+async def unpin_memory(
+    memory_id: str,
+    user_id: str = Query(..., description="User ID"),
+    demote_to: str = Query("long_term", description="Layer to demote to: long_term or session"),
+    manager: UnifiedMemoryManager = Depends(get_memory_manager),
+):
+    """Unpin a memory. Demotes it to the specified layer (default: long_term)."""
+    try:
+        target_layer = _memory_layer_from_str(demote_to)
+
+        success = await manager.unpin_memory(
+            memory_id=memory_id,
+            user_id=user_id,
+            demote_to=target_layer,
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Pinned memory {memory_id} not found for user {user_id}",
+            )
+
+        return {
+            "success": True,
+            "memory_id": memory_id,
+            "demoted_to": demote_to,
+            "message": "Memory unpinned successfully",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to unpin memory: {str(e)}",
         )
 
 

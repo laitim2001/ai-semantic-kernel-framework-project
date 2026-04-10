@@ -146,26 +146,28 @@ class RoutingHandler(Handler):
 
         routing_decision = None
 
-        # Phase 41: Try 3-tier intent routing via _intent_router
-        if self._business_router and not request.force_mode:
+        # Sprint 144: Three-tier routing ALWAYS runs for security/risk assessment,
+        # regardless of force_mode. Mode selection is user-controlled.
+        if self._business_router:
             try:
                 routing_decision = await self._business_router.route(request.content)
                 context["routing_decision"] = routing_decision
                 logger.info(
-                    "RoutingHandler: 3-tier routed intent=%s, layer=%s, confidence=%.2f",
+                    "RoutingHandler: 3-tier routed intent=%s, layer=%s, confidence=%.2f, risk=%s",
                     routing_decision.intent_category,
                     routing_decision.routing_layer,
                     routing_decision.confidence,
+                    routing_decision.risk_level,
                 )
             except Exception as e:
-                logger.warning("RoutingHandler: 3-tier routing failed, using fallback: %s", e)
+                logger.warning("RoutingHandler: 3-tier routing failed: %s", e)
 
-        # Framework selection
+        # Framework selection — force_mode takes priority
         if request.force_mode:
             intent_analysis = IntentAnalysis(
                 mode=request.force_mode,
                 confidence=1.0,
-                reasoning="Forced mode by user request",
+                reasoning=f"User-selected mode: {request.force_mode.value if hasattr(request.force_mode, 'value') else request.force_mode}",
                 analysis_time_ms=0.0,
             )
         else:
@@ -193,8 +195,24 @@ class RoutingHandler(Handler):
                     session_context=session_context,
                 )
 
+        # Sprint 144: Generate mode suggestion from routing_decision
+        # (for display only — user controls actual mode via force_mode)
+        suggested_mode = None
+        if routing_decision:
+            rd_intent = str(getattr(routing_decision, "intent_category", "")).lower()
+            rd_risk = str(getattr(routing_decision, "risk_level", "")).lower()
+
+            if "incident" in rd_intent and "critical" in rd_risk:
+                suggested_mode = "swarm"
+            elif "incident" in rd_intent and "high" in rd_risk:
+                suggested_mode = "workflow"
+            elif "request" in rd_intent or "change" in rd_intent:
+                suggested_mode = "workflow"
+
         context["intent_analysis"] = intent_analysis
         context["execution_mode"] = intent_analysis.mode
+        if suggested_mode:
+            context["suggested_mode"] = suggested_mode
 
         return HandlerResult(
             success=True,
@@ -203,5 +221,6 @@ class RoutingHandler(Handler):
                 "routing_decision": routing_decision,
                 "intent_analysis": intent_analysis,
                 "execution_mode": intent_analysis.mode,
+                "suggested_mode": suggested_mode,
             },
         )

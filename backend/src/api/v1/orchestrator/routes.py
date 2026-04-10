@@ -244,6 +244,102 @@ async def test_intent(
 # =============================================================================
 
 
+@router.post("/approval/{approval_id}")
+async def orchestrator_approval(approval_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle HITL approval response.
+
+    Sprint 146: User approves or rejects a high-risk pipeline operation.
+    Unblocks the waiting pipeline via asyncio.Event.
+    """
+    action = body.get("action", "reject")
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="action must be 'approve' or 'reject'")
+
+    # Find the mediator with the pending approval
+    factory = _get_session_factory()
+    resolved = False
+    for sid in list(factory._sessions.keys()):
+        mediator = factory._sessions.get(sid)
+        if mediator and hasattr(mediator, "resolve_approval"):
+            if mediator.resolve_approval(approval_id, action):
+                resolved = True
+                break
+
+    if not resolved:
+        raise HTTPException(status_code=404, detail=f"Approval {approval_id} not found or expired")
+
+    logger.info("HITL approval %s: %s", approval_id, action)
+    return {"approval_id": approval_id, "action": action, "status": "resolved"}
+
+
+@router.post("/chat/stream")
+async def orchestrator_chat_stream(request: PipelineRequest):
+    """SSE streaming endpoint for the orchestration pipeline.
+
+    Sprint 145: Returns a Server-Sent Events stream with real-time
+    pipeline step events (ROUTING_COMPLETE, AGENT_THINKING, TEXT_DELTA,
+    TOOL_CALL_END, PIPELINE_COMPLETE).
+
+    The frontend can consume this with fetch() + ReadableStream.
+    """
+    import asyncio
+    from fastapi.responses import StreamingResponse
+    from src.integrations.hybrid.orchestrator.sse_events import PipelineEventEmitter
+    from src.integrations.hybrid.orchestrator.contracts import OrchestratorRequest
+    from src.integrations.hybrid.intent import ExecutionMode
+
+    session_id = request.session_id or "default"
+    factory = _get_session_factory()
+    mediator = factory.get_or_create(session_id)
+
+    # Create event emitter for this request
+    emitter = PipelineEventEmitter()
+
+    # Build OrchestratorRequest
+    request_metadata: Dict[str, Any] = dict(request.metadata) if request.metadata else {}
+    request_metadata["user_id"] = request.user_id or request.source or "anonymous"
+
+    force_mode = None
+    if request.mode:
+        mode_map = {
+            "chat": ExecutionMode.CHAT_MODE,
+            "workflow": ExecutionMode.WORKFLOW_MODE,
+            "swarm": ExecutionMode.SWARM_MODE,
+            "hybrid": ExecutionMode.HYBRID_MODE,
+        }
+        force_mode = mode_map.get(request.mode.lower())
+
+    orchestrator_request = OrchestratorRequest(
+        content=request.content,
+        session_id=request.session_id,
+        user_id=request.user_id or request.source or "anonymous",
+        force_mode=force_mode,
+        metadata=request_metadata,
+    )
+
+    async def run_pipeline():
+        """Run pipeline in background, pushing events to emitter."""
+        try:
+            await mediator.execute(orchestrator_request, event_emitter=emitter)
+        except Exception as e:
+            logger.error("SSE pipeline error: %s", e, exc_info=True)
+            await emitter.emit_error(str(e))
+
+    # Start pipeline in background task
+    asyncio.create_task(run_pipeline())
+
+    # Stream events to client
+    return StreamingResponse(
+        emitter.stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.post("/chat", response_model=PipelineResponse)
 async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
     """Execute the full E2E orchestration pipeline.
@@ -287,10 +383,23 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
         request_metadata: Dict[str, Any] = dict(request.metadata) if request.metadata else {}
         request_metadata["user_id"] = request.user_id or request.source or "anonymous"
 
+        # Sprint 144: Map user-selected mode to force_mode
+        force_mode = None
+        if request.mode:
+            from src.integrations.hybrid.intent import ExecutionMode
+            mode_map = {
+                "chat": ExecutionMode.CHAT_MODE,
+                "workflow": ExecutionMode.WORKFLOW_MODE,
+                "swarm": ExecutionMode.SWARM_MODE,
+                "hybrid": ExecutionMode.HYBRID_MODE,
+            }
+            force_mode = mode_map.get(request.mode.lower())
+
         orchestrator_request = OrchestratorRequest(
             content=request.content,
             session_id=request.session_id,
             user_id=request.user_id or request.source or "anonymous",
+            force_mode=force_mode,
             metadata=request_metadata,
         )
 
@@ -339,15 +448,33 @@ async def orchestrator_chat(request: PipelineRequest) -> PipelineResponse:
         )
         routing_layer_str = rd.routing_layer
 
+    # Sprint 144: Extract execution_mode from response object
+    execution_mode_str: Optional[str] = None
+    if hasattr(response, "execution_mode") and response.execution_mode:
+        em = response.execution_mode
+        execution_mode_str = em.value if hasattr(em, "value") else str(em)
+
+    # Sprint 144: Extract tool_calls from agent_response
+    tool_calls_list = None
+    agent_resp = meta.get("agent_response") or {}
+    if isinstance(agent_resp, dict) and agent_resp.get("tool_calls"):
+        tool_calls_list = agent_resp["tool_calls"]
+
+    # Sprint 144: Extract suggested_mode from metadata
+    suggested_mode_str = meta.get("suggested_mode")
+
     return PipelineResponse(
         content=response.content or "",
         intent_category=intent_category_str,
         confidence=confidence_val,
         risk_level=risk_level_str,
         routing_layer=routing_layer_str,
+        execution_mode=execution_mode_str,
+        suggested_mode=suggested_mode_str,
         framework_used=response.framework_used or "orchestrator_agent",
         session_id=response.session_id,
         is_complete=response.success,
+        tool_calls=tool_calls_list,
         processing_time_ms=round(elapsed_ms, 2),
     )
 

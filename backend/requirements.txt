@@ -49,6 +49,7 @@ anthropic>=0.84.0
 # Long-term Memory (mem0)
 # ===========================================
 mem0ai>=0.0.1                # mem0 SDK for long-term memory
+qdrant-client>=1.7.0         # Vector search for knowledge base
 
 # ===========================================
 # Authentication & Security

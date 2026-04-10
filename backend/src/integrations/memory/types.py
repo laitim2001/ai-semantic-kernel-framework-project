@@ -24,6 +24,13 @@ class MemoryType(str, Enum):
     BEST_PRACTICE = "best_practice"  # Best practices and patterns
     CONVERSATION = "conversation"  # Conversation snippets
     FEEDBACK = "feedback"  # User feedback and corrections
+    INSIGHT = "insight"  # Orchestrator insights and analysis
+    DECISION = "decision"  # Routing and decision records
+    # CC-inspired extraction types (Post-Pipeline Memory Extraction)
+    PINNED_KNOWLEDGE = "pinned_knowledge"  # User-pinned or auto-pinned stable knowledge
+    EXTRACTED_FACT = "extracted_fact"  # LLM-extracted concrete fact from conversation
+    EXTRACTED_PREFERENCE = "extracted_preference"  # LLM-extracted user preference
+    EXTRACTED_PATTERN = "extracted_pattern"  # LLM-extracted recurring behavior/need
 
 
 class MemoryLayer(str, Enum):
@@ -32,6 +39,7 @@ class MemoryLayer(str, Enum):
     WORKING = "working"  # Redis - short-term, TTL 30 min
     SESSION = "session"  # PostgreSQL - medium-term, TTL 7 days
     LONG_TERM = "long_term"  # mem0 + Qdrant - permanent
+    PINNED = "pinned"  # Redis hash, no TTL - always injected into context (CC's CLAUDE.md equivalent)
 
 
 @dataclass
@@ -227,6 +235,16 @@ class MemoryConfig:
     # Batch settings
     embedding_batch_size: int = 100
     search_batch_size: int = 50
+
+    # Pinned memory settings (CC's CLAUDE.md equivalent)
+    max_pinned_per_user: int = field(
+        default_factory=lambda: int(os.getenv("MAX_PINNED_PER_USER", "20"))
+    )
+
+    # Context budget settings (tokens)
+    context_budget_tokens: int = field(
+        default_factory=lambda: int(os.getenv("MEMORY_CONTEXT_BUDGET", "6000"))
+    )
 
     # Feature flag
     enabled: bool = field(

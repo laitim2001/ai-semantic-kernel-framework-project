@@ -46,6 +46,8 @@ import { Settings as DevUISettings } from '@/pages/DevUI/Settings';
 import { AGUITestPanel } from '@/pages/DevUI/AGUITestPanel';
 // Phase 29: Agent Swarm Test Page
 import { SwarmTestPage } from '@/pages/SwarmTestPage';
+// PoC: Agent Team Test Page
+import { AgentTeamTestPage } from '@/pages/AgentTeamTestPage';
 // Sprint 133: Workflow DAG Editor (Phase 34)
 import { WorkflowEditorPage } from '@/pages/workflows/WorkflowEditorPage';
 // Sprint 138: Session Management Pages (Phase 40)
@@ -70,6 +72,8 @@ function App() {
 
       {/* Phase 29: Agent Swarm Test Page - Standalone full-screen layout */}
       <Route path="/swarm-test" element={<SwarmTestPage />} />
+      {/* PoC: Agent Team Test Page */}
+      <Route path="/agent-team-test" element={<AgentTeamTestPage />} />
 
       {/* Protected Routes (Sprint 71) - Require authentication */}
       <Route

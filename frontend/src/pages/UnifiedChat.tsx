@@ -42,8 +42,8 @@ import { useExecutionMetrics } from '@/hooks/useExecutionMetrics';
 import { useChatThreads } from '@/hooks/useChatThreads';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useOrchestration } from '@/hooks/useOrchestration';
-import { orchestratorApi } from '@/api/endpoints/orchestrator';
-import type { SendOrchestratorMessageResponse } from '@/api/endpoints/orchestrator';
+import { useSSEChat } from '@/hooks/useSSEChat';
+import type { OrchestrationMetadata as _OrchestratorApiType } from '@/types/ag-ui'; // SSE replaces orchestratorApi
 import { memoryApi } from '@/api/endpoints/memory';
 import { sessionsApi } from '@/api/endpoints/sessions';
 import { filesApi } from '@/api/endpoints/files';
@@ -52,6 +52,9 @@ import type { DialogQuestion } from '@/api/endpoints/orchestration';
 import type { Attachment } from '@/types/unified-chat';
 import type { OrchestrationMetadata } from '@/types/ag-ui';
 import { MemoryHint } from '@/components/unified-chat/MemoryHint';
+import { AgentSwarmPanel } from '@/components/unified-chat/agent-swarm/AgentSwarmPanel';
+import { WorkerDetailDrawer } from '@/components/unified-chat/agent-swarm/WorkerDetailDrawer';
+import { useSwarmStore } from '@/stores/swarmStore';
 import type { MemoryHintItem } from '@/components/unified-chat/MemoryHint';
 import type {
   UnifiedChatProps,
@@ -251,6 +254,29 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const [dialogQuestions, setDialogQuestions] = useState<DialogQuestion[] | null>(null);
   // Phase 41: Track orchestrator pipeline session ID
   const [orchestratorSessionId, setOrchestratorSessionId] = useState<string | null>(null);
+  const [isPipelineSending] = useState(false); // kept for non-SSE fallback
+  // Sprint 145: SSE streaming hook
+  const { sendSSE, isStreaming: isSSEStreaming } = useSSEChat();
+  // Sprint 146: Swarm store for AgentSwarmPanel
+  const swarmStatus = useSwarmStore((s) => s.swarmStatus);
+  const _swarmReset = useSwarmStore((s) => s.reset);
+  void _swarmReset; // used on session change (future)
+  void useSwarmStore; // accessed via getState() in SSE handlers
+  const swarmSelectedDetail = useSwarmStore((s) => s.selectedWorkerDetail);
+  const swarmIsDrawerOpen = useSwarmStore((s) => s.isDrawerOpen);
+  const swarmCloseDrawer = useSwarmStore((s) => s.closeDrawer);
+  const [showSwarmPanel, setShowSwarmPanel] = useState(false);
+  // Sprint 146: HITL approval state
+  const [pendingApproval, setPendingApproval] = useState<{
+    approvalId: string;
+    action: string;
+    riskLevel: string;
+    description: string;
+    details?: Record<string, unknown>;
+  } | null>(null);
+  // Sprint 144: User-controlled pipeline mode
+  const [pipelineMode, setPipelineMode] = useState<'chat' | 'workflow' | 'swarm'>('chat');
+  const [suggestedMode, setSuggestedMode] = useState<string | null>(null);
   // Phase 41: Track typewriter animation state
   const [typewriterContent, setTypewriterContent] = useState<string | null>(null);
   const [typewriterMessageId, setTypewriterMessageId] = useState<string | null>(null);
@@ -710,9 +736,9 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       console.log('[S75-5] Uploaded file IDs:', allFileIds);
     }
 
-    // Phase 41: Unified pipeline — POST /orchestrator/chat
+    // Phase 41 / Sprint 145: Unified pipeline via SSE streaming
     if (orchestrationEnabled) {
-      console.log('[UnifiedChat] Pipeline send via /orchestrator/chat:', content.slice(0, 50));
+      console.log('[UnifiedChat] Pipeline SSE send:', content.slice(0, 50));
 
       // Add user message to chat immediately
       const userMessage = {
@@ -724,125 +750,257 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
       const messagesWithUser = [...messagesRef.current, userMessage];
       setMessages(messagesWithUser);
 
-      try {
-        const response: SendOrchestratorMessageResponse = await orchestratorApi.sendMessage({
+      // Create assistant message placeholder
+      const assistantMessageId = `orch-${Date.now()}`;
+      let accumulatedContent = '';
+      const orchMetadata: OrchestrationMetadata = {
+        executionMode: pipelineMode,
+      };
+
+      const assistantMessage = {
+        id: assistantMessageId,
+        role: 'assistant' as const,
+        content: '',
+        timestamp: new Date().toISOString(),
+        orchestrationMetadata: orchMetadata,
+      };
+      setMessages([...messagesWithUser, assistantMessage]);
+
+      // Sprint 145: SSE event handlers for real-time updates
+      await sendSSE(
+        {
           content,
+          mode: pipelineMode,
           source: 'user',
           session_id: orchestratorSessionId || undefined,
           user_id: userId,
-        });
-
-        // Track pipeline session
-        if (response.session_id) {
-          setOrchestratorSessionId(response.session_id);
-        }
-
-        // Build orchestration metadata from PipelineResponse
-        // Normalize risk_level to uppercase (backend may return lowercase)
-        const normalizedRisk = response.risk_level?.toUpperCase() as OrchestrationMetadata['riskLevel'];
-        const orchMetadata: OrchestrationMetadata = {
-          intent: response.intent_category || response.intent,
-          riskLevel: normalizedRisk,
-          executionMode: response.execution_mode || response.framework_used,
-          routingLayer: response.routing_layer,
-          confidence: response.confidence,
-          processingTimeMs: response.processing_time_ms,
-          taskId: response.task_id,
-          sessionId: response.session_id,
-          frameworkUsed: response.framework_used,
-          requiresApproval: response.requires_approval,
-        };
-
-        // S142-2: Extract tool calls from message metadata
-        const rawToolCalls = response.message?.metadata?.tool_calls as
-          | Array<{ tool_name?: string; status?: string; result?: string; duration_ms?: number }>
-          | undefined;
-        if (Array.isArray(rawToolCalls) && rawToolCalls.length > 0) {
-          orchMetadata.pipelineToolCalls = rawToolCalls.map((tc, idx) => ({
-            id: `tc-${Date.now()}-${idx}`,
-            toolName: tc.tool_name || 'unknown',
-            status: (tc.status as 'pending' | 'running' | 'completed' | 'failed') || 'completed',
-            result: tc.result,
-            durationMs: tc.duration_ms,
-          }));
-        }
-
-        // Extract response content
-        const responseContent =
-          response.content ||
-          response.message?.content ||
-          '(No response content)';
-
-        // Build detail string for IntentStatusChip expandable section
-        const detailParts: string[] = [];
-        if (orchMetadata.routingLayer) detailParts.push(`路由層: ${orchMetadata.routingLayer}`);
-        if (orchMetadata.confidence != null) detailParts.push(`信心度: ${(orchMetadata.confidence * 100).toFixed(0)}%`);
-        if (orchMetadata.processingTimeMs != null) detailParts.push(`處理時間: ${orchMetadata.processingTimeMs}ms`);
-        if (orchMetadata.frameworkUsed) detailParts.push(`框架: ${orchMetadata.frameworkUsed}`);
-        if (orchMetadata.taskId) detailParts.push(`任務: ${orchMetadata.taskId}`);
-        if (orchMetadata.pipelineToolCalls?.length) detailParts.push(`工具調用: ${orchMetadata.pipelineToolCalls.length} 個`);
-
-        // Create assistant message with orchestration metadata
-        const assistantMessageId = `orch-${Date.now()}`;
-        const assistantMessage = {
-          id: assistantMessageId,
-          role: 'assistant' as const,
-          content: '', // Start empty for typewriter effect
-          timestamp: new Date().toISOString(),
-          orchestrationMetadata: {
-            ...orchMetadata,
-            detail: detailParts.length > 0 ? detailParts.join('\n') : undefined,
+        },
+        {
+          onPipelineStart: (data) => {
+            console.log('[SSE] Pipeline started:', data);
+            if (data.session_id) {
+              setOrchestratorSessionId(data.session_id as string);
+            }
           },
-        };
-        setMessages([...messagesWithUser, assistantMessage]);
+          onRoutingComplete: (data) => {
+            console.log('[SSE] Routing complete:', data);
+            const intent = data.intent as string;
+            const riskLevel = (data.risk_level as string)?.toUpperCase() as OrchestrationMetadata['riskLevel'];
+            const mode = data.mode as string;
+            const confidence = data.confidence as number;
+            const suggested = data.suggested_mode as string;
 
-        // Trigger typewriter effect
-        setTypewriterContent(responseContent);
-        setTypewriterMessageId(assistantMessageId);
+            orchMetadata.intent = intent;
+            orchMetadata.riskLevel = riskLevel;
+            orchMetadata.executionMode = mode || pipelineMode;
+            orchMetadata.confidence = confidence;
 
-        // S143-1: Search for related memories on first message
-        if (isFirstMessage.current) {
-          isFirstMessage.current = false;
-          memoryApi.searchMemories(content, userId)
-            .then((res) => {
-              if (res.memories && res.memories.length > 0) {
-                setRelatedMemories(res.memories.map((m) => ({
-                  id: m.id,
-                  content: m.content,
-                  created_at: m.created_at,
-                  score: m.score,
-                })));
-                setShowMemoryHint(true);
+            // Update message with routing metadata
+            const routingUpdated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, orchestrationMetadata: { ...orchMetadata } }
+                : m
+            );
+            setMessages(routingUpdated);
+
+            if (suggested && suggested !== pipelineMode) {
+              setSuggestedMode(suggested);
+            }
+          },
+          onAgentThinking: () => {
+            // Could show a thinking indicator
+          },
+          onToolCallEnd: (data) => {
+            const toolName = data.tool_name as string;
+            console.log('[SSE] Tool call:', toolName);
+            if (!orchMetadata.pipelineToolCalls) orchMetadata.pipelineToolCalls = [];
+            orchMetadata.pipelineToolCalls.push({
+              id: `tc-${Date.now()}`,
+              toolName: toolName || 'unknown',
+              status: 'completed',
+            });
+            const updated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, orchestrationMetadata: { ...orchMetadata } }
+                : m
+            );
+            setMessages(updated);
+          },
+          onTextDelta: (delta) => {
+            accumulatedContent += delta;
+            const updated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, content: accumulatedContent }
+                : m
+            );
+            setMessages(updated);
+          },
+          onTaskDispatched: (data) => {
+            console.log('[SSE] Task dispatched:', data);
+            orchMetadata.taskId = data.task_id as string;
+          },
+          onPipelineComplete: (data) => {
+            console.log('[SSE] Pipeline complete:', data);
+            const finalContent = (data.content as string) || accumulatedContent;
+            const processingTime = data.processing_time_ms as number;
+
+            orchMetadata.processingTimeMs = processingTime;
+
+            const detailParts: string[] = [];
+            if (orchMetadata.confidence != null) detailParts.push(`信心度: ${(orchMetadata.confidence * 100).toFixed(0)}%`);
+            if (processingTime != null) detailParts.push(`處理時間: ${processingTime}ms`);
+            if (orchMetadata.pipelineToolCalls?.length) detailParts.push(`工具調用: ${orchMetadata.pipelineToolCalls.length} 個`);
+
+            const updated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? {
+                    ...m,
+                    content: finalContent || '(No response content)',
+                    orchestrationMetadata: {
+                      ...orchMetadata,
+                      detail: detailParts.length > 0 ? detailParts.join('\n') : undefined,
+                    },
+                  }
+                : m
+            );
+            setMessages(updated);
+          },
+          onSwarmWorkerStart: (data) => {
+            console.log('[SSE] Swarm worker started:', data);
+            setShowSwarmPanel(true);
+            const subtype = data.event_subtype as string;
+
+            if (subtype === 'SWARM_STARTED') {
+              // Initial swarm setup — use getState() to avoid stale closure
+              const totalWorkers = (data.total_workers as number) || 0;
+              useSwarmStore.getState().setSwarmStatus({
+                swarmId: (data.swarm_id as string) || `swarm-${Date.now()}`,
+                sessionId: orchestratorSessionId || '',
+                mode: (data.mode as 'parallel' | 'sequential' | 'pipeline' | 'hierarchical' | 'hybrid') || 'parallel',
+                status: 'executing',
+                totalWorkers,
+                overallProgress: 0,
+                workers: [],
+                createdAt: new Date().toISOString(),
+                startedAt: new Date().toISOString(),
+                metadata: {},
+              });
+            } else {
+              // Individual worker start — ensure status exists first
+              const store = useSwarmStore.getState();
+              if (!store.swarmStatus) {
+                store.setSwarmStatus({
+                  swarmId: `swarm-${Date.now()}`,
+                  sessionId: orchestratorSessionId || '',
+                  mode: 'parallel',
+                  status: 'executing',
+                  totalWorkers: 4,
+                  overallProgress: 0,
+                  workers: [],
+                  createdAt: new Date().toISOString(),
+                  startedAt: new Date().toISOString(),
+                  metadata: {},
+                });
               }
-            })
-            .catch(() => { /* memory search is non-critical */ });
-        }
+              store.addWorker({
+                workerId: (data.worker_id as string) || `w-${Date.now()}`,
+                workerName: (data.display_name as string) || (data.agent_name as string) || 'Worker',
+                workerType: 'hybrid',
+                role: (data.role as string) || 'worker',
+                status: 'running',
+                progress: 0,
+                toolCallsCount: 0,
+                createdAt: new Date().toISOString(),
+                startedAt: new Date().toISOString(),
+              });
+            }
+          },
+          onSwarmProgress: (data) => {
+            const subtype = data.event_subtype as string;
+            const store = useSwarmStore.getState();
 
-        // S143-3: Extract memory_context from pipeline response metadata
-        const msgMeta = response.message?.metadata as Record<string, unknown> | undefined;
-        const memCtx = msgMeta?.memory_context as
-          | Array<{ id: string; content: string; created_at: string; score?: number }>
-          | undefined;
-        if (Array.isArray(memCtx) && memCtx.length > 0) {
-          setRelatedMemories(memCtx.map((m) => ({
-            id: m.id,
-            content: m.content,
-            created_at: m.created_at,
-            score: m.score,
-          })));
-          setShowMemoryHint(true);
+            if (subtype === 'SWARM_WORKER_COMPLETED') {
+              store.completeWorker({
+                swarm_id: '',
+                worker_id: data.worker_id as string,
+                status: 'completed',
+                duration_ms: (data.duration_ms as number) || 0,
+                completed_at: new Date().toISOString(),
+              });
+            } else if (subtype === 'SWARM_WORKER_THINKING') {
+              store.updateWorkerThinking({
+                swarm_id: '',
+                worker_id: data.worker_id as string,
+                thinking_content: (data.content as string) || '',
+                timestamp: new Date().toISOString(),
+              });
+            } else if (subtype === 'SWARM_WORKER_TOOL_CALL') {
+              if ((data.status as string) === 'completed') {
+                store.updateWorkerToolCall({
+                  swarm_id: '',
+                  worker_id: data.worker_id as string,
+                  tool_call_id: `tc-${Date.now()}`,
+                  tool_name: (data.tool_name as string) || '',
+                  status: 'completed',
+                  input_args: (data.arguments as Record<string, unknown>) || {},
+                  output_result: data.result as Record<string, unknown>,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+            } else if (subtype === 'SWARM_COMPLETED') {
+              const total = (data.total_workers as number) || 0;
+              const completed = (data.completed_workers as number) || 0;
+              store.updateSwarmProgress(total > 0 ? Math.round((completed / total) * 100) : 100);
+              store.completeSwarm('completed');
+            } else {
+              // Generic progress update
+              store.updateWorkerProgress({
+                swarm_id: '',
+                worker_id: data.worker_id as string,
+                progress: (data.progress as number) || 0,
+                status: (data.status as string) || 'running',
+                updated_at: new Date().toISOString(),
+              });
+            }
+          },
+          onApprovalRequired: (data) => {
+            console.log('[SSE] Approval required:', data);
+            setPendingApproval({
+              approvalId: data.approval_id as string,
+              action: data.action as string,
+              riskLevel: data.risk_level as string,
+              description: data.description as string,
+              details: data.details as Record<string, unknown>,
+            });
+          },
+          onPipelineError: (error) => {
+            console.error('[SSE] Pipeline error:', error);
+            const updated = messagesRef.current.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, content: `Pipeline 錯誤: ${error}` }
+                : m
+            );
+            setMessages(updated);
+          },
         }
+      );
 
-      } catch (err) {
-        console.error('[UnifiedChat] Pipeline send failed:', err);
-        // Fallback: show error (use messagesWithUser which already has user message)
-        const errorMessage = {
-          id: `orch-err-${Date.now()}`,
-          role: 'assistant' as const,
-          content: `Pipeline 錯誤: ${err instanceof Error ? err.message : String(err)}`,
-          timestamp: new Date().toISOString(),
-        };
-        setMessages([...messagesWithUser, errorMessage]);
+      // S143-1: Search for related memories on first message
+      if (isFirstMessage.current) {
+        isFirstMessage.current = false;
+        memoryApi.searchMemories(content, userId)
+          .then((res) => {
+            if (res.memories && res.memories.length > 0) {
+              setRelatedMemories(res.memories.map((m) => ({
+                id: m.id,
+                content: m.content,
+                created_at: m.created_at,
+                score: m.score,
+              })));
+              setShowMemoryHint(true);
+            }
+          })
+          .catch(() => { /* memory search is non-critical */ });
       }
 
       if (allFileIds.length > 0) clearAttachments();
@@ -1026,6 +1184,66 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
               </div>
             )}
 
+            {/* Sprint 146: HITL Inline Approval */}
+            {pendingApproval && (
+              <div className="mx-4 my-2 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="text-red-500 text-xl mt-0.5">&#9888;</div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-red-800 text-sm">
+                      {pendingApproval.riskLevel} 風險操作需要審批
+                    </h4>
+                    <p className="text-sm text-red-700 mt-1">{pendingApproval.description}</p>
+                    {pendingApproval.details && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {JSON.stringify(pendingApproval.details)}
+                      </p>
+                    )}
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                        onClick={async () => {
+                          try {
+                            const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+                            const authToken = useAuthStore.getState().token;
+                            const hdrs: Record<string, string> = { 'Content-Type': 'application/json' };
+                            if (authToken) hdrs['Authorization'] = `Bearer ${authToken}`;
+                            await fetch(`${API_BASE}/orchestrator/approval/${pendingApproval.approvalId}`, {
+                              method: 'POST',
+                              headers: hdrs,
+                              body: JSON.stringify({ action: 'approve' }),
+                            });
+                          } catch { /* non-critical */ }
+                          setPendingApproval(null);
+                        }}
+                      >
+                        批准
+                      </button>
+                      <button
+                        className="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
+                        onClick={async () => {
+                          try {
+                            const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+                            const authToken = useAuthStore.getState().token;
+                            const hdrs: Record<string, string> = { 'Content-Type': 'application/json' };
+                            if (authToken) hdrs['Authorization'] = `Bearer ${authToken}`;
+                            await fetch(`${API_BASE}/orchestrator/approval/${pendingApproval.approvalId}`, {
+                              method: 'POST',
+                              headers: hdrs,
+                              body: JSON.stringify({ action: 'reject' }),
+                            });
+                          } catch { /* non-critical */ }
+                          setPendingApproval(null);
+                        }}
+                      >
+                        拒絕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Messages Area - Using ChatArea component with tool support */}
             <ChatArea
               messages={messages}
@@ -1046,6 +1264,40 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
               checkpoints={checkpoints}
               onRestoreCheckpoint={handleRestore}
             />
+          )}
+
+          {/* Sprint 146/149: Agent Swarm Panel + Worker Detail Drawer */}
+          {(pipelineMode === 'swarm' || showSwarmPanel) && (
+            <div className="w-[360px] border-l bg-white overflow-y-auto hidden xl:block">
+              <AgentSwarmPanel
+                swarmStatus={swarmStatus}
+                onWorkerClick={(worker) => {
+                  // Build WorkerDetail from store data so Drawer doesn't need to fetch
+                  const store = useSwarmStore.getState();
+                  store.selectWorker(worker);
+                  // Build minimal WorkerDetail from UIWorkerSummary
+                  store.setWorkerDetail({
+                    ...worker,
+                    taskId: worker.workerId,
+                    taskDescription: worker.currentAction || '',
+                    thinkingHistory: [],
+                    toolCalls: [],
+                    messages: [],
+                  });
+                  store.openDrawer();
+                }}
+                isLoading={isSSEStreaming && pipelineMode === 'swarm'}
+              />
+              <WorkerDetailDrawer
+                open={swarmIsDrawerOpen}
+                onClose={swarmCloseDrawer}
+                swarmId={swarmStatus?.swarmId || ''}
+                worker={swarmStatus?.workers?.find(
+                  w => w.workerId === useSwarmStore.getState().selectedWorkerId
+                ) || null}
+                workerDetail={swarmSelectedDetail}
+              />
+            </div>
           )}
 
           {/* Sprint 99: Orchestration Panel (Phase 28 debug view) */}
@@ -1075,15 +1327,54 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
           />
         )}
 
+        {/* Sprint 144: Mode Selector + Suggested Mode Banner */}
+        {suggestedMode && suggestedMode !== pipelineMode && (
+          <div className="mx-4 mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-sm">
+            <span className="text-amber-800">
+              路由建議切換到 <strong>{suggestedMode}</strong> 模式
+            </span>
+            <button
+              className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded text-xs font-medium"
+              onClick={() => {
+                setPipelineMode(suggestedMode as 'chat' | 'workflow' | 'swarm');
+                setSuggestedMode(null);
+              }}
+            >
+              切換
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-1 px-4 pb-1">
+          {(['chat', 'workflow', 'swarm'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => { setPipelineMode(m); setSuggestedMode(null); }}
+              className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
+                pipelineMode === m
+                  ? m === 'chat'
+                    ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-300'
+                    : m === 'workflow'
+                    ? 'bg-purple-100 text-purple-800 ring-1 ring-purple-300'
+                    : 'bg-orange-100 text-orange-800 ring-1 ring-orange-300'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              {m === 'chat' ? 'Chat' : m === 'workflow' ? 'Workflow' : 'Swarm'}
+            </button>
+          ))}
+        </div>
+
         {/* Input Area - S75-4: Added file attachment support */}
         <ChatInput
           onSend={handleSend}
-          isStreaming={isStreaming || isUploading}
+          isStreaming={isStreaming || isUploading || isPipelineSending || isSSEStreaming}
           onCancel={handleCancel}
           placeholder={
-            effectiveMode === 'chat'
+            pipelineMode === 'chat'
               ? 'Type a message...'
-              : 'Describe your task...'
+              : pipelineMode === 'workflow'
+              ? 'Describe your workflow task...'
+              : 'Describe the incident for swarm agents...'
           }
           attachments={typedAttachments}
           onAttach={handleAttach}

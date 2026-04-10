@@ -351,6 +351,8 @@ export interface OrchestrationMetadata {
   requiresApproval?: boolean;
   /** Approval ID if approval is required */
   approvalId?: string;
+  /** Sprint 147: Knowledge sources from RAG search */
+  knowledgeSources?: Array<{ title?: string; score?: number; snippet?: string }>;
 }
 
 /** Chat Message */

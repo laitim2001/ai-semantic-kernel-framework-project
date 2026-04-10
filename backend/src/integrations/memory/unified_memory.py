@@ -142,6 +142,10 @@ class UnifiedMemoryManager:
         Returns:
             Selected memory layer.
         """
+        # Pinned knowledge always goes to PINNED layer
+        if memory_type == MemoryType.PINNED_KNOWLEDGE:
+            return MemoryLayer.PINNED
+
         # High importance or specific types go to long-term
         if importance >= 0.8:
             return MemoryLayer.LONG_TERM
@@ -150,6 +154,14 @@ class UnifiedMemoryManager:
             MemoryType.EVENT_RESOLUTION,
             MemoryType.BEST_PRACTICE,
             MemoryType.SYSTEM_KNOWLEDGE,
+        ]:
+            return MemoryLayer.LONG_TERM
+
+        # Extracted types go to long-term
+        if memory_type in [
+            MemoryType.EXTRACTED_FACT,
+            MemoryType.EXTRACTED_PREFERENCE,
+            MemoryType.EXTRACTED_PATTERN,
         ]:
             return MemoryLayer.LONG_TERM
 
@@ -219,7 +231,9 @@ class UnifiedMemoryManager:
         )
 
         # Store in appropriate layer
-        if target_layer == MemoryLayer.WORKING:
+        if target_layer == MemoryLayer.PINNED:
+            await self._store_pinned_memory(record)
+        elif target_layer == MemoryLayer.WORKING:
             await self._store_working_memory(record)
         elif target_layer == MemoryLayer.SESSION:
             await self._store_session_memory(record)
@@ -467,22 +481,30 @@ class UnifiedMemoryManager:
         """
         Get relevant memories for the current context.
 
-        Combines recent working memory with relevant long-term memories.
+        Priority order (CC-inspired):
+        1. PINNED — always loaded, like CC's CLAUDE.md (not counted against limit)
+        2. WORKING — recent short-term context
+        3. SESSION — medium-term context
+        4. LONG_TERM — semantic search results
 
         Args:
             user_id: User identifier.
             session_id: Optional session identifier.
             query: Optional query for semantic search.
-            limit: Maximum memories to return.
+            limit: Maximum non-pinned memories to return.
 
         Returns:
-            List of relevant MemoryRecord objects.
+            List of relevant MemoryRecord objects (pinned first, then others).
         """
         self._ensure_initialized()
 
         memories: List[MemoryRecord] = []
 
-        # Get recent working memories
+        # Priority 1: PINNED — always loaded, not counted against limit
+        pinned = await self.get_pinned(user_id)
+        memories.extend(pinned)
+
+        # Priority 2: Recent working memories
         if self._redis:
             try:
                 pattern = f"memory:working:{user_id}:*"
@@ -499,17 +521,36 @@ class UnifiedMemoryManager:
             except Exception as e:
                 logger.warning(f"Failed to get working memory context: {e}")
 
-        # If query provided, search for relevant memories
-        if query:
+        # Priority 3: Recent session memories
+        if self._redis:
+            try:
+                session_pattern = f"memory:session:{user_id}:*"
+                session_keys = []
+                async for key in self._redis.scan_iter(match=session_pattern, count=50):
+                    session_keys.append(key)
+
+                for key in session_keys[:5]:  # Get 5 most recent
+                    data = await self._redis.get(key)
+                    if data:
+                        record = MemoryRecord.from_dict(json.loads(data))
+                        memories.append(record)
+
+            except Exception as e:
+                logger.warning(f"Failed to get session memory context: {e}")
+
+        # Priority 4: Semantic search for relevant long-term memories
+        non_pinned_count = len(memories) - len(pinned)
+        remaining = limit - non_pinned_count
+        if query and remaining > 0:
             search_results = await self.search(
                 query=query,
                 user_id=user_id,
                 layers=[MemoryLayer.LONG_TERM],
-                limit=limit - len(memories),
+                limit=max(1, remaining),
             )
             memories.extend([r.memory for r in search_results])
 
-        return memories[:limit]
+        return memories
 
     async def promote(
         self,
@@ -595,7 +636,13 @@ class UnifiedMemoryManager:
         layers = [layer] if layer else list(MemoryLayer)
 
         for target_layer in layers:
-            if target_layer == MemoryLayer.WORKING and self._redis:
+            if target_layer == MemoryLayer.PINNED and self._redis:
+                hash_key = self._pinned_hash_key(user_id)
+                result = await self._redis.hdel(hash_key, memory_id)
+                if result:
+                    deleted = True
+
+            elif target_layer == MemoryLayer.WORKING and self._redis:
                 key = f"memory:working:{user_id}:{memory_id}"
                 result = await self._redis.delete(key)
                 if result:
@@ -636,6 +683,13 @@ class UnifiedMemoryManager:
         memories: List[MemoryRecord] = []
         target_layers = layers or list(MemoryLayer)
 
+        # Get from pinned memory
+        if MemoryLayer.PINNED in target_layers:
+            pinned = await self.get_pinned(user_id)
+            for record in pinned:
+                if not memory_types or record.memory_type in memory_types:
+                    memories.append(record)
+
         # Get from working memory
         if MemoryLayer.WORKING in target_layers and self._redis:
             try:
@@ -671,6 +725,208 @@ class UnifiedMemoryManager:
             memories.extend(long_term)
 
         return memories
+
+    # ── Pinned Knowledge Layer (CC's CLAUDE.md equivalent) ──────────────
+
+    def _pinned_hash_key(self, user_id: str) -> str:
+        """Redis hash key for a user's pinned memories."""
+        return f"memory:pinned:{user_id}"
+
+    async def _store_pinned_memory(self, record: MemoryRecord) -> None:
+        """Store a memory in the pinned layer (Redis hash, no TTL)."""
+        if not self._redis:
+            logger.warning("Redis unavailable — pinned memory stored to long-term instead")
+            await self._mem0_client.add_memory(
+                content=record.content,
+                user_id=record.user_id,
+                memory_type=record.memory_type,
+                metadata=record.metadata,
+            )
+            return
+
+        hash_key = self._pinned_hash_key(record.user_id)
+
+        # Enforce per-user limit
+        current_count = await self._redis.hlen(hash_key)
+        if current_count >= self.config.max_pinned_per_user:
+            raise ValueError(
+                f"Pinned memory limit reached ({self.config.max_pinned_per_user}). "
+                f"Unpin existing memories before adding new ones."
+            )
+
+        await self._redis.hset(hash_key, record.id, json.dumps(record.to_dict()))
+        logger.info(
+            f"Pinned memory stored: {record.id[:8]}... for user {record.user_id} "
+            f"({current_count + 1}/{self.config.max_pinned_per_user})"
+        )
+
+    async def pin_memory(
+        self,
+        content: str,
+        user_id: str,
+        memory_type: MemoryType = MemoryType.PINNED_KNOWLEDGE,
+        metadata: Optional[MemoryMetadata] = None,
+    ) -> MemoryRecord:
+        """Pin a memory — it will ALWAYS be injected into context.
+
+        This is the server-side equivalent of CC's CLAUDE.md: knowledge that
+        the system should always have available regardless of semantic relevance.
+
+        Args:
+            content: The knowledge to pin.
+            user_id: User identifier.
+            memory_type: Defaults to PINNED_KNOWLEDGE.
+            metadata: Optional metadata.
+
+        Returns:
+            The pinned MemoryRecord.
+
+        Raises:
+            ValueError: If pinned limit reached.
+        """
+        return await self.add(
+            content=content,
+            user_id=user_id,
+            memory_type=memory_type,
+            metadata=metadata,
+            layer=MemoryLayer.PINNED,
+        )
+
+    async def unpin_memory(
+        self,
+        memory_id: str,
+        user_id: str,
+        demote_to: MemoryLayer = MemoryLayer.LONG_TERM,
+    ) -> bool:
+        """Unpin a memory. Optionally demotes it to another layer.
+
+        Args:
+            memory_id: Memory to unpin.
+            user_id: User identifier.
+            demote_to: Layer to move the memory to (default: LONG_TERM).
+
+        Returns:
+            True if successfully unpinned.
+        """
+        self._ensure_initialized()
+
+        if not self._redis:
+            return False
+
+        hash_key = self._pinned_hash_key(user_id)
+        data = await self._redis.hget(hash_key, memory_id)
+        if not data:
+            return False
+
+        # Remove from pinned
+        await self._redis.hdel(hash_key, memory_id)
+
+        # Demote to target layer
+        record = MemoryRecord.from_dict(json.loads(data))
+        record.layer = demote_to
+        record.updated_at = datetime.utcnow()
+
+        if demote_to == MemoryLayer.LONG_TERM:
+            await self._mem0_client.add_memory(
+                content=record.content,
+                user_id=record.user_id,
+                memory_type=record.memory_type,
+                metadata=record.metadata,
+            )
+        elif demote_to == MemoryLayer.SESSION:
+            await self._store_session_memory(record)
+
+        logger.info(
+            f"Memory unpinned: {memory_id[:8]}... → {demote_to.value} "
+            f"for user {user_id}"
+        )
+        return True
+
+    async def get_pinned(self, user_id: str) -> List[MemoryRecord]:
+        """Get ALL pinned memories for a user. No search needed — always returned.
+
+        This is the core mechanism: pinned memories are unconditionally
+        injected into every pipeline context, like CC's CLAUDE.md.
+
+        Args:
+            user_id: User identifier.
+
+        Returns:
+            List of all pinned MemoryRecord objects.
+        """
+        self._ensure_initialized()
+
+        if not self._redis:
+            return []
+
+        try:
+            hash_key = self._pinned_hash_key(user_id)
+            all_data = await self._redis.hgetall(hash_key)
+
+            records = []
+            for mem_id, data in all_data.items():
+                try:
+                    record = MemoryRecord.from_dict(json.loads(data))
+                    records.append(record)
+                except Exception as e:
+                    logger.warning(f"Failed to parse pinned memory {mem_id}: {e}")
+
+            # Sort by created_at (newest first)
+            records.sort(key=lambda r: r.created_at, reverse=True)
+            return records
+
+        except Exception as e:
+            logger.warning(f"Failed to get pinned memories for {user_id}: {e}")
+            return []
+
+    async def update_pinned(
+        self,
+        memory_id: str,
+        user_id: str,
+        content: Optional[str] = None,
+        metadata: Optional[MemoryMetadata] = None,
+    ) -> Optional[MemoryRecord]:
+        """Update a pinned memory's content or metadata.
+
+        Args:
+            memory_id: Memory to update.
+            user_id: User identifier.
+            content: New content (if updating).
+            metadata: New metadata (if updating).
+
+        Returns:
+            Updated MemoryRecord, or None if not found.
+        """
+        self._ensure_initialized()
+
+        if not self._redis:
+            return None
+
+        hash_key = self._pinned_hash_key(user_id)
+        data = await self._redis.hget(hash_key, memory_id)
+        if not data:
+            return None
+
+        record = MemoryRecord.from_dict(json.loads(data))
+
+        if content is not None:
+            record.content = content
+        if metadata is not None:
+            record.metadata = metadata
+        record.updated_at = datetime.utcnow()
+
+        await self._redis.hset(hash_key, memory_id, json.dumps(record.to_dict()))
+        logger.info(f"Pinned memory updated: {memory_id[:8]}... for user {user_id}")
+        return record
+
+    async def get_pinned_count(self, user_id: str) -> int:
+        """Get the number of pinned memories for a user."""
+        if not self._redis:
+            return 0
+        hash_key = self._pinned_hash_key(user_id)
+        return await self._redis.hlen(hash_key)
+
+    # ── Updated get_context with Pinned layer ────────────────────────
 
     async def close(self) -> None:
         """Clean up all resources."""

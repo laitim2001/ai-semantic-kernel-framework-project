@@ -192,7 +192,7 @@ class OrchestratorBootstrap:
             except Exception as e:
                 logger.warning("Bootstrap: ContextBridge unavailable: %s", e)
 
-            # Sprint 135: Wire MemoryManager for auto-memory injection
+            # Sprint 135/144: Wire MemoryManager with memory_client
             memory_manager = None
             try:
                 from src.integrations.hybrid.orchestrator.memory_manager import (
@@ -206,11 +206,27 @@ class OrchestratorBootstrap:
                     conv_store = ConversationStateStore()
                 except Exception:
                     pass
+
+                # Sprint 144: Connect UnifiedMemoryManager as memory_client
+                memory_client = None
+                try:
+                    from src.integrations.memory.unified_memory import (
+                        UnifiedMemoryManager,
+                    )
+                    memory_client = UnifiedMemoryManager()
+                    logger.info("Bootstrap: UnifiedMemoryManager created as memory_client")
+                except Exception as mem_err:
+                    logger.warning("Bootstrap: UnifiedMemoryManager unavailable: %s", mem_err)
+
                 memory_manager = OrchestratorMemoryManager(
                     llm_service=self._llm_service,
+                    memory_client=memory_client,
                     conversation_store=conv_store,
                 )
-                logger.info("Bootstrap: MemoryManager created for ContextHandler")
+                logger.info(
+                    "Bootstrap: MemoryManager created (memory_client=%s)",
+                    memory_client is not None,
+                )
             except Exception as e:
                 logger.warning("Bootstrap: MemoryManager unavailable: %s", e)
 
@@ -233,11 +249,22 @@ class OrchestratorBootstrap:
         try:
             from src.integrations.hybrid.orchestrator.handlers.routing import RoutingHandler
 
-            # InputGateway
+            # InputGateway (Sprint 144: register source handlers via factory)
             input_gateway = None
             try:
-                from src.integrations.orchestration.input_gateway.gateway import InputGateway
-                input_gateway = InputGateway(source_handlers={})
+                from src.integrations.orchestration.input_gateway.gateway import (
+                    InputGateway,
+                    create_input_gateway,
+                )
+                try:
+                    input_gateway = create_input_gateway(
+                        business_router=None,  # will be set below
+                    )
+                    logger.info("Bootstrap: InputGateway created with source handlers")
+                except Exception:
+                    # Fallback: create basic gateway with empty handlers
+                    input_gateway = InputGateway(source_handlers={})
+                    logger.info("Bootstrap: InputGateway created (basic)")
             except Exception as e:
                 logger.warning("Bootstrap: InputGateway unavailable: %s", e)
 
@@ -251,11 +278,28 @@ class OrchestratorBootstrap:
             except Exception as e:
                 logger.warning("Bootstrap: BusinessIntentRouter unavailable: %s", e)
 
-            # FrameworkSelector
+            # FrameworkSelector with classifiers (Sprint 144)
             framework_selector = None
             try:
                 from src.integrations.hybrid.intent.router import FrameworkSelector
-                framework_selector = FrameworkSelector()
+                from src.integrations.hybrid.intent.classifiers.rule_based import (
+                    RuleBasedClassifier,
+                )
+                from src.integrations.hybrid.intent.classifiers.routing_decision import (
+                    RoutingDecisionClassifier,
+                )
+                classifiers = [
+                    RuleBasedClassifier(weight=1.0),
+                    RoutingDecisionClassifier(weight=1.5),
+                ]
+                framework_selector = FrameworkSelector(
+                    classifiers=classifiers,
+                    confidence_threshold=0.6,
+                )
+                logger.info(
+                    "Bootstrap: FrameworkSelector with %d classifiers",
+                    len(classifiers),
+                )
             except Exception as e:
                 logger.warning("Bootstrap: FrameworkSelector unavailable: %s", e)
 
@@ -286,13 +330,21 @@ class OrchestratorBootstrap:
             return None
 
     def _wire_dialog_handler(self) -> Any:
-        """Wire DialogHandler with GuidedDialogEngine."""
+        """Wire DialogHandler with GuidedDialogEngine.
+
+        Sprint 146-3: GuidedDialogEngine requires a router parameter.
+        """
         try:
             from src.integrations.hybrid.orchestrator.handlers.dialog import DialogHandler
             guided_dialog = None
             try:
                 from src.integrations.orchestration.guided_dialog.engine import GuidedDialogEngine
-                guided_dialog = GuidedDialogEngine()
+                from src.integrations.orchestration.intent_router.router import (
+                    create_router_with_llm,
+                )
+                router = create_router_with_llm()
+                guided_dialog = GuidedDialogEngine(router=router)
+                logger.info("Bootstrap: GuidedDialogEngine wired with router")
             except Exception as e:
                 logger.warning("Bootstrap: GuidedDialogEngine unavailable: %s", e)
 
@@ -304,7 +356,10 @@ class OrchestratorBootstrap:
             return None
 
     def _wire_approval_handler(self) -> Any:
-        """Wire ApprovalHandler with RiskAssessor + HITLController."""
+        """Wire ApprovalHandler with RiskAssessor + HITLController.
+
+        Sprint 146-3: HITLController requires a storage parameter.
+        """
         try:
             from src.integrations.hybrid.orchestrator.handlers.approval import ApprovalHandler
 
@@ -317,8 +372,23 @@ class OrchestratorBootstrap:
 
             hitl_controller = None
             try:
-                from src.integrations.orchestration.hitl.controller import HITLController
-                hitl_controller = HITLController()
+                from src.integrations.orchestration.hitl.controller import (
+                    HITLController,
+                    create_hitl_controller,
+                )
+                hitl_controller = create_hitl_controller()
+                logger.info("Bootstrap: HITLController wired via factory")
+            except ImportError:
+                try:
+                    from src.integrations.orchestration.hitl.controller import HITLController
+                    from src.integrations.orchestration.hitl.approval_handler import (
+                        InMemoryApprovalStorage,
+                    )
+                    storage = InMemoryApprovalStorage()
+                    hitl_controller = HITLController(storage=storage)
+                    logger.info("Bootstrap: HITLController wired with InMemoryStorage")
+                except Exception as e2:
+                    logger.warning("Bootstrap: HITLController unavailable: %s", e2)
             except Exception as e:
                 logger.warning("Bootstrap: HITLController unavailable: %s", e)
 
