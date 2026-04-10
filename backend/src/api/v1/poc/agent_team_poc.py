@@ -1228,6 +1228,12 @@ async def test_orchestrator(
             "args": f"route={selected_mode}",
             "result": response_text[:300],
         })
+        # Fallback: if LLM only called select_route tool without extra text
+        if not response_text.strip():
+            response_text = (
+                f"已選擇 **{selected_mode}** 模式進行處理。\n\n"
+                f"路由決策耗時 {decision_time}ms。正在執行 {selected_mode} 模式..."
+            )
         results["orchestrator_response"] = response_text[:3000]
 
         # Mandatory decision-point checkpoint at Step 4 (always)
