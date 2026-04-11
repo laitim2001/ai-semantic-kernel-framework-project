@@ -182,7 +182,8 @@ class OrchestrationPipelineService:
             try:
                 context = await step.execute(context)
 
-                # Emit step complete
+                # Emit step complete with metadata
+                step_summary = self._build_step_summary(context, step)
                 await self._emit(
                     event_queue,
                     PipelineEvent(
@@ -191,6 +192,7 @@ class OrchestrationPipelineService:
                             "step_index": step.step_index,
                             "step_name": step.name,
                             "latency_ms": context.step_latencies.get(step.name, 0),
+                            "metadata": step_summary,
                         },
                         step_name=step.name,
                     ),

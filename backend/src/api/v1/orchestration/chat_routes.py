@@ -164,6 +164,17 @@ async def chat_stream(request: ChatRequest):
                 )
                 result_ctx.dispatch_result = dispatch_result
 
+                # Emit response text as TEXT_DELTA so frontend chat shows it
+                response_text = dispatch_result.response_text or ""
+                if response_text:
+                    await event_queue.put(
+                        PipelineEvent(
+                            PipelineEventType.TEXT_DELTA,
+                            {"content": response_text},
+                            step_name="dispatch",
+                        )
+                    )
+
                 # Run post-process step manually (Step 8)
                 post_step = PostProcessStep()
                 await post_step.execute(result_ctx)

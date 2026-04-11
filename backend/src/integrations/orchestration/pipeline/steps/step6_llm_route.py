@@ -161,51 +161,11 @@ class LLMRouteStep(PipelineStep):
         """
         client = self._get_client()
 
-        try:
-            from agents import Agent, function_tool
-
-            @function_tool(
-                name="select_route",
-                description=(
-                    "Select the execution route for this task. Options: "
-                    "'direct_answer' (simple Q&A), 'subagent' (parallel independent), "
-                    "'team' (expert collaboration)."
-                ),
-            )
-            def select_route(route: str, reasoning: str) -> str:
-                """Select execution route with reasoning."""
-                return f"Route: {route}. Reason: {reasoning}"
-
-            orchestrator = Agent(
-                client,
-                name="Orchestrator",
-                instructions=system_prompt,
-                tools=[select_route],
-            )
-
-            response = await orchestrator.run(task)
-
-            # Extract response text
-            response_text = ""
-            if hasattr(response, "text") and response.text:
-                response_text = response.text
-            elif hasattr(response, "messages") and response.messages:
-                for msg in response.messages:
-                    if hasattr(msg, "text") and msg.text:
-                        response_text += msg.text
-
-            # Extract route from response
-            selected_route, reasoning = self._extract_route(response_text)
-
-            # Fallback response if LLM only called tool
-            if not response_text.strip():
-                response_text = f"Selected route: {selected_route}. {reasoning}"
-
-            return selected_route, reasoning, response_text
-
-        except ImportError:
-            # Fallback: use raw LLM call without agent framework
-            return await self._call_llm_raw(client, task, system_prompt)
+        # Use direct LLM call for route selection.
+        # The Agent SDK (function_tool) approach will be integrated when
+        # the MAF Agent API is properly wired. For now, a simple chat
+        # completion with structured prompt works reliably.
+        return await self._call_llm_raw(client, task, system_prompt)
 
     async def _call_llm_raw(
         self, client: Any, task: str, system_prompt: str
@@ -221,7 +181,7 @@ class LLMRouteStep(PipelineStep):
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": task},
                 ],
-                max_tokens=512,
+                max_completion_tokens=512,
                 temperature=0.3,
             )
             text = response.choices[0].message.content or ""

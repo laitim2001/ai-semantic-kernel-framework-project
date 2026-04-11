@@ -143,7 +143,7 @@ class TeamExecutor(BaseExecutor):
                     },
                     {"role": "user", "content": request.task},
                 ],
-                max_tokens=1024,
+                max_completion_tokens=1024,
                 temperature=0.5,
             )
             output = response.choices[0].message.content or ""
@@ -216,7 +216,7 @@ class TeamExecutor(BaseExecutor):
                         ),
                     },
                 ],
-                max_tokens=1500,
+                max_completion_tokens=1500,
                 temperature=0.5,
             )
             return response.choices[0].message.content or findings

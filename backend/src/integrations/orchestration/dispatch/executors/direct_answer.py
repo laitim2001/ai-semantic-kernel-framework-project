@@ -51,7 +51,7 @@ class DirectAnswerExecutor(BaseExecutor):
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": request.task},
                 ],
-                max_tokens=2048,
+                max_completion_tokens=2048,
                 temperature=0.7,
                 stream=True,
             )

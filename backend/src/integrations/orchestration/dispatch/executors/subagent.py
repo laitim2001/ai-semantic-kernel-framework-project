@@ -160,7 +160,7 @@ class SubagentExecutor(BaseExecutor):
                     },
                     {"role": "user", "content": task_text},
                 ],
-                max_tokens=1024,
+                max_completion_tokens=1024,
                 temperature=0.5,
             )
             output = response.choices[0].message.content or ""
