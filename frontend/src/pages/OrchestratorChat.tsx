@@ -1360,6 +1360,11 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
             <GuidedDialogPanel
               dialogPause={pipeline.dialogPause}
               onSubmit={pipeline.respondDialog}
+              onSkip={() => {
+                // Skip dialog — re-run pipeline with original task as-is
+                const storedTask = sessionStorage.getItem(`pipeline-task-${pipeline.sessionId}`) || '';
+                if (storedTask) pipeline.sendMessage(storedTask);
+              }}
             />
           </div>
         )}

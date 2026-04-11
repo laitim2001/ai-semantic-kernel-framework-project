@@ -105,17 +105,29 @@ class IntentStep(PipelineStep):
             routing_decision.routing_layer,
         )
 
-        # Check completeness
+        # Check completeness — only pause if critically incomplete (< 50%)
+        # Above 50% is "good enough" to proceed with LLM routing.
+        # Users can always provide more context in follow-up messages.
+        COMPLETENESS_THRESHOLD = 0.50
+
         completeness = routing_decision.completeness
         context.completeness_info = completeness
 
-        if not completeness.is_complete:
+        if not completeness.is_complete and completeness.completeness_score < COMPLETENESS_THRESHOLD:
             logger.info(
-                "IntentStep: incomplete (score=%.2f, missing=%s)",
+                "IntentStep: critically incomplete (score=%.2f < %.2f, missing=%s), pausing for dialog",
                 completeness.completeness_score,
+                COMPLETENESS_THRESHOLD,
                 completeness.missing_fields,
             )
             await self._handle_incomplete(context, completeness)
+        elif not completeness.is_complete:
+            logger.info(
+                "IntentStep: partially incomplete (score=%.2f >= %.2f, missing=%s), proceeding anyway",
+                completeness.completeness_score,
+                COMPLETENESS_THRESHOLD,
+                completeness.missing_fields,
+            )
 
         return context
 

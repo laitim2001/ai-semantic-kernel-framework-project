@@ -14,11 +14,13 @@ import type { DialogPause } from '@/hooks/useOrchestratorPipeline';
 interface GuidedDialogPanelProps {
   dialogPause: DialogPause;
   onSubmit: (responses: Record<string, string>) => void;
+  onSkip?: () => void;
   isSubmitting?: boolean;
 }
 
 export const GuidedDialogPanel: FC<GuidedDialogPanelProps> = ({
   dialogPause,
+  onSkip,
   onSubmit,
   isSubmitting = false,
 }) => {
@@ -80,8 +82,17 @@ export const GuidedDialogPanel: FC<GuidedDialogPanelProps> = ({
         })}
       </div>
 
-      {/* Submit */}
-      <div className="flex justify-end">
+      {/* Submit + Skip */}
+      <div className="flex justify-end gap-2">
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-medium rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            跳過，直接繼續
+          </button>
+        )}
         <button
           onClick={handleSubmit}
           disabled={!allFilled || isSubmitting}
@@ -91,7 +102,7 @@ export const GuidedDialogPanel: FC<GuidedDialogPanelProps> = ({
               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
           }`}
         >
-          {isSubmitting ? '提交中...' : '繼續 Pipeline'}
+          {isSubmitting ? '提交中...' : '補充後繼續'}
         </button>
       </div>
     </div>
