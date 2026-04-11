@@ -11,9 +11,7 @@ from typing import Any, Dict, Optional
 from .executors.base import BaseExecutor
 from .executors.direct_answer import DirectAnswerExecutor
 from .executors.subagent import SubagentExecutor
-from .executors.swarm import SwarmExecutor
 from .executors.team import TeamExecutor
-from .executors.workflow import WorkflowExecutor
 from .models import DispatchRequest, DispatchResult, ExecutionRoute
 
 logger = logging.getLogger(__name__)
@@ -41,8 +39,6 @@ class DispatchService:
             ExecutionRoute.DIRECT_ANSWER: DirectAnswerExecutor(llm_client, model),
             ExecutionRoute.SUBAGENT: SubagentExecutor(llm_client, model),
             ExecutionRoute.TEAM: TeamExecutor(llm_client, model),
-            ExecutionRoute.SWARM: SwarmExecutor(),
-            ExecutionRoute.WORKFLOW: WorkflowExecutor(),
         }
 
     def register_executor(

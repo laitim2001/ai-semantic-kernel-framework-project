@@ -6,7 +6,7 @@ Uses an OrchestratorAgent with select_route() function calling to choose
 the best execution route based on ALL prior context.
 
 Outputs:
-    context.selected_route — One of: direct_answer/subagent/team/swarm/workflow
+    context.selected_route — One of: direct_answer/subagent/team
     context.route_reasoning — LLM's reasoning for the choice.
 
 Phase 45: Orchestration Core (Sprint 155)
@@ -21,7 +21,7 @@ from .base import PipelineStep
 
 logger = logging.getLogger(__name__)
 
-VALID_ROUTES = {"direct_answer", "subagent", "team", "swarm", "workflow"}
+VALID_ROUTES = {"direct_answer", "subagent", "team"}
 DEFAULT_ROUTE = "team"
 
 ORCHESTRATOR_SYSTEM_PROMPT = """You are an IT Operations Orchestrator. Based on the context below, \
@@ -48,8 +48,6 @@ Choose ONE route:
 - direct_answer: simple questions, low risk, factual Q&A
 - subagent: independent parallel checks (e.g., check 3 systems separately)
 - team: complex investigation needing expert collaboration
-- swarm: critical incidents needing deep Manager-driven analysis
-- workflow: structured processes (deploy, change management)
 
 Call select_route with your choice and reasoning."""
 
@@ -171,8 +169,7 @@ class LLMRouteStep(PipelineStep):
                 description=(
                     "Select the execution route for this task. Options: "
                     "'direct_answer' (simple Q&A), 'subagent' (parallel independent), "
-                    "'team' (expert collaboration), 'swarm' (deep Manager analysis), "
-                    "'workflow' (structured process)."
+                    "'team' (expert collaboration)."
                 ),
             )
             def select_route(route: str, reasoning: str) -> str:

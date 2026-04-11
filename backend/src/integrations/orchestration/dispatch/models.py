@@ -16,8 +16,6 @@ class ExecutionRoute(str, Enum):
     DIRECT_ANSWER = "direct_answer"
     SUBAGENT = "subagent"
     TEAM = "team"
-    SWARM = "swarm"
-    WORKFLOW = "workflow"
 
     @classmethod
     def from_string(cls, value: str) -> "ExecutionRoute":

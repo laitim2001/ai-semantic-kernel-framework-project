@@ -74,7 +74,7 @@ class PipelineContext:
     hitl_approval_id: Optional[str] = None
 
     # --- Step 6: LLM Route Decision ---
-    selected_route: Optional[str] = None  # "direct_answer" | "subagent" | "team" | "swarm" | "workflow"
+    selected_route: Optional[str] = None  # "direct_answer" | "subagent" | "team"
     route_reasoning: Optional[str] = None
 
     # --- Step 7: Dispatch ---

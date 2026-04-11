@@ -8,8 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.integrations.orchestration.dispatch.executors.swarm import SwarmExecutor
-from src.integrations.orchestration.dispatch.executors.workflow import WorkflowExecutor
 from src.integrations.orchestration.dispatch.models import (
     AgentResult,
     DispatchRequest,
@@ -188,37 +186,6 @@ class TestDispatchModels:
         assert d["status"] == "completed"
 
 
-# === Stub Executor Tests ===
-
-class TestStubExecutors:
-
-    @pytest.mark.asyncio
-    async def test_swarm_returns_not_implemented(self):
-        executor = SwarmExecutor()
-        req = DispatchRequest(
-            route=ExecutionRoute.SWARM,
-            task="Investigate outage",
-            user_id="u1",
-            session_id="s1",
-        )
-        result = await executor.execute(req)
-        assert result.status == "not_implemented"
-        assert "Phase 46" in result.response_text
-
-    @pytest.mark.asyncio
-    async def test_workflow_returns_not_implemented(self):
-        executor = WorkflowExecutor()
-        req = DispatchRequest(
-            route=ExecutionRoute.WORKFLOW,
-            task="Deploy v2.0",
-            user_id="u1",
-            session_id="s1",
-        )
-        result = await executor.execute(req)
-        assert result.status == "not_implemented"
-        assert "Phase 46" in result.response_text
-
-
 # === DispatchService Tests ===
 
 class TestDispatchService:
@@ -300,11 +267,9 @@ class TestDispatchService:
         assert any(e.event_type.value == "DISPATCH_START" for e in events)
 
     def test_default_executors_registered(self):
-        """Service has all 5 default executors."""
+        """Service has all 3 default executors."""
         svc = DispatchService()
-        assert len(svc._executors) == 5
+        assert len(svc._executors) == 3
         assert ExecutionRoute.DIRECT_ANSWER in svc._executors
         assert ExecutionRoute.SUBAGENT in svc._executors
         assert ExecutionRoute.TEAM in svc._executors
-        assert ExecutionRoute.SWARM in svc._executors
-        assert ExecutionRoute.WORKFLOW in svc._executors
