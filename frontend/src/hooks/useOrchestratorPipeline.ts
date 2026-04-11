@@ -256,11 +256,16 @@ export function useOrchestratorPipeline() {
 
   const sendMessage = useCallback(async (task: string, userId: string = 'default-user') => {
     // Reset state
+    const newSessionId = `pipeline-${Date.now()}`;
     setState({
       ...INITIAL_STATE,
       steps: INITIAL_STEPS.map(s => ({ ...s })),
       isRunning: true,
+      sessionId: newSessionId,
     });
+
+    // Store original task for dialog resume
+    sessionStorage.setItem(`pipeline-task-${newSessionId}`, task);
 
     abortRef.current = new AbortController();
 
@@ -355,22 +360,24 @@ export function useOrchestratorPipeline() {
   const respondDialog = useCallback(async (responses: Record<string, string>) => {
     if (!state.dialogPause) return;
 
-    try {
-      await fetch('/api/v1/orchestration/chat/dialog-respond', {
-        method: 'POST',
-        headers: _authHeaders(),
-        body: JSON.stringify({
-          checkpoint_id: state.dialogPause.checkpointId,
-          user_id: 'default-user',
-          dialog_id: state.dialogPause.dialogId,
-          responses,
-        }),
-      });
-      setState(prev => ({ ...prev, dialogPause: null }));
-    } catch (err) {
-      setState(prev => ({ ...prev, error: (err as Error).message }));
-    }
-  }, [state.dialogPause, _authHeaders]);
+    // Build enriched task: original task + user's supplementary answers
+    const originalTask = state.steps[0]?.metadata?.step === 'memory_read'
+      ? '' : '';  // We need the original task
+    const supplement = Object.entries(responses)
+      .map(([field, value]) => `${field}: ${value}`)
+      .join(', ');
+
+    setState(prev => ({ ...prev, dialogPause: null }));
+
+    // Re-run pipeline with enriched task (original task stored in sessionStorage)
+    const storedTask = sessionStorage.getItem(`pipeline-task-${state.sessionId}`) || '';
+    const enrichedTask = storedTask
+      ? `${storedTask}\n\nAdditional info: ${supplement}`
+      : supplement;
+
+    // Re-trigger the full pipeline with enriched context
+    await sendMessage(enrichedTask);
+  }, [state.dialogPause, state.sessionId, state.steps, sendMessage]);
 
   return {
     ...state,
