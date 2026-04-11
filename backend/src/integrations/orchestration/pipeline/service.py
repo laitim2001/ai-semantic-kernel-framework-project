@@ -375,14 +375,16 @@ class OrchestrationPipelineService:
     def _build_step_summary(
         context: PipelineContext, step: PipelineStep
     ) -> Dict[str, Any]:
-        """Build output summary dict for a transcript entry."""
+        """Build output summary dict — includes FULL content, no truncation."""
         summary: Dict[str, Any] = {"step": step.name}
 
         if step.name == "memory_read":
             summary["memory_chars"] = len(context.memory_text)
+            summary["memory_text"] = context.memory_text  # full text
             summary.update(context.memory_metadata)
         elif step.name == "knowledge_search":
             summary["knowledge_chars"] = len(context.knowledge_text)
+            summary["knowledge_text"] = context.knowledge_text  # full text
             summary.update(context.knowledge_metadata)
         elif step.name == "intent_analysis":
             if context.routing_decision:
@@ -392,18 +394,36 @@ class OrchestrationPipelineService:
                     if hasattr(rd.intent_category, "value")
                     else str(rd.intent_category)
                 )
+                summary["sub_intent"] = rd.sub_intent
                 summary["confidence"] = rd.confidence
                 summary["routing_layer"] = rd.routing_layer
+                if context.completeness_info:
+                    ci = context.completeness_info
+                    summary["is_complete"] = ci.is_complete
+                    summary["completeness_score"] = ci.completeness_score
+                    summary["missing_fields"] = ci.missing_fields
         elif step.name == "risk_assessment":
             if context.risk_assessment:
                 ra = context.risk_assessment
                 summary["risk_level"] = (
                     ra.level.value if hasattr(ra.level, "value") else str(ra.level)
                 )
+                summary["score"] = ra.score
                 summary["requires_approval"] = ra.requires_approval
+                summary["approval_type"] = ra.approval_type
+                summary["policy_id"] = ra.policy_id
+                summary["reasoning"] = ra.reasoning
+                summary["adjustments"] = ra.adjustments_applied
+        elif step.name == "hitl_gate":
+            summary["passed"] = not (context.paused_at == "hitl")
+            if context.hitl_approval_id:
+                summary["approval_id"] = context.hitl_approval_id
         elif step.name == "llm_route_decision":
             summary["selected_route"] = context.selected_route
-            summary["reasoning"] = (context.route_reasoning or "")[:200]
+            summary["reasoning"] = context.route_reasoning or ""  # full text
+        elif step.name == "post_process":
+            summary["checkpoint_id"] = context.checkpoint_id
+            summary["extraction"] = "scheduled"
 
         return summary
 

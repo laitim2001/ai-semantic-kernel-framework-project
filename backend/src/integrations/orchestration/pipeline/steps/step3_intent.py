@@ -85,6 +85,15 @@ class IntentStep(PipelineStep):
 
         # Run 3-tier intent classification
         routing_decision = await router.route(context.task)
+        # If V8 router returned UNKNOWN with low confidence, try direct LLM classification
+        if (
+            routing_decision.intent_category.value == "unknown"
+            and routing_decision.confidence < 0.5
+        ):
+            routing_decision = await self._llm_classify_fallback(
+                context.task, routing_decision
+            )
+
         context.routing_decision = routing_decision
 
         logger.info(
@@ -179,6 +188,78 @@ class IntentStep(PipelineStep):
             checkpoint_id=checkpoint_id,
             completeness_score=completeness.completeness_score,
         )
+
+    async def _llm_classify_fallback(
+        self, task: str, original_decision: object
+    ) -> object:
+        """Direct LLM intent classification when V8 router returns UNKNOWN.
+
+        Uses Azure OpenAI to classify intent, then updates the RoutingDecision.
+        """
+        import os
+
+        try:
+            from openai import AzureOpenAI
+            from src.integrations.orchestration.intent_router.models import (
+                ITIntentCategory,
+                RiskLevel,
+            )
+
+            client = AzureOpenAI(
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
+            )
+
+            response = client.chat.completions.create(
+                model=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Classify the user's IT request into exactly ONE category. "
+                            "Reply with ONLY the JSON: {\"category\": \"...\", \"sub_intent\": \"...\", \"confidence\": 0.0-1.0}\n"
+                            "Categories:\n"
+                            "- incident: service outage, system failure, error, performance issue\n"
+                            "- change: deployment, restart, configuration change, update\n"
+                            "- request: access request, account creation, license\n"
+                            "- query: status check, information lookup, how-to question, greeting\n"
+                        ),
+                    },
+                    {"role": "user", "content": task},
+                ],
+                max_completion_tokens=100,
+                temperature=0.1,
+            )
+
+            import json
+
+            text = response.choices[0].message.content or ""
+            # Extract JSON from response
+            start = text.find("{")
+            end = text.rfind("}") + 1
+            if start >= 0 and end > start:
+                parsed = json.loads(text[start:end])
+                category = parsed.get("category", "query").lower()
+                sub_intent = parsed.get("sub_intent", "")
+                confidence = float(parsed.get("confidence", 0.8))
+
+                original_decision.intent_category = ITIntentCategory.from_string(category)
+                original_decision.sub_intent = sub_intent
+                original_decision.confidence = confidence
+                original_decision.routing_layer = "llm_fallback"
+
+                logger.info(
+                    "IntentStep LLM fallback: %s/%s (confidence=%.2f)",
+                    category,
+                    sub_intent,
+                    confidence,
+                )
+
+        except Exception as e:
+            logger.warning("IntentStep LLM fallback failed: %s", str(e)[:100])
+
+        return original_decision
 
     async def _get_router(self) -> object:
         """Get or create BusinessIntentRouter with default configuration."""

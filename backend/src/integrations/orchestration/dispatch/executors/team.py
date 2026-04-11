@@ -130,7 +130,7 @@ class TeamExecutor(BaseExecutor):
                 prior = "\n\n## Prior Team Findings\n" + "\n".join(shared_context)
 
             response = client.chat.completions.create(
-                model=self._model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o"),
+                model=self._model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
                 messages=[
                     {
                         "role": "system",
@@ -199,7 +199,7 @@ class TeamExecutor(BaseExecutor):
             )
 
             response = client.chat.completions.create(
-                model=self._model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o"),
+                model=self._model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
                 messages=[
                     {
                         "role": "system",

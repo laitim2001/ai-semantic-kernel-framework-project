@@ -46,7 +46,7 @@ class DirectAnswerExecutor(BaseExecutor):
             system_prompt = self._build_system_prompt(request)
 
             response = client.chat.completions.create(
-                model=self._model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o"),
+                model=self._model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": request.task},

@@ -91,6 +91,34 @@ class RiskStep(PipelineStep):
             context=assessment_context,
         )
 
+        # Intent-based risk cap: QUERY and UNKNOWN intents are read-only,
+        # so risk should never exceed MEDIUM and never require approval.
+        # This prevents context adjustments (e.g., production env) from
+        # escalating simple information queries to HIGH/CRITICAL.
+        intent_str = (
+            context.routing_decision.intent_category.value
+            if hasattr(context.routing_decision.intent_category, "value")
+            else str(context.routing_decision.intent_category)
+        ).lower()
+
+        non_actionable = {"query", "unknown", "request"}
+        if intent_str in non_actionable:
+            from src.integrations.orchestration.intent_router.models import RiskLevel as RL
+
+            if risk_assessment.level in (RL.HIGH, RL.CRITICAL):
+                logger.info(
+                    "RiskStep: capping risk from %s to MEDIUM for non-actionable intent '%s'",
+                    risk_assessment.level.value,
+                    intent_str,
+                )
+                risk_assessment.level = RL.MEDIUM
+                risk_assessment.score = min(risk_assessment.score, 0.5)
+                risk_assessment.requires_approval = False
+                risk_assessment.approval_type = "none"
+                risk_assessment.adjustments_applied.append(
+                    f"Risk capped: non-actionable intent '{intent_str}'"
+                )
+
         context.risk_assessment = risk_assessment
 
         logger.info(

@@ -125,22 +125,33 @@ const StepDetail: FC<{ step: PipelineStep }> = ({ step }) => {
 // --- Step-specific detail components ---
 
 const MemoryDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
-  <div className="text-muted-foreground space-y-0.5">
-    {meta.pinned_count != null && <div>Pinned: {String(meta.pinned_count)}</div>}
-    {meta.budget_used_pct != null && <div>Budget: {Number(meta.budget_used_pct).toFixed(0)}%</div>}
-    {meta.memory_chars != null && <div>Chars: {String(meta.memory_chars)}</div>}
-    {meta.status && <div>Status: {String(meta.status)}</div>}
+  <div className="text-muted-foreground space-y-1">
+    <div className="flex gap-3 text-xs">
+      {meta.pinned_count != null && <span>Pinned: {String(meta.pinned_count)}</span>}
+      {meta.budget_used_pct != null && <span>Budget: {Number(meta.budget_used_pct).toFixed(0)}%</span>}
+      {meta.status && <span>Status: {String(meta.status)}</span>}
+    </div>
+    {meta.memory_text && (
+      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
+        {String(meta.memory_text)}
+      </pre>
+    )}
   </div>
 );
 
 const KnowledgeDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
-  <div className="text-muted-foreground space-y-0.5">
-    {meta.result_count != null && <div>Results: {String(meta.result_count)}</div>}
-    {meta.collection && <div>Collection: {String(meta.collection)}</div>}
-    {Array.isArray(meta.scores) && meta.scores.length > 0 && (
-      <div>Scores: {(meta.scores as number[]).map(s => s.toFixed(2)).join(', ')}</div>
+  <div className="text-muted-foreground space-y-1">
+    <div className="flex gap-3 text-xs">
+      {meta.result_count != null && <span>Results: {String(meta.result_count)}</span>}
+      {Array.isArray(meta.scores) && meta.scores.length > 0 && (
+        <span>Scores: {(meta.scores as number[]).map(s => s.toFixed(2)).join(', ')}</span>
+      )}
+    </div>
+    {meta.knowledge_text && (
+      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
+        {String(meta.knowledge_text)}
+      </pre>
     )}
-    {meta.status && <div>Status: {String(meta.status)}</div>}
   </div>
 );
 
@@ -149,12 +160,19 @@ const IntentDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
     {meta.intent && (
       <div>
         Intent: <span className="font-medium text-foreground">{String(meta.intent)}</span>
+        {meta.sub_intent && <span className="ml-1">/ {String(meta.sub_intent)}</span>}
       </div>
     )}
     {meta.confidence != null && (
       <div>Confidence: {(Number(meta.confidence) * 100).toFixed(0)}%</div>
     )}
     {meta.routing_layer && <div>Layer: {String(meta.routing_layer)}</div>}
+    {meta.is_complete != null && (
+      <div>Complete: {meta.is_complete ? 'Yes' : `No (${Number(meta.completeness_score || 0) * 100}%)`}</div>
+    )}
+    {Array.isArray(meta.missing_fields) && (meta.missing_fields as string[]).length > 0 && (
+      <div>Missing: {(meta.missing_fields as string[]).join(', ')}</div>
+    )}
   </div>
 );
 
@@ -167,11 +185,18 @@ const RiskDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => {
       {level && (
         <div>
           Level: <span className={`font-medium ${colorClass}`}>{level.toUpperCase()}</span>
+          {meta.score != null && <span className="ml-2">(score: {Number(meta.score).toFixed(2)})</span>}
         </div>
       )}
-      {meta.score != null && <div>Score: {Number(meta.score).toFixed(2)}</div>}
       {meta.requires_approval != null && (
-        <div>Approval: {meta.requires_approval ? 'Required' : 'Not required'}</div>
+        <div>Approval: {meta.requires_approval ? `Required (${String(meta.approval_type)})` : 'Not required'}</div>
+      )}
+      {meta.policy_id && <div>Policy: {String(meta.policy_id)}</div>}
+      {meta.reasoning && (
+        <div className="mt-1 text-xs italic">{String(meta.reasoning)}</div>
+      )}
+      {Array.isArray(meta.adjustments) && (meta.adjustments as string[]).length > 0 && (
+        <div>Adjustments: {(meta.adjustments as string[]).join(', ')}</div>
       )}
     </div>
   );
@@ -193,7 +218,9 @@ const RouteDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
       <div>Route: <span className="font-medium text-foreground">{String(meta.route)}</span></div>
     )}
     {meta.reasoning && (
-      <div className="line-clamp-2">{String(meta.reasoning)}</div>
+      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
+        {String(meta.reasoning)}
+      </pre>
     )}
   </div>
 );
