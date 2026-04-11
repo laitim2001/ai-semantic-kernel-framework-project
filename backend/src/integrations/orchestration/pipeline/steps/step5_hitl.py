@@ -79,6 +79,25 @@ class HITLGateStep(PipelineStep):
             return context
 
         ra = context.risk_assessment
+        rd = context.routing_decision
+
+        # Only actionable intents (CHANGE, INCIDENT) can trigger HITL.
+        # QUERY, UNKNOWN, and REQUEST are read-only / low-risk by nature.
+        # This matches the PoC behavior where only CHANGE+HIGH triggered approval.
+        actionable_intents = {"change", "incident"}
+        intent_str = (
+            rd.intent_category.value
+            if rd and hasattr(rd.intent_category, "value")
+            else str(rd.intent_category) if rd else "unknown"
+        ).lower()
+
+        if intent_str not in actionable_intents:
+            logger.info(
+                "HITLGateStep: non-actionable intent '%s', skipping approval (level=%s)",
+                intent_str,
+                ra.level.value if hasattr(ra.level, "value") else str(ra.level),
+            )
+            return context
 
         if not ra.requires_approval:
             logger.info(
@@ -100,8 +119,15 @@ class HITLGateStep(PipelineStep):
         checkpoint_id = await self._save_checkpoint(context)
         context.checkpoint_id = checkpoint_id
 
-        # 2. Create approval request
-        approval_id = await self._create_approval(context, checkpoint_id)
+        # 2. Create approval request (graceful: if service unavailable, still pause)
+        try:
+            approval_id = await self._create_approval(context, checkpoint_id)
+        except Exception as e:
+            logger.warning(
+                "HITLGateStep: approval service unavailable, pausing without ID — %s",
+                str(e)[:100],
+            )
+            approval_id = f"pending-{checkpoint_id or 'no-cp'}"
 
         # 3. Raise pause exception
         risk_level_str = (
@@ -210,4 +236,5 @@ class HITLGateStep(PipelineStep):
             )
 
             self._approval_service = ApprovalService()
+            await self._approval_service.initialize()
         return self._approval_service

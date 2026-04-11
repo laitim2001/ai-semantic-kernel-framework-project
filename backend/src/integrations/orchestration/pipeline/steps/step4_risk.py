@@ -121,9 +121,12 @@ class RiskStep(PipelineStep):
             AssessmentContext,
         )
 
-        combined_text = (
-            f"{context.task} {context.memory_text} {context.knowledge_text}"
-        ).lower()
+        # Only extract environment factors from the USER TASK, not from
+        # memory/knowledge (which may contain "production" etc. unrelated
+        # to the user's actual request). This prevents simple greetings
+        # from being escalated to CRITICAL just because memory mentions
+        # production systems.
+        task_text = context.task.lower()
 
         now = datetime.now()
         is_weekend = now.weekday() >= 5  # Saturday=5, Sunday=6
@@ -132,12 +135,12 @@ class RiskStep(PipelineStep):
         )
 
         return AssessmentContext(
-            is_production=self._contains_keywords(combined_text, _PRODUCTION_KEYWORDS),
-            is_staging=self._contains_keywords(combined_text, _STAGING_KEYWORDS),
+            is_production=self._contains_keywords(task_text, _PRODUCTION_KEYWORDS),
+            is_staging=self._contains_keywords(task_text, _STAGING_KEYWORDS),
             is_weekend=is_weekend,
             is_business_hours=is_business_hours,
-            is_urgent=self._contains_keywords(context.task.lower(), _URGENCY_KEYWORDS),
-            affected_systems=self._extract_systems(combined_text),
+            is_urgent=self._contains_keywords(task_text, _URGENCY_KEYWORDS),
+            affected_systems=self._extract_systems(task_text),
             custom_factors={
                 "memory_available": bool(context.memory_text),
                 "knowledge_available": bool(context.knowledge_text),
