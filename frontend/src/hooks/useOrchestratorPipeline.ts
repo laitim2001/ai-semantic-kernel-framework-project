@@ -12,7 +12,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { apiClient } from '@/api/client';
+import { useAuthStore } from '@/store/authStore';
 
 // --- Types ---
 
@@ -99,6 +99,7 @@ const INITIAL_STATE: PipelineState = {
 export function useOrchestratorPipeline() {
   const [state, setState] = useState<PipelineState>({ ...INITIAL_STATE, steps: INITIAL_STEPS.map(s => ({ ...s })) });
   const abortRef = useRef<AbortController | null>(null);
+  const token = useAuthStore((s) => s.token);
 
   const updateStep = useCallback((stepName: string, updates: Partial<PipelineStep>) => {
     setState(prev => ({
@@ -261,9 +262,14 @@ export function useOrchestratorPipeline() {
     abortRef.current = new AbortController();
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/v1/orchestration/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ task, user_id: userId }),
         signal: abortRef.current.signal,
       });
@@ -310,12 +316,18 @@ export function useOrchestratorPipeline() {
         }));
       }
     }
-  }, [handleSSEEvent]);
+  }, [handleSSEEvent, token]);
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
     setState(prev => ({ ...prev, isRunning: false }));
   }, []);
+
+  const _authHeaders = useCallback((): Record<string, string> => {
+    const h: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    return h;
+  }, [token]);
 
   const resumeApproval = useCallback(async (status: 'approved' | 'rejected', approver: string = 'user') => {
     if (!state.hitlPause) return;
@@ -323,7 +335,7 @@ export function useOrchestratorPipeline() {
     try {
       await fetch('/api/v1/orchestration/chat/resume', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: _authHeaders(),
         body: JSON.stringify({
           checkpoint_id: state.hitlPause.checkpointId,
           user_id: 'default-user',
@@ -335,7 +347,7 @@ export function useOrchestratorPipeline() {
     } catch (err) {
       setState(prev => ({ ...prev, error: (err as Error).message }));
     }
-  }, [state.hitlPause]);
+  }, [state.hitlPause, _authHeaders]);
 
   const respondDialog = useCallback(async (responses: Record<string, string>) => {
     if (!state.dialogPause) return;
@@ -343,7 +355,7 @@ export function useOrchestratorPipeline() {
     try {
       await fetch('/api/v1/orchestration/chat/dialog-respond', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: _authHeaders(),
         body: JSON.stringify({
           checkpoint_id: state.dialogPause.checkpointId,
           user_id: 'default-user',
@@ -355,7 +367,7 @@ export function useOrchestratorPipeline() {
     } catch (err) {
       setState(prev => ({ ...prev, error: (err as Error).message }));
     }
-  }, [state.dialogPause]);
+  }, [state.dialogPause, _authHeaders]);
 
   return {
     ...state,

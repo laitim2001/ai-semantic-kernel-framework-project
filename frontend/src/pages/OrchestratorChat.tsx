@@ -752,7 +752,10 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
 
     // Phase 41 / Sprint 145: Unified pipeline via SSE streaming
     if (orchestrationEnabled) {
-      console.log('[UnifiedChat] Pipeline SSE send:', content.slice(0, 50));
+      console.log('[OrchestratorChat] Pipeline SSE send:', content.slice(0, 50));
+
+      // Phase 45: Trigger the 8-step pipeline in parallel (updates right panel)
+      pipeline.sendMessage(content, userId);
 
       // Add user message to chat immediately
       const userMessage = {
