@@ -34,6 +34,7 @@ import { AuditPage } from '@/pages/audit/AuditPage';
 import { TemplatesPage } from '@/pages/templates/TemplatesPage';
 import { AGUIDemoPage } from '@/pages/ag-ui/AGUIDemoPage';
 import { UnifiedChat } from '@/pages/UnifiedChat';
+import { OrchestratorChat } from '@/pages/OrchestratorChat';  // Phase 45
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { SignupPage } from '@/pages/auth/SignupPage';
 // Sprint 87: DevUI pages
@@ -92,6 +93,9 @@ function App() {
 
         {/* Unified Chat Interface (Sprint 69: Integrated into AppLayout) */}
         <Route path="chat" element={<UnifiedChat />} />
+
+        {/* Orchestrator Chat — Phase 45: 8-step pipeline + dispatch */}
+        <Route path="orchestrator-chat" element={<OrchestratorChat />} />
 
         {/* Performance Monitoring (Sprint 12 - Phase 2) */}
         <Route path="performance" element={<PerformancePage />} />
