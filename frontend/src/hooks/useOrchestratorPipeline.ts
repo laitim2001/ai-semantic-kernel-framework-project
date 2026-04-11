@@ -18,12 +18,17 @@ import { apiClient } from '@/api/client';
 
 export type PipelineStepStatus = 'pending' | 'running' | 'completed' | 'paused' | 'error';
 
+export interface StepMetadata {
+  [key: string]: unknown;
+}
+
 export interface PipelineStep {
   index: number;
   name: string;
   label: string;
   status: PipelineStepStatus;
   latencyMs?: number;
+  metadata?: StepMetadata;
 }
 
 export interface DialogPause {
@@ -54,6 +59,7 @@ export interface PipelineState {
   steps: PipelineStep[];
   currentStepIndex: number;
   selectedRoute: string | null;
+  routeReasoning: string | null;
   responseText: string;
   agents: AgentProgress[];
   dialogPause: DialogPause | null;
@@ -79,6 +85,7 @@ const INITIAL_STATE: PipelineState = {
   steps: INITIAL_STEPS.map(s => ({ ...s })),
   currentStepIndex: -1,
   selectedRoute: null,
+  routeReasoning: null,
   responseText: '',
   agents: [],
   dialogPause: null,
@@ -124,18 +131,23 @@ export function useOrchestratorPipeline() {
         updateStep(data.step_name as string, {
           status: 'completed',
           latencyMs: data.latency_ms as number,
+          metadata: (data.metadata ?? data) as StepMetadata,
         });
         break;
 
       case 'STEP_ERROR':
-        updateStep(data.step_name as string, { status: 'error' });
+        updateStep(data.step_name as string, { status: 'error', metadata: data as StepMetadata });
         break;
 
       case 'LLM_ROUTE_DECISION':
         setState(prev => ({
           ...prev,
           selectedRoute: data.route as string,
+          routeReasoning: (data.reasoning as string) || null,
         }));
+        updateStep('llm_route_decision', {
+          metadata: { route: data.route, reasoning: data.reasoning } as StepMetadata,
+        });
         break;
 
       case 'DISPATCH_START':

@@ -61,6 +61,11 @@ import { MemoryHint } from '@/components/unified-chat/MemoryHint';
 import { AgentSwarmPanel } from '@/components/unified-chat/agent-swarm/AgentSwarmPanel';
 import { WorkerDetailDrawer } from '@/components/unified-chat/agent-swarm/WorkerDetailDrawer';
 import { useSwarmStore } from '@/stores/swarmStore';
+// Phase 45: Pipeline components
+import { PipelineProgressPanel } from '@/components/unified-chat/PipelineProgressPanel';
+import { StepDetailPanel } from '@/components/unified-chat/StepDetailPanel';
+import { GuidedDialogPanel } from '@/components/unified-chat/GuidedDialogPanel';
+import { useOrchestratorPipeline } from '@/hooks/useOrchestratorPipeline';
 import type { MemoryHintItem } from '@/components/unified-chat/MemoryHint';
 import type {
   UnifiedChatProps,
@@ -249,6 +254,9 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
   // Phase 41: Use email for stable storage key across logins
   const userKey = user?.email || userId;
   const activeThreadKey = useMemo(() => `${ACTIVE_THREAD_KEY_PREFIX}${userKey}`, [userKey]);
+
+  // Phase 45: 8-step pipeline hook
+  const pipeline = useOrchestratorPipeline();
 
   // S74-3: Chat history panel collapse state
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
@@ -1262,66 +1270,24 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
             />
           </div>
 
-          {/* Workflow Side Panel (Only visible in Workflow mode) */}
-          {effectiveMode === 'workflow' && (
-            <WorkflowSidePanel
-              workflowState={workflowState}
-              toolCalls={toolCalls}
-              checkpoints={checkpoints}
-              onRestoreCheckpoint={handleRestore}
+          {/* Phase 45: Pipeline Progress + Step Detail Panel (right side) */}
+          <div className="w-[380px] border-l bg-white overflow-y-auto hidden lg:flex flex-col">
+            <PipelineProgressPanel
+              steps={pipeline.steps}
+              currentStepIndex={pipeline.currentStepIndex}
+              selectedRoute={pipeline.selectedRoute}
+              totalMs={pipeline.totalMs}
+              isRunning={pipeline.isRunning}
             />
-          )}
-
-          {/* Sprint 146/149: Agent Swarm Panel + Worker Detail Drawer */}
-          {(pipelineMode === 'swarm' || showSwarmPanel) && (
-            <div className="w-[360px] border-l bg-white overflow-y-auto hidden xl:block">
-              <AgentSwarmPanel
-                swarmStatus={swarmStatus}
-                onWorkerClick={(worker) => {
-                  // Build WorkerDetail from store data so Drawer doesn't need to fetch
-                  const store = useSwarmStore.getState();
-                  store.selectWorker(worker);
-                  // Build minimal WorkerDetail from UIWorkerSummary
-                  store.setWorkerDetail({
-                    ...worker,
-                    taskId: worker.workerId,
-                    taskDescription: worker.currentAction || '',
-                    thinkingHistory: [],
-                    toolCalls: [],
-                    messages: [],
-                  });
-                  store.openDrawer();
-                }}
-                isLoading={isSSEStreaming && pipelineMode === 'swarm'}
-              />
-              <WorkerDetailDrawer
-                open={swarmIsDrawerOpen}
-                onClose={swarmCloseDrawer}
-                swarmId={swarmStatus?.swarmId || ''}
-                worker={swarmStatus?.workers?.find(
-                  w => w.workerId === useSwarmStore.getState().selectedWorkerId
-                ) || null}
-                workerDetail={swarmSelectedDetail}
+            <div className="flex-1 border-t overflow-y-auto">
+              <StepDetailPanel
+                steps={pipeline.steps}
+                agents={pipeline.agents}
+                selectedRoute={pipeline.selectedRoute}
+                routeReasoning={pipeline.routeReasoning}
               />
             </div>
-          )}
-
-          {/* Sprint 99: Orchestration Panel (Phase 28 debug view) */}
-          {showOrchestrationPanel && (
-            <OrchestrationPanel
-              phase={orchestrationState.phase}
-              routingDecision={orchestrationState.routingDecision}
-              riskAssessment={orchestrationState.riskAssessment}
-              dialogQuestions={dialogQuestions}
-              isLoading={orchestrationState.isLoading}
-              error={orchestrationState.error}
-              onDialogResponse={handleDialogResponse}
-              onApprove={handleOrchestrationApprove}
-              onReject={handleOrchestrationReject}
-              onSkipDialog={handleSkipDialog}
-              defaultCollapsed={true}
-            />
-          )}
+          </div>
         </main>
 
         {/* Phase 41 S143-1: MemoryHint above ChatInput */}
@@ -1331,6 +1297,42 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
             isVisible={showMemoryHint}
             onDismiss={() => setShowMemoryHint(false)}
           />
+        )}
+
+        {/* Phase 45: Guided Dialog Panel (when pipeline pauses for missing info) */}
+        {pipeline.dialogPause && (
+          <div className="mx-4 mb-2">
+            <GuidedDialogPanel
+              dialogPause={pipeline.dialogPause}
+              onSubmit={pipeline.respondDialog}
+            />
+          </div>
+        )}
+
+        {/* Phase 45: HITL Pause Banner (when pipeline pauses for approval) */}
+        {pipeline.hitlPause && (
+          <div className="mx-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-red-500">&#9888;</span>
+              <span className="font-medium text-sm text-red-800">
+                {pipeline.hitlPause.riskLevel.toUpperCase()} 風險 — 需要人工審批
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                onClick={() => pipeline.resumeApproval('approved')}
+              >
+                批准
+              </button>
+              <button
+                className="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                onClick={() => pipeline.resumeApproval('rejected')}
+              >
+                拒絕
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Sprint 144: Mode Selector + Suggested Mode Banner */}
@@ -1406,4 +1408,4 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
   );
 };
 
-export default UnifiedChat;
+export default OrchestratorChat;
