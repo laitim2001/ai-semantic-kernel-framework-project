@@ -1061,9 +1061,10 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
 
     if (!displayText) return;
 
-    setMessages(prev => prev.map(m =>
+    const updated = messagesRef.current.map(m =>
       m.id === msgId ? { ...m, content: displayText } : m
-    ));
+    );
+    setMessages(updated);
   }, [pipeline.responseText, pipeline.isRunning, pipeline.error]);
 
   // Phase 45: When pipeline completes, finalize assistant message
@@ -1074,7 +1075,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
     const finalContent = pipeline.responseText || '(Pipeline completed with no response text)';
     const routeLabel = pipeline.selectedRoute || 'unknown';
 
-    setMessages(prev => prev.map(m =>
+    const updated = messagesRef.current.map(m =>
       m.id === msgId
         ? {
             ...m,
@@ -1086,7 +1087,8 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
             } as OrchestrationMetadata,
           }
         : m
-    ));
+    );
+    setMessages(updated);
   }, [pipeline.totalMs, pipeline.isRunning, pipeline.responseText, pipeline.selectedRoute]);
 
   // Phase 41 S143-2: Handle session resume from ChatHistoryPanel
