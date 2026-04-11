@@ -340,22 +340,25 @@ export function useOrchestratorPipeline() {
   const resumeApproval = useCallback(async (status: 'approved' | 'rejected', approver: string = 'user') => {
     if (!state.hitlPause) return;
 
-    try {
-      await fetch('/api/v1/orchestration/chat/resume', {
-        method: 'POST',
-        headers: _authHeaders(),
-        body: JSON.stringify({
-          checkpoint_id: state.hitlPause.checkpointId,
-          user_id: 'default-user',
-          approval_status: status,
-          approval_approver: approver,
-        }),
-      });
-      setState(prev => ({ ...prev, hitlPause: null }));
-    } catch (err) {
-      setState(prev => ({ ...prev, error: (err as Error).message }));
+    if (status === 'rejected') {
+      // Rejected — just clear the pause and show rejection message
+      setState(prev => ({
+        ...prev,
+        hitlPause: null,
+        isRunning: false,
+        error: 'Operation rejected by approver',
+      }));
+      return;
     }
-  }, [state.hitlPause, _authHeaders]);
+
+    // Approved — re-run pipeline with original task (approval granted)
+    const storedTask = sessionStorage.getItem(`pipeline-task-${state.sessionId}`) || '';
+    setState(prev => ({ ...prev, hitlPause: null }));
+
+    if (storedTask) {
+      await sendMessage(storedTask);
+    }
+  }, [state.hitlPause, state.sessionId, sendMessage]);
 
   const respondDialog = useCallback(async (responses: Record<string, string>) => {
     if (!state.dialogPause) return;
