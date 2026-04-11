@@ -16,6 +16,7 @@ Phase 45: Orchestration Core (Sprint 154)
 """
 
 import logging
+import os
 import uuid
 from typing import Optional
 
@@ -279,8 +280,16 @@ class IntentStep(PipelineStep):
                 from src.integrations.orchestration.intent_router.llm_classifier.classifier import (
                     LLMClassifier,
                 )
-                llm_cls = LLMClassifier()
-            except Exception:
+                from src.integrations.llm.azure_openai import AzureOpenAILLMService
+
+                # Layer 3: LLMClassifier with real Azure OpenAI service
+                llm_service = AzureOpenAILLMService(
+                    deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
+                )
+                llm_cls = LLMClassifier(llm_service=llm_service)
+                logger.info("IntentStep: LLMClassifier initialized with AzureOpenAILLMService")
+            except Exception as e:
+                logger.warning("IntentStep: LLMClassifier init failed: %s", str(e)[:100])
                 llm_cls = None
 
             checker = self._completeness_checker
