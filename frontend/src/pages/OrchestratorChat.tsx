@@ -261,6 +261,9 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
   // S74-3: Chat history panel collapse state
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
 
+  // Phase 45: Track assistant message ID for pipeline response sync
+  const pipelineAssistantIdRef = useRef<string | null>(null);
+
   // Sprint 99: Phase 28 Orchestration state
   // Phase 41: orchestrationEnabled now controls pipeline routing
   const [orchestrationEnabled, _setOrchestrationEnabled] = useState(true);
@@ -750,12 +753,9 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
       console.log('[S75-5] Uploaded file IDs:', allFileIds);
     }
 
-    // Phase 41 / Sprint 145: Unified pipeline via SSE streaming
+    // Phase 45: 8-step pipeline as the sole response channel
     if (orchestrationEnabled) {
-      console.log('[OrchestratorChat] Pipeline SSE send:', content.slice(0, 50));
-
-      // Phase 45: Trigger the 8-step pipeline in parallel (updates right panel)
-      pipeline.sendMessage(content, userId);
+      console.log('[OrchestratorChat] Pipeline send:', content.slice(0, 50));
 
       // Add user message to chat immediately
       const userMessage = {
@@ -767,23 +767,34 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
       const messagesWithUser = [...messagesRef.current, userMessage];
       setMessages(messagesWithUser);
 
-      // Create assistant message placeholder
-      const assistantMessageId = `orch-${Date.now()}`;
-      let accumulatedContent = '';
-      const orchMetadata: OrchestrationMetadata = {
-        executionMode: pipelineMode,
-      };
+      // Create assistant message placeholder (will be updated by useEffect watching pipeline.responseText)
+      const assistantMessageId = `pipeline-${Date.now()}`;
+      pipelineAssistantIdRef.current = assistantMessageId;
 
       const assistantMessage = {
         id: assistantMessageId,
         role: 'assistant' as const,
-        content: '',
+        content: '...',
         timestamp: new Date().toISOString(),
-        orchestrationMetadata: orchMetadata,
+        orchestrationMetadata: {
+          executionMode: pipelineMode,
+        } as OrchestrationMetadata,
       };
       setMessages([...messagesWithUser, assistantMessage]);
 
-      // Sprint 145: SSE event handlers for real-time updates
+      // Trigger the 8-step pipeline (sole response channel)
+      pipeline.sendMessage(content, userId);
+
+      // Phase 45: Old SSE flow disabled — pipeline.sendMessage() is the sole channel
+      // Response text is synced to chat via useEffect watching pipeline.responseText
+
+      if (allFileIds.length > 0) clearAttachments();
+      return;
+    }
+
+    // DEAD CODE BELOW — kept for reference, will be removed in cleanup
+    // eslint-disable-next-line no-constant-condition
+    if (false) {
       await sendSSE(
         {
           content,
@@ -1038,6 +1049,45 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
     uploadAll, clearAttachments, orchestrationEnabled, orchestratorSessionId,
     userId
   ]);
+
+  // Phase 45: Sync pipeline.responseText → assistant message in chat
+  useEffect(() => {
+    const msgId = pipelineAssistantIdRef.current;
+    if (!msgId) return;
+
+    const displayText = pipeline.responseText
+      || (pipeline.isRunning ? 'Pipeline 執行中...' : '')
+      || (pipeline.error ? `Error: ${pipeline.error}` : '');
+
+    if (!displayText) return;
+
+    setMessages(prev => prev.map(m =>
+      m.id === msgId ? { ...m, content: displayText } : m
+    ));
+  }, [pipeline.responseText, pipeline.isRunning, pipeline.error]);
+
+  // Phase 45: When pipeline completes, finalize assistant message
+  useEffect(() => {
+    const msgId = pipelineAssistantIdRef.current;
+    if (!msgId || pipeline.isRunning || pipeline.totalMs === 0) return;
+
+    const finalContent = pipeline.responseText || '(Pipeline completed with no response text)';
+    const routeLabel = pipeline.selectedRoute || 'unknown';
+
+    setMessages(prev => prev.map(m =>
+      m.id === msgId
+        ? {
+            ...m,
+            content: finalContent,
+            orchestrationMetadata: {
+              ...((m as Record<string, unknown>).orchestrationMetadata as Record<string, unknown> || {}),
+              executionMode: routeLabel,
+              processingTimeMs: pipeline.totalMs,
+            } as OrchestrationMetadata,
+          }
+        : m
+    ));
+  }, [pipeline.totalMs, pipeline.isRunning, pipeline.responseText, pipeline.selectedRoute]);
 
   // Phase 41 S143-2: Handle session resume from ChatHistoryPanel
   const handleResumeSession = useCallback(async (resumedSessionId: string) => {
