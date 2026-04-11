@@ -61,9 +61,12 @@ async def _sse_generator(
             sse_data = event.to_sse()
             yield f"event: {sse_data['event']}\ndata: {json.dumps(sse_data['data'])}\n\n"
 
-            # Terminal events
-            if sse_data["event"] in (
-                "PIPELINE_COMPLETE",
+            # Terminal events — only stop on truly final events
+            is_final_complete = (
+                sse_data["event"] == "PIPELINE_COMPLETE"
+                and sse_data["data"].get("final", False)
+            )
+            if is_final_complete or sse_data["event"] in (
                 "PIPELINE_ERROR",
                 "HITL_REQUIRED",
                 "DIALOG_REQUIRED",
@@ -179,7 +182,7 @@ async def chat_stream(request: ChatRequest):
                 post_step = PostProcessStep()
                 await post_step.execute(result_ctx)
 
-                # Emit final pipeline complete
+                # Emit final pipeline complete (final=true stops SSE stream)
                 await event_queue.put(
                     PipelineEvent(
                         PipelineEventType.PIPELINE_COMPLETE,
@@ -189,6 +192,7 @@ async def chat_stream(request: ChatRequest):
                             "total_ms": round(result_ctx.elapsed_ms, 1),
                             "completed_steps": result_ctx.completed_steps,
                             "checkpoint_id": result_ctx.checkpoint_id,
+                            "final": True,
                         },
                     )
                 )

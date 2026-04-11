@@ -232,13 +232,16 @@ export function useOrchestratorPipeline() {
         break;
 
       case 'PIPELINE_COMPLETE':
-        updateStep('dispatch', { status: 'completed' });
-        updateStep('post_process', { status: 'completed' });
-        setState(prev => ({
-          ...prev,
-          isRunning: false,
-          totalMs: data.total_ms as number,
-        }));
+        // Only finalize on the truly final event (after dispatch)
+        if (data.final) {
+          updateStep('dispatch', { status: 'completed' });
+          updateStep('post_process', { status: 'completed' });
+          setState(prev => ({
+            ...prev,
+            isRunning: false,
+            totalMs: data.total_ms as number,
+          }));
+        }
         break;
 
       case 'PIPELINE_ERROR':
