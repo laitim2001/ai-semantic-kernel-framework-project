@@ -150,7 +150,7 @@ class SwarmWorkerExecutor:
                             messages=working_messages,
                             tools=tool_schemas,
                             tool_choice="auto" if not is_last_iteration else "none",
-                            max_tokens=2048,
+                            max_tokens=4096,
                             temperature=0.7,
                         )
                     else:
@@ -160,7 +160,7 @@ class SwarmWorkerExecutor:
                                 f"[{m['role']}] {m.get('content', '')}"
                                 for m in working_messages
                             ),
-                            max_tokens=2048,
+                            max_tokens=4096,
                             temperature=0.7,
                         )
                         result = {"content": content, "tool_calls": None, "finish_reason": "stop"}
@@ -262,46 +262,61 @@ class SwarmWorkerExecutor:
                         messages.append({"role": "tool", "tool_name": tool_name, "result": tool_result})
                 else:
                     # No tool calls — final response
+                    finish_reason = result.get("finish_reason", "stop")
                     logger.info(
-                        "Worker %s: NO TOOL CALLS on iter %d → final response path, content_len=%d",
-                        self._worker_id, iteration, len(content),
+                        "Worker %s: NO TOOL CALLS on iter %d → final response path, content_len=%d, finish=%s",
+                        self._worker_id, iteration, len(content), finish_reason,
                     )
-                    # If content is empty, retry with tool_choice="none" to force text output
-                    # keeping full chat history (tool results) for context
+
+                    # If content is empty (often finish_reason=length means context too large)
                     if not content.strip():
                         logger.info(
-                            "Worker %s: empty content on iteration %d (tool_calls_made=%d), forcing text response",
-                            self._worker_id, iteration, len(tool_calls_made),
+                            "Worker %s: empty content (finish=%s, tool_calls_made=%d), retrying with compact context",
+                            self._worker_id, finish_reason, len(tool_calls_made),
                         )
+
+                        # Strategy: use compact messages (system + user + tool summary only)
+                        # This avoids context overflow from large tool call/result messages
+                        tool_summary = ""
+                        if tool_calls_made:
+                            summaries = []
+                            for tc in tool_calls_made[-3:]:
+                                result_str = json.dumps(tc.get("result", {}), ensure_ascii=False, default=str)[:200]
+                                summaries.append(f"- {tc['tool_name']}: {result_str}")
+                            tool_summary = "\n## 工具調用結果摘要\n" + "\n".join(summaries)
+
+                        compact_messages = [
+                            {"role": "system", "content": self._role_def.get("system_prompt", "")},
+                            {"role": "user", "content": (
+                                f"## 任務\n{self._task.description}\n"
+                                f"{tool_summary}\n\n"
+                                f"根據以上資訊，請直接用你的專業知識完成分析。"
+                                f"給出具體的診斷結果、排查步驟和修復建議。"
+                            )},
+                        ]
                         try:
-                            # Add instruction to produce analysis, then call with tool_choice="none"
-                            retry_messages = working_messages + [{
-                                "role": "user",
-                                "content": "請根據以上所有資訊和工具結果，直接用你的專業知識完成分析並回答任務。給出具體的診斷結果和建議。",
-                            }]
                             retry_result = await self._llm.chat_with_tools(
-                                messages=retry_messages,
-                                tools=tool_schemas,
-                                tool_choice="none",
-                                max_tokens=2048,
+                                messages=compact_messages,
+                                tools=None,
+                                max_tokens=4096,
                                 temperature=0.7,
                             )
                             content = retry_result.get("content") or ""
-                            logger.info("Worker %s: tool_choice=none retry → content_len=%d", self._worker_id, len(content))
+                            logger.info("Worker %s: compact retry → content_len=%d", self._worker_id, len(content))
                         except Exception as retry_err:
-                            logger.warning("Worker %s: forced text retry FAILED: %s", self._worker_id, retry_err)
+                            logger.warning("Worker %s: compact retry FAILED: %s", self._worker_id, retry_err)
 
-                        # Final fallback: generate() without chat context
+                        # Final fallback: generate() with minimal prompt
                         if not content.strip():
-                            logger.info("Worker %s: still empty after retry, trying generate()", self._worker_id)
+                            logger.info("Worker %s: still empty, trying generate()", self._worker_id)
                             try:
                                 content = await self._llm.generate(
                                     prompt=(
                                         f"{self._role_def.get('system_prompt', '')}\n\n"
                                         f"## 任務\n{self._task.description}\n\n"
-                                        f"請直接用你的專業知識分析並回答。"
+                                        f"請直接用你的專業知識分析並回答。給出具體的診斷結果和建議。"
                                     ),
-                                    max_tokens=2048,
+                                    max_tokens=4096,
                                     temperature=0.7,
                                 )
                             except Exception as gen_err:
