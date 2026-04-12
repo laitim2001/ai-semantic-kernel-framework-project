@@ -146,13 +146,23 @@ export function useOrchestratorPipeline() {
         setState(prev => ({ ...prev, currentStepIndex: data.step_index as number }));
         break;
 
-      case 'STEP_COMPLETE':
+      case 'STEP_COMPLETE': {
+        const meta = (data.metadata ?? data) as StepMetadata;
         updateStep(data.step_name as string, {
           status: 'completed',
           latencyMs: data.latency_ms as number,
-          metadata: (data.metadata ?? data) as StepMetadata,
+          metadata: meta,
         });
+        // Extract selectedRoute from llm_route_decision step metadata (fallback for checkpoint resume)
+        if (data.step_name === 'llm_route_decision' && meta.route) {
+          setState(prev => ({
+            ...prev,
+            selectedRoute: prev.selectedRoute || (meta.route as string),
+            routeReasoning: prev.routeReasoning || (meta.reasoning as string) || null,
+          }));
+        }
         break;
+      }
 
       case 'STEP_ERROR':
         updateStep(data.step_name as string, { status: 'error', metadata: data as StepMetadata });

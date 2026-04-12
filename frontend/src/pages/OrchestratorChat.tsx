@@ -1096,8 +1096,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               isRunning={pipeline.isRunning}
             />
             <div className="flex-1 border-t overflow-y-auto">
-              {(pipeline.selectedRoute === 'team' || pipeline.selectedRoute === 'subagent')
-                && agentTeamStatus ? (
+              {agentTeamStatus ? (
                 <AgentTeamPanel
                   agentTeamStatus={agentTeamStatus}
                   onAgentClick={(agent) => {
