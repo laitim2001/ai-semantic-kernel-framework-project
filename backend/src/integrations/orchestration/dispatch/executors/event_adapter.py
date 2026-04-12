@@ -112,9 +112,20 @@ class EventQueueAdapter:
                 )
 
             elif subtype == "SWARM_WORKER_PROGRESS":
-                # Progress update (not mapped to a specific AGENT_MEMBER event)
-                # Just log it; the frontend tracks progress via other events
-                pass
+                # Forward progress events to keep SSE alive during long dispatch
+                await self._queue.put(
+                    PipelineEvent(
+                        PipelineEventType.AGENT_MEMBER_THINKING,
+                        {
+                            "team_id": self._team_id,
+                            "agent_id": worker_id,
+                            "thinking_content": data.get("current_action", "processing..."),
+                            "progress": data.get("progress", 0),
+                            "timestamp": data.get("timestamp", ""),
+                        },
+                        step_name="dispatch",
+                    )
+                )
 
             elif subtype == "SWARM_WORKER_COMPLETED":
                 # Agent completed

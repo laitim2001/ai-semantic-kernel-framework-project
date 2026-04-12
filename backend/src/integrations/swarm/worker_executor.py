@@ -138,12 +138,14 @@ class SwarmWorkerExecutor:
                 })
 
                 # Call LLM with tools
+                # Force text response on last iteration to prevent infinite tool loops
+                is_last_iteration = iteration >= _MAX_TOOL_ITERATIONS - 1
                 try:
                     if tool_schemas and hasattr(self._llm, "chat_with_tools"):
                         result = await self._llm.chat_with_tools(
                             messages=working_messages,
                             tools=tool_schemas,
-                            tool_choice="auto",
+                            tool_choice="auto" if not is_last_iteration else "none",
                             max_tokens=2048,
                             temperature=0.7,
                         )
@@ -246,24 +248,39 @@ class SwarmWorkerExecutor:
                         messages.append({"role": "tool", "tool_name": tool_name, "result": tool_result})
                 else:
                     # No tool calls — final response
-                    # If content is empty, do a fallback generate() call
+                    # If content is empty, do a fallback generate() call with tool context
                     if not content.strip():
-                        logger.info("Worker %s: empty content, running fallback generate()", self._worker_id)
+                        logger.info(
+                            "Worker %s: empty content on iteration %d (tool_calls_made=%d), running fallback",
+                            self._worker_id, iteration, len(tool_calls_made),
+                        )
+                        # Build context from prior tool results
+                        tool_context = ""
+                        if tool_calls_made:
+                            tool_summaries = []
+                            for tc in tool_calls_made[-3:]:
+                                tool_summaries.append(
+                                    f"- {tc['tool_name']}: {json.dumps(tc.get('result', {}), ensure_ascii=False, default=str)[:300]}"
+                                )
+                            tool_context = "\n## 工具調用結果\n" + "\n".join(tool_summaries)
+
                         try:
                             content = await self._llm.generate(
                                 prompt=(
                                     f"{self._role_def.get('system_prompt', '')}\n\n"
                                     f"## 任務\n{self._task.description}\n\n"
-                                    f"請直接用你的專業知識分析並回答。"
+                                    f"{tool_context}\n\n"
+                                    f"根據以上資訊，請直接用你的專業知識分析並回答。不要嘗試調用任何工具。"
                                 ),
                                 max_tokens=2048,
                                 temperature=0.7,
                             )
                         except Exception as gen_err:
                             logger.warning("Worker %s: fallback generate failed: %s", self._worker_id, gen_err)
-                            # Use last thinking step if available
                             if thinking_steps:
                                 content = thinking_steps[-1].get("content", "")
+                            if not content:
+                                content = f"Worker {self._worker_id} 已完成分析但無法生成摘要。"
 
                     messages.append({"role": "assistant", "content": content})
                     duration_ms = (time.time() - start_time) * 1000
@@ -288,21 +305,37 @@ class SwarmWorkerExecutor:
                         duration_ms=duration_ms,
                     )
 
-            # Max iterations reached — fallback generate if no content
+            # Max iterations reached — generate final response with accumulated context
             duration_ms = (time.time() - start_time) * 1000
+            logger.info(
+                "Worker %s: max iterations reached (thinking_steps=%d, tool_calls=%d)",
+                self._worker_id, len(thinking_steps), len(tool_calls_made),
+            )
             last_content = thinking_steps[-1]["content"] if thinking_steps else ""
             if not last_content.strip():
+                # Build context from tool results for a meaningful fallback
+                tool_context = ""
+                if tool_calls_made:
+                    tool_summaries = []
+                    for tc in tool_calls_made[-3:]:  # Last 3 tool results
+                        tool_summaries.append(
+                            f"- {tc['tool_name']}: {json.dumps(tc.get('result', {}), ensure_ascii=False, default=str)[:300]}"
+                        )
+                    tool_context = "\n## 工具調用結果\n" + "\n".join(tool_summaries)
+
                 try:
                     last_content = await self._llm.generate(
                         prompt=(
                             f"{self._role_def.get('system_prompt', '')}\n\n"
                             f"## 任務\n{self._task.description}\n\n"
-                            f"請直接用你的專業知識分析並回答。"
+                            f"{tool_context}\n\n"
+                            f"根據以上資訊，請直接用你的專業知識分析並回答。不要嘗試調用任何工具。"
                         ),
                         max_tokens=2048,
                         temperature=0.7,
                     )
-                except Exception:
+                except Exception as gen_err:
+                    logger.warning("Worker %s: fallback generate failed: %s", self._worker_id, gen_err)
                     last_content = f"Worker {self._worker_id} 已完成分析但無法生成摘要。"
 
             await self._emit("SWARM_WORKER_COMPLETED", {

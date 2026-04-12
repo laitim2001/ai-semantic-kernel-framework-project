@@ -66,7 +66,7 @@ class TeamExecutor(BaseExecutor):
                         PipelineEventType.AGENT_TEAM_CREATED,
                         {
                             "team_id": team_id,
-                            "mode": "sequential",
+                            "mode": "parallel",
                             "agents": [
                                 {
                                     "agent_id": f"w-{t.task_id}",
@@ -82,25 +82,59 @@ class TeamExecutor(BaseExecutor):
                     )
                 )
 
-            # Execute workers sequentially with shared context
+            # Execute workers in parallel (PoC-proven asyncio.gather pattern)
+            # TaskDecomposer returns mode: "parallel" | "sequential"
+            exec_mode = "parallel"
+            if hasattr(sub_tasks[0], "__class__") and hasattr(sub_tasks, "__iter__"):
+                # Check if decomposer set a mode
+                exec_mode = getattr(sub_tasks, "_mode", "parallel") if hasattr(sub_tasks, "_mode") else "parallel"
+
             agent_results: List[AgentResult] = []
-            shared_context: List[str] = []
 
-            for sub_task in sub_tasks:
-                # Append prior findings to task description for sequential context
-                if shared_context:
-                    sub_task.description += (
-                        "\n\n## Prior Team Findings\n"
-                        + "\n".join(shared_context)
+            if exec_mode == "sequential":
+                # Sequential with shared context (rarely used)
+                shared_context: List[str] = []
+                for sub_task in sub_tasks:
+                    if shared_context:
+                        sub_task.description += (
+                            "\n\n## Prior Team Findings\n"
+                            + "\n".join(shared_context)
+                        )
+                    result = await self._run_worker(
+                        sub_task, llm_service, tool_registry, event_queue, team_id
                     )
+                    agent_results.append(result)
+                    shared_context.append(
+                        f"[{result.agent_name}]: {result.output}"
+                    )
+            else:
+                # Parallel execution — all agents run concurrently (PoC pattern)
+                max_concurrent = min(len(sub_tasks), 5)
+                semaphore = asyncio.Semaphore(max_concurrent)
 
-                result = await self._run_worker(
-                    sub_task, llm_service, tool_registry, event_queue, team_id
+                async def _run_parallel(sub_task):
+                    async with semaphore:
+                        return await self._run_worker(
+                            sub_task, llm_service, tool_registry, event_queue, team_id
+                        )
+
+                results_or_errors = await asyncio.gather(
+                    *[_run_parallel(t) for t in sub_tasks],
+                    return_exceptions=True,
                 )
-                agent_results.append(result)
-                shared_context.append(
-                    f"[{result.agent_name}]: {result.output}"
-                )
+
+                for i, result in enumerate(results_or_errors):
+                    if isinstance(result, Exception):
+                        logger.error("Agent %d failed: %s", i, result)
+                        agent_results.append(AgentResult(
+                            agent_name=sub_tasks[i].title if hasattr(sub_tasks[i], 'title') else f"Agent-{i}",
+                            role="error",
+                            output=f"Agent execution failed: {str(result)[:200]}",
+                            duration_ms=0,
+                            status="failed",
+                        ))
+                    else:
+                        agent_results.append(result)
 
             # Synthesize results
             synthesis = self._synthesize(agent_results)
