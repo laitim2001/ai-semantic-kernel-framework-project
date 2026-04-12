@@ -318,17 +318,63 @@ IT_SEMANTIC_ROUTES: List[SemanticRoute] = (
 )
 
 
+def _load_routes_from_yaml() -> List[SemanticRoute]:
+    """Load semantic routes from YAML config file.
+
+    Returns routes from routes.yaml if available, otherwise returns empty list.
+    """
+    import logging
+    import os
+
+    import yaml
+
+    yaml_path = os.path.join(os.path.dirname(__file__), "routes.yaml")
+    logger = logging.getLogger(__name__)
+
+    if not os.path.exists(yaml_path):
+        return []
+
+    try:
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+
+        routes = []
+        for r in config.get("routes", []):
+            category = ITIntentCategory.from_string(r.get("category", "unknown"))
+            risk = RiskLevel.from_string(r.get("risk_level", "medium"))
+            workflow = WorkflowType.from_string(r.get("workflow_type", "simple"))
+
+            routes.append(SemanticRoute(
+                name=r["name"],
+                utterances=r.get("utterances", []),
+                intent_category=category,
+                sub_intent=r.get("sub_intent", ""),
+                risk_level=risk,
+                workflow_type=workflow,
+            ))
+
+        if routes:
+            logger.info("Loaded %d semantic routes from YAML", len(routes))
+        return routes
+
+    except Exception as e:
+        logger.warning("Failed to load routes.yaml, using Python defaults: %s", str(e)[:100])
+        return []
+
+
 def get_default_routes() -> List[SemanticRoute]:
     """
     Get the default set of IT service semantic routes.
 
+    Tries to load from routes.yaml first (enterprise-configurable).
+    Falls back to hardcoded Python routes if YAML is unavailable.
+
     Returns:
-        List of 15 predefined SemanticRoute objects covering:
-        - 4 Incident routes (ETL, network, performance, system down)
-        - 4 Request routes (account, access, software, password)
-        - 3 Change routes (deployment, config, database)
-        - 4 Query routes (status, report, ticket, documentation)
+        List of SemanticRoute objects.
     """
+    yaml_routes = _load_routes_from_yaml()
+    if yaml_routes:
+        return yaml_routes
     return IT_SEMANTIC_ROUTES.copy()
 
 

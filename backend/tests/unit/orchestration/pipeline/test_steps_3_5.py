@@ -112,14 +112,14 @@ class TestIntentStep:
 
     @pytest.mark.asyncio
     async def test_incomplete_intent_raises_dialog_pause(self):
-        """Incomplete intent triggers DialogPauseException."""
+        """Incomplete intent triggers DialogPauseException when score < 50%."""
         decision = MockRoutingDecision(
             intent_category=MockIntentCategory.INCIDENT,
             sub_intent="etl_failure",
             confidence=0.85,
             completeness=MockCompletenessInfo(
                 is_complete=False,
-                completeness_score=0.5,
+                completeness_score=0.3,
                 missing_fields=["severity", "affected_systems"],
                 suggestions=["What is the severity?", "Which systems are affected?"],
             ),
@@ -136,7 +136,7 @@ class TestIntentStep:
 
         assert exc_info.value.missing_fields == ["severity", "affected_systems"]
         assert len(exc_info.value.questions) == 2
-        assert exc_info.value.completeness_score == 0.5
+        assert exc_info.value.completeness_score == 0.3
 
     @pytest.mark.asyncio
     async def test_incomplete_with_checkpoint(self):

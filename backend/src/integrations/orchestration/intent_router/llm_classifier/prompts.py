@@ -124,6 +124,61 @@ COMPLETENESS_PROMPT = """分析以下 IT 服務請求的資訊完整度。
 # Helper Functions
 # =============================================================================
 
+def _load_prompts_from_yaml() -> dict:
+    """Load prompt templates from YAML config file."""
+    import logging
+    import os
+
+    import yaml
+
+    yaml_path = os.path.join(os.path.dirname(__file__), "prompts.yaml")
+    logger = logging.getLogger(__name__)
+
+    if not os.path.exists(yaml_path):
+        return {}
+
+    try:
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+        logger.info("Loaded LLM prompt templates from YAML")
+        return config
+    except Exception as e:
+        logger.warning("Failed to load prompts.yaml: %s", str(e)[:100])
+        return {}
+
+
+def _build_prompt_from_yaml(config: dict, user_input: str) -> str:
+    """Build classification prompt from YAML config."""
+    cp = config.get("classification_prompt", {})
+    parts = [cp.get("system", "")]
+
+    categories = cp.get("categories", {})
+    if categories:
+        parts.append("\n## 意圖類別說明\n")
+        for cat_name, cat_info in categories.items():
+            parts.append(f"### {cat_name}")
+            parts.append(cat_info.get("description", ""))
+            subs = cat_info.get("sub_intents", [])
+            if subs:
+                parts.append(f"子意圖: {', '.join(subs)}")
+            req_info = cat_info.get("required_info", [])
+            if req_info:
+                parts.append("必要資訊:")
+                for ri in req_info:
+                    parts.append(f"- {ri}")
+            parts.append("")
+
+    parts.append(f"\n## 用戶輸入\n{user_input}\n")
+    parts.append(f"\n## 輸出格式\n{cp.get('output_format', '')}")
+    parts.append(cp.get("instructions", ""))
+
+    return "\n".join(parts)
+
+
+# Cached YAML config
+_YAML_CONFIG = _load_prompts_from_yaml()
+
+
 def get_classification_prompt(
     user_input: str,
     include_completeness: bool = True,
@@ -131,6 +186,8 @@ def get_classification_prompt(
 ) -> str:
     """
     Generate the classification prompt for the given user input.
+
+    Tries YAML config first, falls back to hardcoded prompts.
 
     Args:
         user_input: The user's input text to classify
@@ -141,7 +198,13 @@ def get_classification_prompt(
         Formatted prompt string
     """
     if simplified:
+        if _YAML_CONFIG and "simple_prompt" in _YAML_CONFIG:
+            sp = _YAML_CONFIG["simple_prompt"]
+            return sp.get("system", "") + f"\n\n輸入: {user_input}\n\n" + sp.get("output_format", "")
         return SIMPLE_CLASSIFICATION_PROMPT.format(user_input=user_input)
+
+    if _YAML_CONFIG and "classification_prompt" in _YAML_CONFIG:
+        return _build_prompt_from_yaml(_YAML_CONFIG, user_input)
 
     return CLASSIFICATION_PROMPT.format(user_input=user_input)
 
@@ -153,6 +216,8 @@ def get_completeness_prompt(
     """
     Generate the completeness assessment prompt.
 
+    Tries YAML config first, falls back to hardcoded prompt.
+
     Args:
         user_input: The user's input text
         intent_category: The classified intent category
@@ -160,6 +225,14 @@ def get_completeness_prompt(
     Returns:
         Formatted prompt string
     """
+    if _YAML_CONFIG and "completeness_prompt" in _YAML_CONFIG:
+        cp = _YAML_CONFIG["completeness_prompt"]
+        return (
+            cp.get("system", "")
+            + f"\n\n## 意圖類別: {intent_category}\n## 用戶輸入: {user_input}\n\n"
+            + cp.get("output_format", "")
+        )
+
     return COMPLETENESS_PROMPT.format(
         user_input=user_input,
         intent_category=intent_category,
