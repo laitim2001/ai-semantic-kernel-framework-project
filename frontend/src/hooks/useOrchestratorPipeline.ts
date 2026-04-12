@@ -116,16 +116,27 @@ export function useOrchestratorPipeline() {
 
   const handleSSEEvent = useCallback((eventType: string, data: Record<string, unknown>) => {
     switch (eventType) {
-      case 'PIPELINE_START':
-        setState(prev => ({
-          ...prev,
-          isRunning: true,
-          sessionId: data.session_id as string,
-          error: null,
-          dialogPause: null,
-          hitlPause: null,
-        }));
+      case 'PIPELINE_START': {
+        const startFrom = (data.start_from as number) || 0;
+        setState(prev => {
+          // If resuming from checkpoint, mark skipped steps as 'completed (restored)'
+          const updatedSteps = startFrom > 0
+            ? prev.steps.map(s =>
+                s.index < startFrom ? { ...s, status: 'completed' as const } : s
+              )
+            : prev.steps;
+          return {
+            ...prev,
+            isRunning: true,
+            sessionId: data.session_id as string,
+            error: null,
+            dialogPause: null,
+            hitlPause: null,
+            steps: updatedSteps,
+          };
+        });
         break;
+      }
 
       case 'STEP_START':
         updateStep(data.step_name as string, { status: 'running' });

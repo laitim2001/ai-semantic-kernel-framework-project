@@ -204,14 +204,13 @@ const RiskDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => {
 };
 
 const HITLDetail: FC<{ meta: Record<string, unknown>; step: PipelineStep }> = ({ meta, step }) => {
-  const passed = meta.passed as boolean | undefined;
-  const approvalId = meta.approval_id as string | undefined;
+  const hasMeta = Object.keys(meta).length > 1; // more than just {step: 'hitl_gate'}
   return (
     <div className="text-muted-foreground">
       {step.status === 'paused' ? (
         <div className="text-yellow-600">Waiting for approval...</div>
-      ) : passed === false && approvalId ? (
-        <div className="text-green-600">Approved (pre-approved resume)</div>
+      ) : step.status === 'completed' && !hasMeta ? (
+        <div className="text-green-600">Approved (checkpoint resume)</div>
       ) : (
         <div>Passed (no approval needed)</div>
       )}
