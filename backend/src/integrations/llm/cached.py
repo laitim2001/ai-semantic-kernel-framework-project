@@ -144,6 +144,33 @@ class CachedLLMService:
 
         return response
 
+    async def chat_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: str = "auto",
+        max_tokens: int = 2048,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Chat with tools — delegates directly to inner service (no caching).
+
+        Tool-calling responses are non-deterministic and context-dependent,
+        so caching is not appropriate.
+        """
+        if not hasattr(self.inner_service, "chat_with_tools"):
+            raise AttributeError(
+                f"{type(self.inner_service).__name__} does not support chat_with_tools"
+            )
+        return await self.inner_service.chat_with_tools(
+            messages=messages,
+            tools=tools,
+            tool_choice=tool_choice,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            **kwargs,
+        )
+
     async def generate_structured(
         self,
         prompt: str,

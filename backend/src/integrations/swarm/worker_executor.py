@@ -107,6 +107,10 @@ class SwarmWorkerExecutor:
 
             # Get role-filtered tool schemas
             tool_schemas = self._get_filtered_tool_schemas()
+            logger.info(
+                "Worker %s: starting execution (role=%s, tools=%d, timeout=%.0fs)",
+                self._worker_id, self._task.role, len(tool_schemas), self._timeout,
+            )
 
             # Function calling loop
             for iteration in range(_MAX_TOOL_ITERATIONS):
@@ -161,10 +165,12 @@ class SwarmWorkerExecutor:
                         )
                         result = {"content": content, "tool_calls": None, "finish_reason": "stop"}
                 except Exception as llm_err:
-                    logger.error("Worker %s: LLM call failed: %s", self._worker_id, llm_err)
+                    logger.error("Worker %s: LLM call FAILED iter %d: %s", self._worker_id, iteration, llm_err)
                     # Retry once
                     if iteration == 0:
+                        logger.info("Worker %s: retrying after iter 0 failure", self._worker_id)
                         continue
+                    logger.error("Worker %s: EXIT via LLM error path → content=EMPTY", self._worker_id)
                     return WorkerResult(
                         worker_id=self._worker_id,
                         role=self._task.role,
@@ -180,6 +186,14 @@ class SwarmWorkerExecutor:
 
                 content = result.get("content") or ""
                 tool_calls = result.get("tool_calls")
+
+                logger.info(
+                    "Worker %s iter %d: content_len=%d, tool_calls=%s, is_last=%s, finish=%s",
+                    self._worker_id, iteration, len(content),
+                    len(tool_calls) if tool_calls else 0,
+                    is_last_iteration,
+                    result.get("finish_reason", "?"),
+                )
 
                 # Emit thinking event
                 if content:
@@ -248,6 +262,10 @@ class SwarmWorkerExecutor:
                         messages.append({"role": "tool", "tool_name": tool_name, "result": tool_result})
                 else:
                     # No tool calls — final response
+                    logger.info(
+                        "Worker %s: NO TOOL CALLS on iter %d → final response path, content_len=%d",
+                        self._worker_id, iteration, len(content),
+                    )
                     # If content is empty, retry with tool_choice="none" to force text output
                     # keeping full chat history (tool results) for context
                     if not content.strip():
@@ -269,11 +287,13 @@ class SwarmWorkerExecutor:
                                 temperature=0.7,
                             )
                             content = retry_result.get("content") or ""
+                            logger.info("Worker %s: tool_choice=none retry → content_len=%d", self._worker_id, len(content))
                         except Exception as retry_err:
-                            logger.warning("Worker %s: forced text retry failed: %s", self._worker_id, retry_err)
+                            logger.warning("Worker %s: forced text retry FAILED: %s", self._worker_id, retry_err)
 
                         # Final fallback: generate() without chat context
                         if not content.strip():
+                            logger.info("Worker %s: still empty after retry, trying generate()", self._worker_id)
                             try:
                                 content = await self._llm.generate(
                                     prompt=(
@@ -288,6 +308,10 @@ class SwarmWorkerExecutor:
                                 logger.warning("Worker %s: generate fallback failed: %s", self._worker_id, gen_err)
                                 content = f"Worker {self._worker_id} 已完成分析但無法生成摘要。"
 
+                    logger.info(
+                        "Worker %s: EXIT via normal path → content_len=%d, status=completed",
+                        self._worker_id, len(content),
+                    )
                     messages.append({"role": "assistant", "content": content})
                     duration_ms = (time.time() - start_time) * 1000
 
@@ -347,6 +371,10 @@ class SwarmWorkerExecutor:
                 "duration_ms": round(duration_ms, 2),
             })
 
+            logger.info(
+                "Worker %s: EXIT via max-iterations path → content_len=%d",
+                self._worker_id, len(last_content),
+            )
             return WorkerResult(
                 worker_id=self._worker_id,
                 role=self._task.role,
