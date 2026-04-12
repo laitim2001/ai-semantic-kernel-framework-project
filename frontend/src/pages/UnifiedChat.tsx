@@ -52,9 +52,9 @@ import type { DialogQuestion } from '@/api/endpoints/orchestration';
 import type { Attachment } from '@/types/unified-chat';
 import type { OrchestrationMetadata } from '@/types/ag-ui';
 import { MemoryHint } from '@/components/unified-chat/MemoryHint';
-import { AgentSwarmPanel } from '@/components/unified-chat/agent-swarm/AgentSwarmPanel';
-import { WorkerDetailDrawer } from '@/components/unified-chat/agent-swarm/WorkerDetailDrawer';
-import { useSwarmStore } from '@/stores/swarmStore';
+import { AgentTeamPanel } from '@/components/unified-chat/agent-team/AgentTeamPanel';
+import { AgentDetailDrawer } from '@/components/unified-chat/agent-team/AgentDetailDrawer';
+import { useAgentTeamStore } from '@/stores/agentTeamStore';
 import type { MemoryHintItem } from '@/components/unified-chat/MemoryHint';
 import type {
   UnifiedChatProps,
@@ -257,14 +257,14 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
   const [isPipelineSending] = useState(false); // kept for non-SSE fallback
   // Sprint 145: SSE streaming hook
   const { sendSSE, isStreaming: isSSEStreaming } = useSSEChat();
-  // Sprint 146: Swarm store for AgentSwarmPanel
-  const swarmStatus = useSwarmStore((s) => s.swarmStatus);
-  const _swarmReset = useSwarmStore((s) => s.reset);
-  void _swarmReset; // used on session change (future)
-  void useSwarmStore; // accessed via getState() in SSE handlers
-  const swarmSelectedDetail = useSwarmStore((s) => s.selectedWorkerDetail);
-  const swarmIsDrawerOpen = useSwarmStore((s) => s.isDrawerOpen);
-  const swarmCloseDrawer = useSwarmStore((s) => s.closeDrawer);
+  // Sprint 146: Swarm store for AgentTeamPanel
+  const agentTeamStatus = useAgentTeamStore((s) => s.agentTeamStatus);
+  const _agentTeamReset = useAgentTeamStore((s) => s.reset);
+  void _agentTeamReset; // used on session change (future)
+  void useAgentTeamStore; // accessed via getState() in SSE handlers
+  const agentTeamSelectedDetail = useAgentTeamStore((s) => s.selectedAgentDetail);
+  const agentTeamIsDrawerOpen = useAgentTeamStore((s) => s.isDrawerOpen);
+  const agentTeamCloseDrawer = useAgentTeamStore((s) => s.closeDrawer);
   const [showSwarmPanel, setShowSwarmPanel] = useState(false);
   // Sprint 146: HITL approval state
   const [pendingApproval, setPendingApproval] = useState<{
@@ -872,40 +872,40 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
 
             if (subtype === 'SWARM_STARTED') {
               // Initial swarm setup — use getState() to avoid stale closure
-              const totalWorkers = (data.total_workers as number) || 0;
-              useSwarmStore.getState().setSwarmStatus({
-                swarmId: (data.swarm_id as string) || `swarm-${Date.now()}`,
+              const totalWorkers = (data.total_agents as number) || 0;
+              useAgentTeamStore.getState().setTeamStatus({
+                teamId: (data.team_id as string) || `swarm-${Date.now()}`,
                 sessionId: orchestratorSessionId || '',
                 mode: (data.mode as 'parallel' | 'sequential' | 'pipeline' | 'hierarchical' | 'hybrid') || 'parallel',
                 status: 'executing',
                 totalWorkers,
                 overallProgress: 0,
-                workers: [],
+                agents: [],
                 createdAt: new Date().toISOString(),
                 startedAt: new Date().toISOString(),
                 metadata: {},
               });
             } else {
               // Individual worker start — ensure status exists first
-              const store = useSwarmStore.getState();
-              if (!store.swarmStatus) {
-                store.setSwarmStatus({
-                  swarmId: `swarm-${Date.now()}`,
+              const store = useAgentTeamStore.getState();
+              if (!store.agentTeamStatus) {
+                store.setTeamStatus({
+                  teamId: `swarm-${Date.now()}`,
                   sessionId: orchestratorSessionId || '',
                   mode: 'parallel',
                   status: 'executing',
                   totalWorkers: 4,
                   overallProgress: 0,
-                  workers: [],
+                  agents: [],
                   createdAt: new Date().toISOString(),
                   startedAt: new Date().toISOString(),
                   metadata: {},
                 });
               }
-              store.addWorker({
-                workerId: (data.worker_id as string) || `w-${Date.now()}`,
-                workerName: (data.display_name as string) || (data.agent_name as string) || 'Worker',
-                workerType: 'hybrid',
+              store.addAgent({
+                agentId: (data.worker_id as string) || `w-${Date.now()}`,
+                agentName: (data.display_name as string) || (data.agent_name as string) || 'Worker',
+                agentType: 'hybrid',
                 role: (data.role as string) || 'worker',
                 status: 'running',
                 progress: 0,
@@ -917,27 +917,27 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
           },
           onSwarmProgress: (data) => {
             const subtype = data.event_subtype as string;
-            const store = useSwarmStore.getState();
+            const store = useAgentTeamStore.getState();
 
             if (subtype === 'SWARM_WORKER_COMPLETED') {
-              store.completeWorker({
-                swarm_id: '',
+              store.completeAgent({
+                team_id: '',
                 worker_id: data.worker_id as string,
                 status: 'completed',
                 duration_ms: (data.duration_ms as number) || 0,
                 completed_at: new Date().toISOString(),
               });
             } else if (subtype === 'SWARM_WORKER_THINKING') {
-              store.updateWorkerThinking({
-                swarm_id: '',
+              store.updateAgentThinking({
+                team_id: '',
                 worker_id: data.worker_id as string,
                 thinking_content: (data.content as string) || '',
                 timestamp: new Date().toISOString(),
               });
             } else if (subtype === 'SWARM_WORKER_TOOL_CALL') {
               if ((data.status as string) === 'completed') {
-                store.updateWorkerToolCall({
-                  swarm_id: '',
+                store.updateAgentToolCall({
+                  team_id: '',
                   worker_id: data.worker_id as string,
                   tool_call_id: `tc-${Date.now()}`,
                   tool_name: (data.tool_name as string) || '',
@@ -948,14 +948,14 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
                 });
               }
             } else if (subtype === 'SWARM_COMPLETED') {
-              const total = (data.total_workers as number) || 0;
-              const completed = (data.completed_workers as number) || 0;
-              store.updateSwarmProgress(total > 0 ? Math.round((completed / total) * 100) : 100);
-              store.completeSwarm('completed');
+              const total = (data.total_agents as number) || 0;
+              const completed = (data.completed_agents as number) || 0;
+              store.updateTeamProgress(total > 0 ? Math.round((completed / total) * 100) : 100);
+              store.completeTeam('completed');
             } else {
               // Generic progress update
-              store.updateWorkerProgress({
-                swarm_id: '',
+              store.updateAgentProgress({
+                team_id: '',
                 worker_id: data.worker_id as string,
                 progress: (data.progress as number) || 0,
                 status: (data.status as string) || 'running',
@@ -1269,17 +1269,17 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
           {/* Sprint 146/149: Agent Swarm Panel + Worker Detail Drawer */}
           {(pipelineMode === 'swarm' || showSwarmPanel) && (
             <div className="w-[360px] border-l bg-white overflow-y-auto hidden xl:block">
-              <AgentSwarmPanel
-                swarmStatus={swarmStatus}
-                onWorkerClick={(worker) => {
+              <AgentTeamPanel
+                agentTeamStatus={agentTeamStatus}
+                onAgentClick={(agent) => {
                   // Build WorkerDetail from store data so Drawer doesn't need to fetch
-                  const store = useSwarmStore.getState();
-                  store.selectWorker(worker);
-                  // Build minimal WorkerDetail from UIWorkerSummary
-                  store.setWorkerDetail({
+                  const store = useAgentTeamStore.getState();
+                  store.selectAgent(agent);
+                  // Build minimal WorkerDetail from UIAgentSummary
+                  store.setAgentDetail({
                     ...worker,
-                    taskId: worker.workerId,
-                    taskDescription: worker.currentAction || '',
+                    taskId: agent.agentId,
+                    taskDescription: agent.currentAction || '',
                     thinkingHistory: [],
                     toolCalls: [],
                     messages: [],
@@ -1288,14 +1288,14 @@ export const UnifiedChat: FC<UnifiedChatProps> = ({
                 }}
                 isLoading={isSSEStreaming && pipelineMode === 'swarm'}
               />
-              <WorkerDetailDrawer
-                open={swarmIsDrawerOpen}
-                onClose={swarmCloseDrawer}
-                swarmId={swarmStatus?.swarmId || ''}
-                worker={swarmStatus?.workers?.find(
-                  w => w.workerId === useSwarmStore.getState().selectedWorkerId
+              <AgentDetailDrawer
+                open={agentTeamIsDrawerOpen}
+                onClose={agentTeamCloseDrawer}
+                teamId={agentTeamStatus?.teamId || ''}
+                worker={agentTeamStatus?.agents?.find(
+                  w => w.agentId === useAgentTeamStore.getState().selectedAgentId
                 ) || null}
-                workerDetail={swarmSelectedDetail}
+                agentDetail={agentTeamSelectedDetail}
               />
             </div>
           )}

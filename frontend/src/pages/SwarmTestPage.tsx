@@ -36,12 +36,12 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import {
-  AgentSwarmPanel,
-  WorkerDetailDrawer,
-} from '@/components/unified-chat/agent-swarm';
+  AgentTeamPanel,
+  AgentDetailDrawer,
+} from '@/components/unified-chat/agent-team';
 import { useSwarmMock, type MockMessage } from '@/hooks/useSwarmMock';
 import { useSwarmReal } from '@/hooks/useSwarmReal';
-import type { WorkerType, WorkerStatus, UIWorkerSummary } from '@/components/unified-chat/agent-swarm/types';
+import type { AgentType, AgentMemberStatus, UIAgentSummary } from '@/components/unified-chat/agent-team/types';
 
 // =============================================================================
 // Types
@@ -164,9 +164,9 @@ export const SwarmTestPage: FC = () => {
 
   // Choose which hook to use based on mode
   const {
-    swarmStatus,
-    selectedWorkerId,
-    selectedWorkerDetail,
+    agentTeamStatus,
+    selectedAgentId,
+    selectedAgentDetail,
     isDrawerOpen,
     mockMessages,
     selectWorker,
@@ -176,7 +176,7 @@ export const SwarmTestPage: FC = () => {
   // Local state for inputs
   const [chatInput, setChatInput] = useState('');
   const [newWorkerName, setNewWorkerName] = useState('');
-  const [newWorkerType, setNewWorkerType] = useState<WorkerType>('claude_sdk');
+  const [newAgentType, setNewAgentType] = useState<AgentType>('claude_sdk');
   const [newWorkerRole, setNewWorkerRole] = useState('');
   const [selectedControlWorkerId, setSelectedControlWorkerId] = useState<string | null>(null);
   const [thinkingInput, setThinkingInput] = useState('');
@@ -185,8 +185,8 @@ export const SwarmTestPage: FC = () => {
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.0);
 
   // Get selected worker for controls
-  const selectedControlWorker = swarmStatus?.workers.find(
-    (w) => w.workerId === selectedControlWorkerId
+  const selectedControlWorker = agentTeamStatus?.workers.find(
+    (w) => w.agentId === selectedControlWorkerId
   );
 
   // Mode change handler
@@ -216,14 +216,14 @@ export const SwarmTestPage: FC = () => {
 
   const handleAddWorker = useCallback(() => {
     if (!newWorkerName.trim() || testMode !== 'mock') return;
-    mockHook.addWorker(newWorkerName, newWorkerType, newWorkerRole || 'Worker');
+    mockHook.addAgent(newWorkerName, newAgentType, newWorkerRole || 'Worker');
     setNewWorkerName('');
     setNewWorkerRole('');
-  }, [newWorkerName, newWorkerType, newWorkerRole, mockHook, testMode]);
+  }, [newWorkerName, newAgentType, newWorkerRole, mockHook, testMode]);
 
   const handleWorkerClick = useCallback(
-    (worker: UIWorkerSummary) => {
-      selectWorker(worker.workerId);
+    (worker: UIAgentSummary) => {
+      selectWorker(worker.agentId);
     },
     [selectWorker]
   );
@@ -415,12 +415,12 @@ export const SwarmTestPage: FC = () => {
                 <div className="text-xs text-gray-600 space-y-1">
                   <div>API: {import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}</div>
                   <div>場景數量: {realHook.scenarios.length}</div>
-                  {swarmStatus && (
+                  {agentTeamStatus && (
                     <>
                       <div className="pt-2 border-t mt-2">
-                        <div>Swarm ID: {swarmStatus.swarmId}</div>
-                        <div>狀態: {swarmStatus.status}</div>
-                        <div>進度: {swarmStatus.overallProgress}%</div>
+                        <div>Swarm ID: {agentTeamStatus.swarmId}</div>
+                        <div>狀態: {agentTeamStatus.status}</div>
+                        <div>進度: {agentTeamStatus.overallProgress}%</div>
                       </div>
                     </>
                   )}
@@ -480,7 +480,7 @@ export const SwarmTestPage: FC = () => {
                     <Button
                       size="sm"
                       onClick={() => mockHook.createSwarm({ mode: 'sequential' })}
-                      disabled={!!swarmStatus}
+                      disabled={!!agentTeamStatus}
                       className="flex-1"
                     >
                       <Play className="w-4 h-4 mr-1" />
@@ -490,17 +490,17 @@ export const SwarmTestPage: FC = () => {
                       size="sm"
                       variant="outline"
                       onClick={mockHook.resetSwarm}
-                      disabled={!swarmStatus}
+                      disabled={!agentTeamStatus}
                     >
                       <RotateCcw className="w-4 h-4" />
                     </Button>
                   </div>
-                  {swarmStatus && (
+                  {agentTeamStatus && (
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={mockHook.completeSwarm}
+                        onClick={mockHook.completeTeam}
                         className="flex-1"
                       >
                         <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
@@ -517,12 +517,12 @@ export const SwarmTestPage: FC = () => {
                       </Button>
                     </div>
                   )}
-                  {swarmStatus && (
+                  {agentTeamStatus && (
                     <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
-                      <div>ID: {swarmStatus.swarmId.slice(0, 15)}...</div>
-                      <div>模式: {swarmStatus.mode}</div>
-                      <div>狀態: {swarmStatus.status}</div>
-                      <div>進度: {swarmStatus.overallProgress}%</div>
+                      <div>ID: {agentTeamStatus.swarmId.slice(0, 15)}...</div>
+                      <div>模式: {agentTeamStatus.mode}</div>
+                      <div>狀態: {agentTeamStatus.status}</div>
+                      <div>進度: {agentTeamStatus.overallProgress}%</div>
                     </div>
                   )}
                 </div>
@@ -532,20 +532,20 @@ export const SwarmTestPage: FC = () => {
               <ControlSection
                 title="新增 Worker"
                 icon={<UserPlus className="w-4 h-4 text-purple-600" />}
-                defaultOpen={!!swarmStatus}
+                defaultOpen={!!agentTeamStatus}
               >
                 <div className="space-y-2">
                   <Input
                     placeholder="Worker 名稱"
                     value={newWorkerName}
                     onChange={(e) => setNewWorkerName(e.target.value)}
-                    disabled={!swarmStatus}
+                    disabled={!agentTeamStatus}
                   />
                   <select
                     className="w-full p-2 text-sm border rounded"
-                    value={newWorkerType}
-                    onChange={(e) => setNewWorkerType(e.target.value as WorkerType)}
-                    disabled={!swarmStatus}
+                    value={newAgentType}
+                    onChange={(e) => setNewAgentType(e.target.value as AgentType)}
+                    disabled={!agentTeamStatus}
                   >
                     <option value="claude_sdk">Claude SDK</option>
                     <option value="maf">MAF</option>
@@ -556,12 +556,12 @@ export const SwarmTestPage: FC = () => {
                     placeholder="角色 (可選)"
                     value={newWorkerRole}
                     onChange={(e) => setNewWorkerRole(e.target.value)}
-                    disabled={!swarmStatus}
+                    disabled={!agentTeamStatus}
                   />
                   <Button
                     size="sm"
                     onClick={handleAddWorker}
-                    disabled={!swarmStatus || !newWorkerName.trim()}
+                    disabled={!agentTeamStatus || !newWorkerName.trim()}
                     className="w-full"
                   >
                     <UserPlus className="w-4 h-4 mr-1" />
@@ -571,7 +571,7 @@ export const SwarmTestPage: FC = () => {
               </ControlSection>
 
               {/* Worker Controls */}
-              {swarmStatus && swarmStatus.workers.length > 0 && (
+              {agentTeamStatus && agentTeamStatus.workers.length > 0 && (
                 <ControlSection
                   title="Worker 控制"
                   icon={<Wrench className="w-4 h-4 text-orange-600" />}
@@ -584,9 +584,9 @@ export const SwarmTestPage: FC = () => {
                       onChange={(e) => setSelectedControlWorkerId(e.target.value || null)}
                     >
                       <option value="">選擇 Worker...</option>
-                      {swarmStatus.workers.map((w) => (
-                        <option key={w.workerId} value={w.workerId}>
-                          {w.workerName} ({w.status})
+                      {agentTeamStatus.workers.map((w) => (
+                        <option key={w.agentId} value={w.agentId}>
+                          {w.agentName} ({w.status})
                         </option>
                       ))}
                     </select>
@@ -595,12 +595,12 @@ export const SwarmTestPage: FC = () => {
                       <>
                         {/* Status Controls */}
                         <div className="flex gap-1 flex-wrap">
-                          {(['pending', 'running', 'paused'] as WorkerStatus[]).map((status) => (
+                          {(['pending', 'running', 'paused'] as AgentMemberStatus[]).map((status) => (
                             <Button
                               key={status}
                               size="sm"
                               variant={selectedControlWorker.status === status ? 'default' : 'outline'}
-                              onClick={() => mockHook.setWorkerStatus(selectedControlWorkerId!, status)}
+                              onClick={() => mockHook.setAgentMemberStatus(selectedControlWorkerId!, status)}
                               className="text-xs px-2 py-1"
                             >
                               {status}
@@ -676,7 +676,7 @@ export const SwarmTestPage: FC = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => mockHook.completeWorker(selectedControlWorkerId!)}
+                            onClick={() => mockHook.completeAgent(selectedControlWorkerId!)}
                             className="flex-1"
                           >
                             <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
@@ -721,23 +721,23 @@ export const SwarmTestPage: FC = () => {
               </Badge>
             )}
           </div>
-          {swarmStatus && (
+          {agentTeamStatus && (
             <div className="flex items-center gap-2">
               <Badge
                 className={cn(
                   'text-xs',
-                  swarmStatus.status === 'executing' && 'bg-blue-100 text-blue-800',
-                  swarmStatus.status === 'completed' && 'bg-green-100 text-green-800',
-                  swarmStatus.status === 'failed' && 'bg-red-100 text-red-800'
+                  agentTeamStatus.status === 'executing' && 'bg-blue-100 text-blue-800',
+                  agentTeamStatus.status === 'completed' && 'bg-green-100 text-green-800',
+                  agentTeamStatus.status === 'failed' && 'bg-red-100 text-red-800'
                 )}
               >
-                {swarmStatus.status === 'executing' && (
+                {agentTeamStatus.status === 'executing' && (
                   <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                 )}
-                {swarmStatus.status}
+                {agentTeamStatus.status}
               </Badge>
               <span className="text-sm text-gray-500">
-                {swarmStatus.overallProgress}%
+                {agentTeamStatus.overallProgress}%
               </span>
             </div>
           )}
@@ -794,8 +794,8 @@ export const SwarmTestPage: FC = () => {
           {/* Swarm Panel */}
           <Card className="shadow-sm">
             <CardContent className="p-0">
-              <AgentSwarmPanel
-                swarmStatus={swarmStatus}
+              <AgentTeamPanel
+                agentTeamStatus={agentTeamStatus}
                 onWorkerClick={handleWorkerClick}
                 isLoading={testMode === 'real' && realHook.isLoading}
                 className="border-0 shadow-none"
@@ -804,19 +804,19 @@ export const SwarmTestPage: FC = () => {
           </Card>
 
           {/* Debug Info */}
-          {swarmStatus && (
+          {agentTeamStatus && (
             <Card className="mt-3 shadow-sm">
               <CardHeader className="py-2 px-3">
                 <CardTitle className="text-sm font-medium">Debug Info</CardTitle>
               </CardHeader>
               <CardContent className="p-3 text-xs text-gray-600 space-y-1">
                 <div>Mode: <Badge variant="outline" className="text-xs ml-1">{testMode.toUpperCase()}</Badge></div>
-                <div>Swarm ID: {swarmStatus.swarmId}</div>
-                <div>Session ID: {swarmStatus.sessionId}</div>
-                <div>Execution Mode: {swarmStatus.mode}</div>
-                <div>Workers: {swarmStatus.totalWorkers}</div>
-                <div>Progress: {swarmStatus.overallProgress}%</div>
-                <div>Selected Worker: {selectedWorkerId || 'None'}</div>
+                <div>Swarm ID: {agentTeamStatus.swarmId}</div>
+                <div>Session ID: {agentTeamStatus.sessionId}</div>
+                <div>Execution Mode: {agentTeamStatus.mode}</div>
+                <div>Workers: {agentTeamStatus.totalWorkers}</div>
+                <div>Progress: {agentTeamStatus.overallProgress}%</div>
+                <div>Selected Worker: {selectedAgentId || 'None'}</div>
                 <div>Drawer Open: {isDrawerOpen ? 'Yes' : 'No'}</div>
                 {testMode === 'real' && (
                   <div>Connected: {realHook.isConnected ? 'Yes' : 'No'}</div>
@@ -828,14 +828,14 @@ export const SwarmTestPage: FC = () => {
       </div>
 
       {/* Worker Detail Drawer */}
-      <WorkerDetailDrawer
+      <AgentDetailDrawer
         open={isDrawerOpen}
         onClose={closeDrawer}
-        swarmId={swarmStatus?.swarmId || ''}
+        swarmId={agentTeamStatus?.swarmId || ''}
         worker={
-          swarmStatus?.workers.find((w) => w.workerId === selectedWorkerId) || null
+          agentTeamStatus?.workers.find((w) => w.agentId === selectedAgentId) || null
         }
-        workerDetail={selectedWorkerDetail}
+        workerDetail={selectedAgentDetail}
       />
     </div>
   );

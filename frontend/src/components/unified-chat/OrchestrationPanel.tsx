@@ -38,10 +38,10 @@ import type {
 } from '@/api/endpoints/orchestration';
 import type { OrchestrationPhase } from '@/hooks/useOrchestration';
 import {
-  AgentSwarmPanel,
-  WorkerDetailDrawer,
-  useSwarmStatus,
-} from './agent-swarm';
+  AgentTeamPanel,
+  AgentDetailDrawer,
+  useTeamStatus,
+} from './agent-team';
 
 // =============================================================================
 // Types
@@ -191,12 +191,12 @@ export const OrchestrationPanel: FC<OrchestrationPanelProps> = ({
 
   // Sprint 105: Swarm state management
   const {
-    swarmStatus,
-    selectedWorkerId,
+    agentTeamStatus,
+    selectedAgentId,
     isDrawerOpen,
     handleWorkerSelect,
     handleDrawerClose,
-  } = useSwarmStatus();
+  } = useTeamStatus();
 
   const handleDialogSubmit = () => {
     onDialogResponse?.(dialogResponses);
@@ -204,8 +204,8 @@ export const OrchestrationPanel: FC<OrchestrationPanelProps> = ({
   };
 
   // Find selected worker from swarm status
-  const selectedWorker = swarmStatus?.workers.find(
-    (w: { workerId: string }) => w.workerId === selectedWorkerId
+  const selectedAgent = agentTeamStatus?.agents.find(
+    (w: { agentId: string }) => w.agentId === selectedAgentId
   ) || null;
 
   if (isCollapsed) {
@@ -460,7 +460,7 @@ export const OrchestrationPanel: FC<OrchestrationPanelProps> = ({
         )}
 
         {/* Sprint 105: Agent Swarm Panel */}
-        {showSwarmPanel && swarmStatus && (
+        {showSwarmPanel && agentTeamStatus && (
           <div className="border rounded-lg overflow-hidden">
             <SectionHeader
               title="Agent Swarm"
@@ -469,15 +469,15 @@ export const OrchestrationPanel: FC<OrchestrationPanelProps> = ({
               onToggle={() => setSwarmOpen(!swarmOpen)}
               badge={
                 <Badge className="bg-indigo-100 text-indigo-800 text-xs">
-                  {swarmStatus.workers.length} workers
+                  {agentTeamStatus.agents.length} agents
                 </Badge>
               }
             />
             {swarmOpen && (
               <div className="p-2">
-                <AgentSwarmPanel
-                  swarmStatus={swarmStatus}
-                  onWorkerClick={handleWorkerSelect}
+                <AgentTeamPanel
+                  agentTeamStatus={agentTeamStatus}
+                  onAgentClick={handleWorkerSelect}
                   className="border-0 shadow-none"
                 />
               </div>
@@ -486,7 +486,7 @@ export const OrchestrationPanel: FC<OrchestrationPanelProps> = ({
         )}
 
         {/* Idle State */}
-        {phase === 'idle' && !routingDecision && !swarmStatus && (
+        {phase === 'idle' && !routingDecision && !agentTeamStatus && (
           <div className="text-center py-8 text-gray-500">
             <Info className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">Send a message to see orchestration details</p>
@@ -495,11 +495,11 @@ export const OrchestrationPanel: FC<OrchestrationPanelProps> = ({
       </div>
 
       {/* Sprint 105: Worker Detail Drawer */}
-      <WorkerDetailDrawer
+      <AgentDetailDrawer
         open={isDrawerOpen}
         onClose={handleDrawerClose}
-        swarmId={swarmStatus?.swarmId || ''}
-        worker={selectedWorker}
+        teamId={agentTeamStatus?.teamId || ''}
+        agent={selectedAgent}
       />
     </div>
   );

@@ -9,12 +9,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
-  UIAgentSwarmStatus,
-  UIWorkerSummary,
-  WorkerDetail,
+  UIAgentTeamStatus,
+  UIAgentSummary,
+  AgentDetail,
   ThinkingContent,
   ToolCallInfo,
-} from '@/components/unified-chat/agent-swarm/types';
+} from '@/components/unified-chat/agent-team/types';
 
 // =============================================================================
 // Types
@@ -49,7 +49,7 @@ interface SwarmUpdateEvent {
   overall_progress: number;
   total_tool_calls: number;
   completed_tool_calls: number;
-  workers: WorkerEventData[];
+  agents: WorkerEventData[];
 }
 
 interface WorkerEventData {
@@ -82,9 +82,9 @@ export interface MockMessage {
 
 interface UseSwarmRealReturn {
   // State
-  swarmStatus: UIAgentSwarmStatus | null;
-  selectedWorkerId: string | null;
-  selectedWorkerDetail: WorkerDetail | null;
+  agentTeamStatus: UIAgentTeamStatus | null;
+  selectedAgentId: string | null;
+  selectedAgentDetail: AgentDetail | null;
   isDrawerOpen: boolean;
   mockMessages: MockMessage[];
 
@@ -103,7 +103,7 @@ interface UseSwarmRealReturn {
   loadScenarios: () => Promise<void>;
 
   // UI Actions
-  selectWorker: (workerId: string | null) => void;
+  selectWorker: (agentId: string | null) => void;
   openDrawer: () => void;
   closeDrawer: () => void;
 
@@ -127,8 +127,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/
 
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-const mapWorkerType = (type: string): UIWorkerSummary['workerType'] => {
-  const typeMap: Record<string, UIWorkerSummary['workerType']> = {
+const mapAgentType = (type: string): UIAgentSummary['agentType'] => {
+  const typeMap: Record<string, UIAgentSummary['agentType']> = {
     'analyst': 'claude_sdk',
     'coder': 'maf',
     'writer': 'claude_sdk',
@@ -142,8 +142,8 @@ const mapWorkerType = (type: string): UIWorkerSummary['workerType'] => {
   return typeMap[type.toLowerCase()] || 'claude_sdk';
 };
 
-const mapWorkerStatus = (status: string): UIWorkerSummary['status'] => {
-  const statusMap: Record<string, UIWorkerSummary['status']> = {
+const mapAgentMemberStatus = (status: string): UIAgentSummary['status'] => {
+  const statusMap: Record<string, UIAgentSummary['status']> = {
     'pending': 'pending',
     'running': 'running',
     'thinking': 'running',
@@ -154,8 +154,8 @@ const mapWorkerStatus = (status: string): UIWorkerSummary['status'] => {
   return statusMap[status.toLowerCase()] || 'pending';
 };
 
-const mapSwarmMode = (mode: string): UIAgentSwarmStatus['mode'] => {
-  const modeMap: Record<string, UIAgentSwarmStatus['mode']> = {
+const mapTeamMode = (mode: string): UIAgentTeamStatus['mode'] => {
+  const modeMap: Record<string, UIAgentTeamStatus['mode']> = {
     'parallel': 'parallel',
     'sequential': 'sequential',
     'hierarchical': 'hierarchical',
@@ -163,8 +163,8 @@ const mapSwarmMode = (mode: string): UIAgentSwarmStatus['mode'] => {
   return modeMap[mode.toLowerCase()] || 'parallel';
 };
 
-const mapSwarmStatus = (status: string): UIAgentSwarmStatus['status'] => {
-  const statusMap: Record<string, UIAgentSwarmStatus['status']> = {
+const mapSwarmStatus = (status: string): UIAgentTeamStatus['status'] => {
+  const statusMap: Record<string, UIAgentTeamStatus['status']> = {
     'running': 'executing',
     'executing': 'executing',
     'completed': 'completed',
@@ -180,9 +180,9 @@ const mapSwarmStatus = (status: string): UIAgentSwarmStatus['status'] => {
 
 export function useSwarmReal(): UseSwarmRealReturn {
   // State
-  const [swarmStatus, setSwarmStatus] = useState<UIAgentSwarmStatus | null>(null);
-  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
-  const [selectedWorkerDetail, setSelectedWorkerDetail] = useState<WorkerDetail | null>(null);
+  const [agentTeamStatus, setTeamStatus] = useState<UIAgentTeamStatus | null>(null);
+  const [selectedAgentId, setSelectedWorkerId] = useState<string | null>(null);
+  const [selectedAgentDetail, setSelectedAgentDetail] = useState<AgentDetail | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [mockMessages, setMockMessages] = useState<MockMessage[]>([]);
 
@@ -366,30 +366,30 @@ export function useSwarmReal(): UseSwarmRealReturn {
 
   const updateSwarmStatus = useCallback((data: SwarmUpdateEvent) => {
     // Store full worker data for later use (includes tool_calls and thinking_contents)
-    data.workers.forEach((w) => {
+    data.agents.forEach((w) => {
       workersDataRef.current.set(w.worker_id, w);
     });
 
-    const workers: UIWorkerSummary[] = data.workers.map((w) => ({
-      workerId: w.worker_id,
-      workerName: w.worker_name,
-      workerType: mapWorkerType(w.worker_type),
+    const agents: UIAgentSummary[] = data.agents.map((w) => ({
+      agentId: w.worker_id,
+      agentName: w.worker_name,
+      agentType: mapAgentType(w.worker_type),
       role: w.role,
-      status: mapWorkerStatus(w.status),
+      status: mapAgentMemberStatus(w.status),
       progress: w.progress,
       currentAction: w.current_task || undefined,
       toolCallsCount: w.tool_calls_count,
       createdAt: new Date().toISOString(),
     }));
 
-    const newStatus: UIAgentSwarmStatus = {
-      swarmId: data.swarm_id,
+    const newStatus: UIAgentTeamStatus = {
+      teamId: data.swarm_id,
       sessionId: `session-${data.swarm_id}`,
-      mode: mapSwarmMode(data.mode),
+      mode: mapTeamMode(data.mode),
       status: mapSwarmStatus(data.status),
       overallProgress: data.overall_progress,
-      workers,
-      totalWorkers: workers.length,
+      agents,
+      totalAgents: agents.length,
       createdAt: new Date().toISOString(),
       startedAt: new Date().toISOString(),
       metadata: {
@@ -398,18 +398,18 @@ export function useSwarmReal(): UseSwarmRealReturn {
       },
     };
 
-    setSwarmStatus(newStatus);
+    setTeamStatus(newStatus);
 
     // Update selected worker detail if drawer is open
-    if (selectedWorkerId) {
-      const selectedWorkerData = data.workers.find(w => w.worker_id === selectedWorkerId);
+    if (selectedAgentId) {
+      const selectedWorkerData = data.agents.find(w => w.worker_id === selectedAgentId);
       if (selectedWorkerData) {
-        updateWorkerDetail(selectedWorkerData);
+        updateAgentDetail(selectedWorkerData);
       }
     }
-  }, [selectedWorkerId]);
+  }, [selectedAgentId]);
 
-  const updateWorkerDetail = useCallback((workerData: WorkerEventData) => {
+  const updateAgentDetail = useCallback((workerData: WorkerEventData) => {
     const thinkingHistory: ThinkingContent[] = workerData.thinking_contents.map((tc) => ({
       content: tc.content,
       timestamp: new Date().toISOString(),
@@ -424,12 +424,12 @@ export function useSwarmReal(): UseSwarmRealReturn {
       startedAt: new Date().toISOString(),
     }));
 
-    const detail: WorkerDetail = {
-      workerId: workerData.worker_id,
-      workerName: workerData.worker_name,
-      workerType: mapWorkerType(workerData.worker_type),
+    const detail: AgentDetail = {
+      agentId: workerData.worker_id,
+      agentName: workerData.worker_name,
+      agentType: mapAgentType(workerData.worker_type),
       role: workerData.role,
-      status: mapWorkerStatus(workerData.status),
+      status: mapAgentMemberStatus(workerData.status),
       progress: workerData.progress,
       currentAction: workerData.current_task || undefined,
       toolCallsCount: workerData.tool_calls_count,
@@ -442,38 +442,38 @@ export function useSwarmReal(): UseSwarmRealReturn {
       startedAt: new Date().toISOString(),
     };
 
-    setSelectedWorkerDetail(detail);
+    setSelectedAgentDetail(detail);
   }, []);
 
   // =============================================================================
   // UI Actions
   // =============================================================================
 
-  const selectWorker = useCallback((workerId: string | null) => {
-    setSelectedWorkerId(workerId);
-    if (workerId && swarmStatus) {
-      const worker = swarmStatus.workers.find(w => w.workerId === workerId);
+  const selectWorker = useCallback((agentId: string | null) => {
+    setSelectedWorkerId(agentId);
+    if (agentId && agentTeamStatus) {
+      const worker = agentTeamStatus.agents.find(w => w.agentId === agentId);
       if (worker) {
         // Try to get full worker data from stored SSE events
-        const fullWorkerData = workersDataRef.current.get(workerId);
+        const fullWorkerData = workersDataRef.current.get(agentId);
 
         if (fullWorkerData) {
           // Use full data with tool_calls and thinking_contents
-          updateWorkerDetail(fullWorkerData);
+          updateAgentDetail(fullWorkerData);
         } else {
           // Fallback: Create basic detail from summary
-          setSelectedWorkerDetail({
-            workerId: worker.workerId,
-            workerName: worker.workerName,
-            workerType: worker.workerType,
+          setSelectedAgentDetail({
+            agentId: worker.agentId,
+            agentName: worker.agentName,
+            agentType: worker.agentType,
             role: worker.role,
             status: worker.status,
             progress: worker.progress,
             currentAction: worker.currentAction,
             toolCallsCount: worker.toolCallsCount,
             createdAt: worker.createdAt,
-            taskId: `task-${worker.workerId}`,
-            taskDescription: worker.currentAction || `${worker.role} - ${worker.workerName}`,
+            taskId: `task-${worker.agentId}`,
+            taskDescription: worker.currentAction || `${worker.role} - ${worker.agentName}`,
             thinkingHistory: [],
             toolCalls: [],
             messages: [],
@@ -484,10 +484,10 @@ export function useSwarmReal(): UseSwarmRealReturn {
         setIsDrawerOpen(true);
       }
     } else {
-      setSelectedWorkerDetail(null);
+      setSelectedAgentDetail(null);
       setIsDrawerOpen(false);
     }
-  }, [swarmStatus, updateWorkerDetail]);
+  }, [agentTeamStatus, updateAgentDetail]);
 
   const openDrawer = useCallback(() => {
     setIsDrawerOpen(true);
@@ -496,7 +496,7 @@ export function useSwarmReal(): UseSwarmRealReturn {
   const closeDrawer = useCallback(() => {
     setIsDrawerOpen(false);
     setSelectedWorkerId(null);
-    setSelectedWorkerDetail(null);
+    setSelectedAgentDetail(null);
   }, []);
 
   // =============================================================================
@@ -533,9 +533,9 @@ export function useSwarmReal(): UseSwarmRealReturn {
 
   const reset = useCallback(() => {
     stopDemo();
-    setSwarmStatus(null);
+    setTeamStatus(null);
     setSelectedWorkerId(null);
-    setSelectedWorkerDetail(null);
+    setSelectedAgentDetail(null);
     setIsDrawerOpen(false);
     setMockMessages([]);
     setError(null);
@@ -566,9 +566,9 @@ export function useSwarmReal(): UseSwarmRealReturn {
 
   return {
     // State
-    swarmStatus,
-    selectedWorkerId,
-    selectedWorkerDetail,
+    agentTeamStatus,
+    selectedAgentId,
+    selectedAgentDetail,
     isDrawerOpen,
     mockMessages,
 

@@ -9,54 +9,54 @@
 
 import { useCallback, useState } from 'react';
 import type {
-  UIAgentSwarmStatus,
-  UIWorkerSummary,
-  WorkerDetail,
-  WorkerType,
-  WorkerStatus,
-  SwarmMode,
+  UIAgentTeamStatus,
+  UIAgentSummary,
+  AgentDetail,
+  AgentType,
+  AgentMemberStatus,
+  TeamMode,
   ThinkingContent,
   ToolCallInfo,
-  WorkerMessage,
-} from '@/components/unified-chat/agent-swarm/types';
+  AgentMessage,
+} from '@/components/unified-chat/agent-team/types';
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface MockSwarmConfig {
-  mode?: SwarmMode;
+  mode?: TeamMode;
   workerCount?: number;
-  workerTypes?: WorkerType[];
+  agentTypes?: AgentType[];
 }
 
 interface UseSwarmMockReturn {
   // State
-  swarmStatus: UIAgentSwarmStatus | null;
-  selectedWorkerId: string | null;
-  selectedWorkerDetail: WorkerDetail | null;
+  agentTeamStatus: UIAgentTeamStatus | null;
+  selectedAgentId: string | null;
+  selectedAgentDetail: AgentDetail | null;
   isDrawerOpen: boolean;
   mockMessages: MockMessage[];
 
   // Swarm Actions
   createSwarm: (config?: MockSwarmConfig) => void;
-  addWorker: (name: string, type: WorkerType, role: string) => void;
-  removeWorker: (workerId: string) => void;
-  completeSwarm: () => void;
+  addAgent: (name: string, type: AgentType, role: string) => void;
+  removeWorker: (agentId: string) => void;
+  completeTeam: () => void;
   failSwarm: () => void;
   resetSwarm: () => void;
 
   // Worker Actions
-  setWorkerStatus: (workerId: string, status: WorkerStatus) => void;
-  setWorkerProgress: (workerId: string, progress: number) => void;
-  addThinking: (workerId: string, content: string) => void;
-  addToolCall: (workerId: string, toolName: string, status?: ToolCallInfo['status']) => void;
-  addMessage: (workerId: string, role: WorkerMessage['role'], content: string) => void;
-  completeWorker: (workerId: string) => void;
-  failWorker: (workerId: string, error: string) => void;
+  setAgentMemberStatus: (agentId: string, status: AgentMemberStatus) => void;
+  setWorkerProgress: (agentId: string, progress: number) => void;
+  addThinking: (agentId: string, content: string) => void;
+  addToolCall: (agentId: string, toolName: string, status?: ToolCallInfo['status']) => void;
+  addMessage: (agentId: string, role: AgentMessage['role'], content: string) => void;
+  completeAgent: (agentId: string) => void;
+  failWorker: (agentId: string, error: string) => void;
 
   // UI Actions
-  selectWorker: (workerId: string | null) => void;
+  selectWorker: (agentId: string | null) => void;
   openDrawer: () => void;
   closeDrawer: () => void;
 
@@ -83,15 +83,15 @@ export interface MockMessage {
 
 const generateId = () => `mock-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-const createMockWorker = (
+const createMockAgent = (
   name: string,
-  type: WorkerType,
+  type: AgentType,
   role: string,
   index: number
-): UIWorkerSummary => ({
-  workerId: `worker-${index}-${generateId()}`,
-  workerName: name,
-  workerType: type,
+): UIAgentSummary => ({
+  agentId: `worker-${index}-${generateId()}`,
+  agentName: name,
+  agentType: type,
   role,
   status: 'pending',
   progress: 0,
@@ -99,25 +99,25 @@ const createMockWorker = (
   createdAt: new Date().toISOString(),
 });
 
-const createMockSwarm = (config: MockSwarmConfig = {}): UIAgentSwarmStatus => {
+const createMockSwarm = (config: MockSwarmConfig = {}): UIAgentTeamStatus => {
   const { mode = 'sequential' } = config;
   return {
-    swarmId: `swarm-${generateId()}`,
+    teamId: `swarm-${generateId()}`,
     sessionId: `session-${generateId()}`,
     mode,
     status: 'initializing',
-    totalWorkers: 0,
+    totalAgents: 0,
     overallProgress: 0,
-    workers: [],
+    agents: [],
     createdAt: new Date().toISOString(),
     metadata: { mock: true },
   };
 };
 
-const createEmptyWorkerDetail = (worker: UIWorkerSummary): WorkerDetail => ({
+const createEmptyAgentDetail = (worker: UIAgentSummary): AgentDetail => ({
   ...worker,
   taskId: `task-${generateId()}`,
-  taskDescription: `執行 ${worker.workerName} 的任務`,
+  taskDescription: `執行 ${worker.agentName} 的任務`,
   thinkingHistory: [],
   toolCalls: [],
   messages: [],
@@ -128,11 +128,11 @@ const createEmptyWorkerDetail = (worker: UIWorkerSummary): WorkerDetail => ({
 // =============================================================================
 
 const ETL_SCENARIO = {
-  swarmConfig: { mode: 'sequential' as SwarmMode },
-  workers: [
-    { name: '診斷專家', type: 'claude_sdk' as WorkerType, role: 'Diagnostic' },
-    { name: '修復專家', type: 'claude_sdk' as WorkerType, role: 'Remediation' },
-    { name: '驗證專家', type: 'maf' as WorkerType, role: 'Verification' },
+  swarmConfig: { mode: 'sequential' as TeamMode },
+  agents: [
+    { name: '診斷專家', type: 'claude_sdk' as AgentType, role: 'Diagnostic' },
+    { name: '修復專家', type: 'claude_sdk' as AgentType, role: 'Remediation' },
+    { name: '驗證專家', type: 'maf' as AgentType, role: 'Verification' },
   ],
   messages: [
     { role: 'user' as const, content: 'APAC Glider ETL Pipeline 連續第三天失敗，日報表完全無法產出' },
@@ -154,12 +154,12 @@ const ETL_SCENARIO = {
 };
 
 const SECURITY_AUDIT_SCENARIO = {
-  swarmConfig: { mode: 'parallel' as SwarmMode },
-  workers: [
-    { name: '網路掃描', type: 'maf' as WorkerType, role: 'Network Scanner' },
-    { name: '漏洞分析', type: 'claude_sdk' as WorkerType, role: 'Vulnerability Analyzer' },
-    { name: '合規檢查', type: 'hybrid' as WorkerType, role: 'Compliance Checker' },
-    { name: '報告生成', type: 'claude_sdk' as WorkerType, role: 'Report Generator' },
+  swarmConfig: { mode: 'parallel' as TeamMode },
+  agents: [
+    { name: '網路掃描', type: 'maf' as AgentType, role: 'Network Scanner' },
+    { name: '漏洞分析', type: 'claude_sdk' as AgentType, role: 'Vulnerability Analyzer' },
+    { name: '合規檢查', type: 'hybrid' as AgentType, role: 'Compliance Checker' },
+    { name: '報告生成', type: 'claude_sdk' as AgentType, role: 'Report Generator' },
   ],
   messages: [
     { role: 'user' as const, content: '請對生產環境執行完整的安全審計' },
@@ -176,12 +176,12 @@ const SECURITY_AUDIT_SCENARIO = {
 };
 
 const DATA_PIPELINE_SCENARIO = {
-  swarmConfig: { mode: 'pipeline' as SwarmMode },
-  workers: [
-    { name: '數據提取', type: 'maf' as WorkerType, role: 'Data Extractor' },
-    { name: '數據清洗', type: 'claude_sdk' as WorkerType, role: 'Data Cleaner' },
-    { name: '數據轉換', type: 'claude_sdk' as WorkerType, role: 'Data Transformer' },
-    { name: '數據載入', type: 'maf' as WorkerType, role: 'Data Loader' },
+  swarmConfig: { mode: 'pipeline' as TeamMode },
+  agents: [
+    { name: '數據提取', type: 'maf' as AgentType, role: 'Data Extractor' },
+    { name: '數據清洗', type: 'claude_sdk' as AgentType, role: 'Data Cleaner' },
+    { name: '數據轉換', type: 'claude_sdk' as AgentType, role: 'Data Transformer' },
+    { name: '數據載入', type: 'maf' as AgentType, role: 'Data Loader' },
   ],
   messages: [
     { role: 'user' as const, content: '請執行每日數據同步管線' },
@@ -202,9 +202,9 @@ const DATA_PIPELINE_SCENARIO = {
 // =============================================================================
 
 export const useSwarmMock = (): UseSwarmMockReturn => {
-  const [swarmStatus, setSwarmStatus] = useState<UIAgentSwarmStatus | null>(null);
-  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
-  const [workerDetails, setWorkerDetails] = useState<Map<string, WorkerDetail>>(new Map());
+  const [agentTeamStatus, setTeamStatus] = useState<UIAgentTeamStatus | null>(null);
+  const [selectedAgentId, setSelectedWorkerId] = useState<string | null>(null);
+  const [workerDetails, setAgentDetails] = useState<Map<string, AgentDetail>>(new Map());
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [mockMessages, setMockMessages] = useState<MockMessage[]>([]);
 
@@ -216,44 +216,44 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
     const newSwarm = createMockSwarm(config);
     newSwarm.status = 'executing';
     newSwarm.startedAt = new Date().toISOString();
-    setSwarmStatus(newSwarm);
-    setWorkerDetails(new Map());
+    setTeamStatus(newSwarm);
+    setAgentDetails(new Map());
     setMockMessages([]);
   }, []);
 
-  const addWorker = useCallback((name: string, type: WorkerType, role: string) => {
-    setSwarmStatus((prev) => {
+  const addAgent = useCallback((name: string, type: AgentType, role: string) => {
+    setTeamStatus((prev) => {
       if (!prev) return prev;
-      const newWorker = createMockWorker(name, type, role, prev.workers.length);
-      const detail = createEmptyWorkerDetail(newWorker);
-      setWorkerDetails((details) => new Map(details).set(newWorker.workerId, detail));
+      const newAgent = createMockAgent(name, type, role, prev.agents.length);
+      const detail = createEmptyAgentDetail(newAgent);
+      setAgentDetails((details) => new Map(details).set(newAgent.agentId, detail));
       return {
         ...prev,
-        workers: [...prev.workers, newWorker],
-        totalWorkers: prev.workers.length + 1,
+        agents: [...prev.agents, newAgent],
+        totalAgents: prev.agents.length + 1,
       };
     });
   }, []);
 
-  const removeWorker = useCallback((workerId: string) => {
-    setSwarmStatus((prev) => {
+  const removeWorker = useCallback((agentId: string) => {
+    setTeamStatus((prev) => {
       if (!prev) return prev;
-      const newWorkers = prev.workers.filter((w) => w.workerId !== workerId);
+      const newAgents = prev.agents.filter((w) => w.agentId !== agentId);
       return {
         ...prev,
-        workers: newWorkers,
-        totalWorkers: newWorkers.length,
+        agents: newAgents,
+        totalAgents: newAgents.length,
       };
     });
-    setWorkerDetails((details) => {
+    setAgentDetails((details) => {
       const newDetails = new Map(details);
-      newDetails.delete(workerId);
+      newDetails.delete(agentId);
       return newDetails;
     });
   }, []);
 
-  const completeSwarm = useCallback(() => {
-    setSwarmStatus((prev) => {
+  const completeTeam = useCallback(() => {
+    setTeamStatus((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
@@ -265,7 +265,7 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
   }, []);
 
   const failSwarm = useCallback(() => {
-    setSwarmStatus((prev) => {
+    setTeamStatus((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
@@ -276,9 +276,9 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
   }, []);
 
   const resetSwarm = useCallback(() => {
-    setSwarmStatus(null);
+    setTeamStatus(null);
     setSelectedWorkerId(null);
-    setWorkerDetails(new Map());
+    setAgentDetails(new Map());
     setIsDrawerOpen(false);
     setMockMessages([]);
   }, []);
@@ -287,54 +287,54 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
   // Worker Actions
   // ---------------------------------------------------------------------------
 
-  const setWorkerStatus = useCallback((workerId: string, status: WorkerStatus) => {
-    setSwarmStatus((prev) => {
+  const setAgentMemberStatus = useCallback((agentId: string, status: AgentMemberStatus) => {
+    setTeamStatus((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        workers: prev.workers.map((w) =>
-          w.workerId === workerId
+        agents: prev.agents.map((w) =>
+          w.agentId === agentId
             ? { ...w, status, startedAt: status === 'running' ? new Date().toISOString() : w.startedAt }
             : w
         ),
       };
     });
-    setWorkerDetails((details) => {
-      const detail = details.get(workerId);
+    setAgentDetails((details) => {
+      const detail = details.get(agentId);
       if (!detail) return details;
       const newDetails = new Map(details);
-      newDetails.set(workerId, { ...detail, status });
+      newDetails.set(agentId, { ...detail, status });
       return newDetails;
     });
   }, []);
 
-  const setWorkerProgress = useCallback((workerId: string, progress: number) => {
-    setSwarmStatus((prev) => {
+  const setWorkerProgress = useCallback((agentId: string, progress: number) => {
+    setTeamStatus((prev) => {
       if (!prev) return prev;
-      const newWorkers = prev.workers.map((w) =>
-        w.workerId === workerId ? { ...w, progress, status: 'running' as WorkerStatus } : w
+      const newAgents = prev.agents.map((w) =>
+        w.agentId === agentId ? { ...w, progress, status: 'running' as AgentMemberStatus } : w
       );
-      const totalProgress = newWorkers.reduce((sum, w) => sum + w.progress, 0);
-      const overallProgress = Math.round(totalProgress / newWorkers.length);
+      const totalProgress = newAgents.reduce((sum, w) => sum + w.progress, 0);
+      const overallProgress = Math.round(totalProgress / newAgents.length);
       return {
         ...prev,
-        workers: newWorkers,
+        agents: newAgents,
         overallProgress,
       };
     });
-    setWorkerDetails((details) => {
-      const detail = details.get(workerId);
+    setAgentDetails((details) => {
+      const detail = details.get(agentId);
       if (!detail) return details;
       const newDetails = new Map(details);
-      newDetails.set(workerId, { ...detail, progress, status: 'running' });
+      newDetails.set(agentId, { ...detail, progress, status: 'running' });
       return newDetails;
     });
   }, []);
 
-  const addThinking = useCallback((workerId: string, content: string) => {
-    setWorkerStatus(workerId, 'running');
-    setWorkerDetails((details) => {
-      const detail = details.get(workerId);
+  const addThinking = useCallback((agentId: string, content: string) => {
+    setAgentMemberStatus(agentId, 'running');
+    setAgentDetails((details) => {
+      const detail = details.get(agentId);
       if (!detail) return details;
       const thinking: ThinkingContent = {
         content,
@@ -342,29 +342,29 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
         tokenCount: Math.ceil(content.length / 4),
       };
       const newDetails = new Map(details);
-      newDetails.set(workerId, {
+      newDetails.set(agentId, {
         ...detail,
         thinkingHistory: [...detail.thinkingHistory, thinking],
       });
       return newDetails;
     });
-  }, [setWorkerStatus]);
+  }, [setAgentMemberStatus]);
 
   const addToolCall = useCallback(
-    (workerId: string, toolName: string, status: ToolCallInfo['status'] = 'running') => {
-      setSwarmStatus((prev) => {
+    (agentId: string, toolName: string, status: ToolCallInfo['status'] = 'running') => {
+      setTeamStatus((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          workers: prev.workers.map((w) =>
-            w.workerId === workerId
+          agents: prev.agents.map((w) =>
+            w.agentId === agentId
               ? { ...w, toolCallsCount: w.toolCallsCount + 1, currentAction: `Calling ${toolName}...` }
               : w
           ),
         };
       });
-      setWorkerDetails((details) => {
-        const detail = details.get(workerId);
+      setAgentDetails((details) => {
+        const detail = details.get(agentId);
         if (!detail) return details;
         const toolCall: ToolCallInfo = {
           toolCallId: `tc-${generateId()}`,
@@ -374,7 +374,7 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
           startedAt: new Date().toISOString(),
         };
         const newDetails = new Map(details);
-        newDetails.set(workerId, {
+        newDetails.set(agentId, {
           ...detail,
           toolCalls: [...detail.toolCalls, toolCall],
         });
@@ -385,17 +385,17 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
   );
 
   const addMessage = useCallback(
-    (workerId: string, role: WorkerMessage['role'], content: string) => {
-      setWorkerDetails((details) => {
-        const detail = details.get(workerId);
+    (agentId: string, role: AgentMessage['role'], content: string) => {
+      setAgentDetails((details) => {
+        const detail = details.get(agentId);
         if (!detail) return details;
-        const message: WorkerMessage = {
+        const message: AgentMessage = {
           role,
           content,
           timestamp: new Date().toISOString(),
         };
         const newDetails = new Map(details);
-        newDetails.set(workerId, {
+        newDetails.set(agentId, {
           ...detail,
           messages: [...detail.messages, message],
         });
@@ -405,27 +405,27 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
     []
   );
 
-  const completeWorker = useCallback((workerId: string) => {
-    setSwarmStatus((prev) => {
+  const completeAgent = useCallback((agentId: string) => {
+    setTeamStatus((prev) => {
       if (!prev) return prev;
-      const newWorkers = prev.workers.map((w) =>
-        w.workerId === workerId
-          ? { ...w, status: 'completed' as WorkerStatus, progress: 100, completedAt: new Date().toISOString() }
+      const newAgents = prev.agents.map((w) =>
+        w.agentId === agentId
+          ? { ...w, status: 'completed' as AgentMemberStatus, progress: 100, completedAt: new Date().toISOString() }
           : w
       );
-      const totalProgress = newWorkers.reduce((sum, w) => sum + w.progress, 0);
-      const overallProgress = Math.round(totalProgress / newWorkers.length);
+      const totalProgress = newAgents.reduce((sum, w) => sum + w.progress, 0);
+      const overallProgress = Math.round(totalProgress / newAgents.length);
       return {
         ...prev,
-        workers: newWorkers,
+        agents: newAgents,
         overallProgress,
       };
     });
-    setWorkerDetails((details) => {
-      const detail = details.get(workerId);
+    setAgentDetails((details) => {
+      const detail = details.get(agentId);
       if (!detail) return details;
       const newDetails = new Map(details);
-      newDetails.set(workerId, {
+      newDetails.set(agentId, {
         ...detail,
         status: 'completed',
         progress: 100,
@@ -435,23 +435,23 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
     });
   }, []);
 
-  const failWorker = useCallback((workerId: string, error: string) => {
-    setSwarmStatus((prev) => {
+  const failWorker = useCallback((agentId: string, error: string) => {
+    setTeamStatus((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        workers: prev.workers.map((w) =>
-          w.workerId === workerId
-            ? { ...w, status: 'failed' as WorkerStatus, completedAt: new Date().toISOString() }
+        agents: prev.agents.map((w) =>
+          w.agentId === agentId
+            ? { ...w, status: 'failed' as AgentMemberStatus, completedAt: new Date().toISOString() }
             : w
         ),
       };
     });
-    setWorkerDetails((details) => {
-      const detail = details.get(workerId);
+    setAgentDetails((details) => {
+      const detail = details.get(agentId);
       if (!detail) return details;
       const newDetails = new Map(details);
-      newDetails.set(workerId, {
+      newDetails.set(agentId, {
         ...detail,
         status: 'failed',
         error,
@@ -465,9 +465,9 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
   // UI Actions
   // ---------------------------------------------------------------------------
 
-  const selectWorker = useCallback((workerId: string | null) => {
-    setSelectedWorkerId(workerId);
-    if (workerId) {
+  const selectWorker = useCallback((agentId: string | null) => {
+    setSelectedWorkerId(agentId);
+    if (agentId) {
       setIsDrawerOpen(true);
     }
   }, []);
@@ -512,18 +512,18 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
       newSwarm.status = 'executing';
       newSwarm.startedAt = new Date().toISOString();
 
-      // Add workers
-      const workers: UIWorkerSummary[] = [];
-      const details = new Map<string, WorkerDetail>();
+      // Add agents
+      const agents: UIAgentSummary[] = [];
+      const details = new Map<string, AgentDetail>();
 
-      scenario.workers.forEach((w, index) => {
-        const worker = createMockWorker(w.name, w.type, w.role, index);
-        workers.push(worker);
-        details.set(worker.workerId, createEmptyWorkerDetail(worker));
+      scenario.agents.forEach((w, index) => {
+        const worker = createMockAgent(w.name, w.type, w.role, index);
+        agents.push(worker);
+        details.set(worker.agentId, createEmptyAgentDetail(worker));
       });
 
-      newSwarm.workers = workers;
-      newSwarm.totalWorkers = workers.length;
+      newSwarm.agents = agents;
+      newSwarm.totalAgents = agents.length;
 
       // Add mock messages
       const messages: MockMessage[] = scenario.messages.map((m) => ({
@@ -534,34 +534,34 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
       }));
 
       // Set first worker as running with some progress
-      if (workers.length > 0) {
-        workers[0].status = 'running';
-        workers[0].progress = 35;
-        workers[0].startedAt = new Date().toISOString();
+      if (agents.length > 0) {
+        agents[0].status = 'running';
+        agents[0].progress = 35;
+        agents[0].startedAt = new Date().toISOString();
 
         // Add thinking content to first worker
-        const firstWorkerDetail = details.get(workers[0].workerId);
-        if (firstWorkerDetail) {
-          firstWorkerDetail.status = 'running';
-          firstWorkerDetail.progress = 35;
-          firstWorkerDetail.thinkingHistory = [
+        const firstAgentDetail = details.get(agents[0].agentId);
+        if (firstAgentDetail) {
+          firstAgentDetail.status = 'running';
+          firstAgentDetail.progress = 35;
+          firstAgentDetail.thinkingHistory = [
             {
               content: scenario.thinkingContent,
               timestamp: new Date().toISOString(),
               tokenCount: Math.ceil(scenario.thinkingContent.length / 4),
             },
           ];
-          details.set(workers[0].workerId, firstWorkerDetail);
+          details.set(agents[0].agentId, firstAgentDetail);
         }
 
         // Calculate overall progress
         newSwarm.overallProgress = Math.round(
-          workers.reduce((sum, w) => sum + w.progress, 0) / workers.length
+          agents.reduce((sum, w) => sum + w.progress, 0) / agents.length
         );
       }
 
-      setSwarmStatus(newSwarm);
-      setWorkerDetails(details);
+      setTeamStatus(newSwarm);
+      setAgentDetails(details);
       setMockMessages(messages);
     },
     [resetSwarm]
@@ -575,33 +575,33 @@ export const useSwarmMock = (): UseSwarmMockReturn => {
   // Return
   // ---------------------------------------------------------------------------
 
-  const selectedWorkerDetail = selectedWorkerId
-    ? workerDetails.get(selectedWorkerId) || null
+  const selectedAgentDetail = selectedAgentId
+    ? workerDetails.get(selectedAgentId) || null
     : null;
 
   return {
     // State
-    swarmStatus,
-    selectedWorkerId,
-    selectedWorkerDetail,
+    agentTeamStatus,
+    selectedAgentId,
+    selectedAgentDetail,
     isDrawerOpen,
     mockMessages,
 
     // Swarm Actions
     createSwarm,
-    addWorker,
+    addAgent,
     removeWorker,
-    completeSwarm,
+    completeTeam,
     failSwarm,
     resetSwarm,
 
     // Worker Actions
-    setWorkerStatus,
+    setAgentMemberStatus,
     setWorkerProgress,
     addThinking,
     addToolCall,
     addMessage,
-    completeWorker,
+    completeAgent,
     failWorker,
 
     // UI Actions
