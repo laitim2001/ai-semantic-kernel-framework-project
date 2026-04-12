@@ -121,7 +121,10 @@ async def chat_stream(request: ChatRequest):
                 IPACheckpointStorage,
             )
 
-            storage = IPACheckpointStorage(user_id=request.user_id)
+            from src.core.config import get_settings as _get_settings
+            storage = IPACheckpointStorage(
+                redis_url=_get_settings().redis_url, user_id=request.user_id
+            )
             await storage.initialize()
             checkpoint = await storage.load(request.checkpoint_id)
             context = PipelineContext.from_checkpoint_state(checkpoint.state)
@@ -158,10 +161,12 @@ async def chat_stream(request: ChatRequest):
     # Checkpoint storage for HITL gate (enables true resume)
     checkpoint_storage = None
     try:
+        from src.core.config import get_settings
         from src.integrations.agent_framework.ipa_checkpoint_storage import (
             IPACheckpointStorage,
         )
-        cp_store = IPACheckpointStorage(user_id=context.user_id)
+        redis_url = get_settings().redis_url
+        cp_store = IPACheckpointStorage(redis_url=redis_url, user_id=context.user_id)
         await cp_store.initialize()
         checkpoint_storage = cp_store
     except Exception as e:

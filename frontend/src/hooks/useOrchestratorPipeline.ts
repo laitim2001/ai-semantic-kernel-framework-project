@@ -65,6 +65,7 @@ export interface PipelineState {
   dialogPause: DialogPause | null;
   hitlPause: HITLPause | null;
   originalTask: string | null;
+  originalUserId: string | null;
   error: string | null;
   totalMs: number;
 }
@@ -92,6 +93,7 @@ const INITIAL_STATE: PipelineState = {
   dialogPause: null,
   hitlPause: null,
   originalTask: null,
+  originalUserId: null,
   error: null,
   totalMs: 0,
 };
@@ -265,6 +267,7 @@ export function useOrchestratorPipeline() {
       isRunning: true,
       sessionId: newSessionId,
       originalTask: task,
+      originalUserId: userId,
     });
 
     abortRef.current = new AbortController();
@@ -372,7 +375,7 @@ export function useOrchestratorPipeline() {
           headers,
           body: JSON.stringify({
             task,
-            user_id: 'default-user',
+            user_id: state.originalUserId || 'default-user',
             checkpoint_id: checkpointId,
           }),
           signal: abortRef.current?.signal,
@@ -418,9 +421,9 @@ export function useOrchestratorPipeline() {
     } else if (task) {
       // Fallback: re-run with hitl_pre_approved (backward compatible)
       console.log('[resumeApproval] fallback: re-run with hitl_pre_approved');
-      await sendMessage(task, 'default-user', { hitl_pre_approved: true });
+      await sendMessage(task, state.originalUserId || 'default-user', { hitl_pre_approved: true });
     }
-  }, [state.hitlPause, state.originalTask, token, handleSSEEvent, sendMessage]);
+  }, [state.hitlPause, state.originalTask, state.originalUserId, token, handleSSEEvent, sendMessage]);
 
   const respondDialog = useCallback(async (responses: Record<string, string>) => {
     if (!state.dialogPause) return;
