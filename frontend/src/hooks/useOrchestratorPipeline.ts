@@ -338,12 +338,7 @@ export function useOrchestratorPipeline() {
   }, [token]);
 
   const resumeApproval = useCallback(async (status: 'approved' | 'rejected', approver: string = 'user') => {
-    console.log('[resumeApproval] called with status:', status, 'hitlPause:', !!state.hitlPause, 'sessionId:', state.sessionId);
-
-    if (!state.hitlPause) {
-      console.warn('[resumeApproval] hitlPause is null, aborting');
-      return;
-    }
+    if (!state.hitlPause) return;
 
     if (status === 'rejected') {
       setState(prev => ({
@@ -355,22 +350,77 @@ export function useOrchestratorPipeline() {
       return;
     }
 
-    // Approved — re-run pipeline with original task (HITL gate will be skipped)
+    const checkpointId = state.hitlPause.checkpointId;
     const task = state.originalTask;
-    console.log('[resumeApproval] originalTask:', task ? task.substring(0, 50) : '(empty)');
+    console.log('[resumeApproval] checkpoint:', checkpointId, 'task:', task?.substring(0, 30));
 
-    if (task) {
-      setState(prev => ({ ...prev, hitlPause: null }));
-      console.log('[resumeApproval] calling sendMessage with hitl_pre_approved=true');
+    // Clear HITL pause, mark Steps 1-5 as "restored"
+    setState(prev => ({
+      ...prev,
+      hitlPause: null,
+      isRunning: true,
+    }));
+
+    // True resume via checkpoint_id (skips Steps 1-5, restores context from Redis)
+    if (checkpointId && task) {
       try {
-        await sendMessage(task, 'default-user', { hitl_pre_approved: true });
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch('/api/v1/orchestration/chat', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            task,
+            user_id: 'default-user',
+            checkpoint_id: checkpointId,
+          }),
+          signal: abortRef.current?.signal,
+        });
+
+        if (!response.ok) throw new Error(`Resume failed: ${response.status}`);
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No response body');
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let currentEvent = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7).trim();
+            } else if (line.startsWith('data: ') && currentEvent) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                handleSSEEvent(currentEvent, data);
+              } catch {
+                // skip malformed JSON
+              }
+              currentEvent = '';
+            }
+          }
+        }
       } catch (err) {
-        console.error('[resumeApproval] sendMessage failed:', err);
+        if ((err as Error).name !== 'AbortError') {
+          console.error('[resumeApproval] checkpoint resume failed:', err);
+          setState(prev => ({ ...prev, isRunning: false, error: (err as Error).message }));
+        }
       }
-    } else {
-      console.warn('[resumeApproval] no originalTask in state, cannot resume');
+    } else if (task) {
+      // Fallback: re-run with hitl_pre_approved (backward compatible)
+      console.log('[resumeApproval] fallback: re-run with hitl_pre_approved');
+      await sendMessage(task, 'default-user', { hitl_pre_approved: true });
     }
-  }, [state.hitlPause, state.originalTask, sendMessage]);
+  }, [state.hitlPause, state.originalTask, token, handleSSEEvent, sendMessage]);
 
   const respondDialog = useCallback(async (responses: Record<string, string>) => {
     if (!state.dialogPause) return;

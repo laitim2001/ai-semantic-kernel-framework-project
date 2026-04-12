@@ -214,6 +214,41 @@ class RoutingDecision:
         }
 
     @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RoutingDecision":
+        """Reconstruct RoutingDecision from a serialized dict.
+
+        Inverse of to_dict(). Used for checkpoint resume.
+        """
+        completeness_data = data.get("completeness", {})
+        completeness = CompletenessInfo(
+            is_complete=completeness_data.get("is_complete", True),
+            missing_fields=completeness_data.get("missing_fields", []),
+            optional_missing=completeness_data.get("optional_missing", []),
+            completeness_score=completeness_data.get("completeness_score", 1.0),
+            suggestions=completeness_data.get("suggestions", []),
+        )
+
+        return cls(
+            intent_category=ITIntentCategory.from_string(
+                data.get("intent_category", "unknown")
+            ),
+            sub_intent=data.get("sub_intent"),
+            confidence=data.get("confidence", 0.0),
+            workflow_type=WorkflowType.from_string(
+                data.get("workflow_type", "simple")
+            ),
+            risk_level=RiskLevel.from_string(
+                data.get("risk_level", "medium")
+            ),
+            completeness=completeness,
+            routing_layer=data.get("routing_layer", "checkpoint"),
+            rule_id=data.get("rule_id"),
+            reasoning=data.get("reasoning", ""),
+            metadata=data.get("metadata", {}),
+            processing_time_ms=data.get("processing_time_ms", 0.0),
+        )
+
+    @classmethod
     def from_pattern_match(
         cls,
         result: PatternMatchResult,

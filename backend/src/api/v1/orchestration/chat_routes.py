@@ -112,7 +112,47 @@ async def chat_stream(request: ChatRequest):
         PostProcessStep,
     )
 
-    session_id = request.session_id or str(uuid.uuid4())
+    start_from_step = 0
+
+    # Checkpoint resume: load state from Redis and continue from paused step
+    if request.checkpoint_id:
+        try:
+            from src.integrations.agent_framework.ipa_checkpoint_storage import (
+                IPACheckpointStorage,
+            )
+
+            storage = IPACheckpointStorage(user_id=request.user_id)
+            checkpoint = await storage.load(request.checkpoint_id)
+            context = PipelineContext.from_checkpoint_state(checkpoint.state)
+            start_from_step = checkpoint.iteration_count + 1  # Next step after pause
+            session_id = context.session_id
+
+            logger.info(
+                "Checkpoint resume: checkpoint=%s, session=%s, start_from=%d",
+                request.checkpoint_id,
+                session_id,
+                start_from_step,
+            )
+        except Exception as e:
+            logger.warning(
+                "Checkpoint resume failed, falling back to full run: %s",
+                str(e)[:100],
+            )
+            session_id = request.session_id or str(uuid.uuid4())
+            context = PipelineContext(
+                user_id=request.user_id,
+                session_id=session_id,
+                task=request.task,
+                hitl_pre_approved=request.hitl_pre_approved,
+            )
+    else:
+        session_id = request.session_id or str(uuid.uuid4())
+        context = PipelineContext(
+            user_id=request.user_id,
+            session_id=session_id,
+            task=request.task,
+            hitl_pre_approved=request.hitl_pre_approved,
+        )
 
     # Build full pipeline with all 8 steps
     pipeline = create_default_pipeline()
@@ -125,19 +165,14 @@ async def chat_stream(request: ChatRequest):
         PostProcessStep(),  # Step 8
     ])
 
-    context = PipelineContext(
-        user_id=request.user_id,
-        session_id=session_id,
-        task=request.task,
-        hitl_pre_approved=request.hitl_pre_approved,
-    )
-
     event_queue: asyncio.Queue = asyncio.Queue()
 
     async def _run_pipeline():
         """Run pipeline and dispatch in background."""
         try:
-            result_ctx = await pipeline.run(context, event_queue=event_queue)
+            result_ctx = await pipeline.run(
+                context, event_queue=event_queue, start_from_step=start_from_step
+            )
 
             # If pipeline completed without pause, run dispatch
             if not result_ctx.is_paused and result_ctx.selected_route:

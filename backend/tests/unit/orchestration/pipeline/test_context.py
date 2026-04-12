@@ -89,15 +89,16 @@ class TestPipelineContext:
         assert state["selected_route"] == "direct_answer"
         assert state["completed_steps"] == ["memory_read"]
 
-    def test_to_checkpoint_state_truncates_long_text(self):
+    def test_to_checkpoint_state_preserves_full_text(self):
+        """Checkpoint saves full text (no truncation) for true resume."""
         ctx = self._make_context()
         ctx.memory_text = "x" * 1000
         ctx.knowledge_text = "y" * 1000
 
         state = ctx.to_checkpoint_state()
 
-        assert len(state["memory_text"]) == 500
-        assert len(state["knowledge_text"]) == 500
+        assert len(state["memory_text"]) == 1000
+        assert len(state["knowledge_text"]) == 1000
 
     def test_to_sse_summary(self):
         ctx = self._make_context()

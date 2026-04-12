@@ -116,27 +116,34 @@ class PipelineContext:
         return len(self.completed_steps)
 
     def to_checkpoint_state(self) -> Dict[str, Any]:
-        """Serialize pipeline state for checkpoint persistence.
+        """Serialize full pipeline state for checkpoint persistence.
 
         Returns a dict suitable for WorkflowCheckpoint.state.
-        Complex objects (RoutingDecision, RiskAssessment) are converted
-        via their to_dict() methods if available.
+        All fields are preserved WITHOUT truncation to enable
+        true resume from checkpoint via from_checkpoint_state().
         """
         state: Dict[str, Any] = {
+            # Identity
             "user_id": self.user_id,
             "session_id": self.session_id,
             "request_id": self.request_id,
             "task": self.task,
-            "memory_text": self.memory_text[:500],
-            "knowledge_text": self.knowledge_text[:500],
+            # Step 1-2 outputs (FULL — no truncation for true resume)
+            "memory_text": self.memory_text,
+            "knowledge_text": self.knowledge_text,
+            "memory_metadata": self.memory_metadata,
+            "knowledge_metadata": self.knowledge_metadata,
+            # Step 6 outputs
             "selected_route": self.selected_route,
             "route_reasoning": self.route_reasoning,
+            # Pipeline control
             "paused_at": self.paused_at,
             "checkpoint_id": self.checkpoint_id,
             "completed_steps": self.completed_steps,
             "step_latencies": self.step_latencies,
         }
 
+        # Step 3: routing decision
         if self.routing_decision is not None:
             state["routing_decision"] = (
                 self.routing_decision.to_dict()
@@ -144,6 +151,19 @@ class PipelineContext:
                 else str(self.routing_decision)
             )
 
+        # Step 3: completeness info
+        if self.completeness_info is not None:
+            state["completeness_info"] = (
+                self.completeness_info.to_dict()
+                if hasattr(self.completeness_info, "to_dict")
+                else {
+                    "is_complete": getattr(self.completeness_info, "is_complete", True),
+                    "completeness_score": getattr(self.completeness_info, "completeness_score", 1.0),
+                    "missing_fields": list(getattr(self.completeness_info, "missing_fields", [])),
+                }
+            )
+
+        # Step 4: risk assessment
         if self.risk_assessment is not None:
             state["risk_assessment"] = (
                 self.risk_assessment.to_dict()
@@ -152,6 +172,64 @@ class PipelineContext:
             )
 
         return state
+
+    @classmethod
+    def from_checkpoint_state(cls, state: Dict[str, Any]) -> "PipelineContext":
+        """Restore PipelineContext from a checkpoint state dict.
+
+        Inverse of to_checkpoint_state(). Reconstructs complex objects
+        (RoutingDecision, RiskAssessment) via their from_dict() methods.
+        Sets hitl_pre_approved=True since we're resuming after approval.
+        """
+        ctx = cls(
+            user_id=state["user_id"],
+            session_id=state["session_id"],
+            task=state["task"],
+            request_id=state.get("request_id", str(uuid.uuid4())),
+        )
+
+        # Step 1-2 outputs (full, no truncation)
+        ctx.memory_text = state.get("memory_text", "")
+        ctx.knowledge_text = state.get("knowledge_text", "")
+        ctx.memory_metadata = state.get("memory_metadata", {})
+        ctx.knowledge_metadata = state.get("knowledge_metadata", {})
+
+        # Step 3: routing decision
+        if state.get("routing_decision") and isinstance(state["routing_decision"], dict):
+            try:
+                from src.integrations.orchestration.intent_router.models import RoutingDecision
+                ctx.routing_decision = RoutingDecision.from_dict(state["routing_decision"])
+            except Exception:
+                pass
+
+        # Step 3: completeness info
+        if state.get("completeness_info") and isinstance(state["completeness_info"], dict):
+            try:
+                from src.integrations.orchestration.intent_router.models import CompletenessInfo
+                ci = state["completeness_info"]
+                ctx.completeness_info = CompletenessInfo(
+                    is_complete=ci.get("is_complete", True),
+                    completeness_score=ci.get("completeness_score", 1.0),
+                    missing_fields=ci.get("missing_fields", []),
+                )
+            except Exception:
+                pass
+
+        # Step 4: risk assessment
+        if state.get("risk_assessment") and isinstance(state["risk_assessment"], dict):
+            try:
+                from src.integrations.orchestration.risk_assessor.assessor import RiskAssessment
+                ctx.risk_assessment = RiskAssessment.from_dict(state["risk_assessment"])
+            except Exception:
+                pass
+
+        # Pipeline control
+        ctx.completed_steps = state.get("completed_steps", [])
+        ctx.step_latencies = state.get("step_latencies", {})
+        ctx.paused_at = None  # Clear pause — we're resuming
+        ctx.hitl_pre_approved = True  # Skip HITL gate on resume
+
+        return ctx
 
     def to_sse_summary(self) -> Dict[str, Any]:
         """Compact summary for SSE event streaming to frontend."""

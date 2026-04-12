@@ -17,6 +17,7 @@ class ChatRequest(BaseModel):
     user_id: str = Field(default="default-user", description="User identifier")
     session_id: Optional[str] = Field(default=None, description="Session ID (auto-generated if not provided)")
     hitl_pre_approved: bool = Field(default=False, description="Skip HITL gate (set after approval resume)")
+    checkpoint_id: Optional[str] = Field(default=None, description="Resume from checkpoint (true resume, skips completed steps)")
 
 
 class ResumeRequest(BaseModel):
