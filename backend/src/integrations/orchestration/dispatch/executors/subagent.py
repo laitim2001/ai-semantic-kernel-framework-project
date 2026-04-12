@@ -62,8 +62,8 @@ class SubagentExecutor(BaseExecutor):
             except Exception as e:
                 logger.warning("Tool registry unavailable: %s", str(e)[:100])
 
-            # Decompose task
-            sub_tasks = self._decompose_task(request)
+            # Decompose task with LLM TaskDecomposer (same as TeamExecutor)
+            sub_tasks = await self._decompose_task(request, llm_service, tool_registry)
 
             # Emit AGENT_TEAM_CREATED
             if event_queue is not None:
@@ -168,35 +168,48 @@ class SubagentExecutor(BaseExecutor):
                 status="failed",
             )
 
-    def _decompose_task(self, request: DispatchRequest) -> List[Any]:
-        """Decompose task into parallel sub-tasks.
+    async def _decompose_task(
+        self,
+        request: DispatchRequest,
+        llm_service: Any,
+        tool_registry: Any,
+    ) -> List[Any]:
+        """Decompose task using LLM TaskDecomposer with role assignment.
 
-        Returns DecomposedTask objects for SwarmWorkerExecutor.
+        Same as TeamExecutor — uses PoC-proven TaskDecomposer.
+        Falls back to simple decomposition if TaskDecomposer fails.
         """
+        try:
+            from src.integrations.swarm.task_decomposer import TaskDecomposer
+
+            tool_names: List[str] = []
+            if tool_registry and hasattr(tool_registry, "list_tools"):
+                tool_names = [t.name for t in tool_registry.list_tools(role="admin")]
+            elif tool_registry and hasattr(tool_registry, "get_openai_tool_schemas"):
+                schemas = tool_registry.get_openai_tool_schemas(role="admin")
+                tool_names = [s.get("function", {}).get("name", "") for s in schemas]
+
+            decomposer = TaskDecomposer(
+                llm_service=llm_service,
+                tool_names=tool_names,
+            )
+            result = await decomposer.decompose(request.task)
+
+            if result.sub_tasks:
+                logger.info(
+                    "SubagentExecutor: Decomposed into %d sub-tasks (mode=%s)",
+                    len(result.sub_tasks), result.mode,
+                )
+                return result.sub_tasks
+
+        except Exception as e:
+            logger.warning(
+                "Task decomposition failed, using fallback: %s", str(e)[:100]
+            )
+
+        # Fallback: single general agent
         from src.integrations.swarm.task_decomposer import DecomposedTask
 
-        task_lower = request.task.lower()
-
-        # Pattern: "check X, Y, and Z" → 3 parallel agents
-        if any(w in task_lower for w in ["and", "，", ",", "、"]):
-            parts = []
-            for sep in [" and ", "，", ", ", "、"]:
-                if sep in request.task:
-                    parts = [p.strip() for p in request.task.split(sep) if p.strip()]
-                    break
-
-            if len(parts) >= 2:
-                return [
-                    DecomposedTask(
-                        task_id=uuid.uuid4().hex[:8],
-                        title=f"Agent-{i + 1}",
-                        description=part,
-                        role="general",
-                    )
-                    for i, part in enumerate(parts[:5])
-                ]
-
-        # Default: single agent
         return [
             DecomposedTask(
                 task_id=uuid.uuid4().hex[:8],
@@ -230,6 +243,29 @@ class SubagentExecutor(BaseExecutor):
         )
 
         worker_result = await executor.execute()
+
+        # Emit full result data (messages, thinking_steps, tool_calls)
+        if event_queue is not None:
+            from ...pipeline.service import PipelineEvent, PipelineEventType
+
+            if worker_result.messages:
+                for msg in worker_result.messages:
+                    role = msg.get("role", "")
+                    content = msg.get("content", "")
+                    if role and content and role != "system":
+                        await event_queue.put(
+                            PipelineEvent(
+                                PipelineEventType.AGENT_MEMBER_THINKING,
+                                {
+                                    "team_id": team_id,
+                                    "agent_id": worker_id,
+                                    "thinking_content": f"[{role}] {content[:1000]}",
+                                    "message_role": role,
+                                    "timestamp": "",
+                                },
+                                step_name="dispatch",
+                            )
+                        )
 
         return AgentResult(
             agent_name=sub_task.title,

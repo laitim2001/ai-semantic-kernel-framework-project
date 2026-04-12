@@ -278,6 +278,31 @@ class TeamExecutor(BaseExecutor):
 
         worker_result = await executor.execute()
 
+        # Emit full result data (messages, thinking_steps, tool_calls)
+        # that SwarmWorkerExecutor doesn't emit in real-time events
+        if event_queue is not None:
+            from ...pipeline.service import PipelineEvent, PipelineEventType
+
+            # Emit messages as conversation history
+            if worker_result.messages:
+                for msg in worker_result.messages:
+                    role = msg.get("role", "")
+                    content = msg.get("content", "")
+                    if role and content and role != "system":
+                        await event_queue.put(
+                            PipelineEvent(
+                                PipelineEventType.AGENT_MEMBER_THINKING,
+                                {
+                                    "team_id": team_id,
+                                    "agent_id": worker_id,
+                                    "thinking_content": f"[{role}] {content[:1000]}",
+                                    "message_role": role,
+                                    "timestamp": "",
+                                },
+                                step_name="dispatch",
+                            )
+                        )
+
         return AgentResult(
             agent_name=sub_task.title,
             role=sub_task.role,
