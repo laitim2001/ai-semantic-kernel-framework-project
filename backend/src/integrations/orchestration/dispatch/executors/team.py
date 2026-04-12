@@ -341,10 +341,31 @@ class TeamExecutor(BaseExecutor):
                             )
                         )
 
+        # Safety net: if worker returned empty content, force a direct LLM call
+        final_content = worker_result.content or ""
+        if not final_content.strip():
+            logger.warning(
+                "Worker %s returned empty content (status=%s, tool_calls=%d), forcing direct LLM",
+                worker_id, worker_result.status, len(worker_result.tool_calls_made or []),
+            )
+            try:
+                final_content = await llm_service.generate(
+                    prompt=(
+                        f"你是 {sub_task.title}。\n\n"
+                        f"## 任務\n{sub_task.description}\n\n"
+                        f"請直接用你的專業知識分析並回答。給出具體的診斷結果和建議。"
+                    ),
+                    max_tokens=2048,
+                    temperature=0.7,
+                )
+            except Exception as e:
+                logger.error("Direct LLM fallback failed for %s: %s", worker_id, e)
+                final_content = f"Agent {sub_task.title} 分析完成，但無法生成詳細報告。"
+
         return AgentResult(
             agent_name=sub_task.title,
             role=sub_task.role,
-            output=worker_result.content,
+            output=final_content,
             duration_ms=worker_result.duration_ms,
             status=worker_result.status,
         )
