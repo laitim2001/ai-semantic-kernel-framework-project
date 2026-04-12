@@ -27,7 +27,7 @@ export default defineConfig({
     port: 4070,
     proxy: {
       '/api': {
-        target: 'http://localhost:8003',
+        target: 'http://localhost:8005',
         changeOrigin: true,
         // SSE streaming requires these settings to prevent buffering
         configure: (proxy) => {
