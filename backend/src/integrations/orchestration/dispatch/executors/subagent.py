@@ -5,11 +5,13 @@ Launches multiple MAF agents in parallel, each performing an independent
 sub-task. Results are aggregated into a combined response.
 
 Phase 45: Orchestration Core (Sprint 155)
+Phase 45: Rich AGENT_TEAM_* events for Agent Team Visualization
 """
 
 import asyncio
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from ..models import AgentResult, DispatchRequest, DispatchResult, ExecutionRoute
@@ -40,6 +42,7 @@ class SubagentExecutor(BaseExecutor):
         event_queue: Optional[asyncio.Queue] = None,
     ) -> DispatchResult:
         start = time.time()
+        team_id = f"subagent-{int(time.time() * 1000)}"
 
         try:
             # Decompose task into sub-tasks
@@ -48,9 +51,35 @@ class SubagentExecutor(BaseExecutor):
             if not sub_tasks:
                 sub_tasks = [{"name": "GeneralAgent", "task": request.task}]
 
+            # Emit AGENT_TEAM_CREATED with full roster
+            if event_queue is not None:
+                from ...pipeline.service import PipelineEvent, PipelineEventType
+
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.AGENT_TEAM_CREATED,
+                        {
+                            "team_id": team_id,
+                            "mode": "parallel",
+                            "agents": [
+                                {
+                                    "agent_id": st["name"],
+                                    "agent_name": st["name"],
+                                    "role": st.get("role", "specialist"),
+                                }
+                                for st in sub_tasks
+                            ],
+                            "total_agents": len(sub_tasks),
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                        },
+                        step_name="dispatch",
+                    )
+                )
+
             # Run agents in parallel
             agent_coros = [
-                self._run_agent(st, request, event_queue) for st in sub_tasks
+                self._run_agent(st, request, event_queue, team_id)
+                for st in sub_tasks
             ]
             agent_results = await asyncio.gather(*agent_coros, return_exceptions=True)
 
@@ -71,6 +100,25 @@ class SubagentExecutor(BaseExecutor):
             # Synthesize
             synthesis = self._synthesize(results)
 
+            # Emit AGENT_TEAM_COMPLETED
+            if event_queue is not None:
+                from ...pipeline.service import PipelineEvent, PipelineEventType
+
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.AGENT_TEAM_COMPLETED,
+                        {
+                            "team_id": team_id,
+                            "status": "completed",
+                            "total_agents": len(sub_tasks),
+                            "completed_agents": len(results),
+                            "duration_ms": round((time.time() - start) * 1000),
+                            "completed_at": datetime.now(timezone.utc).isoformat(),
+                        },
+                        step_name="dispatch",
+                    )
+                )
+
             return DispatchResult(
                 route=ExecutionRoute.SUBAGENT,
                 response_text=synthesis,
@@ -82,6 +130,20 @@ class SubagentExecutor(BaseExecutor):
 
         except Exception as e:
             logger.error("SubagentExecutor failed: %s", str(e)[:200])
+            if event_queue is not None:
+                from ...pipeline.service import PipelineEvent, PipelineEventType
+
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.AGENT_TEAM_COMPLETED,
+                        {
+                            "team_id": team_id,
+                            "status": "failed",
+                            "error": str(e)[:200],
+                        },
+                        step_name="dispatch",
+                    )
+                )
             return DispatchResult(
                 route=ExecutionRoute.SUBAGENT,
                 response_text=f"Subagent execution failed: {str(e)[:200]}",
@@ -119,19 +181,53 @@ class SubagentExecutor(BaseExecutor):
         sub_task: Dict[str, str],
         request: DispatchRequest,
         event_queue: Optional[asyncio.Queue] = None,
+        team_id: str = "",
     ) -> AgentResult:
         """Run a single sub-agent."""
         agent_name = sub_task["name"]
         task_text = sub_task["task"]
         start = time.time()
 
+        # Emit AGENT_MEMBER_STARTED
         if event_queue is not None:
             from ...pipeline.service import PipelineEvent, PipelineEventType
 
             await event_queue.put(
                 PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_STARTED,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "agent_name": agent_name,
+                        "role": sub_task.get("role", "specialist"),
+                        "started_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+            # Backward compat
+            await event_queue.put(
+                PipelineEvent(
                     PipelineEventType.AGENT_THINKING,
                     {"agent_name": agent_name, "task": task_text[:100]},
+                    step_name="dispatch",
+                )
+            )
+
+        # Emit AGENT_MEMBER_TOOL_CALL (LLM inference start)
+        if event_queue is not None:
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_TOOL_CALL,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "tool_call_id": f"llm-{agent_name}",
+                        "tool_name": "llm_inference",
+                        "status": "running",
+                        "input_args": {"task": task_text[:100]},
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
                     step_name="dispatch",
                 )
             )
@@ -144,11 +240,14 @@ class SubagentExecutor(BaseExecutor):
             client = self._llm_client or AzureOpenAI(
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
+                api_version=os.getenv(
+                    "AZURE_OPENAI_API_VERSION", "2024-02-15-preview"
+                ),
             )
 
             response = client.chat.completions.create(
-                model=self._model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
+                model=self._model
+                or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
                 messages=[
                     {
                         "role": "system",
@@ -174,6 +273,41 @@ class SubagentExecutor(BaseExecutor):
         if event_queue is not None:
             from ...pipeline.service import PipelineEvent, PipelineEventType
 
+            # Emit AGENT_MEMBER_TOOL_CALL (completed)
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_TOOL_CALL,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "tool_call_id": f"llm-{agent_name}",
+                        "tool_name": "llm_inference",
+                        "status": "completed",
+                        "output_result": {"preview": output[:200]},
+                        "duration_ms": round(duration),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+
+            # Emit AGENT_MEMBER_COMPLETED
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_COMPLETED,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "agent_name": agent_name,
+                        "status": "completed",
+                        "output": output[:300],
+                        "duration_ms": round(duration),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+            # Backward compat
             await event_queue.put(
                 PipelineEvent(
                     PipelineEventType.AGENT_COMPLETE,

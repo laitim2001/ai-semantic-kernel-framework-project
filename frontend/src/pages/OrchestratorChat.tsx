@@ -792,249 +792,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
       return;
     }
 
-    // DEAD CODE BELOW — kept for reference, will be removed in cleanup
-    // eslint-disable-next-line no-constant-condition
-    if (false) {
-      await sendSSE(
-        {
-          content,
-          mode: pipelineMode,
-          source: 'user',
-          session_id: orchestratorSessionId || undefined,
-          user_id: userId,
-        },
-        {
-          onPipelineStart: (data) => {
-            console.log('[SSE] Pipeline started:', data);
-            if (data.session_id) {
-              setOrchestratorSessionId(data.session_id as string);
-            }
-          },
-          onRoutingComplete: (data) => {
-            console.log('[SSE] Routing complete:', data);
-            const intent = data.intent as string;
-            const riskLevel = (data.risk_level as string)?.toUpperCase() as OrchestrationMetadata['riskLevel'];
-            const mode = data.mode as string;
-            const confidence = data.confidence as number;
-            const suggested = data.suggested_mode as string;
-
-            orchMetadata.intent = intent;
-            orchMetadata.riskLevel = riskLevel;
-            orchMetadata.executionMode = mode || pipelineMode;
-            orchMetadata.confidence = confidence;
-
-            // Update message with routing metadata
-            const routingUpdated = messagesRef.current.map(m =>
-              m.id === assistantMessageId
-                ? { ...m, orchestrationMetadata: { ...orchMetadata } }
-                : m
-            );
-            setMessages(routingUpdated);
-
-            if (suggested && suggested !== pipelineMode) {
-              setSuggestedMode(suggested);
-            }
-          },
-          onAgentThinking: () => {
-            // Could show a thinking indicator
-          },
-          onToolCallEnd: (data) => {
-            const toolName = data.tool_name as string;
-            console.log('[SSE] Tool call:', toolName);
-            if (!orchMetadata.pipelineToolCalls) orchMetadata.pipelineToolCalls = [];
-            orchMetadata.pipelineToolCalls.push({
-              id: `tc-${Date.now()}`,
-              toolName: toolName || 'unknown',
-              status: 'completed',
-            });
-            const updated = messagesRef.current.map(m =>
-              m.id === assistantMessageId
-                ? { ...m, orchestrationMetadata: { ...orchMetadata } }
-                : m
-            );
-            setMessages(updated);
-          },
-          onTextDelta: (delta) => {
-            accumulatedContent += delta;
-            const updated = messagesRef.current.map(m =>
-              m.id === assistantMessageId
-                ? { ...m, content: accumulatedContent }
-                : m
-            );
-            setMessages(updated);
-          },
-          onTaskDispatched: (data) => {
-            console.log('[SSE] Task dispatched:', data);
-            orchMetadata.taskId = data.task_id as string;
-          },
-          onPipelineComplete: (data) => {
-            console.log('[SSE] Pipeline complete:', data);
-            const finalContent = (data.content as string) || accumulatedContent;
-            const processingTime = data.processing_time_ms as number;
-
-            orchMetadata.processingTimeMs = processingTime;
-
-            const detailParts: string[] = [];
-            if (orchMetadata.confidence != null) detailParts.push(`信心度: ${(orchMetadata.confidence * 100).toFixed(0)}%`);
-            if (processingTime != null) detailParts.push(`處理時間: ${processingTime}ms`);
-            if (orchMetadata.pipelineToolCalls?.length) detailParts.push(`工具調用: ${orchMetadata.pipelineToolCalls.length} 個`);
-
-            const updated = messagesRef.current.map(m =>
-              m.id === assistantMessageId
-                ? {
-                    ...m,
-                    content: finalContent || '(No response content)',
-                    orchestrationMetadata: {
-                      ...orchMetadata,
-                      detail: detailParts.length > 0 ? detailParts.join('\n') : undefined,
-                    },
-                  }
-                : m
-            );
-            setMessages(updated);
-          },
-          onSwarmWorkerStart: (data) => {
-            console.log('[SSE] Agent team started:', data);
-            setShowAgentTeamPanel(true);
-            const subtype = data.event_subtype as string;
-
-            if (subtype === 'SWARM_STARTED') {
-              // Initial team setup — use getState() to avoid stale closure
-              const totalAgents = (data.total_agents as number) || 0;
-              useAgentTeamStore.getState().setTeamStatus({
-                teamId: (data.team_id as string) || `team-${Date.now()}`,
-                sessionId: orchestratorSessionId || '',
-                mode: (data.mode as 'parallel' | 'sequential' | 'pipeline' | 'hierarchical' | 'hybrid') || 'parallel',
-                status: 'executing',
-                totalAgents,
-                overallProgress: 0,
-                agents: [],
-                createdAt: new Date().toISOString(),
-                startedAt: new Date().toISOString(),
-                metadata: {},
-              });
-            } else {
-              // Individual worker start — ensure status exists first
-              const store = useAgentTeamStore.getState();
-              if (!store.agentTeamStatus) {
-                store.setTeamStatus({
-                  teamId: `team-${Date.now()}`,
-                  sessionId: orchestratorSessionId || '',
-                  mode: 'parallel',
-                  status: 'executing',
-                  totalAgents: 4,
-                  overallProgress: 0,
-                  agents: [],
-                  createdAt: new Date().toISOString(),
-                  startedAt: new Date().toISOString(),
-                  metadata: {},
-                });
-              }
-              store.addAgent({
-                agentId: (data.agent_id as string) || `w-${Date.now()}`,
-                agentName: (data.display_name as string) || (data.agent_name as string) || 'Agent',
-                agentType: 'hybrid',
-                role: (data.role as string) || 'worker',
-                status: 'running',
-                progress: 0,
-                toolCallsCount: 0,
-                createdAt: new Date().toISOString(),
-                startedAt: new Date().toISOString(),
-              });
-            }
-          },
-          onSwarmProgress: (data) => {
-            const subtype = data.event_subtype as string;
-            const store = useAgentTeamStore.getState();
-
-            if (subtype === 'SWARM_WORKER_COMPLETED') {
-              store.completeAgent({
-                team_id: '',
-                agent_id: data.agent_id as string,
-                status: 'completed',
-                duration_ms: (data.duration_ms as number) || 0,
-                completed_at: new Date().toISOString(),
-              });
-            } else if (subtype === 'SWARM_WORKER_THINKING') {
-              store.updateAgentThinking({
-                team_id: '',
-                agent_id: data.agent_id as string,
-                thinking_content: (data.content as string) || '',
-                timestamp: new Date().toISOString(),
-              });
-            } else if (subtype === 'SWARM_WORKER_TOOL_CALL') {
-              if ((data.status as string) === 'completed') {
-                store.updateAgentToolCall({
-                  team_id: '',
-                  agent_id: data.agent_id as string,
-                  tool_call_id: `tc-${Date.now()}`,
-                  tool_name: (data.tool_name as string) || '',
-                  status: 'completed',
-                  input_args: (data.arguments as Record<string, unknown>) || {},
-                  output_result: data.result as Record<string, unknown>,
-                  timestamp: new Date().toISOString(),
-                });
-              }
-            } else if (subtype === 'SWARM_COMPLETED') {
-              const total = (data.total_agents as number) || 0;
-              const completed = (data.completed_agents as number) || 0;
-              store.updateTeamProgress(total > 0 ? Math.round((completed / total) * 100) : 100);
-              store.completeTeam('completed');
-            } else {
-              // Generic progress update
-              store.updateAgentProgress({
-                team_id: '',
-                agent_id: data.agent_id as string,
-                progress: (data.progress as number) || 0,
-                status: (data.status as string) || 'running',
-                updated_at: new Date().toISOString(),
-              });
-            }
-          },
-          onApprovalRequired: (data) => {
-            console.log('[SSE] Approval required:', data);
-            setPendingApproval({
-              approvalId: data.approval_id as string,
-              action: data.action as string,
-              riskLevel: data.risk_level as string,
-              description: data.description as string,
-              details: data.details as Record<string, unknown>,
-            });
-          },
-          onPipelineError: (error) => {
-            console.error('[SSE] Pipeline error:', error);
-            const updated = messagesRef.current.map(m =>
-              m.id === assistantMessageId
-                ? { ...m, content: `Pipeline 錯誤: ${error}` }
-                : m
-            );
-            setMessages(updated);
-          },
-        }
-      );
-
-      // S143-1: Search for related memories on first message
-      if (isFirstMessage.current) {
-        isFirstMessage.current = false;
-        memoryApi.searchMemories(content, userId)
-          .then((res) => {
-            if (res.memories && res.memories.length > 0) {
-              setRelatedMemories(res.memories.map((m) => ({
-                id: m.id,
-                content: m.content,
-                created_at: m.created_at,
-                score: m.score,
-              })));
-              setShowMemoryHint(true);
-            }
-          })
-          .catch(() => { /* memory search is non-critical */ });
-      }
-
-      if (allFileIds.length > 0) clearAttachments();
-      return;
-    }
-
+    // Phase 45: Old SSE dead code removed — pipeline.sendMessage() is the sole channel
     // Fallback: Direct send without orchestration (AG-UI SSE path)
     sendMessage(content, allFileIds.length > 0 ? allFileIds : undefined).catch((err) => {
       console.error('[UnifiedChat] Failed to send message:', err);
@@ -1328,8 +1086,8 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
             />
           </div>
 
-          {/* Phase 45: Pipeline Progress + Step Detail Panel (right side) */}
-          <div className="w-[380px] border-l bg-white overflow-y-auto hidden lg:flex flex-col">
+          {/* Phase 45: Pipeline Progress + Agent Team / Step Detail (right side) */}
+          <div className="w-[380px] border-l bg-white dark:bg-gray-950 overflow-y-auto hidden lg:flex flex-col">
             <PipelineProgressPanel
               steps={pipeline.steps}
               currentStepIndex={pipeline.currentStepIndex}
@@ -1338,14 +1096,36 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               isRunning={pipeline.isRunning}
             />
             <div className="flex-1 border-t overflow-y-auto">
-              <StepDetailPanel
-                steps={pipeline.steps}
-                agents={pipeline.agents}
-                selectedRoute={pipeline.selectedRoute}
-                routeReasoning={pipeline.routeReasoning}
-              />
+              {(pipeline.selectedRoute === 'team' || pipeline.selectedRoute === 'subagent')
+                && agentTeamStatus ? (
+                <AgentTeamPanel
+                  agentTeamStatus={agentTeamStatus}
+                  onAgentClick={(agent) => {
+                    useAgentTeamStore.getState().selectAgent(agent);
+                  }}
+                />
+              ) : (
+                <StepDetailPanel
+                  steps={pipeline.steps}
+                  agents={pipeline.agents}
+                  selectedRoute={pipeline.selectedRoute}
+                  routeReasoning={pipeline.routeReasoning}
+                />
+              )}
             </div>
           </div>
+
+          {/* Agent Detail Drawer (overlay) */}
+          {agentTeamIsDrawerOpen && agentTeamSelectedDetail && (
+            <AgentDetailDrawer
+              open={agentTeamIsDrawerOpen}
+              onClose={agentTeamCloseDrawer}
+              teamId={agentTeamStatus?.teamId || ''}
+              agent={agentTeamStatus?.agents.find(
+                a => a.agentId === agentTeamSelectedDetail?.agentId
+              ) || null}
+            />
+          )}
         </main>
 
         {/* Phase 41 S143-1: MemoryHint above ChatInput */}

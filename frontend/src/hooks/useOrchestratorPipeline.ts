@@ -13,6 +13,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { useAgentTeamStore } from '@/stores/agentTeamStore';
 
 // --- Types ---
 
@@ -118,6 +119,8 @@ export function useOrchestratorPipeline() {
     switch (eventType) {
       case 'PIPELINE_START': {
         const startFrom = (data.start_from as number) || 0;
+        // Reset agent team store for new pipeline run
+        useAgentTeamStore.getState().reset();
         setState(prev => {
           // If resuming from checkpoint, mark skipped steps as 'completed (restored)'
           const updatedSteps = startFrom > 0
@@ -245,6 +248,108 @@ export function useOrchestratorPipeline() {
           },
         }));
         break;
+
+      // --- Rich Agent Team Events (Phase 45: Agent Team Visualization) ---
+
+      case 'AGENT_TEAM_CREATED': {
+        const store = useAgentTeamStore.getState();
+        store.reset();
+        const agents = data.agents as Array<{ agent_id: string; agent_name: string; role: string }>;
+        store.setTeamStatus({
+          teamId: data.team_id as string,
+          sessionId: '',
+          mode: (data.mode as 'sequential' | 'parallel') || 'sequential',
+          status: 'executing',
+          totalAgents: agents.length,
+          overallProgress: 0,
+          agents: agents.map(a => ({
+            agentId: a.agent_id,
+            agentName: a.agent_name,
+            agentType: 'hybrid' as const,
+            role: a.role,
+            status: 'pending' as const,
+            progress: 0,
+            toolCallsCount: 0,
+            createdAt: (data.created_at as string) || new Date().toISOString(),
+          })),
+          createdAt: (data.created_at as string) || new Date().toISOString(),
+          metadata: {},
+        });
+        break;
+      }
+
+      case 'AGENT_MEMBER_STARTED': {
+        const store = useAgentTeamStore.getState();
+        const existing = store.agentTeamStatus?.agents.find(
+          a => a.agentId === (data.agent_id as string)
+        );
+        if (!existing) {
+          // Agent not in roster (e.g., TeamLead added later)
+          store.addAgent({
+            agentId: data.agent_id as string,
+            agentName: (data.agent_name as string) || (data.agent_id as string),
+            agentType: 'hybrid',
+            role: (data.role as string) || 'agent',
+            status: 'running',
+            progress: 0,
+            toolCallsCount: 0,
+            createdAt: new Date().toISOString(),
+            startedAt: (data.started_at as string) || new Date().toISOString(),
+          });
+        } else {
+          // Update existing agent status to running
+          store.updateAgentProgress({
+            team_id: data.team_id as string,
+            agent_id: data.agent_id as string,
+            progress: 0,
+            status: 'running',
+            updated_at: (data.started_at as string) || new Date().toISOString(),
+          });
+        }
+        break;
+      }
+
+      case 'AGENT_MEMBER_THINKING':
+        useAgentTeamStore.getState().updateAgentThinking({
+          team_id: data.team_id as string,
+          agent_id: data.agent_id as string,
+          thinking_content: (data.thinking_content as string) || '',
+          timestamp: (data.timestamp as string) || new Date().toISOString(),
+        });
+        break;
+
+      case 'AGENT_MEMBER_TOOL_CALL':
+        useAgentTeamStore.getState().updateAgentToolCall({
+          team_id: data.team_id as string,
+          agent_id: data.agent_id as string,
+          tool_call_id: data.tool_call_id as string,
+          tool_name: data.tool_name as string,
+          status: data.status as 'running' | 'completed' | 'failed',
+          input_args: (data.input_args as Record<string, unknown>) || {},
+          output_result: (data.output_result as Record<string, unknown>) || null,
+          timestamp: (data.timestamp as string) || new Date().toISOString(),
+        });
+        break;
+
+      case 'AGENT_MEMBER_COMPLETED':
+        useAgentTeamStore.getState().completeAgent({
+          team_id: data.team_id as string,
+          agent_id: data.agent_id as string,
+          status: (data.status as 'completed' | 'failed') || 'completed',
+          duration_ms: (data.duration_ms as number) || 0,
+          completed_at: (data.completed_at as string) || new Date().toISOString(),
+        });
+        break;
+
+      case 'AGENT_TEAM_COMPLETED': {
+        const store = useAgentTeamStore.getState();
+        const teamStatus = (data.status as string) === 'failed' ? 'failed' : 'completed';
+        store.completeTeam(
+          teamStatus as 'completed' | 'failed',
+          (data.completed_at as string) || new Date().toISOString()
+        );
+        break;
+      }
 
       case 'PIPELINE_COMPLETE':
         // Only finalize on the truly final event (after dispatch)

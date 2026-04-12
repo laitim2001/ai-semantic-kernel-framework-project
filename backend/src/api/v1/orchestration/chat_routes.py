@@ -269,6 +269,7 @@ async def chat_stream(request: ChatRequest):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
             "X-Session-Id": session_id,
         },
     )

@@ -6,11 +6,13 @@ and build on each other's findings. A TeamLead coordinates and
 synthesizes the final output.
 
 Phase 45: Orchestration Core (Sprint 155)
+Phase 45: Rich AGENT_TEAM_* events for Agent Team Visualization
 """
 
 import asyncio
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from ..models import AgentResult, DispatchRequest, DispatchResult, ExecutionRoute
@@ -48,16 +50,42 @@ class TeamExecutor(BaseExecutor):
         event_queue: Optional[asyncio.Queue] = None,
     ) -> DispatchResult:
         start = time.time()
+        team_id = f"team-{int(time.time() * 1000)}"
 
         try:
             team = self._build_team(request)
             shared_context: List[str] = []
             agent_results: List[AgentResult] = []
 
+            # Emit AGENT_TEAM_CREATED with full roster
+            if event_queue is not None:
+                from ...pipeline.service import PipelineEvent, PipelineEventType
+
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.AGENT_TEAM_CREATED,
+                        {
+                            "team_id": team_id,
+                            "mode": "sequential",
+                            "agents": [
+                                {
+                                    "agent_id": m["name"],
+                                    "agent_name": m["name"],
+                                    "role": m["role"],
+                                }
+                                for m in team
+                            ],
+                            "total_agents": len(team),
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                        },
+                        step_name="dispatch",
+                    )
+                )
+
             # Sequential execution with shared context
             for member in team:
                 result = await self._run_team_member(
-                    member, request, shared_context, event_queue
+                    member, request, shared_context, event_queue, team_id
                 )
                 agent_results.append(result)
                 shared_context.append(
@@ -66,8 +94,27 @@ class TeamExecutor(BaseExecutor):
 
             # TeamLead synthesis
             synthesis = await self._synthesize(
-                request, agent_results, event_queue
+                request, agent_results, event_queue, team_id
             )
+
+            # Emit AGENT_TEAM_COMPLETED
+            if event_queue is not None:
+                from ...pipeline.service import PipelineEvent, PipelineEventType
+
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.AGENT_TEAM_COMPLETED,
+                        {
+                            "team_id": team_id,
+                            "status": "completed",
+                            "total_agents": len(team) + 1,  # +1 for TeamLead
+                            "completed_agents": len(team) + 1,
+                            "duration_ms": round((time.time() - start) * 1000),
+                            "completed_at": datetime.now(timezone.utc).isoformat(),
+                        },
+                        step_name="dispatch",
+                    )
+                )
 
             return DispatchResult(
                 route=ExecutionRoute.TEAM,
@@ -80,6 +127,20 @@ class TeamExecutor(BaseExecutor):
 
         except Exception as e:
             logger.error("TeamExecutor failed: %s", str(e)[:200])
+            if event_queue is not None:
+                from ...pipeline.service import PipelineEvent, PipelineEventType
+
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.AGENT_TEAM_COMPLETED,
+                        {
+                            "team_id": team_id,
+                            "status": "failed",
+                            "error": str(e)[:200],
+                        },
+                        step_name="dispatch",
+                    )
+                )
             return DispatchResult(
                 route=ExecutionRoute.TEAM,
                 response_text=f"Team execution failed: {str(e)[:200]}",
@@ -97,18 +158,52 @@ class TeamExecutor(BaseExecutor):
         request: DispatchRequest,
         shared_context: List[str],
         event_queue: Optional[asyncio.Queue] = None,
+        team_id: str = "",
     ) -> AgentResult:
         """Run a single team member with shared context."""
         agent_name = member["name"]
         start = time.time()
 
+        # Emit AGENT_MEMBER_STARTED
         if event_queue is not None:
             from ...pipeline.service import PipelineEvent, PipelineEventType
 
             await event_queue.put(
                 PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_STARTED,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "agent_name": agent_name,
+                        "role": member["role"],
+                        "started_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+            # Backward compat: also emit AGENT_THINKING
+            await event_queue.put(
+                PipelineEvent(
                     PipelineEventType.AGENT_THINKING,
                     {"agent_name": agent_name, "role": member["role"]},
+                    step_name="dispatch",
+                )
+            )
+
+        # Emit AGENT_MEMBER_TOOL_CALL (LLM inference start)
+        if event_queue is not None:
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_TOOL_CALL,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "tool_call_id": f"llm-{agent_name}",
+                        "tool_name": "llm_inference",
+                        "status": "running",
+                        "input_args": {"role": member["role"]},
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
                     step_name="dispatch",
                 )
             )
@@ -121,7 +216,9 @@ class TeamExecutor(BaseExecutor):
             client = self._llm_client or AzureOpenAI(
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
+                api_version=os.getenv(
+                    "AZURE_OPENAI_API_VERSION", "2024-02-15-preview"
+                ),
             )
 
             # Build context from prior agents
@@ -130,7 +227,8 @@ class TeamExecutor(BaseExecutor):
                 prior = "\n\n## Prior Team Findings\n" + "\n".join(shared_context)
 
             response = client.chat.completions.create(
-                model=self._model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
+                model=self._model
+                or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
                 messages=[
                     {
                         "role": "system",
@@ -153,9 +251,45 @@ class TeamExecutor(BaseExecutor):
 
         duration = (time.time() - start) * 1000
 
+        # Emit AGENT_MEMBER_TOOL_CALL (completed)
         if event_queue is not None:
             from ...pipeline.service import PipelineEvent, PipelineEventType
 
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_TOOL_CALL,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "tool_call_id": f"llm-{agent_name}",
+                        "tool_name": "llm_inference",
+                        "status": "completed",
+                        "output_result": {"preview": output[:200]},
+                        "duration_ms": round(duration),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+
+        # Emit AGENT_MEMBER_COMPLETED
+        if event_queue is not None:
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_COMPLETED,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "agent_name": agent_name,
+                        "status": "completed",
+                        "output": output[:300],
+                        "duration_ms": round(duration),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+            # Backward compat: also emit AGENT_COMPLETE
             await event_queue.put(
                 PipelineEvent(
                     PipelineEventType.AGENT_COMPLETE,
@@ -181,8 +315,28 @@ class TeamExecutor(BaseExecutor):
         request: DispatchRequest,
         results: List[AgentResult],
         event_queue: Optional[asyncio.Queue] = None,
+        team_id: str = "",
     ) -> str:
         """TeamLead synthesizes all agent findings."""
+        # Emit TeamLead as a member
+        if event_queue is not None:
+            from ...pipeline.service import PipelineEvent, PipelineEventType
+
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_STARTED,
+                    {
+                        "team_id": team_id,
+                        "agent_id": "TeamLead",
+                        "agent_name": "TeamLead",
+                        "role": "Synthesize team findings into actionable summary",
+                        "started_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+
+        start = time.time()
         try:
             import os
 
@@ -191,7 +345,9 @@ class TeamExecutor(BaseExecutor):
             client = self._llm_client or AzureOpenAI(
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
+                api_version=os.getenv(
+                    "AZURE_OPENAI_API_VERSION", "2024-02-15-preview"
+                ),
             )
 
             findings = "\n\n".join(
@@ -199,7 +355,8 @@ class TeamExecutor(BaseExecutor):
             )
 
             response = client.chat.completions.create(
-                model=self._model or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
+                model=self._model
+                or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
                 messages=[
                     {
                         "role": "system",
@@ -219,8 +376,36 @@ class TeamExecutor(BaseExecutor):
                 max_completion_tokens=1500,
                 temperature=0.5,
             )
-            return response.choices[0].message.content or findings
+            output = response.choices[0].message.content or findings
 
         except Exception as e:
-            logger.warning("Synthesis failed, returning raw findings: %s", str(e)[:100])
-            return "\n\n---\n\n".join(f"**{r.agent_name}**: {r.output}" for r in results)
+            logger.warning(
+                "Synthesis failed, returning raw findings: %s", str(e)[:100]
+            )
+            output = "\n\n---\n\n".join(
+                f"**{r.agent_name}**: {r.output}" for r in results
+            )
+
+        duration = (time.time() - start) * 1000
+
+        # Emit TeamLead completed
+        if event_queue is not None:
+            from ...pipeline.service import PipelineEvent, PipelineEventType
+
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_COMPLETED,
+                    {
+                        "team_id": team_id,
+                        "agent_id": "TeamLead",
+                        "agent_name": "TeamLead",
+                        "status": "completed",
+                        "output": output[:300],
+                        "duration_ms": round(duration),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+
+        return output
