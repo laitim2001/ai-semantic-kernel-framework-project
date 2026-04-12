@@ -122,6 +122,7 @@ async def chat_stream(request: ChatRequest):
             )
 
             storage = IPACheckpointStorage(user_id=request.user_id)
+            await storage.initialize()
             checkpoint = await storage.load(request.checkpoint_id)
             context = PipelineContext.from_checkpoint_state(checkpoint.state)
             start_from_step = checkpoint.iteration_count + 1  # Next step after pause
@@ -154,13 +155,25 @@ async def chat_stream(request: ChatRequest):
             hitl_pre_approved=request.hitl_pre_approved,
         )
 
+    # Checkpoint storage for HITL gate (enables true resume)
+    checkpoint_storage = None
+    try:
+        from src.integrations.agent_framework.ipa_checkpoint_storage import (
+            IPACheckpointStorage,
+        )
+        cp_store = IPACheckpointStorage(user_id=context.user_id)
+        await cp_store.initialize()
+        checkpoint_storage = cp_store
+    except Exception as e:
+        logger.warning("Checkpoint storage init failed: %s", str(e)[:100])
+
     # Build full pipeline with all 8 steps
     pipeline = create_default_pipeline()
     pipeline.configure_steps([
         *pipeline._steps,  # Steps 1-2 from factory
         IntentStep(),       # Step 3
         RiskStep(),         # Step 4
-        HITLGateStep(),     # Step 5
+        HITLGateStep(checkpoint_storage=checkpoint_storage),  # Step 5
         LLMRouteStep(),     # Step 6
         PostProcessStep(),  # Step 8
     ])
