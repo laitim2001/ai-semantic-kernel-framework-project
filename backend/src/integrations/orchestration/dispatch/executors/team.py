@@ -99,7 +99,7 @@ class TeamExecutor(BaseExecutor):
                 )
                 agent_results.append(result)
                 shared_context.append(
-                    f"[{result.agent_name}]: {result.output[:500]}"
+                    f"[{result.agent_name}]: {result.output}"
                 )
 
             # Synthesize results
@@ -299,7 +299,7 @@ class TeamExecutor(BaseExecutor):
                                 {
                                     "team_id": team_id,
                                     "agent_id": worker_id,
-                                    "thinking_content": f"[{role}] {content[:1000]}",
+                                    "thinking_content": f"[{role}] {content}",
                                     "message_role": role,
                                     "timestamp": "",
                                 },

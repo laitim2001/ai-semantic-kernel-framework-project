@@ -126,7 +126,7 @@ class EventQueueAdapter:
                             "agent_id": worker_id,
                             "agent_name": data.get("agent_name", worker_id),
                             "status": data.get("status", "completed"),
-                            "output": data.get("content_preview", "")[:2000],
+                            "output": data.get("content_preview", ""),
                             "duration_ms": data.get("duration_ms", 0),
                             "completed_at": data.get("completed_at", ""),
                         },
@@ -139,7 +139,7 @@ class EventQueueAdapter:
                         PipelineEventType.AGENT_COMPLETE,
                         {
                             "agent_name": data.get("agent_name", worker_id),
-                            "output_preview": data.get("content_preview", "")[:200],
+                            "output_preview": data.get("content_preview", ""),
                             "duration_ms": round(data.get("duration_ms", 0)),
                         },
                         step_name="dispatch",

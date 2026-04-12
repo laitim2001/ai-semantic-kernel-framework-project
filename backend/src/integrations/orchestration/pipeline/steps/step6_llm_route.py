@@ -112,7 +112,7 @@ class LLMRouteStep(PipelineStep):
 
             context.selected_route = selected_route
             context.route_reasoning = reasoning
-            context.metadata["llm_route_response"] = response_text[:500]
+            context.metadata["llm_route_response"] = response_text
 
             # Extract intent validation from LLM response
             intent_validated, intent_override = self._extract_intent_validation(
@@ -269,11 +269,11 @@ class LLMRouteStep(PipelineStep):
         for marker in ["reason:", "reasoning:", "because", "since"]:
             idx = text_lower.find(marker)
             if idx >= 0:
-                reasoning = text[idx:idx + 200].strip()
+                reasoning = text[idx:].strip()
                 break
 
         if not reasoning:
-            reasoning = text[:200].strip()
+            reasoning = text.strip()
 
         return selected, reasoning
 
