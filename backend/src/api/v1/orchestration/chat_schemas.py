@@ -16,6 +16,7 @@ class ChatRequest(BaseModel):
     task: str = Field(..., min_length=1, max_length=5000, description="User's message/task")
     user_id: str = Field(default="default-user", description="User identifier")
     session_id: Optional[str] = Field(default=None, description="Session ID (auto-generated if not provided)")
+    hitl_pre_approved: bool = Field(default=False, description="Skip HITL gate (set after approval resume)")
 
 
 class ResumeRequest(BaseModel):

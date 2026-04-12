@@ -78,6 +78,11 @@ class HITLGateStep(PipelineStep):
             logger.warning("HITLGateStep: no risk_assessment, passing through")
             return context
 
+        # Skip HITL if pre-approved (resume after prior approval)
+        if context.hitl_pre_approved:
+            logger.info("HITLGateStep: pre-approved (resume), skipping gate")
+            return context
+
         ra = context.risk_assessment
         rd = context.routing_decision
 

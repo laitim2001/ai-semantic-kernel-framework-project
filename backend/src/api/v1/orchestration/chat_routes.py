@@ -129,6 +129,7 @@ async def chat_stream(request: ChatRequest):
         user_id=request.user_id,
         session_id=session_id,
         task=request.task,
+        hitl_pre_approved=request.hitl_pre_approved,
     )
 
     event_queue: asyncio.Queue = asyncio.Queue()

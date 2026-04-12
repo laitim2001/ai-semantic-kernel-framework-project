@@ -82,6 +82,7 @@ class PipelineContext:
 
     # --- Optimization flags ---
     fast_path_applied: bool = False  # True when Step 6 LLM was skipped via fast-path
+    hitl_pre_approved: bool = False  # True when re-running after HITL approval (skip gate)
 
     # --- Pipeline Control ---
     paused_at: Optional[str] = None  # "hitl" | "dialog" | None

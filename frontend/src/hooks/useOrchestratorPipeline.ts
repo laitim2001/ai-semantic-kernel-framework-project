@@ -64,6 +64,7 @@ export interface PipelineState {
   agents: AgentProgress[];
   dialogPause: DialogPause | null;
   hitlPause: HITLPause | null;
+  originalTask: string | null;
   error: string | null;
   totalMs: number;
 }
@@ -90,6 +91,7 @@ const INITIAL_STATE: PipelineState = {
   agents: [],
   dialogPause: null,
   hitlPause: null,
+  originalTask: null,
   error: null,
   totalMs: 0,
 };
@@ -254,7 +256,7 @@ export function useOrchestratorPipeline() {
     }
   }, [updateStep]);
 
-  const sendMessage = useCallback(async (task: string, userId: string = 'default-user') => {
+  const sendMessage = useCallback(async (task: string, userId: string = 'default-user', options?: { hitl_pre_approved?: boolean }) => {
     // Reset state
     const newSessionId = `pipeline-${Date.now()}`;
     setState({
@@ -262,10 +264,8 @@ export function useOrchestratorPipeline() {
       steps: INITIAL_STEPS.map(s => ({ ...s })),
       isRunning: true,
       sessionId: newSessionId,
+      originalTask: task,
     });
-
-    // Store original task for dialog resume
-    sessionStorage.setItem(`pipeline-task-${newSessionId}`, task);
 
     abortRef.current = new AbortController();
 
@@ -278,7 +278,7 @@ export function useOrchestratorPipeline() {
       const response = await fetch('/api/v1/orchestration/chat', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ task, user_id: userId }),
+        body: JSON.stringify({ task, user_id: userId, hitl_pre_approved: options?.hitl_pre_approved || false }),
         signal: abortRef.current.signal,
       });
 
@@ -338,10 +338,14 @@ export function useOrchestratorPipeline() {
   }, [token]);
 
   const resumeApproval = useCallback(async (status: 'approved' | 'rejected', approver: string = 'user') => {
-    if (!state.hitlPause) return;
+    console.log('[resumeApproval] called with status:', status, 'hitlPause:', !!state.hitlPause, 'sessionId:', state.sessionId);
+
+    if (!state.hitlPause) {
+      console.warn('[resumeApproval] hitlPause is null, aborting');
+      return;
+    }
 
     if (status === 'rejected') {
-      // Rejected — just clear the pause and show rejection message
       setState(prev => ({
         ...prev,
         hitlPause: null,
@@ -351,14 +355,22 @@ export function useOrchestratorPipeline() {
       return;
     }
 
-    // Approved — re-run pipeline with original task (approval granted)
-    const storedTask = sessionStorage.getItem(`pipeline-task-${state.sessionId}`) || '';
-    setState(prev => ({ ...prev, hitlPause: null }));
+    // Approved — re-run pipeline with original task (HITL gate will be skipped)
+    const task = state.originalTask;
+    console.log('[resumeApproval] originalTask:', task ? task.substring(0, 50) : '(empty)');
 
-    if (storedTask) {
-      await sendMessage(storedTask);
+    if (task) {
+      setState(prev => ({ ...prev, hitlPause: null }));
+      console.log('[resumeApproval] calling sendMessage with hitl_pre_approved=true');
+      try {
+        await sendMessage(task, 'default-user', { hitl_pre_approved: true });
+      } catch (err) {
+        console.error('[resumeApproval] sendMessage failed:', err);
+      }
+    } else {
+      console.warn('[resumeApproval] no originalTask in state, cannot resume');
     }
-  }, [state.hitlPause, state.sessionId, sendMessage]);
+  }, [state.hitlPause, state.originalTask, sendMessage]);
 
   const respondDialog = useCallback(async (responses: Record<string, string>) => {
     if (!state.dialogPause) return;
