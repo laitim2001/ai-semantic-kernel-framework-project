@@ -52,15 +52,18 @@ class SubagentExecutor(BaseExecutor):
 
             llm_service = LLMServiceFactory.create(use_cache=True)
 
-            tool_registry = None
+            # Create tool registry with team collaboration tools
+            from .team_tool_registry import TeamToolRegistry
+
+            base_registry = None
             try:
                 from src.integrations.hybrid.orchestrator.tools import (
                     OrchestratorToolRegistry,
                 )
-
-                tool_registry = OrchestratorToolRegistry()
+                base_registry = OrchestratorToolRegistry()
             except Exception as e:
-                logger.warning("Tool registry unavailable: %s", str(e)[:100])
+                logger.info("Base tool registry unavailable: %s", str(e)[:100])
+            tool_registry = TeamToolRegistry(base_registry=base_registry)
 
             # Decompose task with LLM TaskDecomposer (same as TeamExecutor)
             sub_tasks = await self._decompose_task(request, llm_service, tool_registry)

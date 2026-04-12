@@ -162,20 +162,24 @@ class TeamExecutor(BaseExecutor):
         return LLMServiceFactory.create(use_cache=True)
 
     def _create_tool_registry(self) -> Any:
-        """Create tool registry for agent tool execution.
+        """Create tool registry with team collaboration tools.
 
-        Same pattern as PoC execution.py:254-257.
-        Returns None if registry is unavailable (agents run without tools).
+        Provides SharedTaskList-based team tools (send_team_message,
+        check_my_inbox, claim_next_task, etc.) merged with any available
+        base registry tools (search_knowledge, assess_risk, etc.).
         """
+        from .team_tool_registry import TeamToolRegistry
+
+        base_registry = None
         try:
             from src.integrations.hybrid.orchestrator.tools import (
                 OrchestratorToolRegistry,
             )
-
-            return OrchestratorToolRegistry()
+            base_registry = OrchestratorToolRegistry()
         except Exception as e:
-            logger.warning("Tool registry unavailable, agents run without tools: %s", str(e)[:100])
-            return None
+            logger.info("Base tool registry unavailable: %s", str(e)[:100])
+
+        return TeamToolRegistry(base_registry=base_registry)
 
     async def _decompose_task(
         self,
