@@ -31,6 +31,13 @@ import type {
 // Types
 // =============================================================================
 
+/** Per-agent accumulated data from SSE events */
+interface AgentAccumulatedData {
+  thinkingHistory: ThinkingContent[];
+  toolCalls: ToolCallInfo[];
+  output: string;
+}
+
 interface AgentTeamState {
   // Core state
   agentTeamStatus: UIAgentTeamStatus | null;
@@ -39,6 +46,8 @@ interface AgentTeamState {
   isDrawerOpen: boolean;
   isLoading: boolean;
   error: string | null;
+  // Accumulated data per agent (built from SSE events)
+  agentDataMap: Record<string, AgentAccumulatedData>;
 }
 
 interface AgentTeamActions {
@@ -79,6 +88,7 @@ const initialState: AgentTeamState = {
   isDrawerOpen: false,
   isLoading: false,
   error: null,
+  agentDataMap: {},
 };
 
 // =============================================================================
@@ -184,31 +194,26 @@ export const useAgentTeamStore = create<AgentTeamStore>()(
       updateAgentThinking: (payload) =>
         set(
           (state) => {
-            // Update the selected agent detail if it matches
-            if (
-              state.selectedAgentDetail &&
-              state.selectedAgentDetail.agentId === payload.agent_id
-            ) {
-              const thinkingHistory = state.selectedAgentDetail.thinkingHistory;
-              const lastThinking = thinkingHistory[thinkingHistory.length - 1];
+            // Accumulate in agentDataMap
+            if (!state.agentDataMap[payload.agent_id]) {
+              state.agentDataMap[payload.agent_id] = { thinkingHistory: [], toolCalls: [], output: '' };
+            }
+            const accum = state.agentDataMap[payload.agent_id];
+            const newThinking: ThinkingContent = {
+              content: payload.thinking_content,
+              timestamp: payload.timestamp,
+              tokenCount: payload.token_count || undefined,
+            };
+            const lastThinking = accum.thinkingHistory[accum.thinkingHistory.length - 1];
+            if (lastThinking && payload.thinking_content.startsWith(lastThinking.content)) {
+              accum.thinkingHistory[accum.thinkingHistory.length - 1] = newThinking;
+            } else {
+              accum.thinkingHistory.push(newThinking);
+            }
 
-              // Create new thinking content
-              const newThinking: ThinkingContent = {
-                content: payload.thinking_content,
-                timestamp: payload.timestamp,
-                tokenCount: payload.token_count || undefined,
-              };
-
-              if (
-                lastThinking &&
-                payload.thinking_content.startsWith(lastThinking.content)
-              ) {
-                // Incremental update - replace last thinking block
-                thinkingHistory[thinkingHistory.length - 1] = newThinking;
-              } else {
-                // New thinking block
-                thinkingHistory.push(newThinking);
-              }
+            // Also update selectedAgentDetail if it matches
+            if (state.selectedAgentDetail?.agentId === payload.agent_id) {
+              state.selectedAgentDetail.thinkingHistory = [...accum.thinkingHistory];
             }
           },
           false,
@@ -221,41 +226,39 @@ export const useAgentTeamStore = create<AgentTeamStore>()(
             if (!state.agentTeamStatus) return;
 
             // Update tool call count in agent summary
-            const workerIndex = state.agentTeamStatus.agents.findIndex(
+            const agentIndex = state.agentTeamStatus.agents.findIndex(
               (w: UIAgentSummary) => w.agentId === payload.agent_id
             );
-            if (workerIndex !== -1 && payload.status === 'running') {
-              // Only increment when a new tool call starts
-              state.agentTeamStatus.agents[workerIndex].toolCallsCount += 1;
+            if (agentIndex !== -1 && payload.status === 'running') {
+              state.agentTeamStatus.agents[agentIndex].toolCallsCount += 1;
             }
 
-            // Update agent detail if it matches
-            if (
-              state.selectedAgentDetail &&
-              state.selectedAgentDetail.agentId === payload.agent_id
-            ) {
-              const toolCalls = state.selectedAgentDetail.toolCalls;
-              const existingIndex = toolCalls.findIndex(
-                (t: ToolCallInfo) => t.toolCallId === payload.tool_call_id
-              );
+            // Accumulate in agentDataMap
+            if (!state.agentDataMap[payload.agent_id]) {
+              state.agentDataMap[payload.agent_id] = { thinkingHistory: [], toolCalls: [], output: '' };
+            }
+            const accum = state.agentDataMap[payload.agent_id];
+            const updatedToolCall: ToolCallInfo = {
+              toolCallId: payload.tool_call_id,
+              toolName: payload.tool_name,
+              status: payload.status,
+              inputArgs: payload.input_args,
+              outputResult: payload.output_result || undefined,
+              error: payload.error || undefined,
+              durationMs: payload.duration_ms || undefined,
+            };
+            const existingIndex = accum.toolCalls.findIndex(
+              (t: ToolCallInfo) => t.toolCallId === payload.tool_call_id
+            );
+            if (existingIndex !== -1) {
+              accum.toolCalls[existingIndex] = updatedToolCall;
+            } else {
+              accum.toolCalls.push(updatedToolCall);
+            }
 
-              const updatedToolCall: ToolCallInfo = {
-                toolCallId: payload.tool_call_id,
-                toolName: payload.tool_name,
-                status: payload.status,
-                inputArgs: payload.input_args,
-                outputResult: payload.output_result || undefined,
-                error: payload.error || undefined,
-                durationMs: payload.duration_ms || undefined,
-              };
-
-              if (existingIndex !== -1) {
-                // Update existing tool call
-                toolCalls[existingIndex] = updatedToolCall;
-              } else {
-                // Add new tool call
-                toolCalls.push(updatedToolCall);
-              }
+            // Also update selectedAgentDetail if it matches
+            if (state.selectedAgentDetail?.agentId === payload.agent_id) {
+              state.selectedAgentDetail.toolCalls = [...accum.toolCalls];
             }
           },
           false,
@@ -267,25 +270,25 @@ export const useAgentTeamStore = create<AgentTeamStore>()(
           (state) => {
             if (!state.agentTeamStatus) return;
 
-            const workerIndex = state.agentTeamStatus.agents.findIndex(
+            const agentIndex = state.agentTeamStatus.agents.findIndex(
               (w: UIAgentSummary) => w.agentId === payload.agent_id
             );
-            if (workerIndex !== -1) {
-              state.agentTeamStatus.agents[workerIndex].status = payload.status;
-              state.agentTeamStatus.agents[workerIndex].progress = 100;
-              state.agentTeamStatus.agents[workerIndex].completedAt = payload.completed_at;
+            if (agentIndex !== -1) {
+              state.agentTeamStatus.agents[agentIndex].status = payload.status;
+              state.agentTeamStatus.agents[agentIndex].progress = 100;
+              state.agentTeamStatus.agents[agentIndex].completedAt = payload.completed_at;
             }
 
-            // Update agent detail if it matches
-            if (
-              state.selectedAgentDetail &&
-              state.selectedAgentDetail.agentId === payload.agent_id
-            ) {
+            // Accumulate output in agentDataMap
+            if (!state.agentDataMap[payload.agent_id]) {
+              state.agentDataMap[payload.agent_id] = { thinkingHistory: [], toolCalls: [], output: '' };
+            }
+
+            // Also update selectedAgentDetail if it matches
+            if (state.selectedAgentDetail?.agentId === payload.agent_id) {
               state.selectedAgentDetail.status = payload.status;
               state.selectedAgentDetail.progress = 100;
               state.selectedAgentDetail.completedAt = payload.completed_at;
-              state.selectedAgentDetail.result = payload.result || undefined;
-              state.selectedAgentDetail.error = payload.error || undefined;
             }
 
             // Recalculate overall progress
@@ -309,8 +312,25 @@ export const useAgentTeamStore = create<AgentTeamStore>()(
         set(
           (state) => {
             state.selectedAgentId = agent?.agentId || null;
-            // Clear old detail when selecting new agent
-            state.selectedAgentDetail = null;
+            if (agent) {
+              // Build AgentDetail from accumulated SSE data
+              const accum = state.agentDataMap[agent.agentId] || {
+                thinkingHistory: [], toolCalls: [], output: '',
+              };
+              state.selectedAgentDetail = {
+                ...agent,
+                taskId: state.agentTeamStatus?.teamId || '',
+                taskDescription: agent.role,
+                thinkingHistory: [...accum.thinkingHistory],
+                toolCalls: [...accum.toolCalls],
+                messages: [],
+                result: accum.output ? { output: accum.output } : undefined,
+              };
+              state.isDrawerOpen = true;
+            } else {
+              state.selectedAgentDetail = null;
+              state.isDrawerOpen = false;
+            }
           },
           false,
           'selectAgent'

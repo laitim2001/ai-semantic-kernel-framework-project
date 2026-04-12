@@ -190,6 +190,24 @@ class TeamExecutor(BaseExecutor):
                 )
             )
 
+            # Emit shared context as AGENT_MEMBER_THINKING (agent interaction visualization)
+            if shared_context:
+                context_summary = "\n".join(shared_context)
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.AGENT_MEMBER_THINKING,
+                        {
+                            "team_id": team_id,
+                            "agent_id": agent_name,
+                            "thinking_content": (
+                                f"📋 Reviewing prior team findings:\n{context_summary}"
+                            ),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        },
+                        step_name="dispatch",
+                    )
+                )
+
         # Emit AGENT_MEMBER_TOOL_CALL (LLM inference start)
         if event_queue is not None:
             await event_queue.put(
@@ -274,6 +292,20 @@ class TeamExecutor(BaseExecutor):
 
         # Emit AGENT_MEMBER_COMPLETED
         if event_queue is not None:
+            # Emit agent's response as thinking content (visible in detail drawer)
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_THINKING,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "thinking_content": f"💬 Response:\n{output[:500]}",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+
             await event_queue.put(
                 PipelineEvent(
                     PipelineEventType.AGENT_MEMBER_COMPLETED,

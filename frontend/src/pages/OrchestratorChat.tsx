@@ -1086,7 +1086,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
             />
           </div>
 
-          {/* Phase 45: Pipeline Progress + Agent Team / Step Detail (right side) */}
+          {/* Phase 45: Pipeline Progress + Step Detail + Agent Team (right side, stacked) */}
           <div className="w-[380px] border-l bg-white dark:bg-gray-950 overflow-y-auto hidden lg:flex flex-col">
             <PipelineProgressPanel
               steps={pipeline.steps}
@@ -1096,25 +1096,27 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               isRunning={pipeline.isRunning}
             />
             <div className="flex-1 border-t overflow-y-auto">
-              {agentTeamStatus ? (
-                <AgentTeamPanel
-                  agentTeamStatus={agentTeamStatus}
-                  onAgentClick={(agent) => {
-                    useAgentTeamStore.getState().selectAgent(agent);
-                  }}
-                />
-              ) : (
-                <StepDetailPanel
-                  steps={pipeline.steps}
-                  agents={pipeline.agents}
-                  selectedRoute={pipeline.selectedRoute}
-                  routeReasoning={pipeline.routeReasoning}
-                />
+              <StepDetailPanel
+                steps={pipeline.steps}
+                agents={pipeline.agents}
+                selectedRoute={pipeline.selectedRoute}
+                routeReasoning={pipeline.routeReasoning}
+              />
+              {/* Agent Team Panel — shown below step details when team/subagent route active */}
+              {agentTeamStatus && (
+                <div className="border-t">
+                  <AgentTeamPanel
+                    agentTeamStatus={agentTeamStatus}
+                    onAgentClick={(agent) => {
+                      useAgentTeamStore.getState().selectAgent(agent);
+                    }}
+                  />
+                </div>
               )}
             </div>
           </div>
 
-          {/* Agent Detail Drawer (overlay) */}
+          {/* Agent Detail Drawer (overlay) — uses store-accumulated data, no API fetch */}
           {agentTeamIsDrawerOpen && agentTeamSelectedDetail && (
             <AgentDetailDrawer
               open={agentTeamIsDrawerOpen}
@@ -1123,6 +1125,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               agent={agentTeamStatus?.agents.find(
                 a => a.agentId === agentTeamSelectedDetail?.agentId
               ) || null}
+              workerDetail={agentTeamSelectedDetail}
             />
           )}
         </main>
