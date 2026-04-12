@@ -36,7 +36,7 @@ call select_route to choose the best execution mode.
 ## Knowledge Base Results
 {knowledge_text}
 
-## Intent Analysis
+## Intent Analysis (from prior step)
 Category: {intent_category}, Sub-intent: {sub_intent}
 Confidence: {confidence:.2f}, Layer: {routing_layer}
 
@@ -49,7 +49,13 @@ Choose ONE route:
 - subagent: independent parallel checks (e.g., check 3 systems separately)
 - team: complex investigation needing expert collaboration
 
-Call select_route with your choice and reasoning."""
+Also validate the prior intent classification given full context.
+
+Reply in this format:
+route: <direct_answer|subagent|team>
+reasoning: <why this route>
+intent_validated: <true|false>
+intent_override: <null or corrected category if intent_validated is false>"""
 
 
 class LLMRouteStep(PipelineStep):
@@ -108,9 +114,29 @@ class LLMRouteStep(PipelineStep):
             context.route_reasoning = reasoning
             context.metadata["llm_route_response"] = response_text[:500]
 
+            # Extract intent validation from LLM response
+            intent_validated, intent_override = self._extract_intent_validation(
+                response_text
+            )
+            context.metadata["intent_validated"] = intent_validated
+            context.metadata["intent_override"] = intent_override
+
+            if not intent_validated and intent_override:
+                logger.warning(
+                    "LLMRouteStep: intent mismatch — Step 3 said '%s' but Step 6 suggests '%s'",
+                    (
+                        context.routing_decision.intent_category.value
+                        if context.routing_decision
+                        and hasattr(context.routing_decision.intent_category, "value")
+                        else "unknown"
+                    ),
+                    intent_override,
+                )
+
             logger.info(
-                "LLMRouteStep: selected=%s, reasoning=%s",
+                "LLMRouteStep: selected=%s, intent_validated=%s, reasoning=%s",
                 selected_route,
+                intent_validated,
                 reasoning[:100] if reasoning else "none",
             )
 
@@ -190,6 +216,36 @@ class LLMRouteStep(PipelineStep):
         except Exception as e:
             logger.error("Raw LLM call also failed: %s", str(e)[:100])
             return DEFAULT_ROUTE, f"All LLM calls failed: {str(e)[:100]}", ""
+
+    @staticmethod
+    def _extract_intent_validation(text: str) -> tuple:
+        """Extract intent validation signal from LLM response.
+
+        Returns:
+            Tuple of (intent_validated: bool, intent_override: str or None).
+        """
+        text_lower = text.lower()
+
+        # Look for intent_validated field
+        validated = True
+        for marker in ["intent_validated:", "intent_validated ="]:
+            idx = text_lower.find(marker)
+            if idx >= 0:
+                val = text_lower[idx + len(marker):idx + len(marker) + 20].strip()
+                validated = val.startswith("true")
+                break
+
+        # Look for intent_override field
+        override = None
+        for marker in ["intent_override:", "intent_override ="]:
+            idx = text_lower.find(marker)
+            if idx >= 0:
+                val = text[idx + len(marker):idx + len(marker) + 30].strip()
+                if val and val.lower() not in ("null", "none", "n/a", "\"null\""):
+                    override = val.strip().strip('"').strip("'")
+                break
+
+        return validated, override
 
     @staticmethod
     def _extract_route(text: str) -> tuple:

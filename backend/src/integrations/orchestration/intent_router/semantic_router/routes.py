@@ -347,7 +347,7 @@ def _load_routes_from_yaml() -> List[SemanticRoute]:
             routes.append(SemanticRoute(
                 name=r["name"],
                 utterances=r.get("utterances", []),
-                intent_category=category,
+                category=category,
                 sub_intent=r.get("sub_intent", ""),
                 risk_level=risk,
                 workflow_type=workflow,

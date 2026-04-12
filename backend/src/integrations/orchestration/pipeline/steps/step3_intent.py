@@ -26,6 +26,23 @@ from .base import PipelineStep
 
 logger = logging.getLogger(__name__)
 
+# Keywords suggesting actionable intent (CHANGE/INCIDENT) that require
+# precise L3 LLM classification for accurate Step 4 risk assessment.
+# If none of these appear, the input is likely a QUERY and L3 can be skipped.
+ACTIONABLE_KEYWORDS = frozenset({
+    # Change / deployment
+    "deploy", "部署", "上線", "發布", "release", "upgrade", "升級",
+    "restart", "重啟", "重新啟動", "reboot", "rollback", "回滾",
+    "配置", "config", "migration", "patch", "更新系統",
+    # Incident / failure
+    "故障", "失敗", "掛了", "當機", "crash", "down", "outage",
+    "錯誤", "error", "fail", "timeout", "超時",
+    "中斷", "停機", "無法", "不能", "異常", "斷線",
+    # Production / critical
+    "生產", "production", "prod", "正式環境",
+    "緊急", "urgent", "critical", "嚴重", "p1", "p2",
+})
+
 
 class IntentStep(PipelineStep):
     """Analyze user intent via 3-tier cascade and check completeness.
@@ -70,6 +87,17 @@ class IntentStep(PipelineStep):
     def step_index(self) -> int:
         return 2
 
+    @staticmethod
+    def _has_actionable_keywords(text: str) -> bool:
+        """Check if text contains keywords suggesting actionable intent.
+
+        Actionable intents (CHANGE/INCIDENT) require precise L3 LLM
+        classification for accurate risk assessment in Steps 4-5.
+        Non-actionable queries can safely default to QUERY, skipping L3.
+        """
+        text_lower = text.lower()
+        return any(kw in text_lower for kw in ACTIONABLE_KEYWORDS)
+
     async def _execute(self, context: PipelineContext) -> PipelineContext:
         """Route intent and check completeness.
 
@@ -84,12 +112,21 @@ class IntentStep(PipelineStep):
         """
         router = await self._get_router()
 
-        # Run 3-tier intent classification
-        routing_decision = await router.route(context.task)
-        # If V8 router returned UNKNOWN with low confidence, try direct LLM classification
+        # Conditional L3: skip LLM for non-actionable input (saves ~2s)
+        has_actionable = self._has_actionable_keywords(context.task)
+        skip_llm = not has_actionable
+        if skip_llm:
+            logger.info("IntentStep: no actionable keywords, will skip L3 if L1/L2 fail")
+
+        # Run 3-tier intent classification (L3 conditionally skipped)
+        routing_decision = await router.route(context.task, skip_llm=skip_llm)
+
+        # If V8 router returned UNKNOWN with low confidence, try direct LLM
+        # classification — but ONLY for actionable tasks
         if (
             routing_decision.intent_category.value == "unknown"
             and routing_decision.confidence < 0.5
+            and has_actionable
         ):
             routing_decision = await self._llm_classify_fallback(
                 context.task, routing_decision
@@ -311,9 +348,20 @@ class IntentStep(PipelineStep):
                 )
                 checker = CompletenessChecker()
 
+            from src.integrations.orchestration.intent_router.semantic_router.routes import (
+                get_default_routes,
+            )
+
             self._router = BusinessIntentRouter(
                 pattern_matcher=PatternMatcher(),
-                semantic_router=SemanticRouter(),
+                semantic_router=SemanticRouter(
+                    routes=get_default_routes(),
+                    encoder_type="azure",
+                    azure_deployment_name=os.getenv(
+                        "AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-large"
+                    ),
+                    threshold=0.50,  # Low inner threshold; RouterConfig.semantic_threshold does real filtering
+                ),
                 llm_classifier=llm_cls,
                 completeness_checker=checker,
                 config=RouterConfig(

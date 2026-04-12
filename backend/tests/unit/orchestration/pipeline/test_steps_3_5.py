@@ -108,7 +108,10 @@ class TestIntentStep:
 
         assert result.routing_decision is decision
         assert result.completeness_info.is_complete is True
-        mock_router.route.assert_called_once_with("Check VPN connectivity for Taipei office")
+        # "Check VPN connectivity" has no actionable keywords → skip_llm=True
+        mock_router.route.assert_called_once_with(
+            "Check VPN connectivity for Taipei office", skip_llm=True
+        )
 
     @pytest.mark.asyncio
     async def test_incomplete_intent_raises_dialog_pause(self):

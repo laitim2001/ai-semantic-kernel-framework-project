@@ -165,6 +165,53 @@ class OrchestrationPipelineService:
                 )
                 continue
 
+            # Fast-path: skip LLM route step for high-confidence non-actionable queries
+            if step.name == "llm_route_decision" and self._should_fast_path(context):
+                context.selected_route = "direct_answer"
+                context.route_reasoning = (
+                    "Fast-path: high-confidence non-actionable intent "
+                    f"({context.routing_decision.intent_category.value}, "
+                    f"c={context.routing_decision.confidence:.2f})"
+                )
+                context.fast_path_applied = True
+                context.mark_step_complete(step.name, 0.0)
+
+                await self._emit(
+                    event_queue,
+                    PipelineEvent(
+                        PipelineEventType.STEP_START,
+                        {
+                            "step_index": step.step_index,
+                            "step_name": step.name,
+                            "total_steps": self.step_count,
+                        },
+                        step_name=step.name,
+                    ),
+                )
+                await self._emit(
+                    event_queue,
+                    PipelineEvent(
+                        PipelineEventType.STEP_COMPLETE,
+                        {
+                            "step_index": step.step_index,
+                            "step_name": step.name,
+                            "latency_ms": 0,
+                            "metadata": {
+                                "step": step.name,
+                                "selected_route": "direct_answer",
+                                "fast_path": True,
+                                "reasoning": context.route_reasoning,
+                            },
+                        },
+                        step_name=step.name,
+                    ),
+                )
+
+                logger.info(
+                    "Fast-path applied: skipped Step 6 LLM call, route=direct_answer"
+                )
+                continue
+
             # Emit step start
             await self._emit(
                 event_queue,
@@ -327,6 +374,42 @@ class OrchestrationPipelineService:
 
         return context
 
+    @staticmethod
+    def _should_fast_path(context: PipelineContext) -> bool:
+        """Check if LLM route step can be skipped via fast-path.
+
+        Conditions (ALL must be true):
+        - Intent is QUERY or REQUEST (non-actionable)
+        - L1/L2 confidence >= 0.92
+        - Completeness score >= 0.80
+        - Risk level is LOW
+
+        This saves one LLM call (~2s) for simple, clear queries.
+        """
+        rd = context.routing_decision
+        ra = context.risk_assessment
+        ci = context.completeness_info
+
+        if rd is None or ra is None:
+            return False
+
+        intent = (
+            rd.intent_category.value
+            if hasattr(rd.intent_category, "value")
+            else str(rd.intent_category)
+        )
+        risk = (
+            ra.level.value if hasattr(ra.level, "value") else str(ra.level)
+        )
+
+        return (
+            intent in ("query", "request")
+            and rd.confidence >= 0.92
+            and ci is not None
+            and ci.completeness_score >= 0.80
+            and risk == "low"
+        )
+
     async def _emit(
         self,
         queue: Optional[asyncio.Queue],
@@ -421,6 +504,9 @@ class OrchestrationPipelineService:
         elif step.name == "llm_route_decision":
             summary["selected_route"] = context.selected_route
             summary["reasoning"] = context.route_reasoning or ""  # full text
+            summary["intent_validated"] = context.metadata.get("intent_validated", True)
+            summary["intent_override"] = context.metadata.get("intent_override")
+            summary["fast_path"] = context.fast_path_applied
         elif step.name == "post_process":
             summary["checkpoint_id"] = context.checkpoint_id
             summary["extraction"] = "scheduled"

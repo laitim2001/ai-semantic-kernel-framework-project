@@ -80,6 +80,9 @@ class PipelineContext:
     # --- Step 7: Dispatch ---
     dispatch_result: Optional[Any] = None  # dispatch.models.DispatchResult
 
+    # --- Optimization flags ---
+    fast_path_applied: bool = False  # True when Step 6 LLM was skipped via fast-path
+
     # --- Pipeline Control ---
     paused_at: Optional[str] = None  # "hitl" | "dialog" | None
     checkpoint_id: Optional[str] = None

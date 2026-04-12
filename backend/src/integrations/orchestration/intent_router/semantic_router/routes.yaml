@@ -1,6 +1,12 @@
 # Semantic Router Routes Configuration
 # Each route defines example utterances for vector similarity matching.
 # Add new routes or utterances without changing code — just restart the service.
+#
+# Guidelines for adding utterances:
+# - Cover formal/informal registers (e.g., 「系統掛了」vs「系統無法使用」)
+# - Include Taiwan (繁體) and Hong Kong (粵式書面語) phrasing
+# - Mix Chinese + English terms used in IT contexts
+# - Target 15-20 utterances per route for robust matching
 
 routes:
   # === INCIDENT ===
@@ -15,6 +21,16 @@ routes:
       - "資料管線出問題"
       - "資料同步失敗了"
       - "ETL 任務沒有完成"
+      - "data pipeline 掛了"
+      - "ETL 排程失敗"
+      - "資料載入出錯"
+      - "ETL 跑到一半就停了"
+      - "batch job 失敗了"
+      - "資料抽取沒跑完"
+      - "ETL 報錯了怎麼辦"
+      - "資料管線 timeout"
+      - "今天的 ETL 沒有正常結束"
+      - "data sync 失敗"
 
   - name: incident_network
     category: incident
@@ -27,6 +43,16 @@ routes:
       - "網路斷線了"
       - "連線一直斷掉"
       - "網路很不穩定"
+      - "VPN 連不上"
+      - "內網不通"
+      - "ping 不到伺服器"
+      - "網路延遲很高"
+      - "DNS 解析失敗"
+      - "server 連線逾時"
+      - "辦公室網路斷了"
+      - "Wi-Fi 一直掉"
+      - "remote desktop 連不上"
+      - "SSH 連線被拒"
 
   - name: incident_performance
     category: incident
@@ -39,6 +65,16 @@ routes:
       - "系統響應很慢"
       - "應用程式卡頓"
       - "頁面載入很久"
+      - "API 回應很慢"
+      - "dashboard 開很久"
+      - "query 跑很久"
+      - "系統越來越慢"
+      - "CPU 使用率很高"
+      - "記憶體不夠用"
+      - "response time 很長"
+      - "用戶反映系統很lag"
+      - "操作都要等很久"
+      - "系統比平常慢很多"
 
   - name: incident_system_down
     category: incident
@@ -51,6 +87,17 @@ routes:
       - "系統完全不能用"
       - "網站打不開"
       - "服務中斷了"
+      - "系統 down 了"
+      - "server 死了"
+      - "系統完全沒有回應"
+      - "整個服務都掛了"
+      - "系統全面當機"
+      - "用戶都連不上去"
+      - "502 bad gateway"
+      - "503 service unavailable"
+      - "系統掛了很久了"
+      - "production 整個不能用"
+      - "服務完全無法存取"
 
   # === REQUEST ===
   - name: request_account
@@ -64,6 +111,16 @@ routes:
       - "要開一個新的帳號"
       - "申請系統帳號"
       - "新員工需要帳號"
+      - "create new account"
+      - "新進人員開帳號"
+      - "幫同事申請帳號"
+      - "需要一個測試帳號"
+      - "開 AD 帳號"
+      - "申請 LDAP 帳號"
+      - "新人入職要開系統帳號"
+      - "幫我開一個 service account"
+      - "需要建立新用戶"
+      - "申請開通系統登入"
 
   - name: request_access
     category: request
@@ -76,6 +133,16 @@ routes:
       - "申請系統權限"
       - "要開放資料夾權限"
       - "沒有權限進入"
+      - "access denied 怎麼辦"
+      - "需要 VPN 權限"
+      - "申請資料庫讀取權限"
+      - "幫我加入這個群組"
+      - "需要 admin 權限"
+      - "申請 API key"
+      - "共享資料夾存取權限"
+      - "需要 production 環境權限"
+      - "Git repo 沒有 push 權限"
+      - "申請 Jira 專案存取"
 
   - name: request_software
     category: request
@@ -88,6 +155,16 @@ routes:
       - "申請安裝 Office"
       - "要裝開發工具"
       - "請幫我安裝 VS Code"
+      - "需要安裝 Python"
+      - "可以裝 Docker Desktop 嗎"
+      - "申請安裝 Postman"
+      - "電腦需要裝 Git"
+      - "安裝 Teams"
+      - "需要 IDE 安裝"
+      - "幫我裝 Node.js"
+      - "申請 license"
+      - "軟體升級申請"
+      - "需要安裝 VPN client"
 
   - name: request_password
     category: request
@@ -100,6 +177,16 @@ routes:
       - "需要重設密碼"
       - "帳號無法登入"
       - "密碼過期了"
+      - "reset password"
+      - "帳號被鎖定了"
+      - "登入失敗太多次"
+      - "密碼不能用了"
+      - "要換新密碼"
+      - "MFA 驗證失敗"
+      - "忘記 VPN 密碼"
+      - "系統一直說密碼錯誤"
+      - "需要解鎖帳號"
+      - "SSO 登不進去"
 
   # === CHANGE ===
   - name: change_deployment
@@ -113,6 +200,17 @@ routes:
       - "部署更新"
       - "發布新版程式"
       - "準備上 production"
+      - "deploy to staging"
+      - "今天要 release"
+      - "版本升級"
+      - "CI/CD 部署"
+      - "推新版上線"
+      - "要把 feature branch merge 上去"
+      - "production deployment"
+      - "rollout 新功能"
+      - "hotfix 部署"
+      - "準備做 release"
+      - "新版本要上正式環境"
 
   - name: change_config
     category: change
@@ -125,6 +223,16 @@ routes:
       - "調整系統參數"
       - "修改 config 檔"
       - "變更環境設定"
+      - "更新 environment variable"
+      - "修改 nginx 設定"
+      - "調整 timeout 參數"
+      - "改防火牆規則"
+      - "更新 SSL 憑證"
+      - "修改 DNS 設定"
+      - "調整 load balancer"
+      - "變更 cron job 排程"
+      - "修改 connection pool 大小"
+      - "更新 feature flag"
 
   - name: change_database
     category: change
@@ -137,6 +245,16 @@ routes:
       - "修改資料庫結構"
       - "更新 schema"
       - "資料庫 migration"
+      - "要 alter table"
+      - "DB schema 變更"
+      - "新增 index"
+      - "修改 stored procedure"
+      - "資料表結構調整"
+      - "要做 data migration"
+      - "更新資料庫版本"
+      - "新增 foreign key"
+      - "修改欄位類型"
+      - "資料庫 backup 和變更"
 
   # === QUERY ===
   - name: query_status
@@ -150,6 +268,16 @@ routes:
       - "現在系統穩定嗎"
       - "檢查系統健康狀態"
       - "服務有問題嗎"
+      - "system health check"
+      - "現在服務正常嗎"
+      - "CRM 系統還好嗎"
+      - "看一下系統狀態"
+      - "monitoring 有異常嗎"
+      - "Grafana 上有 alert 嗎"
+      - "API 服務正常嗎"
+      - "今天系統有沒有問題"
+      - "infrastructure 狀態查詢"
+      - "uptime 多少"
 
   - name: query_report
     category: query
@@ -162,6 +290,16 @@ routes:
       - "產出統計數據"
       - "匯出資料報表"
       - "要看使用報告"
+      - "generate report"
+      - "上個月的統計"
+      - "需要 SLA 報告"
+      - "效能報表在哪"
+      - "匯出 CSV"
+      - "看一下上週的數據"
+      - "incident 報告"
+      - "產出 availability report"
+      - "要看 dashboard 的資料"
+      - "月報什麼時候出"
 
   - name: query_ticket
     category: query
@@ -174,6 +312,16 @@ routes:
       - "查詢需求單狀態"
       - "案件編號查詢"
       - "工單什麼時候處理"
+      - "ticket status"
+      - "我的 request 進度"
+      - "INC 開頭的單號查詢"
+      - "上次提交的申請處理了嗎"
+      - "幫我查一下工單"
+      - "需求什麼時候完成"
+      - "案件有人在處理嗎"
+      - "Jira ticket 狀態"
+      - "SNOW 工單查詢"
+      - "我的申請審批了嗎"
 
   - name: query_documentation
     category: query
@@ -186,3 +334,13 @@ routes:
       - "怎麼使用這個功能"
       - "教我怎麼操作"
       - "有使用教學嗎"
+      - "SOP 在哪裡"
+      - "runbook 在哪"
+      - "有沒有 API 文件"
+      - "安裝步驟是什麼"
+      - "操作流程說明"
+      - "wiki 在哪裡"
+      - "如何設定 VPN"
+      - "新人教學文件"
+      - "troubleshooting guide"
+      - "有沒有 FAQ"
