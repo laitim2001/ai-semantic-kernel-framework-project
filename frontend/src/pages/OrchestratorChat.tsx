@@ -1073,7 +1073,10 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
     if (!msgId || pipeline.isRunning || pipeline.totalMs === 0) return;
 
     const finalContent = pipeline.responseText || '(Pipeline completed with no response text)';
-    const routeLabel = pipeline.selectedRoute || 'unknown';
+    // Derive mode: prefer selectedRoute, fallback to intent from step metadata
+    const intentStep = pipeline.steps.find(s => s.name === 'intent_analysis');
+    const intentLabel = intentStep?.metadata?.intent as string | undefined;
+    const routeLabel = pipeline.selectedRoute || intentLabel || 'chat';
 
     const updated = messagesRef.current.map(m =>
       m.id === msgId

@@ -117,6 +117,7 @@ const StepDetail: FC<{ step: PipelineStep }> = ({ step }) => {
       {step.name === 'risk_assessment' && <RiskDetail meta={meta} />}
       {step.name === 'hitl_gate' && <HITLDetail meta={meta} step={step} />}
       {step.name === 'llm_route_decision' && <RouteDetail meta={meta} />}
+      {step.name === 'dispatch' && <DispatchDetail meta={meta} />}
       {step.name === 'post_process' && <PostProcessDetail meta={meta} />}
     </div>
   );
@@ -202,15 +203,21 @@ const RiskDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => {
   );
 };
 
-const HITLDetail: FC<{ meta: Record<string, unknown>; step: PipelineStep }> = ({ meta, step }) => (
-  <div className="text-muted-foreground">
-    {step.status === 'paused' ? (
-      <div className="text-yellow-600">Waiting for approval...</div>
-    ) : (
-      <div>Passed (no approval needed)</div>
-    )}
-  </div>
-);
+const HITLDetail: FC<{ meta: Record<string, unknown>; step: PipelineStep }> = ({ meta, step }) => {
+  const passed = meta.passed as boolean | undefined;
+  const approvalId = meta.approval_id as string | undefined;
+  return (
+    <div className="text-muted-foreground">
+      {step.status === 'paused' ? (
+        <div className="text-yellow-600">Waiting for approval...</div>
+      ) : passed === false && approvalId ? (
+        <div className="text-green-600">Approved (pre-approved resume)</div>
+      ) : (
+        <div>Passed (no approval needed)</div>
+      )}
+    </div>
+  );
+};
 
 const RouteDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
   <div className="text-muted-foreground space-y-0.5">
@@ -222,6 +229,14 @@ const RouteDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
         {String(meta.reasoning)}
       </pre>
     )}
+  </div>
+);
+
+const DispatchDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
+  <div className="text-muted-foreground space-y-0.5">
+    {meta.route && <div>Route: <span className="font-medium text-foreground">{String(meta.route)}</span></div>}
+    {meta.executor && <div>Executor: {String(meta.executor)}</div>}
+    {!meta.route && !meta.executor && <div>Dispatching to executor...</div>}
   </div>
 );
 
