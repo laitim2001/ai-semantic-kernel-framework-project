@@ -214,7 +214,14 @@ class SubagentExecutor(BaseExecutor):
                 )
             )
 
-        # Emit AGENT_MEMBER_TOOL_CALL (LLM inference start)
+        # Build system prompt
+        system_prompt = (
+            f"You are {agent_name}, an IT operations specialist. "
+            f"Complete this sub-task concisely.\n"
+            f"Context: {request.knowledge_text[:500]}"
+        )
+
+        # Emit AGENT_MEMBER_TOOL_CALL (start) with full prompt
         if event_queue is not None:
             await event_queue.put(
                 PipelineEvent(
@@ -225,7 +232,11 @@ class SubagentExecutor(BaseExecutor):
                         "tool_call_id": f"llm-{agent_name}",
                         "tool_name": "llm_inference",
                         "status": "running",
-                        "input_args": {"task": task_text[:100]},
+                        "input_args": {
+                            "role": sub_task.get("role", "specialist"),
+                            "system_prompt": system_prompt[:1000],
+                            "user_message": task_text[:500],
+                        },
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
                     step_name="dispatch",
@@ -249,14 +260,7 @@ class SubagentExecutor(BaseExecutor):
                 model=self._model
                 or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
                 messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            f"You are {agent_name}, an IT operations specialist. "
-                            f"Complete this sub-task concisely.\n"
-                            f"Context: {request.knowledge_text[:500]}"
-                        ),
-                    },
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": task_text},
                 ],
                 max_completion_tokens=1024,
@@ -273,7 +277,21 @@ class SubagentExecutor(BaseExecutor):
         if event_queue is not None:
             from ...pipeline.service import PipelineEvent, PipelineEventType
 
-            # Emit AGENT_MEMBER_TOOL_CALL (completed)
+            # Emit agent's analysis as thinking
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_THINKING,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "thinking_content": output,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+
+            # Emit AGENT_MEMBER_TOOL_CALL (completed) with full response
             await event_queue.put(
                 PipelineEvent(
                     PipelineEventType.AGENT_MEMBER_TOOL_CALL,
@@ -283,7 +301,7 @@ class SubagentExecutor(BaseExecutor):
                         "tool_call_id": f"llm-{agent_name}",
                         "tool_name": "llm_inference",
                         "status": "completed",
-                        "output_result": {"preview": output[:200]},
+                        "output_result": {"response": output[:2000]},
                         "duration_ms": round(duration),
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
@@ -291,7 +309,7 @@ class SubagentExecutor(BaseExecutor):
                 )
             )
 
-            # Emit AGENT_MEMBER_COMPLETED
+            # Emit AGENT_MEMBER_COMPLETED with full output
             await event_queue.put(
                 PipelineEvent(
                     PipelineEventType.AGENT_MEMBER_COMPLETED,
@@ -300,7 +318,7 @@ class SubagentExecutor(BaseExecutor):
                         "agent_id": agent_name,
                         "agent_name": agent_name,
                         "status": "completed",
-                        "output": output[:300],
+                        "output": output[:2000],
                         "duration_ms": round(duration),
                         "completed_at": datetime.now(timezone.utc).isoformat(),
                     },

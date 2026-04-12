@@ -119,8 +119,10 @@ export function useOrchestratorPipeline() {
     switch (eventType) {
       case 'PIPELINE_START': {
         const startFrom = (data.start_from as number) || 0;
-        // Reset agent team store for new pipeline run
-        useAgentTeamStore.getState().reset();
+        // Only reset agent team store on fresh runs, not checkpoint resume
+        if (startFrom === 0) {
+          useAgentTeamStore.getState().reset();
+        }
         setState(prev => {
           // If resuming from checkpoint, mark skipped steps as 'completed (restored)'
           const updatedSteps = startFrom > 0
@@ -341,15 +343,26 @@ export function useOrchestratorPipeline() {
         });
         break;
 
-      case 'AGENT_MEMBER_COMPLETED':
-        useAgentTeamStore.getState().completeAgent({
+      case 'AGENT_MEMBER_COMPLETED': {
+        const teamStore = useAgentTeamStore.getState();
+        teamStore.completeAgent({
           team_id: data.team_id as string,
           agent_id: data.agent_id as string,
           status: (data.status as 'completed' | 'failed') || 'completed',
           duration_ms: (data.duration_ms as number) || 0,
           completed_at: (data.completed_at as string) || new Date().toISOString(),
         });
+        // Store the agent's full output for detail drawer
+        if (data.output) {
+          const agentId = data.agent_id as string;
+          const map = teamStore.agentDataMap;
+          if (!map[agentId]) {
+            map[agentId] = { thinkingHistory: [], toolCalls: [], output: '' };
+          }
+          map[agentId].output = data.output as string;
+        }
         break;
+      }
 
       case 'AGENT_TEAM_COMPLETED': {
         const store = useAgentTeamStore.getState();

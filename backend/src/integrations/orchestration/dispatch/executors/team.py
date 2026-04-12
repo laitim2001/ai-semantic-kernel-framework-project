@@ -190,7 +190,7 @@ class TeamExecutor(BaseExecutor):
                 )
             )
 
-            # Emit shared context as AGENT_MEMBER_THINKING (agent interaction visualization)
+            # Emit prior team context as thinking (agent interaction)
             if shared_context:
                 context_summary = "\n".join(shared_context)
                 await event_queue.put(
@@ -199,16 +199,27 @@ class TeamExecutor(BaseExecutor):
                         {
                             "team_id": team_id,
                             "agent_id": agent_name,
-                            "thinking_content": (
-                                f"📋 Reviewing prior team findings:\n{context_summary}"
-                            ),
+                            "thinking_content": context_summary,
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                         },
                         step_name="dispatch",
                     )
                 )
 
-        # Emit AGENT_MEMBER_TOOL_CALL (LLM inference start)
+        # Build context from prior agents
+        prior = ""
+        if shared_context:
+            prior = "\n\n## Prior Team Findings\n" + "\n".join(shared_context)
+
+        # Build the full system prompt for this agent
+        system_prompt = (
+            f"You are {agent_name}, an IT expert. "
+            f"Your role: {member['role']}\n"
+            f"Context: {request.knowledge_text[:500]}"
+            f"{prior}"
+        )
+
+        # Emit AGENT_MEMBER_TOOL_CALL (LLM inference start) with full prompt
         if event_queue is not None:
             await event_queue.put(
                 PipelineEvent(
@@ -219,7 +230,11 @@ class TeamExecutor(BaseExecutor):
                         "tool_call_id": f"llm-{agent_name}",
                         "tool_name": "llm_inference",
                         "status": "running",
-                        "input_args": {"role": member["role"]},
+                        "input_args": {
+                            "role": member["role"],
+                            "system_prompt": system_prompt[:1000],
+                            "user_message": request.task[:500],
+                        },
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
                     step_name="dispatch",
@@ -239,24 +254,11 @@ class TeamExecutor(BaseExecutor):
                 ),
             )
 
-            # Build context from prior agents
-            prior = ""
-            if shared_context:
-                prior = "\n\n## Prior Team Findings\n" + "\n".join(shared_context)
-
             response = client.chat.completions.create(
                 model=self._model
                 or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
                 messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            f"You are {agent_name}, an IT expert. "
-                            f"Your role: {member['role']}\n"
-                            f"Context: {request.knowledge_text[:500]}"
-                            f"{prior}"
-                        ),
-                    },
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": request.task},
                 ],
                 max_completion_tokens=1024,
@@ -269,10 +271,25 @@ class TeamExecutor(BaseExecutor):
 
         duration = (time.time() - start) * 1000
 
-        # Emit AGENT_MEMBER_TOOL_CALL (completed)
+        # Emit agent's full analysis as thinking content
         if event_queue is not None:
             from ...pipeline.service import PipelineEvent, PipelineEventType
 
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_THINKING,
+                    {
+                        "team_id": team_id,
+                        "agent_id": agent_name,
+                        "thinking_content": output,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                    step_name="dispatch",
+                )
+            )
+
+        # Emit AGENT_MEMBER_TOOL_CALL (completed) with full response
+        if event_queue is not None:
             await event_queue.put(
                 PipelineEvent(
                     PipelineEventType.AGENT_MEMBER_TOOL_CALL,
@@ -282,7 +299,7 @@ class TeamExecutor(BaseExecutor):
                         "tool_call_id": f"llm-{agent_name}",
                         "tool_name": "llm_inference",
                         "status": "completed",
-                        "output_result": {"preview": output[:200]},
+                        "output_result": {"response": output[:2000]},
                         "duration_ms": round(duration),
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
@@ -290,22 +307,8 @@ class TeamExecutor(BaseExecutor):
                 )
             )
 
-        # Emit AGENT_MEMBER_COMPLETED
+        # Emit AGENT_MEMBER_COMPLETED with full output
         if event_queue is not None:
-            # Emit agent's response as thinking content (visible in detail drawer)
-            await event_queue.put(
-                PipelineEvent(
-                    PipelineEventType.AGENT_MEMBER_THINKING,
-                    {
-                        "team_id": team_id,
-                        "agent_id": agent_name,
-                        "thinking_content": f"💬 Response:\n{output[:500]}",
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                    },
-                    step_name="dispatch",
-                )
-            )
-
             await event_queue.put(
                 PipelineEvent(
                     PipelineEventType.AGENT_MEMBER_COMPLETED,
@@ -314,7 +317,7 @@ class TeamExecutor(BaseExecutor):
                         "agent_id": agent_name,
                         "agent_name": agent_name,
                         "status": "completed",
-                        "output": output[:300],
+                        "output": output[:2000],
                         "duration_ms": round(duration),
                         "completed_at": datetime.now(timezone.utc).isoformat(),
                     },
