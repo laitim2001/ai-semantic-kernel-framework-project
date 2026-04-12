@@ -248,38 +248,44 @@ class SwarmWorkerExecutor:
                         messages.append({"role": "tool", "tool_name": tool_name, "result": tool_result})
                 else:
                     # No tool calls — final response
-                    # If content is empty, do a fallback generate() call with tool context
+                    # If content is empty, retry with tool_choice="none" to force text output
+                    # keeping full chat history (tool results) for context
                     if not content.strip():
                         logger.info(
-                            "Worker %s: empty content on iteration %d (tool_calls_made=%d), running fallback",
+                            "Worker %s: empty content on iteration %d (tool_calls_made=%d), forcing text response",
                             self._worker_id, iteration, len(tool_calls_made),
                         )
-                        # Build context from prior tool results
-                        tool_context = ""
-                        if tool_calls_made:
-                            tool_summaries = []
-                            for tc in tool_calls_made[-3:]:
-                                tool_summaries.append(
-                                    f"- {tc['tool_name']}: {json.dumps(tc.get('result', {}), ensure_ascii=False, default=str)[:300]}"
-                                )
-                            tool_context = "\n## 工具調用結果\n" + "\n".join(tool_summaries)
-
                         try:
-                            content = await self._llm.generate(
-                                prompt=(
-                                    f"{self._role_def.get('system_prompt', '')}\n\n"
-                                    f"## 任務\n{self._task.description}\n\n"
-                                    f"{tool_context}\n\n"
-                                    f"根據以上資訊，請直接用你的專業知識分析並回答。不要嘗試調用任何工具。"
-                                ),
+                            # Add instruction to produce analysis, then call with tool_choice="none"
+                            retry_messages = working_messages + [{
+                                "role": "user",
+                                "content": "請根據以上所有資訊和工具結果，直接用你的專業知識完成分析並回答任務。給出具體的診斷結果和建議。",
+                            }]
+                            retry_result = await self._llm.chat_with_tools(
+                                messages=retry_messages,
+                                tools=tool_schemas,
+                                tool_choice="none",
                                 max_tokens=2048,
                                 temperature=0.7,
                             )
-                        except Exception as gen_err:
-                            logger.warning("Worker %s: fallback generate failed: %s", self._worker_id, gen_err)
-                            if thinking_steps:
-                                content = thinking_steps[-1].get("content", "")
-                            if not content:
+                            content = retry_result.get("content") or ""
+                        except Exception as retry_err:
+                            logger.warning("Worker %s: forced text retry failed: %s", self._worker_id, retry_err)
+
+                        # Final fallback: generate() without chat context
+                        if not content.strip():
+                            try:
+                                content = await self._llm.generate(
+                                    prompt=(
+                                        f"{self._role_def.get('system_prompt', '')}\n\n"
+                                        f"## 任務\n{self._task.description}\n\n"
+                                        f"請直接用你的專業知識分析並回答。"
+                                    ),
+                                    max_tokens=2048,
+                                    temperature=0.7,
+                                )
+                            except Exception as gen_err:
+                                logger.warning("Worker %s: generate fallback failed: %s", self._worker_id, gen_err)
                                 content = f"Worker {self._worker_id} 已完成分析但無法生成摘要。"
 
                     messages.append({"role": "assistant", "content": content})
@@ -305,7 +311,7 @@ class SwarmWorkerExecutor:
                         duration_ms=duration_ms,
                     )
 
-            # Max iterations reached — generate final response with accumulated context
+            # Max iterations reached — force final text response with full chat context
             duration_ms = (time.time() - start_time) * 1000
             logger.info(
                 "Worker %s: max iterations reached (thinking_steps=%d, tool_calls=%d)",
@@ -313,29 +319,24 @@ class SwarmWorkerExecutor:
             )
             last_content = thinking_steps[-1]["content"] if thinking_steps else ""
             if not last_content.strip():
-                # Build context from tool results for a meaningful fallback
-                tool_context = ""
-                if tool_calls_made:
-                    tool_summaries = []
-                    for tc in tool_calls_made[-3:]:  # Last 3 tool results
-                        tool_summaries.append(
-                            f"- {tc['tool_name']}: {json.dumps(tc.get('result', {}), ensure_ascii=False, default=str)[:300]}"
-                        )
-                    tool_context = "\n## 工具調用結果\n" + "\n".join(tool_summaries)
-
+                # Retry with tool_choice="none" preserving full chat history
                 try:
-                    last_content = await self._llm.generate(
-                        prompt=(
-                            f"{self._role_def.get('system_prompt', '')}\n\n"
-                            f"## 任務\n{self._task.description}\n\n"
-                            f"{tool_context}\n\n"
-                            f"根據以上資訊，請直接用你的專業知識分析並回答。不要嘗試調用任何工具。"
-                        ),
+                    retry_messages = working_messages + [{
+                        "role": "user",
+                        "content": "請根據以上所有資訊和工具結果，直接用你的專業知識完成分析並回答任務。給出具體的診斷結果和建議。",
+                    }]
+                    retry_result = await self._llm.chat_with_tools(
+                        messages=retry_messages,
+                        tools=tool_schemas,
+                        tool_choice="none",
                         max_tokens=2048,
                         temperature=0.7,
                     )
-                except Exception as gen_err:
-                    logger.warning("Worker %s: fallback generate failed: %s", self._worker_id, gen_err)
+                    last_content = retry_result.get("content") or ""
+                except Exception as retry_err:
+                    logger.warning("Worker %s: max-iter forced text failed: %s", self._worker_id, retry_err)
+
+                if not last_content.strip():
                     last_content = f"Worker {self._worker_id} 已完成分析但無法生成摘要。"
 
             await self._emit("SWARM_WORKER_COMPLETED", {
