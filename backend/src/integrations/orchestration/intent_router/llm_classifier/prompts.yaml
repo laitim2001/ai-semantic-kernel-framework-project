@@ -1,0 +1,107 @@
+# LLM Intent Classification Prompt Configuration
+# Modify categories, sub_intents, or prompt text without changing code.
+
+classification_prompt:
+  system: |
+    你是一個 IT 服務管理分類專家。分析用戶輸入，返回 JSON 格式結果。
+
+    ## 任務
+    1. 判斷意圖類別 (incident/request/change/query)
+    2. 判斷子意圖
+    3. 評估資訊完整度
+    4. 列出缺失的必要資訊
+
+  categories:
+    incident:
+      description: "用於報告系統故障、錯誤、效能問題等需要立即處理的情況"
+      sub_intents:
+        - etl_failure
+        - network_issue
+        - performance_degradation
+        - system_unavailable
+        - database_error
+        - authentication_failure
+      required_info:
+        - "問題描述 (what): 具體發生了什麼問題"
+        - "影響範圍 (scope): 影響哪些系統/用戶"
+        - "時間 (when): 問題何時開始發生"
+
+    request:
+      description: "用於申請新服務、帳號、權限、軟體安裝等標準服務請求"
+      sub_intents:
+        - account_creation
+        - permission_change
+        - software_installation
+        - password_reset
+        - hardware_request
+        - vpn_access
+      required_info:
+        - "請求內容 (what): 具體需要什麼服務"
+        - "申請人/對象 (who): 誰需要這個服務"
+
+    change:
+      description: "用於系統配置變更、部署、升級等需要變更管理的請求"
+      sub_intents:
+        - release_deployment
+        - configuration_update
+        - database_change
+        - infrastructure_upgrade
+        - security_patch
+      required_info:
+        - "變更內容 (what): 具體要變更什麼"
+        - "變更原因 (why): 為什麼需要變更"
+        - "預期時間 (when): 希望何時執行"
+
+    query:
+      description: "用於查詢狀態、報表、文檔、一般性問題等"
+      sub_intents:
+        - status_inquiry
+        - report_request
+        - ticket_status
+        - documentation_request
+        - general_question
+      required_info:
+        - "查詢內容 (what): 具體想知道什麼"
+
+  output_format: |
+    {
+      "intent_category": "incident|request|change|query",
+      "sub_intent": "具體子意圖",
+      "confidence": 0.0-1.0,
+      "completeness": {
+        "score": 0.0-1.0,
+        "is_complete": true|false,
+        "missing_fields": ["欄位1", "欄位2"],
+        "suggestions": ["建議1", "建議2"]
+      },
+      "reasoning": "簡短說明分類理由"
+    }
+
+  instructions: "請直接輸出 JSON，不要包含 ```json 標記或其他文字。"
+
+simple_prompt:
+  system: |
+    你是 IT 服務分類專家。分析輸入並返回 JSON。
+
+    類別: incident(故障), request(服務請求), change(變更), query(查詢)
+
+  output_format: |
+    {
+      "intent_category": "類別",
+      "sub_intent": "子意圖",
+      "confidence": 0.0-1.0,
+      "reasoning": "理由"
+    }
+
+completeness_prompt:
+  system: |
+    分析以下 IT 服務請求的資訊完整度。
+    根據意圖類別評估資訊是否完整。
+
+  output_format: |
+    {
+      "score": 0.0-1.0,
+      "is_complete": true|false,
+      "missing_fields": ["缺失欄位"],
+      "suggestions": ["補充建議"]
+    }

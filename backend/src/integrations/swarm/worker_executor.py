@@ -107,6 +107,10 @@ class SwarmWorkerExecutor:
 
             # Get role-filtered tool schemas
             tool_schemas = self._get_filtered_tool_schemas()
+            logger.info(
+                "Worker %s: starting execution (role=%s, tools=%d, timeout=%.0fs)",
+                self._worker_id, self._task.role, len(tool_schemas), self._timeout,
+            )
 
             # Function calling loop
             for iteration in range(_MAX_TOOL_ITERATIONS):
@@ -138,13 +142,15 @@ class SwarmWorkerExecutor:
                 })
 
                 # Call LLM with tools
+                # Force text response on last iteration to prevent infinite tool loops
+                is_last_iteration = iteration >= _MAX_TOOL_ITERATIONS - 1
                 try:
                     if tool_schemas and hasattr(self._llm, "chat_with_tools"):
                         result = await self._llm.chat_with_tools(
                             messages=working_messages,
                             tools=tool_schemas,
-                            tool_choice="auto",
-                            max_tokens=2048,
+                            tool_choice="auto" if not is_last_iteration else "none",
+                            max_tokens=4096,
                             temperature=0.7,
                         )
                     else:
@@ -154,15 +160,17 @@ class SwarmWorkerExecutor:
                                 f"[{m['role']}] {m.get('content', '')}"
                                 for m in working_messages
                             ),
-                            max_tokens=2048,
+                            max_tokens=4096,
                             temperature=0.7,
                         )
                         result = {"content": content, "tool_calls": None, "finish_reason": "stop"}
                 except Exception as llm_err:
-                    logger.error("Worker %s: LLM call failed: %s", self._worker_id, llm_err)
+                    logger.error("Worker %s: LLM call FAILED iter %d: %s", self._worker_id, iteration, llm_err)
                     # Retry once
                     if iteration == 0:
+                        logger.info("Worker %s: retrying after iter 0 failure", self._worker_id)
                         continue
+                    logger.error("Worker %s: EXIT via LLM error path → content=EMPTY", self._worker_id)
                     return WorkerResult(
                         worker_id=self._worker_id,
                         role=self._task.role,
@@ -178,6 +186,14 @@ class SwarmWorkerExecutor:
 
                 content = result.get("content") or ""
                 tool_calls = result.get("tool_calls")
+
+                logger.info(
+                    "Worker %s iter %d: content_len=%d, tool_calls=%s, is_last=%s, finish=%s",
+                    self._worker_id, iteration, len(content),
+                    len(tool_calls) if tool_calls else 0,
+                    is_last_iteration,
+                    result.get("finish_reason", "?"),
+                )
 
                 # Emit thinking event
                 if content:
@@ -246,25 +262,71 @@ class SwarmWorkerExecutor:
                         messages.append({"role": "tool", "tool_name": tool_name, "result": tool_result})
                 else:
                     # No tool calls — final response
-                    # If content is empty, do a fallback generate() call
+                    finish_reason = result.get("finish_reason", "stop")
+                    logger.info(
+                        "Worker %s: NO TOOL CALLS on iter %d → final response path, content_len=%d, finish=%s",
+                        self._worker_id, iteration, len(content), finish_reason,
+                    )
+
+                    # If content is empty (often finish_reason=length means context too large)
                     if not content.strip():
-                        logger.info("Worker %s: empty content, running fallback generate()", self._worker_id)
+                        logger.info(
+                            "Worker %s: empty content (finish=%s, tool_calls_made=%d), retrying with compact context",
+                            self._worker_id, finish_reason, len(tool_calls_made),
+                        )
+
+                        # Strategy: use compact messages (system + user + tool summary only)
+                        # This avoids context overflow from large tool call/result messages
+                        tool_summary = ""
+                        if tool_calls_made:
+                            summaries = []
+                            for tc in tool_calls_made[-3:]:
+                                result_str = json.dumps(tc.get("result", {}), ensure_ascii=False, default=str)[:200]
+                                summaries.append(f"- {tc['tool_name']}: {result_str}")
+                            tool_summary = "\n## 工具調用結果摘要\n" + "\n".join(summaries)
+
+                        compact_messages = [
+                            {"role": "system", "content": self._role_def.get("system_prompt", "")},
+                            {"role": "user", "content": (
+                                f"## 任務\n{self._task.description}\n"
+                                f"{tool_summary}\n\n"
+                                f"根據以上資訊，請直接用你的專業知識完成分析。"
+                                f"給出具體的診斷結果、排查步驟和修復建議。"
+                            )},
+                        ]
                         try:
-                            content = await self._llm.generate(
-                                prompt=(
-                                    f"{self._role_def.get('system_prompt', '')}\n\n"
-                                    f"## 任務\n{self._task.description}\n\n"
-                                    f"請直接用你的專業知識分析並回答。"
-                                ),
-                                max_tokens=2048,
+                            retry_result = await self._llm.chat_with_tools(
+                                messages=compact_messages,
+                                tools=None,
+                                max_tokens=4096,
                                 temperature=0.7,
                             )
-                        except Exception as gen_err:
-                            logger.warning("Worker %s: fallback generate failed: %s", self._worker_id, gen_err)
-                            # Use last thinking step if available
-                            if thinking_steps:
-                                content = thinking_steps[-1].get("content", "")
+                            content = retry_result.get("content") or ""
+                            logger.info("Worker %s: compact retry → content_len=%d", self._worker_id, len(content))
+                        except Exception as retry_err:
+                            logger.warning("Worker %s: compact retry FAILED: %s", self._worker_id, retry_err)
 
+                        # Final fallback: generate() with minimal prompt
+                        if not content.strip():
+                            logger.info("Worker %s: still empty, trying generate()", self._worker_id)
+                            try:
+                                content = await self._llm.generate(
+                                    prompt=(
+                                        f"{self._role_def.get('system_prompt', '')}\n\n"
+                                        f"## 任務\n{self._task.description}\n\n"
+                                        f"請直接用你的專業知識分析並回答。給出具體的診斷結果和建議。"
+                                    ),
+                                    max_tokens=4096,
+                                    temperature=0.7,
+                                )
+                            except Exception as gen_err:
+                                logger.warning("Worker %s: generate fallback failed: %s", self._worker_id, gen_err)
+                                content = f"Worker {self._worker_id} 已完成分析但無法生成摘要。"
+
+                    logger.info(
+                        "Worker %s: EXIT via normal path → content_len=%d, status=completed",
+                        self._worker_id, len(content),
+                    )
                     messages.append({"role": "assistant", "content": content})
                     duration_ms = (time.time() - start_time) * 1000
 
@@ -288,21 +350,32 @@ class SwarmWorkerExecutor:
                         duration_ms=duration_ms,
                     )
 
-            # Max iterations reached — fallback generate if no content
+            # Max iterations reached — force final text response with full chat context
             duration_ms = (time.time() - start_time) * 1000
+            logger.info(
+                "Worker %s: max iterations reached (thinking_steps=%d, tool_calls=%d)",
+                self._worker_id, len(thinking_steps), len(tool_calls_made),
+            )
             last_content = thinking_steps[-1]["content"] if thinking_steps else ""
             if not last_content.strip():
+                # Retry with tool_choice="none" preserving full chat history
                 try:
-                    last_content = await self._llm.generate(
-                        prompt=(
-                            f"{self._role_def.get('system_prompt', '')}\n\n"
-                            f"## 任務\n{self._task.description}\n\n"
-                            f"請直接用你的專業知識分析並回答。"
-                        ),
+                    retry_messages = working_messages + [{
+                        "role": "user",
+                        "content": "請根據以上所有資訊和工具結果，直接用你的專業知識完成分析並回答任務。給出具體的診斷結果和建議。",
+                    }]
+                    retry_result = await self._llm.chat_with_tools(
+                        messages=retry_messages,
+                        tools=tool_schemas,
+                        tool_choice="none",
                         max_tokens=2048,
                         temperature=0.7,
                     )
-                except Exception:
+                    last_content = retry_result.get("content") or ""
+                except Exception as retry_err:
+                    logger.warning("Worker %s: max-iter forced text failed: %s", self._worker_id, retry_err)
+
+                if not last_content.strip():
                     last_content = f"Worker {self._worker_id} 已完成分析但無法生成摘要。"
 
             await self._emit("SWARM_WORKER_COMPLETED", {
@@ -313,6 +386,10 @@ class SwarmWorkerExecutor:
                 "duration_ms": round(duration_ms, 2),
             })
 
+            logger.info(
+                "Worker %s: EXIT via max-iterations path → content_len=%d",
+                self._worker_id, len(last_content),
+            )
             return WorkerResult(
                 worker_id=self._worker_id,
                 role=self._task.role,

@@ -588,8 +588,75 @@ class CompletenessRules:
 # Utility Functions
 # =============================================================================
 
+def _load_rules_from_yaml() -> "CompletenessRules | None":
+    """Load completeness rules from YAML config file."""
+    import logging
+
+    import yaml
+
+    yaml_path = os.path.join(os.path.dirname(__file__), "rules.yaml")
+    logger = logging.getLogger(__name__)
+
+    if not os.path.exists(yaml_path):
+        return None
+
+    try:
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+
+        rules_dict = {}
+        for cat_name, cat_config in config.get("rules", {}).items():
+            category = ITIntentCategory.from_string(cat_name)
+
+            required = []
+            for fd in cat_config.get("required_fields", []):
+                required.append(FieldDefinition(
+                    name=fd["name"],
+                    display_name=fd.get("display_name", fd["name"]),
+                    description=fd.get("description", ""),
+                    patterns=fd.get("patterns", []),
+                    keywords=fd.get("keywords", []),
+                    required=True,
+                    examples=fd.get("examples", []),
+                ))
+
+            optional = []
+            for fd in cat_config.get("optional_fields", []):
+                optional.append(FieldDefinition(
+                    name=fd["name"],
+                    display_name=fd.get("display_name", fd["name"]),
+                    description=fd.get("description", ""),
+                    patterns=fd.get("patterns", []),
+                    keywords=fd.get("keywords", []),
+                    required=False,
+                    examples=fd.get("examples", []),
+                ))
+
+            rules_dict[category] = CompletenessRule(
+                category=category,
+                threshold=float(cat_config.get("threshold", 0.5)),
+                required_fields=required,
+                optional_fields=optional,
+                description=cat_config.get("description", ""),
+            )
+
+        if rules_dict:
+            result = CompletenessRules()
+            result._rules.update(rules_dict)
+            logger.info("Loaded completeness rules from YAML (%d categories)", len(rules_dict))
+            return result
+
+    except Exception as e:
+        logger.warning("Failed to load rules.yaml, using Python defaults: %s", str(e)[:100])
+
+    return None
+
+
 def get_default_rules() -> CompletenessRules:
-    """Get default completeness rules instance."""
+    """Get completeness rules — YAML first, Python fallback."""
+    yaml_rules = _load_rules_from_yaml()
+    if yaml_rules is not None:
+        return yaml_rules
     return CompletenessRules()
 
 

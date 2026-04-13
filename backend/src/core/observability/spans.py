@@ -129,7 +129,7 @@ async def record_llm_call(
     Records duration and token usage metrics.
 
     Args:
-        model: Model deployment name (e.g., "gpt-5.2").
+        model: Model deployment name (e.g., "gpt-5.4-mini").
         provider: LLM provider name (e.g., "azure", "anthropic").
         extra_attributes: Additional span attributes.
 

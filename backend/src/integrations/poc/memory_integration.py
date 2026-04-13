@@ -218,8 +218,17 @@ async def create_memory_integration() -> Optional[TeamMemoryIntegration]:
             logger.info("Memory: UnifiedMemoryManager unavailable, skipping integration")
             return None
 
+        # Initialize LLM service for structured summarization
+        llm_service = None
+        try:
+            from src.integrations.llm.factory import LLMServiceFactory
+            llm_service = LLMServiceFactory.create(use_cache=True)
+            logger.info("Memory: LLM service initialized for structured summarization")
+        except Exception as e:
+            logger.info(f"Memory: LLM service unavailable, using basic summary: {e}")
+
         mm = OrchestratorMemoryManager(
-            llm_service=None,  # PoC: basic summary without LLM
+            llm_service=llm_service,
             memory_client=memory_client,
         )
         logger.info("Memory: TeamMemoryIntegration initialized")

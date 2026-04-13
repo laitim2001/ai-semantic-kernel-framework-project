@@ -608,6 +608,8 @@ async def run_parallel_team(
     timeout: float = 120.0,
     comm_window: float = 15.0,
     session_id: str = "",
+    skip_phase0: bool = False,
+    skip_phase2: bool = False,
 ) -> TeamResult:
     """V3/V4: Run agents in parallel with CC-like lifecycle management.
 
@@ -662,24 +664,30 @@ async def run_parallel_team(
     )
 
     # ── Phase 0: TeamLead decomposition ──
-    # Inject memory context into the decomposition prompt
-    enriched_context = context
-    if memory_context:
-        enriched_context = f"{memory_context}\n\n{context}" if context else memory_context
-
+    # skip_phase0=True when tasks are pre-populated by production's TaskDecomposer
     phase0_ms = 0
-    try:
-        lead_client = client_factory()
-        phase0_ms = await phase0_decompose(
-            task, enriched_context, lead_client, lead_tools, emitter,
-            lead_prompt=dynamic_lead_prompt,
-        )
-    except Exception as e:
-        logger.error(f"Phase 0 failed, falling back to single task: {e}")
-        shared.add_task("T-fallback", task, priority=1)
+    if skip_phase0:
+        task_count = shared.task_count()
+        logger.info(f"Phase 0 SKIPPED (skip_phase0=True): {task_count} tasks pre-populated")
+    else:
+        # Inject memory context into the decomposition prompt
+        enriched_context = context
+        if memory_context:
+            enriched_context = f"{memory_context}\n\n{context}" if context else memory_context
+
+        try:
+            lead_client = client_factory()
+            phase0_ms = await phase0_decompose(
+                task, enriched_context, lead_client, lead_tools, emitter,
+                lead_prompt=dynamic_lead_prompt,
+            )
+        except Exception as e:
+            logger.error(f"Phase 0 failed, falling back to single task: {e}")
+            shared.add_task("T-fallback", task, priority=1)
 
     task_count = shared.task_count()
-    logger.info(f"Phase 0 complete: {task_count} tasks created")
+    if not skip_phase0:
+        logger.info(f"Phase 0 complete: {task_count} tasks created")
 
     if emitter:
         await emitter.emit_event("SWARM_PROGRESS", {
@@ -689,7 +697,6 @@ async def run_parallel_team(
         })
 
     # ── Phase 1: Launch persistent agents ──
-    from agent_framework import Agent
     import concurrent.futures
 
     _executor = concurrent.futures.ThreadPoolExecutor(
@@ -700,12 +707,23 @@ async def run_parallel_team(
 
     for cfg in agents_config:
         agent_client = client_factory()
-        cfg.agent = Agent(
-            agent_client,
-            name=cfg.name,
-            instructions=cfg.instructions,
-            tools=cfg.tools,
-        )
+        # Production mode: client_factory returns TeamAgentAdapter (has .run/.name)
+        # PoC mode: client_factory returns MAF ChatClient (needs Agent() wrapper)
+        if hasattr(agent_client, "run") and hasattr(agent_client, "name"):
+            # TeamAgentAdapter — already agent-compatible, use directly
+            agent_client._name = cfg.name
+            if cfg.instructions:
+                agent_client._instructions = cfg.instructions
+            cfg.agent = agent_client
+        else:
+            # MAF client — wrap with Agent()
+            from agent_framework import Agent
+            cfg.agent = Agent(
+                agent_client,
+                name=cfg.name,
+                instructions=cfg.instructions,
+                tools=cfg.tools,
+            )
 
     # V4: Event-driven approval manager (CC PermissionDecision equivalent)
     _approval_manager = None
@@ -830,9 +848,18 @@ async def run_parallel_team(
             agent_results[cfg.name] = f"ERROR: {e}"
 
     # ── Phase 2: Lead Synthesis ──
+    # skip_phase2=True when production's _synthesize_with_llm() handles synthesis
     synthesis = ""
     phase2_ms = 0
-    if agent_results:
+    if skip_phase2:
+        logger.info("Phase 2 SKIPPED (skip_phase2=True): synthesis handled by caller")
+        # Build raw findings as fallback synthesis
+        synthesis = "\n\n".join(
+            f"## {name}\n{output[:2000]}"
+            for name, output in agent_results.items()
+            if output and not output.startswith("ERROR") and not output.startswith("CANCELLED")
+        )
+    elif agent_results:
         if emitter:
             await emitter.emit_event("AGENT_THINKING", {
                 "agent": "TeamLead",

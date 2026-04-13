@@ -33,14 +33,21 @@ _AzureOpenAIEncoder = None
 
 try:
     from semantic_router import Route
-    from semantic_router.layer import RouteLayer
     from semantic_router.encoders import OpenAIEncoder
 
     _Route = Route
-    _AurelioRouter = RouteLayer
     _OpenAIEncoder = OpenAIEncoder
+
+    # v0.1.x uses semantic_router.routers.SemanticRouter (not .layer.RouteLayer)
+    try:
+        from semantic_router.routers import SemanticRouter as _SR
+        _AurelioRouter = _SR
+    except ImportError:
+        from semantic_router.layer import RouteLayer
+        _AurelioRouter = RouteLayer
+
     _SEMANTIC_ROUTER_AVAILABLE = True
-    logger.info("Semantic Router library loaded successfully")
+    logger.info("Semantic Router library loaded successfully (v0.1.x)")
 
     # Try to import Azure OpenAI Encoder
     try:
@@ -220,6 +227,7 @@ class SemanticRouter:
                 aurelio_route = _Route(
                     name=route.name,
                     utterances=route.utterances,
+                    score_threshold=0.3,  # Low library threshold; our own threshold filters
                     metadata={
                         "category": route.category.value,
                         "sub_intent": route.sub_intent,
@@ -230,10 +238,11 @@ class SemanticRouter:
                 )
                 aurelio_routes.append(aurelio_route)
 
-            # Create router layer
+            # Create router layer (auto_sync="local" builds index immediately)
             self._router = _AurelioRouter(
                 encoder=encoder,
                 routes=aurelio_routes,
+                auto_sync="local",
             )
 
             self._initialized = True
@@ -277,17 +286,25 @@ class SemanticRouter:
 
             processing_time = (time.perf_counter() - start_time) * 1000
 
+            # Debug: log raw result from library
+            logger.info(
+                f"Semantic raw result: name={result.name}, "
+                f"score={getattr(result, 'similarity_score', 'N/A')}, "
+                f"input='{user_input[:30]}...'"
+            )
+
             # Handle no match case
             if result is None or result.name is None:
-                logger.debug(
+                logger.info(
                     f"No semantic match for: '{user_input[:50]}...' "
                     f"(time: {processing_time:.2f}ms)"
                 )
                 return SemanticRouteResult.no_match()
 
-            # Get similarity score
-            # Note: RouteLayer returns RouteChoice with similarity attribute
-            similarity = getattr(result, "similarity", 0.0)
+            # Get similarity score (v0.1.x uses similarity_score, older uses similarity)
+            similarity = getattr(result, "similarity_score", None)
+            if similarity is None:
+                similarity = getattr(result, "similarity", 0.0)
 
             # Check threshold
             if similarity < self.threshold:

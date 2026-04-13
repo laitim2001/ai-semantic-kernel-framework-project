@@ -1,65 +1,44 @@
-# Sprint 154 Plan - U2: HITL Approval Gate
+# Sprint 154 Plan - Steps 3-5: 意圖 + 風險 + HITL
 
-## Phase 45: Agent Team V4 - P1 Upgrades
+## Phase 45: Orchestration Core
 
-### Sprint Goal
-Add human-in-the-loop approval checkpoint to agent work loop for high-risk tool calls, matching CC's Permission UI pattern.
+### Sprint 目標
+將 V8 的三層意圖路由、完整度檢查、引導對話、7 維風險評估、HITL 審批整合到 pipeline 的 Steps 3-5。
 
 ---
 
 ## User Stories
 
-### US-154-1: Tool Risk Assessment
-**As** the system,
-**I want** to classify tool calls by risk level,
-**So that** high-risk operations require human approval.
+### US-154-1: IntentStep（意圖分析 + 完整度檢查）
+**作為** orchestration pipeline，
+**我希望** 用 V8 三層 cascade（Pattern→Semantic→LLM）分析用戶意圖並檢查資訊完整度，
+**以便** 準確識別意圖類別、子意圖、和缺失資訊。
 
-### US-154-2: Per-Agent Approval Pause
-**As** a human operator,
-**I want** to approve/reject high-risk tool calls,
-**So that** dangerous operations don't execute without oversight.
+### US-154-2: RiskStep（風險評估）
+**作為** orchestration pipeline，
+**我希望** 用 V8 RiskAssessor 的 7 維度 + 40 ITIL 政策評估風險，並用記憶/知識構建 AssessmentContext，
+**以便** 根據上下文做出精確的風險判斷。
 
----
+### US-154-3: HITLGateStep（HITL 審批閘）
+**作為** orchestration pipeline，
+**我希望** 在高風險操作時自動暫停、保存 checkpoint、並建立審批請求，
+**以便** 危險操作必須經過授權才能執行。
 
-## Technical Specification
-
-### Approval Flow
-1. Agent LLM selects a tool → check `requires_approval(tool_name)`
-2. HIGH risk → emit `APPROVAL_REQUIRED` SSE → poll HITLController every 2s
-3. Only the requesting agent pauses (asyncio.sleep in its coroutine)
-4. Other agents continue working (asyncio.gather natural isolation)
-5. User approves/rejects via existing `POST /approvals/{id}/decision`
-6. Agent resumes or skips tool
-
-### Risk Classification (PoC-level)
-- HIGH: `run_diagnostic_command`, `query_database`
-- MEDIUM: `search_knowledge_base` (no approval needed)
-- LOW: all other tools
-
-### Reused Infrastructure
-- HITLController from `integrations/orchestration/hitl/controller.py`
-- Approval API from `api/v1/orchestration/approval_routes.py`
-- SSE APPROVAL_REQUIRED event already in `sse_events.py`
-- Frontend `useOrchestratorSSE.ts` already handles approval state
+### US-154-4: Dialog 暫停路徑
+**作為** orchestration pipeline，
+**我希望** 在資訊不完整時暫停並返回引導問題，
+**以便** 用戶能補充缺失資訊後繼續 pipeline。
 
 ---
 
-## File Changes
+## 檔案變更
 
-| File | Action | Description |
-|------|--------|-------------|
-| `backend/src/integrations/poc/approval_gate.py` | NEW | Risk check + approval helper (~120 LOC) |
-| `backend/src/integrations/poc/agent_work_loop.py` | MODIFY | Insert approval checkpoint in tool execution |
-| `backend/src/api/v1/poc/agent_team_poc.py` | MODIFY | Initialize HITLController |
-| `frontend/src/pages/AgentTeamTestPage.tsx` | MODIFY | Approval dialog for team page |
+| 檔案 | 動作 | 說明 |
+|------|------|------|
+| `pipeline/steps/step3_intent.py` | NEW | IntentStep（包裝 BusinessIntentRouter + CompletenessChecker + GuidedDialogEngine） |
+| `pipeline/steps/step4_risk.py` | NEW | RiskStep（包裝 RiskAssessor + AssessmentContext 建構器） |
+| `pipeline/steps/step5_hitl.py` | NEW | HITLGateStep（包裝 HITLController + checkpoint + ApprovalService） |
 
 ---
 
-## Acceptance Criteria
-
-- [ ] HIGH risk tool → APPROVAL_REQUIRED SSE event emitted
-- [ ] Approve → agent continues with tool execution
-- [ ] Reject → agent skips tool, receives rejection message
-- [ ] Other agents NOT blocked during approval wait
-- [ ] 5 minute timeout → auto-expired
-- [ ] Frontend shows approval dialog with tool name + agent name
+**Story Points**: 21

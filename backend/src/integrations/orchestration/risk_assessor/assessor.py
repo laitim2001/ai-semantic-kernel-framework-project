@@ -156,6 +156,24 @@ class RiskAssessment:
         }
 
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RiskAssessment":
+        """Reconstruct RiskAssessment from a serialized dict.
+
+        Inverse of to_dict(). Used for checkpoint resume.
+        """
+        return cls(
+            level=RiskLevel.from_string(data.get("level", "medium")),
+            score=data.get("score", 0.0),
+            requires_approval=data.get("requires_approval", False),
+            approval_type=data.get("approval_type", "none"),
+            factors=[],  # Factors are not critical for resume
+            reasoning=data.get("reasoning", ""),
+            policy_id=data.get("policy_id"),
+            adjustments_applied=data.get("adjustments_applied", []),
+        )
+
+
 class RiskAssessor:
     """
     Risk assessment engine for IT service management.

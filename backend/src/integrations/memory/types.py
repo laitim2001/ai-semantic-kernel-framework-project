@@ -220,7 +220,7 @@ class MemoryConfig:
     llm_model: str = field(
         default_factory=lambda: os.getenv(
             "MEMORY_LLM_MODEL",
-            os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.2"),
+            os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"),
         )
     )
 

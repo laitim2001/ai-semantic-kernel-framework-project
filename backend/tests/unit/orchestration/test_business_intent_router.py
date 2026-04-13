@@ -48,7 +48,7 @@ class TestRouterConfig:
         config = RouterConfig()
 
         assert config.pattern_threshold == 0.90
-        assert config.semantic_threshold == 0.85
+        assert config.semantic_threshold == 0.70
         assert config.enable_llm_fallback is True
         assert config.enable_completeness is True
         assert config.track_latency is True
@@ -75,7 +75,7 @@ class TestRouterConfig:
             config = RouterConfig.from_env()
 
         assert config.pattern_threshold == 0.90
-        assert config.semantic_threshold == 0.85
+        assert config.semantic_threshold == 0.70
         assert config.enable_llm_fallback is True
         assert config.enable_completeness is True
         assert config.track_latency is True

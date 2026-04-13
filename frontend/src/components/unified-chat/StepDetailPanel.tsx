@@ -1,0 +1,286 @@
+/**
+ * StepDetailPanel — Displays detailed results for each pipeline step.
+ *
+ * Shows step-specific information as it becomes available:
+ * - Memory: pinned count, budget %, chars
+ * - Knowledge: result count, scores
+ * - Intent: category, sub_intent, confidence, layer, completeness
+ * - Risk: level, score, requires_approval
+ * - HITL: approval status
+ * - LLM Route: selected route, reasoning
+ * - Agents: status, output preview
+ * - PostProcess: checkpoint ID
+ *
+ * Phase 45: Orchestration Core
+ */
+
+import { FC } from 'react';
+import type { PipelineStep, AgentProgress } from '@/hooks/useOrchestratorPipeline';
+
+interface StepDetailPanelProps {
+  steps: PipelineStep[];
+  agents: AgentProgress[];
+  selectedRoute: string | null;
+  routeReasoning: string | null;
+}
+
+const ROUTE_LABELS: Record<string, string> = {
+  direct_answer: 'Direct Answer (直接回答)',
+  subagent: 'Subagent (並行執行)',
+  team: 'Team (專家協作)',
+};
+
+const RISK_COLORS: Record<string, string> = {
+  low: 'text-green-600',
+  medium: 'text-yellow-600',
+  high: 'text-orange-600',
+  critical: 'text-red-600',
+};
+
+export const StepDetailPanel: FC<StepDetailPanelProps> = ({
+  steps,
+  agents,
+  selectedRoute,
+  routeReasoning,
+}) => {
+  const completedSteps = steps.filter(s => s.status === 'completed' || s.status === 'paused');
+
+  if (completedSteps.length === 0) {
+    return (
+      <div className="text-xs text-muted-foreground p-3 text-center">
+        等待 pipeline 執行...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 p-3 overflow-y-auto">
+      {completedSteps.map(step => (
+        <StepDetail key={step.name} step={step} />
+      ))}
+
+      {/* Route Decision */}
+      {selectedRoute && (
+        <div className="border rounded p-2 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+          <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+            Route Decision
+          </div>
+          <div className="text-sm font-medium">
+            {ROUTE_LABELS[selectedRoute] || selectedRoute}
+          </div>
+          {routeReasoning && (
+            <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+              {routeReasoning}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Agents */}
+      {agents.length > 0 && (
+        <div className="border rounded p-2">
+          <div className="text-xs font-medium mb-1">Agents</div>
+          <div className="space-y-1">
+            {agents.map(agent => (
+              <AgentRow key={agent.agentName} agent={agent} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Step Detail Row ---
+
+const StepDetail: FC<{ step: PipelineStep }> = ({ step }) => {
+  const meta = step.metadata || {};
+
+  return (
+    <div className="border rounded p-2 text-xs">
+      <div className="flex items-center justify-between mb-1">
+        <span className="font-medium">{step.label}</span>
+        {step.latencyMs != null && (
+          <span className="text-muted-foreground tabular-nums">
+            {step.latencyMs < 1000
+              ? `${Math.round(step.latencyMs)}ms`
+              : `${(step.latencyMs / 1000).toFixed(1)}s`
+            }
+          </span>
+        )}
+      </div>
+
+      {/* Step-specific metadata */}
+      {step.name === 'memory_read' && <MemoryDetail meta={meta} />}
+      {step.name === 'knowledge_search' && <KnowledgeDetail meta={meta} />}
+      {step.name === 'intent_analysis' && <IntentDetail meta={meta} />}
+      {step.name === 'risk_assessment' && <RiskDetail meta={meta} />}
+      {step.name === 'hitl_gate' && <HITLDetail meta={meta} step={step} />}
+      {step.name === 'llm_route_decision' && <RouteDetail meta={meta} />}
+      {step.name === 'dispatch' && <DispatchDetail meta={meta} />}
+      {step.name === 'post_process' && <PostProcessDetail meta={meta} />}
+    </div>
+  );
+};
+
+// --- Step-specific detail components ---
+
+const MemoryDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
+  <div className="text-muted-foreground space-y-1">
+    <div className="flex gap-3 text-xs">
+      {meta.pinned_count != null && <span>Pinned: {String(meta.pinned_count)}</span>}
+      {meta.budget_used_pct != null && <span>Budget: {Number(meta.budget_used_pct).toFixed(0)}%</span>}
+      {meta.status && <span>Status: {String(meta.status)}</span>}
+    </div>
+    {meta.memory_text && (
+      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
+        {String(meta.memory_text)}
+      </pre>
+    )}
+  </div>
+);
+
+const KnowledgeDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
+  <div className="text-muted-foreground space-y-1">
+    <div className="flex gap-3 text-xs">
+      {meta.result_count != null && <span>Results: {String(meta.result_count)}</span>}
+      {Array.isArray(meta.scores) && meta.scores.length > 0 && (
+        <span>Scores: {(meta.scores as number[]).map(s => s.toFixed(2)).join(', ')}</span>
+      )}
+    </div>
+    {meta.knowledge_text && (
+      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
+        {String(meta.knowledge_text)}
+      </pre>
+    )}
+  </div>
+);
+
+const IntentDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
+  <div className="text-muted-foreground space-y-0.5">
+    {meta.intent && (
+      <div>
+        Intent: <span className="font-medium text-foreground">{String(meta.intent)}</span>
+        {meta.sub_intent && <span className="ml-1">/ {String(meta.sub_intent)}</span>}
+      </div>
+    )}
+    {meta.confidence != null && (
+      <div>Confidence: {(Number(meta.confidence) * 100).toFixed(0)}%</div>
+    )}
+    {meta.routing_layer && <div>Layer: {String(meta.routing_layer)}</div>}
+    {meta.is_complete != null && (
+      <div>Complete: {meta.is_complete ? 'Yes' : `No (${Number(meta.completeness_score || 0) * 100}%)`}</div>
+    )}
+    {Array.isArray(meta.missing_fields) && (meta.missing_fields as string[]).length > 0 && (
+      <div>Missing: {(meta.missing_fields as string[]).join(', ')}</div>
+    )}
+  </div>
+);
+
+const RiskDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => {
+  const level = String(meta.risk_level || meta.level || '').toLowerCase();
+  const colorClass = RISK_COLORS[level] || '';
+
+  return (
+    <div className="text-muted-foreground space-y-0.5">
+      {level && (
+        <div>
+          Level: <span className={`font-medium ${colorClass}`}>{level.toUpperCase()}</span>
+          {meta.score != null && <span className="ml-2">(score: {Number(meta.score).toFixed(2)})</span>}
+        </div>
+      )}
+      {meta.requires_approval != null && (
+        <div>Approval: {meta.requires_approval ? `Required (${String(meta.approval_type)})` : 'Not required'}</div>
+      )}
+      {meta.policy_id && <div>Policy: {String(meta.policy_id)}</div>}
+      {meta.reasoning && (
+        <div className="mt-1 text-xs italic">{String(meta.reasoning)}</div>
+      )}
+      {Array.isArray(meta.adjustments) && (meta.adjustments as string[]).length > 0 && (
+        <div>Adjustments: {(meta.adjustments as string[]).join(', ')}</div>
+      )}
+    </div>
+  );
+};
+
+const HITLDetail: FC<{ meta: Record<string, unknown>; step: PipelineStep }> = ({ meta, step }) => {
+  const hasMeta = Object.keys(meta).length > 1; // more than just {step: 'hitl_gate'}
+  return (
+    <div className="text-muted-foreground">
+      {step.status === 'paused' ? (
+        <div className="text-yellow-600">Waiting for approval...</div>
+      ) : step.status === 'completed' && !hasMeta ? (
+        <div className="text-green-600">Approved (checkpoint resume)</div>
+      ) : (
+        <div>Passed (no approval needed)</div>
+      )}
+    </div>
+  );
+};
+
+const RouteDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
+  <div className="text-muted-foreground space-y-0.5">
+    {meta.route && (
+      <div>Route: <span className="font-medium text-foreground">{String(meta.route)}</span></div>
+    )}
+    {meta.reasoning && (
+      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
+        {String(meta.reasoning)}
+      </pre>
+    )}
+  </div>
+);
+
+const DispatchDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
+  <div className="text-muted-foreground space-y-0.5">
+    {meta.route && <div>Route: <span className="font-medium text-foreground">{String(meta.route)}</span></div>}
+    {meta.executor && <div>Executor: {String(meta.executor)}</div>}
+    {!meta.route && !meta.executor && <div>Dispatching to executor...</div>}
+  </div>
+);
+
+const PostProcessDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
+  <div className="text-muted-foreground space-y-0.5">
+    {meta.checkpoint_id && <div>Checkpoint: {String(meta.checkpoint_id).slice(0, 12)}...</div>}
+    <div>Memory extraction: scheduled</div>
+  </div>
+);
+
+// --- Agent Row ---
+
+const AGENT_STATUS_CONFIG: Record<string, { icon: string; color: string; label: string }> = {
+  thinking: { icon: '◉', color: 'text-blue-500 animate-pulse', label: 'Thinking' },
+  tool_call: { icon: '◉', color: 'text-orange-500 animate-pulse', label: 'Tool Call' },
+  completed: { icon: '✓', color: 'text-green-500', label: 'Completed' },
+};
+
+const AgentRow: FC<{ agent: AgentProgress }> = ({ agent }) => {
+  const config = AGENT_STATUS_CONFIG[agent.status] || { icon: '○', color: 'text-gray-400', label: agent.status };
+
+  return (
+    <div className="text-xs py-1.5 border-b last:border-b-0 border-dashed">
+      {/* Row 1: status icon + full agent name + duration */}
+      <div className="flex items-start gap-1.5">
+        <span className={`flex-shrink-0 ${config.color}`}>{config.icon}</span>
+        <span className="font-medium break-words flex-1">{agent.agentName}</span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <span className={`text-[10px] ${config.color}`}>{config.label}</span>
+          {agent.durationMs != null && agent.durationMs > 0 && (
+            <span className="text-muted-foreground tabular-nums text-[10px]">
+              {agent.durationMs < 1000
+                ? `${Math.round(agent.durationMs)}ms`
+                : `${(agent.durationMs / 1000).toFixed(1)}s`}
+            </span>
+          )}
+        </div>
+      </div>
+      {/* Row 2: output preview (if completed) */}
+      {agent.status === 'completed' && agent.output && (
+        <p className="text-muted-foreground mt-0.5 ml-4 break-words whitespace-pre-wrap">
+          {agent.output.slice(0, 200)}
+          {agent.output.length > 200 && '...'}
+        </p>
+      )}
+    </div>
+  );
+};

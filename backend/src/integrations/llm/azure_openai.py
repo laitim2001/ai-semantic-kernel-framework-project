@@ -53,7 +53,7 @@ class AzureOpenAILLMService:
         service = AzureOpenAILLMService(
             endpoint="https://xxx.openai.azure.com/",
             api_key="your-api-key",
-            deployment_name="gpt-5.2",
+            deployment_name="gpt-5.4-mini",
         )
 
         # 文本生成
@@ -94,7 +94,7 @@ class AzureOpenAILLMService:
         self.endpoint = endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
         self.api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
         self.deployment_name = deployment_name or os.getenv(
-            "AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.2"
+            "AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini"
         )
         self.api_version = api_version
         self.max_retries = max_retries

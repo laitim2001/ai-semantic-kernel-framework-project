@@ -38,13 +38,15 @@ class RouterConfig:
 
     Attributes:
         pattern_threshold: Minimum confidence for pattern match (default: 0.90)
-        semantic_threshold: Minimum similarity for semantic match (default: 0.85)
+        semantic_threshold: Minimum similarity for semantic match (default: 0.70)
+            Note: Chinese text embeddings yield lower similarity scores than English
+            (~0.75-0.80 for exact matches). Default lowered from 0.85 to 0.70.
         enable_llm_fallback: Whether to use LLM as last resort (default: True)
         enable_completeness: Whether to check completeness (default: True)
         track_latency: Whether to track latency metrics (default: True)
     """
     pattern_threshold: float = 0.90
-    semantic_threshold: float = 0.85
+    semantic_threshold: float = 0.70
     enable_llm_fallback: bool = True
     enable_completeness: bool = True
     track_latency: bool = True
@@ -57,7 +59,7 @@ class RouterConfig:
                 os.getenv("PATTERN_CONFIDENCE_THRESHOLD", "0.90")
             ),
             semantic_threshold=float(
-                os.getenv("SEMANTIC_SIMILARITY_THRESHOLD", "0.85")
+                os.getenv("SEMANTIC_SIMILARITY_THRESHOLD", "0.70")
             ),
             enable_llm_fallback=os.getenv(
                 "ENABLE_LLM_FALLBACK", "true"
@@ -177,17 +179,19 @@ class BusinessIntentRouter:
         self.config = config or RouterConfig()
         self._metrics = RoutingMetrics()
 
-    async def route(self, user_input: str) -> RoutingDecision:
+    async def route(self, user_input: str, skip_llm: bool = False) -> RoutingDecision:
         """
         Route user input through three-layer architecture.
 
         Attempts matching in order:
         1. Pattern Matcher (if confidence >= pattern_threshold)
         2. Semantic Router (if similarity >= semantic_threshold)
-        3. LLM Classifier (final fallback)
+        3. LLM Classifier (final fallback, skipped if skip_llm=True)
 
         Args:
             user_input: The user's input text to route
+            skip_llm: If True, skip Layer 3 LLM and default to QUERY
+                for non-actionable inputs. Saves ~2s latency.
 
         Returns:
             RoutingDecision with routing details and completeness assessment
@@ -242,7 +246,7 @@ class BusinessIntentRouter:
             )
 
         # Layer 3: LLM Classifier (fallback)
-        if self.config.enable_llm_fallback:
+        if self.config.enable_llm_fallback and not skip_llm:
             layer_start = time.perf_counter()
             llm_result = await self.llm_classifier.classify(
                 normalized_input,
@@ -257,6 +261,17 @@ class BusinessIntentRouter:
             self._metrics.llm_fallbacks += 1
             return self._build_decision_from_llm(
                 llm_result,
+                normalized_input,
+                start_time,
+                layer_latencies,
+            )
+
+        # Non-actionable safe default: skip LLM, default to QUERY
+        if skip_llm:
+            logger.info(
+                "LLM fallback skipped (non-actionable input), defaulting to QUERY"
+            )
+            return self._build_safe_default_decision(
                 normalized_input,
                 start_time,
                 layer_latencies,
@@ -394,6 +409,48 @@ class BusinessIntentRouter:
                 "model": result.model,
                 "usage": result.usage,
                 "layer_latencies": layer_latencies,
+            },
+            processing_time_ms=total_latency,
+        )
+
+    def _build_safe_default_decision(
+        self,
+        user_input: str,
+        start_time: float,
+        layer_latencies: Dict[str, float],
+    ) -> RoutingDecision:
+        """Build QUERY decision as safe default when LLM is skipped.
+
+        Used when L1/L2 fail but the input has no actionable keywords,
+        indicating a non-actionable query. This saves ~2s LLM latency
+        while ensuring Steps 4-5 get a valid intent for risk evaluation.
+
+        Completeness is floored at 0.60 to avoid false dialog pauses —
+        if we're already defaulting to the safest category (QUERY),
+        blocking with completeness questions adds no safety value.
+        """
+        total_latency = (time.perf_counter() - start_time) * 1000
+        self._metrics.record_latency(total_latency)
+
+        completeness = self._get_completeness(ITIntentCategory.QUERY, user_input)
+        # Floor completeness for safe_default to avoid false dialog pauses.
+        # The input may be a REQUEST/other that doesn't match QUERY rules.
+        if completeness.completeness_score < 0.60:
+            completeness.completeness_score = 0.60
+            completeness.is_complete = True
+
+        return RoutingDecision(
+            intent_category=ITIntentCategory.QUERY,
+            sub_intent="general_question",
+            confidence=0.60,
+            workflow_type=WorkflowType.SIMPLE,
+            risk_level=RiskLevel.LOW,
+            completeness=completeness,
+            routing_layer="safe_default",
+            reasoning="Non-actionable input: LLM skipped, defaulted to QUERY",
+            metadata={
+                "layer_latencies": layer_latencies,
+                "skip_reason": "no_actionable_keywords",
             },
             processing_time_ms=total_latency,
         )
