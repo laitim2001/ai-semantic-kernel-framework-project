@@ -10,6 +10,7 @@ Phase 45: Integrated PoC SwarmWorkerExecutor (replaces simplified LLM-only versi
 
 import asyncio
 import logging
+import os
 import time
 import uuid
 from datetime import datetime, timezone
@@ -53,6 +54,22 @@ class TeamExecutor(BaseExecutor):
 
             # Create tool registry (same pattern as PoC execution.py:254-257)
             tool_registry = self._create_tool_registry()
+
+            # Phase 7: Pre-execution memory retrieval (PoC memory_integration.py)
+            mem_integration = None
+            memory_context = ""
+            try:
+                from src.integrations.poc.memory_integration import create_memory_integration
+
+                mem_integration = await create_memory_integration()
+                if mem_integration:
+                    memory_context = await mem_integration.retrieve_for_goal(
+                        goal=request.task, user_id=request.user_id or "system"
+                    )
+                    if memory_context:
+                        logger.info("TeamExecutor: injected %d chars of past findings", len(memory_context))
+            except Exception as e:
+                logger.info("Memory retrieval skipped: %s", str(e)[:100])
 
             # Decompose task into sub-tasks
             sub_tasks = await self._decompose_task(request, llm_service, tool_registry)
@@ -136,8 +153,31 @@ class TeamExecutor(BaseExecutor):
                     else:
                         agent_results.append(result)
 
-            # Synthesize results
-            synthesis = self._synthesize(agent_results)
+            # Phase 1.5: Communication Window (PoC pattern)
+            # Agents stay alive briefly to exchange cross-cutting findings
+            comm_window = float(os.getenv("TEAM_COMM_WINDOW_SECONDS", "0"))
+            if comm_window > 0:
+                if event_queue is not None:
+                    from ...pipeline.service import PipelineEvent, PipelineEventType
+
+                    await event_queue.put(
+                        PipelineEvent(
+                            PipelineEventType.AGENT_MEMBER_THINKING,
+                            {
+                                "team_id": team_id,
+                                "agent_id": "system",
+                                "thinking_content": f"Communication window: {comm_window}s — agents exchanging findings",
+                                "phase": "1.5",
+                            },
+                            step_name="dispatch",
+                        )
+                    )
+                await asyncio.sleep(comm_window)
+
+            # Phase 2: LLM Synthesis (PoC pattern — unified analysis report)
+            synthesis = await self._synthesize_with_llm(
+                agent_results, request.task, llm_service, event_queue, team_id
+            )
 
             # Emit AGENT_TEAM_COMPLETED
             if event_queue is not None:
@@ -157,6 +197,17 @@ class TeamExecutor(BaseExecutor):
                         step_name="dispatch",
                     )
                 )
+
+            # Phase 7: Post-execution memory storage (PoC memory_integration.py)
+            if mem_integration and synthesis:
+                try:
+                    agent_results_dict = {r.agent_name: r.output for r in agent_results}
+                    await mem_integration.store_synthesis(
+                        team_id, request.task, synthesis, agent_results_dict
+                    )
+                    logger.info("TeamExecutor: stored synthesis to memory (%d chars)", len(synthesis))
+                except Exception as e:
+                    logger.info("Memory storage skipped: %s", str(e)[:100])
 
             return DispatchResult(
                 route=ExecutionRoute.TEAM,
@@ -370,9 +421,78 @@ class TeamExecutor(BaseExecutor):
             status=worker_result.status,
         )
 
+    async def _synthesize_with_llm(
+        self,
+        results: List[AgentResult],
+        task: str,
+        llm_service: Any,
+        event_queue: Optional[asyncio.Queue] = None,
+        team_id: str = "",
+    ) -> str:
+        """Synthesize team results via LLM — PoC Phase 2 pattern.
+
+        Produces a unified analysis report instead of concatenated agent outputs.
+        Falls back to static concatenation if LLM call fails.
+        """
+        # Build findings from agent outputs (PoC agent_work_loop.py L843-847)
+        findings = "\n\n".join(
+            f"## {r.agent_name}\n{r.output[:2000]}"
+            for r in results
+            if r.output and r.status == "completed"
+        )
+
+        if not findings.strip():
+            return self._synthesize_static(results)
+
+        # Emit synthesis start event
+        if event_queue is not None:
+            from ...pipeline.service import PipelineEvent, PipelineEventType
+
+            await event_queue.put(
+                PipelineEvent(
+                    PipelineEventType.AGENT_MEMBER_THINKING,
+                    {
+                        "team_id": team_id,
+                        "agent_id": "team-lead",
+                        "thinking_content": "Synthesizing team findings...",
+                        "phase": "synthesis",
+                    },
+                    step_name="dispatch",
+                )
+            )
+
+        # PoC synthesis prompt (agent_work_loop.py L851-867)
+        synthesis_prompt = (
+            f"You are the TeamLead synthesizing findings from your expert team.\n\n"
+            f"ORIGINAL TASK:\n{task}\n\n"
+            f"TEAM FINDINGS:\n{findings}\n\n"
+            f"Produce a UNIFIED ANALYSIS REPORT that:\n"
+            f"1. Summarizes the key findings from each expert\n"
+            f"2. Identifies cross-cutting patterns and correlations between findings\n"
+            f"3. Provides a prioritized root cause assessment\n"
+            f"4. Gives specific, actionable next steps\n"
+            f"5. Highlights any gaps or areas needing further investigation\n\n"
+            f"Write as a professional incident report, not a collection of individual reports.\n"
+            f"請用繁體中文回覆。"
+        )
+
+        try:
+            synthesis = await llm_service.generate(
+                prompt=synthesis_prompt,
+                max_tokens=4096,
+                temperature=0.7,
+            )
+            if synthesis and synthesis.strip():
+                logger.info("LLM synthesis completed (%d chars)", len(synthesis))
+                return synthesis
+        except Exception as e:
+            logger.warning("LLM synthesis failed, falling back to static: %s", str(e)[:100])
+
+        return self._synthesize_static(results)
+
     @staticmethod
-    def _synthesize(results: List[AgentResult]) -> str:
-        """Combine team agent results into a summary."""
+    def _synthesize_static(results: List[AgentResult]) -> str:
+        """Fallback: combine team agent results via string concatenation."""
         parts = []
         for r in results:
             status_icon = "✓" if r.status == "completed" else "✗"
