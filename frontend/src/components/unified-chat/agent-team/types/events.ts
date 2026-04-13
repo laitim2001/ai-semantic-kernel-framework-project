@@ -162,6 +162,44 @@ export interface AgentCompletedPayload {
 }
 
 // =============================================================================
+// Inter-Agent Communication Event Payloads (Phase 45: Sprint D)
+// =============================================================================
+
+/**
+ * Team message event payload — agent-to-agent communication
+ */
+export interface TeamMessagePayload {
+  team_id: string;
+  from_agent: string;
+  to_agent?: string | null;
+  content: string;
+  directed: boolean;
+}
+
+/**
+ * Inbox received event payload — agent received a directed message
+ */
+export interface InboxReceivedPayload {
+  team_id: string;
+  agent_id: string;
+  from_agent: string;
+  content: string;
+}
+
+/**
+ * Per-tool HITL approval required — agent waiting for human decision
+ */
+export interface AgentApprovalRequiredPayload {
+  team_id: string;
+  approval_id: string;
+  agent_name: string;
+  tool_name: string;
+  risk_level: string;
+  message: string;
+  arguments?: Record<string, unknown>;
+}
+
+// =============================================================================
 // Event Union Types
 // =============================================================================
 
@@ -177,7 +215,10 @@ export type SwarmEventPayload =
   | AgentThinkingPayload
   | AgentToolCallPayload
   | AgentMessagePayload
-  | AgentCompletedPayload;
+  | AgentCompletedPayload
+  | TeamMessagePayload
+  | InboxReceivedPayload
+  | AgentApprovalRequiredPayload;
 
 /**
  * Agent Team SSE event structure (from AG-UI CustomEvent)

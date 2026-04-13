@@ -374,6 +374,53 @@ export function useOrchestratorPipeline() {
         break;
       }
 
+      // --- Inter-Agent Communication Events (Phase 45: Sprint D) ---
+
+      case 'AGENT_TEAM_MESSAGE':
+        useAgentTeamStore.getState().addTeamMessage({
+          team_id: data.team_id as string,
+          from_agent: data.from_agent as string,
+          to_agent: (data.to_agent as string) || null,
+          content: data.content as string,
+          directed: (data.directed as boolean) || false,
+        });
+        break;
+
+      case 'AGENT_INBOX_RECEIVED':
+        useAgentTeamStore.getState().addTeamMessage({
+          team_id: data.team_id as string,
+          from_agent: data.from_agent as string,
+          to_agent: data.agent_id as string,
+          content: data.content as string,
+          directed: true,
+        });
+        break;
+
+      case 'AGENT_TASK_CLAIMED':
+      case 'AGENT_TASK_REASSIGNED':
+        // Forward to thinking for visibility
+        useAgentTeamStore.getState().updateAgentThinking({
+          team_id: data.team_id as string,
+          agent_id: data.agent_id as string,
+          thinking_content: data.thinking_content as string || `[${eventType}]`,
+          timestamp: new Date().toISOString(),
+        });
+        break;
+
+      // --- Per-Tool HITL Approval (Phase 45: Sprint D) ---
+
+      case 'AGENT_APPROVAL_REQUIRED':
+        useAgentTeamStore.getState().addPendingApproval({
+          team_id: data.team_id as string,
+          approval_id: data.approval_id as string,
+          agent_name: data.agent_name as string,
+          tool_name: data.tool_name as string,
+          risk_level: data.risk_level as string,
+          message: data.message as string,
+          arguments: (data.arguments as Record<string, unknown>) || {},
+        });
+        break;
+
       case 'PIPELINE_COMPLETE':
         // Only finalize on the truly final event (after dispatch)
         if (data.final) {
@@ -564,6 +611,30 @@ export function useOrchestratorPipeline() {
     }
   }, [state.hitlPause, state.originalTask, state.originalUserId, token, handleSSEEvent, sendMessage]);
 
+  const resolveTeamApproval = useCallback(async (
+    approvalId: string,
+    decision: 'approved' | 'rejected',
+    decidedBy: string = 'user'
+  ) => {
+    try {
+      const response = await fetch(`/api/v1/orchestration/chat/team-approval/${approvalId}/decide`, {
+        method: 'POST',
+        headers: _authHeaders(),
+        body: JSON.stringify({ decision, decided_by: decidedBy }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(err.detail || `HTTP ${response.status}`);
+      }
+
+      // Remove from pending approvals in store
+      useAgentTeamStore.getState().removePendingApproval(approvalId);
+    } catch (err) {
+      console.error('[resolveTeamApproval] failed:', err);
+    }
+  }, [_authHeaders]);
+
   const respondDialog = useCallback(async (responses: Record<string, string>) => {
     if (!state.dialogPause) return;
 
@@ -592,5 +663,6 @@ export function useOrchestratorPipeline() {
     cancel,
     resumeApproval,
     respondDialog,
+    resolveTeamApproval,
   };
 }

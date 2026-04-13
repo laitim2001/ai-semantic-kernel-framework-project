@@ -25,6 +25,8 @@ import type {
   AgentToolCallPayload,
   AgentProgressPayload,
   AgentCompletedPayload,
+  TeamMessagePayload,
+  AgentApprovalRequiredPayload,
 } from '@/components/unified-chat/agent-team/types';
 
 // =============================================================================
@@ -38,6 +40,27 @@ interface AgentAccumulatedData {
   output: string;
 }
 
+/** Inter-agent team message (Phase 45: Sprint D) */
+export interface TeamMessage {
+  id: string;
+  fromAgent: string;
+  toAgent?: string | null;
+  content: string;
+  directed: boolean;
+  timestamp: string;
+}
+
+/** Pending per-tool HITL approval (Phase 45: Sprint D) */
+export interface PendingTeamApproval {
+  approvalId: string;
+  agentName: string;
+  toolName: string;
+  riskLevel: string;
+  message: string;
+  arguments?: Record<string, unknown>;
+  timestamp: string;
+}
+
 interface AgentTeamState {
   // Core state
   agentTeamStatus: UIAgentTeamStatus | null;
@@ -48,6 +71,10 @@ interface AgentTeamState {
   error: string | null;
   // Accumulated data per agent (built from SSE events)
   agentDataMap: Record<string, AgentAccumulatedData>;
+  // Inter-agent communication (Phase 45: Sprint D)
+  teamMessages: TeamMessage[];
+  // Per-tool HITL approvals (Phase 45: Sprint D)
+  pendingApprovals: PendingTeamApproval[];
 }
 
 interface AgentTeamActions {
@@ -62,6 +89,11 @@ interface AgentTeamActions {
   updateAgentThinking: (payload: AgentThinkingPayload) => void;
   updateAgentToolCall: (payload: AgentToolCallPayload) => void;
   completeAgent: (payload: AgentCompletedPayload) => void;
+
+  // Inter-agent communication actions (Phase 45: Sprint D)
+  addTeamMessage: (payload: TeamMessagePayload) => void;
+  addPendingApproval: (payload: AgentApprovalRequiredPayload) => void;
+  removePendingApproval: (approvalId: string) => void;
 
   // UI actions
   selectAgent: (agent: UIAgentSummary | null) => void;
@@ -89,6 +121,8 @@ const initialState: AgentTeamState = {
   isLoading: false,
   error: null,
   agentDataMap: {},
+  teamMessages: [],
+  pendingApprovals: [],
 };
 
 // =============================================================================
@@ -305,6 +339,56 @@ export const useAgentTeamStore = create<AgentTeamStore>()(
         ),
 
       // =====================================================================
+      // Inter-Agent Communication Actions (Phase 45: Sprint D)
+      // =====================================================================
+
+      addTeamMessage: (payload) =>
+        set(
+          (state) => {
+            const msg: TeamMessage = {
+              id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              fromAgent: payload.from_agent,
+              toAgent: payload.to_agent,
+              content: payload.content,
+              directed: payload.directed,
+              timestamp: new Date().toISOString(),
+            };
+            state.teamMessages.push(msg);
+          },
+          false,
+          'addTeamMessage'
+        ),
+
+      addPendingApproval: (payload) =>
+        set(
+          (state) => {
+            const approval: PendingTeamApproval = {
+              approvalId: payload.approval_id,
+              agentName: payload.agent_name,
+              toolName: payload.tool_name,
+              riskLevel: payload.risk_level,
+              message: payload.message,
+              arguments: payload.arguments,
+              timestamp: new Date().toISOString(),
+            };
+            state.pendingApprovals.push(approval);
+          },
+          false,
+          'addPendingApproval'
+        ),
+
+      removePendingApproval: (approvalId) =>
+        set(
+          (state) => {
+            state.pendingApprovals = state.pendingApprovals.filter(
+              (a) => a.approvalId !== approvalId
+            );
+          },
+          false,
+          'removePendingApproval'
+        ),
+
+      // =====================================================================
       // UI Actions
       // =====================================================================
 
@@ -460,5 +544,15 @@ export const selectFailedAgents = (state: AgentTeamStore) =>
  */
 export const selectIsTeamActive = (state: AgentTeamStore) =>
   state.agentTeamStatus?.status === 'executing';
+
+/**
+ * Select team messages
+ */
+export const selectTeamMessages = (state: AgentTeamStore) => state.teamMessages;
+
+/**
+ * Select pending approvals
+ */
+export const selectPendingApprovals = (state: AgentTeamStore) => state.pendingApprovals;
 
 export default useAgentTeamStore;

@@ -27,6 +27,7 @@ from .chat_schemas import (
     DialogRespondRequest,
     ResumeRequest,
     SessionStatusResponse,
+    TeamApprovalDecisionRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -401,4 +402,76 @@ async def get_session_status(session_id: str, user_id: str = "default-user"):
         logger.error("Get session status failed: %s", str(e)[:200])
         raise HTTPException(
             status_code=500, detail=f"Failed to get session: {str(e)[:200]}"
+        )
+
+
+# ── Phase 45 Sprint D: Per-tool HITL approval within agent team ──
+
+
+@chat_router.post("/team-approval/{approval_id}/decide")
+async def decide_team_approval(approval_id: str, body: TeamApprovalDecisionRequest):
+    """Resolve a pending per-tool approval within an agent team execution.
+
+    The agent is suspended on asyncio.Event.wait() — calling resolve()
+    sets the event and the agent resumes instantly. Zero CPU during wait.
+
+    Phase 45: Sprint D — Per-tool HITL (CC PermissionDecision equivalent).
+    """
+    try:
+        from src.integrations.poc.approval_gate import get_approval_manager
+
+        manager = get_approval_manager()
+        if not manager:
+            raise HTTPException(
+                status_code=404,
+                detail="No active approval manager — no team execution in progress",
+            )
+
+        resolved = await manager.resolve(
+            approval_id=approval_id,
+            decision=body.decision,
+            decided_by=body.decided_by,
+        )
+
+        if not resolved:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Approval {approval_id} not found or already resolved",
+            )
+
+        logger.info(
+            "Team approval %s resolved: %s by %s",
+            approval_id, body.decision, body.decided_by,
+        )
+        return {"status": "ok", "approval_id": approval_id, "decision": body.decision}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Team approval failed: %s", str(e)[:200])
+        raise HTTPException(
+            status_code=500, detail=f"Failed to resolve approval: {str(e)[:200]}"
+        )
+
+
+@chat_router.get("/team-approvals/pending")
+async def list_pending_team_approvals():
+    """List all pending per-tool approvals for the current agent team execution.
+
+    Phase 45: Sprint D — Per-tool HITL.
+    """
+    try:
+        from src.integrations.poc.approval_gate import get_approval_manager
+
+        manager = get_approval_manager()
+        if not manager:
+            return {"pending": []}
+
+        pending = await manager.list_pending()
+        return {"pending": pending}
+
+    except Exception as e:
+        logger.error("List pending approvals failed: %s", str(e)[:200])
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list approvals: {str(e)[:200]}"
         )

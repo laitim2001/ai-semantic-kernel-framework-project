@@ -46,6 +46,13 @@ class DialogRespondRequest(BaseModel):
     responses: Dict[str, str] = Field(..., description="Field name → user response mapping")
 
 
+class TeamApprovalDecisionRequest(BaseModel):
+    """Request body for POST /orchestration/chat/team-approval/{id}/decide."""
+
+    decision: str = Field(..., pattern="^(approved|rejected)$", description="'approved' or 'rejected'")
+    decided_by: str = Field(default="user", description="Who made the decision")
+
+
 class PipelineStepStatus(BaseModel):
     """Status of a single pipeline step."""
 

@@ -119,23 +119,45 @@ class PipelineEmitterBridge:
                 ))
 
             elif event_name == "TEAM_MESSAGE":
+                content = data.get("content", data.get("message", ""))
+                from_agent = data.get("from", data.get("agent", ""))
+                to_agent = data.get("to")
+                # Dedicated inter-agent message event
+                await self._queue.put(PipelineEvent(
+                    PipelineEventType.AGENT_TEAM_MESSAGE,
+                    {
+                        "team_id": self._team_id,
+                        "from_agent": from_agent,
+                        "to_agent": to_agent,
+                        "content": content,
+                        "directed": data.get("directed", bool(to_agent)),
+                    },
+                    step_name="dispatch",
+                ))
+                # Also forward as thinking so agent card shows activity
                 await self._queue.put(PipelineEvent(
                     PipelineEventType.AGENT_MEMBER_THINKING,
                     {
                         "team_id": self._team_id,
-                        "agent_id": data.get("from", data.get("agent", "")),
-                        "thinking_content": (
-                            f"[→ {data.get('to', 'all')}] {data.get('content', data.get('message', ''))}"
-                        ),
+                        "agent_id": from_agent,
+                        "thinking_content": f"[→ {to_agent or 'all'}] {content}",
                         "message_type": "team_message",
-                        "from_agent": data.get("from", ""),
-                        "to_agent": data.get("to"),
-                        "directed": data.get("directed", bool(data.get("to"))),
                     },
                     step_name="dispatch",
                 ))
 
             elif event_name == "INBOX_RECEIVED":
+                await self._queue.put(PipelineEvent(
+                    PipelineEventType.AGENT_INBOX_RECEIVED,
+                    {
+                        "team_id": self._team_id,
+                        "agent_id": data.get("agent", ""),
+                        "from_agent": data.get("from", "?"),
+                        "content": data.get("content", ""),
+                    },
+                    step_name="dispatch",
+                ))
+                # Also forward as thinking
                 await self._queue.put(PipelineEvent(
                     PipelineEventType.AGENT_MEMBER_THINKING,
                     {
@@ -174,15 +196,28 @@ class PipelineEmitterBridge:
                 ))
 
             elif event_name == "APPROVAL_REQUIRED":
+                # Dedicated approval event for frontend HITL card
+                await self._queue.put(PipelineEvent(
+                    PipelineEventType.AGENT_APPROVAL_REQUIRED,
+                    {
+                        "team_id": self._team_id,
+                        "approval_id": data.get("approval_id", ""),
+                        "agent_name": data.get("agent_name", data.get("agent", "")),
+                        "tool_name": data.get("tool_name", ""),
+                        "risk_level": data.get("risk_level", "high"),
+                        "message": data.get("message", ""),
+                        "arguments": data.get("arguments", {}),
+                    },
+                    step_name="dispatch",
+                ))
+                # Also forward as thinking so agent card shows waiting state
                 await self._queue.put(PipelineEvent(
                     PipelineEventType.AGENT_MEMBER_THINKING,
                     {
                         "team_id": self._team_id,
-                        "agent_id": data.get("agent", ""),
-                        "thinking_content": f"Approval required: {data.get('message', '')}",
+                        "agent_id": data.get("agent_name", data.get("agent", "")),
+                        "thinking_content": f"⏳ Awaiting approval: {data.get('tool_name', '')}",
                         "message_type": "approval_required",
-                        "approval_id": data.get("approval_id", ""),
-                        "risk_level": data.get("risk_level", ""),
                     },
                     step_name="dispatch",
                 ))
