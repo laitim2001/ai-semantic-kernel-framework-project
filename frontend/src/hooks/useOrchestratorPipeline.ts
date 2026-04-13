@@ -321,46 +321,78 @@ export function useOrchestratorPipeline() {
         break;
       }
 
-      case 'AGENT_MEMBER_THINKING':
-        useAgentTeamStore.getState().updateAgentThinking({
+      case 'AGENT_MEMBER_THINKING': {
+        const thinkStore = useAgentTeamStore.getState();
+        thinkStore.updateAgentThinking({
           team_id: data.team_id as string,
           agent_id: data.agent_id as string,
           thinking_content: (data.thinking_content as string) || '',
           timestamp: (data.timestamp as string) || new Date().toISOString(),
         });
+        // Push to conversation log (skip redundant team_message/approval echoes)
+        const msgType = data.message_type as string;
+        if (msgType !== 'team_message' && msgType !== 'approval_required' && msgType !== 'inbox_received') {
+          thinkStore.addAgentEvent(
+            'thinking',
+            data.agent_id as string,
+            data.agent_id as string,
+            (data.thinking_content as string) || '',
+          );
+        }
         break;
+      }
 
-      case 'AGENT_MEMBER_TOOL_CALL':
-        useAgentTeamStore.getState().updateAgentToolCall({
+      case 'AGENT_MEMBER_TOOL_CALL': {
+        const toolStore = useAgentTeamStore.getState();
+        const toolStatus = data.status as string;
+        toolStore.updateAgentToolCall({
           team_id: data.team_id as string,
           agent_id: data.agent_id as string,
           tool_call_id: data.tool_call_id as string,
           tool_name: data.tool_name as string,
-          status: data.status as 'running' | 'completed' | 'failed',
+          status: toolStatus as 'running' | 'completed' | 'failed',
           input_args: (data.input_args as Record<string, unknown>) || {},
           output_result: (data.output_result as Record<string, unknown>) || null,
           timestamp: (data.timestamp as string) || new Date().toISOString(),
         });
+        // Push to conversation log
+        toolStore.addAgentEvent(
+          'tool_call',
+          data.agent_id as string,
+          data.agent_id as string,
+          `${data.tool_name as string} [${toolStatus}]`,
+          { tool_call_id: data.tool_call_id, status: toolStatus },
+        );
         break;
+      }
 
       case 'AGENT_MEMBER_COMPLETED': {
-        const teamStore = useAgentTeamStore.getState();
-        teamStore.completeAgent({
+        const completeStore = useAgentTeamStore.getState();
+        const agentStatus = (data.status as string) || 'completed';
+        completeStore.completeAgent({
           team_id: data.team_id as string,
           agent_id: data.agent_id as string,
-          status: (data.status as 'completed' | 'failed') || 'completed',
+          status: agentStatus as 'completed' | 'failed',
           duration_ms: (data.duration_ms as number) || 0,
           completed_at: (data.completed_at as string) || new Date().toISOString(),
         });
         // Store the agent's full output for detail drawer
         if (data.output) {
           const agentId = data.agent_id as string;
-          const map = teamStore.agentDataMap;
+          const map = completeStore.agentDataMap;
           if (!map[agentId]) {
             map[agentId] = { thinkingHistory: [], toolCalls: [], output: '' };
           }
           map[agentId].output = data.output as string;
         }
+        // Push to conversation log
+        completeStore.addAgentEvent(
+          'task_completed',
+          data.agent_id as string,
+          (data.agent_name as string) || (data.agent_id as string),
+          agentStatus === 'failed' ? 'Task failed' : 'Task completed',
+          { duration_ms: data.duration_ms, status: agentStatus },
+        );
         break;
       }
 
@@ -376,25 +408,44 @@ export function useOrchestratorPipeline() {
 
       // --- Inter-Agent Communication Events (Phase 45: Sprint D) ---
 
-      case 'AGENT_TEAM_MESSAGE':
-        useAgentTeamStore.getState().addTeamMessage({
+      case 'AGENT_TEAM_MESSAGE': {
+        const msgStore = useAgentTeamStore.getState();
+        msgStore.addTeamMessage({
           team_id: data.team_id as string,
           from_agent: data.from_agent as string,
           to_agent: (data.to_agent as string) || null,
           content: data.content as string,
           directed: (data.directed as boolean) || false,
         });
+        // Push to conversation log
+        const toLabel = (data.to_agent as string) || 'all';
+        msgStore.addAgentEvent(
+          'message',
+          data.from_agent as string,
+          data.from_agent as string,
+          `→ ${toLabel}: ${data.content as string}`,
+        );
         break;
+      }
 
-      case 'AGENT_INBOX_RECEIVED':
-        useAgentTeamStore.getState().addTeamMessage({
+      case 'AGENT_INBOX_RECEIVED': {
+        const inboxStore = useAgentTeamStore.getState();
+        inboxStore.addTeamMessage({
           team_id: data.team_id as string,
           from_agent: data.from_agent as string,
           to_agent: data.agent_id as string,
           content: data.content as string,
           directed: true,
         });
+        // Push to conversation log
+        inboxStore.addAgentEvent(
+          'inbox',
+          data.agent_id as string,
+          data.agent_id as string,
+          `Received from ${data.from_agent as string}`,
+        );
         break;
+      }
 
       case 'AGENT_TASK_CLAIMED':
       case 'AGENT_TASK_REASSIGNED':
@@ -409,8 +460,9 @@ export function useOrchestratorPipeline() {
 
       // --- Per-Tool HITL Approval (Phase 45: Sprint D) ---
 
-      case 'AGENT_APPROVAL_REQUIRED':
-        useAgentTeamStore.getState().addPendingApproval({
+      case 'AGENT_APPROVAL_REQUIRED': {
+        const approvalStore = useAgentTeamStore.getState();
+        approvalStore.addPendingApproval({
           team_id: data.team_id as string,
           approval_id: data.approval_id as string,
           agent_name: data.agent_name as string,
@@ -419,7 +471,16 @@ export function useOrchestratorPipeline() {
           message: data.message as string,
           arguments: (data.arguments as Record<string, unknown>) || {},
         });
+        // Push to conversation log
+        approvalStore.addAgentEvent(
+          'approval',
+          data.agent_name as string,
+          data.agent_name as string,
+          `Approval required: ${data.tool_name as string}`,
+          { approval_id: data.approval_id, risk_level: data.risk_level },
+        );
         break;
+      }
 
       case 'PIPELINE_COMPLETE':
         // Only finalize on the truly final event (after dispatch)

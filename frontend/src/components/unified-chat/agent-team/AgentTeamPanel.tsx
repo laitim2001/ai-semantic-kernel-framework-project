@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import { AgentTeamHeader } from './AgentTeamHeader';
 import { OverallProgress } from './OverallProgress';
 import { AgentCardList } from './AgentCardList';
+import { ConversationLog } from './ConversationLog';
+import { useAgentTeamStore, selectAgentEvents } from '@/stores/agentTeamStore';
 import type { AgentTeamPanelProps } from './types';
 
 // =============================================================================
@@ -102,6 +104,9 @@ export const AgentTeamPanel: FC<AgentTeamPanelProps> = ({
   isLoading = false,
   className,
 }) => {
+  // Subscribe to conversation log events from store
+  const agentEvents = useAgentTeamStore(selectAgentEvents);
+
   // Loading state
   if (isLoading) {
     return <LoadingState className={className} />;
@@ -138,6 +143,16 @@ export const AgentTeamPanel: FC<AgentTeamPanelProps> = ({
             onAgentClick={onAgentClick}
           />
         </div>
+
+        {/* Conversation Log (Phase 45: Sprint E) */}
+        {agentEvents.length > 0 && (
+          <div className="border-t pt-4">
+            <ConversationLog
+              events={agentEvents}
+              maxHeight="280px"
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

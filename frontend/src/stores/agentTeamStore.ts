@@ -27,6 +27,8 @@ import type {
   AgentCompletedPayload,
   TeamMessagePayload,
   AgentApprovalRequiredPayload,
+  AgentEvent,
+  AgentEventType,
 } from '@/components/unified-chat/agent-team/types';
 
 // =============================================================================
@@ -75,6 +77,8 @@ interface AgentTeamState {
   teamMessages: TeamMessage[];
   // Per-tool HITL approvals (Phase 45: Sprint D)
   pendingApprovals: PendingTeamApproval[];
+  // Unified conversation log (Phase 45: Sprint E)
+  agentEvents: AgentEvent[];
 }
 
 interface AgentTeamActions {
@@ -94,6 +98,9 @@ interface AgentTeamActions {
   addTeamMessage: (payload: TeamMessagePayload) => void;
   addPendingApproval: (payload: AgentApprovalRequiredPayload) => void;
   removePendingApproval: (approvalId: string) => void;
+
+  // Conversation log actions (Phase 45: Sprint E)
+  addAgentEvent: (type: AgentEventType, agentId: string, agentName: string, content: string, metadata?: Record<string, unknown>) => void;
 
   // UI actions
   selectAgent: (agent: UIAgentSummary | null) => void;
@@ -123,6 +130,7 @@ const initialState: AgentTeamState = {
   agentDataMap: {},
   teamMessages: [],
   pendingApprovals: [],
+  agentEvents: [],
 };
 
 // =============================================================================
@@ -336,6 +344,32 @@ export const useAgentTeamStore = create<AgentTeamStore>()(
           },
           false,
           'completeAgent'
+        ),
+
+      // =====================================================================
+      // Conversation Log Actions (Phase 45: Sprint E)
+      // =====================================================================
+
+      addAgentEvent: (type, agentId, agentName, content, metadata) =>
+        set(
+          (state) => {
+            const event: AgentEvent = {
+              id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              type,
+              agentId,
+              agentName,
+              content,
+              timestamp: new Date().toISOString(),
+              metadata,
+            };
+            state.agentEvents.push(event);
+            // Cap at 500 events to prevent memory bloat
+            if (state.agentEvents.length > 500) {
+              state.agentEvents = state.agentEvents.slice(-400);
+            }
+          },
+          false,
+          'addAgentEvent'
         ),
 
       // =====================================================================
@@ -554,5 +588,10 @@ export const selectTeamMessages = (state: AgentTeamStore) => state.teamMessages;
  * Select pending approvals
  */
 export const selectPendingApprovals = (state: AgentTeamStore) => state.pendingApprovals;
+
+/**
+ * Select agent events (conversation log)
+ */
+export const selectAgentEvents = (state: AgentTeamStore) => state.agentEvents;
 
 export default useAgentTeamStore;

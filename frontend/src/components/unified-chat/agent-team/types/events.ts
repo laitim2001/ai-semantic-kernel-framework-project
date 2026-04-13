@@ -200,6 +200,36 @@ export interface AgentApprovalRequiredPayload {
 }
 
 // =============================================================================
+// Unified Conversation Log Event (Phase 45: Sprint E)
+// =============================================================================
+
+/**
+ * Event type for the conversation log timeline
+ */
+export type AgentEventType =
+  | 'thinking'
+  | 'tool_call'
+  | 'message'
+  | 'inbox'
+  | 'task_completed'
+  | 'approval'
+  | 'system';
+
+/**
+ * A single event in the agent team conversation log.
+ * All agent activity is normalized to this format for chronological display.
+ */
+export interface AgentEvent {
+  id: string;
+  type: AgentEventType;
+  agentId: string;
+  agentName: string;
+  content: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
+
+// =============================================================================
 // Event Union Types
 // =============================================================================
 
