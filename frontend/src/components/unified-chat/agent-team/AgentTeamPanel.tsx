@@ -104,8 +104,9 @@ export const AgentTeamPanel: FC<AgentTeamPanelProps> = ({
   isLoading = false,
   className,
 }) => {
-  // Subscribe to conversation log events from store
+  // Subscribe to conversation log events and route type from store
   const agentEvents = useAgentTeamStore(selectAgentEvents);
+  const routeType = useAgentTeamStore((s) => s.routeType);
 
   // Loading state
   if (isLoading) {
@@ -126,6 +127,7 @@ export const AgentTeamPanel: FC<AgentTeamPanelProps> = ({
           status={agentTeamStatus.status}
           totalAgents={agentTeamStatus.totalAgents}
           startedAt={agentTeamStatus.startedAt}
+          routeType={routeType}
         />
       </CardHeader>
 

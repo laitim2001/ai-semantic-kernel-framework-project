@@ -176,6 +176,8 @@ export function useOrchestratorPipeline() {
           selectedRoute: data.route as string,
           routeReasoning: (data.reasoning as string) || null,
         }));
+        // Store route type in agent team store for header display
+        useAgentTeamStore.getState().setRouteType(data.route as string);
         updateStep('llm_route_decision', {
           metadata: { route: data.route, reasoning: data.reasoning } as StepMetadata,
         });

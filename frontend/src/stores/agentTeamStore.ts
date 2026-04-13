@@ -79,6 +79,8 @@ interface AgentTeamState {
   pendingApprovals: PendingTeamApproval[];
   // Unified conversation log (Phase 45: Sprint E)
   agentEvents: AgentEvent[];
+  // Selected route from LLM routing (direct_answer / subagent / team)
+  routeType: string | null;
 }
 
 interface AgentTeamActions {
@@ -98,6 +100,9 @@ interface AgentTeamActions {
   addTeamMessage: (payload: TeamMessagePayload) => void;
   addPendingApproval: (payload: AgentApprovalRequiredPayload) => void;
   removePendingApproval: (approvalId: string) => void;
+
+  // Route type action
+  setRouteType: (route: string) => void;
 
   // Conversation log actions (Phase 45: Sprint E)
   addAgentEvent: (type: AgentEventType, agentId: string, agentName: string, content: string, metadata?: Record<string, unknown>) => void;
@@ -131,6 +136,7 @@ const initialState: AgentTeamState = {
   teamMessages: [],
   pendingApprovals: [],
   agentEvents: [],
+  routeType: null,
 };
 
 // =============================================================================
@@ -344,6 +350,19 @@ export const useAgentTeamStore = create<AgentTeamStore>()(
           },
           false,
           'completeAgent'
+        ),
+
+      // =====================================================================
+      // Route Type Action
+      // =====================================================================
+
+      setRouteType: (route) =>
+        set(
+          (state) => {
+            state.routeType = route;
+          },
+          false,
+          'setRouteType'
         ),
 
       // =====================================================================

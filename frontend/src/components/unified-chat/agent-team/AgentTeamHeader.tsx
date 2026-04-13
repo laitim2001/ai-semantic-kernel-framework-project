@@ -78,14 +78,22 @@ const STATUS_CONFIG: Record<TeamStatus, StatusConfigItem> = {
  * @param totalAgents - Total number of agents in the team
  * @param startedAt - ISO timestamp when the team started
  */
+const ROUTE_LABELS: Record<string, { label: string; color: string }> = {
+  direct_answer: { label: 'Direct Answer', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  subagent: { label: 'Subagent', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  team: { label: 'Team', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+};
+
 export const AgentTeamHeader: FC<AgentTeamHeaderProps> = ({
   mode,
   status,
   totalAgents,
   startedAt,
+  routeType,
 }) => {
-  const statusConfig = STATUS_CONFIG[status];
+  const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.executing;
   const StatusIcon = statusConfig.icon;
+  const routeConfig = routeType ? ROUTE_LABELS[routeType] : null;
 
   /**
    * Format ISO timestamp to locale time string
@@ -114,9 +122,16 @@ export const AgentTeamHeader: FC<AgentTeamHeaderProps> = ({
             AGENT TEAM ({totalAgents} {totalAgents === 1 ? 'Agent' : 'Agents'})
           </span>
         </div>
-        <Badge variant="outline" className="text-xs">
-          {MODE_LABELS[mode]}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          {routeConfig && (
+            <Badge className={cn('text-xs border-0', routeConfig.color)}>
+              {routeConfig.label}
+            </Badge>
+          )}
+          <Badge variant="outline" className="text-xs">
+            {MODE_LABELS[mode]}
+          </Badge>
+        </div>
       </div>
 
       {/* Status row */}

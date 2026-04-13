@@ -124,6 +124,7 @@ export interface AgentTeamHeaderProps {
   status: TeamStatus;
   totalAgents: number;
   startedAt?: string;
+  routeType?: string | null;
 }
 
 export interface OverallProgressProps {
