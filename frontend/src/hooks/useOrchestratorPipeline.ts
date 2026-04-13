@@ -659,6 +659,16 @@ export function useOrchestratorPipeline() {
 
       // SSE stream ended — ensure UI stops spinning if PIPELINE_COMPLETE wasn't received
       setState(prev => prev.isRunning ? { ...prev, isRunning: false } : prev);
+      // Auto-complete any unfinished agents when stream ends gracefully
+      const endStore = useAgentTeamStore.getState();
+      if (endStore.agentTeamStatus && endStore.agentTeamStatus.status === 'executing') {
+        for (const agent of endStore.agentTeamStatus.agents) {
+          if (agent.status === 'running' || agent.status === 'pending') {
+            endStore.completeAgent({ team_id: endStore.agentTeamStatus.teamId, agent_id: agent.agentId, status: 'completed', duration_ms: 0, completed_at: new Date().toISOString() });
+          }
+        }
+        endStore.completeTeam('completed', new Date().toISOString());
+      }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         setState(prev => ({
@@ -666,6 +676,16 @@ export function useOrchestratorPipeline() {
           isRunning: false,
           error: (err as Error).message,
         }));
+        // Auto-complete agents on error too (SSE disconnected mid-execution)
+        const errStore = useAgentTeamStore.getState();
+        if (errStore.agentTeamStatus && errStore.agentTeamStatus.status === 'executing') {
+          for (const agent of errStore.agentTeamStatus.agents) {
+            if (agent.status === 'running' || agent.status === 'pending') {
+              errStore.completeAgent({ team_id: errStore.agentTeamStatus.teamId, agent_id: agent.agentId, status: 'completed', duration_ms: 0, completed_at: new Date().toISOString() });
+            }
+          }
+          errStore.completeTeam('completed', new Date().toISOString());
+        }
       }
     }
   }, [handleSSEEvent, token]);
@@ -756,10 +776,30 @@ export function useOrchestratorPipeline() {
 
         // SSE stream ended — ensure UI stops spinning if PIPELINE_COMPLETE wasn't received
         setState(prev => prev.isRunning ? { ...prev, isRunning: false } : prev);
+        // Auto-complete any unfinished agents
+        const resumeEndStore = useAgentTeamStore.getState();
+        if (resumeEndStore.agentTeamStatus && resumeEndStore.agentTeamStatus.status === 'executing') {
+          for (const agent of resumeEndStore.agentTeamStatus.agents) {
+            if (agent.status === 'running' || agent.status === 'pending') {
+              resumeEndStore.completeAgent({ team_id: resumeEndStore.agentTeamStatus.teamId, agent_id: agent.agentId, status: 'completed', duration_ms: 0, completed_at: new Date().toISOString() });
+            }
+          }
+          resumeEndStore.completeTeam('completed', new Date().toISOString());
+        }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           console.error('[resumeApproval] checkpoint resume failed:', err);
           setState(prev => ({ ...prev, isRunning: false, error: (err as Error).message }));
+          // Auto-complete agents on error
+          const resumeErrStore = useAgentTeamStore.getState();
+          if (resumeErrStore.agentTeamStatus && resumeErrStore.agentTeamStatus.status === 'executing') {
+            for (const agent of resumeErrStore.agentTeamStatus.agents) {
+              if (agent.status === 'running' || agent.status === 'pending') {
+                resumeErrStore.completeAgent({ team_id: resumeErrStore.agentTeamStatus.teamId, agent_id: agent.agentId, status: 'completed', duration_ms: 0, completed_at: new Date().toISOString() });
+              }
+            }
+            resumeErrStore.completeTeam('completed', new Date().toISOString());
+          }
         }
       }
     } else if (task) {
