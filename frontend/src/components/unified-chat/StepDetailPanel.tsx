@@ -248,29 +248,39 @@ const PostProcessDetail: FC<{ meta: Record<string, unknown> }> = ({ meta }) => (
 
 // --- Agent Row ---
 
-const AGENT_STATUS_ICONS: Record<string, string> = {
-  thinking: '...',
-  tool_call: '...',
-  completed: '✓',
+const AGENT_STATUS_CONFIG: Record<string, { icon: string; color: string; label: string }> = {
+  thinking: { icon: '◉', color: 'text-blue-500 animate-pulse', label: 'Thinking' },
+  tool_call: { icon: '◉', color: 'text-orange-500 animate-pulse', label: 'Tool Call' },
+  completed: { icon: '✓', color: 'text-green-500', label: 'Completed' },
 };
 
-const AgentRow: FC<{ agent: AgentProgress }> = ({ agent }) => (
-  <div className="flex items-center gap-2 text-xs py-0.5">
-    <span className={agent.status === 'completed' ? 'text-green-500' : 'text-blue-500 animate-pulse'}>
-      {AGENT_STATUS_ICONS[agent.status] || '○'}
-    </span>
-    <span className="font-medium">{agent.agentName}</span>
-    <span className="text-muted-foreground flex-1 truncate">
-      {agent.status === 'completed' && agent.output
-        ? agent.output.slice(0, 80)
-        : agent.status === 'thinking'
-        ? 'thinking...'
-        : agent.status}
-    </span>
-    {agent.durationMs != null && (
-      <span className="text-muted-foreground tabular-nums">
-        {Math.round(agent.durationMs)}ms
-      </span>
-    )}
-  </div>
-);
+const AgentRow: FC<{ agent: AgentProgress }> = ({ agent }) => {
+  const config = AGENT_STATUS_CONFIG[agent.status] || { icon: '○', color: 'text-gray-400', label: agent.status };
+
+  return (
+    <div className="text-xs py-1.5 border-b last:border-b-0 border-dashed">
+      {/* Row 1: status icon + full agent name + duration */}
+      <div className="flex items-start gap-1.5">
+        <span className={`flex-shrink-0 ${config.color}`}>{config.icon}</span>
+        <span className="font-medium break-words flex-1">{agent.agentName}</span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <span className={`text-[10px] ${config.color}`}>{config.label}</span>
+          {agent.durationMs != null && agent.durationMs > 0 && (
+            <span className="text-muted-foreground tabular-nums text-[10px]">
+              {agent.durationMs < 1000
+                ? `${Math.round(agent.durationMs)}ms`
+                : `${(agent.durationMs / 1000).toFixed(1)}s`}
+            </span>
+          )}
+        </div>
+      </div>
+      {/* Row 2: output preview (if completed) */}
+      {agent.status === 'completed' && agent.output && (
+        <p className="text-muted-foreground mt-0.5 ml-4 break-words whitespace-pre-wrap">
+          {agent.output.slice(0, 200)}
+          {agent.output.length > 200 && '...'}
+        </p>
+      )}
+    </div>
+  );
+};
