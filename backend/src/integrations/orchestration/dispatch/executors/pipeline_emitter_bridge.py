@@ -37,8 +37,10 @@ class PipelineEmitterBridge:
         """Handle PoC-style emit_event(name, data) calls."""
         from ...pipeline.service import PipelineEvent, PipelineEventType
 
-        # Map PoC event names to Production PipelineEventType
-        event_data = {"team_id": self._team_id, **data}
+        logger.info(
+            "PipelineEmitterBridge: emit_event(%s) agent=%s",
+            event_name, data.get("agent", data.get("worker", "?")),
+        )
 
         try:
             if event_name == "SWARM_WORKER_START":

@@ -495,18 +495,26 @@ class TeamExecutor(BaseExecutor):
             f"請用繁體中文回覆。"
         )
 
-        try:
-            synthesis = await llm_service.generate(
-                prompt=synthesis_prompt,
-                max_tokens=4096,
-                temperature=0.7,
-            )
-            if synthesis and synthesis.strip():
-                logger.info("LLM synthesis completed (%d chars)", len(synthesis))
-                return synthesis
-        except Exception as e:
-            logger.warning("LLM synthesis failed, falling back to static: %s", str(e)[:100])
+        # Retry with delay — Azure API may be exhausted after parallel agents
+        for attempt in range(3):
+            try:
+                if attempt > 0:
+                    delay = 2 ** attempt  # 2s, 4s
+                    logger.info("LLM synthesis retry %d/3 after %ds delay", attempt + 1, delay)
+                    await asyncio.sleep(delay)
 
+                synthesis = await llm_service.generate(
+                    prompt=synthesis_prompt,
+                    max_tokens=4096,
+                    temperature=0.7,
+                )
+                if synthesis and synthesis.strip():
+                    logger.info("LLM synthesis completed (%d chars)", len(synthesis))
+                    return synthesis
+            except Exception as e:
+                logger.warning("LLM synthesis attempt %d failed: %s", attempt + 1, str(e)[:100])
+
+        logger.warning("LLM synthesis all attempts failed, using static fallback")
         return self._synthesize_static(results)
 
     @staticmethod
