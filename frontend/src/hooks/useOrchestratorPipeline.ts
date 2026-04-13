@@ -187,7 +187,7 @@ export function useOrchestratorPipeline() {
         updateStep('dispatch', { status: 'running' });
         break;
 
-      case 'AGENT_THINKING':
+      case 'AGENT_THINKING': {
         setState(prev => ({
           ...prev,
           agents: [
@@ -198,7 +198,37 @@ export function useOrchestratorPipeline() {
             },
           ],
         }));
+        // Safety net: auto-create team from backward-compat AGENT_THINKING events
+        const atStore = useAgentTeamStore.getState();
+        if (!atStore.agentTeamStatus) {
+          atStore.setTeamStatus({
+            teamId: 'auto',
+            sessionId: '',
+            mode: 'parallel',
+            status: 'executing',
+            totalAgents: 0,
+            overallProgress: 0,
+            agents: [],
+            createdAt: new Date().toISOString(),
+            metadata: {},
+          });
+        }
+        // Add agent if not already in roster
+        const agentName = data.agent_name as string;
+        if (agentName && !atStore.agentTeamStatus?.agents.find(a => a.agentName === agentName)) {
+          atStore.addAgent({
+            agentId: agentName,
+            agentName,
+            agentType: 'hybrid',
+            role: (data.role as string) || 'agent',
+            status: 'running',
+            progress: 0,
+            toolCallsCount: 0,
+            createdAt: new Date().toISOString(),
+          });
+        }
         break;
+      }
 
       case 'AGENT_TOOL_CALL':
         setState(prev => ({
@@ -211,7 +241,7 @@ export function useOrchestratorPipeline() {
         }));
         break;
 
-      case 'AGENT_COMPLETE':
+      case 'AGENT_COMPLETE': {
         setState(prev => ({
           ...prev,
           agents: prev.agents.map(a =>
@@ -225,7 +255,23 @@ export function useOrchestratorPipeline() {
               : a
           ),
         }));
+        // Safety net: complete agent in team store from backward-compat events
+        const acStore = useAgentTeamStore.getState();
+        const acName = data.agent_name as string;
+        if (acStore.agentTeamStatus) {
+          const agentEntry = acStore.agentTeamStatus.agents.find(a => a.agentName === acName || a.agentId === acName);
+          if (agentEntry) {
+            acStore.completeAgent({
+              team_id: acStore.agentTeamStatus.teamId,
+              agent_id: agentEntry.agentId,
+              status: 'completed',
+              duration_ms: (data.duration_ms as number) || 0,
+              completed_at: new Date().toISOString(),
+            });
+          }
+        }
         break;
+      }
 
       case 'TEXT_DELTA':
         setState(prev => ({
@@ -293,13 +339,26 @@ export function useOrchestratorPipeline() {
       }
 
       case 'AGENT_MEMBER_STARTED': {
-        const store = useAgentTeamStore.getState();
-        const existing = store.agentTeamStatus?.agents.find(
+        const startStore = useAgentTeamStore.getState();
+        // Safety net: auto-create team if AGENT_TEAM_CREATED was missed
+        if (!startStore.agentTeamStatus) {
+          startStore.setTeamStatus({
+            teamId: (data.team_id as string) || 'auto',
+            sessionId: '',
+            mode: 'parallel',
+            status: 'executing',
+            totalAgents: 0,
+            overallProgress: 0,
+            agents: [],
+            createdAt: new Date().toISOString(),
+            metadata: {},
+          });
+        }
+        const existing = startStore.agentTeamStatus?.agents.find(
           a => a.agentId === (data.agent_id as string)
         );
         if (!existing) {
-          // Agent not in roster (e.g., TeamLead added later)
-          store.addAgent({
+          startStore.addAgent({
             agentId: data.agent_id as string,
             agentName: (data.agent_name as string) || (data.agent_id as string),
             agentType: 'hybrid',
@@ -311,8 +370,7 @@ export function useOrchestratorPipeline() {
             startedAt: (data.started_at as string) || new Date().toISOString(),
           });
         } else {
-          // Update existing agent status to running
-          store.updateAgentProgress({
+          startStore.updateAgentProgress({
             team_id: data.team_id as string,
             agent_id: data.agent_id as string,
             progress: 0,
