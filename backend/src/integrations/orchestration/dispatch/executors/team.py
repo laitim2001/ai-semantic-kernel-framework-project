@@ -99,9 +99,17 @@ class TeamExecutor(BaseExecutor):
                     )
                 )
 
-            # Phase 2: SharedTaskList — dynamic task claiming by priority (PoC pattern)
+            # Phase 5: run_parallel_team — PoC's 3-Phase persistent agent loop
+            # Phase 0 skipped (production uses TaskDecomposer)
+            # Phase 2 skipped (production uses _synthesize_with_llm)
             from src.integrations.poc.shared_task_list import create_shared_task_list
+            from src.integrations.poc.agent_work_loop import (
+                run_parallel_team, AgentConfig, TeamResult as PoCTeamResult,
+            )
+            from .team_agent_adapter import TeamAgentAdapter
+            from .pipeline_emitter_bridge import PipelineEmitterBridge
 
+            # Create SharedTaskList and populate with decomposed tasks
             shared = create_shared_task_list(session_id=team_id)
             for t in sub_tasks:
                 shared.add_task(
@@ -112,102 +120,78 @@ class TeamExecutor(BaseExecutor):
                 )
             logger.info("TeamExecutor: SharedTaskList populated with %d tasks", shared.task_count())
 
-            # Parallel execution — agents claim tasks from shared pool
-            max_concurrent = min(len(sub_tasks), 5)
-            semaphore = asyncio.Semaphore(max_concurrent)
+            # Build AgentConfig list with role-specific instructions
+            from src.integrations.swarm.worker_roles import get_role
+            agents_config = []
+            for t in sub_tasks:
+                role_def = get_role(t.role)
+                agents_config.append(AgentConfig(
+                    name=t.title,
+                    instructions=role_def.get("system_prompt", ""),
+                    expertise=t.role,
+                    tools=[],  # tools provided via TeamAgentAdapter's registry
+                ))
 
-            async def _run_with_claiming(sub_task):
-                """Run worker with SharedTaskList claim/complete lifecycle."""
-                worker_id = f"w-{sub_task.task_id}"
-                async with semaphore:
-                    # Claim task from shared pool (priority-based)
-                    claimed = shared.claim_task(worker_id)
-                    if not claimed:
-                        logger.warning("Worker %s: no task to claim", worker_id)
-                        return AgentResult(
-                            agent_name=sub_task.title,
-                            role=sub_task.role,
-                            output="No task available to claim.",
-                            duration_ms=0,
-                            status="skipped",
-                        )
+            # Bridge: client_factory returns TeamAgentAdapter (MAF Agent compatible)
+            def client_factory():
+                adapter = TeamAgentAdapter(
+                    llm_service=llm_service,
+                    tool_registry=tool_registry,
+                    name="Agent",
+                    instructions="",
+                )
+                return adapter
 
-                    try:
-                        result = await self._run_worker(
-                            sub_task, llm_service, tool_registry, event_queue, team_id
-                        )
-                        # Report completion to shared pool
-                        shared.complete_task(
-                            claimed.task_id,
-                            result.output[:500] if result.output else "",
-                        )
-                        return result
-                    except Exception as exc:
-                        # Phase 3: Error classification + reassignment
-                        error_type = self._classify_error(exc)
-                        if error_type == "transient" and claimed.retry_count < 2:
-                            shared.reassign_task(claimed.task_id)
-                            logger.warning(
-                                "Worker %s: transient error, task %s reassigned (retry %d/2)",
-                                worker_id, claimed.task_id, claimed.retry_count + 1,
-                            )
-                            if event_queue is not None:
-                                from ...pipeline.service import PipelineEvent, PipelineEventType
+            # Bridge: PipelineEmitterBridge maps PoC events → Production Queue
+            emitter = PipelineEmitterBridge(event_queue, team_id) if event_queue else None
 
-                                await event_queue.put(
-                                    PipelineEvent(
-                                        PipelineEventType.AGENT_MEMBER_THINKING,
-                                        {
-                                            "team_id": team_id,
-                                            "agent_id": worker_id,
-                                            "thinking_content": f"Task reassigned due to {error_type} error (retry {claimed.retry_count + 1}/2)",
-                                        },
-                                        step_name="dispatch",
-                                    )
-                                )
-                        else:
-                            shared.fail_task(claimed.task_id, str(exc)[:200])
-                        raise
-
-            agent_results: List[AgentResult] = []
-            results_or_errors = await asyncio.gather(
-                *[_run_with_claiming(t) for t in sub_tasks],
-                return_exceptions=True,
-            )
-
-            for i, result in enumerate(results_or_errors):
-                if isinstance(result, Exception):
-                    logger.error("Agent %d failed: %s", i, result)
-                    agent_results.append(AgentResult(
-                        agent_name=sub_tasks[i].title if hasattr(sub_tasks[i], 'title') else f"Agent-{i}",
-                        role="error",
-                        output=f"Agent execution failed: {str(result)[:200]}",
-                        duration_ms=0,
-                        status="failed",
-                    ))
-                else:
-                    agent_results.append(result)
-
-            # Phase 1.5: Communication Window (PoC pattern)
-            # Agents stay alive briefly to exchange cross-cutting findings
+            # Communication window from env
             comm_window = float(os.getenv("TEAM_COMM_WINDOW_SECONDS", "0"))
-            if comm_window > 0:
-                if event_queue is not None:
-                    from ...pipeline.service import PipelineEvent, PipelineEventType
 
-                    await event_queue.put(
-                        PipelineEvent(
-                            PipelineEventType.AGENT_MEMBER_THINKING,
-                            {
-                                "team_id": team_id,
-                                "agent_id": "system",
-                                "thinking_content": f"Communication window: {comm_window}s — agents exchanging findings",
-                                "phase": "1.5",
-                            },
-                            step_name="dispatch",
-                        )
-                    )
-                await asyncio.sleep(comm_window)
+            # Run the PoC's proven 3-phase parallel engine
+            try:
+                team_result = await run_parallel_team(
+                    task=request.task,
+                    context=memory_context or "",
+                    agents_config=agents_config,
+                    shared=shared,
+                    client_factory=client_factory,
+                    lead_tools=[],
+                    emitter=emitter,
+                    timeout=float(os.getenv("TEAM_TIMEOUT_SECONDS", "180")),
+                    comm_window=comm_window,
+                    session_id=team_id,
+                    skip_phase0=True,   # Production uses TaskDecomposer
+                    skip_phase2=True,   # Production uses _synthesize_with_llm
+                )
+                logger.info(
+                    "run_parallel_team completed: reason=%s, agents=%d",
+                    team_result.termination_reason,
+                    len(team_result.agent_results),
+                )
+            except Exception as rpt_err:
+                logger.error("run_parallel_team failed: %s", rpt_err, exc_info=True)
+                team_result = PoCTeamResult(
+                    shared_state={},
+                    agent_results={},
+                    termination_reason=f"error: {str(rpt_err)[:100]}",
+                )
+
+            # Convert PoC TeamResult (dict) → Production AgentResult list
+            agent_results: List[AgentResult] = []
+            for agent_name, output in team_result.agent_results.items():
+                status = "completed"
+                if output.startswith("ERROR:"):
+                    status = "failed"
+                elif output.startswith("CANCELLED"):
+                    status = "cancelled"
+                agent_results.append(AgentResult(
+                    agent_name=agent_name,
+                    role="team",
+                    output=output,
+                    duration_ms=0,
+                    status=status,
+                ))
 
             # Phase 2: LLM Synthesis (PoC pattern — unified analysis report)
             synthesis = await self._synthesize_with_llm(
