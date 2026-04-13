@@ -32,6 +32,8 @@ class PipelineEmitterBridge:
     def __init__(self, event_queue: asyncio.Queue, team_id: str):
         self._queue = event_queue
         self._team_id = team_id
+        self._team_created_emitted = False
+        self._agent_roster: list = []  # collect agents for AGENT_TEAM_CREATED
 
     async def emit_event(self, event_name: str, data: Dict[str, Any]) -> None:
         """Handle PoC-style emit_event(name, data) calls."""
@@ -44,12 +46,30 @@ class PipelineEmitterBridge:
 
         try:
             if event_name == "SWARM_WORKER_START":
+                agent_id = data.get("agent", data.get("worker", ""))
+                agent_name = data.get("agent", data.get("display_name", ""))
+
+                # Emit AGENT_TEAM_CREATED on first agent start
+                if not self._team_created_emitted:
+                    self._team_created_emitted = True
+                    await self._queue.put(PipelineEvent(
+                        PipelineEventType.AGENT_TEAM_CREATED,
+                        {
+                            "team_id": self._team_id,
+                            "mode": "parallel",
+                            "agents": [],  # populated incrementally via AGENT_MEMBER_STARTED
+                            "total_agents": 0,
+                            "created_at": "",
+                        },
+                        step_name="dispatch",
+                    ))
+
                 await self._queue.put(PipelineEvent(
                     PipelineEventType.AGENT_MEMBER_STARTED,
                     {
                         "team_id": self._team_id,
-                        "agent_id": data.get("agent", data.get("worker", "")),
-                        "agent_name": data.get("agent", data.get("display_name", "")),
+                        "agent_id": agent_id,
+                        "agent_name": agent_name,
                         "role": data.get("role", ""),
                     },
                     step_name="dispatch",
@@ -57,7 +77,7 @@ class PipelineEmitterBridge:
                 # Backward compat
                 await self._queue.put(PipelineEvent(
                     PipelineEventType.AGENT_THINKING,
-                    {"agent_name": data.get("agent", ""), "role": data.get("role", "")},
+                    {"agent_name": agent_name, "role": data.get("role", "")},
                     step_name="dispatch",
                 ))
 

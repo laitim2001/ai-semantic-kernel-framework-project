@@ -74,30 +74,9 @@ class TeamExecutor(BaseExecutor):
             # Decompose task into sub-tasks
             sub_tasks = await self._decompose_task(request, llm_service, tool_registry)
 
-            # Emit AGENT_TEAM_CREATED with full roster
-            if event_queue is not None:
-                from ...pipeline.service import PipelineEvent, PipelineEventType
-
-                await event_queue.put(
-                    PipelineEvent(
-                        PipelineEventType.AGENT_TEAM_CREATED,
-                        {
-                            "team_id": team_id,
-                            "mode": "parallel",
-                            "agents": [
-                                {
-                                    "agent_id": f"w-{t.task_id}",
-                                    "agent_name": t.title,
-                                    "role": t.role,
-                                }
-                                for t in sub_tasks
-                            ],
-                            "total_agents": len(sub_tasks),
-                            "created_at": datetime.now(timezone.utc).isoformat(),
-                        },
-                        step_name="dispatch",
-                    )
-                )
+            # AGENT_TEAM_CREATED is now emitted by PipelineEmitterBridge
+            # when run_parallel_team() sends SWARM_WORKER_START events.
+            # Emitting here would duplicate agents in the frontend.
 
             # Phase 5: run_parallel_team — PoC's 3-Phase persistent agent loop
             # Phase 0 skipped (production uses TaskDecomposer)
