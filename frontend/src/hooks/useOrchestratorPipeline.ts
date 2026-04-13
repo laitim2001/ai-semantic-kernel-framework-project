@@ -457,9 +457,23 @@ export function useOrchestratorPipeline() {
       }
 
       case 'AGENT_TEAM_COMPLETED': {
-        const store = useAgentTeamStore.getState();
+        const teamCompleteStore = useAgentTeamStore.getState();
         const teamStatus = (data.status as string) === 'failed' ? 'failed' : 'completed';
-        store.completeTeam(
+        // Auto-complete any agents still at 0% (AGENT_COMPLETE events may have been lost)
+        if (teamCompleteStore.agentTeamStatus) {
+          for (const agent of teamCompleteStore.agentTeamStatus.agents) {
+            if (agent.status === 'running' || agent.status === 'pending') {
+              teamCompleteStore.completeAgent({
+                team_id: teamCompleteStore.agentTeamStatus.teamId,
+                agent_id: agent.agentId,
+                status: teamStatus === 'failed' ? 'failed' : 'completed',
+                duration_ms: 0,
+                completed_at: new Date().toISOString(),
+              });
+            }
+          }
+        }
+        teamCompleteStore.completeTeam(
           teamStatus as 'completed' | 'failed',
           (data.completed_at as string) || new Date().toISOString()
         );
@@ -542,7 +556,7 @@ export function useOrchestratorPipeline() {
         break;
       }
 
-      case 'PIPELINE_COMPLETE':
+      case 'PIPELINE_COMPLETE': {
         // Only finalize on the truly final event (after dispatch)
         if (data.final) {
           updateStep('dispatch', { status: 'completed' });
@@ -552,8 +566,25 @@ export function useOrchestratorPipeline() {
             isRunning: false,
             totalMs: data.total_ms as number,
           }));
+          // Safety net: auto-complete any unfinished agents when pipeline ends
+          const pcStore = useAgentTeamStore.getState();
+          if (pcStore.agentTeamStatus && pcStore.agentTeamStatus.status !== 'completed') {
+            for (const agent of pcStore.agentTeamStatus.agents) {
+              if (agent.status === 'running' || agent.status === 'pending') {
+                pcStore.completeAgent({
+                  team_id: pcStore.agentTeamStatus.teamId,
+                  agent_id: agent.agentId,
+                  status: 'completed',
+                  duration_ms: 0,
+                  completed_at: new Date().toISOString(),
+                });
+              }
+            }
+            pcStore.completeTeam('completed', new Date().toISOString());
+          }
         }
         break;
+      }
 
       case 'PIPELINE_ERROR':
         setState(prev => ({
