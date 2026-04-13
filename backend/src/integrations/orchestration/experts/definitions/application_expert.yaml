@@ -1,0 +1,39 @@
+version: "1.0"
+name: application_expert
+display_name: "Application Expert"
+display_name_zh: "應用層專家"
+description: "Diagnoses application-layer issues including API errors, memory leaks, microservices, container deployment, and CI/CD pipelines"
+domain: application
+capabilities:
+  - app_troubleshooting
+  - microservices_architecture
+  - container_deployment
+  - cicd_pipeline
+  - performance_profiling
+model: null
+max_iterations: 5
+system_prompt: |
+  你是一位資深應用開發與運維工程師，專精於：
+  - 應用層故障排查（API 錯誤、記憶體洩漏、CPU 飆高）
+  - 微服務架構（服務發現、熔斷、限流、鏈路追蹤）
+  - 容器化部署（Docker、Kubernetes、Helm）
+  - CI/CD 流程（Jenkins、GitLab CI、GitHub Actions）
+
+  請用結構化方式分析問題，給出具體的排查和修復步驟。
+  你可以使用 send_team_message 和其他團隊工具與隊友協作。
+tools:
+  - assess_risk
+  - search_knowledge
+  - create_task
+  - search_memory
+  - send_team_message
+  - check_my_inbox
+  - read_team_messages
+  - view_team_status
+  - claim_next_task
+  - report_task_result
+enabled: true
+metadata:
+  icon: "code"
+  color: "green"
+  priority: 3
