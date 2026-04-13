@@ -592,25 +592,34 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
       limit: tokenUsage.limit,
       percentage: (estimatedTokens / tokenUsage.limit) * 100,
     },
-    time: executionTime,
+    time: pipeline.totalMs
+      ? { total: pipeline.totalMs, isRunning: pipeline.isRunning, formatted: `${(pipeline.totalMs / 1000).toFixed(1)}s` }
+      : executionTime,
     toolCallCount: toolCalls.length,
     messageCount: messages.length,
-  }), [estimatedTokens, tokenUsage.limit, executionTime, toolCalls.length, messages.length]);
+  }), [estimatedTokens, tokenUsage.limit, executionTime, pipeline.totalMs, toolCalls.length, messages.length]);
 
-  // Risk state (derived from pending approvals)
+  // Risk state — prefer pipeline risk_assessment step metadata, fallback to pending approvals
   const riskLevel: RiskLevel = useMemo(() => {
+    const riskStep = pipeline.steps.find(s => s.name === 'risk_assessment' && s.status === 'completed');
+    if (riskStep?.metadata) {
+      const level = (riskStep.metadata.level as string || '').toLowerCase();
+      if (['low', 'medium', 'high', 'critical'].includes(level)) return level as RiskLevel;
+    }
     if (pendingApprovals.length === 0) return 'low';
     const maxRisk = pendingApprovals.reduce((max, a) => {
       const levels: RiskLevel[] = ['low', 'medium', 'high', 'critical'];
       return levels.indexOf(a.riskLevel) > levels.indexOf(max) ? a.riskLevel : max;
     }, 'low' as RiskLevel);
     return maxRisk;
-  }, [pendingApprovals]);
+  }, [pipeline.steps, pendingApprovals]);
 
   const riskScore = useMemo(() => {
+    const riskStep = pipeline.steps.find(s => s.name === 'risk_assessment' && s.status === 'completed');
+    if (riskStep?.metadata?.score != null) return riskStep.metadata.score as number;
     if (pendingApprovals.length === 0) return 0.1;
     return Math.max(...pendingApprovals.map(a => a.riskScore));
-  }, [pendingApprovals]);
+  }, [pipeline.steps, pendingApprovals]);
 
   // Checkpoint state
   const hasCheckpoint = checkpoints.length > 0;
@@ -954,8 +963,10 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
     }
   }, []);
 
-  // Determine effective mode (currentMode from hook already handles manual override)
-  const effectiveMode = currentMode;
+  // Determine effective mode — always 'chat' (workflow removed; route shown in StatusBar)
+  const effectiveMode: ExecutionMode = 'chat';
+  // Pipeline route for StatusBar display (direct_answer/subagent/team)
+  const pipelineRoute = pipeline.selectedRoute;
 
   return (
     <div
@@ -1001,8 +1012,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
           {/* Chat Area with Tool Call Display */}
           <div
             className={cn(
-              'flex-1 flex flex-col bg-white',
-              effectiveMode === 'workflow' && 'border-r'
+              'flex-1 flex flex-col bg-white'
             )}
           >
             {/* Error Display */}
@@ -1198,7 +1208,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
           </div>
         )}
         <div className="flex items-center gap-1 px-4 pb-1">
-          {(['chat', 'workflow', 'team'] as const).map((m) => (
+          {(['chat', 'team'] as const).map((m) => (
             <button
               key={m}
               onClick={() => { setPipelineMode(m); setSuggestedMode(null); }}
@@ -1206,13 +1216,11 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
                 pipelineMode === m
                   ? m === 'chat'
                     ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-300'
-                    : m === 'workflow'
-                    ? 'bg-purple-100 text-purple-800 ring-1 ring-purple-300'
                     : 'bg-orange-100 text-orange-800 ring-1 ring-orange-300'
                   : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
               }`}
             >
-              {m === 'chat' ? 'Chat' : m === 'workflow' ? 'Workflow' : 'Team'}
+              {m === 'chat' ? 'Chat' : 'Team'}
             </button>
           ))}
         </div>
@@ -1220,14 +1228,12 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
         {/* Input Area - S75-4: Added file attachment support */}
         <ChatInput
           onSend={handleSend}
-          isStreaming={isStreaming || isUploading || isPipelineSending || isSSEStreaming}
+          isStreaming={isStreaming || isUploading || isPipelineSending || isSSEStreaming || pipeline.isRunning}
           onCancel={handleCancel}
           placeholder={
-            pipelineMode === 'chat'
-              ? 'Type a message...'
-              : pipelineMode === 'workflow'
-              ? 'Describe your workflow task...'
-              : 'Describe the incident for the agent team...'
+            pipelineMode === 'team'
+              ? 'Describe the incident for the agent team...'
+              : 'Type a message...'
           }
           attachments={typedAttachments}
           onAttach={handleAttach}
@@ -1245,6 +1251,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
           canRestore={canRestore}
           onRestore={handleRestore}
           heartbeat={heartbeat}  // S67-BF-1
+          pipelineRoute={pipelineRoute}
         />
       </div>
 

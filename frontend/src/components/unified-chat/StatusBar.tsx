@@ -109,7 +109,7 @@ const formatTokens = (count: number): string => {
  * - Execution time with running indicator
  * - Checkpoint restore button (if available)
  */
-export const StatusBar: FC<StatusBarProps> = ({
+export const StatusBar: FC<StatusBarProps & { pipelineRoute?: string | null }> = ({
   mode,
   modeSource,
   riskLevel,
@@ -119,6 +119,7 @@ export const StatusBar: FC<StatusBarProps> = ({
   canRestore,
   onRestore,
   heartbeat,  // S67-BF-1
+  pipelineRoute,
 }) => {
   const riskConfig = getRiskConfig(riskLevel);
   const RiskIcon = riskConfig.icon;
@@ -145,15 +146,25 @@ export const StatusBar: FC<StatusBarProps> = ({
       >
         {/* Left Section: Mode and Risk */}
         <div className="flex items-center gap-4">
-          {/* Mode Indicator */}
+          {/* Mode / Route Indicator */}
           <div className="flex items-center gap-1.5">
-            <span className="text-gray-500">Mode:</span>
-            <Badge variant="outline" className="font-medium">
-              {mode === 'chat' ? 'Chat' : 'Workflow'}
+            <span className="text-gray-500">Route:</span>
+            <Badge
+              variant="outline"
+              className={cn('font-medium', pipelineRoute === 'team'
+                ? 'bg-purple-50 text-purple-700 border-purple-300'
+                : pipelineRoute === 'subagent'
+                ? 'bg-blue-50 text-blue-700 border-blue-300'
+                : pipelineRoute === 'direct_answer'
+                ? 'bg-green-50 text-green-700 border-green-300'
+                : ''
+              )}
+            >
+              {pipelineRoute === 'direct_answer' ? 'Direct'
+                : pipelineRoute === 'subagent' ? 'Subagent'
+                : pipelineRoute === 'team' ? 'Team'
+                : mode === 'chat' ? 'Chat' : mode}
             </Badge>
-            {modeSource === 'manual' && (
-              <span className="text-xs text-gray-400">(manual)</span>
-            )}
           </div>
 
           {/* Risk Indicator */}

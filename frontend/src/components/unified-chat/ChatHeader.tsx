@@ -61,33 +61,16 @@ export const ChatHeader: FC<ChatHeaderProps> = ({
         )}
       </div>
 
-      {/* Center: Mode Toggle */}
+      {/* Center: Mode indicator (Workflow removed — new orchestrator flow handles routing) */}
       <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
         <Button
-          variant={currentMode === 'chat' ? 'default' : 'ghost'}
+          variant="default"
           size="sm"
-          className={cn(
-            'gap-2 transition-all',
-            currentMode === 'chat' && 'shadow-sm'
-          )}
-          onClick={() => handleModeClick('chat')}
+          className="gap-2 shadow-sm"
           data-testid="mode-toggle-chat"
         >
           <MessageSquare className="h-4 w-4" />
           Chat
-        </Button>
-        <Button
-          variant={currentMode === 'workflow' ? 'default' : 'ghost'}
-          size="sm"
-          className={cn(
-            'gap-2 transition-all',
-            currentMode === 'workflow' && 'shadow-sm'
-          )}
-          onClick={() => handleModeClick('workflow')}
-          data-testid="mode-toggle-workflow"
-        >
-          <Workflow className="h-4 w-4" />
-          Workflow
         </Button>
       </div>
 
