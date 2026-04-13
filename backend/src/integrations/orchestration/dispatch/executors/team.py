@@ -99,59 +99,94 @@ class TeamExecutor(BaseExecutor):
                     )
                 )
 
-            # Execute workers in parallel (PoC-proven asyncio.gather pattern)
-            # TaskDecomposer returns mode: "parallel" | "sequential"
-            exec_mode = "parallel"
-            if hasattr(sub_tasks[0], "__class__") and hasattr(sub_tasks, "__iter__"):
-                # Check if decomposer set a mode
-                exec_mode = getattr(sub_tasks, "_mode", "parallel") if hasattr(sub_tasks, "_mode") else "parallel"
+            # Phase 2: SharedTaskList — dynamic task claiming by priority (PoC pattern)
+            from src.integrations.poc.shared_task_list import create_shared_task_list
 
-            agent_results: List[AgentResult] = []
+            shared = create_shared_task_list(session_id=team_id)
+            for t in sub_tasks:
+                shared.add_task(
+                    task_id=t.task_id,
+                    description=t.description,
+                    priority=getattr(t, "priority", 1),
+                    required_expertise=t.role,
+                )
+            logger.info("TeamExecutor: SharedTaskList populated with %d tasks", shared.task_count())
 
-            if exec_mode == "sequential":
-                # Sequential with shared context (rarely used)
-                shared_context: List[str] = []
-                for sub_task in sub_tasks:
-                    if shared_context:
-                        sub_task.description += (
-                            "\n\n## Prior Team Findings\n"
-                            + "\n".join(shared_context)
+            # Parallel execution — agents claim tasks from shared pool
+            max_concurrent = min(len(sub_tasks), 5)
+            semaphore = asyncio.Semaphore(max_concurrent)
+
+            async def _run_with_claiming(sub_task):
+                """Run worker with SharedTaskList claim/complete lifecycle."""
+                worker_id = f"w-{sub_task.task_id}"
+                async with semaphore:
+                    # Claim task from shared pool (priority-based)
+                    claimed = shared.claim_task(worker_id)
+                    if not claimed:
+                        logger.warning("Worker %s: no task to claim", worker_id)
+                        return AgentResult(
+                            agent_name=sub_task.title,
+                            role=sub_task.role,
+                            output="No task available to claim.",
+                            duration_ms=0,
+                            status="skipped",
                         )
-                    result = await self._run_worker(
-                        sub_task, llm_service, tool_registry, event_queue, team_id
-                    )
-                    agent_results.append(result)
-                    shared_context.append(
-                        f"[{result.agent_name}]: {result.output}"
-                    )
-            else:
-                # Parallel execution — all agents run concurrently (PoC pattern)
-                max_concurrent = min(len(sub_tasks), 5)
-                semaphore = asyncio.Semaphore(max_concurrent)
 
-                async def _run_parallel(sub_task):
-                    async with semaphore:
-                        return await self._run_worker(
+                    try:
+                        result = await self._run_worker(
                             sub_task, llm_service, tool_registry, event_queue, team_id
                         )
+                        # Report completion to shared pool
+                        shared.complete_task(
+                            claimed.task_id,
+                            result.output[:500] if result.output else "",
+                        )
+                        return result
+                    except Exception as exc:
+                        # Phase 3: Error classification + reassignment
+                        error_type = self._classify_error(exc)
+                        if error_type == "transient" and claimed.retry_count < 2:
+                            shared.reassign_task(claimed.task_id)
+                            logger.warning(
+                                "Worker %s: transient error, task %s reassigned (retry %d/2)",
+                                worker_id, claimed.task_id, claimed.retry_count + 1,
+                            )
+                            if event_queue is not None:
+                                from ...pipeline.service import PipelineEvent, PipelineEventType
 
-                results_or_errors = await asyncio.gather(
-                    *[_run_parallel(t) for t in sub_tasks],
-                    return_exceptions=True,
-                )
+                                await event_queue.put(
+                                    PipelineEvent(
+                                        PipelineEventType.AGENT_MEMBER_THINKING,
+                                        {
+                                            "team_id": team_id,
+                                            "agent_id": worker_id,
+                                            "thinking_content": f"Task reassigned due to {error_type} error (retry {claimed.retry_count + 1}/2)",
+                                        },
+                                        step_name="dispatch",
+                                    )
+                                )
+                        else:
+                            shared.fail_task(claimed.task_id, str(exc)[:200])
+                        raise
 
-                for i, result in enumerate(results_or_errors):
-                    if isinstance(result, Exception):
-                        logger.error("Agent %d failed: %s", i, result)
-                        agent_results.append(AgentResult(
-                            agent_name=sub_tasks[i].title if hasattr(sub_tasks[i], 'title') else f"Agent-{i}",
-                            role="error",
-                            output=f"Agent execution failed: {str(result)[:200]}",
-                            duration_ms=0,
-                            status="failed",
-                        ))
-                    else:
-                        agent_results.append(result)
+            agent_results: List[AgentResult] = []
+            results_or_errors = await asyncio.gather(
+                *[_run_with_claiming(t) for t in sub_tasks],
+                return_exceptions=True,
+            )
+
+            for i, result in enumerate(results_or_errors):
+                if isinstance(result, Exception):
+                    logger.error("Agent %d failed: %s", i, result)
+                    agent_results.append(AgentResult(
+                        agent_name=sub_tasks[i].title if hasattr(sub_tasks[i], 'title') else f"Agent-{i}",
+                        role="error",
+                        output=f"Agent execution failed: {str(result)[:200]}",
+                        duration_ms=0,
+                        status="failed",
+                    ))
+                else:
+                    agent_results.append(result)
 
             # Phase 1.5: Communication Window (PoC pattern)
             # Agents stay alive briefly to exchange cross-cutting findings
@@ -498,3 +533,22 @@ class TeamExecutor(BaseExecutor):
             status_icon = "✓" if r.status == "completed" else "✗"
             parts.append(f"**{r.agent_name}** [{status_icon}]:\n{r.output}")
         return "\n\n---\n\n".join(parts)
+
+    @staticmethod
+    def _classify_error(e: Exception) -> str:
+        """Classify error as transient or fatal (PoC agent_work_loop.py pattern).
+
+        Transient errors are worth retrying; fatal errors should fail immediately.
+        """
+        err_str = str(e).lower()
+        if any(kw in err_str for kw in (
+            "timeout", "429", "503", "504", "rate_limit",
+            "overloaded", "connection", "reset",
+        )):
+            return "transient"
+        if any(kw in err_str for kw in (
+            "401", "403", "authentication", "forbidden",
+            "invalid", "not_found", "404",
+        )):
+            return "fatal"
+        return "unknown"
