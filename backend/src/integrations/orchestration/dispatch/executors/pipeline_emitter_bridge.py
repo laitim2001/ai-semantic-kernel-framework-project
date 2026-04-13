@@ -183,11 +183,25 @@ class PipelineEmitterBridge:
                 ))
 
             elif event_name == "TEXT_DELTA":
-                await self._queue.put(PipelineEvent(
-                    PipelineEventType.TEXT_DELTA,
-                    {"content": data.get("delta", ""), "source": data.get("source", "agent")},
-                    step_name="dispatch",
-                ))
+                # Only forward synthesis TEXT_DELTA to chat response.
+                # Agent TEXT_DELTA goes to thinking (avoids chat constantly updating)
+                if data.get("source") == "synthesis":
+                    await self._queue.put(PipelineEvent(
+                        PipelineEventType.TEXT_DELTA,
+                        {"content": data.get("delta", ""), "source": "synthesis"},
+                        step_name="dispatch",
+                    ))
+                else:
+                    await self._queue.put(PipelineEvent(
+                        PipelineEventType.AGENT_MEMBER_THINKING,
+                        {
+                            "team_id": self._team_id,
+                            "agent_id": data.get("agent", ""),
+                            "thinking_content": data.get("delta", "")[:200],
+                            "message_type": "agent_response",
+                        },
+                        step_name="dispatch",
+                    ))
 
             else:
                 # Unknown event — log and forward as thinking

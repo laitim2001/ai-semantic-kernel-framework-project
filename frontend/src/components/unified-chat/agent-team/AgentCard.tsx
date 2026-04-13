@@ -118,7 +118,7 @@ export const AgentCard: FC<AgentCardProps> = ({
 }) => {
   // Get configurations
   const RoleIcon = ROLE_ICONS[agent.role.toLowerCase()] || ROLE_ICONS.default;
-  const statusConfig = STATUS_CONFIG[agent.status];
+  const statusConfig = STATUS_CONFIG[agent.status] || STATUS_CONFIG.running;
   const StatusIcon = statusConfig.icon;
   const typeConfig = TYPE_CONFIG[agent.agentType] || TYPE_CONFIG.custom;
   const TypeIcon = typeConfig.icon;
