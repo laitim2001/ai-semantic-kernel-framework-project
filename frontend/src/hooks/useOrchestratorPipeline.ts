@@ -567,6 +567,9 @@ export function useOrchestratorPipeline() {
           }
         }
       }
+
+      // SSE stream ended — ensure UI stops spinning if PIPELINE_COMPLETE wasn't received
+      setState(prev => prev.isRunning ? { ...prev, isRunning: false } : prev);
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         setState(prev => ({
@@ -661,6 +664,9 @@ export function useOrchestratorPipeline() {
             }
           }
         }
+
+        // SSE stream ended — ensure UI stops spinning if PIPELINE_COMPLETE wasn't received
+        setState(prev => prev.isRunning ? { ...prev, isRunning: false } : prev);
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           console.error('[resumeApproval] checkpoint resume failed:', err);

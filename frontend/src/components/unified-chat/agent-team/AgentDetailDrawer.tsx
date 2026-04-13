@@ -212,7 +212,7 @@ export const AgentDetailDrawer: FC<AgentDetailDrawerProps> = ({
                     thinkingHistory={workerDetail.thinkingHistory}
                     defaultExpanded={true}
                     autoScroll={true}
-                    maxHeight={250}
+                    maxHeight={400}
                   />
                 </>
               )}

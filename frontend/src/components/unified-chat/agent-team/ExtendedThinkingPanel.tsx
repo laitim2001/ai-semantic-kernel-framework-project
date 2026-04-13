@@ -11,7 +11,6 @@ import { FC, useState, useRef, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { ScrollArea } from '@/components/ui/ScrollArea';
 import {
   Collapsible,
   CollapsibleContent,
@@ -129,7 +128,7 @@ function formatTimestamp(isoString: string): string {
  */
 export const ExtendedThinkingPanel: FC<ExtendedThinkingPanelProps> = ({
   thinkingHistory,
-  maxHeight = 300,
+  maxHeight = 400,
   defaultExpanded = true,
   autoScroll = true,
   className,
@@ -190,21 +189,20 @@ export const ExtendedThinkingPanel: FC<ExtendedThinkingPanelProps> = ({
         <CollapsibleContent>
           <CardContent className="pt-0 px-4 pb-3">
             {/* Scrollable thinking blocks */}
-            <ScrollArea
-              className="pr-3"
+            <div
+              ref={scrollRef}
+              className="overflow-y-auto pr-1 space-y-3 scrollbar-thin"
               style={{ maxHeight }}
             >
-              <div ref={scrollRef} className="space-y-3">
-                {thinkingHistory.map((thinking, index) => (
-                  <ThinkingBlock
-                    key={index}
-                    thinking={thinking}
-                    index={index}
-                    isLatest={index === thinkingHistory.length - 1}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
+              {thinkingHistory.map((thinking, index) => (
+                <ThinkingBlock
+                  key={index}
+                  thinking={thinking}
+                  index={index}
+                  isLatest={index === thinkingHistory.length - 1}
+                />
+              ))}
+            </div>
 
             {/* Statistics footer */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t text-xs text-muted-foreground">

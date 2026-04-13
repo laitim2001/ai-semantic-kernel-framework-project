@@ -7,8 +7,10 @@
  * Sprint 102: AgentTeamPanel + AgentCard
  */
 
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Users, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AgentTeamHeader } from './AgentTeamHeader';
 import { OverallProgress } from './OverallProgress';
@@ -98,12 +100,15 @@ const EmptyState: FC<{ className?: string }> = ({ className }) => (
  * @param isLoading - Whether data is loading
  * @param className - Additional CSS classes
  */
+type PanelTab = 'agents' | 'log';
+
 export const AgentTeamPanel: FC<AgentTeamPanelProps> = ({
   agentTeamStatus,
   onAgentClick,
   isLoading = false,
   className,
 }) => {
+  const [activeTab, setActiveTab] = useState<PanelTab>('agents');
   // Subscribe to conversation log events and route type from store
   const agentEvents = useAgentTeamStore(selectAgentEvents);
   const routeType = useAgentTeamStore((s) => s.routeType);
@@ -138,22 +143,43 @@ export const AgentTeamPanel: FC<AgentTeamPanelProps> = ({
           status={agentTeamStatus.status}
         />
 
-        {/* Agent list */}
-        <div className="border-t pt-4">
-          <AgentCardList
-            agents={agentTeamStatus.agents}
-            onAgentClick={onAgentClick}
-          />
+        {/* Tab toggle: Agents / Conversation Log */}
+        <div className="flex items-center gap-1 border-t pt-3">
+          <Button
+            variant={activeTab === 'agents' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 text-xs px-3"
+            onClick={() => setActiveTab('agents')}
+          >
+            <Users className="h-3 w-3 mr-1" />
+            Agents ({agentTeamStatus.agents.length})
+          </Button>
+          <Button
+            variant={activeTab === 'log' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 text-xs px-3"
+            onClick={() => setActiveTab('log')}
+          >
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Log {agentEvents.length > 0 && `(${agentEvents.length})`}
+          </Button>
         </div>
 
-        {/* Conversation Log (Phase 45: Sprint E) */}
-        {agentEvents.length > 0 && (
-          <div className="border-t pt-4">
-            <ConversationLog
-              events={agentEvents}
-              maxHeight="280px"
+        {/* Tab content */}
+        {activeTab === 'agents' && (
+          <div>
+            <AgentCardList
+              agents={agentTeamStatus.agents}
+              onAgentClick={onAgentClick}
             />
           </div>
+        )}
+
+        {activeTab === 'log' && (
+          <ConversationLog
+            events={agentEvents}
+            maxHeight="400px"
+          />
         )}
       </CardContent>
     </Card>
