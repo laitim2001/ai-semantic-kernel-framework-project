@@ -565,6 +565,12 @@ export function useOrchestratorPipeline() {
             ...prev,
             isRunning: false,
             totalMs: data.total_ms as number,
+            // Auto-complete pipeline agents still stuck on 'thinking'
+            agents: prev.agents.map(a =>
+              a.status !== 'completed'
+                ? { ...a, status: 'completed' as const, durationMs: data.total_ms as number }
+                : a
+            ),
           }));
           // Safety net: auto-complete any unfinished agents when pipeline ends
           const pcStore = useAgentTeamStore.getState();
@@ -658,7 +664,11 @@ export function useOrchestratorPipeline() {
       }
 
       // SSE stream ended — ensure UI stops spinning if PIPELINE_COMPLETE wasn't received
-      setState(prev => prev.isRunning ? { ...prev, isRunning: false } : prev);
+      setState(prev => prev.isRunning ? {
+        ...prev,
+        isRunning: false,
+        agents: prev.agents.map(a => a.status !== 'completed' ? { ...a, status: 'completed' as const } : a),
+      } : prev);
       // Auto-complete any unfinished agents when stream ends gracefully
       const endStore = useAgentTeamStore.getState();
       if (endStore.agentTeamStatus && endStore.agentTeamStatus.status === 'executing') {
@@ -775,7 +785,11 @@ export function useOrchestratorPipeline() {
         }
 
         // SSE stream ended — ensure UI stops spinning if PIPELINE_COMPLETE wasn't received
-        setState(prev => prev.isRunning ? { ...prev, isRunning: false } : prev);
+        setState(prev => prev.isRunning ? {
+        ...prev,
+        isRunning: false,
+        agents: prev.agents.map(a => a.status !== 'completed' ? { ...a, status: 'completed' as const } : a),
+      } : prev);
         // Auto-complete any unfinished agents
         const resumeEndStore = useAgentTeamStore.getState();
         if (resumeEndStore.agentTeamStatus && resumeEndStore.agentTeamStatus.status === 'executing') {
