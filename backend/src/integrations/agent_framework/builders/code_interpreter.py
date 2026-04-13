@@ -278,7 +278,7 @@ class CodeInterpreterAdapter:
             api_mode=APIMode.RESPONSES,
             azure_endpoint="https://xxx.openai.azure.com/",
             api_key="your-key",
-            deployment="gpt-5.2",
+            deployment="gpt-5.4-mini",
         )
         adapter = CodeInterpreterAdapter(config=config)
         result = adapter.execute("print(2 + 2)")

@@ -100,7 +100,7 @@ class Mem0Client:
         if provider == "azure_openai":
             azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
             azure_key = os.getenv("AZURE_OPENAI_API_KEY", "")
-            deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.2")
+            deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-5.4-mini")
             return {
                 "provider": "azure_openai",
                 "config": {
