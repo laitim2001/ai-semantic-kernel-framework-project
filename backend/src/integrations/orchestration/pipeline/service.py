@@ -53,6 +53,8 @@ class PipelineEventType(str, Enum):
     AGENT_TASK_REASSIGNED = "AGENT_TASK_REASSIGNED"
     # Per-tool HITL approval within agent team (Phase 45: Sprint D)
     AGENT_APPROVAL_REQUIRED = "AGENT_APPROVAL_REQUIRED"
+    # Expert Roster Preview (Phase 46: Sprint 165)
+    EXPERT_ROSTER_PREVIEW = "EXPERT_ROSTER_PREVIEW"
     TEXT_DELTA = "TEXT_DELTA"
     PIPELINE_COMPLETE = "PIPELINE_COMPLETE"
     PIPELINE_ERROR = "PIPELINE_ERROR"

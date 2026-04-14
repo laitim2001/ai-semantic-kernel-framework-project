@@ -138,14 +138,20 @@ class TeamExecutor(BaseExecutor):
             # Bridge: PipelineEmitterBridge maps PoC events → Production Queue
             emitter = PipelineEmitterBridge(event_queue, team_id) if event_queue else None
 
-            # Sprint 165: Emit EXPERT_ROSTER_PREVIEW via emitter bridge
-            if emitter and event_queue:
-                await event_queue.put({
-                    "type": "EXPERT_ROSTER_PREVIEW",
-                    "team_id": team_id,
-                    "roster": roster_preview,
-                    "total_agents": len(roster_preview),
-                })
+            # Sprint 165: Emit EXPERT_ROSTER_PREVIEW via PipelineEvent
+            if event_queue is not None:
+                from ...pipeline.service import PipelineEvent, PipelineEventType
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.EXPERT_ROSTER_PREVIEW,
+                        {
+                            "team_id": team_id,
+                            "roster": roster_preview,
+                            "total_agents": len(roster_preview),
+                        },
+                        step_name="dispatch",
+                    )
+                )
 
             # Communication window from env
             comm_window = float(os.getenv("TEAM_COMM_WINDOW_SECONDS", "0"))
