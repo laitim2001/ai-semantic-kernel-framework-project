@@ -223,6 +223,18 @@ class OrchestrationPipelineService:
                     ),
                 )
 
+                # Also emit LLM_ROUTE_DECISION for fast-path
+                await self._emit(
+                    event_queue,
+                    PipelineEvent(
+                        PipelineEventType.LLM_ROUTE_DECISION,
+                        {
+                            "route": "direct_answer",
+                            "reasoning": context.route_reasoning or "Fast-path: high-confidence non-actionable",
+                        },
+                        step_name=step.name,
+                    ),
+                )
                 logger.info(
                     "Fast-path applied: skipped Step 6 LLM call, route=direct_answer"
                 )
@@ -260,6 +272,23 @@ class OrchestrationPipelineService:
                         step_name=step.name,
                     ),
                 )
+
+                # Emit LLM_ROUTE_DECISION after Step 6 completes
+                # so frontend can immediately display the selected route
+                if step.name == "llm_route_decision" and context.selected_route:
+                    await self._emit(
+                        event_queue,
+                        PipelineEvent(
+                            PipelineEventType.LLM_ROUTE_DECISION,
+                            {
+                                "route": context.selected_route,
+                                "reasoning": context.route_reasoning or "",
+                                "intent_validated": context.metadata.get("intent_validated", True),
+                                "intent_override": context.metadata.get("intent_override"),
+                            },
+                            step_name=step.name,
+                        ),
+                    )
 
                 # Record transcript entry
                 await self._record_transcript(context, step, "step_complete")

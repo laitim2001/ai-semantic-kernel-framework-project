@@ -505,12 +505,8 @@ export function useOrchestratorPipeline() {
           teamStatus as 'completed' | 'failed',
           (data.completed_at as string) || new Date().toISOString()
         );
-        // Fix 1: Only override selectedRoute if it wasn't already set by LLM_ROUTE_DECISION
-        // SubagentExecutor also emits AGENT_TEAM events, so don't blindly set 'team'
-        setState(prev => ({
-          ...prev,
-          selectedRoute: prev.selectedRoute || 'team',
-        }));
+        // selectedRoute is set ONLY by LLM_ROUTE_DECISION — never override here.
+        // SubagentExecutor also emits AGENT_TEAM_COMPLETED events.
         break;
       }
 
