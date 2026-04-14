@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AgentCardProps, AgentMemberStatus, AgentType } from './types';
+import { DomainBadge } from './ExpertBadges';
 
 // =============================================================================
 // Constants
@@ -171,6 +172,9 @@ export const AgentCard: FC<AgentCardProps> = ({
           <Badge variant="outline" className="text-xs h-5 px-1.5 capitalize">
             {agent.role}
           </Badge>
+          {agent.domain && (
+            <DomainBadge domain={agent.domain} />
+          )}
         </div>
 
         {/* Current action */}

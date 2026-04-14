@@ -71,6 +71,12 @@ export interface UIAgentSummary {
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
+  /** Expert domain from Agent Expert Registry (Sprint 161) */
+  domain?: string;
+  /** Expert capabilities list from Agent Expert Registry (Sprint 161) */
+  capabilities?: string[];
+  /** Expert Chinese display name from Agent Expert Registry (Sprint 161) */
+  expertDisplayName?: string;
 }
 
 // =============================================================================

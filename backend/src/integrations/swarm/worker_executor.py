@@ -84,7 +84,7 @@ class SwarmWorkerExecutor:
         messages: List[Dict[str, Any]] = []
 
         try:
-            # Emit SWARM_WORKER_START
+            # Emit SWARM_WORKER_START (includes expert domain/capabilities from Sprint 161)
             await self._emit("SWARM_WORKER_START", {
                 "worker_id": self._worker_id,
                 "agent_name": self._role_def.get("name", "Worker"),
@@ -92,6 +92,8 @@ class SwarmWorkerExecutor:
                 "role": self._task.role,
                 "task": self._task.title,
                 "task_description": self._task.description,
+                "domain": self._role_def.get("domain", "general"),
+                "capabilities": self._role_def.get("capabilities", []),
             })
 
             # Build messages with role-specific system prompt
