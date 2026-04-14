@@ -21,8 +21,10 @@ from .base import PipelineStep
 
 logger = logging.getLogger(__name__)
 
-VALID_ROUTES = {"direct_answer", "subagent", "team"}
-DEFAULT_ROUTE = "team"
+VALID_ROUTES = {"direct_answer", "subagent"}
+DEFAULT_ROUTE = "subagent"
+# Note: "team" route is triggered ONLY by explicit user action (Team button or [agent team] keyword),
+# never by LLM auto-routing. This follows CC's design: agents are user-driven, not LLM-decided.
 
 ORCHESTRATOR_SYSTEM_PROMPT = """You are an IT Operations Orchestrator. Based on the context below, \
 call select_route to choose the best execution mode.
@@ -45,14 +47,13 @@ Level: {risk_level}, Score: {risk_score:.2f}
 Requires Approval: {requires_approval}
 
 Choose ONE route:
-- direct_answer: simple questions, low risk, factual Q&A
-- subagent: independent parallel checks (e.g., check 3 systems separately)
-- team: complex investigation needing expert collaboration
+- direct_answer: simple questions, greetings, low risk, factual Q&A that can be answered immediately
+- subagent: tasks needing investigation, analysis, troubleshooting, or multi-step checks
 
 Also validate the prior intent classification given full context.
 
 Reply in this format:
-route: <direct_answer|subagent|team>
+route: <direct_answer|subagent>
 reasoning: <why this route>
 intent_validated: <true|false>
 intent_override: <null or corrected category if intent_validated is false>"""

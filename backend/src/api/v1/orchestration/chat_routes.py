@@ -195,6 +195,21 @@ async def chat_stream(request: ChatRequest):
 
             # If pipeline completed without pause, run dispatch
             if not result_ctx.is_paused and result_ctx.selected_route:
+                # Change 2: Team mode requires explicit user trigger (CC design pattern)
+                # force_team (button) or keyword [agent team]/[團隊] overrides LLM route
+                _TEAM_KEYWORDS = {"[agent team]", "[團隊]", "[agent_team]"}
+                _task_lower = result_ctx.task.lower()
+                if request.force_team or any(kw in _task_lower for kw in _TEAM_KEYWORDS):
+                    result_ctx.selected_route = "team"
+                    result_ctx.route_reasoning = (
+                        "Team mode triggered by explicit user action"
+                        if request.force_team
+                        else "Team mode triggered by keyword in message"
+                    )
+                    logger.info("Route overridden to 'team' (force_team=%s, keyword=%s)",
+                                request.force_team,
+                                any(kw in _task_lower for kw in _TEAM_KEYWORDS))
+
                 dispatch_svc = DispatchService()
                 dispatch_req = DispatchRequest(
                     route=ExecutionRoute.from_string(result_ctx.selected_route),

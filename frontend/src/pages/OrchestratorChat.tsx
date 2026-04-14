@@ -797,7 +797,8 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
       setMessages([...messagesWithUser, assistantMessage]);
 
       // Trigger the 8-step pipeline (sole response channel)
-      pipeline.sendMessage(content, userId);
+      // Team mode requires explicit user action (CC design: agents are user-driven)
+      pipeline.sendMessage(content, userId, { force_team: pipelineMode === 'team' });
 
       // Phase 45: Old SSE flow disabled — pipeline.sendMessage() is the sole channel
       // Response text is synced to chat via useEffect watching pipeline.responseText
@@ -1163,7 +1164,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               onSkip={() => {
                 // Skip dialog — re-run pipeline with original task as-is
                 const storedTask = sessionStorage.getItem(`pipeline-task-${pipeline.sessionId}`) || '';
-                if (storedTask) pipeline.sendMessage(storedTask);
+                if (storedTask) pipeline.sendMessage(storedTask, undefined, { force_team: pipelineMode === 'team' });
               }}
             />
           </div>
@@ -1228,6 +1229,9 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               {m === 'chat' ? 'Chat' : 'Team'}
             </button>
           ))}
+          <span className="text-[10px] text-muted-foreground ml-1">
+            {pipelineMode === 'chat' ? 'AI 自動選擇模式' : '強制啟用專家團隊'}
+          </span>
         </div>
 
         {/* Sprint 165: Expert Roster Preview */}

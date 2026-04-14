@@ -627,7 +627,7 @@ export function useOrchestratorPipeline() {
     }
   }, [updateStep]);
 
-  const sendMessage = useCallback(async (task: string, userId: string = 'default-user', options?: { hitl_pre_approved?: boolean }) => {
+  const sendMessage = useCallback(async (task: string, userId: string = 'default-user', options?: { hitl_pre_approved?: boolean; force_team?: boolean }) => {
     // Reset state
     const newSessionId = `pipeline-${Date.now()}`;
     setState({
@@ -650,7 +650,7 @@ export function useOrchestratorPipeline() {
       const response = await fetch('/api/v1/orchestration/chat', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ task, user_id: userId, hitl_pre_approved: options?.hitl_pre_approved || false }),
+        body: JSON.stringify({ task, user_id: userId, hitl_pre_approved: options?.hitl_pre_approved || false, force_team: options?.force_team || false }),
         signal: abortRef.current.signal,
       });
 
