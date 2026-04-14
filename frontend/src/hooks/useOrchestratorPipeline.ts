@@ -355,6 +355,14 @@ export function useOrchestratorPipeline() {
           createdAt: (data.created_at as string) || new Date().toISOString(),
           metadata: {},
         });
+        // Restore routeType after reset (reset clears it to null)
+        // Use the selectedRoute from pipeline state which was set by LLM_ROUTE_DECISION
+        setState(prev => {
+          if (prev.selectedRoute) {
+            store.setRouteType(prev.selectedRoute);
+          }
+          return prev;
+        });
         break;
       }
 
