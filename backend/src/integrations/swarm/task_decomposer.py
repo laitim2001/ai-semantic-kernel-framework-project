@@ -13,7 +13,10 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from src.integrations.swarm.worker_roles import get_role_names
+from src.integrations.orchestration.experts.bridge import (
+    get_expert_descriptions,
+    get_expert_role_names,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +24,9 @@ DECOMPOSE_PROMPT = """你是一個任務拆解專家。請分析以下任務，�
 
 ## 可用的專家角色
 {roles}
+
+## 專家能力詳情
+{expert_details}
 
 ## 可用的工具
 {tools}
@@ -101,11 +107,13 @@ class TaskDecomposer:
         Returns:
             TaskDecomposition with sub-tasks and mode.
         """
-        roles_text = ", ".join(get_role_names())
+        roles_text = ", ".join(get_expert_role_names())
+        expert_details = get_expert_descriptions()
         tools_text = ", ".join(self._tool_names) if self._tool_names else "assess_risk, search_knowledge, search_memory, create_task"
 
         prompt = DECOMPOSE_PROMPT.format(
             roles=roles_text,
+            expert_details=expert_details,
             tools=tools_text,
             task=task,
         )
@@ -148,7 +156,7 @@ class TaskDecomposer:
     def _build_decomposition(self, original_task: str, result: Dict[str, Any]) -> TaskDecomposition:
         """Build TaskDecomposition from LLM result."""
         sub_tasks: List[DecomposedTask] = []
-        valid_roles = set(get_role_names())
+        valid_roles = set(get_expert_role_names())
 
         for item in result.get("sub_tasks", []):
             role = item.get("role", "general")

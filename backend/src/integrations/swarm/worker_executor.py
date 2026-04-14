@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from src.integrations.swarm.worker_roles import get_role
+from src.integrations.orchestration.experts.bridge import get_expert_role
 from src.integrations.swarm.task_decomposer import DecomposedTask
 
 logger = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ class SwarmWorkerExecutor:
         self._tool_registry = tool_registry
         self._emitter = event_emitter
         self._timeout = timeout
-        self._role_def = get_role(task.role)
+        self._role_def = get_expert_role(task.role)
 
     async def execute(self) -> WorkerResult:
         """Execute the worker's sub-task with LLM + function calling.
