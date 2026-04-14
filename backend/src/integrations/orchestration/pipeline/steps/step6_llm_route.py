@@ -48,7 +48,7 @@ Requires Approval: {requires_approval}
 
 Choose ONE route:
 - direct_answer: simple questions, greetings, low risk, factual Q&A that can be answered immediately
-- subagent: tasks needing investigation, analysis, troubleshooting, or multi-step checks
+- subagent: tasks needing investigation or analysis — agent count scales with complexity (1 for simple checks, up to 8 for complex multi-system issues)
 
 Also validate the prior intent classification given full context.
 
