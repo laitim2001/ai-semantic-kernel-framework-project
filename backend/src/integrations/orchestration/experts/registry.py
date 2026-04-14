@@ -14,7 +14,9 @@ from typing import Any
 
 import yaml
 
+from .domain_tools import resolve_tools
 from .exceptions import ExpertNotFoundError, ExpertSchemaValidationError
+from .tool_validator import validate_expert_tools
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +103,7 @@ class AgentExpertRegistry:
                 expert = self._load_one(yaml_path)
                 if expert.enabled:
                     self._experts[expert.name] = expert
+                    validate_expert_tools(expert)
                     logger.debug("Loaded expert: %s (domain=%s)", expert.name, expert.domain)
                 else:
                     logger.debug("Skipped disabled expert: %s", expert.name)
@@ -143,7 +146,7 @@ class AgentExpertRegistry:
             model=data.get("model"),
             max_iterations=data.get("max_iterations", 5),
             system_prompt=data["system_prompt"].strip(),
-            tools=data.get("tools", ["*"]),
+            tools=resolve_tools(data.get("tools", ["*"]), data["domain"]),
             enabled=data.get("enabled", True),
             metadata=data.get("metadata", {}),
         )

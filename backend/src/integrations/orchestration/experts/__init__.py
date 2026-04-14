@@ -9,7 +9,9 @@ from .exceptions import (
     ExpertSchemaValidationError,
 )
 from .bridge import get_expert_descriptions, get_expert_role, get_expert_role_names
+from .domain_tools import get_domain_tools, resolve_tools
 from .registry import AgentExpertDefinition, AgentExpertRegistry, get_registry
+from .tool_validator import validate_expert_tools
 
 __all__ = [
     "AgentExpertDefinition",
@@ -17,8 +19,11 @@ __all__ = [
     "ExpertDefinitionError",
     "ExpertNotFoundError",
     "ExpertSchemaValidationError",
+    "get_domain_tools",
     "get_expert_descriptions",
     "get_expert_role",
     "get_expert_role_names",
     "get_registry",
+    "resolve_tools",
+    "validate_expert_tools",
 ]
