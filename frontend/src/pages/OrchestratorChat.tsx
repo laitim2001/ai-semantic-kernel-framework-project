@@ -61,6 +61,8 @@ import { MemoryHint } from '@/components/unified-chat/MemoryHint';
 import { AgentTeamPanel } from '@/components/unified-chat/agent-team/AgentTeamPanel';
 import { AgentDetailDrawer } from '@/components/unified-chat/agent-team/AgentDetailDrawer';
 import { useAgentTeamStore } from '@/stores/agentTeamStore';
+import { AgentRosterPanel } from '@/components/unified-chat/agent-team/AgentRosterPanel';
+import { useExpertSelectionStore } from '@/stores/expertSelectionStore';
 // Phase 45: Pipeline components
 import { PipelineProgressPanel } from '@/components/unified-chat/PipelineProgressPanel';
 import { StepDetailPanel } from '@/components/unified-chat/StepDetailPanel';
@@ -747,6 +749,9 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
   // S75-5 Fix: Use uploadAll return value to avoid React state sync issue
   // Sprint 99: Phase 28 - Optional orchestration flow before sending
   const handleSend = useCallback(async (content: string, fileIds?: string[]) => {
+    // Sprint 165: Reset expert roster on new message
+    useExpertSelectionStore.getState().reset();
+
     // Auto-create thread if none active
     let threadToUse = activeThreadId;
     if (!threadToUse) {
@@ -792,7 +797,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
       setMessages([...messagesWithUser, assistantMessage]);
 
       // Trigger the 8-step pipeline (sole response channel)
-      pipeline.sendMessage(content, userId);
+      pipeline.sendMessage(content, userId, { mode: pipelineMode });
 
       // Phase 45: Old SSE flow disabled — pipeline.sendMessage() is the sole channel
       // Response text is synced to chat via useEffect watching pipeline.responseText
@@ -1158,7 +1163,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               onSkip={() => {
                 // Skip dialog — re-run pipeline with original task as-is
                 const storedTask = sessionStorage.getItem(`pipeline-task-${pipeline.sessionId}`) || '';
-                if (storedTask) pipeline.sendMessage(storedTask);
+                if (storedTask) pipeline.sendMessage(storedTask, undefined, { mode: pipelineMode });
               }}
             />
           </div>
@@ -1224,6 +1229,9 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Sprint 165: Expert Roster Preview */}
+        <AgentRosterPanel />
 
         {/* Input Area - S75-4: Added file attachment support */}
         <ChatInput
