@@ -99,6 +99,9 @@ from src.api.v1.poc.agent_team_poc import router as poc_team_router  # PoC: Agen
 # Phase 34: n8n Integration
 from src.api.v1.n8n import router as n8n_router  # Sprint 124
 
+# Phase 46: Agent Expert Registry
+from src.api.v1.experts.routes import router as experts_router  # Sprint 162
+
 # Phase 34: Workflow Graph Visualization
 from src.api.v1.workflows.graph_routes import router as workflow_graph_router  # Sprint 133
 
@@ -245,6 +248,9 @@ protected_router.include_router(tasks_router)  # Sprint 113
 
 # Phase 38: Knowledge Management
 protected_router.include_router(knowledge_router)  # Sprint 119
+
+# Phase 46: Agent Expert Registry
+protected_router.include_router(experts_router)  # Sprint 162
 
 # PoC: Agent Team (no auth for easy testing)
 public_router.include_router(poc_team_router)
