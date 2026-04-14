@@ -230,30 +230,54 @@ class SubagentExecutor(BaseExecutor):
 
     @staticmethod
     def _infer_complexity(request: DispatchRequest) -> str:
-        """Infer task complexity from pipeline context.
+        """Infer task complexity from pipeline context + task text analysis.
 
-        Uses risk_level and intent_summary already populated by
-        Steps 3-5 of the pipeline to guide TaskDecomposer.
+        Primary signal: risk_level and intent_summary from pipeline Steps 3-5.
+        Secondary signal: keyword analysis on task text — catches cases where
+        the intent classifier mis-categorizes complex tasks as QUERY.
 
         Returns:
             "simple", "moderate", "complex", or "auto".
         """
         risk = (request.risk_level or "").upper()
         intent = (request.intent_summary or "").upper()
+        task_lower = (request.task or "").lower()
 
-        # High/Critical risk or INCIDENT → complex (needs thorough investigation)
+        # ── Secondary signal: task text keywords (overrides pipeline if strong) ──
+        # These keywords indicate multi-system / incident-level complexity
+        # even if the intent classifier defaults to QUERY/LOW.
+        complex_keywords = (
+            "multiple services", "services down", "outage", "cross-datacenter",
+            "multi-system", "widespread", "cascading", "production down",
+            "critical failure", "全面故障", "多系統",
+        )
+        moderate_keywords = (
+            "investigate", "troubleshoot", "diagnose", "analyze",
+            "排查", "調查", "分析",
+        )
+        multi_domain = sum(1 for d in ("network", "database", "application", "security", "cloud",
+                                        "網路", "資料庫", "應用", "安全")
+                          if d in task_lower)
+
+        # Strong complexity signal from task text
+        if any(kw in task_lower for kw in complex_keywords) or multi_domain >= 3:
+            return "complex"
+        if multi_domain >= 2 or any(kw in task_lower for kw in moderate_keywords):
+            # Don't downgrade if pipeline already says complex
+            if risk in ("CRITICAL", "HIGH") or "INCIDENT" in intent:
+                return "complex"
+            return "moderate"
+
+        # ── Primary signal: pipeline context ──
         if risk in ("CRITICAL", "HIGH") or "INCIDENT" in intent:
             return "complex"
 
-        # Low risk + QUERY → simple (likely a straightforward question)
         if risk == "LOW" and "QUERY" in intent:
             return "simple"
 
-        # Medium risk or REQUEST/CHANGE → moderate
         if risk == "MEDIUM" or "REQUEST" in intent or "CHANGE" in intent:
             return "moderate"
 
-        # Default: let LLM decide
         return "auto"
 
     async def _run_worker(

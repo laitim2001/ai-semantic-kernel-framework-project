@@ -145,16 +145,18 @@ class TestInferComplexity:
             ExecutionRoute,
         )
 
-        def _make(risk_level: str = "low", intent_summary: str = ""):
+        def _make(task: str = "test task", risk_level: str = "low", intent_summary: str = ""):
             return DispatchRequest(
                 route=ExecutionRoute.SUBAGENT,
-                task="test task",
+                task=task,
                 user_id="test",
                 session_id="test",
                 risk_level=risk_level,
                 intent_summary=intent_summary,
             )
         return _make
+
+    # ── Pipeline context tests ──
 
     def test_critical_risk_returns_complex(self, make_request):
         from src.integrations.orchestration.dispatch.executors.subagent import SubagentExecutor
@@ -170,6 +172,46 @@ class TestInferComplexity:
         from src.integrations.orchestration.dispatch.executors.subagent import SubagentExecutor
         req = make_request(risk_level="MEDIUM", intent_summary="INCIDENT: database_down")
         assert SubagentExecutor._infer_complexity(req) == "complex"
+
+    # ── Task text keyword override tests ──
+
+    def test_multiple_services_down_overrides_to_complex(self, make_request):
+        """Even if pipeline says QUERY/LOW, task text 'multiple services down' → complex."""
+        from src.integrations.orchestration.dispatch.executors.subagent import SubagentExecutor
+        req = make_request(
+            task="Multiple services down, investigate network, database and application layers",
+            risk_level="LOW", intent_summary="QUERY: general_question",
+        )
+        assert SubagentExecutor._infer_complexity(req) == "complex"
+
+    def test_multi_domain_keywords_override_to_moderate(self, make_request):
+        """Task mentioning 2 domains → at least moderate even if pipeline says QUERY/LOW."""
+        from src.integrations.orchestration.dispatch.executors.subagent import SubagentExecutor
+        req = make_request(
+            task="Check network and database connectivity",
+            risk_level="LOW", intent_summary="QUERY: general_question",
+        )
+        assert SubagentExecutor._infer_complexity(req) == "moderate"
+
+    def test_investigate_keyword_returns_moderate(self, make_request):
+        """Task with 'investigate' → moderate even if pipeline says simple."""
+        from src.integrations.orchestration.dispatch.executors.subagent import SubagentExecutor
+        req = make_request(
+            task="Investigate the API latency issue",
+            risk_level="LOW", intent_summary="QUERY: general_question",
+        )
+        assert SubagentExecutor._infer_complexity(req) == "moderate"
+
+    def test_three_domains_returns_complex(self, make_request):
+        """Task mentioning 3+ domains → complex."""
+        from src.integrations.orchestration.dispatch.executors.subagent import SubagentExecutor
+        req = make_request(
+            task="Check network, database and application health",
+            risk_level="LOW", intent_summary="QUERY: general_question",
+        )
+        assert SubagentExecutor._infer_complexity(req) == "complex"
+
+    # ── Original pipeline-only tests ──
 
     def test_low_risk_query_returns_simple(self, make_request):
         from src.integrations.orchestration.dispatch.executors.subagent import SubagentExecutor
