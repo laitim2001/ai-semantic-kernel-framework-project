@@ -797,7 +797,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
       setMessages([...messagesWithUser, assistantMessage]);
 
       // Trigger the 8-step pipeline (sole response channel)
-      pipeline.sendMessage(content, userId, { mode: pipelineMode });
+      pipeline.sendMessage(content, userId);
 
       // Phase 45: Old SSE flow disabled — pipeline.sendMessage() is the sole channel
       // Response text is synced to chat via useEffect watching pipeline.responseText
@@ -1163,7 +1163,7 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               onSkip={() => {
                 // Skip dialog — re-run pipeline with original task as-is
                 const storedTask = sessionStorage.getItem(`pipeline-task-${pipeline.sessionId}`) || '';
-                if (storedTask) pipeline.sendMessage(storedTask, undefined, { mode: pipelineMode });
+                if (storedTask) pipeline.sendMessage(storedTask);
               }}
             />
           </div>

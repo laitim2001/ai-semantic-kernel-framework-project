@@ -217,10 +217,30 @@ async def chat_stream(request: ChatRequest):
                     ),
                     route_reasoning=result_ctx.route_reasoning or "",
                 )
+                import time as _time
+                _dispatch_start = _time.time()
                 dispatch_result = await dispatch_svc.dispatch(
                     dispatch_req, event_queue=event_queue
                 )
                 result_ctx.dispatch_result = dispatch_result
+
+                # Fix 2: Emit STEP_COMPLETE for dispatch step so frontend updates
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.STEP_COMPLETE,
+                        {
+                            "step_index": 6,
+                            "step_name": "dispatch",
+                            "latency_ms": round((_time.time() - _dispatch_start) * 1000),
+                            "metadata": {
+                                "step": "dispatch",
+                                "route": result_ctx.selected_route or "unknown",
+                                "status": "completed",
+                            },
+                        },
+                        step_name="dispatch",
+                    )
+                )
 
                 # Emit response text as TEXT_DELTA so frontend chat shows it
                 response_text = dispatch_result.response_text or ""

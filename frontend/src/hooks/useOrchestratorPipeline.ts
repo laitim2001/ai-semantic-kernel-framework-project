@@ -497,6 +497,11 @@ export function useOrchestratorPipeline() {
           teamStatus as 'completed' | 'failed',
           (data.completed_at as string) || new Date().toISOString()
         );
+        // Fix 1: Override selectedRoute to reflect actual executed mode
+        setState(prev => ({
+          ...prev,
+          selectedRoute: 'team',
+        }));
         break;
       }
 
@@ -622,7 +627,7 @@ export function useOrchestratorPipeline() {
     }
   }, [updateStep]);
 
-  const sendMessage = useCallback(async (task: string, userId: string = 'default-user', options?: { hitl_pre_approved?: boolean; mode?: string }) => {
+  const sendMessage = useCallback(async (task: string, userId: string = 'default-user', options?: { hitl_pre_approved?: boolean }) => {
     // Reset state
     const newSessionId = `pipeline-${Date.now()}`;
     setState({
@@ -645,7 +650,7 @@ export function useOrchestratorPipeline() {
       const response = await fetch('/api/v1/orchestration/chat', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ task, user_id: userId, hitl_pre_approved: options?.hitl_pre_approved || false, mode: options?.mode }),
+        body: JSON.stringify({ task, user_id: userId, hitl_pre_approved: options?.hitl_pre_approved || false }),
         signal: abortRef.current.signal,
       });
 
