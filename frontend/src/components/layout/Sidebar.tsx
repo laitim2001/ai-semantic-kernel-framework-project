@@ -33,6 +33,7 @@ import {
   ListTodo,
   BookOpen,
   BrainCircuit,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +53,7 @@ const navigation: NavItem[] = [
   { name: '效能監控', href: '/performance', icon: Activity },
   { name: '工作流', href: '/workflows', icon: Workflow },
   { name: 'Agents', href: '/agents', icon: Bot },
+  { name: 'Agent 專家', href: '/agent-experts', icon: Users },
   { name: '模板市場', href: '/templates', icon: BookTemplate },
   { name: '審批中心', href: '/approvals', icon: ClipboardCheck },
   { name: '審計日誌', href: '/audit', icon: FileText },

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AgentDetail, AgentMemberStatus, AgentType } from './types';
+import { DomainBadge, CapabilitiesChips } from './ExpertBadges';
 
 // =============================================================================
 // Types
@@ -166,12 +167,20 @@ export const AgentDetailHeader: FC<AgentDetailHeaderProps> = ({
         <Badge variant="outline" className="text-xs capitalize">
           {agent.role}
         </Badge>
+        {agent.domain && (
+          <DomainBadge domain={agent.domain} />
+        )}
         {agent.toolCallsCount > 0 && (
           <Badge variant="outline" className="text-xs">
             {agent.toolCallsCount} {agent.toolCallsCount === 1 ? 'tool' : 'tools'}
           </Badge>
         )}
       </div>
+
+      {/* Expert capabilities (Sprint 161) */}
+      {agent.capabilities && agent.capabilities.length > 0 && (
+        <CapabilitiesChips capabilities={agent.capabilities} maxDisplay={5} />
+      )}
     </div>
   );
 };

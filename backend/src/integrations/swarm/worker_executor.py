@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from src.integrations.swarm.worker_roles import get_role
+from src.integrations.orchestration.experts.bridge import get_expert_role
 from src.integrations.swarm.task_decomposer import DecomposedTask
 
 logger = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ class SwarmWorkerExecutor:
         self._tool_registry = tool_registry
         self._emitter = event_emitter
         self._timeout = timeout
-        self._role_def = get_role(task.role)
+        self._role_def = get_expert_role(task.role)
 
     async def execute(self) -> WorkerResult:
         """Execute the worker's sub-task with LLM + function calling.
@@ -84,7 +84,7 @@ class SwarmWorkerExecutor:
         messages: List[Dict[str, Any]] = []
 
         try:
-            # Emit SWARM_WORKER_START
+            # Emit SWARM_WORKER_START (includes expert domain/capabilities from Sprint 161)
             await self._emit("SWARM_WORKER_START", {
                 "worker_id": self._worker_id,
                 "agent_name": self._role_def.get("name", "Worker"),
@@ -92,6 +92,8 @@ class SwarmWorkerExecutor:
                 "role": self._task.role,
                 "task": self._task.title,
                 "task_description": self._task.description,
+                "domain": self._role_def.get("domain", "general"),
+                "capabilities": self._role_def.get("capabilities", []),
             })
 
             # Build messages with role-specific system prompt

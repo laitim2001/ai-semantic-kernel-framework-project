@@ -14,6 +14,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useAgentTeamStore } from '@/stores/agentTeamStore';
+import { useExpertSelectionStore } from '@/stores/expertSelectionStore';
 
 // --- Types ---
 
@@ -309,6 +310,25 @@ export function useOrchestratorPipeline() {
         }));
         break;
 
+      // --- Sprint 165: Expert Roster Preview ---
+      case 'EXPERT_ROSTER_PREVIEW': {
+        const expertStore = useExpertSelectionStore.getState();
+        const roster = (data.roster as Array<Record<string, unknown>>) || [];
+        expertStore.setRosterPreview(
+          roster.map((r) => ({
+            role: r.role as string,
+            taskId: r.task_id as string,
+            taskTitle: r.task_title as string,
+            expertName: r.expert_name as string,
+            displayNameZh: r.display_name_zh as string,
+            domain: r.domain as string,
+            capabilities: (r.capabilities as string[]) || [],
+          }))
+        );
+        expertStore.showRoster();
+        break;
+      }
+
       // --- Rich Agent Team Events (Phase 45: Agent Team Visualization) ---
 
       case 'AGENT_TEAM_CREATED': {
@@ -334,6 +354,14 @@ export function useOrchestratorPipeline() {
           })),
           createdAt: (data.created_at as string) || new Date().toISOString(),
           metadata: {},
+        });
+        // Restore routeType after reset (reset clears it to null)
+        // Use the selectedRoute from pipeline state which was set by LLM_ROUTE_DECISION
+        setState(prev => {
+          if (prev.selectedRoute) {
+            store.setRouteType(prev.selectedRoute);
+          }
+          return prev;
         });
         break;
       }
@@ -477,6 +505,8 @@ export function useOrchestratorPipeline() {
           teamStatus as 'completed' | 'failed',
           (data.completed_at as string) || new Date().toISOString()
         );
+        // selectedRoute is set ONLY by LLM_ROUTE_DECISION — never override here.
+        // SubagentExecutor also emits AGENT_TEAM_COMPLETED events.
         break;
       }
 
@@ -602,7 +632,7 @@ export function useOrchestratorPipeline() {
     }
   }, [updateStep]);
 
-  const sendMessage = useCallback(async (task: string, userId: string = 'default-user', options?: { hitl_pre_approved?: boolean }) => {
+  const sendMessage = useCallback(async (task: string, userId: string = 'default-user', options?: { hitl_pre_approved?: boolean; force_team?: boolean }) => {
     // Reset state
     const newSessionId = `pipeline-${Date.now()}`;
     setState({
@@ -625,7 +655,7 @@ export function useOrchestratorPipeline() {
       const response = await fetch('/api/v1/orchestration/chat', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ task, user_id: userId, hitl_pre_approved: options?.hitl_pre_approved || false }),
+        body: JSON.stringify({ task, user_id: userId, hitl_pre_approved: options?.hitl_pre_approved || false, force_team: options?.force_team || false }),
         signal: abortRef.current.signal,
       });
 

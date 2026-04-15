@@ -181,7 +181,8 @@ async def chat_stream(request: ChatRequest):
         RiskStep(),         # Step 4
         HITLGateStep(checkpoint_storage=checkpoint_storage),  # Step 5
         LLMRouteStep(),     # Step 6
-        PostProcessStep(),  # Step 8
+        # Note: PostProcessStep runs AFTER dispatch (line 272), not inside pipeline.
+        # Including it here would run it before dispatch with no result — wasteful.
     ])
 
     event_queue: asyncio.Queue = asyncio.Queue()
@@ -195,6 +196,21 @@ async def chat_stream(request: ChatRequest):
 
             # If pipeline completed without pause, run dispatch
             if not result_ctx.is_paused and result_ctx.selected_route:
+                # Change 2: Team mode requires explicit user trigger (CC design pattern)
+                # force_team (button) or keyword [agent team]/[團隊] overrides LLM route
+                _TEAM_KEYWORDS = {"[agent team]", "[團隊]", "[agent_team]"}
+                _task_lower = result_ctx.task.lower()
+                if request.force_team or any(kw in _task_lower for kw in _TEAM_KEYWORDS):
+                    result_ctx.selected_route = "team"
+                    result_ctx.route_reasoning = (
+                        "Team mode triggered by explicit user action"
+                        if request.force_team
+                        else "Team mode triggered by keyword in message"
+                    )
+                    logger.info("Route overridden to 'team' (force_team=%s, keyword=%s)",
+                                request.force_team,
+                                any(kw in _task_lower for kw in _TEAM_KEYWORDS))
+
                 dispatch_svc = DispatchService()
                 dispatch_req = DispatchRequest(
                     route=ExecutionRoute.from_string(result_ctx.selected_route),
@@ -217,14 +233,36 @@ async def chat_stream(request: ChatRequest):
                     ),
                     route_reasoning=result_ctx.route_reasoning or "",
                 )
+                import time as _time
+                _dispatch_start = _time.time()
                 dispatch_result = await dispatch_svc.dispatch(
                     dispatch_req, event_queue=event_queue
                 )
                 result_ctx.dispatch_result = dispatch_result
 
-                # Emit response text as TEXT_DELTA so frontend chat shows it
+                # Fix 2: Emit STEP_COMPLETE for dispatch step so frontend updates
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.STEP_COMPLETE,
+                        {
+                            "step_index": 6,
+                            "step_name": "dispatch",
+                            "latency_ms": round((_time.time() - _dispatch_start) * 1000),
+                            "metadata": {
+                                "step": "dispatch",
+                                "route": result_ctx.selected_route or "unknown",
+                                "status": "completed",
+                            },
+                        },
+                        step_name="dispatch",
+                    )
+                )
+
+                # Emit response text as TEXT_DELTA so frontend chat shows it.
+                # Skip for direct_answer — DirectAnswerExecutor already streams
+                # TEXT_DELTA during execution; emitting again would duplicate.
                 response_text = dispatch_result.response_text or ""
-                if response_text:
+                if response_text and result_ctx.selected_route != "direct_answer":
                     await event_queue.put(
                         PipelineEvent(
                             PipelineEventType.TEXT_DELTA,

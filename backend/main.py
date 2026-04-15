@@ -91,6 +91,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         if settings.app_env == "production":
             raise
 
+    # Seed built-in expert definitions (Sprint 163)
+    try:
+        from src.integrations.orchestration.experts.seeder import seed_builtin_experts
+        from src.infrastructure.database.session import DatabaseSession
+        async with DatabaseSession() as session:
+            seeded = await seed_builtin_experts(session)
+        logger.info(f"Expert registry seeded: {seeded} new experts")
+    except Exception as e:
+        logger.warning(f"Expert registry seeding skipped: {e}")
+
     # Initialize Agent Service
     try:
         from src.domain.agents.service import init_agent_service

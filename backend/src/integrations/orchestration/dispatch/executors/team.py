@@ -99,11 +99,25 @@ class TeamExecutor(BaseExecutor):
                 )
             logger.info("TeamExecutor: SharedTaskList populated with %d tasks", shared.task_count())
 
-            # Build AgentConfig list with role-specific instructions
-            from src.integrations.swarm.worker_roles import get_role
+            # Sprint 165: Emit EXPERT_ROSTER_PREVIEW before execution starts
+            from src.integrations.orchestration.experts.bridge import get_expert_role
+            roster_preview = []
+            for t in sub_tasks:
+                role_def = get_expert_role(t.role)
+                roster_preview.append({
+                    "role": t.role,
+                    "task_id": t.task_id,
+                    "task_title": t.title,
+                    "expert_name": role_def.get("name", t.role),
+                    "display_name_zh": role_def.get("display_name", t.role),
+                    "domain": role_def.get("domain", "general"),
+                    "capabilities": role_def.get("capabilities", []),
+                })
+
+            # Build AgentConfig list with role-specific instructions (using expert registry)
             agents_config = []
             for t in sub_tasks:
-                role_def = get_role(t.role)
+                role_def = get_expert_role(t.role)
                 agents_config.append(AgentConfig(
                     name=t.title,
                     instructions=role_def.get("system_prompt", ""),
@@ -123,6 +137,21 @@ class TeamExecutor(BaseExecutor):
 
             # Bridge: PipelineEmitterBridge maps PoC events → Production Queue
             emitter = PipelineEmitterBridge(event_queue, team_id) if event_queue else None
+
+            # Sprint 165: Emit EXPERT_ROSTER_PREVIEW via PipelineEvent
+            if event_queue is not None:
+                from ...pipeline.service import PipelineEvent, PipelineEventType
+                await event_queue.put(
+                    PipelineEvent(
+                        PipelineEventType.EXPERT_ROSTER_PREVIEW,
+                        {
+                            "team_id": team_id,
+                            "roster": roster_preview,
+                            "total_agents": len(roster_preview),
+                        },
+                        step_name="dispatch",
+                    )
+                )
 
             # Communication window from env
             comm_window = float(os.getenv("TEAM_COMM_WINDOW_SECONDS", "0"))

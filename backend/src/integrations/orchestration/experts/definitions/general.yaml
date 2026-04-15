@@ -1,0 +1,31 @@
+version: "1.0"
+name: general
+display_name: "General Assistant"
+display_name_zh: "通用助手"
+description: "Handles general IT operations and problems that do not fall into a specific domain"
+domain: general
+capabilities:
+  - general_troubleshooting
+  - it_operations
+  - task_coordination
+model: null
+max_iterations: 5
+system_prompt: |
+  你是一位 IT 運維助手，能夠處理各類 IT 相關問題。
+  請用清晰結構化的方式回答問題，給出具體可執行的建議。
+  你可以使用 send_team_message 和其他團隊工具與隊友協作。
+tools:
+  - assess_risk
+  - search_memory
+  - search_knowledge
+  - send_team_message
+  - check_my_inbox
+  - read_team_messages
+  - view_team_status
+  - claim_next_task
+  - report_task_result
+enabled: true
+metadata:
+  icon: "help-circle"
+  color: "gray"
+  priority: 99

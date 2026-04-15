@@ -29,6 +29,11 @@ import { AgentsPage } from '@/pages/agents/AgentsPage';
 import { AgentDetailPage } from '@/pages/agents/AgentDetailPage';
 import { CreateAgentPage } from '@/pages/agents/CreateAgentPage';
 import { EditAgentPage } from '@/pages/agents/EditAgentPage';
+// Sprint 164: Agent Expert Management Pages
+import { AgentExpertsPage } from '@/pages/agent-experts/AgentExpertsPage';
+import { CreateAgentExpertPage } from '@/pages/agent-experts/CreateAgentExpertPage';
+import { EditAgentExpertPage } from '@/pages/agent-experts/EditAgentExpertPage';
+import { AgentExpertDetailPage } from '@/pages/agent-experts/AgentExpertDetailPage';
 import { ApprovalsPage } from '@/pages/approvals/ApprovalsPage';
 import { AuditPage } from '@/pages/audit/AuditPage';
 import { TemplatesPage } from '@/pages/templates/TemplatesPage';
@@ -112,6 +117,12 @@ function App() {
         <Route path="agents/new" element={<CreateAgentPage />} />
         <Route path="agents/:id" element={<AgentDetailPage />} />
         <Route path="agents/:id/edit" element={<EditAgentPage />} />
+
+        {/* Agent Experts (Sprint 164 - Phase 46) */}
+        <Route path="agent-experts" element={<AgentExpertsPage />} />
+        <Route path="agent-experts/new" element={<CreateAgentExpertPage />} />
+        <Route path="agent-experts/:name" element={<AgentExpertDetailPage />} />
+        <Route path="agent-experts/:name/edit" element={<EditAgentExpertPage />} />
 
         {/* Templates */}
         <Route path="templates" element={<TemplatesPage />} />

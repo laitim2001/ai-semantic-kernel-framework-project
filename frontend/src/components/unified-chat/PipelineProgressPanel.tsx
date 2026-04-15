@@ -53,11 +53,6 @@ export const PipelineProgressPanel: FC<PipelineProgressPanelProps> = ({
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium">Pipeline 進度</span>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {selectedRoute && (
-            <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-              {ROUTE_LABELS[selectedRoute] || selectedRoute}
-            </span>
-          )}
           {totalMs > 0 && (
             <span>{(totalMs / 1000).toFixed(1)}s</span>
           )}
@@ -66,6 +61,20 @@ export const PipelineProgressPanel: FC<PipelineProgressPanelProps> = ({
           )}
         </div>
       </div>
+
+      {/* Route Decision — prominent banner, shown immediately when available */}
+      {selectedRoute && (
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium ${
+          selectedRoute === 'team'
+            ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800'
+            : selectedRoute === 'subagent'
+              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+              : 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300 border border-green-200 dark:border-green-800'
+        }`}>
+          <span>Route Decision</span>
+          <span className="font-bold">{ROUTE_LABELS[selectedRoute] || selectedRoute}</span>
+        </div>
+      )}
 
       {/* Steps */}
       <div className="space-y-1">

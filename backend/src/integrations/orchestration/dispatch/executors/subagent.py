@@ -65,7 +65,8 @@ class SubagentExecutor(BaseExecutor):
                 logger.info("Base tool registry unavailable: %s", str(e)[:100])
             tool_registry = TeamToolRegistry(base_registry=base_registry)
 
-            # Decompose task with LLM TaskDecomposer (same as TeamExecutor)
+            # Decompose task with complexity-aware TaskDecomposer
+            # CC pattern: agent count scales dynamically with task complexity
             sub_tasks = await self._decompose_task(request, llm_service, tool_registry)
 
             # Emit AGENT_TEAM_CREATED
@@ -177,9 +178,10 @@ class SubagentExecutor(BaseExecutor):
         llm_service: Any,
         tool_registry: Any,
     ) -> List[Any]:
-        """Decompose task using LLM TaskDecomposer with role assignment.
+        """Decompose task using complexity-aware TaskDecomposer.
 
-        Same as TeamExecutor — uses PoC-proven TaskDecomposer.
+        Uses pipeline context (risk_level, intent_summary) to infer
+        task complexity and guide the LLM toward an appropriate agent count.
         Falls back to simple decomposition if TaskDecomposer fails.
         """
         try:
@@ -192,16 +194,20 @@ class SubagentExecutor(BaseExecutor):
                 schemas = tool_registry.get_openai_tool_schemas(role="admin")
                 tool_names = [s.get("function", {}).get("name", "") for s in schemas]
 
+            complexity_hint = self._infer_complexity(request)
             decomposer = TaskDecomposer(
                 llm_service=llm_service,
                 tool_names=tool_names,
             )
-            result = await decomposer.decompose(request.task)
+            result = await decomposer.decompose(
+                request.task, complexity_hint=complexity_hint
+            )
 
             if result.sub_tasks:
                 logger.info(
-                    "SubagentExecutor: Decomposed into %d sub-tasks (mode=%s)",
-                    len(result.sub_tasks), result.mode,
+                    "SubagentExecutor: Decomposed into %d sub-tasks "
+                    "(mode=%s, complexity=%s)",
+                    len(result.sub_tasks), result.mode, complexity_hint,
                 )
                 return result.sub_tasks
 
@@ -221,6 +227,58 @@ class SubagentExecutor(BaseExecutor):
                 role="general",
             )
         ]
+
+    @staticmethod
+    def _infer_complexity(request: DispatchRequest) -> str:
+        """Infer task complexity from pipeline context + task text analysis.
+
+        Primary signal: risk_level and intent_summary from pipeline Steps 3-5.
+        Secondary signal: keyword analysis on task text — catches cases where
+        the intent classifier mis-categorizes complex tasks as QUERY.
+
+        Returns:
+            "simple", "moderate", "complex", or "auto".
+        """
+        risk = (request.risk_level or "").upper()
+        intent = (request.intent_summary or "").upper()
+        task_lower = (request.task or "").lower()
+
+        # ── Secondary signal: task text keywords (overrides pipeline if strong) ──
+        # These keywords indicate multi-system / incident-level complexity
+        # even if the intent classifier defaults to QUERY/LOW.
+        complex_keywords = (
+            "multiple services", "services down", "outage", "cross-datacenter",
+            "multi-system", "widespread", "cascading", "production down",
+            "critical failure", "全面故障", "多系統",
+        )
+        moderate_keywords = (
+            "investigate", "troubleshoot", "diagnose", "analyze",
+            "排查", "調查", "分析",
+        )
+        multi_domain = sum(1 for d in ("network", "database", "application", "security", "cloud",
+                                        "網路", "資料庫", "應用", "安全")
+                          if d in task_lower)
+
+        # Strong complexity signal from task text
+        if any(kw in task_lower for kw in complex_keywords) or multi_domain >= 3:
+            return "complex"
+        if multi_domain >= 2 or any(kw in task_lower for kw in moderate_keywords):
+            # Don't downgrade if pipeline already says complex
+            if risk in ("CRITICAL", "HIGH") or "INCIDENT" in intent:
+                return "complex"
+            return "moderate"
+
+        # ── Primary signal: pipeline context ──
+        if risk in ("CRITICAL", "HIGH") or "INCIDENT" in intent:
+            return "complex"
+
+        if risk == "LOW" and "QUERY" in intent:
+            return "simple"
+
+        if risk == "MEDIUM" or "REQUEST" in intent or "CHANGE" in intent:
+            return "moderate"
+
+        return "auto"
 
     async def _run_worker(
         self,

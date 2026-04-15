@@ -23,6 +23,7 @@ from src.infrastructure.database.models.execution import Execution
 from src.infrastructure.database.models.checkpoint import Checkpoint
 from src.infrastructure.database.models.audit import AuditLog
 from src.infrastructure.database.models.session import SessionModel, MessageModel, AttachmentModel
+from src.infrastructure.database.models.agent_expert import AgentExpert  # Sprint 163
 
 __all__ = [
     "Base",
@@ -30,6 +31,7 @@ __all__ = [
     "UUIDMixin",
     "User",
     "Agent",
+    "AgentExpert",
     "Workflow",
     "Execution",
     "Checkpoint",
