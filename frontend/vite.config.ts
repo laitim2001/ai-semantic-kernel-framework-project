@@ -27,7 +27,7 @@ export default defineConfig({
     port: 4070,
     proxy: {
       '/api': {
-        target: 'http://localhost:8090',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         // SSE streaming requires long timeout (dispatch can take 3+ minutes)
         timeout: 300000,     // 5 minutes
