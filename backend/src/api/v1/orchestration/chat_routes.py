@@ -181,7 +181,8 @@ async def chat_stream(request: ChatRequest):
         RiskStep(),         # Step 4
         HITLGateStep(checkpoint_storage=checkpoint_storage),  # Step 5
         LLMRouteStep(),     # Step 6
-        PostProcessStep(),  # Step 8
+        # Note: PostProcessStep runs AFTER dispatch (line 272), not inside pipeline.
+        # Including it here would run it before dispatch with no result — wasteful.
     ])
 
     event_queue: asyncio.Queue = asyncio.Queue()
@@ -257,9 +258,11 @@ async def chat_stream(request: ChatRequest):
                     )
                 )
 
-                # Emit response text as TEXT_DELTA so frontend chat shows it
+                # Emit response text as TEXT_DELTA so frontend chat shows it.
+                # Skip for direct_answer — DirectAnswerExecutor already streams
+                # TEXT_DELTA during execution; emitting again would duplicate.
                 response_text = dispatch_result.response_text or ""
-                if response_text:
+                if response_text and result_ctx.selected_route != "direct_answer":
                     await event_queue.put(
                         PipelineEvent(
                             PipelineEventType.TEXT_DELTA,
