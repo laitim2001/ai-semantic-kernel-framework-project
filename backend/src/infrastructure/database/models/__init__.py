@@ -24,6 +24,7 @@ from src.infrastructure.database.models.checkpoint import Checkpoint
 from src.infrastructure.database.models.audit import AuditLog
 from src.infrastructure.database.models.session import SessionModel, MessageModel, AttachmentModel
 from src.infrastructure.database.models.agent_expert import AgentExpert  # Sprint 163
+from src.infrastructure.database.models.orchestration_execution_log import OrchestrationExecutionLog  # Sprint 169
 
 __all__ = [
     "Base",
@@ -39,4 +40,5 @@ __all__ = [
     "SessionModel",
     "MessageModel",
     "AttachmentModel",
+    "OrchestrationExecutionLog",
 ]
