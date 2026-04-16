@@ -463,6 +463,8 @@ class OrchestrationPipelineService:
         """Emit a PipelineEvent to the SSE queue (if provided)."""
         if queue is not None:
             await queue.put(event)
+            # Explicit yield to event loop so SSE generator can flush immediately
+            await asyncio.sleep(0)
 
     async def _record_transcript(
         self,
