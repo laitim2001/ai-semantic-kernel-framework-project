@@ -38,12 +38,13 @@ class PipelineExecutionPersistenceService:
             Record UUID string, or None on failure.
         """
         try:
-            from src.infrastructure.database.session import async_session_factory
+            from src.infrastructure.database.session import get_session_factory
             from src.infrastructure.database.repositories.orchestration_execution_log import (
                 OrchestrationExecutionLogRepository,
             )
 
-            async with async_session_factory() as session:
+            session_factory = get_session_factory()
+            async with session_factory() as session:
                 async with session.begin():
                     repo = OrchestrationExecutionLogRepository(session)
 
