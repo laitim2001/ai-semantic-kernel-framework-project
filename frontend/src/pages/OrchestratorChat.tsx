@@ -68,6 +68,7 @@ import { PipelineProgressPanel } from '@/components/unified-chat/PipelineProgres
 import { StepDetailPanel } from '@/components/unified-chat/StepDetailPanel';
 import { GuidedDialogPanel } from '@/components/unified-chat/GuidedDialogPanel';
 import { useOrchestratorPipeline } from '@/hooks/useOrchestratorPipeline';
+import { useOrchestratorHistory } from '@/hooks/useOrchestratorHistory';
 import type { MemoryHintItem } from '@/components/unified-chat/MemoryHint';
 import type {
   UnifiedChatProps,
@@ -259,6 +260,10 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
 
   // Phase 45: 8-step pipeline hook
   const pipeline = useOrchestratorPipeline();
+
+  // Sprint 169: Historical pipeline data for right panel
+  const [selectedHistorySessionId, setSelectedHistorySessionId] = useState<string | null>(null);
+  const { historicalPanelData, isLoadingHistory } = useOrchestratorHistory(selectedHistorySessionId);
 
   // S74-3: Chat history panel collapse state
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
@@ -675,8 +680,14 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
     const savedMessages = getMessages(id);
     if (savedMessages.length > 0) {
       setMessages(savedMessages);
+      // Sprint 169: Auto-load historical pipeline for the latest assistant message
+      const lastAssistant = [...savedMessages].reverse().find(
+        (m) => m.role === 'assistant' && m.orchestrationMetadata?.sessionId
+      );
+      setSelectedHistorySessionId(lastAssistant?.orchestrationMetadata?.sessionId || null);
     } else {
       clearMessages();
+      setSelectedHistorySessionId(null);
     }
   }, [isStreaming, cancelStream, activeThreadId, messages, saveMessages, getMessages, setMessages, clearMessages, resetTimer]);
 
@@ -860,12 +871,62 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               ...((m as Record<string, unknown>).orchestrationMetadata as Record<string, unknown> || {}),
               executionMode: routeLabel,
               processingTimeMs: pipeline.totalMs,
+              sessionId: pipeline.sessionId || undefined,
             } as OrchestrationMetadata,
           }
         : m
     );
     setMessages(updated);
   }, [pipeline.totalMs, pipeline.isRunning, pipeline.responseText, pipeline.selectedRoute]);
+
+  // Sprint 169: Clear historical data when pipeline starts running
+  useEffect(() => {
+    if (pipeline.isRunning) {
+      setSelectedHistorySessionId(null);
+    }
+  }, [pipeline.isRunning]);
+
+  // Sprint 169: Compute effective panel data (live vs historical)
+  const effectivePanelData = useMemo(() => {
+    // Priority 1: Live pipeline data while running or just completed
+    if (pipeline.isRunning || (pipeline.totalMs > 0 && !historicalPanelData)) {
+      return {
+        steps: pipeline.steps,
+        currentStepIndex: pipeline.currentStepIndex,
+        selectedRoute: pipeline.selectedRoute,
+        totalMs: pipeline.totalMs,
+        isRunning: pipeline.isRunning,
+        agents: pipeline.agents,
+        routeReasoning: pipeline.routeReasoning,
+        isHistorical: false,
+      };
+    }
+    // Priority 2: Historical data from API
+    if (historicalPanelData) {
+      return {
+        steps: historicalPanelData.steps,
+        currentStepIndex: -1,
+        selectedRoute: historicalPanelData.selectedRoute,
+        totalMs: historicalPanelData.totalMs,
+        isRunning: false,
+        agents: historicalPanelData.agents,
+        routeReasoning: historicalPanelData.routeReasoning,
+        isHistorical: true,
+      };
+    }
+    // Priority 3: Empty/idle state
+    return {
+      steps: pipeline.steps,
+      currentStepIndex: -1,
+      selectedRoute: null,
+      totalMs: 0,
+      isRunning: false,
+      agents: [] as typeof pipeline.agents,
+      routeReasoning: null,
+      isHistorical: false,
+    };
+  }, [pipeline.isRunning, pipeline.totalMs, pipeline.steps, pipeline.currentStepIndex,
+      pipeline.selectedRoute, pipeline.agents, pipeline.routeReasoning, historicalPanelData]);
 
   // Phase 41 S143-2: Handle session resume from ChatHistoryPanel
   const handleResumeSession = useCallback(async (resumedSessionId: string) => {
@@ -1105,18 +1166,25 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
           {/* Phase 45: Pipeline Progress + Step Detail + Agent Team (right side, stacked) */}
           <div className="w-[380px] border-l bg-white dark:bg-gray-950 overflow-y-auto hidden lg:flex flex-col">
             <PipelineProgressPanel
-              steps={pipeline.steps}
-              currentStepIndex={pipeline.currentStepIndex}
-              selectedRoute={pipeline.selectedRoute}
-              totalMs={pipeline.totalMs}
-              isRunning={pipeline.isRunning}
+              steps={effectivePanelData.steps}
+              currentStepIndex={effectivePanelData.currentStepIndex}
+              selectedRoute={effectivePanelData.selectedRoute}
+              totalMs={effectivePanelData.totalMs}
+              isRunning={effectivePanelData.isRunning}
             />
+            {/* Sprint 169: Historical mode indicator */}
+            {effectivePanelData.isHistorical && (
+              <div className="px-3 py-1.5 text-xs text-amber-700 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/30 border-b flex items-center gap-1.5">
+                <span>&#128203;</span>
+                <span>歷史記錄</span>
+              </div>
+            )}
             <div className="flex-1 border-t overflow-y-auto">
               <StepDetailPanel
-                steps={pipeline.steps}
-                agents={pipeline.agents}
-                selectedRoute={pipeline.selectedRoute}
-                routeReasoning={pipeline.routeReasoning}
+                steps={effectivePanelData.steps}
+                agents={effectivePanelData.agents}
+                selectedRoute={effectivePanelData.selectedRoute}
+                routeReasoning={effectivePanelData.routeReasoning}
               />
               {/* Agent Team Panel — shown below step details when team/subagent route active */}
               {agentTeamStatus && (
