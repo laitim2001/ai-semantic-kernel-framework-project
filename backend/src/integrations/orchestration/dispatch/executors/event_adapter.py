@@ -62,14 +62,6 @@ class EventQueueAdapter:
                         step_name="dispatch",
                     )
                 )
-                # Backward compat
-                await self._queue.put(
-                    PipelineEvent(
-                        PipelineEventType.AGENT_THINKING,
-                        {"agent_name": data.get("agent_name", worker_id), "role": data.get("role", "")},
-                        step_name="dispatch",
-                    )
-                )
 
             elif subtype == "SWARM_WORKER_THINKING":
                 # Agent thinking content (real LLM response text)

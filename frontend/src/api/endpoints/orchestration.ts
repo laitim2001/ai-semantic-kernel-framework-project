@@ -320,6 +320,82 @@ export const orchestrationApi = {
    */
   checkHealth: (): Promise<{ status: string; policies_loaded: number }> =>
     api.get<{ status: string; policies_loaded: number }>('/orchestration/health'),
+
+  // ===========================================================================
+  // Execution Logs (Sprint 169 — Phase 47)
+  // ===========================================================================
+
+  listExecutionLogs: (params: {
+    session_id?: string;
+    user_id?: string;
+    status?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<ExecutionLogListResponse> => {
+    const qs = new URLSearchParams();
+    if (params.session_id) qs.set('session_id', params.session_id);
+    if (params.user_id) qs.set('user_id', params.user_id);
+    if (params.status) qs.set('status', params.status);
+    if (params.page) qs.set('page', String(params.page));
+    if (params.page_size) qs.set('page_size', String(params.page_size));
+    return api.get<ExecutionLogListResponse>(`/orchestration/executions?${qs.toString()}`);
+  },
+
+  getExecutionLog: (id: string): Promise<ExecutionLogDetailResponse> =>
+    api.get<ExecutionLogDetailResponse>(`/orchestration/executions/${id}`),
+
+  getLatestExecutionForSession: (sessionId: string): Promise<ExecutionLogDetailResponse> =>
+    api.get<ExecutionLogDetailResponse>(
+      `/orchestration/executions/by-session/${sessionId}/latest`
+    ),
 };
+
+// =============================================================================
+// Types - Execution Logs (Sprint 169 — Phase 47)
+// =============================================================================
+
+export interface PipelineStepRecord {
+  status: string;
+  latency_ms: number;
+}
+
+export interface ExecutionLogSummary {
+  id: string;
+  request_id: string;
+  session_id: string;
+  user_id: string;
+  user_input: string;
+  selected_route: string | null;
+  status: 'completed' | 'failed' | 'paused_hitl' | 'paused_dialog';
+  total_ms: number | null;
+  fast_path_applied: boolean;
+  created_at: string | null;
+  pipeline_steps: Record<string, PipelineStepRecord> | null;
+}
+
+export interface ExecutionLogDetail extends ExecutionLogSummary {
+  routing_decision: Record<string, unknown> | null;
+  risk_assessment: Record<string, unknown> | null;
+  completeness_info: Record<string, unknown> | null;
+  route_reasoning: string | null;
+  agent_events: unknown[] | null;
+  final_response: string | null;
+  dispatch_result: Record<string, unknown> | null;
+  error: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface ExecutionLogListResponse {
+  data: ExecutionLogSummary[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ExecutionLogDetailResponse {
+  data: ExecutionLogDetail;
+  message: string;
+}
 
 export default orchestrationApi;

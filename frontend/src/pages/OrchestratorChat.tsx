@@ -68,6 +68,7 @@ import { PipelineProgressPanel } from '@/components/unified-chat/PipelineProgres
 import { StepDetailPanel } from '@/components/unified-chat/StepDetailPanel';
 import { GuidedDialogPanel } from '@/components/unified-chat/GuidedDialogPanel';
 import { useOrchestratorPipeline } from '@/hooks/useOrchestratorPipeline';
+import { useOrchestratorHistory } from '@/hooks/useOrchestratorHistory';
 import type { MemoryHintItem } from '@/components/unified-chat/MemoryHint';
 import type {
   UnifiedChatProps,
@@ -259,6 +260,10 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
 
   // Phase 45: 8-step pipeline hook
   const pipeline = useOrchestratorPipeline();
+
+  // Sprint 169: Historical pipeline data for right panel
+  const [selectedHistorySessionId, setSelectedHistorySessionId] = useState<string | null>(null);
+  const { historicalPanelData, isLoadingHistory } = useOrchestratorHistory(selectedHistorySessionId);
 
   // S74-3: Chat history panel collapse state
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
@@ -649,7 +654,11 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
     setActiveThreadId(newId);
     clearMessages();
     resetTimer();
-  }, [isStreaming, cancelStream, activeThreadId, messages, saveMessages, createThread, clearMessages, resetTimer]);
+    // Reset right-side orchestration panel on new thread
+    pipeline.reset();
+    setSelectedMessageId(null);
+    setSelectedHistorySessionId(null);
+  }, [isStreaming, cancelStream, activeThreadId, messages, saveMessages, createThread, clearMessages, resetTimer, pipeline]);
 
   // S74-3: Handle thread selection
   // S74-BF-1: Load messages from localStorage when switching threads
@@ -678,7 +687,12 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
     } else {
       clearMessages();
     }
-  }, [isStreaming, cancelStream, activeThreadId, messages, saveMessages, getMessages, setMessages, clearMessages, resetTimer]);
+    // Sprint 169: Clear historical selection on thread switch
+    setSelectedMessageId(null);
+    setSelectedHistorySessionId(null);
+    // Reset right-side orchestration panel on thread switch
+    pipeline.reset();
+  }, [isStreaming, cancelStream, activeThreadId, messages, saveMessages, getMessages, setMessages, clearMessages, resetTimer, pipeline]);
 
   // S74-3: Handle thread deletion
   const handleDeleteThread = useCallback((id: string) => {
@@ -860,12 +874,44 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               ...((m as Record<string, unknown>).orchestrationMetadata as Record<string, unknown> || {}),
               executionMode: routeLabel,
               processingTimeMs: pipeline.totalMs,
+              sessionId: pipeline.sessionId || undefined,
             } as OrchestrationMetadata,
           }
         : m
     );
     setMessages(updated);
   }, [pipeline.totalMs, pipeline.isRunning, pipeline.responseText, pipeline.selectedRoute]);
+
+  // Sprint 169: Clear historical data when pipeline starts running
+  useEffect(() => {
+    if (pipeline.isRunning) {
+      setSelectedHistorySessionId(null);
+      setSelectedMessageId(null);
+    }
+  }, [pipeline.isRunning]);
+
+  // Sprint 169: Handle message click → load pipeline history for that message
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const handleMessageClick = useCallback((messageId: string) => {
+    if (pipeline.isRunning) return;
+    const msg = messages.find((m) => m.id === messageId);
+    const sessionId = msg?.orchestrationMetadata?.sessionId;
+    if (sessionId) {
+      // Toggle: click again to deselect
+      if (selectedMessageId === messageId) {
+        setSelectedMessageId(null);
+        setSelectedHistorySessionId(null);
+      } else {
+        setSelectedMessageId(messageId);
+        setSelectedHistorySessionId(sessionId);
+      }
+    }
+  }, [pipeline.isRunning, messages, selectedMessageId]);
+
+  // Sprint 169: Determine if we should show historical data
+  // When historicalPanelData is set (user clicked a Pipeline button) AND pipeline is idle,
+  // we overlay historical data. Otherwise, panels use pipeline.X directly (original behavior).
+  const showHistorical = !pipeline.isRunning && pipeline.totalMs === 0 && !!historicalPanelData;
 
   // Phase 41 S143-2: Handle session resume from ChatHistoryPanel
   const handleResumeSession = useCallback(async (resumedSessionId: string) => {
@@ -1099,24 +1145,33 @@ export const OrchestratorChat: FC<UnifiedChatProps> = ({
               onReject={handleReject}
               onExpired={removeExpiredApproval}
               onDownload={handleDownload}
+              onMessageClick={handleMessageClick}
+              selectedMessageId={selectedMessageId}
             />
           </div>
 
           {/* Phase 45: Pipeline Progress + Step Detail + Agent Team (right side, stacked) */}
           <div className="w-[380px] border-l bg-white dark:bg-gray-950 overflow-y-auto hidden lg:flex flex-col">
             <PipelineProgressPanel
-              steps={pipeline.steps}
-              currentStepIndex={pipeline.currentStepIndex}
-              selectedRoute={pipeline.selectedRoute}
-              totalMs={pipeline.totalMs}
-              isRunning={pipeline.isRunning}
+              steps={showHistorical ? historicalPanelData!.steps : pipeline.steps}
+              currentStepIndex={showHistorical ? -1 : pipeline.currentStepIndex}
+              selectedRoute={showHistorical ? historicalPanelData!.selectedRoute : pipeline.selectedRoute}
+              totalMs={showHistorical ? historicalPanelData!.totalMs : pipeline.totalMs}
+              isRunning={showHistorical ? false : pipeline.isRunning}
             />
+            {/* Sprint 169: Historical mode indicator */}
+            {showHistorical && (
+              <div className="px-3 py-1.5 text-xs text-amber-700 bg-amber-50 dark:text-amber-440 dark:bg-amber-950/30 border-b flex items-center gap-1.5">
+                <span>&#128203;</span>
+                <span>歷史記錄</span>
+              </div>
+            )}
             <div className="flex-1 border-t overflow-y-auto">
               <StepDetailPanel
-                steps={pipeline.steps}
-                agents={pipeline.agents}
-                selectedRoute={pipeline.selectedRoute}
-                routeReasoning={pipeline.routeReasoning}
+                steps={showHistorical ? historicalPanelData!.steps : pipeline.steps}
+                agents={showHistorical ? historicalPanelData!.agents : pipeline.agents}
+                selectedRoute={showHistorical ? historicalPanelData!.selectedRoute : pipeline.selectedRoute}
+                routeReasoning={showHistorical ? historicalPanelData!.routeReasoning : pipeline.routeReasoning}
               />
               {/* Agent Team Panel — shown below step details when team/subagent route active */}
               {agentTeamStatus && (

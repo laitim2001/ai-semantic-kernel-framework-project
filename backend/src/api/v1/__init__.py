@@ -90,6 +90,7 @@ from src.api.v1.orchestration import approval_router as orchestration_approval_r
 from src.api.v1.orchestration import webhook_router as orchestration_webhook_router  # Sprint 114
 from src.api.v1.orchestration import route_management_router as orchestration_route_mgmt_router  # Sprint 115
 from src.api.v1.orchestration import chat_router as orchestration_chat_router  # Phase 45
+from src.api.v1.orchestration.execution_log_routes import execution_log_router as orchestration_execution_log_router  # Sprint 169
 
 # Phase 29: Agent Swarm Visualization
 from src.api.v1.swarm import router as swarm_router  # Sprint 100
@@ -224,6 +225,7 @@ protected_router.include_router(orchestration_approval_router)  # Sprint 98
 protected_router.include_router(orchestration_webhook_router)  # Sprint 114
 protected_router.include_router(orchestration_route_mgmt_router)  # Sprint 115
 protected_router.include_router(orchestration_chat_router)  # Phase 45
+protected_router.include_router(orchestration_execution_log_router)  # Sprint 169
 
 # Phase 29: Agent Swarm Visualization
 protected_router.include_router(swarm_router)  # Sprint 100

@@ -214,20 +214,10 @@ export function useOrchestratorPipeline() {
             metadata: {},
           });
         }
-        // Add agent if not already in roster
-        const agentName = data.agent_name as string;
-        if (agentName && !atStore.agentTeamStatus?.agents.find(a => a.agentName === agentName)) {
-          atStore.addAgent({
-            agentId: agentName,
-            agentName,
-            agentType: 'hybrid',
-            role: (data.role as string) || 'agent',
-            status: 'running',
-            progress: 0,
-            toolCallsCount: 0,
-            createdAt: new Date().toISOString(),
-          });
-        }
+        // NOTE: addAgent to agentTeamStore removed (was causing phantom duplicate
+        // agents in subagent/team modes — agentName-as-agentId bypassed dedup).
+        // AGENT_MEMBER_STARTED is the canonical event that populates the roster
+        // with proper agent_id. See plan file: replicated-enchanting-nebula.md.
         break;
       }
 
@@ -406,6 +396,19 @@ export function useOrchestratorPipeline() {
             updated_at: (data.started_at as string) || new Date().toISOString(),
           });
         }
+        // Populate pipeline.agents for the live "Agents" block.
+        // Previously filled by backward-compat AGENT_THINKING; migrated here
+        // after removing that emit to stop phantom duplicate agents.
+        setState(prev => ({
+          ...prev,
+          agents: [
+            ...prev.agents.filter(a => a.agentName !== (data.agent_name as string)),
+            {
+              agentName: (data.agent_name as string) || (data.agent_id as string),
+              status: 'thinking',
+            },
+          ],
+        }));
         break;
       }
 
@@ -735,6 +738,13 @@ export function useOrchestratorPipeline() {
     setState(prev => ({ ...prev, isRunning: false }));
   }, []);
 
+  // Reset pipeline state to initial (used when switching/creating threads)
+  const reset = useCallback(() => {
+    abortRef.current?.abort();
+    setState({ ...INITIAL_STATE, steps: INITIAL_STEPS.map(s => ({ ...s })) });
+    useAgentTeamStore.getState().reset();
+  }, []);
+
   const _authHeaders = useCallback((): Record<string, string> => {
     const h: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) h['Authorization'] = `Bearer ${token}`;
@@ -903,6 +913,7 @@ export function useOrchestratorPipeline() {
     ...state,
     sendMessage,
     cancel,
+    reset,
     resumeApproval,
     respondDialog,
     resolveTeamApproval,

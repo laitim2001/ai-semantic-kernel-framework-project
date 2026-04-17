@@ -32,6 +32,28 @@ from .chat_schemas import (
 
 logger = logging.getLogger(__name__)
 
+
+async def _persist_execution(
+    context: object, status: str, error: str | None = None
+) -> None:
+    """Fire-and-forget pipeline execution persistence.
+
+    Called via asyncio.create_task() after the SSE event is already queued.
+    Sprint 169 — Phase 47.
+    """
+    try:
+        from src.integrations.orchestration.pipeline.persistence import (
+            PipelineExecutionPersistenceService,
+        )
+
+        svc = PipelineExecutionPersistenceService()
+        record_id = await svc.save(context, status=status, error=error)
+        if record_id:
+            logger.debug("Pipeline execution persisted: %s", record_id)
+    except Exception as e:
+        logger.warning("_persist_execution task failed: %s", str(e)[:100])
+
+
 chat_router = APIRouter(
     prefix="/orchestration/chat",
     tags=["Orchestration Chat (Phase 45)"],
@@ -290,6 +312,14 @@ async def chat_stream(request: ChatRequest):
                     )
                 )
 
+                # Sprint 169: Persist execution log (non-blocking)
+                _persist_status = "completed"
+                if getattr(result_ctx, "paused_at", None) == "hitl":
+                    _persist_status = "paused_hitl"
+                elif getattr(result_ctx, "paused_at", None) == "dialog":
+                    _persist_status = "paused_dialog"
+                asyncio.create_task(_persist_execution(result_ctx, _persist_status))
+
         except Exception as e:
             logger.error("Pipeline execution failed: %s", str(e)[:200], exc_info=True)
             await event_queue.put(
@@ -297,6 +327,10 @@ async def chat_stream(request: ChatRequest):
                     PipelineEventType.PIPELINE_ERROR,
                     {"error": str(e)[:200], "recoverable": False},
                 )
+            )
+            # Sprint 169: Persist failed execution (non-blocking)
+            asyncio.create_task(
+                _persist_execution(context, "failed", error=str(e)[:500])
             )
 
     # Start pipeline in background task

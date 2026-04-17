@@ -46,6 +46,10 @@ export interface MessageListProps {
   onUIEvent?: (event: UIComponentEvent) => void;
   /** Sprint 76: Callback when file download is triggered */
   onDownload?: (fileId: string) => Promise<void>;
+  /** Sprint 169: Callback when user clicks a message to view its pipeline history */
+  onMessageClick?: (messageId: string) => void;
+  /** Sprint 169: Currently selected message ID for pipeline history highlight */
+  selectedMessageId?: string | null;
 }
 
 /**
@@ -69,6 +73,8 @@ export const MessageList: FC<MessageListProps> = ({
   onExpired,
   onUIEvent,
   onDownload,
+  onMessageClick,
+  selectedMessageId,
 }) => {
   // Track new messages for animation
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
@@ -230,13 +236,29 @@ export const MessageList: FC<MessageListProps> = ({
           >
             {/* Phase 41: IntentStatusChip above assistant messages with pipeline metadata */}
             {message.role === 'assistant' && orchMeta && (
-              <div className="mx-4 mb-1">
+              <div className="mx-4 mb-1 flex items-center gap-2">
                 <IntentStatusChip
                   intent={orchMeta.intent}
                   riskLevel={orchMeta.riskLevel}
                   executionMode={orchMeta.executionMode}
                   detail={orchMeta.detail}
                 />
+                {/* Sprint 169: Pipeline history button */}
+                {orchMeta.sessionId && onMessageClick && (
+                  <button
+                    onClick={() => onMessageClick(message.id)}
+                    className={cn(
+                      'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors',
+                      selectedMessageId === message.id
+                        ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300'
+                        : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-700'
+                    )}
+                    title="查看 Pipeline 處理記錄"
+                  >
+                    <span>&#128202;</span>
+                    <span>{selectedMessageId === message.id ? '查看中' : 'Pipeline'}</span>
+                  </button>
+                )}
               </div>
             )}
 
