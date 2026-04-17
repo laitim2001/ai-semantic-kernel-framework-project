@@ -143,15 +143,31 @@ class PipelineExecutionPersistenceService:
             }
 
             # Attach per-step metadata from context so the UI history panel
-            # can render the same detail it shows during a live run.
+            # can render the same detail it shows during a live run (including
+            # full memory_text / knowledge_text body that StepDetailPanel
+            # renders in a <pre> block).
             if step_name == "memory_read":
+                meta: Dict[str, Any] = {}
                 mm = getattr(context, "memory_metadata", None)
                 if mm:
-                    step_data["metadata"] = mm
+                    meta.update(mm)
+                mt = getattr(context, "memory_text", None)
+                if mt:
+                    meta["memory_text"] = mt
+                    meta["memory_chars"] = len(mt)
+                if meta:
+                    step_data["metadata"] = meta
             elif step_name == "knowledge_search":
+                meta = {}
                 km = getattr(context, "knowledge_metadata", None)
                 if km:
-                    step_data["metadata"] = km
+                    meta.update(km)
+                kt = getattr(context, "knowledge_text", None)
+                if kt:
+                    meta["knowledge_text"] = kt
+                    meta["knowledge_chars"] = len(kt)
+                if meta:
+                    step_data["metadata"] = meta
 
             steps[step_name] = step_data
         return steps
