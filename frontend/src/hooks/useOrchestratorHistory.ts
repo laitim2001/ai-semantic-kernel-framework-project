@@ -87,8 +87,12 @@ export function transformExecutionLogToPanel(
 
     const latencyMs = record?.latency_ms ?? undefined;
 
-    // Build step-specific metadata from the JSONB columns
-    let metadata: Record<string, unknown> | undefined;
+    // Build step-specific metadata from the JSONB columns.
+    // For memory_read / knowledge_search, the per-step metadata is stored
+    // inline on the pipeline_steps record (see backend persistence.py).
+    let metadata: Record<string, unknown> | undefined = (record as
+      | { metadata?: Record<string, unknown> }
+      | undefined)?.metadata;
 
     if (name === 'intent_analysis' && rd) {
       metadata = {

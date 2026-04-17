@@ -350,6 +350,10 @@ export interface ChatAreaProps {
   onExpired?: (approvalId: string) => void;
   /** Sprint 76: Callback when file download is triggered */
   onDownload?: (fileId: string) => Promise<void>;
+  /** Sprint 169: Callback when user clicks a message to view its pipeline history */
+  onMessageClick?: (messageId: string) => void;
+  /** Sprint 169: Currently selected message ID for pipeline history highlight */
+  selectedMessageId?: string | null;
 }
 
 /** WorkflowSidePanel props */

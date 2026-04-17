@@ -74,12 +74,6 @@ class PipelineEmitterBridge:
                     },
                     step_name="dispatch",
                 ))
-                # Backward compat
-                await self._queue.put(PipelineEvent(
-                    PipelineEventType.AGENT_THINKING,
-                    {"agent_name": agent_name, "role": data.get("role", "")},
-                    step_name="dispatch",
-                ))
 
             elif event_name == "SWARM_WORKER_END":
                 await self._queue.put(PipelineEvent(

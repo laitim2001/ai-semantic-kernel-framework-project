@@ -137,10 +137,23 @@ class PipelineExecutionPersistenceService:
         latencies = getattr(context, "step_latencies", {})
 
         for step_name in completed:
-            steps[step_name] = {
+            step_data: Dict[str, Any] = {
                 "status": "completed",
                 "latency_ms": latencies.get(step_name, 0),
             }
+
+            # Attach per-step metadata from context so the UI history panel
+            # can render the same detail it shows during a live run.
+            if step_name == "memory_read":
+                mm = getattr(context, "memory_metadata", None)
+                if mm:
+                    step_data["metadata"] = mm
+            elif step_name == "knowledge_search":
+                km = getattr(context, "knowledge_metadata", None)
+                if km:
+                    step_data["metadata"] = km
+
+            steps[step_name] = step_data
         return steps
 
     @staticmethod

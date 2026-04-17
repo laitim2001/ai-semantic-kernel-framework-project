@@ -32,6 +32,8 @@ export const ChatArea: FC<ChatAreaProps> = ({
   onReject,
   onExpired,
   onDownload,
+  onMessageClick,
+  selectedMessageId,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -65,6 +67,8 @@ export const ChatArea: FC<ChatAreaProps> = ({
               onReject={onReject}
               onExpired={onExpired}
               onDownload={onDownload}
+              onMessageClick={onMessageClick}
+              selectedMessageId={selectedMessageId}
             />
 
             {/* Streaming Indicator */}
