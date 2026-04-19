@@ -246,3 +246,27 @@
 |--------|-----------|----------|---------------------|
 | Documented Enums | 284/339 | 339/339 | 339 + 42 L09 enums verified |
 | Enum Coverage | 83.8% | **100%** | **100%** (cross-doc synced) |
+
+---
+
+## Phase 45-47 Enum Additions (2026-04-19 sync)
+
+| Enum | Source File | Values | Purpose |
+|------|-------------|--------|---------|
+| `ExecutionRoute` | `integrations/orchestration/dispatch/models.py:13` | `DIRECT_ANSWER="direct_answer"`, `SUBAGENT="subagent"`, `TEAM="team"` | Dispatch layer route decision. `from_string()` defaults to `TEAM` on unknown input. |
+| `PipelineEventType` | `integrations/orchestration/pipeline/service.py:27-61` | 27 values: `PIPELINE_START`, `STEP_START`, `STEP_COMPLETE`, `STEP_ERROR`, `DIALOG_REQUIRED`, `HITL_REQUIRED`, `LLM_ROUTE_DECISION`, `ROUTING_COMPLETE`, `DISPATCH_START`, `AGENT_THINKING`, `AGENT_TOOL_CALL`, `AGENT_COMPLETE`, `AGENT_TEAM_CREATED`, `AGENT_MEMBER_STARTED`, `AGENT_MEMBER_THINKING`, `AGENT_MEMBER_TOOL_CALL`, `AGENT_MEMBER_COMPLETED`, `AGENT_TEAM_COMPLETED`, `AGENT_TEAM_MESSAGE`, `AGENT_INBOX_RECEIVED`, `AGENT_TASK_CLAIMED`, `AGENT_TASK_REASSIGNED`, `AGENT_APPROVAL_REQUIRED`, `EXPERT_ROSTER_PREVIEW`, `TEXT_DELTA`, `PIPELINE_COMPLETE`, `PIPELINE_ERROR` | Unified pipeline SSE event types (Phase 45 Sprint 153-156). |
+| `ToolRiskLevel` | `integrations/poc/approval_gate.py:33` | `LOW`, `MEDIUM`, `HIGH` | HITL approval risk classification (PoC V4). |
+| `TaskStatus` (PoC) | `integrations/poc/shared_task_list.py:29` | `PENDING`, `IN_PROGRESS`, `COMPLETED`, `FAILED` | SharedTaskList task lifecycle (PoC V4). |
+| `VALID_DOMAINS` (frozenset) | `integrations/orchestration/experts/registry.py:27` | `{network, database, application, security, cloud, general, custom}` | Agent Expert domain whitelist (Phase 46; declared as frozenset, not Python Enum). |
+
+### Notes
+
+- **Sprint 166**: `SubagentExecutor._infer_complexity()` returns string literals (`"simple"`, `"moderate"`, `"complex"`, `"auto"`) — not a formal Python Enum. Flagged for potential refactor.
+- **Pipeline step order**: `MemoryStep`=0, `KnowledgeStep`=1, `IntentStep`=2, `RiskStep`=3, `HITLGateStep`=4, `LLMRouteStep`=5, `PostProcessStep`=7 (step 7 identifier) — step 6 is not present as a pipeline step; dispatch occurs inside the `LLMRouteStep` outcome.
+
+### Updated Coverage
+
+| Metric | After Wave 72 | Post-Phase 47 (2026-04-19) |
+|--------|---------------|----------------------------|
+| Documented Enums | 381 (339 base + 42 L09) | **385** (+4 new: ExecutionRoute, PipelineEventType, ToolRiskLevel, PoC TaskStatus) |
+| Coverage | 100% | 100% (Phase 45-47 additions verified via actual source reading) |

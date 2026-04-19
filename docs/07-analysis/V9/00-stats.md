@@ -1,20 +1,24 @@
 # V9 Codebase Statistics Summary
 
-> Generated: 2026-03-29 | Scope: Phase 1-44 | Base: Full file inventory scan
+> Generated: 2026-03-29 | Original scope: Phase 1-44 | Base: Full file inventory scan
+> **Last sync**: 2026-04-19 — synced forward to Phase 47 W1 (Sprint 166+), baseline commit `69b5fa2`.
 
 ---
 
 ## 1. Overall Metrics
 
-| Metric | Value |
-|--------|-------|
-| **Total Source Files** | 1,028 (792 .py + 236 .ts/.tsx) |
-| **Total LOC** | 327,582 (273,344 backend + 54,238 frontend) |
-| **Total Phases** | 44 |
-| **Total Sprints** | 152+ |
-| **Total Story Points** | ~2,500+ |
-| **Project Start** | 2025-11-14 |
-| **Current Branch** | feature/phase-42-deep-integration |
+| Metric | V9 Baseline (2026-03-31) | Current (2026-04-19, commit `69b5fa2`) |
+|--------|--------------------------|-----------------------------------------|
+| **Total Source Files** | 1,028 (792 .py + 236 .ts/.tsx) | **1,116** (862 .py + 254 .ts/.tsx) |
+| **Total LOC** | 327,582 | ~356,000 (+28,944 insertions, -3,033 deletions since baseline) |
+| **Test Files (backend)** | 386 | **460** |
+| **Total Phases** | 44 | **47** (W1 of Phase 47 merged) |
+| **Total Sprints** | 152+ | **166+** |
+| **Total Story Points** | ~2,500+ | ~2,700+ |
+| **Project Start** | 2025-11-14 | — |
+| **Current Branch** | main (post Phase 47 W1 merge) | — |
+
+> Detailed Phase 45-47 changes: see `07-delta/delta-phase-45-47.md`.
 
 ### Architecture Overview
 
@@ -589,7 +593,7 @@ graph TB
 
 | Category | Files | Coverage Target |
 |----------|-------|-----------------|
-| Backend Unit Tests | 289 | 80% fail_under |
+| Backend Unit Tests | 289 (V9 baseline) / ~363 (post-Phase 47) | 80% fail_under |
 | Backend Integration Tests | 28 | — |
 | Backend E2E Tests | 23 | — |
 | Backend Security Tests | 3 | — |
@@ -597,9 +601,15 @@ graph TB
 | Backend Load Tests | 1 | — |
 | Backend Mocks | 3 | — |
 | Backend conftest.py | 4 | — |
-| Frontend Unit Tests | 13 (12 swarm + 1 store) | — |
+| Frontend Unit Tests | 13 → ~14 (agentTeamStore.test.ts added, swarmStore.test.ts removed) | — |
 | Frontend E2E Tests | 12 (8 ag-ui + 3 root + 1 swarm) | — |
-| **Total Test Files** | **386** (361 backend + 25 frontend) | |
+| **Total Test Files** | **386 (V9 baseline) → ~460 (post-Phase 47)** | |
+
+**Phase 45-47 test additions** (Sprint 158-166):
+- `backend/tests/unit/orchestration/pipeline/` — 7 files (pipeline e2e, service, steps, step6 dispatch, step8 api)
+- `backend/tests/unit/api/v1/experts/` — 2 files (routes, crud)
+- `backend/tests/unit/integrations/orchestration/experts/` — 3 files (bridge, domain_tools, registry)
+- `backend/tests/unit/test_sprint166_dynamic_agents.py` — 1 file
 
 ---
 
@@ -645,3 +655,65 @@ graph TB
 | LOC (source only) | ~160K | ~327K (273K backend + 54K frontend) | +167K LOC |
 | Features Tracked | 70+15 | TBD (V9 analysis) | — |
 | Issues Tracked | 62 | TBD (V9 analysis) | — |
+
+---
+
+## 11. Phase 45-47 Delta (applied 2026-04-19, commit `69b5fa2`)
+
+Summary of incremental changes since V9 baseline (Phase 44, commit `50ec420`). Full details: `07-delta/delta-phase-45-47.md`.
+
+### 11.1 File Inventory Delta
+
+| Category | V9 Baseline | Post-Phase 47 | Change |
+|----------|------------|---------------|--------|
+| Backend `.py` (src) | 792 | **862** | +70 |
+| Frontend `.ts/.tsx` (src) | 236 | **254** | +18 |
+| Backend tests `.py` | 386 | **460** | +74 |
+
+### 11.2 New Backend Directories (commits/sprints)
+
+| Directory | Files | Commit / Sprint |
+|-----------|-------|----------------|
+| `backend/src/integrations/orchestration/pipeline/` | 14 files (service, context, exceptions, persistence + 7 steps) | Sprint 153-156 (`6e7bf1d..f946489`) |
+| `backend/src/integrations/orchestration/dispatch/` | 12 files (service, models + 9 executors) | Sprint 155 (`85fdc83`) |
+| `backend/src/integrations/orchestration/experts/` | 7 Python + 6 YAML (network/database/cloud/application/security/general) | Sprint 158-163 (`2870d05..b5d7d64`) |
+| `backend/src/integrations/orchestration/approval/` | 2 files | Phase 45 |
+| `backend/src/integrations/orchestration/transcript/` | 3 files | Phase 45 |
+| `backend/src/integrations/orchestration/resume/` | 2 files | Phase 45 |
+| `backend/src/integrations/poc/` | 10 files (agent_work_loop, shared/redis_task_list, approval_gate, tools) | PoC V4 merge (`c20c72d`) |
+| `backend/src/integrations/agent_framework/clients/` | 2 files (AnthropicChatClient) | PoC V4 |
+| `backend/src/api/v1/experts/` | 3 files | Sprint 162-163 |
+| `backend/src/api/v1/orchestration/` | 4 new files (chat_routes, chat_schemas, execution_log_routes, execution_log_schemas) | Sprint 156 + Phase 47 W1 |
+| `backend/src/api/v1/poc/` | 2 files | PoC V4 |
+
+### 11.3 New Frontend Directories / Files
+
+| Area | Change |
+|------|--------|
+| `frontend/src/pages/agent-experts/` | 4 NEW pages (Phase 46 Sprint 164) |
+| `frontend/src/pages/OrchestratorChat.tsx` | NEW page (Phase 45 Sprint 157) |
+| `frontend/src/pages/AgentTeamTestPage.tsx` | NEW page (PoC V4) |
+| `frontend/src/components/unified-chat/agent-team/` | Mass rename from `agent-swarm/` + 4 new components (AgentCardList, ExpertBadges, ConversationLog, AgentRosterPanel) |
+| `frontend/src/components/unified-chat/GuidedDialogPanel.tsx`, `PipelineProgressPanel.tsx`, `StepDetailPanel.tsx` | 3 NEW Phase 45 components |
+| `frontend/src/hooks/useOrchestratorPipeline.ts`, `useOrchestratorSSE.ts`, `useOrchestratorHistory.ts`, `useExperts.ts` | 4 NEW hooks |
+| `frontend/src/stores/agentTeamStore.ts`, `expertSelectionStore.ts` | 2 NEW stores (replace deleted `swarmStore.ts`) |
+
+### 11.4 Event System Expansion
+
+Pipeline events: **27 new event types** via `PipelineEventType` enum at `integrations/orchestration/pipeline/service.py:27-61`. Includes pipeline lifecycle, per-step tracking, HITL/dialog pauses, agent team orchestration, and expert roster preview events.
+
+### 11.5 New Enums
+
+- `ExecutionRoute` (`DIRECT_ANSWER`, `SUBAGENT`, `TEAM`) at `dispatch/models.py:13`
+- `PipelineEventType` (27 values) at `pipeline/service.py:27`
+- `ToolRiskLevel` (`LOW`, `MEDIUM`, `HIGH`) at `poc/approval_gate.py:33`
+- `TaskStatus` (`PENDING`, `IN_PROGRESS`, `COMPLETED`, `FAILED`) at `poc/shared_task_list.py:29`
+
+### 11.6 Data Model Additions
+
+| Table | File | Purpose |
+|-------|------|---------|
+| `agent_expert` | `infrastructure/database/models/agent_expert.py` (168 LOC) | Agent Expert Registry persistence |
+| `orchestration_execution_log` | `infrastructure/database/models/orchestration_execution_log.py` | Phase 47 — persist full pipeline logs |
+
+---

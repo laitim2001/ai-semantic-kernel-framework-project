@@ -604,3 +604,69 @@ All 4 security features remain COMPLETE. V9 notes that Phase 36 (Sprint 109) add
 > **Generated**: 2026-03-29 | V9 Codebase Analysis
 > **Method**: Full source code reading of all implementation files listed above
 > **Scope**: 792 Python files, Phase 1-44 (Sprint 1-148+)
+
+---
+
+## Phase 45-47 Feature Additions (2026-04-19 sync)
+
+### Category K: Unified Orchestration Pipeline (Phase 45)
+
+| ID | Feature | Status | Evidence | Notes |
+|----|---------|--------|----------|-------|
+| K-01 | Unified 8-step orchestration pipeline | ✅ PRODUCTION | `integrations/orchestration/pipeline/service.py` (569 LOC) + 7 steps | Sprint 153-156 |
+| K-02 | 27 PipelineEventType SSE events | ✅ PRODUCTION | `pipeline/service.py:27-61` | Covers lifecycle, step tracking, HITL/dialog pauses, agent team events |
+| K-03 | Dialog pause + resume at Step 3 | ✅ PRODUCTION | `DialogPauseException` + `ResumeService` | Guided dialog for missing fields |
+| K-04 | HITL pause + resume at Step 5 | ✅ PRODUCTION | `HITLPauseException` + `ApprovalService` | HIGH/CRITICAL risk gate |
+| K-05 | Fast-path for high-confidence intent | ✅ PRODUCTION | `Step6LLMRoute` fast-path for QUERY/REQUEST confidence ≥ 0.92 | Bypasses LLM call |
+| K-06 | Execution log persistence | ✅ PRODUCTION (Phase 47 W1) | `pipeline/persistence.py` + `orchestration_execution_log` ORM | Persists memory/knowledge text |
+| K-07 | Transcript service (Redis Streams) | ✅ PRODUCTION | `transcript/service.py` | Per-session transcript |
+| K-08 | Checkpoint-based resume | ✅ PRODUCTION | `resume/service.py` | Re-enters pipeline at paused step |
+
+### Category L: Agent Expert Registry (Phase 46)
+
+| ID | Feature | Status | Evidence | Notes |
+|----|---------|--------|----------|-------|
+| L-01 | YAML-based expert definitions | ✅ PRODUCTION | `experts/definitions/*.yaml` (6 builtin) | network/database/cloud/application/security/general |
+| L-02 | Expert CRUD REST API | ✅ PRODUCTION | `api/v1/experts/routes.py` (6 endpoints) | Sprint 162-163 |
+| L-03 | DB-backed expert persistence | ✅ PRODUCTION | `infrastructure/database/models/agent_expert.py` + repo | Sprint 163 |
+| L-04 | Three-tier fallback (DB → YAML → worker_roles) | ✅ PRODUCTION | `registry.py:get_or_fallback()` | Graceful degradation |
+| L-05 | Hot-reload registry | ✅ PRODUCTION | `POST /experts/reload` | Sprint 162 |
+| L-06 | Built-in protection (is_builtin) | ✅ PRODUCTION | `routes.py` returns 403 on delete | Prevents accidental removal |
+| L-07 | Version auto-bump on update | ✅ PRODUCTION | Repository `update()` method | Optimistic locking hint |
+| L-08 | Domain-specific tool schemas | ✅ PRODUCTION | `domain_tools.py` DOMAIN_TOOLS dict + resolve_tools() | Sprint 160 |
+| L-09 | Tool validation on YAML load | ✅ PRODUCTION | `tool_validator.py` | Schema validation |
+| L-10 | Frontend Expert management UI | ✅ PRODUCTION | `pages/agent-experts/*.tsx` (4 pages) | Sprint 164 |
+| L-11 | Expert domain/capability badges | ✅ PRODUCTION | `unified-chat/agent-team/ExpertBadges.tsx` | Sprint 161 |
+| L-12 | Expert Roster Preview | ✅ PRODUCTION | `AgentRosterPanel.tsx` + `expertSelectionStore` | Sprint 165 |
+
+### Category M: PoC Agent Team V4
+
+| ID | Feature | Status | Evidence | Notes |
+|----|---------|--------|----------|-------|
+| M-01 | CC-style persistent agent loop | ✅ PRODUCTION (via TeamExecutor) | `poc/agent_work_loop.py` (1002 LOC) | Phase A/B/C loop |
+| M-02 | SharedTaskList (in-memory) | ✅ PRODUCTION | `poc/shared_task_list.py` (370) | threading.Lock thread-safe |
+| M-03 | Redis-backed task list | ✅ PRODUCTION | `poc/redis_task_list.py` (442) | Redis Streams + Hash, 1h TTL |
+| M-04 | Event-driven HITL approval | ✅ PRODUCTION | `poc/approval_gate.py` | Zero-CPU asyncio.Event.wait() |
+| M-05 | Inter-agent directed messages | ✅ PRODUCTION | `TeamMessage.to_agent` field | Per-agent inbox stream |
+| M-06 | Task reassignment on failure | ✅ PRODUCTION | `SharedTaskList.reassign_task()` | With retry_count tracking |
+| M-07 | 15-second communication window | ✅ PRODUCTION | `agent_work_loop.py` | Post-all-done comm phase |
+| M-08 | AnthropicChatClient for MAF | ✅ PRODUCTION | `agent_framework/clients/anthropic_chat_client.py` (393) | Claude API as MAF ChatClient |
+| M-09 | LLMCallPool concurrency control | ✅ PRODUCTION | integrated into `llm/` | Prevents rate-limit |
+
+### Category N: Dynamic Agent Scaling (Sprint 166)
+
+| ID | Feature | Status | Evidence |
+|----|---------|--------|----------|
+| N-01 | Dynamic agent count per task complexity | ✅ PRODUCTION | `dispatch/executors/subagent.py::_infer_complexity()` |
+| N-02 | Complexity inference rules | ✅ PRODUCTION | Pipeline rules (risk + intent) + task text overrides; MAX_SUBTASKS=10 cap |
+
+### Feature Count Update
+
+| Metric | V9 Baseline | Post-Phase 47 |
+|--------|-------------|---------------|
+| Feature categories | A-J (10) | **A-N (14)** (+K Pipeline, +L Expert Registry, +M PoC Team V4, +N Dynamic Scaling) |
+| Total features | 70+15 | **~110+** (+~30 new features) |
+
+---
+
+*Phase 45-47 features appended 2026-04-19 from source reading + commit messages (`git log 50ec420..HEAD`).*

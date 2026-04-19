@@ -532,3 +532,48 @@ Sprint 119-120 已建立 7 個領域特定工廠函式 (`storage_factories.py`),
 > **Document Version**: V9 R1
 > **Cross-references**: `layer-09-integrations.md` Section 4-5, `layer-11-infrastructure.md` Sections 5-6, `layer-10-domain.md` Section 2-4, `mock-real-map.md` Section 2
 > **Next Actions**: P0 InMemory migration (InMemoryCheckpointStorage + InMemoryApprovalStorage) should be prioritized in the next sprint cycle.
+
+---
+
+## Phase 45-47 Memory Additions (2026-04-19 sync)
+
+### New Memory Modules
+
+The `backend/src/integrations/memory/` directory gained **3 new modules** during Phase 45-46 to support the unified pipeline's memory step (`Step1Memory`):
+
+| File | Purpose | Evidence |
+|------|---------|----------|
+| `memory/consolidation.py` | Consolidation logic — episodic memories → semantic long-term memories | New file in Phase 45-46 range |
+| `memory/context_budget.py` | Token budget allocation for memory retrieval; ensures pipeline context fits within LLM window | Used by `Step1Memory` in pipeline |
+| `memory/extraction.py` | Memory extraction from completed transcripts (used by Step 8 postprocess) | Used by `PostProcessStep` |
+
+**Modified**: `memory/mem0_client.py`, `memory/types.py`, `memory/unified_memory.py` — enhancements to support new pipeline integration.
+
+### Integration Points
+
+1. **Pipeline Step 1 (Memory Read)** — `integrations/orchestration/pipeline/steps/step1_memory.py`
+   - Calls `unified_memory` + applies `context_budget` to cap retrieved memory text
+   - Outputs `ctx.memory_text` for downstream steps
+2. **PoC `memory_integration.py`** — `integrations/poc/memory_integration.py`
+   - Pre-execution retrieval matching task goal
+   - Post-execution storage of synthesis + full transcript
+   - Used by `run_parallel_team()` in the persistent agent loop
+3. **Pipeline Step 8 (Postprocess)** — `integrations/orchestration/pipeline/steps/step8_postprocess.py`
+   - Invokes `extraction` module to write memory entries after pipeline completion
+   - Records `ctx.checkpoint_id`
+
+### Updated Memory Architecture Grade
+
+| Dimension | V9 Baseline | Post-Phase 47 |
+|-----------|-------------|---------------|
+| Semantic memory (mem0) | B | B+ (unchanged, but better-used by pipeline) |
+| Episodic memory | C | B (consolidation now formalized in `consolidation.py`) |
+| Context budgeting | Not explicit | **NEW** — `context_budget.py` gives explicit token allocation |
+| Pipeline integration | Ad-hoc | **Structured** — Step 1 (read) + Step 8 (write) |
+| **Overall** | B | **B+** |
+
+> P0 `InMemoryCheckpointStorage` migration still pending — no evidence of resolution in Phase 45-47 commits.
+
+---
+
+*Phase 45-47 memory section appended 2026-04-19 from source reading.*

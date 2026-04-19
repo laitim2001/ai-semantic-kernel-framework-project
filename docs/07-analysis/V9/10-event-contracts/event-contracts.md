@@ -605,4 +605,57 @@ The system has **three distinct bridge pathways** for converting internal events
 | `backend/src/integrations/contracts/pipeline.py` | `PipelineRequest`, `PipelineResponse` |
 | `frontend/src/hooks/useSSEChat.ts` | SSE streaming hook + event dispatch |
 | `frontend/src/types/ag-ui.ts` | Frontend AG-UI type definitions |
-| `frontend/src/components/unified-chat/agent-swarm/types/events.ts` | Frontend swarm event types |
+| `frontend/src/components/unified-chat/agent-swarm/types/events.ts` | Frontend swarm event types (V9 baseline) |
+| `frontend/src/components/unified-chat/agent-team/types/events.ts` | **NEW (Phase 45-47)** — Frontend agent-team event types (renamed from agent-swarm, adds `TeamCreatedPayload`, `AgentStartedPayload`, `AgentThinkingPayload`, `AgentToolCallPayload`, `AgentMessagePayload`, `TeamMessagePayload`, `InboxReceivedPayload`, `AgentApprovalRequiredPayload`) |
+
+---
+
+## Phase 45-47 Event Contract Additions (2026-04-19 sync)
+
+### 1. PipelineEventType — Unified Pipeline Events (Phase 45)
+
+**Source**: `backend/src/integrations/orchestration/pipeline/service.py:27-61` (enum)
+**Format**: Emitted via `asyncio.Queue` + SSE generator at `backend/src/api/v1/orchestration/chat_routes.py:63-99`
+**Transport**: HTTP SSE stream on `POST /orchestration/chat` (+ `/resume`, `/dialog-respond`)
+
+**27 event types** organized into 6 groups:
+
+| Group | Events | Purpose |
+|-------|--------|---------|
+| Pipeline lifecycle | `PIPELINE_START`, `PIPELINE_COMPLETE`, `PIPELINE_ERROR` | Session open/close/fail |
+| Per-step tracking | `STEP_START`, `STEP_COMPLETE`, `STEP_ERROR` | Fired for each of 7 steps |
+| Pause signals | `DIALOG_REQUIRED`, `HITL_REQUIRED` | Triggered when pipeline hits missing-field or high-risk gate (saves checkpoint) |
+| Routing | `LLM_ROUTE_DECISION`, `ROUTING_COMPLETE`, `DISPATCH_START` | LLM route selection + dispatch start |
+| Agent team coordination | `AGENT_TEAM_CREATED`, `AGENT_MEMBER_STARTED`, `AGENT_MEMBER_THINKING`, `AGENT_MEMBER_TOOL_CALL`, `AGENT_MEMBER_COMPLETED`, `AGENT_TEAM_COMPLETED`, `AGENT_TEAM_MESSAGE`, `AGENT_INBOX_RECEIVED`, `AGENT_TASK_CLAIMED`, `AGENT_TASK_REASSIGNED`, `AGENT_APPROVAL_REQUIRED` | Real-time team execution state |
+| Single-agent fields | `AGENT_THINKING`, `AGENT_TOOL_CALL`, `AGENT_COMPLETE`, `TEXT_DELTA` | Used by SubagentExecutor + DirectAnswerExecutor |
+| Previews | `EXPERT_ROSTER_PREVIEW` | Sprint 165 — preview of expert roster before team execution |
+
+**Event serialization**: `PipelineEvent.to_sse() -> Dict[str, Any]` (`service.py` around line 92-129).
+
+### 2. Inter-Agent Communication Events (PoC V4)
+
+**Source**: `backend/src/integrations/poc/shared_task_list.py` + `redis_task_list.py`
+**Transport**: In-memory (dev) or Redis Streams (prod)
+
+| Channel | Event Type | Purpose |
+|---------|-----------|---------|
+| `messages` stream | `TEAM_MESSAGE` | Global broadcast between team agents |
+| `inbox:{agent_name}` stream | `INBOX_RECEIVED` | Directed message to specific agent |
+| `tasks` hash | `TASK_DISPATCHED`, `TASK_CLAIMED`, `TASK_COMPLETED`, `TASK_FAILED`, `ALL_TASKS_DONE` | Task lifecycle |
+| (SSE bridge) | `SWARM_PROGRESS` | Progress aggregation (includes task_claimed, agent_retry, agent_idle, task_reassigned, phase0_complete, shutdown_request, team_complete) |
+
+**Bridge**: `integrations/orchestration/dispatch/executors/pipeline_emitter_bridge.py` maps PoC `SWARM_*` events → pipeline `AGENT_*` events for consumption by frontend.
+
+### 3. Updated Event Totals
+
+| Metric | V9 Baseline | Post-Phase 47 |
+|--------|-------------|---------------|
+| Pipeline SSE events | 13 (old hybrid orchestrator) | **27** (new `PipelineEventType`) |
+| AG-UI Protocol events | 11 | 11 (unchanged) |
+| Swarm events | 9 | 9 + now bridged via pipeline emitter |
+| Agent-team events (frontend-consumed) | — | **8** (TeamCreated, AgentStarted, AgentThinking, AgentToolCall, AgentMessage, TeamMessage, InboxReceived, AgentApprovalRequired) |
+| **Total Event Surface** | 40+ | **60+** |
+
+---
+
+*Phase 45-47 event additions appended 2026-04-19 from source reading of `pipeline/service.py`, `poc/shared_task_list.py`, and frontend `agent-team/types/events.ts`.*

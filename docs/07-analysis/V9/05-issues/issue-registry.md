@@ -1111,3 +1111,41 @@ pie title Issue Severity Distribution (93 total)
 *Updated 2026-03-31: V9-C10 confirmed false positive (FIXED); Summary/By-Layer tables corrected; per-layer counts deduplicated to primary layer only.*
 *Total: 93 issues (14 CRITICAL, 22 HIGH, 30 MEDIUM, 27 LOW).*
 *3 FIXED (C02, C04, C10), 46 STILL_OPEN, 0 WORSENED, 44 NEW.*
+
+---
+
+## Phase 45-47 Issue-Related Changes (2026-04-19 sync)
+
+### Likely-Fixed Issues (evidence from commits)
+
+| Commit | Area | Likely V9 issue addressed | Evidence |
+|--------|------|---------------------------|----------|
+| `3c54a96` fix(pipeline): force event loop yield after SSE emit | SSE streaming | Matches pattern of SSE streaming ordering issues | `asyncio.sleep(0)` forced yield to enable incremental streaming |
+| `9c3df99` fix(orchestration): persist full memory/knowledge text in execution log | Phase 47 W1 | Data persistence completeness | ORM model + repo now stores full text (not truncated) |
+| `23da222` fix(orchestration): right-panel UX fixes + step metadata + phantom agent cleanup | Frontend panel rendering | Resolves phantom agent entries in team panel | Step metadata propagation + duplicate cleanup |
+| `0aa9302` fix(orchestration): LLM synthesis retry + bridge logging for Sprint C issues | LLM reliability | LLM timeout/retry in synthesis | Retry loop + structured logging |
+| `ea98dff`/`997fd71` fix(poc): fallback response when LLM only calls select_route tool | Route dispatch edge case | PoC-level issue but now bridged to production TeamExecutor | Adds default response when LLM makes only a routing tool call |
+
+> **Verification note**: These are commit-observed fixes. Mapping to specific V9 issue IDs (e.g., C-01, H-03) requires re-reading the V9 issue registry entries individually. Flagged for manual cross-reference in next dedicated issue-registry sync.
+
+### New Potential Issues Introduced
+
+| Area | Risk | Evidence |
+|------|------|----------|
+| `integrations/poc/` naming | Production code in a `poc/` directory may confuse readers and tooling (maturity classification false-negative) | Directory named "poc" but `TeamExecutor` invokes `run_parallel_team()` from it in production |
+| `frontend/src/components/unified-chat/agent-team/` | 15 files inherited via rename from `agent-swarm/` — behavioral equivalence not yet end-to-end unit-tested on new names | Rename similarity: 51-100%, new tests only partially written |
+| Pipeline step indexing gap | `PostProcessStep` has `step_index=7`; no step with index=6 — dispatch is NOT a numbered pipeline step | `pipeline/steps/step8_postprocess.py` + absence of `step7_*.py` |
+| `execution_log_*` Phase 47 W1 | Only 2 commits merged into main (`69b5fa2`, `9c3df99`); full schema inventory not yet in V9 | Phase 47 has additional worktrees not yet merged |
+
+### Unmerged Branches (tracked, not yet applied)
+
+- `feature/intent-classifier-improvements` (1 ahead) — likely fixes intent-classifier issues
+- `feature/subagent-count-control` (2 ahead) — complements Sprint 166 dynamic-agent work
+- `poc/anthropic-chatclient` (4 ahead) — AnthropicChatClient enhancements
+- `poc/unified-tools` (1 ahead) — unified tools
+
+These branches' fixes are NOT yet reflected in this registry.
+
+---
+
+*Phase 45-47 issue summary appended 2026-04-19 from `git log 50ec420..HEAD` commit messages + source reading.*

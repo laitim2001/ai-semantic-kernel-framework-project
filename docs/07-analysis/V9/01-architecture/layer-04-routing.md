@@ -917,3 +917,56 @@ Multiple files use `datetime.utcnow()` which is deprecated in Python 3.12+. The 
 ---
 
 *Analysis generated: 2026-03-29 | Source: 55 Python files in `backend/src/integrations/orchestration/`*
+
+---
+
+## Phase 45-47 Routing Additions (2026-04-19 sync)
+
+**File count update**: `backend/src/integrations/orchestration/` grew from **55 files** (V9 baseline) to **~115 files** (+60) with Phase 45-47 additions (pipeline/ 14, dispatch/ 12, experts/ 7+6yaml, approval/ 2, transcript/ 3, resume/ 2, plus updated intent_router configs).
+
+### Intent Router YAML Configs (Sprint 153-154)
+
+The `intent_router/` module was refactored to externalize configs as YAML:
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `intent_router/completeness/rules.py` | **Modified** | Logic now reads from YAML |
+| `intent_router/completeness/rules.yaml` | **NEW** | Completeness rules per intent category |
+| `intent_router/llm_classifier/prompts.py` | **Modified** | Loads from YAML |
+| `intent_router/llm_classifier/prompts.yaml` | **NEW** | LLM classifier prompts externalised |
+| `intent_router/semantic_router/router.py` | **Modified** | Reads routes from YAML |
+| `intent_router/semantic_router/routes.yaml` | **NEW** | Semantic router embedding routes |
+| `intent_router/models.py`, `router.py` | **Modified** | Integration with new pipeline |
+
+**Benefits**: Hot-reload-friendly, non-code configuration changes for Ops engineers, reduced test surface for config changes.
+
+### Unified 8-Step Pipeline (Phase 45)
+
+The new pipeline at `integrations/orchestration/pipeline/` **wraps** the intent router output and adds pre/post-processing:
+
+- **Step 1 (Memory)** — runs before intent
+- **Step 2 (Knowledge)** — runs before intent
+- **Step 3 (Intent)** — **calls `BusinessIntentRouter` from `intent_router/`** (unchanged 3-tier cascade)
+- **Step 4 (Risk)** — `RiskAssessor` (unchanged)
+- **Step 5 (HITL Gate)** — wraps `HITLController`
+- **Step 6 (LLM Route)** — **NEW** — LLM decides `ExecutionRoute` (direct_answer/subagent/team) via function calling with fast-path for high-confidence QUERY/REQUEST
+- **Step 7** — dispatch (not a pipeline step; `DispatchService.dispatch()`)
+- **Step 8 (PostProcess)** — checkpoint + memory extraction
+
+> See `01-architecture/layer-05-orchestration.md` Phase 45-47 section for pipeline class diagrams.
+
+### Dispatch Layer
+
+Post-intent/route decision, `DispatchService` at `integrations/orchestration/dispatch/service.py` invokes the right executor. `ExecutionRoute` enum values: `DIRECT_ANSWER`, `SUBAGENT`, `TEAM`.
+
+### API Wiring
+
+New endpoint `POST /api/v1/orchestration/chat` (in `chat_routes.py`) replaces the manual orchestration invocation — accepts `ChatRequest`, streams `PipelineEventType` events via SSE. Corresponding frontend page: `/orchestrator-chat` (OrchestratorChat.tsx + 3 new panels: GuidedDialog, PipelineProgress, StepDetail).
+
+### Sprint 166 Dynamic Agent Count
+
+Logic lives in `dispatch/executors/subagent.py::_infer_complexity()`. Pipeline rules + task-text overrides. `MAX_SUBTASKS=10`.
+
+---
+
+*Phase 45-47 routing additions appended 2026-04-19 from source reading of `orchestration/` subdirectories.*

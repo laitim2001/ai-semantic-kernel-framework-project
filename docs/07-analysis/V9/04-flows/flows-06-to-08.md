@@ -514,3 +514,138 @@ Flow 8 (Memory)
 | **Flow 6: Pipeline** | SSE streaming works E2E. 7 handlers wired via Bootstrap. Routing, approval, memory injection all functional. | ExecutionHandler returns stubs when MAF/Claude unavailable. Checkpoint fallback to memory. | **70%** -- works for chat mode; workflow/swarm dispatch needs real executors |
 | **Flow 7: Async Dispatch** | Task creation + ARQ submission functional. Status tracking works. | MAF workflow execution is TODO (task_functions.py:53). ARQ package may not be installed. No result-to-SSE push. | **30%** -- infrastructure exists but actual execution not connected |
 | **Flow 8: Memory** | 3-layer architecture implemented. Retrieval + injection into pipeline works. RAG pipeline complete. | Requires mem0 + Qdrant + Redis + embedding API. Session memory uses Redis not PostgreSQL. No auto-summarisation trigger. `_write_to_longterm()` defaults to SESSION layer (MemoryMetadata default importance=0.5). | **45%** -- works when all external services available; fragile dependency chain; per-message writes go to session memory (TTL 7d), not long-term despite method name |
+
+---
+
+## Flow 9: Unified Orchestration Pipeline (Phase 45 NEW, 2026-04-19 sync)
+
+**Entry point**: `POST /api/v1/orchestration/chat` → `OrchestrationPipelineService.run()`
+**Transport**: HTTP SSE stream yielding `PipelineEventType` events
+**Frontend page**: `/orchestrator-chat` (OrchestratorChat.tsx)
+
+### E2E Sequence
+
+```
+Frontend OrchestratorChat.tsx
+  ↓ POST /orchestration/chat with ChatRequest
+  ↓ (useOrchestratorPipeline + useOrchestratorSSE hooks)
+
+api/v1/orchestration/chat_routes.py
+  ↓ creates asyncio.Queue
+  ↓ spawns PipelineService.run() in background task
+  ↓ _sse_generator streams events from queue until PIPELINE_COMPLETE/ERROR
+
+integrations/orchestration/pipeline/service.py
+  ↓ PipelineEvent(PIPELINE_START) → SSE
+  ↓ For step in configured_steps (filtered by start_from_step):
+  │    PipelineEvent(STEP_START, step_name) → SSE
+  │    step.execute(context) → context
+  │    PipelineEvent(STEP_COMPLETE, latency) → SSE
+  │
+  │ Step1Memory (index 0):
+  │   → memory.consolidation/context_budget/extraction
+  │   → ctx.memory_text
+  │
+  │ Step2Knowledge (index 1):
+  │   → knowledge/ RAG pipeline
+  │   → ctx.knowledge_text
+  │
+  │ Step3Intent (index 2):
+  │   → BusinessIntentRouter.route() (3-tier cascade)
+  │   → ctx.routing_decision
+  │   → if incomplete: raise DialogPauseException
+  │      → PipelineEvent(DIALOG_REQUIRED) → SSE
+  │      → checkpoint saved, pipeline pauses
+  │      → Frontend shows GuidedDialogPanel
+  │      → User answers → POST /orchestration/chat/dialog-respond
+  │      → ResumeService re-enters at start_from_step
+  │
+  │ Step4Risk (index 3):
+  │   → RiskAssessor.assess() (7 dimensions)
+  │   → ctx.risk_assessment
+  │
+  │ Step5HITLGate (index 4):
+  │   → ApprovalService.check()
+  │   → if HIGH/CRITICAL & not pre-approved: raise HITLPauseException
+  │      → PipelineEvent(HITL_REQUIRED) → SSE
+  │      → Frontend shows HITL approval UI
+  │      → User approves → POST /orchestration/chat/resume
+  │
+  │ Step6LLMRoute (index 5):
+  │   → LLM function call (fast-path for QUERY/REQUEST conf ≥ 0.92)
+  │   → ctx.selected_route = ExecutionRoute.{DIRECT_ANSWER|SUBAGENT|TEAM}
+  │   → PipelineEvent(LLM_ROUTE_DECISION) → SSE
+  │
+  │ [Step 6 outcome → DispatchService.dispatch()]
+  │   → PipelineEvent(DISPATCH_START) → SSE
+  │   → BaseExecutor.execute():
+  │     ├─ DirectAnswerExecutor → direct LLM response → TEXT_DELTA events
+  │     ├─ SubagentExecutor → single-agent + _infer_complexity (Sprint 166)
+  │     │    → AGENT_THINKING, AGENT_TOOL_CALL, AGENT_COMPLETE events
+  │     └─ TeamExecutor → run_parallel_team() (PoC V4)
+  │          → AGENT_TEAM_CREATED, AGENT_MEMBER_STARTED, ..., AGENT_TEAM_COMPLETED events
+  │          → (PipelineEmitterBridge maps SWARM_* → AGENT_*)
+  │
+  │ Step8PostProcess (index 7):
+  │   → checkpoint save (PG + Redis)
+  │   → memory.extraction.extract_and_store()
+  │   → ctx.checkpoint_id
+  │
+  └─ PipelineEvent(PIPELINE_COMPLETE, duration) → SSE
+     → PipelineExecutionPersistenceService saves full log (Phase 47 W1)
+
+Frontend:
+  ↓ useOrchestratorSSE consumes events → updates agentTeamStore
+  ↓ PipelineProgressPanel shows 8-step visual progress
+  ↓ StepDetailPanel shows per-step results
+  ↓ AgentTeamPanel shows parallel agent execution
+```
+
+### Readiness Assessment (Flow 9)
+
+| Aspect | Real Data Path | Mock/Stub Barriers | Production Readiness |
+|--------|---------------|-------------------|---------------------|
+| **Flow 9: Unified Pipeline** | 8-step orchestration E2E with real DB/Redis/LLM backing, real SSE streaming, real HITL/dialog pauses, real expert-backed team dispatch | Requires Redis + PG + LLM (Azure OpenAI or Claude). Persistence layer (Phase 47 W1) newly introduced — not yet fully stress-tested. | **85%** — production-ready for happy path; edge cases (network partitions during long-running team execution, Redis cluster failover) flagged for next verification wave |
+
+---
+
+## Flow 10: Agent Team Execution (PoC V4 → TeamExecutor)
+
+**Entry**: `TeamExecutor.execute()` from `integrations/orchestration/dispatch/executors/team.py`
+**Delegates to**: `run_parallel_team()` in `integrations/poc/agent_work_loop.py`
+
+### Key Phases (from `agent_work_loop.py:600-973`)
+
+```
+Phase 0: Task decomposition (may be skipped if already decomposed upstream)
+  → LLM call to TeamLead → task list → SharedTaskList.add_task()
+
+Phase 1: Parallel agent execution
+  → asyncio.gather(*[agent_work_loop(agent) for agent in agents])
+  → Each agent loop: Phase A (active: claim + execute + report)
+                   → Phase B (idle)
+                   → Phase C (500ms mailbox poll)
+  → Uses AgentExpertRegistry for expert-backed agent configuration
+  → Per-tool HITL via TeamApprovalManager.wait_for_decision()
+  → Error recovery: transient (exponential backoff 1s→2s→4s) vs fatal
+
+Phase 1.5: Communication window (15s)
+  → Agents exchange final messages, answer follow-ups
+
+Phase 2: Synthesis (may be skipped if production TaskDecomposer handles it)
+  → TeamLead LLM combines findings → unified analysis report
+
+Shutdown:
+  → SHUTDOWN_REQUEST → SHUTDOWN_ACK protocol
+  → Safety cap: max 10 LLM turns per agent
+```
+
+### Readiness Assessment (Flow 10)
+
+| Aspect | Real Data Path | Barriers | Readiness |
+|--------|---------------|----------|-----------|
+| **Flow 10: Agent Team** | Real Claude/Azure LLM calls, real Redis SharedTaskList, real HITL approval, real memory integration | PoC-directory naming may be misleading. Full production E2E tests pass (Sprint 158 `f1923d3`). | **80%** — production-grade code, but naming/organization cleanup pending |
+
+---
+
+*Phase 45-47 flows (9-10) appended 2026-04-19 from source reading of `pipeline/service.py`, `dispatch/service.py`, `poc/agent_work_loop.py`.*

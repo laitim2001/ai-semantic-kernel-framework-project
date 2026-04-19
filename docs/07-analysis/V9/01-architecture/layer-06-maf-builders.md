@@ -790,3 +790,51 @@ The Sprint 128 ACL provides stable interfaces that shield platform code from MAF
 **Analysis Completed**: 2026-03-29
 **Analyst**: Claude Opus 4.6 (1M context)
 **Confidence**: HIGH — based on direct reading of 30+ source files, all import statements verified via grep
+
+---
+
+## Phase 45-47 MAF Builder Additions (2026-04-19 sync)
+
+### New `clients/` Subdirectory (PoC V4 merge)
+
+**Directory**: `backend/src/integrations/agent_framework/clients/` (NEW)
+
+| File | LOC | Purpose |
+|------|-----|---------|
+| `anthropic_chat_client.py` | 393 | `AnthropicChatClient(FunctionInvocationLayer, BaseChatClient)` — wraps Claude API for MAF |
+| `__init__.py` | — | Re-exports |
+
+**`AnthropicChatClient`** (`anthropic_chat_client.py:47`):
+- Constructor: `model` (default `"claude-sonnet-4-6"`), `api_key` (env `ANTHROPIC_API_KEY`), `thinking_config` (optional extended thinking), `max_tokens` (default 16000)
+- Creates `AsyncAnthropic` client internally
+- `_inner_get_response()` — detects tool presence, falls back to non-streaming for tool use (text_stream can't capture tool_use blocks), wraps non-streaming as single-chunk stream
+- `_stream_anthropic()` (line 150) — async iterator over `text_stream`
+- `_extract_tools_from_options()` (line 184) — converts MAF tool schemas → Anthropic JSON schemas
+- `_convert_messages_to_anthropic()` (line 213) — handles text/function_call/function_result, pairs tool_use/tool_result, merges same-role messages
+- `_convert_response_to_maf()` (line 344) — extracts tool_use blocks + thinking blocks into MAF `ChatResponse`
+
+**Why this matters**: Enables Claude-powered agents to participate in MAF `ConcurrentBuilder`, `GroupChatBuilder`, `HandoffBuilder`, etc. — same builder adapters can now orchestrate Claude agents alongside Azure OpenAI agents.
+
+### New `ipa_checkpoint_storage.py` (PoC V4)
+
+**File**: `backend/src/integrations/agent_framework/ipa_checkpoint_storage.py` (NEW)
+
+IPA-specific checkpoint storage adapter for MAF — bridges MAF's checkpoint API to IPA's PostgreSQL + Redis checkpoint infrastructure.
+
+### Modified Files
+
+- `agent_framework/builders/agent_executor.py` — enhancements
+- `agent_framework/builders/code_interpreter.py` — enhancements
+
+### Builder Count Update
+
+| Metric | V9 Baseline | Post-Phase 47 |
+|--------|-------------|---------------|
+| Builder adapters | 9 (Concurrent, Handoff, GroupChat, Magentic, Swarm, Custom, A2A, EdgeRouting, Assistant) | 9 (unchanged) |
+| Chat clients available | Azure OpenAI (built-in) | **2** — Azure OpenAI + new `AnthropicChatClient` |
+| Checkpoint storage | MAF default | MAF default + new `IPACheckpointStorage` adapter |
+| Files in `agent_framework/` | 57 | **~60** (+`clients/` 2 files, +`ipa_checkpoint_storage.py`) |
+
+---
+
+*Phase 45-47 MAF builder additions appended 2026-04-19 from source reading of `agent_framework/clients/anthropic_chat_client.py` + `ipa_checkpoint_storage.py`.*

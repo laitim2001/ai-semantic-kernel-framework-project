@@ -2,7 +2,8 @@
 
 > **Generated**: 2026-03-29 | **Source**: V9 codebase analysis + AST scan of 64 route files across 48 modules
 > **Base URL**: `http://localhost:8000/api/v1` | **Framework**: FastAPI 0.100+
-> **Total Endpoints**: 587 REST + 4 WebSocket = **591 endpoints**
+> **Total Endpoints**: 587 REST + 4 WebSocket = **591 endpoints** (V9 baseline, Phase 44)
+> **Post-Phase 47 sync (2026-04-19)**: ~**611 endpoints** (+20). New modules appended in "Phase 45-47 Endpoint Additions" section at the bottom of this file.
 
 ---
 
@@ -1337,4 +1338,68 @@ Quick reference mapping modules to source files.
 
 ---
 
+## Phase 45-47 Endpoint Additions (2026-04-19 sync)
+
+### A. Orchestration Chat — Phase 45 Sprint 156
+
+**Module**: `backend/src/api/v1/orchestration/chat_routes.py` + `chat_schemas.py`
+**Prefix**: `/orchestration/chat` | **Tags**: `Orchestration Chat (Phase 45)`
+
+| # | Method | Path | Handler Purpose | Auth | Notes |
+|---|--------|------|-----------------|------|-------|
+| 1 | POST | `/orchestration/chat` | Start orchestration pipeline (SSE stream) | JWT | Request: `ChatRequest`; yields `PipelineEventType` events |
+| 2 | POST | `/orchestration/chat/resume` | Resume paused pipeline | JWT | Request: `ResumeRequest` (checkpoint_id, approval_status, override_route, retry_agents) |
+| 3 | POST | `/orchestration/chat/dialog-respond` | Respond to guided-dialog questions | JWT | Request: `DialogRespondRequest` |
+| 4 | POST | `/orchestration/chat/team/approval` | Approve/reject pending team action | JWT | Request: `TeamApprovalDecisionRequest` |
+| 5 | GET | `/orchestration/chat/session/{session_id}` | Get session status | JWT | Response: `SessionStatusResponse` |
+
+**Schemas**: `ChatRequest`, `ResumeRequest`, `DialogRespondRequest`, `TeamApprovalDecisionRequest`, `PipelineStepStatus`, `SessionStatusResponse`.
+
+### B. Orchestration Execution Log — Phase 47 Worktree 1
+
+**Module**: `backend/src/api/v1/orchestration/execution_log_routes.py` + `execution_log_schemas.py`
+**Prefix**: `/orchestration/execution-log`
+
+Persistent retrieval of past pipeline executions (memory text, knowledge text, step metadata, route decisions).
+
+### C. Agent Expert Registry — Phase 46 Sprint 162-163
+
+**Module**: `backend/src/api/v1/experts/routes.py` + `schemas.py`
+**Prefix**: `/experts` | **Tags**: `Experts`
+
+| # | Method | Path | Purpose | Auth |
+|---|--------|------|---------|------|
+| 1 | GET | `/experts/` | List experts (filters: `domain`, `enabled`) | JWT |
+| 2 | GET | `/experts/{name}` | Get expert detail | JWT |
+| 3 | POST | `/experts/` | Create new expert | JWT |
+| 4 | PUT | `/experts/{name}` | Update expert (auto-bumps `version`) | JWT |
+| 5 | DELETE | `/experts/{name}` | Delete expert (403 if `is_builtin=True`) | JWT |
+| 6 | POST | `/experts/reload` | Re-seed YAML + reset in-memory registry | JWT |
+
+**Schemas**: `ExpertResponse`, `ExpertDetailResponse`, `ExpertListResponse`, `ExpertCreateRequest`, `ExpertUpdateRequest`, `ReloadResponse`.
+
+### D. PoC Agent Team Test — PoC V4 merge
+
+**Module**: `backend/src/api/v1/poc/agent_team_poc.py`
+**Prefix**: `/poc/agent-team`
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/poc/agent-team/test_team` | Team mode (GroupChat + SharedTaskList) |
+| POST | `/poc/agent-team/test_team_stream` | Team mode with SSE streaming |
+| POST | `/poc/agent-team/test_subagent` | Subagent mode (ConcurrentBuilder, independent) |
+| POST | `/poc/agent-team/test_hybrid` | Orchestrator decides mode |
+
+### Updated Module Inventory
+
+| Module | Phase 45-47 change |
+|--------|--------------------|
+| orchestration | +4 new route files (chat_routes, chat_schemas, execution_log_routes, execution_log_schemas); file count grew from 6 to 10 |
+| experts | **NEW** module (routes.py, schemas.py, __init__.py) — 6 endpoints |
+| poc | **NEW** module (agent_team_poc.py, __init__.py) — 4 endpoints |
+| memory | Modified (routes.py + schemas.py) — see `06-cross-cutting/memory-architecture.md` for new consolidation/extraction/context_budget modules |
+
+---
+
 *Document generated from V9 codebase analysis of 48 route modules (64 `.py` route files) under `backend/src/api/v1/`.*
+*Phase 45-47 section appended 2026-04-19 from actual source file reading — see `07-delta/delta-phase-45-47.md` for full details.*

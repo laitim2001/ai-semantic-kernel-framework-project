@@ -3,6 +3,7 @@
 > **Generated**: 2026-03-29
 > **Scope**: Full-stack data model audit across DB models, Pydantic schemas, TypeScript types, and Zustand stores
 > **Files Analyzed**: 9 DB tables across 6 model files, 30 Pydantic schema files (12 read in detail), 4 TypeScript type files, 3 Zustand stores
+> **Phase 45-47 update (2026-04-19)**: +2 ORM tables, +2 Zustand stores, +3 Pydantic schema files. See "Phase 45-47 Data Model Additions" section at the bottom.
 
 ---
 
@@ -953,6 +954,79 @@ backend/src/infrastructure/database/models/__init__.py exports:
 | 30 | `api/v1/n8n/schemas.py` | n8n integration | -- |
 
 > Note: Rows marked `--` in Classes Count were not read in detail for this analysis. Their existence was confirmed via glob.
+
+---
+
+## Phase 45-47 Data Model Additions (2026-04-19 sync)
+
+### New ORM Tables (SQLAlchemy)
+
+#### Table: `agent_expert` (Phase 46 Sprint 163)
+
+**File**: `backend/src/infrastructure/database/models/agent_expert.py` (168 LOC)
+**Repository**: `backend/src/infrastructure/database/repositories/agent_expert.py` (109 LOC)
+**Purpose**: Persist Agent Expert Registry entries (seeded from YAML, then editable via `/api/v1/experts`)
+
+| Column | Type | Constraints / Default |
+|--------|------|----------------------|
+| `id` | UUID | PK, default=uuid4 |
+| `name` | String(255) | UNIQUE, INDEXED |
+| `display_name` | String(255) | — |
+| `display_name_zh` | String(255) | — |
+| `description` | Text | nullable |
+| `domain` | String(100) | INDEXED, CHECK (one of: network/database/application/security/cloud/general/custom) |
+| `capabilities` | JSONB | default=`[]` |
+| `model` | String(255) | nullable |
+| `max_iterations` | Integer | default=5, range 1-20 |
+| `system_prompt` | Text | — |
+| `tools` | JSONB | default=`[]` |
+| `enabled` | Boolean | INDEXED, default=True |
+| `is_builtin` | Boolean | default=False (blocks deletion at API layer) |
+| `metadata_` | JSONB | default=`{}` |
+| `version` | Integer | default=1, auto-bumped on update |
+| `created_at`, `updated_at` | TIMESTAMP | from `TimestampMixin` |
+
+**Repository methods** (async, `AsyncSession`): `create`, `get_by_id`, `get_by_name`, `list_all(domain, enabled)`, `update` (bumps `version`), `delete`, `upsert_from_yaml(data)`, `count(**filters)`.
+
+#### Table: `orchestration_execution_log` (Phase 47 W1)
+
+**File**: `backend/src/infrastructure/database/models/orchestration_execution_log.py`
+**Repository**: `backend/src/infrastructure/database/repositories/orchestration_execution_log.py`
+**Purpose**: Persist full pipeline execution log (memory/knowledge text, step metadata, route decisions) for retrieval in subsequent sessions. Powers `GET /orchestration/execution-log` endpoint.
+
+> Note: Exact column list not fully inventoried in this sync — flagged for manual deep-dive verification when next V9 refresh is performed.
+
+### New Pydantic Schema Files
+
+| # | File | Purpose |
+|---|------|---------|
+| 31 | `api/v1/experts/schemas.py` | `ExpertResponse`, `ExpertDetailResponse`, `ExpertListResponse`, `ExpertCreateRequest`, `ExpertUpdateRequest`, `ReloadResponse` |
+| 32 | `api/v1/orchestration/chat_schemas.py` | `ChatRequest`, `ResumeRequest`, `DialogRespondRequest`, `TeamApprovalDecisionRequest`, `PipelineStepStatus`, `SessionStatusResponse` |
+| 33 | `api/v1/orchestration/execution_log_schemas.py` | Persistence / retrieval DTOs for execution log |
+
+### New Zustand Stores (Frontend)
+
+| Store | File | Replaces | State Shape |
+|-------|------|----------|-------------|
+| `agentTeamStore` | `frontend/src/stores/agentTeamStore.ts` | **replaces** deleted `swarmStore.ts` | `{ agentTeamStatus, selectedAgentId, selectedAgentDetail, isDrawerOpen, agentDataMap, teamMessages, pendingApprovals, agentEventLog }` |
+| `expertSelectionStore` | `frontend/src/stores/expertSelectionStore.ts` | — (new) | `{ rosterPreview, disabledExperts: Set<string>, isRosterVisible }` |
+
+**Total Zustand stores**: V9 baseline 3 → 4 post-sync (authStore, unifiedChatStore, agentTeamStore, expertSelectionStore).
+
+### New TypeScript Types
+
+Expanded `frontend/src/types/unified-chat.ts` adds: `ExecutionMode`, `ModeSource`, `WorkflowStepStatus`, `WorkflowStep`, `WorkflowState`, `TrackedToolCall`, `Checkpoint`, `TokenUsage`, `ExecutionTime`.
+
+New type module `frontend/src/components/unified-chat/agent-team/types/events.ts` holds wire-format snake_case payloads; `types/index.ts` holds UI camelCase types (`UIAgentSummary`, `UIAgentTeamStatus`, `AgentDetail`, `ThinkingContent`, `ToolCallInfo`, `AgentEvent`, etc.).
+
+### Database Model Inventory — Updated Counts
+
+| Metric | V9 Baseline | Post-Phase 47 |
+|--------|-------------|---------------|
+| ORM tables | 9 (User, Agent, Workflow, Execution, Checkpoint, Audit, Session, Message + 1) | **11** (+agent_expert, +orchestration_execution_log) |
+| Pydantic schema files | 30 (12 read in detail) | **33** (+3 new) |
+| Zustand stores | 3 | **4** (swarmStore deleted, agentTeamStore + expertSelectionStore added) |
+| TypeScript type files | 4 | **5+** (agent-team/types/events.ts + index.ts) |
 
 ---
 

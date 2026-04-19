@@ -629,3 +629,71 @@ App.tsx
 *R5 update on 2026-03-31: V9 deep semantic name verification (50-point). Fixed: TaskProgressCard missing from hierarchy and core count (27->28), ag-ui barrel description (no top-level barrel), endpoint index barrel count (7->8 modules).*
 *R6 update on 2026-03-31: V9 deep semantic behavior verification (50-point). Fixed: EventSource hook list missing useOrchestratorChat.ts (3->4 hooks). All other behavioral descriptions verified correct.*
 *V9 Layer 01 -- Frontend Architecture Report*
+
+---
+
+## Phase 45-47 Frontend Additions (2026-04-19 sync)
+
+**File count update**: `frontend/src/` grew from **236** files (V9 baseline) to **254** (+18).
+
+### New Pages
+
+| Page | Route | File | Phase |
+|------|-------|------|-------|
+| `OrchestratorChat` | `/orchestrator-chat` | `pages/OrchestratorChat.tsx` | 45 Sprint 157 |
+| `AgentTeamTestPage` | `/agent-team-test` | `pages/AgentTeamTestPage.tsx` | PoC V4 |
+| `AgentExpertsPage` | `/agent-experts` | `pages/agent-experts/AgentExpertsPage.tsx` | 46 Sprint 164 |
+| `AgentExpertDetailPage` | `/agent-experts/:name` | `pages/agent-experts/AgentExpertDetailPage.tsx` | 46 |
+| `CreateAgentExpertPage` | `/agent-experts/new` | `pages/agent-experts/CreateAgentExpertPage.tsx` | 46 |
+| `EditAgentExpertPage` | `/agent-experts/:name/edit` | `pages/agent-experts/EditAgentExpertPage.tsx` | 46 |
+
+Modified: `UnifiedChat.tsx`, `SwarmTestPage.tsx`, `App.tsx` (routes added).
+
+### New Hooks (4)
+
+| Hook | File | Purpose |
+|------|------|---------|
+| `useOrchestratorPipeline` | `hooks/useOrchestratorPipeline.ts` | 8-step pipeline state, dialog/HITL pauses, route selection |
+| `useOrchestratorSSE` | `hooks/useOrchestratorSSE.ts` | SSE consumer for `PipelineEventType` events |
+| `useOrchestratorHistory` | `hooks/useOrchestratorHistory.ts` | Phase 47 — session/checkpoint history retrieval |
+| `useExperts` | `hooks/useExperts.ts` | React Query CRUD hooks for Agent Expert Registry |
+
+### New Zustand Stores (2)
+
+| Store | File | Replaces |
+|-------|------|----------|
+| `agentTeamStore` | `stores/agentTeamStore.ts` | **replaces** deleted `swarmStore.ts` |
+| `expertSelectionStore` | `stores/expertSelectionStore.ts` | — (new) |
+
+### Directory Rename: `agent-swarm/` → `agent-team/`
+
+Mass rename at `components/unified-chat/` (15 files renamed, similarity 51-100%). New files:
+- `AgentCardList.tsx`, `ExpertBadges.tsx`, `ConversationLog.tsx`, `AgentRosterPanel.tsx`
+- Hooks: `useAgentTeamEventHandler.ts`, `useAgentTeamEvents.ts`, `useAgentTeamStatus.ts`, `useAgentDetail.ts`
+- Types: `types/events.ts` (wire-format snake_case), `types/index.ts` (UI camelCase)
+
+Deleted: `WorkerCardList.tsx` (refactored into `AgentCardList`).
+
+### New Unified-Chat Panels (Phase 45)
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `GuidedDialogPanel` | `components/unified-chat/GuidedDialogPanel.tsx` | Missing-field Q form when pipeline pauses at Step 3 |
+| `PipelineProgressPanel` | `components/unified-chat/PipelineProgressPanel.tsx` | 8-step visual progress tracker |
+| `StepDetailPanel` | `components/unified-chat/StepDetailPanel.tsx` | Per-step result display (memory %, intent, risk, route, agents) |
+
+### Types Expansion
+
+`types/unified-chat.ts` adds: `ExecutionMode`, `ModeSource`, `WorkflowStepStatus`, `WorkflowStep`, `WorkflowState`, `TrackedToolCall`, `Checkpoint`, `TokenUsage`, `ExecutionTime`.
+
+### Frontend Hook Count Update
+
+| Metric | V9 Baseline | Post-Phase 47 |
+|--------|-------------|---------------|
+| Total hooks | 25 | **~29** (+useOrchestratorPipeline, +useOrchestratorSSE, +useOrchestratorHistory, +useExperts) |
+| Total pages | 46 | **~52** (+OrchestratorChat, +AgentTeamTestPage, +4 agent-experts pages) |
+| Zustand stores | 3 (auth, unifiedChat, swarm) | **4** (auth, unifiedChat, agentTeam, expertSelection — swarm removed) |
+
+---
+
+*Phase 45-47 frontend additions appended 2026-04-19 from source reading of new pages, hooks, stores, and components.*

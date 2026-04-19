@@ -1095,3 +1095,52 @@ Phase 38:    591 endpoints  (final count including n8n/orchestrator/tasks/knowle
 > Route modules corrected 43 → 44 directories. SSE streaming endpoints corrected 4 → 5
 > (added sessions/chat). All 44 per-module endpoint counts verified exact match.
 > No stale values (594, 572, 153, 47377) found. 47/50 points passed before corrections.
+
+---
+
+## Phase 45-47 API Gateway Additions (2026-04-19 sync)
+
+### Module Count Update
+
+| Metric | V9 Baseline | Post-Phase 47 |
+|--------|-------------|---------------|
+| Route modules | 44 | **47** (+`experts/`, +`poc/`; orchestration/ expanded) |
+| Route files (.py) | 68 endpoint-bearing files | **~74** (+chat_routes, +chat_schemas, +execution_log_routes, +execution_log_schemas, +experts/routes+schemas, +poc/agent_team_poc) |
+| Registered routers | 56 | ~59 |
+| Total endpoints | 591 (587 REST + 4 WS) | **~611** (+20 — see `09-api-reference/api-reference.md` Phase 45-47 section) |
+| Backend `src/api/v1/` .py files | 152 | **~158** |
+
+### New API Modules
+
+#### `api/v1/experts/` (Phase 46 Sprint 162-163)
+
+- `routes.py` (216 LOC) — 6 endpoints: GET list, GET detail, POST create, PUT update, DELETE, POST reload
+- `schemas.py` (87 LOC) — `ExpertResponse`, `ExpertDetailResponse`, `ExpertListResponse`, `ExpertCreateRequest`, `ExpertUpdateRequest`, `ReloadResponse`
+
+#### `api/v1/orchestration/` (expanded)
+
+**V9 baseline files**: `routes.py`, `intent_routes.py`, `dialog_routes.py`, `approval_routes.py`, `webhook_routes.py`, `route_management.py` (29 endpoints total).
+
+**Phase 45-47 additions**:
+- `chat_routes.py` — 5 endpoints under `/orchestration/chat` (Phase 45 Sprint 156)
+- `chat_schemas.py` — Pydantic models
+- `execution_log_routes.py` — Phase 47 W1 persistent log retrieval
+- `execution_log_schemas.py` — Phase 47 W1 schemas
+
+#### `api/v1/poc/` (PoC V4 merge)
+
+- `agent_team_poc.py` — 4 endpoints: `/poc/agent-team/test_team`, `/test_team_stream`, `/test_subagent`, `/test_hybrid`
+
+### Updated Modules
+
+- `api/v1/memory/routes.py` + `schemas.py` — modified to expose new consolidation/extraction/context_budget memory capabilities
+- `api/v1/__init__.py` — registers new `experts_router` and `poc_router`
+
+### Permission / Auth Notes
+
+- New expert CRUD routes require JWT (`protected_router`). `DELETE /experts/{name}` returns 403 if `is_builtin=True` at `routes.py` application layer (not DB constraint).
+- `/poc/agent-team/*` endpoints are test endpoints — verify authorization model before production rollout (flagged for manual review).
+
+---
+
+*Phase 45-47 API additions appended 2026-04-19 from source reading of `api/v1/experts/`, `api/v1/orchestration/chat_*`, `api/v1/poc/`.*

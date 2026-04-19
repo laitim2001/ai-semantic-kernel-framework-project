@@ -819,3 +819,72 @@ Simple keyword-based classification (placeholder for production router):
 | a2a | 4 | 0 | In-memory only | No — no tests, no persistence (but has AgentDiscoveryService) |
 | n8n | 3 | 6+ | Via n8n API client | Yes — best tested |
 | contracts+shared | 4 | 1 | N/A (interfaces) | Partial — protocols unused |
+
+---
+
+## Phase 45-47 Module Additions (2026-04-19 sync)
+
+### New Modules
+
+| Module | Path | Phase | Files | Purpose |
+|--------|------|-------|-------|---------|
+| **`orchestration/pipeline/`** | `integrations/orchestration/pipeline/` | 45 | 14 (~2,971 LOC) | Unified 8-step pipeline: `OrchestrationPipelineService` + 7 concrete steps + persistence |
+| **`orchestration/dispatch/`** | `integrations/orchestration/dispatch/` | 45 | 12 (~2,210 LOC) | Route dispatch: `DispatchService`, `ExecutionRoute` enum, 3 executors (direct_answer/subagent/team) + 4 adapters |
+| **`orchestration/experts/`** | `integrations/orchestration/experts/` | 46 | 7 Python + 6 YAML | `AgentExpertRegistry` (singleton with DB→YAML→worker_roles fallback), `AgentExpertDefinition`, `domain_tools.py` (TEAM_TOOLS + DOMAIN_TOOLS), `bridge.py` (legacy adapter), `tool_validator.py`, `seeder.py` |
+| **`orchestration/approval/`** | `integrations/orchestration/approval/` | 45 | 2 | `ApprovalService` |
+| **`orchestration/transcript/`** | `integrations/orchestration/transcript/` | 45 | 3 | `TranscriptService` + `TranscriptEntry` (Redis Streams) |
+| **`orchestration/resume/`** | `integrations/orchestration/resume/` | 45 | 2 | `ResumeService` (checkpoint-based re-entry) |
+| **`poc/`** | `integrations/poc/` | PoC V4 | 10 (~2,800+ LOC) | `agent_work_loop.py` (1002), `shared_task_list.py` (370), `redis_task_list.py` (442), `approval_gate.py` (150+), + 6 support files |
+| **`agent_framework/clients/`** | `integrations/agent_framework/clients/` | PoC V4 | 2 | `AnthropicChatClient` (393) + `__init__.py` |
+
+### Agent Expert Registry Details (Phase 46)
+
+**YAML schema** (v1.0) at `experts/definitions/*.yaml`:
+- Required fields: `version`, `name` (unique slug), `display_name`, `display_name_zh`, `description`, `domain`, `capabilities`, `system_prompt`, `tools`, `enabled`
+- Optional: `model` (null = use system default), `max_iterations` (1-20, default 5), `metadata` (icon/color/priority)
+- Tools can be: explicit list, `["*"]` (all known), or `["@domain"]` (domain-specific)
+
+**6 builtin experts**: network_expert, database_expert, cloud_expert, application_expert, security_expert, general
+
+**`VALID_DOMAINS`** (`registry.py:27`): `{network, database, application, security, cloud, general, custom}`
+
+**`DOMAIN_TOOLS`** (`domain_tools.py`) — per-domain tool whitelist (core + specialized). Plus `TEAM_TOOLS` (6 collaboration tools: `send_team_message`, `check_my_inbox`, `read_team_messages`, `view_team_status`, `claim_next_task`, `report_task_result`).
+
+### Module Count Update
+
+| Metric | V9 Baseline | Post-Phase 47 |
+|--------|-------------|---------------|
+| Integration sub-modules (batch 2 scope) | 4 (orchestration, swarm, a2a, mcp) | 4 + **subdirectories** under orchestration now have production-quality pipeline/dispatch/experts/approval/transcript/resume sub-modules |
+| Total Python files in batch 2 | ~140 | **~205** (+60 in orchestration subdirs, +10 in poc) |
+
+### Integration Map — How Modules Connect
+
+```
+POST /orchestration/chat
+  → chat_routes.py
+  → OrchestrationPipelineService.run()
+      ↓
+    steps/step1_memory       → unified_memory + context_budget
+    steps/step2_knowledge    → RAG pipeline
+    steps/step3_intent       → BusinessIntentRouter (layer-04)
+    steps/step4_risk         → RiskAssessor (layer-04)
+    steps/step5_hitl         → ApprovalService (may raise HITLPauseException)
+    steps/step6_llm_route    → LLM function call → ExecutionRoute
+      ↓
+    DispatchService.dispatch(ExecutionRoute)
+      ├─ DirectAnswerExecutor   → direct LLM response
+      ├─ SubagentExecutor       → single-agent + _infer_complexity (Sprint 166)
+      └─ TeamExecutor           → run_parallel_team() in poc/
+                                  ↓
+                                ├─ AgentExpertRegistry (expert selection)
+                                ├─ SharedTaskList (in-memory or Redis)
+                                ├─ TeamApprovalManager (event-driven HITL)
+                                └─ asyncio.gather() per agent
+      ↓
+    steps/step8_postprocess   → checkpoint save + memory extraction
+                                  + PipelineExecutionPersistenceService (Phase 47)
+```
+
+---
+
+*Phase 45-47 module additions appended 2026-04-19 from source reading of new `orchestration/` subdirectories and `poc/` module.*

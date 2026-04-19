@@ -890,4 +890,56 @@ The following domain modules have **no dedicated test files** under `tests/unit/
 
 ---
 
+## Phase 45-47 Test Additions (2026-04-19 sync)
+
+**Scope**: 162 commits, 194 source files changed since commit `50ec420`.
+**Backend tests**: 386 → **460** (+74 files).
+
+### New Backend Test Directories
+
+| Directory | Files | Purpose |
+|-----------|-------|---------|
+| `backend/tests/unit/orchestration/pipeline/` | 7 files | Phase 45 Sprint 158 E2E pipeline tests (`f1923d3`) |
+| `backend/tests/unit/api/v1/experts/` | 2 files (+ `__init__.py`) | Phase 46 Expert CRUD API tests |
+| `backend/tests/unit/integrations/orchestration/experts/` | 3 files (+ `__init__.py`) | Phase 46 Expert registry/bridge/domain_tools tests |
+
+### New Backend Test Files
+
+| File | Coverage Target |
+|------|----------------|
+| `tests/unit/orchestration/pipeline/test_context.py` | `PipelineContext` dataclass lifecycle |
+| `tests/unit/orchestration/pipeline/test_pipeline_e2e.py` | End-to-end pipeline execution |
+| `tests/unit/orchestration/pipeline/test_service.py` | `OrchestrationPipelineService.run()` |
+| `tests/unit/orchestration/pipeline/test_step6_dispatch.py` | Step 6 LLM route + dispatch integration |
+| `tests/unit/orchestration/pipeline/test_step8_api.py` | Step 8 postprocess API integration |
+| `tests/unit/orchestration/pipeline/test_steps.py` | Step base class contract |
+| `tests/unit/orchestration/pipeline/test_steps_3_5.py` | Steps 3 (intent) and 5 (HITL gate) |
+| `tests/unit/api/v1/experts/test_routes.py` | Expert GET/POST routes |
+| `tests/unit/api/v1/experts/test_crud_routes.py` | Expert PUT/DELETE/reload |
+| `tests/unit/integrations/orchestration/experts/test_bridge.py` | Legacy worker_roles fallback |
+| `tests/unit/integrations/orchestration/experts/test_domain_tools.py` | TEAM_TOOLS, DOMAIN_TOOLS, resolve_tools() |
+| `tests/unit/integrations/orchestration/experts/test_registry.py` | YAML loading + validation |
+| `tests/unit/test_sprint166_dynamic_agents.py` | Sprint 166 `_infer_complexity()` rules + MAX_SUBTASKS cap |
+| `tests/unit/orchestration/test_business_intent_router.py` | **Modified** — new completeness/routes YAML configs |
+
+### Frontend Test Changes
+
+- **Added**: `frontend/src/stores/__tests__/agentTeamStore.test.ts` (replaces `swarmStore.test.ts`)
+- **Deleted**: `frontend/src/stores/__tests__/swarmStore.test.ts`
+- **Renamed** (agent-swarm → agent-team, rename similarity 51-100%): 15+ test files including `AgentCard.test.tsx`, `AgentDetailDrawer.test.tsx`, `AgentTeamHeader.test.tsx`, `AgentTeamPanel.test.tsx`, `AgentActionList.test.tsx`, `ExtendedThinkingPanel.test.tsx`, `MessageHistory.test.tsx`, `OverallProgress.test.tsx`, `ToolCallItem.test.tsx`, `useAgentDetail.test.ts`
+- **New**: `AgentCardList.test.tsx`, `AgentTeamStatusBadges.test.tsx`
+
+### Updated Test Count Table
+
+| Category | V9 Baseline | Phase 47 Actual | Delta |
+|----------|-------------|-----------------|-------|
+| Backend unit tests | 289 | **~363** | +74 |
+| Backend integration | 28 | ~28 | — |
+| Backend E2E | 23 | ~23 | — |
+| Frontend unit/E2E | 25 | ~26 | +1 (net: agentTeamStore − swarmStore) |
+| **Total** | **386** | **~460** | **+74** |
+
+---
+
 *Analysis generated: 2026-03-29 | Method: Full glob scan of test directories + source module cross-reference*
+*Phase 45-47 test additions appended 2026-04-19 from `git diff 50ec420..HEAD -- backend/tests/`.*

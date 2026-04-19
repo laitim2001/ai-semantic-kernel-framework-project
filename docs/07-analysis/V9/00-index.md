@@ -1,6 +1,7 @@
 # V9 Codebase Analysis — Master Index
 
 > **Generated**: 2026-03-29 | **Scope**: Phase 1-44 | **Predecessor**: V8 (Phase 1-34)
+> **Last Synced**: 2026-04-19 (Phase 47 W1 merged, commit `69b5fa2`) — see `07-delta/delta-phase-45-47.md`
 > **Purpose**: Machine-readable navigation index for all V9 analysis documents
 
 ---
@@ -113,13 +114,14 @@
 | `enum-registry.md` | — | Consolidated registry of all enums across backend and frontend | `enums`, `registry`, `constants`, `types` |
 | `memory-architecture.md` | — | Memory system architecture analysis (mem0, Qdrant, session memory) | `memory`, `mem0`, `qdrant`, `session`, `architecture` |
 
-### 07-delta (3 files)
+### 07-delta (4 files)
 
 | File | Size | Description | Tags |
 |------|------|-------------|------|
 | `delta-phase-35-38.md` | 16 KB | Delta: Phase 35-38 changes (E2E Assembly core + foundation + task + memory) | `delta`, `phase-35`, `phase-36`, `phase-37`, `phase-38`, `e2e` |
 | `delta-phase-39-42.md` | 16 KB | Delta: Phase 39-42 changes (pipeline assembly, UI, chat integration, deep integration) | `delta`, `phase-39`, `phase-40`, `phase-41`, `phase-42`, `pipeline` |
 | `delta-phase-43-44.md` | 14 KB | Delta: Phase 43-44 changes (swarm deep dive, agent team PoC) | `delta`, `phase-43`, `phase-44`, `swarm`, `agent-team`, `poc` |
+| `delta-phase-45-47.md` | ~20 KB | **Delta: Phase 45-47 changes** (Orchestration Core unified pipeline, Agent Expert Registry, Execution Log Persistence, PoC V4 merge) — [sync 2026-04-19] | `delta`, `phase-45`, `phase-46`, `phase-47`, `pipeline`, `dispatch`, `experts`, `poc-v4` |
 
 ### 08-data-model (2 files)
 
@@ -280,6 +282,7 @@
 | What changed in Phase 35-38? | `07-delta/delta-phase-35-38.md` |
 | What changed in Phase 39-42? | `07-delta/delta-phase-39-42.md` |
 | What changed in Phase 43-44? | `07-delta/delta-phase-43-44.md` |
+| What changed in Phase 45-47? | `07-delta/delta-phase-45-47.md` |
 | What does the data model look like? | `08-data-model/data-model-analysis.md` |
 | What events/contracts exist? | `10-event-contracts/event-contracts.md` |
 | How is testing organized? | `12-testing/testing-landscape.md` |
@@ -391,7 +394,8 @@ V9 is maintained as a **living document** with AI-driven incremental synchroniza
 
 ### Freshness Policy
 
-- **Baseline**: Phase 44, 2026-03-31, commit 50ec420
+- **Original baseline**: Phase 44, 2026-03-31, commit `50ec420`
+- **Last sync**: Phase 47 W1, 2026-04-19, commit `69b5fa2` (full details in `07-delta/delta-phase-45-47.md` + `_verification/v9-sync-log.md`)
 - **Update cadence**: After each sprint (Tier 1: numbers) or phase (Tier 2: architecture)
 - **Quality standard**: Updates must maintain 9.2/10 quality. Conservative principle — flag uncertain items for review rather than making potentially incorrect changes
 - **Re-baseline**: Consider a full re-verification pass every ~10 phases or after major architectural changes

@@ -808,3 +808,99 @@ pages/workflows/WorkflowEditorPage.tsx
 ---
 
 *End of V9 Frontend Module Deep-Dive Analysis*
+
+---
+
+## Phase 45-47 Frontend Module Additions (2026-04-19 sync)
+
+### New Page Modules
+
+| Route | File | Phase |
+|-------|------|-------|
+| `/orchestrator-chat` | `pages/OrchestratorChat.tsx` | 45 Sprint 157 |
+| `/agent-team-test` | `pages/AgentTeamTestPage.tsx` | PoC V4 |
+| `/agent-experts` (list) | `pages/agent-experts/AgentExpertsPage.tsx` (226 LOC) | 46 Sprint 164 |
+| `/agent-experts/:name` | `pages/agent-experts/AgentExpertDetailPage.tsx` | 46 |
+| `/agent-experts/new` | `pages/agent-experts/CreateAgentExpertPage.tsx` | 46 |
+| `/agent-experts/:name/edit` | `pages/agent-experts/EditAgentExpertPage.tsx` | 46 |
+
+### Directory Rename: `agent-swarm/` → `agent-team/`
+
+Mass rename at `components/unified-chat/` (15 file renames with similarity 51-100%). New file components (NOT in original `agent-swarm/`):
+
+| New Component | Purpose |
+|---------------|---------|
+| `AgentCardList.tsx` | Card grid container with selection (refactored from deleted `WorkerCardList`) |
+| `ExpertBadges.tsx` | Domain/capability badges (Phase 46) — exports `DomainBadge`, `CapabilitiesChips` |
+| `ConversationLog.tsx` | Unified event timeline (Phase 45) |
+| `AgentRosterPanel.tsx` | Expert roster preview panel (Sprint 165) |
+
+**Hooks** (4 new at `agent-team/hooks/`):
+- `useAgentTeamEventHandler.ts` — SSE event dispatcher
+- `useAgentTeamEvents.ts` — Event hook aggregator
+- `useAgentTeamStatus.ts` — Team status + agent detail state
+- `useAgentDetail.ts` — Individual agent detail fetching (renamed from `useWorkerDetail`)
+
+**Types** (2 files at `agent-team/types/`):
+- `events.ts` — Wire-format snake_case SSE payloads: `TeamCreatedPayload`, `AgentStartedPayload`, `AgentThinkingPayload`, `AgentToolCallPayload`, `AgentMessagePayload`, `TeamMessagePayload`, `InboxReceivedPayload`, `AgentApprovalRequiredPayload`
+- `index.ts` — UI camelCase types: `UIAgentSummary`, `UIAgentTeamStatus`, `AgentDetail`, `ThinkingContent`, `ToolCallInfo`, `AgentEvent`
+
+### New Unified-Chat Panels (Phase 45)
+
+| Component | File | Props |
+|-----------|------|-------|
+| `GuidedDialogPanel` | `components/unified-chat/GuidedDialogPanel.tsx` | `{ dialogPause, onSubmit, onSkip?, isSubmitting? }` |
+| `PipelineProgressPanel` | `components/unified-chat/PipelineProgressPanel.tsx` | `{ steps, currentStepIndex, selectedRoute, totalMs, isRunning }` |
+| `StepDetailPanel` | `components/unified-chat/StepDetailPanel.tsx` | `{ steps, agents, selectedRoute, routeReasoning }` |
+
+### New Hooks (top-level `hooks/`)
+
+| Hook | File |
+|------|------|
+| `useOrchestratorPipeline` | `hooks/useOrchestratorPipeline.ts` |
+| `useOrchestratorSSE` | `hooks/useOrchestratorSSE.ts` |
+| `useOrchestratorHistory` | `hooks/useOrchestratorHistory.ts` |
+| `useExperts` | `hooks/useExperts.ts` — React Query: `useExpertsList`, `useExpertDetail`, `useCreateExpert`, `useUpdateExpert`, `useDeleteExpert`, `useReloadExperts` |
+
+### Zustand Store Changes
+
+| Action | Store | File |
+|--------|-------|------|
+| **Added** | `agentTeamStore` | `stores/agentTeamStore.ts` |
+| **Added** | `expertSelectionStore` | `stores/expertSelectionStore.ts` |
+| **Deleted** | `swarmStore` | `stores/swarmStore.ts` (removed) |
+| **Added** | test suite | `stores/__tests__/agentTeamStore.test.ts` (replaces deleted `swarmStore.test.ts`) |
+
+**agentTeamStore state** (from `stores/agentTeamStore.ts`):
+```
+{
+  agentTeamStatus: UIAgentTeamStatus | null,
+  selectedAgentId: string | null,
+  selectedAgentDetail: AgentDetail | null,
+  isDrawerOpen: boolean,
+  agentDataMap: Record<agentId, {thinking, toolCalls, output}>,
+  teamMessages: TeamMessage[],
+  pendingApprovals: PendingTeamApproval[],
+  agentEventLog: AgentEvent[]
+}
+```
+
+**Actions**: `setAgentTeamStatus`, `selectAgent`, `openDetailDrawer`, `addThinkingContent`, `addToolCall`, `addTeamMessage`, `addPendingApproval`, `handleApprovalApproved`, `reset`.
+
+### Types Expansion — `types/unified-chat.ts`
+
+New types: `ExecutionMode` (`'chat' | 'workflow'`), `ModeSource` (`'auto' | 'manual'`), `WorkflowStepStatus` (`'pending' | 'running' | 'completed' | 'failed' | 'skipped'`), `WorkflowStep`, `WorkflowState`, `TrackedToolCall` (extends `ToolCallState` + duration/queuedAt), `Checkpoint`, `TokenUsage`, `ExecutionTime`.
+
+### Updated Counts
+
+| Metric | V9 Baseline | Post-Phase 47 |
+|--------|-------------|---------------|
+| Frontend `.ts/.tsx` (src) | 236 | **254** (+18) |
+| Total pages | 46 | **~52** (+6 new pages) |
+| Custom hooks (top-level) | 25 | **~29** |
+| Zustand stores | 3 | **4** (swarm removed, agentTeam + expertSelection added) |
+| Unified-chat components | 29 (core) + agent-swarm (16) | **34 core** + **agent-team (29)** |
+
+---
+
+*Phase 45-47 frontend module additions appended 2026-04-19 from source reading of new pages, hooks, stores, and component directories.*
