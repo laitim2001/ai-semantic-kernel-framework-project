@@ -5,7 +5,27 @@
 **Branch**: `research/memory-system-enterprise`
 **Worktree**: `ai-semantic-kernel-memory-research`
 **Date**: 2026-04-20
+**Plan Version**: **v2** (Batch 3 review — content delivery partial failure, applied known-risk principles)
 **Depends on**: Sprint 175 (topic generator provides semantic query input)
+
+---
+
+## v2 Revision Notes
+
+Batch 3 team review delivered YELLOW verdict but full findings lost. v2 applies known-risk principles.
+
+Known-risk integrations:
+- **[py] `asyncio.gather(..., return_exceptions=True)`** — partial strategy failure doesn't kill all
+- **[py] merge+dedup O(N log N) via `dict`** — avoid O(N²) nested loops
+- **[py] Cohere SDK** — sync or async? Use async via `httpx` if SDK sync only
+- **[py] rerank cache — Redis preferred** over OrderedDict for cross-process invalidation
+- **[py] Pydantic Settings `list[str]` env parsing** — use comma-separated or JSON env var convention
+- **[sec] Cohere API PII exposure** — memory content sent to third-party vendor; need DPA + PII redaction option + opt-out per org
+- **[sec] BM25 tsvector SQL injection** — use parameterized query, `plainto_tsquery()` not string concat
+- **[sec] rerank cache timing leak** — use consistent-time compare or add noise
+- **[sec] Cohere trust boundary** — NEVER trust Cohere response for tenant boundaries; scope filter applied BEFORE send + re-checked AFTER receive
+- **[qa] LongMemEval subset reproducibility** — check subset script into repo; deterministic selection via seed
+- **[qa] CI-without-Cohere** — mock-based test path for offline CI + real-Cohere nightly job
 
 ---
 
@@ -167,3 +187,171 @@ This sprint implements both.
 - Multi-language rerank model auto-selection — single model for v1
 - Rerank result explanation to users — not needed internally
 - Full LongMemEval run (115K tokens/convo expensive) — subset only
+
+---
+
+## v2 Implementation Notes (known-risk integrations)
+
+### asyncio.gather with partial failure
+
+```python
+async def retrieve(self, topic, scope, strategies, per_strategy_k=20):
+    results = await asyncio.gather(
+        self._embedding_search(topic, scope, per_strategy_k),
+        self._bm25_search(topic, scope, per_strategy_k),
+        self._importance_recency(scope, per_strategy_k),
+        return_exceptions=True  # CRITICAL: partial failure tolerance
+    )
+
+    candidates = []
+    for strategy_name, result in zip(["embedding", "bm25", "importance"], results):
+        if isinstance(result, Exception):
+            logger.warning("strategy_failed", extra={"strategy": strategy_name, "error": str(result)})
+            continue
+        candidates.extend((c, strategy_name) for c in result)
+
+    # Dedup via dict (O(N log N))
+    deduped = {}
+    for candidate, source in candidates:
+        if candidate.memory_id not in deduped:
+            deduped[candidate.memory_id] = (candidate, [source])
+        else:
+            deduped[candidate.memory_id][1].append(source)  # track all sources
+    return [(c, sources) for c, sources in deduped.values()]
+```
+
+### Cohere PII Redaction + Opt-Out
+
+```python
+# settings.py
+class Settings(BaseSettings):
+    COHERE_RERANK_ENABLED: bool = False
+    COHERE_DISABLED_ORGS: list[str] = []  # orgs opting out of third-party processing
+    COHERE_PII_REDACT_ENABLED: bool = True  # redact emails/phones before send
+
+# reranker.py
+async def rerank(self, query, candidates, top_n, scope):
+    if scope.org_id in settings.COHERE_DISABLED_ORGS:
+        return self._fallback_rerank(candidates)[:top_n]
+
+    if settings.COHERE_PII_REDACT_ENABLED:
+        docs = [redact_pii(c.content) for c in candidates]
+    else:
+        docs = [c.content for c in candidates]
+
+    # Pre-send scope re-check: confirm all candidates within scope
+    for c in candidates:
+        assert c.scope_hash == scope.as_hashed_key_prefix(), "scope leak attempt"
+
+    response = await self._cohere_api.rerank(query=query, documents=docs, top_n=top_n)
+    # Post-receive: map indices back, re-verify scope
+    reranked = [candidates[r.index] for r in response.results]
+    for r in reranked:
+        assert r.scope_hash == scope.as_hashed_key_prefix()
+    return reranked
+```
+
+### BM25 SQL Injection Defense
+
+```python
+# bm25_search.py — use parameterized tsquery
+async def search(self, topic, scope, limit):
+    # Extract keywords via simple tokenizer (not raw topic into SQL)
+    keywords = tokenize_stop_words_removed(topic)
+    if not keywords:
+        return []
+    tsquery_str = " & ".join(keywords)  # Prepared for plainto_tsquery
+
+    # Parameterized query via SQLAlchemy
+    stmt = select(SessionMemory).where(
+        SessionMemory.org_id == scope.org_id,  # scope enforce
+        SessionMemory.workspace_id == scope.workspace_id,
+        SessionMemory.content_tsvector.op("@@")(func.plainto_tsquery(tsquery_str))
+    ).limit(limit)
+
+    result = await self.session.execute(stmt)
+    return result.scalars().all()
+```
+
+### Rerank Cache via Redis (not OrderedDict)
+
+```python
+# reranker.py
+async def rerank(self, query, candidates, top_n, scope):
+    cache_key = f"rerank:{scope.as_hashed_key_prefix()[:12]}:{hash_query(query)}"
+    cached = await redis.get(cache_key)
+    if cached:
+        return json.loads(cached)
+
+    result = await self._cohere_call(...)
+    await redis.setex(cache_key, 60, json.dumps(result))
+    return result
+```
+
+### Settings list[str] parsing
+
+```python
+# Pydantic v2 Settings:
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+    COHERE_DISABLED_ORGS: list[str] = []
+
+    @field_validator("COHERE_DISABLED_ORGS", mode="before")
+    @classmethod
+    def parse_csv(cls, v):
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v
+
+# In .env: COHERE_DISABLED_ORGS=org_gov,org_hipaa,org_eu
+```
+
+### LongMemEval Subset Reproducibility
+
+```python
+# scripts/create_longmemeval_subset.py
+import random
+random.seed(42)  # Deterministic
+
+def select_subset(full_dataset, size=100):
+    # Filter: multi-session + temporal reasoning questions
+    candidates = [q for q in full_dataset if q.type in ("multi_session", "temporal")]
+    return random.sample(candidates, min(size, len(candidates)))
+
+# Save subset manifest (question IDs) to repo:
+# backend/tests/fixtures/longmemeval_subset_v1.json
+```
+
+### CI Without Cohere Key
+
+```python
+# Two test modes:
+# 1. Offline CI: mock Cohere responses via `responses` lib or `httpx.MockTransport`
+#    Every PR runs this
+# 2. Nightly real-Cohere: tagged pytest marker `@pytest.mark.real_cohere`, run in scheduled workflow only
+#    with Cohere API key from secrets
+
+@pytest.fixture
+def mock_cohere_responses():
+    with responses.RequestsMock() as r:
+        r.add_callback(responses.POST, "https://api.cohere.ai/v1/rerank", deterministic_rerank)
+        yield
+
+def test_multi_strategy_offline(mock_cohere_responses):
+    result = multi_strategy.retrieve(...)
+    assert len(result) == 5
+
+@pytest.mark.real_cohere
+def test_multi_strategy_real_api():
+    result = multi_strategy.retrieve(...)
+    assert len(result) >= 3
+```
+
+---
+
+## Open Item
+
+Batch 3 review body was not captured in full. Before Sprint 176 coding kickoff:
+- Re-run focused agent-team review on Sprint 176 v2
+- Use file-based consensus delivery
+- Specific focus: Cohere DPA requirement, PII redaction effectiveness, LongMemEval subset quality

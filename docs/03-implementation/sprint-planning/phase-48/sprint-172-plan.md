@@ -5,7 +5,23 @@
 **Branch**: `research/memory-system-enterprise`
 **Worktree**: `ai-semantic-kernel-memory-research`
 **Date**: 2026-04-20
-**Depends on**: Sprint 170 (`MemoryBackgroundTaskManager` + mem0 update executor established)
+**Plan Version**: **v2** (integrated Batch 1 team review findings)
+**Depends on**: Sprint 170 + Sprint 171 (enforced merge order — both edit `unified_memory.py`)
+
+---
+
+## v2 Revision Notes
+
+Batch 1 agent team review found Sprint 172 items (1 CRITICAL + 5 HIGH + MEDIUM). Full findings in `phase-48-review-consolidated.md`. v2 integrates:
+
+- **CRITICAL [sec]**: Backfill script least-privilege DB role + secrets via env/secret-manager
+- **HIGH [py]**: Dual-write rollback — PG-first + best-effort Redis (not both-or-nothing)
+- **HIGH [py]**: `MEM0_MUTATION_LOCK_TIMEOUT=5.0` dead — `asyncio.Lock` has no native timeout; wrap `asyncio.wait_for(lock.acquire(), 5.0)`
+- **HIGH [py]**: `ThreadPoolExecutor` leaks on FastAPI reload → wire to `lifespan` shutdown
+- **HIGH [sec]**: Redis TTL ≤ PG `expires_at`; PG delete → explicit Redis DEL (GDPR)
+- **HIGH [sec]**: Executor tenant context bleed → `contextvars.copy_context()` per submit (preview of S173)
+- **MEDIUM [arch]**: PG `access_count` vs S170 Redis counter authority — declare **Redis=write-through cache, PG=authoritative** (updated only on promote/consolidation)
+- **LOW**: AC-6 typo — lists `update` twice
 
 ---
 
@@ -150,3 +166,119 @@ Also resolves **Sprint 170 Deferred Technical Debt items #1 and #2**.
 - Tenant scope columns (Sprint 173 will add `org_id` / `workspace_id`)
 - Native async mem0 SDK adoption (no stable release yet; revisit Sprint 178+)
 - Bitemporal fields on session_memory (Sprint 174 will extend)
+
+---
+
+## v2 Implementation Notes (from Batch 1 team review)
+
+### CRITICAL — Backfill Least-Privilege
+
+```bash
+# Dedicated migration DB role with minimal grants
+CREATE ROLE ipa_migrator LOGIN PASSWORD :'pw';
+GRANT CONNECT ON DATABASE ipa TO ipa_migrator;
+GRANT USAGE ON SCHEMA public TO ipa_migrator;
+GRANT SELECT, INSERT, UPDATE ON session_memory TO ipa_migrator;
+-- No DELETE, no DDL
+
+# Secrets via env only — NOT hardcoded
+IPA_MIGRATOR_DB_URL=postgresql://ipa_migrator:${MIGRATOR_PW}@...
+# MIGRATOR_PW from secret manager (AWS Secrets Manager / Azure Key Vault)
+# Document in scripts/backfill_session_memory_pg.py docstring
+```
+
+### HIGH — Dual-Write Rollback (PG-first)
+
+```python
+# unified_memory.py — dual-write order
+async def _store_session_memory(self, entry: MemoryEntry) -> None:
+    # PG first (source of truth)
+    try:
+        await self.session_memory_repo.upsert(entry)
+    except Exception as exc:
+        logger.error("session_memory_pg_write_failed", ...)
+        raise  # Fail the operation — don't write Redis orphan
+
+    # Redis cache — best-effort, non-blocking
+    try:
+        await self._redis.setex(key, ttl, json.dumps(entry.to_dict()))
+    except Exception as exc:
+        logger.warning("session_memory_redis_cache_failed", extra={"memory_id": entry.memory_id, "error": str(exc)})
+        # Don't raise — PG is authoritative, cache missing is acceptable
+```
+
+### HIGH — asyncio.Lock timeout
+
+```python
+# mem0_client.py — replace dead config with wait_for wrapper
+async def update(self, ...) -> None:
+    try:
+        await asyncio.wait_for(self._mutation_lock.acquire(), timeout=settings.MEM0_MUTATION_LOCK_TIMEOUT)
+    except asyncio.TimeoutError:
+        raise Mem0LockTimeout(f"Could not acquire mem0 mutation lock within {timeout}s")
+    try:
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(self._executor, self._memory.update, ...)
+    finally:
+        self._mutation_lock.release()
+```
+
+### HIGH — ThreadPoolExecutor lifespan shutdown
+
+```python
+# main.py or application setup
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    mem0_client = Mem0Client(...)
+    app.state.mem0_client = mem0_client
+    yield
+    # Shutdown
+    await mem0_client.close()  # Shuts down self._executor
+
+app = FastAPI(lifespan=lifespan)
+```
+
+### HIGH — contextvars for tenant propagation
+
+```python
+# integrations/memory/scope.py (preview — full in S173)
+from contextvars import ContextVar
+
+current_scope: ContextVar[ScopeContext | None] = ContextVar("current_scope", default=None)
+
+# mem0_client.py — in executor submit:
+def update_access_metadata(self, memory_id, count, accessed_at):
+    ctx = contextvars.copy_context()  # snapshot current scope
+    # ctx.run(actual_work) inside executor preserves scope
+```
+
+### HIGH — Redis/PG TTL coherence (GDPR)
+
+```python
+# Rule: Redis TTL MUST be ≤ PG expires_at
+# In dual-write:
+pg_expires = entry.expires_at
+redis_ttl_seconds = min((pg_expires - now).seconds, 24*3600)  # cap at 1 day
+
+# On PG delete (expiration cleanup or explicit):
+async def delete_session_memory(self, memory_id, user_id):
+    await self.repo.delete(memory_id)  # PG delete
+    await self._redis.delete(redis_key_for(memory_id, user_id))  # Explicit Redis DEL
+```
+
+### MEDIUM — Access Counter Authority
+
+Document in code + ADR:
+- **Redis counter keys** (`memory:counter:*`): write-through cache, high-frequency increments
+- **PG `session_memory.access_count`**: authoritative value, updated **only during promotion / consolidation** (not per-`search` hit)
+- Reconciliation: consolidation Phase 3 reads Redis counter → updates PG → resets Redis counter if needed
+
+Avoids per-search PG UPDATE pressure while keeping PG as source of truth.
+
+### Fix AC-6 typo
+
+Current AC-6 lists `update` twice. Replace with: `search`, `get`, `add`, `update`, `get_all`, `delete` (6 ops total).

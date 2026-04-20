@@ -12,20 +12,46 @@ Phase 48 improves the IPA Platform memory system along two axes discovered in th
 
 **Design lineage**: The existing memory system is a hybrid of Claude Code skeleton (explicit "CC Equivalent" comments in `context_budget.py` / `consolidation.py` / `extraction.py`) plus Mem0/Qdrant vector engine. Phase 48 extends along this lineage rather than replacing it.
 
-## Sprint Overview
+## Sprint Overview (v2 — post 4-batch team review 2026-04-20)
 
-| Sprint | Title | Wave | Story Points | Status | Depends On |
-|--------|-------|------|-------------|--------|-----------|
-| 170 | Access Tracking Reconnection | 1 — Fix | 5 | Planned | — |
-| 171 | Consolidation 5-phase Completion (Decay + Summarize) | 1 — Fix | 8 | Planned | 170 |
-| 172 | Session L2 PostgreSQL + Mem0 Async Wrapping | 1 — Fix | 8 | Planned | — |
-| 173 | Tenant Scope Foundation (org/workspace/user/agent) | 2 — Enterprise | 8 | Planned | 170-172 |
-| 174 | Bitemporal Support (event_time + as_of_time queries) | 2 — Enterprise | 5 | Planned | 173 |
-| 175 | Active Retrieval — Topic Generation Step | 2 — Enterprise | 8 | Planned | 173 |
-| 176 | Active Retrieval — Multi-Strategy + Cohere Rerank | 2 — Enterprise | 8 | Planned | 175 |
-| 177 | Integration Validation + E2E Benchmark | 2 — Enterprise | 5 | Planned | 173-176 |
+| Sprint | Title | Wave | Story Points | Plan Version | Depends On |
+|--------|-------|------|-------------|--------------|-----------|
+| 170 | Access Tracking Reconnection | 1 — Fix | 5 | **v2 GREEN** | — |
+| 171 | Consolidation 5-phase Completion | 1 — Fix | 8 | **v2** (Batch 1) | 170 |
+| 172 | Session L2 PostgreSQL + Mem0 Async | 1 — Fix | 8 | **v2** (Batch 1) | 170, 171 |
+| 173 | Tenant Scope Foundation + ADR-048 | 2 — Enterprise | 10 | **v2** (Batch 2, was 8) | 172 |
+| 174 | Bitemporal + GDPR Tombstone coordination | 2 — Enterprise | 6 | **v2** (Batch 2, was 5) | 173, coord with 177a |
+| 175 | Active Retrieval — Topic Generation | 2 — Enterprise | 8 | **v2 (partial)** (Batch 3 content lost) | 173 |
+| 176 | Active Retrieval — Multi-Strategy + Cohere Rerank | 2 — Enterprise | 8 | **v2 (partial)** (Batch 3 content lost) | 175 |
+| **177a** | **GDPR + Cross-Layer Saga + Audit Chain (compliance)** | 2 — Enterprise | **8** (was 5) | **v2** (split from original 177) | 170-176 |
+| ~~177b~~ | **DEFERRED to Phase 49** — DevUI + V9 benchmark + docs | — | — | see `sprint-177b-deferred.md` | — |
 
-**Total**: ~55 Story Points (large phase)
+**Total Phase 48**: ~61 Story Points (increased from 55 after review findings integration)
+
+### Merge Order (enforced after Batch 1-4 review)
+
+- **S170 → S171 → S172** (all edit `unified_memory.py`; linear merge to avoid conflicts)
+- **S172 → S173** (scope cols need L2 PG schema from 172)
+- **S173 → S174** (scope context required for bitemporal)
+- **S173 → S175 → S176** (active retrieval needs scope)
+- **S174 ↔ S177a** (tombstone model shared — merge order flexible, both v2 reference same `forgotten_users` schema)
+- **S170-176 → S177a** (compliance layer builds on all prior)
+- CI check: `alembic heads == 1` prevents parallel migration divergence
+
+### Batch Review Status
+
+Full review findings in `phase-48-review-consolidated.md`:
+- **Batch 1** (S171+S172): 26 items (2C/1H/17M/6L) → v2 integrated
+- **Batch 2** (S173+S174): 31 items (4C/8H/12M/7L) → v2 integrated, ADR-048 rewrite pending
+- **Batch 3** (S175+S176): YELLOW verdict, findings body lost in delivery → v2 partial with known-risk integrations; recommend focused re-review at kickoff
+- **Batch 4** (S177 → split 177a+177b): 16 items (3C/5H/6M/2L) → 177a fully v2 with saga/HMAC/tombstone; 177b deferred
+
+### Exit Gate
+
+Phase 48 cannot close until Sprint 177a passes all 12 compliance ACs with signed-off:
+- backend-lead
+- sec-lead
+- compliance officer
 
 ## Architecture
 
