@@ -196,6 +196,7 @@ class MemoryExtractionService:
 
         try:
             from agent_framework import Agent
+
             from src.api.v1.poc.agent_team_poc import _create_client
 
             # Use a lightweight model for extraction to balance cost/quality

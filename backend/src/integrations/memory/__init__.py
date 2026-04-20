@@ -28,24 +28,19 @@
 #   results = await manager.search("user preferences", user_id="user123")
 # =============================================================================
 
-from .types import (
-    # Enums
-    MemoryType,
+from .embeddings import EmbeddingService
+from .mem0_client import Mem0Client
+from .types import (  # Enums; Data classes; Constants
+    DEFAULT_MEMORY_CONFIG,
+    MemoryConfig,
     MemoryLayer,
-    # Data classes
     MemoryMetadata,
     MemoryRecord,
-    MemorySearchResult,
     MemorySearchQuery,
-    MemoryConfig,
-    # Constants
-    DEFAULT_MEMORY_CONFIG,
+    MemorySearchResult,
+    MemoryType,
 )
-
-from .mem0_client import Mem0Client
 from .unified_memory import UnifiedMemoryManager
-from .embeddings import EmbeddingService
-
 
 __all__ = [
     # Enums

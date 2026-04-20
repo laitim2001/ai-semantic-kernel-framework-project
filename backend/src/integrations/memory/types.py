@@ -39,7 +39,9 @@ class MemoryLayer(str, Enum):
     WORKING = "working"  # Redis - short-term, TTL 30 min
     SESSION = "session"  # PostgreSQL - medium-term, TTL 7 days
     LONG_TERM = "long_term"  # mem0 + Qdrant - permanent
-    PINNED = "pinned"  # Redis hash, no TTL - always injected into context (CC's CLAUDE.md equivalent)
+    PINNED = (
+        "pinned"  # Redis hash, no TTL - always injected into context (CC's CLAUDE.md equivalent)
+    )
 
 
 @dataclass
@@ -122,15 +124,19 @@ class MemoryRecord:
             layer=MemoryLayer(data.get("layer", "long_term")),
             metadata=MemoryMetadata.from_dict(data.get("metadata", {})),
             embedding=data.get("embedding"),
-            created_at=datetime.fromisoformat(data["created_at"])
-            if isinstance(data.get("created_at"), str)
-            else data.get("created_at", datetime.utcnow()),
-            updated_at=datetime.fromisoformat(data["updated_at"])
-            if isinstance(data.get("updated_at"), str)
-            else data.get("updated_at", datetime.utcnow()),
-            accessed_at=datetime.fromisoformat(data["accessed_at"])
-            if data.get("accessed_at")
-            else None,
+            created_at=(
+                datetime.fromisoformat(data["created_at"])
+                if isinstance(data.get("created_at"), str)
+                else data.get("created_at", datetime.utcnow())
+            ),
+            updated_at=(
+                datetime.fromisoformat(data["updated_at"])
+                if isinstance(data.get("updated_at"), str)
+                else data.get("updated_at", datetime.utcnow())
+            ),
+            accessed_at=(
+                datetime.fromisoformat(data["accessed_at"]) if data.get("accessed_at") else None
+            ),
             access_count=data.get("access_count", 0),
         )
 
@@ -169,9 +175,7 @@ class MemorySearchQuery:
         return {
             "query": self.query,
             "user_id": self.user_id,
-            "memory_types": [t.value for t in self.memory_types]
-            if self.memory_types
-            else None,
+            "memory_types": [t.value for t in self.memory_types] if self.memory_types else None,
             "tags": self.tags,
             "min_importance": self.min_importance,
             "limit": self.limit,
@@ -189,9 +193,7 @@ class MemoryConfig:
     """
 
     # Qdrant settings (from environment or defaults)
-    qdrant_path: str = field(
-        default_factory=lambda: os.getenv("QDRANT_PATH", "/data/mem0/qdrant")
-    )
+    qdrant_path: str = field(default_factory=lambda: os.getenv("QDRANT_PATH", "/data/mem0/qdrant"))
     qdrant_collection: str = field(
         default_factory=lambda: os.getenv("QDRANT_COLLECTION", "ipa_memories")
     )
@@ -246,6 +248,11 @@ class MemoryConfig:
         default_factory=lambda: int(os.getenv("MEMORY_CONTEXT_BUDGET", "6000"))
     )
 
+    # Sprint 170: Background task concurrency cap for access tracking fire-and-forget
+    memory_background_concurrency: int = field(
+        default_factory=lambda: int(os.getenv("MEMORY_BACKGROUND_CONCURRENCY", "100"))
+    )
+
     # Feature flag
     enabled: bool = field(
         default_factory=lambda: os.getenv("MEM0_ENABLED", "true").lower() == "true"
@@ -264,6 +271,7 @@ class MemoryConfig:
             "session_memory_ttl": self.session_memory_ttl,
             "embedding_batch_size": self.embedding_batch_size,
             "search_batch_size": self.search_batch_size,
+            "memory_background_concurrency": self.memory_background_concurrency,
             "enabled": self.enabled,
         }
 

@@ -17,13 +17,18 @@
 #   └── consolidate()     - Merge and summarize memories
 # =============================================================================
 
+import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from .background_tasks import MemoryBackgroundTaskManager
+from .embeddings import EmbeddingService
+from .mem0_client import Mem0Client
 from .types import (
+    DEFAULT_MEMORY_CONFIG,
     MemoryConfig,
     MemoryLayer,
     MemoryMetadata,
@@ -31,11 +36,7 @@ from .types import (
     MemorySearchQuery,
     MemorySearchResult,
     MemoryType,
-    DEFAULT_MEMORY_CONFIG,
 )
-from .mem0_client import Mem0Client
-from .embeddings import EmbeddingService
-
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,11 @@ class UnifiedMemoryManager:
         self._redis = None
         self._db_session = None
 
+        # Sprint 170: safe fire-and-forget manager for access tracking
+        self._background_tasks = MemoryBackgroundTaskManager(
+            max_concurrency=self.config.memory_background_concurrency
+        )
+
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -97,6 +103,7 @@ class UnifiedMemoryManager:
         """Initialize Redis connection for working memory."""
         try:
             import os
+
             import redis.asyncio as redis
 
             redis_host = os.getenv("REDIS_HOST", "localhost")
@@ -123,9 +130,7 @@ class UnifiedMemoryManager:
     def _ensure_initialized(self) -> None:
         """Ensure the manager is initialized."""
         if not self._initialized:
-            raise RuntimeError(
-                "UnifiedMemoryManager not initialized. Call initialize() first."
-            )
+            raise RuntimeError("UnifiedMemoryManager not initialized. Call initialize() first.")
 
     def _select_layer(
         self,
@@ -246,8 +251,7 @@ class UnifiedMemoryManager:
             )
 
         logger.info(
-            f"Memory added to {target_layer.value} layer: "
-            f"{memory_id[:8]}... for user {user_id}"
+            f"Memory added to {target_layer.value} layer: " f"{memory_id[:8]}... for user {user_id}"
         )
         return record
 
@@ -335,16 +339,12 @@ class UnifiedMemoryManager:
 
         # Search working memory
         if MemoryLayer.WORKING in search_layers:
-            working_results = await self._search_working_memory(
-                query, user_id, memory_types, limit
-            )
+            working_results = await self._search_working_memory(query, user_id, memory_types, limit)
             results.extend(working_results)
 
         # Search session memory
         if MemoryLayer.SESSION in search_layers:
-            session_results = await self._search_session_memory(
-                query, user_id, memory_types, limit
-            )
+            session_results = await self._search_session_memory(query, user_id, memory_types, limit)
             results.extend(session_results)
 
         # Search long-term memory
@@ -371,7 +371,23 @@ class UnifiedMemoryManager:
                 seen_contents.add(content_key)
                 unique_results.append(result)
 
-        return unique_results[:limit]
+        final_results = unique_results[:limit]
+
+        # Sprint 170: merge live counter values (source of truth) + schedule
+        # fire-and-forget access tracking. Both are best-effort and do NOT
+        # block the search response.
+        if final_results:
+            await self._merge_counters_into_results(final_results)
+            self._background_tasks.fire_and_forget(
+                self._track_access_batch(final_results, operation="search_hit"),
+                context={
+                    "operation": "search_hit",
+                    "user_id": user_id,
+                    "hit_count": len(final_results),
+                },
+            )
+
+        return final_results
 
     async def _search_working_memory(
         self,
@@ -394,7 +410,7 @@ class UnifiedMemoryManager:
             # Get query embedding for similarity comparison
             query_embedding = await self._embedding_service.embed_text(query)
 
-            for key in keys[:limit * 2]:  # Get more than limit for filtering
+            for key in keys[: limit * 2]:  # Get more than limit for filtering
                 data = await self._redis.get(key)
                 if data:
                     record_dict = json.loads(data)
@@ -405,12 +421,8 @@ class UnifiedMemoryManager:
                         continue
 
                     # Calculate similarity
-                    content_embedding = await self._embedding_service.embed_text(
-                        record.content
-                    )
-                    score = EmbeddingService.compute_similarity(
-                        query_embedding, content_embedding
-                    )
+                    content_embedding = await self._embedding_service.embed_text(record.content)
+                    score = EmbeddingService.compute_similarity(query_embedding, content_embedding)
 
                     results.append(MemorySearchResult(memory=record, score=score))
 
@@ -443,7 +455,7 @@ class UnifiedMemoryManager:
             # Get query embedding for similarity comparison
             query_embedding = await self._embedding_service.embed_text(query)
 
-            for key in keys[:limit * 2]:
+            for key in keys[: limit * 2]:
                 data = await self._redis.get(key)
                 if data:
                     record_dict = json.loads(data)
@@ -454,12 +466,8 @@ class UnifiedMemoryManager:
                         continue
 
                     # Calculate similarity
-                    content_embedding = await self._embedding_service.embed_text(
-                        record.content
-                    )
-                    score = EmbeddingService.compute_similarity(
-                        query_embedding, content_embedding
-                    )
+                    content_embedding = await self._embedding_service.embed_text(record.content)
+                    score = EmbeddingService.compute_similarity(query_embedding, content_embedding)
 
                     results.append(MemorySearchResult(memory=record, score=score))
 
@@ -606,8 +614,7 @@ class UnifiedMemoryManager:
             return promoted
 
         logger.info(
-            f"Memory {memory_id[:8]}... promoted from "
-            f"{from_layer.value} to {to_layer.value}"
+            f"Memory {memory_id[:8]}... promoted from " f"{from_layer.value} to {to_layer.value}"
         )
         return record
 
@@ -837,8 +844,7 @@ class UnifiedMemoryManager:
             await self._store_session_memory(record)
 
         logger.info(
-            f"Memory unpinned: {memory_id[:8]}... → {demote_to.value} "
-            f"for user {user_id}"
+            f"Memory unpinned: {memory_id[:8]}... → {demote_to.value} " f"for user {user_id}"
         )
         return True
 
@@ -928,8 +934,239 @@ class UnifiedMemoryManager:
 
     # ── Updated get_context with Pinned layer ────────────────────────
 
+    # ── Sprint 170: Access Tracking (counter keys + fire-and-forget) ──
+
+    @staticmethod
+    def _counter_key(layer: MemoryLayer, user_id: str, memory_id: str) -> str:
+        """Redis key for access counter. Independent of memory entry storage."""
+        return f"memory:counter:{layer.value}:{user_id}:{memory_id}"
+
+    @staticmethod
+    def _accessed_at_key(layer: MemoryLayer, user_id: str, memory_id: str) -> str:
+        """Redis key for last-accessed ISO8601 timestamp."""
+        return f"memory:accessed_at:{layer.value}:{user_id}:{memory_id}"
+
+    def _ttl_for_layer(self, layer: MemoryLayer) -> Optional[int]:
+        """TTL (seconds) matching source memory tier; None = no TTL."""
+        if layer == MemoryLayer.WORKING:
+            return self.config.working_memory_ttl
+        if layer == MemoryLayer.SESSION:
+            return self.config.session_memory_ttl
+        # PINNED and LONG_TERM have no TTL
+        return None
+
+    async def _track_access_single(
+        self,
+        *,
+        memory_id: str,
+        layer: MemoryLayer,
+        user_id: str,
+        operation: str,
+    ) -> None:
+        """Increment counter + update accessed_at for a single access.
+
+        Raises exceptions — caller wraps in fire_and_forget for DLQ capture.
+        """
+        now = datetime.now(timezone.utc)
+        new_count = 0
+
+        # Redis-backed counter for PINNED / WORKING / SESSION
+        if self._redis and layer != MemoryLayer.LONG_TERM:
+            counter_key = self._counter_key(layer, user_id, memory_id)
+            accessed_key = self._accessed_at_key(layer, user_id, memory_id)
+            ttl = self._ttl_for_layer(layer)
+
+            # INCR is atomic — survives races (validated by AC-1 concurrent test)
+            new_count = await self._redis.incr(counter_key)
+            await self._redis.set(accessed_key, now.isoformat())
+
+            # Align TTL with source memory (if any). PINNED has no TTL — skip.
+            if ttl is not None:
+                await self._redis.expire(counter_key, ttl)
+                await self._redis.expire(accessed_key, ttl)
+
+        # LONG_TERM: propagate to mem0 metadata via thread-safe wrapper.
+        # Read-modify-write race is acceptable for Sprint 170 scope (v2 plan).
+        if layer == MemoryLayer.LONG_TERM:
+            current = 0
+            record = await self._mem0_client.get_memory(memory_id)
+            if record and record.metadata and record.metadata.custom:
+                current = int(record.metadata.custom.get("access_count", 0) or 0)
+            new_count = current + 1
+            await self._mem0_client.update_access_metadata(memory_id, new_count, now)
+
+        # Structured log event (AC-9)
+        logger.info(
+            "memory_access_tracked",
+            extra={
+                "event": "memory_access_tracked",
+                "memory_id": memory_id,
+                "new_count": new_count,
+                "layer": layer.value,
+                "tenant_id": user_id,
+                "operation": operation,
+                "ts": now.isoformat(),
+            },
+        )
+
+    async def _track_access_batch(
+        self,
+        hits: List[MemorySearchResult],
+        *,
+        operation: str,
+    ) -> None:
+        """Track access for all hits in a search result batch (best-effort)."""
+        for hit in hits:
+            try:
+                await self._track_access_single(
+                    memory_id=hit.memory.id,
+                    layer=hit.memory.layer,
+                    user_id=hit.memory.user_id,
+                    operation=operation,
+                )
+            except Exception as exc:  # noqa: BLE001 — per-hit tolerance
+                logger.warning(
+                    "per_hit_access_tracking_failed",
+                    extra={
+                        "memory_id": hit.memory.id,
+                        "layer": hit.memory.layer.value,
+                        "error": str(exc),
+                        "error_type": type(exc).__name__,
+                    },
+                )
+
+    async def _merge_counters_into_results(self, results: List[MemorySearchResult]) -> None:
+        """Fetch live counter values and merge into record.access_count.
+
+        Uses asyncio.gather for parallel Redis reads. Best-effort: any
+        individual failure leaves that record's access_count as-is.
+        """
+        if not self._redis or not results:
+            return
+
+        redis_targets: List[tuple[int, str]] = []
+        for idx, hit in enumerate(results):
+            if hit.memory.layer == MemoryLayer.LONG_TERM:
+                continue  # LONG_TERM reads count from mem0 metadata directly
+            key = self._counter_key(hit.memory.layer, hit.memory.user_id, hit.memory.id)
+            redis_targets.append((idx, key))
+
+        if not redis_targets:
+            return
+
+        try:
+            raw_values = await asyncio.gather(
+                *(self._redis.get(key) for _, key in redis_targets),
+                return_exceptions=True,
+            )
+        except Exception:  # noqa: BLE001 — outer gather safety net
+            return
+
+        for (idx, _key), value in zip(redis_targets, raw_values):
+            if isinstance(value, Exception) or value is None:
+                continue
+            try:
+                results[idx].memory.access_count = int(value)
+            except (ValueError, TypeError):
+                continue
+
+    async def get(
+        self,
+        memory_id: str,
+        user_id: str,
+        layer: Optional[MemoryLayer] = None,
+    ) -> Optional[MemoryRecord]:
+        """Retrieve a memory by id with access tracking (Sprint 170 AC-3).
+
+        Searches tiers WORKING → SESSION → LONG_TERM unless ``layer`` specified.
+        Increments counter on hit; no increment on miss.
+
+        Args:
+            memory_id: Target memory identifier.
+            user_id: Owner user id — required for tier key lookup.
+            layer: If provided, restrict lookup to that tier only.
+
+        Returns:
+            MemoryRecord if found, None otherwise.
+        """
+        self._ensure_initialized()
+
+        tiers_to_check: List[MemoryLayer] = (
+            [layer]
+            if layer is not None
+            else [
+                MemoryLayer.WORKING,
+                MemoryLayer.SESSION,
+                MemoryLayer.LONG_TERM,
+            ]
+        )
+
+        for tier in tiers_to_check:
+            record = await self._get_from_tier(memory_id, user_id, tier)
+            if record is None:
+                continue
+
+            self._background_tasks.fire_and_forget(
+                self._track_access_single(
+                    memory_id=memory_id,
+                    layer=tier,
+                    user_id=user_id,
+                    operation="get_hit",
+                ),
+                context={
+                    "memory_id": memory_id,
+                    "layer": tier.value,
+                    "user_id": user_id,
+                    "operation": "get_hit",
+                },
+            )
+            return record
+
+        return None
+
+    async def _get_from_tier(
+        self, memory_id: str, user_id: str, tier: MemoryLayer
+    ) -> Optional[MemoryRecord]:
+        """Retrieve a memory from a specific tier without triggering tracking."""
+        if tier == MemoryLayer.LONG_TERM:
+            return await self._mem0_client.get_memory(memory_id)
+
+        if not self._redis:
+            return None
+
+        if tier == MemoryLayer.WORKING:
+            key = f"memory:working:{user_id}:{memory_id}"
+        elif tier == MemoryLayer.SESSION:
+            key = f"memory:session:{user_id}:{memory_id}"
+        else:
+            return None  # PINNED uses hash-based storage; out of scope for get()
+
+        data = await self._redis.get(key)
+        if not data:
+            return None
+
+        try:
+            record = MemoryRecord.from_dict(json.loads(data))
+        except (json.JSONDecodeError, KeyError) as exc:
+            logger.warning(f"Malformed memory record at {key}: {exc}")
+            return None
+
+        # Merge live counter value (source of truth) into record
+        try:
+            counter_key = self._counter_key(tier, user_id, memory_id)
+            value = await self._redis.get(counter_key)
+            if value is not None:
+                record.access_count = int(value)
+        except Exception:  # noqa: BLE001 — best-effort merge
+            pass
+
+        return record
+
     async def close(self) -> None:
         """Clean up all resources."""
+        # Sprint 170: drain background tracking tasks before releasing Redis
+        await self._background_tasks.close()
+
         await self._mem0_client.close()
         await self._embedding_service.close()
 

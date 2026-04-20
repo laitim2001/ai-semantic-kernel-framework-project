@@ -16,12 +16,16 @@
 #   └── delete_memory()   - Remove memory
 # =============================================================================
 
+import asyncio
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from functools import partial
 from typing import Any, Dict, List, Optional
 
 from .types import (
+    DEFAULT_MEMORY_CONFIG,
     MemoryConfig,
     MemoryLayer,
     MemoryMetadata,
@@ -29,9 +33,7 @@ from .types import (
     MemorySearchQuery,
     MemorySearchResult,
     MemoryType,
-    DEFAULT_MEMORY_CONFIG,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,19 @@ class Mem0Client:
         self.config = config or DEFAULT_MEMORY_CONFIG
         self._memory = None
         self._initialized = False
+        # Sprint 170: dedicated executor + lock for thread-unsafe mem0 metadata updates.
+        # Lazy-init: executor on first use, lock requires running loop.
+        self._update_executor: Optional[ThreadPoolExecutor] = None
+        self._update_lock: Optional[asyncio.Lock] = None
+
+    def _ensure_update_resources(self) -> None:
+        """Lazy-init executor + lock on first metadata update call."""
+        if self._update_executor is None:
+            self._update_executor = ThreadPoolExecutor(
+                max_workers=4, thread_name_prefix="mem0-update"
+            )
+        if self._update_lock is None:
+            self._update_lock = asyncio.Lock()
 
     def _build_embedder_config(self) -> Dict[str, Any]:
         """Build embedder config based on provider setting.
@@ -109,9 +124,7 @@ class Mem0Client:
                         "api_key": azure_key,
                         "azure_deployment": deployment,
                         "azure_endpoint": azure_endpoint,
-                        "api_version": os.getenv(
-                            "AZURE_OPENAI_API_VERSION", "2024-12-01-preview"
-                        ),
+                        "api_version": os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
                     },
                 },
             }
@@ -145,10 +158,11 @@ class Mem0Client:
 
         try:
             # Import mem0 SDK
-            from mem0 import Memory
-
             # Configure mem0 — use Docker Qdrant if QDRANT_HOST is set, else local path
             import os
+
+            from mem0 import Memory
+
             qdrant_host = os.getenv("QDRANT_HOST")
             qdrant_port = int(os.getenv("QDRANT_PORT", "6333"))
             if qdrant_host:
@@ -179,9 +193,7 @@ class Mem0Client:
             logger.info("mem0 client initialized successfully")
 
         except ImportError:
-            logger.warning(
-                "mem0 SDK not installed. Install with: pip install mem0ai"
-            )
+            logger.warning("mem0 SDK not installed. Install with: pip install mem0ai")
             raise
         except Exception as e:
             logger.error(f"Failed to initialize mem0 client: {e}")
@@ -190,9 +202,7 @@ class Mem0Client:
     def _ensure_initialized(self) -> None:
         """Ensure the client is initialized."""
         if not self._initialized:
-            raise RuntimeError(
-                "Mem0Client not initialized. Call initialize() first."
-            )
+            raise RuntimeError("Mem0Client not initialized. Call initialize() first.")
 
     async def add_memory(
         self,
@@ -226,13 +236,15 @@ class Mem0Client:
             }
 
             if metadata:
-                mem0_metadata.update({
-                    "source": metadata.source,
-                    "event_id": metadata.event_id,
-                    "session_id": metadata.session_id,
-                    "importance": metadata.importance,
-                    "tags": metadata.tags,
-                })
+                mem0_metadata.update(
+                    {
+                        "source": metadata.source,
+                        "event_id": metadata.event_id,
+                        "session_id": metadata.session_id,
+                        "importance": metadata.importance,
+                        "tags": metadata.tags,
+                    }
+                )
 
             # Add memory using mem0
             result = self._memory.add(
@@ -290,7 +302,9 @@ class Mem0Client:
             search_results = []
 
             # mem0 v1.0.5+ may return {"results": [...]} or list directly
-            logger.debug(f"mem0 raw search result type={type(results).__name__}, value={str(results)[:200]}")
+            logger.debug(
+                f"mem0 raw search result type={type(results).__name__}, value={str(results)[:200]}"
+            )
             if isinstance(results, dict):
                 results = results.get("results", results.get("memories", []))
             if not isinstance(results, list):
@@ -300,7 +314,9 @@ class Mem0Client:
             for item in results:
                 # Skip non-dict items (mem0 format may vary)
                 if not isinstance(item, dict):
-                    logger.debug(f"Skipping non-dict search result item: {type(item).__name__}={str(item)[:80]}")
+                    logger.debug(
+                        f"Skipping non-dict search result item: {type(item).__name__}={str(item)[:80]}"
+                    )
                     continue
                 # Extract memory data
                 memory_data = item.get("memory", {})
@@ -480,6 +496,55 @@ class Mem0Client:
             logger.error(f"Failed to update memory {memory_id}: {e}")
             return None
 
+    async def update_access_metadata(
+        self,
+        memory_id: str,
+        count: int,
+        accessed_at: datetime,
+    ) -> bool:
+        """Update access tracking metadata on a LONG_TERM memory (Sprint 170).
+
+        Wraps synchronous `mem0.update()` via dedicated ThreadPoolExecutor
+        serialized by asyncio.Lock. Rationale: mem0 SDK is not guaranteed
+        thread-safe — concurrent updates can corrupt internal Qdrant state
+        (v2 review finding).
+
+        Args:
+            memory_id: Target memory identifier.
+            count: Current access count after increment.
+            accessed_at: Timestamp of most recent access.
+
+        Returns:
+            True if update call returned truthy, False otherwise.
+
+        Raises:
+            Exceptions from mem0 propagate — caller (background task manager)
+            routes failures to dead-letter log.
+        """
+        self._ensure_initialized()
+        self._ensure_update_resources()
+        assert self._update_lock is not None  # nosec B101 — set by _ensure
+        assert self._update_executor is not None  # nosec B101 — set by _ensure
+
+        metadata = {
+            "access_count": count,
+            "accessed_at": accessed_at.isoformat(),
+        }
+
+        async with self._update_lock:
+            loop = asyncio.get_running_loop()
+            # Implementation Note 4: mem0.update() uses kwargs (see update_memory
+            # line 472); must wrap with functools.partial for run_in_executor.
+            result = await loop.run_in_executor(
+                self._update_executor,
+                partial(
+                    self._memory.update,
+                    memory_id=memory_id,
+                    metadata=metadata,
+                ),
+            )
+        return bool(result)
+
     async def delete_memory(self, memory_id: str) -> bool:
         """
         Delete a memory.
@@ -542,6 +607,10 @@ class Mem0Client:
 
     async def close(self) -> None:
         """Clean up resources."""
+        if self._update_executor is not None:
+            self._update_executor.shutdown(wait=True)
+            self._update_executor = None
+        self._update_lock = None
         if self._memory:
             # mem0 doesn't have explicit cleanup, but we reset state
             self._memory = None

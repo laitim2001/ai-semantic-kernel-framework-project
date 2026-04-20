@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ConsolidationResult:
     """Result of a consolidation run."""
+
     user_id: str = ""
     deduplicated: int = 0
     decayed: int = 0
@@ -85,6 +86,7 @@ class MemoryConsolidationService:
         and fault-tolerant — failures in one phase don't block others.
         """
         import time
+
         t0 = time.time()
 
         result = ConsolidationResult(user_id=user_id)
@@ -251,6 +253,12 @@ class MemoryConsolidationService:
 
         promoted = 0
         for mem in session_memories:
+            # Sprint 170: explicit PINNED guard for defense in depth.
+            # PINNED entries already sit at top tier — promotion is nonsensical
+            # and could clobber the CC-style pinned injection semantics.
+            if mem.layer == MemoryLayer.PINNED:
+                continue
+
             if mem.access_count >= access_threshold:
                 try:
                     await mgr.promote(
@@ -259,11 +267,35 @@ class MemoryConsolidationService:
                         from_layer=MemoryLayer.SESSION,
                         to_layer=MemoryLayer.LONG_TERM,
                     )
+                    # Sprint 170 Implementation Note 3: clean up orphan
+                    # counter keys left behind by the source tier.
+                    await self._cleanup_counter(mem.id, user_id, MemoryLayer.SESSION)
                     promoted += 1
                 except Exception:
                     pass
 
         return promoted
+
+    async def _cleanup_counter(
+        self,
+        memory_id: str,
+        user_id: str,
+        source_layer: MemoryLayer,
+    ) -> None:
+        """Remove counter + accessed_at keys for a memory that moved tiers.
+
+        Prevents orphan counters from lingering after promotion (Sprint 170
+        Implementation Note 3). Best-effort — failures logged but not raised.
+        """
+        redis = self._memory_manager._redis
+        if not redis:
+            return
+        try:
+            counter_key = f"memory:counter:{source_layer.value}:{user_id}:{memory_id}"
+            accessed_key = f"memory:accessed_at:{source_layer.value}:{user_id}:{memory_id}"
+            await redis.delete(counter_key, accessed_key)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Counter cleanup failed for {memory_id}: {exc}")
 
     async def _prune_stale(
         self,
@@ -286,8 +318,7 @@ class MemoryConsolidationService:
 
         pruned = 0
         for mem in all_memories:
-            if (mem.metadata.importance < importance_threshold
-                    and mem.created_at < cutoff):
+            if mem.metadata.importance < importance_threshold and mem.created_at < cutoff:
                 try:
                     await mgr.delete(mem.id, user_id, MemoryLayer.LONG_TERM)
                     pruned += 1
@@ -295,6 +326,31 @@ class MemoryConsolidationService:
                     pass
 
         return pruned
+
+    # ── Sprint 170: Unified Entry Point ──────────────────────────────
+
+    async def run_once(
+        self,
+        user_id: str,
+        force_run: bool = False,
+    ) -> Optional[ConsolidationResult]:
+        """Run consolidation once, optionally bypassing the throttle.
+
+        Args:
+            user_id: Target user id for consolidation.
+            force_run: If True, skip the threshold check and run immediately.
+                Used by tests + manual triggers. Natural pipeline completion
+                path should pass ``force_run=False`` to respect the 20-count
+                throttle.
+
+        Returns:
+            ConsolidationResult when a run executed, None when throttled.
+        """
+        if not force_run:
+            should_run = await self.increment_and_check(user_id)
+            if not should_run:
+                return None
+        return await self.run_consolidation(user_id)
 
     # ── Pipeline Completion Counter ──────────────────────────────────
 

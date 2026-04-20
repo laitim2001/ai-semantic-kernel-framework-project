@@ -13,13 +13,12 @@
 #   └── compute_similarity() - Calculate cosine similarity
 # =============================================================================
 
-import logging
 import hashlib
+import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-from .types import MemoryConfig, DEFAULT_MEMORY_CONFIG
-
+from .types import DEFAULT_MEMORY_CONFIG, MemoryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +121,7 @@ class EmbeddingService:
 
         try:
             import os
+
             from openai import AsyncOpenAI
 
             # Initialize OpenAI client
