@@ -28,11 +28,12 @@ Without ADR approval, 4 of 8 Phase 48 sprints (roughly 32 story points) remain b
 
 | Role | Scope of review | Sign-off |
 |------|----------------|----------|
-| **backend-lead** | Tenant scope data model, schema migration strategy, backward compatibility for existing `user_id`-keyed memory | [ ] |
-| **sec-lead** | JWT claim structure, key rotation, cross-tenant isolation guarantees, SCAN enumeration risk mitigation | [ ] |
-| **SRE-lead** | Qdrant T1/SMB tiering operational cost, migration runbook feasibility, observability/alerting plan | [ ] |
+| **backend-lead** | Tenant scope data model, schema migration strategy, backward compatibility for existing `user_id`-keyed memory | [x] APPROVE-WITH-COMMENTS (v0.1) |
+| **sec-lead** | JWT claim structure, key rotation, cross-tenant isolation guarantees, SCAN enumeration risk mitigation | [x] APPROVE (v0.2) |
+| **SRE-lead** | Qdrant T1/SMB tiering operational cost, migration runbook feasibility, observability/alerting plan | [x] APPROVE-WITH-COMMENTS (v0.2 re-review after v0.1 REJECT) |
 
-Any one REJECT blocks the ADR until rewritten.
+**All 3 sign-offs received 2026-04-20. Sprint 173 code phase UNBLOCKED.**
+Full outcome: [ADR-048-review-feedback-consolidated.md](ADR-048-review-feedback-consolidated.md)
 
 ---
 
@@ -113,5 +114,8 @@ For clarifying questions during review, tag the planning track in the ADR itself
 ---
 
 **Status log**:
-- 2026-04-20 — Review request opened, 3 sign-offs pending
-- (pending reviewer updates)
+- 2026-04-20 09:00 — Review request opened, 3 sign-offs pending
+- 2026-04-20 12:00 — All 3 reviews submitted: Backend APPROVE-WITH-COMMENTS, Security APPROVE-WITH-COMMENTS, SRE **REJECT** (3 BLOCKER)
+- 2026-04-20 14:00 — ADR-048 v0.2 published integrating all findings; re-review requested from SRE + Security
+- 2026-04-20 15:30 — SRE **APPROVE-WITH-COMMENTS** (all 3 BLOCKER + 4 HIGH resolved); Security **APPROVE** (all HIGH/MEDIUM/LOW resolved)
+- 2026-04-20 15:45 — **ADR-048 v0.2 ACCEPTED**; Sprint 173 code phase unblocked
