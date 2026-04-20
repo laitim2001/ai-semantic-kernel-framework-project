@@ -20,8 +20,9 @@
 import asyncio
 import json
 import logging
+from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
 from .background_tasks import MemoryBackgroundTaskManager
@@ -38,6 +39,9 @@ from .types import (
     MemoryType,
 )
 
+# Sprint 172: PG session factory type for dual-write path
+SessionFactory = Callable[[], AbstractAsyncContextManager[Any]]
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,12 +57,20 @@ class UnifiedMemoryManager:
     Provides automatic layer selection, promotion, and consolidation.
     """
 
-    def __init__(self, config: Optional[MemoryConfig] = None):
+    def __init__(
+        self,
+        config: Optional[MemoryConfig] = None,
+        session_factory: Optional[SessionFactory] = None,
+    ):
         """
         Initialize the memory manager.
 
         Args:
             config: Memory configuration. Uses defaults if not provided.
+            session_factory: Optional async context manager factory for
+                PostgreSQL sessions (Sprint 172 L2 dual-write). Defaults to
+                ``DatabaseSession`` from ``infrastructure.database.session``
+                when ``None``. Tests may inject a mock factory.
         """
         self.config = config or DEFAULT_MEMORY_CONFIG
 
@@ -70,12 +82,30 @@ class UnifiedMemoryManager:
         self._redis = None
         self._db_session = None
 
+        # Sprint 172: L2 PostgreSQL dual-write
+        self._session_factory: Optional[SessionFactory] = session_factory
+
         # Sprint 170: safe fire-and-forget manager for access tracking
         self._background_tasks = MemoryBackgroundTaskManager(
             max_concurrency=self.config.memory_background_concurrency
         )
 
         self._initialized = False
+
+    def _pg_session_ctx(self) -> Optional[AbstractAsyncContextManager[Any]]:
+        """Return an async context manager yielding an AsyncSession, or None.
+
+        Uses the injected factory (tests) or imports the production
+        ``DatabaseSession`` lazily to avoid hard DB coupling at import time.
+        """
+        if self._session_factory is not None:
+            return self._session_factory()
+        try:
+            from src.infrastructure.database.session import DatabaseSession
+
+            return DatabaseSession()
+        except Exception:  # noqa: BLE001 — DB optional in some test/dev paths
+            return None
 
     async def initialize(self) -> None:
         """Initialize all memory layers."""
@@ -275,29 +305,85 @@ class UnifiedMemoryManager:
             await self._store_session_memory(record)
 
     async def _store_session_memory(self, record: MemoryRecord) -> None:
-        """Store memory in PostgreSQL session memory."""
-        if not self._redis:
-            # Use mem0 as fallback
-            await self._mem0_client.add_memory(
-                content=record.content,
-                user_id=record.user_id,
-                memory_type=record.memory_type,
-                metadata=record.metadata,
-            )
-            return
+        """Store session-tier memory — Sprint 172 dual-write (PG-first).
 
-        try:
-            # Use Redis with longer TTL for session memory
-            # In production, this would use PostgreSQL
-            key = f"memory:session:{record.user_id}:{record.id}"
-            await self._redis.setex(
-                key,
-                self.config.session_memory_ttl,
-                json.dumps(record.to_dict()),
-            )
-        except Exception as e:
-            logger.warning(f"Failed to store session memory: {e}")
-            # Fall back to long-term memory
+        Write path (v2 HIGH finding — PG is authoritative):
+          1. PostgreSQL ``session_memory`` upsert via
+             ``SessionMemoryRepository``. If this fails, raise — we do not
+             want to create a Redis orphan with no durable copy.
+          2. Redis cache best-effort. Failures logged as warning only.
+
+        If no PG session factory is wired (tests, degraded deploys), falls
+        back to the pre-Sprint-172 Redis-only behaviour so we don't regress.
+        """
+        pg_ctx = self._pg_session_ctx()
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=self.config.session_memory_ttl)
+
+        # Step 1 — PostgreSQL (authoritative)
+        pg_persisted = False
+        if pg_ctx is not None:
+            try:
+                async with pg_ctx as pg_session:
+                    from src.infrastructure.database.repositories.session_memory import (
+                        SessionMemoryRepository,
+                    )
+
+                    repo = SessionMemoryRepository(pg_session)
+                    await repo.upsert(
+                        memory_id=record.id,
+                        user_id=record.user_id,
+                        content=record.content,
+                        memory_type=record.memory_type.value,
+                        importance=record.metadata.importance,
+                        access_count=record.access_count,
+                        accessed_at=record.accessed_at,
+                        expires_at=expires_at,
+                        extra_metadata=record.metadata.to_dict(),
+                        tags=record.metadata.tags,
+                    )
+                pg_persisted = True
+            except Exception as exc:
+                logger.error(
+                    "session_memory_pg_write_failed",
+                    extra={
+                        "memory_id": record.id,
+                        "user_id": record.user_id,
+                        "error": str(exc),
+                    },
+                )
+                # PG-first contract: fail the operation instead of leaving
+                # an orphan Redis entry behind.
+                raise
+
+        # Step 2 — Redis cache (best-effort; TTL ≤ PG expires_at)
+        if self._redis:
+            try:
+                key = f"memory:session:{record.user_id}:{record.id}"
+                await self._redis.setex(
+                    key,
+                    self.config.session_memory_ttl,
+                    json.dumps(record.to_dict()),
+                )
+            except Exception as exc:
+                logger.warning(
+                    "session_memory_redis_cache_failed",
+                    extra={
+                        "memory_id": record.id,
+                        "error": str(exc),
+                    },
+                )
+                # Only fall back to mem0 when PG also didn't take it —
+                # otherwise PG is the source of truth.
+                if not pg_persisted:
+                    await self._mem0_client.add_memory(
+                        content=record.content,
+                        user_id=record.user_id,
+                        memory_type=record.memory_type,
+                        metadata=record.metadata,
+                    )
+        elif not pg_persisted:
+            # Neither PG nor Redis available — mem0 fallback retains
+            # pre-Sprint-172 degraded-mode semantics.
             await self._mem0_client.add_memory(
                 content=record.content,
                 user_id=record.user_id,
@@ -441,7 +527,29 @@ class UnifiedMemoryManager:
         memory_types: Optional[List[MemoryType]],
         limit: int,
     ) -> List[MemorySearchResult]:
-        """Search session memory (Redis/PostgreSQL)."""
+        """Search session memory — Sprint 172 adds PG-first path.
+
+        When ``config.memory_l2_pg_read_enabled`` is True AND a PG session
+        factory is available, read from PostgreSQL first (authoritative).
+        Fall back to Redis when PG returns nothing or errors. Source label
+        is emitted for the ``memory_l2_read_source`` metric.
+        """
+        # Try PG first when enabled
+        if self.config.memory_l2_pg_read_enabled:
+            pg_results = await self._search_session_memory_pg(query, user_id, memory_types, limit)
+            if pg_results is not None:
+                logger.info(
+                    "memory_l2_read_source",
+                    extra={
+                        "event": "memory_l2_read_source",
+                        "source": "pg",
+                        "user_id": user_id,
+                        "hit_count": len(pg_results),
+                    },
+                )
+                return pg_results
+            # PG path unavailable → fall through to Redis (logged as fallback)
+
         if not self._redis:
             return []
 
@@ -473,11 +581,103 @@ class UnifiedMemoryManager:
 
             # Sort by score
             results.sort(key=lambda x: x.score, reverse=True)
-            return results[:limit]
+            top = results[:limit]
+
+            if self.config.memory_l2_pg_read_enabled:
+                # Flag enabled but we had to fall back → observability signal
+                logger.info(
+                    "memory_l2_read_source",
+                    extra={
+                        "event": "memory_l2_read_source",
+                        "source": "redis_fallback",
+                        "user_id": user_id,
+                        "hit_count": len(top),
+                    },
+                )
+            return top
 
         except Exception as e:
             logger.warning(f"Failed to search session memory: {e}")
             return []
+
+    async def _search_session_memory_pg(
+        self,
+        query: str,
+        user_id: str,
+        memory_types: Optional[List[MemoryType]],
+        limit: int,
+    ) -> Optional[List[MemorySearchResult]]:
+        """PG-backed implementation of session memory search.
+
+        Returns ``None`` when the PG path is unavailable (no factory, or
+        operational failure) so callers can fall back to Redis gracefully.
+        Returns ``[]`` (not None) when PG is reachable but produces no hits
+        — in that case the read authority is PG and an empty set is correct.
+        """
+        pg_ctx = self._pg_session_ctx()
+        if pg_ctx is None:
+            return None
+
+        try:
+            async with pg_ctx as pg_session:
+                from src.infrastructure.database.repositories.session_memory import (
+                    SessionMemoryRepository,
+                )
+
+                repo = SessionMemoryRepository(pg_session)
+                rows = await repo.list_by_user(user_id=user_id, limit=limit * 4)
+        except Exception as exc:  # noqa: BLE001 — fall back on any DB error
+            logger.warning(
+                "memory_l2_pg_read_failed",
+                extra={"user_id": user_id, "error": str(exc)},
+            )
+            return None
+
+        if not rows:
+            return []
+
+        # Compute similarity to re-rank PG hits
+        try:
+            query_embedding = await self._embedding_service.embed_text(query)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "memory_l2_embedding_failed",
+                extra={"user_id": user_id, "error": str(exc)},
+            )
+            return None
+
+        results: List[MemorySearchResult] = []
+        for row in rows:
+            # Filter by memory type
+            if memory_types:
+                matches_type = any(row.memory_type == t.value for t in memory_types)
+                if not matches_type:
+                    continue
+            try:
+                # Rebuild MemoryRecord from row
+                record = MemoryRecord(
+                    id=row.memory_id,
+                    user_id=row.user_id,
+                    content=row.content,
+                    memory_type=MemoryType(row.memory_type),
+                    layer=MemoryLayer.SESSION,
+                    metadata=MemoryMetadata.from_dict(row.extra_metadata or {}),
+                    created_at=row.created_at,
+                    accessed_at=row.accessed_at,
+                    access_count=row.access_count,
+                )
+                content_embedding = await self._embedding_service.embed_text(record.content)
+                score = EmbeddingService.compute_similarity(query_embedding, content_embedding)
+                results.append(MemorySearchResult(memory=record, score=score))
+            except Exception as exc:  # noqa: BLE001 — skip bad row, continue
+                logger.debug(
+                    "memory_l2_row_skip",
+                    extra={"memory_id": row.memory_id, "error": str(exc)},
+                )
+                continue
+
+        results.sort(key=lambda x: x.score, reverse=True)
+        return results[:limit]
 
     async def get_context(
         self,

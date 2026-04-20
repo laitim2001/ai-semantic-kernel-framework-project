@@ -265,6 +265,17 @@ class MemoryConfig:
         default_factory=lambda: int(os.getenv("MEMORY_BACKGROUND_CONCURRENCY", "100"))
     )
 
+    # Sprint 172: L2 PostgreSQL + mem0 full async wrapping
+    memory_l2_pg_read_enabled: bool = field(
+        default_factory=lambda: os.getenv("MEMORY_L2_PG_READ_ENABLED", "false").lower() == "true"
+    )
+    mem0_executor_workers: int = field(
+        default_factory=lambda: int(os.getenv("MEM0_EXECUTOR_WORKERS", "8"))
+    )
+    mem0_mutation_lock_timeout: float = field(
+        default_factory=lambda: float(os.getenv("MEM0_MUTATION_LOCK_TIMEOUT", "5.0"))
+    )
+
     # Sprint 171: Consolidation Phase 2 Decay + Phase 5 Summarize
     memory_decay_lambda: float = field(
         default_factory=lambda: float(os.getenv("MEMORY_DECAY_LAMBDA", "0.05"))
@@ -301,6 +312,9 @@ class MemoryConfig:
             "embedding_batch_size": self.embedding_batch_size,
             "search_batch_size": self.search_batch_size,
             "memory_background_concurrency": self.memory_background_concurrency,
+            "memory_l2_pg_read_enabled": self.memory_l2_pg_read_enabled,
+            "mem0_executor_workers": self.mem0_executor_workers,
+            "mem0_mutation_lock_timeout": self.mem0_mutation_lock_timeout,
             "memory_decay_lambda": self.memory_decay_lambda,
             "memory_decay_min_importance": self.memory_decay_min_importance,
             "memory_decay_skip_access_threshold": self.memory_decay_skip_access_threshold,

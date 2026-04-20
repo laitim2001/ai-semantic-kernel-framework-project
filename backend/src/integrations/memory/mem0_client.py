@@ -38,6 +38,11 @@ from .types import (
 logger = logging.getLogger(__name__)
 
 
+class Mem0LockTimeout(RuntimeError):
+    """Raised when a mem0 mutation cannot acquire the serialisation lock
+    within the configured ``MEM0_MUTATION_LOCK_TIMEOUT`` (Sprint 172)."""
+
+
 class Mem0Client:
     """
     Wrapper for mem0 SDK providing long-term memory operations.
@@ -56,19 +61,48 @@ class Mem0Client:
         self.config = config or DEFAULT_MEMORY_CONFIG
         self._memory = None
         self._initialized = False
-        # Sprint 170: dedicated executor + lock for thread-unsafe mem0 metadata updates.
-        # Lazy-init: executor on first use, lock requires running loop.
-        self._update_executor: Optional[ThreadPoolExecutor] = None
-        self._update_lock: Optional[asyncio.Lock] = None
+        # Sprint 172: shared ThreadPoolExecutor wraps ALL sync mem0 SDK calls
+        # (search / get / get_all / add / update / delete / delete_all / history).
+        # Mutation ops additionally acquire _mutation_lock with timeout.
+        self._executor: Optional[ThreadPoolExecutor] = None
+        self._mutation_lock: Optional[asyncio.Lock] = None
 
-    def _ensure_update_resources(self) -> None:
-        """Lazy-init executor + lock on first metadata update call."""
-        if self._update_executor is None:
-            self._update_executor = ThreadPoolExecutor(
-                max_workers=4, thread_name_prefix="mem0-update"
+    def _ensure_resources(self) -> None:
+        """Lazy-init executor + mutation lock on first async call."""
+        if self._executor is None:
+            self._executor = ThreadPoolExecutor(
+                max_workers=self.config.mem0_executor_workers,
+                thread_name_prefix="mem0",
             )
-        if self._update_lock is None:
-            self._update_lock = asyncio.Lock()
+        if self._mutation_lock is None:
+            self._mutation_lock = asyncio.Lock()
+
+    async def _run_read(self, fn, /, *args, **kwargs):
+        """Run a sync mem0 READ op in the executor (no lock — reads parallel)."""
+        self._ensure_resources()
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._executor, partial(fn, *args, **kwargs))
+
+    async def _run_mutate(self, fn, /, *args, **kwargs):
+        """Run a sync mem0 WRITE op in the executor with serialised mutation lock.
+
+        Timeout via ``asyncio.wait_for(lock.acquire())`` — the HIGH finding
+        from v2 review. ``asyncio.Lock`` has no native timeout parameter.
+        """
+        self._ensure_resources()
+        assert self._mutation_lock is not None  # nosec B101 — set by _ensure
+        timeout = self.config.mem0_mutation_lock_timeout
+        try:
+            await asyncio.wait_for(self._mutation_lock.acquire(), timeout=timeout)
+        except asyncio.TimeoutError as exc:
+            raise Mem0LockTimeout(
+                f"Could not acquire mem0 mutation lock within {timeout}s"
+            ) from exc
+        try:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(self._executor, partial(fn, *args, **kwargs))
+        finally:
+            self._mutation_lock.release()
 
     def _build_embedder_config(self) -> Dict[str, Any]:
         """Build embedder config based on provider setting.
@@ -246,8 +280,9 @@ class Mem0Client:
                     }
                 )
 
-            # Add memory using mem0
-            result = self._memory.add(
+            # Add memory using mem0 (Sprint 172: wrapped in executor + mutation lock)
+            result = await self._run_mutate(
+                self._memory.add,
                 messages=content,
                 user_id=user_id,
                 metadata=mem0_metadata,
@@ -291,8 +326,9 @@ class Mem0Client:
         self._ensure_initialized()
 
         try:
-            # Perform semantic search (guard: Qdrant rejects limit=0)
-            results = self._memory.search(
+            # Perform semantic search (Sprint 172: executor-wrapped, no lock — read)
+            results = await self._run_read(
+                self._memory.search,
                 query=query.query,
                 user_id=query.user_id,
                 limit=max(1, query.limit),
@@ -375,8 +411,8 @@ class Mem0Client:
         self._ensure_initialized()
 
         try:
-            # Get all memories for user
-            raw_results = self._memory.get_all(user_id=user_id)
+            # Get all memories for user (Sprint 172: executor-wrapped, no lock — read)
+            raw_results = await self._run_read(self._memory.get_all, user_id=user_id)
 
             # mem0 may return dict {"results": [...]} or plain list
             if isinstance(raw_results, dict):
@@ -437,7 +473,8 @@ class Mem0Client:
         self._ensure_initialized()
 
         try:
-            result = self._memory.get(memory_id)
+            # Sprint 172: executor-wrapped, no lock — read op
+            result = await self._run_read(self._memory.get, memory_id)
 
             if not result:
                 return None
@@ -485,7 +522,8 @@ class Mem0Client:
         self._ensure_initialized()
 
         try:
-            result = self._memory.update(memory_id=memory_id, data=content)
+            # Sprint 172: executor-wrapped, mutation lock serialises writes
+            result = await self._run_mutate(self._memory.update, memory_id=memory_id, data=content)
 
             if result:
                 return await self.get_memory(memory_id)
@@ -522,27 +560,15 @@ class Mem0Client:
             routes failures to dead-letter log.
         """
         self._ensure_initialized()
-        self._ensure_update_resources()
-        assert self._update_lock is not None  # nosec B101 — set by _ensure
-        assert self._update_executor is not None  # nosec B101 — set by _ensure
-
         metadata = {
             "access_count": count,
             "accessed_at": accessed_at.isoformat(),
         }
-
-        async with self._update_lock:
-            loop = asyncio.get_running_loop()
-            # Implementation Note 4: mem0.update() uses kwargs (see update_memory
-            # line 472); must wrap with functools.partial for run_in_executor.
-            result = await loop.run_in_executor(
-                self._update_executor,
-                partial(
-                    self._memory.update,
-                    memory_id=memory_id,
-                    metadata=metadata,
-                ),
-            )
+        result = await self._run_mutate(
+            self._memory.update,
+            memory_id=memory_id,
+            metadata=metadata,
+        )
         return bool(result)
 
     async def update_importance_metadata(
@@ -564,23 +590,13 @@ class Mem0Client:
             True if update call returned truthy.
         """
         self._ensure_initialized()
-        self._ensure_update_resources()
-        assert self._update_lock is not None  # nosec B101 — set by _ensure
-        assert self._update_executor is not None  # nosec B101 — set by _ensure
-
         clamped = max(0.0, min(1.0, new_importance))
         metadata = {"importance": clamped}
-
-        async with self._update_lock:
-            loop = asyncio.get_running_loop()
-            result = await loop.run_in_executor(
-                self._update_executor,
-                partial(
-                    self._memory.update,
-                    memory_id=memory_id,
-                    metadata=metadata,
-                ),
-            )
+        result = await self._run_mutate(
+            self._memory.update,
+            memory_id=memory_id,
+            metadata=metadata,
+        )
         return bool(result)
 
     async def delete_memory(self, memory_id: str) -> bool:
@@ -596,7 +612,8 @@ class Mem0Client:
         self._ensure_initialized()
 
         try:
-            self._memory.delete(memory_id=memory_id)
+            # Sprint 172: executor-wrapped, mutation lock serialises writes
+            await self._run_mutate(self._memory.delete, memory_id=memory_id)
             logger.info(f"Memory deleted: {memory_id}")
             return True
 
@@ -617,7 +634,8 @@ class Mem0Client:
         self._ensure_initialized()
 
         try:
-            self._memory.delete_all(user_id=user_id)
+            # Sprint 172: executor-wrapped, mutation lock serialises writes
+            await self._run_mutate(self._memory.delete_all, user_id=user_id)
             logger.info(f"All memories deleted for user {user_id}")
             return True
 
@@ -638,17 +656,18 @@ class Mem0Client:
         self._ensure_initialized()
 
         try:
-            return self._memory.history(memory_id=memory_id)
+            # Sprint 172: executor-wrapped, no lock — read-only history op
+            return await self._run_read(self._memory.history, memory_id=memory_id)
         except Exception as e:
             logger.error(f"Failed to get history for memory {memory_id}: {e}")
             return []
 
     async def close(self) -> None:
-        """Clean up resources."""
-        if self._update_executor is not None:
-            self._update_executor.shutdown(wait=True)
-            self._update_executor = None
-        self._update_lock = None
+        """Clean up resources — Sprint 172 shuts down the shared executor."""
+        if self._executor is not None:
+            self._executor.shutdown(wait=True)
+            self._executor = None
+        self._mutation_lock = None
         if self._memory:
             # mem0 doesn't have explicit cleanup, but we reset state
             self._memory = None
