@@ -1162,6 +1162,83 @@ class UnifiedMemoryManager:
 
         return record
 
+    # ── Sprint 171: Consolidation Phase 2 Decay support ──────────────
+
+    async def update_importance(
+        self,
+        memory_id: str,
+        user_id: str,
+        layer: MemoryLayer,
+        new_importance: float,
+    ) -> bool:
+        """Write back a new importance score to the source tier.
+
+        Used by consolidation Phase 2 Decay. Clamps to [0.0, 1.0].
+
+        - WORKING / SESSION: read JSON from Redis, mutate
+          ``metadata.importance``, re-SETEX preserving original TTL.
+        - LONG_TERM: delegate to mem0_client via thread executor.
+        - PINNED: out of scope (decay doesn't apply — user-pinned).
+
+        Returns True on success, False on any failure (logged, not raised).
+        """
+        self._ensure_initialized()
+        clamped = max(0.0, min(1.0, new_importance))
+
+        if layer == MemoryLayer.LONG_TERM:
+            try:
+                return await self._mem0_client.update_importance_metadata(memory_id, clamped)
+            except Exception as exc:  # noqa: BLE001 — logged for consolidation
+                logger.warning(
+                    "update_importance_long_term_failed",
+                    extra={"memory_id": memory_id, "error": str(exc)},
+                )
+                return False
+
+        if layer == MemoryLayer.PINNED:
+            logger.debug(
+                "update_importance_skipped_pinned",
+                extra={"memory_id": memory_id},
+            )
+            return False
+
+        if not self._redis:
+            return False
+
+        key = (
+            f"memory:working:{user_id}:{memory_id}"
+            if layer == MemoryLayer.WORKING
+            else f"memory:session:{user_id}:{memory_id}"
+        )
+        try:
+            raw = await self._redis.get(key)
+            if raw is None:
+                return False
+            record = MemoryRecord.from_dict(json.loads(raw))
+            record.metadata.importance = clamped
+            record.updated_at = datetime.now(timezone.utc)
+
+            ttl = await self._redis.ttl(key)
+            if ttl is None or ttl < 0:
+                # Key missing TTL (persistent) or expired — use layer default
+                ttl = self._ttl_for_layer(layer) or 0
+
+            if ttl > 0:
+                await self._redis.setex(key, ttl, json.dumps(record.to_dict()))
+            else:
+                await self._redis.set(key, json.dumps(record.to_dict()))
+            return True
+        except Exception as exc:  # noqa: BLE001 — decay should not crash loop
+            logger.warning(
+                "update_importance_redis_failed",
+                extra={
+                    "memory_id": memory_id,
+                    "layer": layer.value,
+                    "error": str(exc),
+                },
+            )
+            return False
+
     async def close(self) -> None:
         """Clean up all resources."""
         # Sprint 170: drain background tracking tasks before releasing Redis

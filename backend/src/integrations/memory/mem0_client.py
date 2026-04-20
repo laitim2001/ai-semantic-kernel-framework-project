@@ -545,6 +545,44 @@ class Mem0Client:
             )
         return bool(result)
 
+    async def update_importance_metadata(
+        self,
+        memory_id: str,
+        new_importance: float,
+    ) -> bool:
+        """Update importance metadata on a LONG_TERM memory (Sprint 171).
+
+        Reuses the Sprint 170 thread-safe wrapper pattern. Separate from
+        ``update_access_metadata`` to keep call sites explicit and to avoid
+        accidentally overwriting access counters during decay.
+
+        Args:
+            memory_id: Target memory identifier.
+            new_importance: New importance score (clamped to [0.0, 1.0]).
+
+        Returns:
+            True if update call returned truthy.
+        """
+        self._ensure_initialized()
+        self._ensure_update_resources()
+        assert self._update_lock is not None  # nosec B101 — set by _ensure
+        assert self._update_executor is not None  # nosec B101 — set by _ensure
+
+        clamped = max(0.0, min(1.0, new_importance))
+        metadata = {"importance": clamped}
+
+        async with self._update_lock:
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                self._update_executor,
+                partial(
+                    self._memory.update,
+                    memory_id=memory_id,
+                    metadata=metadata,
+                ),
+            )
+        return bool(result)
+
     async def delete_memory(self, memory_id: str) -> bool:
         """
         Delete a memory.

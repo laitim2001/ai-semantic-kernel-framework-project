@@ -46,7 +46,12 @@ class MemoryLayer(str, Enum):
 
 @dataclass
 class MemoryMetadata:
-    """Metadata associated with a memory."""
+    """Metadata associated with a memory.
+
+    Sprint 171 adds ``superseded_by`` and ``summarized_into`` — these are
+    server-only (write restricted to ``MemoryConsolidationService``).
+    External API request models must exclude them to prevent forgery.
+    """
 
     source: str = ""  # Source of the memory (e.g., "chat", "event")
     event_id: Optional[str] = None
@@ -55,6 +60,9 @@ class MemoryMetadata:
     importance: float = 0.5  # Importance score (0.0 to 1.0)
     tags: List[str] = field(default_factory=list)
     custom: Dict[str, Any] = field(default_factory=dict)
+    # Sprint 171: consolidation supersession tracking (server-only writes)
+    superseded_by: Optional[str] = None
+    summarized_into: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -66,6 +74,8 @@ class MemoryMetadata:
             "importance": self.importance,
             "tags": self.tags,
             "custom": self.custom,
+            "superseded_by": self.superseded_by,
+            "summarized_into": self.summarized_into,
         }
 
     @classmethod
@@ -79,6 +89,8 @@ class MemoryMetadata:
             importance=data.get("importance", 0.5),
             tags=data.get("tags", []),
             custom=data.get("custom", {}),
+            superseded_by=data.get("superseded_by"),
+            summarized_into=data.get("summarized_into"),
         )
 
 
@@ -253,6 +265,23 @@ class MemoryConfig:
         default_factory=lambda: int(os.getenv("MEMORY_BACKGROUND_CONCURRENCY", "100"))
     )
 
+    # Sprint 171: Consolidation Phase 2 Decay + Phase 5 Summarize
+    memory_decay_lambda: float = field(
+        default_factory=lambda: float(os.getenv("MEMORY_DECAY_LAMBDA", "0.05"))
+    )
+    memory_decay_min_importance: float = field(
+        default_factory=lambda: float(os.getenv("MEMORY_DECAY_MIN_IMPORTANCE", "0.1"))
+    )
+    memory_decay_skip_access_threshold: int = field(
+        default_factory=lambda: int(os.getenv("MEMORY_DECAY_SKIP_ACCESS_THRESHOLD", "3"))
+    )
+    memory_summarize_cluster_min_size: int = field(
+        default_factory=lambda: int(os.getenv("MEMORY_SUMMARIZE_CLUSTER_MIN_SIZE", "5"))
+    )
+    memory_summarize_importance_cutoff: float = field(
+        default_factory=lambda: float(os.getenv("MEMORY_SUMMARIZE_IMPORTANCE_CUTOFF", "0.3"))
+    )
+
     # Feature flag
     enabled: bool = field(
         default_factory=lambda: os.getenv("MEM0_ENABLED", "true").lower() == "true"
@@ -272,6 +301,11 @@ class MemoryConfig:
             "embedding_batch_size": self.embedding_batch_size,
             "search_batch_size": self.search_batch_size,
             "memory_background_concurrency": self.memory_background_concurrency,
+            "memory_decay_lambda": self.memory_decay_lambda,
+            "memory_decay_min_importance": self.memory_decay_min_importance,
+            "memory_decay_skip_access_threshold": self.memory_decay_skip_access_threshold,
+            "memory_summarize_cluster_min_size": self.memory_summarize_cluster_min_size,
+            "memory_summarize_importance_cutoff": self.memory_summarize_importance_cutoff,
             "enabled": self.enabled,
         }
 
