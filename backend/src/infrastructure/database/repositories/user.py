@@ -16,8 +16,8 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.infrastructure.database.repositories.base import BaseRepository
 from src.infrastructure.database.models.user import User
+from src.infrastructure.database.repositories.base import BaseRepository
 
 
 class UserRepository(BaseRepository[User]):

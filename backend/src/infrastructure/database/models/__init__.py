@@ -15,16 +15,19 @@
 #   - AuditLog: Complete audit trail for compliance
 # =============================================================================
 
-from src.infrastructure.database.models.base import Base, TimestampMixin, UUIDMixin
-from src.infrastructure.database.models.user import User
 from src.infrastructure.database.models.agent import Agent
-from src.infrastructure.database.models.workflow import Workflow
-from src.infrastructure.database.models.execution import Execution
-from src.infrastructure.database.models.checkpoint import Checkpoint
-from src.infrastructure.database.models.audit import AuditLog
-from src.infrastructure.database.models.session import SessionModel, MessageModel, AttachmentModel
 from src.infrastructure.database.models.agent_expert import AgentExpert  # Sprint 163
-from src.infrastructure.database.models.orchestration_execution_log import OrchestrationExecutionLog  # Sprint 169
+from src.infrastructure.database.models.audit import AuditLog
+from src.infrastructure.database.models.base import Base, TimestampMixin, UUIDMixin
+from src.infrastructure.database.models.checkpoint import Checkpoint
+from src.infrastructure.database.models.execution import Execution
+from src.infrastructure.database.models.orchestration_execution_log import (
+    OrchestrationExecutionLog,  # Sprint 169
+)
+from src.infrastructure.database.models.session import AttachmentModel, MessageModel, SessionModel
+from src.infrastructure.database.models.session_memory import SessionMemory  # Sprint 172
+from src.infrastructure.database.models.user import User
+from src.infrastructure.database.models.workflow import Workflow
 
 __all__ = [
     "Base",
@@ -41,4 +44,5 @@ __all__ = [
     "MessageModel",
     "AttachmentModel",
     "OrchestrationExecutionLog",
+    "SessionMemory",
 ]

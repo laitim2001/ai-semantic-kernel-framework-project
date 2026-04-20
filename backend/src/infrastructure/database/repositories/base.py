@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.infrastructure.database.models.base import Base
 
-
 # Type variable for model classes
 ModelT = TypeVar("ModelT", bound=Base)
 
