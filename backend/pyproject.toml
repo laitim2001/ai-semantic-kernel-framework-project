@@ -1,0 +1,56 @@
+[project]
+name = "ipa-platform-v2"
+version = "2.0.0-alpha"
+description = "IPA Platform V2 — 11+1 category agent harness (server-side, LLM-provider-neutral)"
+requires-python = ">=3.11"
+authors = [{ name = "IPA Platform V2 Team" }]
+
+# Runtime dependencies are pinned in requirements.txt for reproducible
+# installs. This file declares the package metadata only.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "black>=24.0",
+    "isort>=5.13",
+    "flake8>=7.0",
+    "mypy>=1.10",
+]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+strict = true
+warn_unused_ignores = true
+python_version = "3.11"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --strict-markers"
+markers = [
+    "unit: unit tests (fast, isolated)",
+    "integration: integration tests (require services)",
+    "contract: adapter contract tests",
+    "multi_tenant: multi-tenant isolation tests",
+    "anti_pattern: anti-pattern regression tests",
+    "observability: observability instrumentation tests",
+    "slow: tests that take >5s",
+]
