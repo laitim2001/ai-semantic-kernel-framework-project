@@ -16,6 +16,58 @@
 
 ---
 
+## ⚡ V2 — Phase 49 Foundation (ACTIVE as of 2026-04-29)
+
+> **The README content below describes V1 (Phase 1-48). V1 is now archived
+> and frozen.** V2 is the active development direction.
+
+| Item | V1 (frozen) | V2 (active) |
+|------|-------------|-------------|
+| Architecture | MAF + Claude SDK hybrid orchestrator | TAO/ReAct agent harness, 11+1 categories, LLM-provider-neutral |
+| Source location | `archived/v1-phase1-48/` (READ-ONLY) | `backend/`, `frontend/` (rebuilt during Sprint 49.1+) |
+| Git tag | `v1-final-phase48` | _(none yet — V2 still in foundation phase)_ |
+| Real alignment | ~27% (audited 2026-04) | Targeting ~75% by Phase 55 (~5.5 months) |
+
+### V2 launch references
+
+- **V2 vision**: [`docs/03-implementation/agent-harness-planning/00-v2-vision.md`](docs/03-implementation/agent-harness-planning/00-v2-vision.md)
+- **11+1 categories spec**: [`docs/03-implementation/agent-harness-planning/01-eleven-categories-spec.md`](docs/03-implementation/agent-harness-planning/01-eleven-categories-spec.md)
+- **22-sprint roadmap**: [`docs/03-implementation/agent-harness-planning/06-phase-roadmap.md`](docs/03-implementation/agent-harness-planning/06-phase-roadmap.md)
+- **Highest-level principles** (server-side / LLM-neutrality / CC reference): [`docs/03-implementation/agent-harness-planning/10-server-side-philosophy.md`](docs/03-implementation/agent-harness-planning/10-server-side-philosophy.md)
+- **V1 archive notes**: [`archived/v1-phase1-48/README.md`](archived/v1-phase1-48/README.md)
+- **Project memory**: [`CLAUDE.md`](CLAUDE.md) (V2 high-level navigation)
+
+### How to bring up V2 dev environment
+
+V2 backend / frontend skeleton is built incrementally during Sprint 49.1
+(Phase 49 Foundation). Once Sprint 49.1 lands:
+
+```bash
+# Start dev infrastructure (PostgreSQL / Redis / RabbitMQ / Qdrant)
+docker compose -f docker-compose.dev.yml up -d
+
+# Backend (Python 3.11+, FastAPI)
+cd backend && pip install -e ".[dev]" && uvicorn src.main:app --port 8001
+
+# Frontend (React 18, Vite 5)
+cd frontend && npm install && npm run dev
+```
+
+> **Until Sprint 49.1 finishes**, `backend/` and `frontend/` directories
+> at root are intentionally absent — V1 was just archived. Sprint 49.1
+> rebuilds them as V2 skeleton.
+
+---
+
+## 📦 V1 Historical Content (frozen on 2026-04-29)
+
+> **The sections below describe V1 as it stood at the time of archive.**
+> They are preserved for historical reference only. V1 is no longer
+> being developed. Status badges above (MVP Complete, 812 tests, etc.)
+> reflect V1 final state, NOT current V2 status.
+
+---
+
 ## Project Overview
 
 **IPA Platform** (Intelligent Process Automation) is an enterprise-grade AI Agent orchestration platform designed for mid-size enterprises (500-2000 employees).
