@@ -114,14 +114,93 @@ overrun without slipping the 5-day Sprint timeline.
   large for HTML viz. Non-blocking but slow (~30 sec per commit). Can
   be addressed later (e.g. `--no-viz` or `.graphifyignore` extension).
 
-## Next: Day 2 — V2 backend skeleton
+## Day 2 (2026-04-29) — V2 backend skeleton (commit `5d630f2`)
 
-Day 2 covers (per plan):
-1. `backend/` root: pyproject.toml, requirements.txt, README, tests dirs
-2. `agent_harness/` 11 范疇 + 范疇 12 (observability) + HITL
-   centralization — 13 ABCs total
-3. `_contracts/` cross-category single-source types (10 contract files)
-4. `adapters/` skeleton: `_base/chat_client.py` + `azure_openai/`
-   + `anthropic/` + `maf/` README placeholders
+### Day 2.1 — Backend root (3 files)
+- `backend/pyproject.toml` (Python 3.11+, mypy strict, 7 pytest markers)
+- `backend/requirements.txt` (FastAPI / SQLAlchemy / OTel; LLM SDKs deliberately excluded — Sprint 49.3 onwards)
+- `backend/README.md` (5-layer architecture overview + LLM-neutrality rule + Quickstart)
+- Plus: `backend/tests/{unit,integration}/.gitkeep`
 
-Estimated 7.5h (per checklist) — heaviest day of the sprint.
+### Day 2.2 — agent_harness/ 13 ABCs (13 dirs × 3 files = 39 files)
+
+| Cat | ABC class(es) | Phase impl |
+|-----|----------------|------------|
+| 1 orchestrator_loop | AgentLoop | 50.1 |
+| 2 tools | ToolRegistry, ToolExecutor | 51.1 |
+| 3 memory | MemoryLayer, MemoryScope (5-layer enum) | 51.2 |
+| 4 context_mgmt | Compactor, TokenCounter, PromptCacheManager | 52.1 |
+| 5 prompt_builder | PromptBuilder | 52.2 |
+| 6 output_parser | OutputParser, ParsedOutput | 50.1 |
+| 7 state_mgmt | Checkpointer, Reducer | 53.1 |
+| 8 error_handling | ErrorPolicy, CircuitBreaker, ErrorTerminator + ErrorClass enum | 53.2 |
+| 9 guardrails | Guardrail, Tripwire (per 17.md §6 — Tripwire is Cat 9 NOT Cat 8) | 53.3-53.4 |
+| 10 verification | Verifier | 54.1 |
+| 11 subagent | SubagentDispatcher (4 modes, no worktree) | 54.2 |
+| 12 observability | Tracer (cross-cutting; impl in `platform/observability/`) | 49.4+ |
+| HITL | HITLManager (5 methods; centralization per 17.md §5) | 53.3-53.4 |
+
+Plus: `agent_harness/__init__.py` with LLM-neutrality reminder.
+
+### Day 2.2.5 — _contracts/ single-source types (11 files)
+
+Per 17.md §1 — every cross-category dataclass / enum has exactly ONE
+home. Categories import from `agent_harness._contracts` only:
+
+| File | Types |
+|------|-------|
+| chat.py | Message, ChatRequest, ChatResponse, ContentBlock, ToolCall, TokenUsage, StopReason, CacheBreakpoint |
+| tools.py | ToolSpec, ToolAnnotations, ConcurrencyPolicy, ToolResult |
+| state.py | LoopState, TransientState, DurableState, StateVersion |
+| events.py | LoopEvent + 22 concrete subclasses (per 17.md §4.1) |
+| memory.py | MemoryHint |
+| prompt.py | PromptArtifact (re-exports CacheBreakpoint) |
+| verification.py | VerificationResult |
+| subagent.py | SubagentBudget, SubagentResult, SubagentMode (enum, 4 modes) |
+| observability.py | TraceContext, MetricEvent, SpanCategory (13-value enum) |
+| hitl.py | ApprovalRequest, ApprovalDecision, HITLPolicy, RiskLevel, DecisionType |
+| __init__.py | Unified re-export of all 50+ symbols |
+
+### Day 2.3 — adapters/ (7 files)
+
+| File | Content |
+|------|---------|
+| `__init__.py` | provider-neutrality reminder |
+| `_base/__init__.py` | re-export ChatClient + dataclasses |
+| `_base/chat_client.py` | **ChatClient ABC** with 7 abstract methods (chat / stream / count_tokens / get_pricing / supports_feature / model_info) + ModelInfo + PricingInfo + StreamEvent |
+| `_base/README.md` | Why this matters (LLM-neutrality), 7-method surface |
+| `azure_openai/README.md` | V2 primary, Sprint 49.3 implementation deliverables |
+| `anthropic/README.md` | Reserved placeholder for Phase 50+ |
+| `maf/README.md` | Conditional placeholder, Sprint 54.2 if needed |
+
+### Day 2.4 — Verification
+
+- ✅ All 13 ABCs successfully importable
+- ✅ Unified `_contracts` import returns all 50+ types
+- ✅ ChatClient ABC importable
+- ✅ `grep "import openai/anthropic/agent_framework"` returns empty in `agent_harness/`
+- ✅ Single commit `5d630f2` (64 files, including 41 .py + 17 README)
+
+### Estimates vs Actual (Day 2)
+
+| Section | Plan estimate | Actual | Notes |
+|---------|---------------|--------|-------|
+| 2.1 backend root | 45 min | ~10 min | parallel writes |
+| 2.2 13 ABCs | ~3h 40min | ~50 min | template-similar; followed 17.md §2.1 owner table exactly |
+| 2.2.5 _contracts (11 files) | 60 min | ~20 min | most complex was events.py with 22 subclasses |
+| 2.3 adapters/ | 45 min | ~10 min | ChatClient ABC was the bulk |
+| 2.4 verify + commit | 30 min | ~5 min | imports succeeded first try |
+| **Total Day 2** | **7h** | **~95 min** | 23% of estimate |
+
+Buffer accumulated → Days 3-5 can absorb any complexity surprises.
+
+## Next: Day 3 — V2 backend platform / api / infra / core
+
+Day 3 covers (per plan, 5h estimate):
+1. `platform/` — governance / identity / observability impl / workers
+2. `api/v1/` — chat / governance routers + /health endpoint impl
+3. `business_domain/` — 5 sub-dirs with Phase 55 placeholder READMEs
+4. `infrastructure/` — db / cache / messaging / storage subdirs
+5. `core/` — config (pydantic Settings) / exceptions / logging
+6. `middleware/` — tenant.py, auth.py stubs
+7. `main.py` — minimal FastAPI app with /health

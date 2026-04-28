@@ -125,120 +125,140 @@
 
 ### 2.1 backend 根層（45 min）
 
-- [ ] **建立 `backend/` 目錄樹基礎**
+- [x] **建立 `backend/` 目錄樹基礎**
   - 預估：5 min
   - DoD：`mkdir -p backend/src backend/tests/{unit,integration}`
 
-- [ ] **建立 `backend/pyproject.toml`**
+- [x] **建立 `backend/pyproject.toml`**
   - 預估：15 min
   - DoD：依 plan 規格，含 `[project]` + `[project.optional-dependencies]` + `[tool.black/isort/mypy]`
+  - **實際**：含 7 個 pytest markers（unit / integration / contract / multi_tenant / anti_pattern / observability / slow）
 
-- [ ] **建立 `backend/requirements.txt`**
+- [x] **建立 `backend/requirements.txt`**
   - 預估：15 min
   - DoD：依 plan 列表，鎖定主要版本
+  - **實際**：DELIBERATELY EXCLUDED openai/anthropic SDK（Sprint 49.3 adapters 才裝）+ agent-framework MAF（Sprint 54.2 if needed）
 
-- [ ] **建立 `backend/README.md`**
+- [x] **建立 `backend/README.md`**
   - 預估：10 min
   - DoD：說明 V2 後端入口 + 5 層架構導覽
+  - **實際**：含 5-layer architecture map + LLM-provider-neutrality critical rule + Quickstart
 
 ### 2.2 agent_harness/ 11 範疇空殼（3.5 hours）
 
 > 每個範疇 20 min × 11 = 3 小時 40 分鐘
 
-- [ ] **範疇 1：orchestrator_loop**
+- [x] **範疇 1：orchestrator_loop**
   - 預估：20 min
   - DoD：`__init__.py` + `README.md`（職責 + Phase 50.1 接手）+ `_abc.py`（`AgentLoop` ABC）
-  - 驗證：`python -c "from agent_harness.orchestrator_loop import AgentLoop"`
+  - 驗證：`python -c "from agent_harness.orchestrator_loop import AgentLoop"` ✅
 
-- [ ] **範疇 2：tools**
+- [x] **範疇 2：tools**
   - 預估：20 min
   - DoD：含 `ToolRegistry` + `ToolSpec` ABC
+  - **實際**：含 `ToolRegistry` + `ToolExecutor` 兩個 ABC（17.md §2.1）
 
-- [ ] **範疇 3：memory**
+- [x] **範疇 3：memory**
   - 預估：20 min
   - DoD：含 `MemoryLayer` ABC（標明 5 層）
+  - **實際**：含 `MemoryScope` enum（5 層）+ `MemoryLayer` ABC（read/write/evict/resolve 4 method）
 
-- [ ] **範疇 4：context_mgmt**
+- [x] **範疇 4：context_mgmt**
   - 預估：20 min
   - DoD：含 `Compactor` + `TokenCounter` ABC
+  - **實際**：3 個 ABC（Compactor + TokenCounter + PromptCacheManager），含 cross-cutting note re: §7.1 No direct subagent call
 
-- [ ] **範疇 5：prompt_builder**
+- [x] **範疇 5：prompt_builder**
   - 預估：20 min
   - DoD：含 `PromptBuilder` ABC
+  - **實際**：build() 接受 LoopState + tenant + user，回傳 PromptArtifact
 
-- [ ] **範疇 6：output_parser**
+- [x] **範疇 6：output_parser**
   - 預估：20 min
   - DoD：含 `OutputParser` ABC（強調 native tool_calls）
+  - **實際**：定義 ParsedOutput dataclass（parser-internal）
 
-- [ ] **範疇 7：state_mgmt**
+- [x] **範疇 7：state_mgmt**
   - 預估：20 min
   - DoD：含 `Checkpointer` ABC
+  - **實際**：Checkpointer + Reducer 兩個 ABC（17.md §2.1）；time_travel 方法
 
-- [ ] **範疇 8：error_handling**
+- [x] **範疇 8：error_handling**
   - 預估：20 min
   - DoD：含 `ErrorPolicy` ABC（4 類錯誤）
+  - **實際**：3 個 ABC（ErrorPolicy + CircuitBreaker + ErrorTerminator）+ ErrorClass enum
 
-- [ ] **範疇 9：guardrails**
+- [x] **範疇 9：guardrails**
   - 預估：20 min
   - DoD：含 `Guardrail` ABC（input / output / tool 三種）
+  - **實際**：Guardrail + Tripwire 兩個 ABC（per 17.md §6 — Tripwire owned by Cat 9 not Cat 8）+ GuardrailType / GuardrailAction / GuardrailResult
 
-- [ ] **範疇 10：verification**
+- [x] **範疇 10：verification**
   - 預估：20 min
   - DoD：含 `Verifier` ABC
 
-- [ ] **範疇 11：subagent**
+- [x] **範疇 11：subagent**
   - 預估：20 min
   - DoD：含 `SubagentDispatcher` ABC（4 種模式，**不含 worktree**）+ `SubagentBudget`
+  - **實際**：SubagentMode enum 強制 4 模式（FORK/TEAMMATE/HANDOFF/AS_TOOL）；worktree 不在
 
-- [ ] **範疇 12：observability（cross-cutting）**
+- [x] **範疇 12：observability（cross-cutting）**
   - 預估：25 min
   - DoD：`observability/_abc.py` 含 `Tracer` ABC（`start_span` async context manager + `record_metric` + `get_current_context`）；README 標明「實作在 backend/src/observability/，本目錄只 own ABC」
+  - **實際**：完整 3 個 method + AbstractAsyncContextManager 型別
 
-- [ ] **§HITL 中央化：hitl/**
+- [x] **§HITL 中央化：hitl/**
   - 預估：20 min
   - DoD：`hitl/_abc.py` 含 `HITLManager` ABC（4 abstract methods：request_approval / wait_for_decision / get_pending / decide）；README 引用 17.md §5
+  - **實際**：5 個 method（多了 get_policy）；README 含 cross-category interaction 規則
 
 ### 2.2.5 跨範疇 single-source 型別包：_contracts/（**新增**，60 min）
 
-- [ ] **建立 `_contracts/__init__.py`**（統一 re-export）
+- [x] **建立 `_contracts/__init__.py`**（統一 re-export）
   - 預估：10 min
   - DoD：from `_contracts` import 可拿到所有 dataclass / enum
+  - **實際**：__all__ 列出 50+ exports 含完整 22 個 LoopEvent 子類
 
-- [ ] **建立 10 個 contract 檔案**（每個 5 min × 10 = 50 min）
-  - [ ] `_contracts/chat.py`（ChatRequest/Response/Message/StopReason/ContentBlock）
-  - [ ] `_contracts/tools.py`（ToolSpec/ToolCall/ToolResult/ToolAnnotations/ConcurrencyPolicy）
-  - [ ] `_contracts/state.py`（LoopState/TransientState/DurableState/StateVersion）
-  - [ ] `_contracts/events.py`（LoopEvent + 22 個子類 stub）
-  - [ ] `_contracts/memory.py`（MemoryHint）
-  - [ ] `_contracts/prompt.py`（PromptArtifact/CacheBreakpoint）
-  - [ ] `_contracts/verification.py`（VerificationResult）
-  - [ ] `_contracts/subagent.py`（SubagentBudget/SubagentResult/SubagentMode）
-  - [ ] `_contracts/observability.py`（TraceContext/MetricEvent/SpanCategory）
-  - [ ] `_contracts/hitl.py`（ApprovalRequest/Decision/HITLPolicy）
+- [x] **建立 10 個 contract 檔案**（每個 5 min × 10 = 50 min）
+  - [x] `_contracts/chat.py`（ChatRequest/Response/Message/StopReason/ContentBlock）— 含 ToolCall + TokenUsage + CacheBreakpoint
+  - [x] `_contracts/tools.py`（ToolSpec/ToolCall/ToolResult/ToolAnnotations/ConcurrencyPolicy）
+  - [x] `_contracts/state.py`（LoopState/TransientState/DurableState/StateVersion）
+  - [x] `_contracts/events.py`（LoopEvent + 22 個子類 stub）— 完整 22 子類 frozen dataclass
+  - [x] `_contracts/memory.py`（MemoryHint）
+  - [x] `_contracts/prompt.py`（PromptArtifact/CacheBreakpoint）
+  - [x] `_contracts/verification.py`（VerificationResult）
+  - [x] `_contracts/subagent.py`（SubagentBudget/SubagentResult/SubagentMode）— SubagentMode enum 強制 4 模式
+  - [x] `_contracts/observability.py`（TraceContext/MetricEvent/SpanCategory）— SpanCategory enum 13 值
+  - [x] `_contracts/hitl.py`（ApprovalRequest/Decision/HITLPolicy）— + RiskLevel + DecisionType enum
   - DoD：每個 dataclass 完整型別 hint；mypy strict 通過
 
 ### 2.3 adapters/ 骨架（45 min）
 
-- [ ] **建立 `adapters/_base/chat_client.py`（ChatClient ABC）**
+- [x] **建立 `adapters/_base/chat_client.py`（ChatClient ABC）**
   - 預估：20 min
   - DoD：定義 `chat()` / `stream()` 兩個 abstract method
+  - **實際**：完整 7 個 method（chat / stream / count_tokens / get_pricing / supports_feature / model_info）+ ModelInfo + PricingInfo + StreamEvent dataclasses
 
-- [ ] **建立 `adapters/{azure_openai,anthropic,maf}/README.md`**
+- [x] **建立 `adapters/{azure_openai,anthropic,maf}/README.md`**
   - 預估：15 min
   - DoD：3 份 README 標明 Sprint 49.3 / 預留 / Sprint 54.2
+  - **實際**：azure_openai = V2 primary; anthropic = reserved Phase 50+; maf = conditional Sprint 54.2
 
-- [ ] **建立 `adapters/__init__.py` + `adapters/_base/__init__.py`**
+- [x] **建立 `adapters/__init__.py` + `adapters/_base/__init__.py`**
   - 預估：10 min
+  - **實際**：含 provider-neutrality 說明 doctring
 
 ### 2.4 Day 2 收尾（30 min）
 
-- [ ] **驗證 11 範疇全部可 import**
+- [x] **驗證 11 範疇全部可 import**
   - 預估：15 min
   - DoD：跑 `python -c "from agent_harness.{範疇} import {ABC}"` 11 次全部通過
+  - **實際**：13 範疇（含 範疇 12 + HITL）+ _contracts unified + ChatClient ABC 全通過
 
-- [ ] **commit Day 2 work**
+- [x] **commit Day 2 work**
   - 預估：15 min
   - DoD：`git diff --stat HEAD~1` 顯示 11 範疇 + adapters 檔案
+  - **實際**：commit `5d630f2`，64 files staged（含 backend/pyproject.toml + requirements.txt + 41 .py + 17 README + 3 root README）
 
 ---
 
@@ -630,7 +650,7 @@
 **Sprint 狀態追蹤**：
 - [x] Sprint 啟動（用戶批准 + branch 建立）— 2026-04-29
 - [x] Day 1 完成 — 2026-04-29
-- [ ] Day 2 完成
+- [x] Day 2 完成 — 2026-04-29
 - [ ] Day 3 完成
 - [ ] Day 4 完成
 - [ ] Day 5 完成
