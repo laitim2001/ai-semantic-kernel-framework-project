@@ -169,8 +169,11 @@ backend/.venv-rc4/
 /graphify_chunk_*.py
 
 # ============================================================================
-# Graphify derived files (keep main outputs, ignore intermediates)
+# Graphify outputs (local reading aid only; not committed)
 # ============================================================================
-graphify-out/.query_*
-graphify-out/_subagent_prompt.md
-graphify-out/converted/
+# Per CLAUDE.md §graphify: graphify-out/ is a Claude Code local reading
+# accelerator. INFERRED edges (~75% of graph) are LLM hypotheses, not
+# facts — committing them puts unverified data in git history. Each
+# `graphify update .` regenerates content; tracking would create noise
+# diffs in every PR. Rebuild cost is low (manifest diff is fast).
+/graphify-out/
