@@ -30,82 +30,94 @@
 
 ### 1.1 Phase 48 收尾確認（30 min）
 
-- [ ] **檢查 main branch 狀態**
+- [x] **檢查 main branch 狀態**
   - 預估：10 min
   - DoD：`git status` 顯示 clean，`git log main..origin/main` 為空
   - 指令：`git checkout main && git pull && git status`
+  - **實際**：~5 min；main 已 clean（前一 session 已 commit）
 
-- [ ] **確認所有 Phase 48 PR 已 merged**
+- [x] **確認所有 Phase 48 PR 已 merged**
   - 預估：10 min
   - DoD：`gh pr list --state open --label phase-48` 為空
+  - **實際**：~1 min；無 open PR
 
-- [ ] **建立工作 branch**
+- [x] **建立工作 branch**
   - 預估：10 min
   - DoD：`git branch --show-current` 顯示 `feature/phase-49-sprint-1-v2-foundation`
   - 指令：`git checkout -b feature/phase-49-sprint-1-v2-foundation`
+  - **實際**：~1 min；branch 已建立
 
 ### 1.2 V1 不可變 tag（15 min）
 
-- [ ] **打 V1 final tag**
+- [x] **打 V1 final tag**
   - 預估：10 min
   - DoD：`git tag --list | grep v1-final-phase48` 找得到
   - 指令：`git tag -a v1-final-phase48 -m "V1 final state — Phase 1-48 (27% alignment baseline)"`
+  - **實際**：~2 min；tag 指向 `1d9b05f`，message 含 Sprint 181 deferred 說明
 
-- [ ] **推送 tag 到 remote**
+- [x] **推送 tag 到 remote**
   - 預估：5 min
   - DoD：`git ls-remote --tags origin | grep v1-final-phase48` 找得到
   - 指令：`git push origin v1-final-phase48`
+  - **實際**：~2 min；tag SHA `65ee5d5b`
 
 ### 1.3 V1 移到 archived/（90 min）
 
-- [ ] **建立 archived 目錄**
+- [x] **建立 archived 目錄**
   - 預估：5 min
   - DoD：`ls archived/` 顯示 `v1-phase1-48/`
   - 指令：`mkdir -p archived/v1-phase1-48`
 
-- [ ] **`git mv backend → archived/v1-phase1-48/backend`**
+- [x] **`git mv backend → archived/v1-phase1-48/backend`**
   - 預估：20 min（檔案多）
   - DoD：`ls backend` 失敗，`ls archived/v1-phase1-48/backend` 成功
 
-- [ ] **`git mv frontend → archived/v1-phase1-48/frontend`**
+- [x] **`git mv frontend → archived/v1-phase1-48/frontend`**
   - 預估：20 min
   - DoD：同上
 
-- [ ] **`git mv infrastructure → archived/v1-phase1-48/infrastructure`**
+- [x] **`git mv infrastructure → archived/v1-phase1-48/infrastructure`**
   - 預估：15 min
   - DoD：同上
 
-- [ ] **建立 archived/v1-phase1-48/README.md（READ-ONLY 警告）**
+- [x] **建立 archived/v1-phase1-48/README.md（READ-ONLY 警告）**
   - 預估：10 min
   - DoD：檔案內容包含「READ-ONLY」、「Frozen on 2026-04-XX」、「Phase 1-48」、「Do not modify」
+  - **實際**：含 Sprint 181 DEFERRED 紀錄（option 丙）+ V2 launch references + V1 alignment baseline 表
 
-- [ ] **驗證：`docs/`、`claudedocs/`、`reference/` 仍在原位**
+- [x] **驗證：`docs/`、`claudedocs/`、`reference/` 仍在原位**
   - 預估：5 min
   - DoD：3 個目錄都存在於 repo 根
 
-- [ ] **commit V1 封存**
+- [x] **commit V1 封存**
   - 預估：5 min
   - DoD：`git log --oneline -1` 顯示 `chore(v2): archive V1 to archived/v1-phase1-48/`
+  - **實際**：commit `6f15d14`；1682 個檔案 rename（git mv 自動偵測 100% 相同）+ 1 個新 README
 
 ### 1.4 根層配置（45 min）
 
-- [ ] **建立 `docker-compose.dev.yml`**
+- [x] **建立 `docker-compose.dev.yml`**
   - 預估：20 min
   - DoD：包含 postgres / redis / rabbitmq / qdrant 4 個服務，volume 命名加 `_v2` 後綴
+  - **實際**：4 服務都有 healthcheck；container 名稱 `ipa_v2_*`
 
-- [ ] **建立 `.env.example`（V2 版）**
+- [x] **建立 `.env.example`（V2 版）**
   - 預估：15 min
   - DoD：包含 DB / Redis / RabbitMQ / Qdrant 連線字串，標明「V2」
+  - **實際**：Azure OpenAI 為主供應商；Anthropic / OpenAI 註解為可選 adapter；含 JWT / OTel 預留位
 
-- [ ] **更新根 `README.md` 加 V2 區段**
+- [x] **更新根 `README.md` 加 V2 區段**
   - 預估：10 min
   - DoD：頂部加「V2 從 backend/ + frontend/ 開始；V1 已封存到 archived/」
+  - **實際**：V2 banner 含 V1/V2 對照表 + dev quickstart + V2 plan 連結；V1 內容保留於 "V1 Historical Content" 分隔線之下
 
 ### 1.5 Day 1 收尾（10 min）
 
-- [ ] **更新 progress.md**
-- [ ] **commit Day 1 work**
+- [x] **更新 progress.md**
+  - **實際**：建立 `docs/03-implementation/agent-harness-execution/phase-49/sprint-49-1/progress.md`，含 5 個 Day 1 commit 紀錄 + 估時 vs 實際對照表
+- [x] **commit Day 1 work**
   - DoD：`git log --oneline | head -5` 顯示當日 2-3 個 commit
+  - **實際**：本 commit 即 Day 1 final commit；branch 上累計 3 個 V2 commit（V1 archive、root config、Day 1 closeout）
 
 ---
 
@@ -616,8 +628,8 @@
 ---
 
 **Sprint 狀態追蹤**：
-- [ ] Sprint 啟動（用戶批准 + branch 建立）
-- [ ] Day 1 完成
+- [x] Sprint 啟動（用戶批准 + branch 建立）— 2026-04-29
+- [x] Day 1 完成 — 2026-04-29
 - [ ] Day 2 完成
 - [ ] Day 3 完成
 - [ ] Day 4 完成
