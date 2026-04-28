@@ -2,178 +2,257 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **2026-04-28 更新**：本專案進入 **V2 重構（Phase 49+）**，不再以 Microsoft Agent Framework 為主架構。V1 內容已歸檔至 `CLAUDE.backup.md`。
+
+---
+
+## ⚠️ 最關鍵閱讀順序（每次 session 必讀）
+
+1. **本檔案**（CLAUDE.md）— 高層導航
+2. **`docs/03-implementation/agent-harness-planning/README.md`** — V2 規劃權威入口
+3. **`docs/03-implementation/agent-harness-planning/10-server-side-philosophy.md`** — 3 大最高指導原則（必讀）
+4. **`docs/03-implementation/agent-harness-planning/17-cross-category-interfaces.md`** — Single-source 介面權威表
+
+> **權威排序**：`agent-harness-planning/` 17 份 V2 文件 > 本 CLAUDE.md > 任何 V1 文件 / 既有代碼。
+> 衝突時以 V2 規劃為準。
+
 ---
 
 ## AI Assistant Notes
 
-- **Project Location**: Windows (`C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framework-project`)
+- **Project Location**: Windows (`C:\Users\Chris\Downloads\ai-semantic-kernel-framework-project`)
 - **Server Startup**: Use `cmd /c` or direct terminal execution, NOT `start /D` or `start /B`
-  - `start /B python -m uvicorn ...` — Background execution causes process tracking issues
-  - `cmd /c "cd /d path && python -m uvicorn ..."` — Recommended
 
 ```bash
-# Recommended Backend startup (Windows)
-cmd /c "cd /d C:\Users\rci.ChrisLai\Documents\GitHub\ai-semantic-kernel-framework-project\backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+# Recommended (Windows)
+cmd /c "cd /d <project_path>\backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000"
 ```
+
+> **注意**：V1 backend / frontend 即將封存到 `archived/v1-phase1-48/`（Sprint 49.1 Day 1）。封存後啟動命令會更新為新 V2 backend 結構。
 
 ---
 
 ## Core Vision & Design Philosophy
 
-> **This section defines the project's fundamental direction. Every design decision, suggestion, and implementation MUST align with these principles.**
+> **本節定義專案根本方向。所有設計決策、建議、實作必須對齊。**
 
 ### Mission
-Build enterprise AI agent teams that work like **human professional teams** — not just using existing frameworks, but designing **novel agentic capabilities** that don't exist yet.
+
+Build enterprise AI agent teams that work like **human professional teams** — 不只是用既有框架，而是設計**業界第一個「企業級治理 + Claude Code 級閉環」混合 agent 平台**。
 
 ### Agent Team Design Principles
-The platform delivers agents that are:
-1. **Professional** — domain expertise, not generic chatbots
-2. **Planned** — structured approach to tasks, not ad-hoc
-3. **Memory-equipped** — remember past interactions, decisions, context
-4. **Autonomous** — self-organize, plan, execute, and retry
-5. **Controllable** — human oversight at all times
-6. **Transparent** — all processes and decisions are visible/auditable
-7. **Security-compliant** — follows enterprise-specific regulations
-8. **Multi-intelligent** — multiple specialized agents collaborating
-9. **Knowledge-aware** — RAG/knowledge base for enterprise-specific knowledge
-10. **Action-capable** — real tool execution, not just conversation
+
+平台交付的 agent 必須是：
+1. **Professional** — 領域專長，不是通用聊天
+2. **Planned** — 結構化，不是 ad-hoc
+3. **Memory-equipped** — 記得過去互動、決策、上下文
+4. **Autonomous** — 自我組織、規劃、執行、重試
+5. **Controllable** — 隨時可由人介入
+6. **Transparent** — 所有過程與決策可審計
+7. **Security-compliant** — 遵循企業合規
+8. **Multi-intelligent** — 多專業 agent 協作
+9. **Knowledge-aware** — RAG / 企業知識
+10. **Action-capable** — 真實工具執行，不只對話
 
 ### Development Philosophy
-- MAF, Claude SDK, AG-UI, Claude Code patterns are **building blocks and inspiration**, NOT design boundaries
-- Many capabilities require **novel architecture** that doesn't exist in any single framework
-- Current agentic frameworks are all very new — none fully addresses enterprise production needs
-- **DO NOT** default to "MAF has feature X, let's use it" — instead ask "what effect is needed?" then **co-design** a solution
-- Reference multiple sources (MAF internals, CC source patterns, Claude SDK, industry research) as **design inspiration**
-- The hybrid orchestrator (code-enforced steps + LLM routing) is an **intentional novel design**, not a workaround
-- **User provides ideas and vision; AI assistant (Claude) is executor and coordinator** — together we design what doesn't exist yet
+
+- MAF / Claude SDK / AG-UI / Claude Code 是**靈感與參考**，**不是設計邊界**
+- 許多企業需求需要**自研架構**，沒有單一框架完整提供
+- **不要**「MAF 已經有 X，用 MAF 的」 — 要問「需要什麼效果」再 co-design
+- Hybrid orchestrator（code-enforced steps + LLM routing）是**有意設計**，不是 workaround
+- **使用者出構想，AI 助手執行協調** — 一起設計尚未存在的東西
 
 ---
 
-## Project Overview
-
-**IPA Platform** (Intelligent Process Automation) - Enterprise AI Agent orchestration platform
+## V2 Refactor Status（Phase 49+）
 
 | Attribute | Value |
 |-----------|-------|
-| **Core Framework** | Microsoft Agent Framework + Claude Agent SDK + AG-UI Protocol |
-| **Current Status** | Phase 44 Completed - Deep Integration & Optimization |
-| **Completed** | 44 Phases, 152+ Sprints, ~2500+ Story Points |
-| **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis |
+| **Phase** | Phase 49 Foundation（剛啟動） |
+| **Status** | Sprint 49.1 規劃完成（plan + checklist 已就緒）|
+| **Roadmap** | Phase 49-55，**22 sprint，約 5.5 個月** |
+| **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis（V1 沿用）|
+| **Architecture** | TAO/ReAct loop + 11+1 範疇 + LLM Provider 中性 |
+
+詳見 `docs/03-implementation/agent-harness-planning/06-phase-roadmap.md`。
+
+### V2 不是「修補 V1」也不是「全部砍掉」
+
+- ❌ **不是修補 V1**：V1 真實對齊度 27%，11 範疇 8 個處於 Level 0-2
+- ❌ **不是全部砍掉**：保留 V9 分析 / CC 30-wave 研究 / V1 教訓 / 部分 infrastructure 設計
+- ✅ **是 11+1 範疇導向重新出發**
+
+### V2 完成 ≠ SaaS-ready ⚠️
+
+V2（Phase 55）達成「核心能力 + 業務領域 + canary」；SaaS Stage 1（多租戶內部 SaaS / billing / SLA / DR）在 Phase 56-58。
+詳見 `agent-harness-planning/00-v2-vision.md`。
+
+---
+
+## V2 11+1 範疇
+
+V2 嚴格按以下範疇組織代碼，**禁止跨範疇雜湊**：
+
+| # | 範疇 | Phase |
+|---|------|-------|
+| 1 | Orchestrator Layer (TAO/ReAct) | 50.1 |
+| 2 | Tool Layer | 51.1 |
+| 3 | Memory（雙軸：5 scope × 3 time scale） | 51.2 |
+| 4 | Context Mgmt（含 Prompt Caching） | 52.1 |
+| 5 | Prompt Construction | 52.2 |
+| 6 | Output Parsing | 50.1 |
+| 7 | State Mgmt（含 Reducer + transient/durable） | 53.1 |
+| 8 | Error Handling | 53.2 |
+| 9 | Guardrails & Safety | 53.3 + 53.4 |
+| 10 | Verification Loops | 54.1 |
+| 11 | Subagent Orchestration（4 模式，**無 worktree**） | 54.2 |
+| **12** | **Observability / Tracing**（cross-cutting） | 49.4 滲透所有 |
+
+完整定義見 `agent-harness-planning/01-eleven-categories-spec.md`。
+
+---
+
+## V2 五大核心約束（必守）
+
+### 約束 1：單一範疇歸屬原則
+任何代碼必須明確歸屬於 11 範疇之一（或 platform / business_domain / infrastructure / adapters）。
+
+### 約束 2：主流量驗證原則
+任何功能必須能在 UnifiedChat-V2 → API → Agent Loop 主流量中驗證。**禁止 Potemkin Feature**。
+
+### 約束 3：LLM Provider Neutrality（中性）⭐⭐⭐
+- ❌ `agent_harness/**` 任何檔案禁止 `import openai` / `import anthropic`
+- ❌ 工具定義禁止用 OpenAI / Anthropic 原生 schema
+- ✅ 全透過 `adapters/_base/` 的 `ChatClient` ABC + 中性 `ToolSpec` + 中性 `Message`
+- ✅ CI 強制 lint 檢查
+- **驗收**：30 分鐘換 provider 不改代碼
+
+### 約束 4：Anti-Pattern 檢查原則
+每個 PR 必須通過 `04-anti-patterns.md` 11 條檢查清單。
+
+### 約束 5：測試優先原則
+- 範疇單元測試 ≥ 80%
+- 範疇整合測試 ≥ 60%
+- 端到端閉環測試 ≥ 1 個關鍵案例
+
+---
+
+## 「Check Existing Before Building」— V2 版
+
+建任何新 infra 前，**權威排序**：
+
+1. **`agent-harness-planning/` 17 份 V2 規劃**（最高權威）
+2. **Sprint 49.1+ plan/checklist** — 當前迭代決定
+3. **PoC worktrees 驗證模式** — poc-tools / intent-classifier / memory-system / subagent-control / KB enterprise
+4. **Phase 48 LLM-native orchestrator + 7 YAML configs**（已落地新基礎）
+5. **既有 V2 代碼**（archive 範圍外的部分）
+
+### ⛔ 禁止反模式
+
+- ❌ 「MAF 已經有 X」— MAF 正在被封存
+- ❌ 翻 `reference/agent-framework/` 找實作 — 那是過時參考
+- ❌ 擴充 `backend/src/integrations/agent_framework/` — 整個目錄即將封存
+
+---
+
+## V2 規劃文件導航（19 份）
+
+| 文件 | 用途 |
+|------|------|
+| `agent-harness-planning/README.md` | 整體導覽 |
+| `00-v2-vision.md` | V2 願景（含 V2 ≠ SaaS-ready 聲明）|
+| `01-eleven-categories-spec.md` | 11 範疇 + 範疇 12 完整定義 |
+| `02-architecture-design.md` | 5 層架構 + 範疇 12 cross-cutting |
+| `03-rebirth-strategy.md` | 重生策略（3 區分治、archive 處理）|
+| `04-anti-patterns.md` | V1 教訓 11 條反模式 |
+| `05-reference-strategy.md` | 參考資料策略 |
+| `06-phase-roadmap.md` | **22 sprint 路線圖（5.5 個月）** |
+| `07-tech-stack-decisions.md` | 技術選型 |
+| `08-glossary.md` | 術語表 |
+| `08b-business-tools-spec.md` | 業務領域工具 spec（5 domain × 24 工具）|
+| `09-db-schema-design.md` | DB Schema |
+| `10-server-side-philosophy.md` | ⭐ **3 大最高指導原則（必讀）**|
+| `11-test-strategy.md` | 測試策略 |
+| `12-category-contracts.md` | 範疇間整合契約 |
+| `13-deployment-and-devops.md` | 部署 + CI/CD + Docker + DR |
+| `14-security-deep-dive.md` | STRIDE / OWASP / GDPR |
+| `15-saas-readiness.md` | SaaS Stage 1 規劃 |
+| `16-frontend-design.md` | 前端 12 頁 sprint 對應 |
+| `17-cross-category-interfaces.md` | ⭐ **跨範疇接口 single-source registry** |
+| `v2-review-integration-report-20260428.md` | 兩輪 expert review 整合報告 |
+
+---
+
+## V1 歷史資產（保留參考）
+
+V1 雖被 V2 取代，但下列資產持續保留作為**設計知識**：
+
+| 資產 | 位置 | 用途 |
+|------|------|------|
+| V9 Codebase Analysis | `docs/07-analysis/V9/00-index.md` | V1 baseline（Phase 1-44，1028 files） |
+| Claude Code Source Study | `docs/07-analysis/claude-code-study/` | V2 設計藍本（30 waves） |
+| V8 Analysis | `docs/07-analysis/Overview/full-codebase-analysis/` | 歷史對比 |
+| ClaudeDocs | `claudedocs/` | 持續使用（V2 新文件繼續寫入）|
+
+> **使用準則**：V9 是 V1 的真相快照；引用時要標註「V1 baseline」，不能當作 V2 架構描述。
 
 ---
 
 ## Development Commands
 
-### Unified Dev Environment (Recommended)
+> ⚠️ **Sprint 49.1 Day 1 後，backend / frontend 將遷移**。以下命令在遷移後會更新。
+
+### Unified Dev Environment
 
 ```bash
-# View all service status
+# View status
 python scripts/dev.py status
 
 # Start services
-python scripts/dev.py start              # Start all (Docker + Backend + Frontend)
-python scripts/dev.py start backend      # Backend only
-python scripts/dev.py start frontend     # Frontend only
-python scripts/dev.py start docker       # Docker services only
+python scripts/dev.py start              # All
+python scripts/dev.py start backend
+python scripts/dev.py start frontend
 
-# Stop/Restart
+# Stop / Restart / Logs
 python scripts/dev.py stop [service]
 python scripts/dev.py restart [service]
-
-# Logs
-python scripts/dev.py logs postgres
 python scripts/dev.py logs docker -f
 ```
 
 ### Service Ports
 
-| Service | Port | Description |
-|---------|------|-------------|
-| Backend | 8000 | FastAPI/Uvicorn |
-| Frontend | 3005 | Vite Dev Server |
-| PostgreSQL | 5432 | Database |
-| Redis | 6379 | Cache |
-| RabbitMQ | 5672/15672 | Message Queue / Management UI |
-
----
-
-## Architecture Overview
-
-```
-Frontend (React 18 + TypeScript + Fetch API)
-    ↓ HTTP (port 3005)
-Backend (FastAPI, port 8000)
-    ├─ api/v1/           # 39 API route modules
-    ├─ integrations/     # 16 integration modules (see below)
-    ├─ domain/           # Business logic (20 domain modules)
-    └─ infrastructure/   # Database, Cache, Messaging
-    ↓
-PostgreSQL 16 + Redis 7 + RabbitMQ
-```
-
-### Directory Structure
-
-```
-backend/src/
-├── api/v1/              # 41 API route modules (~591 endpoints)
-│   ├── agents, workflows, sessions, executions
-│   ├── ag_ui, claude_sdk, hybrid, mcp
-│   ├── orchestration, autonomous, routing
-│   ├── patrol, correlation, rootcause, audit
-│   ├── swarm, a2a                          # Phase 29+ A2A
-│   └── auth, files, sandbox, checkpoints, etc.
-├── integrations/        # 16 integration modules
-│   ├── agent_framework/ # MAF Adapters (30+ builders)
-│   ├── claude_sdk/      # Claude SDK (autonomous, hooks, hybrid, mcp, tools)
-│   ├── ag_ui/           # AG-UI Protocol (SSE, Events, Handlers)
-│   ├── hybrid/          # Hybrid MAF+SDK (context, intent, risk, switching)
-│   ├── orchestration/   # Three-tier Intent Routing (Phase 28)
-│   ├── swarm/           # Agent Swarm System (Phase 29)
-│   ├── mcp/             # MCP servers (Azure, Filesystem, LDAP, Shell, SSH)
-│   └── a2a, memory, patrol, correlation, rootcause, audit, learning, llm
-├── domain/              # 20 domain modules (business logic)
-├── infrastructure/      # Database, Cache, Messaging, Storage
-└── core/                # Performance, Sandbox, Security utilities
-
-frontend/src/
-├── pages/               # Page components (agents, workflows, dashboard, DevUI, etc.)
-├── components/          # UI components
-│   ├── unified-chat/    # Main chat interface (27+ components)
-│   │   └── agent-swarm/ # Agent Swarm visualization (15 components + 4 hooks, Phase 29)
-│   ├── ag-ui/           # Agentic UI components (chat, hitl, advanced)
-│   ├── DevUI/           # Developer tools (15 components)
-│   ├── ui/              # Shadcn UI components
-│   └── layout, shared, auth
-├── hooks/               # Custom React hooks (17 hooks)
-├── api/                 # API client (Fetch API, NOT Axios)
-├── store/, stores/      # Zustand state management
-├── types/               # TypeScript type definitions
-└── utils/               # Utility functions
-```
+| Service | Port |
+|---------|------|
+| Backend | 8000 |
+| Frontend | 3005 |
+| PostgreSQL | 5432 |
+| Redis | 6379 |
+| RabbitMQ | 5672 / 15672 |
 
 ---
 
 ## Code Standards
 
-All code standards are defined in `.claude/rules/` directory:
+完整規則在 `.claude/rules/`：
 
 | Rule File | Scope |
 |-----------|-------|
-| `backend-python.md` | Python backend code |
-| `frontend-react.md` | React/TypeScript frontend |
-| `agent-framework.md` | Agent Framework integration layer |
-| `git-workflow.md` | Git commits and branches |
-| `code-quality.md` | Code quality tools (Black, ESLint, etc.) |
-| `testing.md` | Testing standards |
-| `azure-openai-api.md` | Azure OpenAI API usage |
+| `backend-python.md` | Python backend |
+| `frontend-react.md` | React/TypeScript |
+| `git-workflow.md` | Git commits / branches |
+| `code-quality.md` | Black / ESLint / mypy |
+| `testing.md` | 測試標準（≥ 80% coverage） |
+| `azure-openai-api.md` | Azure OpenAI 用法 |
+
+> **過時規則**：`.claude/rules/agent-framework.md`（MAF 用法）— V2 不適用，待移除或改寫為 adapter 規則。
 
 ### Quick Commands
 
 ```bash
-# Backend quality check
+# Backend
 cd backend && black . && isort . && flake8 . && mypy . && pytest
 
-# Frontend quality check
+# Frontend
 cd frontend && npm run lint && npm run build
 ```
 
@@ -181,278 +260,371 @@ cd frontend && npm run lint && npm run build
 
 ## Environment Setup
 
-Copy `.env.example` to `.env`. Key variables:
+複製 `.env.example` 到 `.env`。關鍵變數：
 
 ```bash
-# Database
+# Database / Redis / RabbitMQ
 DB_NAME=ipa_platform
 DB_USER=ipa_user
 DB_PASSWORD=ipa_password
-DB_HOST=localhost
-DB_PORT=5432
-
-# Redis
 REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=             # Optional, for production
-
-# RabbitMQ
 RABBITMQ_HOST=localhost
-RABBITMQ_PORT=5672
-RABBITMQ_USER=guest
-RABBITMQ_PASSWORD=guest
 
-# Azure OpenAI
+# Azure OpenAI（V2 主供應商）
 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
 AZURE_OPENAI_API_KEY=<key>
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
 AZURE_OPENAI_API_VERSION=2024-02-15-preview
 
-# Optional: Additional LLM providers (in backend/.env.example)
+# Optional adapters（V2 透過 adapter 層支援）
 # ANTHROPIC_API_KEY=<key>
 # OPENAI_API_KEY=<key>
-
-# Optional: mem0 Memory System (in backend/.env.example)
-# MEM0_ENABLED=false
-# QDRANT_PATH=./qdrant_data
 ```
 
-> **Note**: See `backend/.env.example` for full configuration including mem0 memory system settings.
-
 ---
 
-## Key Documentation
+## ClaudeDocs — AI Assistant Execution Docs
 
-| Document | Purpose |
-|----------|---------|
-| `docs/02-architecture/technical-architecture.md` | System architecture |
-| `docs/01-planning/prd/prd-main.md` | Product requirements |
-| `docs/03-implementation/sprint-planning/README.md` | Sprint planning overview |
-| `docs/api/ag-ui-api-reference.md` | AG-UI API Reference |
-| `claudedocs/CLAUDE.md` | AI assistant execution docs index |
-
-### V9 Codebase Analysis (2026-03-31, Latest & Most Accurate)
-
-> **Important**: V9 supersedes all previous versions (V1-V8). Covers Phase 1-44 with 130 verification waves (9.2/10 quality score). Based on 1,028 source files (792 .py + 236 .ts/.tsx), 327,582 LOC.
-
-**Master Index**: `docs/07-analysis/V9/00-index.md` — Start here for full navigation
-
-| Directory | Key Files | Purpose |
-|-----------|-----------|---------|
-| `V9/01-architecture/` | 11 layer files (L01-L11) | **11-layer architecture deep analysis** — Frontend → API → AG-UI → Routing → Orchestration → MAF → Claude SDK → MCP → Integrations → Domain → Infrastructure |
-| `V9/02-modules/` | 4 module files | Module-level analysis (4 groupings) |
-| `V9/03-features/` | 2 category files | **70+ features verification** with maturity matrix |
-| `V9/04-flows/` | 2 E2E files | **5 E2E user journey validations** (Chat, CRUD, Workflow, HITL, Swarm) |
-| `V9/05-issues/` | issue-registry.md | **62 deduplicated issues** (8 CRITICAL, 16 HIGH, 22 MEDIUM, 16 LOW) |
-| `V9/06-cross-cutting/` | 5 files | Enum registry, error handling, logging, auth, cross-cutting concerns |
-| `V9/07-delta/` | 3 phase-delta files | Phase 30-44 change tracking (new files, endpoints, features per phase) |
-| `V9/08-data-model/` | 2 files | ORM schema, data model analysis |
-| `V9/09-api-reference/` | 1 catalog | **591 API endpoints** complete catalog |
-| `V9/10-event-contracts/` | 1 spec | Event specifications and contracts |
-| `V9/11-config-deploy/` | 1 file | Configuration and deployment analysis |
-| `V9/12-testing/` | 1 file | Testing landscape (386 test files) |
-| `V9/13-mock-real/` | 1 map | **Implementation maturity map** — mock vs real for all features |
-
-#### V9 Usage Scenarios — What to Read When
-
-| Scenario | Start Here | Then Read |
-|----------|-----------|-----------|
-| **Project Onboarding** — First time understanding the project | `V9/00-index.md` → `V9/00-stats.md` | `V9/01-architecture/` layer files top-down |
-| **Bug Investigation** — Researching known issues | `V9/05-issues/issue-registry.md` | Corresponding layer file for the affected module |
-| **Feature Planning** — Planning new Phase/Sprint | `V9/03-features/` + `V9/13-mock-real/` | `V9/07-delta/` to see recent phase changes |
-| **Architecture Decision** — Cross-layer modifications | `V9/01-architecture/` relevant layers | `V9/04-flows/` for E2E impact analysis |
-| **Security/Quality Audit** — Code review preparation | `V9/05-issues/` (8 CRITICAL issues) | `V9/06-cross-cutting/` for auth, logging, error handling |
-| **API Development** — Adding/modifying endpoints | `V9/09-api-reference/` | `V9/08-data-model/` + `V9/02-modules/` |
-| **Phase Delta Tracking** — What changed in Phase X | `V9/07-delta/` (Phase 30-34, 35-39, 40-44) | Combined with `git log` for complete history |
-| **Testing & Deployment** — Writing tests or deploying | `V9/12-testing/` + `V9/11-config-deploy/` | `V9/06-cross-cutting/` for enum registry |
-
-#### V9 Freshness Policy
-
-- **Baseline**: Phase 1-44, snapshot date 2026-03-31
-- **Verification Quality**: 130 waves, 9.2/10 score, ~6,860 verification points
-- **Staleness**: V9 content may diverge as new Phases are developed. Numbers (file counts, endpoints, LOC) will become increasingly approximate after Phase 44
-- **Update Strategy**: Consider a V10 refresh after every 5 Phases or major architectural changes. Use `git log --since="2026-03-31"` + V9 as baseline to understand delta
-- **Trust Level**: Verified statistics (endpoints, enums, ORM columns) are high-confidence. Behavioral descriptions and flow narratives should be cross-checked against current source code
-
-### V8 Codebase Analysis (2026-03-15, Archived)
-
-> V8 reports are archived at `docs/07-analysis/Overview/full-codebase-analysis/`. V9 is the current authoritative analysis. V8 remains useful for historical comparison (Phase 1-34 baseline).
-
-| Document | Purpose |
-|----------|---------|
-| `MAF-Claude-Hybrid-Architecture-V8.md` | V8 11-layer architecture (Phase 1-34 baseline) |
-| `MAF-Features-Architecture-Mapping-V8.md` | V8 70+ features verification |
-| `Architecture-Review-Board-Consensus-Report.md` | Architecture Review Board consensus |
-| `phase4-validation/` | V8 cross-validation reports |
-| `sdk-version-gap/` | MAF & Claude SDK version gap analysis + MAF RC4 Upgrade Master Plan |
-
----
-
-## ClaudeDocs - AI Assistant Execution Docs
-
-> **Important**: The `claudedocs/` directory contains dynamic execution documentation produced collaboratively by AI assistants and the development team, managed separately from the design docs in `docs/`.
+`claudedocs/` 是 AI 助手與開發者協作的動態執行紀錄，獨立於 `docs/`。
 
 ### Directory Structure
 
 ```
 claudedocs/
-├── 1-planning/          # Overall planning (epics, architecture, features)
-├── 2-sprints/           # Sprint execution docs
-├── 3-progress/          # Progress tracking (daily, weekly, milestones)
-├── 4-changes/           # Change records (bug-fixes, feature-changes)
-├── 5-status/            # Status reports (phase-reports, testing)
-├── 6-ai-assistant/      # AI assistant related (prompts, analysis)
-├── 7-archive/           # Historical archive
-├── CLAUDE.md            # Detailed directory index
-└── README.md            # Quick navigation
+├── 1-planning/          # 整體規劃
+├── 2-sprints/           # Sprint 執行
+├── 3-progress/          # 進度（daily / weekly / milestone）
+├── 4-changes/           # 變更紀錄（bug-fixes / feature-changes）
+├── 5-status/            # 狀態報告
+├── 6-ai-assistant/      # AI 助手相關（prompts / analysis）
+├── 7-archive/           # 歷史封存
+├── CLAUDE.md            # 詳細索引
+└── README.md            # 快速導覽
 ```
 
-### AI Assistant Situation Prompts (SITUATION)
+### AI Assistant Situation Prompts
 
-Use the corresponding prompt template based on current work context:
+依當前情境使用對應 prompt 模板：
 
-| Situation | Document | When to Use |
-|-----------|----------|-------------|
-| **SITUATION-1** | `6-ai-assistant/prompts/SITUATION-1-PROJECT-ONBOARDING.md` | Project onboarding, first contact |
-| **SITUATION-2** | `6-ai-assistant/prompts/SITUATION-2-FEATURE-DEV-PREP.md` | Feature development preparation |
-| **SITUATION-3** | `6-ai-assistant/prompts/SITUATION-3-FEATURE-ENHANCEMENT.md` | Feature enhancement or fixes |
-| **SITUATION-4** | `6-ai-assistant/prompts/SITUATION-4-NEW-FEATURE-DEV.md` | New feature development execution |
-| **SITUATION-5** | `6-ai-assistant/prompts/SITUATION-5-SAVE-PROGRESS.md` | Save progress, end session |
-| **SITUATION-6** | `6-ai-assistant/prompts/SITUATION-6-SERVICE-STARTUP.md` | Service startup, environment check |
-| **SITUATION-7** | `6-ai-assistant/prompts/SITUATION-7-NEW-ENV-SETUP.md` | New development environment setup |
+| Situation | 文件 | 何時使用 |
+|-----------|------|---------|
+| **SITUATION-1** | `6-ai-assistant/prompts/SITUATION-1-PROJECT-ONBOARDING.md` | 專案初次接觸 |
+| **SITUATION-2** | `SITUATION-2-FEATURE-DEV-PREP.md` | 功能開發準備 |
+| **SITUATION-3** | `SITUATION-3-FEATURE-ENHANCEMENT.md` | 功能增強或修復 |
+| **SITUATION-4** | `SITUATION-4-NEW-FEATURE-DEV.md` | 新功能開發執行 |
+| **SITUATION-5** | `SITUATION-5-SAVE-PROGRESS.md` | 儲存進度、結束 session |
+| **SITUATION-6** | `SITUATION-6-SERVICE-STARTUP.md` | 服務啟動、環境檢查 |
+| **SITUATION-7** | `SITUATION-7-NEW-ENV-SETUP.md` | 新開發環境設置 |
 
 ### Change Record Conventions
 
-When fixing bugs or implementing feature changes, create corresponding docs in `claudedocs/4-changes/`:
+修 bug 或實作變更時，於 `claudedocs/4-changes/` 建立對應文件：
 
-| Type | Directory | Naming Format | Example |
-|------|-----------|---------------|---------|
-| Bug Fix | `4-changes/bug-fixes/` | `FIX-XXX-description.md` | `FIX-001-hitl-approval-wrong-id-type.md` |
-| Feature Change | `4-changes/feature-changes/` | `CHANGE-XXX-description.md` | `CHANGE-001-hitl-inline-approval-card.md` |
-| Refactoring | `4-changes/refactoring/` | `REFACTOR-XXX-description.md` | `REFACTOR-001-api-structure.md` |
+| Type | Directory | Naming |
+|------|-----------|--------|
+| Bug Fix | `4-changes/bug-fixes/` | `FIX-XXX-description.md` |
+| Feature Change | `4-changes/feature-changes/` | `CHANGE-XXX-description.md` |
+| Refactoring | `4-changes/refactoring/` | `REFACTOR-XXX-description.md` |
 
 ### Daily Workflow
 
-1. **Before starting work**: Check `claudedocs/3-progress/daily/` for latest logs
-2. **Fixing bugs**: Create FIX doc in `claudedocs/4-changes/bug-fixes/`
-3. **Feature changes**: Create CHANGE doc in `claudedocs/4-changes/feature-changes/`
-4. **End of session**: Use SITUATION-5 to save progress
-
-### Detailed Guide
-
-- Full directory index: `claudedocs/CLAUDE.md`
-- Quick navigation: `claudedocs/README.md`
-- Naming conventions and format templates: see `claudedocs/CLAUDE.md`
+1. **開工前**：看 `claudedocs/3-progress/daily/` 最新 log
+2. **修 bug**：在 `4-changes/bug-fixes/` 建 FIX
+3. **功能變更**：在 `4-changes/feature-changes/` 建 CHANGE
+4. **下班前**：用 SITUATION-5 儲存進度
 
 ---
 
 ## Developer Preferences
 
 ### Communication
-- **Language**: Respond in Traditional Chinese (for user communication)
-- **Documentation**: Use English for all CLAUDE.md files
-- **Detail Level**: Provide detailed explanations with reasoning
-- **Confirmation**: Ask before destructive operations
+- **Language**: 用戶溝通用繁體中文
+- **Documentation**: CLAUDE.md / 設計文件用英文
+- **Detail**: 詳細解釋並附理由
+- **Confirmation**: 破壞性操作前必問
 
 ### Code Style
-- **Comments**: English for code comments
-- **Git Commit**: Commit only when feature is complete
-- **Testing**: New features must include unit tests
+- **Comments**: 程式碼註解用英文
+- **Git Commit**: 功能完成才 commit
+- **Testing**: 新功能必須附單元測試
 
 ### Behavior Rules
-- **Proactive Assistance**: Actively participate in development
-- **Ask Before Acting**: When uncertain, always ask first
-- **Deep Error Analysis**: Analyze root cause thoroughly
-- **Never Delete Tests**: Do not delete or skip tests to solve problems
-- **Never Delete Docs**: Do not delete documentation without asking
-- **Never Delete Checklist Items**: When updating checklists, only change `[ ]` to `[x]`. Never remove unchecked items — they represent pending work. Violation occurred in Phase 42 Sprint 147.
-- **Check Existing Before Building**: Before creating new infrastructure (SSE, tools, memory), verify MAF/AG-UI/Claude SDK doesn't already provide it. Violation occurred in Phase 42 Sprint 145.
+- **Proactive Assistance**: 主動參與開發
+- **Ask Before Acting**: 不確定時必先問
+- **Deep Error Analysis**: 找根因，不貼膏藥
+- **Never Delete Tests**: 不刪測試 / 不關測試 / 不跳測試
+- **Never Delete Docs**: 未授權不刪文件
+- **Never Delete Checklist Items**: 只能 `[ ]` → `[x]`，不能刪除未勾選項（Phase 42 Sprint 147 違規前車之鑑）
+- **Check Existing Before Building**: 建新 infra 前，先查 V2 17 份規劃 + Sprint plan + PoC worktrees（**不是查 MAF/AG-UI/SDK** — 它們正被封存）
+
+---
+
+## Karpathy Coding Guidelines
+
+> 減少常見 LLM coding 錯誤的行為守則。Source: [Andrej Karpathy](https://x.com/karpathy/status/2015883857489522876)
+
+### 1. Think Before Coding
+- 明說假設；不確定就問
+- 多種解讀並陳，不要私下選一個
+- 有更簡單方案就說；該 push back 就 push back
+- 不清楚就停下、命名困惑、發問
+
+### 2. Simplicity First
+- 最少代碼解決問題
+- 不寫沒被問的功能 / 不為單次使用造抽象 / 不加未要求的「彈性」
+- 不為不可能的情境寫 error handling
+- 200 行能變 50 行就重寫
+
+### 3. Surgical Changes
+- 只動必要的；不順手「改善」相鄰代碼
+- 不重構沒壞的東西；配合既有風格即使你會做不同
+- 看到無關的 dead code 就提一下，不刪
+- 你的改動產生的 orphan 才清；既有的 dead code 不關你事
+
+### 4. Goal-Driven Execution
+- 任務轉成可驗證目標：「Add validation」→「寫無效輸入測試 → 通過」
+- 多步任務先給簡短 plan：每步 + verify
+- 強成功標準才能獨立 loop；弱標準需要不斷澄清
+
+---
+
+## File Header & Modification Convention
+
+> **與 Karpathy 守則的關係**：Karpathy 第 2 條反對「行內每行註解噪音」；本規則要求**檔案層級 metadata**，兩者不衝突。
+> - ✅ **要寫**：檔案開頭 docstring（目的 / 範疇 / 建立日期 / 修改歷史）
+> - ✅ **要寫**：重要區塊開頭的 WHY 說明（為何用此方法、排除過什麼方案）
+> - ❌ **不寫**：行內每行 `# this assigns x to y` 這類噪音
+> - ❌ **不寫**：「used by X」「added for Y flow」之類 git log 已記錄的內容
+
+### 1. New File Header（建立新檔案時必須有）
+
+#### Python（`.py`）
+```python
+"""
+File: <relative path from project root>
+Purpose: <一句話說明此檔案的核心目的>
+Category: <11+1 範疇之一，例如「範疇 1 Orchestrator」>
+Scope: <Sprint XX.Y / Phase ZZ>
+
+Description:
+    <2-5 行描述：此檔案做什麼、為何存在、與哪些範疇/檔案互動>
+
+Key Components:
+    - ClassA: <用途>
+    - function_b(): <用途>
+
+Created: YYYY-MM-DD (Sprint XX.Y)
+Last Modified: YYYY-MM-DD
+
+Modification History:
+    - YYYY-MM-DD: Initial creation (Sprint XX.Y) - <one-line reason>
+
+Related:
+    - 範疇規格: agent-harness-planning/01-eleven-categories-spec.md §<section>
+    - Cross-category contract: 17-cross-category-interfaces.md Contract <N>
+    - Sprint plan: phase-XX-*/sprint-XX-Y-plan.md
+"""
+```
+
+#### TypeScript / React（`.ts` / `.tsx`）
+```typescript
+/**
+ * File: <relative path from project root>
+ * Purpose: <一句話說明>
+ * Category: <範疇 9 UI/UX, 對應 16-frontend-design.md 第 N 頁>
+ * Scope: <Sprint XX.Y / Phase ZZ>
+ *
+ * Description:
+ *   <2-5 行描述>
+ *
+ * Key Components:
+ *   - <ComponentA>: <用途>
+ *   - <useHookB>: <用途>
+ *
+ * Created: YYYY-MM-DD (Sprint XX.Y)
+ * Last Modified: YYYY-MM-DD
+ *
+ * Modification History:
+ *   - YYYY-MM-DD: Initial creation (Sprint XX.Y) - <reason>
+ *
+ * Related:
+ *   - <相關文件路徑>
+ */
+```
+
+#### Markdown 設計文件（`.md`）— 簡化版
+```markdown
+# <Title>
+
+**Purpose**: <一句話>
+**Category / Scope**: <範疇 / Sprint>
+**Created**: YYYY-MM-DD
+**Last Modified**: YYYY-MM-DD
+**Status**: Draft / Active / Deprecated
+
+> **Modification History**
+> - YYYY-MM-DD: Initial creation
+```
+
+### 2. Section Header（檔案內重要功能區塊）
+
+每個重要 class / 大型 function / 邏輯區塊在開頭加**短註解**說明 **WHY**（不是 WHAT）：
+
+```python
+# === LoopExecutor: TAO/ReAct main loop ===
+# Why: V1 採線性 Pipeline 導致 agent 無法多輪迭代（範疇 1 對齊度 18%）。
+# V2 改 TAO loop 直到 stop_reason=end_turn 或 max_turns。
+# Alternative considered: LangGraph state machine — 排除因為加層不解決核心 loop 問題。
+# Reference: agent-harness-planning/01-eleven-categories-spec.md §範疇1
+class LoopExecutor:
+    ...
+```
+
+> 規則：**只在區塊開頭一次**，不在每行重複。每行 `# this calls X` 是噪音，刪掉。
+
+### 3. Modification Convention（修改現有檔案）
+
+#### 三層級對應（依改動性質）
+
+| 改動類型 | 範例 | 文件處理 |
+|---------|------|---------|
+| **Trivial** | typo / format / rename 變數 | git log 即可，**不更新** Modification History |
+| **Behavioral** | 修 bug / 新功能 / 重構邏輯 | ✅ 更新 `Last Modified` + 加一行 Modification History + 在 `claudedocs/4-changes/` 建 FIX/CHANGE/REFACTOR |
+| **Structural** | 拆檔 / 範疇遷移 / 介面變更 | ✅ 上述全做 + 更新 Sprint progress doc + 視情況更新 `17-cross-category-interfaces.md` |
+
+#### Modification History 格式
+
+加在檔案 header，**最新在最上**（newest-first）：
+
+```python
+Modification History:
+    - 2026-05-15: Add streaming support (Sprint 50.2) - Contract 15 alignment
+    - 2026-05-03: Refactor LoopState into transient/durable (Sprint 50.1)
+    - 2026-04-28: Initial creation (Sprint 49.1)
+```
+
+#### 禁止事項
+
+- ❌ **行內塞歷史**：`x = compute()  # 2026-05-01 changed from old_compute()` — git blame 已記錄，刪掉
+- ❌ **保留 dead code 註解**：`# old version: ...` — 直接刪，git 有歷史
+- ❌ **commit message 寫「update」「fix」**：必須具體（feat/fix/refactor + scope + why）
+- ❌ **跳過 claudedocs/4-changes/**：行為變更必須留 FIX/CHANGE/REFACTOR 文件
+
+### 4. 為何要這樣做（Why this rule exists）
+
+| 痛點 | 解法 |
+|------|------|
+| AI 助手接手不知檔案目的 → 重複探查浪費 token | File header 一秒鎖定範疇與用途 |
+| Phase 35-38 散落跨範疇難追溯 | Category 標籤強制歸屬 |
+| V1 「Potemkin Feature」結構在但無內容 | Description + Key Components 強制說明真實用途 |
+| git blame 解決不了「為何這樣設計」 | Section header 的 Why + Alternative considered |
+| 修改累積無歷史 → 三個月後沒人知道為什麼 | Modification History 記錄行為變更（trivial 不記） |
+
+### 5. 例外
+
+- **生成檔案**（migrations / proto / openapi schema）：可省略 header，由工具產生
+- **第三方 vendor 檔**：不動其 header
+- **`__init__.py` 空檔**：可省略
+- **測試檔**：可用簡化版（Purpose + Created + Modification History 即可）
 
 ---
 
 ## CRITICAL: Sprint Execution Workflow
 
-> **This rule is mandatory for all sprint work. Violation occurred in Phase 35-38 (Sprint 107-120) and must never be repeated.**
+> **強制流程。Phase 35-38（Sprint 107-120）違規前車之鑑，永不重蹈。**
 
-Every sprint MUST follow this workflow in order:
+每個 sprint 必須按以下順序：
 
 ### Step 1: Create Plan File
-Before writing ANY code, create `docs/03-implementation/sprint-planning/phase-XX/sprint-XXX-plan.md`:
-- User Stories (作為/我希望/以便 format)
+寫 code 前，建 `docs/03-implementation/agent-harness-planning/phase-XX-*/sprint-XXX-plan.md`：
+- User Stories（作為 / 我希望 / 以便）
 - Technical specifications
 - File change list
 - Acceptance criteria
 
 ### Step 2: Create Checklist File
-Create `docs/03-implementation/sprint-planning/phase-XX/sprint-XXX-checklist.md`:
-- Checkbox items (`- [ ]`) for every deliverable
-- Verification criteria
-- Links to plan file
+建 `phase-XX-*/sprint-XXX-checklist.md`：
+- `- [ ]` 列出每個交付項
+- 驗證標準
+- 連結 plan
 
 ### Step 3: Implement Code
-Only after plan + checklist exist, begin coding.
+plan + checklist 都有了才開始 code。
 
 ### Step 4: Update Checklist
-As work progresses, mark items `[x]` in the checklist.
+進度推進時，將 `[ ]` 改 `[x]`。**禁止刪除未勾選項**。
 
 ### Step 5: Create Progress Doc
-Create `docs/03-implementation/sprint-execution/sprint-XXX/progress.md` with execution details.
+建 `docs/03-implementation/agent-harness-execution/sprint-XXX/progress.md`。
 
-### Correct Flow
+### 正確流程
 ```
 Phase README → Sprint Plan → Sprint Checklist → Code → Update Checklist → Progress Doc
 ```
 
-### WRONG Flow (what happened in Phase 35-38)
+### 錯誤流程（Phase 35-38 發生過）
 ```
-Phase README → Code → Progress Doc  (SKIPPED plan + checklist)
-```
-
-Reference existing examples: `docs/03-implementation/sprint-planning/phase-29/sprint-100-plan.md` and `sprint-100-checklist.md`
-
----
-
-## CRITICAL: Microsoft Agent Framework API Usage
-
-> **This is the most important rule for this project.**
-
-When developing in `backend/src/integrations/agent_framework/builders/`:
-
-### MUST Do
-
-1. **Import official classes from `agent_framework`**
-2. **Create official Builder instance**: `self._builder = OfficialBuilder()`
-3. **Call official Builder in build()**: `return self._builder.build()`
-
-### DO NOT
-
-- Create custom implementation without `agent_framework` imports
-- Skip `from agent_framework import ...` statements
-- Implement similar functionality without calling official API
-
-### Verification
-
-```bash
-cd backend && python scripts/verify_official_api_usage.py
-# All 5 checks must pass
+Phase README → Code → Progress Doc  ❌ 跳過 plan + checklist
 ```
 
-See `.claude/rules/agent-framework.md` for detailed rules.
+參考範例：`agent-harness-planning/phase-49-foundation/sprint-49-1-plan.md` + `sprint-49-1-checklist.md`
 
 ---
 
 ## Important Notes
 
-1. **Agent Framework is Preview**: API may change. Reference docs in `reference/agent-framework/`
-
-2. **Target Market**: Taiwan/Hong Kong. Technical terms in English, user-facing content in Traditional Chinese.
-
-3. **BMAD Methodology**: Project follows BMad Agile Development workflow. Track status in `docs/bmm-workflow-status.yaml`
+1. **Target Market**: 台灣 / 香港。技術詞英文，使用者面向繁體中文。
+2. **BMAD Methodology**: 沿用 BMad Agile workflow。狀態追蹤於 `docs/bmm-workflow-status.yaml`。
+3. **MAF Status**: V1 整合的 Microsoft Agent Framework 將於 Sprint 49.1 封存到 `archived/v1-phase1-48/`。V2 不再以 MAF 為核心；如需 multi-agent builder 才有條件保留 adapter。
 
 ---
 
-**Last Updated**: 2026-03-31
+## graphify
+
+This project has a graphify knowledge graph at `graphify-out/`.
+
+### Navigation rules
+- 回答架構或代碼問題前，讀 `graphify-out/GRAPH_REPORT.md`（god nodes + community structure）
+- 若 `graphify-out/wiki/index.md` 存在，優先用而非讀原始檔案
+- 最佳閱讀順序：L1–10（summary）→ L2184–2322（god nodes + surprising connections + hyperedges）。用 Grep 跳到特定 community 在 L2323+
+
+### Confidence handling（CRITICAL）
+當前 graph 約 25% EXTRACTED / 75% INFERRED。
+- **God Nodes 與 Community structure** — 高信任，可直接用
+- **Surprising Connections** — 多為 INFERRED，當作假說，引用前用 Read/Grep 驗證
+- **架構理由引用** — 用 `/graphify explain <node>` 確認支撐 edge 是 EXTRACTED（已驗證）還是 INFERRED（LLM 猜的）。若只有 INFERRED 支撐，回答時必須明示
+
+### ⚠️ Scope Control
+**`.graphifyignore` 必須存在於專案根**。`graphify update .` 不會記住初次 build 排除哪些目錄；缺少 `.graphifyignore` 會把 `reference/`（2,213 files）、`claudedocs sample/`（217 files）、debug PNG（~124 files）全納入。
+
+驗證 scope：
+```bash
+python -c "from graphify.detect import detect; from pathlib import Path; r = detect(Path('.')); print(f'{r[\"total_files\"]} files, {r[\"graphifyignore_patterns\"]} ignore patterns')"
+# 預期：~3,300 files、30 ignore patterns
+```
+
+若 >5,000 files，停下修 `.graphifyignore` 再繼續。
+
+### Maintenance
+
+| Command | When | Cost |
+|---------|------|------|
+| `graphify update .` | 代碼變更（.py / .ts / .tsx）| Free |
+| `/graphify --update` | docs / markdown / PDF / image | Paid (LLM) |
+| `/graphify .` | 全重建（罕用） | Paid (LLM) |
+
+預設：每次 code commit 後跑 `graphify update .` — 它用 manifest.json diff，小變更幾乎瞬間完成。
+
+---
+
+## V1 Backup
+
+V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（MAF + Claude SDK + AG-UI）細節請參考。
+
+---
+
+**Last Updated**: 2026-04-28
 **Project Start**: 2025-11-14
-**Status**: Phase 44 Completed (152+ Sprints completed)
-**Total Story Points**: ~2500+ pts across 44 phases
-**V9 Analysis**: `docs/07-analysis/V9/00-index.md` (1,028 files, 327,582 LOC, 9.2/10 quality)
+**Current Phase**: V2 Phase 49 Foundation（Sprint 49.1 待啟動）
+**V2 Authority**: `docs/03-implementation/agent-harness-planning/` (19 docs)
+**V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`

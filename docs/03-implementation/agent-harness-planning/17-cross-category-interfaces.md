@@ -1,0 +1,445 @@
+# 17 — 跨範疇接口附錄（Single-Source Registry）
+
+**建立日期**：2026-04-28
+**版本**：V2.0
+**狀態**：Authoritative reference — 任何 V2 規劃文件都必須遵守
+
+> **本文件是 V2 的「介面權威表」**。當兩份規劃文件對同一介面（dataclass / ABC / tool / event）有不同定義時，**本文件勝出**。所有重複定義必須改為 import / 引用，不可複製。
+
+---
+
+## 為什麼需要這份附錄
+
+V2 review 發現 7 條跨範疇 / 跨文件重複定義：
+
+| 議題 | 衝突點 |
+|------|--------|
+| `ToolSpec` | 範疇 2 與原則 2 都定義 |
+| `ChatClient` ABC | 範疇 6 引用、原則 2 定義 |
+| `memory_search` 工具 | 範疇 2 與範疇 3 重複 |
+| `task_spawn` 工具 | 範疇 2 與範疇 11 重複 |
+| `Tripwire` 概念 | 範疇 8 / 9 邊界模糊 |
+| `Subagent delegation` 接口 | 範疇 4 / 11 跨範疇呼叫未明 |
+| `HITL` 機制 | 散落在範疇 2 / 7 / 8 / 9 |
+
+如果這些介面在 Sprint 中各自實作，會導致：
+- 同一概念兩個實作（Anti-Pattern 6 — Hybrid 橋接層債務）
+- 修改一處遺漏另一處（V1 教訓 #1）
+- 範疇間整合時 type mismatch 大量浮現
+
+**規則**：每個跨範疇介面**只能定義一次**。其他文件**只能引用**，不能重新定義。
+
+---
+
+## 第 1 部分：核心資料結構（dataclass / TypedDict）
+
+### 1.1 single-source 表
+
+| 介面名稱 | Owner 文件 | Owner 範疇 / 章節 | 說明 |
+|---------|----------|------------------|------|
+| `ChatRequest` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | LLM 呼叫請求；中性化欄位 |
+| `ChatResponse` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | LLM 呼叫回應；含 `stop_reason` enum |
+| `Message` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | role / content / tool_calls |
+| `ContentBlock` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | text / image / tool_use / tool_result |
+| `ToolSpec` | `01-eleven-categories-spec.md` | 範疇 2 | 工具定義（含 annotations / concurrency_policy / version） |
+| `ToolCall` | `01-eleven-categories-spec.md` | 範疇 2 | 單次工具呼叫 |
+| `ToolResult` | `01-eleven-categories-spec.md` | 範疇 2 | 工具回傳（含 `result_content_types`） |
+| `ToolAnnotations` | `01-eleven-categories-spec.md` | 範疇 2 | MCP 4 hints（readOnly / destructive / idempotent / openWorld） |
+| `ConcurrencyPolicy` | `01-eleven-categories-spec.md` | 範疇 2 | sequential / read_only_parallel / all_parallel |
+| `LoopState` | `01-eleven-categories-spec.md` | 範疇 7 | 中央 state；拆 transient/durable |
+| `TransientState` | `01-eleven-categories-spec.md` | 範疇 7 | in-memory 短期 state |
+| `DurableState` | `01-eleven-categories-spec.md` | 範疇 7 | DB 持久 state |
+| `LoopEvent` | `01-eleven-categories-spec.md` | 範疇 1 | Loop 事件流（`AgentLoop.events()` yield） |
+| `StopReason` | `10-server-side-philosophy.md` | 原則 2 enum 中性化表 | 替代 per-provider 字串 |
+| `MemoryHint` | `01-eleven-categories-spec.md` | 範疇 3 | 「線索→驗證」資料結構 |
+| `PromptArtifact` | `01-eleven-categories-spec.md` | 範疇 5 | PromptBuilder 產出（含 cache breakpoints） |
+| `CacheBreakpoint` | `01-eleven-categories-spec.md` | 範疇 5 | Anthropic-style cache_control 標記 |
+| `VerificationResult` | `01-eleven-categories-spec.md` | 範疇 10 | Verifier 回傳 |
+| `SubagentBudget` | `01-eleven-categories-spec.md` | 範疇 11 | token / duration / concurrency cap |
+| `SubagentResult` | `01-eleven-categories-spec.md` | 範疇 11 | Subagent 回傳（含強制 ≤ N token 摘要） |
+| `TraceContext` | `01-eleven-categories-spec.md` | **範疇 12 (Observability)** | trace_id / span_id / baggage |
+| `MetricEvent` | `01-eleven-categories-spec.md` | 範疇 12 | latency / token / cost 三軸 metric |
+| `ApprovalRequest` | `01-eleven-categories-spec.md` | §HITL 中央化 | HITL 統一請求結構 |
+| `ApprovalDecision` | `01-eleven-categories-spec.md` | §HITL 中央化 | approve / reject / escalate |
+
+### 1.2 引用方式（範例）
+
+```python
+# ✅ 正確：範疇 6 (output_parser) 引用 ChatResponse
+from agent_harness._contracts import ChatResponse  # 由原則 2 single-source
+
+class OutputParser(ABC):
+    @abstractmethod
+    def parse(self, response: ChatResponse) -> ParsedOutput: ...
+```
+
+```python
+# ❌ 錯誤：範疇 6 重新定義 ChatResponse
+@dataclass
+class ChatResponse:  # ← 違反 single-source rule
+    ...
+```
+
+### 1.3 實作位置（程式碼層）
+
+V2 backend 中：
+
+```
+backend/src/agent_harness/_contracts/
+├── __init__.py            ← 統一 re-export
+├── chat.py                ← ChatRequest/Response/Message/ContentBlock/StopReason
+├── tools.py               ← ToolSpec/ToolCall/ToolResult/ToolAnnotations
+├── state.py               ← LoopState/TransientState/DurableState
+├── events.py              ← LoopEvent
+├── memory.py              ← MemoryHint
+├── prompt.py              ← PromptArtifact/CacheBreakpoint
+├── verification.py        ← VerificationResult
+├── subagent.py            ← SubagentBudget/SubagentResult
+├── observability.py       ← TraceContext/MetricEvent
+└── hitl.py                ← ApprovalRequest/ApprovalDecision
+```
+
+`_contracts/` 是**11 範疇 + 範疇 12 共用的型別包**。任何 `agent_harness/` 子目錄都從這裡 import，**不在自己內部 redefine**。
+
+---
+
+## 第 2 部分：核心 ABC（介面）
+
+### 2.1 single-source 表
+
+| ABC 名稱 | Owner 文件 | Owner 章節 | 主要方法 |
+|---------|----------|----------|---------|
+| `ChatClient` | `10-server-side-philosophy.md` | 原則 2 | `chat()` / `stream()` / `count_tokens()` / `get_pricing()` / `supports_feature()` / `model_info()` |
+| `AgentLoop` | `01-eleven-categories-spec.md` | 範疇 1 | `run() -> AsyncIterator[LoopEvent]` |
+| `ToolRegistry` | `01-eleven-categories-spec.md` | 範疇 2 | `register()` / `get()` / `list()` |
+| `ToolExecutor` | `01-eleven-categories-spec.md` | 範疇 2 | `execute()` / `execute_batch()` |
+| `MemoryLayer` | `01-eleven-categories-spec.md` | 範疇 3 | `read()` / `write()` / `evict()` |
+| `Compactor` | `01-eleven-categories-spec.md` | 範疇 4 | `compact()` |
+| `TokenCounter` | `01-eleven-categories-spec.md` | 範疇 4 | `count(messages, tools) -> int` |
+| `PromptBuilder` | `01-eleven-categories-spec.md` | 範疇 5 | `build() -> PromptArtifact` |
+| `OutputParser` | `01-eleven-categories-spec.md` | 範疇 6 | `parse(response) -> ParsedOutput` |
+| `Checkpointer` | `01-eleven-categories-spec.md` | 範疇 7 | `save()` / `load()` / `time_travel()` |
+| `Reducer` | `01-eleven-categories-spec.md` | 範疇 7 | `merge(state, update) -> state` |
+| `ErrorPolicy` | `01-eleven-categories-spec.md` | 範疇 8 | `should_retry()` / `classify()` |
+| `CircuitBreaker` | `01-eleven-categories-spec.md` | 範疇 8 | `record()` / `is_open()` |
+| `Guardrail` | `01-eleven-categories-spec.md` | 範疇 9 | `check()` |
+| `Tripwire` | `01-eleven-categories-spec.md` | 範疇 9（**non-範疇 8**）| `register()` / `trigger()` |
+| `Verifier` | `01-eleven-categories-spec.md` | 範疇 10 | `verify() -> VerificationResult` |
+| `SubagentDispatcher` | `01-eleven-categories-spec.md` | 範疇 11 | `spawn()` / `handoff()` |
+| `Tracer` | `01-eleven-categories-spec.md` | **範疇 12** | `start_span()` / `record_metric()` |
+| `HITLManager` | `01-eleven-categories-spec.md` | §HITL 中央化 | `request_approval()` / `wait()` / `decide()` |
+
+### 2.2 ABC 程式碼位置
+
+```
+backend/src/agent_harness/{範疇}/_abc.py
+```
+
+每個範疇的 `_abc.py` 只 own 該範疇的 ABC。**禁止**在某範疇 `_abc.py` 定義跨範疇 ABC。
+
+---
+
+## 第 3 部分：跨範疇工具註冊表
+
+> 這些工具是 LLM 可呼叫的 tool，**Owner 範疇**負責提供實作，**Caller 範疇**只透過 Registry 呼叫。
+
+### 3.1 工具註冊權威表
+
+| 工具名稱 | Owner 範疇 | 描述 | 可被誰呼叫 |
+|---------|----------|------|----------|
+| `memory_search` | **範疇 3 (Memory)** | 跨 5 層搜尋記憶 | LLM via 範疇 2 Registry |
+| `memory_write` | **範疇 3 (Memory)** | 寫入指定層 | LLM via 範疇 2 Registry |
+| `memory_extract` | **範疇 3 (Memory)** | 觸發背景 extraction worker | LLM via 範疇 2 Registry |
+| `task_spawn` | **範疇 11 (Subagent)** | Fork subagent | LLM via 範疇 2 Registry |
+| `handoff` | **範疇 11 (Subagent)** | Handoff 控制權 | LLM via 範疇 2 Registry |
+| `request_approval` | **§HITL 中央化** | 觸發人工審批 | LLM via 範疇 2 Registry |
+| `verify` | **範疇 10 (Verification)** | 觸發 verifier 檢查當前 output | LLM via 範疇 2 Registry |
+| `web_search` | **範疇 2 (Tools)** | 內建工具 | LLM |
+| `python_sandbox` | **範疇 2 (Tools)** | 內建工具 | LLM |
+
+### 3.2 規則
+
+- **Owner 範疇** 是工具的實作來源；**Caller 範疇** 只能 import owner 提供的 `register_*()` helper，**不可重新實作同名工具**
+- 範疇 2（Tools）只 own **內建通用工具**（search / sandbox / file ops 等），不 own 跨範疇工具
+- 業務領域工具（patrol / correlation / rootcause / audit / incident）見 **`08b-business-tools-spec.md`**（V2 將此拆出 spec，避免混入通用 spec）
+
+### 3.3 工具註冊範例
+
+```python
+# 範疇 3 註冊 memory_search 到 Registry（範疇 2 own）
+# backend/src/agent_harness/memory/tools.py
+from agent_harness._contracts import ToolSpec, ToolAnnotations, ConcurrencyPolicy
+from agent_harness.tools import ToolRegistry  # 範疇 2 ABC
+
+def register_memory_tools(registry: ToolRegistry) -> None:
+    registry.register(ToolSpec(
+        name="memory_search",
+        annotations=ToolAnnotations(read_only=True, idempotent=True),
+        concurrency_policy=ConcurrencyPolicy.READ_ONLY_PARALLEL,
+        version="1.0",
+        ...
+    ))
+```
+
+---
+
+## 第 4 部分：跨範疇 Events
+
+### 4.1 LoopEvent 統一型別表
+
+`LoopEvent` 由**範疇 1（Orchestrator Loop）**從 `_contracts/events.py` 定義；其他範疇**只 emit 子類**，不重新定義 base class。
+
+| Event 子類 | Emit 範疇 | 觸發時機 |
+|-----------|----------|---------|
+| `LoopStarted` | 範疇 1 | Loop run 開始 |
+| `Thinking` | 範疇 1 | 模型 thinking text |
+| `ToolCallRequested` | 範疇 6 | output parser 解析出 tool_calls |
+| `ToolCallExecuted` | 範疇 2 | Tool executor 完成 |
+| `ToolCallFailed` | 範疇 2 | Tool 拋錯 |
+| `MemoryAccessed` | 範疇 3 | memory layer read/write |
+| `ContextCompacted` | 範疇 4 | Compactor 觸發 |
+| `PromptBuilt` | 範疇 5 | PromptBuilder 完成 |
+| `StateCheckpointed` | 範疇 7 | Checkpointer save |
+| `ErrorRetried` | 範疇 8 | Retry 觸發 |
+| `GuardrailTriggered` | 範疇 9 | input/output/tool guardrail block |
+| `TripwireTriggered` | 範疇 9 | Tripwire 觸發即停 |
+| `VerificationPassed` | 範疇 10 | Verifier OK |
+| `VerificationFailed` | 範疇 10 | Verifier 拒絕 |
+| `SubagentSpawned` | 範疇 11 | Subagent 啟動 |
+| `SubagentCompleted` | 範疇 11 | Subagent 結束 |
+| `ApprovalRequested` | §HITL 中央化 | HITL 觸發等待 |
+| `ApprovalReceived` | §HITL 中央化 | HITL 結果回到 loop |
+| `LoopCompleted` | 範疇 1 | Loop 終止 |
+| `SpanStarted` | **範疇 12** | OTel span 開始 |
+| `SpanEnded` | **範疇 12** | OTel span 結束 |
+| `MetricRecorded` | **範疇 12** | latency / token / cost 三軸 metric |
+
+### 4.2 事件序列規範
+
+`AgentLoop.run()` 必須 yield `AsyncIterator[LoopEvent]`（**non-sync callback**），由消費者（API / SSE handler）決定怎麼 forward 給用戶。
+
+```python
+# ✅ 正確：async iterator
+async for event in loop.run(...):
+    await sse_emit(event)
+
+# ❌ 錯誤：sync callback（已從 V2 移除，違反原則 1 / 4 Async-First）
+def on_event(event: LoopEvent) -> None: ...  # 不再接受
+```
+
+---
+
+## 第 5 部分：HITL 中央化
+
+> **問題**：HITL 機制散落在範疇 2（`request_approval` tool）/ 範疇 7（`pending_approvals` in state）/ 範疇 8（HITL recoverable error）/ 範疇 9（HITL guardrail action），缺中央定義。
+
+> **解法**：在 `01-eleven-categories-spec.md` 末尾建立 **§HITL Centralization** 章節，作為 single-source。各範疇只引用、不重新定義。
+
+### 5.1 HITL 統一架構
+
+```
+                ┌──────────────────────────────────┐
+                │        HITLManager               │
+                │  (single-source ABC)             │
+                └──────────────┬───────────────────┘
+                               │
+       ┌───────────────────────┼───────────────────────┐
+       │                       │                       │
+       ▼                       ▼                       ▼
+┌──────────────┐      ┌──────────────────┐    ┌──────────────────┐
+│ 範疇 2       │      │ 範疇 9           │    │ 範疇 7           │
+│ Tools:       │      │ Guardrail:       │    │ State:           │
+│ request_     │      │ HIGH risk →      │    │ pending_         │
+│ approval     │      │ require approval │    │ approvals[]      │
+│ (caller)     │      │ (caller)         │    │ (storage)        │
+└──────────────┘      └──────────────────┘    └──────────────────┘
+       │                       │                       │
+       └───────────────────────▼───────────────────────┘
+                       Approval queue
+                  (DB-backed, durable across sessions)
+```
+
+### 5.2 HITL 介面（owner: HITL Centralization 章節）
+
+```python
+@dataclass
+class ApprovalRequest:
+    request_id: UUID
+    tenant_id: UUID
+    session_id: UUID                # source session
+    requester: str                  # category name e.g. "tools" / "guardrails"
+    risk_level: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    payload: dict
+    sla_deadline: datetime
+    context_snapshot: dict          # for human reviewer
+
+@dataclass
+class ApprovalDecision:
+    request_id: UUID
+    decision: Literal["APPROVED", "REJECTED", "ESCALATED"]
+    reviewer: str
+    reason: Optional[str]
+    decided_at: datetime
+
+class HITLManager(ABC):
+    @abstractmethod
+    async def request_approval(self, req: ApprovalRequest) -> UUID: ...
+    @abstractmethod
+    async def wait_for_decision(self, request_id: UUID, timeout_s: int) -> ApprovalDecision: ...
+    @abstractmethod
+    async def get_pending(self, tenant_id: UUID) -> list[ApprovalRequest]: ...
+```
+
+### 5.3 跨範疇 HITL 互動規則
+
+- 範疇 2 / 9 **是 caller**，呼叫 `HITLManager.request_approval()`
+- 範疇 7 **是 storage**，把 `pending_approval_ids: list[UUID]` 放進 DurableState
+- 範疇 8 **不直接 own HITL**，只把 HITL pending 視為 「LLM-recoverable resumable wait」
+- HITL 結果回流時，**Reducer** 負責把 `ApprovalDecision` merge 回 `LoopState` 並 resume
+
+---
+
+## 第 6 部分：Tripwire 邊界（範疇 8 vs 9）
+
+> **問題**：範疇 8（Error）與範疇 9（Guardrail）都提 tripwire 概念，邊界模糊。
+
+> **裁定**：**Tripwire 屬於範疇 9（Guardrail）**。範疇 8 不再用 tripwire 一詞，改用 `error_terminator` 區分。
+
+| 概念 | Owner 範疇 | 觸發方式 | 處置 |
+|------|----------|---------|------|
+| `Tripwire` | **範疇 9 (Guardrail)** | 偵測到嚴重 policy violation（PII leak / jailbreak / data exfil 嫌疑） | **立即終止 loop**，不 retry |
+| `ErrorTerminator` | **範疇 8 (Error)** | Error budget 超支 / circuit breaker open / fatal exception | **立即終止 loop**，不 retry |
+| `Guardrail.check()` 失敗 | **範疇 9** | 一般 input/output/tool guardrail | 看 `OutputGuardrailAction`：reroll / sanitize / abort / escalate |
+| `ErrorPolicy.should_retry()` 為 false | **範疇 8** | 一般非 transient error | 視 type 決定 retry / 回注 LLM / 回傳給 user |
+
+---
+
+## 第 7 部分：跨範疇呼叫順序圖（節錄）
+
+完整順序圖見 `12-category-contracts.md`。本附錄只列**易混淆的跨範疇呼叫**：
+
+### 7.1 範疇 4（Context）→ 範疇 11（Subagent）
+
+```
+Loop turn N: context_used > 75%
+  ↓
+範疇 4 Compactor.compact() 被呼叫
+  ↓
+若 compaction 不足 + 任務可拆分
+  ↓
+範疇 4 emit hint: "consider subagent delegation"
+  ↓
+範疇 1 Loop 把 hint 注入 next prompt
+  ↓
+LLM 自己決定是否呼叫 task_spawn tool（範疇 11 own）
+  ↓
+範疇 4 不直接呼叫範疇 11 — 僅透過 LLM decision
+```
+
+**規則**：範疇 4 與 範疇 11 之間**沒有直接 ABC 呼叫**，僅透過「prompt hint + LLM 決策」聯繫。Spec 必須明示這點。
+
+### 7.2 範疇 12（Observability）滲透所有範疇
+
+```
+所有範疇的 ABC 都接受 trace_context: TraceContext 參數
+  ↓
+範疇 12 Tracer.start_span() 在每個 ABC 入口呼叫
+  ↓
+所有 LoopEvent 都附 trace_id / span_id
+  ↓
+SSE / OTel collector 端 reconstruction 完整 trace tree
+```
+
+**規則**：範疇 12 是 **cross-cutting concern**，所有 ABC 都吃 `TraceContext`，但**不在每個範疇 spec 重複描述**。範疇 12 spec 一次定義 + 跨範疇規範通用即可。
+
+---
+
+## 第 8 部分：禁止重複定義 Lint 規則
+
+V2 在 Phase 49.4 起會加 pre-commit hook 強制執行：
+
+### 8.1 Lint 規則 1：禁止重複 dataclass
+
+```bash
+# Pseudo-code
+$ duplicate-dataclass-check backend/src/
+ERROR: ToolSpec defined in 2 places:
+  - backend/src/agent_harness/tools/_abc.py:23
+  - backend/src/adapters/_base/chat_client.py:45
+Fix: Remove the duplicate, import from agent_harness._contracts instead.
+```
+
+### 8.2 Lint 規則 2：禁止跨範疇直接 import
+
+```python
+# ❌ 禁止：範疇 4 直接 import 範疇 11
+from agent_harness.subagent.dispatcher import SubagentDispatcher
+
+# ✅ 允許：範疇 4 import 範疇 11 的 contract type
+from agent_harness._contracts.subagent import SubagentBudget
+```
+
+例外：經 `12-category-contracts.md` 顯式核准的 ABC 直接呼叫（如範疇 1 → 範疇 6）。
+
+### 8.3 Lint 規則 3：禁止 sync callback 在 async loop
+
+```python
+# ❌ 禁止
+def on_event(event: LoopEvent) -> None: ...
+
+# ✅ 允許
+async def on_event(event: LoopEvent) -> None: ...
+# 或
+events: AsyncIterator[LoopEvent]
+```
+
+---
+
+## 第 9 部分：使用流程
+
+### 9.1 開發新範疇 / 修現有範疇 spec 時
+
+1. 先看本附錄 §1-3，**確認介面是否已被某文件 own**
+2. 若已被 own → spec 文件**只引用 + 加一行 `→ see 17.md §X`**
+3. 若未被 own → 在所屬 spec 文件定義 + **回 PR 一併更新本附錄**
+4. 不可在新文件平行定義同名介面
+
+### 9.2 Code review 時必檢
+
+- [ ] 修改的 dataclass 是否在本附錄登記？
+- [ ] 修改的 ABC 是否在本附錄登記？
+- [ ] 新增工具是否在本附錄登記？
+- [ ] LoopEvent 子類是否在本附錄登記？
+- [ ] 是否違反「禁止重複定義」lint 規則？
+
+### 9.3 維護責任
+
+本附錄與 `12-category-contracts.md`、`01-eleven-categories-spec.md`、`10-server-side-philosophy.md` 共生。任一改動都要回頭更新本附錄。
+
+---
+
+## 第 10 部分：附錄演進路徑
+
+| Phase | 預計增補 |
+|-------|---------|
+| Phase 49.1 | 11 範疇 + 範疇 12 ABC 全部 stub |
+| Phase 49.4 | Lint 規則上線（duplicate-dataclass-check） |
+| Phase 50.x | LoopEvent 子類補完（隨 loop 實作） |
+| Phase 53.4 | HITL 中央化完整接入 |
+| Phase 54.x | Subagent + Verification contracts 補完 |
+| Phase 56+ | 第 13 範疇 Cost Tracking 接入後再擴充 |
+
+---
+
+## 參考連結
+
+- [01-eleven-categories-spec.md](./01-eleven-categories-spec.md) — 11 範疇 + 範疇 12 規格
+- [02-architecture-design.md](./02-architecture-design.md) — 5 層架構
+- [04-anti-patterns.md](./04-anti-patterns.md) — Anti-Pattern 6 (Hybrid 橋接層債務)
+- [10-server-side-philosophy.md](./10-server-side-philosophy.md) — 原則 2 ChatClient ABC
+- [12-category-contracts.md](./12-category-contracts.md) — 範疇間契約（順序圖 + 失敗模式）
+
+---
+
+**最後更新**：2026-04-28
+**下次 review**：Phase 49.4（Lint 規則上線時）
