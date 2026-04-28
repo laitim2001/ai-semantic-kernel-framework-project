@@ -194,13 +194,69 @@ home. Categories import from `agent_harness._contracts` only:
 
 Buffer accumulated → Days 3-5 can absorb any complexity surprises.
 
-## Next: Day 3 — V2 backend platform / api / infra / core
+## Day 3 (2026-04-29) — V2 backend platform / api / infra / core (commit pending)
 
-Day 3 covers (per plan, 5h estimate):
-1. `platform/` — governance / identity / observability impl / workers
-2. `api/v1/` — chat / governance routers + /health endpoint impl
-3. `business_domain/` — 5 sub-dirs with Phase 55 placeholder READMEs
-4. `infrastructure/` — db / cache / messaging / storage subdirs
-5. `core/` — config (pydantic Settings) / exceptions / logging
-6. `middleware/` — tenant.py, auth.py stubs
-7. `main.py` — minimal FastAPI app with /health
+### Day 3.1 — platform/ (12 files)
+- governance/{risk,hitl,audit}/ — 3 subdirs each with __init__.py + README
+- identity/, observability/, workers/ — each with __init__.py + README
+
+### Day 3.2 — api/v1/ (5 files)
+- chat/, governance/ — placeholders with detailed Phase planning READMEs
+- **health.py — REAL impl**: GET /api/v1/health returns
+  `HealthResponse(status="ok", version="2.0.0-alpha")` via APIRouter
+
+### Day 3.3 — business_domain/ (7 files, INTENTIONALLY EMPTY for Sprint 49.x)
+- README warns "Phase 55 才動工"; lists 5 domains × ~24 tools mapping
+- 5 domain subdirs with __init__.py only (no impl)
+
+### Day 3.4 — infrastructure/ (9 files)
+- db/, cache/, messaging/, storage/ — each with __init__.py + README
+
+### Day 3.5 — core/ + middleware/ (7 files)
+- core/config — REAL pydantic Settings stub (env / log_level / DB / Redis
+  / JWT) with @lru_cache get_settings()
+- core/exceptions — IPABaseException
+- core/logging — Phase 49.4 placeholder
+- middleware/tenant.py — get_current_tenant FastAPI dep (raises 501; impl Sprint 49.2)
+- middleware/auth.py — get_current_user FastAPI dep (raises 501; impl Sprint 49.3)
+
+### Day 3.6 — main.py
+- FastAPI app: title="IPA Platform V2", version from Settings
+- Includes /api/v1/health router
+- Root / endpoint returns app info
+
+### Day 3.7 — Verification
+- ✅ App imports successfully
+- ✅ 6 routes registered (4 OpenAPI auto + / + /api/v1/health)
+- ✅ All Day 3 imports succeed
+- ⏳ Real uvicorn run + curl deferred to Day 5 integration acceptance
+
+### Estimates vs Actual (Day 3)
+| Section | Plan estimate | Actual |
+|---------|---------------|--------|
+| 3.1 platform/ | 80 min | ~15 min |
+| 3.2 api/v1/ | 60 min | ~10 min |
+| 3.3 business_domain/ | 30 min | ~5 min |
+| 3.4 infrastructure/ | 30 min | ~10 min |
+| 3.5 core/ + middleware/ | 45 min | ~10 min |
+| 3.6 main.py | 30 min | ~5 min |
+| 3.7 verify + commit | 30 min | ~5 min |
+| **Total Day 3** | **5h** | **~60 min** | 20% of estimate
+
+### Sprint 49.1 cumulative
+
+| Day | Plan | Actual | Ratio |
+|-----|------|--------|-------|
+| Day 1 | 3h 10min | ~65 min | 35% |
+| Day 2 | 7h | ~95 min | 23% |
+| Day 3 | 5h | ~60 min | 20% |
+| **Cumulative** | **15h 10min** | **~3h 40min** | **24%** |
+
+## Next: Day 4 — V2 frontend skeleton (5h estimate)
+
+1. frontend/ root: package.json (React 18 + Vite 5 + Zustand) / tsconfig
+   / vite.config.ts (port 3007) / index.html
+2. src/main.tsx + src/App.tsx (router)
+3. pages/{chat-v2,governance,verification}/ placeholders
+4. features/ 11 categories × README placeholders
+5. Verify: npm install / npm run lint / npm run build / npm run dev

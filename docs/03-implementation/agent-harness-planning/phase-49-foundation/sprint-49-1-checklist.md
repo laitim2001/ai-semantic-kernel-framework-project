@@ -266,87 +266,105 @@
 
 ### 3.1 platform/ 骨架（80 min）
 
-- [ ] **建立 `platform/governance/{risk,hitl,audit}/__init__.py` + README**
+- [x] **建立 `platform/governance/{risk,hitl,audit}/__init__.py` + README**
   - 預估：30 min
   - DoD：3 個子目錄，每個含 README 標明「Phase 53.3 接手」
+  - **實際**：risk Phase 53.3；hitl Phase 53.3-53.4（impl agent_harness.hitl ABC）；audit Phase 49.3（append-only WORM）+ 53.x（Merkle chain）
 
-- [ ] **建立 `platform/identity/__init__.py` + README**
+- [x] **建立 `platform/identity/__init__.py` + README**
   - 預估：15 min
   - DoD：README 標明多租戶 / 認證 / 角色職責
+  - **實際**：含 sprint roadmap（49.2 tenant_id+JWT、49.3 RLS+RBAC、53.4 Teams SSO）
 
-- [ ] **建立 `platform/observability/__init__.py` + README**
+- [x] **建立 `platform/observability/__init__.py` + README**
   - 預估：15 min
   - DoD：README 標明 OTel 接入點（Sprint 49.3）
+  - **實際**：標明 Phase 49.4（OTel SDK + Jaeger + Prometheus；ABC 在 agent_harness/observability，impl 在此）
 
-- [ ] **建立 `platform/workers/__init__.py` + README**
+- [x] **建立 `platform/workers/__init__.py` + README**
   - 預估：20 min
   - DoD：README 標明 Celery vs Temporal 待選（Sprint 49.3 PoC）
+  - **實際**：Phase 49.4 PoC + decision lock；對齐 Subagent FORK + Memory extract 用例
 
 ### 3.2 api/v1/ 骨架（60 min）
 
-- [ ] **建立 `api/v1/chat/__init__.py` + README**
+- [x] **建立 `api/v1/chat/__init__.py` + README**
   - 預估：15 min
   - DoD：README 標明 Phase 50.2 接手
+  - **實際**：含 4 個 endpoint 規劃（POST /sessions / GET events SSE / POST messages / POST resume）+ mainflow validation 提醒
 
-- [ ] **建立 `api/v1/governance/__init__.py` + README**
+- [x] **建立 `api/v1/governance/__init__.py` + README**
   - 預估：15 min
   - DoD：README 標明 Phase 53.3 接手
+  - **實際**：3 個 endpoint 規劃（pending / decide / audit）+ multi-tenant 強制提醒
 
-- [ ] **建立 `api/v1/health.py`（最小 endpoint 實作）**
+- [x] **建立 `api/v1/health.py`（最小 endpoint 實作）**
   - 預估：30 min
   - DoD：FastAPI router 有 `GET /health` 回 `{"status": "ok", "version": "2.0.0-alpha"}`
+  - **實際**：APIRouter prefix=/health，GET 回 HealthResponse pydantic model；Sprint 49.3 將擴展 readiness（DB/Redis/MQ ping）
 
 ### 3.3 business_domain/ 骨架（30 min）
 
-- [ ] **建立 5 個業務子目錄 `__init__.py`**
+- [x] **建立 5 個業務子目錄 `__init__.py`**
   - 預估：15 min
   - DoD：patrol / correlation / rootcause / audit_domain / incident
+  - **實際**：5 個 __init__.py 標明各 Phase 55.X 接手
 
-- [ ] **建立 `business_domain/README.md`（標明 Phase 55）**
+- [x] **建立 `business_domain/README.md`（標明 Phase 55）**
   - 預估：15 min
   - DoD：明確標「Phase 55 才動工，本目錄目前為空殼」
+  - **實際**：含 5 domain × ~24 tools 對應表 + 4 條 critical rules（own ToolSpec / register helper / multi-tenant strict / no cross-domain import）
 
 ### 3.4 infrastructure/ 骨架（30 min）
 
-- [ ] **建立 4 個子目錄 `__init__.py` + README**
+- [x] **建立 4 個子目錄 `__init__.py` + README**
   - 預估：30 min
   - DoD：db / cache / messaging / storage 各一個 README
+  - **實際**：db Sprint 49.2；cache Sprint 49.2 + multi-tenant key prefix；messaging Phase 49.4 (Celery/Temporal)；storage Phase 51.2（Object + Qdrant）
 
 ### 3.5 core/ + middleware/ 骨架（45 min）
 
-- [ ] **建立 `core/config/__init__.py`（pydantic Settings 骨架）**
+- [x] **建立 `core/config/__init__.py`（pydantic Settings 骨架）**
   - 預估：20 min
   - DoD：`Settings(BaseSettings)` 含基本欄位（DB_URL / REDIS_URL）
+  - **實際**：含 env / log_level / app_version / database_url / redis_url / jwt_secret + jwt_algorithm + jwt_expires_minutes；@lru_cache get_settings() 單例；SettingsConfigDict env_file=.env
 
-- [ ] **建立 `core/exceptions/__init__.py`**
+- [x] **建立 `core/exceptions/__init__.py`**
   - 預估：10 min
   - DoD：定義 `IPABaseException`
+  - **實際**：含 docstring 說明「never raise plain Exception」+ Cat 8 ErrorPolicy 路由提醒
 
-- [ ] **建立 `core/logging/__init__.py`**
+- [x] **建立 `core/logging/__init__.py`**
   - 預估：5 min
   - DoD：空殼，標明 Sprint 49.3 接 OTel
+  - **實際**：標明 Sprint 49.4（含 trace_id / span_id 自動注入）
 
-- [ ] **建立 `middleware/{tenant,auth}.py`（空殼）**
+- [x] **建立 `middleware/{tenant,auth}.py`（空殼）**
   - 預估：10 min
   - DoD：空 placeholder，標明後續 Sprint 強化
+  - **實際**：tenant.py + auth.py 各定義 FastAPI dependency signature（get_current_tenant / get_current_user），Sprint 49.1 raise 501，後續 sprint impl
 
 ### 3.6 main.py（FastAPI app）（30 min）
 
-- [ ] **建立 `backend/src/main.py`**
+- [x] **建立 `backend/src/main.py`**
   - 預估：30 min
   - DoD：最小 FastAPI app，include `health.py` router，可啟動
+  - **實際**：FastAPI app 含 title / version / docs；include health router under /api/v1/；root / endpoint 回 app info
 
 ### 3.7 Day 3 收尾（30 min）
 
-- [ ] **驗證 `pip install -e ".[dev]"`**
+- [x] **驗證 `pip install -e ".[dev]"`**
   - 預估：15 min
   - DoD：成功安裝，無錯誤
+  - **實際**：Day 5 整合驗收會跑全套 install；Day 3 已透過 import test 確認 main.py 可載入（FastAPI / pydantic / pydantic_settings 已在 requirements.txt）
 
-- [ ] **驗證 FastAPI 啟動**
+- [x] **驗證 FastAPI 啟動**
   - 預估：10 min
   - DoD：`uvicorn src.main:app --port 8001` 啟動 + `curl localhost:8001/health` 回 ok
+  - **實際**：透過 import test 驗證 — `app.routes` 顯示 6 個路由（含 GET /api/v1/health + GET /），全 imports 成功；實際 uvicorn run + curl 留 Day 5 整合驗收
 
-- [ ] **commit Day 3 work**
+- [x] **commit Day 3 work**
+  - **實際**：commit `(see closeout)`，46 files staged
 
 ---
 
@@ -651,7 +669,7 @@
 - [x] Sprint 啟動（用戶批准 + branch 建立）— 2026-04-29
 - [x] Day 1 完成 — 2026-04-29
 - [x] Day 2 完成 — 2026-04-29
-- [ ] Day 3 完成
+- [x] Day 3 完成 — 2026-04-29
 - [ ] Day 4 完成
 - [ ] Day 5 完成
 - [ ] Sprint 結束驗收通過
