@@ -1,0 +1,1 @@
+"""api.v1.chat — V2 main flow endpoints (Phase 50.2 wires AgentLoop via SSE)."""
