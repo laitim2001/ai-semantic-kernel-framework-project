@@ -390,24 +390,26 @@ claudedocs/
 
 ## File Header & Modification Convention
 
-> **與 Karpathy 守則的關係**：Karpathy 第 2 條反對「行內每行註解噪音」；本規則要求**檔案層級 metadata**，兩者不衝突。
-> - ✅ **要寫**：檔案開頭 docstring（目的 / 範疇 / 建立日期 / 修改歷史）
-> - ✅ **要寫**：重要區塊開頭的 WHY 說明（為何用此方法、排除過什麼方案）
-> - ❌ **不寫**：行內每行 `# this assigns x to y` 這類噪音
-> - ❌ **不寫**：「used by X」「added for Y flow」之類 git log 已記錄的內容
+> 完整規範：[`.claude/rules/file-header-convention.md`](.claude/rules/file-header-convention.md)
 
-### 1. New File Header（建立新檔案時必須有）
+### 三大原則
 
-#### Python（`.py`）
+- ✅ **要寫**：檔案開頭 docstring（Purpose / Category / Created / Modification History）
+- ✅ **要寫**：重要區塊開頭的 WHY 說明（含 Alternative considered）
+- ❌ **不寫**：行內每行 `# this assigns x to y` 噪音
+- ❌ **不寫**：「used by X」「added for Y」git log 已記錄的內容
+
+### Python File Header 速查範本
+
 ```python
 """
-File: <relative path from project root>
-Purpose: <一句話說明此檔案的核心目的>
-Category: <11+1 範疇之一，例如「範疇 1 Orchestrator」>
+File: <relative path>
+Purpose: <一句話>
+Category: <11+1 範疇之一>
 Scope: <Sprint XX.Y / Phase ZZ>
 
 Description:
-    <2-5 行描述：此檔案做什麼、為何存在、與哪些範疇/檔案互動>
+    <2-5 行：做什麼、為何存在、與哪些範疇互動>
 
 Key Components:
     - ClassA: <用途>
@@ -416,116 +418,33 @@ Key Components:
 Created: YYYY-MM-DD (Sprint XX.Y)
 Last Modified: YYYY-MM-DD
 
-Modification History:
-    - YYYY-MM-DD: Initial creation (Sprint XX.Y) - <one-line reason>
+Modification History (newest-first):
+    - YYYY-MM-DD: Initial creation (Sprint XX.Y) - <reason>
 
 Related:
-    - 範疇規格: agent-harness-planning/01-eleven-categories-spec.md §<section>
-    - Cross-category contract: 17-cross-category-interfaces.md Contract <N>
-    - Sprint plan: phase-XX-*/sprint-XX-Y-plan.md
+    - 01-eleven-categories-spec.md §<section>
+    - 17-cross-category-interfaces.md Contract <N>
 """
 ```
 
-#### TypeScript / React（`.ts` / `.tsx`）
-```typescript
-/**
- * File: <relative path from project root>
- * Purpose: <一句話說明>
- * Category: <範疇 9 UI/UX, 對應 16-frontend-design.md 第 N 頁>
- * Scope: <Sprint XX.Y / Phase ZZ>
- *
- * Description:
- *   <2-5 行描述>
- *
- * Key Components:
- *   - <ComponentA>: <用途>
- *   - <useHookB>: <用途>
- *
- * Created: YYYY-MM-DD (Sprint XX.Y)
- * Last Modified: YYYY-MM-DD
- *
- * Modification History:
- *   - YYYY-MM-DD: Initial creation (Sprint XX.Y) - <reason>
- *
- * Related:
- *   - <相關文件路徑>
- */
-```
+> TypeScript / Markdown 範本見獨立 rule 檔。
 
-#### Markdown 設計文件（`.md`）— 簡化版
-```markdown
-# <Title>
-
-**Purpose**: <一句話>
-**Category / Scope**: <範疇 / Sprint>
-**Created**: YYYY-MM-DD
-**Last Modified**: YYYY-MM-DD
-**Status**: Draft / Active / Deprecated
-
-> **Modification History**
-> - YYYY-MM-DD: Initial creation
-```
-
-### 2. Section Header（檔案內重要功能區塊）
-
-每個重要 class / 大型 function / 邏輯區塊在開頭加**短註解**說明 **WHY**（不是 WHAT）：
-
-```python
-# === LoopExecutor: TAO/ReAct main loop ===
-# Why: V1 採線性 Pipeline 導致 agent 無法多輪迭代（範疇 1 對齊度 18%）。
-# V2 改 TAO loop 直到 stop_reason=end_turn 或 max_turns。
-# Alternative considered: LangGraph state machine — 排除因為加層不解決核心 loop 問題。
-# Reference: agent-harness-planning/01-eleven-categories-spec.md §範疇1
-class LoopExecutor:
-    ...
-```
-
-> 規則：**只在區塊開頭一次**，不在每行重複。每行 `# this calls X` 是噪音，刪掉。
-
-### 3. Modification Convention（修改現有檔案）
-
-#### 三層級對應（依改動性質）
+### 三層級修改對應
 
 | 改動類型 | 範例 | 文件處理 |
 |---------|------|---------|
 | **Trivial** | typo / format / rename 變數 | git log 即可，**不更新** Modification History |
-| **Behavioral** | 修 bug / 新功能 / 重構邏輯 | ✅ 更新 `Last Modified` + 加一行 Modification History + 在 `claudedocs/4-changes/` 建 FIX/CHANGE/REFACTOR |
-| **Structural** | 拆檔 / 範疇遷移 / 介面變更 | ✅ 上述全做 + 更新 Sprint progress doc + 視情況更新 `17-cross-category-interfaces.md` |
+| **Behavioral** | 修 bug / 新功能 / 重構邏輯 | ✅ 更新 Last Modified + 加 Modification History + 建 `claudedocs/4-changes/FIX-XXX` |
+| **Structural** | 拆檔 / 範疇遷移 / 介面變更 | ✅ 上述全做 + 更新 Sprint progress + 視情況更新 17.md |
 
-#### Modification History 格式
+### 核心禁止
 
-加在檔案 header，**最新在最上**（newest-first）：
+- ❌ 行內歷史註解（git blame 已有）
+- ❌ 保留 dead code 註解（直接刪）
+- ❌ Commit message 寫「update / fix / changes」（必須具體 type + scope + why）
+- ❌ 行為變更跳過 `claudedocs/4-changes/`
 
-```python
-Modification History:
-    - 2026-05-15: Add streaming support (Sprint 50.2) - Contract 15 alignment
-    - 2026-05-03: Refactor LoopState into transient/durable (Sprint 50.1)
-    - 2026-04-28: Initial creation (Sprint 49.1)
-```
-
-#### 禁止事項
-
-- ❌ **行內塞歷史**：`x = compute()  # 2026-05-01 changed from old_compute()` — git blame 已記錄，刪掉
-- ❌ **保留 dead code 註解**：`# old version: ...` — 直接刪，git 有歷史
-- ❌ **commit message 寫「update」「fix」**：必須具體（feat/fix/refactor + scope + why）
-- ❌ **跳過 claudedocs/4-changes/**：行為變更必須留 FIX/CHANGE/REFACTOR 文件
-
-### 4. 為何要這樣做（Why this rule exists）
-
-| 痛點 | 解法 |
-|------|------|
-| AI 助手接手不知檔案目的 → 重複探查浪費 token | File header 一秒鎖定範疇與用途 |
-| Phase 35-38 散落跨範疇難追溯 | Category 標籤強制歸屬 |
-| V1 「Potemkin Feature」結構在但無內容 | Description + Key Components 強制說明真實用途 |
-| git blame 解決不了「為何這樣設計」 | Section header 的 Why + Alternative considered |
-| 修改累積無歷史 → 三個月後沒人知道為什麼 | Modification History 記錄行為變更（trivial 不記） |
-
-### 5. 例外
-
-- **生成檔案**（migrations / proto / openapi schema）：可省略 header，由工具產生
-- **第三方 vendor 檔**：不動其 header
-- **`__init__.py` 空檔**：可省略
-- **測試檔**：可用簡化版（Purpose + Created + Modification History 即可）
+> 例外（生成檔 / vendor / 空 `__init__.py` / 測試檔簡化）與完整禁止項見 [`file-header-convention.md`](.claude/rules/file-header-convention.md)。
 
 ---
 
