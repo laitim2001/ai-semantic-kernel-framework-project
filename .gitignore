@@ -133,3 +133,44 @@ backend/fantasy_story.txt
 # Backend data directory (runtime data)
 backend/data/
 backend/.venv-rc4/
+
+# ============================================================================
+# Debug artifacts at repo root (Phase 35-48 accumulated; never commit)
+# ============================================================================
+# Restricted to root with leading slash so nested docs/, claudedocs/, frontend/
+# etc. are unaffected. Real assets belong under those folders, never at root.
+
+# Screenshots & images at root
+/*.png
+/*.jpg
+/*.jpeg
+
+# Snapshot / debug markdown at root
+/*-snap.md
+/*-snapshot.md
+/snapshot-*.md
+/chat-area-snapshot.md
+/completed-snapshot.md
+/orch-*.md
+/orchestrator-deep.md
+/orchestrator-ready.md
+/experts-*.md
+/team-mode-*.md
+/scrolled-*.md
+/t3-*.md
+
+# Console & inventory dumps at root
+/console-*.txt
+/backend_inventory_*.txt
+/*-this-session-is-being-continued-*.txt
+
+# One-off scripts at root
+/extract_chunk_*.py
+/graphify_chunk_*.py
+
+# ============================================================================
+# Graphify derived files (keep main outputs, ignore intermediates)
+# ============================================================================
+graphify-out/.query_*
+graphify-out/_subagent_prompt.md
+graphify-out/converted/
