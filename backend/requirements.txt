@@ -26,6 +26,14 @@ alembic>=1.13,<2.0
 redis>=5.0,<6.0
 celery>=5.4,<6.0
 
-# ---- Observability (Sprint 49.4 wires this up) -----------------------
+# ---- Observability (Sprint 49.4 wires up the 11+1 categories) --------
+# OTLP exporters preferred over deprecated jaeger-exporter; modern Jaeger
+# 1.55+ accepts OTLP/gRPC natively on port 4317.
 opentelemetry-api>=1.27,<2.0
 opentelemetry-sdk>=1.27,<2.0
+opentelemetry-exporter-otlp>=1.27,<2.0
+opentelemetry-exporter-prometheus>=0.48b0,<1.0
+opentelemetry-instrumentation-fastapi>=0.48b0,<1.0
+opentelemetry-instrumentation-sqlalchemy>=0.48b0,<1.0
+opentelemetry-instrumentation-redis>=0.48b0,<1.0
+python-json-logger>=2.0,<4.0

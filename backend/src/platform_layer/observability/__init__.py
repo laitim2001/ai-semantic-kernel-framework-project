@@ -1,5 +1,25 @@
-"""platform.observability — OTel + Jaeger + Prometheus integration.
+"""platform_layer.observability — process-wide OTel SDK init + JSON logger.
 
-Implements `agent_harness.observability.Tracer` ABC at platform level.
-Phase 49.4 wires OTel SDK; Phase 50+ each category instruments.
+Single-source map:
+- setup_opentelemetry / shutdown_opentelemetry: setup.py
+- get_json_logger / configure_json_logging: logger.py
+- PIIRedactor: logger.py
 """
+
+from platform_layer.observability.logger import (
+    PIIRedactor,
+    configure_json_logging,
+    get_json_logger,
+)
+from platform_layer.observability.setup import (
+    setup_opentelemetry,
+    shutdown_opentelemetry,
+)
+
+__all__ = [
+    "PIIRedactor",
+    "configure_json_logging",
+    "get_json_logger",
+    "setup_opentelemetry",
+    "shutdown_opentelemetry",
+]
