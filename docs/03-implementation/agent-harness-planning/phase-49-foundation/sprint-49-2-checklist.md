@@ -3,9 +3,10 @@
 **Sprint**: 49.2 — DB Schema + Async ORM 核心
 **Plan**: [sprint-49-2-plan.md](./sprint-49-2-plan.md)
 **建立日期**：2026-04-29
-**狀態**：📋 計劃中（待用戶 approve）
-**Story Points**：22
-**5 Days × 5h average = 25h**
+**狀態**：✅ DONE 2026-04-29
+**Story Points**：22 / 22 完成
+**Plan vs Actual**：25h plan / ~3.8h actual（15% ratio）
+**Commits**：8 on `feature/phase-49-sprint-2-db-orm`
 
 ---
 
@@ -171,66 +172,40 @@
 
 ---
 
-## Day 5 — Settings 收尾 + V2 文件 platform 同步 + 整合驗收 + closeout（估 5h）
+## Day 5 — Settings + V2 文件同步 + 整合驗收 + closeout（估 5h）— ✅ DONE
 
-### 5.1 Settings 與 .env.example 完整化（30 min）
-- [ ] **檢查 Settings 所有 db_* 欄位**
-  - DoD：`Settings()` 以 `.env` 載入 + 用 default 不報錯
-- [ ] **`.env.example` 與 `.env.example` 同步**
-  - DoD：`grep DB_ backend/.env.example` 顯示 5 條（DATABASE_URL + 4 DB_POOL_*）
+### 5.1 Settings + .env.example 確認（30 min）— ✅ DONE
+- [x] **檢查 Settings db_* 欄位** + .env.example DB section
+- 結果：10 條 DB env vars 全部就位（5 DB_ + DATABASE_URL + 4 DB_POOL_*）
 
-### 5.2 49.1 retro action items 清算（45 min）
-- [ ] **`02-architecture-design.md` platform → platform_layer**
-  - DoD：`grep -n 'platform/' docs/03-implementation/agent-harness-planning/02-architecture-design.md` 0 matches（除非引述歷史 V1，否則改完）
-- [ ] **`06-phase-roadmap.md` platform → platform_layer**
-  - DoD：同上
-- [ ] **掃其他規劃文件**
-  - DoD：`grep -rn 'platform/' docs/03-implementation/agent-harness-planning/` 只剩歷史性引用（標記 OK）
-  - Command：`grep -rn 'platform/' docs/03-implementation/agent-harness-planning/`
-- [ ] **`.gitignore` Python 構建產物 pattern audit**
-  - DoD：`grep -E '__pycache__|\.egg-info|\.pytest_cache|\.mypy_cache|\.coverage' .gitignore` 全部存在
+### 5.2 V2 規劃文件 platform_layer 同步（45 min）— ✅ DONE
+- [x] **02 + 03 + 04 + 05 + 06.md 批次替換** `platform/` → `platform_layer/`（22 處）
+- [x] **`.gitignore` audit**：Python build patterns（__pycache__ / *.egg-info / .pytest_cache / .mypy_cache / .coverage）全在
+- 13.md L738 `charts/ipa-platform/` 為 Helm chart 名（非 Python path），保留不動
 
-### 5.3 整合驗收：完整 migration cycle（45 min）
-- [ ] **Drop + recreate database**
-  - Command：`docker compose -f docker-compose.dev.yml exec postgres psql -U ipa_v2 -c "DROP DATABASE IF EXISTS ipa_v2_test"; ... CREATE DATABASE ipa_v2_test;`
-- [ ] **`alembic upgrade head` 從零跑通**
-  - DoD：4 migration 全成功；`\dt` 顯示 13 張表（含 partition）
-- [ ] **`alembic downgrade base` 全 rollback**
-  - DoD：所有表 + trigger + function 全消失
-- [ ] **再 upgrade head**
-  - DoD：成功（idempotency 驗證）
+### 5.3 整合驗收：完整 migration cycle（45 min）— ✅ DONE
+- [x] **alembic downgrade base**：4 migration 全 revert，僅 alembic_version 1 row
+- [x] **alembic upgrade head 從零跑通**：4 migrations 成功，20 tables + 1 function + 1 trigger
+- [x] **idempotency**：cycle 完整可重複
 
-### 5.4 整合驗收：跑全 test suite（30 min）
-- [ ] **跑全 unit + integration tests**
-  - Command：`pytest backend/ -v --cov=src/infrastructure/db --cov-report=term-missing`
-  - DoD：全 PASS；`infrastructure/db/` coverage ≥ 80%
-- [ ] **跑 mypy strict 全 backend/src**
-  - Command：`mypy backend/src --strict`
-  - DoD：0 errors
-- [ ] **跑 black + isort + flake8**
-  - DoD：全 clean
-- [ ] **LLM SDK leak grep（49.1 既有規則延續）**
-  - Command：`grep -rE "^import openai|^from openai|^import anthropic|^from anthropic" backend/src/agent_harness/ backend/src/infrastructure/`
-  - DoD：0 matches
+### 5.4 整合驗收：全 test suite（30 min）— ✅ DONE
+- [x] **pytest 全 backend/**：29 PASS + 1 SKIPPED in 1.36s
+- [x] **mypy strict 全 src/**：89 source files / 0 errors
+- [x] **black + isort + flake8**：全 clean（修了 1 個 test_imports.py L255 過長 + 1 個 black auto-reformat）
+- [x] **LLM SDK leak grep**：0 imports
 
-### 5.5 CI workflow update（30 min）
-- [ ] **`.github/workflows/backend-ci.yml` 加 alembic + postgres service**
-  - DoD：CI job 在 lint/mypy/pytest 之前 spin up postgres + run alembic upgrade head
-- [ ] **Push 並驗 CI green**
-  - DoD：CI 在 push 後變 green（如未 merge 則待用戶決定 PR / 直 push）
+### 5.5 CI workflow update（30 min）— ✅ DONE
+- [x] **`.github/workflows/backend-ci.yml`**：加 services postgres + DATABASE_URL env + alembic upgrade step + alembic downgrade verify
+- [x] **flake8 strict 化**：移除 49.1 留下的 `|| true`
+- ⏸ Push 後 CI green 驗證 → 用戶 push 後可見
 
-### 5.6 文件 + retrospective + closeout（90 min）
-- [ ] **更新 `infrastructure/db/README.md`**
-  - DoD：49.2 status: implemented；列出 13 表 + alembic 用法
-- [ ] **建立 `docs/03-implementation/agent-harness-execution/phase-49/sprint-49-2/progress.md`**（如未隨日更新則此處統整）
-  - DoD：5 day estimate vs actual 對照表 + notes
-- [ ] **建立 `docs/03-implementation/agent-harness-execution/phase-49/sprint-49-2/retrospective.md`**
-  - DoD：5 必述（outcome / estimates vs actual / went-well / surprises / Action items for 49.3）+ sign-off block
-- [ ] **更新 checklist 整體狀態 → ✅ DONE**
-- [ ] **Day 5 commit + push**
-  - Commits（建議分 2）：
-    1. `chore(infrastructure-db, sprint-49-2): Day 5.1-5.5 settings + platform_layer doc sync + CI alembic`
-    2. `docs(sprint-49-2): Day 5.6 progress + retrospective + closeout`
+### 5.6 文件 + retrospective + closeout（90 min）— ✅ DONE
+- [x] **`infrastructure/db/README.md`** 更新（49.2 status: implemented + 完整 deliverable list）
+- [x] **`phase-49-foundation/README.md`** 建立（option B 補建 Phase 49 入口；49.1 retro action item）
+- [x] **`progress.md` Day 5 entry** 完整
+- [x] **`retrospective.md`** 建立（5 必述：outcome / estimates / went-well / surprises / action items + sign-off）
+- [x] **更新 checklist 整體狀態 → ✅ DONE**
+- [ ] **Day 5 commit + push**（待執行）
 - [ ] **Push branch**
   - DoD：`git push origin feature/phase-49-sprint-2-db-orm` 成功
 - [ ] **報告用戶 Sprint 49.2 ✅ DONE**

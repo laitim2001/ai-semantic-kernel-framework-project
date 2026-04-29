@@ -99,7 +99,7 @@ Guardrails 散落 6 處：`core/security/`、`orchestration/hitl/`、`orchestrat
 **範疇單一歸屬原則**：
 ```
 範疇 X 的所有代碼 → backend/src/agent_harness/0X_xxx/
-平台級服務 → backend/src/platform/{governance, observability, ...}
+平台級服務 → backend/src/platform_layer/{governance, observability, ...}
 ```
 
 新增代碼時 PR 模板要求：
@@ -110,7 +110,7 @@ Guardrails 散落 6 處：`core/security/`、`orchestration/hitl/`、`orchestrat
 - [ ] 2. Tool Layer
 - [ ] 3. Memory
 ... (11 選 1)
-- [ ] 跨範疇基礎設施（platform/）
+- [ ] 跨範疇基礎設施（platform_layer/）
 - [ ] 業務領域（business_domain/）
 - [ ] 適配層（adapters/）
 - [ ] 基礎設施（infrastructure/）

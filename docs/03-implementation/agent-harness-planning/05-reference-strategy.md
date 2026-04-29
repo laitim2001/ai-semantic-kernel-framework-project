@@ -137,14 +137,14 @@ archived/v1-phase1-48/
 
 | V1 模組 | 邏輯價值 | 遷移到 V2 |
 |---------|---------|----------|
-| `risk_assessor/assessor.py` (639 LOC) | 風險評估規則設計 | `platform/governance/risk/policies/`（提取規則 YAML） |
-| `hitl/controller.py` (788 LOC) | Teams 通知整合 | `platform/governance/hitl/teams_notifier.py`（重寫） |
-| `audit/logger.py` | Audit log 格式 | `platform/governance/audit/`（借鑒欄位） |
+| `risk_assessor/assessor.py` (639 LOC) | 風險評估規則設計 | `platform_layer/governance/risk/policies/`（提取規則 YAML） |
+| `hitl/controller.py` (788 LOC) | Teams 通知整合 | `platform_layer/governance/hitl/teams_notifier.py`（重寫） |
+| `audit/logger.py` | Audit log 格式 | `platform_layer/governance/audit/`（借鑒欄位） |
 | `intent_router/llm_classifier/prompts.py` | LLM 分類 prompts | `agent_harness/05_prompt_builder/templates/` |
 | `dispatch/executors/team_agent_adapter.py` | MAF GroupChat 整合 | `adapters/maf/group_chat.py`（直接遷移） |
 | `mcp/servers/*` | 企業 MCP 整合 | `adapters/mcp/`（直接遷移） |
 | `agent_framework/builders/` | MAF Builder 包裝 | `adapters/maf/`（重新整理） |
-| `core/security/*` | 加密 / 認證工具 | `core/crypto/` + `platform/identity/`（提取） |
+| `core/security/*` | 加密 / 認證工具 | `core/crypto/` + `platform_layer/identity/`（提取） |
 | `core/sandbox/*` | Sandbox 抽象 | `agent_harness/02_tools/sandbox.py`（提取） |
 
 ### 使用時機

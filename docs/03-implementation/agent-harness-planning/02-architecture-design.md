@@ -7,7 +7,7 @@
 
 ## 整體架構（5 層 + 跨切面）
 
-> **設計校正（2026-04-23）**：原 4 層設計缺 `business_domain/` 歸屬、`platform/` 過於肥大。修訂為 5 層 + 跨切面。
+> **設計校正（2026-04-23）**：原 4 層設計缺 `business_domain/` 歸屬、`platform_layer/` 過於肥大。修訂為 5 層 + 跨切面。
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -66,9 +66,9 @@
 | **cross-cutting** | governance / identity / observability | 被任意層使用 |
 | **infrastructure** | DB / Cache / MQ / Storage | 不依賴上層 |
 
-### 原 platform/ 拆解說明（重要校正）
+### 原 platform_layer/ 拆解說明（重要校正）
 
-> **校正**：原 `platform/` 集合 5 個性質完全不同的子系統會變「上帝層」。已拆為獨立目錄：
+> **校正**：原 `platform_layer/` 集合 5 個性質完全不同的子系統會變「上帝層」。已拆為獨立目錄：
 
 ```
 backend/src/
@@ -124,7 +124,7 @@ backend/src/
 │   │   │   ├── exec_tools.py      #     sql_query / python_sandbox
 │   │   │   ├── hitl_tools.py      #     request_approval
 │   │   │   └── subagent_tools.py  #     task_spawn / handoff
-│   │   ├── enterprise/            #   企業工具（接 platform/business）
+│   │   ├── enterprise/            #   企業工具（接 platform_layer/business）
 │   │   │   ├── d365_tools.py
 │   │   │   ├── erp_tools.py
 │   │   │   ├── servicenow_tools.py
@@ -216,7 +216,7 @@ backend/src/
 │       ├── mailbox.py             #   Teammate 通信
 │       └── tests/
 │
-├── platform/                      # ─── Layer 2: 平台服務 ───
+├── platform_layer/                      # ─── Layer 2: 平台服務 ───
 │   ├── governance/                # 治理層（與 9 號範疇配合）
 │   │   ├── hitl/                  #   Human-in-the-loop
 │   │   │   ├── controller.py
@@ -408,7 +408,7 @@ frontend/src/
 ```
 api/        ──→ agent_harness/  ──→ adapters/  ──→ infrastructure/
                        ↓                              ↑
-                  platform/   ──────────────────────┘
+                  platform_layer/   ──────────────────────┘
 
   (向下依賴，不可反向)
 ```

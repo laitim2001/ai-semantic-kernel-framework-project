@@ -252,7 +252,7 @@ def test_chat_client_abc_importable() -> None:
 
 @pytest.mark.unit
 def test_no_llm_sdk_imports_in_agent_harness() -> None:
-    """LLM-provider-neutrality: agent_harness/** must not import openai/anthropic/agent_framework."""
+    """LLM-provider-neutrality: agent_harness must not import openai/anthropic SDKs."""
     import re
     from pathlib import Path
 
@@ -260,9 +260,7 @@ def test_no_llm_sdk_imports_in_agent_harness() -> None:
     agent_harness_dir = repo_root / "src" / "agent_harness"
     assert agent_harness_dir.exists()
 
-    forbidden = re.compile(
-        r"^(from |import )(openai|anthropic|agent_framework)\b", re.MULTILINE
-    )
+    forbidden = re.compile(r"^(from |import )(openai|anthropic|agent_framework)\b", re.MULTILINE)
     leaks = []
     for py_file in agent_harness_dir.rglob("*.py"):
         text = py_file.read_text(encoding="utf-8")

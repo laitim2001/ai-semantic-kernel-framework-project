@@ -177,4 +177,47 @@ b414e7c docs(sprint-49-2): plan + checklist for Phase 49 Sprint 2
 
 ---
 
-## Day 5 — TBD (Settings + 文件 platform_layer 同步 + 整合驗收 + closeout)
+## Day 5 — Settings + platform_layer 文件同步 + 整合驗收 + closeout (2026-04-29)
+
+**Plan estimate**: 5h
+**Actual**: ~60 min
+**Commits planned**: 1-2 (closeout)
+
+### Tasks completed
+
+| Task | Status | Notes |
+|------|--------|-------|
+| 5.1 Settings + .env.example 確認 | ✅ | All 10 DB env vars verified (5 DB_ + DATABASE_URL + 4 DB_POOL_*) |
+| 5.2 V2 規劃文件 platform/ → platform_layer/ | ✅ | 22 replacements across 02/03/04/05/06.md (Python regex with negative lookbehind) |
+| 5.3 完整 migration cycle | ✅ | downgrade base → 1 row → upgrade head → 20 tables (5 identity + 1 sessions + 4 messages + 4 message_events + 3 tools + 2 state + alembic_version) |
+| 5.4 全 test suite + lint + LLM leak | ✅ | 29 PASS + 1 SKIPPED / mypy 89 files / black + isort / flake8 (1 fix applied) / 0 SDK leak |
+| 5.5 CI workflow update | ✅ | services postgres + DATABASE_URL env + alembic upgrade step + alembic downgrade verify + flake8 strict |
+| 5.6 Closeout (README + retro + Phase 49 README + commits) | ✅ | infrastructure/db/README updated; phase-49 README created (option B); retrospective.md 5 必述完整 |
+
+### Quality gates final state
+
+- ✅ alembic 0001 → 0002 → 0003 → 0004 cycle (proven from absolute zero)
+- ✅ 20 PostgreSQL tables + 1 function + 1 trigger
+- ✅ pytest 29/30 PASS (1 skipped TRUNCATE deferred)
+- ✅ Coverage 92% on non-migration infrastructure/db code
+- ✅ mypy strict 89 source files / 0 errors
+- ✅ black + isort + flake8 全 clean (strict CI)
+- ✅ LLM SDK leak grep 0 imports
+- ✅ CI workflow validated via postgres service
+
+### Day 5 changes
+
+- `backend/src/infrastructure/db/README.md` — 49.2 status: implemented + full deliverable list
+- `docs/03-implementation/agent-harness-planning/phase-49-foundation/README.md` — Phase 49 entry doc (option B per plan)
+- `docs/03-implementation/agent-harness-execution/phase-49/sprint-49-2/retrospective.md` — 5 必述完整
+- 5 V2 planning docs (02/03/04/05/06.md) — 22 platform/ → platform_layer/ replacements
+- `.github/workflows/backend-ci.yml` — postgres service + alembic step + flake8 strict
+- `backend/tests/unit/test_imports.py` L255 — docstring shortened to fit max-line=100
+
+### Final acceptance criteria status
+
+- ✅ AC-1: alembic 4 migrations cycle clean (proven from zero)
+- ✅ AC-2: 13 ORM models / 12 CRUD-style tests
+- ✅ AC-3: StateVersion 雙因子 race (5x parametrize, no flake)
+- ✅ AC-4: state_snapshots append-only trigger
+- ✅ AC-5: messages + message_events partition routing

@@ -13,9 +13,35 @@ on:
 
 jobs:
   lint-and-test:
-    name: Lint + Type Check + Test
+    name: Lint + Type Check + Test (with PostgreSQL 16)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    # Sprint 49.2: spin up real PostgreSQL 16 (matches docker-compose.dev.yml)
+    # so alembic migrations + pytest run against a real DB (NOT SQLite).
+    # Per .claude/rules/testing.md AP-10 對策.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ipa_v2
+          POSTGRES_PASSWORD: ipa_v2_dev
+          POSTGRES_DB: ipa_v2
+        options: >-
+          --health-cmd "pg_isready -U ipa_v2"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      # Match docker-compose.dev.yml + backend/.env.example
+      DATABASE_URL: postgresql+asyncpg://ipa_v2:ipa_v2_dev@localhost:5432/ipa_v2
+      DB_POOL_SIZE: "5"
+      DB_POOL_MAX_OVERFLOW: "5"
+      DB_POOL_RECYCLE_SEC: "300"
+      DB_ECHO: "false"
 
     steps:
       - name: Checkout
@@ -37,34 +63,48 @@ jobs:
 
       - name: Black (code formatting)
         working-directory: backend
-        run: black --check src/
+        run: black --check src/ tests/
 
       - name: isort (import ordering)
         working-directory: backend
-        run: isort --check-only --profile black src/
+        run: isort --check-only --profile black src/ tests/
 
       - name: flake8 (style)
         working-directory: backend
-        run: flake8 src/ --max-line-length=100 --extend-ignore=E203,W503 || true
-        # Note: flake8 errors are non-blocking until Sprint 49.4 establishes
-        # the full lint baseline. Then change `|| true` → strict.
+        # Sprint 49.2: strict mode (was `|| true` in 49.1).
+        # Config in backend/.flake8 (max-line-length=100, ignores E203/W503).
+        run: flake8 src/ tests/
 
       - name: mypy (strict type check)
         working-directory: backend
         run: mypy src/ --strict
         continue-on-error: false
 
-      - name: pytest (unit tests)
+      - name: Alembic upgrade head
         working-directory: backend
-        run: pytest -v
+        # Sprint 49.2: full migration cycle from zero against the real PG service.
+        run: |
+          alembic upgrade head
+          alembic current
+
+      - name: pytest (unit + integration with real PostgreSQL)
+        working-directory: backend
+        run: pytest -v --tb=short
         continue-on-error: false
-        # Sprint 49.1 has no business tests yet; pytest passes vacuously.
+
+      - name: Alembic downgrade base (rollback verification)
+        working-directory: backend
+        # Verify all migrations have working downgrade()
+        run: |
+          alembic downgrade base
+          alembic current
+        if: always()
 
       - name: LLM SDK leak check (LLM-provider-neutrality)
         working-directory: backend
         run: |
-          if grep -rE "^(from |import )(openai|anthropic|agent_framework)" src/agent_harness/; then
-            echo "ERROR: agent_harness/ must not import LLM SDKs directly"
+          if grep -rE "^(from |import )(openai|anthropic|agent_framework)" src/agent_harness/ src/infrastructure/; then
+            echo "ERROR: agent_harness/ + infrastructure/ must not import LLM SDKs directly"
             exit 1
           fi
-          echo "OK: no LLM SDK imports in agent_harness/"
+          echo "OK: no LLM SDK imports in agent_harness/ + infrastructure/"

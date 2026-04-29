@@ -174,7 +174,7 @@
 
 **Deliverables**：
 - [ ] `api/v1/chat/` 端點（POST /chat with SSE）
-- [ ] `platform/workers/agent_loop_worker.py` 整合 loop
+- [ ] `platform_layer/workers/agent_loop_worker.py` 整合 loop
 - [ ] Frontend `pages/chat-v2/` 基本介面
 - [ ] Frontend 顯示 loop events（thinking / tool_call / tool_result / final）
 - [ ] 第一個演示案例：「問 Echo 工具的 X，回答 X」
