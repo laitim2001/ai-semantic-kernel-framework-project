@@ -24,15 +24,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.db.models import (
-    Message,
-    MessageEvent,
-    Session,
-    Tenant,
-    ToolCall,
-    ToolRegistry,
-    ToolResult,
-)
+from infrastructure.db.models import (Message, MessageEvent, Session, Tenant,
+                                      ToolCall, ToolRegistry, ToolResult)
 from tests.conftest import seed_tenant, seed_user
 
 

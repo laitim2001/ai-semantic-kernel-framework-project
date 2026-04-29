@@ -118,7 +118,9 @@ async def test_api_key_expire_lookup(db_session: AsyncSession) -> None:
     now = datetime.now(timezone.utc)
     result = await db_session.execute(
         select(ApiKey).where(
-            (ApiKey.tenant_id == t.id) & (ApiKey.status == "active") & (ApiKey.expires_at > now)
+            (ApiKey.tenant_id == t.id)
+            & (ApiKey.status == "active")
+            & (ApiKey.expires_at > now)
         )
     )
     assert result.scalar_one_or_none() is None  # expired → effective denied

@@ -50,7 +50,9 @@ async def test_message_routes_to_correct_partition(
     db_session.add(s)
     await db_session.flush()
 
-    explicit_dt = datetime.fromisoformat(created_at_str.replace(" ", "T").replace("+00", "+00:00"))
+    explicit_dt = datetime.fromisoformat(
+        created_at_str.replace(" ", "T").replace("+00", "+00:00")
+    )
     assert explicit_dt.tzinfo == timezone.utc
 
     m = Message(

@@ -25,11 +25,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.db import (
-    dispose_engine,
-    get_engine,
-    get_session_factory,
-)
+from infrastructure.db import dispose_engine, get_engine, get_session_factory
 
 
 @pytest.mark.asyncio

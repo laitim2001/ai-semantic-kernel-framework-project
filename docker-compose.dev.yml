@@ -18,12 +18,22 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # Sprint 49.4 Day 4 — switched from postgres:16-alpine to custom image
+    # with pg_partman 5.x preinstalled (alpine lacks postgresql-16-partman).
+    # Carry-forward 49.3 retrospective item #1 RESOLVED.
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.postgres
+    image: ipa-v2-postgres:16
     container_name: ipa_v2_postgres
     environment:
       POSTGRES_DB: ipa_v2
       POSTGRES_USER: ipa_v2
       POSTGRES_PASSWORD: ipa_v2_dev
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=pg_partman_bgw"
     ports:
       - "5432:5432"
     volumes:

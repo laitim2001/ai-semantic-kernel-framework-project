@@ -1,0 +1,29 @@
+# Custom postgres:16 image with pg_partman extension installed.
+#
+# Sprint 49.4 Day 4 — clears 49.3 carryover (#1) where postgres:16-alpine
+# lacks postgresql-16-partman package.
+#
+# Image size note: ~+200MB vs alpine. Acceptable: dev one-time build,
+# CI cache layer makes subsequent jobs fast.
+#
+# Build:
+#   docker build -f docker/Dockerfile.postgres -t ipa-v2-postgres:16 .
+#
+# Used by docker-compose.dev.yml (build context = repo root).
+
+FROM postgres:16
+
+# pg_partman ships in postgresql-16-partman on debian/bookworm. Also
+# install postgresql-contrib for completeness (pg_trgm etc. used by Cat 3).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        postgresql-16-partman \
+        postgresql-contrib \
+    && rm -rf /var/lib/apt/lists/*
+
+# pg_partman uses a background worker — must be in shared_preload_libraries.
+# We append to the default config via init script so existing init still runs.
+COPY docker/postgres-init/ /docker-entrypoint-initdb.d/
+
+# Run-time: append shared_preload_libraries entry. postgres:16 image lets
+# us pass extra args via command; docker-compose sets these.

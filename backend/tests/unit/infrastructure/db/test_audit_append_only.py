@@ -32,11 +32,8 @@ from sqlalchemy import delete, text, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.db.audit_helper import (
-    SENTINEL_HASH,
-    append_audit,
-    compute_audit_hash,
-)
+from infrastructure.db.audit_helper import (SENTINEL_HASH, append_audit,
+                                            compute_audit_hash)
 from infrastructure.db.models import AuditLog, Session, append_snapshot
 from tests.conftest import seed_tenant, seed_user
 
