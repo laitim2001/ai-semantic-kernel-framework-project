@@ -58,35 +58,49 @@
 ## Day 2 — api_keys + rate_limits + 5 memory tables（估 6h）
 
 ### 2.1 api_keys + rate_limits 設計 + ORM（30 min）
-- [ ] **api_keys 欄位**：id / tenant_id / key_hash CHAR(64) / last_4 CHAR(4) / name VARCHAR / scopes JSONB / expires_at / revoked_at / created_by_user_id / created_at
-- [ ] **rate_limits 欄位**：id / tenant_id / api_key_id / window_start / window_end / request_count / created_at
-  - DoD：兩 ORM 都用 TenantScopedMixin
-  - Output：`backend/src/infrastructure/db/models/identity.py` 新增 ApiKey + RateLimit class
+- [x] **api_keys 欄位（對齐 09.md L869-896）**：id / tenant_id / name(128) / key_prefix(16) / key_hash(128 bcrypt) / permissions JSONB / rate_limit_tier / status / expires_at / last_used_at / created_by FK users / created_at / revoked_at
+- [x] **rate_limits 欄位（對齐 09.md L902-919）**：id / tenant_id / resource_type / window_type / quota / used / window_start / window_end + UNIQUE(tenant, resource, window_type, window_start)
+  - **Scope 修正**：plan 寫的 `last_4` / `scopes` / `api_key_id` 已對齐 09.md 改為 `key_prefix` / `permissions` / 無 api_key_id（rate_limits 是 per-tenant per-resource per-window，與 api_key 無 FK）
+  - **檔案位置改動**：plan 寫「擴充 identity.py」，實作為新檔 `models/api_keys.py`（職責分明：API auth+quota vs identity/RBAC；精神對齐 ✅）
+  - DoD：兩 ORM 都用 TenantScopedMixin ✅
 
 ### 2.2 0006 migration（45 min）
-- [ ] **寫 `0006_api_keys_rate_limits` migration**（含 unique key_hash index + composite index on rate_limits）
-  - DoD：alembic upgrade + downgrade 對稱
+- [x] **寫 `0006_api_keys_rate_limits` migration**（含 ix_api_keys_tenant_id + idx_api_keys_active partial WHERE status='active' + idx_api_keys_prefix + ix_rate_limits_tenant_id + idx_rate_limits_lookup DESC + UNIQUE constraint）
+  - DoD：alembic upgrade + downgrade 對稱 ✅
 
 ### 2.3 5 memory tables 設計 + ORM（60 min）
-- [ ] **memory_system**（全局；無 tenant_id；id / category / content / created_at）
-- [ ] **memory_tenant**（TenantScopedMixin；category / content / expires_at NULL=permanent）
-- [ ] **memory_role**（TenantScopedMixin + role_id FK；category / content / expires_at）
-- [ ] **memory_user**（TenantScopedMixin + user_id FK；category / content / expires_at）
-- [ ] **memory_session_summary**（TenantScopedMixin + session_id FK；summary_text / token_count / created_at）
-  - DoD：5 ORM classes；4 帶 TenantScopedMixin
+- [x] **memory_system**（全局；無 tenant_id；id / key UNIQUE / category / content / metadata / version / timestamps）✅
+- [x] **memory_tenant**（TenantScopedMixin；key / category / content / vector_id / metadata + UNIQUE(tenant,key) + idx_memory_tenant_category）✅
+- [x] **memory_role**（**junction via role_id only**；無直接 tenant_id；同 user_roles 模式 — 09.md L432-447 不含 tenant_id；plan 中「TenantScopedMixin + role_id」修正為純 junction）✅
+- [x] **memory_user**（TenantScopedMixin + user_id FK；category / content / vector_id / source / source_session_id / confidence Numeric(3,2) / expires_at / metadata + 4 indexes 含 partial expires）✅
+- [x] **memory_session_summary**（**junction via session_id UNIQUE**；無直接 tenant_id；09.md L485-498 不含 tenant_id；plan 中「TenantScopedMixin」修正為純 junction）✅
+  - **Scope 修正**：plan 寫「4 個 memory 用 TenantScopedMixin」，09.md 權威：只 memory_tenant + memory_user 用（2 個）；memory_role / memory_session_summary 是 junction-style（同 user_roles / role_permissions / tool_results 49.2 模式）
+  - DoD：5 ORM classes；2 帶 TenantScopedMixin、2 junction、1 全局 ✅
   - Output：`backend/src/infrastructure/db/models/memory.py`
 
 ### 2.4 0007 migration（60 min）
-- [ ] **寫 `0007_memory_layers` migration**（5 表 + 8 indexes：每表 (tenant, user/role/session, expires_at WHERE NOT NULL)）
-  - DoD：alembic upgrade + downgrade
+- [x] **寫 `0007_memory_layers` migration**（5 表 + 11 indexes：mem_tenant 4 / mem_role 3 / mem_user 5 / mem_session_summary 2 / mem_system 2）
+  - DoD：alembic upgrade + downgrade ✅
 
 ### 2.5 結構驗證（15 min）
-- [ ] **\d+ all 7 new tables + 確認 indexes**
+- [x] **psql 驗 7 表全建 + index 數量**：api_keys 4 / rate_limits 4 / memory_system 2 / memory_tenant 4 / memory_role 3 / memory_user 5 / memory_session_summary 2 ✅
 
 ### 2.6 測試（90 min）
-- [ ] **test_api_keys_crud.py**（4 tests：create / lookup by hash / revoke / expire）
-- [ ] **test_memory_models_crud.py**（5 layer × CRUD = 5 tests + 1 cross-tenant memory_user 不可見 test = 6 tests）
-  - DoD：10 tests 全綠
+- [x] **test_api_keys_crud.py（5 tests）**：
+  - test_api_key_create_active ✅
+  - test_api_key_lookup_by_hash ✅
+  - test_api_key_revoke ✅
+  - test_api_key_expire_lookup ✅
+  - test_rate_limit_create_unique（UNIQUE 違反 IntegrityError）✅
+- [x] **test_memory_models_crud.py（6 tests）**：
+  - test_memory_system_global ✅
+  - test_memory_tenant_scoped ✅
+  - test_memory_role_via_role（修：Role 用 display_name 而非 name）✅
+  - test_memory_user_with_provenance ✅
+  - test_memory_session_summary_unique ✅
+  - test_memory_user_cross_tenant_via_filter（app-layer 過濾驗證；RLS 驗證留 Day 4）✅
+  - DoD：11 tests 全綠（plan 寫「10 tests」實作 11 個更完整）
+  - 全套回歸：43/43 PASS（49.2 26 + 49.3 17，0 SKIPPED）
 
 ### 2.7 commit Day 2（10 min）
 - [ ] **commit `feat(infrastructure-db, sprint-49-3): Day 2 api_keys + rate_limits + 5 memory layers`**

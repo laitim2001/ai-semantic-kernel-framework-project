@@ -9,6 +9,8 @@ Sprint 49.2 builds these incrementally:
 
 Sprint 49.3 adds:
     Day 1.1: audit.py        — AuditLog (append-only, hash chain)
+    Day 2.1: api_keys.py     — ApiKey / RateLimit
+    Day 2.3: memory.py       — MemorySystem / MemoryTenant / MemoryRole / MemoryUser / MemorySessionSummary
 
 Importing this package registers all ORM tables with Base.metadata, which
 the Alembic env.py uses as `target_metadata`.
@@ -18,6 +20,9 @@ inherit `TenantScopedMixin` from `infrastructure.db.base`.
 """
 
 from __future__ import annotations
+
+# Day 2.1 (Sprint 49.3) — API auth + quotas
+from infrastructure.db.models.api_keys import ApiKey, RateLimit
 
 # Day 1.1 (Sprint 49.3) — Audit
 from infrastructure.db.models.audit import AuditLog
@@ -29,6 +34,15 @@ from infrastructure.db.models.identity import (
     Tenant,
     User,
     UserRole,
+)
+
+# Day 2.3 (Sprint 49.3) — Memory layers
+from infrastructure.db.models.memory import (
+    MemoryRole,
+    MemorySessionSummary,
+    MemorySystem,
+    MemoryTenant,
+    MemoryUser,
 )
 
 # Day 2.1 — Sessions
@@ -75,4 +89,13 @@ __all__ = [
     "compute_state_hash",
     # Audit (Sprint 49.3)
     "AuditLog",
+    # API auth + quotas (Sprint 49.3)
+    "ApiKey",
+    "RateLimit",
+    # Memory layers (Sprint 49.3)
+    "MemorySystem",
+    "MemoryTenant",
+    "MemoryRole",
+    "MemoryUser",
+    "MemorySessionSummary",
 ]

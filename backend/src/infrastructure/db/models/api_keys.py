@@ -1,0 +1,187 @@
+"""
+File: backend/src/infrastructure/db/models/api_keys.py
+Purpose: ApiKey + RateLimit ORM (external API auth + quota tracking).
+Category: Infrastructure / ORM (API auth & limits)
+Scope: Sprint 49.3 (Day 2.1 - api_keys + rate_limits)
+Owner: infrastructure/db owner
+
+Description:
+    External-tenant API key management + per-tenant rate limit accounting.
+
+    Schema authority: 09-db-schema-design.md L869-919.
+
+    Why a separate module (not identity.py):
+        identity.py owns RBAC (Tenant/User/Role/junctions). API keys and
+        rate limits are a distinct concern (external system auth + quota),
+        so they live in their own file. The plan called for "extending
+        identity.py" — same intent, cleaner separation.
+
+    api_keys notes:
+        - key_hash stores bcrypt hash (VARCHAR(128)) — NOT the raw key.
+        - key_prefix is the displayable first 8 chars (e.g. "ipa_abcd...")
+          for user identification only; never enough to authenticate with.
+        - permissions JSONB lists scope strings (e.g. ["read:sessions"]).
+        - status transitions: active → revoked / active → expired.
+          revoked_at + last_used_at are advisory; status is the source of truth.
+
+    rate_limits notes:
+        - Per (tenant, resource_type, window_type, window_start) row.
+        - quota / used counter; window_end is informational (= start + window).
+        - UNIQUE constraint per the spec ensures idempotent upserts.
+        - resource_type / window_type kept as VARCHAR (not enum) for forward
+          compatibility; validation lives in service layer.
+
+Created: 2026-04-29 (Sprint 49.3 Day 2.1)
+Last Modified: 2026-04-29
+
+Modification History:
+    - 2026-04-29: Initial creation (Sprint 49.3 Day 2.1)
+
+Related:
+    - 09-db-schema-design.md L869-919 (api_keys + rate_limits)
+    - 14-security-deep-dive.md (API auth + rate limit hardening)
+    - .claude/rules/multi-tenant-data.md 鐵律 1 (TenantScopedMixin)
+    - sprint-49-3-plan.md §Story 49.3-3
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any
+from uuid import UUID as PyUUID
+
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+    text,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PgUUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from infrastructure.db.base import Base, TenantScopedMixin
+
+
+class ApiKey(Base, TenantScopedMixin):
+    """External tenant API key. Per 09-db-schema-design.md L869-896."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[PyUUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(128),
+        nullable=False,
+        doc="Human-readable purpose label.",
+    )
+    key_prefix: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        doc="Display-only first 8 chars (e.g. 'ipa_abcd'); cannot authenticate with this alone.",
+    )
+    key_hash: Mapped[str] = mapped_column(
+        String(128),
+        nullable=False,
+        doc="bcrypt hash of the full key. Never store the raw key.",
+    )
+
+    permissions: Mapped[list[Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+        doc="Scope strings, e.g. ['read:sessions','write:tools'].",
+    )
+    rate_limit_tier: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        server_default=text("'standard'"),
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        server_default=text("'active'"),
+        doc="active / revoked / expired. Source of truth for usability.",
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_by: Mapped[PyUUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=True,
+        doc="User who minted this key (null for system-created).",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # NOTE: TenantScopedMixin already adds ix_api_keys_tenant_id (the
+    # idx_api_keys_tenant in 09.md). We add the other two indexes.
+    __table_args__ = (
+        Index(
+            "idx_api_keys_active",
+            "status",
+            postgresql_where=text("status = 'active'"),
+        ),
+        Index("idx_api_keys_prefix", "key_prefix"),
+    )
+
+
+class RateLimit(Base, TenantScopedMixin):
+    """Per-tenant resource quota window. Per 09-db-schema-design.md L902-919."""
+
+    __tablename__ = "rate_limits"
+
+    id: Mapped[PyUUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+
+    resource_type: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        doc="llm_tokens / tool_calls / api_requests (validation in service layer).",
+    )
+    window_type: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        doc="minute / hour / day / month.",
+    )
+
+    quota: Mapped[int] = mapped_column(Integer, nullable=False)
+    used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    window_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "resource_type",
+            "window_type",
+            "window_start",
+            name="uq_rate_limits_tenant_window",
+        ),
+        # 09.md L918 — desc index on window_end for "latest window" lookup.
+        Index(
+            "idx_rate_limits_lookup",
+            "tenant_id",
+            "resource_type",
+            text("window_end DESC"),
+        ),
+    )
+
+
+__all__ = ["ApiKey", "RateLimit"]
