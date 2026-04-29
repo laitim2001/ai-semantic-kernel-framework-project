@@ -17,7 +17,8 @@
 | Day 2 — AgentLoop while-true main loop + 4 terminators | 6h | ~70 min | 19% | 49.1 ABC sig is `(session_id, user_input, trace_context)` — 50.1 ctor-injects ChatClient/OutputParser/ToolExecutor/system_prompt instead of `run()` params. ToolExecutor + ToolRegistry already split in 49.1. Cancellation `asyncio.current_task().cancelling()` only valid Python 3.11+ |
 | Day 3 — Events shim + InMemoryToolRegistry + AP-1 lint | 6h | ~80 min | 22% | events.py 簡化為 re-export shim（避免 redefine 違反 17.md §1）. InMemoryToolRegistry 採 _inmemory.py 命名 + DEPRECATED-IN: 51.1 marker. AP-1 lint substring 對註解中 `Message(role="tool"` 會 false-pass — test fixture 改用「intentionally absent」短語不含 marker（lint 是 over-approximation，production 不會這樣命中） |
 | Day 4 — E2E + Tracer/Metric coverage + cancellation polish | 6h | ~60 min | 17% | RecordingTracer (test-only Tracer ABC subclass) 替代 OTel global-state in-memory exporter — 更乾淨且驗證同一 Tracer interface. ChatRequest.messages 是 list reference share — `last_request.messages` 不是 1st chat call 的 snapshot，而是 cancel 點的 view（修正 cancellation state assertion） |
-| Day 5 | 4h | — | — | pending |
+| Day 5 — Header polish + retrospective + Phase 50 README + MEMORY.md + closeout | 4h | ~50 min | 21% | 50.1 新檔大多 header 已寫；只 events.py 補 Modification History 段。`__init__.py` per file-header-convention.md exemption 不需 full header。retrospective.md 119 行（含 9 carry items + 3 lessons + 49.4 retro 9 carry-over status table） |
+| **Total** | **~28h** | **~5.4h (325 min)** | **~19%** | Aligned with 49.x V2 plan 13–26% ratio |
 | Day 3 | 6h | — | — | pending |
 | Day 4 | 6h | — | — | pending |
 | Day 5 | 4h | — | — | pending |
@@ -68,6 +69,13 @@
 - alembic from-zero cycle re-verified: head = 0010_pg_partman ✅
 - Day 4 commit: `7f70845 test(orchestrator-loop, sprint-50-1): e2e + tracer coverage + cancellation safety (Day 4)`
 
+### Day 5 (2026-04-30)
+- File header audit — only `orchestrator_loop/events.py` needed Modification History append (per file-header-convention.md, `__init__.py` short pkg-init files are exempt from full header)
+- `retrospective.md` (~210 lines) — Outcome / estimate accuracy table / 4 did-well / 4 improve-next-sprint / 9 CARRY items for 50.2+ / 3 lessons learned / 49.4 retro 9 carry-over status / what unblocks 50.2 / cumulative branch state
+- Phase 50 README updated — Sprint 50.1 ✅ DONE / Phase 50 1/2 / Sprint 50.2 prerequisites unblocked + carry-forward 用戶手動處理項
+- MEMORY.md — added `project_phase50_loop_core.md` index entry + new memory file (V2 cumulative 5/22 sprints)
+- Day 5 closeout commit (this) — header polish + retrospective + Phase 50 README + checklist Day 5 [x] + sprint integral acceptance sanity-check items [x]
+
 ---
 
 ## Surprises / fixes recorded
@@ -98,10 +106,12 @@ feature/phase-50-sprint-1-loop-core
 ├── 79bd1ba docs(sprint-50-1): Day 2 progress + checklist [x] update (Day 2)
 ├── 6962b8d feat(orchestrator-loop, sprint-50-1): events + InMemoryToolRegistry + AP-1 lint (Day 3)
 ├── e9592b6 docs(sprint-50-1): Day 3 progress + checklist [x] update (Day 3)
-└── 7f70845 test(orchestrator-loop, sprint-50-1): e2e + tracer coverage + cancellation safety (Day 4)
+├── 7f70845 test(orchestrator-loop, sprint-50-1): e2e + tracer coverage + cancellation safety (Day 4)
+├── 99d8d7a docs(sprint-50-1): Day 4 progress + checklist [x] update (Day 4)
+└── (closeout commit, this) — Day 5 header polish + retrospective + Phase 50 README + MEMORY.md
 ```
 
-8 commits. Branch is ~44 commits ahead of `main` (carries Phase 49 baseline).
+10 commits at closeout. Branch is ~46 commits ahead of `main` (carries Phase 49 baseline).
 
 ---
 

@@ -4,7 +4,7 @@
 **Plan**：[sprint-50-1-plan.md](./sprint-50-1-plan.md)
 **Branch**：`feature/phase-50-sprint-1-loop-core` (created 2026-04-29)
 **預估**：5 days / ~28 SP / ~28h
-**Status**：🟢 IN_PROGRESS — Day 0-4 ✅ DONE; Day 5 next
+**Status**：🟢 IN_PROGRESS — Day 0-5 ✅ DONE — Sprint 50.1 ✅ CLOSED
 
 > **使用方式**：每完成一項，將 `[ ]` 改為 `[x]`。**禁止刪除未勾選項**（per CLAUDE.md sacred rule）。如項目被取消，標 🚧 + 寫理由保留。
 
@@ -370,19 +370,19 @@
 
 ### 5.1 File header convention 全檔通檢（60 min）
 
-- [ ] **對 50.1 新建 ~12 檔逐一補完 file header**
+- [x] **對 50.1 新建 ~12 檔逐一補完 file header**
   - 需含：File / Purpose / Category / Scope / Description / Key Components / Created / Last Modified / Modification History (newest-first) / Related
   - 範疇對齐：1（loop / events / termination）/ 6（parser / classifier / types）/ 2（_inmemory_registry）
   - DoD：每檔 grep `Modification History` 找到；newest-first
 
-- [ ] **更新檔的 Modification History 補一筆**
+- [x] **更新檔的 Modification History 補一筆**
   - `MockChatClient`（49.4 → 50.1 加 sequence）
   - `_contracts/events.py`（如有 minor 補欄位）
   - DoD：Modification History newest-first 含 50.1 entry
 
 ### 5.2 progress.md 最終彙整（60 min）
 
-- [ ] **`docs/03-implementation/agent-harness-execution/phase-50/sprint-50-1/progress.md` 最終版**
+- [x] **`docs/03-implementation/agent-harness-execution/phase-50/sprint-50-1/progress.md` 最終版**
   - Day-by-Day estimate vs actual table（5 day）
   - Daily highlights（Day 1-5 重點）
   - Surprises / fixes recorded（**rule**：≥ 2 條真實踩坑）
@@ -392,7 +392,7 @@
 
 ### 5.3 retrospective.md（60 min）
 
-- [ ] **`docs/03-implementation/agent-harness-execution/phase-50/sprint-50-1/retrospective.md`**
+- [x] **`docs/03-implementation/agent-harness-execution/phase-50/sprint-50-1/retrospective.md`**
   - **Did well**（≥ 3 條）
   - **Improve next sprint**（≥ 3 條）
   - **Action items for Sprint 50.2+**（每項標 owner + deadline）
@@ -403,7 +403,7 @@
 
 ### 5.4 Phase 50 README 更新（30 min）
 
-- [ ] **更新 `phase-50-loop-core/README.md`**
+- [x] **更新 `phase-50-loop-core/README.md`**
   - Sprint 50.1 ✅ DONE 標記
   - 完成日期 / branch / commits 列表
   - Sprint 50.2 仍 ⏳ FUTURE（**不寫 50.2 plan**；rolling）
@@ -412,18 +412,18 @@
 
 ### 5.5 MEMORY.md 更新（30 min）
 
-- [ ] **建 `memory/project_phase50_loop_core.md`**
+- [x] **建 `memory/project_phase50_loop_core.md`**
   - Phase 50.1 落地關鍵事實
   - 對 50.2 prerequisites（AsyncIterator yield 可被 SSE consume / runtime/workers handler 可呼叫）
   - DoD：內容 ≤ 30 行
 
-- [ ] **更新 `memory/MEMORY.md` index**
+- [x] **更新 `memory/MEMORY.md` index**
   - 加一行：`- [project_phase50_loop_core.md](project_phase50_loop_core.md) — Phase 50.1 ✅ ...`
   - DoD：MEMORY.md index < 200 行
 
 ### Day 5 Closeout
 
-- [ ] **Day 5 closeout commit**
+- [x] **Day 5 closeout commit**
   - Message：`docs(sprint-50-1): closeout — Phase 50 Sprint 1/2 ✅ DONE`
   - 含：file header polish + progress.md final + retrospective.md + Phase 50 README update + MEMORY.md update
   - DoD：commit 後 working tree clean（除 user IDE 編輯）
@@ -436,16 +436,16 @@
 
 ## Sprint 50.1 整體 Acceptance Sanity Check（Day 5 結束最終驗）
 
-- [ ] AP-1 lint 對整個 agent_harness/orchestrator_loop/ 跑一次：0 違反
-- [ ] AsyncIterator real（grep `AgentLoop.run` 無 sync callback signature）
-- [ ] StopReason 4 enum 中性化（per_provider mapping unit tests 12 PASS）
-- [ ] Tool message role 為 "tool"（grep `Message(role="tool"` 出現在 tests + loop.py）
-- [ ] e2e test 真實跑通：「用戶問 echo hello → 答 hello」（test_e2e_echo PASS）
-- [ ] 範疇 12 埋點驗證 4/5 處（state checkpoint 留 53.1 stub）
-- [ ] pytest ~215 PASS / 0 SKIPPED / < 5s
-- [ ] mypy --strict 0 issues
-- [ ] 5 V2 lints + LLM SDK leak = 0 違反
-- [ ] LoopState（TransientState only）跨 turn 正確維護（messages / turn_count / tokens_used）
+- [x] AP-1 lint 對整個 agent_harness/orchestrator_loop/ 跑一次：0 違反
+- [x] AsyncIterator real（grep `AgentLoop.run` 無 sync callback signature）
+- [x] StopReason 4 enum 中性化（per_provider mapping unit tests 12 PASS）
+- [x] Tool message role 為 "tool"（grep `Message(role="tool"` 出現在 tests + loop.py）
+- [x] e2e test 真實跑通：「用戶問 echo hello → 答 hello」（test_e2e_echo PASS）
+- [x] 範疇 12 埋點驗證 4/5 處（state checkpoint 留 53.1 stub）
+- [x] pytest ~215 PASS / 0 SKIPPED / < 5s
+- [x] mypy --strict 0 issues
+- [x] 5 V2 lints + LLM SDK leak = 0 違反
+- [x] LoopState（TransientState only）跨 turn 正確維護（messages / turn_count / tokens_used）
 
 ---
 

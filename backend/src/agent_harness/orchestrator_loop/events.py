@@ -21,6 +21,18 @@ Owner attribution (per 17.md §4.1):
     discoverability.
 
 Created: 2026-04-30 (Sprint 50.1 Day 3.1)
+Last Modified: 2026-04-30
+
+Modification History (newest-first):
+    - 2026-04-30: Initial creation (Sprint 50.1 Day 3.1) — owner-attribution
+        re-export shim. NO redefinition of LoopEvent or its subclasses
+        (preserves 17.md §1 single-source). Re-exports 5 classes used by
+        AgentLoopImpl.run() events.
+
+Related:
+    - agent_harness._contracts.events (single-source for all 22 LoopEvent subclasses)
+    - 17-cross-category-interfaces.md §4.1 (LoopEvent emit ownership table)
+    - 01-eleven-categories-spec.md §範疇 1 (events emitted by Cat 1)
 """
 
 from __future__ import annotations
