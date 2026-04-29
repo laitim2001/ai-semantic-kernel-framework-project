@@ -10,44 +10,39 @@
 ## Day 0 — Branch + 微清理（≤30 min）
 
 ### 0.1 確認 50.1 closeout 狀態（5 min）
-- [ ] `git status` clean（除 user IDE 編輯 + V2-AUDIT-* 平行文件）
-- [ ] `git log --oneline -5` 顯示 50.1 closeout commit `92c8fd4`
-- [ ] `git branch --show-current` = `feature/phase-50-sprint-1-loop-core`
+- [x] `git status` clean（除 user IDE 編輯 + V2-AUDIT-* 平行文件）
+- [x] `git log --oneline -5` 顯示 50.1 closeout commit `92c8fd4`
+- [x] `git branch --show-current` = `feature/phase-50-sprint-1-loop-core`
 
 ### 0.2 拉新 sprint branch（5 min）
-- [ ] `git checkout -b feature/phase-50-sprint-2-api-frontend`
-- [ ] DoD：`git branch --show-current` = `feature/phase-50-sprint-2-api-frontend`
+- [x] `git checkout -b feature/phase-50-sprint-2-api-frontend`
+- [x] DoD：`git branch --show-current` = `feature/phase-50-sprint-2-api-frontend`
 
 ### 0.3 提交 plan + checklist（5 min）
-- [ ] `git add docs/03-implementation/agent-harness-planning/phase-50-loop-core/sprint-50-2-{plan,checklist}.md`
-- [ ] commit msg：`docs(sprint-50-2): plan + checklist (Day 0)` per git-workflow.md
-- [ ] DoD：`git log --oneline -1` 顯示新 commit
+- [x] `git add docs/03-implementation/agent-harness-planning/phase-50-loop-core/sprint-50-2-{plan,checklist}.md`
+- [x] commit msg：`docs(sprint-50-2): plan + checklist (Day 0)` per git-workflow.md → commit `6de7aed`
+- [x] DoD：`git log --oneline -1` 顯示新 commit
 
 ### 0.4 更新 Phase 50 README 標 50.2 in-progress（5 min）
-- [ ] Edit `phase-50-loop-core/README.md` Sprint 進度表 50.2 改 ⏳ → 🟡 IN PROGRESS
-- [ ] Last Updated 改 2026-04-30
-- [ ] commit：`docs(sprint-50-2): Phase 50 README 50.2 in-progress (Day 0)`
+- [x] Edit `phase-50-loop-core/README.md` Sprint 進度表 50.2 改 ⏳ → 🟡 IN PROGRESS
+- [x] Last Updated 改 2026-04-30
+- [x] commit：`docs(sprint-50-2): Phase 50 README 50.2 in-progress (Day 0)` → commit `80c9295`
 
 ### 0.5 CARRY-001：testing.md 加 `python -m pytest` rule（5 min）
-- [ ] Edit `.claude/rules/testing.md` 在 §Test Commands 段加：
-  ```markdown
-  ### Critical: Use `python -m pytest`, NOT bare `pytest`
-  Bare `pytest` does NOT add cwd to sys.path → `from tests.conftest import ...` 會 fail。
-  Always use `python -m pytest` (V2 sprint-50-1 retrospective CARRY-001).
-  ```
-- [ ] DoD：grep `python -m pytest` 在 testing.md 出現 ≥ 1 次
+- [x] Edit `.claude/rules/testing.md` 在 §Test Commands 段加 `### Critical` block + 改 commands 範例為 `python -m pytest`
+- [x] DoD：grep `python -m pytest` 在 testing.md 出現 ≥ 1 次（actual: 4 次）
 
 ### 0.6 CARRY-002：fix datetime.utcnow() in events.py（5 min）
-- [ ] Edit `backend/src/agent_harness/_contracts/events.py` 把 `datetime.utcnow()` 改 `datetime.now(UTC)`
-- [ ] 同檔頂端 `from datetime import datetime, UTC` 加 UTC
-- [ ] 跑 `python -m pytest backend/tests/unit/agent_harness/orchestrator_loop/` 驗證 28+ DeprecationWarning 消失
-- [ ] DoD：pytest 同樣 PASS（之前 7+10 tests），warning 數 0
+- [x] Edit `backend/src/agent_harness/_contracts/events.py` 把 `datetime.utcnow()` 改 `datetime.now(UTC)`
+- [x] 同檔頂端 `from datetime import UTC, datetime` 加 UTC
+- [x] 跑 `python -m pytest backend/tests/unit/agent_harness/orchestrator_loop/` 驗證 DeprecationWarning 消失
+- [x] DoD：pytest 17 PASS / 0 warnings（事前 28+ warnings）
 
 ### 0.7 commit Day 0 trivia（5 min）
-- [ ] `git add backend/src/agent_harness/_contracts/events.py .claude/rules/testing.md`
-- [ ] commit：`fix(events, sprint-50-2): CARRY-001 + CARRY-002 trivia (Day 0)`
+- [x] `git add backend/src/agent_harness/_contracts/events.py .claude/rules/testing.md`
+- [x] commit：`fix(events,docs, sprint-50-2): CARRY-001 + CARRY-002 trivia (Day 0)` → commit `80338f0`
 
-**Day 0 Total Plan**: ≤30 min / 5 commits
+**Day 0 Total Plan**: ≤30 min / 5 commits → **Actual: ~17 min（57%）/ 3 commits**（CARRY-001+002 合併因 scope 對等：trivia carry-forward）
 
 ---
 
