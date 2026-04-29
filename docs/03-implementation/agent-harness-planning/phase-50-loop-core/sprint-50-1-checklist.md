@@ -2,9 +2,9 @@
 
 **Sprint**：50.1
 **Plan**：[sprint-50-1-plan.md](./sprint-50-1-plan.md)
-**Branch**（待建立）：`feature/phase-50-sprint-1-loop-core`
+**Branch**：`feature/phase-50-sprint-1-loop-core` (created 2026-04-29)
 **預估**：5 days / ~28 SP / ~28h
-**Status**：🔵 PLANNED — 等用戶 approve 才動 Day 1
+**Status**：🟢 IN_PROGRESS — Day 0 + Day 1 ✅ DONE (commits `74dd2e4`, `068d2fd`); Day 2 next
 
 > **使用方式**：每完成一項，將 `[ ]` 改為 `[x]`。**禁止刪除未勾選項**（per CLAUDE.md sacred rule）。如項目被取消，標 🚧 + 寫理由保留。
 
@@ -12,15 +12,15 @@
 
 ## Day 0（用戶 approve 後執行）— Branch + 環境準備（30 min）
 
-- [ ] **0.1 建 feature branch**
+- [x] **0.1 建 feature branch**
   - DoD：`git status` 顯示 on `feature/phase-50-sprint-1-loop-core`，from main HEAD（or last 49.4 closeout commit）
   - Command：`git checkout -b feature/phase-50-sprint-1-loop-core`
 
-- [ ] **0.2 確認 prerequisites 全綠**
+- [x] **0.2 確認 prerequisites 全綠**
   - DoD：pytest 143 PASS（49.4 closeout baseline）；mypy strict 0；4 lints OK
   - Command：`cd backend && pytest -q && mypy src --strict`
 
-- [ ] **0.3 commit plan + checklist + Phase 50 README**
+- [x] **0.3 commit plan + checklist + Phase 50 README**
   - DoD：3 docs commit 到 feature branch first commit
   - Command：`git add docs/03-implementation/agent-harness-planning/phase-50-loop-core/ && git commit -m "docs(sprint-50-1, sprint-50-1): plan + checklist + Phase 50 README"`
 
@@ -30,66 +30,66 @@
 
 ### 1.1 OutputParser 具體實作（90 min）
 
-- [ ] **建 `agent_harness/output_parser/types.py`**
+- [x] **建 `agent_harness/output_parser/types.py`**
   - 內容：`ParsedOutput` dataclass（tool_calls / final_text / handoff_request / metadata）
   - DoD：mypy strict pass；可 import
   - Command：`python -c "from agent_harness.output_parser.types import ParsedOutput; print(ParsedOutput.__dataclass_fields__.keys())"`
 
-- [ ] **建 `agent_harness/output_parser/parser.py`**
+- [x] **建 `agent_harness/output_parser/parser.py`**
   - 內容：`OutputParser` 具體實作（從 49.1 _abc.py 衍生 `OutputParserImpl`）
   - 方法：`parse(response: ChatResponse) -> ParsedOutput`
   - 邏輯：從 ChatResponse.tool_calls / content / 自定欄位 萃取
   - **禁止** regex 文本解析（lint check）
   - DoD：5 unit tests PASS（pos: tool_calls / final_text / handoff / 空 / 混合）
 
-- [ ] **建 `agent_harness/output_parser/__init__.py` 補完 export**
+- [x] **建 `agent_harness/output_parser/__init__.py` 補完 export**
   - DoD：`from agent_harness.output_parser import OutputParser, ParsedOutput, classify_output, OutputType` 全可用
 
 ### 1.2 classifier.py（60 min）
 
-- [ ] **建 `agent_harness/output_parser/classifier.py`**
+- [x] **建 `agent_harness/output_parser/classifier.py`**
   - 內容：`OutputType{TOOL_USE, FINAL, HANDOFF}` enum + `classify_output(response: ChatResponse) -> OutputType`
   - 邏輯：tool_calls 非空 → TOOL_USE；handoff_request 非空 → HANDOFF；否則 → FINAL
   - DoD：3 unit tests PASS（每個 case 1 個）+ docstring 標 owner=範疇 6
 
 ### 1.3 StopReason 4 種 mapping + MockChatClient enhancement（90 min）
 
-- [ ] **確認 `_contracts/chat.py` StopReason enum 完整**
+- [x] **確認 `_contracts/chat.py` StopReason enum 完整**
   - 應有 5 enum：END_TURN / TOOL_USE / MAX_TOKENS / SAFETY_REFUSAL / PROVIDER_ERROR
   - DoD：49.4 已建；50.1 不新增；確認 import OK
 
-- [ ] **更新 `adapters/_testing/mock_clients.py`**
+- [x] 🚧 **更新 `adapters/_testing/mock_clients.py`** — SKIPPED: 49.4 MockChatClient `responses: list[ChatResponse]` + `pop(0)` already implements sequence behavior; no enhancement needed
   - 加 `MockChatClient.with_response_sequence(responses: list[ChatResponse])`
   - 依 turn_count（call count）取 index；超出時 raise StopIteration
   - DoD：6 unit tests（1 turn / 2 turn / 3 turn / 0 / overrun / reset）
 
-- [ ] **建 `tests/unit/output_parser/test_stop_reason_mapping.py`**
+- [x] **建 `tests/unit/output_parser/test_stop_reason_mapping.py`**
   - 4 stop_reason × 3 場景 = 12 unit tests
   - 場景：純 stop_reason / 含 tool_calls / 含 content
   - DoD：12 PASS
 
 ### 1.4 Parser + Classifier 單元測試（60 min）
 
-- [ ] **建 `tests/unit/output_parser/test_parser.py`**
+- [x] **建 `tests/unit/output_parser/test_parser.py`**
   - 5 tests: 純 final_text / 純 tool_calls / 純 handoff / 空 / 混合（tool_calls + content）
   - 1 perf test：1k 次 parse < 5s（p95 < 5ms / call）
   - DoD：6 PASS
 
-- [ ] **建 `tests/unit/output_parser/test_classifier.py`**
+- [x] **建 `tests/unit/output_parser/test_classifier.py`**
   - 3 tests: TOOL_USE / FINAL / HANDOFF（per 1 ChatResponse fixture）
   - DoD：3 PASS
 
 ### Day 1 Wrap-up
 
-- [ ] **跑全套 pytest + mypy + lints 確認 0 regression**
+- [x] **跑全套 pytest + mypy + lints 確認 0 regression**
   - Command：`cd backend && pytest -q && mypy src --strict && python scripts/lint/check_*.py src/`
   - DoD：143（49.4 carry）+ ~25 new = ~168 PASS / 0 SKIPPED
 
-- [ ] **Day 1 progress.md 寫入**
+- [x] **Day 1 progress.md 寫入**
   - 路徑：`docs/03-implementation/agent-harness-execution/phase-50/sprint-50-1/progress.md`
   - 內容：Day 1 estimate vs actual / 完成項 / surprises
 
-- [ ] **Day 1 commit**
+- [x] **Day 1 commit**
   - Message：`feat(output-parser, sprint-50-1): OutputParser + classifier + StopReason mapping (Day 1)`
   - DoD：commit hash 記入 progress.md
 
