@@ -4,7 +4,7 @@
 **Plan**：[sprint-50-1-plan.md](./sprint-50-1-plan.md)
 **Branch**：`feature/phase-50-sprint-1-loop-core` (created 2026-04-29)
 **預估**：5 days / ~28 SP / ~28h
-**Status**：🟢 IN_PROGRESS — Day 0 + Day 1 ✅ DONE (commits `74dd2e4`, `068d2fd`); Day 2 next
+**Status**：🟢 IN_PROGRESS — Day 0-2 ✅ DONE; Day 3 next
 
 > **使用方式**：每完成一項，將 `[ ]` 改為 `[x]`。**禁止刪除未勾選項**（per CLAUDE.md sacred rule）。如項目被取消，標 🚧 + 寫理由保留。
 
@@ -99,7 +99,7 @@
 
 ### 2.1 termination.py 4 類終止（120 min）
 
-- [ ] **建 `agent_harness/orchestrator_loop/termination.py`**
+- [x] **建 `agent_harness/orchestrator_loop/termination.py`**
   - 4 個 terminator function：
     - `should_terminate_by_stop_reason(response: ChatResponse) -> bool`
     - `should_terminate_by_turns(turn_count: int, max_turns: int) -> bool`
@@ -109,13 +109,13 @@
   - `TripwireTerminator` ABC stub（範疇 9 在 53.3 接入）
   - DoD：mypy strict pass；ABC stub 含 docstring 標 「Sprint 53.3 implements」
 
-- [ ] **建 `tests/unit/orchestrator_loop/test_termination.py`**
+- [x] **建 `tests/unit/orchestrator_loop/test_termination.py`**
   - 8 unit tests：4 terminator × 2 scenarios（trigger / not trigger）
   - DoD：8 PASS
 
 ### 2.2 AgentLoopImpl 主迴圈（180 min）
 
-- [ ] **建 `agent_harness/orchestrator_loop/loop.py`**
+- [x] **建 `agent_harness/orchestrator_loop/loop.py`**
   - `class AgentLoopImpl(AgentLoop)`：
     - `__init__(chat_client, output_parser, tool_registry, tracer, ...)`
     - `async def run(messages, tools, system_prompt, max_turns=50, token_budget=100_000, ...)` async generator
@@ -153,7 +153,7 @@
     ```
   - DoD：mypy strict pass；可 import；無業務邏輯錯誤
 
-- [ ] **建 `tests/unit/orchestrator_loop/test_loop.py`**
+- [x] **建 `tests/unit/orchestrator_loop/test_loop.py`**
   - 6 unit tests：
     1. 單 turn 結束（FINAL stop_reason）
     2. 多 turn（2-turn tool_use → end_turn）
@@ -165,18 +165,18 @@
 
 ### 2.3 MockChatClient sequence enhancement test（60 min）
 
-- [ ] **加 `MockChatClient` cancellation 行為測試**
+- [x] **加 `MockChatClient` cancellation 行為測試**
   - 測試：tool execute 中 cancel → MockChatClient 不應發新 chat call
   - DoD：2 unit tests PASS
 
 ### Day 2 Wrap-up
 
-- [ ] **跑全套 pytest + mypy + lints**
+- [x] **跑全套 pytest + mypy + lints**
   - DoD：~168（Day 1 累積）+ ~16 new = ~184 PASS
 
-- [ ] **Day 2 progress.md 寫入**
+- [x] **Day 2 progress.md 寫入**
 
-- [ ] **Day 2 commit**
+- [x] **Day 2 commit**
   - Message：`feat(orchestrator-loop, sprint-50-1): AgentLoop while-true main loop + 4 terminators (Day 2)`
 
 ---
