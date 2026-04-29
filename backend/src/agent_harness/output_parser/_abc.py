@@ -2,7 +2,7 @@
 File: backend/src/agent_harness/output_parser/_abc.py
 Purpose: Category 6 ABC — OutputParser (parse LLM responses + tool_calls).
 Category: 範疇 6 (Output Parsing)
-Scope: Phase 49 / Sprint 49.1 (stub; impl in Phase 50.1)
+Scope: Phase 50 / Sprint 50.1 (refactor; ABC stub from Sprint 49.1)
 
 Description:
     Parses ChatResponse from any provider into a uniform ParsedOutput
@@ -17,24 +17,26 @@ Owner: 01-eleven-categories-spec.md §範疇 6
 Single-source: 17.md §2.1
 
 Created: 2026-04-29 (Sprint 49.1)
+Last Modified: 2026-04-29
+
+Modification History (newest-first):
+    - 2026-04-29: Refactor — move ParsedOutput to .types (Sprint 50.1 Day 1.1).
+        ABC files own only ABC per category-boundaries.md.
+    - 2026-04-29: Initial creation (Sprint 49.1) — ABC stub + ParsedOutput inline.
+
+Related:
+    - .types (ParsedOutput dataclass)
+    - 01-eleven-categories-spec.md §範疇 6
+    - 17-cross-category-interfaces.md §2.1
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 
-from agent_harness._contracts import ChatResponse, StopReason, ToolCall, TraceContext
+from agent_harness._contracts import ChatResponse, TraceContext
 
-
-@dataclass(frozen=True)
-class ParsedOutput:
-    """Result of OutputParser.parse(); not in 17.md (parser-internal)."""
-
-    text: str
-    tool_calls: list[ToolCall] = field(default_factory=list)
-    stop_reason: StopReason = StopReason.END_TURN
-    raw_response_id: str | None = None
+from .types import ParsedOutput
 
 
 class OutputParser(ABC):
