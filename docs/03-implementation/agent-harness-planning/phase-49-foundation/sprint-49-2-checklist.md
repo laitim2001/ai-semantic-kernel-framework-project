@@ -1,0 +1,340 @@
+# Sprint 49.2 — Checklist
+
+**Sprint**: 49.2 — DB Schema + Async ORM 核心
+**Plan**: [sprint-49-2-plan.md](./sprint-49-2-plan.md)
+**建立日期**：2026-04-29
+**狀態**：📋 計劃中（待用戶 approve）
+**Story Points**：22
+**5 Days × 5h average = 25h**
+
+---
+
+## 使用說明
+
+- 每個任務勾選 `- [ ]` → `- [x]` **不可刪除未勾選項**（per CLAUDE.md sacred rule）
+- 阻塞時加 `🚧 阻塞：<reason>` 在該項下方
+- 每天結束前更新 progress.md 對應條目
+- 每個 commit message 必須對應一個 task ID（如 `feat(infrastructure-db, sprint-49-2): 1.2 ...`）
+
+---
+
+## Day 1 — Alembic 基底 + Identity migration + ORM（估 5h）
+
+### 1.1 Pre-flight check（10 min）
+- [ ] **確認 working tree 狀態**
+  - DoD：`git status` 乾淨（discussion-log 仍開可忽略）；branch 在 main 或新建 49.2 feature branch
+  - Command：`git status --short && git branch --show-current`
+- [ ] **建立 49.2 feature branch**
+  - DoD：branch `feature/phase-49-sprint-2-db-orm` checked out
+  - Command：`git checkout main && git pull && git checkout -b feature/phase-49-sprint-2-db-orm`
+- [ ] **確認 docker compose postgres up**
+  - DoD：`docker compose -f docker-compose.dev.yml ps` 顯示 `ipa-postgres` healthy
+  - Command：`docker compose -f docker-compose.dev.yml up -d postgres && docker compose -f docker-compose.dev.yml ps`
+
+### 1.2 Alembic 基底（45 min）
+- [ ] **建立 `backend/alembic.ini`**
+  - DoD：含 `script_location = src/infrastructure/db/migrations`、`sqlalchemy.url` 用 `${DATABASE_URL}` 環境變數覆寫
+  - Verify：`cd backend && alembic --help` 不報錯
+- [ ] **建立 `backend/src/infrastructure/db/migrations/env.py`**
+  - DoD：用 SQLAlchemy 2.0 async pattern（`run_async_migrations`），import `Base` from `infrastructure.db.base`
+  - Reference：[Alembic async template](https://alembic.sqlalchemy.org/en/latest/cookbook.html#using-asyncio-with-alembic)
+- [ ] **建立 `backend/src/infrastructure/db/migrations/script.py.mako`**
+  - DoD：標準 Alembic mako template，加 V2 file header convention
+- [ ] **建立 `migrations/__init__.py` + `versions/__init__.py`**
+  - DoD：空 `__init__.py` 兩個
+
+### 1.3 DeclarativeBase + TenantScopedMixin（30 min）
+- [ ] **建立 `backend/src/infrastructure/db/base.py`**
+  - DoD：定義 `class Base(DeclarativeBase)`、`class TenantScopedMixin` 含 `tenant_id` mapped_column（NOT NULL + index）
+  - Verify：`python -c "from src.infrastructure.db.base import Base, TenantScopedMixin"` 不報錯
+- [ ] **建立 `backend/src/infrastructure/db/exceptions.py`**
+  - DoD：定義 `StateConflictError(Exception)`、`MigrationError(Exception)`
+
+### 1.4 Async Engine + Session Factory（45 min）
+- [ ] **建立 `backend/src/infrastructure/db/engine.py`**
+  - DoD：`get_engine()` + `get_session_factory()` 全 async；用 `get_settings()`；含 pool_size / pool_pre_ping / pool_recycle
+- [ ] **建立 `backend/src/infrastructure/db/session.py`**
+  - DoD：`get_db_session()` async generator（FastAPI dependency 用）；wrap session.begin()
+- [ ] **更新 `backend/src/infrastructure/db/__init__.py`**
+  - DoD：re-export `Base, TenantScopedMixin, get_engine, get_session_factory, get_db_session`
+- [ ] **擴充 `backend/src/core/config/__init__.py`**
+  - DoD：加 `db_pool_size: int = 10`、`db_pool_max_overflow: int = 20`、`db_pool_recycle_sec: int = 300`、`db_echo: bool = False`
+- [ ] **更新 `backend/.env.example`**
+  - DoD：補 4 個 `DB_POOL_*` 範例值
+
+### 1.5 Identity ORM models（45 min）
+- [ ] **建立 `backend/src/infrastructure/db/models/__init__.py`**
+  - DoD：空 init，準備 Day 1-4 incremental re-export
+- [ ] **建立 `backend/src/infrastructure/db/models/identity.py`**
+  - DoD：5 個 ORM class：Tenant / User / Role / UserRole / RolePermission；除 Tenant 外全繼承 TenantScopedMixin（注意：Role / UserRole / RolePermission 也帶 tenant_id 因為 multi-tenant role 系統）
+  - 驗：所有欄位對齐 09-db-schema-design.md L114-191
+- [ ] **更新 `models/__init__.py` re-export Day 1 models**
+  - DoD：`from .identity import Tenant, User, Role, UserRole, RolePermission`
+
+### 1.6 Migration 0001（45 min）
+- [ ] **建立 `migrations/versions/0001_initial_identity.py`**
+  - DoD：手寫 SQL（不依賴 autogenerate，避免 mixin 干擾）；含所有 CREATE TABLE + indexes + UNIQUE constraints
+  - 對齐 09-db-schema-design.md L114-191
+- [ ] **跑 migration up + verify**
+  - DoD：`alembic upgrade head` 成功；`psql ... -c '\dt'` 顯示 5 張新表
+  - Command：`cd backend && alembic upgrade head && docker compose -f ../docker-compose.dev.yml exec postgres psql -U ipa_v2 -d ipa_v2 -c "\dt"`
+- [ ] **跑 migration down + verify**
+  - DoD：`alembic downgrade base` 成功；表全消失
+  - Command：`cd backend && alembic downgrade base && docker compose -f ../docker-compose.dev.yml exec postgres psql -U ipa_v2 -d ipa_v2 -c "\dt"`
+
+### 1.7 連線 smoke test（20 min）
+- [ ] **建立 `backend/tests/unit/infrastructure/db/__init__.py`**（如不存在）
+  - DoD：空檔
+- [ ] **建立 `backend/tests/unit/infrastructure/db/test_engine_connect.py`**
+  - DoD：1 個 test：`async def test_engine_can_ping`，跑 `SELECT 1`
+- [ ] **跑 test**
+  - DoD：`pytest backend/tests/unit/infrastructure/db/test_engine_connect.py -v` PASS
+- [ ] **Day 1 commit**
+  - DoD：commit message `feat(infrastructure-db, sprint-49-2): Day 1 alembic + identity migration + ORM models`
+- [ ] **更新 progress.md Day 1 條目**
+
+---
+
+## Day 2 — Sessions migration（含 partition）+ ORM + CRUD test（估 5h）
+
+### 2.1 Sessions ORM models（60 min）
+- [ ] **建立 `models/sessions.py`**
+  - DoD：3 個 ORM class：Session / Message / MessageEvent；全繼承 TenantScopedMixin
+  - 對齐 09-db-schema-design.md L196-281 + L1042-1075（partition 改寫版）
+  - 注意：Message / MessageEvent 的 PK 含 `created_at`（partition key 必須在 PK）
+- [ ] **更新 `models/__init__.py` re-export**
+
+### 2.2 Migration 0002 — partition 設計（90 min）
+- [ ] **建立 `migrations/versions/0002_sessions_partitioned.py`**
+  - DoD：手寫 SQL：
+    1. `CREATE TABLE sessions ...`（無 partition）
+    2. `CREATE TABLE messages ... PARTITION BY RANGE (created_at)`
+    3. `CREATE TABLE messages_2026_05 PARTITION OF messages FOR VALUES FROM ('2026-05-01') TO ('2026-06-01')`
+    4. `CREATE TABLE messages_2026_06 PARTITION OF messages FOR VALUES FROM ('2026-06-01') TO ('2026-07-01')`
+    5. `message_events` 同 partition
+    6. 全部 indexes
+  - 對齐 09-db-schema-design.md L1040-1095
+- [ ] **跑 migration up + verify partition**
+  - DoD：`\dt+ messages*` 顯示 3 個 entry（messages 主表 + 2 partition）
+  - Command：`docker compose -f ../docker-compose.dev.yml exec postgres psql -U ipa_v2 -d ipa_v2 -c "\dt+ messages*"`
+- [ ] **跑 migration down + verify**
+  - DoD：partition 與主表全消失
+
+### 2.3 conftest.py 與 db_session fixture（45 min）
+- [ ] **建立 / 擴充 `backend/tests/conftest.py`**
+  - DoD：定義 `@pytest_asyncio.fixture async def db_session()`，per-test transaction + rollback
+  - 注意：必須先 `alembic upgrade head` 再跑 test（前置 fixture 或 CI step）
+- [ ] **建立 conftest helper：seed_tenant + seed_user**
+  - DoD：`async def seed_tenant(session) -> Tenant` 與 `async def seed_user(session, tenant) -> User`
+
+### 2.4 CRUD tests for Sessions（60 min）
+- [ ] **建立 `backend/tests/unit/infrastructure/db/test_models_crud.py`**（先寫 sessions 區塊）
+  - DoD：3 個 test：`test_session_create_read`、`test_message_create_with_session`、`test_message_event_emit`
+  - 每個 test 先 seed tenant + user
+
+### 2.5 Partition routing test（45 min）
+- [ ] **建立 `backend/tests/unit/infrastructure/db/test_partition_routing.py`**
+  - DoD：2 個 test：插 `created_at='2026-05-15'` 訊息 → 確認在 `messages_2026_05`；插 `'2026-06-15'` → 在 `messages_2026_06`
+  - Verify：用 raw SQL `SELECT tableoid::regclass FROM messages WHERE id = ...`
+
+### 2.6 Day 2 收尾（20 min）
+- [ ] **跑全 test**
+  - DoD：`pytest backend/tests/unit/infrastructure/db/ -v` 全 PASS
+- [ ] **Day 2 commit**
+  - DoD：`feat(infrastructure-db, sprint-49-2): Day 2 sessions/messages partition + ORM + CRUD test`
+- [ ] **更新 progress.md Day 2 條目**
+
+---
+
+## Day 3 — Tools migration + ORM + CRUD test（估 4h）
+
+### 3.1 Tools ORM models（60 min）
+- [ ] **建立 `models/tools.py`**
+  - DoD：3 個 ORM：ToolRegistry（不繼承 TenantScopedMixin — 全局）/ ToolCall（繼承）/ ToolResult（繼承）
+  - 對齐 09-db-schema-design.md L286-380
+- [ ] **更新 `models/__init__.py` re-export**
+
+### 3.2 Migration 0003（45 min）
+- [ ] **建立 `migrations/versions/0003_tools.py`**
+  - DoD：手寫 SQL；含所有 CREATE TABLE + indexes + UNIQUE constraints
+  - 注意：tools_registry 是 global（無 tenant_id）；tool_calls / tool_results 帶 tenant_id
+- [ ] **跑 migration up + down**
+  - DoD：兩方向均成功
+
+### 3.3 CRUD tests for Tools（90 min）
+- [ ] **擴充 `test_models_crud.py` Tools 區塊**
+  - DoD：3 個 test：`test_tools_registry_global`、`test_tool_call_with_session`、`test_tool_result_link_to_call`
+
+### 3.4 Day 3 收尾（25 min）
+- [ ] **跑全 test**
+  - DoD：`pytest backend/tests/unit/infrastructure/db/ -v` 全 PASS（≥ 8 tests）
+- [ ] **Day 3 commit**
+  - DoD：`feat(infrastructure-db, sprint-49-2): Day 3 tools registry + tool_calls/results + CRUD test`
+- [ ] **更新 progress.md Day 3 條目**
+
+---
+
+## Day 4 — State migration + append-only + StateVersion race test（估 6h）
+
+### 4.1 State ORM models（45 min）
+- [ ] **建立 `models/state.py`**
+  - DoD：2 個 ORM：StateSnapshot（繼承 TenantScopedMixin）/ LoopState（繼承）
+  - 對齐 09-db-schema-design.md L508-555
+  - StateSnapshot 含 `version: int`、`parent_version: int | None`、`state_hash: str`、`reason: str`、`UNIQUE(session_id, version)`
+- [ ] **更新 `models/__init__.py` re-export**
+
+### 4.2 `append_snapshot()` helper + StateConflictError 處理（90 min）
+- [ ] **擴充 `models/state.py` 加 `append_snapshot()` async function**
+  - DoD：實作 plan 第 4 節 pseudocode；驗 parent_version + parent_hash + INSERT 失敗轉 StateConflictError
+- [ ] **加 `compute_state_hash(state_data: dict) -> str` helper**
+  - DoD：SHA-256 of `json.dumps(state_data, sort_keys=True)`
+
+### 4.3 Migration 0004（60 min）
+- [ ] **建立 `migrations/versions/0004_state.py`**
+  - DoD：手寫 SQL：
+    1. `CREATE TABLE state_snapshots ...`（含 UNIQUE(session_id, version)）
+    2. `CREATE TABLE loop_states ...`
+    3. `CREATE OR REPLACE FUNCTION prevent_state_snapshot_modification()`
+    4. `CREATE TRIGGER state_snapshots_no_update_delete`
+  - 對齐 09-db-schema-design.md L508-555
+- [ ] **跑 migration up + down**
+  - DoD：兩方向均成功；trigger 在 up 後存在於 `\df`
+
+### 4.4 Append-only trigger 測試（45 min）
+- [ ] **建立 `tests/unit/infrastructure/db/test_state_append_only.py`**
+  - DoD：3 個 test：
+    1. `test_state_snapshot_can_insert`：normal append 成功
+    2. `test_state_snapshot_cannot_update`：UPDATE raise IntegrityError matching "append-only"
+    3. `test_state_snapshot_cannot_delete`：DELETE 同樣 raise
+
+### 4.5 StateVersion 雙因子 Race condition 測試（120 min）
+- [ ] **建立 `tests/unit/infrastructure/db/test_state_race.py`**
+  - DoD：1 個 test `test_concurrent_snapshot_insert_one_wins`：
+    - 用 `asyncio.Barrier(2)` 嚴格同步兩 worker
+    - 兩 worker 同時用 parent_version=5 + 同一 expected_parent_hash
+    - 期望：1 成功 1 失敗（StateConflictError）
+  - 額外：跑 100 次（`pytest -k race --count=100`）confirm 不 flaky
+- [ ] **加 `parent_hash` 不符測試**
+  - DoD：1 個 test `test_parent_hash_mismatch_raises`：parent_version 對但 parent_hash 不符 → StateConflictError
+
+### 4.6 Day 4 收尾（30 min）
+- [ ] **跑全 test**
+  - DoD：`pytest backend/tests/unit/infrastructure/db/ -v` 全 PASS（≥ 14 tests）
+- [ ] **mypy strict 通過**
+  - DoD：`mypy backend/src/infrastructure/db --strict` 0 errors
+- [ ] **Day 4 commit**
+  - DoD：`feat(infrastructure-db, sprint-49-2): Day 4 state snapshots + append-only + StateVersion race test`
+- [ ] **更新 progress.md Day 4 條目**
+
+---
+
+## Day 5 — Settings 收尾 + V2 文件 platform 同步 + 整合驗收 + closeout（估 5h）
+
+### 5.1 Settings 與 .env.example 完整化（30 min）
+- [ ] **檢查 Settings 所有 db_* 欄位**
+  - DoD：`Settings()` 以 `.env` 載入 + 用 default 不報錯
+- [ ] **`.env.example` 與 `.env.example` 同步**
+  - DoD：`grep DB_ backend/.env.example` 顯示 5 條（DATABASE_URL + 4 DB_POOL_*）
+
+### 5.2 49.1 retro action items 清算（45 min）
+- [ ] **`02-architecture-design.md` platform → platform_layer**
+  - DoD：`grep -n 'platform/' docs/03-implementation/agent-harness-planning/02-architecture-design.md` 0 matches（除非引述歷史 V1，否則改完）
+- [ ] **`06-phase-roadmap.md` platform → platform_layer**
+  - DoD：同上
+- [ ] **掃其他規劃文件**
+  - DoD：`grep -rn 'platform/' docs/03-implementation/agent-harness-planning/` 只剩歷史性引用（標記 OK）
+  - Command：`grep -rn 'platform/' docs/03-implementation/agent-harness-planning/`
+- [ ] **`.gitignore` Python 構建產物 pattern audit**
+  - DoD：`grep -E '__pycache__|\.egg-info|\.pytest_cache|\.mypy_cache|\.coverage' .gitignore` 全部存在
+
+### 5.3 整合驗收：完整 migration cycle（45 min）
+- [ ] **Drop + recreate database**
+  - Command：`docker compose -f docker-compose.dev.yml exec postgres psql -U ipa_v2 -c "DROP DATABASE IF EXISTS ipa_v2_test"; ... CREATE DATABASE ipa_v2_test;`
+- [ ] **`alembic upgrade head` 從零跑通**
+  - DoD：4 migration 全成功；`\dt` 顯示 13 張表（含 partition）
+- [ ] **`alembic downgrade base` 全 rollback**
+  - DoD：所有表 + trigger + function 全消失
+- [ ] **再 upgrade head**
+  - DoD：成功（idempotency 驗證）
+
+### 5.4 整合驗收：跑全 test suite（30 min）
+- [ ] **跑全 unit + integration tests**
+  - Command：`pytest backend/ -v --cov=src/infrastructure/db --cov-report=term-missing`
+  - DoD：全 PASS；`infrastructure/db/` coverage ≥ 80%
+- [ ] **跑 mypy strict 全 backend/src**
+  - Command：`mypy backend/src --strict`
+  - DoD：0 errors
+- [ ] **跑 black + isort + flake8**
+  - DoD：全 clean
+- [ ] **LLM SDK leak grep（49.1 既有規則延續）**
+  - Command：`grep -rE "^import openai|^from openai|^import anthropic|^from anthropic" backend/src/agent_harness/ backend/src/infrastructure/`
+  - DoD：0 matches
+
+### 5.5 CI workflow update（30 min）
+- [ ] **`.github/workflows/backend-ci.yml` 加 alembic + postgres service**
+  - DoD：CI job 在 lint/mypy/pytest 之前 spin up postgres + run alembic upgrade head
+- [ ] **Push 並驗 CI green**
+  - DoD：CI 在 push 後變 green（如未 merge 則待用戶決定 PR / 直 push）
+
+### 5.6 文件 + retrospective + closeout（90 min）
+- [ ] **更新 `infrastructure/db/README.md`**
+  - DoD：49.2 status: implemented；列出 13 表 + alembic 用法
+- [ ] **建立 `docs/03-implementation/agent-harness-execution/phase-49/sprint-49-2/progress.md`**（如未隨日更新則此處統整）
+  - DoD：5 day estimate vs actual 對照表 + notes
+- [ ] **建立 `docs/03-implementation/agent-harness-execution/phase-49/sprint-49-2/retrospective.md`**
+  - DoD：5 必述（outcome / estimates vs actual / went-well / surprises / Action items for 49.3）+ sign-off block
+- [ ] **更新 checklist 整體狀態 → ✅ DONE**
+- [ ] **Day 5 commit + push**
+  - Commits（建議分 2）：
+    1. `chore(infrastructure-db, sprint-49-2): Day 5.1-5.5 settings + platform_layer doc sync + CI alembic`
+    2. `docs(sprint-49-2): Day 5.6 progress + retrospective + closeout`
+- [ ] **Push branch**
+  - DoD：`git push origin feature/phase-49-sprint-2-db-orm` 成功
+- [ ] **報告用戶 Sprint 49.2 ✅ DONE**
+
+---
+
+## Sprint 49.2 結束狀態
+
+完成此 checklist 後，Sprint 49.2 應達到：
+
+- ✅ 4 個 Alembic migration（0001-0004）up/down 跑通
+- ✅ 13 張 ORM models 全部可 CRUD（real PostgreSQL）
+- ✅ StateVersion 雙因子 race condition test 通過（100 次無 flaky）
+- ✅ state_snapshots append-only trigger 驗證通過
+- ✅ Messages / message_events partition routing 驗證通過
+- ✅ pytest fixture `db_session` 用 docker compose real PostgreSQL
+- ✅ mypy strict 0 errors / lint clean / LLM SDK 零 leak
+- ✅ V2 規劃文件 02 + 06 platform → platform_layer 同步
+- ✅ CI 自動跑 alembic + pytest（postgres service in workflow）
+- ✅ Sprint 49.2 commit ≥ 5（每日至少 1）+ pushed
+- ✅ progress.md + retrospective.md 完整
+
+---
+
+## 🚧 延後項清單（per CLAUDE.md sacred rule，不可刪）
+
+下列項**故意不在 49.2 做**，已歸於後續 sprint：
+
+- 🚧 **audit_log + append-only + hash chain** → Sprint 49.3
+- 🚧 **api_keys / rate_limits** → Sprint 49.3
+- 🚧 **5 層 memory 表（system/tenant/role/user/session_summary）** → Sprint 49.3
+- 🚧 **approvals / risk_assessments / guardrail_events** → Sprint 49.3 / 53.4
+- 🚧 **RLS policies 全表套用 + per-request `SET LOCAL app.tenant_id` middleware** → Sprint 49.3
+- 🚧 **Qdrant tenant-aware namespace** → Sprint 49.3
+- 🚧 **verification_results** → Sprint 54.1（範疇 10）
+- 🚧 **subagent_runs / subagent_messages** → Sprint 54.2（範疇 11）
+- 🚧 **worker_tasks / outbox** → Sprint 49.4
+- 🚧 **cost_ledger / llm_invocations** → Sprint 49.4
+- 🚧 **pg_partman 自動分區** → Sprint 49.3
+- 🚧 **indexes optimization (0014)** → Sprint 49.3 / 49.4
+- 🚧 **Encryption at rest（PII 欄位）** → Sprint 49.3 / 14.md security 落地時
+
+---
+
+## Rolling Planning 紀律自檢
+
+完成此 checklist 才允許開始 code：
+- ☐ 沒預寫 Sprint 49.3 / 49.4 plan + checklist
+- ☐ 沒在本 checklist 寫具體 49.3 / 49.4 task（只列 🚧 與「目標 sprint」）
+- ☐ 本 checklist + sprint-49-2-plan.md 已被用戶 review + approve
