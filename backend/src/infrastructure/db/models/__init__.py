@@ -32,6 +32,14 @@ from infrastructure.db.models.sessions import (
     Session,
 )
 
+# Day 4.1 — State
+from infrastructure.db.models.state import (
+    LoopState,
+    StateSnapshot,
+    append_snapshot,
+    compute_state_hash,
+)
+
 # Day 3.1 — Tools
 from infrastructure.db.models.tools import (
     ToolCall,
@@ -54,4 +62,9 @@ __all__ = [
     "ToolRegistry",
     "ToolCall",
     "ToolResult",
+    # State + helpers
+    "StateSnapshot",
+    "LoopState",
+    "append_snapshot",
+    "compute_state_hash",
 ]

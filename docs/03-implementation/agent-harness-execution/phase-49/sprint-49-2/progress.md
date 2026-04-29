@@ -133,7 +133,47 @@ b414e7c docs(sprint-49-2): plan + checklist for Phase 49 Sprint 2
 
 ---
 
-## Day 4 — TBD (State + append-only + StateVersion race test)
+## Day 4 — State + append-only + StateVersion race test (2026-04-29)
+
+**Plan estimate**: 6h (longest day; race test complexity)
+**Actual**: ~50 min
+**Commits planned for end of day**: 1
+
+### Tasks completed
+
+| Task | Status | Notes |
+|------|--------|-------|
+| 4.1 State ORM models (StateSnapshot/LoopState) | ✅ | Both inherit TenantScopedMixin per 09.md L25 multi-tenant standard |
+| 4.2 append_snapshot() helper + compute_state_hash() | ✅ | Validates parent_version + parent_hash; catches IntegrityError -> StateConflictError |
+| 4.3 Migration 0004 | ✅ | state_snapshots + loop_states + trigger function + sessions FK back-fill |
+| 4.4 Append-only trigger test (3 PASS + 1 SKIPPED) | ✅ | Update + delete blocked; TRUNCATE deferred to 49.3 |
+| 4.5 StateVersion race test (7 PASS, 5x parametrize) | ✅ | parent_hash_mismatch + parent_not_found + 5 race iterations all pass |
+| 4.6 收尾 | ✅ | 25 PASS + 1 SKIPPED / mypy 17 files / black + isort / flake8 / 0 SDK leak |
+
+### Quality gates (all GREEN)
+
+- ✅ alembic 0001 → 0002 → 0003 → 0004 cycle (up + down + re-up)
+- ✅ 18 PostgreSQL tables (Day 3's 16 + state_snapshots + loop_states) + 1 function + 1 trigger
+- ✅ pytest 25/26 PASS in 1.32s (1 skipped — TRUNCATE deferred to 49.3)
+- ✅ mypy strict 17 source files 0 errors
+- ✅ black + isort + flake8 clean
+- ✅ LLM SDK leak grep 0 imports
+
+### Notes / Surprises
+
+1. **Trigger exception type via asyncpg**: PG `RAISE EXCEPTION` surfaces in SQLAlchemy as `sqlalchemy.exc.DBAPIError` (wrapping `asyncpg.exceptions.RaiseError`), NOT `InternalError` or `ProgrammingError` as plan §技術設計 §5 sample suggested. Tests catch `DBAPIError` and `assert "append-only" in str(exc_info.value)`.
+2. **TRUNCATE trigger gap**: 09.md L702-705 best practice calls for STATEMENT-level TRUNCATE trigger but Sprint 49.2 only ships ROW-level UPDATE/DELETE trigger. ROW triggers don't fire on TRUNCATE. Documented + skipped test; **deferred to Sprint 49.3** (audit_log + state_snapshots gain it together).
+3. **Race test NOT using db_session fixture**: db_session fixture rolls back at end → second worker never sees winner's lock. Race tests use raw `get_session_factory()` + their own `async with session.begin()` so each worker can commit/rollback independently. `dispose_engine()` only at the very end of each test function.
+4. **Test data not cleaned up**: each race test uses uuid4-prefixed tenant code so subsequent runs don't interfere. Cleaning up via CASCADE delete from tenant would trigger the append-only protection (since state_snapshots cascade delete fires the trigger). Tolerable test pollution.
+5. **5x parametrize for race anti-flaky**: instead of 100-iter internal loop, used `pytest.mark.parametrize("iteration", range(5))`. Pytest output shows each iteration; if any breaks `1 win + 1 fail` invariant the test fails. All 5 passed.
+
+### Day 4 acceptance bridge
+
+- ✅ AC-1 partial: 4 migrations cycle clean
+- ✅ AC-2 partial: 13 ORM models registered (8 from Day 1+2 + 3 from Day 3 + 2 from Day 4); 12 CRUD-style tests
+- ✅ **AC-3 DONE**: StateVersion 雙因子 race; 5/5 parametrize iterations pass; parent_hash + parent_version validation
+- ✅ **AC-4 DONE**: state_snapshots append-only trigger blocks UPDATE + DELETE
+- ✅ AC-5 DONE
 
 ---
 
