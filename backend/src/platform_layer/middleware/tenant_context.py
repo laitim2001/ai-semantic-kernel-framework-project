@@ -63,14 +63,28 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
     """Extract X-Tenant-Id from header + populate request.state.tenant_id.
 
     Returns 401 if header missing; 400 if header is not a valid UUID.
+
+    System endpoints listed in EXEMPT_PATH_PREFIXES are skipped — they're
+    infrastructure (k8s probes / OTel scrape / auth gateway dispatch) and have
+    no tenant scope. Adding a path here is a deliberate decision: it MUST NOT
+    touch tenant-scoped tables.
     """
 
     HEADER_NAME = "X-Tenant-Id"
+
+    # Paths exempt from tenant header requirement. Sprint 49.4 Day 5 added
+    # /api/v1/health for k8s probes. Add new paths only with code review.
+    EXEMPT_PATH_PREFIXES: tuple[str, ...] = ("/api/v1/health",)
 
     def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
 
     async def dispatch(self, request, call_next):  # type: ignore[no-untyped-def]
+        path = request.url.path
+        for prefix in self.EXEMPT_PATH_PREFIXES:
+            if path == prefix or path.startswith(prefix + "/"):
+                return await call_next(request)
+
         raw = request.headers.get(self.HEADER_NAME)
         if not raw:
             return JSONResponse(

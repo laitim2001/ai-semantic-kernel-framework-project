@@ -63,7 +63,10 @@ def test_upgrade_uses_idempotent_create_extension() -> None:
     assert "CREATE EXTENSION IF NOT EXISTS pg_partman" in text
 
 
-def test_downgrade_uses_idempotent_drop() -> None:
+def test_upgrade_skips_when_binary_unavailable() -> None:
+    """upgrade() must check pg_available_extensions before CREATE EXTENSION.
+    This makes alembic upgrade head safe on postgres:16-alpine (no partman
+    binary) AND on the production custom image (binary present)."""
     repo_root = Path(__file__).resolve().parents[5]
     path = (
         repo_root
@@ -76,7 +79,26 @@ def test_downgrade_uses_idempotent_drop() -> None:
         / "0010_pg_partman.py"
     )
     text = path.read_text(encoding="utf-8")
-    assert "DROP EXTENSION IF EXISTS pg_partman" in text
+    assert "pg_available_extensions" in text
+    assert "RAISE NOTICE" in text  # explicit skip log
+
+
+def test_downgrade_drop_is_conditional() -> None:
+    """downgrade() must check pg_extension before DROP EXTENSION (idempotent)."""
+    repo_root = Path(__file__).resolve().parents[5]
+    path = (
+        repo_root
+        / "backend"
+        / "src"
+        / "infrastructure"
+        / "db"
+        / "migrations"
+        / "versions"
+        / "0010_pg_partman.py"
+    )
+    text = path.read_text(encoding="utf-8")
+    assert "pg_extension" in text  # checks installed state
+    assert "DROP EXTENSION pg_partman" in text
 
 
 def test_ops_runbook_documents_create_parent() -> None:

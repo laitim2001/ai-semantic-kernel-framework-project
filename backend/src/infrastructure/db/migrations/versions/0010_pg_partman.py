@@ -77,6 +77,7 @@ Revision graph:
 
 from __future__ import annotations
 
+import sqlalchemy as sa
 from alembic import op
 
 revision = "0010_pg_partman"
@@ -86,11 +87,38 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE EXTENSION IF NOT EXISTS pg_partman")
+    """Install pg_partman if the binary is available; otherwise log + skip.
+
+    Dev environments running postgres:16-alpine do NOT have postgresql-16-partman
+    installed at the OS level — `CREATE EXTENSION pg_partman` fails with
+    'extension control file not found'. We detect via pg_available_extensions
+    and skip gracefully so `alembic upgrade head` still succeeds for dev/CI.
+
+    Production must use docker/Dockerfile.postgres (postgres:16 full +
+    postgresql-16-partman). When that image is in use, this migration installs
+    the extension; otherwise it's a documented no-op.
+    """
+    bind = op.get_bind()
+    available = bind.execute(
+        sa.text("SELECT 1 FROM pg_available_extensions WHERE name = 'pg_partman'")
+    ).scalar()
+    if available:
+        op.execute("CREATE EXTENSION IF NOT EXISTS pg_partman")
+    else:
+        # No-op for environments without the partman binary.
+        # Log via raw NOTICE so alembic upgrade head output makes the skip explicit.
+        op.execute(
+            "DO $$ BEGIN RAISE NOTICE "
+            "'pg_partman binary not available — skipping CREATE EXTENSION (see migration 0010 docstring)'; "
+            "END $$"
+        )
 
 
 def downgrade() -> None:
-    # Note: this drops the extension only; if create_parent has been called
-    # in production, run partman.undo_partition() for each registered parent
-    # FIRST (manual ops step) before downgrading this migration.
-    op.execute("DROP EXTENSION IF EXISTS pg_partman")
+    """Drop pg_partman if installed. Idempotent."""
+    bind = op.get_bind()
+    installed = bind.execute(
+        sa.text("SELECT 1 FROM pg_extension WHERE extname = 'pg_partman'")
+    ).scalar()
+    if installed:
+        op.execute("DROP EXTENSION pg_partman")

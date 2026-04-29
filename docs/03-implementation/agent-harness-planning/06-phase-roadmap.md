@@ -22,7 +22,7 @@
 
 | Phase | 名稱 | 原 sprint | **新 sprint** | 範疇覆蓋 | 預期成果 |
 |-------|------|----------|-------------|---------|---------|
-| **49** | Foundation | 3 | **4** | 0（基礎設施） | V2 骨架 + CI + DB + RLS + Workers + Adapters + OTel |
+| **49** ✅ | Foundation | 3 | **4** ✅ DONE | 0（基礎設施） | V2 骨架 + CI + DB + RLS + Workers + Adapters + OTel — **DONE 2026-04-29** |
 | **50** | Loop Core | 2 | 2 | 1 + 6 | 真 ReAct loop 跑通簡單對話 |
 | **51** | Tools + Memory | 2 | **3** | 2 + 3 | 51.0 mock 工具 + 工具系統 + 5 層記憶 |
 | **52** | Context + Prompt | 2 | 2 | 4 + 5 | 統一 PromptBuilder + Compaction + Caching |
@@ -35,10 +35,14 @@
 
 ---
 
-## Phase 49: Foundation（**4 sprint** ←原 3）
+## Phase 49: Foundation（**4 sprint** ←原 3）✅ DONE — 2026-04-29
 
 ### 目標
 建立 V2 完整骨架，所有後續 Phase 的依賴。**不寫業務邏輯**，只建基礎設施。
+
+**Status**: ✅ **DONE** (2026-04-29) — 4/4 sprint complete; Phase 50.1 prerequisites unblocked.
+
+詳見 [`phase-49-foundation/README.md`](./phase-49-foundation/README.md) for full deliverable list.
 
 ### Sprint 49.1: V1 封存 + V2 目錄骨架 + **CI Pipeline**
 **工作量**：1 週
