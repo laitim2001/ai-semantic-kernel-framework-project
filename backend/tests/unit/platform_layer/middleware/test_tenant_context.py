@@ -23,10 +23,25 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from infrastructure.db import dispose_engine
 from platform_layer.middleware import (
     TenantContextMiddleware,
     get_db_session_with_tenant,
 )
+
+
+@pytest.fixture(autouse=True)
+async def _dispose_engine_after_each_test():  # type: ignore[no-untyped-def]
+    """Dispose the singleton engine after each test so the next test —
+    possibly in a different file with its own event loop — gets a clean
+    engine. Otherwise the pool retains asyncpg connections bound to
+    this test's loop and the next file's first test fails on cleanup
+    with `Event loop is closed`. Same root-cause fix as conftest's
+    db_session fixture, but FastAPI dep here doesn't go through that
+    fixture.
+    """
+    yield
+    await dispose_engine()
 
 
 def _build_test_app() -> FastAPI:

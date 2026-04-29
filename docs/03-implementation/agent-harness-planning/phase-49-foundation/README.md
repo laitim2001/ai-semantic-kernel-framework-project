@@ -1,6 +1,6 @@
 # Phase 49 — Foundation
 
-**Phase 進度**：Sprint 49.2 ✅ DONE — **2 / 4 sprint complete**（50%）
+**Phase 進度**：Sprint 49.3 ✅ DONE — **3 / 4 sprint complete**（75%）
 **啟動日期**：2026-04-28
 **目標完成**：2026-05-26（4 sprint × 1 週）
 
@@ -21,7 +21,7 @@
 |--------|------|------|---------|------------------|
 | **49.1** | ✅ DONE | V1 封存 + V2 目錄骨架 + CI Pipeline | 2026-04-29 | `feature/phase-49-sprint-1-v2-foundation`（13 commits）|
 | **49.2** | ✅ DONE | DB Schema + Async ORM 核心 | 2026-04-29 | `feature/phase-49-sprint-2-db-orm`（7 commits）|
-| 49.3 | 📋 待啟動 | RLS + Audit Append-Only + Memory + Qdrant 隔離 | TBD | TBD |
+| **49.3** | ✅ DONE | RLS + Audit Append-Only + Memory + Qdrant 隔離 | 2026-04-29 | `feature/phase-49-sprint-3-rls-audit-memory`（7 commits）|
 | 49.4 | 📋 待啟動 | Adapters + Worker Queue 選型 + OTel + Lint Rules | TBD | TBD |
 
 ---
@@ -55,7 +55,7 @@ docs/03-implementation/agent-harness-execution/phase-49/
 
 ---
 
-## Phase 49 累計交付（2/4 sprint）
+## Phase 49 累計交付（3/4 sprint）
 
 ### Sprint 49.1 ✅
 - V1 (Phase 1-48) → `archived/v1-phase1-48/`（READ-ONLY；tag `v1-final-phase48`）
@@ -77,6 +77,19 @@ docs/03-implementation/agent-harness-execution/phase-49/
 - 29 unit tests + real docker compose PostgreSQL（AP-10 對策）
 - CI 升級：spin up postgres service + alembic step + 嚴格 flake8
 - 49.1 retro action items 清算（02/03/04/05/06.md `platform/` → `platform_layer/` 22 處）
+
+### Sprint 49.3 ✅
+- Audit log append-only + hash chain（ROW UPDATE/DELETE + STATEMENT TRUNCATE）
+- 5 layer memory schema（system / tenant / role / user / session_summary）
+- API auth + quotas（api_keys + rate_limits）
+- Governance（approvals + risk_assessments + guardrail_events）
+- RLS policies on 13 tenant-scoped tables（26 policies；ENABLE + FORCE）
+- platform_layer/middleware first launch：TenantContextMiddleware + get_db_session_with_tenant
+- QdrantNamespaceStrategy（per-tenant collection + payload filter；client integration → 51.2）
+- 紅隊 6 攻擊向量驗證 0 leak（AC-10 acceptance suite）
+- 73 unit + security tests，0 SKIPPED
+- 49.2 retro carryover：state_snapshots STATEMENT TRUNCATE trigger 補裝
+- 🚧 pg_partman → 49.4（postgres:16-alpine 不支援 extension）
 
 ---
 
