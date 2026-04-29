@@ -16,7 +16,8 @@
 | Day 1 — Output Parser + classifier + StopReason mapping | 6h | ~50 min | 14% | 49.1 stub already had `ParsedOutput`; refactor to `.types` + add `metadata`. MockChatClient already had sequence (49.4). Aligned with 49.x V2 plan保守 ratio |
 | Day 2 — AgentLoop while-true main loop + 4 terminators | 6h | ~70 min | 19% | 49.1 ABC sig is `(session_id, user_input, trace_context)` — 50.1 ctor-injects ChatClient/OutputParser/ToolExecutor/system_prompt instead of `run()` params. ToolExecutor + ToolRegistry already split in 49.1. Cancellation `asyncio.current_task().cancelling()` only valid Python 3.11+ |
 | Day 3 — Events shim + InMemoryToolRegistry + AP-1 lint | 6h | ~80 min | 22% | events.py 簡化為 re-export shim（避免 redefine 違反 17.md §1）. InMemoryToolRegistry 採 _inmemory.py 命名 + DEPRECATED-IN: 51.1 marker. AP-1 lint substring 對註解中 `Message(role="tool"` 會 false-pass — test fixture 改用「intentionally absent」短語不含 marker（lint 是 over-approximation，production 不會這樣命中） |
-| Day 4 | 6h | — | — | pending |
+| Day 4 — E2E + Tracer/Metric coverage + cancellation polish | 6h | ~60 min | 17% | RecordingTracer (test-only Tracer ABC subclass) 替代 OTel global-state in-memory exporter — 更乾淨且驗證同一 Tracer interface. ChatRequest.messages 是 list reference share — `last_request.messages` 不是 1st chat call 的 snapshot，而是 cancel 點的 view（修正 cancellation state assertion） |
+| Day 5 | 4h | — | — | pending |
 | Day 3 | 6h | — | — | pending |
 | Day 4 | 6h | — | — | pending |
 | Day 5 | 4h | — | — | pending |
@@ -59,6 +60,14 @@
 - 14 new tests (tools × 8 in unit + 2 in integration + ap1-lint × 4)
 - Day 3 commit: `6962b8d feat(orchestrator-loop, sprint-50-1): events + InMemoryToolRegistry + AP-1 lint (Day 3)`
 
+### Day 4 (2026-04-30)
+- `tests/integration/orchestrator_loop/test_e2e_echo.py` — Sprint 50.1 acceptance e2e (2 tests): full event sequence + ChatRequest message progression (system → user → assistant w/ tool_calls → tool feedback) + zero-turn FINAL fast-path
+- `tests/integration/orchestrator_loop/test_observability_coverage.py` — RecordingTracer test-only Tracer ABC subclass (avoids OTel `set_tracer_provider` global-state issues); 3 tests verify per-turn loop / per-tool-call / per-turn parser spans + tool_execution_duration_seconds histogram emit (success + error labels)
+- `tests/integration/orchestrator_loop/test_cancellation_safety.py` — 3 edge cases beyond Day 2 mid-tool unit: cancel during slow chat() / consumer-driven generator break / post-cancel state integrity (tool message NOT prematurely appended; chat_call_count == 1)
+- 8 new integration tests; total suite 210 PASS / 0 SKIPPED / 4.25s
+- alembic from-zero cycle re-verified: head = 0010_pg_partman ✅
+- Day 4 commit: `7f70845 test(orchestrator-loop, sprint-50-1): e2e + tracer coverage + cancellation safety (Day 4)`
+
 ---
 
 ## Surprises / fixes recorded
@@ -73,6 +82,8 @@
 8. **`datetime.utcnow()` deprecation warnings** (Day 2 tests) — 49.1 events.py uses `field(default_factory=datetime.utcnow)`. 28 warnings emitted but not failing. CARRY: switch to `lambda: datetime.now(UTC)` in a future trivial-fix sprint.
 9. **AP-1 lint substring matches comments** (Day 3.4) — `Message(role="tool"` substring search picks up the literal even inside `#` comments / docstrings. First test fixture (`NO_TOOL_FEEDBACK_BODY`) had `# NOTE: NO Message(role="tool"...)` and was incorrectly judged as having tool-feedback. Fixed by re-wording fixture to "intentionally absent" without the substring. CARRY: production code rarely writes the literal in comments without using it; over-approximation is acceptable for 50.1.
 10. **`MetricRegistry()` default-constructable** (Day 3.3) — pre-loaded with REQUIRED_METRICS so `InMemoryToolExecutor()` without explicit metric_registry just works. `_safe_emit()` swallows KeyError for non-registered metric names.
+11. **OTel SDK `set_tracer_provider` is global one-shot** (Day 4.2) — once set, subsequent calls warn-and-ignore. Hostile to test isolation. SOLUTION: skip OTel SDK entirely in tests; build a `RecordingTracer` ABC subclass in test file that captures all `start_span` + `record_metric` calls. Production OTelTracer is exercised at adapter contract level (49.4) and at deployment (49.4 docker-compose Jaeger / Prometheus).
+12. **`ChatRequest.messages` is list-reference shared into `MockChatClient.last_request`** (Day 4.3) — Loop's local `messages: list[Message]` is wrapped into ChatRequest.messages and stored as `last_request.messages`. Subsequent appends mutate the same list. `last_request.messages` therefore reflects state at LATEST-OBSERVATION-TIME (e.g. cancel point), NOT the snapshot at original chat() call. Tests must assert invariants ("tool not in roles") rather than exact equality with a frozen-snapshot expectation.
 
 ---
 
@@ -85,18 +96,22 @@ feature/phase-50-sprint-1-loop-core
 ├── c72ef85 docs(sprint-50-1): Day 1 progress + checklist [x] update (Day 1)
 ├── 6f32d9a feat(orchestrator-loop, sprint-50-1): AgentLoop while-true main loop + 4 terminators (Day 2)
 ├── 79bd1ba docs(sprint-50-1): Day 2 progress + checklist [x] update (Day 2)
-└── 6962b8d feat(orchestrator-loop, sprint-50-1): events + InMemoryToolRegistry + AP-1 lint (Day 3)
+├── 6962b8d feat(orchestrator-loop, sprint-50-1): events + InMemoryToolRegistry + AP-1 lint (Day 3)
+├── e9592b6 docs(sprint-50-1): Day 3 progress + checklist [x] update (Day 3)
+└── 7f70845 test(orchestrator-loop, sprint-50-1): e2e + tracer coverage + cancellation safety (Day 4)
 ```
 
-6 commits. Branch is ~42 commits ahead of `main` (carries Phase 49 baseline).
+8 commits. Branch is ~44 commits ahead of `main` (carries Phase 49 baseline).
 
 ---
 
-## Quality gates (current = end of Day 3)
+## Quality gates (current = end of Day 4)
 
-- pytest: **202 / 0 SKIPPED / 4.02s** (49.4 baseline 150 + Day 1 21 + Day 2 17 + Day 3 14)
+- pytest: **210 / 0 SKIPPED / 4.25s** (49.4 baseline 150 + Day 1 21 + Day 2 17 + Day 3 14 + Day 4 8)
 - mypy --strict: 0 issues / **131 source files** (49.4 124 + 50.1 +7: types / parser / classifier / termination / loop / events / _inmemory)
-- **5 V2 lints: all OK** — duplicate-dataclass / cross-category-import / sync-callback / LLM SDK leak / **AP-1 (NEW)**
+- **5 V2 lints: all OK** — duplicate-dataclass / cross-category-import / sync-callback / LLM SDK leak / AP-1
 - LLM SDK leak grep on agent_harness/ + business_domain/ + platform_layer/ + runtime/ + api/: **0**
 - AP-1 (Pipeline disguised as Loop) verified clean on 4 files in agent_harness/orchestrator_loop/
-- alembic from-zero cycle: ✅ (head = `0010_pg_partman` from 49.4)
+- alembic from-zero cycle: ✅ (head = `0010_pg_partman` from 49.4) — re-verified Day 4
+- Sprint 50.1 e2e acceptance criterion: **MET** (test_e2e_echo_acceptance PASS)
+- Cat 12 instrumentation coverage: 3 of 5 emit points reachable in 50.1 scope verified (Loop turn / Tool execute / Output parser parse); LLM call covered at adapter contract level (49.4); state checkpoint lands Phase 53.1

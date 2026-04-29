@@ -4,7 +4,7 @@
 **Plan**：[sprint-50-1-plan.md](./sprint-50-1-plan.md)
 **Branch**：`feature/phase-50-sprint-1-loop-core` (created 2026-04-29)
 **預估**：5 days / ~28 SP / ~28h
-**Status**：🟢 IN_PROGRESS — Day 0-3 ✅ DONE; Day 4 next
+**Status**：🟢 IN_PROGRESS — Day 0-4 ✅ DONE; Day 5 next
 
 > **使用方式**：每完成一項，將 `[ ]` 改為 `[x]`。**禁止刪除未勾選項**（per CLAUDE.md sacred rule）。如項目被取消，標 🚧 + 寫理由保留。
 
@@ -269,7 +269,7 @@
 
 ### 4.1 端到端 e2e test（150 min）
 
-- [ ] **建 `tests/integration/orchestrator_loop/test_e2e_echo.py`**
+- [x] **建 `tests/integration/orchestrator_loop/test_e2e_echo.py`**
   - Setup fixtures：
     - MockChatClient with 2-turn pre-programmed response sequence
     - InMemoryToolRegistry + register echo_tool
@@ -299,7 +299,7 @@
   - 斷言 turn_count == 2
   - DoD：1 test PASS in < 1s
 
-- [ ] **驗證 e2e test 在 cancellation 邊界正確**
+- [x] **驗證 e2e test 在 cancellation 邊界正確**
   - `asyncio.wait_for(loop.run(...), timeout=...)` 觸發 cancel mid-turn
   - 斷言：events 含 LoopCompleted with reason=CANCELLED
   - 斷言：raises asyncio.CancelledError
@@ -307,7 +307,7 @@
 
 ### 4.2 Tracer / Metrics 埋點驗證（90 min）
 
-- [ ] **建 `tests/integration/orchestrator_loop/test_observability_coverage.py`**
+- [x] **建 `tests/integration/orchestrator_loop/test_observability_coverage.py`**
   - 用 OTelTracer + in-memory exporter（49.4 SDK 已有）
   - 跑 e2e echo flow
   - 斷言：每個 turn 有對應 span
@@ -316,7 +316,7 @@
   - 斷言：`tool_execution_duration_seconds` metric emit per tool call
   - DoD：4 assertions PASS
 
-- [ ] **驗證 `observability-instrumentation.md` 5 處埋點覆蓋**
+- [x] **驗證 `observability-instrumentation.md` 5 處埋點覆蓋**
   - 1. Loop turn 開頭 + 結尾 ✓
   - 2. Tool 執行前後 ✓
   - 3. LLM 呼叫前後（adapter 已埋）✓
@@ -326,7 +326,7 @@
 
 ### 4.3 Cancellation 完整測試（60 min）
 
-- [ ] **建 `tests/unit/orchestrator_loop/test_cancellation.py`**
+- [x] **建 `tests/unit/orchestrator_loop/test_cancellation.py`**
   - 3 scenarios：
     1. Slow tool execute → cancel mid-tool → 工具被 cancel + Loop yield CANCELLED
     2. Cancel before first turn → LoopStarted yield 但立即 LoopCompleted CANCELLED
@@ -336,13 +336,13 @@
 
 ### 4.4 全套驗證（60 min）
 
-- [ ] **mypy --strict 對 50.1 全 source 跑一次**
+- [x] **mypy --strict 對 50.1 全 source 跑一次**
   - DoD：0 issues
 
-- [ ] **pytest 全套**
+- [x] **pytest 全套**
   - DoD：~205 + ~10 new = ~215 PASS / 0 SKIPPED / < 5s
 
-- [ ] **5 lints + LLM SDK leak grep**
+- [x] **5 lints + LLM SDK leak grep**
   - Command：
     ```
     python scripts/lint/check_duplicate_dataclass.py src/
@@ -353,15 +353,15 @@
     ```
   - DoD：5 lints 全 PASS / LLM SDK leak = 0
 
-- [ ] **alembic from-zero cycle（49.4 baseline 確認）**
+- [x] **alembic from-zero cycle（49.4 baseline 確認）**
   - Command：`cd backend && alembic downgrade base && alembic upgrade head`
   - DoD：head=`0010_pg_partman` / 0 error
 
 ### Day 4 Wrap-up
 
-- [ ] **Day 4 progress.md 寫入**
+- [x] **Day 4 progress.md 寫入**
 
-- [ ] **Day 4 commit**
+- [x] **Day 4 commit**
   - Message：`test(orchestrator-loop, sprint-50-1): e2e + tracer coverage + cancellation (Day 4)`
 
 ---
