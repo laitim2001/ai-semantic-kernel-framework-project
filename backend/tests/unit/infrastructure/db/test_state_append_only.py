@@ -114,15 +114,32 @@ async def test_state_snapshot_cannot_delete(db_session: AsyncSession) -> None:
 
 @pytest.mark.asyncio
 async def test_state_snapshot_truncate_blocked(db_session: AsyncSession) -> None:
-    """Per 09.md L702-705 best practice — TRUNCATE should also be blocked.
+    """Per 09.md L702-705 best practice — STATEMENT-level TRUNCATE blocked.
 
-    NOTE: 09.md L703-705 calls for a STATEMENT-level TRUNCATE trigger, but
-    Sprint 49.2 only ships a ROW-level UPDATE/DELETE trigger. TRUNCATE is
-    a statement-level operation that bypasses ROW triggers, so this test
-    documents the gap. Sprint 49.3 will add the TRUNCATE trigger as part
-    of audit_log security tightening.
+    Sprint 49.3 migration 0005 installs `state_snapshots_no_truncate`
+    (BEFORE TRUNCATE FOR EACH STATEMENT). TRUNCATE state_snapshots
+    requires CASCADE because sessions.current_state_snapshot_id FKs into
+    it; CASCADE lets the trigger fire BEFORE the FK check would
+    otherwise reject. The trigger raises 'state_snapshots is append-only'.
     """
-    pytest.skip(
-        "STATEMENT-level TRUNCATE trigger deferred to Sprint 49.3 "
-        "(audit_log + state_snapshots both gain it together)."
+    from sqlalchemy import text
+
+    t = await seed_tenant(db_session, code="STATE_TRC2")
+    u = await seed_user(db_session, t, email="trc2@state.test")
+    s = Session(tenant_id=t.id, user_id=u.id)
+    db_session.add(s)
+    await db_session.flush()
+    await append_snapshot(
+        db_session,
+        session_id=s.id,
+        tenant_id=t.id,
+        state_data={"step": 1},
+        turn_num=1,
+        parent_version=None,
+        expected_parent_hash=None,
+        reason="bootstrap",
     )
+    with pytest.raises(DBAPIError) as exc_info:
+        await db_session.execute(text("TRUNCATE state_snapshots CASCADE"))
+        await db_session.flush()
+    assert "state_snapshots is append-only" in str(exc_info.value)

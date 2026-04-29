@@ -7,6 +7,9 @@ Sprint 49.2 builds these incrementally:
     Day 3.1: tools.py        — ToolRegistry / ToolCall / ToolResult
     Day 4.1: state.py        — StateSnapshot / LoopState
 
+Sprint 49.3 adds:
+    Day 1.1: audit.py        — AuditLog (append-only, hash chain)
+
 Importing this package registers all ORM tables with Base.metadata, which
 the Alembic env.py uses as `target_metadata`.
 
@@ -15,6 +18,9 @@ inherit `TenantScopedMixin` from `infrastructure.db.base`.
 """
 
 from __future__ import annotations
+
+# Day 1.1 (Sprint 49.3) — Audit
+from infrastructure.db.models.audit import AuditLog
 
 # Day 1.5 — Identity
 from infrastructure.db.models.identity import (
@@ -67,4 +73,6 @@ __all__ = [
     "LoopState",
     "append_snapshot",
     "compute_state_hash",
+    # Audit (Sprint 49.3)
+    "AuditLog",
 ]

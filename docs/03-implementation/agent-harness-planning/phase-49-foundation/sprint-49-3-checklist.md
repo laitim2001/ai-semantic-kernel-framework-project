@@ -13,38 +13,42 @@
 ## Day 1 — Audit log 完整鏈（估 5h）
 
 ### 1.1 設計 + ORM model（30 min）
-- [ ] **設計 `audit_log` schema（含 BIGSERIAL id + tenant_id NOT NULL + operation + resource_type + resource_id + access_allowed + payload JSONB + prev_hash + row_hash + timestamp_ms + 月度 PARTITION BY RANGE(created_at)）**
+- [x] **設計 `audit_log` schema（含 BIGSERIAL id + tenant_id NOT NULL + operation + resource_type + resource_id + access_allowed + payload JSONB + prev_hash + row_hash + timestamp_ms + 月度 PARTITION BY RANGE(created_at)）**
   - DoD：schema 對齐 09-db-schema-design.md L678-720；月度 partition 含 2026-04/05/06
   - Output：`backend/src/infrastructure/db/models/audit.py` (AuditLog ORM)
 
 ### 1.2 Alembic migration 0005（90 min）
-- [ ] **寫 `0005_audit_log_append_only` migration**
-  - 包含：1 audit_log 主表 + 3 monthly partitions + ROW UPDATE/DELETE trigger + STATEMENT TRUNCATE trigger
+- [x] **寫 `0005_audit_log_append_only` migration**
+  - **Scope 修正（對齐 09.md）**：09-db-schema-design.md L658 audit_log 為單表非 partition；plan 中「+3 monthly partitions」是過度設計，已刪除。實際交付：1 audit_log 主表（BIGSERIAL pk + TenantScopedMixin）+ ROW UPDATE/DELETE trigger + STATEMENT TRUNCATE trigger
   - **同時補裝**：state_snapshots 的 STATEMENT TRUNCATE trigger（49.2 deferred）
-  - DoD：upgrade() 與 downgrade() 對等；alembic upgrade head 成功
+  - DoD：upgrade() 與 downgrade() 對等；alembic upgrade head 成功 ✅
   - Command：`cd backend && alembic upgrade head`
 
 ### 1.3 結構驗證（20 min）
-- [ ] **\d+ audit_log + \d+ state_snapshots 確認 trigger 存在**
-  - DoD：`audit_log_row_immutable` + `audit_log_truncate_immutable` + `state_snapshots_truncate_immutable` 三個 function 在；對應 trigger 全裝
-  - Command：`docker compose exec postgres psql -U ipa_user -d ipa_platform -c "\\df audit_log*"`
+- [x] **pg_trigger 查詢確認 4 trigger 全裝（actual function names: prevent_audit_modification + prevent_state_snapshot_modification）**
+  - DoD：4 triggers 確認：audit_log_no_update_delete (ROW)、audit_log_no_truncate (STATEMENT)、state_snapshots_no_update_delete (ROW)、state_snapshots_no_truncate (STATEMENT) ✅
+  - Command：`SELECT tgname, tgrelid::regclass, tgtype FROM pg_trigger WHERE tgname LIKE '%audit%' OR tgname LIKE '%state_snapshots%'`
 
 ### 1.4 audit_helper.py（45 min）
-- [ ] **寫 `compute_audit_hash(prev_hash, payload, tenant_id, ts_ms) -> str`（SHA-256, canonical JSON sort_keys）**
-- [ ] **寫 async `append_audit(session, *, tenant_id, user_id, operation, resource_type, resource_id, allowed, payload) -> AuditLog`**
-  - 內部：select latest row_hash by tenant → compute new hash → insert
-  - DoD：mypy strict pass
+- [x] **寫 `compute_audit_hash(*, previous_log_hash, operation_data, tenant_id, timestamp_ms) -> str`（SHA-256, canonical JSON sort_keys + tight separators）**
+- [x] **寫 async `append_audit(session, *, tenant_id, operation, resource_type, operation_data, user_id=None, session_id=None, ...) -> AuditLog`**
+  - 內部：select latest current_log_hash by tenant → SENTINEL_HASH 若無前序 → compute new hash → insert
+  - **欄位名對齐 09.md**：`previous_log_hash` / `current_log_hash` / `operation_data` / `operation_result`（plan 用的 `prev_hash` / `payload` 已修正）
+  - DoD：mypy strict pass ✅
   - Output：`backend/src/infrastructure/db/audit_helper.py`
 
 ### 1.5 test_audit_append_only.py（90 min）
-- [ ] **test_audit_update_blocked**：`session.execute(update(AuditLog)...)` 應 raise DBAPIError
-- [ ] **test_audit_delete_blocked**：DELETE 同上
-- [ ] **test_audit_truncate_blocked**：`text("TRUNCATE audit_log")` 同上
-- [ ] **test_state_snapshots_truncate_blocked**：49.2 deferred 的 TRUNCATE 補上後驗證
-- [ ] **test_audit_hash_chain_integrity**：append 3 rows → 驗 row_hash[N] 與 prev_hash[N+1] 對齐
-- [ ] **test_audit_partition_routing**：插 2026-04 / 05 / 06 三日期，`tableoid::regclass` 應分到三 partition
-  - DoD：6 tests 全綠
-  - Command：`pytest backend/tests/unit/infrastructure/db/test_audit_append_only.py -v`
+- [x] **test_audit_can_insert**：baseline INSERT + SENTINEL_HASH + 獨立重算 hash 一致 ✅
+- [x] **test_audit_cannot_update**：UPDATE raise `audit_log is append-only` ✅
+- [x] **test_audit_cannot_delete**：DELETE raise 同上 ✅
+- [x] **test_audit_cannot_truncate**：`TRUNCATE audit_log` raise 同上 ✅
+- [x] **test_state_snapshots_cannot_truncate**：49.2 carryover；用 `TRUNCATE state_snapshots CASCADE` 繞過 FK check 後 trigger raise `state_snapshots is append-only` ✅
+- [x] **test_audit_hash_chain_integrity**：3 rows append → SENTINEL bootstrap + chain[N].previous == chain[N-1].current + 獨立重算一致 ✅
+  - **Scope 修正**：plan 中 `test_audit_partition_routing` 隨 partition 設計刪除一同移除；改為 hash chain integrity 更實質
+  - DoD：6 tests 全綠 ✅
+  - 順手解：49.2 留的 `test_state_snapshot_truncate_blocked` skip 已在本 sprint 補裝後啟用通過 ✅
+  - 全套回歸：32/32 PASS（49.2 26 + 49.3 6；無 SKIPPED）
+  - Command：`pytest backend/tests/unit/infrastructure/db/ -q`
 
 ### 1.6 commit Day 1（10 min）
 - [ ] **commit `feat(infrastructure-db, sprint-49-3): Day 1 audit log append-only + hash chain + state_snapshots TRUNCATE 補`**
