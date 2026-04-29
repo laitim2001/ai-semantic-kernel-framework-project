@@ -93,7 +93,43 @@ b414e7c docs(sprint-49-2): plan + checklist for Phase 49 Sprint 2
 
 ---
 
-## Day 3 — TBD (Tools migration + ORM + CRUD test)
+## Day 3 — Tools migration + ORM + CRUD test (2026-04-29)
+
+**Plan estimate**: 4h
+**Actual**: ~25 min
+**Commits planned for end of day**: 1
+
+### Tasks completed
+
+| Task | Status | Notes |
+|------|--------|-------|
+| 3.1 Tools ORM models (ToolRegistry/ToolCall/ToolResult) | ✅ | Registry global / Call per-tenant / Result via FK chain |
+| 3.2 Migration 0003 | ✅ | 3 tables + 6 indexes + 1 partial-index (status='active'); up/down cycle pass |
+| 3.3 CRUD tests (3 new) | ✅ | tools_registry / tool_call / tool_result; 8/8 CRUD tests + 4 partition tests + 3 engine tests = 15 PASS |
+| 3.4 收尾 | ✅ | mypy 15 files / black + isort / flake8 / 0 LLM SDK leak |
+
+### Quality gates (all GREEN)
+
+- ✅ alembic 0001 → 0002 → 0003 cycle (up + down + re-up)
+- ✅ 16 PostgreSQL tables (Day 2's 13 + tools_registry + tool_calls + tool_results)
+- ✅ pytest 15/15 PASS in 0.7s
+- ✅ mypy strict 15 source files 0 errors
+- ✅ black + isort + flake8 clean
+- ✅ LLM SDK leak grep 0 imports
+
+### Notes / Surprises
+
+1. **`message_id` FK 限制**：tool_calls.message_id 原 09.md L335 規定 `REFERENCES messages(id)`，但 messages 是 partitioned 表（PK = (id, created_at)），PG 16 不支援 partial-key FK。**決策**：tool_calls.message_id 改為純 UUID 無 FK 約束。Document 在 model docstring + migration docstring。49.3+ 若需 FK 可改 composite (id, created_at) 或等 PG 18 partial-partition FK feature。
+2. **`approval_id` FK 延後**：49.2 沒有 approvals 表，所以 tool_calls.approval_id 沒 FK；49.3 governance migration 加 FK。
+3. **Tool results 不帶 tenant_id**：09.md L25 list 沒列 tool_results；其 tenant 透過 tool_call FK chain 推斷。Junction-style 設計。
+
+### Day 3 acceptance bridge
+
+- ✅ AC-1 partial: alembic 0001 + 0002 + 0003 三個 migrations 全 cycle 通過
+- ✅ AC-2 partial: 11 ORM models registered (8 from Day 1+2 + 3 from Day 3); 8 CRUD tests cover all
+- ⏳ AC-3 (StateVersion race) → Day 4
+- ⏳ AC-4 (state_snapshots append-only) → Day 4
+- ✅ AC-5 DONE
 
 ---
 

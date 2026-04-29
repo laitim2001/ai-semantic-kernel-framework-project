@@ -112,31 +112,28 @@
 
 ---
 
-## Day 3 — Tools migration + ORM + CRUD test（估 4h）
+## Day 3 — Tools migration + ORM + CRUD test（估 4h）— ✅ DONE
 
-### 3.1 Tools ORM models（60 min）
-- [ ] **建立 `models/tools.py`**
-  - DoD：3 個 ORM：ToolRegistry（不繼承 TenantScopedMixin — 全局）/ ToolCall（繼承）/ ToolResult（繼承）
-  - 對齐 09-db-schema-design.md L286-380
-- [ ] **更新 `models/__init__.py` re-export**
+### 3.1 Tools ORM models（60 min）— ✅ DONE
+- [x] **建立 `models/tools.py`**（ToolRegistry global / ToolCall per-tenant / ToolResult no tenant via FK chain）
+- [x] **更新 `models/__init__.py` re-export**
+- 結果：11 ORM 註冊（5 identity + 3 sessions + 3 tools）
+- 🟡 **Plan 修正 from 09.md**：ToolResult 不帶 tenant_id（09.md L25 list 沒列；junction style）
 
-### 3.2 Migration 0003（45 min）
-- [ ] **建立 `migrations/versions/0003_tools.py`**
-  - DoD：手寫 SQL；含所有 CREATE TABLE + indexes + UNIQUE constraints
-  - 注意：tools_registry 是 global（無 tenant_id）；tool_calls / tool_results 帶 tenant_id
-- [ ] **跑 migration up + down**
-  - DoD：兩方向均成功
+### 3.2 Migration 0003（45 min）— ✅ DONE
+- [x] **建立 `migrations/versions/0003_tools.py`**（含 partial index `status='active'`）
+- [x] **跑 migration up + down**：兩方向通過
+- 🟡 **Surprise**：tool_calls.message_id 在 09.md L335 寫 FK 但 messages PK 為 (id, created_at) composite → 取消 FK 約束（不支援 partial-key FK in PG 16）；message_id 改純 UUID column。記錄於 model + migration docstring
 
-### 3.3 CRUD tests for Tools（90 min）
-- [ ] **擴充 `test_models_crud.py` Tools 區塊**
-  - DoD：3 個 test：`test_tools_registry_global`、`test_tool_call_with_session`、`test_tool_result_link_to_call`
+### 3.3 CRUD tests for Tools（90 min）— ✅ DONE
+- [x] **擴充 `test_models_crud.py` 3 個新 tests**：tools_registry_global / tool_call_with_session / tool_result_link_to_call
 
-### 3.4 Day 3 收尾（25 min）
-- [ ] **跑全 test**
-  - DoD：`pytest backend/tests/unit/infrastructure/db/ -v` 全 PASS（≥ 8 tests）
-- [ ] **Day 3 commit**
-  - DoD：`feat(infrastructure-db, sprint-49-2): Day 3 tools registry + tool_calls/results + CRUD test`
-- [ ] **更新 progress.md Day 3 條目**
+### 3.4 Day 3 收尾（25 min）— ✅ DONE
+- [x] **跑全 test**：15/15 PASS in 0.7s
+- [x] **mypy strict / black / isort / flake8**：clean（再次自動 reformat 2 files）
+- [x] **LLM SDK leak grep**：0 imports
+- [ ] **Day 3 commit**（待執行）
+- [x] **更新 progress.md Day 3 條目**
 
 ---
 

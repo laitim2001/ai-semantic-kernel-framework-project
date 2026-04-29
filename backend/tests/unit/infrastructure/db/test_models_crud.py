@@ -29,6 +29,9 @@ from infrastructure.db.models import (
     MessageEvent,
     Session,
     Tenant,
+    ToolCall,
+    ToolRegistry,
+    ToolResult,
 )
 from tests.conftest import seed_tenant, seed_user
 
@@ -142,3 +145,97 @@ async def test_message_event_emit(db_session: AsyncSession) -> None:
     assert e.event_type == "loop_turn_start"
     assert e.event_data == {"turn": 1}
     assert e.sequence_num == 1
+
+
+# ---------------------------------------------------------------------
+# Tools (Day 3 main coverage)
+# ---------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_tools_registry_global(db_session: AsyncSession) -> None:
+    """ToolRegistry is global (no tenant_id); UNIQUE(name, version) holds."""
+    tool = ToolRegistry(
+        name="memory_search",
+        version="1.0",
+        category="memory",
+        description="Semantic search across user/session memory layers.",
+        input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
+        output_schema={"type": "object"},
+        risk_level="low",
+        hitl_policy="auto",
+    )
+    db_session.add(tool)
+    await db_session.flush()
+    await db_session.refresh(tool)
+
+    assert tool.id is not None
+    assert tool.name == "memory_search"
+    assert tool.version == "1.0"
+    assert tool.is_mutating is False
+    assert tool.sandbox_level == "none"
+    assert tool.status == "active"
+
+
+@pytest.mark.asyncio
+async def test_tool_call_with_session(db_session: AsyncSession) -> None:
+    """ToolCall is per-tenant + per-session; default status='pending'."""
+    t = await seed_tenant(db_session, code="TC_TEST")
+    u = await seed_user(db_session, t, email="erin@example.com")
+    s = Session(tenant_id=t.id, user_id=u.id)
+    db_session.add(s)
+    await db_session.flush()
+
+    tc = ToolCall(
+        tenant_id=t.id,
+        session_id=s.id,
+        tool_name="memory_search",
+        tool_version="1.0",
+        arguments={"query": "incident #1234"},
+        permission_check_passed=True,
+    )
+    db_session.add(tc)
+    await db_session.flush()
+    await db_session.refresh(tc)
+
+    assert tc.id is not None
+    assert tc.tenant_id == t.id
+    assert tc.session_id == s.id
+    assert tc.status == "pending"
+    assert tc.message_id is None
+    assert tc.approval_id is None
+
+
+@pytest.mark.asyncio
+async def test_tool_result_link_to_call(db_session: AsyncSession) -> None:
+    """ToolResult links to a ToolCall; tenant scope inferred via FK chain."""
+    t = await seed_tenant(db_session, code="TR_TEST")
+    u = await seed_user(db_session, t, email="frank@example.com")
+    s = Session(tenant_id=t.id, user_id=u.id)
+    db_session.add(s)
+    await db_session.flush()
+
+    tc = ToolCall(
+        tenant_id=t.id,
+        session_id=s.id,
+        tool_name="echo",
+        arguments={"text": "Hi"},
+        permission_check_passed=True,
+        status="succeeded",
+    )
+    db_session.add(tc)
+    await db_session.flush()
+
+    tr = ToolResult(
+        tool_call_id=tc.id,
+        is_error=False,
+        result={"text": "Hi"},
+        raw_size_bytes=len('{"text": "Hi"}'),
+    )
+    db_session.add(tr)
+    await db_session.flush()
+    await db_session.refresh(tr)
+
+    assert tr.id is not None
+    assert tr.tool_call_id == tc.id
+    assert tr.is_error is False
+    assert tr.result == {"text": "Hi"}
+    assert tr.truncated is False

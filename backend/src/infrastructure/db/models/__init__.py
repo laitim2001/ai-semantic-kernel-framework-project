@@ -32,6 +32,13 @@ from infrastructure.db.models.sessions import (
     Session,
 )
 
+# Day 3.1 — Tools
+from infrastructure.db.models.tools import (
+    ToolCall,
+    ToolRegistry,
+    ToolResult,
+)
+
 __all__ = [
     # Identity
     "Tenant",
@@ -43,4 +50,8 @@ __all__ = [
     "Session",
     "Message",
     "MessageEvent",
+    # Tools
+    "ToolRegistry",
+    "ToolCall",
+    "ToolResult",
 ]
