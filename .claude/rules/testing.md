@@ -15,19 +15,26 @@
 
 ## Test Commands
 
+### ⚠️ Critical: Use `python -m pytest`, NOT bare `pytest`
+
+Bare `pytest` does NOT add cwd to `sys.path`, so imports like `from tests.conftest import ...` fail
+silently with `ModuleNotFoundError`. Always invoke pytest as a Python module.
+
 ```bash
-# Backend
+# Backend — ALWAYS prefix with `python -m`
 cd backend
-pytest                          # All tests
-pytest tests/unit/              # Unit tests only
-pytest -v --cov=src             # With coverage
-pytest tests/unit/test_file.py::test_function  # Single test
+python -m pytest                          # All tests
+python -m pytest tests/unit/              # Unit tests only
+python -m pytest -v --cov=src             # With coverage
+python -m pytest tests/unit/test_file.py::test_function  # Single test
 
 # Frontend
 cd frontend
 npm run test                    # Run tests
 npm run test:coverage           # With coverage
 ```
+
+> Source: V2 sprint-50-1 retrospective CARRY-001. Day 0.2 lost time to bare `pytest` failure mode.
 
 ---
 

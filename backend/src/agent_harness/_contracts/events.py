@@ -22,7 +22,9 @@ Single-source: 17.md §4.1
 Created: 2026-04-29 (Sprint 49.1)
 Last Modified: 2026-04-29
 
-Modification History:
+Modification History (newest-first):
+    - 2026-04-30: Fix `datetime.utcnow()` → `datetime.now(UTC)` (Sprint 50.2 Day 0
+        CARRY-002) — clears 28+ DeprecationWarning emitted per loop test run.
     - 2026-04-29: Initial creation (Sprint 49.1) — 22 stub subclasses
 
 Related:
@@ -34,7 +36,7 @@ Related:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -46,7 +48,7 @@ class LoopEvent:
     """Abstract base. Concrete subclasses are emitted by specific categories."""
 
     event_id: UUID = field(default_factory=uuid4)
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     trace_context: TraceContext | None = None
 
 
