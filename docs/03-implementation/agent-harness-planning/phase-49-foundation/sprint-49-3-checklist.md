@@ -1,0 +1,253 @@
+# Sprint 49.3 — Checklist
+
+**Plan**：[`sprint-49-3-plan.md`](./sprint-49-3-plan.md)
+**狀態**：📋 計劃中（待用戶 approve 才開 branch + 進 Day 1）
+**Branch**：`feature/phase-49-sprint-3-rls-audit-memory`（待建）
+**開始日**：TBD（用戶 approve 後）
+**目標完成**：開工後 5 工作天內
+
+> **Sacred Rule**：未勾選 `[ ]` 永不刪除；無法在本 sprint 內完成的，標 `🚧 延後到 49.X` + 理由保留。
+
+---
+
+## Day 1 — Audit log 完整鏈（估 5h）
+
+### 1.1 設計 + ORM model（30 min）
+- [ ] **設計 `audit_log` schema（含 BIGSERIAL id + tenant_id NOT NULL + operation + resource_type + resource_id + access_allowed + payload JSONB + prev_hash + row_hash + timestamp_ms + 月度 PARTITION BY RANGE(created_at)）**
+  - DoD：schema 對齐 09-db-schema-design.md L678-720；月度 partition 含 2026-04/05/06
+  - Output：`backend/src/infrastructure/db/models/audit.py` (AuditLog ORM)
+
+### 1.2 Alembic migration 0005（90 min）
+- [ ] **寫 `0005_audit_log_append_only` migration**
+  - 包含：1 audit_log 主表 + 3 monthly partitions + ROW UPDATE/DELETE trigger + STATEMENT TRUNCATE trigger
+  - **同時補裝**：state_snapshots 的 STATEMENT TRUNCATE trigger（49.2 deferred）
+  - DoD：upgrade() 與 downgrade() 對等；alembic upgrade head 成功
+  - Command：`cd backend && alembic upgrade head`
+
+### 1.3 結構驗證（20 min）
+- [ ] **\d+ audit_log + \d+ state_snapshots 確認 trigger 存在**
+  - DoD：`audit_log_row_immutable` + `audit_log_truncate_immutable` + `state_snapshots_truncate_immutable` 三個 function 在；對應 trigger 全裝
+  - Command：`docker compose exec postgres psql -U ipa_user -d ipa_platform -c "\\df audit_log*"`
+
+### 1.4 audit_helper.py（45 min）
+- [ ] **寫 `compute_audit_hash(prev_hash, payload, tenant_id, ts_ms) -> str`（SHA-256, canonical JSON sort_keys）**
+- [ ] **寫 async `append_audit(session, *, tenant_id, user_id, operation, resource_type, resource_id, allowed, payload) -> AuditLog`**
+  - 內部：select latest row_hash by tenant → compute new hash → insert
+  - DoD：mypy strict pass
+  - Output：`backend/src/infrastructure/db/audit_helper.py`
+
+### 1.5 test_audit_append_only.py（90 min）
+- [ ] **test_audit_update_blocked**：`session.execute(update(AuditLog)...)` 應 raise DBAPIError
+- [ ] **test_audit_delete_blocked**：DELETE 同上
+- [ ] **test_audit_truncate_blocked**：`text("TRUNCATE audit_log")` 同上
+- [ ] **test_state_snapshots_truncate_blocked**：49.2 deferred 的 TRUNCATE 補上後驗證
+- [ ] **test_audit_hash_chain_integrity**：append 3 rows → 驗 row_hash[N] 與 prev_hash[N+1] 對齐
+- [ ] **test_audit_partition_routing**：插 2026-04 / 05 / 06 三日期，`tableoid::regclass` 應分到三 partition
+  - DoD：6 tests 全綠
+  - Command：`pytest backend/tests/unit/infrastructure/db/test_audit_append_only.py -v`
+
+### 1.6 commit Day 1（10 min）
+- [ ] **commit `feat(infrastructure-db, sprint-49-3): Day 1 audit log append-only + hash chain + state_snapshots TRUNCATE 補`**
+
+---
+
+## Day 2 — api_keys + rate_limits + 5 memory tables（估 6h）
+
+### 2.1 api_keys + rate_limits 設計 + ORM（30 min）
+- [ ] **api_keys 欄位**：id / tenant_id / key_hash CHAR(64) / last_4 CHAR(4) / name VARCHAR / scopes JSONB / expires_at / revoked_at / created_by_user_id / created_at
+- [ ] **rate_limits 欄位**：id / tenant_id / api_key_id / window_start / window_end / request_count / created_at
+  - DoD：兩 ORM 都用 TenantScopedMixin
+  - Output：`backend/src/infrastructure/db/models/identity.py` 新增 ApiKey + RateLimit class
+
+### 2.2 0006 migration（45 min）
+- [ ] **寫 `0006_api_keys_rate_limits` migration**（含 unique key_hash index + composite index on rate_limits）
+  - DoD：alembic upgrade + downgrade 對稱
+
+### 2.3 5 memory tables 設計 + ORM（60 min）
+- [ ] **memory_system**（全局；無 tenant_id；id / category / content / created_at）
+- [ ] **memory_tenant**（TenantScopedMixin；category / content / expires_at NULL=permanent）
+- [ ] **memory_role**（TenantScopedMixin + role_id FK；category / content / expires_at）
+- [ ] **memory_user**（TenantScopedMixin + user_id FK；category / content / expires_at）
+- [ ] **memory_session_summary**（TenantScopedMixin + session_id FK；summary_text / token_count / created_at）
+  - DoD：5 ORM classes；4 帶 TenantScopedMixin
+  - Output：`backend/src/infrastructure/db/models/memory.py`
+
+### 2.4 0007 migration（60 min）
+- [ ] **寫 `0007_memory_layers` migration**（5 表 + 8 indexes：每表 (tenant, user/role/session, expires_at WHERE NOT NULL)）
+  - DoD：alembic upgrade + downgrade
+
+### 2.5 結構驗證（15 min）
+- [ ] **\d+ all 7 new tables + 確認 indexes**
+
+### 2.6 測試（90 min）
+- [ ] **test_api_keys_crud.py**（4 tests：create / lookup by hash / revoke / expire）
+- [ ] **test_memory_models_crud.py**（5 layer × CRUD = 5 tests + 1 cross-tenant memory_user 不可見 test = 6 tests）
+  - DoD：10 tests 全綠
+
+### 2.7 commit Day 2（10 min）
+- [ ] **commit `feat(infrastructure-db, sprint-49-3): Day 2 api_keys + rate_limits + 5 memory layers`**
+
+---
+
+## Day 3 — Governance 3 tables（估 5h）
+
+### 3.1 approvals 設計（30 min）
+- [ ] **欄位**：id / tenant_id / requestor_user_id / actor_user_id NULL / approval_type / status enum(pending/approved/rejected/timeout) / reason / payload JSONB / requested_at / decided_at NULL / expires_at
+  - DoD：TenantScopedMixin
+
+### 3.2 risk_assessments 設計（30 min）
+- [ ] **欄位**：id / tenant_id / session_id / score INT 0-100 / severity enum / recommendation TEXT / blocked BOOLEAN / payload JSONB / created_at
+  - DoD：TenantScopedMixin + session_id FK
+
+### 3.3 guardrail_events 設計 + ORM（30 min）
+- [ ] **欄位**：id / tenant_id / session_id NULL / detector_type / severity / action_taken enum(logged/blocked/sanitized) / payload JSONB / created_at
+  - DoD：TenantScopedMixin
+  - Output：`backend/src/infrastructure/db/models/governance.py` 含 3 classes
+
+### 3.4 0008 migration + upgrade（60 min）
+- [ ] **寫 `0008_governance` migration**（3 表 + 6 indexes）
+  - DoD：alembic upgrade + downgrade
+  - 結構驗證 \d+
+
+### 3.5 test_governance_models_crud.py（90 min）
+- [ ] **test_approval_state_machine**：pending → approved（actor_user_id + decided_at 寫入）
+- [ ] **test_approval_rejection**：pending → rejected
+- [ ] **test_approval_expiration**：expires_at 過期後 status auto-stay pending（DB 不主動轉；by job/query）
+- [ ] **test_risk_assessment_create**：score + severity + blocked 寫入
+- [ ] **test_guardrail_event_logged**：3 種 action_taken 都可寫
+- [ ] **test_cross_tenant_governance**：tenant_a approval 在 tenant_b 不可見
+  - DoD：6 tests 全綠
+
+### 3.6 commit Day 3（10 min）
+- [ ] **commit `feat(infrastructure-db, sprint-49-3): Day 3 governance — approvals + risk + guardrail events`**
+
+---
+
+## Day 4 — RLS + middleware + pg_partman（估 7h）
+
+### 4.1 14 表 RLS policy 清單（30 min）
+- [ ] **列出 14 張 session-scoped 表**：users / roles / sessions / messages / message_events / tool_calls / state_snapshots / loop_states / api_keys / rate_limits / approvals / risk_assessments / guardrail_events / audit_log
+  - 同時列出 6 張全局表（不掛 RLS）：tenants / tools_registry / user_roles / role_permissions / tool_results / memory_system
+
+### 4.2 0009 migration（120 min）
+- [ ] **寫 `0009_rls_policies_pg_partman` migration**
+  - 14 表 × `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`
+  - 14 表 × `CREATE POLICY tenant_isolation_<table> USING (tenant_id = current_setting('app.tenant_id', true)::uuid)`
+  - 14 表 × `CREATE POLICY tenant_insert_<table> FOR INSERT WITH CHECK (tenant_id = ...)`
+  - **pg_partman**：CREATE EXTENSION + 3 個 create_parent（messages / message_events / audit_log，p_premake=6）
+  - DoD：upgrade + downgrade 對等；upgrade 能跑通
+
+### 4.3 結構驗證（30 min）
+- [ ] **\dt + check policies**：`SELECT * FROM pg_policies WHERE schemaname = 'public'` → 28 行（14×2）
+- [ ] **pg_partman setup verify**：`SELECT * FROM partman.part_config`
+
+🚧 **延後條件**：若 pg_partman extension 在 `postgres:16-alpine` 不可裝，將 4.2 中 pg_partman 部分拆 0009b 並標 `🚧 延後到 49.4 lint+infra 階段`，理由：image 換 `postgres:16` full 需 docker compose env 改動，本 sprint 範圍外。
+
+### 4.4 tenant_context middleware（60 min）
+- [ ] **新建 `backend/src/platform_layer/middleware/__init__.py`**
+- [ ] **`backend/src/platform_layer/middleware/tenant_context.py`**：
+  - `TenantContextMiddleware(BaseHTTPMiddleware)` extract `X-Tenant-Id` header → set `request.state.tenant_id`
+  - `get_db_session_with_tenant(request)` async generator：取 request.state.tenant_id → SET LOCAL → yield session
+  - DoD：mypy strict pass
+
+### 4.5 test_tenant_context.py（45 min）
+- [ ] **test_missing_header_returns_401**
+- [ ] **test_invalid_uuid_returns_400**
+- [ ] **test_valid_uuid_sets_request_state**
+- [ ] **test_get_db_session_with_tenant_sets_local**：integration test 驗 SET LOCAL 確實寫入
+  - DoD：4 tests 全綠
+
+### 4.6 test_rls_enforcement.py（90 min）
+- [ ] **test_rls_select_blocked_without_set_local**：query messages → 0 rows（NULL setting 不匹配）
+- [ ] **test_rls_select_scoped_to_tenant**：SET LOCAL tenant_a → 只看到 tenant_a messages
+- [ ] **test_rls_insert_with_check_blocks_wrong_tenant**：SET LOCAL tenant_a + INSERT (tenant_id=tenant_b) → raise
+- [ ] **test_rls_update_blocked_cross_tenant**：SET LOCAL tenant_a + UPDATE messages WHERE id=<tenant_b's>...→ 0 rows affected
+- [ ] **test_rls_delete_blocked_cross_tenant**：同上
+  - 在 audit_log / approvals / memory_user 三表至少各覆蓋 1 案例（防漏）
+  - DoD：5+ tests 全綠
+
+### 4.7 commit Day 4（10 min）
+- [ ] **commit `feat(platform-layer, sprint-49-3): Day 4 RLS 14 表 + tenant context middleware + pg_partman`**
+
+---
+
+## Day 5 — Qdrant abstraction + 紅隊 + closeout（估 5h）
+
+### 5.1 Qdrant namespace abstraction（45 min）
+- [ ] **新建 `backend/src/infrastructure/vector/__init__.py`**
+- [ ] **`backend/src/infrastructure/vector/qdrant_namespace.py`**：
+  - `QdrantNamespaceStrategy.collection_name(tenant_id, layer)` static
+  - `QdrantNamespaceStrategy.payload_filter(tenant_id)` static
+  - 不接 Qdrant client（推 51.2）
+  - DoD：mypy strict pass
+
+### 5.2 test_qdrant_namespace.py（30 min）
+- [ ] **test_collection_name_tenant_unique**：兩 tenant 名稱不同
+- [ ] **test_collection_name_layer_separated**：同 tenant 不同 layer 名不同
+- [ ] **test_payload_filter_contains_tenant_id**
+  - DoD：3 tests 全綠
+
+### 5.3 紅隊測試套件（90 min）
+- [ ] **新建 `backend/tests/security/test_red_team_isolation.py`**：
+  - **AV-1**：偽造 X-Tenant-Id 為 tenant_b（middleware 接受合法 UUID 但 RLS 擋）→ 跨 tenant query 0 rows
+  - **AV-2**：移除 SET LOCAL（直連 session 不過 dependency）→ query 0 rows
+  - **AV-3**：嘗試 SQL injection 入 set_config('app.tenant_id', '...; SELECT * FROM ...')→ ::uuid cast 擋
+  - **AV-4**：UPDATE audit_log → trigger raise
+  - **AV-5**：TRUNCATE audit_log + state_snapshots → trigger raise
+  - **AV-6**：兩 tenant 用 QdrantNamespaceStrategy 拿 collection name → 名稱前綴 prefix 不重疊；payload filter 含 tenant_id must
+  - DoD：6 tests 全綠
+
+### 5.4 全套驗收（30 min）
+- [ ] **alembic downgrade base + alembic upgrade head 從零跑通**
+- [ ] **`pytest backend/tests/unit/infrastructure/db/ backend/tests/unit/platform_layer/ backend/tests/unit/infrastructure/vector/ backend/tests/security/`** 全綠
+- [ ] **\dt 確認最終表數量**：49.2 的 13 表 + 49.3 新增（audit_log + 3 partitions + api_keys + rate_limits + 5 memory + 3 governance）= 13 + 13 = 26 表 + 6 全局已存在 = 26 base + 6 partitions + 觸發器 functions
+  - DoD：表 / function / policy 數量符合 plan §AC-1
+
+### 5.5 Lint + 規範驗證（20 min）
+- [ ] **mypy strict 全 backend/src/infrastructure/db/ + backend/src/infrastructure/vector/ + backend/src/platform_layer/middleware/**
+- [ ] **flake8 + isort + black --check**
+- [ ] **LLM SDK leak grep on new files**：`grep -rn "import openai\|import anthropic\|from openai\|from anthropic" backend/src/infrastructure/ backend/src/platform_layer/` → 0 結果
+- [ ] **跨範疇 import check（手動）**：infrastructure 不 import agent_harness（單向依賴）
+
+### 5.6 文件 closeout（55 min）
+- [ ] **更新 `backend/src/infrastructure/db/README.md`**（補 49.3 deliverables 段）
+- [ ] **新建 `backend/src/platform_layer/middleware/README.md`**（簡述 tenant_context middleware）
+- [ ] **新建 `backend/src/infrastructure/vector/README.md`**（簡述 qdrant_namespace + 51.2 接 client 計畫）
+- [ ] **建 `docs/03-implementation/agent-harness-execution/phase-49/sprint-49-3/progress.md`**（5 days estimate vs actual + 意外項）
+- [ ] **建 `docs/03-implementation/agent-harness-execution/phase-49/sprint-49-3/retrospective.md`**（5 必述 + sign-off）
+- [ ] **更新 `docs/03-implementation/agent-harness-planning/phase-49-foundation/README.md`**（49.3 ✅ DONE，3/4 = 75%）
+- [ ] **將本 checklist 全項目 [x]（或標 🚧 + 理由）**
+
+### 5.7 commit Day 5 closeout（10 min）
+- [ ] **commit `docs(sprint-49-3): Day 5 closeout — Sprint 49.3 DONE`**
+
+---
+
+## Sprint 49.3 Done 條件（all must ✅）
+
+- [ ] AC-1 5 個 migrations 正反向 cycle 跑通
+- [ ] AC-2 audit append-only DB 層三擋（UPDATE/DELETE/TRUNCATE）
+- [ ] AC-3 hash chain 串連完整
+- [ ] AC-4 14 表 RLS 跨 tenant 0 leak
+- [ ] AC-5 5 層 memory CRUD + tenant 隔離
+- [ ] AC-6 governance 3 表 workflow stub
+- [ ] AC-7 tenant_context middleware + dependency
+- [ ] AC-8 Qdrant namespace abstraction
+- [ ] AC-9 49.2 carried-over 兩件清掉（state_snapshots TRUNCATE + pg_partman）（後者若 image 不支援，標 🚧 → 49.4）
+- [ ] AC-10 紅隊 6 攻擊向量 0 leak
+- [ ] AC-11 CI 通過：alembic + pytest + mypy + lint + LLM leak grep
+
+---
+
+## Sprint 49.3 closeout sign-off（Day 5 完成時填）
+
+- [ ] 全 checklist 項 `[x]` 或標 🚧 + 理由
+- [ ] All linters pass
+- [ ] X PASS + Y SKIPPED（X / Y 待 closeout 填）
+- [ ] Migration cycle from base proven
+- [ ] Real PostgreSQL via docker compose throughout
+- [ ] LLM SDK leak grep: 0 imports
+- [ ] CI workflow updated（若 0009 RLS migration 需新 verify step）
+- [ ] Phase 49 README 更新（3/4 sprint complete）
+
+**Sprint 49.3 status**：📋 計劃中 → 待用戶 approve → 開工
