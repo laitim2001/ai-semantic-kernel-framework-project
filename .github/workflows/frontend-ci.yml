@@ -1,0 +1,48 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, "feature/**", "fix/**", "refactor/**"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+
+jobs:
+  lint-and-build:
+    name: Lint + Type Check + Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: ESLint (with --max-warnings 0)
+        working-directory: frontend
+        run: npm run lint
+
+      - name: TypeScript check + Vite build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Verify dist artifacts
+        working-directory: frontend
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
+          echo "Build artifacts verified."

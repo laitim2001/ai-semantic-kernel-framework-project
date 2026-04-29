@@ -1,0 +1,70 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, "feature/**", "fix/**", "refactor/**"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  lint-and-test:
+    name: Lint + Type Check + Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install -r requirements.txt
+
+      - name: Black (code formatting)
+        working-directory: backend
+        run: black --check src/
+
+      - name: isort (import ordering)
+        working-directory: backend
+        run: isort --check-only --profile black src/
+
+      - name: flake8 (style)
+        working-directory: backend
+        run: flake8 src/ --max-line-length=100 --extend-ignore=E203,W503 || true
+        # Note: flake8 errors are non-blocking until Sprint 49.4 establishes
+        # the full lint baseline. Then change `|| true` → strict.
+
+      - name: mypy (strict type check)
+        working-directory: backend
+        run: mypy src/ --strict
+        continue-on-error: false
+
+      - name: pytest (unit tests)
+        working-directory: backend
+        run: pytest -v
+        continue-on-error: false
+        # Sprint 49.1 has no business tests yet; pytest passes vacuously.
+
+      - name: LLM SDK leak check (LLM-provider-neutrality)
+        working-directory: backend
+        run: |
+          if grep -rE "^(from |import )(openai|anthropic|agent_framework)" src/agent_harness/; then
+            echo "ERROR: agent_harness/ must not import LLM SDKs directly"
+            exit 1
+          fi
+          echo "OK: no LLM SDK imports in agent_harness/"
