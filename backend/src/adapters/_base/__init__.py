@@ -1,5 +1,24 @@
-"""adapters._base — ChatClient ABC + neutral types. See README.md."""
+"""adapters._base — ChatClient ABC + neutral types. See README.md.
 
-from adapters._base.chat_client import ChatClient, ModelInfo, PricingInfo, StreamEvent
+Single-source map:
+- ChatClient: chat_client.py
+- ModelInfo / StreamEvent: types.py
+- PricingInfo: pricing.py
+- ProviderError / AdapterException: errors.py
+- StopReason: re-exported from agent_harness._contracts.chat (per 17.md §1.1)
+"""
 
-__all__ = ["ChatClient", "ModelInfo", "PricingInfo", "StreamEvent"]
+from adapters._base.chat_client import ChatClient
+from adapters._base.errors import AdapterException, ProviderError
+from adapters._base.pricing import PricingInfo
+from adapters._base.types import ModelInfo, StopReason, StreamEvent
+
+__all__ = [
+    "AdapterException",
+    "ChatClient",
+    "ModelInfo",
+    "PricingInfo",
+    "ProviderError",
+    "StopReason",
+    "StreamEvent",
+]
