@@ -147,49 +147,53 @@
 
 ## Day 4 — RLS + middleware + pg_partman（估 7h）
 
-### 4.1 14 表 RLS policy 清單（30 min）
-- [ ] **列出 14 張 session-scoped 表**：users / roles / sessions / messages / message_events / tool_calls / state_snapshots / loop_states / api_keys / rate_limits / approvals / risk_assessments / guardrail_events / audit_log
-  - 同時列出 6 張全局表（不掛 RLS）：tenants / tools_registry / user_roles / role_permissions / tool_results / memory_system
+### 4.1 RLS-eligible tables 清單（30 min）
+- [x] **實際 13 張帶直接 tenant_id 的表**：users / roles / sessions / messages / message_events / tool_calls / state_snapshots / loop_states / api_keys / rate_limits / audit_log / memory_tenant / memory_user
+  - **Scope 修正**：plan 寫 14 張，實際 13。plan 把 approvals / risk_assessments / guardrail_events 算入 RLS 表，但 09.md 權威顯示這 3 表為 junction-via-session（無直接 tenant_id），不適用直接 RLS（已在 Day 3 落實此設計）。tenant 隔離透過 sessions FK 上的 RLS 一級傳導。
+  - 全局表（不掛 RLS）：tenants / tools_registry / memory_system
+  - Junction（無直接 tenant_id；不掛 RLS）：user_roles / role_permissions / tool_results / memory_role / memory_session_summary / approvals / risk_assessments / guardrail_events ✅
 
 ### 4.2 0009 migration（120 min）
-- [ ] **寫 `0009_rls_policies_pg_partman` migration**
-  - 14 表 × `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`
-  - 14 表 × `CREATE POLICY tenant_isolation_<table> USING (tenant_id = current_setting('app.tenant_id', true)::uuid)`
-  - 14 表 × `CREATE POLICY tenant_insert_<table> FOR INSERT WITH CHECK (tenant_id = ...)`
-  - **pg_partman**：CREATE EXTENSION + 3 個 create_parent（messages / message_events / audit_log，p_premake=6）
-  - DoD：upgrade + downgrade 對等；upgrade 能跑通
+- [x] **寫 `0009_rls_policies` migration**
+  - 13 表 × `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`
+  - 13 表 × `CREATE POLICY tenant_isolation_<table> USING (tenant_id = current_setting('app.tenant_id', true)::uuid)`
+  - 13 表 × `CREATE POLICY tenant_insert_<table> FOR INSERT WITH CHECK (tenant_id = ...)`
+  - **pg_partman 拆出 → 49.4** 🚧（image 不支援；見 4.3）
+  - DoD：upgrade + downgrade 對等 ✅；upgrade 跑通 ✅
 
 ### 4.3 結構驗證（30 min）
-- [ ] **\dt + check policies**：`SELECT * FROM pg_policies WHERE schemaname = 'public'` → 28 行（14×2）
-- [ ] **pg_partman setup verify**：`SELECT * FROM partman.part_config`
+- [x] **pg_policies 確認**：13 tables × 2 policies = 26 total ✅
+- [x] **FORCE RLS 確認**：13 tables relrowsecurity AND relforcerowsecurity = TRUE ✅
 
-🚧 **延後條件**：若 pg_partman extension 在 `postgres:16-alpine` 不可裝，將 4.2 中 pg_partman 部分拆 0009b 並標 `🚧 延後到 49.4 lint+infra 階段`，理由：image 換 `postgres:16` full 需 docker compose env 改動，本 sprint 範圍外。
+🚧 **pg_partman 確認延後到 49.4**：postgres:16-alpine image 不含 pg_partman extension（`SELECT name FROM pg_available_extensions WHERE name LIKE 'pg_partman%'` 回零行）。安裝需換 `postgres:16` full image + 自訂 Dockerfile + docker compose env 改動，超出 49.3 scope。49.4 lint+infra 階段一併處理 image 升級。
 
 ### 4.4 tenant_context middleware（60 min）
-- [ ] **新建 `backend/src/platform_layer/middleware/__init__.py`**
-- [ ] **`backend/src/platform_layer/middleware/tenant_context.py`**：
-  - `TenantContextMiddleware(BaseHTTPMiddleware)` extract `X-Tenant-Id` header → set `request.state.tenant_id`
-  - `get_db_session_with_tenant(request)` async generator：取 request.state.tenant_id → SET LOCAL → yield session
-  - DoD：mypy strict pass
+- [x] **新建 `backend/src/platform_layer/middleware/__init__.py`** ✅
+- [x] **`backend/src/platform_layer/middleware/tenant_context.py`**：
+  - `TenantContextMiddleware(BaseHTTPMiddleware)` extract `X-Tenant-Id` header → set `request.state.tenant_id`；missing → 401，invalid uuid → 400 ✅
+  - `get_db_session_with_tenant(request)` async generator：取 request.state.tenant_id → 用 `set_config('app.tenant_id', :tid, true)` SET LOCAL → yield session；commit/rollback context manager ✅
+  - DoD：mypy strict pass ✅
 
 ### 4.5 test_tenant_context.py（45 min）
-- [ ] **test_missing_header_returns_401**
-- [ ] **test_invalid_uuid_returns_400**
-- [ ] **test_valid_uuid_sets_request_state**
-- [ ] **test_get_db_session_with_tenant_sets_local**：integration test 驗 SET LOCAL 確實寫入
-  - DoD：4 tests 全綠
+- [x] **test_missing_header_returns_401** ✅
+- [x] **test_invalid_uuid_returns_400** ✅
+- [x] **test_valid_uuid_populates_request_state** ✅
+- [x] **test_get_db_session_with_tenant_sets_local**：用 ASGITransport + httpx AsyncClient mount 測試 app；endpoint probe `current_setting('app.tenant_id')` 確認 SET LOCAL 落地 ✅
+  - DoD：4 tests 全綠 ✅
 
 ### 4.6 test_rls_enforcement.py（90 min）
-- [ ] **test_rls_select_blocked_without_set_local**：query messages → 0 rows（NULL setting 不匹配）
-- [ ] **test_rls_select_scoped_to_tenant**：SET LOCAL tenant_a → 只看到 tenant_a messages
-- [ ] **test_rls_insert_with_check_blocks_wrong_tenant**：SET LOCAL tenant_a + INSERT (tenant_id=tenant_b) → raise
-- [ ] **test_rls_update_blocked_cross_tenant**：SET LOCAL tenant_a + UPDATE messages WHERE id=<tenant_b's>...→ 0 rows affected
-- [ ] **test_rls_delete_blocked_cross_tenant**：同上
-  - 在 audit_log / approvals / memory_user 三表至少各覆蓋 1 案例（防漏）
-  - DoD：5+ tests 全綠
+- [x] **關鍵發現**：`ipa_v2` 是 SUPERUSER + BYPASSRLS（兩者都繞 RLS，包括 FORCE RLS）。為真實驗 RLS，測試在 transaction 內建 `rls_app_role` (NOLOGIN, no superuser, no BYPASSRLS) + GRANT CRUD + `SET LOCAL ROLE rls_app_role` 切換到非 bypass role 後驗 RLS。
+- [x] **test_rls_select_blocked_without_set_local**：current_setting NULL 時 RLS 隱藏所有行（query 0 rows）✅
+- [x] **test_rls_select_scoped_to_tenant_a**：SET LOCAL app.tenant_id=A → 只看見 A 的 memory_user ✅
+- [x] **test_rls_insert_with_check_blocks_wrong_tenant**：tenant_a context + INSERT tenant_b → DBAPIError "row-level security" ✅
+- [x] **test_rls_update_blocked_cross_tenant**：tenant_a context + UPDATE B's row → rowcount=0；RESET ROLE 後驗 B 的內容未變 ✅
+- [x] **test_rls_delete_blocked_cross_tenant**：同 update 模式；rowcount=0 ✅
+- [x] **test_rls_audit_log_isolation**：audit_log 也走 RLS；A 看不到 B 的 audit row ✅
+  - DoD：6 tests 全綠 ✅
+  - 全套回歸：59/59 PASS（49.2 26 + 49.3 33；0 SKIPPED）
 
 ### 4.7 commit Day 4（10 min）
-- [ ] **commit `feat(platform-layer, sprint-49-3): Day 4 RLS 14 表 + tenant context middleware + pg_partman`**
+- [ ] **commit `feat(platform-layer, sprint-49-3): Day 4 RLS 13 tables + tenant_context middleware + (pg_partman 🚧 49.4)`**
 
 ---
 
