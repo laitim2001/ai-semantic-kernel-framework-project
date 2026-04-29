@@ -169,6 +169,15 @@ backend/.venv-rc4/
 /graphify_chunk_*.py
 
 # ============================================================================
+# TypeScript / Vite build artifacts (regenerated on each `npm run build`)
+# ============================================================================
+*.tsbuildinfo
+# vite.config.ts is the source; .d.ts and .js are emitted by `tsc -b` because
+# tsconfig.node.json has composite=true. They regenerate, so don't track them.
+/frontend/vite.config.d.ts
+/frontend/vite.config.js
+
+# ============================================================================
 # Graphify outputs (local reading aid only; not committed)
 # ============================================================================
 # Per CLAUDE.md §graphify: graphify-out/ is a Claude Code local reading
