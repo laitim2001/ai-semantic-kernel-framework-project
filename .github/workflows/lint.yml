@@ -51,6 +51,9 @@ jobs:
       - name: Lint 4 — LLM SDK only inside adapters/<provider>/
         run: python scripts/lint/check_llm_sdk_leak.py --root backend/src
 
+      - name: Lint 5 — AP-1 (Pipeline disguised as Loop)
+        run: python scripts/lint/check_ap1_pipeline_disguise.py --root backend/src
+
       - name: Lint rule unit tests (PASS + FAIL fixtures)
         working-directory: backend
         run: pytest tests/unit/scripts/lint -v

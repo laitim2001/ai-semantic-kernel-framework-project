@@ -72,3 +72,12 @@ repos:
         pass_filenames: false
         files: ^backend/src/.*\.py$
         always_run: false
+
+      - id: check-ap1-pipeline-disguise
+        name: V2 — AP-1 (Pipeline disguised as Loop)
+        entry: python scripts/lint/check_ap1_pipeline_disguise.py
+        args: [--root, backend/src]
+        language: system
+        pass_filenames: false
+        files: ^backend/src/agent_harness/orchestrator_loop/.*\.py$
+        always_run: false
