@@ -1,9 +1,9 @@
 # Phase 50 — Loop Core
 
-**Phase 進度**：Sprint 50.1 ✅ DONE — **1 / 2 sprint complete（50%）**
+**Phase 進度**：Sprint 50.1 ✅ DONE / Sprint 50.2 🟡 IN PROGRESS — **1 / 2 sprint complete（50%）**
 **啟動日期**：2026-04-29（接 Phase 49 closeout）
-**完成日期**：—（Phase 50 still in progress; 50.2 pending）
-**狀態**：✅ Sprint 50.1 DONE — Sprint 50.2 prerequisites unblocked; 50.2 plan 待 next session 開始時寫
+**完成日期**：—（Phase 50 still in progress; 50.2 Day 0 started 2026-04-30）
+**狀態**：🟡 Sprint 50.2 Day 0 — plan + checklist approved; branch `feature/phase-50-sprint-2-api-frontend` 已開
 
 ---
 
@@ -22,7 +22,7 @@
 | Sprint | 狀態 | 主題 | 完成日期 | Branch / Commits |
 |--------|------|------|---------|------------------|
 | **50.1** | ✅ DONE | 範疇 1 (Orchestrator Loop) + 範疇 6 (Output Parser) 核心 | 2026-04-30 | `feature/phase-50-sprint-1-loop-core`（10 commits incl. closeout）|
-| **50.2** | ⏳ PLANNED | API + Frontend 對接（rolling — plan 待寫）| — | — |
+| **50.2** | 🟡 IN PROGRESS | API + Frontend 對接 | — | `feature/phase-50-sprint-2-api-frontend`（Day 0 + plan/checklist 已 commit）|
 
 ---
 
@@ -33,8 +33,8 @@ phase-50-loop-core/
 ├── README.md                          ← (this file) Phase 50 入口
 ├── sprint-50-1-plan.md                ✅ DONE
 ├── sprint-50-1-checklist.md           ✅ DONE
-├── sprint-50-2-plan.md                ⏳ next session 開始時寫（rolling planning）
-└── sprint-50-2-checklist.md           ⏳ 同上
+├── sprint-50-2-plan.md                🟡 Day 0 (committed 2026-04-30)
+└── sprint-50-2-checklist.md           🟡 Day 0 (committed 2026-04-30)
 ```
 
 執行紀錄：
@@ -137,5 +137,5 @@ docs/03-implementation/agent-harness-execution/phase-50/
 
 ---
 
-**Last Updated**：2026-04-30 (Sprint 50.1 closeout — Phase 50 progress 1/2 = 50%)
+**Last Updated**：2026-04-30 (Sprint 50.2 Day 0 started — plan + checklist committed)
 **Maintainer**：用戶 + AI 助手共同維護
