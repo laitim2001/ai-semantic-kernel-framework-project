@@ -57,7 +57,7 @@ class AgentLoop(ABC):
         """
         raise NotImplementedError("Phase 50.1 will implement")
         # required to make this an async generator at type level:
-        yield  # type: ignore[unreachable]
+        yield
 
     @abstractmethod
     async def resume(
@@ -68,4 +68,4 @@ class AgentLoop(ABC):
     ) -> AsyncIterator[LoopEvent]:
         """Resume from a checkpointed state (e.g. after HITL approval)."""
         raise NotImplementedError("Phase 50.1 will implement")
-        yield  # type: ignore[unreachable]
+        yield

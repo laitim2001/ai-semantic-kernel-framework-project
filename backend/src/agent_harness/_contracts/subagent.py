@@ -38,10 +38,10 @@ from uuid import UUID
 class SubagentMode(Enum):
     """4 subagent dispatch modes. Worktree DELIBERATELY ABSENT."""
 
-    FORK = "fork"            # parallel sub-task; results merged back
-    TEAMMATE = "teammate"    # peer-to-peer mailbox communication
-    HANDOFF = "handoff"      # transfer control to another agent
-    AS_TOOL = "as_tool"      # LLM calls subagent as if it were a tool
+    FORK = "fork"  # parallel sub-task; results merged back
+    TEAMMATE = "teammate"  # peer-to-peer mailbox communication
+    HANDOFF = "handoff"  # transfer control to another agent
+    AS_TOOL = "as_tool"  # LLM calls subagent as if it were a tool
 
 
 @dataclass(frozen=True)

@@ -53,10 +53,10 @@ from agent_harness._contracts import (
 class ModelInfo:
     """ChatClient.model_info() returns this. Used for routing + cache key + metric labels."""
 
-    model_name: str          # "gpt-5.4" / "claude-3.7-sonnet" / "gpt-4o"
-    model_family: str        # "gpt" / "claude" / "azure-openai"
-    provider: str            # "azure_openai" / "anthropic" / "openai" / "foundry"
-    context_window: int      # max input tokens
+    model_name: str  # "gpt-5.4" / "claude-3.7-sonnet" / "gpt-4o"
+    model_family: str  # "gpt" / "claude" / "azure-openai"
+    provider: str  # "azure_openai" / "anthropic" / "openai" / "foundry"
+    context_window: int  # max input tokens
     max_output_tokens: int
     knowledge_cutoff: datetime | None = None
 
@@ -75,9 +75,7 @@ class PricingInfo:
 class StreamEvent:
     """Emitted by ChatClient.stream(); adapter normalizes provider event types."""
 
-    event_type: Literal[
-        "content_delta", "tool_call_delta", "stop", "thinking_delta", "usage"
-    ]
+    event_type: Literal["content_delta", "tool_call_delta", "stop", "thinking_delta", "usage"]
     payload: dict[str, object]
 
 
@@ -105,7 +103,7 @@ class ChatClient(ABC):
     ) -> AsyncIterator[StreamEvent]:
         """Server-Sent Events compatible. Yields StreamEvent."""
         raise NotImplementedError
-        yield  # type: ignore[unreachable]
+        yield
 
     # -- token / pricing / capability --------------------------------------
 

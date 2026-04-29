@@ -1,6 +1,6 @@
 """
 File: backend/src/agent_harness/_contracts/chat.py
-Purpose: Single-source LLM-neutral chat types (ChatRequest/Response/Message/ContentBlock/StopReason).
+Purpose: Single-source LLM-neutral chat types (request/response/message/blocks/stop).
 Category: cross-category single-source contracts (per 17.md §1)
 Scope: Phase 49 / Sprint 49.1
 

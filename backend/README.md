@@ -27,7 +27,9 @@ backend/src/
 │   ├── subagent/           ← Cat 11: 4-mode dispatch (no worktree)
 │   ├── observability/      ← Cat 12: Cross-cutting tracing (ABC owner)
 │   └── hitl/               ← HITL centralization (per §HITL)
-├── platform/               ← Governance, identity, observability impl, workers
+├── platform_layer/         ← Governance, identity, observability impl, workers
+│                              (named `platform_layer` not `platform` to avoid
+│                               shadowing Python stdlib `platform` module)
 ├── adapters/               ← Outbound integrations
 │   ├── _base/              ← ChatClient ABC (LLM-provider-neutral)
 │   ├── azure_openai/       ← V2 primary provider (Sprint 49.3)
