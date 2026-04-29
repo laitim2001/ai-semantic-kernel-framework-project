@@ -252,11 +252,83 @@ Buffer accumulated → Days 3-5 can absorb any complexity surprises.
 | Day 3 | 5h | ~60 min | 20% |
 | **Cumulative** | **15h 10min** | **~3h 40min** | **24%** |
 
-## Next: Day 4 — V2 frontend skeleton (5h estimate)
+## Day 4 (2026-04-29) — V2 frontend skeleton (commits `006321e` + `c798f95`)
 
-1. frontend/ root: package.json (React 18 + Vite 5 + Zustand) / tsconfig
-   / vite.config.ts (port 3007) / index.html
-2. src/main.tsx + src/App.tsx (router)
-3. pages/{chat-v2,governance,verification}/ placeholders
-4. features/ 11 categories × README placeholders
-5. Verify: npm install / npm run lint / npm run build / npm run dev
+### Day 4.1 — frontend root (6 files)
+- package.json: React 18 + Vite 5 + Zustand 5 + RR 6 + ESLint 9 + TS 5.6 + @types/node 20
+- tsconfig.json: strict + path alias `@/*` → `src/*`
+- tsconfig.node.json: composite, types: ["node"] for vite.config.ts
+- vite.config.ts: port 3007 (avoid V1 collision) + /api proxy → :8001
+- index.html: lang=zh-Hant, module main.tsx
+- README.md: architecture map + 5-phase roadmap + V2 vs V1
+
+### Day 4.2 — src/ main files
+- main.tsx: StrictMode + BrowserRouter + App
+- App.tsx: 4 routes (/ Home + chat-v2 + governance + verification)
+- 8 .gitkeep for components/{ui,layout,shared}, hooks/, api/, stores/, types/, utils/, public/
+
+### Day 4.3 — Pages placeholders (6 files)
+- pages/chat-v2/{index.tsx, README.md} — Phase 50.2
+- pages/governance/{index.tsx, README.md} — Phase 53.3-53.4
+- pages/verification/{index.tsx, README.md} — Phase 54.1
+
+### Day 4.4 — Features placeholders (7 README only)
+- orchestrator-loop / tools / memory / state-mgmt / guardrails /
+  verification / subagent — each lists 3-4 planned components +
+  backend pair + first implementation sprint
+
+### Day 4.5 — Verification
+
+- ✅ `npm install`: 43 packages, 0 errors (2 audit warnings non-blocking)
+- ✅ `npm run build`: 36 modules → dist/index-*.js (165 KB / gzip 54 KB) in 519 ms
+- ⏸️ `npm run dev`: skipped (CLAUDE.md "do not stop node.js processes" rule;
+  defer real Vite dev server to Day 5.2 / user manual run)
+- ⏸️ `npm run lint`: deferred (ESLint 9 flat config not yet built; build/typecheck
+  is primary Day 4 gate; lint config will land in a later sprint when actual
+  source code exists to lint)
+
+### Two commits
+
+| Commit | Notes |
+|--------|-------|
+| `006321e` | feat(frontend-shared): Day 4 frontend skeleton (35 files) |
+| `c798f95` | chore(gitignore): exclude *.tsbuildinfo + vite.config.{d.ts,js} (cleanup of accidentally tracked TS build artifacts) |
+
+### Estimates vs Actual (Day 4)
+| Section | Plan estimate | Actual |
+|---------|---------------|--------|
+| 4.1 root config | 60 min | ~10 min |
+| 4.2 src main | 60 min | ~5 min |
+| 4.3 pages | 45 min | ~5 min |
+| 4.4 features | 55 min | ~5 min |
+| 4.5 verify (npm install + build) | 60 min | ~5 min |
+| **Total Day 4** | **5h** | **~30 min** | 10% of estimate
+
+### Sprint 49.1 cumulative
+
+| Day | Plan | Actual | Ratio |
+|-----|------|--------|-------|
+| Day 1 | 3h 10min | ~65 min | 35% |
+| Day 2 | 7h | ~95 min | 23% |
+| Day 3 | 5h | ~60 min | 20% |
+| Day 4 | 5h | ~30 min | 10% |
+| **Cumulative** | **20h 10min** | **~4h 10min** | **21%** |
+
+### Open items
+- ⏸️ ESLint 9 flat config not yet created (no production code exists to lint yet)
+- ⏸️ Vite dev server not manually validated (defer to Day 5 or user-driven)
+- ⏸️ npm audit reports 2 moderate severity vulnerabilities (transitive deps); fix in later sprint
+
+## Next: Day 5 — Docker + CI Pipeline + Integration acceptance + Sprint closeout (5h estimate)
+
+1. CI Pipeline (NEW per 2026-04-28 review):
+   - .github/workflows/backend-ci.yml (black/isort/flake8/mypy/pytest)
+   - .github/workflows/frontend-ci.yml (lint/build/test)
+   - .github/PULL_REQUEST_TEMPLATE.md (3 principles + 17.md interface check)
+   - branch protection rules (admin)
+2. Docker compose smoke test (4 services: postgres / redis / rabbitmq / qdrant)
+3. End-to-end startup verification (uvicorn + npm run dev + curl /health)
+4. Code quality checks (black / isort / mypy / flake8 / npm lint+build)
+5. Import comprehensive verification (13 ABCs + _contracts + ChatClient)
+6. Documentation completion (retrospective.md + artifacts/)
+7. PR creation + self-review
