@@ -4,7 +4,7 @@
 **Plan**：[sprint-50-1-plan.md](./sprint-50-1-plan.md)
 **Branch**：`feature/phase-50-sprint-1-loop-core` (created 2026-04-29)
 **預估**：5 days / ~28 SP / ~28h
-**Status**：🟢 IN_PROGRESS — Day 0-2 ✅ DONE; Day 3 next
+**Status**：🟢 IN_PROGRESS — Day 0-3 ✅ DONE; Day 4 next
 
 > **使用方式**：每完成一項，將 `[ ]` 改為 `[x]`。**禁止刪除未勾選項**（per CLAUDE.md sacred rule）。如項目被取消，標 🚧 + 寫理由保留。
 
@@ -185,7 +185,7 @@
 
 ### 3.1 events.py 範疇 1 own 事件（90 min）
 
-- [ ] **建 `agent_harness/orchestrator_loop/events.py`**
+- [x] **建 `agent_harness/orchestrator_loop/events.py`**
   - 從 `_contracts/events.py` re-export `LoopEvent` base + 9 子類
   - 在 orchestrator_loop/ 內 own 5 個必須事件（per 17.md §4.1）：
     - `LoopStarted` / `Thinking` / `LoopCompleted`（owner: 範疇 1）
@@ -201,7 +201,7 @@
 
 ### 3.2 Tool 結果回注驗證（60 min）
 
-- [ ] **整合測試 `tests/integration/orchestrator_loop/test_tool_feedback.py`**
+- [x] **整合測試 `tests/integration/orchestrator_loop/test_tool_feedback.py`**
   - MockChatClient sequence：
     - Turn 1：tool_calls=[ToolCall(name="echo", arguments={"text":"hi"})]
     - Turn 2：FINAL「The echo returned: hi」
@@ -212,7 +212,7 @@
 
 ### 3.3 InMemoryToolRegistry + echo_tool（90 min）
 
-- [ ] **建 `agent_harness/tools/_inmemory_registry.py`**
+- [x] **建 `agent_harness/tools/_inmemory_registry.py`**
   - `class InMemoryToolRegistry(ToolRegistry)`（對齐 49.1 _abc.py）
   - 方法：register / get / list / execute
   - **檔名前綴 `_` + docstring 標：「DEPRECATED-IN: Sprint 51.1（範疇 2 完整實作 supersedes）」**
@@ -220,14 +220,14 @@
   - 整合 49.4 NoOpTracer（emit `tool_execution_duration_seconds` metric）
   - DoD：mypy strict pass；可 import + execute
 
-- [ ] **建 `tests/unit/tools/test_inmemory_registry.py`**
+- [x] **建 `tests/unit/tools/test_inmemory_registry.py`**
   - 5 tests：register / get / list / execute echo / unknown tool error
   - 1 test：metric emit 驗證（用 in-memory metric reader）
   - DoD：6 PASS
 
 ### 3.4 AP-1 lint rule（60 min）
 
-- [ ] **建 `scripts/lint/check_ap1_pipeline_disguise.py`**
+- [x] **建 `scripts/lint/check_ap1_pipeline_disguise.py`**
   - 檢查 `agent_harness/orchestrator_loop/loop.py` 結構：
     - 必須含 `while True:` 或 `while not …:`（AST 檢測）
     - 不能用 `for step in steps:` 模式
@@ -237,15 +237,15 @@
   - **stdlib only**（per 49.4 lint scripts 慣例）
   - DoD：mypy strict pass
 
-- [ ] **加入 `.pre-commit-config.yaml`**
+- [x] **加入 `.pre-commit-config.yaml`**
   - 同 49.4 4 個 lint hooks 結構
   - DoD：`pre-commit run check-ap1 --all-files` 對 50.1 codebase 0 違反
 
-- [ ] **加入 `.github/workflows/lint.yml`**
+- [x] **加入 `.github/workflows/lint.yml`**
   - 加一個 step `Check AP-1 pipeline disguise`
   - DoD：CI workflow YAML 合法（GH Actions parser 通過）
 
-- [ ] **建 `tests/unit/lint/test_ap1_pipeline_disguise.py`**
+- [x] **建 `tests/unit/lint/test_ap1_pipeline_disguise.py`**
   - 4 tests：
     - pos：AgentLoopImpl with while-True → pass
     - neg：fake module with `for step in steps:` → fail
@@ -255,12 +255,12 @@
 
 ### Day 3 Wrap-up
 
-- [ ] **跑全套 pytest + mypy + 5 lints（49.4 4 + AP-1 1）**
+- [x] **跑全套 pytest + mypy + 5 lints（49.4 4 + AP-1 1）**
   - DoD：~184 + ~21 new = ~205 PASS
 
-- [ ] **Day 3 progress.md 寫入**
+- [x] **Day 3 progress.md 寫入**
 
-- [ ] **Day 3 commit**
+- [x] **Day 3 commit**
   - Message：`feat(orchestrator-loop, sprint-50-1): events + tool result feed-back + AP-1 lint (Day 3)`
 
 ---
