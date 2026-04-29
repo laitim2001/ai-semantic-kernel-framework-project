@@ -51,9 +51,45 @@ b414e7c docs(sprint-49-2): plan + checklist for Phase 49 Sprint 2
 
 ---
 
-## Day 2 — TBD (Sessions partition + ORM + CRUD test)
+## Day 2 — Sessions partition + ORM + CRUD test (2026-04-29)
 
-_planned 2026-04-29 後續 / 用戶下次 session_
+**Plan estimate**: 5h
+**Actual**: ~45 min
+**Commits planned for end of day**: 1
+
+### Tasks completed
+
+| Task | Status | Notes |
+|------|--------|-------|
+| 2.1 Sessions ORM models (Session/Message/MessageEvent) | ✅ | Composite PK (id, created_at) for partitioned tables; postgresql_partition_by="RANGE (created_at)" |
+| 2.2 Migration 0002 partition design | ✅ | sessions + 3 partitioned children each (2026_04, 05, 06); pg_partman deferred to 49.3 |
+| 2.3 conftest.py + db_session fixture | ✅ | Per-test rollback + dispose_engine() to fix loop scope issue (see Surprises) |
+| 2.4 CRUD tests for sessions (5 tests) | ✅ | Tenant + User + Session + Message + MessageEvent CRUD |
+| 2.5 Partition routing test (4 tests) | ✅ | parametrize 3 months + MessageEvent; verify via tableoid::regclass |
+| 2.6 收尾 (lint + commit) | ✅ | 12 tests / mypy strict / black / isort / flake8 all green |
+
+### Quality gates (all GREEN)
+
+- ✅ alembic 0001 → 0002 migration up + down + re-up cycle
+- ✅ 13 PostgreSQL tables (5 identity + sessions + messages parent + 3 partition + message_events parent + 3 partition + alembic_version)
+- ✅ pytest 12/12 PASS in 0.5s
+- ✅ mypy strict 13 source files 0 errors
+- ✅ black + isort + flake8 clean
+
+### Notes / Surprises
+
+1. **Default NOW() partition routing**: 起初 migration 只建 2026-05 + 2026-06 partition，但 docker postgres NOW() = 2026-04-29 → 落不進任何 partition。修為加 2026-04 partition（當月）+ 05 + 06。修法：alembic downgrade → edit migration → alembic upgrade。lesson: 49.3 起 pg_partman 自動建 +6 個月 partition 避此。
+2. **Event loop closed in test 2+**: pytest-asyncio 預設 per-test event loop，但 `infrastructure.db.engine` 是 module-level singleton bound to 第一個建立 engine 的 loop。第 2 個 test 在新 loop 跑時拿到 dead loop pool connection → `RuntimeError: Event loop is closed`。修：conftest.py db_session fixture 在 teardown 時 `await dispose_engine()` 強制下次 test 重建 engine。記錄 trade-off：每 test 多 ~10ms 但保正確 + 隔離。
+3. **postgresql_partition_by SQLAlchemy 支援**：op.create_table 直接接受 `postgresql_partition_by="RANGE (created_at)"` kwarg，partition leaves 用 op.execute("CREATE TABLE ... PARTITION OF ...")。Alembic 1.13+ 工作良好。
+4. **Composite PK + UNIQUE 規則**：PostgreSQL 強制 partition key 在 PRIMARY KEY 內，且任何 UNIQUE constraint 都必須含 partition key。所以 Message 的 PK = (id, created_at)，UNIQUE = (session_id, sequence_num, created_at)。
+
+### Day 2 acceptance bridge
+
+- [x] AC-1 partial: alembic 0001 + 0002 migrations apply + revert cleanly
+- [x] AC-2 partial: 8 ORM models + CRUD tests pass (5 tests for Day 2 + 3 from Day 1)
+- [ ] AC-3 (StateVersion race) → Day 4
+- [ ] AC-4 (state_snapshots append-only trigger) → Day 4
+- [x] **AC-5 partition routing**: 4 partition routing tests pass; tableoid::regclass verifies messages_2026_{04,05,06} + message_events_2026_05 routing
 
 ---
 

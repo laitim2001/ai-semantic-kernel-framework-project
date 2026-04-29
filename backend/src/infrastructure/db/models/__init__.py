@@ -25,10 +25,22 @@ from infrastructure.db.models.identity import (
     UserRole,
 )
 
+# Day 2.1 — Sessions
+from infrastructure.db.models.sessions import (
+    Message,
+    MessageEvent,
+    Session,
+)
+
 __all__ = [
+    # Identity
     "Tenant",
     "User",
     "Role",
     "UserRole",
     "RolePermission",
+    # Sessions
+    "Session",
+    "Message",
+    "MessageEvent",
 ]

@@ -79,54 +79,36 @@
 
 ---
 
-## Day 2 — Sessions migration（含 partition）+ ORM + CRUD test（估 5h）
+## Day 2 — Sessions partition + ORM + CRUD test（估 5h）— ✅ DONE
 
-### 2.1 Sessions ORM models（60 min）
-- [ ] **建立 `models/sessions.py`**
-  - DoD：3 個 ORM class：Session / Message / MessageEvent；全繼承 TenantScopedMixin
-  - 對齐 09-db-schema-design.md L196-281 + L1042-1075（partition 改寫版）
-  - 注意：Message / MessageEvent 的 PK 含 `created_at`（partition key 必須在 PK）
-- [ ] **更新 `models/__init__.py` re-export**
+### 2.1 Sessions ORM models（60 min）— ✅ DONE
+- [x] **建立 `models/sessions.py`**（Session + Message + MessageEvent）
+- [x] **更新 `models/__init__.py` re-export**
+- 結果：8 表註冊（5 identity + sessions + messages + message_events）；composite PK + postgresql_partition_by 配置正確
 
-### 2.2 Migration 0002 — partition 設計（90 min）
-- [ ] **建立 `migrations/versions/0002_sessions_partitioned.py`**
-  - DoD：手寫 SQL：
-    1. `CREATE TABLE sessions ...`（無 partition）
-    2. `CREATE TABLE messages ... PARTITION BY RANGE (created_at)`
-    3. `CREATE TABLE messages_2026_05 PARTITION OF messages FOR VALUES FROM ('2026-05-01') TO ('2026-06-01')`
-    4. `CREATE TABLE messages_2026_06 PARTITION OF messages FOR VALUES FROM ('2026-06-01') TO ('2026-07-01')`
-    5. `message_events` 同 partition
-    6. 全部 indexes
-  - 對齐 09-db-schema-design.md L1040-1095
-- [ ] **跑 migration up + verify partition**
-  - DoD：`\dt+ messages*` 顯示 3 個 entry（messages 主表 + 2 partition）
-  - Command：`docker compose -f ../docker-compose.dev.yml exec postgres psql -U ipa_v2 -d ipa_v2 -c "\dt+ messages*"`
-- [ ] **跑 migration down + verify**
-  - DoD：partition 與主表全消失
+### 2.2 Migration 0002 — partition 設計（90 min）— ✅ DONE
+- [x] **建立 `migrations/versions/0002_sessions_partitioned.py`**
+  - 含 3 個月 partition（**2026-04 為當月，加碼避 NOW() 撞牆**）+ 全部 indexes
+- [x] **跑 migration up + verify partition**：`\dt+ messages*` 顯示 4 entry（parent + 3 partitions）
+- [x] **跑 migration down + verify**：表全消失
+- 🟡 **Surprise**：原計畫只 2 partition（05, 06）但 NOW()=2026-04-29 落不進。修：補 2026-04 partition
 
-### 2.3 conftest.py 與 db_session fixture（45 min）
-- [ ] **建立 / 擴充 `backend/tests/conftest.py`**
-  - DoD：定義 `@pytest_asyncio.fixture async def db_session()`，per-test transaction + rollback
-  - 注意：必須先 `alembic upgrade head` 再跑 test（前置 fixture 或 CI step）
-- [ ] **建立 conftest helper：seed_tenant + seed_user**
-  - DoD：`async def seed_tenant(session) -> Tenant` 與 `async def seed_user(session, tenant) -> User`
+### 2.3 conftest.py 與 db_session fixture（45 min）— ✅ DONE
+- [x] **建立 `backend/tests/conftest.py`** 含 db_session fixture + seed_tenant + seed_user helpers
+- 🟡 **Surprise**：pytest-asyncio per-test event loop + module-level engine singleton 衝突 → `RuntimeError: Event loop is closed`。修：fixture teardown 加 `await dispose_engine()` 強制 next test 重建 engine
 
-### 2.4 CRUD tests for Sessions（60 min）
-- [ ] **建立 `backend/tests/unit/infrastructure/db/test_models_crud.py`**（先寫 sessions 區塊）
-  - DoD：3 個 test：`test_session_create_read`、`test_message_create_with_session`、`test_message_event_emit`
-  - 每個 test 先 seed tenant + user
+### 2.4 CRUD tests for Sessions（60 min）— ✅ DONE
+- [x] **`test_models_crud.py` 5 tests**（2 identity + 3 sessions）全 PASS
 
-### 2.5 Partition routing test（45 min）
-- [ ] **建立 `backend/tests/unit/infrastructure/db/test_partition_routing.py`**
-  - DoD：2 個 test：插 `created_at='2026-05-15'` 訊息 → 確認在 `messages_2026_05`；插 `'2026-06-15'` → 在 `messages_2026_06`
-  - Verify：用 raw SQL `SELECT tableoid::regclass FROM messages WHERE id = ...`
+### 2.5 Partition routing test（45 min）— ✅ DONE
+- [x] **`test_partition_routing.py` 4 tests**（3 messages parametrize + 1 message_events）全 PASS via `tableoid::regclass`
 
-### 2.6 Day 2 收尾（20 min）
-- [ ] **跑全 test**
-  - DoD：`pytest backend/tests/unit/infrastructure/db/ -v` 全 PASS
-- [ ] **Day 2 commit**
-  - DoD：`feat(infrastructure-db, sprint-49-2): Day 2 sessions/messages partition + ORM + CRUD test`
-- [ ] **更新 progress.md Day 2 條目**
+### 2.6 Day 2 收尾（20 min）— ✅ DONE
+- [x] **跑全 test**：12/12 PASS in 0.5s
+- [x] **mypy strict**：13 source files 0 errors
+- [x] **black + isort + flake8**：clean（修了 sessions.py em-dash + test files 過長 + unused User import）
+- [ ] **Day 2 commit**（待執行）
+- [x] **更新 progress.md Day 2 條目**
 
 ---
 
