@@ -319,16 +319,123 @@ Buffer accumulated → Days 3-5 can absorb any complexity surprises.
 - ⏸️ Vite dev server not manually validated (defer to Day 5 or user-driven)
 - ⏸️ npm audit reports 2 moderate severity vulnerabilities (transitive deps); fix in later sprint
 
-## Next: Day 5 — Docker + CI Pipeline + Integration acceptance + Sprint closeout (5h estimate)
+## Day 5 (2026-04-29) — CI Pipeline + Docker + integration + closeout
 
-1. CI Pipeline (NEW per 2026-04-28 review):
-   - .github/workflows/backend-ci.yml (black/isort/flake8/mypy/pytest)
-   - .github/workflows/frontend-ci.yml (lint/build/test)
-   - .github/PULL_REQUEST_TEMPLATE.md (3 principles + 17.md interface check)
-   - branch protection rules (admin)
-2. Docker compose smoke test (4 services: postgres / redis / rabbitmq / qdrant)
-3. End-to-end startup verification (uvicorn + npm run dev + curl /health)
-4. Code quality checks (black / isort / mypy / flake8 / npm lint+build)
-5. Import comprehensive verification (13 ABCs + _contracts + ChatClient)
-6. Documentation completion (retrospective.md + artifacts/)
-7. PR creation + self-review
+### Day 5.0 — CI Pipeline (commit `d535235`)
+
+- `.github/workflows/backend-ci.yml`: setup-python 3.11 → black → isort → flake8 → mypy strict → pytest → **LLM SDK leak check** (grep agent_harness/ for openai/anthropic/agent_framework — fails CI on hit)
+- `.github/workflows/frontend-ci.yml`: setup-node 20 → npm ci → lint → build → dist verification
+- `.github/PULL_REQUEST_TEMPLATE.md`: 3 principles + 17.md interface check + 11-point anti-patterns + multi-tenant + CI gates
+- `frontend/eslint.config.js` (built Day 5, deferred from Day 4): ESLint 9 flat config — `npm run lint` 0 warnings
+
+### Day 5.1 — Docker compose
+
+`docker compose -f docker-compose.dev.yml up -d` → 4 services up:
+
+| Service | Status |
+|---------|--------|
+| postgres | Up 16s, healthy |
+| redis | Up 16s, healthy |
+| rabbitmq | Up 16s, healthy |
+| qdrant | Up 16s, health: starting (warming, normal) |
+
+### Day 5.2 — End-to-end startup
+
+- ✅ FastAPI app loads via `from main import app` (6 routes: `/`, `/api/v1/health`, `/docs`, `/docs/oauth2-redirect`, `/openapi.json`, `/redoc`)
+- ✅ `health()` coroutine returns `HealthResponse(status='ok', version='2.0.0-alpha')` (validated via direct call; uvicorn subprocess hit by hook restrictions; TestClient hit by platform shadow before fix)
+- ⏸ `npm run dev` deferred (CLAUDE.md "no node.js process" rule); `npm run build` validated as proxy
+
+### Day 5.3 — Code quality (commit `6ee07dc`)
+
+Fixed 4 issues found:
+- Shorten chat.py:3 line >100 chars (flake8 E501)
+- Black-format 2 files (chat_client.py, subagent.py)
+- Remove 3 unused `# type: ignore[unreachable]` comments (mypy)
+- Update backend/README.md + platform_layer/__init__.py docstring
+
+| Check | Result |
+|-------|--------|
+| black --check src/ | All 73 files clean ✅ |
+| isort --check src/ | Clean ✅ |
+| flake8 src/ | Clean ✅ |
+| mypy --strict src/ | "Success: no issues found in 73 source files" ✅ |
+| npm run lint | 0 warnings ✅ |
+| npm run build | 36 modules / 165 KB / 519 ms ✅ |
+
+### Day 5.4 — Import acceptance (commit `6ee07dc`)
+
+`backend/tests/unit/test_imports.py` — 4 tests, all PASSED:
+
+| Test | Verifies |
+|------|----------|
+| test_eleven_plus_one_categories_importable | 13 ABCs (11 + Cat 12 + HITL) all importable + abstract |
+| test_contracts_unified_export | 50+ types from `_contracts/` (incl. 22 LoopEvent subclasses) + StopReason 6 values + SubagentMode 4 modes (NO worktree) + SpanCategory 13 values + RiskLevel + DecisionType |
+| test_chat_client_abc_importable | ChatClient + ModelInfo + PricingInfo + StreamEvent |
+| test_no_llm_sdk_imports_in_agent_harness | Regex grep agent_harness/ for `import openai/anthropic/agent_framework` returns empty |
+
+`pytest tests/unit/test_imports.py -v` → **4 passed in 0.11s**
+
+### ⚠️ Mid-Sprint blocker: `platform/` shadow Python stdlib
+
+**Discovered Day 5.4** when first pytest run failed with cryptic
+`AttributeError: module 'platform' has no attribute 'system'`.
+
+**Root cause**: `backend/src/platform/` shadows Python stdlib `platform`
+when on sys.path via `PYTHONPATH=src`. Transitive deps using
+`platform.python_implementation()` (rich/attr/faker) break.
+
+**Resolution**: Renamed `platform/` → `platform_layer/`, bundled into
+commit `d535235`. All tests pass after rename.
+
+**Follow-up captured in retrospective.md**:
+- Update agent-harness-planning/02-architecture-design.md + 06-phase-roadmap.md to use `platform_layer/`
+- Add CI lint to block reintroduction of bare `platform/`
+- Sprint 49.2+ planning uses new name
+
+### Day 5.5 — Documentation
+
+- ✅ `retrospective.md` complete (outcome + estimates + went-well + surprises + Sprint 49.2 prerequisites + sign-off)
+- ✅ `progress.md` (this file) Day 1-5 complete
+- ⏸ `agent-harness-planning/README.md` Sprint 49.2 link — deferred until 49.2 plan exists (rolling planning)
+- ⏸ `artifacts/` 5 evidence files — deferred (CI auto-produces from Sprint 49.2; Day 5 evidence embedded in retrospective text)
+
+### Day 5 commits
+
+| Commit | Summary |
+|--------|---------|
+| `d535235` | chore(ci): CI workflows + PR template + ESLint flat config (also platform→platform_layer rename) |
+| `6ee07dc` | fix(core): code quality fixes + test_imports.py |
+| (this closeout commit) | docs(sprint-49-1): Day 5 closeout — retrospective + checklist + progress |
+
+PR creation skipped per user direction; commits pushed to origin
+directly.
+
+### Estimates vs Actual (Day 5)
+
+| Section | Plan | Actual |
+|---------|------|--------|
+| 5.0 CI + ESLint | 60 min | ~25 min |
+| 5.1 Docker | 45 min | ~5 min |
+| 5.2 E2E startup | 30 min | ~15 min |
+| 5.3 Code quality | 45 min | ~15 min |
+| 5.4 Imports + test | 45 min | ~15 min |
+| 5.5 Documentation | 45 min | ~25 min |
+| 5.6 Closeout | 45 min | ~10 min |
+| **Total Day 5** | **5h** | **~110 min** | 37% of estimate
+
+### Sprint 49.1 Final Cumulative
+
+| Day | Plan | Actual | Ratio |
+|-----|------|--------|-------|
+| Day 1 | 3h 10min | ~65 min | 35% |
+| Day 2 | 7h | ~95 min | 23% |
+| Day 3 | 5h | ~60 min | 20% |
+| Day 4 | 5h | ~30 min | 10% |
+| Day 5 | 5h | ~110 min | 37% |
+| **Total** | **25h 10min** | **~6h 0min** | **24%** |
+
+## Sprint 49.1 ✅ DONE (pending push to origin)
+
+See `retrospective.md` for full sign-off. Next: **Sprint 49.2 — DB
+Schema + Async ORM** (rolling planning; plan + checklist to be created
+at start of next session).
