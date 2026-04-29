@@ -20,78 +20,62 @@
 
 ## Day 1 — Alembic 基底 + Identity migration + ORM（估 5h）
 
-### 1.1 Pre-flight check（10 min）
-- [ ] **確認 working tree 狀態**
-  - DoD：`git status` 乾淨（discussion-log 仍開可忽略）；branch 在 main 或新建 49.2 feature branch
-  - Command：`git status --short && git branch --show-current`
-- [ ] **建立 49.2 feature branch**
-  - DoD：branch `feature/phase-49-sprint-2-db-orm` checked out
-  - Command：`git checkout main && git pull && git checkout -b feature/phase-49-sprint-2-db-orm`
-- [ ] **確認 docker compose postgres up**
-  - DoD：`docker compose -f docker-compose.dev.yml ps` 顯示 `ipa-postgres` healthy
-  - Command：`docker compose -f docker-compose.dev.yml up -d postgres && docker compose -f docker-compose.dev.yml ps`
+### 1.1 Pre-flight check（10 min）— ✅ DONE 2026-04-29
+- [x] **確認 working tree 狀態**
+  - 結果：working tree 乾淨（discussion-log 為用戶 IDE，不阻塞）；untracked = 49.2 plan/checklist
+- [x] **建立 49.2 feature branch**
+  - 結果：`feature/phase-49-sprint-2-db-orm` 從 49.1 branch carry forward 建立（main 落後 49.1 16 commits，唯一可行路徑）
+  - 補：plan+checklist 作為 branch 第一個 commit `b414e7c docs(sprint-49-2): plan + checklist`
+- [x] **確認 docker compose postgres up**
+  - 結果：`ipa_v2_postgres` healthy（port 5432）；qdrant unhealthy（49.2 不用，49.3 修復）；redis/rabbitmq healthy
+- [x] **驗證 Python venv 已裝核心 deps**（自加 — 49.1 retro lessons）
+  - 結果：sqlalchemy 2.0.48 / asyncpg 0.31.0 / alembic 1.18.4 / pydantic_settings 2.13.1 全部就位
 
-### 1.2 Alembic 基底（45 min）
-- [ ] **建立 `backend/alembic.ini`**
-  - DoD：含 `script_location = src/infrastructure/db/migrations`、`sqlalchemy.url` 用 `${DATABASE_URL}` 環境變數覆寫
-  - Verify：`cd backend && alembic --help` 不報錯
-- [ ] **建立 `backend/src/infrastructure/db/migrations/env.py`**
-  - DoD：用 SQLAlchemy 2.0 async pattern（`run_async_migrations`），import `Base` from `infrastructure.db.base`
-  - Reference：[Alembic async template](https://alembic.sqlalchemy.org/en/latest/cookbook.html#using-asyncio-with-alembic)
-- [ ] **建立 `backend/src/infrastructure/db/migrations/script.py.mako`**
-  - DoD：標準 Alembic mako template，加 V2 file header convention
-- [ ] **建立 `migrations/__init__.py` + `versions/__init__.py`**
-  - DoD：空 `__init__.py` 兩個
+### 1.2 Alembic 基底（45 min）— ✅ DONE
+- [x] **建立 `backend/alembic.ini`**
+- [x] **建立 `backend/src/infrastructure/db/migrations/env.py`**
+- [x] **建立 `backend/src/infrastructure/db/migrations/script.py.mako`**
+- [x] **建立 `migrations/__init__.py` + `versions/__init__.py`**
+- 結果：alembic CLI 在 `cd backend && alembic --help` 通過
 
-### 1.3 DeclarativeBase + TenantScopedMixin（30 min）
-- [ ] **建立 `backend/src/infrastructure/db/base.py`**
-  - DoD：定義 `class Base(DeclarativeBase)`、`class TenantScopedMixin` 含 `tenant_id` mapped_column（NOT NULL + index）
-  - Verify：`python -c "from src.infrastructure.db.base import Base, TenantScopedMixin"` 不報錯
-- [ ] **建立 `backend/src/infrastructure/db/exceptions.py`**
-  - DoD：定義 `StateConflictError(Exception)`、`MigrationError(Exception)`
+### 1.3 DeclarativeBase + TenantScopedMixin（30 min）— ✅ DONE
+- [x] **建立 `backend/src/infrastructure/db/base.py`**（Base + TenantScopedMixin via declared_attr）
+- [x] **建立 `backend/src/infrastructure/db/exceptions.py`**（DBException / StateConflictError / MigrationError）
+- 結果：imports OK；Base.metadata.tables 初為空（預期，Day 1.5 後填）
 
-### 1.4 Async Engine + Session Factory（45 min）
-- [ ] **建立 `backend/src/infrastructure/db/engine.py`**
-  - DoD：`get_engine()` + `get_session_factory()` 全 async；用 `get_settings()`；含 pool_size / pool_pre_ping / pool_recycle
-- [ ] **建立 `backend/src/infrastructure/db/session.py`**
-  - DoD：`get_db_session()` async generator（FastAPI dependency 用）；wrap session.begin()
-- [ ] **更新 `backend/src/infrastructure/db/__init__.py`**
-  - DoD：re-export `Base, TenantScopedMixin, get_engine, get_session_factory, get_db_session`
-- [ ] **擴充 `backend/src/core/config/__init__.py`**
-  - DoD：加 `db_pool_size: int = 10`、`db_pool_max_overflow: int = 20`、`db_pool_recycle_sec: int = 300`、`db_echo: bool = False`
-- [ ] **更新 `backend/.env.example`**
-  - DoD：補 4 個 `DB_POOL_*` 範例值
+### 1.4 Async Engine + Session Factory（45 min）— ✅ DONE
+- [x] **建立 `backend/src/infrastructure/db/engine.py`**（get_engine / get_session_factory / dispose_engine 三 helper）
+- [x] **建立 `backend/src/infrastructure/db/session.py`**（get_db_session async generator）
+- [x] **更新 `backend/src/infrastructure/db/__init__.py`**（re-export 9 個 public symbol）
+- [x] **擴充 `backend/src/core/config/__init__.py`**（db_pool_size=10 / db_pool_max_overflow=20 / db_pool_recycle_sec=300 / db_echo=False）
+- [x] **更新 `.env.example`**（root，補 DB_POOL_* + DB_ECHO 4 行）
+- 結果：Real PostgreSQL 16.10 ping 通；pool config 4 fields 顯示正確
 
-### 1.5 Identity ORM models（45 min）
-- [ ] **建立 `backend/src/infrastructure/db/models/__init__.py`**
-  - DoD：空 init，準備 Day 1-4 incremental re-export
-- [ ] **建立 `backend/src/infrastructure/db/models/identity.py`**
-  - DoD：5 個 ORM class：Tenant / User / Role / UserRole / RolePermission；除 Tenant 外全繼承 TenantScopedMixin（注意：Role / UserRole / RolePermission 也帶 tenant_id 因為 multi-tenant role 系統）
-  - 驗：所有欄位對齐 09-db-schema-design.md L114-191
-- [ ] **更新 `models/__init__.py` re-export Day 1 models**
-  - DoD：`from .identity import Tenant, User, Role, UserRole, RolePermission`
+### 1.5 Identity ORM models（45 min）— ✅ DONE
+- [x] **建立 `backend/src/infrastructure/db/models/__init__.py`**
+- [x] **建立 `backend/src/infrastructure/db/models/identity.py`**
+  - 5 個 ORM：Tenant（無 mixin）/ User（mixin）/ Role（mixin）/ UserRole（無 mixin）/ RolePermission（無 mixin）
+  - **Plan 修正執行**：09.md 只 roles 帶 tenant_id；user_roles + role_permissions 為 junction，無 tenant_id（依 FK chain）
+- [x] **更新 `models/__init__.py` re-export 5 個 model**
+- 結果：Base.metadata 註冊 5 表，columns 對齐 09-db-schema-design.md L114-191
 
-### 1.6 Migration 0001（45 min）
-- [ ] **建立 `migrations/versions/0001_initial_identity.py`**
-  - DoD：手寫 SQL（不依賴 autogenerate，避免 mixin 干擾）；含所有 CREATE TABLE + indexes + UNIQUE constraints
-  - 對齐 09-db-schema-design.md L114-191
-- [ ] **跑 migration up + verify**
-  - DoD：`alembic upgrade head` 成功；`psql ... -c '\dt'` 顯示 5 張新表
-  - Command：`cd backend && alembic upgrade head && docker compose -f ../docker-compose.dev.yml exec postgres psql -U ipa_v2 -d ipa_v2 -c "\dt"`
-- [ ] **跑 migration down + verify**
-  - DoD：`alembic downgrade base` 成功；表全消失
-  - Command：`cd backend && alembic downgrade base && docker compose -f ../docker-compose.dev.yml exec postgres psql -U ipa_v2 -d ipa_v2 -c "\dt"`
+### 1.6 Migration 0001（45 min）— ✅ DONE
+- [x] **建立 `migrations/versions/0001_initial_identity.py`**（手寫 op.create_table；含 partial index + 4 UniqueConstraint）
+- [x] **跑 migration up + verify**：6 表存在（5 業務 + alembic_version）
+- [x] **跑 migration down + verify**：1 表（only alembic_version）
+- [x] **重新 upgrade verify idempotent**：6 表恢復
+- 🟡 **Surprise：Windows cp950 encoding error**（alembic.ini em-dash 字符）
+  - 修：em-dash → ASCII hyphen
+  - Action：CI 加 .ini ASCII-only lint，或 PYTHONUTF8=1（→ Day 5 / 49.4）
 
-### 1.7 連線 smoke test（20 min）
-- [ ] **建立 `backend/tests/unit/infrastructure/db/__init__.py`**（如不存在）
-  - DoD：空檔
-- [ ] **建立 `backend/tests/unit/infrastructure/db/test_engine_connect.py`**
-  - DoD：1 個 test：`async def test_engine_can_ping`，跑 `SELECT 1`
-- [ ] **跑 test**
-  - DoD：`pytest backend/tests/unit/infrastructure/db/test_engine_connect.py -v` PASS
-- [ ] **Day 1 commit**
-  - DoD：commit message `feat(infrastructure-db, sprint-49-2): Day 1 alembic + identity migration + ORM models`
-- [ ] **更新 progress.md Day 1 條目**
+### 1.7 連線 smoke test（20 min）— ✅ DONE
+- [x] **建立 `backend/tests/unit/infrastructure/db/test_engine_connect.py`**（3 tests）
+- [x] **跑 test**：3/3 PASS in 0.48s
+  - test_engine_can_ping_postgres
+  - test_engine_reports_pg_version（驗 PG 16+ real DB）
+  - test_session_factory_yields_async_session
+- [ ] **Day 1 commit**（待執行）
+- [x] **建立 progress.md Day 1 條目**（已建）
 
 ---
 

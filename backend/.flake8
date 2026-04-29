@@ -1,0 +1,26 @@
+[flake8]
+# Align with black + isort line length (100) + V2 conventions.
+# Sprint 49.2 Day 1: established to align flake8 with pyproject.toml [tool.black].
+max-line-length = 100
+
+# Exclude generated / vendor / dynamic content:
+#   - alembic version migrations: long DDL strings + auto-template structure
+#   - graphify-out / .venv / __pycache__: not source
+extend-exclude =
+    src/infrastructure/db/migrations/versions
+    .venv
+    __pycache__
+    *.egg-info
+    build
+    dist
+
+# Ignore black-compatible warnings:
+#   E203: whitespace before ':' (conflicts with black slicing rules)
+#   E501: handled by max-line-length above
+#   W503: line break before binary operator (PEP 8 now permits)
+extend-ignore = E203, W503
+
+# Per-file ignores (no inline comments allowed by flake8 config parser)
+# F401: re-export modules in __init__.py packages
+per-file-ignores =
+    __init__.py:F401
