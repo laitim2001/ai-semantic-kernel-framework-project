@@ -11,6 +11,7 @@ Sprint 49.3 adds:
     Day 1.1: audit.py        — AuditLog (append-only, hash chain)
     Day 2.1: api_keys.py     — ApiKey / RateLimit
     Day 2.3: memory.py       — MemorySystem / MemoryTenant / MemoryRole / MemoryUser / MemorySessionSummary
+    Day 3.1-3: governance.py — Approval / RiskAssessment / GuardrailEvent
 
 Importing this package registers all ORM tables with Base.metadata, which
 the Alembic env.py uses as `target_metadata`.
@@ -26,6 +27,13 @@ from infrastructure.db.models.api_keys import ApiKey, RateLimit
 
 # Day 1.1 (Sprint 49.3) — Audit
 from infrastructure.db.models.audit import AuditLog
+
+# Day 3.1-3 (Sprint 49.3) — Governance
+from infrastructure.db.models.governance import (
+    Approval,
+    GuardrailEvent,
+    RiskAssessment,
+)
 
 # Day 1.5 — Identity
 from infrastructure.db.models.identity import (
@@ -98,4 +106,8 @@ __all__ = [
     "MemoryRole",
     "MemoryUser",
     "MemorySessionSummary",
+    # Governance (Sprint 49.3)
+    "Approval",
+    "RiskAssessment",
+    "GuardrailEvent",
 ]

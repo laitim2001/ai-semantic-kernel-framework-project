@@ -110,31 +110,35 @@
 ## Day 3 — Governance 3 tables（估 5h）
 
 ### 3.1 approvals 設計（30 min）
-- [ ] **欄位**：id / tenant_id / requestor_user_id / actor_user_id NULL / approval_type / status enum(pending/approved/rejected/timeout) / reason / payload JSONB / requested_at / decided_at NULL / expires_at
-  - DoD：TenantScopedMixin
+- [x] **欄位（對齐 09.md L566-601）**：id / session_id FK / action_type / action_summary / action_payload JSONB / risk_level / risk_score Numeric(3,2) / risk_reasoning / required_approver_role / approver_user_id FK users / status (pending/approved/rejected/expired) / decision_reason / teams_notification_sent / teams_message_id / created_at / expires_at / decided_at
+  - **Scope 修正**：plan 寫的 `tenant_id` / `requestor_user_id` / `approval_type` / `reason` 對齐 09.md → **junction via session_id**（無直接 tenant_id；同 memory_session_summary 模式）；`approver_user_id` (不是 actor_user_id)；`action_type` (不是 approval_type)
+  - DoD：純 junction，無 TenantScopedMixin ✅
 
 ### 3.2 risk_assessments 設計（30 min）
-- [ ] **欄位**：id / tenant_id / session_id / score INT 0-100 / severity enum / recommendation TEXT / blocked BOOLEAN / payload JSONB / created_at
-  - DoD：TenantScopedMixin + session_id FK
+- [x] **欄位（對齐 09.md L605-622）**：id / session_id FK / tool_call_id FK NULL / risk_level / risk_score Numeric(3,2) NOT NULL / triggered_rules JSONB / reasoning / requires_approval BOOL / created_at
+  - **Scope 修正**：09.md 用 `risk_level` + `risk_score Numeric(3,2)` 不是 plan 寫的 `score INT 0-100 + severity enum`；無 `recommendation` / `blocked`；改用 `requires_approval` + `tool_call_id` FK（plan 沒提）
+  - DoD：純 junction via session_id；無 TenantScopedMixin ✅
 
 ### 3.3 guardrail_events 設計 + ORM（30 min）
-- [ ] **欄位**：id / tenant_id / session_id NULL / detector_type / severity / action_taken enum(logged/blocked/sanitized) / payload JSONB / created_at
-  - DoD：TenantScopedMixin
-  - Output：`backend/src/infrastructure/db/models/governance.py` 含 3 classes
+- [x] **欄位（對齐 09.md L628-648）**：id / session_id FK NULL / layer / check_type / passed BOOL / severity / detected_pattern / action_taken / metadata / created_at
+  - **Scope 修正**：09.md 用 `layer + check_type + passed + severity + detected_pattern + action_taken` 不是 plan 寫的 `detector_type + severity + action_taken enum(logged/blocked/sanitized)`；action_taken 真實值為 `allow / block / tripwire_fired`；session_id 可為 NULL（pre-session input layer）
+  - DoD：純 junction；無 TenantScopedMixin ✅
+  - Output：`backend/src/infrastructure/db/models/governance.py` 含 3 classes ✅
 
 ### 3.4 0008 migration + upgrade（60 min）
-- [ ] **寫 `0008_governance` migration**（3 表 + 6 indexes）
-  - DoD：alembic upgrade + downgrade
-  - 結構驗證 \d+
+- [x] **寫 `0008_governance` migration**（3 表 + 7 indexes：approvals 3 + risk_assessments 1 + guardrail_events 3 = 7 functional + 3 pkey = 10 total）
+  - DoD：alembic upgrade + downgrade ✅
+  - 結構驗證：approvals 4 / risk_assessments 2 / guardrail_events 4 indexes ✅
 
 ### 3.5 test_governance_models_crud.py（90 min）
-- [ ] **test_approval_state_machine**：pending → approved（actor_user_id + decided_at 寫入）
-- [ ] **test_approval_rejection**：pending → rejected
-- [ ] **test_approval_expiration**：expires_at 過期後 status auto-stay pending（DB 不主動轉；by job/query）
-- [ ] **test_risk_assessment_create**：score + severity + blocked 寫入
-- [ ] **test_guardrail_event_logged**：3 種 action_taken 都可寫
-- [ ] **test_cross_tenant_governance**：tenant_a approval 在 tenant_b 不可見
+- [x] **test_approval_state_machine_pending_to_approved**：actor user + decided_at 填寫 ✅
+- [x] **test_approval_state_machine_pending_to_rejected**：decision_reason 寫入 ✅
+- [x] **test_approval_pending_query_uses_partial_index**：partial idx 只含 status='pending' ✅
+- [x] **test_risk_assessment_create_with_score**：Numeric(3,2) + triggered_rules JSONB + requires_approval ✅
+- [x] **test_guardrail_event_three_action_types**：allow / block / tripwire_fired 3 案例 + partial passed=FALSE 索引 ✅
+- [x] **test_governance_cross_tenant_via_session_chain**：JOIN sessions 過濾 tenant_id（governance 無直接 tenant_id 故必須 JOIN；RLS 在 Day 4 補強）✅
   - DoD：6 tests 全綠
+  - 全套回歸：49/49 PASS（49.2 26 + 49.3 23，0 SKIPPED）
 
 ### 3.6 commit Day 3（10 min）
 - [ ] **commit `feat(infrastructure-db, sprint-49-3): Day 3 governance — approvals + risk + guardrail events`**
