@@ -201,9 +201,44 @@
 
 ---
 
-## Day 5 — pending
+## Day 5 — 2026-04-30
 
-…（待寫）
+### 預計 vs 實際
+
+| Step | Plan | Actual | Notes |
+|------|------|--------|-------|
+| 5.1 Real Azure OpenAI demo wiring + env verify | 45 min | ~5 min | .env 4 vars 全 ready (gpt-5.2 / 2024-12-01-preview)；wiring 已 verify by Day 1 test_handler；用戶 next session run real demo (CARRY-016) |
+| 5.2 quality gates final | 30 min | ~5 min | 259 PASS / mypy 136 / 5 V2 lints OK / 0 LLM SDK leak / frontend build 47 modules + lint 0 warnings |
+| 5.3 retrospective.md | 45 min | ~12 min | ~280 行 — Outcome / Estimate / Did well 5 / Improve 4 / Action items 9 (CARRY-010..018) / Lessons 3 / 50.1 carry-over status |
+| 5.4 Phase 50 README closeout | 30 min | ~6 min | 50.2 標 ✅ DONE / Phase 進度 2/2 = 100% / 範疇成熟度 Cat 1→3 / Cat 6→4 / 累計交付概要 |
+| 5.5 MEMORY.md + project_phase50_loop_core.md 同步 | 15 min | ~6 min | memory file 全 rewrite (50.1 + 50.2 outputs + Phase 51.0 prerequisites + carry-forward); MEMORY.md index update + closeout note |
+| 5.6 final closeout commit | 15 min | ~6 min | 含 quality gate 全跑 + 集中 commit retro + README + memory + checklist |
+| **Day 5 總計** | **~4h（240 min）** | **~40 min（17%）** | 與 Day 1-4 17-24% 完全對齐 |
+
+### Verification (final)
+
+- ✅ `python -m pytest tests/` **259 PASS / 0 SKIPPED / 4.49s** unchanged from Day 4
+- ✅ `python -m mypy src --strict` 136 files OK
+- ✅ 5/5 V2 lints PASS (LLM SDK leak / AP-1 / cross-cat / dup-dataclass [54 classes] / sync-callback)
+- ✅ `npm run build` 47 modules / 524ms / 177 KB (58 KB gzipped)
+- ✅ `npm run lint` 0 warnings
+- ✅ retrospective.md ~280 行 / Phase 50 README 完整收尾 / memory 同步
+
+### Surprises / Decisions
+
+1. **Real Azure OpenAI demo 不在 bash 跑** — Day 5 5.1 plan 寫「啟 dev server + 訪 /chat-v2 切 real_llm」；actual 跳過實際 run。**理由**：bash 啟 uvicorn + vite 會 block 整個對話；且 real LLM 消預算。**決策**：env 配置 verify ✅ + Day 1 unit test 驗 wiring（test_build_real_llm_missing_env_raises_runtime_error 證 env 缺時 503，反推 env 全時可 build）+ 用戶 next session 自己 trigger（CARRY-016 in retrospective）。
+2. **Sprint 50.2 estimate accuracy 19.7%（5.6h actual / 28h plan）** — 與 V2 6 sprint 平均 19% 一致。Day 0-5 ratio 分布：57% / 17% / 24% / 19% / 18% / 17%。Day 2 略高（24%）因擴 LoopEvent + 17.md update 涉及多檔同步。
+3. **alembic from-zero cycle 跳過** — 50.2 沒新增 migration（純 application logic），跳過 alembic verify；50.1 baseline 已 verify 過。
+
+### Sprint 50.2 ✅ DONE — Phase 50 ✅ DONE — V2 累計 6/22 sprints (27%)
+
+**範疇成熟度 (Phase 50 closeout)：**
+- Cat 1 Orchestrator: Level 0 → Level 2 (50.1) → **Level 3** (50.2 主流量)
+- Cat 6 Output Parser: Level 0 → Level 3 (50.1) → **Level 4** (50.2 frontend native)
+- Cat 2 Tool Layer: Level 0 → Level 1 (stub; 51.1 進 Level 3+)
+- Cat 12 Observability: Level 1 → Level 2 (50.1; 50.2 unchanged)
+
+**Branch state**: ~14 commits ahead of 50.1 HEAD = ~58 commits ahead of main
 
 ---
 

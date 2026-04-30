@@ -1,9 +1,9 @@
 # Phase 50 — Loop Core
 
-**Phase 進度**：Sprint 50.1 ✅ DONE / Sprint 50.2 🟡 IN PROGRESS — **1 / 2 sprint complete（50%）**
+**Phase 進度**：Sprint 50.1 ✅ DONE / Sprint 50.2 ✅ DONE — **2 / 2 sprint complete（100%）**
 **啟動日期**：2026-04-29（接 Phase 49 closeout）
-**完成日期**：—（Phase 50 still in progress; 50.2 Day 0 started 2026-04-30）
-**狀態**：🟡 Sprint 50.2 Day 0 — plan + checklist approved; branch `feature/phase-50-sprint-2-api-frontend` 已開
+**完成日期**：2026-04-30
+**狀態**：✅ Phase 50 DONE — 範疇 1 Level 3 / 範疇 6 Level 4；V2 累計 6/22 sprint = 27%
 
 ---
 
@@ -22,7 +22,7 @@
 | Sprint | 狀態 | 主題 | 完成日期 | Branch / Commits |
 |--------|------|------|---------|------------------|
 | **50.1** | ✅ DONE | 範疇 1 (Orchestrator Loop) + 範疇 6 (Output Parser) 核心 | 2026-04-30 | `feature/phase-50-sprint-1-loop-core`（10 commits incl. closeout）|
-| **50.2** | 🟡 IN PROGRESS | API + Frontend 對接 | — | `feature/phase-50-sprint-2-api-frontend`（Day 0 + plan/checklist 已 commit）|
+| **50.2** | ✅ DONE | API + Frontend 對接 | 2026-04-30 | `feature/phase-50-sprint-2-api-frontend`（~14 commits incl. closeout）|
 
 ---
 
@@ -33,8 +33,15 @@ phase-50-loop-core/
 ├── README.md                          ← (this file) Phase 50 入口
 ├── sprint-50-1-plan.md                ✅ DONE
 ├── sprint-50-1-checklist.md           ✅ DONE
-├── sprint-50-2-plan.md                🟡 Day 0 (committed 2026-04-30)
-└── sprint-50-2-checklist.md           🟡 Day 0 (committed 2026-04-30)
+├── sprint-50-2-plan.md                ✅ DONE
+└── sprint-50-2-checklist.md           ✅ DONE
+```
+
+執行紀錄：
+```
+docs/03-implementation/agent-harness-execution/phase-50/
+├── sprint-50-1/{progress,retrospective}.md ✅
+└── sprint-50-2/{progress,retrospective}.md ✅
 ```
 
 執行紀錄：
@@ -110,32 +117,57 @@ docs/03-implementation/agent-harness-execution/phase-50/
 
 ---
 
-## Sprint 50.1 範疇成熟度提升
+## Phase 50 範疇成熟度提升（2/2 sprint cumulative）
 
-| 範疇 | Pre-50.1 | Post-50.1 | 備註 |
-|------|---------|----------|------|
-| 1. Orchestrator Loop | Level 0 | **Level 2** | 核心 loop 跑通；Level 3 需 50.2 接 API 主流量 |
-| 6. Output Parser | Level 0 | **Level 3** | 完整 native tool_calling parse + 3-way classifier |
-| 2. Tool Layer | Level 0 | **Level 1** | InMemoryToolRegistry stub；51.1 進 Level 3+ |
-| 12. Observability | Level 1 | **Level 2** | 範疇 1 / 6 / 2 真實埋點 + Cat 12 coverage test |
+| 範疇 | Pre-50.1 | Post-50.1 | **Post-50.2** | 備註 |
+|------|---------|----------|---------------|------|
+| 1. Orchestrator Loop | Level 0 | Level 2 | **Level 3** ✅ | 接入主流量 — POST /api/v1/chat/ → AgentLoopImpl → SSE |
+| 6. Output Parser | Level 0 | Level 3 | **Level 4** ✅ | 完全 native + frontend 顯示 — 7-event SSE wire format |
+| 2. Tool Layer | Level 0 | Level 1 | Level 1 | InMemoryToolRegistry stub；51.1 進 Level 3+ |
+| 12. Observability | Level 1 | Level 2 | Level 2 | unchanged in 50.2（沒新加埋點 — 51+ 範疇實作會擴）|
+
+---
+
+## Phase 50 累計交付概要
+
+### Backend
+- `agent_harness/orchestrator_loop/` — AgentLoopImpl while-true TAO loop + 4 terminator + 8 LoopEvent emit
+- `agent_harness/output_parser/` — OutputParserImpl + classify_output 3-way
+- `agent_harness/tools/_inmemory.py` — InMemoryToolRegistry + make_echo_executor (DEPRECATED-IN: 51.1)
+- `_contracts/events.py` — 25 LoopEvent subclasses (3 new in 50.2 + ToolCallExecuted 擴 result_content)
+- `api/v1/chat/{router,sse,schemas,handler,session_registry}.py` — POST /chat SSE endpoint + GET/cancel sessions
+- `runtime/workers/agent_loop_worker.py` — execute_loop_with_sse + build_agent_loop_handler factory（53.1 forward-compat）
+- `scripts/lint/check_ap1_pipeline_disguise.py` — V2 Lint #5
+
+### Frontend
+- `features/chat_v2/{types,store/chatStore,services/chatService,hooks/useLoopEventStream,components/{ChatLayout,MessageList,ToolCallCard,InputBar}}.ts(x)` — 8 modules
+- `pages/chat-v2/index.tsx` — 取代 49.1 placeholder 為完整 ChatLayout + MessageList + InputBar
+- 47 modules build / 177 KB / 58 KB gzipped
+
+### Tests
+- 50.1: 60 new tests / 210 PASS
+- 50.2: 49 new tests + 4 modified sequences / 259 PASS / 4.49s
+- 5 V2 lints all OK / mypy 136 files strict
 
 ---
 
 ## 下一步（Next session）
 
-1. 用戶開新 session 時，**第一件事**：用 `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md` onboarding（注意：第八+九部分 Open Items / milestones table 需要 50.1 完成後同步更新）
-2. 指示「啟動 Sprint 50.2 — API + Frontend 對接」
-3. AI 助手依 rolling planning 建 `sprint-50-2-plan.md` + `sprint-50-2-checklist.md` 等用戶 approve 才 code
+1. 用戶開新 session 時，**第一件事**：用 `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md` onboarding（注意：第八+九部分 Open Items / milestones table 需要 50.1 + 50.2 完成後同步更新）
+2. 指示「啟動 Sprint 51.0 — Mock 企業工具 + 業務工具骨架」（per 06-phase-roadmap §Phase 51）
+3. AI 助手依 rolling planning 建 `phase-51-tools-memory/sprint-51-0-plan.md` + `sprint-51-0-checklist.md` 等用戶 approve 才 code
 
-**用戶手動處理項**（從 49.x + 50.1 累積）：
+**用戶手動處理項**（從 49.x + 50.x 累積）：
 - ⏸ GitHub branch protection rule（49.1 carry）— admin UI
-- ⏸ 49.1+49.2+49.3+49.4+50.1 merge to main 決策（用戶決策）
-- ⏸ npm audit 2 moderate vulnerabilities（49.1 carry）— 留待 frontend sprint
-- ⏸ Production app role 在 staging 環境配置（per Day 5.2 guide）— Phase 53.1+
-- ⏸ CI deploy gate 引入規範 E 警報（Production cutover Phase 55）
-- ⏸ SITUATION-V2-SESSION-START.md 第八+九部分過期（49.2/49.3/49.4/50.1 milestones）— 待用戶或 AI 助手同步
+- ⏸ 49.1+49.2+49.3+49.4+50.1+50.2 merge to main 決策（用戶決策；50.2 closeout 後一次合併較合理）
+- ⏸ npm audit 2 moderate vulnerabilities（49.1 carry）→ 51.x frontend sprint 處理（CARRY-013）
+- ⏸ Production app role 在 staging 環境配置 — Phase 53.1+
+- ⏸ CI deploy gate 引入規範 E 警報 — Production cutover Phase 55
+- ⏸ SITUATION-V2-SESSION-START.md 第八+九部分過期（49.2/49.3/49.4/50.1/50.2 milestones）— 待用戶或 AI 助手同步
+- ⏸ Real Azure OpenAI demo run（用戶手動 — env 已 ready；訪 /chat-v2 切 real_llm mode；CARRY-016）
+- ⏸ Frontend dev server manual e2e smoke（用戶手動 5-10 min；CARRY-012）
 
 ---
 
-**Last Updated**：2026-04-30 (Sprint 50.2 Day 0 started — plan + checklist committed)
+**Last Updated**：2026-04-30 (Sprint 50.2 closeout — Phase 50 progress 2/2 = 100%; V2 cumulative 6/22 sprints)
 **Maintainer**：用戶 + AI 助手共同維護
