@@ -120,8 +120,29 @@ class ChatResponse:
 
 @dataclass(frozen=True)
 class CacheBreakpoint:
-    """Anthropic-style cache_control marker; positions in the prompt."""
+    """Cache_control marker for prompt-cache providers (Anthropic / OpenAI / Redis).
 
+    Two layers of fields:
+      Physical (51.1, owner: Cat 5 PromptBuilder) — provider-facing positioning:
+        - position / ttl_seconds / breakpoint_type
+      Logical (52.1, owner: Cat 4 PromptCacheManager) — internal cache lookup:
+        - section_id / content_hash / cache_control (all default=None for 51.1 compat)
+
+    The logical fields let Cat 4 deduplicate / invalidate cache entries by tenant + section
+    without forcing 51.1 callers to migrate. 52.2 PromptBuilder bridges the two layers.
+    """
+
+    # Physical marker (51.1, retained verbatim — 5 callers depend on these)
     position: int
     ttl_seconds: int = 300
     breakpoint_type: Literal["ephemeral", "persistent"] = "ephemeral"
+
+    # Logical metadata (52.1 extension — Cat 4 fills; Cat 5 may use; 52.2 wires through)
+    section_id: str | None = None
+    """Logical section id (e.g. "system", "tools", "memory_user_layer"); set by PromptCacheManager."""
+
+    content_hash: str | None = None
+    """sha256 of the cached content; key component for invalidation lookups."""
+
+    cache_control: dict[str, object] | None = None
+    """Provider-native cache_control dict (Anthropic-style); None = use physical fields only."""

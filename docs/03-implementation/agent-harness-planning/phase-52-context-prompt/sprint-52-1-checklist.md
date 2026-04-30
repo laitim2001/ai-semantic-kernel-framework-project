@@ -54,90 +54,105 @@
 ## Day 1 — 5 ABC + 4 contracts + 17.md sync（估 6h）
 
 ### 1.1 開新 feature branch
-- [ ] **`git checkout -b feature/phase-52-sprint-1-cat4-context-mgmt`** from main HEAD `a541d97`
-  - DoD：`git branch --show-current` = `feature/phase-52-sprint-1-cat4-context-mgmt`
-  - Verify：`git log -1 --oneline` 顯示 51.2 merge commit
+- [x] **`git checkout -b feature/phase-52-sprint-1-cat4-context-mgmt`** from main HEAD `a541d97`
+  - DoD：`git branch --show-current` = `feature/phase-52-sprint-1-cat4-context-mgmt` ✅
+  - Verify：`git log -1 --oneline` 顯示 51.2 merge commit ✅（branch 早於 Day 1 已存在；feature HEAD = `e5bbc995` Day 0 commit）
 
 ### 1.2 重組 49.1 stub 為 5 ABC + 子目錄結構（30 min）
-- [ ] **保留 `agent_harness/context_mgmt/__init__.py`**（既存 49.1 stub；52.1 Day 4 補 public re-exports）
-- [ ] **重寫 `agent_harness/context_mgmt/_abc.py`**：移除 49.1 三 ABC（TokenCounter/Compactor/PromptCacheManager），改為 ObservationMasker + JITRetrieval ABC（其餘 3 ABC 移至子目錄）
-- [ ] **建 `agent_harness/context_mgmt/compactor/__init__.py`**（package marker）
-- [ ] **建 `agent_harness/context_mgmt/compactor/_abc.py`**（Compactor ABC + CompactionStrategy enum；簽名升級至 `compact_if_needed → CompactionResult`）
-- [ ] **建 `agent_harness/context_mgmt/token_counter/__init__.py`**（package marker）
-- [ ] **建 `agent_harness/context_mgmt/token_counter/_abc.py`**（TokenCounter ABC + accuracy() 方法）
-  - DoD：6 file 全有 file header（per `file-header-convention.md`）；mypy --strict pass（即使是 stub）
-  - Verify：`python -m mypy backend/src/agent_harness/context_mgmt --strict`
+
+> **Day 1 執行 note (2026-05-01)**：1.2 + 1.5 合併執行（同一輪重組 + ABC 簽名一氣呵成），因依賴順序為 1.3+1.4 contracts → 1.2+1.5 ABCs → 1.6+1.7 17.md → 1.8 tests。__init__.py 在 1.2 同時更新 re-export（不延後到 Day 4）以維持 test_imports baseline 不破。
+
+- [x] **更新 `agent_harness/context_mgmt/__init__.py`**：re-export 5 ABC（Compactor / ObservationMasker / JITRetrieval / TokenCounter / PromptCacheManager）從新位置
+- [x] **重寫 `agent_harness/context_mgmt/_abc.py`**：移除 49.1 三 ABC（TokenCounter/Compactor/PromptCacheManager），改為 ObservationMasker + JITRetrieval ABC（其餘 3 ABC 移至子目錄）
+- [x] **建 `agent_harness/context_mgmt/compactor/__init__.py`**（package marker，re-export Compactor）
+- [x] **建 `agent_harness/context_mgmt/compactor/_abc.py`**（Compactor ABC + 預設 should_compact 邏輯；簽名升級至 `compact_if_needed → CompactionResult`）
+- [x] **建 `agent_harness/context_mgmt/token_counter/__init__.py`**（package marker，re-export TokenCounter）
+- [x] **建 `agent_harness/context_mgmt/token_counter/_abc.py`**（TokenCounter ABC + accuracy() Literal["exact","approximate"]）
+- [x] **建 `agent_harness/context_mgmt/cache_manager.py`**（PromptCacheManager ABC + tenant-scoped get_cache_breakpoints / invalidate）
+  - DoD：7 file 全有 file header（per `file-header-convention.md`）；mypy --strict pass ✅
+  - Verify：`python -m mypy backend/src/agent_harness/context_mgmt --strict` → Success: no issues found in 7 source files
 
 ### 1.3 建 `_contracts/compaction.py`（30 min）
-- [ ] **`_contracts/compaction.py`**：`CompactionStrategy` enum（STRUCTURAL / SEMANTIC / HYBRID）
-- [ ] **`_contracts/compaction.py`**：`CompactionResult` dataclass（frozen=True）
-  - 欄位：`triggered: bool` / `strategy_used: CompactionStrategy | None` / `tokens_before: int` / `tokens_after: int` / `messages_compacted: int` / `duration_ms: float` / `compacted_state: LoopState | None`
-- [ ] **更新 `_contracts/__init__.py` re-export**
-  - DoD：`from agent_harness._contracts import CompactionStrategy, CompactionResult` 成功
-  - Verify：`python -m mypy backend/src/agent_harness/_contracts --strict`
+- [x] **`_contracts/compaction.py`**：`CompactionStrategy` enum（STRUCTURAL / SEMANTIC / HYBRID）✅
+- [x] **`_contracts/compaction.py`**：`CompactionResult` dataclass（frozen=True）
+  - 欄位：`triggered: bool` / `strategy_used: CompactionStrategy | None` / `tokens_before: int` / `tokens_after: int` / `messages_compacted: int` / `duration_ms: float` / `compacted_state: LoopState | None` ✅
+- [x] **更新 `_contracts/__init__.py` re-export**
+  - DoD：`from agent_harness._contracts import CompactionStrategy, CompactionResult` 成功 ✅
+  - Verify：`python -m mypy backend/src/agent_harness/_contracts --strict` → Success ✅
 
-### 1.4 建 `_contracts/cache.py`（30 min）
-- [ ] **`_contracts/cache.py`**：`CachePolicy` dataclass（frozen=True）
-  - 欄位：`enabled: bool = True` / `cache_system_prompt: bool = True` / `cache_tool_definitions: bool = True` / `cache_memory_layers: bool = True` / `cache_recent_turns: bool = False` / `ttl_seconds: int = 300` / `invalidate_on: list[str] = []`
-- [ ] **`_contracts/cache.py`**：`CacheBreakpoint` dataclass（owner: Cat 5 — 標 docstring）
-  - 欄位：`section_id: str` / `content_hash: str` / `cache_control: dict | None`（Anthropic-style；52.2 接通）
-- [ ] **更新 `_contracts/__init__.py` re-export**
-  - DoD：4 type 全可 import；mypy strict clean
-  - Verify：`from agent_harness._contracts import CachePolicy, CacheBreakpoint` 成功
+### 1.4 擴充 chat.py CacheBreakpoint + 建 `_contracts/cache.py`（30 min）
+
+> **設計校正（2026-05-01）**：原 plan §1.4 寫「建 `cache.py` 含 CacheBreakpoint」，但 51.1 已在 `_contracts/chat.py:122` 定義 CacheBreakpoint 物理 marker 並由 5 處 callers（`adapters/_base/chat_client.py` / `azure_openai/adapter.py` / `_testing/mock_clients.py` / `_contracts/prompt.py` / `context_mgmt/_abc.py`）使用。為維持 single-source rule + 兼容 51.1，採方案 A：**擴充既有 chat.py CacheBreakpoint**（加 logical metadata 欄位 default=None），新建 cache.py 只放 CachePolicy。
+
+- [x] **擴充 `_contracts/chat.py` CacheBreakpoint**（保留既有 `position` / `ttl_seconds` / `breakpoint_type` 物理欄位）
+  - 加：`section_id: str | None = None`（logical 區塊識別，52.2 PromptBuilder 接通）✅
+  - 加：`content_hash: str | None = None`（內容 hash，cache invalidation 用）✅
+  - 加：`cache_control: dict[str, object] | None = None`（Anthropic-style raw control，52.2 接通）✅
+  - 全 default=None → 51.1 既有 5 處 callers 不破壞 ✅（adapter test 41/41 PASS）
+- [x] **建 `_contracts/cache.py`**：`CachePolicy` dataclass（frozen=True）
+  - 欄位：`enabled: bool = True` / `cache_system_prompt: bool = True` / `cache_tool_definitions: bool = True` / `cache_memory_layers: bool = True` / `cache_recent_turns: bool = False` / `ttl_seconds: int = 300` / `invalidate_on: list[str] = []` ✅
+- [x] **更新 `_contracts/__init__.py` re-export**：加 CachePolicy + CompactionStrategy + CompactionResult（CacheBreakpoint 已 export，欄位擴充無需動 __init__ 但仍從 chat 重新 import）✅
+  - DoD：CachePolicy 可 import；mypy strict clean；51.1 5 處 callers 不破壞 ✅
+  - Verify：`from agent_harness._contracts import CachePolicy, CacheBreakpoint, CompactionStrategy, CompactionResult` 成功 ✅ + 51.1 adapter tests 41/41 PASS ✅
 
 ### 1.5 完成 5 ABC（90 min）
-- [ ] **`compactor/_abc.py` 寫 `Compactor` ABC**
-  - `should_compact(state) -> bool`（abstract，預設邏輯：`token_used > window * 0.75 OR turn_count > 30`）
-  - `compact_if_needed(state) -> CompactionResult`（async abstract）
-  - DoD：mypy strict pass；ABC method docstring 完整
-- [ ] **`_abc.py` 寫 `ObservationMasker` ABC**
-  - `mask_old_results(messages, *, keep_recent: int = 5) -> list[Message]` (abstract)
-- [ ] **`_abc.py` 寫 `JITRetrieval` ABC**
-  - `resolve(pointer: str, *, tenant_id: UUID) -> str` (async abstract)
-- [ ] **`token_counter/_abc.py` 寫 `TokenCounter` ABC**
-  - `count(messages, tools=None) -> int` (abstract)
-  - `accuracy() -> Literal["exact", "approximate"]` (abstract)
-- [ ] **`cache_manager.py` 寫 `PromptCacheManager` ABC**
-  - `get_cache_breakpoints(tenant_id, policy) -> list[CacheBreakpoint]` (async abstract)
-  - `invalidate(tenant_id, reason) -> None` (async abstract)
-  - DoD：5 ABC 簽名齊；每個 ABC 有 module docstring（含 owner / 跨範疇互動說明）
-  - Verify：`python -m mypy backend/src/agent_harness/context_mgmt --strict`
+
+> **Day 1 執行 note (2026-05-01)**：與 1.2 合併執行。所有 ABC 簽名一次到位，避免 placeholder→fill 兩輪改寫。
+
+- [x] **`compactor/_abc.py` 寫 `Compactor` ABC** ✅
+  - `should_compact(state) -> bool`（concrete default：`token_used > window * 0.75 OR turn_count > 30`；concrete impls 可 override）✅
+  - `compact_if_needed(state) -> CompactionResult`（async abstract，trace_context 可選）✅
+  - DoD：mypy strict pass；ABC method docstring 完整 ✅
+- [x] **`_abc.py` 寫 `ObservationMasker` ABC** ✅
+  - `mask_old_results(messages, *, keep_recent: int = 5) -> list[Message]` (abstract) ✅
+- [x] **`_abc.py` 寫 `JITRetrieval` ABC** ✅
+  - `resolve(pointer: str, *, tenant_id: UUID) -> str` (async abstract) ✅
+- [x] **`token_counter/_abc.py` 寫 `TokenCounter` ABC** ✅
+  - `count(*, messages, tools=None) -> int` (abstract) ✅
+  - `accuracy() -> Literal["exact", "approximate"]` (abstract) ✅
+- [x] **`cache_manager.py` 寫 `PromptCacheManager` ABC** ✅
+  - `get_cache_breakpoints(*, tenant_id, policy) -> list[CacheBreakpoint]` (async abstract) ✅
+  - `invalidate(*, tenant_id, reason) -> None` (async abstract) ✅
+  - DoD：5 ABC 簽名齊；每個 ABC 有 module docstring（含 owner / 跨範疇互動說明）✅
+  - Verify：`python -m mypy backend/src/agent_harness/context_mgmt --strict` → Success: no issues found in 7 source files ✅
 
 ### 1.6 17.md §1.1 同步（45 min）
-- [ ] **更新 `17-cross-category-interfaces.md` §1.1**
-  - 加 row：`CompactionStrategy` — Owner `01-eleven-categories-spec.md` §範疇 4，描述 enum 3 值
-  - 加 row：`CompactionResult` — Owner Cat 4，描述 7 欄位
-  - 加 row：`CachePolicy` — Owner Cat 4，描述 5 cache_* boolean
-  - 加 row：`CacheBreakpoint` — Owner Cat 5（Cat 4 generate；52.2 接通）
-  - DoD：grep 確認 4 type 列入；single-source 規則維持
-  - Verify：`grep -n "CompactionStrategy\|CompactionResult\|CachePolicy\|CacheBreakpoint" docs/03-implementation/agent-harness-planning/17-cross-category-interfaces.md`
+- [x] **更新 `17-cross-category-interfaces.md` §1.1** ✅
+  - 加 row：`CompactionStrategy` — Owner `01-eleven-categories-spec.md` §範疇 4，描述 enum 3 值 ✅
+  - 加 row：`CompactionResult` — Owner Cat 4，描述 7 欄位 ✅
+  - 加 row：`CachePolicy` — Owner Cat 4，描述 5 cache_* boolean ✅
+  - 改 row：`CacheBreakpoint` — Owner 改為「範疇 5（物理）+ 範疇 4（logical metadata）」標明 52.1 擴充欄位 ✅
+  - 同步 §1.3 file layout：加 `compaction.py` + `cache.py` ✅
+  - DoD：grep 確認 4 type 列入；single-source 規則維持 ✅
+  - Verify：`grep -n "CompactionStrategy\|CompactionResult\|CachePolicy\|CacheBreakpoint" docs/03-implementation/agent-harness-planning/17-cross-category-interfaces.md` → 4 type 全列入 ✅
 
 ### 1.7 17.md §2.1 同步（45 min）
-- [ ] **更新 `17-cross-category-interfaces.md` §2.1**
-  - 加 row：`Compactor` — Cat 4，方法 `compact_if_needed()` / `should_compact()`
-  - 加 row：`ObservationMasker` — Cat 4，方法 `mask_old_results()`
-  - 加 row：`JITRetrieval` — Cat 4，方法 `resolve(pointer)`
-  - 加 row：`TokenCounter` — Cat 4，方法 `count()` / `accuracy()`
-  - 加 row：`PromptCacheManager` — Cat 4，方法 `get_cache_breakpoints()` / `invalidate()`
-  - DoD：5 ABC 列入；grep 確認
-  - Verify：`grep -n "Compactor\|ObservationMasker\|JITRetrieval\|TokenCounter\|PromptCacheManager" docs/03-implementation/agent-harness-planning/17-cross-category-interfaces.md`
+- [x] **更新 `17-cross-category-interfaces.md` §2.1** ✅
+  - 改 row：`Compactor` — Cat 4，簽名升級 `should_compact() / compact_if_needed() -> CompactionResult`（49.1 stub `compact() -> LoopState` 已淘汰）✅
+  - 加 row：`ObservationMasker` — Cat 4，方法 `mask_old_results()` ✅
+  - 加 row：`JITRetrieval` — Cat 4，方法 `resolve(pointer)`（multi-tenant safety: tenant_id 強制）✅
+  - 改 row：`TokenCounter` — Cat 4，加 `accuracy()` Literal["exact","approximate"] ✅
+  - 加 row：`PromptCacheManager` — Cat 4，方法 `get_cache_breakpoints()` / `invalidate()`（multi-tenant safety: tenant_id 強制隔離）✅
+  - DoD：5 ABC 列入；grep 確認 ✅
+  - Verify：`grep -n "ObservationMasker\|JITRetrieval\|PromptCacheManager" 17.md` → 全列入 ✅
 
 ### 1.8 9 個 unit test 占位（30 min）
-- [ ] **建 `tests/unit/agent_harness/context_mgmt/` 9 個 test 檔**（per plan §3 file 清單）
-  - `test_compactor_structural.py` / `test_compactor_semantic.py` / `test_compactor_hybrid.py`
-  - `test_observation_masker.py` / `test_jit_retrieval.py`
-  - `test_token_counter_tiktoken.py` / `test_token_counter_claude.py` / `test_token_counter_generic.py`
-  - `test_cache_manager.py`
-  - 各檔內含 `pytest.mark.skip(reason="Day 2-4 implements")` placeholder + module docstring
-  - DoD：pytest collect succeeds；no test runs（all skipped）
-  - Verify：`python -m pytest backend/tests/unit/agent_harness/context_mgmt/ --collect-only -q`
+- [x] **建 `tests/unit/agent_harness/context_mgmt/` 9 個 test 檔**（per plan §3 file 清單）✅
+  - `test_compactor_structural.py` / `test_compactor_semantic.py` / `test_compactor_hybrid.py` ✅
+  - `test_observation_masker.py` / `test_jit_retrieval.py` ✅
+  - `test_token_counter_tiktoken.py` / `test_token_counter_claude.py` / `test_token_counter_generic.py` ✅
+  - `test_cache_manager.py` ✅
+  - 各檔內含 `pytest.mark.skip(reason="Day 2-4 implements")` placeholder + module docstring（每檔列 Day X.Y 對應的 test 名單）✅
+  - DoD：pytest collect succeeds；no test runs（all skipped）✅
+  - Verify：`python -m pytest backend/tests/unit/agent_harness/context_mgmt/ --collect-only -q` → 9 tests collected; `pytest -v` → 9 skipped ✅
 
 ### 1.9 Day 1 commit
-- [ ] **commit Day 1**
-  - Msg：`feat(context-mgmt, sprint-52-1): Day 1 — 5 ABC + 4 contracts + 17.md §1.1/§2.1 sync`
-  - Files：6 src + 2 contracts + 9 test placeholder + 17.md
-  - DoD：mypy --strict pass；pytest collect 0 fail；17.md §1.1+§2.1 同 commit
-  - Verify：`git log -1 --stat`
+- [x] **commit Day 1** ✅
+  - Msg：`feat(context-mgmt, sprint-52-1): Day 1 — 5 ABC + 4 contracts + 17.md §1.1/§2.1 sync` ✅
+  - Files：7 src（6 new + 1 rewrite）+ 3 contracts edits（chat extension + 2 new）+ 9 test placeholder + 17.md + plan + checklist
+  - DoD：mypy --strict pass（20 files clean）；pytest collect 0 fail（9 tests collected/skipped）；51.1 baseline 維持（adapter 41/41 PASS）；test_imports 4/4 PASS；LLM SDK leak 0 ✅
+  - 已知 carry：`test_builtin_tools.py::test_memory_search_placeholder_raises` + `test_memory_write_placeholder_raises` 2 個 PRE-EXISTING failure（非 Day 1 引入；Cat 2/3 placeholder 行為 vs test 期望分歧；Sprint 51.2 retroactive 應已捕捉但未修；CARRY-035 留 retro Day 4）
+  - Verify：`git log -1 --stat` ✅
 
 ---
 
@@ -447,4 +462,4 @@
 
 ---
 
-**Last Updated**：2026-04-30（Day 0 ✅ 全 4 group 完成；環境 verified — main HEAD `a541d97` synced，49.1 stub 已認知將於 Day 1 重組，AI-3/4/5 不阻啟動；對齊 51.2 5-day format + 同等細節水平）
+**Last Updated**：2026-05-01（Day 1 ✅ 9 group 完成 — 5 ABC 完成 + 4 contracts 同步 + 17.md §1.1/§1.3/§2.1 sync + 9 placeholder tests collected。mypy strict 20 files clean / 51.1 adapter 41/41 PASS / 0 LLM SDK leak。CARRY-035：2 個 pre-existing test_builtin_tools failure 非 Day 1 引入，Day 4 retro 處理）

@@ -24,6 +24,7 @@ Owner: 17-cross-category-interfaces.md §1
 Created: 2026-04-29 (Sprint 49.1)
 """
 
+from agent_harness._contracts.cache import CachePolicy
 from agent_harness._contracts.chat import (
     CacheBreakpoint,
     ChatRequest,
@@ -33,6 +34,10 @@ from agent_harness._contracts.chat import (
     StopReason,
     TokenUsage,
     ToolCall,
+)
+from agent_harness._contracts.compaction import (
+    CompactionResult,
+    CompactionStrategy,
 )
 from agent_harness._contracts.events import (
     ApprovalReceived,
@@ -107,6 +112,11 @@ __all__ = [
     "ToolCall",
     "TokenUsage",
     "CacheBreakpoint",
+    # compaction (Cat 4)
+    "CompactionStrategy",
+    "CompactionResult",
+    # cache (Cat 4)
+    "CachePolicy",
     # tools
     "ToolSpec",
     "ToolResult",

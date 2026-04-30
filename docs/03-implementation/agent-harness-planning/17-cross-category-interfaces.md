@@ -55,7 +55,10 @@ V2 review 發現 7 條跨範疇 / 跨文件重複定義：
 | `StopReason` | `10-server-side-philosophy.md` | 原則 2 enum 中性化表 | 替代 per-provider 字串 |
 | `MemoryHint` | `01-eleven-categories-spec.md` | 範疇 3 | 「線索→驗證」資料結構（**51.2 Day 1** 擴 5 欄位：`time_scale` / `confidence` / `last_verified_at` / `verify_before_use` / `source_tool_call_id`） |
 | `PromptArtifact` | `01-eleven-categories-spec.md` | 範疇 5 | PromptBuilder 產出（含 cache breakpoints） |
-| `CacheBreakpoint` | `01-eleven-categories-spec.md` | 範疇 5 | Anthropic-style cache_control 標記 |
+| `CacheBreakpoint` | `01-eleven-categories-spec.md` | 範疇 5（物理）+ 範疇 4（logical metadata） | Provider cache_control 標記。**51.1**：物理欄位 `position` / `ttl_seconds` / `breakpoint_type`（Cat 5 own）。**52.1 Day 1 擴充**：logical metadata 欄位 `section_id` / `content_hash` / `cache_control`（Cat 4 own，全 default=None 維持 51.1 callers 兼容）|
+| `CompactionStrategy` | `01-eleven-categories-spec.md` | 範疇 4 | Compactor 策略 enum（STRUCTURAL / SEMANTIC / HYBRID）— **52.1 Day 1 新增** |
+| `CompactionResult` | `01-eleven-categories-spec.md` | 範疇 4 | `Compactor.compact_if_needed()` 回傳；7 欄位（triggered / strategy_used / tokens_before / tokens_after / messages_compacted / duration_ms / compacted_state）— **52.1 Day 1 新增** |
+| `CachePolicy` | `01-eleven-categories-spec.md` | 範疇 4 | `PromptCacheManager.get_cache_breakpoints()` 輸入；5 個 cache_* boolean + ttl_seconds + invalidate_on triggers — **52.1 Day 1 新增** |
 | `VerificationResult` | `01-eleven-categories-spec.md` | 範疇 10 | Verifier 回傳 |
 | `SubagentBudget` | `01-eleven-categories-spec.md` | 範疇 11 | token / duration / concurrency cap |
 | `SubagentResult` | `01-eleven-categories-spec.md` | 範疇 11 | Subagent 回傳（含強制 ≤ N token 摘要） |
@@ -89,12 +92,14 @@ V2 backend 中：
 ```
 backend/src/agent_harness/_contracts/
 ├── __init__.py            ← 統一 re-export
-├── chat.py                ← ChatRequest/Response/Message/ContentBlock/StopReason
+├── chat.py                ← ChatRequest/Response/Message/ContentBlock/StopReason/CacheBreakpoint（51.1 物理 + 52.1 logical）
 ├── tools.py               ← ToolSpec/ToolCall/ToolResult/ToolAnnotations
 ├── state.py               ← LoopState/TransientState/DurableState
 ├── events.py              ← LoopEvent
 ├── memory.py              ← MemoryHint
-├── prompt.py              ← PromptArtifact/CacheBreakpoint
+├── prompt.py              ← PromptArtifact（CacheBreakpoint re-export from chat.py）
+├── compaction.py          ← CompactionStrategy/CompactionResult（**52.1 Day 1**）
+├── cache.py               ← CachePolicy（**52.1 Day 1**）
 ├── verification.py        ← VerificationResult
 ├── subagent.py            ← SubagentBudget/SubagentResult
 ├── observability.py       ← TraceContext/MetricEvent
@@ -116,8 +121,11 @@ backend/src/agent_harness/_contracts/
 | `ToolRegistry` | `01-eleven-categories-spec.md` | 範疇 2 | `register()` / `get()` / `list()` |
 | `ToolExecutor` | `01-eleven-categories-spec.md` | 範疇 2 | `execute()` / `execute_batch()` |
 | `MemoryLayer` | `01-eleven-categories-spec.md` | 範疇 3 | `read()` / `write()` / `evict()` / `resolve()`（**51.2 Day 1** 簽名變更：`write(ttl=...)` → `write(time_scale=..., confidence=...)`；`read()` 加 `time_scales` 軸；新增 `MemoryTimeScale` enum helper） |
-| `Compactor` | `01-eleven-categories-spec.md` | 範疇 4 | `compact()` |
-| `TokenCounter` | `01-eleven-categories-spec.md` | 範疇 4 | `count(messages, tools) -> int` |
+| `Compactor` | `01-eleven-categories-spec.md` | 範疇 4 | `should_compact(state) -> bool` / `compact_if_needed(state) -> CompactionResult`（async）— **52.1 Day 1 簽名升級**（49.1 stub `compact() -> LoopState` 已淘汰） |
+| `ObservationMasker` | `01-eleven-categories-spec.md` | 範疇 4 | `mask_old_results(messages, *, keep_recent=5) -> list[Message]` — **52.1 Day 1 新增** |
+| `JITRetrieval` | `01-eleven-categories-spec.md` | 範疇 4 | `resolve(pointer, *, tenant_id) -> str`（async）— **52.1 Day 1 新增**（multi-tenant safety: tenant_id 強制） |
+| `TokenCounter` | `01-eleven-categories-spec.md` | 範疇 4 | `count(messages, tools) -> int` / `accuracy() -> Literal["exact", "approximate"]`（**52.1 Day 1** 加 accuracy method） |
+| `PromptCacheManager` | `01-eleven-categories-spec.md` | 範疇 4 | `get_cache_breakpoints(*, tenant_id, policy) -> list[CacheBreakpoint]`（async） / `invalidate(*, tenant_id, reason) -> None`（async）— **52.1 Day 1 簽名升級**（49.1 stub `plan_breakpoints(messages, provider_supports_caching)` 已淘汰；multi-tenant safety: tenant_id 強制隔離） |
 | `PromptBuilder` | `01-eleven-categories-spec.md` | 範疇 5 | `build() -> PromptArtifact` |
 | `OutputParser` | `01-eleven-categories-spec.md` | 範疇 6 | `parse(response) -> ParsedOutput` |
 | `Checkpointer` | `01-eleven-categories-spec.md` | 範疇 7 | `save()` / `load()` / `time_travel()` |

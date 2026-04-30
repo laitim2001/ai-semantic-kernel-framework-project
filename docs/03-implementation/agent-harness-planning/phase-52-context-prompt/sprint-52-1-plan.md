@@ -66,7 +66,7 @@
 **驗收**：
 - `PromptCacheManager` ABC：`get_cache_breakpoints(tenant_id, policy)` + `invalidate(tenant_id, reason)`
 - `CachePolicy` dataclass：5 個 cache_* boolean + `ttl_seconds: int = 300` + `invalidate_on: list[str]`
-- `CacheBreakpoint` 標記在 `_contracts/prompt.py`（Cat 5 own，52.1 占位 + 52.2 接通）
+- `CacheBreakpoint` **擴充既有 `_contracts/chat.py:122`**（51.1 已有物理 marker：`position`/`ttl_seconds`/`breakpoint_type`）；52.1 加 logical metadata：`section_id: str | None` / `content_hash: str | None` / `cache_control: dict | None`，全 default=None 維持 51.1 callers 兼容（5 處 unchanged）
 - `InMemoryCacheManager` impl：dict-backed key store + TTL；key = `sha256(tenant_id || section_id || content_hash || provider)`
 - Tenant 隔離 red-team test：tenant_a 寫入 + tenant_b 用 same content 查 → cache miss（key 不同）
 - 穩態 cache hit 率 > 50% 整合測試（5 turn 同 tenant + user 對話）
@@ -176,7 +176,7 @@ cache_key = sha256(tenant_id || section_id || content_hash || provider_signature
 - `CompactionStrategy` — Cat 4，enum：STRUCTURAL / SEMANTIC / HYBRID
 - `CompactionResult` — Cat 4，Compactor.compact_if_needed 回傳
 - `CachePolicy` — Cat 4，per-tenant + per-loop caching 政策
-- `CacheBreakpoint` — Cat 5 own，Cat 4 generate（52.1 占位 + 52.2 接通）
+- `CacheBreakpoint` — **擴充**既有 chat.py:122（Cat 5 own 物理 marker；Cat 4 加 logical metadata 欄位 — section_id/content_hash/cache_control，全 default=None）
 
 **§2.1（ABC 表）— 新增 5 row**：
 - `Compactor` / `ObservationMasker` / `JITRetrieval` / `TokenCounter` / `PromptCacheManager` 全 owner = `01-eleven-categories-spec.md` §範疇 4
@@ -203,8 +203,9 @@ agent_harness/context_mgmt/                              # 49.1 stub 已存（__
 └── cache_manager.py
 
 agent_harness/_contracts/
-├── compaction.py                        # CompactionStrategy + CompactionResult
-└── cache.py                             # CachePolicy + CacheBreakpoint
+├── compaction.py                        # CompactionStrategy + CompactionResult (NEW)
+├── cache.py                             # CachePolicy (NEW)
+└── chat.py                              # CacheBreakpoint extended with section_id / content_hash / cache_control (default=None)
 
 tests/unit/agent_harness/context_mgmt/   # 9 test files / ~44 tests
 ├── test_compactor_structural.py        (6)
@@ -229,7 +230,7 @@ tests/e2e/
 ### 修改（~5 file）
 
 - `agent_harness/orchestrator_loop/loop.py` — +compactor injection + per-turn compact check + ContextCompacted event
-- `agent_harness/_contracts/__init__.py` — +CompactionStrategy/CompactionResult/CachePolicy/CacheBreakpoint exports
+- `agent_harness/_contracts/__init__.py` — +CompactionStrategy/CompactionResult/CachePolicy exports（CacheBreakpoint 已 export，欄位擴充無需改 __init__）
 - `adapters/azure_openai/adapter.py` — `ChatClient.count_tokens()` 路由到 TiktokenCounter
 - `docs/03-implementation/agent-harness-planning/17-cross-category-interfaces.md` — §1.1 + §2.1 + §4.1 sync
 - `docs/03-implementation/agent-harness-planning/phase-52-context-prompt/README.md` — 52.1 ✅ DONE marker（closeout）
