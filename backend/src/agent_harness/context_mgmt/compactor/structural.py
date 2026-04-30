@@ -52,7 +52,9 @@ from agent_harness._contracts import (
     Message,
     TraceContext,
 )
+from agent_harness.context_mgmt._abc import ObservationMasker
 from agent_harness.context_mgmt.compactor._abc import Compactor
+from agent_harness.context_mgmt.observation_masker import DefaultObservationMasker
 
 
 def _tool_call_signature(msg: Message) -> str | None:
@@ -99,29 +101,6 @@ def _drop_redundant_tool_retries(messages: list[Message]) -> tuple[list[Message]
     return filtered, dropped
 
 
-def _redact_old_tool_results(
-    messages: list[Message],
-    keep_recent_turns: int,
-) -> list[Message]:
-    """Day 2 inline tombstone for old tool results; Day 3.3 swaps in ObservationMasker."""
-    user_assistant_indices = [i for i, m in enumerate(messages) if m.role in ("user", "assistant")]
-    if len(user_assistant_indices) <= keep_recent_turns:
-        return messages
-    cutoff_idx = user_assistant_indices[-keep_recent_turns]
-
-    out: list[Message] = []
-    for i, msg in enumerate(messages):
-        if msg.role == "tool" and i < cutoff_idx:
-            tool_name = msg.name or "unknown"
-            content_repr = msg.content if isinstance(msg.content, str) else "[content blocks]"
-            byte_count = len(content_repr) if isinstance(content_repr, str) else 0
-            tombstone = f"[REDACTED: tool {tool_name} result; bytes={byte_count}]"
-            out.append(replace(msg, content=tombstone))
-        else:
-            out.append(msg)
-    return out
-
-
 class StructuralCompactor(Compactor):
     """Rule-based context compaction. Target p95 < 100ms (per Sprint 52.1 §1)."""
 
@@ -133,12 +112,16 @@ class StructuralCompactor(Compactor):
         token_budget: int = 100_000,
         token_threshold_ratio: float = 0.75,
         turn_threshold: int = 30,
+        masker: ObservationMasker | None = None,
     ) -> None:
         self.keep_recent_turns = keep_recent_turns
         self.preserve_hitl = preserve_hitl
         self.token_budget = token_budget
         self.token_threshold_ratio = token_threshold_ratio
         self.turn_threshold = turn_threshold
+        # Day 3.3: dependency-injected masker. Default = DefaultObservationMasker.
+        # Replaces the Day 2 inline _redact_old_tool_results helper.
+        self.masker: ObservationMasker = masker or DefaultObservationMasker()
 
     def should_compact(self, state: LoopState) -> bool:
         """Override ABC default with concrete state path access."""
@@ -183,8 +166,10 @@ class StructuralCompactor(Compactor):
         rest_messages = [m for i, m in enumerate(messages) if i not in always_keep_indices]
         rest_filtered, _dropped = _drop_redundant_tool_retries(rest_messages)
 
-        # Step 3: redact old tool results (inline; Day 3.3 will swap to ObservationMasker)
-        rest_redacted = _redact_old_tool_results(rest_filtered, self.keep_recent_turns)
+        # Step 3: redact old tool results via injected ObservationMasker (Day 3.3)
+        rest_redacted = self.masker.mask_old_results(
+            rest_filtered, keep_recent=self.keep_recent_turns
+        )
 
         # Step 4: re-merge — preserve order: always_keep messages stay where they were
         kept_messages: list[Message] = []

@@ -35,7 +35,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import AsyncIterator, Literal
+from typing import TYPE_CHECKING, AsyncIterator, Literal
+
+if TYPE_CHECKING:
+    from agent_harness.context_mgmt.token_counter.tiktoken_counter import TiktokenCounter
 
 import tiktoken
 from openai import AsyncAzureOpenAI
@@ -79,6 +82,8 @@ class AzureOpenAIAdapter(ChatClient):
         self.config = config or AzureOpenAIConfig()
         self._client: AsyncAzureOpenAI | None = None
         self._tokenizer: tiktoken.Encoding | None = None
+        # 52.1 Day 3.10: lazy Cat 4 token counter (replaces inline tiktoken loop)
+        self._token_counter: "TiktokenCounter | None" = None
 
     # -- lazy clients ------------------------------------------------------
 
@@ -242,30 +247,33 @@ class AzureOpenAIAdapter(ChatClient):
         messages: list[Message],
         tools: list[ToolSpec] | None = None,
     ) -> int:
-        """Count tokens using tiktoken (matches Azure billing tokenizer)."""
-        encoder = self._get_tokenizer()
-        total = 0
-        # Each message has ~4 token overhead per OpenAI cookbook
-        per_message_overhead = 4
+        """Count tokens via Cat 4 TiktokenCounter (single-source per 17.md §2.1).
 
-        for msg in messages:
-            total += per_message_overhead
-            total += len(encoder.encode(msg.role))
-            if isinstance(msg.content, str):
-                total += len(encoder.encode(msg.content))
-            else:
-                for block in msg.content:
-                    if block.text:
-                        total += len(encoder.encode(block.text))
+        Sprint 52.1 Day 3.10: previously this method had its own inline tiktoken
+        loop (per_message_overhead=4, simplified schema serialisation). It now
+        delegates to TiktokenCounter, the canonical Cat 4 implementation, with
+        per_message_overhead=4 + per_request_overhead=0 to preserve the 51.1
+        adapter contract (count([])==0 / single short message > 4).
+        """
+        counter = self._get_token_counter()
+        return counter.count(messages=messages, tools=tools)
 
-        if tools:
-            for spec in tools:
-                total += len(encoder.encode(spec.name))
-                total += len(encoder.encode(spec.description))
-                # JSON schema serialized — rough approximation via string repr
-                total += len(encoder.encode(str(spec.input_schema)))
+    def _get_token_counter(self) -> "TiktokenCounter":
+        if self._token_counter is None:
+            from agent_harness.context_mgmt.token_counter.tiktoken_counter import TiktokenCounter
 
-        return total
+            self._token_counter = TiktokenCounter(
+                model=self.config.model_name,
+                # Preserve 51.1 adapter contract:
+                # - count_tokens([]) == 0 (no per_request overhead on empty input;
+                #   TiktokenCounter already short-circuits empty, but we also keep
+                #   per_request_overhead at 0 for any future code path consistency)
+                # - per_message overhead = 4 (matches the OpenAI cookbook value
+                #   used by 51.1 adapter; tests in test_token_counting.py assume this)
+                per_message_overhead=4,
+                per_request_overhead=0,
+            )
+        return self._token_counter
 
     def get_pricing(self) -> PricingInfo:
         return PricingInfo(
