@@ -41,10 +41,11 @@ V2 review 發現 7 條跨範疇 / 跨文件重複定義：
 | `ChatResponse` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | LLM 呼叫回應；含 `stop_reason` enum |
 | `Message` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | role / content / tool_calls |
 | `ContentBlock` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | text / image / tool_use / tool_result |
-| `ToolSpec` | `01-eleven-categories-spec.md` | 範疇 2 | 工具定義（含 annotations / concurrency_policy / version） |
+| `ToolSpec` | `01-eleven-categories-spec.md` | 範疇 2 | 工具定義（含 annotations / concurrency_policy / **hitl_policy / risk_level (51.1)** / version） |
 | `ToolCall` | `01-eleven-categories-spec.md` | 範疇 2 | 單次工具呼叫 |
 | `ToolResult` | `01-eleven-categories-spec.md` | 範疇 2 | 工具回傳（含 `result_content_types`） |
 | `ToolAnnotations` | `01-eleven-categories-spec.md` | 範疇 2 | MCP 4 hints（readOnly / destructive / idempotent / openWorld） |
+| `ToolHITLPolicy` | `01-eleven-categories-spec.md` | 範疇 2 | Per-tool HITL behavior enum（`AUTO` / `ASK_ONCE` / `ALWAYS_ASK`）— **新增 51.1**；distinct from per-tenant `HITLPolicy` (in `_contracts.hitl`) |
 | `ConcurrencyPolicy` | `01-eleven-categories-spec.md` | 範疇 2 | sequential / read_only_parallel / all_parallel |
 | `LoopState` | `01-eleven-categories-spec.md` | 範疇 7 | 中央 state；拆 transient/durable |
 | `TransientState` | `01-eleven-categories-spec.md` | 範疇 7 | in-memory 短期 state |
@@ -161,7 +162,7 @@ backend/src/agent_harness/{範疇}/_abc.py
 #### 業務領域工具（Sprint 51.0 mock 階段；Phase 55 替換為真實 enterprise integration）
 
 > Sprint 51.0 命名約定：所有業務 stub 加 `mock_` prefix；Phase 55 真實 integration 上線時統一 mass rename 移除 prefix。
-> hitl_policy 與 risk_level 為 Sprint 51.0 暫編碼於 `ToolSpec.tags`（CARRY-021：51.1 ToolSpec 加 first-class field）。
+> ~~hitl_policy 與 risk_level 為 Sprint 51.0 暫編碼於 `ToolSpec.tags`~~（CARRY-021 已於 **Sprint 51.1 Day 1** 處理：`ToolSpec` 加入 first-class `hitl_policy: ToolHITLPolicy` + `risk_level: RiskLevel` field；Day 5 移除 18 業務 stub 的 tags-encoded workaround）。
 
 | 工具名稱 | Owner | 描述 | concurrency / hitl / risk |
 |---------|------|------|--------------------------|

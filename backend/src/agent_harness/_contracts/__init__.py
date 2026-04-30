@@ -7,7 +7,7 @@ Scope: Phase 49 / Sprint 49.1
 Usage:
     from agent_harness._contracts import (
         Message, ChatRequest, ChatResponse, StopReason,
-        ToolSpec, ToolCall, ToolResult, ToolAnnotations, ConcurrencyPolicy,
+        ToolSpec, ToolCall, ToolResult, ToolAnnotations, ConcurrencyPolicy, ToolHITLPolicy,
         LoopState, TransientState, DurableState, StateVersion,
         LoopEvent, ToolCallRequested, ToolCallExecuted,
         MemoryHint,
@@ -90,6 +90,7 @@ from agent_harness._contracts.subagent import (
 from agent_harness._contracts.tools import (
     ConcurrencyPolicy,
     ToolAnnotations,
+    ToolHITLPolicy,
     ToolResult,
     ToolSpec,
 )
@@ -110,6 +111,7 @@ __all__ = [
     "ToolResult",
     "ToolAnnotations",
     "ConcurrencyPolicy",
+    "ToolHITLPolicy",
     # state
     "LoopState",
     "TransientState",

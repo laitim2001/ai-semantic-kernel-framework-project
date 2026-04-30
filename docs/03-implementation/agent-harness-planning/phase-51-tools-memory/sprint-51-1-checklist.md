@@ -8,8 +8,8 @@
 
 ## 進度總覽
 
-- **Day 0**：⏸ Plan + Checklist + branch（4h）
-- **Day 1**：⏸ ToolSpec extension（CARRY-021）+ ToolRegistryImpl（5h）
+- **Day 0**：✅ Plan + Checklist + branch（4h）
+- **Day 1**：✅ ToolSpec extension（CARRY-021）+ ToolRegistryImpl（5h plan / actual ~1h）
 - **Day 2**：⏸ ToolExecutorImpl + PermissionChecker（6h）
 - **Day 3**：⏸ SandboxBackend + SubprocessSandbox + exec_tools（5h）
 - **Day 4**：⏸ search_tools + hitl_tools + memory_tools placeholder + tests（6h）
@@ -22,73 +22,70 @@
 ## Day 0 — Plan / Checklist / Branch / Phase README sync（預估 4 小時）
 
 ### 0.1 Sprint plan 撰寫（45 min）
-- [ ] **撰寫 sprint-51-1-plan.md**
+- [x] **撰寫 sprint-51-1-plan.md**
   - DoD: 含 Sprint Goal + 5 User Stories + 6 架構決策 + File Change List + Acceptance Criteria + Deliverables + 6 Risks + V2 紀律對照
-  - 已完成 ✅（本 commit 提交）
+  - 已完成 ✅（commit `6aa6e32`）
 
 ### 0.2 Sprint checklist 撰寫（45 min）
-- [ ] **撰寫 sprint-51-1-checklist.md**（本檔）
+- [x] **撰寫 sprint-51-1-checklist.md**（本檔）
   - DoD: Day 0-5 task 全列；每項 ≤ 90 min；含 DoD + verification command
-  - 已完成 ✅（本 commit 提交）
+  - 已完成 ✅（commit `6aa6e32`）
 
 ### 0.3 Phase 51 README 同步（30 min）
-- [ ] **修改 phase-51-tools-memory/README.md** — Sprint 51.1 狀態 ⏸→🟡 PLANNING
-  - DoD: README Sprint 表更新 51.1 狀態 + 範圍預覽
+- [x] **修改 phase-51-tools-memory/README.md** — Sprint 51.1 狀態 ⏸→🟡 PLANNING
+  - DoD: README Sprint 表更新 51.1 狀態 + 範圍預覽 ✅（commit `6aa6e32`）
 
 ### 0.4 建立 branch（10 min）
-- [ ] **`git checkout -b feature/phase-51-sprint-1-cat2-tool-layer` from main**
+- [x] **`git checkout -b feature/phase-51-sprint-1-cat2-tool-layer` from main**
   - DoD: branch 從 main HEAD（51.0 merge commit `8cd47ca`）切；當前未動 main
-  - **已執行**：branch 在 51.0 closeout 後建立
+  - **已執行**：branch 在 51.0 closeout 後建立 ✅
 
 ### 0.5 確認 50.x / 51.0 baseline ready（30 min）
-- [ ] **`make_default_executor` / `register_all_business_tools` / 18 ToolSpec / InMemoryToolRegistry 全 importable**
-  - DoD: smoke import test
-  - Command: `python -c "from business_domain._register_all import make_default_executor; from agent_harness.tools._inmemory import InMemoryToolRegistry; reg, exe = make_default_executor(); print(len(reg.list()))"` ≥ 19
+- [x] **`make_default_executor` / `register_all_business_tools` / 18 ToolSpec / InMemoryToolRegistry 全 importable**
+  - DoD: smoke import test ✅（Day 1 開工前驗證 `tool_count 19`）
 
 ### 0.6 確認 jsonschema lib 可用（15 min）
-- [ ] **`python -c "import jsonschema; print(jsonschema.__version__)"` ≥ 4.20**
+- [x] **`python -c "import jsonschema; print(jsonschema.__version__)"` ≥ 4.20**
   - DoD: jsonschema 在 backend deps；如缺，加到 pyproject.toml requirements 並重 install
-  - 49.1 baseline 應已含
+  - 49.1 baseline 已含 ✅（4.26.0）
 
 ### 0.7 Day 0 commit（10 min）
-- [ ] **commit `docs(plan, sprint-51-1): Day 0 plan + checklist + Phase 51 README`**
-  - DoD: 3 docs 提交；branch HEAD = Day 0 commit；working tree clean (除用戶 IDE work)
+- [x] **commit `docs(plan, sprint-51-1): Day 0 plan + checklist + Phase 51 README`**
+  - DoD: 3 docs 提交；branch HEAD = Day 0 commit；working tree clean (除用戶 IDE work) ✅（`6aa6e32`）
 
 ---
 
 ## Day 1 — ToolSpec extension + ToolRegistryImpl（預估 5 小時）
 
 ### 1.1 ToolSpec 加 hitl_policy + risk_level field（CARRY-021）（45 min）
-- [ ] **修改 `_contracts/tools.py:ToolSpec`** 加兩個 field 帶 default
-  - DoD: `hitl_policy: HITLPolicy = HITLPolicy.AUTO` + `risk_level: Literal["low","medium","high"] = "low"`
-  - import HITLPolicy from `_contracts.hitl`（forward-ref 或直接 import）
-  - mypy strict pass
+- [x] **修改 `_contracts/tools.py:ToolSpec`** 加兩個 field 帶 default
+  - DoD: `hitl_policy: ToolHITLPolicy = ToolHITLPolicy.AUTO` + `risk_level: RiskLevel = RiskLevel.LOW` ✅
+  - **設計調整**：plan §決策 1 寫 `HITLPolicy.AUTO`，但 `_contracts/hitl.py:HITLPolicy` 已存在為 per-tenant dataclass（不是 enum）。新增 distinct enum `ToolHITLPolicy`（AUTO / ASK_ONCE / ALWAYS_ASK）與既有 per-tenant `HITLPolicy` dataclass 區分；`risk_level` 複用 `_contracts/hitl.py:RiskLevel` enum（single-source 紀律）
+  - 將於 retrospective 登錄此調整
+  - mypy strict pass ✅
 
 ### 1.2 17.md §1.1 sync ToolSpec dataclass 表（30 min）
-- [ ] **修改 `17-cross-category-interfaces.md` §1.1**
-  - DoD: ToolSpec 表加 hitl_policy + risk_level row；註明 51.1 加入 + 替代 51.0 tags-encoded
+- [x] **修改 `17-cross-category-interfaces.md` §1.1**
+  - DoD: ToolSpec 表加 hitl_policy / risk_level annotation；新增 ToolHITLPolicy row；§3.1 註腳更新（51.0 tags-encoded → 51.1 first-class）✅
 
 ### 1.3 50.x / 51.0 既存測試 baseline run（30 min）
-- [ ] **`PYTHONPATH=src python -m pytest --tb=line` 跑全 test**
-  - DoD: 283 PASS / 0 SKIPPED 不變（ToolSpec 加 default field 應 backward-compat）
-  - 若 fail：修 ToolSpec field default 或 dataclass(frozen=True) 互動
+- [x] **`PYTHONPATH=src python -m pytest --tb=line` 跑全 test**
+  - DoD: 283 PASS / 0 SKIPPED 不變 ✅（後 1.4 重跑亦 283 PASS）
 
 ### 1.4 ToolRegistryImpl class（60 min）
-- [ ] **`agent_harness/tools/registry.py:ToolRegistryImpl(ToolRegistry)`**
-  - DoD:
-    - `register(spec) -> None` 含 duplicate detection + JSONSchema validate spec.input_schema
-    - `get(name) -> ToolSpec | None`
-    - `list() -> list[ToolSpec]`
-    - `by_tag(tag) -> list[ToolSpec]` helper
-  - File header 完整
+- [x] **`agent_harness/tools/registry.py:ToolRegistryImpl(ToolRegistry)`** ✅
+  - register: duplicate detection + Draft202012Validator.check_schema(spec.input_schema)
+  - get / list / by_tag 完整
+  - File header 完整 ✅
 
 ### 1.5 tools/__init__.py 加 export（15 min）
-- [ ] **export ToolRegistryImpl + 保留 ToolRegistry ABC export**
-  - DoD: `from agent_harness.tools import ToolRegistry, ToolRegistryImpl` 兩者都可
+- [x] **export ToolRegistryImpl + 保留 ToolRegistry ABC export** ✅
+  - smoke confirmed: `from agent_harness.tools import ToolRegistry, ToolRegistryImpl` 兩者皆可
+  - `from agent_harness._contracts import ToolHITLPolicy` 亦 OK
 
 ### 1.6 Day 1 commit（15 min）
 - [ ] **commit `feat(tools, sprint-51-1): Day 1 — ToolSpec hitl_policy/risk_level + ToolRegistryImpl + 17.md §1.1 sync`**
-  - DoD: 283 baseline 全 PASS；mypy strict OK
+  - DoD: 283 baseline 全 PASS ✅；mypy strict OK ✅；black clean ✅；4/5 V2 lints OK（AP-1 skipped: orchestrator_loop dir 未在當前 mypy --root path）
 
 ---
 
