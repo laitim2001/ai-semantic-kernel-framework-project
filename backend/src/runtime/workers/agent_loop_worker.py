@@ -17,14 +17,27 @@ Description:
     - propagate trace_context for Cat 12 observability
 
     NOT in scope this sprint:
-    - real LLM calls (Cat 1 owns; Phase 50.1)
     - Temporal-specific signals (Phase 53.1)
-    - graceful shutdown (drain pending tasks; Phase 50.2)
+    - graceful shutdown (drain pending tasks; Phase 53.1)
+
+Sprint 50.2 Day 2.5 additions:
+    - `execute_loop_with_sse(loop, session_id, user_input, sse_emit)` — common
+      driver that runs `AgentLoopImpl.run()` and dispatches each LoopEvent to
+      the supplied async `sse_emit` callback. Used by both the API SSE router
+      (in-process) and the worker handler (queue-backed; Phase 53.1).
+    - `build_agent_loop_handler(*, chat_client, tool_registry, tool_executor,
+      output_parser, system_prompt, sse_emit) -> TaskHandler` factory: produces
+      a worker-ready handler that constructs a fresh AgentLoopImpl per task
+      and runs it through `execute_loop_with_sse`. Forward-compatible with
+      Phase 53.1 Temporal adapter (TaskHandler signature unchanged).
 
 Created: 2026-04-29 (Sprint 49.4 Day 2)
-Last Modified: 2026-04-29
+Last Modified: 2026-04-30
 
-Modification History:
+Modification History (newest-first):
+    - 2026-04-30: Add execute_loop_with_sse helper + build_agent_loop_handler
+        factory (Sprint 50.2 Day 2.5). _default_handler stub kept for now
+        (DEPRECATED-IN: 53.1 when TemporalQueueBackend lands).
     - 2026-04-29: Initial stub (Sprint 49.4 Day 2)
 
 Related:
@@ -38,8 +51,19 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable
+from uuid import UUID
 
+from adapters._base.chat_client import ChatClient
+from agent_harness._contracts import (
+    LLMResponded,
+    LoopCompleted,
+    LoopEvent,
+    TraceContext,
+)
+from agent_harness.orchestrator_loop import AgentLoopImpl
+from agent_harness.output_parser import OutputParser
+from agent_harness.tools import ToolExecutor, ToolRegistry
 from runtime.workers.queue_backend import (
     MockQueueBackend,
     QueueBackend,
@@ -54,6 +78,92 @@ logger = logging.getLogger(__name__)
 # Handler signature: receives envelope, returns result dict.
 # In Phase 50.1 the AgentLoop is wired here.
 TaskHandler = Callable[[TaskEnvelope], Awaitable[dict[str, object]]]
+
+
+# === Sprint 50.2 Day 2.5: shared driver + handler factory ====================
+
+# SseEmit callback: receives a LoopEvent, dispatches it to the streaming sink
+# (HTTP SSE chunked response, queue, etc.). Async so backpressure-friendly.
+SseEmit = Callable[[LoopEvent], Awaitable[None]]
+
+
+async def execute_loop_with_sse(
+    *,
+    loop: AgentLoopImpl,
+    session_id: UUID,
+    user_input: str,
+    sse_emit: SseEmit,
+    trace_context: TraceContext | None = None,
+) -> dict[str, Any]:
+    """Drive `loop.run()` and dispatch each event to `sse_emit`.
+
+    Returns a dict suitable as a TaskHandler result: ``{"status",
+    "total_turns", "final_content"}``. ``final_content`` captures the
+    most recent LLMResponded.content (best-effort final answer).
+    """
+    final_content = ""
+    total_turns = 0
+    async for event in loop.run(
+        session_id=session_id,
+        user_input=user_input,
+        trace_context=trace_context,
+    ):
+        await sse_emit(event)
+        if isinstance(event, LLMResponded) and event.content:
+            final_content = event.content
+        if isinstance(event, LoopCompleted):
+            total_turns = event.total_turns
+    return {
+        "status": "completed",
+        "total_turns": total_turns,
+        "final_content": final_content,
+    }
+
+
+def build_agent_loop_handler(
+    *,
+    chat_client: ChatClient,
+    tool_registry: ToolRegistry,
+    tool_executor: ToolExecutor,
+    output_parser: OutputParser,
+    sse_emit: SseEmit,
+    system_prompt: str = "",
+    max_turns: int = 50,
+    token_budget: int = 100_000,
+) -> TaskHandler:
+    """Factory: TaskHandler that runs AgentLoopImpl + emits LoopEvents via SSE.
+
+    The returned handler is queue-backend-agnostic; same wiring works for
+    MockQueueBackend (50.2) and TemporalQueueBackend (Phase 53.1).
+
+    The envelope must carry the user message under ``payload["message"]``.
+    """
+
+    async def handler(envelope: TaskEnvelope) -> dict[str, Any]:
+        loop = AgentLoopImpl(
+            chat_client=chat_client,
+            output_parser=output_parser,
+            tool_executor=tool_executor,
+            tool_registry=tool_registry,
+            system_prompt=system_prompt,
+            max_turns=max_turns,
+            token_budget=token_budget,
+        )
+        message = str(envelope.payload.get("message", ""))
+        # task_id is a str; coerce to UUID for the loop's session_id contract.
+        try:
+            sid = UUID(envelope.task_id)
+        except ValueError:
+            # Fall back to a deterministic UUID; envelope.task_id may be free-form.
+            sid = UUID(int=hash(envelope.task_id) & ((1 << 128) - 1))
+        return await execute_loop_with_sse(
+            loop=loop,
+            session_id=sid,
+            user_input=message,
+            sse_emit=sse_emit,
+        )
+
+    return handler
 
 
 async def _default_handler(envelope: TaskEnvelope) -> dict[str, object]:
@@ -164,4 +274,12 @@ class AgentLoopWorker:
             await self.backend._complete(task_id, error=error)
 
 
-__all__ = ["AgentLoopWorker", "TaskHandler", "TaskStatus", "WorkerConfig"]
+__all__ = [
+    "AgentLoopWorker",
+    "SseEmit",
+    "TaskHandler",
+    "TaskStatus",
+    "WorkerConfig",
+    "build_agent_loop_handler",
+    "execute_loop_with_sse",
+]

@@ -40,6 +40,8 @@ from agent_harness._contracts.events import (
     ContextCompacted,
     ErrorRetried,
     GuardrailTriggered,
+    LLMRequested,
+    LLMResponded,
     LoopCompleted,
     LoopEvent,
     LoopStarted,
@@ -56,6 +58,7 @@ from agent_harness._contracts.events import (
     ToolCallFailed,
     ToolCallRequested,
     TripwireTriggered,
+    TurnStarted,
     VerificationFailed,
     VerificationPassed,
 )
@@ -115,6 +118,9 @@ __all__ = [
     # events
     "LoopEvent",
     "LoopStarted",
+    "TurnStarted",
+    "LLMRequested",
+    "LLMResponded",
     "Thinking",
     "LoopCompleted",
     "ToolCallRequested",

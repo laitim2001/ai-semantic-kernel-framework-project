@@ -87,11 +87,22 @@ async def test_e2e_echo_acceptance() -> None:
 
     # === Assertion (a): full event sequence ===================================
     type_seq = [type(e).__name__ for e in events]
+    # Sprint 50.2 Day 2.4: per-turn events expanded with TurnStarted /
+    # LLMRequested / LLMResponded; ToolCallExecuted yielded after success.
     assert type_seq == [
         "LoopStarted",
-        "Thinking",  # turn 1 — "I'll call the echo tool."
-        "ToolCallRequested",  # turn 1 — call_1 echo_tool
-        "Thinking",  # turn 2 — "Echo returned: hello"
+        # --- turn 1 ---
+        "TurnStarted",
+        "LLMRequested",
+        "LLMResponded",  # canonical SSE llm_response (50.2)
+        "Thinking",  # backward compat (50.1 tests still rely)
+        "ToolCallRequested",
+        "ToolCallExecuted",
+        # --- turn 2 ---
+        "TurnStarted",
+        "LLMRequested",
+        "LLMResponded",
+        "Thinking",
         "LoopCompleted",
     ]
 
@@ -165,8 +176,12 @@ async def test_e2e_zero_turn_immediate_final() -> None:
         tool_registry=registry,
     )
     events = [ev async for ev in loop.run(session_id=uuid4(), user_input="hi")]
+    # Sprint 50.2 Day 2.4: per-turn events expanded.
     assert [type(e).__name__ for e in events] == [
         "LoopStarted",
+        "TurnStarted",
+        "LLMRequested",
+        "LLMResponded",
         "Thinking",
         "LoopCompleted",
     ]

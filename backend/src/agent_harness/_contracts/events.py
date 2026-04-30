@@ -23,6 +23,10 @@ Created: 2026-04-29 (Sprint 49.1)
 Last Modified: 2026-04-29
 
 Modification History (newest-first):
+    - 2026-04-30: Add 3 new Cat 1-owned events (Sprint 50.2 Day 2.2) —
+        TurnStarted / LLMRequested / LLMResponded for per-turn SSE granularity.
+        Extend ToolCallExecuted with `result_content: str = ""` so tool result
+        text reaches frontend (backward-compatible default).
     - 2026-04-30: Fix `datetime.utcnow()` → `datetime.now(UTC)` (Sprint 50.2 Day 0
         CARRY-002) — clears 28+ DeprecationWarning emitted per loop test run.
     - 2026-04-29: Initial creation (Sprint 49.1) — 22 stub subclasses
@@ -61,6 +65,39 @@ class LoopStarted(LoopEvent):
 
 
 @dataclass(frozen=True)
+class TurnStarted(LoopEvent):
+    """Emitted by Cat 1 at the top of each TAO loop iteration. (Sprint 50.2)"""
+
+    turn_num: int = 0
+
+
+@dataclass(frozen=True)
+class LLMRequested(LoopEvent):
+    """Emitted by Cat 1 immediately before chat_client.chat(). (Sprint 50.2)
+
+    `tokens_in` is the prompt token count if available (best-effort; 0 when
+    Loop hasn't yet wired count_tokens()).
+    """
+
+    model: str = ""
+    tokens_in: int = 0
+
+
+@dataclass(frozen=True)
+class LLMResponded(LoopEvent):
+    """Emitted by Cat 1 after parser.parse(response). (Sprint 50.2)
+
+    Carries the canonical (content, tool_calls, thinking) tuple per
+    02-architecture-design.md §SSE `llm_response` schema. Replaces SSE-level
+    Thinking in 50.2; Thinking event itself stays for 50.1 test backward-compat.
+    """
+
+    content: str = ""
+    tool_calls: tuple[Any, ...] = field(default_factory=tuple)  # tuple[ToolCall, ...]
+    thinking: str | None = None
+
+
+@dataclass(frozen=True)
 class Thinking(LoopEvent):
     text: str = ""
 
@@ -89,6 +126,7 @@ class ToolCallExecuted(LoopEvent):
     tool_call_id: str = ""
     tool_name: str = ""
     duration_ms: float = 0.0
+    result_content: str = ""  # Sprint 50.2: tool output text (default empty for backward compat)
 
 
 @dataclass(frozen=True)

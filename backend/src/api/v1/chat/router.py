@@ -120,8 +120,12 @@ async def _stream_loop_events(
             try:
                 payload = serialize_loop_event(event)
             except NotImplementedError:
-                # Day 1: unimplemented event types (Day 2 fills) — skip for now.
+                # Event types deferred to later sprints (HITL / Verification / etc.).
                 logger.debug("sse: skip unserialized event %s", type(event).__name__)
+                continue
+            if payload is None:
+                # Day 2: serializer signals "skip this event" (e.g. Thinking →
+                # LLMResponded carries the canonical content).
                 continue
             yield format_sse_message(payload["type"], payload["data"])
             if isinstance(event, LoopCompleted):

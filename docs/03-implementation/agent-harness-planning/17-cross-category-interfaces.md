@@ -192,7 +192,10 @@ def register_memory_tools(registry: ToolRegistry) -> None:
 | Event 子類 | Emit 範疇 | 觸發時機 |
 |-----------|----------|---------|
 | `LoopStarted` | 範疇 1 | Loop run 開始 |
-| `Thinking` | 範疇 1 | 模型 thinking text |
+| `TurnStarted` | 範疇 1 | Loop 每個 TAO 迭代開頭（Sprint 50.2 加） |
+| `LLMRequested` | 範疇 1 | LLM call 發出前（含 model 名 + best-effort tokens_in；Sprint 50.2 加） |
+| `LLMResponded` | 範疇 1 | LLM 回應收到（canonical SSE `llm_response` 載體：content + tool_calls + thinking；Sprint 50.2 加） |
+| `Thinking` | 範疇 1 | 模型 thinking text（50.1 backward-compat；50.2+ SSE 不發） |
 | `ToolCallRequested` | 範疇 6 | output parser 解析出 tool_calls |
 | `ToolCallExecuted` | 範疇 2 | Tool executor 完成 |
 | `ToolCallFailed` | 範疇 2 | Tool 拋錯 |

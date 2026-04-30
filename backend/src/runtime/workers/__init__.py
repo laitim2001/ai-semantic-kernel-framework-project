@@ -6,7 +6,14 @@ Single-source map:
 - MockQueueBackend: queue_backend.py (test double)
 """
 
-from runtime.workers.agent_loop_worker import AgentLoopWorker, TaskHandler, WorkerConfig
+from runtime.workers.agent_loop_worker import (
+    AgentLoopWorker,
+    SseEmit,
+    TaskHandler,
+    WorkerConfig,
+    build_agent_loop_handler,
+    execute_loop_with_sse,
+)
 from runtime.workers.queue_backend import (
     MockQueueBackend,
     QueueBackend,
@@ -19,9 +26,12 @@ __all__ = [
     "AgentLoopWorker",
     "MockQueueBackend",
     "QueueBackend",
+    "SseEmit",
     "TaskEnvelope",
     "TaskHandler",
     "TaskResult",
     "TaskStatus",
     "WorkerConfig",
+    "build_agent_loop_handler",
+    "execute_loop_with_sse",
 ]

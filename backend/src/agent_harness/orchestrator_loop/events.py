@@ -24,6 +24,9 @@ Created: 2026-04-30 (Sprint 50.1 Day 3.1)
 Last Modified: 2026-04-30
 
 Modification History (newest-first):
+    - 2026-04-30: Re-export 3 new Cat 1-owned events (Sprint 50.2 Day 2.3) —
+        TurnStarted / LLMRequested / LLMResponded for per-turn SSE granularity.
+        17.md §4.1 owner table updated to add corresponding rows.
     - 2026-04-30: Initial creation (Sprint 50.1 Day 3.1) — owner-attribution
         re-export shim. NO redefinition of LoopEvent or its subclasses
         (preserves 17.md §1 single-source). Re-exports 5 classes used by
@@ -38,17 +41,27 @@ Related:
 from __future__ import annotations
 
 from agent_harness._contracts.events import (
+    LLMRequested,
+    LLMResponded,
     LoopCompleted,
     LoopEvent,
     LoopStarted,
     Thinking,
+    ToolCallExecuted,
+    ToolCallFailed,
     ToolCallRequested,
+    TurnStarted,
 )
 
 __all__ = [
+    "LLMRequested",
+    "LLMResponded",
     "LoopCompleted",
     "LoopEvent",
     "LoopStarted",
     "Thinking",
+    "ToolCallExecuted",
+    "ToolCallFailed",
     "ToolCallRequested",
+    "TurnStarted",
 ]

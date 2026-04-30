@@ -156,7 +156,16 @@ async def test_single_turn_final_end_turn() -> None:
         loop.run(session_id=uuid4(), user_input="hi")
     )
     types = [type(e).__name__ for e in events]
-    assert types == ["LoopStarted", "Thinking", "LoopCompleted"]
+    # Sprint 50.2 Day 2.4: per-turn events expanded with TurnStarted /
+    # LLMRequested / LLMResponded. Thinking event preserved for backward compat.
+    assert types == [
+        "LoopStarted",
+        "TurnStarted",
+        "LLMRequested",
+        "LLMResponded",
+        "Thinking",
+        "LoopCompleted",
+    ]
     completed = events[-1]
     assert isinstance(completed, LoopCompleted)
     assert completed.stop_reason == TerminationReason.END_TURN.value
@@ -195,10 +204,19 @@ async def test_multi_turn_tool_use_feedback() -> None:
     )
     events = await _collect(loop.run(session_id=uuid4(), user_input="echo world"))
     types = [type(e).__name__ for e in events]
+    # Sprint 50.2 Day 2.4: per-turn events expanded; ToolCallExecuted yielded
+    # by Loop after tool_executor.execute() success (Cat 2-owned event).
     assert types == [
         "LoopStarted",
+        "TurnStarted",
+        "LLMRequested",
+        "LLMResponded",
         "Thinking",
         "ToolCallRequested",
+        "ToolCallExecuted",
+        "TurnStarted",
+        "LLMRequested",
+        "LLMResponded",
         "Thinking",
         "LoopCompleted",
     ]

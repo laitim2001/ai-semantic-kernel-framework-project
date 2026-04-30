@@ -15,11 +15,16 @@ from uuid import uuid4
 import pytest
 
 from agent_harness._contracts import (
+    LLMRequested,
+    LLMResponded,
     LoopCompleted,
     LoopStarted,
     Thinking,
+    ToolCall,
     ToolCallExecuted,
+    ToolCallFailed,
     ToolCallRequested,
+    TurnStarted,
     VerificationPassed,
 )
 from api.v1.chat.sse import format_sse_message, serialize_loop_event
@@ -39,11 +44,54 @@ class TestSerializeLoopEvent:
         out = serialize_loop_event(ev)
         assert out["data"]["session_id"] is None
 
-    def test_thinking_maps_to_llm_response(self) -> None:
+    def test_thinking_returns_none_skipped_in_day_2(self) -> None:
+        """Day 2: Thinking → None; LLMResponded carries canonical llm_response."""
         ev = Thinking(text="hello world")
         out = serialize_loop_event(ev)
+        assert out is None
+
+    def test_turn_started(self) -> None:
+        ev = TurnStarted(turn_num=2)
+        out = serialize_loop_event(ev)
+        assert out is not None
+        assert out["type"] == "turn_start"
+        assert out["data"]["turn_num"] == 2
+
+    def test_llm_requested(self) -> None:
+        ev = LLMRequested(model="gpt-4o", tokens_in=500)
+        out = serialize_loop_event(ev)
+        assert out is not None
+        assert out["type"] == "llm_request"
+        assert out["data"]["model"] == "gpt-4o"
+        assert out["data"]["tokens_in"] == 500
+
+    def test_llm_responded_with_tool_calls(self) -> None:
+        tc = ToolCall(id="c1", name="echo_tool", arguments={"text": "X"})
+        ev = LLMResponded(
+            content="calling tool",
+            tool_calls=(tc,),
+            thinking="reasoning here",
+        )
+        out = serialize_loop_event(ev)
+        assert out is not None
         assert out["type"] == "llm_response"
-        assert out["data"]["content"] == "hello world"
+        assert out["data"]["content"] == "calling tool"
+        assert out["data"]["thinking"] == "reasoning here"
+        assert out["data"]["tool_calls"] == [
+            {"id": "c1", "name": "echo_tool", "arguments": {"text": "X"}}
+        ]
+
+    def test_tool_call_failed(self) -> None:
+        ev = ToolCallFailed(
+            tool_call_id="c1",
+            tool_name="broken_tool",
+            error="timeout",
+        )
+        out = serialize_loop_event(ev)
+        assert out is not None
+        assert out["type"] == "tool_call_result"
+        assert out["data"]["is_error"] is True
+        assert out["data"]["result"] == "timeout"
 
     def test_tool_call_requested(self) -> None:
         ev = ToolCallRequested(
@@ -62,11 +110,14 @@ class TestSerializeLoopEvent:
             tool_call_id="call_123",
             tool_name="echo_tool",
             duration_ms=1.25,
+            result_content="X",
         )
         out = serialize_loop_event(ev)
+        assert out is not None
         assert out["type"] == "tool_call_result"
         assert out["data"]["duration_ms"] == 1.25
         assert out["data"]["is_error"] is False
+        assert out["data"]["result"] == "X"
 
     def test_loop_completed(self) -> None:
         ev = LoopCompleted(stop_reason="end_turn", total_turns=2)

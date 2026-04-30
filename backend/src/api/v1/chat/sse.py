@@ -10,25 +10,37 @@ Description:
     `format_sse_message()` then encodes that shape into the SSE wire
     format (`event: ...\\ndata: <json>\\n\\n`).
 
-    Day 1 implements the LoopEvent subclasses already emitted by 50.1
-    AgentLoopImpl: LoopStarted / Thinking / ToolCallRequested / LoopCompleted.
-    Forward-compatible: ToolCallExecuted (Cat 2 owner; Day 2 Loop emit) +
-    TurnStarted / LLMRequested / LLMResponded (Day 2 new types) raise
-    NotImplementedError until Day 2 fills them in — explicit failure beats
-    silent drop.
+    Day 2 wiring (after Sprint 50.2 Day 2.4 Loop event additions):
+        loop_start          ← LoopStarted        (Cat 1)
+        turn_start          ← TurnStarted        (Cat 1, NEW Day 2)
+        llm_request         ← LLMRequested       (Cat 1, NEW Day 2)
+        llm_response        ← LLMResponded       (Cat 1, NEW Day 2; canonical)
+        tool_call_request   ← ToolCallRequested  (Cat 6)
+        tool_call_result    ← ToolCallExecuted   (Cat 2; success path)
+        tool_call_result    ← ToolCallFailed     (Cat 2; error path)
+        loop_end            ← LoopCompleted      (Cat 1)
+
+    `Thinking` (Cat 1) → returns None → router skips: LLMResponded carries
+    the same content via the canonical llm_response schema so emitting both
+    would duplicate the frame. Thinking event itself stays in 50.1
+    test_loop assertions; only the SSE projection drops it.
 
     All other LoopEvent subclasses (HITL / Guardrails / Verification / etc.)
     are deferred to their owner sprints (53-54) and currently raise
     NotImplementedError with a clear "not in 50.2 scope" message.
 
 Key Components:
-    - serialize_loop_event(event) -> dict[str, Any]
+    - serialize_loop_event(event) -> dict[str, Any] | None
     - format_sse_message(event_type, data) -> bytes
 
 Created: 2026-04-30 (Sprint 50.2 Day 1.3)
 Last Modified: 2026-04-30
 
 Modification History (newest-first):
+    - 2026-04-30: Wire 3 new Day 2 events + skip-Thinking + ToolCallFailed
+        (Sprint 50.2 Day 2.5) — TurnStarted / LLMRequested / LLMResponded;
+        Thinking returns None (LLMResponded canonical); ToolCallExecuted
+        carries result_content; ToolCallFailed → tool_call_result is_error=True.
     - 2026-04-30: Initial creation (Sprint 50.2 Day 1.3) — 4 50.1-emit events
         serialize; rest raise NotImplementedError with sprint pointer.
 
@@ -45,21 +57,26 @@ from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from agent_harness._contracts import (
+    LLMRequested,
+    LLMResponded,
     LoopCompleted,
     LoopEvent,
     LoopStarted,
     Thinking,
     ToolCallExecuted,
+    ToolCallFailed,
     ToolCallRequested,
+    TurnStarted,
 )
 
 
-def serialize_loop_event(event: LoopEvent) -> dict[str, Any]:
+def serialize_loop_event(event: LoopEvent) -> dict[str, Any] | None:
     """Map a LoopEvent instance to the SSE event_dict shape per 02.md §SSE.
 
     Returns a dict with keys ``type`` (SSE event type string) and ``data``
-    (dict serializable as JSON). Raises NotImplementedError for events not
-    yet wired in 50.2 scope.
+    (dict serializable as JSON), or None to signal "skip this event"
+    (used for Thinking, replaced by LLMResponded in Day 2). Raises
+    NotImplementedError for events not yet wired in 50.2 scope.
     """
     if isinstance(event, LoopStarted):
         return {
@@ -70,16 +87,40 @@ def serialize_loop_event(event: LoopEvent) -> dict[str, Any]:
             },
         }
 
-    if isinstance(event, Thinking):
-        # 50.1 Loop emits Thinking AFTER parser.parse(); represents LLM response
-        # text. Per 02.md §SSE this maps to llm_response (with no tool_calls
-        # split out — Day 2 LLMResponded carries that explicitly).
+    if isinstance(event, TurnStarted):
+        return {
+            "type": "turn_start",
+            "data": {"turn_num": event.turn_num},
+        }
+
+    if isinstance(event, LLMRequested):
+        return {
+            "type": "llm_request",
+            "data": {"model": event.model, "tokens_in": event.tokens_in},
+        }
+
+    if isinstance(event, LLMResponded):
+        # Day 2: canonical llm_response carrier per 02.md §SSE.
         return {
             "type": "llm_response",
             "data": {
-                "content": event.text,
+                "content": event.content,
+                "tool_calls": [
+                    {
+                        "id": getattr(tc, "id", ""),
+                        "name": getattr(tc, "name", ""),
+                        "arguments": getattr(tc, "arguments", {}),
+                    }
+                    for tc in event.tool_calls
+                ],
+                "thinking": event.thinking,
             },
         }
+
+    if isinstance(event, Thinking):
+        # Day 2: skip — LLMResponded carries the same content via canonical
+        # llm_response. Returning None signals the router to drop the frame.
+        return None
 
     if isinstance(event, ToolCallRequested):
         return {
@@ -92,15 +133,26 @@ def serialize_loop_event(event: LoopEvent) -> dict[str, Any]:
         }
 
     if isinstance(event, ToolCallExecuted):
-        # Cat 2 owns; 50.1 Loop does NOT yield this today. Day 2 patches Loop
-        # to yield after tool_executor.execute() success.
         return {
             "type": "tool_call_result",
             "data": {
                 "tool_call_id": event.tool_call_id,
                 "tool_name": event.tool_name,
                 "duration_ms": event.duration_ms,
+                "result": event.result_content,
                 "is_error": False,
+            },
+        }
+
+    if isinstance(event, ToolCallFailed):
+        return {
+            "type": "tool_call_result",
+            "data": {
+                "tool_call_id": event.tool_call_id,
+                "tool_name": event.tool_name,
+                "duration_ms": 0.0,
+                "result": event.error,
+                "is_error": True,
             },
         }
 

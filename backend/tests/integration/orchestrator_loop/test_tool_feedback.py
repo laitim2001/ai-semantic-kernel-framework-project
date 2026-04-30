@@ -74,11 +74,18 @@ async def test_production_inmemory_executor_wires_into_loop() -> None:
         ev async for ev in loop.run(session_id=uuid4(), user_input="echo world")
     ]
 
-    # Event sequence
+    # Event sequence — Sprint 50.2 Day 2.4 expanded with per-turn events.
     assert [type(e).__name__ for e in events] == [
         "LoopStarted",
+        "TurnStarted",
+        "LLMRequested",
+        "LLMResponded",
         "Thinking",
         "ToolCallRequested",
+        "ToolCallExecuted",
+        "TurnStarted",
+        "LLMRequested",
+        "LLMResponded",
         "Thinking",
         "LoopCompleted",
     ]

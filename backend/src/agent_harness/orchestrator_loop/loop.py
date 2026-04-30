@@ -45,6 +45,11 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-04-30
 
 Modification History (newest-first):
+    - 2026-04-30: Yield 5 additional LoopEvents per turn (Sprint 50.2 Day 2.4):
+        TurnStarted at top of while → LLMRequested before chat() → LLMResponded
+        after parse (canonical SSE llm_response carrier) → ToolCallExecuted
+        (success) / ToolCallFailed (error) per tool call. Thinking emit retained
+        for 50.1 test backward compat. Event sequence now Cat 1+2+6 cooperate.
     - 2026-04-30: Switch ToolExecutor/ToolRegistry import to public path
         `agent_harness.tools` (Sprint 50.2 Day 1.5) — clears
         check_cross_category_import lint warning per category-boundaries.md
@@ -70,6 +75,8 @@ from agent_harness._contracts import (
     ChatRequest,
     ChatResponse,
     ContentBlock,
+    LLMRequested,
+    LLMResponded,
     LoopEvent,
     LoopState,
     LoopStarted,
@@ -77,8 +84,11 @@ from agent_harness._contracts import (
     Message,
     SpanCategory,
     Thinking,
+    ToolCallExecuted,
+    ToolCallFailed,
     ToolCallRequested,
     TraceContext,
+    TurnStarted,
 )
 from agent_harness.observability import NoOpTracer, Tracer
 
@@ -170,7 +180,16 @@ class AgentLoopImpl(AgentLoop):
                     )
                     return
 
+                # === Per-turn marker (Sprint 50.2) ==========================
+                yield TurnStarted(turn_num=turn_count, trace_context=ctx)
+
                 # === LLM call ===============================================
+                model_name = self._chat_client.model_info().model_name
+                yield LLMRequested(
+                    model=model_name,
+                    tokens_in=0,  # Phase 52.1 wires count_tokens()
+                    trace_context=ctx,
+                )
                 try:
                     request = ChatRequest(
                         messages=messages,
@@ -191,9 +210,18 @@ class AgentLoopImpl(AgentLoop):
                 if response.usage is not None:
                     tokens_used += response.usage.total_tokens
 
-                # === Parse + emit Thinking ==================================
+                # === Parse + emit LLMResponded + Thinking ==================
                 parsed = await self._output_parser.parse(
                     response, trace_context=ctx
+                )
+                # 50.2: LLMResponded carries the canonical (content, tool_calls, thinking) tuple
+                # per 02-architecture-design.md §SSE llm_response schema. Thinking event is kept
+                # for 50.1 test backward compatibility but no longer the SSE-canonical form.
+                yield LLMResponded(
+                    content=parsed.text,
+                    tool_calls=tuple(parsed.tool_calls),
+                    thinking=None,
+                    trace_context=ctx,
                 )
                 yield Thinking(text=parsed.text, trace_context=ctx)
 
@@ -258,6 +286,25 @@ class AgentLoopImpl(AgentLoop):
 
                     # Feed back as tool message — KEY V2 cure for AP-1.
                     tool_content = self._tool_result_to_text(result.content)
+
+                    # 50.2: emit Cat 2-owned completion event so SSE / frontend
+                    # see tool result text + success/failure.
+                    if result.success:
+                        yield ToolCallExecuted(
+                            tool_call_id=tc.id,
+                            tool_name=tc.name,
+                            duration_ms=result.duration_ms or 0.0,
+                            result_content=tool_content,
+                            trace_context=ctx,
+                        )
+                    else:
+                        yield ToolCallFailed(
+                            tool_call_id=tc.id,
+                            tool_name=tc.name,
+                            error=result.error or "unknown tool error",
+                            trace_context=ctx,
+                        )
+
                     messages.append(
                         Message(
                             role="tool",
