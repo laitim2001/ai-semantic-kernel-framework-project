@@ -75,6 +75,8 @@ from agent_harness._contracts import (
     ChatRequest,
     ChatResponse,
     ContentBlock,
+    ContextCompacted,
+    DurableState,
     LLMRequested,
     LLMResponded,
     LoopEvent,
@@ -83,13 +85,16 @@ from agent_harness._contracts import (
     LoopCompleted,
     Message,
     SpanCategory,
+    StateVersion,
     Thinking,
     ToolCallExecuted,
     ToolCallFailed,
     ToolCallRequested,
     TraceContext,
+    TransientState,
     TurnStarted,
 )
+from agent_harness.context_mgmt import Compactor
 from agent_harness.observability import NoOpTracer, Tracer
 
 from ._abc import AgentLoop
@@ -106,6 +111,10 @@ from adapters._base.chat_client import ChatClient
 from agent_harness.output_parser import OutputParser, OutputType, classify_output
 from agent_harness.tools import ToolExecutor, ToolRegistry  # public path per category-boundaries.md
 
+# Local import to avoid circular: only used at runtime for state placeholders
+from datetime import datetime
+from uuid import uuid4 as _uuid4
+
 
 class AgentLoopImpl(AgentLoop):
     """Concrete TAO/ReAct loop. While-true driven, StopReason-terminated."""
@@ -121,6 +130,7 @@ class AgentLoopImpl(AgentLoop):
         max_turns: int = 50,
         token_budget: int = 100_000,
         tracer: Tracer | None = None,
+        compactor: Compactor | None = None,
     ) -> None:
         self._chat_client = chat_client
         self._output_parser = output_parser
@@ -130,6 +140,9 @@ class AgentLoopImpl(AgentLoop):
         self._max_turns = max_turns
         self._token_budget = token_budget
         self._tracer = tracer or NoOpTracer()
+        # 52.1 Day 2.7: compactor is OPTIONAL for backward-compat with 50.x callers.
+        # When None, compaction step is a no-op; pre-existing tests stay green.
+        self._compactor = compactor
 
     async def run(
         self,
@@ -178,6 +191,47 @@ class AgentLoopImpl(AgentLoop):
                         trace_context=ctx,
                     )
                     return
+
+                # === Compaction check (Sprint 52.1 Day 2.7) =================
+                # Cat 4 Compactor: Pre-LLM context compaction. Optional injection
+                # — when None, this is a no-op (50.x backward compat).
+                if self._compactor is not None:
+                    compact_state = LoopState(
+                        transient=TransientState(
+                            messages=list(messages),
+                            current_turn=turn_count,
+                            token_usage_so_far=tokens_used,
+                        ),
+                        durable=DurableState(
+                            session_id=session_id,
+                            tenant_id=session_id,  # placeholder; Phase 53.1 wires real tenant
+                        ),
+                        version=StateVersion(
+                            version=turn_count,
+                            parent_version=turn_count - 1 if turn_count > 0 else None,
+                            created_at=datetime.now(),
+                            created_by_category="orchestrator_loop",
+                        ),
+                    )
+                    compaction_result = await self._compactor.compact_if_needed(
+                        compact_state, trace_context=ctx
+                    )
+                    if compaction_result.triggered and compaction_result.compacted_state is not None:
+                        messages = list(compaction_result.compacted_state.transient.messages)
+                        tokens_used = compaction_result.tokens_after
+                        strategy_label = (
+                            compaction_result.strategy_used.value
+                            if compaction_result.strategy_used is not None
+                            else "unknown"
+                        )
+                        yield ContextCompacted(
+                            tokens_before=compaction_result.tokens_before,
+                            tokens_after=compaction_result.tokens_after,
+                            compaction_strategy=strategy_label,
+                            messages_compacted=compaction_result.messages_compacted,
+                            duration_ms=compaction_result.duration_ms,
+                            trace_context=ctx,
+                        )
 
                 # === Per-turn marker (Sprint 50.2) ==========================
                 yield TurnStarted(turn_num=turn_count, trace_context=ctx)

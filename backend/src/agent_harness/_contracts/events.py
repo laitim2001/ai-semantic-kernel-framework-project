@@ -154,6 +154,8 @@ class ContextCompacted(LoopEvent):
     tokens_before: int = 0
     tokens_after: int = 0
     compaction_strategy: str = ""
+    messages_compacted: int = 0  # 52.1 Day 2.7 — compaction observability payload
+    duration_ms: float = 0.0  # 52.1 Day 2.7 — compaction observability payload
 
 
 # === Category 5: Prompt Builder =============================================

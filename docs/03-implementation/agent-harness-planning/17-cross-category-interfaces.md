@@ -39,7 +39,7 @@ V2 review 發現 7 條跨範疇 / 跨文件重複定義：
 |---------|----------|------------------|------|
 | `ChatRequest` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | LLM 呼叫請求；中性化欄位 |
 | `ChatResponse` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | LLM 呼叫回應；含 `stop_reason` enum |
-| `Message` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | role / content / tool_calls |
+| `Message` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | role / content / tool_calls / **metadata**（**52.1 Day 2 擴充**：`metadata: dict[str, Any] = {}` 用於 Cat 4 Compactor 標記 `hitl=True` / `compacted_summary=True` 等 non-LLM-facing flag；adapter MUST NOT serialise into provider requests） |
 | `ContentBlock` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | text / image / tool_use / tool_result |
 | `ToolSpec` | `01-eleven-categories-spec.md` | 範疇 2 | 工具定義（含 annotations / concurrency_policy / **hitl_policy / risk_level (51.1)** / version） |
 | `ToolCall` | `01-eleven-categories-spec.md` | 範疇 2 | 單次工具呼叫 |

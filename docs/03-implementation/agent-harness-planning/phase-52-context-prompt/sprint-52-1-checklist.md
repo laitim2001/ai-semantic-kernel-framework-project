@@ -159,70 +159,74 @@
 ## Day 2 — Compactor 3 策略 + Loop integration（估 8h）
 
 ### 2.1 `StructuralCompactor` impl（90 min）
-- [ ] **建 `compactor/structural.py`**
-  - 邏輯：保留 system message + 最近 `keep_recent_turns` turn + HITL decisions（標 `meta["hitl"]=True`）；丟重複 tool retry（detect by tool_name + args hash）
-  - 配置：`keep_recent_turns: int = 5` / `preserve_hitl: bool = True`
-  - Day 2 暫用 inline mask 邏輯（Day 3.3 接通 ObservationMasker）
-  - implements `should_compact()` 預設邏輯
-  - DoD：implements Compactor ABC 全方法；file header 含 `Why:` 說明（V1 教訓 AP-7）
+
+> **Day 2 執行 note (2026-05-01)**：完成；採方案 A 預先擴充 `Message.metadata: dict` 欄位以支援 `hitl=True` / `compacted_summary=True` 標記（17.md §1.1 Message row 已 sync）。
+
+- [x] **建 `compactor/structural.py`** ✅
+  - 邏輯：保留 system message + 最近 `keep_recent_turns` turn + HITL decisions（標 `metadata["hitl"]=True`）；丟重複 tool retry（detect by tool_name + sha256(args)） ✅
+  - 配置：`keep_recent_turns: int = 5` / `preserve_hitl: bool = True` / `token_budget: int = 100_000` / `token_threshold_ratio: float = 0.75` / `turn_threshold: int = 30` ✅
+  - Day 2 暫用 inline mask 邏輯（`_redact_old_tool_results` helper；Day 3.3 接通 ObservationMasker） ✅
+  - override `should_compact()` 用 state.transient.token_usage_so_far / current_turn ✅
+  - DoD：implements Compactor ABC 全方法；file header 含 `Why:` 說明（V1 教訓 AP-7） ✅
 
 ### 2.2 `test_compactor_structural.py` — 6 tests（45 min）
-- [ ] `test_not_triggered_below_threshold`（token < 75% AND turn < 30）
-- [ ] `test_triggered_by_token_threshold`（token > 75%）
-- [ ] `test_triggered_by_turn_count`（turn > 30 但 token 低）
-- [ ] `test_preserves_system_message`（system message always 在 result.compacted_state）
-- [ ] `test_preserves_hitl_decisions`（meta.hitl=True 不被丟）
-- [ ] `test_drops_redundant_tool_retry`（同 tool_name + args hash 出現 2+ 次只留最新）
-  - DoD：6 tests pass；mock LoopState；no real LLM call
-  - Verify：`python -m pytest backend/tests/unit/agent_harness/context_mgmt/test_compactor_structural.py -v`
+- [x] `test_not_triggered_below_threshold`（token < 75% AND turn < 30）✅
+- [x] `test_triggered_by_token_threshold`（token > 75%）✅
+- [x] `test_triggered_by_turn_count`（turn > 30 但 token 低）✅
+- [x] `test_preserves_system_message`（system message always 在 result.compacted_state）✅
+- [x] `test_preserves_hitl_decisions`（metadata["hitl"]=True 不被丟）✅
+- [x] `test_drops_redundant_tool_retry`（同 tool_name + sha256(args) 出現 2+ 次只留最新）✅
+  - DoD：6 tests pass；mock LoopState；no real LLM call ✅
+  - Verify：`python -m pytest backend/tests/unit/agent_harness/context_mgmt/test_compactor_structural.py -v` → 6/6 PASS ✅
 
 ### 2.3 `SemanticCompactor` impl（120 min）
-- [ ] **建 `compactor/semantic.py`**
-  - 邏輯：取超過 `keep_recent` 的 turn → 透過注入 ChatClient.chat() 摘要 → 替換為 ≤ `summary_max_tokens` token 的 single assistant message（標 `meta["compacted_summary"]=True`）
-  - 注入：`chat_client: ChatClient` / `summary_max_tokens: int = 2000` / `summary_system_prompt: str`（hardcoded SUMMARY_PROMPT 常數）
-  - Failure handling：retry 1 次；仍失敗則 raise SemanticCompactionFailedError（HybridCompactor 接住降級）
-  - **LLM 中性**：`grep "import openai\|import anthropic" compactor/semantic.py` = 0
-  - DoD：implements Compactor ABC；file header 含 LLM 中性說明
+- [x] **建 `compactor/semantic.py`** ✅
+  - 邏輯：取超過 `keep_recent_turns` 的 user→assistant turn（以 user message 為錨點）→ 透過注入 ChatClient.chat() 摘要 → 替換為 single assistant message（標 `metadata["compacted_summary"]=True`） ✅
+  - 注入：`chat_client: ChatClient` / `summary_max_tokens: int = 2000` / `summary_system_prompt: str = SUMMARY_PROMPT` 常數 / `retry_count: int = 1` ✅
+  - Failure handling：retry 1 次；仍失敗則 raise `SemanticCompactionFailedError`（HybridCompactor 接住降級）✅
+  - **LLM 中性**：`grep "import openai\|import anthropic" compactor/semantic.py` = 0（docstring 警語不算實際 import）✅
+  - DoD：implements Compactor ABC；file header 含 LLM 中性說明 ✅
 
 ### 2.4 `test_compactor_semantic.py` — 4 tests（45 min）
-- [ ] `test_summarize_old_turns_via_mock_client`（mock 回固定摘要 → 替換成功）
-- [ ] `test_preserves_recent_n_turns`（keep_recent 後的 turn 不動）
-- [ ] `test_handles_llm_failure_raises`（mock 拋例外 → SemanticCompactionFailedError）
-- [ ] `test_summary_metadata_marker`（compacted_summary=True 標記寫入）
-  - DoD：用 MockChatClient 注入；real LLM 不在 unit
-  - Verify：`grep "import openai\|import anthropic" backend/src/agent_harness/context_mgmt/compactor/semantic.py` 結果 0 行
+- [x] `test_summarize_old_turns_via_mock_client`（MockChatClient 回固定摘要 → 替換成功）✅
+- [x] `test_preserves_recent_n_turns`（keep_recent_turns 以 user 為錨；最近 N 個 user→assistant turn 完整保留）✅
+- [x] `test_handles_llm_failure_raises`（_FailingChatClient 拋例外 → retry 後 SemanticCompactionFailedError）✅
+- [x] `test_summary_metadata_marker`（metadata["compacted_summary"]=True 標記寫入）✅
+  - DoD：用 MockChatClient 注入；real LLM 不在 unit ✅
+  - Verify：`grep "import openai\|import anthropic"` → 0 行 ✅
 
 ### 2.5 `HybridCompactor` impl（60 min）
-- [ ] **建 `compactor/hybrid.py`**
-  - 邏輯：先 StructuralCompactor 跑；若 result.tokens_after > window * 0.75 仍存在 → 接 SemanticCompactor；若 SemanticCompactor 失敗 → log warning，回 Structural result
-  - 注入：`structural: StructuralCompactor` / `semantic: SemanticCompactor`
-  - DoD：implements Compactor ABC；file header 含 fallback 邏輯說明
+- [x] **建 `compactor/hybrid.py`** ✅
+  - 邏輯：先 StructuralCompactor 跑；若 `tokens_after > token_budget * token_threshold_ratio` 仍存在 → 接 SemanticCompactor；若 SemanticCompactor raise SemanticCompactionFailedError → log warning，回 Structural result（標 strategy=HYBRID）✅
+  - 注入：`structural: StructuralCompactor` / `semantic: SemanticCompactor` / `token_budget` / `token_threshold_ratio` ✅
+  - DoD：implements Compactor ABC；file header 含 fallback 邏輯說明 ✅
 
 ### 2.6 `test_compactor_hybrid.py` — 5 tests（30 min）
-- [ ] `test_structural_sufficient`（structural 後 tokens < 75% → 不跑 semantic）
-- [ ] `test_structural_insufficient_runs_semantic`（structural 不夠 → 接 semantic）
-- [ ] `test_semantic_failure_fallback_structural`（semantic raise → 回 structural result）
-- [ ] `test_both_fail_emit_warning`（structural / semantic 都失敗 → CompactionResult.triggered=False + log）
-- [ ] `test_preserves_message_order`（compacted_state messages 順序維持）
-  - DoD：5 tests pass；用 MockCompactor 模擬 structural / semantic 行為
+- [x] `test_structural_sufficient`（structural 後 tokens < threshold → 不跑 semantic；call_count semantic=0）✅
+- [x] `test_structural_insufficient_runs_semantic`（structural 不夠 → 接 semantic；total messages_compacted = sum）✅
+- [x] `test_semantic_failure_fallback_structural`（_StubSemantic raise SemanticCompactionFailedError → 回 structural result，strategy=HYBRID）✅
+- [x] `test_both_fail_emit_warning`（structural triggered=False + semantic raise → caplog.WARNING + triggered=False）✅
+- [x] `test_preserves_message_order`（compacted_state messages 順序維持）✅
+  - DoD：5 tests pass；`_StubCompactor` + `_StubSemantic` 模擬 structural / semantic 行為 ✅
 
 ### 2.7 Loop integration — `agent_harness/orchestrator_loop/loop.py`（90 min）
-- [ ] **修改 loop 接受 `compactor: Compactor` 注入**
-  - 預設：`HybridCompactor`（DI 容器在 Phase 53.x 接通；52.1 暫 caller 顯式注入）
-- [ ] **每 turn 開頭 call `result = await self.compactor.compact_if_needed(state)`**
-- [ ] **若 result.triggered：state = result.compacted_state**
-- [ ] **emit `LoopEvent(type="ContextCompacted", payload={...})`**
-  - payload：`tokens_before` / `tokens_after` / `strategy_used` / `duration_ms`
-- [ ] **既有 50.x loop tests 不被破壞**（baseline 282 PASS 維持）
-  - DoD：mypy strict pass；50.x integration tests 全 green
-  - Verify：`python -m pytest backend/tests/integration/agent_harness/orchestrator_loop/ -v`
+- [x] **修改 loop 接受 `compactor: Compactor | None = None` 注入**（None 則無 compaction，50.x backward-compat）✅
+  - 預設：None（caller 顯式注入 HybridCompactor；DI 容器 Phase 53.x 接通）✅
+- [x] **每 turn 開頭（pre-LLM termination 後）build LoopState placeholder + call `await self._compactor.compact_if_needed(state, trace_context=ctx)`** ✅
+- [x] **若 result.triggered：messages = result.compacted_state.transient.messages；tokens_used = result.tokens_after** ✅
+- [x] **emit `ContextCompacted` event** ✅
+  - payload：`tokens_before` / `tokens_after` / `compaction_strategy` / **`messages_compacted` / `duration_ms`**（events.py 同 commit 擴充 2 欄位）✅
+- [x] **既有 50.x loop tests 不被破壞** ✅
+  - DoD：mypy strict pass（75 source files clean）；50.x loop tests 10/10 PASS ✅
+  - Verify：`python -m pytest tests/unit/agent_harness/orchestrator_loop/test_loop.py tests/unit/runtime/workers/test_agent_loop_handler.py -v` → 10/10 PASS ✅
 
 ### 2.8 Day 2 commit
-- [ ] **commit Day 2**
+- [x] **commit Day 2** ✅
   - Msg：`feat(context-mgmt, sprint-52-1): Day 2 — 3 Compactor strategies + Loop integration + 15 tests`
-  - Files：3 compactor impl + loop.py edit + 3 test files + 1 contracts edit (StopReason enum sync if needed)
-  - DoD：mypy strict pass；pytest baseline +15 = ~157 PASS；ChatClient 注入無 SDK leak
-  - Verify：`grep -r "import openai\|import anthropic" backend/src/agent_harness/context_mgmt/` = 0
+  - Files：3 compactor impl（structural / semantic / hybrid）+ loop.py edit + 3 test files filled (15 tests) + Message metadata 擴充 (chat.py) + ContextCompacted event +2 fields (events.py) + 17.md Message row sync + checklist updates
+  - DoD：mypy strict pass（75 src files clean）；pytest baseline 397 PASS（+15 from Day 1 final 382）；7 skipped（剩餘 Day 3-4 placeholders）；ChatClient 注入無 SDK leak ✅
+  - 已知 carry：CARRY-035（test_builtin_tools 2 個 pre-existing failure）仍未處理，Day 4 retro 統一處理 ✅
+  - Verify：`grep -r "import openai\|import anthropic" backend/src/agent_harness/context_mgmt/` = 0 ✅
 
 ---
 
@@ -462,4 +466,4 @@
 
 ---
 
-**Last Updated**：2026-05-01（Day 1 ✅ 9 group 完成 — 5 ABC 完成 + 4 contracts 同步 + 17.md §1.1/§1.3/§2.1 sync + 9 placeholder tests collected。mypy strict 20 files clean / 51.1 adapter 41/41 PASS / 0 LLM SDK leak。CARRY-035：2 個 pre-existing test_builtin_tools failure 非 Day 1 引入，Day 4 retro 處理）
+**Last Updated**：2026-05-01（Day 2 ✅ 8 group 完成 — 3 Compactor strategies (structural/semantic/hybrid) + Loop integration + 15 unit tests + Message metadata extension。mypy strict 75 source files clean / pytest 397 PASS / 0 LLM SDK leak / 50.x loop baseline 維持 10/10）

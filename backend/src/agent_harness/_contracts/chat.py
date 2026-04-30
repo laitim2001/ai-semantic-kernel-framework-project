@@ -74,13 +74,25 @@ class ToolCall:
 
 @dataclass(frozen=True)
 class Message:
-    """LLM-neutral message. role / content / tool_calls."""
+    """LLM-neutral message. role / content / tool_calls / metadata.
+
+    metadata (52.1 Day 2 extension) carries non-LLM-facing flags used by
+    Cat 4 Compactor and Cat 5 PromptBuilder (e.g. {"hitl": True} preserves
+    HITL approval messages through structural compaction; {"compacted_summary":
+    True} tags semantic-compacted summary messages). Adapters MUST NOT serialise
+    metadata into provider requests — it is local bookkeeping only.
+
+    The dict default is mutable but the Message instance itself is frozen
+    (cannot rebind fields). Unhashable due to mutable field — Message is not
+    used as dict key / set member anywhere in the harness (verified Day 2).
+    """
 
     role: Literal["system", "user", "assistant", "tool"]
     content: str | list[ContentBlock]
     tool_calls: list[ToolCall] | None = None
     tool_call_id: str | None = None
     name: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
