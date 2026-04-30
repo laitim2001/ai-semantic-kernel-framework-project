@@ -222,3 +222,90 @@
 - **Day 3.6**：commit
 
 ---
+
+## Day 3 — 2026-04-30（actual ~45min / plan 4h 45min）
+
+### Accomplishments
+
+- [x] **3.1** `mock_services/routers/audit.py` 3 endpoints（query_logs filtered / generate_report / flag_anomaly）
+- [x] **3.2** `business_domain/audit_domain/{mock_executor,tools}.py` 3 ToolSpec + register_audit_tools
+- [x] **3.3** `mock_services/routers/incident.py` 5 endpoints（create / update_status / close HIGH-risk / get/{id} / list 含 filter）
+- [x] **3.4** `business_domain/incident/{mock_executor,tools}.py` 5 ToolSpec + register_incident_tools（`close` 確認 `always_ask` + `risk:high`）
+- [x] **3.5** `business_domain/_register_all.py` aggregator — register_all_business_tools()
+- **mock_services/main.py** 加 audit + incident router include（總 7 router 全 mounted）
+
+### Files added (7) / modified (1)
+
+| File | Lines | 範疇 |
+|------|-------|------|
+| `backend/src/mock_services/routers/audit.py` | 110 | mock_services |
+| `backend/src/mock_services/routers/incident.py` | 142 | mock_services |
+| `backend/src/business_domain/audit_domain/mock_executor.py` | 65 | business |
+| `backend/src/business_domain/audit_domain/tools.py` | 133 | business |
+| `backend/src/business_domain/incident/mock_executor.py` | 75 | business |
+| `backend/src/business_domain/incident/tools.py` | 195 | business |
+| `backend/src/business_domain/_register_all.py` | 64 | business / aggregator |
+| `backend/src/mock_services/main.py` | +5 | (modify: 2 router include) |
+
+### Estimate vs Actual
+
+| Task | Plan | Actual | Diff |
+|------|------|--------|------|
+| 3.1 audit router | 45 min | ~6 min | -87% |
+| 3.2 audit executor + tools | 60 min | ~7 min | -88% |
+| 3.3 incident router | 60 min | ~10 min | -83% |
+| 3.4 incident executor + tools | 75 min | ~10 min | -87% |
+| 3.5 _register_all aggregator | 30 min | ~5 min | -83% |
+| black + mypy fix iteration | (in tasks) | ~3 min | — |
+| TestClient + register_all verify | 0 | ~4 min | — |
+| **Day 3 總計** | **4h 30min** | **~45min** | **-83%** |
+
+### Surprises / Discoveries
+
+- **`audit_domain/` 命名 confirmed**：CLAUDE.md scope hierarchy 防止與 `governance.audit` 衝突；Sprint 49.1 baseline 已建立此名，51.0 沿用。
+- **incident 5 endpoints 比 4 多 1**：plan 寫 5（matches 08b spec），seed 已有 5 incidents (inc_001..005)，`/list` filter 對 severity + status 雙條件正常。
+- **seed + live incident merge view**：incident 的 `_all_incidents()` helper 把 `_live_incidents` 與 `db.incidents` (seed) 合併查找，`update_status` / `close` 對 seed 採 mutated copy 模式（不寫回 seed），對 live 真實寫入。設計簡潔且不污染 seed。
+- **register_all 順序 patrol→correlation→rootcause→audit→incident**：對應 08b §Domain 1-5 numbering，無 inter-domain dep。
+- **2 HIGH risk tools 自動驗證**：assertion `set(s.name for s in high) == {'mock_rootcause_apply_fix', 'mock_incident_close'}` PASS；51.x 後改 ToolSpec first-class field 時這個 invariant 應持續維持。
+- **Plan estimate -83% Day 3** vs Day 2 -85%；累計 Sprint 51.0 Day 0-3 ~4h 7min vs plan 18h 20min（-78%）。
+
+### Branch / Working Tree State
+
+- **HEAD**：`642ce07`（Day 2 closeout）→ pending Day 3 main commit + Day 3 closeout commit
+- **Files**：7 new + 1 modified（main.py +5 lines）
+- **Working tree**：Day 3 files staged-ready
+
+### Quality Gates
+
+- ✅ mypy strict on 30 source files (mock_services + 5 business_domain) — no issues
+- ✅ black --check — 7 files reformatted（auto-applied）
+- ✅ 18 mock endpoints TestClient smoke PASS（4 patrol + 3 correlation + 3 rootcause + 3 audit + 5 incident）
+- ✅ register_all_business_tools wires 18 ToolSpec + 18 handlers
+- ✅ Per-domain breakdown: patrol=4 / correlation=3 / rootcause=3 / audit=3 / incident=5（matches 08b spec exactly）
+- ✅ HIGH-risk tools verified: `mock_rootcause_apply_fix` + `mock_incident_close` 兩個（皆 `always_ask`）
+
+### V2 紀律 9 項對照
+
+| # | 紀律 | 狀態 |
+|---|------|------|
+| 1 | Server-Side First | ✅ |
+| 2 | LLM Provider Neutrality | ✅ business_domain 0 LLM SDK |
+| 3 | CC Reference 不照搬 | ✅ |
+| 4 | 17.md Single-source | ⏸ Day 5.1 同步 18 entries |
+| 5 | 11+1 範疇歸屬 | ✅ audit_domain 命名避開 governance.audit；register_all 在 business_domain/_register_all.py |
+| 6 | 04 Anti-patterns | ✅ AP-3（無跨 domain import）/ AP-6（每 domain 獨立 mock_executor） |
+| 7 | Sprint workflow | ✅ |
+| 8 | File header convention | ✅ 7 新檔完整 V2 header |
+| 9 | Multi-tenant rule | ✅（mock 不 tenant-aware；51.1+ 加） |
+
+### Next Day Plan
+
+- **Day 4**：Tests + worker hook + chat handler（plan 5h / 預估 actual ~1.5h）
+- **Day 4.1**：integration test mock_services_startup（7 router smoke）
+- **Day 4.2**：integration test business_tools_via_registry（18 tools execute via InMemoryToolRegistry）
+- **Day 4.3**：worker startup hook 加 `register_all_business_tools(registry)`
+- **Day 4.4**：chat handler default tools = 19（echo + 18 business）
+- **Day 4.5**：e2e test_agent_loop_with_mock_patrol（核心 demo）
+- **Day 4.6**：commit
+
+---

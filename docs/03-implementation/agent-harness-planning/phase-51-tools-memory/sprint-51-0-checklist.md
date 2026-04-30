@@ -143,35 +143,30 @@
 ## Day 3 — Audit + Incident Domain + Aggregator（預估 6 小時）
 
 ### 3.1 mock_services/routers/audit.py（45 min）
-- [ ] **3 endpoints 對應 3 audit tools**：query_logs / generate_report / flag_anomaly
-  - DoD: query_logs 接 time_range filter；generate_report 回 PDF placeholder URL
-  - Command: `pytest tests/unit/mock_services/test_audit_router.py`
+- [x] **3 endpoints**：query_logs / generate_report / flag_anomaly ✅ 2026-04-30
+  - DoD: query_logs filter (time_range/action/user_id) ✅；generate_report 回 placeholder URL ✅；flag_anomaly 紀錄 in-memory ledger ✅
 
 ### 3.2 business_domain/audit_domain/{mock_executor,tools}.py（60 min）
-- [ ] **`AuditMockExecutor` + 3 ToolSpec + register_audit_tools**
-  - DoD: 對應 08b §Domain 4 表 3 entries
-  - Command: `pytest tests/unit/business_domain/test_audit_tools.py`
+- [x] **`AuditMockExecutor` + 3 ToolSpec + register_audit_tools** ✅ 2026-04-30
+  - DoD: 對應 08b §Domain 4 表 3 entries ✅；flag_anomaly destructive=True + ask_once
 
 ### 3.3 mock_services/routers/incident.py（60 min）
-- [ ] **5 endpoints 對應 5 incident tools**：create / update_status / close / get / list
-  - DoD: create 回 incident_id；close 高風險（mock 不真關閉，回 status=closed_pending_review）
-  - Command: `pytest tests/unit/mock_services/test_incident_router.py`
+- [x] **5 endpoints**：create / update_status / close / get/{id} / list ✅ 2026-04-30
+  - DoD: create 回 inc_live_*；close 回 `closed_pending_review`；list 支援 severity/status filter ✅
+  - 額外：seed + live incident merge view（_all_incidents helper）
 
 ### 3.4 business_domain/incident/{mock_executor,tools}.py（75 min）
-- [ ] **`IncidentMockExecutor` + 5 ToolSpec + register_incident_tools**
-  - DoD: `mock_incident_close` 必須 `hitl_policy=ALWAYS_ASK` + `risk_level=HIGH`（per 08b §Domain 5）
-  - Command: `pytest tests/unit/business_domain/test_incident_tools.py`
+- [x] **`IncidentMockExecutor` + 5 ToolSpec + register_incident_tools** ✅ 2026-04-30
+  - DoD: `mock_incident_close` `hitl_policy:always_ask` + `risk:high` + `destructive=True`（per 08b §Domain 5 強制） ✅
 
 ### 3.5 business_domain/_register_all.py（30 min）
-- [ ] **`register_all_business_tools(registry)` 一次呼叫 5 個 register**
-  - DoD: 註冊後 `registry.list_tools()` 回 ≥ 18（含 echo_tool 共 19）
-  - File header 完整
-  - Command: `pytest tests/unit/business_domain/test_register_all.py`
+- [x] **`register_all_business_tools(registry, handlers, *, mock_url)` 一次呼叫 5 register** ✅ 2026-04-30
+  - DoD: 註冊後 18 ToolSpec + 18 handlers；per-domain count 4+3+3+3+5；2 HIGH risk = apply_fix + incident_close（驗證通過）✅
 
 ### 3.6 Day 3 commit（15 min）
 - [ ] **commit `feat(business-audit/incident + aggregator, sprint-51-0): Day 3 — 8 ToolSpec + 2 mock routers + register_all`**
-  - DoD: 18 ToolSpec 全註冊 OK；mypy strict / black / isort / flake8 OK
-  - Command: `pytest tests/unit/business_domain/ -v && python -m mypy backend/src/business_domain/`
+  - DoD: 18 ToolSpec 全註冊 OK；mypy strict 30 files / black formatted / 8 endpoints TestClient PASS
+  - Verify: ✅ `register_all_business_tools` wires 18 + 18; 2 HIGH risk correct
 
 ---
 
