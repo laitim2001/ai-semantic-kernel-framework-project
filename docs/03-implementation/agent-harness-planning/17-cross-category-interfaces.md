@@ -53,7 +53,7 @@ V2 review 發現 7 條跨範疇 / 跨文件重複定義：
 | `DurableState` | `01-eleven-categories-spec.md` | 範疇 7 | DB 持久 state |
 | `LoopEvent` | `01-eleven-categories-spec.md` | 範疇 1 | Loop 事件流（`AgentLoop.events()` yield） |
 | `StopReason` | `10-server-side-philosophy.md` | 原則 2 enum 中性化表 | 替代 per-provider 字串 |
-| `MemoryHint` | `01-eleven-categories-spec.md` | 範疇 3 | 「線索→驗證」資料結構 |
+| `MemoryHint` | `01-eleven-categories-spec.md` | 範疇 3 | 「線索→驗證」資料結構（**51.2 Day 1** 擴 5 欄位：`time_scale` / `confidence` / `last_verified_at` / `verify_before_use` / `source_tool_call_id`） |
 | `PromptArtifact` | `01-eleven-categories-spec.md` | 範疇 5 | PromptBuilder 產出（含 cache breakpoints） |
 | `CacheBreakpoint` | `01-eleven-categories-spec.md` | 範疇 5 | Anthropic-style cache_control 標記 |
 | `VerificationResult` | `01-eleven-categories-spec.md` | 範疇 10 | Verifier 回傳 |
@@ -115,7 +115,7 @@ backend/src/agent_harness/_contracts/
 | `AgentLoop` | `01-eleven-categories-spec.md` | 範疇 1 | `run() -> AsyncIterator[LoopEvent]` |
 | `ToolRegistry` | `01-eleven-categories-spec.md` | 範疇 2 | `register()` / `get()` / `list()` |
 | `ToolExecutor` | `01-eleven-categories-spec.md` | 範疇 2 | `execute()` / `execute_batch()` |
-| `MemoryLayer` | `01-eleven-categories-spec.md` | 範疇 3 | `read()` / `write()` / `evict()` |
+| `MemoryLayer` | `01-eleven-categories-spec.md` | 範疇 3 | `read()` / `write()` / `evict()` / `resolve()`（**51.2 Day 1** 簽名變更：`write(ttl=...)` → `write(time_scale=..., confidence=...)`；`read()` 加 `time_scales` 軸；新增 `MemoryTimeScale` enum helper） |
 | `Compactor` | `01-eleven-categories-spec.md` | 範疇 4 | `compact()` |
 | `TokenCounter` | `01-eleven-categories-spec.md` | 範疇 4 | `count(messages, tools) -> int` |
 | `PromptBuilder` | `01-eleven-categories-spec.md` | 範疇 5 | `build() -> PromptArtifact` |
