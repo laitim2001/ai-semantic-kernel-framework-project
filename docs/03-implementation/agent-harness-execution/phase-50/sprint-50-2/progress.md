@@ -80,7 +80,49 @@
 
 ---
 
-## Day 2 — pending
+## Day 2 — 2026-04-30
+
+### 預計 vs 實際
+
+| Step | Plan | Actual | Notes |
+|------|------|--------|-------|
+| 2.1 17.md owner check 4 LoopEvent | 15 min | ~5 min | 讀 §4.1 確認既有 22 entries；新 4 個都 Cat 1；ToolCallCompleted 與 ToolCallExecuted/Failed 重疊 → 改 3 個（不是 4）+ 擴 ToolCallExecuted |
+| 2.2 events.py 加 3 新 + 擴 ToolCallExecuted | 45 min | ~10 min | TurnStarted / LLMRequested / LLMResponded（後者 tool_calls 用 tuple 因 frozen dataclass）；ToolCallExecuted 加 `result_content: str = ""` backward-compat |
+| 2.3 events.py shim re-export | 10 min | ~3 min | 同步加 ToolCallExecuted / ToolCallFailed re-export（Day 2 Loop 開始 emit） |
+| 2.4 loop.py yield 5 新 events | 90 min | ~15 min | TurnStarted/LLMRequested 在 pre-LLM check 後；LLMResponded 在 parse 後 + 保留 Thinking；ToolCallExecuted 含 result_content + duration / ToolCallFailed 加 |
+| 2.5 sse.py 3 新 mapping + Thinking→None + helper | 90 min | ~12 min | serialize 簽名 dict\|None；Thinking 回 None；ToolCallExecuted 加 result；ToolCallFailed → tool_call_result is_error=True |
+| 2.5b agent_loop_worker.py execute_loop_with_sse + build_agent_loop_handler factory | (隱含) | ~10 min | sse_emit callback 設計；handler coerce task_id str → UUID with deterministic fallback；exports update |
+| 2.6 router None-skip + 17.md §4.1 擴 3 entries | 60 min | ~6 min | router._stream_loop_events 加 if payload is None: continue；17.md 表加 3 行（含 Thinking 標 50.2+ SSE 不發） |
+| 2.7 整理 + tests + commit | 15 min | ~25 min | 跨 6 個 tests 修 event sequence（test_loop / test_sse / test_e2e_echo × 2 / test_tool_feedback）+ 新 test_agent_loop_handler.py 3 tests + quality gate 全跑 |
+| **Day 2 總計** | **~6h（360 min）** | **~86 min（24%）** | 比 Day 1 的 17% 略高，符合 Day 2 涉及 _contracts + Loop body 大改的預期 scope |
+
+### Verification (final)
+
+- ✅ `python -m pytest tests/` **256 PASS / 0 SKIPPED / 4.37s**（Day 1 baseline 239 + Day 2 17 new = 256 — 50.1 17 + 4 sse + 3 worker + 3 sse changes - 0 deleted）
+- ✅ `python -m mypy src --strict` 136 files OK
+- ✅ 5/5 V2 lints PASS（dup-dataclass scan 51→54 classes confirms 3 新 events）
+- ✅ LLM SDK leak grep = 0
+- ✅ 17.md §4.1 表加 3 entries 與 events.py / orchestrator_loop/events.py shim 三方一致
+
+### Surprises / Decisions
+
+1. **`ToolCallCompleted` 與既有 `ToolCallExecuted`/`ToolCallFailed` 重疊** — plan §4.2 寫 4 新 events，但 17.md §4.1 既有 ToolCallExecuted (Cat 2 / success) + ToolCallFailed (Cat 2 / error) 已覆蓋 tool 完成的兩種結果。**決策**：不加 ToolCallCompleted；改成擴 ToolCallExecuted 加 `result_content: str = ""`（backward-compat default），讓 SSE tool_call_result 能載 result content。
+2. **Thinking + LLMResponded 重複** — 50.1 Loop emit Thinking(text=parsed.text)；50.2 加 LLMResponded(content=parsed.text, ...) 後內容重複。**決策**：Loop 兩個都 emit（保 50.1 test backward compat）；SSE serializer 收到 Thinking 回 None（router skip）。LLMResponded 是 canonical SSE 載體。
+3. **router 不接 worker handler in 50.2** — plan §2.6 寫「router 接入 worker handler」；要做需 in-process queue bridge（asyncio.Queue 為 sse_emit）+ runner task。**決策**：保 router 直接 iterate（in-process），execute_loop_with_sse + build_agent_loop_handler 作為 53.1 forward-compat（worker pool 用）。Plan §2.6 commit message 註明此偏離。
+4. **`tuple` for frozen dataclass field** — LLMResponded.tool_calls 必須 hashable 因 frozen=True；用 `tuple[Any, ...]` + `field(default_factory=tuple)`（不能 `tuple[ToolCall, ...]` 因 ToolCall 在不同 module + 會 circular）。Loop 傳入時做 `tuple(parsed.tool_calls)` 轉型。
+5. **TaskEnvelope 沒有 `created_at`** — 我寫 test 時憑 plan §4.3 印象 hard-code `created_at=...`；TaskEnvelope 實際 field 是 `enqueued_at` + `factory` for default。**修正**：用 `TaskEnvelope.new()` classmethod factory 建 envelope，不傳 enqueued_at。
+6. **TaskEnvelope.task_id 是 free-form str** — plan §4.3 假設可直接 `UUID(envelope.task_id)`；實際 ABC 沒強制 UUID 格式。handler 加 try/except + deterministic fallback（hash → UUID）做 graceful coerce。test 加 `test_build_agent_loop_handler_non_uuid_task_id_falls_back` 驗證。
+
+### Next Day (Day 3)
+
+- 主題：Frontend skeleton（types + chatStore + chatService + useLoopEventStream + ChatLayout）
+- Plan 6h；預估 actual ~60-90 min（比例似 Day 2）
+- Pre-work：Day 2 backend SSE 已完整 — Day 3 第一件事 curl test 確認 7+ events 流出來，再寫 frontend
+- Vite proxy / fetch streaming 是 Day 3 主要 risk
+
+---
+
+## Day 3 — pending
 
 …（待寫）
 

@@ -105,55 +105,60 @@
 
 ## Day 2 — Worker 整合 + 4 新 LoopEvent（6h plan）
 
-### 2.1 17.md owner check — 4 個新 LoopEvent（15 min）
-- [ ] Read `17-cross-category-interfaces.md` §4.1 Event ownership table
-- [ ] 確認 `TurnStarted` / `LLMRequested` / `LLMResponded` / `ToolCallCompleted` 4 個 owner = Cat 1
-- [ ] 若 17.md 沒明列，則寫提案 PR comment 同步表更新（Day 2 commit 同次提）
-- [ ] DoD：4 個新 event 在 17.md 表中有條目（或 commit 訊息 explicitly extends 17.md）
+### 2.1 17.md owner check — 新 LoopEvent（15 min）
+- [x] Read `17-cross-category-interfaces.md` §4.1 Event ownership table
+- 🚧 `ToolCallCompleted` — **不加**：與既有 `ToolCallExecuted` (Cat 2 / success) + `ToolCallFailed` (Cat 2 / error) 重疊；改成擴 ToolCallExecuted 加 `result_content` field
+- [x] `TurnStarted` / `LLMRequested` / `LLMResponded` 3 個 Cat 1 owner — 17.md §4.1 表擴 3 entries（commit 同次）
+- [x] DoD：3 新 event 在 17.md §4.1 有條目；ToolCallExecuted Modification History 紀錄欄位擴展
 
-### 2.2 _contracts/events.py 加 4 新 event class（45 min）
-- [ ] Edit `backend/src/agent_harness/_contracts/events.py`
-- [ ] 加 `TurnStarted(LoopEvent)` { turn_num: int }
-- [ ] 加 `LLMRequested(LoopEvent)` { model: str, tokens_in: int }
-- [ ] 加 `LLMResponded(LoopEvent)` { content: str, tool_calls: list, thinking: str | None = None }
-- [ ] 加 `ToolCallCompleted(LoopEvent)` { tool_name: str, result: object, is_error: bool }
-- [ ] 全用 50.1 已 fix 的 `datetime.now(UTC)` default_factory
-- [ ] Modification History 加 entry
-- [ ] DoD：mypy strict 通過 + 4 dataclass test PASS
+### 2.2 _contracts/events.py 加 3 新 event class + 擴 ToolCallExecuted（45 min）
+- [x] Edit `backend/src/agent_harness/_contracts/events.py`
+- [x] 加 `TurnStarted(LoopEvent)` { turn_num: int = 0 }
+- [x] 加 `LLMRequested(LoopEvent)` { model: str = "", tokens_in: int = 0 }
+- [x] 加 `LLMResponded(LoopEvent)` { content: str = "", tool_calls: tuple[Any, ...] = field(default_factory=tuple), thinking: str | None = None } (tuple 因 frozen dataclass + circular import 規避)
+- [x] 擴 `ToolCallExecuted` 加 `result_content: str = ""`（backward-compat default）
+- [x] 全用 `datetime.now(UTC)` default_factory（CARRY-002 已 fix）
+- [x] Modification History 加 2 entry
+- [x] DoD：mypy strict 通過 + dup-dataclass scan 51→54 classes 確認
 
 ### 2.3 events.py shim 加 re-export（10 min）
-- [ ] Edit `backend/src/agent_harness/orchestrator_loop/events.py` 加 4 個新 re-export
-- [ ] 更新 Modification History
-- [ ] DoD：`from agent_harness.orchestrator_loop.events import TurnStarted` 通過
+- [x] Edit `backend/src/agent_harness/orchestrator_loop/events.py` 加 3 個新 + ToolCallExecuted/Failed re-export（後 2 個 Day 2 Loop 開始 emit）
+- [x] 更新 Modification History
+- [x] DoD：`from agent_harness.orchestrator_loop.events import TurnStarted, LLMRequested, LLMResponded, ToolCallExecuted, ToolCallFailed` 通過
 
-### 2.4 loop.py yield 4 新 event 在正確時機（90 min）
-- [ ] Edit `backend/src/agent_harness/orchestrator_loop/loop.py`
-- [ ] turn loop start → yield `TurnStarted(turn_num=N)`
-- [ ] llm call 前 → yield `LLMRequested(model=..., tokens_in=...)`
-- [ ] llm call 後 + parse 後 → yield `LLMResponded(content=..., tool_calls=[...], thinking=...)`
-- [ ] tool execute 後 → yield `ToolCallCompleted(tool_name=..., result=..., is_error=...)`
-- [ ] 確保 yield 順序與 02.md §SSE 期待一致（loop_start → turn_start → llm_request → llm_response → tool_call_request → tool_call_result → tool_call_completed → ... → loop_end）
-- [ ] DoD：50.1 既有 7 個 loop unit test 仍 PASS（4 新 event 不破既有）+ 4 新 unit test 驗 emit 時機
+### 2.4 loop.py yield 5 新 event 在正確時機（90 min）
+- [x] Edit `backend/src/agent_harness/orchestrator_loop/loop.py`
+- [x] pre-LLM check 通過後 → yield `TurnStarted(turn_num=turn_count)`
+- [x] chat call 前 → yield `LLMRequested(model=chat_client.model_info().model_name, tokens_in=0)`（tokens_in best-effort 0；Phase 52.1 wire count_tokens）
+- [x] parse 後 → yield `LLMResponded(content=parsed.text, tool_calls=tuple(parsed.tool_calls), thinking=None)` (canonical) → yield `Thinking(text=parsed.text)` (50.1 backward compat)
+- [x] tool_executor.execute 後 → result.success ? yield `ToolCallExecuted(...with result_content)` : yield `ToolCallFailed(...)`
+- [x] 確保 yield 順序與 02.md §SSE 期待一致
+- [x] DoD：50.1 既有 17 loop unit tests 全 PASS（更新 2 個 event 序列 assertion）+ 50.1 integration 3 tests 全 PASS（更新 2 個 sequence）
 
-### 2.5 agent_loop_worker.py — build_agent_loop_handler 工廠（90 min）
-- [ ] Edit `backend/src/runtime/workers/agent_loop_worker.py`
-- [ ] 加 `build_agent_loop_handler(*, chat_client, tool_registry, tool_executor, output_parser, system_prompt, sse_emit) -> TaskHandler`
-- [ ] handler 內部：建 AgentLoopImpl → loop.run() 收 LoopEvent → 每個 event 呼叫 sse_emit callback
-- [ ] 保留 `_default_handler` stub（DEPRECATED-IN: 53.1 + Modification History 紀錄）
-- [ ] DoD：3 unit test PASS（factory 建 handler / sse_emit called per event / handler error 不洩漏 task）
+### 2.5 agent_loop_worker.py — execute_loop_with_sse + build_agent_loop_handler 工廠（90 min）
+- [x] Edit `backend/src/runtime/workers/agent_loop_worker.py`
+- [x] 加 `execute_loop_with_sse(*, loop, session_id, user_input, sse_emit, trace_context) -> dict[str, Any]` — common driver；router + worker 共用
+- [x] 加 `build_agent_loop_handler(*, chat_client, tool_registry, tool_executor, output_parser, sse_emit, system_prompt, max_turns, token_budget) -> TaskHandler`
+- [x] handler 內部：建 AgentLoopImpl → 經 execute_loop_with_sse 跑 → return summary dict
+- [x] task_id (str) → UUID coerce 含 deterministic fallback for non-UUID
+- [x] 保留 `_default_handler` stub（DEPRECATED-IN: 53.1 標 + Modification History 紀錄）
+- [x] runtime/workers/__init__.py 加 3 新 export
+- [x] DoD：3 unit test PASS（execute happy / build handler / non-UUID fallback）
 
-### 2.6 router.py 接入 worker handler（60 min）
-- [ ] Edit `backend/src/api/v1/chat/router.py` 用 `build_agent_loop_handler` 替換之前直接 loop.run()
-- [ ] sse_emit callback 寫進 SSE response stream
-- [ ] DoD：integration smoke 仍 PASS（router 用 handler factory 跑 echo demo）
+### 2.6 router None-skip + 17.md §4.1 擴 3 entries（60 min）
+- [x] Edit `backend/src/api/v1/chat/router.py` `_stream_loop_events` — 加 `if payload is None: continue`（Thinking → None skip）
+- 🚧 router **不主動呼叫** worker handler — 會引入 in-process queue bridge 複雜度；保留 direct iteration；helpers 作為 53.1 forward-compat。Decision 紀錄於 commit message + progress.md surprise #3。
+- [x] sse.py 3 個新 mapping (TurnStarted / LLMRequested / LLMResponded) + Thinking→None + ToolCallFailed → tool_call_result is_error=True + ToolCallExecuted 加 result
+- [x] 17.md §4.1 表擴 3 entries（TurnStarted / LLMRequested / LLMResponded — Cat 1 owner）
+- [x] DoD：integration test test_e2e_echo + test_tool_feedback PASS（更新 sequence assertion）
 
 ### 2.7 Day 2 progress + commit（15 min）
-- [ ] checklist 2.1-2.6 全 [x]
-- [ ] progress.md Day 2 段
-- [ ] commit：`feat(orchestrator-loop, sprint-50-2): 4 new LoopEvents + worker handler factory (Day 2)`
-- [ ] commit checklist update
+- [x] checklist 2.1-2.6 全 [x]（含 🚧 + reason）
+- [x] progress.md Day 2 段（estimate vs actual / 6 surprises）
+- [x] commit：`feat(orchestrator-loop,api,runtime, sprint-50-2): 3 new LoopEvents + worker handler factory (Day 2)` → commit `4e04ae7`
+- [x] commit checklist update：`docs(sprint-50-2): Day 2 progress + checklist [x] update`
 
-**Day 2 Total Plan**: ~6h / ~10 unit tests / 2 commits
+**Day 2 Total Plan**: ~6h / ~10 unit tests / 2 commits → **Actual: ~86 min（24%）/ 17 new tests + 4 modified tests / 2 commits**
 
 ---
 
