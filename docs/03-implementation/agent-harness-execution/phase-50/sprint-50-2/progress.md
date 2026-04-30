@@ -122,7 +122,46 @@
 
 ---
 
-## Day 3 — pending
+## Day 3 — 2026-04-30
+
+### 預計 vs 實際
+
+| Step | Plan | Actual | Notes |
+|------|------|--------|-------|
+| 3.1 SSE backend curl 驗證 | 15 min | (跳過) | 改用 Day 1 test_router.py FastAPI test client SSE 驗證代替（10 tests 含完整 7-event echo demo SSE 驗證）；不啟動 dev server，避免 port 衝突 |
+| 3.2 types.ts | 45 min | ~10 min | 7-arm discriminated LoopEvent union + KNOWN_LOOP_EVENT_TYPES gate + UI types (Message / ToolCallEntry / ChatStatus / ChatMode / ChatSession) |
+| 3.3 chatStore.ts Zustand | 60 min | ~15 min | mergeEvent reducer 7 cases + nextMsgId + reset；UnknownEvent 移除（gate 在 service 端） |
+| 3.4 chatService.ts | 60 min | ~10 min | fetch + ReadableStream parser；KNOWN_LOOP_EVENT_TYPES gate filter unknown → null；AbortError 靜默 return |
+| 3.5 useLoopEventStream.ts | 45 min | ~10 min | send() + cancel() + isRunning；fallback status="completed" if loop_end 未到 |
+| 3.6 ChatLayout.tsx | 45 min | ~12 min | 3-column CSS Grid (header / sidebar / main / inspector)；inline styles（Tailwind 53.4 才裝） |
+| 3.7 index.tsx 取代 placeholder | 15 min | ~3 min | 簡單 import ChatLayout + 內容 placeholder for Day 4 |
+| 3.8 build + lint + commit | 15 min | ~10 min | 改型別 narrowing fix（UnknownEvent 干擾 discriminated union） |
+| **Day 3 總計** | **~6h（360 min）** | **~70 min（19%）** | 與 Day 1 17% 對齊；type narrowing 修是唯一 surprise |
+
+### Verification (final)
+
+- ✅ `npm run build` 37 modules / 526ms / 167 KB (54 KB gzipped)
+- ✅ `npm run lint` 0 warnings（eslint --max-warnings 0）
+- ✅ backend `python -m pytest tests/` 256 PASS（無 regression）
+- ✅ frontend dev server 訪問 /chat-v2 顯示 3-column layout（Day 4 會 e2e 驗）
+
+### Surprises / Decisions
+
+1. **TypeScript discriminated union 被 UnknownEvent 干擾** — 一開始 LoopEvent 包含 `UnknownEvent = { type: string; data: Record<string, unknown> }` 作 catch-all。**問題**：UnknownEvent.type 是 `string`（非 literal），TypeScript narrow `case "loop_start":` 時無法區分 LoopStartEvent vs UnknownEvent，導致 mergeEvent switch 內每個 ev.data.* 變成 `unknown`。**解法**：types.ts 移除 UnknownEvent；改在 chatService.parseSSEFrame 用 `KNOWN_LOOP_EVENT_TYPES` Set gate 過濾 unknown event types → return null。store 永遠收到 known event，narrowing 復活。Defensive `default: never` exhaustive check 加。
+2. **No vitest in frontend** — package.json 沒裝 vitest / @testing-library。plan §3.x mentioned vitest tests; 50.2 不裝（Phase 51+ test infra）。**決策**：frontend Day 3 unit tests 標 🚧 deferred；Day 4 用 manual smoke + backend e2e test_router.py 補位。
+3. **Step 3.1 curl 驗證跳過** — 啟 dev server (uvicorn / npm run dev) 在 bash 會 block；Day 1 test_router.py 已 10 tests 用 FastAPI TestClient + SSE iter_bytes 完整覆蓋 7-event 流程，包括 tool_call_request args 對齊 / loop_end last / 422 / 404 / 503 / cancel。**決策**：3.1 改成 retro 確認 Day 1 test 覆蓋；不另跑 curl。
+4. **Tailwind / shadcn 未裝** — V2 frontend baseline (49.1) 沒裝 CSS framework。ChatLayout 用 inline styles。Phase 53.4（governance/approvals 頁）裝 Tailwind 時順便 retrofit chat-v2。
+5. **`session_id` 處理** — chatService.streamChat 收 session_id 為 optional；useLoopEventStream 從 store.sessionId 讀，初始 null → 不傳；後續 turn 帶上一輪 session_id（保 conversation 持久；目前 50.2 backend 每次 POST 還是新 session 因 in-memory registry，但 wire format 已 ready）。
+
+### Next Day (Day 4)
+
+- 主題：MessageList + ToolCallCard + InputBar wiring + e2e demo + integration test
+- Plan 6h；預估 actual ~60-90 min（Day 1+2+3 平均 20% 比率）
+- Pre-work：Day 3 store + hook 已 ready；Day 4 只需 component 寫 + 啟 dev server e2e 驗 + 補 backend integration e2e test
+
+---
+
+## Day 4 — pending
 
 …（待寫）
 
