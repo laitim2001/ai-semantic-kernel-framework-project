@@ -31,7 +31,13 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from agent_harness._contracts import ToolCall
-from agent_harness.tools._inmemory import InMemoryToolRegistry
+from agent_harness.tools._inmemory import (
+    ECHO_TOOL_SPEC,
+    InMemoryToolExecutor,
+    InMemoryToolRegistry,
+    echo_handler,
+)
+from agent_harness.observability import Tracer
 
 from .audit_domain.tools import register_audit_tools
 from .correlation.tools import register_correlation_tools
@@ -68,4 +74,40 @@ def register_all_business_tools(
     register_incident_tools(registry, handlers, mock_url=mock_url)
 
 
-__all__ = ["register_all_business_tools", "DEFAULT_MOCK_URL"]
+def make_default_executor(
+    *,
+    mock_url: str = DEFAULT_MOCK_URL,
+    tracer: Tracer | None = None,
+) -> tuple[InMemoryToolRegistry, InMemoryToolExecutor]:
+    """Build a registry+executor pair with echo_tool + 18 business tools (19 total).
+
+    Replaces 50.1's `make_echo_executor()` for chat handler default wiring in 51.0.
+    Sprint 51.1 will replace InMemoryToolRegistry with production Cat 2 registry;
+    this factory's signature stays stable.
+
+    Args:
+        mock_url: Override for the mock_services backend URL.
+        tracer: Optional Tracer (defaults to NoOp via InMemoryToolExecutor).
+
+    Returns:
+        (registry, executor) — both wired with 19 ToolSpec + handlers.
+    """
+    registry = InMemoryToolRegistry()
+    handlers: dict[str, ToolHandler] = {}
+
+    # echo_tool (50.1 built-in for bring-up tests)
+    registry.register(ECHO_TOOL_SPEC)
+    handlers["echo_tool"] = echo_handler
+
+    # 18 business tools
+    register_all_business_tools(registry, handlers, mock_url=mock_url)
+
+    executor = InMemoryToolExecutor(handlers=handlers, tracer=tracer)
+    return registry, executor
+
+
+__all__ = [
+    "register_all_business_tools",
+    "make_default_executor",
+    "DEFAULT_MOCK_URL",
+]

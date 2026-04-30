@@ -55,7 +55,7 @@ from agent_harness._contracts import (
 )
 from agent_harness.orchestrator_loop import AgentLoopImpl
 from agent_harness.output_parser import OutputParserImpl
-from agent_harness.tools._inmemory import make_echo_executor
+from business_domain._register_all import make_default_executor
 
 from .schemas import ChatMode
 
@@ -75,7 +75,7 @@ def build_echo_demo_handler(message: str) -> AgentLoopImpl:
     The mock responds with TOOL_USE on turn 1 (echo_tool with the user's
     message text) and END_TURN with the echoed content on turn 2.
     """
-    registry, executor = make_echo_executor()
+    registry, executor = make_default_executor()
     parser = OutputParserImpl()
 
     scripted: list[ChatResponse] = [
@@ -132,7 +132,7 @@ def build_real_llm_handler() -> AgentLoopImpl:
     # AzureOpenAIConfig is a BaseSettings — pulls AZURE_OPENAI_* from env automatically.
     chat_client: ChatClient = AzureOpenAIAdapter(AzureOpenAIConfig())
 
-    registry, executor = make_echo_executor()
+    registry, executor = make_default_executor()
     parser = OutputParserImpl()
 
     return AgentLoopImpl(
