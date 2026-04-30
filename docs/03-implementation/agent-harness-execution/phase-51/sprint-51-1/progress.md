@@ -153,6 +153,44 @@
 
 ---
 
+## Day 4 — 2026-04-30 (search/hitl/memory tools + register helper + 17.md sync)
+
+**Estimated**: 6h / **Actual**: ~1.5h
+
+### Done
+- 4.1 search_tools.WEB_SEARCH_SPEC + make_web_search_handler factory (Bing v7 via httpx; BING_SEARCH_API_KEY/ENDPOINT env-driven; WebSearchConfigError on missing key)
+- 4.2 hitl_tools.REQUEST_APPROVAL_SPEC + request_approval_handler (deterministic pending_approval_id via uuid5; hitl=ALWAYS_ASK self-referential; risk=MEDIUM)
+- 4.3 memory_tools.MEMORY_SEARCH_SPEC + MEMORY_WRITE_SPEC + memory_placeholder_handler (raises NotImplementedError pointing to Sprint 51.2)
+- 4.4 register_builtin_tools(registry, handlers, *, sandbox_backend) registers 6 specs (echo / python_sandbox / web_search / request_approval / memory_search / memory_write); plan said "4 builtin" but real count is 6 (echo carryover + memory ×2 placeholder)
+- 4.5 12 integration tests in tests/integration/agent_harness/tools/test_builtin_tools.py
+  - Wiring (2): register 6 specs / duplicate raises ValueError
+  - Executor flow (6): echo happy / sandbox computes 40+2=42 / approval ALWAYS_ASK gate / explicit_approval still gated by HITL / memory placeholders raise
+  - web_search (2): mocked httpx response / missing env raises WebSearchConfigError
+  - Meta (2): no tags-encoded hitl/risk on builtins (CARRY-021 verification) / PermissionDecision reproducible per spec
+- 4.6 17.md §3.1 expanded with concurrency/hitl/risk column for all 10 listed tools; placeholder/wiring notes added (request_approval=51.1 placeholder→53.3; memory_*=51.1 placeholder→51.2; web_search/python_sandbox=51.1 ships)
+
+### Verification
+- pytest 323 PASS / 1 SKIPPED (311 prior + 12 Day 4 = 323 active) ✅
+- mypy --strict 23 source files clean ✅
+  - Fixes: search_tools params: dict[str, str | int] explicit; test_builtin_tools handlers: dict[str, ToolHandler] (added ToolHandler import); json.loads(result.content) gated by isinstance(content, str) since ToolResult.content is str|list union
+- black formatted ✅
+- 4/4 V2 lints OK ✅
+
+### Notes
+- "echo_tool" still imports from _inmemory.py in 51.1 — will migrate it to a non-deprecated location during Day 5 _inmemory.py deletion (so register_builtin_tools doesn't break)
+- request_approval handler is mostly trace-only in 51.1: ToolExecutorImpl short-circuits at PermissionChecker for ALWAYS_ASK; the handler runs only via PermissionChecker path that allows ALWAYS_ASK (currently never). Phase 53.3 ApprovalManager will provide the real bypass channel.
+- web_search response shape captures top-K from `webPages.value` only; News/Images filters skipped in 51.1.
+- 17.md §3.1 column extension is backward-compatible (existing rows updated in place; no row removals).
+
+### Files
+- Created (4): search_tools.py / hitl_tools.py / memory_tools.py / tests/integration/agent_harness/tools/test_builtin_tools.py
+- Modified (2): tools/__init__.py (8 new exports + register_builtin_tools) / 17.md (§3.1 column + 10 row metadata)
+
+### Commit (pending)
+- Will commit as feat(tools, sprint-51-1): Day 4 — 4 built-in tools (search/exec/hitl + memory placeholder) + 17.md §3.1 sync
+
+---
+
 ## 估時 vs Actual（rolling）
 
 | Day | Plan | Actual | % |
@@ -161,9 +199,10 @@
 | 1   | 5h   | ~1h    | 20% |
 | 2   | 6h   | ~1.5h  | 25% |
 | 3   | 5h   | ~1h    | 20% |
-| **累計** | **20h** | **~4.5h** | **23%** |
+| 4   | 6h   | ~1.5h  | 25% |
+| **累計** | **26h** | **~6h** | **23%** |
 
-V2 7-sprint avg 20%；51.0 23%；51.1 early-mid 23%（趨勢 nominal）。
+V2 7-sprint avg 20%；51.0 23%；51.1 cumulative 23%（穩定 nominal）。
 
 ---
 

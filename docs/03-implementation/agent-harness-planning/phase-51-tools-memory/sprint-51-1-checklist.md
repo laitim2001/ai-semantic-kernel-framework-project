@@ -12,7 +12,7 @@
 - **Day 1**：✅ ToolSpec extension（CARRY-021）+ ToolRegistryImpl（5h plan / actual ~1h）
 - **Day 2**：✅ ToolExecutorImpl + PermissionChecker（6h plan / actual ~1.5h）
 - **Day 3**：✅ SandboxBackend + SubprocessSandbox + exec_tools（5h plan / actual ~1h）
-- **Day 4**：⏸ search_tools + hitl_tools + memory_tools placeholder + tests（6h）
+- **Day 4**：✅ search_tools + hitl_tools + memory_tools placeholder + tests（6h plan / actual ~1.5h）
 - **Day 5**：⏸ 18 業務 stub migration + _inmemory.py 刪 + retro + closeout（5h）
 
 **Plan total**：31h / **Actual estimate**：6-8h
@@ -168,7 +168,7 @@
   - `make_python_sandbox_handler(backend)` factory 返回 async handler；handler 序列化 SandboxResult → JSON ToolResult.content
 
 ### 3.5 Day 3 commit（15 min）
-- [ ] **commit `feat(tools, sprint-51-1): Day 3 — SandboxBackend + SubprocessSandbox + python_sandbox tool`**
+- [x] **commit `feat(tools, sprint-51-1): Day 3 — SandboxBackend + SubprocessSandbox + python_sandbox tool`** ✅ `24734dd`
   - DoD: pytest 311 PASS / 1 SKIPPED（POSIX-only mem test，Windows skip）；mypy --strict 39 source files clean；black formatted；4/4 V2 lints OK
 
 ---
@@ -176,39 +176,51 @@
 ## Day 4 — search_tools + hitl_tools + memory_tools + tests（預估 6 小時）
 
 ### 4.1 search_tools.py — web_search ToolSpec + handler（75 min）
-- [ ] **`agent_harness/tools/search_tools.py`**
-  - DoD: ToolSpec web_search input_schema {query, top_k}
-  - handler 用 httpx async 打 Bing Search API（env BING_SEARCH_API_KEY；缺時 raise ConfigError）
-  - hitl_policy=HITLPolicy.AUTO + risk_level="low"
-  - Test 用 mock httpx response（real key smoke 留 CARRY-024）
+- [x] **`agent_harness/tools/search_tools.py`** ✅
+  - WEB_SEARCH_SPEC（input_schema {query required minLength=1, top_k 1-20 default 5}; annotations open_world=True）
+  - hitl_policy=AUTO + risk_level=LOW + tags=("builtin","search")
+  - `make_web_search_handler(client, *, endpoint, api_key_env)` factory；缺 BING_SEARCH_API_KEY 拋 `WebSearchConfigError`
+  - 支援 `BING_SEARCH_ENDPOINT` env override（self-hosted / 沙盒）
+  - Test 用 `httpx.MockTransport` mock response（real key smoke 留 CARRY-024）
 
 ### 4.2 hitl_tools.py — request_approval ToolSpec + handler（45 min）
-- [ ] **`agent_harness/tools/hitl_tools.py`**
-  - DoD: ToolSpec request_approval input_schema {message, severity}
-  - handler return PermissionDecision.REQUIRE_APPROVAL serialized as ToolResult content（含 approval_request_id placeholder）
-  - hitl_policy=HITLPolicy.ALWAYS_ASK（self-referential：tool 本身 always_ask）+ risk_level="medium"
+- [x] **`agent_harness/tools/hitl_tools.py`** ✅
+  - REQUEST_APPROVAL_SPEC（input_schema {message required, severity enum [low/medium/high/critical] default medium}）
+  - hitl_policy=ALWAYS_ASK（self-referential）+ risk_level=MEDIUM + concurrency=SEQUENTIAL + tags=("builtin","hitl")
+  - `request_approval_handler` 返回 JSON `{pending_approval_id, message, severity, status:"pending", note}`；`pending_approval_id` 用 `uuid5(NAMESPACE_OID, f"approval:{call.id}")` 確保 deterministic for tracing
+  - 文件註明：handler 通常被 PermissionChecker 短路；只有 explicit_approval=True 才會跑（且即使如此 ALWAYS_ASK 仍 gate）
 
 ### 4.3 memory_tools.py — placeholder ToolSpec（30 min）
-- [ ] **`agent_harness/tools/memory_tools.py`**
-  - DoD: 2 placeholder ToolSpec（memory_search / memory_write）handler 回 `NotImplementedError("memory_tools placeholder; Sprint 51.2 wires Cat 3")`
-  - 文件註明 51.2 接 Cat 3 真實實作
+- [x] **`agent_harness/tools/memory_tools.py`** ✅
+  - MEMORY_SEARCH_SPEC（query / scopes enum / top_k）read_only=True / RO_PARALLEL
+  - MEMORY_WRITE_SPEC（scope enum / key / content）SEQUENTIAL
+  - 兩 spec hitl=AUTO + risk=LOW + tags=("builtin","memory","placeholder")
+  - `memory_placeholder_handler` raises `NotImplementedError("memory tool 'X' is a 51.1 placeholder; Sprint 51.2 wires Cat 3 backend")`
+  - MEMORY_TOOL_SPECS tuple export 給 register helper 用
 
 ### 4.4 4 built-in tools register helpers（30 min）
-- [ ] **`agent_harness/tools/__init__.py` 加 `register_builtin_tools(registry, handlers)`**
-  - DoD: 一次註冊 4 內建工具 + 補回 echo_tool（從原 _inmemory.py 改地）
+- [x] **`agent_harness/tools/__init__.py` 加 `register_builtin_tools(registry, handlers, *, sandbox_backend)`** ✅
+  - 註冊 6 個 spec：echo_tool / python_sandbox / web_search / request_approval / memory_search / memory_write
+  - 補回 echo_tool（仍從 `_inmemory.py` import，Day 5 將遷移到非 deprecation 路徑）
   - export `register_builtin_tools`
+  - **變動 vs plan**：plan 寫「4 內建工具」實際是 6（echo + python_sandbox + web_search + request_approval + memory_search + memory_write）— echo 從 50.1 留存 + memory ×2 placeholder 計入
 
 ### 4.5 Integration test：4 built-in via registry（60 min）
-- [ ] **`tests/integration/tools/test_builtin_tools.py`**
-  - DoD: register_builtin_tools → 4 + echo = 5 specs；execute happy path 各 1 case
+- [x] **`tests/integration/agent_harness/tools/test_builtin_tools.py`**（12 tests）✅
+  - register wiring（2）：register_builtin_tools 註冊 6 specs / duplicate raises
+  - execute via executor（6）：echo / python_sandbox / request_approval blocked by ALWAYS_ASK / explicit_approval still blocked / memory_search placeholder / memory_write placeholder
+  - web_search（2）：mocked httpx response / missing env raises
+  - meta（2）：first-class hitl/risk fields no tags-encoding（CARRY-021 verification）/ permission decisions reproducible
 
 ### 4.6 17.md §3.1 sync — 4 built-in entries（30 min）
-- [ ] **修改 `17-cross-category-interfaces.md` §3.1**
-  - DoD: web_search / python_sandbox / request_approval / memory_search / memory_write entries 加（refining 51.0 entries with new fields）
+- [x] **修改 `17-cross-category-interfaces.md` §3.1** ✅
+  - §3.1 表加 column「concurrency / hitl / risk」
+  - web_search / python_sandbox / echo_tool / request_approval / memory_search / memory_write 各填 51.1 metadata
+  - request_approval 註明 51.1 placeholder + 53.3 wires；memory_* 註明 51.2 fills；python_sandbox 註明 CARRY-022 Docker；echo_tool 改備註「仍 active in 51.1；可能在 52.x deprecate」（51.1 不刪 echo_tool）
 
 ### 4.7 Day 4 commit（15 min）
 - [ ] **commit `feat(tools, sprint-51-1): Day 4 — 4 built-in tools (search/exec/hitl + memory placeholder) + 17.md §3.1 sync`**
-  - DoD: pytest 全 PASS
+  - DoD: pytest 323 PASS / 1 SKIPPED ✅；mypy --strict 23 source files clean ✅；black formatted ✅；4/4 V2 lints OK ✅
 
 ---
 

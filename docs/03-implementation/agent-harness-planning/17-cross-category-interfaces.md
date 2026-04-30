@@ -146,18 +146,18 @@ backend/src/agent_harness/{範疇}/_abc.py
 
 ### 3.1 工具註冊權威表
 
-| 工具名稱 | Owner 範疇 | 描述 | 可被誰呼叫 |
-|---------|----------|------|----------|
-| `memory_search` | **範疇 3 (Memory)** | 跨 5 層搜尋記憶 | LLM via 範疇 2 Registry |
-| `memory_write` | **範疇 3 (Memory)** | 寫入指定層 | LLM via 範疇 2 Registry |
-| `memory_extract` | **範疇 3 (Memory)** | 觸發背景 extraction worker | LLM via 範疇 2 Registry |
-| `task_spawn` | **範疇 11 (Subagent)** | Fork subagent | LLM via 範疇 2 Registry |
-| `handoff` | **範疇 11 (Subagent)** | Handoff 控制權 | LLM via 範疇 2 Registry |
-| `request_approval` | **§HITL 中央化** | 觸發人工審批 | LLM via 範疇 2 Registry |
-| `verify` | **範疇 10 (Verification)** | 觸發 verifier 檢查當前 output | LLM via 範疇 2 Registry |
-| `web_search` | **範疇 2 (Tools)** | 內建工具 | LLM |
-| `python_sandbox` | **範疇 2 (Tools)** | 內建工具 | LLM |
-| `echo_tool` | **範疇 2 (Tools)** | 50.1 bring-up built-in（51.1 deprecate） | LLM |
+| 工具名稱 | Owner 範疇 | 描述 | concurrency / hitl / risk | 可被誰呼叫 |
+|---------|----------|------|--------------------------|----------|
+| `memory_search` | **範疇 3 (Memory)** | 跨 5 層搜尋記憶（**51.1 placeholder**：handler raises NotImplementedError；51.2 接 Cat 3 真實實作） | RO_PARALLEL / AUTO / LOW | LLM via 範疇 2 Registry |
+| `memory_write` | **範疇 3 (Memory)** | 寫入指定層（**51.1 placeholder**；51.2 fill） | SEQUENTIAL / AUTO / LOW | LLM via 範疇 2 Registry |
+| `memory_extract` | **範疇 3 (Memory)** | 觸發背景 extraction worker（51.2+） | TBD | LLM via 範疇 2 Registry |
+| `task_spawn` | **範疇 11 (Subagent)** | Fork subagent（54.2+） | TBD | LLM via 範疇 2 Registry |
+| `handoff` | **範疇 11 (Subagent)** | Handoff 控制權（54.2+） | TBD | LLM via 範疇 2 Registry |
+| `request_approval` | **§HITL 中央化** | 觸發人工審批（**51.1 Day 4 ships placeholder**：handler 返回 `pending_approval_id` JSON；ApprovalManager wires 53.3） | SEQUENTIAL / **ALWAYS_ASK** / MEDIUM | LLM via 範疇 2 Registry |
+| `verify` | **範疇 10 (Verification)** | 觸發 verifier 檢查當前 output（54.1+） | TBD | LLM via 範疇 2 Registry |
+| `web_search` | **範疇 2 (Tools)** | 內建工具：Bing Search v7 via httpx（**51.1 Day 4**；CARRY-024 real-key smoke） | RO_PARALLEL / AUTO / LOW | LLM |
+| `python_sandbox` | **範疇 2 (Tools)** | 內建工具：subprocess + tempdir cwd + POSIX rlimit（**51.1 Day 3**；Docker backend 留 CARRY-022） | RO_PARALLEL / AUTO / MEDIUM | LLM |
+| `echo_tool` | **範疇 2 (Tools)** | 50.1 bring-up built-in（仍 active in 51.1；可能在 52.x deprecate） | RO_PARALLEL / AUTO / LOW | LLM |
 
 #### 業務領域工具（Sprint 51.0 mock 階段；Phase 55 替換為真實 enterprise integration）
 
