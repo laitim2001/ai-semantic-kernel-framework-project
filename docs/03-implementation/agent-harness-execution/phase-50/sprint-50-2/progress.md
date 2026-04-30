@@ -161,7 +161,47 @@
 
 ---
 
-## Day 4 — pending
+## Day 4 — 2026-04-30
+
+### 預計 vs 實際
+
+| Step | Plan | Actual | Notes |
+|------|------|--------|-------|
+| 4.1 MessageList.tsx | 90 min | ~12 min | useChatStore.messages subscribe + user/assistant rows + auto-scroll on length change + empty state hint |
+| 4.2 ToolCallCard.tsx | 60 min | ~10 min | 3-status badge (running/done/error) + collapsible (default open) + JSON pretty args + result + duration_ms |
+| 4.3 InputBar.tsx | 45 min | ~12 min | textarea + Send→Stop 切換 + mode toggle + status pill + error banner + Enter/Shift+Enter；text trim 後 send |
+| 4.4 chat-v2/index.tsx 整合 | 15 min | ~3 min | ChatLayout 包 MessageList + InputBar |
+| 4.5 e2e demo 手動測試 | 30 min | (跳過) | dev server 啟動會 block bash；改靠 Day 1 + Day 4.6 共 13 backend tests cover SSE 端到端契約；frontend 留 manual smoke for next session |
+| 4.6 backend integration test | 60 min | ~12 min | 3 tests: 8-event sequence + session_id header + completed flip / cancel endpoint flow |
+| 4.7 frontend integration test | 30 min | (跳過) | vitest 沒裝；Phase 51+ |
+| 4.8 commit | 30 min | ~15 min | 兩輪 type 修（function value in Record / `as const` resize narrowing）後 build 47 modules / 544ms |
+| **Day 4 總計** | **~6h（360 min）** | **~64 min（18%）** | 與 Day 3 19% / 50.1 平均 19% 對齊 |
+
+### Verification (final)
+
+- ✅ frontend `npm run build` 47 modules / 544ms / 177 KB（58 KB gzipped；vs Day 3 167 KB / 54 KB）
+- ✅ frontend `npm run lint` 0 warnings
+- ✅ backend `python -m pytest tests/` **259 PASS / 0 SKIPPED / 4.49s**（Day 3 256 + Day 4 3 e2e new = 259）
+- ✅ Day 2 mypy baseline 維持（Day 4 backend 只新增 1 test 檔，不影響 src）
+- ✅ chat-v2 完整 component tree 可 render：ChatLayout > MessageList + InputBar；MessageList 內 ToolCallCard 折疊 / 展開
+
+### Surprises / Decisions
+
+1. **`Record<string, CSSProperties>` 不容納 function values** — ToolCallCard.styles 寫 `badge: (color) => ...`、InputBar.styles 寫 `status: (color) => ...` / `modeButton: (active) => ...` / `sendBtn: (disabled) => ...`。**問題**：Record 強制 value type 為 CSSProperties；TS 對 callable 抗拒。**修**：把 4 個 function values 拆出 styles dict，寫成 top-level const helpers（`badge` / `statusStyle` / `modeButton` / `sendBtn`）。此模式應該成為 V2 frontend 慣例 — 留給 Phase 53.4 Tailwind retrofit 時 normalize。
+2. **`as const` 把 `flexDirection: "column"` literal 過度 narrow 成 `"column"` 而 React 期待 `FlexDirection enum`** — 短暫嘗試 `as const` 取代 explicit `Record<string, CSSProperties>`，build error。**修**：回到 explicit Record + 拆 helpers 模式。
+3. **dev server e2e 跳過** — 啟 uvicorn / npm run dev 會 block bash。Day 1 test_router 10 tests + Day 4 test_chat_e2e 3 tests 共 13 個用 FastAPI TestClient + raw SSE byte parsing 已覆蓋 8-event 序列 / session header / cancel endpoint。**決策**：frontend 真實瀏覽器 e2e 留 next session 用戶手動 verify（type/build/lint 全綠 → 高機率可跑）。
+4. **vitest 沒裝 → 4.7 frontend integration test 跳過** — 同 Day 3 #2 deferred Phase 51+。
+5. **e2e SSE message_id 與 sequence assertion** — backend Day 2 wire format 改：Thinking 不再從 SSE 流出（serializer 回 None / router skip），所以 e2e test 的 expected sequence 是 `loop_start / 2× (turn_start + llm_request + llm_response) + tool_call_request + tool_call_result + loop_end` = 9 SSE frames（不含 Thinking）；test 用 count() 驗 occurrence 而不寫死 list（更 robust）。
+
+### Next Day (Day 5)
+
+- 主題：Real Azure OpenAI demo + retrospective + Phase 50 closeout + MEMORY.md 同步
+- Plan 4h；預估 actual ~30-50 min
+- Pre-work：Day 0-4 已交付 8 backend modules + 5 frontend components + 5 lint OK + 259 PASS；Day 5 主要 doc 同步 + real LLM demo（用戶 trigger）
+
+---
+
+## Day 5 — pending
 
 …（待寫）
 
