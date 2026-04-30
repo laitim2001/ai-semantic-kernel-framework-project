@@ -1,0 +1,153 @@
+/**
+ * File: frontend/src/features/chat_v2/types.ts
+ * Purpose: SSE LoopEvent types — 1:1 alignment with 02-architecture-design.md §SSE.
+ * Category: Frontend / chat_v2
+ * Scope: Phase 50 / Sprint 50.2 (Day 3.2)
+ *
+ * Description:
+ *   Discriminated union mirroring the backend SSE wire format. Sprint 50.2
+ *   wires 8 event types end-to-end (loop_start / turn_start / llm_request /
+ *   llm_response / tool_call_request / tool_call_result / loop_end +
+ *   error / unknown fallback). Other 02.md §SSE event types
+ *   (guardrail_check / tripwire_fired / compaction_triggered / hitl_required /
+ *   verification_*) are reserved for later phases — frontend ignores them
+ *   gracefully via the `unknown` arm.
+ *
+ *   Plus UI-side aggregate types: Message (rendered list item), ToolCallEntry
+ *   (paired request+result), ChatSession, ChatMode.
+ *
+ * Created: 2026-04-30 (Sprint 50.2 Day 3.2)
+ * Last Modified: 2026-04-30
+ *
+ * Modification History:
+ *   - 2026-04-30: Initial creation (Sprint 50.2 Day 3.2)
+ *
+ * Related:
+ *   - backend/src/api/v1/chat/sse.py (server-side serializer)
+ *   - 02-architecture-design.md §SSE 事件規範
+ */
+
+// === LoopEvent SSE wire types ===============================================
+// Each variant has a `type` discriminator + `data` payload matching the
+// backend's serialize_loop_event() output.
+
+export type LoopStartEvent = {
+  type: "loop_start";
+  data: { session_id: string | null; request_id: string };
+};
+
+export type TurnStartEvent = {
+  type: "turn_start";
+  data: { turn_num: number };
+};
+
+export type LLMRequestEvent = {
+  type: "llm_request";
+  data: { model: string; tokens_in: number };
+};
+
+export type LLMToolCall = {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+};
+
+export type LLMResponseEvent = {
+  type: "llm_response";
+  data: {
+    content: string;
+    tool_calls: LLMToolCall[];
+    thinking: string | null;
+  };
+};
+
+export type ToolCallRequestEvent = {
+  type: "tool_call_request";
+  data: {
+    tool_call_id: string;
+    tool_name: string;
+    args: Record<string, unknown>;
+  };
+};
+
+export type ToolCallResultEvent = {
+  type: "tool_call_result";
+  data: {
+    tool_call_id: string;
+    tool_name: string;
+    duration_ms: number;
+    result: string;
+    is_error: boolean;
+  };
+};
+
+export type LoopEndEvent = {
+  type: "loop_end";
+  data: { stop_reason: string; total_turns: number };
+};
+
+/**
+ * Sprint 50.2 wires 7 known event types end-to-end. Unknown event types
+ * (e.g. guardrail_check / hitl_required from later phases) are filtered
+ * at the SSE parser (chatService.parseSSEFrame returns null) so the store
+ * never sees them — preserving discriminated-union narrowing inside
+ * mergeEvent's switch.
+ */
+export type LoopEvent =
+  | LoopStartEvent
+  | TurnStartEvent
+  | LLMRequestEvent
+  | LLMResponseEvent
+  | ToolCallRequestEvent
+  | ToolCallResultEvent
+  | LoopEndEvent;
+
+/** Set of SSE event type names recognized by Sprint 50.2 frontend. */
+export const KNOWN_LOOP_EVENT_TYPES = new Set<string>([
+  "loop_start",
+  "turn_start",
+  "llm_request",
+  "llm_response",
+  "tool_call_request",
+  "tool_call_result",
+  "loop_end",
+]);
+
+// === UI aggregate types =====================================================
+
+/**
+ * Rendered message in the conversation. Built by chatStore.mergeEvent from
+ * raw LoopEvents. ToolCallCards are folded into the assistant turn that
+ * triggered them via the `tool_calls` array.
+ */
+export type Message =
+  | { kind: "user"; id: string; content: string }
+  | {
+      kind: "assistant";
+      id: string;
+      content: string;
+      thinking: string | null;
+      toolCalls: ToolCallEntry[];
+    };
+
+export type ToolCallEntry = {
+  toolCallId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  // populated when the matching tool_call_result event arrives
+  result?: string;
+  isError?: boolean;
+  durationMs?: number;
+};
+
+export type ChatStatus = "idle" | "running" | "completed" | "cancelled" | "error";
+
+export type ChatMode = "echo_demo" | "real_llm";
+
+export type ChatSession = {
+  sessionId: string | null;
+  status: ChatStatus;
+  totalTurns: number;
+  stopReason: string | null;
+  errorMessage: string | null;
+};
