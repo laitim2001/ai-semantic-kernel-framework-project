@@ -52,9 +52,10 @@
   - Command: `ls backend/src/business_domain/` ✅
 
 ### 0.7 Day 0 commit（10 min）
-- [ ] **commit `docs(plan, sprint-51-0): Day 0 plan/checklist/README + branch ready`**
+- [x] **commit `docs(plan, sprint-51-0): Day 0 — plan + checklist + Phase 51 README`** ✅ 2026-04-30
   - DoD: 3 docs 提交；branch HEAD = Day 0 commit；working tree clean (除用戶 IDE work 外)
-  - Command: `git add docs/03-implementation/agent-harness-planning/phase-51-tools-memory/ && git commit -m "docs(plan, sprint-51-0): Day 0 plan/checklist/README"`
+  - **實際 commit**：`4a843a7` on `feature/phase-51-sprint-0-mock-business-tools`（3 files / 768 insertions）
+  - Pre-merge action：`feature/phase-50-sprint-2-api-frontend` → main merge commit `f31498e`（user-authorized）
 
 ---
 
