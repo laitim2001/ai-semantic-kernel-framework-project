@@ -23,8 +23,8 @@
 
 | Sprint | 狀態 | 主題 | 完成日期 | Branch / Commits |
 |--------|------|------|---------|------------------|
-| **51.0** | ✅ DONE | Mock 企業工具 + 業務工具骨架（**新增 sprint**） | 2026-04-30 | `feature/phase-51-sprint-0-mock-business-tools`（~12 commits incl. closeout） |
-| **51.1** | ⏸ 待啟動 | 範疇 2 工具層（Level 3） | TBD | TBD |
+| **51.0** | ✅ DONE | Mock 企業工具 + 業務工具骨架（**新增 sprint**） | 2026-04-30 | `feature/phase-51-sprint-0-mock-business-tools`（12 commits）→ merged main `8cd47ca` |
+| **51.1** | 🟡 PLANNING | 範疇 2 工具層（Level 3）— ToolSpec first-class field + ToolRegistryImpl + Sandbox + 4 內建工具 | TBD | `feature/phase-51-sprint-1-cat2-tool-layer`（plan + checklist 待 user approve） |
 | **51.2** | ⏸ 待啟動 | 範疇 3 記憶層（Level 3） | TBD | TBD |
 
 ---
