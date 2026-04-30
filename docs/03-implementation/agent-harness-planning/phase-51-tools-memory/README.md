@@ -1,8 +1,9 @@
 # Phase 51 — Tools + Memory
 
-**Phase 進度**：Sprint 51.0 🟡 PLANNING（plan + checklist 待用戶 approve）/ Sprint 51.1 ⏸ 未啟動 / Sprint 51.2 ⏸ 未啟動 — **0 / 3 sprint complete（0%）**
+**Phase 進度**：Sprint 51.0 ✅ DONE / Sprint 51.1 ⏸ 未啟動 / Sprint 51.2 ⏸ 未啟動 — **1 / 3 sprint complete（33%）**
 **啟動日期**：2026-04-30（接 Phase 50 closeout）
-**狀態**：🟡 Phase 51 啟動中 — Sprint 51.0 plan/checklist 已就緒，等用戶 approve 才 code
+**Sprint 51.0 完成日期**：2026-04-30
+**狀態**：🟢 Phase 51 進行中 — Sprint 51.0 ✅ DONE；51.1 plan/checklist 待 user 指示後再寫（rolling）
 
 ---
 
@@ -22,7 +23,7 @@
 
 | Sprint | 狀態 | 主題 | 完成日期 | Branch / Commits |
 |--------|------|------|---------|------------------|
-| **51.0** | 🟡 PLANNING | Mock 企業工具 + 業務工具骨架（**新增 sprint**） | TBD | TBD |
+| **51.0** | ✅ DONE | Mock 企業工具 + 業務工具骨架（**新增 sprint**） | 2026-04-30 | `feature/phase-51-sprint-0-mock-business-tools`（~12 commits incl. closeout） |
 | **51.1** | ⏸ 待啟動 | 範疇 2 工具層（Level 3） | TBD | TBD |
 | **51.2** | ⏸ 待啟動 | 範疇 3 記憶層（Level 3） | TBD | TBD |
 
@@ -51,13 +52,13 @@ docs/03-implementation/agent-harness-execution/phase-51/
 
 ## 範疇成熟度演進（規劃）
 
-| 範疇 | Pre-51.0 | Post-51.0 | Post-51.1 | Post-51.2 |
-|------|---------|----------|----------|-----------|
-| 1. Orchestrator Loop | Level 3 | Level 3 | Level 3 | Level 3 |
-| 2. Tool Layer | Level 1 | Level 1+ | **Level 3** | Level 3 |
+| 範疇 | Pre-51.0 | Post-51.0 ✅ | Post-51.1 | Post-51.2 |
+|------|---------|-------------|----------|-----------|
+| 1. Orchestrator Loop | Level 3 | **Level 3** | Level 3 | Level 3 |
+| 2. Tool Layer | Level 1 | **Level 1+**（18 業務 stub + register pattern + e2e via real subprocess）| Level 3 | Level 3 |
 | 3. Memory | Level 0 | Level 0 | Level 0 | **Level 3** |
 | 6. Output Parser | Level 4 | Level 4 | Level 4 | Level 4 |
-| 12. Observability | Level 2 | Level 2 | Level 2 | Level 2 |
+| 12. Observability | Level 2 | Level 2（mock_executor 已埋 tool_execution_duration_seconds via InMemoryToolExecutor）| Level 2 | Level 2 |
 
 > Sprint 51.0 不直接提升範疇 2/3 等級，但**解鎖 51.1+ 的 demo 場景**：移除 echo_tool 依賴，讓 52-54 sprint 有真實業務工具可呼叫。
 
@@ -92,13 +93,52 @@ docs/03-implementation/agent-harness-execution/phase-51/
 
 ---
 
-## 下一步
+## Sprint 51.0 累計交付
 
-1. **用戶 review**：sprint-51-0-plan.md + sprint-51-0-checklist.md
-2. **approve 後**：AI 助手執行 Sprint 51.0 Day 0（建 branch + commit plan/checklist）
-3. **51.0 closeout 後**：再 rolling 建 sprint-51-1-plan.md + checklist（**禁止預寫**）
+### Backend（17 new files / 3 modified）
+- `mock_services/` 11 file — FastAPI app + 7 routers + schemas + seed.json + loader
+- `business_domain/{patrol,correlation,rootcause,audit_domain,incident}/{mock_executor,tools}.py` 10 file
+- `business_domain/_register_all.py` — `register_all_business_tools()` + `make_default_executor()`
+- `api/v1/chat/handler.py` — swap `make_echo_executor` → `make_default_executor`（chat default 1→19 tools）
+- `runtime/workers/agent_loop_worker.py` — unchanged（cleaner layering decision）
+
+### Tests（3 new files / 24 new tests）
+- `tests/integration/mock_services/test_mock_services_startup.py`（12 tests，TestClient + lifespan）
+- `tests/integration/business_domain/test_business_tools_via_registry.py`（10 tests，httpx ASGI monkey-patch）
+- `tests/e2e/test_agent_loop_with_mock_patrol.py`（2 tests，real uvicorn subprocess + AgentLoopImpl）
+
+### Dev tooling
+- `scripts/mock_dev.py` — standalone start/stop/status
+- `scripts/dev.py` — 17-line shim dispatching `mock <cmd>` → mock_dev.py
+- `docker-compose.dev.yml` — `mock_services` service block（python:3.12-slim + uvicorn 8001）
+
+### 文件
+- `sprint-51-0-plan.md` （~250 行）
+- `sprint-51-0-checklist.md` （39 task / Day 0-5 全 [x]）
+- `progress.md` （Day 0-5 全紀錄）
+- `retrospective.md`（5 Improve / 3 CARRY / 估時準度報告）
+- `17-cross-category-interfaces.md` §3.1 — 加 18 mock business tools entries（+ echo_tool entry）
+- `phase-51-tools-memory/README.md`（本檔）
+
+### Test 累計
+- 50.2 baseline 259 PASS → **51.0 closeout 283 PASS / 0 SKIPPED / 0 FAILED**（+24 new tests）
+- mypy strict 30 source files no issues
+- 5 V2 lints all OK / black formatted
+
+### 估時準度
+- Plan ~25.5h / Actual ~5.9h / **23%**（V2 7-sprint 平均 ~20%；落 13-26% 區間）
 
 ---
 
-**Last Updated**：2026-04-30 (Sprint 51.0 planning 啟動)
+## 下一步
+
+1. **51.0 closeout 完成**（本 sprint）
+2. **Sprint 51.1 啟動**（用戶指示後）：rolling 建 `sprint-51-1-plan.md` + checklist
+   - 主題：範疇 2 工具層（real ToolRegistry / ToolExecutor / Sandbox / Permissions + 4 內建通用工具）
+   - 預期：Cat 2 進 Level 3 / 處理 CARRY-017 + CARRY-021
+3. **Sprint 51.2 啟動**（51.1 closeout 後）：範疇 3 記憶層
+
+---
+
+**Last Updated**：2026-04-30 (Sprint 51.0 ✅ DONE — Phase 51 progress 1/3 = 33%; V2 cumulative 7/22 sprints = 32%)
 **Maintainer**：用戶 + AI 助手共同維護

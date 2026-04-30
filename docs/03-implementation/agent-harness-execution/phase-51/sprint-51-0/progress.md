@@ -396,3 +396,89 @@
 - **Day 5.8**：Day 5 closeout commit
 
 ---
+
+## Day 5 — 2026-04-30（actual ~30min / plan 3h）
+
+### Accomplishments
+
+- [x] **5.1** 17.md §3.1 加 18 mock business tool entries + echo_tool entry（含「Sprint 51.0 mock 階段」section header + tagging 規則註解 + Phase 55 mass rename plan）
+- [x] **5.2** docker-compose.dev.yml — `mock_services` service block（python:3.12-slim + uvicorn 8001 + healthcheck via urllib + mount backend/src:/app:ro）
+- [x] **5.3** progress.md Day 5 final entry（本 entry）
+- [x] **5.4** retrospective.md — 5 Improve / 3 CARRY items / 估時準度報告 / 範疇成熟度 Post-51.0
+- [x] **5.5** Phase 51 README — Sprint 51.0 ✅ DONE / 1/3 = 33% / 累計交付 list / V2 7/22 sprints (32%)
+- [x] **5.6** `~/.claude/.../memory/project_phase51_tools_memory.md` + MEMORY.md index hook line
+- [x] **5.7** sprint-51-0-checklist Day 0-5 全 [x]（0 個 🚧 殘留）
+
+### Files modified (5) / created (3)
+
+| File | Type | Notes |
+|------|------|-------|
+| `17-cross-category-interfaces.md` | edit | §3.1 +20 entries（19 mock + echo_tool） |
+| `docker-compose.dev.yml` | edit | +27 lines（mock_services service block） |
+| `phase-51-tools-memory/README.md` | edit | 51.0 ✅ DONE / 1/3 progress / 累計交付 |
+| `phase-51-tools-memory/sprint-51-0-checklist.md` | edit | Day 5.1-5.7 [x] |
+| `agent-harness-execution/phase-51/sprint-51-0/progress.md` | edit | Day 5 final entry |
+| `agent-harness-execution/phase-51/sprint-51-0/retrospective.md` | new | 5 Improve / 3 CARRY |
+| `~/.claude/.../memory/project_phase51_tools_memory.md` | new | Phase 51 1/3 done + V2 7/22 |
+| `~/.claude/.../memory/MEMORY.md` | edit | +1 hook line |
+
+### Estimate vs Actual
+
+| Task | Plan | Actual | Diff |
+|------|------|--------|------|
+| 5.1 17.md sync | 45 min | ~6 min | -87% |
+| 5.2 docker-compose | 20 min | ~3 min | -85% |
+| 5.3 progress Day 5 | 30 min | ~5 min | -83% |
+| 5.4 retrospective | 30 min | ~10 min | -67% |
+| 5.5 Phase 51 README | 20 min | ~3 min | -85% |
+| 5.6 memory + index | 15 min | ~3 min | -80% |
+| 5.7 checklist [x] | 10 min | ~2 min | -80% |
+| **Day 5 總計** | **2h 50min** | **~32 min** | **-81%** |
+
+### Sprint 51.0 累計（Day 0-5）
+
+| Day | Plan | Actual | Ratio |
+|-----|------|--------|-------|
+| 0 | 3h 20min | ~1h 18min | 39% |
+| 1 | 4h 45min | ~1h 13min | 26% |
+| 2 | 5h 45min | ~51min | 15% |
+| 3 | 4h 30min | ~45min | 17% |
+| 4 | 4h 15min | ~1h 15min | 29% |
+| 5 | 3h 0min | ~32min | 18% |
+| **總** | **25h 35min** | **~5h 54min** | **23%** |
+
+V2 7-sprint 平均 ~20%；51.0 落 13-26% 區間，與 49.x / 50.x 一致。
+
+### Quality Gates（Sprint 51.0 final aggregate）
+
+- ✅ pytest **283 PASS / 0 SKIPPED / 0 FAILED**（259 baseline + 24 new = 283；無 regression）
+- ✅ mypy strict on `src/mock_services/` + `src/business_domain/{patrol,correlation,rootcause,audit_domain,incident}/` — 30 source files no issues
+- ✅ black formatted 全 51.0 新增檔案
+- ✅ LLM SDK leak grep `business_domain/` = 0 hits
+- ✅ Cross-domain import zero violations
+- ✅ V2 紀律 9 項全程零違規
+
+### Surprises (final retro consolidation)
+
+詳見 retrospective.md。本 sprint 5 大 Surprises：
+1. ToolSpec 缺 first-class hitl_policy / risk_level field（CARRY-021）
+2. Test dir `__init__.py` shadows source package（pytest 慣例）
+3. TestClient lifespan 需 `with` block（FastAPI 0.110+）
+4. ToolCallExecuted 沒 `success` field（用 ToolCallFailed 表達失敗）
+5. mypy strict + httpx.json() Any 必須改 method return → Any 或 cast
+
+### Branch / Working Tree State
+
+- **HEAD**：`9d84011`（Day 4 closeout）→ pending Day 5 closeout commit
+- **Files**：5 modified + 3 new
+- **Working tree**：Day 5 files staged-ready
+
+### Sprint 51.0 ✅ DONE — Next Steps
+
+1. **51.0 closeout commit**（Day 5.8）→ Sprint 51.0 official ✅ DONE
+2. **Sprint 51.1 啟動**（user 指示後）：rolling 建 plan + checklist
+   - 主題：範疇 2 工具層 — real ToolRegistry / ToolExecutor / Sandbox / Permissions + 4 內建通用工具
+   - 處理 CARRY-017（InMemoryToolRegistry deprecate）+ CARRY-021（ToolSpec first-class field）
+3. **Sprint 51.2 啟動**（51.1 closeout 後）：範疇 3 記憶層
+
+---

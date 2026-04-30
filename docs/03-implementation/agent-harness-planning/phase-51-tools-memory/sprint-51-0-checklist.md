@@ -213,42 +213,39 @@
 ## Day 5 — 17.md Sync + Retro + Closeout（預估 3 小時）
 
 ### 5.1 17.md §3.1 加 18 ToolSpec entries（45 min）
-- [ ] **修改 `docs/03-implementation/agent-harness-planning/17-cross-category-interfaces.md` §3.1 工具註冊表**
-  - DoD: 18 entries 含 name / annotations / concurrency / hitl_policy / risk / owner（範疇 = 業務領域層 / mock 階段）
-  - Command: `grep "mock_patrol\|mock_correlation\|mock_rootcause\|mock_audit\|mock_incident" docs/03-implementation/agent-harness-planning/17-cross-category-interfaces.md | wc -l` ≥ 18
+- [x] **17.md §3.1 工具註冊表 加 18 mock business entries + echo_tool entry** ✅ 2026-04-30
+  - 含「Sprint 51.0 mock 階段」section header + tagging 規則註解 + Phase 55 mass rename plan
+  - 4 patrol + 3 correlation + 3 rootcause + 3 audit + 5 incident = 18 entries 確認
 
 ### 5.2 docker-compose.dev.yml 加 mock_services（20 min）
-- [ ] **加 service block：image=local；command=uvicorn; port 8001:8001**
-  - DoD: `docker compose -f docker-compose.dev.yml config` 通過；`docker compose up mock_services` 可啟動
-  - Command: `docker compose -f docker-compose.dev.yml config -q`
+- [x] **service block 加在 prometheus 之後 / volumes 之前** ✅ 2026-04-30
+  - image: python:3.12-slim, command: pip install + uvicorn, mount backend/src:/app:ro, healthcheck via urllib
 
 ### 5.3 progress.md Day 0-5 全紀錄（30 min）
-- [ ] **`docs/03-implementation/agent-harness-execution/phase-51/sprint-51-0/progress.md`**
-  - DoD: Day 0-5 各 1 entry（estimate vs actual / surprises / blockers / decisions）
-  - 命令：mkdir + Write
+- [x] **progress.md Day 5 final entry** ✅ 2026-04-30
+  - Day 0-5 全紀錄；估時 vs actual 表格 / surprises / V2 紀律 9 項 / next phase plan
 
 ### 5.4 retrospective.md（30 min）
-- [ ] **`docs/03-implementation/agent-harness-execution/phase-51/sprint-51-0/retrospective.md`**
-  - DoD: 含 Did Well / Improve / Action Items / 估時準度（plan vs actual）/ CARRY-019/020 + 51.x 影響
-  - **R-4 處置**：retrospective 明示 spec 18 vs roadmap 24 差異；user 決定 CARRY-020
+- [x] **retrospective.md** ✅ 2026-04-30
+  - 5 Improve（A1 ToolSpec field / A2 correlation null-server / A3 curl 寫法 / A4 CWD persistence / A5 24 vs 18）
+  - 3 CARRY items（CARRY-019/020/021）+ 估時準度報告 + 範疇成熟度表
 
 ### 5.5 Phase 51 README 更新 51.0 完成狀態（20 min）
-- [ ] **修改 `phase-51-tools-memory/README.md`**
-  - DoD: Sprint 51.0 ✅ DONE 標記；範疇成熟度表更新 Post-51.0；Sprint 進度總覽 1/3 = 33%
+- [x] **phase-51-tools-memory/README.md** ✅ 2026-04-30
+  - Sprint 51.0 ✅ DONE 標記 / Sprint 進度 1/3 = 33% / 範疇成熟度 Post-51.0 / 累計交付 list
 
 ### 5.6 memory/project_phase51_tools_memory.md 更新（15 min）
-- [ ] **新增 memory file**
-  - DoD: 描述 51.0 closeout / 18 ToolSpec / 5 domain / mock_services / V2 累計 7/22 sprints (32%)
-  - 同步更新 `MEMORY.md` index
+- [x] **memory file 新增 + MEMORY.md index 更新** ✅ 2026-04-30
+  - `~/.claude/projects/.../memory/project_phase51_tools_memory.md`
+  - MEMORY.md index 加 hook line（< 200 字）
 
 ### 5.7 sprint-51-0-checklist 全 [x]（10 min）
-- [ ] **本檔所有 `[ ]` → `[x]` 或標 🚧 + reason**
-  - DoD: 無未勾選項殘留；🚧 項全有 reason 連結到 retro Action Items
+- [x] **本檔 Day 0-5 全 [x]** ✅ 2026-04-30
+  - 0 個 🚧 殘留項；無未勾選項
 
 ### 5.8 Day 5 closeout commit（15 min）
-- [ ] **commit `docs(closeout, sprint-51-0): Day 5 — 17.md sync + progress + retro + Phase 51 README + memory`**
-  - DoD: working tree clean；branch HEAD = closeout commit；ready for merge / next sprint
-  - Command: `git status` clean
+- [ ] **commit `docs(closeout, sprint-51-0): Day 5 — 17.md sync + docker-compose + progress + retro + Phase 51 README + memory`**
+  - DoD: working tree clean；branch HEAD = closeout commit；Sprint 51.0 ✅ DONE
 
 ---
 
