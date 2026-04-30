@@ -20,34 +20,35 @@
   - Verify：`ls docs/03-implementation/agent-harness-planning/phase-51-tools-memory/sprint-51-2-checklist.md`
 
 ### 0.2 Phase 51 README sync
-- [ ] **更新 Phase 51 README — Sprint 51.2 啟動標記**
+- [x] **更新 Phase 51 README — Sprint 51.2 啟動標記**
   - DoD：Sprint 51.2 row 從「⏸ 待啟動」→「🟡 PLANNING」；範疇成熟度表加 Post-51.2 預期欄位
-  - Verify：`grep -n "51.2" docs/03-implementation/agent-harness-planning/phase-51-tools-memory/README.md` 顯示 PLANNING 標記
+  - Verify：`grep -n "51.2" docs/03-implementation/agent-harness-planning/phase-51-tools-memory/README.md` 顯示 PLANNING 標記 ✅
 
 ### 0.3 啟動前環境確認
-- [ ] **確認 Sprint 51.1 working tree clean**
+- [x] **確認 Sprint 51.1 working tree clean**
   - Cmd：`git status --short && git log -1 --oneline`
-  - DoD：HEAD = `7595e60`（51.1 closeout）；working tree clean（除用戶 IDE 工作）
-- [ ] **確認 alembic migration 狀態 — PG memory tables 是否已建**
+  - DoD：HEAD = `7595e60`（51.1 closeout）；working tree clean（除用戶 IDE 工作）✅
+- [x] **確認 alembic migration 狀態 — PG memory tables 是否已建**
   - Cmd：`grep -r "user_memory\|tenant_memory\|role_policies\|system_policies" backend/alembic/ 2>/dev/null | head -5`
   - DoD：判定（A）migration 已存在（49.2 工作）→ Day 1 直接使用 / 或（B）尚未建 → 加 Day 1 任務 1.7 建 migration
-  - 結果記錄：__________
+  - 結果記錄：✅ **(A) 已存在** — `backend/src/infrastructure/db/migrations/versions/0007_memory_layers.py` + `db/models/memory.py` ORM + `infrastructure/vector/qdrant_namespace.py` 49.2 已建好；Day 1.7 標 N/A
 
 ### 0.4 Day 0 commit
-- [ ] **commit Day 0**
+- [x] **commit Day 0**
   - Cmd：`git add docs/03-implementation/agent-harness-planning/phase-51-tools-memory/{sprint-51-2-plan.md,sprint-51-2-checklist.md,README.md} && git commit -m "docs(memory, sprint-51-2): plan + checklist + Phase 51 README sync (Day 0)"`
   - DoD：commit 上 main 之前的 51.2 第一個 commit；branch 仍是 main 或新建 feature branch
+  - ✅ Commit `eb17d64` on `feature/phase-51-sprint-2-cat3-memory-layer`（branched from 51.1 tip `7595e60`）；3 files / +694 / -17
 
 ---
 
 ## Day 1 — MemoryHint 擴展 + MemoryLayer ABC 微調 + 17.md sync（估 6h）
 
 ### 1.1 開新 feature branch
-- [ ] **`git checkout -b feature/phase-51-sprint-2-cat3-memory-layer`**
-  - DoD：`git branch --show-current` = `feature/phase-51-sprint-2-cat3-memory-layer`
+- [x] **`git checkout -b feature/phase-51-sprint-2-cat3-memory-layer`** ✅ branched from `7595e60` (51.1 closeout tip)
+  - DoD：`git branch --show-current` = `feature/phase-51-sprint-2-cat3-memory-layer` ✅
 
 ### 1.2 擴展 `MemoryHint` dataclass
-- [ ] **編輯 `_contracts/memory.py` — 新增 5 欄位**
+- [x] **編輯 `_contracts/memory.py` — 新增 5 欄位** ✅ commit `4ab5ef8`
   - 新增：`time_scale: Literal["short_term","long_term","semantic"]`（required，無 default — breaking）
   - 新增：`confidence: float`（required）
   - 新增：`last_verified_at: datetime | None = None`
@@ -58,31 +59,31 @@
   - Verify：`python -m mypy backend/src/agent_harness/_contracts/memory.py --strict`
 
 ### 1.3 grep 既有 MemoryHint callers + 修補
-- [ ] **掃描 src/ + tests/ MemoryHint usage**
+- [x] **掃描 src/ + tests/ MemoryHint usage** ✅ 0 constructor callers — 不需修補
   - Cmd：`grep -rn "MemoryHint(" backend/src backend/tests --include="*.py"`
   - DoD：列出所有 callers；49.1 stub 預期 ≤ 3 處
   - 修補：每個 caller 補 `time_scale` + `confidence` 必填欄位
   - Verify：`python -m mypy backend/src --strict` clean
 
 ### 1.4 微調 `MemoryLayer.write()` 簽名
-- [ ] **編輯 `memory/_abc.py` — `ttl` → `time_scale`**
+- [x] **編輯 `memory/_abc.py` — `ttl` → `time_scale`** ✅ + read() 加 time_scales axis + MemoryTimeScale enum
   - 改 `ttl: Literal["permanent","quarterly","daily"]` → `time_scale: Literal["short_term","long_term","semantic"]`
   - 更新 docstring 說明 TTL 是 per-scope 內部映射
   - DoD：mypy strict clean；既有 stub 仍能 import
   - Verify：`python -m mypy backend/src/agent_harness/memory/_abc.py --strict`
 
 ### 1.5 17.md §1.1 同步（MemoryHint）
-- [ ] **更新 `17-cross-category-interfaces.md` §1.1**
+- [x] **更新 `17-cross-category-interfaces.md` §1.1** ✅ L56 補 5 新欄位
   - 找 `MemoryHint` row 補 5 新欄位（per plan §2.7）
   - DoD：grep 確認新欄位列入；single-source 規則維持
 
 ### 1.6 17.md §2.1 同步（MemoryLayer ABC）
-- [ ] **更新 `17-cross-category-interfaces.md` §2.1**
+- [x] **更新 `17-cross-category-interfaces.md` §2.1** ✅ L118 加 resolve() + 簽名變更註
   - 找 `MemoryLayer` row 簽名同步 `time_scale`
   - DoD：grep 確認
 
 ### 1.7 PG memory tables migration（若 Day 0 確認尚未建）
-- [ ] **若 Day 0.3 判定 alembic 無 memory tables → 建 migration**
+- [ ] 🚧 **N/A — 49.2 已建好** `0007_memory_layers.py` migration + `db/models/memory.py` ORM + `infrastructure/vector/qdrant_namespace.py`；Day 2 直接用既有 ORM。任務保留 unchecked 加 N/A 註（V2 sacred rule）。原 DoD 不執行：
   - 新增 alembic version `00XX_add_memory_tables.py`
   - 建 4 tables：`system_policies` / `tenant_memory` / `role_policies` / `user_memory`
   - 每張表 columns：`id UUID PK`, `tenant_id UUID NOT NULL FK`（除 system）, `user_id UUID FK`（user 表）, `category VARCHAR(64)`, `content TEXT`, `confidence FLOAT`, `last_verified_at TIMESTAMPTZ`, `verify_before_use BOOL DEFAULT FALSE`, `created_at`, `expires_at`
@@ -91,53 +92,55 @@
   - 🚧 若 Day 0 判定 already exists 則 skip
 
 ### 1.8 Day 1 commit
-- [ ] **commit Day 1**
-  - Msg：`feat(memory, sprint-51-2): extend MemoryHint with verify_before_use + time_scale axis (Day 1)`
-  - DoD：commit 含 _contracts/memory.py + memory/_abc.py + 17.md（§1.1 §2.1）+ 可能 alembic migration
+- [x] **commit Day 1** ✅ Commit `4ab5ef8 feat(memory, sprint-51-2): extend MemoryHint + MemoryLayer with time_scale axis (Day 1)` (3 files / +100 / -21)
+  - Msg：`feat(memory, sprint-51-2): extend MemoryHint + MemoryLayer with time_scale axis (Day 1)`
+  - DoD：commit 含 _contracts/memory.py + memory/_abc.py + 17.md（§1.1 §2.1）✅
+  - 驗證：mypy 56 src clean / pytest unit/agent_harness 73 passed + 1 platform-skip ✅
+  - Day 1 actual ~1.5h vs plan 6h ≈ **25%**（V2 7-sprint avg 20-24%；落區間內）
 
 ---
 
-## Day 2 — 5 Layer concrete impl + 26 tests（估 7h）
+## Day 2 — 5 Layer concrete impl + 31 tests（估 7h / 實際 ~2h ≈ 29%）
 
 ### 2.1 `memory/layers/__init__.py`
-- [ ] **建 layers package**
+- [x] **建 layers package** ✅ re-export 5 layer classes
   - Re-export 5 個 layer class
   - DoD：`from agent_harness.memory.layers import UserLayer, SessionLayer, ...` 成功 import
 
 ### 2.2 `memory/layers/user_layer.py`（核心，估 1.5h）
-- [ ] **`UserLayer(MemoryLayer)` PG-backed 實作**
+- [x] **`UserLayer(MemoryLayer)` PG-backed 實作** ✅ MemoryUser ORM；4 spec 欄位（verify_before_use / last_verified_at / source_tool_call_id / time_scale）存 metadata JSONB；24h TTL for short_term
   - `read()`：query `user_memory` WHERE `tenant_id` AND `user_id` ORDER BY `confidence` DESC LIMIT max_hints；return `list[MemoryHint]`
   - `write()`：INSERT 含 `time_scale` 對應 TTL 計算
   - `evict()`：DELETE BY `id` AND `tenant_id`
   - `resolve()`：SELECT full content BY `id`
   - DoD：mypy strict clean；含 file header
 
-### 2.3 `memory/layers/session_layer.py`（Redis wrapper，估 1h）
-- [ ] **`SessionLayer(MemoryLayer)` Redis-backed**
+### 2.3 `memory/layers/session_layer.py`（**改 in-memory dict** vs plan Redis wrapper，估 1h）
+- [x] **`SessionLayer(MemoryLayer)` in-memory dict-backed** ✅ — 49.x infrastructure/cache 仍是 stub；Redis backend 延後到 **CARRY-029**（新增）。Composite key (tenant_id, session_id)；24h TTL；lazy expiry
   - `read()`：`redis.lrange("tenant:{tid}:session:{sid}:messages", 0, max_hints)` 回傳 hint 摘要
   - `write()`：`redis.rpush(...)` + 設 TTL 24h
   - 不重複造輪 — wrap 既有 V1 session store API
   - DoD：mypy strict clean
 
 ### 2.4 `memory/layers/system_layer.py`（read-only，估 30 min）
-- [ ] **`SystemLayer(MemoryLayer)` PG `system_policies`**
+- [x] **`SystemLayer(MemoryLayer)` PG `memory_system`** ✅ — `SystemReadOnlyError` raise on write/evict；read 不需 tenant filter（global）
   - `read()`：startup-loaded const dict（簡化版；51.2 不做 hot reload）
   - `write()`：raise `PermissionError("system layer is read-only")`
   - DoD：write 拒絕測試 pass
 
 ### 2.5 `memory/layers/tenant_layer.py`（估 1h）
-- [ ] **`TenantLayer(MemoryLayer)` PG `tenant_memory`**
+- [x] **`TenantLayer(MemoryLayer)` PG `memory_tenant`** ✅ — long_term only；short_term raise ValueError（caller 應走 SessionLayer）
   - 類比 user_layer 但 query 用 `tenant_id` 不用 `user_id`
   - DoD：mypy strict clean
 
 ### 2.6 `memory/layers/role_layer.py`（簡化版，估 30 min）
-- [ ] **`RoleLayer(MemoryLayer)` PG `role_policies`**
+- [x] **`RoleLayer(MemoryLayer)` PG `memory_role`** ✅ — read-only impl；write/evict raise NotImplementedError；admin-managed in Phase 53+
   - 51.2 簡化：只 read（admin UI 寫入屬 Phase 53+）
   - `write()` raise NotImplementedError + log warning
   - DoD：仍 inherit ABC 全方法
 
 ### 2.7 Unit tests — UserLayer（估 1h）
-- [ ] **`tests/unit/agent_harness/memory/test_user_layer.py`** ~10 tests
+- [x] **`tests/unit/agent_harness/memory/test_user_layer.py`** ✅ **11 tests**（超 plan 10）
   - `test_write_and_read_roundtrip`
   - `test_tenant_isolation_via_query`
   - `test_max_hints_limit`
@@ -151,30 +154,33 @@
   - DoD：10/10 pass
 
 ### 2.8 Unit tests — SessionLayer + SystemLayer + TenantLayer + RoleLayer（估 1h）
-- [ ] **`test_session_layer.py`** ~6 tests（Redis fixture）
-- [ ] **`test_system_layer.py`** ~4 tests
-- [ ] **`test_tenant_layer.py`** ~6 tests
-- [ ] **`test_role_layer.py`** ~3 tests（read + write_raises + edge）
-  - 累計 Day 2 整體 ~26 tests
-  - DoD：26/26 pass
+- [x] **`test_session_layer.py`** ✅ **7 tests**（超 plan 6；in-memory direct，不需 Redis fixture）
+- [x] **`test_system_layer.py`** ✅ **4 tests**（AsyncMock pattern；read + write/evict raise + time_scale filter）
+- [x] **`test_tenant_layer.py`** ✅ **6 tests**（含 short_term reject + tenant required）
+- [x] **`test_role_layer.py`** ✅ **3 tests**（write/evict raise + read returns hints）
+  - 累計 Day 2 整體 **31 tests** ✅（超 plan 26；plan + 5 額外 edge cases）
+  - DoD：31/31 pass ✅
 
 ### 2.9 Day 2 commit
-- [ ] **commit Day 2**
-  - Msg：`feat(memory, sprint-51-2): 5-layer concrete impl (user/session/system/tenant/role) + 29 tests (Day 2)`
+- [x] **commit Day 2** ✅ Commit `f7d0614 feat(memory, sprint-51-2): 5-layer concrete impl + 31 unit tests (Day 2)` (12 files / +1483 / 0 del)
+  - Msg：`feat(memory, sprint-51-2): 5-layer concrete impl + 31 unit tests (Day 2)`
+  - 驗證：mypy 62 src clean / pytest unit/agent_harness/memory 31 passed / wider sanity 104 passed + 1 platform-skip
+  - Day 2 actual ~2h vs plan 7h ≈ **29%**（V2 cumulative trend 20-25%；Day 2 略高因 mock pattern 設計時間）
+  - 新增 **CARRY-029**：SessionLayer Redis backend（infrastructure/cache 待 Phase 52.x ship 真 client）
 
 ---
 
-## Day 3 — Retrieval + Extraction + ConflictResolver + tests（估 6h）
+## Day 3 — Retrieval + Extraction + ConflictResolver + tests（估 6h / 實際 ~1.5h ≈ 25%）
 
 ### 3.1 `memory/retrieval.py`
-- [ ] **`MemoryRetrieval` 類別 — 跨 layer 多軸 search**
+- [x] **`MemoryRetrieval` 類別 — 跨 layer 多軸 search** ✅
   - `async def search(query, scopes, time_scales, top_k, tenant_id, user_id) -> list[MemoryHint]`
   - 內部：對每個指定 scope 並行呼叫 `layer.read()` → merge → 按 `relevance_score * confidence` 排序 → return top_k
   - 加 trace context 埋點（per `observability-instrumentation.md`）
   - DoD：mypy strict clean；trace span 名稱 `memory_retrieval_search`
 
 ### 3.2 `memory/conflict_resolver.py`
-- [ ] **4 條規則實作**
+- [x] **4 條規則實作** ✅ session > user > role > tenant > system 優先序；Rule 4 raise `RequiresHumanReviewError`
   - rule 1：confidence ≥ 0.8 直接勝出
   - rule 2：last_verified_at < 7 day 最新值
   - rule 3：layer specificity（user > role > tenant > system；session 邊界 case）
@@ -182,52 +188,54 @@
   - DoD：mypy strict clean
 
 ### 3.3 `memory/extraction.py`
-- [ ] **`MemoryExtractor` — session → user 萃取（手動觸發）**
+- [x] **`MemoryExtractor` — session → user 萃取（手動觸發）** ✅ 透過 ChatRequest + ChatClient ABC（中性）；JSON tolerant parser；0 LLM SDK leak
   - `async def extract_session_to_user(session_id, tenant_id, user_id, chat_client) -> list[MemoryHint]`
   - 內部：讀 session messages → LLM judge prompt（透過 ChatClient ABC，**禁止 import openai/anthropic**）→ 萃取候選 hints → 寫入 user_layer
   - DoD：grep 確認 0 LLM SDK leak
 
 ### 3.4 Unit tests — Retrieval / ConflictResolver / Extraction
-- [ ] **`test_retrieval.py`** ~8 tests
-- [ ] **`test_conflict_resolver.py`** ~6 tests
-- [ ] **`test_extraction.py`** ~3 tests（用 MockChatClient）
-  - 累計 ~17 tests
-  - DoD：17/17 pass
+- [x] **`test_retrieval.py`** ✅ **8 tests**（tenant required / layer dispatch / session_id routing / top_k / sort / exception isolation / time_scales prop / unmapped scopes）
+- [x] **`test_conflict_resolver.py`** ✅ **8 tests**（超 plan 6；含 single-hint shortcut + empty raise + Rule 1 skipped when 2 high-conf）
+- [x] **`test_extraction.py`** ✅ **4 tests**（超 plan 3；happy path + empty messages + invalid JSON + prose-around-JSON 用 MockChatClient）
+  - 累計 Day 3 整體 **20 tests** ✅（超 plan 17；plan + 3 額外 edge cases）
+  - DoD：20/20 pass ✅
 
 ### 3.5 Day 3 commit
-- [ ] **commit Day 3**
-  - Msg：`feat(memory, sprint-51-2): MemoryRetrieval + ConflictResolver + MemoryExtractor + 17 tests (Day 3)`
+- [x] **commit Day 3** ✅ Commit `948fcd5 feat(memory, sprint-51-2): retrieval + conflict_resolver + extraction + 20 tests (Day 3)` (6 files / +843 / 0 del)
+  - Msg：`feat(memory, sprint-51-2): retrieval + conflict_resolver + extraction + 20 tests (Day 3)`
+  - 驗證：mypy 65 src clean / pytest unit/agent_harness/memory 51 passed / wider sanity 124 passed + 1 platform-skip
+  - Day 3 actual ~1.5h vs plan 6h ≈ **25%**（V2 cumulative 21-29%；落區間內）
 
 ---
 
-## Day 4 — 工具 placeholder → real handler + integration tests（估 5h）
+## Day 4 — 工具 placeholder → real handler + integration tests（估 5h / 實際 ~1.5h ≈ 30%）
 
 ### 4.1 `tools/memory_tools.py` schema 擴展
-- [ ] **`MEMORY_SEARCH_SPEC` schema 加 `time_scales` 參數**
+- [x] **`MEMORY_SEARCH_SPEC` schema 加 `time_scales` 參數** ✅ + `MEMORY_WRITE_SPEC` 加 `time_scale` + `confidence`；移除 placeholder tag
   - JSON Schema：`{"type": "array", "items": {"enum": ["short_term","long_term","semantic"]}, "default": ["long_term"]}`
   - DoD：JSONSchema validate fixture 通過
 
 ### 4.2 `memory_search_handler` real impl
-- [ ] **替換 `memory_placeholder_handler` → `memory_search_handler`**
+- [x] **`make_memory_search_handler(retrieval)` factory** ✅ — 路由到 MemoryRetrieval；JSON serialized list[MemoryHint]；placeholder 保留為 dev fallback
   - 從 `ToolCall.arguments` 解析 query/scopes/time_scales/top_k
   - 路由到 `MemoryRetrieval.search()`
   - 序列化 list[MemoryHint] 為 JSON string return
   - DoD：handler 不再 raise NotImplementedError
 
 ### 4.3 `memory_write_handler` real impl
-- [ ] **替換為 real handler**
+- [x] **`make_memory_write_handler(layers)` factory** ✅ — scope=system 拒絕；scope=session 路由 session_id 槽；session 層 short_term-only 約束 + tenant 層 long_term-only 約束 honor
   - 從 ToolCall 解析 scope/key/content/time_scale
   - 路由到對應 `layer.write()`
   - `scope=system` 拒絕並 return error JSON
   - DoD：write → search 整合通過
 
 ### 4.4 移除 placeholder tag + register
-- [ ] **`tags=("builtin", "memory", "placeholder")` → `tags=("builtin", "memory")`**
-- [ ] **`business_domain/_register_all.py` wire memory_handlers**
-  - DoD：`make_default_executor()` 注冊 19 工具 → 仍 19（memory 已含但 handler 換新）
+- [x] **`tags=("builtin", "memory", "placeholder")` → `tags=("builtin", "memory")`** ✅
+- [x] **`agent_harness/tools/__init__.py register_builtin_tools` wire memory_handlers** ✅（取代 plan 的 `business_domain/_register_all.py`，因 51.1 memory 在 builtin tools 不在 business tools）
+  - DoD 微調：`register_builtin_tools(memory_retrieval=..., memory_layers=...)` 注入時走 real handler；無注入時走 placeholder（dev fallback）
 
 ### 4.5 Integration tests — memory tools via registry
-- [ ] **`tests/integration/memory/test_memory_tools_integration.py`** ~6 tests
+- [x] **`tests/integration/memory/test_memory_tools_integration.py`** ✅ **8 tests**（超 plan 6）
   - test_memory_write_then_search_via_registry
   - test_memory_write_system_scope_rejected
   - test_memory_search_default_scopes
@@ -237,18 +245,24 @@
   - DoD：6/6 pass
 
 ### 4.6 17.md §3.1 sync
-- [ ] **更新 `17-cross-category-interfaces.md` §3.1**
+- [x] **更新 `17-cross-category-interfaces.md` §3.1** ✅ memory_search/memory_write rows 移除「51.1 placeholder」標記、加註「51.2 Day 4 ships real handler」；memory_extract row 改為 internal worker 註記
   - `memory_search` / `memory_write` 移除「51.1 placeholder」標記
   - 新增「51.2 real handler」備註
   - DoD：grep 確認 placeholder 字串只剩 51.0 echo / memory_extract
 
 ### 4.7 17.md §4.1 sync — MemoryAccessed event
-- [ ] **`MemoryAccessed` event payload 補 `time_scale` / `confidence`**
+- [x] **`MemoryAccessed` event payload 補 `time_scale` / `confidence`** ✅ + 加 `scope` / `verify_before_use` / `tenant_id`
   - DoD：event types 與 retrieval.py 埋點 attributes 一致
 
 ### 4.8 Day 4 commit
-- [ ] **commit Day 4**
-  - Msg：`feat(memory, sprint-51-2): replace placeholder handler with real Cat 3 backend + 6 integration tests (Day 4)`
+- [x] **commit Day 4** ✅ → see commit hash in Day 4 commit footer below
+  - Msg：`feat(memory, sprint-51-2): real memory_tools handlers + register_builtin_tools wiring + 8 integration tests (Day 4)`
+  - 驗證：mypy 65 src clean / pytest unit + integration/memory **132 passed + 1 platform-skip**
+  - Day 4 actual ~1.5h vs plan 5h ≈ **30%**（V2 cumulative 25-30%；落區間內）
+  - Plan 偏差 1：plan 寫 "business_domain/_register_all.py wire" → 改為 `agent_harness/tools/__init__.py register_builtin_tools`（51.1 memory 屬 builtin 非 business）
+  - Plan 偏差 2：tests 6 → 實際 8（+2 edge cases：missing query / unknown scope）
+  - 額外 fix：刪除 `tests/unit/agent_harness/memory/__init__.py` + `tests/integration/memory/__init__.py`（pytest 套件名衝突 — Day 2 加錯，convention 為 path-based discovery 不放 __init__.py）
+  - 新增 **CARRY-030**：tenant 上下文目前從 ToolCall.arguments 讀（loop 預注入），未來改 ExecutionContext threading（Phase 53.3 / 並進 CARRY-023）
 
 ---
 

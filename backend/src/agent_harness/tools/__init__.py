@@ -26,6 +26,8 @@ from agent_harness.tools.memory_tools import (
     MEMORY_SEARCH_SPEC,
     MEMORY_TOOL_SPECS,
     MEMORY_WRITE_SPEC,
+    make_memory_search_handler,
+    make_memory_write_handler,
     memory_placeholder_handler,
 )
 from agent_harness.tools.permissions import PermissionChecker, PermissionDecision
@@ -49,14 +51,30 @@ def register_builtin_tools(
     handlers: dict[str, ToolHandler],
     *,
     sandbox_backend: SandboxBackend | None = None,
+    memory_retrieval: object | None = None,
+    memory_layers: dict[str, object] | None = None,
 ) -> None:
     """Register 6 built-in ToolSpecs + handlers (echo + python_sandbox + web_search +
-    request_approval + memory_search/write placeholders).
+    request_approval + memory_search/write).
 
     `handlers` is mutated in place — caller passes a (possibly pre-populated)
     handlers dict that will receive the new entries. Duplicate registration
     raises via ToolRegistryImpl.register; caller is responsible for ensuring
     a clean registry.
+
+    Memory handler wiring (51.2 Day 4):
+      - If both `memory_retrieval` and `memory_layers` are provided, real
+        handlers route into Cat 3 (MemoryRetrieval.search +
+        MemoryLayer.write).
+      - Otherwise, falls back to memory_placeholder_handler which returns
+        an error JSON. Phase 51.2 Day 4 unblocks the real path; production
+        deployment must wire both kwargs.
+
+    The kwargs are typed as `object | None` here to avoid a registry-level
+    import cycle (agent_harness.tools -> agent_harness.memory.retrieval ->
+    agent_harness._contracts is fine, but importing MemoryRetrieval at this
+    module would tighten coupling unnecessarily). The factory functions in
+    memory_tools.py do the proper isinstance routing.
     """
     registry.register(ECHO_TOOL_SPEC)
     handlers["echo_tool"] = echo_handler
@@ -70,9 +88,34 @@ def register_builtin_tools(
     registry.register(REQUEST_APPROVAL_SPEC)
     handlers["request_approval"] = request_approval_handler
 
-    for spec in MEMORY_TOOL_SPECS:
-        registry.register(spec)
-        handlers[spec.name] = memory_placeholder_handler
+    # Memory tools: real handlers if Cat 3 backend wired, else placeholder
+    real_memory_wired = memory_retrieval is not None and memory_layers is not None
+    if real_memory_wired:
+        # Imports postponed to keep this module's load graph minimal
+        from agent_harness.memory._abc import MemoryLayer
+        from agent_harness.memory.retrieval import MemoryRetrieval
+
+        if not isinstance(memory_retrieval, MemoryRetrieval):
+            raise TypeError(
+                "memory_retrieval must be a MemoryRetrieval instance"
+            )
+        # Validate each layer is a MemoryLayer subclass instance
+        validated_layers: dict[str, MemoryLayer] = {}
+        for scope, layer in (memory_layers or {}).items():
+            if not isinstance(layer, MemoryLayer):
+                raise TypeError(
+                    f"memory_layers[{scope!r}] must be a MemoryLayer instance"
+                )
+            validated_layers[scope] = layer
+
+        registry.register(MEMORY_SEARCH_SPEC)
+        handlers["memory_search"] = make_memory_search_handler(memory_retrieval)
+        registry.register(MEMORY_WRITE_SPEC)
+        handlers["memory_write"] = make_memory_write_handler(validated_layers)
+    else:
+        for spec in MEMORY_TOOL_SPECS:
+            registry.register(spec)
+            handlers[spec.name] = memory_placeholder_handler
 
 
 __all__ = [
@@ -96,6 +139,8 @@ __all__ = [
     "WebSearchConfigError",
     "echo_handler",
     "make_echo_executor",
+    "make_memory_search_handler",
+    "make_memory_write_handler",
     "make_python_sandbox_handler",
     "make_web_search_handler",
     "memory_placeholder_handler",
