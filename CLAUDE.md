@@ -461,11 +461,21 @@ Related:
 - File change list
 - Acceptance criteria
 
+> **🔴 格式一致性鐵律**：起草前必先讀**最近一個 completed sprint 的 plan**（不是 49.1 / 50.1 等舊樣板，是最新 closed 的）作為模板。
+> 章節編號 / 章節命名 / Day 結構 / 每 task 細節水平**必須一致**。
+> Sprint scope 差異透過**內容**調整（更多 stories / 更多 file），**不是透過結構**調整（多加章節 / 改 Day 數）。
+> 例：51.2 plan 9 sections（0-9）→ 52.1 plan 必須也 9 sections + 命名一致；違反 = 用戶矯正成本（前車：52.1 v1→v3 三輪重寫）。
+
 ### Step 2: Create Checklist File
 建 `phase-XX-*/sprint-XXX-checklist.md`：
 - `- [ ]` 列出每個交付項
 - 驗證標準
 - 連結 plan
+
+> **🔴 格式一致性鐵律**：同 Step 1 — 必讀最近 completed sprint checklist 為模板。
+> Day 數預設 5（Day 0-4，與 V2 累計 sprint 一致）；Day 4 含 retro + closeout。
+> 每 task 含：bold task 描述 / 3-6 sub-bullets（具體 case / 配置 / DoD）/ Verify command。
+> 細節水平：同等 scope sprint，checklist 行數 ±20% 內。
 
 ### Step 3: Implement Code
 plan + checklist 都有了才開始 code。
