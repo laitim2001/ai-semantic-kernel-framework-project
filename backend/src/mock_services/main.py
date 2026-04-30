@@ -29,8 +29,10 @@ from typing import Any, AsyncIterator
 from fastapi import FastAPI
 
 from mock_services.data.loader import load_seed
+from mock_services.routers import audit as audit_router
 from mock_services.routers import correlation as correlation_router
 from mock_services.routers import crm as crm_router
+from mock_services.routers import incident as incident_router
 from mock_services.routers import kb as kb_router
 from mock_services.routers import patrol as patrol_router
 from mock_services.routers import rootcause as rootcause_router
@@ -58,6 +60,8 @@ app.include_router(kb_router.router)
 app.include_router(patrol_router.router)
 app.include_router(correlation_router.router)
 app.include_router(rootcause_router.router)
+app.include_router(audit_router.router)
+app.include_router(incident_router.router)
 
 
 @app.get("/")
