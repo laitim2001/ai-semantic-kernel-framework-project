@@ -838,6 +838,19 @@ def main() -> None:
         cmd_status()
     elif command == 'logs':
         cmd_logs(service, follow)
+    elif command == 'mock':
+        # Sprint 51.0 — dispatch to standalone scripts/mock_dev.py
+        # Avoids weaving mock_services into ServiceType enum (low risk).
+        mock_args = sys.argv[2:] if len(sys.argv) > 2 else []
+        if not mock_args or mock_args[0] not in ('start', 'stop', 'status'):
+            print("usage: python scripts/dev.py mock {start|stop|status}")
+            sys.exit(2)
+        mock_dev = Path(__file__).parent / 'mock_dev.py'
+        result = subprocess.run(
+            [sys.executable, str(mock_dev), mock_args[0]],
+            check=False,
+        )
+        sys.exit(result.returncode)
     else:
         print(f"Unknown command: {command}")
         show_help()
