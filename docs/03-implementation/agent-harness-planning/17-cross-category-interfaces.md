@@ -156,6 +156,33 @@ backend/src/agent_harness/{範疇}/_abc.py
 | `verify` | **範疇 10 (Verification)** | 觸發 verifier 檢查當前 output | LLM via 範疇 2 Registry |
 | `web_search` | **範疇 2 (Tools)** | 內建工具 | LLM |
 | `python_sandbox` | **範疇 2 (Tools)** | 內建工具 | LLM |
+| `echo_tool` | **範疇 2 (Tools)** | 50.1 bring-up built-in（51.1 deprecate） | LLM |
+
+#### 業務領域工具（Sprint 51.0 mock 階段；Phase 55 替換為真實 enterprise integration）
+
+> Sprint 51.0 命名約定：所有業務 stub 加 `mock_` prefix；Phase 55 真實 integration 上線時統一 mass rename 移除 prefix。
+> hitl_policy 與 risk_level 為 Sprint 51.0 暫編碼於 `ToolSpec.tags`（CARRY-021：51.1 ToolSpec 加 first-class field）。
+
+| 工具名稱 | Owner | 描述 | concurrency / hitl / risk |
+|---------|------|------|--------------------------|
+| `mock_patrol_check_servers` | **`business_domain/patrol/`** (08b §Domain 1) | 對 server scope 跑健康檢查 | parallel / auto / low |
+| `mock_patrol_get_results` | 同上 | 取單一 PatrolResult | parallel / auto / low |
+| `mock_patrol_schedule` | 同上 | Cron + scope 排程定期巡檢 | sequential / ask_once / medium |
+| `mock_patrol_cancel` | 同上 | 取消已排程巡檢 | sequential / ask_once / medium |
+| `mock_correlation_analyze` | **`business_domain/correlation/`** (08b §Domain 2) | 解析 alert 關聯鏈（同 server ±5min） | parallel / auto / low |
+| `mock_correlation_find_root_cause` | 同上 | Incident → 排序 RCA candidates | sequential / auto / low |
+| `mock_correlation_get_related` | 同上 | Alert → 關聯 alert（depth 1-3） | parallel / auto / low |
+| `mock_rootcause_diagnose` | **`business_domain/rootcause/`** (08b §Domain 3) | 取 incident 最高信心 RCA finding | sequential / auto / low |
+| `mock_rootcause_suggest_fix` | 同上 | 生成 mock fix proposal | sequential / auto / low |
+| `mock_rootcause_apply_fix` | 同上 | **HIGH RISK**：套用 fix（dry_run default true） | sequential / **always_ask** / **high** |
+| `mock_audit_query_logs` | **`business_domain/audit_domain/`** (08b §Domain 4) | 過濾查 audit logs | parallel / auto / low |
+| `mock_audit_generate_report` | 同上 | Template + params → 報表 URL placeholder | sequential / auto / medium |
+| `mock_audit_flag_anomaly` | 同上 | 標記 audit record 為異常 | sequential / ask_once / medium |
+| `mock_incident_create` | **`business_domain/incident/`** (08b §Domain 5) | 建立 incident（title/severity/alert_ids） | sequential / ask_once / medium |
+| `mock_incident_update_status` | 同上 | 更新 incident.status | sequential / ask_once / medium |
+| `mock_incident_close` | 同上 | **HIGH RISK**：關閉 incident（resolution） | sequential / **always_ask** / **high** |
+| `mock_incident_get` | 同上 | 取單一 incident | parallel / auto / low |
+| `mock_incident_list` | 同上 | 過濾列出 incidents | parallel / auto / low |
 
 ### 3.2 規則
 
