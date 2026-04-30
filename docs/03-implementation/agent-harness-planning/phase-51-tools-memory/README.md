@@ -1,10 +1,11 @@
 # Phase 51 — Tools + Memory
 
-**Phase 進度**：Sprint 51.0 ✅ DONE / Sprint 51.1 ✅ DONE / Sprint 51.2 ⏸ 未啟動 — **2 / 3 sprint complete（67%）**
+**Phase 進度**：Sprint 51.0 ✅ DONE / Sprint 51.1 ✅ DONE / Sprint 51.2 ✅ DONE — **3 / 3 sprint complete（100%）**
 **啟動日期**：2026-04-30（接 Phase 50 closeout）
 **Sprint 51.0 完成日期**：2026-04-30
 **Sprint 51.1 完成日期**：2026-04-30
-**狀態**：🟢 Phase 51 進行中 — Sprint 51.0 + 51.1 ✅ DONE；51.2 plan/checklist 待 user 指示後再寫（rolling）
+**Sprint 51.2 完成日期**：2026-04-30
+**狀態**：✅ **Phase 51 完成** — Cat 2 + Cat 3 都達 Level 3；範疇 12 持續 Level 2；解鎖 Phase 52.x（Cat 4 Context Mgmt + Cat 5 PromptBuilder）整合 memory layers
 
 ---
 
@@ -26,7 +27,7 @@
 |--------|------|------|---------|------------------|
 | **51.0** | ✅ DONE | Mock 企業工具 + 業務工具骨架（**新增 sprint**） | 2026-04-30 | `feature/phase-51-sprint-0-mock-business-tools`（12 commits）→ merged main `8cd47ca` |
 | **51.1** | ✅ DONE | 範疇 2 工具層（Level 3）— ToolSpec first-class field + ToolRegistryImpl + Sandbox + 6 內建工具 + 18 業務 stub migration + _inmemory deletion | 2026-04-30 | `feature/phase-51-sprint-1-cat2-tool-layer`（5 commits + Day 5 closeout） |
-| **51.2** | ⏸ 待啟動 | 範疇 3 記憶層（Level 3） | TBD | TBD |
+| **51.2** | ✅ DONE | 範疇 3 記憶層（Level 3）— MemoryHint 擴展 + 5 layer concrete impl + retrieval / extraction / conflict_resolver + memory_tools placeholder→real handler + tenant isolation + 「線索→驗證」demo | 2026-04-30 | `feature/phase-51-sprint-2-cat3-memory-layer`（5 commits + Day 5 closeout）|
 
 ---
 
@@ -39,8 +40,8 @@ phase-51-tools-memory/
 ├── sprint-51-0-checklist.md           🟡 PLANNING
 ├── sprint-51-1-plan.md                ⏸ 51.0 closeout 後 rolling 寫
 ├── sprint-51-1-checklist.md           ⏸ 同上
-├── sprint-51-2-plan.md                ⏸ 51.1 closeout 後 rolling 寫
-└── sprint-51-2-checklist.md           ⏸ 同上
+├── sprint-51-2-plan.md                ✅ DONE
+└── sprint-51-2-checklist.md           ✅ DONE
 ```
 
 執行紀錄（51.0 啟動後建立）：
@@ -53,13 +54,13 @@ docs/03-implementation/agent-harness-execution/phase-51/
 
 ## 範疇成熟度演進（規劃）
 
-| 範疇 | Pre-51.0 | Post-51.0 ✅ | Post-51.1 ✅ | Post-51.2 |
+| 範疇 | Pre-51.0 | Post-51.0 ✅ | Post-51.1 ✅ | Post-51.2 ✅ |
 |------|---------|-------------|-------------|-----------|
-| 1. Orchestrator Loop | Level 3 | **Level 3** | **Level 3** | Level 3 |
-| 2. Tool Layer | Level 1 | **Level 1+**（18 業務 stub + register pattern + e2e via real subprocess）| **Level 3** ✅（ToolRegistryImpl + ToolExecutorImpl + PermissionChecker + SandboxBackend + 6 builtin + 18 business migrated to first-class hitl_policy/risk_level） | Level 3 |
-| 3. Memory | Level 0 | Level 0 | Level 0 | **Level 3** |
-| 6. Output Parser | Level 4 | Level 4 | **Level 4** | Level 4 |
-| 12. Observability | Level 2 | Level 2（mock_executor 已埋 tool_execution_duration_seconds via InMemoryToolExecutor）| **Level 2**（ToolExecutorImpl 持續埋 metric；status label 擴展 unknown / denied / approval_required / schema_invalid / success / error） | Level 2 |
+| 1. Orchestrator Loop | Level 3 | **Level 3** | **Level 3** | **Level 3**（unchanged）|
+| 2. Tool Layer | Level 1 | **Level 1+** | **Level 3** ✅ | **Level 3**（unchanged；memory_tools placeholder→real handler 不影響 Cat 2 等級）|
+| 3. Memory | Level 0 | Level 0 | Level 0 | **Level 3** ✅（MemoryHint 5 新欄位 + 5 layer concrete impl + retrieval / extraction / conflict_resolver + memory_tools real handler + 9/15 cell 真實實作；Qdrant semantic 軸 → CARRY-026）|
+| 6. Output Parser | Level 4 | Level 4 | **Level 4** | **Level 4**（unchanged）|
+| 12. Observability | Level 2 | Level 2 | **Level 2** | **Level 2**（51.2 MemoryAccessed event payload 擴 scope/time_scale/confidence/verify_before_use/tenant_id；retrieval span 待 Phase 53.x Cat 12 強化）|
 
 > Sprint 51.0 不直接提升範疇 2/3 等級，但**解鎖 51.1+ 的 demo 場景**：移除 echo_tool 依賴，讓 52-54 sprint 有真實業務工具可呼叫。
 
@@ -133,13 +134,12 @@ docs/03-implementation/agent-harness-execution/phase-51/
 
 ## 下一步
 
-1. **51.0 closeout 完成**（本 sprint）
-2. **Sprint 51.1 啟動**（用戶指示後）：rolling 建 `sprint-51-1-plan.md` + checklist
-   - 主題：範疇 2 工具層（real ToolRegistry / ToolExecutor / Sandbox / Permissions + 4 內建通用工具）
-   - 預期：Cat 2 進 Level 3 / 處理 CARRY-017 + CARRY-021
-3. **Sprint 51.2 啟動**（51.1 closeout 後）：範疇 3 記憶層
+1. ✅ **51.0 closeout 完成**
+2. ✅ **Sprint 51.1 closeout 完成**：Cat 2 Level 1+ → **Level 3**（HEAD `7595e60`）
+3. ✅ **Sprint 51.2 closeout 完成**：Cat 3 Level 0 → **Level 3**；新增 CARRY-026/027/028/029/030
+4. **Sprint 52.1 待啟動**（51.2 closeout 後）：範疇 4 Context Mgmt（Compaction + token counter + 30+ turn 對話）— 將整合 51.2 memory layers 為 PromptBuilder（52.2）的注入源
 
 ---
 
-**Last Updated**：2026-04-30 (Sprint 51.0 ✅ DONE — Phase 51 progress 1/3 = 33%; V2 cumulative 7/22 sprints = 32%)
+**Last Updated**：2026-04-30 (Sprint 51.2 ✅ DONE — Phase 51 ✅ COMPLETE 3/3 = 100%; V2 cumulative 9/22 sprints = 41%)
 **Maintainer**：用戶 + AI 助手共同維護
