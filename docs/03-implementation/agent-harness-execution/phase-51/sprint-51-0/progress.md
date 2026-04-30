@@ -309,3 +309,90 @@
 - **Day 4.6**：commit
 
 ---
+
+## Day 4 — 2026-04-30（actual ~1h 15min / plan 4h 45min）
+
+### Accomplishments
+
+- [x] **4.1** `tests/integration/mock_services/test_mock_services_startup.py` — 12 tests via TestClient (in-process); 7 routers + 404 + dry_run + close
+- [x] **4.2** `tests/integration/business_domain/test_business_tools_via_registry.py` — 10 tests via httpx ASGI transport monkey-patch (in-process)
+- [x] **4.3** `make_default_executor()` added to `business_domain/_register_all.py` (echo + 18 business = 19 specs)
+- [x] **4.4** `api/v1/chat/handler.py` — both build_echo_demo_handler + build_real_llm_handler now use `make_default_executor()` instead of `make_echo_executor()`
+- [x] **4.5** `tests/e2e/test_agent_loop_with_mock_patrol.py` — subprocess fixture (real uvicorn:8001) + AgentLoopImpl + MockChatClient pre-script (2 tests)
+
+### Files added (3) / modified (2)
+
+| File | Lines | Type |
+|------|-------|------|
+| `tests/integration/mock_services/test_mock_services_startup.py` | 134 | new test |
+| `tests/integration/business_domain/test_business_tools_via_registry.py` | 230 | new test |
+| `tests/e2e/test_agent_loop_with_mock_patrol.py` | 200 | new test |
+| `business_domain/_register_all.py` | +37 | added `make_default_executor()` |
+| `api/v1/chat/handler.py` | -1, +1 | swap `make_echo_executor` -> `make_default_executor` |
+
+### Estimate vs Actual
+
+| Task | Plan | Actual | Diff |
+|------|------|--------|------|
+| 4.1 mock_services_startup | 45 min | ~10 min | -78% |
+| 4.2 business_tools_via_registry | 60 min | ~15 min | -75% |
+| 4.3 worker / make_default_executor | 30 min | ~10 min | -67% |
+| 4.4 chat handler swap | 30 min | ~3 min | -90% |
+| 4.5 e2e mock_patrol (subprocess fixture) | 90 min | ~25 min | -72% |
+| **Day 4 design + debugging** | (in tasks) | ~12 min | — |
+| **Day 4 總計** | **4h 15min** | **~1h 15min** | **-71%** |
+
+### Surprises / Discoveries
+
+- **Test directory `__init__.py` shadows source package**：建立 `tests/integration/business_domain/__init__.py` 後，pytest 將其視為 `business_domain` package，於 sys.path 上 shadowing 真實的 `src/business_domain/`。Fix：刪除 test dir 的 `__init__.py`（pytest 慣例：test dir 不要 `__init__.py`，讓 rootdir 自動發現）。
+- **TestClient lifespan 須用 `with TestClient(app) as c:`**：FastAPI 0.110+ 預設 TestClient(app) 不觸發 lifespan；改 `with` syntax 才會 load_seed via on_startup hook。
+- **httpx ASGI transport 路由**：`httpx.ASGITransport(app=app)` 將所有 httpx 請求路由到 in-process FastAPI app，不論 base_url；monkeypatch `httpx.AsyncClient` 可在 4.2 不啟 subprocess 完成 18 tool 測試。
+- **ToolCallExecuted 沒 `success` field**：`success` 是 ToolResult 上的屬性，event 用 `ToolCallFailed` 表示失敗（無對應 success=True event；assertion 改 `failed == []`）。
+- **AgentLoopImpl.run signature**：`run(session_id=UUID, user_input=str)`，不是 messages list；events 是 AsyncIterator[LoopEvent]。e2e 模仿 50.1 test_e2e_echo 結構即可。
+- **Plan estimate Day 4 -71%**：包含 ~10min 找 test dir __init__.py shadow 問題；累計 Day 0-4 ~5h 22min vs plan 23h 5min（-77%）。
+
+### Branch / Working Tree State
+
+- **HEAD**：`b344553`（Day 3 closeout）→ pending Day 4 main commit + Day 4 closeout commit
+- **Files**：3 new tests + 2 modified（_register_all + handler.py）
+- **Working tree**：Day 4 files staged-ready
+
+### Quality Gates
+
+- ✅ Full test suite **283 PASSED** / 0 SKIPPED / 0 FAILED in 8.54s
+- ✅ Sprint 50.2 baseline 259 PASS preserved（259 + 24 new Day 4 = 283）— 無 regression
+- ✅ Day 4 specific:
+  - mock_services_startup: 12 / 12 PASS
+  - business_tools_via_registry: 10 / 10 PASS（含 high_risk 確認 + unknown_tool error case）
+  - e2e mock_patrol: 2 / 2 PASS（含 subprocess startup ~3s）
+- ✅ make_default_executor 19 specs / 19 handlers
+- ✅ chat handler 兩 site swap clean
+- ⏭ mypy strict on test files：跑（在主 quality gate）
+
+### V2 紀律 9 項對照
+
+| # | 紀律 | 狀態 |
+|---|------|------|
+| 1 | Server-Side First | ✅ 全部 server-side test；frontend 0 變動 |
+| 2 | LLM Provider Neutrality | ✅ 用 MockChatClient（不打真 Azure） |
+| 3 | CC Reference 不照搬 | ✅ |
+| 4 | 17.md Single-source | ⏸ Day 5.1 同步 18 entries |
+| 5 | 11+1 範疇歸屬 | ✅ make_default_executor 在 business_domain（非 agent_harness） |
+| 6 | 04 Anti-patterns | ✅ AP-3（test dir 與 source 邏輯隔離）/ AP-4（每 test 有實際 assertion，非空 stub） |
+| 7 | Sprint workflow | ✅ |
+| 8 | File header convention | ✅ 3 新 test 檔皆有完整 V2 header |
+| 9 | Multi-tenant rule | ✅（mock test 不需 tenant_id；51.1 加） |
+
+### Next Day Plan
+
+- **Day 5**：17.md sync + retro + closeout（plan 3h / 預估 actual ~45min）
+- **Day 5.1**：17.md §3.1 加 18 entries
+- **Day 5.2**：docker-compose.dev.yml 加 mock_services service
+- **Day 5.3**：progress.md final entry
+- **Day 5.4**：retrospective.md
+- **Day 5.5**：Phase 51 README 更新 51.0 ✅ DONE
+- **Day 5.6**：memory/project_phase51_tools_memory.md
+- **Day 5.7**：sprint-51-0-checklist 全 [x] / 🚧
+- **Day 5.8**：Day 5 closeout commit
+
+---
