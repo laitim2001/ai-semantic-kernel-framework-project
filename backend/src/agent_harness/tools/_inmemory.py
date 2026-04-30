@@ -51,6 +51,7 @@ from typing import Any
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
+    ExecutionContext,
     SpanCategory,
     ToolAnnotations,
     ToolCall,
@@ -112,7 +113,9 @@ class InMemoryToolExecutor(ToolExecutor):
         call: ToolCall,
         *,
         trace_context: TraceContext | None = None,
+        context: ExecutionContext | None = None,  # 51.1 ABC sync; not consumed in stub
     ) -> ToolResult:
+        del context  # stub ignores context (DEPRECATED-IN: 51.1)
         if call.name not in self._handlers:
             return ToolResult(
                 tool_call_id=call.id,
@@ -164,10 +167,11 @@ class InMemoryToolExecutor(ToolExecutor):
         calls: list[ToolCall],
         *,
         trace_context: TraceContext | None = None,
+        context: ExecutionContext | None = None,  # 51.1 ABC sync
     ) -> list[ToolResult]:
         results: list[ToolResult] = []
         for c in calls:
-            results.append(await self.execute(c, trace_context=trace_context))
+            results.append(await self.execute(c, trace_context=trace_context, context=context))
         return results
 
     def _safe_emit(

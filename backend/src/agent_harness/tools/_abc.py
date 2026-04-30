@@ -28,7 +28,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from agent_harness._contracts import ToolCall, ToolResult, ToolSpec, TraceContext
+from agent_harness._contracts import (
+    ExecutionContext,
+    ToolCall,
+    ToolResult,
+    ToolSpec,
+    TraceContext,
+)
 
 
 class ToolRegistry(ABC):
@@ -53,6 +59,7 @@ class ToolExecutor(ABC):
         call: ToolCall,
         *,
         trace_context: TraceContext | None = None,
+        context: ExecutionContext | None = None,
     ) -> ToolResult: ...
 
     @abstractmethod
@@ -61,6 +68,7 @@ class ToolExecutor(ABC):
         calls: list[ToolCall],
         *,
         trace_context: TraceContext | None = None,
+        context: ExecutionContext | None = None,
     ) -> list[ToolResult]:
         """Honors ConcurrencyPolicy from each ToolSpec."""
         ...

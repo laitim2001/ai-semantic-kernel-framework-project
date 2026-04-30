@@ -10,7 +10,7 @@
 
 - **Day 0**：✅ Plan + Checklist + branch（4h）
 - **Day 1**：✅ ToolSpec extension（CARRY-021）+ ToolRegistryImpl（5h plan / actual ~1h）
-- **Day 2**：⏸ ToolExecutorImpl + PermissionChecker（6h）
+- **Day 2**：✅ ToolExecutorImpl + PermissionChecker（6h plan / actual ~1.5h）
 - **Day 3**：⏸ SandboxBackend + SubprocessSandbox + exec_tools（5h）
 - **Day 4**：⏸ search_tools + hitl_tools + memory_tools placeholder + tests（6h）
 - **Day 5**：⏸ 18 業務 stub migration + _inmemory.py 刪 + retro + closeout（5h）
@@ -84,7 +84,7 @@
   - `from agent_harness._contracts import ToolHITLPolicy` 亦 OK
 
 ### 1.6 Day 1 commit（15 min）
-- [ ] **commit `feat(tools, sprint-51-1): Day 1 — ToolSpec hitl_policy/risk_level + ToolRegistryImpl + 17.md §1.1 sync`**
+- [x] **commit `feat(tools, sprint-51-1): Day 1 — ToolSpec hitl_policy/risk_level + ToolRegistryImpl + 17.md §1.1 sync`** ✅ `5468303`
   - DoD: 283 baseline 全 PASS ✅；mypy strict OK ✅；black clean ✅；4/5 V2 lints OK（AP-1 skipped: orchestrator_loop dir 未在當前 mypy --root path）
 
 ---
@@ -92,34 +92,43 @@
 ## Day 2 — ToolExecutorImpl + PermissionChecker（預估 6 小時）
 
 ### 2.1 PermissionDecision enum + PermissionChecker class（60 min）
-- [ ] **`agent_harness/tools/permissions.py`**
-  - DoD: PermissionDecision = ALLOW / REQUIRE_APPROVAL / DENY enum；PermissionChecker.check(spec, call, context) returns Decision
+- [x] **`agent_harness/tools/permissions.py`** ✅
+  - PermissionDecision = ALLOW / REQUIRE_APPROVAL / DENY enum；PermissionChecker.check(spec, call, context) returns Decision
   - 3 維度檢查：HITL policy / risk_level / annotations.destructive
+  - **Refactor**：`ExecutionContext` 移到 `_contracts/tools.py`（single-source）讓 ToolExecutor ABC 可 reference 而不引入 dependency cycle；§17.md §1.1 同步加 row（pending Day 5 closeout sync）
 
 ### 2.2 ToolExecutorImpl class（90 min）
-- [ ] **`agent_harness/tools/executor.py:ToolExecutorImpl(ToolExecutor)`**
-  - DoD:
-    - `__init__` 接 handlers dict + permission_checker + tracer
-    - `execute(call, *, trace_context=None)` — pre-check permission → JSONSchema validate → run handler → emit metric
-    - `execute_batch(calls)` — 依 ConcurrencyPolicy 路由 read-parallel via asyncio.gather / write-sequential
+- [x] **`agent_harness/tools/executor.py:ToolExecutorImpl(ToolExecutor)`** ✅
+  - `__init__(*, registry, handlers, permission_checker, tracer, metric_registry)`
+  - `execute(call, *, trace_context, context)` — registry lookup → permission gate → JSONSchema validate → handler → tracer span + metric emit
+  - `execute_batch(calls, *, trace_context, context)` — `_batch_can_parallelize()` 判斷後路由 asyncio.gather 或 sequential loop
+  - ABC `_abc.py:ToolExecutor` 同步加 `context` kwarg；`_inmemory.InMemoryToolExecutor` 同步加（unused; DEPRECATED-IN: 51.1）
 
 ### 2.3 JSONSchema validation（30 min）
-- [ ] **executor.execute() 加 validator**
-  - DoD: bad input → ToolResult.success=False + error="schema mismatch: <field>: <reason>"；validator cached per spec
-  - test 覆蓋
+- [x] **executor.execute() 加 validator** ✅
+  - bad input → ToolResult.success=False + error="schema mismatch: <field>: <message>"
+  - validator 用 `_validator_cache: dict[str, Draft202012Validator]` per-spec cached
+  - 4 tests（valid / missing required / wrong type / cache verification）
 
 ### 2.4 Permission tests（45 min）
-- [ ] **`tests/unit/tools/test_executor.py` permission gate tests**
-  - DoD: 3 種 Decision 各 ≥ 1 test（ALLOW / REQUIRE_APPROVAL / DENY）
-  - test 用 spec.hitl_policy / spec.risk_level 不同組合
+- [x] **`tests/unit/agent_harness/tools/test_executor.py` permission gate tests** ✅
+  - 3 種 Decision 全覆蓋：
+    - ALLOW: `test_allow_simple_read_only` / `test_allow_destructive_with_explicit_approval`
+    - REQUIRE_APPROVAL: `test_require_approval_always_ask` / `test_require_approval_ask_once` / `test_require_approval_high_risk_overrides_auto_hitl`
+    - DENY: `test_deny_destructive_without_explicit_approval` / `test_deny_beats_require_approval`
+  - 加 `test_permission_decision_enum_values` direct enum assertion
 
 ### 2.5 Concurrency tests（45 min）
-- [ ] **`tests/unit/tools/test_executor.py` concurrency tests**
-  - DoD: read-only → asyncio.gather；write → sequential；ALL_PARALLEL → gather；mock handlers 計時驗證
+- [x] **`tests/unit/agent_harness/tools/test_executor.py` concurrency tests** ✅
+  - `test_batch_read_only_parallel_runs_concurrently`（3 × 100ms slow handler，threshold < 250ms）
+  - `test_batch_with_sequential_runs_serial`（混合 SEQ + RO_PARALLEL → sequential，threshold > 280ms）
+  - `test_batch_all_parallel_runs_concurrently`（2 × ALL_PARALLEL，threshold < 180ms）
+  - `test_batch_empty_returns_empty`
+  - Edge cases：unknown_tool / handler_exception / no_handler_registered
 
 ### 2.6 Day 2 commit（15 min）
 - [ ] **commit `feat(tools, sprint-51-1): Day 2 — ToolExecutorImpl + PermissionChecker + JSONSchema validation`**
-  - DoD: pytest 全 PASS；mypy strict OK
+  - DoD: pytest 302 PASS（19 new）✅；mypy strict 35 source files clean ✅；4/4 V2 lints OK ✅；black formatted ✅
 
 ---
 

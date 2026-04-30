@@ -89,6 +89,7 @@ from agent_harness._contracts.subagent import (
 )
 from agent_harness._contracts.tools import (
     ConcurrencyPolicy,
+    ExecutionContext,
     ToolAnnotations,
     ToolHITLPolicy,
     ToolResult,
@@ -112,6 +113,7 @@ __all__ = [
     "ToolAnnotations",
     "ConcurrencyPolicy",
     "ToolHITLPolicy",
+    "ExecutionContext",
     # state
     "LoopState",
     "TransientState",

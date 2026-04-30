@@ -13,13 +13,18 @@ from agent_harness.tools._inmemory import (
     echo_handler,
     make_echo_executor,
 )
+from agent_harness.tools.executor import ToolExecutorImpl
+from agent_harness.tools.permissions import PermissionChecker, PermissionDecision
 from agent_harness.tools.registry import ToolRegistryImpl
 
 __all__ = [
     "ECHO_TOOL_SPEC",
     "InMemoryToolExecutor",
     "InMemoryToolRegistry",
+    "PermissionChecker",
+    "PermissionDecision",
     "ToolExecutor",
+    "ToolExecutorImpl",
     "ToolHandler",
     "ToolRegistry",
     "ToolRegistryImpl",

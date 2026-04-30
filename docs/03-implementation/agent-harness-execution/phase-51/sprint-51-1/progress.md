@@ -67,15 +67,72 @@
 
 ---
 
+## Day 2 — 2026-04-30 (PermissionChecker + ToolExecutorImpl + JSONSchema)
+
+**Estimated**：6h / **Actual**：~1.5h
+
+### Done
+- **2.1 PermissionChecker + ExecutionContext refactor**：
+  - `tools/permissions.py` 新建 PermissionDecision enum + PermissionChecker.check() 3 維度（HITL policy / risk_level / annotations.destructive）
+  - **Refactor 期間**：plan 把 `ExecutionContext` 設計在 `permissions.py`，但 ToolExecutor ABC（`_abc.py`）需要在 method 簽名引用 ExecutionContext，會反向 import permissions → dependency cycle。解：把 ExecutionContext 移到 `_contracts/tools.py`（single-source per 17.md §1.1），permissions.py / executor.py / ABC 全從 `_contracts` import。`_contracts/__init__.py` export 同步加。
+  - 17.md §1.1 ExecutionContext entry sync 留 Day 5 closeout 一起補。
+- **2.2 ToolExecutorImpl**：
+  - `tools/executor.py` 新建 ~190 行 — `__init__(*, registry, handlers, permission_checker, tracer, metric_registry)`
+  - `execute(call, *, trace_context, context)`：6 階段 pipeline（lookup → permission → schema → handler dispatch → tracer span → metric emit）
+  - `execute_batch(calls, *, trace_context, context)`：`_batch_can_parallelize()` 根據 batch 內全部 spec 的 ConcurrencyPolicy 決定 `asyncio.gather` 或 sequential await loop（任一 spec 為 SEQUENTIAL → fall back sequential，conservative）
+  - 失敗路徑統一走 `_fail()` helper：拋 ToolResult.error + 對應 status label 給 metric（unknown / denied / approval_required / schema_invalid / error）
+- **2.3 JSONSchema runtime validation**：
+  - `Draft202012Validator` per-spec cached in `_validator_cache: dict[str, Validator]`
+  - bad input → `ToolResult(success=False, error="schema mismatch: <path>: <message>")`
+- **ABC sync**：`_abc.py:ToolExecutor.execute/execute_batch` 加 `context: ExecutionContext | None = None` kwarg；`_inmemory.InMemoryToolExecutor` 同步（accepts 但 unused）
+- **`tools/__init__.py`** export `ToolExecutorImpl` / `PermissionChecker` / `PermissionDecision`
+- **2.4 + 2.5 tests**：`tests/unit/agent_harness/tools/test_executor.py`（19 tests，~270 行）
+  - Permission（7）：3 Decision 各 ≥ 1（ALLOW / REQUIRE_APPROVAL / DENY），含 resolution order test（DENY > REQUIRE_APPROVAL）
+  - JSONSchema（4）：valid / missing required / wrong type / validator cached
+  - Concurrency（4）：empty / read-only-parallel timing / sequential timing / all-parallel timing
+  - Edge（3）：unknown_tool / handler_exception / no_handler_registered
+  - Direct enum（1）：PermissionDecision values
+
+### Verification
+- pytest 19 new tests PASS（總 302 PASS / 0 SKIPPED）✅
+- mypy --strict 35 source files clean ✅
+- black formatted ✅
+- 4/4 V2 lints OK ✅（cross_category_import / llm_sdk_leak / duplicate_dataclass / sync_callback）
+
+### Notes
+- 計時 test thresholds：parallel ~100ms（threshold 250ms），serial ~300ms（threshold 280ms gates against false-pass parallel）；OS jitter 容忍 ~150% slack
+- Permission resolution order：destructive (DENY) > HITL/risk (REQUIRE_APPROVAL) > AUTO+LOW (ALLOW)；`test_deny_beats_require_approval` 明確驗證
+- `ASK_ONCE` 51.1 與 `ALWAYS_ASK` 同樣 REQUIRE_APPROVAL（per-session first-call tracking 留 53.3 ApprovalManager 一起做）
+- ExecutionContext single-source 重定址未在 plan 預期；屬 Day 2 期間發現的設計優化，登錄 retrospective
+
+### Files Changed
+**Modified (5)**：
+- `_contracts/tools.py` — +ExecutionContext dataclass + UUID import
+- `_contracts/__init__.py` — export ExecutionContext
+- `tools/_abc.py` — ABC 加 `context: ExecutionContext | None = None` kwarg
+- `tools/_inmemory.py` — sig sync (DEPRECATED-IN 51.1)
+- `tools/__init__.py` — export ToolExecutorImpl + PermissionChecker + PermissionDecision
+
+**Created (3)**：
+- `tools/permissions.py` — PermissionDecision + PermissionChecker
+- `tools/executor.py` — ToolExecutorImpl + ToolHandler type alias
+- `tests/unit/agent_harness/tools/test_executor.py` — 19 tests
+
+### Commit (pending)
+- Will commit as `feat(tools, sprint-51-1): Day 2 — ToolExecutorImpl + PermissionChecker + JSONSchema validation`
+
+---
+
 ## 估時 vs Actual（rolling）
 
 | Day | Plan | Actual | % |
 |-----|------|--------|---|
 | 0   | 4h   | ~1h    | 25% |
 | 1   | 5h   | ~1h    | 20% |
-| **累計** | **9h** | **~2h** | **22%** |
+| 2   | 6h   | ~1.5h  | 25% |
+| **累計** | **15h** | **~3.5h** | **23%** |
 
-V2 7-sprint avg 20%；51.0 23%；51.1 早期 22%（趨勢 nominal）。
+V2 7-sprint avg 20%；51.0 23%；51.1 early-mid 23%（趨勢 nominal）。
 
 ---
 

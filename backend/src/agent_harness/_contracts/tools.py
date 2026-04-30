@@ -44,6 +44,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal
+from uuid import UUID
 
 from agent_harness._contracts.hitl import RiskLevel
 
@@ -94,6 +95,21 @@ class ToolSpec:
     risk_level: RiskLevel = RiskLevel.LOW
     version: str = "1.0"
     tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ExecutionContext:
+    """Per-call invocation context for ToolExecutor pipeline.
+
+    Forward-compatible for Phase 53.3 RBAC wiring (tenant-scoped role checks
+    will read tenant_id) and HITL tracking (session_id ties first-call
+    state to session). `explicit_approval` lets the caller signal that the
+    operator has already authorized a destructive action this turn.
+    """
+
+    tenant_id: UUID | None = None
+    session_id: UUID | None = None
+    explicit_approval: bool = False
 
 
 @dataclass(frozen=True)
