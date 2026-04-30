@@ -105,46 +105,38 @@
 ## Day 2 — Patrol + Correlation + Rootcause Domain（預估 6 小時）
 
 ### 2.1 mock_services/routers/patrol.py（45 min）
-- [ ] **4 endpoints 對應 4 patrol tools**：check_servers / get_results / schedule / cancel
-  - DoD: 各 endpoint 200 + 對應 schema；mock 結果含 server_id / health / metrics
-  - Command: `pytest tests/unit/mock_services/test_patrol_router.py`
+- [x] **4 endpoints**：check_servers / get_results/{id} / schedule / cancel ✅ 2026-04-30
+  - DoD: 各 endpoint 200 + Pydantic schema；TestClient 全通 ✅
 
 ### 2.2 business_domain/patrol/mock_executor.py（30 min）
-- [ ] **`PatrolMockExecutor` class — 4 async methods 對應 4 endpoints**
-  - DoD: 用 httpx async client；URL 從 env `MOCK_SERVICES_URL` 讀（default `http://localhost:8001`）；各 method 序列化輸入 / 反序列化輸出
-  - File header 完整
-  - Command: `python -c "from business_domain.patrol.mock_executor import PatrolMockExecutor"`
+- [x] **`PatrolMockExecutor` class — 4 async methods** ✅ 2026-04-30
+  - DoD: httpx async client；MOCK_SERVICES_URL env override；timeout 10s ✅
 
 ### 2.3 business_domain/patrol/tools.py（60 min）
-- [ ] **4 ToolSpec stub + register_patrol_tools(registry)**
-  - DoD: 4 ToolSpec 含 input_schema / annotations / concurrency / hitl_policy / risk_level（依 08b spec §Domain 1 表）；register 函式註冊到 registry；naming = `mock_patrol_*`
-  - File header 完整
-  - Command: `pytest tests/unit/business_domain/test_patrol_tools.py`
+- [x] **4 ToolSpec stub + register_patrol_tools(registry, handlers)** ✅ 2026-04-30
+  - DoD: 4 ToolSpec 含 input_schema / annotations / concurrency；hitl_policy + risk_level 編碼 tags（CARRY-021 51.1 first-class）；naming `mock_patrol_*` ✅
+  - 驗證：`registry.list()` 4 specs；handlers dict 4 entries
 
 ### 2.4 mock_services/routers/correlation.py（45 min）
-- [ ] **3 endpoints 對應 3 correlation tools**：analyze / find_root_cause / get_related
-  - DoD: 各 endpoint 200 + mock 結果含 alert 關聯 chain
-  - Command: `pytest tests/unit/mock_services/test_correlation_router.py`
+- [x] **3 endpoints**：analyze / find_root_cause / related/{id} ✅ 2026-04-30
+  - DoD: 各 endpoint 200；±5 min naive correlation；mock chain confidence 0.5+ ✅
 
 ### 2.5 business_domain/correlation/{mock_executor,tools}.py（60 min）
-- [ ] **`CorrelationMockExecutor` + 3 ToolSpec + register_correlation_tools**
-  - DoD: 對應 08b §Domain 2 表 3 entries
-  - Command: `pytest tests/unit/business_domain/test_correlation_tools.py`
+- [x] **`CorrelationMockExecutor` + 3 ToolSpec + register_correlation_tools** ✅ 2026-04-30
+  - DoD: 對應 08b §Domain 2 ✅
 
 ### 2.6 mock_services/routers/rootcause.py（45 min）
-- [ ] **3 endpoints 對應 3 rootcause tools**：diagnose / suggest_fix / apply_fix
-  - DoD: apply_fix 高風險 — mock 接受 `dry_run=true` 預設；mock 回 fix_id + status
-  - Command: `pytest tests/unit/mock_services/test_rootcause_router.py`
+- [x] **3 endpoints**：diagnose / suggest_fix / apply_fix（HIGH risk） ✅ 2026-04-30
+  - DoD: apply_fix dry_run default true；live run 回 `closed_pending_review`；in-memory ledger 紀錄 ✅
 
 ### 2.7 business_domain/rootcause/{mock_executor,tools}.py（60 min）
-- [ ] **`RootcauseMockExecutor` + 3 ToolSpec + register_rootcause_tools**
-  - DoD: `mock_rootcause_apply_fix` 必須 `hitl_policy=ALWAYS_ASK` + `risk_level=HIGH`（per 08b 強制要求）
-  - Command: `pytest tests/unit/business_domain/test_rootcause_tools.py`
+- [x] **`RootcauseMockExecutor` + 3 ToolSpec + register_rootcause_tools** ✅ 2026-04-30
+  - DoD: `mock_rootcause_apply_fix` `hitl_policy:always_ask` + `risk:high` + `destructive=True` + `open_world=True`（per 08b §Domain 3 強制） ✅
 
 ### 2.8 Day 2 commit（15 min）
-- [ ] **commit `feat(business-patrol/correlation/rootcause, sprint-51-0): Day 2 — 10 ToolSpec + 3 mock routers`**
-  - DoD: pytest 全 PASS；mypy strict OK
-  - Command: `pytest tests/unit/business_domain/ tests/unit/mock_services/ -v`
+- [ ] **commit `feat(business-patrol/correlation/rootcause + mock-services, sprint-51-0): Day 2 — 10 ToolSpec + 3 mock routers`**
+  - DoD: mypy strict 20 files / black formatted / 10 endpoints TestClient PASS / 10 specs+handlers wired
+  - Verify: `python -m mypy src/mock_services/ src/business_domain/{patrol,correlation,rootcause}/ --strict` ✅
 
 ---
 

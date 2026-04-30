@@ -129,3 +129,96 @@
 - **Day 2.8**：commit
 
 ---
+
+## Day 2 — 2026-04-30（actual ~50min / plan 5h 45min）
+
+### Accomplishments
+
+- [x] **2.1** `mock_services/routers/patrol.py` 4 endpoints（check_servers / results/{id} / schedule / cancel）
+- [x] **2.2** `business_domain/patrol/mock_executor.py` httpx async client（base_url overridable via MOCK_SERVICES_URL env）
+- [x] **2.3** `business_domain/patrol/tools.py` 4 ToolSpec + `register_patrol_tools(registry, handlers)`
+- [x] **2.4** `mock_services/routers/correlation.py` 3 endpoints（analyze / find_root_cause / related/{id}）
+- [x] **2.5** `business_domain/correlation/{mock_executor,tools}.py` 3 ToolSpec + register
+- [x] **2.6** `mock_services/routers/rootcause.py` 3 endpoints（diagnose / suggest_fix / apply_fix HIGH risk）
+- [x] **2.7** `business_domain/rootcause/{mock_executor,tools}.py` 3 ToolSpec + register（apply_fix `always_ask` + `risk:high` + `destructive=True` + `open_world=True`）
+- **mock_services/main.py** 加 3 router include（patrol / correlation / rootcause）
+
+### Files added (9) / modified (1)
+
+| File | Lines | 範疇 |
+|------|-------|------|
+| `backend/src/mock_services/routers/patrol.py` | 113 | mock_services |
+| `backend/src/mock_services/routers/correlation.py` | 134 | mock_services |
+| `backend/src/mock_services/routers/rootcause.py` | 132 | mock_services |
+| `backend/src/business_domain/patrol/mock_executor.py` | 49 | business |
+| `backend/src/business_domain/patrol/tools.py` | 161 | business |
+| `backend/src/business_domain/correlation/mock_executor.py` | 47 | business |
+| `backend/src/business_domain/correlation/tools.py` | 121 | business |
+| `backend/src/business_domain/rootcause/mock_executor.py` | 41 | business |
+| `backend/src/business_domain/rootcause/tools.py` | 134 | business |
+| `backend/src/mock_services/main.py` | +5 | (modify: 3 router include) |
+
+### Estimate vs Actual
+
+| Task | Plan | Actual | Diff |
+|------|------|--------|------|
+| 2.1 patrol router | 45 min | ~5 min | -89% |
+| 2.2 patrol mock_executor | 30 min | ~3 min | -90% |
+| 2.3 patrol tools.py | 60 min | ~6 min | -90% |
+| 2.4 correlation router | 45 min | ~7 min | -84% |
+| 2.5 correlation executor + tools | 60 min | ~6 min | -90% |
+| 2.6 rootcause router | 45 min | ~6 min | -87% |
+| 2.7 rootcause executor + tools | 60 min | ~6 min | -90% |
+| mypy / black fix iteration | (in tasks) | ~7 min | — |
+| TestClient + register verify | 0 | ~5 min | — |
+| **Day 2 總計** | **5h 45min** | **~51 min** | **-85%** |
+
+### Surprises / Discoveries
+
+- **ToolSpec 沒有 hitl_policy / risk_level 直接 field** — 49.4 設計時只有 `name / description / input_schema / annotations / concurrency_policy / version / tags`。08b spec 提到 `hitl_policy` 但 `_contracts/tools.py` 未實作。Sprint 51.0 採 workaround：編碼到 `tags`（`hitl_policy:always_ask` / `risk:high`）。**CARRY-021** ToolSpec 加 first-class `hitl_policy: HITLPolicy | None` + `risk_level: Literal[low/medium/high] | None` 欄位 → 51.1 工作（51.1 是「範疇 2 工具層」sprint，正合適）。
+- **mypy strict `no-any-return`**：mock_executor 用 `httpx.Response.json()` 回 `Any`，但 method declared return type `list[dict[str, Any]]` 違反 strict。改 method return type 為 `Any`（mock dynamic JSON 本來就是 Any）；Phase 55 真實 integration 上線時 narrow types。
+- **mypy strict `dict` 必須 `dict[str, Any]`**：再次撞到，提早全檢查 mock_services router 私有 helper。
+- **InMemoryToolExecutor handlers 透過 init dict 傳入**：register_*_tools 必須同時更新 `registry`（specs）+ `handlers`（callable dict）。設計成 `register_<domain>_tools(registry, handlers, *, mock_url=...)` 兩參數，符合 InMemoryToolExecutor 的 `__init__(handlers=...)` API。
+- **Plan estimate 嚴重過保守**：Day 2 actual ~50 min vs plan 5h 45min（-85%）。Day 0+1+2 累計 ~3h 22min vs plan 13h 50min（-76%）。51.x 後 sprint 套 **0.2-0.3x correction factor** 給 mock + skeleton + register pattern 類 task。
+- **Naive correlation behaviour**：當 primary alert server_id=null 而其他 alert server_id 有值時，目前 filter 排除（`other.server_id and other.server_id != primary.server_id` → True for primary=null）。對 mock 行為 OK，retro 標記 51.1+ 真實 correlation 邏輯需精修。
+- **patrol/check_servers seeded vs synth fallback**：當 `scope` 內 server_id 已 seeded（pat_001 web-01 etc）回 seed；其他 server_id 透過 `_make_result()` 用 hash 生成 deterministic mock metrics。設計兼容真實環境（已知 + 未知 server）。
+
+### Branch / Working Tree State
+
+- **HEAD**：`66aba50`（Day 1 closeout）→ pending Day 2 main commit + Day 2 closeout commit
+- **Files**：9 new + 1 modified（main.py +5 lines）
+- **Working tree**：Day 2 files staged-ready
+
+### Quality Gates
+
+- ✅ mypy strict on `src/mock_services/` + `src/business_domain/{patrol,correlation,rootcause}/` — 20 source files no issues
+- ✅ black --check — 11 files reformatted（auto-applied）
+- ✅ 10 mock endpoints TestClient smoke PASS（4 patrol + 3 correlation + 3 rootcause）
+- ✅ register_*_tools wire 10 ToolSpec + 10 handlers correctly（apply_fix 確認 always_ask / high）
+- ⏭ pytest unit tests — Day 4.1-4.2 加（plan 安排）
+
+### V2 紀律 9 項對照
+
+| # | 紀律 | 狀態 |
+|---|------|------|
+| 1 | Server-Side First | ✅ mock_services 在 backend；frontend 0 變動 |
+| 2 | LLM Provider Neutrality | ✅ business_domain/* 0 LLM SDK import |
+| 3 | CC Reference 不照搬 | ✅ V2 自設計 mock_executor + register pattern |
+| 4 | 17.md Single-source | ⏸ Day 5.1 加 18 entries |
+| 5 | 11+1 範疇歸屬 | ✅ tools.py = 業務層 / mock_executor = 業務層 / mock_services = 平台輔助 |
+| 6 | 04 Anti-patterns | ✅ AP-3 安全（無跨 domain import）/ AP-6 mock_executor 各 domain 獨立 |
+| 7 | Sprint workflow | ✅ Day 2 嚴格 plan→checklist→code→update→commit |
+| 8 | File header convention | ✅ 9 新檔皆有完整 V2 header |
+| 9 | Multi-tenant rule | ✅ mock 不 tenant-aware（CARRY 51.1 加 tenant_id 注入；plan §決策 5 已記） |
+
+### Next Day Plan
+
+- **Day 3**：audit_domain + incident domain（plan 6h / 預估 actual ~1h）
+- **Day 3.1**：mock_services/routers/audit.py 3 endpoints
+- **Day 3.2**：business_domain/audit_domain/{mock_executor, tools}.py 3 ToolSpec
+- **Day 3.3**：mock_services/routers/incident.py 5 endpoints（含 close 高風險）
+- **Day 3.4**：business_domain/incident/{mock_executor, tools}.py 5 ToolSpec（close `always_ask` + `high`）
+- **Day 3.5**：business_domain/_register_all.py aggregator（一次呼叫 5 個 register_<domain>_tools）
+- **Day 3.6**：commit
+
+---
