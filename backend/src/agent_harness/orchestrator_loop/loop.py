@@ -101,7 +101,6 @@ from .termination import (
     should_terminate_by_turns,
 )
 
-
 # Need imports from sibling adapter / tools / output_parser modules:
 from adapters._base.chat_client import ChatClient
 from agent_harness.output_parser import OutputParser, OutputType, classify_output
@@ -211,9 +210,7 @@ class AgentLoopImpl(AgentLoop):
                     tokens_used += response.usage.total_tokens
 
                 # === Parse + emit LLMResponded + Thinking ==================
-                parsed = await self._output_parser.parse(
-                    response, trace_context=ctx
-                )
+                parsed = await self._output_parser.parse(response, trace_context=ctx)
                 # 50.2: LLMResponded carries the canonical (content, tool_calls, thinking) tuple
                 # per 02-architecture-design.md §SSE llm_response schema. Thinking event is kept
                 # for 50.1 test backward compatibility but no longer the SSE-canonical form.
@@ -273,9 +270,7 @@ class AgentLoopImpl(AgentLoop):
                         trace_context=ctx,
                     )
                     try:
-                        result = await self._tool_executor.execute(
-                            tc, trace_context=ctx
-                        )
+                        result = await self._tool_executor.execute(tc, trace_context=ctx)
                     except asyncio.CancelledError:
                         yield LoopCompleted(
                             stop_reason=TerminationReason.CANCELLED.value,

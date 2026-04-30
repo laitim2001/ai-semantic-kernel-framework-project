@@ -1,8 +1,8 @@
 """
 File: backend/tests/integration/business_domain/test_business_tools_via_registry.py
-Purpose: Execute all 18 business ToolSpecs through InMemoryToolRegistry; httpx routed in-process via ASGI.
+Purpose: Execute all 18 business ToolSpecs through ToolRegistryImpl; httpx routed in-process via ASGI.
 Category: Tests / Integration / business_domain
-Scope: Phase 51 / Sprint 51.0 Day 4.2
+Scope: Phase 51 / Sprint 51.0 Day 4.2; updated Sprint 51.1 Day 5 (CARRY-017)
 
 Description:
     Verifies the full registration -> execution chain WITHOUT a running
@@ -11,10 +11,20 @@ Description:
 
     Flow per tool:
       1. ToolCall constructed with realistic arguments
-      2. InMemoryToolExecutor.execute() runs the registered handler
+      2. ToolExecutorImpl.execute() runs the registered handler (after the
+         permission gate — see permissive checker note below)
       3. Handler calls <Domain>MockExecutor.<method>() via httpx
       4. ASGI transport routes httpx to mock_services FastAPI app
       5. Response JSON serialized as ToolResult.content
+
+    Sprint 51.1 Day 5 migration: switched from InMemoryToolRegistry /
+    InMemoryToolExecutor (deleted) to production ToolRegistryImpl /
+    ToolExecutorImpl. Several tests exercise HIGH-risk + ALWAYS_ASK tools
+    (e.g. mock_rootcause_apply_fix, mock_incident_close) whose permission
+    gate would normally short-circuit handler execution. To preserve the
+    original "handler-routing" test focus, an `_AllowAllPermissionChecker`
+    is injected — permission semantics are independently covered in
+    tests/unit/agent_harness/tools/test_executor.py.
 
 Created: 2026-04-30 (Sprint 51.0 Day 4)
 Last Modified: 2026-04-30
@@ -29,11 +39,38 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_harness._contracts import ToolCall
-from agent_harness.tools._inmemory import InMemoryToolExecutor, InMemoryToolRegistry
+from agent_harness._contracts import (
+    ExecutionContext,
+    RiskLevel,
+    ToolCall,
+    ToolHITLPolicy,
+)
+from agent_harness.tools import (
+    PermissionChecker,
+    PermissionDecision,
+    ToolExecutorImpl,
+    ToolRegistryImpl,
+)
 from business_domain._register_all import register_all_business_tools
 from mock_services.data.loader import load_seed
 from mock_services.main import app
+
+
+class _AllowAllPermissionChecker(PermissionChecker):
+    """Test-only checker that always returns ALLOW.
+
+    Used to keep this suite focused on handler routing through the ASGI
+    transport. Production permission semantics are covered in
+    tests/unit/agent_harness/tools/test_executor.py.
+    """
+
+    def check(
+        self,
+        spec: Any,  # noqa: ANN401 — relax for test
+        call: ToolCall,
+        context: ExecutionContext,
+    ) -> PermissionDecision:
+        return PermissionDecision.ALLOW
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -57,11 +94,15 @@ def patched_httpx(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def registry_and_executor() -> tuple[InMemoryToolRegistry, InMemoryToolExecutor]:
-    registry = InMemoryToolRegistry()
+def registry_and_executor() -> tuple[ToolRegistryImpl, ToolExecutorImpl]:
+    registry = ToolRegistryImpl()
     handlers: dict[str, Any] = {}
     register_all_business_tools(registry, handlers)
-    executor = InMemoryToolExecutor(handlers=handlers)
+    executor = ToolExecutorImpl(
+        registry=registry,
+        handlers=handlers,
+        permission_checker=_AllowAllPermissionChecker(),
+    )
     return registry, executor
 
 
@@ -71,7 +112,7 @@ def _call(name: str, args: dict[str, Any]) -> ToolCall:
 
 @pytest.mark.asyncio
 async def test_registry_has_18_business_tools(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
+    registry_and_executor: tuple[ToolRegistryImpl, ToolExecutorImpl],
 ) -> None:
     registry, _ = registry_and_executor
     specs = registry.list()
@@ -86,23 +127,31 @@ async def test_registry_has_18_business_tools(
 
 
 @pytest.mark.asyncio
-async def test_high_risk_tools_tagged_correctly(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
-) -> None:
-    registry, _ = registry_and_executor
-    high_risk = [s for s in registry.list() if "risk:high" in s.tags]
+async def test_high_risk_tools_use_first_class_fields() -> None:
+    """Sprint 51.1 CARRY-021: HIGH-risk tools use first-class hitl_policy /
+    risk_level fields, not tags-encoded `risk:high` / `hitl_policy:always_ask`.
+    """
+    registry = ToolRegistryImpl()
+    handlers: dict[str, Any] = {}
+    register_all_business_tools(registry, handlers)
+
+    high_risk = [s for s in registry.list() if s.risk_level is RiskLevel.HIGH]
     assert {s.name for s in high_risk} == {
         "mock_rootcause_apply_fix",
         "mock_incident_close",
     }
     for spec in high_risk:
-        assert "hitl_policy:always_ask" in spec.tags
+        assert spec.hitl_policy is ToolHITLPolicy.ALWAYS_ASK
         assert spec.annotations.destructive is True
+        # tags must NOT contain legacy encoding
+        for tag in spec.tags:
+            assert not tag.startswith("hitl_policy:")
+            assert not tag.startswith("risk:")
 
 
 @pytest.mark.asyncio
 async def test_patrol_check_servers(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
+    registry_and_executor: tuple[ToolRegistryImpl, ToolExecutorImpl],
 ) -> None:
     _, executor = registry_and_executor
     result = await executor.execute(
@@ -117,7 +166,7 @@ async def test_patrol_check_servers(
 
 @pytest.mark.asyncio
 async def test_patrol_get_results(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
+    registry_and_executor: tuple[ToolRegistryImpl, ToolExecutorImpl],
 ) -> None:
     _, executor = registry_and_executor
     result = await executor.execute(_call("mock_patrol_get_results", {"patrol_id": "pat_001"}))
@@ -128,7 +177,7 @@ async def test_patrol_get_results(
 
 @pytest.mark.asyncio
 async def test_correlation_find_root_cause(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
+    registry_and_executor: tuple[ToolRegistryImpl, ToolExecutorImpl],
 ) -> None:
     _, executor = registry_and_executor
     result = await executor.execute(
@@ -143,7 +192,7 @@ async def test_correlation_find_root_cause(
 
 @pytest.mark.asyncio
 async def test_rootcause_diagnose(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
+    registry_and_executor: tuple[ToolRegistryImpl, ToolExecutorImpl],
 ) -> None:
     _, executor = registry_and_executor
     result = await executor.execute(_call("mock_rootcause_diagnose", {"incident_id": "inc_001"}))
@@ -155,7 +204,7 @@ async def test_rootcause_diagnose(
 
 @pytest.mark.asyncio
 async def test_rootcause_apply_fix_dry_run(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
+    registry_and_executor: tuple[ToolRegistryImpl, ToolExecutorImpl],
 ) -> None:
     _, executor = registry_and_executor
     result = await executor.execute(
@@ -172,7 +221,7 @@ async def test_rootcause_apply_fix_dry_run(
 
 @pytest.mark.asyncio
 async def test_audit_query_logs(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
+    registry_and_executor: tuple[ToolRegistryImpl, ToolExecutorImpl],
 ) -> None:
     _, executor = registry_and_executor
     result = await executor.execute(_call("mock_audit_query_logs", {"limit": 5}))
@@ -183,7 +232,7 @@ async def test_audit_query_logs(
 
 @pytest.mark.asyncio
 async def test_incident_create_then_close(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
+    registry_and_executor: tuple[ToolRegistryImpl, ToolExecutorImpl],
 ) -> None:
     _, executor = registry_and_executor
 
@@ -218,7 +267,7 @@ async def test_incident_create_then_close(
 
 @pytest.mark.asyncio
 async def test_unknown_tool_returns_error_result(
-    registry_and_executor: tuple[InMemoryToolRegistry, InMemoryToolExecutor],
+    registry_and_executor: tuple[ToolRegistryImpl, ToolExecutorImpl],
 ) -> None:
     _, executor = registry_and_executor
     result = await executor.execute(_call("nonexistent_tool", {}))

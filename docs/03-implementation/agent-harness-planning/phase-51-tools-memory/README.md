@@ -1,9 +1,10 @@
 # Phase 51 — Tools + Memory
 
-**Phase 進度**：Sprint 51.0 ✅ DONE / Sprint 51.1 ⏸ 未啟動 / Sprint 51.2 ⏸ 未啟動 — **1 / 3 sprint complete（33%）**
+**Phase 進度**：Sprint 51.0 ✅ DONE / Sprint 51.1 ✅ DONE / Sprint 51.2 ⏸ 未啟動 — **2 / 3 sprint complete（67%）**
 **啟動日期**：2026-04-30（接 Phase 50 closeout）
 **Sprint 51.0 完成日期**：2026-04-30
-**狀態**：🟢 Phase 51 進行中 — Sprint 51.0 ✅ DONE；51.1 plan/checklist 待 user 指示後再寫（rolling）
+**Sprint 51.1 完成日期**：2026-04-30
+**狀態**：🟢 Phase 51 進行中 — Sprint 51.0 + 51.1 ✅ DONE；51.2 plan/checklist 待 user 指示後再寫（rolling）
 
 ---
 
@@ -23,8 +24,8 @@
 
 | Sprint | 狀態 | 主題 | 完成日期 | Branch / Commits |
 |--------|------|------|---------|------------------|
-| **51.0** | ✅ DONE | Mock 企業工具 + 業務工具骨架（**新增 sprint**） | 2026-04-30 | `feature/phase-51-sprint-0-mock-business-tools`（~12 commits incl. closeout） |
-| **51.1** | ⏸ 待啟動 | 範疇 2 工具層（Level 3） | TBD | TBD |
+| **51.0** | ✅ DONE | Mock 企業工具 + 業務工具骨架（**新增 sprint**） | 2026-04-30 | `feature/phase-51-sprint-0-mock-business-tools`（12 commits）→ merged main `8cd47ca` |
+| **51.1** | ✅ DONE | 範疇 2 工具層（Level 3）— ToolSpec first-class field + ToolRegistryImpl + Sandbox + 6 內建工具 + 18 業務 stub migration + _inmemory deletion | 2026-04-30 | `feature/phase-51-sprint-1-cat2-tool-layer`（5 commits + Day 5 closeout） |
 | **51.2** | ⏸ 待啟動 | 範疇 3 記憶層（Level 3） | TBD | TBD |
 
 ---
@@ -52,13 +53,13 @@ docs/03-implementation/agent-harness-execution/phase-51/
 
 ## 範疇成熟度演進（規劃）
 
-| 範疇 | Pre-51.0 | Post-51.0 ✅ | Post-51.1 | Post-51.2 |
-|------|---------|-------------|----------|-----------|
-| 1. Orchestrator Loop | Level 3 | **Level 3** | Level 3 | Level 3 |
-| 2. Tool Layer | Level 1 | **Level 1+**（18 業務 stub + register pattern + e2e via real subprocess）| Level 3 | Level 3 |
+| 範疇 | Pre-51.0 | Post-51.0 ✅ | Post-51.1 ✅ | Post-51.2 |
+|------|---------|-------------|-------------|-----------|
+| 1. Orchestrator Loop | Level 3 | **Level 3** | **Level 3** | Level 3 |
+| 2. Tool Layer | Level 1 | **Level 1+**（18 業務 stub + register pattern + e2e via real subprocess）| **Level 3** ✅（ToolRegistryImpl + ToolExecutorImpl + PermissionChecker + SandboxBackend + 6 builtin + 18 business migrated to first-class hitl_policy/risk_level） | Level 3 |
 | 3. Memory | Level 0 | Level 0 | Level 0 | **Level 3** |
-| 6. Output Parser | Level 4 | Level 4 | Level 4 | Level 4 |
-| 12. Observability | Level 2 | Level 2（mock_executor 已埋 tool_execution_duration_seconds via InMemoryToolExecutor）| Level 2 | Level 2 |
+| 6. Output Parser | Level 4 | Level 4 | **Level 4** | Level 4 |
+| 12. Observability | Level 2 | Level 2（mock_executor 已埋 tool_execution_duration_seconds via InMemoryToolExecutor）| **Level 2**（ToolExecutorImpl 持續埋 metric；status label 擴展 unknown / denied / approval_required / schema_invalid / success / error） | Level 2 |
 
 > Sprint 51.0 不直接提升範疇 2/3 等級，但**解鎖 51.1+ 的 demo 場景**：移除 echo_tool 依賴，讓 52-54 sprint 有真實業務工具可呼叫。
 

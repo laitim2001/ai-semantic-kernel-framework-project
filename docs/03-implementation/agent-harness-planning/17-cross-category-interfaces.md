@@ -41,10 +41,12 @@ V2 review 發現 7 條跨範疇 / 跨文件重複定義：
 | `ChatResponse` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | LLM 呼叫回應；含 `stop_reason` enum |
 | `Message` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | role / content / tool_calls |
 | `ContentBlock` | `10-server-side-philosophy.md` | 原則 2 §`ChatClient` ABC | text / image / tool_use / tool_result |
-| `ToolSpec` | `01-eleven-categories-spec.md` | 範疇 2 | 工具定義（含 annotations / concurrency_policy / version） |
+| `ToolSpec` | `01-eleven-categories-spec.md` | 範疇 2 | 工具定義（含 annotations / concurrency_policy / **hitl_policy / risk_level (51.1)** / version） |
 | `ToolCall` | `01-eleven-categories-spec.md` | 範疇 2 | 單次工具呼叫 |
 | `ToolResult` | `01-eleven-categories-spec.md` | 範疇 2 | 工具回傳（含 `result_content_types`） |
 | `ToolAnnotations` | `01-eleven-categories-spec.md` | 範疇 2 | MCP 4 hints（readOnly / destructive / idempotent / openWorld） |
+| `ToolHITLPolicy` | `01-eleven-categories-spec.md` | 範疇 2 | Per-tool HITL behavior enum（`AUTO` / `ASK_ONCE` / `ALWAYS_ASK`）— **新增 51.1**；distinct from per-tenant `HITLPolicy` (in `_contracts.hitl`) |
+| `ExecutionContext` | `01-eleven-categories-spec.md` | 範疇 2 | Per-call invocation context dataclass（`tenant_id` / `session_id` / `explicit_approval`）— **新增 51.1**（owned by `_contracts/tools.py` so `ToolExecutor` ABC can reference without import cycle）；consumed by `PermissionChecker.check()` |
 | `ConcurrencyPolicy` | `01-eleven-categories-spec.md` | 範疇 2 | sequential / read_only_parallel / all_parallel |
 | `LoopState` | `01-eleven-categories-spec.md` | 範疇 7 | 中央 state；拆 transient/durable |
 | `TransientState` | `01-eleven-categories-spec.md` | 範疇 7 | in-memory 短期 state |
@@ -145,23 +147,23 @@ backend/src/agent_harness/{範疇}/_abc.py
 
 ### 3.1 工具註冊權威表
 
-| 工具名稱 | Owner 範疇 | 描述 | 可被誰呼叫 |
-|---------|----------|------|----------|
-| `memory_search` | **範疇 3 (Memory)** | 跨 5 層搜尋記憶 | LLM via 範疇 2 Registry |
-| `memory_write` | **範疇 3 (Memory)** | 寫入指定層 | LLM via 範疇 2 Registry |
-| `memory_extract` | **範疇 3 (Memory)** | 觸發背景 extraction worker | LLM via 範疇 2 Registry |
-| `task_spawn` | **範疇 11 (Subagent)** | Fork subagent | LLM via 範疇 2 Registry |
-| `handoff` | **範疇 11 (Subagent)** | Handoff 控制權 | LLM via 範疇 2 Registry |
-| `request_approval` | **§HITL 中央化** | 觸發人工審批 | LLM via 範疇 2 Registry |
-| `verify` | **範疇 10 (Verification)** | 觸發 verifier 檢查當前 output | LLM via 範疇 2 Registry |
-| `web_search` | **範疇 2 (Tools)** | 內建工具 | LLM |
-| `python_sandbox` | **範疇 2 (Tools)** | 內建工具 | LLM |
-| `echo_tool` | **範疇 2 (Tools)** | 50.1 bring-up built-in（51.1 deprecate） | LLM |
+| 工具名稱 | Owner 範疇 | 描述 | concurrency / hitl / risk | 可被誰呼叫 |
+|---------|----------|------|--------------------------|----------|
+| `memory_search` | **範疇 3 (Memory)** | 跨 5 層搜尋記憶（**51.1 placeholder**：handler raises NotImplementedError；51.2 接 Cat 3 真實實作） | RO_PARALLEL / AUTO / LOW | LLM via 範疇 2 Registry |
+| `memory_write` | **範疇 3 (Memory)** | 寫入指定層（**51.1 placeholder**；51.2 fill） | SEQUENTIAL / AUTO / LOW | LLM via 範疇 2 Registry |
+| `memory_extract` | **範疇 3 (Memory)** | 觸發背景 extraction worker（51.2+） | TBD | LLM via 範疇 2 Registry |
+| `task_spawn` | **範疇 11 (Subagent)** | Fork subagent（54.2+） | TBD | LLM via 範疇 2 Registry |
+| `handoff` | **範疇 11 (Subagent)** | Handoff 控制權（54.2+） | TBD | LLM via 範疇 2 Registry |
+| `request_approval` | **§HITL 中央化** | 觸發人工審批（**51.1 Day 4 ships placeholder**：handler 返回 `pending_approval_id` JSON；ApprovalManager wires 53.3） | SEQUENTIAL / **ALWAYS_ASK** / MEDIUM | LLM via 範疇 2 Registry |
+| `verify` | **範疇 10 (Verification)** | 觸發 verifier 檢查當前 output（54.1+） | TBD | LLM via 範疇 2 Registry |
+| `web_search` | **範疇 2 (Tools)** | 內建工具：Bing Search v7 via httpx（**51.1 Day 4**；CARRY-024 real-key smoke） | RO_PARALLEL / AUTO / LOW | LLM |
+| `python_sandbox` | **範疇 2 (Tools)** | 內建工具：subprocess + tempdir cwd + POSIX rlimit（**51.1 Day 3**；Docker backend 留 CARRY-022） | RO_PARALLEL / AUTO / MEDIUM | LLM |
+| `echo_tool` | **範疇 2 (Tools)** | 50.1 bring-up built-in（仍 active in 51.1；可能在 52.x deprecate） | RO_PARALLEL / AUTO / LOW | LLM |
 
 #### 業務領域工具（Sprint 51.0 mock 階段；Phase 55 替換為真實 enterprise integration）
 
 > Sprint 51.0 命名約定：所有業務 stub 加 `mock_` prefix；Phase 55 真實 integration 上線時統一 mass rename 移除 prefix。
-> hitl_policy 與 risk_level 為 Sprint 51.0 暫編碼於 `ToolSpec.tags`（CARRY-021：51.1 ToolSpec 加 first-class field）。
+> ~~hitl_policy 與 risk_level 為 Sprint 51.0 暫編碼於 `ToolSpec.tags`~~（CARRY-021 已於 **Sprint 51.1 Day 1** 處理：`ToolSpec` 加入 first-class `hitl_policy: ToolHITLPolicy` + `risk_level: RiskLevel` field；Day 5 移除 18 業務 stub 的 tags-encoded workaround）。
 
 | 工具名稱 | Owner | 描述 | concurrency / hitl / risk |
 |---------|------|------|--------------------------|

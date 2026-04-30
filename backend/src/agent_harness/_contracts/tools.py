@@ -20,15 +20,23 @@ Owner: 01-eleven-categories-spec.md §範疇 2
 Single-source: 17.md §1.1
 
 Created: 2026-04-29 (Sprint 49.1)
-Last Modified: 2026-04-29
+Last Modified: 2026-04-30
 
-Modification History:
+Modification History (newest-first):
+    - 2026-04-30: Add first-class ToolHITLPolicy enum + risk_level field on
+      ToolSpec (Sprint 51.1 Day 1; CARRY-021 from 51.0 retro). Replaces
+      tags-encoded `hitl_policy:*` / `risk:*` workaround. Reuses existing
+      RiskLevel enum from _contracts.hitl (single-source). ToolHITLPolicy
+      named distinctly from per-tenant HITLPolicy dataclass to avoid
+      collision; values map to 51.0 tag strings (auto / ask_once /
+      always_ask).
     - 2026-04-29: Initial creation (Sprint 49.1)
 
 Related:
     - 01-eleven-categories-spec.md §範疇 2 (Tools)
-    - 17-cross-category-interfaces.md §3 (cross-category tools)
+    - 17-cross-category-interfaces.md §1.1 (ToolSpec dataclass) / §3 (cross-category tools)
     - 08b-business-tools-spec.md (business-domain tools)
+    - sprint-51-1-plan.md §決策 1 (CARRY-021)
 """
 
 from __future__ import annotations
@@ -36,6 +44,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal
+from uuid import UUID
+
+from agent_harness._contracts.hitl import RiskLevel
 
 
 class ConcurrencyPolicy(Enum):
@@ -44,6 +55,21 @@ class ConcurrencyPolicy(Enum):
     SEQUENTIAL = "sequential"
     READ_ONLY_PARALLEL = "read_only_parallel"
     ALL_PARALLEL = "all_parallel"
+
+
+class ToolHITLPolicy(Enum):
+    """Per-tool HITL behavior policy.
+
+    Distinct from per-tenant HITLPolicy (in _contracts.hitl) which encodes
+    tenant-level approval routing. This enum encodes the tool's intrinsic
+    HITL stance: whether each invocation requires human approval before
+    handler execution. PermissionChecker (Sprint 51.1 Day 2) consumes this
+    plus risk_level to compute PermissionDecision.
+    """
+
+    AUTO = "auto"  # no HITL required (subject to risk_level + tenant policy)
+    ASK_ONCE = "ask_once"  # first call in session requires approval
+    ALWAYS_ASK = "always_ask"  # every call requires approval
 
 
 @dataclass(frozen=True)
@@ -65,8 +91,25 @@ class ToolSpec:
     input_schema: dict[str, Any]  # JSON Schema
     annotations: ToolAnnotations = field(default_factory=ToolAnnotations)
     concurrency_policy: ConcurrencyPolicy = ConcurrencyPolicy.SEQUENTIAL
+    hitl_policy: ToolHITLPolicy = ToolHITLPolicy.AUTO
+    risk_level: RiskLevel = RiskLevel.LOW
     version: str = "1.0"
     tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ExecutionContext:
+    """Per-call invocation context for ToolExecutor pipeline.
+
+    Forward-compatible for Phase 53.3 RBAC wiring (tenant-scoped role checks
+    will read tenant_id) and HITL tracking (session_id ties first-call
+    state to session). `explicit_approval` lets the caller signal that the
+    operator has already authorized a destructive action this turn.
+    """
+
+    tenant_id: UUID | None = None
+    session_id: UUID | None = None
+    explicit_approval: bool = False
 
 
 @dataclass(frozen=True)

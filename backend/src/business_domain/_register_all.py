@@ -31,13 +31,13 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from agent_harness._contracts import ToolCall
-from agent_harness.tools._inmemory import (
-    ECHO_TOOL_SPEC,
-    InMemoryToolExecutor,
-    InMemoryToolRegistry,
-    echo_handler,
-)
 from agent_harness.observability import Tracer
+from agent_harness.tools import (
+    ToolExecutorImpl,
+    ToolRegistry,
+    ToolRegistryImpl,
+)
+from agent_harness.tools.echo_tool import ECHO_TOOL_SPEC, echo_handler
 
 from .audit_domain.tools import register_audit_tools
 from .correlation.tools import register_correlation_tools
@@ -52,7 +52,7 @@ DEFAULT_MOCK_URL = "http://localhost:8001"
 
 
 def register_all_business_tools(
-    registry: InMemoryToolRegistry,
+    registry: ToolRegistry,
     handlers: dict[str, ToolHandler],
     *,
     mock_url: str = DEFAULT_MOCK_URL,
@@ -78,31 +78,43 @@ def make_default_executor(
     *,
     mock_url: str = DEFAULT_MOCK_URL,
     tracer: Tracer | None = None,
-) -> tuple[InMemoryToolRegistry, InMemoryToolExecutor]:
+) -> tuple[ToolRegistryImpl, ToolExecutorImpl]:
     """Build a registry+executor pair with echo_tool + 18 business tools (19 total).
 
-    Replaces 50.1's `make_echo_executor()` for chat handler default wiring in 51.0.
-    Sprint 51.1 will replace InMemoryToolRegistry with production Cat 2 registry;
-    this factory's signature stays stable.
+    Sprint 51.1 Day 5: switched from InMemoryToolRegistry / InMemoryToolExecutor
+    to production Cat 2 implementations (ToolRegistryImpl + ToolExecutorImpl
+    with PermissionChecker + JSONSchema validation + concurrency-aware batch).
+    Behavior changes:
+      - Tool calls now go through PermissionChecker (HIGH-risk + ALWAYS_ASK
+        tools surface as approval_required ToolResult error).
+      - Bad arguments fail fast with schema mismatch error.
+      - Batch executes parallel for read-only / sequential for any
+        SEQUENTIAL spec (concurrency policy enforcement).
 
     Args:
         mock_url: Override for the mock_services backend URL.
-        tracer: Optional Tracer (defaults to NoOp via InMemoryToolExecutor).
+        tracer: Optional Tracer (defaults to NoOp via ToolExecutorImpl).
 
     Returns:
         (registry, executor) — both wired with 19 ToolSpec + handlers.
     """
-    registry = InMemoryToolRegistry()
+    registry = ToolRegistryImpl()
     handlers: dict[str, ToolHandler] = {}
 
-    # echo_tool (50.1 built-in for bring-up tests)
+    # echo_tool (50.1 built-in for bring-up tests; migrated out of _inmemory in 51.1)
     registry.register(ECHO_TOOL_SPEC)
     handlers["echo_tool"] = echo_handler
 
     # 18 business tools
     register_all_business_tools(registry, handlers, mock_url=mock_url)
 
-    executor = InMemoryToolExecutor(handlers=handlers, tracer=tracer)
+    # ToolExecutorImpl handler signature is `Callable[[ToolCall], Awaitable[str]]`;
+    # business handlers return `str | dict` and ToolExecutorImpl coerces to str.
+    executor = ToolExecutorImpl(
+        registry=registry,
+        handlers=handlers,
+        tracer=tracer,
+    )
     return registry, executor
 
 

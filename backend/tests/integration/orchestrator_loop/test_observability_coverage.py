@@ -44,8 +44,7 @@ from agent_harness._contracts import (
 from agent_harness.observability import MetricRegistry, Tracer
 from agent_harness.orchestrator_loop import AgentLoopImpl
 from agent_harness.output_parser import OutputParserImpl
-from agent_harness.tools import make_echo_executor
-from agent_harness.tools._inmemory import InMemoryToolExecutor
+from agent_harness.tools import ToolExecutorImpl, ToolRegistryImpl, make_echo_executor
 
 
 class RecordingTracer(Tracer):
@@ -96,8 +95,9 @@ async def test_e2e_emits_per_turn_loop_and_tool_spans() -> None:
     spans across all three collaborators."""
     rec = RecordingTracer()
     registry, _ = make_echo_executor()
-    # Re-build executor + registry with shared RecordingTracer.
-    executor = InMemoryToolExecutor(
+    # Re-build executor with shared RecordingTracer (same registry).
+    executor = ToolExecutorImpl(
+        registry=registry,
         handlers={"echo_tool": _shared_echo_handler},
         tracer=rec,
         metric_registry=MetricRegistry(),
@@ -108,9 +108,7 @@ async def test_e2e_emits_per_turn_loop_and_tool_spans() -> None:
             ChatResponse(
                 model="m",
                 content="calling",
-                tool_calls=[
-                    ToolCall(id="c1", name="echo_tool", arguments={"text": "x"})
-                ],
+                tool_calls=[ToolCall(id="c1", name="echo_tool", arguments={"text": "x"})],
                 stop_reason=StopReason.TOOL_USE,
             ),
             ChatResponse(model="m", content="done", stop_reason=StopReason.END_TURN),
@@ -154,7 +152,8 @@ async def test_e2e_emits_tool_execution_duration_metric() -> None:
     histogram per successful tool call."""
     rec = RecordingTracer()
     registry, _ = make_echo_executor()
-    executor = InMemoryToolExecutor(
+    executor = ToolExecutorImpl(
+        registry=registry,
         handlers={"echo_tool": _shared_echo_handler},
         tracer=rec,
         metric_registry=MetricRegistry(),
@@ -185,8 +184,7 @@ async def test_e2e_emits_tool_execution_duration_metric() -> None:
 
     # 2 tool calls → 2 metric events
     duration_metrics = [
-        m for m in rec.metrics
-        if m.metric_name == "tool_execution_duration_seconds"
+        m for m in rec.metrics if m.metric_name == "tool_execution_duration_seconds"
     ]
     assert len(duration_metrics) == 2
     assert all(m.metric_type == "histogram" for m in duration_metrics)
@@ -204,18 +202,30 @@ async def test_tool_failure_emits_error_metric() -> None:
     async def crashing_handler(call: ToolCall) -> str:
         raise RuntimeError("oops")
 
-    executor = InMemoryToolExecutor(
+    # Build a registry with a minimal `crash` spec so ToolExecutorImpl reaches
+    # the handler instead of short-circuiting on unknown-tool lookup.
+    from agent_harness._contracts import ToolAnnotations, ToolSpec  # noqa: PLC0415
+
+    registry = ToolRegistryImpl()
+    registry.register(
+        ToolSpec(
+            name="crash",
+            description="test",
+            input_schema={"type": "object", "properties": {}},
+            annotations=ToolAnnotations(read_only=True),
+        )
+    )
+    executor = ToolExecutorImpl(
+        registry=registry,
         handlers={"crash": crashing_handler},
         tracer=rec,
         metric_registry=MetricRegistry(),
     )
-    result = await executor.execute(
-        ToolCall(id="c1", name="crash", arguments={})
-    )
+    result = await executor.execute(ToolCall(id="c1", name="crash", arguments={}))
     assert result.success is False
     error_metrics = [
-        m for m in rec.metrics
-        if m.metric_name == "tool_execution_duration_seconds"
-        and m.labels.get("status") == "error"
+        m
+        for m in rec.metrics
+        if m.metric_name == "tool_execution_duration_seconds" and m.labels.get("status") == "error"
     ]
     assert len(error_metrics) == 1
