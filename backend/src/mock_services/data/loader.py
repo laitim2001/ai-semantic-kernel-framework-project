@@ -82,9 +82,7 @@ def load_seed(path: Path | None = None) -> SeedDB:
 def get_db() -> SeedDB:
     """FastAPI dependency: return the loaded DB or raise if startup not run."""
     if _db is None:
-        raise RuntimeError(
-            "SeedDB not loaded. Call load_seed() in app lifespan before requests."
-        )
+        raise RuntimeError("SeedDB not loaded. Call load_seed() in app lifespan before requests.")
     return _db
 
 

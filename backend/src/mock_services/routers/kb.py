@@ -50,12 +50,8 @@ def _score(article: dict[str, Any], query: str) -> float:
 
 
 @router.post("/search", response_model=list[KBSearchResult])
-async def search(
-    request: KBSearchRequest, db: SeedDB = Depends(get_db)
-) -> list[KBSearchResult]:
-    scored = [
-        (_score(article, request.query), article) for article in db.kb_articles.values()
-    ]
+async def search(request: KBSearchRequest, db: SeedDB = Depends(get_db)) -> list[KBSearchResult]:
+    scored = [(_score(article, request.query), article) for article in db.kb_articles.values()]
     scored = [(s, a) for s, a in scored if s > 0.0]
     scored.sort(key=lambda pair: pair[0], reverse=True)
     return [
