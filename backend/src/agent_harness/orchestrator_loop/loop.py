@@ -45,6 +45,10 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-04-30
 
 Modification History (newest-first):
+    - 2026-04-30: Switch ToolExecutor/ToolRegistry import to public path
+        `agent_harness.tools` (Sprint 50.2 Day 1.5) — clears
+        check_cross_category_import lint warning per category-boundaries.md
+        (re-export already in tools/__init__.py since 50.1).
     - 2026-04-30: Initial creation (Sprint 50.1 Day 2.2) — while-true main
         loop + 4 termination conditions + 3-way dispatch + cancellation safety.
 
@@ -91,7 +95,7 @@ from .termination import (
 # Need imports from sibling adapter / tools / output_parser modules:
 from adapters._base.chat_client import ChatClient
 from agent_harness.output_parser import OutputParser, OutputType, classify_output
-from agent_harness.tools._abc import ToolExecutor, ToolRegistry
+from agent_harness.tools import ToolExecutor, ToolRegistry  # public path per category-boundaries.md
 
 
 class AgentLoopImpl(AgentLoop):
