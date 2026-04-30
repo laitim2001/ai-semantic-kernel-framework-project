@@ -1,0 +1,26 @@
+"""Category 2: Tool Layer (registry + executor). See README.md.
+
+50.x bring-up: in-memory registry + executor + echo_tool exported here for
+test-helper convenience. DEPRECATED-IN: 51.1 (Cat 2 production impl).
+"""
+
+from agent_harness.tools._abc import ToolExecutor, ToolRegistry
+from agent_harness.tools._inmemory import (
+    ECHO_TOOL_SPEC,
+    InMemoryToolExecutor,
+    InMemoryToolRegistry,
+    ToolHandler,
+    echo_handler,
+    make_echo_executor,
+)
+
+__all__ = [
+    "ECHO_TOOL_SPEC",
+    "InMemoryToolExecutor",
+    "InMemoryToolRegistry",
+    "ToolExecutor",
+    "ToolHandler",
+    "ToolRegistry",
+    "echo_handler",
+    "make_echo_executor",
+]

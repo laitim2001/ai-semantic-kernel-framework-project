@@ -1,0 +1,127 @@
+# V2 Phase 49+ Development Infrastructure
+#
+# Brings up dependency services (PostgreSQL / Redis / RabbitMQ / Qdrant)
+# for V2 backend development. Backend / frontend run locally (not in
+# docker) per Sprint 49.1 plan.
+#
+# Volume names are suffixed with `_v2` to avoid colliding with V1
+# (archived/v1-phase1-48/docker-compose.yml).
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.dev.yml ps
+#   docker compose -f docker-compose.dev.yml down
+#
+# References:
+#   - docs/03-implementation/agent-harness-planning/phase-49-foundation/sprint-49-1-plan.md
+#   - .env.example (connection strings)
+
+services:
+  postgres:
+    # Sprint 49.4 Day 4 — switched from postgres:16-alpine to custom image
+    # with pg_partman 5.x preinstalled (alpine lacks postgresql-16-partman).
+    # Carry-forward 49.3 retrospective item #1 RESOLVED.
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.postgres
+    image: ipa-v2-postgres:16
+    container_name: ipa_v2_postgres
+    environment:
+      POSTGRES_DB: ipa_v2
+      POSTGRES_USER: ipa_v2
+      POSTGRES_PASSWORD: ipa_v2_dev
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=pg_partman_bgw"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data_v2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ipa_v2 -d ipa_v2"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ipa_v2_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_v2:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: ipa_v2_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data_v2:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ipa_v2_qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data_v2:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Sprint 49.4 Day 3 — Observability stack (range cat 12)
+  # Modern Jaeger 1.55+ accepts OTLP/gRPC on 4317; no jaeger-exporter needed.
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    container_name: ipa_v2_jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP/gRPC receiver
+      - "4318:4318"    # OTLP/HTTP receiver
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:16686/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: ipa_v2_prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    ports:
+      - "9090:9090"
+    volumes:
+      - prom_data_v2:/prometheus
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_data_v2:
+  redis_data_v2:
+  rabbitmq_data_v2:
+  prom_data_v2:
+  qdrant_data_v2:

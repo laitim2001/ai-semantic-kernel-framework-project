@@ -1,167 +1,43 @@
-// =============================================================================
-// IPA Platform - Main Application Component
-// =============================================================================
-// Sprint 5: Frontend UI - App Shell
-// Sprint 12: S12-4 UI Integration - Added Performance Monitoring
-// Sprint 61: AG-UI Demo Page Route
-// Sprint 62: Unified Chat Interface Route (Phase 16)
-// Sprint 69: S69-4 - Integrated Chat into AppLayout (Dashboard integration)
-// Sprint 71: S71-2 - Added Login/Signup routes (Phase 18)
-// Sprint 71: S71-3 - Added ProtectedRoute wrapper (Phase 18)
-// Sprint 87: S87-1 - Added DevUI routes (Phase 26)
-//
-// Root application component with routing configuration.
-//
-// Dependencies:
-//   - React Router 6
-// =============================================================================
+import { Link, Route, Routes } from "react-router-dom";
+import ChatV2Page from "./pages/chat-v2";
+import GovernancePage from "./pages/governance";
+import VerificationPage from "./pages/verification";
 
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { DashboardPage } from '@/pages/dashboard/DashboardPage';
-import { PerformancePage } from '@/pages/dashboard/PerformancePage';
-import { WorkflowsPage } from '@/pages/workflows/WorkflowsPage';
-import { WorkflowDetailPage } from '@/pages/workflows/WorkflowDetailPage';
-import { CreateWorkflowPage } from '@/pages/workflows/CreateWorkflowPage';
-import { EditWorkflowPage } from '@/pages/workflows/EditWorkflowPage';
-import { AgentsPage } from '@/pages/agents/AgentsPage';
-import { AgentDetailPage } from '@/pages/agents/AgentDetailPage';
-import { CreateAgentPage } from '@/pages/agents/CreateAgentPage';
-import { EditAgentPage } from '@/pages/agents/EditAgentPage';
-// Sprint 164: Agent Expert Management Pages
-import { AgentExpertsPage } from '@/pages/agent-experts/AgentExpertsPage';
-import { CreateAgentExpertPage } from '@/pages/agent-experts/CreateAgentExpertPage';
-import { EditAgentExpertPage } from '@/pages/agent-experts/EditAgentExpertPage';
-import { AgentExpertDetailPage } from '@/pages/agent-experts/AgentExpertDetailPage';
-import { ApprovalsPage } from '@/pages/approvals/ApprovalsPage';
-import { AuditPage } from '@/pages/audit/AuditPage';
-import { TemplatesPage } from '@/pages/templates/TemplatesPage';
-import { AGUIDemoPage } from '@/pages/ag-ui/AGUIDemoPage';
-import { UnifiedChat } from '@/pages/UnifiedChat';
-import { OrchestratorChat } from '@/pages/OrchestratorChat';  // Phase 45
-import { LoginPage } from '@/pages/auth/LoginPage';
-import { SignupPage } from '@/pages/auth/SignupPage';
-// Sprint 87: DevUI pages
-import { DevUILayout } from '@/pages/DevUI/Layout';
-import { DevUIOverview } from '@/pages/DevUI/index';
-import { TraceList } from '@/pages/DevUI/TraceList';
-import { TraceDetail } from '@/pages/DevUI/TraceDetail';
-import { LiveMonitor } from '@/pages/DevUI/LiveMonitor';
-import { Settings as DevUISettings } from '@/pages/DevUI/Settings';
-import { AGUITestPanel } from '@/pages/DevUI/AGUITestPanel';
-// Phase 29: Agent Swarm Test Page
-import { SwarmTestPage } from '@/pages/SwarmTestPage';
-// PoC: Agent Team Test Page
-import { AgentTeamTestPage } from '@/pages/AgentTeamTestPage';
-// Sprint 133: Workflow DAG Editor (Phase 34)
-import { WorkflowEditorPage } from '@/pages/workflows/WorkflowEditorPage';
-// Sprint 138: Session Management Pages (Phase 40)
-import { SessionsPage } from '@/pages/sessions/SessionsPage';
-import { SessionDetailPage } from '@/pages/sessions/SessionDetailPage';
-// Sprint 139: Task Dashboard Pages (Phase 40)
-import { TaskDashboardPage } from '@/pages/tasks/TaskDashboardPage';
-import { TaskDetailPage } from '@/pages/tasks/TaskDetailPage';
-// Sprint 140: Knowledge + Memory Pages (Phase 40)
-import { KnowledgePage } from '@/pages/knowledge/KnowledgePage';
-import { MemoryPage } from '@/pages/memory/MemoryPage';
-
-function App() {
+// Sprint 49.1 placeholder router. Real navigation / layout shell
+// lands in Phase 50.2 (chat-v2 main flow) and is extended each phase.
+function Home() {
   return (
-    <Routes>
-      {/* Auth Pages (Sprint 71) - Standalone full-screen layout */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-
-      {/* AG-UI Demo Page (Sprint 61) - Standalone full-screen layout */}
-      <Route path="/ag-ui-demo" element={<AGUIDemoPage />} />
-
-      {/* Phase 29: Agent Swarm Test Page - Standalone full-screen layout */}
-      <Route path="/swarm-test" element={<SwarmTestPage />} />
-      {/* PoC: Agent Team Test Page */}
-      <Route path="/agent-team-test" element={<AgentTeamTestPage />} />
-
-      {/* Protected Routes (Sprint 71) - Require authentication */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
-        {/* Default redirect to dashboard */}
-        <Route index element={<Navigate to="/dashboard" replace />} />
-
-        {/* Dashboard */}
-        <Route path="dashboard" element={<DashboardPage />} />
-
-        {/* Unified Chat Interface (Sprint 69: Integrated into AppLayout) */}
-        <Route path="chat" element={<UnifiedChat />} />
-
-        {/* Orchestrator Chat — Phase 45: 8-step pipeline + dispatch */}
-        <Route path="orchestrator-chat" element={<OrchestratorChat />} />
-
-        {/* Performance Monitoring (Sprint 12 - Phase 2) */}
-        <Route path="performance" element={<PerformancePage />} />
-
-        {/* Workflows */}
-        <Route path="workflows" element={<WorkflowsPage />} />
-        <Route path="workflows/new" element={<CreateWorkflowPage />} />
-        <Route path="workflows/:id" element={<WorkflowDetailPage />} />
-        <Route path="workflows/:id/edit" element={<EditWorkflowPage />} />
-        <Route path="workflows/:id/editor" element={<WorkflowEditorPage />} />
-
-        {/* Agents */}
-        <Route path="agents" element={<AgentsPage />} />
-        <Route path="agents/new" element={<CreateAgentPage />} />
-        <Route path="agents/:id" element={<AgentDetailPage />} />
-        <Route path="agents/:id/edit" element={<EditAgentPage />} />
-
-        {/* Agent Experts (Sprint 164 - Phase 46) */}
-        <Route path="agent-experts" element={<AgentExpertsPage />} />
-        <Route path="agent-experts/new" element={<CreateAgentExpertPage />} />
-        <Route path="agent-experts/:name" element={<AgentExpertDetailPage />} />
-        <Route path="agent-experts/:name/edit" element={<EditAgentExpertPage />} />
-
-        {/* Templates */}
-        <Route path="templates" element={<TemplatesPage />} />
-
-        {/* Sessions (Sprint 138 - Phase 40) */}
-        <Route path="sessions" element={<SessionsPage />} />
-        <Route path="sessions/:id" element={<SessionDetailPage />} />
-
-        {/* Tasks (Sprint 139 - Phase 40) */}
-        <Route path="tasks" element={<TaskDashboardPage />} />
-        <Route path="tasks/:id" element={<TaskDetailPage />} />
-
-        {/* Knowledge (Sprint 140 - Phase 40) */}
-        <Route path="knowledge" element={<KnowledgePage />} />
-
-        {/* Memory (Sprint 140 - Phase 40) */}
-        <Route path="memory" element={<MemoryPage />} />
-
-        {/* Approvals */}
-        <Route path="approvals" element={<ApprovalsPage />} />
-
-        {/* Audit */}
-        <Route path="audit" element={<AuditPage />} />
-
-        {/* DevUI (Sprint 87) - Developer Tools with nested layout */}
-        <Route path="devui" element={<DevUILayout />}>
-          <Route index element={<DevUIOverview />} />
-          <Route path="ag-ui-test" element={<AGUITestPanel />} />
-          <Route path="traces" element={<TraceList />} />
-          <Route path="traces/:id" element={<TraceDetail />} />
-          <Route path="monitor" element={<LiveMonitor />} />
-          <Route path="settings" element={<DevUISettings />} />
-        </Route>
-
-        {/* 404 fallback */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Route>
-    </Routes>
+    <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
+      <h1>IPA Platform V2</h1>
+      <p>
+        <strong>Status:</strong> Phase 49 Foundation, Sprint 49.1 — frontend skeleton only.
+      </p>
+      <p>Pages currently registered (placeholders):</p>
+      <ul>
+        <li>
+          <Link to="/chat-v2">/chat-v2</Link> — Phase 50.2 main flow
+        </li>
+        <li>
+          <Link to="/governance">/governance</Link> — Phase 53.3 HITL UI
+        </li>
+        <li>
+          <Link to="/verification">/verification</Link> — Phase 54.1 verifier panel
+        </li>
+      </ul>
+      <p>
+        Backend health: <code>GET /api/v1/health</code> (proxied to localhost:8001)
+      </p>
+    </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/chat-v2/*" element={<ChatV2Page />} />
+      <Route path="/governance/*" element={<GovernancePage />} />
+      <Route path="/verification/*" element={<VerificationPage />} />
+    </Routes>
+  );
+}

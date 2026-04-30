@@ -1,82 +1,92 @@
 """
-Pytest Configuration and Fixtures
+File: backend/tests/conftest.py
+Purpose: Shared pytest fixtures + seed helpers for V2 backend tests.
+Category: Tests / Infrastructure
+Scope: Sprint 49.2 Day 2.3 (initial conftest + db_session + seed helpers)
 
-Shared fixtures for all tests.
+Description:
+    Provides:
+        db_session: per-test AsyncSession with rollback at end (real docker
+                    compose PostgreSQL — AP-10 對策, no SQLite).
+        seed_tenant: helper to create + flush a Tenant.
+        seed_user: helper to create + flush a User under a tenant.
+
+    Pre-requisite for tests using db_session:
+        docker compose -f docker-compose.dev.yml up -d postgres
+        cd backend && alembic upgrade head
+
+Created: 2026-04-29 (Sprint 49.2 Day 2.3)
+Last Modified: 2026-04-29
+
+Modification History:
+    - 2026-04-29: Initial creation (Sprint 49.2 Day 2.3)
+
+Related:
+    - .claude/rules/testing.md (testing rules + AP-10 對策)
+    - infrastructure/db/engine.py (singleton factory)
 """
-import pytest
+
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
+
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from infrastructure.db import dispose_engine, get_session_factory
+from infrastructure.db.models import Tenant, User
 
 
-# =============================================================================
-# Pytest Markers Configuration (Phase 7)
-# =============================================================================
+@pytest_asyncio.fixture(scope="function")
+async def db_session() -> AsyncIterator[AsyncSession]:
+    """Per-test AsyncSession with rollback + engine disposal at end.
 
-def pytest_configure(config):
-    """Register custom markers."""
-    config.addinivalue_line("markers", "e2e: End-to-end tests (may require real API)")
-    config.addinivalue_line("markers", "performance: Performance benchmark tests")
-    config.addinivalue_line("markers", "slow: Tests that take a long time to run")
-    config.addinivalue_line("markers", "integration: Integration tests")
+    Why dispose_engine() per-test:
+        pytest-asyncio defaults to per-test event loops. The singleton
+        AsyncEngine in infrastructure.db.engine is bound to whichever
+        loop first created it; subsequent tests run in new loops and
+        hit RuntimeError('Event loop is closed') on pooled connections.
+        Disposing the engine after each test forces a fresh engine on
+        the next test's loop. Slight perf cost (~10 ms / test) is the
+        right trade for correctness + isolation.
 
-
-@pytest.fixture
-def client():
-    """Create a test client for the FastAPI application.
-
-    Uses lazy import to avoid initialization issues during test collection.
+    Caller may flush + use ORM normally; pending changes are rolled
+    back at fixture teardown so each test sees a clean DB state.
     """
-    from fastapi.testclient import TestClient
-    from main import app
-    return TestClient(app)
+    factory = get_session_factory()
+    async with factory() as session:
+        try:
+            yield session
+        finally:
+            await session.rollback()
+    await dispose_engine()
 
 
-@pytest.fixture
-def api_prefix() -> str:
-    """API version prefix."""
-    return "/api/v1"
+async def seed_tenant(
+    session: AsyncSession, *, code: str = "TEST_TENANT", display_name: str | None = None
+) -> Tenant:
+    """Create + flush a Tenant. Caller must NOT commit — fixture rollback handles cleanup."""
+    t = Tenant(code=code, display_name=display_name or f"Tenant {code}")
+    session.add(t)
+    await session.flush()
+    await session.refresh(t)
+    return t
 
 
-# =============================================================================
-# Database Fixtures (Sprint 1)
-# =============================================================================
-
-# @pytest.fixture
-# async def db_session():
-#     """Create a database session for testing."""
-#     # TODO: Implement database session fixture
-#     pass
-
-
-# @pytest.fixture
-# def sample_user():
-#     """Create a sample user for testing."""
-#     return {
-#         "email": "test@example.com",
-#         "name": "Test User",
-#         "role": "user",
-#     }
-
-
-# =============================================================================
-# Agent Framework Fixtures (Sprint 1)
-# =============================================================================
-
-# @pytest.fixture
-# def mock_agent_executor():
-#     """Create a mock agent executor for testing."""
-#     pass
-
-
-# @pytest.fixture
-# def mock_workflow():
-#     """Create a mock workflow for testing."""
-#     pass
-
-
-# =============================================================================
-# Redis Fixtures (Sprint 2)
-# =============================================================================
-
-# @pytest.fixture
-# async def redis_client():
-#     """Create a Redis client for testing."""
-#     pass
+async def seed_user(
+    session: AsyncSession,
+    tenant: Tenant,
+    *,
+    email: str = "user@test.com",
+    display_name: str | None = None,
+) -> User:
+    """Create + flush a User scoped to the given tenant."""
+    u = User(
+        tenant_id=tenant.id,
+        email=email,
+        display_name=display_name or email.split("@")[0],
+    )
+    session.add(u)
+    await session.flush()
+    await session.refresh(u)
+    return u

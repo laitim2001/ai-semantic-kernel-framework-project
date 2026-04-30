@@ -1,1 +1,1 @@
-﻿# Infrastructure layer
+"""infrastructure — DB / cache / messaging / storage clients."""

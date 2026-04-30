@@ -1,0 +1,129 @@
+# ============================================
+# IPA Platform - Python Dependencies
+# ============================================
+# Sprint 0: Infrastructure Foundation
+
+# ===========================================
+# Core Framework
+# ===========================================
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# ===========================================
+# Microsoft Agent Framework
+# ===========================================
+# Preview version (Beta) - monitor for GA release
+# Note: [azure] extra not available, use base package
+# Version locked to prevent unintended upgrades (2026-01-16)
+agent-framework>=1.0.0rc4,<2.0.0
+
+# ===========================================
+# Database
+# ===========================================
+sqlalchemy>=2.0.25
+asyncpg>=0.29.0              # PostgreSQL async driver
+alembic>=1.13.0              # Database migrations
+greenlet>=3.0.0              # Required for SQLAlchemy async
+
+# ===========================================
+# Cache & Messaging
+# ===========================================
+redis>=5.0.0
+aio-pika>=9.3.0              # RabbitMQ async client
+
+# ===========================================
+# Azure Services
+# ===========================================
+azure-identity>=1.15.0
+azure-keyvault-secrets>=4.7.0
+azure-servicebus>=7.11.0     # Production message queue
+
+# ===========================================
+# Anthropic Claude SDK
+# ===========================================
+anthropic>=0.84.0
+
+# ===========================================
+# Long-term Memory (mem0)
+# ===========================================
+mem0ai>=0.0.1                # mem0 SDK for long-term memory
+qdrant-client>=1.7.0         # Vector search for knowledge base
+
+# ===========================================
+# Authentication & Security
+# ===========================================
+slowapi>=0.1.9                   # Rate limiting middleware (Sprint 111)
+python-jose[cryptography]>=3.3.0
+# Note: bcrypt 5.x breaks passlib compatibility, must use 4.x
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.0,<5.0.0
+python-multipart>=0.0.6      # Form data parsing
+
+# ===========================================
+# HTTP Client
+# ===========================================
+httpx>=0.26.0                # Async HTTP client
+aiohttp>=3.9.0               # Alternative async HTTP
+
+# ===========================================
+# Utilities
+# ===========================================
+python-dotenv>=1.0.0
+structlog>=24.1.0            # Structured logging
+tenacity>=8.2.0              # Retry logic
+croniter>=2.0.0              # Cron expression parsing
+aiofiles>=23.0.0             # Async file operations
+email-validator>=2.0.0       # Pydantic EmailStr validation
+
+# ===========================================
+# Observability (Sprint 3 + Sprint 122)
+# ===========================================
+opentelemetry-api>=1.22.0
+opentelemetry-sdk>=1.22.0
+opentelemetry-instrumentation-fastapi>=0.43b0
+opentelemetry-instrumentation-httpx>=0.43b0       # Sprint 122: httpx auto-instrumentation
+opentelemetry-instrumentation-redis>=0.43b0       # Sprint 122: Redis auto-instrumentation
+opentelemetry-instrumentation-asyncpg>=0.43b0     # Sprint 122: asyncpg auto-instrumentation
+opentelemetry-exporter-otlp>=1.22.0
+opentelemetry-semantic-conventions>=0.43b0         # Sprint 122: Semantic conventions
+azure-monitor-opentelemetry-exporter>=1.0.0b21    # Sprint 122: Azure Monitor export
+prometheus-client>=0.19.0
+
+# ===========================================
+# Development Dependencies
+# ===========================================
+black>=24.1.0
+isort>=5.13.0
+flake8>=7.0.0
+mypy>=1.8.0
+ruff>=0.1.0
+
+# ===========================================
+# Testing
+# ===========================================
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+httpx>=0.26.0                # For TestClient
+factory-boy>=3.3.0           # Test data factories
+faker>=22.0.0                # Fake data generation
+
+# ===========================================
+# Load Testing (Sprint 6)
+# ===========================================
+locust>=2.20.0               # Load testing framework
+
+# ===========================================
+# Security Testing (Sprint 6)
+# ===========================================
+pip-audit>=2.6.0             # Dependency vulnerability scanning
+bandit>=1.7.0                # Security linter
+
+# ===========================================
+# Type Stubs
+# ===========================================
+types-redis>=4.6.0
+types-passlib>=1.7.0

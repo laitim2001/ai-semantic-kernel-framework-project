@@ -1,0 +1,83 @@
+# V2 pre-commit hooks — Sprint 49.4 Day 4.
+#
+# Install: pre-commit install
+# Run all: pre-commit run --all-files
+#
+# Hooks:
+#   - black / isort / flake8 / mypy: standard formatters/linters (run from backend/)
+#   - V2-specific lints (4 rules per 17.md §8 + llm-provider-neutrality.md):
+#     1. duplicate-dataclass-check
+#     2. cross-category-import-check
+#     3. sync-callback-check
+#     4. llm-sdk-leak-check
+
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        args: [--config=backend/pyproject.toml]
+        files: ^backend/
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--settings-path=backend/pyproject.toml]
+        files: ^backend/
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args: [--config=backend/.flake8]
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      # ---- V2 single-source / category-boundaries lints (17.md §8) ----
+
+      - id: check-duplicate-dataclass
+        name: V2 — no duplicate @dataclass names in agent_harness/
+        entry: python scripts/lint/check_duplicate_dataclass.py
+        args: [--root, backend/src/agent_harness]
+        language: system
+        pass_filenames: false
+        files: ^backend/src/agent_harness/.*\.py$
+        always_run: false
+
+      - id: check-cross-category-import
+        name: V2 — no private cross-category imports
+        entry: python scripts/lint/check_cross_category_import.py
+        args: [--root, backend/src/agent_harness]
+        language: system
+        pass_filenames: false
+        files: ^backend/src/agent_harness/.*\.py$
+        always_run: false
+
+      - id: check-sync-callback
+        name: V2 — sync/async ABC override consistency
+        entry: python scripts/lint/check_sync_callback.py
+        args: [--root, backend/src]
+        language: system
+        pass_filenames: false
+        files: ^backend/src/.*\.py$
+        always_run: false
+
+      - id: check-llm-sdk-leak
+        name: V2 — LLM SDK only inside adapters/<provider>/
+        entry: python scripts/lint/check_llm_sdk_leak.py
+        args: [--root, backend/src]
+        language: system
+        pass_filenames: false
+        files: ^backend/src/.*\.py$
+        always_run: false
+
+      - id: check-ap1-pipeline-disguise
+        name: V2 — AP-1 (Pipeline disguised as Loop)
+        entry: python scripts/lint/check_ap1_pipeline_disguise.py
+        args: [--root, backend/src]
+        language: system
+        pass_filenames: false
+        files: ^backend/src/agent_harness/orchestrator_loop/.*\.py$
+        always_run: false

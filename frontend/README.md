@@ -1,104 +1,71 @@
-# IPA Platform Frontend
+# IPA Platform V2 — Frontend
 
-Modern React frontend for the Intelligent Process Automation Platform.
+React 18 + TypeScript + Vite 5 + Zustand. Built around the **11+1
+agent harness categories** (per `01-eleven-categories-spec.md`) — each
+category gets a `features/` subdirectory.
 
-## Tech Stack
+> **Status**: Phase 49 Foundation, Sprint 49.1. Skeleton + placeholder
+> pages only. Real implementation lands per phase roadmap below.
 
-- **Framework**: React 18 + TypeScript 5
-- **Build Tool**: Vite 5
-- **Styling**: TailwindCSS 3 + Shadcn/ui
-- **State Management**: Zustand + TanStack Query
-- **Routing**: React Router 6
-- **Charts**: Recharts
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-
-### Installation
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
-npm run test
-```
-
-### Environment Variables
-
-Copy `.env.example` to `.env` and configure:
-
-```bash
-VITE_API_URL=/api/v1
-```
-
-## Project Structure
+## Architecture
 
 ```
-src/
-├── api/                 # API client and hooks
+frontend/src/
+├── main.tsx              ← Entry point
+├── App.tsx               ← Router root
+│
+├── pages/                ← Top-level pages (one per route)
+│   ├── chat-v2/          ← Phase 50.2 main flow
+│   ├── governance/       ← Phase 53.3 HITL + audit UI
+│   └── verification/     ← Phase 54.1 verification panel
+│
 ├── components/
-│   ├── ui/             # Shadcn/ui components
-│   ├── layout/         # Layout components
-│   └── shared/         # Shared business components
-├── hooks/              # Custom React hooks
-├── lib/                # Utility functions
-├── pages/              # Page components
-│   ├── dashboard/
-│   ├── workflows/
-│   ├── agents/
-│   ├── approvals/
-│   ├── audit/
-│   └── templates/
-├── store/              # Zustand stores
-└── types/              # TypeScript types
+│   ├── ui/               ← Shadcn UI primitives (extract from V1 archive)
+│   ├── layout/           ← Layout shells
+│   └── shared/           ← Cross-page shared components
+│
+├── features/             ← One subdir per agent harness category that has UI
+│   ├── orchestrator-loop/  ← Cat 1 — Loop event visualization
+│   ├── tools/              ← Cat 2 — Tool call viewer
+│   ├── memory/             ← Cat 3 — Memory inspector
+│   ├── state-mgmt/         ← Cat 7 — State timeline
+│   ├── guardrails/         ← Cat 9 — Governance UI
+│   ├── verification/       ← Cat 10 — Verification panel
+│   └── subagent/           ← Cat 11 — Subagent visualizer
+│
+├── hooks/                ← React hooks (e.g. useLoopEvents SSE)
+├── api/                  ← Fetch clients (calls backend /api/v1/*)
+├── stores/               ← Zustand stores
+├── types/                ← TypeScript shared types
+└── utils/                ← Pure helpers
 ```
 
-## Available Scripts
+## Quickstart
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start dev server |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build |
-| `npm run test` | Run unit tests |
-| `npm run test:e2e` | Run E2E tests |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Type check |
+```bash
+npm install            # install React 18 / Vite 5 / Zustand / RR
+npm run dev            # Vite dev server on http://localhost:3007
+npm run build          # production build → dist/
+npm run lint           # ESLint
+npm run typecheck      # tsc --noEmit
+```
 
-## Pages
+Dev server proxies `/api/*` to `http://localhost:8001` (V2 backend).
+Port 3007 chosen to avoid collision with archived V1 frontend (was 3005).
 
-| Route | Description |
-|-------|-------------|
-| `/dashboard` | System overview and metrics |
-| `/workflows` | Workflow management |
-| `/workflows/:id` | Workflow details |
-| `/agents` | Agent management |
-| `/agents/:id` | Agent details and testing |
-| `/templates` | Template marketplace |
-| `/approvals` | Approval workbench |
-| `/audit` | Audit logs |
+## Sprint roadmap (frontend)
 
-## Sprint 5 Features
+| Sprint | Adds |
+|--------|------|
+| 49.1 | Skeleton (this) |
+| 50.2 | chat-v2 page wires `AgentLoop.run()` events via SSE |
+| 53.3-53.4 | governance page (HITL approval modal + Teams integration) |
+| 54.1 | verification page (verifier results + self-correction trace) |
+| 55.1-55.5 | 5 business domain pages (patrol / correlation / rootcause / audit / incident) + DevUI 12-category dashboard |
 
-- Dashboard with key metrics and charts
-- Workflow list and detail views
-- Agent management and testing
-- Template marketplace
-- Approval workbench
-- Audit log viewer
+## V2 vs V1
 
----
-
-**Sprint**: 5 - Frontend UI
-**Version**: 0.1.0
+V1 frontend is archived to `archived/v1-phase1-48/frontend/`. V2 starts
+from a clean skeleton — **do not import V1 directly** (V1 has its own
+backend OpenAPI types that no longer exist). Instead, copy and adapt
+patterns from the archive when building V2 components.

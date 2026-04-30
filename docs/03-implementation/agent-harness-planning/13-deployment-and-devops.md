@@ -874,3 +874,127 @@ Phase 53+：
 
 Phase 56+：
 - [ ] Helm chart + K8s migration
+
+---
+
+## §Production App Role（Sprint 49.4 Day 5.2 補入；49.3 retro Action item #2 RESOLVED）
+
+### 為何重要
+
+Sprint 49.3 Day 4.2 落地 13 張 tenant-scoped 表的 RLS policies + per-request `SET LOCAL app.tenant_id`。**RLS 強制是 tenant 隔離的最後一道防線**：即使應用層 query 漏寫 `WHERE tenant_id = ?`，DB 層仍會擋下跨 tenant 讀寫。
+
+但 **PostgreSQL `SUPERUSER` 與 `BYPASSRLS` 兩個 attribute 任何一個都會繞過 RLS**，包含 `FORCE ROW LEVEL SECURITY` 也無效。
+
+Sprint 49.3 RLS 測試發現 dev container 預設 user `ipa_v2` 同時擁有 `rolsuper=true` 與 `rolbypassrls=true` —— 這在 dev 是 PostgreSQL image 預設，但**生產絕對不可如此**。否則：
+
+- 應用 query bug 不會被 RLS 擋
+- 應用持有 SUPERUSER 連線 = 等於沒有 RLS
+- 攻擊者奪取應用 DB 憑證 = 跨 tenant 全曝光
+
+### 生產規範（強制）
+
+#### 規範 A — App role 屬性
+
+生產環境**禁止**用 `postgres` / `ipa_v2` 等帶 `SUPERUSER` 或 `BYPASSRLS` 的 role 連線。應用必須用專用 app role：
+
+```sql
+-- 生產 app role 範例（在 init 時 owner role 執行）
+CREATE ROLE app_ipa_v2 NOLOGIN;
+ALTER ROLE app_ipa_v2 WITH NOSUPERUSER NOBYPASSRLS;
+
+-- 授予 schema-level 權限
+GRANT USAGE ON SCHEMA public TO app_ipa_v2;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_ipa_v2;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_ipa_v2;
+
+-- 確保未來新建表也自動繼承
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_ipa_v2;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT USAGE, SELECT ON SEQUENCES TO app_ipa_v2;
+
+-- 應用透過 LOGIN role 繼承 app_ipa_v2 屬性（典型管法：login user 屬於 app_ipa_v2 group）
+CREATE ROLE app_ipa_v2_login LOGIN PASSWORD '<env secret>' IN ROLE app_ipa_v2;
+```
+
+關鍵屬性：
+- `NOSUPERUSER` — 不可繞 RLS / 不可 ALTER SYSTEM / 不可 COPY FROM PROGRAM
+- `NOBYPASSRLS` — `FORCE RLS` 對此 role 有效
+- 最小權限 GRANT — 只 CRUD `public` schema 業務表
+- 不授予 DDL（CREATE / ALTER / DROP TABLE）— migration 由獨立 owner role 執行
+
+#### 規範 B — Connection string 範例
+
+```bash
+# DEV（仍可用 SUPERUSER 簡化開發）
+DATABASE_URL=postgresql+asyncpg://ipa_v2:ipa_v2_dev@localhost:5432/ipa_v2
+
+# STAGING / PROD（必須用受限 app role）
+DATABASE_URL=postgresql+asyncpg://app_ipa_v2_login:${APP_DB_PASSWORD}@<host>:5432/ipa_v2
+```
+
+`APP_DB_PASSWORD` 透過 K8s Secret / Vault / AWS Secrets Manager 注入，**禁止寫入 .env file 或 Helm chart**。
+
+#### 規範 C — Migration role 區隔
+
+Alembic migrations 需 DDL 權限（CREATE TABLE / CREATE POLICY / ALTER）。**App role 不可有 DDL**。建議：
+
+```sql
+-- 獨立的 migration owner role（CI/CD pipeline 才知道密碼）
+CREATE ROLE owner_ipa_v2 LOGIN PASSWORD '<rotated env secret>';
+GRANT ALL PRIVILEGES ON SCHEMA public TO owner_ipa_v2;
+```
+
+CI/CD migration step：
+```bash
+# Migration step uses owner role
+DATABASE_URL=postgresql+asyncpg://owner_ipa_v2:... alembic upgrade head
+
+# Application step uses app role
+DATABASE_URL=postgresql+asyncpg://app_ipa_v2_login:... uvicorn api.main:app
+```
+
+#### 規範 D — RLS 真實有效性測試
+
+每個生產部署 release 前 CI 必須跑：
+
+```sql
+-- Test: connect as app role; try to read another tenant's row
+SET LOCAL app.tenant_id = '<tenant-A-uuid>';
+SELECT count(*) FROM messages;  -- 必須只看到 tenant A 的訊息
+
+-- Test: try to bypass with SET LOCAL app.tenant_id manipulation
+SELECT set_config('app.tenant_id', '<tenant-B-uuid>', false);  -- false = SESSION not LOCAL
+SELECT count(*) FROM messages;  -- 仍應只看到 tenant A（如果 connection pooler 重設了 LOCAL）
+```
+
+Sprint 49.3 紅隊已驗證；生產 deploy 還要重跑一次（不同 user 不同密碼可能有差）。
+
+#### 規範 E — Audit
+
+監控 + 警報：
+
+```sql
+-- 警報：app role 不可有 SUPERUSER / BYPASSRLS
+SELECT rolname, rolsuper, rolbypassrls
+FROM pg_roles
+WHERE rolname IN ('app_ipa_v2', 'app_ipa_v2_login')
+  AND (rolsuper OR rolbypassrls);
+-- 預期：0 rows. 任何 row 都是 critical alert.
+```
+
+Grafana / CloudWatch alarm：每小時跑一次此 query，> 0 rows → page on-call。
+
+### Phase 49.4 status
+
+- [x] 規範 A-E 文件化（本節）
+- [ ] CI deploy gate 引入規範 E 警報（Phase 55 production cutover 前）
+- [ ] App role 在 staging 環境配置（Phase 53.1+）
+- [x] 49.3 retro Action item #2 RESOLVED ✅
+
+### Cross-references
+
+- Sprint 49.3 retro Action item #2
+- `0009_rls_policies.py` — 建立 13 張表 RLS policies
+- `platform_layer/middleware/tenant_context.py` — `SET LOCAL app.tenant_id` 實作
+- `.claude/rules/multi-tenant-data.md` — 鐵律 1+2+3 連動

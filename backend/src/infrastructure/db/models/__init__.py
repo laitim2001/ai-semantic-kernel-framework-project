@@ -1,0 +1,113 @@
+"""
+infrastructure.db.models — All ORM models registered against `Base.metadata`.
+
+Sprint 49.2 builds these incrementally:
+    Day 1.5: identity.py     — Tenant / User / Role / UserRole / RolePermission
+    Day 2.1: sessions.py     — Session / Message / MessageEvent
+    Day 3.1: tools.py        — ToolRegistry / ToolCall / ToolResult
+    Day 4.1: state.py        — StateSnapshot / LoopState
+
+Sprint 49.3 adds:
+    Day 1.1: audit.py        — AuditLog (append-only, hash chain)
+    Day 2.1: api_keys.py     — ApiKey / RateLimit
+    Day 2.3: memory.py       — MemorySystem / MemoryTenant / MemoryRole / MemoryUser / MemorySessionSummary
+    Day 3.1-3: governance.py — Approval / RiskAssessment / GuardrailEvent
+
+Importing this package registers all ORM tables with Base.metadata, which
+the Alembic env.py uses as `target_metadata`.
+
+Per .claude/rules/multi-tenant-data.md 鐵律 1, all session-scoped tables
+inherit `TenantScopedMixin` from `infrastructure.db.base`.
+"""
+
+from __future__ import annotations
+
+# Day 2.1 (Sprint 49.3) — API auth + quotas
+from infrastructure.db.models.api_keys import ApiKey, RateLimit
+
+# Day 1.1 (Sprint 49.3) — Audit
+from infrastructure.db.models.audit import AuditLog
+
+# Day 3.1-3 (Sprint 49.3) — Governance
+from infrastructure.db.models.governance import (
+    Approval,
+    GuardrailEvent,
+    RiskAssessment,
+)
+
+# Day 1.5 — Identity
+from infrastructure.db.models.identity import (
+    Role,
+    RolePermission,
+    Tenant,
+    User,
+    UserRole,
+)
+
+# Day 2.3 (Sprint 49.3) — Memory layers
+from infrastructure.db.models.memory import (
+    MemoryRole,
+    MemorySessionSummary,
+    MemorySystem,
+    MemoryTenant,
+    MemoryUser,
+)
+
+# Day 2.1 — Sessions
+from infrastructure.db.models.sessions import (
+    Message,
+    MessageEvent,
+    Session,
+)
+
+# Day 4.1 — State
+from infrastructure.db.models.state import (
+    LoopState,
+    StateSnapshot,
+    append_snapshot,
+    compute_state_hash,
+)
+
+# Day 3.1 — Tools
+from infrastructure.db.models.tools import (
+    ToolCall,
+    ToolRegistry,
+    ToolResult,
+)
+
+__all__ = [
+    # Identity
+    "Tenant",
+    "User",
+    "Role",
+    "UserRole",
+    "RolePermission",
+    # Sessions
+    "Session",
+    "Message",
+    "MessageEvent",
+    # Tools
+    "ToolRegistry",
+    "ToolCall",
+    "ToolResult",
+    # State + helpers
+    "StateSnapshot",
+    "LoopState",
+    "append_snapshot",
+    "compute_state_hash",
+    # Audit (Sprint 49.3)
+    "AuditLog",
+    # API auth + quotas (Sprint 49.3)
+    "ApiKey",
+    "RateLimit",
+    # Memory layers (Sprint 49.3)
+    "MemorySystem",
+    "MemoryTenant",
+    "MemoryRole",
+    "MemoryUser",
+    "MemorySessionSummary",
+    # Governance (Sprint 49.3)
+    "Approval",
+    "RiskAssessment",
+    "GuardrailEvent",
+]

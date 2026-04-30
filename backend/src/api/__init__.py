@@ -1,1 +1,1 @@
-﻿# API v1 routes
+"""api — FastAPI routers (versioned)."""
