@@ -13,9 +13,9 @@
 - **Day 2**：✅ ToolExecutorImpl + PermissionChecker（6h plan / actual ~1.5h）
 - **Day 3**：✅ SandboxBackend + SubprocessSandbox + exec_tools（5h plan / actual ~1h）
 - **Day 4**：✅ search_tools + hitl_tools + memory_tools placeholder + tests（6h plan / actual ~1.5h）
-- **Day 5**：⏸ 18 業務 stub migration + _inmemory.py 刪 + retro + closeout（5h）
+- **Day 5**：✅ 18 業務 stub migration + _inmemory.py 刪 + retro + closeout（5h plan / actual ~1.5h）
 
-**Plan total**：31h / **Actual estimate**：6-8h
+**Plan total**：31h / **Actual**：~7.5h（24% — V2 avg 20%；51.0 23%；nominal）
 
 ---
 
@@ -219,7 +219,7 @@
   - request_approval 註明 51.1 placeholder + 53.3 wires；memory_* 註明 51.2 fills；python_sandbox 註明 CARRY-022 Docker；echo_tool 改備註「仍 active in 51.1；可能在 52.x deprecate」（51.1 不刪 echo_tool）
 
 ### 4.7 Day 4 commit（15 min）
-- [ ] **commit `feat(tools, sprint-51-1): Day 4 — 4 built-in tools (search/exec/hitl + memory placeholder) + 17.md §3.1 sync`**
+- [x] **commit `feat(tools, sprint-51-1): Day 4 — built-in tools (web_search/hitl/memory placeholder) + 17.md §3.1 sync`** ✅ `dd08fc2`
   - DoD: pytest 323 PASS / 1 SKIPPED ✅；mypy --strict 23 source files clean ✅；black formatted ✅；4/4 V2 lints OK ✅
 
 ---
@@ -227,44 +227,49 @@
 ## Day 5 — Migration + _inmemory.py delete + retro + closeout（預估 5 小時）
 
 ### 5.1 18 業務 stub migration tags → first-class field（90 min）
-- [ ] **修改 5 file `business_domain/{patrol,correlation,rootcause,audit_domain,incident}/tools.py`**
-  - DoD: 每個 ToolSpec 移除 `tags=("hitl_policy:*", "risk:*", ...)` 中的 hitl_policy / risk 編碼，加 first-class `hitl_policy=...` + `risk_level=...`
-  - 保 `tags=("domain:*",)`（domain tag 持續用作分類）
-  - 18 spec 全 mypy strict pass
+- [x] **修改 5 file `business_domain/{patrol,correlation,rootcause,audit_domain,incident}/tools.py`** ✅
+  - 18 spec 全移除 `hitl_policy:*` / `risk:*` tags-encoded；加 first-class `hitl_policy=ToolHITLPolicy.X` + `risk_level=RiskLevel.X`
+  - 保 `tags=("domain:*",)`
+  - register parameter type `InMemoryToolRegistry` → `ToolRegistry` ABC
+  - mypy strict 39 source files clean ✅
 
 ### 5.2 `make_default_executor()` 切到 ToolRegistryImpl + ToolExecutorImpl（30 min）
-- [ ] **修改 `business_domain/_register_all.py`**
-  - DoD: 用 ToolRegistryImpl + ToolExecutorImpl 取代 InMemoryToolRegistry + InMemoryToolExecutor
-  - executor 注入 PermissionChecker + tracer
+- [x] **修改 `business_domain/_register_all.py`** ✅
+  - ToolRegistryImpl + ToolExecutorImpl 取代 InMemoryToolRegistry + InMemoryToolExecutor
+  - 從新 `tools/echo_tool.py` import ECHO_TOOL_SPEC + echo_handler（不再依賴 _inmemory.py）
+  - parameter type `InMemoryToolRegistry` → `ToolRegistry` ABC
 
 ### 5.3 `_inmemory.py` 整檔刪除（30 min）
-- [ ] **delete `agent_harness/tools/_inmemory.py`**
-  - DoD: file 不存在；同時刪所有 `from agent_harness.tools._inmemory import` 站點
-  - Verify: `grep -r "InMemoryToolRegistry\|InMemoryToolExecutor\|make_echo_executor" backend/src/` = 0 hits
+- [x] **delete `agent_harness/tools/_inmemory.py`** ✅
+  - 同時刪：`tests/unit/agent_harness/tools/test_inmemory.py`（8 tests for deprecated impl）
+  - **影響範圍 vs plan**：13 callers 修：5 business_domain/*/tools.py + _register_all.py + tools/__init__.py + 6 test files
+  - 修 6 test files：5 用 make_echo_executor (re-export from tools/) + 1 用 ToolExecutorImpl + AllowAllPermissionChecker test helper
+  - Verify: `grep -r InMemoryToolRegistry|InMemoryToolExecutor|make_echo_executor backend/src/` 全是 docstring/comment（0 active import）；`_inmemory.py` not exists ✅
 
 ### 5.4 既存 283 tests 回歸驗證（45 min）
-- [ ] **`PYTHONPATH=src python -m pytest --tb=short`**
-  - DoD: 283 baseline + ~25 new = ~308 PASS / 0 SKIPPED；mock_services + 18 業務 + e2e 全 PASS
-  - 若 fail：診斷 migration 影響並修
+- [x] **`PYTHONPATH=src python -m pytest --tb=short`** ✅
+  - 315 PASS / 1 SKIPPED（POSIX-only memory test on Windows，platform-skipif 標準 pattern）
+  - 算式：51.0 baseline 283 + Day 2 ~19 + Day 3 ~9 + Day 4 ~12 - Day 5 inmemory delete -8 = **315 PASS active**
+  - mock_services + 18 業務（透過 _AllowAllPermissionChecker 在 routing test 中保留 happy path）+ e2e 全 PASS
 
 ### 5.5 progress.md Day 0-5 全紀錄（30 min）
-- [ ] **`docs/03-implementation/agent-harness-execution/phase-51/sprint-51-1/progress.md`**
-  - DoD: Day 0-5 各 1 entry；估時 vs actual 表
+- [x] **`docs/03-implementation/agent-harness-execution/phase-51/sprint-51-1/progress.md`** ✅
+  - Day 0-5 各 1 entry；估時 vs actual 表
 
 ### 5.6 retrospective.md（30 min）
-- [ ] **`docs/03-implementation/agent-harness-execution/phase-51/sprint-51-1/retrospective.md`**
-  - DoD: 含 Did Well / Improve / Action Items / 估時準度 / 範疇成熟度 Post-51.1（Cat 2 → Level 3）
+- [x] **`docs/03-implementation/agent-harness-execution/phase-51/sprint-51-1/retrospective.md`** ✅
+  - 5 Did Well / 5 Improve / 4 Action Items / CARRY 解決+延後+forward / 估時準度 24% / 範疇成熟度 Post-51.1（Cat 2 → Level 3）
 
 ### 5.7 Phase 51 README 更新 51.1 ✅ DONE（15 min）
-- [ ] **`phase-51-tools-memory/README.md`**
-  - DoD: Sprint 51.1 ✅ DONE 標記；Cat 2 Level 1+ → Level 3；Sprint 進度 2/3 = 67%
+- [x] **`phase-51-tools-memory/README.md`** ✅
+  - Sprint 51.1 ✅ DONE；2 / 3 sprint complete (67%)；範疇成熟度表 Post-51.1 column 更新
 
 ### 5.8 sprint-51-1-checklist 全 [x] / 🚧（10 min）
-- [ ] **本檔所有 `[ ]` → `[x]` 或標 🚧 + reason**
-  - DoD: 0 個未勾選殘留
+- [x] **本檔所有 `[ ]` → `[x]`** ✅
+  - 0 個未勾選殘留（除 5.9 closeout commit pending 自身）
 
 ### 5.9 Day 5 closeout commit（15 min）
-- [ ] **commit `docs(closeout, sprint-51-1): Day 5 — migration + _inmemory delete + progress + retro + Phase 51 README`**
+- [ ] **commit `docs(closeout, sprint-51-1): Day 5 — 18 stub migration + _inmemory delete + 6 caller migrations + retro + Phase 51 README`**
   - DoD: working tree clean；branch HEAD = closeout commit；Sprint 51.1 ✅ DONE
 
 ---

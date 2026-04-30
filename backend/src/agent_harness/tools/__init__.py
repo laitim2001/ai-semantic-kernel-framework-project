@@ -1,18 +1,18 @@
-"""Category 2: Tool Layer (registry + executor). See README.md.
+"""Category 2: Tool Layer — production registry + executor + sandbox + 6 built-in tools.
 
-50.x bring-up: in-memory registry + executor + echo_tool exported here for
-test-helper convenience. DEPRECATED-IN: 51.1 (Cat 2 production impl).
+Sprint 51.1 (Day 5): InMemoryToolRegistry / InMemoryToolExecutor /
+make_echo_executor have been removed (CARRY-017 closeout). All consumers
+should use ToolRegistryImpl + ToolExecutorImpl directly, or call
+register_builtin_tools() / business_domain.make_default_executor().
 """
 
+from collections.abc import Awaitable, Callable
+from typing import Any
+
+from agent_harness._contracts import ToolCall
+
 from agent_harness.tools._abc import ToolExecutor, ToolRegistry
-from agent_harness.tools._inmemory import (
-    ECHO_TOOL_SPEC,
-    InMemoryToolExecutor,
-    InMemoryToolRegistry,
-    ToolHandler,
-    echo_handler,
-    make_echo_executor,
-)
+from agent_harness.tools.echo_tool import ECHO_TOOL_SPEC, echo_handler, make_echo_executor
 from agent_harness.tools.exec_tools import (
     PYTHON_SANDBOX_SPEC,
     make_python_sandbox_handler,
@@ -40,6 +40,8 @@ from agent_harness.tools.search_tools import (
     WebSearchConfigError,
     make_web_search_handler,
 )
+
+ToolHandler = Callable[[ToolCall], Awaitable[str | dict[str, Any]]]
 
 
 def register_builtin_tools(
@@ -75,8 +77,6 @@ def register_builtin_tools(
 
 __all__ = [
     "ECHO_TOOL_SPEC",
-    "InMemoryToolExecutor",
-    "InMemoryToolRegistry",
     "MEMORY_SEARCH_SPEC",
     "MEMORY_TOOL_SPECS",
     "MEMORY_WRITE_SPEC",

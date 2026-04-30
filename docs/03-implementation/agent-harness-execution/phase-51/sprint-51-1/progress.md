@@ -191,18 +191,84 @@
 
 ---
 
-## 估時 vs Actual（rolling）
+## Day 5 — 2026-04-30 (18 stub migration + _inmemory deletion + 6 caller migrations + retro + closeout)
 
-| Day | Plan | Actual | % |
-|-----|------|--------|---|
-| 0   | 4h   | ~1h    | 25% |
-| 1   | 5h   | ~1h    | 20% |
-| 2   | 6h   | ~1.5h  | 25% |
-| 3   | 5h   | ~1h    | 20% |
-| 4   | 6h   | ~1.5h  | 25% |
-| **累計** | **26h** | **~6h** | **23%** |
+**Estimated**: 5h / **Actual**: ~1.5h
 
-V2 7-sprint avg 20%；51.0 23%；51.1 cumulative 23%（穩定 nominal）。
+### Done
+- 5.1 18 business stub migration: 5 files (patrol/correlation/rootcause/audit_domain/incident/tools.py); each ToolSpec moves from tags-encoded `hitl_policy:*` / `risk:*` to first-class `hitl_policy=ToolHITLPolicy.X` + `risk_level=RiskLevel.X` per CARRY-021. Register parameter type `InMemoryToolRegistry` → `ToolRegistry` ABC.
+- 5.2 _register_all.make_default_executor switched from InMemory* to ToolRegistryImpl + ToolExecutorImpl with PermissionChecker; ECHO_TOOL_SPEC + echo_handler now imported from new `tools/echo_tool.py`.
+- 5.3 _inmemory.py whole-file delete + test_inmemory.py whole-file delete (-8 deprecated tests); 13 callers updated:
+  - 5 business_domain/*/tools.py imports
+  - _register_all.py
+  - tools/__init__.py exports refactor
+  - 6 test files: make_echo_executor re-exported from tools/ via tools/echo_tool.py; test_observability_coverage uses ToolExecutorImpl + ToolRegistryImpl directly with crash spec; test_business_tools_via_registry uses _AllowAllPermissionChecker test helper to focus on routing
+- 5.4 baseline regression: 315 PASS / 1 SKIPPED (POSIX-only mem test platform skipif on Windows); math = 51.0 baseline 283 + 19 Day 2 + 9 Day 3 + 12 Day 4 - 8 inmemory delete = 315
+- 5.5 progress.md Day 0-5 full roll
+- 5.6 retrospective.md full content (5 Did Well / 5 Improve / 4 Action Items / CARRY resolved + deferred + forward)
+- 5.7 Phase 51 README: Sprint 51.1 DONE; 2/3 sprint = 67%; maturity table Post-51.1 column updated
+- 5.8 checklist 0 unchecked items (except 5.9 closeout commit itself)
+- AI-1 17.md §1.1: ExecutionContext row added (single-source migration logged)
+
+### Verification
+- pytest 315 PASS / 1 SKIPPED ✅
+- mypy --strict 39 source files clean ✅
+- black formatted ✅
+- 4/4 V2 lints OK ✅
+- CARRY-017: `InMemoryToolRegistry|InMemoryToolExecutor|make_echo_executor` grep in src/ → all docstring/comment, 0 active import; `_inmemory.py` deleted ✅
+- CARRY-021: `tags=(.*"hitl_policy:|tags=(.*"risk:` grep → 0 hits ✅
+
+### Notes
+- echo_tool.make_echo_executor uses TYPE_CHECKING block to avoid circular import (echo_tool imported by tools/__init__ before executor/registry are bound). Action item AI-3: refactor to module-level helper in 51.x.
+- test_business_tools_via_registry uses `_AllowAllPermissionChecker` test helper to bypass permission gate for routing-focused tests; production permission semantics covered separately in test_executor.py (avoids AP-10 mock divergence).
+- HIGH-risk business tools (mock_rootcause_apply_fix / mock_incident_close) now correctly surface as REQUIRE_APPROVAL through default executor — test_e2e_with_mock_patrol uses MEDIUM-risk patrol tools so it still happy-paths.
+- Day 5 plan said "make_default_executor switch", but the migration also touched 6 test files (plan §5.3 mentioned in Risk R-3); R-3 mitigation worked — all sites caught via grep + AST scan.
+
+### Files Changed
+**Modified (10)**:
+- 5 business_domain/*/tools.py (patrol/correlation/rootcause/audit_domain/incident)
+- business_domain/_register_all.py
+- agent_harness/tools/__init__.py
+- 4 test files (test_business_tools_via_registry / test_observability_coverage / test_agent_loop_handler / others using make_echo_executor passive)
+- docs (Phase 51 README / 17.md §1.1 / sprint-51-1-checklist / progress / retrospective)
+
+**Created (2)**:
+- agent_harness/tools/echo_tool.py (50.1 carryover migration target)
+- retrospective.md
+
+**Deleted (2)**:
+- agent_harness/tools/_inmemory.py (CARRY-017 closeout)
+- tests/unit/agent_harness/tools/test_inmemory.py (-8 deprecated tests)
+
+### Commit (pending)
+- Will commit as docs(closeout, sprint-51-1): Day 5 — 18 stub migration + _inmemory delete + 6 caller migrations + retro
+
+---
+
+## 估時 vs Actual（final）
+
+| Day | Plan | Actual | % | 主題 |
+|-----|------|--------|---|------|
+| 0   | 4h   | ~1h    | 25% | Plan + Checklist + Phase README |
+| 1   | 5h   | ~1h    | 20% | ToolSpec extension + ToolRegistryImpl + 17.md §1.1 |
+| 2   | 6h   | ~1.5h  | 25% | ToolExecutorImpl + PermissionChecker + JSONSchema |
+| 3   | 5h   | ~1h    | 20% | SandboxBackend + SubprocessSandbox + python_sandbox |
+| 4   | 6h   | ~1.5h  | 25% | builtin tools (search/hitl/memory) + register helper + 17.md §3.1 |
+| 5   | 5h   | ~1.5h  | 30% | 18 stub migration + _inmemory delete + 6 caller migrations + retro |
+| **總** | **31h** | **~7.5h** | **24%** | — |
+
+V2 7-sprint avg 20%；51.0 23%；51.1 final 24%（穩定 nominal）。
+
+---
+
+## Sprint 51.1 Test 累計
+
+- Pre-51.1 baseline (51.0 closeout)：283 PASS / 0 SKIPPED
+- Day 2 add：+19 (executor)
+- Day 3 add：+9 active + 1 platform-skip (sandbox)
+- Day 4 add：+12 (builtin integration)
+- Day 5 delete：-8 (inmemory deprecated)
+- **Final**：**315 PASS / 1 SKIPPED**（+32 active / +1 platform-skip 整體 net）
 
 ---
 

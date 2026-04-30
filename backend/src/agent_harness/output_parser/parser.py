@@ -85,9 +85,7 @@ class OutputParserImpl(OutputParser):
         """Join text-typed ContentBlocks; pass-through if already str."""
         if isinstance(content, str):
             return content
-        return "".join(
-            block.text or "" for block in content if block.type == "text"
-        )
+        return "".join(block.text or "" for block in content if block.type == "text")
 
     @staticmethod
     def _extract_response_id(response: ChatResponse) -> str | None:

@@ -16,11 +16,13 @@ from typing import Any
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
+    RiskLevel,
     ToolAnnotations,
     ToolCall,
+    ToolHITLPolicy,
     ToolSpec,
 )
-from agent_harness.tools._inmemory import InMemoryToolRegistry
+from agent_harness.tools import ToolRegistry
 
 from .mock_executor import DEFAULT_BASE_URL, CorrelationMockExecutor
 
@@ -46,7 +48,9 @@ SPEC_ANALYZE = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True),
     concurrency_policy=ConcurrencyPolicy.READ_ONLY_PARALLEL,
-    tags=("domain:correlation", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:correlation",),
 )
 
 SPEC_FIND_ROOT_CAUSE = ToolSpec(
@@ -61,7 +65,9 @@ SPEC_FIND_ROOT_CAUSE = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:correlation", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:correlation",),
 )
 
 SPEC_GET_RELATED = ToolSpec(
@@ -77,7 +83,9 @@ SPEC_GET_RELATED = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True, idempotent=True),
     concurrency_policy=ConcurrencyPolicy.READ_ONLY_PARALLEL,
-    tags=("domain:correlation", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:correlation",),
 )
 
 CORRELATION_SPECS: tuple[ToolSpec, ...] = (
@@ -111,7 +119,7 @@ def _build_handlers(executor: CorrelationMockExecutor) -> dict[str, ToolHandler]
 
 
 def register_correlation_tools(
-    registry: InMemoryToolRegistry,
+    registry: ToolRegistry,
     handlers: dict[str, ToolHandler],
     *,
     mock_url: str = DEFAULT_BASE_URL,

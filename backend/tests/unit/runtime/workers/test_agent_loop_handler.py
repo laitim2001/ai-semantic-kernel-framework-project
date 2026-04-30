@@ -24,7 +24,7 @@ from agent_harness._contracts import (
 )
 from agent_harness.orchestrator_loop import AgentLoopImpl
 from agent_harness.output_parser import OutputParserImpl
-from agent_harness.tools._inmemory import make_echo_executor
+from agent_harness.tools import make_echo_executor
 from runtime.workers import (
     TaskEnvelope,
     build_agent_loop_handler,

@@ -25,11 +25,13 @@ from typing import Any
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
+    RiskLevel,
     ToolAnnotations,
     ToolCall,
+    ToolHITLPolicy,
     ToolSpec,
 )
-from agent_harness.tools._inmemory import InMemoryToolRegistry
+from agent_harness.tools import ToolRegistry
 
 from .mock_executor import DEFAULT_BASE_URL, PatrolMockExecutor
 
@@ -58,7 +60,9 @@ SPEC_CHECK_SERVERS = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True, idempotent=True),
     concurrency_policy=ConcurrencyPolicy.READ_ONLY_PARALLEL,
-    tags=("domain:patrol", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:patrol",),
 )
 
 SPEC_GET_RESULTS = ToolSpec(
@@ -73,7 +77,9 @@ SPEC_GET_RESULTS = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True, idempotent=True),
     concurrency_policy=ConcurrencyPolicy.READ_ONLY_PARALLEL,
-    tags=("domain:patrol", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:patrol",),
 )
 
 SPEC_SCHEDULE = ToolSpec(
@@ -93,7 +99,9 @@ SPEC_SCHEDULE = ToolSpec(
     },
     annotations=ToolAnnotations(destructive=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:patrol", "hitl_policy:ask_once", "risk:medium"),
+    hitl_policy=ToolHITLPolicy.ASK_ONCE,
+    risk_level=RiskLevel.MEDIUM,
+    tags=("domain:patrol",),
 )
 
 SPEC_CANCEL = ToolSpec(
@@ -108,7 +116,9 @@ SPEC_CANCEL = ToolSpec(
     },
     annotations=ToolAnnotations(destructive=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:patrol", "hitl_policy:ask_once", "risk:medium"),
+    hitl_policy=ToolHITLPolicy.ASK_ONCE,
+    risk_level=RiskLevel.MEDIUM,
+    tags=("domain:patrol",),
 )
 
 PATROL_SPECS: tuple[ToolSpec, ...] = (
@@ -148,7 +158,7 @@ def _build_handlers(executor: PatrolMockExecutor) -> dict[str, ToolHandler]:
 
 
 def register_patrol_tools(
-    registry: InMemoryToolRegistry,
+    registry: ToolRegistry,
     handlers: dict[str, ToolHandler],
     *,
     mock_url: str = DEFAULT_BASE_URL,

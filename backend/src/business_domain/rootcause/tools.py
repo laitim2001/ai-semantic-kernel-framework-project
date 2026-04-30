@@ -21,11 +21,13 @@ from typing import Any
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
+    RiskLevel,
     ToolAnnotations,
     ToolCall,
+    ToolHITLPolicy,
     ToolSpec,
 )
-from agent_harness.tools._inmemory import InMemoryToolRegistry
+from agent_harness.tools import ToolRegistry
 
 from .mock_executor import DEFAULT_BASE_URL, RootcauseMockExecutor
 
@@ -44,7 +46,9 @@ SPEC_DIAGNOSE = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:rootcause", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:rootcause",),
 )
 
 SPEC_SUGGEST_FIX = ToolSpec(
@@ -59,7 +63,9 @@ SPEC_SUGGEST_FIX = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:rootcause", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:rootcause",),
 )
 
 SPEC_APPLY_FIX = ToolSpec(
@@ -79,7 +85,9 @@ SPEC_APPLY_FIX = ToolSpec(
     },
     annotations=ToolAnnotations(destructive=True, open_world=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:rootcause", "hitl_policy:always_ask", "risk:high"),
+    hitl_policy=ToolHITLPolicy.ALWAYS_ASK,
+    risk_level=RiskLevel.HIGH,
+    tags=("domain:rootcause",),
 )
 
 ROOTCAUSE_SPECS: tuple[ToolSpec, ...] = (
@@ -113,7 +121,7 @@ def _build_handlers(executor: RootcauseMockExecutor) -> dict[str, ToolHandler]:
 
 
 def register_rootcause_tools(
-    registry: InMemoryToolRegistry,
+    registry: ToolRegistry,
     handlers: dict[str, ToolHandler],
     *,
     mock_url: str = DEFAULT_BASE_URL,

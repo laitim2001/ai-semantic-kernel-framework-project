@@ -46,6 +46,7 @@ V2 review 發現 7 條跨範疇 / 跨文件重複定義：
 | `ToolResult` | `01-eleven-categories-spec.md` | 範疇 2 | 工具回傳（含 `result_content_types`） |
 | `ToolAnnotations` | `01-eleven-categories-spec.md` | 範疇 2 | MCP 4 hints（readOnly / destructive / idempotent / openWorld） |
 | `ToolHITLPolicy` | `01-eleven-categories-spec.md` | 範疇 2 | Per-tool HITL behavior enum（`AUTO` / `ASK_ONCE` / `ALWAYS_ASK`）— **新增 51.1**；distinct from per-tenant `HITLPolicy` (in `_contracts.hitl`) |
+| `ExecutionContext` | `01-eleven-categories-spec.md` | 範疇 2 | Per-call invocation context dataclass（`tenant_id` / `session_id` / `explicit_approval`）— **新增 51.1**（owned by `_contracts/tools.py` so `ToolExecutor` ABC can reference without import cycle）；consumed by `PermissionChecker.check()` |
 | `ConcurrencyPolicy` | `01-eleven-categories-spec.md` | 範疇 2 | sequential / read_only_parallel / all_parallel |
 | `LoopState` | `01-eleven-categories-spec.md` | 範疇 7 | 中央 state；拆 transient/durable |
 | `TransientState` | `01-eleven-categories-spec.md` | 範疇 7 | in-memory 短期 state |

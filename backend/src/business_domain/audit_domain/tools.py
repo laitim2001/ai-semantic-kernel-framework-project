@@ -20,11 +20,13 @@ from typing import Any
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
+    RiskLevel,
     ToolAnnotations,
     ToolCall,
+    ToolHITLPolicy,
     ToolSpec,
 )
-from agent_harness.tools._inmemory import InMemoryToolRegistry
+from agent_harness.tools import ToolRegistry
 
 from .mock_executor import DEFAULT_BASE_URL, AuditMockExecutor
 
@@ -46,7 +48,9 @@ SPEC_QUERY_LOGS = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True),
     concurrency_policy=ConcurrencyPolicy.READ_ONLY_PARALLEL,
-    tags=("domain:audit", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:audit",),
 )
 
 SPEC_GENERATE_REPORT = ToolSpec(
@@ -62,7 +66,9 @@ SPEC_GENERATE_REPORT = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True, open_world=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:audit", "hitl_policy:auto", "risk:medium"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.MEDIUM,
+    tags=("domain:audit",),
 )
 
 SPEC_FLAG_ANOMALY = ToolSpec(
@@ -78,7 +84,9 @@ SPEC_FLAG_ANOMALY = ToolSpec(
     },
     annotations=ToolAnnotations(destructive=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:audit", "hitl_policy:ask_once", "risk:medium"),
+    hitl_policy=ToolHITLPolicy.ASK_ONCE,
+    risk_level=RiskLevel.MEDIUM,
+    tags=("domain:audit",),
 )
 
 AUDIT_SPECS: tuple[ToolSpec, ...] = (
@@ -121,7 +129,7 @@ def _build_handlers(executor: AuditMockExecutor) -> dict[str, ToolHandler]:
 
 
 def register_audit_tools(
-    registry: InMemoryToolRegistry,
+    registry: ToolRegistry,
     handlers: dict[str, ToolHandler],
     *,
     mock_url: str = DEFAULT_BASE_URL,

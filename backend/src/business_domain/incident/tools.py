@@ -24,11 +24,13 @@ from typing import Any
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
+    RiskLevel,
     ToolAnnotations,
     ToolCall,
+    ToolHITLPolicy,
     ToolSpec,
 )
-from agent_harness.tools._inmemory import InMemoryToolRegistry
+from agent_harness.tools import ToolRegistry
 
 from .mock_executor import DEFAULT_BASE_URL, IncidentMockExecutor
 
@@ -53,7 +55,9 @@ SPEC_CREATE = ToolSpec(
     },
     annotations=ToolAnnotations(destructive=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:incident", "hitl_policy:ask_once", "risk:medium"),
+    hitl_policy=ToolHITLPolicy.ASK_ONCE,
+    risk_level=RiskLevel.MEDIUM,
+    tags=("domain:incident",),
 )
 
 SPEC_UPDATE_STATUS = ToolSpec(
@@ -72,7 +76,9 @@ SPEC_UPDATE_STATUS = ToolSpec(
     },
     annotations=ToolAnnotations(destructive=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:incident", "hitl_policy:ask_once", "risk:medium"),
+    hitl_policy=ToolHITLPolicy.ASK_ONCE,
+    risk_level=RiskLevel.MEDIUM,
+    tags=("domain:incident",),
 )
 
 SPEC_CLOSE = ToolSpec(
@@ -91,7 +97,9 @@ SPEC_CLOSE = ToolSpec(
     },
     annotations=ToolAnnotations(destructive=True),
     concurrency_policy=ConcurrencyPolicy.SEQUENTIAL,
-    tags=("domain:incident", "hitl_policy:always_ask", "risk:high"),
+    hitl_policy=ToolHITLPolicy.ALWAYS_ASK,
+    risk_level=RiskLevel.HIGH,
+    tags=("domain:incident",),
 )
 
 SPEC_GET = ToolSpec(
@@ -104,7 +112,9 @@ SPEC_GET = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True, idempotent=True),
     concurrency_policy=ConcurrencyPolicy.READ_ONLY_PARALLEL,
-    tags=("domain:incident", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:incident",),
 )
 
 SPEC_LIST = ToolSpec(
@@ -126,7 +136,9 @@ SPEC_LIST = ToolSpec(
     },
     annotations=ToolAnnotations(read_only=True),
     concurrency_policy=ConcurrencyPolicy.READ_ONLY_PARALLEL,
-    tags=("domain:incident", "hitl_policy:auto", "risk:low"),
+    hitl_policy=ToolHITLPolicy.AUTO,
+    risk_level=RiskLevel.LOW,
+    tags=("domain:incident",),
 )
 
 INCIDENT_SPECS: tuple[ToolSpec, ...] = (
@@ -183,7 +195,7 @@ def _build_handlers(executor: IncidentMockExecutor) -> dict[str, ToolHandler]:
 
 
 def register_incident_tools(
-    registry: InMemoryToolRegistry,
+    registry: ToolRegistry,
     handlers: dict[str, ToolHandler],
     *,
     mock_url: str = DEFAULT_BASE_URL,
