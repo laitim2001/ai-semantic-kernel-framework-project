@@ -11,7 +11,7 @@
 - **Day 0**：✅ Plan + Checklist + branch（4h）
 - **Day 1**：✅ ToolSpec extension（CARRY-021）+ ToolRegistryImpl（5h plan / actual ~1h）
 - **Day 2**：✅ ToolExecutorImpl + PermissionChecker（6h plan / actual ~1.5h）
-- **Day 3**：⏸ SandboxBackend + SubprocessSandbox + exec_tools（5h）
+- **Day 3**：✅ SandboxBackend + SubprocessSandbox + exec_tools（5h plan / actual ~1h）
 - **Day 4**：⏸ search_tools + hitl_tools + memory_tools placeholder + tests（6h）
 - **Day 5**：⏸ 18 業務 stub migration + _inmemory.py 刪 + retro + closeout（5h）
 
@@ -127,7 +127,7 @@
   - Edge cases：unknown_tool / handler_exception / no_handler_registered
 
 ### 2.6 Day 2 commit（15 min）
-- [ ] **commit `feat(tools, sprint-51-1): Day 2 — ToolExecutorImpl + PermissionChecker + JSONSchema validation`**
+- [x] **commit `feat(tools, sprint-51-1): Day 2 — ToolExecutorImpl + PermissionChecker + JSONSchema validation`** ✅ `8b364fc`
   - DoD: pytest 302 PASS（19 new）✅；mypy strict 35 source files clean ✅；4/4 V2 lints OK ✅；black formatted ✅
 
 ---
@@ -135,33 +135,41 @@
 ## Day 3 — SandboxBackend + SubprocessSandbox + exec_tools（預估 5 小時）
 
 ### 3.1 SandboxBackend ABC + SandboxResult dataclass（30 min）
-- [ ] **`agent_harness/tools/sandbox.py:SandboxBackend(ABC)` + `SandboxResult`**
-  - DoD: ABC method `execute(code, *, timeout_seconds, memory_mb, network_blocked) -> SandboxResult`
-  - SandboxResult: stdout, stderr, exit_code, duration_seconds, killed_by_timeout
+- [x] **`agent_harness/tools/sandbox.py:SandboxBackend(ABC)` + `SandboxResult`** ✅
+  - ABC method `execute(code, *, timeout_seconds, memory_mb, network_blocked) -> SandboxResult`
+  - SandboxResult: stdout / stderr / exit_code / duration_seconds / killed_by_timeout
 
 ### 3.2 SubprocessSandbox impl（90 min）
-- [ ] **`agent_harness/tools/sandbox.py:SubprocessSandbox`**
-  - DoD: subprocess.Popen + asyncio wait + resource.setrlimit (POSIX) / Job Object (Windows)
-  - timeout 觸發 kill；memory limit (POSIX) `RLIMIT_AS`
-  - network_blocked: skip 51.1（CARRY 為 51.x；用 doc 註明）
+- [x] **`agent_harness/tools/sandbox.py:SubprocessSandbox`** ✅
+  - asyncio.create_subprocess_exec + asyncio.wait_for timeout（kill on timeout → killed_by_timeout=True）
+  - tempfile.TemporaryDirectory cwd（每執行 fresh tempdir auto-cleanup）
+  - POSIX `_make_posix_limiter`：preexec_fn 設 RLIMIT_AS (memory) + RLIMIT_CPU (timeout × 2 backstop)
+  - Windows: 跳過 rlimit（依賴 wall-time wait_for kill；Job Object CARRY-022）
+  - network_blocked: 51.1 不執行（doc note；CARRY-022 Docker）
 
 ### 3.3 Sandbox isolation tests（60 min）
-- [ ] **`tests/unit/tools/test_sandbox.py`**
-  - DoD:
-    - test_subprocess_returns_stdout（happy path）
-    - test_timeout_kills_runaway（while True loop → killed_by_timeout=True）
-    - test_filesystem_write_blocked（嘗試 `open("/tmp/escape.txt", "w")` → 失敗）— platform-specific
-    - test_exit_code_propagated（sys.exit(42) → exit_code=42）
+- [x] **`tests/unit/agent_harness/tools/test_sandbox.py`**（10 tests）✅
+  - test_sandbox_returns_stdout（happy path）
+  - test_sandbox_timeout_kills_runaway（while True → killed_by_timeout=True / duration < 1.5s）
+  - test_sandbox_exit_code_propagated（sys.exit(42) → exit_code=42）
+  - test_sandbox_runs_in_isolated_cwd（subprocess cwd != host cwd / 含 sbx_ tempdir prefix）
+  - test_sandbox_stderr_captured
+  - test_sandbox_relative_writes_contained_in_tempdir（cwd-relative writes，tempdir auto-cleanup）
+  - test_sandbox_memory_limit_kills_oversized_alloc（POSIX-only，`@pytest.mark.skipif(win32)` 標記）
+  - test_python_sandbox_spec_metadata + happy_path + uses_defaults（3 tests for built-in tool）
+  - **設計調整**：plan §3.3 寫「test_filesystem_write_blocked: try open("/tmp/escape.txt", "w") → 失敗」需 chroot/namespace（51.1 best-effort 不擋 absolute path writes；Docker 才能真隔離）。改為 `test_sandbox_relative_writes_contained_in_tempdir`（cwd-relative 寫 OK + tempdir cleanup 隔離）+ memory_limit test（POSIX only）。原 plan test 留 51.x Docker sandbox 真實實作。
 
 ### 3.4 exec_tools.py — python_sandbox ToolSpec + handler（45 min）
-- [ ] **`agent_harness/tools/exec_tools.py`**
-  - DoD: ToolSpec(name="python_sandbox", input_schema={code: str}, annotations destructive=False, idempotent=False, sandbox-required tag)
-  - handler 用 SubprocessSandbox.execute(call.arguments["code"])
-  - hitl_policy=HITLPolicy.AUTO + risk_level="medium"（執行任意 code 即使 sandboxed 也 medium risk）
+- [x] **`agent_harness/tools/exec_tools.py`** ✅
+  - PYTHON_SANDBOX_SPEC（input_schema {code, timeout_seconds default 5, memory_mb default 256}）
+  - annotations: destructive=False（subprocess sandboxed）/ open_world=False
+  - hitl_policy=AUTO + risk_level=MEDIUM（任意 code 執行即使 sandboxed 也 medium）
+  - tags=("builtin","exec")
+  - `make_python_sandbox_handler(backend)` factory 返回 async handler；handler 序列化 SandboxResult → JSON ToolResult.content
 
 ### 3.5 Day 3 commit（15 min）
 - [ ] **commit `feat(tools, sprint-51-1): Day 3 — SandboxBackend + SubprocessSandbox + python_sandbox tool`**
-  - DoD: pytest 全 PASS；sandbox isolation tests pass on Linux/macOS（Windows xfail OK）
+  - DoD: pytest 311 PASS / 1 SKIPPED（POSIX-only mem test，Windows skip）；mypy --strict 39 source files clean；black formatted；4/4 V2 lints OK
 
 ---
 

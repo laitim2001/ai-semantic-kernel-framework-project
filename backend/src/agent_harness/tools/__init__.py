@@ -13,16 +13,29 @@ from agent_harness.tools._inmemory import (
     echo_handler,
     make_echo_executor,
 )
+from agent_harness.tools.exec_tools import (
+    PYTHON_SANDBOX_SPEC,
+    make_python_sandbox_handler,
+)
 from agent_harness.tools.executor import ToolExecutorImpl
 from agent_harness.tools.permissions import PermissionChecker, PermissionDecision
 from agent_harness.tools.registry import ToolRegistryImpl
+from agent_harness.tools.sandbox import (
+    SandboxBackend,
+    SandboxResult,
+    SubprocessSandbox,
+)
 
 __all__ = [
     "ECHO_TOOL_SPEC",
     "InMemoryToolExecutor",
     "InMemoryToolRegistry",
+    "PYTHON_SANDBOX_SPEC",
     "PermissionChecker",
     "PermissionDecision",
+    "SandboxBackend",
+    "SandboxResult",
+    "SubprocessSandbox",
     "ToolExecutor",
     "ToolExecutorImpl",
     "ToolHandler",
@@ -30,4 +43,5 @@ __all__ = [
     "ToolRegistryImpl",
     "echo_handler",
     "make_echo_executor",
+    "make_python_sandbox_handler",
 ]
