@@ -115,6 +115,7 @@ V2 採用「**滾動式 sprint 規劃**」（per `.claude/rules/sprint-workflow.
 - 每個 sprint 結束 retrospective 後，根據實作學習**微調**下一 sprint 設計
 - Phase README + 06-phase-roadmap.md 提供高層綱要，**不是**完整 plan
 - 完成 sprint plan + checklist 才開始 code（**禁止跳步**：Phase README → Plan → Checklist → Code → Update → Progress doc → Retrospective）
+- 🆕 **起草新 plan/checklist 必先讀「最近一個 completed sprint」樣板**：章節編號 / 命名 / Day 數 / 細節水平必須一致；scope 差異透過**內容**調整（更多 stories / file / tests），**不透過結構**調整（多加章節 / 改 Day 數）。違反 = 用戶矯正成本（前車：52.1 plan/checklist v1 → v3 三輪重寫才對齊 51.2 格式）
 
 ### ❌ 禁止做法
 
@@ -213,6 +214,7 @@ ls docs/03-implementation/agent-harness-execution/
 - [ ] 不刪除未勾選的 checklist 項（只能 `[ ]→[x]` 或加 🚧）
 - [ ] 跨範疇型別從 `agent_harness._contracts/` import（不重複定義）
 - [ ] 開始 code 前確認該 sprint 已有 plan + checklist
+- [ ] 🆕 **起草新 sprint plan/checklist 前先讀最近 completed sprint 的 plan/checklist 作格式樣板**（非空白白板起草；章節 / Day 數 / 細節水平必須一致）
 - [ ] 寫 commit message 用 Conventional Commits 格式（per `.claude/rules/git-workflow.md`）+ co-author
 - [ ] 每個 commit 對應一個 checklist 項目
 - [ ] 維持每天 progress.md 紀錄（estimates vs actual）
