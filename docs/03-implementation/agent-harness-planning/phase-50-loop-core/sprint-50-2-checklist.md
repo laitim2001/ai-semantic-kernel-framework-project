@@ -50,47 +50,56 @@
 
 ### 1.1 schemas.py — Pydantic models（30 min）
 - [ ] 建 `backend/src/api/v1/chat/schemas.py`
-- [ ] `ChatRequest` { message: str, session_id: UUID | None, mode: Literal["echo_demo", "real_llm"] = "echo_demo" }
-- [ ] `ChatSessionResponse` { session_id: UUID, status: Literal["running", "completed", "cancelled"], started_at: datetime }
-- [ ] `ToolCallSummary` / `MessageSummary`（for SSE event payload）
-- [ ] DoD：mypy --strict 通過 + 1 unit test 驗 validation
+- [x] `ChatRequest` { message: str, session_id: UUID | None, mode: Literal["echo_demo", "real_llm"] = "echo_demo" }
+- [x] `ChatSessionResponse` { session_id: UUID, status: Literal["running", "completed", "cancelled"], started_at: datetime }
+- 🚧 `ToolCallSummary` / `MessageSummary`（for SSE event payload）— **不需要**：SSE payload 直接 dict 序列化 LoopEvent dataclass，無需中間 Pydantic 包
+- [x] DoD：mypy --strict 通過 + 7 unit tests PASS
 
 ### 1.2 session_registry.py — in-memory session map（45 min）
-- [ ] 建 `backend/src/api/v1/chat/session_registry.py`
-- [ ] `SessionRegistry` class：register / get / cancel / cleanup
-- [ ] thread-safe（asyncio.Lock）+ session_id → asyncio.Event (cancel signal) + status enum
-- [ ] DoD：3 unit test PASS（register / cancel / cleanup race）
+- [x] 建 `backend/src/api/v1/chat/session_registry.py`
+- [x] `SessionRegistry` class：register / get / cancel / cleanup / mark_completed
+- [x] thread-safe（asyncio.Lock）+ session_id → asyncio.Event (cancel signal) + status Literal enum + module-level default singleton + get_default_registry() factory
+- [x] DoD：7 unit test PASS（含 register idempotent / cancel returns False on missing / mark_completed not override cancelled / asyncio.gather race）
 
 ### 1.3 sse.py — LoopEvent → SSE serializer（90 min）
-- [ ] 建 `backend/src/api/v1/chat/sse.py`
-- [ ] `serialize_loop_event(event: LoopEvent) -> dict` 對應 02.md §SSE 13 types
-  - 50.2 必實作 7：loop_start / turn_start / llm_request / llm_response / tool_call_request / tool_call_result / loop_end
-  - 其餘 6 type 留 stub（raise NotImplementedError）+ 註明 sprint owner
-- [ ] `format_sse_message(event_type, data) -> bytes`（`event: ...\ndata: ...\n\n`）
-- [ ] DoD：4 unit test 對 4 種 LoopEvent class 各驗一次 serialize
+- [x] 建 `backend/src/api/v1/chat/sse.py`
+- [x] `serialize_loop_event(event: LoopEvent) -> dict` 對應 02.md §SSE
+  - Day 1 已實作 5: loop_start (LoopStarted) / llm_response (Thinking) / tool_call_request (ToolCallRequested) / tool_call_result (ToolCallExecuted forward-compat for Day 2) / loop_end (LoopCompleted)
+  - 🚧 turn_start / llm_request / llm_response (LLMResponded) — Day 2 加 4 個新 LoopEvent 後 fill in
+  - 其餘 14 events（HITL / Guardrails / Verification / 等）raise NotImplementedError 帶 sprint pointer
+- [x] `format_sse_message(event_type, data) -> bytes`（`event: ...\ndata: ...\n\n`）+ `_jsonable()` 處理 UUID / datetime
+- [x] DoD：10 unit tests PASS（5 event types + 3 format/UUID/unicode + NotImplementedError 帶 sprint 50.2 pointer）
 
 ### 1.4 handler.py — agent loop handler factory（60 min）
-- [ ] 建 `backend/src/api/v1/chat/handler.py`
-- [ ] `build_echo_demo_handler() -> tuple[AgentLoopImpl, ToolRegistry, ToolExecutor]`：用 50.1 `make_echo_executor()` + `MockChatClient` scripted response
-- [ ] `build_real_llm_handler() -> tuple[...]`：用 49.4 `AzureOpenAIAdapter` + `make_echo_executor()`
-- [ ] DoD：3 unit test PASS（echo_demo build / real_llm build skipped if no AZURE key / wrong mode raises）
+- [x] 建 `backend/src/api/v1/chat/handler.py`
+- [x] `build_echo_demo_handler(message: str) -> AgentLoopImpl`：用 50.1 `make_echo_executor()` + `MockChatClient` 2-step scripted response（TOOL_USE → END_TURN）
+- [x] `build_real_llm_handler() -> AgentLoopImpl`：用 49.4 `AzureOpenAIAdapter(AzureOpenAIConfig())` + `make_echo_executor()`；env validation 在 build 時間檢查（缺 raise RuntimeError）
+- [x] `build_handler(mode, message) -> AgentLoopImpl` dispatcher
+- [x] DoD：5 unit tests PASS（echo_demo build / scripted message into echo_tool args / real_llm missing env raises / dispatch echo_demo / dispatch invalid mode raises）
 
 ### 1.5 router.py — POST /chat + GET /sessions/{id}（120 min）
-- [ ] 建 `backend/src/api/v1/chat/router.py`
-- [ ] `POST /api/v1/chat/` 用 `EventSourceResponse`（sse-starlette）or 純 `StreamingResponse(media_type="text/event-stream")`
-- [ ] flow：parse ChatRequest → build handler by mode → register session → wrap loop.run() generator → 每 LoopEvent → format_sse → yield bytes
-- [ ] `GET /api/v1/chat/sessions/{id}` → SessionRegistry.get → return ChatSessionResponse
-- [ ] include in `api/v1/chat/__init__.py`
-- [ ] include in `api/main.py` `app.include_router(chat_router, prefix="/api/v1/chat")`
-- [ ] DoD：5 unit test PASS（happy path / invalid mode / missing message / session 404 / cancel signal received）+ FastAPI test client integration smoke
+- [x] 建 `backend/src/api/v1/chat/router.py`
+- [x] `POST /api/v1/chat/` 用 `StreamingResponse(media_type="text/event-stream")` + X-Session-Id response header
+- [x] flow：parse ChatRequest → build_handler by mode → register session → _stream_loop_events generator (serialize_loop_event + format_sse_message + mark_completed on natural completion) → yield bytes
+- [x] `GET /api/v1/chat/sessions/{session_id}` → SessionRegistry.get → return ChatSessionResponse / 404
+- [x] `POST /api/v1/chat/sessions/{session_id}/cancel` → SessionRegistry.cancel → 204 / 404
+- [x] include in `api/v1/chat/__init__.py`（re-export router）
+- [x] include in `api/main.py` `app.include_router(chat_router, prefix="/api/v1")`
+- [x] DoD：10 unit tests PASS（SSE 5+ events stream / 422 empty msg / 422 invalid mode / 422 missing msg / 503 missing AZURE env / session_id persisted as completed / 404 unknown session / running session GET / cancel happy / cancel 404）
 
 ### 1.6 Day 1 progress + commit（15 min）
-- [ ] checklist 1.1-1.5 全 [x]
-- [ ] 寫 `docs/03-implementation/agent-harness-execution/phase-50/sprint-50-2/progress.md` Day 1 段（estimate vs actual / surprises）
-- [ ] commit：`feat(api, sprint-50-2): chat router + SSE serializer + session registry (Day 1)`
-- [ ] commit checklist update：`docs(sprint-50-2): Day 1 progress + checklist [x] update`
+- [x] checklist 1.1-1.5 全 [x]
+- [x] 寫 `docs/03-implementation/agent-harness-execution/phase-50/sprint-50-2/progress.md` Day 1 段（estimate vs actual / 5 surprises）
+- [x] commit：`feat(api,orchestrator-loop, sprint-50-2): chat router + SSE serializer + session registry (Day 1)` → commit `<HEAD>`
+- [x] commit checklist update：`docs(sprint-50-2): Day 1 progress + checklist [x] update`
 
-**Day 1 Total Plan**: ~6h / ~15 unit tests / 2 commits
+**Day 1 Total Plan**: ~6h / ~15 unit tests / 2 commits → **Actual: ~61 min（17%）/ 29 unit tests / 2 commits**
+
+### Day 1 Bonus 修正（plan 外）
+
+- 🚧 **`loop.py:94` 50.1 latent cross-cat lint warn** — 順手改成 public path（`agent_harness.tools` 已 re-export ToolExecutor/ToolRegistry）。Modification History entry 加。
+- 🚧 **tests/unit/api/__init__.py + v1/__init__.py + v1/chat/__init__.py 刪除** — namespace package mode（與 50.1 tests/unit/agent_harness/ 對齐）。pytest 全 collection 時 src/api 與 tests/api 衝突的 quirk。
+- 🚧 **handler.py `AzureOpenAIAdapter` ctor sig 修正** — plan §4.1 寫的 `endpoint=..., api_key=...` 不對，actual 是 `AzureOpenAIAdapter(AzureOpenAIConfig())`（BaseSettings env auto-load）。env existence 自檢仍保留。
 
 ---
 
