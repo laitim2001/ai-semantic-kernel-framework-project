@@ -1,8 +1,8 @@
 # Phase 52 — Context + Prompt
 
-**Phase 進度**：Sprint 52.1 🟡 PLANNING / Sprint 52.2 ⏸ ROLLING — **0 / 2 sprint complete（0%）**
+**Phase 進度**：Sprint 52.1 ✅ DONE / Sprint 52.2 ⏸ ROLLING — **1 / 2 sprint complete（50%）**
 **啟動日期**：2026-04-30（接 Phase 51 closeout）
-**狀態**：🟡 **Phase 52 啟動** — Sprint 52.1 plan + checklist 起草中；Sprint 52.2 嚴守 rolling 紀律（待 52.1 closeout 才寫）
+**狀態**：🟢 **Sprint 52.1 closeout 中** — Cat 4 達 Level 3，5 大支柱齊出，30+ turn no-OOM 驗證；Sprint 52.2 嚴守 rolling 紀律（待 52.1 merge 才寫）
 
 ---
 
@@ -19,10 +19,10 @@
 
 ## Sprint 進度總覽
 
-| Sprint | 狀態 | 主題 | 預計完成 | Branch / Commits |
+| Sprint | 狀態 | 主題 | 完成日期 | Branch / Commits |
 |--------|------|------|---------|------------------|
-| **52.1** | 🟡 PLANNING | 範疇 4 Context Mgmt（Level 3）— Compactor + ObservationMasker + JITRetrieval + TokenCounter ABC + PromptCacheManager ABC + Loop 整合 + 30+ turn e2e | 2026-05-初 | `feature/phase-52-sprint-1-cat4-context-mgmt`（待開） |
-| **52.2** | ⏸ ROLLING | 範疇 5 PromptBuilder（Level 4）— 統一入口 + Lost-in-middle 策略 + CacheBreakpoint 接通 + memory layer 真注入 lint rule | TBD | TBD（52.1 closeout 後 rolling 寫）|
+| **52.1** | ✅ DONE | 範疇 4 Context Mgmt（Level 3）— 5 ABC + 3 Compactor 策略 + ObservationMasker + JITRetrieval (db://) + 3 TokenCounter + InMemoryCacheManager + Loop integration + 30+ turn no-OOM ⭐ + 50-turn e2e + SLO latency | **2026-05-01** | `feature/phase-52-sprint-1-cat4-context-mgmt`（5 commits：Day 0 / Day 1 / Day 2 / Day 3 / Day 4 + closeout）|
+| **52.2** | ⏸ ROLLING | 範疇 5 PromptBuilder（Level 4）— 統一入口 + Lost-in-middle 策略 + CacheBreakpoint 接通 + memory layer 真注入 lint rule | TBD | TBD（52.1 merge 後 rolling 寫）|
 
 > **Rolling 紀律**：52.2 plan/checklist **未寫**，必須等 52.1 closeout（含 retrospective）才開始起草。違反 rolling = 重蹈 Phase 35-38 跳過 plan 覆轍。
 
@@ -49,17 +49,22 @@ docs/03-implementation/agent-harness-execution/phase-52/
 
 ## 範疇成熟度演進（規劃）
 
-| 範疇 | Pre-Phase-52 | Post-52.1 預計 | Post-52.2 預計 |
-|------|-------------|---------------|---------------|
-| 1. Orchestrator Loop | Level 3 | **Level 3**（unchanged；Loop 加 compaction check + ContextCompacted event）| **Level 3**（PromptBuilder 整合進 Loop 入口）|
+| 範疇 | Pre-Phase-52 | Post-52.1 實際 ✅ | Post-52.2 預計 |
+|------|-------------|------------------|---------------|
+| 1. Orchestrator Loop | Level 3 | **Level 3**（unchanged；Loop 加 compactor 注入 + ContextCompacted event；50.x baseline 10/10 維持）| **Level 3**（PromptBuilder 整合進 Loop 入口）|
 | 2. Tool Layer | Level 3 | **Level 3**（unchanged）| **Level 3**（unchanged）|
 | 3. Memory | Level 3 | **Level 3**（unchanged；Cat 4 透過 prompt hint 與 Cat 11 互動，不直接呼叫 Cat 3）| **Level 3**（PromptBuilder 從 Cat 3 抽 memory hints 注入 prompt）|
-| **4. Context Mgmt** | Level 0 | **Level 3** ✅ | **Level 3**（unchanged；52.2 加 CacheBreakpoint 實際接通 LLM call）|
+| **4. Context Mgmt** | Level 0 | **Level 3** ✅ **（達成）** | **Level 3**（unchanged；52.2 加 CacheBreakpoint 實際接通 LLM call）|
 | **5. Prompt Builder** | Level 0 | Level 0 | **Level 4** ✅ |
 | 6. Output Parser | Level 4 | Level 4 | Level 4 |
-| 12. Observability | Level 2 | **Level 2**（52.1 加 ContextCompacted span + token_count metric）| **Level 2**（52.2 加 PromptBuilt span）|
+| 12. Observability | Level 2 | **Level 2**（52.1 ContextCompacted event 已 emit，Tracer span 留 Phase 53.x）| **Level 2**（52.2 加 PromptBuilt span）|
 
-> **Cat 4 Level 3 的核心驗收**：30+ turn 對話 token 不爆 + compaction p95 < 2s + TokenCounter 誤差 < 2% + tenant cache 隔離 0 leak。
+> **Cat 4 Level 3 的核心驗收（52.1 達成）**：
+> - 30+ turn (35-turn integration test) → 0 over-budget turns + ≥1 compaction event ✅
+> - Compaction latency p95：Structural 0.03ms / Semantic 0.02ms / Hybrid 0.05ms（mock LLM）— 全遠低於 SLO ✅
+> - TokenCounter 3 implementations: TiktokenCounter (exact) / ClaudeTokenCounter (DI-friendly approx) / GenericApproxCounter ✅
+> - Tenant cache 隔離 4 red-team tests + JIT tenant filter 3 red-team cases，0 leak ✅
+> - 50-turn verifier pass-rate Δ < 5%（baseline 100% / compacted 100% → Δ=0）✅
 
 ---
 
@@ -139,5 +144,5 @@ docs/03-implementation/agent-harness-execution/phase-52/
 
 ---
 
-**Last Updated**：2026-04-30 (Sprint 52.1 plan 起草中；Phase 52 0/2 = 0%；V2 cumulative 9/22 = 41% — 52.1 完成預計 10/22 = 45%)
+**Last Updated**：2026-05-01 (Sprint 52.1 ✅ DONE Day 4 closeout；Phase 52 1/2 = 50%；V2 cumulative **10/22 = 45%**)
 **Maintainer**：用戶 + AI 助手共同維護

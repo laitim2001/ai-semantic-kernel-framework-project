@@ -237,7 +237,7 @@ def register_memory_tools(registry: ToolRegistry) -> None:
 | `ToolCallExecuted` | 範疇 2 | Tool executor 完成 |
 | `ToolCallFailed` | 範疇 2 | Tool 拋錯 |
 | `MemoryAccessed` | 範疇 3 | memory layer read/write（**51.2 Day 4** payload 擴：`scope` / `time_scale` / `confidence` / `verify_before_use` / `tenant_id`） |
-| `ContextCompacted` | 範疇 4 | Compactor 觸發 |
+| `ContextCompacted` | 範疇 4 | Compactor 觸發（**52.1 Day 2.7** Loop integration 接通；payload：`tokens_before` / `tokens_after` / `compaction_strategy` / `messages_compacted` / `duration_ms`） |
 | `PromptBuilt` | 範疇 5 | PromptBuilder 完成 |
 | `StateCheckpointed` | 範疇 7 | Checkpointer save |
 | `ErrorRetried` | 範疇 8 | Retry 觸發 |
