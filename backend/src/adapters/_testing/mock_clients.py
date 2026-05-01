@@ -86,6 +86,9 @@ class MockChatClient(ChatClient):
         self.chat_call_count = 0
         self.stream_call_count = 0
         self.last_request: ChatRequest | None = None
+        # Sprint 52.2 Day 3.6: record cache_breakpoints passed by Loop / PromptBuilder
+        # so integration tests can assert artifact.cache_breakpoints flowed through.
+        self.last_call_cache_breakpoints: list[CacheBreakpoint] | None = None
 
     async def chat(
         self,
@@ -96,6 +99,9 @@ class MockChatClient(ChatClient):
     ) -> ChatResponse:
         self.chat_call_count += 1
         self.last_request = request
+        self.last_call_cache_breakpoints = (
+            list(cache_breakpoints) if cache_breakpoints else None
+        )
         if not self._responses:
             return ChatResponse(
                 model=self._model_metadata.model_name,
@@ -113,6 +119,9 @@ class MockChatClient(ChatClient):
     ) -> AsyncIterator[StreamEvent]:
         self.stream_call_count += 1
         self.last_request = request
+        self.last_call_cache_breakpoints = (
+            list(cache_breakpoints) if cache_breakpoints else None
+        )
         return self._stream_impl()
 
     async def _stream_impl(self) -> AsyncIterator[StreamEvent]:

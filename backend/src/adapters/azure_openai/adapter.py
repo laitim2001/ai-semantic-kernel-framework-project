@@ -19,9 +19,14 @@ Description:
     provided; full OTel hookup happens in Day 3 setup.py.
 
 Created: 2026-04-29 (Sprint 49.4)
-Last Modified: 2026-04-29
+Last Modified: 2026-05-01
 
-Modification History:
+Modification History (newest-first):
+    - 2026-05-01: Compute deterministic prompt_cache_key from CacheBreakpoint
+        section_ids (Sprint 52.2 Day 3.5) and forward via extra_body to Azure
+        OpenAI for auto-prompt-caching. Stream path mirrors chat. Helper
+        `_compute_prompt_cache_key` returns None when no section_ids → safe
+        no-op for 51.1 callers / pre-PromptBuilder Loop fallback.
     - 2026-04-29: Initial creation (Sprint 49.4) — full ChatClient ABC implementation
 
 Related:
@@ -34,6 +39,7 @@ Related:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 from typing import TYPE_CHECKING, AsyncIterator, Literal
 
@@ -74,6 +80,27 @@ _AZURE_FINISH_REASON_MAP: dict[str, StopReason] = {
     "content_filter": StopReason.SAFETY_REFUSAL,
     "function_call": StopReason.TOOL_USE,  # legacy
 }
+
+
+def _compute_prompt_cache_key(
+    cache_breakpoints: list[CacheBreakpoint] | None,
+) -> str | None:
+    """Sprint 52.2 Day 3.5: Deterministic Azure OpenAI prompt_cache_key from breakpoints.
+
+    Per plan §3.5: key = sha256(":".join(bp.section_id for bp with section_id)).
+    Returns None when:
+      - cache_breakpoints is None / empty
+      - no breakpoints carry section_id (Cat 4 logical metadata absent)
+
+    Azure OpenAI auto-caches prompts that share prompt_cache_key; deterministic
+    derivation across turns means stable hits without manual cache management.
+    """
+    if not cache_breakpoints:
+        return None
+    section_ids = [bp.section_id for bp in cache_breakpoints if bp.section_id]
+    if not section_ids:
+        return None
+    return hashlib.sha256(":".join(section_ids).encode("utf-8")).hexdigest()
 
 
 class AzureOpenAIAdapter(ChatClient):
@@ -182,6 +209,13 @@ class AzureOpenAIAdapter(ChatClient):
                     kwargs["tool_choice"] = request.tool_choice
                 if request.max_tokens is not None:
                     kwargs["max_tokens"] = request.max_tokens
+                # Sprint 52.2 Day 3.5: forward Cat 5 cache_breakpoints as Azure
+                # OpenAI's deterministic prompt_cache_key (extra_body). Per plan §3.5:
+                # key = sha256(":".join(bp.section_id for bp with section_id present)).
+                # Azure OpenAI auto-caches prompts that share the same prompt_cache_key.
+                cache_key = _compute_prompt_cache_key(cache_breakpoints)
+                if cache_key is not None:
+                    kwargs["extra_body"] = {"prompt_cache_key": cache_key}
 
                 response = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]  # noqa: E501
             except asyncio.CancelledError:
@@ -202,12 +236,17 @@ class AzureOpenAIAdapter(ChatClient):
         trace_context: TraceContext | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Streaming completion. Returns async iterator of StreamEvent."""
-        return self._stream_impl(request, trace_context=trace_context)
+        return self._stream_impl(
+            request,
+            cache_breakpoints=cache_breakpoints,
+            trace_context=trace_context,
+        )
 
     async def _stream_impl(
         self,
         request: ChatRequest,
         *,
+        cache_breakpoints: list[CacheBreakpoint] | None = None,
         trace_context: TraceContext | None,
     ) -> AsyncIterator[StreamEvent]:
         # Sprint 52.5 P0 #16: span wraps the full stream lifetime — opens
@@ -242,6 +281,10 @@ class AzureOpenAIAdapter(ChatClient):
                     kwargs["tools"] = azure_tools
                 if request.max_tokens is not None:
                     kwargs["max_tokens"] = request.max_tokens
+                # Sprint 52.2 Day 3.5: stream path mirrors chat() prompt_cache_key.
+                cache_key = _compute_prompt_cache_key(cache_breakpoints)
+                if cache_key is not None:
+                    kwargs["extra_body"] = {"prompt_cache_key": cache_key}
 
                 stream = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]  # noqa: E501
             except asyncio.CancelledError:

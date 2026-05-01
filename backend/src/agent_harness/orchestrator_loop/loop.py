@@ -42,9 +42,17 @@ Description:
     revisit if per-run override is needed.
 
 Created: 2026-04-30 (Sprint 50.1 Day 2.2)
-Last Modified: 2026-04-30
+Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-01: Inject Cat 5 PromptBuilder (Sprint 52.2 Day 3.1) — optional
+        ctor kwarg `prompt_builder: PromptBuilder | None = None`. When set,
+        per-turn (post-compaction) call build() to rebuild chat() messages
+        and forward artifact.cache_breakpoints to ChatClient.chat (already
+        a 51.1 ABC kwarg). Emit PromptBuilt with full payload (messages_count
+        / estimated_input_tokens / cache_breakpoints_count / memory_layers_used
+        / position_strategy_used / duration_ms). When None, falls back to
+        50.x baseline messages → backward-compat preserved (50.x tests intact).
     - 2026-04-30: Yield 5 additional LoopEvents per turn (Sprint 50.2 Day 2.4):
         TurnStarted at top of while → LLMRequested before chat() → LLMResponded
         after parse (canonical SSE llm_response carrier) → ToolCallExecuted
@@ -68,6 +76,7 @@ Related:
 from __future__ import annotations
 
 import asyncio
+import time
 
 # Local import to avoid circular: only used at runtime for state placeholders
 from datetime import datetime
@@ -77,6 +86,7 @@ from uuid import UUID
 # Need imports from sibling adapter / tools / output_parser modules:
 from adapters._base.chat_client import ChatClient
 from agent_harness._contracts import (
+    CacheBreakpoint,
     ChatRequest,
     ChatResponse,
     ContentBlock,
@@ -90,6 +100,7 @@ from agent_harness._contracts import (
     LoopStarted,
     LoopState,
     Message,
+    PromptBuilt,
     SpanCategory,
     StateVersion,
     Thinking,
@@ -103,6 +114,7 @@ from agent_harness._contracts import (
 from agent_harness.context_mgmt import Compactor
 from agent_harness.observability import NoOpTracer, Tracer
 from agent_harness.output_parser import OutputParser, OutputType, classify_output
+from agent_harness.prompt_builder import PromptBuilder
 from agent_harness.tools import ToolExecutor, ToolRegistry  # public path per category-boundaries.md
 
 from ._abc import AgentLoop
@@ -130,6 +142,7 @@ class AgentLoopImpl(AgentLoop):
         token_budget: int = 100_000,
         tracer: Tracer | None = None,
         compactor: Compactor | None = None,
+        prompt_builder: PromptBuilder | None = None,
     ) -> None:
         self._chat_client = chat_client
         self._output_parser = output_parser
@@ -142,6 +155,12 @@ class AgentLoopImpl(AgentLoop):
         # 52.1 Day 2.7: compactor is OPTIONAL for backward-compat with 50.x callers.
         # When None, compaction step is a no-op; pre-existing tests stay green.
         self._compactor = compactor
+        # 52.2 Day 3.1: prompt_builder is OPTIONAL for 50.x backward-compat.
+        # When None, per-turn LLM call uses raw `messages` (50.x baseline).
+        # When set, Cat 5 build() runs each turn, replacing chat()'s messages
+        # with artifact.messages and forwarding artifact.cache_breakpoints to
+        # the adapter (Anthropic cache_control / OpenAI prompt_cache_key).
+        self._prompt_builder = prompt_builder
 
     async def run(
         self,
@@ -238,6 +257,61 @@ class AgentLoopImpl(AgentLoop):
                 # === Per-turn marker (Sprint 50.2) ==========================
                 yield TurnStarted(turn_num=turn_count, trace_context=ctx)
 
+                # === Cat 5 PromptBuilder (Sprint 52.2 Day 3.1) ==============
+                # When prompt_builder is injected, build a per-turn artifact
+                # replacing the raw `messages` list at LLM call time. Conversation
+                # accumulator (`messages`) continues to grow with assistant + tool
+                # messages — only the chat() input is rebuilt each turn.
+                # When None, falls back to 50.x baseline (raw messages, no cache).
+                chat_messages: list[Message] = messages
+                cache_breakpoints: list[CacheBreakpoint] | None = None
+                if self._prompt_builder is not None:
+                    build_state = LoopState(
+                        transient=TransientState(
+                            messages=list(messages),
+                            current_turn=turn_count,
+                            token_usage_so_far=tokens_used,
+                        ),
+                        durable=DurableState(
+                            session_id=session_id,
+                            tenant_id=session_id,  # placeholder; Phase 53.1 wires real tenant
+                        ),
+                        version=StateVersion(
+                            version=turn_count,
+                            parent_version=turn_count - 1 if turn_count > 0 else None,
+                            created_at=datetime.now(),
+                            created_by_category="orchestrator_loop",
+                        ),
+                    )
+                    t0 = time.perf_counter()
+                    artifact = await self._prompt_builder.build(
+                        state=build_state,
+                        tenant_id=session_id,  # placeholder per State Mgmt 53.1
+                        user_id=None,
+                        tools=self._tool_registry.list(),
+                        trace_context=ctx,
+                    )
+                    duration_ms = (time.perf_counter() - t0) * 1000.0
+                    chat_messages = list(artifact.messages)
+                    cache_breakpoints = (
+                        list(artifact.cache_breakpoints)
+                        if artifact.cache_breakpoints
+                        else None
+                    )
+                    layers_used = artifact.layer_metadata.get("memory_layers_used", [])
+                    strategy_used = artifact.layer_metadata.get("position_strategy", "")
+                    yield PromptBuilt(
+                        messages_count=len(artifact.messages),
+                        estimated_input_tokens=artifact.estimated_input_tokens,
+                        cache_breakpoints_count=len(artifact.cache_breakpoints),
+                        memory_layers_used=tuple(layers_used)
+                        if isinstance(layers_used, (list, tuple))
+                        else (),
+                        position_strategy_used=str(strategy_used),
+                        duration_ms=duration_ms,
+                        trace_context=ctx,
+                    )
+
                 # === LLM call ===============================================
                 model_name = self._chat_client.model_info().model_name
                 yield LLMRequested(
@@ -247,11 +321,13 @@ class AgentLoopImpl(AgentLoop):
                 )
                 try:
                     request = ChatRequest(
-                        messages=messages,
+                        messages=chat_messages,
                         tools=self._tool_registry.list(),
                     )
                     response: ChatResponse = await self._chat_client.chat(
-                        request, trace_context=ctx
+                        request,
+                        cache_breakpoints=cache_breakpoints,
+                        trace_context=ctx,
                     )
                 except asyncio.CancelledError:
                     yield LoopCompleted(
