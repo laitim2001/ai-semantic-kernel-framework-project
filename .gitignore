@@ -186,3 +186,12 @@ backend/.venv-rc4/
 # `graphify update .` regenerates content; tracking would create noise
 # diffs in every PR. Rebuild cost is low (manifest diff is fast).
 /graphify-out/
+
+# ============================================================================
+# Local development logs (devlog) — not committed to GitHub
+# ============================================================================
+# docs/08-development-log/ is a local-only conversation / decision diary.
+# Useful for AI assistant continuity across sessions, but the raw transcripts
+# are noisy and not appropriate for shared history. Kept untracked so they
+# can grow freely without polluting commits.
+/docs/08-development-log/
