@@ -10,8 +10,8 @@ Description:
 
       1. Registry lookup — unknown tool → ToolResult(success=False, error="unknown tool: <name>")
       2. Permission gate — calls `PermissionChecker.check()`:
-         - DENY → ToolResult(success=False, error="permission denied: destructive without explicit approval")
-         - REQUIRE_APPROVAL → ToolResult(success=False, error="approval required: <hitl_policy>/<risk_level>")
+         - DENY → ToolResult(success=False, error="permission denied: destructive without explicit approval")  # noqa: E501
+         - REQUIRE_APPROVAL → ToolResult(success=False, error="approval required: <hitl_policy>/<risk_level>")  # noqa: E501
            (51.1 returns error semantically; Phase 53.3 wires ApprovalManager invocation)
          - ALLOW → continue
       3. JSONSchema runtime validation — call.arguments validated against

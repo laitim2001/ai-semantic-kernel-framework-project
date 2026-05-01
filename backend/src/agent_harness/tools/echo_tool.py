@@ -82,7 +82,7 @@ def make_echo_executor(
 
 # Type-only imports avoided at module top to prevent import cycle (echo_tool
 # is imported by tools/__init__.py before executor/registry are bound).
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING  # noqa: E402
 
 if TYPE_CHECKING:
     from agent_harness.observability import Tracer

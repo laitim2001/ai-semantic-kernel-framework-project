@@ -23,7 +23,6 @@ import pytest
 
 from agent_harness._contracts import (
     CompactionResult,
-    CompactionStrategy,
     DurableState,
     LoopState,
     Message,
@@ -31,12 +30,12 @@ from agent_harness._contracts import (
     TraceContext,
     TransientState,
 )
+from agent_harness.context_mgmt.compactor.hybrid import HybridCompactor
 from agent_harness.context_mgmt.compactor.semantic import (
     SemanticCompactionFailedError,
     SemanticCompactor,
 )
 from agent_harness.context_mgmt.compactor.structural import StructuralCompactor
-from agent_harness.context_mgmt.compactor.hybrid import HybridCompactor
 
 
 class _NoOpSemantic(SemanticCompactor):

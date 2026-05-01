@@ -24,8 +24,7 @@ from sqlalchemy import delete, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.db.models import (Session, StateSnapshot, append_snapshot,
-                                      compute_state_hash)
+from infrastructure.db.models import Session, StateSnapshot, append_snapshot, compute_state_hash
 from tests.conftest import seed_tenant, seed_user
 
 
@@ -77,9 +76,7 @@ async def test_state_snapshot_cannot_update(db_session: AsyncSession) -> None:
     # in same transaction — PG trigger fires regardless of commit boundary.
     with pytest.raises(DBAPIError) as exc_info:
         await db_session.execute(
-            update(StateSnapshot)
-            .where(StateSnapshot.id == snap.id)
-            .values(reason="tampered")
+            update(StateSnapshot).where(StateSnapshot.id == snap.id).values(reason="tampered")
         )
         await db_session.flush()
     assert "append-only" in str(exc_info.value)
@@ -105,9 +102,7 @@ async def test_state_snapshot_cannot_delete(db_session: AsyncSession) -> None:
         reason="turn_end",
     )
     with pytest.raises(DBAPIError) as exc_info:
-        await db_session.execute(
-            delete(StateSnapshot).where(StateSnapshot.id == snap.id)
-        )
+        await db_session.execute(delete(StateSnapshot).where(StateSnapshot.id == snap.id))
         await db_session.flush()
     assert "append-only" in str(exc_info.value)
 

@@ -28,9 +28,7 @@ from agent_harness._contracts import (
     ExecutionContext,
     LoopCompleted,
     LoopStarted,
-    Message,
     StopReason,
-    Thinking,
     TokenUsage,
     ToolCall,
     ToolCallRequested,
@@ -41,7 +39,6 @@ from agent_harness._contracts import (
 from agent_harness.orchestrator_loop import AgentLoopImpl, TerminationReason
 from agent_harness.output_parser import OutputParserImpl
 from agent_harness.tools._abc import ToolExecutor, ToolRegistry
-
 
 # === Test fixtures ===========================================================
 
@@ -97,10 +94,7 @@ class _EchoExecutor(ToolExecutor):
         trace_context: TraceContext | None = None,
         context: ExecutionContext | None = None,
     ) -> list[ToolResult]:
-        return [
-            await self.execute(c, trace_context=trace_context, context=context)
-            for c in calls
-        ]
+        return [await self.execute(c, trace_context=trace_context, context=context) for c in calls]
 
 
 class _SlowExecutor(ToolExecutor):
@@ -114,9 +108,7 @@ class _SlowExecutor(ToolExecutor):
         context: ExecutionContext | None = None,
     ) -> ToolResult:
         await asyncio.sleep(10)
-        return ToolResult(
-            tool_call_id=call.id, tool_name=call.name, success=True, content=""
-        )
+        return ToolResult(tool_call_id=call.id, tool_name=call.name, success=True, content="")
 
     async def execute_batch(
         self,
@@ -125,10 +117,7 @@ class _SlowExecutor(ToolExecutor):
         trace_context: TraceContext | None = None,
         context: ExecutionContext | None = None,
     ) -> list[ToolResult]:
-        return [
-            await self.execute(c, trace_context=trace_context, context=context)
-            for c in calls
-        ]
+        return [await self.execute(c, trace_context=trace_context, context=context) for c in calls]
 
 
 def _make_loop(
@@ -161,14 +150,10 @@ async def test_single_turn_final_end_turn() -> None:
     """No tool_calls + END_TURN → LoopStarted, Thinking, LoopCompleted(end_turn)."""
     loop = _make_loop(
         chat_responses=[
-            ChatResponse(
-                model="m", content="Hello!", stop_reason=StopReason.END_TURN
-            ),
+            ChatResponse(model="m", content="Hello!", stop_reason=StopReason.END_TURN),
         ],
     )
-    events = await _collect(
-        loop.run(session_id=uuid4(), user_input="hi")
-    )
+    events = await _collect(loop.run(session_id=uuid4(), user_input="hi"))
     types = [type(e).__name__ for e in events]
     # Sprint 50.2 Day 2.4: per-turn events expanded with TurnStarted /
     # LLMRequested / LLMResponded. Thinking event preserved for backward compat.
@@ -325,9 +310,7 @@ async def test_cancellation_during_tool_yields_cancelled() -> None:
 @pytest.mark.asyncio
 async def test_handoff_path_yields_not_implemented() -> None:
     """HANDOFF detected → LoopCompleted(handoff_not_implemented); Cat 11 stub."""
-    handoff_call = ToolCall(
-        id="h1", name="handoff", arguments={"target_agent": "specialist"}
-    )
+    handoff_call = ToolCall(id="h1", name="handoff", arguments={"target_agent": "specialist"})
     loop = _make_loop(
         chat_responses=[
             ChatResponse(
@@ -341,9 +324,7 @@ async def test_handoff_path_yields_not_implemented() -> None:
     events = await _collect(loop.run(session_id=uuid4(), user_input="x"))
     completed = events[-1]
     assert isinstance(completed, LoopCompleted)
-    assert (
-        completed.stop_reason == TerminationReason.HANDOFF_NOT_IMPLEMENTED.value
-    )
+    assert completed.stop_reason == TerminationReason.HANDOFF_NOT_IMPLEMENTED.value
     # Verify NO ToolCallRequested was emitted (HANDOFF short-circuits before
     # the tool_call dispatch loop).
     assert not any(isinstance(e, ToolCallRequested) for e in events)

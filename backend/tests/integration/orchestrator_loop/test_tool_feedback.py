@@ -48,11 +48,7 @@ async def test_production_inmemory_executor_wires_into_loop() -> None:
             ChatResponse(
                 model="m",
                 content="calling echo",
-                tool_calls=[
-                    ToolCall(
-                        id="c1", name="echo_tool", arguments={"text": "world"}
-                    )
-                ],
+                tool_calls=[ToolCall(id="c1", name="echo_tool", arguments={"text": "world"})],
                 stop_reason=StopReason.TOOL_USE,
             ),
             ChatResponse(
@@ -70,9 +66,7 @@ async def test_production_inmemory_executor_wires_into_loop() -> None:
         system_prompt="you are an echo bot",
     )
 
-    events = [
-        ev async for ev in loop.run(session_id=uuid4(), user_input="echo world")
-    ]
+    events = [ev async for ev in loop.run(session_id=uuid4(), user_input="echo world")]
 
     # Event sequence — Sprint 50.2 Day 2.4 expanded with per-turn events.
     assert [type(e).__name__ for e in events] == [
@@ -99,9 +93,7 @@ async def test_production_inmemory_executor_wires_into_loop() -> None:
 
     # Final assistant turn references the echo result
     assert "world" in (
-        events[-2].text  # type: ignore[attr-defined]
-        if hasattr(events[-2], "text")
-        else ""
+        events[-2].text if hasattr(events[-2], "text") else ""  # type: ignore[attr-defined]
     )
 
     completed = events[-1]
@@ -119,9 +111,7 @@ async def test_loop_built_from_production_modules_only() -> None:
     loop = AgentLoopImpl(
         chat_client=MockChatClient(
             responses=[
-                ChatResponse(
-                    model="m", content="ok", stop_reason=StopReason.END_TURN
-                ),
+                ChatResponse(model="m", content="ok", stop_reason=StopReason.END_TURN),
             ]
         ),
         output_parser=OutputParserImpl(),
@@ -129,9 +119,7 @@ async def test_loop_built_from_production_modules_only() -> None:
         tool_registry=registry,
     )
     # Just exercise the wire-up; not asserting deep behavior here.
-    events = [
-        ev async for ev in loop.run(session_id=uuid4(), user_input="hi")
-    ]
+    events = [ev async for ev in loop.run(session_id=uuid4(), user_input="hi")]
     assert isinstance(events[-1], LoopCompleted)
     # Registered tools surface to LLM via ChatRequest.tools
     assert any(

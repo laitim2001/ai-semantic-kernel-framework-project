@@ -91,7 +91,7 @@ async def test_missing_db_session_raises_config_error() -> None:
 
 @pytest.mark.asyncio
 async def test_tenant_id_required_filter_enforced() -> None:
-    """Red-team: missing tenant_id query OR mismatched tenant must raise PointerTenantMismatchError."""
+    """Red-team: missing tenant_id query OR mismatched tenant must raise PointerTenantMismatchError."""  # noqa: E501
     db = _MockDBSession()
     resolver = PointerResolver(db_session=db)
     runtime_tenant = uuid4()

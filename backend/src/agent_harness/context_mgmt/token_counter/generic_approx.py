@@ -96,9 +96,7 @@ class GenericApproxCounter(TokenCounter):
                     "description": tool.description,
                     "parameters": tool.input_schema,
                 }
-                tools_text_tokens += _approx(
-                    json.dumps(schema_obj, sort_keys=True, default=str)
-                )
+                tools_text_tokens += _approx(json.dumps(schema_obj, sort_keys=True, default=str))
             total += math.ceil(tools_text_tokens * _PER_TOOL_BUFFER_FACTOR)
 
         return total

@@ -145,9 +145,7 @@ class SemanticCompactor(Compactor):
                     ) from err
 
         # Unreachable but keeps mypy happy
-        raise SemanticCompactionFailedError(
-            f"SemanticCompactor exhausted retries: {last_err}"
-        )
+        raise SemanticCompactionFailedError(f"SemanticCompactor exhausted retries: {last_err}")
 
     async def compact_if_needed(
         self,

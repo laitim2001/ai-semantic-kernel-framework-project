@@ -79,9 +79,7 @@ ToolHandler = Callable[[ToolCall, ExecutionContext], Awaitable[str]]
 _RESERVED_TENANT_KEYS = ("tenant_id", "user_id", "session_id")
 
 
-def _detect_forged_scope_args(
-    args: dict[str, Any], context: ExecutionContext
-) -> str | None:
+def _detect_forged_scope_args(args: dict[str, Any], context: ExecutionContext) -> str | None:
     """Return human-readable error string if any reserved arg disagrees
     with the ExecutionContext, otherwise None.
 
@@ -204,9 +202,7 @@ MEMORY_TOOL_SPECS: tuple[ToolSpec, ...] = (MEMORY_SEARCH_SPEC, MEMORY_WRITE_SPEC
 # ---------------------------------------------------------------------------
 # Placeholder handler (kept as fallback for dev/test environments without DB)
 # ---------------------------------------------------------------------------
-async def memory_placeholder_handler(
-    call: ToolCall, context: ExecutionContext
-) -> str:
+async def memory_placeholder_handler(call: ToolCall, context: ExecutionContext) -> str:
     """Fallback handler used when no MemoryRetrieval / MemoryLayer is wired.
 
     Sprint 51.2 keeps this for backward compatibility with code paths that
@@ -267,9 +263,7 @@ def make_memory_search_handler(retrieval: MemoryRetrieval) -> ToolHandler:
             top_k=top_k,
         )
 
-        return json.dumps(
-            {"ok": True, "hints": [_hint_to_dict(h) for h in hints]}
-        )
+        return json.dumps({"ok": True, "hints": [_hint_to_dict(h) for h in hints]})
 
     return handler
 
@@ -304,9 +298,7 @@ def make_memory_write_handler(layers: dict[str, MemoryLayer]) -> ToolHandler:
 
         layer = layers.get(scope)
         if layer is None:
-            return json.dumps(
-                {"ok": False, "error": f"scope '{scope}' has no layer wired"}
-            )
+            return json.dumps({"ok": False, "error": f"scope '{scope}' has no layer wired"})
 
         # Per-layer slot wiring: layers expecting user_id (user/role/tenant)
         # take context.user_id; the session layer historically overloads the
@@ -357,9 +349,7 @@ def _hint_to_dict(hint: MemoryHint) -> dict[str, Any]:
         "relevance_score": hint.relevance_score,
         "full_content_pointer": hint.full_content_pointer,
         "timestamp": hint.timestamp.isoformat(),
-        "last_verified_at": (
-            hint.last_verified_at.isoformat() if hint.last_verified_at else None
-        ),
+        "last_verified_at": (hint.last_verified_at.isoformat() if hint.last_verified_at else None),
         "verify_before_use": hint.verify_before_use,
         "source_tool_call_id": hint.source_tool_call_id,
         "expires_at": hint.expires_at.isoformat() if hint.expires_at else None,

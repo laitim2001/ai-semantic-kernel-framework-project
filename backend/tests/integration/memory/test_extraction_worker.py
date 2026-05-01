@@ -113,9 +113,7 @@ async def test_extraction_uses_chat_client_abc_no_sdk_leak() -> None:
     increments. Combined with grep gate at lint time, this verifies the LLM
     Provider Neutrality rule (no openai/anthropic import in agent_harness/memory)."""
     chat_client = MockChatClient(
-        responses=[
-            ChatResponse(model="mock", content="[]", stop_reason=StopReason.END_TURN)
-        ]
+        responses=[ChatResponse(model="mock", content="[]", stop_reason=StopReason.END_TURN)]
     )
     layer = _RecordingLayer()
     extractor = MemoryExtractor(chat_client=chat_client, user_layer=layer)  # type: ignore[arg-type]

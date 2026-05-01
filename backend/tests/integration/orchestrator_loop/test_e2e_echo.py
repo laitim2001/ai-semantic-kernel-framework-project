@@ -33,7 +33,6 @@ from agent_harness._contracts import (
     ChatResponse,
     LoopCompleted,
     LoopStarted,
-    Message,
     StopReason,
     Thinking,
     ToolCall,

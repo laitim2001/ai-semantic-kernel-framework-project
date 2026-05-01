@@ -23,12 +23,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.v1.chat import router as chat_router
-from api.v1.chat.session_registry import (
-    SessionRegistry,
-    get_default_registry,
-)
+from api.v1.chat.session_registry import get_default_registry
 from platform_layer.identity import get_current_tenant
-
 
 # Fixed UUID per test module — most single-tenant tests share it. Multi-tenant
 # tests build their own pair via uuid4() inside the test body.
@@ -75,8 +71,8 @@ def _parse_sse(body: bytes) -> list[dict]:
         data_line = next((ln for ln in lines if ln.startswith("data: ")), "")
         out.append(
             {
-                "type": event_line[len("event: "):],
-                "data": json.loads(data_line[len("data: "):]) if data_line else None,
+                "type": event_line[len("event: ") :],
+                "data": json.loads(data_line[len("data: ") :]) if data_line else None,
             }
         )
     return out
@@ -100,7 +96,8 @@ class TestPostChat:
 
         events = _parse_sse(body)
         types = [e["type"] for e in events]
-        # echo demo emits: loop_start, llm_response (turn 1 thinking), tool_call_request, llm_response (turn 2), loop_end
+        # echo demo emits: loop_start, llm_response (turn 1 thinking),
+        # tool_call_request, llm_response (turn 2), loop_end
         assert types[0] == "loop_start"
         assert "tool_call_request" in types
         assert "loop_end" == types[-1]
@@ -163,9 +160,7 @@ class TestGetSession:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_returns_running_after_register(
-        self, app: FastAPI, client: TestClient
-    ) -> None:
+    async def test_returns_running_after_register(self, app: FastAPI, client: TestClient) -> None:
         sid = uuid4()
         reg = get_default_registry()
         await reg.register(DEFAULT_TENANT, sid)
@@ -176,9 +171,7 @@ class TestGetSession:
 
 class TestCancelSession:
     @pytest.mark.asyncio
-    async def test_cancel_running_session(
-        self, app: FastAPI, client: TestClient
-    ) -> None:
+    async def test_cancel_running_session(self, app: FastAPI, client: TestClient) -> None:
         sid = uuid4()
         reg = get_default_registry()
         await reg.register(DEFAULT_TENANT, sid)
@@ -201,9 +194,7 @@ class TestMultiTenantIsolation:
     """
 
     @pytest.mark.asyncio
-    async def test_get_session_404_when_session_belongs_to_other_tenant(
-        self, app: FastAPI
-    ) -> None:
+    async def test_get_session_404_when_session_belongs_to_other_tenant(self, app: FastAPI) -> None:
         # Tenant A registers a session directly via registry; client uses
         # default override (DEFAULT_TENANT) which differs → expect 404.
         other_tenant = uuid4()
@@ -229,9 +220,7 @@ class TestMultiTenantIsolation:
         assert entry.status == "running"
         assert entry.cancel_event.is_set() is False
 
-    def test_two_tenants_can_have_same_session_id_via_separate_clients(
-        self, app: FastAPI
-    ) -> None:
+    def test_two_tenants_can_have_same_session_id_via_separate_clients(self, app: FastAPI) -> None:
         """Two tenants run chats with the SAME generated session_id but stays isolated."""
         tenant_a = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
         tenant_b = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
@@ -267,11 +256,7 @@ class TestMultiTenantIsolation:
         # Use sync helper-via-asyncio since conftest may not export one
         import asyncio
 
-        a_entry = asyncio.get_event_loop().run_until_complete(
-            reg.get(tenant_a, forced_sid)
-        )
-        b_entry = asyncio.get_event_loop().run_until_complete(
-            reg.get(tenant_b, forced_sid)
-        )
+        a_entry = asyncio.get_event_loop().run_until_complete(reg.get(tenant_a, forced_sid))
+        b_entry = asyncio.get_event_loop().run_until_complete(reg.get(tenant_b, forced_sid))
         assert a_entry is not None and b_entry is not None
         assert a_entry is not b_entry  # independent entries

@@ -53,9 +53,7 @@ class _TenantStubLayer(MemoryLayer):
         query: str,
         tenant_id: UUID | None = None,
         user_id: UUID | None = None,
-        time_scales: tuple[Literal["short_term", "long_term", "semantic"], ...] = (
-            "long_term",
-        ),
+        time_scales: tuple[Literal["short_term", "long_term", "semantic"], ...] = ("long_term",),
         max_hints: int = 10,
         trace_context: TraceContext | None = None,
     ) -> list[MemoryHint]:
@@ -178,22 +176,14 @@ async def test_session_layer_tenant_isolation_via_composite_key() -> None:
     session_a = uuid4()
     session_b = uuid4()
 
-    await layer.write(
-        content="shared topic", tenant_id=tenant_a, user_id=session_a
-    )
-    await layer.write(
-        content="shared topic", tenant_id=tenant_b, user_id=session_b
-    )
+    await layer.write(content="shared topic", tenant_id=tenant_a, user_id=session_a)
+    await layer.write(content="shared topic", tenant_id=tenant_b, user_id=session_b)
 
-    a_hints = await layer.read(
-        query="shared", tenant_id=tenant_a, user_id=session_a
-    )
+    a_hints = await layer.read(query="shared", tenant_id=tenant_a, user_id=session_a)
     assert len(a_hints) == 1
     assert a_hints[0].tenant_id == tenant_a
 
-    cross = await layer.read(
-        query="shared", tenant_id=tenant_a, user_id=session_b
-    )
+    cross = await layer.read(query="shared", tenant_id=tenant_a, user_id=session_b)
     assert cross == []
 
 
@@ -235,7 +225,7 @@ async def test_extraction_worker_no_cross_tenant_pollution() -> None:
         ]
     )
     user_layer = _TenantStubLayer(MemoryScope.USER)
-    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]
+    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]  # noqa: E501
 
     tenant_a = uuid4()
     user_a = uuid4()

@@ -43,8 +43,14 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from infrastructure.db import dispose_engine, get_session_factory
 from infrastructure.db.exceptions import StateConflictError
-from infrastructure.db.models import (Session, StateSnapshot, Tenant, User,
-                                      append_snapshot, compute_state_hash)
+from infrastructure.db.models import (
+    Session,
+    StateSnapshot,
+    Tenant,
+    User,
+    append_snapshot,
+    compute_state_hash,
+)
 
 
 async def _setup_parent_committed(
@@ -179,16 +185,11 @@ async def test_concurrent_snapshot_insert_one_wins(iteration: int) -> None:
 
         successes = [r for r in results if isinstance(r, StateSnapshot)]
         failures = [r for r in results if isinstance(r, StateConflictError)]
-        unexpected = [
-            r for r in results if not isinstance(r, (StateSnapshot, StateConflictError))
-        ]
+        unexpected = [r for r in results if not isinstance(r, (StateSnapshot, StateConflictError))]
 
-        assert (
-            not unexpected
-        ), f"Unexpected error in iteration {iteration}: {unexpected}"
+        assert not unexpected, f"Unexpected error in iteration {iteration}: {unexpected}"
         assert len(successes) == 1, (
-            f"Iteration {iteration}: expected 1 winner, got {len(successes)}; "
-            f"results={results}"
+            f"Iteration {iteration}: expected 1 winner, got {len(successes)}; " f"results={results}"
         )
         assert len(failures) == 1, (
             f"Iteration {iteration}: expected 1 StateConflictError, got "

@@ -183,7 +183,7 @@ class AzureOpenAIAdapter(ChatClient):
                 if request.max_tokens is not None:
                     kwargs["max_tokens"] = request.max_tokens
 
-                response = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]
+                response = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]  # noqa: E501
             except asyncio.CancelledError:
                 logger.info("azure_openai chat cancelled")
                 raise
@@ -243,7 +243,7 @@ class AzureOpenAIAdapter(ChatClient):
                 if request.max_tokens is not None:
                     kwargs["max_tokens"] = request.max_tokens
 
-                stream = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]
+                stream = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]  # noqa: E501
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001

@@ -29,7 +29,6 @@ from platform_layer.middleware import (
     get_db_session_with_tenant,
 )
 
-
 _TEST_SECRET = "test-secret-do-not-use-in-prod"
 
 
@@ -42,12 +41,8 @@ def _build_jwt(
 ) -> tuple[str, JWTManager]:
     """Mint a JWT signed with a deterministic test secret + return manager
     (so the middleware can be constructed with the same secret)."""
-    mgr = JWTManager(
-        secret=_TEST_SECRET, algorithm="HS256", expires_minutes=expires_minutes
-    )
-    token = mgr.encode(
-        sub=str(user_id), tenant_id=tenant_id, roles=roles or []
-    )
+    mgr = JWTManager(secret=_TEST_SECRET, algorithm="HS256", expires_minutes=expires_minutes)
+    token = mgr.encode(sub=str(user_id), tenant_id=tenant_id, roles=roles or [])
     return token, mgr
 
 
@@ -113,9 +108,7 @@ async def test_invalid_token_returns_401() -> None:
     app = _build_test_app(jwt_manager=mgr)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get(
-            "/whoami", headers={"Authorization": "Bearer garbage.not.a.jwt"}
-        )
+        resp = await ac.get("/whoami", headers={"Authorization": "Bearer garbage.not.a.jwt"})
     assert resp.status_code == 401
     assert resp.json()["error"] == "token invalid"
 
@@ -129,9 +122,7 @@ async def test_valid_jwt_populates_request_state() -> None:
     app = _build_test_app(jwt_manager=mgr)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get(
-            "/whoami", headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = await ac.get("/whoami", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     body = resp.json()
     assert UUID(body["tenant_id"]) == tid
@@ -149,8 +140,6 @@ async def test_get_db_session_with_tenant_sets_local() -> None:
     app = _build_test_app(jwt_manager=mgr)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get(
-            "/dbprobe", headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = await ac.get("/dbprobe", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     assert resp.json()["app_tenant_id"] == str(tid)

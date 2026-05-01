@@ -33,7 +33,6 @@ from platform_layer.identity.jwt import (
     JWTManager,
 )
 
-
 # === Fixtures =====================================================
 
 
@@ -109,9 +108,7 @@ def test_decode_raises_expired_error_when_exp_passed(
 def test_decode_raises_invalid_for_bad_signature(
     manager: JWTManager, secret: str, tenant_id: UUID, user_id: UUID
 ) -> None:
-    other = JWTManager(
-        secret=secret + "tampered", algorithm="HS256", expires_minutes=60
-    )
+    other = JWTManager(secret=secret + "tampered", algorithm="HS256", expires_minutes=60)
     token = other.encode(sub=str(user_id), tenant_id=tenant_id)
     with pytest.raises(JWTInvalidError):
         manager.decode(token)
@@ -125,9 +122,7 @@ def test_decode_raises_invalid_for_malformed_token(manager: JWTManager) -> None:
 # === Missing / invalid claims ====================================
 
 
-def test_decode_raises_invalid_when_tenant_id_missing(
-    secret: str, user_id: UUID
-) -> None:
+def test_decode_raises_invalid_when_tenant_id_missing(secret: str, user_id: UUID) -> None:
     # Construct payload directly (bypassing encode()) to inject a token
     # with valid signature but missing tenant_id claim.
     now = datetime.now(timezone.utc)
@@ -142,9 +137,7 @@ def test_decode_raises_invalid_when_tenant_id_missing(
         manager.decode(token)
 
 
-def test_decode_raises_invalid_for_non_uuid_tenant_id(
-    secret: str, user_id: UUID
-) -> None:
+def test_decode_raises_invalid_for_non_uuid_tenant_id(secret: str, user_id: UUID) -> None:
     now = datetime.now(timezone.utc)
     payload = {
         "sub": str(user_id),

@@ -35,9 +35,7 @@ def _build_factory(rows: list[MemoryTenant], scalar_value: str | None = None) ->
     return factory
 
 
-def _make_row(
-    *, tenant_id: object | None = None, content: str = "tenant playbook"
-) -> MemoryTenant:
+def _make_row(*, tenant_id: object | None = None, content: str = "tenant playbook") -> MemoryTenant:
     row = MemoryTenant(
         id=uuid4(),
         tenant_id=tenant_id or uuid4(),

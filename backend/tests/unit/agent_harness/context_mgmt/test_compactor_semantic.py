@@ -181,9 +181,7 @@ async def test_preserves_recent_n_turns() -> None:
     kept = result.compacted_state.transient.messages
 
     # Tail of kept must contain the last 'keep_recent' assistant messages of the original history
-    last_assistant_contents = [
-        m.content for m in history if m.role == "assistant"
-    ][-keep_recent:]
+    last_assistant_contents = [m.content for m in history if m.role == "assistant"][-keep_recent:]
     kept_assistant_contents = [
         m.content for m in kept if m.role == "assistant" and not m.metadata.get("compacted_summary")
     ]
@@ -229,7 +227,8 @@ async def test_summary_metadata_marker() -> None:
     assert result.compacted_state is not None
 
     summary_msgs = [
-        m for m in result.compacted_state.transient.messages
+        m
+        for m in result.compacted_state.transient.messages
         if m.metadata.get("compacted_summary") is True
     ]
     assert len(summary_msgs) == 1

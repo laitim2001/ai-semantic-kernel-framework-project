@@ -47,7 +47,6 @@ from uuid import UUID
 
 from fastapi import HTTPException, Request, status
 
-
 _AUTH_REQUIRED = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Authentication required",

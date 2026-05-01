@@ -10,7 +10,6 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from agent_harness._contracts import ToolCall
-
 from agent_harness.tools._abc import ToolExecutor, ToolRegistry
 from agent_harness.tools.echo_tool import ECHO_TOOL_SPEC, echo_handler, make_echo_executor
 from agent_harness.tools.exec_tools import (
@@ -96,16 +95,12 @@ def register_builtin_tools(
         from agent_harness.memory.retrieval import MemoryRetrieval
 
         if not isinstance(memory_retrieval, MemoryRetrieval):
-            raise TypeError(
-                "memory_retrieval must be a MemoryRetrieval instance"
-            )
+            raise TypeError("memory_retrieval must be a MemoryRetrieval instance")
         # Validate each layer is a MemoryLayer subclass instance
         validated_layers: dict[str, MemoryLayer] = {}
         for scope, layer in (memory_layers or {}).items():
             if not isinstance(layer, MemoryLayer):
-                raise TypeError(
-                    f"memory_layers[{scope!r}] must be a MemoryLayer instance"
-                )
+                raise TypeError(f"memory_layers[{scope!r}] must be a MemoryLayer instance")
             validated_layers[scope] = layer
 
         registry.register(MEMORY_SEARCH_SPEC)

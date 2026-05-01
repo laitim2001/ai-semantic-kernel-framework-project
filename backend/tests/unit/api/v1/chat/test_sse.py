@@ -150,5 +150,5 @@ class TestFormatSseMessage:
         assert str(sid) in body
         # Verify it parses as JSON
         data_line = [line for line in body.split("\n") if line.startswith("data: ")][0]
-        parsed = json.loads(data_line[len("data: "):])
+        parsed = json.loads(data_line[len("data: ") :])
         assert parsed["session_id"] == str(sid)

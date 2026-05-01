@@ -55,9 +55,7 @@ class _UserLayerStub(MemoryLayer):
         query: str,
         tenant_id: UUID | None = None,
         user_id: UUID | None = None,
-        time_scales: tuple[Literal["short_term", "long_term", "semantic"], ...] = (
-            "long_term",
-        ),
+        time_scales: tuple[Literal["short_term", "long_term", "semantic"], ...] = ("long_term",),
         max_hints: int = 10,
         trace_context: TraceContext | None = None,
     ) -> list[MemoryHint]:
@@ -249,9 +247,7 @@ async def test_lead_then_verify_consistent_path() -> None:
     assert len(search_resp["hints"]) == 1
 
     crm_result = await _mock_crm_search_customer(customer_id="acme-002")
-    consistent = (
-        crm_result["preference"] in search_resp["hints"][0]["summary"].lower()
-    )
+    consistent = crm_result["preference"] in search_resp["hints"][0]["summary"].lower()
     assert consistent is True
 
     assert len(user_layer._store) == 1

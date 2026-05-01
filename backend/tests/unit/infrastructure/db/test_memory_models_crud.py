@@ -29,9 +29,15 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.db.models import (MemoryRole, MemorySessionSummary,
-                                      MemorySystem, MemoryTenant, MemoryUser,
-                                      Role, Session)
+from infrastructure.db.models import (
+    MemoryRole,
+    MemorySessionSummary,
+    MemorySystem,
+    MemoryTenant,
+    MemoryUser,
+    Role,
+    Session,
+)
 from tests.conftest import seed_tenant, seed_user
 
 
@@ -71,8 +77,7 @@ async def test_memory_tenant_scoped(db_session: AsyncSession) -> None:
 
     result = await db_session.execute(
         select(MemoryTenant).where(
-            (MemoryTenant.tenant_id == t.id)
-            & (MemoryTenant.key == "playbook.incident_severity_p0")
+            (MemoryTenant.tenant_id == t.id) & (MemoryTenant.key == "playbook.incident_severity_p0")
         )
     )
     row = result.scalar_one()
@@ -101,9 +106,7 @@ async def test_memory_role_via_role(db_session: AsyncSession) -> None:
     db_session.add(mr)
     await db_session.flush()
 
-    result = await db_session.execute(
-        select(MemoryRole).where(MemoryRole.role_id == r.id)
-    )
+    result = await db_session.execute(select(MemoryRole).where(MemoryRole.role_id == r.id))
     row = result.scalar_one()
     assert row.category == "workflow"
 
@@ -127,9 +130,7 @@ async def test_memory_user_with_provenance(db_session: AsyncSession) -> None:
     await db_session.flush()
 
     found = await db_session.execute(
-        select(MemoryUser).where(
-            (MemoryUser.tenant_id == t.id) & (MemoryUser.user_id == u.id)
-        )
+        select(MemoryUser).where((MemoryUser.tenant_id == t.id) & (MemoryUser.user_id == u.id))
     )
     row = found.scalar_one()
     assert row.source == "extracted"
@@ -196,9 +197,7 @@ async def test_memory_user_cross_tenant_via_filter(
     await db_session.flush()
 
     # Tenant A's tenant-filtered query sees only its own
-    result = await db_session.execute(
-        select(MemoryUser).where(MemoryUser.tenant_id == t_a.id)
-    )
+    result = await db_session.execute(select(MemoryUser).where(MemoryUser.tenant_id == t_a.id))
     rows = list(result.scalars().all())
     assert len(rows) == 1
     assert rows[0].content == "Tenant A note."

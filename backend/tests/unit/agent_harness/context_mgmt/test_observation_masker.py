@@ -15,8 +15,6 @@ Scope: Sprint 52.1 Day 3.2
 
 from __future__ import annotations
 
-import pytest
-
 from agent_harness._contracts import Message, ToolCall
 from agent_harness.context_mgmt.observation_masker import DefaultObservationMasker
 

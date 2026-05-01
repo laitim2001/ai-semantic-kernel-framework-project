@@ -1,6 +1,6 @@
 """
 File: backend/tests/integration/business_domain/test_business_tools_via_registry.py
-Purpose: Execute all 18 business ToolSpecs through ToolRegistryImpl; httpx routed in-process via ASGI.
+Purpose: Execute all 18 business ToolSpecs through ToolRegistryImpl; httpx routed in-process via ASGI.  # noqa: E501
 Category: Tests / Integration / business_domain
 Scope: Phase 51 / Sprint 51.0 Day 4.2; updated Sprint 51.1 Day 5 (CARRY-017)
 

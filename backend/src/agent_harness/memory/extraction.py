@@ -33,7 +33,6 @@ from typing import Any
 from uuid import UUID
 
 from adapters._base.chat_client import ChatClient
-
 from agent_harness._contracts import ChatRequest, Message, TraceContext
 from agent_harness.memory.layers.user_layer import UserLayer
 

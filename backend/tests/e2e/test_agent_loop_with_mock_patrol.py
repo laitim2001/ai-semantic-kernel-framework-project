@@ -1,6 +1,6 @@
 """
 File: backend/tests/e2e/test_agent_loop_with_mock_patrol.py
-Purpose: Sprint 51.0 acceptance e2e — agent loop drives mock_patrol_check_servers via real httpx + mock_services subprocess.
+Purpose: Sprint 51.0 acceptance e2e — agent loop drives mock_patrol_check_servers via real httpx + mock_services subprocess.  # noqa: E501
 Category: Tests / e2e / Sprint 51.0 acceptance gate
 Scope: Phase 51 / Sprint 51.0 Day 4.5
 
@@ -126,7 +126,7 @@ def mock_services_subprocess() -> Iterator[None]:
 async def test_agent_loop_calls_mock_patrol_via_real_subprocess(
     mock_services_subprocess: None,
 ) -> None:
-    """Sprint 51.0 acceptance: TAO loop -> mock_patrol_check_servers -> real HTTP -> mock JSON -> END_TURN."""
+    """Sprint 51.0 acceptance: TAO loop -> mock_patrol_check_servers -> real HTTP -> mock JSON -> END_TURN."""  # noqa: E501
     registry, executor = make_default_executor()
 
     # Pre-scripted MockChatClient: turn 1 calls patrol, turn 2 ends with summary

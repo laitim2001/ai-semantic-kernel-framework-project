@@ -28,7 +28,6 @@ from api.v1.chat import router as chat_router
 from api.v1.chat.session_registry import get_default_registry
 from platform_layer.identity import get_current_tenant
 
-
 # Module-level deterministic tenant for single-tenant tests.
 DEFAULT_TENANT = UUID("11111111-1111-1111-1111-111111111111")
 
@@ -73,8 +72,8 @@ def _parse_sse(body: bytes) -> list[dict]:
         data_line = next((ln for ln in lines if ln.startswith("data: ")), "")
         out.append(
             {
-                "type": event_line[len("event: "):],
-                "data": json.loads(data_line[len("data: "):]) if data_line else None,
+                "type": event_line[len("event: ") :],
+                "data": json.loads(data_line[len("data: ") :]) if data_line else None,
             }
         )
     return out
@@ -166,8 +165,8 @@ def test_e2e_cancellation_marks_session_cancelled(client: TestClient) -> None:
 
 class TestTraceIdPropagationE2E:
     """End-to-end TraceContext.create_root() coverage:
-        - X-Trace-Id response header set
-        - Every emitted SSE event carries data.trace_id matching the header
+    - X-Trace-Id response header set
+    - Every emitted SSE event carries data.trace_id matching the header
     """
 
     def test_x_trace_id_header_present_and_uuid_hex(self, client: TestClient) -> None:
@@ -182,9 +181,7 @@ class TestTraceIdPropagationE2E:
         assert isinstance(trace_id, str) and len(trace_id) == 32
         int(trace_id, 16)  # raises if non-hex
 
-    def test_every_sse_event_carries_matching_trace_id(
-        self, client: TestClient
-    ) -> None:
+    def test_every_sse_event_carries_matching_trace_id(self, client: TestClient) -> None:
         """All 8+ SSE frames must share the same trace_id as X-Trace-Id."""
         with client.stream(
             "POST",
@@ -205,8 +202,7 @@ class TestTraceIdPropagationE2E:
                 "should have injected it"
             )
             assert data["trace_id"] == header_tid, (
-                f"event {ev['type']} trace_id={data['trace_id']!r} != "
-                f"X-Trace-Id={header_tid!r}"
+                f"event {ev['type']} trace_id={data['trace_id']!r} != " f"X-Trace-Id={header_tid!r}"
             )
 
 
@@ -217,10 +213,10 @@ class TestTraceIdPropagationE2E:
 
 class TestMultiTenantE2E:
     """End-to-end cross-tenant isolation:
-        - Tenant A creates a session via POST /chat
-        - Tenant B GET /sessions/{sid} → 404 (never reveal existence)
-        - Tenant B POST /sessions/{sid}/cancel → 404
-        - Tenant B's cancel attempt does NOT flip Tenant A's session
+    - Tenant A creates a session via POST /chat
+    - Tenant B GET /sessions/{sid} → 404 (never reveal existence)
+    - Tenant B POST /sessions/{sid}/cancel → 404
+    - Tenant B's cancel attempt does NOT flip Tenant A's session
     """
 
     def _make_tenant_app(self, tenant: UUID) -> FastAPI:
@@ -245,10 +241,7 @@ class TestMultiTenantE2E:
                 for _ in resp.iter_bytes():
                     pass
             # Sanity: tenant A sees status=completed
-            assert (
-                tc_a.get(f"/api/v1/chat/sessions/{sid}").json()["status"]
-                == "completed"
-            )
+            assert tc_a.get(f"/api/v1/chat/sessions/{sid}").json()["status"] == "completed"
 
         # Tenant B tries to read same session_id
         app_b = self._make_tenant_app(tenant_b)

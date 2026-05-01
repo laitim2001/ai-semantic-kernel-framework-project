@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Awaitable, Callable
-from uuid import uuid5, NAMESPACE_OID
+from uuid import NAMESPACE_OID, uuid5
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,

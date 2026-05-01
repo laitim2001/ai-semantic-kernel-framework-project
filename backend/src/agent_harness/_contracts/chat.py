@@ -151,7 +151,7 @@ class CacheBreakpoint:
 
     # Logical metadata (52.1 extension — Cat 4 fills; Cat 5 may use; 52.2 wires through)
     section_id: str | None = None
-    """Logical section id (e.g. "system", "tools", "memory_user_layer"); set by PromptCacheManager."""
+    """Logical section id (e.g. "system", "tools", "memory_user_layer"); set by PromptCacheManager."""  # noqa: E501
 
     content_hash: str | None = None
     """sha256 of the cached content; key component for invalidation lookups."""

@@ -129,7 +129,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 status_code=401,
                 headers={"WWW-Authenticate": 'Bearer realm="api"'},
             )
-        token = raw[len(self.BEARER_PREFIX):].strip()
+        token = raw[len(self.BEARER_PREFIX) :].strip()
         if not token:
             return JSONResponse(
                 {"error": "Bearer token is empty"},
@@ -152,15 +152,11 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 {"error": "token invalid"},
                 status_code=401,
-                headers={
-                    "WWW-Authenticate": 'Bearer error="invalid_token"'
-                },
+                headers={"WWW-Authenticate": 'Bearer error="invalid_token"'},
             )
         except JWTAuthError:
             # Catch-all for any other JWTAuthError subclass added later.
-            return JSONResponse(
-                {"error": "authentication failed"}, status_code=401
-            )
+            return JSONResponse({"error": "authentication failed"}, status_code=401)
 
         # Parse user_id from `sub`. JWT spec stores sub as string; we expect
         # UUID-shaped values from our own issuer. If `sub` cannot parse,
@@ -171,9 +167,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 {"error": "token sub is not a valid UUID"},
                 status_code=401,
-                headers={
-                    "WWW-Authenticate": 'Bearer error="invalid_token"'
-                },
+                headers={"WWW-Authenticate": 'Bearer error="invalid_token"'},
             )
 
         request.state.tenant_id = claims.tenant_id

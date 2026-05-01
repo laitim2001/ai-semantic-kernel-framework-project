@@ -1,6 +1,6 @@
 """
 File: backend/src/agent_harness/context_mgmt/compactor/structural.py
-Purpose: Rule-based Compactor; preserves system + recent N turns + HITL decisions, drops redundant tool retries.
+Purpose: Rule-based Compactor; preserves system + recent N turns + HITL decisions, drops redundant tool retries.  # noqa: E501
 Category: 範疇 4 (Context Management)
 Scope: Phase 52 / Sprint 52.1 Day 2
 

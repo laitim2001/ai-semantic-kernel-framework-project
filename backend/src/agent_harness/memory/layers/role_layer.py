@@ -95,9 +95,7 @@ class RoleLayer(MemoryLayer):
         tenant_id: UUID | None = None,
         trace_context: TraceContext | None = None,
     ) -> None:
-        raise NotImplementedError(
-            "RoleLayer evict is admin-managed (Phase 53+)."
-        )
+        raise NotImplementedError("RoleLayer evict is admin-managed (Phase 53+).")
 
     async def resolve(
         self,

@@ -36,8 +36,6 @@ from __future__ import annotations
 class DBException(Exception):
     """Base for all infrastructure/db domain exceptions."""
 
-    pass
-
 
 class StateConflictError(DBException):
     """
@@ -54,13 +52,9 @@ class StateConflictError(DBException):
     rebasing the change.
     """
 
-    pass
-
 
 class MigrationError(DBException):
     """Failure of a migration helper (verification / stamp / etc.)."""
-
-    pass
 
 
 __all__ = ["DBException", "StateConflictError", "MigrationError"]

@@ -30,7 +30,6 @@ from infrastructure.db import dispose_engine
 from platform_layer.identity import JWTManager
 from platform_layer.middleware import TenantContextMiddleware
 
-
 _SECRET = "integ-test-secret"
 
 
@@ -56,9 +55,7 @@ def _make_app(jwt_manager: JWTManager) -> FastAPI:
 
 
 def _mgr(*, expires_minutes: int = 60) -> JWTManager:
-    return JWTManager(
-        secret=_SECRET, algorithm="HS256", expires_minutes=expires_minutes
-    )
+    return JWTManager(secret=_SECRET, algorithm="HS256", expires_minutes=expires_minutes)
 
 
 @pytest.mark.asyncio
@@ -100,9 +97,7 @@ async def test_expired_token_returns_401_with_expired_description() -> None:
     app = _make_app(mgr)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get(
-            "/echo", headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = await ac.get("/echo", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 401
     assert resp.json()["error"] == "token expired"
     assert "expired" in resp.headers.get("www-authenticate", "").lower()
@@ -117,9 +112,7 @@ async def test_bad_signature_returns_401() -> None:
     app = _make_app(verifier)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get(
-            "/echo", headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = await ac.get("/echo", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 401
     assert resp.json()["error"] == "token invalid"
     assert "invalid_token" in resp.headers.get("www-authenticate", "")
@@ -142,9 +135,7 @@ async def test_sub_not_uuid_returns_401() -> None:
     app = _make_app(_mgr())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get(
-            "/echo", headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = await ac.get("/echo", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 401
     assert "valid UUID" in resp.json()["error"]
 
@@ -186,7 +177,5 @@ async def test_forged_x_tenant_id_without_jwt_still_401() -> None:
     app = _make_app(mgr)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get(
-            "/echo", headers={"X-Tenant-Id": str(uuid4())}
-        )
+        resp = await ac.get("/echo", headers={"X-Tenant-Id": str(uuid4())})
     assert resp.status_code == 401

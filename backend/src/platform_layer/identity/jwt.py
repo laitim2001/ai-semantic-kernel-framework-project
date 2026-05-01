@@ -52,7 +52,6 @@ from jose.exceptions import ExpiredSignatureError, JWTError
 
 from core.config import get_settings
 
-
 # === Custom exceptions ============================================
 # Why: callers (middleware, tests) need to distinguish "expired" from
 # "malformed/bad signature" to return appropriate 401 messages and to
@@ -162,9 +161,7 @@ class JWTManager:
         if extra:
             for key in extra:
                 if key in self._RESERVED_CLAIMS:
-                    raise ValueError(
-                        f"extra claim '{key}' overlaps a reserved standard claim"
-                    )
+                    raise ValueError(f"extra claim '{key}' overlaps a reserved standard claim")
             payload.update(extra)
         return jose_jwt.encode(payload, self.secret, algorithm=self.algorithm)
 
@@ -222,14 +219,10 @@ class JWTManager:
             raise JWTInvalidError(f"'tenant_id' is not a valid UUID: {e}") from e
 
         roles_raw = raw.get("roles", [])
-        if not isinstance(roles_raw, list) or not all(
-            isinstance(r, str) for r in roles_raw
-        ):
+        if not isinstance(roles_raw, list) or not all(isinstance(r, str) for r in roles_raw):
             raise JWTInvalidError("'roles' must be a list of strings")
 
-        extra = {
-            k: v for k, v in raw.items() if k not in cls._RESERVED_CLAIMS
-        }
+        extra = {k: v for k, v in raw.items() if k not in cls._RESERVED_CLAIMS}
         return JWTClaims(
             sub=sub,
             tenant_id=tenant_id,

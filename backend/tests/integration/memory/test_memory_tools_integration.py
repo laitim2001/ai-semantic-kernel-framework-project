@@ -57,9 +57,7 @@ class _StubUserLayer(MemoryLayer):
         query: str,
         tenant_id: UUID | None = None,
         user_id: UUID | None = None,
-        time_scales: tuple[Literal["short_term", "long_term", "semantic"], ...] = (
-            "long_term",
-        ),
+        time_scales: tuple[Literal["short_term", "long_term", "semantic"], ...] = ("long_term",),
         max_hints: int = 10,
         trace_context: TraceContext | None = None,
     ) -> list[MemoryHint]:

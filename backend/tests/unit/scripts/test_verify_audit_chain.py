@@ -20,17 +20,14 @@ Created: 2026-05-01
 
 from __future__ import annotations
 
-import hashlib
-import json
+import sys
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
-
-import sys
-from pathlib import Path
 
 # Allow `from scripts.verify_audit_chain import ...` regardless of cwd.
 ROOT = Path(__file__).resolve().parents[3]
@@ -43,7 +40,6 @@ from scripts.verify_audit_chain import (  # noqa: E402
     _normalise_db_url,
     _verify_tenant_chain,
 )
-
 
 # ============================================================
 # Hash parity: matches audit_helper.compute_audit_hash exactly
@@ -71,9 +67,9 @@ def test_compute_hash_parity_with_audit_helper() -> None:
         tenant_id=tenant,
         timestamp_ms=ts_ms,
     )
-    assert helper_hash == verifier_hash, (
-        f"hash drift! helper={helper_hash} verifier={verifier_hash}"
-    )
+    assert (
+        helper_hash == verifier_hash
+    ), f"hash drift! helper={helper_hash} verifier={verifier_hash}"
 
 
 def test_compute_hash_canonical_json_invariant() -> None:
@@ -292,7 +288,4 @@ def test_normalise_db_url_strips_asyncpg_suffix() -> None:
 
 
 def test_normalise_db_url_passthrough_when_already_plain() -> None:
-    assert (
-        _normalise_db_url("postgresql://user:pwd@h:5432/db")
-        == "postgresql://user:pwd@h:5432/db"
-    )
+    assert _normalise_db_url("postgresql://user:pwd@h:5432/db") == "postgresql://user:pwd@h:5432/db"

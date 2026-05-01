@@ -162,6 +162,6 @@ class PointerResolver(JITRetrieval):
         )
         if result is None:
             raise JITRetrievalConfigError(
-                f"db:// pointer resolved to no row (table={table}, id={row_uuid}, tenant={tenant_id})"
+                f"db:// pointer resolved to no row (table={table}, id={row_uuid}, tenant={tenant_id})"  # noqa: E501
             )
         return str(result)

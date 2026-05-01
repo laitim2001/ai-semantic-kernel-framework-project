@@ -20,7 +20,6 @@ import pytest
 
 from api.v1.chat.session_registry import SessionRegistry
 
-
 # ============================================================
 # Existing single-tenant tests (refactored to pass tenant_id)
 # ============================================================

@@ -1,6 +1,6 @@
 """
 File: backend/src/agent_harness/context_mgmt/observation_masker.py
-Purpose: DefaultObservationMasker — redacts old role="tool" message bodies while keeping tool_calls intact.
+Purpose: DefaultObservationMasker — redacts old role="tool" message bodies while keeping tool_calls intact.  # noqa: E501
 Category: 範疇 4 (Context Management)
 Scope: Phase 52 / Sprint 52.1 Day 3
 
@@ -69,9 +69,7 @@ class DefaultObservationMasker(ObservationMasker):
         for i, msg in enumerate(messages):
             if msg.role == "tool" and i < cutoff_idx:
                 tool_name = msg.name or "unknown"
-                content_str = (
-                    msg.content if isinstance(msg.content, str) else "[content blocks]"
-                )
+                content_str = msg.content if isinstance(msg.content, str) else "[content blocks]"
                 byte_count = len(content_str) if isinstance(content_str, str) else 0
                 tombstone = f"[REDACTED: tool {tool_name} result; bytes={byte_count}]"
                 out.append(replace(msg, content=tombstone))

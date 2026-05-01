@@ -44,6 +44,7 @@ def test_tools_buffer_adds_30_percent() -> None:
     assert delta > 0
     # Compute raw schema tokens and verify the 1.3 factor was applied.
     import json as _json
+
     schema = {
         "name": tool.name,
         "description": tool.description,

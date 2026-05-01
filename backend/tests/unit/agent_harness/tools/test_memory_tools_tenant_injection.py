@@ -34,7 +34,6 @@ from agent_harness.tools.memory_tools import (
     memory_placeholder_handler,
 )
 
-
 # Fixtures ----------------------------------------------------------
 
 
@@ -251,9 +250,7 @@ def test_handlers_have_two_arg_signature() -> None:
     ):
         sig = inspect.signature(handler)
         params = list(sig.parameters.values())
-        assert len(params) == 2, (
-            f"{handler!r} signature {sig} — must take (call, context)"
-        )
+        assert len(params) == 2, f"{handler!r} signature {sig} — must take (call, context)"
         assert params[1].name == "context"
 
 
@@ -295,9 +292,7 @@ async def test_search_serialises_returned_hints(
     fake_retrieval = MagicMock()
     fake_retrieval.search = AsyncMock(return_value=[hint])
     handler = make_memory_search_handler(fake_retrieval)
-    result = await handler(
-        _call("memory_search", query="alpha"), authenticated_context
-    )
+    result = await handler(_call("memory_search", query="alpha"), authenticated_context)
     payload = json.loads(result)
     assert payload["ok"] is True
     assert len(payload["hints"]) == 1

@@ -15,7 +15,6 @@ a tool blob; record duration_ms from CompactionResult, compute p50/p95/p99.
 
 from __future__ import annotations
 
-import statistics
 from datetime import datetime
 from typing import AsyncIterator
 from uuid import uuid4

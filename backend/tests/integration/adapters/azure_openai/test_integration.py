@@ -51,7 +51,6 @@ from agent_harness._contracts import (
     ToolSpec,
 )
 
-
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_AZURE_INTEGRATION") != "1",
     reason=(
@@ -67,9 +66,7 @@ def adapter() -> AzureOpenAIAdapter:
     across the three test cases to keep cost low."""
     config = AzureOpenAIConfig()
     if not config.is_configured():
-        pytest.skip(
-            "AzureOpenAIConfig missing required env vars; cannot run live test."
-        )
+        pytest.skip("AzureOpenAIConfig missing required env vars; cannot run live test.")
     return AzureOpenAIAdapter(config=config)
 
 

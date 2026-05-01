@@ -236,7 +236,7 @@ async def test_batch_empty_returns_empty() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_read_only_parallel_runs_concurrently() -> None:
-    """3 read-only-parallel calls × 100ms slow handler should finish in ~100ms (parallel), not ~300ms."""
+    """3 read-only-parallel calls × 100ms slow handler should finish in ~100ms (parallel), not ~300ms."""  # noqa: E501
     reg = ToolRegistryImpl()
     reg.register(_spec("ro_a", concurrency=ConcurrencyPolicy.READ_ONLY_PARALLEL))
     reg.register(_spec("ro_b", concurrency=ConcurrencyPolicy.READ_ONLY_PARALLEL))

@@ -27,9 +27,7 @@ def parser() -> OutputParserImpl:
 
 @pytest.mark.parametrize("stop", list(StopReason))
 @pytest.mark.asyncio
-async def test_stop_reason_preserved_pure_text(
-    parser: OutputParserImpl, stop: StopReason
-) -> None:
+async def test_stop_reason_preserved_pure_text(parser: OutputParserImpl, stop: StopReason) -> None:
     """Each StopReason value is carried through parse() unchanged."""
     resp = ChatResponse(model="m", content="x", stop_reason=stop)
     out = await parser.parse(resp)

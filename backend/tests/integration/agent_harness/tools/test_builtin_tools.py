@@ -126,7 +126,7 @@ async def test_request_approval_handler_runs_with_explicit_approval_bypass() -> 
         context=ctx,
     )
     # explicit_approval bypasses DESTRUCTIVE gate, but not ALWAYS_ASK gate.
-    # PermissionChecker resolution: destructive(False)→fall through; HITL ALWAYS_ASK→REQUIRE_APPROVAL
+    # PermissionChecker resolution: destructive(False)→fall through; HITL ALWAYS_ASK→REQUIRE_APPROVAL  # noqa: E501
     assert result.success is False
     assert "approval required" in (result.error or "")
 

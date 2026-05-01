@@ -86,13 +86,9 @@ async def _ensure_rls_app_role(session: AsyncSession) -> None:
             """))
     # Grants are idempotent
     grants = ", ".join(_RLS_TABLES)
-    await session.execute(
-        text(f"GRANT SELECT, INSERT, UPDATE, DELETE ON {grants} TO rls_app_role")
-    )
+    await session.execute(text(f"GRANT SELECT, INSERT, UPDATE, DELETE ON {grants} TO rls_app_role"))
     # SEQUENCE on bigserial / uuid_generate_v4 default still needs USAGE
-    await session.execute(
-        text("GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO rls_app_role")
-    )
+    await session.execute(text("GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO rls_app_role"))
 
 
 async def _set_app_tenant(session: AsyncSession, tenant_id: UUID) -> None:
@@ -113,9 +109,7 @@ async def test_rls_select_blocked_without_set_local(
     # Seed data as superuser
     t = await seed_tenant(db_session, code="RLS_NS")
     u = await seed_user(db_session, t, email="ns@rls.test")
-    db_session.add(
-        MemoryUser(tenant_id=t.id, user_id=u.id, category="fact", content="X")
-    )
+    db_session.add(MemoryUser(tenant_id=t.id, user_id=u.id, category="fact", content="X"))
     await db_session.flush()
 
     # Switch to non-bypass role. Do NOT call set_config — app.tenant_id is
@@ -141,12 +135,8 @@ async def test_rls_select_scoped_to_tenant_a(db_session: AsyncSession) -> None:
 
     db_session.add_all(
         [
-            MemoryUser(
-                tenant_id=t_a.id, user_id=u_a.id, category="fact", content="A note"
-            ),
-            MemoryUser(
-                tenant_id=t_b.id, user_id=u_b.id, category="fact", content="B note"
-            ),
+            MemoryUser(tenant_id=t_a.id, user_id=u_a.id, category="fact", content="A note"),
+            MemoryUser(tenant_id=t_b.id, user_id=u_b.id, category="fact", content="B note"),
         ]
     )
     await db_session.flush()
@@ -177,9 +167,7 @@ async def test_rls_insert_with_check_blocks_wrong_tenant(
     await _set_app_tenant(db_session, t_a.id)
 
     # Try to insert a memory_user for tenant B while context is tenant A
-    db_session.add(
-        MemoryUser(tenant_id=t_b.id, user_id=u_b.id, category="fact", content="hijack")
-    )
+    db_session.add(MemoryUser(tenant_id=t_b.id, user_id=u_b.id, category="fact", content="hijack"))
     with pytest.raises(DBAPIError) as exc_info:
         await db_session.flush()
     assert "row-level security" in str(exc_info.value).lower()
@@ -193,9 +181,7 @@ async def test_rls_update_blocked_cross_tenant(db_session: AsyncSession) -> None
     t_a = await seed_tenant(db_session, code="RLS_UPD_A")
     t_b = await seed_tenant(db_session, code="RLS_UPD_B")
     u_b = await seed_user(db_session, t_b, email="b_upd@rls.test")
-    b_row = MemoryUser(
-        tenant_id=t_b.id, user_id=u_b.id, category="fact", content="B original"
-    )
+    b_row = MemoryUser(tenant_id=t_b.id, user_id=u_b.id, category="fact", content="B original")
     db_session.add(b_row)
     await db_session.flush()
     b_row_id = b_row.id
@@ -223,9 +209,7 @@ async def test_rls_delete_blocked_cross_tenant(db_session: AsyncSession) -> None
     t_a = await seed_tenant(db_session, code="RLS_DEL_A")
     t_b = await seed_tenant(db_session, code="RLS_DEL_B")
     u_b = await seed_user(db_session, t_b, email="b_del@rls.test")
-    b_row = MemoryUser(
-        tenant_id=t_b.id, user_id=u_b.id, category="fact", content="survive"
-    )
+    b_row = MemoryUser(tenant_id=t_b.id, user_id=u_b.id, category="fact", content="survive")
     db_session.add(b_row)
     await db_session.flush()
     b_row_id = b_row.id
@@ -262,7 +246,5 @@ async def test_rls_audit_log_isolation(db_session: AsyncSession) -> None:
     await db_session.execute(text("SET LOCAL ROLE rls_app_role"))
     await _set_app_tenant(db_session, t_a.id)
 
-    result = await db_session.execute(
-        select(AuditLog).where(AuditLog.operation == "b_only_action")
-    )
+    result = await db_session.execute(select(AuditLog).where(AuditLog.operation == "b_only_action"))
     assert result.scalar_one_or_none() is None  # B's audit invisible to A

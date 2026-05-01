@@ -194,7 +194,7 @@ def _make_posix_limiter(memory_mb: int, timeout_seconds: float) -> Any:
         mem_bytes = memory_mb * 1024 * 1024
         resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))  # type: ignore[attr-defined]
         cpu_seconds = max(1, int(timeout_seconds * 2))
-        resource.setrlimit(resource.RLIMIT_CPU, (cpu_seconds, cpu_seconds))  # type: ignore[attr-defined]
+        resource.setrlimit(resource.RLIMIT_CPU, (cpu_seconds, cpu_seconds))  # type: ignore[attr-defined]  # noqa: E501
 
     return _apply
 
@@ -323,8 +323,8 @@ class DockerSandbox(SandboxBackend):
             # docker SDK exposes `requests` exceptions and (on Windows) named-pipe
             # ReadTimeoutError; we capture all of them as a single "timeout"
             # signal. Any other exception during wait() is escalated.
+            from requests.exceptions import ConnectionError as RequestsConnectionError
             from requests.exceptions import (
-                ConnectionError as RequestsConnectionError,
                 ReadTimeout,
             )
             from urllib3.exceptions import ReadTimeoutError

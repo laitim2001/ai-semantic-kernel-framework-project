@@ -111,13 +111,8 @@ async def test_sandbox_blocks_network_when_network_blocked_true(
 ) -> None:
     """--network=none must be real. Pre-fix, network_blocked was a doc-only
     flag (W4P-3 audit: `# noqa: ARG002 — doc-only knob`)."""
-    code = (
-        "import socket; s = socket.socket(); s.settimeout(2); "
-        "s.connect(('8.8.8.8', 53))"
-    )
-    result = await sandbox.execute(
-        code, timeout_seconds=10, memory_mb=64, network_blocked=True
-    )
+    code = "import socket; s = socket.socket(); s.settimeout(2); " "s.connect(('8.8.8.8', 53))"
+    result = await sandbox.execute(code, timeout_seconds=10, memory_mb=64, network_blocked=True)
     # Connection MUST fail. We accept any non-zero exit (different OS error
     # codes raise different exceptions). What we explicitly DON'T tolerate
     # is exit_code==0 (which would prove the connect succeeded).
@@ -172,8 +167,7 @@ async def test_sandbox_memory_limit_enforced(sandbox: DockerSandbox) -> None:
     )
     result = await sandbox.execute(code, timeout_seconds=15, memory_mb=64)
     assert result.exit_code != 0, (
-        f"sandbox survived 200MB alloc inside 64MB cap! "
-        f"stdout={result.stdout!r}"
+        f"sandbox survived 200MB alloc inside 64MB cap! " f"stdout={result.stdout!r}"
     )
     assert "survived" not in result.stdout
 
@@ -190,9 +184,7 @@ async def test_sandbox_perf_baseline_under_500ms(sandbox: DockerSandbox) -> None
     """
     timings: list[float] = []
     for _ in range(10):
-        result = await sandbox.execute(
-            "pass", timeout_seconds=5, memory_mb=64
-        )
+        result = await sandbox.execute("pass", timeout_seconds=5, memory_mb=64)
         assert result.exit_code == 0
         timings.append(result.duration_seconds)
     avg = statistics.mean(timings[1:])  # drop cold start

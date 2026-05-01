@@ -87,9 +87,7 @@ class SessionRegistry:
         self._tenants: dict[UUID, dict[UUID, SessionEntry]] = {}
         self._lock = asyncio.Lock()
 
-    async def register(
-        self, tenant_id: UUID, session_id: UUID
-    ) -> SessionEntry:
+    async def register(self, tenant_id: UUID, session_id: UUID) -> SessionEntry:
         """Insert a new running entry under ``tenant_id``. Idempotent on existing.
 
         Two different tenants may register the same session_id; entries are
@@ -104,9 +102,7 @@ class SessionRegistry:
             sessions[session_id] = entry
             return entry
 
-    async def get(
-        self, tenant_id: UUID, session_id: UUID
-    ) -> SessionEntry | None:
+    async def get(self, tenant_id: UUID, session_id: UUID) -> SessionEntry | None:
         """Return entry for (tenant, session) — or None if either is absent."""
         async with self._lock:
             sessions = self._tenants.get(tenant_id)
@@ -114,9 +110,7 @@ class SessionRegistry:
                 return None
             return sessions.get(session_id)
 
-    async def cancel(
-        self, tenant_id: UUID, session_id: UUID
-    ) -> bool:
+    async def cancel(self, tenant_id: UUID, session_id: UUID) -> bool:
         """Set status=cancelled + signal cancel_event. Returns True if found.
 
         Cross-tenant cancel attempts return False (treated as not-found).
@@ -133,9 +127,7 @@ class SessionRegistry:
             entry.cancel_event.set()
             return True
 
-    async def mark_completed(
-        self, tenant_id: UUID, session_id: UUID
-    ) -> None:
+    async def mark_completed(self, tenant_id: UUID, session_id: UUID) -> None:
         """Mark running entry completed. No-op on missing or cancelled entry.
 
         Cross-tenant calls are no-ops — the registry never silently mutates
@@ -149,9 +141,7 @@ class SessionRegistry:
             if entry is not None and entry.status == "running":
                 entry.status = "completed"
 
-    async def cleanup(
-        self, tenant_id: UUID, session_id: UUID
-    ) -> None:
+    async def cleanup(self, tenant_id: UUID, session_id: UUID) -> None:
         """Remove entry; idempotent on missing id or absent tenant.
 
         If tenant has no remaining sessions after removal, the tenant entry
