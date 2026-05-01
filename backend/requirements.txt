@@ -40,3 +40,9 @@ opentelemetry-instrumentation-fastapi==0.43b0
 opentelemetry-instrumentation-sqlalchemy==0.43b0
 opentelemetry-instrumentation-redis==0.43b0
 python-json-logger>=2.0,<4.0
+
+# ---- Identity / Auth (Sprint 52.5 P0 #14) ----------------------------
+# JWT replaces V1 X-Tenant-Id header (W1-2 audit P0). HS256 dev / RS256 prod;
+# `cryptography` extras include backends needed for RS256.
+# See platform_layer/identity/jwt.py + tenant_context.py.
+python-jose[cryptography]>=3.3,<4.0
