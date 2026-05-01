@@ -1,7 +1,10 @@
 # V2 Audit — 完整總圖（單頁 onboarding）
 
-**Last updated**: 2026-05-01 evening
-**Status**: 4 audit windows complete (W1, W2, W3, mini-W4-pre); 45% coverage; 8 P0 open; 1 cleanup sprint pending; W4 not yet triggered
+**Last updated**: 2026-05-02 (post-Sprint 52.5 merge)
+**Status**: 4 audit windows complete (W1, W2, W3, mini-W4-pre); 45% coverage;
+**8/8 P0 + 4/4 P1 CLOSED via Sprint 52.5 PR #19** (admin-merged at d4ba89ef
+2026-05-02 because main CI was 100% red across all 4 workflows — see new
+Audit Debt #5); **W4 audit READY to trigger**.
 **Authoritative index**: `V2-AUDIT-OPEN-ISSUES-20260501.md`（this doc 是縮版）
 
 ---
@@ -54,30 +57,38 @@ Phase 55 ░░░░░░░░░░░░░░░░░░░░   0%
 
 ---
 
-## 4. Open P0/P1 速覽
+## 4. P0/P1 結局（2026-05-02 update）
 
-### 8 P0（cleanup sprint 必清，Phase 53.x 阻塞）
+### 8 P0 — ALL CLOSED ✅ (Sprint 52.5 PR #19 d4ba89ef)
 
-| # | Title | Effort |
-|---|-------|--------|
-| #11 | chat router multi-tenant 隔離 | 1-2d |
-| #12 | TraceContext propagation at chat handler | half day |
-| #13 | audit_log hash chain verifier | 2-3d |
-| #14 | JWT replace X-Tenant-Id header | 1-2d |
-| #15 | OTel SDK version lock to ==1.22.0 | 30 min |
-| #16 | OTel main-flow tracer span coverage 5 places | 2-3d |
-| #17 | SubprocessSandbox Windows Docker isolation | 3-5d |
-| #18 | memory_tools handler tenant from ExecutionContext | 1d |
+| # | Title | Resolved by |
+|---|-------|-------------|
+| #11 | chat router multi-tenant 隔離 | fe0722ea + dc301732 |
+| #12 | TraceContext propagation at chat handler | fe0722ea + dc301732 |
+| #13 | audit_log hash chain verifier | 99eb327c + 9a0f65cb |
+| #14 | JWT replace X-Tenant-Id header | 3d75ff68 + 0e883dab |
+| #15 | OTel SDK version lock to ==1.22.0 | c7796c2b |
+| #16 | OTel main-flow tracer span coverage | a074eb29 + dc301732 |
+| #17 | SubprocessSandbox Docker isolation | c4aa6e86 |
+| #18 | memory_tools handler tenant from ExecutionContext | dbfb906c |
 
-**總工時**: 12-17 days → 推薦 **10-14 day cleanup sprint**
+**Originally-estimated**: 12-17 days. **Actual**: ~1 day intensive sprint.
 
-### 6 P1 待清（cleanup sprint Day 6）
+### 4 P1 actionable — ALL CLOSED ✅
 
-W2-1 #4 / W2-2 #6 / W2-2 #7 / W2-2 #8 / W3-1 LoopState / W3-1 ToolCallExecuted owner
+W2-1 #4 azure_openai test_integration / W2-2 #6 Celery cleanup /
+W2-2 #7 worker dir shim / W2-2 #8 STUB docstring → all in 54a80243.
 
-### 2 P1 已清（PR #10 merge 後）
+### 2 P1 deferred (transparent, not Sprint 52.5 scope)
 
-W1-2 #3 stub 刪除 / W2-1 #5 CI lint scope（commit ab0d727d / d3070e12）
+W3-1 LoopState frozen+reducer (Phase 53.1 / CARRY-007).
+W3-1 ToolCallExecuted/Failed owner drift (Phase 51.x / CARRY-009).
+
+### 2 P1 originally claimed via stale PR #10
+
+W1-2 #3 stub deletion + W2-1 #5 CI lint scope. PR #10 was OPEN not merged
+(Audit Debt #1) — **closed as superseded 2026-05-02**; both items
+delivered by Sprint 52.5 commits 0e883dab + 54a80243.
 
 ---
 
@@ -116,21 +127,31 @@ W1-2 #3 stub 刪除 / W2-1 #5 CI lint scope（commit ab0d727d / d3070e12）
 
 ---
 
-## 7. 接下來的工作（pending）
+## 7. 接下來的工作（2026-05-02 update）
 
-### 🔴 Cleanup Sprint — 完全未啟動
+### ✅ Cleanup Sprint — DONE
 
-**等 user 開新 cleanup session** + 採用 cleanup template 執行 8 P0。
+Sprint 52.5 完成。PR #19 admin-merged at d4ba89ef on 2026-05-02.
+8/8 P0 + 4/4 actionable P1 closed in 14 commits.
 
-預計 10-14 days，Phase 53.1 啟動前必清完。
+### 🔴 NEW HIGH-PRIORITY: CI infra restoration sprint
+
+Audit Debt #5 surfaced via Sprint 52.5: all 4 main CI workflows
+(backend-ci.yml, ci.yml, e2e-tests.yml, lint.yml) have failed last 3
+runs each. Sprint 52.5 admin-merged to bypass. Must fix before any
+PR-based merge gating can resume. Estimated 3-5 days. **New cleanup
+sprint required**.
 
 ### 🟡 主 session 52.2 — Day 1-3 已 ship 未審
 
 Day 2 Memory + Cache wiring 是 W4P-4 留下的風險區，未確認是否守住「PromptBuilder 直接呼叫 memory store ABC，不走 memory_tools handler」紀律。
 
-### 🟢 W4 Audit — 觸發條件未滿足
+### 🟢 W4 Audit — READY to trigger
 
-需 8 P0 全 close + 4 P1 全清 + cleanup sprint done + 52.2 done 才啟動。預估 6-8 小時。
+All preconditions met (8/8 P0 + 4/4 P1 + retrospective filed). W4 scope
+should additionally cover the 5 new Audit Debt items recorded in
+Sprint 52.5 retrospective Q5 (per OPEN-ISSUES.md "New Audit Debt"
+section). Estimated 6-8 hours.
 
 ---
 
