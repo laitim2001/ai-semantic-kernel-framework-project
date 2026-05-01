@@ -77,6 +77,7 @@ from agent_harness._contracts import (
     ContentBlock,
     ContextCompacted,
     DurableState,
+    ExecutionContext,
     LLMRequested,
     LLMResponded,
     LoopEvent,
@@ -324,7 +325,18 @@ class AgentLoopImpl(AgentLoop):
                         trace_context=ctx,
                     )
                     try:
-                        result = await self._tool_executor.execute(tc, trace_context=ctx)
+                        # Sprint 52.5 P0 #18: build ExecutionContext from
+                        # trace_context so memory_tools (and future scoped
+                        # tools) get server-authoritative tenant_id /
+                        # user_id / session_id instead of trusting LLM args.
+                        exec_ctx = ExecutionContext(
+                            tenant_id=ctx.tenant_id,
+                            user_id=ctx.user_id,
+                            session_id=ctx.session_id or session_id,
+                        )
+                        result = await self._tool_executor.execute(
+                            tc, trace_context=ctx, context=exec_ctx
+                        )
                     except asyncio.CancelledError:
                         yield LoopCompleted(
                             stop_reason=TerminationReason.CANCELLED.value,

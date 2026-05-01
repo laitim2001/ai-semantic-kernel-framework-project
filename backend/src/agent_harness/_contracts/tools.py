@@ -105,9 +105,19 @@ class ExecutionContext:
     will read tenant_id) and HITL tracking (session_id ties first-call
     state to session). `explicit_approval` lets the caller signal that the
     operator has already authorized a destructive action this turn.
+
+    Sprint 52.5 P0 #18 (CARRY-030): `user_id` was added so memory_tools
+    handlers can attribute writes / reads to the authenticated user from
+    server-side state instead of trusting LLM-supplied arguments. The
+    Loop must build ExecutionContext from the request's authenticated
+    state (JWT claims) and pass it to ToolExecutor.execute(context=...);
+    handlers MUST treat any args["tenant_id"] / args["user_id"] /
+    args["session_id"] that disagrees with this context as a forgery
+    attempt and refuse the call.
     """
 
     tenant_id: UUID | None = None
+    user_id: UUID | None = None
     session_id: UUID | None = None
     explicit_approval: bool = False
 

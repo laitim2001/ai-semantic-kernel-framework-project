@@ -84,7 +84,22 @@ from agent_harness.observability import (
 from ._abc import ToolExecutor, ToolRegistry
 from .permissions import PermissionChecker, PermissionDecision
 
-ToolHandler = Callable[[ToolCall], Awaitable[str | dict[str, Any]]]
+#: Tool handler protocol — accepts EITHER ``(call)`` or ``(call, context)``.
+#:
+#: Sprint 52.5 P0 #18 (CARRY-030) extends the protocol to thread an
+#: ExecutionContext through to handlers so that memory_tools (and
+#: future scoped tools) can read tenant_id / user_id / session_id from
+#: server-authoritative state instead of trusting LLM-provided arguments.
+#:
+#: Backward compatibility: the executor uses ``inspect.signature`` to detect
+#: the arity of each registered handler at execute() time. Single-arg
+#: handlers continue to work unchanged; new handlers should accept the
+#: context kwarg. Once all handlers in the codebase are migrated (Phase 53.3
+#: governance pass), this Union can be tightened to the 2-arg form only.
+ToolHandler = (
+    Callable[[ToolCall], Awaitable[str | dict[str, Any]]]
+    | Callable[[ToolCall, ExecutionContext], Awaitable[str | dict[str, Any]]]
+)
 
 
 class ToolExecutorImpl(ToolExecutor):
@@ -105,6 +120,9 @@ class ToolExecutorImpl(ToolExecutor):
         self._tracer = tracer or NoOpTracer()
         self._metrics = metric_registry or MetricRegistry()
         self._validator_cache: dict[str, Draft202012Validator] = {}
+        # P0 #18: cache `inspect.signature` arity per handler so we don't
+        # re-introspect on every call. Filled lazily on first dispatch.
+        self._handler_takes_context_cache: dict[str, bool] = {}
 
     async def execute(
         self,
@@ -162,7 +180,14 @@ class ToolExecutorImpl(ToolExecutor):
         ):
             t0 = time.monotonic()
             try:
-                raw = await handler(call)
+                # P0 #18 (CARRY-030): dual-arity handler protocol.
+                # New handlers accept (call, context); legacy handlers
+                # accept (call) only. Detect via signature at call time
+                # (cached per handler in self._handler_takes_context).
+                if self._handler_takes_context(call.name, handler):
+                    raw = await handler(call, ctx)  # type: ignore[call-arg]
+                else:
+                    raw = await handler(call)  # type: ignore[call-arg]
                 duration = time.monotonic() - t0
                 self._safe_emit(
                     "tool_execution_duration_seconds",
@@ -211,6 +236,38 @@ class ToolExecutorImpl(ToolExecutor):
         for c in calls:
             results.append(await self.execute(c, trace_context=trace_context, context=context))
         return results
+
+    def _handler_takes_context(self, name: str, handler: Any) -> bool:
+        """Return True if `handler` is the `(call, context)` arity.
+
+        Cached per tool name on first dispatch. Inspection prefers the
+        actual handler signature; falls back to single-arg if introspection
+        fails (e.g. C-implemented callables, partials without __wrapped__).
+        """
+        cached = self._handler_takes_context_cache.get(name)
+        if cached is not None:
+            return cached
+        try:
+            import inspect
+
+            sig = inspect.signature(handler)
+            # Count POSITIONAL_OR_KEYWORD / KEYWORD_ONLY params; this works
+            # whether handler is async def, functools.partial, or a class
+            # instance with __call__.
+            usable = [
+                p
+                for p in sig.parameters.values()
+                if p.kind
+                in (
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.POSITIONAL_ONLY,
+                )
+            ]
+            takes_ctx = len(usable) >= 2
+        except (ValueError, TypeError):
+            takes_ctx = False
+        self._handler_takes_context_cache[name] = takes_ctx
+        return takes_ctx
 
     def _batch_can_parallelize(self, calls: list[ToolCall]) -> bool:
         for c in calls:

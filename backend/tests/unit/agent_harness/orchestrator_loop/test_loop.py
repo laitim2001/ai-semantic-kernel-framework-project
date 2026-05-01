@@ -25,6 +25,7 @@ import pytest
 from adapters._testing.mock_clients import MockChatClient
 from agent_harness._contracts import (
     ChatResponse,
+    ExecutionContext,
     LoopCompleted,
     LoopStarted,
     Message,
@@ -69,14 +70,18 @@ class _EchoExecutor(ToolExecutor):
 
     def __init__(self) -> None:
         self.executed: list[ToolCall] = []
+        # Sprint 52.5 P0 #18: capture last context for test assertions.
+        self.last_context: ExecutionContext | None = None
 
     async def execute(
         self,
         call: ToolCall,
         *,
         trace_context: TraceContext | None = None,
+        context: ExecutionContext | None = None,
     ) -> ToolResult:
         self.executed.append(call)
+        self.last_context = context
         text = str(call.arguments.get("text", ""))
         return ToolResult(
             tool_call_id=call.id,
@@ -90,8 +95,12 @@ class _EchoExecutor(ToolExecutor):
         calls: list[ToolCall],
         *,
         trace_context: TraceContext | None = None,
+        context: ExecutionContext | None = None,
     ) -> list[ToolResult]:
-        return [await self.execute(c, trace_context=trace_context) for c in calls]
+        return [
+            await self.execute(c, trace_context=trace_context, context=context)
+            for c in calls
+        ]
 
 
 class _SlowExecutor(ToolExecutor):
@@ -102,6 +111,7 @@ class _SlowExecutor(ToolExecutor):
         call: ToolCall,
         *,
         trace_context: TraceContext | None = None,
+        context: ExecutionContext | None = None,
     ) -> ToolResult:
         await asyncio.sleep(10)
         return ToolResult(
@@ -113,8 +123,12 @@ class _SlowExecutor(ToolExecutor):
         calls: list[ToolCall],
         *,
         trace_context: TraceContext | None = None,
+        context: ExecutionContext | None = None,
     ) -> list[ToolResult]:
-        return [await self.execute(c, trace_context=trace_context) for c in calls]
+        return [
+            await self.execute(c, trace_context=trace_context, context=context)
+            for c in calls
+        ]
 
 
 def _make_loop(
