@@ -19,7 +19,7 @@ from agent_harness.context_mgmt.token_counter import claude_counter as cc_module
 from agent_harness.context_mgmt.token_counter.claude_counter import ClaudeTokenCounter
 
 
-def test_count_via_anthropic_lib_or_fallback() -> None:
+def test_count_via_injected_tokenizer_or_fallback() -> None:
     """Counter returns a positive token estimate regardless of which path is active."""
     counter = ClaudeTokenCounter()
     msgs = [Message(role="user", content="hello world")]
@@ -29,10 +29,9 @@ def test_count_via_anthropic_lib_or_fallback() -> None:
     assert n < 50
 
 
-def test_fallback_to_approx_when_lib_missing() -> None:
-    """force_approximate=True must use the 4-chars/token heuristic regardless of lib presence."""
-    counter = ClaudeTokenCounter(force_approximate=True)
-    # 16-char content under approx → ceil(16/4) = 4 tokens for content alone
+def test_fallback_to_approx_when_no_tokenizer_injected() -> None:
+    """No tokenizer injected → 4-chars/token heuristic active; accuracy=approximate."""
+    counter = ClaudeTokenCounter()  # default: no DI
     msg = Message(role="user", content="a" * 16)
     n = counter.count(messages=[msg])
     # 3 per_message + ceil("user"/4=1) + ceil(16/4=4) = 8
@@ -40,25 +39,20 @@ def test_fallback_to_approx_when_lib_missing() -> None:
     assert counter.accuracy() == "approximate"
 
 
-def test_accuracy_returns_appropriate_value(monkeypatch: pytest.MonkeyPatch) -> None:
-    """accuracy() reflects whether anthropic.tokenizer was loaded.
+def test_accuracy_returns_appropriate_value() -> None:
+    """accuracy() reflects whether an exact tokenizer was injected via DI."""
+    # Default: no tokenizer → approximate
+    counter_default = ClaudeTokenCounter()
+    assert counter_default.accuracy() == "approximate"
 
-    We monkeypatch the module-level _ANTHROPIC_COUNTER to simulate both
-    presence and absence without requiring the library to be installed.
-    """
-    counter = ClaudeTokenCounter()
-    # Reflect current real-world state: matches whatever the module loaded
-    if cc_module._ANTHROPIC_COUNTER is not None:
-        assert counter.accuracy() == "exact"
-    else:
-        assert counter.accuracy() == "approximate"
-
-    # Now force-simulate "lib present" by injecting a fake counter
-    monkeypatch.setattr(cc_module, "_ANTHROPIC_COUNTER", lambda text: max(1, len(text) // 3))
-    counter_with_lib = ClaudeTokenCounter()
+    # Inject an exact tokenizer (simulates what an Anthropic adapter would do)
+    fake_exact_tokenizer = lambda text: max(1, len(text) // 3)  # noqa: E731
+    counter_with_lib = ClaudeTokenCounter(tokenizer_callable=fake_exact_tokenizer)
     assert counter_with_lib.accuracy() == "exact"
 
-    # And simulate "lib missing"
-    monkeypatch.setattr(cc_module, "_ANTHROPIC_COUNTER", None)
-    counter_without_lib = ClaudeTokenCounter()
-    assert counter_without_lib.accuracy() == "approximate"
+    # force_approximate=True overrides even an injected exact tokenizer
+    counter_forced = ClaudeTokenCounter(
+        tokenizer_callable=fake_exact_tokenizer,
+        force_approximate=True,
+    )
+    assert counter_forced.accuracy() == "approximate"

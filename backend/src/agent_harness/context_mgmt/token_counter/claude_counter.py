@@ -1,22 +1,26 @@
 """
 File: backend/src/agent_harness/context_mgmt/token_counter/claude_counter.py
-Purpose: ClaudeTokenCounter — Anthropic tokenizer (exact when available, approximate fallback).
+Purpose: ClaudeTokenCounter — Claude-family approximate tokenizer (DI-friendly for exact upgrade).
 Category: 範疇 4 (Context Management)
 Scope: Phase 52 / Sprint 52.1 Day 3
 
 Description:
-    Anthropic does not publish a Python tokenizer in lockstep with their
-    models. The optional `anthropic` library historically exposed
-    `count_tokens()` via the SDK; this counter probes for that capability
-    and falls back to a 4-chars-per-token heuristic with a tools schema
-    inflation buffer (matching GenericApproxCounter) when unavailable.
+    Claude-family approximate tokenizer using the same 4-chars/token heuristic
+    as GenericApproxCounter, plus a 30 % tools schema inflation buffer. The
+    estimate is conservative enough for Cat 4 Compactor to make budget
+    decisions without ever calling out to the Anthropic SDK.
 
-LLM neutrality (per 10-server-side-philosophy.md §原則 2):
-    The probe is wrapped in try/except around `import anthropic`. The
-    Anthropic library is NOT imported into agent_harness — this module
-    lives under context_mgmt and is treated as a tokenizer adapter.
-    When the library is missing, the counter still returns a usable
-    estimate so Cat 4 Compactor can run.
+    For an exact tokenizer the constructor accepts an optional
+    `tokenizer_callable: Callable[[str], int]` that the future Anthropic
+    *adapter* (see adapters/anthropic/, Phase 50+) will supply. When that
+    callable is present, accuracy() returns "exact"; otherwise "approximate".
+
+LLM neutrality (per 10-server-side-philosophy.md §原則 2 + .claude/rules/llm-provider-neutrality.md):
+    `agent_harness/**` MUST NOT import openai / anthropic. This file
+    therefore does NOT probe `from anthropic.tokenizer ...`. The exact-
+    tokenizer path is reached only via dependency injection from an
+    adapter, keeping the SDK boundary clean. Lint rule 1 is enforced by
+    CI; this module is verified by grep `import anthropic` = 0.
 
 Owner: 01-eleven-categories-spec.md §範疇 4
 Single-source: 17-cross-category-interfaces.md §2.1 (TokenCounter row)
@@ -24,10 +28,15 @@ Single-source: 17-cross-category-interfaces.md §2.1 (TokenCounter row)
 Related:
     - token_counter/_abc.py TokenCounter ABC
     - token_counter/generic_approx.py — fallback formula reused here
+    - adapters-layer.md (.claude/rules/) — exact tokenizer DI path
 
 Created: 2026-05-01 (Sprint 52.1 Day 3.8)
+Last Modified: 2026-05-01 (Sprint 52.1 Day 4.9)
 
 Modification History:
+    - 2026-05-01: Drop direct `from anthropic.tokenizer ...` probe — violates
+      LLM neutrality. Replace with constructor-injected `tokenizer_callable`
+      so adapters can wire an exact path (Sprint 52.1 Day 4.9).
     - 2026-05-01: Initial creation (Sprint 52.1 Day 3.8) — exact-or-approx Claude counter
 """
 
@@ -40,17 +49,8 @@ from typing import Any, Callable, Literal
 from agent_harness._contracts import Message, ToolSpec
 from agent_harness.context_mgmt.token_counter._abc import TokenCounter
 
-# Detect anthropic.tokenizer at module load. Two known surfaces:
-#   - anthropic.tokenizer.count_tokens(text)  (older SDKs)
-#   - client.count_tokens(...)                 (newer; requires a client instance)
-# Day 3.8 supports the static-callable form; client form left for Phase 53+.
-_ANTHROPIC_COUNTER: Callable[[str], int] | None
-try:
-    from anthropic.tokenizer import count_tokens as _anthropic_count_tokens  # type: ignore[import-not-found]
-
-    _ANTHROPIC_COUNTER = _anthropic_count_tokens
-except ImportError:
-    _ANTHROPIC_COUNTER = None
+# Default: no exact tokenizer wired in. Adapters can supply one via constructor.
+_ANTHROPIC_COUNTER: Callable[[str], int] | None = None
 
 
 _PER_MESSAGE_OVERHEAD: int = 3
@@ -75,11 +75,17 @@ class ClaudeTokenCounter(TokenCounter):
     def __init__(
         self,
         *,
+        tokenizer_callable: Callable[[str], int] | None = None,
         force_approximate: bool = False,
     ) -> None:
-        # force_approximate exists primarily for tests that want to exercise
-        # the fallback path even on an environment where the lib is installed.
-        self._counter = None if force_approximate else _ANTHROPIC_COUNTER
+        # tokenizer_callable: an exact tokenizer supplied by the future
+        # Anthropic adapter (Phase 50+). When None, falls back to approx.
+        # force_approximate=True overrides any injected callable — used by
+        # tests that want to exercise the fallback path deterministically.
+        if force_approximate:
+            self._counter = None
+        else:
+            self._counter = tokenizer_callable or _ANTHROPIC_COUNTER
 
     def _count_text(self, text: str) -> int:
         if self._counter is not None:

@@ -39,8 +39,11 @@ Created: 2026-04-29 (Sprint 49.1, original 3-ABC stub)
 Last Modified: 2026-05-01 (Sprint 52.1 Day 1)
 
 Modification History:
-    - 2026-05-01: Restructure for Sprint 52.1 — move Compactor/TokenCounter/PromptCacheManager to subpackages; this file now hosts ObservationMasker + JITRetrieval ABCs (Sprint 52.1 Day 1)
-    - 2026-04-29: Initial creation (Sprint 49.1) — Compactor + TokenCounter + PromptCacheManager stubs
+    - 2026-05-01: Restructure for Sprint 52.1 — move Compactor / TokenCounter /
+      PromptCacheManager to subpackages; this file now hosts ObservationMasker
+      + JITRetrieval ABCs (Sprint 52.1 Day 1)
+    - 2026-04-29: Initial creation (Sprint 49.1) — Compactor + TokenCounter +
+      PromptCacheManager stubs
 """
 
 from __future__ import annotations
