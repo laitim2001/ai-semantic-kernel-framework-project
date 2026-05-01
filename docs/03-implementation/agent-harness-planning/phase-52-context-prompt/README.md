@@ -1,8 +1,17 @@
 # Phase 52 — Context + Prompt
 
-**Phase 進度**：Sprint 52.1 ✅ DONE / Sprint 52.2 🟡 PLANNING — **1 / 2 sprint complete（50%）**
+**Phase 進度**：Sprint 52.1 ✅ DONE / Sprint 52.2 ✅ DONE — **2 / 2 sprint complete（100%）** ⭐
 **啟動日期**：2026-04-30（接 Phase 51 closeout）
-**狀態**：🟡 **Sprint 52.2 PLANNING 中** — Cat 5 PromptBuilder 將達 Level 4，6 大支柱（DefaultPromptBuilder + 3 PositionStrategy + Memory 5×3 真注入 + CacheBreakpoint 接通 + Loop integration + AP-8 lint rule）；Phase 52 收尾，V2 半程里程碑 11/22 = 50%
+**完成日期**：2026-05-01（Sprint 52.2 closeout）
+**狀態**：✅ **Phase 52 完成** — Cat 4 Context Mgmt Level 3 ✅ + Cat 5 PromptBuilder Level 4 ✅；V2 半程里程碑 **11/22 = 50%** ⭐
+
+### Sprint 52.2 核心驗收結果（5 條）
+
+- ✅ **DefaultPromptBuilder ship**：6-section layered + 3 PositionStrategy + Memory 5×3 真注入 + Tracer Protocol（`agent_harness/prompt_builder/builder.py`）
+- ✅ **CacheBreakpoint 接通 LLM call**：MockAnthropicAdapter cache_control marker（CARRY-031 解除）+ Azure OpenAI prompt_cache_key chat+stream（CARRY-032 解除）
+- ✅ **Loop integration（100% 主流量）**：`AgentLoopImpl(prompt_builder=...)` per-turn build → cache_breakpoints → chat()；emit PromptBuilt 完整 6-field payload
+- ✅ **AP-8 lint enforced**：`scripts/check_promptbuilder_usage.py` AST-based + allowlist + --dry-run；0 violations under current `agent_harness/`
+- ✅ **52 new tests / 0 LLM SDK leak / p95<50ms / 50/50 position accuracy**：unit 38 + integration 7 + e2e 3 + SLO 4 + 17.md sync
 
 ---
 
@@ -22,9 +31,9 @@
 | Sprint | 狀態 | 主題 | 完成日期 | Branch / Commits |
 |--------|------|------|---------|------------------|
 | **52.1** | ✅ DONE | 範疇 4 Context Mgmt（Level 3）— 5 ABC + 3 Compactor 策略 + ObservationMasker + JITRetrieval (db://) + 3 TokenCounter + InMemoryCacheManager + Loop integration + 30+ turn no-OOM ⭐ + 50-turn e2e + SLO latency | **2026-05-01** | `feature/phase-52-sprint-1-cat4-context-mgmt`（5 commits：Day 0 / Day 1 / Day 2 / Day 3 / Day 4 + closeout）|
-| **52.2** | 🟡 PLANNING | 範疇 5 PromptBuilder（Level 4）— DefaultPromptBuilder + 3 PositionStrategy + Memory 5×3 真注入 + CacheBreakpoint 接通 LLM call + Loop integration + AP-8 lint rule（CARRY-031/032 解除）| TBD | `feature/phase-52-sprint-2-cat5-prompt-builder`（待開）|
+| **52.2** | ✅ DONE | 範疇 5 PromptBuilder（Level 4）— DefaultPromptBuilder + 3 PositionStrategy + Memory 5×3 真注入 + CacheBreakpoint 接通 LLM call + Loop integration + AP-8 lint rule（CARRY-031/032 解除）| **2026-05-01** | `feature/phase-52-sprint-2-cat5-prompt-builder`（6 commits：Day 0 / Day 1 / Day 2 / Day 3 / Day 4 impl / Day 4 closeout docs）|
 
-> **Rolling 紀律**：52.2 plan + checklist 已 Day 0 起草（2026-05-01，52.1 closeout merged 後才開始）；待用戶 approve 才啟動 Day 1 code。53.x plan/checklist **嚴禁預寫**，必須等 52.2 closeout（含 retrospective）才開始起草。違反 rolling = 重蹈 Phase 35-38 跳過 plan 覆轍。
+> **Rolling 紀律**：53.x plan/checklist 仍空白；52.2 retrospective + Action Items（5 條 max）已寫，但**禁止寫 day-level future task**。下一 sprint 啟動前必須先 grep `agent_harness/state_mgmt/` 既有結構（per 52.1 AI-6 + 52.2 §3 went well 4）。
 
 ---
 
@@ -35,29 +44,30 @@ phase-52-context-prompt/
 ├── README.md                          ← (this file) Phase 52 入口
 ├── sprint-52-1-plan.md                ✅ DONE（2026-05-01 closeout merged）
 ├── sprint-52-1-checklist.md           ✅ DONE
-├── sprint-52-2-plan.md                🟡 PLANNING（待用戶 approve；2026-05-01 Day 0 起草）
-└── sprint-52-2-checklist.md           🟡 PLANNING
+├── sprint-52-2-plan.md                ✅ DONE（2026-05-01 closeout merged）
+└── sprint-52-2-checklist.md           ✅ DONE
 ```
 
-執行紀錄（52.1 啟動後建立）：
+執行紀錄：
 ```
 docs/03-implementation/agent-harness-execution/phase-52/
-└── sprint-52-1/{progress,retrospective}.md
+├── sprint-52-1/{progress,retrospective}.md   ✅
+└── sprint-52-2/{progress,retrospective}.md   ✅
 ```
 
 ---
 
 ## 範疇成熟度演進（規劃）
 
-| 範疇 | Pre-Phase-52 | Post-52.1 實際 ✅ | Post-52.2 預計 |
+| 範疇 | Pre-Phase-52 | Post-52.1 實際 ✅ | Post-52.2 實際 ✅ |
 |------|-------------|------------------|---------------|
-| 1. Orchestrator Loop | Level 3 | **Level 3**（unchanged；Loop 加 compactor 注入 + ContextCompacted event；50.x baseline 10/10 維持）| **Level 3**（PromptBuilder 整合進 Loop 入口）|
+| 1. Orchestrator Loop | Level 3 | **Level 3**（unchanged；Loop 加 compactor 注入 + ContextCompacted event；50.x baseline 10/10 維持）| **Level 3**（unchanged；Loop 加 prompt_builder 注入 + PromptBuilt event；50.x baseline 10/10 維持）|
 | 2. Tool Layer | Level 3 | **Level 3**（unchanged）| **Level 3**（unchanged）|
-| 3. Memory | Level 3 | **Level 3**（unchanged；Cat 4 透過 prompt hint 與 Cat 11 互動，不直接呼叫 Cat 3）| **Level 3**（PromptBuilder 從 Cat 3 抽 memory hints 注入 prompt）|
-| **4. Context Mgmt** | Level 0 | **Level 3** ✅ **（達成）** | **Level 3**（unchanged；52.2 加 CacheBreakpoint 實際接通 LLM call）|
-| **5. Prompt Builder** | Level 0 | Level 0 | **Level 4** ✅ |
+| 3. Memory | Level 3 | **Level 3**（unchanged；Cat 4 透過 prompt hint 與 Cat 11 互動，不直接呼叫 Cat 3）| **Level 3**（unchanged；PromptBuilder 從 Cat 3 抽 5×3 memory hints 注入 prompt）|
+| **4. Context Mgmt** | Level 0 | **Level 3** ✅ **（達成）** | **Level 3**（unchanged；52.2 W3-2 carryover：cache_manager `trace_context` kwarg；CacheBreakpoint 接通 LLM call via Azure prompt_cache_key + Anthropic cache_control mock）|
+| **5. Prompt Builder** | Level 0 | Level 0 | **Level 4** ✅ **（達成）** |
 | 6. Output Parser | Level 4 | Level 4 | Level 4 |
-| 12. Observability | Level 2 | **Level 2**（52.1 ContextCompacted event 已 emit，Tracer span 留 Phase 53.x）| **Level 2**（52.2 加 PromptBuilt span）|
+| 12. Observability | Level 2 | **Level 2**（52.1 ContextCompacted event 已 emit，Tracer span 留 Phase 53.x）| **Level 2**（52.2 PromptBuilt event 完整 6-field payload；OTel child spans + metrics 留 Phase 53.x per Audit Debt）|
 
 > **Cat 4 Level 3 的核心驗收（52.1 達成）**：
 > - 30+ turn (35-turn integration test) → 0 over-budget turns + ≥1 compaction event ✅

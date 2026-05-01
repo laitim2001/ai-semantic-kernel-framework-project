@@ -163,9 +163,26 @@ class ContextCompacted(LoopEvent):
 
 @dataclass(frozen=True)
 class PromptBuilt(LoopEvent):
-    layer_count: int = 0
-    total_tokens: int = 0
-    cache_breakpoints: int = 0
+    """Emitted by Cat 1 Loop after Cat 5 PromptBuilder.build() each turn.
+
+    Sprint 52.2 Day 3.3: full payload schema per plan §2.7 + §3.3:
+      - messages_count: artifact.messages length
+      - estimated_input_tokens: artifact.estimated_input_tokens (Cat 4 token_counter)
+      - cache_breakpoints_count: artifact.cache_breakpoints length
+      - memory_layers_used: artifact.layer_metadata["memory_layers_used"]
+      - position_strategy_used: artifact.layer_metadata["position_strategy"]
+      - duration_ms: build() wall-clock duration
+
+    Frozen tuple (not list) for memory_layers_used so the dataclass remains
+    hashable / immutable per LoopEvent base contract.
+    """
+
+    messages_count: int = 0
+    estimated_input_tokens: int = 0
+    cache_breakpoints_count: int = 0
+    memory_layers_used: tuple[str, ...] = ()
+    position_strategy_used: str = ""
+    duration_ms: float = 0.0
 
 
 # === Category 7: State Mgmt =================================================
