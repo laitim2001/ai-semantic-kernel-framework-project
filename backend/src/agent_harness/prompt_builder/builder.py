@@ -45,10 +45,24 @@ Related:
 
 from __future__ import annotations
 
+import hashlib
+import json
+import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
+
+_logger = logging.getLogger(__name__)
+
+# Time scale priority for memory layer ordering (per plan §2.5).
+# Lower number = higher priority (rendered first in prompt).
+# 51.2 MemoryHint.time_scale ∈ {"short_term", "long_term", "semantic"}.
+_TIME_SCALE_PRIORITY: dict[str, int] = {
+    "long_term": 0,    # durable knowledge → most important
+    "semantic": 1,     # vector matches → middle
+    "short_term": 2,   # working memory → least important
+}
 
 from agent_harness._contracts import (
     CacheBreakpoint,
@@ -237,8 +251,18 @@ class DefaultPromptBuilder(PromptBuilder):
                 trace_context=child_ctx,
             )
 
-            # --- Step 4: token estimation ---
-            estimated_tokens = self._token_counter.count(messages=messages, tools=tools_list)
+            # --- Step 4: token estimation (graceful degrade per W3-2 theme) ---
+            try:
+                estimated_tokens = self._token_counter.count(
+                    messages=messages, tools=tools_list
+                )
+            except Exception as exc:  # pragma: no cover - defensive degrade path
+                _logger.warning(
+                    "TokenCounter.count failed (tenant=%s); estimated_tokens=0: %s",
+                    tenant_id,
+                    exc,
+                )
+                estimated_tokens = 0
 
             return PromptArtifact(
                 messages=messages,
@@ -304,18 +328,57 @@ class DefaultPromptBuilder(PromptBuilder):
         query: str,
         trace_context: TraceContext | None = None,
     ) -> dict[str, list[MemoryHint]]:
-        """Day 1.6 STUB returning {}.
+        """Real call to 51.2 MemoryRetrieval.search() with trace propagation.
 
-        Day 2.1 will call:
-            await self._memory_retrieval.search(
-                query=query, tenant_id=tenant_id, user_id=user_id,
-                session_id=session_id, scopes=("system","tenant","role","user","session"),
-                time_scales=("short_term","long_term","semantic"), top_k=10,
-                trace_context=trace_context,  # W3-2 propagation
-            )
-        and group hints by layer + sort by time_scale priority.
+        Returns hints grouped by layer (system / tenant / role / user / session)
+        and sorted within each layer by time_scale priority (long_term first,
+        then semantic, then short_term per _TIME_SCALE_PRIORITY).
+
+        Multi-tenant safety (W3-2 + W1-2 carryover):
+        - tenant_id is REQUIRED at builder entry (build() signature)
+        - 51.2 MemoryRetrieval enforces tenant_id filter at storage level
+        - Empty query returns {} (no memory injection)
+
+        Graceful degradation (per plan §2.5):
+        - Any failure during retrieval → log warning + return {} (does not crash
+          build()). The prompt falls back to system + tools + conversation only.
+
+        Trace propagation (W3-2 carryover):
+        - trace_context is forwarded as-is to MemoryRetrieval.search() so OTel
+          spans link memory queries back to the build() span.
         """
-        return {}
+        if not query.strip():
+            return {}
+
+        try:
+            hints = await self._memory_retrieval.search(
+                query=query,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                session_id=session_id,
+                scopes=("system", "tenant", "role", "user", "session"),
+                time_scales=("short_term", "long_term", "semantic"),
+                top_k=10,
+                trace_context=trace_context,
+            )
+        except Exception as exc:  # pragma: no cover - defensive degrade path
+            _logger.warning(
+                "MemoryRetrieval.search failed (tenant=%s); degrading to no memory injection: %s",
+                tenant_id,
+                exc,
+            )
+            return {}
+
+        by_layer: dict[str, list[MemoryHint]] = {}
+        for h in hints:
+            by_layer.setdefault(h.layer, []).append(h)
+
+        for layer_name in by_layer:
+            by_layer[layer_name].sort(
+                key=lambda h: _TIME_SCALE_PRIORITY.get(h.time_scale, 99)
+            )
+
+        return by_layer
 
     # ------------------------------------------------------------------
     # Cache breakpoint builder (Day 1.6 STUB; Day 2.3 wires real)
@@ -329,13 +392,76 @@ class DefaultPromptBuilder(PromptBuilder):
         sections: PromptSections,
         trace_context: TraceContext | None = None,
     ) -> list[CacheBreakpoint]:
-        """Day 1.6 STUB returning [].
+        """Real call to 52.1 PromptCacheManager.get_cache_breakpoints with trace propagation.
 
-        Day 2.3 will call:
-            await self._cache_manager.get_cache_breakpoints(
-                tenant_id=tenant_id, policy=policy,
-                trace_context=trace_context,  # W3-2 propagation
-            )
-        and decorate each breakpoint with content_hash from sections.
+        52.1 PromptCacheManager enforces tenant isolation at the cache key level
+        (4 red-team verified); 52.2 PromptBuilder relies on that contract and adds
+        content_hash from current sections so 52.1 cache_manager can detect
+        invalidation when section content changes between builds.
+
+        Graceful degradation:
+        - cache_policy.enabled = False → return [] (no cache markers)
+        - Any failure during cache_manager call → log warning + return [] (cache miss
+          is non-fatal; LLM call still proceeds without caching)
+
+        Trace propagation (W3-2 carryover): trace_context forwarded as-is to
+        52.1 cache_manager (52.1 ABC extended Day 2.3 to accept trace_context kwarg).
         """
-        return []
+        if not policy.enabled:
+            return []
+
+        try:
+            breakpoints = await self._cache_manager.get_cache_breakpoints(
+                tenant_id=tenant_id,
+                policy=policy,
+                trace_context=trace_context,
+            )
+        except Exception as exc:  # pragma: no cover - defensive degrade path
+            _logger.warning(
+                "PromptCacheManager.get_cache_breakpoints failed (tenant=%s); cache disabled: %s",
+                tenant_id,
+                exc,
+            )
+            return []
+
+        enhanced: list[CacheBreakpoint] = []
+        for bp in breakpoints:
+            content_hash = self._compute_section_hash(bp.section_id, sections)
+            enhanced.append(replace(bp, content_hash=content_hash))
+        return enhanced
+
+    def _compute_section_hash(
+        self, section_id: str | None, sections: PromptSections
+    ) -> str | None:
+        """SHA256 hash for the named section's current content.
+
+        Used to populate CacheBreakpoint.content_hash (52.1 logical metadata).
+        52.1 cache_manager can compare hashes across builds to detect when a
+        cached section's content changed and the entry should be invalidated.
+
+        Section ID mapping (matches 52.1 _sections_from_policy):
+        - "system_prompt" → hash of sections.system.content
+        - "tool_definitions" → hash of stable JSON of tool name+schema list
+        - "memory_layers" → hash of layer_name:hint_count fingerprint
+        - other / None → None (forward-compat for new section types)
+        """
+        if section_id is None:
+            return None
+        if section_id == "system_prompt":
+            text = str(sections.system.content)
+        elif section_id == "tool_definitions":
+            text = json.dumps(
+                [
+                    {"name": t.name, "schema": t.input_schema}
+                    for t in sections.tools
+                ],
+                sort_keys=True,
+            )
+        elif section_id == "memory_layers":
+            text = ",".join(
+                f"{layer}:{len(hints)}"
+                for layer, hints in sorted(sections.memory_layers.items())
+            )
+        else:
+            return None
+        return hashlib.sha256(text.encode()).hexdigest()

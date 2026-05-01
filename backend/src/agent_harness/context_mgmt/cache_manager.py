@@ -43,7 +43,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from uuid import UUID
 
-from agent_harness._contracts import CacheBreakpoint, CachePolicy
+from agent_harness._contracts import CacheBreakpoint, CachePolicy, TraceContext
 
 
 class PromptCacheManager(ABC):
@@ -55,6 +55,7 @@ class PromptCacheManager(ABC):
         *,
         tenant_id: UUID,
         policy: CachePolicy,
+        trace_context: TraceContext | None = None,
     ) -> list[CacheBreakpoint]:
         """Return the list of CacheBreakpoint markers to attach to the prompt.
 
@@ -71,6 +72,7 @@ class PromptCacheManager(ABC):
         *,
         tenant_id: UUID,
         reason: str,
+        trace_context: TraceContext | None = None,
     ) -> None:
         """Drop all cache entries for a tenant.
 
@@ -173,6 +175,7 @@ class InMemoryCacheManager(PromptCacheManager):
         *,
         tenant_id: UUID,
         policy: CachePolicy,
+        trace_context: TraceContext | None = None,
     ) -> list[CacheBreakpoint]:
         if not policy.enabled:
             return []
@@ -216,6 +219,7 @@ class InMemoryCacheManager(PromptCacheManager):
         *,
         tenant_id: UUID,
         reason: str,
+        trace_context: TraceContext | None = None,
     ) -> None:
         keys = self._by_tenant.pop(str(tenant_id), set())
         for k in keys:
