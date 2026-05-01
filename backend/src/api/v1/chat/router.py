@@ -2,24 +2,32 @@
 File: backend/src/api/v1/chat/router.py
 Purpose: HTTP entrypoint for the V2 main agent flow — POST /chat (SSE) + GET sessions.
 Category: api/v1/chat
-Scope: Phase 50 / Sprint 50.2 (Day 1.5)
+Scope: Phase 50 / Sprint 50.2 (Day 1.5) — Sprint 52.5 Day 2 (P0 #11+#12 wiring)
 
 Description:
-    Three endpoints:
+    Three endpoints, all gated by `Depends(get_current_tenant)` (single
+    canonical source: JWT-decoded tenant_id from request.state, populated
+    by TenantContextMiddleware):
+
     - POST /api/v1/chat/                   → starts AgentLoopImpl.run() and
                                              streams LoopEvents as SSE.
     - GET  /api/v1/chat/sessions/{id}      → returns running/completed/cancelled
-                                             status for a known session.
+                                             status for a known session of THIS tenant.
     - POST /api/v1/chat/sessions/{id}/cancel → flips status to "cancelled" and
-                                             signals cancel_event.
+                                             signals cancel_event for THIS tenant.
 
-    POST /chat orchestration:
-        1. Parse ChatRequest (mode + message).
-        2. Generate / accept session_id; register in SessionRegistry.
-        3. build_handler(mode, message) — returns wired AgentLoopImpl.
-        4. Stream loop.run() events through serialize_loop_event +
-           format_sse_message into a StreamingResponse(text/event-stream).
-        5. mark_completed on natural termination; raise propagates as 500.
+    POST /chat orchestration (per Sprint 52.5 P0 #11+#12):
+        1. JWT middleware populates request.state.tenant_id → Depends extracts.
+        2. Parse ChatRequest (mode + message).
+        3. Generate / accept session_id; register in SessionRegistry under tenant.
+        4. Create root TraceContext(tenant_id=current_tenant, session_id=...).
+        5. build_handler(mode, message) — returns wired AgentLoopImpl.
+        6. Stream loop.run(trace_context=root_ctx) events through
+           serialize_loop_event + format_sse_message.
+        7. mark_completed on natural termination; raise propagates as 500.
+
+    Cross-tenant attempts return 404 — never reveal whether the session
+    exists under a different tenant (per multi-tenant-data.md 鐵律).
 
     Phase 50.2 keeps everything in-process. Phase 53.1 will fork the loop
     execution into a worker pool (Temporal / Celery) — at that point the
@@ -27,18 +35,24 @@ Description:
     actual loop run lives in the worker.
 
 Created: 2026-04-30 (Sprint 50.2 Day 1.5)
-Last Modified: 2026-04-30
+Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-01: Sprint 52.5 Day 2 (P0 #11+#12) — every endpoint takes
+        Depends(get_current_tenant); SessionRegistry calls all carry
+        tenant_id; chat endpoint creates root TraceContext and propagates
+        through loop.run(); cross-tenant lookups return 404.
     - 2026-04-30: Initial creation (Sprint 50.2 Day 1.5) — POST /chat SSE +
         GET / cancel session endpoints. In-process loop execution.
 
 Related:
     - .schemas (ChatRequest / ChatSessionResponse)
     - .handler (build_handler)
-    - .sse (serialize_loop_event / format_sse_message)
-    - .session_registry (in-memory state)
-    - api/main.py (mounts this router)
+    - .sse (serialize_loop_event / format_sse_message — emits trace_id)
+    - .session_registry (tenant-scoped storage)
+    - api/main.py (mounts this router; installs TenantContextMiddleware)
+    - platform_layer/identity (Depends source)
+    - claudedocs/5-status/V2-AUDIT-W3-2-PHASE50-2.md (audit source)
 """
 
 from __future__ import annotations
@@ -48,10 +62,11 @@ import logging
 from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
-from agent_harness._contracts import LoopCompleted
+from agent_harness._contracts import LoopCompleted, TraceContext
+from platform_layer.identity import get_current_tenant
 
 from .handler import build_handler
 from .schemas import ChatRequest, ChatSessionResponse
@@ -63,20 +78,23 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 @router.post("/", status_code=status.HTTP_200_OK)
-async def chat(req: ChatRequest) -> StreamingResponse:
+async def chat(
+    req: ChatRequest,
+    current_tenant: UUID = Depends(get_current_tenant),
+) -> StreamingResponse:
     """Run an agent loop and stream LoopEvents as SSE.
 
     Response is `text/event-stream` (per 02-architecture-design §SSE).
     Each frame is `event: <type>\\ndata: <json>\\n\\n`. The session_id is
-    in the first `loop_start` frame's data.
+    in the first `loop_start` frame's data, alongside the `trace_id` of
+    the root TraceContext (frontend can correlate with Jaeger / logs).
     """
     try:
         loop = build_handler(req.mode, req.message)
     except (RuntimeError, ValueError) as exc:
         # Misconfiguration (env vars / unsupported mode) → 503.
-        # 503 reflects "feature available in principle but not configured here";
-        # for invalid mode the schema layer should have rejected first, but we
-        # keep this as defense-in-depth.
+        # Schema-layer errors (invalid mode literal) get caught by FastAPI
+        # validation as 422 before reaching here.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
@@ -84,38 +102,61 @@ async def chat(req: ChatRequest) -> StreamingResponse:
 
     session_id = req.session_id or uuid4()
     registry = get_default_registry()
-    await registry.register(session_id)
+    await registry.register(current_tenant, session_id)
+
+    # P0 #12 — root TraceContext established at API boundary. The loop
+    # already accepts trace_context; sse.py will copy trace_id into every
+    # SSE frame's data so SSE consumers can correlate with backend traces.
+    trace_ctx = TraceContext(
+        tenant_id=current_tenant,
+        session_id=session_id,
+    )
 
     return StreamingResponse(
-        _stream_loop_events(loop, session_id, registry, user_input=req.message),
+        _stream_loop_events(
+            loop,
+            current_tenant,
+            session_id,
+            registry,
+            user_input=req.message,
+            trace_context=trace_ctx,
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # disable nginx buffering for real-time
             "X-Session-Id": str(session_id),
+            "X-Trace-Id": trace_ctx.trace_id,
         },
     )
 
 
 async def _stream_loop_events(
     loop: object,  # AgentLoopImpl; loose-typed to avoid circular import noise
+    tenant_id: UUID,
     session_id: UUID,
     registry: SessionRegistry,
     *,
     user_input: str,
+    trace_context: TraceContext,
 ) -> AsyncIterator[bytes]:
-    """Drive the loop generator + emit SSE bytes; finalize registry state.
+    """Drive the loop generator + emit SSE bytes; finalize tenant-scoped registry.
 
     `user_input` is appended into the loop's messages as the first user turn.
     For ``echo_demo`` mode it is harmless (MockChatClient ignores the request);
     for ``real_llm`` it is what the model actually responds to.
+
+    `trace_context` is the root context for this chat run — passed to
+    ``loop.run`` so child spans (TurnStarted / LLMRequested / etc.) inherit
+    the trace_id; sse.py extracts trace_id into each SSE event.
     """
     natural_completion = False
     try:
         async for event in loop.run(  # type: ignore[attr-defined]
             session_id=session_id,
             user_input=user_input,
+            trace_context=trace_context,
         ):
             try:
                 payload = serialize_loop_event(event)
@@ -132,18 +173,30 @@ async def _stream_loop_events(
                 natural_completion = True
                 break
     except asyncio.CancelledError:
-        logger.info("chat session %s: client disconnected mid-stream", session_id)
+        logger.info(
+            "chat session %s/%s: client disconnected mid-stream",
+            tenant_id,
+            session_id,
+        )
         raise
     finally:
         if natural_completion:
-            await registry.mark_completed(session_id)
+            await registry.mark_completed(tenant_id, session_id)
         # else: leave status as-is (running / cancelled) — caller can poll GET.
 
 
 @router.get("/sessions/{session_id}", response_model=ChatSessionResponse)
-async def get_session(session_id: UUID) -> ChatSessionResponse:
+async def get_session(
+    session_id: UUID,
+    current_tenant: UUID = Depends(get_current_tenant),
+) -> ChatSessionResponse:
+    """Return session status for THIS tenant; 404 on missing OR cross-tenant.
+
+    Cross-tenant attempts deliberately return 404 (not 403) so the API does
+    not reveal that the session exists under a different tenant.
+    """
     registry = get_default_registry()
-    entry = await registry.get(session_id)
+    entry = await registry.get(current_tenant, session_id)
     if entry is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -157,9 +210,17 @@ async def get_session(session_id: UUID) -> ChatSessionResponse:
 
 
 @router.post("/sessions/{session_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
-async def cancel_session(session_id: UUID) -> None:
+async def cancel_session(
+    session_id: UUID,
+    current_tenant: UUID = Depends(get_current_tenant),
+) -> None:
+    """Cancel a running session for THIS tenant; 404 on missing OR cross-tenant.
+
+    Same 404-on-cross-tenant rule as get_session — never reveal cross-tenant
+    session existence.
+    """
     registry = get_default_registry()
-    found = await registry.cancel(session_id)
+    found = await registry.cancel(current_tenant, session_id)
     if not found:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

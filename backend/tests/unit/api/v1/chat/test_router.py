@@ -2,9 +2,14 @@
 File: backend/tests/unit/api/v1/chat/test_router.py
 Purpose: Unit tests for /api/v1/chat router — POST SSE + sessions endpoints.
 Category: tests
-Scope: Phase 50 / Sprint 50.2 (Day 1.5)
+Scope: Phase 50 / Sprint 50.2 (Day 1.5) — Sprint 52.5 Day 2 (P0 #11+#12 dep + tenant)
 
-Created: 2026-04-30
+Modification History (newest-first):
+    - 2026-05-01: Sprint 52.5 Day 2 (P0 #11+#12) — every test exercises
+        Depends(get_current_tenant) via dependency_overrides; storage
+        reset uses _tenants.clear(); register() calls carry tenant_id;
+        new TestMultiTenantIsolation class verifies cross-tenant 404.
+    - 2026-04-30: Initial creation (Sprint 50.2 Day 1.5)
 """
 
 from __future__ import annotations
@@ -22,13 +27,25 @@ from api.v1.chat.session_registry import (
     SessionRegistry,
     get_default_registry,
 )
+from platform_layer.identity import get_current_tenant
+
+
+# Fixed UUID per test module — most single-tenant tests share it. Multi-tenant
+# tests build their own pair via uuid4() inside the test body.
+DEFAULT_TENANT = UUID("11111111-1111-1111-1111-111111111111")
 
 
 @pytest.fixture
 def app() -> FastAPI:
-    """Minimal app — chat router only, no tenant middleware / OTel."""
+    """Minimal app — chat router only, no real tenant middleware / OTel.
+
+    Override `get_current_tenant` to return `DEFAULT_TENANT` deterministically
+    so unit tests don't need to mint JWT tokens or install middleware. The
+    full middleware path is exercised by integration tests.
+    """
     inst = FastAPI()
     inst.include_router(chat_router, prefix="/api/v1")
+    inst.dependency_overrides[get_current_tenant] = lambda: DEFAULT_TENANT
     return inst
 
 
@@ -42,9 +59,9 @@ def client(app: FastAPI) -> Iterator[TestClient]:
 def _reset_default_registry() -> Iterator[None]:
     """Each test starts with an empty default registry."""
     reg = get_default_registry()
-    reg._entries.clear()  # type: ignore[attr-defined]
+    reg._tenants.clear()  # type: ignore[attr-defined]  # noqa: SLF001
     yield
-    reg._entries.clear()  # type: ignore[attr-defined]
+    reg._tenants.clear()  # type: ignore[attr-defined]  # noqa: SLF001
 
 
 def _parse_sse(body: bytes) -> list[dict]:
@@ -74,7 +91,11 @@ class TestPostChat:
         ) as resp:
             assert resp.status_code == 200
             assert resp.headers["content-type"].startswith("text/event-stream")
-            assert "x-session-id" in {k.lower(): v for k, v in resp.headers.items()}
+            headers_lower = {k.lower(): v for k, v in resp.headers.items()}
+            assert "x-session-id" in headers_lower
+            # P0 #12: chat router exposes the root trace_id via header for
+            # frontend correlation with Jaeger / log search.
+            assert "x-trace-id" in headers_lower
             body = b"".join(chunk for chunk in resp.iter_bytes())
 
         events = _parse_sse(body)
@@ -90,6 +111,13 @@ class TestPostChat:
         # final llm_response should echo the message back
         last_thinking = [e for e in events if e["type"] == "llm_response"][-1]
         assert last_thinking["data"]["content"] == "zebra"
+        # P0 #12: every emitted event carries trace_id matching the X-Trace-Id header.
+        header_trace = headers_lower["x-trace-id"]
+        for ev in events:
+            assert ev["data"]["trace_id"] == header_trace, (
+                f"trace_id mismatch on event {ev['type']}: "
+                f"got {ev['data']['trace_id']!r}, header {header_trace!r}"
+            )
 
     def test_empty_message_rejected_422(self, client: TestClient) -> None:
         resp = client.post("/api/v1/chat/", json={"message": "", "mode": "echo_demo"})
@@ -140,7 +168,7 @@ class TestGetSession:
     ) -> None:
         sid = uuid4()
         reg = get_default_registry()
-        await reg.register(sid)
+        await reg.register(DEFAULT_TENANT, sid)
         resp = client.get(f"/api/v1/chat/sessions/{sid}")
         assert resp.status_code == 200
         assert resp.json()["status"] == "running"
@@ -153,7 +181,7 @@ class TestCancelSession:
     ) -> None:
         sid = uuid4()
         reg = get_default_registry()
-        await reg.register(sid)
+        await reg.register(DEFAULT_TENANT, sid)
         resp = client.post(f"/api/v1/chat/sessions/{sid}/cancel")
         assert resp.status_code == 204
         # GET reflects cancelled
@@ -163,3 +191,87 @@ class TestCancelSession:
     def test_cancel_unknown_returns_404(self, client: TestClient) -> None:
         resp = client.post(f"/api/v1/chat/sessions/{uuid4()}/cancel")
         assert resp.status_code == 404
+
+
+class TestMultiTenantIsolation:
+    """P0 #11 — cross-tenant session lookups must 404 (never reveal existence).
+
+    Why this matters: V1 W3-2 audit confirmed chat router was 0-tenant-aware.
+    These tests would have been impossible to write pre-refactor.
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_session_404_when_session_belongs_to_other_tenant(
+        self, app: FastAPI
+    ) -> None:
+        # Tenant A registers a session directly via registry; client uses
+        # default override (DEFAULT_TENANT) which differs → expect 404.
+        other_tenant = uuid4()
+        sid = uuid4()
+        reg = get_default_registry()
+        await reg.register(other_tenant, sid)
+        with TestClient(app) as tc:
+            resp = tc.get(f"/api/v1/chat/sessions/{sid}")
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_cancel_session_404_when_session_belongs_to_other_tenant(
+        self, app: FastAPI
+    ) -> None:
+        other_tenant = uuid4()
+        sid = uuid4()
+        reg = get_default_registry()
+        entry = await reg.register(other_tenant, sid)
+        with TestClient(app) as tc:
+            resp = tc.post(f"/api/v1/chat/sessions/{sid}/cancel")
+        assert resp.status_code == 404
+        # The other tenant's entry must remain untouched.
+        assert entry.status == "running"
+        assert entry.cancel_event.is_set() is False
+
+    def test_two_tenants_can_have_same_session_id_via_separate_clients(
+        self, app: FastAPI
+    ) -> None:
+        """Two tenants run chats with the SAME generated session_id but stays isolated."""
+        tenant_a = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+        tenant_b = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+        forced_sid = UUID("12345678-1234-1234-1234-123456789012")
+
+        # Build two apps each pinned to one tenant.
+        def _make_app(tenant: UUID) -> FastAPI:
+            inst = FastAPI()
+            inst.include_router(chat_router, prefix="/api/v1")
+            inst.dependency_overrides[get_current_tenant] = lambda t=tenant: t
+            return inst
+
+        for tenant, app_inst in (
+            (tenant_a, _make_app(tenant_a)),
+            (tenant_b, _make_app(tenant_b)),
+        ):
+            with TestClient(app_inst) as tc:
+                with tc.stream(
+                    "POST",
+                    "/api/v1/chat/",
+                    json={
+                        "message": "hi",
+                        "mode": "echo_demo",
+                        "session_id": str(forced_sid),
+                    },
+                ) as resp:
+                    assert resp.status_code == 200
+                    for _ in resp.iter_bytes():
+                        pass
+
+        # Both tenants now have an entry under same forced_sid.
+        reg = get_default_registry()
+        # Use sync helper-via-asyncio since conftest may not export one
+        import asyncio
+
+        a_entry = asyncio.get_event_loop().run_until_complete(
+            reg.get(tenant_a, forced_sid)
+        )
+        b_entry = asyncio.get_event_loop().run_until_complete(
+            reg.get(tenant_b, forced_sid)
+        )
+        assert a_entry is not None and b_entry is not None
+        assert a_entry is not b_entry  # independent entries
