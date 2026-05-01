@@ -1,26 +1,24 @@
 """
 File: backend/tests/integration/api/test_chat_e2e.py
-Purpose: End-to-end SSE round-trip — POST /api/v1/chat/ → 7-event echo flow.
+Purpose: End-to-end SSE round-trip — POST /api/v1/chat/ → multi-event echo flow,
+    plus multi-tenant isolation + trace_id propagation acceptance.
 Category: tests / integration
-Scope: Phase 50 / Sprint 50.2 (Day 4.6)
+Scope: Phase 50 / Sprint 50.2 (Day 4.6) — Sprint 52.5 Day 2.5 (P0 #11+#12+#16)
 
-Description:
-    Boots a FastAPI app with the chat router only (skip OTel + tenant
-    middleware to keep the integration test focused). Drives a full
-    echo_demo conversation from HTTP POST through AgentLoopImpl and
-    asserts the SSE event stream matches the contract published in
-    02-architecture-design.md §SSE.
-
-    Also covers cancellation: aborting mid-stream must mark the session
-    as cancelled in the registry without the server hanging.
-
-Created: 2026-04-30 (Sprint 50.2 Day 4.6)
+Modification History (newest-first):
+    - 2026-05-01: Sprint 52.5 Day 2.5 (P0 #11 + #12 + #16) — replaced
+        skip-tenant-middleware fixture with dependency_overrides for
+        get_current_tenant; added MultiTenantE2E + TraceIdE2E classes;
+        switched registry reset from `_entries.clear()` (V1 attribute name)
+        to `_tenants.clear()` (post-refactor attribute name).
+    - 2026-04-30: Initial creation (Sprint 50.2 Day 4.6)
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import FastAPI
@@ -28,12 +26,26 @@ from fastapi.testclient import TestClient
 
 from api.v1.chat import router as chat_router
 from api.v1.chat.session_registry import get_default_registry
+from platform_layer.identity import get_current_tenant
+
+
+# Module-level deterministic tenant for single-tenant tests.
+DEFAULT_TENANT = UUID("11111111-1111-1111-1111-111111111111")
 
 
 @pytest.fixture
 def app() -> FastAPI:
+    """E2E app with chat router + dep override that pins tenant_id.
+
+    Sprint 52.5 P0 #11: instead of skipping tenant middleware (V1 pattern),
+    we override the FastAPI dep so the router still goes through the
+    Depends(get_current_tenant) path and registry calls receive a real
+    tenant_id. The full TenantContextMiddleware path (JWT decode) is
+    exercised by tests/integration/api/test_jwt_auth.py.
+    """
     inst = FastAPI()
     inst.include_router(chat_router, prefix="/api/v1")
+    inst.dependency_overrides[get_current_tenant] = lambda: DEFAULT_TENANT
     return inst
 
 
@@ -46,9 +58,9 @@ def client(app: FastAPI) -> Iterator[TestClient]:
 @pytest.fixture(autouse=True)
 def _reset_default_registry() -> Iterator[None]:
     reg = get_default_registry()
-    reg._entries.clear()  # type: ignore[attr-defined]
+    reg._tenants.clear()  # type: ignore[attr-defined]  # noqa: SLF001
     yield
-    reg._entries.clear()  # type: ignore[attr-defined]
+    reg._tenants.clear()  # type: ignore[attr-defined]  # noqa: SLF001
 
 
 def _parse_sse(body: bytes) -> list[dict]:
@@ -68,6 +80,11 @@ def _parse_sse(body: bytes) -> list[dict]:
     return out
 
 
+# ============================================================
+# Existing 50.2 Day 4.6 tests (refactored: signatures + clear key)
+# ============================================================
+
+
 def test_e2e_echo_demo_full_loop_event_sequence(client: TestClient) -> None:
     """End-to-end: POST echo_demo → 8-event stream including
     new TurnStarted / LLMRequested / LLMResponded events from Day 2."""
@@ -82,14 +99,12 @@ def test_e2e_echo_demo_full_loop_event_sequence(client: TestClient) -> None:
     events = _parse_sse(body)
     types = [e["type"] for e in events]
 
-    # Sprint 50.2 Day 2 expanded event sequence — see test_e2e_echo (unit)
-    # for the in-process equivalent. Wire format adds:
+    # Sprint 50.2 Day 2 expanded event sequence:
     #   loop_start
     #   turn_start, llm_request, llm_response (turn 1)
     #     tool_call_request, tool_call_result
     #   turn_start, llm_request, llm_response (turn 2)
     #   loop_end
-    # Thinking is skipped per sse.py serializer (None return).
     assert types[0] == "loop_start"
     assert types[-1] == "loop_end"
     assert types.count("turn_start") == 2
@@ -131,20 +146,200 @@ def test_e2e_session_id_in_response_header(client: TestClient) -> None:
 
 def test_e2e_cancellation_marks_session_cancelled(client: TestClient) -> None:
     """Cancel endpoint flips status without needing the stream to finish."""
-    # Pre-register a session
-    sid = "12345678-1234-5678-1234-567812345678"
-    import uuid
-
-    sid_uuid = uuid.UUID(sid)
-    from api.v1.chat.session_registry import get_default_registry
-
-    reg = get_default_registry()
     import asyncio
 
-    asyncio.run(reg.register(sid_uuid))
+    sid_uuid = UUID("12345678-1234-5678-1234-567812345678")
+    reg = get_default_registry()
+    asyncio.run(reg.register(DEFAULT_TENANT, sid_uuid))
 
-    cancel_resp = client.post(f"/api/v1/chat/sessions/{sid}/cancel")
+    cancel_resp = client.post(f"/api/v1/chat/sessions/{sid_uuid}/cancel")
     assert cancel_resp.status_code == 204
 
-    get_resp = client.get(f"/api/v1/chat/sessions/{sid}")
+    get_resp = client.get(f"/api/v1/chat/sessions/{sid_uuid}")
     assert get_resp.json()["status"] == "cancelled"
+
+
+# ============================================================
+# Sprint 52.5 P0 #12 acceptance — TraceContext propagation E2E
+# ============================================================
+
+
+class TestTraceIdPropagationE2E:
+    """End-to-end TraceContext.create_root() coverage:
+        - X-Trace-Id response header set
+        - Every emitted SSE event carries data.trace_id matching the header
+    """
+
+    def test_x_trace_id_header_present_and_uuid_hex(self, client: TestClient) -> None:
+        with client.stream(
+            "POST", "/api/v1/chat/", json={"message": "ping", "mode": "echo_demo"}
+        ) as resp:
+            assert resp.status_code == 200
+            trace_id = resp.headers["x-trace-id"]
+            for _ in resp.iter_bytes():
+                pass
+        # TraceContext.create_root() default is uuid4().hex → 32 hex chars
+        assert isinstance(trace_id, str) and len(trace_id) == 32
+        int(trace_id, 16)  # raises if non-hex
+
+    def test_every_sse_event_carries_matching_trace_id(
+        self, client: TestClient
+    ) -> None:
+        """All 8+ SSE frames must share the same trace_id as X-Trace-Id."""
+        with client.stream(
+            "POST",
+            "/api/v1/chat/",
+            json={"message": "ping", "mode": "echo_demo"},
+        ) as resp:
+            assert resp.status_code == 200
+            header_tid = resp.headers["x-trace-id"]
+            body = b"".join(chunk for chunk in resp.iter_bytes())
+
+        events = _parse_sse(body)
+        assert events, "no SSE events received"
+        for ev in events:
+            data = ev["data"]
+            assert data is not None, f"event {ev['type']} has no data"
+            assert "trace_id" in data, (
+                f"event {ev['type']} missing trace_id field — sse.py wrapper "
+                "should have injected it"
+            )
+            assert data["trace_id"] == header_tid, (
+                f"event {ev['type']} trace_id={data['trace_id']!r} != "
+                f"X-Trace-Id={header_tid!r}"
+            )
+
+
+# ============================================================
+# Sprint 52.5 P0 #11 acceptance — multi-tenant isolation E2E
+# ============================================================
+
+
+class TestMultiTenantE2E:
+    """End-to-end cross-tenant isolation:
+        - Tenant A creates a session via POST /chat
+        - Tenant B GET /sessions/{sid} → 404 (never reveal existence)
+        - Tenant B POST /sessions/{sid}/cancel → 404
+        - Tenant B's cancel attempt does NOT flip Tenant A's session
+    """
+
+    def _make_tenant_app(self, tenant: UUID) -> FastAPI:
+        inst = FastAPI()
+        inst.include_router(chat_router, prefix="/api/v1")
+        inst.dependency_overrides[get_current_tenant] = lambda t=tenant: t
+        return inst
+
+    def test_tenant_b_cannot_read_tenant_a_session(self) -> None:
+        tenant_a = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+        tenant_b = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+
+        # Tenant A creates session
+        app_a = self._make_tenant_app(tenant_a)
+        with TestClient(app_a) as tc_a:
+            with tc_a.stream(
+                "POST",
+                "/api/v1/chat/",
+                json={"message": "secret-A", "mode": "echo_demo"},
+            ) as resp:
+                sid = resp.headers["x-session-id"]
+                for _ in resp.iter_bytes():
+                    pass
+            # Sanity: tenant A sees status=completed
+            assert (
+                tc_a.get(f"/api/v1/chat/sessions/{sid}").json()["status"]
+                == "completed"
+            )
+
+        # Tenant B tries to read same session_id
+        app_b = self._make_tenant_app(tenant_b)
+        with TestClient(app_b) as tc_b:
+            resp_b = tc_b.get(f"/api/v1/chat/sessions/{sid}")
+        assert resp_b.status_code == 404
+
+    def test_tenant_b_cannot_cancel_tenant_a_session(self) -> None:
+        import asyncio
+
+        tenant_a = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+        tenant_b = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+        sid = uuid4()
+
+        # Pre-register a running session under tenant A directly.
+        reg = get_default_registry()
+        entry_a = asyncio.run(reg.register(tenant_a, sid))
+
+        # Tenant B attempts to cancel
+        app_b = self._make_tenant_app(tenant_b)
+        with TestClient(app_b) as tc_b:
+            resp_b = tc_b.post(f"/api/v1/chat/sessions/{sid}/cancel")
+        assert resp_b.status_code == 404
+
+        # Tenant A's entry must remain running (not flipped to cancelled).
+        assert entry_a.status == "running"
+        assert entry_a.cancel_event.is_set() is False
+
+    def test_two_tenants_share_session_id_without_collision(self) -> None:
+        """Same generated session_id → two independent registry entries."""
+        tenant_a = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+        tenant_b = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+        forced_sid = "12345678-1234-1234-1234-123456789012"
+
+        for tenant, app_inst in (
+            (tenant_a, self._make_tenant_app(tenant_a)),
+            (tenant_b, self._make_tenant_app(tenant_b)),
+        ):
+            with TestClient(app_inst) as tc:
+                with tc.stream(
+                    "POST",
+                    "/api/v1/chat/",
+                    json={
+                        "message": "hi",
+                        "mode": "echo_demo",
+                        "session_id": forced_sid,
+                    },
+                ) as resp:
+                    assert resp.status_code == 200
+                    for _ in resp.iter_bytes():
+                        pass
+
+        # Each tenant sees their own session as completed; the other tenant
+        # does not see it via the API.
+        for tenant, app_inst in (
+            (tenant_a, self._make_tenant_app(tenant_a)),
+            (tenant_b, self._make_tenant_app(tenant_b)),
+        ):
+            with TestClient(app_inst) as tc:
+                resp = tc.get(f"/api/v1/chat/sessions/{forced_sid}")
+                assert resp.status_code == 200
+                assert resp.json()["status"] == "completed"
+
+
+# ============================================================
+# Sprint 52.5 P0 #16 acceptance — adapter LLM-call span sanity
+# ============================================================
+
+
+class TestAdapterTracerSpanIntegration:
+    """Echo demo uses MockChatClient (no adapter spans), but the
+    contract that adapters MUST emit `llm_chat` spans is validated
+    structurally by direct adapter unit tests + the tracer fixture
+    pattern. This integration test is a sanity check that the
+    adapter constructor still accepts the new tracer kwarg under
+    the standard `build_real_llm_handler` env-var-gated path
+    (skipped without Azure env). Documenting here so the audit has
+    a concrete pointer for issue #16.
+    """
+
+    def test_adapter_constructor_accepts_tracer_kwarg_signature(self) -> None:
+        """Signature regression test: AzureOpenAIAdapter(config, tracer=...)
+        is the new V2 contract; this guards against accidental removal."""
+        import inspect
+
+        from adapters.azure_openai.adapter import AzureOpenAIAdapter
+
+        sig = inspect.signature(AzureOpenAIAdapter.__init__)
+        params = sig.parameters
+        assert "tracer" in params, (
+            "AzureOpenAIAdapter.__init__ must accept a tracer kwarg "
+            "(P0 #16 — adapter LLM-call span)."
+        )
+        assert params["tracer"].kind == inspect.Parameter.KEYWORD_ONLY
