@@ -4,6 +4,14 @@ Purpose: AgentLoopWorker — pulls TaskEnvelope from QueueBackend and executes a
 Category: Runtime / Workers (execution plane)
 Scope: Phase 49 / Sprint 49.4 (stub) → Phase 50.1 (loop) → Phase 53.1 (HITL)
 
+[STUB] Phase 49.4-53.1 — production worker requires TemporalQueueBackend
+which lands in Phase 53.1. The current MockQueueBackend + scaffold here
+is suitable for unit / integration testing of the worker contract but is
+NOT a production runtime: no durable task storage, no replay-on-crash, no
+distributed scheduling. Wiring an actual chat request through this worker
+loop happens in Phase 53.1 alongside HITL pause/resume signals — until
+then, the API layer drives AgentLoopImpl.run() in-process per Sprint 50.2.
+
 Description:
     Phase 49.4 stub: scaffold + retry policy + cancellation handling. The actual
     agent loop body (Cat 1) lands in Phase 50.1; HITL pause/resume signals

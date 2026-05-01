@@ -24,7 +24,10 @@ alembic>=1.13,<2.0
 
 # ---- Cache / messaging -----------------------------------------------
 redis>=5.0,<6.0
-celery>=5.4,<6.0
+# Sprint 52.5 Day 10 P1 #6 (W2-2): Celery removed; Phase 49.4 worker-queue
+# decision selected Temporal (workflow-native + replay durability) over Celery.
+# `temporalio>=1.6,<2.0` joins this file in Phase 53.1 when TemporalQueueBackend
+# lands per docs/03-implementation/agent-harness-planning/06-phase-roadmap.md.
 
 # ---- Observability (Sprint 49.4 wires up the 11+1 categories) --------
 # OTLP exporters preferred over deprecated jaeger-exporter; modern Jaeger
