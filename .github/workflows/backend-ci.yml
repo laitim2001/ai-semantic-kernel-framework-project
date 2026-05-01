@@ -103,8 +103,14 @@ jobs:
       - name: LLM SDK leak check (LLM-provider-neutrality)
         working-directory: backend
         run: |
-          if grep -rE "^(from |import )(openai|anthropic|agent_framework)" src/agent_harness/ src/infrastructure/; then
-            echo "ERROR: agent_harness/ + infrastructure/ must not import LLM SDKs directly"
+          # Audit-carryover (W2-1 P1 #5, 2026-05-01): scope expanded from
+          # agent_harness/+infrastructure/ to also cover business_domain/,
+          # platform_layer/, api/ — these layers must also remain provider-neutral.
+          # Allowed exception: src/adapters/ (sole legal home for LLM SDK imports).
+          if grep -rE "^(from |import )(openai|anthropic|agent_framework)" \
+              src/agent_harness/ src/infrastructure/ \
+              src/business_domain/ src/platform_layer/ src/api/; then
+            echo "ERROR: agent_harness/ + infrastructure/ + business_domain/ + platform_layer/ + api/ must not import LLM SDKs directly"
             exit 1
           fi
-          echo "OK: no LLM SDK imports in agent_harness/ + infrastructure/"
+          echo "OK: no LLM SDK imports in agent_harness/ + infrastructure/ + business_domain/ + platform_layer/ + api/"
