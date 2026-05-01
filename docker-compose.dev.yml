@@ -119,6 +119,31 @@ services:
       timeout: 5s
       retries: 5
 
+  # Sprint 52.5 P0 #13 phase 2 — audit_log hash chain daily verifier.
+  # supercronic runs /scripts/verify_audit_chain.py at 02:00 UTC daily.
+  # See docs/03-implementation/agent-harness-planning/13-deployment-and-devops.md
+  # §Audit Verification for the operational playbook (rotation + alert wiring).
+  audit_verifier:
+    build:
+      context: .
+      dockerfile: docker/audit-verifier/Dockerfile
+    container_name: ipa_v2_audit_verifier
+    environment:
+      # asyncpg-compatible URL — verifier internally strips +asyncpg if present.
+      DATABASE_URL: "postgresql://ipa_v2:ipa_v2_dev@postgres:5432/ipa_v2"
+      # Default skip W1-3 audit forgery tenant. Override via env at compose-up
+      # to add more (space-separated UUIDs).
+      IGNORE_TENANTS: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa4444"
+      # Optional: ALERT_WEBHOOK_URL=https://hooks.slack.com/...
+      PYTHONPATH: /app
+    volumes:
+      - ./backend/src:/app:ro
+      - ./backend/scripts:/app/scripts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   # Sprint 51.0 Day 5.2 — Mock business backend (port 8001)
   # NOT for production. Phase 55 真實 enterprise integration 上線時整個 service 刪除。
   # See: docs/03-implementation/agent-harness-planning/phase-51-tools-memory/sprint-51-0-plan.md §決策 1

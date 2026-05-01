@@ -9,8 +9,11 @@ register_builtin_tools() / business_domain.make_default_executor().
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from agent_harness._contracts import ToolCall
-
+# Sprint 52.5 P0 #18: handlers may take EITHER (call) or (call, context).
+# Mirror the Union from tools/executor.py so dict[str, ToolHandler] accepts
+# both arities. Single-arg legacy handlers continue to work; new handlers
+# (memory_search/write/placeholder) supply the 2-arg form.
+from agent_harness._contracts import ExecutionContext, ToolCall
 from agent_harness.tools._abc import ToolExecutor, ToolRegistry
 from agent_harness.tools.echo_tool import ECHO_TOOL_SPEC, echo_handler, make_echo_executor
 from agent_harness.tools.exec_tools import (
@@ -43,7 +46,10 @@ from agent_harness.tools.search_tools import (
     make_web_search_handler,
 )
 
-ToolHandler = Callable[[ToolCall], Awaitable[str | dict[str, Any]]]
+ToolHandler = (
+    Callable[[ToolCall], Awaitable[str | dict[str, Any]]]
+    | Callable[[ToolCall, ExecutionContext], Awaitable[str | dict[str, Any]]]
+)
 
 
 def register_builtin_tools(
@@ -92,20 +98,15 @@ def register_builtin_tools(
     real_memory_wired = memory_retrieval is not None and memory_layers is not None
     if real_memory_wired:
         # Imports postponed to keep this module's load graph minimal
-        from agent_harness.memory._abc import MemoryLayer
-        from agent_harness.memory.retrieval import MemoryRetrieval
+        from agent_harness.memory import MemoryLayer, MemoryRetrieval
 
         if not isinstance(memory_retrieval, MemoryRetrieval):
-            raise TypeError(
-                "memory_retrieval must be a MemoryRetrieval instance"
-            )
+            raise TypeError("memory_retrieval must be a MemoryRetrieval instance")
         # Validate each layer is a MemoryLayer subclass instance
         validated_layers: dict[str, MemoryLayer] = {}
         for scope, layer in (memory_layers or {}).items():
             if not isinstance(layer, MemoryLayer):
-                raise TypeError(
-                    f"memory_layers[{scope!r}] must be a MemoryLayer instance"
-                )
+                raise TypeError(f"memory_layers[{scope!r}] must be a MemoryLayer instance")
             validated_layers[scope] = layer
 
         registry.register(MEMORY_SEARCH_SPEC)

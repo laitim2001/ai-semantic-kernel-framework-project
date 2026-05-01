@@ -119,9 +119,7 @@ class SessionLayer(MemoryLayer):
         trace_context: TraceContext | None = None,
     ) -> UUID:
         if tenant_id is None or user_id is None:
-            raise ValueError(
-                "SessionLayer.write requires tenant_id and user_id (session_id slot)"
-            )
+            raise ValueError("SessionLayer.write requires tenant_id and user_id (session_id slot)")
         if time_scale != "short_term":
             raise ValueError(
                 "SessionLayer only supports short_term writes; "

@@ -19,7 +19,7 @@ Single-source: 17-cross-category-interfaces.md §1.1
 Created: 2026-05-01 (Sprint 52.1, Day 1)
 
 Modification History:
-    - 2026-05-01: Initial creation (Sprint 52.1 Day 1) — define CompactionStrategy + CompactionResult
+    - 2026-05-01: Initial creation (Sprint 52.1 Day 1) — define CompactionStrategy + CompactionResult  # noqa: E501
 """
 
 from __future__ import annotations

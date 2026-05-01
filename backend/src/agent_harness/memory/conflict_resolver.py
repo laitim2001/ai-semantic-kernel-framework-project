@@ -74,13 +74,14 @@ def resolve(hints: list[MemoryHint], *, now: datetime | None = None) -> MemoryHi
     fresh = [
         h
         for h in hints
-        if h.last_verified_at is not None
-        and (cutoff_now - h.last_verified_at) < timedelta(days=7)
+        if h.last_verified_at is not None and (cutoff_now - h.last_verified_at) < timedelta(days=7)
     ]
     if fresh:
         # max by last_verified_at; mypy needs the assert because filter
         # made it non-None but the type is still datetime | None
-        return max(fresh, key=lambda h: h.last_verified_at or datetime.min.replace(tzinfo=timezone.utc))
+        return max(
+            fresh, key=lambda h: h.last_verified_at or datetime.min.replace(tzinfo=timezone.utc)
+        )
 
     # Rule 3: layer specificity - unique top priority wins
     priorities = {_LAYER_PRIORITY.get(h.layer, 0) for h in hints}

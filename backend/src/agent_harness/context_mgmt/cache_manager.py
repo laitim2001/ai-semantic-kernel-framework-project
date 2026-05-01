@@ -130,7 +130,7 @@ class InMemoryCacheManager(PromptCacheManager):
     def __init__(self, *, provider_signature: str = "default") -> None:
         self._provider_signature = provider_signature
         self._cache: dict[str, _CacheEntry] = {}
-        # tenant_id (str form, since UUID is hashable but we store as text in keys) → set of cache_key
+        # tenant_id (str form, since UUID is hashable but we store as text in keys) → set of cache_key  # noqa: E501
         self._by_tenant: dict[str, set[str]] = {}
 
     # -- key formula (per Sprint 52.1 plan §1.4 + Day 4 red-team contract) --
@@ -178,9 +178,7 @@ class InMemoryCacheManager(PromptCacheManager):
             return []
 
         breakpoints: list[CacheBreakpoint] = []
-        ttl_deadline = (
-            time.monotonic() + policy.ttl_seconds if policy.ttl_seconds > 0 else 0.0
-        )
+        ttl_deadline = time.monotonic() + policy.ttl_seconds if policy.ttl_seconds > 0 else 0.0
 
         for section_id, position, bp_type in _sections_from_policy(policy):
             # content_hash is filled by Cat 5 PromptBuilder (52.2). Day 4

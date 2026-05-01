@@ -9,7 +9,6 @@ Created: 2026-04-30
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -47,7 +46,7 @@ async def test_extract_writes_facts_to_user_layer() -> None:
         ]
     )
     user_layer = _UserLayerStub()
-    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]
+    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]  # noqa: E501
 
     tenant = uuid4()
     user = uuid4()
@@ -74,7 +73,7 @@ async def test_extract_writes_facts_to_user_layer() -> None:
 async def test_extract_returns_empty_for_empty_messages() -> None:
     chat_client = MockChatClient()
     user_layer = _UserLayerStub()
-    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]
+    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]  # noqa: E501
 
     new_ids = await extractor.extract_session_to_user(
         session_id=uuid4(),
@@ -99,7 +98,7 @@ async def test_extract_tolerates_invalid_json() -> None:
         ]
     )
     user_layer = _UserLayerStub()
-    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]
+    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]  # noqa: E501
 
     new_ids = await extractor.extract_session_to_user(
         session_id=uuid4(),
@@ -128,7 +127,7 @@ async def test_extract_handles_prose_around_json() -> None:
         ]
     )
     user_layer = _UserLayerStub()
-    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]
+    extractor = MemoryExtractor(chat_client=chat_client, user_layer=user_layer)  # type: ignore[arg-type]  # noqa: E501
 
     new_ids = await extractor.extract_session_to_user(
         session_id=uuid4(),

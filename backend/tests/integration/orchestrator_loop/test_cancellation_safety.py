@@ -38,7 +38,7 @@ from agent_harness._contracts import (
     ToolSpec,
     TraceContext,
 )
-from agent_harness.orchestrator_loop import AgentLoopImpl, TerminationReason
+from agent_harness.orchestrator_loop import AgentLoopImpl
 from agent_harness.output_parser import OutputParserImpl
 from agent_harness.tools import make_echo_executor
 
@@ -61,9 +61,7 @@ class SlowChatClient(ChatClient):
         self.chat_call_count += 1
         self.last_request = request
         await asyncio.sleep(self.sleep_seconds)
-        return ChatResponse(
-            model="slow", content="never reached", stop_reason=StopReason.END_TURN
-        )
+        return ChatResponse(model="slow", content="never reached", stop_reason=StopReason.END_TURN)
 
     def stream(
         self,
@@ -131,9 +129,7 @@ async def test_cancel_during_slow_chat_yields_cancelled() -> None:
     )
 
     async def consume() -> list:
-        return [
-            ev async for ev in loop.run(session_id=uuid4(), user_input="x")
-        ]
+        return [ev async for ev in loop.run(session_id=uuid4(), user_input="x")]
 
     task = asyncio.create_task(consume())
     await asyncio.sleep(0.05)
@@ -160,9 +156,9 @@ async def test_consumer_break_closes_generator_cleanly() -> None:
                 content="t1",
                 stop_reason=StopReason.TOOL_USE,
                 tool_calls=[
-                    __import__(
-                        "agent_harness._contracts", fromlist=["ToolCall"]
-                    ).ToolCall(id=f"c{i}", name="echo_tool", arguments={"text": "x"})
+                    __import__("agent_harness._contracts", fromlist=["ToolCall"]).ToolCall(
+                        id=f"c{i}", name="echo_tool", arguments={"text": "x"}
+                    )
                     for i in range(1)
                 ],
             )
@@ -210,9 +206,7 @@ async def test_post_cancel_message_state_consistent() -> None:
             ChatResponse(
                 model="m",
                 content="calling slow",
-                tool_calls=[
-                    ToolCall(id="c1", name="slow_tool", arguments={"text": "x"})
-                ],
+                tool_calls=[ToolCall(id="c1", name="slow_tool", arguments={"text": "x"})],
                 stop_reason=StopReason.TOOL_USE,
             ),
         ]
@@ -226,9 +220,7 @@ async def test_post_cancel_message_state_consistent() -> None:
     )
 
     async def consume() -> list:
-        return [
-            ev async for ev in loop.run(session_id=uuid4(), user_input="hang test")
-        ]
+        return [ev async for ev in loop.run(session_id=uuid4(), user_input="hang test")]
 
     task = asyncio.create_task(consume())
     await asyncio.sleep(0.05)

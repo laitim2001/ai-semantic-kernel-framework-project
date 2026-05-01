@@ -29,8 +29,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.db.models import (Approval, GuardrailEvent, RiskAssessment,
-                                      Session)
+from infrastructure.db.models import Approval, GuardrailEvent, RiskAssessment, Session
 from tests.conftest import seed_tenant, seed_user
 
 
@@ -135,9 +134,7 @@ async def test_approval_pending_query_uses_partial_index(
     db_session.add_all([pending_a, decided_a])
     await db_session.flush()
 
-    result = await db_session.execute(
-        select(Approval).where(Approval.status == "pending")
-    )
+    result = await db_session.execute(select(Approval).where(Approval.status == "pending"))
     pending_rows = list(result.scalars().all())
     assert len(pending_rows) == 1
     assert pending_rows[0].id == pending_a.id

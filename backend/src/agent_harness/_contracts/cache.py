@@ -57,4 +57,4 @@ class CachePolicy:
     """Default cache TTL. Anthropic ephemeral max ~5 min; OpenAI session-bound."""
 
     invalidate_on: list[str] = field(default_factory=list)
-    """Trigger labels that force cache invalidation (e.g. ['memory_write', 'tool_registry_change'])."""
+    """Trigger labels that force cache invalidation (e.g. ['memory_write', 'tool_registry_change'])."""  # noqa: E501

@@ -1,0 +1,17 @@
+# Sprint 52.5 P0 #13 — daily audit_log hash chain verification.
+#
+# Format: cron-spec  shell-command (executed by supercronic)
+# Runs at 02:00 UTC every day (low-traffic window in TW/HK).
+# Adjust to local needs at deploy-time by editing this file or by mounting
+# a different crontab in docker-compose.
+#
+# Required env vars (set at compose level):
+#   DATABASE_URL          asyncpg-style postgres URL (no +asyncpg suffix needed;
+#                         the verifier strips it).
+# Optional env vars:
+#   IGNORE_TENANTS        Space-separated UUIDs to pass as repeated
+#                         --ignore-tenant flags. Default: the W1-3 audit
+#                         forgery baseline tenant aaaaaaaa-...-4444 only.
+#   ALERT_WEBHOOK_URL     POSTed JSON tamper report on failure.
+
+0 2 * * * /bin/bash -c 'python -m scripts.verify_audit_chain $(for t in ${IGNORE_TENANTS:-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa4444}; do printf -- "--ignore-tenant %s " "$t"; done) ${ALERT_WEBHOOK_URL:+--alert-webhook "$ALERT_WEBHOOK_URL"} --quiet'

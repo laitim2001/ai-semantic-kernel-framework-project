@@ -47,8 +47,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 class Base(DeclarativeBase):
     """V2 ORM declarative base. All ORM tables inherit from this."""
 
-    pass
-
 
 class TenantScopedMixin:
     """

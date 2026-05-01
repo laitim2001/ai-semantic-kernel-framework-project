@@ -10,7 +10,7 @@ Sprint 49.2 builds these incrementally:
 Sprint 49.3 adds:
     Day 1.1: audit.py        — AuditLog (append-only, hash chain)
     Day 2.1: api_keys.py     — ApiKey / RateLimit
-    Day 2.3: memory.py       — MemorySystem / MemoryTenant / MemoryRole / MemoryUser / MemorySessionSummary
+    Day 2.3: memory.py       — MemorySystem / MemoryTenant / MemoryRole / MemoryUser / MemorySessionSummary  # noqa: E501
     Day 3.1-3: governance.py — Approval / RiskAssessment / GuardrailEvent
 
 Importing this package registers all ORM tables with Base.metadata, which

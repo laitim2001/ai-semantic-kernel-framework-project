@@ -14,8 +14,6 @@ Scope: Sprint 52.1 Day 3.7
 
 from __future__ import annotations
 
-import pytest
-
 from agent_harness._contracts import Message, ToolSpec
 from agent_harness.context_mgmt.token_counter.tiktoken_counter import TiktokenCounter
 
@@ -27,7 +25,7 @@ def test_count_plain_text() -> None:
 
 
 def test_count_messages_with_role_overhead() -> None:
-    """Message with single text content → request_overhead(3) + per_message(3) + role_tokens + content_tokens."""
+    """Message with single text content → request_overhead(3) + per_message(3) + role_tokens + content_tokens."""  # noqa: E501
     c = TiktokenCounter(model="gpt-4o")
     msg = Message(role="user", content="Hi")
     n = c.count(messages=[msg])

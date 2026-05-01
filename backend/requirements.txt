@@ -24,16 +24,36 @@ alembic>=1.13,<2.0
 
 # ---- Cache / messaging -----------------------------------------------
 redis>=5.0,<6.0
-celery>=5.4,<6.0
+# Sprint 52.5 Day 10 P1 #6 (W2-2): Celery removed; Phase 49.4 worker-queue
+# decision selected Temporal (workflow-native + replay durability) over Celery.
+# `temporalio>=1.6,<2.0` joins this file in Phase 53.1 when TemporalQueueBackend
+# lands per docs/03-implementation/agent-harness-planning/06-phase-roadmap.md.
+
+# ---- Sandbox isolation (Sprint 52.5 P0 #17) --------------------------
+# Docker SDK for DockerSandbox — replaces best-effort SubprocessSandbox
+# (decorative on Windows: resource.setrlimit POSIX-only; W4P-3 audit
+# proved os.listdir("C:/") leaked host fs from inside the "sandbox").
+# Real isolation via short-lived Docker containers with --memory --cpus
+# --network=none --read-only --cap-drop=ALL.
+docker>=7.0,<8.0
 
 # ---- Observability (Sprint 49.4 wires up the 11+1 categories) --------
 # OTLP exporters preferred over deprecated jaeger-exporter; modern Jaeger
 # 1.55+ accepts OTLP/gRPC natively on port 4317.
-opentelemetry-api>=1.27,<2.0
-opentelemetry-sdk>=1.27,<2.0
-opentelemetry-exporter-otlp>=1.27,<2.0
-opentelemetry-exporter-prometheus>=0.48b0,<1.0
-opentelemetry-instrumentation-fastapi>=0.48b0,<1.0
-opentelemetry-instrumentation-sqlalchemy>=0.48b0,<1.0
-opentelemetry-instrumentation-redis>=0.48b0,<1.0
+# Sprint 52.5 P0 #15 (issue #15): version-pinned per
+# .claude/rules/observability-instrumentation.md to avoid breaking changes.
+# Auditor evidence: W4P-1 found floating range `>=1.27,<2.0` violates rule.
+opentelemetry-api==1.22.0
+opentelemetry-sdk==1.22.0
+opentelemetry-exporter-otlp==1.22.0
+opentelemetry-exporter-prometheus==0.43b0
+opentelemetry-instrumentation-fastapi==0.43b0
+opentelemetry-instrumentation-sqlalchemy==0.43b0
+opentelemetry-instrumentation-redis==0.43b0
 python-json-logger>=2.0,<4.0
+
+# ---- Identity / Auth (Sprint 52.5 P0 #14) ----------------------------
+# JWT replaces V1 X-Tenant-Id header (W1-2 audit P0). HS256 dev / RS256 prod;
+# `cryptography` extras include backends needed for RS256.
+# See platform_layer/identity/jwt.py + tenant_context.py.
+python-jose[cryptography]>=3.3,<4.0

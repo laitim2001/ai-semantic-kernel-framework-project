@@ -998,3 +998,153 @@ Grafana / CloudWatch alarm：每小時跑一次此 query，> 0 rows → page on-
 - `0009_rls_policies.py` — 建立 13 張表 RLS policies
 - `platform_layer/middleware/tenant_context.py` — `SET LOCAL app.tenant_id` 實作
 - `.claude/rules/multi-tenant-data.md` — 鐵律 1+2+3 連動
+
+---
+
+## §Audit Verification（Sprint 52.5 Day 4-5 P0 #13）
+
+`audit_log` 採 per-tenant SHA-256 hash chain 確保 append-only + tamper-evident。
+Hash chain 是「自證」結構 —— **驗證程式不存在 = 任何篡改都靜默成功**。
+W1-3 audit 實測：用 superuser INSERT 假 `current_log_hash="f"*64` 的 row，
+0 偵測。本節定義 verifier 的部署、運維與告警機制。
+
+### 元件
+
+```
+┌────────────────────────────┐
+│ docker-compose.dev.yml      │  audit_verifier service (supercronic)
+│   service: audit_verifier   │
+└──────────────┬──────────────┘
+               │ daily 02:00 UTC
+               ▼
+┌────────────────────────────┐
+│ scripts/verify_audit_chain  │  asyncpg + stdlib only (no FastAPI)
+│   --ignore-tenant ...       │  per-tenant chain walk
+│   --alert-webhook ...       │  POST tamper report on failure
+└──────────────┬──────────────┘
+               │ exit code
+               ▼
+        0 = pass  / 1 = tamper / 2 = config error
+```
+
+### Verifier CLI（`backend/scripts/verify_audit_chain.py`）
+
+```bash
+# Ad-hoc 全表驗證
+DATABASE_URL=postgresql://ipa_v2:ipa_v2_dev@localhost:5432/ipa_v2 \
+    python -m scripts.verify_audit_chain
+
+# 略過 W1-3 audit 留下的 forgery 基線（tenant aaaa-...-4444 row id=36-39）
+python -m scripts.verify_audit_chain \
+    --ignore-tenant aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa4444
+
+# 限定單 tenant + 部分時間窗口 + 失敗時 webhook
+python -m scripts.verify_audit_chain \
+    --tenant <UUID> --from-date 2026-04-01 \
+    --alert-webhook https://hooks.slack.com/services/...
+
+# Cron-friendly 單行輸出
+python -m scripts.verify_audit_chain --quiet
+```
+
+兩重檢查獨立並行：
+- **broken_link**：row N+1 的 `previous_log_hash` ≠ row N 的 `current_log_hash`
+- **curr_hash_mismatch**：`SHA256(stored_prev || canonical_json(payload) || tenant_id || ts_ms)`
+  ≠ row 的 stored `current_log_hash`
+
+任一觸發即 exit 1 + 列出篡改起點 row id；webhook 收到 JSON payload `{tampers, summary}`。
+
+### Docker / Cron 部署
+
+`docker-compose.dev.yml` 已包含 `audit_verifier` service：
+- Image: `python:3.12-slim` + asyncpg pre-install + supercronic
+  （`docker/audit-verifier/Dockerfile`）
+- Crontab: `02:00 UTC` daily（`docker/audit-verifier/crontab`）
+- Bind-mount `backend/src` + `backend/scripts` (read-only) → 改 verifier 不需 rebuild
+- `depends_on.postgres.condition: service_healthy` → 等 DB ready 才啟動 cron
+
+啟動：
+
+```bash
+docker compose -f docker-compose.dev.yml up -d audit_verifier
+docker logs -f ipa_v2_audit_verifier
+```
+
+手動單次驗證（不等下一個 cron tick）：
+
+```bash
+docker compose -f docker-compose.dev.yml run --rm audit_verifier \
+    python -m scripts.verify_audit_chain --ignore-tenant aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa4444
+```
+
+### 告警
+
+dev 環境：supercronic stdout 由 `docker logs ipa_v2_audit_verifier` 採集，
+搭配 Loki / docker-syslog → Grafana 告警。
+
+prod 環境：在 compose 加 `ALERT_WEBHOOK_URL` env var → verifier 失敗時 POST。
+建議 webhook target：
+- 內部 Slack/Teams channel `#sec-audit`
+- PagerDuty service（24/7 incident response）
+- SIEM ingestion endpoint（如 Splunk HEC）
+
+Webhook 載荷範例：
+
+```json
+{
+  "status": "fail",
+  "tampers": [
+    {
+      "tenant_id": "...",
+      "row_id": 39,
+      "error_type": "curr_hash_mismatch",
+      "expected": "abcd1234...",
+      "actual": "ffffffff...",
+      "operation": "tool_executed",
+      "created_at": "2026-04-29T..."
+    }
+  ],
+  "summary": {"rows": 12345, "tenants": 7, "ignored_tenants": ["aaaa..."]}
+}
+```
+
+### 運維 Runbook
+
+**篡改告警觸發 → 即時動作**：
+
+1. 凍結相關 tenant 寫入：`UPDATE tenants SET status='frozen' WHERE id = ?`
+   （或業務層 feature flag）
+2. 輸出 forensics：`pg_dump -t audit_log --where "tenant_id='<UUID>'" > forensics.sql`
+3. 比對 row N 的 prev_hash 與 row N-1 的 curr_hash 是否分別來源於：
+   - 應用層 INSERT（檢查 connection log）
+   - DB superuser INSERT（檢查 PG audit log + role assumptions）
+4. 若發現是 superuser INSERT，啟動人員 access 調查 + key rotation
+5. **不要直接刪除告警 row** — 保留為 evidence；若需要恢復 chain 連續性，
+   記錄修補手續為新 audit row
+
+**已知 baseline noise（不需告警）**：
+
+| Tenant | 原因 | Source |
+|--------|------|--------|
+| `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa4444` | W1-3 audit 留下的 forgery rows id=36-39（驗證 verifier 確能偵測） | `claudedocs/5-status/V2-AUDIT-W1-AUDIT-HASH.md` |
+
+部署到 staging / prod 之前需 DBA cleanup（`DELETE FROM audit_log WHERE tenant_id='aaaa...4444'`
++ 紀錄到 retrospective），或繼續用 `--ignore-tenant` 略過。
+
+### 測試
+
+`backend/tests/unit/scripts/test_verify_audit_chain.py`（11 cases，0.14s）保證：
+- Hash compute 與 `audit_helper.compute_audit_hash` byte-identical（最關鍵）
+- broken_link / curr_hash_mismatch 各自獨立偵測
+- 同時被 tamper 兩處（payload 改 + curr_hash 重算 + 下一 row prev_hash 沒更新）
+  → 至少 broken_link 觸發
+- `--ignore-tenant` / `--from-date` / asyncpg URL normalisation 正確
+
+### 引用
+
+- 09-db-schema-design.md L654-717（Group 7 Audit + hash chain spec）
+- 14-security-deep-dive.md §append-only / hash chain
+- backend/src/infrastructure/db/audit_helper.py（canonical hash compute）
+- backend/scripts/verify_audit_chain.py
+- docker/audit-verifier/{Dockerfile, crontab}
+- claudedocs/5-status/V2-AUDIT-W1-AUDIT-HASH.md（audit source）

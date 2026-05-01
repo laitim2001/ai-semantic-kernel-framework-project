@@ -63,7 +63,9 @@ def _make_state(
 class _StubCompactor(StructuralCompactor):
     """Test stub: returns a configurable CompactionResult and counts calls."""
 
-    def __init__(self, *, fixed_result: CompactionResult, raise_exc: Exception | None = None) -> None:
+    def __init__(
+        self, *, fixed_result: CompactionResult, raise_exc: Exception | None = None
+    ) -> None:
         super().__init__()
         self.fixed_result = fixed_result
         self.raise_exc = raise_exc
@@ -189,9 +191,7 @@ async def test_structural_sufficient() -> None:
 @pytest.mark.asyncio
 async def test_structural_insufficient_runs_semantic() -> None:
     """Structural still over threshold → semantic runs and lowers further."""
-    state = _make_state(
-        [Message(role="user", content=f"q{i}") for i in range(20)]
-    )
+    state = _make_state([Message(role="user", content=f"q{i}") for i in range(20)])
     post_structural_state = _make_state(
         [Message(role="user", content="q19")],
         token_used=85_000,
@@ -237,9 +237,7 @@ async def test_structural_insufficient_runs_semantic() -> None:
 @pytest.mark.asyncio
 async def test_semantic_failure_fallback_structural() -> None:
     """Semantic raises → return structural result tagged HYBRID."""
-    state = _make_state(
-        [Message(role="user", content=f"q{i}") for i in range(20)]
-    )
+    state = _make_state([Message(role="user", content=f"q{i}") for i in range(20)])
     post_structural_state = _make_state(
         [Message(role="user", content="q19")],
         token_used=85_000,
@@ -253,9 +251,7 @@ async def test_semantic_failure_fallback_structural() -> None:
             compacted_state=post_structural_state,
         )
     )
-    semantic_stub = _StubSemantic(
-        raise_exc=SemanticCompactionFailedError("simulated failure")
-    )
+    semantic_stub = _StubSemantic(raise_exc=SemanticCompactionFailedError("simulated failure"))
     hybrid = HybridCompactor(
         structural=structural_stub,
         semantic=semantic_stub,
@@ -274,9 +270,7 @@ async def test_semantic_failure_fallback_structural() -> None:
 @pytest.mark.asyncio
 async def test_both_fail_emit_warning(caplog: pytest.LogCaptureFixture) -> None:
     """Structural triggered=False AND semantic raises → warning + passthrough."""
-    state = _make_state(
-        [Message(role="user", content=f"q{i}") for i in range(20)]
-    )
+    state = _make_state([Message(role="user", content=f"q{i}") for i in range(20)])
     structural_stub = _StubCompactor(
         fixed_result=_make_result(
             triggered=False,
@@ -284,9 +278,7 @@ async def test_both_fail_emit_warning(caplog: pytest.LogCaptureFixture) -> None:
             tokens_after=95_000,
         )
     )
-    semantic_stub = _StubSemantic(
-        raise_exc=SemanticCompactionFailedError("semantic failed")
-    )
+    semantic_stub = _StubSemantic(raise_exc=SemanticCompactionFailedError("semantic failed"))
     hybrid = HybridCompactor(
         structural=structural_stub,
         semantic=semantic_stub,

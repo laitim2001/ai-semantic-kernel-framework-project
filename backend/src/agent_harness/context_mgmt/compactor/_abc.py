@@ -30,7 +30,7 @@ Related:
 Created: 2026-05-01 (Sprint 52.1, Day 1)
 
 Modification History:
-    - 2026-05-01: Initial creation (Sprint 52.1 Day 1) — Compactor ABC with should_compact + compact_if_needed
+    - 2026-05-01: Initial creation (Sprint 52.1 Day 1) — Compactor ABC with should_compact + compact_if_needed  # noqa: E501
 """
 
 from __future__ import annotations

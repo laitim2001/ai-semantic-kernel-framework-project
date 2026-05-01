@@ -12,10 +12,7 @@ Scope: Sprint 52.1 Day 3.8
 
 from __future__ import annotations
 
-import pytest
-
 from agent_harness._contracts import Message
-from agent_harness.context_mgmt.token_counter import claude_counter as cc_module
 from agent_harness.context_mgmt.token_counter.claude_counter import ClaudeTokenCounter
 
 

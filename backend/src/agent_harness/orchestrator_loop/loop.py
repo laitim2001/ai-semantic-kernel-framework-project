@@ -68,21 +68,27 @@ Related:
 from __future__ import annotations
 
 import asyncio
+
+# Local import to avoid circular: only used at runtime for state placeholders
+from datetime import datetime
 from typing import AsyncIterator
 from uuid import UUID
 
+# Need imports from sibling adapter / tools / output_parser modules:
+from adapters._base.chat_client import ChatClient
 from agent_harness._contracts import (
     ChatRequest,
     ChatResponse,
     ContentBlock,
     ContextCompacted,
     DurableState,
+    ExecutionContext,
     LLMRequested,
     LLMResponded,
-    LoopEvent,
-    LoopState,
-    LoopStarted,
     LoopCompleted,
+    LoopEvent,
+    LoopStarted,
+    LoopState,
     Message,
     SpanCategory,
     StateVersion,
@@ -96,6 +102,8 @@ from agent_harness._contracts import (
 )
 from agent_harness.context_mgmt import Compactor
 from agent_harness.observability import NoOpTracer, Tracer
+from agent_harness.output_parser import OutputParser, OutputType, classify_output
+from agent_harness.tools import ToolExecutor, ToolRegistry  # public path per category-boundaries.md
 
 from ._abc import AgentLoop
 from .termination import (
@@ -105,15 +113,6 @@ from .termination import (
     should_terminate_by_tokens,
     should_terminate_by_turns,
 )
-
-# Need imports from sibling adapter / tools / output_parser modules:
-from adapters._base.chat_client import ChatClient
-from agent_harness.output_parser import OutputParser, OutputType, classify_output
-from agent_harness.tools import ToolExecutor, ToolRegistry  # public path per category-boundaries.md
-
-# Local import to avoid circular: only used at runtime for state placeholders
-from datetime import datetime
-from uuid import uuid4 as _uuid4
 
 
 class AgentLoopImpl(AgentLoop):
@@ -216,7 +215,10 @@ class AgentLoopImpl(AgentLoop):
                     compaction_result = await self._compactor.compact_if_needed(
                         compact_state, trace_context=ctx
                     )
-                    if compaction_result.triggered and compaction_result.compacted_state is not None:
+                    if (
+                        compaction_result.triggered
+                        and compaction_result.compacted_state is not None
+                    ):
                         messages = list(compaction_result.compacted_state.transient.messages)
                         tokens_used = compaction_result.tokens_after
                         strategy_label = (
@@ -324,7 +326,18 @@ class AgentLoopImpl(AgentLoop):
                         trace_context=ctx,
                     )
                     try:
-                        result = await self._tool_executor.execute(tc, trace_context=ctx)
+                        # Sprint 52.5 P0 #18: build ExecutionContext from
+                        # trace_context so memory_tools (and future scoped
+                        # tools) get server-authoritative tenant_id /
+                        # user_id / session_id instead of trusting LLM args.
+                        exec_ctx = ExecutionContext(
+                            tenant_id=ctx.tenant_id,
+                            user_id=ctx.user_id,
+                            session_id=ctx.session_id or session_id,
+                        )
+                        result = await self._tool_executor.execute(
+                            tc, trace_context=ctx, context=exec_ctx
+                        )
                     except asyncio.CancelledError:
                         yield LoopCompleted(
                             stop_reason=TerminationReason.CANCELLED.value,

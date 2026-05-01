@@ -74,9 +74,30 @@ def serialize_loop_event(event: LoopEvent) -> dict[str, Any] | None:
     """Map a LoopEvent instance to the SSE event_dict shape per 02.md §SSE.
 
     Returns a dict with keys ``type`` (SSE event type string) and ``data``
-    (dict serializable as JSON), or None to signal "skip this event"
-    (used for Thinking, replaced by LLMResponded in Day 2). Raises
+    (dict serializable as JSON, with ``trace_id`` field injected from
+    ``event.trace_context``), or None to signal "skip this event" (used
+    for Thinking, replaced by LLMResponded in Day 2). Raises
     NotImplementedError for events not yet wired in 50.2 scope.
+
+    Sprint 52.5 P0 #12: ``trace_id`` always present in ``data`` (or None
+    if event has no trace_context — should not happen in main flow now
+    that chat router always creates a root TraceContext).
+    """
+    payload = _serialize_inner(event)
+    if payload is None:
+        return None
+    # P0 #12 — inject trace_id into every emitted SSE frame so frontend
+    # can correlate live events with backend logs / Jaeger traces.
+    trace_ctx = getattr(event, "trace_context", None)
+    payload["data"]["trace_id"] = trace_ctx.trace_id if trace_ctx else None
+    return payload
+
+
+def _serialize_inner(event: LoopEvent) -> dict[str, Any] | None:
+    """Inner serializer — same logic as before P0 #12, no trace_id injection.
+
+    Pulled out so ``serialize_loop_event`` can wrap it with cross-cutting
+    concerns (currently: trace_id injection; future: tenant attribution).
     """
     if isinstance(event, LoopStarted):
         return {

@@ -104,9 +104,9 @@ async def test_cross_tenant_same_content_no_leak() -> None:
         section_id="system_prompt",
         content_hash="hash123",
     )
-    assert key_a != key_b, (
-        "Cross-tenant cache key collision detected — multi-tenant isolation broken!"
-    )
+    assert (
+        key_a != key_b
+    ), "Cross-tenant cache key collision detected — multi-tenant isolation broken!"
 
 
 @pytest.mark.asyncio
@@ -143,9 +143,9 @@ async def test_cache_key_includes_tenant_id_first() -> None:
 
     expected_input = f"{tenant}:system_prompt:abc:azure_openai_gpt-4o"
     expected_key = hashlib.sha256(expected_input.encode("utf-8")).hexdigest()
-    assert actual_key == expected_key, (
-        "Cache key formula deviated from `tenant_id:section_id:content_hash:provider` order"
-    )
+    assert (
+        actual_key == expected_key
+    ), "Cache key formula deviated from `tenant_id:section_id:content_hash:provider` order"
 
 
 @pytest.mark.asyncio
@@ -165,9 +165,9 @@ async def test_provider_signature_isolation() -> None:
         section_id="system_prompt",
         content_hash="hash",
     )
-    assert key_azure != key_anthropic, (
-        "Provider signature is not partitioning the cache — cross-provider leak!"
-    )
+    assert (
+        key_azure != key_anthropic
+    ), "Provider signature is not partitioning the cache — cross-provider leak!"
 
 
 # ============================================================================

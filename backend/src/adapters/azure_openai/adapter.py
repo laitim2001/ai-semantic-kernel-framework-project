@@ -39,6 +39,7 @@ from typing import TYPE_CHECKING, AsyncIterator, Literal
 
 if TYPE_CHECKING:
     from agent_harness.context_mgmt.token_counter.tiktoken_counter import TiktokenCounter
+    from agent_harness.observability import Tracer
 
 import tiktoken
 from openai import AsyncAzureOpenAI
@@ -78,12 +79,26 @@ _AZURE_FINISH_REASON_MAP: dict[str, StopReason] = {
 class AzureOpenAIAdapter(ChatClient):
     """Azure OpenAI ChatClient implementation."""
 
-    def __init__(self, config: AzureOpenAIConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: AzureOpenAIConfig | None = None,
+        *,
+        tracer: "Tracer | None" = None,
+    ) -> None:
         self.config = config or AzureOpenAIConfig()
         self._client: AsyncAzureOpenAI | None = None
         self._tokenizer: tiktoken.Encoding | None = None
         # 52.1 Day 3.10: lazy Cat 4 token counter (replaces inline tiktoken loop)
         self._token_counter: "TiktokenCounter | None" = None
+        # Sprint 52.5 P0 #16: tracer injection for the LLM-call span.
+        # NoOpTracer is the lazy default used when no tracer is wired in
+        # (unit tests + dev paths). Production wiring goes through
+        # api/v1/chat/handler.py which builds an OTelTracer once per process.
+        if tracer is None:
+            from agent_harness.observability import NoOpTracer
+
+            tracer = NoOpTracer()
+        self._tracer: "Tracer" = tracer
 
     # -- lazy clients ------------------------------------------------------
 
@@ -121,7 +136,17 @@ class AzureOpenAIAdapter(ChatClient):
         cache_breakpoints: list[CacheBreakpoint] | None = None,
         trace_context: TraceContext | None = None,
     ) -> ChatResponse:
-        """Single non-streaming completion."""
+        """Single non-streaming completion.
+
+        Sprint 52.5 P0 #16: wraps the LLM call in `tracer.start_span("llm_chat")`
+        so the span hierarchy includes the SDK call as a child of the loop's
+        outer span. Pre-refactor, audit W4P-1 found `trace_context` reached
+        adapter (8 hits) but no `tracer.start_span` ever fired here — the
+        adapter was a span-tree dead end.
+        """
+        # Lazy import — keeps module-load cost down for non-tracing test paths.
+        from agent_harness._contracts import SpanCategory
+
         client = self._get_client()
         azure_messages = messages_to_azure(request.messages)
         azure_tools = tool_specs_to_azure(list(request.tools)) if request.tools else None
@@ -134,26 +159,38 @@ class AzureOpenAIAdapter(ChatClient):
                 self.config.model_name,
             )
 
-        try:
-            kwargs: dict[str, object] = {
-                "model": self.config.deployment_name,
-                "messages": azure_messages,
-                "temperature": request.temperature,
-            }
-            if azure_tools:
-                kwargs["tools"] = azure_tools
-                kwargs["tool_choice"] = request.tool_choice
-            if request.max_tokens is not None:
-                kwargs["max_tokens"] = request.max_tokens
+        async with self._tracer.start_span(
+            name="llm_chat",
+            category=SpanCategory.ORCHESTRATOR,
+            trace_context=trace_context,
+            attributes={
+                "provider": "azure_openai",
+                "model": self.config.model_name,
+                "deployment": self.config.deployment_name,
+                "stream": "false",
+                "has_tools": "true" if azure_tools else "false",
+            },
+        ):
+            try:
+                kwargs: dict[str, object] = {
+                    "model": self.config.deployment_name,
+                    "messages": azure_messages,
+                    "temperature": request.temperature,
+                }
+                if azure_tools:
+                    kwargs["tools"] = azure_tools
+                    kwargs["tool_choice"] = request.tool_choice
+                if request.max_tokens is not None:
+                    kwargs["max_tokens"] = request.max_tokens
 
-            response = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]
-        except asyncio.CancelledError:
-            logger.info("azure_openai chat cancelled")
-            raise
-        except Exception as exc:  # noqa: BLE001
-            raise AzureOpenAIErrorMapper.map(exc) from exc
+                response = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]  # noqa: E501
+            except asyncio.CancelledError:
+                logger.info("azure_openai chat cancelled")
+                raise
+            except Exception as exc:  # noqa: BLE001
+                raise AzureOpenAIErrorMapper.map(exc) from exc
 
-        return self._parse_response(response)
+            return self._parse_response(response)
 
     # -- core: stream ------------------------------------------------------
 
@@ -173,71 +210,88 @@ class AzureOpenAIAdapter(ChatClient):
         *,
         trace_context: TraceContext | None,
     ) -> AsyncIterator[StreamEvent]:
+        # Sprint 52.5 P0 #16: span wraps the full stream lifetime — opens
+        # before the SDK request, stays open while consumer iterates, closes
+        # when the generator is exhausted / cancelled / errors.
+        from agent_harness._contracts import SpanCategory
+
         client = self._get_client()
         azure_messages = messages_to_azure(request.messages)
         azure_tools = tool_specs_to_azure(list(request.tools)) if request.tools else None
 
-        try:
-            kwargs: dict[str, object] = {
-                "model": self.config.deployment_name,
-                "messages": azure_messages,
-                "temperature": request.temperature,
-                "stream": True,
-            }
-            if azure_tools:
-                kwargs["tools"] = azure_tools
-            if request.max_tokens is not None:
-                kwargs["max_tokens"] = request.max_tokens
+        async with self._tracer.start_span(
+            name="llm_chat_stream",
+            category=SpanCategory.ORCHESTRATOR,
+            trace_context=trace_context,
+            attributes={
+                "provider": "azure_openai",
+                "model": self.config.model_name,
+                "deployment": self.config.deployment_name,
+                "stream": "true",
+                "has_tools": "true" if azure_tools else "false",
+            },
+        ):
+            try:
+                kwargs: dict[str, object] = {
+                    "model": self.config.deployment_name,
+                    "messages": azure_messages,
+                    "temperature": request.temperature,
+                    "stream": True,
+                }
+                if azure_tools:
+                    kwargs["tools"] = azure_tools
+                if request.max_tokens is not None:
+                    kwargs["max_tokens"] = request.max_tokens
 
-            stream = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            raise AzureOpenAIErrorMapper.map(exc) from exc
+                stream = await client.chat.completions.create(**kwargs)  # type: ignore[call-overload]  # noqa: E501
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                raise AzureOpenAIErrorMapper.map(exc) from exc
 
-        try:
-            async for chunk in stream:
-                if not chunk.choices:
-                    continue
-                choice = chunk.choices[0]
-                delta = choice.delta
+            try:
+                async for chunk in stream:
+                    if not chunk.choices:
+                        continue
+                    choice = chunk.choices[0]
+                    delta = choice.delta
 
-                if delta.content:
-                    yield StreamEvent(
-                        event_type="content_delta",
-                        payload={"text": delta.content},
-                    )
-                if delta.tool_calls:
-                    for tc_delta in delta.tool_calls:
+                    if delta.content:
                         yield StreamEvent(
-                            event_type="tool_call_delta",
-                            payload={
-                                "id": getattr(tc_delta, "id", None),
-                                "name": (
-                                    getattr(tc_delta.function, "name", None)
-                                    if tc_delta.function
-                                    else None
-                                ),
-                                "arguments_delta": (
-                                    getattr(tc_delta.function, "arguments", None)
-                                    if tc_delta.function
-                                    else None
-                                ),
-                            },
+                            event_type="content_delta",
+                            payload={"text": delta.content},
                         )
-                if choice.finish_reason:
-                    stop = _AZURE_FINISH_REASON_MAP.get(
-                        choice.finish_reason, StopReason.PROVIDER_ERROR
-                    )
-                    yield StreamEvent(
-                        event_type="stop",
-                        payload={"stop_reason": stop.value},
-                    )
-        except asyncio.CancelledError:
-            logger.info("azure_openai stream cancelled mid-flight")
-            raise
-        except Exception as exc:  # noqa: BLE001
-            raise AzureOpenAIErrorMapper.map(exc) from exc
+                    if delta.tool_calls:
+                        for tc_delta in delta.tool_calls:
+                            yield StreamEvent(
+                                event_type="tool_call_delta",
+                                payload={
+                                    "id": getattr(tc_delta, "id", None),
+                                    "name": (
+                                        getattr(tc_delta.function, "name", None)
+                                        if tc_delta.function
+                                        else None
+                                    ),
+                                    "arguments_delta": (
+                                        getattr(tc_delta.function, "arguments", None)
+                                        if tc_delta.function
+                                        else None
+                                    ),
+                                },
+                            )
+                    if choice.finish_reason:
+                        stop = _AZURE_FINISH_REASON_MAP.get(
+                            choice.finish_reason, StopReason.PROVIDER_ERROR
+                        )
+                        yield StreamEvent(
+                            event_type="stop",
+                            payload={"stop_reason": stop.value},
+                        )
+            except asyncio.CancelledError:
+                logger.info("azure_openai stream cancelled mid-flight")
+                raise
+            except Exception as exc:  # noqa: BLE001
+                raise AzureOpenAIErrorMapper.map(exc) from exc
 
     # -- token / pricing / capability --------------------------------------
 

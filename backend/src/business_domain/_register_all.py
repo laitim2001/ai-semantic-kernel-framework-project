@@ -27,13 +27,10 @@ Last Modified: 2026-04-30
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
-from typing import Any
-
-from agent_harness._contracts import ToolCall
 from agent_harness.observability import Tracer
 from agent_harness.tools import (
     ToolExecutorImpl,
+    ToolHandler,
     ToolRegistry,
     ToolRegistryImpl,
 )
@@ -44,8 +41,6 @@ from .correlation.tools import register_correlation_tools
 from .incident.tools import register_incident_tools
 from .patrol.tools import register_patrol_tools
 from .rootcause.tools import register_rootcause_tools
-
-ToolHandler = Callable[[ToolCall], Awaitable[str | dict[str, Any]]]
 
 # Default mock backend URL (overridable per-call)
 DEFAULT_MOCK_URL = "http://localhost:8001"

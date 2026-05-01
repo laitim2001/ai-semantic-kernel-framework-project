@@ -98,9 +98,7 @@ class SystemLayer(MemoryLayer):
         tenant_id: UUID | None = None,
         trace_context: TraceContext | None = None,
     ) -> None:
-        raise SystemReadOnlyError(
-            "SystemLayer is read-only at runtime; cannot evict."
-        )
+        raise SystemReadOnlyError("SystemLayer is read-only at runtime; cannot evict.")
 
     async def resolve(
         self,

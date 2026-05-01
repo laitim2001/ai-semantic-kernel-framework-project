@@ -21,9 +21,7 @@ def _resp(
     tool_calls: list[ToolCall] | None = None,
     stop: StopReason = StopReason.END_TURN,
 ) -> ChatResponse:
-    return ChatResponse(
-        model="m", content="", tool_calls=tool_calls, stop_reason=stop
-    )
+    return ChatResponse(model="m", content="", tool_calls=tool_calls, stop_reason=stop)
 
 
 def test_classify_final_no_tool_calls() -> None:

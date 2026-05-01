@@ -107,7 +107,9 @@ class HybridCompactor(Compactor):
             if structural_result.triggered and structural_result.compacted_state is not None
             else state
         )
-        post_structural_tokens = structural_result.tokens_after if structural_result.triggered else tokens_before
+        post_structural_tokens = (
+            structural_result.tokens_after if structural_result.triggered else tokens_before
+        )
 
         threshold = self.token_budget * self.token_threshold_ratio
         needs_semantic = post_structural_tokens > threshold
@@ -116,11 +118,7 @@ class HybridCompactor(Compactor):
             # Structural was sufficient (or both passthrough)
             return replace(
                 structural_result,
-                strategy_used=(
-                    CompactionStrategy.HYBRID
-                    if structural_result.triggered
-                    else None
-                ),
+                strategy_used=(CompactionStrategy.HYBRID if structural_result.triggered else None),
                 duration_ms=(time.perf_counter() - start) * 1000.0,
             )
 
@@ -137,11 +135,7 @@ class HybridCompactor(Compactor):
             # Fallback: return structural result tagged as HYBRID (so callers see the strategy)
             return replace(
                 structural_result,
-                strategy_used=(
-                    CompactionStrategy.HYBRID
-                    if structural_result.triggered
-                    else None
-                ),
+                strategy_used=(CompactionStrategy.HYBRID if structural_result.triggered else None),
                 duration_ms=(time.perf_counter() - start) * 1000.0,
             )
 
@@ -149,9 +143,7 @@ class HybridCompactor(Compactor):
             # Semantic decided no work needed (e.g. nothing left to summarise)
             if not structural_result.triggered:
                 # Neither stage did work
-                logger.debug(
-                    "HybridCompactor: both structural and semantic returned passthrough"
-                )
+                logger.debug("HybridCompactor: both structural and semantic returned passthrough")
                 return CompactionResult(
                     triggered=False,
                     strategy_used=None,
@@ -169,9 +161,8 @@ class HybridCompactor(Compactor):
 
         # Both stages did work (or only semantic did)
         total_messages_compacted = (
-            (structural_result.messages_compacted if structural_result.triggered else 0)
-            + semantic_result.messages_compacted
-        )
+            structural_result.messages_compacted if structural_result.triggered else 0
+        ) + semantic_result.messages_compacted
         return CompactionResult(
             triggered=True,
             strategy_used=CompactionStrategy.HYBRID,

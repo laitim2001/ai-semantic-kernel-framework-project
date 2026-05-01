@@ -8,9 +8,7 @@ from pathlib import Path
 
 
 def _load_lint_module() -> object:
-    repo_root = (
-        Path(__file__).resolve().parents[5]
-    )  # …/backend/tests/unit/scripts/lint -> repo
+    repo_root = Path(__file__).resolve().parents[5]  # …/backend/tests/unit/scripts/lint -> repo
     script = repo_root / "scripts" / "lint" / "check_duplicate_dataclass.py"
     spec = importlib.util.spec_from_file_location("check_dup", script)
     assert spec and spec.loader

@@ -94,9 +94,7 @@ async def test_read_filters_only_short_term_axis() -> None:
     layer = SessionLayer()
     tenant = uuid4()
     session_id = uuid4()
-    await layer.write(
-        content="hi", tenant_id=tenant, user_id=session_id, time_scale="short_term"
-    )
+    await layer.write(content="hi", tenant_id=tenant, user_id=session_id, time_scale="short_term")
 
     # long_term-only request → empty (session layer is short_term only)
     hints = await layer.read(
