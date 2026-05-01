@@ -47,8 +47,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from jose import jwt as jose_jwt
-from jose.exceptions import ExpiredSignatureError, JWTError
+from jose import jwt as jose_jwt  # type: ignore[import-untyped]
+from jose.exceptions import (  # type: ignore[import-untyped]
+    ExpiredSignatureError,
+    JWTError,
+)
 
 from core.config import get_settings
 
@@ -163,7 +166,8 @@ class JWTManager:
                 if key in self._RESERVED_CLAIMS:
                     raise ValueError(f"extra claim '{key}' overlaps a reserved standard claim")
             payload.update(extra)
-        return jose_jwt.encode(payload, self.secret, algorithm=self.algorithm)
+        encoded: str = jose_jwt.encode(payload, self.secret, algorithm=self.algorithm)
+        return encoded
 
     def decode(self, token: str) -> JWTClaims:
         """Validate signature + expiration and return parsed claims.

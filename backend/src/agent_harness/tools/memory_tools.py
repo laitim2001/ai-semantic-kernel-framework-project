@@ -66,8 +66,7 @@ from agent_harness._contracts import (
     ToolHITLPolicy,
     ToolSpec,
 )
-from agent_harness.memory._abc import MemoryLayer
-from agent_harness.memory.retrieval import MemoryRetrieval
+from agent_harness.memory import MemoryLayer, MemoryRetrieval
 
 ToolHandler = Callable[[ToolCall, ExecutionContext], Awaitable[str]]
 

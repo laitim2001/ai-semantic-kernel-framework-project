@@ -16,8 +16,6 @@ Last Modified: 2026-04-30
 from __future__ import annotations
 
 import json
-from collections.abc import Awaitable, Callable
-from typing import Any
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
@@ -27,12 +25,12 @@ from agent_harness._contracts import (
     ToolHITLPolicy,
     ToolSpec,
 )
+
+# Sprint 52.5 P0 #18: use Union ToolHandler from tools.__init__
+from agent_harness.tools import ToolHandler  # noqa: E402
 from agent_harness.tools import ToolRegistry
 
 from .mock_executor import DEFAULT_BASE_URL, RootcauseMockExecutor
-
-ToolHandler = Callable[[ToolCall], Awaitable[str | dict[str, Any]]]
-
 
 SPEC_DIAGNOSE = ToolSpec(
     name="mock_rootcause_diagnose",

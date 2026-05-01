@@ -250,7 +250,7 @@ class DockerSandbox(SandboxBackend):
     def _get_client(self) -> Any:
         if self._client is None:
             # Lazy import: keeps module import cheap when sandbox unused.
-            import docker
+            import docker  # type: ignore[import-untyped, unused-ignore]
 
             self._client = docker.from_env()
         return self._client
@@ -401,7 +401,7 @@ def default_sandbox(*, image: str | None = None) -> SandboxBackend:
 
     logger = logging.getLogger(__name__)
     try:
-        import docker
+        import docker  # type: ignore[import-untyped, unused-ignore]
 
         client = docker.from_env()
         # Cheap reachability check; raises if daemon not running.

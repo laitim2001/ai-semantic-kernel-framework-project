@@ -39,6 +39,7 @@ from typing import TYPE_CHECKING, AsyncIterator, Literal
 
 if TYPE_CHECKING:
     from agent_harness.context_mgmt.token_counter.tiktoken_counter import TiktokenCounter
+    from agent_harness.observability import Tracer
 
 import tiktoken
 from openai import AsyncAzureOpenAI
@@ -82,7 +83,7 @@ class AzureOpenAIAdapter(ChatClient):
         self,
         config: AzureOpenAIConfig | None = None,
         *,
-        tracer: object | None = None,
+        tracer: "Tracer | None" = None,
     ) -> None:
         self.config = config or AzureOpenAIConfig()
         self._client: AsyncAzureOpenAI | None = None
@@ -90,7 +91,6 @@ class AzureOpenAIAdapter(ChatClient):
         # 52.1 Day 3.10: lazy Cat 4 token counter (replaces inline tiktoken loop)
         self._token_counter: "TiktokenCounter | None" = None
         # Sprint 52.5 P0 #16: tracer injection for the LLM-call span.
-        # `object` typing avoids a hard module-level import of agent_harness;
         # NoOpTracer is the lazy default used when no tracer is wired in
         # (unit tests + dev paths). Production wiring goes through
         # api/v1/chat/handler.py which builds an OTelTracer once per process.
@@ -98,7 +98,7 @@ class AzureOpenAIAdapter(ChatClient):
             from agent_harness.observability import NoOpTracer
 
             tracer = NoOpTracer()
-        self._tracer = tracer
+        self._tracer: "Tracer" = tracer
 
     # -- lazy clients ------------------------------------------------------
 
@@ -159,7 +159,7 @@ class AzureOpenAIAdapter(ChatClient):
                 self.config.model_name,
             )
 
-        async with self._tracer.start_span(  # type: ignore[union-attr]
+        async with self._tracer.start_span(
             name="llm_chat",
             category=SpanCategory.ORCHESTRATOR,
             trace_context=trace_context,
@@ -219,7 +219,7 @@ class AzureOpenAIAdapter(ChatClient):
         azure_messages = messages_to_azure(request.messages)
         azure_tools = tool_specs_to_azure(list(request.tools)) if request.tools else None
 
-        async with self._tracer.start_span(  # type: ignore[union-attr]
+        async with self._tracer.start_span(
             name="llm_chat_stream",
             category=SpanCategory.ORCHESTRATOR,
             trace_context=trace_context,
