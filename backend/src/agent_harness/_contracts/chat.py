@@ -74,13 +74,25 @@ class ToolCall:
 
 @dataclass(frozen=True)
 class Message:
-    """LLM-neutral message. role / content / tool_calls."""
+    """LLM-neutral message. role / content / tool_calls / metadata.
+
+    metadata (52.1 Day 2 extension) carries non-LLM-facing flags used by
+    Cat 4 Compactor and Cat 5 PromptBuilder (e.g. {"hitl": True} preserves
+    HITL approval messages through structural compaction; {"compacted_summary":
+    True} tags semantic-compacted summary messages). Adapters MUST NOT serialise
+    metadata into provider requests — it is local bookkeeping only.
+
+    The dict default is mutable but the Message instance itself is frozen
+    (cannot rebind fields). Unhashable due to mutable field — Message is not
+    used as dict key / set member anywhere in the harness (verified Day 2).
+    """
 
     role: Literal["system", "user", "assistant", "tool"]
     content: str | list[ContentBlock]
     tool_calls: list[ToolCall] | None = None
     tool_call_id: str | None = None
     name: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -120,8 +132,29 @@ class ChatResponse:
 
 @dataclass(frozen=True)
 class CacheBreakpoint:
-    """Anthropic-style cache_control marker; positions in the prompt."""
+    """Cache_control marker for prompt-cache providers (Anthropic / OpenAI / Redis).
 
+    Two layers of fields:
+      Physical (51.1, owner: Cat 5 PromptBuilder) — provider-facing positioning:
+        - position / ttl_seconds / breakpoint_type
+      Logical (52.1, owner: Cat 4 PromptCacheManager) — internal cache lookup:
+        - section_id / content_hash / cache_control (all default=None for 51.1 compat)
+
+    The logical fields let Cat 4 deduplicate / invalidate cache entries by tenant + section
+    without forcing 51.1 callers to migrate. 52.2 PromptBuilder bridges the two layers.
+    """
+
+    # Physical marker (51.1, retained verbatim — 5 callers depend on these)
     position: int
     ttl_seconds: int = 300
     breakpoint_type: Literal["ephemeral", "persistent"] = "ephemeral"
+
+    # Logical metadata (52.1 extension — Cat 4 fills; Cat 5 may use; 52.2 wires through)
+    section_id: str | None = None
+    """Logical section id (e.g. "system", "tools", "memory_user_layer"); set by PromptCacheManager."""
+
+    content_hash: str | None = None
+    """sha256 of the cached content; key component for invalidation lookups."""
+
+    cache_control: dict[str, object] | None = None
+    """Provider-native cache_control dict (Anthropic-style); None = use physical fields only."""

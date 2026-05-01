@@ -1,5 +1,23 @@
-"""Category 4: Context Management (compaction + token counting + caching). See README.md."""
+"""Category 4: Context Management (compaction + masking + token counting + caching).
 
-from agent_harness.context_mgmt._abc import Compactor, PromptCacheManager, TokenCounter
+Re-exports the 5 Cat 4 ABCs:
+    - Compactor (compactor/_abc.py)
+    - ObservationMasker, JITRetrieval (_abc.py)
+    - TokenCounter (token_counter/_abc.py)
+    - PromptCacheManager (cache_manager.py)
 
-__all__ = ["Compactor", "TokenCounter", "PromptCacheManager"]
+See README.md for category overview; 17.md §2.1 for canonical ABC list.
+"""
+
+from agent_harness.context_mgmt._abc import JITRetrieval, ObservationMasker
+from agent_harness.context_mgmt.cache_manager import PromptCacheManager
+from agent_harness.context_mgmt.compactor import Compactor
+from agent_harness.context_mgmt.token_counter import TokenCounter
+
+__all__ = [
+    "Compactor",
+    "ObservationMasker",
+    "JITRetrieval",
+    "TokenCounter",
+    "PromptCacheManager",
+]
