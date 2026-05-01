@@ -54,7 +54,8 @@ V2 review 發現 7 條跨範疇 / 跨文件重複定義：
 | `LoopEvent` | `01-eleven-categories-spec.md` | 範疇 1 | Loop 事件流（`AgentLoop.events()` yield） |
 | `StopReason` | `10-server-side-philosophy.md` | 原則 2 enum 中性化表 | 替代 per-provider 字串 |
 | `MemoryHint` | `01-eleven-categories-spec.md` | 範疇 3 | 「線索→驗證」資料結構（**51.2 Day 1** 擴 5 欄位：`time_scale` / `confidence` / `last_verified_at` / `verify_before_use` / `source_tool_call_id`） |
-| `PromptArtifact` | `01-eleven-categories-spec.md` | 範疇 5 | PromptBuilder 產出（含 cache breakpoints） |
+| `PromptArtifact` | `01-eleven-categories-spec.md` | 範疇 5 | PromptBuilder 產出（messages / cache_breakpoints / estimated_input_tokens / **layer_metadata** keys per 52.2 Day 1.6：`memory_layers_used: list[str]` / `position_strategy: str` / `cache_sections: list[str]` / `trace_id: str`（W3-2 carryover；前端 SSE event 串連日誌用））|
+| `PromptSections` | `01-eleven-categories-spec.md` | 範疇 5 | DefaultPromptBuilder 內部 dataclass；5 欄位（`system: Message` / `tools: list[ToolSpec]` / `memory_layers: dict[str, list[MemoryHint]]` / `conversation: list[Message]` / `user_message: Message \| None`）— **52.2 Day 1.3 新增**；caller 預先按 time_scale priority 排序 memory_layers 後傳入 PositionStrategy.arrange() |
 | `CacheBreakpoint` | `01-eleven-categories-spec.md` | 範疇 5（物理）+ 範疇 4（logical metadata） | Provider cache_control 標記。**51.1**：物理欄位 `position` / `ttl_seconds` / `breakpoint_type`（Cat 5 own）。**52.1 Day 1 擴充**：logical metadata 欄位 `section_id` / `content_hash` / `cache_control`（Cat 4 own，全 default=None 維持 51.1 callers 兼容）|
 | `CompactionStrategy` | `01-eleven-categories-spec.md` | 範疇 4 | Compactor 策略 enum（STRUCTURAL / SEMANTIC / HYBRID）— **52.1 Day 1 新增** |
 | `CompactionResult` | `01-eleven-categories-spec.md` | 範疇 4 | `Compactor.compact_if_needed()` 回傳；7 欄位（triggered / strategy_used / tokens_before / tokens_after / messages_compacted / duration_ms / compacted_state）— **52.1 Day 1 新增** |
@@ -97,7 +98,7 @@ backend/src/agent_harness/_contracts/
 ├── state.py               ← LoopState/TransientState/DurableState
 ├── events.py              ← LoopEvent
 ├── memory.py              ← MemoryHint
-├── prompt.py              ← PromptArtifact（CacheBreakpoint re-export from chat.py）
+├── prompt.py              ← PromptArtifact（CacheBreakpoint re-export from chat.py）/ PromptSections re-export from prompt_builder.strategies._abc（**52.2 Day 1.7**）
 ├── compaction.py          ← CompactionStrategy/CompactionResult（**52.1 Day 1**）
 ├── cache.py               ← CachePolicy（**52.1 Day 1**）
 ├── verification.py        ← VerificationResult
@@ -126,7 +127,8 @@ backend/src/agent_harness/_contracts/
 | `JITRetrieval` | `01-eleven-categories-spec.md` | 範疇 4 | `resolve(pointer, *, tenant_id) -> str`（async）— **52.1 Day 1 新增**（multi-tenant safety: tenant_id 強制） |
 | `TokenCounter` | `01-eleven-categories-spec.md` | 範疇 4 | `count(messages, tools) -> int` / `accuracy() -> Literal["exact", "approximate"]`（**52.1 Day 1** 加 accuracy method） |
 | `PromptCacheManager` | `01-eleven-categories-spec.md` | 範疇 4 | `get_cache_breakpoints(*, tenant_id, policy) -> list[CacheBreakpoint]`（async） / `invalidate(*, tenant_id, reason) -> None`（async）— **52.1 Day 1 簽名升級**（49.1 stub `plan_breakpoints(messages, provider_supports_caching)` 已淘汰；multi-tenant safety: tenant_id 強制隔離） |
-| `PromptBuilder` | `01-eleven-categories-spec.md` | 範疇 5 | `build() -> PromptArtifact` |
+| `PromptBuilder` | `01-eleven-categories-spec.md` | 範疇 5 | `build(*, state, tenant_id, user_id, tools, cache_policy, position_strategy, trace_context) -> PromptArtifact`（async）— **52.2 Day 1.2 簽名升級**（49.1 stub 4 參數 → 7 參數；加 `tools: list[ToolSpec] \| None`（Loop 從 tool registry passthrough）+ `cache_policy: CachePolicy \| None`（None 用 builder default）+ `position_strategy: PositionStrategy \| None`（None 用 builder default = LostInMiddleStrategy）+ tenant_id 強制必傳 per multi-tenant tri-rule + trace_context propagation per W3-2 audit carryover）|
+| `PositionStrategy` | `01-eleven-categories-spec.md` | 範疇 5 | `arrange(sections: PromptSections) -> list[Message]` — pure stateless rearrangement，no IO；3 concrete impls per 52.2 Day 1.4：`NaiveStrategy`（[system, memory, conv, user]）/ `LostInMiddleStrategy`（**default**；user message 同時錨點首尾）/ `ToolsAtEndStrategy`（messages + tools_position_hint marker；adapter 層 detach）— **52.2 Day 1.3 新增** |
 | `OutputParser` | `01-eleven-categories-spec.md` | 範疇 6 | `parse(response) -> ParsedOutput` |
 | `Checkpointer` | `01-eleven-categories-spec.md` | 範疇 7 | `save()` / `load()` / `time_travel()` |
 | `Reducer` | `01-eleven-categories-spec.md` | 範疇 7 | `merge(state, update) -> state` |
