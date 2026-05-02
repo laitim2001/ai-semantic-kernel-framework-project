@@ -49,6 +49,8 @@ jobs:
           # Sprint 52.6 US-1 expanded (AD-5): install dev extras (gives types-requests
           # for mypy stubs); matches backend-ci.yml pattern.
           pip install -e ".[dev]"
+          # ruff is not in dev extras — install separately (used by Run Ruff step).
+          pip install ruff
           pip install -r requirements.txt
 
       - name: Run Black (formatting)
@@ -154,9 +156,10 @@ jobs:
         run: |
           cd backend
           pip install --upgrade pip
-          # Sprint 52.6 US-7 fixup (AD-5): install package in editable mode so
-          # `from infrastructure.db import ...` (root conftest) resolves.
-          pip install -e .
+          # Sprint 52.6 US-7 fixup (AD-5): install package + dev extras so
+          # `from infrastructure.db import ...` (root conftest) resolves AND
+          # pytest / pytest-asyncio / pytest-cov are available.
+          pip install -e ".[dev]"
           pip install -r requirements.txt
 
       - name: Run tests with coverage
