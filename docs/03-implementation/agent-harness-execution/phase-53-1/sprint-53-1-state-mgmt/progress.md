@@ -101,3 +101,82 @@ Reactivation strategy (Day 3-4):
 - **Branch protection 不需 temp-relax**：Sprint 52.6 已生效 enforce_admins=true；53.1 PR 走正常 review flow（user approve → merge）
 - **Plan section consistency**：本 sprint 9-section plan + Day 0-4 checklist 對齊 52.6 樣板（per `feedback_sprint_plan_use_prior_template.md`）
 - **No admin override expected**: Day 4 PR merge 須通過 8 status checks + 1 review approval
+
+---
+
+## Day 1 — 2026-05-02
+
+### US-1 DefaultReducer concrete impl ✅
+
+**Commit**: `2a31b95f` — `feat(state-mgmt, sprint-53-1): US-1 DefaultReducer concrete impl + 13 unit tests`
+
+**Files**:
+- ➕ `backend/src/agent_harness/state_mgmt/reducer.py` (new, 166 lines)
+- ➕ `backend/tests/unit/agent_harness/state_mgmt/test_reducer.py` (new, 296 lines)
+- ✏️ `backend/src/agent_harness/state_mgmt/__init__.py` (re-export `DefaultReducer`)
+
+**DefaultReducer 特性**:
+- `asyncio.Lock` 序列化 merges → version 序列無洞（即使 concurrent gather）
+- Frozen `StateVersion`：每次 merge bump v+1，`parent_version=v` 留給 time-travel
+- `source_category` audit trail 戳印於每 version（"orchestrator_loop" / "tools" / "guardrails" / etc）
+- Dict-based update protocol：
+  - **transient**: `messages_append` (additive) / `current_turn` (replace) / `elapsed_ms` / `token_usage_so_far` / `pending_tool_calls_set` / `pending_tool_calls_clear`
+  - **durable**: `pending_approval_ids_add` / `pending_approval_ids_remove` (set semantics) / `metadata_set` (dict update) / `conversation_summary` / `last_checkpoint_version` / `user_id`
+- `session_id` / `tenant_id` 不暴露 patch handler — immutable post-creation
+- 返回 NEW `LoopState`（input 不被 mutate）
+- `trace_context` 參數 plumbed through（範疇 12 hook，actual emit 在 49.4 OTel scaffold）
+
+### 13 Unit Tests ✅ (target ≥ 7)
+
+| Test | 覆蓋場景 |
+|------|---------|
+| `test_merge_increments_version_monotonically` | version 0→1，parent 保留 |
+| `test_merge_records_source_category` | audit trail |
+| `test_merge_appends_messages` | additive list extend；input 不變 |
+| `test_merge_replaces_current_turn_and_token_usage` | scalar replace × 3 |
+| `test_merge_pending_tool_calls_set_and_clear` | replace + clear；2 turn 連續 |
+| `test_merge_durable_pending_approval_add_remove` | additive + set 移除 |
+| `test_merge_metadata_set_dict_update` | dict update（不是 replace）|
+| `test_merge_conversation_summary_replace` | range 4 Compactor consumer |
+| `test_parallel_merge_under_lock_no_version_holes` | 10 sequential → v=10 |
+| `test_concurrent_merge_serialized_by_lock` | 5 from same base → no exception |
+| `test_merge_preserves_immutable_session_id_and_tenant_id` | session/tenant 不 patchable |
+| `test_merge_empty_update_still_bumps_version` | audit checkpoint use case |
+| `test_merge_user_id_replace` | user_id replace（rare）|
+
+### Day 1 Sanity Baselines
+
+| Metric | Value | Δ from Day 0 |
+|--------|-------|--------------|
+| pytest | **563 passed** / 4 skip / 14 xfail / 0 fail in 20.66s | +13 ✅ |
+| mypy --strict src | **201 source files** clean | +1 ✅ |
+| Cat 7 coverage | **98%** (47 stmts, 1 miss line 171 trace_context unused branch) | target ≥ 85% ✅ |
+| 6 V2 lint scripts | all green | ✅ |
+| black/isort/flake8/ruff on new files | all green（black auto-fixed 2 files；docstring line 24 手 shorten）| ✅ |
+
+### Day 1 Commit + Push + CI
+
+- Push: `9335860c..2a31b95f` to `feature/sprint-53-1-state-mgmt`
+- Backend CI on `2a31b95f` triggered（path: `backend/**`）
+- 其他 CI workflow 仍待 PR open（與 Day 0 一致）
+
+### #32 Status
+
+✅ Closed by commit `2a31b95f`（comment 含 coverage 98% + 13 tests + sanity confirmation）
+
+### Remaining for Day 2 (US-2 + US-3)
+
+- **US-2** DBCheckpointer + alembic migration + time-travel
+  - `_db_models.py` (SQLAlchemy `StateSnapshotORM`)
+  - `alembic/versions/XXXX_add_state_snapshots.py`（parent: `0010_pg_partman`）
+  - `checkpointer.py` (DBCheckpointer 實作 save / load / time_travel)
+  - Tenant isolation enforced（per `multi-tenant-data.md`）
+  - Tracer events per `observability-instrumentation.md` §5
+- **US-3** Transient/Durable split runtime enforcement
+  - DBCheckpointer.save() 只持久 durable + transient summary scalars（NOT messages buffer）
+  - DBCheckpointer.load() rehydrate transient with empty buffers
+  - README.md 移除 "skeleton" wording
+- Unit + integration tests（≥ 4 unit + ≥ 4 integration）
+- Cat 7 coverage 維持 ≥ 85%
+- Commit `feat(state-mgmt, sprint-53-1): US-2 + US-3 ...` + push + verify Backend CI green
+- Close #33 + #34

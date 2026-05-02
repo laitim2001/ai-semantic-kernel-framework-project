@@ -101,29 +101,29 @@
 ## Day 1 — US-1 Reducer Concrete Impl (est. 5-6 hours)
 
 ### 1.1 Create reducer.py
-- [ ] **Write `DefaultReducer` class**
+- [x] **Write `DefaultReducer` class**
   - File: `backend/src/agent_harness/state_mgmt/reducer.py`
   - File header per `file-header-convention.md`：Purpose / Category 7 / Scope Sprint 53.1 / Description / Modification History
   - Implement `merge(state, update, *, source_category, trace_context=None) -> LoopState`
   - asyncio.Lock for thread safety
   - Monotonic version increment
   - DoD: file 存在；mypy --strict pass for new file
-- [ ] **Implement `_merge_transient` helper**
+- [x] **Implement `_merge_transient` helper**
   - Handle `messages_append` (additive list extend), `current_turn` (replace), `token_usage_so_far` (replace), `pending_tool_calls_set` (replace), `pending_tool_calls_clear` (set to [])
   - DoD: dataclass 重建；frozen contract 守住
-- [ ] **Implement `_merge_durable` helper**
+- [x] **Implement `_merge_durable` helper**
   - Handle `pending_approval_ids_add` / `pending_approval_ids_remove` / `conversation_summary` (replace) / `last_checkpoint_version` (replace) / `metadata_set`
   - DoD: dataclass 重建
 
 ### 1.2 Update state_mgmt/__init__.py
-- [ ] **Re-export DefaultReducer**
+- [x] **Re-export DefaultReducer**
   - Edit `backend/src/agent_harness/state_mgmt/__init__.py`
   - Add: `from agent_harness.state_mgmt.reducer import DefaultReducer`
   - Update `__all__`
   - DoD: `python -c "from agent_harness.state_mgmt import DefaultReducer"` works
 
 ### 1.3 Unit tests
-- [ ] **Create test_reducer.py**
+- [x] **Create test_reducer.py**
   - File: `backend/tests/unit/agent_harness/state_mgmt/test_reducer.py`
   - File header per convention
   - Tests:
@@ -135,37 +135,37 @@
     - `test_parallel_merge_under_lock` (asyncio.gather × 10 → version 連續無洞)
     - `test_merge_emits_tracer_event` (mock TraceContext)
   - DoD: ≥ 7 tests pass
-- [ ] **Run unit tests + coverage**
+- [x] **Run unit tests + coverage**
   - `cd backend && python -m pytest tests/unit/agent_harness/state_mgmt/test_reducer.py -v --cov=src/agent_harness/state_mgmt/reducer --cov-report=term-missing`
   - DoD: coverage ≥ 85%；no regressions in baseline 550 PASS
 
 ### 1.4 Day 1 sanity checks
-- [ ] **mypy strict 仍 clean**
+- [x] **mypy strict 仍 clean**
   - `cd backend && python -m mypy --strict src 2>&1 | tail -3`
   - DoD: 200+ files clean
-- [ ] **All 6 V2 lint scripts 仍綠**
+- [x] **All 6 V2 lint scripts 仍綠**
   - `python scripts/lint/check_llm_sdk_leak.py --root backend/src && python scripts/lint/check_cross_category_import.py --root backend/src/agent_harness && python scripts/lint/check_promptbuilder_usage.py --root backend/src && ...`
   - DoD: 全 exit 0
-- [ ] **Full pytest 不退步**
+- [x] **Full pytest 不退步**
   - `cd backend && python -m pytest --tb=no -q 2>&1 | tail -5`
   - DoD: ≥ 557 PASS（550 baseline + ≥ 7 new reducer tests）/ 14 xfail / 4 skip / 0 fail
 
 ### 1.5 Day 1 commit + push + verify CI
-- [ ] **Commit US-1**
+- [x] **Commit US-1**
   - Stage: `git add backend/src/agent_harness/state_mgmt/reducer.py backend/src/agent_harness/state_mgmt/__init__.py backend/tests/unit/agent_harness/state_mgmt/`
   - Message: `feat(state-mgmt, sprint-53-1): US-1 DefaultReducer concrete impl + unit tests`
   - **Verify branch before commit**
-- [ ] **Push to feature branch**
+- [x] **Push to feature branch**
   - `git push origin feature/sprint-53-1-state-mgmt`
-- [ ] **Verify backend-ci.yml + ci.yml + V2 Lint green on this branch**
+- [x] **Verify backend-ci.yml + ci.yml + V2 Lint green on this branch**
   - `gh run list --branch feature/sprint-53-1-state-mgmt --limit 3`
   - 等 ~3 min；`gh run view <id> --json conclusion`
   - DoD: 8 active workflow 全 success on this push
-- [ ] **Close GitHub issue #32**
+- [x] **Close GitHub issue #32**
   - `gh issue close 32 --comment "Resolved by commit <hash>. Coverage: XX%. Verified: 7 unit tests pass; mypy strict clean; lint scripts pass."`
 
 ### 1.6 Day 1 progress.md update
-- [ ] **Append Day 1 progress.md**
+- [x] **Append Day 1 progress.md**
   - Sections: Today's accomplishments (US-1 ✅) / coverage % / Remaining for Day 2
 
 ---
