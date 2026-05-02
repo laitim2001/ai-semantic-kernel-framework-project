@@ -9,27 +9,27 @@
 ## Day 0 — Setup + Cat 7 Baseline + AI-20 Quick Win (est. 2-3 hours)
 
 ### 0.1 Branch + plan + checklist commit
-- [ ] **Verify on main + clean working tree**
+- [x] **Verify on main + clean working tree**
   - `git checkout main && git pull && git status --short`
   - DoD: HEAD `404b8147`（or newer if main moved）+ working tree empty
-- [ ] **Verify branch protection still enforced**
+- [x] **Verify branch protection still enforced**
   - `gh api repos/laitim2001/ai-semantic-kernel-framework-project/branches/main/protection -q '.enforce_admins.enabled'`
   - DoD: returns `true`（不再走 52.6 temp-relax bootstrap）
-- [ ] **Create feature branch**
+- [x] **Create feature branch**
   - `git checkout -b feature/sprint-53-1-state-mgmt`
   - DoD: `git branch --show-current` returns `feature/sprint-53-1-state-mgmt`
-- [ ] **Verify phase folder structure exists**
+- [x] **Verify phase folder structure exists**
   - planning: `docs/03-implementation/agent-harness-planning/phase-53-1-state-mgmt/sprint-53-1-{plan,checklist}.md`
   - execution (create): `docs/03-implementation/agent-harness-execution/phase-53-1/sprint-53-1-state-mgmt/`
   - DoD: `ls -d` confirms both
-- [ ] **Commit Day 0 docs (plan + checklist)**
+- [x] **Commit Day 0 docs (plan + checklist)**
   - Files: this plan + this checklist
   - Commit message: `docs(state-mgmt, sprint-53-1): Day 0 plan + checklist`
   - **Verify branch before commit**: `git branch --show-current`
   - DoD: `git log -1` shows Day 0 commit on feature branch
 
 ### 0.2 GitHub issues 建立
-- [ ] **Create 6 GitHub issues #32-37**
+- [x] **Create 6 GitHub issues #32-37**
   - 模仿 52.6 #21-26 格式 — title + body 含 plan link + DoD
   - #32 US-1 Reducer concrete impl
   - #33 US-2 DBCheckpointer + alembic + time-travel
@@ -38,60 +38,60 @@
   - #36 US-6 pyproject.toml [dev] add ruff (52.6 AI-20)
   - #37 US-7 code-quality.md cross-platform mypy docs (52.6 AI-21)
   - DoD: `gh issue list -l sprint-53-1 -s open` returns 6 rows; URLs 列入 progress.md
-- [ ] **Verify #27 status**
+- [x] **Verify #27 status**
   - `gh issue view 27 --json state,title,labels`
   - DoD: open；labels 含 `sprint-52-6` + reactivation plan in body；本 sprint 將大幅推進
 
 ### 0.3 Cat 7 既有結構 + baseline 記錄
-- [ ] **Cat 7 stub structure inventory**
+- [x] **Cat 7 stub structure inventory**
   - `ls backend/src/agent_harness/state_mgmt/ backend/src/agent_harness/_contracts/state.py`
   - DoD: 確認 `_abc.py` (Checkpointer + Reducer ABC) + `__init__.py` + `README.md` + `_contracts/state.py` (LoopState/StateVersion/Transient/Durable dataclasses)
-- [ ] **Cat 7 既有 tests dir**
+- [x] **Cat 7 既有 tests dir**
   - `ls backend/tests/unit/agent_harness/state_mgmt/ backend/tests/integration/agent_harness/state_mgmt/ 2>&1 || echo "(missing — to be created)"`
   - DoD: 記錄是否需 mkdir
-- [ ] **Reference points: 21 files referencing state**
+- [x] **Reference points: 21 files referencing state**
   - `grep -rln "Checkpointer\|LoopState\|StateSnapshot" backend/src/agent_harness/ | wc -l`
   - DoD: count 對齊 21（or noted 差異）
-- [ ] **pytest baseline**
+- [x] **pytest baseline**
   - `cd backend && python -m pytest --tb=no -q 2>&1 | tail -5`
   - DoD: `550 PASS / 14 xfailed / 4 skipped / 0 failed` recorded（per Sprint 52.6 closeout）
-- [ ] **mypy baseline**
+- [x] **mypy baseline**
   - `cd backend && python -m mypy --strict src 2>&1 | tail -3`
   - DoD: 200 src files clean recorded
-- [ ] **LLM SDK leak baseline**
+- [x] **LLM SDK leak baseline**
   - `python scripts/lint/check_llm_sdk_leak.py --root backend/src 2>&1 | tail -2`
   - DoD: 0 violations recorded
-- [ ] **alembic head baseline**
+- [x] **alembic head baseline**
   - `cd backend && alembic heads 2>&1 | head -3`
   - DoD: 1 head recorded（為 US-2 migration 對齊 parent）
 
 ### 0.4 US-6 (AI-20) dev extras quick win
-- [ ] **Edit `backend/pyproject.toml`**
+- [x] **Edit `backend/pyproject.toml`**
   - 在 `[project.optional-dependencies] dev = [...]` 加 `"ruff>=0.6,<1.0"`（如已存在則跳過）
   - DoD: `grep "ruff" backend/pyproject.toml` shows entry under [dev]
-- [ ] **Verify in fresh venv (or current)**
+- [x] **Verify in fresh venv (or current)**
   - `cd backend && pip install -e .[dev] 2>&1 | tail -5`
   - `ruff --version`
   - DoD: ruff installed via [dev]; version output OK
-- [ ] **Commit US-6**
+- [x] **Commit US-6**
   - Stage: `git add backend/pyproject.toml`
   - Message: `chore(deps, sprint-53-1): US-6 add ruff to [dev] extras (52.6 AI-20)`
   - **Verify branch before commit**: `git branch --show-current`
-- [ ] **Push to feature branch**
+- [x] **Push to feature branch**
   - `git push origin feature/sprint-53-1-state-mgmt`
-- [ ] **Close GitHub issue #36**
+- [x] **Close GitHub issue #36**
   - `gh issue close 36 --comment "Resolved by commit <hash>. Verified: pip install -e .[dev] installs ruff."`
 
 ### 0.5 #27 catalog 對齊
-- [ ] **List 14 xfail tests with current decorator state**
+- [x] **List 14 xfail tests with current decorator state**
   - `grep -rn "@pytest.mark.xfail" backend/tests/ | head -20`
   - DoD: 14 hits across 6 files；reasons 對齊 Sprint 52.6 plan §US-7 表
-- [ ] **Run 14 tests in isolation to capture current failure mode**
+- [x] **Run 14 tests in isolation to capture current failure mode**
   - `cd backend && python -m pytest tests/integration/memory/test_memory_tools_integration.py tests/integration/memory/test_tenant_isolation.py tests/integration/orchestrator_loop/test_cancellation_safety.py tests/unit/api/v1/chat/test_router.py::TestMultiTenantIsolation tests/e2e/test_lead_then_verify_workflow.py tests/integration/agent_harness/tools/test_builtin_tools.py --no-header -rf 2>&1 | tail -30`
   - DoD: 14 個 xfailed (不是 fail)；error messages 記錄到 progress.md（為 Day 3-4 reactivation 提供 baseline）
 
 ### 0.6 Day 0 progress.md
-- [ ] **Day 0 progress.md**
+- [x] **Day 0 progress.md**
   - Path: `docs/03-implementation/agent-harness-execution/phase-53-1/sprint-53-1-state-mgmt/progress.md`
   - Sections: Day 0 setup / Cat 7 baseline / 6 GitHub issue URLs / #27 14 xfail captured failure modes / US-6 ✅ AI-20 closed / Remaining for Day 1
   - DoD: 6 issue URLs + Cat 7 baseline metrics + #27 baseline 已列
