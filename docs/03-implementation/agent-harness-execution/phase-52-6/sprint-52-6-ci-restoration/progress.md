@@ -281,3 +281,81 @@ If C (recommended):
 - Cumulative sprint commits: 9 (2 Day 0 docs + 5 Day 1 + 3 Day 2 + 1 Day 1 progress)
 - All commits "Verify branch before commit" + no admin-merge
 
+---
+
+## Day 3 — 2026-05-02 (US-3 Playwright + US-7 xfail triage)
+
+### Today's Accomplishments
+
+#### 3.1 US-3 Playwright + E2E restoration ✅
+- **Plan hypothesis was wrong**: assumed `playwright.config.ts` had empty `projects` array. Day 3 reality: V2 frontend has **NO Playwright setup at all** — no config, no `@playwright/test` dep, no `*.spec.ts`, no `test:e2e` npm script (V1 setup was archived).
+- Commit `16de4bcd`: `.github/workflows/e2e-tests.yml`
+  - Added `if: false` guard to `frontend-e2e` job with comment explaining V2 reality + reactivation steps
+  - Updated `e2e-summary` `needs:` to drop `frontend-e2e` (only `backend-e2e` gates)
+  - Adjusted result echo + pass condition
+- Created GitHub issue #29 (Sprint 53.x+ frontend track): V2 frontend E2E reactivation with full DoD checklist
+- Per plan §Risks "降規模" guidance: scope reduced to "workflow gate fixed via skip + reactivation ticket"
+- **Closes #23 partially** — workflow now passes (skip is "expected"); full E2E setup is 53.x+ scope
+
+#### 3.2-3.4 US-7 xfail triage 14 pre-existing test failures ✅
+- Commit `5f1d4cbb`: 14 `@pytest.mark.xfail(strict=True, reason="...")` decorators added across 6 files; **no source code changed**
+
+| File | xfail count | Reason |
+|------|-------------|--------|
+| `tests/e2e/test_lead_then_verify_workflow.py` | 2 | 51.2 demo affected by 52.x changes |
+| `tests/integration/agent_harness/tools/test_builtin_tools.py` | 2 | CARRY-035 (52.2 AI-11) |
+| `tests/integration/memory/test_memory_tools_integration.py` | 6 | 52.5 P0 #18 ExecutionContext refactor mismatch |
+| `tests/integration/memory/test_tenant_isolation.py` | 2 | 52.5 P0 #11/#18 multi-tenant + ExecutionContext |
+| `tests/integration/orchestrator_loop/test_cancellation_safety.py` | 1 | 52.5 orchestrator drift |
+| `tests/unit/api/v1/chat/test_router.py::TestMultiTenantIsolation` | 1 | 52.5 P0 #11 multi-tenant |
+
+- All reasons reference issue #27 (umbrella reactivate) for 53.1
+- `strict=True` ensures any future "accidental fix" reports XPASS — 53.1 reactivate must remove decorator
+- **Pytest result**: **550 passed, 4 skipped, 14 xfailed, 0 failed** (was 14 failed, 550 passed, 4 skipped, 1 collection error pre-Day-1)
+- Bonus: `tests/unit/scripts/test_lint_rule.py:19` reformatted by black (LINT_SCRIPT path E501 after Day 2's lint/ segment add)
+
+#### 3.5 Day 3 fixup — black scope mismatch
+- Commit `595fb94f`: Apply black to `backend/scripts/verify_audit_chain.py`
+- Day 3 PR push caught: `ci.yml` Code Quality job runs `cd backend && black --check --diff .` (whole backend dir) — wider than `backend-ci.yml`'s `black --check src/ tests/`
+- 52.5 P0 #13 file `verify_audit_chain.py` (in `scripts/`, not `src/` or `tests/`) was unformatted
+- Lesson for Day 4 retrospective: align local lint scope with all CI workflows that run lint
+
+### PR #28 Status After Day 3 Push (HEAD `595fb94f`)
+
+| Workflow | Status (post Day 3.5 push) |
+|----------|----------------------------|
+| **v2-lints** | ✅ SUCCESS（unchanged from Day 2）|
+| **Frontend Tests** | ✅ SUCCESS |
+| **Frontend E2E Tests** | ✅ **SKIPPED**（US-3 took effect） |
+| Backend CI (Lint+Type+Test) | (in progress; expected ✅ after US-7) |
+| Code Quality (ci.yml) | (in progress; expected ✅ after `595fb94f` black fix) |
+| Backend E2E Tests | (in progress; expected ✅ after US-7 lead-then-verify xfail) |
+| Tests | (in progress) |
+
+### 🔍 Day 3 New Findings (Audit Debt for Day 4 retrospective)
+
+1. **V2 frontend lacks E2E** — bigger than plan assumed; created umbrella #29 for 53.x+ reactivation
+2. **CI workflow scope divergence** — `backend-ci.yml` uses `black --check src/ tests/`, `ci.yml` uses `black --check --diff .`. Local lint command must match the WIDEST scope, not the narrowest.
+3. **xfail decorator order**: `@pytest.mark.xfail` placed ABOVE existing `@pytest.mark.asyncio`/`@pytest.mark.multi_tenant` decorators; this works but ordering convention should be documented somewhere (possibly `.claude/rules/testing.md`)
+
+### Issues impact
+
+- #23 (US-3 Playwright) — closed via `16de4bcd` commit msg `Closes #23`（partial: workflow gate fixed; full E2E setup → #29 53.x+）
+- #27 (US-7 umbrella) — Sprint 52.6 part of DoD ✅ (xfail markup); umbrella stays OPEN for 53.1 reactivation per plan
+- #29 (V2 frontend E2E) — NEW, created Day 3 for 53.x+
+
+### Remaining for Day 4
+
+- US-5 Branch protection rule on `main` (per AD-2 cleanup; admin-merge bypass = ❌)
+- 13.md doc update §Branch Protection
+- Day 4 retrospective.md (6 mandatory questions per plan §Retrospective 必答)
+- Sprint Closeout: PR #28 from Draft → Ready for Review; **normal merge** (not admin-merge)
+
+### Notes
+
+- Day 3 commits: 3 (US-3 + US-7 + black scope fixup)
+- Day 3 push iterations: 1 (single push for US-3 + US-7; black scope fix landed in subsequent push)
+- Cumulative sprint commits: **14** (2 Day 0 docs + 1 Day 0 mid-day + 5 Day 1 + 1 Day 1 progress + 4 Day 2 + 3 Day 3)
+- All commits passed "Verify branch before commit" check
+- No admin-merge used; PR #28 still draft awaiting Day 4 closeout
+
