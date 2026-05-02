@@ -29,7 +29,12 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from agent_harness._contracts import MemoryHint, ToolCall, TraceContext
+from agent_harness._contracts import (
+    ExecutionContext,
+    MemoryHint,
+    ToolCall,
+    TraceContext,
+)
 from agent_harness.memory._abc import MemoryLayer, MemoryScope
 from agent_harness.memory.retrieval import MemoryRetrieval
 from agent_harness.tools.memory_tools import (
@@ -114,10 +119,6 @@ async def _mock_crm_search_customer(*, customer_id: str) -> dict[str, object]:
     return {"customer_id": customer_id, "preference": "concise summaries"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 51.2 demo affected by 52.x changes; reactivate per #27 in Sprint 53.1",
-)
 @pytest.mark.asyncio
 async def test_agent_uses_stale_hint_then_verifies_with_mock_tool() -> None:
     """When stored hint says X but live data says Y, agent rewrites memory."""
@@ -145,6 +146,7 @@ async def test_agent_uses_stale_hint_then_verifies_with_mock_tool() -> None:
     retrieval = MemoryRetrieval({"user": user_layer})
     search_handler = make_memory_search_handler(retrieval)
     write_handler = make_memory_write_handler({"user": user_layer})
+    exec_ctx = ExecutionContext(tenant_id=tenant, user_id=user)
 
     search_resp = json.loads(
         await search_handler(
@@ -154,10 +156,9 @@ async def test_agent_uses_stale_hint_then_verifies_with_mock_tool() -> None:
                 arguments={
                     "query": "customer",
                     "scopes": ["user"],
-                    "tenant_id": str(tenant),
-                    "user_id": str(user),
                 },
-            )
+            ),
+            exec_ctx,
         )
     )
     assert search_resp["ok"] is True
@@ -179,10 +180,9 @@ async def test_agent_uses_stale_hint_then_verifies_with_mock_tool() -> None:
                     "key": "preference",
                     "content": f"customer prefers {crm_result['preference']}",
                     "confidence": 0.9,
-                    "tenant_id": str(tenant),
-                    "user_id": str(user),
                 },
-            )
+            ),
+            exec_ctx,
         )
     )
     assert write_resp["ok"] is True
@@ -195,10 +195,9 @@ async def test_agent_uses_stale_hint_then_verifies_with_mock_tool() -> None:
                 arguments={
                     "query": "concise",
                     "scopes": ["user"],
-                    "tenant_id": str(tenant),
-                    "user_id": str(user),
                 },
-            )
+            ),
+            exec_ctx,
         )
     )
     assert requery["ok"] is True
@@ -207,10 +206,6 @@ async def test_agent_uses_stale_hint_then_verifies_with_mock_tool() -> None:
     assert requery["hints"][0]["verify_before_use"] is False
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 51.2 demo affected by 52.x changes; reactivate per #27 in Sprint 53.1",
-)
 @pytest.mark.asyncio
 async def test_lead_then_verify_consistent_path() -> None:
     """When live data matches stored hint, agent proceeds without rewrite."""
@@ -237,6 +232,7 @@ async def test_lead_then_verify_consistent_path() -> None:
 
     retrieval = MemoryRetrieval({"user": user_layer})
     search_handler = make_memory_search_handler(retrieval)
+    exec_ctx = ExecutionContext(tenant_id=tenant, user_id=user)
 
     search_resp = json.loads(
         await search_handler(
@@ -246,10 +242,9 @@ async def test_lead_then_verify_consistent_path() -> None:
                 arguments={
                     "query": "concise",
                     "scopes": ["user"],
-                    "tenant_id": str(tenant),
-                    "user_id": str(user),
                 },
-            )
+            ),
+            exec_ctx,
         )
     )
     assert len(search_resp["hints"]) == 1
