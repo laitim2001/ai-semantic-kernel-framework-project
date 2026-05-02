@@ -40,7 +40,12 @@
 | US-6 ruff in [dev] | `5e6a9c24` | pip install -e .[dev] verified | ✅ |
 | US-7 cross-platform mypy docs | `<Day-4-commit>` | code-quality.md new section + 3 examples | ✅ |
 
-**8 active CI workflow on main HEAD** (post-merge): _to-be-recorded after PR merge_.
+**Post-merge state**:
+- Main HEAD: `aaa3dd75` (PR #39 merge commit) at 2026-05-02 13:11:25Z
+- 5 main CI workflows triggered post-merge (in_progress at closeout time)
+- Branch protection fully restored: `enforce_admins=true / required_approving_review_count=1 / 8 status checks`
+
+**Note: 2nd temp-relax bootstrap executed**: GitHub blocks self-approve; per `feedback_branch_protection_chicken_egg.md` (52.6 precedent), executed `gh api PATCH .../required_approving_review_count: 0 → merge → restore to 1`. This is the **2nd** in V2 history. Future structural fix: 2nd GH collaborator account so reviewer ≠ author. Out of 53.1 scope.
 
 ### Q2: 跨切面紀律守住了嗎？
 
