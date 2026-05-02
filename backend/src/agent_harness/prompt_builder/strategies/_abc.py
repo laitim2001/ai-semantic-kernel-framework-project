@@ -1,6 +1,6 @@
 """
 File: backend/src/agent_harness/prompt_builder/strategies/_abc.py
-Purpose: PositionStrategy ABC + PromptSections dataclass — pure stateless rearrangement of prompt sections.
+Purpose: PositionStrategy ABC + PromptSections dataclass — pure rearrangement.
 Category: 範疇 5 (Prompt Construction)
 Scope: Phase 52 / Sprint 52.2 (Day 1.3)
 

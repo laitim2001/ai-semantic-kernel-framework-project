@@ -53,17 +53,6 @@ from dataclasses import dataclass, field, replace
 from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
-_logger = logging.getLogger(__name__)
-
-# Time scale priority for memory layer ordering (per plan §2.5).
-# Lower number = higher priority (rendered first in prompt).
-# 51.2 MemoryHint.time_scale ∈ {"short_term", "long_term", "semantic"}.
-_TIME_SCALE_PRIORITY: dict[str, int] = {
-    "long_term": 0,  # durable knowledge → most important
-    "semantic": 1,  # vector matches → middle
-    "short_term": 2,  # working memory → least important
-}
-
 from agent_harness._contracts import (
     CacheBreakpoint,
     CachePolicy,
@@ -84,6 +73,17 @@ from agent_harness.prompt_builder.strategies import (
     PromptSections,
 )
 from agent_harness.prompt_builder.templates import SYSTEM_ROLE_TEMPLATE
+
+_logger = logging.getLogger(__name__)
+
+# Time scale priority for memory layer ordering (per plan §2.5).
+# Lower number = higher priority (rendered first in prompt).
+# 51.2 MemoryHint.time_scale ∈ {"short_term", "long_term", "semantic"}.
+_TIME_SCALE_PRIORITY: dict[str, int] = {
+    "long_term": 0,  # durable knowledge → most important
+    "semantic": 1,  # vector matches → middle
+    "short_term": 2,  # working memory → least important
+}
 
 # ---------------------------------------------------------------------------
 # Tracer protocol (Cat 12 Day 1 minimal stub; replaced by real OTel in 53.x)
