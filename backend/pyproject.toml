@@ -18,6 +18,8 @@ dev = [
     "isort>=5.13",
     "flake8>=7.0",
     "mypy>=1.10",
+    # Sprint 52.6 US-1 / AD-5: type stubs needed for mypy --strict on CI Linux
+    "types-requests>=2.31",
 ]
 
 [build-system]

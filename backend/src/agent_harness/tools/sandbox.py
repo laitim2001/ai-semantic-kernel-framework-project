@@ -192,9 +192,17 @@ def _make_posix_limiter(memory_mb: int, timeout_seconds: float) -> Any:
         import resource  # POSIX-only; mypy on Windows lacks attrs.
 
         mem_bytes = memory_mb * 1024 * 1024
-        resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))  # type: ignore[attr-defined]
+        # cross-platform mypy: attr-defined fires on Windows (no RLIMIT_*);
+        # unused-ignore fires on Linux (attrs exist). Stack both codes.
+        resource.setrlimit(  # type: ignore[attr-defined,unused-ignore]
+            resource.RLIMIT_AS,  # type: ignore[attr-defined,unused-ignore]
+            (mem_bytes, mem_bytes),
+        )
         cpu_seconds = max(1, int(timeout_seconds * 2))
-        resource.setrlimit(resource.RLIMIT_CPU, (cpu_seconds, cpu_seconds))  # type: ignore[attr-defined]  # noqa: E501
+        resource.setrlimit(  # type: ignore[attr-defined,unused-ignore]
+            resource.RLIMIT_CPU,  # type: ignore[attr-defined,unused-ignore]
+            (cpu_seconds, cpu_seconds),
+        )
 
     return _apply
 
