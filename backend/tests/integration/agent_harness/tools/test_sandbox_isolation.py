@@ -67,9 +67,29 @@ def _docker_reachable() -> bool:
         return False
 
 
+def _sandbox_image_built() -> bool:
+    """Sprint 52.6 US-7 fixup: skip if ipa-v2-sandbox image missing.
+
+    CI runners have docker daemon but no pre-built image. Pulling fails
+    (image not in registry). Tests pass locally where dev built the image.
+    Issue #30 tracks proper CI image build step.
+    """
+    try:
+        import docker
+
+        client = docker.from_env()
+        client.images.get("ipa-v2-sandbox:latest")
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
 pytestmark = pytest.mark.skipif(
-    not _docker_reachable(),
-    reason="Docker daemon unreachable — DockerSandbox integration tests skipped.",
+    not _docker_reachable() or not _sandbox_image_built(),
+    reason=(
+        "DockerSandbox integration tests skipped: docker daemon unreachable OR "
+        "ipa-v2-sandbox image not built. CI build step pending — see #30."
+    ),
 )
 
 

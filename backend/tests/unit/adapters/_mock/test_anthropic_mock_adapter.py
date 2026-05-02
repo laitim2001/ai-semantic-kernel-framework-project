@@ -53,9 +53,7 @@ async def test_cache_control_marker_injected(adapter: MockAnthropicAdapter) -> N
 
     assert adapter.last_anthropic_messages is not None
     assert "cache_control" not in adapter.last_anthropic_messages[0]
-    assert adapter.last_anthropic_messages[1]["cache_control"] == {
-        "type": "ephemeral"
-    }
+    assert adapter.last_anthropic_messages[1]["cache_control"] == {"type": "ephemeral"}
     assert "cache_control" not in adapter.last_anthropic_messages[2]
     assert adapter.last_cache_breakpoints == [bp]
 
@@ -84,13 +82,7 @@ def test_does_not_import_anthropic_sdk() -> None:
     dependency. Real adapter (Phase 50+) lives in adapters/anthropic/.
     """
     here = Path(__file__).resolve()
-    adapter_path = (
-        here.parents[4]
-        / "src"
-        / "adapters"
-        / "_mock"
-        / "anthropic_adapter.py"
-    )
+    adapter_path = here.parents[4] / "src" / "adapters" / "_mock" / "anthropic_adapter.py"
     content = adapter_path.read_text(encoding="utf-8")
 
     forbidden_patterns = ("\nimport anthropic", "\nfrom anthropic ")

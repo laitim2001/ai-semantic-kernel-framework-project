@@ -80,9 +80,7 @@ async def test_3_time_scales_ordered_long_term_first(
 
     artifact = await builder.build(state=state, tenant_id=tenant_id)
 
-    user_memory_msg = next(
-        m for m in artifact.messages if m.metadata.get("memory_layer") == "user"
-    )
+    user_memory_msg = next(m for m in artifact.messages if m.metadata.get("memory_layer") == "user")
     content = str(user_memory_msg.content)
     long_idx = content.index("durable")
     sem_idx = content.index("vector")
@@ -176,20 +174,12 @@ async def test_cross_user_no_leak(
 
     mock_search.side_effect = per_user_search
 
-    state_a = make_state(
-        messages=[msg("user", "a")], tenant_id=tenant_id, user_id=user_a
-    )
-    artifact_a = await builder.build(
-        state=state_a, tenant_id=tenant_id, user_id=user_a
-    )
+    state_a = make_state(messages=[msg("user", "a")], tenant_id=tenant_id, user_id=user_a)
+    artifact_a = await builder.build(state=state_a, tenant_id=tenant_id, user_id=user_a)
     a_content = " ".join(str(m.content) for m in artifact_a.messages)
 
-    state_b = make_state(
-        messages=[msg("user", "b")], tenant_id=tenant_id, user_id=user_b
-    )
-    artifact_b = await builder.build(
-        state=state_b, tenant_id=tenant_id, user_id=user_b
-    )
+    state_b = make_state(messages=[msg("user", "b")], tenant_id=tenant_id, user_id=user_b)
+    artifact_b = await builder.build(state=state_b, tenant_id=tenant_id, user_id=user_b)
     b_content = " ".join(str(m.content) for m in artifact_b.messages)
 
     assert "USER-A-NOTE" in a_content

@@ -90,9 +90,7 @@ async def test_5x3_matrix_full_coverage() -> None:
     assert set(used) == set(LAYERS)
 
     for layer in LAYERS:
-        layer_msg = next(
-            m for m in artifact.messages if m.metadata.get("memory_layer") == layer
-        )
+        layer_msg = next(m for m in artifact.messages if m.metadata.get("memory_layer") == layer)
         content = str(layer_msg.content)
         for ts in TIME_SCALES:
             assert f"{layer}-{ts}-content" in content

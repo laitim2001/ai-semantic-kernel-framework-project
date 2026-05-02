@@ -16,12 +16,8 @@ import sys
 from pathlib import Path
 from textwrap import dedent
 
-import pytest
-
 LINT_SCRIPT = (
-    Path(__file__).resolve().parents[4]
-    / "scripts"
-    / "check_promptbuilder_usage.py"
+    Path(__file__).resolve().parents[4] / "scripts" / "lint" / "check_promptbuilder_usage.py"
 )
 
 

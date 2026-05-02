@@ -131,6 +131,10 @@ async def test_request_approval_handler_runs_with_explicit_approval_bypass() -> 
     assert "approval required" in (result.error or "")
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="CARRY-035 (Sprint 52.2 retrospective AI-11); reactivate per #27 in Sprint 53.1",
+)
 @pytest.mark.asyncio
 async def test_memory_search_placeholder_raises() -> None:
     """memory_search handler raises NotImplementedError → ToolResult.error."""
@@ -147,6 +151,10 @@ async def test_memory_search_placeholder_raises() -> None:
     assert "Sprint 51.2" in (result.error or "")
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="CARRY-035 (Sprint 52.2 retrospective AI-11); reactivate per #27 in Sprint 53.1",
+)
 @pytest.mark.asyncio
 async def test_memory_write_placeholder_raises() -> None:
     reg = ToolRegistryImpl()

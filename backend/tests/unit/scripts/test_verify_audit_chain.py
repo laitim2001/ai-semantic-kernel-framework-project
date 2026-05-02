@@ -20,6 +20,7 @@ Created: 2026-05-01
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -29,17 +30,31 @@ from uuid import UUID
 
 import pytest
 
-# Allow `from scripts.verify_audit_chain import ...` regardless of cwd.
+# Sprint 52.6 US-6: Load `backend/scripts/verify_audit_chain.py` via importlib
+# bypassing the import system. The plain `from scripts.verify_audit_chain import ...`
+# is shadowed by the `tests.unit.scripts` package (auto-registered by pytest from
+# `tests/unit/scripts/__init__.py`) and never resolves to `backend/scripts/`.
+# importlib.util.spec_from_file_location reads the file directly, no namespace
+# collision possible.
+#
+# IMPORTANT: must register module in sys.modules BEFORE exec_module — dataclass
+# decoration in the loaded file accesses sys.modules[<__module__>] for type
+# resolution (Python 3.12 behaviour).
+_MODULE_NAME = "_verify_audit_chain_under_test"
 ROOT = Path(__file__).resolve().parents[3]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+_VERIFY_AUDIT_CHAIN_PATH = ROOT / "scripts" / "verify_audit_chain.py"
+_spec = importlib.util.spec_from_file_location(_MODULE_NAME, _VERIFY_AUDIT_CHAIN_PATH)
+assert (
+    _spec is not None and _spec.loader is not None
+), f"Could not load verify_audit_chain spec from {_VERIFY_AUDIT_CHAIN_PATH}"
+_verify_audit_chain_module = importlib.util.module_from_spec(_spec)
+sys.modules[_MODULE_NAME] = _verify_audit_chain_module
+_spec.loader.exec_module(_verify_audit_chain_module)
 
-from scripts.verify_audit_chain import (  # noqa: E402
-    SENTINEL_HASH,
-    _compute_hash,
-    _normalise_db_url,
-    _verify_tenant_chain,
-)
+SENTINEL_HASH = _verify_audit_chain_module.SENTINEL_HASH
+_compute_hash = _verify_audit_chain_module._compute_hash
+_normalise_db_url = _verify_audit_chain_module._normalise_db_url
+_verify_tenant_chain = _verify_audit_chain_module._verify_tenant_chain
 
 # ============================================================
 # Hash parity: matches audit_helper.compute_audit_hash exactly

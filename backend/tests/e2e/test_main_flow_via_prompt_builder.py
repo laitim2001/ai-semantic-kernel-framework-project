@@ -76,10 +76,7 @@ class _NoopExecutor(ToolExecutor):
         trace_context: TraceContext | None = None,
         context: ExecutionContext | None = None,
     ) -> list[ToolResult]:
-        return [
-            await self.execute(c, trace_context=trace_context, context=context)
-            for c in calls
-        ]
+        return [await self.execute(c, trace_context=trace_context, context=context) for c in calls]
 
 
 def _final(text: str) -> ChatResponse:
@@ -117,9 +114,7 @@ async def test_every_chat_preceded_by_prompt_built() -> None:
     retrieval.search = AsyncMock(return_value=[])  # type: ignore[method-assign]
     loop = _build_loop(chat_client, retrieval)
 
-    events = [
-        ev async for ev in loop.run(session_id=uuid4(), user_input="hello")
-    ]
+    events = [ev async for ev in loop.run(session_id=uuid4(), user_input="hello")]
 
     pending_prompt_built = False
     pairings = 0
@@ -128,8 +123,7 @@ async def test_every_chat_preceded_by_prompt_built() -> None:
             pending_prompt_built = True
         elif isinstance(ev, LLMRequested):
             assert pending_prompt_built, (
-                "LLMRequested emitted without a preceding PromptBuilt — "
-                "AP-8 main-flow violation"
+                "LLMRequested emitted without a preceding PromptBuilt — " "AP-8 main-flow violation"
             )
             pending_prompt_built = False
             pairings += 1
@@ -146,12 +140,8 @@ async def test_cache_breakpoints_reach_adapter() -> None:
     retrieval.search = AsyncMock(return_value=[])  # type: ignore[method-assign]
     loop = _build_loop(chat_client, retrieval)
 
-    events = [
-        ev async for ev in loop.run(session_id=uuid4(), user_input="hello")
-    ]
-    prompt_built = cast(
-        list[PromptBuilt], [ev for ev in events if isinstance(ev, PromptBuilt)]
-    )
+    events = [ev async for ev in loop.run(session_id=uuid4(), user_input="hello")]
+    prompt_built = cast(list[PromptBuilt], [ev for ev in events if isinstance(ev, PromptBuilt)])
 
     assert len(prompt_built) == 1
     advertised = prompt_built[0].cache_breakpoints_count
@@ -171,12 +161,8 @@ async def test_messages_count_matches_artifact() -> None:
     retrieval.search = AsyncMock(return_value=[])  # type: ignore[method-assign]
     loop = _build_loop(chat_client, retrieval)
 
-    events = [
-        ev async for ev in loop.run(session_id=uuid4(), user_input="probe")
-    ]
-    prompt_built = cast(
-        list[PromptBuilt], [ev for ev in events if isinstance(ev, PromptBuilt)]
-    )
+    events = [ev async for ev in loop.run(session_id=uuid4(), user_input="probe")]
+    prompt_built = cast(list[PromptBuilt], [ev for ev in events if isinstance(ev, PromptBuilt)])
 
     assert len(prompt_built) == 1
     advertised = prompt_built[0].messages_count

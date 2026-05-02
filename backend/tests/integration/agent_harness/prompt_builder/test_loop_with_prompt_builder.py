@@ -82,10 +82,7 @@ class _NoopExecutor(ToolExecutor):
         trace_context: TraceContext | None = None,
         context: ExecutionContext | None = None,
     ) -> list[ToolResult]:
-        return [
-            await self.execute(c, trace_context=trace_context, context=context)
-            for c in calls
-        ]
+        return [await self.execute(c, trace_context=trace_context, context=context) for c in calls]
 
 
 def _final_response(text: str = "done") -> ChatResponse:
@@ -122,9 +119,7 @@ async def test_loop_emits_prompt_built_event_with_full_payload() -> None:
         prompt_builder=_make_builder(retrieval),
     )
 
-    events = [
-        ev async for ev in loop.run(session_id=uuid4(), user_input="hello")
-    ]
+    events = [ev async for ev in loop.run(session_id=uuid4(), user_input="hello")]
     prompt_built = [ev for ev in events if isinstance(ev, PromptBuilt)]
 
     assert len(prompt_built) == 1
@@ -172,9 +167,7 @@ async def test_memory_layers_grow_across_sessions() -> None:
     """
     call_count = {"n": 0}
 
-    async def variable_search(
-        *args: object, **kwargs: object
-    ) -> list[MemoryHint]:
+    async def variable_search(*args: object, **kwargs: object) -> list[MemoryHint]:
         call_count["n"] += 1
         if call_count["n"] == 1:
             return []
@@ -217,22 +210,14 @@ async def test_memory_layers_grow_across_sessions() -> None:
 
     # Run 1: empty memory.
     loop1 = _make_loop()
-    events1 = [
-        ev async for ev in loop1.run(session_id=uuid4(), user_input="run1")
-    ]
-    pb1 = cast(
-        list[PromptBuilt], [ev for ev in events1 if isinstance(ev, PromptBuilt)]
-    )
+    events1 = [ev async for ev in loop1.run(session_id=uuid4(), user_input="run1")]
+    pb1 = cast(list[PromptBuilt], [ev for ev in events1 if isinstance(ev, PromptBuilt)])
     assert len(pb1) == 1
     assert pb1[0].memory_layers_used == ()
 
     # Run 2: memory populated.
     loop2 = _make_loop()
-    events2 = [
-        ev async for ev in loop2.run(session_id=uuid4(), user_input="run2")
-    ]
-    pb2 = cast(
-        list[PromptBuilt], [ev for ev in events2 if isinstance(ev, PromptBuilt)]
-    )
+    events2 = [ev async for ev in loop2.run(session_id=uuid4(), user_input="run2")]
+    pb2 = cast(list[PromptBuilt], [ev for ev in events2 if isinstance(ev, PromptBuilt)])
     assert len(pb2) == 1
     assert set(pb2[0].memory_layers_used) >= {"user", "session"}

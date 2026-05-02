@@ -53,17 +53,6 @@ from dataclasses import dataclass, field, replace
 from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
-_logger = logging.getLogger(__name__)
-
-# Time scale priority for memory layer ordering (per plan §2.5).
-# Lower number = higher priority (rendered first in prompt).
-# 51.2 MemoryHint.time_scale ∈ {"short_term", "long_term", "semantic"}.
-_TIME_SCALE_PRIORITY: dict[str, int] = {
-    "long_term": 0,    # durable knowledge → most important
-    "semantic": 1,     # vector matches → middle
-    "short_term": 2,   # working memory → least important
-}
-
 from agent_harness._contracts import (
     CacheBreakpoint,
     CachePolicy,
@@ -74,9 +63,8 @@ from agent_harness._contracts import (
     ToolSpec,
     TraceContext,
 )
-from agent_harness.context_mgmt.cache_manager import PromptCacheManager
-from agent_harness.context_mgmt.token_counter._abc import TokenCounter
-from agent_harness.memory.retrieval import MemoryRetrieval
+from agent_harness.context_mgmt import PromptCacheManager, TokenCounter
+from agent_harness.memory import MemoryRetrieval
 from agent_harness.prompt_builder._abc import PromptBuilder
 from agent_harness.prompt_builder.strategies import (
     LostInMiddleStrategy,
@@ -85,6 +73,16 @@ from agent_harness.prompt_builder.strategies import (
 )
 from agent_harness.prompt_builder.templates import SYSTEM_ROLE_TEMPLATE
 
+_logger = logging.getLogger(__name__)
+
+# Time scale priority for memory layer ordering (per plan §2.5).
+# Lower number = higher priority (rendered first in prompt).
+# 51.2 MemoryHint.time_scale ∈ {"short_term", "long_term", "semantic"}.
+_TIME_SCALE_PRIORITY: dict[str, int] = {
+    "long_term": 0,  # durable knowledge → most important
+    "semantic": 1,  # vector matches → middle
+    "short_term": 2,  # working memory → least important
+}
 
 # ---------------------------------------------------------------------------
 # Tracer protocol (Cat 12 Day 1 minimal stub; replaced by real OTel in 53.x)
@@ -240,7 +238,9 @@ class DefaultPromptBuilder(PromptBuilder):
             )
 
             # --- Step 2: position strategy ---
-            strategy = position_strategy if position_strategy is not None else self._default_strategy
+            strategy = (
+                position_strategy if position_strategy is not None else self._default_strategy
+            )
             messages = strategy.arrange(sections)
 
             # --- Step 3: cache breakpoints ---
@@ -253,9 +253,7 @@ class DefaultPromptBuilder(PromptBuilder):
 
             # --- Step 4: token estimation (graceful degrade per W3-2 theme) ---
             try:
-                estimated_tokens = self._token_counter.count(
-                    messages=messages, tools=tools_list
-                )
+                estimated_tokens = self._token_counter.count(messages=messages, tools=tools_list)
             except Exception as exc:  # pragma: no cover - defensive degrade path
                 _logger.warning(
                     "TokenCounter.count failed (tenant=%s); estimated_tokens=0: %s",
@@ -271,9 +269,7 @@ class DefaultPromptBuilder(PromptBuilder):
                 layer_metadata={
                     "memory_layers_used": list(memory_layers.keys()),
                     "position_strategy": strategy.__class__.__name__,
-                    "cache_sections": [
-                        bp.section_id for bp in cache_breakpoints if bp.section_id
-                    ],
+                    "cache_sections": [bp.section_id for bp in cache_breakpoints if bp.section_id],
                     "trace_id": child_ctx.trace_id,
                 },
             )
@@ -374,9 +370,7 @@ class DefaultPromptBuilder(PromptBuilder):
             by_layer.setdefault(h.layer, []).append(h)
 
         for layer_name in by_layer:
-            by_layer[layer_name].sort(
-                key=lambda h: _TIME_SCALE_PRIORITY.get(h.time_scale, 99)
-            )
+            by_layer[layer_name].sort(key=lambda h: _TIME_SCALE_PRIORITY.get(h.time_scale, 99))
 
         return by_layer
 
@@ -430,9 +424,7 @@ class DefaultPromptBuilder(PromptBuilder):
             enhanced.append(replace(bp, content_hash=content_hash))
         return enhanced
 
-    def _compute_section_hash(
-        self, section_id: str | None, sections: PromptSections
-    ) -> str | None:
+    def _compute_section_hash(self, section_id: str | None, sections: PromptSections) -> str | None:
         """SHA256 hash for the named section's current content.
 
         Used to populate CacheBreakpoint.content_hash (52.1 logical metadata).
@@ -451,16 +443,12 @@ class DefaultPromptBuilder(PromptBuilder):
             text = str(sections.system.content)
         elif section_id == "tool_definitions":
             text = json.dumps(
-                [
-                    {"name": t.name, "schema": t.input_schema}
-                    for t in sections.tools
-                ],
+                [{"name": t.name, "schema": t.input_schema} for t in sections.tools],
                 sort_keys=True,
             )
         elif section_id == "memory_layers":
             text = ",".join(
-                f"{layer}:{len(hints)}"
-                for layer, hints in sorted(sections.memory_layers.items())
+                f"{layer}:{len(hints)}" for layer, hints in sorted(sections.memory_layers.items())
             )
         else:
             return None

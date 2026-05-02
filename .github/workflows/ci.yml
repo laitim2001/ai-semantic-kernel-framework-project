@@ -46,7 +46,11 @@ jobs:
         run: |
           cd backend
           pip install --upgrade pip
-          pip install black isort flake8 mypy ruff
+          # Sprint 52.6 US-1 expanded (AD-5): install dev extras (gives types-requests
+          # for mypy stubs); matches backend-ci.yml pattern.
+          pip install -e ".[dev]"
+          # ruff is not in dev extras — install separately (used by Run Ruff step).
+          pip install ruff
           pip install -r requirements.txt
 
       - name: Run Black (formatting)
@@ -152,11 +156,26 @@ jobs:
         run: |
           cd backend
           pip install --upgrade pip
+          # Sprint 52.6 US-7 fixup (AD-5): install package + dev extras so
+          # `from infrastructure.db import ...` (root conftest) resolves AND
+          # pytest / pytest-asyncio / pytest-cov are available.
+          pip install -e ".[dev]"
           pip install -r requirements.txt
+
+      - name: Alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_db
+        run: |
+          cd backend
+          # Sprint 52.6 US-7 fixup (AD-5): apply schema before tests run.
+          # Backend CI has this step; ci.yml previously didn't, leading to
+          # red_team / audit / RLS tests failing on missing tables/triggers.
+          alembic upgrade head
 
       - name: Run tests with coverage
         env:
           APP_ENV: testing
+          DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_db
           DB_HOST: localhost
           DB_PORT: 5432
           DB_NAME: test_db

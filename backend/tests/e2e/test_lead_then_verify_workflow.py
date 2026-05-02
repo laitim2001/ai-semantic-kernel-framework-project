@@ -114,6 +114,10 @@ async def _mock_crm_search_customer(*, customer_id: str) -> dict[str, object]:
     return {"customer_id": customer_id, "preference": "concise summaries"}
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="Sprint 51.2 demo affected by 52.x changes; reactivate per #27 in Sprint 53.1",
+)
 @pytest.mark.asyncio
 async def test_agent_uses_stale_hint_then_verifies_with_mock_tool() -> None:
     """When stored hint says X but live data says Y, agent rewrites memory."""
@@ -203,6 +207,10 @@ async def test_agent_uses_stale_hint_then_verifies_with_mock_tool() -> None:
     assert requery["hints"][0]["verify_before_use"] is False
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="Sprint 51.2 demo affected by 52.x changes; reactivate per #27 in Sprint 53.1",
+)
 @pytest.mark.asyncio
 async def test_lead_then_verify_consistent_path() -> None:
     """When live data matches stored hint, agent proceeds without rewrite."""

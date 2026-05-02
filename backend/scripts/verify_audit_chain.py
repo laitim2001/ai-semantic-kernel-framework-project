@@ -92,7 +92,6 @@ from uuid import UUID
 
 import asyncpg
 
-
 SENTINEL_HASH: str = "0" * 64
 
 
@@ -129,17 +128,13 @@ def _compute_hash(
     Must produce byte-identical hashes given the same inputs — any drift
     here would cause every row to fail verification.
     """
-    payload_json = json.dumps(
-        operation_data, sort_keys=True, separators=(",", ":")
-    )
+    payload_json = json.dumps(operation_data, sort_keys=True, separators=(",", ":"))
     base = f"{previous_log_hash}{payload_json}{tenant_id}{timestamp_ms}"
     return hashlib.sha256(base.encode("utf-8")).hexdigest()
 
 
 async def _list_tenants(conn: asyncpg.Connection) -> list[UUID]:
-    rows = await conn.fetch(
-        "SELECT DISTINCT tenant_id FROM audit_log ORDER BY tenant_id"
-    )
+    rows = await conn.fetch("SELECT DISTINCT tenant_id FROM audit_log ORDER BY tenant_id")
     return [r["tenant_id"] for r in rows]
 
 
@@ -219,9 +214,7 @@ async def _verify_tenant_chain(
 def _post_alert_webhook(url: str, payload: dict[str, Any]) -> bool:
     """Best-effort POST. Returns True on 2xx, False otherwise (no raise)."""
     body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url, data=body, headers={"Content-Type": "application/json"}
-    )
+    req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             return 200 <= resp.status < 300
@@ -255,17 +248,13 @@ async def _main_async(ns: argparse.Namespace) -> int:
         tenants = [t for t in tenants if t not in ignore_set]
 
         from_date: date | None = (
-            datetime.strptime(ns.from_date, "%Y-%m-%d").date()
-            if ns.from_date
-            else None
+            datetime.strptime(ns.from_date, "%Y-%m-%d").date() if ns.from_date else None
         )
 
         all_reports: list[TamperReport] = []
         total_rows = 0
         for tenant in tenants:
-            n, reports = await _verify_tenant_chain(
-                conn, tenant, from_date=from_date
-            )
+            n, reports = await _verify_tenant_chain(conn, tenant, from_date=from_date)
             total_rows += n
             all_reports.extend(reports)
 
@@ -281,10 +270,7 @@ async def _main_async(ns: argparse.Namespace) -> int:
                 if len(all_reports) > cap:
                     print(f"  ... ({len(all_reports) - cap} more)")
             else:
-                print(
-                    f"FAIL count={len(all_reports)} rows={total_rows} "
-                    f"tenants={len(tenants)}"
-                )
+                print(f"FAIL count={len(all_reports)} rows={total_rows} " f"tenants={len(tenants)}")
             if ns.alert_webhook:
                 _post_alert_webhook(
                     ns.alert_webhook,
@@ -301,26 +287,18 @@ async def _main_async(ns: argparse.Namespace) -> int:
             return 1
 
         if not ns.quiet:
-            print(
-                f"OK: verified {total_rows} rows across "
-                f"{len(tenants)} tenants"
-            )
+            print(f"OK: verified {total_rows} rows across " f"{len(tenants)} tenants")
             if ignore_set:
                 print(f"   (ignored {len(ignore_set)} tenants)")
         else:
-            print(
-                f"OK rows={total_rows} tenants={len(tenants)} "
-                f"ignored={len(ignore_set)}"
-            )
+            print(f"OK rows={total_rows} tenants={len(tenants)} " f"ignored={len(ignore_set)}")
         return 0
     finally:
         await conn.close()
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Verify audit_log per-tenant hash chains."
-    )
+    parser = argparse.ArgumentParser(description="Verify audit_log per-tenant hash chains.")
     parser.add_argument(
         "--db-url",
         default=None,

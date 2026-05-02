@@ -100,16 +100,12 @@ class MockAnthropicAdapter(ChatClient):
         self.last_anthropic_messages = self._build_anthropic_messages(
             request.messages, cache_breakpoints
         )
-        self.last_cache_breakpoints = (
-            list(cache_breakpoints) if cache_breakpoints else None
-        )
+        self.last_cache_breakpoints = list(cache_breakpoints) if cache_breakpoints else None
         return ChatResponse(
             model=self._model,
             content=self._canned_response,
             stop_reason=StopReason.END_TURN,
-            usage=TokenUsage(
-                prompt_tokens=10, completion_tokens=2, total_tokens=12
-            ),
+            usage=TokenUsage(prompt_tokens=10, completion_tokens=2, total_tokens=12),
         )
 
     # -- core: stream ------------------------------------------------------
@@ -125,9 +121,7 @@ class MockAnthropicAdapter(ChatClient):
         self.last_anthropic_messages = self._build_anthropic_messages(
             request.messages, cache_breakpoints
         )
-        self.last_cache_breakpoints = (
-            list(cache_breakpoints) if cache_breakpoints else None
-        )
+        self.last_cache_breakpoints = list(cache_breakpoints) if cache_breakpoints else None
         return self._stream_impl()
 
     async def _stream_impl(self) -> AsyncIterator[StreamEvent]:
@@ -192,9 +186,7 @@ class MockAnthropicAdapter(ChatClient):
         marks the END of a cacheable prefix. Per plan §2.6 + §3.4:
           messages[bp.position]["cache_control"] = {"type": bp.breakpoint_type}
         """
-        out: list[dict[str, Any]] = [
-            {"role": msg.role, "content": msg.content} for msg in messages
-        ]
+        out: list[dict[str, Any]] = [{"role": msg.role, "content": msg.content} for msg in messages]
         if not cache_breakpoints:
             return out
         for bp in cache_breakpoints:
