@@ -303,3 +303,91 @@ Plan §File Change List 列了下列**未交付**項，因 Sprint 49.2 已存在
   - `test_tenant_isolation.py` × 2
 - 9 / 14 reactivate target Day 3
 - Commit + push + close #35
+
+---
+
+## Day 3 — 2026-05-02
+
+### US-4 AgentLoop Integration ✅ (opt-in pattern)
+
+**Commit**: `4ee85f37` — `feat(orchestrator-loop, sprint-53-1): US-4 + #27 上半 9 xfail reactivation`
+
+**Files**:
+- ✏️ `backend/src/agent_harness/orchestrator_loop/loop.py` (+ ~80 lines)
+- ➕ `backend/tests/integration/agent_harness/state_mgmt/test_loop_state_integration.py` (3 tests)
+
+**設計**: opt-in integration（保護 51.x baseline 26 tests 不退步）
+- `AgentLoopImpl.__init__` 新增 3 個 optional kwargs：`reducer` / `checkpointer` / `tenant_id`
+- 三者全提供時，`_emit_state_checkpoint` helper 在 2 個 safe points 觸發：
+  - post-LLM（每 turn LLM response 後）
+  - post-tool（每 turn 所有 tool results 收集完後）
+- Helper 流程：build LoopState from loop locals → `reducer.merge` (in-memory version bump + audit) → `checkpointer.save` (DB chain monotonic) → emit `StateCheckpointed` event with persisted version
+- 任一 kwarg = None 時：no-op（51.x 路徑 untouched）
+- **Bonus**: Fixed 3 個 `tenant_id=session_id` placeholder（compactor + prompt_builder + checkpoint helper），現在用 `self._tenant_id or session_id`
+
+### Plan/Reality Drift（為 retrospective Audit Debt 備記）
+
+Plan §US-4 原本要求**完整 sole-mutator 重構**（每個 `messages.append` → `reducer.merge`），但實際採取**shadow-checkpoint pattern**：
+- `messages` list mutation 仍 in-place
+- Reducer 只在 safe points 鏡像狀態到 DB
+- 完整 sole-mutator refactor → **deferred to Phase 54.x**（避免破壞 working 494-line loop.py）
+
+**Audit Debt 條目**: AD-Cat7-1 — 全 sole-mutator refactor pending 54.x；驗收 grep `state\.transient\.\w+\.append|state\.durable\.\w+\s*=` in `backend/src/agent_harness/orchestrator_loop/` 應 = 0（目前仍非 0）。
+
+### US-4 Integration Test ✅ (3 tests)
+
+`test_loop_state_integration.py`:
+| Test | 覆蓋場景 |
+|------|---------|
+| `test_loop_emits_state_checkpoints_to_db` | 3-turn loop + 2 tool calls + 1 final → 5 StateCheckpointed events + 5 DB rows + monotonic versions [1,2,3,4,5] + tenant_id stamp + reasons "post_llm" / "post_tool" |
+| `test_loop_without_cat7_wiring_skips_checkpoints` | 51.x baseline — 0 events, 0 DB rows |
+| `test_loop_partial_cat7_wiring_no_crash` | only reducer set (no checkpointer/tenant_id) → no events, no crash (all-three guard) |
+
+### #27 上半 Reactivation ✅ (9/14)
+
+| File | Count | Fix |
+|------|-------|-----|
+| `tests/integration/orchestrator_loop/test_cancellation_safety.py` | 1 | `HangingToolExecutor.execute` mock signature accepts `context=None` kwarg (52.5 P0 #18 alignment) |
+| `tests/integration/memory/test_memory_tools_integration.py` | 6 | Pass `ExecutionContext(tenant_id, user_id)` as 2nd arg to handler; remove forged `tenant_id`/`user_id` from `arguments` dict |
+| `tests/integration/memory/test_tenant_isolation.py` | 2 | Same pattern as memory_tools |
+
+**Reactivation strategy**: All 9 are 52.5 P0 #18 ExecutionContext refactor casualties — server-authoritative tenant/user identity now requires `ExecutionContext` arg, not `arguments` dict. Forge detection enforced by handler.
+
+### Day 3 Sanity Baselines
+
+| Metric | Value | Δ from Day 2 |
+|--------|-------|--------------|
+| pytest | **592 passed** / 4 skip / **5 xfail** / 0 fail in 21.58s | +12 PASS / **−9 xfail** ✅ |
+| mypy --strict src | **202 source files** clean | unchanged |
+| 6 V2 lint scripts | all green | ✅ |
+| black/isort/flake8/ruff on Day 3 files | all green | ✅ |
+| Cat 1 (orchestrator_loop) baseline tests | **26 passed + 1 xfail (now 0)** | not regressed ✅ |
+
+### Day 3 Commit + Push + CI
+
+- Push: `4bdda8a0..4ee85f37` to `feature/sprint-53-1-state-mgmt`
+- Backend CI on `4ee85f37`: in_progress at push time
+
+### #35 Status
+
+✅ Closed by commit `4ee85f37`（comment 含 opt-in pattern + 3 tests evidence + deferred 54.x notes）
+
+### #27 Status — 9/14 reactivated
+
+- ✅ test_cancellation_safety × 1
+- ✅ test_memory_tools_integration × 6
+- ✅ test_tenant_isolation × 2
+- ⏳ test_lead_then_verify_workflow × 2 (Day 4 下半)
+- ⏳ test_router::TestMultiTenantIsolation × 1 (Day 4 下半)
+- ⏳ test_builtin_tools × 2 (CARRY-035; Day 4 嘗試 + 降規模門檻)
+
+### Remaining for Day 4 (#27 下半 + AI-21 + Retrospective + PR)
+
+- **#27 下半** 5 xfail reactivation
+  - test_router (multi-tenant) × 1
+  - test_lead_then_verify_workflow (E2E demo) × 2
+  - test_builtin_tools (CARRY-035) × 2 — **降規模門檻 > 2hrs**
+- **US-7** AI-21 cross-platform mypy docs (`.claude/rules/code-quality.md`)
+- **Retrospective** 6 必答條 + Audit Debt（AD-Cat7-1 sole-mutator refactor）
+- **PR open** to main → 8 active CI workflow全綠 + 1 review approval → normal merge
+- **V2 milestone** 13/22 (59%)
