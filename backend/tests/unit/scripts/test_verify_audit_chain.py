@@ -44,9 +44,9 @@ _MODULE_NAME = "_verify_audit_chain_under_test"
 ROOT = Path(__file__).resolve().parents[3]
 _VERIFY_AUDIT_CHAIN_PATH = ROOT / "scripts" / "verify_audit_chain.py"
 _spec = importlib.util.spec_from_file_location(_MODULE_NAME, _VERIFY_AUDIT_CHAIN_PATH)
-assert _spec is not None and _spec.loader is not None, (
-    f"Could not load verify_audit_chain spec from {_VERIFY_AUDIT_CHAIN_PATH}"
-)
+assert (
+    _spec is not None and _spec.loader is not None
+), f"Could not load verify_audit_chain spec from {_VERIFY_AUDIT_CHAIN_PATH}"
 _verify_audit_chain_module = importlib.util.module_from_spec(_spec)
 sys.modules[_MODULE_NAME] = _verify_audit_chain_module
 _spec.loader.exec_module(_verify_audit_chain_module)
