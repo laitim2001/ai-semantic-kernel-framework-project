@@ -47,8 +47,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from jose import jwt as jose_jwt  # type: ignore[import-untyped]
-from jose.exceptions import (  # type: ignore[import-untyped]
+from jose import jwt as jose_jwt  # type: ignore[import-untyped, unused-ignore]
+from jose.exceptions import (  # type: ignore[import-untyped, unused-ignore]
     ExpiredSignatureError,
     JWTError,
 )

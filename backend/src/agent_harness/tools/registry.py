@@ -40,8 +40,8 @@ from __future__ import annotations
 
 from builtins import list as _list
 
-from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
-from jsonschema.exceptions import SchemaError  # type: ignore[import-untyped]
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped, unused-ignore]
+from jsonschema.exceptions import SchemaError  # type: ignore[import-untyped, unused-ignore]
 
 from agent_harness._contracts import ToolSpec
 

@@ -67,3 +67,4 @@ httpx>=0.27,<1.0           # business_domain/*/mock_executor.py (5 modules)
 tiktoken>=0.7,<1.0          # context_mgmt/token_counter/tiktoken_counter.py + adapters/azure_openai
 requests>=2.31,<3.0         # agent_harness/tools/sandbox.py
 openai>=1.40,<2.0           # adapters/azure_openai/error_mapper.py (LLM-neutral allowlist: only adapters/<provider>/)
+jsonschema>=4.20,<5.0       # agent_harness/tools/{registry,executor}.py — input_schema validation (51.1)

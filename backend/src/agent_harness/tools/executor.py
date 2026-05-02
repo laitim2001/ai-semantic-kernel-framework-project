@@ -62,8 +62,8 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
-from jsonschema.exceptions import ValidationError  # type: ignore[import-untyped]
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped, unused-ignore]
+from jsonschema.exceptions import ValidationError  # type: ignore[import-untyped, unused-ignore]
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
