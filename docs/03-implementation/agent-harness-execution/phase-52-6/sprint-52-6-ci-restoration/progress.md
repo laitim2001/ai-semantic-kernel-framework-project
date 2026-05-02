@@ -148,3 +148,65 @@ If C (recommended):
 - No admin-merge used; no destructive git ops
 - 4 workflow failures REPRODUCED locally → root causes IDENTIFIED → ready for fix Day 1+
 
+---
+
+## Day 1 — 2026-05-02 (US-1 Black + US-6 Collection fix; expanded scope)
+
+### Today's Accomplishments
+
+#### 1.1-1.3 US-1 Black formatting fix ✅
+- Commit `79470ea3`: 13 files reformatted (4 src + 9 tests, all 52.2 admin-merge carryover)
+- Diff: 50 insertions / 139 deletions (line wrap + blank line removal)
+- Local verify: `black --check` exit 0 / mypy 200 src clean / pytest baseline unchanged
+
+#### 1.4 US-6 collection fix ✅
+- Commit `43340929`: pyproject.toml `pythonpath = ["."]` + `backend/scripts/__init__.py` + test file importlib.util refactor
+- Strategy converged on Option I+II hybrid (Option I alone insufficient — `tests/unit/scripts/__init__.py` shadows `scripts` namespace; Option II required for clean separation)
+- Note: Python 3.12 dataclass needs `sys.modules` pre-registration before `exec_module`
+- pytest baseline now: **14 fail / 550 pass / 4 skipped / 0 collection error** (up from 539 pass — +11 verify_audit_chain tests now reachable)
+
+#### 1.x Day 1 incremental fixes (CI feedback driven, mid-Day 1)
+- Commit `f4084906`: black on US-6 test file (forgot to format after importlib refactor)
+- Commit `76e04b9f`: 9 flake8 violations fixed
+  - `builder.py` 7× E402: `_TIME_SCALE_PRIORITY` dict moved AFTER imports
+  - `strategies/_abc.py:3` E501: docstring shortened
+  - `test_lint_rule.py:19` F401: removed unused `import pytest`
+- Commit `52601b7a`: 4 missing prod deps + cross-platform mypy ignore
+  - `requirements.txt`: httpx + tiktoken + requests + openai (all pre-existing prod usage; 49.3 oversight)
+  - `pyproject.toml [dev]`: types-requests
+  - `sandbox.py`: `# type: ignore[attr-defined,unused-ignore]` stack codes for cross-platform (Windows mypy needs attr-defined; Linux mypy needs unused-ignore)
+
+### Backend CI Results
+
+| Run | Commit | Result | Failed step | Note |
+|-----|--------|--------|-------------|------|
+| 25244733052 | 43340929 | ❌ | Black | US-6 test file unformatted (fixed in f4084906) |
+| 25244762780 | f4084906 | ❌ | flake8 | 9 pre-existing 52.2 violations (fixed in 76e04b9f) |
+| 25244814855 | 76e04b9f | ❌ | mypy | 4 missing prod deps + sandbox unused-ignore (fixed in 52601b7a) |
+| **25244889086** | **52601b7a** | ❌ at pytest | **Black ✅ / isort ✅ / flake8 ✅ / mypy ✅ / Alembic ✅ / pytest ❌ (expected: 14 pre-existing US-7 fixes Day 3)** | **Day 1 endpoint as planned** |
+
+### 🔍 Day 1 New Discoveries (Audit Debt for Day 4 retrospective)
+
+1. **Day 0.4 baseline gap**: didn't run flake8 — discovered 9 pre-existing 52.2 violations only via CI feedback (3 push iterations)
+2. **49.3 dep oversight**: `requirements.txt` line 7 says "openai → Sprint 49.3 adapters" but 49.3 never added. Same for tiktoken / httpx / requests added without dep updates by 51.x / 52.x. CI mypy was failing all along but mypy is local-passed by dev's existing site-packages.
+3. **Cross-platform mypy strict**: Windows + Linux divergence on `resource.setrlimit` requires stacking `[attr-defined,unused-ignore]` ignore codes; future POSIX-only modules should anticipate this.
+4. **CI workflow trigger gap**: `ci.yml` / `lint.yml` / `e2e-tests.yml` only fire on push-to-main or pull_request — feature branch push only triggers `backend-ci.yml`. Need to open draft PR for full CI feedback.
+
+### Issues closed today
+
+- #21 (US-1 Black) — closed via commit message in `79470ea3`
+  - Note: kept open by commit msg's "Closes #21" but technically the full US-1 spans 4 commits (79470ea3 + f4084906 + 76e04b9f + 52601b7a). Will re-confirm closure in Day 4 retrospective.
+- #26 (US-6 collection fix) — closed via commit message in `43340929`
+
+### Remaining for Day 2
+
+- Open draft PR (trigger ci.yml + lint.yml + e2e-tests.yml on subsequent pushes)
+- US-2 Lint 2 cross-category fix (3 builder.py imports → re-export from `_contracts/`)
+- US-4 AP-8 wire to lint.yml (move script + add Lint 6 step)
+
+### Notes
+
+- Day 1 push iterations: 4 (vs planned 1). Lesson: Day 0 baseline must include flake8 + check CI workflow's actual install steps to catch dep gaps locally.
+- Sprint duration estimate revised: Day 1 ate ~6 hours (vs 4-5 budget). May compress US-2/US-4/US-3/US-7 if needed.
+- All 4 commits used "Verify branch before commit" check; no admin-merge used.
+
