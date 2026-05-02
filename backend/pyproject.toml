@@ -43,6 +43,11 @@ python_version = "3.11"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Sprint 52.6 US-6: enable `from scripts.verify_audit_chain import ...` resolution
+# from backend/ (the backend repo root). Without this, the namespace package
+# `tests/unit/scripts/` shadows the `backend/scripts/` package and the test
+# import fails. Combined with backend/scripts/__init__.py creation.
+pythonpath = ["."]
 python_files = ["test_*.py"]
 addopts = "-v --strict-markers"
 markers = [
