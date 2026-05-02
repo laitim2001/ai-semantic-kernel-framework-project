@@ -29,7 +29,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from agent_harness._contracts import MemoryHint, ToolCall, TraceContext
+from agent_harness._contracts import ExecutionContext, MemoryHint, ToolCall, TraceContext
 from agent_harness.memory._abc import MemoryLayer, MemoryScope
 from agent_harness.memory.layers.session_layer import SessionLayer
 from agent_harness.memory.retrieval import MemoryRetrieval
@@ -146,16 +146,13 @@ async def test_memory_handler_no_longer_raises_not_implemented(wired_registry) -
     assert handlers["memory_write"] is not memory_placeholder_handler
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 52.5 P0 #18 ExecutionContext refactor mismatch; reactivate per #27 in 53.1",
-)
 @pytest.mark.asyncio
 async def test_memory_write_then_search_via_registry(wired_registry) -> None:
     """End-to-end: write user fact, then search retrieves it."""
     _, handlers, user_layer, _ = wired_registry
     tenant = uuid4()
     user = uuid4()
+    exec_ctx = ExecutionContext(tenant_id=tenant, user_id=user)
 
     write_call = ToolCall(
         id="tc1",
@@ -166,11 +163,9 @@ async def test_memory_write_then_search_via_registry(wired_registry) -> None:
             "content": "user prefers detailed financial breakdowns",
             "time_scale": "long_term",
             "confidence": 0.9,
-            "tenant_id": str(tenant),
-            "user_id": str(user),
         },
     )
-    write_resp = json.loads(await handlers["memory_write"](write_call))
+    write_resp = json.loads(await handlers["memory_write"](write_call, exec_ctx))
     assert write_resp["ok"] is True
     assert write_resp["scope"] == "user"
     assert len(user_layer.write_args) == 1
@@ -183,24 +178,19 @@ async def test_memory_write_then_search_via_registry(wired_registry) -> None:
             "query": "detailed",
             "scopes": ["user"],
             "time_scales": ["long_term"],
-            "tenant_id": str(tenant),
-            "user_id": str(user),
         },
     )
-    search_resp = json.loads(await handlers["memory_search"](search_call))
+    search_resp = json.loads(await handlers["memory_search"](search_call, exec_ctx))
     assert search_resp["ok"] is True
     assert len(search_resp["hints"]) == 1
     assert search_resp["hints"][0]["layer"] == "user"
     assert search_resp["hints"][0]["time_scale"] == "long_term"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 52.5 P0 #18 ExecutionContext refactor mismatch; reactivate per #27 in 53.1",
-)
 @pytest.mark.asyncio
 async def test_memory_write_system_scope_rejected(wired_registry) -> None:
     _, handlers, _, _ = wired_registry
+    exec_ctx = ExecutionContext(tenant_id=uuid4(), user_id=uuid4())
     call = ToolCall(
         id="tc3",
         name="memory_write",
@@ -208,25 +198,20 @@ async def test_memory_write_system_scope_rejected(wired_registry) -> None:
             "scope": "system",
             "key": "policy-x",
             "content": "should be rejected",
-            "tenant_id": str(uuid4()),
-            "user_id": str(uuid4()),
         },
     )
-    resp = json.loads(await handlers["memory_write"](call))
+    resp = json.loads(await handlers["memory_write"](call, exec_ctx))
     assert resp["ok"] is False
     assert "read-only" in resp["error"].lower()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 52.5 P0 #18 ExecutionContext refactor mismatch; reactivate per #27 in 53.1",
-)
 @pytest.mark.asyncio
 async def test_memory_search_default_scopes_used_when_omitted(wired_registry) -> None:
     """Without explicit scopes, retrieval defaults to (session, user, tenant)."""
     _, handlers, user_layer, _ = wired_registry
     tenant = uuid4()
     user = uuid4()
+    exec_ctx = ExecutionContext(tenant_id=tenant, user_id=user)
 
     user_layer._store.append(
         MemoryHint(
@@ -247,24 +232,19 @@ async def test_memory_search_default_scopes_used_when_omitted(wired_registry) ->
         name="memory_search",
         arguments={
             "query": "seeded",
-            "tenant_id": str(tenant),
-            "user_id": str(user),
         },
     )
-    resp = json.loads(await handlers["memory_search"](call))
+    resp = json.loads(await handlers["memory_search"](call, exec_ctx))
     assert resp["ok"] is True
     assert len(resp["hints"]) == 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 52.5 P0 #18 ExecutionContext refactor mismatch; reactivate per #27 in 53.1",
-)
 @pytest.mark.asyncio
 async def test_memory_search_top_k_limit(wired_registry) -> None:
     _, handlers, user_layer, _ = wired_registry
     tenant = uuid4()
     user = uuid4()
+    exec_ctx = ExecutionContext(tenant_id=tenant, user_id=user)
 
     for i in range(8):
         user_layer._store.append(
@@ -288,11 +268,9 @@ async def test_memory_search_top_k_limit(wired_registry) -> None:
             "query": "match",
             "scopes": ["user"],
             "top_k": 3,
-            "tenant_id": str(tenant),
-            "user_id": str(user),
         },
     )
-    resp = json.loads(await handlers["memory_search"](call))
+    resp = json.loads(await handlers["memory_search"](call, exec_ctx))
     assert resp["ok"] is True
     assert len(resp["hints"]) == 3
 
@@ -307,35 +285,29 @@ async def test_memory_handlers_use_placeholder_when_no_backend() -> None:
     assert handlers["memory_write"] is memory_placeholder_handler
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 52.5 P0 #18 ExecutionContext refactor mismatch; reactivate per #27 in 53.1",
-)
 @pytest.mark.asyncio
 async def test_search_factory_handles_missing_query() -> None:
     """Empty query yields error JSON, no exception."""
     layer = _StubUserLayer()
     retrieval = MemoryRetrieval({"user": layer})
     handler = make_memory_search_handler(retrieval)
+    exec_ctx = ExecutionContext(tenant_id=uuid4())
 
     call = ToolCall(
         id="tc6",
         name="memory_search",
-        arguments={"query": "", "tenant_id": str(uuid4())},
+        arguments={"query": ""},
     )
-    resp = json.loads(await handler(call))
+    resp = json.loads(await handler(call, exec_ctx))
     assert resp["ok"] is False
     assert "required" in resp["error"].lower()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 52.5 P0 #18 ExecutionContext refactor mismatch; reactivate per #27 in 53.1",
-)
 @pytest.mark.asyncio
 async def test_write_factory_handles_unknown_scope() -> None:
     """Scope without a wired layer -> error JSON."""
     handler = make_memory_write_handler({"user": _StubUserLayer()})
+    exec_ctx = ExecutionContext(tenant_id=uuid4(), user_id=uuid4())
 
     call = ToolCall(
         id="tc7",
@@ -344,10 +316,8 @@ async def test_write_factory_handles_unknown_scope() -> None:
             "scope": "role",
             "key": "k",
             "content": "x",
-            "tenant_id": str(uuid4()),
-            "user_id": str(uuid4()),
         },
     )
-    resp = json.loads(await handler(call))
+    resp = json.loads(await handler(call, exec_ctx))
     assert resp["ok"] is False
     assert "no layer wired" in resp["error"]

@@ -45,6 +45,18 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-02: Cat 7 State Mgmt integration (Sprint 53.1 Day 3) — optional
+        ctor kwargs `reducer`, `checkpointer`, `tenant_id`. When all three
+        provided, AgentLoopImpl builds an internal LoopState snapshot at
+        each safe point (post-LLM, post-tool) and emits StateCheckpointed
+        events with monotonic DB chain version. tenant_id ctor kwarg also
+        supersedes the prior `tenant_id=session_id` placeholder in
+        compactor + prompt_builder LoopState building blocks (lines marked
+        "Phase 53.1 wires real tenant"). Backward-compat: when reducer /
+        checkpointer / tenant_id are None, behavior is identical to 52.x
+        baseline (51.x integration tests stay green). Full sole-mutator
+        refactor (every messages.append → reducer.merge) is deferred to
+        Phase 54.x — see Sprint 53.1 retrospective Audit Debt.
     - 2026-05-01: Inject Cat 5 PromptBuilder (Sprint 52.2 Day 3.1) — optional
         ctor kwarg `prompt_builder: PromptBuilder | None = None`. When set,
         per-turn (post-compaction) call build() to rebuild chat() messages
@@ -102,6 +114,7 @@ from agent_harness._contracts import (
     Message,
     PromptBuilt,
     SpanCategory,
+    StateCheckpointed,
     StateVersion,
     Thinking,
     ToolCallExecuted,
@@ -115,6 +128,7 @@ from agent_harness.context_mgmt import Compactor
 from agent_harness.observability import NoOpTracer, Tracer
 from agent_harness.output_parser import OutputParser, OutputType, classify_output
 from agent_harness.prompt_builder import PromptBuilder
+from agent_harness.state_mgmt import Checkpointer, Reducer
 from agent_harness.tools import ToolExecutor, ToolRegistry  # public path per category-boundaries.md
 
 from ._abc import AgentLoop
@@ -143,6 +157,9 @@ class AgentLoopImpl(AgentLoop):
         tracer: Tracer | None = None,
         compactor: Compactor | None = None,
         prompt_builder: PromptBuilder | None = None,
+        reducer: Reducer | None = None,
+        checkpointer: Checkpointer | None = None,
+        tenant_id: UUID | None = None,
     ) -> None:
         self._chat_client = chat_client
         self._output_parser = output_parser
@@ -161,6 +178,16 @@ class AgentLoopImpl(AgentLoop):
         # with artifact.messages and forwarding artifact.cache_breakpoints to
         # the adapter (Anthropic cache_control / OpenAI prompt_cache_key).
         self._prompt_builder = prompt_builder
+        # 53.1 Day 3 Cat 7 integration: Reducer + Checkpointer + tenant_id are
+        # OPTIONAL. When all three provided, AgentLoopImpl persists a state
+        # snapshot at each safe point (post-LLM, post-tool) via reducer.merge
+        # → checkpointer.save → emit StateCheckpointed. When any is None,
+        # the integration is no-op (preserves 51.x baseline). tenant_id
+        # also fixes the prior `tenant_id=session_id` placeholder in the
+        # compactor + prompt_builder LoopState building blocks.
+        self._reducer = reducer
+        self._checkpointer = checkpointer
+        self._tenant_id = tenant_id
 
     async def run(
         self,
@@ -222,7 +249,8 @@ class AgentLoopImpl(AgentLoop):
                         ),
                         durable=DurableState(
                             session_id=session_id,
-                            tenant_id=session_id,  # placeholder; Phase 53.1 wires real tenant
+                            # 53.1: real tenant when ctor-injected; else session_id fallback
+                            tenant_id=self._tenant_id or session_id,
                         ),
                         version=StateVersion(
                             version=turn_count,
@@ -274,7 +302,8 @@ class AgentLoopImpl(AgentLoop):
                         ),
                         durable=DurableState(
                             session_id=session_id,
-                            tenant_id=session_id,  # placeholder; Phase 53.1 wires real tenant
+                            # 53.1: real tenant when ctor-injected; else session_id fallback
+                            tenant_id=self._tenant_id or session_id,
                         ),
                         version=StateVersion(
                             version=turn_count,
@@ -286,7 +315,7 @@ class AgentLoopImpl(AgentLoop):
                     t0 = time.perf_counter()
                     artifact = await self._prompt_builder.build(
                         state=build_state,
-                        tenant_id=session_id,  # placeholder per State Mgmt 53.1
+                        tenant_id=self._tenant_id or session_id,  # 53.1: real tenant when set
                         user_id=None,
                         tools=self._tool_registry.list(),
                         trace_context=ctx,
@@ -351,6 +380,22 @@ class AgentLoopImpl(AgentLoop):
                     trace_context=ctx,
                 )
                 yield Thinking(text=parsed.text, trace_context=ctx)
+
+                # === Cat 7 post-LLM checkpoint (53.1 Day 3) =================
+                # When reducer + checkpointer + tenant_id all set, persist a
+                # state snapshot after LLM response so verifier / HITL pause /
+                # error recovery have a recent restore point. No-op when any
+                # is None (51.x backward-compat path).
+                post_llm_event = await self._emit_state_checkpoint(
+                    session_id=session_id,
+                    messages=messages,
+                    turn_count=turn_count,
+                    tokens_used=tokens_used,
+                    source_category="orchestrator_loop:post_llm",
+                    ctx=ctx,
+                )
+                if post_llm_event is not None:
+                    yield post_llm_event
 
                 # === stop_reason terminator =================================
                 if should_terminate_by_stop_reason(response):
@@ -449,6 +494,21 @@ class AgentLoopImpl(AgentLoop):
                         )
                     )
 
+                # === Cat 7 post-tool checkpoint (53.1 Day 3) ================
+                # After all tool results are appended for this turn, persist
+                # a snapshot so HITL pause / replay can resume from
+                # complete-tool-batch boundary. No-op when not configured.
+                post_tool_event = await self._emit_state_checkpoint(
+                    session_id=session_id,
+                    messages=messages,
+                    turn_count=turn_count,
+                    tokens_used=tokens_used,
+                    source_category="orchestrator_loop:post_tool",
+                    ctx=ctx,
+                )
+                if post_tool_event is not None:
+                    yield post_tool_event
+
                 turn_count += 1
                 # loop continues to next while iteration
 
@@ -470,6 +530,57 @@ class AgentLoopImpl(AgentLoop):
             total_turns=0,
             trace_context=trace_context,
         )
+
+    async def _emit_state_checkpoint(
+        self,
+        *,
+        session_id: UUID,
+        messages: list[Message],
+        turn_count: int,
+        tokens_used: int,
+        source_category: str,
+        ctx: TraceContext,
+    ) -> StateCheckpointed | None:
+        """Build LoopState from loop locals, reducer.merge → checkpointer.save.
+
+        Returns StateCheckpointed event with DB chain version (caller yields).
+        Returns None if reducer/checkpointer/tenant_id not all configured
+        (i.e., 51.x backward-compat caller path). Errors are NOT swallowed;
+        the loop should fail loud rather than silently miss a checkpoint.
+        """
+        if self._reducer is None or self._checkpointer is None or self._tenant_id is None:
+            return None
+
+        # Build snapshot state from current loop locals.
+        snapshot_state = LoopState(
+            transient=TransientState(
+                messages=list(messages),
+                current_turn=turn_count,
+                token_usage_so_far=tokens_used,
+            ),
+            durable=DurableState(
+                session_id=session_id,
+                tenant_id=self._tenant_id,
+            ),
+            version=StateVersion(
+                version=turn_count,
+                parent_version=turn_count - 1 if turn_count > 0 else None,
+                created_at=datetime.now(),
+                created_by_category=source_category,
+            ),
+        )
+
+        # In-memory version bump via Reducer (audit trail).
+        bumped = await self._reducer.merge(
+            snapshot_state,
+            {"transient": {"current_turn": turn_count, "token_usage_so_far": tokens_used}},
+            source_category=source_category,
+            trace_context=ctx,
+        )
+
+        # Persist to DB; persisted version is from DB chain (authoritative).
+        persisted = await self._checkpointer.save(bumped, trace_context=ctx)
+        return StateCheckpointed(version=persisted.version, trace_context=ctx)
 
     @staticmethod
     def _tool_result_to_text(

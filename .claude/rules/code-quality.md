@@ -165,6 +165,79 @@ plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 ---
 
+## V2 新增：Cross-platform mypy `# type: ignore[X, unused-ignore]` Pattern
+
+**Source**: Sprint 52.6 retrospective Q4（CI mypy 在 Linux runner 與 Windows 開發機行為不一致 — 某 platform 缺 stub 包）
+
+### 問題
+
+同一 import / Optional unwrap 在不同 platform 上 mypy 行為不同：
+- 一邊安裝了 type stub → 該行**不需要** `# type: ignore`
+- 另一邊缺 type stub → 該行**需要** `# type: ignore[import-not-found]`
+
+若兩平台都需要 CI 全綠（local Windows 開發 + Linux GitHub Actions），單純加 `# type: ignore` 在缺 stub 一邊可解，但有 stub 一邊會抱怨「unused ignore」（`warn_unused_ignores = true` strict 模式下）。
+
+### 標準解：雙 ignore code
+
+```python
+from foo import Bar  # type: ignore[import-not-found, unused-ignore]
+```
+
+- `[import-not-found]`：缺 stub 平台抑制找不到錯誤
+- `[unused-ignore]`：有 stub 平台允許「無用的 ignore」不報錯
+
+### 三個常見場景
+
+#### 1. Optional dependency（如 redis.asyncio）
+
+```python
+# 本地 Linux 安裝了 redis stubs；CI 容器可能未裝
+from redis.asyncio import Redis  # type: ignore[import-not-found, unused-ignore]
+```
+
+#### 2. Platform-specific module（如 winreg / msvcrt）
+
+```python
+import sys
+
+if sys.platform == "win32":
+    import winreg  # type: ignore[import-not-found, unused-ignore]
+```
+
+#### 3. Conditional Optional unwrap
+
+某些 helper 在 platform A 返回 `T | None` 但在 platform B 返回 `T`：
+
+```python
+result: int | None = compute()
+# Linux: result is `int`; Windows: result is `int | None`
+final: int = result  # type: ignore[assignment, unused-ignore]
+```
+
+### 反模式（禁止）
+
+```python
+# ❌ 禁止：bare # type: ignore (吞掉所有錯誤類型；無法 grep)
+from foo import Bar  # type: ignore
+
+# ❌ 禁止：disable warn_unused_ignores 全域繞過
+[tool.mypy]
+warn_unused_ignores = false  # ← 會掩蓋 dead ignores
+
+# ❌ 禁止：跨平台分支 if sys.platform: + 雙 import 完整重寫
+```
+
+### 適用範圍
+
+只用於**真實**的 cross-platform 不一致場景（CI vs local）。不要當「萬用消音器」濫用。
+
+### Reference
+
+- Sprint 52.6 retrospective Q4：[`docs/03-implementation/agent-harness-execution/phase-52-6/sprint-52-6-ci-restoration/retrospective.md`](../../docs/03-implementation/agent-harness-execution/phase-52-6/sprint-52-6-ci-restoration/retrospective.md)
+- mypy docs：[mypy_silencing-linters](https://mypy.readthedocs.io/en/stable/error_code_list.html#code-unused-ignore)
+
+---
+
 ## V2 新增：Lint Hook 順序
 
 ### Pre-commit Hook (< 10 秒)

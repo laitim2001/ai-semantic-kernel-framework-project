@@ -131,13 +131,16 @@ async def test_request_approval_handler_runs_with_explicit_approval_bypass() -> 
     assert "approval required" in (result.error or "")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="CARRY-035 (Sprint 52.2 retrospective AI-11); reactivate per #27 in Sprint 53.1",
-)
 @pytest.mark.asyncio
-async def test_memory_search_placeholder_raises() -> None:
-    """memory_search handler raises NotImplementedError → ToolResult.error."""
+async def test_memory_search_placeholder_returns_error_json() -> None:
+    """memory_search placeholder returns error JSON content (no real backend wired).
+
+    Sprint 53.1 #27 reactivation: CARRY-035 expected raised exception, but
+    Sprint 52.x changed placeholder to return error JSON inside ToolResult.content
+    while result.success=True. Updated assertion reflects current contract.
+    """
+    import json as _json
+
     reg = ToolRegistryImpl()
     handlers: dict[str, ToolHandler] = {}
     register_builtin_tools(reg, handlers)
@@ -146,17 +149,20 @@ async def test_memory_search_placeholder_raises() -> None:
     result = await exe.execute(
         ToolCall(id="m1", name="memory_search", arguments={"query": "find me"})
     )
-    assert result.success is False
-    assert "51.1 placeholder" in (result.error or "")
-    assert "Sprint 51.2" in (result.error or "")
+    payload = _json.loads(result.content)
+    assert payload["ok"] is False
+    assert "memory" in payload["error"].lower()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="CARRY-035 (Sprint 52.2 retrospective AI-11); reactivate per #27 in Sprint 53.1",
-)
 @pytest.mark.asyncio
-async def test_memory_write_placeholder_raises() -> None:
+async def test_memory_write_placeholder_returns_error_json() -> None:
+    """memory_write placeholder returns error JSON content (no real backend wired).
+
+    Sprint 53.1 #27 reactivation: same shift as memory_search — placeholder now
+    surfaces error via JSON content (success=True at tool layer, ok=False inside).
+    """
+    import json as _json
+
     reg = ToolRegistryImpl()
     handlers: dict[str, ToolHandler] = {}
     register_builtin_tools(reg, handlers)
@@ -169,8 +175,9 @@ async def test_memory_write_placeholder_raises() -> None:
             arguments={"scope": "session", "key": "k", "content": "v"},
         )
     )
-    assert result.success is False
-    assert "51.1 placeholder" in (result.error or "")
+    payload = _json.loads(result.content)
+    assert payload["ok"] is False
+    assert "memory" in payload["error"].lower()
 
 
 # === web_search via mocked httpx ==========================================
