@@ -63,9 +63,8 @@ from agent_harness._contracts import (
     ToolSpec,
     TraceContext,
 )
-from agent_harness.context_mgmt.cache_manager import PromptCacheManager
-from agent_harness.context_mgmt.token_counter._abc import TokenCounter
-from agent_harness.memory.retrieval import MemoryRetrieval
+from agent_harness.context_mgmt import PromptCacheManager, TokenCounter
+from agent_harness.memory import MemoryRetrieval
 from agent_harness.prompt_builder._abc import PromptBuilder
 from agent_harness.prompt_builder.strategies import (
     LostInMiddleStrategy,
