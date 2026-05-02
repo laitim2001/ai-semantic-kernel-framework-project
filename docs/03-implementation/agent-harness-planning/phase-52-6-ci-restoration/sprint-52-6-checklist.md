@@ -63,7 +63,7 @@
 
 ---
 
-## Day 1 — US-1 Black Formatting Fix (est. 3-4 hours)
+## Day 1 — US-1 Black + US-6 Collection Fix (est. 4-5 hours)
 
 ### 1.1 Apply Black auto-format
 - [ ] **Run black on backend src**
@@ -101,9 +101,36 @@
 - [ ] **Close GitHub issue #21**
   - `gh issue close 21 --comment "Resolved by commit <hash>. Verified: black --check exit 0; backend-ci.yml + ci.yml Black step green on feature branch run <id>."`
 
-### 1.4 Day 1 progress.md update
+### 1.4 US-6 collection fix
+- [ ] **Apply Option I — pyproject.toml pythonpath**
+  - Edit `backend/pyproject.toml`：在 `[tool.pytest.ini_options]` 加 `pythonpath = ["."]`
+  - DoD: line `pythonpath = ["."]` exists under section
+- [ ] **Verify `backend/scripts/__init__.py` exists**
+  - From Day 0.4 untracked file or create: `touch backend/scripts/__init__.py`
+  - DoD: file exists + 0 bytes
+- [ ] **Verify pytest collection passes**
+  - `cd backend && python -m pytest tests/unit/scripts/test_verify_audit_chain.py --collect-only 2>&1 | tail -5`
+  - DoD: exit 0 + "9 tests collected"（or whatever the file's actual test count）
+- [ ] **Verify full pytest still works**
+  - `cd backend && python -m pytest --tb=no -q 2>&1 | tail -5`
+  - DoD: 553 PASS / 14 FAIL / 4 skipped / **0 collection error**（tests now reachable）
+- [ ] **If Option I fails**: fallback to Option II（test file importlib.util refactor）or Option III（rename test dir）
+  - Audit Debt 記錄 + 改 plan §Tech Spec §US-6
+- [ ] **Commit US-6**
+  - Stage: `git add backend/pyproject.toml backend/scripts/__init__.py`
+  - Message: `fix(scripts, sprint-52-6): US-6 unblock test_verify_audit_chain collection (52.5 carryover)`
+  - **Verify branch before commit**
+- [ ] **Push to feature branch**
+  - `git push origin feature/sprint-52-6-ci-restoration`
+- [ ] **Verify ci.yml「Run tests with coverage」step**（仍會 fail 14 個 — 期待，US-7 處理）
+  - `gh run view <id> --json jobs -q '.jobs[].steps[] | select(.name | contains("Run tests"))'`
+  - DoD: collection error 消失（其他 14 fail 仍有，待 US-7）
+- [ ] **Close GitHub issue #26**
+  - `gh issue close 26 --comment "Resolved by commit <hash>. Verified: pytest --collect-only on test_verify_audit_chain.py exit 0; 14 pre-existing test failures still need US-7 xfail triage."`
+
+### 1.5 Day 1 progress.md update
 - [ ] **Append Day 1 progress.md**
-  - Sections: Today's accomplishments (US-1 ✅) / CI verification run id / Remaining for Day 2
+  - Sections: Today's accomplishments (US-1 ✅ + US-6 ✅) / CI verification run ids / Remaining for Day 2
 
 ---
 
@@ -174,7 +201,7 @@
 
 ---
 
-## Day 3 — US-3 Playwright + E2E Restoration (est. 4-6 hours)
+## Day 3 — US-3 Playwright + E2E + US-7 xfail Triage (est. 5-7 hours)
 
 ### 3.1 Diagnose Playwright failure root cause
 - [ ] **Read fail log**
@@ -217,7 +244,47 @@
 - [ ] **Close GitHub issue #23**
   - `gh issue close 23 --comment "..."`（含 skipped spec 列表 + 53.x reactivate plan）
 
-### 3.5 Day 3 progress.md update
+### 3.5 US-7 xfail triage 14 pre-existing failures
+- [ ] **For each of 6 test files, add `@pytest.mark.xfail(strict=True, reason="...")`**：
+  - `tests/e2e/test_lead_then_verify_workflow.py` × 2 tests
+    - Reason: `"Sprint 51.2 demo affected by 52.x changes; reactivate per #27 in 53.1"`
+  - `tests/integration/agent_harness/tools/test_builtin_tools.py` × 2 tests（CARRY-035）
+    - Reason: `"CARRY-035 (52.2 retrospective AI-11); reactivate per #27 in 53.1"`
+  - `tests/integration/memory/test_memory_tools_integration.py` × 6 tests
+    - Reason: `"52.5 P0 #18 ExecutionContext refactor mismatch; reactivate per #27 in 53.1"`
+  - `tests/integration/memory/test_tenant_isolation.py` × 2 tests
+    - Reason: `"52.5 P0 #11/#18 multi-tenant + ExecutionContext; reactivate per #27 in 53.1"`
+  - `tests/integration/orchestrator_loop/test_cancellation_safety.py` × 1 test
+    - Reason: `"52.5 orchestrator drift; reactivate per #27 in 53.1"`
+  - `tests/unit/api/v1/chat/test_router.py::TestMultiTenantIsolation` × 1 test
+    - Reason: `"52.5 P0 #11 multi-tenant; reactivate per #27 in 53.1"`
+  - DoD: 14 tests 全加 `@pytest.mark.xfail(strict=True, reason="...")` decorator；不改 source code
+- [ ] **Verify pytest exit 0**
+  - `cd backend && python -m pytest --tb=no -q 2>&1 | tail -8`
+  - DoD: `XX passed, 14 xfailed, X skipped` + exit 0
+- [ ] **Strict=True sanity**
+  - 隨選 1 個 xfail test 暫時加 `assert True` 看是否 XPASS（test framework warning）
+  - 然後 revert 確保標記為 xfail
+  - DoD: pytest output 顯示 "x" 標記符
+- [ ] **Verify mypy + LLM SDK leak 不退步**
+  - 同 Day 0.4 baselines
+
+### 3.6 Day 3 commit + push + verify CI
+- [ ] **Commit US-3 + US-7**
+  - Stage: `git add .github/workflows/e2e-tests.yml frontend/ backend/tests/`
+  - Message: `fix(ci, sprint-52-6): US-3 + US-7 — Playwright config + xfail triage 14 pre-existing failures`
+  - **Verify branch before commit**
+- [ ] **Push**
+- [ ] **Verify e2e-tests.yml + ci.yml「Run tests with coverage」green**
+  - `gh run view <id> --json jobs -q '.jobs[].steps[] | select(.conclusion != null) | {name, conclusion}'`
+  - DoD: e2e-tests.yml 3 step success + ci.yml「Run tests with coverage」success（with xfail）+「Check results」success
+- [ ] **Close GitHub issue #23**
+  - `gh issue close 23 --comment "..."`（含 skipped spec 列表）
+- [ ] **Update GitHub issue #27 with reactivation plan**
+  - `gh issue edit 27 --body "Updated <date>: 14 pre-existing failures xfailed in PR <hash>. Reactivation plan for 53.1: ..."`
+  - **Don't close** #27（53.1 reactivate 才 close）
+
+### 3.7 Day 3 progress.md update
 
 ---
 
@@ -322,9 +389,11 @@
 | US-3 E2E on main | ⬜ | run id（含 skipped spec count）|
 | US-4 AP-8 (Lint 6) on main | ⬜ | run id |
 | US-5 Branch protection on main | ⬜ | `gh api` response |
+| US-6 collection error gone | ⬜ | pytest collection output |
+| US-7 14 xfail decorations + #27 umbrella | ⬜ | xfail count + #27 url |
 | 4 workflow + Frontend CI 全綠 on main HEAD | ⬜ | 5 run ids |
 | Branch protection 真擋 admin-merge | ⬜ | dummy PR test result |
-| pytest baseline 不退步 | ⬜ | counts |
+| pytest exit 0（539 PASS / 14 xfail / 4 skipped / 0 fail） | ⬜ | counts |
 | mypy 200 src clean | ⬜ | tail output |
 | LLM SDK leak = 0 | ⬜ | tail output |
 | Sprint 52.6 PR 走正常 merge（no admin） | ⬜ | merge commit hash |

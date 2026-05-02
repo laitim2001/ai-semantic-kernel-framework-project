@@ -77,6 +77,18 @@ V2 Verification Audit（2026-05-01 closeout）在 §10 §AD-5 記錄：
 - **影響檔案**：GitHub UI 設定；docs `docs/03-implementation/agent-harness-planning/13-deployment-and-devops.md` 加 §Branch Protection 章節說明 + screenshot
 - **GitHub Issue**：#25
 
+### US-6：作為 CI 維護者，我希望解除 `test_verify_audit_chain.py` collection error，以便 `ci.yml`「Run tests with coverage」step 進入測試執行階段（Option C scope expansion 2026-05-02）
+- **驗收**：`python -m pytest tests/unit/scripts/test_verify_audit_chain.py --collect-only` exit 0 + 9 tests collected；全 baseline pytest 不再有 collection error
+- **影響檔案**：`backend/scripts/__init__.py`（新建，52.5 plan 列在 File Change List 但實作未交付）；`backend/pyproject.toml`（加 `pythonpath = ["."]`）
+- **GitHub Issue**：#26
+- **源頭**：52.5 P0 #13 oversight（Day 0 progress §New Finding 發現）
+
+### US-7：作為 CI 維護者，我希望 14 個 pre-existing test failures 加 `@pytest.mark.xfail(strict=True)` 標記 + umbrella reactivate ticket，以便 `ci.yml`「Run tests with coverage」step exit 0 + bug 不被遺漏（Option C scope expansion 2026-05-02）
+- **驗收**：6 個 test file × 14 tests 全加 xfail decorator + reason + reactivate ticket 引用；pytest exit 0；GitHub issue #27 列 6 categories + 53.1 reactivate plan
+- **影響檔案**：7 個 test files（per Day 0 progress §New Finding 表）
+- **GitHub Issue**：#27（umbrella，53.1 reactivate）
+- **源頭**：Day 0.4 baseline 發現 main HEAD 14 failures（遠超 52.2 retrospective 「2 pre-existing CARRY-035」）
+
 ---
 
 ## Technical Specifications
@@ -167,6 +179,61 @@ V2 Verification Audit（2026-05-01 closeout）在 §10 §AD-5 記錄：
 
 **Effort**: 0.5 day
 
+### US-6 — Test verify_audit_chain collection fix
+
+**現況**（Day 0.4 reproduce）：
+```
+ModuleNotFoundError: No module named 'scripts.verify_audit_chain'
+```
+- `backend/scripts/__init__.py` 不存在（52.5 plan 列在 File Change List 但未提交 — 52.5 retrospective 未發現）
+- 即便加 `__init__.py`，仍失敗 — 真因是 **namespace 衝突**：pytest 默認模式下，`tests/unit/scripts/__init__.py` 把 `scripts` 註冊為 `tests.unit.scripts` package，與 `backend/scripts/` 衝突
+- Manual `python -c "import sys; sys.path.insert(0, '.'); from scripts.verify_audit_chain import _normalise_db_url"` works（手動加路徑時）
+
+**設計**（fix order，最小改動優先）：
+1. **Option I — Pyproject pythonpath**（最低改動，首選）：
+   - 加 `[tool.pytest.ini_options] pythonpath = ["."]` to `backend/pyproject.toml`
+   - 加 `backend/scripts/__init__.py`（52.5 plan 已要求；空檔）
+   - 不改 test file；不 rename
+2. **Option II — Test file 用 importlib.util.spec_from_file_location**（fallback）
+3. **Option III — Rename `tests/unit/scripts/` → `tests/unit/cli_scripts/`**（最重，最後選項）
+
+**驗證**：
+- `python -m pytest tests/unit/scripts/test_verify_audit_chain.py --collect-only` exit 0 + 9 tests collected
+- 全 baseline pytest 不再有 collection error
+- 既有 539 PASS 不退步
+
+**Effort**: 0.5 day（Day 1 與 US-1 並行）
+
+### US-7 — xfail triage for 14 pre-existing test failures
+
+**現況**（Day 0.4 baseline）：
+14 個 failing tests across 6 files / 6 categories
+
+**設計**：
+1. 每 failing test 加 `@pytest.mark.xfail(reason="...", strict=True)` decorator
+2. Reason 內容：簡述失敗來源 + reactivate ticket reference（GitHub issue #27 / 53.1 sprint）
+3. `strict=True` 確保**真意外修好**會自動轉 PASS（防止後續 sprint regression）
+4. **不**改 test logic / source code — 純標記
+5. 創 GitHub issue #27 umbrella ticket：列 6 categories + 53.1 reactivate plan
+
+**Categories + reason 模板**：
+
+| Test file | xfail count | Reason 模板 |
+|-----------|-------------|-------------|
+| `e2e/test_lead_then_verify_workflow.py` | 2 | Sprint 51.2 demo affected by 52.x changes; reactivate per #27 in 53.1 |
+| `integration/agent_harness/tools/test_builtin_tools.py` | 2 | CARRY-035 (52.2 retrospective AI-11); reactivate per #27 in 53.1 |
+| `integration/memory/test_memory_tools_integration.py` | 6 | 52.5 P0 #18 ExecutionContext refactor mismatch; reactivate per #27 in 53.1 |
+| `integration/memory/test_tenant_isolation.py` | 2 | 52.5 P0 #11/#18 multi-tenant + ExecutionContext; reactivate per #27 in 53.1 |
+| `integration/orchestrator_loop/test_cancellation_safety.py` | 1 | 52.5 orchestrator drift; reactivate per #27 in 53.1 |
+| `unit/api/v1/chat/test_router.py::TestMultiTenantIsolation` | 1 | 52.5 P0 #11 multi-tenant; reactivate per #27 in 53.1 |
+
+**驗證**：
+- `python -m pytest --tb=no -q` exit 0（with xfailed listed）
+- 539 PASS / 14 xfail / 4 skipped / 0 failed
+- ci.yml「Run tests with coverage」step 綠（exit 0）
+
+**Effort**: 0.5-1 day（Day 3 與 US-3 並行）
+
 ### US-5 — Branch protection rule + admin-merge precedent 截斷
 
 **現況**：
@@ -225,18 +292,31 @@ V2 Verification Audit（2026-05-01 closeout）在 §10 §AD-5 記錄：
 - GitHub UI 設定（無 file）
 - ✏️ `docs/03-implementation/agent-harness-planning/13-deployment-and-devops.md`（加 §Branch Protection 章節）
 
+### US-6 (collection fix)
+- ➕ `backend/scripts/__init__.py`（empty file，從 52.5 plan oversight）
+- ✏️ `backend/pyproject.toml`（加 `[tool.pytest.ini_options] pythonpath = ["."]`）
+
+### US-7 (xfail triage)
+- ✏️ `backend/tests/e2e/test_lead_then_verify_workflow.py`（加 xfail × 2）
+- ✏️ `backend/tests/integration/agent_harness/tools/test_builtin_tools.py`（加 xfail × 2 — CARRY-035）
+- ✏️ `backend/tests/integration/memory/test_memory_tools_integration.py`（加 xfail × 6）
+- ✏️ `backend/tests/integration/memory/test_tenant_isolation.py`（加 xfail × 2）
+- ✏️ `backend/tests/integration/orchestrator_loop/test_cancellation_safety.py`（加 xfail × 1）
+- ✏️ `backend/tests/unit/api/v1/chat/test_router.py`（加 xfail × 1）
+- 不改 source code；純標記
+
 ---
 
 ## Acceptance Criteria
 
 ### Sprint-level（必過）
-- [ ] 5 user stories 全 ✅（US-1 ~ US-5）
+- [ ] 7 user stories 全 ✅（US-1 ~ US-7；US-6/US-7 加入 Day 0 Option C scope expansion）
 - [ ] 4 GitHub Actions workflow（V2 Lint / Backend CI / CI Pipeline / E2E Tests）on `main` HEAD 連續 ≥ 2 runs 全綠
 - [ ] Frontend CI 仍綠（不退步）
-- [ ] `cd backend && python -m pytest --cov=src --cov-report=term-missing` baseline 不退步（≥ 493 PASS / 2 pre-existing CARRY-035）— per 52.2 retrospective baseline
+- [ ] `cd backend && python -m pytest` exit 0：539 PASS / 14 xfail / 4 skipped / **0 failed** / **0 collection error**
 - [ ] `cd backend && mypy --strict src` 200 files clean（不退步）
 - [ ] `python scripts/lint/check_llm_sdk_leak.py --root backend/src` LLM SDK leak = 0
-- [ ] 5 GitHub issues #21-25 全 close
+- [ ] 7 GitHub issues #21-27 全 close（#27 umbrella reactivate ticket 開 + assigned to 53.1）
 
 ### 跨切面紀律
 - [ ] **No admin-merge**：本 sprint 自身 PR 走正常路徑（4 + 1 workflow 全綠 + 1 review approval）
@@ -256,13 +336,13 @@ V2 Verification Audit（2026-05-01 closeout）在 §10 §AD-5 記錄：
 
 | Day | 工作 |
 |-----|------|
-| 0 | Setup: branch + plan + checklist + GitHub issues #21-25 + reproduce 4 workflow failure locally |
-| 1 | US-1 Black formatting fix + commit + push 驗 backend-ci.yml + ci.yml Black step 綠 |
+| 0 | Setup: branch + plan + checklist + GitHub issues #21-27 + reproduce 4 workflow failure locally + 14+1 test failures discovery + Option C scope expansion approved |
+| 1 | **US-1 Black formatting fix + US-6 collection fix** + commit + push 驗 backend-ci.yml + ci.yml Black step 綠 + collection 通過 |
 | 2 | US-2 Lint 2 cross-category fix + US-4 AP-8 wire to lint.yml + push 驗 V2 Lint 6 step 全綠 |
-| 3 | US-3 Playwright + E2E restoration（含 stale spec 處理） + push 驗 e2e-tests.yml 綠 |
-| 4 | US-5 Branch protection rule setup + 13.md doc + retrospective + Sprint Closeout + PR open |
+| 3 | **US-3 Playwright + E2E restoration + US-7 xfail triage** + push 驗 e2e-tests.yml 綠 + ci.yml「Run tests with coverage」step 綠（539 PASS / 14 xfail / 0 failed） |
+| 4 | US-5 Branch protection rule setup + 13.md doc + retrospective + Sprint Closeout + PR open（normal merge，**not admin-merge**）|
 
-可彈性壓縮成 3-4 days（如 Lint 2 違反少 + E2E 修補快）。
+Day 0 完成 2026-05-02；Day 1-4 預計 6 days（5+1）。
 
 ---
 
@@ -284,6 +364,9 @@ V2 Verification Audit（2026-05-01 closeout）在 §10 §AD-5 記錄：
 | **Branch protection 設錯導致用戶被自己鎖外** | Day 4 設定後 immediately 跑 dummy PR 驗證；保留 `Allow administrators to bypass` 選項只在 emergency override（**but 本 sprint 後永久關閉**）|
 | **AP-8 lint script path move 影響 52.2 unit test** | git mv 同 commit 內 update import path + run pytest 確認綠 |
 | **Sprint 52.6 自身 PR 也跑紅** | DoD 是 4 workflow 全綠才 merge；如某 step 仍紅，不 admin-merge bypass — fix it 或承認 sprint 未完成 |
+| **US-6 Option I (pyproject pythonpath) 不解** | Fallback Option II（test file importlib.util）→ Option III（rename test dir）；最差 case 加 1 day |
+| **US-7 xfail strict=True triggered**（53.x 修好但忘移除 xfail）| 53.1 reactivate ticket 強制要求移除 xfail 後 commit，pytest fail = 自動 catch |
+| **US-7 標記後 cancellation_safety 1 個是 race condition flaky**（不是真 bug）| Day 3 reproduce 3 次；如 3/3 fail 則 xfail；如 1/3 pass 則改 `pytest.mark.flaky` 或 `xfail(strict=False)` + Audit Debt |
 
 ---
 
@@ -336,8 +419,8 @@ Sprint 結束時，retrospective 必須回答以下 6 條：
 ## Sprint Closeout
 
 - [ ] Day 4 retrospective.md 寫好（含必答 6 條）
-- [ ] All 5 GitHub issues #21-25 closed
-- [ ] PR 開到 main，title: `feat(ci-restoration, sprint-52-6): CI infra restoration — AD-5 (4 workflow + branch protection)`
+- [ ] All 7 GitHub issues #21-27 closed（#27 umbrella reactivate moved to 53.1 — close 52.6 reference, but keep tracking issue OPEN for 53.1）
+- [ ] PR 開到 main，title: `feat(ci-restoration, sprint-52-6): CI infra restoration — AD-5 (4 workflow + branch protection + collection unblock + xfail triage)`
 - [ ] PR body 含每 US verification 證據 + workflow run id + branch protection screenshot/api response
 - [ ] **PR 用正常 merge**（NOT admin-merge）— 4 workflow + 1 frontend + 1 review approval
 - [ ] V2 milestone 更新：12/22 sprints
