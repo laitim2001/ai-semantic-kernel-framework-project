@@ -118,6 +118,89 @@
 
 ---
 
+### Branch Protection（main）— Sprint 52.6 US-5
+
+> **Background**：Sprint 52.2 PR #20 + Sprint 52.5 PR #19 均使用 admin-merge bypass red CI，違反 Sprint 52.5 retrospective §AD-2 教訓。Sprint 52.6 US-5 強制設定 main branch protection rule，杜絕未來 admin-merge precedent。
+
+#### 必選 Status Checks（8 條全綠才可 merge）
+
+```
+- Lint + Type Check + Test (with PostgreSQL 16)  # backend-ci.yml
+- Code Quality                                    # ci.yml
+- Tests                                           # ci.yml
+- Backend E2E Tests                               # e2e-tests.yml
+- E2E Test Summary                                # e2e-tests.yml aggregator
+- v2-lints                                        # lint.yml (V2 lint rules)
+- Frontend Tests                                  # frontend-ci.yml + ci.yml
+- CI Summary                                      # ci.yml aggregator
+```
+
+#### 必選 Options
+
+| Option | 設定 | 理由 |
+|--------|------|------|
+| Require status checks before merging | ✅ | 8 條全綠 |
+| Require branches to be up to date | ✅ | strict mode；防止 base 漂移 |
+| Require pull request reviews | ✅（min 1 approval）| 防止單人合併 |
+| Restrict who can push | ✅（admin only）| 防止 force push |
+| Allow force pushes | ❌ | 保留 git history |
+| Allow deletions | ❌ | 防止誤刪 main |
+| **Allow administrators to bypass** | **❌**（**關鍵**）| 杜絕 admin-merge norm；52.5 §AD-2 教訓 |
+
+#### `gh api` 等價設定命令（reproducibility）
+
+```bash
+gh api -X PUT repos/laitim2001/ai-semantic-kernel-framework-project/branches/main/protection \
+  -F required_status_checks[strict]=true \
+  -f required_status_checks[contexts][]="Lint + Type Check + Test (with PostgreSQL 16)" \
+  -f required_status_checks[contexts][]="Code Quality" \
+  -f required_status_checks[contexts][]="Tests" \
+  -f required_status_checks[contexts][]="Backend E2E Tests" \
+  -f required_status_checks[contexts][]="E2E Test Summary" \
+  -f required_status_checks[contexts][]="v2-lints" \
+  -f required_status_checks[contexts][]="Frontend Tests" \
+  -f required_status_checks[contexts][]="CI Summary" \
+  -F enforce_admins=true \
+  -F required_pull_request_reviews[required_approving_review_count]=1 \
+  -F required_pull_request_reviews[dismiss_stale_reviews]=false \
+  -F restrictions= \
+  -F allow_force_pushes=false \
+  -F allow_deletions=false
+```
+
+> **Note on `enforce_admins=true`**：GitHub 的 `enforce_admins` 對映 UI 「Do not allow bypassing the above settings」勾選。設 true = admin **無法** bypass red CI / missing review。Sprint 52.6 US-5 紀律核心。
+
+#### 違反舉證測試（Sprint 52.6 Day 4 / 後續任何 sprint 可重複）
+
+```bash
+# 1. 故意推一個 black-violator commit 到 test/ branch
+git checkout -b test/branch-protection-verify
+echo "x=1" >> backend/src/some_file.py  # bad indentation
+git add ... && git commit -m "test: intentional black violation"
+git push origin test/branch-protection-verify
+
+# 2. 開 PR
+gh pr create --title "test: branch protection lockdown" ...
+
+# 3. 等 CI 跑紅
+gh pr view <id> --json statusCheckRollup -q '.statusCheckRollup[] | select(.conclusion == "FAILURE")'
+
+# 4. 嘗試 admin merge → 應該被擋
+gh pr merge <id> --merge  # 預期失敗（required check pending OR admin bypass disabled）
+gh pr merge <id> --admin --merge  # 預期失敗（enforce_admins=true）
+
+# 5. 清理
+gh pr close <id> && git push origin --delete test/branch-protection-verify
+```
+
+#### 維護紀律
+
+- 每次新增 CI workflow 必須加進 status checks（or rule needs update）
+- workflow rename 必須同步 update protection rule
+- `enforce_admins=true` 不得改回 false（必要 emergency override 須 documented + audit log）
+
+---
+
 ## Docker 化規格
 
 ### Backend Dockerfile（多階段建構，**2026-04-28 review 修訂**：builder / runtime 分離）
