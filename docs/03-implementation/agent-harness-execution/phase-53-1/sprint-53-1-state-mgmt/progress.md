@@ -180,3 +180,126 @@ Reactivation strategy (Day 3-4):
 - Cat 7 coverage 維持 ≥ 85%
 - Commit `feat(state-mgmt, sprint-53-1): US-2 + US-3 ...` + push + verify Backend CI green
 - Close #33 + #34
+
+---
+
+## Day 2 — 2026-05-02
+
+### Major Discovery: Sprint 49.2 已交付一半 ✅
+
+Day 2.1 inspection found **0004_state.py + models/state.py + append_snapshot helper** all delivered by Sprint 49.2 Day 4.1-4.4. Plan §US-2 originally assumed schema design + alembic migration creation in 53.1, but reality:
+
+| Plan §US-2 假設 | 實況 |
+|----------------|------|
+| Create new alembic migration `XXXX_add_state_snapshots.py` (parent `0010_pg_partman`) | **Already exists**: `0004_state.py` (Sprint 49.2 Day 4.3) |
+| Create `_db_models.py` SQLAlchemy `StateSnapshotORM` | **Already exists**: `infrastructure/db/models/state.py::StateSnapshot` + `LoopState` (cache pointer) |
+| Schema: `durable_state JSONB + transient_summary JSONB + size_bytes` | **Reality**: single `state_data JSONB` + `state_hash` + `turn_num` + `reason` (different but more compact + audit-aware via append-only trigger) |
+| Implement save/load/time_travel | **Built fresh**: wraps existing `append_snapshot()` helper |
+
+Result: Day 2 scope reduced from "build schema + ORM + checkpointer" → "build checkpointer wrapping existing infra". Net +500 lines instead of +1000+.
+
+### US-2 DBCheckpointer ✅
+
+**Commit**: `9a68e5da` — `feat(state-mgmt, sprint-53-1): US-2 + US-3 DBCheckpointer + transient/durable split`
+
+**Files**:
+- ➕ `backend/src/agent_harness/state_mgmt/checkpointer.py` (266 lines) — `DBCheckpointer` + `StateNotFoundError` + `StateMismatchError` + `_serialize_state_for_db` + `_deserialize_state_from_db`
+- ➕ `backend/tests/unit/agent_harness/state_mgmt/test_checkpointer_serialization.py` (10 tests, no DB)
+- ➕ `backend/tests/integration/agent_harness/state_mgmt/test_checkpointer_db.py` (7 tests, real PG)
+- ✏️ `backend/src/agent_harness/state_mgmt/__init__.py` — re-export 新 public API
+- ✏️ `backend/src/agent_harness/state_mgmt/README.md` — US-3 docs
+
+**DBCheckpointer 特性**:
+- **Bound pattern**: `(session_id, tenant_id)` 在 constructor 設定 → `Checkpointer.load(version=N)` ABC 不需要傳 session_id 每次；查詢自動 tenant-scoped
+- **save / load / time_travel** 完整實現 ABC 契約
+- **StateMismatchError** 守門：state.durable.{session_id,tenant_id} 必須 match binding（caller bug guard）
+- **Optimistic concurrency**: 透過 49.2 `append_snapshot()` helper 的 StateVersion 雙因子 (counter + state_hash)
+- **DB chain authoritative**: load 時 StateVersion 由 row.{version,parent_version,created_at,reason} 構建（embedded `version_meta` 是 informational）
+
+### US-3 Transient/Durable split runtime enforcement ✅
+
+**設計**:
+- `_serialize_state_for_db(state)` — 只持久化:
+  - DurableState 全部 fields (session_id / tenant_id / user_id / pending_approval_ids / last_checkpoint_version / conversation_summary / metadata)
+  - TransientState SCALAR summary (current_turn / elapsed_ms / token_usage_so_far)
+- **不**持久化:
+  - `messages` list (range 4 messages history rehydrate)
+  - `pending_tool_calls` list (ephemeral; AgentLoop refill on resume)
+- `_deserialize_state_from_db(row)` — TransientState rehydrate with `messages=[]` + `pending_tool_calls=[]`
+
+**驗收**:
+- Unit test `test_serialize_size_under_5kb_for_typical_state` — 100 messages 高負載 → JSON < 5KB ✅
+- Integration test `test_db_row_size_under_5kb` — real PG round-trip 同上 ✅
+
+### 17 Tests ✅ (target ≥ 4 unit + ≥ 4 integration)
+
+**Unit (10)** — `test_checkpointer_serialization.py`:
+| Test | 覆蓋場景 |
+|------|---------|
+| `test_serialize_excludes_messages_buffer` | US-3: messages 不入 output |
+| `test_serialize_excludes_pending_tool_calls` | US-3: pending_tool_calls 不入 |
+| `test_serialize_includes_only_transient_scalars` | scalar summary 內容 |
+| `test_serialize_uuid_and_datetime_jsonsafe` | UUID→str / datetime→ISO |
+| `test_serialize_optional_user_id_none` | None handling |
+| `test_deserialize_rehydrates_empty_transient_buffers` | US-3 load empty |
+| `test_deserialize_preserves_transient_scalars` | scalar 還原 |
+| `test_deserialize_round_trip_durable_equality` | durable 全 fields 還原 |
+| `test_deserialize_version_metadata` | StateVersion 重建 |
+| `test_serialize_size_under_5kb_for_typical_state` | 100 msgs 不 bloat |
+
+**Integration (7)** — `test_checkpointer_db.py`:
+| Test | 覆蓋場景 |
+|------|---------|
+| `test_save_load_round_trip` | 基本 round-trip + DB chain version |
+| `test_save_multiple_versions_then_time_travel` | v1/v2/v3 → time_travel(2) returns v2 |
+| `test_tenant_isolation` | tenant_b 不能 load tenant_a snapshot |
+| `test_state_mismatch_session_id_raises` | StateMismatchError(session_id) |
+| `test_state_mismatch_tenant_id_raises` | StateMismatchError(tenant_id) |
+| `test_load_unknown_version_raises` | StateNotFoundError |
+| `test_db_row_size_under_5kb` | real PG row JSONB < 5KB |
+
+### Day 2 Sanity Baselines
+
+| Metric | Value | Δ from Day 1 |
+|--------|-------|--------------|
+| pytest | **580 passed** / 4 skip / 14 xfail / 0 fail | +17 ✅ |
+| mypy --strict src | **202 source files** clean | +1 (checkpointer.py) ✅ |
+| Cat 7 coverage | **99%** (108 stmts, 1 miss) | +1pp ✅ |
+| 6 V2 lint scripts | all green | ✅ |
+| black/isort/flake8/ruff on new files | all green（auto-fix 3 files；datetime unused removed）| ✅ |
+| alembic head | `0010_pg_partman` (unchanged — no new migration) | ✅ |
+
+### Day 2 Commit + Push + CI
+
+- Push: `3f97746d..9a68e5da` to `feature/sprint-53-1-state-mgmt`
+- Backend CI on `9a68e5da` triggered（path `backend/**` matched）
+- 其他 CI workflow 待 PR open
+
+### #33 + #34 Status
+
+- ✅ #33 closed by commit `9a68e5da` (US-2)
+- ✅ #34 closed by commit `9a68e5da` (US-3)
+
+### Plan/Reality Drift（為 retrospective 備記）
+
+Plan §File Change List 列了下列**未交付**項，因 Sprint 49.2 已存在：
+- ❌ `_db_models.py` (new) — 改用 `infrastructure/db/models/state.py`
+- ❌ `alembic/versions/XXXX_add_state_snapshots.py` (new) — 改用 `0004_state.py`
+- ❌ Schema `durable_state JSONB + transient_summary JSONB + size_bytes` — 改用 `state_data JSONB` 單欄
+
+這是**正面 drift**（節省一個 sprint 的工作）— Sprint 49.2 比預期完整。Audit Debt: 無；plan 文件**保留原樣**作為歷史紀錄。
+
+### Remaining for Day 3 (US-4 + #27 上半)
+
+- **US-4** AgentLoop integration with Reducer + Checkpointer (sole-mutator pattern)
+  - `AgentLoop.__init__(reducer, checkpointer, ...)` DI
+  - `state.transient.X.append(...)` mutations 全改 `state = await reducer.merge(...)`
+  - Safe points checkpoint：post-LLM / post-tool / post-verify / on HITL pause
+  - `LoopEvent.state_version` SSE field
+  - Integration test：3-turn loop + 1 tool + 1 verify → DB ≥ 5 snapshots
+- **#27 上半** xfail reactivation:
+  - `test_cancellation_safety.py` × 1 (Cat 7 native)
+  - `test_memory_tools_integration.py` × 6 (ExecutionContext drift)
+  - `test_tenant_isolation.py` × 2
+- 9 / 14 reactivate target Day 3
+- Commit + push + close #35
