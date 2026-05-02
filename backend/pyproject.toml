@@ -20,6 +20,8 @@ dev = [
     "mypy>=1.10",
     # Sprint 52.6 US-1 / AD-5: type stubs needed for mypy --strict on CI Linux
     "types-requests>=2.31",
+    # Sprint 53.1 US-6 / 52.6 AI-20: ruff in [dev] so ci.yml install picks it up
+    "ruff>=0.6,<1.0",
 ]
 
 [build-system]
