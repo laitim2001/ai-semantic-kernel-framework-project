@@ -18,11 +18,7 @@ from textwrap import dedent
 
 import pytest
 
-LINT_SCRIPT = (
-    Path(__file__).resolve().parents[4]
-    / "scripts"
-    / "check_promptbuilder_usage.py"
-)
+LINT_SCRIPT = Path(__file__).resolve().parents[4] / "scripts" / "check_promptbuilder_usage.py"
 
 
 def _run_lint(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:

@@ -75,9 +75,7 @@ async def test_cache_size_flat_after_turn_1() -> None:
 
     print(f"\ncache_size per turn: {sizes}")
     assert sizes[0] >= 1
-    assert all(s == sizes[0] for s in sizes[1:]), (
-        f"cache should be flat from turn 1; got {sizes}"
-    )
+    assert all(s == sizes[0] for s in sizes[1:]), f"cache should be flat from turn 1; got {sizes}"
 
     # Steady-state hit interpretation: turns 2-5 reuse all keys, so the
     # implicit hit ratio across the steady-state window is 100%.
@@ -102,9 +100,7 @@ async def test_has_cached_persists_across_turns() -> None:
             state=_state(tenant_id, session_id),
             tenant_id=tenant_id,
         )
-        persisted.append(
-            cache_manager.has_cached(tenant_id=tenant_id, section_id="system_prompt")
-        )
+        persisted.append(cache_manager.has_cached(tenant_id=tenant_id, section_id="system_prompt"))
 
     print(f"\nhas_cached(system_prompt) per turn: {persisted}")
     assert persisted[0] is True

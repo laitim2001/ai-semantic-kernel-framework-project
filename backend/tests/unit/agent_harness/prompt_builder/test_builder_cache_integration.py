@@ -109,7 +109,5 @@ async def test_disabled_policy_returns_no_breakpoints() -> None:
     tenant_id = uuid4()
     state = make_state(messages=[msg("user", "q")], tenant_id=tenant_id)
     disabled = CachePolicy(enabled=False)
-    artifact = await builder.build(
-        state=state, tenant_id=tenant_id, cache_policy=disabled
-    )
+    artifact = await builder.build(state=state, tenant_id=tenant_id, cache_policy=disabled)
     assert artifact.cache_breakpoints == []

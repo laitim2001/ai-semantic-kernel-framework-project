@@ -118,10 +118,7 @@ async def test_build_p95_under_50ms_over_100_runs() -> None:
     p95 = sorted_d[int(len(sorted_d) * 0.95) - 1]
     p99 = sorted_d[int(len(sorted_d) * 0.99) - 1]
 
-    print(
-        f"\nbuild() latency over 100 runs: "
-        f"p50={p50:.2f}ms p95={p95:.2f}ms p99={p99:.2f}ms"
-    )
+    print(f"\nbuild() latency over 100 runs: " f"p50={p50:.2f}ms p95={p95:.2f}ms p99={p99:.2f}ms")
     assert p95 < 50.0, f"SLO violation: p95={p95:.2f}ms exceeds 50ms threshold"
 
 
@@ -142,9 +139,7 @@ async def test_lost_in_middle_position_accuracy_over_50_runs() -> None:
             continue
         first_is_system = msgs[0].role == "system"
         user_msgs = [m for m in msgs if m.role == "user"]
-        last_user_correct = bool(user_msgs) and f"query-{i}" in str(
-            user_msgs[-1].content
-        )
+        last_user_correct = bool(user_msgs) and f"query-{i}" in str(user_msgs[-1].content)
         if first_is_system and last_user_correct:
             correct += 1
 

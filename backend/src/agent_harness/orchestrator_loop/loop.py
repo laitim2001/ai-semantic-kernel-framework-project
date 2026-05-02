@@ -294,9 +294,7 @@ class AgentLoopImpl(AgentLoop):
                     duration_ms = (time.perf_counter() - t0) * 1000.0
                     chat_messages = list(artifact.messages)
                     cache_breakpoints = (
-                        list(artifact.cache_breakpoints)
-                        if artifact.cache_breakpoints
-                        else None
+                        list(artifact.cache_breakpoints) if artifact.cache_breakpoints else None
                     )
                     layers_used = artifact.layer_metadata.get("memory_layers_used", [])
                     strategy_used = artifact.layer_metadata.get("position_strategy", "")
@@ -304,9 +302,9 @@ class AgentLoopImpl(AgentLoop):
                         messages_count=len(artifact.messages),
                         estimated_input_tokens=artifact.estimated_input_tokens,
                         cache_breakpoints_count=len(artifact.cache_breakpoints),
-                        memory_layers_used=tuple(layers_used)
-                        if isinstance(layers_used, (list, tuple))
-                        else (),
+                        memory_layers_used=(
+                            tuple(layers_used) if isinstance(layers_used, (list, tuple)) else ()
+                        ),
                         position_strategy_used=str(strategy_used),
                         duration_ms=duration_ms,
                         trace_context=ctx,

@@ -99,9 +99,7 @@ class MockChatClient(ChatClient):
     ) -> ChatResponse:
         self.chat_call_count += 1
         self.last_request = request
-        self.last_call_cache_breakpoints = (
-            list(cache_breakpoints) if cache_breakpoints else None
-        )
+        self.last_call_cache_breakpoints = list(cache_breakpoints) if cache_breakpoints else None
         if not self._responses:
             return ChatResponse(
                 model=self._model_metadata.model_name,
@@ -119,9 +117,7 @@ class MockChatClient(ChatClient):
     ) -> AsyncIterator[StreamEvent]:
         self.stream_call_count += 1
         self.last_request = request
-        self.last_call_cache_breakpoints = (
-            list(cache_breakpoints) if cache_breakpoints else None
-        )
+        self.last_call_cache_breakpoints = list(cache_breakpoints) if cache_breakpoints else None
         return self._stream_impl()
 
     async def _stream_impl(self) -> AsyncIterator[StreamEvent]:
