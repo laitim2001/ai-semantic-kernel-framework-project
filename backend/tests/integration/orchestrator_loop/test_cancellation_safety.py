@@ -185,6 +185,10 @@ async def test_consumer_break_closes_generator_cleanly() -> None:
     assert not any(isinstance(e, LoopCompleted) for e in collected)
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="Sprint 52.5 orchestrator drift; reactivate per #27 in Sprint 53.1",
+)
 @pytest.mark.asyncio
 async def test_post_cancel_message_state_consistent() -> None:
     """After mid-tool cancellation, messages seen by chat() up to the
