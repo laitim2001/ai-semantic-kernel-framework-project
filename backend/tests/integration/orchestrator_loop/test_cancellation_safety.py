@@ -185,10 +185,6 @@ async def test_consumer_break_closes_generator_cleanly() -> None:
     assert not any(isinstance(e, LoopCompleted) for e in collected)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 52.5 orchestrator drift; reactivate per #27 in Sprint 53.1",
-)
 @pytest.mark.asyncio
 async def test_post_cancel_message_state_consistent() -> None:
     """After mid-tool cancellation, messages seen by chat() up to the
@@ -197,13 +193,18 @@ async def test_post_cancel_message_state_consistent() -> None:
     from agent_harness._contracts import ToolCall
     from agent_harness.tools._abc import ToolExecutor
 
+    # Sprint 53.1 #27 reactivation: ToolExecutor.execute signature gained
+    # `context=None` kwarg in 52.5 P0 #18; mock must accept it to avoid
+    # TypeError at the call site in loop.py.
     class HangingToolExecutor(ToolExecutor):
-        async def execute(self, call, *, trace_context=None):
+        async def execute(self, call, *, trace_context=None, context=None):
             await asyncio.sleep(10)
             raise RuntimeError("never reached")
 
-        async def execute_batch(self, calls, *, trace_context=None):
-            return [await self.execute(c, trace_context=trace_context) for c in calls]
+        async def execute_batch(self, calls, *, trace_context=None, context=None):
+            return [
+                await self.execute(c, trace_context=trace_context, context=context) for c in calls
+            ]
 
     chat = MockChatClient(
         responses=[

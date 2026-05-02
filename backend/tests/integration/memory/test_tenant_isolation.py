@@ -27,7 +27,14 @@ from uuid import UUID, uuid4
 import pytest
 
 from adapters._testing.mock_clients import MockChatClient
-from agent_harness._contracts import ChatResponse, MemoryHint, Message, ToolCall, TraceContext
+from agent_harness._contracts import (
+    ChatResponse,
+    ExecutionContext,
+    MemoryHint,
+    Message,
+    ToolCall,
+    TraceContext,
+)
 from agent_harness._contracts.chat import StopReason
 from agent_harness.memory._abc import MemoryLayer, MemoryScope
 from agent_harness.memory.extraction import MemoryExtractor
@@ -108,10 +115,6 @@ class _TenantStubLayer(MemoryLayer):
         return ""
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 52.5 P0 #11/#18 multi-tenant + ExecutionContext; reactivate per #27 in 53.1",
-)
 @pytest.mark.asyncio
 @pytest.mark.multi_tenant
 async def test_tenant_a_search_zero_leak_from_tenant_b() -> None:
@@ -126,25 +129,20 @@ async def test_tenant_a_search_zero_leak_from_tenant_b() -> None:
 
     retrieval = MemoryRetrieval({"user": layer})
     handler = make_memory_search_handler(retrieval)
+    exec_ctx = ExecutionContext(tenant_id=tenant_a, user_id=user_a)
     call = ToolCall(
         id="t1",
         name="memory_search",
         arguments={
             "query": "secret",
             "scopes": ["user"],
-            "tenant_id": str(tenant_a),
-            "user_id": str(user_a),
         },
     )
-    resp = json.loads(await handler(call))
+    resp = json.loads(await handler(call, exec_ctx))
     assert resp["ok"] is True
     assert resp["hints"] == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Sprint 52.5 P0 #11/#18 multi-tenant + ExecutionContext; reactivate per #27 in 53.1",
-)
 @pytest.mark.asyncio
 @pytest.mark.multi_tenant
 async def test_tenant_a_write_isolated_storage() -> None:
@@ -155,6 +153,7 @@ async def test_tenant_a_write_isolated_storage() -> None:
     user_b = uuid4()
 
     handler = make_memory_write_handler({"user": layer})
+    exec_ctx = ExecutionContext(tenant_id=tenant_a, user_id=user_a)
     write_call = ToolCall(
         id="t2",
         name="memory_write",
@@ -162,11 +161,9 @@ async def test_tenant_a_write_isolated_storage() -> None:
             "scope": "user",
             "key": "k",
             "content": "tenant A data",
-            "tenant_id": str(tenant_a),
-            "user_id": str(user_a),
         },
     )
-    resp = json.loads(await handler(write_call))
+    resp = json.loads(await handler(write_call, exec_ctx))
     assert resp["ok"] is True
 
     assert layer.write_calls[0]["tenant_id"] == tenant_a
