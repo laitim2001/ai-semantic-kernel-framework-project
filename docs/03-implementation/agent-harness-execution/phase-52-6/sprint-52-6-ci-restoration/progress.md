@@ -210,3 +210,74 @@ If C (recommended):
 - Sprint duration estimate revised: Day 1 ate ~6 hours (vs 4-5 budget). May compress US-2/US-4/US-3/US-7 if needed.
 - All 4 commits used "Verify branch before commit" check; no admin-merge used.
 
+---
+
+## Day 2 — 2026-05-02 (US-2 Lint 2 + US-4 AP-8 wire)
+
+### Today's Accomplishments
+
+#### 2.1-2.4 US-2 Lint 2 cross-category fix ✅
+- Commit `df167998`: builder.py imports refactored to use category `__init__.py` public re-exports
+  - `from agent_harness.context_mgmt.cache_manager import PromptCacheManager` → `from agent_harness.context_mgmt import PromptCacheManager`
+  - `from agent_harness.context_mgmt.token_counter._abc import TokenCounter` → `from agent_harness.context_mgmt import TokenCounter`
+  - `from agent_harness.memory.retrieval import MemoryRetrieval` → `from agent_harness.memory import MemoryRetrieval`
+- Per `.claude/rules/category-boundaries.md` "Allowed import 2": cross-category imports OK from owner's `__init__.py`
+- Both target categories already re-export the needed types (no `_contracts/` move needed)
+- Verification: 49 prompt_builder tests pass; mypy 200 src clean; Lint 2 exit 0
+
+#### 2.5 US-4 AP-8 wire to lint.yml ✅
+- Commit `df167998` (lumped): `git mv scripts/check_promptbuilder_usage.py scripts/lint/check_promptbuilder_usage.py`
+- Commit `cc44f1e3`: lint.yml + test_lint_rule.py
+  - Added "Lint 6 — AP-8 (PromptBuilder usage; no bare messages list)" step in lint.yml
+  - Updated `LINT_SCRIPT` Path in test_lint_rule.py
+- Note: rename + builder.py edit landed in same commit (`df167998`) due to git mv staging order. Day 4 retrospective will note Action Item: separate stage `git restore --staged` if mixing rename + edit.
+
+#### 2.6 US-4 expanded — lint.yml deps install ✅
+- Commit `c404ea57`: lint.yml install step now runs `pip install -e ".[dev]" + pip install -r requirements.txt` (matches backend-ci.yml)
+- Caused by AD-5 author's prophecy: "lint.yml needs sqlalchemy install"
+- Root cause: `tests/conftest.py:34` imports `sqlalchemy.ext.asyncio.AsyncSession`. lint.yml's `pytest tests/unit/scripts/lint -v` step auto-loads root conftest, which fails ImportError without sqlalchemy.
+- Trade-off: lint workflow runtime +5-10s (full deps install) for "tests/conftest.py loads cleanly" guarantee
+- Alternative considered: lazy-import sqlalchemy in conftest fixtures — declined as broader scope
+
+### v2-lints Workflow Status
+
+| Run | Commit | Result | Step results |
+|-----|--------|--------|--------------|
+| 25244943582 | 8c9cc35a | ❌ Lint 2 fail | Day 1 closeout state |
+| 25245102859 | cc44f1e3 | ❌ Lint rule unit tests fail | Lint 1-6 ✅; conftest ImportError sqlalchemy |
+| **25245128223** | **c404ea57** | ✅ **SUCCESS** | **All 7 steps green: Lint 1-6 ✅ + Lint rule unit tests ✅** |
+
+### PR #28 Status After Day 2
+
+| Workflow | Status | Notes |
+|----------|--------|-------|
+| **v2-lints** | ✅ SUCCESS | Day 2 ✅ AD-5 Lint workflow restored |
+| **Frontend Tests** | ✅ SUCCESS | Was already green |
+| Backend CI (Lint+Type+Test) | ❌ pytest fails | 14 pre-existing — US-7 Day 3 |
+| Code Quality | ❌ | Likely tests step — US-7 Day 3 |
+| Tests | ❌ | Likely tests step — US-7 Day 3 |
+| Backend E2E Tests | (in progress / ?) | TBD Day 3 |
+| Frontend E2E Tests | (in progress / US-3) | US-3 Day 3 |
+
+### 🔍 Day 2 New Findings
+
+1. **`git mv` staging ordering**: `git mv` auto-stages the rename. Subsequent `git add path/to/file.py` (for the same file in new location) can carry the rename even when intent was to commit only the related edit. Day 2.6 mitigation: `git restore --staged ...` before re-adding selectively. Adds to Day 4 retrospective.
+2. **lint.yml conftest cascade**: lint.yml said "minimal deps for lint scripts" but conftest.py auto-loaded → forced full install. Suggests project-wide `tests/conftest.py` should defer DB imports to fixtures (53.x design discussion).
+
+### Issues impact
+
+- #22 (US-2 Lint 2) — closed via `df167998` commit msg `Closes #22` (auto-close on Day 4 PR merge to main)
+- #24 (US-4 AP-8 wire) — closed via `cc44f1e3` commit msg `Closes #24` (auto-close on Day 4 PR merge)
+
+### Remaining for Day 3
+
+- US-3 Playwright + E2E restoration (root cause: `playwright.config.ts` missing `projects` array)
+- US-7 xfail triage 14 pre-existing test failures + #27 reactivate ticket update
+
+### Notes
+
+- Day 2 commits: 3 (US-2 + US-4 split + lint.yml deps fix)
+- Day 2 push iterations: 2 (vs planned 1) — lint.yml deps install gap caught by CI
+- Cumulative sprint commits: 9 (2 Day 0 docs + 5 Day 1 + 3 Day 2 + 1 Day 1 progress)
+- All commits "Verify branch before commit" + no admin-merge
+
