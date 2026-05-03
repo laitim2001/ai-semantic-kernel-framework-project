@@ -92,7 +92,9 @@ async def test_ttl_set_on_increment(fake_redis, store) -> None:  # type: ignore[
 
 
 @pytest.mark.asyncio
-async def test_ttl_refreshes_on_subsequent_increment(fake_redis, store) -> None:  # type: ignore[no-untyped-def]
+async def test_ttl_refreshes_on_subsequent_increment(  # type: ignore[no-untyped-def]
+    fake_redis, store
+) -> None:
     """Each increment refreshes EXPIRE — sliding-window semantics."""
     await store.increment("counter:slide", ttl_seconds=30)
     # If we increment again with longer TTL, the new TTL should win
@@ -122,7 +124,9 @@ async def test_multi_tenant_keys_isolated(store) -> None:  # type: ignore[no-unt
 
 
 @pytest.mark.asyncio
-async def test_pipeline_returns_first_result_as_running_count(store) -> None:  # type: ignore[no-untyped-def]
+async def test_pipeline_returns_first_result_as_running_count(  # type: ignore[no-untyped-def]
+    store,
+) -> None:
     """RedisBudgetStore.increment returns INCR's result (not EXPIRE's bool)."""
     n1 = await store.increment("p1", ttl_seconds=10)
     n2 = await store.increment("p1", ttl_seconds=10)
