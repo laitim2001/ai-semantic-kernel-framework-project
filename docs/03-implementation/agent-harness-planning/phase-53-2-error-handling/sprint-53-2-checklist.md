@@ -132,13 +132,13 @@
 - [x] **black/isort/flake8/ruff** _(all green after auto-format on 6 files)_
 
 ### 2.11 Day 2 commit + push + verify CI
-- [ ] **Commit US-3 + US-4 + AP-8 allowlist**
-- [ ] **Push to feature branch**
-- [ ] **Backend CI green on this branch**
-- [ ] **Close GitHub issues #42 + #43**
+- [x] **Commit US-3 + US-4 + AP-8 allowlist** _(8c00b413, +1264/-82, 14 files)_
+- [x] **Push to feature branch** _(be39582d → 8c00b413)_
+- [x] **Backend CI green on this branch** _(initial 8c00b413 fail mypy on Linux Redis[bytes]; fix 677cfcc6 dual `# type: ignore[type-arg, unused-ignore]` per code-quality.md cross-platform pattern; success ✅)_
+- [x] **Close GitHub issues #42 + #43**
 
 ### 2.12 Day 2 progress.md update
-- [ ] **Append Day 2 progress.md**
+- [x] **Append Day 2 progress.md**
 
 ---
 
