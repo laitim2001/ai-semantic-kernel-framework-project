@@ -377,5 +377,3 @@ async def test_verify_chain_accepts_id_range(db_session: AsyncSession) -> None:
     assert "valid" in body
     assert "total_entries" in body
     assert body["total_entries"] >= 1
-
-
