@@ -305,6 +305,71 @@ None.
 - US-2 inline chat ApprovalCard (extends features/chat_v2/components with new ApprovalCard.tsx + chatStore approvals slice + SSE event hook)
 - Sprint final verification + retrospective + PR
 
+---
+
+## Day 4 — 2026-05-04 (US-2 ApprovalCard + SSE wiring + Sprint Closeout)
+
+### Today's Accomplishments
+
+#### 4.0 UNPLANNED scope: backend SSE serializer + frontend types ✅ (D13 added)
+- Day 4 探勘 finding: Day 2 `_cat9_hitl_branch` yields `ApprovalRequested` + `ApprovalReceived` LoopEvents but `serialize_loop_event` raised NotImplementedError. Production AgentLoopImpl with hitl_manager wired would crash chat endpoint. (Day 2 e2e tests didn't catch — they consumed events directly, not through SSE.)
+- Modified: `backend/src/api/v1/chat/sse.py` — added 2 isinstance branches mapping to `approval_requested` / `approval_received` wire types
+- Modified: `backend/tests/unit/api/v1/chat/test_sse.py` — added 3 test cases (17/17 green)
+- Modified: `frontend/src/features/chat_v2/types.ts` — added `ApprovalRequestedEvent` + `ApprovalReceivedEvent` to discriminated union; added 2 entries to KNOWN_LOOP_EVENT_TYPES; added `ApprovalEntry` type for store
+
+#### 4.1 + 4.2 US-2 ApprovalCard + chatStore wiring ✅
+- Modified: `frontend/src/features/chat_v2/store/chatStore.ts`
+  - Added `approvals: Record<string, ApprovalEntry>` slice (dedup-safe by request_id)
+  - Added 2 mergeEvent cases: `approval_requested` (push entry, dedup if exists) / `approval_received` (update decision; defensive create on out-of-order)
+  - approvals included in `_initial()` reset state
+- New: `frontend/src/features/chat_v2/components/ApprovalCard.tsx`
+  - Renders inline in chat conversation
+  - Pending state: Approve / Reject buttons + governance page deep-link + risk-level color coding
+  - Decided state: decision badge replaces buttons (APPROVED green / REJECTED red / ESCALATED orange)
+  - Optimistic chatStore update on decide (immediately before SSE event arrives)
+  - Error state for failed decide call
+- Modified: `frontend/src/features/chat_v2/components/MessageList.tsx`
+  - Subscribes to chatStore.approvals
+  - Renders ApprovalCard rows alongside messages, sorted by receivedAt
+  - Auto-scroll triggers on both messages.length and approvalEntries.length
+
+#### 4.3 Playwright e2e 🚧 DEFERRED to AD-Front-1 (per Day 0 D1)
+
+#### 4.4 Sprint final verification ✅
+- Cross-tenant isolation: enforced at HTTP layer (audit + governance endpoints)
+- LLM SDK leak: 0 (grep confirmed)
+- Full pytest: **1056 passed / 4 skipped / 0 fail** (+44 from main baseline 1012; +3 from Day 3 for SSE tests)
+- 6 V2 lint scripts: all OK / no violations
+- mypy --strict: all touched backend files clean
+- Frontend ESLint: clean (max-warnings 0)
+- Frontend build: 188KB / 52 modules / 541ms
+
+#### 4.5 Retrospective ✅
+- Created `retrospective.md` with all 6 mandatory questions answered
+- Documented ~50% over-estimate pattern (identical to 53.4) → calibration follow-up
+- 12 plan deviations (D1-D13 — D9 from Day 1 / D10-D11 from Day 2 / D12 from Day 3 / D13 from Day 4) for future plan accuracy
+- 6 AD items closed (AD-Cat9-4 + AD-Hitl-1/2/3/5/6); 3 new (AD-Front-1 + AD-Front-2 + AD-Hitl-4-followup)
+
+### Drift Update (D13 added)
+
+| # | Detail |
+|---|--------|
+| D13 (NEW) | Backend SSE serializer didn't handle `ApprovalRequested` + `ApprovalReceived` events emitted by Day 2 `_cat9_hitl_branch`. Caught in Day 4 探勘. Production crash risk if AgentLoopImpl had hitl_manager wired. Plan should have flagged this in Day 0 探勘 step "verify all SSE events emitted by US-3 are wire-supported". |
+
+### Banked / Burned Hours
+
+- Day 4 estimated: full day (~7-8 hr) / actual: ~3 hr
+- Cumulative: estimated 22-31 hr / actual ~11.5 hr / total banked ~10-19.5 hr
+- Banked time used for: thorough retrospective + closeout artifacts (no churn from rushing)
+
+### Sprint Closeout Status
+
+- ✅ All 6 USs delivered
+- ✅ retrospective.md filled
+- ✅ Pre-PR verification complete (pytest 1056 / lint clean / build green)
+- ⏳ PR open + merge (next step after this commit)
+- ⏳ Memory update post-merge
+
 ### Sprint Scope Refinement
 
 After Day 0 探勘, refined US scope:

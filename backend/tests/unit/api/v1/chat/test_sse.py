@@ -126,6 +126,38 @@ class TestSerializeLoopEvent:
         assert out["data"]["stop_reason"] == "end_turn"
         assert out["data"]["total_turns"] == 2
 
+    def test_approval_requested(self) -> None:
+        """Sprint 53.5 US-2: Cat 9 ESCALATE → ApprovalRequested → SSE."""
+        from agent_harness._contracts import ApprovalRequested
+
+        rid = uuid4()
+        ev = ApprovalRequested(approval_request_id=rid, risk_level="HIGH")
+        out = serialize_loop_event(ev)
+        assert out is not None
+        assert out["type"] == "approval_requested"
+        assert out["data"]["approval_request_id"] == str(rid)
+        assert out["data"]["risk_level"] == "HIGH"
+
+    def test_approval_received_approved(self) -> None:
+        """Sprint 53.5 US-2: wait_for_decision returns → ApprovalReceived → SSE."""
+        from agent_harness._contracts import ApprovalReceived
+
+        rid = uuid4()
+        ev = ApprovalReceived(approval_request_id=rid, decision="APPROVED")
+        out = serialize_loop_event(ev)
+        assert out is not None
+        assert out["type"] == "approval_received"
+        assert out["data"]["approval_request_id"] == str(rid)
+        assert out["data"]["decision"] == "APPROVED"
+
+    def test_approval_received_rejected(self) -> None:
+        from agent_harness._contracts import ApprovalReceived
+
+        ev = ApprovalReceived(approval_request_id=uuid4(), decision="REJECTED")
+        out = serialize_loop_event(ev)
+        assert out is not None
+        assert out["data"]["decision"] == "REJECTED"
+
     def test_unsupported_event_raises_with_sprint_pointer(self) -> None:
         ev = VerificationPassed(verifier="some_verifier")
         with pytest.raises(NotImplementedError, match="Sprint 50.2"):

@@ -86,9 +86,29 @@ export type LoopEndEvent = {
   data: { stop_reason: string; total_turns: number };
 };
 
+// Sprint 53.5 US-2: HITL approval events. Loop emits ApprovalRequested when
+// Cat 9 ESCALATE → HITLManager.request_approval persists; ApprovalReceived
+// when wait_for_decision returns. Frontend renders inline ApprovalCard.
+
+export type ApprovalRequestedEvent = {
+  type: "approval_requested";
+  data: {
+    approval_request_id: string | null;
+    risk_level: string;
+  };
+};
+
+export type ApprovalReceivedEvent = {
+  type: "approval_received";
+  data: {
+    approval_request_id: string | null;
+    decision: string; // APPROVED / REJECTED / ESCALATED
+  };
+};
+
 /**
- * Sprint 50.2 wires 7 known event types end-to-end. Unknown event types
- * (e.g. guardrail_check / hitl_required from later phases) are filtered
+ * Sprint 50.2 wired 7 known event types; Sprint 53.5 adds 2 (approval_*).
+ * Unknown event types (e.g. guardrail_check from later phases) are filtered
  * at the SSE parser (chatService.parseSSEFrame returns null) so the store
  * never sees them — preserving discriminated-union narrowing inside
  * mergeEvent's switch.
@@ -100,9 +120,11 @@ export type LoopEvent =
   | LLMResponseEvent
   | ToolCallRequestEvent
   | ToolCallResultEvent
-  | LoopEndEvent;
+  | LoopEndEvent
+  | ApprovalRequestedEvent
+  | ApprovalReceivedEvent;
 
-/** Set of SSE event type names recognized by Sprint 50.2 frontend. */
+/** Set of SSE event type names recognized by Sprint 50.2 + 53.5 frontend. */
 export const KNOWN_LOOP_EVENT_TYPES = new Set<string>([
   "loop_start",
   "turn_start",
@@ -111,6 +133,8 @@ export const KNOWN_LOOP_EVENT_TYPES = new Set<string>([
   "tool_call_request",
   "tool_call_result",
   "loop_end",
+  "approval_requested",
+  "approval_received",
 ]);
 
 // === UI aggregate types =====================================================
@@ -138,6 +162,15 @@ export type ToolCallEntry = {
   result?: string;
   isError?: boolean;
   durationMs?: number;
+};
+
+/** Sprint 53.5 US-2: in-chat HITL approval card state. */
+export type ApprovalEntry = {
+  approvalRequestId: string;
+  riskLevel: string;
+  // updated when approval_received arrives; null while pending
+  decision: string | null;
+  receivedAt: number; // epoch ms when ApprovalRequested arrived
 };
 
 export type ChatStatus = "idle" | "running" | "completed" | "cancelled" | "error";
