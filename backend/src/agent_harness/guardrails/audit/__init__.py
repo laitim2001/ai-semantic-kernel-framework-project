@@ -7,6 +7,10 @@ and verify_chain() for tamper detection.
 Schema reused (NOT duplicated): see infrastructure/db/models/audit.py.
 """
 
+from agent_harness.guardrails.audit.chain_verifier import (
+    ChainVerificationResult,
+    verify_chain,
+)
 from agent_harness.guardrails.audit.worm_log import (
     AuditAppendError,
     WORMAuditLog,
@@ -17,4 +21,6 @@ __all__ = [
     "WORMAuditLog",
     "AuditAppendError",
     "compute_entry_hash",
+    "verify_chain",
+    "ChainVerificationResult",
 ]

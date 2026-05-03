@@ -9,8 +9,10 @@ from agent_harness.guardrails._abc import (
 )
 from agent_harness.guardrails.audit import (
     AuditAppendError,
+    ChainVerificationResult,
     WORMAuditLog,
     compute_entry_hash,
+    verify_chain,
 )
 from agent_harness.guardrails.engine import GuardrailEngine
 from agent_harness.guardrails.input.jailbreak_detector import JailbreakDetector
@@ -46,4 +48,6 @@ __all__ = [
     "WORMAuditLog",
     "AuditAppendError",
     "compute_entry_hash",
+    "verify_chain",
+    "ChainVerificationResult",
 ]
