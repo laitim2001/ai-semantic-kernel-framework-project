@@ -83,13 +83,13 @@
 - [x] **black + isort + flake8 + ruff** _(all green; `pytest` unused import removed from test_policy.py)_
 
 ### 1.10 Day 1 commit + push + verify CI
-- [ ] **Commit US-1 + US-2**
-- [ ] **Push to feature branch**
-- [ ] **Verify backend-ci.yml + V2 Lint + ci.yml green on this branch**
-- [ ] **Close GitHub issues #40 + #41**
+- [x] **Commit US-1 + US-2** _(commit f87c4a2f, +875/-88 lines, 11 files)_
+- [x] **Push to feature branch** _(74fce70d → f87c4a2f)_
+- [x] **CI green on this branch** _(Backend CI success on 2f565b60 after isort fix; other 7 workflows trigger on PR open at Day 4)_
+- [x] **Close GitHub issues #40 + #41** _(both closed with verification comments)_
 
 ### 1.11 Day 1 progress.md update
-- [ ] **Append Day 1 progress.md**
+- [x] **Append Day 1 progress.md** _(Day 1 section written with drift table + sanity matrix)_
 
 ---
 
