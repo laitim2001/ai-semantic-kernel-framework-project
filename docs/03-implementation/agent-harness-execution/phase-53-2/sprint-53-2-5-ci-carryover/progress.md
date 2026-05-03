@@ -64,6 +64,80 @@ $ gh api repos/.../actions/workflows --jq '.workflows[] | select(.path|contains(
 
 ---
 
-## Day 1 — TBD
+## Day 1 — 2026-05-03 (Archive + Verify + Close, ~3h)
 
-（pending — Day 0 commit 後啟動）
+### 1.1 Delete ci.yml ✅
+- `git rm .github/workflows/ci.yml` 完成
+- `grep` 確認其他檔案 reference 全是 historical V1 sprint planning docs（archive / sprint-execution V1 / V9 analysis），無 active dependency
+- Commit `8d45cdc9` -277 lines
+
+### 1.2 Update 13-deployment-and-devops.md ✅
+§Branch Protection 全面 rewrite：
+- §必選 Status Checks: 8 → 4 active（Lint+Type+Test / Backend E2E / E2E Summary / v2-lints）
+- NEW §Permanently Dropped 子章節列出 4 條 + 替代 workflow
+- §必選 Options: review_count 1→0（solo-dev policy）
+- §gh api: 更新到當前指令 + future un-do snippet（2nd collaborator restoration）
+- §維護紀律: 加 solo-dev policy 條目
+- NEW §Changelog table: 52.6 baseline / 53.2 review_count / 53.2.5 ci.yml archive
+
+### 1.3 Update 53.2 retrospective.md ✅
+新增 §Follow-up — Sprint 53.2.5 (CI carryover) 含 investigation findings 表 + Resolution + Lesson Update 表（更正 AD-CI-3 真因 + AD-CI-1 since 0ec64c77 → 真實 since 2026-04-10）。
+
+### 1.4 Memory files ✅
+- `feedback_branch_protection_solo_dev_policy.md` line 62: "temporarily dropped ... restore after fix" → "permanently dropped ... not regression — duplicates removed"
+- New `project_phase53_2_5_ci_carryover.md` (60+ lines)
+- `MEMORY.md` 加新 entry under project section
+
+### 1.5 + 1.6 Push + Open PR + Verify CI ✅
+- Push: branch `chore/sprint-53-2-5-ci-carryover` to origin
+- Open PR #50 with full body（investigation findings + redundancy table + V2 discipline self-check）
+- **Initial CI**: 只 Backend E2E Tests + E2E Test Summary fired；Backend CI lint-and-test + V2 Lint NOT fired due to paths filter（docs-only PR + ci.yml deletion 不在 backend/** 也不在 lint paths）
+- **mergeStateStatus = BLOCKED**
+
+### 1.5b Paths filter blocker fix ✅ (discovered mid-merge)
+- 問題：required_status_checks 假設那些 checks 總是 fire；workflow paths filter 假設 only fire when relevant files change → docs-only PR + 部分 required checks 不出現 → BLOCKED
+- 解決：commit `9dbf35f1` 擴展 backend-ci.yml + lint.yml `paths:` 加 `.github/workflows/**`（future workflow file change 也觸發 backend 完整 test + V2 lint）
+- 副作用：未來如再有 ci.yml-style "broken at registration" workflow 改動會更早 surface
+- 同時 backend-ci push branches 加 `chore/**`（cover 本 sprint branch 命名）
+
+### 1.6b CI verification ✅
+4 required checks 全綠 at HEAD `9dbf35f1`：
+- Lint + Type Check + Test (PG16): SUCCESS
+- Backend E2E Tests: SUCCESS
+- E2E Test Summary: SUCCESS
+- v2-lints: SUCCESS
+
+### 1.7 Merge PR ✅
+- `gh pr merge 50 --merge --delete-branch`
+- main HEAD: a77878ad → `80b4a9e1`
+- Branch deleted local + remote
+
+### 1.8 Post-merge verification ✅
+- Workflow API list: 5 active workflows，**ci.yml 不在內** ✅
+- main HEAD `80b4a9e1` push 觸發 4 expected workflows（Backend CI / V2 Lint / E2E Tests / Deploy to Production）
+- **No ci.yml run** for new HEAD ✅（vs prior a77878ad 仍有 ci.yml failed run）
+
+### 1.9 Close issues ✅
+- #49 自動 closed by PR #50（"Closes #49" in body）
+- 加 verification comment with post-merge evidence
+- #46 (53.2 US-8 AD-CI-1) 已 CLOSED state；earlier supersede comment posted
+
+### 1.10 Day 1 progress + retrospective ✅
+- Day 1 section append（this section）
+- retrospective.md 完整 6 必答 + Sprint Summary table
+
+---
+
+## Final Commits on `chore/sprint-53-2-5-ci-carryover`
+
+| SHA | Description |
+|-----|------|
+| `31034b18` | Day 0 plan + checklist + Day 0 progress |
+| `8d45cdc9` | ci.yml deletion (-277 lines) — closes AD-CI-2 + AD-CI-3 |
+| `987d68ce` | Batched docs (branch protection + 53.2 follow-up + 53.2.5 checklist [x] partial) |
+| `9dbf35f1` | paths expansion fix (backend-ci + lint to .github/workflows/**) |
+| Final commit | Day 1 progress + retrospective + checklist 100% [x] (this commit) |
+
+---
+
+## Sprint Done — V2 14/22 unchanged（carryover bundle）
