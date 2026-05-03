@@ -213,10 +213,7 @@ jobs:
     # would always fail with "open Dockerfile: no such file or directory"
     # and turn main HEAD CI Pipeline red on every merge. The hashFiles()
     # guard makes the job conditionally skip rather than fail.
-    if: |
-      github.ref == 'refs/heads/main'
-      && github.event_name == 'push'
-      && hashFiles('backend/Dockerfile') != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && hashFiles('backend/Dockerfile') != ''
 
     steps:
       - name: Checkout code
