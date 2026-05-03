@@ -134,7 +134,14 @@ async def test_approval_pending_query_uses_partial_index(
     db_session.add_all([pending_a, decided_a])
     await db_session.flush()
 
-    result = await db_session.execute(select(Approval).where(Approval.status == "pending"))
+    # Scope by this test's session to avoid cross-test pollution from other
+    # tests that commit pending approvals (e.g. governance endpoint tests).
+    result = await db_session.execute(
+        select(Approval).where(
+            Approval.status == "pending",
+            Approval.session_id == s.id,
+        )
+    )
     pending_rows = list(result.scalars().all())
     assert len(pending_rows) == 1
     assert pending_rows[0].id == pending_a.id

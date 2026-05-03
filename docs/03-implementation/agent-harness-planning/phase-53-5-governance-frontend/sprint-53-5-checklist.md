@@ -218,43 +218,62 @@
 
 ## Day 3 — US-1 Frontend governance approvals page (est. 6-8 hours)
 
+### 3.0 US-1 backend HTTP endpoint (UNPLANNED scope addition — Day 3 探勘 finding D12)
+- [x] **Create `backend/src/api/v1/governance/router.py`** ✅ (originally drafted as `governance.py`; moved to package per Phase 53.3 stub package convention)
+  - Endpoints: GET /api/v1/governance/approvals (paginated by tenant) + POST /api/v1/governance/approvals/{request_id}/decide
+  - DTOs: ApprovalSummaryDTO + PendingListResponse + DecisionRequestBody + DecisionResponse
+  - RBAC: new `require_approver_role` dep (approver / admin / manager); _require_role helper extracted
+  - Tenant isolation via HITLManager.get_pending; cross-tenant decide → 404
+  - Mounted in api/main.py
+  - 11 integration tests in `tests/integration/api/test_governance_endpoints.py` (RBAC + 3 decision paths + cross-tenant 404 + invalid label 422 + DTO shape)
+
 ### 3.1 US-1 governance_service.ts
-- [ ] **Create `frontend/src/services/governance_service.ts`**
-  - Content: ApprovalRequestSummary type + listPending() + decide() API client
-  - DoD: imports clean + types match backend ApprovalRequest
+- [x] **Create `frontend/src/features/governance/services/governanceService.ts`** ✅ (path adjusted per D3)
+  - Content: types.ts + governanceService.listPending + governanceService.decide
+  - Bearer JWT carried via `credentials: 'same-origin'` (existing pattern)
+  - DoD: imports clean; eslint green
 
 ### 3.2 US-1 ApprovalList + DecisionModal components
-- [ ] **Create `pages/governance/approvals/ApprovalList.tsx`**
-  - Tenant + role 過濾 list with sortable columns (request_uuid, tool_name, requested_by, age, risk_level, priority)
-  - Real-time updates via SSE topic `governance.approvals.pending` OR polling fallback (30s)
-  - DoD: list renders + sort works
-- [ ] **Create `pages/governance/approvals/DecisionModal.tsx`**
-  - Approve / Reject (with reason text) / Escalate (to higher role) buttons
-  - POST via governance_service.decide()
+- [x] **Create `frontend/src/features/governance/components/ApprovalList.tsx`** ✅
+  - Tabular view; columns: tool / risk (color-coded) / requester / reason / time-left / action
+  - Empty state ("No pending approvals.")
+  - Click row → onSelect → parent opens modal
+  - DoD: list renders + button works
+- [x] **Create `frontend/src/features/governance/components/DecisionModal.tsx`** ✅
+  - 3 buttons: Approve (green) / Reject (red) / Escalate (orange) + Cancel
+  - Reason textarea (optional)
+  - Error state for failed decide()
   - DoD: modal renders + 3 paths callable
-- [ ] **Create `pages/governance/approvals/index.tsx`**
-  - Route page combining ApprovalList + DecisionModal
+- [x] **Create `frontend/src/features/governance/components/ApprovalsPage.tsx`** ✅
+  - Container fetches list (30s poll fallback; no SSE topic — deferred to AD-Front-1)
+  - AbortController on unmount
+  - Decide submission → refresh list
   - DoD: route renders without errors
 
 ### 3.3 US-1 router + governance index update
-- [ ] **Register route `/governance/approvals` in router**
-  - File: `frontend/src/router/index.tsx` (or wherever routes defined)
+- [x] **Register route `/governance/approvals` (nested via React Router v6 sub-routes)** ✅
+  - File: `frontend/src/pages/governance/index.tsx` — uses `<Routes>` with index + approvals sub-route + catch-all redirect
+  - Existing `App.tsx` already mounts `/governance/*` so nested routes work without app.tsx changes
   - DoD: route resolvable
-- [ ] **Modify `pages/governance/index.tsx`**
-  - Add link / nav button to /governance/approvals
-  - DoD: link clickable
+- [x] **Modify `pages/governance/index.tsx`** ✅
+  - Replaced placeholder; now hosts `<GovernanceIndex>` (nav links) + `<ApprovalsPage>` at `/approvals`
+  - DoD: link clickable from /governance to /governance/approvals
 
 ### 3.4 US-1 Playwright e2e
-- [ ] **Create `frontend/tests/e2e/governance/approvals.spec.ts`**
+- [ ] **Create `frontend/tests/e2e/governance/approvals.spec.ts`** 🚧 DEFERRED to AD-Front-1 (per Day 0 D1 — Playwright not installed; sprint-sized to bootstrap). Components covered by manual verification + backend integration tests.
   - Test: login as reviewer → /governance/approvals → list pending → click row → modal → approve → backend state changes → loop resume → list updates
   - Multi-tenant test: tenant A reviewer 看不到 tenant B pending
   - DoD: e2e green
   - Verify: `cd frontend && npx playwright test tests/e2e/governance/approvals.spec.ts`
 
 ### 3.5 Day 3 sanity checks
-- [ ] **Frontend lint + type check + build green**
-  - Command: `cd frontend && npm run lint && npm run type-check && npm run build`
-- [ ] **Playwright e2e green**
+- [x] **Frontend lint + type check + build green** ✅
+  - eslint: clean (max-warnings 0)
+  - typecheck: 1 pre-existing tsconfig.node.json TS6310 (unrelated; tsconfig project ref emit setting)
+  - build: ✅ 51 modules transformed, 184KB output, 560ms
+- [x] **Backend full pytest** ✅ **1053 passed / 4 skipped / 0 fail** (+11 from Day 2's 1042; matches 11 governance endpoint tests added)
+- [x] **Pre-existing test fragility fix** — adjusted `test_approval_pending_query_uses_partial_index` to scope by `session_id` (was implicitly assuming no other test commits pending approvals)
+- [ ] **Playwright e2e green** 🚧 DEFERRED (AD-Front-1)
 
 ### 3.6 Day 3 commit + push + verify CI
 - [ ] **Stage + commit + push**

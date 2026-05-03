@@ -31,6 +31,8 @@ Created: 2026-05-01 (Sprint 52.5 Day 1.2)
 Last Modified: 2026-05-01
 
 Modification History:
+    - 2026-05-04: Add require_approver_role RBAC dep + extract _require_role helper
+        (Sprint 53.5 US-1 — approver / admin / manager)
     - 2026-05-04: Add require_audit_role RBAC dep (Sprint 53.5 US-5 — auditor / admin / compliance)
     - 2026-05-01: Initial creation (Sprint 52.5 Day 1.2) — replaces V1 stubs
 
@@ -98,6 +100,12 @@ async def get_current_user_id(request: Request) -> UUID:
 # Single-source: JWT 'roles' claim list[str].
 _AUDIT_ROLES: frozenset[str] = frozenset({"auditor", "admin", "compliance"})
 
+# RBAC roles permitted to view + decide on HITL approvals (Sprint 53.5 US-1).
+# Auditors are intentionally NOT included — auditors review the chain after
+# the fact; approval decisions belong to operators with authority over the
+# tool action being requested.
+_APPROVER_ROLES: frozenset[str] = frozenset({"approver", "admin", "manager"})
+
 
 async def require_audit_role(request: Request) -> UUID:
     """Authorize the caller for audit endpoints.
@@ -108,6 +116,20 @@ async def require_audit_role(request: Request) -> UUID:
 
     Used by GET /api/v1/audit/log and /api/v1/audit/verify-chain.
     """
+    return await _require_role(request, _AUDIT_ROLES, role_label="Audit")
+
+
+async def require_approver_role(request: Request) -> UUID:
+    """Authorize the caller for HITL approval decision endpoints.
+
+    Returns the authenticated user_id once role membership is verified.
+    Used by GET /api/v1/governance/approvals and POST /api/v1/governance/approvals/{id}/decide.
+    """
+    return await _require_role(request, _APPROVER_ROLES, role_label="Approver")
+
+
+async def _require_role(request: Request, allowed: frozenset[str], *, role_label: str) -> UUID:
+    """Shared role-check helper used by require_audit_role + require_approver_role."""
     user_id = await get_current_user_id(request)
     roles = getattr(request.state, "roles", None)
     if not isinstance(roles, list):
@@ -115,10 +137,10 @@ async def require_audit_role(request: Request) -> UUID:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="roles middleware contract violated",
         )
-    if not any(r in _AUDIT_ROLES for r in roles):
+    if not any(r in allowed for r in roles):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Audit role required",
+            detail=f"{role_label} role required",
         )
     return user_id
 
@@ -127,4 +149,5 @@ __all__ = [
     "get_current_tenant",
     "get_current_user_id",
     "require_audit_role",
+    "require_approver_role",
 ]

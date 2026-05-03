@@ -27,6 +27,8 @@ Created: 2026-04-29 (Sprint 49.4 Day 5)
 Last Modified: 2026-04-29
 
 Modification History (newest-first):
+    - 2026-05-04: Mount governance router (Sprint 53.5 US-1) — GET /governance/approvals
+        + POST /governance/approvals/{id}/decide (approver RBAC + tenant isolation).
     - 2026-05-04: Mount audit router (Sprint 53.5 US-5+US-6) — GET /audit/log
         + GET /audit/verify-chain (auditor RBAC + tenant isolation).
     - 2026-04-30: Mount chat router (Sprint 50.2 Day 1.5) — POST /chat SSE +
@@ -50,6 +52,7 @@ from fastapi import FastAPI
 
 from api.v1.audit import router as audit_router
 from api.v1.chat import router as chat_router
+from api.v1.governance import router as governance_router
 from api.v1.health import router as health_router
 from infrastructure.db import dispose_engine
 from platform_layer.middleware import TenantContextMiddleware
@@ -92,6 +95,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(chat_router, prefix="/api/v1")
     app.include_router(audit_router, prefix="/api/v1")
+    app.include_router(governance_router, prefix="/api/v1")
 
     return app
 

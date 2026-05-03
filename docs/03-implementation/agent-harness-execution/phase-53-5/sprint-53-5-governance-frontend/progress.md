@@ -232,6 +232,79 @@ None.
 - US-2 Frontend inline chat ApprovalCard
 - (Playwright e2e deferred to AD-Front-1 follow-up sprint per Day 0 finding)
 
+---
+
+## Day 3 — 2026-05-04 (US-1 Governance Approvals — backend HTTP + frontend feature)
+
+### Today's Accomplishments
+
+#### 3.0 UNPLANNED scope addition: backend governance HTTP endpoint ✅
+- Discovery: Day 3 探勘 found that Sprint 53.4 only built `HITLManager` service; no `/api/v1/governance/approvals` HTTP endpoint exists. Without it, US-1 frontend would be Potemkin (AP-4). Added scope.
+- New: `backend/src/api/v1/governance/router.py` (moved from initial draft `governance.py` after collision with existing Phase 53.3 stub package)
+  - `GET /api/v1/governance/approvals` — list pending for JWT tenant via HITLManager.get_pending
+  - `POST /api/v1/governance/approvals/{request_id}/decide` — apply ApprovalDecision (3 outcomes)
+  - DTOs: ApprovalSummaryDTO + PendingListResponse + DecisionRequestBody + DecisionResponse
+  - Tenant isolation enforced at HTTP boundary (decide pre-checks request belongs to tenant via get_pending)
+- Modified: `backend/src/platform_layer/identity/auth.py`
+  - Added `require_approver_role` dep (approver / admin / manager — auditors excluded)
+  - Refactored: extracted `_require_role` helper used by both audit + approver dep functions
+- Modified: `backend/src/api/main.py` — mount governance_router
+- Modified: `backend/src/api/v1/governance/__init__.py` — re-export router (matches `api/v1/chat` package pattern)
+
+#### 3.1 + 3.2 + 3.3 Frontend feature ✅
+- New: `frontend/src/features/governance/types.ts` (ApprovalSummary mirroring backend DTO)
+- New: `frontend/src/features/governance/services/governanceService.ts` (listPending + decide; AbortSignal support)
+- New: `frontend/src/features/governance/components/ApprovalList.tsx` (table view; risk-level color coding)
+- New: `frontend/src/features/governance/components/DecisionModal.tsx` (Approve/Reject/Escalate buttons + reason textarea + error state)
+- New: `frontend/src/features/governance/components/ApprovalsPage.tsx` (container; 30s polling fallback for real-time updates)
+- Modified: `frontend/src/pages/governance/index.tsx` — replaced placeholder with `<Routes>` (index + `/approvals` sub-route)
+- React Router v6 nested routing — App.tsx already mounts `/governance/*`, no app.tsx changes needed
+
+#### 3.4 Backend tests ✅ 11/11
+- New: `backend/tests/integration/api/test_governance_endpoints.py`
+- Cases (11): RBAC 403 (list+decide) / list returns pending / list cross-tenant invisible / list DTO shape / list empty / decide approves / decide rejects / decide escalates / decide cross-tenant 404 / decide nonexistent 404 / decide invalid label 422
+- Used `dependency_overrides` for `get_current_tenant` + `require_approver_role` (mirrors test_chat_e2e.py + test_audit_endpoints.py patterns)
+- Fixture: `_seed_session` inline helper (no `seed_session` in conftest)
+
+#### 3.5 Pre-existing test fragility fix
+- Fixed: `tests/unit/infrastructure/db/test_governance_models_crud.py::test_approval_pending_query_uses_partial_index`
+- Was implicitly relying on no other test having committed pending approvals (which my governance e2e tests now do); scoped query by session_id to make it robust
+- This is pre-existing test fragility surfaced (not caused) by Day 3 tests
+
+#### 3.6 Sanity checks ✅
+- Backend full pytest: **1053 passed / 4 skipped / 0 fail** (+11 from Day 2's 1042)
+- mypy --strict on touched backend files: clean
+- Black + isort + flake8: green
+- 6 V2 lint scripts: all OK / no violations
+- Frontend ESLint: clean (max-warnings 0)
+- Frontend build: 51 modules transformed, 184KB output, 560ms
+- Frontend typecheck: 1 pre-existing tsconfig.node.json TS6310 (unrelated to my changes)
+
+### Drift Update (D12 added)
+
+| # | Detail |
+|---|--------|
+| D12 (NEW) | Sprint plan US-1 implicitly assumed `/api/v1/governance/approvals/*` endpoint existed. Reality: not built (Sprint 53.4 only delivered HITLManager service). Added scope to Day 3 (router.py + 11 integration tests + RBAC dep + main.py mount). Without this, US-1 frontend would be Potemkin per AP-4. |
+
+### Banked / Burned Hours
+
+- Day 3 estimated: 6-8 hr / actual: ~3 hr (backend endpoint + frontend feature in single session)
+- Banked: ~3-5 hr (component reuse with chat_v2 patterns + skipping Playwright per Day 0 D1)
+- Cumulative banked: ~10-17 hr → reserved for Day 4 (US-2 ApprovalCard + closeout/retro/PR)
+
+### Blockers
+
+None.
+
+### AD Status Update
+
+- ✅ **AD-Hitl-1** US-1 governance approvals page — backend + frontend complete. Playwright e2e deferred to AD-Front-1.
+
+### Remaining for Day 4
+
+- US-2 inline chat ApprovalCard (extends features/chat_v2/components with new ApprovalCard.tsx + chatStore approvals slice + SSE event hook)
+- Sprint final verification + retrospective + PR
+
 ### Sprint Scope Refinement
 
 After Day 0 探勘, refined US scope:
