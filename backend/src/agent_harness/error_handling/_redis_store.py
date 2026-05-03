@@ -39,7 +39,10 @@ class RedisBudgetStore:
     and injects it. This module does not own connection lifecycle.
     """
 
-    def __init__(self, client: "Redis[bytes]") -> None:
+    def __init__(
+        self,
+        client: "Redis[bytes]",  # type: ignore[type-arg, unused-ignore]
+    ) -> None:
         self._client = client
 
     async def increment(self, key: str, ttl_seconds: int) -> int:
