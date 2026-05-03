@@ -14,7 +14,6 @@ import json
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
-import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 

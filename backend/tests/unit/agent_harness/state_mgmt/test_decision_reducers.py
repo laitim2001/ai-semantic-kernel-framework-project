@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from agent_harness._contracts.hitl import ApprovalDecision, DecisionType
+from agent_harness._contracts.subagent import SubagentMode, SubagentResult
 from agent_harness.state_mgmt.decision_reducers import (
     HITLDecisionReducer,
-    SubagentResult,
     SubagentResultReducer,
 )
 
@@ -76,24 +76,29 @@ def test_subagent_success_patch_metadata_keyed_by_id() -> None:
     sub_id = uuid4()
     result = SubagentResult(
         subagent_id=sub_id,
-        status="success",
-        output={"answer": 42},
+        mode=SubagentMode.AS_TOOL,
+        success=True,
+        summary="Computed 42",
+        tokens_used=120,
     )
     patch = SubagentResultReducer.build_patch(result)
 
     metadata_key = f"subagent_result:{sub_id}"
     assert metadata_key in patch["durable"]["metadata_set"]
     stored = patch["durable"]["metadata_set"][metadata_key]
-    assert stored["status"] == "success"
-    assert stored["output"] == {"answer": 42}
+    assert stored["success"] is True
+    assert stored["summary"] == "Computed 42"
+    assert stored["mode"] == SubagentMode.AS_TOOL.value
 
 
 def test_subagent_failed_patch_appends_message() -> None:
     sub_id = uuid4()
     result = SubagentResult(
         subagent_id=sub_id,
-        status="failed",
-        output={"error": "timeout"},
+        mode=SubagentMode.AS_TOOL,
+        success=False,
+        summary="timeout after 30s",
+        error="TimeoutError",
     )
     patch = SubagentResultReducer.build_patch(result)
     msg = patch["transient"]["messages_append"][0]
@@ -104,8 +109,18 @@ def test_subagent_failed_patch_appends_message() -> None:
 
 def test_two_parallel_subagents_metadata_keys_disjoint() -> None:
     """Two subagents should NOT overwrite each other's metadata."""
-    a = SubagentResult(subagent_id=uuid4(), status="success", output={"v": 1})
-    b = SubagentResult(subagent_id=uuid4(), status="success", output={"v": 2})
+    a = SubagentResult(
+        subagent_id=uuid4(),
+        mode=SubagentMode.AS_TOOL,
+        success=True,
+        summary="a",
+    )
+    b = SubagentResult(
+        subagent_id=uuid4(),
+        mode=SubagentMode.AS_TOOL,
+        success=True,
+        summary="b",
+    )
     patch_a = SubagentResultReducer.build_patch(a)
     patch_b = SubagentResultReducer.build_patch(b)
 

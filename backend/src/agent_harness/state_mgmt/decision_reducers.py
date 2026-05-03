@@ -31,20 +31,16 @@ Related:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
-from uuid import UUID
 
 from agent_harness._contracts.hitl import ApprovalDecision, DecisionType
+from agent_harness._contracts.subagent import SubagentResult
 
-
-@dataclass(frozen=True)
-class SubagentResult:
-    """Compact summary of a subagent run for state merging."""
-
-    subagent_id: UUID
-    status: str  # "success" | "failed" | "cancelled"
-    output: dict[str, Any]
+__all__ = [
+    "HITLDecisionReducer",
+    "SubagentResult",  # re-exported for caller convenience
+    "SubagentResultReducer",
+]
 
 
 # === HITLDecisionReducer ===
@@ -103,13 +99,18 @@ class SubagentResultReducer:
     @staticmethod
     def build_patch(result: SubagentResult) -> dict[str, Any]:
         """Return update dict to pass to DefaultReducer.merge()."""
+        status = "success" if result.success else "failed"
         marker = {
             "role": "system",
-            "content": (f"Subagent {result.subagent_id} finished with status=" f"{result.status}"),
+            "content": (
+                f"Subagent {result.subagent_id} ({result.mode.value}) "
+                f"finished status={status}: {result.summary}"
+            ),
             "metadata": {
                 "kind": "subagent_result",
                 "subagent_id": str(result.subagent_id),
-                "status": result.status,
+                "status": status,
+                "mode": result.mode.value,
             },
         }
         # Store structured result under metadata — keyed by subagent_id so
@@ -122,8 +123,13 @@ class SubagentResultReducer:
             "durable": {
                 "metadata_set": {
                     metadata_key: {
-                        "status": result.status,
-                        "output": result.output,
+                        "success": result.success,
+                        "summary": result.summary,
+                        "mode": result.mode.value,
+                        "tokens_used": result.tokens_used,
+                        "duration_ms": result.duration_ms,
+                        "error": result.error,
+                        "full_artifact_pointer": result.full_artifact_pointer,
                     },
                 },
             },
