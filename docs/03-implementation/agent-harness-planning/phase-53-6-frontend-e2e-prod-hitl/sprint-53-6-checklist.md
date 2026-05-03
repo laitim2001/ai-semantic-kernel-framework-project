@@ -168,17 +168,14 @@
 - [x] **Full e2e suite green locally** ✅ 7/7 in 5.4s (2 smoke + 5 governance)
 - [x] **Frontend lint + build green** ✅ ESLint clean / 188.10 KB / 52 modules / 563ms
 - [x] **Backend full pytest unaffected** — 53.6 Day 2 changes are frontend-only; baseline 1059 maintained (verified Day 1 last run; no backend code touched Day 2)
-- [ ] **CI Playwright E2E run passes** 🚧 will verify after Day 2.5 push
+- [x] **CI Playwright E2E run passes** ✅ 49s (faster than Day 1's 59s — chromium cache hit!)
 
 ### 2.5 Day 2 commit + push + verify CI
-- [ ] **Stage + commit + push**
-  - Commit: `feat(frontend-e2e, sprint-53-6): US-2 governance approvals reviewer e2e (5 cases incl. error + empty)`
-  - Push + verify CI
+- [x] **Stage + commit + push** ✅ commit `c6c51295` on branch
+- [x] **CI verify** ✅ Frontend CI 21s + Playwright E2E 49s both green; Backend CI skipped (paths filter excludes frontend-only commits — expected)
 
 ### 2.6 Day 2 progress.md update
-- [ ] **Update progress.md with Day 2 actuals**
-  - Commit: batched into Day 2.5 commit per 53.5 pattern
-  - Push
+- [x] **Update progress.md with Day 2 actuals** ✅ batched into Day 2.5 commit per 53.5 pattern
 
 ---
 
