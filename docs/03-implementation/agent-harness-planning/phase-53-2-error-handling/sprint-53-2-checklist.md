@@ -178,7 +178,19 @@
 
 ---
 
-## Day 4 — US-6 Lower Half + #38 + AD-CI-1 + 53.1 Closeout Bundle + Retrospective + PR (est. 7-8 hours)
+## Day 4 — US-6 Lower Half + #38 + AD-CI-1 + 53.1 Closeout Bundle + Retrospective + PR (executed 2026-05-03)
+
+> _All Day 4 work compressed into same calendar day. 9 USs + retrospective.md + PR open. Detail boxes below were retroactively documented post-execution._
+
+- [x] **4.1 Wire `_handle_tool_error` into main loop** _(commit `1e782813`; both uncaught exception path + soft-failure ToolResult path)_
+- [x] **4.2 Integration tests** _(4 scenarios pass: LLM_recoverable / FATAL_terminate / BUDGET_terminate / opt_out)_
+- [x] **4.3 Commit US-6 + push + Backend CI green + close #45** _(success on `1e782813`)_
+- [x] **4.4 US-7 #38 fix** _(commit `39bf8648` — asyncio.run() per call replaces fragile get_event_loop().run_until_complete; xfail count 1 → 0)_
+- [x] **4.5 US-8 AD-CI-1 fix** _(commits `39bf8648` + `57cf923d` — hashFiles('backend/Dockerfile') guard auto-skips Build job until #31)_
+- [x] **4.6 US-9 53.1 closeout bundle** _(merge commit `b4001430` brings 2 commits from `docs/sprint-53-1-closeout-bookkeeping`)_
+- [x] **4.7 Sprint final verification** _(all grep evidence ✅ — see retrospective Q6)_
+- [x] **4.8 retrospective.md** _(6 必答 + Audit Debt AD-Cat8-1~3 + AD-CI-2/3)_
+- [ ] **4.9 PR open + normal merge** ← in progress
 
 ### 4.1 US-6 AgentLoop integration (下半 — wire helper into main loop)
 - [ ] **Replace direct tool execution with `_execute_tool_with_error_handling`**
