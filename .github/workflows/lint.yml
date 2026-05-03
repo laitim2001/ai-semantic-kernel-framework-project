@@ -10,12 +10,13 @@ on:
       - "backend/src/**"
       - "scripts/lint/**"
       - "backend/tests/unit/scripts/lint/**"
-      - ".github/workflows/lint.yml"
+      - ".github/workflows/**"
   push:
     branches: [main]
     paths:
       - "backend/src/**"
       - "scripts/lint/**"
+      - ".github/workflows/**"
 
 permissions:
   contents: read
