@@ -1,0 +1,39 @@
+# File: backend/config/notification.yaml
+# Purpose: HITL notification channel configuration (Sprint 53.5 US-4).
+# Category: Platform / Governance / HITL
+# Scope: Phase 53 / Sprint 53.5 US-4
+#
+# Loaded by platform_layer.governance.hitl.notifier.load_notifier_from_config.
+# Environment variables in ${VAR} form are expanded at load time. Per-tenant
+# webhook overrides allow different tenants to route approvals to different
+# Teams channels without code changes.
+#
+# Fallback behavior:
+#   - file missing → NoopNotifier (with WARNING log)
+#   - teams.enabled = false → NoopNotifier
+#   - default webhook empty/unset AND no per-tenant override → NoopNotifier
+#   - notifier raises at runtime → swallowed by HITLManager (best-effort)
+
+version: "1.0"
+
+defaults:
+  enabled: true
+  fallback_silent: false  # log WARNING (vs DEBUG) when notifier unavailable
+
+teams:
+  enabled: true
+  # Default webhook for all tenants without an explicit override.
+  # If TEAMS_WEBHOOK_URL env var is unset, the default is empty -> NoopNotifier.
+  default_webhook: ${TEAMS_WEBHOOK_URL}
+
+  # Per-tenant webhook overrides. Keys are tenant UUIDs (string form).
+  # Add entries here OR set env vars TEAMS_WEBHOOK_TENANT_<UUID-NO-DASHES>.
+  per_tenant_overrides: {}
+  #   00000000-0000-0000-0000-000000000001: ${TEAMS_WEBHOOK_TENANT_001}
+
+  # Optional deep-link template for the governance approvals page.
+  # {request_id} is replaced at notification time.
+  approval_review_url_template: null
+
+  # Request timeout (seconds).
+  timeout_s: 5.0

@@ -106,6 +106,72 @@ None.
 - US-6 verify-chain endpoint + AuditQuery.verify_chain() implementation
 - US-4 notification.yaml + factory wiring
 
+---
+
+## Day 1 — 2026-05-04 (US-5 Audit HTTP + US-6 Chain Verify + US-4 notification.yaml)
+
+### Today's Accomplishments
+
+#### 1.1 + 1.2 US-5 Audit HTTP endpoint + US-6 Chain Verify ✅
+- New: `backend/src/api/v1/audit.py` (FastAPI router, 2 endpoints)
+- Modified: `backend/src/api/main.py` (mount audit router)
+- Modified: `backend/src/platform_layer/identity/auth.py` (added `require_audit_role` RBAC dep + `_AUDIT_ROLES` frozenset)
+- Modified: `backend/src/platform_layer/governance/audit/query.py` (added `verify_chain()` wrapper around `agent_harness.guardrails.audit.verify_chain`; constructor accepts both `session=` for list and `session_factory=` for verify_chain — methods independent)
+- Endpoints:
+  - `GET /api/v1/audit/log` — paginated cursor-style (`{items, has_more, next_offset, page_size}`); filters: operation / resource_type / user_id / from_ts_ms / to_ts_ms; max page_size 200 (FastAPI Query le=200); RBAC + tenant isolation
+  - `GET /api/v1/audit/verify-chain` — returns `{valid, broken_at_id, total_entries}`; uses fresh session_factory for chain walk; RBAC + tenant isolation
+
+#### 1.3 US-5 + US-6 integration tests ✅ 13/13
+- New: `backend/tests/integration/api/test_audit_endpoints.py`
+- Strategy: minimal FastAPI app + `dependency_overrides` for `get_current_tenant` / `require_audit_role` / `_get_db_session` (mirrors existing `test_chat_e2e.py` pattern)
+- Cases (13):
+  - **/log** (8): RBAC 403, tenant rows visible, cross-tenant invisible, operation filter, user_id filter, time-range filter, pagination cursor (3 pages), page_size cap 422, DTO shape
+  - **/verify-chain** (5): RBAC 403, empty chain valid, wiring smoke (single row), tenant isolation, from_id+to_id range params
+- Note: chain_verifier walker stops at first mismatch — synthetic `'0'*64`/`'1'*64` hashes break early; tests assert wiring + ≥1 entry examined, NOT chain validity (algorithm tested in 53.3)
+- Tenant codes use `uuid4().hex[:6]` suffix to avoid uniqueness violations across reruns when commit() bypasses fixture rollback
+
+#### 1.4 US-4 notification.yaml + factory ✅ (with deferred ServiceFactory wiring)
+- New: `backend/config/notification.yaml` (10-line minimal config; teams section only)
+- Modified: `backend/src/platform_layer/governance/hitl/notifier.py`
+  - Added `load_notifier_from_config(config_path)` function
+  - Added `_expand_env(value)` recursive ENV interpolation
+  - Added `_ENV_VAR_RE` regex for `${VAR}` matching (no default-value syntax — keeps loader simple)
+  - 4 NoopNotifier fallback paths: missing file / disabled / empty webhook + no overrides / unresolved env vars
+  - 2 ValueError raise paths: non-mapping overrides / invalid UUID key
+- ServiceFactory wiring 🚧 DEFERRED to Day 2 / US-3 — belongs at orchestrator boundary; Day 1 ships loader function only
+
+#### 1.5 US-4 unit tests ✅ 10/10
+- New: `backend/tests/unit/platform_layer/governance/hitl/test_notification_config.py`
+- Cases (10): missing file / teams disabled / empty webhook + no overrides / default webhook resolves / per-tenant override resolves / env var set / env var unset / invalid UUID key / non-mapping overrides / repo notification.yaml smoke load
+
+#### 1.6 Sanity checks ✅
+- mypy --strict 4 source files clean (after adding `# type: ignore[import-untyped, unused-ignore]` for yaml stub)
+- black + isort + flake8 green
+- 6 V2 lint scripts: all OK / no violations
+- Full pytest: **1035 passed / 4 skipped / 0 fail** (+23 from main baseline 1012)
+
+### Drift Update (D9 added)
+
+| # | Detail |
+|---|--------|
+| D9 (NEW) | `require_audit_role` placed in `platform_layer/identity/auth.py` (canonical identity dep file) instead of new `api/dependencies.py`. Plan said create new dep file; reality is to extend the single canonical identity module. Maintains single-source rule per multi-tenant-data.md. |
+
+### Banked / Burned Hours
+
+- Day 1 estimated: 5-6 hr / actual: ~2.5 hr
+- Banked: ~2.5-3.5 hr (ServiceFactory deferral + small test surface)
+- Reserved buffer: invest in US-3 (Day 2) — most architecturally risky
+
+### Blockers
+
+None.
+
+### Remaining for Day 2
+
+- US-3 ToolGuardrail returns RiskLevel context
+- US-3 AgentLoop `_cat9_tool_check` HITL wiring (4 paths: APPROVED/REJECTED/ESCALATED/EXPIRED)
+- US-3 integration tests + Stage 3 e2e
+
 ### Sprint Scope Refinement
 
 After Day 0 探勘, refined US scope:

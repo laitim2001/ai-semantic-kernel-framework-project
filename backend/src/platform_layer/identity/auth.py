@@ -31,6 +31,7 @@ Created: 2026-05-01 (Sprint 52.5 Day 1.2)
 Last Modified: 2026-05-01
 
 Modification History:
+    - 2026-05-04: Add require_audit_role RBAC dep (Sprint 53.5 US-5 — auditor / admin / compliance)
     - 2026-05-01: Initial creation (Sprint 52.5 Day 1.2) — replaces V1 stubs
 
 Related:
@@ -93,7 +94,37 @@ async def get_current_user_id(request: Request) -> UUID:
     return user_id
 
 
+# RBAC roles permitted to read audit_log (Sprint 53.5 US-5).
+# Single-source: JWT 'roles' claim list[str].
+_AUDIT_ROLES: frozenset[str] = frozenset({"auditor", "admin", "compliance"})
+
+
+async def require_audit_role(request: Request) -> UUID:
+    """Authorize the caller for audit endpoints.
+
+    Returns the authenticated user_id once role membership is verified.
+    Raises 401 if no JWT context (middleware must run first); 403 if the
+    JWT's roles claim does not intersect _AUDIT_ROLES.
+
+    Used by GET /api/v1/audit/log and /api/v1/audit/verify-chain.
+    """
+    user_id = await get_current_user_id(request)
+    roles = getattr(request.state, "roles", None)
+    if not isinstance(roles, list):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="roles middleware contract violated",
+        )
+    if not any(r in _AUDIT_ROLES for r in roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Audit role required",
+        )
+    return user_id
+
+
 __all__ = [
     "get_current_tenant",
     "get_current_user_id",
+    "require_audit_role",
 ]
