@@ -113,3 +113,58 @@ class ToolResult:
 ---
 
 **Day 1 will resume**：US-9 (small task first — ToolResult.error_class) → US-1 GuardrailEngine framework + GuardrailTriggered event → US-2 上半 PIIDetector + red-team fixture.
+
+---
+
+## Day 1 — 2026-05-03 (US-9 + US-1 + US-2 上半)
+
+### Completed deliverables
+
+| US | Status | Evidence |
+|----|--------|----------|
+| **US-9** ToolResult.error_class (AD-Cat8-3) | ✅ | error_class field added; ToolExecutor writes `f"{module}.{name}"`; DefaultErrorPolicy auto-mirrors registry to by-string view + new `register_by_string()` + `classify_by_string()` |
+| **US-1** GuardrailEngine framework | ✅ | engine.py with priority-sorted per-type chains + fail-fast + parallel batch; GuardrailTriggered already stubbed Sprint 49.1; guardrails.yaml declarative config; engine.py coverage 100% |
+| **US-2 上半** PIIDetector | ✅ | 4-pattern regex (email/phone/ssn/cc) with span-based dedup (avoids double-count between overlapping CC and phone matches); 38+12 red-team fixture; PII positive accuracy 100% / negative 100% (target 95%) |
+
+### Day 1 baseline → final
+
+| Metric | Day 0 | Day 1 final | Delta |
+|--------|-------|-------------|-------|
+| pytest | 680 / 4 / 0 / 0 | **753 / 4 / 0 / 0** | +73 (+8 US-9, +12 US-1, +53 US-2) |
+| mypy --strict src | 210 files | **213 files** | +3 (engine, pii_detector, input/__init__) |
+| Cat 9 coverage | n/a (no impl) | **98%** | from baseline 0% |
+| LLM SDK leak | 0 | 0 | unchanged |
+| 6 V2 lint scripts | green | green | unchanged |
+| Cat 8 vs Cat 9 strict boundary (雙向) | 0 / 0 | 0 / 0 | maintained |
+
+### Drift / decisions
+
+**ToolResult signature (Plan §TS US-9)**:
+- Plan TS code used `is_error: bool`; actual `_contracts/tools.py:126` uses `success: bool` + `error: str | None`. Implementation followed real schema and added `error_class` after `error`. Net behavior matches plan intent (preserve original exception type for soft-failure path); semantic identical.
+
+**Phone regex tuning (Plan §TS US-2)**:
+- Initial regex caused 2 false-positive multi-matches in CC strings ("4111-1111-1111-1111" → cc + phone double-count → BLOCK instead of expected ESCALATE). Three attempts:
+  1. Negative lookahead `(?![-.\s]?\d)` — only blocked match starting at first 12 digits, not middle starts.
+  2. Add negative lookbehind `(?<!\d[-.\s])` — same problem (matched from middle of CC).
+  3. **Final**: keep both lookaround guards as defense-in-depth + add **span-based dedup** in `check()` — runs patterns in priority order (ssn > credit_card > email > phone), discards overlapping matches.
+- Decision: span-dedup is the correct architectural approach because patterns SHOULD be allowed to legitimately match overlapping spans (e.g. CC sub-run looks like phone in isolation); the *counting* logic is what needed to be smarter, not the regexes.
+
+**GuardrailTriggered + TripwireTriggered events**:
+- Both stubs already created Sprint 49.1 in `_contracts/events.py:225-236`. Plan §US-1 / §US-5 listed them as new but they exist. Saved ~30 min planning time. Schemas are minimal (3-field GuardrailTriggered; 2-field TripwireTriggered) but sufficient for 53.3 SSE emission.
+
+### Estimated vs Actual
+
+| Step | Estimated | Actual | Drift |
+|------|-----------|--------|-------|
+| 1.1-1.2 US-9 (ToolResult + tests) | 90 min | ~75 min | -15 min (already-clear schema) |
+| 1.3-1.6 US-1 (engine + tests + yaml) | 120 min | ~110 min | -10 min |
+| 1.7 US-2 PIIDetector + redteam fixture | 150 min | ~180 min | +30 min (regex/dedup iteration) |
+| 1.8 sanity checks | 30 min | ~25 min | -5 min |
+| **Day 1 total** | ~6.5 hours | ~6.5 hours | 0 |
+
+✅ **Day 1 on schedule.**
+
+### Day 2 will resume
+
+US-2 下半 (JailbreakDetector + red-team fixture) → US-3 Output guardrails (ToxicityDetector + SensitiveInfoDetector + multi-tenant cross-leak test).
+

@@ -84,6 +84,71 @@ class TestClassify:
         assert p.classify(Foo()) == ErrorClass.LLM_RECOVERABLE
 
 
+# === classify_by_string (Sprint 53.3 US-9 / AD-Cat8-3) =====================
+
+
+class TestClassifyByString:
+    """Sprint 53.3 US-9: by-string classification for soft-failure
+    ToolResult path where the original exception object is unavailable.
+    """
+
+    def test_defaults_mirror_to_string_registry(self) -> None:
+        p = DefaultErrorPolicy()
+        # _register_defaults() routes through register() which auto-mirrors,
+        # so all stdlib defaults are queryable by their fully-qualified name.
+        assert p.classify_by_string("builtins.ConnectionError") == ErrorClass.TRANSIENT
+        assert p.classify_by_string("builtins.OSError") == ErrorClass.TRANSIENT
+        assert p.classify_by_string("builtins.TimeoutError") == ErrorClass.TRANSIENT
+
+    def test_register_auto_mirrors_to_string_registry(self) -> None:
+        p = DefaultErrorPolicy()
+
+        class ProviderRateLimit(Exception):
+            pass
+
+        p.register(ProviderRateLimit, ErrorClass.TRANSIENT)
+        # The same registration is queryable via by-string lookup.
+        full_name = f"{ProviderRateLimit.__module__}.{ProviderRateLimit.__name__}"
+        assert p.classify_by_string(full_name) == ErrorClass.TRANSIENT
+
+    def test_register_by_string_direct(self) -> None:
+        p = DefaultErrorPolicy()
+        # Useful for YAML config / lazy plugins where the class can't be
+        # imported at registration time.
+        p.register_by_string("some.lazy.PluginError", ErrorClass.LLM_RECOVERABLE)
+        assert p.classify_by_string("some.lazy.PluginError") == ErrorClass.LLM_RECOVERABLE
+
+    def test_register_by_string_idempotent(self) -> None:
+        p = DefaultErrorPolicy()
+        p.register_by_string("dup.Error", ErrorClass.TRANSIENT)
+        p.register_by_string("dup.Error", ErrorClass.HITL_RECOVERABLE)  # second wins
+        assert p.classify_by_string("dup.Error") == ErrorClass.HITL_RECOVERABLE
+
+    def test_unknown_string_falls_back_to_fatal(self) -> None:
+        p = DefaultErrorPolicy()
+        assert p.classify_by_string("never.Registered") == ErrorClass.FATAL
+
+    def test_string_lookup_is_strict_no_mro(self) -> None:
+        """register(SubClass) does NOT auto-register SubClass's parents
+        in the string registry — by-string lookup is exact match only.
+        Caller wanting parent classification should pass parent's name.
+        """
+        p = DefaultErrorPolicy()
+
+        class SalesforceConnectionError(ToolExecutionError):
+            pass
+
+        p.register(SalesforceConnectionError, ErrorClass.LLM_RECOVERABLE)
+        # exact name resolves
+        full_name = f"{SalesforceConnectionError.__module__}.{SalesforceConnectionError.__name__}"
+        assert p.classify_by_string(full_name) == ErrorClass.LLM_RECOVERABLE
+        # ToolExecutionError default is also LLM_RECOVERABLE (registered separately)
+        assert (
+            p.classify_by_string("agent_harness._contracts.errors.ToolExecutionError")
+            == ErrorClass.LLM_RECOVERABLE
+        )
+
+
 # === should_retry ===========================================================
 
 

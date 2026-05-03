@@ -7,6 +7,8 @@ from agent_harness.guardrails._abc import (
     GuardrailType,
     Tripwire,
 )
+from agent_harness.guardrails.engine import GuardrailEngine
+from agent_harness.guardrails.input.pii_detector import PIIDetector
 
 __all__ = [
     "Guardrail",
@@ -14,4 +16,6 @@ __all__ = [
     "GuardrailType",
     "GuardrailAction",
     "GuardrailResult",
+    "GuardrailEngine",
+    "PIIDetector",
 ]
