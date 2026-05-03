@@ -118,21 +118,30 @@
 
 ---
 
-### Branch Protection（main）— Sprint 52.6 US-5
+### Branch Protection（main）— Sprint 52.6 US-5（with 53.2 + 53.2.5 evolution）
 
 > **Background**：Sprint 52.2 PR #20 + Sprint 52.5 PR #19 均使用 admin-merge bypass red CI，違反 Sprint 52.5 retrospective §AD-2 教訓。Sprint 52.6 US-5 強制設定 main branch protection rule，杜絕未來 admin-merge precedent。
+>
+> **2026-05-03 Sprint 53.2 update**：solo-dev policy 永久將 `required_approving_review_count: 1 → 0`（GitHub 阻擋 PR-author self-approve；solo dev 無第二 reviewer）。`enforce_admins=true` 保留。
+>
+> **2026-05-03 Sprint 53.2.5 update**：archive `.github/workflows/ci.yml` 後，4 條對應 status checks（Code Quality / Tests / Frontend Tests / CI Summary）permanently dropped — 它們是 V1 monolithic CI 之 jobs，已被 backend-ci.yml + frontend-ci.yml 之 jobs 涵蓋（自 d5352359 拆分以來）。**非降級，是去重**。
 
-#### 必選 Status Checks（8 條全綠才可 merge）
+#### 必選 Status Checks（4 條當前 active；2026-05-03 起）
 
 ```
-- Lint + Type Check + Test (with PostgreSQL 16)  # backend-ci.yml
-- Code Quality                                    # ci.yml
-- Tests                                           # ci.yml
+- Lint + Type Check + Test (with PostgreSQL 16)  # backend-ci.yml lint-and-test
 - Backend E2E Tests                               # e2e-tests.yml
 - E2E Test Summary                                # e2e-tests.yml aggregator
 - v2-lints                                        # lint.yml (V2 lint rules)
-- Frontend Tests                                  # frontend-ci.yml + ci.yml
-- CI Summary                                      # ci.yml aggregator
+```
+
+#### Permanently Dropped（archived in Sprint 53.2.5）
+
+```
+- Code Quality       # was ci.yml lint job; redundant w/ backend-ci.yml lint-and-test
+- Tests              # was ci.yml test job; redundant w/ backend-ci.yml lint-and-test
+- Frontend Tests     # was ci.yml frontend-test job; redundant w/ frontend-ci.yml lint-and-build
+- CI Summary         # was ci.yml meta aggregator; redundant w/ 4 active required checks
 ```
 
 #### 必選 Options
@@ -141,7 +150,7 @@
 |--------|------|------|
 | Require status checks before merging | ✅ | 8 條全綠 |
 | Require branches to be up to date | ✅ | strict mode；防止 base 漂移 |
-| Require pull request reviews | ✅（min 1 approval）| 防止單人合併 |
+| Require pull request reviews | ✅（min **0** approval；2026-05-03 solo-dev policy）| 原 53.2 前=1；solo dev = no 2nd reviewer；GitHub 阻擋 author self-approve；保留 enforce_admins=true 之 audit gate |
 | Restrict who can push | ✅（admin only）| 防止 force push |
 | Allow force pushes | ❌ | 保留 git history |
 | Allow deletions | ❌ | 防止誤刪 main |
@@ -150,23 +159,27 @@
 #### `gh api` 等價設定命令（reproducibility）
 
 ```bash
+# 當前 (2026-05-03 Sprint 53.2.5 之後) 設定
 gh api -X PUT repos/laitim2001/ai-semantic-kernel-framework-project/branches/main/protection \
   -F required_status_checks[strict]=true \
   -f required_status_checks[contexts][]="Lint + Type Check + Test (with PostgreSQL 16)" \
-  -f required_status_checks[contexts][]="Code Quality" \
-  -f required_status_checks[contexts][]="Tests" \
   -f required_status_checks[contexts][]="Backend E2E Tests" \
   -f required_status_checks[contexts][]="E2E Test Summary" \
   -f required_status_checks[contexts][]="v2-lints" \
-  -f required_status_checks[contexts][]="Frontend Tests" \
-  -f required_status_checks[contexts][]="CI Summary" \
   -F enforce_admins=true \
-  -F required_pull_request_reviews[required_approving_review_count]=1 \
+  -F required_pull_request_reviews[required_approving_review_count]=0 \
   -F required_pull_request_reviews[dismiss_stale_reviews]=false \
   -F restrictions= \
   -F allow_force_pushes=false \
   -F allow_deletions=false
 ```
+
+> **Future un-do（當第 2 collaborator 加入時）**：
+> ```bash
+> echo '{"required_approving_review_count":1,"dismiss_stale_reviews":false,"require_code_owner_reviews":false}' \
+>   | gh api -X PATCH repos/laitim2001/ai-semantic-kernel-framework-project/branches/main/protection/required_pull_request_reviews \
+>   --input -
+> ```
 
 > **Note on `enforce_admins=true`**：GitHub 的 `enforce_admins` 對映 UI 「Do not allow bypassing the above settings」勾選。設 true = admin **無法** bypass red CI / missing review。Sprint 52.6 US-5 紀律核心。
 
@@ -198,6 +211,15 @@ gh pr close <id> && git push origin --delete test/branch-protection-verify
 - 每次新增 CI workflow 必須加進 status checks（or rule needs update）
 - workflow rename 必須同步 update protection rule
 - `enforce_admins=true` 不得改回 false（必要 emergency override 須 documented + audit log）
+- `required_approving_review_count=0`（solo-dev policy）— 當第 2 collaborator 加入時 1-line PATCH 還原為 1
+
+#### Changelog
+
+| Date | Sprint | Change | Reason |
+|------|------|------|------|
+| 2026-05-01 | 52.6 US-5 | 8 required status checks + enforce_admins=true + review_count=1 | 杜絕 admin-merge bypass precedent |
+| 2026-05-03 | 53.2 PR #48 | review_count: 1 → 0（permanent solo-dev policy） | GitHub 阻擋 PR author self-approve；solo dev = no 2nd human reviewer；replaces 3rd temp-relax bootstrap (52.6 #28 + 53.1 #39 used 2x) |
+| 2026-05-03 | 53.2.5 PR #50 | 8 → 4 required checks（drop Code Quality / Tests / Frontend Tests / CI Summary） | ci.yml archived; 4 dropped 是 V1 monolithic CI 之 jobs，已被 backend-ci.yml + frontend-ci.yml 涵蓋（自 d5352359 起重複）。**非降級，是去重**。 |
 
 ---
 
