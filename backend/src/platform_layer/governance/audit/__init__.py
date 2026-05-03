@@ -1,5 +1,14 @@
-"""platform.governance.audit — append-only audit log + Merkle hash chain.
+"""Platform / Governance / Audit — query API + hash-chain verification.
 
-Phase 49.3 implementation (append-only WORM table).
-Phase 53.x adds Merkle hash chain for tamper detection.
+Per Sprint 49.3 (audit_log WORM table) + 53.3 (hash chain) + 53.4 (query API).
 """
+
+from __future__ import annotations
+
+from platform_layer.governance.audit.query import (
+    AuditLogEntry,
+    AuditQuery,
+    AuditQueryFilter,
+)
+
+__all__ = ["AuditLogEntry", "AuditQuery", "AuditQueryFilter"]

@@ -1,0 +1,33 @@
+# Risk Policy Configuration (Sprint 53.4 US-1)
+#
+# Loaded by `platform_layer.governance.risk.policy.DefaultRiskPolicy`.
+# RiskLevel single-source: `agent_harness._contracts.hitl.RiskLevel`.
+#
+# Evaluation rules:
+#   1. per_tenant_overlays takes precedence over tool_overrides for that tenant.
+#   2. Among matching patterns, the highest-priority risk wins (CRITICAL > HIGH > MEDIUM > LOW).
+#   3. If no pattern matches, default_risk is returned.
+
+version: "1.0"
+default_risk: medium
+
+tool_overrides:
+  - pattern: "salesforce_*"
+    risk: high
+  - pattern: "send_email"
+    risk: medium
+  - pattern: "delete_*"
+    risk: critical
+  - pattern: "drop_*"
+    risk: critical
+  - pattern: "read_*"
+    risk: low
+  - pattern: "list_*"
+    risk: low
+
+per_tenant_overlays:
+  # Per-tenant overlays keyed by tenant UUID string.
+  # Example "enterprise_strict" tenant uplifts delete_* from critical (already)
+  # and adds an explicit salesforce_delete pattern to ensure it's CRITICAL not HIGH.
+  enterprise_strict:
+    "salesforce_delete_*": critical
