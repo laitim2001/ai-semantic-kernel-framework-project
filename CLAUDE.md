@@ -68,11 +68,15 @@ Build enterprise AI agent teams that work like **human professional teams** — 
 
 | Attribute | Value |
 |-----------|-------|
-| **Phase** | Phase 49 Foundation（剛啟動） |
-| **Status** | Sprint 49.1 規劃完成（plan + checklist 已就緒）|
+| **Phase** | Phase 53（進行中）— 14/22 sprint 完成，64% V2 進度 |
+| **Latest Sprint** | **53.2.5** ✅ COMPLETE 2026-05-03（CI carryover：archived ci.yml；closes AD-CI-2 + AD-CI-3） |
+| **Last Cat 8 Sprint** | **53.2** ✅ COMPLETE 2026-05-03（Cat 8 production: ErrorPolicy + RetryPolicyMatrix + CircuitBreaker + ErrorBudget + ErrorTerminator）|
+| **main HEAD** | `132c39bc` (2026-05-03) |
+| **Next Sprint** | **53.3** Cat 9 Guardrails 核心（input/output/tool guardrails + Tripwire ABC + plugin registry + WORM hash chain）— **plan/checklist 尚未起草**（rolling planning，等 user approve scope） |
 | **Roadmap** | Phase 49-55，**22 sprint，約 5.5 個月** |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis（V1 沿用）|
 | **Architecture** | TAO/ReAct loop + 11+1 範疇 + LLM Provider 中性 |
+| **Branch Protection** | enforce_admins=true / **review_count=0**（solo-dev policy 永久，2026-05-03 Sprint 53.2 起）/ 4 active required CI checks |
 
 詳見 `docs/03-implementation/agent-harness-planning/06-phase-roadmap.md`。
 
@@ -552,8 +556,9 @@ V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（M
 
 ---
 
-**Last Updated**: 2026-04-28
+**Last Updated**: 2026-05-03 (Sprint 53.2.5 closeout)
 **Project Start**: 2025-11-14
-**Current Phase**: V2 Phase 49 Foundation（Sprint 49.1 待啟動）
+**Current Phase**: V2 Phase 53（14/22 = 64% 完成）— 53.2 + 53.2.5 closed；53.3 Cat 9 Guardrails 待啟動
+**main HEAD**: `132c39bc`
 **V2 Authority**: `docs/03-implementation/agent-harness-planning/` (19 docs)
 **V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`

@@ -4,6 +4,10 @@
 #   - backend/** changes (any backend code/tests/configs)
 #   - .github/workflows/** changes (any workflow file edit re-validates)
 #
+# Sprint 53.2.5 closeout sync (2026-05-03): SITUATION-V2-SESSION-START.md +
+# CLAUDE.md updated to reflect V2 14/22 progress + Solo-dev policy + Paths
+# filter workaround. Header touch here applies the workaround itself.
+#
 # Known limitation: docs-only / .gitignore-only PRs DO NOT trigger this
 # workflow, leading to BLOCKED mergeStateStatus when "Lint + Type Check +
 # Test (with PostgreSQL 16)" is in branch protection required_status_checks.
