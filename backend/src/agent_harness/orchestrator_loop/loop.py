@@ -91,13 +91,15 @@ import asyncio
 import time
 
 # Local import to avoid circular: only used at runtime for state placeholders
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator
-from uuid import UUID
+from uuid import UUID, uuid4
 
 # Need imports from sibling adapter / tools / output_parser modules:
 from adapters._base.chat_client import ChatClient
 from agent_harness._contracts import (
+    ApprovalReceived,
+    ApprovalRequested,
     CacheBreakpoint,
     ChatRequest,
     ChatResponse,
@@ -129,6 +131,12 @@ from agent_harness._contracts import (
     TripwireTriggered,
     TurnStarted,
 )
+from agent_harness._contracts.hitl import (
+    ApprovalDecision,
+    ApprovalRequest,
+    DecisionType,
+    RiskLevel,
+)
 from agent_harness.context_mgmt import Compactor
 from agent_harness.error_handling import (
     DefaultCircuitBreaker,
@@ -146,6 +154,7 @@ from agent_harness.guardrails import (
     Tripwire,
     WORMAuditLog,
 )
+from agent_harness.hitl import HITLManager
 from agent_harness.observability import NoOpTracer, Tracer
 from agent_harness.output_parser import OutputParser, OutputType, classify_output
 from agent_harness.prompt_builder import PromptBuilder
@@ -193,6 +202,12 @@ class AgentLoopImpl(AgentLoop):
         tripwire: "Tripwire | None" = None,
         audit_log: "WORMAuditLog | None" = None,
         capability_matrix: "CapabilityMatrix | None" = None,
+        # 53.5 US-3 §HITL Centralization wiring: opt-in. When set, Cat 9
+        # ESCALATE branch pauses the loop, calls HITLManager.request_approval,
+        # waits for the reviewer's decision, and resumes / blocks based on
+        # outcome. When None, ESCALATE remains a soft-block (53.3 baseline).
+        hitl_manager: "HITLManager | None" = None,
+        hitl_timeout_s: int = 14400,  # 4hr cross-session window
     ) -> None:
         self._chat_client = chat_client
         self._output_parser = output_parser
@@ -236,6 +251,9 @@ class AgentLoopImpl(AgentLoop):
         self._tripwire = tripwire
         self._audit_log = audit_log
         self._capability_matrix = capability_matrix
+        # 53.5 US-3 §HITL Centralization
+        self._hitl_manager = hitl_manager
+        self._hitl_timeout_s = hitl_timeout_s
 
     async def _handle_tool_error(
         self,
@@ -383,6 +401,23 @@ class AgentLoopImpl(AgentLoop):
         if self._guardrail_engine is not None:
             g_result = await self._guardrail_engine.check_tool_call(tc, trace_context=ctx)
             if g_result.action != GuardrailAction.PASS:
+                # 53.5 US-3: ESCALATE → HITL pause + wait_for_decision when
+                # hitl_manager wired. APPROVED → continue (no block); REJECTED
+                # / ESCALATED / TIMEOUT → fall through to existing block path.
+                # Other non-PASS actions (BLOCK / SANITIZE / REROLL) keep 53.3
+                # baseline behavior (soft block, caller injects error ToolResult).
+                if g_result.action == GuardrailAction.ESCALATE and self._hitl_manager is not None:
+                    async for ev in self._cat9_hitl_branch(
+                        tc=tc,
+                        ctx=ctx,
+                        guardrail_reason=g_result.reason or "escalated",
+                    ):
+                        yield ev
+                    # _cat9_hitl_branch yields GuardrailTriggered(block) only
+                    # when rejected/timeout — when approved, it returns
+                    # without yielding so the caller flows to normal tool exec.
+                    return
+
                 await self._audit_log_safe(
                     event_type=f"guardrail.tool.{g_result.action.value}",
                     content={
@@ -420,6 +455,153 @@ class AgentLoopImpl(AgentLoop):
                     trace_context=ctx,
                 )
                 return
+
+    async def _cat9_hitl_branch(
+        self,
+        *,
+        tc: ToolCall,
+        ctx: TraceContext,
+        guardrail_reason: str,
+    ) -> AsyncIterator[LoopEvent]:
+        """Cat 9 ESCALATE → HITL pause + wait_for_decision (Sprint 53.5 US-3).
+
+        Yields:
+            ApprovalRequested  — request created, awaiting reviewer.
+            ApprovalReceived   — reviewer decision (or timeout fallback).
+            GuardrailTriggered(block) — only when REJECTED / ESCALATED / TIMEOUT.
+                When APPROVED, no GuardrailTriggered is yielded — caller
+                flows to normal tool execution.
+
+        Risk level defaults to HIGH (escalation implies human review). Future
+        sprints may pull from RiskPolicy via a callable injected at ctor time;
+        keeping the default here avoids importing platform_layer/governance/risk
+        from agent_harness (per category-boundaries.md backwards-import rule).
+
+        Tenant + session context come from `self._tenant_id` and `ctx.session_id`.
+        Both must be present; otherwise we fall back to the soft-block path
+        (yielding GuardrailTriggered) since ApprovalRequest requires both.
+        """
+        if self._hitl_manager is None:  # defensive; caller already checked
+            return
+
+        tenant_id = self._tenant_id or ctx.tenant_id
+        session_id = ctx.session_id
+        if tenant_id is None or session_id is None:
+            # Cannot build ApprovalRequest without identity; fail closed by
+            # treating as block + audit + GuardrailTriggered. This is rare —
+            # production wiring always supplies tenant_id (52.5 P0 #14).
+            await self._audit_log_safe(
+                event_type="guardrail.tool.escalate.no_identity",
+                content={"tool": tc.name, "reason": guardrail_reason},
+                ctx=ctx,
+            )
+            yield GuardrailTriggered(
+                guardrail_type="tool",
+                action="block",
+                reason=f"escalation requires identity context: {guardrail_reason}",
+                trace_context=ctx,
+            )
+            return
+
+        request_id = uuid4()
+        risk_level = RiskLevel.HIGH  # ESCALATE default; see method docstring
+        sla_deadline = datetime.now(timezone.utc) + timedelta(seconds=self._hitl_timeout_s)
+        approval_req = ApprovalRequest(
+            request_id=request_id,
+            tenant_id=tenant_id,
+            session_id=session_id,
+            requester="guardrails",
+            risk_level=risk_level,
+            payload={
+                "tool_name": tc.name,
+                "tool_arguments": tc.arguments,
+                "reason": guardrail_reason,
+                "summary": f"approve tool call: {tc.name}",
+            },
+            sla_deadline=sla_deadline,
+            context_snapshot={"tool_call_id": tc.id, "trace_id": ctx.trace_id},
+        )
+
+        # 1. Persist request via single-source HITLManager.
+        try:
+            await self._hitl_manager.request_approval(approval_req, trace_context=ctx)
+        except Exception as exc:  # noqa: BLE001 — fail closed on persistence error
+            await self._audit_log_safe(
+                event_type="guardrail.tool.escalate.persist_failed",
+                content={"tool": tc.name, "error": str(exc)},
+                ctx=ctx,
+            )
+            yield GuardrailTriggered(
+                guardrail_type="tool",
+                action="block",
+                reason=f"approval persistence failed: {exc}",
+                trace_context=ctx,
+            )
+            return
+
+        await self._audit_log_safe(
+            event_type="guardrail.tool.escalate.requested",
+            content={
+                "tool": tc.name,
+                "request_id": str(request_id),
+                "risk_level": risk_level.value,
+                "reason": guardrail_reason,
+            },
+            ctx=ctx,
+        )
+        yield ApprovalRequested(
+            approval_request_id=request_id,
+            risk_level=risk_level.value,
+            trace_context=ctx,
+        )
+
+        # 2. Block for reviewer decision (cross-session resume supported by DB
+        #    polling inside HITLManager.wait_for_decision).
+        try:
+            decision = await self._hitl_manager.wait_for_decision(
+                request_id,
+                timeout_s=self._hitl_timeout_s,
+                trace_context=ctx,
+            )
+            outcome = decision.decision
+        except TimeoutError:
+            outcome = DecisionType.REJECTED
+            decision = ApprovalDecision(
+                request_id=request_id,
+                decision=DecisionType.REJECTED,
+                reviewer="system_timeout",
+                decided_at=datetime.now(timezone.utc),
+                reason="approval timeout",
+            )
+
+        await self._audit_log_safe(
+            event_type=f"guardrail.tool.escalate.{outcome.value.lower()}",
+            content={
+                "tool": tc.name,
+                "request_id": str(request_id),
+                "decision": outcome.value,
+                "reviewer": decision.reviewer,
+                "reason": decision.reason or "",
+            },
+            ctx=ctx,
+        )
+        yield ApprovalReceived(
+            approval_request_id=request_id,
+            decision=outcome.value,
+            trace_context=ctx,
+        )
+
+        if outcome == DecisionType.APPROVED:
+            # No GuardrailTriggered → caller flows to normal tool execution.
+            return
+
+        # REJECTED / ESCALATED → block tool; LLM sees error ToolResult.
+        yield GuardrailTriggered(
+            guardrail_type="tool",
+            action="block",
+            reason=f"approval {outcome.value.lower()}: {decision.reason or 'no reason'}",
+            trace_context=ctx,
+        )
 
     async def _cat9_output_check(
         self,
