@@ -20,6 +20,11 @@
  * Last Modified: 2026-04-30
  *
  * Modification History:
+ *   - 2026-05-04: Add GuardrailTriggeredEvent type (Sprint 53.6 D2 — Day 0 探勘 finding)
+ *     — backend yields GuardrailTriggered 7× in loop.py (Cat 9 Stage 1/2/3); frontend
+ *     defensive type so KNOWN_LOOP_EVENT_TYPES includes the wire type and
+ *     LoopEvent union recognises it (no UI surface yet — events route to chatStore.rawEvents).
+ *   - 2026-05-04: Add ApprovalRequested + ApprovalReceived events (Sprint 53.5 US-2)
  *   - 2026-04-30: Initial creation (Sprint 50.2 Day 3.2)
  *
  * Related:
@@ -106,12 +111,26 @@ export type ApprovalReceivedEvent = {
   };
 };
 
+// Sprint 53.6 D2: GuardrailTriggered defensive type. Backend yields this 7×
+// in loop.py (Cat 9 Stage 1 input / Stage 2 output / Stage 3 tool escalate
+// reject/timeout block paths). No UI surface in 53.6 — event routes to
+// chatStore.rawEvents only; future sprint may render warning banner.
+
+export type GuardrailTriggeredEvent = {
+  type: "guardrail_triggered";
+  data: {
+    guardrail_type: string; // input / output / tool
+    action: string; // block / sanitize / escalate / reroll
+    reason: string;
+  };
+};
+
 /**
- * Sprint 50.2 wired 7 known event types; Sprint 53.5 adds 2 (approval_*).
- * Unknown event types (e.g. guardrail_check from later phases) are filtered
- * at the SSE parser (chatService.parseSSEFrame returns null) so the store
- * never sees them — preserving discriminated-union narrowing inside
- * mergeEvent's switch.
+ * Sprint 50.2 wired 7 known event types; Sprint 53.5 adds 2 (approval_*);
+ * Sprint 53.6 adds 1 (guardrail_triggered).
+ * Unknown event types from later phases are filtered at the SSE parser
+ * (chatService.parseSSEFrame returns null) so the store never sees them —
+ * preserving discriminated-union narrowing inside mergeEvent's switch.
  */
 export type LoopEvent =
   | LoopStartEvent
@@ -122,9 +141,10 @@ export type LoopEvent =
   | ToolCallResultEvent
   | LoopEndEvent
   | ApprovalRequestedEvent
-  | ApprovalReceivedEvent;
+  | ApprovalReceivedEvent
+  | GuardrailTriggeredEvent;
 
-/** Set of SSE event type names recognized by Sprint 50.2 + 53.5 frontend. */
+/** Set of SSE event type names recognized by Sprint 50.2 + 53.5 + 53.6 frontend. */
 export const KNOWN_LOOP_EVENT_TYPES = new Set<string>([
   "loop_start",
   "turn_start",
@@ -135,6 +155,7 @@ export const KNOWN_LOOP_EVENT_TYPES = new Set<string>([
   "loop_end",
   "approval_requested",
   "approval_received",
+  "guardrail_triggered",
 ]);
 
 // === UI aggregate types =====================================================

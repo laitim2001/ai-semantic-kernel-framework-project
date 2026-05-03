@@ -1,0 +1,69 @@
+name: Playwright E2E
+
+on:
+  push:
+    branches: [main, "feature/**", "fix/**", "refactor/**"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/playwright-e2e.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/playwright-e2e.yml"
+
+# Avoid running an old commit's workflow when newer ones land on the same ref.
+concurrency:
+  group: playwright-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Frontend E2E (chromium headless)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers (chromium + deps)
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production bundle
+        working-directory: frontend
+        run: npm run build
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        env:
+          CI: "1"
+        run: npx playwright test --reporter=list
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

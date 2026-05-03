@@ -79,84 +79,61 @@
 ## Day 1 — D2 SSE Serializer Fix + US-1 Playwright Bootstrap + Smoke Spec + CI Workflow (est. 5-7 hours)
 
 ### 1.0 D2 SSE Serializer GuardrailTriggered Fix (UNPLANNED — Day 0 探勘 finding)
-- [ ] **Add `GuardrailTriggered` isinstance branch in `backend/src/api/v1/chat/sse.py`**
-  - Wire-format type: `"guardrail_triggered"`
-  - Payload: action / reason / detector / severity / category (per `agent_harness/_contracts/events.py:225` GuardrailTriggered fields)
-  - Update Modification History with Sprint 53.6 D2 entry
+- [x] **Add `GuardrailTriggered` isinstance branch in `backend/src/api/v1/chat/sse.py`** ✅
+  - Wire-format type: `"guardrail_triggered"`; payload: guardrail_type / action / reason
+  - Modification History updated with Sprint 53.6 D2 entry
   - DoD: serialize_loop_event(GuardrailTriggered(...)) returns dict, no NotImplementedError
-- [ ] **Add 3 SSE serializer test cases in `tests/unit/api/v1/chat/test_sse.py`**
-  - test_guardrail_triggered_input (Stage 1 PII detection)
-  - test_guardrail_triggered_output (Stage 2 jailbreak detection)
-  - test_guardrail_triggered_escalate_block (Stage 3 reject/escalate/timeout block path)
-  - DoD: 3 cases green; full test_sse.py suite (existing 17 + 3 new = 20) passing
-  - Verify: `python -m pytest tests/unit/api/v1/chat/test_sse.py -v`
-- [ ] **Update `frontend/src/features/chat_v2/types.ts` if frontend needs awareness**
-  - Decision: Add `GuardrailTriggeredEvent` to LoopEvent union + `"guardrail_triggered"` to KNOWN_LOOP_EVENT_TYPES (defensive — even if no UI yet, prevents type-narrowing breakage if event reaches frontend)
-  - DoD: typecheck green
-- [ ] **`npm install -D @playwright/test` in `frontend/`**
-  - Command: `cd frontend && npm install -D @playwright/test`
-  - DoD: package.json devDependencies 含 `@playwright/test`; package-lock.json updated
-- [ ] **`npx playwright install chromium`**
-  - Command: `cd frontend && npx playwright install chromium`
-  - DoD: `~/.cache/ms-playwright/chromium-*/` 存在；下載成功
-- [ ] **Add e2e + e2e:ui scripts to package.json**
-  - Edit: `"e2e": "playwright test", "e2e:ui": "playwright test --ui"`
-  - DoD: `npm run e2e` 可解析（即使無 spec 也不報錯）
+- [x] **Add 3 SSE serializer test cases in `tests/unit/api/v1/chat/test_sse.py`** ✅ 20/20 green
+  - test_guardrail_triggered_input_block (Stage 1 PII detection)
+  - test_guardrail_triggered_output_sanitize (Stage 2 jailbreak detection)
+  - test_guardrail_triggered_tool_escalate_block (Stage 3 reject/escalate/timeout block path)
+  - DoD: 3 new cases + 17 existing = 20 passing
+  - Verify: `python -m pytest tests/unit/api/v1/chat/test_sse.py -v` → 20 passed in 0.44s
+- [x] **Update `frontend/src/features/chat_v2/types.ts` + chatStore.ts** ✅
+  - Added `GuardrailTriggeredEvent` to LoopEvent union + `"guardrail_triggered"` to KNOWN_LOOP_EVENT_TYPES
+  - Added `case "guardrail_triggered"` in chatStore mergeEvent (routes to rawEvents only — no UI surface)
+  - DoD: typecheck + build green (188.10 KB / 707ms)
+
+### 1.1 Install Playwright + chromium browser
+- [x] **`npm install -D @playwright/test`** ✅ `@playwright/test ^1.59.1` in devDependencies
+- [x] **`npx playwright install chromium`** ✅ chromium 147.0.7727.15 (179 MiB) + headless shell (111 MiB) downloaded to `~/.cache/ms-playwright/`
+- [x] **Add e2e + e2e:ui scripts to package.json** ✅ `"e2e": "playwright test"` + `"e2e:ui": "playwright test --ui"`
 
 ### 1.2 Create `frontend/playwright.config.ts`
-- [ ] **Write minimal viable config**
-  - Sections: testDir './tests/e2e' / timeout 30s / retries (CI=2 / local=0) / reporter (CI=list+html / local=list) / use.baseURL / use.trace 'on-first-retry' / webServer (CI=preview, local=dev with reuseExistingServer)
-  - DoD: `npx playwright test --list` 跑通；無 ts compile error
-- [ ] **Verify config typecheck**
-  - Command: `cd frontend && npx tsc --noEmit playwright.config.ts`
-  - DoD: 0 errors
+- [x] **Write minimal viable config** ✅ testDir `./tests/e2e` / timeout 30s / retries CI=2 local=0 / reporter list+html on CI / baseURL `http://localhost:5173` / trace on-first-retry / webServer auto-start vite dev (local) or vite preview (CI) with strictPort / chromium project only
+- [x] **Verify config + smoke spec runs** ✅ verified Day 1.3 (2 passed in 4.0s)
 
 ### 1.3 Create `frontend/tests/e2e/smoke.spec.ts`
-- [ ] **Minimal smoke test**
-  - Content: `test('home page loads', async ({ page }) => { await page.goto('/'); await expect(page).toHaveTitle(/.+/); });`
-  - File header: 含 Purpose / Category / Created
-  - DoD: file 存在 + ts 合法
-- [ ] **Run smoke locally**
-  - Command: `cd frontend && npm run e2e tests/e2e/smoke.spec.ts`
-  - DoD: 1 passed; 0 failed
+- [x] **Minimal smoke test (2 cases)** ✅ test 1: home page loads with /IPA Platform/ title; test 2: /governance/approvals route resolves without crash
+- [x] **Run smoke locally** ✅ `npx playwright test tests/e2e/smoke.spec.ts` → 2 passed in 4.0s (Vite proxy ECONNREFUSED for /api/* expected — no backend running, SPA HTML still serves)
 
 ### 1.4 Update `.gitignore` + `frontend/README.md`
-- [ ] **Add to `.gitignore`**: `frontend/playwright-report/`, `frontend/test-results/`
-  - DoD: `git status` 不顯示這兩 dir
-- [ ] **Add e2e workflow section to `frontend/README.md`**
-  - Sections: Local run (`npm run e2e`) / UI mode (`npm run e2e:ui`) / Update snapshots / Debug mode
-  - DoD: README markdown render 正常
+- [x] **Add to `.gitignore`** ✅ `frontend/playwright-report/`, `frontend/test-results/`, `frontend/playwright/.cache/`
+- [x] **Add E2E section to `frontend/README.md`** ✅ inserted between Quickstart and Sprint roadmap (one-time install + npm run e2e / e2e:ui / single spec / show-report)
 
 ### 1.5 Create `.github/workflows/playwright-e2e.yml`
-- [ ] **Write workflow per plan §Technical Spec**
-  - Sections: name / on (PR + push main) / paths filter / job e2e / steps (checkout / setup-node / npm ci / playwright install / build / test / upload artifact on failure)
-  - DoD: workflow file YAML 合法
-- [ ] **Validate workflow YAML**
-  - Command: `gh workflow view playwright-e2e.yml --ref feature/sprint-53-6-frontend-e2e-prod-hitl` (after push)
-  - DoD: GitHub parses without warning
-- [ ] **First push triggers workflow**
-  - Push branch → check `gh run list --workflow playwright-e2e.yml --limit 3`
-  - DoD: workflow runs; smoke spec passes
+- [x] **Write workflow per plan §Technical Spec** ✅ paths filter (frontend/** + workflow self) / concurrency group / setup-node@v4 + npm cache / npm ci / actions/cache for `~/.cache/ms-playwright` / install chromium with deps / build / playwright test --reporter=list / upload report on failure (retention 7d)
+- [ ] **Validate workflow YAML on first push** 🚧 deferred to Day 1.7 push (will trigger first run; verify via `gh run list`)
+- [ ] **First push triggers workflow** 🚧 deferred to Day 1.7 push
 
 ### 1.6 Day 1 sanity checks
-- [ ] **Frontend lint + build green**
-  - Command: `cd frontend && npm run lint && npm run build`
-- [ ] **No regressions in existing CI checks**
-  - Command: `gh run list --branch feature/sprint-53-6-frontend-e2e-prod-hitl --limit 5`
-  - DoD: Backend CI / V2 Lint / E2E Tests / Frontend CI / Playwright E2E 全 green or pending
+- [x] **mypy --strict src/api/v1/chat/sse.py** ✅ Success: no issues found in 1 source file
+- [x] **black + isort + flake8 green on touched backend files** ✅ (1 E501 fixed: shortened test docstring at line 193)
+- [x] **6 V2 lint scripts green** ✅ (check_ap1 + check_promptbuilder need `--root backend/src/agent_harness`; both 0 violations; cross_category_import / duplicate_dataclass / llm_sdk_leak / sync_callback all OK)
+- [x] **Backend full pytest** ✅ **1059 passed / 4 skipped / 0 fail** (+3 from main 1056 = exactly the 3 new SSE tests)
+- [x] **Frontend lint + build green** ✅ ESLint clean / build 188.10 KB / 52 modules / 707ms
 
 ### 1.7 Day 1 commit + push + verify CI
 - [ ] **Stage + commit + push**
   - Verify branch: `git branch --show-current`
-  - Commit: `feat(frontend, sprint-53-6): US-1 Playwright bootstrap + smoke spec + CI workflow`
+  - Commit: `feat(frontend+sse, sprint-53-6): Day 1 — D2 SSE GuardrailTriggered + US-1 Playwright bootstrap + CI workflow`
   - Push: `git push`
 - [ ] **Verify Playwright E2E CI runs and passes**
-  - Command: `gh run watch <run_id>`
+  - Command: `gh run list --branch feature/sprint-53-6-frontend-e2e-prod-hitl --limit 5`
 
 ### 1.8 Day 1 progress.md update
 - [ ] **Update progress.md with Day 1 actuals**
-  - Sections: Today's accomplishments / drift / banked-or-burned hours / blockers
-  - Commit: `docs(progress, sprint-53-6): Day 1 actuals + Playwright bootstrap done`
+  - Commit: `docs(progress, sprint-53-6): Day 1 actuals — D2 + Playwright bootstrap`
   - Push
 
 ---

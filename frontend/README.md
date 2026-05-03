@@ -53,6 +53,30 @@ npm run typecheck      # tsc --noEmit
 Dev server proxies `/api/*` to `http://localhost:8001` (V2 backend).
 Port 3007 chosen to avoid collision with archived V1 frontend (was 3005).
 
+## End-to-end tests (Playwright)
+
+Sprint 53.6 introduces Playwright e2e specs covering the governance reviewer
+flow + chat-v2 inline ApprovalCard. The runner auto-starts `vite` (local) or
+`vite preview` (CI) on port 5173 — see `playwright.config.ts`.
+
+```bash
+npm install -D @playwright/test          # one-time (already in devDeps)
+npx playwright install chromium          # one-time browser download (~290 MB)
+
+npm run e2e                              # run all specs headless
+npm run e2e:ui                           # Playwright UI inspector
+npx playwright test tests/e2e/smoke.spec.ts  # single spec
+npx playwright show-report               # HTML report after run
+```
+
+Specs live under `frontend/tests/e2e/`:
+- `smoke.spec.ts` — bootstrap smoke (US-1)
+- `governance/approvals.spec.ts` — reviewer flow + cross-tenant (US-2)
+- `chat/approval-card.spec.ts` — SSE-driven ApprovalCard (US-3)
+
+CI runs the same suite on every PR via `.github/workflows/playwright-e2e.yml`.
+Failed runs upload `playwright-report/` as a workflow artifact.
+
 ## Sprint roadmap (frontend)
 
 | Sprint | Adds |

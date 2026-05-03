@@ -158,6 +158,53 @@ class TestSerializeLoopEvent:
         assert out is not None
         assert out["data"]["decision"] == "REJECTED"
 
+    def test_guardrail_triggered_input_block(self) -> None:
+        """Sprint 53.6 D2: Cat 9 Stage 1 input PII detection → GuardrailTriggered → SSE."""
+        from agent_harness._contracts import GuardrailTriggered
+
+        ev = GuardrailTriggered(
+            guardrail_type="input",
+            action="block",
+            reason="PII detected: email pattern",
+        )
+        out = serialize_loop_event(ev)
+        assert out is not None
+        assert out["type"] == "guardrail_triggered"
+        assert out["data"]["guardrail_type"] == "input"
+        assert out["data"]["action"] == "block"
+        assert out["data"]["reason"] == "PII detected: email pattern"
+
+    def test_guardrail_triggered_output_sanitize(self) -> None:
+        """Sprint 53.6 D2: Cat 9 Stage 2 output detection → GuardrailTriggered → SSE."""
+        from agent_harness._contracts import GuardrailTriggered
+
+        ev = GuardrailTriggered(
+            guardrail_type="output",
+            action="sanitize",
+            reason="Jailbreak attempt: prompt injection",
+        )
+        out = serialize_loop_event(ev)
+        assert out is not None
+        assert out["type"] == "guardrail_triggered"
+        assert out["data"]["guardrail_type"] == "output"
+        assert out["data"]["action"] == "sanitize"
+
+    def test_guardrail_triggered_tool_escalate_block(self) -> None:
+        """Sprint 53.6 D2: Stage 3 reject/escalate/timeout → GuardrailTriggered(block)."""
+        from agent_harness._contracts import GuardrailTriggered
+
+        ev = GuardrailTriggered(
+            guardrail_type="tool",
+            action="block",
+            reason="HITL rejected by reviewer",
+        )
+        out = serialize_loop_event(ev)
+        assert out is not None
+        assert out["type"] == "guardrail_triggered"
+        assert out["data"]["guardrail_type"] == "tool"
+        assert out["data"]["action"] == "block"
+        assert "reviewer" in out["data"]["reason"]
+
     def test_unsupported_event_raises_with_sprint_pointer(self) -> None:
         ev = VerificationPassed(verifier="some_verifier")
         with pytest.raises(NotImplementedError, match="Sprint 50.2"):

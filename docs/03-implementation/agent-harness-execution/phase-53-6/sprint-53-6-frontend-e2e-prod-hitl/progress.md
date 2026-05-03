@@ -76,3 +76,54 @@
 2. **US-1 Playwright bootstrap** (~3 hr): npm install + chromium + playwright.config.ts + smoke spec
 3. **CI workflow** (~1 hr): playwright-e2e.yml using frontend-ci.yml as template
 4. Day 1 sanity + commit + push
+
+---
+
+## Day 1 — 2026-05-04 (~3 hr actual / est. 5-7 hr → buffered ~3 hr)
+
+### D2 SSE Serializer Fix (1.0)
+- ✅ Added `GuardrailTriggered` import + isinstance branch in `backend/src/api/v1/chat/sse.py` → wire-format type `"guardrail_triggered"`; payload: guardrail_type / action / reason
+- ✅ Added 3 test cases in `tests/unit/api/v1/chat/test_sse.py` — Stage 1 input PII / Stage 2 output sanitize / Stage 3 tool escalate-block; total 20/20 green (17 existing + 3 new) in 0.44s
+- ✅ Defensive frontend update: `GuardrailTriggeredEvent` type + `LoopEvent` union + `KNOWN_LOOP_EVENT_TYPES` set + `case "guardrail_triggered"` in chatStore mergeEvent (routes to rawEvents only, no UI surface)
+- ✅ Modification History updated on sse.py + types.ts
+
+### US-1 Playwright Bootstrap (1.1-1.5)
+- ✅ `@playwright/test ^1.59.1` installed (devDep); 2 pre-existing vulnerabilities in vite/esbuild chain (non-blocking; not Playwright-related)
+- ✅ Chromium 147.0.7727.15 (179.4 MiB) + headless shell (111.5 MiB) downloaded to `~/.cache/ms-playwright/`
+- ✅ `e2e` + `e2e:ui` npm scripts added
+- ✅ `playwright.config.ts` written: testDir `./tests/e2e` / chromium-only / webServer auto-start (vite dev local / vite preview CI) / strictPort / trace on-first-retry / retries CI=2 local=0 / reporter list+html on CI
+- ✅ `tests/e2e/smoke.spec.ts` written (2 cases — home title + /governance/approvals 200); local run **2 passed in 4.0s**
+- ✅ `.gitignore` updated (3 Playwright artifacts: playwright-report/ + test-results/ + playwright/.cache/)
+- ✅ `frontend/README.md` E2E section added (between Quickstart + Sprint roadmap)
+- ✅ `.github/workflows/playwright-e2e.yml` written: paths filter / concurrency / setup-node@v4 + npm cache / actions/cache for ms-playwright / install chromium with deps / build / playwright test / upload report on failure (retention 7d)
+
+### Day 1 sanity (1.6)
+- mypy --strict sse.py: ✅ no issues
+- black + isort: ✅ clean
+- flake8: ✅ clean (1 E501 caught + fixed: shortened test docstring at line 193 from 103→97 chars)
+- 6 V2 lint scripts: ✅ all OK (check_ap1 + check_promptbuilder require `--root backend/src/agent_harness` arg; verified 0 violations)
+- Backend full pytest: ✅ **1059 passed / 4 skipped / 0 fail** (+3 from main baseline 1056 = exactly the new SSE tests)
+- Frontend lint + build: ✅ ESLint clean / 188.10 KB / 52 modules / 707ms
+
+### Day 1 Drift
+
+| ID | Type | Description |
+|----|------|-------------|
+| **D9** | flake8 catch | E501 (103 chars) at test_sse.py:193; fixed pre-commit per `feedback_pre_push_lint_must_run_flake8.md` discipline (would have failed CI otherwise) |
+| **D10** | V2 lint args | check_ap1 + check_promptbuilder need explicit `--root backend/src/agent_harness` (no auto-discover); document in pre-push wrapper script for future sprints |
+
+### Day 1 Time Banking
+
+- Estimated: 5-7 hr (revised from 4-5 hr after Day 0 D2 added)
+- Actual: ~3 hr (D2 fix ~45 min / Playwright bootstrap incl chromium download ~1 hr / config + smoke + sanity + CI workflow ~1.25 hr)
+- **Banked**: ~3-4 hr cumulative (Day 0 ~1 hr + Day 1 ~3 hr); will absorb Day 2 e2e fixture complexity (cross-tenant test setup)
+
+### Blockers
+
+- None for Day 2 entry. Playwright runner production-ready locally; CI workflow YAML written and pending first-push validation (Day 1.7).
+
+### Next (Day 2)
+
+- US-2 Governance approvals reviewer e2e (≥ 4 cases incl. cross-tenant)
+- 2.1 fixtures setup (auth + backend seed) — Day 0 探勘 may need mini-探勘 to confirm whether 53.5 既有 fixture pattern is reusable or dev-only seed endpoint needed
+
