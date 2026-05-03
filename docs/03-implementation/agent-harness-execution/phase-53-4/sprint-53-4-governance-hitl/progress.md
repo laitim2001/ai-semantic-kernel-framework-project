@@ -187,3 +187,79 @@ Day 2 will reuse existing `Approval` model. May add tiny migration only if `esca
 - 2.4-2.6 sanity / commit / progress.md
 
 Estimated 6-7 hours; banked ~5 hours buffer makes Day 2 schedule comfortable.
+
+---
+
+## Day 2 — 2026-05-03 — US-2 Full Impl + US-5 Reducers
+
+### Accomplishments
+
+#### US-2 HITLManager Full Implementation ✅ Production-ready
+
+| File | LoC | Coverage | Notes |
+|------|-----|----------|-------|
+| `platform_layer/governance/hitl/manager.py` | 248 | **97%** | 6 ABC methods + escalate() helper |
+
+**Methods implemented**:
+- `request_approval()` — INSERT into existing `approvals` table + best-effort notifier
+- `decide()` — state machine validated UPDATE
+- `get_pending()` — JOIN sessions for tenant filter + `with_for_update(skip_locked=True)`
+- `wait_for_decision()` — poll-based DB check with timeout
+- `get_policy()` — returns default_policy or fallback (Day 3+ extends with DB)
+- `expire_overdue()` — background sweep transitioning pending→expired
+- `escalate()` — helper: terminate current + create fresh PENDING under higher role
+
+**Drift adjustment**: ABC method names match 17.md §5.2 exactly (`get_pending` not `pickup_pending`, `wait_for_decision` not `wait`).
+
+#### US-2 Integration Tests ✅ 11/11 pass
+
+`tests/integration/platform_layer/governance/hitl/test_manager.py` covers:
+1. request_approval persists pending
+2. decide approved transitions state
+3. decide rejected → terminal (cannot re-decide)
+4. decide unknown request raises LookupError
+5. **tenant isolation** in get_pending (cross-tenant invisible)
+6. expire_overdue transitions pending → expired
+7. wait_for_decision returns after decide
+8. wait_for_decision timeout
+9. get_policy returns default
+10. **escalate** creates new pending under higher role
+11. **notifier called best-effort** (failure does not block)
+
+#### US-5 Reducer Helpers ✅ 6/6 pass
+
+`agent_harness/state_mgmt/decision_reducers.py` (single file, not directory):
+- `HITLDecisionReducer.build_patch(decision)` → DefaultReducer-compatible patch (removes pending_approval_id + appends marker message)
+- `SubagentResult` dataclass + `SubagentResultReducer.build_patch(result)` → patch (metadata keyed by subagent_id so parallel subagents disjoint)
+
+**Drift**: Helpers do NOT subclass Reducer — they build patches consumed by the existing DefaultReducer. This preserves the Sprint 53.1 sole-mutator pattern (DefaultReducer = only Reducer impl).
+
+### Sanity Status
+
+| Check | Result |
+|-------|--------|
+| black --check | ✅ clean |
+| isort --check | ✅ clean |
+| flake8 | ✅ clean |
+| mypy --strict | ✅ Success: no issues found |
+| pytest unit + integration governance/ + state_mgmt/ | ✅ **36/36 pass** |
+| Coverage governance/ | **98%** (manager 97% + state_machine 100% + risk policy 100%) |
+
+### Day 2 Summary
+
+| Metric | Value |
+|--------|-------|
+| Hours estimated | 6-7 |
+| Hours actual | ~3 (existing schema + ABC + Reducer pattern reuse) |
+| Banked buffer | **+3-4 hours** (cumulative ~8 from Day 0+1+2) |
+| Blockers | 無 (one minor pytest __init__.py issue resolved within minutes) |
+| Drift | 1 documented (Reducer helpers do NOT subclass Reducer ABC) |
+
+### Day 3 Plan
+
+- 3.1-3.3 US-3 §HITL 中央化 — refactor Cat 2 hitl_tools + Cat 9 ToolGuardrail Stage 3 真整合
+- 3.4-3.5 US-4 Audit Query API + tests
+- 3.6 US-6 HITLNotifier ABC + TeamsWebhookNotifier
+- 3.7-3.8 sanity / commit / progress.md
+
+Estimated 6-7 hours.

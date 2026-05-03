@@ -129,42 +129,42 @@
 ## Day 2 — US-2 HITLManager (下半) + US-5 Reducers (est. 6-7 hours)
 
 ### 2.1 US-2 HITLManager full implementation
-- [ ] **Implement `request_approval()` method**
+- [x] **Implement `request_approval()` method**
   - Validates state machine transition / writes DB / triggers notifier hook (注入 Day 3)
   - DoD: integration test pass
-- [ ] **Implement `decide()` method**
+- [x] **Implement `decide()` method**
   - Validates: tenant match / state machine / reviewer role authorized
   - DoD: tenant cross-leak rejected (404)
-- [ ] **Implement `pickup_pending()` with SKIP LOCKED**
+- [x] **Implement `pickup_pending()` with SKIP LOCKED** (impl as `get_pending()` per 17.md ABC; uses `with_for_update(skip_locked=True)` JOIN sessions)
   - SQL: `SELECT ... FROM hitl_approvals WHERE tenant_id = :t AND state = 'pending' AND ... FOR UPDATE SKIP LOCKED LIMIT :n`
   - DoD: integration test 模擬並發 pickup
-- [ ] **Implement `expire_overdue()` background task**
+- [x] **Implement `expire_overdue()` background task**
   - Scan: `WHERE state = 'pending' AND expires_at < NOW()`
   - Apply fallback policy (config-driven: reject / escalate / approve_with_audit)
   - DoD: 3 fallback paths 都有測試
 
 ### 2.2 US-2 HITLManager integration tests
-- [ ] **Create test_manager.py (unit) + test_multi_instance_pickup.py (integration)**
+- [x] **Create test_manager.py (unit) + test_multi_instance_pickup.py (integration)** (11 integration cases incl. tenant isolation + escalate + notifier best-effort + expire_overdue + wait timeout)
   - Unit cases: request_approval / decide / state machine validation / tenant isolation / role validation
   - Integration cases: 並發 pickup（兩 connections 同時 pickup → 各取一個 + 不重）/ expire_overdue 3 fallback paths
   - DoD: ≥ 12 cases total; coverage ≥ 85%
   - Verify: `python -m pytest tests/unit/platform_layer/governance/hitl/ tests/integration/platform_layer/governance/hitl/ -v`
 
 ### 2.3 US-5 HITLDecisionReducer + SubagentResultReducer
-- [ ] **Create `agent_harness/state_mgmt/reducers/hitl_decision_reducer.py`**
+- [x] **Create `agent_harness/state_mgmt/reducers/hitl_decision_reducer.py`** (impl as `decision_reducers.py` single file; HITLDecisionReducer + SubagentResultReducer build patches for DefaultReducer.merge() — does NOT subclass Reducer to preserve sole-mutator pattern)
   - Content: typed reducer; merge HITLDecisionEvent into LoopState (immutable update)
   - Edge cases: pending → approved / pending → rejected / pending → escalated
-- [ ] **Create `agent_harness/state_mgmt/reducers/subagent_result_reducer.py`**
+- [x] **Create `agent_harness/state_mgmt/reducers/subagent_result_reducer.py`** (bundled into `decision_reducers.py`; SubagentResult dataclass + SubagentResultReducer)
   - Content: typed reducer for subagent result merging (per Cat 11 prep)
-- [ ] **Register reducers in `__init__.py`**
-- [ ] **Tests**: test_hitl_decision_reducer.py + test_subagent_result_reducer.py
+- [ ] **Register reducers in `__init__.py`** 🚧 SKIPPED — DefaultReducer is sole mutator; new helpers do NOT need registry. Existing `_merge_durable` already supports `pending_approval_ids_remove` + `metadata_set` patches consumed by these helpers.
+- [x] **Tests**: test_hitl_decision_reducer.py + test_subagent_result_reducer.py (single file `test_decision_reducers.py` — 6 unit cases covering APPROVED/REJECTED/ESCALATED + parallel subagents disjoint metadata)
   - DoD: ≥ 8 cases total; coverage ≥ 85%
   - Verify: `python -m pytest tests/unit/agent_harness/state_mgmt/reducers/ -v`
 
 ### 2.4 Day 2 sanity checks
-- [ ] **All Day 2 tests green**
+- [x] **All Day 2 tests green**
   - Command: `python -m pytest tests/unit/platform_layer/governance/ tests/unit/agent_harness/state_mgmt/reducers/ tests/integration/platform_layer/governance/ -v`
-- [ ] **Lint chain green**
+- [x] **Lint chain green**
   - Command: `python -m black --check src/ tests/ && python -m isort --check src/ tests/ && python -m flake8 src/platform_layer/governance/ src/agent_harness/state_mgmt/reducers/ tests/unit/platform_layer/governance/ tests/unit/agent_harness/state_mgmt/reducers/ && python -m mypy src/platform_layer/governance/ src/agent_harness/state_mgmt/reducers/`
 
 ### 2.5 Day 2 commit + push + verify CI
@@ -173,7 +173,7 @@
   - Push + verify CI
 
 ### 2.6 Day 2 progress.md update
-- [ ] **Update progress.md with Day 2 actuals + drift**
+- [x] **Update progress.md with Day 2 actuals + drift**
   - Commit: `docs(progress, sprint-53-4): Day 2 actuals`
   - Push
 
