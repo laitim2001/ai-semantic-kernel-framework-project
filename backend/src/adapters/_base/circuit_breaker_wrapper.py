@@ -56,8 +56,7 @@ from agent_harness._contracts import (
     ToolSpec,
     TraceContext,
 )
-from agent_harness.error_handling._abc import CircuitBreaker
-from agent_harness.error_handling.circuit_breaker import CircuitOpenError
+from agent_harness.error_handling import CircuitBreaker, CircuitOpenError
 
 
 class CircuitBreakerWrapper(ChatClient):

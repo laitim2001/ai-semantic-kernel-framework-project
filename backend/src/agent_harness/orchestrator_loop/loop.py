@@ -127,6 +127,7 @@ from agent_harness._contracts import (
 )
 from agent_harness.context_mgmt import Compactor
 from agent_harness.error_handling import (
+    DefaultCircuitBreaker,
     DefaultErrorTerminator,
     ErrorClass,
     ErrorPolicy,
@@ -134,7 +135,6 @@ from agent_harness.error_handling import (
     TenantErrorBudget,
 )
 from agent_harness.error_handling import TerminationReason as Cat8TerminationReason
-from agent_harness.error_handling.circuit_breaker import DefaultCircuitBreaker
 from agent_harness.observability import NoOpTracer, Tracer
 from agent_harness.output_parser import OutputParser, OutputType, classify_output
 from agent_harness.prompt_builder import PromptBuilder
