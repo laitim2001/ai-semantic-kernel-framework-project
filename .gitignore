@@ -118,6 +118,8 @@ data/temp/*
 # Claude Code local settings
 .claude/settings.json
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/*.lock
 .pids/
 
 # Playwright MCP artifacts
