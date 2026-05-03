@@ -85,13 +85,13 @@
 - [x] **black + isort + flake8 + ruff** _(black auto-formatted 4 files; isort fixed 2; flake8 caught E501 line-too-long on phone regex → split into multi-line raw-string concat; ruff All checks passed!)_
 
 ### 1.9 Day 1 commit + push + verify CI
-- [ ] **Commit US-1 + US-2 上半 + US-9**
-- [ ] **Push to feature branch**
-- [ ] **CI green on this branch (Backend CI 必綠)**
-- [ ] **Close GitHub issues #53 (US-1) + #61 (US-9)** _(US-2 #54 stays open — Day 2 finishes JailbreakDetector)_
+- [x] **Commit US-1 + US-2 上半 + US-9** _(commit `7ba59671`, +1317/-75 lines, 16 files)_
+- [x] **Push to feature branch** _(2f5cc45a..7ba59671 pushed)_
+- [x] **CI green on this branch (Backend CI 必綠)** _(verified post-push; Backend CI green)_
+- [x] **Close GitHub issues #53 (US-1) + #61 (US-9)** _(both closed via `gh issue close` with verification comments; US-2 #54 stays open for Day 2 JailbreakDetector)_
 
 ### 1.10 Day 1 progress.md update
-- [ ] **Append Day 1 progress.md** with deliverables / drift table / sanity matrix
+- [x] **Append Day 1 progress.md** _(Day 1 section written: 3 US deliverables table + Day 1 baseline→final delta + drift/decisions + estimated/actual table; Day 1 on schedule ~6.5 hours)_
 
 ---
 
