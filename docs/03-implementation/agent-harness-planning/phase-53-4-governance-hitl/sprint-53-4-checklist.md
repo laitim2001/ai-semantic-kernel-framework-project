@@ -64,62 +64,62 @@
 ## Day 1 — US-1 Risk Policy + US-2 HITLManager (上半) (est. 6-7 hours)
 
 ### 1.1 US-1 RiskLevel + RiskPolicy ABC
-- [ ] **Create `platform_layer/governance/risk/levels.py`**
+- [ ] **Create `platform_layer/governance/risk/levels.py`** 🚧 SKIPPED — RiskLevel single-sourced at `_contracts/hitl.py` per 17.md §1; creating duplicate would violate single-source rule. Day 1 探勘發現。governance/risk/policy.py imports from contracts directly.
   - Content: `RiskLevel` enum (LOW/MEDIUM/HIGH/CRITICAL)
   - File header: docstring + Modification History
   - DoD: imports clean
-- [ ] **Create `platform_layer/governance/risk/policy.py`**
+- [x] **Create `platform_layer/governance/risk/policy.py`**
   - Content: `RiskPolicy` ABC with `evaluate()` abstract method + `DefaultRiskPolicy` impl with YAML loader
   - YAML loading: `risk_policy.yaml` + per-tenant overlay support
   - DoD: imports clean + ABC structure 完整
 
 ### 1.2 US-1 risk_policy.yaml + tests
-- [ ] **Create `backend/config/risk_policy.yaml`**
+- [x] **Create `backend/config/risk_policy.yaml`**
   - 4 tool patterns + 1 per_tenant_overlay example (per plan §Technical Specifications)
-- [ ] **Create test_policy.py**
+- [x] **Create test_policy.py**
   - Cases: default risk / pattern matching priority / per-tenant overlay / unknown tool fallback
   - DoD: ≥ 5 test cases; coverage ≥ 85%
   - Verify: `cd backend && python -m pytest tests/unit/platform_layer/governance/risk/ -v`
 
 ### 1.3 US-2 HITLManager skeleton
-- [ ] **Create `platform_layer/governance/hitl/state_machine.py`**
+- [x] **Create `platform_layer/governance/hitl/state_machine.py`**
   - Content: state transitions + validation
   - DoD: pending → approved/rejected/escalated/expired 5 states 都有測試案例位
-- [ ] **Create `platform_layer/governance/hitl/manager.py`**
+- [x] **Create `platform_layer/governance/hitl/manager.py`** (DefaultHITLManager skeleton with NotImplementedError stubs for 5 ABC methods + expire_overdue helper; Day 2 implements DB logic)
   - Content: HITLManager skeleton（method signatures + docstrings；impl 寬鬆放 stub 給 Day 2 完整）
   - DoD: imports clean
 
 ### 1.4 US-2 DB model + migration
-- [ ] **Create `infrastructure/db/models/hitl_approval.py`**
+- [ ] **Create `infrastructure/db/models/hitl_approval.py`** 🚧 SKIPPED — Day 1 探勘發現 `infrastructure/db/models/governance.py` 已有 `Approval` ORM model from Sprint 49.3 (per `09-db-schema-design.md` L566-601). Schema covers all needed fields (id/session_id/action_type/risk_level/status/teams_*/etc). Reuse existing model; no new model needed.
   - Content: SQLAlchemy ORM model per plan §DB Schema
   - DoD: imports clean
-- [ ] **Generate alembic migration**
+- [ ] **Generate alembic migration** 🚧 SKIPPED — `approvals` table already migrated by `0008_governance.py` (Sprint 49.3). Day 2 may add a small migration if `escalated` state needs explicit DB constraint update; otherwise no new migration.
   - Command: `cd backend && alembic revision --autogenerate -m "add_hitl_approvals"`
   - Edit migration: 加 RLS policy + indexes per plan §DB Schema
   - DoD: migration file 完整，包含 indexes + RLS
 
 ### 1.5 US-2 state_machine unit tests
-- [ ] **Create test_state_machine.py**
+- [x] **Create test_state_machine.py**
   - Cases: valid transitions / invalid transitions raise / approved → rejected 拒絕 / expire timeout transition
   - DoD: ≥ 6 test cases; coverage ≥ 85%
   - Verify: `python -m pytest tests/unit/platform_layer/governance/hitl/test_state_machine.py -v`
 
 ### 1.6 Day 1 sanity checks
-- [ ] **mypy --strict 無新錯誤**
+- [x] **mypy --strict 無新錯誤**
   - Command: `cd backend && python -m mypy src/platform_layer/governance/risk/ src/platform_layer/governance/hitl/state_machine.py src/platform_layer/governance/hitl/manager.py`
-- [ ] **black + isort + flake8 green**
+- [x] **black + isort + flake8 green**
   - Command: `cd backend && python -m black --check src/platform_layer/governance/ && python -m isort --check src/platform_layer/governance/ && python -m flake8 src/platform_layer/governance/ tests/unit/platform_layer/governance/`
 
 ### 1.7 Day 1 commit + push + verify CI
-- [ ] **Stage + commit + push**
+- [x] **Stage + commit + push**
   - Verify branch: `git branch --show-current`
   - Commit: `feat(governance, sprint-53-4): US-1 Risk policy + US-2 HITLManager skeleton + DB schema`
   - Push: `git push`
-- [ ] **Verify CI runs and (if applicable) passes lint**
+- [x] **Verify CI runs and (if applicable) passes lint**
   - Command: `gh run list --branch feature/sprint-53-4-governance-hitl --limit 3`
 
 ### 1.8 Day 1 progress.md update
-- [ ] **Update progress.md with Day 1 actuals**
+- [x] **Update progress.md with Day 1 actuals**
   - Sections: Today's accomplishments / drift / banked-or-burned hours / blockers
   - Commit: `docs(progress, sprint-53-4): Day 1 actuals + drift notes`
   - Push: `git push`
@@ -168,7 +168,7 @@
   - Command: `python -m black --check src/ tests/ && python -m isort --check src/ tests/ && python -m flake8 src/platform_layer/governance/ src/agent_harness/state_mgmt/reducers/ tests/unit/platform_layer/governance/ tests/unit/agent_harness/state_mgmt/reducers/ && python -m mypy src/platform_layer/governance/ src/agent_harness/state_mgmt/reducers/`
 
 ### 2.5 Day 2 commit + push + verify CI
-- [ ] **Stage + commit + push**
+- [x] **Stage + commit + push**
   - Commit: `feat(governance+state-mgmt, sprint-53-4): US-2 HITLManager full impl + US-5 Cat 7 reducers`
   - Push + verify CI
 

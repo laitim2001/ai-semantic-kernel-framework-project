@@ -122,3 +122,68 @@ This file (you are reading).
 - 1.8 progress.md Day 1 update
 
 Estimated 6-7 hours.
+
+---
+
+## Day 1 — 2026-05-03 — US-1 Risk Policy + US-2 HITL Skeleton
+
+### Accomplishments
+
+#### US-1 Risk Policy ✅ Production-ready
+
+| File | LoC | Coverage |
+|------|-----|---------|
+| `platform_layer/governance/risk/policy.py` | 133 | **100%** |
+| `platform_layer/governance/risk/__init__.py` | 8 | **100%** |
+| `backend/config/risk_policy.yaml` | 35 | n/a |
+| `tests/unit/.../test_policy.py` | 100 (8 cases) | n/a |
+
+**Drift**: ⚠️ `RiskLevel` was already single-sourced at `agent_harness/_contracts/hitl.py` per 17.md §1. SKIPPED creation of `governance/risk/levels.py` to avoid duplicate definition. Imports from contracts.
+
+#### US-2 HITL Skeleton ✅ State machine ready, manager stubs ready for Day 2
+
+| File | LoC | Coverage | Status |
+|------|-----|----------|--------|
+| `platform_layer/governance/hitl/state_machine.py` | 87 | **100%** | Production-ready |
+| `platform_layer/governance/hitl/manager.py` | 124 | 59% | Skeleton (Day 2 fills DB logic) |
+| `platform_layer/governance/hitl/__init__.py` | 23 | 100% | Production-ready |
+| `tests/unit/.../test_state_machine.py` | 89 (11 cases) | n/a | All pass |
+
+**Drift**: ⚠️ Major buffer-banking discovery — `Approval` ORM model + table already exist at `infrastructure/db/models/governance.py` from Sprint 49.3 (per `0008_governance.py` migration + `09-db-schema-design.md` L566-601). Schema covers all required fields (id/session_id/action_*/risk_*/status/teams_*/created_at/expires_at/decided_at). SKIPPED:
+- New ORM model creation
+- New alembic migration
+
+Day 2 will reuse existing `Approval` model. May add tiny migration only if `escalated` state needs DB CHECK constraint update (TBD Day 2).
+
+### Sanity Status
+
+| Check | Result |
+|-------|--------|
+| black --check | ✅ 9 files clean |
+| isort --check | ✅ clean |
+| flake8 | ✅ clean |
+| mypy --strict | ✅ 5 source files clean |
+| pytest tests/unit/platform_layer/governance/ | ✅ **19/19 pass** |
+| Coverage governance/ | **90%** (manager 59% — Day 2 fills) |
+
+### Day 1 Summary
+
+| Metric | Value |
+|--------|-------|
+| Hours estimated | 6-7 |
+| Hours actual | ~3 (huge buffer from existing approvals table + ABC) |
+| Banked buffer | **+3-4 hours** (cumulative ~5 from Day 0+1) |
+| Blockers | 無 |
+| Drift | 2 documented (RiskLevel single-source + Approval ORM reuse) |
+
+### Day 2 Plan
+
+- 2.1 HITLManager.request_approval() — INSERT INTO approvals via session
+- 2.1 HITLManager.decide() — UPDATE with state machine validation
+- 2.1 HITLManager.get_pending() with FOR UPDATE SKIP LOCKED
+- 2.1 HITLManager.expire_overdue() background scan
+- 2.2 Integration tests (multi-instance pickup + 3 fallback policies)
+- 2.3 US-5 Cat 7 HITLDecisionReducer + SubagentResultReducer
+- 2.4-2.6 sanity / commit / progress.md
+
+Estimated 6-7 hours; banked ~5 hours buffer makes Day 2 schedule comfortable.
