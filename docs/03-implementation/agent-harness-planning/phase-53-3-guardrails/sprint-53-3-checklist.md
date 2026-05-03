@@ -323,31 +323,31 @@
 
 | Item | Status | Evidence |
 |------|--------|----------|
-| US-1 GuardrailEngine framework | ⬜ | commit hash + coverage % |
-| US-2 Input guardrails (PII + Jailbreak) | ⬜ | commit hash + red-team accuracy ≥ 95% / 90% |
-| US-3 Output guardrails (Toxicity + SensitiveInfo) | ⬜ | commit hash + cross-tenant isolation test pass |
-| US-4 CapabilityMatrix + ToolGuardrail | ⬜ | commit hash + multi-tenant test pass |
-| US-5 Tripwire ABC + plug-in registry | ⬜ | commit hash + 4 patterns registered |
-| US-6 WORM audit log + hash chain | ⬜ | commit hash + tamper test fail at exact id |
-| US-7 AgentLoop 3 layer integration | ⬜ | grep evidence (3 切點 × engine + 3 切點 × tripwire + 2 切點 × audit_log) + 6 scenarios pass |
-| US-8 fakeredis + RedisBudgetStore | ⬜ | commit hash + _redis_store coverage ≥ 80% |
-| US-9 ToolResult.error_class | ⬜ | commit hash + by-string lookup test pass |
-| 4 active CI required checks green on main HEAD | ⬜ | 4 run ids |
-| Cat 9 coverage ≥ 80% | ⬜ | pytest --cov output |
-| pytest ≥ 760 PASS / 0 xfail / 0 fail | ⬜ | counts |
-| mypy 220+ src clean | ⬜ | tail output |
-| LLM SDK leak = 0 | ⬜ | tail output |
-| 6 V2 lint scripts green | ⬜ | each exit 0 |
-| Cat 9 vs Cat 8 邊界 (Tripwire in error_handling/) | ⬜ | grep = 0 hits |
-| Cat 9 vs Cat 8 邊界 (ErrorTerminator in guardrails/) | ⬜ | grep = 0 hits |
-| GuardrailEngine 3 切點真用 | ⬜ | grep evidence ≥ 3 hits |
-| Tripwire 3 切點真用 | ⬜ | grep evidence ≥ 3 hits |
-| WORMAuditLog 真寫 | ⬜ | grep evidence ≥ 2 hits |
-| PII detection accuracy | ⬜ | red-team pct ≥ 95% |
-| Jailbreak detection accuracy | ⬜ | red-team pct ≥ 90% |
-| WORM tamper test | ⬜ | fail at exact id evidence |
-| Sprint 53.3 PR normal merge (no admin, no temp-relax) | ⬜ | merge commit hash + protection status |
-| V2 milestone 15/22 (68%) | ⬜ | memory + retrospective updated |
+| US-1 GuardrailEngine framework | ✅ | commit `7ba59671`; engine.py 100% coverage; 12 tests |
+| US-2 Input guardrails (PII + Jailbreak) | ✅ | commits `7ba59671` + `5b951bff`; PII 100%/100% / Jailbreak 100%/100% (target 95% / 90%) |
+| US-3 Output guardrails (Toxicity + SensitiveInfo) | ✅ | commit `5b951bff`; multi-tenant cross-leak test pass |
+| US-4 CapabilityMatrix + ToolGuardrail | ✅ | commit `05c93e62`; 30 tests; multi-tenant scenario verified |
+| US-5 Tripwire ABC + plug-in registry | ✅ | commit `05c93e62`; 4 baseline patterns + extensibility |
+| US-6 WORM audit log + hash chain | ✅ | commits `05c93e62` + `1b0e616b`; tamper at id 50 → broken_at_id == 50 verified |
+| US-7 AgentLoop 3 layer integration | ✅ | commit `1b0e616b`; 3+3+9 grep evidence; 8 integration tests pass |
+| US-8 fakeredis + RedisBudgetStore | ✅ | commit `1b0e616b`; _redis_store coverage 0% → 100% |
+| US-9 ToolResult.error_class | ✅ | commit `7ba59671`; by-string lookup test pass |
+| 4 active CI required checks green on main HEAD | ⏳ | post-PR-merge verification |
+| Cat 9 coverage ≥ 80% | ✅ | **90%** (504 stmts / 51 missed) |
+| pytest ≥ 760 PASS / 0 xfail / 0 fail | ✅ | **963 passed** / 4 skipped / 0 xfail / 0 fail |
+| mypy 220+ src clean | ✅ | **224 src clean** |
+| LLM SDK leak = 0 | ✅ | 0 violations |
+| 6 V2 lint scripts green | ✅ | all green (AP-1 / AP-3 / AP-4 / AP-8 / AP-11 / LLM-SDK) |
+| Cat 9 vs Cat 8 邊界 (Tripwire in error_handling/) | ✅ | 0 hits (strict pattern) |
+| Cat 9 vs Cat 8 邊界 (ErrorTerminator in guardrails/) | ✅ | 0 hits (strict pattern) |
+| GuardrailEngine 3 切點真用 | ✅ | 3 hits in orchestrator_loop/loop.py |
+| Tripwire 3 切點真用 | ✅ | 3 hits in orchestrator_loop/loop.py |
+| WORMAuditLog 真寫 | ✅ | 9 hits in orchestrator_loop/loop.py (incl. _audit_log_safe) |
+| PII detection accuracy | ✅ | 100%/100% on red-team fixture (target 95%) |
+| Jailbreak detection accuracy | ✅ | 100%/100% on red-team fixture (target 90%) |
+| WORM tamper test | ✅ | `test_verify_detects_tampered_hash_at_exact_id` passes |
+| Sprint 53.3 PR normal merge (no admin, no temp-relax) | ⏳ | post-merge |
+| V2 milestone 15/22 (68%) | ⏳ | post-merge memory update |
 
 ---
 
