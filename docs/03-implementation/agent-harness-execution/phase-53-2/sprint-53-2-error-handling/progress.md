@@ -104,3 +104,72 @@
 ---
 
 **Next**: Day 1 — US-1 + US-2 implementation. Estimated 6-7 hours.
+
+---
+
+## Day 1 — 2026-05-03 (US-1 ErrorPolicy + US-2 RetryPolicyMatrix)
+
+### Accomplishments
+
+#### 1.1 `_contracts/errors.py` ✅ (new file)
+Added single-source data model for Cat 8:
+- `ErrorContext` (frozen dataclass): source_category / tool_name / provider / attempt_num / state_version / tenant_id
+- `AuthenticationError` / `MissingDataError`: HITL_RECOVERABLE base classes
+- `ToolExecutionError`: LLM_RECOVERABLE base class
+- Re-exported via `_contracts/__init__.py`
+
+#### 1.2-1.3 `error_handling/policy.py` (US-1) ✅
+`DefaultErrorPolicy` implements existing `ErrorPolicy` ABC (Sprint 49.1 stub):
+- **classify**: type-based registry with MRO walk; stdlib-only defaults (ConnectionError / OSError / TimeoutError / asyncio.TimeoutError → TRANSIENT; ToolExecutionError → LLM_RECOVERABLE; AuthenticationError / MissingDataError → HITL_RECOVERABLE; fallback FATAL)
+- **should_retry**: gates by ErrorClass + attempt cap (TRANSIENT/LLM_RECOVERABLE retry; HITL_RECOVERABLE/FATAL never)
+- **backoff_seconds**: exponential with optional ±10% jitter
+- `register()` for adapter __init__ to map provider-specific exceptions
+
+`test_policy.py`: **19 tests** pass — classify (10) + should_retry (4) + backoff_seconds (4) + import smoke (1)
+
+#### 1.4 ErrorRetried event ✅ (no code change)
+Already exists in stub `_contracts/events.py` with fields `attempt: int / error_class: str / backoff_ms: float` — sufficient for 53.2. Documented; no add.
+
+#### 1.5-1.7 `error_handling/retry.py` (US-2) ✅
+Layer-2 separation from policy.py:
+- `RetryConfig` (frozen dataclass): max_attempts / backoff_base / backoff_max / jitter
+- `RetryPolicyMatrix.get_policy(tool_name, error_class) -> RetryConfig`
+- Resolution order: per-tool override → global override → spec defaults
+- `from_yaml(path)` classmethod loads `backend/config/retry_policies.yaml`
+- `compute_backoff(config, attempt) -> float` pure function
+
+`backend/config/retry_policies.yaml`: 4 ErrorClass defaults + salesforce_query per-tool override (max=5, backoff_max=60s)
+
+`test_retry.py`: **15 tests** pass — defaults (4) + resolution order (3) + from_yaml (3) + compute_backoff (5)
+
+#### 1.8-1.9 sanity checks ✅
+| Metric | Before Day 1 | After Day 1 |
+|--------|--------------|-------------|
+| pytest | 596/4/1/0 | **630/4/1/0** (+34 new) |
+| mypy strict src | 202 clean | **205** clean (+3 files) |
+| LLM SDK leak | 0 | 0 |
+| 6 V2 lint scripts | all green | all green |
+| Cat 8 coverage | n/a (stub only) | **100%** (103/103 stmts) |
+| black/isort/flake8/ruff | clean | clean |
+
+Initial mypy errors (5) fixed:
+- `dict` generic type-arg → `dict[str, Any]`
+- 4× `no-any-return` from min/multiplication arithmetic → explicit `float()` casts
+
+### Plan Drift / Notes
+
+| Drift | Plan said | Reality | Resolution |
+|-------|-----------|---------|------------|
+| Class name | `DefaultErrorClassifier` | `DefaultErrorPolicy` (matches existing `ErrorPolicy` ABC) | Renamed; semantics unchanged |
+| Module name | `classifier.py` | `policy.py` | Renamed |
+| `_contracts/errors.py` | "Add to existing" | **NEW** file (didn't exist) | Created from scratch |
+| `ErrorRetried` event fields | `error_category / tool_name / attempt_num / delay_seconds / original_exception` | stub has `attempt / error_class / backoff_ms` | Stub sufficient; no add |
+| Test count target | ≥17 (8 classify + 9 retry) | **34** delivered (19+15) | Over-delivered |
+| Coverage target | ≥85% | **100%** | Easy clear |
+
+### Remaining for Day 2
+
+- 1.10 Commit US-1 + US-2 + push + verify 8 active CI workflow green on feature branch ← in progress
+- 1.11 Day 1 progress.md (this section)
+- Close GitHub issues #40 (US-1) + #41 (US-2)
+- Day 2: US-3 ProviderCircuitBreaker + US-4 TenantErrorBudget

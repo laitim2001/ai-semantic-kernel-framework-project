@@ -6,5 +6,20 @@ from agent_harness.error_handling._abc import (
     ErrorPolicy,
     ErrorTerminator,
 )
+from agent_harness.error_handling.policy import DefaultErrorPolicy
+from agent_harness.error_handling.retry import (
+    RetryConfig,
+    RetryPolicyMatrix,
+    compute_backoff,
+)
 
-__all__ = ["ErrorPolicy", "CircuitBreaker", "ErrorTerminator", "ErrorClass"]
+__all__ = [
+    "ErrorPolicy",
+    "DefaultErrorPolicy",
+    "CircuitBreaker",
+    "ErrorTerminator",
+    "ErrorClass",
+    "RetryConfig",
+    "RetryPolicyMatrix",
+    "compute_backoff",
+]

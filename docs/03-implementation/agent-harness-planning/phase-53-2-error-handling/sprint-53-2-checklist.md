@@ -48,115 +48,48 @@
 
 ---
 
-## Day 1 — US-1 ErrorClassifier + US-2 RetryPolicy + ErrorRetried Event (est. 6-7 hours)
+## Day 1 — US-1 ErrorPolicy + US-2 RetryPolicy + ErrorRetried Event (est. 6-7 hours)
 
 ### 1.1 Update _contracts/errors.py
-- [ ] **Add new exception classes**
-  - File: `backend/src/agent_harness/_contracts/errors.py`
-  - Add: `AuthenticationError(Exception)` / `MissingDataError(Exception)` / `ErrorContext` (frozen dataclass)
-  - DoD: classes importable; mypy strict pass
+- [x] **Add new exception classes** _(created `_contracts/errors.py` with ErrorContext + AuthenticationError + MissingDataError + ToolExecutionError; re-exported via _contracts/__init__.py)_
 
-### 1.2 Create classifier.py
-- [ ] **Write `DefaultErrorClassifier` class**
-  - File: `backend/src/agent_harness/error_handling/classifier.py`
-  - File header per `file-header-convention.md`：Purpose / Category 8 / Scope Sprint 53.2 / Description / Modification History
-  - Implement `classify(error, context, *, trace_context=None) -> ErrorCategory`
-  - Registry pattern with `register(exc_class, category)` + `_register_defaults()`
-  - MRO walk for inheritance lookup
-  - DoD: file 存在；mypy --strict pass for new file
-- [ ] **Update `error_handling/__init__.py`**
-  - Edit: re-export `DefaultErrorClassifier` + `ErrorContext`
-  - Update `__all__`
-  - DoD: `python -c "from agent_harness.error_handling import DefaultErrorClassifier"` works
+### 1.2 Create policy.py (renamed from classifier.py per stub)
+- [x] **Write `DefaultErrorPolicy` class** _(implements existing `ErrorPolicy` ABC: classify + should_retry + backoff_seconds; registry pattern with MRO walk; stdlib-only defaults)_
+- [x] **Update `error_handling/__init__.py`** _(re-exported DefaultErrorPolicy)_
 
-### 1.3 Create test_classifier.py
-- [ ] **Create test_classifier.py**
-  - File: `backend/tests/unit/agent_harness/error_handling/test_classifier.py`
-  - File header per convention
-  - Tests:
-    - `test_classify_aiohttp_connection_error_as_transient`
-    - `test_classify_asyncio_timeout_as_transient`
-    - `test_classify_tool_execution_error_as_llm_recoverable`
-    - `test_classify_authentication_error_as_user_fixable`
-    - `test_classify_missing_data_error_as_user_fixable`
-    - `test_classify_unregistered_as_unexpected`
-    - `test_register_custom_exception`
-    - `test_inheritance_mro_walk` (subclass of registered)
-  - DoD: ≥ 8 tests pass
+### 1.3 Create test_policy.py
+- [x] **Create test_policy.py** _(19 tests pass: 10 classify + 4 should_retry + 4 backoff_seconds + 1 import smoke; covers all 4 ErrorClass cases + MRO + register)_
 
 ### 1.4 US-2 ErrorRetried event
-- [ ] **Add `ErrorRetried` to `_contracts/events.py`**
-  - File: `backend/src/agent_harness/_contracts/events.py`
-  - frozen dataclass: error_category / tool_name / attempt_num / delay_seconds / original_exception
-  - DoD: event importable from agent_harness._contracts
+- [x] **`ErrorRetried` already exists in stub `_contracts/events.py`** _(fields: attempt / error_class / backoff_ms — sufficient for 53.2; no code change needed)_
 
 ### 1.5 US-2 Create retry.py
-- [ ] **Write `RetryConfig` + `RetryPolicyMatrix` classes**
-  - File: `backend/src/agent_harness/error_handling/retry.py`
-  - File header per convention
-  - `RetryConfig` (frozen): max_attempts / backoff_base / backoff_max / jitter
-  - `RetryPolicyMatrix.get_policy(tool_name, error_category) -> RetryConfig`
-  - `RetryPolicyMatrix.from_yaml(path)` classmethod
-  - `compute_backoff(config, attempt) -> float` helper
-  - DoD: file 存在；mypy --strict pass
+- [x] **Write `RetryConfig` + `RetryPolicyMatrix` classes** _(layer-2 separation: policy.py owns "should retry?", retry.py owns "with what config?"; from_yaml + compute_backoff helper; mypy strict clean)_
 
 ### 1.6 Create retry_policies.yaml
-- [ ] **Create config file**
-  - File: `backend/config/retry_policies.yaml`
-  - 含 defaults section（4 categories）+ per_tool override (salesforce_query 範例)
-  - DoD: YAML parseable; from_yaml() loads correctly
+- [x] **Create config file** _(`backend/config/retry_policies.yaml` with 4 ErrorClass defaults + salesforce_query per-tool override)_
 
 ### 1.7 Create test_retry.py
-- [ ] **Create test_retry.py**
-  - File: `backend/tests/unit/agent_harness/error_handling/test_retry.py`
-  - Tests:
-    - `test_default_transient_policy` (max=3, base=1.0, max_delay=30.0, jitter=True)
-    - `test_default_llm_recoverable_policy` (max=2)
-    - `test_default_user_fixable_no_retry` (max=0)
-    - `test_default_unexpected_no_retry` (max=0)
-    - `test_per_tool_override` (salesforce_query TRANSIENT max=5)
-    - `test_compute_backoff_exponential`
-    - `test_compute_backoff_with_jitter` (variance check)
-    - `test_compute_backoff_capped_at_max`
-    - `test_from_yaml_loads_matrix`
-  - DoD: ≥ 9 tests pass
+- [x] **Create test_retry.py** _(15 tests pass: 4 defaults + 3 resolution + 3 from_yaml + 5 compute_backoff)_
 
 ### 1.8 Update __init__.py
-- [ ] **Re-export RetryConfig + RetryPolicyMatrix + compute_backoff**
-  - Edit `backend/src/agent_harness/error_handling/__init__.py`
-  - DoD: `python -c "from agent_harness.error_handling import RetryPolicyMatrix"` works
+- [x] **Re-export RetryConfig + RetryPolicyMatrix + compute_backoff** _(exported via `agent_harness.error_handling`)_
 
 ### 1.9 Day 1 sanity checks
-- [ ] **mypy strict 仍 clean**
-  - `cd backend && python -m mypy --strict src 2>&1 | tail -3`
-  - DoD: 205+ files clean
-- [ ] **All 6 V2 lint scripts 仍綠**
-  - DoD: 全 exit 0
-- [ ] **Full pytest 不退步**
-  - `cd backend && python -m pytest --tb=no -q 2>&1 | tail -5`
-  - DoD: ≥ 613 PASS（596 baseline + ≥ 17 new tests）/ 1 xfail (#38) / 4 skip / 0 fail
-- [ ] **Cat 8 coverage Day 1 partial**
-  - `cd backend && python -m pytest tests/unit/agent_harness/error_handling/ --cov=src/agent_harness/error_handling --cov-report=term-missing`
-  - DoD: classifier + retry coverage ≥ 85%
+- [x] **mypy strict 仍 clean** _(205 src files clean, was 202 → +3 new files: errors.py + policy.py + retry.py)_
+- [x] **All 6 V2 lint scripts 仍綠** _(ap1 + cross_category + duplicate_dataclass + llm_sdk_leak + promptbuilder + sync_callback all green)_
+- [x] **Full pytest 不退步** _(596 → **630 passed** / 4 skip / 1 xfail (#38) / 0 fail; +34 new tests)_
+- [x] **Cat 8 coverage Day 1 partial** _(`__init__` + `_abc` + `policy` + `retry` = **100%** coverage; 103/103 stmts; target ≥ 80%)_
+- [x] **black + isort + flake8 + ruff** _(all green; `pytest` unused import removed from test_policy.py)_
 
 ### 1.10 Day 1 commit + push + verify CI
 - [ ] **Commit US-1 + US-2**
-  - Stage: `git add backend/src/agent_harness/error_handling/ backend/src/agent_harness/_contracts/ backend/config/retry_policies.yaml backend/tests/unit/agent_harness/error_handling/`
-  - Message: `feat(error-handling, sprint-53-2): US-1 ErrorClassifier + US-2 RetryPolicy matrix + ErrorRetried event`
-  - **Verify branch before commit**
 - [ ] **Push to feature branch**
-  - `git push origin feature/sprint-53-2-error-handling`
-- [ ] **Verify backend-ci.yml + ci.yml + V2 Lint green on this branch**
-  - `gh run list --branch feature/sprint-53-2-error-handling --limit 3`
-  - 等 ~3 min；`gh run view <id> --json conclusion`
-  - DoD: 8 active workflow 全 success on this push
+- [ ] **Verify backend-ci.yml + V2 Lint + ci.yml green on this branch**
 - [ ] **Close GitHub issues #40 + #41**
-  - `gh issue close 40 --comment "Resolved by commit <hash>. Coverage: XX%."`
-  - `gh issue close 41 --comment "Resolved by commit <hash>. Coverage: XX%."`
 
 ### 1.11 Day 1 progress.md update
 - [ ] **Append Day 1 progress.md**
-  - Sections: Today's accomplishments (US-1 ✅ + US-2 ✅) / coverage % / Remaining for Day 2
 
 ---
 

@@ -25,6 +25,12 @@ Created: 2026-04-29 (Sprint 49.1)
 """
 
 from agent_harness._contracts.cache import CachePolicy
+from agent_harness._contracts.errors import (
+    AuthenticationError,
+    ErrorContext,
+    MissingDataError,
+    ToolExecutionError,
+)
 from agent_harness._contracts.chat import (
     CacheBreakpoint,
     ChatRequest,
@@ -117,6 +123,11 @@ __all__ = [
     "CompactionResult",
     # cache (Cat 4)
     "CachePolicy",
+    # errors (Cat 8)
+    "ErrorContext",
+    "AuthenticationError",
+    "MissingDataError",
+    "ToolExecutionError",
     # tools
     "ToolSpec",
     "ToolResult",
