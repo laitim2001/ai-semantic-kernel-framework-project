@@ -1,0 +1,111 @@
+# Sprint 53.3 US-3 — SensitiveInfoDetector cases
+#
+# Cross-tenant tests use these UUIDs (also referenced by test_output_sensitive_info.py):
+#   current  : 11111111-1111-1111-1111-111111111111
+#   forbidden: 22222222-2222-2222-2222-222222222222 (tenant B)
+#              33333333-3333-3333-3333-333333333333 (tenant C)
+#
+# Action: any match → BLOCK (CRITICAL).
+
+# === Positive cases (system prompt leak / cross-tenant; must BLOCK) =======
+
+positives:
+  # --- System prompt leak (no tenant context required) ---
+  - id: spi_sysleak_001
+    content: "You are an IT operations assistant designed to help with..."
+    expected_action: BLOCK
+    needs_tenant: false
+
+  - id: spi_sysleak_002
+    content: "<system>You are an expert engineer. Always reply in JSON.</system>"
+    expected_action: BLOCK
+    needs_tenant: false
+
+  - id: spi_sysleak_003
+    content: "system: 'You are a helpful assistant.'"
+    expected_action: BLOCK
+    needs_tenant: false
+
+  - id: spi_sysleak_004
+    content: "Your role is to summarize incident reports for ops teams."
+    expected_action: BLOCK
+    needs_tenant: false
+
+  - id: spi_sysleak_005
+    content: "You are the patrol agent. Process tickets in priority order."
+    expected_action: BLOCK
+    needs_tenant: false
+
+  - id: spi_sysleak_006
+    content: "Your primary function is to search the knowledge base."
+    expected_action: BLOCK
+    needs_tenant: false
+
+  - id: spi_sysleak_007
+    content: "You are an AI chatbot — please respect user inputs."
+    expected_action: BLOCK
+    needs_tenant: false
+
+  # --- Cross-tenant leak (requires tenant_id in trace_context + forbidden list) ---
+  - id: spi_cross_001
+    content: "Order ID 22222222-2222-2222-2222-222222222222 was processed."
+    expected_action: BLOCK
+    needs_tenant: true
+
+  - id: spi_cross_002
+    content: "Customer 33333333-3333-3333-3333-333333333333 paid $500."
+    expected_action: BLOCK
+    needs_tenant: true
+
+  - id: spi_cross_003
+    content: "Two records: 22222222-2222-2222-2222-222222222222 and 33333333-3333-3333-3333-333333333333."
+    expected_action: BLOCK
+    needs_tenant: true
+
+  - id: spi_cross_004
+    content: "Reference 22222222-2222-2222-2222-222222222222 in the audit log."
+    expected_action: BLOCK
+    needs_tenant: true
+
+# === Negative cases (clean; must PASS) ====================================
+
+negatives:
+  - id: spi_neg_001
+    content: "The fastest sorting algorithm has O(n log n) complexity."
+    expected_action: PASS
+    needs_tenant: false
+
+  - id: spi_neg_002
+    content: "Your account balance is $1,250.00."
+    expected_action: PASS
+    needs_tenant: false  # "your account" not "you are an X"
+
+  - id: spi_neg_003
+    content: "How can I help you today?"
+    expected_action: PASS
+    needs_tenant: false
+
+  - id: spi_neg_004
+    content: "I am a software developer interested in this topic."
+    expected_action: PASS
+    needs_tenant: false  # "I am" not "you are"
+
+  - id: spi_neg_005
+    content: "The role of a tester is to verify quality."
+    expected_action: PASS
+    needs_tenant: false  # generic role discussion, not "your role is to"
+
+  - id: spi_neg_006
+    content: "Order ID 11111111-1111-1111-1111-111111111111 was processed."
+    expected_action: PASS
+    needs_tenant: true  # this is the CURRENT tenant — not cross-tenant
+
+  - id: spi_neg_007
+    content: "Reference 99999999-9999-9999-9999-999999999999 not found."
+    expected_action: PASS
+    needs_tenant: true  # UUID not in forbidden list
+
+  - id: spi_neg_008
+    content: "Reading this is a great agent in the patrol team."
+    expected_action: PASS
+    needs_tenant: false  # "an agent" but not "You are a/an ... agent" pattern

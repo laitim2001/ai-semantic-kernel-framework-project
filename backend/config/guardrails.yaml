@@ -1,0 +1,30 @@
+# Sprint 53.3 US-1: GuardrailEngine declarative config
+#
+# Each entry: { name, type, priority, params } — the engine factory
+# resolves `name` to a Guardrail class via plugin registry, instantiates
+# with `params`, and registers with given priority. Priority 0 = highest.
+#
+# Per-type chain runs in ascending priority; first non-PASS short-circuits.
+#
+# Day 1 only ships PIIDetector under input. JailbreakDetector / Toxicity /
+# SensitiveInfo / ToolGuardrail will be added in subsequent days.
+# Engine.register() is also usable directly in code (DI from API layer)
+# for tests and one-off composition.
+
+input:
+  - name: pii_detector
+    priority: 10
+    params:
+      llm_judge_threshold: 2
+
+  # Day 2 adds:
+  # - name: jailbreak_detector
+  #   priority: 20
+
+output:
+  []
+  # Day 2 adds toxicity_detector + sensitive_info_detector
+
+tool:
+  []
+  # Day 3 adds tool_guardrail with capability_matrix DI

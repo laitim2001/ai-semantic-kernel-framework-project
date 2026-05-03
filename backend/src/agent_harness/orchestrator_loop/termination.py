@@ -56,6 +56,7 @@ class TerminationReason(Enum):
     TOKEN_BUDGET = "token_budget"
     CANCELLED = "cancelled"
     TRIPWIRE = "tripwire"  # Cat 9 — wired in Phase 53.3
+    GUARDRAIL_BLOCKED = "guardrail_blocked"  # Cat 9 — non-tripwire BLOCK / ESCALATE
     ERROR = "error"  # Cat 8 — wired in Phase 53.2
     HANDOFF_NOT_IMPLEMENTED = "handoff_not_implemented"  # 50.1 stub for Cat 11
 

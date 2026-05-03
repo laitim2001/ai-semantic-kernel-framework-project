@@ -322,6 +322,47 @@ async def test_handler_exception_propagated_via_result_error() -> None:
 
 
 @pytest.mark.asyncio
+async def test_handler_exception_writes_error_class() -> None:
+    """Sprint 53.3 US-9 (AD-Cat8-3): exception path preserves original
+    type as fully-qualified class name in ToolResult.error_class so
+    DefaultErrorPolicy.classify_by_string() can recover ErrorClass.
+    """
+    reg = ToolRegistryImpl()
+    reg.register(_spec("explodes"))
+
+    # Custom exception with known module + qualname
+    class CustomToolFault(RuntimeError):
+        pass
+
+    async def _custom_explode(_call_arg: object) -> str:
+        raise CustomToolFault("boom-custom")
+
+    exe = ToolExecutorImpl(registry=reg, handlers={"explodes": _custom_explode})
+
+    result = await exe.execute(_call("explodes"))
+    assert result.success is False
+    assert result.error_class is not None
+    # tests are run via pytest; class is defined in the test module so its
+    # __module__ is the test file path. We only assert the qualname suffix
+    # which is what `register_by_string` would key on.
+    assert result.error_class.endswith(".CustomToolFault")
+
+
+@pytest.mark.asyncio
+async def test_non_exception_failure_has_no_error_class() -> None:
+    """Sprint 53.3 US-9: error_class is None for non-exception failures
+    (unknown tool / schema mismatch / permission denied) since these
+    paths use `_fail()` which doesn't set error_class.
+    """
+    reg = ToolRegistryImpl()
+    exe = ToolExecutorImpl(registry=reg, handlers={})
+
+    result = await exe.execute(_call("nonexistent"))
+    assert result.success is False
+    assert result.error_class is None  # not an exception
+
+
+@pytest.mark.asyncio
 async def test_no_handler_registered_returns_error() -> None:
     reg = ToolRegistryImpl()
     reg.register(_spec("orphan"))  # spec registered but no handler

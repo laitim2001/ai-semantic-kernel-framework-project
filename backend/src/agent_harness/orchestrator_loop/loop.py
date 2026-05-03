@@ -92,7 +92,7 @@ import time
 
 # Local import to avoid circular: only used at runtime for state placeholders
 from datetime import datetime
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from uuid import UUID
 
 # Need imports from sibling adapter / tools / output_parser modules:
@@ -105,6 +105,7 @@ from agent_harness._contracts import (
     ContextCompacted,
     DurableState,
     ExecutionContext,
+    GuardrailTriggered,
     LLMRequested,
     LLMResponded,
     LoopCompleted,
@@ -118,11 +119,14 @@ from agent_harness._contracts import (
     StateCheckpointed,
     StateVersion,
     Thinking,
+    ToolCall,
     ToolCallExecuted,
     ToolCallFailed,
     ToolCallRequested,
+    ToolResult,
     TraceContext,
     TransientState,
+    TripwireTriggered,
     TurnStarted,
 )
 from agent_harness.context_mgmt import Compactor
@@ -135,6 +139,13 @@ from agent_harness.error_handling import (
     TenantErrorBudget,
 )
 from agent_harness.error_handling import TerminationReason as Cat8TerminationReason
+from agent_harness.guardrails import (
+    CapabilityMatrix,
+    GuardrailAction,
+    GuardrailEngine,
+    Tripwire,
+    WORMAuditLog,
+)
 from agent_harness.observability import NoOpTracer, Tracer
 from agent_harness.output_parser import OutputParser, OutputType, classify_output
 from agent_harness.prompt_builder import PromptBuilder
@@ -175,6 +186,13 @@ class AgentLoopImpl(AgentLoop):
         circuit_breaker: DefaultCircuitBreaker | None = None,
         error_budget: TenantErrorBudget | None = None,
         error_terminator: DefaultErrorTerminator | None = None,
+        # 53.3 Day 4 Cat 9 integration: 4 opt-in deps. When any is None
+        # the corresponding Cat 9 path is skipped (preserves 53.2 baseline).
+        # See `agent_harness.guardrails` for production wiring.
+        guardrail_engine: "GuardrailEngine | None" = None,
+        tripwire: "Tripwire | None" = None,
+        audit_log: "WORMAuditLog | None" = None,
+        capability_matrix: "CapabilityMatrix | None" = None,
     ) -> None:
         self._chat_client = chat_client
         self._output_parser = output_parser
@@ -213,6 +231,11 @@ class AgentLoopImpl(AgentLoop):
         self._circuit_breaker = circuit_breaker
         self._error_budget = error_budget
         self._error_terminator = error_terminator
+        # 53.3 Day 4 Cat 9
+        self._guardrail_engine = guardrail_engine
+        self._tripwire = tripwire
+        self._audit_log = audit_log
+        self._capability_matrix = capability_matrix
 
     async def _handle_tool_error(
         self,
@@ -262,6 +285,215 @@ class AgentLoopImpl(AgentLoop):
 
         return False, cls, None, None
 
+    # === Cat 9 helpers (53.3 Day 4 US-7) =================================
+
+    async def _audit_log_safe(
+        self,
+        *,
+        event_type: str,
+        content: dict[str, Any],
+        ctx: TraceContext,
+    ) -> None:
+        """Best-effort WORM append. Logs but doesn't crash loop on failure.
+
+        Plan §AC says audit append failure SHOULD escalate to ErrorTerminator
+        FATAL — that tighter coupling is deferred to Phase 54.x. For 53.3
+        we swallow the exception so a transient DB hiccup doesn't kill an
+        in-flight loop. Documented as Audit Debt in retrospective.
+        """
+        if self._audit_log is None or self._tenant_id is None:
+            return
+        try:
+            await self._audit_log.append(
+                tenant_id=self._tenant_id,
+                event_type=event_type,
+                content=content,
+                user_id=ctx.user_id,
+                session_id=ctx.session_id,
+            )
+        except Exception:
+            pass  # best-effort; future: escalate to ErrorTerminator FATAL
+
+    async def _cat9_input_check(
+        self,
+        *,
+        user_input: str,
+        ctx: TraceContext,
+    ) -> AsyncIterator[LoopEvent]:
+        """Cat 9 loop-start gating. Yields GuardrailTriggered/TripwireTriggered
+        + LoopCompleted on block; nothing on PASS.
+        """
+        if self._guardrail_engine is not None:
+            g_result = await self._guardrail_engine.check_input(user_input, trace_context=ctx)
+            if g_result.action != GuardrailAction.PASS:
+                await self._audit_log_safe(
+                    event_type=f"guardrail.input.{g_result.action.value}",
+                    content={
+                        "action": g_result.action.value,
+                        "reason": g_result.reason or "",
+                        "risk_level": g_result.risk_level,
+                    },
+                    ctx=ctx,
+                )
+                yield GuardrailTriggered(
+                    guardrail_type="input",
+                    action=g_result.action.value,
+                    reason=g_result.reason or "",
+                    trace_context=ctx,
+                )
+                yield LoopCompleted(
+                    stop_reason=TerminationReason.GUARDRAIL_BLOCKED.value,
+                    total_turns=0,
+                    trace_context=ctx,
+                )
+                return
+
+        if self._tripwire is not None:
+            if await self._tripwire.trigger_check(content=user_input, trace_context=ctx):
+                await self._audit_log_safe(
+                    event_type="tripwire.input.triggered",
+                    content={"content_excerpt": user_input[:200]},
+                    ctx=ctx,
+                )
+                yield TripwireTriggered(
+                    violation_type="input",
+                    detail=f"input length={len(user_input)}",
+                    trace_context=ctx,
+                )
+                yield LoopCompleted(
+                    stop_reason=TerminationReason.TRIPWIRE.value,
+                    total_turns=0,
+                    trace_context=ctx,
+                )
+                return
+
+    async def _cat9_tool_check(
+        self,
+        *,
+        tc: ToolCall,
+        ctx: TraceContext,
+        turn_count: int,
+    ) -> AsyncIterator[LoopEvent]:
+        """Cat 9 per-tool_call gating. Yields:
+        GuardrailTriggered (action=BLOCK/ESCALATE/SANITIZE/REROLL) when
+            guardrail returns non-PASS — caller wraps result as error
+            ToolResult so LLM can adjust.
+        TripwireTriggered + LoopCompleted(TRIPWIRE) when tripwire fires.
+        """
+        if self._guardrail_engine is not None:
+            g_result = await self._guardrail_engine.check_tool_call(tc, trace_context=ctx)
+            if g_result.action != GuardrailAction.PASS:
+                await self._audit_log_safe(
+                    event_type=f"guardrail.tool.{g_result.action.value}",
+                    content={
+                        "tool": tc.name,
+                        "action": g_result.action.value,
+                        "reason": g_result.reason or "",
+                    },
+                    ctx=ctx,
+                )
+                yield GuardrailTriggered(
+                    guardrail_type="tool",
+                    action=g_result.action.value,
+                    reason=g_result.reason or "blocked",
+                    trace_context=ctx,
+                )
+                # Caller injects an error ToolResult after seeing this
+                # event; we don't yield LoopCompleted here (only Tripwire
+                # terminates the loop on tool calls — soft block continues).
+
+        if self._tripwire is not None:
+            if await self._tripwire.trigger_check(content=tc, trace_context=ctx):
+                await self._audit_log_safe(
+                    event_type="tripwire.tool.triggered",
+                    content={"tool": tc.name},
+                    ctx=ctx,
+                )
+                yield TripwireTriggered(
+                    violation_type="tool",
+                    detail=f"tool={tc.name}",
+                    trace_context=ctx,
+                )
+                yield LoopCompleted(
+                    stop_reason=TerminationReason.TRIPWIRE.value,
+                    total_turns=turn_count,
+                    trace_context=ctx,
+                )
+                return
+
+    async def _cat9_output_check(
+        self,
+        *,
+        output_text: str,
+        ctx: TraceContext,
+        turn_count: int,
+    ) -> AsyncIterator[LoopEvent]:
+        """Cat 9 loop-end output gating.
+
+        BLOCK   → terminate with GUARDRAIL_BLOCKED (refuse output)
+        SANITIZE/REROLL → emit GuardrailTriggered + continue (53.3 doesn't
+                          mutate output text in-place; production wiring or
+                          Cat 10 self-correction handles replacement)
+        Tripwire → terminate with TRIPWIRE
+        """
+        if self._guardrail_engine is not None:
+            g_result = await self._guardrail_engine.check_output(output_text, trace_context=ctx)
+            if g_result.action == GuardrailAction.BLOCK:
+                await self._audit_log_safe(
+                    event_type="guardrail.output.block",
+                    content={"reason": g_result.reason or ""},
+                    ctx=ctx,
+                )
+                yield GuardrailTriggered(
+                    guardrail_type="output",
+                    action="block",
+                    reason=g_result.reason or "",
+                    trace_context=ctx,
+                )
+                yield LoopCompleted(
+                    stop_reason=TerminationReason.GUARDRAIL_BLOCKED.value,
+                    total_turns=turn_count,
+                    trace_context=ctx,
+                )
+                return
+            elif g_result.action in (
+                GuardrailAction.SANITIZE,
+                GuardrailAction.REROLL,
+                GuardrailAction.ESCALATE,
+            ):
+                await self._audit_log_safe(
+                    event_type=f"guardrail.output.{g_result.action.value}",
+                    content={"reason": g_result.reason or ""},
+                    ctx=ctx,
+                )
+                yield GuardrailTriggered(
+                    guardrail_type="output",
+                    action=g_result.action.value,
+                    reason=g_result.reason or "",
+                    trace_context=ctx,
+                )
+                # Continue — caller's flow proceeds to LoopCompleted END_TURN.
+                # Cat 10 self-correction loop (54.1) will replay LLM call on REROLL.
+
+        if self._tripwire is not None:
+            if await self._tripwire.trigger_check(content=output_text, trace_context=ctx):
+                await self._audit_log_safe(
+                    event_type="tripwire.output.triggered",
+                    content={"text_excerpt": output_text[:200]},
+                    ctx=ctx,
+                )
+                yield TripwireTriggered(
+                    violation_type="output",
+                    detail="output content tripped tripwire",
+                    trace_context=ctx,
+                )
+                yield LoopCompleted(
+                    stop_reason=TerminationReason.TRIPWIRE.value,
+                    total_turns=turn_count,
+                    trace_context=ctx,
+                )
+                return
+
     async def run(
         self,
         *,
@@ -285,6 +517,18 @@ class AgentLoopImpl(AgentLoop):
             trace_context=ctx,
         ):
             yield LoopStarted(session_id=session_id, trace_context=ctx)
+
+            # === Cat 9 input guardrail check (53.3 Day 4 US-7) ============
+            # Runs once at loop start (before any LLM call). Per plan §US-7:
+            #   guardrail BLOCK/ESCALATE → GuardrailTriggered + audit
+            #                              + LoopCompleted(GUARDRAIL_BLOCKED)
+            #   tripwire trigger         → TripwireTriggered + audit
+            #                              + LoopCompleted(TRIPWIRE)
+            # No-op when corresponding deps are None (53.2 baseline).
+            async for ev in self._cat9_input_check(user_input=user_input, ctx=ctx):
+                yield ev
+                if isinstance(ev, LoopCompleted):
+                    return
 
             while True:
                 # === Pre-LLM termination checks ============================
@@ -470,6 +714,20 @@ class AgentLoopImpl(AgentLoop):
                 if post_llm_event is not None:
                     yield post_llm_event
 
+                # === Cat 9 output guardrail check (53.3 Day 4 US-7) ========
+                # Runs once per LLM response, BEFORE stop_reason terminator
+                # so BLOCK / SANITIZE / REROLL can decide before LoopCompleted
+                # fires. Tripwire on output → terminate. No-op when deps None.
+                output_terminated = False
+                async for ev in self._cat9_output_check(
+                    output_text=parsed.text, ctx=ctx, turn_count=turn_count
+                ):
+                    yield ev
+                    if isinstance(ev, LoopCompleted):
+                        output_terminated = True
+                if output_terminated:
+                    return
+
                 # === stop_reason terminator =================================
                 if should_terminate_by_stop_reason(response):
                     yield LoopCompleted(
@@ -517,6 +775,49 @@ class AgentLoopImpl(AgentLoop):
                         arguments=tc.arguments,
                         trace_context=ctx,
                     )
+
+                    # === Cat 9 per tool_call check (53.3 Day 4 US-7) ====
+                    # tool guardrail BLOCK/ESCALATE → inject error ToolResult
+                    #   so LLM sees failure + can self-correct (no loop terminate).
+                    # tripwire trigger → emit TripwireTriggered + LoopCompleted.
+                    cat9_blocked: ToolResult | None = None
+                    cat9_terminated = False
+                    async for ev in self._cat9_tool_check(tc=tc, ctx=ctx, turn_count=turn_count):
+                        yield ev
+                        if isinstance(ev, LoopCompleted):
+                            cat9_terminated = True
+                        elif isinstance(ev, GuardrailTriggered):
+                            cat9_blocked = ToolResult(
+                                tool_call_id=tc.id,
+                                tool_name=tc.name,
+                                content=(f"tool blocked by guardrail: {ev.reason}"),
+                                success=False,
+                                error=ev.reason,
+                                duration_ms=0.0,
+                            )
+                    if cat9_terminated:
+                        return
+                    if cat9_blocked is not None:
+                        result = cat9_blocked
+                        result_text = self._tool_result_to_text(result.content)
+                        # Append result to messages and skip tool execution.
+                        # (Falls through to the result-append code below.)
+                        messages.append(
+                            Message(
+                                role="tool",
+                                content=result_text,
+                                tool_call_id=tc.id,
+                            )
+                        )
+                        yield ToolCallExecuted(
+                            tool_call_id=tc.id,
+                            tool_name=tc.name,
+                            duration_ms=0.0,
+                            result_content=result_text,
+                            trace_context=ctx,
+                        )
+                        continue
+
                     try:
                         # Sprint 52.5 P0 #18: build ExecutionContext from
                         # trace_context so memory_tools (and future scoped
@@ -564,8 +865,7 @@ class AgentLoopImpl(AgentLoop):
                         # Synthesize LLM-recoverable error ToolResult so the
                         # LLM sees the failure on next turn and can self-correct
                         # (Cat 8 §LLM-recoverable; Anthropic / LangGraph pattern).
-                        from agent_harness._contracts import ToolResult
-
+                        # Note: ToolResult is now imported at module top (53.3 Day 4).
                         result = ToolResult(
                             tool_call_id=tc.id,
                             tool_name=tc.name,

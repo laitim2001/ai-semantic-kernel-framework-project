@@ -1,0 +1,146 @@
+# Sprint 53.3 US-4 — CapabilityMatrix declarative config
+#
+# Loaded by CapabilityMatrix.from_yaml(). Schema:
+#   capabilities:
+#     <capability_name>: [tool_a, tool_b, ...]
+#   permission_rules:
+#     <tool_name>:
+#       role_required: any | <role_name>
+#       tenant_scope: any | own_only
+#       max_calls_per_session: <int> (0 = unlimited)
+#       requires_approval: <bool>
+#
+# 8 baseline capabilities mirror Capability enum in capability_matrix.py.
+# Add new capabilities to enum FIRST, then map tools here.
+#
+# Production wiring: orchestrator loads this file at session start, may
+# overlay tenant-specific rules from DB (per-tenant config).
+
+capabilities:
+  read_kb:
+    - search_kb
+    - get_doc
+  write_kb:
+    - create_doc
+    - update_doc
+    - delete_doc
+  execute_query:
+    - salesforce_query
+    - sap_query
+    - jira_query
+  modify_ticket:
+    - update_jira
+    - close_jira
+    - assign_jira
+  send_notification:
+    - send_email
+    - send_slack
+  read_pii:
+    - get_user_profile
+  execute_shell:
+    - run_command  # high-risk
+  call_external_api:
+    - http_get
+    - http_post
+
+permission_rules:
+  # --- read_kb (low-risk reads) ---
+  search_kb:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 100
+    requires_approval: false
+  get_doc:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 100
+    requires_approval: false
+
+  # --- write_kb (mutations require ops/admin) ---
+  create_doc:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 50
+    requires_approval: false
+  update_doc:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 50
+    requires_approval: false
+  delete_doc:
+    role_required: admin
+    tenant_scope: own_only
+    max_calls_per_session: 10
+    requires_approval: true
+
+  # --- execute_query (read-only enterprise queries) ---
+  salesforce_query:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 200
+    requires_approval: false
+  sap_query:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 200
+    requires_approval: false
+  jira_query:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 200
+    requires_approval: false
+
+  # --- modify_ticket (write to JIRA / similar) ---
+  update_jira:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 50
+    requires_approval: false
+  close_jira:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 30
+    requires_approval: false
+  assign_jira:
+    role_required: ops
+    tenant_scope: own_only
+    max_calls_per_session: 30
+    requires_approval: false
+
+  # --- send_notification (require approval; user-visible side-effect) ---
+  send_email:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 20
+    requires_approval: true
+  send_slack:
+    role_required: any
+    tenant_scope: own_only
+    max_calls_per_session: 30
+    requires_approval: false
+
+  # --- read_pii (sensitive data; restricted role) ---
+  get_user_profile:
+    role_required: ops
+    tenant_scope: own_only
+    max_calls_per_session: 50
+    requires_approval: true
+
+  # --- execute_shell (highest-risk; ops only + always require approval) ---
+  run_command:
+    role_required: ops
+    tenant_scope: own_only
+    max_calls_per_session: 5
+    requires_approval: true
+
+  # --- call_external_api ---
+  http_get:
+    role_required: any
+    tenant_scope: any  # external API not bound to tenant
+    max_calls_per_session: 100
+    requires_approval: false
+  http_post:
+    role_required: ops
+    tenant_scope: any
+    max_calls_per_session: 30
+    requires_approval: true

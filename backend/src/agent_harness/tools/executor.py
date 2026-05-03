@@ -209,12 +209,17 @@ class ToolExecutorImpl(ToolExecutor):
                     {"tool_name": call.name, "status": "error"},
                     trace_context,
                 )
+                # Sprint 53.3 US-9 (AD-Cat8-3): preserve original exception
+                # type as fully-qualified class name so DefaultErrorPolicy
+                # can classify by string in soft-failure path (without
+                # access to the original exception object).
                 return ToolResult(
                     tool_call_id=call.id,
                     tool_name=call.name,
                     success=False,
                     content="",
                     error=str(exc),
+                    error_class=f"{type(exc).__module__}.{type(exc).__name__}",
                 )
 
     async def execute_batch(

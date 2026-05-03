@@ -33,6 +33,11 @@ Single-source: ErrorClass enum stays in _abc.py; this file consumes it.
 Created: 2026-05-03 (Sprint 53.2 Day 1)
 
 Modification History (newest-first):
+    - 2026-05-03: Sprint 53.3 US-9 (AD-Cat8-3) — add `_registry_by_str` mirror +
+      `register_by_string()` + `classify_by_string()` so the soft-failure
+      ToolResult path (which has only `error_class: str`) can recover
+      ErrorClass without the original exception object. `register()` now
+      auto-mirrors to the string registry to keep both views consistent.
     - 2026-05-03: Initial creation (Sprint 53.2 Day 1) — US-1 production impl
 """
 
@@ -77,6 +82,12 @@ class DefaultErrorPolicy(ErrorPolicy):
         self._backoff_max = backoff_max
         self._jitter = jitter
         self._registry: dict[Type[BaseException], ErrorClass] = {}
+        # Sprint 53.3 US-9 (AD-Cat8-3): mirrored by-string registry for
+        # soft-failure ToolResult path. Auto-populated by register() so the
+        # two views stay consistent. register_by_string() allows direct
+        # registration when only a class name string is available
+        # (e.g. loading from YAML config without importing the class).
+        self._registry_by_str: dict[str, ErrorClass] = {}
         self._register_defaults()
 
     # === Registry ============================================================
@@ -85,18 +96,20 @@ class DefaultErrorPolicy(ErrorPolicy):
     # → LLM_RECOVERABLE without explicit registration).
 
     def _register_defaults(self) -> None:
+        # Sprint 53.3 US-9: route through register() so both registries
+        # (type and by-string) stay populated by the same defaults.
         # TRANSIENT — stdlib only (no aiohttp / requests imports here)
-        self._registry[ConnectionError] = ErrorClass.TRANSIENT
-        self._registry[OSError] = ErrorClass.TRANSIENT
-        self._registry[TimeoutError] = ErrorClass.TRANSIENT
-        self._registry[asyncio.TimeoutError] = ErrorClass.TRANSIENT
+        self.register(ConnectionError, ErrorClass.TRANSIENT)
+        self.register(OSError, ErrorClass.TRANSIENT)
+        self.register(TimeoutError, ErrorClass.TRANSIENT)
+        self.register(asyncio.TimeoutError, ErrorClass.TRANSIENT)
 
         # LLM_RECOVERABLE — agent_harness contracts
-        self._registry[ToolExecutionError] = ErrorClass.LLM_RECOVERABLE
+        self.register(ToolExecutionError, ErrorClass.LLM_RECOVERABLE)
 
         # HITL_RECOVERABLE — agent_harness contracts
-        self._registry[AuthenticationError] = ErrorClass.HITL_RECOVERABLE
-        self._registry[MissingDataError] = ErrorClass.HITL_RECOVERABLE
+        self.register(AuthenticationError, ErrorClass.HITL_RECOVERABLE)
+        self.register(MissingDataError, ErrorClass.HITL_RECOVERABLE)
 
         # FATAL — fallback when no registered match found
 
@@ -110,8 +123,32 @@ class DefaultErrorPolicy(ErrorPolicy):
         Intended for adapter __init__ to map SDK-specific exception types
         (e.g. openai.RateLimitError → TRANSIENT). Idempotent: re-registering
         the same type silently overwrites the previous mapping.
+
+        Sprint 53.3 US-9: also auto-mirrors to `_registry_by_str` keyed by
+        the fully-qualified class name so `classify_by_string()` returns
+        the same result for the same type without a separate registration.
         """
         self._registry[exc_class] = error_class
+        self._registry_by_str[f"{exc_class.__module__}.{exc_class.__name__}"] = error_class
+
+    def register_by_string(
+        self,
+        class_str: str,
+        error_class: ErrorClass,
+    ) -> None:
+        """Register a fully-qualified class name string → ErrorClass mapping.
+
+        Sprint 53.3 US-9 (AD-Cat8-3): use this when the exception class
+        cannot be imported at registration time (e.g. loading rules from
+        YAML config; lazy plugins). The string MUST be the full
+        `f"{cls.__module__}.{cls.__name__}"` form to match what
+        `ToolExecutor` writes into `ToolResult.error_class`.
+
+        Idempotent: re-registering the same string silently overwrites.
+        Note: this does NOT participate in MRO walk (no class object
+        available), so only exact-string matches resolve.
+        """
+        self._registry_by_str[class_str] = error_class
 
     # === ErrorPolicy ABC ====================================================
 
@@ -121,6 +158,22 @@ class DefaultErrorPolicy(ErrorPolicy):
             if exc_type in self._registry:
                 return self._registry[exc_type]
         return ErrorClass.FATAL
+
+    def classify_by_string(self, class_str: str) -> ErrorClass:
+        """Classify by fully-qualified exception class name string.
+
+        Sprint 53.3 US-9 (AD-Cat8-3): for the soft-failure ToolResult
+        path where the original exception object is unavailable but
+        `ToolResult.error_class` is set to `f"{cls.__module__}.{cls.__name__}"`.
+
+        Strict string match (no MRO walk — would require importlib
+        resolution to recover the class hierarchy, which is overkill
+        for the common case where adapters register their exception
+        types explicitly via `register()`).
+
+        Returns FATAL if `class_str` is not registered.
+        """
+        return self._registry_by_str.get(class_str, ErrorClass.FATAL)
 
     def should_retry(
         self,

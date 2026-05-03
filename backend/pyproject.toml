@@ -22,6 +22,9 @@ dev = [
     "types-requests>=2.31",
     # Sprint 53.1 US-6 / 52.6 AI-20: ruff in [dev] so ci.yml install picks it up
     "ruff>=0.6,<1.0",
+    # Sprint 53.3 US-8 / AD-Cat8-1: fakeredis for RedisBudgetStore integration tests
+    # (CI has no Redis service; fakeredis emulates MULTI/EXEC pipeline + INCR/EXPIRE)
+    "fakeredis>=2.20",
 ]
 
 [build-system]

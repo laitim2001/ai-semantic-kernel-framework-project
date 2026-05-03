@@ -137,3 +137,10 @@ class ToolResult:
     result_content_types: tuple[Literal["text", "image", "json"], ...] = ("text",)
     error: str | None = None
     duration_ms: float | None = None
+    # Sprint 53.3 US-9 (AD-Cat8-3): preserve original exception type for
+    # soft-failure path so DefaultErrorPolicy.classify_by_string() can
+    # recover ErrorClass without the original exception object.
+    # Format: fully-qualified class name e.g. "aiohttp.ClientConnectionError".
+    # None when ToolResult.success=True OR when failure is non-exception
+    # (e.g. permission denied / schema mismatch / unknown tool).
+    error_class: str | None = None
