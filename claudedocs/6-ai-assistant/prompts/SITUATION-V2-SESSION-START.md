@@ -173,15 +173,23 @@ ls docs/03-implementation/agent-harness-execution/
 
 > **這段需要每個 sprint 結束時用戶或 AI 添加。** 收尾時，把 retrospective.md 的「待改進」「Action items」精煉成下方一句話列表。
 
-### 已知未解（at session start time）
+### 已知未解（at session start time = 2026-05-03 Sprint 53.2.5 closeout）
 
-- ⏸ **`platform/` rename 同步**：Sprint 49.1 Day 5 將 `backend/src/platform/` rename 為 `platform_layer/`（避免 stdlib shadow）。但 V2 規劃文件 `02-architecture-design.md` + `06-phase-roadmap.md` 仍寫 `platform/`，需在 Sprint 49.2+ 同步更新
-- ⏸ **branch protection rule**：用戶尚未在 GitHub UI 設定 main 分支必須 CI green 才可 merge
-- ⏸ **CI lint** 防 `platform` package 重新引入：未實作；建議 Sprint 49.4 lint rules 一併補
-- ⏸ **agent-harness-planning/README.md「Sprint 49.2 已啟動」更新**：等 49.2 plan 寫了再改
-- ⏸ **真實 dev server 手動驗證**：用戶尚未親跑 `uvicorn` + `npm run dev` 確認瀏覽器端可看 placeholder pages
-- ⏸ **npm audit 2 moderate vulnerabilities**：transitive deps，後續 sprint 處理
-- ⏸ **Sprint 181 deferred**（V1 work）：`completeness folder` + `guided_dialog migration` 在 V1 archive 內未完成 — 已記錄於 `archived/v1-phase1-48/README.md`，V2 不會繼承（不需處理）
+#### Cat 8 carryover（53.2 retrospective Q5）
+- ⏸ **AD-Cat8-1**：RedisBudgetStore 0% coverage；需 fakeredis dep + integration test → 53.x or 54.x
+- ⏸ **AD-Cat8-2**：RetryPolicyMatrix 未 wire 進 Loop end-to-end retry-with-backoff loop（目前只有 ErrorTerminator path）→ 54.x
+- ⏸ **AD-Cat8-3**：soft-failure 路徑 synthesizes Exception(str)，loses original type；考慮 ToolResult.error_class 欄位 → 54.x
+
+#### CI infrastructure carryover（53.2.5 retrospective Q4）
+- ⏸ **AD-CI-4**：sprint plan §Risks template 缺「paths filter vs required_status_checks」class of risk → next sprint plan template / sprint-workflow.md rule update
+- ⏸ **AD-CI-5**：`required_status_checks` 對 docs-only PR 仍 BLOCKED 因 paths filter；當前 workaround = touch backend-ci.yml header；長期需 revisit strategy → 53.x or 54.x
+
+#### 跨 sprint carryover
+- ⏸ **AI-22**：dummy red PR enforce_admins chaos test (52.6 carryover) → 53.x or 54.x bundle
+- ⏸ **#31**：V2 Dockerfile + 新 build workflow（取代已 archived ci.yml 之 build job）→ infrastructure track（無 sprint binding）
+
+#### 永久 dropped（不必處理）
+- ✅ **4 dropped CI Pipeline checks**（Code Quality / Tests / Frontend Tests / CI Summary）：53.2.5 archive ci.yml 後永久 drop（V1 monolithic CI duplicates，非降級；branch protection 已正確配置 4 active checks）
 
 > **AI 助手任務**：每個新 sprint 開始時，先看本 prompt 此節 + 上 sprint 的 retrospective.md 「Action items」，向用戶確認哪些 follow-up 要在這個 sprint 處理，哪些繼續延後。
 
@@ -191,15 +199,32 @@ ls docs/03-implementation/agent-harness-execution/
 
 > **每個 sprint 結束更新一行**
 
-| Sprint | 完成日期 | Branch / Commits | 主要成果 |
+| Sprint | 完成日期 | Merge SHA / PR | 主要成果 |
 |--------|---------|----------------|---------|
-| **49.1** | 2026-04-29 | `feature/phase-49-sprint-1-v2-foundation`（13 commits, pushed）| V1 archive + V2 5-layer skeleton + 11+1 ABC stubs + _contracts + ChatClient ABC + frontend skeleton + Docker + CI + ESLint + test_imports |
-| 49.2 | _pending_ | _pending_ | DB Schema + Async ORM |
-| 49.3 | _pending_ | _pending_ | RLS + Audit + Adapter (Azure OpenAI) |
-| 49.4 | _pending_ | _pending_ | Worker queue PoC + OTel + Lint rules |
-| Phase 50-55 | _pending_ | _pending_ | 18 sprints across 6 phases |
+| **49.1** | 2026-04-29 | feature branch (13 commits) | V1 archive + V2 5-layer skeleton + 11+1 ABC stubs + _contracts + ChatClient ABC + frontend skeleton + Docker + CI + ESLint |
+| **49.2** | 2026-04 | merged | DB Schema + Async ORM |
+| **49.3** | 2026-04 | merged | RLS + Audit + Adapter (Azure OpenAI) |
+| **49.4** | 2026-04 | merged | Worker queue PoC + OTel + Lint rules |
+| **50.1** | 2026-04-30 | merged | Cat 1 (Loop core) + Cat 6 (Output Parsing) + AP-1 lint |
+| **50.2** | 2026-04-30 | merged | POST /chat SSE 8-event + chat-v2 frontend + worker factory |
+| **51.0** | 2026-04-30 | merged | mock business tools |
+| **51.1** | 2026-04-30 | merged | Cat 2 Tool Layer L3 |
+| **51.2** | 2026-04-30 | merged | Cat 3 Memory L3（5 scope × 3 time scale）|
+| **52.1** | 2026-05-01 | merged `5c18869a` | Cat 4 Context Mgmt（compaction + lost-in-middle）|
+| **52.2** | 2026-05-01 | merged `30628c05` | Cat 5 Prompt Construction + AP-8 lint |
+| **52.5** | 2026-05-02 | PR #19 merged `d4ba89ef` | Audit carryover bundle (8 P0 + 4 P1 in 1 day) |
+| **52.6** | 2026-05-02 | PR #28 merged `404b8147` | CI restoration: 8 active CI workflows green + branch protection enforced |
+| **53.1** | 2026-05-02 | PR #39 merged `aaa3dd75` | Cat 7 State Mgmt（DefaultReducer + DBCheckpointer + opt-in shadow-checkpoint）|
+| **53.2** | 2026-05-03 | PR #48 merged `a77878ad` | Cat 8 Error Handling（ErrorPolicy + RetryPolicyMatrix + CircuitBreaker + ErrorBudget + ErrorTerminator + AgentLoop integration）+ Solo-dev policy structural change |
+| **53.2.5** | 2026-05-03 | PR #50/#51 merged `132c39bc` | CI carryover: archived redundant ci.yml (V1 monolithic); closes AD-CI-2 + AD-CI-3; 4 dropped checks permanent |
+| 53.3 | _pending_ | _pending_ | Cat 9 Guardrails 核心（Tripwire + plugin registry + WORM hash chain）|
+| 53.4 | _pending_ | _pending_ | Governance Frontend + V1 HITL/Risk 遷移 |
+| Phase 54 | _pending_ | _pending_ | Cat 10 Verification + Cat 11 Subagent |
+| Phase 55 | _pending_ | _pending_ | Business domain + canary |
 
-**累計**：1 / 22 sprint 完成（Phase 49 1/4，Phase 50-55 全 0）
+**累計**：**14 / 22 sprint** 完成（**64%**）— Phase 49: 4/4 ✅，Phase 50: 2/2 ✅，Phase 51: 3/3 ✅，Phase 52: 4/4 ✅，Phase 53: 1.5/4（53.1 + 53.2 + 53.2.5 carryover）
+
+> **53.2.5 是 carryover bundle 不算入主 22 sprint 進度**；V2 主進度 14/22 不變。
 
 ---
 
@@ -214,11 +239,49 @@ ls docs/03-implementation/agent-harness-execution/
 - [ ] 不刪除未勾選的 checklist 項（只能 `[ ]→[x]` 或加 🚧）
 - [ ] 跨範疇型別從 `agent_harness._contracts/` import（不重複定義）
 - [ ] 開始 code 前確認該 sprint 已有 plan + checklist
-- [ ] 🆕 **起草新 sprint plan/checklist 前先讀最近 completed sprint 的 plan/checklist 作格式樣板**（非空白白板起草；章節 / Day 數 / 細節水平必須一致）
+- [ ] 🆕 **起草新 sprint plan/checklist 前先讀最近 completed sprint 的 plan/checklist 作格式樣板**（非空白白板起草；章節 / Day 數 / 細節水平必須一致；最近樣板 = `phase-53-2-error-handling/sprint-53-2-{plan,checklist}.md` 或 carryover 版 `sprint-53-2-5-{plan,checklist}.md`）
 - [ ] 寫 commit message 用 Conventional Commits 格式（per `.claude/rules/git-workflow.md`）+ co-author
 - [ ] 每個 commit 對應一個 checklist 項目
 - [ ] 維持每天 progress.md 紀錄（estimates vs actual）
-- [ ] sprint 結束寫 retrospective.md（5 必述：outcome / estimates / went-well / surprises / Action items）
+- [ ] 🆕 **sprint 結束寫 retrospective.md 用 6 必答格式**（53.2 + 53.2.5 樣板）：
+  - Q1 What went well
+  - Q2 What didn't go well
+  - Q3 What we learned（generalizable lessons）
+  - Q4 Audit Debt deferred（明確標 ID + target sprint）
+  - Q5 Next steps（rolling planning 下；不寫具體未來 sprint 任務，只寫 carryover 候選）
+  - Q6 Solo-dev policy validation（or 其他 sprint-specific 主題）
+
+### 🆕 V2 紀律 9 項自檢（每 PR 前 + 每 commit 後）
+
+per `compact 格式 §3` + `.claude/rules/anti-patterns-checklist.md`：
+
+1. Server-Side First（tenant_id 強制 / no local file IO 假設）
+2. LLM Provider Neutrality（agent_harness 零 SDK import）
+3. CC Reference 不照搬（CC 概念 → V2 server-side 重寫）
+4. 17.md Single-source（dataclass / ABC / 工具不重複定義）
+5. 11+1 範疇歸屬（每檔案明確歸 1 範疇）
+6. 04 anti-patterns（11 條全綠）
+7. Sprint workflow（plan → checklist → code → progress → retro）
+8. File header convention
+9. Multi-tenant rule
+
+### 🆕 Solo-Dev 政策（2026-05-03 Sprint 53.2 永久結構性變更）
+
+- `required_approving_review_count = 0`（不是 1）
+- ✅ PR 仍要開（audit trail + CI gate）
+- ✅ enforce_admins=true 仍 active（admin 不能直接 push main）
+- ✅ 4 active required CI checks 必須全綠
+- ❌ **不需** review approval（GitHub 阻擋 author self-approve；solo dev 無第二 reviewer）
+- ❌ **不用** temp-relax bootstrap（PATCH review_count: 1→0 暫降）—— 已永久 0
+- 當 2nd collaborator 加入時 1-line PATCH 還原為 1（指令見 `13-deployment-and-devops.md` §gh api command）
+
+### 🆕 Paths Filter Workaround（docs-only PR）
+
+當 PR 只動 `docs/` 或 `.gitignore`（不動 `backend/**` 或 `.github/workflows/**`），required checks `Lint + Type Check + Test (PG16)` + `v2-lints` 不會 fire → mergeStateStatus=BLOCKED。
+
+**Workaround**: 加一個 commit 觸碰 `.github/workflows/backend-ci.yml`（例如 header comment 註記改動原因），就會觸發 backend-ci + V2 Lint。
+- 文件化於 `.github/workflows/backend-ci.yml` header comment（從 53.2.5 起）
+- 長期 fix 為 AD-CI-5（暫 deferred）
 
 ### 不做
 
@@ -227,6 +290,7 @@ ls docs/03-implementation/agent-harness-execution/
 - [ ] 不讓 AI 助手單方面決定不可逆操作（git tag push / git mv 大量檔案）— 必須先報告
 - [ ] 不執行 `--no-verify` / `--force` git 命令（除非用戶明確授權）
 - [ ] 不啟動長期運行 server process（CLAUDE.md 規範：節點 process 與 claude code 衝突）
+- [ ] 🆕 不寫 `--admin` merge bypass（enforce_admins=true 會擋；solo-dev policy 已用 `review_count=0` 解決） 
 
 ---
 
@@ -268,6 +332,16 @@ V2 完成（Phase 55 後）→ 此 prompt 變歷史紀念物，改用 V3 / SaaS 
 
 ---
 
-**Last Updated**: 2026-04-29（Sprint 49.1 完成後初版）
+**Last Updated**: 2026-05-03（Sprint 53.2.5 closeout — V2 14/22 = 64% 完成；下一 sprint = 53.3 Cat 9 Guardrails 待啟動）
 **Maintainer**: 用戶 + AI 助手共同維護
 **File location**: `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md`
+
+---
+
+## Update history
+
+| Date | Sprint | Updates |
+|------|------|------|
+| 2026-04-29 | 49.1 | 初版（V2 重構期間 onboarding prompt） |
+| 2026-04-30 | 52.1 | 新增 §6 「format consistency rule」（52.1 v1→v3 incident 教訓） |
+| 2026-05-03 | 53.2.5 | §8 全更新（Cat 8 + CI carryover + AI-22 + #31）；§9 milestones 補 49.1 → 53.2.5 共 16 個 sprint 行；§10 加 6 必答 retrospective 格式 + V2 紀律 9 項自檢 + Solo-dev policy + Paths filter workaround |
