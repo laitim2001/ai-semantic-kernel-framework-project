@@ -22,6 +22,11 @@ from agent_harness.error_handling.retry import (
     RetryPolicyMatrix,
     compute_backoff,
 )
+from agent_harness.error_handling.terminator import (
+    DefaultErrorTerminator,
+    TerminationDecision,
+    TerminationReason,
+)
 
 __all__ = [
     "ErrorPolicy",
@@ -38,4 +43,7 @@ __all__ = [
     "BudgetStore",
     "InMemoryBudgetStore",
     "TenantErrorBudget",
+    "DefaultErrorTerminator",
+    "TerminationDecision",
+    "TerminationReason",
 ]

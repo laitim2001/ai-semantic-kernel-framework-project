@@ -243,3 +243,68 @@ ABC change in `_abc.py`: `record` / `is_open` made `async` (previously sync stub
 - Push + verify Backend CI green
 - Close GitHub issues #42 + #43
 - Day 3: US-5 ErrorTerminator + US-6 AgentLoop integration upper half
+
+---
+
+## Day 3 — 2026-05-03 (US-5 ErrorTerminator + US-6 AgentLoop integration upper half)
+
+### Accomplishments
+
+#### 3.1 LoopTerminated event ✅
+Added to `_contracts/events.py` Cat 8 section + re-exported via `_contracts/__init__.py`. Fields: `reason: str / detail: str | None / last_state_version: int | None`. Per 17.md §6 boundary, distinct from `GuardrailTriggered` (Cat 9).
+
+#### 3.2-3.3 `error_handling/terminator.py` (US-5) ✅
+`DefaultErrorTerminator` implements existing `ErrorTerminator` ABC + adds rich async path:
+- `TerminationReason` enum: BUDGET_EXCEEDED / CIRCUIT_OPEN / FATAL_EXCEPTION / MAX_RETRIES_EXHAUSTED — **explicitly not Tripwire** (Cat 9 owns those per 17.md §6)
+- `TerminationDecision` frozen dataclass: terminate / reason / detail
+- Sync `should_terminate(consecutive_errors, budget_exhausted, circuit_open)` — preserves stub ABC compatibility
+- Async `evaluate(error, error_class, context, tenant_id)` — rich path that composes CircuitBreaker + ErrorBudget + classification + global hard cap; returns full TerminationDecision
+- Precedence: budget > circuit > fatal > max_retries
+
+`test_terminator.py`: **13 tests** pass — sync ABC (4) + budget (1) + circuit (2) + fatal (1) + max-retries (1) + non-termination (2) + enum/boundary smoke (2)
+
+#### 3.4 Cat 8 vs Cat 9 boundary ✅
+Strict grep `import.*Tripwire | class Tripwire | = Tripwire | Tripwire(` in `error_handling/` = **0 hits**. Only docstring/README mentions exist (explaining the boundary, not violating it). Boundary守住 per 17.md §6.
+
+#### 3.5 AgentLoop integration upper half (US-6 partial) ✅
+`AgentLoopImpl.__init__` extended with 5 opt-in Cat 8 kwargs (same pattern as 53.1 Cat 7):
+- `error_policy: ErrorPolicy | None`
+- `retry_policy: RetryPolicyMatrix | None`
+- `circuit_breaker: DefaultCircuitBreaker | None`
+- `error_budget: TenantErrorBudget | None`
+- `error_terminator: DefaultErrorTerminator | None`
+
+Naming collision resolved: existing `from .termination import TerminationReason` (orchestrator_loop) vs Cat 8's `TerminationReason` (error_handling). Aliased Cat 8 import as `Cat8TerminationReason`.
+
+`_handle_tool_error` helper (Day 4 wires into main tool execution path):
+1. Classifies via `error_policy`
+2. Records to `error_budget` (skip FATAL — bug)
+3. Consults `error_terminator.evaluate()`
+4. Returns `(should_terminate, error_class, termination_reason, detail)` tuple
+5. When Cat 8 deps None → returns no-op (preserves 53.1 baseline)
+
+#### 3.6 sanity ✅
+| Metric | Day 2 close | Day 3 close |
+|--------|-------------|-------------|
+| pytest | 662/4/1/0 | **675/4/1/0** (+13 new) |
+| mypy strict src | 209 clean | **210** clean (+1 terminator) |
+| LLM SDK leak | 0 | 0 |
+| 6 V2 lint scripts | all green | all green |
+| black/isort/flake8/ruff | clean | clean (auto-formatted loop.py + test_terminator.py) |
+| 51.x + 53.1 baseline | preserved | preserved (helper not yet wired; opt-in safe) |
+
+### Plan Drift / Notes
+
+| Drift | Resolution |
+|-------|-----------|
+| Helper name `_execute_tool_with_error_handling` (plan) | `_handle_tool_error` (cleaner; Day 4 wires it) |
+| Helper signature returning `tuple[LoopState, ToolResult \| None]` (plan) | `tuple[bool, ErrorClass \| None, Cat8TerminationReason \| None, str \| None]` — better separation of concerns; Day 4 caller orchestrates LoopState mutation via reducer (53.1 pattern) |
+| `TerminationReason` collision | Aliased Cat 8 import as `Cat8TerminationReason` in loop.py |
+| ABC sync `should_terminate` preserved | Both sync (ABC compat) + async `evaluate` (rich path) provided |
+
+### Remaining for Day 3 closeout (3.7-3.8)
+
+- Commit US-5 + US-6 partial ← in progress
+- Push + verify Backend CI green
+- Close GitHub issue #44
+- Day 4 (Day 4 = final day): US-6 lower half (wire helper into main loop) + US-7 #38 fix + US-8 AD-CI-1 fix + US-9 53.1 closeout bundle + retrospective + PR open

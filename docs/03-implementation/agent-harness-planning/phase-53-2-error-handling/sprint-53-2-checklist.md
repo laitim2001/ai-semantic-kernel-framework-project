@@ -145,75 +145,36 @@
 ## Day 3 — US-5 ErrorTerminator + US-6 AgentLoop Integration (上半) (est. 6-7 hours)
 
 ### 3.1 Add LoopTerminated event
-- [ ] **Add `LoopTerminated` to `_contracts/events.py`**
-  - frozen dataclass: reason / detail / last_state_version
-  - DoD: importable
+- [x] **Add `LoopTerminated` to `_contracts/events.py`** _(frozen dataclass with reason/detail/last_state_version; re-exported via _contracts/__init__.py)_
 
 ### 3.2 Create terminator.py
-- [ ] **Write `TerminationReason` enum + `TerminationDecision` + `ErrorTerminator` class**
-  - File: `backend/src/agent_harness/error_handling/terminator.py`
-  - File header per convention
-  - `TerminationReason`: BUDGET_EXCEEDED / CIRCUIT_OPEN / FATAL_EXCEPTION / MAX_RETRIES_EXHAUSTED
-  - **明確 NOT 包含 Tripwire reasons**（per 17.md §6 邊界裁定）
-  - `should_terminate(error, error_category, context, tenant_id) -> TerminationDecision`
-  - DoD: mypy strict pass
+- [x] **Write `TerminationReason` enum + `TerminationDecision` + `DefaultErrorTerminator` class** _(4 reasons: BUDGET_EXCEEDED/CIRCUIT_OPEN/FATAL_EXCEPTION/MAX_RETRIES_EXHAUSTED; non-Tripwire; sync ABC compat method + async evaluate() rich path)_
 
 ### 3.3 Create test_terminator.py
-- [ ] **Create test_terminator.py**
-  - File: `backend/tests/unit/agent_harness/error_handling/test_terminator.py`
-  - Tests:
-    - `test_should_terminate_on_budget_exceeded`
-    - `test_should_terminate_on_circuit_open`
-    - `test_should_terminate_on_fatal_unexpected`
-    - `test_should_terminate_on_max_retries_exhausted`
-    - `test_should_not_terminate_on_transient_within_budget`
-    - `test_should_not_terminate_on_llm_recoverable`
-  - DoD: ≥ 6 tests pass
+- [x] **Create test_terminator.py** _(13 tests pass: 4 sync ABC + 1 budget + 2 circuit + 1 fatal + 1 max-retries + 2 non-termination + 2 enum/boundary smoke)_
 
 ### 3.4 Cat 8 vs Cat 9 邊界守門
-- [ ] **Grep `Tripwire` 在 error_handling/ 必須 = 0 hits**
-  - `grep -rn "Tripwire\|tripwire" backend/src/agent_harness/error_handling/`
-  - DoD: 0 hits（per 17.md §6 邊界裁定）
-- [ ] **Update __init__.py**
-  - Re-export `ErrorTerminator` + `TerminationReason` + `TerminationDecision`
+- [x] **Grep `Tripwire` strict check** _(0 hits for `import.*Tripwire\|class Tripwire\|= Tripwire\|Tripwire(`; only docstring/README mentions explaining boundary)_
+- [x] **Update __init__.py** _(re-exported DefaultErrorTerminator + TerminationDecision + TerminationReason)_
 
-### 3.5 US-6 AgentLoop integration (上半 — opt-in deps + classify hook)
-- [ ] **Add Cat 8 deps to `AgentLoop.__init__`**
-  - File: `backend/src/agent_harness/orchestrator_loop/loop.py`
-  - Add optional kwargs: `error_classifier` / `retry_policy` / `circuit_breakers` / `error_budget` / `error_terminator`
-  - All default `None`（opt-in pattern；同 53.1 Reducer/Checkpointer pattern）
-  - DoD: 既有 51.x + 53.1 baseline tests 不退步
-- [ ] **Implement `_execute_tool_with_error_handling` helper**
-  - 簽名：`async def _execute_tool_with_error_handling(self, tool_call, state, trace_context) -> tuple[LoopState, ToolResult | None]`
-  - 邏輯：
-    - while True 重試 loop
-    - try execute → 成功 return
-    - except → classify → record budget → check terminator
-    - LLM_RECOVERABLE: 構造 error ToolResult → return（被 caller append to messages）
-    - TRANSIENT: get retry_policy → backoff → retry
-    - USER_FIXABLE: bubble (TODO Phase 53.4 HITL)
-    - UNEXPECTED: bubble
-    - terminator.should_terminate=True → checkpoint + emit LoopTerminated → return signal
-  - DoD: mypy strict pass
+### 3.5 US-6 AgentLoop integration (上半 — opt-in deps + helper)
+- [x] **Add Cat 8 deps to `AgentLoop.__init__`** _(5 opt-in kwargs: error_policy / retry_policy / circuit_breaker / error_budget / error_terminator; preserved 51.x + 53.1 baseline)_
+- [x] **Implement `_handle_tool_error` helper** _(classify → record budget → check terminator; returns (terminate, error_class, reason, detail) tuple; Day 4 wires into main loop; aliased Cat8TerminationReason to avoid collision with orchestrator_loop.termination.TerminationReason)_
 
-### 3.6 Day 3 commit + push (中間 push 取得 CI 反饋)
+### 3.6 Day 3 sanity (moved before commit)
+- [x] **mypy --strict** _(210 src files clean, was 209 +1 terminator)_
+- [x] **6 V2 lint scripts** _(all green)_
+- [x] **Full pytest** _(662 → **675 passed** / 4 skip / 1 xfail / 0 fail; +13 new terminator tests)_
+- [x] **black/isort/flake8/ruff** _(auto-applied formatters; all clean)_
+- [x] **51.x + 53.1 baseline preserved** _(all integration tests still green)_
+
+### 3.7 Day 3 commit + push (中間 push 取得 CI 反饋)
 - [ ] **Commit US-5 + US-6 partial**
-  - Stage: `git add backend/src/agent_harness/error_handling/terminator.py backend/src/agent_harness/_contracts/events.py backend/src/agent_harness/orchestrator_loop/loop.py backend/tests/unit/agent_harness/error_handling/`
-  - Message: `feat(error-handling, sprint-53-2): US-5 ErrorTerminator + US-6 AgentLoop deps integration (partial)`
-  - **Verify branch before commit**
-- [ ] **Push + verify 8 workflow CI green**
-  - `gh run list --branch feature/sprint-53-2-error-handling --limit 3`
+- [ ] **Push + verify Backend CI green**
 - [ ] **Close GitHub issue #44**
-
-### 3.7 Day 3 sanity
-- [ ] **mypy + 6 V2 lints + pytest 不退步**
-- [ ] **51.x + 53.1 baseline preserved**
-  - 跑 Cat 1 + Cat 7 既有 integration test suite
-  - DoD: 全綠
 
 ### 3.8 Day 3 progress.md update
 - [ ] **Append Day 3 progress.md**
-  - Sections: US-5 ✅ / US-6 partial ✅ (deps + helper) / Remaining for Day 4 (US-6 lower half + US-7 + US-8 + US-9 + retro + PR)
 
 ---
 

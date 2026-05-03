@@ -203,6 +203,21 @@ class ErrorRetried(LoopEvent):
     backoff_ms: float = 0.0
 
 
+@dataclass(frozen=True)
+class LoopTerminated(LoopEvent):
+    """Loop ended early via Cat 8 ErrorTerminator (NOT Cat 9 Tripwire).
+
+    Reasons (TerminationReason): budget_exceeded / circuit_open /
+    fatal_exception / max_retries_exhausted. Per 17.md §6 boundary,
+    Tripwire violations are emitted by GuardrailTriggered (Cat 9), not
+    here.
+    """
+
+    reason: str = ""
+    detail: str | None = None
+    last_state_version: int | None = None
+
+
 # === Category 9: Guardrails =================================================
 
 
