@@ -138,53 +138,47 @@
 
 ## Day 2 — US-2 Governance Approvals Reviewer E2E (est. 4-5 hours)
 
-### 2.1 Create test fixtures (auth + backend seed)
-- [ ] **Create `frontend/tests/e2e/fixtures/auth-fixtures.ts`**
-  - Helper: `loginAsReviewer(page, { tenantId, role })` injects JWT cookie / storageState
-  - Backend: dev-only `/api/v1/_test/issue-jwt` endpoint by env flag `ENABLE_TEST_AUTH=1` (or use existing test JWT issuer if any)
-  - DoD: helper callable + storageState saved
-- [ ] **Create `frontend/tests/e2e/fixtures/backend-fixtures.ts`**
-  - Helper: `seedApprovals({ tenantA: 2, tenantB: 1 })` POSTs to dev-only `/api/v1/_test/seed-approvals` endpoint OR direct DB inject via test fixture
-  - Cleanup: `cleanupApprovals()` after test
-  - DoD: helpers idempotent; can re-run
+### 2.1 Design decision (D11) — Mock at network layer instead of booting backend + seeding DB
+- [x] **Day 2 mini-探勘 finding**: 53.5 governance integration tests use FastAPI `dependency_overrides` (in-process mocking, NOT browser e2e applicable). For Playwright e2e three options considered:
+  - (a) Dev-only `/api/v1/_test/issue-jwt` + `/seed-approvals` endpoints — extra prod surface area; require env flag mounting
+  - (b) Boot uvicorn + seed DB via Python helper — slow (~60s/spec); CI port conflicts; auth complexity
+  - (c) **Playwright `page.route()` network mocks** — fast (~1s/spec); isolated; standard SPA e2e pattern
+- [x] **D11 decision: Option (c) selected** ✅
+  - Rationale: backend integration is exercised by 11 cases in `tests/integration/api/test_governance_endpoints.py` (incl. cross-tenant 404). e2e specs OWN frontend behavior validation (rendering / interaction / payload shape / error UI). Mocking at network layer keeps specs fast + isolated + standard pattern.
+  - Documented in: `frontend/tests/e2e/fixtures/approval-fixtures.ts` header
 
-### 2.2 (Optional) Add backend dev-only seed endpoint
-- [ ] **Verify if existing test fixture is reusable**
-  - Command: `grep -rn "seed_approvals\|test_fixture\|create_pending" backend/tests/`
-  - Decision: 若 53.5 既有 fixture 可重用 → e2e 直接 setup DB；否則加 dev-only endpoint
-  - DoD: 採何種 path 已決定 + 文件記錄
-- [ ] **(If needed) Add dev-only seed endpoint**
-  - File: `backend/src/api/v1/_test/router.py` (新建; mounted only when `ENABLE_TEST_FIXTURES=1`)
-  - Endpoints: POST /seed-approvals / DELETE /seed-approvals
-  - DoD: endpoint 只在 env flag 開啟時 mounted；prod 確定不暴露
+### 2.2 Create fixture module
+- [x] **Create `frontend/tests/e2e/fixtures/approval-fixtures.ts`** ✅
+  - Exports: `sampleApprovals()` (3 canned items: HIGH delete_customer_record / MEDIUM send_external_email / CRITICAL execute_db_migration)
+  - Helper: `mockGovernanceList(page, items)` — wires `page.route('**/api/v1/governance/approvals')` GET handler with mutable item slot (allows tests to swap response between calls; e.g. main flow approve removes item)
+  - Helper: `mockGovernanceDecide(page, opts)` — wires POST handler; captures records in returned array; supports `respondWith` override for error cases
+  - DoD: imports clean; helpers usable from spec
 
 ### 2.3 Write `frontend/tests/e2e/governance/approvals.spec.ts`
-- [ ] **Main flow case**: reviewer A login → /governance/approvals → see 2 pending → click row → modal → approve with reason → backend POST /decide 200 → list refreshes → remaining 1 pending
-  - Verify: `await expect(page.getByRole('row')).toHaveCount(1)`
-- [ ] **Cross-tenant case**: reviewer A → 直接 navigate `/governance/approvals/{tenant_b_request_id}` → 應 404 / empty / redirect
-  - Verify: list 不含 tenant B 的 request_id
-- [ ] **Reject case**: click row → modal → reject with reason → backend state = rejected → list refreshes
-- [ ] **Escalate case**: click row → modal → escalate → backend state = escalated → list refreshes
-- [ ] **(Optional) Error case**: stub /decide 500 → toast 顯示 error
-- [ ] DoD: ≥ 4 cases；spec 跑通；CI green
-- [ ] Verify: `cd frontend && npm run e2e tests/e2e/governance/approvals.spec.ts`
+- [x] **5 cases written and passing** ✅ 5/5 in 5.3s
+  - **main flow**: list 3 → click "delete_customer_record" Review → modal → fill reason → Approve → list refresh shows 2 → decide POST captured (decision=approved, reason matches)
+  - **reject flow**: row "send_external_email" → modal → fill reason → Reject → decide POST captured (decision=rejected)
+  - **escalate flow**: row "execute_db_migration" → modal → Escalate (no reason) → decide POST captured (decision=escalated, reason=null)
+  - **decide error**: mock /decide 404 → modal stays open → `[role="alert"]` shows backend detail "Approval not found" (covers cross-tenant 404 surface)
+  - **empty list**: mock returns [] → renders "No pending approvals." text
+- [x] **Spec covers main flow + 3 decision paths + error UI + empty state** ✅ exceeds plan minimum (≥4 cases)
+- [x] Verify: `npx playwright test tests/e2e/governance/approvals.spec.ts` → 5 passed in 5.3s
 
 ### 2.4 Day 2 sanity checks
-- [ ] **All 4+ governance cases green locally**
-  - Command: `cd frontend && npm run e2e tests/e2e/governance/`
-- [ ] **Backend full pytest unaffected**
-  - Command: `python -m pytest --tb=line -q` → expect ≈1056 passed (baseline maintained)
-- [ ] **Frontend lint + build green**
-- [ ] **CI Playwright E2E run passes**
+- [x] **Full e2e suite green locally** ✅ 7/7 in 5.4s (2 smoke + 5 governance)
+- [x] **Frontend lint + build green** ✅ ESLint clean / 188.10 KB / 52 modules / 563ms
+- [x] **Backend full pytest unaffected** — 53.6 Day 2 changes are frontend-only; baseline 1059 maintained (verified Day 1 last run; no backend code touched Day 2)
+- [ ] **CI Playwright E2E run passes** 🚧 will verify after Day 2.5 push
 
 ### 2.5 Day 2 commit + push + verify CI
 - [ ] **Stage + commit + push**
-  - Commit: `feat(frontend-e2e, sprint-53-6): US-2 governance approvals reviewer e2e (4 cases incl. cross-tenant)`
+  - Commit: `feat(frontend-e2e, sprint-53-6): US-2 governance approvals reviewer e2e (5 cases incl. error + empty)`
   - Push + verify CI
 
 ### 2.6 Day 2 progress.md update
 - [ ] **Update progress.md with Day 2 actuals**
-  - Commit + push
+  - Commit: batched into Day 2.5 commit per 53.5 pattern
+  - Push
 
 ---
 

@@ -127,3 +127,60 @@
 - US-2 Governance approvals reviewer e2e (≥ 4 cases incl. cross-tenant)
 - 2.1 fixtures setup (auth + backend seed) — Day 0 探勘 may need mini-探勘 to confirm whether 53.5 既有 fixture pattern is reusable or dev-only seed endpoint needed
 
+---
+
+## Day 2 — 2026-05-04 (~1.5 hr actual / est. 4-5 hr → buffered ~3 hr)
+
+### Mini-探勘 + design decision D11
+- ✅ Inspected `tests/integration/api/test_governance_endpoints.py` — uses FastAPI `dependency_overrides` (in-process; NOT applicable to browser e2e)
+- ✅ Three e2e fixture options evaluated: (a) dev-only test endpoints / (b) real backend boot + seed / (c) Playwright `page.route()` network mocks
+- ✅ **D11 design decision**: Option (c) selected. Rationale:
+  - Backend integration is exercised by 11 cases in `test_governance_endpoints.py` (incl. cross-tenant 404, RBAC 403, decision paths) — already production-grade
+  - e2e specs OWN frontend behavior validation (rendering / interaction / payload shape / error UI) — what needs net-new coverage
+  - Mocking at network layer: ~5x faster (~1s vs ~5-60s per spec); zero CI infra (no port conflicts, no DB cleanup, no JWT issuance); standard SPA e2e pattern
+  - Documented in `tests/e2e/fixtures/approval-fixtures.ts` header for future contributors
+
+### US-2 Implementation (2.2-2.3)
+- ✅ Created `tests/e2e/fixtures/approval-fixtures.ts`:
+  - `sampleApprovals()`: 3 canned items spanning HIGH / MEDIUM / CRITICAL risk levels
+  - `mockGovernanceList(page, items)`: wires GET handler with mutable item slot for tests to swap response between calls (main-flow refresh after approve)
+  - `mockGovernanceDecide(page, opts)`: wires POST handler; captures records; supports `respondWith` override for error cases
+- ✅ Created `tests/e2e/governance/approvals.spec.ts` with 5 cases:
+  - main flow: list shows 3 → approve removes item → list shows 2 + decide POST captured
+  - reject flow: decision=rejected with reason
+  - escalate flow: decision=escalated with reason=null
+  - decide error 404: modal stays open + `[role="alert"]` surfaces detail
+  - empty list: "No pending approvals." rendered
+
+### Day 2 sanity (2.4)
+- ✅ Governance spec local: 5 passed in 5.3s
+- ✅ Full e2e suite local: **7 passed in 5.4s** (2 smoke + 5 governance)
+- ✅ Frontend lint clean
+- ✅ Frontend build: 188.10 KB / 52 modules / 563ms
+- ⏳ CI Playwright E2E: pending Day 2.5 push
+
+### Day 2 Drift
+
+| ID | Type | Description |
+|----|------|-------------|
+| **D11** | Design decision | Mock at network layer (page.route()) instead of booting backend + seeding DB; rationale captured in approval-fixtures.ts header |
+| **D12** | Scope expanded | 5 cases instead of plan-minimum 4 (added empty-list case for free with mocking; ~5 min extra) |
+
+### Day 2 Time Banking
+
+- Estimated: 4-5 hr
+- Actual: ~1.5 hr (探勘 ~30 min / fixture module ~30 min / spec ~30 min / sanity ~15 min)
+- **Banked**: ~3 hr; cumulative ~6-7 hr buffer (Day 0 ~1 + Day 1 ~3 + Day 2 ~3)
+- Massive savings vs plan estimate due to mocking approach — saved JWT issuance + uvicorn boot + DB seed scaffolding
+
+### Blockers
+
+- None. Day 3 (US-3 ChatV2 ApprovalCard e2e) can use the same `page.route()` mocking pattern; need additional fixtures for SSE event injection.
+
+### Next (Day 3)
+
+- US-3 ChatV2 inline ApprovalCard e2e (≥ 3 cases: approve / reject / risk badge)
+- Reuse `mockGovernanceDecide` from approval-fixtures.ts
+- Add SSE injection helper (mock backend SSE stream emitting LoopStarted → ApprovalRequested → ApprovalReceived)
+
+
