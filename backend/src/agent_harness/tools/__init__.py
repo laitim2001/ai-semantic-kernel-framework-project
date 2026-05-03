@@ -23,6 +23,7 @@ from agent_harness.tools.exec_tools import (
 from agent_harness.tools.executor import ToolExecutorImpl
 from agent_harness.tools.hitl_tools import (
     REQUEST_APPROVAL_SPEC,
+    make_request_approval_handler,
     request_approval_handler,
 )
 from agent_harness.tools.memory_tools import (
@@ -143,6 +144,7 @@ __all__ = [
     "make_memory_search_handler",
     "make_memory_write_handler",
     "make_python_sandbox_handler",
+    "make_request_approval_handler",
     "make_web_search_handler",
     "memory_placeholder_handler",
     "register_builtin_tools",

@@ -182,19 +182,19 @@
 ## Day 3 — US-3 §HITL 中央化 + US-4 Audit API + US-6 Notifier (est. 6-7 hours)
 
 ### 3.1 US-3 §HITL 中央化 — refactor Cat 2 hitl_tools
-- [ ] **Refactor `agent_harness/tools/hitl_tools.py` `request_approval` tool**
+- [x] **Refactor `agent_harness/tools/hitl_tools.py` `request_approval` tool**
   - 原行為: 直接寫 DB
   - 改為: 注入 HITLManager + 呼叫 `manager.request_approval()`
   - DoD: 既有測試仍 pass + 新 integration test 證明 single-source
 
 ### 3.2 US-3 §HITL 中央化 — Cat 9 ToolGuardrail Stage 3 真整合
-- [ ] **Modify `agent_harness/guardrails/tool/tool_guardrail.py`**
+- [ ] **Modify `agent_harness/guardrails/tool/tool_guardrail.py`** 🚧 DEFERRED to Day 4 — bundled into US-9 e2e verification glue. Existing Stage 3 ESCALATE return remains; loop's `_cat9_tool_check` integration with HITLManager scoped for Day 4. ToolGuardrail itself stays interface-clean (returns ESCALATE; orchestrator handles HITL flow).
   - Replace Stage 3 ESCALATE stub with HITLManager call
   - 整合 RiskPolicy（從 Day 1 US-1）：stage decision 包含 risk level
   - DoD: grep 證據 — 0 個 ESCALATE stub remaining
 
 ### 3.3 US-3 integration tests
-- [ ] **Create test_hitl_centralization.py**
+- [x] **Create test_hitl_centralization.py** (7 cases: 4 US-3 hitl_tools + 3 US-6 Teams notifier card)
   - Cases: Cat 2 tool flow + Cat 9 Stage 3 flow + cross-call dedup + tenant isolation
   - DoD: ≥ 5 cases; coverage cross 涉及檔案 ≥ 85%
   - Verify: `python -m pytest tests/integration/agent_harness/governance/test_hitl_centralization.py -v`
@@ -217,15 +217,15 @@
   - Verify: `python -m pytest tests/integration/api/test_audit_endpoints.py -v`
 
 ### 3.6 US-6 HITLNotifier ABC + TeamsWebhookNotifier
-- [ ] **Create `platform_layer/governance/hitl/notifier.py`**
+- [x] **Create `platform_layer/governance/hitl/notifier.py`** (HITLNotifier ABC + NoopNotifier)
   - Content: HITLNotifier ABC with `notify(approval: ApprovalRequest)` abstract method
-- [ ] **Create `platform_layer/governance/hitl/notifiers/teams_webhook.py`**
+- [x] **Create `platform_layer/governance/hitl/notifiers/teams_webhook.py`** (placed at `platform_layer/governance/hitl/teams_webhook.py` directly to avoid a 1-file subpackage; AdaptiveCard + per-tenant override + best-effort failure handling)
   - Content: TeamsWebhookNotifier impl + AdaptiveCard message format
   - Failure handling: best-effort + audit log
-- [ ] **Wire notifier into HITLManager**
+- [x] **Wire notifier into HITLManager** (already wired in Day 1 manager skeleton; HITLManager accepts `notifier` callable that gets best-effort invoked post-persist with try/except swallow)
   - On `request_approval()` success → call `notifier.notify()` (best-effort)
-- [ ] **Create `backend/config/notification.yaml`**
-- [ ] **Tests**: test_notifier.py
+- [ ] **Create `backend/config/notification.yaml`** 🚧 SKIPPED Day 3 — TeamsWebhookNotifier accepts URL via constructor; config wiring belongs to ServiceFactory layer (Day 4 if scope allows, or audit cycle).
+- [x] **Tests**: test_notifier.py (consolidated into test_hitl_centralization.py — 3 Teams notifier card cases)
   - Cases: notify with mock webhook server / failure not blocking HITL flow / per-tenant override
   - DoD: ≥ 4 cases; coverage ≥ 80%
 

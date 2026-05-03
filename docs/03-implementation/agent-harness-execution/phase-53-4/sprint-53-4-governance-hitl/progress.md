@@ -263,3 +263,65 @@ Estimated 6-7 hours; banked ~5 hours buffer makes Day 2 schedule comfortable.
 - 3.7-3.8 sanity / commit / progress.md
 
 Estimated 6-7 hours.
+
+---
+
+## Day 3 — 2026-05-03 — US-3 (Cat 2 part) + US-6 Notifier
+
+### Accomplishments
+
+#### US-3 part 1 — `hitl_tools.py` refactored ✅
+
+- New: `make_request_approval_handler(hitl_manager, tenant_id_resolver, session_id_resolver)` — closure factory binding handler to a DefaultHITLManager. Production code uses this for real persistence.
+- Kept: legacy `request_approval_handler(call)` — deprecated placeholder; tests confirm it returns DEPRECATED note + does NOT persist via manager. Backward-compatible while migration completes.
+- `agent_harness/tools/__init__.py` — exported new factory.
+
+#### US-6 — Notifier ABC + Teams webhook ✅
+
+- New: `platform_layer/governance/hitl/notifier.py` — HITLNotifier ABC + NoopNotifier
+- New: `platform_layer/governance/hitl/teams_webhook.py` — TeamsWebhookNotifier with AdaptiveCard payload, per-tenant URL override, best-effort failure handling (logs + swallows)
+- Manager already wired to call notifier post-persist (Day 1 skeleton); failure best-effort verified by Day 2 test
+
+#### Tests — 7 cases ✅
+
+`test_hitl_centralization.py`:
+- US-3: 4 cases — handler persists via manager / severity → risk mapping (low/medium/high) / unknown severity fallback / legacy handler does NOT persist
+- US-6: 3 cases — AdaptiveCard with review link / no link when no template / per-tenant override
+
+### Drift Documented (3 items)
+
+1. **Cat 9 ToolGuardrail Stage 3 wiring 🚧 DEFERRED to Day 4** — bundled into US-9 e2e verification glue. The HITLManager integration belongs at the loop's `_cat9_tool_check` layer, not inside ToolGuardrail itself. ToolGuardrail correctly returns ESCALATE; orchestrator handles flow. This minimizes Cat 9 surface change.
+2. **`teams_webhook.py` placement** — placed at `platform_layer/governance/hitl/` directly instead of a `notifiers/` subpackage (single-file subpackage was unnecessary).
+3. **`notification.yaml` SKIPPED** — TeamsWebhookNotifier accepts URL via constructor; config wiring belongs to ServiceFactory layer (deferred to Day 4 if scope allows).
+
+### Sanity Status
+
+| Check | Result |
+|-------|--------|
+| black --check | ✅ clean |
+| isort --check | ✅ clean |
+| flake8 | ✅ clean |
+| mypy --strict | ✅ Success: no issues found in 6 source files |
+| pytest governance/ + hitl_centralization/ + state_mgmt/ | ✅ **43/43 pass** |
+
+### Day 3 Summary
+
+| Metric | Value |
+|--------|-------|
+| Hours estimated | 6-7 |
+| Hours actual | ~2.5 (HITLManager already had notifier hook from Day 1; closure factory pattern straightforward) |
+| Banked buffer | **+3-4 hours** (cumulative ~11 from Day 0+1+2+3) |
+| Blockers | 無 |
+
+### Day 4 Plan (full day, ~7-8 hours estimated)
+
+- 4.1 US-7 Frontend `pages/governance/approvals/` (ApprovalList + DecisionModal + governance_service)
+- 4.2 US-7 Playwright e2e
+- 4.3 US-8 inline chat ApprovalCard + SSE event handler in ChatPage
+- 4.4 US-9 Stage 3 e2e verification (closes AD-Cat9-4)
+- 4.5 US-4 Audit Query API + endpoint (smaller scope; audit query only, defer chain verify endpoint to follow-up if time pressed)
+- 4.6 Sprint final verification (lint chain + grep evidence + coverage gates + 6 V2 lint scripts)
+- 4.7 retrospective.md + PR open + closeout
+- 4.8 cleanup + memory update
+
+Cumulative ~11 hours banked → Day 4 has plenty of headroom.
