@@ -111,6 +111,7 @@ from agent_harness._contracts import (
     LoopEvent,
     LoopStarted,
     LoopState,
+    LoopTerminated,
     Message,
     PromptBuilt,
     SpanCategory,
@@ -536,6 +537,69 @@ class AgentLoopImpl(AgentLoop):
                             trace_context=ctx,
                         )
                         raise
+                    except Exception as exc:
+                        # 53.2 Day 4 Cat 8 chain: classify → record budget →
+                        # check terminator. When Cat 8 deps None → re-raise
+                        # (preserves 53.1 baseline).
+                        terminate, _err_class, term_reason, term_detail = (
+                            await self._handle_tool_error(
+                                error=exc,
+                                tool_name=tc.name,
+                                attempt_num=1,
+                                state_version=None,
+                                trace_context=ctx,
+                            )
+                        )
+                        if self._error_policy is None:
+                            # Opt-out path: no Cat 8 deps → preserve 53.1 raise behavior
+                            raise
+                        if terminate:
+                            yield LoopTerminated(
+                                reason=(term_reason.value if term_reason is not None else ""),
+                                detail=term_detail,
+                                last_state_version=None,
+                                trace_context=ctx,
+                            )
+                            return
+                        # Synthesize LLM-recoverable error ToolResult so the
+                        # LLM sees the failure on next turn and can self-correct
+                        # (Cat 8 §LLM-recoverable; Anthropic / LangGraph pattern).
+                        from agent_harness._contracts import ToolResult
+
+                        result = ToolResult(
+                            tool_call_id=tc.id,
+                            tool_name=tc.name,
+                            content=f"Error: {exc!r}. Please adjust your approach.",
+                            success=False,
+                            error=repr(exc),
+                            duration_ms=0.0,
+                        )
+
+                    # 53.2 Day 4 Cat 8 chain on soft failure: ToolExecutorImpl
+                    # catches handler exceptions internally → ToolResult(success=
+                    # False). Reconstruct a synthetic exception so the Cat 8
+                    # chain can classify + check terminator. When deps None →
+                    # fall through to existing 53.1 baseline (LLM-recoverable
+                    # via tool message).
+                    if not result.success and self._error_policy is not None:
+                        synthetic = Exception(result.error or "tool soft failure")
+                        terminate, _err_class, term_reason, term_detail = (
+                            await self._handle_tool_error(
+                                error=synthetic,
+                                tool_name=tc.name,
+                                attempt_num=1,
+                                state_version=None,
+                                trace_context=ctx,
+                            )
+                        )
+                        if terminate:
+                            yield LoopTerminated(
+                                reason=(term_reason.value if term_reason is not None else ""),
+                                detail=term_detail,
+                                last_state_version=None,
+                                trace_context=ctx,
+                            )
+                            return
 
                     # Feed back as tool message — KEY V2 cure for AP-1.
                     tool_content = self._tool_result_to_text(result.content)
