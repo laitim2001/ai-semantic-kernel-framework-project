@@ -173,3 +173,73 @@ Initial mypy errors (5) fixed:
 - 1.11 Day 1 progress.md (this section)
 - Close GitHub issues #40 (US-1) + #41 (US-2)
 - Day 2: US-3 ProviderCircuitBreaker + US-4 TenantErrorBudget
+
+---
+
+## Day 2 — 2026-05-03 (US-3 CircuitBreaker + US-4 ErrorBudget)
+
+### Accomplishments
+
+#### 2.1-2.2 `error_handling/circuit_breaker.py` (US-3 core) ✅
+`DefaultCircuitBreaker` implements existing `CircuitBreaker` ABC (made async during 53.2):
+- `record(*, success: bool, resource: str)` async — per-resource state transitions
+- `is_open(resource: str) -> bool` async — short-circuits when OPEN; promotes to HALF_OPEN after recovery_timeout
+- 3-state machine: CLOSED → OPEN (after threshold consecutive failures) → HALF_OPEN (after recovery_timeout) → CLOSED (on trial success) | OPEN (on trial failure)
+- `asyncio.Lock` guards state transitions
+- Per-resource state isolation in `dict[str, CircuitBreakerStats]`
+
+ABC change in `_abc.py`: `record` / `is_open` made `async` (previously sync stub) — no existing consumers, so no breaking change.
+
+`test_circuit_breaker.py`: **15 tests** pass — construction (3) + closed→open (3) + recovery flow (4) + per-resource isolation (1) + concurrency (2) + smoke (2)
+
+#### 2.3-2.4 Adapter integration ✅
+**Design choice**: wrapper pattern instead of modifying ChatClient ABC. Created `adapters/_base/circuit_breaker_wrapper.py`:
+- `CircuitBreakerWrapper(ChatClient)` — transparent decorator
+- Pre-checks `breaker.is_open(resource)` before `chat()` / `stream()` / `count_tokens()`
+- Records success/failure after each call
+- Pure-metadata methods (`get_pricing` / `supports_feature` / `model_info`) delegate without protection
+- Re-exported via `adapters._base.__init__`
+
+`test_circuit_breaker_integration.py` (`tests/integration/adapters/`): **6 tests** pass — success path (2) + failure recording (2) + circuit-open short-circuit (2). Uses hand-built `FakeChatClient` (no real provider needed).
+
+**Side effect**: removed `tests/integration/adapters/__init__.py` (was created by my touch in Day 0; was shadowing `src/adapters` namespace).
+
+#### 2.5-2.8 ErrorBudget (US-4) ✅
+- `error_handling/budget.py`:
+  - `BudgetStore` Protocol — increment + get
+  - `InMemoryBudgetStore` — thread-safe with TTL handling (tests + dev)
+  - `TenantErrorBudget` — daily/monthly counters with TTL; skips FATAL
+- `error_handling/_redis_store.py`:
+  - `RedisBudgetStore` — MULTI/EXEC pipeline (INCR + EXPIRE atomic)
+  - `TYPE_CHECKING` import to keep redis dep optional
+  - `Redis[bytes]` generic typed for mypy strict
+- `backend/config/error_budgets.yaml`: defaults (1000/day, 20000/month) + per_tenant override placeholder
+
+`test_budget.py`: **11 tests** pass — InMemoryStore basics (4) + record (3) + is_exceeded (3) + multi-tenant isolation (1)
+
+#### 2.9-2.10 sanity checks ✅
+| Metric | Day 1 close | Day 2 close |
+|--------|-------------|-------------|
+| pytest | 630/4/1/0 | **662/4/1/0** (+32 new) |
+| mypy strict src | 205 clean | **209** clean (+4 files) |
+| LLM SDK leak | 0 | 0 |
+| 6 V2 lint scripts | all green | all green (added AP-8 allowlist for circuit_breaker_wrapper) |
+| Cat 8 coverage | 100% | **93%** (_redis_store 0% by design — no Redis in CI; budget/policy/retry 100%; circuit_breaker 97%) |
+| black/isort/flake8/ruff | clean | clean (after auto-format 6 files) |
+
+### Plan Drift / Notes
+
+| Drift | Plan said | Reality | Resolution |
+|-------|-----------|---------|------------|
+| Stub `CircuitBreaker` ABC | sync `record_success/record_failure/is_open` | sync `record(success, resource)/is_open(resource)` | Used stub signature; made ABC async (no existing consumers) |
+| Adapter integration approach | Modify `chat_client.py` + `azure_openai/adapter.py` | Wrapper pattern in `_base/circuit_breaker_wrapper.py` | Composition over ABC mutation; concrete adapters untouched |
+| Test backend | "fakeredis or in-memory mock" | InMemoryBudgetStore (no fakeredis dep) | No new package dep; adequate test coverage |
+| Per-provider isolation | "per-provider instance" | Single instance with `dict[resource, state]` (per stub) | More flexible; resource keying handles same isolation |
+| AP-8 lint false positive | (not anticipated) | Wrapper's `inner.stream()` call triggered "no PromptBuilder" | Added wrapper to ALLOWLIST_PATTERNS with rationale |
+
+### Remaining for Day 2 closeout (2.11-2.12)
+
+- Commit US-3 + US-4 + AP-8 allowlist patch ← in progress
+- Push + verify Backend CI green
+- Close GitHub issues #42 + #43
+- Day 3: US-5 ErrorTerminator + US-6 AgentLoop integration upper half

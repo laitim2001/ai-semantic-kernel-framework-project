@@ -55,13 +55,17 @@ class ErrorPolicy(ABC):
 
 
 class CircuitBreaker(ABC):
-    """Per-resource (provider / tool) failure rate tracker."""
+    """Per-resource (provider / tool) failure rate tracker.
+
+    Methods are async to allow asyncio.Lock-based state guarding from
+    concurrent adapter / Loop callers (Sprint 53.2 Day 2 finalised).
+    """
 
     @abstractmethod
-    def record(self, *, success: bool, resource: str) -> None: ...
+    async def record(self, *, success: bool, resource: str) -> None: ...
 
     @abstractmethod
-    def is_open(self, resource: str) -> bool: ...
+    async def is_open(self, resource: str) -> bool: ...
 
 
 class ErrorTerminator(ABC):

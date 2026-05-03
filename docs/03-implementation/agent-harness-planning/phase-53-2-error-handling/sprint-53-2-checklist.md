@@ -96,105 +96,45 @@
 ## Day 2 — US-3 CircuitBreaker + US-4 ErrorBudget (est. 6-7 hours)
 
 ### 2.1 Create circuit_breaker.py
-- [ ] **Write `CircuitState` enum + `CircuitBreakerStats` + `ProviderCircuitBreaker` class**
-  - File: `backend/src/agent_harness/error_handling/circuit_breaker.py`
-  - File header per convention
-  - `CircuitState`: CLOSED / OPEN / HALF_OPEN
-  - `ProviderCircuitBreaker(provider, threshold=5, recovery_timeout_seconds=60.0, half_open_max_calls=1)`
-  - `is_open() -> bool` async with state-transition logic
-  - `record_success() / record_failure()` async with asyncio.Lock
-  - `CircuitOpenError(Exception)` class
-  - DoD: mypy strict pass
+- [x] **Write `CircuitState` enum + `CircuitBreakerStats` + `DefaultCircuitBreaker` class** _(per-resource state; CLOSED/OPEN/HALF_OPEN; async with asyncio.Lock; CircuitOpenError; ABC made async)_
+
 
 ### 2.2 Create test_circuit_breaker.py
-- [ ] **Create test_circuit_breaker.py**
-  - File: `backend/tests/unit/agent_harness/error_handling/test_circuit_breaker.py`
-  - Tests:
-    - `test_initial_state_closed`
-    - `test_consecutive_failures_open_circuit` (threshold reached)
-    - `test_open_to_half_open_after_recovery_timeout`
-    - `test_half_open_success_closes_circuit`
-    - `test_half_open_failure_reopens_circuit`
-    - `test_record_success_resets_consecutive_failures`
-    - `test_concurrent_record_under_lock` (asyncio.gather × 10)
-    - `test_per_provider_isolation` (azure_openai vs anthropic)
-  - DoD: ≥ 8 tests pass
+- [x] **Create test_circuit_breaker.py** _(15 tests pass: 3 construction + 3 closed→open + 4 recovery + 1 isolation + 2 concurrency + 2 smoke)_
+
 
 ### 2.3 Adapter 整合
-- [ ] **Update `adapters/_base/chat_client.py`**
-  - File: `backend/src/adapters/_base/chat_client.py`
-  - Add `circuit_breaker: ProviderCircuitBreaker | None = None` to `__init__`
-  - Pre-call check: `if self._circuit_breaker and await self._circuit_breaker.is_open(): raise CircuitOpenError(...)`
-  - Wrap `_do_chat`: success → record_success；exception → record_failure；re-raise
-  - DoD: 既有 chat_client tests 不退步
-- [ ] **Update `adapters/azure_openai/adapter.py`**
-  - DI hook：建構時可注入 circuit breaker
-  - DoD: existing adapter tests pass
+- [x] **Wrapper pattern instead of modifying ABC** _(created `adapters/_base/circuit_breaker_wrapper.py` — composition; ChatClient ABC stays neutral; existing adapters untouched)_
 
 ### 2.4 Adapter integration test
-- [ ] **Create test_circuit_breaker_integration.py**
-  - File: `backend/tests/integration/adapters/test_circuit_breaker_integration.py`
-  - Tests:
-    - `test_adapter_succeeds_normally_under_closed_circuit`
-    - `test_adapter_records_failure_on_provider_exception`
-    - `test_adapter_raises_circuit_open_after_threshold_failures`
-    - `test_adapter_recovers_after_timeout`
-  - DoD: ≥ 4 tests pass
+- [x] **Create test_circuit_breaker_integration.py** _(6 tests pass: success path 2 + failure recording 2 + circuit-open short-circuit 2; tests/integration/adapters/__init__.py removed to avoid namespace shadow)_
 
 ### 2.5 Create budget.py
-- [ ] **Write `BudgetStore` Protocol + `TenantErrorBudget` class**
-  - File: `backend/src/agent_harness/error_handling/budget.py`
-  - File header per convention
-  - `BudgetStore(Protocol)`: `increment(key, ttl_seconds) -> int` / `get(key) -> int`
-  - `TenantErrorBudget(store, max_per_day=1000, max_per_month=20000)`
-  - `record(tenant_id, error_category)` async
-  - `is_exceeded(tenant_id) -> tuple[bool, str | None]` async
-  - 跳過 UNEXPECTED 不計入 budget（bug 不應計）
-  - DoD: mypy strict pass
+- [x] **Write `BudgetStore` Protocol + `InMemoryBudgetStore` + `TenantErrorBudget` class** _(skip FATAL since=bug; daily/monthly TTL; multi-tenant isolation)_
 
 ### 2.6 Create _redis_store.py
-- [ ] **Write `RedisBudgetStore` impl**
-  - File: `backend/src/agent_harness/error_handling/_redis_store.py`
-  - 使用 `redis.asyncio` (cross-platform `# type: ignore` per code-quality.md)
-  - `INCR` + `EXPIRE` 原子操作
-  - DoD: type-safe；importable on both Linux + Windows CI
+- [x] **Write `RedisBudgetStore` impl** _(MULTI/EXEC pipeline INCR+EXPIRE atomic; TYPE_CHECKING import; Redis[bytes] generic typed)_
 
 ### 2.7 Create error_budgets.yaml
-- [ ] **Create config file**
-  - File: `backend/config/error_budgets.yaml`
-  - defaults: max_per_day=1000, max_per_month=20000
-  - per_tenant override 範例（一個 tenant 自訂上限）
-  - DoD: YAML parseable
+- [x] **Create config file** _(defaults 1000/20000 + per_tenant override placeholder)_
 
 ### 2.8 Create test_budget.py
-- [ ] **Create test_budget.py**
-  - File: `backend/tests/unit/agent_harness/error_handling/test_budget.py`
-  - Tests with `fakeredis` or in-memory mock:
-    - `test_record_increments_day_and_month_counters`
-    - `test_unexpected_skipped_in_budget` (bug 不計入)
-    - `test_is_exceeded_when_day_limit_hit`
-    - `test_is_exceeded_when_month_limit_hit`
-    - `test_per_tenant_isolation` (tenant_a 超支 → tenant_b 未受影響)
-    - `test_ttl_resets_at_day_boundary` (mock time)
-  - DoD: ≥ 6 tests pass
+- [x] **Create test_budget.py** _(11 tests pass: 4 InMemoryStore + 3 record + 3 is_exceeded + 1 multi-tenant isolation; uses InMemoryBudgetStore not fakeredis)_
 
 ### 2.9 Update __init__.py
-- [ ] **Re-export ProviderCircuitBreaker + CircuitOpenError + TenantErrorBudget**
-  - DoD: imports work
+- [x] **Re-export DefaultCircuitBreaker + CircuitOpenError + CircuitState + BudgetStore + InMemoryBudgetStore + TenantErrorBudget**
 
 ### 2.10 Day 2 sanity checks
-- [ ] **mypy strict 仍 clean**
-- [ ] **All 6 V2 lint scripts 仍綠**
-- [ ] **Full pytest 不退步**
-  - DoD: ≥ 631 PASS（613 + ≥ 18 new tests）/ 1 xfail / 4 skip / 0 fail
-- [ ] **Cat 8 coverage Day 2 partial**
-  - DoD: ≥ 80%
+- [x] **mypy strict 仍 clean** _(209 src files clean; +4 new files vs Day 1 baseline 205)_
+- [x] **All 6 V2 lint scripts 仍綠** _(AP-8 added allowlist for circuit_breaker_wrapper.py — transparent decorator, prompts already built upstream)_
+- [x] **Full pytest 不退步** _(630 → **662 passed** / 4 skip / 1 xfail / 0 fail; +32 new tests = 15 cb + 6 cb_integration + 11 budget)_
+- [x] **Cat 8 coverage Day 2** _(error_handling 93% — 254 stmts; budget 100% / circuit_breaker 97% / policy 100% / retry 100%; _redis_store 0% — uncovered by design, no Redis in CI)_
+- [x] **black/isort/flake8/ruff** _(all green after auto-format on 6 files)_
 
 ### 2.11 Day 2 commit + push + verify CI
-- [ ] **Commit US-3 + US-4**
-  - Message: `feat(error-handling, sprint-53-2): US-3 CircuitBreaker per-provider + US-4 ErrorBudget per-tenant + adapter integration`
-  - **Verify branch before commit**
-- [ ] **Push + verify 8 workflow CI green**
+- [ ] **Commit US-3 + US-4 + AP-8 allowlist**
+- [ ] **Push to feature branch**
+- [ ] **Backend CI green on this branch**
 - [ ] **Close GitHub issues #42 + #43**
 
 ### 2.12 Day 2 progress.md update

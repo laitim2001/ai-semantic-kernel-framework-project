@@ -46,6 +46,11 @@ ALLOWLIST_PATTERNS: tuple[str, ...] = (
     # not subject to centralized PromptBuilder routing.
     "agent_harness/context_mgmt/compactor/",
     "agent_harness/memory/extraction.py",
+    # Sprint 53.2: Cat 8 CircuitBreakerWrapper is a transparent ChatClient
+    # decorator at adapter layer — it delegates `chat()` / `stream()` to the
+    # inner adapter without constructing prompts. Caller (the AgentLoop) has
+    # already routed through PromptBuilder before invoking the wrapped client.
+    "adapters/_base/circuit_breaker_wrapper.py",
 )
 
 
