@@ -12,17 +12,22 @@ Description:
 Created: 2026-05-03 (Sprint 53.4 Day 4)
 
 Modification History:
+    - 2026-05-04: Add verify_chain() method (Sprint 53.5 US-6) — wraps existing
+        agent_harness/guardrails/audit/chain_verifier.verify_chain so the API
+        layer doesn't reach into Cat 9 directly.
     - 2026-05-03: Initial creation (Sprint 53.4 Day 4 US-4)
 
 Related:
     - infrastructure/db/models/audit.py (AuditLog ORM)
+    - agent_harness/guardrails/audit/chain_verifier.py (underlying verify_chain)
     - 09-db-schema-design.md Group 7 (audit_log)
     - 17-cross-category-interfaces.md §5
-    - sprint-53-4-plan.md §US-4
+    - sprint-53-4-plan.md §US-4 / sprint-53-5-plan.md §US-6
 """
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -31,6 +36,10 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_harness.guardrails.audit import (
+    ChainVerificationResult,
+)
+from agent_harness.guardrails.audit import verify_chain as _verify_chain_impl
 from infrastructure.db.models.audit import AuditLog
 
 
@@ -67,13 +76,63 @@ class AuditQueryFilter:
     offset: int = 0
 
 
+SessionFactory = Callable[[], AsyncSession] | Callable[[], Awaitable[AsyncSession]]
+
+
 class AuditQuery:
     """Paginated read-only access to audit_log with tenant isolation."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession | None = None,
+        session_factory: SessionFactory | None = None,
+    ) -> None:
+        """session: bound to current tenant for list(); required for list().
+        session_factory: optional fresh-session factory used by verify_chain
+            (chain walk needs paginated independent sessions to avoid holding
+            one transaction open for tens of thousands of rows). Required for
+            verify_chain. The two methods are independent — callers may pass
+            only the one they need.
+        """
         self._session = session
+        self._session_factory = session_factory
+
+    async def verify_chain(
+        self,
+        *,
+        tenant_id: UUID,
+        from_id: int | None = None,
+        to_id: int | None = None,
+        page_size: int = 100,
+    ) -> ChainVerificationResult:
+        """Walk the tenant's audit_log chain and recompute hashes.
+
+        Wraps agent_harness.guardrails.audit.verify_chain (Cat 9 single-source
+        per 17.md §5) so api/v1/audit doesn't import Cat 9 directly. Tenant
+        isolation enforced at the chain_verifier layer (WHERE tenant_id = ...).
+
+        Raises:
+            RuntimeError: when session_factory was not supplied at construction.
+        """
+        if self._session_factory is None:
+            raise RuntimeError(
+                "AuditQuery.verify_chain requires session_factory; "
+                "construct with session_factory= for chain verification."
+            )
+        return await _verify_chain_impl(
+            self._session_factory,
+            tenant_id,
+            from_id=from_id,
+            to_id=to_id,
+            page_size=page_size,
+        )
 
     async def list(self, query: AuditQueryFilter) -> list[AuditLogEntry]:
+        if self._session is None:
+            raise RuntimeError(
+                "AuditQuery.list requires session; "
+                "construct with session= for paginated listing."
+            )
         stmt = select(AuditLog).where(AuditLog.tenant_id == query.tenant_id)
         if query.user_id is not None:
             stmt = stmt.where(AuditLog.user_id == query.user_id)

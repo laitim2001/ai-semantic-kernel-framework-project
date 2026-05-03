@@ -37,6 +37,10 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.3)
 Last Modified: 2026-04-30
 
 Modification History (newest-first):
+    - 2026-05-04: Add HITL approval events (Sprint 53.5 US-2) — ApprovalRequested
+        → "approval_requested"; ApprovalReceived → "approval_received". Loop
+        emits these when Cat 9 ESCALATE → HITLManager.request_approval +
+        wait_for_decision (53.5 _cat9_hitl_branch).
     - 2026-04-30: Wire 3 new Day 2 events + skip-Thinking + ToolCallFailed
         (Sprint 50.2 Day 2.5) — TurnStarted / LLMRequested / LLMResponded;
         Thinking returns None (LLMResponded canonical); ToolCallExecuted
@@ -57,6 +61,8 @@ from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from agent_harness._contracts import (
+    ApprovalReceived,
+    ApprovalRequested,
     LLMRequested,
     LLMResponded,
     LoopCompleted,
@@ -183,6 +189,31 @@ def _serialize_inner(event: LoopEvent) -> dict[str, Any] | None:
             "data": {
                 "stop_reason": event.stop_reason,
                 "total_turns": event.total_turns,
+            },
+        }
+
+    # Sprint 53.5 US-2: HITL approval events. Loop emits ApprovalRequested when
+    # Cat 9 ESCALATE → HITLManager.request_approval persists; ApprovalReceived
+    # when wait_for_decision returns. Frontend renders inline ApprovalCard.
+    if isinstance(event, ApprovalRequested):
+        return {
+            "type": "approval_requested",
+            "data": {
+                "approval_request_id": (
+                    str(event.approval_request_id) if event.approval_request_id else None
+                ),
+                "risk_level": event.risk_level,
+            },
+        }
+
+    if isinstance(event, ApprovalReceived):
+        return {
+            "type": "approval_received",
+            "data": {
+                "approval_request_id": (
+                    str(event.approval_request_id) if event.approval_request_id else None
+                ),
+                "decision": event.decision,
             },
         }
 

@@ -34,6 +34,7 @@
 
 import { create } from "zustand";
 import type {
+  ApprovalEntry,
   ChatMode,
   ChatStatus,
   LoopEvent,
@@ -50,6 +51,8 @@ type ChatStoreState = {
   mode: ChatMode;
   messages: Message[];
   rawEvents: LoopEvent[];
+  // Sprint 53.5 US-2: HITL approval cards keyed by request_id (dedup-safe).
+  approvals: Record<string, ApprovalEntry>;
   // actions
   setMode: (m: ChatMode) => void;
   setStatus: (s: ChatStatus) => void;
@@ -61,7 +64,14 @@ type ChatStoreState = {
 
 const _initial = (): Pick<
   ChatStoreState,
-  "sessionId" | "status" | "totalTurns" | "stopReason" | "errorMessage" | "messages" | "rawEvents"
+  | "sessionId"
+  | "status"
+  | "totalTurns"
+  | "stopReason"
+  | "errorMessage"
+  | "messages"
+  | "rawEvents"
+  | "approvals"
 > => ({
   sessionId: null,
   status: "idle",
@@ -70,6 +80,7 @@ const _initial = (): Pick<
   errorMessage: null,
   messages: [],
   rawEvents: [],
+  approvals: {},
 });
 
 let _msgCounter = 0;
@@ -180,6 +191,57 @@ export const useChatStore = create<ChatStoreState>((set) => ({
             status: "completed",
             totalTurns: ev.data.total_turns,
             stopReason: ev.data.stop_reason,
+          };
+        }
+
+        case "approval_requested": {
+          // 53.5 US-2: render inline ApprovalCard. Dedup by request_id.
+          const id = ev.data.approval_request_id;
+          if (!id) return { ...s, rawEvents };
+          if (s.approvals[id]) return { ...s, rawEvents };
+          return {
+            ...s,
+            rawEvents,
+            approvals: {
+              ...s.approvals,
+              [id]: {
+                approvalRequestId: id,
+                riskLevel: ev.data.risk_level,
+                decision: null,
+                receivedAt: Date.now(),
+              },
+            },
+          };
+        }
+
+        case "approval_received": {
+          // 53.5 US-2: update card to show reviewer outcome.
+          const id = ev.data.approval_request_id;
+          if (!id) return { ...s, rawEvents };
+          const existing = s.approvals[id];
+          if (!existing) {
+            // Decision arrived without prior request — defensive create
+            return {
+              ...s,
+              rawEvents,
+              approvals: {
+                ...s.approvals,
+                [id]: {
+                  approvalRequestId: id,
+                  riskLevel: "UNKNOWN",
+                  decision: ev.data.decision,
+                  receivedAt: Date.now(),
+                },
+              },
+            };
+          }
+          return {
+            ...s,
+            rawEvents,
+            approvals: {
+              ...s.approvals,
+              [id]: { ...existing, decision: ev.data.decision },
+            },
           };
         }
 

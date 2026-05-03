@@ -26,6 +26,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import { useChatStore } from "../store/chatStore";
 import type { Message } from "../types";
+import { ApprovalCard } from "./ApprovalCard";
 import ToolCallCard from "./ToolCallCard";
 
 const styles: Record<string, CSSProperties> = {
@@ -120,22 +121,35 @@ function MessageRow({ msg }: { msg: Message }): JSX.Element {
 
 export default function MessageList(): JSX.Element {
   const messages = useChatStore((s) => s.messages);
+  const approvals = useChatStore((s) => s.approvals);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Sort approvals by receivedAt (chronological with messages).
+  const approvalEntries = Object.values(approvals).sort(
+    (a, b) => a.receivedAt - b.receivedAt,
+  );
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length]);
+  }, [messages.length, approvalEntries.length]);
 
   return (
     <div style={styles.list} ref={scrollRef}>
-      {messages.length === 0 ? (
+      {messages.length === 0 && approvalEntries.length === 0 ? (
         <div style={styles.empty}>
           Type a message below to start. Try <code>echo hello</code> in echo_demo
           mode.
         </div>
       ) : (
-        messages.map((m) => <MessageRow key={m.id} msg={m} />)
+        <>
+          {messages.map((m) => (
+            <MessageRow key={m.id} msg={m} />
+          ))}
+          {approvalEntries.map((a) => (
+            <ApprovalCard key={a.approvalRequestId} approvalRequestId={a.approvalRequestId} />
+          ))}
+        </>
       )}
     </div>
   );
