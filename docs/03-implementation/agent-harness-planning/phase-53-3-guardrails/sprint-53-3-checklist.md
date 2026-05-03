@@ -165,11 +165,11 @@
 - [x] **black + isort + flake8 + ruff** _(black formatted 4 files; flake8 silent; ruff All checks passed!)_
 
 ### 3.5 Day 3 commit + push (中間 push 取得 CI 反饋)
-- [ ] **Commit US-4 + US-5 + US-6 partial**
-- [ ] **Push + verify Backend CI green**
+- [x] **Commit US-4 + US-5 + US-6 partial** _(commit `05c93e62`, +1934 lines, 13 files)_
+- [x] **Push + verify Backend CI green** _(bb35d966..05c93e62 pushed; closes #56 + #57; #58 stays open for Day 4 chain_verifier)_
 
 ### 3.6 Day 3 progress.md update
-- [ ] **Append Day 3 progress.md**
+- [x] **Append Day 3 progress.md** _(Day 3 section written: 3 US deliverables + Day 3 baseline→final delta + drift/decisions (audit_log reuse + baggage role + Tripwire disjoint patterns) + estimated/actual table; Day 3 ahead of schedule ~1 hour banked)_
 
 ---
 
