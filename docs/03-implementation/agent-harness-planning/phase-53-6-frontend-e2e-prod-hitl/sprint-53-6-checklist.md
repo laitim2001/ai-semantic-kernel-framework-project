@@ -113,8 +113,8 @@
 
 ### 1.5 Create `.github/workflows/playwright-e2e.yml`
 - [x] **Write workflow per plan §Technical Spec** ✅ paths filter (frontend/** + workflow self) / concurrency group / setup-node@v4 + npm cache / npm ci / actions/cache for `~/.cache/ms-playwright` / install chromium with deps / build / playwright test --reporter=list / upload report on failure (retention 7d)
-- [ ] **Validate workflow YAML on first push** 🚧 deferred to Day 1.7 push (will trigger first run; verify via `gh run list`)
-- [ ] **First push triggers workflow** 🚧 deferred to Day 1.7 push
+- [x] **Validate workflow YAML on first push** ✅ commit `ea6bbbaa` triggered Playwright E2E run #25285348385; YAML parsed cleanly
+- [x] **First push triggers workflow** ✅ Playwright E2E **success in 59s** (chromium install + build + 2 smoke tests)
 
 ### 1.6 Day 1 sanity checks
 - [x] **mypy --strict src/api/v1/chat/sse.py** ✅ Success: no issues found in 1 source file
@@ -124,17 +124,15 @@
 - [x] **Frontend lint + build green** ✅ ESLint clean / build 188.10 KB / 52 modules / 707ms
 
 ### 1.7 Day 1 commit + push + verify CI
-- [ ] **Stage + commit + push**
-  - Verify branch: `git branch --show-current`
-  - Commit: `feat(frontend+sse, sprint-53-6): Day 1 — D2 SSE GuardrailTriggered + US-1 Playwright bootstrap + CI workflow`
-  - Push: `git push`
-- [ ] **Verify Playwright E2E CI runs and passes**
-  - Command: `gh run list --branch feature/sprint-53-6-frontend-e2e-prod-hitl --limit 5`
+- [x] **Stage + commit + push** ✅ commit `ea6bbbaa` (14 files; 3 new + 11 modified) on branch `feature/sprint-53-6-frontend-e2e-prod-hitl`
+- [x] **Verify CI runs and passes** ✅ 3 workflows green:
+  - Backend CI: success in 1m34s
+  - Frontend CI: success in 26s
+  - Playwright E2E (new!): success in 59s
+  - Note: V2 Lint + E2E Tests didn't trigger this push — likely paths filters exclude frontend-heavy commits; will trigger on Day 4 backend US-4/US-5 commits
 
 ### 1.8 Day 1 progress.md update
-- [ ] **Update progress.md with Day 1 actuals**
-  - Commit: `docs(progress, sprint-53-6): Day 1 actuals — D2 + Playwright bootstrap`
-  - Push
+- [x] **Update progress.md with Day 1 actuals** ✅ included in `ea6bbbaa` commit (progress.md updated before commit, batched with code per 53.5 pattern)
 
 ---
 
