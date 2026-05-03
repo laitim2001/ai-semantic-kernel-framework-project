@@ -169,12 +169,12 @@
 - [x] **51.x + 53.1 baseline preserved** _(all integration tests still green)_
 
 ### 3.7 Day 3 commit + push (中間 push 取得 CI 反饋)
-- [ ] **Commit US-5 + US-6 partial**
-- [ ] **Push + verify Backend CI green**
-- [ ] **Close GitHub issue #44**
+- [x] **Commit US-5 + US-6 partial** _(077865b4, +534/-57, 8 files)_
+- [x] **Push + verify Backend CI green** _(success on 077865b4)_
+- [x] **Close GitHub issue #44**
 
 ### 3.8 Day 3 progress.md update
-- [ ] **Append Day 3 progress.md**
+- [x] **Append Day 3 progress.md** _(Day 3 section written: 4 deliverables + drift table + sanity matrix)_
 
 ---
 
