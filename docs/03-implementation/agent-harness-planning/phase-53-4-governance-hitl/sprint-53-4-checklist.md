@@ -11,10 +11,10 @@
 ## Day 0 — Setup + V1 HITL/Risk 探勘 + Baseline (est. 3-4 hours)
 
 ### 0.1 Branch + plan + checklist commit
-- [ ] **Verify on main + clean**
+- [x] **Verify on main + clean**
   - Command: `git status && git branch --show-current` → expects `main` clean
   - DoD: working tree empty
-- [ ] **Create branch + push plan/checklist**
+- [x] **Create branch + push plan/checklist**
   - Command: `git checkout -b feature/sprint-53-4-governance-hitl`
   - Stage: plan + checklist files
   - Commit: `docs(plan, sprint-53-4): plan + checklist for Cat 9 §HITL 中央化 + governance frontend`
@@ -22,41 +22,41 @@
   - DoD: branch on remote with plan + checklist visible
 
 ### 0.2 GitHub issues 建立
-- [ ] **Open 9 issues for US-1 ~ US-9** (or carry-over labels)
+- [x] **Open 9 issues for US-1 ~ US-9** (or carry-over labels)
   - Each issue: title = `Sprint 53.4 US-X: <description>`
   - Labels: `sprint-53-4`, `phase-53`, `governance` / `hitl` / `frontend`
   - Link to plan
   - DoD: 9 issues open
 
 ### 0.3 V1 HITL/Risk 探勘（CRITICAL — 找不到就純新建不假裝遷移）
-- [ ] **grep V1 archive for HITL/Risk modules**
+- [x] **grep V1 archive for HITL/Risk modules**
   - Command: `find archived/v1-phase1-48/backend/src -path '*hitl*' -o -path '*risk*' -o -path '*approval*' -o -path '*governance*' 2>&1 | grep -v __pycache__`
   - DoD: 列出 V1 HITL/Risk 邏輯位置（或確認不存在 → 純新建）
-- [ ] **Document findings in progress.md Day 0**
+- [x] **Document findings in progress.md Day 0**
   - 找到的檔案逐個記錄 + 行數 + 主要 class/function
   - 評估：哪些可遷移、哪些重寫、哪些 V1 邏輯已不適用 V2 多租戶
   - DoD: progress.md Day 0 §V1 探勘結果完整
 
 ### 0.4 V2 既有結構 baseline
-- [ ] **Inspect existing V2 governance + HITL state**
+- [x] **Inspect existing V2 governance + HITL state**
   - Files: `backend/src/agent_harness/hitl/`, `backend/src/agent_harness/_contracts/hitl.py`, `backend/src/agent_harness/tools/hitl_tools.py`, `backend/src/platform_layer/governance/`
   - Record: 各檔案行數、existing ABC 方法簽名、existing tools 行為
   - DoD: 知道哪些是 stub 哪些已可用
 
 ### 0.5 Cat 9 ToolGuardrail Stage 3 stub 位置確認
-- [ ] **grep "ESCALATE" in tool_guardrail.py**
+- [x] **grep "ESCALATE" in tool_guardrail.py**
   - Command: `grep -n "ESCALATE\|stage_3\|stub" backend/src/agent_harness/guardrails/tool/tool_guardrail.py`
   - DoD: 找到 53.3 留下的 ESCALATE branch 位置 + 知道 US-3/US-9 要修哪幾行
 
 ### 0.6 alembic baseline (US-2 prep)
-- [ ] **Verify alembic working state**
+- [x] **Verify alembic working state**
   - Command: `cd backend && alembic current`
   - DoD: alembic CLI 可運行 + 知道當前 migration head
 
 ### 0.7 Day 0 progress.md
-- [ ] **Create `docs/03-implementation/agent-harness-execution/phase-53-4/sprint-53-4-governance-hitl/progress.md`**
-- [ ] **Day 0 sections**: Setup completion / V1 探勘結果 / V2 既有結構 / baseline records
-- [ ] Commit: `docs(progress, sprint-53-4): Day 0 setup + V1 探勘 + baselines`
+- [x] **Create `docs/03-implementation/agent-harness-execution/phase-53-4/sprint-53-4-governance-hitl/progress.md`**
+- [x] **Day 0 sections**: Setup completion / V1 探勘結果 / V2 既有結構 / baseline records
+- [x] Commit: `docs(progress, sprint-53-4): Day 0 setup + V1 探勘 + baselines`
   - Push: `git push`
 
 ---
