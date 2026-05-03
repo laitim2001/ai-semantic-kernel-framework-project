@@ -25,12 +25,6 @@ Created: 2026-04-29 (Sprint 49.1)
 """
 
 from agent_harness._contracts.cache import CachePolicy
-from agent_harness._contracts.errors import (
-    AuthenticationError,
-    ErrorContext,
-    MissingDataError,
-    ToolExecutionError,
-)
 from agent_harness._contracts.chat import (
     CacheBreakpoint,
     ChatRequest,
@@ -44,6 +38,12 @@ from agent_harness._contracts.chat import (
 from agent_harness._contracts.compaction import (
     CompactionResult,
     CompactionStrategy,
+)
+from agent_harness._contracts.errors import (
+    AuthenticationError,
+    ErrorContext,
+    MissingDataError,
+    ToolExecutionError,
 )
 from agent_harness._contracts.events import (
     ApprovalReceived,
