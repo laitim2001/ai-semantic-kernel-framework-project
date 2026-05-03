@@ -9,6 +9,7 @@ Single-source map:
 """
 
 from adapters._base.chat_client import ChatClient
+from adapters._base.circuit_breaker_wrapper import CircuitBreakerWrapper
 from adapters._base.errors import AdapterException, ProviderError
 from adapters._base.pricing import PricingInfo
 from adapters._base.types import ModelInfo, StopReason, StreamEvent
@@ -16,6 +17,7 @@ from adapters._base.types import ModelInfo, StopReason, StreamEvent
 __all__ = [
     "AdapterException",
     "ChatClient",
+    "CircuitBreakerWrapper",
     "ModelInfo",
     "PricingInfo",
     "ProviderError",

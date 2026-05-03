@@ -1,0 +1,38 @@
+# Sprint 53.2 — Cat 8 RetryPolicyMatrix configuration.
+#
+# Keys map to ErrorClass enum values (lowercase). Per-tool overrides
+# take precedence over `defaults`. Anything unspecified falls back to
+# Cat 8 spec defaults baked into retry.py.
+#
+# Authority: 01-eleven-categories-spec.md §範疇 8 RetryPolicy.
+
+defaults:
+  transient:
+    max_attempts: 3
+    backoff_base: 1.0
+    backoff_max: 30.0
+    jitter: true
+  llm_recoverable:
+    max_attempts: 2
+    backoff_base: 0.5
+    backoff_max: 5.0
+    jitter: false
+  hitl_recoverable:
+    max_attempts: 0
+    backoff_base: 0.0
+    backoff_max: 0.0
+    jitter: false
+  fatal:
+    max_attempts: 0
+    backoff_base: 0.0
+    backoff_max: 0.0
+    jitter: false
+
+per_tool:
+  # Example: Salesforce queries are more 503-prone; allow more retries.
+  salesforce_query:
+    transient:
+      max_attempts: 5
+      backoff_base: 1.0
+      backoff_max: 60.0
+      jitter: true

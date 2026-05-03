@@ -1,0 +1,17 @@
+# Sprint 53.2 — Cat 8 TenantErrorBudget configuration.
+#
+# Defaults apply to every tenant unless overridden in `per_tenant`.
+# UUID strings should match the `tenant_id` column in the `tenants` table.
+#
+# Authority: 01-eleven-categories-spec.md §Cat 8 ErrorBudget +
+# multi-tenant-data.md.
+
+defaults:
+  max_per_day: 1000
+  max_per_month: 20000
+
+per_tenant:
+  # Example: bump limits for an internal-test tenant
+  # 00000000-0000-0000-0000-000000000001:
+  #   max_per_day: 5000
+  #   max_per_month: 100000

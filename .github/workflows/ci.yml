@@ -207,7 +207,13 @@ jobs:
     name: Build Docker Images
     runs-on: ubuntu-latest
     needs: [test, frontend-test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Sprint 53.2 US-8 (AD-CI-1): skip when backend/Dockerfile missing —
+    # V1 Dockerfile was archived in Sprint 49.1; V2 Dockerfile lands per
+    # issue #31 (deferred from 53.x infra track). Until then, this job
+    # would always fail with "open Dockerfile: no such file or directory"
+    # and turn main HEAD CI Pipeline red on every merge. The hashFiles()
+    # guard makes the job conditionally skip rather than fail.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && hashFiles('backend/Dockerfile') != ''
 
     steps:
       - name: Checkout code

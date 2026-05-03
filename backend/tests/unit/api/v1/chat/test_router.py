@@ -220,12 +220,6 @@ class TestMultiTenantIsolation:
         assert entry.status == "running"
         assert entry.cancel_event.is_set() is False
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason="Order-dependent: passes in isolation, fails in full suite "
-        "(suspected fixture/registry leak). Sprint 53.1 #27 reactivation found "
-        "flakiness; tracked in #38 for 53.x investigation.",
-    )
     def test_two_tenants_can_have_same_session_id_via_separate_clients(self, app: FastAPI) -> None:
         """Two tenants run chats with the SAME generated session_id but stays isolated."""
         tenant_a = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
@@ -259,10 +253,15 @@ class TestMultiTenantIsolation:
 
         # Both tenants now have an entry under same forced_sid.
         reg = get_default_registry()
-        # Use sync helper-via-asyncio since conftest may not export one
+        # Sprint 53.2 US-7 fix: use asyncio.run() per call to spawn a fresh
+        # event loop. The previous `asyncio.get_event_loop().run_until_complete`
+        # was fragile in full-suite runs (after async tests close their loops,
+        # get_event_loop returns a closed/stale loop in pytest-asyncio AUTO
+        # mode under Python 3.12+). asyncio.run is the supported pattern for
+        # running a single async call from sync code.
         import asyncio
 
-        a_entry = asyncio.get_event_loop().run_until_complete(reg.get(tenant_a, forced_sid))
-        b_entry = asyncio.get_event_loop().run_until_complete(reg.get(tenant_b, forced_sid))
+        a_entry = asyncio.run(reg.get(tenant_a, forced_sid))
+        b_entry = asyncio.run(reg.get(tenant_b, forced_sid))
         assert a_entry is not None and b_entry is not None
         assert a_entry is not b_entry  # independent entries

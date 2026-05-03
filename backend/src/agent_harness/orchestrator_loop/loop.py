@@ -111,6 +111,7 @@ from agent_harness._contracts import (
     LoopEvent,
     LoopStarted,
     LoopState,
+    LoopTerminated,
     Message,
     PromptBuilt,
     SpanCategory,
@@ -125,6 +126,15 @@ from agent_harness._contracts import (
     TurnStarted,
 )
 from agent_harness.context_mgmt import Compactor
+from agent_harness.error_handling import (
+    DefaultCircuitBreaker,
+    DefaultErrorTerminator,
+    ErrorClass,
+    ErrorPolicy,
+    RetryPolicyMatrix,
+    TenantErrorBudget,
+)
+from agent_harness.error_handling import TerminationReason as Cat8TerminationReason
 from agent_harness.observability import NoOpTracer, Tracer
 from agent_harness.output_parser import OutputParser, OutputType, classify_output
 from agent_harness.prompt_builder import PromptBuilder
@@ -160,6 +170,11 @@ class AgentLoopImpl(AgentLoop):
         reducer: Reducer | None = None,
         checkpointer: Checkpointer | None = None,
         tenant_id: UUID | None = None,
+        error_policy: ErrorPolicy | None = None,
+        retry_policy: RetryPolicyMatrix | None = None,
+        circuit_breaker: DefaultCircuitBreaker | None = None,
+        error_budget: TenantErrorBudget | None = None,
+        error_terminator: DefaultErrorTerminator | None = None,
     ) -> None:
         self._chat_client = chat_client
         self._output_parser = output_parser
@@ -188,6 +203,64 @@ class AgentLoopImpl(AgentLoop):
         self._reducer = reducer
         self._checkpointer = checkpointer
         self._tenant_id = tenant_id
+        # 53.2 Day 3 Cat 8 integration: 5 opt-in deps. When any is None
+        # the corresponding Cat 8 path is skipped (preserves 53.1
+        # baseline). Day 4 wires `_handle_tool_error` into the main tool
+        # execution path. Until then the helper exists but is unused —
+        # explicitly opt-in via constructor.
+        self._error_policy = error_policy
+        self._retry_policy = retry_policy
+        self._circuit_breaker = circuit_breaker
+        self._error_budget = error_budget
+        self._error_terminator = error_terminator
+
+    async def _handle_tool_error(
+        self,
+        *,
+        error: BaseException,
+        tool_name: str,
+        attempt_num: int,
+        state_version: int | None,
+        trace_context: TraceContext,
+    ) -> tuple[bool, ErrorClass | None, Cat8TerminationReason | None, str | None]:
+        """Cat 8 chain: classify → record budget → check terminator.
+
+        Day 3 helper (Day 4 wires into main loop). Returns:
+            (should_terminate, error_class, termination_reason, detail)
+
+        When Cat 8 deps are None, returns (False, None, None, None) — caller
+        re-raises (preserves 53.1 behavior).
+        """
+        if self._error_policy is None:
+            return False, None, None, None
+
+        from agent_harness._contracts.errors import ErrorContext
+
+        # 1. Classify
+        cls = self._error_policy.classify(error)
+
+        # 2. Record budget (skip FATAL — bug, not tenant-attributable)
+        if self._error_budget is not None and self._tenant_id is not None:
+            await self._error_budget.record(self._tenant_id, cls)
+
+        # 3. Check terminator
+        if self._error_terminator is not None and self._tenant_id is not None:
+            decision = await self._error_terminator.evaluate(
+                error=error,
+                error_class=cls,
+                context=ErrorContext(
+                    source_category="tools",
+                    tool_name=tool_name,
+                    attempt_num=attempt_num,
+                    state_version=state_version,
+                    tenant_id=self._tenant_id,
+                ),
+                tenant_id=self._tenant_id,
+            )
+            if decision.terminate:
+                return True, cls, decision.reason, decision.detail
+
+        return False, cls, None, None
 
     async def run(
         self,
@@ -464,6 +537,69 @@ class AgentLoopImpl(AgentLoop):
                             trace_context=ctx,
                         )
                         raise
+                    except Exception as exc:
+                        # 53.2 Day 4 Cat 8 chain: classify → record budget →
+                        # check terminator. When Cat 8 deps None → re-raise
+                        # (preserves 53.1 baseline).
+                        terminate, _err_class, term_reason, term_detail = (
+                            await self._handle_tool_error(
+                                error=exc,
+                                tool_name=tc.name,
+                                attempt_num=1,
+                                state_version=None,
+                                trace_context=ctx,
+                            )
+                        )
+                        if self._error_policy is None:
+                            # Opt-out path: no Cat 8 deps → preserve 53.1 raise behavior
+                            raise
+                        if terminate:
+                            yield LoopTerminated(
+                                reason=(term_reason.value if term_reason is not None else ""),
+                                detail=term_detail,
+                                last_state_version=None,
+                                trace_context=ctx,
+                            )
+                            return
+                        # Synthesize LLM-recoverable error ToolResult so the
+                        # LLM sees the failure on next turn and can self-correct
+                        # (Cat 8 §LLM-recoverable; Anthropic / LangGraph pattern).
+                        from agent_harness._contracts import ToolResult
+
+                        result = ToolResult(
+                            tool_call_id=tc.id,
+                            tool_name=tc.name,
+                            content=f"Error: {exc!r}. Please adjust your approach.",
+                            success=False,
+                            error=repr(exc),
+                            duration_ms=0.0,
+                        )
+
+                    # 53.2 Day 4 Cat 8 chain on soft failure: ToolExecutorImpl
+                    # catches handler exceptions internally → ToolResult(success=
+                    # False). Reconstruct a synthetic exception so the Cat 8
+                    # chain can classify + check terminator. When deps None →
+                    # fall through to existing 53.1 baseline (LLM-recoverable
+                    # via tool message).
+                    if not result.success and self._error_policy is not None:
+                        synthetic = Exception(result.error or "tool soft failure")
+                        terminate, _err_class, term_reason, term_detail = (
+                            await self._handle_tool_error(
+                                error=synthetic,
+                                tool_name=tc.name,
+                                attempt_num=1,
+                                state_version=None,
+                                trace_context=ctx,
+                            )
+                        )
+                        if terminate:
+                            yield LoopTerminated(
+                                reason=(term_reason.value if term_reason is not None else ""),
+                                detail=term_detail,
+                                last_state_version=None,
+                                trace_context=ctx,
+                            )
+                            return
 
                     # Feed back as tool message — KEY V2 cure for AP-1.
                     tool_content = self._tool_result_to_text(result.content)

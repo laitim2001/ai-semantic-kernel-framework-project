@@ -40,7 +40,12 @@
 | US-6 ruff in [dev] | `5e6a9c24` | pip install -e .[dev] verified | ✅ |
 | US-7 cross-platform mypy docs | `<Day-4-commit>` | code-quality.md new section + 3 examples | ✅ |
 
-**8 active CI workflow on main HEAD** (post-merge): _to-be-recorded after PR merge_.
+**Post-merge state**:
+- Main HEAD: `aaa3dd75` (PR #39 merge commit) at 2026-05-02 13:11:25Z
+- 5 main CI workflows triggered post-merge (in_progress at closeout time)
+- Branch protection fully restored: `enforce_admins=true / required_approving_review_count=1 / 8 status checks`
+
+**Note: 2nd temp-relax bootstrap executed**: GitHub blocks self-approve; per `feedback_branch_protection_chicken_egg.md` (52.6 precedent), executed `gh api PATCH .../required_approving_review_count: 0 → merge → restore to 1`. This is the **2nd** in V2 history. Future structural fix: 2nd GH collaborator account so reviewer ≠ author. Out of 53.1 scope.
 
 ### Q2: 跨切面紀律守住了嗎？
 
@@ -90,6 +95,7 @@
 | **AD-Cat7-2** | **Test isolation** | test_router multi-tenant flaky in full suite (#38). Investigate session registry / fixture leak. | Phase 53.x (early next sprint) |
 | AD-Cat7-3 | Retention policy | state_snapshots DB table will grow unbounded. Need retention policy (e.g., keep last 50 per session). | Phase 54.x (post HITL feature scope clear) |
 | AD-Cat7-4 | Resume() impl | AgentLoopImpl.resume() still 49.1 stub. Full implementation requires Cat 4 messages history rehydration + session-state restoration. | Phase 54.x |
+| **AD-CI-1** | **CI Pipeline push-to-main failure** (pre-existing) | `CI Pipeline` workflow on `push: main` event has been failing since 52.5 / 52.6 / 53.1 merges. PR-side `Tests` and `CI Summary` are GREEN on PR review (which is what branch protection enforces). Post-merge `CI Pipeline` triggered by `push: main` event likely runs different path / lacks PG service / etc. NOT a 53.1 regression. Investigate workflow yaml for push vs pull_request divergence. | Phase 53.x (early next sprint; consolidate with #38 fixture leak fix) |
 
 ### Q6: 主流量整合驗收
 

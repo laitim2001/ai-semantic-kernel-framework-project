@@ -39,6 +39,12 @@ from agent_harness._contracts.compaction import (
     CompactionResult,
     CompactionStrategy,
 )
+from agent_harness._contracts.errors import (
+    AuthenticationError,
+    ErrorContext,
+    MissingDataError,
+    ToolExecutionError,
+)
 from agent_harness._contracts.events import (
     ApprovalReceived,
     ApprovalRequested,
@@ -50,6 +56,7 @@ from agent_harness._contracts.events import (
     LoopCompleted,
     LoopEvent,
     LoopStarted,
+    LoopTerminated,
     MemoryAccessed,
     MetricRecorded,
     PromptBuilt,
@@ -117,6 +124,11 @@ __all__ = [
     "CompactionResult",
     # cache (Cat 4)
     "CachePolicy",
+    # errors (Cat 8)
+    "ErrorContext",
+    "AuthenticationError",
+    "MissingDataError",
+    "ToolExecutionError",
     # tools
     "ToolSpec",
     "ToolResult",
@@ -145,6 +157,7 @@ __all__ = [
     "PromptBuilt",
     "StateCheckpointed",
     "ErrorRetried",
+    "LoopTerminated",
     "GuardrailTriggered",
     "TripwireTriggered",
     "VerificationPassed",
