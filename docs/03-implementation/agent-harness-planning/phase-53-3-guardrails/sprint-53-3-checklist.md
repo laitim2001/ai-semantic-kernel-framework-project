@@ -124,11 +124,12 @@
 - [x] **black/isort/flake8/ruff** _(black formatted 4 files; isort idempotent; flake8 silent; ruff All checks passed!)_
 
 ### 2.6 Day 2 commit + push + verify CI
-- [ ] **Commit US-2 finish + US-3**
-- [ ] **Push + verify Backend CI green**
-- [ ] **Close GitHub issues #54 + #55**
+- [x] **Commit US-2 finish + US-3** _(commit `5b951bff`, +1712/-37, 14 files)_
+- [x] **Push + verify Backend CI green** _(7383569f..5b951bff pushed; Backend CI in progress on push)_
+- [x] **Close GitHub issues #54 + #55** _(both closed via `gh issue close` with verification comments)_
 
 ### 2.7 Day 2 progress.md update
+- [x] **Append Day 2 progress.md** _(Day 2 section written: 3 US deliverables + Day 2 baseline→final delta + drift/decisions + estimated/actual table; Day 2 on schedule ~6.5 hours)_
 
 ---
 
