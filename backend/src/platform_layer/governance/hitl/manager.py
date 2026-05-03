@@ -49,7 +49,7 @@ from agent_harness._contracts.hitl import (
     RiskLevel,
 )
 from agent_harness._contracts.observability import TraceContext
-from agent_harness.hitl._abc import HITLManager
+from agent_harness.hitl import HITLManager
 from infrastructure.db.models.governance import Approval
 from infrastructure.db.models.sessions import Session as SessionModel
 from platform_layer.governance.hitl.state_machine import (

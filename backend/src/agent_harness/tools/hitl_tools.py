@@ -48,7 +48,7 @@ from agent_harness._contracts import (
     ToolHITLPolicy,
     ToolSpec,
 )
-from agent_harness.hitl._abc import HITLManager
+from agent_harness.hitl import HITLManager
 
 ToolHandler = Callable[[ToolCall], Awaitable[str]]
 
