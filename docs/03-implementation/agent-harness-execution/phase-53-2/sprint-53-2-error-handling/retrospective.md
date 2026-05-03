@@ -160,4 +160,35 @@ Cat 8 ABC implementations now production-ready. Phase 53.3 (Cat 9 Guardrails) ca
 
 ---
 
+## Follow-up — Sprint 53.2.5 (CI carryover)
+
+**Added**: 2026-05-03 (post-PR #48 merge same day)
+
+53.2 Audit Debt §Q5 列出 AD-CI-2 + AD-CI-3 為 53.x carryover；Sprint 53.2.5 Day 0 investigation 顛覆原診斷：
+
+- **AD-CI-3 root cause 不是 trigger semantics**（原診斷推測 push/pull_request filter 設定錯）
+- **真實根因**：`.github/workflows/ci.yml` workflow 在 GitHub Actions 以 broken state 註冊 since 2026-04-10 — workflow API `name` 欄位返回檔案路徑 (`.github/workflows/ci.yml`) 而非 `name: CI Pipeline` (line 14 設的 display name)；25/25 main runs all failed with 0 jobs
+- **AD-CI-1** 觀察的 `since 0ec64c77` (2026-05-01) 不是 root cause start，是 reviewer 注意到的時點
+- **53.2 US-8 hashFiles guard 不夠**：只對應 Build Docker job 的失敗，但 workflow 自身 broken at registration level
+
+### Sprint 53.2.5 Resolution
+
+- **Action**: archive entire ci.yml（`git rm`；單檔變更同時解 AD-CI-2 + AD-CI-3）
+- **Justification**: ci.yml 5 jobs 全與 backend-ci.yml + frontend-ci.yml 重複（V1 monolithic CI；d5352359 拆分後即為 zombie）
+- **4 dropped checks (Code Quality / Tests / Frontend Tests / CI Summary)**: permanently drop（duplicates，**非降級**；其他 4 active checks 已涵蓋同等驗證）
+- **Branch protection**: 不需 PATCH（4 active checks 已正確配置）
+- **Sprint**: 53.2.5（V2 14/22 主進度不變；carryover bundle）
+
+詳見 [sprint-53-2-5-plan.md](../../../agent-harness-planning/phase-53-2-error-handling/sprint-53-2-5-plan.md)。
+
+### Lesson Update
+
+| 53.2 Retro 原 lesson | 53.2.5 update |
+|------|------|
+| AD-CI-3 視為 trigger semantics 問題 | 真因是 GitHub Actions cache 之 broken parse state |
+| 4 dropped checks "restore after AD-CI-3 fix" | permanently dropped — they were duplicates |
+| AD-CI-1 since 0ec64c77 (2026-05-01) | 真實 first failure since 2026-04-10（fail history > AD-CI-1 觀察日期） |
+
+---
+
 **權威排序**：本 retrospective 對齊 [sprint-53-2-plan.md](../../../agent-harness-planning/phase-53-2-error-handling/sprint-53-2-plan.md) §Retrospective 必答 6 條 + Sprint 53.1 retrospective format.

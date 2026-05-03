@@ -15,40 +15,40 @@
 - [x] **Identify d5352359 as workflow split commit** _(backend-ci.yml + frontend-ci.yml introduced; ci.yml became zombie thereafter)_
 
 ### 0.2 Branch + plan + checklist commit
-- [ ] **Verify on main + clean working tree** _(HEAD a77878ad)_
-- [ ] **Create feature branch** _(`git checkout -b chore/sprint-53-2-5-ci-carryover`)_
-- [ ] **Verify phase folder structure exists** _(planning + execution dirs for sprint-53-2-5)_
-- [ ] **Commit Day 0 plan + checklist** _(commit message: `docs(closeout, sprint-53-2-5): plan + checklist for CI carryover (AD-CI-2 + AD-CI-3 + 4-checks resolution)`)_
+- [x] **Verify on main + clean working tree** _(HEAD a77878ad)_
+- [x] **Create feature branch** _(`chore/sprint-53-2-5-ci-carryover` created off a77878ad)_
+- [x] **Verify phase folder structure exists** _(planning dir already exists; execution dir mkdir'd `sprint-53-2-5-ci-carryover/`)_
+- [x] **Commit Day 0 plan + checklist + progress.md** _(commit `31034b18`; 3 files / 474 insertions)_
 
 ### 0.3 GitHub issues
-- [ ] **Create issue #49 (or next available) — AD-CI-3 closure tracking** _(label sprint-53-2-5; link 53.2 #46 + this plan)_
-- [ ] **Comment on existing #46 (53.2 US-8 AD-CI-1)** _(note: superseded by #49 / 53.2.5 — original "fix Build Docker job" was insufficient because workflow itself broken at registration)_
+- [x] **Create issue #49 — AD-CI-3 closure tracking** _(labels: sprint-53-2-5, ci-infrastructure, audit-carryover; new labels created)_
+- [x] **Comment on existing #46 (53.2 US-8 AD-CI-1)** _(already CLOSED state from 53.2 PR #48 ref; comment 4365932527 marks superseded by #49)_
 
 ### 0.4 Day 0 progress.md
-- [ ] **Write Day 0 progress.md** _(mkdir docs/03-implementation/agent-harness-execution/phase-53-2/sprint-53-2-5-ci-carryover/; document investigation findings)_
+- [x] **Write Day 0 progress.md** _(written with 3 investigation findings + decision rationale + Day 1 next list)_
 
 ---
 
 ## Day 1 — Archive + Verify + Close (est. 3 hours)
 
 ### 1.1 Delete ci.yml
-- [ ] **Run `git rm .github/workflows/ci.yml`** _(verify file removed from working tree + index)_
-- [ ] **Verify no other file references ci.yml** _(`grep -r "ci.yml" .github/ docs/ 2>&1 | grep -v "node_modules"` — expect only sprint docs)_
-- [ ] **Commit deletion** _(message: `chore(ci, sprint-53-2-5): archive redundant ci.yml — solves AD-CI-2 + AD-CI-3 (V1 monolithic CI; backend-ci.yml + frontend-ci.yml replaced it d5352359; 25/25 main runs failed since 2026-04-10 due to broken workflow registration)`)_
+- [x] **Run `git rm .github/workflows/ci.yml`** _(file removed; -277 lines; commit `8d45cdc9`)_
+- [x] **Verify no other file references ci.yml** _(grep result: only historical V1 sprint planning docs + 53.2 plan US-8 historical mention; no active dependency)_
+- [x] **Commit deletion** _(commit `8d45cdc9`; full message includes investigation findings + redundancy table + no-regression rationale)_
 
 ### 1.2 Update 13-deployment-and-devops.md
-- [ ] **Locate §Branch Protection changelog section** _(if absent, create at end of doc)_
-- [ ] **Add 2026-05-03 Sprint 53.2.5 entry** _(per plan §Doc updates 範本)_
-- [ ] **Commit** _(message: `docs(deployment, sprint-53-2-5): branch protection changelog — ci.yml archived + 4 dropped checks permanent (redundant)`)_
+- [x] **Locate §Branch Protection section** _(line 121-200; updated subsections: §必選 Status Checks → 4 active + new §Permanently Dropped; §必選 Options → review_count 1→0 entry; §gh api → updated command + future un-do snippet)_
+- [x] **Add 2026-05-03 Sprint 53.2.5 entry** _(new §Changelog subsection with 3-row table: 52.6 baseline / 53.2 review_count change / 53.2.5 ci.yml archive)_
+- [ ] **Commit (batched)** _(will be combined with 1.3+1.4 docs commit)_
 
 ### 1.3 Update 53.2 retrospective.md
-- [ ] **Add follow-up entry at end of retrospective.md** _(point to 53.2.5 plan; note AD-CI-2 + AD-CI-3 root cause turned out to be workflow registration not trigger semantics)_
-- [ ] **Commit** _(message: `docs(closeout, sprint-53-2): follow-up entry pointing to 53.2.5 (AD-CI-3 actually broken workflow registration, not trigger config)`)_
+- [x] **Add follow-up entry at end of retrospective.md** _(new §Follow-up — Sprint 53.2.5 with investigation findings + resolution + lesson update table)_
+- [ ] **Commit (batched)** _(combined with 1.2+1.4)_
 
 ### 1.4 Update memory files
-- [ ] **Update `feedback_branch_protection_solo_dev_policy.md`** _(line 62 "4 CI Pipeline checks ... AD-CI-3 trigger issue; restore after fix" → rewrite to "permanently dropped because ci.yml archived in Sprint 53.2.5 as redundant")_
-- [ ] **Create `project_phase53_2_5_ci_carryover.md`** _(memory file with sprint outcome summary)_
-- [ ] **Update `MEMORY.md`** _(add line: `- [project_phase53_2_5_ci_carryover.md](project_phase53_2_5_ci_carryover.md) — Sprint 53.2.5 ✅ COMPLETE 2026-05-03: archived redundant ci.yml workflow; AD-CI-2 + AD-CI-3 closed; 4 dropped checks permanent (redundant); V2 14/22 unchanged (carryover bundle)`)_
+- [x] **Update `feedback_branch_protection_solo_dev_policy.md`** _(line 62 changed: "temporarily dropped ... restore after fix" → "permanently dropped ... not regression — duplicates removed")_
+- [x] **Create `project_phase53_2_5_ci_carryover.md`** _(60+ lines memory; investigation findings + resolution + sprint workflow compliance + methodology demonstration)_
+- [x] **Update `MEMORY.md`** _(new line under project section after 53.2 entry)_
 
 ### 1.5 Push + open PR
 - [ ] **Push branch to origin** _(`git push -u origin chore/sprint-53-2-5-ci-carryover`)_
