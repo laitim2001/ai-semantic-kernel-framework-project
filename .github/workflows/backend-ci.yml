@@ -1,3 +1,16 @@
+# Backend CI workflow.
+#
+# Triggers (since Sprint 53.2.5):
+#   - backend/** changes (any backend code/tests/configs)
+#   - .github/workflows/** changes (any workflow file edit re-validates)
+#
+# Known limitation: docs-only / .gitignore-only PRs DO NOT trigger this
+# workflow, leading to BLOCKED mergeStateStatus when "Lint + Type Check +
+# Test (with PostgreSQL 16)" is in branch protection required_status_checks.
+# Workaround: trivially touch a workflow file (e.g., this header comment)
+# in the PR to re-trigger. Long-term: revisit required_status_checks
+# strategy to allow conditional checks.
+
 name: Backend CI
 
 on:
