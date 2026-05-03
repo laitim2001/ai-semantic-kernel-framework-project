@@ -11,72 +11,88 @@
 ## Day 0 — Setup + Playwright 探勘 + Chat Router HITL Wiring 探勘 + 53.5 Components Verify (est. 2-3 hours)
 
 ### 0.1 Branch + plan + checklist commit
-- [ ] **Verify on main + clean**
+- [x] **Verify on main + clean** ✅ pre-branch only `phase-53-6-*/` untracked
   - Command: `git status && git branch --show-current` → expects `main` clean
-  - DoD: working tree empty
-- [ ] **Create branch + push plan/checklist**
+  - DoD: working tree empty (untracked plan dir is the new sprint files only)
+- [x] **Create branch + push plan/checklist** ✅ commit `10ab34a6`
   - Command: `git checkout -b feature/sprint-53-6-frontend-e2e-prod-hitl`
   - Stage: plan + checklist files
   - Commit: `docs(plan, sprint-53-6): plan + checklist for frontend e2e + production HITL wiring`
   - Push: `git push -u origin feature/sprint-53-6-frontend-e2e-prod-hitl`
-  - DoD: branch on remote with plan + checklist visible
+  - DoD: branch on remote with plan + checklist visible (set up to track origin)
 
 ### 0.2 Playwright 探勘（US-1 prep — CRITICAL，53.5 Day 0 已確認未安裝）
-- [ ] **Re-confirm Playwright not installed**
+- [x] **Re-confirm Playwright not installed** ✅ `grep -i playwright frontend/package.json` → 0 matches
   - Command: `cd frontend && cat package.json | grep -i playwright`
   - DoD: 確認 @playwright/test 不在 devDependencies
-- [ ] **Decide local install path**
-  - Command: dry-run `npm install -D @playwright/test --dry-run`
+- [x] **Decide local install path** ✅ Day 1 will run `npm install -D @playwright/test` then `npx playwright install chromium` (~300MB)
   - Note: Day 1 才實際 install + browser download (~300MB)
   - DoD: 確認 npm registry 可達 + 預估安裝時間
-- [ ] **Inspect existing CI workflow shape (參考 backend-ci.yml + frontend-ci.yml)**
-  - Files: `.github/workflows/backend-ci.yml`, `.github/workflows/frontend-ci.yml`
-  - Note: paths-filter pattern + concurrency group + setup-node steps（用作 playwright-e2e.yml 的 template）
+- [x] **Inspect existing CI workflow shape** ✅ `frontend-ci.yml` 49 lines as template
+  - Files: `.github/workflows/frontend-ci.yml`
+  - Pattern: setup-node@v4 + cache npm + paths filter + lint + build steps；reuse for playwright-e2e.yml
   - DoD: 知道新 workflow 該複用哪些既有 pattern
 
 ### 0.3 Chat Router HITL Wiring 探勘（US-4 prep）
-- [ ] **Locate AgentLoopImpl construction site in chat router**
-  - Command: `grep -n "AgentLoopImpl\|AgentLoop(\|hitl_manager" backend/src/api/v1/chat/router.py`
+- [x] **Locate AgentLoopImpl construction sites in chat handler** ✅ `handler.py` line 102 (echo_demo) + line 138 (real_llm)
+  - Both ctor calls do NOT pass `hitl_manager` → confirms AD-Front-2 gap
+  - Command: `grep -n "AgentLoopImpl\|hitl_manager" backend/src/api/v1/chat/handler.py`
   - DoD: 找到 ctor 呼叫位置 + 確認 hitl_manager 目前是否傳入（預期：未傳）
-- [ ] **Verify ServiceFactory 是否已存在或需新建**
+- [x] **Verify ServiceFactory 是否已存在或需新建** ✅ NOT EXIST → US-5 全新建
   - Command: `find backend/src/platform_layer/governance -name "service_factory.py"`
   - DoD: 知道 US-5 是新建還是擴充
-- [ ] **Inspect existing api/dependencies.py DI patterns**
-  - File: `backend/src/api/dependencies.py`
-  - Note: 既有 `get_current_tenant`、`require_*_role`；新加 `get_service_factory` 應一致 pattern
+- [x] **Inspect existing DI patterns** ✅ Single-source = `platform_layer/identity/auth.py` (5 deps); `api/dependencies.py` does NOT exist (D1)
+  - File: `backend/src/platform_layer/identity/auth.py` (canonical DI dep file per 53.5)
+  - Existing deps: get_current_tenant / get_current_user_id / require_audit_role / require_approver_role / _require_role
+  - Decision deferred to Day 4 code phase: `get_service_factory` lands in identity/auth.py OR new dedicated file
   - DoD: DI 注入模式清楚
 
 ### 0.4 53.5 Frontend Components Verify（US-2 + US-3 prep）
-- [ ] **Verify governance components exist + render**
+- [x] **Verify governance components exist** ✅ ApprovalsPage / ApprovalList / DecisionModal 3 files present
   - Files: `frontend/src/features/governance/components/{ApprovalsPage.tsx, ApprovalList.tsx, DecisionModal.tsx}`
-  - Command: `cd frontend && npm run dev` → manual visit `http://localhost:5173/governance/approvals` → screenshot
-  - DoD: 53.5 components 可 render（即便沒資料也要顯示「No pending approvals」空 state）
-- [ ] **Verify ChatV2 ApprovalCard wired to store**
-  - Files: `frontend/src/features/chat_v2/components/ApprovalCard.tsx`, `MessageList.tsx`, `store/chatStore.ts`
-  - Command: `grep -n "approval_requested\|approval_received\|approvals" frontend/src/features/chat_v2/store/chatStore.ts`
+  - DoD: 53.5 components 可 render（visual smoke deferred to Day 1 when dev server starts for Playwright config）
+- [x] **Verify ChatV2 ApprovalCard wired to store** ✅
+  - chatStore.ts line 55 (approvals slice) + lines 197 (approval_requested case) + 217 (approval_received case)
   - DoD: 確認 store slice + SSE event handler 已 wired
-- [ ] **Verify backend routes (governance + audit + chat) 全 mounted**
-  - Command: `python -m uvicorn src.api.main:app --port 8000 --reload &` → `curl http://localhost:8000/api/v1/governance/approvals -H "Authorization: Bearer $TEST_JWT"`
-  - DoD: routes 200/401（取決於 JWT）；非 404
-  - 注意：完成後 kill backend process
+- [x] **Verify backend routes (governance + audit + chat) 全 mounted** ✅
+  - api/main.py lines 95-98: health / chat / audit / governance 4 routers mounted at `/api/v1`
+  - DoD: routes mounted; live HTTP smoke deferred to US-4 integration test (avoids spinning uvicorn now)
 
 ### 0.5 SSE serializer scope check（per `feedback_sse_serializer_scope_check.md`）
-- [ ] **Grep new LoopEvent emissions in this sprint scope**
-  - Note: 53.6 不新增 LoopEvent type，預期 0 new；仍跑檢核維持紀律
+- [x] **Grep new LoopEvent emissions + check 53.5 events** ✅ 11 isinstance branches in sse.py
+  - 53.5 ApprovalRequested (line 198) + ApprovalReceived (line 209) preserved ✅
+  - 🚨 **CRITICAL D2**: `GuardrailTriggered` yielded **7×** in loop.py (lines 356/430/498/534/599/629/651) but **NO isinstance branch in sse.py**
+  - Pre-existing bug from 53.3 (escaped 53.4 + 53.5 because chat router never wired guardrails); will crash production once US-4 wires hitl_manager
+  - **Action**: Add to Day 1 scope as pre-Playwright fix (1 isinstance branch + 3 SSE serializer tests, ~1.5 hr); blocks US-2/US-3 e2e specs
   - Command: `grep -n "isinstance(event," backend/src/api/v1/chat/sse.py`
-  - DoD: 確認 53.5 加入的 ApprovalRequested + ApprovalReceived 仍在 sse.py（不被 regression 拿掉）
 
 ### 0.6 Day 0 progress.md
-- [ ] **Create `docs/03-implementation/agent-harness-execution/phase-53-6/sprint-53-6-frontend-e2e-prod-hitl/progress.md`**
-- [ ] **Day 0 sections**: Setup completion / Playwright readiness / Chat router探勘 / 53.5 components verify / drift summary
-- [ ] Commit: `docs(progress, sprint-53-6): Day 0 setup + Playwright/chat-router/components探勘`
+- [x] **Create progress.md** ✅
+  - Path: `docs/03-implementation/agent-harness-execution/phase-53-6/sprint-53-6-frontend-e2e-prod-hitl/progress.md`
+- [x] **Day 0 sections written**: Setup completion / Playwright readiness / Chat router 探勘 / 53.5 components verify / drift D1-D8 / time banking / next (Day 1)
+- [ ] **Commit + push Day 0 progress + checklist updates**
+  - Commit: `docs(progress, sprint-53-6): Day 0探勘 + drift D1-D8 (incl. critical D2 SSE GuardrailTriggered gap)`
   - Push: `git push`
 
 ---
 
-## Day 1 — US-1 Playwright Bootstrap + Smoke Spec + CI Workflow (est. 4-5 hours)
+## Day 1 — D2 SSE Serializer Fix + US-1 Playwright Bootstrap + Smoke Spec + CI Workflow (est. 5-7 hours)
 
-### 1.1 Install Playwright + chromium browser
+### 1.0 D2 SSE Serializer GuardrailTriggered Fix (UNPLANNED — Day 0 探勘 finding)
+- [ ] **Add `GuardrailTriggered` isinstance branch in `backend/src/api/v1/chat/sse.py`**
+  - Wire-format type: `"guardrail_triggered"`
+  - Payload: action / reason / detector / severity / category (per `agent_harness/_contracts/events.py:225` GuardrailTriggered fields)
+  - Update Modification History with Sprint 53.6 D2 entry
+  - DoD: serialize_loop_event(GuardrailTriggered(...)) returns dict, no NotImplementedError
+- [ ] **Add 3 SSE serializer test cases in `tests/unit/api/v1/chat/test_sse.py`**
+  - test_guardrail_triggered_input (Stage 1 PII detection)
+  - test_guardrail_triggered_output (Stage 2 jailbreak detection)
+  - test_guardrail_triggered_escalate_block (Stage 3 reject/escalate/timeout block path)
+  - DoD: 3 cases green; full test_sse.py suite (existing 17 + 3 new = 20) passing
+  - Verify: `python -m pytest tests/unit/api/v1/chat/test_sse.py -v`
+- [ ] **Update `frontend/src/features/chat_v2/types.ts` if frontend needs awareness**
+  - Decision: Add `GuardrailTriggeredEvent` to LoopEvent union + `"guardrail_triggered"` to KNOWN_LOOP_EVENT_TYPES (defensive — even if no UI yet, prevents type-narrowing breakage if event reaches frontend)
+  - DoD: typecheck green
 - [ ] **`npm install -D @playwright/test` in `frontend/`**
   - Command: `cd frontend && npm install -D @playwright/test`
   - DoD: package.json devDependencies 含 `@playwright/test`; package-lock.json updated
