@@ -38,23 +38,23 @@
 
 ### AD-Plan-1 — `sprint-workflow.md` §Step 2.5 Day-0 Plan-vs-Repo Verify
 
-- [ ] **Edit `.claude/rules/sprint-workflow.md`**
+- [x] **Edit `.claude/rules/sprint-workflow.md`**
   - Add new §Step 2.5 "Day-0 Plan-vs-Repo Verify" between current §Step 2 (Create Checklist File) and §Step 3 (Implement Code)
   - Content: mandatory grep verify for plan §Technical Spec assertions(file paths / class names / table names / fixture paths)
   - Drift catalog goes to progress.md Day 0 entry
   - Cross-link to `anti-patterns-checklist.md` AP-2 (no orphan code)
   - Examples: 53.7 D4-D12 + 55.3 D1-D3 (this sprint's findings)
-- [ ] **Verify**: `grep -n "## Step 2.5" .claude/rules/sprint-workflow.md` returns 1
-- [ ] **Verify**: `grep -n "Day-0 Plan-vs-Repo Verify" .claude/rules/sprint-workflow.md` returns ≥ 1
+- [x] **Verify**: `grep -n "### Step 2.5" .claude/rules/sprint-workflow.md` returns 1 (note: header level `### `, not `## `)
+- [x] **Verify**: `grep -n "Day-0 Plan-vs-Repo Verify" .claude/rules/sprint-workflow.md` returns ≥ 1 (3 matches: §Step 2.5 header + §Step 2.5 description + Modification History entry)
 
 ### AD-Lint-2 — Drop Per-Day Calibrated Targets
 
-- [ ] **Edit `.claude/rules/sprint-workflow.md`** (same file as AD-Plan-1; combine commit)
-  - Update Step 2 / Step 5 / checklist template guidance: drop "Estimated X hours" header from Day sections
-  - Keep sprint-aggregate "Workload" estimate in plan §Workload only
-  - Add doc note: per-day estimates → progress.md (individual record), non-binding
-- [ ] **Combined commit for AD-Plan-1 + AD-Lint-2**
-  - Commit: `docs(rules, sprint-55-3): close AD-Plan-1 + AD-Lint-2 (sprint-workflow.md)`
+- [x] **Edit `.claude/rules/sprint-workflow.md`** (same file as AD-Plan-1; combine commit)
+  - Step 2 §Required Format template: dropped `(Estimated X hours)` from Day header / `(Y min)` from task suffix / `Estimated: Y min` sub-bullet
+  - Added prohibition list with strikethrough examples + Sprint 53.7 retrospective Q4 evidence
+  - Step 5 added "Per-day estimates live here" section: progress.md is single home for per-day / per-task time tracking
+- [x] **Combined commit for AD-Plan-1 + AD-Lint-2**
+  - Commit: `docs(rules, sprint-55-3): close AD-Plan-1 + AD-Lint-2 (sprint-workflow.md)` — pending
 
 ### AD-Lint-3 — Modification History 1-Line Format
 
