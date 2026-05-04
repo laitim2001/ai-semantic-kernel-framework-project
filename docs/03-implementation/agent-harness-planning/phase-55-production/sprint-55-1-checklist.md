@@ -41,58 +41,47 @@ Per AD-Plan-1 (53.7) + feedback_day0_must_grep_plan_assumptions.md — grep each
 
 ### 0.5 Day 0 progress.md ✅
 - [x] **Create `docs/03-implementation/agent-harness-execution/phase-55/sprint-55-1/progress.md`** ✅ Day 0 entry with 8 verify + D1 + baseline + Day 1 plan
-- [ ] **Commit + push Day 0**
-  - Verify: `git log --oneline origin/feature/sprint-55-1-business-services` shows 2+ commits
+- [x] **Commit + push Day 0** ✅ commit `8632d2eb` pushed (2 commits ahead of main)
 
 ---
 
-## Day 1 — US-1 Incident DB Schema + ORM Model + Alembic Migration
+## Day 1 — US-1 Incident DB Schema + ORM Model + Alembic Migration ✅
 
-### 1.1 New `infrastructure/db/models/business/__init__.py`
-- [ ] **Create empty __init__.py** with `__all__ = ["Incident"]` (re-export)
-- [ ] DoD: file present
+### 1.1 New `infrastructure/db/models/business/__init__.py` ✅
+- [x] **Create __init__.py** ✅ re-exports `Incident / IncidentSeverity / IncidentStatus`
 
-### 1.2 New `infrastructure/db/models/business/incident.py`
-- [ ] **Define Incident(Base) ORM class**
-  - Columns per plan §US-1 (id UUID PK / tenant_id NN FK / user_id FK NULL / title VARCHAR 512 NN / severity Enum NN / status Enum NN / alert_ids JSONB / resolution TEXT / created_at NN / updated_at NN / closed_at NULL)
-  - File header per file-header-convention.md
-- [ ] **Define IncidentSeverity + IncidentStatus enums**
-  - severity ∈ {low, medium, high, critical}
-  - status ∈ {open, investigating, resolved, closed}
-- [ ] **Define UNIQUE (tenant_id, id) constraint + 5 indexes**
-  - idx_incidents_tenant_user (tenant_id, user_id)
-  - idx_incidents_severity_status (tenant_id, severity, status)
-  - idx_incidents_status_created (tenant_id, status, created_at)
-  - idx_incidents_closed_at (tenant_id, closed_at) WHERE closed_at IS NOT NULL
-  - idx_incidents_alert_ids GIN (alert_ids)
-- DoD: mypy --strict green; black + isort + flake8 green
+### 1.2 New `infrastructure/db/models/business/incident.py` ✅
+- [x] **Define Incident(Base, TenantScopedMixin) ORM class** ✅ ~180 lines; file header complete
+- [x] **Define IncidentSeverity + IncidentStatus Python enums** ✅ str-Enum (LOW/MEDIUM/HIGH/CRITICAL + OPEN/INVESTIGATING/RESOLVED/CLOSED)
+- [x] **Define UNIQUE + 2 CHECK + 5 indexes** ✅
+  - 🚨 **D2 (convention)**: plan said PG ENUM types; project convention is `String(32) + CHECK constraint` (per 0011_approvals_status_check + Approval pattern). Reverted to convention.
+  - UNIQUE (tenant_id, id); CHECK severity / CHECK status
+  - 5 indexes: tenant_user / severity_status / status_created / closed_at (partial) / alert_ids (GIN)
+- DoD: mypy --strict green ✅; black formatted ✅; flake8 ✅
 
-### 1.3 New Alembic migration `XXXX_add_incidents_table.py`
-- [ ] **upgrade()**: CREATE incidents table + 5 indexes + RLS policy
-  - RLS policy `incident_tenant_isolation` USING `tenant_id = current_setting('app.tenant_id')::uuid`
-  - ENUM types `incident_severity` + `incident_status`
-- [ ] **downgrade()**: drop policy + drop indexes + drop table + drop ENUM types
-  - Use `DROP POLICY IF EXISTS` + `DROP TYPE IF EXISTS` for idempotency
-- DoD: `cd backend && alembic upgrade head && alembic downgrade base && alembic upgrade head` 全程 green
+### 1.3 New Alembic migration `0012_incidents.py` ✅
+- [x] **upgrade()** ✅ create_table + ix_incidents_tenant_id + 5 indexes + 2 CHECK + RLS policy
+- [x] **downgrade()** ✅ DROP POLICY IF EXISTS + DISABLE RLS + drop_table (cascades indexes)
+- [x] **Verify cycle** ✅ `alembic upgrade head` → `downgrade base` → `upgrade head` 全程 green
 
-### 1.4 5 ORM unit tests
-- [ ] **test_incident_create** — INSERT row + verify all columns
-- [ ] **test_incident_tenant_filter** — 2 tenants, query each → only own incidents
-- [ ] **test_incident_severity_enum_validation** — invalid severity → IntegrityError
-- [ ] **test_incident_status_default** — no status passed → defaults to "open"
-- [ ] **test_incident_tenant_cascade_delete** — DELETE tenant → CASCADE deletes incidents
-- DoD: `cd backend && python -m pytest tests/unit/infrastructure/db/test_incident_model.py -v` → 5 passed
+### 1.4 5 ORM unit tests ✅
+- [x] **test_incident_create** ✅
+- [x] **test_incident_tenant_filter** ✅
+- [x] **test_incident_severity_check_constraint** ✅ (renamed from "_enum_validation"; CHECK constraint pattern)
+- [x] **test_incident_status_default_open** ✅
+- [x] **test_incident_tenant_cascade_delete** ✅
+- DoD: `pytest tests/unit/infrastructure/db/test_incident_model.py -v` → **5 passed in 0.28s** ✅
 
-### 1.5 Day 1 sanity checks
-- [ ] **mypy --strict** green
-- [ ] **black + isort + flake8** green
-- [ ] **6 V2 lints via run_all.py** green
-- [ ] **Backend full pytest** ≥ 1356 passed (= 1351 + 5 new)
-- [ ] **LLM SDK leak in business_domain/ + infrastructure/db/models/business/** — 0 imports
+### 1.5 Day 1 sanity checks ✅
+- [x] **mypy --strict** ✅ 0 errors / 258 files (was 255 + 3 new)
+- [x] **black + isort + flake8** ✅ all clean
+- [x] **6 V2 lints via run_all.py** ✅ 6/6 green in 2.11s
+- [x] **Backend full pytest** ✅ **1356 passed / 4 skipped / 0 fail** in 29.31s (= 1351 + 5)
+- [x] **LLM SDK leak in models/business/** ✅ 0
 
 ### 1.6 Day 1 commit + push + progress.md
-- [ ] **Stage + commit Day 1 source + tests + alembic migration**
-- [ ] **Update progress.md** with Day 1 actuals (hr / drift / fix)
+- [ ] **Stage + commit Day 1 source + tests + alembic migration** (next)
+- [ ] **Update progress.md** with Day 1 actuals (hr / D2 / D3 fix)
 - [ ] **Push to origin**
 
 ---

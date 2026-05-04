@@ -28,6 +28,13 @@ from infrastructure.db.models.api_keys import ApiKey, RateLimit
 # Day 1.1 (Sprint 49.3) — Audit
 from infrastructure.db.models.audit import AuditLog
 
+# Sprint 55.1 — Business domain (incident production table)
+from infrastructure.db.models.business import (
+    Incident,
+    IncidentSeverity,
+    IncidentStatus,
+)
+
 # Day 3.1-3 (Sprint 49.3) — Governance
 from infrastructure.db.models.governance import (
     Approval,
@@ -110,4 +117,8 @@ __all__ = [
     "Approval",
     "RiskAssessment",
     "GuardrailEvent",
+    # Business domain (Sprint 55.1)
+    "Incident",
+    "IncidentSeverity",
+    "IncidentStatus",
 ]
