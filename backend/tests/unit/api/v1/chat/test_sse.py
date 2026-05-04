@@ -24,8 +24,8 @@ from agent_harness._contracts import (
     ToolCallExecuted,
     ToolCallFailed,
     ToolCallRequested,
-    TurnStarted,
     TripwireTriggered,
+    TurnStarted,
     VerificationPassed,
 )
 from api.v1.chat.sse import format_sse_message, serialize_loop_event
