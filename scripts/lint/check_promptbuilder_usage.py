@@ -51,6 +51,13 @@ ALLOWLIST_PATTERNS: tuple[str, ...] = (
     # inner adapter without constructing prompts. Caller (the AgentLoop) has
     # already routed through PromptBuilder before invoking the wrapped client.
     "adapters/_base/circuit_breaker_wrapper.py",
+    # Sprint 54.1: Cat 10 LLMJudgeVerifier is a verification subagent that runs
+    # an INDEPENDENT judge LLM call on candidate output (not the main agent
+    # loop). It builds its own narrow judge prompt from a static template
+    # (verification/templates/) and is by design not routed through
+    # PromptBuilder (which constructs main-loop prompts with memory layers /
+    # tools / cache breakpoints — none of which apply to a verifier).
+    "agent_harness/verification/llm_judge.py",
 )
 
 

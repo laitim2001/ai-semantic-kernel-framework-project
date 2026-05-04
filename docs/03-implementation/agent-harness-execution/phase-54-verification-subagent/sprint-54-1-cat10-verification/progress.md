@@ -123,13 +123,92 @@
 | 8 | File header convention | ✅ all 6 new files have full header + Modification History |
 | 9 | Multi-tenant rule | ✅ verifier doesn't touch tenant data; per-request DI registry (not module-level cache) |
 
-### Next (Day 2 — US-2 LLMJudgeVerifier + Templates + AD-Cat9-1 fallback)
+### Next (Day 2 — US-2 LLMJudgeVerifier + Templates + AD-Cat9-1 fallback) → ✅ DONE (see below)
 
-1. Day 2.1: 4 prompt templates (factual_consistency / format_compliance / safety_review / pii_leak_check) + load_template helper
-2. Day 2.2: LLMJudgeVerifier — adjust for D3 drift (`chat()` takes `ChatRequest` not raw messages)
-3. Day 2.3: 6 unit tests for LLMJudgeVerifier
-4. Day 2.4: 2 unit tests for templates
-5. Day 2.5: Modify `guardrails/output/engine.py` to add `llm_judge_fallback` param
-6. Day 2.6: 3 integration tests for AD-Cat9-1 closure
-7. Day 2.7: sanity + commit
+---
+
+## Day 2 — US-2 LLMJudgeVerifier + Templates + AD-Cat9-1 Closure ✅
+
+**Date**: 2026-05-04
+**Estimated**: ~4 hr
+**Actual**: ~1.5 hr (well under estimate; +2.5 hr banked)
+
+### Deliverables ✅
+
+**Templates** (5 files):
+- ✅ `verification/templates/__init__.py` (load_template helper)
+- ✅ `verification/templates/factual_consistency.txt`
+- ✅ `verification/templates/format_compliance.txt`
+- ✅ `verification/templates/safety_review.txt`
+- ✅ `verification/templates/pii_leak_check.txt`
+
+**LLMJudgeVerifier** (1 file):
+- ✅ `verification/llm_judge.py` (145 lines): fail-closed semantics; ChatClient ABC; ChatRequest wrapping (D3 drift)
+
+**AD-Cat9-1 fallback** (1 file, Drift D8 wrapper pattern):
+- ✅ `verification/cat9_fallback.py` (135 lines): `LLMJudgeFallbackGuardrail` — wraps Cat 9 Guardrail + adds Cat 10 judge as defense-in-depth
+
+**Tests** (3 files, 18 new cases):
+- ✅ `tests/unit/.../test_llm_judge.py`: 8 cases (pass / fail / chat exception fail-closed / malformed JSON / missing key / template loading / p95 < 5s / VerificationResult sanity)
+- ✅ `tests/unit/.../test_templates.py`: 6 cases (load existing / load missing → FileNotFoundError / 4 default templates parametrize)
+- ✅ `tests/integration/.../test_llm_judge_fallback.py`: 4 cases (BLOCK propagates skip judge / PASS+judge BLOCK / PASS+judge PASS / guardrail_type inheritance)
+
+**Updates**:
+- ✅ `verification/__init__.py`: 9 re-exports total (added LLMJudgeVerifier / LLMJudgeFallbackGuardrail / load_template)
+- ✅ `scripts/lint/check_promptbuilder_usage.py`: added llm_judge.py to ALLOWLIST_PATTERNS (utility-LLM caller, same justification as compactor / memory_extractor)
+
+### Sanity ✅
+
+- ✅ pytest verification + fallback: **29/29 passed** in 0.80s (= 11 Day 1 + 18 Day 2)
+- ✅ pytest full backend: **1287 passed / 4 skipped / 0 fail** (= 1258 baseline + 11 Day 1 + 18 Day 2)
+- ✅ mypy --strict: 0 errors on 13 source files
+- ✅ black + isort + flake8: clean
+- ✅ 6 V2 lints via run_all.py: 6/6 green in 0.73s
+- ✅ LLM SDK leak: 0 in `verification/` (specifically llm_judge.py uses ChatClient ABC)
+
+### Drift fixes during Day 2
+
+| ID | Issue | Fix |
+|----|-------|-----|
+| D7 | Plan said `guardrails/output/engine.py`; actual at `guardrails/engine.py` | Read engine.py at correct location during探勘 |
+| D8 | Plan §US-2 said modify engine.py with `llm_judge_fallback` param requiring `confidence` field on GuardrailResult; would touch 17.md single-source rule + 4 detector implementations | Architecture change: implement as `LLMJudgeFallbackGuardrail` wrapper class (Cat 10 owned, IS-A Guardrail). Lower blast radius; no contract changes; opt-in per-detector. Documented in cat9_fallback.py module docstring |
+| D9 | mypy `unused-ignore` on test override `# type: ignore[override]` | Removed — override signature is compatible with MockChatClient base (kwargs match) |
+| D10 | AP-8 lint flagged `llm_judge.py` as "raw chat() call without PromptBuilder" | Added to `ALLOWLIST_PATTERNS` with justification: verifier subagent runs INDEPENDENT judge call; not main agent loop; uses static templates not memory/cache/tools — same pattern as existing compactor / memory_extractor allowlist entries |
+| D11 | check_cross_category_import flagged `from agent_harness.guardrails._abc import (...)` as private import | Changed to `from agent_harness.guardrails import (...)` (public re-export from __init__.py) |
+| D12 | flake8 E501: 5 lines too long (Purpose / Modification History / dict reason f-string) | Shortened all 5 lines |
+
+### V2 9-discipline check (Day 2)
+
+| # | 紀律 | Status |
+|---|------|--------|
+| 1 | Server-Side First | ✅ verifier stateless; trace_context propagated |
+| 2 | LLM Provider Neutrality | ✅ llm_judge.py uses ChatClient ABC; check_llm_sdk_leak green |
+| 3 | CC Reference 不照搬 | ✅ wrapper pattern (Drift D8) is V2-original; CC has no equivalent |
+| 4 | 17.md Single-source | ✅ NO changes to GuardrailResult / VerificationResult / Verifier ABC; reuse all existing contracts |
+| 5 | 11+1 範疇歸屬 | ✅ all in `agent_harness/verification/`; cat9_fallback.py is Cat 10 owned (consumes Cat 9 ABCs via public re-export) |
+| 6 | 04 anti-patterns | ✅ AP-8 allowlisted with rationale; AP-3 cross-directory: judge + wrapper in single owner dir; AP-4 Potemkin avoided (every judge code path has test) |
+| 7 | Sprint workflow | ✅ Day 2 follows checklist 2.1-2.8 in order |
+| 8 | File header convention | ✅ all 6 new files have full header + Modification History |
+| 9 | Multi-tenant rule | ✅ judge doesn't touch tenant data; wrapper inherits guardrail_type for proper engine routing |
+
+### AD-Cat9-1 closure evidence
+
+- ✅ LLMJudgeFallbackGuardrail wrapper class shipped + tested with 4 integration cases
+- ✅ 4 default judge templates (factual_consistency / format_compliance / safety_review / pii_leak_check) ready
+- ✅ Wiring pattern documented in cat9_fallback.py module docstring
+- 🚧 **Note**: actually wiring all 4 specific Cat 9 detectors (PII / jailbreak / sensitive-info / toxicity) with this wrapper is **operator-driven** (opt-in, per-deployment cost-vs-safety call); not done in 54.1. AD-Cat9-1 closure means **infrastructure ready** — operators can register `LLMJudgeFallbackGuardrail(wrapped=PIIDetector(), judge=...)` in their config when they want defense-in-depth.
+
+### Time banking
+
+- Day 2 estimate ~4 hr / actual ~1.5 hr → **+2.5 hr banked**
+- Total banked sprint-to-date: **+5.5 hr** (Day 0 +0.5 + Day 1 +2.5 + Day 2 +2.5)
+- Remaining estimate: Day 3 (US-3) ~3.5 hr + Day 4 (US-4 + US-5 + closeout) ~4 hr = ~7.5 hr; banked +5.5 hr brings remaining commit to ~5-6 hr — Day 3-4 likely consumers: D2 multi-exit AgentLoop hook design / SSE serializer extension / Cat 9 SANITIZE/REROLL test assertion upgrade
+
+### Next (Day 3 — US-3 AgentLoop self-correction + SSE + observability)
+
+1. Day 3.1: AgentLoop verification hook (handle D2: 5+ yield LoopCompleted exits; design _finalize_with_verification helper)
+2. Day 3.2: SSE serializer extension for VerificationPassed / VerificationFailed (D1: api/v1/chat/sse.py)
+3. Day 3.3: Cat 12 tracer span + 3 metrics
+4. Day 3.4: 3 unit tests + 4 integration tests
+5. Day 3.5: sanity + commit
 
