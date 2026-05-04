@@ -31,6 +31,19 @@ Exit codes:
 Stdlib-only (matches the 4 V2 lint scripts shipped in Sprint 49.4 Day 4).
 
 Created: 2026-04-30 (Sprint 50.1 Day 3.4)
+Last Modified: 2026-05-04 (Sprint 53.7 Day 1)
+
+Modification History (newest-first):
+    - 2026-05-04: Sprint 53.7 Day 1 — fail loudly (exit 2) instead of silent OK
+      when target_dir is missing. Sprint 53.7 Day 0 drift D1 found that the
+      53.6-era invocation `--root backend/src/agent_harness` silently exited
+      OK because join produced `backend/src/agent_harness/agent_harness/
+      orchestrator_loop` which doesn't exist. The "OK: skipping" message
+      was deceiving: it implied success when in reality the AP-1 invariant
+      was never checked. This change converts the missing-target-dir branch
+      into a configuration error matching the existing root-not-exist branch.
+      Wrapper at scripts/lint/run_all.py now passes correct `--root backend/src`.
+    - 2026-04-30: Initial creation (Sprint 50.1 Day 3.4)
 """
 
 from __future__ import annotations
@@ -98,7 +111,7 @@ def check_file(path: Path) -> list[str]:
             violations.append(
                 f"{path}:{cls.lineno}: AP-1 violation: "
                 f"{cls.name} does not feed tool results back as "
-                f"Message(role=\"tool\", tool_call_id=...). "
+                f'Message(role="tool", tool_call_id=...). '
                 f"Tool results MUST be appended to messages so the LLM can "
                 f"observe and continue reasoning. See 04-anti-patterns.md §AP-1."
             )
@@ -121,10 +134,18 @@ def main(argv: list[str] | None = None) -> int:
 
     target_dir = root / "agent_harness" / "orchestrator_loop"
     if not target_dir.exists():
+        # Sprint 53.7 D1: was previously "return 0" silent OK which masked
+        # mis-invocation (e.g. --root backend/src/agent_harness causing the
+        # join to produce backend/src/agent_harness/agent_harness/orchestrator_loop).
+        # Now fail loudly so CI / pre-push catches the mis-invocation.
         print(
-            f"OK: no orchestrator_loop dir found under {root}; skipping AP-1 check."
+            f"ERROR: target_dir does not exist: {target_dir}\n"
+            f"       Hint: --root must point to <src> such that "
+            f"<src>/agent_harness/orchestrator_loop/ exists "
+            f"(typically `--root backend/src`).",
+            file=sys.stderr,
         )
-        return 0
+        return 2
 
     all_violations: list[str] = []
     files_scanned = 0
@@ -144,9 +165,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    print(
-        f"OK: AP-1 check passed in {target_dir} ({files_scanned} file(s) scanned)"
-    )
+    print(f"OK: AP-1 check passed in {target_dir} ({files_scanned} file(s) scanned)")
     return 0
 
 

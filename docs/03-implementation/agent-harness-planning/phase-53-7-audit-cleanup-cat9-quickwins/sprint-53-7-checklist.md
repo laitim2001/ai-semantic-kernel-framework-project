@@ -48,73 +48,57 @@
 ### 0.6 Day 0 progress.md
 - [x] **Create progress.md** ✅
 - [x] **Day 0 sections written** ✅ Setup / carryover / calibration / SSE / pre-flight + D1 drift / time banking / next
-- [ ] **Commit + push Day 0**
+- [x] **Commit + push Day 0** ✅ commit `167f64a7`
 
 ---
 
 ## Day 1 — US-1 Plan/Process Improvements (est. 2.5-3 hr; closes 4 AD)
 
 ### 1.1 AD-Sprint-Plan-1 — sprint-workflow.md calibration multiplier sub-section
-- [ ] **Edit `.claude/rules/sprint-workflow.md`**
-  - Locate: §Step 1 Create Plan File 段
-  - Add sub-section "Workload calibration"：說明 `bottom-up est ~X hr → calibrated commit ~Y hr (multiplier Z)` 三段式表達
-  - Default multiplier: 0.5-0.6 (basis: 53.4-53.6 三連續 ~50% over-estimate retrospective evidence)
-  - When to adjust: 連續 3+ sprint actual / committed > 1.2 → 提高 multiplier 到 0.7；連續 3+ sprint < 0.7 → 降低到 0.4
-  - DoD: sub-section 寫入；本 plan §Workload 段已示範
+- [x] **Edit `.claude/rules/sprint-workflow.md`** ✅
+  - Step 1 Create Plan File 段下加 §Workload Calibration sub-section
+  - Three-segment form `bottom-up X hr -> calibrated Y hr (multiplier Z)` documented
+  - Default 0.5-0.6 mid-band 0.55 + adjust criteria + Day 4 retro Q2 verification rule
+  - Modification History updated
 
 ### 1.2 AD-CI-4 — sprint-workflow.md §Common Risk Classes
-- [ ] **Add §Common Risk Classes section to sprint-workflow.md**
-  - Risk class 1: paths-filter vs required_status_checks（53.2.5 source；workaround = touch backend-ci.yml header；long-term fix = AD-CI-5）
-  - Risk class 2: cross-platform mypy unused-ignore（53.4 source；solution = `# type: ignore[X, unused-ignore]`）
-  - Risk class 3: Module-level singleton in tests（53.6 source；solution = autouse reset fixture，see testing.md）
-  - DoD: 段落寫入；至少 3 個 class 各含 source sprint + symptom + workaround/fix
+- [x] **Add §Common Risk Classes section to sprint-workflow.md** ✅
+  - 3 risk classes documented:
+    - A: paths-filter vs required_status_checks (53.2.5 origin)
+    - B: cross-platform mypy unused-ignore (52.6 origin)
+    - C: Module-level singleton across event loops (53.6 origin)
+  - Each entry: symptom + source + workaround + long-term fix + how-to-use guidance
 
 ### 1.3 AD-Lint-1 — scripts/lint/run_all.py wrapper
-- [ ] **Create `scripts/lint/run_all.py`**
-  - Implement per plan §Technical Spec File Skeleton
-  - LINTS list: 6 scripts with their args
-  - subprocess.run + measure time + collect exit codes
-  - Print per-lint summary line + final aggregated summary
-  - File header per file-header-convention
-  - DoD: `python scripts/lint/run_all.py` exit 0 in main + prints 6 OK lines
-- [ ] **Verify wrapper detects breaks**
-  - Sanity: temporarily modify a file to violate one rule (e.g. duplicate-dataclass) → wrapper exit 1 + identifies failing lint
-  - Revert sanity break
-  - DoD: exit 0 / exit 1 paths both verified
-- [ ] **Update `.claude/rules/sprint-workflow.md` §Pre-Push** to reference `python scripts/lint/run_all.py`
-  - DoD: pre-push instructions show single command not 6
+- [x] **Create `scripts/lint/run_all.py`** ✅
+  - 129 lines; LINTS list with correct per-script args; subprocess.run + timing
+  - File header + Modification History per file-header-convention
+- [x] **Verify wrapper exit 0 / exit 1 paths** ✅
+  - Empty break → 6/6 green in 0.61s exit 0
+  - Day 1 hunting found 2 bonus bugs verified via FAIL path:
+    - check_promptbuilder `parents[1]` bug → fixed to `parents[2]` (was silently failing when no --root passed)
+    - check_ap1 silent-OK on missing target_dir → changed to fail-loudly exit 2 (D1 fix)
+- [x] **Update sprint-workflow.md Before Commit Lint+Format** ✅
+  - Added run_all.py reference with closes AD-Lint-1 since Sprint 53.7 note
 
 ### 1.4 AD-Test-1 — testing.md singleton-reset pattern
-- [ ] **Edit `.claude/rules/testing.md`**
-  - Add §Module-level Singleton Reset Pattern section
-  - When needed: ServiceFactory / RiskPolicy DB cache / MetricsRegistry / TokenCounter cache / any module-level lazy-singleton
-  - Pattern: autouse fixture in `conftest.py` calling `reset_*()`；scope = integration suite (avoid cross-cutting unit tests)
-  - Code template based on 53.6 conftest.py
-  - List of known singletons (with module path) + their reset functions
-  - DoD: section 寫入；含 ≥ 3 真實 singleton 例 + reset_service_factory 完整 code reference
+- [x] **Edit `.claude/rules/testing.md`** ✅
+  - Added §Module-level Singleton Reset Pattern between §Mocking Guidelines + §Coverage Requirements
+  - Sections: When needed / When to apply / Required pattern (autouse fixture template) / Scope rules / Known singletons catalog / Anti-patterns / Long-term direction
+  - Modification History updated with 53.7 entry
 
 ### 1.5 Day 1 sanity checks
-- [ ] **mypy --strict on touched .py files**
-  - Files: scripts/lint/run_all.py
-  - Command: `mypy --strict scripts/lint/run_all.py`
-  - DoD: 0 errors
-- [ ] **black + isort + flake8 on run_all.py**
-  - DoD: clean
-- [ ] **run_all.py self-test**: `python scripts/lint/run_all.py` exit 0
-- [ ] **Backend full pytest unchanged**: 1085 passed (Day 1 不動 backend code)
+- [x] **mypy --strict on touched .py files** ✅ Success: no issues found in 3 source files (run_all.py + check_ap1 + check_promptbuilder)
+- [x] **black + isort + flake8 on touched files** ✅ clean (black auto-reformatted run_all.py + check_ap1 once)
+- [x] **run_all.py self-test** ✅ 6/6 green in 0.77s exit 0
+- [x] **Backend full pytest unchanged** ✅ 1085 passed / 4 skipped (matches main baseline)
 
 ### 1.6 Day 1 commit + push + verify CI
 - [ ] **Stage + commit + push**
-  - Commit: `feat(process+lint, sprint-53-7): Day 1 — US-1 plan template calibration + risk classes + lint wrapper + singleton reset doc (closes AD-Sprint-Plan-1 + AD-CI-4 + AD-Lint-1 + AD-Test-1)`
-  - Push
 - [ ] **Verify CI runs**
-  - Note: paths-only docs + scripts changes 可能不觸發 backend-ci paths filter；workaround per AD-CI-4 documented
-  - DoD: 至少 V2 Lint workflow 跑 + green
 
 ### 1.7 Day 1 progress.md update
 - [ ] **Update progress.md with Day 1 actuals**
-  - 4 AD closed + estimate vs actual hours
-  - Commit batch with 1.6
 
 ---
 

@@ -93,3 +93,85 @@ US-1 Plan/Process Improvements (closes 4 AD):
 - 1.4 AD-Test-1 — `.claude/rules/testing.md` §Module-level Singleton Reset Pattern
 
 Estimated 2.5-3 hr; calibrated target ~1.5-2 hr after Day 0 banking.
+
+---
+
+## Day 1 — US-1 Plan/Process Improvements (2026-05-04)
+
+### Time
+
+- Estimated: 2.5-3 hr (calibrated target ~1.5-2 hr post Day 0 banking)
+- Actual: ~1.5 hr
+- Banked: ~1-1.5 hr (cause: tooling fixes inline + reusing 53.6 patterns)
+
+### 1.1 AD-Sprint-Plan-1 — Calibration multiplier sub-section ✅
+
+- File: `.claude/rules/sprint-workflow.md`
+- Added §Workload Calibration sub-section under Step 1
+- Three-segment commitment form `bottom-up X hr → calibrated Y hr (multiplier Z)`
+- Default multiplier 0.5-0.6 (mid-band 0.55) backed by 53.4-53.6 retrospective Q2 evidence
+- When-to-adjust criteria + Day 4 retro Q2 verification rule
+
+### 1.2 AD-CI-4 — §Common Risk Classes section ✅
+
+- Added new H2 section between Step 5 and Change Record Conventions
+- 3 risk classes: paths-filter (53.2.5 source) / mypy unused-ignore (52.6) / module singleton (53.6)
+- Each entry: symptom + source + workaround + long-term fix + how-to-use guidance
+- Catalog ready to grow as new classes emerge
+
+### 1.3 AD-Lint-1 — run_all.py wrapper + 2 bonus bug fixes ✅
+
+- New file: `scripts/lint/run_all.py` (129 lines after black format)
+- LINTS list with correct per-script args:
+  - check_ap1: `--root backend/src` (was wrong `backend/src/agent_harness` in 53.3-53.6 silently)
+  - check_promptbuilder: explicit `--root backend/src/agent_harness` (defensive)
+  - 4 others: auto-discover (no args)
+- Output: per-script line `[OK ] script_name elapsed` + final aggregated `6/6 green`
+- Sprint 53.7 D1 hunting uncovered **2 bonus bugs**:
+  - **check_promptbuilder_usage.py**: `_default_root()` used `parents[1]` (= `<repo>/scripts/`) → produced non-existent path `<repo>/scripts/backend/src/agent_harness/` → silent fail when invoked without --root. Fixed to `parents[2]` (= repo root). Pre-53.7 callers escaped this by always passing explicit --root; run_all.py exposed it.
+  - **check_ap1_pipeline_disguise.py**: returned 0 with "OK: no orchestrator_loop dir; skipping" when target_dir missing → mis-invocation produced false-greens. Changed to exit 2 with hint message.
+- Both fixes have Modification History entries; both verified via re-run of run_all.py: 6/6 green in 0.77s
+- Updated `.claude/rules/sprint-workflow.md` §Before Commit §Lint to reference `python scripts/lint/run_all.py`
+
+### 1.4 AD-Test-1 — testing.md §Module-level Singleton Reset Pattern ✅
+
+- File: `.claude/rules/testing.md`
+- Inserted between §Mocking Guidelines and §Coverage Requirements
+- Sections: When needed / When to apply / Required pattern (autouse fixture template) / Scope rules / Known singletons catalog / Anti-patterns / Long-term direction
+- Catalog seeded with `service_factory.reset_service_factory()` (53.6 source)
+- Catalog row format ready for additions as new singletons emerge
+- Modification History updated
+
+### 1.5 Day 1 sanity ✅
+
+- mypy --strict on 3 touched .py files: Success no issues
+- black: 2 files reformatted (run_all.py + check_ap1) → re-checked clean
+- flake8 + isort: clean on touched files
+- run_all.py self-test: **6/6 green in 0.77s**, exit 0
+- Backend full pytest: **1085 passed / 4 skipped** (matches main HEAD baseline)
+
+### Drift Findings (Day 1)
+
+| ID | Description | Action |
+|----|-------------|--------|
+| **D2** | check_promptbuilder_usage.py `_default_root()` `parents[1]` bug — would fail when invoked without --root from project root | Fixed inline (Modification History added) |
+| **D3** | check_ap1_pipeline_disguise.py "OK: skipping" silent-pass when target_dir missing — mis-invocation false-green | Fixed inline (exit 2 + hint message) |
+
+Both D2 + D3 are sub-fixes inside AD-Lint-1 closure and don't need separate carryover AD entries (folded into the wrapper PR scope).
+
+### Files touched (Day 1)
+
+- New: `scripts/lint/run_all.py`
+- Modified: `scripts/lint/check_ap1_pipeline_disguise.py` (silent-skip fix)
+- Modified: `scripts/lint/check_promptbuilder_usage.py` (parents bug fix)
+- Modified: `.claude/rules/sprint-workflow.md` (1.1 + 1.2 + Pre-Push update)
+- Modified: `.claude/rules/testing.md` (1.4)
+
+### Next — Day 2
+
+Group B infra cleanup (closes AD-Hitl-8 + AI-22 + Playwright required_check):
+- 2.1 US-2 — Alembic migration `add_escalated_to_status_check` + integration test
+- 2.2 US-3 — Branch protection PATCH 5 required + verify
+- 2.3 US-3 — AI-22 enforce_admins chaos test (dummy red PR + admin merge attempt)
+
+Estimated 1.5-2 hr; calibrated target ~1 hr after Day 0+1 banking.

@@ -8,6 +8,7 @@
 **Status**: Active
 
 > **Modification History**
+> - 2026-05-04: Sprint 53.7 — add §Workload Calibration sub-section under Step 1 (closes AD-Sprint-Plan-1) + new §Common Risk Classes top-level section (closes AD-CI-4) + Pre-Push reference `python scripts/lint/run_all.py` wrapper (closes AD-Lint-1 doc portion)
 > - 2026-04-28: Initial creation (V2 foundation) — enforce 5-step workflow + change record conventions
 
 ---
@@ -42,6 +43,30 @@ This document enforces the **mandatory 5-step sprint execution flow** used in V2
 **Violation Pattern** ❌: "I'll start coding and see what happens" → scattered PRs → unclear scope → Phase 35-38 repeat.
 
 **Violation Pattern** ❌ (Sprint 52.1 v1 — 2026-04-30): Drafted plan with 10 sections + 6 days + custom section names without consulting most recent (51.2) plan format. User had to point out inconsistency; 3 rewrites (v1→v2→v3) before format aligned. **Lesson**: Read prior sprint plan FIRST, then mirror exactly.
+
+#### Workload Calibration (Sprint 53.7+ — closes AD-Sprint-Plan-1)
+
+Plan §Workload (or equivalent header) **must** state estimate in this three-segment form:
+
+> Bottom-up est ~X hr → calibrated commit ~Y hr (multiplier Z)
+
+- **X** = sum of per-task / per-US bottom-up estimates (raw, no calibration applied)
+- **Z** = calibration multiplier in [0.4, 1.0]; default **0.5–0.6** (mid-band 0.55) per 53.4 + 53.5 + 53.6 retrospectives Q2 evidence (3 consecutive ~50% over-estimate; ~7-14 hr banked across 3 sprints)
+- **Y** = X × Z = number you actually commit to (PR description / sprint goal acceptance / Day 4 retrospective Q2 baseline)
+
+**When to adjust the multiplier**:
+- 3+ consecutive sprints with `actual / committed > 1.2` → raise multiplier (e.g. 0.55 → 0.70) — under-estimating
+- 3+ consecutive sprints with `actual / committed < 0.7` → lower multiplier (e.g. 0.55 → 0.40) — buffer too generous
+- Single-sprint outliers: ignore; 3-sprint moving evidence required
+
+**Day 4 retrospective Q2 must verify the multiplier**:
+- Compute `actual_total_hr / committed_total_hr` ratio
+- Document delta vs expected `≈ 1.0`
+- If `|delta| > 30%`: log `AD-Sprint-Plan-N+1` to revisit multiplier in next plan template iteration
+
+**Why**: Three consecutive ~50% over-estimate sprints (53.4 + 53.5 + 53.6) showed bottom-up estimates consistently double actual; without calibration, sprint commitments were inflated and "banked" hours obscured velocity tracking.
+
+**First plan to apply**: Sprint 53.7 itself (`sprint-53-7-plan.md` §Workload).
 
 ---
 
@@ -145,6 +170,46 @@ This document enforces the **mandatory 5-step sprint execution flow** used in V2
 - "We'll update docs after the sprint" → too late, details lost
 - Skip retrospective → patterns repeat
 - Generic notes ("worked on stuff") → no data for future planning
+
+---
+
+## Common Risk Classes (Sprint 53.7+ — closes AD-CI-4)
+
+When drafting plan §Risks, consider these recurring risk classes (V2 carryover evidence). Each entry: `Symptom → Workaround → Long-term fix`.
+
+### Risk Class A: Paths-filter vs `required_status_checks` (CI infra)
+
+**Symptom**: PR只動 `docs/` 或 `.gitignore`（不動 `backend/**` 或 `.github/workflows/**`），導致 GitHub Actions paths-filter 不觸發 backend-ci / V2 Lint。Branch protection `required_status_checks` 仍要求這些 contexts 通過 → mergeStateStatus = `BLOCKED` even though PR is logically clean.
+
+**Source**: Sprint 53.2.5 retrospective (AD-CI-2 / AD-CI-3 origin); Sprint 53.6 Day 2-3 (frontend-only commits had Backend CI skipped — looked like CI broke; required PR-description note).
+
+**Workaround**: 加一個 commit 觸碰 `.github/workflows/backend-ci.yml`（例如 header comment 註記改動原因），就會觸發 backend-ci + V2 Lint → 必填 contexts 滿足 → PR mergeable. Documented inline in `.github/workflows/backend-ci.yml` header (since 53.2.5).
+
+**Long-term fix**: AD-CI-5 (`required_status_checks` paths-filter design revisit; possibly switch to GitHub Actions "fall through" / use `if: always()` aggregator job). Independent infra track.
+
+### Risk Class B: Cross-platform `mypy --strict` `unused-ignore` (Python tooling)
+
+**Symptom**: 同一 import / Optional unwrap 在 Linux runner 與 Windows 開發機 mypy 行為不同（缺 stub 包 vs 有 stub 包）。`# type: ignore[X]` 在一邊需要、在另一邊變 `unused-ignore` 報錯（`warn_unused_ignores=true` strict 模式下）。
+
+**Source**: Sprint 52.6 retrospective Q4.
+
+**Workaround**: 雙 ignore code → `# type: ignore[X, unused-ignore]`. 兩邊都不報錯. Documented in `.claude/rules/code-quality.md` §Cross-platform mypy pattern.
+
+**Long-term fix**: Pin Python stub package versions in `pyproject.toml` so both platforms behave identically. Independent.
+
+### Risk Class C: Module-level Singleton Across Test Event Loops (test isolation)
+
+**Symptom**: TestClient-based integration tests 共用 module-level singletons (e.g. `service_factory` cache / `RiskPolicy` DB cache / `MetricsRegistry`) → 第二次 fixture activate 拿到上一個 event loop 的 cached instance → 「event loop closed」cascade fail.
+
+**Source**: Sprint 53.6 Day 4 (US-5 ServiceFactory consolidation introduced; 5 governance / audit tests failed until autouse `reset_service_factory` fixture added).
+
+**Workaround**: Per-suite `conftest.py` autouse fixture calling `reset_*()` for affected singletons. Pattern documented in `.claude/rules/testing.md` §Module-level Singleton Reset Pattern (since 53.7).
+
+**Long-term fix**: Refactor singletons to be DI-injected per-request (no module-level cache); avoids root cause. Per-singleton scope; track as needed.
+
+### How to use this section
+
+When drafting plan §Risks, scan this catalog. If any class applies to your sprint scope, copy the symptom + workaround text into your plan §Risks table. Add new classes here when 2+ sprints hit the same root cause.
 
 ---
 
@@ -289,7 +354,11 @@ Every commit must pass:
    - Checklist `[ ]` → `[x]` done before or immediately after commit
 
 2. **Lint + Format** (from code-quality.md)
-   - Backend: `black . && isort . && flake8 . && mypy .`
+   - Backend (per-file format + type chain): `black . && isort . && flake8 . && mypy .`
+   - Backend (V2 architecture lints — 6 scripts; closes AD-Lint-1 since Sprint 53.7): `python scripts/lint/run_all.py`
+     - One-stop wrapper invokes 6 V2 lints with correct `--root` args (check_ap1: `backend/src` / check_promptbuilder: default `backend/src/agent_harness` / 4 auto-discover)
+     - Exit 0 = all 6 green; non-zero = `<failed>/6` with per-script line summary
+     - Replaces the prior 6 separate invocations (which silently mis-passed when `--root` arg mismatched script expectation — see Sprint 53.7 Day 0 drift D1)
    - Frontend: `npm run lint && npm run build`
 
 3. **Tests Passing**

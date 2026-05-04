@@ -4,10 +4,11 @@
 
 **Category**: Development Process / Quality Assurance
 **Created**: 2025
-**Last Modified**: 2026-04-28
+**Last Modified**: 2026-05-04
 **Status**: Active
 
 > **Modification History**
+> - 2026-05-04: Sprint 53.7 Day 1 — add §Module-level Singleton Reset Pattern (closes AD-Test-1; pattern from 53.6 Day 4 ServiceFactory consolidation event-loop-cache cascade fix)
 > - 2026-04-28: Enhance for V2 — 新增範疇層級測試分工、主流量驗證、Contract Test、Multi-tenant Tests、Anti-Pattern Tests、Test Performance、Observability Tests
 > - 2025: Initial V1 version (generic test rules)
 
@@ -101,6 +102,75 @@ def mock_chat_client():
     from adapters._testing.mock_clients import MockChatClient
     return MockChatClient(responses={...})
 ```
+
+---
+
+## Module-level Singleton Reset Pattern (Sprint 53.7+ — closes AD-Test-1)
+
+**When you need this**: any module that exposes a lazily-initialized **module-level singleton** (e.g. via `_instance: X | None = None` + `def get_x()`). When `TestClient`-based integration tests run, each test fires up its own asyncio event loop. A singleton cached during test A holds references to event-loop-bound resources (DB session factories / asyncio Queues / Redis clients). When test B starts, the cache returns the dead instance → `RuntimeError: Event loop is closed` cascade.
+
+**Source**: Sprint 53.6 Day 4 (US-5 ServiceFactory consolidation). Adding `service_factory.py` with module-level `_factory` cache made 5 governance / audit tests fail under the full suite even though each passed in isolation. Resolved by adding an autouse fixture in `tests/integration/api/conftest.py` calling `reset_service_factory()` before every test.
+
+### When to apply
+
+- ✅ Module exposes `get_x()` / `set_x()` / `reset_x()` triple, or any equivalent lazy-singleton pattern
+- ✅ The singleton holds (directly or transitively) event-loop-bound resources: `asyncio.Queue` / async DB session factory / async Redis client / asyncio Lock
+- ✅ Suite has 2+ tests that each acquire the singleton
+
+**Don't apply** if the singleton holds only pure CPU values (e.g. cached config dict). Then there is no event-loop coupling and no cascade.
+
+### Required pattern (autouse fixture per integration suite)
+
+```python
+# backend/tests/integration/<suite>/conftest.py
+"""
+Sprint 53.7+ pattern: per-suite autouse fixture resets module-level
+singletons that hold event-loop-bound resources, so each test gets a
+fresh instance bound to its own loop.
+
+See .claude/rules/testing.md §Module-level Singleton Reset Pattern.
+"""
+from __future__ import annotations
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _reset_module_singletons() -> None:
+    """Reset all known module-level singletons before each test."""
+    # Add new resets here as singletons are introduced; keep this list
+    # in sync with the catalog below.
+    from platform_layer.governance.service_factory import reset_service_factory
+
+    reset_service_factory()
+    # ... future resets ...
+```
+
+### Scope rules
+
+- **Per-suite, NOT global**: place the fixture in the integration suite's `conftest.py` (e.g. `tests/integration/api/conftest.py`), not in the top-level `tests/conftest.py`. Unit tests under `tests/unit/` should not pay for resets they don't need.
+- **autouse=True**: makes every test in the suite trigger the reset; explicit fixture wiring is too easy to miss for new tests.
+- **No yield**: this is a pre-test hook; teardown is unnecessary because the next test's pre-test reset is the teardown.
+
+### Known module-level singletons (catalog)
+
+Update this list when you add a new singleton-style module. Each entry: `module path → reset function → singleton role`.
+
+| Module | Reset function | Singleton role | Introduced |
+|--------|----------------|----------------|------------|
+| `platform_layer.governance.service_factory` | `reset_service_factory()` | HITLManager + RiskPolicy lazy cache; AuditQuery factory | Sprint 53.6 |
+| _add new entries here_ | | | |
+
+### Anti-patterns (do NOT do these instead)
+
+- ❌ **Pytest fixtures rebuilding the singleton** with `monkeypatch.setattr(module, '_instance', None)`: brittle, hides the public reset API
+- ❌ **Global fixture in top-level `tests/conftest.py`**: pays the reset cost for every unit test; pollutes test scope
+- ❌ **Skipping affected tests with `@pytest.mark.skip("flaky")`**: hides the real bug; would be flagged by `04-anti-patterns.md` AP-9 verification
+- ❌ **Refactoring singleton to be DI-only without reset**: removes the singleton but loses lazy-cache benefits; consider whether per-request DI is genuinely cheaper before refactoring
+
+### Long-term direction
+
+The pattern above is a **mitigation**, not a fix. The root-cause fix is to refactor singletons to be **DI-injected per request** (no module-level cache), which eliminates event-loop coupling entirely. ServiceFactory will be considered for this refactor if a 3rd singleton joins the catalog and the reset list becomes burdensome to maintain.
 
 ---
 
