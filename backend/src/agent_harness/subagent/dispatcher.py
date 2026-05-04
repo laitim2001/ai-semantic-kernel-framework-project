@@ -2,7 +2,7 @@
 File: backend/src/agent_harness/subagent/dispatcher.py
 Purpose: DefaultSubagentDispatcher — production class implementing SubagentDispatcher ABC.
 Category: 範疇 11 (Subagent Orchestration)
-Scope: Sprint 54.2 US-1 (skeleton); US-2/3/4 fill in mode executors
+Scope: Sprint 54.2 US-1 (skeleton) → US-2 (FORK + AsTool wired); US-3/4 fill TEAMMATE / HANDOFF
 
 Description:
     DefaultSubagentDispatcher implements the 3-method ABC (spawn /
@@ -15,35 +15,44 @@ Description:
         Blocks until the future resolves (or timeout). Returns
         success=False / error=... on BudgetExceededError or timeout.
     - handoff(target_agent, context) -> UUID (new session_id)
-        Synchronous transfer; returns new session_id directly.
+        Synchronous transfer; returns new session_id directly. (US-4)
 
     AS_TOOL mode is NOT routed through spawn(). It uses the separate
-    `as_tool_factory(agent_role)` method (Option A from Day 0 D1-followup),
-    which returns a ToolSpec for Cat 2 ToolRegistry. spawn(mode=AS_TOOL)
+    `as_tool_factory(spec)` method (Option A from Day 0 D1-followup),
+    which returns (ToolSpec, handler) for Cat 2 ToolRegistry. spawn(mode=AS_TOOL)
     raises SubagentLaunchError.
 
-    US-1 (this commit) ships skeleton only: spawn() raises NotImplementedError
-    for FORK / TEAMMATE; wait_for() / handoff() / as_tool_factory() also
-    NotImplementedError. US-2 fills FORK + AS_TOOL; US-3 fills TEAMMATE; US-4
-    fills HANDOFF.
+    Concurrency: spawn() pre-checks budget.max_concurrent against the count
+    of in-flight subagents (per AD-Test-1 53.6: per-request DI; not module
+    singleton). Depth check is left to the caller (parent loop tracks current
+    depth; passes via context).
+
+US-2 deliverable (this file): wires FORK via ForkExecutor + as_tool_factory
+    via AsToolWrapper. TEAMMATE / HANDOFF still raise NotImplementedError.
 
 Created: 2026-05-04 (Sprint 54.2)
 
 Modification History:
+    - 2026-05-04: Wire FORK via ForkExecutor + as_tool_factory via AsToolWrapper (US-2)
     - 2026-05-04: Initial skeleton creation (Sprint 54.2 US-1)
 
 Related:
     - subagent/_abc.py — SubagentDispatcher ABC (3 methods)
-    - _contracts/subagent.py — SubagentBudget / SubagentResult / SubagentMode
+    - subagent/modes/fork.py — ForkExecutor (US-2)
+    - subagent/modes/as_tool.py — AsToolWrapper (US-2)
+    - _contracts/subagent.py — SubagentBudget / SubagentResult / SubagentMode / AgentSpec
     - 17-cross-category-interfaces.md §2.1 (SubagentDispatcher owner)
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-from uuid import UUID
+import asyncio
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
 
+from adapters._base.chat_client import ChatClient
 from agent_harness._contracts import (
+    AgentSpec,
     SubagentBudget,
     SubagentMode,
     SubagentResult,
@@ -51,30 +60,38 @@ from agent_harness._contracts import (
 )
 from agent_harness.subagent._abc import SubagentDispatcher
 from agent_harness.subagent.budget import BudgetEnforcer
-from agent_harness.subagent.exceptions import SubagentLaunchError
+from agent_harness.subagent.exceptions import (
+    BudgetExceededError,
+    SubagentLaunchError,
+)
+from agent_harness.subagent.modes.as_tool import AsToolWrapper
+from agent_harness.subagent.modes.fork import ForkExecutor
 
 if TYPE_CHECKING:
-    # Avoid circular import; ToolSpec only used in as_tool_factory() return type.
-    from agent_harness._contracts.tools import ToolSpec
+    # Tool handler return type — see modes/as_tool.py for ToolHandler alias.
+    from agent_harness._contracts import ToolSpec
+    from agent_harness.subagent.modes.as_tool import ToolHandler
 
 
 class DefaultSubagentDispatcher(SubagentDispatcher):
     """Production dispatcher; routes by SubagentMode to mode executors.
 
-    Per Day 0 D1: 3-method ABC (spawn / wait_for / handoff) + 1 extra method
-    (as_tool_factory) for AS_TOOL wrapping. Mode executors (Fork / Teammate /
-    Handoff) injected via __init__ in US-2/3/4; US-1 ships skeleton with
-    NotImplementedError raises.
+    Per Day 0 D1 / D10: 3-method ABC (spawn / wait_for / handoff) + 1 extra
+    method (as_tool_factory) for AS_TOOL wrapping. Mode executors (Fork in
+    US-2, Teammate in US-3, Handoff in US-4) injected via __init__.
 
     Per AD-Test-1 (53.6) lesson: this class is per-request DI, NOT
     module-level singleton. AgentLoop holds a fresh instance per request.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, chat_client: ChatClient) -> None:
+        self._chat = chat_client
         self._enforcer = BudgetEnforcer()
-        # In-flight subagent futures for wait_for() lookup.
-        # Populated by spawn() (US-2/3); read by wait_for() (US-2/3).
-        self._in_flight: dict[UUID, Any] = {}
+        self._fork = ForkExecutor(chat_client=chat_client, enforcer=self._enforcer)
+        self._as_tool_wrapper = AsToolWrapper(fork_executor=self._fork)
+        # In-flight subagent tasks for wait_for() lookup. Per-instance state;
+        # NOT module-level — fresh dispatcher per request.
+        self._in_flight: dict[UUID, asyncio.Task[SubagentResult]] = {}
 
     async def spawn(
         self,
@@ -90,23 +107,47 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
         AS_TOOL mode raises SubagentLaunchError — use as_tool_factory() instead.
         HANDOFF mode raises SubagentLaunchError — use handoff() method instead.
 
-        US-1 skeleton raises NotImplementedError; US-2 fills FORK; US-3 fills
-        TEAMMATE.
+        US-2 fills FORK; US-3 fills TEAMMATE.
         """
         if mode == SubagentMode.AS_TOOL:
             raise SubagentLaunchError(
-                "AS_TOOL mode does not use spawn(); call as_tool_factory(agent_role) "
-                "to get a ToolSpec for Cat 2 ToolRegistry."
+                "AS_TOOL mode does not use spawn(); call as_tool_factory(spec) "
+                "to get (ToolSpec, handler) for Cat 2 ToolRegistry."
             )
         if mode == SubagentMode.HANDOFF:
             raise SubagentLaunchError(
                 "HANDOFF mode does not use spawn(); call handoff(target_agent, context) "
                 "directly — it returns a new session_id."
             )
-        # FORK / TEAMMATE — implementations come in US-2 / US-3.
-        raise NotImplementedError(
-            f"spawn(mode={mode.value}) skeleton; impl in Sprint 54.2 US-2 (FORK) / US-3 (TEAMMATE)."
-        )
+
+        budget = budget or SubagentBudget()
+        # Concurrency guard — count active futures (not yet done).
+        active = sum(1 for t in self._in_flight.values() if not t.done())
+        try:
+            self._enforcer.check_concurrent(active_count=active, budget=budget)
+        except BudgetExceededError as exc:
+            # Budget exceeded surfaces as a synchronous launch failure (no
+            # subagent_id allocated). Caller catches SubagentLaunchError and
+            # converts to its own error path.
+            raise SubagentLaunchError(f"spawn rejected: {exc}") from exc
+
+        subagent_id = uuid4()
+
+        if mode == SubagentMode.FORK:
+            coro = self._fork.execute(
+                subagent_id=subagent_id,
+                task=task,
+                budget=budget,
+                trace_context=trace_context,
+            )
+        elif mode == SubagentMode.TEAMMATE:
+            # US-3 will replace this branch with TeammateExecutor.spawn(...)
+            raise NotImplementedError("spawn(mode=TEAMMATE) skeleton; impl in Sprint 54.2 US-3.")
+        else:  # pragma: no cover — Enum exhausted by branches above
+            raise SubagentLaunchError(f"Unknown mode: {mode}")
+
+        self._in_flight[subagent_id] = asyncio.create_task(coro)
+        return subagent_id
 
     async def wait_for(
         self,
@@ -115,14 +156,29 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
         timeout_s: int | None = None,
         trace_context: TraceContext | None = None,
     ) -> SubagentResult:
-        """Block until subagent completes; return SubagentResult.
-
-        US-1 skeleton raises NotImplementedError; US-2 fills (shared with FORK).
-        """
-        raise NotImplementedError(
-            "wait_for() skeleton; impl in Sprint 54.2 US-2 (FORK) — shared "
-            "in-flight future retrieval."
-        )
+        """Block until subagent completes; return SubagentResult (fail-closed)."""
+        task = self._in_flight.get(subagent_id)
+        if task is None:
+            return SubagentResult(
+                subagent_id=subagent_id,
+                mode=SubagentMode.FORK,  # placeholder — unknown
+                success=False,
+                summary="",
+                error=f"unknown_subagent_id: {subagent_id}",
+            )
+        try:
+            if timeout_s is None:
+                return await task
+            return await asyncio.wait_for(asyncio.shield(task), timeout=timeout_s)
+        except asyncio.TimeoutError:
+            # Don't cancel — caller may still want to retrieve later via wait_for again.
+            return SubagentResult(
+                subagent_id=subagent_id,
+                mode=SubagentMode.FORK,
+                success=False,
+                summary="",
+                error=f"wait_for_timeout: {timeout_s}s",
+            )
 
     async def handoff(
         self,
@@ -133,20 +189,18 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
     ) -> UUID:
         """Transfer control to target_agent; return new session_id.
 
-        US-1 skeleton raises NotImplementedError; US-4 fills.
+        US-1 skeleton; US-4 fills.
         """
         raise NotImplementedError("handoff() skeleton; impl in Sprint 54.2 US-4.")
 
-    def as_tool_factory(self, agent_role: str) -> "ToolSpec":
-        """Wrap a subagent role as a ToolSpec for Cat 2 ToolRegistry.
+    def as_tool_factory(self, spec: AgentSpec) -> tuple["ToolSpec", "ToolHandler"]:
+        """Wrap AgentSpec into a Cat 2 ToolSpec + handler pair.
 
         Per Day 0 D1-followup Option A: AS_TOOL is OUT-OF-BAND from spawn()
-        because it returns a ToolSpec (not a SubagentResult). LLM calls the
-        wrapped tool like any other; handler internally invokes spawn(FORK)
-        with bounded budget.
+        because it returns a ToolSpec (not a SubagentResult). Callers register
+        the returned (ToolSpec, handler) with Cat 2 ToolRegistry; the LLM then
+        invokes the wrapped subagent like any tool.
 
-        US-1 skeleton raises NotImplementedError; US-2 fills.
+        US-2 wires this to AsToolWrapper.
         """
-        raise NotImplementedError(
-            f"as_tool_factory(role={agent_role!r}) skeleton; impl in Sprint 54.2 US-2."
-        )
+        return self._as_tool_wrapper.wrap(spec)

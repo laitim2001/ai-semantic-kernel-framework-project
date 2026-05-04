@@ -83,59 +83,33 @@
 
 ## Day 2 — US-2 Fork Mode + AsTool Mode
 
-### 2.1 New `agent_harness/subagent/modes/__init__.py` (empty package init)
-- [ ] **Create modes/ subpackage**
-  - DoD: `from agent_harness.subagent.modes import ForkExecutor, AsToolWrapper, TeammateExecutor, HandoffExecutor` will work after Days 2-4
+### 2.1 / 2.2 / 2.3 modes/ package + Fork + AsTool ✅
+- [x] **Create modes/__init__.py + 2 mode executors** ✅
+  - `subagent/modes/__init__.py` — re-exports ForkExecutor + AsToolWrapper
+  - `subagent/modes/fork.py` (~130 lines) — single-shot ChatClient call (per D12 simplification: no parent context inheritance; Phase 55+ extends to multi-turn child loop)
+  - `subagent/modes/as_tool.py` (~115 lines) — `wrap(spec) -> (ToolSpec, handler)` tuple
 
-### 2.2 New `agent_harness/subagent/modes/fork.py` — ForkExecutor
-- [ ] **Implement ForkExecutor**
-  - `__init__(enforcer: BudgetEnforcer, chat_client_factory)`
-  - `async execute(parent_ctx, task, budget, trace_context) -> SubagentResult`
-  - Flow: deepcopy parent.messages → append task as user msg → build child LoopState (new session_id; inherit tenant_id) → run child AgentLoop with budget guards → on completion truncate summary to budget.summary_token_cap → return SubagentResult
-  - Budget guards: pre-call `check_concurrent`; mid-loop `check_tokens` per turn; post-loop `check_duration`
-  - File header per file-header-convention
-  - DoD: matches plan §US-2 acceptance flow
+### 2.4 Wire dispatcher (FORK + as_tool_factory) ✅
+- [x] **Rewrite dispatcher.py** ✅ wires FORK via ForkExecutor + as_tool_factory via AsToolWrapper; spawn() concurrency guard + asyncio.create_task fire-and-forget; wait_for() with optional timeout via asyncio.shield; AS_TOOL/HANDOFF rejected; TEAMMATE still NotImplementedError (US-3)
+- [x] **Add AgentSpec to `_contracts/subagent.py`** ✅ (D7 partial closure; SubagentHandle deferred to US-3)
+- [x] **Re-export AgentSpec from _contracts/__init__.py** ✅
 
-### 2.3 New `agent_harness/subagent/modes/as_tool.py` — AsToolWrapper
-- [ ] **Implement AsToolWrapper**
-  - `__init__(fork_executor: ForkExecutor)`
-  - `wrap(agent_spec: AgentSpec) -> ToolSpec` returns ToolSpec with name=f"agent_{agent_spec.role}", input_schema={"task": str}, handler closure that calls fork_executor.execute() with agent_spec's bounded budget
-  - File header per file-header-convention
-  - DoD: returned ToolSpec passes 17.md §1 ToolSpec validation
+### 2.5 / 2.6 Tests (10 new — +2 bonus over plan's 8) ✅
+- [x] **test_fork.py — 5 cases** ✅ (returns_summary / truncated_cap / chat_exception fail-closed / timeout / dispatcher round-trip)
+- [x] **test_as_tool.py — 4 cases** ✅ (3 plan + 1 bonus: missing_task no-LLM-call)
+- [x] **test_dispatcher_init.py +1 bonus** ✅ (handoff method skeleton)
+- Verify: 25 subagent tests passed
 
-### 2.4 Modify `agent_harness/subagent/dispatcher.py` — wire fork() and as_tool()
-- [ ] **Replace 2 `NotImplementedError` with delegation**
-  - `fork()` delegates to `self._fork.execute(...)`
-  - `as_tool()` delegates to `self._as_tool.wrap(...)`
-  - DoD: 2 methods working; spawn_teammate / handoff_to still NotImplementedError (US-3/4)
-
-### 2.5 New `tests/unit/agent_harness/subagent/test_fork.py` — 5 cases
-- [ ] **Implement 5 unit tests using mock ChatClient**
-  - test_fork_copies_parent_messages_no_mutation (assert id mismatch)
-  - test_fork_returns_subagent_result_with_summary
-  - test_fork_summary_truncated_to_cap (set cap=10 words; provide long output)
-  - test_fork_budget_token_exceeded_returns_status
-  - test_fork_propagates_tenant_id_to_child
-  - Verify: 5 passed
-
-### 2.6 New `tests/unit/agent_harness/subagent/test_as_tool.py` — 3 cases
-- [ ] **Implement 3 unit tests**
-  - test_as_tool_returns_toolspec_with_correct_schema
-  - test_as_tool_handler_calls_fork_executor (mock fork_executor)
-  - test_as_tool_handler_returns_result_summary (e2e via mock)
-  - Verify: 3 passed
-
-### 2.7 Day 2 sanity checks
-- [ ] **mypy --strict on touched files** → 0 errors
-- [ ] **black + isort + flake8** → clean
-- [ ] **6 V2 lints** → 6/6 green
-- [ ] **LLM SDK leak check** → 0 in subagent/
-- [ ] **Backend full pytest** → ~1323 passed (1315 + 8 new) / 0 fail
+### 2.7 Day 2 sanity checks ✅
+- [x] **mypy --strict** ✅ 0 errors / 8 source files
+- [x] **black + isort + flake8** ✅ clean (3 black auto-fix + 1 isort fix)
+- [x] **6 V2 lints** ✅ 6/6 green in 0.63s (after D14 fix: ALLOWLIST_PATTERNS adds fork.py — same justification as 54.1 D10 llm_judge.py)
+- [x] **LLM SDK leak in subagent/** ✅ 0
+- [x] **Backend full pytest** ✅ **1330 passed / 4 skipped / 0 fail** (= 1320 baseline + 10 new)
 
 ### 2.8 Day 2 commit + push + progress.md
-- [ ] **Stage + commit + push**
-  - Commit message: `feat(subagent, sprint-54-2): US-2 Fork + AsTool modes + 8 unit tests`
-- [ ] **Update progress.md with Day 2 actuals + drift fixes**
+- [ ] **Stage + commit + push** (next)
+- [x] **Update progress.md with Day 2 actuals + drift fixes (D12 + D13 + D14)** ✅
 
 ---
 

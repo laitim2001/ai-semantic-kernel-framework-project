@@ -181,13 +181,93 @@ Day 1 actual: ~1 hr (plan estimate 3.5 hr × 0.55 calibrated → committed for ~
 
 Banked: +1 hr buffer added to Day 2/3/4 reserve.
 
-### Next: Day 2 (US-2 Fork + AsTool Modes)
+## Day 2 (2026-05-04) — US-2 Fork + AsTool Modes ✅
 
-- Decide D7 SubagentHandle / AgentSpec — add to `_contracts/subagent.py` BEFORE TeammateExecutor (Day 3) needs them
-- Implement `subagent/modes/fork.py` (ForkExecutor) — deepcopy parent.messages, run child loop with budget guards
-- Implement `subagent/modes/as_tool.py` (AsToolWrapper) — wraps agent_role to ToolSpec via `as_tool_factory()` method
-- Wire `dispatcher.spawn(FORK)` → ForkExecutor + `dispatcher.wait_for()` future retrieval
-- Wire `dispatcher.as_tool_factory()` → AsToolWrapper
-- 5 unit tests for fork + 3 for as_tool (per plan)
-- Sanity: mypy / lint / pytest 1328 expected
-- Day 2 commit + push + progress update
+### 2.1 / 2.2 / 2.3 New `subagent/modes/` package + 2 mode executors
+
+- ✅ `subagent/modes/__init__.py` — re-export ForkExecutor + AsToolWrapper
+- ✅ `subagent/modes/fork.py` (~130 lines) — ForkExecutor with single-shot ChatClient call + budget timeout/error fail-closed
+- ✅ `subagent/modes/as_tool.py` (~115 lines) — AsToolWrapper.wrap(spec) → (ToolSpec, handler) tuple
+
+### 2.4 Wire dispatcher (rewrite for FORK + as_tool_factory)
+
+- ✅ `__init__(*, chat_client: ChatClient)` injection
+- ✅ spawn(FORK) → asyncio.create_task wrapping fork_executor.execute() → store in `_in_flight[uuid]`
+- ✅ spawn() concurrency check via `BudgetEnforcer.check_concurrent` → BudgetExceededError → SubagentLaunchError
+- ✅ wait_for() → await stored task with optional timeout (asyncio.shield protect cancellation)
+- ✅ as_tool_factory(spec: AgentSpec) → tuple delegation to AsToolWrapper
+- ✅ TEAMMATE / HANDOFF still NotImplementedError (US-3 / US-4 fill)
+
+### 2.5 D7 partial closure: AgentSpec added to `_contracts/subagent.py`
+
+- ✅ Frozen dataclass: role + prompt + model + metadata
+- ✅ Re-exported from `_contracts/__init__.py` (imports + __all__)
+- 🚧 SubagentHandle still deferred — Teammate (US-3) decides if needed
+
+### Drift findings during Day 2 (D12 — D14)
+
+| ID | Type | Issue | Fix |
+|----|------|-------|----|
+| **D12** | architecture | Plan §US-2 said ForkExecutor "deepcopy parent.messages → run child AgentLoop with budget guards". But actual ABC `spawn(mode, task, parent_session_id, budget)` only passes parent_session_id (UUID), not parent_ctx. Loading parent state from session_id requires checkpoint/Cat 7 wiring not in scope for 54.2. | Day 2 simplification: ForkExecutor runs `task` as single-shot ChatClient call (user message only). No parent message inheritance. Phase 55+ may extend to multi-turn child loops with parent state load. Documented in fork.py module docstring. |
+| **D13** | data | `TokenUsage` actual fields are `prompt_tokens` / `completion_tokens` / `cached_input_tokens` / `total_tokens`, NOT `input_tokens` / `output_tokens` as initially written | Use `response.usage.total_tokens` if > 0 else fall back to `prompt_tokens + completion_tokens` |
+| **D14** | lint | AP-8 lint flagged `fork.py` (same issue as 54.1 D10 with llm_judge.py). ForkExecutor calls ChatClient.chat() directly without PromptBuilder routing | Add `agent_harness/subagent/modes/fork.py` to `check_promptbuilder_usage.py` ALLOWLIST_PATTERNS with utility-LLM caller justification (parent already routed through PromptBuilder before deciding to spawn). |
+
+### 2.6 Tests (10 new — +2 bonus over plan's 8)
+
+- ✅ `test_fork.py` — **5 cases**:
+  - test_fork_returns_subagent_result_with_summary (happy path; 80 tokens)
+  - test_fork_summary_truncated_to_cap (1000 → 501 words)
+  - test_fork_chat_exception_returns_fail_closed (RuntimeError → error string)
+  - test_fork_timeout_returns_timeout_error (max_duration_s=0)
+  - test_dispatcher_spawn_fork_then_wait_for_round_trip (e2e via dispatcher)
+- ✅ `test_as_tool.py` — **4 cases** (3 plan + 1 bonus: missing_task input):
+  - test_as_tool_returns_toolspec_with_correct_schema
+  - test_as_tool_handler_calls_fork_executor_returns_summary_dict
+  - test_as_tool_handler_missing_task_returns_error (bonus; no LLM call)
+  - test_dispatcher_as_tool_factory_returns_pair (e2e via dispatcher)
+- ✅ `test_dispatcher_init.py` updated:
+  - All 4 prior tests now pass MockChatClient
+  - +1 bonus: test_handoff_method_skeleton_raises_not_implemented (US-4 placeholder coverage)
+
+### 2.7 Day 2 sanity checks ✅
+
+- ✅ **mypy --strict** — 0 errors / 8 source files
+- ✅ **black** — 3 files auto-formatted; recheck clean
+- ✅ **isort** — 1 fix on test_dispatcher_init.py; recheck clean
+- ✅ **flake8** — clean
+- ✅ **6 V2 lints** — initially 5/6 (D14 AP-8 flag); after ALLOWLIST add → 6/6 green in 0.63s
+- ✅ **LLM SDK leak in subagent/** — 0 (grep confirm)
+- ✅ **Backend full pytest** — **1330 passed / 4 skipped / 0 fail** (= 1320 baseline + 10 new = 5 fork + 4 as_tool + 1 dispatcher_init bonus)
+
+### 2.8 V2 9-discipline self-check ✅
+
+| # | Discipline | Status | Note |
+|---|-----------|--------|------|
+| 1 | Server-Side First | ✅ | All Cat 11 mode files server-side; ChatClient via injection |
+| 2 | LLM Provider Neutrality | ✅ | 0 SDK imports in subagent/; check_llm_sdk_leak passed |
+| 3 | CC Reference 不照搬 | ✅ | Single-shot ForkExecutor is V2 server-side simplification (D12); CC has different multi-turn pattern |
+| 4 | 17.md Single-source | ✅ | AgentSpec added to _contracts/subagent.py (D7 partial); SubagentBudget/Mode/Result unchanged; ToolSpec from _contracts |
+| 5 | 11+1 範疇歸屬 | ✅ | Fork + AsTool in `subagent/modes/` (Cat 11 owner) |
+| 6 | 04 anti-patterns | ✅ | AP-3 (no scattering), AP-8 (D14 ALLOWLIST justified — utility-LLM caller, same as 54.1 D10 pattern) |
+| 7 | Sprint workflow | ✅ | Plan → checklist → Day 0 → Day 1 → Day 2 → progress |
+| 8 | File header convention | ✅ | All new files have File / Purpose / Category / Scope / Modification History |
+| 9 | Multi-tenant rule | ✅ | Per-request DI dispatcher (no module singleton); parent_session_id propagates via spawn() |
+
+### 2.9 Time spent
+
+Day 2 actual: ~1.5 hr (plan estimate 4 hr × 0.55 calibrated → committed for ~2.2 hr). Faster than expected due to:
+- Day 0 探勘 captured all major contract drifts (D1-D9) so writing was straightforward
+- AsToolWrapper closure pattern reusable from 54.1 verifier handler patterns
+- Test boilerplate copy-pasting from 54.1
+
+Banked: +0.7 hr Day 2 + carrying forward Day 1 +1 hr → **+1.7 hr total banked** for Day 3-4 reserve.
+
+### Next: Day 3 (US-3 Teammate Mode + Mailbox)
+
+- Implement `subagent/mailbox.py` (MailboxStore — in-memory per-session pub/sub)
+- Implement `subagent/modes/teammate.py` (TeammateExecutor)
+- Add SubagentHandle to `_contracts/subagent.py` (D7 final closure) — for TeammateExecutor.spawn() return
+- Wire `dispatcher.spawn(TEAMMATE)` → TeammateExecutor + Mailbox injection (DefaultSubagentDispatcher.__init__ takes optional mailbox param)
+- 5 unit tests for mailbox + 3 for teammate (per plan)
+- Sanity: mypy / lint / pytest 1338 expected
+- Day 3 commit + push + progress update
