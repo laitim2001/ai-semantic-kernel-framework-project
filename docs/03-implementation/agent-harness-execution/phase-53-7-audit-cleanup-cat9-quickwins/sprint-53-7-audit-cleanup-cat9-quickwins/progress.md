@@ -175,3 +175,72 @@ Group B infra cleanup (closes AD-Hitl-8 + AI-22 + Playwright required_check):
 - 2.3 US-3 — AI-22 enforce_admins chaos test (dummy red PR + admin merge attempt)
 
 Estimated 1.5-2 hr; calibrated target ~1 hr after Day 0+1 banking.
+
+---
+
+## Day 2 — US-2 DB Constraint + US-3 Branch Protection + AI-22 Chaos Test (2026-05-04)
+
+### Time
+
+- Estimated: 1.5-2 hr (calibrated target ~1 hr post Day 0+1 banking)
+- Actual: ~2 hr (D5 regression + D6 mypy fix iteration cost ~30 min)
+- Banked: ~0 hr (used buffer for D5 + D6 fixes)
+
+### 2.1 US-2 — AD-Hitl-8 DB CHECK constraint ✅
+
+- **Drift D4**: Plan assumed table `hitl_approvals` + DROP+ADD existing constraint. Actual: table is `approvals` + no prior CHECK existed → simpler ADD-only migration.
+- **Drift D5 (CRITICAL)**: Initial 4-value enum `('pending','approved','rejected','escalated')` broke `test_expire_overdue_transitions_pending_to_expired` because HITL state machine includes `expired` (per Approval ORM docstring "pending → approved | rejected | expired"). **Fix**: extended constraint to 5 values; integration test parametrize updated; regression resolved.
+- **Drift D6**: mypy --strict caught 5 missing-annotation errors in new test file. Fixed with `UUID` import + `_make_approval` arg type + `seeded_session` return type + per-test arg annotations.
+- New: `backend/src/infrastructure/db/migrations/versions/0011_approvals_status_check.py`
+  - Chain `0010_pg_partman → 0011_approvals_status_check`
+  - upgrade(): `ADD CONSTRAINT approvals_status_check CHECK status IN 5 values`
+  - downgrade(): `DROP CONSTRAINT IF EXISTS approvals_status_check`
+- New: `backend/tests/integration/infrastructure/db/test_approval_status_constraint.py` (6 cases)
+  - test_status_escalated_is_accepted
+  - test_status_existing_values_still_accepted[pending|approved|rejected|expired] (parametrize ×4)
+  - test_status_unknown_string_is_rejected (asserts IntegrityError + constraint name in error msg)
+- alembic upgrade + downgrade -1 + upgrade head 三遍 clean
+- Verify: pytest 6 passed in 0.38s
+- Backend full pytest: **1091 passed / 4 skipped / 0 fail** (+6 from main 1085 baseline)
+
+### 2.2 US-3 — Branch protection PATCH ✅
+
+- **Drift D7**: Plan said "Playwright E2E" context. Actual: workflow `Playwright E2E` job `e2e` has display name `Frontend E2E (chromium headless)`. Required contexts use **job names** not workflow names.
+- Pre-PATCH 4 contexts: Lint+Type+Test (PG16) / Backend E2E Tests / E2E Test Summary / v2-lints
+- PATCH: `echo '{"strict":true,"contexts":[5 names]}' | gh api repos/.../required_status_checks -X PATCH --input -`
+- Post-PATCH GET shows 5 contexts confirmed
+
+### 2.3 US-3 — AI-22 enforce_admins chaos test ✅ PASSED
+
+- Dummy red PR #75 (`chore/chaos-test-enforce-admins` from main HEAD f4a1425f)
+- `backend/tests/unit/test_chaos_dummy_53_7.py` with `assert 1 == 2`
+- Non-admin merge: blocked — "the base branch policy prohibits the merge"
+- Admin merge (KEY TEST): blocked — "GraphQL: 5 of 5 required status checks have not succeeded: 3 expected. (mergePullRequest)"
+- **Critical evidence**: enforce_admins=true actively rejects --admin bypass at GitHub API layer
+- Cleanup: `gh pr close 75 --delete-branch` (PR + remote branch deleted)
+- Documented: `chaos-test-enforce-admins.md` with verbatim error messages
+
+### Drift Findings (Day 2)
+
+| ID | Description | Action |
+|----|-------------|--------|
+| D4 | Plan assumed table=hitl_approvals + DROP+ADD; actual=approvals + no prior CHECK | Migration revised to ADD-only |
+| D5 | Initial 4-value enum missed 'expired' → broke test_expire_overdue | Extended to 5 values; regression resolved |
+| D6 | mypy --strict caught 5 missing annotations | Fixed with UUID + return-type + arg-type |
+| D7 | Plan said "Playwright E2E" context; actual is "Frontend E2E (chromium headless)" | PATCH used correct job display name |
+
+### Files touched (Day 2)
+
+- New: `backend/src/infrastructure/db/migrations/versions/0011_approvals_status_check.py`
+- New: `backend/tests/integration/infrastructure/db/test_approval_status_constraint.py`
+- New: `docs/.../sprint-53-7-audit-cleanup-cat9-quickwins/chaos-test-enforce-admins.md`
+- Admin op (not git-tracked): branch protection PATCH on main (5 required contexts)
+
+### Next — Day 3
+
+Group C Cat 9 hardening (closes AD-Cat9-7 + AD-Cat9-8 + AD-Cat9-9):
+- 3.1 US-4 — AD-Cat9-8 jailbreak regex FP fix (negative-lookahead for meta-discussion)
+- 3.2 US-4 — AD-Cat9-7 _audit_log_safe FATAL escalation (raise WORMAuditWriteError)
+- 3.3 US-5 — AD-Cat9-9 PII red-team fixture 50→200 cases + SLO test
+
+Estimated 3-4 hr; calibrated target ~2 hr.

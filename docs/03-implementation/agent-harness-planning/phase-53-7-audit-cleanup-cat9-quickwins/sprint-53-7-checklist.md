@@ -94,81 +94,65 @@
 - [x] **Backend full pytest unchanged** ✅ 1085 passed / 4 skipped (matches main baseline)
 
 ### 1.6 Day 1 commit + push + verify CI
-- [ ] **Stage + commit + push**
-- [ ] **Verify CI runs**
+- [x] **Stage + commit + push** ✅ commit `1508e011` (7 files / +417 -56)
+- [ ] **Verify CI runs** — pending CI run; will check at start of Day 2
 
 ### 1.7 Day 1 progress.md update
-- [ ] **Update progress.md with Day 1 actuals**
+- [x] **Update progress.md with Day 1 actuals** ✅ batched into 1508e011 per 53.6 pattern
 
 ---
 
 ## Day 2 — US-2 DB Constraint + US-3 Branch Protection + Chaos Test (est. 1.5-2 hr; closes 2 AD + 1 AI)
 
 ### 2.1 US-2 — Alembic migration for AD-Hitl-8
-- [ ] **Generate alembic migration skeleton**
-  - Command: `cd backend && alembic revision -m "add_escalated_to_status_check"`
-  - DoD: 新檔案 in `backend/migrations/versions/`
-- [ ] **Implement upgrade() / downgrade()**
-  - Pattern per plan §Technical Spec
-  - DROP CONSTRAINT IF EXISTS + ADD CHECK with 4 status values
-  - DoD: migration 邏輯正確 + DROP IF EXISTS 防 idempotent issue
-- [ ] **Run alembic upgrade head + downgrade -1 + upgrade head 三遍**
-  - Command: `alembic upgrade head && alembic downgrade -1 && alembic upgrade head`
-  - DoD: 三遍乾淨無 error
-- [ ] **Create integration test `backend/tests/integration/db/test_approval_status_constraint.py`**
-  - Test 1: INSERT escalated 成功
-  - Test 2: INSERT 'unknown' 仍被 CHECK 拒（IntegrityError）
-  - Test 3: existing 24 governance + audit endpoint tests 全綠（regression sanity）
-  - DoD: 3 cases passing + verify command works
+- [x] **Drift D4 探勘** ✅ Plan assumed table=`hitl_approvals` + DROP+ADD existing constraint; actual table=`approvals` + no prior CHECK → simpler ADD-only migration
+- [x] **Create migration `0011_approvals_status_check.py`** ✅
+  - Path: `backend/src/infrastructure/db/migrations/versions/0011_approvals_status_check.py`
+  - Chain: `down_revision = "0010_pg_partman"`
+  - upgrade(): ADD CONSTRAINT approvals_status_check CHECK status IN 4 values
+  - downgrade(): DROP CONSTRAINT IF EXISTS
+  - File header per file-header-convention
+- [x] **alembic upgrade + downgrade -1 + upgrade head 三遍** ✅ all clean
+- [x] **Create integration test `tests/integration/infrastructure/db/test_approval_status_constraint.py`** ✅ 5 cases
+  - test_status_escalated_is_accepted ✅
+  - test_status_existing_three_values_still_accepted[pending|approved|rejected] ✅×3
+  - test_status_unknown_string_is_rejected (asserts IntegrityError + constraint name in error msg) ✅
+  - Verify: `pytest tests/integration/infrastructure/db/test_approval_status_constraint.py -v` → 5 passed in 0.30s
 
 ### 2.2 US-3 — Branch protection PATCH
-- [ ] **Snapshot current required_status_checks**
-  - Command: `gh api /repos/laitim2001/.../branches/main/protection/required_status_checks > /tmp/protection-before.json`
-  - DoD: 4 contexts 紀錄
-- [ ] **PATCH 加 Playwright E2E**
-  - Command: `gh api -X PATCH /repos/laitim2001/.../branches/main/protection/required_status_checks --field 'contexts[]=...' (5 contexts)`
-  - DoD: gh api 200 + GET 顯示 5 contexts
-- [ ] **Verify PATCH took effect**
-  - Command: `gh api /repos/laitim2001/.../branches/main/protection/required_status_checks | jq '.contexts'`
-  - DoD: 5 contexts 含 "Playwright E2E"
+- [x] **Snapshot current required_status_checks** ✅ pre-PATCH 4 contexts (Lint+Type+Test PG16 / Backend E2E Tests / E2E Test Summary / v2-lints)
+- [x] **PATCH 加 Frontend E2E (chromium headless) — Playwright job display name** ✅
+  - Pre-探勘: workflow `Playwright E2E` has job `e2e` with `name: Frontend E2E (chromium headless)` → use job display name as context
+  - Command: `echo '{"strict":true,"contexts":[5 names]}' | gh api repos/.../required_status_checks -X PATCH --input -`
+  - Result: 200 + 5 contexts confirmed
+- [x] **Verify PATCH took effect** ✅ GET shows 5 contexts incl. "Frontend E2E (chromium headless)"
 
 ### 2.3 US-3 — AI-22 enforce_admins chaos test
-- [ ] **Create dummy red PR**
-  - Branch: `chore/chaos-test-enforce-admins`
-  - Change: 加 trivial assertion fail in `backend/tests/unit/test_chaos_dummy.py`（assert 1 == 2）
-  - PR title: `[CHAOS TEST DO NOT MERGE] enforce_admins verification`
-  - PR body: 引用 AI-22 + 預期被擋 + 測完關閉
-  - DoD: PR opened + 至少 1 CI check fail
-- [ ] **嘗試 admin merge → 預期被擋**
-  - Command: `gh pr merge <num> --merge` (admin)
-  - 預期：GitHub 拒絕 with `failedStatusChecks` error
-  - DoD: 拒絕訊息 captured to chaos-test-enforce-admins.md
-- [ ] **Document result**
-  - Create `docs/03-implementation/agent-harness-execution/phase-53-7-.../chaos-test-enforce-admins.md`
-  - Sections: setup / dummy PR url / merge attempt result / GitHub API response / conclusion
-  - DoD: 文件含 admin merge 真被擋的 evidence
-- [ ] **Cleanup chaos test**
-  - Command: `gh pr close <num> --delete-branch && git push origin :chore/chaos-test-enforce-admins`
-  - DoD: PR closed + dummy branch 從 remote 刪除
-- [ ] **Update 13-deployment-and-devops.md**
-  - §Branch Protection 段加：5 required checks (含 Playwright E2E since 53.7) + AI-22 chaos test passed evidence ref
-  - DoD: 段落更新
+- [x] **Create dummy red PR** ✅ PR #75
+  - Branch: `chore/chaos-test-enforce-admins` (from main HEAD f4a1425f)
+  - Change: `backend/tests/unit/test_chaos_dummy_53_7.py` asserting `1 == 2`
+  - PR title: `[CHAOS TEST DO NOT MERGE] AI-22 enforce_admins verification`
+- [x] **嘗試 non-admin merge → blocked** ✅
+  - `gh pr merge 75 --merge` → "the base branch policy prohibits the merge"
+- [x] **嘗試 admin merge → blocked (KEY TEST)** ✅
+  - `gh pr merge 75 --merge --admin` → "GraphQL: 5 of 5 required status checks have not succeeded: 3 expected. (mergePullRequest)"
+  - **Critical evidence**: enforce_admins=true actively rejects --admin bypass at GitHub API layer
+- [x] **Document result** ✅
+  - File: `docs/03-implementation/agent-harness-execution/phase-53-7-audit-cleanup-cat9-quickwins/sprint-53-7-audit-cleanup-cat9-quickwins/chaos-test-enforce-admins.md`
+  - Sections: Goal / Setup / Procedure / Outcomes (verbatim error msgs) / Conclusion / Cleanup / Notes
+- [x] **Cleanup chaos test** ✅ `gh pr close 75 --delete-branch` (remote + local both deleted)
+- [ ] **Update 13-deployment-and-devops.md** — deferred to Day 4 closeout (small doc edit; bundled with 5-required-checks note)
 
 ### 2.4 Day 2 sanity checks
-- [ ] **alembic upgrade head 仍 clean** (Day 2.1 已驗；recheck for safety)
-- [ ] **Backend full pytest with new test**
-  - Command: `cd backend && python -m pytest --tb=line -q 2>&1 | tail -5`
-  - Expected: 1085 + 3 = 1088 passed
-- [ ] **mypy --strict on touched files**: 0 errors
-- [ ] **6 V2 lints via run_all.py**: green
+- [x] **alembic upgrade head clean** ✅ (verified during D5 fix iteration: down -> up -> tests pass)
+- [x] **Backend full pytest** ✅ **1091 passed / 4 skipped / 0 fail** (+6 from baseline = 5 status check tests + 'expired' parametrize entry; D5 regression resolved by including 'expired' in 5-value enum)
+- [x] **mypy --strict on touched files** ✅ 0 errors after D6 fix (added UUID type annotation to `_make_approval`)
+- [x] **6 V2 lints via run_all.py** ✅ 6/6 green in 0.63s
+- [x] **black + isort + flake8** ✅ clean after auto-format
 
 ### 2.5 Day 2 commit + push + verify CI
 - [ ] **Stage + commit + push**
-  - Commit: `feat(db+ci, sprint-53-7): Day 2 — US-2 DB constraint + US-3 branch protection + AI-22 chaos test (closes AD-Hitl-8 + AI-22)`
-  - Push
-- [ ] **Verify CI runs**
-  - Backend CI / V2 Lint / E2E / Frontend CI / Playwright E2E all 觸發 (alembic + new tests + workflow change)
-  - DoD: 5 active checks green
+- [ ] **Verify CI runs** (Backend CI / V2 Lint / E2E / Playwright E2E all expected to fire on this commit due to backend/* + .github/* not touched but migrations + tests in backend/)
 
 ### 2.6 Day 2 progress.md update
 - [ ] **Update progress.md with Day 2 actuals**
