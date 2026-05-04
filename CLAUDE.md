@@ -68,15 +68,15 @@ Build enterprise AI agent teams that work like **human professional teams** — 
 
 | Attribute | Value |
 |-----------|-------|
-| **Phase** | Phase 55.1 完成 — **21/22 sprint 完成，95% V2 進度** |
-| **Latest Sprint** | **55.1** ✅ COMPLETE 2026-05-04（Business domain production service layer — Incident DB + IncidentService + 4 read-only services + BUSINESS_DOMAIN_MODE flag + Cat 12 obs；44 tests；calibration ratio 0.68）|
-| **Last main-progress Sprint** | **55.1** ✅ COMPLETE 2026-05-04（V2 20/22 → 21/22）|
-| **main HEAD** | `798176d5` (2026-05-04) |
-| **Next Sprint** | **55.2** Production deployment + full mode swap 完成 V2 22/22 (100%) closure — **plan/checklist 尚未起草**（rolling planning，等 user approve scope；候選 Option A: 完成 register_*_tools mode swap for 4 deferred domains，closes AD-BusinessDomainPartialSwap-1） |
-| **Roadmap** | Phase 49-55，**22 sprint，約 5.5 個月** |
+| **Phase** | **🎉 V2 重構完成 — 22/22 sprint 完成，100% V2 進度** |
+| **Latest Sprint** | **55.2** ✅ COMPLETE 2026-05-04（V2 22/22 closure — production mode swap + chat handler wiring；AD-BusinessDomainPartialSwap-1 closed at 3 layers；21 tests；calibration ratio **1.10** FIRST in band）|
+| **Last main-progress Sprint** | **55.2** ✅ COMPLETE 2026-05-04（V2 21/22 → **22/22 = 100%**）|
+| **main HEAD** | `9a8296ae` (2026-05-04) |
+| **Next Phase** | **Phase 56+ SaaS Stage 1**（候選 scope: Multi-tenant infrastructure + Billing + SLA + Disaster Recovery；user approval required；Sprint 56.1 plan 起草前必先 user approve scope per rolling planning 紀律）|
+| **Roadmap** | Phase 49-55 V2 ✅，Phase 56-58 SaaS Stage 1 候選 |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis（V1 沿用）|
-| **Architecture** | TAO/ReAct loop + 11+1 範疇 + LLM Provider 中性 |
-| **Branch Protection** | enforce_admins=true / **review_count=0**（solo-dev policy 永久，2026-05-03 Sprint 53.2 起）/ 4 active required CI checks |
+| **Architecture** | TAO/ReAct loop + 11+1 範疇 全 Level 4（Cat 9 L5）+ LLM Provider 中性（CI-enforced）+ Multi-tenant 3 鐵律 |
+| **Branch Protection** | enforce_admins=true / **review_count=0**（solo-dev policy 永久，2026-05-03 Sprint 53.2 起）/ 5 active required CI checks |
 
 詳見 `docs/03-implementation/agent-harness-planning/06-phase-roadmap.md`。
 
@@ -556,9 +556,9 @@ V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（M
 
 ---
 
-**Last Updated**: 2026-05-04 (Sprint 55.1 closeout)
+**Last Updated**: 2026-05-04 (Sprint 55.2 closeout — V2 22/22 (100%) 完成)
 **Project Start**: 2025-11-14
-**Current Phase**: V2 Phase 55.1 完成（**21/22 = 95% 完成**）— Business domain production service layer landed；55.2 待啟動 (V2 22/22 closure)
-**main HEAD**: `798176d5`
+**Current Phase**: 🎉 **V2 重構完成（22/22 = 100% 完成）**— Phase 49-55 共 22 sprint + 2 carryover bundles；11+1 範疇全 Level 4（Cat 9 L5）；5 business domains production-capable；下一階段 = Phase 56+ SaaS Stage 1（候選 scope，user approval required）
+**main HEAD**: `9a8296ae`
 **V2 Authority**: `docs/03-implementation/agent-harness-planning/` (19 docs)
 **V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`
