@@ -180,3 +180,95 @@ Wait, that's 4 ADs done in Day 1 (Group A 3 + AD-Cat12-Helpers-1 1). Tracker:
 | AD-Hitl-7 | ⏳ Day 3 |
 
 **4/6 ADs closed by end of Day 1**. Remaining 2 ADs cover Day 2 + Day 3 (Cat 7 lint + per-tenant HITL DB).
+
+---
+
+## Day 2 — 2026-05-04 (~2.5 hr actual / ~3-4 hr est)
+
+### Actions taken — AD-Cat7-1 sole-mutator grep-zero + 7th V2 lint
+
+1. **Grep-zero verification across full `backend/src/` tree** (extended Day 0 D1):
+   - 4 patterns: `state.messages.append` / `state.scratchpad[` / `state.tool_calls.append` / `state.user_input =`
+   - Path: `backend/src/` (covers agent_harness + api + business_domain + platform_layer + infrastructure + adapters)
+   - Result: **zero matches** for all 4 patterns
+   - Confirms Cat 7 sole-mutator pattern is fully achieved; AD-Cat7-1 scope = enforcement gate (no remediation needed)
+
+2. **New `scripts/lint/check_sole_mutator.py`** (project root per D4):
+   - argparse with `--root` default to `backend/src`
+   - 4 regex patterns + whitelist: `state_mgmt/reducer.py`, `state_mgmt/decision_reducers.py`, `/tests/`, `__pycache__`
+   - Skips comment-only lines to avoid false flags on documentation
+   - Exit 0 / 1 / 2 (clean / violation / config error)
+   - Used `r"""..."""` raw docstring to suppress Python 3.12 SyntaxWarning on regex backslashes
+
+3. **Wired into `scripts/lint/run_all.py`** as 7th lint:
+   - Added LINT entry: `("check_sole_mutator.py", ["--root", "backend/src"])`
+   - Refactored `run_all.py` to compute `n_lints = len(LINTS)` (parameterized "7/7 green" formatting; future-proof for 8th lint)
+   - Updated header docstring + Modification History entry (1-line per AD-Lint-3)
+   - Updated description argparse help "6 V2 architecture" → "7 V2 architecture"
+
+4. **New tests `backend/tests/unit/agent_harness/state_mgmt/test_sole_mutator_lint.py`** (6 tests):
+   - `test_lint_passes_on_real_codebase` — guards future regression on real backend/src
+   - `test_lint_fails_on_injected_violation` — injects violation into tmp_path; verifies exit 1 + stderr contains pattern + filename
+   - `test_lint_whitelists_reducer` — verifies tmp `agent_harness/state_mgmt/reducer.py` mutation does NOT trigger
+   - **Bonus**: parametric `test_lint_catches_other_forbidden_patterns` × 3 (scratchpad / tool_calls / user_input) — coverage of remaining 3 patterns beyond the original 3-test plan target
+
+### Path correction (D4 → resolved Day 2)
+
+Plan §AD-Cat7-1 spec stated `backend/scripts/lint/check_sole_mutator.py`. Day 1 D4 finding revealed V2 lints actually live at PROJECT root `scripts/lint/`. Day 2 deliverables placed at correct location:
+- `scripts/lint/check_sole_mutator.py` ✓
+- `scripts/lint/run_all.py` (existing, edited) ✓
+- `backend/tests/unit/agent_harness/state_mgmt/test_sole_mutator_lint.py` ✓ (test in backend per testing.md;subprocess invokes lint at project-root path resolved via `Path(__file__).parents[5]`)
+
+Per AD-Plan-1 audit-trail rule: drift findings recorded in §Risks (D4) and progress.md;plan §Spec NOT silently rewritten.
+
+### Verification
+
+- pytest: **6/6 green** (3 main + 3 parametric)
+- 7 V2 lints: **7/7 green** (~0.77s total)
+- mypy --strict: 0 errors on 3 files (check_sole_mutator + run_all + test)
+- black + isort: green
+- flake8 backend tests: green (100-char limit per backend/.flake8)
+- flake8 scripts/: pre-existing 80-83 char lines in run_all.py (Sprint 53.7) are not in CI scope per backend-ci.yml `flake8 src/ tests/`;de-facto convention preserves;not blocking
+- LLM SDK leak: 0 (CI-equivalent grep)
+
+### Drift findings (Day 2 — none new)
+
+- D4 (resolved): path correction applied per spec
+- No new drift findings in Day 2
+
+### Day 2 actual vs estimate
+
+| Slot | Estimate | Actual | Delta |
+|------|----------|--------|-------|
+| Grep-zero verify (4 patterns × 4 paths combined) | ~30 min | ~10 min | -20 min (faster than expected: single grep across backend/src/ sufficed) |
+| Write check_sole_mutator.py + r-string fix | ~1 hr | ~50 min | -10 min |
+| Wire into run_all.py + parameterize | ~30 min | ~30 min | ±0 |
+| Write tests (3 main + 3 bonus parametric) | ~45 min | ~45 min | ±0 (bonus parametric added inside budget) |
+| Lint chain + verify | ~30 min | ~15 min | -15 min |
+| **Day 2 total** | **~3-4 hr** | **~2.5 hr** | **~30% under** (closer to lower est bound) |
+
+### Day 3 plan
+
+- **AD-Hitl-7 per-tenant HITLPolicy DB persistence** (~4-5 hr est)
+- New table `hitl_policies` + Alembic 0013 + RLS policy
+- ORM `HitlPolicyRow`
+- ABC `HITLPolicyStore` in `agent_harness/hitl/_abc.py`
+- Default impl `DBHITLPolicyStore` in `platform_layer/governance/hitl/policy_store.py`
+- Wire into `DefaultHITLManager.get_policy(tenant_id)` + `ServiceFactory`
+- 5+ tests (unit + integration with 2 tenants RLS)
+- Commit `feat(governance, db, sprint-55-3): close AD-Hitl-7`
+
+### Day 2 status
+
+**Day 2**: 1 commit delivered;1 AD closed (AD-Cat7-1).
+
+| AD | Status | Day | Commit |
+|----|--------|-----|--------|
+| AD-Plan-1 | ✅ closed | Day 1 | `bc468477` |
+| AD-Lint-2 | ✅ closed | Day 1 | `bc468477` |
+| AD-Lint-3 | ✅ closed | Day 1 | `144c4595` |
+| AD-Cat12-Helpers-1 | ✅ closed | Day 1 | `52d802a9` |
+| AD-Cat7-1 | ✅ closed | Day 2 | pending |
+| AD-Hitl-7 | ⏳ pending | Day 3 | — |
+
+**5/6 ADs closed by end of Day 2**. Remaining 1 AD (AD-Hitl-7) covers Day 3.
