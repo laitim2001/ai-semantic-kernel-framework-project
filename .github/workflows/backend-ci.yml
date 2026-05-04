@@ -10,6 +10,11 @@
 # BUSINESS_DOMAIN_MODE flag + BusinessServiceFactory). Header touch here
 # triggers backend-ci required check for docs-only closeout PR.
 #
+# Sprint 55.1 checklist bookkeeping (2026-05-04, post-closeout): commit
+# 32-line [x] marks for §4.6/4.7/4.8 (PR #82/#83 actual work landed via
+# closeout PR #83 but checklist `[x]` marks were never pushed back). Header
+# touch here applies the paths-filter workaround for this docs-only PR.
+#
 # Sprint 53.2.5 closeout sync (2026-05-03): SITUATION-V2-SESSION-START.md +
 # CLAUDE.md updated to reflect V2 14/22 progress + Solo-dev policy + Paths
 # filter workaround. Header touch here applies the workaround itself.

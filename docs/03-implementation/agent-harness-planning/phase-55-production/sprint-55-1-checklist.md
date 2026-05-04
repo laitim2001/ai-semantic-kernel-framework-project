@@ -220,19 +220,19 @@ Per AD-Plan-1 (53.7) + feedback_day0_must_grep_plan_assumptions.md — grep each
 - [x] **LLM SDK leak** ✅ 0
 - [x] **alembic upgrade head** ✅ migration 0012 applied earlier Day 1; cycle verified
 
-### 4.6 Open PR + CI green + solo-dev merge
-- [ ] **Push final commit + open PR** (next)
-- [ ] **Wait CI green** (5 active checks: backend-ci / V2 Lint / E2E Backend / E2E Summary / Frontend E2E chromium headless)
-- [ ] **Solo-dev normal merge to main**
+### 4.6 Open PR + CI green + solo-dev merge ✅
+- [x] **Push final commit + open PR** ✅ PR #82 opened
+- [x] **Wait CI green** ✅ 5/5 required checks green (1 isort fix commit `a1ad19c6` + 1 paths-filter workaround `8dbb8a56`)
+- [x] **Solo-dev normal merge to main** ✅ PR #82 squash-merged main `798176d5`
 
-### 4.7 Closeout PR
-- [ ] **Branch `chore/sprint-55-1-closeout`**
-- [ ] **Update SITUATION-V2-SESSION-START.md** §8 + §9 (V2 21/22 = 95%)
-- [ ] **Update CLAUDE.md** L48-50 V2 progress + main HEAD
-- [ ] **Touch backend-ci.yml header** + playwright-e2e.yml header (paths-filter workarounds)
-- [ ] **Open closeout PR + merge**
+### 4.7 Closeout PR ✅
+- [x] **Branch `chore/sprint-55-1-closeout`** ✅
+- [x] **Update SITUATION-V2-SESSION-START.md** §9 milestones row + Last Updated + Update history ✅
+- [x] **Update CLAUDE.md** L71-75 V2 progress + main HEAD + L559-562 footer ✅
+- [x] **Touch backend-ci.yml header + playwright-e2e.yml header** (paths-filter workarounds) ✅
+- [x] **Open closeout PR + merge** ✅ PR #83 merged main `7ef94d30`
 
-### 4.8 Memory update + final push
-- [ ] **Create `memory/project_phase55_1_business_services.md`**
-- [ ] **Update `memory/MEMORY.md`** index
-- [ ] **Verify main HEAD + working tree clean + delete merged branches**
+### 4.8 Memory update + final push ✅
+- [x] **Create `memory/project_phase55_1_business_services.md`** ✅
+- [x] **Update `memory/MEMORY.md`** index ✅ entry added
+- [x] **Verify main HEAD + working tree clean + delete merged branches** ✅ main `7ef94d30` clean; both branches deleted via `gh pr merge --delete-branch`
