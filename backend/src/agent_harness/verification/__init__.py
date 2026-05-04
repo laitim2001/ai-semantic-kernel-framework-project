@@ -8,6 +8,10 @@ LLMJudgeVerifier ships in US-2; AgentLoop self-correction integration in US-3.
 
 from agent_harness.verification._abc import Verifier
 from agent_harness.verification.cat9_fallback import LLMJudgeFallbackGuardrail
+from agent_harness.verification.correction_loop import (
+    VERIFICATION_FAILED_STOP_REASON,
+    run_with_verification,
+)
 from agent_harness.verification.llm_judge import LLMJudgeVerifier
 from agent_harness.verification.registry import VerifierRegistry
 from agent_harness.verification.rules_based import RulesBasedVerifier
@@ -27,7 +31,9 @@ __all__ = [
     "Rule",
     "RulesBasedVerifier",
     "SchemaRule",
+    "VERIFICATION_FAILED_STOP_REASON",
     "Verifier",
     "VerifierRegistry",
     "load_template",
+    "run_with_verification",
 ]

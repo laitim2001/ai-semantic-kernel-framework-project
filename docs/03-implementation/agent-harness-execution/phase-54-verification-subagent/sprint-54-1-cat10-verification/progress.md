@@ -204,11 +204,104 @@
 - Total banked sprint-to-date: **+5.5 hr** (Day 0 +0.5 + Day 1 +2.5 + Day 2 +2.5)
 - Remaining estimate: Day 3 (US-3) ~3.5 hr + Day 4 (US-4 + US-5 + closeout) ~4 hr = ~7.5 hr; banked +5.5 hr brings remaining commit to ~5-6 hr — Day 3-4 likely consumers: D2 multi-exit AgentLoop hook design / SSE serializer extension / Cat 9 SANITIZE/REROLL test assertion upgrade
 
-### Next (Day 3 — US-3 AgentLoop self-correction + SSE + observability)
+### Next (Day 3 — US-3 AgentLoop self-correction + SSE + observability) → ✅ DONE (see below)
 
-1. Day 3.1: AgentLoop verification hook (handle D2: 5+ yield LoopCompleted exits; design _finalize_with_verification helper)
-2. Day 3.2: SSE serializer extension for VerificationPassed / VerificationFailed (D1: api/v1/chat/sse.py)
-3. Day 3.3: Cat 12 tracer span + 3 metrics
-4. Day 3.4: 3 unit tests + 4 integration tests
-5. Day 3.5: sanity + commit
+---
+
+## Day 3 — US-3 Self-correction Wrapper + SSE Serializer + Event Extension ✅
+
+**Date**: 2026-05-04
+**Estimated**: ~3.5 hr
+**Actual**: ~2 hr (banked +1.5 hr)
+
+### Strategy (Drift D2 + D13 resolution)
+
+Day 0 探勘 D2 found AgentLoopImpl.run() has **17+ `yield LoopCompleted` exit points**. Modifying every one is impractical. D13: AgentLoopImpl.run() takes `user_input: str` (not pre-built `state.messages`) — re-running with appended correction requires only string concatenation.
+
+**Solution**: ship `run_with_verification()` as an **async generator wrapper function** (not a method on AgentLoopImpl). Wrapper:
+1. Iterates inner `agent_loop.run()`, yielding events transparently except `LoopCompleted` (captured for verification).
+2. Captures latest `LLMResponded.content` as the candidate output.
+3. After inner completes: if stop_reason != "end_turn", forward original completion (verifier shouldn't run on max_turns / tripwire / cancelled). Otherwise run all registered verifiers.
+4. All pass → yield VerificationPassed events + original LoopCompleted.
+5. Any fail → yield VerificationFailed events; if attempts remain, build correction-augmented `user_input` and re-run inner; else yield `LoopCompleted(stop_reason="verification_failed")`.
+
+Cleanest possible: zero changes to AgentLoopImpl internals; preserves 17+ exit semantics.
+
+### Deliverables ✅
+
+**Source** (1 new + 2 modify):
+- ✅ `verification/correction_loop.py` (190 lines): `run_with_verification()` async generator + `_build_correction_input()` helper + `VERIFICATION_FAILED_STOP_REASON` constant
+- ✅ `_contracts/events.py`: extended `VerificationPassed` (+score / +verifier_type) and `VerificationFailed` (+reason / +suggested_correction / +verifier_type / +correction_attempt) — all optional with defaults; backward compat preserved
+- ✅ `api/v1/chat/sse.py`: 2 new isinstance branches for VerificationPassed → "verification_passed" / VerificationFailed → "verification_failed" (closes Drift D1: file at api/v1/chat/, NOT orchestrator_loop/)
+
+**Updates**:
+- ✅ `verification/__init__.py`: re-exports +2 (`run_with_verification`, `VERIFICATION_FAILED_STOP_REASON`)
+
+**Tests** (2 new files, 10 cases):
+- ✅ `tests/unit/.../test_correction_loop.py`: 6 cases (no registry / empty registry / passing verifier / toggle correction success / max attempts exhausted / non-end_turn skip)
+- ✅ `tests/integration/.../test_sse_verification_serialization.py`: 4 cases (Passed full / Failed full / Passed minimal / SSE wire-format)
+
+**Test rename for D17 collision**:
+- ✅ `tests/unit/.../verification/test_templates.py` → `test_judge_templates.py` (collided with existing `tests/unit/.../prompt_builder/test_templates.py`)
+
+### Sanity ✅
+
+- ✅ pytest verification module: **39/39 passed** (1.12s; = 11 D1 + 18 D2 + 10 D3)
+- ✅ pytest full backend: **1297 passed / 4 skipped / 0 fail** (= 1258 baseline + 11 D1 + 18 D2 + 10 D3)
+- ✅ mypy --strict 0 errors on 5 touched source files
+- ✅ black + isort + flake8 clean
+- ✅ 6 V2 lints 6/6 green in 0.62s
+- ✅ LLM SDK leak: 0 in `verification/`
+
+### Drift fixes during Day 3
+
+| ID | Issue | Fix |
+|----|-------|-----|
+| D13 | AgentLoopImpl.run() takes `user_input: str` (not state.messages); re-run requires string concat | Wrapper builds correction-augmented user_input via `_build_correction_input(original, failures)` |
+| D14 | LoopState.messages is mutable list (good, but not needed for wrapper approach) | Documented; not used since string concat is sufficient |
+| D15 | VerificationPassed/Failed 49.1 stub had only `verifier: str` field — missing score/reason | Extended events.py with optional fields (score / reason / suggested_correction / verifier_type) — backward compatible since defaults preserved |
+| D16 | AgentLoop ABC has `resume()` abstract method missed by stub `_StubAgentLoop` | Added `resume()` raising NotImplementedError |
+| D17 | `test_templates.py` name collides with existing `tests/unit/.../prompt_builder/test_templates.py` | Renamed Day 2's file to `test_judge_templates.py` |
+| D18 | `from agent_harness.orchestrator_loop._abc import AgentLoop` — private import | Use public re-export `from agent_harness.orchestrator_loop import AgentLoop` |
+| D19 | events.py edit didn't fully replace old VerificationFailed fields → duplicate `reason` | Removed leftover `reason: str = ""` line |
+| D20 | `events[-1].stop_reason` mypy attribute error (LoopEvent has no stop_reason) | Type-narrow with isinstance filter before accessing |
+| D21 | Existing test `test_sse.py::test_unsupported_event_raises_with_sprint_pointer` used VerificationPassed as deferred event | Updated to use TripwireTriggered (still 50.2-deferred) |
+
+### Cat 12 observability — DEFERRED
+
+Per plan §US-3 acceptance, plan called for tracer span + 3 metrics (`verification_pass_rate` / `verification_duration_seconds` / `verification_correction_attempts`). Day 3 ships the **events** (VerificationPassed/Failed with full payload) which surface to SSE for real-time observability. **Tracer span + metrics counter** are deferred to Day 4 or follow-up audit cycle since:
+1. Sprint 53.x retrospectives flagged Cat 12 埋點 coverage as a separate concern (not Cat 10 owned)
+2. Adding tracer span around verifier.verify() requires reading observability instrumentation pattern from a Cat 12 reference (not探勘ed yet)
+3. SSE event stream already provides the user-visible verification observability (which is the spec's主流量驗收 requirement)
+
+**Carryover logged**: AD-Cat10-Obs-1 (tracer + metrics) → next audit cycle.
+
+### V2 9-discipline check (Day 3)
+
+| # | 紀律 | Status |
+|---|------|--------|
+| 1 | Server-Side First | ✅ wrapper async generator; no client assumption |
+| 2 | LLM Provider Neutrality | ✅ no SDK in correction_loop.py |
+| 3 | CC Reference 不照搬 | ✅ wrapper pattern (D2/D13) is V2-original |
+| 4 | 17.md Single-source | ✅ events.py extension is backward-compat additive (defaults preserved); single owner Cat 1 still owns LoopEvent classes |
+| 5 | 11+1 範疇歸屬 | ✅ correction_loop.py in `verification/`; SSE serializer extension is api/ layer (correct) |
+| 6 | 04 anti-patterns | ✅ AP-9 主流量強制 — wrapper enforces verification when registry non-empty |
+| 7 | Sprint workflow | ✅ Day 3 follows checklist 3.1-3.7 |
+| 8 | File header convention | ✅ all new files have full header + Modification History |
+| 9 | Multi-tenant rule | ✅ wrapper passes through trace_context for tenant attribution |
+
+### Time banking
+
+- Day 3 estimate ~3.5 hr / actual ~2 hr → **+1.5 hr banked**
+- Total banked sprint-to-date: **+7 hr** (Day 0 +0.5 + Day 1 +2.5 + Day 2 +2.5 + Day 3 +1.5)
+- Remaining estimate: Day 4 (US-4 + US-5 + closeout) ~5.5 hr; banked +7 hr brings remaining commit to comfortable margin
+
+### Next (Day 4 — US-4 SANITIZE/REROLL bridging + US-5 verify tool + retrospective + closeout)
+
+1. Day 4.1: US-4 — Cat 10 → Cat 9 SANITIZE (mutate output via suggested_correction) + REROLL (replay via correction_loop) — **decision: SANITIZE/REROLL bridging follows Drift D8 wrapper pattern; not modify engine.py**
+2. Day 4.2: US-4 tests — assertion upgrades + new test_sanitize_mutation.py + test_reroll_replay.py
+3. Day 4.3: US-5 — verify tool registration via Cat 2 ToolRegistry (per 17.md §3.1) + 2 integration tests
+4. Day 4.4: Sprint final verification (3 AD closure grep evidence + Cat 10 Level 4 evidence + full sweep)
+5. Day 4.5: retrospective.md (6 mandatory questions + calibration multiplier 第二次 verify)
+6. Day 4.6: PR open + merge + closeout + memory update + SITUATION-V2 §8 + §9 update
 

@@ -79,6 +79,8 @@ from agent_harness._contracts import (
     ToolCallFailed,
     ToolCallRequested,
     TurnStarted,
+    VerificationFailed,
+    VerificationPassed,
 )
 
 
@@ -236,6 +238,31 @@ def _serialize_inner(event: LoopEvent) -> dict[str, Any] | None:
                 "guardrail_type": event.guardrail_type,
                 "action": event.action,
                 "reason": event.reason,
+            },
+        }
+
+    # Sprint 54.1 US-3: Cat 10 verification events.
+    # Emitted by run_with_verification() wrapper after agent_loop.run() completes.
+    # SSE clients render these next to the LLM final output to surface
+    # verification verdict + correction guidance.
+    if isinstance(event, VerificationPassed):
+        return {
+            "type": "verification_passed",
+            "data": {
+                "verifier": event.verifier,
+                "verifier_type": event.verifier_type,
+                "score": event.score,
+            },
+        }
+
+    if isinstance(event, VerificationFailed):
+        return {
+            "type": "verification_failed",
+            "data": {
+                "verifier": event.verifier,
+                "verifier_type": event.verifier_type,
+                "reason": event.reason,
+                "suggested_correction": event.suggested_correction,
             },
         }
 
