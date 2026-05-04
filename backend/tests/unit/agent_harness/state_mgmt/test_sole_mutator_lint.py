@@ -39,7 +39,7 @@ def _run_lint(root: Path) -> tuple[int, str]:
 
 
 def test_lint_passes_on_real_codebase() -> None:
-    """Real backend/src must currently be sole-mutator clean (Sprint 55.3 Day 0 grep-zero baseline)."""
+    """Real backend/src must currently be sole-mutator clean (Sprint 55.3 grep-zero baseline)."""
     backend_src = _PROJECT_ROOT / "backend" / "src"
     rc, stderr = _run_lint(backend_src)
     assert rc == 0, f"sole-mutator regression on real codebase:\n{stderr}"
