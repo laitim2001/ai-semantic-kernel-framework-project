@@ -27,9 +27,13 @@ Key Components:
     - build_handler(mode: ChatMode, message: str) -> AgentLoopImpl  (dispatcher)
 
 Created: 2026-04-30 (Sprint 50.2 Day 1.4)
-Last Modified: 2026-04-30
+Last Modified: 2026-05-04
 
 Modification History (newest-first):
+    - 2026-05-04: (Sprint 55.2 Day 3.4) build_handler + build_echo_demo_handler
+      + build_real_llm_handler now accept `business_factory_provider`. Threaded
+      to make_default_executor → register_all_business_tools → 5 register_*_tools
+      to enable service-mode business-domain handlers in chat main flow.
     - 2026-04-30: Initial creation (Sprint 50.2 Day 1.4) — echo_demo via
         MockChatClient + scripted responses; real_llm via AzureOpenAIAdapter.
 
@@ -45,6 +49,7 @@ Related:
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from adapters._base.chat_client import ChatClient
@@ -62,6 +67,7 @@ from .schemas import ChatMode
 
 if TYPE_CHECKING:
     from agent_harness.hitl import HITLManager
+    from business_domain._service_factory import BusinessServiceFactory
     from platform_layer.governance.service_factory import ServiceFactory
 
 # Phase 50.2 demo system prompt — instructs the model to use echo_tool when the
@@ -79,6 +85,7 @@ def build_echo_demo_handler(
     *,
     hitl_manager: "HITLManager | None" = None,
     hitl_timeout_s: int = 14400,
+    business_factory_provider: Callable[[], "BusinessServiceFactory"] | None = None,
 ) -> AgentLoopImpl:
     """Wire AgentLoopImpl with a MockChatClient pre-scripted to call echo_tool.
 
@@ -87,8 +94,12 @@ def build_echo_demo_handler(
 
     Sprint 53.6 US-4: optional `hitl_manager` opts the loop into Cat 9 Stage 3
     HITL escalation. None preserves 53.3 baseline behavior (no HITL pause).
+
+    Sprint 55.2 US-3: optional `business_factory_provider` enables service-mode
+    business domain handlers (settings.business_domain_mode='service' path).
+    None preserves PoC mock-mode behavior.
     """
-    registry, executor = make_default_executor()
+    registry, executor = make_default_executor(factory_provider=business_factory_provider)
     parser = OutputParserImpl()
 
     scripted: list[ChatResponse] = [
@@ -128,8 +139,12 @@ def build_real_llm_handler(
     *,
     hitl_manager: "HITLManager | None" = None,
     hitl_timeout_s: int = 14400,
+    business_factory_provider: Callable[[], "BusinessServiceFactory"] | None = None,
 ) -> AgentLoopImpl:
     """Wire AgentLoopImpl with AzureOpenAIAdapter. Requires env vars.
+
+    Sprint 55.2 US-3: optional `business_factory_provider` enables service-mode
+    business domain handlers. See build_echo_demo_handler for full description.
 
     Raises:
         RuntimeError: when any of AZURE_OPENAI_ENDPOINT / AZURE_OPENAI_API_KEY /
@@ -151,7 +166,7 @@ def build_real_llm_handler(
     # AzureOpenAIConfig is a BaseSettings — pulls AZURE_OPENAI_* from env automatically.
     chat_client: ChatClient = AzureOpenAIAdapter(AzureOpenAIConfig())
 
-    registry, executor = make_default_executor()
+    registry, executor = make_default_executor(factory_provider=business_factory_provider)
     parser = OutputParserImpl()
 
     return AgentLoopImpl(
@@ -172,6 +187,7 @@ def build_handler(
     *,
     service_factory: "ServiceFactory | None" = None,
     hitl_timeout_s: int = 14400,
+    business_factory_provider: Callable[[], "BusinessServiceFactory"] | None = None,
 ) -> AgentLoopImpl:
     """Dispatch to the per-mode builder. Single entry-point for the router.
 
@@ -179,16 +195,27 @@ def build_handler(
     HITL_ENABLED is not "false", resolves the production HITLManager from the
     factory and injects it into AgentLoopImpl. Without the factory (legacy
     callers, tests) the loop runs with 53.3 baseline behavior.
+
+    Sprint 55.2 US-3: optional `business_factory_provider` enables service-mode
+    business-domain handlers (settings.business_domain_mode='service' path).
+    None preserves PoC mock-mode behavior — see _register_all.make_default_executor.
     """
     hitl_manager: "HITLManager | None" = None
     if service_factory is not None and _hitl_enabled():
         hitl_manager = service_factory.get_hitl_manager()
     if mode == "echo_demo":
         return build_echo_demo_handler(
-            message, hitl_manager=hitl_manager, hitl_timeout_s=hitl_timeout_s
+            message,
+            hitl_manager=hitl_manager,
+            hitl_timeout_s=hitl_timeout_s,
+            business_factory_provider=business_factory_provider,
         )
     if mode == "real_llm":
-        return build_real_llm_handler(hitl_manager=hitl_manager, hitl_timeout_s=hitl_timeout_s)
+        return build_real_llm_handler(
+            hitl_manager=hitl_manager,
+            hitl_timeout_s=hitl_timeout_s,
+            business_factory_provider=business_factory_provider,
+        )
     raise ValueError(f"Unsupported mode: {mode!r}")
 
 

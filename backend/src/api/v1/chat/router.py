@@ -64,8 +64,12 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_harness._contracts import LoopCompleted, TraceContext
+from business_domain._service_factory import BusinessServiceFactory
+from core.config import get_settings
+from infrastructure.db.session import get_db_session
 from platform_layer.governance.service_factory import (
     ServiceFactory,
     get_service_factory,
@@ -86,6 +90,7 @@ async def chat(
     req: ChatRequest,
     current_tenant: UUID = Depends(get_current_tenant),
     factory: ServiceFactory = Depends(get_service_factory),
+    db: AsyncSession = Depends(get_db_session),
 ) -> StreamingResponse:
     """Run an agent loop and stream LoopEvents as SSE.
 
@@ -99,9 +104,34 @@ async def chat(
     Cat 9 Stage 3 ESCALATE now flows through the full HITL pipeline
     (request_approval → notifier → reviewer UI → wait_for_decision → resume).
     Toggle off via env `HITL_ENABLED=false` (handler.py guards this).
+
+    Sprint 55.2 US-3 — closes AD-BusinessDomainPartialSwap-1 at the wiring
+    layer: builds a per-request BusinessServiceFactory(db, tenant_id, tracer=None)
+    and passes the factory_provider lambda to build_handler. When
+    settings.business_domain_mode='service', business-domain handlers route
+    through DB-backed services (5 domains uniformly mode-aware). When
+    'mock' (default), preserves 51.0/55.1 PoC behavior. Tracer=None per
+    AD-Cat12-Helpers-1 deferred (Phase 56+).
     """
+    settings = get_settings()
+    business_factory = BusinessServiceFactory(
+        db=db,
+        tenant_id=current_tenant,
+        tracer=None,  # D2: get_tracer factory deferred to Phase 56+
+    )
+
+    def business_factory_provider() -> BusinessServiceFactory:
+        return business_factory
+
     try:
-        loop = build_handler(req.mode, req.message, service_factory=factory)
+        loop = build_handler(
+            req.mode,
+            req.message,
+            service_factory=factory,
+            business_factory_provider=(
+                business_factory_provider if settings.business_domain_mode == "service" else None
+            ),
+        )
     except (RuntimeError, ValueError) as exc:
         # Misconfiguration (env vars / unsupported mode) → 503.
         # Schema-layer errors (invalid mode literal) get caught by FastAPI
