@@ -1,3 +1,4 @@
+# Sprint 53.7 closeout PR #77 — header touched again to fire workflow.
 # Sprint 53.7 paths-filter trigger workaround (AD-CI-5 pattern):
 # When a PR is backend-only (no frontend/** changes), this workflow's
 # paths filter doesn't match → "Frontend E2E (chromium headless)" job
