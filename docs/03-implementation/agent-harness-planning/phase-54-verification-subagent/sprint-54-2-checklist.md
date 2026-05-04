@@ -49,60 +49,35 @@
 
 ## Day 1 — US-1 DefaultSubagentDispatcher + Budget Enforcement Foundation
 
-### 1.1 New `agent_harness/subagent/exceptions.py`
-- [ ] **Define BudgetExceededError + SubagentLaunchError**
-  - Both inherit from Exception with `f-string` constructor for easy debugging
-  - File header per file-header-convention
-  - DoD: 2 classes defined; mypy --strict 0 errors
+### 1.1 New `agent_harness/subagent/exceptions.py` ✅
+- [x] **Define BudgetExceededError + SubagentLaunchError** ✅ 47 lines
 
-### 1.2 New `agent_harness/subagent/budget.py` — BudgetEnforcer
-- [ ] **Implement BudgetEnforcer 4 methods**
-  - `check_concurrent(active_count, budget) -> None` raises BudgetExceededError if active >= max_concurrent
-  - `check_tokens(used, budget) -> None` raises if used > max_tokens
-  - `check_duration(elapsed_s, budget) -> None` raises if elapsed > max_duration_s
-  - `truncate_summary(text, cap) -> tuple[str, bool]` word-based truncation; returns (truncated, was_truncated)
-  - File header per file-header-convention
-  - DoD: 4 methods + matches plan §Technical Spec skeleton
+### 1.2 New `agent_harness/subagent/budget.py` ✅
+- [x] **Implement BudgetEnforcer 5 methods** ✅ (D11 fix: added `check_depth` for max_subagent_depth recursive guard; renamed `max_concurrent_subagents` → `max_concurrent` to match actual frozen dataclass; truncate_summary takes `cap_words=500` not from budget)
 
-### 1.3 New `agent_harness/subagent/dispatcher.py` — Skeleton
-- [ ] **Implement DefaultSubagentDispatcher class skeleton**
-  - `__init__(*, mailbox: MailboxStore | None = None, chat_client_factory=None)`
-  - 4 mode methods (fork / spawn_teammate / handoff_to / as_tool) — initially raise `NotImplementedError("US-2/3/4 will fill")`
-  - File header per file-header-convention
-  - DoD: class inherits SubagentDispatcher ABC; mypy --strict 0 errors
+### 1.3 New `agent_harness/subagent/dispatcher.py` ✅
+- [x] **DefaultSubagentDispatcher skeleton** ✅ (D10 fix: 3 ABC methods `spawn / wait_for / handoff` not 4; AS_TOOL out-of-band via `as_tool_factory()` Option A; spawn(AS_TOOL/HANDOFF) raises SubagentLaunchError)
 
-### 1.4 Update `agent_harness/subagent/__init__.py`
-- [ ] **Re-export new classes**
-  - Add `DefaultSubagentDispatcher` / `BudgetEnforcer` / `BudgetExceededError`
-  - Existing SubagentDispatcher export retained
-  - DoD: `from agent_harness.subagent import DefaultSubagentDispatcher, BudgetEnforcer` works
+### 1.4 Update `agent_harness/subagent/__init__.py` ✅
+- [x] **Re-export 4 new public classes** ✅ DefaultSubagentDispatcher / BudgetEnforcer / BudgetExceededError / SubagentLaunchError
 
-### 1.5 New `tests/unit/agent_harness/subagent/test_budget.py` — 6+ cases
-- [ ] **Implement 8 unit tests**
-  - test_check_concurrent_pass / test_check_concurrent_exceeds_raises
-  - test_check_tokens_pass / test_check_tokens_exceeds_raises
-  - test_check_duration_pass / test_check_duration_exceeds_raises
-  - test_truncate_summary_under_cap_no_truncation
-  - test_truncate_summary_over_cap_returns_truncated_flag
-  - Verify: `pytest tests/unit/agent_harness/subagent/test_budget.py -v` → 8 passed
+### 1.5 / 1.6 Tests (15 cases — +5 bonus over plan's 10) ✅
+- [x] **test_budget.py — 11 cases** ✅ (3 bonus: empty truncation edge + 2 depth coverage)
+- [x] **test_dispatcher_init.py — 4 cases** ✅ (2 bonus: AS_TOOL + HANDOFF launch error coverage)
+- Verify: `pytest tests/unit/agent_harness/subagent/ -v` → 15 passed
 
-### 1.6 New `tests/unit/agent_harness/subagent/test_dispatcher_init.py` — 2 cases
-- [ ] **Implement 2 unit tests**
-  - test_dispatcher_inherits_subagent_dispatcher_abc
-  - test_dispatcher_4_methods_raise_not_implemented_initially
-  - Verify: 2 passed (will be replaced by US-2/3/4 real-implementation tests)
-
-### 1.7 Day 1 sanity checks
-- [ ] **mypy --strict on touched files** → 0 errors
-- [ ] **black + isort + flake8 on touched files** → clean
-- [ ] **6 V2 lints via run_all.py** → 6/6 green
-- [ ] **Backend full pytest** → ~1315 passed (1305 + 10 new) / 0 fail
-- [ ] **LLM SDK leak check** → 0 in subagent/
+### 1.7 Day 1 sanity checks ✅
+- [x] **mypy --strict** ✅ 0 errors / 5 source files
+- [x] **black** ✅ 3 files auto-formatted then clean
+- [x] **isort** ✅ clean
+- [x] **flake8** ✅ clean
+- [x] **6 V2 lints via run_all.py** ✅ 6/6 green in 0.77s
+- [x] **Backend full pytest** ✅ **1320 passed / 4 skipped / 0 fail** (= 1305 baseline + 15 new)
+- [x] **LLM SDK leak in subagent/** ✅ 0 (grep confirm)
 
 ### 1.8 Day 1 commit + push + progress.md
-- [ ] **Stage + commit + push**
-  - Commit message: `feat(subagent, sprint-54-2): US-1 BudgetEnforcer + DefaultSubagentDispatcher skeleton + 10 unit tests`
-- [ ] **Update progress.md with Day 1 actuals**
+- [ ] **Stage + commit + push** (next)
+- [x] **Update progress.md with Day 1 actuals + drift fixes (D10 + D11)** ✅
 
 ---
 

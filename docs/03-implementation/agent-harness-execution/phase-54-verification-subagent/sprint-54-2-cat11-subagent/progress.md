@@ -115,11 +115,79 @@ Recommend **Option A** (cleaner separation of concerns); decide at Day 1 start.
 | Calibration pre-read | ✅ 0.55 × 22.5 = 12-13 hr commit |
 | Day 0 progress.md | ✅ this file |
 
-### Next: Day 1 (US-1 BudgetEnforcer + Dispatcher Skeleton)
+## Day 1 (2026-05-04) — US-1 BudgetEnforcer + Dispatcher Skeleton ✅
 
-- Decide D1-followup Option A vs B (recommend A)
-- Add `SubagentHandle` + `AgentSpec` to `_contracts/subagent.py` (D7)
-- Implement `subagent/exceptions.py` + `subagent/budget.py` + `subagent/dispatcher.py` (skeleton)
-- 8 unit tests for budget + 2 for dispatcher init
-- Sanity: mypy / lint / pytest 1319 expected
-- Day 1 commit + push + progress update
+### 1.1 / 1.2 / 1.3 Source files created (4)
+
+- ✅ `agent_harness/subagent/exceptions.py` — `BudgetExceededError` + `SubagentLaunchError` (47 lines)
+- ✅ `agent_harness/subagent/budget.py` — `BudgetEnforcer` (5 methods: check_concurrent / check_tokens / check_duration / check_depth / truncate_summary) (95 lines)
+- ✅ `agent_harness/subagent/dispatcher.py` — `DefaultSubagentDispatcher` skeleton (3 ABC methods + `as_tool_factory()`; all raise NotImplementedError pending US-2/3/4) (152 lines)
+
+### 1.4 `__init__.py` re-exports
+
+- ✅ Added `DefaultSubagentDispatcher` / `BudgetEnforcer` / `BudgetExceededError` / `SubagentLaunchError` to public API
+
+### Drift findings during Day 1 (D10 — D11)
+
+| ID | Type | Issue | Fix |
+|----|------|-------|----|
+| **D10** | architecture (revises D1) | ABC reads `spawn / wait_for / handoff` (3 methods, fire-and-forget pattern) — **NOT** unified `dispatch()` as Day 0 D1 thought. spawn() returns UUID; wait_for(subagent_id) returns SubagentResult; handoff() returns new session_id directly. AS_TOOL stays out-of-band via separate `as_tool_factory()` method (Option A confirmed) | DefaultSubagentDispatcher implements actual ABC: spawn() + wait_for() + handoff() + as_tool_factory(). spawn(AS_TOOL/HANDOFF) raises SubagentLaunchError to surface misuse. |
+| **D11** | data | Plan §Technical Spec said `max_concurrent_subagents` and `summary_token_cap` budget fields. Actual `SubagentBudget` (49.1 stub) has `max_concurrent` (no `_subagents` suffix) + `max_subagent_depth` (NEW; recursive guard) + NO `summary_token_cap` (convention is "≤ 500 tokens" docstring on SubagentResult.summary) | BudgetEnforcer: rename to `check_concurrent` (matches actual field); add 5th method `check_depth` for max_subagent_depth recursive guard; `truncate_summary(text, cap_words=500)` takes caller-provided cap (not from budget). No 17.md change needed. |
+
+### 1.5 / 1.6 Tests (15 cases — +5 bonus)
+
+- ✅ `tests/unit/agent_harness/subagent/test_budget.py` — **11 cases** (plan said 8; +3 bonus: empty truncation edge + depth pass + depth exceeds)
+  - check_concurrent pass / exceeds (2)
+  - check_tokens pass / exceeds (2)
+  - check_duration pass / exceeds (2)
+  - truncate_summary under_cap / over_cap / empty (3)
+  - check_depth pass / exceeds (2)
+- ✅ `tests/unit/agent_harness/subagent/test_dispatcher_init.py` — **4 cases** (plan said 2; +2 bonus: AS_TOOL + HANDOFF spawn() launch error coverage)
+  - test_dispatcher_inherits_subagent_dispatcher_abc
+  - test_spawn_as_tool_mode_raises_launch_error
+  - test_spawn_handoff_mode_raises_launch_error
+  - test_spawn_fork_mode_skeleton_raises_not_implemented
+
+### 1.7 Day 1 sanity checks ✅
+
+- ✅ **mypy --strict** — 0 errors in 5 source files (subagent/__init__.py / _abc.py / exceptions.py / budget.py / dispatcher.py)
+- ✅ **black** — 3 files auto-formatted; recheck clean
+- ✅ **isort** — clean
+- ✅ **flake8** — clean
+- ✅ **6 V2 lints (`run_all.py`)** — 6/6 green in 0.77s
+- ✅ **LLM SDK leak in subagent/** — 0 (grep confirm)
+- ✅ **Backend full pytest** — **1320 passed / 4 skipped / 0 fail** (= 1305 baseline + 15 new = 11 budget + 4 dispatcher_init)
+
+### 1.8 V2 9-discipline self-check ✅
+
+| # | Discipline | Status | Note |
+|---|-----------|--------|------|
+| 1 | Server-Side First | ✅ | All 4 Cat 11 source files server-side; no local file IO |
+| 2 | LLM Provider Neutrality | ✅ | 0 SDK imports in subagent/ (lint pass) |
+| 3 | CC Reference 不照搬 | ✅ | spawn/wait_for/handoff is V2 server-side pattern; CC has different async model |
+| 4 | 17.md Single-source | ✅ | Used existing SubagentBudget/Mode/Result (no redefinition); SubagentHandle / AgentSpec deferred to US-2/3 (per Day 0 D7) |
+| 5 | 11+1 範疇歸屬 | ✅ | All files in `agent_harness/subagent/` — Cat 11 owner directory |
+| 6 | 04 anti-patterns | ✅ | AP-3 (no scattering), AP-4 (NotImplementedError IS placeholder but tests assert it raises — caught by US-2/3/4 acceptance), AP-6 (worktree NOT implemented per V2 spec; YAGNI) |
+| 7 | Sprint workflow | ✅ | Plan → checklist → Day 0 探勘 → Day 1 code → progress |
+| 8 | File header convention | ✅ | All 4 source + 2 test files have File / Purpose / Category / Scope / Created header |
+| 9 | Multi-tenant rule | ✅ | parent_session_id passed through spawn(); future executors will propagate tenant_id |
+
+### 1.9 Time spent
+
+Day 1 actual: ~1 hr (plan estimate 3.5 hr × 0.55 calibrated → committed for ~2 hr). Faster than expected due to:
+- Skeleton-first approach (no real mode executor logic this Day)
+- Frozen-dataclass discovery (no defensive code needed)
+- Test boilerplate copy-pasting from 54.1 patterns
+
+Banked: +1 hr buffer added to Day 2/3/4 reserve.
+
+### Next: Day 2 (US-2 Fork + AsTool Modes)
+
+- Decide D7 SubagentHandle / AgentSpec — add to `_contracts/subagent.py` BEFORE TeammateExecutor (Day 3) needs them
+- Implement `subagent/modes/fork.py` (ForkExecutor) — deepcopy parent.messages, run child loop with budget guards
+- Implement `subagent/modes/as_tool.py` (AsToolWrapper) — wraps agent_role to ToolSpec via `as_tool_factory()` method
+- Wire `dispatcher.spawn(FORK)` → ForkExecutor + `dispatcher.wait_for()` future retrieval
+- Wire `dispatcher.as_tool_factory()` → AsToolWrapper
+- 5 unit tests for fork + 3 for as_tool (per plan)
+- Sanity: mypy / lint / pytest 1328 expected
+- Day 2 commit + push + progress update
