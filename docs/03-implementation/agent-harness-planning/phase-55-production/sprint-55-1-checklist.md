@@ -1,0 +1,313 @@
+# Sprint 55.1 — Business Domain Production Service Layer — Checklist
+
+**Plan**: [sprint-55-1-plan.md](sprint-55-1-plan.md)
+**Branch**: `feature/sprint-55-1-business-services`
+**Day count**: 5 (Day 0-4) | **Bottom-up est**: ~22 hr | **Calibrated commit**: ~11 hr (multiplier **0.50** per AD-Sprint-Plan-2; **first application** after 53.7=1.01 / 54.1=0.69 / 54.2=0.65 → 3-sprint mean 0.78 BELOW [0.85, 1.20] band → reduce 0.55 → 0.50)
+
+> **格式遵守**：每 Day 同 54.2 結構（progress.md update + sanity + commit + verify CI）。每 task 3-6 sub-bullets（case / DoD / Verify command）。Per AD-Lint-2 (53.7) — 不寫 per-day calibrated hour targets；只寫 sprint-aggregate calibration verify in retro。
+
+---
+
+## Day 0 — Setup + Day-0 探勘 + Pre-flight Verify
+
+### 0.1 Branch + plan + checklist commit
+- [x] **Verify on main + clean** ✅ HEAD `b0e7b71a`
+- [x] **Create branch + push plan/checklist** ✅ `feature/sprint-55-1-business-services` created
+- [ ] **Stage + commit plan + checklist + push branch**
+  - DoD: `git push -u origin feature/sprint-55-1-business-services` succeeds
+  - Verify: `git log --oneline -1` shows plan + checklist commit
+
+### 0.2 Day-0 探勘 — verify plan §Technical Spec assertions against actual repo state
+
+Per AD-Plan-1 (53.7) + feedback_day0_must_grep_plan_assumptions.md — grep each plan claim, not memory.
+
+- [ ] **Verify 5 domain mock skeleton intact**
+  - Verify: `ls backend/src/business_domain/{patrol,correlation,rootcause,audit_domain,incident}/{mock_executor,tools}.py`
+  - DoD: 10 files all present
+- [ ] **Verify _register_all.py + make_default_executor**
+  - Verify: `grep "register_all_business_tools\|make_default_executor" backend/src/business_domain/_register_all.py`
+  - DoD: both function defs present (51.0 stable)
+- [ ] **Verify Settings location + existing fields**
+  - Verify: `grep "BUSINESS_DOMAIN_MODE\|BaseSettings" backend/src/core/config.py`
+  - DoD: BaseSettings exists, BUSINESS_DOMAIN_MODE NOT YET present (will add Day 3)
+- [ ] **Verify async SQLAlchemy session factory**
+  - Verify: `grep "AsyncSession\|async_session" backend/src/infrastructure/db/`
+  - DoD: AsyncSession factory exists (49.2 stable)
+- [ ] **Verify existing tenants + audit_log tables**
+  - Verify: `ls backend/src/infrastructure/db/migrations/versions/ | grep -E "tenants|audit"` AND grep ORM models for `tenants` + `audit_log`
+  - DoD: both tables exist via migrations (49.2 + 53.4 stable)
+- [ ] **Verify ServiceFactory + reset pattern**
+  - Verify: `grep "reset_service_factory\|ServiceFactory" backend/src/platform_layer/governance/service_factory.py`
+  - DoD: 53.6 ServiceFactory + reset_service_factory present
+- [ ] **Verify Tracer ABC + record_metric signature**
+  - Verify: `grep "record_metric\|class Tracer" backend/src/agent_harness/observability/_abc.py`
+  - DoD: Tracer ABC + record_metric method match Cat 11 usage pattern
+- [ ] **Catalogue any drift findings (D1, D2, ...) in progress.md** if assumptions mismatch
+
+### 0.3 Calibration multiplier pre-read
+- [ ] **Read 54.2 retrospective Q2** — confirm 3-sprint mean 0.78 → multiplier 0.55→0.50 first application
+- [ ] **Compute 55.1 bottom-up** — verify ~22 hr × 0.50 = **commit 11 hr** (matches plan §Workload)
+- [ ] **Document predicted vs banked** — 53.7→54.2 banked ~10 hr (1.01 + 0.69 + 0.65 = aggregate under-estimate); 0.50 conservative
+
+### 0.4 Pre-flight verify (main green baseline)
+- [ ] **pytest collect baseline**
+  - Verify: `cd backend && python -m pytest --collect-only 2>&1 | tail -5`
+  - DoD: 1351 tests collected (= 1305 + 46 from 54.2; +0 from carryover)
+- [ ] **6 V2 lints via run_all.py**
+  - Verify: `python scripts/lint/run_all.py`
+  - DoD: 6/6 green; <2s total
+- [ ] **Backend full pytest baseline**
+  - Verify: `cd backend && python -m pytest -q 2>&1 | tail -3`
+  - DoD: **1351 passed / 4 skipped / 0 fail**
+- [ ] **mypy --strict baseline**
+  - Verify: `cd backend && python -m mypy src --strict 2>&1 | tail -3`
+  - DoD: 0 errors
+
+### 0.5 Day 0 progress.md
+- [ ] **Create `docs/03-implementation/agent-harness-execution/phase-55/sprint-55-1/progress.md`**
+  - Sections: Day 0 setup / Day 0 探勘 drift findings / pre-flight baseline / next-day plan
+- [ ] **Commit + push Day 0**
+  - Verify: `git log --oneline origin/feature/sprint-55-1-business-services` shows 2+ commits
+
+---
+
+## Day 1 — US-1 Incident DB Schema + ORM Model + Alembic Migration
+
+### 1.1 New `infrastructure/db/models/business/__init__.py`
+- [ ] **Create empty __init__.py** with `__all__ = ["Incident"]` (re-export)
+- [ ] DoD: file present
+
+### 1.2 New `infrastructure/db/models/business/incident.py`
+- [ ] **Define Incident(Base) ORM class**
+  - Columns per plan §US-1 (id UUID PK / tenant_id NN FK / user_id FK NULL / title VARCHAR 512 NN / severity Enum NN / status Enum NN / alert_ids JSONB / resolution TEXT / created_at NN / updated_at NN / closed_at NULL)
+  - File header per file-header-convention.md
+- [ ] **Define IncidentSeverity + IncidentStatus enums**
+  - severity ∈ {low, medium, high, critical}
+  - status ∈ {open, investigating, resolved, closed}
+- [ ] **Define UNIQUE (tenant_id, id) constraint + 5 indexes**
+  - idx_incidents_tenant_user (tenant_id, user_id)
+  - idx_incidents_severity_status (tenant_id, severity, status)
+  - idx_incidents_status_created (tenant_id, status, created_at)
+  - idx_incidents_closed_at (tenant_id, closed_at) WHERE closed_at IS NOT NULL
+  - idx_incidents_alert_ids GIN (alert_ids)
+- DoD: mypy --strict green; black + isort + flake8 green
+
+### 1.3 New Alembic migration `XXXX_add_incidents_table.py`
+- [ ] **upgrade()**: CREATE incidents table + 5 indexes + RLS policy
+  - RLS policy `incident_tenant_isolation` USING `tenant_id = current_setting('app.tenant_id')::uuid`
+  - ENUM types `incident_severity` + `incident_status`
+- [ ] **downgrade()**: drop policy + drop indexes + drop table + drop ENUM types
+  - Use `DROP POLICY IF EXISTS` + `DROP TYPE IF EXISTS` for idempotency
+- DoD: `cd backend && alembic upgrade head && alembic downgrade base && alembic upgrade head` 全程 green
+
+### 1.4 5 ORM unit tests
+- [ ] **test_incident_create** — INSERT row + verify all columns
+- [ ] **test_incident_tenant_filter** — 2 tenants, query each → only own incidents
+- [ ] **test_incident_severity_enum_validation** — invalid severity → IntegrityError
+- [ ] **test_incident_status_default** — no status passed → defaults to "open"
+- [ ] **test_incident_tenant_cascade_delete** — DELETE tenant → CASCADE deletes incidents
+- DoD: `cd backend && python -m pytest tests/unit/infrastructure/db/test_incident_model.py -v` → 5 passed
+
+### 1.5 Day 1 sanity checks
+- [ ] **mypy --strict** green
+- [ ] **black + isort + flake8** green
+- [ ] **6 V2 lints via run_all.py** green
+- [ ] **Backend full pytest** ≥ 1356 passed (= 1351 + 5 new)
+- [ ] **LLM SDK leak in business_domain/ + infrastructure/db/models/business/** — 0 imports
+
+### 1.6 Day 1 commit + push + progress.md
+- [ ] **Stage + commit Day 1 source + tests + alembic migration**
+- [ ] **Update progress.md** with Day 1 actuals (hr / drift / fix)
+- [ ] **Push to origin**
+
+---
+
+## Day 2 — US-2 IncidentService Production Class
+
+### 2.1 New `business_domain/_base.py` BusinessServiceBase
+- [ ] **Define BusinessServiceBase abstract class**
+  - Fields: `db: AsyncSession / tenant_id: UUID / tracer: Tracer | None`
+  - Method: `_audit_hook(operation: str, resource_id: str, **extra)` — emit audit_log entry
+  - File header per file-header-convention.md
+- DoD: 30-50 lines; mypy strict green
+
+### 2.2 New `business_domain/_obs.py` business_service_span
+- [ ] **Define `business_service_span` async ctx manager**
+  - Signature per plan §Cat 12 Observability Pattern
+  - Emit 3 metrics on success / error
+  - Span name: `business_service.{service_name}.{method}`
+- [ ] **Unit test: 3 cases** (success / exception propagates / mock tracer receives 3 metric events)
+- DoD: 50-80 lines; 3 unit tests pass
+
+### 2.3 New `business_domain/incident/service.py` IncidentService
+- [ ] **IncidentService(BusinessServiceBase)** with 5 async methods
+  - `create(*, title: str, severity: str = "high", alert_ids: list[str] | None = None, user_id: UUID | None = None) -> Incident`
+  - `list(*, severity: str | None = None, status: str | None = None, limit: int = 20) -> list[Incident]`
+  - `get(*, incident_id: UUID) -> Incident | None`
+  - `update_status(*, incident_id: UUID, status: str) -> Incident`
+  - `close(*, incident_id: UUID, resolution: str) -> Incident`
+- [ ] Each method wrapped with `async with business_service_span(...)`
+- [ ] Each method first SQL must include `WHERE tenant_id = self.tenant_id`
+- [ ] `close()` validates `resolution` length ≥ 1; raises ValueError if empty
+- [ ] `update_status()` raises ValueError if `incident_id` not found in tenant
+- [ ] All methods call `self._audit_hook(...)` for destructive ops (create/update/close)
+- DoD: ~200 lines; mypy strict green; black + isort + flake8 green
+
+### 2.4 12 IncidentService unit tests
+- [ ] **test_create_returns_incident** + **test_create_default_severity_high**
+- [ ] **test_list_filters_by_severity** + **test_list_filters_by_status** + **test_list_pagination_limit**
+- [ ] **test_get_returns_none_when_not_found** + **test_get_cross_tenant_returns_none** (multi-tenant)
+- [ ] **test_update_status_transitions** + **test_update_status_cross_tenant_raises** (multi-tenant)
+- [ ] **test_close_sets_closed_at_now** + **test_close_empty_resolution_raises_value_error** (validation)
+- [ ] **test_audit_hook_emits_for_destructive_methods** (create/update_status/close)
+- DoD: `cd backend && python -m pytest tests/unit/business_domain/incident/test_service.py -v` → 12 passed
+
+### 2.5 Day 2 sanity checks
+- [ ] **mypy --strict** green
+- [ ] **6 V2 lints via run_all.py** green
+- [ ] **Backend full pytest** ≥ 1371 passed (= 1356 + 15 new = 12 service + 3 obs)
+- [ ] **LLM SDK leak in business_domain/incident/** — 0
+
+### 2.6 Day 2 commit + push + progress.md
+- [ ] **Stage + commit Day 2**
+- [ ] **Update progress.md** Day 2 actuals
+- [ ] **Push**
+
+---
+
+## Day 3 — US-3 + US-4 (4 Read-Only Services + BUSINESS_DOMAIN_MODE Flag)
+
+### 3.1 New 4 read-only service.py files
+
+#### 3.1a `business_domain/patrol/service.py PatrolService`
+- [ ] **PatrolService.get_results(*, patrol_id: str) -> dict** — read seeded fixture from `business_domain/patrol/_fixtures/patrol_results.json`
+- [ ] Fixture contains 5 deterministic patrol_id entries
+- [ ] Wrapped with business_service_span
+
+#### 3.1b `business_domain/correlation/service.py CorrelationService`
+- [ ] **CorrelationService.get_related(*, alert_id: str, depth: int = 1) -> list[dict]** — deterministic graph traversal on seeded `_fixtures/correlation_graph.json`
+- [ ] depth ∈ {1, 2, 3}; raises ValueError otherwise
+
+#### 3.1c `business_domain/rootcause/service.py RootCauseService`
+- [ ] **RootCauseService.diagnose(*, incident_id: UUID) -> dict** — read Incident from DB (US-1 table) + return canned analysis dict based on `incident.status`
+- [ ] Tenant-filtered query
+
+#### 3.1d `business_domain/audit_domain/service.py AuditService`
+- [ ] **AuditService.query_logs(*, time_range: tuple[datetime, datetime], filters: dict | None = None) -> list[dict]** — query existing `audit_log` table (53.4)
+- [ ] Tenant-filtered
+
+### 3.2 8 read-only service unit tests
+- [ ] PatrolService: 2 cases (existing patrol_id / not-found)
+- [ ] CorrelationService: 2 cases (depth=1 / invalid depth raises)
+- [ ] RootCauseService: 2 cases (incident found returns analysis / cross-tenant returns ValueError)
+- [ ] AuditService: 2 cases (query within range / empty range returns [])
+- DoD: 8 passed
+
+### 3.3 Modify `core/config.py` Settings
+- [ ] **Add `BUSINESS_DOMAIN_MODE: Literal["mock", "service"] = "mock"`**
+- [ ] Update Settings docstring + Modification History
+- DoD: env var override works (`BUSINESS_DOMAIN_MODE=service` → settings.BUSINESS_DOMAIN_MODE == "service")
+
+### 3.4 Modify 5 `register_*_tools()` accept mode kwarg
+- [ ] Each `register_{domain}_tools(registry, handlers, *, mock_url=DEFAULT_BASE_URL, mode: str = "mock")` — handler closures branch on mode
+- [ ] mode="mock": existing 51.0 path (mock_executor)
+- [ ] mode="service": new path (service class via ServiceFactory)
+- [ ] mode invalid: raise ValueError
+
+### 3.5 Modify `make_default_executor()` read settings
+- [ ] **`make_default_executor(*, mock_url=DEFAULT_MOCK_URL, tracer=None, mode: str | None = None)`**
+- [ ] If `mode is None`: read `settings.BUSINESS_DOMAIN_MODE`
+- [ ] Pass `mode` through to `register_all_business_tools()`
+
+### 3.6 Modify `ServiceFactory` add 5 service getters
+- [ ] **`get_incident_service(tenant_id: UUID, db: AsyncSession) -> IncidentService`**
+- [ ] **`get_patrol_service(tenant_id) -> PatrolService`** + 3 others
+- [ ] **`reset_service_factory()`** clears 5 new caches (per testing.md §Module-level Singleton Reset Pattern)
+- [ ] Update `tests/integration/api/conftest.py` autouse fixture (already exists; no change needed if reset_service_factory updated)
+
+### 3.7 6 integration tests
+- [ ] **test_mode_mock_unchanged_behavior** — BUSINESS_DOMAIN_MODE=mock, all 18 tools work as 51.0 baseline
+- [ ] **test_mode_service_incident_create_persists_to_db** — mode=service, create incident → SELECT verifies row
+- [ ] **test_mode_switch_per_test** — autouse fixture allows different mode per test
+- [ ] **test_service_factory_reset_isolates_event_loops** — 53.6 pattern verification (no event-loop-closed cascade)
+- [ ] **test_make_default_executor_reads_settings** — env var override applies
+- [ ] **test_make_default_executor_explicit_mode_overrides_settings** — explicit kwarg wins
+- DoD: 6 passed
+
+### 3.8 Day 3 sanity checks
+- [ ] **mypy --strict** green
+- [ ] **6 V2 lints via run_all.py** green (especially check_cross_category_import: service.py NOT importing agent_harness/ private modules)
+- [ ] **Backend full pytest** ≥ 1385 passed (= 1371 + 14 new = 8 services + 6 integration)
+- [ ] **51.0 + 51.1 baseline tests pass** (BUSINESS_DOMAIN_MODE=mock regression check) — explicit `pytest tests/unit/business_domain -v` 0 fail
+- [ ] **LLM SDK leak** — 0
+
+### 3.9 Day 3 commit + push + progress.md
+- [ ] **Stage + commit Day 3**
+- [ ] **Update progress.md** Day 3 actuals
+- [ ] **Push**
+
+---
+
+## Day 4 — US-5 Cat 12 Obs + Retro + Closeout
+
+### 4.1 Verify Cat 12 obs wired to all 25 service methods
+- [ ] **Audit grep**: `grep -c "business_service_span" backend/src/business_domain/*/service.py`
+- [ ] DoD: each service.py has ≥ 1 `business_service_span` per method (incident=5, patrol=1, correlation=1, rootcause=1, audit_domain=1 = 9 in 5 files; remaining 16 from incident's create/list/get/update_status/close detailed metrics)
+- [ ] Adjust expectation: minimum is **9 wraps** for 1 method per service + incident's 5 methods all wrapped
+
+### 4.2 Multi-tenant integration tests (cross-domain)
+- [ ] **test_incident_create_isolates_by_tenant** — tenant A creates → tenant B list() returns empty
+- [ ] **test_rootcause_diagnose_isolates_by_tenant** — RootCauseService respects tenant_id
+- [ ] **test_audit_query_isolates_by_tenant**
+- [ ] **test_rls_policy_enforced_at_db_layer** — SET LOCAL app.tenant_id then SELECT incidents → only own rows visible
+- [ ] **test_cross_tenant_404** — GET /incidents/{id} as wrong tenant → 404 (hide existence)
+- DoD: 5 passed
+
+### 4.3 Main flow e2e test
+- [ ] **test_chat_to_incident_create_persists_to_db** (NEW)
+  - POST /api/v1/chat with prompt forcing tool_call(mock_incident_create) [BUSINESS_DOMAIN_MODE=service]
+  - Verify SSE stream contains tool_call_completed event
+  - Verify INSERT row in incidents table with correct tenant_id
+  - Verify tracer.record_metric called for business_service_duration_seconds
+- DoD: e2e green; ~1 test added
+
+### 4.4 retrospective.md
+- [ ] **Q1**: Sprint goal achievement summary
+- [ ] **Q2**: Calibration verify — actual_total_hr vs committed 11 hr → ratio
+  - if [0.85, 1.20]: close AD-Sprint-Plan-2 ✅
+  - if < 0.85: log AD-Sprint-Plan-3 (0.50 → 0.40)
+  - if > 1.20: log AD-Sprint-Plan-3 (0.50 → 0.55)
+- [ ] **Q3**: Drift findings catalogue (D1, D2, ...)
+- [ ] **Q4**: V2 紀律 9 項 review
+- [ ] **Q5**: Sprint 55.2 candidate scope (canary deployment / real enterprise integration / SaaS Stage 0 cutover prep)
+- [ ] **Q6**: Open AD list (any new ones logged)
+
+### 4.5 Final pytest + lints + LLM SDK leak final verify
+- [ ] **Backend full pytest** ≥ 1395 passed (= 1351 + 44 new)
+- [ ] **mypy --strict** green
+- [ ] **6 V2 lints** green
+- [ ] **LLM SDK leak** — 0
+- [ ] **alembic upgrade head + downgrade base** both green
+
+### 4.6 Open PR + CI green + solo-dev merge
+- [ ] **Push final commit + open PR**
+  - Title: `feat(business_domain, sprint-55-1): production service layer + BUSINESS_DOMAIN_MODE flag + V2 21/22`
+  - PR body: link plan + checklist + retrospective; list 5 USs + 44 new tests
+- [ ] **Wait CI green** (5 active checks: backend-ci / V2 Lint / E2E Backend / E2E Summary / Frontend E2E chromium headless)
+  - Frontend E2E required → touch `.github/workflows/playwright-e2e.yml` header per AD-CI-5 if needed
+- [ ] **Solo-dev normal merge to main** (review_count=0; no temp-relax needed since 53.2 policy)
+
+### 4.7 Closeout PR
+- [ ] **Branch `chore/sprint-55-1-closeout`**
+- [ ] **Update SITUATION-V2-SESSION-START.md** §8 + §9 (V2 21/22 = 95%)
+- [ ] **Update CLAUDE.md** L48-50 V2 progress + main HEAD
+- [ ] **Touch backend-ci.yml header** (paths-filter workaround for docs-only PR)
+- [ ] **Touch playwright-e2e.yml header** (Frontend E2E required check)
+- [ ] **Open closeout PR + merge**
+
+### 4.8 Memory update + final push
+- [ ] **Create `memory/project_phase55_1_business_services.md`**
+- [ ] **Update `memory/MEMORY.md`** index
+- [ ] **Verify main HEAD** is closeout PR merge
+- [ ] **Verify working tree clean**
+- [ ] **Delete merged branches** (feature + chore)
