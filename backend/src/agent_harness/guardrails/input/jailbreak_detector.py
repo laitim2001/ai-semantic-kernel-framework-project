@@ -171,8 +171,7 @@ class JailbreakDetector(Guardrail):
             re.IGNORECASE,
         ),
         re.compile(
-            r"\b(?:please\s+|let'?s\s+|help\s+me\s+)?"
-            r"jailbreak\s+(?:me|us|yourself)\b",
+            r"\b(?:please\s+|let'?s\s+|help\s+me\s+)?" r"jailbreak\s+(?:me|us|yourself)\b",
             re.IGNORECASE,
         ),
     ]
