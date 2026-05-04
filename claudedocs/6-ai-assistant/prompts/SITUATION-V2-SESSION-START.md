@@ -265,11 +265,12 @@ ls docs/03-implementation/agent-harness-execution/
 | **53.7** | 2026-05-04 | PR #76 merged `eb7929cf` | Audit cleanup bundle — 9 carryover AD closed (AD-Sprint-Plan-1 + AD-CI-4 + AD-Lint-1 + AD-Test-1 + AD-Hitl-8 + AI-22 + AD-Cat9-7/8/9) + 2 BONUS V2 lint bug fixes; calibration multiplier 0.55 validated; V2 18/22 unchanged |
 | **54.1** | 2026-05-04 | PR #78 merged `c0c2860a` | Cat 10 Verification Loops Level 4 (RulesBasedVerifier + LLMJudgeVerifier + 4 templates + run_with_verification self-correction wrapper + LLMVerifyMutateGuardrail + verify tool) — closes AD-Cat9-1+2+3 via D8 wrapper pattern; 47 tests added; calibration ratio 0.69 (2nd application); 24 drifts; **V2 18/22 → 19/22 (86%)** ↑ |
 | **54.2** | 2026-05-04 | PR #80 merged `c7b686ae` | Cat 11 Subagent Orchestration Level 4 (BudgetEnforcer + DefaultSubagentDispatcher + Fork + AsTool + Teammate + Mailbox + Handoff + task_spawn/handoff tools per 17.md §3.1 + AD-Cat10-Obs-1 verifier observability) — closes AD-Cat10-Obs-1; 46 tests; calibration ratio 0.65 (3rd application; 3-sprint mean 0.78 → recommend lower to 0.50 for Phase 55); 22 drifts D1-D22; Worktree NOT implemented per V2 spec §範疇 11 (AP-6 clean); AgentLoop UNTOUCHED per D18 (tools auto-route via tool_executor); 7 new AD; **V2 19/22 → 20/22 (91%)** ↑ |
-| Phase 55 | _pending_ | _pending_ | Business domain (5 domains × 24 mock tools per 08b-business-tools-spec.md) + canary deployment — V2 22/22 closure |
+| **55.1** | 2026-05-04 | PR #82 merged `798176d5` | Business domain production service layer (Option A) — Incident DB schema + ORM + Alembic 0012 + RLS policy; IncidentService production CRUD + multi-tenant + audit chain; 4 read-only services (Patrol/Correlation/RootCause/Audit); BUSINESS_DOMAIN_MODE flag + BusinessServiceFactory (D8 separate from governance); register_incident_tools mode swap (incident only — D9 + AD-BusinessDomainPartialSwap-1 for 4 deferred domains); Cat 12 obs span on 9 service methods; **44 tests** (= plan target hit exactly: 1351 → 1395); 11 drifts D1-D11; calibration ratio **0.68** (1st application of 0.50; 4-sprint mean 0.76 → AD-Sprint-Plan-3 = 0.50→0.40 for 55.2); **V2 20/22 → 21/22 (95%)** ↑ |
+| Phase 55.2 | _pending_ | _pending_ | Production deployment + full mode swap (closes AD-BusinessDomainPartialSwap-1) — V2 22/22 closure |
 
-**累計**：**20 / 22 sprint** 完成（**91%**）— Phase 49: 4/4 ✅，Phase 50: 2/2 ✅，Phase 51: 3/3 ✅，Phase 52: 4/4 ✅，Phase 53: 6/4 (53.1-53.6) ✅，Phase 54: 2/2 (54.1 + 54.2) ✅，+ 2 carryover bundles (53.2.5 + 53.7)
+**累計**：**21 / 22 sprint** 完成（**95%**）— Phase 49: 4/4 ✅，Phase 50: 2/2 ✅，Phase 51: 3/3 ✅，Phase 52: 4/4 ✅，Phase 53: 6/4 (53.1-53.6) ✅，Phase 54: 2/2 ✅，Phase 55: 1/2 (55.1) ✅，+ 2 carryover bundles (53.2.5 + 53.7)
 
-> **53.2.5 + 53.7 是 carryover bundles 不算入主 22 sprint 進度**；54.1 + 54.2 是主進度推進 18/22 → 20/22。**Phase 54 已完成（2/2）**。下一 sprint 候選：Phase 55.1 Business domain layer (5 domains × 24 mock tools per 08b-business-tools-spec.md) → V2 21/22；最後 Phase 55.2 Canary deployment + V2 22/22 (100%) closure。
+> **53.2.5 + 53.7 是 carryover bundles 不算入主 22 sprint 進度**；55.1 是主進度推進 20/22 → 21/22。**Phase 55.1 已完成**；下一 sprint = **Phase 55.2 Production deployment + V2 22/22 (100%) closure**（候選 scope: Option A 完成 register_*_tools mode swap for 4 deferred domains + production wiring; 等用戶 approve scope 後才起草 plan/checklist）。
 
 ---
 
@@ -377,7 +378,7 @@ V2 完成（Phase 55 後）→ 此 prompt 變歷史紀念物，改用 V3 / SaaS 
 
 ---
 
-**Last Updated**: 2026-05-04（Sprint 54.2 closeout — V2 **20/22 = 91%** 完成；Phase 54 完成 2/2；下一 sprint = Phase 55.1 Business domain layer (5 domains × 24 mock tools)）
+**Last Updated**: 2026-05-04（Sprint 55.1 closeout — V2 **21/22 = 95%** 完成；Phase 55.1 業務領域 production service layer 達成；下一 sprint = Phase 55.2 production deployment + V2 22/22 (100%) closure）
 **Maintainer**: 用戶 + AI 助手共同維護
 **File location**: `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md`
 
@@ -392,3 +393,4 @@ V2 完成（Phase 55 後）→ 此 prompt 變歷史紀念物，改用 V3 / SaaS 
 | 2026-05-03 | 53.2.5 | §8 全更新（Cat 8 + CI carryover + AI-22 + #31）；§9 milestones 補 49.1 → 53.2.5 共 16 個 sprint 行；§10 加 6 必答 retrospective 格式 + V2 紀律 9 項自檢 + Solo-dev policy + Paths filter workaround |
 | 2026-05-04 | 54.1 | §8 closes AD-Cat9-1+2+3 + adds AD-Cat10-Obs-1 / AD-Cat10-Wire-1 / AD-Cat9-1-WireDetectors / AD-Test-Module-Naming as 54.1 carryover; §9 milestones row +Sprint 54.1 (V2 18/22 → 19/22 = 86%); session start time updated to 54.1 closeout |
 | 2026-05-04 | 54.2 | §8 closes AD-Cat10-Obs-1 + adds AD-Cat10-Obs-Cat9Wrappers / AD-Cat11-Multiturn / AD-Cat11-SSEEvents / AD-Cat11-ParentCtx / AD-Sprint-Plan-2 / AD-Cat12-Helpers-1 / AD-Lint-3 as 54.2 carryover; §9 milestones row +Sprint 54.2 (V2 19/22 → 20/22 = 91%); Phase 54 完成 2/2; session start time updated to 54.2 closeout |
+| 2026-05-04 | 55.1 | §9 milestones row +Sprint 55.1 (V2 20/22 → 21/22 = 95%); Phase 55 progresses 1/2; new AD logged: AD-Sprint-Plan-3 (multiplier 0.50→0.40 for 55.2; 4-sprint mean 0.76 BELOW band) + AD-BusinessDomainPartialSwap-1 (full register_*_tools mode swap for 4 deferred domains); session start time updated to 55.1 closeout |

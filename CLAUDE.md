@@ -68,11 +68,11 @@ Build enterprise AI agent teams that work like **human professional teams** — 
 
 | Attribute | Value |
 |-----------|-------|
-| **Phase** | Phase 53（進行中）— 14/22 sprint 完成，64% V2 進度 |
-| **Latest Sprint** | **53.2.5** ✅ COMPLETE 2026-05-03（CI carryover：archived ci.yml；closes AD-CI-2 + AD-CI-3） |
-| **Last Cat 8 Sprint** | **53.2** ✅ COMPLETE 2026-05-03（Cat 8 production: ErrorPolicy + RetryPolicyMatrix + CircuitBreaker + ErrorBudget + ErrorTerminator）|
-| **main HEAD** | `132c39bc` (2026-05-03) |
-| **Next Sprint** | **53.3** Cat 9 Guardrails 核心（input/output/tool guardrails + Tripwire ABC + plugin registry + WORM hash chain）— **plan/checklist 尚未起草**（rolling planning，等 user approve scope） |
+| **Phase** | Phase 55.1 完成 — **21/22 sprint 完成，95% V2 進度** |
+| **Latest Sprint** | **55.1** ✅ COMPLETE 2026-05-04（Business domain production service layer — Incident DB + IncidentService + 4 read-only services + BUSINESS_DOMAIN_MODE flag + Cat 12 obs；44 tests；calibration ratio 0.68）|
+| **Last main-progress Sprint** | **55.1** ✅ COMPLETE 2026-05-04（V2 20/22 → 21/22）|
+| **main HEAD** | `798176d5` (2026-05-04) |
+| **Next Sprint** | **55.2** Production deployment + full mode swap 完成 V2 22/22 (100%) closure — **plan/checklist 尚未起草**（rolling planning，等 user approve scope；候選 Option A: 完成 register_*_tools mode swap for 4 deferred domains，closes AD-BusinessDomainPartialSwap-1） |
 | **Roadmap** | Phase 49-55，**22 sprint，約 5.5 個月** |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis（V1 沿用）|
 | **Architecture** | TAO/ReAct loop + 11+1 範疇 + LLM Provider 中性 |
@@ -556,9 +556,9 @@ V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（M
 
 ---
 
-**Last Updated**: 2026-05-03 (Sprint 53.2.5 closeout)
+**Last Updated**: 2026-05-04 (Sprint 55.1 closeout)
 **Project Start**: 2025-11-14
-**Current Phase**: V2 Phase 53（14/22 = 64% 完成）— 53.2 + 53.2.5 closed；53.3 Cat 9 Guardrails 待啟動
-**main HEAD**: `132c39bc`
+**Current Phase**: V2 Phase 55.1 完成（**21/22 = 95% 完成**）— Business domain production service layer landed；55.2 待啟動 (V2 22/22 closure)
+**main HEAD**: `798176d5`
 **V2 Authority**: `docs/03-implementation/agent-harness-planning/` (19 docs)
 **V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`
