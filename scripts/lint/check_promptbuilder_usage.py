@@ -67,6 +67,10 @@ ALLOWLIST_PATTERNS: tuple[str, ...] = (
     # from the parent context are deliberately NOT inherited (Day 2 D12 design;
     # see modes/fork.py module docstring).
     "agent_harness/subagent/modes/fork.py",
+    # Sprint 54.2: Cat 11 TeammateExecutor — same justification as ForkExecutor
+    # above (utility-LLM caller, not main loop). Difference is mailbox-side-
+    # effect delivery to parent on completion (Day 3 D15 design).
+    "agent_harness/subagent/modes/teammate.py",
 )
 
 

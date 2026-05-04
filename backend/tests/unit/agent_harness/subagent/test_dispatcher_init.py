@@ -79,17 +79,9 @@ async def test_spawn_handoff_mode_raises_launch_error(
         )
 
 
-@pytest.mark.asyncio
-async def test_spawn_teammate_skeleton_raises_not_implemented(
-    dispatcher: DefaultSubagentDispatcher,
-) -> None:
-    """US-2 wires FORK; TEAMMATE still skeleton — raises NotImplementedError until US-3."""
-    with pytest.raises(NotImplementedError, match="US-3"):
-        await dispatcher.spawn(
-            mode=SubagentMode.TEAMMATE,
-            task="dummy",
-            parent_session_id=uuid4(),
-        )
+# (test_spawn_teammate_skeleton_raises_not_implemented removed in US-3:
+#  TEAMMATE now wired to TeammateExecutor; round-trip behavior covered in
+#  test_teammate.py::test_dispatcher_spawn_teammate_then_wait_for_round_trip)
 
 
 @pytest.mark.asyncio

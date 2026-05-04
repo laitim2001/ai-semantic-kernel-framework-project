@@ -2,7 +2,7 @@
 File: backend/src/agent_harness/subagent/dispatcher.py
 Purpose: DefaultSubagentDispatcher — production class implementing SubagentDispatcher ABC.
 Category: 範疇 11 (Subagent Orchestration)
-Scope: Sprint 54.2 US-1 (skeleton) → US-2 (FORK + AsTool wired); US-3/4 fill TEAMMATE / HANDOFF
+Scope: Sprint 54.2 US-1 → US-2 (FORK + AsTool) → US-3 (TEAMMATE); US-4 HANDOFF
 
 Description:
     DefaultSubagentDispatcher implements the 3-method ABC (spawn /
@@ -33,6 +33,7 @@ US-2 deliverable (this file): wires FORK via ForkExecutor + as_tool_factory
 Created: 2026-05-04 (Sprint 54.2)
 
 Modification History:
+    - 2026-05-04: Wire TEAMMATE via TeammateExecutor + MailboxStore injection (US-3)
     - 2026-05-04: Wire FORK via ForkExecutor + as_tool_factory via AsToolWrapper (US-2)
     - 2026-05-04: Initial skeleton creation (Sprint 54.2 US-1)
 
@@ -64,8 +65,10 @@ from agent_harness.subagent.exceptions import (
     BudgetExceededError,
     SubagentLaunchError,
 )
+from agent_harness.subagent.mailbox import MailboxStore
 from agent_harness.subagent.modes.as_tool import AsToolWrapper
 from agent_harness.subagent.modes.fork import ForkExecutor
+from agent_harness.subagent.modes.teammate import TeammateExecutor
 
 if TYPE_CHECKING:
     # Tool handler return type — see modes/as_tool.py for ToolHandler alias.
@@ -84,10 +87,23 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
     module-level singleton. AgentLoop holds a fresh instance per request.
     """
 
-    def __init__(self, *, chat_client: ChatClient) -> None:
+    def __init__(
+        self,
+        *,
+        chat_client: ChatClient,
+        mailbox: MailboxStore | None = None,
+    ) -> None:
         self._chat = chat_client
         self._enforcer = BudgetEnforcer()
+        # Mailbox is per-request DI (NOT module-level singleton; AD-Test-1 53.6).
+        # If caller does not inject one, create a fresh instance scoped to this dispatcher.
+        self._mailbox = mailbox or MailboxStore()
         self._fork = ForkExecutor(chat_client=chat_client, enforcer=self._enforcer)
+        self._teammate = TeammateExecutor(
+            chat_client=chat_client,
+            mailbox=self._mailbox,
+            enforcer=self._enforcer,
+        )
         self._as_tool_wrapper = AsToolWrapper(fork_executor=self._fork)
         # In-flight subagent tasks for wait_for() lookup. Per-instance state;
         # NOT module-level — fresh dispatcher per request.
@@ -141,8 +157,16 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
                 trace_context=trace_context,
             )
         elif mode == SubagentMode.TEAMMATE:
-            # US-3 will replace this branch with TeammateExecutor.spawn(...)
-            raise NotImplementedError("spawn(mode=TEAMMATE) skeleton; impl in Sprint 54.2 US-3.")
+            # Per Day 3 D15: role defaults to "teammate"; ABC has no role kwarg.
+            # Phase 55+ may extend ABC or thread role via trace_context.
+            coro = self._teammate.execute(
+                subagent_id=subagent_id,
+                parent_session_id=parent_session_id,
+                role="teammate",
+                task=task,
+                budget=budget,
+                trace_context=trace_context,
+            )
         else:  # pragma: no cover — Enum exhausted by branches above
             raise SubagentLaunchError(f"Unknown mode: {mode}")
 

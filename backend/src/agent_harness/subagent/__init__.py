@@ -12,8 +12,10 @@ from agent_harness.subagent.exceptions import (
     BudgetExceededError,
     SubagentLaunchError,
 )
+from agent_harness.subagent.mailbox import MailboxStore
 from agent_harness.subagent.modes.as_tool import AsToolWrapper
 from agent_harness.subagent.modes.fork import ForkExecutor
+from agent_harness.subagent.modes.teammate import TeammateExecutor
 
 __all__ = [
     "SubagentDispatcher",
@@ -21,6 +23,8 @@ __all__ = [
     "BudgetEnforcer",
     "BudgetExceededError",
     "SubagentLaunchError",
+    "MailboxStore",
     "ForkExecutor",
     "AsToolWrapper",
+    "TeammateExecutor",
 ]
