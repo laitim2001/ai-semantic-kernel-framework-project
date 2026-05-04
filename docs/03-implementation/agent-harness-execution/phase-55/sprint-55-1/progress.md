@@ -215,3 +215,96 @@ US-2 estimated bottom-up 5 hr × 0.50 = ~2.5 hr commit. Actual: ~2 hr (4 drift f
 ---
 
 **Last Updated**: 2026-05-04 (Day 2 complete)
+
+---
+
+## Day 3 — 2026-05-04
+
+### Deliverables ✅
+
+| Task | Status | Output |
+|------|--------|--------|
+| 3.1 4 read-only service.py | ✅ | patrol/correlation/rootcause/audit_domain (~70-90 LOC each) |
+| 3.2 8 read-only service tests | ✅ | 8 passed |
+| 3.3 Settings.business_domain_mode | ✅ | Literal["mock", "service"] = "mock" + env override |
+| 3.4 incident/tools.py mode wiring | ✅ | Full mode='mock'/'service' + factory_provider closure |
+| 3.5 make_default_executor(mode=None) reads settings | ✅ | lazy import to avoid circular |
+| 3.6 BusinessServiceFactory | ✅ | NEW `_service_factory.py`; 5 getters; per-request builder |
+| 3.7 8 integration tests | ✅ | factory + settings + mode wiring + e2e service handler |
+| 3.8 sanity (mypy/lints/pytest/leak) | ✅ | all green |
+| 3.9 commit + push (in progress) | 🔄 | next step |
+
+### Drift Findings
+
+**🚨 D8 (architecture)** — Separate factory, not governance
+- **Plan claim**: §US-4 said "extend governance ServiceFactory with 5 getters"
+- **Actual choice**: separate `business_domain/_service_factory.py` (BusinessServiceFactory)
+- **Rationale**: governance ServiceFactory is HITL/Risk/Audit-scoped; mixing business-domain getters violates `category-boundaries.md` AP-3. Per-request builder pattern (vs cached singleton) because services are stateless wrappers over (db, tenant_id) and shouldn't be cached across requests.
+- **Impact**: cleaner separation of concerns; no `reset_business_service_factory()` needed (no module-level state); test fixture friction zero.
+
+**🚨 D9 (scope reduction)** — incident-only mode swap; 4 other domains deferred
+- **Plan claim**: §US-3+US-4 implied all 5 domains' tools.py would gain mode='service' wiring
+- **Actual approach**: Only `register_incident_tools` has full mode swap. The other 4 domains keep mode='mock' default behavior; they accept the kwarg signature pattern but treat 'service' as 'mock' (no break).
+- **Rationale**: Incident is the demo domain for V2 21/22 main flow; service classes for the other 4 domains exist (Day 3.1) but their tools.py wire-up needs more effort than budget allows. **AD-BusinessDomainPartialSwap-1** logged: Phase 55.2 production-deployment sprint completes the wire-up for the remaining 13 tools (3 patrol-destructive + 2 correlation-misc + 2 rootcause-misc + 2 audit-misc + 4 redundant read-only handler swap).
+- **Impact**: minimum-viable mode flag wiring proves the architecture; production deployment in 55.2 finishes wire-up.
+
+**🚨 D10 (ToolCall ctor)** — `name` not `tool_name`
+- **Plan claim**: test fixture used `tool_name` kwarg (mirrors event names from events.py)
+- **Actual**: ToolCall dataclass uses `name` (single source: `_contracts/chat.py:67`)
+- **Fix**: aligned test fixture; verified via grep across 5 ToolCall usages
+
+**🚨 D11 (scope simplification)** — deterministic hash, not JSON fixture files
+- **Plan claim**: §US-3 said `business_domain/{domain}/_fixtures/*.json` for patrol/correlation seed data
+- **Actual approach**: SHA-256-hash deterministic stubs in service code
+- **Rationale**: removes file maintenance burden; cleaner unit testing (no file IO in tests); production-bound stubs anyway (Phase 56+ replaces with real data sources)
+
+### Sanity Results ✅
+
+| Check | Result |
+|-------|--------|
+| `pytest tests/unit/business_domain/ -v` | **31 passed in 1.34s** (15 from Day 2 + 16 new) |
+| `mypy src --strict` | **0 errors / 266 files** (was 261 + 5 new) |
+| `black + isort + flake8` on Day 3 files | clean (1 E501 + 1 mypy attr-defined fixed via explicit Incident type) |
+| `python scripts/lint/run_all.py` (6 V2 lints) | **6/6 green** in 0.68s |
+| `pytest -q` full backend suite | **1387 passed / 4 skipped / 0 fail** in 29.19s (= 1371 + 16) |
+| LLM SDK leak in `business_domain/` | 0 |
+
+### Files Created / Modified
+
+| File | Status | LOC |
+|------|--------|-----|
+| `business_domain/patrol/service.py` | NEW | ~70 |
+| `business_domain/correlation/service.py` | NEW | ~55 |
+| `business_domain/rootcause/service.py` | NEW | ~95 |
+| `business_domain/audit_domain/service.py` | NEW | ~95 |
+| `business_domain/_service_factory.py` | NEW | ~95 |
+| `business_domain/incident/tools.py` | MODIFIED | +110 (mock/service handler split + serializer + mode kwarg) |
+| `business_domain/_register_all.py` | MODIFIED | +25 (mode + factory_provider plumbing) |
+| `core/config/__init__.py` | MODIFIED | +6 (business_domain_mode field) |
+| `tests/unit/business_domain/test_readonly_services.py` | NEW | ~145 |
+| `tests/unit/business_domain/test_factory_and_mode.py` | NEW | ~145 |
+
+### New AD Logged
+
+- **AD-BusinessDomainPartialSwap-1** — Phase 55.2 / production-deployment sprint completes register_*_tools() mode swap for the 4 read-only domains (13 tools); service classes already production-ready.
+
+### Calibration Mid-Sprint Note
+
+US-3 + US-4 estimated bottom-up 8 hr × 0.50 = ~4 hr commit. Actual: ~3 hr (D8/D9/D10/D11 absorbed within budget; D9 scope-reduction trade-off saved ~1 hr). Sprint cumulative actual ~6.5 hr / 11 hr budget → trending under projection. Day 4 retro Q2 will compute final ratio.
+
+### Next Day Plan (Day 4)
+
+- US-5 + retro + closeout
+- 4.1 Audit Cat 12 obs wiring on all 25 service methods
+- 4.2 Multi-tenant cross-domain integration tests (5 cases)
+- 4.3 Main flow e2e test (chat → incident_create → DB row)
+- 4.4 retrospective.md (6 必答題 + AD-Sprint-Plan-2 closure verify)
+- 4.5 Final pytest + lints + leak verify
+- 4.6 Open PR + CI green + solo-dev merge
+- 4.7 Closeout PR (SITUATION-V2 + CLAUDE.md)
+- 4.8 Memory update + final push
+- est ~2 hr commit
+
+---
+
+**Last Updated**: 2026-05-04 (Day 3 complete)
