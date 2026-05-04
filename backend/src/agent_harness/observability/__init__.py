@@ -5,6 +5,7 @@ Single-source map:
 - NoOpTracer / OTelTracer: tracer.py
 - MetricRegistry / MetricSpec / REQUIRED_METRICS / emit: metrics.py
 - OTelExporterConfig / build_tracer_provider / build_meter_provider: exporter.py
+- category_span (cross-cutting span primitive; Sprint 55.3 / AD-Cat12-Helpers-1): helpers.py
 """
 
 from agent_harness.observability._abc import Tracer
@@ -13,6 +14,7 @@ from agent_harness.observability.exporter import (
     build_meter_provider,
     build_tracer_provider,
 )
+from agent_harness.observability.helpers import category_span
 from agent_harness.observability.metrics import (
     REQUIRED_METRICS,
     MetricKind,
@@ -33,5 +35,6 @@ __all__ = [
     "Tracer",
     "build_meter_provider",
     "build_tracer_provider",
+    "category_span",
     "emit",
 ]

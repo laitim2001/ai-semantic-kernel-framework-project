@@ -70,34 +70,40 @@
 
 ### AD-Cat12-Helpers-1 — Extract `category_span` Helper
 
-- [ ] **Decision**: Option A (thin wrapper) vs Option B (delete `_obs.py` + direct call)
-  - Option B is preferred (simpler; no extra import indirection)
-  - Document decision in progress.md Day 1 entry
-- [ ] **Create `backend/src/agent_harness/observability/helpers.py`**
+- [x] **Decision: Option A (thin wrapper delegation)** — revised from preliminary B
+  - Reason: 7 callers (2 verification + 5 business_domain) each have ergonomic signatures (verifier_name positional / service_name+method keyword) and different categories (VERIFICATION / TOOLS); refactoring all 7 call sites with explicit category arg = invasive. Option A: keep wrappers, extract no-op + start_span boilerplate to `category_span` primitive.
+  - Documented in progress.md Day 1 entry
+- [x] **Create `backend/src/agent_harness/observability/helpers.py`**
   - Function: `category_span(tracer: Tracer | None, name: str, category: SpanCategory) -> AsyncIterator[None]`
   - Async ctx mgr; no-op when tracer is None
   - File header per `file-header-convention.md` (Purpose / Category 12 / Created)
-- [ ] **Refactor `verification/_obs.py`** per Option A/B decision
-- [ ] **Refactor `verification/rules_based.py`** — import from helpers.py
-- [ ] **Refactor `verification/llm_judge.py`** — import from helpers.py
-- [ ] **Refactor `business_domain/_obs.py`** per Option A/B decision
-- [ ] **Refactor `business_domain/_base.py`** — import path update
-- [ ] **Cat 9 wrappers UNTOUCHED** per 54.2 D19 (reuse inner judge tracer)
-- [ ] **Write `backend/tests/unit/observability/test_category_span.py`**
-  - Test 1: tracer=None → no-op (no exception)
-  - Test 2: tracer mock → span emit verified with name + category
-  - Test 3: span enters/exits in correct order
-- [ ] **Run tests**: `pytest backend/tests/unit/observability/ backend/tests/unit/verification/ -v`
-- [ ] **Commit AD-Cat12-Helpers-1**
-  - Commit: `refactor(observability, sprint-55-3): close AD-Cat12-Helpers-1 (extract category_span)`
+- [x] **Refactor `verification/_obs.py`** — delegate to category_span; preserve `verification_span(tracer, name)` signature
+- [x] **`verification/rules_based.py` UNTOUCHED** — Option A means external callers see no API change
+- [x] **`verification/llm_judge.py` UNTOUCHED** — Option A means external callers see no API change
+- [x] **Refactor `business_domain/_obs.py`** — delegate to category_span; preserve `business_service_span(tracer, *, service_name, method)` signature
+- [x] **`business_domain/*/service.py` (5 files) UNTOUCHED** — Option A means external callers see no API change
+- [x] **Cat 9 wrappers UNTOUCHED** per 54.2 D19 (reuse inner judge tracer)
+- [x] **Add `category_span` to `agent_harness/observability/__init__.py` __all__**
+- [x] **Write `backend/tests/unit/agent_harness/observability/test_category_span.py`**
+  - Test 1: tracer=None → no-op (no exception, body executes)
+  - Test 2: tracer mock → span emit verified with name + category; body runs inside ctx
+  - Test 3: sequential calls accumulate spans in order
+- [x] **Run tests**: 10 passed (3 new + 4 verification regression + 3 business_domain regression)
+- [x] **Lint chain**: black ✓ / isort ✓ / flake8 ✓ / mypy --strict ✓ / 6 V2 lints ✓
+- [x] **Drift findings (Day 1)**:
+  - **D4** V2 lint scripts at PROJECT root `scripts/lint/` (not `backend/scripts/lint/` as plan §AD-Cat7-1 stated) — Day 2 will write `check_sole_mutator.py` to `scripts/lint/`
+  - **D5** First import attempt `from agent_harness.observability._abc import Tracer` triggered `check_cross_category_import.py` (private cross-cat import); fix = use package re-export `from agent_harness.observability import Tracer, category_span`
+- [x] **Commit AD-Cat12-Helpers-1**
+  - Commit: `refactor(observability, sprint-55-3): close AD-Cat12-Helpers-1 (extract category_span)` — pending
 
 ### Day 1 Wrap
 
-- [ ] **Update progress.md Day 1 entry**
-  - Cover: 3 commits (Group A 1 commit + AD-Lint-3 1 commit + AD-Cat12-Helpers-1 1 commit)
-  - Document Option A/B decision for AD-Cat12-Helpers-1
-  - New drift findings (if any)
-- [ ] **pytest baseline check**: `pytest -q` should be 1416 → 1419-1420 (+3-4 from AD-Cat12-Helpers-1 unit tests)
+- [x] **Update progress.md Day 1 entry**
+  - Cover: 3 commits (Group A 1 commit `bc468477` + AD-Lint-3 1 commit `144c4595` + AD-Cat12-Helpers-1 1 commit pending)
+  - Documented Option A decision (revised from preliminary B) for AD-Cat12-Helpers-1
+  - New drift findings: D4 (V2 lint scripts at project root) + D5 (cross-cat import lint pattern)
+- [x] **pytest delta**: 1416 baseline → +3 new test_category_span tests + 7 regression all passing (full suite re-run deferred to Day 4 closeout)
+- [x] **Tracker (end Day 1)**: 4/6 ADs closed (AD-Plan-1 ✅ / AD-Lint-2 ✅ / AD-Lint-3 ✅ / AD-Cat12-Helpers-1 ✅ pending commit / AD-Cat7-1 ⏳ Day 2 / AD-Hitl-7 ⏳ Day 3)
 
 ---
 

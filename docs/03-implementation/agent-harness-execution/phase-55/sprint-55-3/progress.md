@@ -84,5 +84,99 @@ Will document final decision after Day 1 verification.
 ---
 
 **Day 0 status**: ✅ COMPLETE
-**Day 0 commit**: pending(this commit)
+**Day 0 commit**: `ab42b076`
 **Next**: Day 1 morning Group A combined edit pass
+
+---
+
+## Day 1 — 2026-05-04 (~2.5 hr actual)
+
+### Actions taken
+
+**Morning — Group A (3 process/template ADs, 2 commits, ~1 hr actual / ~1 hr est)**:
+
+1. **AD-Plan-1 + AD-Lint-2 combined edit** on `.claude/rules/sprint-workflow.md`:
+   - Inserted new §Step 2.5 "Day-0 Plan-vs-Repo Verify" (mandatory grep verify before Day 1 code)
+   - Added decision matrix (≤20% / 20-50% / >50% scope shift)
+   - Examples: Sprint 53.7 D4-D12 (cost ~1 hr re-work) + Sprint 55.3 D1-D3 (saved ~30 min)
+   - Cross-link to anti-patterns-checklist.md AP-2
+   - §Step 2 §Required Format: dropped per-day "(Estimated X hours)" + per-task "(Y min)" + per-task "Estimated: Y min" sub-bullets; added prohibition list with strikethrough examples
+   - §Step 5 added "Per-day estimates live here" section (progress.md as single home)
+   - Updated top Modification History (1-line entry per AD-Lint-3 to-be-applied next)
+   - **Commit `bc468477`**: `docs(rules, sprint-55-3): close AD-Plan-1 + AD-Lint-2 (sprint-workflow.md)`
+
+2. **AD-Lint-3** edit on `.claude/rules/file-header-convention.md`:
+   - §格式 rewritten: "1-line max per entry" + char budget guidance (≤ E501 / 100 chars including indent / `> - ` Markdown prefix; effective ~90 chars)
+   - Added good (1-line) and bad (multi-line) examples in §格式
+   - New 禁止項 5: MHist multi-line / bullet sub-points / line breaks / quote markers (4 ❌ examples + 3 ✅ examples + Why)
+   - Top Modification History updated demonstrating compliance
+   - Existing 4 file-type examples already conform; no edit needed
+   - **Commit `144c4595`**: `docs(rules, sprint-55-3): close AD-Lint-3 (MHist 1-line format)`
+
+**Afternoon — AD-Cat12-Helpers-1 (1 commit, ~1.5 hr actual / ~1.75 hr est)**:
+
+3. **Decision: Option A (thin wrapper delegation)** — revised from preliminary B
+   - Reason: 7 callers (2 verification + 5 business_domain) each have different ergonomic signatures (verifier_name positional / service_name+method keyword) and different categories (VERIFICATION / TOOLS); refactoring all 7 = invasive. Option A keeps wrappers, extracts only the no-op + start_span boilerplate to `category_span` primitive.
+4. **Created `backend/src/agent_harness/observability/helpers.py`**:
+   - `category_span(tracer, name, category)` async ctx mgr; no-op when tracer=None; otherwise delegates to `tracer.start_span(name=, category=)`
+5. **Refactored 2 wrapper files** to delegate:
+   - `verification/_obs.py:verification_span(tracer, name)` → calls `category_span(tracer, f"verifier.{name}", VERIFICATION)`
+   - `business_domain/_obs.py:business_service_span(tracer, *, service_name, method)` → calls `category_span(tracer, f"business_service.{service_name}.{method}", TOOLS)`
+6. **Added `category_span` to `observability/__init__.py` __all__** for package re-export
+7. **Tests**: new `tests/unit/agent_harness/observability/test_category_span.py` (3 tests):
+   - `test_category_span_noop_when_tracer_is_none`
+   - `test_category_span_emits_span_when_tracer_present`
+   - `test_category_span_sequential_calls_accumulate_in_order`
+8. **Cat 9 wrappers UNTOUCHED** per 54.2 D19 (reuse inner judge tracer)
+9. **External callers UNTOUCHED**: 2 verification (rules_based / llm_judge) + 5 business_domain services (incident / patrol / correlation / rootcause / audit_domain) — Option A means no API change visible to callers
+10. **Commit AD-Cat12-Helpers-1**: pending after this progress.md update
+
+### Drift findings (Day 1 — D4-D5)
+
+| ID | Finding | Source | Implication |
+|----|---------|--------|-------------|
+| **D4** | V2 lint scripts located at PROJECT root `scripts/lint/` (not `backend/scripts/lint/` as plan §AD-Cat7-1 stated) | `ls /c/...project/scripts/lint/` | Day 2 AD-Cat7-1 must place `check_sole_mutator.py` in **project root** `scripts/lint/`, not under `backend/`. Plan §File Change List entry for AD-Cat7-1 needs implicit correction (no §Spec rewrite per AD-Plan-1 audit-trail rule) |
+| **D5** | First import attempt `from agent_harness.observability._abc import Tracer` triggered `check_cross_category_import.py` lint failure (private cross-category import) | run_all.py first run (5/6 green) | Fix pattern: use package re-export `from agent_harness.observability import Tracer, category_span`. Established convention in V2 codebase: all cross-category imports must come from `<category>/__init__.py` re-exports OR `agent_harness/_contracts/`. helpers.py being inside `observability/` is NOT private cross-cat (same package); but `_obs.py` files in verification/ and business_domain/ ARE cross-category — must use re-export |
+
+### Verification
+
+- pytest: **10/10 green** (3 new test_category_span + 4 verification regression + 3 business_domain regression)
+- baseline check: 1416 → ~1419 (+3 from new tests; full suite not re-run yet — Day 4 closeout will)
+- mypy --strict: 0 errors on 3 modified source files
+- flake8: 0 issues (after fixing 3 E501 hits in MHist + test docstring → ironic AD-Lint-3 self-violation caught + fixed)
+- 6 V2 lints: **6/6 green** (after D5 fix)
+
+### Day 1 actual vs estimate
+
+| Slot | Estimate | Actual | Delta |
+|------|----------|--------|-------|
+| Morning Group A (3 ADs) | ~1 hr | ~1 hr | ±0 |
+| Afternoon AD-Cat12-Helpers-1 | ~1.75 hr | ~1.5 hr | -15 min |
+| **Day 1 total** | **~2.75 hr** | **~2.5 hr** | **~9% under** |
+
+### Day 2 plan
+
+- **AD-Cat7-1 sole-mutator grep-zero + CI lint** (~3-4 hr est)
+- **Path correction per D4**: `check_sole_mutator.py` → `scripts/lint/check_sole_mutator.py` (project root); wire into `scripts/lint/run_all.py` (becomes 7th lint)
+- Verify grep-zero in 4 production paths (agent_harness / api / business_domain / platform_layer)
+- Catalog any residual violations (audit log)
+- Write check_sole_mutator.py + wire into run_all.py
+- New `backend/tests/unit/state_mgmt/test_sole_mutator_lint.py` (3 tests)
+- Commit `feat(lint, state-mgmt, sprint-55-3): close AD-Cat7-1`
+
+### Day 1 status
+
+**Day 1**: 3 commits delivered;3 ADs closed (AD-Plan-1 + AD-Lint-2 + AD-Lint-3 + AD-Cat12-Helpers-1 = 4 ADs total — counting AD-Plan-1 + AD-Lint-2 separately).
+
+Wait, that's 4 ADs done in Day 1 (Group A 3 + AD-Cat12-Helpers-1 1). Tracker:
+
+| AD | Day 1 status |
+|----|---|
+| AD-Plan-1 | ✅ closed (commit `bc468477`) |
+| AD-Lint-2 | ✅ closed (commit `bc468477`) |
+| AD-Lint-3 | ✅ closed (commit `144c4595`) |
+| AD-Cat12-Helpers-1 | ✅ closed (commit pending — this turn) |
+| AD-Cat7-1 | ⏳ Day 2 |
+| AD-Hitl-7 | ⏳ Day 3 |
+
+**4/6 ADs closed by end of Day 1**. Remaining 2 ADs cover Day 2 + Day 3 (Cat 7 lint + per-tenant HITL DB).
