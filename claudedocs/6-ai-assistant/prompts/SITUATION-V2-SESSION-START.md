@@ -173,7 +173,7 @@ ls docs/03-implementation/agent-harness-execution/
 
 > **這段需要每個 sprint 結束時用戶或 AI 添加。** 收尾時，把 retrospective.md 的「待改進」「Action items」精煉成下方一句話列表。
 
-### 已知未解（at session start time = 2026-05-04 Sprint 54.2 closeout）
+### 已知未解（at session start time = 2026-05-04 Sprint 55.3 closeout — Audit Cycle Mini-Sprint #1 complete; 6 ADs closed)
 
 #### Cat 8 carryover（53.2 retrospective Q5 — still open）
 - ⏸ **AD-Cat8-1**：RedisBudgetStore 0% coverage；需 fakeredis dep + integration test → 53.8 / 54.x
@@ -198,11 +198,11 @@ ls docs/03-implementation/agent-harness-execution/
 - ⏸ **AD-Cat11-SSEEvents**（new from 54.2）：SubagentSpawned/Completed event emission from tool handlers; SSE 2 isinstance branches (Day 0 D3 deferred per D18) → Phase 55 frontend
 - ⏸ **AD-Cat11-ParentCtx**（new from 54.2）：ForkExecutor parent context inheritance via Cat 7 checkpoint load (D12 deferred) → Phase 55
 
-#### Cat 7 carryover（53.1 retrospective）
-- ⏸ **AD-Cat7-1**：Full sole-mutator pattern (grep-zero refactor) → Phase 54.x (Cat 10 verifier session-state model)
+#### Cat 7 carryover（53.1 retrospective — closed by 55.3）
+- ✅ **AD-Cat7-1** closed by 55.3 (sole-mutator grep-zero confirmed across full backend/src/ + 7th V2 lint check_sole_mutator.py + 6 tests)
 
-#### Hitl carryover（53.4 retrospective + 53.7 partial closure）
-- ⏸ **AD-Hitl-7**：Per-tenant HITLPolicy DB persistence → 53.8 / 54.x
+#### Hitl carryover（53.4 retrospective + 53.7 + 55.3 closures）
+- ✅ **AD-Hitl-7** closed by 55.3 (per-tenant HITLPolicy DB: hitl_policies table + DBHITLPolicyStore + 3-tier fallback get_policy + 9 tests)
 - ✅ **AD-Hitl-1..6** closed by 53.5; **AD-Hitl-4-followup** closed by 53.6; **AD-Hitl-8** closed by 53.7
 
 #### Frontend carryover（53.5 retrospective — all closed by 53.6）
@@ -220,14 +220,29 @@ ls docs/03-implementation/agent-harness-execution/
 - ✅ **AI-22** closed by 53.7 (chaos test PASSED — admin merge blocked at GraphQL API)
 - ⏸ **#31**：V2 Dockerfile + 新 build workflow → infrastructure track（無 sprint binding）
 
-#### Sprint 53.7 新加（待後續處理）
-- ⏸ **AD-Plan-1**：Day-0 探勘 must grep each plan §Technical Spec assertion against repo state (5 drift findings D4-D12 in 53.7 cost ~1 hr re-work). Action: extend `.claude/rules/sprint-workflow.md` §Step 3 with mandatory plan-vs-repo verify → next plan template iteration / Phase 55
-- ⏸ **AD-Lint-2**：Day-level estimates have higher variance than sprint-level (53.7 banking offset Day 2/3 over-runs). Action: drop per-day calibrated targets; keep only sprint-aggregate → next checklist template / Phase 55
+#### Sprint 53.7 新加（closed by 55.3）
+- ✅ **AD-Plan-1** closed by 55.3 (sprint-workflow.md §Step 2.5 Day-0 Plan-vs-Repo Verify added; first self-application caught D1-D3 + D4-D8 = 8 drift findings, saving ~4 hr re-work)
+- ✅ **AD-Lint-2** closed by 55.3 (per-day "Estimated X hours" headers dropped from checklist template; progress.md is single home for per-day estimates)
 
-#### Sprint 54.2 新加（待後續處理）
-- ⏸ **AD-Sprint-Plan-2**：Calibration multiplier 0.55 systematically over-budgets (3-sprint mean 0.78 = 53.7 1.01 + 54.1 0.69 + 54.2 0.65 BELOW [0.85, 1.20] band). Action: lower multiplier 0.55 → **0.50** for Phase 55 sprint 1; re-evaluate after 1 sprint; if ratio stays < 0.85, drop to 0.45. → Next plan template
-- ⏸ **AD-Cat12-Helpers-1**：Extract `verification_span` async ctx mgr pattern from 54.2 to `agent_harness/observability/helpers.py` for cross-Cat reuse (Cat 8 / Cat 11 dispatch will benefit) → Phase 55
-- ⏸ **AD-Lint-3**：Modification History entries accumulating cause recurring flake8 E501 (4× hit in 54.2 Day 4). Action: shorten MHist format to 1-line max `YYYY-MM-DD: scope (Sprint XX.Y)` → `.claude/rules/file-header-convention.md` update
+#### Sprint 54.2 新加（partial closure by 55.3）
+- ✅ **AD-Cat12-Helpers-1** closed by 55.3 (extracted category_span to agent_harness/observability/helpers.py; verification_span + business_service_span delegate; Option A thin wrapper preserves 7 callers' API)
+- ✅ **AD-Lint-3** closed by 55.3 (file-header-convention.md §格式 enforces 1-line max + char budget ≤ E501; new 禁止項 5 with examples; ironic self-violation caught + fixed in helpers.py)
+- ⏸ **AD-Sprint-Plan-2** — **superseded by AD-Sprint-Plan-4** (this retro): single global multiplier strategy fails because scope class differs (55.3 ratio 2.81 way over band when 0.40 applied to medium-backend scope vs 55.2 ratio 1.10 in band for closure scope)
+
+#### Sprint 55.2 carryover（superseded）
+- ⏸ **AD-Phase56-Calibration** — **superseded by AD-Sprint-Plan-4** (this retro): scope-class multiplier matrix replaces single-multiplier baseline tracking
+- ⏸ **AD-Cat12-BusinessObs**：thread real tracer through chat router → BusinessServiceFactory → 5 services when `get_tracer` factory implemented → Phase 56+
+
+#### Sprint 55.3 新加（待後續處理）
+- ⏸ **AD-Sprint-Plan-4** (NEW)：Adopt scope-class multiplier matrix to replace single global multiplier. Calibration evidence: 6-sprint window has 2/6 in-band (53.7 1.01, 55.2 1.10) and oscillates between under-est (54.x / 55.1 ~0.65-0.70) and over-est (55.3 ~2.81). Action: Phase 56+ first sprint plan §Workload header states scope class + multiplier from matrix:
+  ```
+  Audit cycle / docs / template:    0.40 (55.2 evidence)
+  Mixed (process + 1-2 backend):    0.55-0.65 (53.7 evidence)
+  Medium-backend production:        0.65-0.75 (55.3 actual ~10.5 hr ÷ 11.25 bottom-up = 0.93 → start 0.65)
+  Large multi-domain:               0.50-0.55 (55.1 evidence)
+  ```
+  After 3-4 sprints under matrix, re-evaluate per-class. → Phase 56+ first sprint plan
+- ⏸ **AD-Plan-2** (NEW)：Extend `sprint-workflow.md` §Step 2.5 to require explicit Day-0 path verification for every plan §File Change List entry (Glob-check exists for edits / not-exist for creates). Evidence: 55.3 D4 + D7 + D8 = 3 path-drift findings caught mid-implementation (V2 lint scripts at project root vs plan said backend/scripts/, alembic versions vs plan said backend/alembic/, test paths under platform_layer/ vs plan said tests/.../governance/). Action: 5-min Day-0 task per sprint to prevent path-drift class. → Sprint 55.4+ plan template
 
 #### 永久 dropped（不必處理）
 - ✅ **4 dropped CI Pipeline checks**（Code Quality / Tests / Frontend Tests / CI Summary）：53.2.5 archive ci.yml 後永久 drop（V1 monolithic CI duplicates，非降級；branch protection 已正確配置 4 active checks）
@@ -267,10 +282,11 @@ ls docs/03-implementation/agent-harness-execution/
 | **54.2** | 2026-05-04 | PR #80 merged `c7b686ae` | Cat 11 Subagent Orchestration Level 4 (BudgetEnforcer + DefaultSubagentDispatcher + Fork + AsTool + Teammate + Mailbox + Handoff + task_spawn/handoff tools per 17.md §3.1 + AD-Cat10-Obs-1 verifier observability) — closes AD-Cat10-Obs-1; 46 tests; calibration ratio 0.65 (3rd application; 3-sprint mean 0.78 → recommend lower to 0.50 for Phase 55); 22 drifts D1-D22; Worktree NOT implemented per V2 spec §範疇 11 (AP-6 clean); AgentLoop UNTOUCHED per D18 (tools auto-route via tool_executor); 7 new AD; **V2 19/22 → 20/22 (91%)** ↑ |
 | **55.1** | 2026-05-04 | PR #82 merged `798176d5` | Business domain production service layer (Option A) — Incident DB schema + ORM + Alembic 0012 + RLS policy; IncidentService production CRUD + multi-tenant + audit chain; 4 read-only services (Patrol/Correlation/RootCause/Audit); BUSINESS_DOMAIN_MODE flag + BusinessServiceFactory (D8 separate from governance); register_incident_tools mode swap (incident only — D9 + AD-BusinessDomainPartialSwap-1 for 4 deferred domains); Cat 12 obs span on 9 service methods; **44 tests** (= plan target hit exactly: 1351 → 1395); 11 drifts D1-D11; calibration ratio **0.68** (1st application of 0.50; 4-sprint mean 0.76 → AD-Sprint-Plan-3 = 0.50→0.40 for 55.2); **V2 20/22 → 21/22 (95%)** ↑ |
 | **55.2** | 2026-05-04 | PR #85 merged `9a8296ae` | **V2 22/22 (100%) CLOSURE** — AD-BusinessDomainPartialSwap-1 closed at 3 layers (per-domain register_*_tools + _register_all aggregator + chat router DI); 5 USs: 4 deferred domains tools.py mode swap (13 handlers = 4 real + 9 sentinel per D1) / _register_all uniform mode threading / chat handler BusinessServiceFactory wiring (D2 tracer=None + D9 get_db_session) / 21 tests cumulative / ceremony retro; pytest 1395 → **1416** (+21 cumulative; +6 over plan ≥+15); calibration multiplier 0.40 1st application: ratio **1.10** ✅ FIRST in [0.85, 1.20] band (5-sprint mean 0.826; AD-Phase56-Calibration logged); 10 drifts D1-D10; **V2 21/22 → 22/22 (100%)** ↑ **V2 重構完成** |
+| **55.3** | 2026-05-04 | (TBD merge SHA) | **Audit Cycle Mini-Sprint #1 (Groups A + G)** — 6 ADs closed: AD-Plan-1 (sprint-workflow.md §Step 2.5 Day-0 Plan-vs-Repo Verify) + AD-Lint-2 (drop per-day "Estimated X hours" from checklist template) + AD-Lint-3 (MHist 1-line format + 禁止項 5) + AD-Cat12-Helpers-1 (extract category_span to observability/helpers.py; thin wrapper Option A) + AD-Cat7-1 (sole-mutator grep-zero confirmed full backend/src/ + 7th V2 lint check_sole_mutator.py) + AD-Hitl-7 (per-tenant HITLPolicy DB: hitl_policies table + DBHITLPolicyStore + 3-tier fallback get_policy + Alembic 0013 + RLS); pytest 1416 → **1434** (+18, 50% over plan ≥+12); 7 V2 lints 7/7 green (added check_sole_mutator); calibration multiplier 0.40 2nd application: ratio **~2.81** ⚠️ way OVER band → 6-sprint mean 1.16 with high variance (range 0.65-2.81) → AD-Sprint-Plan-4 logged proposing scope-class matrix (audit/mixed/medium-backend/large multi-domain); 8 drifts D1-D8; AD-Plan-1 first self-application caught D1-D3 before Day 1 code → ROI validated; **V2 22/22 unchanged (audit cycle bundle, not main progress)** |
 
-**累計**：**22 / 22 sprint** 完成（**100%**）— Phase 49: 4/4 ✅，Phase 50: 2/2 ✅，Phase 51: 3/3 ✅，Phase 52: 4/4 ✅，Phase 53: 6/4 (53.1-53.6) ✅，Phase 54: 2/2 ✅，Phase 55: 2/2 ✅，+ 2 carryover bundles (53.2.5 + 53.7)
+**累計**：**22 / 22 sprint** 完成（**100%**）— Phase 49: 4/4 ✅，Phase 50: 2/2 ✅，Phase 51: 3/3 ✅，Phase 52: 4/4 ✅，Phase 53: 6/4 (53.1-53.6) ✅，Phase 54: 2/2 ✅，Phase 55: 2/2 ✅，+ 3 carryover bundles (53.2.5 + 53.7 + 55.3)
 
-> **53.2.5 + 53.7 是 carryover bundles 不算入主 22 sprint 進度**；55.2 是主進度推進 21/22 → 22/22。**Phase 55.2 已完成 — V2 重構達成 100% 完成**。下一階段 = Phase 56+ SaaS Stage 1（Multi-tenant infrastructure + Billing + SLA + DR；候選 scope 等用戶 approve；Sprint 56.1 plan 起草前必先 user approve scope，per rolling planning 紀律）。Calibration multiplier 0.40 carry to Phase 56+ as starting point；first sprint 56.1 retro Q2 verify ratio；若 < 0.85 或 > 1.20 → AD-SaaS-Plan-1 (re-baseline)。
+> **53.2.5 + 53.7 + 55.3 是 carryover bundles 不算入主 22 sprint 進度**。**Phase 55.2 已完成 — V2 重構達成 100% 完成**。**Sprint 55.3 (audit cycle mini-sprint #1) 完成 — 6 ADs closed**;Sprint 55.4 候選 scope = Groups B + C (Cat 8 + Cat 9 backend);Sprint 55.5 / 55.6 後續 audit cycles。下一階段 = Phase 56+ SaaS Stage 1（Multi-tenant infrastructure + Billing + SLA + DR；候選 scope 等用戶 approve；Sprint 56.1 plan 起草前必先 user approve scope，per rolling planning 紀律）。Calibration:單一全域 multiplier 失效(6-sprint 2/6 in band) → AD-Sprint-Plan-4 提案 scope-class matrix(audit 0.40 / mixed 0.55-0.65 / medium-backend 0.65-0.75 / large multi-domain 0.50-0.55);Sprint 55.4+ 試行。
 
 ---
 
@@ -378,7 +394,7 @@ V2 完成（Phase 55 後）→ 此 prompt 變歷史紀念物，改用 V3 / SaaS 
 
 ---
 
-**Last Updated**: 2026-05-04（Sprint 55.2 closeout — **V2 22/22 = 100% 完成** 🎉；V2 重構達成；Phase 55.2 production mode swap + chat handler wiring 達成；AD-BusinessDomainPartialSwap-1 closed; AD-Sprint-Plan-3 conditionally closed (multiplier 0.40 first hit in band 1.10); 下一階段 = Phase 56+ SaaS Stage 1 候選 scope，等用戶 approve）
+**Last Updated**: 2026-05-04（Sprint 55.3 closeout — **Audit Cycle Mini-Sprint #1 完成,6 ADs closed**:AD-Plan-1 + AD-Lint-2 + AD-Lint-3 + AD-Cat12-Helpers-1 + AD-Cat7-1 + AD-Hitl-7;pytest 1434(+18);7 V2 lints(added check_sole_mutator);calibration 0.40 2nd app ratio 2.81 way over band → AD-Sprint-Plan-4 提案 scope-class matrix;V2 22/22 unchanged(audit cycle bundle);Sprint 55.4 候選 scope = Groups B+C(Cat 8+Cat 9 backend),user approval pending）
 **Maintainer**: 用戶 + AI 助手共同維護
 **File location**: `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md`
 
@@ -395,3 +411,4 @@ V2 完成（Phase 55 後）→ 此 prompt 變歷史紀念物，改用 V3 / SaaS 
 | 2026-05-04 | 54.2 | §8 closes AD-Cat10-Obs-1 + adds AD-Cat10-Obs-Cat9Wrappers / AD-Cat11-Multiturn / AD-Cat11-SSEEvents / AD-Cat11-ParentCtx / AD-Sprint-Plan-2 / AD-Cat12-Helpers-1 / AD-Lint-3 as 54.2 carryover; §9 milestones row +Sprint 54.2 (V2 19/22 → 20/22 = 91%); Phase 54 完成 2/2; session start time updated to 54.2 closeout |
 | 2026-05-04 | 55.1 | §9 milestones row +Sprint 55.1 (V2 20/22 → 21/22 = 95%); Phase 55 progresses 1/2; new AD logged: AD-Sprint-Plan-3 (multiplier 0.50→0.40 for 55.2; 4-sprint mean 0.76 BELOW band) + AD-BusinessDomainPartialSwap-1 (full register_*_tools mode swap for 4 deferred domains); session start time updated to 55.1 closeout |
 | 2026-05-04 | **55.2** | **🎉 V2 22/22 (100%) CLOSURE**; §9 milestones row +Sprint 55.2; AD-BusinessDomainPartialSwap-1 closed at 3 layers (per-domain + aggregator + chat router); AD-Sprint-Plan-3 conditionally closed (0.40 first hit ratio 1.10 in band; 5-sprint mean 0.826); 2 new AD for Phase 56+ (AD-Phase56-Calibration + AD-Cat12-BusinessObs); session start time updated to 55.2 closeout |
+| 2026-05-04 | **55.3** | §8 closes 6 ADs (AD-Plan-1 + AD-Lint-2 + AD-Lint-3 + AD-Cat12-Helpers-1 + AD-Cat7-1 + AD-Hitl-7) + supersedes AD-Sprint-Plan-2 + AD-Phase56-Calibration via new AD-Sprint-Plan-4 (scope-class multiplier matrix); §9 milestones row +Sprint 55.3 (V2 22/22 unchanged — audit cycle bundle); 2 new AD logged: AD-Sprint-Plan-4 (matrix) + AD-Plan-2 (Day-0 path verify); pytest +18 (1416 → 1434); 7th V2 lint check_sole_mutator added; calibration ratio 2.81 way over band evidence drives matrix proposal |

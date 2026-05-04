@@ -8,6 +8,7 @@
 **Status**: Active
 
 > **Modification History**
+> - 2026-05-04: Sprint 55.3 — add §Step 2.5 Day-0 plan-vs-repo grep verify (closes AD-Plan-1) + drop per-day "Estimated X hours" headers from checklist template (closes AD-Lint-2)
 > - 2026-05-04: Sprint 53.7 — add §Workload Calibration sub-section under Step 1 (closes AD-Sprint-Plan-1) + new §Common Risk Classes top-level section (closes AD-CI-4) + Pre-Push reference `python scripts/lint/run_all.py` wrapper (closes AD-Lint-1 doc portion)
 > - 2026-04-28: Initial creation (V2 foundation) — enforce 5-step workflow + change record conventions
 
@@ -80,11 +81,10 @@ Plan §Workload (or equivalent header) **must** state estimate in this three-seg
 
 [Link to plan]
 
-## Day N — Task Group (Estimated X hours)
+## Day N — Task Group
 
-### N.M Task Description (Y min)
+### N.M Task Description
 - [ ] **Specific deliverable**
-  - Estimated: Y min
   - DoD: Measurable definition of done
   - Command: `git ...` or `pytest ...`
 - [ ] **Next deliverable**
@@ -93,10 +93,17 @@ Plan §Workload (or equivalent header) **must** state estimate in this three-seg
 
 **Key Rules**:
 - Use `- [ ]` format
-- Each task ≤ 60 min (break down longer)
+- Each task should be a single logical unit (break down if checklist entry covers >1 commit's worth of work)
 - Include DoD (Definition of Done) — how to verify
 - Map each task to plan's acceptance criteria
 - Assign to days (Day 1-5 for typical sprint)
+- **DO NOT include time estimates in checklist** (since Sprint 55.3 / AD-Lint-2):
+  - ❌ ~~`## Day N — Task Group (Estimated X hours)`~~ — drop "(Estimated X hours)" header
+  - ❌ ~~`### N.M Task Description (Y min)`~~ — drop "(Y min)" suffix
+  - ❌ ~~`- Estimated: Y min`~~ sub-bullets — drop entirely
+  - ✅ Sprint-aggregate `Bottom-up est ~X hr → calibrated commit ~Y hr` lives in plan §Workload only
+  - ✅ Per-day / per-task actuals (with informal estimates if useful) → progress.md Day entries (individual record, non-binding)
+  - **Why** (Sprint 53.7 retrospective Q4 evidence): Day-level estimates have higher variance than sprint-level (banking offset Day N over-runs against budget). Per-day calibrated targets create false precision and trigger anxiety mid-sprint when Day N slips. Sprint-aggregate calibration is the only signal that survives 3-sprint moving evidence (per §Workload Calibration above).
 
 **Reference Template**: **The most recent completed sprint's checklist** (NOT a fixed reference; always the latest closed sprint). As of 2026-04-30, that's `phase-51-tools-memory/sprint-51-2-checklist.md` (~351 lines, Day 0-4, 5 days, ~34 task groups, each task has 3-6 sub-bullets with specific cases/DoD/Verify commands).
 
@@ -107,6 +114,60 @@ Plan §Workload (or equivalent header) **must** state estimate in this three-seg
 **Violation Pattern** ❌ (Sprint 52.1 v1-v2 — 2026-04-30): First draft used 6 days (Day 0-5); second draft was 27% shorter than 51.2 with insufficient per-task detail. Both required rewrites. **Lesson**: Match prior sprint's day count + detail depth before drafting.
 
 ✅ **Correct behavior**: Only change `[ ]` → `[x]`. If scope cuts, leave `[ ]` and note reason in progress.md.
+
+---
+
+### Step 2.5: Day-0 Plan-vs-Repo Verify (Sprint 55.3+ — closes AD-Plan-1)
+
+**Mandatory** between plan/checklist drafting and Day 1 code start. Plans drafted from session memory + retrospective context **drift from real repo** because:
+
+- Class names get renamed between sprints (e.g. `_obs.py` may already exist when plan assumes new file)
+- Table names change in Alembic migrations between PR drafts
+- Test fixture paths shift when `conftest.py` is restructured
+- Service/method signatures evolve in unrelated PRs while plan was being written
+
+**Cost when skipped**: Sprint 53.7 retrospective Q4 — 5 drift findings (D4-D12) cost ~1 hr of Day 1+ re-work; Sprint 55.3 Day 0 — 3 drift findings (D1-D3) caught in ~30 min before code starts → estimated savings ~30 min of Day 1+ re-work.
+
+#### Required actions (Day 0, before Day 1 code)
+
+1. **Grep each plan §Technical Spec assertion against repo state**:
+   - Every file path mentioned in plan §File Change List or §Technical Spec → `Glob` or `ls` to confirm exists / does not exist as expected
+   - Every class name → `grep -r "class FooName"` to confirm presence / absence
+   - Every DB table name → check `infrastructure/db/models/*.py` + `alembic/versions/*.py`
+   - Every fixture path → check `tests/**/conftest.py`
+   - Every public ABC method → read the actual ABC file to confirm signature
+
+2. **Catalog drift findings** in `progress.md` Day 0 entry under "Drift findings" header:
+   - Format: `D{N}` ID + Finding + Implication
+   - Cross-reference to plan §Risks (where finding may shift scope or risk profile)
+   - **Do NOT silently update plan §Technical Spec** — instead, add finding to plan §Risks. This preserves audit trail of what was originally planned vs. what reality forced. (See `anti-patterns-checklist.md` AP-2 — "no orphan code".)
+
+3. **Decide go/no-go for Day 1**:
+   - Findings shift scope by ≤ 20% → continue Day 1 with risk noted in §Risks
+   - Findings shift scope by 20-50% → revise plan §Acceptance Criteria + §Workload, re-confirm with user
+   - Findings shift scope by > 50% → abort sprint; redraft plan with reality baseline
+
+#### Examples
+
+**Sprint 53.7 D4-D12** (9 drift findings cost ~1 hr re-work — _why this rule exists_):
+- D4: Plan referenced `check_promptbuilder.py --root` arg behavior that did not match script
+- D7-D8: Plan assumed lint scripts would silently accept missing `--root` flag; reality = silent-OK or exit 2
+- D10-D12: Plan-stated `pytest` count baselines off by 2-5 tests vs. real repo at branch-creation time
+
+**Sprint 55.3 D1-D3** (3 findings caught _before_ Day 1 code — _ROI validation_):
+- D1: Plan assumed sole-mutator refactor needed for `agent_harness/`; grep showed three target patterns already grep-zero → AD-Cat7-1 scope 收斂 to enforcement test + lint
+- D2: Plan assumed `verification_span` would be created; `verification/_obs.py` already had it → AD-Cat12-Helpers-1 became `extract` (non-create)
+- D3: Plan assumed DB-backed `HITLPolicy` already partially wired; `DefaultHITLManager.default_policy` was in-memory only → AD-Hitl-7 baseline confirmed cleanly
+
+#### Cross-references
+
+- `anti-patterns-checklist.md` AP-2 (no orphan / phantom code references)
+- `.claude/rules/file-header-convention.md` §Modification History (drift findings during refactor go in MHist)
+- §Common Risk Classes below (recurring drift patterns deserve catalog entries)
+
+✅ **Correct flow**: Plan drafted → Checklist drafted → **Day-0 探勘 grep + drift findings catalogued** → Day 1 code starts.
+
+❌ **Wrong flow** (Sprint 53.7 pre-AD-Plan-1): Plan drafted → Day 1 code → discover plan-vs-repo gaps mid-implementation → re-work checklist + plan + commits.
 
 ---
 
@@ -165,6 +226,12 @@ Plan §Workload (or equivalent header) **must** state estimate in this three-seg
 
 **Sprint end**:
 - Create `retrospective.md` covering: did well / improve next sprint / action items + estimate accuracy %
+
+**Per-day estimates live here** (Sprint 55.3+ — AD-Lint-2 follow-on):
+- Since checklist no longer carries "(Estimated X hours)" / "(Y min)" headers, **progress.md is the single home for per-day / per-task time tracking**.
+- Format inside "Today's Accomplishments": `Task X.Y — actual Z min (est ~W min, delta ±N%)`
+- Sprint-aggregate ratio computed in retrospective.md Q2 from sum of progress.md actuals vs. plan §Workload committed hours.
+- Per-task estimates here are **non-binding individual record** — they help calibrate next sprint's bottom-up estimates but do not gate Day N completion.
 
 **What NOT to do** ❌:
 - "We'll update docs after the sprint" → too late, details lost

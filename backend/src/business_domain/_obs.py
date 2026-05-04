@@ -31,10 +31,12 @@ Created: 2026-05-04 (Sprint 55.1 Day 2)
 Last Modified: 2026-05-04
 
 Modification History:
+    - 2026-05-04: Sprint 55.3 — delegate to category_span (closes AD-Cat12-Helpers-1)
     - 2026-05-04: Initial creation (Sprint 55.1 Day 2.2)
 
 Related:
-    - agent_harness/verification/_obs.py (sibling pattern, Sprint 54.2)
+    - agent_harness/observability/helpers.py — category_span primitive (single owner; Sprint 55.3)
+    - agent_harness/verification/_obs.py (sibling wrapper, Sprint 54.2)
     - agent_harness/observability/_abc.py — Tracer ABC
     - agent_harness/_contracts/observability.py — SpanCategory.TOOLS
 """
@@ -45,7 +47,7 @@ import contextlib
 from collections.abc import AsyncIterator
 
 from agent_harness._contracts import SpanCategory
-from agent_harness.observability import Tracer
+from agent_harness.observability import Tracer, category_span
 
 
 @contextlib.asynccontextmanager
@@ -57,16 +59,16 @@ async def business_service_span(
 ) -> AsyncIterator[None]:
     """Emit `business_service.{service_name}.{method}` span under TOOLS; no-op if tracer is None.
 
+    Delegates to `category_span` (Sprint 55.3 / AD-Cat12-Helpers-1).
+
     Args:
         tracer: optional Tracer (None → no-op).
         service_name: domain service identifier (e.g. "incident", "patrol").
         method: service method name (e.g. "create", "list", "close").
     """
-    if tracer is None:
-        yield
-        return
-    async with tracer.start_span(
-        name=f"business_service.{service_name}.{method}",
-        category=SpanCategory.TOOLS,
+    async with category_span(
+        tracer,
+        f"business_service.{service_name}.{method}",
+        SpanCategory.TOOLS,
     ):
         yield

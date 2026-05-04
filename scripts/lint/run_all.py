@@ -1,18 +1,22 @@
 """
 File: scripts/lint/run_all.py
-Purpose: One-stop wrapper that invokes all 6 V2 architecture lint scripts with
+Purpose: One-stop wrapper that invokes all 7 V2 architecture lint scripts with
     the correct CLI arguments + emits a per-script timing summary + final
-    aggregated pass/fail count. Replaces the 6 separate manual invocations
+    aggregated pass/fail count. Replaces the separate manual invocations
     that historically caused silent-skip false-greens when the `--root` arg
     mismatched a script's expectation (see Sprint 53.7 Day 0 drift D1).
 Category: Cross-cutting / DevOps tooling
-Scope: Sprint 53.7 US-1 (closes AD-Lint-1)
+Scope: Sprint 53.7 US-1 (closes AD-Lint-1) / Sprint 55.3 (adds 7th lint via AD-Cat7-1)
+
+Modification History:
+    - 2026-05-04: Sprint 55.3 — add 7th lint check_sole_mutator (closes AD-Cat7-1)
+    - 2026-05-04: Sprint 53.7 — initial 6-lint wrapper (closes AD-Lint-1)
 
 Description:
     Each V2 lint enforces a different architectural invariant (AP-1 / cross-
     category import / duplicate dataclass / LLM SDK leak / sync callback /
-    AP-8 PromptBuilder usage). The 6 scripts unfortunately have inconsistent
-    `--root` semantics:
+    AP-8 PromptBuilder usage / Cat 7 sole-mutator). The scripts have
+    inconsistent `--root` semantics:
         - check_ap1_pipeline_disguise.py:  required `--root backend/src`
           (internally joins `<root>/agent_harness/orchestrator_loop`)
         - check_promptbuilder_usage.py:    default `backend/src/agent_harness`
@@ -27,12 +31,12 @@ Description:
     This wrapper hardcodes the correct args per-script.
 
 Usage:
-    python scripts/lint/run_all.py            # exit 0 if all 6 green
+    python scripts/lint/run_all.py            # exit 0 if all 7 green
     python scripts/lint/run_all.py --verbose  # also print per-lint stdout
 
 Exit codes:
-    0 = all 6 lints green
-    N = N of 6 lints failed (1..6); per-script status printed to stdout
+    0 = all 7 lints green
+    N = N of 7 lints failed (1..7); per-script status printed to stdout
 
 Created: 2026-05-04 (Sprint 53.7 Day 1)
 
@@ -62,6 +66,8 @@ LINTS: list[tuple[str, list[str]]] = [
     ("check_duplicate_dataclass.py", []),
     ("check_llm_sdk_leak.py", []),
     ("check_sync_callback.py", []),
+    # Sprint 55.3 (AD-Cat7-1): Cat 7 sole-mutator enforcement.
+    ("check_sole_mutator.py", ["--root", "backend/src"]),
 ]
 
 
@@ -83,7 +89,7 @@ def run_one(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run all 6 V2 architecture lint scripts with correct args."
+        description="Run all 7 V2 architecture lint scripts with correct args."
     )
     parser.add_argument(
         "--verbose",
@@ -97,7 +103,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: scripts/lint dir not found at {base}", file=sys.stderr)
         return 99
 
-    print("Running 6 V2 architecture lint scripts:")
+    n_lints = len(LINTS)
+    print(f"Running {n_lints} V2 architecture lint scripts:")
     print("=" * 60)
 
     failures = 0
@@ -117,10 +124,11 @@ def main(argv: list[str] | None = None) -> int:
 
     print("=" * 60)
     if failures == 0:
-        print(f"V2 Lints: 6/6 green  (total {total_elapsed:.2f}s)")
+        print(f"V2 Lints: {n_lints}/{n_lints} green  (total {total_elapsed:.2f}s)")
         return 0
     print(
-        f"V2 Lints: {6 - failures}/6 green -- {failures} FAILED (total {total_elapsed:.2f}s)"
+        f"V2 Lints: {n_lints - failures}/{n_lints} green -- {failures} FAILED "
+        f"(total {total_elapsed:.2f}s)"
     )
     return failures
 

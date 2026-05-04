@@ -18,18 +18,21 @@ Key Components:
     - DefaultHITLManager: subclass of agent_harness.hitl.HITLManager (ABC)
 
 Created: 2026-05-03 (Sprint 53.4 Day 1)
-Last Modified: 2026-05-03
+Last Modified: 2026-05-04
 
 Modification History:
+    - 2026-05-04: Sprint 55.3 — accept policy_store + override get_policy (closes AD-Hitl-7)
     - 2026-05-03: Day 2 — full implementation (Sprint 53.4 Day 2)
     - 2026-05-03: Initial skeleton (Sprint 53.4 Day 1) — Day 2 to implement
 
 Related:
-    - agent_harness/hitl/_abc.py (HITLManager ABC)
+    - agent_harness/hitl/_abc.py (HITLManager + HITLPolicyStore ABCs)
     - agent_harness/_contracts/hitl.py (Single-source types)
+    - platform_layer/governance/hitl/policy_store.py (DBHITLPolicyStore — Sprint 55.3)
     - 17-cross-category-interfaces.md §5
     - 09-db-schema-design.md §approvals
     - sprint-53-4-plan.md §US-2
+    - sprint-55-3-plan.md §AD-Hitl-7
 """
 
 from __future__ import annotations
@@ -49,7 +52,7 @@ from agent_harness._contracts.hitl import (
     RiskLevel,
 )
 from agent_harness._contracts.observability import TraceContext
-from agent_harness.hitl import HITLManager
+from agent_harness.hitl import HITLManager, HITLPolicyStore
 from infrastructure.db.models.governance import Approval
 from infrastructure.db.models.sessions import Session as SessionModel
 from platform_layer.governance.hitl.state_machine import (
@@ -74,6 +77,9 @@ class DefaultHITLManager(HITLManager):
         default_expiry_seconds: default approval TTL (4 hours per 17.md §5).
         default_policy: optional HITLPolicy returned by get_policy() when no
             tenant-specific policy is loaded; tests pass a minimal policy.
+        policy_store: optional DB-backed HITLPolicyStore (Sprint 55.3 / AD-Hitl-7).
+            When supplied, get_policy(tenant_id) queries it first; on None or
+            missing row, falls back to default_policy.
         wait_poll_interval_s: poll interval for wait_for_decision (default 1s).
     """
 
@@ -84,12 +90,14 @@ class DefaultHITLManager(HITLManager):
         notifier: Callable[[ApprovalRequest], Awaitable[None]] | None = None,
         default_expiry_seconds: int = 14400,
         default_policy: HITLPolicy | None = None,
+        policy_store: HITLPolicyStore | None = None,
         wait_poll_interval_s: float = 1.0,
     ) -> None:
         self._session_factory = session_factory
         self._notifier = notifier
         self._default_expiry_seconds = default_expiry_seconds
         self._default_policy = default_policy
+        self._policy_store = policy_store
         self._wait_poll_interval_s = wait_poll_interval_s
 
     # ---------------- request_approval ----------------
@@ -241,9 +249,17 @@ class DefaultHITLManager(HITLManager):
     ) -> HITLPolicy:
         """Return per-tenant HITL policy.
 
-        Day 2 scope: returns default_policy supplied at construction time.
-        Day 3+ may extend with DB-stored per-tenant overrides.
+        Sprint 55.3 (AD-Hitl-7): per-tenant DB-backed policy support.
+
+        Resolution order:
+            1. If policy_store supplied + tenant has row → return DB policy
+            2. Else if default_policy supplied at construction → return it
+            3. Else → hardcoded minimal policy (LOW / MEDIUM)
         """
+        if self._policy_store is not None:
+            policy = await self._policy_store.get(tenant_id)
+            if policy is not None:
+                return policy
         if self._default_policy is not None:
             return self._default_policy
         return HITLPolicy(
