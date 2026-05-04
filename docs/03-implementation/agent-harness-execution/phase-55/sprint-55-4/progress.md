@@ -141,6 +141,73 @@ D4-D8 catalogued above and propagated to plan §Drift Findings (per AD-Plan-1 au
 
 ✅ COMPLETE — AD-Cat8-1 (verification stamp) + AD-Cat8-3 (narrow Option C) both done in single combined commit (pending).
 
-**Day 1 commit**: pending (this commit)
+**Day 1 commit**: `cb084c3e`
 **Pytest delta**: +3 (1434 → 1437)
 **Next**: Day 2 morning AD-Cat9-5 ToolGuardrail session counter (promoted from Day 3)
+
+---
+
+## Day 2 — 2026-05-05 (~1.5 hr)
+
+### Reading + design (~30 min)
+
+- Read `tool_guardrail.py` (171 lines):TODO at L129 in Stage 2.3 max-calls-per-session block confirmed
+- Read `capability_matrix.py`:`PermissionRule.max_calls_per_session: int = 0` field already exists ✓
+- Verified `TraceContext.session_id: UUID | None` available
+
+### Storage decision: in-memory dict
+
+Per Selection D 紀律(audit cycle Group 不做 architecture change):
+- **Choice**: In-memory `dict[(session_id_str, tool_name), int]` instance attribute on `ToolGuardrail`
+- **Rationale**: single-instance scope sufficient for current deployment;Redis-backed multi-instance enforcement is a different architectural concern,tracked separately(out of audit cycle scope per Selection D)
+- **Fail-open semantics for missing session_id**: when `trace_context.session_id is None`,skip enforcement(over-blocking unauthenticated sessions would harm callers that haven't yet threaded session_id through trace_context;document the gap)
+
+### Code changes (~45 min)
+
+**Files edited**:
+- `backend/src/agent_harness/guardrails/tool/tool_guardrail.py`:
+  - `__init__`: add `self._call_counters: dict[tuple[str, str], int] = {}`
+  - Stage 2.3:replace TODO comment + placeholder block with pre-increment + check impl
+  - File header MHist: 1-line entry per AD-Lint-3
+- `backend/tests/unit/agent_harness/guardrails/test_tool_guardrail.py`:
+  - Added `_make_quota_matrix(max_calls: int)` factory + `_session_context()` helper + 2 SESSION UUID constants
+  - 4 new tests: under-cap / at-cap / over-cap / cross-session isolation
+  - File header MHist: 1-line entry per AD-Lint-3
+
+**Logic detail**:
+- Pre-increment + check: `new_count = old + 1; if new_count > max → BLOCK; else write back`
+- Counter increments only when call would otherwise PASS (BLOCK at Stage 2.1/2.2 won't increment)
+- ESCALATE flow (Stage 3 follows Stage 2.3): counter increments even if approval is needed → reflects "intent attempts" semantics
+
+### Verification (~15 min)
+
+| Check | Result |
+|-------|--------|
+| pytest test_tool_guardrail.py | 22/22 PASS in 0.14s (18 existing + 4 new) |
+| pytest full agent_harness regression | **945 passed, 1 skipped, 0 failed** in 15.50s |
+| `grep "TODO(53.4)" tool_guardrail.py` | 0 hits ✓ |
+| black --check | clean |
+| isort --check | clean |
+| flake8 | clean |
+| mypy --strict | 0 errors |
+| 7 V2 lints | **7/7 green** in 0.88s |
+
+### Estimate vs actual
+
+- Estimated: ~1.5-2 hr (per revised checklist Day 2)
+- Actual: ~1.5 hr (30 min reading + 45 min code/test + 15 min lint/regression)
+
+### Drift findings (Day 2)
+
+None. Plan-vs-repo state aligned (D2 from Day 0 already confirmed L129 TODO marker; no new drift).
+
+### Open questions for user (none)
+
+### Day 2 status
+
+✅ COMPLETE — AD-Cat9-5 closed (Stage 2.3 session counter wired; TODO grep 0; 4 new tests).
+
+**Day 2 commit**: pending (this commit)
+**Pytest delta**: +4 (1437 → 1441)
+**Cumulative pytest**: 1434 → 1441 (+7 over 2 days)
+**Next**: Day 3 morning AD-Cat9-6 WORM real-DB integration tests

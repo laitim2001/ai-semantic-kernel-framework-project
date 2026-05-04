@@ -70,21 +70,20 @@
 
 ### AD-Cat9-5 — ToolGuardrail max-calls-per-session Counter
 
-- [ ] **Read `tool_guardrail.py:120-150`** — understand current counter logic
-- [ ] **Read `capability_matrix.py`** — verify `max_calls_per_session` field exists or needs adding
-- [ ] **Decide storage: in-memory vs Redis**
-  - In-memory acceptable for single-instance
-  - Redis for multi-instance future
-  - Document decision in progress.md Day 3
-- [ ] **Implement session counter**
-  - Replace TODO at L129 with impl
-  - On `check(tool_name, trace_context)`: read max-calls, increment counter, BLOCK if over
-- [ ] **Add 4 tests to `test_tool_guardrail.py`**
-  - Under-cap → ALLOW
-  - At-cap → ALLOW (last call)
-  - Over-cap → BLOCK with reason
-  - Different sessions independent (tenant isolation)
-- [ ] **Verify**: `grep "TODO(53.4)" backend/src/agent_harness/guardrails/tool/tool_guardrail.py` returns 0
+- [x] **Read `tool_guardrail.py:120-150`** — understand current counter logic (TODO at L129 confirmed in Stage 2.3)
+- [x] **Read `capability_matrix.py`** — `max_calls_per_session: int = 0` field already exists ✓
+- [x] **Decide storage: in-memory** (per Selection D 紀律;single-instance scope;Redis multi-instance tracked separately)
+- [x] **Implement session counter**
+  - Replace TODO at L129 with pre-increment + check impl
+  - `__init__`: `self._call_counters: dict[tuple[str, str], int] = {}`
+  - On check: when `rule.max_calls_per_session > 0` AND session_id present → pre-increment + check `new > max → BLOCK` else write back
+  - Missing session_id → fail-open (documented; over-blocking unauthenticated harms availability)
+- [x] **Add 4 tests to `test_tool_guardrail.py`**
+  - test_max_calls_under_cap_passes ✓
+  - test_max_calls_at_cap_passes (3/3 last allowed) ✓
+  - test_max_calls_over_cap_blocks (4th of 3 max → BLOCK + HIGH risk) ✓
+  - test_max_calls_per_session_isolation (cross-session independent) ✓
+- [x] **Verify**: `grep "TODO(53.4)" backend/src/agent_harness/guardrails/tool/tool_guardrail.py` → 0 hits ✓
 - [ ] **Commit AD-Cat9-5**
   - Commit: `feat(guardrails, sprint-55-4): close AD-Cat9-5 (session call-counter)`
 
