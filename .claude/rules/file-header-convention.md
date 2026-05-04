@@ -8,6 +8,7 @@
 **Status**: Active
 
 **Modification History**:
+- 2026-05-04: Sprint 55.3 — enforce MHist 1-line max + char budget guidance + 禁止項 5 (closes AD-Lint-3)
 - 2026-04-28: Initial creation from CLAUDE.md §File Header & Modification Convention
 
 ---
@@ -187,12 +188,37 @@ const useChatStore = create<ChatStore>((set) => ({
 
 ### 格式
 
+**1-line max per entry** (Sprint 55.3+ — closes AD-Lint-3):
+
 ```
 Modification History (newest-first):
-    - YYYY-MM-DD: <verb> <what> (Sprint XX.Y) — <why/reason/reference>
+    - YYYY-MM-DD: <verb> <what> (Sprint XX.Y) — <one-line reason ≤ E501 budget>
     - YYYY-MM-DD: <verb> <what> (Sprint XX.Y) — <reason>
     - ...
 ```
+
+**Character budget**:
+- Each entry must fit within `.flake8` E501 (max-line-length=100) **including** indent / blockquote prefix
+- Effective budget for `<verb> <what> (Sprint XX.Y) — <reason>` ≈ 90 chars(after 4-space indent or `> - ` Markdown prefix)
+- If reason exceeds budget → split into multiple commits, OR move detail to commit message body / `claudedocs/4-changes/FIX-XXX`, OR factor reason into shorter scope keyword
+
+**Why** (Sprint 54.2 retrospective Q4 evidence): MHist entries accumulate in mature files; each new entry at full prose reason often exceeded E501 (4× lint hit in Sprint 54.2 Day 4 alone); verbose MHist duplicates commit message + git blame already records full diff context. The single line forces the author to commit message body / 4-changes record for the rich detail, keeping headers scannable.
+
+**Examples (good — 1-line, fit budget)**:
+```
+- 2026-05-04: Sprint 55.3 — extract category_span helper (closes AD-Cat12-Helpers-1)
+- 2026-05-03: Sprint 53.4 Day 2 — full implementation
+- 2026-04-28: Initial creation (Sprint 49.1) — TAO loop stub
+```
+
+**Examples (bad — see 禁止項 5)**:
+```
+- 2026-05-15: Add streaming support with AsyncIterator[LoopEvent] (Sprint 50.2)
+    Reason: Required for SSE event stream alignment with Contract 4 in 17.md;
+    consumer is frontend LoopVisualizer; tested via test_streaming_iterator.py
+    + integration test under tests/integration/sse/.
+```
+(Wrong: multi-line + bullet detail. Detail belongs in commit message body / claudedocs/4-changes/.)
 
 ### 動詞選擇（Verb）
 
@@ -265,6 +291,36 @@ git commit -m "fix: context rot bug"
 1. 建 claudedocs/4-changes/bug-fixes/FIX-123-context-rot.md
 2. git commit -m "fix: …"
 ```
+
+### ❌ 禁止 5：MHist multi-line / bullet sub-points / quote markers (Sprint 55.3+)
+
+每個 MHist entry **必須是單行**，遵守 E501 (≤100 chars 含 indent / prefix)。
+
+```
+# ❌ 禁止 — multi-paragraph reason
+- 2026-05-15: Add streaming support (Sprint 50.2)
+    This change introduces AsyncIterator[LoopEvent] to align with Contract 4
+    in 17-cross-category-interfaces.md. Required for frontend LoopVisualizer
+    to consume SSE events. Tested via test_streaming_iterator.py.
+
+# ❌ 禁止 — bullet sub-points
+- 2026-05-15: Refactor LoopState (Sprint 50.1)
+    - Split into transient/durable
+    - Added Reducer ABC
+    - Tests added: test_state_split.py
+
+# ❌ 禁止 — line breaks within entry / quote markers
+- 2026-05-15: Update PromptBuilder cache strategy (Sprint 52.2)
+  > Reason: Prefix caching now uses 3-tier breakpoints
+  > See: 17.md §Contract 5
+
+# ✅ 正確 — single line, ≤ E501 budget
+- 2026-05-15: Add streaming support with AsyncIterator[LoopEvent] (Sprint 50.2)
+- 2026-05-15: Refactor LoopState into transient/durable split (Sprint 50.1)
+- 2026-05-15: Update PromptBuilder cache strategy (Sprint 52.2) — 3-tier breakpoints
+```
+
+**Why**: Multi-line MHist entries (a) trigger flake8 E501 in mature headers (4× hit in Sprint 54.2 Day 4), (b) duplicate commit message body which is already preserved by `git log`, (c) break the newest-first scan that lets a reader survey 5+ entries in 5 seconds. Move rich detail to commit message body / `claudedocs/4-changes/FIX-XXX-*.md`; keep MHist scannable.
 
 ---
 

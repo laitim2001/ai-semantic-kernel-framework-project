@@ -58,15 +58,15 @@
 
 ### AD-Lint-3 — Modification History 1-Line Format
 
-- [ ] **Edit `.claude/rules/file-header-convention.md`**
-  - §Modification History 詳細規範 §格式 (L188-195): change to 1-line max format
-  - Format: `YYYY-MM-DD: scope (Sprint XX.Y) — <≤60 char one-line reason>`
-  - Update all 3 file-type examples (Python L57-60 / TypeScript L100-102 / Markdown L122-124)
-  - Update 範例段(L335-336)
-  - Add 禁止項: multi-paragraph reason / line breaks / quote markers
-- [ ] **Verify**: `grep -A 1 "Modification History (newest-first):" .claude/rules/file-header-convention.md | head -20` shows only 1-line entries
+- [x] **Edit `.claude/rules/file-header-convention.md`**
+  - §格式 section: rewrote to enforce "1-line max per entry" + char budget guidance (≤ E501 / 100 chars including indent or `> - ` Markdown prefix; effective ~90 chars)
+  - Added good/bad examples in §格式
+  - Existing 4 file-type examples (Python L57-60 / TypeScript L100-102 / Markdown L122-124 / Compactor L335-336) already conform to 1-line — no change needed
+  - Added new 禁止項 5: multi-line reason / bullet sub-points / line breaks / quote markers — with 4 ❌ examples + 3 ✅ examples + Why
+  - Updated top Modification History to reflect Sprint 55.3 entry (1-line format demonstrating itself)
+- [x] **Verify**: `grep "1-line max per entry"` returns 1 ✓ / `grep "禁止 5"` returns 1 ✓
 - [ ] **Commit AD-Lint-3**
-  - Commit: `docs(rules, sprint-55-3): close AD-Lint-3 (MHist 1-line format)`
+  - Commit: `docs(rules, sprint-55-3): close AD-Lint-3 (MHist 1-line format)` — pending
 
 ### AD-Cat12-Helpers-1 — Extract `category_span` Helper
 
