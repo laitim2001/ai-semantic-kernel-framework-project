@@ -97,28 +97,75 @@ Per AD-Plan-1 (53.7) + feedback_day0_must_grep_plan_assumptions.md.
 
 ---
 
-## Next: Day 1 — US-1 patrol + correlation tools.py mode swap
-
-### Day 1 plan refinement (per D1 finding)
-
-- **patrol/tools.py** (4 handlers):
-  - `mock_patrol_get_results` → `factory_provider().get_patrol_service().get_results(...)` (real)
-  - `mock_patrol_check_servers` → sentinel `{"status": "service_path_pending", "method": "check_servers"}`
-  - `mock_patrol_schedule` → sentinel
-  - `mock_patrol_cancel` → sentinel
-- **correlation/tools.py** (3 handlers):
-  - `mock_correlation_get_related` → `factory_provider().get_correlation_service().get_related(...)` (real)
-  - `mock_correlation_analyze` → sentinel
-  - `mock_correlation_find_root_cause` → sentinel
-- 6 unit tests (3 per domain): mode='mock' default / mode='service' requires factory / service handler invocation pattern
-
-### Day 1 estimated effort
-
-- Bottom-up: ~3 hr (code: 1.5 hr; tests: 1 hr; sanity+commit: 0.5 hr)
-- Calibrated: ~1.2 hr per multiplier 0.40
-
 ### Day 0 totals
 
 - Time: ~1 hr (探勘 + baseline + progress.md)
 - Drift findings: 5 (D1-D5)
 - AD pre-emptively logged: 0 (D-findings within sprint scope; mitigation already in plan/checklist)
+
+---
+
+## Day 1 — US-1 patrol + correlation tools.py mode swap (2026-05-04) ✅
+
+### 1.1 patrol/tools.py mode swap ✅
+
+- ✅ Added imports: `from collections.abc import Callable` + `from business_domain._service_factory import BusinessServiceFactory`
+- ✅ Updated file header with Sprint 55.2 Day 1.1 section + Modification History entry
+- ✅ Added `_build_service_handlers(factory_provider)` — 4 handlers:
+  - `h_get` (mock_patrol_get_results) → real `factory_provider().get_patrol_service().get_results(patrol_id=...)`
+  - `h_check`, `h_schedule`, `h_cancel` → sentinel `{"status": "service_path_pending", "method": "<name>"}`
+- ✅ Modified `register_patrol_tools(... mode='mock'|'service', factory_provider=None)` — mock branch unchanged; service branch raises ValueError if no factory_provider; invalid mode → ValueError
+
+### 1.2 correlation/tools.py mode swap ✅
+
+- ✅ Same pattern as 1.1
+- ✅ `_build_service_handlers` 3 handlers:
+  - `h_get_related` (mock_correlation_get_related) → real `factory_provider().get_correlation_service().get_related(alert_id, depth)`
+  - `h_analyze`, `h_find_rc` → sentinel
+- ✅ `register_correlation_tools(... mode='mock'|'service', factory_provider=None)`
+
+### 1.3 6 unit tests ✅
+
+File: `backend/tests/unit/business_domain/test_partial_swap.py` (NEW; cross-domain consolidated per 55.1 `test_factory_and_mode.py` style)
+
+⚠️ **D6 (test file location)**: checklist 1.1/1.2 verify cmd referenced `test_patrol_tools.py` + `test_correlation_tools.py` per-domain; consolidated to single cross-domain `test_partial_swap.py` for clarity (mirrors 55.1 test_factory_and_mode.py). Day 2 rootcause + audit_domain tests will extend same file.
+
+- ✅ test_register_patrol_tools_mode_mock_uses_executor
+- ✅ test_register_patrol_tools_mode_service_requires_factory_provider
+- ✅ test_register_patrol_tools_mode_service_get_results_invokes_service (real e2e + sentinel verify)
+- ✅ test_register_correlation_tools_mode_mock_uses_executor
+- ✅ test_register_correlation_tools_mode_service_requires_factory_provider
+- ✅ test_register_correlation_tools_mode_service_get_related_invokes_service (real e2e + sentinel verify)
+- DoD: **6 passed in 0.35s** ✅
+
+### 1.4 Day 1 sanity checks ✅
+
+| Check | Result |
+|-------|--------|
+| black | ✅ 3 files unchanged |
+| isort | ✅ clean |
+| flake8 | ✅ clean |
+| mypy --strict | ✅ 0 errors / 266 files |
+| 6 V2 lints (project root cwd) | ✅ 6/6 green in 0.65s |
+| Backend full pytest | ✅ **1401 passed / 4 skipped / 0 fail** in 29.87s (= 1395 + 6 — plan target hit exactly) |
+| LLM SDK leak | ✅ 0 (Day 0 baseline still) |
+
+### 1.5 Day 1 commit + push + progress.md ✅ (this entry)
+
+### Day 1 totals
+
+- Time: ~1.2 hr (calibrated estimate hit; bottom-up was ~3 hr)
+- Drift findings: 1 (D6 — test file location consolidation)
+- AD: AD-BusinessDomainPartialSwap-1 partial closure (2/4 domains done; rootcause + audit_domain Day 2)
+- Files modified: 2 (patrol/tools.py +69 / correlation/tools.py +49)
+- Files added: 1 (test_partial_swap.py 156 lines)
+
+### Next: Day 2 — US-1 rootcause + audit_domain tools.py mode swap
+
+Same pattern. Service classes for these domains:
+- RootCauseService.diagnose (1 real) + suggest_fix / apply_fix (2 sentinel; apply_fix returns "approval_pending" sentinel for HITL ALWAYS_ASK alignment per plan)
+- AuditService.query_logs (1 real) + generate_report / flag_anomaly (2 sentinel)
+
+6 unit tests (3 rootcause + 3 audit_domain) extending test_partial_swap.py.
+
+After Day 2, AD-BusinessDomainPartialSwap-1 fully closed (4/4 domains uniformly mode-aware).

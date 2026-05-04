@@ -13,13 +13,27 @@ Description:
     HITL policy + risk_level encoded in ToolSpec.tags as Sprint 51.0 workaround;
     Sprint 51.1 will extend ToolSpec with first-class fields (per retro CARRY-021).
 
+Sprint 55.2 Day 1.1 (US-1): register_patrol_tools() now accepts a `mode` kwarg.
+    mode='mock' keeps the 51.0 HTTP path via PatrolMockExecutor.
+    mode='service' uses BusinessServiceFactory to build a per-call PatrolService;
+    only get_results maps to a real service method (PatrolService.get_results);
+    check_servers / schedule / cancel return service_path_pending sentinel
+    (AD-BusinessDomainPartialSwap-1 partial closure; full impl → Phase 56+).
+    Caller must pass `factory_provider` when mode='service'.
+
 Created: 2026-04-30 (Sprint 51.0 Day 2)
-Last Modified: 2026-04-30
+Last Modified: 2026-05-04
+
+Modification History:
+    - 2026-05-04: (Sprint 55.2 Day 1.1) Add mode kwarg + service-backed handlers
+      (1 real: get_results; 3 sentinel: check_servers / schedule / cancel).
+    - 2026-04-30: Initial creation (Sprint 51.0 Day 2).
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
@@ -33,6 +47,7 @@ from agent_harness._contracts import (
 # Sprint 52.5 P0 #18: use Union ToolHandler from tools.__init__
 from agent_harness.tools import ToolHandler  # noqa: E402
 from agent_harness.tools import ToolRegistry
+from business_domain._service_factory import BusinessServiceFactory
 
 from .mock_executor import DEFAULT_BASE_URL, PatrolMockExecutor
 
@@ -155,14 +170,72 @@ def _build_handlers(executor: PatrolMockExecutor) -> dict[str, ToolHandler]:
     }
 
 
+def _build_service_handlers(
+    factory_provider: Callable[[], BusinessServiceFactory],
+) -> dict[str, ToolHandler]:
+    """Service-mode handlers: factory per-call → PatrolService.
+
+    Sprint 55.2 D1: PatrolService only has `get_results` from 55.1; other 3
+    methods (check_servers / schedule / cancel) return service_path_pending
+    sentinel (AD-BusinessDomainPartialSwap-1 partial closure; full impl →
+    Phase 56+ enterprise integration).
+    """
+
+    async def h_check(call: ToolCall) -> str:
+        # Touch factory to maintain factory_provider invariant.
+        factory_provider().get_patrol_service()
+        return json.dumps({"status": "service_path_pending", "method": "check_servers"})
+
+    async def h_get(call: ToolCall) -> str:
+        svc = factory_provider().get_patrol_service()
+        result = await svc.get_results(patrol_id=call.arguments["patrol_id"])
+        return json.dumps(result)
+
+    async def h_schedule(call: ToolCall) -> str:
+        factory_provider().get_patrol_service()
+        return json.dumps({"status": "service_path_pending", "method": "schedule"})
+
+    async def h_cancel(call: ToolCall) -> str:
+        factory_provider().get_patrol_service()
+        return json.dumps({"status": "service_path_pending", "method": "cancel"})
+
+    return {
+        "mock_patrol_check_servers": h_check,
+        "mock_patrol_get_results": h_get,
+        "mock_patrol_schedule": h_schedule,
+        "mock_patrol_cancel": h_cancel,
+    }
+
+
 def register_patrol_tools(
     registry: ToolRegistry,
     handlers: dict[str, ToolHandler],
     *,
     mock_url: str = DEFAULT_BASE_URL,
+    mode: str = "mock",
+    factory_provider: Callable[[], BusinessServiceFactory] | None = None,
 ) -> None:
-    """Register 4 mock_patrol_* ToolSpecs + handlers wired to PatrolMockExecutor."""
-    executor = PatrolMockExecutor(base_url=mock_url)
+    """Register 4 mock_patrol_* ToolSpecs + handlers per mode.
+
+    Args:
+        registry: ToolRegistry to register specs into.
+        handlers: dict of name → ToolHandler closures (mutated in place).
+        mock_url: mode='mock' only — base URL for mock_services backend.
+        mode: 'mock' (51.0 HTTP path) or 'service' (55.2 partial DB-backed via factory).
+        factory_provider: required when mode='service'; per-call sync callable
+            returning a BusinessServiceFactory bound to (db, tenant_id, tracer).
+
+    Raises:
+        ValueError: invalid mode OR mode='service' without factory_provider.
+    """
     for spec in PATROL_SPECS:
         registry.register(spec)
-    handlers.update(_build_handlers(executor))
+    if mode == "mock":
+        executor = PatrolMockExecutor(base_url=mock_url)
+        handlers.update(_build_handlers(executor))
+    elif mode == "service":
+        if factory_provider is None:
+            raise ValueError("register_patrol_tools(mode='service') requires factory_provider")
+        handlers.update(_build_service_handlers(factory_provider))
+    else:
+        raise ValueError(f"register_patrol_tools: invalid mode {mode!r}")
