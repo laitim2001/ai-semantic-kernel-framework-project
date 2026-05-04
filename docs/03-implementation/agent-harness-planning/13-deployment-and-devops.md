@@ -118,7 +118,7 @@
 
 ---
 
-### Branch Protection（main）— Sprint 52.6 US-5（with 53.2 + 53.2.5 evolution）
+### Branch Protection（main）— Sprint 52.6 US-5（with 53.2 + 53.2.5 + 53.7 evolution）
 
 > **Background**：Sprint 52.2 PR #20 + Sprint 52.5 PR #19 均使用 admin-merge bypass red CI，違反 Sprint 52.5 retrospective §AD-2 教訓。Sprint 52.6 US-5 強制設定 main branch protection rule，杜絕未來 admin-merge precedent。
 >
@@ -159,13 +159,14 @@
 #### `gh api` 等價設定命令（reproducibility）
 
 ```bash
-# 當前 (2026-05-03 Sprint 53.2.5 之後) 設定
+# 當前 (2026-05-04 Sprint 53.7 之後) 設定 -- 5 contexts
 gh api -X PUT repos/laitim2001/ai-semantic-kernel-framework-project/branches/main/protection \
   -F required_status_checks[strict]=true \
   -f required_status_checks[contexts][]="Lint + Type Check + Test (with PostgreSQL 16)" \
   -f required_status_checks[contexts][]="Backend E2E Tests" \
   -f required_status_checks[contexts][]="E2E Test Summary" \
   -f required_status_checks[contexts][]="v2-lints" \
+  -f required_status_checks[contexts][]="Frontend E2E (chromium headless)" \
   -F enforce_admins=true \
   -F required_pull_request_reviews[required_approving_review_count]=0 \
   -F required_pull_request_reviews[dismiss_stale_reviews]=false \
@@ -182,6 +183,8 @@ gh api -X PUT repos/laitim2001/ai-semantic-kernel-framework-project/branches/mai
 > ```
 
 > **Note on `enforce_admins=true`**：GitHub 的 `enforce_admins` 對映 UI 「Do not allow bypassing the above settings」勾選。設 true = admin **無法** bypass red CI / missing review。Sprint 52.6 US-5 紀律核心。
+>
+> **2026-05-04 Sprint 53.7 chaos verification**: AI-22 chaos test 透過 dummy red PR + admin merge 嘗試實際驗證 enforce_admins 真有效。GitHub GraphQL API 拒絕 admin merge 訊息：`"5 of 5 required status checks have not succeeded: 3 expected. (mergePullRequest)"`. 證明 admin 無法繞過。完整紀錄見 `docs/03-implementation/agent-harness-execution/phase-53-7-audit-cleanup-cat9-quickwins/sprint-53-7-audit-cleanup-cat9-quickwins/chaos-test-enforce-admins.md`.
 
 #### 違反舉證測試（Sprint 52.6 Day 4 / 後續任何 sprint 可重複）
 
