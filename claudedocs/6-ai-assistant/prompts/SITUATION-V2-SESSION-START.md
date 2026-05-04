@@ -173,20 +173,46 @@ ls docs/03-implementation/agent-harness-execution/
 
 > **這段需要每個 sprint 結束時用戶或 AI 添加。** 收尾時，把 retrospective.md 的「待改進」「Action items」精煉成下方一句話列表。
 
-### 已知未解（at session start time = 2026-05-03 Sprint 53.2.5 closeout）
+### 已知未解（at session start time = 2026-05-04 Sprint 53.7 closeout）
 
-#### Cat 8 carryover（53.2 retrospective Q5）
-- ⏸ **AD-Cat8-1**：RedisBudgetStore 0% coverage；需 fakeredis dep + integration test → 53.x or 54.x
-- ⏸ **AD-Cat8-2**：RetryPolicyMatrix 未 wire 進 Loop end-to-end retry-with-backoff loop（目前只有 ErrorTerminator path）→ 54.x
-- ⏸ **AD-Cat8-3**：soft-failure 路徑 synthesizes Exception(str)，loses original type；考慮 ToolResult.error_class 欄位 → 54.x
+#### Cat 8 carryover（53.2 retrospective Q5 — still open）
+- ⏸ **AD-Cat8-1**：RedisBudgetStore 0% coverage；需 fakeredis dep + integration test → 53.8 / 54.x
+- ⏸ **AD-Cat8-2**：RetryPolicyMatrix 未 wire 進 Loop end-to-end retry-with-backoff loop → 54.x
+- ⏸ **AD-Cat8-3**：soft-failure 路徑 synthesizes Exception(str)，loses original type → 54.x
 
-#### CI infrastructure carryover（53.2.5 retrospective Q4）
-- ⏸ **AD-CI-4**：sprint plan §Risks template 缺「paths filter vs required_status_checks」class of risk → next sprint plan template / sprint-workflow.md rule update
-- ⏸ **AD-CI-5**：`required_status_checks` 對 docs-only PR 仍 BLOCKED 因 paths filter；當前 workaround = touch backend-ci.yml header；長期需 revisit strategy → 53.x or 54.x
+#### Cat 9 carryover（53.3 retrospective + 53.7 partial closure）
+- ⏸ **AD-Cat9-1**：LLM-as-judge fallback for 4 detectors → Phase 54.1 (Cat 10 LLM-judge integration)
+- ⏸ **AD-Cat9-2**：Output SANITIZE actually mutates output → Phase 54.1 (Cat 10 self-correction)
+- ⏸ **AD-Cat9-3**：Output REROLL replays LLM call → Phase 54.1
+- ⏸ **AD-Cat9-5**：ToolGuardrail max-calls-per-session counter → 53.8 / 54.x
+- ⏸ **AD-Cat9-6**：WORMAuditLog real-DB integration tests → 53.8 / audit cycle
+- ✅ **AD-Cat9-4** closed by 53.5 / **AD-Cat9-7+8+9** closed by 53.7
+
+#### Cat 7 carryover（53.1 retrospective）
+- ⏸ **AD-Cat7-1**：Full sole-mutator pattern (grep-zero refactor) → Phase 54.x (Cat 10 verifier session-state model)
+
+#### Hitl carryover（53.4 retrospective + 53.7 partial closure）
+- ⏸ **AD-Hitl-7**：Per-tenant HITLPolicy DB persistence → 53.8 / 54.x
+- ✅ **AD-Hitl-1..6** closed by 53.5; **AD-Hitl-4-followup** closed by 53.6; **AD-Hitl-8** closed by 53.7
+
+#### Frontend carryover（53.5 retrospective — all closed by 53.6）
+- ✅ **AD-Front-1+2** + **AD-Hitl-4-followup** closed by 53.6
+
+#### Process / Lint carryover（53.6 retrospective — all closed by 53.7）
+- ✅ **AD-Sprint-Plan-1** + **AD-Lint-1** + **AD-Test-1** closed by 53.7
+
+#### CI infrastructure carryover（53.2.5 retrospective + 53.7 partial closure）
+- ✅ **AD-CI-4** closed by 53.7 (Common Risk Classes section in sprint-workflow.md)
+- ⏸ **AD-CI-5**：`required_status_checks` 對 docs-only PR 仍 BLOCKED 因 paths filter；當前 workaround = touch workflow header (53.7 used playwright-e2e.yml); 長期需 revisit strategy → infra track
+- ⏸ **AD-CI-6**：Deploy to Production chronic fail since 53.2 → infra track（non-required check; not blocking）
 
 #### 跨 sprint carryover
-- ⏸ **AI-22**：dummy red PR enforce_admins chaos test (52.6 carryover) → 53.x or 54.x bundle
-- ⏸ **#31**：V2 Dockerfile + 新 build workflow（取代已 archived ci.yml 之 build job）→ infrastructure track（無 sprint binding）
+- ✅ **AI-22** closed by 53.7 (chaos test PASSED — admin merge blocked at GraphQL API)
+- ⏸ **#31**：V2 Dockerfile + 新 build workflow → infrastructure track（無 sprint binding）
+
+#### Sprint 53.7 新加（待後續處理）
+- ⏸ **AD-Plan-1**：Day-0 探勘 must grep each plan §Technical Spec assertion against repo state (5 drift findings D4-D12 in 53.7 cost ~1 hr re-work). Action: extend `.claude/rules/sprint-workflow.md` §Step 3 with mandatory plan-vs-repo verify → next plan template iteration / 53.8
+- ⏸ **AD-Lint-2**：Day-level estimates have higher variance than sprint-level (53.7 banking offset Day 2/3 over-runs). Action: drop per-day calibrated targets; keep only sprint-aggregate → next checklist template / 53.8
 
 #### 永久 dropped（不必處理）
 - ✅ **4 dropped CI Pipeline checks**（Code Quality / Tests / Frontend Tests / CI Summary）：53.2.5 archive ci.yml 後永久 drop（V1 monolithic CI duplicates，非降級；branch protection 已正確配置 4 active checks）
@@ -217,14 +243,18 @@ ls docs/03-implementation/agent-harness-execution/
 | **53.1** | 2026-05-02 | PR #39 merged `aaa3dd75` | Cat 7 State Mgmt（DefaultReducer + DBCheckpointer + opt-in shadow-checkpoint）|
 | **53.2** | 2026-05-03 | PR #48 merged `a77878ad` | Cat 8 Error Handling（ErrorPolicy + RetryPolicyMatrix + CircuitBreaker + ErrorBudget + ErrorTerminator + AgentLoop integration）+ Solo-dev policy structural change |
 | **53.2.5** | 2026-05-03 | PR #50/#51 merged `132c39bc` | CI carryover: archived redundant ci.yml (V1 monolithic); closes AD-CI-2 + AD-CI-3; 4 dropped checks permanent |
-| 53.3 | _pending_ | _pending_ | Cat 9 Guardrails 核心（Tripwire + plugin registry + WORM hash chain）|
-| 53.4 | _pending_ | _pending_ | Governance Frontend + V1 HITL/Risk 遷移 |
-| Phase 54 | _pending_ | _pending_ | Cat 10 Verification + Cat 11 Subagent |
+| **53.3** | 2026-05-03 | PR #62 merged `ca57ae86` | Cat 9 Guardrails 核心（GuardrailEngine + 4 detectors + Tripwire + WORM audit + 3-layer AgentLoop integration）|
+| **53.4** | 2026-05-03 | PR #72 merged `872021ee` | §HITL Centralization backend (RiskPolicy + HITLManager production + Cat 2 hitl_tools refactor + AuditQuery + Cat 7 reducers + HITLNotifier+Teams)|
+| **53.5** | 2026-05-04 | PR #73 merged `86fd42db` | Governance frontend (approvals page + ApprovalCard + Cat 9 Stage 3 → AgentLoop wiring + audit endpoints) — closes AD-Cat9-4 + AD-Hitl-1..6 |
+| **53.6** | 2026-05-04 | PR #74 merged `f4a1425f` | Frontend e2e Playwright + production HITL wiring + ServiceFactory consolidation — closes AD-Front-1/2 + AD-Hitl-4-followup; V2 17→18/22 |
+| **53.7** | 2026-05-04 | PR #76 merged `eb7929cf` | Audit cleanup bundle — 9 carryover AD closed (AD-Sprint-Plan-1 + AD-CI-4 + AD-Lint-1 + AD-Test-1 + AD-Hitl-8 + AI-22 + AD-Cat9-7/8/9) + 2 BONUS V2 lint bug fixes; calibration multiplier 0.55 validated; V2 18/22 unchanged |
+| 53.8+ | _pending_ | _pending_ | (rolling planning — scope TBD) |
+| Phase 54 | _pending_ | _pending_ | Cat 10 Verification + Cat 11 Subagent (V2 main progress 18/22 → 19/22) |
 | Phase 55 | _pending_ | _pending_ | Business domain + canary |
 
-**累計**：**14 / 22 sprint** 完成（**64%**）— Phase 49: 4/4 ✅，Phase 50: 2/2 ✅，Phase 51: 3/3 ✅，Phase 52: 4/4 ✅，Phase 53: 1.5/4（53.1 + 53.2 + 53.2.5 carryover）
+**累計**：**18 / 22 sprint** 完成（**82%**）— Phase 49: 4/4 ✅，Phase 50: 2/2 ✅，Phase 51: 3/3 ✅，Phase 52: 4/4 ✅，Phase 53: 5/4 (53.1 + 53.2 + 53.3 + 53.4 + 53.5 + 53.6) + 3 carryover bundles (53.2.5 + 53.7 + 任一未來 audit-cycle)
 
-> **53.2.5 是 carryover bundle 不算入主 22 sprint 進度**；V2 主進度 14/22 不變。
+> **53.2.5 + 53.7 是 carryover bundles 不算入主 22 sprint 進度**；V2 主進度 18/22 不變。下一 sprint 候選：53.8 audit cycle continue OR Phase 54.1 Cat 10 Verification (主進度 → 19/22)。
 
 ---
 
@@ -332,7 +362,7 @@ V2 完成（Phase 55 後）→ 此 prompt 變歷史紀念物，改用 V3 / SaaS 
 
 ---
 
-**Last Updated**: 2026-05-03（Sprint 53.2.5 closeout — V2 14/22 = 64% 完成；下一 sprint = 53.3 Cat 9 Guardrails 待啟動）
+**Last Updated**: 2026-05-04（Sprint 53.7 closeout — V2 18/22 = 82% 完成；下一 sprint 候選 = 53.8 audit cycle continue OR Phase 54.1 Cat 10 Verification）
 **Maintainer**: 用戶 + AI 助手共同維護
 **File location**: `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md`
 
