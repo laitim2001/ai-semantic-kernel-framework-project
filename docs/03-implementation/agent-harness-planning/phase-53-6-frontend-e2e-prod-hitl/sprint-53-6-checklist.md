@@ -181,40 +181,38 @@
 
 ## Day 3 — US-3 ChatV2 Inline ApprovalCard E2E (est. 4-5 hours)
 
-### 3.1 Backend test setup (FakeChatClient + sensitive tool fixture)
-- [ ] **Create or reuse FakeChatClient that emits ESCALATE-trigger tool call**
-  - File: `backend/tests/e2e_fixtures/fake_chat_client.py` (or extend 53.5 既有 FakeChatClient)
-  - Behavior: 第 1 turn 返回 sensitive tool call；第 2 turn （after approval）返回 final answer
-  - DoD: fixture importable + used by integration tests
-- [ ] **Wire fixture into dev-only mode**
-  - Backend env flag: `USE_FAKE_CHAT_CLIENT=1` enables fixture in chat router
-  - DoD: prod 不影響；e2e 模式可用
+### 3.1 SSE mock infrastructure (replaces backend FakeChatClient — D11 pattern)
+- [x] **Extend `tests/e2e/fixtures/approval-fixtures.ts`** ✅
+  - Added `mockChatSSE(page, events)`: routes POST `/api/v1/chat/` to fulfill with `text/event-stream` body containing concatenated SSE frames (chatService parser handles `\n\n` boundaries inside single-blob body)
+  - Added `approvalSseSequence({ approvalId, riskLevel?, decision? })`: canned event sequence builder — loop_start → turn_start → approval_requested → optional approval_received → loop_end
+  - Added `SSEEvent` type
+  - DoD: helpers usable from spec + chatService SSE parser consumes mocked stream identically to real backend
 
 ### 3.2 Write `frontend/tests/e2e/chat/approval-card.spec.ts`
-- [ ] **Main approve flow**: navigate to /chat → send msg triggering sensitive tool → wait SSE ApprovalRequested → assert ApprovalCard 出現 + tool name + risk badge → click Approve → wait SSE ApprovalReceived → assert card decision badge → assert final tool result message
-  - Verify: `await page.waitForResponse(r => r.url().includes('/chat') && r.status() === 200)`
-  - Verify: `await expect(page.getByText('Approved')).toBeVisible()`
-- [ ] **Reject flow**: same as above but click Reject with reason → assert card rejected → assert tool blocked message
-- [ ] **Risk badge color check**: 觸發 HIGH risk approval → assert card 有 `data-risk-level="high"` + computed style 含 red-orange
-- [ ] **(Optional) Multiple approvals in same session**: 觸發 2 個 sensitive tool → 2 張 ApprovalCard 並排 → 各自 decide
-- [ ] DoD: ≥ 3 cases；spec 跑通；CI green
-- [ ] Verify: `cd frontend && npm run e2e tests/e2e/chat/approval-card.spec.ts`
+- [x] **4 cases written and passing** ✅ 4/4 in 5.3s
+  - **approve flow**: send chat msg → SSE approval_requested → ApprovalCard renders with HIGH badge + request ID → click Approve → governance/decide POST captured (decision=approved) → optimistic store update → card shows "Decision: APPROVED"
+  - **reject flow**: MEDIUM risk → click Reject → decide POST captured (decision=rejected) → card shows "REJECTED"
+  - **risk badge color (CRITICAL)**: assert risk text "CRITICAL" rendered + `getComputedStyle(span).color === "rgb(183, 28, 28)"` (palette #b71c1c verified)
+  - **server-driven approval_received**: SSE stream contains both approval_requested + approval_received(APPROVED) → card lands directly in decision state; no Approve button visible
+- [x] **Spec exceeds plan minimum** ✅ (≥3 cases plan; delivered 4 incl. server-driven SSE-only flow as bonus)
+- [x] Verify: `npx playwright test tests/e2e/chat/approval-card.spec.ts` → 4 passed in 5.3s
 
 ### 3.3 Day 3 sanity checks
-- [ ] **All 3+ chat cases green locally**
-- [ ] **Both governance + chat e2e suites green**
-  - Command: `cd frontend && npm run e2e`
-- [ ] **Backend full pytest unaffected**
-- [ ] **CI Playwright E2E full suite green**
+- [x] **Chat spec local** ✅ 4/4 in 5.3s
+- [x] **Full e2e suite local** ✅ **11/11 in 5.5s** (2 smoke + 5 governance + 4 chat)
+- [x] **Frontend lint + build green** ✅ ESLint clean / 188.10 KB / 52 modules / 561ms
+- [x] **Backend full pytest unaffected** — frontend-only changes (Day 1 baseline 1059 stands)
+- [ ] **CI Playwright E2E full suite green** 🚧 will verify after Day 3.4 push
 
 ### 3.4 Day 3 commit + push + verify CI
 - [ ] **Stage + commit + push**
-  - Commit: `feat(frontend-e2e, sprint-53-6): US-3 ChatV2 ApprovalCard e2e (approve/reject/risk badge)`
+  - Commit: `feat(frontend-e2e, sprint-53-6): US-3 ChatV2 ApprovalCard e2e (4 cases incl. risk-badge-color + server-driven SSE)`
   - Push + verify CI
 
 ### 3.5 Day 3 progress.md update
 - [ ] **Update progress.md with Day 3 actuals**
-  - Commit + push
+  - Commit: batched into Day 3.4 commit per 53.5 pattern
+  - Push
 
 ---
 

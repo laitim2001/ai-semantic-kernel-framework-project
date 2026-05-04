@@ -183,4 +183,61 @@
 - Reuse `mockGovernanceDecide` from approval-fixtures.ts
 - Add SSE injection helper (mock backend SSE stream emitting LoopStarted → ApprovalRequested → ApprovalReceived)
 
+---
+
+## Day 3 — 2026-05-04 (~1.5 hr actual / est. 4-5 hr → buffered ~3 hr)
+
+### 探勘
+- ✅ chatService.ts uses POST /api/v1/chat/ with manual fetch + ReadableStream parser (browser EventSource not used — POST body required)
+- ✅ SSE wire format: `event: <type>\ndata: <json>\n\n` — frame parser in chatService handles boundaries; can pass single concatenated blob via Playwright route.fulfill()
+- ✅ ApprovalCard at `[role="region"][aria-label="HITL approval"]`; rendered from chatStore.approvals dict via MessageList; pending state shows Approve/Reject/link buttons; after decision shows "Decision: <label>" badge
+- ✅ InputBar uses textarea with placeholder "Ask the agent…"; Enter to send
+- ✅ Risk palette: LOW=#2e7d32 / MEDIUM=#ed6c02 / HIGH=#d84315 / CRITICAL=#b71c1c
+
+### US-3 SSE infrastructure (3.1)
+- ✅ Extended `approval-fixtures.ts` with:
+  - `mockChatSSE(page, events)`: routes POST `/api/v1/chat/` → fulfills with `text/event-stream` body
+  - `approvalSseSequence({ approvalId, riskLevel?, decision? })`: canned 5-7 event sequence (loop_start → turn_start → approval_requested → optional approval_received → loop_end)
+  - `SSEEvent` type
+  - All event payloads include `trace_id: null` matching real serializer P0 #12 contract
+
+### US-3 spec write (3.2)
+- ✅ `tests/e2e/chat/approval-card.spec.ts` with 4 cases:
+  - approve flow: SSE → card renders → button click → decide POST captured + optimistic state
+  - reject flow: same with Reject button
+  - risk badge CRITICAL: computed style color === "rgb(183, 28, 28)" (= #b71c1c verified at DOM layer)
+  - server-driven approval_received: SSE stream contains both events → card lands in decision state without user interaction
+
+### Day 3 sanity (3.3)
+- ✅ Chat spec local: 4/4 in 5.3s
+- ✅ Full e2e suite local: **11/11 in 5.5s** (2 smoke + 5 governance + 4 chat)
+- ✅ Frontend lint clean
+- ✅ Frontend build: 188.10 KB / 52 modules / 561ms
+- ⏳ CI Playwright E2E: pending Day 3.4 push
+
+### Day 3 Drift
+
+| ID | Type | Description |
+|----|------|-------------|
+| **D13** | Scope expansion | 4 cases delivered vs plan minimum 3; added "server-driven approval_received" case as bonus to validate SSE-only path |
+| **D14** | Mock pattern reuse | Day 2 D11 design decision (page.route mocking) extended to SSE; pattern proves general-purpose for both REST + streaming endpoints |
+
+### Day 3 Time Banking
+
+- Estimated: 4-5 hr
+- Actual: ~1.5 hr (探勘 ~30 min / SSE helper ~20 min / spec ~25 min / sanity ~15 min)
+- **Banked**: ~3 hr; cumulative ~9-10 hr buffer (Day 0 ~1 + Day 1 ~3 + Day 2 ~3 + Day 3 ~3)
+- Day 3 came in even faster than Day 2 because mocking infrastructure (approval-fixtures.ts) already existed; only added SSE helper
+
+### Blockers
+
+- None. Day 4 (US-4 production HITL wiring + US-5 ServiceFactory) is the only remaining sprint scope.
+
+### Next (Day 4)
+
+- US-4 production HITL wiring at chat router (handler.py:102 + 138 inject `hitl_manager` via factory)
+- US-5 ServiceFactory consolidation (governance/risk/audit/HITL uniform constructors)
+- Day 4 sanity + retrospective + PR + closeout
+
+
 

@@ -131,6 +131,71 @@ export async function mockGovernanceList(
   };
 }
 
+export type SSEEvent = {
+  event: string;
+  data: Record<string, unknown>;
+};
+
+/**
+ * Mock POST /api/v1/chat/ to return an SSE-formatted body containing the
+ * supplied event sequence. Used by US-3 (ChatV2 ApprovalCard) e2e to drive
+ * the inline approval card without a real backend.
+ *
+ * The chatService.parseSSEFrame reads "event: <type>\ndata: <json>\n\n"
+ * frames from the body. We concatenate all events and let the SPA parse them
+ * incrementally — Playwright route.fulfill() returns the body as a single
+ * blob, which still works because the parser handles \n\n boundaries inside
+ * its internal buffer.
+ */
+export async function mockChatSSE(page: Page, events: SSEEvent[]): Promise<void> {
+  const body = events
+    .map((ev) => `event: ${ev.event}\ndata: ${JSON.stringify(ev.data)}\n\n`)
+    .join("");
+  await page.route("**/api/v1/chat/", async (route: Route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: { "cache-control": "no-cache", connection: "keep-alive" },
+      body,
+    });
+  });
+}
+
+/** Standard event sequence for an approval-triggering chat turn. */
+export function approvalSseSequence(opts: {
+  approvalId: string;
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  decision?: "APPROVED" | "REJECTED" | "ESCALATED";
+}): SSEEvent[] {
+  const { approvalId, riskLevel = "HIGH", decision } = opts;
+  const events: SSEEvent[] = [
+    {
+      event: "loop_start",
+      data: { session_id: "ssn-test-1", request_id: "req-1", trace_id: null },
+    },
+    { event: "turn_start", data: { turn_num: 1, trace_id: null } },
+    {
+      event: "approval_requested",
+      data: { approval_request_id: approvalId, risk_level: riskLevel, trace_id: null },
+    },
+  ];
+  if (decision) {
+    events.push({
+      event: "approval_received",
+      data: { approval_request_id: approvalId, decision, trace_id: null },
+    });
+  }
+  events.push({
+    event: "loop_end",
+    data: { stop_reason: "end_turn", total_turns: 1, trace_id: null },
+  });
+  return events;
+}
+
 export type DecideRecord = {
   requestId: string;
   decision: string;
