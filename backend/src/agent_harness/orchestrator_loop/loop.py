@@ -312,25 +312,30 @@ class AgentLoopImpl(AgentLoop):
         content: dict[str, Any],
         ctx: TraceContext,
     ) -> None:
-        """Best-effort WORM append. Logs but doesn't crash loop on failure.
+        """WORM append. Sprint 53.7 (closes AD-Cat9-7) made this fail-closed:
+        if the WORM append raises (e.g. ``AuditAppendError`` from the underlying
+        DB layer), the exception **propagates** to AgentLoop's top-level handler
+        which treats it as FATAL (no retry, loop terminates).
 
-        Plan §AC says audit append failure SHOULD escalate to ErrorTerminator
-        FATAL — that tighter coupling is deferred to Phase 54.x. For 53.3
-        we swallow the exception so a transient DB hiccup doesn't kill an
-        in-flight loop. Documented as Audit Debt in retrospective.
+        Compliance rationale: WORM audit log is non-negotiable. Allowing the
+        loop to continue without an audit record (the 53.3 best-effort behavior)
+        would leave Cat 9 events undetectable in post-incident audit. The
+        method name is kept as ``_audit_log_safe`` for call-site compatibility
+        but the semantics are now strict.
         """
         if self._audit_log is None or self._tenant_id is None:
             return
-        try:
-            await self._audit_log.append(
-                tenant_id=self._tenant_id,
-                event_type=event_type,
-                content=content,
-                user_id=ctx.user_id,
-                session_id=ctx.session_id,
-            )
-        except Exception:
-            pass  # best-effort; future: escalate to ErrorTerminator FATAL
+        # No try/except: AuditAppendError (or any other exception from
+        # audit_log.append) propagates to AgentLoop run() handler, which
+        # surfaces it as a fatal LoopFailed event. See 53.3 docstring on
+        # WORMAuditLog: 'caller must escalate to ErrorTerminator FATAL'.
+        await self._audit_log.append(
+            tenant_id=self._tenant_id,
+            event_type=event_type,
+            content=content,
+            user_id=ctx.user_id,
+            session_id=ctx.session_id,
+        )
 
     async def _cat9_input_check(
         self,

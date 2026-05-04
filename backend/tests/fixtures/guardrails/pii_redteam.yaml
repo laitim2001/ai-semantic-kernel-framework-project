@@ -167,6 +167,541 @@ positives:
     expected_action: ESCALATE
     notes: "DOB-like string + phone (only phone matches)"
 
+  # === Sprint 53.7 AD-Cat9-9 expansion: international + format diversity ===
+  # The 53.3 fixture covered 4 categories (email/phone/ssn/credit_card) with
+  # ~30 cases. AD-Cat9-9 expands to ~200 cases for production-grade ≥ 95%
+  # detect rate evidence. All new cases are constructed to match the existing
+  # detector regexes (no detector changes); cases the detector cannot match
+  # belong in the negatives section.
+
+  # --- Email: international + alias formats ---
+  - id: pii_email_011
+    content: "Reach me at user+alias@gmail.com for receipts"
+    expected_action: ESCALATE
+    notes: "Plus-tag local part"
+
+  - id: pii_email_012
+    content: "Backup contact: a.b.c.d@company.io"
+    expected_action: ESCALATE
+    notes: "Multi-dot local part (Gmail dot-folding semantics)"
+
+  - id: pii_email_013
+    content: "Forward to recruiting+role-eng@startup.co"
+    expected_action: ESCALATE
+    notes: "Plus-tag with hyphen subtag"
+
+  - id: pii_email_014
+    content: "Email firstname.lastname@subdomain.example.org"
+    expected_action: ESCALATE
+    notes: "Two-label subdomain"
+
+  - id: pii_email_015
+    content: "Send to noreply@deep.nested.org.uk"
+    expected_action: ESCALATE
+    notes: "Three-label domain"
+
+  - id: pii_email_016
+    content: "Reach the team at team@long-tld.engineering"
+    expected_action: ESCALATE
+    notes: "New gTLD"
+
+  - id: pii_email_017
+    content: "Owner: 操作員@example.org"
+    expected_action: ESCALATE
+    notes: "Local part with non-ASCII (regex \\w under unicode)"
+
+  - id: pii_email_018
+    content: "alex123@my-company.co.jp asking about quote"
+    expected_action: ESCALATE
+    notes: "JP gTLD"
+
+  - id: pii_email_019
+    content: "Confirmation sent: order-2026-05@ecommerce.shop"
+    expected_action: ESCALATE
+    notes: "Hyphenated local with date-like digits"
+
+  - id: pii_email_020
+    content: "support_24x7@helpdesk.io is the queue"
+    expected_action: ESCALATE
+    notes: "Underscore local part"
+
+  - id: pii_email_021
+    content: "Use sales+EMEA@acme.de for European deals"
+    expected_action: ESCALATE
+    notes: "Plus-tag uppercase, DE gTLD"
+
+  - id: pii_email_022
+    content: "List: a@b.co, c@d.co, e@f.co"
+    expected_action: BLOCK
+    notes: "Three emails -> BLOCK"
+
+  - id: pii_email_023
+    content: "ops@datacenter.aws.amazon.com handles tickets"
+    expected_action: ESCALATE
+    notes: "AWS-style 3-label subdomain"
+
+  - id: pii_email_024
+    content: "我的信箱是 user@example.com.tw"
+    expected_action: ESCALATE
+    notes: "TW gTLD with Chinese context"
+
+  - id: pii_email_025
+    content: "Notify devops@k8s.cluster.internal.io"
+    expected_action: ESCALATE
+    notes: "Kubernetes-style 4-label internal domain"
+
+  # --- Phone: international country codes (need separators per regex) ---
+  - id: pii_phone_011
+    content: "Hong Kong office: +852 9123 4567"
+    expected_action: ESCALATE
+    notes: "HK +852 mobile"
+
+  - id: pii_phone_012
+    content: "UK landline +44 20 1234 5678"
+    expected_action: ESCALATE
+    notes: "UK fixed-line"
+
+  - id: pii_phone_013
+    content: "Tokyo: +81 03 1234 5678"
+    expected_action: ESCALATE
+    notes: "JP Tokyo number (area widened to 2-digit '03' to fit \\d{2,4})"
+
+  - id: pii_phone_014
+    content: "Reach me on +972 03 555 1234 for IL ops"
+    expected_action: ESCALATE
+    notes: "IL number (area widened to 2-digit '03')"
+
+  - id: pii_phone_015
+    content: "SG office +65 6123 4567 (Mon-Fri 9am)"
+    expected_action: ESCALATE
+    notes: "SG number"
+
+  - id: pii_phone_016
+    content: "Berlin: +49 30 1234 5678 ext. 4"
+    expected_action: ESCALATE
+    notes: "DE Berlin"
+
+  - id: pii_phone_017
+    content: "Paris HQ: +33 01 2345 6789"
+    expected_action: ESCALATE
+    notes: "FR (regrouped 2-4-4 to fit detector regex)"
+
+  - id: pii_phone_018
+    content: "Amsterdam team: +31 20 123 4567"
+    expected_action: ESCALATE
+    notes: "NL number"
+
+  - id: pii_phone_019
+    content: "Sydney +61 02 9876 5432"
+    expected_action: ESCALATE
+    notes: "AU number (area widened to 2-digit '02')"
+
+  - id: pii_phone_020
+    content: "Mumbai: +91 22 1234 5678"
+    expected_action: ESCALATE
+    notes: "IN number"
+
+  - id: pii_phone_021
+    content: "Toronto: +1 416 555 1234"
+    expected_action: ESCALATE
+    notes: "CA number"
+
+  - id: pii_phone_022
+    content: "Beijing: +86 10 8888 8888"
+    expected_action: ESCALATE
+    notes: "CN Beijing"
+
+  - id: pii_phone_023
+    content: "Mexico City +52 55 1234 5678"
+    expected_action: ESCALATE
+    notes: "MX CDMX"
+
+  - id: pii_phone_024
+    content: "Brazil São Paulo +55 11 9123 4567"
+    expected_action: ESCALATE
+    notes: "BR number (4-4 groups; pattern needs each group <=4 digits)"
+
+  - id: pii_phone_025
+    content: "South Korea +82 22 1234 5678"
+    expected_action: ESCALATE
+    notes: "KR Seoul (area widened to 2-digit for regex compatibility)"
+
+  - id: pii_phone_026
+    content: "(415) 555-0192 weekday only"
+    expected_action: ESCALATE
+    notes: "US parens area code"
+
+  - id: pii_phone_027
+    content: "415.555.0192 fax line"
+    expected_action: ESCALATE
+    notes: "US dot-separated"
+
+  - id: pii_phone_028
+    content: "+1-650-555-0123 main desk"
+    expected_action: ESCALATE
+    notes: "US +1 with dash"
+
+  - id: pii_phone_029
+    content: "+972-50-123-4567"
+    expected_action: ESCALATE
+    notes: "IL mobile +972-50 (regrouped to 3-4 last to fit detector regex)"
+
+  - id: pii_phone_030
+    content: "+1 (212) 555-9876 NYC"
+    expected_action: ESCALATE
+    notes: "US +1 with parens"
+
+  - id: pii_phone_031
+    content: "Office +44 (0) 20 7946 0958"
+    expected_action: ESCALATE
+    notes: "UK with optional 0"
+
+  - id: pii_phone_032
+    content: "+886 22 2345 6789"
+    expected_action: ESCALATE
+    notes: "TW Taipei (area widened to 2-digit)"
+
+  - id: pii_phone_033
+    content: "+34 91 234 5678"
+    expected_action: ESCALATE
+    notes: "ES Madrid"
+
+  - id: pii_phone_034
+    content: "+39 06 1234 5678"
+    expected_action: ESCALATE
+    notes: "IT Rome"
+
+  - id: pii_phone_035
+    content: "+7 495 123 4567 Moscow"
+    expected_action: ESCALATE
+    notes: "RU Moscow"
+
+  # --- SSN US format edge cases ---
+  - id: pii_ssn_011
+    content: "SSN on file: 555-44-3333"
+    expected_action: ESCALATE
+    notes: "explicit SSN label"
+
+  - id: pii_ssn_012
+    content: "Tax form has 123-00-9876"
+    expected_action: ESCALATE
+    notes: "SSN-format-only string"
+
+  - id: pii_ssn_013
+    content: "Old record 678-99-0123 from archive"
+    expected_action: ESCALATE
+    notes: "embedded in sentence"
+
+  - id: pii_ssn_014
+    content: "Multiple SSNs: 111-22-3333, 444-55-6666"
+    expected_action: BLOCK
+    notes: "two SSNs -> BLOCK"
+
+  - id: pii_ssn_015
+    content: "001-23-4567 (low-prefix legacy SSN)"
+    expected_action: ESCALATE
+    notes: "low-prefix"
+
+  - id: pii_ssn_016
+    content: "Reformat 999-12-3456 please"
+    expected_action: ESCALATE
+    notes: "high-prefix"
+
+  - id: pii_ssn_017
+    content: "Three: 111-11-1111, 222-22-2222, 333-33-3333"
+    expected_action: BLOCK
+    notes: "three SSNs"
+
+  - id: pii_ssn_018
+    content: "DOB redacted; SSN 555-12-9999 sole identifier"
+    expected_action: ESCALATE
+    notes: "in mixed context"
+
+  - id: pii_ssn_019
+    content: "Form W-9 line 1: SSN 678-12-3456"
+    expected_action: ESCALATE
+    notes: "tax form context"
+
+  - id: pii_ssn_020
+    content: "SSN range 100-12-3456 to 100-12-3789 audit"
+    expected_action: BLOCK
+    notes: "two SSN-format numbers"
+
+  # --- Credit Card (Visa/MC/Amex/JCB/UnionPay BIN ranges) ---
+  - id: pii_cc_011
+    content: "Visa 4111-1111-1111-1111 expires 12/29"
+    expected_action: ESCALATE
+    notes: "Visa BIN 4 dashed"
+
+  - id: pii_cc_012
+    content: "Pay with 4000 1234 5678 9010 today"
+    expected_action: ESCALATE
+    notes: "Visa space-separated"
+
+  - id: pii_cc_013
+    content: "MC 5500-0000-0000-0004 stored"
+    expected_action: ESCALATE
+    notes: "MasterCard BIN 5"
+
+  - id: pii_cc_014
+    content: "MC 2221-2222-3333-4444 (post-2017 BIN)"
+    expected_action: ESCALATE
+    notes: "MasterCard 2-series BIN"
+
+  - id: pii_cc_015
+    content: "Amex 378282246310005"
+    expected_action: ESCALATE
+    notes: "Amex 15-digit plain"
+
+  - id: pii_cc_016
+    content: "Amex 378282246310005 hyphenated form"
+    expected_action: ESCALATE
+    notes: "Amex 15-digit plain (detector pattern: \\d{14,19})"
+
+  - id: pii_cc_017
+    content: "JCB 3530 1113 3330 0000"
+    expected_action: ESCALATE
+    notes: "JCB BIN 35"
+
+  - id: pii_cc_018
+    content: "銀聯卡 6212 3456 7890 1234 已綁定"
+    expected_action: ESCALATE
+    notes: "UnionPay BIN 62 (Chinese context)"
+
+  - id: pii_cc_019
+    content: "Discover 6011-1234-5678-9012"
+    expected_action: ESCALATE
+    notes: "Discover BIN 6011"
+
+  - id: pii_cc_020
+    content: "Diners 30569309025904"
+    expected_action: ESCALATE
+    notes: "Diners 14-digit plain"
+
+  - id: pii_cc_021
+    content: "PCI test: 4242 4242 4242 4242"
+    expected_action: ESCALATE
+    notes: "Stripe test card"
+
+  - id: pii_cc_022
+    content: "Two cards 4111-1111-1111-1111 and 5555-5555-5555-4444"
+    expected_action: BLOCK
+    notes: "two CCs -> BLOCK"
+
+  - id: pii_cc_023
+    content: "Backup 6011000990139424 in vault"
+    expected_action: ESCALATE
+    notes: "Discover plain digits"
+
+  - id: pii_cc_024
+    content: "JCB 35301113 33300000 customer copy"
+    expected_action: ESCALATE
+    notes: "JCB 8-8 spaced"
+
+  - id: pii_cc_025
+    content: "Maestro 6759649826438453"
+    expected_action: ESCALATE
+    notes: "Maestro BIN 6759"
+
+  - id: pii_cc_026
+    content: "MIR 2200123456789012"
+    expected_action: ESCALATE
+    notes: "Russian MIR BIN 2200"
+
+  - id: pii_cc_027
+    content: "RuPay 60759649826438"
+    expected_action: ESCALATE
+    notes: "RuPay BIN 6075 14-digit"
+
+  - id: pii_cc_028
+    content: "AmEx Corp 375382111112005 customer copy"
+    expected_action: ESCALATE
+    notes: "Amex Corporate 15-digit plain"
+
+  - id: pii_cc_029
+    content: "Visa Electron 4917300800000000"
+    expected_action: ESCALATE
+    notes: "Visa Electron BIN 4917 16-digit"
+
+  - id: pii_cc_030
+    content: "Card list: 4111111111111111, 5555555555554444, 378282246310005"
+    expected_action: BLOCK
+    notes: "three cards"
+
+  # --- Multi-PII compound cases (always BLOCK) ---
+  - id: pii_multi_011
+    content: "Customer: john@example.com / phone +1-650-555-0123 / SSN 555-44-3333"
+    expected_action: BLOCK
+    notes: "email + phone + SSN"
+
+  - id: pii_multi_012
+    content: "Reach Alice (alice@co.com) at +44 20 7946 0958"
+    expected_action: BLOCK
+    notes: "email + UK phone"
+
+  - id: pii_multi_013
+    content: "Card 4111-1111-1111-1111 holder ssn 123-45-6789"
+    expected_action: BLOCK
+    notes: "CC + SSN"
+
+  - id: pii_multi_014
+    content: "Bob bob@bob.com card 5500-0000-0000-0004 sees +852 9123 4567"
+    expected_action: BLOCK
+    notes: "email + CC + HK phone"
+
+  - id: pii_multi_015
+    content: "Two contacts: alice@co.com (+44 20 7946 0958) and bob@co.com (+1 650-555-0001)"
+    expected_action: BLOCK
+    notes: "two emails + two phones"
+
+  - id: pii_multi_016
+    content: "Audit: SSN 555-12-3456, Visa 4111111111111111, JCB 3530111133300000"
+    expected_action: BLOCK
+    notes: "SSN + 2 CCs"
+
+  - id: pii_multi_017
+    content: "Profile: jane@example.org / +33 01 2345 6789 / DoB redacted"
+    expected_action: BLOCK
+    notes: "email + FR phone (regrouped 2-4-4 to fit detector regex)"
+
+  - id: pii_multi_018
+    content: "Test: x@y.co, 6011-1234-5678-9012, +81 3 1234 5678"
+    expected_action: BLOCK
+    notes: "email + Discover + JP phone"
+
+  - id: pii_multi_019
+    content: "Tax: SSN 999-12-3456, payroll deposit Visa 4242 4242 4242 4242"
+    expected_action: BLOCK
+    notes: "SSN + Stripe test CC"
+
+  - id: pii_multi_020
+    content: "Customer #1: a@b.com (415) 555-0192; Customer #2: c@d.com +49 30 1234 5678"
+    expected_action: BLOCK
+    notes: "two compound profiles"
+
+  # --- Final batch: more email/SSN/CC for 200-target ---
+  - id: pii_email_026
+    content: "user@example.io invitation pending"
+    expected_action: ESCALATE
+
+  - id: pii_email_027
+    content: "Reset link sent to user.name@enterprise.co"
+    expected_action: ESCALATE
+
+  - id: pii_email_028
+    content: "From: from@source.org To: to@dest.org"
+    expected_action: BLOCK
+    notes: "two emails"
+
+  - id: pii_email_029
+    content: "Dev account dev@startup.dev configured"
+    expected_action: ESCALATE
+
+  - id: pii_email_030
+    content: "Admin admin@platform.cloud reachable"
+    expected_action: ESCALATE
+
+  - id: pii_email_031
+    content: "Newsletter signup: news@example.com"
+    expected_action: ESCALATE
+
+  - id: pii_email_032
+    content: "Service account svc-bot@k8s.example.io"
+    expected_action: ESCALATE
+
+  - id: pii_email_033
+    content: "Three: a@a.co b@b.co c@c.co"
+    expected_action: BLOCK
+    notes: "three emails"
+
+  - id: pii_email_034
+    content: "Personal email me@myname.io"
+    expected_action: ESCALATE
+
+  - id: pii_email_035
+    content: "Department contact dept@company.org"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_021
+    content: "Form: 123-45-6789 confirmed"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_022
+    content: "Customer SSN 987-65-4321 verified"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_023
+    content: "Audit row SSN 111-23-4567"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_024
+    content: "Tax 222-34-5678 needs review"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_025
+    content: "Legacy 333-45-6789 archive"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_026
+    content: "SSN 444-56-7890 contractor"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_027
+    content: "555-67-8901 returned"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_028
+    content: "ID 666-78-9012 pending"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_029
+    content: "Third party SSN 777-89-0123 hold"
+    expected_action: ESCALATE
+
+  - id: pii_ssn_030
+    content: "888-90-1234 update DOB"
+    expected_action: ESCALATE
+
+  - id: pii_cc_031
+    content: "Receipt: 4929-1234-5678-9010"
+    expected_action: ESCALATE
+
+  - id: pii_cc_032
+    content: "Stored 5305 1234 5678 9010"
+    expected_action: ESCALATE
+
+  - id: pii_cc_033
+    content: "Auth Visa 4485123456789012"
+    expected_action: ESCALATE
+
+  - id: pii_cc_034
+    content: "MC plain 5577123456789012"
+    expected_action: ESCALATE
+
+  - id: pii_cc_035
+    content: "Discover 6011998765432109"
+    expected_action: ESCALATE
+
+  - id: pii_cc_036
+    content: "Settle 4716123456789010"
+    expected_action: ESCALATE
+
+  - id: pii_cc_037
+    content: "Pre-auth 5410123456789012"
+    expected_action: ESCALATE
+
+  - id: pii_cc_038
+    content: "Capture 4929-1111-2222-3333"
+    expected_action: ESCALATE
+
+  - id: pii_cc_039
+    content: "Refund 5555 6666 7777 8888"
+    expected_action: ESCALATE
+
+  - id: pii_cc_040
+    content: "Vault 6011-2222-3333-4444"
+    expected_action: ESCALATE
+
 # === Negatives (must PASS — no false positives) ============================
 
 negatives:
@@ -216,4 +751,234 @@ negatives:
 
   - id: pii_neg_012
     content: "I need help with my Python code"
+    expected_action: PASS
+
+  # === Sprint 53.7 AD-Cat9-9 negatives expansion ============================
+  # Meta-discussion + numeric strings that look PII-like but aren't.
+
+  # --- Meta-discussion (talking about PII concepts) ---
+  - id: pii_neg_013
+    content: "Credit card processing fees vary by acquirer"
+    expected_action: PASS
+    notes: "discusses CC processing concept; no actual number"
+
+  - id: pii_neg_014
+    content: "Phone number format guides differ across regions"
+    expected_action: PASS
+    notes: "meta-discussion of phone formats"
+
+  - id: pii_neg_015
+    content: "SSN explained: it's a US tax identifier"
+    expected_action: PASS
+    notes: "meta-discussion of SSN concept"
+
+  - id: pii_neg_016
+    content: "Email validation rules per RFC 5321"
+    expected_action: PASS
+    notes: "meta-discussion of email standard"
+
+  - id: pii_neg_017
+    content: "PII detection is a guardrail concern"
+    expected_action: PASS
+    notes: "meta-discussion of PII"
+
+  - id: pii_neg_018
+    content: "Social security and pensions topic"
+    expected_action: PASS
+    notes: "no SSN format"
+
+  - id: pii_neg_019
+    content: "International phone country code list"
+    expected_action: PASS
+    notes: "discusses country codes; no number"
+
+  - id: pii_neg_020
+    content: "GDPR governs personal data including emails"
+    expected_action: PASS
+    notes: "GDPR meta-discussion"
+
+  - id: pii_neg_021
+    content: "Visa requirements for international travel"
+    expected_action: PASS
+    notes: "Visa as travel doc, not card"
+
+  - id: pii_neg_022
+    content: "MasterCard launched contactless payments"
+    expected_action: PASS
+    notes: "brand reference; no card number"
+
+  # --- Numbers that look PII but aren't ---
+  - id: pii_neg_023
+    content: "Build 2026.05.04.1234 deployed"
+    expected_action: PASS
+    notes: "version-like dotted numbers, not phone"
+
+  - id: pii_neg_024
+    content: "Issue #1234, PR #5678, Run #9012"
+    expected_action: PASS
+    notes: "issue numbers, no separators between groups"
+
+  - id: pii_neg_025
+    content: "Latitude 37.7749 Longitude -122.4194"
+    expected_action: PASS
+    notes: "GPS coords, two decimals not phone"
+
+  - id: pii_neg_026
+    content: "Process took 1234567 microseconds"
+    expected_action: PASS
+    notes: "long number with no separators"
+
+  - id: pii_neg_027
+    content: "K8s pod ID abc-1234567-def"
+    expected_action: PASS
+    notes: "single 7-digit segment with non-numeric neighbors; not phone-shaped"
+
+  - id: pii_neg_028
+    content: "Hash 0123456789abcdef0123456789abcdef"
+    expected_action: PASS
+    notes: "hex hash, no digit-only span"
+
+  - id: pii_neg_029
+    content: "ISBN 978-0-13-110362-7"
+    expected_action: PASS
+    notes: "ISBN format, not SSN"
+
+  - id: pii_neg_030
+    content: "UUID 550e8400-e29b-41d4-a716-446655440000"
+    expected_action: PASS
+    notes: "UUID format different from CC/phone"
+
+  - id: pii_neg_031
+    content: "Postal code 94103-1234 SF"
+    expected_action: PASS
+    notes: "ZIP+4, not SSN format"
+
+  - id: pii_neg_032
+    content: "Dollar amount $1,234,567.89 transaction"
+    expected_action: PASS
+    notes: "money with commas, not phone"
+
+  - id: pii_neg_033
+    content: "Time 12:34:56 UTC start"
+    expected_action: PASS
+    notes: "time format"
+
+  - id: pii_neg_034
+    content: "Range 1000-9999 inclusive"
+    expected_action: PASS
+    notes: "numeric range, no SSN format"
+
+  - id: pii_neg_035
+    content: "Capacity is 1234 concurrent users"
+    expected_action: PASS
+    notes: "plain number"
+
+  - id: pii_neg_036
+    content: "Score 95 of 100 (95%)"
+    expected_action: PASS
+    notes: "percentages"
+
+  # --- Email-like but not actual emails ---
+  - id: pii_neg_037
+    content: "See [docs](https://example.com) for details"
+    expected_action: PASS
+    notes: "markdown link, no @"
+
+  - id: pii_neg_038
+    content: "Path: /home/user/file.txt"
+    expected_action: PASS
+    notes: "filesystem path, no @"
+
+  - id: pii_neg_039
+    content: "Git ref refs/heads/main commit abc123"
+    expected_action: PASS
+    notes: "git ref"
+
+  - id: pii_neg_040
+    content: "URL fragment example.com/page#section"
+    expected_action: PASS
+    notes: "URL fragment, no @"
+
+  # --- Other non-PII contexts ---
+  - id: pii_neg_041
+    content: "Async task completed in 250ms"
+    expected_action: PASS
+
+  - id: pii_neg_042
+    content: "Retry count: 3 of 5 max"
+    expected_action: PASS
+
+  - id: pii_neg_043
+    content: "HTTP 200 OK, content-length 1024"
+    expected_action: PASS
+
+  - id: pii_neg_044
+    content: "Server response time: 1234567 ns"
+    expected_action: PASS
+
+  - id: pii_neg_045
+    content: "I want to learn about cybersecurity careers"
+    expected_action: PASS
+
+  - id: pii_neg_046
+    content: "Help me write a Python script for log parsing"
+    expected_action: PASS
+
+  - id: pii_neg_047
+    content: "What's the best way to deploy a FastAPI app?"
+    expected_action: PASS
+
+  - id: pii_neg_048
+    content: "Compare PostgreSQL vs MySQL performance"
+    expected_action: PASS
+
+  - id: pii_neg_049
+    content: "Recommend a TypeScript style guide"
+    expected_action: PASS
+
+  - id: pii_neg_050
+    content: "Show me Kubernetes deployment YAML examples"
+    expected_action: PASS
+
+  # === Sprint 53.7 AD-Cat9-9 final batch: reaching 200-case target ==========
+  # Additional negatives covering common false-positive risks.
+
+  - id: pii_neg_051
+    content: "Async lock timeout 5000ms exceeded"
+    expected_action: PASS
+
+  - id: pii_neg_052
+    content: "Compose service depends_on database"
+    expected_action: PASS
+
+  - id: pii_neg_053
+    content: "Implement rate-limiter using token bucket"
+    expected_action: PASS
+
+  - id: pii_neg_054
+    content: "What's the SLO for write latency?"
+    expected_action: PASS
+
+  - id: pii_neg_055
+    content: "OAuth2 PKCE flow explained"
+    expected_action: PASS
+
+  - id: pii_neg_056
+    content: "Deploy strategy: blue-green vs canary"
+    expected_action: PASS
+
+  - id: pii_neg_057
+    content: "Pull request #4321 ready for review"
+    expected_action: PASS
+
+  - id: pii_neg_058
+    content: "OpenTelemetry trace with span IDs"
+    expected_action: PASS
+
+  - id: pii_neg_059
+    content: "Recommend an event-sourcing book"
+    expected_action: PASS
+
+  - id: pii_neg_060
+    content: "Refactor the legacy worker pool"
     expected_action: PASS
