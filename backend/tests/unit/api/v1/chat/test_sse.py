@@ -24,8 +24,8 @@ from agent_harness._contracts import (
     ToolCallExecuted,
     ToolCallFailed,
     ToolCallRequested,
+    TripwireTriggered,
     TurnStarted,
-    VerificationPassed,
 )
 from api.v1.chat.sse import format_sse_message, serialize_loop_event
 
@@ -206,7 +206,11 @@ class TestSerializeLoopEvent:
         assert "reviewer" in out["data"]["reason"]
 
     def test_unsupported_event_raises_with_sprint_pointer(self) -> None:
-        ev = VerificationPassed(verifier="some_verifier")
+        # Sprint 54.1 US-3: VerificationPassed/Failed are now wired.
+        # Use TripwireTriggered (Cat 9; still unwired in 50.2 scope) as a
+        # canonical "deferred event type" — kept in sync as future sprints
+        # add owner branches.
+        ev = TripwireTriggered(violation_type="pii_leak", detail="ssn detected")
         with pytest.raises(NotImplementedError, match="Sprint 50.2"):
             serialize_loop_event(ev)
 

@@ -241,13 +241,29 @@ class TripwireTriggered(LoopEvent):
 
 @dataclass(frozen=True)
 class VerificationPassed(LoopEvent):
+    """Sprint 54.1: extended with optional score / verifier_type for SSE clients.
+
+    All new fields are optional with defaults — backward compatible with the
+    49.1 stub (single `verifier` field).
+    """
+
     verifier: str = ""
+    score: float | None = None
+    verifier_type: str = ""  # "rules_based" / "llm_judge" / "external"
 
 
 @dataclass(frozen=True)
 class VerificationFailed(LoopEvent):
+    """Sprint 54.1: extended with optional reason / suggested_correction / verifier_type.
+
+    All new fields are optional with defaults — backward compatible with the
+    49.1 stub (single `verifier` field).
+    """
+
     verifier: str = ""
-    reason: str = ""
+    reason: str | None = None
+    suggested_correction: str | None = None
+    verifier_type: str = ""
     correction_attempt: int = 0
 
 
