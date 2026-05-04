@@ -1,3 +1,4 @@
+# Sprint 55.1 PR #82 — backend-only business-domain production service layer; touch to fire workflow per AD-CI-5 paths-filter workaround (backend-only PRs need this to satisfy required Frontend E2E check).
 # Sprint 54.2 closeout PR — docs-only sync; touch to satisfy paths-filter (AD-CI-5).
 # Sprint 54.2 PR #80 — backend-only Cat 11 Subagent + AD-Cat10-Obs-1; touch to fire workflow per AD-CI-5 paths-filter workaround.
 # Sprint 54.1 closeout PR — docs-only sync; touch to satisfy paths-filter.

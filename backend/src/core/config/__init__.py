@@ -11,6 +11,7 @@ Settings (not raw os.environ) so type-safe + validation + .env support.
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -47,6 +48,12 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 60
+
+    # ---- Business domain (Sprint 55.1) ------------------------------
+    # mock   → 51.0 HTTP mock_executor pathway (PoC default; backwards-compat)
+    # service → 55.1+ DB-backed service classes (production)
+    # Override via env: BUSINESS_DOMAIN_MODE=service
+    business_domain_mode: Literal["mock", "service"] = "mock"
 
 
 @lru_cache(maxsize=1)

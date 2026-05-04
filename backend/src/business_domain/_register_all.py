@@ -27,6 +27,8 @@ Last Modified: 2026-04-30
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from agent_harness.observability import Tracer
 from agent_harness.tools import (
     ToolExecutorImpl,
@@ -36,6 +38,7 @@ from agent_harness.tools import (
 )
 from agent_harness.tools.echo_tool import ECHO_TOOL_SPEC, echo_handler
 
+from ._service_factory import BusinessServiceFactory
 from .audit_domain.tools import register_audit_tools
 from .correlation.tools import register_correlation_tools
 from .incident.tools import register_incident_tools
@@ -51,48 +54,79 @@ def register_all_business_tools(
     handlers: dict[str, ToolHandler],
     *,
     mock_url: str = DEFAULT_MOCK_URL,
+    mode: str = "mock",
+    factory_provider: Callable[[], BusinessServiceFactory] | None = None,
 ) -> None:
     """Register all 18 business domain ToolSpecs + 18 handlers.
 
+    Sprint 55.1 (US-4): added `mode` + `factory_provider` kwargs.
+        - mode='mock' (default): 51.0 HTTP-backed pathway via mock_executor
+          (all 5 domains).
+        - mode='service': production pathway. Day 3 only wires INCIDENT
+          domain to BusinessServiceFactory; the other 4 domains keep their
+          mock pathway (AD-BusinessDomainPartialSwap; Phase 55.2+ wires the
+          remaining 13 tools to the service layer that landed in this sprint).
+
     Domain breakdown (per 08b-business-tools-spec.md):
-      - patrol:        4 tools (08b §Domain 1)
-      - correlation:   3 tools (08b §Domain 2)
-      - rootcause:     3 tools (08b §Domain 3)
-      - audit:         3 tools (08b §Domain 4)
-      - incident:      5 tools (08b §Domain 5)
+      - patrol:        4 tools (08b §Domain 1) — mock for now in service mode
+      - correlation:   3 tools (08b §Domain 2) — mock for now in service mode
+      - rootcause:     3 tools (08b §Domain 3) — mock for now in service mode
+      - audit:         3 tools (08b §Domain 4) — mock for now in service mode
+      - incident:      5 tools (08b §Domain 5) — service-backed when mode=service
       Total:          18 tools
     """
+    if mode not in ("mock", "service"):
+        raise ValueError(f"register_all_business_tools: invalid mode {mode!r}")
+    if mode == "service" and factory_provider is None:
+        raise ValueError("register_all_business_tools(mode='service') requires factory_provider")
+
+    # Domains 1-4: mock-backed in both modes for Sprint 55.1.
     register_patrol_tools(registry, handlers, mock_url=mock_url)
     register_correlation_tools(registry, handlers, mock_url=mock_url)
     register_rootcause_tools(registry, handlers, mock_url=mock_url)
     register_audit_tools(registry, handlers, mock_url=mock_url)
-    register_incident_tools(registry, handlers, mock_url=mock_url)
+
+    # Domain 5: full mode awareness wired in Day 3.4.
+    register_incident_tools(
+        registry,
+        handlers,
+        mock_url=mock_url,
+        mode=mode,
+        factory_provider=factory_provider,
+    )
 
 
 def make_default_executor(
     *,
     mock_url: str = DEFAULT_MOCK_URL,
     tracer: Tracer | None = None,
+    mode: str | None = None,
+    factory_provider: Callable[[], BusinessServiceFactory] | None = None,
 ) -> tuple[ToolRegistryImpl, ToolExecutorImpl]:
     """Build a registry+executor pair with echo_tool + 18 business tools (19 total).
 
     Sprint 51.1 Day 5: switched from InMemoryToolRegistry / InMemoryToolExecutor
     to production Cat 2 implementations (ToolRegistryImpl + ToolExecutorImpl
     with PermissionChecker + JSONSchema validation + concurrency-aware batch).
-    Behavior changes:
-      - Tool calls now go through PermissionChecker (HIGH-risk + ALWAYS_ASK
-        tools surface as approval_required ToolResult error).
-      - Bad arguments fail fast with schema mismatch error.
-      - Batch executes parallel for read-only / sequential for any
-        SEQUENTIAL spec (concurrency policy enforcement).
+
+    Sprint 55.1 (US-4): added `mode` + `factory_provider`. When `mode is None`,
+    settings.business_domain_mode (env: BUSINESS_DOMAIN_MODE) is read.
+    Explicit kwarg wins over env (test override path).
 
     Args:
         mock_url: Override for the mock_services backend URL.
         tracer: Optional Tracer (defaults to NoOp via ToolExecutorImpl).
+        mode: 'mock' / 'service' / None (read settings).
+        factory_provider: required when mode resolves to 'service'.
 
     Returns:
         (registry, executor) — both wired with 19 ToolSpec + handlers.
     """
+    if mode is None:
+        from core.config import get_settings
+
+        mode = get_settings().business_domain_mode
+
     registry = ToolRegistryImpl()
     handlers: dict[str, ToolHandler] = {}
 
@@ -101,7 +135,13 @@ def make_default_executor(
     handlers["echo_tool"] = echo_handler
 
     # 18 business tools
-    register_all_business_tools(registry, handlers, mock_url=mock_url)
+    register_all_business_tools(
+        registry,
+        handlers,
+        mock_url=mock_url,
+        mode=mode,
+        factory_provider=factory_provider,
+    )
 
     # ToolExecutorImpl handler signature is `Callable[[ToolCall], Awaitable[str]]`;
     # business handlers return `str | dict` and ToolExecutorImpl coerces to str.
