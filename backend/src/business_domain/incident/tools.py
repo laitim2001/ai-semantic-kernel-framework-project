@@ -46,7 +46,6 @@ from agent_harness._contracts import (
 from agent_harness.tools import ToolHandler  # noqa: E402
 from agent_harness.tools import ToolRegistry
 from business_domain._service_factory import BusinessServiceFactory
-
 from infrastructure.db.models.business import Incident
 
 from .mock_executor import DEFAULT_BASE_URL, IncidentMockExecutor
