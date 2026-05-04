@@ -1,3 +1,4 @@
+# Sprint 55.2 PR #85 — V2 22/22 closure: backend-only business-domain mode swap + chat handler wiring; touch to fire workflow per AD-CI-5 paths-filter workaround.
 # Sprint 55.1 checklist bookkeeping PR #84 — docs-only post-closeout `[x]` mark commit; touch to satisfy paths-filter (AD-CI-5).
 # Sprint 55.1 closeout PR — docs-only sync (V2 21/22 = 95%); touch to satisfy paths-filter (AD-CI-5).
 # Sprint 55.1 PR #82 — backend-only business-domain production service layer; touch to fire workflow per AD-CI-5 paths-filter workaround (backend-only PRs need this to satisfy required Frontend E2E check).
