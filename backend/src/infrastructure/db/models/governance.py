@@ -272,4 +272,70 @@ class GuardrailEvent(Base):
     )
 
 
-__all__ = ["Approval", "RiskAssessment", "GuardrailEvent"]
+# ============================================================================
+# hitl_policies — per-tenant HITLPolicy DB persistence (Sprint 55.3 / AD-Hitl-7)
+# ============================================================================
+class HitlPolicyRow(Base):
+    """Per-tenant HITLPolicy override row.
+
+    Mirrors `agent_harness/_contracts/hitl.py:HITLPolicy` dataclass fields
+    (D6-corrected schema; see 0013_hitl_policies migration). DBHITLPolicyStore
+    hydrates HITLPolicy directly from this row.
+
+    UNIQUE (tenant_id): one policy row per tenant. Variants by category
+    deferred until policy versioning is needed.
+    """
+
+    __tablename__ = "hitl_policies"
+
+    id: Mapped[PyUUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    tenant_id: Mapped[PyUUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+
+    # Mirrors HITLPolicy.auto_approve_max_risk: RiskLevel
+    auto_approve_max_risk: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        server_default=text("'LOW'"),
+        doc="LOW / MEDIUM / HIGH / CRITICAL",
+    )
+
+    # Mirrors HITLPolicy.require_approval_min_risk: RiskLevel
+    require_approval_min_risk: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        server_default=text("'MEDIUM'"),
+        doc="LOW / MEDIUM / HIGH / CRITICAL",
+    )
+
+    # Mirrors HITLPolicy.reviewer_groups_by_risk: dict[RiskLevel, list[str]]
+    reviewer_groups_by_risk: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
+
+    # Mirrors HITLPolicy.sla_seconds_by_risk: dict[RiskLevel, int]
+    sla_seconds_by_risk: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+__all__ = ["Approval", "RiskAssessment", "GuardrailEvent", "HitlPolicyRow"]

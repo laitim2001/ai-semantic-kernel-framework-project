@@ -272,3 +272,89 @@ Per AD-Plan-1 audit-trail rule: drift findings recorded in §Risks (D4) and prog
 | AD-Hitl-7 | ⏳ pending | Day 3 | — |
 
 **5/6 ADs closed by end of Day 2**. Remaining 1 AD (AD-Hitl-7) covers Day 3.
+
+---
+
+## Day 3 — 2026-05-04 (~3.5 hr actual / ~4-5 hr est)
+
+### Actions taken — AD-Hitl-7 per-tenant HITLPolicy DB persistence
+
+1. **Read baseline**: `_contracts/hitl.py:HITLPolicy` (5 fields including dict[RiskLevel, ...]); `manager.py:get_policy()` returns `_default_policy` else hardcoded LOW/MEDIUM
+2. **D6 schema correction**: Plan §AD-Hitl-7 stated columns `risk_thresholds JSONB / approver_roles JSONB / sla_seconds INT / escalation_chain JSONB` — but actual HITLPolicy fields are `auto_approve_max_risk / require_approval_min_risk / reviewer_groups_by_risk / sla_seconds_by_risk`. Schema rewritten to mirror dataclass exactly (no rename/alias logic in DBHITLPolicyStore needed).
+3. **D7 path correction**: Plan stated `backend/alembic/versions/`; actual location is `backend/src/infrastructure/db/migrations/versions/`. Migration placed at correct location.
+4. **D8 path correction**: Plan stated `tests/unit/governance/hitl/` + `tests/integration/governance/`; actual convention is `tests/unit/platform_layer/governance/hitl/` + `tests/integration/platform_layer/governance/hitl/`. Tests placed at correct paths.
+5. **Created Alembic 0013_hitl_policies.py**: CREATE TABLE + UNIQUE (tenant_id) + 2 CHECK constraints + idx_hitl_policies_tenant + RLS policy (mirrors 0012/0009 pattern)
+6. **Verified Alembic upgrade/downgrade roundtrip**: 0012 → 0013 → 0012 → 0013 all clean (no schema drift)
+7. **Added `HitlPolicyRow` ORM** to `infrastructure/db/models/governance.py` __all__
+8. **Added `HITLPolicyStore` ABC** to `agent_harness/hitl/_abc.py` + re-exported from `__init__.py`
+9. **Wrote `DBHITLPolicyStore`** at `platform_layer/governance/hitl/policy_store.py`:
+   - `_row_to_policy` + `_hydrate_risk_dict` helpers (resilient to unknown JSONB keys via `RiskLevel.__members__` filter)
+10. **Wired `policy_store` into `DefaultHITLManager`**:
+    - `__init__` accepts `policy_store: HITLPolicyStore | None = None`
+    - `get_policy()` resolution: policy_store DB → default_policy → hardcoded LOW/MEDIUM (3-tier fallback chain)
+11. **Wired `DBHITLPolicyStore` into `ServiceFactory`**:
+    - New `get_hitl_policy_store()` lazy singleton method
+    - `get_hitl_manager()` passes `policy_store=self.get_hitl_policy_store()` to manager
+12. **Tests**: 9 new (5 unit + 4 integration); 45 existing regression tests pass
+
+### Drift findings (Day 3 — D6 + D7 + D8)
+
+| ID | Finding | Implication | Resolution |
+|----|---------|-------------|------------|
+| **D6** | Plan §AD-Hitl-7 schema column names did not match actual HITLPolicy dataclass fields | Schema mirror required to avoid hydration logic complexity | Migration + ORM + DBHITLPolicyStore use HITLPolicy field names directly |
+| **D7** | Alembic versions live at `backend/src/infrastructure/db/migrations/versions/`, not `backend/alembic/versions/` | Plan §File Change List path wrong | Migration placed at correct location (Day 3 first action) |
+| **D8** | Test paths under `tests/.../platform_layer/governance/hitl/`, not `tests/.../governance/hitl/` | Plan §File Change List paths wrong | Tests placed at convention-correct paths |
+
+→ All 3 drift findings recorded in plan §Risks and progress.md per AD-Plan-1 audit-trail rule (plan §Spec NOT silently rewritten).
+
+### Verification
+
+- `alembic upgrade head` + `alembic downgrade -1` + re-upgrade: all clean
+- pytest:
+  - **9/9 green** (5 unit DBHITLPolicyStore + 4 integration per-tenant)
+  - **45/45 existing** (test_manager + test_service_factory + test_state_machine + test_notification_config)
+  - Cumulative: 1416 baseline → 1416 + 9 = ~1425 (full suite re-run deferred to Day 4)
+- mypy --strict: 0 errors on 5 source files (after fixing 1 E501 in service_factory.py log message)
+- 7 V2 lints: **7/7 green** (~0.76s total)
+- LLM SDK leak: 0
+- black + isort: green
+- flake8: green (after E501 fix)
+
+### Day 3 actual vs estimate
+
+| Slot | Estimate | Actual | Delta |
+|------|----------|--------|-------|
+| Read baseline + design | ~30 min | ~25 min | -5 min |
+| D6+D7+D8 drift catalog | (unplanned) | ~10 min | new buffer |
+| Alembic 0013 + ORM | ~45 min | ~30 min | -15 min |
+| ABC + DBHITLPolicyStore | ~45 min | ~40 min | -5 min |
+| Manager + ServiceFactory wiring | ~45 min | ~30 min | -15 min |
+| Tests (9 new) | ~1.5 hr | ~1 hr | -30 min |
+| Lint chain + roundtrip + regression | ~30 min | ~30 min | ±0 |
+| **Day 3 total** | **~4-5 hr** | **~3.5 hr** | **~22% under** (mid-band of est) |
+
+### Day 4 plan
+
+- Retrospective + closeout
+- Full pytest re-run + 7 V2 lints final
+- Calibration ratio compute (sum Day 0+1+2+3 actual vs Day 0+1+2+3 committed)
+- Drift findings final catalog (D1-D8 cumulative)
+- Write retrospective.md (6 必答 Q1-Q6)
+- Update SITUATION-V2-SESSION-START.md §8 + §9 + Update history
+- Update memory: `project_phase55_3_audit_cycle_1.md` + MEMORY.md index
+- Push branch + open PR + watch CI green + merge
+
+### Day 3 status
+
+**Day 3**: 1 commit pending;1 AD closed (AD-Hitl-7).
+
+| AD | Status | Day | Commit |
+|----|--------|-----|--------|
+| AD-Plan-1 | ✅ closed | 1 | `bc468477` |
+| AD-Lint-2 | ✅ closed | 1 | `bc468477` |
+| AD-Lint-3 | ✅ closed | 1 | `144c4595` |
+| AD-Cat12-Helpers-1 | ✅ closed | 1 | `52d802a9` |
+| AD-Cat7-1 | ✅ closed | 2 | `cd86a814` |
+| AD-Hitl-7 | ✅ closed | 3 | pending |
+
+**6/6 ADs closed by end of Day 3**. Sprint 55.3 main work complete; Day 4 = ceremony + retro + merge.

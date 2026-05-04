@@ -1,8 +1,8 @@
 """
 File: backend/src/agent_harness/hitl/_abc.py
-Purpose: HITL Centralization ABC — HITLManager.
+Purpose: HITL Centralization ABCs — HITLManager + HITLPolicyStore.
 Category: §HITL Centralization (per 17.md §5)
-Scope: Phase 49 / Sprint 49.1 (stub; impl in Phase 53.3)
+Scope: Phase 49 / Sprint 49.1 (HITLManager); Sprint 55.3 (HITLPolicyStore — AD-Hitl-7)
 
 Description:
     HITL was scattered across categories 2 / 7 / 8 / 9 in V1. V2
@@ -11,10 +11,16 @@ Description:
     pending_approval_ids in DurableState; category 8 (errors) treats
     HITL as recoverable wait.
 
+    HITLPolicyStore (Sprint 55.3 / AD-Hitl-7) is a separate abstraction
+    for per-tenant HITLPolicy retrieval; DefaultHITLManager.get_policy()
+    delegates to it when supplied (DB-backed) or falls back to default.
+
 Owner: 01-eleven-categories-spec.md §HITL Centralization
 Single-source: 17.md §5
 
-Created: 2026-04-29 (Sprint 49.1)
+Modification History:
+    - 2026-05-04: Sprint 55.3 — add HITLPolicyStore ABC (closes AD-Hitl-7)
+    - 2026-04-29: Initial creation (Sprint 49.1)
 """
 
 from __future__ import annotations
@@ -28,6 +34,20 @@ from agent_harness._contracts import (
     HITLPolicy,
     TraceContext,
 )
+
+
+class HITLPolicyStore(ABC):
+    """Per-tenant HITLPolicy retrieval ABC. Sprint 55.3 / AD-Hitl-7.
+
+    Implementations (DBHITLPolicyStore, future: file-backed / in-memory)
+    return the policy for a tenant or None if no override row exists.
+    DefaultHITLManager wraps the result with default-policy fallback.
+    """
+
+    @abstractmethod
+    async def get(self, tenant_id: UUID) -> HITLPolicy | None:
+        """Return per-tenant policy; None if no override exists."""
+        ...
 
 
 class HITLManager(ABC):

@@ -35,11 +35,13 @@ Key Components:
 Created: 2026-05-04 (Sprint 53.6 Day 4)
 
 Modification History (newest-first):
+    - 2026-05-04: Sprint 55.3 — wire DBHITLPolicyStore into HITLManager (closes AD-Hitl-7)
     - 2026-05-04: Initial creation (Sprint 53.6 US-5) — closes AD-Hitl-4-followup.
 
 Related:
     - .hitl.manager (DefaultHITLManager construction)
     - .hitl.notifier (load_notifier_from_config — Sprint 53.5 US-4 loader)
+    - .hitl.policy_store (DBHITLPolicyStore — Sprint 55.3 / AD-Hitl-7)
     - .audit.query (AuditQuery — Sprint 53.5 US-5 + US-6)
     - .risk.policy (DefaultRiskPolicy — Sprint 53.4 US-1)
     - api/v1/chat/handler.py (consumer — closes AD-Front-2 production wiring)
@@ -58,11 +60,12 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_harness._contracts.hitl import ApprovalRequest
-from agent_harness.hitl import HITLManager
+from agent_harness.hitl import HITLManager, HITLPolicyStore
 
 from .audit.query import AuditQuery
 from .hitl.manager import DefaultHITLManager
 from .hitl.notifier import HITLNotifier, NoopNotifier, load_notifier_from_config
+from .hitl.policy_store import DBHITLPolicyStore
 from .risk.policy import DefaultRiskPolicy, RiskPolicy
 
 logger = logging.getLogger(__name__)
@@ -85,6 +88,9 @@ class ServiceFactory:
 
     Caching:
         - HITLManager: lazy singleton (constructed at first get_hitl_manager()).
+        - HITLPolicyStore: lazy singleton (constructed at first get_hitl_policy_store());
+          shared into HITLManager so per-tenant DB-backed policy resolves via single
+          path (Sprint 55.3 / AD-Hitl-7).
         - RiskPolicy: lazy singleton (constructed at first get_risk_policy()).
         - AuditQuery: NOT cached (request-scoped session binding).
 
@@ -107,9 +113,19 @@ class ServiceFactory:
         self._notification_config_path = notification_config_path
         self._risk_policy_config_path = risk_policy_config_path
         self._hitl_manager: HITLManager | None = None
+        self._hitl_policy_store: HITLPolicyStore | None = None
         self._risk_policy: RiskPolicy | None = None
 
     # --- HITL ---------------------------------------------------------------
+
+    def get_hitl_policy_store(self) -> HITLPolicyStore:
+        """Return process-singleton DBHITLPolicyStore. Sprint 55.3 / AD-Hitl-7."""
+        if self._hitl_policy_store is None:
+            self._hitl_policy_store = DBHITLPolicyStore(
+                session_factory=self._session_factory,
+            )
+            logger.info("ServiceFactory: DBHITLPolicyStore constructed")
+        return self._hitl_policy_store
 
     def get_hitl_manager(self) -> HITLManager:
         """Return process-singleton HITLManager. Constructs on first access."""
@@ -118,9 +134,11 @@ class ServiceFactory:
             self._hitl_manager = DefaultHITLManager(
                 session_factory=self._session_factory,
                 notifier=notifier.notify,  # bind method → matches Callable signature
+                policy_store=self.get_hitl_policy_store(),
             )
             logger.info(
-                "ServiceFactory: HITLManager constructed with notifier=%s",
+                "ServiceFactory: HITLManager constructed with notifier=%s "
+                "+ policy_store=DBHITLPolicyStore",
                 type(notifier).__name__,
             )
         return self._hitl_manager
