@@ -4,6 +4,12 @@
 #   - backend/** changes (any backend code/tests/configs)
 #   - .github/workflows/** changes (any workflow file edit re-validates)
 #
+# Sprint 55.3 closeout sync (2026-05-04): SITUATION-V2-SESSION-START.md
+# §9 row updated with PR #87 merge SHA `4d17a5cd` (Audit Cycle Mini-Sprint #1
+# Groups A + G — 6 ADs closed; pytest 1416 → 1434 (+18); 7 V2 lints; calibration
+# ratio 2.81 way over band drives AD-Sprint-Plan-4 scope-class matrix proposal).
+# Header touch here triggers backend-ci required check for docs-only closeout PR.
+#
 # Sprint 55.2 closeout sync (2026-05-04): SITUATION-V2-SESSION-START.md +
 # CLAUDE.md updated to reflect **V2 22/22 (100%) closure** — V2 重構完成;
 # AD-BusinessDomainPartialSwap-1 closed at 3 layers; calibration multiplier
