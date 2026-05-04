@@ -173,7 +173,7 @@ ls docs/03-implementation/agent-harness-execution/
 
 > **這段需要每個 sprint 結束時用戶或 AI 添加。** 收尾時，把 retrospective.md 的「待改進」「Action items」精煉成下方一句話列表。
 
-### 已知未解（at session start time = 2026-05-04 Sprint 54.1 closeout）
+### 已知未解（at session start time = 2026-05-04 Sprint 54.2 closeout）
 
 #### Cat 8 carryover（53.2 retrospective Q5 — still open）
 - ⏸ **AD-Cat8-1**：RedisBudgetStore 0% coverage；需 fakeredis dep + integration test → 53.8 / 54.x
@@ -181,11 +181,22 @@ ls docs/03-implementation/agent-harness-execution/
 - ⏸ **AD-Cat8-3**：soft-failure 路徑 synthesizes Exception(str)，loses original type → 54.x
 
 #### Cat 9 carryover（53.3 retrospective + 53.7 + 54.1 closures）
-- ⏸ **AD-Cat9-5**：ToolGuardrail max-calls-per-session counter → 54.x audit cycle
-- ⏸ **AD-Cat9-6**：WORMAuditLog real-DB integration tests → 54.x audit cycle
-- ⏸ **AD-Cat9-1-WireDetectors**（new from 54.1）：auto-wrap 4 Cat 9 detectors with LLMJudgeFallbackGuardrail (operator-driven; not a sprint)
-- ✅ **AD-Cat9-1+2+3** closed by 54.1（D8 wrapper pattern: LLMJudgeFallbackGuardrail / LLMVerifyMutateGuardrail / run_with_verification correction loop）
-- ✅ **AD-Cat9-4** closed by 53.5 / **AD-Cat9-7+8+9** closed by 53.7
+- ⏸ **AD-Cat9-5**：ToolGuardrail max-calls-per-session counter → Phase 55+ audit cycle
+- ⏸ **AD-Cat9-6**：WORMAuditLog real-DB integration tests → Phase 55+ audit cycle
+- ⏸ **AD-Cat9-1-WireDetectors**（54.1）：auto-wrap 4 Cat 9 detectors with LLMJudgeFallbackGuardrail (operator-driven; not a sprint)
+- ✅ **AD-Cat9-1+2+3** closed by 54.1 / **AD-Cat9-4** closed by 53.5 / **AD-Cat9-7+8+9** closed by 53.7
+
+#### Cat 10 carryover（54.1 retrospective + 54.2 partial closure）
+- ✅ **AD-Cat10-Obs-1** closed by 54.2（verification/_obs.py + tracer injection in RulesBasedVerifier + LLMJudgeVerifier; Cat 9 wrappers reuse inner judge tracer per D19）
+- ⏸ **AD-Cat10-Wire-1**：chat router default-wire run_with_verification → Phase 55 frontend / 業務 sprint
+- ⏸ **AD-Cat10-VisualVerifier**：Playwright screenshot verifier → Phase 55+
+- ⏸ **AD-Cat10-Frontend-Panel**：verification_panel UI → Phase 55 frontend
+- ⏸ **AD-Cat10-Obs-Cat9Wrappers**（new from 54.2）：Cat 9 fallback/mutator wrappers separate observability span (currently reuse inner judge per D19); revisit if double-instrumentation actually needed → Phase 55+ audit cycle
+
+#### Cat 11 carryover（54.2 deferred features）
+- ⏸ **AD-Cat11-Multiturn**（new from 54.2）：TeammateExecutor multi-turn loop pulling from mailbox each iteration; SubagentHandle for long-lived child query → Phase 55
+- ⏸ **AD-Cat11-SSEEvents**（new from 54.2）：SubagentSpawned/Completed event emission from tool handlers; SSE 2 isinstance branches (Day 0 D3 deferred per D18) → Phase 55 frontend
+- ⏸ **AD-Cat11-ParentCtx**（new from 54.2）：ForkExecutor parent context inheritance via Cat 7 checkpoint load (D12 deferred) → Phase 55
 
 #### Cat 7 carryover（53.1 retrospective）
 - ⏸ **AD-Cat7-1**：Full sole-mutator pattern (grep-zero refactor) → Phase 54.x (Cat 10 verifier session-state model)
@@ -210,8 +221,13 @@ ls docs/03-implementation/agent-harness-execution/
 - ⏸ **#31**：V2 Dockerfile + 新 build workflow → infrastructure track（無 sprint binding）
 
 #### Sprint 53.7 新加（待後續處理）
-- ⏸ **AD-Plan-1**：Day-0 探勘 must grep each plan §Technical Spec assertion against repo state (5 drift findings D4-D12 in 53.7 cost ~1 hr re-work). Action: extend `.claude/rules/sprint-workflow.md` §Step 3 with mandatory plan-vs-repo verify → next plan template iteration / 53.8
-- ⏸ **AD-Lint-2**：Day-level estimates have higher variance than sprint-level (53.7 banking offset Day 2/3 over-runs). Action: drop per-day calibrated targets; keep only sprint-aggregate → next checklist template / 53.8
+- ⏸ **AD-Plan-1**：Day-0 探勘 must grep each plan §Technical Spec assertion against repo state (5 drift findings D4-D12 in 53.7 cost ~1 hr re-work). Action: extend `.claude/rules/sprint-workflow.md` §Step 3 with mandatory plan-vs-repo verify → next plan template iteration / Phase 55
+- ⏸ **AD-Lint-2**：Day-level estimates have higher variance than sprint-level (53.7 banking offset Day 2/3 over-runs). Action: drop per-day calibrated targets; keep only sprint-aggregate → next checklist template / Phase 55
+
+#### Sprint 54.2 新加（待後續處理）
+- ⏸ **AD-Sprint-Plan-2**：Calibration multiplier 0.55 systematically over-budgets (3-sprint mean 0.78 = 53.7 1.01 + 54.1 0.69 + 54.2 0.65 BELOW [0.85, 1.20] band). Action: lower multiplier 0.55 → **0.50** for Phase 55 sprint 1; re-evaluate after 1 sprint; if ratio stays < 0.85, drop to 0.45. → Next plan template
+- ⏸ **AD-Cat12-Helpers-1**：Extract `verification_span` async ctx mgr pattern from 54.2 to `agent_harness/observability/helpers.py` for cross-Cat reuse (Cat 8 / Cat 11 dispatch will benefit) → Phase 55
+- ⏸ **AD-Lint-3**：Modification History entries accumulating cause recurring flake8 E501 (4× hit in 54.2 Day 4). Action: shorten MHist format to 1-line max `YYYY-MM-DD: scope (Sprint XX.Y)` → `.claude/rules/file-header-convention.md` update
 
 #### 永久 dropped（不必處理）
 - ✅ **4 dropped CI Pipeline checks**（Code Quality / Tests / Frontend Tests / CI Summary）：53.2.5 archive ci.yml 後永久 drop（V1 monolithic CI duplicates，非降級；branch protection 已正確配置 4 active checks）
@@ -248,12 +264,12 @@ ls docs/03-implementation/agent-harness-execution/
 | **53.6** | 2026-05-04 | PR #74 merged `f4a1425f` | Frontend e2e Playwright + production HITL wiring + ServiceFactory consolidation — closes AD-Front-1/2 + AD-Hitl-4-followup; V2 17→18/22 |
 | **53.7** | 2026-05-04 | PR #76 merged `eb7929cf` | Audit cleanup bundle — 9 carryover AD closed (AD-Sprint-Plan-1 + AD-CI-4 + AD-Lint-1 + AD-Test-1 + AD-Hitl-8 + AI-22 + AD-Cat9-7/8/9) + 2 BONUS V2 lint bug fixes; calibration multiplier 0.55 validated; V2 18/22 unchanged |
 | **54.1** | 2026-05-04 | PR #78 merged `c0c2860a` | Cat 10 Verification Loops Level 4 (RulesBasedVerifier + LLMJudgeVerifier + 4 templates + run_with_verification self-correction wrapper + LLMVerifyMutateGuardrail + verify tool) — closes AD-Cat9-1+2+3 via D8 wrapper pattern; 47 tests added; calibration ratio 0.69 (2nd application); 24 drifts; **V2 18/22 → 19/22 (86%)** ↑ |
-| 54.2 | _pending_ | _pending_ | Cat 11 Subagent (recommended) — V2 19/22 → 20/22 |
-| Phase 55 | _pending_ | _pending_ | Business domain + canary |
+| **54.2** | 2026-05-04 | PR #80 merged `c7b686ae` | Cat 11 Subagent Orchestration Level 4 (BudgetEnforcer + DefaultSubagentDispatcher + Fork + AsTool + Teammate + Mailbox + Handoff + task_spawn/handoff tools per 17.md §3.1 + AD-Cat10-Obs-1 verifier observability) — closes AD-Cat10-Obs-1; 46 tests; calibration ratio 0.65 (3rd application; 3-sprint mean 0.78 → recommend lower to 0.50 for Phase 55); 22 drifts D1-D22; Worktree NOT implemented per V2 spec §範疇 11 (AP-6 clean); AgentLoop UNTOUCHED per D18 (tools auto-route via tool_executor); 7 new AD; **V2 19/22 → 20/22 (91%)** ↑ |
+| Phase 55 | _pending_ | _pending_ | Business domain (5 domains × 24 mock tools per 08b-business-tools-spec.md) + canary deployment — V2 22/22 closure |
 
-**累計**：**19 / 22 sprint** 完成（**86%**）— Phase 49: 4/4 ✅，Phase 50: 2/2 ✅，Phase 51: 3/3 ✅，Phase 52: 4/4 ✅，Phase 53: 6/4 (53.1-53.6) + Phase 54.1 ✅ + 2 carryover bundles (53.2.5 + 53.7)
+**累計**：**20 / 22 sprint** 完成（**91%**）— Phase 49: 4/4 ✅，Phase 50: 2/2 ✅，Phase 51: 3/3 ✅，Phase 52: 4/4 ✅，Phase 53: 6/4 (53.1-53.6) ✅，Phase 54: 2/2 (54.1 + 54.2) ✅，+ 2 carryover bundles (53.2.5 + 53.7)
 
-> **53.2.5 + 53.7 是 carryover bundles 不算入主 22 sprint 進度**；54.1 是主進度推進 18/22 → 19/22。下一 sprint 候選：54.2 Cat 11 Subagent (主進度 → 20/22) OR audit cycle bundle (Cat 10 wiring / observability)。
+> **53.2.5 + 53.7 是 carryover bundles 不算入主 22 sprint 進度**；54.1 + 54.2 是主進度推進 18/22 → 20/22。**Phase 54 已完成（2/2）**。下一 sprint 候選：Phase 55.1 Business domain layer (5 domains × 24 mock tools per 08b-business-tools-spec.md) → V2 21/22；最後 Phase 55.2 Canary deployment + V2 22/22 (100%) closure。
 
 ---
 
@@ -361,7 +377,7 @@ V2 完成（Phase 55 後）→ 此 prompt 變歷史紀念物，改用 V3 / SaaS 
 
 ---
 
-**Last Updated**: 2026-05-04（Sprint 54.1 closeout — V2 **19/22 = 86%** 完成；下一 sprint 候選 = 54.2 Cat 11 Subagent (recommended; V2 → 20/22) OR audit cycle bundle (AD-Cat10-Obs-1 / AD-Cat10-Wire-1)）
+**Last Updated**: 2026-05-04（Sprint 54.2 closeout — V2 **20/22 = 91%** 完成；Phase 54 完成 2/2；下一 sprint = Phase 55.1 Business domain layer (5 domains × 24 mock tools)）
 **Maintainer**: 用戶 + AI 助手共同維護
 **File location**: `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md`
 
@@ -375,3 +391,4 @@ V2 完成（Phase 55 後）→ 此 prompt 變歷史紀念物，改用 V3 / SaaS 
 | 2026-04-30 | 52.1 | 新增 §6 「format consistency rule」（52.1 v1→v3 incident 教訓） |
 | 2026-05-03 | 53.2.5 | §8 全更新（Cat 8 + CI carryover + AI-22 + #31）；§9 milestones 補 49.1 → 53.2.5 共 16 個 sprint 行；§10 加 6 必答 retrospective 格式 + V2 紀律 9 項自檢 + Solo-dev policy + Paths filter workaround |
 | 2026-05-04 | 54.1 | §8 closes AD-Cat9-1+2+3 + adds AD-Cat10-Obs-1 / AD-Cat10-Wire-1 / AD-Cat9-1-WireDetectors / AD-Test-Module-Naming as 54.1 carryover; §9 milestones row +Sprint 54.1 (V2 18/22 → 19/22 = 86%); session start time updated to 54.1 closeout |
+| 2026-05-04 | 54.2 | §8 closes AD-Cat10-Obs-1 + adds AD-Cat10-Obs-Cat9Wrappers / AD-Cat11-Multiturn / AD-Cat11-SSEEvents / AD-Cat11-ParentCtx / AD-Sprint-Plan-2 / AD-Cat12-Helpers-1 / AD-Lint-3 as 54.2 carryover; §9 milestones row +Sprint 54.2 (V2 19/22 → 20/22 = 91%); Phase 54 完成 2/2; session start time updated to 54.2 closeout |
