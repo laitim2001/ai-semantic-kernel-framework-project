@@ -22,7 +22,14 @@ Lifecycle:
     each domain's mock_executor.py gets swapped.
 
 Created: 2026-04-30 (Sprint 51.0 Day 3)
-Last Modified: 2026-04-30
+Last Modified: 2026-05-04
+
+Modification History:
+    - 2026-05-04: (Sprint 55.2 Day 3.1) Uniform mode/factory_provider threading
+      to all 5 register_*_tools (was incident-only in 55.1; closes
+      AD-BusinessDomainPartialSwap-1 at the aggregator layer).
+    - 2026-05-04: (Sprint 55.1 Day 3) Added mode + factory_provider kwargs.
+    - 2026-04-30: Initial creation (Sprint 51.0 Day 3).
 """
 
 from __future__ import annotations
@@ -59,20 +66,20 @@ def register_all_business_tools(
 ) -> None:
     """Register all 18 business domain ToolSpecs + 18 handlers.
 
-    Sprint 55.1 (US-4): added `mode` + `factory_provider` kwargs.
-        - mode='mock' (default): 51.0 HTTP-backed pathway via mock_executor
-          (all 5 domains).
-        - mode='service': production pathway. Day 3 only wires INCIDENT
-          domain to BusinessServiceFactory; the other 4 domains keep their
-          mock pathway (AD-BusinessDomainPartialSwap; Phase 55.2+ wires the
-          remaining 13 tools to the service layer that landed in this sprint).
+    Sprint 55.1 (US-4): added `mode` + `factory_provider` kwargs (incident only).
+    Sprint 55.2 (US-2): mode/factory_provider now uniformly threaded to all 5
+        register_*_tools. AD-BusinessDomainPartialSwap-1 closed.
+        - mode='mock' (default): 51.0 HTTP-backed pathway via mock_executor.
+        - mode='service': production pathway. All 5 domains accept `mode='service'`
+          + factory_provider. Per-domain handler split (1 real + N sentinel)
+          documented in each domain's tools.py module docstring.
 
     Domain breakdown (per 08b-business-tools-spec.md):
-      - patrol:        4 tools (08b §Domain 1) — mock for now in service mode
-      - correlation:   3 tools (08b §Domain 2) — mock for now in service mode
-      - rootcause:     3 tools (08b §Domain 3) — mock for now in service mode
-      - audit:         3 tools (08b §Domain 4) — mock for now in service mode
-      - incident:      5 tools (08b §Domain 5) — service-backed when mode=service
+      - patrol:        4 tools (08b §Domain 1) — service-aware (1 real: get_results)
+      - correlation:   3 tools (08b §Domain 2) — service-aware (1 real: get_related)
+      - rootcause:     3 tools (08b §Domain 3) — service-aware (1 real: diagnose)
+      - audit:         3 tools (08b §Domain 4) — service-aware (1 real: query_logs)
+      - incident:      5 tools (08b §Domain 5) — fully service-backed
       Total:          18 tools
     """
     if mode not in ("mock", "service"):
@@ -80,13 +87,35 @@ def register_all_business_tools(
     if mode == "service" and factory_provider is None:
         raise ValueError("register_all_business_tools(mode='service') requires factory_provider")
 
-    # Domains 1-4: mock-backed in both modes for Sprint 55.1.
-    register_patrol_tools(registry, handlers, mock_url=mock_url)
-    register_correlation_tools(registry, handlers, mock_url=mock_url)
-    register_rootcause_tools(registry, handlers, mock_url=mock_url)
-    register_audit_tools(registry, handlers, mock_url=mock_url)
-
-    # Domain 5: full mode awareness wired in Day 3.4.
+    # All 5 domains: mode-aware as of Sprint 55.2.
+    register_patrol_tools(
+        registry,
+        handlers,
+        mock_url=mock_url,
+        mode=mode,
+        factory_provider=factory_provider,
+    )
+    register_correlation_tools(
+        registry,
+        handlers,
+        mock_url=mock_url,
+        mode=mode,
+        factory_provider=factory_provider,
+    )
+    register_rootcause_tools(
+        registry,
+        handlers,
+        mock_url=mock_url,
+        mode=mode,
+        factory_provider=factory_provider,
+    )
+    register_audit_tools(
+        registry,
+        handlers,
+        mock_url=mock_url,
+        mode=mode,
+        factory_provider=factory_provider,
+    )
     register_incident_tools(
         registry,
         handlers,

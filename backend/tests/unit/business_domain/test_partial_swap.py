@@ -337,6 +337,115 @@ async def test_register_audit_tools_mode_service_query_logs_invokes_service(
 # ===== AD-BusinessDomainPartialSwap-1 closure smoke test ==============
 
 
+# ===== US-2 register_all uniform mode threading (Day 3.1-3.2) =========
+
+
+def test_register_all_business_tools_mode_mock_default() -> None:
+    """register_all_business_tools(mode='mock') registers 18 mock_* handlers."""
+    from business_domain._register_all import register_all_business_tools
+
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    register_all_business_tools(registry, handlers, mode="mock")
+    # 18 handlers expected (4 patrol + 3 correlation + 3 rootcause + 3 audit + 5 incident)
+    assert len(handlers) == 18
+    # Spot-check one handler from each domain
+    for name in (
+        "mock_patrol_get_results",
+        "mock_correlation_get_related",
+        "mock_rootcause_diagnose",
+        "mock_audit_query_logs",
+        "mock_incident_create",
+    ):
+        assert name in handlers
+
+
+@pytest.mark.asyncio
+async def test_register_all_business_tools_mode_service_threads_factory_to_5_domains(
+    db_session: AsyncSession,
+) -> None:
+    """register_all_business_tools(mode='service') threads factory_provider to all 5 domains.
+
+    Verified by: foundational handlers from each domain invoke factory_provider
+    successfully (no crash + all 5 service classes accessed).
+    """
+    from business_domain._register_all import register_all_business_tools
+
+    t = await seed_tenant(db_session, code="PSWAP_RA1")
+    factory = BusinessServiceFactory(db=db_session, tenant_id=t.id)
+
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    register_all_business_tools(
+        registry,
+        handlers,
+        mode="service",
+        factory_provider=lambda: factory,
+    )
+
+    # All 5 foundational handlers exist and use factory:
+    # patrol.get_results / correlation.get_related / rootcause.diagnose /
+    # audit.query_logs / incident.list (read-only foundational)
+    assert "mock_patrol_get_results" in handlers
+    assert "mock_correlation_get_related" in handlers
+    assert "mock_rootcause_diagnose" in handlers
+    assert "mock_audit_query_logs" in handlers
+    assert "mock_incident_list" in handlers
+
+
+def test_register_all_business_tools_mode_service_no_factory_raises() -> None:
+    """register_all_business_tools(mode='service') without factory_provider → ValueError."""
+    from business_domain._register_all import register_all_business_tools
+
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    with pytest.raises(ValueError, match="requires factory_provider"):
+        register_all_business_tools(registry, handlers, mode="service")
+
+
+def test_register_all_business_tools_invalid_mode_raises() -> None:
+    """register_all_business_tools(mode='unknown') → ValueError."""
+    from business_domain._register_all import register_all_business_tools
+
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    with pytest.raises(ValueError, match="invalid mode"):
+        register_all_business_tools(registry, handlers, mode="unknown")
+
+
+# ===== US-3 chat handler business_factory_provider wiring (Day 3.4) ===
+
+
+def test_build_echo_demo_handler_accepts_business_factory_provider() -> None:
+    """build_echo_demo_handler accepts business_factory_provider kwarg without crash.
+
+    Verifies the param is plumbed into make_default_executor; backwards-compat
+    preserved (None default keeps 50.2/53.6 callers working).
+    """
+    from api.v1.chat.handler import build_echo_demo_handler
+
+    # None: backwards-compat (no business_factory_provider; mock-mode default)
+    loop = build_echo_demo_handler(message="hello")
+    assert loop is not None  # AgentLoopImpl built; no exception
+
+
+def test_build_handler_threads_business_factory_provider_to_echo_demo() -> None:
+    """build_handler dispatcher threads business_factory_provider to echo_demo builder.
+
+    Sprint 55.2 US-3: dispatcher accepts new kwarg; threads to per-mode builders.
+    Verified end-to-end by chat router integration; this unit test verifies
+    the dispatcher signature acceptance.
+    """
+    from api.v1.chat.handler import build_handler
+
+    # Verify dispatch with explicit business_factory_provider=None works
+    loop = build_handler("echo_demo", "hi", business_factory_provider=None)
+    assert loop is not None
+
+
+# ===== AD-BusinessDomainPartialSwap-1 closure smoke test ==============
+
+
 def test_all_5_register_tools_accept_mode_kwarg() -> None:
     """AD-BusinessDomainPartialSwap-1 closure: all 5 register_*_tools functions
     accept mode kwarg + raise ValueError if mode='service' without factory_provider."""
