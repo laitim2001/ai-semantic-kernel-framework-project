@@ -48,10 +48,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.db import get_session_factory
-from platform_layer.governance.audit.query import (
-    AuditLogEntry,
-    AuditQuery,
-    AuditQueryFilter,
+from platform_layer.governance.audit.query import AuditLogEntry, AuditQueryFilter
+from platform_layer.governance.service_factory import (
+    ServiceFactory,
+    get_service_factory,
 )
 from platform_layer.identity.auth import get_current_tenant, require_audit_role
 
@@ -125,6 +125,7 @@ async def get_audit_log(
     current_tenant: UUID = Depends(get_current_tenant),
     _user_id: UUID = Depends(require_audit_role),
     session: AsyncSession = Depends(_get_db_session),
+    factory: ServiceFactory = Depends(get_service_factory),
     operation: str | None = Query(default=None, description="Exact operation name filter."),
     resource_type: str | None = Query(default=None, description="Resource type filter."),
     user_id: UUID | None = Query(default=None, description="User id filter."),
@@ -152,7 +153,7 @@ async def get_audit_log(
         limit=fetch_limit,
         offset=offset,
     )
-    audit_query = AuditQuery(session)
+    audit_query = factory.build_audit_query(session=session)
     rows = await audit_query.list(query)
     has_more = len(rows) > page_size
     page_rows = rows[:page_size]
@@ -168,6 +169,7 @@ async def get_audit_log(
 async def get_verify_chain(
     current_tenant: UUID = Depends(get_current_tenant),
     _user_id: UUID = Depends(require_audit_role),
+    factory: ServiceFactory = Depends(get_service_factory),
     from_id: int | None = Query(
         default=None, ge=1, description="Inclusive start row id (default: chain head)."
     ),
@@ -182,9 +184,9 @@ async def get_verify_chain(
     audit job. Tenant isolation enforced inside the chain walker.
     """
     # verify_chain needs a session factory (it walks paginated independent
-    # sessions to avoid holding a single long transaction open).
-    factory = get_session_factory()
-    audit_query = AuditQuery(session_factory=factory)
+    # sessions to avoid holding a single long transaction open). ServiceFactory
+    # exposes the session_factory via build_audit_query() (Sprint 53.6 US-5).
+    audit_query = factory.build_audit_query()
     try:
         result = await audit_query.verify_chain(
             tenant_id=current_tenant,

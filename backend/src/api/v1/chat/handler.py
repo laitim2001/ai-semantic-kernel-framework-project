@@ -45,6 +45,7 @@ Related:
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 from adapters._base.chat_client import ChatClient
 from adapters._testing.mock_clients import MockChatClient
@@ -59,6 +60,10 @@ from business_domain._register_all import make_default_executor
 
 from .schemas import ChatMode
 
+if TYPE_CHECKING:
+    from agent_harness.hitl import HITLManager
+    from platform_layer.governance.service_factory import ServiceFactory
+
 # Phase 50.2 demo system prompt — instructs the model to use echo_tool when the
 # user explicitly asks to "echo" something. Real LLM only.
 DEMO_SYSTEM_PROMPT = (
@@ -69,11 +74,19 @@ DEMO_SYSTEM_PROMPT = (
 )
 
 
-def build_echo_demo_handler(message: str) -> AgentLoopImpl:
+def build_echo_demo_handler(
+    message: str,
+    *,
+    hitl_manager: "HITLManager | None" = None,
+    hitl_timeout_s: int = 14400,
+) -> AgentLoopImpl:
     """Wire AgentLoopImpl with a MockChatClient pre-scripted to call echo_tool.
 
     The mock responds with TOOL_USE on turn 1 (echo_tool with the user's
     message text) and END_TURN with the echoed content on turn 2.
+
+    Sprint 53.6 US-4: optional `hitl_manager` opts the loop into Cat 9 Stage 3
+    HITL escalation. None preserves 53.3 baseline behavior (no HITL pause).
     """
     registry, executor = make_default_executor()
     parser = OutputParserImpl()
@@ -106,10 +119,16 @@ def build_echo_demo_handler(message: str) -> AgentLoopImpl:
         tool_registry=registry,
         system_prompt=DEMO_SYSTEM_PROMPT,
         max_turns=4,  # Echo demo never needs more than 2 turns; 4 = safety margin.
+        hitl_manager=hitl_manager,
+        hitl_timeout_s=hitl_timeout_s,
     )
 
 
-def build_real_llm_handler() -> AgentLoopImpl:
+def build_real_llm_handler(
+    *,
+    hitl_manager: "HITLManager | None" = None,
+    hitl_timeout_s: int = 14400,
+) -> AgentLoopImpl:
     """Wire AgentLoopImpl with AzureOpenAIAdapter. Requires env vars.
 
     Raises:
@@ -142,13 +161,37 @@ def build_real_llm_handler() -> AgentLoopImpl:
         tool_registry=registry,
         system_prompt=DEMO_SYSTEM_PROMPT,
         max_turns=8,
+        hitl_manager=hitl_manager,
+        hitl_timeout_s=hitl_timeout_s,
     )
 
 
-def build_handler(mode: ChatMode, message: str) -> AgentLoopImpl:
-    """Dispatch to the per-mode builder. Single entry-point for the router."""
+def build_handler(
+    mode: ChatMode,
+    message: str,
+    *,
+    service_factory: "ServiceFactory | None" = None,
+    hitl_timeout_s: int = 14400,
+) -> AgentLoopImpl:
+    """Dispatch to the per-mode builder. Single entry-point for the router.
+
+    Sprint 53.6 US-4: when `service_factory` is provided AND env flag
+    HITL_ENABLED is not "false", resolves the production HITLManager from the
+    factory and injects it into AgentLoopImpl. Without the factory (legacy
+    callers, tests) the loop runs with 53.3 baseline behavior.
+    """
+    hitl_manager: "HITLManager | None" = None
+    if service_factory is not None and _hitl_enabled():
+        hitl_manager = service_factory.get_hitl_manager()
     if mode == "echo_demo":
-        return build_echo_demo_handler(message)
+        return build_echo_demo_handler(
+            message, hitl_manager=hitl_manager, hitl_timeout_s=hitl_timeout_s
+        )
     if mode == "real_llm":
-        return build_real_llm_handler()
+        return build_real_llm_handler(hitl_manager=hitl_manager, hitl_timeout_s=hitl_timeout_s)
     raise ValueError(f"Unsupported mode: {mode!r}")
+
+
+def _hitl_enabled() -> bool:
+    """Feature toggle. Default ON; explicit `HITL_ENABLED=false` disables wiring."""
+    return os.environ.get("HITL_ENABLED", "true").strip().lower() != "false"

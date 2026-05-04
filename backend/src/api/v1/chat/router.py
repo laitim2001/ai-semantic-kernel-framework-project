@@ -66,6 +66,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from agent_harness._contracts import LoopCompleted, TraceContext
+from platform_layer.governance.service_factory import (
+    ServiceFactory,
+    get_service_factory,
+)
 from platform_layer.identity import get_current_tenant
 
 from .handler import build_handler
@@ -81,6 +85,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 async def chat(
     req: ChatRequest,
     current_tenant: UUID = Depends(get_current_tenant),
+    factory: ServiceFactory = Depends(get_service_factory),
 ) -> StreamingResponse:
     """Run an agent loop and stream LoopEvents as SSE.
 
@@ -88,9 +93,15 @@ async def chat(
     Each frame is `event: <type>\\ndata: <json>\\n\\n`. The session_id is
     in the first `loop_start` frame's data, alongside the `trace_id` of
     the root TraceContext (frontend can correlate with Jaeger / logs).
+
+    Sprint 53.6 US-4 — closes AD-Front-2: passes ServiceFactory through
+    `build_handler` so AgentLoopImpl receives the production HITLManager.
+    Cat 9 Stage 3 ESCALATE now flows through the full HITL pipeline
+    (request_approval → notifier → reviewer UI → wait_for_decision → resume).
+    Toggle off via env `HITL_ENABLED=false` (handler.py guards this).
     """
     try:
-        loop = build_handler(req.mode, req.message)
+        loop = build_handler(req.mode, req.message, service_factory=factory)
     except (RuntimeError, ValueError) as exc:
         # Misconfiguration (env vars / unsupported mode) → 503.
         # Schema-layer errors (invalid mode literal) get caught by FastAPI

@@ -239,5 +239,84 @@
 - US-5 ServiceFactory consolidation (governance/risk/audit/HITL uniform constructors)
 - Day 4 sanity + retrospective + PR + closeout
 
+---
+
+## Day 4 — 2026-05-04 (~3 hr actual / est. 5-7 hr → ~3 hr banked)
+
+### US-5 ServiceFactory (4.1-4.2)
+- ✅ Created `backend/src/platform_layer/governance/service_factory.py`:
+  - `ServiceFactory` class: ctor takes `session_factory` + optional `notification_config_path` + `risk_policy_config_path`
+  - `get_hitl_manager()` lazy singleton; resolves notifier via `load_notifier_from_config` (fall back to Noop on missing/malformed)
+  - `get_risk_policy()` lazy singleton; raises if path not configured
+  - `build_audit_query(session?)` per-request builder
+  - Module-level `get_service_factory()` / `set_service_factory()` / `reset_service_factory()` for FastAPI Depends
+- ✅ 13 unit tests in `tests/unit/platform_layer/governance/test_service_factory.py` — all passing in 0.28s
+  - Categories: HITLManager (5 cases) / RiskPolicy (3) / AuditQuery builder (3) / Module singleton (2)
+- ✅ Fixed 2 import errors (HITLManager from agent_harness.hitl not _contracts; TeamsWebhookNotifier from teams_webhook submodule)
+
+### US-4 Chat router production wiring (4.3)
+- ✅ `backend/src/api/v1/chat/handler.py`:
+  - Added `TYPE_CHECKING` imports for HITLManager + ServiceFactory
+  - `build_echo_demo_handler` + `build_real_llm_handler` accept `hitl_manager` + `hitl_timeout_s` kwargs
+  - `build_handler(mode, message, *, service_factory=None, hitl_timeout_s=14400)`: resolves hitl_manager via factory when provided AND `_hitl_enabled()` returns True
+  - `_hitl_enabled()`: env toggle parser (default ON; `HITL_ENABLED=false` opts out; tolerates whitespace + case)
+- ✅ `backend/src/api/v1/chat/router.py`: chat() endpoint adds `factory: ServiceFactory = Depends(get_service_factory)` + passes to build_handler
+
+### US-5 Governance + audit migration (4.4)
+- ✅ `backend/src/api/v1/governance/router.py`:
+  - Removed `_build_manager()` helper + dropped `DefaultHITLManager` + `get_session_factory` imports
+  - Added `factory: ServiceFactory = Depends(get_service_factory)` to both endpoints
+  - Replaced `_build_manager()` calls with `factory.get_hitl_manager()`
+- ✅ `backend/src/api/v1/audit.py`:
+  - Removed `AuditQuery` direct import (still imports `AuditLogEntry` + `AuditQueryFilter`)
+  - Kept `get_session_factory` import (needed by `_get_db_session` request-scoped helper)
+  - Added factory dep to both endpoints
+  - Replaced inline `AuditQuery(session)` + `AuditQuery(session_factory=factory)` with `factory.build_audit_query(session=session)` + `factory.build_audit_query()`
+
+### Test isolation fix (4.4)
+- ✅ Created `backend/tests/integration/api/conftest.py` with `_reset_governance_singletons` autouse fixture — fixes "Event loop is closed" cascade in 5 tests caused by ServiceFactory singleton caching session_factory bound to a previous pytest-asyncio loop. Existing 24 governance + audit endpoint tests now pass without other modifications.
+
+### US-4 Production wiring integration test (4.5)
+- ✅ Created `backend/tests/integration/api/test_chat_hitl_production_wiring.py` with 13 cases:
+  - 5 wiring tests: factory wires HITL / HITL_ENABLED=false skips / no factory legacy path / hitl_timeout_s passthrough / singleton sharing across calls
+  - 8 toggle parser parametrizations: unset / true / True / yes / false / FALSE / False / "  false  " whitespace
+- ✅ All 13 pass in 0.59s
+
+### Sprint final verification (4.6)
+- ✅ Production wiring grep: `grep -rn "DefaultHITLManager(\|AuditQuery(\|DefaultRiskPolicy(" backend/src/api/` → **0 results**
+- ✅ LLM SDK leak: only false-positives in claude_counter.py docstring (no actual imports)
+- ✅ Full pytest: **1085 passed / 4 skipped / 0 fail** (+26 from main 1059 baseline; matches 13 service_factory + 13 production wiring tests)
+- ✅ mypy --strict on 5 touched src files: no issues
+- ✅ black + isort + flake8 on touched files: clean (1 E501 + 1 unused import + 4 black-format auto-fixed)
+- ✅ 6 V2 lint scripts: all OK
+- ✅ Frontend lint: clean
+- ✅ Frontend build: 188.10 KB / 52 modules / 553ms
+- ✅ Frontend Playwright e2e: **11 passed in 5.4s** (2 smoke + 5 governance + 4 chat)
+
+### Retrospective (4.7)
+- ✅ Created `retrospective.md` answering 6 mandatory questions
+- ✅ All 5 USs delivered with verifiable evidence
+- ✅ AD-Front-1 + AD-Front-2 + AD-Hitl-4-followup all closed
+- ✅ 3 new AD logged: AD-Lint-1 / AD-Test-1 / AD-Sprint-Plan-1
+
+### Day 4 Drift
+
+| ID | Type | Description |
+|----|------|-------------|
+| **D15** | Import correction | service_factory.py + test imports needed multiple fixes (HITLManager from `.hitl` not `._contracts.hitl`; TeamsWebhookNotifier from `.teams_webhook` not `.notifier`); minor — same-day caught |
+| **D16** | Test isolation gap | Module-level ServiceFactory singleton broke 5 tests due to event-loop binding; fixed by autouse `reset_service_factory` fixture in `conftest.py` |
+| **D17** | Audit endpoint kept get_session_factory import | `_get_db_session` request-scoped helper uses `get_session_factory()` directly (not via factory); kept for separation of concerns (request-scoped session yielder ≠ governance service builder) |
+
+### Day 4 Time Banking
+
+- Estimated: 5-7 hr
+- Actual: ~3 hr (US-5 ServiceFactory + tests ~1 hr / US-4 wiring + migration + tests ~1.25 hr / sanity + retro ~0.75 hr)
+- **Banked**: cumulative ~12-14 hr unused buffer across Day 0-4 (50% under-estimate pattern continues)
+
+### Blockers
+
+- None. Day 4.8 PR open + merge + 4.9 cleanup pending.
+
+
 
 
