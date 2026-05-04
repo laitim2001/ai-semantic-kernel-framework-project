@@ -58,6 +58,19 @@ ALLOWLIST_PATTERNS: tuple[str, ...] = (
     # PromptBuilder (which constructs main-loop prompts with memory layers /
     # tools / cache breakpoints — none of which apply to a verifier).
     "agent_harness/verification/llm_judge.py",
+    # Sprint 54.2: Cat 11 ForkExecutor is a subagent runner that executes a
+    # bounded delegated task via a single ChatClient call (not the main agent
+    # loop). It builds a narrow task-as-user-message prompt under the parent
+    # AgentLoop's bounded SubagentBudget and is by design not routed through
+    # PromptBuilder — the parent loop already passed through PromptBuilder
+    # before deciding to spawn a subagent. Memory / tools / cache breakpoints
+    # from the parent context are deliberately NOT inherited (Day 2 D12 design;
+    # see modes/fork.py module docstring).
+    "agent_harness/subagent/modes/fork.py",
+    # Sprint 54.2: Cat 11 TeammateExecutor — same justification as ForkExecutor
+    # above (utility-LLM caller, not main loop). Difference is mailbox-side-
+    # effect delivery to parent on completion (Day 3 D15 design).
+    "agent_harness/subagent/modes/teammate.py",
 )
 
 

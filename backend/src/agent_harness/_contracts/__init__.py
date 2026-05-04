@@ -95,6 +95,7 @@ from agent_harness._contracts.state import (
     TransientState,
 )
 from agent_harness._contracts.subagent import (
+    AgentSpec,
     SubagentBudget,
     SubagentMode,
     SubagentResult,
@@ -179,6 +180,7 @@ __all__ = [
     "SubagentBudget",
     "SubagentResult",
     "SubagentMode",
+    "AgentSpec",
     # observability
     "TraceContext",
     "MetricEvent",

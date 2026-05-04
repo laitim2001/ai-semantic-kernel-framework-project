@@ -17,9 +17,11 @@ Owner: 01-eleven-categories-spec.md §範疇 11
 Single-source: 17.md §1.1
 
 Created: 2026-04-29 (Sprint 49.1)
-Last Modified: 2026-04-29
+Last Modified: 2026-05-04
 
 Modification History:
+    - 2026-05-04: Add AgentSpec dataclass (Sprint 54.2 US-2; needed by AsToolWrapper
+      and Phase 55 multi-role subagent registries). Closes Day 0 D7 partial.
     - 2026-04-29: Initial creation (Sprint 49.1)
 
 Related:
@@ -66,4 +68,19 @@ class SubagentResult:
     tokens_used: int = 0
     duration_ms: float = 0.0
     error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class AgentSpec:
+    """Spec for a subagent role; used by AsToolWrapper and TeammateExecutor.
+
+    Sprint 54.2 US-2: minimal fields (role + prompt + model). Phase 55+ may
+    extend with allowed tools / memory scopes / risk limits — those are
+    role-config concerns NOT covered by Cat 11 dispatcher itself.
+    """
+
+    role: str  # short identifier, e.g. "researcher" / "writer"
+    prompt: str | None = None  # initial system / role prompt
+    model: str | None = None  # provider model id; None = inherit parent's
     metadata: dict[str, Any] = field(default_factory=dict)
