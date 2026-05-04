@@ -13,59 +13,34 @@
 ### 0.1 Branch + plan + checklist commit
 - [x] **Verify on main + clean** ✅ HEAD `b0e7b71a`
 - [x] **Create branch + push plan/checklist** ✅ `feature/sprint-55-1-business-services` created
-- [ ] **Stage + commit plan + checklist + push branch**
-  - DoD: `git push -u origin feature/sprint-55-1-business-services` succeeds
-  - Verify: `git log --oneline -1` shows plan + checklist commit
+- [x] **Stage + commit plan + checklist + push branch** ✅ commit `3fb6c084` pushed (785 insertions)
 
-### 0.2 Day-0 探勘 — verify plan §Technical Spec assertions against actual repo state
+### 0.2 Day-0 探勘 — verify plan §Technical Spec assertions against actual repo state ✅
 
 Per AD-Plan-1 (53.7) + feedback_day0_must_grep_plan_assumptions.md — grep each plan claim, not memory.
 
-- [ ] **Verify 5 domain mock skeleton intact**
-  - Verify: `ls backend/src/business_domain/{patrol,correlation,rootcause,audit_domain,incident}/{mock_executor,tools}.py`
-  - DoD: 10 files all present
-- [ ] **Verify _register_all.py + make_default_executor**
-  - Verify: `grep "register_all_business_tools\|make_default_executor" backend/src/business_domain/_register_all.py`
-  - DoD: both function defs present (51.0 stable)
-- [ ] **Verify Settings location + existing fields**
-  - Verify: `grep "BUSINESS_DOMAIN_MODE\|BaseSettings" backend/src/core/config.py`
-  - DoD: BaseSettings exists, BUSINESS_DOMAIN_MODE NOT YET present (will add Day 3)
-- [ ] **Verify async SQLAlchemy session factory**
-  - Verify: `grep "AsyncSession\|async_session" backend/src/infrastructure/db/`
-  - DoD: AsyncSession factory exists (49.2 stable)
-- [ ] **Verify existing tenants + audit_log tables**
-  - Verify: `ls backend/src/infrastructure/db/migrations/versions/ | grep -E "tenants|audit"` AND grep ORM models for `tenants` + `audit_log`
-  - DoD: both tables exist via migrations (49.2 + 53.4 stable)
-- [ ] **Verify ServiceFactory + reset pattern**
-  - Verify: `grep "reset_service_factory\|ServiceFactory" backend/src/platform_layer/governance/service_factory.py`
-  - DoD: 53.6 ServiceFactory + reset_service_factory present
-- [ ] **Verify Tracer ABC + record_metric signature**
-  - Verify: `grep "record_metric\|class Tracer" backend/src/agent_harness/observability/_abc.py`
-  - DoD: Tracer ABC + record_metric method match Cat 11 usage pattern
-- [ ] **Catalogue any drift findings (D1, D2, ...) in progress.md** if assumptions mismatch
+- [x] **Verify 5 domain mock skeleton intact** ✅ 10 files present
+- [x] **Verify _register_all.py + make_default_executor** ✅ `_register_all.py:49,72`
+- [x] **Verify Settings location + existing fields** 🚨 **D1**: actual is package `core/config/__init__.py` (not file `core/config.py`); snake_case fields; `business_domain_mode` to add Day 3
+- [x] **Verify async SQLAlchemy session factory** ✅ `infrastructure/db/session.py` + `engine.py`
+- [x] **Verify existing tenants + audit_log tables** ✅ 11 Alembic migrations (0001 tenants / 0005 audit_log / 0009 RLS)
+- [x] **Verify ServiceFactory + reset pattern** ✅ class line 75; reset_service_factory line 215
+- [x] **Verify Tracer ABC + record_metric signature** ✅ `observability/_abc.py:32` (class) + `:36` start_span + `:48` record_metric
+- [x] **Catalogue D1 in progress.md** ✅ documented; cosmetic fix only (no scope change)
 
-### 0.3 Calibration multiplier pre-read
-- [ ] **Read 54.2 retrospective Q2** — confirm 3-sprint mean 0.78 → multiplier 0.55→0.50 first application
-- [ ] **Compute 55.1 bottom-up** — verify ~22 hr × 0.50 = **commit 11 hr** (matches plan §Workload)
-- [ ] **Document predicted vs banked** — 53.7→54.2 banked ~10 hr (1.01 + 0.69 + 0.65 = aggregate under-estimate); 0.50 conservative
+### 0.3 Calibration multiplier pre-read ✅
+- [x] **Read 54.2 retrospective Q2** ✅ ratio 0.65; 3-sprint mean 0.78 BELOW band
+- [x] **Compute 55.1 bottom-up** ✅ 22 hr × 0.50 = 11 hr commit
+- [x] **Document predicted vs banked** ✅ ~10 hr banked from 53.7+54.1+54.2; 0.50 conservative
 
-### 0.4 Pre-flight verify (main green baseline)
-- [ ] **pytest collect baseline**
-  - Verify: `cd backend && python -m pytest --collect-only 2>&1 | tail -5`
-  - DoD: 1351 tests collected (= 1305 + 46 from 54.2; +0 from carryover)
-- [ ] **6 V2 lints via run_all.py**
-  - Verify: `python scripts/lint/run_all.py`
-  - DoD: 6/6 green; <2s total
-- [ ] **Backend full pytest baseline**
-  - Verify: `cd backend && python -m pytest -q 2>&1 | tail -3`
-  - DoD: **1351 passed / 4 skipped / 0 fail**
-- [ ] **mypy --strict baseline**
-  - Verify: `cd backend && python -m mypy src --strict 2>&1 | tail -3`
-  - DoD: 0 errors
+### 0.4 Pre-flight verify (main green baseline) ✅
+- [x] **pytest collect baseline** ✅ **1355 collected** (= 1351 passed + 4 skipped; D2 false-alarm reconciled)
+- [x] **6 V2 lints via run_all.py** ✅ **6/6 green** in 0.65s
+- [x] **Backend full pytest baseline** ✅ **1351 passed / 4 skipped / 0 fail** in 28.12s
+- [x] **mypy --strict baseline** ✅ **0 errors / 255 files**
 
-### 0.5 Day 0 progress.md
-- [ ] **Create `docs/03-implementation/agent-harness-execution/phase-55/sprint-55-1/progress.md`**
-  - Sections: Day 0 setup / Day 0 探勘 drift findings / pre-flight baseline / next-day plan
+### 0.5 Day 0 progress.md ✅
+- [x] **Create `docs/03-implementation/agent-harness-execution/phase-55/sprint-55-1/progress.md`** ✅ Day 0 entry with 8 verify + D1 + baseline + Day 1 plan
 - [ ] **Commit + push Day 0**
   - Verify: `git log --oneline origin/feature/sprint-55-1-business-services` shows 2+ commits
 
