@@ -446,6 +446,134 @@ def test_build_handler_threads_business_factory_provider_to_echo_demo() -> None:
 # ===== AD-BusinessDomainPartialSwap-1 closure smoke test ==============
 
 
+# ===== US-5 V2 22/22 closure ceremony tests (Day 4) ===================
+
+
+@pytest.mark.asyncio
+async def test_v2_22_22_multi_tenant_factory_isolation(
+    db_session: AsyncSession,
+) -> None:
+    """V2 22/22 ceremony: 2 tenants get distinct factories; service-mode
+    handlers via factory_provider show tenant isolation (no cross-leak).
+
+    Verifies multi-tenant rule (per multi-tenant-data.md 3 鐵律):
+    1. tenant_id flows from chat → factory → service
+    2. Service WHERE tenant_id filters out other tenants
+    3. Same incident_id under tenant A is invisible to tenant B
+    """
+    from business_domain._register_all import register_all_business_tools
+
+    t_a = await seed_tenant(db_session, code="V2CL_A1")
+    t_b = await seed_tenant(db_session, code="V2CL_B1")
+
+    # Tenant A creates an incident (real DB write)
+    inc_svc_a = IncidentService(db=db_session, tenant_id=t_a.id)
+    inc_a = await inc_svc_a.create(title="Tenant A incident", severity="high", alert_ids=[])
+    await db_session.flush()
+
+    # Tenant B factory → rootcause.diagnose with A's incident_id → ValueError (cross-tenant)
+    factory_b = BusinessServiceFactory(db=db_session, tenant_id=t_b.id)
+    registry_b = ToolRegistryImpl()
+    handlers_b: dict[str, ToolHandler] = {}
+    register_all_business_tools(
+        registry_b, handlers_b, mode="service", factory_provider=lambda: factory_b
+    )
+
+    h_diagnose_b = handlers_b["mock_rootcause_diagnose"]
+    with pytest.raises(ValueError, match="not found in tenant scope"):
+        await h_diagnose_b(
+            ToolCall(
+                id="tc-cross-1",
+                name="mock_rootcause_diagnose",
+                arguments={"incident_id": str(inc_a.id)},
+            )
+        )
+
+    # Tenant A factory → rootcause.diagnose with same incident_id → success (same tenant)
+    factory_a = BusinessServiceFactory(db=db_session, tenant_id=t_a.id)
+    registry_a = ToolRegistryImpl()
+    handlers_a: dict[str, ToolHandler] = {}
+    register_all_business_tools(
+        registry_a, handlers_a, mode="service", factory_provider=lambda: factory_a
+    )
+
+    h_diagnose_a = handlers_a["mock_rootcause_diagnose"]
+    raw = await h_diagnose_a(
+        ToolCall(
+            id="tc-cross-2",
+            name="mock_rootcause_diagnose",
+            arguments={"incident_id": str(inc_a.id)},
+        )
+    )
+    parsed = json.loads(raw) if isinstance(raw, str) else raw
+    assert parsed["incident_id"] == str(inc_a.id)
+    assert parsed["tenant_id"] == str(t_a.id)
+
+
+@pytest.mark.asyncio
+async def test_v2_22_22_main_flow_5_domains_service_mode(
+    db_session: AsyncSession,
+) -> None:
+    """V2 22/22 ceremony: full main flow — register_all_business_tools(mode='service')
+    builds 18 handlers; foundational service-mode handlers from each of 5 domains
+    can be invoked successfully. Marks Phase 55.2 production wiring complete.
+    """
+    from business_domain._register_all import register_all_business_tools
+
+    t = await seed_tenant(db_session, code="V2CL_MAIN")
+    factory = BusinessServiceFactory(db=db_session, tenant_id=t.id)
+
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    register_all_business_tools(
+        registry, handlers, mode="service", factory_provider=lambda: factory
+    )
+
+    assert len(handlers) == 18  # 4 + 3 + 3 + 3 + 5
+
+    # Invoke 1 foundational handler from each of 5 domains; all should succeed
+    # without crash (factory threading verified end-to-end):
+
+    # 1. patrol.get_results (real)
+    raw = await handlers["mock_patrol_get_results"](
+        ToolCall(id="tc-1", name="mock_patrol_get_results", arguments={"patrol_id": "p1"})
+    )
+    assert isinstance(json.loads(raw), dict)
+
+    # 2. correlation.get_related (real)
+    raw = await handlers["mock_correlation_get_related"](
+        ToolCall(id="tc-2", name="mock_correlation_get_related", arguments={"alert_id": "a1"})
+    )
+    assert isinstance(json.loads(raw), list)
+
+    # 3. rootcause.diagnose — needs incident; create one first
+    inc_svc = IncidentService(db=db_session, tenant_id=t.id)
+    inc = await inc_svc.create(title="V2 closure incident", severity="medium", alert_ids=[])
+    await db_session.flush()
+    raw = await handlers["mock_rootcause_diagnose"](
+        ToolCall(id="tc-3", name="mock_rootcause_diagnose", arguments={"incident_id": str(inc.id)})
+    )
+    parsed = json.loads(raw)
+    assert parsed["incident_id"] == str(inc.id)
+
+    # 4. audit.query_logs (real; empty result OK)
+    raw = await handlers["mock_audit_query_logs"](
+        ToolCall(id="tc-4", name="mock_audit_query_logs", arguments={"limit": 10})
+    )
+    assert isinstance(json.loads(raw), list)
+
+    # 5. incident.list (real)
+    raw = await handlers["mock_incident_list"](
+        ToolCall(id="tc-5", name="mock_incident_list", arguments={})
+    )
+    incidents = json.loads(raw)
+    assert isinstance(incidents, list)
+    assert any(i["id"] == str(inc.id) for i in incidents)
+
+
+# ===== AD-BusinessDomainPartialSwap-1 closure smoke test ==============
+
+
 def test_all_5_register_tools_accept_mode_kwarg() -> None:
     """AD-BusinessDomainPartialSwap-1 closure: all 5 register_*_tools functions
     accept mode kwarg + raise ValueError if mode='service' without factory_provider."""
