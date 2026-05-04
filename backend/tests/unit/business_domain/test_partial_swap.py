@@ -33,8 +33,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from agent_harness._contracts import ToolCall
 from agent_harness.tools import ToolHandler, ToolRegistryImpl
 from business_domain._service_factory import BusinessServiceFactory
+from business_domain.audit_domain.tools import register_audit_tools
 from business_domain.correlation.tools import register_correlation_tools
+from business_domain.incident.service import IncidentService
 from business_domain.patrol.tools import register_patrol_tools
+from business_domain.rootcause.tools import register_rootcause_tools
 from tests.conftest import seed_tenant
 
 # ===== patrol mode swap (Day 1.1) ======================================
@@ -161,3 +164,203 @@ async def test_register_correlation_tools_mode_service_get_related_invokes_servi
     )
     parsed_analyze = json.loads(raw_analyze) if isinstance(raw_analyze, str) else raw_analyze
     assert parsed_analyze == {"status": "service_path_pending", "method": "analyze"}
+
+
+# ===== rootcause mode swap (Day 2.1) ===================================
+
+
+def test_register_rootcause_tools_mode_mock_uses_executor() -> None:
+    """mode='mock' wires mock_rootcause_* handlers."""
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    register_rootcause_tools(registry, handlers, mode="mock")
+
+    assert "mock_rootcause_diagnose" in handlers
+    assert "mock_rootcause_suggest_fix" in handlers
+    assert "mock_rootcause_apply_fix" in handlers
+
+
+def test_register_rootcause_tools_mode_service_requires_factory_provider() -> None:
+    """mode='service' without factory_provider → ValueError."""
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    with pytest.raises(ValueError, match="requires factory_provider"):
+        register_rootcause_tools(registry, handlers, mode="service")
+
+
+@pytest.mark.asyncio
+async def test_register_rootcause_tools_mode_service_diagnose_invokes_service(
+    db_session: AsyncSession,
+) -> None:
+    """mode='service' diagnose invokes RootCauseService.diagnose (real DB read)
+    + apply_fix returns approval_pending sentinel + suggest_fix sentinel."""
+    t = await seed_tenant(db_session, code="PSWAP_R1")
+    factory = BusinessServiceFactory(db=db_session, tenant_id=t.id)
+
+    # Seed an incident via IncidentService so diagnose has a row to read.
+    # IncidentService.create flushes within session — no commit needed
+    # (commit would break test rollback isolation per pytest-asyncio fixture).
+    inc_svc = IncidentService(db=db_session, tenant_id=t.id)
+    inc = await inc_svc.create(title="RC test incident", severity="high", alert_ids=[])
+    await db_session.flush()
+
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    register_rootcause_tools(
+        registry,
+        handlers,
+        mode="service",
+        factory_provider=lambda: factory,
+    )
+
+    # diagnose: real DB-backed
+    h_diagnose = handlers["mock_rootcause_diagnose"]
+    call = ToolCall(
+        id="tc-rc-1",
+        name="mock_rootcause_diagnose",
+        arguments={"incident_id": str(inc.id)},
+    )
+    raw = await h_diagnose(call)
+    parsed = json.loads(raw) if isinstance(raw, str) else raw
+    assert parsed["incident_id"] == str(inc.id)
+    assert parsed["tenant_id"] == str(t.id)
+    assert parsed["status"] == "open"
+    assert "candidate_root_causes" in parsed
+
+    # apply_fix: approval_pending sentinel (HITL ALWAYS_ASK alignment)
+    h_apply = handlers["mock_rootcause_apply_fix"]
+    raw_apply = await h_apply(
+        ToolCall(
+            id="tc-rc-2",
+            name="mock_rootcause_apply_fix",
+            arguments={"fix_id": "fx-1", "dry_run": False},
+        )
+    )
+    parsed_apply = json.loads(raw_apply) if isinstance(raw_apply, str) else raw_apply
+    assert parsed_apply["status"] == "approval_pending"
+    assert parsed_apply["fix_id"] == "fx-1"
+    assert parsed_apply["dry_run"] is False
+
+    # suggest_fix: service_path_pending sentinel
+    h_suggest = handlers["mock_rootcause_suggest_fix"]
+    raw_suggest = await h_suggest(
+        ToolCall(
+            id="tc-rc-3",
+            name="mock_rootcause_suggest_fix",
+            arguments={"incident_id": str(inc.id)},
+        )
+    )
+    parsed_suggest = json.loads(raw_suggest) if isinstance(raw_suggest, str) else raw_suggest
+    assert parsed_suggest == {"status": "service_path_pending", "method": "suggest_fix"}
+
+
+# ===== audit_domain mode swap (Day 2.2) ================================
+
+
+def test_register_audit_tools_mode_mock_uses_executor() -> None:
+    """mode='mock' wires mock_audit_* handlers."""
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    register_audit_tools(registry, handlers, mode="mock")
+
+    assert "mock_audit_query_logs" in handlers
+    assert "mock_audit_generate_report" in handlers
+    assert "mock_audit_flag_anomaly" in handlers
+
+
+def test_register_audit_tools_mode_service_requires_factory_provider() -> None:
+    """mode='service' without factory_provider → ValueError."""
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    with pytest.raises(ValueError, match="requires factory_provider"):
+        register_audit_tools(registry, handlers, mode="service")
+
+
+@pytest.mark.asyncio
+async def test_register_audit_tools_mode_service_query_logs_invokes_service(
+    db_session: AsyncSession,
+) -> None:
+    """mode='service' query_logs invokes AuditService.query_logs (real DB read,
+    empty result OK) + sentinel handlers + ISO→ms conversion in handler (D7)."""
+    t = await seed_tenant(db_session, code="PSWAP_A1")
+    factory = BusinessServiceFactory(db=db_session, tenant_id=t.id)
+
+    registry = ToolRegistryImpl()
+    handlers: dict[str, ToolHandler] = {}
+    register_audit_tools(
+        registry,
+        handlers,
+        mode="service",
+        factory_provider=lambda: factory,
+    )
+
+    # query_logs: real DB-backed; empty result list is acceptable
+    h_query = handlers["mock_audit_query_logs"]
+    raw = await h_query(
+        ToolCall(
+            id="tc-au-1",
+            name="mock_audit_query_logs",
+            arguments={
+                "time_range_start": "2026-01-01T00:00:00Z",
+                "time_range_end": "2026-12-31T23:59:59Z",
+                "limit": 10,
+            },
+        )
+    )
+    parsed = json.loads(raw) if isinstance(raw, str) else raw
+    assert isinstance(parsed, list)  # may be empty (no audit logs in test tenant)
+
+    # Sentinel handlers: generate_report + flag_anomaly
+    h_report = handlers["mock_audit_generate_report"]
+    raw_report = await h_report(
+        ToolCall(
+            id="tc-au-2",
+            name="mock_audit_generate_report",
+            arguments={"template": "compliance_quarterly"},
+        )
+    )
+    parsed_report = json.loads(raw_report) if isinstance(raw_report, str) else raw_report
+    assert parsed_report == {"status": "service_path_pending", "method": "generate_report"}
+
+    h_flag = handlers["mock_audit_flag_anomaly"]
+    raw_flag = await h_flag(
+        ToolCall(
+            id="tc-au-3",
+            name="mock_audit_flag_anomaly",
+            arguments={"record_id": "audit-1", "reason": "test"},
+        )
+    )
+    parsed_flag = json.loads(raw_flag) if isinstance(raw_flag, str) else raw_flag
+    assert parsed_flag == {"status": "service_path_pending", "method": "flag_anomaly"}
+
+
+# ===== AD-BusinessDomainPartialSwap-1 closure smoke test ==============
+
+
+def test_all_5_register_tools_accept_mode_kwarg() -> None:
+    """AD-BusinessDomainPartialSwap-1 closure: all 5 register_*_tools functions
+    accept mode kwarg + raise ValueError if mode='service' without factory_provider."""
+    from business_domain.incident.tools import register_incident_tools
+
+    register_funcs = [
+        ("incident", register_incident_tools),
+        ("patrol", register_patrol_tools),
+        ("correlation", register_correlation_tools),
+        ("rootcause", register_rootcause_tools),
+        ("audit", register_audit_tools),
+    ]
+    for name, fn in register_funcs:
+        registry = ToolRegistryImpl()
+        handlers: dict[str, ToolHandler] = {}
+        # mode='mock' baseline
+        fn(registry, handlers, mode="mock")
+        # mode='service' without factory_provider → ValueError
+        registry2 = ToolRegistryImpl()
+        handlers2: dict[str, ToolHandler] = {}
+        with pytest.raises(ValueError, match="requires factory_provider"):
+            fn(registry2, handlers2, mode="service")
+        # mode='unknown' → ValueError
+        registry3 = ToolRegistryImpl()
+        handlers3: dict[str, ToolHandler] = {}
+        with pytest.raises(ValueError, match="invalid mode"):
+            fn(registry3, handlers3, mode="unknown")

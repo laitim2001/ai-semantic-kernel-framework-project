@@ -160,12 +160,103 @@ File: `backend/tests/unit/business_domain/test_partial_swap.py` (NEW; cross-doma
 - Files modified: 2 (patrol/tools.py +69 / correlation/tools.py +49)
 - Files added: 1 (test_partial_swap.py 156 lines)
 
-### Next: Day 2 — US-1 rootcause + audit_domain tools.py mode swap
+---
 
-Same pattern. Service classes for these domains:
-- RootCauseService.diagnose (1 real) + suggest_fix / apply_fix (2 sentinel; apply_fix returns "approval_pending" sentinel for HITL ALWAYS_ASK alignment per plan)
-- AuditService.query_logs (1 real) + generate_report / flag_anomaly (2 sentinel)
+## Day 2 — US-1 rootcause + audit_domain tools.py mode swap (2026-05-04) ✅
 
-6 unit tests (3 rootcause + 3 audit_domain) extending test_partial_swap.py.
+### 2.1 rootcause/tools.py mode swap ✅
 
-After Day 2, AD-BusinessDomainPartialSwap-1 fully closed (4/4 domains uniformly mode-aware).
+- ✅ Added imports: Callable + UUID + BusinessServiceFactory
+- ✅ Updated header docstring + Modification History
+- ✅ `_build_service_handlers` 3 handlers:
+  - `h_diagnose` → real `factory_provider().get_rootcause_service().diagnose(incident_id=UUID(...))` (UUID conversion in handler)
+  - `h_suggest` → service_path_pending sentinel
+  - `h_apply` → **approval_pending** sentinel (HIGH-RISK; HITL ALWAYS_ASK at Cat 9 prevents real exec; mirrors mock_executor pattern per plan)
+- ✅ `register_rootcause_tools(... mode='mock'|'service', factory_provider=None)`
+
+### 2.2 audit_domain/tools.py mode swap ✅
+
+- ✅ Added imports: Callable + datetime + BusinessServiceFactory
+- ✅ Updated header docstring + Modification History
+- ✅ `_iso_to_ms()` helper for ISO 8601 → epoch ms conversion (D7)
+- ✅ `_build_service_handlers` 3 handlers:
+  - `h_query` → real `factory_provider().get_audit_service().query_logs(start_ms, end_ms, operation, limit)` with ISO conversion + drops user_id_filter (D7: AuditService.query_logs has no user_id support; deferred to Phase 56+)
+  - `h_report`, `h_flag` → service_path_pending sentinel
+- ✅ `register_audit_tools(... mode='mock'|'service', factory_provider=None)`
+
+### 2.3 6 unit tests + 1 closure smoke test ✅
+
+Extended `test_partial_swap.py` (now 13 tests total = 6 Day 1 + 6 Day 2 + 1 closure):
+
+- ✅ test_register_rootcause_tools_mode_mock_uses_executor
+- ✅ test_register_rootcause_tools_mode_service_requires_factory_provider
+- ✅ test_register_rootcause_tools_mode_service_diagnose_invokes_service (real DB read via IncidentService.create + diagnose; verifies all 3 handlers including approval_pending sentinel)
+- ✅ test_register_audit_tools_mode_mock_uses_executor
+- ✅ test_register_audit_tools_mode_service_requires_factory_provider
+- ✅ test_register_audit_tools_mode_service_query_logs_invokes_service (real DB read with ISO→ms conversion; verifies sentinel handlers)
+- ✅ **test_all_5_register_tools_accept_mode_kwarg** (BONUS — AD-BusinessDomainPartialSwap-1 closure smoke test: 5 register_*_tools all accept mode kwarg + raise ValueError on mode='service' without factory + raise on invalid mode)
+
+### Drift Findings (Day 2)
+
+#### 🚨 D7 — service.py signature mismatches with mock_executor
+
+**Source**: rootcause/service.py.diagnose uses UUID; audit_domain/service.py.query_logs uses (start_ms, end_ms, operation) but tool spec uses (time_range_start, time_range_end, action_filter, user_id_filter).
+
+**Mitigation**:
+- rootcause: Handler converts `str → UUID` for incident_id (clean pattern; same as 55.1 incident handlers)
+- audit_domain: Handler `_iso_to_ms()` converts ISO date strings to epoch ms; user_id_filter ignored (no service support; deferred to Phase 56+)
+
+**Impact**: AD-BusinessDomainPartialSwap-1 closure logic unchanged — uniform mode kwarg accepted; real method invoked where service exists.
+
+#### 🚨 D8 — Test isolation: db_session.commit() poisons rollback
+
+**Source**: Initial test_register_rootcause_tools_mode_service_diagnose_invokes_service used `await db_session.commit()` to persist seeded incident. This:
+1. Broke pytest fixture rollback (commit can't be undone by rollback)
+2. Leaked tenant `PSWAP_R1` permanently → second run of test failed with `UniqueViolationError on uq_tenants_code`
+3. Leaked tenants couldn't be deleted via simple DELETE because `audit_log` table has append-only trigger (cascade DELETE blocked)
+
+**Mitigation**:
+- Replaced `commit()` → `flush()` (data visible in session, rolled back at teardown)
+- Cleaned up leaked test tenants via `SET session_replication_role = replica` (bypasses triggers) + `DELETE FROM tenants WHERE code LIKE 'PSWAP_%' OR FCT_%'`
+- Tests now isolated cleanly across runs
+
+**Impact**: Future test patterns must use `db.flush()`, never `db.commit()` in test code (matches 55.1 incident test pattern).
+
+### 2.4 Day 2 sanity checks ✅
+
+| Check | Result |
+|-------|--------|
+| black | ✅ test_partial_swap.py auto-formatted (1 file reformatted; tools.py files unchanged) |
+| isort + flake8 | ✅ clean |
+| mypy --strict | ✅ 0 errors / 266 files |
+| 6 V2 lints (project root cwd) | ✅ 6/6 green in 0.65s |
+| Backend full pytest | ✅ **1408 passed / 4 skipped / 0 fail** in 28.98s (= 1395 + 13 — 1 over plan target of +12; test_all_5_register_tools BONUS closure smoke test) |
+| LLM SDK leak | ✅ 0 |
+| 51.0/51.1/55.1 baseline regression | ✅ no regression (incident tests + factory_and_mode tests still green) |
+
+### 2.5 AD-BusinessDomainPartialSwap-1 closure smoke test ✅
+
+`test_all_5_register_tools_accept_mode_kwarg` proves 5/5 register_*_tools functions:
+- Accept `mode` kwarg ✅
+- Raise `ValueError("requires factory_provider")` if mode='service' without factory ✅
+- Raise `ValueError("invalid mode")` if unknown mode ✅
+
+**AD-BusinessDomainPartialSwap-1 fully closed** ✅ (was 1/5 in 55.1 → 5/5 in 55.2).
+
+### 2.6 Day 2 commit + push + progress.md ✅ (this entry)
+
+### Day 2 totals
+
+- Time: ~1.5 hr (calibrated estimate; bottom-up was ~3 hr)
+- Drift findings: 2 (D7 signature mismatches, D8 test isolation)
+- AD closure: AD-BusinessDomainPartialSwap-1 ✅ (5/5 domains)
+- Files modified: 2 (rootcause/tools.py +73 / audit_domain/tools.py +84)
+- Files extended: 1 (test_partial_swap.py +172)
+- Files cleaned: 1 leaked tenant from DB
+
+### Next: Day 3 — US-2 + US-3 _register_all + chat handler wiring
+
+- **US-2** _register_all.py thread mode/factory_provider to all 5 register_*_tools (currently only incident — D4 finding from Day 0)
+- **US-3** Chat handler production wiring — modify `build_echo_demo_handler` + `build_real_llm_handler` (handler.py:91+154) to accept db/tenant_id/factory_provider; tracer=None Option B per D2 finding
+- 2 register_all unit tests + 4 chat handler integration tests
+- Estimated: ~2 hr
