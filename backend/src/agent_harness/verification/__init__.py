@@ -1,5 +1,27 @@
-"""Category 10: Verification Loops. See README.md."""
+"""Category 10: Verification Loops.
+
+See README.md for design notes.
+
+Sprint 54.1 (US-1) ships RulesBasedVerifier + VerifierRegistry foundation.
+LLMJudgeVerifier ships in US-2; AgentLoop self-correction integration in US-3.
+"""
 
 from agent_harness.verification._abc import Verifier
+from agent_harness.verification.registry import VerifierRegistry
+from agent_harness.verification.rules_based import RulesBasedVerifier
+from agent_harness.verification.types import (
+    FormatRule,
+    RegexRule,
+    Rule,
+    SchemaRule,
+)
 
-__all__ = ["Verifier"]
+__all__ = [
+    "FormatRule",
+    "RegexRule",
+    "Rule",
+    "RulesBasedVerifier",
+    "SchemaRule",
+    "Verifier",
+    "VerifierRegistry",
+]

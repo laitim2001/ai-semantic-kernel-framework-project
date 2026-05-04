@@ -63,7 +63,7 @@
 ## Day 1 — US-1 RulesBasedVerifier + VerifierRegistry Foundation
 
 ### 1.1 New `agent_harness/verification/types.py` — Rule ABC + 3 concrete types
-- [ ] **Define Rule ABC + RegexRule + SchemaRule + FormatRule**
+- [x] **Define Rule ABC + RegexRule + SchemaRule + FormatRule** ✅
   - `Rule(ABC).check(output: str) -> tuple[bool, str | None, str | None]`（returns `(passed, reason, suggested_correction)`）
   - `RegexRule(pattern: str, expected_match: bool = True)` 用 `re.compile`
   - `SchemaRule(schema: dict)` 用 `jsonschema` lib（已在 requirements.txt？若無加入）
@@ -72,7 +72,7 @@
   - DoD: 4 classes defined; mypy --strict 0 errors
 
 ### 1.2 New `agent_harness/verification/rules_based.py`
-- [ ] **Implement RulesBasedVerifier**
+- [x] **Implement RulesBasedVerifier** ✅
   - `__init__(rules: list[Rule], name: str = "rules_based")`
   - `verify()` async 依序跑 rules → 任一失敗即返回 `VerificationResult(passed=False)`
   - 全 pass → 返回 `VerificationResult(passed=True)`
@@ -80,7 +80,7 @@
   - DoD: 對齐 Verifier ABC + plan §Technical Spec skeleton
 
 ### 1.3 New `agent_harness/verification/registry.py`
-- [ ] **Implement VerifierRegistry**
+- [x] **Implement VerifierRegistry** ✅
   - `register(verifier: Verifier) -> None`
   - `get_all() -> list[Verifier]`（returns in insertion order）
   - `clear() -> None`
@@ -89,13 +89,13 @@
   - DoD: API 對齐 plan US-1 acceptance
 
 ### 1.4 Update `agent_harness/verification/__init__.py`
-- [ ] **Re-export new classes**
+- [x] **Re-export new classes** ✅
   - 加 `RulesBasedVerifier` / `VerifierRegistry` / `Rule` / `RegexRule` / `SchemaRule` / `FormatRule`
   - 既有 Verifier export 保留
   - DoD: `from agent_harness.verification import RulesBasedVerifier, VerifierRegistry` works
 
 ### 1.5 New `tests/unit/agent_harness/verification/test_rules_based.py` — 8 cases
-- [ ] **Implement 8 unit tests**
+- [x] **Implement 8 unit tests** ✅ all 8 passed
   - test_regex_rule_match_pass / test_regex_rule_no_match_fail
   - test_schema_rule_valid_json_pass / test_schema_rule_missing_field_fail
   - test_format_rule_callable_pass / test_format_rule_callable_fail
@@ -104,20 +104,21 @@
   - Verify: `pytest tests/unit/agent_harness/verification/test_rules_based.py -v` → 8 passed
 
 ### 1.6 New `tests/unit/agent_harness/verification/test_registry.py` — 3 cases
-- [ ] **Implement 3 unit tests**
+- [x] **Implement 3 unit tests** ✅ all 3 passed
   - test_register_verifier / test_get_all_returns_in_order / test_clear
   - Verify: `pytest tests/unit/agent_harness/verification/test_registry.py -v` → 3 passed
 
-### 1.7 Day 1 sanity checks
-- [ ] **mypy --strict on touched files** → 0 errors
-- [ ] **black + isort + flake8 on touched files** → clean
-- [ ] **6 V2 lints via run_all.py** → 6/6 green
-- [ ] **Backend full pytest** → ~1269 passed (1258 baseline + 11 new) / 0 fail
+### 1.7 Day 1 sanity checks ✅
+- [x] **mypy --strict on touched files** ✅ Success: no issues found in 8 source files (after D4 fix: jsonschema use existing pattern from tools/; dict[str, Any] for SchemaRule.schema)
+- [x] **black + isort + flake8 on touched files** ✅ clean (after D6 fix: 2 Purpose line shortening to fit 100-col + black auto-format on test_registry.py)
+- [x] **6 V2 lints via run_all.py** ✅ 6/6 green in 0.62s
+- [x] **Backend full pytest** ✅ **1269 passed / 4 skipped / 0 fail** (= 1258 baseline + 11 new; matches expected)
+- [x] **LLM SDK leak check** ✅ 0 in verification/
 
 ### 1.8 Day 1 commit + push + progress.md
-- [ ] **Stage + commit + push**
+- [ ] **Stage + commit + push** (next; in progress)
   - Commit message: `feat(verification, sprint-54-1): US-1 RulesBasedVerifier + VerifierRegistry + 11 unit tests`
-- [ ] **Update progress.md with Day 1 actuals** — batched into commit (53.7 pattern)
+- [x] **Update progress.md with Day 1 actuals** ✅ Day 1 section appended with sanity results + drift fixes D4/D5/D6 + V2 9-discipline check
 
 ---
 
