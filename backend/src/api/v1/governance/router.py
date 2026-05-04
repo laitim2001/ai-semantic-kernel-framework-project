@@ -51,8 +51,10 @@ from agent_harness._contracts.hitl import (
     ApprovalRequest,
     DecisionType,
 )
-from infrastructure.db import get_session_factory
-from platform_layer.governance.hitl.manager import DefaultHITLManager
+from platform_layer.governance.service_factory import (
+    ServiceFactory,
+    get_service_factory,
+)
 from platform_layer.identity.auth import (
     get_current_tenant,
     require_approver_role,
@@ -115,16 +117,6 @@ class DecisionResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _build_manager() -> DefaultHITLManager:
-    """Construct a fresh DefaultHITLManager per request.
-
-    Notifier is None — the API layer doesn't fire notifications; the orchestrator
-    (which calls request_approval) is the notifier site.
-    """
-    factory = get_session_factory()
-    return DefaultHITLManager(session_factory=factory, notifier=None)
-
-
 def _decision_to_enum(label: str) -> DecisionType:
     return DecisionType[label.upper()]
 
@@ -138,13 +130,17 @@ def _decision_to_enum(label: str) -> DecisionType:
 async def list_pending_approvals(
     current_tenant: UUID = Depends(get_current_tenant),
     _user_id: UUID = Depends(require_approver_role),
+    factory: ServiceFactory = Depends(get_service_factory),
 ) -> PendingListResponse:
     """List pending approval requests for the JWT tenant.
 
     Cross-tenant rows are filtered at the HITLManager layer (sessions JOIN
     enforces tenant isolation).
+
+    Sprint 53.6 US-5: HITLManager resolved through ServiceFactory (single-source
+    construction; closes AD-Hitl-4-followup).
     """
-    manager = _build_manager()
+    manager = factory.get_hitl_manager()
     pending = await manager.get_pending(current_tenant)
     items = [ApprovalSummaryDTO.from_request(r) for r in pending]
     return PendingListResponse(items=items, count=len(items))
@@ -159,14 +155,17 @@ async def decide_approval(
     body: DecisionRequestBody,
     current_tenant: UUID = Depends(get_current_tenant),
     user_id: UUID = Depends(require_approver_role),
+    factory: ServiceFactory = Depends(get_service_factory),
 ) -> DecisionResponse:
     """Apply a reviewer decision; cross-tenant attempts return 404.
 
     Validates the approval belongs to the current tenant by fetching pending
     list first. (DefaultHITLManager.decide doesn't verify tenant, so we
     enforce it here at the HTTP boundary.)
+
+    Sprint 53.6 US-5: HITLManager resolved through ServiceFactory.
     """
-    manager = _build_manager()
+    manager = factory.get_hitl_manager()
 
     # Tenant validation: only let reviewer decide on requests they can see.
     # get_pending() returns only this tenant's pending rows; if request_id

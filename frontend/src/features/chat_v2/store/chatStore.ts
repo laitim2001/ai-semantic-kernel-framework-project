@@ -245,6 +245,12 @@ export const useChatStore = create<ChatStoreState>((set) => ({
           };
         }
 
+        // Sprint 53.6 D2: GuardrailTriggered routes to rawEvents only.
+        // No UI surface in 53.6 — future sprint may render warning banner.
+        case "guardrail_triggered": {
+          return { ...s, rawEvents };
+        }
+
         default: {
           // Unreachable: parser filters unknown event types upstream.
           // Defensive return to keep TypeScript exhaustive-check happy.

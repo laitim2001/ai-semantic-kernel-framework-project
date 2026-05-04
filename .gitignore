@@ -125,6 +125,11 @@ data/temp/*
 # Playwright MCP artifacts
 .playwright-mcp/
 
+# Playwright e2e artifacts (Sprint 53.6 US-1)
+frontend/playwright-report/
+frontend/test-results/
+frontend/playwright/.cache/
+
 # Test artifacts and results
 phase_tests_results_*.json
 **/test_results.json

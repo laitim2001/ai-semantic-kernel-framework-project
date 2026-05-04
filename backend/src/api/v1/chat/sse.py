@@ -37,6 +37,11 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.3)
 Last Modified: 2026-04-30
 
 Modification History (newest-first):
+    - 2026-05-04: Add GuardrailTriggered serializer (Sprint 53.6 D2 — Day 0 探勘)
+        — yielded 7× from loop.py (Cat 9 Stage 1/2/3) but missing isinstance
+        branch since 53.3 introduced the event. Pre-existing gap that escaped
+        53.4 + 53.5 because chat router never wired guardrails. Adding now
+        before US-4 production HITL wiring + US-2/US-3 Playwright e2e specs.
     - 2026-05-04: Add HITL approval events (Sprint 53.5 US-2) — ApprovalRequested
         → "approval_requested"; ApprovalReceived → "approval_received". Loop
         emits these when Cat 9 ESCALATE → HITLManager.request_approval +
@@ -63,6 +68,7 @@ from typing import Any
 from agent_harness._contracts import (
     ApprovalReceived,
     ApprovalRequested,
+    GuardrailTriggered,
     LLMRequested,
     LLMResponded,
     LoopCompleted,
@@ -214,6 +220,22 @@ def _serialize_inner(event: LoopEvent) -> dict[str, Any] | None:
                     str(event.approval_request_id) if event.approval_request_id else None
                 ),
                 "decision": event.decision,
+            },
+        }
+
+    # Sprint 53.6 D2: GuardrailTriggered serializer.
+    # Yielded 7× from agent_harness/orchestrator_loop/loop.py covering Cat 9
+    # Stage 1 (input) / Stage 2 (output) / Stage 3 (tool escalate/reject/timeout
+    # block paths). Pre-existing gap from Sprint 53.3 — chat router never wired
+    # guardrails before Sprint 53.6 US-4 production HITL wiring would have
+    # crashed any chat session that triggered Cat 9 detection.
+    if isinstance(event, GuardrailTriggered):
+        return {
+            "type": "guardrail_triggered",
+            "data": {
+                "guardrail_type": event.guardrail_type,
+                "action": event.action,
+                "reason": event.reason,
             },
         }
 
