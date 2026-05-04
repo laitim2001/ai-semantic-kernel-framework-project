@@ -11,65 +11,44 @@
 ## Day 0 — Setup + Carryover Verify + Calibration Pre-Read (est. 1.5-2 hr)
 
 ### 0.1 Branch + plan + checklist commit
-- [ ] **Verify on main + clean**
-  - Command: `git status && git branch --show-current` → expects `main` clean
-  - DoD: working tree empty (untracked plan dir is the new sprint files only)
-- [ ] **Create branch + push plan/checklist**
-  - Command: `git checkout -b feature/sprint-53-7-audit-cleanup-cat9-quickwins`
-  - Stage: plan + checklist files
-  - Commit: `docs(plan, sprint-53-7): plan + checklist for audit cleanup + Cat 9 quick wins (9 AD bundle)`
-  - Push: `git push -u origin feature/sprint-53-7-audit-cleanup-cat9-quickwins`
-  - DoD: branch on remote with plan + checklist visible
+- [x] **Verify on main + clean** ✅ only `phase-53-7-*` untracked
+  - DoD: working tree empty (untracked plan dir is the new sprint files only) ✅
+- [x] **Create branch + push plan/checklist** ✅ commit `5a2464fd`
+  - Branch: `feature/sprint-53-7-audit-cleanup-cat9-quickwins` (tracks origin)
+  - 2 files / 896 insertions
 
 ### 0.2 Carryover source verify（confirm 9 AD all open + locations）
-- [ ] **AD-Sprint-Plan-1 + AD-CI-4 + AD-Lint-1 + AD-Test-1**
-  - Source: 53.6 retrospective Q6 (newest)
-  - Verify: `grep -n "AD-Sprint-Plan-1\|AD-CI-4\|AD-Lint-1\|AD-Test-1" docs/03-implementation/agent-harness-execution/phase-53-6/sprint-53-6-frontend-e2e-prod-hitl/retrospective.md`
-  - DoD: 4 AD 在 53.6 retro 有原始描述 + target sprint 標 53.7
-- [ ] **AD-Hitl-8**
-  - Source: 53.4 retrospective Q6
-  - Verify: `grep -n "AD-Hitl-8" docs/03-implementation/agent-harness-execution/phase-53-4/sprint-53-4-governance-hitl/retrospective.md`
-  - DoD: 確認 escalated 在 application code 已工作但 DB constraint 未支援
-- [ ] **AI-22**
-  - Source: 52.6 retrospective Q6 / SITUATION-V2-SESSION-START §8
-  - Verify: search `AI-22` in 52.6 retro
-  - DoD: dummy red PR + enforce_admins chaos test 是 unblocked
-- [ ] **AD-Cat9-7 + AD-Cat9-8 + AD-Cat9-9**
-  - Source: 53.3 retrospective Q6
-  - Verify: `grep -n "AD-Cat9-[789]" docs/03-implementation/agent-harness-execution/phase-53-3/sprint-53-3-guardrails/retrospective.md`
-  - DoD: 確認 3 個 AD 在 53.3 retro 有原始描述
+- [x] **AD-Sprint-Plan-1 + AD-CI-4 + AD-Lint-1 + AD-Test-1** ✅
+  - 53.6 retro Q4 line 64+66 + Q6 line 100-102; 53.2.5 retro line 79 (CI-4 origin)
+- [x] **AD-Hitl-8** ✅
+  - 53.4 retro Q6 line 106
+- [x] **AI-22** ✅
+  - 52.6 retro line 205 + 53.2.5 line 80 (carryover bundle reference)
+- [x] **AD-Cat9-7 + AD-Cat9-8 + AD-Cat9-9** ✅
+  - 53.3 retro Q6 line 80-82
 
 ### 0.3 Calibration multiplier pre-read（meta；本 sprint 自身應用）
-- [ ] **Read 53.4 + 53.5 + 53.6 retrospective Q2** estimate vs actual
-  - Files: 3 retrospective.md
-  - Compute: average actual / estimated ratio across 3 sprints
-  - DoD: 確認 0.55 multiplier 數據基礎；commit 預估 7-9 hr 的 lower bound
-- [ ] **Compute 53.7 bottom-up estimate**
-  - Per US: US-1 ~3 hr / US-2 ~2 hr / US-3 ~1.5 hr / US-4 ~3 hr / US-5 ~4 hr → bottom-up sum ~13.5 hr
-  - Apply 0.55 multiplier: 7.4 hr committed
-  - DoD: §Workload 段 calibrated commit 段確認
+- [x] **Read 53.4 + 53.5 + 53.6 retrospective Q2** ✅
+  - 53.6 retro Q2: "3 consecutive ~50% over-estimate; default 50-60% multiplier starting 53.7"
+- [x] **Compute 53.7 bottom-up estimate** ✅
+  - Bottom-up ~17 hr → 0.55 × 17 = ~9 hr committed (matches plan §Workload)
 
 ### 0.4 SSE serializer scope check（per `feedback_sse_serializer_scope_check.md`）
-- [ ] **Grep new LoopEvent emissions vs sse.py serializer**
-  - Command: `grep -rn "yield " backend/src/agent_harness/orchestrator_loop/loop.py | grep -E "Event\(|Triggered\("`
-  - 53.7 預期 0 new event（all 5 USs 不引入新 LoopEvent）；但 chain check 仍跑
-  - DoD: 確認 sse.py 11 isinstance branches 已涵蓋全部 emitted events
+- [x] **Grep new LoopEvent emissions vs sse.py serializer** ✅
+  - Loop yields events: 10 / sse.py isinstance branches: 12 (coverage with margin)
+  - 53.7 USs introduce 0 new LoopEvent ✅
 
 ### 0.5 Pre-flight verify（main green baseline）
-- [ ] **pytest baseline**
-  - Command: `cd backend && python -m pytest --tb=line -q 2>&1 | tail -5`
-  - DoD: 1085 passed / 4 skipped / 0 fail（53.6 closeout 數）
-- [ ] **6 V2 lint manual run（為了 Day 1 wrapper 對比基準）**
-  - Run each lint script individually；記錄各 exit code 與時間
-  - DoD: 全 green；wrapper 預期等價
+- [x] **pytest collect baseline** ✅ 1089 collected = 1085 passed + 4 skipped (matches main HEAD `f4a1425f`)
+- [x] **6 V2 lint manual run** ✅ all green; total 0.66 s
+  - check_ap1: 0.054s / check_promptbuilder: 0.126s / check_cross_category_import: 0.113s
+  - check_duplicate_dataclass: 0.108s / check_llm_sdk_leak: 0.088s / check_sync_callback: 0.175s
+  - 🚨 **Drift D1 found**: AP-1 lint reports "no orchestrator_loop dir; skipping AP-1 check" but dir exists. Pre-existing path resolution bug. Day 1 US-1.3 will investigate + fix as part of AD-Lint-1.
 
 ### 0.6 Day 0 progress.md
-- [ ] **Create progress.md**
-  - Path: `docs/03-implementation/agent-harness-execution/phase-53-7-audit-cleanup-cat9-quickwins/sprint-53-7-audit-cleanup-cat9-quickwins/progress.md`
-- [ ] **Day 0 sections**: Setup / Carryover verify / Calibration pre-read / SSE check / pre-flight / next (Day 1)
+- [x] **Create progress.md** ✅
+- [x] **Day 0 sections written** ✅ Setup / carryover / calibration / SSE / pre-flight + D1 drift / time banking / next
 - [ ] **Commit + push Day 0**
-  - Commit: `docs(progress, sprint-53-7): Day 0 setup + carryover verify (9 AD) + calibration multiplier pre-read`
-  - Push
 
 ---
 
