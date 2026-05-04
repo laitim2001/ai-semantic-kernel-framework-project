@@ -4,6 +4,12 @@
 #   - backend/** changes (any backend code/tests/configs)
 #   - .github/workflows/** changes (any workflow file edit re-validates)
 #
+# Sprint 55.1 closeout sync (2026-05-04): SITUATION-V2-SESSION-START.md +
+# CLAUDE.md updated to reflect V2 21/22 (95%) — Business domain production
+# service layer (Incident production CRUD + 4 read-only services +
+# BUSINESS_DOMAIN_MODE flag + BusinessServiceFactory). Header touch here
+# triggers backend-ci required check for docs-only closeout PR.
+#
 # Sprint 53.2.5 closeout sync (2026-05-03): SITUATION-V2-SESSION-START.md +
 # CLAUDE.md updated to reflect V2 14/22 progress + Solo-dev policy + Paths
 # filter workaround. Header touch here applies the workaround itself.
