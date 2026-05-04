@@ -207,7 +207,77 @@ None. Plan-vs-repo state aligned (D2 from Day 0 already confirmed L129 TODO mark
 
 ✅ COMPLETE — AD-Cat9-5 closed (Stage 2.3 session counter wired; TODO grep 0; 4 new tests).
 
-**Day 2 commit**: pending (this commit)
+**Day 2 commit**: `c8736979` (pushed in branch push at end of Day 2)
 **Pytest delta**: +4 (1437 → 1441)
 **Cumulative pytest**: 1434 → 1441 (+7 over 2 days)
 **Next**: Day 3 morning AD-Cat9-6 WORM real-DB integration tests
+
+---
+
+## Day 3 — 2026-05-05 (~1.5 hr)
+
+### Reading + design (~30 min)
+
+- Read `worm_log.py` (188 lines):`WORMAuditLog.append()` SELECT+INSERT+commit pattern; `compute_entry_hash` pure function; `AuditAppendError` raised on DB failure
+- Read `chain_verifier.py`:`verify_chain(session_factory, tenant_id, *, page_size)` returns `ChainVerificationResult(valid, broken_at_id, total_entries)`
+- Read Migration `0005_audit_log_append_only.py`:two triggers — ROW BEFORE UPDATE OR DELETE + STATEMENT BEFORE TRUNCATE — both fire `RAISE EXCEPTION 'audit_log is append-only'`
+- Read `tests/conftest.py`:`db_session` fixture rolls back at teardown + `seed_tenant` helper (uses `flush()`, no commit)
+
+### Fixture design
+
+Per checklist Day 3 hint「Use db_session fixture + monkey-patch commit→flush per testing.md」:
+
+```python
+@pytest_asyncio.fixture
+async def patched_session(db_session, monkeypatch):
+    monkeypatch.setattr(db_session, "commit", flush_only)
+    monkeypatch.setattr(db_session, "close", no_close)
+    yield db_session
+```
+
+Why:WORM's `append()` calls `await session.commit()` + `await session.close()`。If we don't patch:
+- `commit` would persist rows that the trigger forbids us from cleaning up
+- `close` would close the test fixture's session prematurely → next test fails
+
+### Code (~30 min)
+
+**New file**: `backend/tests/integration/agent_harness/guardrails/test_worm_log_db_integration.py` — **5 tests**:
+
+| # | Test | Verifies |
+|---|------|----------|
+| 1 | test_hash_chain_links_across_appends | 3 sequential appends; row1.prev=GENESIS;row2.prev=row1.curr;row3.prev=row2.curr;all distinct hashes |
+| 2 | test_update_attempt_blocked_by_trigger | Raw SQL UPDATE → `DBAPIError` containing `append-only` |
+| 3 | test_delete_attempt_blocked_by_trigger | Raw SQL DELETE wrapped in `begin_nested()` (SAVEPOINT) → `DBAPIError`; row still exists post-fail |
+| 4 | test_verify_chain_on_100_rows_returns_valid | 100 appends + `verify_chain` page_size=25 → `valid=True / broken_at_id=None / total_entries=100` |
+| 5 | test_two_sequential_appends_chain_extends | "concurrent" rephrased to sequential (per AD-Plan-1 audit-trail rule);chain extension correctness covered |
+
+### Drift findings (Day 3)
+
+- **D9** Test 3 first run failed:after PostgreSQL trigger raises in DELETE,transaction is poisoned → subsequent `SELECT` to verify "row still exists" failed with `InFailedSQLTransactionError`. Fix:wrap trigger-firing DELETE in `async with patched_session.begin_nested():` SAVEPOINT,which scopes the failure and lets parent transaction continue.
+- **D10** "Concurrent inserts" Test 5 (per checklist Day 3 task):true concurrency requires separate sessions which require per-test cleanup — but Migration 0005 trigger forbids cleanup. Rephrased to sequential 2-append chain extension test (preserves the original assertion intent:both appends succeed + chain extends correctly). Per AD-Plan-1 noted in test docstring + here, not silently shifted.
+
+### Verification (~30 min)
+
+| Check | Result |
+|-------|--------|
+| pytest test_worm_log_db_integration.py | **5/5 PASS** in 0.52s |
+| pytest full agent_harness regression | **950 passed, 1 skipped, 0 failed** in 15.70s |
+| black --check (after auto-fix) | clean |
+| isort --check (after auto-fix) | clean |
+| flake8 | clean |
+| mypy --strict (production scope: `src/`) | 0 errors |
+| 7 V2 lints | **7/7 green** in 0.78s |
+
+### Estimate vs actual
+
+- Estimated: ~1.5-2 hr (per revised checklist Day 3)
+- Actual: ~1.5 hr (30 min reading + 30 min code + 30 min verify/fix)
+
+### Day 3 status
+
+✅ COMPLETE — AD-Cat9-6 closed (5 real-DB integration tests; Migration 0005 triggers verified; `verify_chain` 100-row sanity passed).
+
+**Day 3 commit**: pending (this commit)
+**Pytest delta**: +5 (1441 → 1446)
+**Cumulative pytest**: 1434 → 1446 (+12 over 3 days, target was ≥+11)
+**Next**: Day 4 retrospective + closeout (target ~1 hr)

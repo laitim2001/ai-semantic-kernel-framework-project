@@ -89,23 +89,22 @@
 
 ### AD-Cat9-6 — WORMAuditLog Real-DB Integration Tests
 
-- [ ] **Read `worm_log.py`** + existing `test_worm_log.py` (195 lines unit)
-- [ ] **Write `tests/integration/agent_harness/guardrails/test_worm_log_db_integration.py`** (new)
-  - Test 1: Insert sequence → hash chain links correctly
-  - Test 2: UPDATE attempt → DB trigger blocks (per 0005 migration)
-  - Test 3: DELETE attempt → DB trigger blocks
-  - Test 4: verify_chain on 100+ rows → no break
-  - Test 5: Two concurrent inserts → both succeed, chain extends
-  - Optional Test 6: pagination 1000+ rows
-- [ ] **Use db_session fixture** + monkey-patch commit→flush per testing.md
-- [ ] **Run tests**: `pytest tests/integration/agent_harness/guardrails/test_worm_log_db_integration.py`
+- [x] **Read `worm_log.py`** (188 lines) + `chain_verifier.py` + Migration 0005
+- [x] **Write `test_worm_log_db_integration.py`** (5 tests) ✓
+  - Test 1: Hash chain links across 3 appends ✓
+  - Test 2: UPDATE attempt → trigger blocks (DBAPIError) ✓
+  - Test 3: DELETE attempt → trigger blocks (with SAVEPOINT for post-fail SELECT) ✓
+  - Test 4: verify_chain on 100 rows → valid=True ✓
+  - Test 5: Two sequential appends → chain extends (concurrent rephrased per D10) ✓
+- [x] **Use db_session fixture + monkey-patch commit→flush + close→no-op** ✓
+- [x] **Run tests**: 5/5 PASS in 0.52s;950 passed full regression
 - [ ] **Commit AD-Cat9-6**
   - Commit: `test(guardrails, sprint-55-4): close AD-Cat9-6 (WORM real-DB integration)`
 
 ### Day 3 Wrap
 
-- [ ] **Update progress.md Day 3 entry** — 2 commits + storage decision + drift findings
-- [ ] **Lint chain**: 7 V2 lints + mypy strict + flake8 all green
+- [x] **Update progress.md Day 3 entry** — 1 commit + drift findings D9/D10
+- [x] **Lint chain**: 7 V2 lints + mypy strict + flake8 all green
 
 ---
 
