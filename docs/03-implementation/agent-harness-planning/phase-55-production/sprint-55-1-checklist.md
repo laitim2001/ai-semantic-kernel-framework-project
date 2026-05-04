@@ -79,62 +79,51 @@ Per AD-Plan-1 (53.7) + feedback_day0_must_grep_plan_assumptions.md — grep each
 - [x] **Backend full pytest** ✅ **1356 passed / 4 skipped / 0 fail** in 29.31s (= 1351 + 5)
 - [x] **LLM SDK leak in models/business/** ✅ 0
 
-### 1.6 Day 1 commit + push + progress.md
-- [ ] **Stage + commit Day 1 source + tests + alembic migration** (next)
-- [ ] **Update progress.md** with Day 1 actuals (hr / D2 / D3 fix)
-- [ ] **Push to origin**
+### 1.6 Day 1 commit + push + progress.md ✅
+- [x] **Stage + commit Day 1 source + tests + alembic migration** ✅ commit `2a9e79fb` (7 files / +630 / -48)
+- [x] **Update progress.md** with Day 1 actuals + D2 + D3 fix ✅
+- [x] **Push to origin** ✅ on `feature/sprint-55-1-business-services`
 
 ---
 
-## Day 2 — US-2 IncidentService Production Class
+## Day 2 — US-2 IncidentService Production Class ✅
 
-### 2.1 New `business_domain/_base.py` BusinessServiceBase
-- [ ] **Define BusinessServiceBase abstract class**
-  - Fields: `db: AsyncSession / tenant_id: UUID / tracer: Tracer | None`
-  - Method: `_audit_hook(operation: str, resource_id: str, **extra)` — emit audit_log entry
-  - File header per file-header-convention.md
-- DoD: 30-50 lines; mypy strict green
+### 2.1 New `business_domain/_base.py` BusinessServiceBase ✅
+- [x] **Define BusinessServiceBase** ✅ ~70 lines; fields (db / tenant_id / tracer); `audit_event()` wraps `append_audit` with tenant binding
+- 🚨 **D6 (signature)**: plan said `_audit_hook(operation, resource_id, **extra)`; actual `append_audit` takes `operation`/`resource_type`/`operation_data` as separate kwargs + `user_id` (not `actor_user_id`). Aligned to actual signature.
 
-### 2.2 New `business_domain/_obs.py` business_service_span
-- [ ] **Define `business_service_span` async ctx manager**
-  - Signature per plan §Cat 12 Observability Pattern
-  - Emit 3 metrics on success / error
-  - Span name: `business_service.{service_name}.{method}`
-- [ ] **Unit test: 3 cases** (success / exception propagates / mock tracer receives 3 metric events)
-- DoD: 50-80 lines; 3 unit tests pass
+### 2.2 New `business_domain/_obs.py` business_service_span ✅
+- [x] **Define `business_service_span` async ctx manager** ✅ ~70 lines (file header heavy); span-only; SpanCategory.TOOLS
+- [x] **3 unit tests** ✅ (noop / TOOLS span emitted / exception propagates) — 3 passed in 0.05s
+- 🚨 **D5 (scope)**: plan §US-5 specified 3 metrics emitted. Reverted to span-only matching `verification_span` precedent (54.2 US-5 AD-Cat10-Obs-1). Metric emission deferred to AD-Cat12-Helpers-1 (54.2 retro Q6 carryover). Reason: avoid duplicating MetricEvent construction across 25 service methods; OTel impl provides span timing.
 
-### 2.3 New `business_domain/incident/service.py` IncidentService
-- [ ] **IncidentService(BusinessServiceBase)** with 5 async methods
-  - `create(*, title: str, severity: str = "high", alert_ids: list[str] | None = None, user_id: UUID | None = None) -> Incident`
-  - `list(*, severity: str | None = None, status: str | None = None, limit: int = 20) -> list[Incident]`
-  - `get(*, incident_id: UUID) -> Incident | None`
-  - `update_status(*, incident_id: UUID, status: str) -> Incident`
-  - `close(*, incident_id: UUID, resolution: str) -> Incident`
-- [ ] Each method wrapped with `async with business_service_span(...)`
-- [ ] Each method first SQL must include `WHERE tenant_id = self.tenant_id`
-- [ ] `close()` validates `resolution` length ≥ 1; raises ValueError if empty
-- [ ] `update_status()` raises ValueError if `incident_id` not found in tenant
-- [ ] All methods call `self._audit_hook(...)` for destructive ops (create/update/close)
-- DoD: ~200 lines; mypy strict green; black + isort + flake8 green
+### 2.3 New `business_domain/incident/service.py` IncidentService ✅
+- [x] **IncidentService(BusinessServiceBase)** ✅ 5 async methods (create / list / get / update_status / close); ~210 lines
+- [x] All methods wrapped `async with business_service_span(...)` ✅
+- [x] All queries include `WHERE tenant_id = self.tenant_id` ✅
+- [x] `close()` validates resolution ≥ 1 char (whitespace-only also rejected) ✅
+- [x] `update_status()` raises ValueError if not in tenant scope ✅
+- [x] `create / update_status / close` call `audit_event(...)` ✅
+- DoD: mypy strict green ✅; black + isort + flake8 green ✅
 
-### 2.4 12 IncidentService unit tests
-- [ ] **test_create_returns_incident** + **test_create_default_severity_high**
-- [ ] **test_list_filters_by_severity** + **test_list_filters_by_status** + **test_list_pagination_limit**
-- [ ] **test_get_returns_none_when_not_found** + **test_get_cross_tenant_returns_none** (multi-tenant)
-- [ ] **test_update_status_transitions** + **test_update_status_cross_tenant_raises** (multi-tenant)
-- [ ] **test_close_sets_closed_at_now** + **test_close_empty_resolution_raises_value_error** (validation)
-- [ ] **test_audit_hook_emits_for_destructive_methods** (create/update_status/close)
-- DoD: `cd backend && python -m pytest tests/unit/business_domain/incident/test_service.py -v` → 12 passed
+### 2.4 12 IncidentService unit tests ✅
+- [x] **test_create_returns_incident / _default_severity_high / _emits_audit** ✅
+- [x] **test_list_filters_by_severity / _by_status / _pagination_limit** ✅
+- [x] **test_get_returns_none_when_not_found / _cross_tenant_returns_none** ✅
+- [x] **test_update_status_transitions / _cross_tenant_raises** ✅
+- [x] **test_close_sets_closed_at_now / _empty_resolution_raises_value_error** ✅
+- DoD: 12 passed in 0.66s (15 total Day 2 with obs tests in 0.71s) ✅
 
-### 2.5 Day 2 sanity checks
-- [ ] **mypy --strict** green
-- [ ] **6 V2 lints via run_all.py** green
-- [ ] **Backend full pytest** ≥ 1371 passed (= 1356 + 15 new = 12 service + 3 obs)
-- [ ] **LLM SDK leak in business_domain/incident/** — 0
+### 2.5 Day 2 sanity checks ✅
+- [x] **mypy --strict** ✅ 0 errors / 261 files (was 258 + 3 new)
+- [x] **black + isort + flake8** ✅ all clean (1 F401 fixed)
+- [x] **6 V2 lints via run_all.py** ✅ 6/6 green in 0.67s
+- [x] **Backend full pytest** ✅ **1371 passed / 4 skipped / 0 fail** in 28.70s (= 1356 + 15)
+- [x] **LLM SDK leak in business_domain/** ✅ 0
 
 ### 2.6 Day 2 commit + push + progress.md
-- [ ] **Stage + commit Day 2**
-- [ ] **Update progress.md** Day 2 actuals
+- [ ] **Stage + commit Day 2** (next)
+- [ ] **Update progress.md** Day 2 actuals (D4 + D5 + D6 + D7)
 - [ ] **Push**
 
 ---

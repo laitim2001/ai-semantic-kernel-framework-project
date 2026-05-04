@@ -133,3 +133,85 @@ US-1 estimated bottom-up 4 hr × 0.50 = ~2 hr commit. Actual: ~1.5 hr (drift han
 ---
 
 **Last Updated**: 2026-05-04 (Day 1 complete)
+
+---
+
+## Day 2 — 2026-05-04
+
+### Deliverables ✅
+
+| Task | Status | Output |
+|------|--------|--------|
+| 2.1 `_base.py BusinessServiceBase` | ✅ | ~70 LOC; db/tenant_id/tracer + audit_event wrapper |
+| 2.2 `_obs.py business_service_span` | ✅ | ~70 LOC (heavy header); span-only ctx mgr |
+| 2.3 `incident/service.py IncidentService` | ✅ | ~210 LOC; 5 async methods + multi-tenant + validation + audit |
+| 2.4 12 IncidentService tests + 3 obs tests | ✅ | 15 passed in 0.71s |
+| 2.5 sanity (mypy/lints/pytest/leak) | ✅ | all green |
+| 2.6 commit + push (in progress) | 🔄 | next step |
+
+### Drift Findings
+
+**🚨 D4 (Tracer signature)** — Tracer ABC actual signature
+- **Plan claim**: §Cat 12 Observability Pattern showed simplified `start_span(name, attributes)` + `record_metric("name", value, attributes={...})`
+- **Actual**: `start_span(*, name, category: SpanCategory, trace_context, attributes)` returns `AbstractAsyncContextManager[TraceContext]`; `record_metric(event: MetricEvent)` takes a frozen MetricEvent dataclass
+- **Fix**: `_obs.py business_service_span` aligned to real signature; uses `SpanCategory.TOOLS` (no BUSINESS_DOMAIN value exists — adding would cross 17.md single-source ownership)
+
+**🚨 D5 (scope reduction)** — span-only, no metric emission
+- **Plan claim**: §US-5 specified 3 metrics emitted (duration / calls_total / errors_total)
+- **Actual approach**: matched `verification/_obs.py verification_span` precedent (54.2 US-5) — span-only; OTel impl provides span timing; no MetricEvent construction needed
+- **Fix**: Span-only ctx mgr; metric emission deferred to AD-Cat12-Helpers-1 (54.2 retro Q6 carryover; broader scope = consolidate verification + business obs helpers + add metrics in single sprint)
+- **Impact**: simpler `_obs.py` (~70 LOC vs ~150); 0 service methods need MetricEvent imports; closer parity with project precedent
+
+**🚨 D6 (audit_helper signature)** — `append_audit` takes operation+resource_type as separate kwargs
+- **Plan claim**: §_base.py audit_hook signature `(operation, resource_id, **extra)` with `extra` flowing to `operation_data`
+- **Actual**: `append_audit(*, tenant_id, user_id, operation, resource_type, operation_data, resource_id, ...)` — `operation` and `resource_type` are first-class kwargs
+- **Fix**: BusinessServiceBase.audit_event() now passes them as separate kwargs + payload becomes operation_data dict + actor_user_id maps to user_id
+
+**🚨 D7 (test infra)** — pytest discovery requires NO `__init__.py` in test dirs
+- **Initial mistake**: created `tests/unit/business_domain/__init__.py` + `tests/unit/business_domain/incident/__init__.py` (defensive)
+- **Symptom**: `ModuleNotFoundError: No module named 'business_domain._obs'` during collection
+- **Root cause**: pytest rootdir-relative discovery; existing `tests/` directories have NO __init__.py (verified via glob); adding them shadows pytest's package detection
+- **Fix**: removed both __init__.py files; tests collect + run cleanly
+- **Lesson**: convention check before adding scaffolding (pytest rootdir-relative vs package-style differs by config)
+
+### Sanity Results ✅
+
+| Check | Result |
+|-------|--------|
+| `pytest tests/unit/business_domain/ -v` | **15 passed in 0.71s** (12 service + 3 obs) |
+| `mypy src --strict` | **0 errors / 261 files** (was 258 + 3 new) |
+| `black + isort + flake8` on Day 2 files | clean (1 F401 fixed) |
+| `python scripts/lint/run_all.py` (6 V2 lints) | **6/6 green** in 0.67s |
+| `pytest -q` full backend suite | **1371 passed / 4 skipped / 0 fail** in 28.70s (= 1356 + 15) |
+| LLM SDK leak in `business_domain/` | 0 |
+
+### Files Created / Modified
+
+| File | Status | LOC |
+|------|--------|-----|
+| `business_domain/_base.py` | NEW | ~75 |
+| `business_domain/_obs.py` | NEW | ~70 |
+| `business_domain/incident/service.py` | NEW | ~210 |
+| `tests/unit/business_domain/test_obs.py` | NEW | ~70 |
+| `tests/unit/business_domain/incident/test_service.py` | NEW | ~210 |
+
+### Calibration Mid-Sprint Note
+
+US-2 estimated bottom-up 5 hr × 0.50 = ~2.5 hr commit. Actual: ~2 hr (4 drift findings absorbed). On-budget; sprint cumulative actual ~3.5 hr / committed budget 11 hr → trending under projection.
+
+### Next Day Plan (Day 3)
+
+- US-3 + US-4: 4 read-only domain services + BUSINESS_DOMAIN_MODE flag
+- 3.1 patrol/correlation/rootcause/audit_domain `service.py` (4 files)
+- 3.2 8 read-only service unit tests
+- 3.3 Modify `core/config/__init__.py` add `business_domain_mode` field
+- 3.4 Modify 5 `register_*_tools()` accept mode kwarg
+- 3.5 Modify `make_default_executor()` read settings
+- 3.6 Modify ServiceFactory add 5 service getters
+- 3.7 6 integration tests
+- 3.8 sanity + commit + push
+- est ~3 hr commit (US-3+US-4 bottom-up 8 × 0.50)
+
+---
+
+**Last Updated**: 2026-05-04 (Day 2 complete)
