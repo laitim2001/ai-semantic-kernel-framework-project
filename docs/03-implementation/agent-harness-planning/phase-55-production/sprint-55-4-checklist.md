@@ -30,73 +30,43 @@
 
 ---
 
-## Day 1 — AD-Cat8-1 + AD-Cat8-3
+## Day 1 — AD-Cat8-1 stamp + AD-Cat8-3 narrow Option C [revised per D4-D8 + Selection D]
 
-### AD-Cat8-1 — RedisBudgetStore + fakeredis Integration Test
+### AD-Cat8-1 — Verification Stamp (no new test code per D4)
 
-- [ ] **Read existing `tests/integration/agent_harness/error_handling/test_redis_budget_store.py`** (149 lines)
-- [ ] **Verify fakeredis vs real Redis usage**
-  - If real Redis → migrate to fakeredis
-  - If fakeredis already → identify coverage gaps
-- [ ] **Add coverage gaps**
-  - consume_budget reduces remaining
-  - restore_budget undoes consumption
-  - get_remaining returns current
-  - Concurrent access (2 simultaneous consume → no double-count)
-  - TTL expiry behavior
-- [ ] **Coverage target**: ≥80% line coverage on `_redis_store.py`
-  - DoD: `pytest --cov=src/agent_harness/error_handling/_redis_store.py` ≥ 80%
-- [ ] **Commit AD-Cat8-1**
-  - Commit: `test(error-handling, sprint-55-4): close AD-Cat8-1 (RedisBudgetStore + fakeredis)`
+- [x] **Read existing `test_redis_budget_store.py`** (149 lines, 9 tests, fakeredis)
+- [x] **Verify coverage** — `_redis_store.py` 16/16 stmts = **100% line coverage**;9/9 tests PASS in 0.52s
+- [x] **D4 catalog** — AD-Cat8-1 实质 closed by 53.3 Day 4;Sprint 55.4 = verification stamp only
+- [x] **Add 1-line stamp comment to test file header** (Sprint 55.4 verification stamp)
 
-### AD-Cat8-3 — Soft-Failure Path Preserve Original Exception Type
+### AD-Cat8-3 — Narrow Option C (loop.py only;no schema change)
 
-- [ ] **Read `agent_harness/error_handling/terminator.py`** — find synthesize call site
-- [ ] **Decide Option A vs B**
-  - A: `raise OriginalExceptionType(str(e)) from e`
-  - B: `SoftFailureError(original=e)` wrapping with __cause__
-  - Document decision in progress.md Day 1 entry
-- [ ] **Refactor terminator.py** per decision
-- [ ] **Add 3 type-preservation tests** to `test_terminator.py`
-  - NetworkTimeoutError preserved
-  - ValueError preserved
-  - Generic Exception preserved
-- [ ] **Run tests**: `pytest tests/unit/agent_harness/error_handling/test_terminator.py`
-- [ ] **Commit AD-Cat8-3**
-  - Commit: `fix(error-handling, sprint-55-4): close AD-Cat8-3 (preserve Exception type)`
+- [x] **Read `loop.py:1072` synthetic site + `_handle_tool_error:258-304`** — D5/D7/D8 confirmed
+- [x] **Read `policy.py:140-176`** — `classify_by_string()` mechanism (53.3 US-9) confirmed
+- [x] **Read `executor.py:204-223`** — `error_class = f"{type(exc).__module__}.{type(exc).__name__}"` confirmed
+- [x] **Edit `_handle_tool_error()` signature** — add `error_class_str: str | None = None` param
+- [x] **Edit `_handle_tool_error()` classify path** — when `error_class_str` provided, use `classify_by_string()` instead of `classify(error)`
+- [x] **Edit caller at L1074** — pass `error_class_str=result.error_class`
+- [x] **Update file header Modification History** (per AD-Lint-3 1-line MHist)
+- [x] **Add `classify_by_string` default to ErrorPolicy ABC** (mypy strict required;non-breaking;default FATAL)
+- [x] **Add 3 unit tests** to new `test_handle_tool_error.py`:
+  - test_handle_tool_error_with_error_class_str_uses_classify_by_string ✓
+  - test_handle_tool_error_without_error_class_str_uses_mro_classify (regression) ✓
+  - test_handle_tool_error_unknown_class_str_returns_fatal ✓
+- [x] **Run tests**: 3/3 PASS in 0.26s;941 passed full agent_harness regression
+- [ ] **Commit AD-Cat8-1 + AD-Cat8-3 (combined)**
+  - Commit: `fix(orchestrator-loop, error-handling, sprint-55-4): close AD-Cat8-1 stamp + AD-Cat8-3 narrow Option C`
 
 ### Day 1 Wrap
 
-- [ ] **Update progress.md Day 1 entry**
-  - Cover: 2 commits + Option A/B decision + new drift findings (if any)
-- [ ] **Lint chain**: black ✓ / isort ✓ / flake8 ✓ / mypy --strict ✓ / 7 V2 lints ✓
+- [x] **Update progress.md Day 1 entry** — cover: D4-D8 drift catalog + Selection D rationale + AD-Cat8-2 deferred to 55.5 + Option C narrow scope
+- [x] **Lint chain**: black ✓ / isort ✓ / flake8 ✓ / mypy --strict ✓ / 7 V2 lints ✓
 
 ---
 
-## Day 2 — AD-Cat8-2 RetryPolicyMatrix Wire to AgentLoop
+## Day 2 — AD-Cat9-5 ToolGuardrail Session Counter (promoted per Selection D)
 
-- [ ] **Read `agent_harness/error_handling/retry.py`** — confirm RetryPolicyMatrix interface
-- [ ] **Read `agent_harness/orchestrator_loop/agent_loop.py`** — find current error-path code
-- [ ] **Identify wire-point**
-  - LLM call retry-eligible failures
-  - Tool call retry-eligible failures
-- [ ] **Implement wire**
-  - AgentLoop accepts `retry_policy: RetryPolicyMatrix | None = None` constructor param
-  - On retry-eligible exception → consult policy → backoff via asyncio.sleep
-  - Max retries enforced;exceeded → error path continues
-- [ ] **Write `tests/integration/agent_harness/orchestrator_loop/test_agent_loop_retry_integration.py`** (new)
-  - Test 1: Transient error → retry success
-  - Test 2: 5xx error → 3-retry backoff
-  - Test 3: Non-retry-eligible → immediate fail
-- [ ] **Run all error_handling + orchestrator_loop tests**
-  - DoD: existing tests + 3 new integration tests all green
-- [ ] **Update progress.md Day 2 entry**
-- [ ] **Commit AD-Cat8-2**
-  - Commit: `feat(orchestrator-loop, error-handling, sprint-55-4): close AD-Cat8-2 (retry wire)`
-
----
-
-## Day 3 — AD-Cat9-5 + AD-Cat9-6
+> **AD-Cat8-2 deferred to 55.5 per D6** — `loop.py:194/245` retry_policy 完全 dead state;wire-up 需 dedicated retry-with-backoff design sprint,不適合 audit cycle Group。
 
 ### AD-Cat9-5 — ToolGuardrail max-calls-per-session Counter
 
@@ -142,14 +112,13 @@
 
 ## Day 4 — Retrospective + Closeout
 
-- [ ] **Verify all 5 ADs closed** (acceptance criteria)
-  - AD-Cat8-1: RedisBudgetStore ≥80% coverage
-  - AD-Cat8-2: AgentLoop retry_policy wired + 3 tests green
-  - AD-Cat8-3: ErrorTerminator preserves type + 3 tests green
+- [ ] **Verify all 4 ADs closed** (acceptance criteria;AD-Cat8-2 deferred to 55.5 per D6 Selection D)
+  - AD-Cat8-1: 100% line coverage stamp (verified 9 tests, 16/16 stmts) ✓
+  - AD-Cat8-3 (narrow Option C): _handle_tool_error error_class_str + classify_by_string + 3 tests green
   - AD-Cat9-5: tool_guardrail.py:129 TODO replaced + 4 tests green
   - AD-Cat9-6: 4-6 real-DB integration tests green
 - [ ] **Run full pytest baseline**
-  - Target: 1434 → ≥1447 (+13 minimum)
+  - Target: 1434 → ≥1445 (+11 minimum;was ≥+13 with AD-Cat8-2 included)
 - [ ] **Run full lint chain**
   - black + isort + flake8 + mypy --strict + 7 V2 lints
 - [ ] **LLM SDK leak check** — 0
@@ -189,12 +158,12 @@
 
 | AD | Status | Tests Added | Commit |
 |----|--------|-------------|--------|
-| AD-Cat8-1 | ⏳ pending | 3-4 | — |
-| AD-Cat8-2 | ⏳ pending | 3 | — |
-| AD-Cat8-3 | ⏳ pending | 3 | — |
-| AD-Cat9-5 | ⏳ pending | 4 | — |
-| AD-Cat9-6 | ⏳ pending | 4-6 | — |
-| **Total** | **0/5 closed** | **0/+13** | — |
+| AD-Cat8-1 | ⏳ stamp pending | 0 (already 100% via 53.3) | — |
+| AD-Cat8-2 | 🚧 deferred to 55.5 (D6) | — | — |
+| AD-Cat8-3 (narrow Option C) | ⏳ Day 1 in progress | 3 | — |
+| AD-Cat9-5 | ⏳ Day 2 pending | 4 | — |
+| AD-Cat9-6 | ⏳ Day 3 pending | 4-6 | — |
+| **Total** | **0/4 closed** (1 deferred) | **0/+11** | — |
 
 ---
 

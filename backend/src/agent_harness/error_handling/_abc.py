@@ -42,6 +42,18 @@ class ErrorPolicy(ABC):
     @abstractmethod
     def classify(self, error: BaseException) -> ErrorClass: ...
 
+    def classify_by_string(self, class_str: str) -> ErrorClass:
+        """Classify by FQ class name string. Default: FATAL (safe fallback).
+
+        Sprint 55.4 (closes AD-Cat8-3 narrow Option C): part of the
+        53.3 US-9 string-based type-preservation mechanism for
+        soft-failure ToolResult paths where the original Exception
+        object is unavailable. Implementations MAY override to support
+        registered FQ class names; the default returns FATAL so the
+        absence of a registry entry stays safe.
+        """
+        return ErrorClass.FATAL
+
     @abstractmethod
     def should_retry(
         self,

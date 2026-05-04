@@ -251,27 +251,37 @@ Per AD-Plan-1 (mandatory grep verify) + AD-Plan-2 (Day-0 path verify for every p
 - Write Day 0 `progress.md`
 - Commit Day 0(plan + checklist + progress)
 
-### Day 1 — AD-Cat8-1 + AD-Cat8-3 (~2.5 hr)
+### Day 1 — AD-Cat8-1 stamp + AD-Cat8-3 narrow Option C (~2 hr) [revised per D4-D8 + Selection D]
 
-- AD-Cat8-1: read existing test_redis_budget_store.py;verify fakeredis vs real Redis;migrate if needed;add coverage gap tests
-- AD-Cat8-3: refactor terminator.py soft-failure path to preserve Exception type;add 3 type tests
+- AD-Cat8-1: 100% line coverage already achieved by 53.3 Day 4 → verification stamp via progress.md + 1-line comment in test file (no new test code; ~15 min)
+- AD-Cat8-3 narrow Option C: surgical edit to `loop.py` only:
+  - `_handle_tool_error()` signature: add `error_class_str: str | None = None` param
+  - When provided, use `policy.classify_by_string(error_class_str)` instead of `policy.classify(error)` — preserves type via 53.3 US-9 mechanism
+  - Call site at line 1074: pass `error_class_str=result.error_class`
+  - 3 unit tests for `_handle_tool_error`: string-based classify / type-based classify (regression) / unknown-string-fallback-FATAL
 - Update progress.md Day 1 entry
-- 2 commits
+- Lint chain: black + isort + flake8 + mypy --strict + 7 V2 lints
+- 1 commit (combined: AD-Cat8-1 stamp + AD-Cat8-3 narrow + 3 tests)
 
-### Day 2 — AD-Cat8-2 (~2-2.5 hr)
+### Day 2 — AD-Cat9-5 ToolGuardrail Session Counter (promoted per Selection D) (~1.5-2 hr)
 
-- Read agent_loop.py + retry.py to identify wire-point
-- Implement retry_policy param + integration logic
-- Write 3 integration tests
-- Run all error_handling + orchestrator_loop tests
+Per D6:AD-Cat8-2 deferred to 55.5(full retry-with-backoff design 需 dedicated sprint);AD-Cat9-5 promoted from Day 3。
+
+- Read tool_guardrail.py:120-150(D2 confirmed L129 TODO marker)
+- Read capability_matrix.py to verify max_calls_per_session field
+- Decide storage: in-memory `dict[session_id, dict[tool_name, count]]` (single-instance OK) vs Redis (multi-instance future);document in progress.md
+- Replace TODO at L129 with impl:read max_calls_per_session, increment counter on check(), BLOCK if over
+- 4 new tests in test_tool_guardrail.py: under-cap / at-cap / over-cap / different sessions independent
+- Verify `grep "TODO(53.4)" tool_guardrail.py` returns 0
 - Update progress.md Day 2 entry + commit
 
-### Day 3 — AD-Cat9-5 + AD-Cat9-6 (~3-4 hr)
+### Day 3 — AD-Cat9-6 WORM Real-DB Integration Tests (~1.5-2 hr)
 
-- AD-Cat9-5: replace tool_guardrail.py:129 TODO with session counter impl + 4 tests
-- AD-Cat9-6: write 4-6 real-DB integration tests for worm_log
-- Run all guardrails tests
-- Update progress.md Day 3 entry + 2 commits
+- Read worm_log.py + existing test_worm_log.py (195 lines unit)
+- New file `tests/integration/agent_harness/guardrails/test_worm_log_db_integration.py`
+- 4-6 integration tests:hash chain links across rows / UPDATE attempt → DB trigger blocks (per 0005 migration) / DELETE attempt → blocks / verify_chain on 100+ rows / two concurrent inserts both succeed
+- Use `db_session` fixture pattern from existing integration tests
+- Update progress.md Day 3 entry + commit
 
 ### Day 4 — Retrospective + Closeout (~1 hr)
 
@@ -323,13 +333,26 @@ Per AD-Plan-1 (mandatory grep verify) + AD-Plan-2 (Day-0 path verify for every p
 | **R4**(WORM real-DB tests flaky under concurrent insert)| Low | Low | Use db_session fixture's transactional rollback for hermetic isolation |
 | **R5**(Calibration ratio outside [0.85, 1.20] band)| Med | Low | scope-class matrix 1st application;if outside, AD-Sprint-Plan-5 logged for refinement(not project-blocking)|
 
-### Drift Findings (Day-0 探勘 — AD-Plan-1 + AD-Plan-2 self-applied)
+### Drift Findings (Day-0 探勘 + Day 1 reading — AD-Plan-1 + AD-Plan-2 self-applied)
 
+**Day 0 探勘**:
 - **D1** All 5 target classes already exist (no `create new` deliverables;all are `enhance + integration test`)
 - **D2** tool_guardrail.py:129 TODO marker confirms AD-Cat9-5 exact wire-point — clean implementation hook
 - **D3** test_redis_budget_store.py exists 149 lines — AD-Cat8-1 "0% coverage" baseline outdated;sharper scope = verify fakeredis-based + add coverage gaps
 
-→ Day 1+ may add D4-Dn drift findings(catalog in progress.md;non-disruptive;preserves audit trail per AD-Plan-1)
+**Day 1 morning reading (2026-05-05)** — pre-code grep for AD-Cat8-1/2/3 baseline verification:
+- **D4** AD-Cat8-1 已實質完成於 Sprint 53.3 Day 4:`test_redis_budget_store.py` 9 tests 全 PASS + `_redis_store.py` **100% line coverage** (16/16 stmts) via `fakeredis`. Plan §「0% coverage」baseline outdated。Action:Day 1 = verification stamp via progress.md + comment(no new test code;~15 min instead of ~1.5-2 hr)。
+- **D5** AD-Cat8-3 plan §Technical Spec 錯指 `terminator.py`;actual `synthetic = Exception(result.error or "tool soft failure")` 在 `loop.py:1072`。`terminator.py` 167 lines 全為 `TerminationDecision` 決策返回,無 raise/synthesize 邏輯。
+- **D6** AD-Cat8-2 完全是 dead state(AP-4 Potemkin 風險):`loop.py:194` accepts `retry_policy: RetryPolicyMatrix | None = None` + `:245 self._retry_policy = retry_policy`,但 `_retry_policy` 在 loop.py 其他 line **0 references**(grep 確認 1 hit only at line 245 assignment)。Wire-up 需設計完整 retry-with-backoff loop,非 audit cycle 範圍。
+- **D7** AD-Cat8-3 type-preservation 需穿透 `tools/executor.py:204-223`:original Exception 在 `try/except Exception as exc` 已 swallow 成 `result.error: str`,ToolResult schema 不帶 BaseException 物件。
+- **D8** Sprint 53.3 US-9 已 ship type-preservation 機制:`ToolResult.error_class = f"{type(exc).__module__}.{type(exc).__name__}"` (executor.py:222) + `DefaultErrorPolicy.classify_by_string(class_str)` (policy.py:162-176)。**機制 already exist**,只是 `loop.py:1072` synthetic path 未消費 — `_handle_tool_error:281` 用 `classify(synthetic)` 對 generic Exception MRO walk → 永遠 FATAL。Narrow Option C 修這個。
+
+→ **User Selection D approved 2026-05-05**:
+- Day 1 = AD-Cat8-1 verification stamp + AD-Cat8-3 narrow Option C(loop.py 內 `_handle_tool_error` 加 `error_class_str` param + 1074 caller pass `result.error_class`;no `ToolResult` schema change, no executor change)
+- Day 2 = AD-Cat9-5 promoted(原 Day 3 task)
+- Day 3 = AD-Cat9-6 only
+- **AD-Cat8-2 deferred to 55.5**(Group B carryover — full retry-with-backoff design 需 dedicated sprint;audit cycle Group 不適合 major architecture change)
+- Sprint 55.4 closure scope:**4 ADs** instead of 5
 
 ### Common Risk Classes (per `sprint-workflow.md` §Common Risk Classes)
 
@@ -379,8 +402,8 @@ If 55.4 hits time-box pressure,**rolling carryover** priority(largest to smalles
 
 ## Definition of Done
 
-- ☐ All 5 ADs closed per acceptance criteria
-- ☐ Tests added ≥+13 (cumulative 1434 → ≥1447)
+- ☐ **4 ADs** closed per acceptance criteria (AD-Cat8-1 stamp + AD-Cat8-3 narrow + AD-Cat9-5 + AD-Cat9-6;AD-Cat8-2 deferred to 55.5 per D6 Selection D)
+- ☐ Tests added ≥+11 (cumulative 1434 → ≥1445;was ≥+13 with AD-Cat8-2 included)
 - ☐ 7 V2 lints green
 - ☐ pytest unit + integration green
 - ☐ mypy --strict 0 errors
@@ -389,7 +412,7 @@ If 55.4 hits time-box pressure,**rolling carryover** priority(largest to smalles
 - ☐ Calibration ratio computed in retro Q2 (AD-Sprint-Plan-4 1st application)
 - ☐ Drift findings catalogued (D1-Dn)
 - ☐ retrospective.md with 6 必答 Q1-Q6
-- ☐ SITUATION-V2-SESSION-START.md §8 updated (close 5 AD;add new AD if any)
+- ☐ SITUATION-V2-SESSION-START.md §8 updated (close 4 AD;add new AD if any;mark AD-Cat8-2 → 55.5 carryover)
 - ☐ PR opened + CI green + merged to main
 - ☐ Closeout PR for SHA fill-in if needed
 
