@@ -80,9 +80,7 @@ def test_lint_whitelists_reducer(tmp_path: Path) -> None:
         ("state.user_input =", "state.user_input = 'new'\n"),
     ],
 )
-def test_lint_catches_other_forbidden_patterns(
-    tmp_path: Path, pattern: str, line: str
-) -> None:
+def test_lint_catches_other_forbidden_patterns(tmp_path: Path, pattern: str, line: str) -> None:
     """All 4 forbidden patterns are caught (parametric coverage of remaining 3)."""
     bad_file = tmp_path / "bad.py"
     bad_file.write_text(line)
