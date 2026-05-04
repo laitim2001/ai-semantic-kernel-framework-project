@@ -1,3 +1,11 @@
+# Sprint 53.7 paths-filter trigger workaround (AD-CI-5 pattern):
+# When a PR is backend-only (no frontend/** changes), this workflow's
+# paths filter doesn't match → "Frontend E2E (chromium headless)" job
+# context never reports → branch protection blocks merge because that
+# context is now in required_status_checks (since 53.7 Day 2 admin op).
+# Workaround: touching this file forces the workflow to run.
+# Long-term fix tracked as AD-CI-5 (revisit paths-filter strategy).
+
 name: Playwright E2E
 
 on:

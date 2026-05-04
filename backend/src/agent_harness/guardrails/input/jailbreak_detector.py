@@ -35,8 +35,22 @@ Owner: 01-eleven-categories-spec.md §範疇 9 (jailbreak detection)
 Single-source: GuardrailResult / GuardrailAction in 17.md §1.1
 
 Created: 2026-05-03 (Sprint 53.3 Day 2)
+Last Modified: 2026-05-04 (Sprint 53.7 Day 3)
 
 Modification History (newest-first):
+    - 2026-05-04: Sprint 53.7 Day 3 — close AD-Cat9-8 FP. Replaced bare-word
+      Group 6 pattern `\b(?:jailbreak|jailbroken|jailbreaking)\b` (which
+      false-positively matched meta-discussion like "what does jailbreak
+      mean?", "the term jailbreak refers to...", "tutorials about
+      jailbreaking are common") with two imperative-target patterns that
+      require the word be followed by a target ("the assistant" / "you" /
+      "claude" / "this AI" / etc.) or a self-target ("me" / "us" / "yourself").
+      Pattern count: 14 -> 15. The 5 real attack styles tested in 53.7
+      checklist all still TRIP (4 caught by Groups 1-5 unchanged; the
+      one needing Group 6 — "jailbreak the assistant by..." — TRIPs the
+      new imperative-target pattern). Fixture jb_neg_010 (previously left
+      out as known-FP) is now added; jb_neg_023..025 cover other meta-
+      discussion phrasings.
     - 2026-05-03: Initial creation (Sprint 53.3 US-2 下半)
 
 Related:
@@ -71,13 +85,14 @@ class JailbreakDetector(Guardrail):
 
     guardrail_type = GuardrailType.INPUT
 
-    # 14 high-precision patterns covering known jailbreak vectors.
-    # Each pattern is intentionally specific to minimize false positives
-    # (e.g. "tell me about jailbreaking" should NOT block — but "this is
-    # a jailbreak" using bare \b\bjailbreak\b\b will trigger; we accept
-    # this trade-off because the ≥90% target tolerates ~10% precision
-    # loss and missing real jailbreaks is worse than over-blocking
-    # discussions about the topic).
+    # 15 high-precision patterns covering known jailbreak vectors.
+    # Each pattern is intentionally specific to minimize false positives.
+    # Group 6 was revised in Sprint 53.7 (closes AD-Cat9-8) to require
+    # imperative + target context, so meta-discussion like "what does
+    # jailbreak mean?" / "the term jailbreak refers to..." / "tutorials
+    # about jailbreaking are common" no longer falsely matches. Real
+    # attacks always specify a target (e.g. "jailbreak the assistant",
+    # "jailbreak me") or use one of the other 14 attack-style patterns.
     PATTERNS: ClassVar[list[Pattern[str]]] = [
         # === Group 1: Imperative instruction override ====================
         re.compile(
@@ -143,8 +158,22 @@ class JailbreakDetector(Guardrail):
             r"(?:system\s+)?(?:prompt|instructions?|original\s+rules?)",
             re.IGNORECASE,
         ),
-        # === Group 6: Self-referential jailbreak terms ===================
-        re.compile(r"\b(?:jailbreak|jailbroken|jailbreaking)\b", re.IGNORECASE),
+        # === Group 6: Imperative-target jailbreak (Sprint 53.7 revision) =
+        # Pre-53.7 had a bare `\b(?:jailbreak|jailbroken|jailbreaking)\b`
+        # which produced FPs on meta-discussion ("what does jailbreak
+        # mean?"). Replaced with two imperative-target patterns: the word
+        # must precede a target object (the AI under attack) or self-target
+        # (me / us / yourself), reflecting how real attacks are phrased.
+        # See AD-Cat9-8 closure in Modification History.
+        re.compile(
+            r"\bjailbreak\s+(?:the\s+|this\s+)?"
+            r"(?:assistant|ai|model|chatbot|claude|gpt|chatgpt|llm|system|you)\b",
+            re.IGNORECASE,
+        ),
+        re.compile(
+            r"\b(?:please\s+|let'?s\s+|help\s+me\s+)?" r"jailbreak\s+(?:me|us|yourself)\b",
+            re.IGNORECASE,
+        ),
     ]
 
     async def check(

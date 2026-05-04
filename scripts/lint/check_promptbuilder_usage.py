@@ -119,9 +119,17 @@ def _scan(root: Path) -> list[str]:
 
 
 def _default_root() -> Path:
-    """Resolve `<repo_root>/backend/src/agent_harness` from this file's location."""
+    """Resolve `<repo_root>/backend/src/agent_harness` from this file's location.
+
+    Sprint 53.7 Day 1 fix: was `here.parents[1]` (= `<repo>/scripts/`) which
+    produced `<repo>/scripts/backend/src/agent_harness` — that path doesn't
+    exist, so default invocation always exited with "root not found". Fixed
+    to `here.parents[2]` (= repo root). The bug went unnoticed because pre-
+    Sprint-53.7 callers always passed explicit `--root backend/src/agent_harness`
+    relative to cwd (project root). The new run_all.py wrapper exposed it.
+    """
     here = Path(__file__).resolve()
-    return here.parents[1] / "backend" / "src" / "agent_harness"
+    return here.parents[2] / "backend" / "src" / "agent_harness"
 
 
 def main(argv: list[str] | None = None) -> int:

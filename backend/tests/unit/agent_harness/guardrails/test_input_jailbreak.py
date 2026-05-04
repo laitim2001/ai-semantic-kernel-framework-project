@@ -45,10 +45,11 @@ def test_guardrail_type_is_input() -> None:
 
 
 def test_pattern_count() -> None:
-    """Plan §US-2 says 14 patterns (6 groups). Ensure registry isn't
-    inadvertently shrunk by a future refactor.
+    """53.3 had 14 patterns (6 groups). Sprint 53.7 (AD-Cat9-8) split bare
+    Group 6 word into 2 imperative-target patterns → 15 total. Ensure
+    registry isn't inadvertently shrunk by a future refactor.
     """
-    assert len(JailbreakDetector.PATTERNS) == 14
+    assert len(JailbreakDetector.PATTERNS) == 15
 
 
 # === Smoke tests ===========================================================
