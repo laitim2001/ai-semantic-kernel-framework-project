@@ -1,3 +1,4 @@
+# Sprint 54.1 closeout PR — docs-only sync; touch to satisfy paths-filter.
 # Sprint 54.1 PR #78 — header touched again to fire workflow (paths-filter
 # workaround: backend-only PRs need this to satisfy required Frontend E2E check).
 # Sprint 53.7 closeout PR #77 — header touched again to fire workflow.
