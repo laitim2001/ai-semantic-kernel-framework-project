@@ -202,17 +202,14 @@
 - [x] **Full e2e suite local** ✅ **11/11 in 5.5s** (2 smoke + 5 governance + 4 chat)
 - [x] **Frontend lint + build green** ✅ ESLint clean / 188.10 KB / 52 modules / 561ms
 - [x] **Backend full pytest unaffected** — frontend-only changes (Day 1 baseline 1059 stands)
-- [ ] **CI Playwright E2E full suite green** 🚧 will verify after Day 3.4 push
+- [x] **CI Playwright E2E full suite green** ✅ 50s (11 specs total: 2 smoke + 5 governance + 4 chat)
 
 ### 3.4 Day 3 commit + push + verify CI
-- [ ] **Stage + commit + push**
-  - Commit: `feat(frontend-e2e, sprint-53-6): US-3 ChatV2 ApprovalCard e2e (4 cases incl. risk-badge-color + server-driven SSE)`
-  - Push + verify CI
+- [x] **Stage + commit + push** ✅ commit `d7b7b362` on branch
+- [x] **CI verify** ✅ Frontend CI 24s + Playwright E2E 50s both green; Backend CI skipped (paths filter excludes frontend-only — expected)
 
 ### 3.5 Day 3 progress.md update
-- [ ] **Update progress.md with Day 3 actuals**
-  - Commit: batched into Day 3.4 commit per 53.5 pattern
-  - Push
+- [x] **Update progress.md with Day 3 actuals** ✅ batched into Day 3.4 commit per 53.5 pattern
 
 ---
 
