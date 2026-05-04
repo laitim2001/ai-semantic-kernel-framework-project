@@ -11,60 +11,52 @@
 ## Day 0 — Setup + Day-0 探勘 + Pre-flight Verify
 
 ### 0.1 Branch + plan + checklist commit
-- [ ] **Verify on main + clean**
-  - DoD: `git status --short` empty (untracked plan dir is the new sprint files only)
-  - Verify: `git branch --show-current` → main
-- [ ] **Create branch + push plan/checklist**
-  - Branch: `feature/sprint-54-1-cat10-verification` (tracks origin)
-  - 2 files (plan + checklist) committed in single Day 0.1 commit
+- [x] **Verify on main + clean** ✅ only `phase-54-verification-subagent/` untracked (new sprint files)
+  - DoD: `git status --short` clean except sprint files ✅
+  - Verify: `git branch --show-current` → main ✅
+- [x] **Create branch + push plan/checklist** ✅ commit `4a859b05`
+  - Branch: `feature/sprint-54-1-cat10-verification` (tracks origin) ✅
+  - 2 files / 994 insertions
+  - Pushed to origin (set up tracking)
 
 ### 0.2 Day-0 探勘 — Per AD-Plan-1 (53.7 lesson)：grep §Technical Spec assertions against repo state
-- [ ] **Verify 49.1 stubs exist + signatures match plan §Background § 既有結構**
-  - `Read backend/src/agent_harness/verification/_abc.py` → confirms Verifier ABC `verify(*, output, state, trace_context)` async
-  - `Read backend/src/agent_harness/_contracts/verification.py` → confirms VerificationResult 7 fields (passed / verifier_name / verifier_type Literal / score / reason / suggested_correction / metadata)
-  - `Read backend/src/agent_harness/_contracts/events.py` → grep `VerificationPassed` + `VerificationFailed` confirm event classes exist
-  - DoD: 3 stubs identified; field signatures match plan US-1/US-3 expectations
-- [ ] **Grep AgentLoop integration point + SSE serializer scope (per `feedback_sse_serializer_scope_check.md`)**
-  - `Grep VerificationPassed|VerificationFailed backend/src/agent_harness/orchestrator_loop/sse.py` → expect 0 matches (US-3 will add 2 isinstance branches)
-  - `Grep "yield LoopCompleted" backend/src/agent_harness/orchestrator_loop/loop.py` → identify line for verification hook insertion
-  - DoD: insertion points identified;預期 SSE serializer 0 matches now，Day 3 完成後 ≥ 2 matches
-- [ ] **Grep Cat 9 SANITIZE / REROLL existing tests for AD-Cat9-2/3 closure assertion upgrade (US-4)**
-  - `Grep "GuardrailAction.SANITIZE" backend/tests/` 列出所有 occurrence
-  - `Grep "GuardrailAction.REROLL" backend/tests/` 列出所有 occurrence
-  - Identify 1-2 specific tests to upgrade in US-4
-  - DoD: 具體 test file path + line 已列；若 0 occurrence 則 US-4 closure 純新建測試
-- [ ] **Verify ChatClient ABC stable for LLMJudgeVerifier (US-2)**
-  - `Read backend/src/adapters/_base/chat_client.py` → confirm `chat()` method async signature accepts messages + tools
-  - `Read backend/src/adapters/_testing/mock_clients.py` (if exists) → confirm test fixture pattern
-  - DoD: LLMJudgeVerifier 可透過 mock ChatClient 測試
-- [ ] **Verify `VerifierRegistry` 命名與既有 Cat 9 `GuardrailEngine` 模式對齐 (避免命名衝突 / 概念混淆)**
-  - `Read backend/src/agent_harness/guardrails/_abc.py + engine.py` (snippets) 確認 GuardrailEngine pattern (register / evaluate)
-  - DoD: VerifierRegistry pattern 命名與 GuardrailEngine 對齐；無命名衝突
-- [ ] **Grep `safety_review` / `pii_leak_check` template names 已存在嗎**
-  - `Grep -r "safety_review.txt\|pii_leak_check.txt" backend/` → expect 0 matches (US-2 全新建)
-  - DoD: 不重複 既有 file;US-2 新建路徑乾淨
+- [x] **Verify 49.1 stubs exist + signatures match plan §Background § 既有結構** ✅
+  - Verifier ABC `verify(*, output, state, trace_context)` async ✅
+  - VerificationResult 7 fields confirmed ✅
+  - VerificationPassed / VerificationFailed events confirmed in `_contracts/events.py` ✅
+- [x] **Grep AgentLoop integration point + SSE serializer scope** ✅
+  - 🚨 **D1 DRIFT**: SSE serializer at `backend/src/api/v1/chat/sse.py` (NOT `agent_harness/orchestrator_loop/sse.py` as plan said). US-3 modify path corrected; SSE file currently raises NotImplementedError for Verification events (per 50.2 design — 53-54 owner sprints add branches; 53.5/53.6 already added GuardrailTriggered + ApprovalRequested/Received).
+  - 🚨 **D2** (logic): AgentLoop.run() has **5+ `yield LoopCompleted` exit points** (lines 367, 386, 457, 640, 677). Verification hook can't be single-point; needs central strategy — Day 1 US-3 design pass.
+- [x] **Grep Cat 9 SANITIZE / REROLL existing tests** ✅
+  - 2 files identified for US-4 assertion upgrade: `test_output_toxicity.py` + `test_engine.py`
+- [x] **Verify ChatClient ABC stable for LLMJudgeVerifier (US-2)** ✅
+  - 🚨 **D3** (signature): `chat()` first positional is `ChatRequest` object (not raw `messages`). Plan §Technical Spec skeleton shows `chat(messages=[...], tools=[])` but actual needs `chat(ChatRequest(messages=[...], tools=[]))`. Adjusted at Day 2 US-2 implementation.
+  - MockChatClient at `adapters/_testing/mock_clients.py` ready for tests ✅
+- [x] **Verify VerifierRegistry vs GuardrailEngine 命名對齐** ✅
+  - GuardrailAction enum has 5 values (PASS/BLOCK/SANITIZE/ESCALATE/REROLL) ✅
+  - GuardrailResult.sanitized_content field already exists (49.1 stub) — bonus: US-4 SANITIZE mutation can populate without schema changes
+- [x] **Grep template names not exist** ✅ 0 matches; clean slate for US-2
 
-### 0.3 Calibration multiplier pre-read（meta；本 sprint 是第二次應用 0.55）
-- [ ] **Read 53.7 retrospective Q2** — 確認 53.7 ratio 1.01 證據
-  - DoD: 53.7 retro Q2 confirms multiplier 0.55 mid-band; 本 sprint 是第二次驗證；若 54.1 ratio 也在 [0.85, 1.20] 則 stable phase
-- [ ] **Compute 54.1 bottom-up estimate**
-  - Bottom-up per US: US-1 ~3.5 hr / US-2 ~4 hr / US-3 ~3.5 hr / US-4 ~2.5 hr / US-5 ~2 hr / Day 0 ~1.5 hr / Day 4 closeout ~1.5 hr = ~18.5 hr
-  - Calibrated: 18.5 × 0.55 = **~10.2 hr → commit 10-11 hr**
-  - DoD: 與 plan §Workload 對齐
+### 0.3 Calibration multiplier pre-read ✅
+- [x] **Read 53.7 retrospective Q2** ✅
+  - Multiplier 0.55 ratio **1.01** validated on first application (53.7 predicted 7.4 hr / actual 7.5 hr) — line 53-61 of 53.7 retro
+  - Line 83 explicit: "Drop the per-day 'calibrated target' line in checklists; keep only sprint-level commit number" — 54.1 checklist already follows this ✅
+- [x] **Compute 54.1 bottom-up** ✅
+  - Bottom-up: US-1 ~3.5 + US-2 ~4 + US-3 ~3.5 + US-4 ~2.5 + US-5 ~2 + Day 0/4 overhead ~3 = **~18.5 hr**
+  - Calibrated: 18.5 × 0.55 = **~10.2 hr → commit 10-11 hr** ✅ matches plan §Workload
 
-### 0.4 Pre-flight verify（main green baseline）
-- [ ] **pytest collect baseline** — expect 1262 collected = 1258 passed + 4 skipped (matches main HEAD `7bf25e02`)
-  - Verify: `cd backend && python -m pytest --collect-only -q | tail -3`
-- [ ] **6 V2 lint manual run via `run_all.py`** — expect 6/6 green
-  - Verify: `python scripts/lint/run_all.py` exit 0
-  - DoD: pre-existing baseline green
+### 0.4 Pre-flight verify（main green baseline） ✅
+- [x] **pytest collect baseline** ✅ **1262 tests collected** (= 1258 passed + 4 skipped per main HEAD `7bf25e02`)
+- [x] **6 V2 lint manual run via `run_all.py`** ✅ **6/6 green in 0.63s**
+  - check_ap1: 0.06s / check_promptbuilder: 0.13s / check_cross_category_import: 0.10s
+  - check_duplicate_dataclass: 0.10s / check_llm_sdk_leak: 0.07s / check_sync_callback: 0.17s
 
-### 0.5 Day 0 progress.md
-- [ ] **Create `progress.md` at execution path**
+### 0.5 Day 0 progress.md ✅
+- [x] **Create `progress.md`** ✅
   - Path: `docs/03-implementation/agent-harness-execution/phase-54-verification-subagent/sprint-54-1-cat10-verification/progress.md`
-  - Day 0 sections: Setup / Day-0 探勘 findings / SSE serializer pre-state / calibration / pre-flight / drift findings (if any) / next
-- [ ] **Commit + push Day 0**
-  - Commit message: `chore(plan, sprint-54-1): plan + checklist + Day 0 探勘 + progress`
+  - Sections: Setup / Day-0 探勘 findings (D1/D2/D3) / calibration / pre-flight / time banking / next
+- [x] **Commit + push Day 0** ✅ commit `<TBD post-commit>` (3 files batched)
+  - Commit message: `chore(plan, sprint-54-1): Day 0 探勘 + pre-flight + progress`
 
 ---
 
