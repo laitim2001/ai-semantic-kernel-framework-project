@@ -11,56 +11,39 @@
 ## Day 0 — Setup + Day-0 探勘 + Pre-flight Verify
 
 ### 0.1 Branch + plan + checklist commit
-- [ ] **Verify on main + clean**
-  - DoD: `git status --short` clean except sprint files
-  - Verify: `git branch --show-current` → main
-- [ ] **Create branch + push plan/checklist**
-  - Branch: `feature/sprint-54-2-cat11-subagent` (tracks origin)
-  - 2 files / ~700 insertions (plan + checklist)
-  - Pushed to origin (set up tracking)
+- [x] **Verify on main + clean** ✅ HEAD `c5a64c62`
+- [x] **Create branch + push plan/checklist** ✅ commit `60a5050b` (2 files / 1041 insertions)
 
-### 0.2 Day-0 探勘 — Per AD-Plan-1 (53.7 lesson)：grep §Technical Spec assertions against repo state
-- [ ] **Verify 49.1 stubs exist + signatures match plan §Background § 既有結構**
-  - SubagentDispatcher ABC `fork() / spawn_teammate() / handoff_to() / as_tool()` async signatures verified
-  - SubagentBudget / SubagentResult / SubagentMode dataclasses confirmed at `_contracts/subagent.py`
-  - Verify SubagentHandle exists (US-3 dependency); if missing add to `_contracts/subagent.py` per 17.md §1.1
-  - Verify AgentSpec exists (US-2/3/4 dependency); if missing add to `_contracts/subagent.py`
-- [ ] **Grep AgentLoop integration point + tool dispatch path scope**
-  - Identify all `tool_call.name == "..."` branches in `orchestrator_loop/loop.py` to confirm new task_spawn / handoff handlers fit pattern
-  - Confirm number of `yield LoopCompleted` exit points (54.1 D2 found 17+) — handoff path needs single-point or central exit helper
-- [ ] **Grep SSE serializer for SubagentSpawned / SubagentCompleted** (per `feedback_sse_serializer_scope_check.md`)
-  - `grep -E "SubagentSpawned|SubagentCompleted" backend/src/api/v1/chat/sse.py`
-  - If 0 matches → US-4 includes adding 2 isinstance branches; if found → just verify integration
-- [ ] **Verify 53.4 SubagentResultReducer ready for AgentLoop wiring**
-  - Confirm reducer at `agent_harness/state_mgmt/reducer.py`
-  - Confirm reducer.merge() patches `state.messages` correctly
-- [ ] **Verify 4 verifier classes for AD-Cat10-Obs-1 (54.1 baseline)**
-  - rules_based.py / llm_judge.py / cat9_fallback.py / cat9_mutator.py exist + verify() signatures
-  - Verify `_contracts/observability.py` has Tracer ABC + MetricsEmitter ABC stubs; if missing add stub minimal
-- [ ] **Grep existing Mailbox-related code (in case 49.1 stubs prepped)**
-  - `grep -rn "Mailbox\|mailbox" backend/src/agent_harness/` → expect 0 matches (clean slate for US-3)
+### 0.2 Day-0 探勘 — 9 Drift Findings catalogued (D1-D9)
+- [x] **Verify 49.1 stubs exist + signatures** ✅ partial drift
+  - 🚨 **D1** (architecture): SubagentDispatcher ABC has UNIFIED `dispatch(*, mode, ...)` method (not 4 separate). DefaultSubagentDispatcher implements single dispatch() routing internally.
+  - 🚨 **D7** (contract): SubagentHandle + AgentSpec MISSING from `_contracts/subagent.py` → US-1/3 will add
+  - 🚨 **D9** (data): SubagentBudget frozen=True (use dataclasses.replace if mutation needed)
+  - ✅ SubagentMode / SubagentBudget / SubagentResult exist
+- [x] **Grep AgentLoop tool dispatch path** ✅
+  - ✅ **D8**: tool_executor.execute(tc) single-line dispatch at loop.py:1018; ToolExecutor auto-routes by tool_name. handoff still needs `_pending_handoff` flag check after turn → loop.py change
+- [x] **Grep SSE serializer for SubagentSpawned / SubagentCompleted** ✅
+  - 🚨 **D3**: 0 matches in `api/v1/chat/sse.py` → US-4 add 2 isinstance branches (SAME location as 54.1 D1 finding — `api/v1/chat/sse.py` not `orchestrator_loop/sse.py`)
+- [x] **Verify SubagentResultReducer location** ✅
+  - 🚨 **D4**: at `state_mgmt/decision_reducers.py:96` (NOT `state_mgmt/reducer.py` as plan said). Pattern is **build_patch** (returns dict for DefaultReducer.merge), not Reducer subclass
+  - ✅ **D2**: SubagentSpawned + SubagentCompleted events EXIST at `_contracts/events.py:274,281` (49.1 stub; optional fields)
+- [x] **Verify 4 verifier classes + Tracer ABC for AD-Cat10-Obs-1** ✅
+  - ✅ **D5**: Tracer ABC at `agent_harness/observability/_abc.py:32` (49.4 stub) — use this for AD-Cat10-Obs-1
+  - 🚨 **D6**: Second Tracer Protocol at `prompt_builder/builder.py:102` (informational duplicate; NOT same class). Cat 10 uses observability Tracer ABC. Day 4 retro flag for AD-Naming
+- [x] **Grep existing Mailbox-related code** ✅
+  - Only 3 references (subagent/_abc.py + README + _contracts/subagent.py docs); no implementation. Clean slate for US-3 ✅
 
-### 0.3 Calibration multiplier pre-read
-- [ ] **Read 54.1 retrospective Q2**
-  - Multiplier 0.55 ratio **0.69** validated on 2nd application (54.1 predicted 10.2 hr / actual 7 hr)
-  - 53.7 ratio 1.01; 54.1 ratio 0.69 → 2-sprint window mean 0.85 (border of stable band)
-  - Retro recommendation: keep 0.55 default for next 1-2 sprints; if 3rd ratio < 0.85 lower to 0.45
-- [ ] **Compute 54.2 bottom-up**
-  - Bottom-up: US-1 ~3.5 + US-2 ~4 + US-3 ~5 + US-4 ~3.5 + US-5 ~3.5 + Day 0/4 overhead ~3 = **~22.5 hr**
-  - Calibrated: 22.5 × 0.55 = **~12.4 hr → commit 12-13 hr**
+### 0.3 Calibration multiplier pre-read ✅
+- [x] **Read 54.1 retrospective Q2** ✅ 0.55 ratio 0.69 (predicted 10.2 / actual 7); 2-sprint mean 0.85 border stable band
+- [x] **Compute 54.2 bottom-up** ✅ ~22.5 hr × 0.55 = **commit 12-13 hr**
 
-### 0.4 Pre-flight verify（main green baseline）
-- [ ] **pytest collect baseline**
-  - Expected: ~1305 tests collected (= 1305 passed + 4 skipped per main HEAD `c5a64c62`)
-- [ ] **6 V2 lint manual run via `run_all.py`**
-  - Expected: 6/6 green in < 1s
+### 0.4 Pre-flight verify（main green baseline） ✅
+- [x] **pytest collect baseline** ✅ **1309 tests collected** (= 1305 passed + 4 skipped + 4 from post-merge sync)
+- [x] **6 V2 lints via run_all.py** ✅ **6/6 green in 0.62s** (check_ap1 0.04 / check_promptbuilder 0.12 / check_cross_category_import 0.11 / check_duplicate_dataclass 0.11 / check_llm_sdk_leak 0.07 / check_sync_callback 0.17)
 
-### 0.5 Day 0 progress.md
-- [ ] **Create `progress.md`**
-  - Path: `docs/03-implementation/agent-harness-execution/phase-54-verification-subagent/sprint-54-2-cat11-subagent/progress.md`
-  - Sections: Setup / Day-0 探勘 findings / calibration / pre-flight / time banking / next
-- [ ] **Commit + push Day 0**
-  - Commit message: `chore(plan, sprint-54-2): Day 0 探勘 + pre-flight + progress`
+### 0.5 Day 0 progress.md ✅
+- [x] **Create `progress.md`** ✅ 125 insertions; 9 drifts D1-D9 + plan adjustments captured (D1-followup AS_TOOL design Option A vs B)
+- [x] **Commit + push Day 0** ✅ commit `4861bb57`
 
 ---
 
