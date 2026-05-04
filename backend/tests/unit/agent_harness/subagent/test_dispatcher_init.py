@@ -84,10 +84,6 @@ async def test_spawn_handoff_mode_raises_launch_error(
 #  test_teammate.py::test_dispatcher_spawn_teammate_then_wait_for_round_trip)
 
 
-@pytest.mark.asyncio
-async def test_handoff_method_skeleton_raises_not_implemented(
-    dispatcher: DefaultSubagentDispatcher,
-) -> None:
-    """US-4 will fill handoff(); for now skeleton raises."""
-    with pytest.raises(NotImplementedError, match="US-4"):
-        await dispatcher.handoff(target_agent="other", context={})
+# (test_handoff_method_skeleton_raises_not_implemented removed in US-4:
+#  handoff() now delegates to HandoffExecutor; round-trip behavior covered in
+#  test_handoff.py::test_dispatcher_handoff_returns_uuid)

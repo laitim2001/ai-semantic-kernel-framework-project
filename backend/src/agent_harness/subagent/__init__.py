@@ -15,7 +15,12 @@ from agent_harness.subagent.exceptions import (
 from agent_harness.subagent.mailbox import MailboxStore
 from agent_harness.subagent.modes.as_tool import AsToolWrapper
 from agent_harness.subagent.modes.fork import ForkExecutor
+from agent_harness.subagent.modes.handoff import HandoffExecutor
 from agent_harness.subagent.modes.teammate import TeammateExecutor
+from agent_harness.subagent.tools import (
+    make_handoff_tool,
+    make_task_spawn_tool,
+)
 
 __all__ = [
     "SubagentDispatcher",
@@ -27,4 +32,7 @@ __all__ = [
     "ForkExecutor",
     "AsToolWrapper",
     "TeammateExecutor",
+    "HandoffExecutor",
+    "make_task_spawn_tool",
+    "make_handoff_tool",
 ]

@@ -33,6 +33,7 @@ US-2 deliverable (this file): wires FORK via ForkExecutor + as_tool_factory
 Created: 2026-05-04 (Sprint 54.2)
 
 Modification History:
+    - 2026-05-04: Wire HANDOFF via HandoffExecutor (US-4)
     - 2026-05-04: Wire TEAMMATE via TeammateExecutor + MailboxStore injection (US-3)
     - 2026-05-04: Wire FORK via ForkExecutor + as_tool_factory via AsToolWrapper (US-2)
     - 2026-05-04: Initial skeleton creation (Sprint 54.2 US-1)
@@ -68,6 +69,7 @@ from agent_harness.subagent.exceptions import (
 from agent_harness.subagent.mailbox import MailboxStore
 from agent_harness.subagent.modes.as_tool import AsToolWrapper
 from agent_harness.subagent.modes.fork import ForkExecutor
+from agent_harness.subagent.modes.handoff import HandoffExecutor
 from agent_harness.subagent.modes.teammate import TeammateExecutor
 
 if TYPE_CHECKING:
@@ -104,6 +106,7 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
             mailbox=self._mailbox,
             enforcer=self._enforcer,
         )
+        self._handoff = HandoffExecutor()
         self._as_tool_wrapper = AsToolWrapper(fork_executor=self._fork)
         # In-flight subagent tasks for wait_for() lookup. Per-instance state;
         # NOT module-level — fresh dispatcher per request.
@@ -213,9 +216,15 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
     ) -> UUID:
         """Transfer control to target_agent; return new session_id.
 
-        US-1 skeleton; US-4 fills.
+        Per Day 4 D18 simplification: delegates to HandoffExecutor (stateless;
+        allocates UUID + validates target_agent). Phase 55+ may add per-tenant
+        target_agent allowlist + audit event emission here.
         """
-        raise NotImplementedError("handoff() skeleton; impl in Sprint 54.2 US-4.")
+        return await self._handoff.execute(
+            target_agent=target_agent,
+            context=context,
+            trace_context=trace_context,
+        )
 
     def as_tool_factory(self, spec: AgentSpec) -> tuple["ToolSpec", "ToolHandler"]:
         """Wrap AgentSpec into a Cat 2 ToolSpec + handler pair.

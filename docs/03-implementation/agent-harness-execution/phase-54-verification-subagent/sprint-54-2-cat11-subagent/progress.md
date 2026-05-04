@@ -339,16 +339,58 @@ Day 3 actual: ~1.5 hr (plan estimate 5 hr × 0.55 calibrated → committed for ~
 
 Banked Day 3: **+1.25 hr** + Day 1+2 banked +1.7 hr = **+2.95 hr cumulative banked** for Day 4 reserve.
 
-### Next: Day 4 (US-4 Handoff + AgentLoop wiring + US-5 task_spawn/handoff tools + AD-Cat10-Obs-1 + Retrospective)
+## Day 4 (2026-05-04) — US-4 Handoff + US-5 Tools + AD-Cat10-Obs-1 + Closeout ✅
 
-- Implement `subagent/modes/handoff.py` (HandoffExecutor)
-- Wire `dispatcher.handoff()` to HandoffExecutor (returns new session_id UUID per ABC)
-- AgentLoop integration: subagent_dispatcher param + tool dispatch path for task_spawn / handoff (currently dispatch via tool_executor; handoff needs `_pending_handoff` flag + LoopCompleted(status="handoff") path)
-- SSE serializer: add SubagentSpawned + SubagentCompleted isinstance branches (D3 from Day 0)
-- US-5 tools: `agent_harness/subagent/tools.py` with `make_task_spawn_tool` + `make_handoff_tool` factories
-- US-5 AD-Cat10-Obs-1: 4 verifier classes (rules_based / llm_judge / cat9_fallback / cat9_mutator) tracer span + 3 metrics
-- 7 tests handoff + integration + 3 tools + 4 observability = **~14 tests**
-- Day 4 retrospective.md (6 questions + calibration multiplier 3rd verification)
-- PR open + closeout + memory + SITUATION-V2 update
+### 4.1-4.5 Sources
 
-預計 ~5.5 hr。Banked +2.95 hr → effective ~8.5 hr。完整 sprint 收尾 + V2 19/22 → 20/22。
+- ✅ `subagent/modes/handoff.py` (~50 lines) — Stateless executor; UUID alloc + empty-target reject
+- ✅ `dispatcher.py` updated: `_handoff = HandoffExecutor()` + `handoff() → self._handoff.execute(...)`
+- ✅ `subagent/tools.py` (~140 lines) — `make_task_spawn_tool` + `make_handoff_tool` factories
+- ✅ `verification/_obs.py` — `verification_span` async ctx mgr (no-op if tracer=None)
+- ✅ `verification/rules_based.py` + `llm_judge.py` — accept `tracer: Tracer | None = None`; wrap verify body
+- ✅ Cat 9 wrappers (cat9_fallback / cat9_mutator) reuse inner judge's tracer (D19; no double-wrap)
+
+### Drift findings during Day 4 (D18 — D22)
+
+| ID | Type | Issue | Fix |
+|----|------|-------|----|
+| **D18** | architecture | Plan §US-4 said modify AgentLoop with `_pending_handoff` flag; D8 Day 0 showed single tool_executor.execute() dispatch — modifying AgentLoop violates 17.md single-source | task_spawn/handoff register as Cat 2 tools; ToolExecutor auto-routes; AgentLoop UNTOUCHED. Phase 55+ may add SubagentSpawned/Completed events via tool handler hook. |
+| **D19** | scope | Plan §US-5 said all 4 verifier classes emit tracer spans; cat9 wrappers internally call judge.verify() which already spans → double-wrap inflation | Cat 9 wrappers reuse inner judge's tracer; tests verify span emitted from judge. AD-Cat10-Obs-Cat9Wrappers logged for revisit. |
+| **D20** | data | LoopState has no `create_new()` factory | Use 54.1 pattern `cast(LoopState, None)` via `_dummy_state()` helper since verifiers don't read state |
+| **D21** | flake8 | 4× E501 from accumulated MHist entries + verbose docstring + JSON literal | Shorten MHist entries; multi-line ternary. AD-Lint-3 logged. |
+| **D22** | lint | check_cross_category_import flagged `from agent_harness.observability._abc import Tracer` (private) | Public import `from agent_harness.observability import Tracer` (re-exported there). Same pattern as 53.5/54.1 cross-category fixes. |
+
+### 4.6/4.7 Tests (14 new − 1 obsolete = 13 net new) ✅
+
+- ✅ `test_handoff.py` — 3 cases
+- ✅ `test_subagent_tools.py` — 7 cases (4 task_spawn + 3 handoff)
+- ✅ `test_observability.py` — 4 cases (4 verifier classes span check)
+- ✅ Removed obsolete `test_handoff_method_skeleton_raises_not_implemented`
+
+### 4.8 Day 4 sanity ✅
+
+- mypy --strict 0 errors / 24 source files
+- black + isort + flake8 clean (D21 fixed)
+- 6/6 V2 lints (D14 + D17 + D22 ALLOWLIST/import fixes)
+- LLM SDK leak: 0
+- pytest **1351 passed / 4 skipped / 0 fail** (= 1338 baseline + 13 net new)
+
+### 4.9 Cat 11 Level 4 verified ✅
+
+```bash
+python -c "from agent_harness.subagent import (DefaultSubagentDispatcher, BudgetEnforcer,
+    MailboxStore, ForkExecutor, AsToolWrapper, TeammateExecutor, HandoffExecutor,
+    make_task_spawn_tool, make_handoff_tool); print('Cat 11 Level 4 OK')"
+```
+
+### 4.10 Retrospective + Closeout
+
+- ✅ retrospective.md (6 mandatory questions + calibration verify + 7 new AD)
+- Calibration 3-sprint mean **0.78** (53.7=1.01, 54.1=0.69, 54.2=0.65) → recommend lower 0.55→0.50 for Phase 55 (AD-Sprint-Plan-2)
+- Total Sprint 54.2 actual: **~8 hr** vs commit 12.4 hr → ratio 0.65 (Day 4 ~3 hr)
+- V2 progress: **19/22 → 20/22 (91%)** ↑ main progress advance
+- Cat 11 Level 0 → **Level 4**
+- AD-Cat10-Obs-1 closed
+- 7 new AD logged for Phase 55+
+
+Next: PR + merge + memory + SITUATION-V2 update。

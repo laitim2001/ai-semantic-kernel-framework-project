@@ -27,6 +27,7 @@ Created: 2026-05-04 (Sprint 54.1 Day 2)
 Last Modified: 2026-05-04
 
 Modification History:
+    - 2026-05-04: AD-Cat10-Obs-1 — accept optional Tracer (Sprint 54.2 US-5)
     - 2026-05-04: Initial (Sprint 54.1 US-2) — closes AD-Cat9-1 (LLM-judge fallback for detectors)
 """
 
@@ -43,7 +44,9 @@ from agent_harness._contracts import (
     VerificationResult,
 )
 from agent_harness._contracts.chat import ChatRequest
+from agent_harness.observability import Tracer
 from agent_harness.verification._abc import Verifier
+from agent_harness.verification._obs import verification_span
 from agent_harness.verification.templates import load_template
 
 
@@ -56,6 +59,7 @@ class LLMJudgeVerifier(Verifier):
         chat_client: ChatClient,
         judge_template: str,
         name: str = "llm_judge",
+        tracer: Tracer | None = None,
     ) -> None:
         """
         Args:
@@ -68,6 +72,7 @@ class LLMJudgeVerifier(Verifier):
         self._chat = chat_client
         self._template_arg = judge_template
         self._name = name
+        self._tracer = tracer
 
     async def verify(
         self,
@@ -76,18 +81,19 @@ class LLMJudgeVerifier(Verifier):
         state: LoopState,
         trace_context: TraceContext | None = None,
     ) -> VerificationResult:
-        try:
-            prompt = self._build_prompt(output)
-            request = ChatRequest(messages=[Message(role="user", content=prompt)])
-            response = await self._chat.chat(request, trace_context=trace_context)
-            return self._parse_response(response.content)
-        except Exception as e:  # noqa: BLE001 — fail-closed: ALL errors → passed=False
-            return VerificationResult(
-                passed=False,
-                verifier_name=self._name,
-                verifier_type="llm_judge",
-                reason=f"judge_error: {type(e).__name__}: {e}",
-            )
+        async with verification_span(self._tracer, self._name):
+            try:
+                prompt = self._build_prompt(output)
+                request = ChatRequest(messages=[Message(role="user", content=prompt)])
+                response = await self._chat.chat(request, trace_context=trace_context)
+                return self._parse_response(response.content)
+            except Exception as e:  # noqa: BLE001 — fail-closed: ALL errors → passed=False
+                return VerificationResult(
+                    passed=False,
+                    verifier_name=self._name,
+                    verifier_type="llm_judge",
+                    reason=f"judge_error: {type(e).__name__}: {e}",
+                )
 
     def _build_prompt(self, output: str) -> str:
         """Resolve template (name or raw) and substitute {output}."""

@@ -2,6 +2,7 @@
 
 from agent_harness.subagent.modes.as_tool import AsToolWrapper
 from agent_harness.subagent.modes.fork import ForkExecutor
+from agent_harness.subagent.modes.handoff import HandoffExecutor
 from agent_harness.subagent.modes.teammate import TeammateExecutor
 
-__all__ = ["ForkExecutor", "AsToolWrapper", "TeammateExecutor"]
+__all__ = ["ForkExecutor", "AsToolWrapper", "TeammateExecutor", "HandoffExecutor"]

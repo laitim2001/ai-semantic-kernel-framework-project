@@ -21,22 +21,32 @@ Created: 2026-05-04 (Sprint 54.1 Day 1)
 Last Modified: 2026-05-04
 
 Modification History:
+    - 2026-05-04: AD-Cat10-Obs-1 — accept optional Tracer (Sprint 54.2 US-5)
     - 2026-05-04: Initial creation (Sprint 54.1 US-1)
 """
 
 from __future__ import annotations
 
 from agent_harness._contracts import LoopState, TraceContext, VerificationResult
+from agent_harness.observability import Tracer
 from agent_harness.verification._abc import Verifier
+from agent_harness.verification._obs import verification_span
 from agent_harness.verification.types import Rule
 
 
 class RulesBasedVerifier(Verifier):
     """Run Rules in order; first failure short-circuits."""
 
-    def __init__(self, rules: list[Rule], name: str = "rules_based") -> None:
+    def __init__(
+        self,
+        rules: list[Rule],
+        name: str = "rules_based",
+        *,
+        tracer: Tracer | None = None,
+    ) -> None:
         self._rules = rules
         self._name = name
+        self._tracer = tracer
 
     async def verify(
         self,
@@ -45,18 +55,19 @@ class RulesBasedVerifier(Verifier):
         state: LoopState,
         trace_context: TraceContext | None = None,
     ) -> VerificationResult:
-        for rule in self._rules:
-            passed, reason, suggestion = rule.check(output)
-            if not passed:
-                return VerificationResult(
-                    passed=False,
-                    verifier_name=self._name,
-                    verifier_type="rules_based",
-                    reason=reason,
-                    suggested_correction=suggestion,
-                )
-        return VerificationResult(
-            passed=True,
-            verifier_name=self._name,
-            verifier_type="rules_based",
-        )
+        async with verification_span(self._tracer, self._name):
+            for rule in self._rules:
+                passed, reason, suggestion = rule.check(output)
+                if not passed:
+                    return VerificationResult(
+                        passed=False,
+                        verifier_name=self._name,
+                        verifier_type="rules_based",
+                        reason=reason,
+                        suggested_correction=suggestion,
+                    )
+            return VerificationResult(
+                passed=True,
+                verifier_name=self._name,
+                verifier_type="rules_based",
+            )
