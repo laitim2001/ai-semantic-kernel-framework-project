@@ -205,69 +205,28 @@
 
 ## Day 4 — Retrospective + Closeout
 
-- [ ] **Verify all 6 ADs closed** (acceptance criteria checklist)
-  - AD-Plan-1: §Step 2.5 in sprint-workflow.md ✅
-  - AD-Lint-2: per-day targets dropped ✅
-  - AD-Lint-3: MHist 1-line ✅
-  - AD-Cat7-1: 7 V2 lints + grep-zero verified ✅
-  - AD-Hitl-7: hitl_policies + DBHITLPolicyStore + 5 tests ✅
-  - AD-Cat12-Helpers-1: category_span + 4 verifier refactors + tests ✅
-- [ ] **Run full pytest baseline**
-  - `cd backend && python -m pytest -q`
-  - Target: 1416 → ≥1428 (+12 minimum)
-- [ ] **Run full lint chain**
-  - `cd backend && black --check src/ tests/`
-  - `cd backend && isort --check-only --profile black src/ tests/`
-  - `cd backend && flake8 src/ tests/`
-  - `cd backend && mypy src/ --strict`
-  - `cd backend && python scripts/lint/run_all.py` (now 7 lints)
-- [ ] **LLM SDK leak check**
-  - `cd backend && grep -rE "^(from |import )(openai|anthropic|agent_framework)" src/agent_harness/ src/infrastructure/`
-  - DoD: zero matches
-- [ ] **Compute calibration ratio**
-  - Sum actual hours across Day 0-4 (from progress.md entries)
-  - Ratio = actual / committed
-  - Document in retro Q2
-- [ ] **Catalog final drift findings**
-  - D1-D3 from Day 0 + Dn from Day 1-3
-- [ ] **Write `retrospective.md`** (6 必答 Q1-Q6)
-  - Path: `docs/03-implementation/agent-harness-execution/phase-55/sprint-55-3/retrospective.md`
-  - Q1 What went well
-  - Q2 What didn't go well + calibration ratio + delta vs band
-  - Q3 What we learned (generalizable)
-  - Q4 Audit Debt deferred (carryover candidates for 55.4-55.6)
-  - Q5 Next steps (rolling planning — 55.4 candidate scope only)
-  - Q6 0.40 multiplier 2nd application validation + recommendation for Phase 56+
-- [ ] **Update `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md`**
-  - §8 close 6 ADs
-  - Add new ADs (if any) from Day 1-3 drift catalog
-  - §9 milestones row +Sprint 55.3 (V2 22/22 unchanged — audit cycle)
-  - Footer Last Updated 2026-05-04
-  - Update history table +1 row
-- [ ] **Update memory**
-  - `memory/project_phase55_3_audit_cycle_1.md` — new
-  - `memory/MEMORY.md` — index +1 line
-- [ ] **Commit Day 4**
-  - Commit 1: `docs(retro, sprint-55-3): retrospective + 6 AD closure summary`
-  - Commit 2: `chore(docs, sprint-55-3): SITUATION + memory sync`
-- [ ] **Push branch**
-  - `git push -u origin feature/sprint-55-3-audit-cycle-A-G`
-- [ ] **Open PR**
-  - Title: `Sprint 55.3: Audit Cycle Mini-Sprint #1 — close 6 ADs (Groups A + G)`
-  - Body: 6 AD closure summary + plan/checklist links + retrospective link
-  - Co-author footer
-- [ ] **Watch CI green**
-  - 5 active required CI checks all pass(backend-ci / V2 Lint / Frontend E2E / etc.)
-  - paths-filter workaround if needed: touch `.github/workflows/backend-ci.yml` header(per AD-CI-5 pattern)
-- [ ] **Merge PR** (after CI green)
-  - Solo-dev policy: review_count=0;merge as author after CI green
-  - Update main HEAD reference in memory + SITUATION
-- [ ] **Closeout PR (docs sync)**
-  - If SITUATION + memory updates lag main merge,open closeout PR per established pattern
-  - Title: `Sprint 55.3 closeout: SITUATION + memory sync`
-- [ ] **Final verify on main**
-  - `git checkout main && git pull && git status` clean
-  - V2 22/22 unchanged (audit cycle does not advance main progress)
+- [x] **Verify all 6 ADs closed** (acceptance criteria checklist)
+  - AD-Plan-1: §Step 2.5 in sprint-workflow.md ✅ (`bc468477`)
+  - AD-Lint-2: per-day targets dropped ✅ (`bc468477`)
+  - AD-Lint-3: MHist 1-line ✅ (`144c4595`)
+  - AD-Cat12-Helpers-1: category_span extracted + 2 wrappers delegate + 3 tests ✅ (`52d802a9`)
+  - AD-Cat7-1: 7 V2 lints + grep-zero verified + 6 tests ✅ (`cd86a814`)
+  - AD-Hitl-7: hitl_policies + DBHITLPolicyStore + 9 tests ✅ (`c09d3cc5`)
+- [x] **Run full pytest baseline** — **1434 passed, 4 skipped** (1416 → 1434 = +18; 50% over plan ≥+12)
+- [x] **Run full lint chain** — black ✓ / isort ✓ / flake8 ✓ / mypy --strict ✓ / 7 V2 lints 7/7 ✓
+- [x] **LLM SDK leak check** — 0 matches
+- [x] **Compute calibration ratio** — actual ~11.5 hr / committed 4 hr = **2.81** ⚠️ way over band [0.85, 1.20]
+- [x] **Catalog final drift findings** — 8 total (D1-D3 Day 0 + D4-D5 Day 1 + D6-D8 Day 3)
+- [x] **Write `retrospective.md`** — 6 必答 Q1-Q6 + AD-Sprint-Plan-4 (matrix proposal) + AD-Plan-2 (Day-0 path verify)
+- [x] **Update `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md`** — §8 closes 6 ADs + supersedes AD-Sprint-Plan-2 + AD-Phase56-Calibration via AD-Sprint-Plan-4 / §9 +Sprint 55.3 row / footer Last Updated / Update history +1 row
+- [x] **Update memory** — `project_phase55_3_audit_cycle_1.md` new + MEMORY.md index +1
+- [ ] **Commit Day 4** — pending (this turn)
+- [ ] **Push branch** — pending after commit
+- [ ] **Open PR** — pending after push
+- [ ] **Watch CI green** — pending
+- [ ] **Merge PR** — pending after CI
+- [ ] **Closeout PR (docs sync)** — pending if needed
+- [ ] **Final verify on main** — pending after merge
 
 ---
 
@@ -275,14 +234,14 @@
 
 | AD | Status | Tests Added | Commit |
 |----|--------|-------------|--------|
-| AD-Plan-1 | ⏳ pending | 0 | — |
-| AD-Lint-2 | ⏳ pending | 0 | — |
-| AD-Lint-3 | ⏳ pending | 0 | — |
-| AD-Cat7-1 | ⏳ pending | 2-3 | — |
-| AD-Hitl-7 | ⏳ pending | 5-7 | — |
-| AD-Cat12-Helpers-1 | ⏳ pending | 3-4 | — |
-| **Total** | **0/6 closed** | **0/+12** | — |
+| AD-Plan-1 | ✅ closed | 0 | `bc468477` |
+| AD-Lint-2 | ✅ closed | 0 | `bc468477` |
+| AD-Lint-3 | ✅ closed | 0 | `144c4595` |
+| AD-Cat7-1 | ✅ closed | 6 | `cd86a814` |
+| AD-Hitl-7 | ✅ closed | 9 | `c09d3cc5` |
+| AD-Cat12-Helpers-1 | ✅ closed | 3 | `52d802a9` |
+| **Total** | **6/6 closed** | **+18** (50% over plan ≥+12) | — |
 
 ---
 
-**Status**: Day 0 — Plan + Checklist + progress.md drafting (this commit pending). Pending user approval before Day 1 code starts.
+**Status**: ✅ Sprint 55.3 main work complete (6/6 ADs closed). Day 4 closeout commit + push + PR pending.
