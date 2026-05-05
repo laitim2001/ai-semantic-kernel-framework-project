@@ -156,12 +156,12 @@
 
 | AD | Status | Tests Added | Commit |
 |----|--------|-------------|--------|
-| AD-Cat8-1 | ⏳ stamp pending | 0 (already 100% via 53.3) | — |
+| AD-Cat8-1 | ✅ closed Day 1 (stamp) | 0 (already 100% via 53.3) | `cb084c3e` |
 | AD-Cat8-2 | 🚧 deferred to 55.5 (D6) | — | — |
-| AD-Cat8-3 (narrow Option C) | ⏳ Day 1 in progress | 3 | — |
-| AD-Cat9-5 | ⏳ Day 2 pending | 4 | — |
-| AD-Cat9-6 | ⏳ Day 3 pending | 4-6 | — |
-| **Total** | **0/4 closed** (1 deferred) | **0/+11** | — |
+| AD-Cat8-3 (narrow Option C) | ✅ closed Day 1 | 3 | `cb084c3e` |
+| AD-Cat9-5 | ✅ closed Day 2 | 4 | `c8736979` |
+| AD-Cat9-6 | ✅ closed Day 3 | 5 | `435cd50b` |
+| **Total** | **4/4 closed** (1 deferred) | **+12 (target ≥+11 hit)** | — |
 
 ---
 
