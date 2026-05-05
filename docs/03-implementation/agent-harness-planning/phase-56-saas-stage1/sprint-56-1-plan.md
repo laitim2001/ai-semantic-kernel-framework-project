@@ -503,11 +503,28 @@ plans:
 
 **Risk Class C (module-level singleton across event loops)**: MEDIUM RELEVANCE — `FeatureFlagsService` cache could become module-level singleton;`PlanLoader` cache too. Mitigation: per-request DI pattern (no module-level cache);若 cache 必要,加 conftest.py `reset_*` autouse fixture pattern per testing.md §Module-level Singleton Reset Pattern.
 
+### Day 0 探勘 D-findings (catalogued 2026-05-05; per AD-Plan-1 + AD-Plan-3 promoted)
+
+8 drift findings from Day 0 兩-prong 探勘 — full detail in [`progress.md`](../../../agent-harness-execution/phase-56/sprint-56-1/progress.md) §Day 0 Drift findings table:
+
+| ID | Summary | Sprint Impact |
+|----|---------|---------------|
+| D1 | `class Tenant(Base)` 已存在於 `identity.py:67` (code/display_name/status/metadata 4 cols, 無 state Enum / plan / progress JSONB) | US-1 = ENHANCE not CREATE (~-2 hr scope save); Day 1 decides rename `status` → `state` Enum or keep both |
+| D2 | V2 Alembic 在 `backend/src/infrastructure/db/migrations/versions/` (NOT `db/alembic/`); head = `0013_hitl_policies.py` (55.3); next = **0014** | §File Layout 路徑修正(applied at Day 1+ implementation; plan §Tech Spec preserves original audit trail per AD-Plan-1) |
+| D3 | Audit infra spread:`AuditLog` ORM at `models/audit.py:67` + `governance/audit/query.py` + `guardrails/audit/worm_log.py` (53.3 WORM);無 single `class AuditLogger` | US-4 feature_flag override audit pathway = direct AuditLog ORM write (Day 3 design) |
+| D4 | Chat router L121 `tracer=None  # D2: get_tracer factory deferred to Phase 56+` (carryover 55.2 = AD-Cat12-BusinessObs) | US-1+US-3+US-4 obs spans pass `tracer=None` to `category_span` until AD-Cat12-BusinessObs closure |
+| D5 | `TenantScopedMixin` at `infrastructure/db/base.py:51` confirmed | None (assumption verified) |
+| D6 | Chat router POST L89-94 uses `ServiceFactory` (53.4 governance), not `BusinessServiceFactory` | US-2 QuotaEnforcer Depends inserts after `factory + db` (Day 2 task) |
+| D7 | pytest baseline **1467 collected** (+4 vs plan 1463); mypy **270 files** (+4 vs plan 266) | Test target re-baseline: 1467 → ≥ 1504 (+37 unchanged) |
+| D8 | V2 lint scripts at root `scripts/lint/` (NOT `backend/scripts/lint/`); 7 scripts + run_all.py orchestrator | §US-5 + §File Layout: 8th lint at `scripts/lint/check_rls_policies.py` (root) |
+
+**Net scope shift**: ≤ 10% (D1 saves ~2 hr; D2+D7+D8 add ~0.5 hr path corrections) → proceed Day 1 without plan re-write per AD-Plan-1 audit-trail discipline.
+
 ### Sprint-specific Risks
 
 | Risk | Mitigation |
 |------|-----------|
-| 既有 `tenants` table 若已存在,US-1 scope unclear | Day 0 grep critical-path;若已存在,plan §US-1 改 issue「enhance + state machine + provisioning workflow」(scope 不變,只改主語) |
+| 既有 `tenants` table 若已存在,US-1 scope unclear | ✅ **CLOSED by Day 0 D1**: Tenant ORM 已存在 `identity.py:67`;US-1 確認為 ENHANCE pattern;Day 1 ORM modification + Alembic 0014 加 state/plan/progress columns |
 | Provisioning workflow 8-step 中 Qdrant + system memory + welcome notification 需要外部依賴 | 此 sprint 全部 stub(log + placeholder field);Phase 56.x 真實接線;sprint scope 縮減 ~3 hr |
 | Quota enforcement Redis daily counter race condition | Use Redis INCR atomic;每日 00:00 UTC 重置(TTL = 24h from first set);多 worker 共享 OK |
 | RLS audit 發現 gap 需大量 schema 改動 | Day 0 quick scan dryrun;若 > 5 tables 需 RLS 補,scope split — 緊急 fixes 入此 sprint;次要 deferred to Phase 56.2 |
