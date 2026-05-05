@@ -208,43 +208,37 @@
 - [x] **Lint chain** (docs-only edits neutral; mypy/black/flake8 skip Markdown; 7 V2 lints out of scope; pytest baseline unchanged 1463/4/0)
 - [x] **Buffer time use**: ~30 min remaining used for SITUATION-V2-SESSION-START.md §8/§9 pre-update notes + memory file (`project_phase55_6_audit_cycle_4.md`) outline pre-draft for Day 5 closeout integration
 - [x] **Update Day 4 progress.md** entry — actual ~1 hr (vs revised plan §Workload Day 4 ~0.75 hr + buffer ~0.5 hr → ratio ~0.8 in band)
-- [ ] **Commit Day 4**
+- [x] **Commit Day 4** — `b2332e60`
   - Commit: `docs(rules, sprint-55-6): close AD-Plan-3-Promotion + AD-Lint-MHist-Verbosity (process AD pair fold-in)`
-- [ ] **Push branch**
+- [x] **Push branch** — `a1ac5558..b2332e60` to origin
 
 ---
 
 ## Day 5 — Retrospective + Closeout
 
-- [ ] **Verify all 5 ADs closed** (acceptance criteria) ✅
-  - AD-Cat8-2: retry wire + 6-8 unit + 1 integration tests green
-  - AD-CI-5: aggregator workflow + branch protection PATCH verified
-  - AD-CI-6: deploy-production disabled with re-enable criteria
-  - AD-Plan-3-Promotion: sprint-workflow.md §Step 2.5 extended
-  - AD-Lint-MHist-Verbosity: file-header-convention.md §格式 extended
-- [ ] **Run full pytest baseline** → target 1454 → ≥1462 (cumulative +8)
-- [ ] **Run full lint chain** → black + isort + flake8 + mypy --strict + 7 V2 lints all green
-- [ ] **LLM SDK leak check** — 0
-- [ ] **Compute calibration ratio** (AD-Sprint-Plan-5 medium-backend 0.85 second application)
-- [ ] **Verify AD-CI-5 effectiveness**: confirm THIS PR's required checks all pass via aggregator route (no touch-header on backend-ci.yml or playwright-e2e.yml needed for THIS PR)
-- [ ] **Catalog final drift findings** (D1-Dn)
-- [ ] **Write `retrospective.md`** (6 必答 Q1-Q6 + sign-off)
-  - Q1 What went well (highlight AD-Plan-3 second app validation + D3 critical catch)
-  - Q2 What didn't go well + calibration ratio
-  - Q3 Generalizable lessons (D3 catch + scope adjustment via plan revision commit)
-  - Q4 Audit Debt deferred (carryover candidates for 55.7+)
-  - Q5 Next steps (rolling planning candidate scope only)
-  - Q6 AD-Sprint-Plan-5 second application + AD-Plan-3-Promotion ratification
-- [ ] **Update `SITUATION-V2-SESSION-START.md`** (§8 close 5 ADs / §9 +Sprint 55.6 row + 累計 / footer + history row)
-- [ ] **Update memory** (`project_phase55_6_audit_cycle_4.md` NEW + `MEMORY.md` +1 line)
+- [x] **Verify all 5 ADs closed** (acceptance criteria) ✅
+  - AD-Cat8-2: Option H wire + 8 unit + 1 integration tests green (Day 1+2 commits)
+  - AD-CI-5: Option Z paths-filter retirement (Day 3 commit `a1ac5558`); branch protection unchanged
+  - AD-CI-6: deploy-production disabled with 5-point re-enable criteria (Day 3 commit `a1ac5558`)
+  - AD-Plan-3-Promotion: sprint-workflow.md §Step 2.5 two-prong model (Day 4 commit `b2332e60`)
+  - AD-Lint-MHist-Verbosity: file-header-convention.md §格式 char-count guidance (Day 4 commit `b2332e60`)
+- [x] **Run full pytest baseline** → 1454 → **1463** (+9; over plan target +8 by 12.5%) ✅
+- [x] **Run full lint chain** → 7 V2 lints 7/7 green (Day 4 verified; Day 5 docs-only neutral)
+- [x] **LLM SDK leak check** — 0 (covered by `check_llm_sdk_leak` in V2 lints)
+- [x] **Compute calibration ratio** — actual ~11 hr / committed ~12 hr → **0.92 ✅** in [0.85, 1.20] band by 0.07; medium-backend 2-data-point mean 1.03; 8-sprint window 4/8 (50%) in-band
+- [ ] **Verify AD-CI-5 effectiveness**: confirm THIS PR's 5 required checks all pass via paths-filter retirement (no touch-header needed) — first end-to-end validation of Option Z; pending PR open
+- [x] **Catalog final drift findings** — D1-D11 stable through Day 4 (no new drifts at Day 4-5 since process AD edits not Day-0 探勘 territory)
+- [x] **Write `retrospective.md`** (6 必答 Q1-Q6 + sign-off) — covers AD-Plan-3 second-sixth applications validation + Option H/Z elegance + Phase 55 audit cycle COMPLETE backend/infra closure
+- [x] **Update `SITUATION-V2-SESSION-START.md`** (§8 close 5 ADs / §9 +Sprint 55.6 row + 累計 6 carryover bundles / footer + history row)
+- [x] **Update memory** (`project_phase55_6_audit_cycle_4.md` NEW + `MEMORY.md` +1 line)
 - [ ] **Commit Day 5**
-  - Commit: `docs(retro, sprint-55-6): retrospective + 5 AD closure summary + AD-Plan-3 2nd app validation + AD-CI-5 paths-filter retired`
+  - Commit: `docs(retro, sprint-55-6): retrospective + 5 AD closure summary + AD-Plan-3 promoted to validated rule + Phase 55 audit cycle COMPLETE`
 - [ ] **Push branch**
 - [ ] **Open PR**
-  - Title: `Sprint 55.6: Audit Cycle Mini-Sprint #4 — close AD-Cat8-2 + AD-CI-5 + AD-CI-6 + Process AD pair`
-- [ ] **Watch CI green** — if AD-CI-5 working: aggregator passes + paths-filtered jobs report independently; if not yet: ONE LAST touch-header on backend-ci.yml + playwright-e2e.yml as transitional workaround
+  - Title: `Sprint 55.6: Audit Cycle Mini-Sprint #4 — close AD-Cat8-2 + AD-CI-5 + AD-CI-6 + Process AD pair (Phase 55 audit cycle COMPLETE)`
+- [ ] **Watch CI green** — first end-to-end validation of Option Z paths-filter retirement; if successful no touch-header needed
 - [ ] **Merge PR** — solo-dev policy, review_count=0
-- [ ] **Closeout PR for SHA fill-in** (SITUATION §9 PR # + SHA + memory file SHA fill-in + branch protection PATCH evidence in PR description)
+- [ ] **Closeout PR for SHA fill-in** (SITUATION §9 PR # + SHA + memory file SHA fill-in)
 - [ ] **Final verify on main** — clean
 
 ---
