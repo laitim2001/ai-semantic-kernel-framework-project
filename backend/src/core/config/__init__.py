@@ -8,6 +8,7 @@ Per project rules (.claude/rules/code-quality.md): always use Pydantic
 Settings (not raw os.environ) so type-safe + validation + .env support.
 
 Modification History (newest-first):
+    - 2026-05-06: Sprint 56.1 Day 2 — add quota_enforcement_enabled (US-2)
     - 2026-05-05: Sprint 55.5 — add chat_verification_mode (AD-Cat10-Wire-1; Option E)
     - 2026-04-30: Sprint 55.1 — add business_domain_mode (Literal mock/service)
     - 2026-04: Sprint 49.2-49.4 — DB / Redis / JWT field expansion
@@ -72,6 +73,16 @@ class Settings(BaseSettings):
     # Option E 2-mode post-D4+D5: no shadow/enforce mode; rely on
     # registry-presence dispatch in run_with_verification wrapper.
     chat_verification_mode: Literal["disabled", "enabled"] = "disabled"
+
+    # ---- Phase 56.1 SaaS quota (US-2) -------------------------------
+    # Off by default — production rollout flips True after Redis client
+    # wiring at api/main.py + load test verifies headroom.
+    # When True: chat router pre-stream calls QuotaEnforcer.check_and_reserve;
+    # 429 raised on cap breach with Retry-After header.
+    # Day 2 ships pre-call reservation only; post-call reconciliation is
+    # Phase 56.x carryover (AD-QuotaPostCall-1).
+    quota_enforcement_enabled: bool = False
+    quota_estimated_tokens_per_call: int = 1000  # conservative pre-call reservation
 
 
 @lru_cache(maxsize=1)

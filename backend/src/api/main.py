@@ -27,6 +27,7 @@ Created: 2026-04-29 (Sprint 49.4 Day 5)
 Last Modified: 2026-04-29
 
 Modification History (newest-first):
+    - 2026-05-06: Sprint 56.1 — mount admin_tenants router (POST /api/v1/admin/tenants)
     - 2026-05-04: Mount governance router (Sprint 53.5 US-1) — GET /governance/approvals
         + POST /governance/approvals/{id}/decide (approver RBAC + tenant isolation).
     - 2026-05-04: Mount audit router (Sprint 53.5 US-5+US-6) — GET /audit/log
@@ -50,6 +51,7 @@ from typing import AsyncIterator
 
 from fastapi import FastAPI
 
+from api.v1.admin.tenants import router as admin_tenants_router
 from api.v1.audit import router as audit_router
 from api.v1.chat import router as chat_router
 from api.v1.governance import router as governance_router
@@ -96,6 +98,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router, prefix="/api/v1")
     app.include_router(audit_router, prefix="/api/v1")
     app.include_router(governance_router, prefix="/api/v1")
+    app.include_router(admin_tenants_router, prefix="/api/v1")
 
     return app
 

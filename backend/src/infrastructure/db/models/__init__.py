@@ -35,6 +35,9 @@ from infrastructure.db.models.business import (
     IncidentStatus,
 )
 
+# Sprint 56.1 Day 3 — Feature Flags (US-4)
+from infrastructure.db.models.feature_flag import FeatureFlag
+
 # Day 3.1-3 (Sprint 49.3) — Governance
 from infrastructure.db.models.governance import (
     Approval,
@@ -121,4 +124,6 @@ __all__ = [
     "Incident",
     "IncidentSeverity",
     "IncidentStatus",
+    # Feature Flags (Sprint 56.1 Day 3)
+    "FeatureFlag",
 ]
