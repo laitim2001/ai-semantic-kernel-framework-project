@@ -7,16 +7,22 @@ Scope: Sprint 54.2 US-5 (origin) / Sprint 55.3 (delegation refactor)
 Description:
     Verification-specific ergonomic wrapper around the cross-cutting
     `category_span` primitive in `agent_harness.observability.helpers`.
-    Used by 4 verifier classes (rules_based / llm_judge /
-    cat9_fallback / cat9_mutator) — emits `verifier.{name}` span under
-    `SpanCategory.VERIFICATION`; no-op when tracer is None.
+    Direct callers (emit `verifier.{name}` span under SpanCategory.VERIFICATION):
+    rules_based.py + llm_judge.py.
+    Indirect users (D19 reuse-inner pattern; do NOT call this directly):
+    cat9_fallback.py + cat9_mutator.py — they delegate verification work to
+    an inner LLMJudgeVerifier whose `verify()` already emits the span; the
+    wrappers intentionally avoid double-instrumentation. Sprint 55.5
+    AD-Cat10-Obs-Cat9Wrappers validates + sentinel-tests this design.
+    No-op when tracer is None.
 
     Sprint 55.3 (AD-Cat12-Helpers-1): the no-op + start_span boilerplate
     moved to `observability/helpers.category_span`; this file now delegates
     to keep the existing call signature stable while removing duplication
     with `business_domain/_obs.py`.
 
-Modification History:
+Modification History (newest-first):
+    - 2026-05-05: Sprint 55.5 — clarify direct vs indirect users (D19 reuse-inner)
     - 2026-05-04: Sprint 55.3 — delegate to category_span (closes AD-Cat12-Helpers-1)
     - 2026-05-04: Initial creation (Sprint 54.2 US-5 / AD-Cat10-Obs-1)
 

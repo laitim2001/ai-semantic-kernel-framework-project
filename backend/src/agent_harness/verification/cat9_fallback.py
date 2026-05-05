@@ -31,13 +31,27 @@ Description:
       - judge.passed=True → return PASS (defense-in-depth confirmed clean)
       - judge.passed=False → return BLOCK with judge.reason as Guardrail reason
 
+    **Observability Design (54.2 D19 + 55.5 AD-Cat10-Obs-Cat9Wrappers validation)**:
+    This wrapper REUSES the inner judge's `verification_span` — it does NOT
+    emit an independent wrapper-level span. Rationale:
+    - Single span per verify invocation matches Cat 12 helpers minimal-overhead
+      philosophy (see observability/helpers.py + AD-Cat12-Helpers-1)
+    - Wrapper logic (judge fallback decision) does not warrant a separate span;
+      inner judge's span attributes already capture verifier identity + result
+    - Avoids double-instrumentation noise in distributed traces
+    - Verified by sentinel: tests/unit/agent_harness/verification/test_cat9_wrappers_obs.py
+      (asserts `verification_span` is NOT imported in this module; reuse-inner
+      invariant enforced at static-import level)
+    Decision recorded by Sprint 55.5 (audit cycle Mini-Sprint #3 closes AD-Cat10-Obs-Cat9Wrappers).
+
 Owner: 範疇 10 (verification/) — bridges to Cat 9 Guardrail ABC
 Single-source: reuses existing GuardrailResult + Verifier ABC + LLMJudgeVerifier
 
 Created: 2026-05-04 (Sprint 54.1 Day 2)
-Last Modified: 2026-05-04
+Last Modified: 2026-05-05
 
 Modification History:
+    - 2026-05-05: Sprint 55.5 — Observability Design D19 (closes AD-Cat10-Obs-Cat9Wrappers)
     - 2026-05-04: Initial (Sprint 54.1 US-2; closes AD-Cat9-1) — wrapper pattern per Drift D8
 
 Related:

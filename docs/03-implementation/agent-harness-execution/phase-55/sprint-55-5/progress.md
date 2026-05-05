@@ -161,9 +161,53 @@ _(to be filled in)_
 
 ---
 
-## Day 2 — 2026-05-XX (pending)
+## Day 2 — 2026-05-05 (AD-Cat10-Obs-Cat9Wrappers validation)
 
-_(to be filled in)_
+**Estimated**: ~1.5 hr (per plan)
+**Actual**: ~1.5 hr (ratio 1.0 in [0.85, 1.20] band)
+
+### Pre-code reading (~10 min) — AD-Plan-3 third application
+
+- ✅ Read `cat9_fallback.py` (137 lines) — wrapper IS-A Guardrail; check() delegates to wrapped + judge; **0 verification_span imports/calls**
+- ✅ Read `cat9_mutator.py` (125 lines) — same pattern; SANITIZE flow with judge.suggested_correction; **0 verification_span imports/calls**
+- ✅ Read `verification/_obs.py` (49 lines) — `verification_span` async ctx mgr delegating to `category_span` (55.3 AD-Cat12-Helpers-1)
+- ✅ Direct verification_span callers: rules_based + llm_judge;cat9 wrappers = indirect via inner judge per 54.2 D19
+
+### Drift findings (Day 2 — AD-Plan-3 third application)
+
+| ID | Type | Finding |
+|----|------|---------|
+| **D7** | Wrong-content drift in `_obs.py` docstring (L11) | Says "Used by 4 verifier classes" but cat9_fallback / cat9_mutator do NOT directly call verification_span — they reuse via inner judge per 54.2 D19. Direct callers = rules_based + llm_judge; cat9 wrappers = indirect. **Fixed in Day 2 commit** |
+| **D8** | Test-design drift | First-pass sentinel used naive string-search → false positive on docstring text. Rewrote to AST walk (Import / ImportFrom / Call nodes only). Self-test caught within 1 minute |
+| **D9** | Lint follow-up (AD-Lint-3) | New MHist lines 101 chars (1 over limit) → compressed to 92 chars. 2nd consecutive sprint where MHist exceeds E501 on first draft → consider reducing template verbosity |
+
+### Decision: KEEP reuse-inner (per 54.2 D19 + Cat 12 minimal-overhead philosophy)
+
+No code change to wrapper logic. Documentation + sentinel only:
+- Edit `cat9_fallback.py` docstring — add "Observability Design (54.2 D19 + 55.5 AD-Cat10-Obs-Cat9Wrappers)" section + 1-line MHist
+- Edit `cat9_mutator.py` docstring — same pattern
+- Edit `_obs.py` docstring — fix D7 (clarify direct vs indirect users)
+- Create `tests/unit/agent_harness/verification/test_cat9_wrappers_obs.py` — 3 sentinel tests via AST walk
+
+### Tests
+
+- `pytest test_cat9_wrappers_obs.py` → **3/3 PASS in 0.26s**
+- Verification + chat regression → **114 PASS in 1.92s** (0 regression)
+- `pytest tests/` (full) → **1454 passed / 4 skipped in 31.28s** (+3 Day 2; cumulative +8 from 1446 — exceeds target +6 by 33%)
+
+### Lint chain
+
+- ✅ black + isort + flake8 (2 E501 → compressed) + mypy strict (0) + 7 V2 lints (7/7) + LLM SDK leak (0)
+
+### Tomorrow (Day 3)
+
+Per checklist Day 3 (clean path) — both ADs closed Day 1+2 + AD-Plan-3 + AD-Sprint-Plan-5 already validated:
+- Pre-draft SITUATION §8 + §9 entry
+- Pre-draft `memory/project_phase55_5_audit_cycle_3.md`
+- Re-run full pytest + lint chain for safety
+- Day 3 progress.md entry
+
+OR consider moving directly to Day 4 retro (Day 3 light;possible compress).
 
 ---
 
