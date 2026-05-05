@@ -211,7 +211,56 @@ OR consider moving directly to Day 4 retro (Day 3 light;possible compress).
 
 ---
 
-## Day 3 — 2026-05-XX (pending)
+## Day 3 — 2026-05-05 (Buffer / Safety / Pre-draft)
+
+**Estimated**: ~0.5-1 hr (clean path — both ADs closed Day 1+2)
+**Actual**: ~0.5 hr
+
+### Decision: Day 3 = clean path (no overflow needed)
+
+Both backend ADs (AD-Cat10-Wire-1 + AD-Cat10-Obs-Cat9Wrappers) closed
+on schedule Day 1+2. AD-Plan-3 + AD-Sprint-Plan-5 process applications
+already validated through Day 0-2 work. No overflow needed; Day 3 is
+pure safety re-validation + Day 4 prep.
+
+### Safety re-validation
+
+- ✅ `python -m pytest tests` (full) → **1454 passed / 4 skipped in 30.98s**
+  - Matches Day 2 final count (no regression introduced by docs-only commit `e1bb0bc0`)
+  - Cumulative +8 from 1446 baseline (target +6;hit 33% over)
+- ✅ `python scripts/lint/run_all.py` → **7/7 V2 lints green in 0.83s**
+- ✅ `python -m flake8 src/` (all backend src) → **0 errors**
+
+### Day 4 prep (pre-draft, commit deferred to Day 4)
+
+Decision: Defer SITUATION + memory edits to Day 4 closeout commit (single
+logical commit "Day 4 retrospective + closeout summary" cleaner than
+splitting pre-draft into Day 3). Day 4 will include:
+- retrospective.md (6 必答 Q1-Q6 with calibration ratio computation)
+- SITUATION-V2-SESSION-START.md §8 + §9 + footer + history row
+- memory/project_phase55_5_audit_cycle_3.md (NEW) + MEMORY.md +1 line
+
+### Drift findings (Day 3): none
+
+No new drifts; safety re-run confirms no inadvertent regression from
+Day 1+2 commits. AD-Plan-3 cumulative ROI continues to validate (5
+wrong-content drifts caught Day 0-2 — D1+D2+D4+D5+D7).
+
+### Tomorrow (Day 4)
+
+- Run full pytest baseline + lint chain (final safety)
+- Compute calibration ratio (AD-Sprint-Plan-5 medium-backend 0.75 + 0.05
+  surcharge 1st application;~5.5-6 hr actual / 7 hr committed → expected
+  ratio ~0.79-0.86 in [0.85, 1.20] band)
+- Catalog final drift findings (D1-D9 cumulative)
+- Write retrospective.md (6 必答)
+- Update SITUATION + memory
+- Commit Day 4
+- Push branch + open PR + watch CI green + merge + closeout PR if needed
+
+---
+
+## Day 4 — 2026-05-XX (pending)
 
 _(to be filled in)_
 
