@@ -39,6 +39,7 @@ Single-source: GuardrailResult / GuardrailAction in 17.md §1.1
 Created: 2026-05-03 (Sprint 53.3 Day 3)
 
 Modification History (newest-first):
+    - 2026-05-05: Sprint 55.4 Day 2 — close AD-Cat9-5 (Stage 2.3 session counter)
     - 2026-05-03: Initial creation (Sprint 53.3 US-4) — stages 1+2 wiring;
       stage 3 (explicit confirmation) deferred to 53.4 HITL infrastructure
 
@@ -73,6 +74,11 @@ class ToolGuardrail(Guardrail):
 
     def __init__(self, matrix: CapabilityMatrix) -> None:
         self._matrix = matrix
+        # Sprint 55.4 closes AD-Cat9-5: in-memory per-session call counter
+        # keyed on (session_id_str, tool_name). Single-instance scope; for
+        # multi-instance enforcement a Redis-backed counter is tracked
+        # separately (out of audit cycle scope per Selection D).
+        self._call_counters: dict[tuple[str, str], int] = {}
 
     async def check(
         self,
@@ -119,14 +125,28 @@ class ToolGuardrail(Guardrail):
             # when the *tool* is tenant-scoped but the call lacks tenant
             # context — which would let the DB query escape its WHERE clause.
 
-        # Stage 2.3 — max calls per session (placeholder)
-        # Integration with session-level state (session_id → counter) is
-        # owned by the orchestrator's session manager; this guardrail
-        # documents the intent without implementing the counter here to
-        # avoid coupling the guardrail to session storage. When the
-        # counter integration lands (53.4 / 54.x), this branch becomes
-        # active.
-        # TODO(53.4): wire in session call-counter via trace_context.session_id
+        # Stage 2.3 — max calls per session (Sprint 55.4 closes AD-Cat9-5).
+        # When `rule.max_calls_per_session > 0`, pre-increment a per-session
+        # counter and BLOCK when the new count exceeds the cap. Missing
+        # session_id is fail-open (cannot enforce a session-scoped counter
+        # without session attribution; over-blocking unauthenticated trace
+        # contexts would harm availability for callers that have not yet
+        # threaded session_id through trace_context).
+        if rule.max_calls_per_session > 0:
+            if trace_context is not None and trace_context.session_id is not None:
+                session_key = (str(trace_context.session_id), tool_name)
+                new_count = self._call_counters.get(session_key, 0) + 1
+                if new_count > rule.max_calls_per_session:
+                    return GuardrailResult(
+                        action=GuardrailAction.BLOCK,
+                        reason=(
+                            f"max calls per session exceeded: "
+                            f"{new_count} > {rule.max_calls_per_session} "
+                            f"for tool {tool_name!r}"
+                        ),
+                        risk_level="HIGH",
+                    )
+                self._call_counters[session_key] = new_count
 
         # Stage 3 — explicit confirmation (defer to HITL infrastructure)
         if rule.requires_approval:

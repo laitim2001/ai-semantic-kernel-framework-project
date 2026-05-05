@@ -45,6 +45,7 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-05: Sprint 55.4 — close AD-Cat8-3 narrow Option C (error_class_str param)
     - 2026-05-02: Cat 7 State Mgmt integration (Sprint 53.1 Day 3) — optional
         ctor kwargs `reducer`, `checkpointer`, `tenant_id`. When all three
         provided, AgentLoopImpl builds an internal LoopState snapshot at
@@ -263,6 +264,7 @@ class AgentLoopImpl(AgentLoop):
         attempt_num: int,
         state_version: int | None,
         trace_context: TraceContext,
+        error_class_str: str | None = None,
     ) -> tuple[bool, ErrorClass | None, Cat8TerminationReason | None, str | None]:
         """Cat 8 chain: classify → record budget → check terminator.
 
@@ -271,14 +273,28 @@ class AgentLoopImpl(AgentLoop):
 
         When Cat 8 deps are None, returns (False, None, None, None) — caller
         re-raises (preserves 53.1 behavior).
+
+        Sprint 55.4 (closes AD-Cat8-3 narrow Option C): when ``error_class_str``
+        is provided (soft-failure ToolResult path where original Exception
+        type is lost — see loop.py:1072 synthetic), use
+        ``classify_by_string()`` so the FQ class name preserved on
+        ``ToolResult.error_class`` (53.3 US-9 mechanism) drives
+        classification instead of MRO walk on the generic synthetic
+        Exception (which would always return FATAL). Default ``None``
+        preserves existing MRO classification for hard-exception path.
         """
         if self._error_policy is None:
             return False, None, None, None
 
         from agent_harness._contracts.errors import ErrorContext
 
-        # 1. Classify
-        cls = self._error_policy.classify(error)
+        # 1. Classify — prefer string-based when provided (soft-failure path
+        #    closes AD-Cat8-3 narrow Option C; type info preserved via
+        #    ToolResult.error_class FQ class name set by ToolExecutorImpl).
+        if error_class_str is not None:
+            cls = self._error_policy.classify_by_string(error_class_str)
+        else:
+            cls = self._error_policy.classify(error)
 
         # 2. Record budget (skip FATAL — bug, not tenant-attributable)
         if self._error_budget is not None and self._tenant_id is not None:
@@ -1068,6 +1084,11 @@ class AgentLoopImpl(AgentLoop):
                     # chain can classify + check terminator. When deps None →
                     # fall through to existing 53.1 baseline (LLM-recoverable
                     # via tool message).
+                    # Sprint 55.4 (AD-Cat8-3 narrow Option C): pass
+                    # `result.error_class` (FQ class name set by ToolExecutorImpl
+                    # per 53.3 US-9) so classification flows through
+                    # classify_by_string() instead of MRO walk on the generic
+                    # synthetic Exception (which would always return FATAL).
                     if not result.success and self._error_policy is not None:
                         synthetic = Exception(result.error or "tool soft failure")
                         terminate, _err_class, term_reason, term_detail = (
@@ -1077,6 +1098,7 @@ class AgentLoopImpl(AgentLoop):
                                 attempt_num=1,
                                 state_version=None,
                                 trace_context=ctx,
+                                error_class_str=result.error_class,
                             )
                         )
                         if terminate:

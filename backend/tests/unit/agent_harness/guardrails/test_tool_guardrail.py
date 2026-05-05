@@ -5,6 +5,10 @@ Category: Tests / 範疇 9
 Scope: Phase 53.3 / Sprint 53.3 Day 3
 
 Created: 2026-05-03 (Sprint 53.3 Day 3)
+
+Modification History (newest-first):
+    - 2026-05-05: Sprint 55.4 Day 2 — add Stage 2.3 session counter tests (AD-Cat9-5)
+    - 2026-05-03: Initial creation (Sprint 53.3 Day 3 — US-4)
 """
 
 from __future__ import annotations
@@ -254,3 +258,82 @@ async def test_block_without_trace_context_when_role_required() -> None:
     r = await g.check(content="delete_doc", trace_context=None)
     # No baggage → role None → BLOCK
     assert r.action == GuardrailAction.BLOCK
+
+
+# === Stage 2.3 max-calls-per-session counter (Sprint 55.4 — closes AD-Cat9-5) =
+
+
+SESSION_A = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+SESSION_B = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+
+
+def _make_quota_matrix(max_calls: int = 3) -> CapabilityMatrix:
+    """Single-tool matrix with max_calls_per_session quota."""
+    return CapabilityMatrix(
+        capability_to_tools={Capability.READ_KB: ["query_tool"]},
+        permission_rules={
+            "query_tool": PermissionRule(
+                role_required="any",
+                tenant_scope="any",
+                max_calls_per_session=max_calls,
+            ),
+        },
+    )
+
+
+def _session_context(session_uuid: UUID) -> TraceContext:
+    return TraceContext(
+        trace_id="t1",
+        span_id="s1",
+        tenant_id=TENANT_A,
+        session_id=session_uuid,
+    )
+
+
+@pytest.mark.asyncio
+async def test_max_calls_under_cap_passes() -> None:
+    """1st call when max_calls_per_session=3 → PASS."""
+    g = ToolGuardrail(_make_quota_matrix(max_calls=3))
+    r = await g.check(content={"name": "query_tool"}, trace_context=_session_context(SESSION_A))
+    assert r.action == GuardrailAction.PASS
+
+
+@pytest.mark.asyncio
+async def test_max_calls_at_cap_passes() -> None:
+    """All 3 calls when max=3 → PASS (last one is the cap-edge)."""
+    g = ToolGuardrail(_make_quota_matrix(max_calls=3))
+    ctx = _session_context(SESSION_A)
+    for _ in range(3):
+        r = await g.check(content={"name": "query_tool"}, trace_context=ctx)
+        assert r.action == GuardrailAction.PASS
+
+
+@pytest.mark.asyncio
+async def test_max_calls_over_cap_blocks() -> None:
+    """4th call when max=3 → BLOCK with reason and HIGH risk."""
+    g = ToolGuardrail(_make_quota_matrix(max_calls=3))
+    ctx = _session_context(SESSION_A)
+    for _ in range(3):
+        await g.check(content={"name": "query_tool"}, trace_context=ctx)
+    r = await g.check(content={"name": "query_tool"}, trace_context=ctx)
+    assert r.action == GuardrailAction.BLOCK
+    assert "max calls per session exceeded" in r.reason
+    assert r.risk_level == "HIGH"
+
+
+@pytest.mark.asyncio
+async def test_max_calls_per_session_isolation() -> None:
+    """Session A reaches cap; session B counter independent."""
+    g = ToolGuardrail(_make_quota_matrix(max_calls=3))
+    ctx_a = _session_context(SESSION_A)
+    ctx_b = _session_context(SESSION_B)
+    # Session A: 3 calls fill the cap
+    for _ in range(3):
+        r = await g.check(content={"name": "query_tool"}, trace_context=ctx_a)
+        assert r.action == GuardrailAction.PASS
+    # Session B: 1st call still under cap (independent counter)
+    r_b = await g.check(content={"name": "query_tool"}, trace_context=ctx_b)
+    assert r_b.action == GuardrailAction.PASS
+    # Session A: 4th call → BLOCK (cap on A only)
+    r_a = await g.check(content={"name": "query_tool"}, trace_context=ctx_a)
+    assert r_a.action == GuardrailAction.BLOCK
