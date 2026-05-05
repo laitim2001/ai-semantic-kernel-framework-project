@@ -39,66 +39,77 @@
 
 ---
 
-## Day 1 — AD-Cat8-2 Implementation Part 1 (ToolErrorDecision extend + _handle_tool_error wire)
+## Day 1 — AD-Cat8-2 Implementation Part 1 (Option H post-D6+D7+D8 — _should_retry_tool_error helper + retry loop wrap)
 
-### Day 1 Pre-code reading (~20 min) — AD-Plan-3 third application within sprint
+### Day 1 Pre-code reading (~20 min) — AD-Plan-3 third application within sprint ✅
 
-- [ ] **Read `backend/src/agent_harness/error_handling/_abc.py`** — confirm `ToolErrorDecision` + `ToolErrorAction` enum exist; check if RETRY action already defined (53.2 implementation)
-  - Drift catch potential: if RETRY already exists, scope shrinks; if missing, scope as planned
-- [ ] **Read `backend/src/agent_harness/error_handling/retry.py:85+`** — confirm `RetryPolicyMatrix.should_retry()` signature
-  - Verify return type (decision dataclass / tuple / bool)
-  - Verify input params (error_class / tool_name / attempt)
-- [ ] **Read `backend/src/agent_harness/orchestrator_loop/loop.py:259-340`** (full `_handle_tool_error` body)
-  - Identify wire-in point (after `error_budget.record`, before terminator)
-- [ ] **Read `backend/src/agent_harness/orchestrator_loop/loop.py:1040-1100`** (tool execution call sites)
-  - Identify retry loop wrap target
-- [ ] **Read `backend/src/agent_harness/error_handling/__init__.py`** — confirm public re-exports
+- [x] **Read `backend/src/agent_harness/error_handling/_abc.py`** — `ToolErrorDecision` + `ToolErrorAction` enum **DON'T exist** (D6 catch). What exists: `ErrorClass` enum (TRANSIENT/LLM_RECOVERABLE/HITL_RECOVERABLE/FATAL), `ErrorPolicy` ABC (with `classify()` + `should_retry()` + `backoff_seconds()` + `classify_by_string()`), `CircuitBreaker` ABC, `ErrorTerminator` ABC.
+- [x] **Read `backend/src/agent_harness/error_handling/retry.py:85+`** — `RetryPolicyMatrix.get_policy(tool_name, error_class) -> RetryConfig` (NOT `should_retry()`); plus standalone `compute_backoff(config, attempt) -> float`. Docstring L24-29 documents the 5-step consumption flow.
+- [x] **Read `backend/src/agent_harness/orchestrator_loop/loop.py:259-320`** — `_handle_tool_error` already implements steps 1+budget+terminator; signature returns 4-tuple `(should_terminate, error_class, term_reason, detail)`; takes `attempt_num` param.
+- [x] **Read `backend/src/agent_harness/orchestrator_loop/loop.py:1040-1100`** — call sites L1044 (hard-exception) + L1092 (soft-failure); both pass `attempt_num=1` HARDCODED (D7 catch).
+- [x] **Read `backend/src/agent_harness/error_handling/__init__.py`** — confirms `RetryConfig`, `RetryPolicyMatrix`, `compute_backoff` publicly re-exported.
+- [x] **D8 grep**: `ErrorRetried` event already at `_contracts/events.py:200` + re-exported `_contracts/__init__.py:52`.
 
-### AD-Cat8-2 Part 1 — Implementation
+### Day 1 Morning Plan Revision Commit (Option H per D6+D7+D8 — per AD-Plan-1 audit-trail rule)
 
-- [ ] **Extend `ToolErrorDecision` + `ToolErrorAction` in `_abc.py`** (if RETRY missing)
-  - Add `RETRY = "retry"` to `ToolErrorAction` enum
-  - Extend `ToolErrorDecision` with `backoff_seconds: float = 0.0` + `attempts_remaining: int = 0`
-  - Default values preserve backwards-compat for existing callers
+- [x] **Edit `sprint-55-6-plan.md`** §header revision history + §Technical Specifications + §Acceptance Criteria + §File Change List + Day-by-Day Plan
+- [x] **Edit `sprint-55-6-checklist.md`** Day 1 + Day 2 (this file)
+- [x] **Append Day 1 morning entry to `progress.md`** (D6+D7+D8 catalogue + Option H rationale)
+- [ ] **Commit plan revision**
+  - Commit: `chore(docs, sprint-55-6): Day 1 morning plan revision — Option H per D6+D7+D8 (no ABC change; new _should_retry_tool_error helper)`
+- [ ] **Push branch**
+
+### AD-Cat8-2 Part 1 (Option H) — Implementation
+
+- [ ] **Pre-impl 5 min check**: read `_contracts/events.py:200` (or grep) to confirm `ErrorRetried` constructor field names (e.g. is it `attempt` or `attempt_num`? `backoff_seconds` or `delay_s`?)
+- [ ] **Add `_should_retry_tool_error` helper to `loop.py`**
+  - ~30 LOC; located near `_handle_tool_error` (L259+ region)
+  - Consults `error_policy.should_retry(error, attempt)` → `retry_policy.get_policy(tool_name, error_class)` → `compute_backoff(config, attempt)`
+  - Returns `tuple[bool, float]` (should_retry, backoff_seconds)
+  - Returns `(False, 0.0)` baseline when `error_policy is None` OR `retry_policy is None` OR `error_class is None`
+  - Defensive `attempt >= config.max_attempts` short-circuit before `compute_backoff`
   - File header MHist 1-line per AD-Lint-3
-- [ ] **Extend `_handle_tool_error` body in `loop.py:259+`**
-  - Add `attempt: int = 0` parameter (default 0; backwards-compat)
-  - After `error_budget.record(...)` line: consult `self._retry_policy` if not None
-  - Translate `RetryPolicyMatrix.should_retry(...)` decision into `ToolErrorDecision(action=RETRY, backoff_seconds=..., attempts_remaining=...)`
-  - Fall through to existing terminator logic if retry not applicable
-  - File header MHist 1-line
+- [ ] **Wrap `_stream_loop_events` tool execution at L1044 (hard-exception path) with retry loop**
+  - Add `attempt_num = 1` counter outside try
+  - On exception → `_handle_tool_error(attempt_num=attempt_num)` (D7 fix: was hardcoded `=1`)
+  - If `terminate=True` → existing `LoopTerminated` yield + return
+  - Else → consult `_should_retry_tool_error(error, error_class, tool_name, attempt_num)`
+  - If `should_retry=True` → emit `ErrorRetried` event + `await asyncio.sleep(backoff_seconds)` + `attempt_num += 1` + `continue`
+  - Else → fall through to existing soft-failure synthesis (`ToolResult(success=False, ...)`)
+- [ ] **Wrap soft-failure path at L1092 with retry loop pattern**
+  - Same `attempt_num` counter (shared across hard + soft path within single tool execution)
+  - Pass synthetic Exception + `error_class_str=result.error_class` (preserves AD-Cat8-3 narrow Option C from 55.4)
+  - Same `_handle_tool_error` → `_should_retry_tool_error` → retry-or-fall-through flow
 - [ ] **Lint chain**: black + isort + flake8 + mypy --strict + 7 V2 lints
 - [ ] **LLM SDK leak check**: 0
-- [ ] **Update Day 1 progress.md** entry — actual hours / drift findings (D6+ if any)
-- [ ] **Commit Day 1**
-  - Commit: `feat(orchestrator-loop, sprint-55-6): wire RetryPolicyMatrix into _handle_tool_error per AD-Cat8-2 (Part 1: ABC + body)`
+- [ ] **Update Day 1 progress.md** entry — actual hours / D6+D7+D8 catalogued / any new D9+ findings
+- [ ] **Commit Day 1 implementation**
+  - Commit: `feat(orchestrator-loop, sprint-55-6): close AD-Cat8-2 (Option H — _should_retry_tool_error helper + retry loop wrap at L1044+L1092)`
 - [ ] **Push branch**
 
 ---
 
-## Day 2 — AD-Cat8-2 Implementation Part 2 (call site retry wrap + tests)
+## Day 2 — AD-Cat8-2 Implementation Part 2 (Option H tests)
 
 ### Day 2 Pre-code reading (~10 min)
 
-- [ ] **Re-read `loop.py:1049` + `loop.py:1095`** tool execution call sites — finalize retry loop wrap pattern
 - [ ] **Check existing retry test fixtures** in `backend/tests/unit/agent_harness/orchestrator_loop/` for reusable mock patterns
+- [ ] **Check existing AgentLoop test setup** for `_error_policy` + `_retry_policy` fixture wiring
 
-### AD-Cat8-2 Part 2 — Call site wrap + Tests
+### AD-Cat8-2 Part 2 — Tests (Option H)
 
-- [ ] **Edit `loop.py:1049`** — wrap tool execution with retry loop consuming `ToolErrorDecision.action == RETRY`
-- [ ] **Edit `loop.py:1095`** — same retry wrap pattern
 - [ ] **Create `backend/tests/unit/agent_harness/orchestrator_loop/test_retry_policy_wire.py`** (NEW; 6-8 unit tests)
-  - test_retry_on_transient_succeeds_after_one_retry
-  - test_retry_exhausted_falls_through_to_terminator
-  - test_retry_disabled_when_retry_policy_is_none (backwards-compat)
-  - test_backoff_timing_calls_asyncio_sleep_with_correct_value (mock asyncio.sleep)
-  - test_error_class_not_retryable_skips_retry_path
-  - test_attempt_counter_increments_correctly
-  - test_retry_decision_no_action_passes_through (RETRY decision with attempts_remaining=0 falls through)
-  - (optional 8th) test_retry_with_circuit_breaker_open_skips_retry (interaction with circuit breaker)
+  - test_should_retry_tool_error_returns_true_for_transient_with_attempts_left
+  - test_should_retry_tool_error_returns_false_when_attempts_exhausted
+  - test_should_retry_tool_error_returns_false_when_error_policy_is_none (baseline)
+  - test_should_retry_tool_error_returns_false_when_retry_policy_is_none (baseline)
+  - test_should_retry_tool_error_returns_false_when_error_class_is_none (defensive)
+  - test_retry_loop_emits_error_retried_event (AgentLoop integration-style with mocked tool_executor)
+  - test_retry_loop_increments_attempt_num (assert _handle_tool_error called with attempt_num=1, then 2, then 3)
+  - test_retry_loop_falls_through_to_llm_recoverable_when_max_attempts (mock raises 4× transient; max_attempts=3; final attempt synthesizes LLM-recoverable ToolResult)
   - DoD: 6-8/6-8 PASS ✅
 - [ ] **Create `backend/tests/integration/agent_harness/test_loop_retry_integration.py`** (NEW or extend existing)
-  - test_full_agent_loop_retry_with_flaky_tool_fixture (deterministic flaky tool that succeeds on attempt 2)
+  - test_full_agent_loop_retry_with_flaky_tool_fixture (deterministic flaky tool that succeeds on attempt 2; assert ErrorRetried event observed; assert tool message receives final success result)
   - DoD: 1/1 PASS ✅
 
 ### Day 2 Wrap

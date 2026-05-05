@@ -126,9 +126,100 @@ Before Day 1 code starts, user approves:
 
 ---
 
-## Day 1 — pending
+## Day 1 Morning — 2026-05-05 ✅ (plan revision)
 
-(Will be filled in Day 1 evening)
+**Hours**: ~0.5 hr (Day 1 morning pre-code reading + drift catch + plan revision per AD-Plan-1 audit-trail rule)
+
+### Pre-code reading completed
+
+Read 5 source files for Day 1 implementation context:
+1. `backend/src/agent_harness/error_handling/_abc.py` (94 lines)
+2. `backend/src/agent_harness/error_handling/__init__.py` (50 lines)
+3. `backend/src/agent_harness/error_handling/retry.py` (169 lines)
+4. `backend/src/agent_harness/orchestrator_loop/loop.py:240-360` (`_handle_tool_error` body)
+5. `backend/src/agent_harness/orchestrator_loop/loop.py:1030-1140` (call sites L1044 + L1092)
+
+### AD-Plan-3 third application — 3 wrong-content drifts caught
+
+**Drift findings catalogued (D6-D8)**:
+
+#### D6 — `ToolErrorDecision` / `ToolErrorAction` enum DON'T EXIST in 53.2 ABC
+
+- Plan §Technical Specifications (Day 0 draft) proposed:
+  - Add `RETRY = "retry"` to `ToolErrorAction` enum
+  - Extend `ToolErrorDecision` dataclass with `backoff_seconds` + `attempts_remaining`
+- Reality: `_abc.py` only contains 4-class enum + 3 ABCs (`ErrorPolicy`, `CircuitBreaker`, `ErrorTerminator`). **No `ToolErrorDecision` dataclass; no `ToolErrorAction` enum.**
+- Verdict: cannot extend non-existent ABCs; plan §Spec was inventing 17.md §Cat 8 single-source violations
+- Mitigation: Option H replaces ABC extension with NEW helper `_should_retry_tool_error` in `loop.py` consuming existing API (no ABC change)
+
+#### D7 — `_handle_tool_error` already takes `attempt_num` param BUT call sites hardcode `=1`
+
+- Plan §Spec proposed adding `attempt: int = 0` parameter to `_handle_tool_error` signature
+- Reality: `_handle_tool_error` already has `attempt_num: int` parameter at L264; both call sites L1052 + L1098 pass HARDCODED `attempt_num=1`
+- Verdict: signature is already correct; the gap is at call sites where retry counter wire is missing
+- Mitigation: Option H wraps L1044 + L1092 call sites with `attempt_num` counter that increments per retry; preserves existing `_handle_tool_error` signature
+
+#### D8 — `ErrorRetried` LoopEvent already shipped at `_contracts/events.py:200`
+
+- Plan §Spec implicitly assumed `ErrorRetried` event might need creation
+- Reality: `_contracts/events.py:200 class ErrorRetried(LoopEvent):` exists; publicly re-exported at `_contracts/__init__.py:52`; per `retry.py:29` 53.2 docstring documenting Step 5 of consumption flow
+- Verdict: event is shipped 53.2 work; reuse as-is
+- Mitigation: Option H emits existing `ErrorRetried` event without modification
+
+### Real 53.2 consumption flow (per `retry.py` L24-29 docstring)
+
+```
+1. error_policy.classify(exc) → ErrorClass             ✅ already wired in _handle_tool_error L294-297
+2. error_policy.should_retry(exc, attempt) → bool      ❌ unwired
+3. retry_policy.get_policy(tool_name, cls) → RetryConfig ❌ unwired
+4. compute_backoff(config, attempt) → sleep_seconds    ❌ unwired
+5. Emit ErrorRetried + asyncio.sleep                   ❌ unwired
+```
+
+Steps 2-5 are the missing pieces. Option H wires them in `_should_retry_tool_error` helper + retry loop wrap at call sites.
+
+### Option H approved by user 2026-05-05
+
+**Decision rationale**:
+- 17.md §Cat 8 single-source preserved (no ABC invention)
+- `_handle_tool_error` 4-tuple signature unchanged (preserves 55.4 AD-Cat8-3 narrow Option C `error_class_str` path)
+- Strictly additive — only NEW helper + retry loop wrap at call sites; no production code path modification beyond wrap
+- Backwards-compat self-evident — when `error_policy is None` OR `retry_policy is None`, helper returns `(False, 0.0)` → existing behavior preserved byte-for-byte
+
+**Scope estimate (post-Option H simplification)**:
+- `_should_retry_tool_error` helper: ~30 LOC
+- Retry loop wrap × 2 call sites (L1044 + L1092): ~60 LOC each
+- Day 1 implementation: ~2 hr (vs Day 0 plan §Spec ~3 hr)
+- Day 2 tests: ~2 hr (unchanged from Day 0 plan)
+- Total Cat8-2 Day 1+2: ~4 hr (vs Day 0 plan ~5.5 hr — ~1.5 hr buffer absorbed into closeout safety)
+
+**Total sprint commitment unchanged at ~12 hr** (Cat8-2 simplification reabsorbed by buffer; Group H + Process AD pair unchanged).
+
+### Plan revision files updated
+
+- `sprint-55-6-plan.md` §header revision history + §Technical Specifications + §Acceptance Criteria + §File Change List + Day-by-Day Plan
+- `sprint-55-6-checklist.md` Day 1 + Day 2 sections
+- `sprint-55-6/progress.md` (this file)
+
+### AD-Plan-3 third application ROI accounting
+
+- Cost: ~25 min Day 1 morning (read 5 files + revise plan + checklist + progress + write commit)
+- Benefit: prevented an estimated **2-3 hr** of scope-creep work — without D6 catch, Day 1 would have been spent inventing `ToolErrorDecision` / `ToolErrorAction` ABCs that violate 17.md single-source, then Day 2 would have rewritten `_handle_tool_error` signature with breaking changes to existing 55.4 callers
+- Cumulative AD-Plan-3 ROI for Sprint 55.6: 8 drifts caught at Day 0+1 morning (D1-D8); ~50 min cost prevented ~5-6 hr re-work = **6-8× conversion rate**
+- Strong evidence reinforcing AD-Plan-3-Promotion (planned for Day 4 fold-in)
+
+### Next (Day 1 afternoon — implementation)
+
+- Pre-impl 5 min check: read `_contracts/events.py:200` to confirm `ErrorRetried` field shape
+- Add `_should_retry_tool_error` helper to `loop.py` (~30 LOC near `_handle_tool_error`)
+- Wrap tool execution at L1044 + L1092 with retry loop (`attempt_num` counter)
+- Lint chain + commit + push
+
+---
+
+## Day 1 — pending implementation (afternoon)
+
+(Will be filled after implementation completes)
 
 ---
 
