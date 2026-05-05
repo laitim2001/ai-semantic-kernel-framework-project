@@ -8,6 +8,11 @@ Sprint 56.1 (Phase 56 SaaS Stage 1 / 1-of-3) introduces:
     - onboarding: OnboardingTracker 6-step + health check (US-3 part 1)
 """
 
+from platform_layer.tenant.health_check import (
+    HealthCheckReport,
+    ProbeResult,
+    TenantHealthChecker,
+)
 from platform_layer.tenant.lifecycle import (
     IllegalTransitionError,
     TenantLifecycle,
@@ -41,6 +46,10 @@ from platform_layer.tenant.quota import (
 )
 
 __all__ = [
+    # health_check
+    "HealthCheckReport",
+    "ProbeResult",
+    "TenantHealthChecker",
     # lifecycle
     "IllegalTransitionError",
     "TenantLifecycle",

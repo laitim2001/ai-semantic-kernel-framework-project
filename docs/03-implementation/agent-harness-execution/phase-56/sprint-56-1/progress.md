@@ -297,3 +297,134 @@ DoD: 14/14 pass in 0.60s
   - **AD-QuotaPostCall-1** (D20): post-call reconciliation via LLMResponded event hook → call `record_usage(actual_tokens=X, reserved_tokens=settings.quota_estimated_tokens_per_call)`
 - D17 surfaces broader "infrastructure/cache stub from 49.2 never delivered" gap — candidate for the same future "Phase 56.x SaaS Stage 1 integration polish" sprint flagged Day 1
 - Solo-dev policy unchanged — Day 2 commit goes direct to feature branch with no special workflow
+
+---
+
+## Day 3 (2026-05-06) — US-3 part 2 Onboarding API + US-4 Feature Flags
+
+### Mid-sprint two-prong 探勘 baseline
+
+**Prong 1 path verify**:
+- ✅ `src/infrastructure/db/models/feature_flag.py` not exist (will create)
+- ✅ `src/core/feature_flags.py` not exist (will create)
+- ✅ `src/platform_layer/tenant/health_check.py` not exist (will create)
+- ✅ Alembic next migration ID = `0015_feature_flags` (after 0014 = current head)
+- ✅ Onboarding endpoints will extend `src/api/v1/admin/tenants.py` (not new file — same `/admin/tenants` prefix per checklist 3.1)
+
+**Prong 2 content verify**:
+- ✅ `infrastructure/db/models/api_keys.py` ApiKey table exists from 49.3 (TenantScopedMixin + status="active") — Day 3 health check `api_key_valid` probe queries this directly
+- ✅ `infrastructure/db/models/identity.py` User + Role + UserRole junction confirmed at L158/202/233
+- ✅ `infrastructure/db/audit_helper.py:append_audit` async function (NOT a class) — D22: FeatureFlagsService.set_tenant_override calls this directly for chain integrity
+- ⚠️ V2 codebase has NO `class AuditLogger` interface — Day 3 service uses `append_audit` helper directly (mirrors 53.4 governance / Cat 9 patterns)
+- ✅ TenantLifecycle.transition is canonical state machine entry (per Day 1) — auto-active path: PROVISIONING → ACTIVE via `await lifecycle.transition(tenant_id, TenantState.ACTIVE)`
+- ✅ Alembic 0013 hitl_policies pattern is reuse template for 0015 feature_flags (RLS enable / table create / downgrade)
+
+### D-findings catalogued (D21-D27)
+
+| ID | Severity | Finding | Implication |
+|----|----------|---------|-------------|
+| **D21** | green | `api_keys` table exists from 49.3 | `api_key_valid` probe queries existing schema; no new table needed |
+| **D22** | yellow | No `class AuditLogger` interface in V2 — only `append_audit` async function | FeatureFlagsService.set_tenant_override calls `append_audit` directly (consistent with 53.4 / Cat 9) |
+| **D23** | green | TenantLifecycle.transition is canonical state machine — onboarding auto-active calls `await lifecycle.transition(tenant_id, TenantState.ACTIVE)` | OnboardingAPI uses lifecycle directly + catches `IllegalTransitionError` |
+| **D24** | yellow | Plan §3.2 health check 6 points includes "Sample LLM call" but real `Adapter.chat()` requires Azure OpenAI key + makes external IO | Day 3 ships health check with optional `chat_call: Callable` injection — production wires real adapter; tests inject mock; default None = probe fails (does not block when production op explicitly disables via Phase 56.x flag) |
+| **D25** | yellow | `feature_flags` is a global registry table — multi-tenant rule §Rule 1 requires tenant_id on business tables | feature_flags is a registry/configuration table (analogous to `tools_registry` per 09-db-schema-design.md); per-tenant overrides live in JSONB; RLS NOT applied; documented inline in 0015 migration header |
+| **D26** | yellow | Plan §3.2 said `Role.name == 'admin'` query but real `Role` ORM uses `code` (per 09-db-schema-design.md L150-162; identity.py:212) — `name` column does not exist | health_check `_first_admin_probe` updated to `Role.code.in_(["admin", "tenant_admin"])`; test seeds use `code="admin", display_name="Admin"` |
+| **D27** | yellow | `api_keys` table requires `name` NOT NULL (per 49.3 schema, identity infra owner) | test seeds add `name="primary"` to ApiKey; Day 3 D-finding caught at first test run + fixed in same loop |
+
+### Tasks completed (3.1-3.8)
+
+#### 3.1 Onboarding API endpoints
+- ✅ `GET /api/v1/admin/tenants/{tenant_id}/onboarding-status` — returns `OnboardingStatusResponse` (state + completed/pending split + step records + is_complete)
+- ✅ `POST /api/v1/admin/tenants/{tenant_id}/onboarding/{step}` — accepts `OnboardingAdvanceRequest{payload}` body
+- ✅ Step name validation at path level — unknown step → 400 (not 422; preserves FastAPI body validation surface)
+- ✅ Auto-transition trigger — when 6/6 complete + health probe `all_passed=True` + tenant in PROVISIONING state → `TenantLifecycle.transition(ACTIVE)`; `IllegalTransitionError` handled defensively
+- ✅ Tenant 404 path via `_load_tenant_or_404` helper
+- ✅ File header Modification History updated (1-line per AD-Lint-3)
+
+#### 3.2 Health check 6-points
+- ✅ `src/platform_layer/tenant/health_check.py` — `TenantHealthChecker` with `run(tenant_id) → HealthCheckReport`
+- ✅ 6 probes: db_connection / redis_ping / qdrant_ping / sample_llm_call / first_admin_user / api_key_valid
+- ✅ Per-probe timeout 5s via `asyncio.wait_for`; overall budget 30s; exception boundary `# noqa: BLE001` per testing.md
+- ✅ ProbeResult / HealthCheckReport frozen dataclasses + `as_dict()` for endpoint response
+- ✅ Optional injection (D24): `redis_client / chat_call / qdrant_ping` callables — production wires real adapter; tests inject mocks; defaults safe
+- ✅ Re-exported from `platform_layer.tenant.__init__`
+
+#### 3.3 3 integration US-3 tests + 1 bonus
+- ✅ `test_onboarding_partial_status_query` — 2 steps advanced, GET returns split, state stays PROVISIONING
+- ✅ `test_onboarding_full_6_step_flow` — all 6 steps + admin/api_key seeded; redis/llm probes lack injection so all_passed=False; transitioned_to_active=False (test verifies the gating mechanism, not the production all-green path which is Phase 56.x carryover)
+- ✅ `test_onboarding_health_check_failure_blocks_active` — no admin/api_key seeded; health probe fails on those 2 + redis + llm; state stays PROVISIONING
+- ✅ `test_onboarding_invalid_step_returns_400` (bonus) — unknown step name → 400 with descriptive detail
+
+#### 3.4 FeatureFlag ORM + Alembic 0015
+- ✅ `src/infrastructure/db/models/feature_flag.py` — `FeatureFlag(name PK / default_enabled / tenant_overrides JSONB / description / created_at / updated_at)` + multi-tenant rule deviation note
+- ✅ `src/infrastructure/db/migrations/versions/0015_feature_flags.py` — global table; no RLS; downgrade clean (verified up + down + up cycle)
+- ✅ Re-exported from `infrastructure.db.models.__init__`
+- ✅ Migration header documents the multi-tenant rule deviation (registry/config table vs business table)
+
+#### 3.5 FeatureFlagsService
+- ✅ `src/core/feature_flags.py` — `FeatureFlagsService(session)` + `is_enabled(flag_name, tenant_id)` lookup precedence (tenant_overrides > default_enabled)
+- ✅ `set_tenant_override` writes JSONB + emits audit chain via `append_audit` (D22) with operation="feature_flag_override_set" + before/after value
+- ✅ `seed_defaults` idempotent — inserts 4 baseline flags (thinking_enabled / verification_enabled / llm_caching_enabled / pii_masking; all default True)
+- ✅ In-memory `_resolved_cache[(flag_name, tenant_id_str_or_none) → bool]` per-instance; invalidated on `set_tenant_override` (drops all cache rows for that flag)
+- ✅ `FeatureFlagNotFoundError(KeyError)` for unknown flag (not silent False — explicit failure)
+- ✅ `get_feature_flags_service(session)` per-request factory (no module singleton — sessions are per-request)
+
+#### 3.6 5 unit US-4 + 1 integration US-4 + 1 bonus
+**Unit (6)**:
+- ✅ `test_feature_flag_default_lookup`
+- ✅ `test_feature_flag_tenant_override_takes_precedence` (+ second tenant still sees default)
+- ✅ `test_feature_flag_set_override_writes_audit` (verifies AuditLog row + before/after value)
+- ✅ `test_feature_flag_cache_invalidate_on_set` (re-query after override)
+- ✅ `test_feature_flag_seed_defaults_idempotent` (2nd run = 0 inserts)
+- ✅ `test_feature_flag_unknown_flag_raises` (bonus — FeatureFlagNotFoundError)
+
+**Integration (1)**:
+- ✅ `test_chat_handler_thinking_enabled_per_tenant_override` — full DB roundtrip simulating chat handler lookup; tenant A flips thinking_enabled=False; tenant A sees False; tenant B sees default True; audit row recorded
+
+**Day 3 health check unit (3 bonus)**:
+- ✅ `test_health_check_db_probe_passes`
+- ✅ `test_health_check_missing_admin_user_fails`
+- ✅ `test_health_check_seeded_admin_and_apikey_pass` (D26+D27 fixes applied)
+
+DoD: 14 Day 3 tests pass in 1.0s
+
+#### 3.7 Sanity checks ✅
+- pytest full: **1503 passed / 4 skipped / 0 fail** (1489 + 14 = 1503 — exceeds plan target 1498 by +5)
+- mypy --strict: **0 errors / 283 source files** (+4 vs Day 2's 279 = feature_flag.py + feature_flags.py + health_check.py + 0015 migration)
+- 7 V2 lints: **7/7 green**
+- black + isort + flake8: clean (1 round of black auto-fmt — 6 files reformatted)
+- LLM SDK leak in `agent_harness/business_domain/platform_layer/core`: 0
+- Alembic 0014 → 0015 cycle clean (down + up verified at command line)
+
+### Calibration update
+
+| Metric | Value |
+|--------|-------|
+| Sprint committed | 17 hr |
+| Day 0 actual | ~1 hr |
+| Day 1 actual | ~3.5 hr |
+| Day 2 actual | ~3.5 hr |
+| Day 3 actual | ~4 hr |
+| Cumulative | 12 hr / 17 hr = **71%** |
+| Day count | 3/5 = 60% baseline |
+| Pace | **+11% ahead** (slight uptick — Day 3 had 2 D-finding rework loops at code+test boundary, but healthy buffer) |
+
+`large multi-domain` 0.55 mult **on track**;Day 4 ratio prediction maintains ~0.95-1.05 in band.
+
+### Remaining for Day 4
+
+- US-5 RLS hardening (8th V2 lint check_rls_policies + RLS gap audit + Alembic gap fix)
+- 3 RLS integration tests + 2 multi-tenant cross-domain integration tests = +5 tests target
+- retrospective.md (6 必答 format)
+- Open PR + CI green + solo-dev merge + closeout PR
+- Memory snapshot + final push
+- Day 4 estimate: ~5 hr per plan §Workload (heaviest day; closeout ceremony + RLS lint + tests)
+
+### Notes
+
+- 7 D-findings catalogued in Day 3 (D21-D27); cumulative Day 0-3 = **27 findings** — Day-0+1 探勘 ROI continues strong; Day 3 had 2 mid-implementation drifts (D26 Role.name vs Role.code; D27 ApiKey.name NOT NULL) caught at first test run + fixed in same loop (5 min total — exactly the kind of thing AD-Plan-3 promoted Prong 2 content verify could have caught Day 0 with a deeper grep on Role + ApiKey column names; pattern logged for future)
+- 2 Day 3 D-findings → Phase 56.x carryover ADs (joining D19/D20 from Day 2):
+  - **AD-AdminAuth-1** (D13 follow-up): replace stub `require_admin_token` with real RBAC role check via 53.4 governance integration when admin role enumeration ships
+  - No new D-findings → pure Phase 56.x carryover; D24 chat_call injection + D25 multi-tenant deviation note are documented in code, not deferred work
+- Solo-dev policy unchanged
+- D26 + D27 are *exactly* the type of wrong-content drift AD-Plan-3 (Prong 2) was promoted to catch at Day 0 — useful evidence for Phase 56.2 retrospective on whether to require schema-column grep in Day 0 探勘 (currently Prong 2 content verify focuses on file/symbol existence, not column-level drift)
