@@ -26,9 +26,10 @@ Key Components:
     - RolePermission: per-role action permissions (resource_type / pattern / action)
 
 Created: 2026-04-29 (Sprint 49.2 Day 1.5)
-Last Modified: 2026-04-29
+Last Modified: 2026-05-05
 
 Modification History:
+    - 2026-05-05: Sprint 56.1 Day 1 — Tenant ENHANCE: state/plan Enum + progress JSONB (D1)
     - 2026-04-29: Initial creation (Sprint 49.2 Day 1.5)
 
 Related:
@@ -40,11 +41,15 @@ Related:
 from __future__ import annotations
 
 from datetime import datetime
+from enum import Enum
 from typing import Any
 from uuid import UUID as PyUUID
 
 from sqlalchemy import (
     DateTime,
+)
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import (
     ForeignKey,
     Index,
     PrimaryKeyConstraint,
@@ -62,10 +67,41 @@ from infrastructure.db.base import Base, TenantScopedMixin
 
 
 # =====================================================================
+# TenantState — Phase 56.1 SaaS Stage 1 lifecycle state machine (per
+# 15-saas-readiness.md §Tenant State Machine + sprint-56-1-plan.md §US-1)
+# =====================================================================
+class TenantState(str, Enum):
+    """Tenant lifecycle states. Valid transitions enforced by TenantLifecycle."""
+
+    REQUESTED = "requested"
+    PROVISIONING = "provisioning"
+    PROVISION_FAILED = "provision_failed"
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    ARCHIVED = "archived"
+
+
+# =====================================================================
+# TenantPlan — Phase 56.1 SaaS Stage 1 enterprise tier only (per
+# user decision 2026-05-05; basic/standard deferred to Stage 2)
+# =====================================================================
+class TenantPlan(str, Enum):
+    """Tenant subscription plan. Stage 1 = enterprise only."""
+
+    ENTERPRISE = "enterprise"
+    # Phase 56+ Stage 2 commercial SaaS will add: BASIC = "basic" / STANDARD = "standard"
+
+
+# =====================================================================
 # Tenant — root of the multi-tenant hierarchy (no tenant_id itself)
 # =====================================================================
 class Tenant(Base):
-    """Top-level tenant. Per 09-db-schema-design.md L114-127."""
+    """Top-level tenant. Per 09-db-schema-design.md L114-127.
+
+    Sprint 56.1 enhancement: status (String) renamed to state (TenantState Enum)
+    for SaaS Stage 1 lifecycle state machine. plan / provisioning_progress /
+    onboarding_progress added per 15-saas-readiness.md §Tenant Lifecycle.
+    """
 
     __tablename__ = "tenants"
 
@@ -76,7 +112,26 @@ class Tenant(Base):
     )
     code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     display_name: Mapped[str] = mapped_column(String(256), nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    state: Mapped[TenantState] = mapped_column(
+        SQLEnum(TenantState, name="tenant_state", values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        server_default=TenantState.REQUESTED.value,
+    )
+    plan: Mapped[TenantPlan] = mapped_column(
+        SQLEnum(TenantPlan, name="tenant_plan", values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        server_default=TenantPlan.ENTERPRISE.value,
+    )
+    provisioning_progress: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
+    onboarding_progress: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
     meta_data: Mapped[dict[str, Any]] = mapped_column(
         "metadata",
         JSONB,
@@ -94,7 +149,7 @@ class Tenant(Base):
         server_default=func.now(),
     )
 
-    __table_args__ = (Index("idx_tenants_status", "status"),)
+    __table_args__ = (Index("idx_tenants_state", "state"),)
 
 
 # =====================================================================
