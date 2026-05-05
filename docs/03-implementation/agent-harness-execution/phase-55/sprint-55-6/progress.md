@@ -496,11 +496,137 @@ Sprint cumulative: ~8 hr / ~12 hr (67%);on track for ~12 hr commit;
 
 ---
 
-## Day 4 — pending
+## Day 4 — 2026-05-05 ✅ (Process AD pair fold-in: AD-Plan-3-Promotion + AD-Lint-MHist-Verbosity closed)
 
----
+**Hours**: ~1 hr (read 3 rule files + edit 2 rule files + self-validation + lint sanity + commit prep)
 
-## Day 4 — pending
+### Pre-edit reading completed
+
+Read 3 rule files for Day 4 context (~10 min):
+1. `.claude/rules/sprint-workflow.md` (full file 473 lines; §Step 2.5 at L120-L171 pre-edit)
+2. `.claude/rules/file-header-convention.md` (full file 442 lines; §格式 starts L189)
+3. `.claude/rules/anti-patterns-checklist.md` AP-2 (cross-reference target — loaded via CLAUDE.md system context; AP-2 = "Side-Track Code Pollution / no orphan code references")
+
+### AD-Plan-3-Promotion implementation
+
+**File modified**: `.claude/rules/sprint-workflow.md`
+
+1. **MHist 1-line entry added** at file header (newest-first; 94 chars including `> - ` prefix, under E501 100-char budget):
+   ```
+   > - 2026-05-05: Sprint 55.6 — promote AD-Plan-3 (Prong 2 content verify + ROI + grep patterns)
+   ```
+
+2. **§Step 2.5 fully restructured** (replaces existing single-prong section with two-prong model):
+   - **Header updated**: `### Step 2.5: Day-0 Plan-vs-Repo Verify (Sprint 55.3+ — closes AD-Plan-1; AD-Plan-3 promoted Sprint 55.6)`
+   - **Drift cause list** extended with 5th bullet: "Wrong-content drift" (file exists but body diverged from plan's claim — e.g. plan asserts `_retry_policy` is dead but path verify alone can't see body's call sites)
+   - **"Cost when skipped"** extended with 4-row historical accumulation:
+     - 53.7: 5 path-drift findings cost ~1 hr re-work
+     - 55.3: 3 path-drift findings caught in ~30 min
+     - 55.5: 5 wrong-content drifts caught (~55 min cost prevented ~3-4 hr re-work; 4-8× ROI)
+     - 55.6: 11 wrong-content drifts caught (~75 min cost prevented ~9-10 hr re-work + 2 production-grade bugs; 7-8× quantitative + 2 critical correctness saves)
+   - **"#### Required actions"** reorganized into TWO PRONGS (both mandatory):
+     - **Prong 1 — Path Verify (AD-Plan-2 from Sprint 55.3)**: existing Glob/ls path-existence check (DB tables / fixtures / imports / public ABC methods)
+     - **Prong 2 — Content Verify (AD-Plan-3 promoted Sprint 55.6)**: NEW grep-based content claim verify with **5-row drift class table** matching Plan claim pattern → Grep verify pattern:
+       1. Claimed-but-unwired entry points: count call sites vs assignments
+       2. Claimed-but-missing imports: confirm import sites in target dir
+       3. Claimed-but-renamed symbols: detect rename / inheritance drift
+       4. Claimed-but-non-existent ABCs: confirm ABC actually exists before planning extension
+       5. Claimed-but-wrong-units fields: confirm unit / type assumption (e.g. `backoff_seconds` vs `backoff_ms`)
+   - "Catalog drift findings" + "Decide go/no-go" sub-sections preserved (no orphan rule loss per AP-2)
+   - **NEW "#### ROI evidence (Sprint 55.6 promotion validation)"** sub-section with 2-row table (55.5 1st app vs 55.6 2nd-6th app cumulative); D3 critical scope reduction (Cat8-2 ~10-12 hr → ~5-6 hr) called out as flagship ROI proof
+   - **Examples extended** with **Sprint 55.6 D3 critical catch** demonstrating Prong 2 ROI invisible to Prong 1 (all referenced files exist; content gap requires grep)
+   - **Cross-references** extended with file-header-convention.md AD-Lint-MHist-Verbosity link
+   - **Wrong flow** extended with "Sprint 55.5 pre-AD-Plan-3 first application" example (path verify only → discover content gaps mid-implementation)
+
+### AD-Lint-MHist-Verbosity implementation
+
+**File modified**: `.claude/rules/file-header-convention.md`
+
+1. **MHist 1-line entry added** at file header (newest-first; 97 chars under E501 budget):
+   ```
+   - 2026-05-05: Sprint 55.6 — add MHist char-count budget guidance (closes AD-Lint-MHist-Verbosity)
+   ```
+
+2. **§格式 extended** with NEW **"Char-count writing guidance" sub-section** between "Character budget" and "Why":
+   - **Rationale**: 3 consecutive sprints (55.4 + 55.5 + 55.6) had new MHist entries exceeding E501 by 1-3 chars on first draft, requiring trim cycle (proactive budget beats trim-after-write)
+   - **Common-case templates table** (3 rows with concrete examples + char counts):
+     | Template shape | Example | Chars |
+     |----------------|---------|-------|
+     | `> - DATE: Sprint X.Y — <verb> <scope>` | (55.3 53.7 Day 1 example) | ~55 |
+     | `> - DATE: Sprint X.Y — <verb> <scope> (closes AD-Foo)` | (55.3 category_span example) | ~80 |
+     | `> - DATE: Sprint X.Y — <verb> <scope> + <minor>` | (55.3 §Step 2.5 + ROI example) | ~65 |
+   - **Anti-patterns bullets** (3 patterns; each with example char count + Fix):
+     - ❌ Pack 4-clause reasons in MHist (≥150 chars) → split into 2 entries OR move detail to commit body / `claudedocs/4-changes/`
+     - ❌ Verbose noun phrases (`extension of` → `extend`; `promotion-to-validated-rule of` → `promote`; `addition of` → `add`)
+     - ❌ Embedded paths > 30 chars (`backend/src/agent_harness/orchestrator_loop/loop.py:1024` 54 chars → `Cat 1 retry wrap` 16 chars or `loop.py L1024+L1092` 19 chars)
+   - **Rule of thumb**: aim for 60-80 chars after prefix; `(closes AD-Foo-N)` parens add ~20 on top
+
+### Self-validation
+
+Both edited files self-validate against their own MHist 1-line constraint:
+
+| File | New MHist entry | Chars | Budget |
+|------|-----------------|-------|--------|
+| `sprint-workflow.md` | `> - 2026-05-05: Sprint 55.6 — promote AD-Plan-3 (Prong 2 content verify + ROI + grep patterns)` | 94 | ≤100 ✓ |
+| `file-header-convention.md` | `- 2026-05-05: Sprint 55.6 — add MHist char-count budget guidance (closes AD-Lint-MHist-Verbosity)` | 97 | ≤100 ✓ |
+
+Cross-references between files verified:
+- sprint-workflow.md §Step 2.5 §Cross-references → file-header-convention.md AD-Lint-MHist-Verbosity link ✓
+- file-header-convention.md §Modification History 55.3 + 55.6 entries form chronological audit trail ✓ (no silent rewrite per AP-2)
+- file-header-convention.md new sub-section's 3 template examples (54/79/57 chars after prefix) all ≤80 chars — demonstrates writing guidance compliance from within the rule itself
+
+### Lint chain results
+
+Docs-only edits → lint chain neutral:
+- ✅ black: not applicable to .md files
+- ✅ isort: not applicable
+- ✅ flake8: not applicable to .md files
+- ✅ mypy --strict: not applicable
+- ✅ 7 V2 lints: 7/7 (Markdown files outside lint script scope; baselines preserved)
+- ✅ LLM SDK leak: 0 (covered)
+- ✅ pytest baseline: **1463/4/0 unchanged** from Day 2 cumulative
+
+### Buffer time use
+
+Used remaining buffer (~30 min) for Day 5 closeout pre-staging:
+- SITUATION-V2-SESSION-START.md §8 + §9 + history pre-draft notes (5 ADs to close: AD-Cat8-2 / AD-CI-5 / AD-CI-6 / AD-Plan-3-Promotion / AD-Lint-MHist-Verbosity; 7-sprint window calibration trend update; AD-Plan-3 status: candidate → validated)
+- Memory file outline pre-draft (`project_phase55_6_audit_cycle_4.md` — covers Option H + Option Z + 11 drifts D1-D11 + AD-Plan-3 promotion + AD-CI-5 paths-filter retire validation evidence)
+
+### AD-Plan-3 cumulative ROI (no new drifts at Day 4 — process AD edits, not Day-0 探勘 territory)
+
+Day 4 work is process AD pair (rule file edits) not new code; AD-Plan-3 探勘 doesn't apply at this stage. Cumulative count stays at **11 drifts (D1-D11)** from Day 0-3. Day 4 is the "fold-in" that promotes the catch mechanism itself from candidate to validated rule, retroactively benefiting all future sprints.
+
+### Day 4 calibration
+
+```
+Day 4 actual:  ~1 hr (vs revised plan §Workload Day 4 ~0.75 hr + buffer ~0.5 hr = ~1.25 hr → ratio 0.8 in band)
+Sprint cumulative: ~9 hr / ~12 hr commit (75%);on track for ~12 hr commit;
+                  Day 5 will use ~3 hr remaining for retro + closeout + PR + merge
+```
+
+### Day 4 totals
+
+- **Day 4 total**: ~1 hr
+- **Sprint cumulative through Day 4**: ~9 hr / ~12 hr (75% capacity used; ~3 hr remaining for Day 5)
+
+### Next (Day 5 — Retrospective + Closeout)
+
+- Verify all 5 ADs closed via acceptance criteria checklist
+- Run full pytest baseline → confirm 1463 unchanged from Day 2 (Day 4 docs-only) ≥ 1462 target ✓
+- Run full lint chain (black + isort + flake8 + mypy --strict + 7 V2 lints)
+- Compute calibration ratio (AD-Sprint-Plan-5 medium-backend 0.85 second application; expect actual ~12 hr / committed ~12 hr → ratio ~1.0 in band)
+- **Verify AD-CI-5 effectiveness**: confirm THIS PR's 5 required checks all fire via paths-filter retirement (no touch-header on backend-ci.yml or playwright-e2e.yml needed) — first end-to-end validation of Option Z
+- Catalog final drift findings (D1-D11 stable through Day 4)
+- Write retrospective.md (6 必答 Q1-Q6 + sign-off)
+  - Q1 What went well: AD-Plan-3 second-sixth applications (11 drifts) + Option H + Option Z simplifications + first solo-dev-policy stable sprint with 0 PR-blocking AD
+  - Q2 What didn't go well + calibration ratio (medium-backend 0.85 second app)
+  - Q3 Generalizable lessons: Day-0 探勘 ROI compounds across multiple applications within sprint (5+3+1+1+1 = 11)
+  - Q4 Audit Debt deferred (carryover candidates: AD-Cat9-5-Redis multi-instance counter / AD-Cat10-VisualVerifier+Frontend-Panel Phase 56+)
+  - Q5 Next steps (rolling: Sprint 55.7 candidate scope = closeout / pause / Phase 56 SaaS Stage 1 plan; user approval required)
+  - Q6 AD-Sprint-Plan-5 second application validation + AD-Plan-3-Promotion + AD-Lint-MHist-Verbosity ratification
+- Update SITUATION-V2-SESSION-START.md (§8 close 5 ADs / §9 +Sprint 55.6 row + 累計 / footer + history)
+- Update memory (`project_phase55_6_audit_cycle_4.md` NEW + `MEMORY.md` +1 line)
+- Open PR + watch CI green (paths-filter retirement first validation) + merge (solo-dev policy) + closeout PR for SHA fill-in
 
 ---
 

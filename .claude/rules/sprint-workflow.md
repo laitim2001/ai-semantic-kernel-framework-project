@@ -8,6 +8,7 @@
 **Status**: Active
 
 > **Modification History**
+> - 2026-05-05: Sprint 55.6 — promote AD-Plan-3 (Prong 2 content verify + ROI + grep patterns)
 > - 2026-05-04: Sprint 55.3 — add §Step 2.5 Day-0 plan-vs-repo grep verify (closes AD-Plan-1) + drop per-day "Estimated X hours" headers from checklist template (closes AD-Lint-2)
 > - 2026-05-04: Sprint 53.7 — add §Workload Calibration sub-section under Step 1 (closes AD-Sprint-Plan-1) + new §Common Risk Classes top-level section (closes AD-CI-4) + Pre-Push reference `python scripts/lint/run_all.py` wrapper (closes AD-Lint-1 doc portion)
 > - 2026-04-28: Initial creation (V2 foundation) — enforce 5-step workflow + change record conventions
@@ -117,7 +118,7 @@ Plan §Workload (or equivalent header) **must** state estimate in this three-seg
 
 ---
 
-### Step 2.5: Day-0 Plan-vs-Repo Verify (Sprint 55.3+ — closes AD-Plan-1)
+### Step 2.5: Day-0 Plan-vs-Repo Verify (Sprint 55.3+ — closes AD-Plan-1; AD-Plan-3 promoted Sprint 55.6)
 
 **Mandatory** between plan/checklist drafting and Day 1 code start. Plans drafted from session memory + retrospective context **drift from real repo** because:
 
@@ -125,49 +126,97 @@ Plan §Workload (or equivalent header) **must** state estimate in this three-seg
 - Table names change in Alembic migrations between PR drafts
 - Test fixture paths shift when `conftest.py` is restructured
 - Service/method signatures evolve in unrelated PRs while plan was being written
+- **Wrong-content drift**: file exists but body diverged from plan's claim (e.g. plan asserts `_retry_policy` is dead but path verify alone can't see the body's call sites; or plan asserts ABC `ToolErrorDecision` exists but the ABC was never created)
 
-**Cost when skipped**: Sprint 53.7 retrospective Q4 — 5 drift findings (D4-D12) cost ~1 hr of Day 1+ re-work; Sprint 55.3 Day 0 — 3 drift findings (D1-D3) caught in ~30 min before code starts → estimated savings ~30 min of Day 1+ re-work.
+**Cost when skipped**:
+- Sprint 53.7 retrospective Q4 — 5 path-drift findings (D4-D12) cost ~1 hr Day 1+ re-work
+- Sprint 55.3 Day 0 — 3 path-drift findings (D1-D3) caught in ~30 min before code starts
+- Sprint 55.5 Day 0-2 — **5 wrong-content drifts** (D1+D2+D4+D5+D7) caught via AD-Plan-3 first application; ~55 min cost prevented ~3-4 hr re-work (4-8× ROI)
+- Sprint 55.6 Day 0-3 — **11 wrong-content drifts** (D1-D11) caught via AD-Plan-3 second through sixth applications; ~75 min cost prevented ~9-10 hr re-work + 2 production-grade bugs (7-8× quantitative + 2 critical correctness saves)
 
 #### Required actions (Day 0, before Day 1 code)
 
-1. **Grep each plan §Technical Spec assertion against repo state**:
-   - Every file path mentioned in plan §File Change List or §Technical Spec → `Glob` or `ls` to confirm exists / does not exist as expected
-   - Every class name → `grep -r "class FooName"` to confirm presence / absence
-   - Every DB table name → check `infrastructure/db/models/*.py` + `alembic/versions/*.py`
-   - Every fixture path → check `tests/**/conftest.py`
-   - Every public ABC method → read the actual ABC file to confirm signature
+The verify is a **two-prong grep pass**; both prongs are mandatory:
 
-2. **Catalog drift findings** in `progress.md` Day 0 entry under "Drift findings" header:
-   - Format: `D{N}` ID + Finding + Implication
-   - Cross-reference to plan §Risks (where finding may shift scope or risk profile)
-   - **Do NOT silently update plan §Technical Spec** — instead, add finding to plan §Risks. This preserves audit trail of what was originally planned vs. what reality forced. (See `anti-patterns-checklist.md` AP-2 — "no orphan code".)
+##### Prong 1 — Path Verify (AD-Plan-2 from Sprint 55.3)
 
-3. **Decide go/no-go for Day 1**:
-   - Findings shift scope by ≤ 20% → continue Day 1 with risk noted in §Risks
-   - Findings shift scope by 20-50% → revise plan §Acceptance Criteria + §Workload, re-confirm with user
-   - Findings shift scope by > 50% → abort sprint; redraft plan with reality baseline
+Every file path mentioned in plan §File Change List or §Technical Spec → `Glob` or `ls` to confirm exists / does not exist as expected.
+
+- New files (creates): `Glob("path/to/new_file.py")` returns 0 results
+- Edited files (edits): `Glob("path/to/existing.py")` returns 1 result
+- DB tables: check `infrastructure/db/models/*.py` + `alembic/versions/*.py`
+- Fixture paths: check `tests/**/conftest.py`
+- Imports / re-exports: confirm package-level `__init__.py` if plan asserts exposure
+- Public ABC methods: read the actual ABC file to confirm signature
+
+##### Prong 2 — Content Verify (AD-Plan-3 promoted Sprint 55.6)
+
+Every plan §Technical Spec / §Background factual claim about existing code → **Grep** for the asserted symbol/pattern in real source. Path-verify alone (Prong 1) is **insufficient**: the file exists, but its body may have diverged from the plan's claim.
+
+Common drift classes and matching grep query patterns:
+
+| Drift class | Plan claim pattern | Grep verify pattern |
+|-------------|--------------------|---------------------|
+| **Claimed-but-unwired entry points** | "X is dead state" / "Y attribute is unused" | `grep -n "self\._{attribute}\b" {target_file}` — count call sites vs assignments (≥1 assignment / 0 call → confirmed dead) |
+| **Claimed-but-missing imports** | "Z is publicly re-exported" / "consumer uses A" | `grep -rn "import {symbol}\|from .* import .*{symbol}" {target_dir}` — confirm import sites |
+| **Claimed-but-renamed symbols** | "B was renamed to C" / "D class extends E" | `grep -rn "{old_name}\|{new_name}\|class .* {parent}" {target_dir}` — detect rename / inheritance drift |
+| **Claimed-but-non-existent ABCs** | "extend ABC F" / "add G enum case" | `grep -rn "class F\|class G\|F\.{member}" {target_dir}` — confirm ABC actually exists before planning extension |
+| **Claimed-but-wrong-units fields** | "uses backoff_seconds" / "stored as float" | `grep -n "{field_name}: " {target_file}` + read 1-3 lines — confirm unit / type assumption |
+
+##### Catalog drift findings
+
+In `progress.md` Day 0 entry under "Drift findings" header:
+
+- Format: `D{N}` ID + Finding + Implication
+- Cross-reference to plan §Risks (where finding may shift scope or risk profile)
+- **Do NOT silently update plan §Technical Spec** — instead, add finding to plan §Risks. This preserves audit trail of what was originally planned vs. what reality forced. (See `anti-patterns-checklist.md` AP-2 — "no orphan code".)
+
+##### Decide go/no-go for Day 1
+
+- Findings shift scope by ≤ 20% → continue Day 1 with risk noted in §Risks
+- Findings shift scope by 20-50% → revise plan §Acceptance Criteria + §Workload, re-confirm with user
+- Findings shift scope by > 50% → abort sprint; redraft plan with reality baseline
+
+#### ROI evidence (Sprint 55.6 promotion validation)
+
+AD-Plan-3 was logged Sprint 55.4 candidate, validated Sprint 55.5 first application (5 drifts → 4-8× ROI), and **promoted to validated rule via Sprint 55.6 fold-in** based on cumulative evidence:
+
+| Sprint | Application count | Drifts caught | Cost | Benefit prevented | ROI |
+|--------|-------------------|---------------|------|-------------------|-----|
+| 55.5 | 1st (Day 0 + 1 + 2) | 5 (D1+D2+D4+D5+D7) | ~55 min | ~3-4 hr re-work | 4-8× |
+| 55.6 | 2nd-6th (Day 0-3) | 11 (D1-D11) | ~75 min | ~9-10 hr re-work + 2 production-grade bugs | 7-8× + 2 saves |
+
+**D3 critical scope reduction in Sprint 55.6 alone**: AD-Cat8-2 dropped from "design + wire ~10-12 hr" to "wire-only ~5-6 hr" — caught via content grep (Prong 2), invisible to path verify (Prong 1).
 
 #### Examples
 
-**Sprint 53.7 D4-D12** (9 drift findings cost ~1 hr re-work — _why this rule exists_):
+**Sprint 53.7 D4-D12** (9 path-drift findings cost ~1 hr re-work — _why Prong 1 exists_):
 - D4: Plan referenced `check_promptbuilder.py --root` arg behavior that did not match script
 - D7-D8: Plan assumed lint scripts would silently accept missing `--root` flag; reality = silent-OK or exit 2
 - D10-D12: Plan-stated `pytest` count baselines off by 2-5 tests vs. real repo at branch-creation time
 
-**Sprint 55.3 D1-D3** (3 findings caught _before_ Day 1 code — _ROI validation_):
+**Sprint 55.3 D1-D3** (3 path-drift findings caught _before_ Day 1 code — _Prong 1 ROI validation_):
 - D1: Plan assumed sole-mutator refactor needed for `agent_harness/`; grep showed three target patterns already grep-zero → AD-Cat7-1 scope 收斂 to enforcement test + lint
 - D2: Plan assumed `verification_span` would be created; `verification/_obs.py` already had it → AD-Cat12-Helpers-1 became `extract` (non-create)
 - D3: Plan assumed DB-backed `HITLPolicy` already partially wired; `DefaultHITLManager.default_policy` was in-memory only → AD-Hitl-7 baseline confirmed cleanly
 
+**Sprint 55.6 D3 critical catch** (Prong 2 content-verify — _why AD-Plan-3 promotion exists_):
+- 55.4 retro Q4 + 55.5 retro Q4 both narrated "AD-Cat8-2 needs full retry-with-backoff design"
+- Day-0 content grep on `loop.py:_handle_tool_error` revealed: ABC implemented, called from main exec, error_policy/error_budget/circuit_breaker ALL wired — **only `_retry_policy` attribute is dead**
+- Scope dropped from ~10-12 hr to ~5-6 hr; saved ~5-6 hr scope-creep design work
+- Path verify (Prong 1) alone could not catch this: all referenced files exist; content gap requires Prong 2 grep
+
 #### Cross-references
 
-- `anti-patterns-checklist.md` AP-2 (no orphan / phantom code references)
-- `.claude/rules/file-header-convention.md` §Modification History (drift findings during refactor go in MHist)
+- `anti-patterns-checklist.md` AP-2 (no orphan / phantom code references — drift findings preserve audit trail vs. silent plan rewrite)
+- `.claude/rules/file-header-convention.md` §Modification History (drift findings during refactor go in MHist; AD-Lint-MHist-Verbosity char-count budget complements this rule)
 - §Common Risk Classes below (recurring drift patterns deserve catalog entries)
 
-✅ **Correct flow**: Plan drafted → Checklist drafted → **Day-0 探勘 grep + drift findings catalogued** → Day 1 code starts.
+✅ **Correct flow**: Plan drafted → Checklist drafted → **Day-0 探勘 grep (Prong 1 path-verify + Prong 2 content-verify) + drift findings catalogued in progress.md** → Day 1 code starts.
 
 ❌ **Wrong flow** (Sprint 53.7 pre-AD-Plan-1): Plan drafted → Day 1 code → discover plan-vs-repo gaps mid-implementation → re-work checklist + plan + commits.
+
+❌ **Wrong flow** (Sprint 55.5 pre-AD-Plan-3 first application): Path verify only (Prong 1) → Day 1 code → discover content gaps mid-implementation (file exists but body wrong; ABC doesn't exist; field uses wrong units).
 
 ---
 
