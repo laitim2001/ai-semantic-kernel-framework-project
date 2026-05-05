@@ -428,3 +428,86 @@ DoD: 14 Day 3 tests pass in 1.0s
   - No new D-findings → pure Phase 56.x carryover; D24 chat_call injection + D25 multi-tenant deviation note are documented in code, not deferred work
 - Solo-dev policy unchanged
 - D26 + D27 are *exactly* the type of wrong-content drift AD-Plan-3 (Prong 2) was promoted to catch at Day 0 — useful evidence for Phase 56.2 retrospective on whether to require schema-column grep in Day 0 探勘 (currently Prong 2 content verify focuses on file/symbol existence, not column-level drift)
+
+---
+
+## Day 4 (2026-05-06) — US-5 RLS Hardening + Closeout Ceremony
+
+### Mid-sprint two-prong 探勘 baseline
+
+**Prong 1 path verify**:
+- ✅ `scripts/lint/check_rls_policies.py` not exist (will create — 8th lint)
+- ✅ `docs/03-implementation/agent-harness-execution/phase-56/sprint-56-1/rls-audit.md` not exist (will create)
+- ✅ Existing 7 V2 lint scripts at `scripts/lint/` confirmed; `run_all.py` orchestrator structure intact
+
+**Prong 2 content verify**:
+- ✅ 0009_rls_policies.py declares `RLS_TABLES` tuple with 13 tables (single bootstrap source)
+- ✅ 0012_incidents.py + 0013_hitl_policies.py each add 1 RLS table (incidents + hitl_policies)
+- ✅ 14 TenantScopedMixin classes detected via grep across `infrastructure/db/models/`
+- ✅ `tests/unit/infrastructure/db/test_rls_enforcement.py` provides reusable RLS pattern (rls_app_role + SET LOCAL)
+- ✅ Phase 56.1 added 0 new TenantScopedMixin tables — all 2 new tables (tenants, feature_flags) are registry-style, correctly excluded
+
+### D-finding catalogued (D28)
+
+| ID | Severity | Finding | Implication |
+|----|----------|---------|-------------|
+| **D28** | green | Plan §4.3 anticipated Alembic gap-fix migration; audit reveals **0 gaps** (V2 baseline already complete via 0009 + 0012 + 0013) | §4.3 deliverable becomes audit report (`rls-audit.md`) + 8th V2 lint that codifies invariant going forward; no migration written |
+
+### Tasks completed (4.1-4.11)
+
+#### 4.1-4.4 RLS lint + audit + orchestrator update
+- ✅ `scripts/lint/check_rls_policies.py` 8th V2 lint (regex pattern reuse from check_sole_mutator)
+- ✅ `rls-audit.md` 15 RLS-protected tables + 14 TenantScopedMixin coverage + 13 whitelisted (registry/junction)
+- ✅ Lint output: "OK: all TenantScopedMixin tables have RLS coverage." (0.05s; exit 0)
+- ✅ `run_all.py` orchestrator updated — 7 → 8 lints; argparse description "8 V2 architecture lint scripts"
+- ✅ §4.3 Alembic gap fix: NO migration needed (D28; ships as audit report + lint instead)
+
+#### 4.5-4.6 Integration tests (5 tests — exact plan target)
+- ✅ `test_rls_phase56_no_tenant_set_blocks_select` — RLS regression: rls_app_role with no app.tenant_id → 0 rows
+- ✅ `test_rls_phase56_correct_tenant_set_returns_own_rows` — RLS: SET LOCAL app.tenant_id=A → only A rows
+- ✅ `test_rls_phase56_cross_tenant_invisible` — RLS: tenant A SET LOCAL → tenant B invisible
+- ✅ `test_full_lifecycle_multi_tenant_isolation` — quota + onboarding + state transition isolation
+- ✅ `test_audit_chain_after_lifecycle_ops` — chain integrity preserved across tenant lifecycle ops
+
+#### 4.7 Final pytest + lints + LLM SDK leak verify ✅
+- pytest full: **1503 → 1508 passed / 4 skipped / 0 fail** (exact plan target +5)
+- mypy --strict: **0 errors / 283 source files** (no new files this day; Day 4 added scripts not in src/)
+- 8 V2 lints: **8/8 green** (added check_rls_policies)
+- black + isort + flake8: clean (1 round black auto-fmt — 2 files)
+- LLM SDK leak: 0
+- Alembic: no new migration (D28); 0014 + 0015 from Day 1+3 stable
+
+#### 4.8 retrospective.md (6 必答 format)
+- ✅ Q1 What went well: 6 themes (探勘 ROI / pattern reuse / test buffer / 8th lint clean / solo-dev workflow / AD-Plan-3 self-application)
+- ✅ Q2 Calibration: ratio **1.00 — bullseye** (`large multi-domain` 0.55 first application; recommendation = KEEP 0.55)
+- ✅ Q3 28 D-findings cumulative; D26+D27 surface AD-Plan-4-Schema-Grep candidate
+- ✅ Q4 V2 紀律 9 項 review at closure: 9/9 green
+- ✅ Q5 Phase 56-58 SaaS Stage 1 progress 0/3 → 1/3; Phase 56.2 candidate scope listed (NOT predefined per rolling planning 紀律)
+- ✅ Q6 Solo-dev policy validation; AD-CI-5 paths-filter retirement confirmed working
+
+#### 4.9-4.11 Closeout ceremony (pending in this commit)
+- 🔄 PR open after this commit + CI green + solo-dev normal merge → next step
+- 🔄 Closeout PR (CLAUDE.md + SITUATION-V2-SESSION-START.md update + memory snapshot) → next step
+- 🔄 Memory snapshot `project_phase56_1_saas_foundation.md` + MEMORY.md index → next step
+
+### Calibration final
+
+| Metric | Value |
+|--------|-------|
+| Sprint committed | 17 hr |
+| Day 0 actual | ~1 hr |
+| Day 1 actual | ~3.5 hr |
+| Day 2 actual | ~3.5 hr |
+| Day 3 actual | ~4 hr |
+| Day 4 actual | ~5 hr |
+| **Total actual** | **~17 hr** |
+| **Ratio** | **1.00 ✅ bullseye** |
+
+`large multi-domain` 0.55 first application — keep stable for next 2-3 sprints.
+
+### Notes
+
+- 1 D-finding catalogued in Day 4 (D28); cumulative Day 0-4 = **28 findings**
+- Day 4 = lightest D-finding day because 探勘 was most thorough — V2 baseline correctness is high
+- Phase 56.1 ceremony still pending (PR open + closeout PR + memory snapshot) — happens in subsequent commits
+- Sprint 56.1 final commit count: Day 0 + Day 1 + Day 2 + Day 3 + Day 4 = ~6-8 feature commits + closeout ceremony (TBD)
