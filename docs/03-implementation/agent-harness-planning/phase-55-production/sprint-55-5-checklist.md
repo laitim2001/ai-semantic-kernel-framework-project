@@ -157,36 +157,17 @@
 
 ## Day 4 — Retrospective + Closeout
 
-- [ ] **Verify all 2 ADs closed** (acceptance criteria)
-  - AD-Cat10-Wire-1: 3-mode CHAT_VERIFICATION_MODE + factory + 6 tests green
-  - AD-Cat10-Obs-Cat9Wrappers: D19 validated + 2 docstrings + 3 sentinel tests green
-- [ ] **Run full pytest baseline**
-  - Target: 1446 → ≥1452 (+6 minimum;actual +9 expected: 5+1+3)
-- [ ] **Run full lint chain**
-  - black + isort + flake8 + mypy --strict + 7 V2 lints
-- [ ] **LLM SDK leak check** — 0
-- [ ] **Compute calibration ratio** (AD-Sprint-Plan-5 medium-backend 0.75 + 0.05 surcharge 1st application)
-  - Sum actual hours Day 0-4
-  - Ratio = actual / committed (committed = ~7 hr per plan §Workload)
-  - Document in retro Q2 + Q6
-- [ ] **Catalog final drift findings** (D1-Dn cumulative)
-- [ ] **Write `retrospective.md`** (6 必答 Q1-Q6)
-  - Q1 What went well
-  - Q2 What didn't go well + ratio + scope-class verification
-  - Q3 Generalizable lessons (especially AD-Plan-3 first-application ROI evidence)
-  - Q4 Audit Debt deferred (carryover candidates for 55.6+)
-  - Q5 Next steps (rolling planning — 55.6 candidate scope only;Group D remaining 2 ADs OR Group F frontend OR Group H CI/infra)
-  - Q6 AD-Sprint-Plan-5 medium-backend 0.75 + 0.05 surcharge 1st application + AD-Plan-3 promotion-to-validated-rule recommendation
-- [ ] **Update `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md`**
-  - §8 close 2 ADs (AD-Cat10-Wire-1 + AD-Cat10-Obs-Cat9Wrappers)
-  - §8 promote AD-Plan-3 from "candidate" to "validated" (or close it after first ROI evidence)
-  - §8 mark AD-Sprint-Plan-5 calibration evidence row
-  - Add new ADs (if any logged from this sprint)
-  - §9 milestones row +Sprint 55.5 (V2 22/22 unchanged — audit cycle bundle)
-  - Footer Last Updated + Update history +1 row
-- [ ] **Update memory**
-  - `memory/project_phase55_5_audit_cycle_3.md` — new
-  - `memory/MEMORY.md` — index +1 line
+- [x] **Verify all 2 ADs closed** (acceptance criteria) ✅
+  - AD-Cat10-Wire-1: 2-mode CHAT_VERIFICATION_MODE + factory + 5 unit + 1 integration tests green
+  - AD-Cat10-Obs-Cat9Wrappers: D19 validated + 2 docstrings + 3 sentinel tests green (AST walk)
+- [x] **Run full pytest baseline** → 1454 / 4 skipped (cumulative +8 from 1446 target +6) ✅
+- [x] **Run full lint chain** → black + isort + flake8 + mypy --strict + 7 V2 lints all green ✅
+- [x] **LLM SDK leak check** — 0 ✅ (V2 lint check_llm_sdk_leak)
+- [x] **Compute calibration ratio** (AD-Sprint-Plan-5 medium-backend 0.80 1st refinement) → **1.14 ✅ in band** (~8 hr actual / ~7 hr committed)
+- [x] **Catalog final drift findings** (D1-D9 cumulative) ✅
+- [x] **Write `retrospective.md`** (6 必答 Q1-Q6 + sign-off) ✅
+- [x] **Update `SITUATION-V2-SESSION-START.md`** (§8 close 2 ADs + 3 new ADs / §9 row + 累計 / footer + history row) ✅
+- [x] **Update memory** (`project_phase55_5_audit_cycle_3.md` NEW + `MEMORY.md` +1 line) ✅
 - [ ] **Commit Day 4**
   - Commit: `docs(retro, sprint-55-5): retrospective + 2 AD closure summary + AD-Plan-3 ROI validation`
 - [ ] **Push branch**
@@ -194,7 +175,7 @@
   - Title: `Sprint 55.5: Audit Cycle Mini-Sprint #3 — close AD-Cat10-Wire-1 + AD-Cat10-Obs-Cat9Wrappers (Group D narrow)`
 - [ ] **Watch CI green** — apply paths-filter workaround for Frontend E2E if needed (per AD-CI-5)
 - [ ] **Merge PR** — solo-dev policy, review_count=0
-- [ ] **Closeout PR for SHA fill-in** if needed (SITUATION §9 + memory file SHA)
+- [ ] **Closeout PR for SHA fill-in** (SITUATION §9 PR # + SHA + memory file SHA fill-in)
 - [ ] **Final verify on main** — clean
 
 ---

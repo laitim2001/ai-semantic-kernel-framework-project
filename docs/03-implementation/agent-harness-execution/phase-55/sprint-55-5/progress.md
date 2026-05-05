@@ -260,12 +260,86 @@ wrong-content drifts caught Day 0-2 — D1+D2+D4+D5+D7).
 
 ---
 
-## Day 4 — 2026-05-XX (pending)
+## Day 4 — 2026-05-05 (Retrospective + Closeout)
 
-_(to be filled in)_
+**Estimated**: ~1.5 hr
+**Actual**: ~1.5 hr (ratio 1.0 in band)
+
+### Final verification
+
+- ✅ AD-Cat10-Wire-1 closed (Day 1 commit `60e65a6a`): 5 unit + 1 integration tests; backwards-compat preserved byte-for-byte
+- ✅ AD-Cat10-Obs-Cat9Wrappers closed (Day 2 commit `e1bb0bc0`): 3 sentinel via AST walk; D19 reuse-inner preserved
+- ✅ AD-Plan-3 first application validated: 5 wrong-content drifts caught Day 0-2 (D1+D2+D4+D5+D7) — ROI 4-8×
+- ✅ AD-Sprint-Plan-5 1st refinement validated: 0.80 mult ratio 1.14 ✅ in band
+- ✅ Full pytest: 1454 / 4 skipped (cumulative +8 from 1446;target +6 hit 33% over)
+- ✅ 7 V2 lints + black + isort + flake8 + mypy --strict + LLM SDK leak — all green
+
+### Calibration ratio (AD-Sprint-Plan-5 1st refinement application)
+
+| Phase | Hours |
+|-------|-------|
+| Plan committed (§Workload) | ~7 hr |
+| Total actual | ~8 hr |
+| **Ratio** | **~1.14 ✅ in [0.85, 1.20] band by 0.06** |
+
+### Closeout artifacts
+
+- ✅ retrospective.md (6 必答 Q1-Q6 + sign-off)
+- ✅ SITUATION-V2-SESSION-START.md §8 + §9 + footer + history row updated (PR # + SHA = `<TBD>` until merge)
+- ✅ memory/project_phase55_5_audit_cycle_3.md (NEW) + MEMORY.md +1 line index
+
+### Sprint 55.5 sign-off
+
+All Definition of Done items met (per plan §Definition of Done). 2/2 backend ADs closed + 2 process AD applications validated. 9 drift findings catalogued per AD-Plan-1 audit-trail rule.
+
+### Next steps
+
+- Push Day 4 closeout commit
+- Open PR for Sprint 55.5 closure
+- Watch CI green (apply paths-filter workaround for Frontend E2E if needed per AD-CI-5)
+- Merge PR (solo-dev policy)
+- Closeout PR for SHA fill-in (SITUATION §9 + memory file `<TBD>` markers)
+- Final verify on main — clean
 
 ---
 
-## Day 4 — 2026-05-XX (pending)
+## Day 4 — 2026-05-05 (Retrospective + Closeout)
 
-_(to be filled in)_
+**Estimated**: ~1.5 hr
+**Actual**: ~1.5 hr (ratio 1.0 in band)
+
+### Final verification
+
+- ✅ AD-Cat10-Wire-1 closed (Day 1 commit `60e65a6a`): 5 unit + 1 integration tests; backwards-compat preserved byte-for-byte
+- ✅ AD-Cat10-Obs-Cat9Wrappers closed (Day 2 commit `e1bb0bc0`): 3 sentinel via AST walk; D19 reuse-inner preserved
+- ✅ AD-Plan-3 first application validated: 5 wrong-content drifts caught Day 0-2 (D1+D2+D4+D5+D7) — ROI 4-8×
+- ✅ AD-Sprint-Plan-5 1st refinement validated: 0.80 mult ratio 1.14 ✅ in band
+- ✅ Full pytest: 1454 / 4 skipped (cumulative +8 from 1446;target +6 hit 33% over)
+- ✅ 7 V2 lints + black + isort + flake8 + mypy --strict + LLM SDK leak — all green
+
+### Calibration ratio (AD-Sprint-Plan-5 1st refinement application)
+
+| Phase | Hours |
+|-------|-------|
+| Plan committed (§Workload) | ~7 hr |
+| Total actual | ~8 hr |
+| **Ratio** | **~1.14 ✅ in [0.85, 1.20] band by 0.06** |
+
+### Closeout artifacts
+
+- ✅ retrospective.md (6 必答 Q1-Q6 + sign-off)
+- ✅ SITUATION-V2-SESSION-START.md §8 + §9 + footer + history row updated (PR # + SHA = `<TBD>` until merge)
+- ✅ memory/project_phase55_5_audit_cycle_3.md (NEW) + MEMORY.md +1 line index
+
+### Sprint 55.5 sign-off
+
+All Definition of Done items met (per plan §Definition of Done). 2/2 backend ADs closed + 2 process AD applications validated. 9 drift findings catalogued per AD-Plan-1 audit-trail rule.
+
+### Next steps
+
+- Push Day 4 closeout commit
+- Open PR for Sprint 55.5 closure
+- Watch CI green (apply paths-filter workaround for Frontend E2E if needed per AD-CI-5)
+- Merge PR (solo-dev policy)
+- Closeout PR for SHA fill-in (SITUATION §9 + memory file `<TBD>` markers)
+- Final verify on main — clean
