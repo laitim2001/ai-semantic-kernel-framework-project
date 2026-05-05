@@ -4,10 +4,11 @@
 
 **Category**: Development Process / Quality Assurance
 **Created**: 2025
-**Last Modified**: 2026-05-04
+**Last Modified**: 2026-05-05
 **Status**: Active
 
 > **Modification History**
+> - 2026-05-05: Sprint 55.6 triage cleanup — add §SAVEPOINT pattern (closes AD-Test-DB-Trigger)
 > - 2026-05-04: Sprint 53.7 Day 1 — add §Module-level Singleton Reset Pattern (closes AD-Test-1; pattern from 53.6 Day 4 ServiceFactory consolidation event-loop-cache cascade fix)
 > - 2026-04-28: Enhance for V2 — 新增範疇層級測試分工、主流量驗證、Contract Test、Multi-tenant Tests、Anti-Pattern Tests、Test Performance、Observability Tests
 > - 2025: Initial V1 version (generic test rules)
@@ -171,6 +172,56 @@ Update this list when you add a new singleton-style module. Each entry: `module 
 ### Long-term direction
 
 The pattern above is a **mitigation**, not a fix. The root-cause fix is to refactor singletons to be **DI-injected per request** (no module-level cache), which eliminates event-loop coupling entirely. ServiceFactory will be considered for this refactor if a 3rd singleton joins the catalog and the reset list becomes burdensome to maintain.
+
+---
+
+## SAVEPOINT Pattern for Post-Error Verification (Sprint 55.4+ — closes AD-Test-DB-Trigger)
+
+**When you need this**: integration test deliberately triggers a DB error (e.g. constraint violation, deadlock-by-design, deliberately-bad row) and then needs to verify that **other state** persisted by the *pre-error* code path is still correct (audit chain row, guardrail event, soft-failure record). The naive `try/except` poisons the outer test transaction → all subsequent queries fail with `sqlalchemy.exc.PendingRollbackError` / `InFailedSqlTransaction`.
+
+**Source**: Sprint 55.4 Day 3 D9 (5 real-DB integration tests for AD-Cat9-6; chain_verifier 100-row sanity test post-error path). Migration 0005 audit-chain triggers fire on the pre-error insert; without SAVEPOINT we couldn't read the chain state to confirm trigger fired before the deliberate error.
+
+### Required pattern: `session.begin_nested()`
+
+```python
+import pytest
+from sqlalchemy import insert, select
+from sqlalchemy.exc import IntegrityError
+
+@pytest.mark.asyncio
+async def test_audit_chain_persists_despite_downstream_error(db_session):
+    # Pre-error code path — should succeed; trigger fires here
+    await db_session.execute(insert(audit_log).values(tenant_id=..., event="X"))
+
+    # Wrap the deliberate-error block in a SAVEPOINT
+    async with db_session.begin_nested():  # ← SAVEPOINT (auto-rollback on exception)
+        try:
+            await db_session.execute(
+                insert(some_table).values(violates_constraint=True)
+            )
+        except IntegrityError:
+            pass  # SAVEPOINT auto-rolls back; outer transaction still alive
+
+    # Outer transaction still usable — verify pre-error state survived
+    row = (await db_session.execute(select(audit_log))).scalar_one()
+    assert row.chain_hash is not None
+```
+
+### Anti-patterns
+
+- ❌ `try/except` without SAVEPOINT → poisons outer transaction; all subsequent queries raise `PendingRollbackError`
+- ❌ Open a second `db_session` to bypass poisoning → loses tenant_id `SET LOCAL` context (per `multi-tenant-data.md`); RLS policy returns empty rows; test passes for the wrong reason
+- ❌ `pytest-asyncio` `event_loop` fixture override to swap session mid-test → re-introduces event-loop cascade (see §Module-level Singleton Reset Pattern)
+
+### When NOT to use
+
+- Pure unit tests with no DB triggers / no audit chain → use `pytest.raises()` with mock
+- Test where error propagation **is** the test goal (you want the outer transaction to roll back) → no SAVEPOINT needed
+
+### Cross-reference
+
+- `multi-tenant-data.md` §Audit chain triggers (Migration 0005)
+- `04-anti-patterns.md` AP-9 verification (don't skip the failing case to dodge poisoning)
 
 ---
 
