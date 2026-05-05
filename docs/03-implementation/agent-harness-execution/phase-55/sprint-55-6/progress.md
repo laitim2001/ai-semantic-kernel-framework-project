@@ -390,7 +390,113 @@ Sprint cumulative: ~6.5 hr / ~12 hr (54%);on track
 
 ---
 
-## Day 3 — pending
+## Day 3 — 2026-05-05 ✅ (Group H CI/infra: AD-CI-5 + AD-CI-6 closed)
+
+**Hours**: ~1.5 hr (read 3 workflows + GET branch protection + D11 plan revision + 3 workflow edits + YAML validation + commit prep)
+
+### D11 NEW DRIFT (Day 3 morning — AD-Plan-3 sixth application)
+
+While reading workflow files for Day 3 implementation, discovered that plan §Tech Spec's "Option Y aggregator workflow" approach is **not implementable as designed**:
+
+- GitHub Actions does NOT support cross-workflow `needs:` dependencies — an aggregator workflow cannot use `needs:` to depend on jobs in OTHER workflow files
+- The only way to verify other workflow results from inside an aggregator is via `gh api` queries (complex, requires polling), which contradicts audit-cycle simplicity goal
+- Industry-standard fix is much simpler: just remove the `paths:` filter so workflows always trigger
+
+**Plan revised to Option Z** (committed `e1abff75`): drop `paths:` filter from `backend-ci.yml` + `playwright-e2e.yml` (push + pull_request blocks). `e2e-tests.yml` already has no paths filter (unchanged). Required-status-checks unchanged (5 contexts already correct). Branch protection PATCH not needed.
+
+### Branch protection state (pre-Day 3, captured via `gh api GET`)
+
+```json
+{
+  "strict": true,
+  "contexts": [
+    "Lint + Type Check + Test (with PostgreSQL 16)",
+    "Backend E2E Tests",
+    "E2E Test Summary",
+    "v2-lints",
+    "Frontend E2E (chromium headless)"
+  ]
+}
+```
+
+5 required contexts mapping to:
+- `backend-ci.yml` → `Lint + Type Check + Test (with PostgreSQL 16)` + `v2-lints`
+- `e2e-tests.yml` → `Backend E2E Tests` + `E2E Test Summary` (already always-runs)
+- `playwright-e2e.yml` → `Frontend E2E (chromium headless)`
+
+After Option Z workflow edits: all 5 contexts will fire on every PR. Branch protection list is correct as-is (no PATCH).
+
+### Files modified
+
+1. **`.github/workflows/backend-ci.yml`**:
+   - Header comment rewritten to document AD-CI-5 closure rationale (paths-filter removed; touch-header workaround retired) + retain historical workaround commits as audit trail
+   - `on: push: paths:` block removed (kept `branches:` filter)
+   - `on: pull_request: paths:` block removed (now triggers on every PR)
+   - Added inline comments at the removed-paths sites pointing to AD-CI-5 / Option Z
+
+2. **`.github/workflows/playwright-e2e.yml`**:
+   - Header comment block added to document AD-CI-5 closure rationale
+   - `on: push: paths:` block removed (kept `branches:` filter)
+   - `on: pull_request: paths:` block removed (now triggers on every PR)
+
+3. **`.github/workflows/deploy-production.yml`** (AD-CI-6):
+   - Header comment block added documenting AD-CI-6 disable rationale + 5-point re-enable criteria
+   - `name:` updated to `Deploy to Production (DISABLED — see AD-CI-6)` for visibility in PR check view
+   - `on: push:` trigger commented out (preserves trigger config for easy re-enable; just uncomment 5 lines when ready)
+   - `workflow_dispatch:` retained for manual testing
+
+### YAML validation
+
+```bash
+python -c "import yaml; [yaml.safe_load(open(f, encoding='utf-8')) for f in [...3 files...]]; print('YAML valid')"
+# Output: YAML valid
+```
+
+All 3 workflows parse cleanly via PyYAML safe_load.
+
+### Verification approach
+
+This sprint's PR (#TBD) will be the FIRST validation of Option Z:
+- Pre-merge: workflows trigger on EVERY commit pushed to feature branch (including Day 3 workflow edits PR itself)
+- Closeout PR (Day 5 docs-only): no touch-header needed; workflows must trigger naturally
+
+If Day 5 closeout PR has all 5 required checks fire WITHOUT touching backend-ci.yml or playwright-e2e.yml headers → AD-CI-5 closure verified end-to-end. If not → workflow trigger config needs adjustment (D12+ deferred to follow-up sprint).
+
+### Side benefit: audit cycle workflow churn reduction
+
+Touch-header workaround accumulated 8 sprints of header comments on `backend-ci.yml` (lines 7-50 are workaround log) and `playwright-e2e.yml` (lines 1-25 are workaround log). Going forward, no new touches → workflow files stop accumulating noise.
+
+### Day 3 calibration
+
+```
+Day 3 actual:  ~1.5 hr (vs plan §Workload Day 3 estimate ~3.5 hr → ratio 0.43;
+                       under because Option Z is much simpler than Option Y aggregator)
+Sprint cumulative: ~8 hr / ~12 hr (67%);on track for ~12 hr commit;
+                  Day 4 + 5 will use ~3-4 hr remaining
+```
+
+### AD-Plan-3 cumulative ROI (11 drifts caught D1-D11)
+
+| Day | Drifts | Cost | Benefit prevented |
+|-----|--------|------|-------------------|
+| 0 | D1-D5 | ~25 min | ~3 hr scope-creep |
+| 1-am | D6-D8 | ~25 min | ~2-3 hr ABC violation rework |
+| 1-pm | D9 | ~5 min | Production bug (units mismatch) |
+| 2-am | D10 | ~10 min | Soft-failure retry silent regression |
+| **3-am** | **D11** | **~10 min** | **~3 hr aggregator workflow rabbit hole** |
+| **Total** | **11** | **~75 min** | **~9-10 hr re-work + 2 production-grade bugs** |
+
+**Conversion rate**: 7-8× quantitative + 2 critical correctness saves. AD-Plan-3-Promotion (Day 4) reinforced.
+
+### Next (Day 4)
+
+- AD-Plan-3-Promotion: extend `.claude/rules/sprint-workflow.md` §Step 2.5 with content-verify task + ROI evidence + grep query patterns
+- AD-Lint-MHist-Verbosity: extend `.claude/rules/file-header-convention.md` §格式 with char-count budget guidance
+- Buffer: SITUATION-V2-SESSION-START.md §8 pre-update + memory file pre-draft
+
+---
+
+## Day 4 — pending
 
 ---
 

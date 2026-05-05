@@ -25,16 +25,18 @@
 
 name: Playwright E2E
 
+# Sprint 55.6 (AD-CI-5 / Option Z): paths filter removed.
+# Same rationale as backend-ci.yml — branch protection's required_status_checks
+# includes "Frontend E2E (chromium headless)" from this workflow, so the touch-
+# header workaround was needed for backend-only PRs to satisfy this required
+# context. Removing paths filter retires the workaround permanently. Every PR
+# runs full Playwright E2E (~+50 sec for backend-only PRs). Acceptable for
+# solo-dev volume.
+
 on:
   push:
     branches: [main, "feature/**", "fix/**", "refactor/**"]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/playwright-e2e.yml"
   pull_request:
-    paths:
-      - "frontend/**"
-      - ".github/workflows/playwright-e2e.yml"
 
 # Avoid running an old commit's workflow when newer ones land on the same ref.
 concurrency:

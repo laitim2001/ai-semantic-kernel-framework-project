@@ -1,17 +1,31 @@
 # =============================================================================
 # IPA Platform - Production Deployment Workflow
 #
-# Deploys the application to Azure App Service using blue-green deployment.
+# Sprint 55.6 (closes AD-CI-6): DISABLED — workflow_dispatch only.
 #
-# Triggers:
-# - Manual dispatch with version tag
-# - Push to main branch (after passing all tests)
+# Why disabled:
+#   This workflow has been chronically failing since Sprint 53.2 (2026-05-03)
+#   because (a) Azure App Service is NOT yet provisioned for V2 (V2 is pre-launch);
+#   (b) GitHub Secrets for Azure credentials are not configured; (c) the
+#   blue-green slot swap targets resources that don't exist. The chronic red
+#   checks created PR-view noise but were never blocking (this workflow is not
+#   in branch protection required_status_checks).
+#
+# Re-enable criteria (delete this notice + restore push: trigger when ALL met):
+#   1. Azure App Service "app-ipa-platform-production" provisioned
+#   2. ACR "ipaplatformacr" provisioned
+#   3. GitHub Secrets configured: AZURE_CREDENTIALS, AZURE_SUBSCRIPTION_ID, etc.
+#   4. Smoke-test stage gated against actual production URL
+#   5. Track in Phase 56+ infra sprint or dedicated production-launch sprint
+#
+# Until then: workflow_dispatch only (manual trigger for testing the workflow
+# definition itself; no automatic-on-push). Remove "if: false" when re-enabling.
 #
 # Author: IPA Platform Team
 # Version: 1.0.0
 # =============================================================================
 
-name: Deploy to Production
+name: Deploy to Production (DISABLED — see AD-CI-6)
 
 on:
   workflow_dispatch:
@@ -28,13 +42,13 @@ on:
         options:
           - staging
           - production
-
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
+  # Sprint 55.6 (AD-CI-6): push trigger disabled until launch infra ready.
+  # push:
+  #   branches:
+  #     - main
+  #   paths-ignore:
+  #     - 'docs/**'
+  #     - '*.md'
 
 env:
   AZURE_RESOURCE_GROUP: rg-ipa-platform-production
