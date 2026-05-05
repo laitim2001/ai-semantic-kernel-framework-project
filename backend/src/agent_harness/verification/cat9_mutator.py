@@ -29,12 +29,22 @@ Description:
     wrapper is a Guardrail that registers normally; operators opt in
     per-detector by wrapping the detector at registration time.
 
+    **Observability Design (54.2 D19 + 55.5 AD-Cat10-Obs-Cat9Wrappers validation)**:
+    This wrapper REUSES the inner judge's `verification_span` — it does NOT
+    emit an independent wrapper-level span. Rationale identical to
+    cat9_fallback.py (single span per verify invocation; minimal-overhead per
+    Cat 12 helpers; avoids double-instrumentation noise). Verified by
+    sentinel: tests/unit/agent_harness/verification/test_cat9_wrappers_obs.py
+    (asserts `verification_span` is NOT imported in this module).
+    Decision recorded by Sprint 55.5 (audit cycle Mini-Sprint #3 closes AD-Cat10-Obs-Cat9Wrappers).
+
 Owner: 範疇 10 (verification/) — bridges to Cat 9 Guardrail ABC
 
 Created: 2026-05-04 (Sprint 54.1 Day 4)
-Last Modified: 2026-05-04
+Last Modified: 2026-05-05
 
 Modification History:
+    - 2026-05-05: Sprint 55.5 — Observability Design D19 (closes AD-Cat10-Obs-Cat9Wrappers)
     - 2026-05-04: Initial (Sprint 54.1 US-4; closes AD-Cat9-2; pattern AD-Cat9-3)
 
 Related:

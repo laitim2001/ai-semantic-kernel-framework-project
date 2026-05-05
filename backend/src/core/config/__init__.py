@@ -6,6 +6,12 @@ RLS / OTel / LLM provider fields.
 
 Per project rules (.claude/rules/code-quality.md): always use Pydantic
 Settings (not raw os.environ) so type-safe + validation + .env support.
+
+Modification History (newest-first):
+    - 2026-05-05: Sprint 55.5 — add chat_verification_mode (AD-Cat10-Wire-1; Option E)
+    - 2026-04-30: Sprint 55.1 — add business_domain_mode (Literal mock/service)
+    - 2026-04: Sprint 49.2-49.4 — DB / Redis / JWT field expansion
+    - 2026-04: Initial creation (Sprint 49.1)
 """
 
 from __future__ import annotations
@@ -54,6 +60,18 @@ class Settings(BaseSettings):
     # service → 55.1+ DB-backed service classes (production)
     # Override via env: BUSINESS_DOMAIN_MODE=service
     business_domain_mode: Literal["mock", "service"] = "mock"
+
+    # ---- Cat 10 verification wiring (Sprint 55.5 — AD-Cat10-Wire-1) -
+    # disabled → inject verifier_registry=None at chat router; wrapper
+    #            transparently delegates to loop.run() per
+    #            correction_loop.py:99-106 (54.1 backwards-compat;
+    #            byte-for-byte event stream identical to direct loop.run)
+    # enabled  → inject populated VerifierRegistry; wrapper runs verifiers +
+    #            self-correction loop max 2 attempts (54.1 spec)
+    # Override via env: CHAT_VERIFICATION_MODE=enabled
+    # Option E 2-mode post-D4+D5: no shadow/enforce mode; rely on
+    # registry-presence dispatch in run_with_verification wrapper.
+    chat_verification_mode: Literal["disabled", "enabled"] = "disabled"
 
 
 @lru_cache(maxsize=1)
