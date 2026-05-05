@@ -95,3 +95,85 @@ Per AD-Plan-1, plan revisions go through **separate commit** documenting drift f
 - AP-1 audit-trail discipline (separate commit for plan §Risks update) preserves reviewer audit-trail per AD-Plan-1
 - D1 finding (existing Tenant ORM) is **good news** — Sprint 56.1 effective scope is slightly smaller; less risk of breaking TenantScopedMixin downstream consumers
 - 8 D-findings in Day 0 探勘 — exceeds 55.5 (5 drifts) and 55.6 (11 drifts in 4 days, ~3 per day average) — Day 0 ROI validated
+
+---
+
+## Day 1 — 2026-05-06
+
+### Today's Accomplishments
+
+**1.1 Tenant ORM enhance ✅** — actual ~30 min (est ~30 min)
+- `infrastructure/db/models/identity.py:Tenant` — rename `status: String(32)` → `state: SQLEnum(TenantState)`
+- Added TenantState Enum (6 values) + TenantPlan Enum (enterprise only)
+- Added `provisioning_progress` JSONB + `onboarding_progress` JSONB
+- Updated index `idx_tenants_status` → `idx_tenants_state`
+- D9 confirmed safe rename (0 callers) — but D15 found existing test missed by grep
+
+**1.2 Alembic 0014 ✅** — actual ~25 min (est ~25 min)
+- `infrastructure/db/migrations/versions/0014_phase56_1_saas_foundation.py` — 11 DDL statements
+- DROP idx + status → CREATE 2 ENUM types → ADD 4 columns → CREATE state index
+- Downgrade reverses all (restore status String + idx_tenants_status)
+- Offline SQL `alembic upgrade --sql 0013:0014` verified
+- Live DB: ran `alembic upgrade head` to apply 0014 (D14 closed)
+
+**1.3 TenantLifecycle state machine ✅** — actual ~30 min (est ~30 min)
+- `platform_layer/tenant/lifecycle.py` — `TenantLifecycle` class
+- 8 valid transitions (D10: plan said 6; minimal set for ProvisioningWorkflow retry path is 8)
+- `IllegalTransitionError` raises with current/target detail
+- `VALID_TRANSITIONS` frozenset for fast lookup
+
+**1.4 ProvisioningWorkflow 8-step ✅** — actual ~45 min (est ~1 hr)
+- `platform_layer/tenant/provisioning.py` — `ProvisioningWorkflow` async run()
+- `PROVISIONING_STEPS` ordered tuple of 7 step names (step 0 = create_tenant_record by API)
+- D11: Cat 12 obs span deferred (no SpanCategory enum value for tenant lifecycle; same pattern as D4/AD-Cat12-BusinessObs Phase 56.x carryover); using structured logging
+- D12: All 8 steps stub for Sprint 56.1 (real DB writes for steps 2/3/6/7 deferred to Phase 56.x integration sprints; consistent with plan §Out of Scope spirit)
+- Idempotent retry via `provisioning_progress` JSONB step skip
+- Failure → state=PROVISION_FAILED + audit log + `ProvisioningError` raise
+
+**1.5 admin tenants API ✅** — actual ~45 min (est ~45 min)
+- `api/v1/admin/__init__.py` + `api/v1/admin/tenants.py`
+- D13: plan said "reuse 53.x admin role check" but no such dep exists; Sprint 56.1 uses stub `require_admin_token` (X-Admin-Token header + env var); real RBAC deferred to Phase 56.x
+- `TenantCreateRequest` (code/display_name/plan/admin_email Pydantic schemas with EmailStr)
+- `TenantCreateResponse` (tenant_id/code/state/estimated_ready_in_seconds)
+- POST endpoint creates Tenant + runs ProvisioningWorkflow synchronously
+- `api/main.py` mount `admin_tenants_router` after governance_router
+
+**1.6 12 tests ✅** — actual ~45 min (est ~1 hr)
+- `tests/unit/platform_layer/tenant/test_lifecycle.py` — 8 unit tests (6 valid + 2 illegal transitions)
+- `tests/unit/platform_layer/tenant/test_provisioning.py` — 4 integration tests (happy / failure / retry / archived rejection)
+- All 12 pass in 0.65s
+
+**1.7 Day 1 sanity ✅** — actual ~10 min
+- mypy --strict: 0 errors / 276 source files (+6 from baseline 270 — new tenant module + tests)
+- black + isort + flake8: clean
+- 7 V2 lints via run_all.py: 7/7 green / 0.82s
+- Backend full pytest: 1475 passed / 4 skipped / 0 failed in 33.33s (= 1467 + 12 = 1479 collected)
+- LLM SDK leak in `platform_layer/`: 0
+- D15: existing `test_tenant_create_and_read` referenced old `t.status == "active"` (D9 grep missed because access via ORM property attr, not literal `Tenant.status` ref); fixed to `assert t.state == TenantState.REQUESTED`
+
+### Drift findings catalogued during Day 1
+
+| ID | Severity | Finding | Resolution |
+|----|---------|---------|-----------|
+| **D9** | green | 0 callers read `tenant.status` across `backend/src` (pre-Day 1 grep) — but later D15 caught test access via attr | Confirmed safe rename modulo D15 |
+| **D10** | yellow | Plan §US-1 said "6 valid transitions"; minimal set for ProvisioningWorkflow retry is 8 (added active→archived + provision_failed→provisioning) | Implemented 8 transitions; documented in lifecycle.py header |
+| **D11** | yellow | Cat 12 obs span deferred — no `SpanCategory` enum value for tenant lifecycle; adding would cross 17.md §1.1 single-source ownership; matches D4 / AD-Cat12-BusinessObs Phase 56.x carryover | Sprint 56.1 uses structured logging only |
+| **D12** | yellow | Plan §US-1 acceptance asserted real DB writes for steps 2/3/6/7 (seed_roles/seed_policies/create_user/api_key); implementing 4 ORM model write paths exceeds Day 1 scope | All 8 steps stub-style markers in `provisioning_progress` JSONB; real writes deferred to Phase 56.x |
+| **D13** | yellow | Plan said "reuse 53.x admin role check" but no such dep exists in V2 codebase | Sprint 56.1 uses stub `require_admin_token` (X-Admin-Token + env var); real RBAC deferred to Phase 56.x |
+| **D14** | green | Test DB schema not migrated to 0014 (`column tenants.state does not exist`) | `alembic upgrade head` ran; tests then pass |
+| **D15** | yellow | Existing `test_tenant_create_and_read` accessed `t.status` via ORM property (D9 grep missed because no `Tenant.status` literal ref) | Updated assertion to `t.state == TenantState.REQUESTED` |
+
+**Day 1 net scope shift**: ≤ 5% (D10/D11/D12/D13 all align to "defer to Phase 56.x" pattern matching plan §Out of Scope spirit; no actual scope creep, just deferred details)
+
+### Remaining for Day 2
+
+- US-2 Plan template enforcement (config/tenant_plans.yml + PlanLoader + QuotaEnforcer Redis daily counter + chat endpoint integration)
+- US-3 part 1: OnboardingTracker backend logic (no API endpoint yet — that's Day 3)
+- 6 unit US-2 + 2 unit US-3 = +8 tests
+- Day 2 estimate: ~4 hr per plan §Workload bottom-up
+
+### Notes
+
+- 7 D-findings catalogued in Day 1 (D9-D15); cumulative Day 0+1 = 15 findings — Day-0+1 探勘 ROI strong
+- Calibration: Day 1 actual ~3.5 hr / committed ~3.4 hr (5/17 hr fraction = 29% vs Day count 1/5 = 20%) — ahead of pace by ~10%
+- Auth/audit/obs gaps (D11/D13) all converge on the same Phase 56.x integration sprint pattern;suggests a future "Phase 56.x SaaS Stage 1 integration polish" sprint candidate

@@ -33,6 +33,7 @@ from infrastructure.db.models import (
     ToolRegistry,
     ToolResult,
 )
+from infrastructure.db.models.identity import TenantState
 from tests.conftest import seed_tenant, seed_user
 
 
@@ -45,7 +46,8 @@ async def test_tenant_create_and_read(db_session: AsyncSession) -> None:
     t = await seed_tenant(db_session, code="ACME_TEST")
     assert t.id is not None
     assert t.code == "ACME_TEST"
-    assert t.status == "active"
+    # Sprint 56.1 D1: status (String "active") replaced by state Enum (REQUESTED default).
+    assert t.state == TenantState.REQUESTED
 
     result = await db_session.execute(select(Tenant).where(Tenant.code == "ACME_TEST"))
     fetched = result.scalar_one()
