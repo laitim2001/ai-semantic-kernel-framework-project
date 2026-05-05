@@ -196,9 +196,9 @@ ls docs/03-implementation/agent-harness-execution/
 - ⏸ **AD-Cat10-Wire-1-Production** (NEW from 55.5): default `chat_verification_mode="disabled"` ships safe; production op should flip to "enabled" after observation period (operational rollout decision; no sprint binding)
 
 #### Cat 11 carryover（54.2 deferred features）
-- ⏸ **AD-Cat11-Multiturn**（new from 54.2）：TeammateExecutor multi-turn loop pulling from mailbox each iteration; SubagentHandle for long-lived child query → Phase 55
-- ⏸ **AD-Cat11-SSEEvents**（new from 54.2）：SubagentSpawned/Completed event emission from tool handlers; SSE 2 isinstance branches (Day 0 D3 deferred per D18) → Phase 55 frontend
-- ⏸ **AD-Cat11-ParentCtx**（new from 54.2）：ForkExecutor parent context inheritance via Cat 7 checkpoint load (D12 deferred) → Phase 55
+- ⏸ **AD-Cat11-Multiturn**（new from 54.2）：TeammateExecutor multi-turn loop pulling from mailbox each iteration; SubagentHandle for long-lived child query → **Phase 56+ Cat 11 carryover** (originally Phase 55; reassigned post-55.6 triage cleanup since Phase 55 closed at 55.2)
+- ⏸ **AD-Cat11-SSEEvents**（new from 54.2）：SubagentSpawned/Completed event emission from tool handlers; SSE 2 isinstance branches (Day 0 D3 deferred per D18) → **Phase 56+ Cat 11 frontend carryover** (originally Phase 55 frontend; reassigned post-55.6 triage cleanup)
+- ⏸ **AD-Cat11-ParentCtx**（new from 54.2）：ForkExecutor parent context inheritance via Cat 7 checkpoint load (D12 deferred) → **Phase 56+ Cat 11 carryover** (originally Phase 55; reassigned post-55.6 triage cleanup)
 
 #### Cat 7 carryover（53.1 retrospective — closed by 55.3）
 - ✅ **AD-Cat7-1** closed by 55.3 (sole-mutator grep-zero confirmed across full backend/src/ + 7th V2 lint check_sole_mutator.py + 6 tests)
@@ -229,10 +229,10 @@ ls docs/03-implementation/agent-harness-execution/
 #### Sprint 54.2 新加（partial closure by 55.3）
 - ✅ **AD-Cat12-Helpers-1** closed by 55.3 (extracted category_span to agent_harness/observability/helpers.py; verification_span + business_service_span delegate; Option A thin wrapper preserves 7 callers' API)
 - ✅ **AD-Lint-3** closed by 55.3 (file-header-convention.md §格式 enforces 1-line max + char budget ≤ E501; new 禁止項 5 with examples; ironic self-violation caught + fixed in helpers.py)
-- ⏸ **AD-Sprint-Plan-2** — **superseded by AD-Sprint-Plan-4** (this retro): single global multiplier strategy fails because scope class differs (55.3 ratio 2.81 way over band when 0.40 applied to medium-backend scope vs 55.2 ratio 1.10 in band for closure scope)
+- ✅ **AD-Sprint-Plan-2** closed by 55.6 triage cleanup (formally superseded by AD-Sprint-Plan-4 scope-class matrix per 55.3 retro; single global multiplier strategy invalidated by 55.3 ratio 2.81 vs 55.2 ratio 1.10 evidence)
 
 #### Sprint 55.2 carryover（superseded）
-- ⏸ **AD-Phase56-Calibration** — **superseded by AD-Sprint-Plan-4** (this retro): scope-class multiplier matrix replaces single-multiplier baseline tracking
+- ✅ **AD-Phase56-Calibration** closed by 55.6 triage cleanup (formally superseded by AD-Sprint-Plan-4 scope-class matrix; single-multiplier baseline tracking replaced by per-class window tracking)
 - ⏸ **AD-Cat12-BusinessObs**：thread real tracer through chat router → BusinessServiceFactory → 5 services when `get_tracer` factory implemented → Phase 56+
 
 #### Sprint 55.4 新加（partial closure by 55.5)
