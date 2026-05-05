@@ -1,8 +1,21 @@
 # Backend CI workflow.
 #
-# Triggers (since Sprint 53.2.5):
-#   - backend/** changes (any backend code/tests/configs)
-#   - .github/workflows/** changes (any workflow file edit re-validates)
+# Triggers (since Sprint 55.6 — closes AD-CI-5 per Option Z):
+#   - EVERY pull_request (no paths filter)
+#   - EVERY push to main / feature/* / fix/* / refactor/* / chore/*
+#
+# Why no paths filter:
+#   Branch protection's required_status_checks list includes
+#   "Lint + Type Check + Test (with PostgreSQL 16)" + "v2-lints" jobs from this
+#   workflow. Path-filtering blocked docs-only / .gitignore-only PRs because the
+#   workflow never triggered → required contexts never reported → mergeStateStatus
+#   = BLOCKED. Sprint 53.2.5 introduced the touch-header workaround (touch this
+#   file's header to force trigger). Sprint 55.6 retires the workaround
+#   permanently by removing the paths filter — every PR runs full backend CI.
+#   Trade-off: ~+1.5 min CI per docs-only PR. Acceptable for solo-dev volume.
+#
+# Historical workaround commits below kept for audit trail.
+# -----------------------------------------------------------------------------
 #
 # Sprint 55.3 closeout sync (2026-05-04): SITUATION-V2-SESSION-START.md
 # §9 row updated with PR #87 merge SHA `4d17a5cd` (Audit Cycle Mini-Sprint #1
@@ -59,13 +72,9 @@ name: Backend CI
 on:
   push:
     branches: [main, "feature/**", "fix/**", "refactor/**", "chore/**"]
-    paths:
-      - "backend/**"
-      - ".github/workflows/**"
+    # Sprint 55.6 (AD-CI-5 / Option Z): paths filter removed — see header comment.
   pull_request:
-    paths:
-      - "backend/**"
-      - ".github/workflows/**"
+    # Sprint 55.6 (AD-CI-5 / Option Z): paths filter removed — see header comment.
 
 jobs:
   lint-and-test:

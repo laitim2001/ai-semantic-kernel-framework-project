@@ -45,6 +45,7 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-05: Sprint 55.6 — close AD-Cat8-2 (retry wrap at L1044+L1092 — Option H)
     - 2026-05-05: Sprint 55.4 — close AD-Cat8-3 narrow Option C (error_class_str param)
     - 2026-05-02: Cat 7 State Mgmt integration (Sprint 53.1 Day 3) — optional
         ctor kwargs `reducer`, `checkpointer`, `tenant_id`. When all three
@@ -107,6 +108,7 @@ from agent_harness._contracts import (
     ContentBlock,
     ContextCompacted,
     DurableState,
+    ErrorRetried,
     ExecutionContext,
     GuardrailTriggered,
     LLMRequested,
@@ -148,6 +150,9 @@ from agent_harness.error_handling import (
     TenantErrorBudget,
 )
 from agent_harness.error_handling import TerminationReason as Cat8TerminationReason
+from agent_harness.error_handling import (
+    compute_backoff,
+)
 from agent_harness.guardrails import (
     CapabilityMatrix,
     GuardrailAction,
@@ -318,6 +323,57 @@ class AgentLoopImpl(AgentLoop):
                 return True, cls, decision.reason, decision.detail
 
         return False, cls, None, None
+
+    async def _should_retry_tool_error(
+        self,
+        *,
+        error: BaseException,
+        error_class: ErrorClass | None,
+        tool_name: str,
+        attempt: int,
+    ) -> tuple[bool, float]:
+        """Cat 8 retry consultation per 53.2 spec docstring steps 2-4.
+
+        Sprint 55.6 (closes AD-Cat8-2 — Option H): consults
+        ``error_policy.should_retry`` (gate) → ``retry_policy.get_policy``
+        (per-tool/class RetryConfig) → ``compute_backoff`` (sleep duration).
+        Returns ``(should_retry, backoff_seconds)``. Step 5 (emit
+        ``ErrorRetried`` + ``asyncio.sleep``) is the caller's responsibility
+        so the retry loop can yield events into the SSE stream.
+
+        Backwards-compat: returns ``(False, 0.0)`` whenever any Cat 8 dep is
+        missing or the error class is unknown, preserving 53.1 baseline.
+        """
+        # Cat 8 deps None → preserve 53.1 baseline (no retry)
+        if self._error_policy is None or self._retry_policy is None or error_class is None:
+            return False, 0.0
+
+        # Step 2: gate via error_class param (already classified by caller).
+        # Per Cat 8 spec semantics: HITL_RECOVERABLE / FATAL never retry.
+        # Sprint 55.6 D10: use error_class param directly instead of
+        # error_policy.should_retry(error, attempt) re-classification.
+        # Reason: soft-failure path passes a synthetic Exception whose MRO
+        # walk (via DefaultErrorPolicy.classify) returns FATAL, but caller's
+        # error_class came from classify_by_string(result.error_class) per
+        # AD-Cat8-3 narrow Option C (Sprint 55.4). Trusting the param
+        # honors both hard-exception (MRO classify) and soft-failure
+        # (classify_by_string) paths uniformly.
+        if error_class in (ErrorClass.HITL_RECOVERABLE, ErrorClass.FATAL):
+            return False, 0.0
+
+        # Step 3: per-(tool, class) RetryConfig lookup (matrix → defaults)
+        config = self._retry_policy.get_policy(tool_name, error_class)
+
+        # Defensive: avoid compute_backoff call when attempts already at cap.
+        # `attempt` is 1-indexed (caller starts at 1; first retry = 2 onwards).
+        # Treat attempt >= max_attempts as exhausted.
+        if attempt >= config.max_attempts:
+            return False, 0.0
+
+        # Step 4: compute backoff (returns 0.0 when max_attempts == 0; defensive
+        # double-check above already covers that path).
+        backoff = compute_backoff(config, attempt)
+        return True, backoff
 
     # === Cat 9 helpers (53.3 Day 4 US-7) =================================
 
@@ -1021,94 +1077,151 @@ class AgentLoopImpl(AgentLoop):
                         )
                         continue
 
-                    try:
-                        # Sprint 52.5 P0 #18: build ExecutionContext from
-                        # trace_context so memory_tools (and future scoped
-                        # tools) get server-authoritative tenant_id /
-                        # user_id / session_id instead of trusting LLM args.
-                        exec_ctx = ExecutionContext(
-                            tenant_id=ctx.tenant_id,
-                            user_id=ctx.user_id,
-                            session_id=ctx.session_id or session_id,
-                        )
-                        result = await self._tool_executor.execute(
-                            tc, trace_context=ctx, context=exec_ctx
-                        )
-                    except asyncio.CancelledError:
-                        yield LoopCompleted(
-                            stop_reason=TerminationReason.CANCELLED.value,
-                            total_turns=turn_count,
-                            trace_context=ctx,
-                        )
-                        raise
-                    except Exception as exc:
-                        # 53.2 Day 4 Cat 8 chain: classify → record budget →
-                        # check terminator. When Cat 8 deps None → re-raise
-                        # (preserves 53.1 baseline).
-                        terminate, _err_class, term_reason, term_detail = (
-                            await self._handle_tool_error(
-                                error=exc,
-                                tool_name=tc.name,
-                                attempt_num=1,
-                                state_version=None,
+                    # Sprint 55.6 — AD-Cat8-2 retry loop wrap (Option H).
+                    # `attempt_num` starts at 1 (1-indexed per 53.2 docstring).
+                    # On retry: yield ErrorRetried + asyncio.sleep(backoff) +
+                    # increment + `continue`. `break` exits to post-execute
+                    # path (tool_content / yield ToolCallExecuted-or-Failed /
+                    # messages.append) which stays at original indent level.
+                    # When Cat 8 deps None → _should_retry_tool_error returns
+                    # (False, 0.0) → break on first iteration → 53.1 baseline.
+                    attempt_num = 1
+                    while True:
+                        try:
+                            # Sprint 52.5 P0 #18: build ExecutionContext from
+                            # trace_context so memory_tools (and future scoped
+                            # tools) get server-authoritative tenant_id /
+                            # user_id / session_id instead of trusting LLM args.
+                            exec_ctx = ExecutionContext(
+                                tenant_id=ctx.tenant_id,
+                                user_id=ctx.user_id,
+                                session_id=ctx.session_id or session_id,
+                            )
+                            result = await self._tool_executor.execute(
+                                tc, trace_context=ctx, context=exec_ctx
+                            )
+                        except asyncio.CancelledError:
+                            yield LoopCompleted(
+                                stop_reason=TerminationReason.CANCELLED.value,
+                                total_turns=turn_count,
                                 trace_context=ctx,
                             )
-                        )
-                        if self._error_policy is None:
-                            # Opt-out path: no Cat 8 deps → preserve 53.1 raise behavior
                             raise
-                        if terminate:
-                            yield LoopTerminated(
-                                reason=(term_reason.value if term_reason is not None else ""),
-                                detail=term_detail,
-                                last_state_version=None,
-                                trace_context=ctx,
+                        except Exception as exc:
+                            # 53.2 Day 4 Cat 8 chain: classify → record budget →
+                            # check terminator. When Cat 8 deps None → re-raise
+                            # (preserves 53.1 baseline).
+                            # Sprint 55.6 D7 fix: pass real attempt_num (was hardcoded =1).
+                            terminate, err_class, term_reason, term_detail = (
+                                await self._handle_tool_error(
+                                    error=exc,
+                                    tool_name=tc.name,
+                                    attempt_num=attempt_num,
+                                    state_version=None,
+                                    trace_context=ctx,
+                                )
                             )
-                            return
-                        # Synthesize LLM-recoverable error ToolResult so the
-                        # LLM sees the failure on next turn and can self-correct
-                        # (Cat 8 §LLM-recoverable; Anthropic / LangGraph pattern).
-                        # Note: ToolResult is now imported at module top (53.3 Day 4).
-                        result = ToolResult(
-                            tool_call_id=tc.id,
-                            tool_name=tc.name,
-                            content=f"Error: {exc!r}. Please adjust your approach.",
-                            success=False,
-                            error=repr(exc),
-                            duration_ms=0.0,
-                        )
+                            if self._error_policy is None:
+                                # Opt-out path: no Cat 8 deps → preserve 53.1 raise behavior
+                                raise
+                            if terminate:
+                                yield LoopTerminated(
+                                    reason=(term_reason.value if term_reason is not None else ""),
+                                    detail=term_detail,
+                                    last_state_version=None,
+                                    trace_context=ctx,
+                                )
+                                return
 
-                    # 53.2 Day 4 Cat 8 chain on soft failure: ToolExecutorImpl
-                    # catches handler exceptions internally → ToolResult(success=
-                    # False). Reconstruct a synthetic exception so the Cat 8
-                    # chain can classify + check terminator. When deps None →
-                    # fall through to existing 53.1 baseline (LLM-recoverable
-                    # via tool message).
-                    # Sprint 55.4 (AD-Cat8-3 narrow Option C): pass
-                    # `result.error_class` (FQ class name set by ToolExecutorImpl
-                    # per 53.3 US-9) so classification flows through
-                    # classify_by_string() instead of MRO walk on the generic
-                    # synthetic Exception (which would always return FATAL).
-                    if not result.success and self._error_policy is not None:
-                        synthetic = Exception(result.error or "tool soft failure")
-                        terminate, _err_class, term_reason, term_detail = (
-                            await self._handle_tool_error(
-                                error=synthetic,
+                            # Sprint 55.6 — AD-Cat8-2 (Option H) retry consultation
+                            # on hard-exception path.
+                            should_retry, backoff_s = await self._should_retry_tool_error(
+                                error=exc,
+                                error_class=err_class,
                                 tool_name=tc.name,
-                                attempt_num=1,
-                                state_version=None,
-                                trace_context=ctx,
-                                error_class_str=result.error_class,
+                                attempt=attempt_num,
                             )
-                        )
-                        if terminate:
-                            yield LoopTerminated(
-                                reason=(term_reason.value if term_reason is not None else ""),
-                                detail=term_detail,
-                                last_state_version=None,
-                                trace_context=ctx,
+                            if should_retry:
+                                yield ErrorRetried(
+                                    attempt=attempt_num,
+                                    error_class=err_class.value if err_class else "",
+                                    backoff_ms=backoff_s * 1000.0,
+                                    trace_context=ctx,
+                                )
+                                await asyncio.sleep(backoff_s)
+                                attempt_num += 1
+                                continue  # retry tool execution
+
+                            # No retry → fall through to LLM-recoverable synthesis.
+                            # Synthesize LLM-recoverable error ToolResult so the
+                            # LLM sees the failure on next turn and can self-correct
+                            # (Cat 8 §LLM-recoverable; Anthropic / LangGraph pattern).
+                            # Note: ToolResult is now imported at module top (53.3 Day 4).
+                            result = ToolResult(
+                                tool_call_id=tc.id,
+                                tool_name=tc.name,
+                                content=f"Error: {exc!r}. Please adjust your approach.",
+                                success=False,
+                                error=repr(exc),
+                                duration_ms=0.0,
                             )
-                            return
+
+                        # 53.2 Day 4 Cat 8 chain on soft failure: ToolExecutorImpl
+                        # catches handler exceptions internally → ToolResult(success=
+                        # False). Reconstruct a synthetic exception so the Cat 8
+                        # chain can classify + check terminator. When deps None →
+                        # fall through to existing 53.1 baseline (LLM-recoverable
+                        # via tool message).
+                        # Sprint 55.4 (AD-Cat8-3 narrow Option C): pass
+                        # `result.error_class` (FQ class name set by ToolExecutorImpl
+                        # per 53.3 US-9) so classification flows through
+                        # classify_by_string() instead of MRO walk on the generic
+                        # synthetic Exception (which would always return FATAL).
+                        # Sprint 55.6 D7 fix: pass real attempt_num (was hardcoded =1).
+                        if not result.success and self._error_policy is not None:
+                            synthetic = Exception(result.error or "tool soft failure")
+                            terminate, err_class, term_reason, term_detail = (
+                                await self._handle_tool_error(
+                                    error=synthetic,
+                                    tool_name=tc.name,
+                                    attempt_num=attempt_num,
+                                    state_version=None,
+                                    trace_context=ctx,
+                                    error_class_str=result.error_class,
+                                )
+                            )
+                            if terminate:
+                                yield LoopTerminated(
+                                    reason=(term_reason.value if term_reason is not None else ""),
+                                    detail=term_detail,
+                                    last_state_version=None,
+                                    trace_context=ctx,
+                                )
+                                return
+
+                            # Sprint 55.6 — AD-Cat8-2 (Option H) retry consultation
+                            # on soft-failure path.
+                            should_retry, backoff_s = await self._should_retry_tool_error(
+                                error=synthetic,
+                                error_class=err_class,
+                                tool_name=tc.name,
+                                attempt=attempt_num,
+                            )
+                            if should_retry:
+                                yield ErrorRetried(
+                                    attempt=attempt_num,
+                                    error_class=err_class.value if err_class else "",
+                                    backoff_ms=backoff_s * 1000.0,
+                                    trace_context=ctx,
+                                )
+                                await asyncio.sleep(backoff_s)
+                                attempt_num += 1
+                                continue  # retry tool execution
+
+                        # Success or no-retry path → exit retry loop. Post-execute
+                        # code (tool_content / yield ToolCallExecuted-or-Failed /
+                        # messages.append) follows at original indent level.
+                        break
 
                     # Feed back as tool message — KEY V2 cure for AP-1.
                     tool_content = self._tool_result_to_text(result.content)

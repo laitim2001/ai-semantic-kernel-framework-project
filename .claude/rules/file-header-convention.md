@@ -8,6 +8,7 @@
 **Status**: Active
 
 **Modification History**:
+- 2026-05-05: Sprint 55.6 — add MHist char-count budget guidance (closes AD-Lint-MHist-Verbosity)
 - 2026-05-04: Sprint 55.3 — enforce MHist 1-line max + char budget guidance + 禁止項 5 (closes AD-Lint-3)
 - 2026-04-28: Initial creation from CLAUDE.md §File Header & Modification Convention
 
@@ -201,6 +202,26 @@ Modification History (newest-first):
 - Each entry must fit within `.flake8` E501 (max-line-length=100) **including** indent / blockquote prefix
 - Effective budget for `<verb> <what> (Sprint XX.Y) — <reason>` ≈ 90 chars(after 4-space indent or `> - ` Markdown prefix)
 - If reason exceeds budget → split into multiple commits, OR move detail to commit message body / `claudedocs/4-changes/FIX-XXX`, OR factor reason into shorter scope keyword
+
+**Char-count writing guidance** (Sprint 55.6+ — closes AD-Lint-MHist-Verbosity):
+
+Treating budget proactively beats trim-after-write. Recurring evidence: Sprint 55.4 + 55.5 + 55.6 (3 consecutive sprints) had new MHist entries exceeding E501 by 1-3 chars on first draft, requiring trim cycle. Apply these templates to fit budget on first draft.
+
+**Common-case templates** (chars include `> - ` or 4-space indent prefix; budget ≤ 100):
+
+| Template shape | Example | Chars |
+|----------------|---------|-------|
+| `> - DATE: Sprint X.Y — <verb> <scope>` | `> - 2026-05-04: Sprint 53.7 Day 1 — full implementation` | ~55 |
+| `> - DATE: Sprint X.Y — <verb> <scope> (closes AD-Foo)` | `> - 2026-05-04: Sprint 55.3 — extract category_span (closes AD-Cat12-Helpers-1)` | ~80 |
+| `> - DATE: Sprint X.Y — <verb> <scope> + <minor>` | `> - 2026-05-04: Sprint 55.3 — add §Step 2.5 + ROI evidence` | ~65 |
+
+**Anti-patterns** (will exceed budget; refactor before commit):
+
+- ❌ **Pack 4-clause reasons in MHist**: `Sprint 55.3 — add §Step 2.5 grep verify (closes AD-Plan-1) + drop estimated headers (closes AD-Lint-2) + …` (≥150 chars). **Fix**: split into 2 separate MHist entries, OR move detail to commit message body / `claudedocs/4-changes/FIX-XXX-*.md`.
+- ❌ **Verbose noun phrases**: prefer verbs over noun phrases — `extend` beats `extension of`; `promote` beats `promotion-to-validated-rule of`; `add` beats `addition of`.
+- ❌ **Embedded paths > 30 chars**: don't quote a full path like `backend/src/agent_harness/orchestrator_loop/loop.py:1024` (54 chars). **Fix**: use scope keyword like `Cat 1 retry wrap` (16 chars) or `loop.py L1024+L1092` (19 chars).
+
+**Rule of thumb**: If first-draft entry needs E501 lint (or the editor's 100-col ruler) to catch overflow, your reason was too verbose. Aim for **60-80 chars after prefix**; `(closes AD-Foo-N)` parens add ~20 chars on top.
 
 **Why** (Sprint 54.2 retrospective Q4 evidence): MHist entries accumulate in mature files; each new entry at full prose reason often exceeded E501 (4× lint hit in Sprint 54.2 Day 4 alone); verbose MHist duplicates commit message + git blame already records full diff context. The single line forces the author to commit message body / 4-changes record for the rich detail, keeping headers scannable.
 
