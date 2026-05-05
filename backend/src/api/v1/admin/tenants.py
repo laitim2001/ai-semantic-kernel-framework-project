@@ -35,6 +35,7 @@ Created: 2026-05-06 (Sprint 56.1 Day 1)
 Last Modified: 2026-05-06
 
 Modification History:
+    - 2026-05-06: Sprint 56.1 Day 4 CI — replace EmailStr with regex (avoid email-validator dep)
     - 2026-05-06: Sprint 56.1 Day 3 — onboarding-status GET + onboarding/{step} POST (US-3 part 2)
     - 2026-05-06: Initial creation (Sprint 56.1 Day 1 / US-1)
 
@@ -54,7 +55,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,6 +71,10 @@ from platform_layer.tenant.onboarding import (
 from platform_layer.tenant.provisioning import ProvisioningError, ProvisioningWorkflow
 
 router = APIRouter(prefix="/admin/tenants", tags=["admin", "tenants"])
+
+# Cheap email regex (RFC 5322-lite). We avoid pydantic's `EmailStr` so we
+# don't need the optional `email-validator` extra in CI / lean prod images.
+_EMAIL_PATTERN = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
 
 
 # Stub admin auth (D13). Phase 56.x will replace with RBAC role check.
@@ -91,7 +96,7 @@ class TenantCreateRequest(BaseModel):
     code: str = Field(min_length=2, max_length=64, pattern=r"^[a-z0-9][a-z0-9_-]*$")
     display_name: str = Field(min_length=1, max_length=256)
     plan: TenantPlan = TenantPlan.ENTERPRISE
-    admin_email: EmailStr
+    admin_email: str = Field(pattern=_EMAIL_PATTERN, max_length=320)
 
 
 class TenantCreateResponse(BaseModel):
