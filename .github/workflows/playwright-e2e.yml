@@ -1,3 +1,4 @@
+# Sprint 55.5 closeout PR — docs-only sync (PR #91 merge SHA `bda6d3e8` fill-in); touch to satisfy paths-filter (AD-CI-5).
 # Sprint 55.5 PR — Audit Cycle Mini-Sprint #3 (Group D narrow — Cat 10 backend audit); touch to fire workflow per AD-CI-5 paths-filter workaround (5 required checks must fire for branch protection).
 # Sprint 55.4 closeout PR — docs-only sync (PR #89 merge SHA `b0fd7582` fill-in); touch to satisfy paths-filter (AD-CI-5).
 # Sprint 55.4 PR — Audit Cycle Mini-Sprint #2: backend-only (Cat 8 + Cat 9 backend); touch to fire workflow per AD-CI-5 paths-filter workaround (5 required checks must fire for branch protection).
