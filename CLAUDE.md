@@ -68,12 +68,12 @@ Build enterprise AI agent teams that work like **human professional teams** — 
 
 | Attribute | Value |
 |-----------|-------|
-| **Phase** | **🎉 V2 重構完成 — 22/22 sprint 完成，100% V2 進度** |
-| **Latest Sprint** | **55.2** ✅ COMPLETE 2026-05-04（V2 22/22 closure — production mode swap + chat handler wiring；AD-BusinessDomainPartialSwap-1 closed at 3 layers；21 tests；calibration ratio **1.10** FIRST in band）|
+| **Phase** | **🎉 V2 重構完成 — 22/22 sprint** + **Phase 56+ SaaS Stage 1 進度 1/3** |
+| **Latest Sprint** | **56.1** ✅ COMPLETE 2026-05-06（SaaS Stage 1 backend foundation — 5 USs all closed: tenant lifecycle + plan template + onboarding API + feature flags + RLS hardening；8th V2 lint check_rls_policies；pytest 1463→**1508**；calibration `large multi-domain` 0.55 1st app ratio **1.00 ✅ bullseye**）|
 | **Last main-progress Sprint** | **55.2** ✅ COMPLETE 2026-05-04（V2 21/22 → **22/22 = 100%**）|
-| **main HEAD** | `ee773842` (2026-05-05 — Sprint 55.6 closeout) |
-| **Next Phase** | **Phase 56+ SaaS Stage 1**（候選 scope: Multi-tenant infrastructure + Billing + SLA + Disaster Recovery；user approval required；Sprint 56.1 plan 起草前必先 user approve scope per rolling planning 紀律）|
-| **Roadmap** | Phase 49-55 V2 ✅，Phase 56-58 SaaS Stage 1 候選 |
+| **main HEAD** | `4aff9e70` (2026-05-06 — Sprint 56.1 SaaS Stage 1 foundation merged) |
+| **Next Phase** | **Phase 56.2** SaaS Stage 1 next sprint — 候選 scope: SLA Monitor / Cost Ledger / Citus PoC / Phase 56.x integration polish bundle (AD-AdminAuth-1 + AD-QuotaPostCall-1 + AD-QuotaEstimation-1)；user approval required per rolling planning 紀律 |
+| **Roadmap** | Phase 49-55 V2 ✅，Phase 56-58 SaaS Stage 1 進度 **1/3** |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis（V1 沿用）|
 | **Architecture** | TAO/ReAct loop + 11+1 範疇 全 Level 4（Cat 9 L5）+ LLM Provider 中性（CI-enforced）+ Multi-tenant 3 鐵律 |
 | **Branch Protection** | enforce_admins=true / **review_count=0**（solo-dev policy 永久，2026-05-03 Sprint 53.2 起）/ 5 active required CI checks |
@@ -556,9 +556,9 @@ V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（M
 
 ---
 
-**Last Updated**: 2026-05-05 (Sprint 55.6 closeout — Phase 55 audit cycle COMPLETE backend/infra closure; AD-CI-5 paths-filter workaround retired permanently)
+**Last Updated**: 2026-05-06 (Sprint 56.1 closeout — SaaS Stage 1 backend foundation merged; calibration `large multi-domain` 0.55 1st app ratio 1.00 bullseye)
 **Project Start**: 2025-11-14
-**Current Phase**: 🎉 **V2 重構完成（22/22 = 100% 完成）**— Phase 49-55 共 22 sprint + 6 carryover bundles (53.2.5 + 53.7 + 55.3 + 55.4 + 55.5 + 55.6)；11+1 範疇全 Level 4（Cat 9 L5）；5 business domains production-capable；Phase 55 audit cycle COMPLETE backend/infra closure (Groups A+B+C+D+H all closed across 55.3-55.6)；下一階段 = Phase 56+ SaaS Stage 1（候選 scope，user approval required）
-**main HEAD**: `ee773842`
+**Current Phase**: 🎉 **V2 重構完成（22/22）** + **Phase 56+ SaaS Stage 1 進度 1/3** — Sprint 56.1 ✅ delivered tenant lifecycle + plan template + onboarding API + feature flags + RLS hardening (8th V2 lint check_rls_policies); pytest 1463 → **1508** (+45); 28 D-findings catalogued; 3 carryover ADs logged for Phase 56.x integration polish (AD-AdminAuth-1 / AD-QuotaEstimation-1 / AD-QuotaPostCall-1); 下一個 Sprint 56.2 候選 scope (SLA Monitor / Cost Ledger / Citus PoC / 整合 polish) 待 user approve per rolling planning 紀律
+**main HEAD**: `4aff9e70`
 **V2 Authority**: `docs/03-implementation/agent-harness-planning/` (19 docs)
 **V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`
