@@ -226,20 +226,18 @@
 - [x] **Run full lint chain** → 7 V2 lints 7/7 green (Day 4 verified; Day 5 docs-only neutral)
 - [x] **LLM SDK leak check** — 0 (covered by `check_llm_sdk_leak` in V2 lints)
 - [x] **Compute calibration ratio** — actual ~11 hr / committed ~12 hr → **0.92 ✅** in [0.85, 1.20] band by 0.07; medium-backend 2-data-point mean 1.03; 8-sprint window 4/8 (50%) in-band
-- [ ] **Verify AD-CI-5 effectiveness**: confirm THIS PR's 5 required checks all pass via paths-filter retirement (no touch-header needed) — first end-to-end validation of Option Z; pending PR open
+- [x] **Verify AD-CI-5 effectiveness**: confirmed via PR #93 merge `ee773842` (FIRST validation: 5 required checks fired naturally, no touch-header) + closeout PR #94 merge `91616392` (SECOND + THIRD validations); D12 caught post-PR #94 first run revealed `lint.yml` still had paths filter → fixed in `ab07c9b3` to complete Option Z application across all 3 workflows backing required_status_checks (backend-ci.yml + playwright-e2e.yml + lint.yml)
 - [x] **Catalog final drift findings** — D1-D11 stable through Day 4 (no new drifts at Day 4-5 since process AD edits not Day-0 探勘 territory)
 - [x] **Write `retrospective.md`** (6 必答 Q1-Q6 + sign-off) — covers AD-Plan-3 second-sixth applications validation + Option H/Z elegance + Phase 55 audit cycle COMPLETE backend/infra closure
 - [x] **Update `SITUATION-V2-SESSION-START.md`** (§8 close 5 ADs / §9 +Sprint 55.6 row + 累計 6 carryover bundles / footer + history row)
 - [x] **Update memory** (`project_phase55_6_audit_cycle_4.md` NEW + `MEMORY.md` +1 line)
-- [ ] **Commit Day 5**
-  - Commit: `docs(retro, sprint-55-6): retrospective + 5 AD closure summary + AD-Plan-3 promoted to validated rule + Phase 55 audit cycle COMPLETE`
-- [ ] **Push branch**
-- [ ] **Open PR**
-  - Title: `Sprint 55.6: Audit Cycle Mini-Sprint #4 — close AD-Cat8-2 + AD-CI-5 + AD-CI-6 + Process AD pair (Phase 55 audit cycle COMPLETE)`
-- [ ] **Watch CI green** — first end-to-end validation of Option Z paths-filter retirement; if successful no touch-header needed
-- [ ] **Merge PR** — solo-dev policy, review_count=0
-- [ ] **Closeout PR for SHA fill-in** (SITUATION §9 PR # + SHA + memory file SHA fill-in)
-- [ ] **Final verify on main** — clean
+- [x] **Commit Day 5** — `140d0361`
+- [x] **Push branch** — `b2332e60..140d0361` to origin
+- [x] **Open PR** — PR #93 https://github.com/laitim2001/ai-semantic-kernel-framework-project/pull/93
+- [x] **Watch CI green** — FIRST end-to-end validation of Option Z paths-filter retirement PASSED (5 required checks fired naturally; no touch-header workaround)
+- [x] **Merge PR** — PR #93 merged `ee773842` at 2026-05-05T08:08:36Z (solo-dev policy, review_count=0, branch deleted)
+- [x] **Closeout PR for SHA fill-in** — PR #94 https://github.com/laitim2001/ai-semantic-kernel-framework-project/pull/94 merged `91616392`; included D12 post-merge fix (`ab07c9b3` lint.yml paths filter removal — completes Option Z across all 3 required_status_check workflows)
+- [x] **Final verify on main** — main HEAD `91616392`; working tree clean post-closeout merge
 
 ---
 
