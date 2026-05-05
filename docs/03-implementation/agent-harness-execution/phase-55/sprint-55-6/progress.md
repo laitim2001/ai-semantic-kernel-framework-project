@@ -723,4 +723,35 @@ Sprint cumulative: ~11 hr / ~12 hr (92% — final ratio 0.92 ✅ in band)
 
 ✅ **Sprint 55.6 COMPLETE** — 5/5 ADs closed in clean closure. Phase 55 audit cycle achieves COMPLETE backend/infra closure. AD-Plan-3 promoted candidate → validated rule. Calibration ratio 0.92 in band. V2 22/22 (100%) unchanged (audit cycle bundle).
 
-Pending: PR open + CI green watch (FIRST end-to-end validation of Option Z paths-filter retirement) + merge + closeout PR for SHA fill-in.
+PR #93 merged `ee773842` at 2026-05-05T08:08:36Z (FIRST end-to-end validation of Option Z paths-filter retirement PASSED — 5 required checks fired naturally without touch-header workaround).
+
+### D12 NEW DRIFT (post-merge — AD-Plan-3 seventh application)
+
+While monitoring closeout PR #94 CI (docs-only — CLAUDE.md + SITUATION-V2-SESSION-START.md only), discovered Option Z incomplete coverage:
+
+- 4/5 required checks fired naturally on docs-only PR (Backend E2E + E2E Test Summary + Frontend E2E chromium headless + Lint + Type Check + Test PG16)
+- **5th check `v2-lints` did NOT fire** — closeout PR #94 mergeStateStatus=BLOCKED
+- Root cause: `lint.yml` (workflow hosting v2-lints job) still has `paths:` filter excluding docs-only changes
+- Day 0 探勘 D4 catalogued 6 workflows but Sprint 55.6 plan §File Change List only covered 3 (backend-ci.yml + playwright-e2e.yml + deploy-production.yml)
+- Plan implicitly assumed `v2-lints` was hosted by `backend-ci.yml` — but `backend-ci.yml` only has a step named "v2-lints" within job "Lint + Type Check + Test"; the actual workflow with the `v2-lints` JOB (registered as required_status_check context) is `lint.yml`
+
+**D12 Mitigation** (commit `ab07c9b3` on closeout branch): drop paths filter from lint.yml's `pull_request:` + `push:` blocks. Completes Option Z application across all 3 workflows that contribute to required_status_checks (5 contexts).
+
+**D12 Generalizable lesson** (candidate for future AD-Plan-3 Prong 2 drift class table extension):
+- New drift class: **"Claimed-but-wrong-host workflow"** — required_status_check context name maps to job in workflow X but plan asserts workflow Y handles it
+- Detection pattern: when planning workflow changes, verify each context name in `gh api .../branches/main/protection` against actual workflow `jobs:` block, not against step names within other workflows
+- Sprint 55.6 had 11 drifts D1-D11 caught by Day 0 探勘 + ongoing AD-Plan-3 applications; D12 is the FIRST post-merge drift caught — strong signal that Day 0 探勘 grep coverage should extend to "workflow ownership of required_status_checks" verification
+
+### AD-Plan-3 cumulative ROI updated (12 drifts D1-D12)
+
+| Day | Drifts | Cost | Benefit prevented |
+|-----|--------|------|-------------------|
+| 0 | D1-D5 | ~25 min | ~3 hr scope-creep (D3 critical) |
+| 1-am | D6-D8 | ~25 min | ~2-3 hr ABC violation rework |
+| 1-pm | D9 | ~5 min | Production bug (units mismatch) |
+| 2-am | D10 | ~10 min | Soft-failure path retry silent regression |
+| 3-am | D11 | ~10 min | ~3 hr Option Y aggregator rabbit hole |
+| **5-post** | **D12** | **~10 min** | **Closeout PR #94 BLOCKED forever (v2-lints never fires on docs-only)** |
+| **Total** | **12** | **~85 min** | **~10-11 hr re-work + 2 production-grade bugs + 1 BLOCKED-forever closure** |
+
+Pending: closeout PR #94 CI re-run after `ab07c9b3` (v2-lints should fire post-D12 fix) + merge + final closeout verification.
