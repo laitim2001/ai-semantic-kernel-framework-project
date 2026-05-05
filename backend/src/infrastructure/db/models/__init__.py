@@ -28,15 +28,15 @@ from infrastructure.db.models.api_keys import ApiKey, RateLimit
 # Day 1.1 (Sprint 49.3) — Audit
 from infrastructure.db.models.audit import AuditLog
 
-# Sprint 56.1 Day 3 — Feature Flags (US-4)
-from infrastructure.db.models.feature_flag import FeatureFlag
-
 # Sprint 55.1 — Business domain (incident production table)
 from infrastructure.db.models.business import (
     Incident,
     IncidentSeverity,
     IncidentStatus,
 )
+
+# Sprint 56.1 Day 3 — Feature Flags (US-4)
+from infrastructure.db.models.feature_flag import FeatureFlag
 
 # Day 3.1-3 (Sprint 49.3) — Governance
 from infrastructure.db.models.governance import (
