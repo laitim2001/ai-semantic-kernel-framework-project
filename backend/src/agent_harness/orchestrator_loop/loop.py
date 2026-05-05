@@ -348,9 +348,17 @@ class AgentLoopImpl(AgentLoop):
         if self._error_policy is None or self._retry_policy is None or error_class is None:
             return False, 0.0
 
-        # Step 2: should_retry gate (gated by ErrorClass; HITL_RECOVERABLE /
-        # FATAL never retry per DefaultErrorPolicy.should_retry)
-        if not self._error_policy.should_retry(error, attempt=attempt):
+        # Step 2: gate via error_class param (already classified by caller).
+        # Per Cat 8 spec semantics: HITL_RECOVERABLE / FATAL never retry.
+        # Sprint 55.6 D10: use error_class param directly instead of
+        # error_policy.should_retry(error, attempt) re-classification.
+        # Reason: soft-failure path passes a synthetic Exception whose MRO
+        # walk (via DefaultErrorPolicy.classify) returns FATAL, but caller's
+        # error_class came from classify_by_string(result.error_class) per
+        # AD-Cat8-3 narrow Option C (Sprint 55.4). Trusting the param
+        # honors both hard-exception (MRO classify) and soft-failure
+        # (classify_by_string) paths uniformly.
+        if error_class in (ErrorClass.HITL_RECOVERABLE, ErrorClass.FATAL):
             return False, 0.0
 
         # Step 3: per-(tool, class) RetryConfig lookup (matrix → defaults)
