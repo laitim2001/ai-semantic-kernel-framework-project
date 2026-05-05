@@ -117,19 +117,41 @@ Per AD-Plan-1 audit-trail rule (no silent updates): drift response committed sep
   - Day 1 test bullets — 4 unit + 1 integration with revised names
   - Tracker — target +8 tests (was +9)
 
-### Tomorrow morning (Day 1 impl phase)
+### Day 1 Implementation phase — actual ~2 hr (committed ~3 hr; ratio 0.67 within band)
 
-- Read `core/config.py` settings pattern (~5 min)
-- Add `chat_verification_mode` field
-- Create `_verifier_factory.py` with `build_default_verifier_registry()`
-- Edit `router.py:_stream_loop_events()` L197 always-call-wrapper
-- Write 4 unit tests in `tests/unit/api/v1/chat/test_verification_wire.py`
-- Write 1 integration test in `tests/integration/api/test_chat_verification_smoke.py`
-- Lint chain + commit + push
+**D6 (drift)**: `core/config.py` doesn't exist as single file — it's a package `core/config/__init__.py`. Glob caught discrepancy in seconds; no plan revision needed (path mention in plan §File Change List is conventional shorthand; actual edit target = `__init__.py`).
 
-### Open questions
+**Implementation**:
+- ✅ Add `chat_verification_mode: Literal["disabled", "enabled"]` field to `core/config/__init__.py` Settings (mirrors existing `business_domain_mode` pattern)
+- ✅ Create `backend/src/api/v1/chat/_verifier_factory.py` (54 LOC) — `build_default_verifier_registry()` + `select_verifier_registry(mode)` helpers + `VerificationMode` Literal alias
+- ✅ Edit `backend/src/api/v1/chat/router.py` `_stream_loop_events()` L197 — always-call-wrapper pattern via `run_with_verification(agent_loop=loop, verifier_registry=registry_or_none, max_correction_attempts=2)`. Settings cached lookup inside `_stream_loop_events()`. File header MHist updated per AD-Lint-3 (5 entries 1-line each compressed within E501).
+- ✅ Add 4 unit tests in `tests/unit/api/v1/chat/test_verification_wire.py` — TestBuildDefaultVerifierRegistry / TestSelectVerifierRegistry / TestSettingsValidation classes
+- ✅ Add 1 integration test in `tests/integration/api/test_chat_verification_smoke.py` — TestChatVerificationWireSmoke 2-mode TestClient SSE smoke (disabled / enabled paths)
 
-- (None at this drift response commit; Selection E unblocks Day 1 impl phase)
+**Tests**:
+- `python -m pytest tests/unit/api/v1/chat/test_verification_wire.py` → **4/4 PASS in 0.99s**
+- `python -m pytest tests/integration/api/test_chat_verification_smoke.py` → **1/1 PASS in 0.48s**
+- `python -m pytest tests/integration/api/test_chat_e2e.py tests/unit/api/v1/chat/` → **71/71 PASS in 1.31s** (regression 0;backwards-compat preserved byte-for-byte)
+- `python -m pytest tests/` (full) → **1451 passed / 4 skipped in 31.76s** (+5 from 1446 baseline)
+
+**Lint chain**:
+- ✅ black: 3 files reformatted (auto-fix)
+- ✅ isort: 1 file reordered (auto-fix)
+- ✅ flake8: 7 E501 caught initially → all compressed per AD-Lint-3 (MHist 1-line + Related path shortening) → final 0 errors
+- ✅ mypy --strict: 0 errors on 3 source files
+- ✅ 7 V2 lints: 7/7 green (0.82s) — including check_llm_sdk_leak (0 violations);check_cross_category_import (0 private imports);check_sole_mutator (0 violations)
+- ✅ LLM SDK leak: 0 (CI enforced;agent_harness import via verification public re-exports only)
+
+**Drift findings (Day 1 impl)**: D6 only (path shorthand in plan §File Change List)
+
+### Tomorrow (Day 2)
+
+- AD-Cat10-Obs-Cat9Wrappers validation
+  - Pre-code reading: cat9_fallback.py + cat9_mutator.py + verification/_obs.py + llm_judge.py (~10 min)
+  - Decision: KEEP reuse-inner (per 54.2 D19 + Cat 12 minimal-overhead philosophy)
+  - Edit cat9_fallback.py + cat9_mutator.py docstrings (Observability Design section)
+  - Write 3 sentinel tests in test_cat9_wrappers_obs.py
+  - Lint chain + commit + push
 
 ---
 

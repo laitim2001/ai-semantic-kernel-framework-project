@@ -44,52 +44,44 @@
 - [x] **Read `backend/src/api/v1/chat/router.py`** full file (270 lines) — wrap target = `_stream_loop_events()` L197, NOT `chat()` endpoint;`loop.run(session_id=..., user_input=..., trace_context=...)` direct call
 - [x] **Read `backend/src/agent_harness/verification/correction_loop.py`** — **D4 caught**:real signature uses `verifier_registry` (registry-based) + `agent_loop` param + NO `mode` param + `verifier_registry=None or empty` transparently delegates to `loop.run()` (54.1 backwards-compat)
 - [x] **Read `backend/src/agent_harness/verification/__init__.py`** — Cat 10 public API re-exports include `run_with_verification` + `VerifierRegistry` + `RulesBasedVerifier` ✓
-- [ ] **Read `backend/src/core/config.py`** existing settings pattern — choose pydantic Field pattern (mirror existing fields)
+- [x] **Read `backend/src/core/config/__init__.py`** existing settings pattern (D6 drift: path is package not single file) — `business_domain_mode: Literal["mock", "service"] = "mock"` pattern confirmed as mirror
 
 ### AD-Cat10-Wire-1 — Implementation (Option E 2-mode + always-call-wrapper)
 
-- [ ] **Add `chat_verification_mode` field to `core/config.py`**
+- [x] **Add `chat_verification_mode` field to `core/config/__init__.py`** ✅
   - **2-mode** `Literal["disabled", "enabled"]` (revised post-D4+D5)
   - Default: `"disabled"` (backwards-compatible via `verifier_registry=None`)
   - Description: cite AD-Cat10-Wire-1 + 2-mode semantics + always-call-wrapper rationale
-  - Update file header MHist (per AD-Lint-3 1-line)
-- [ ] **Create `backend/src/api/v1/chat/_verifier_factory.py`**
-  - `build_default_verifier_registry() -> VerifierRegistry` returning `VerifierRegistry` with `RulesBasedVerifier(rules=[])` registered
-  - File header per file-header-convention.md
-- [ ] **Edit `backend/src/api/v1/chat/router.py` `_stream_loop_events()` L197**
-  - Always-call-wrapper pattern:
-    ```python
-    verifier_registry = build_default_verifier_registry() if settings.chat_verification_mode == "enabled" else None
-    async for event in run_with_verification(
-        agent_loop=loop, session_id=session_id, user_input=user_input,
-        trace_context=trace_context, verifier_registry=verifier_registry,
-        max_correction_attempts=2,
-    ):
-    ```
-  - Preserve existing serialize_loop_event + format_sse_message + LoopCompleted exit
-  - Update file header MHist (per AD-Lint-3 1-line)
+  - File header MHist updated per AD-Lint-3 1-line
+- [x] **Create `backend/src/api/v1/chat/_verifier_factory.py`** ✅ (54 LOC)
+  - `build_default_verifier_registry() -> VerifierRegistry` returning registry with `RulesBasedVerifier(rules=[])` registered
+  - `select_verifier_registry(mode: VerificationMode) -> VerifierRegistry | None` mode-dispatch helper
+  - File header per file-header-convention.md (MHist 1-line)
+- [x] **Edit `backend/src/api/v1/chat/router.py` `_stream_loop_events()` L197** ✅
+  - Always-call-wrapper pattern via `run_with_verification(agent_loop=loop, verifier_registry=select_verifier_registry(...), max_correction_attempts=2)`
+  - Settings cached lookup inside `_stream_loop_events()` for per-request mode resolution
+  - File header MHist compressed to 5 1-line entries (E501 compliant)
 
 ### AD-Cat10-Wire-1 — Tests
 
-- [ ] **Create `backend/tests/unit/api/v1/chat/test_verification_wire.py`**
-  - test_disabled_mode_injects_none_registry (default settings → `verifier_registry=None` passed to wrapper → wrapper delegates to loop.run)
-  - test_enabled_mode_injects_populated_registry (settings override → `verifier_registry` populated with default RulesBasedVerifier)
-  - test_verifier_factory_default_contains_rules_based_no_op (factory returns VerifierRegistry with 1 RulesBasedVerifier with empty rules)
-  - test_invalid_mode_raises (pydantic Literal validation rejects unknown mode like "shadow")
-  - DoD: 4/4 tests PASS
-- [ ] **Add 1 integration test** — `backend/tests/integration/api/test_chat_verification_smoke.py` (NEW)
-  - 2-mode TestClient SSE smoke (disabled / enabled);assert event stream identical when disabled (byte-for-byte equiv to direct loop.run()) + VerificationPassed event present when enabled
-  - DoD: 1 test PASS
+- [x] **Create `backend/tests/unit/api/v1/chat/test_verification_wire.py`** ✅ (4/4 PASS in 0.99s)
+  - test_factory_default_contains_rules_based_no_op (factory returns VerifierRegistry with 1 RulesBasedVerifier with empty rules)
+  - test_disabled_mode_injects_none_registry (mode "disabled" → returns None)
+  - test_enabled_mode_injects_populated_registry (mode "enabled" → returns populated registry)
+  - test_invalid_mode_raises (pydantic Literal rejects "shadow" 3-mode legacy)
+  - DoD: 4/4 PASS ✅
+- [x] **Add 1 integration test** — `backend/tests/integration/api/test_chat_verification_smoke.py` (NEW) ✅ (1/1 PASS in 0.48s)
+  - test_chat_router_verification_smoke_2_modes (disabled preserves echo stream + no verification events;enabled adds verification_passed event from no-op RulesBasedVerifier)
+  - DoD: 1 PASS ✅
 
 ### Day 1 Wrap
 
-- [ ] **Run pytest** — `python -m pytest backend/tests/unit/api/v1/chat/ backend/tests/integration/api/ -v`
-  - DoD: 6 new tests PASS;regression 0
-- [ ] **Lint chain**: black + isort + flake8 + mypy --strict + 7 V2 lints (`python scripts/lint/run_all.py`)
-- [ ] **LLM SDK leak check**: `grep -r "from openai\|from anthropic\|import openai\|import anthropic" backend/src/api backend/src/agent_harness` → 0
-- [ ] **Update Day 1 progress.md** entry — actual hours / drift findings if any / lint results
+- [x] **Run pytest** — 4 unit (test_verification_wire) + 1 integration (test_chat_verification_smoke) + chat regression (71/71) + full pytest **1451 passed / 4 skipped** (+5 from 1446 baseline) ✅
+- [x] **Lint chain**: black ✅ + isort ✅ + flake8 ✅ (7 E501 caught initially → all fixed via AD-Lint-3 compression) + mypy --strict ✅ (0 errors) + 7 V2 lints ✅ (0.82s)
+- [x] **LLM SDK leak check**: ✅ 0 (`check_llm_sdk_leak` in V2 lints suite)
+- [x] **Update Day 1 progress.md** entry — actual ~2 hr / D6 drift / lint results / test counts
 - [ ] **Commit Day 1**
-  - Commit: `feat(api, sprint-55-5): close AD-Cat10-Wire-1 (chat router 3-mode CHAT_VERIFICATION_MODE wire)`
+  - Commit: `feat(api, sprint-55-5): close AD-Cat10-Wire-1 (chat router 2-mode CHAT_VERIFICATION_MODE wire; Option E post-D4+D5)`
 - [ ] **Push branch**
 
 ---

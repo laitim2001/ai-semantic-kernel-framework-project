@@ -38,12 +38,11 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
-    - 2026-05-01: Sprint 52.5 Day 2 (P0 #11+#12) — every endpoint takes
-        Depends(get_current_tenant); SessionRegistry calls all carry
-        tenant_id; chat endpoint creates root TraceContext and propagates
-        through loop.run(); cross-tenant lookups return 404.
-    - 2026-04-30: Initial creation (Sprint 50.2 Day 1.5) — POST /chat SSE +
-        GET / cancel session endpoints. In-process loop execution.
+    - 2026-05-05: Sprint 55.5 Day 1 — wire run_with_verification at L197 (AD-Cat10-Wire-1; Option E)
+    - 2026-05-04: Sprint 55.2 — BusinessServiceFactory per-request wiring (AD-BizDomain-1)
+    - 2026-05-04: Sprint 53.6 US-4 — ServiceFactory through build_handler (closes AD-Front-2)
+    - 2026-05-01: Sprint 52.5 P0 #11+#12 — Depends(get_current_tenant) + root TraceContext + 404
+    - 2026-04-30: Sprint 50.2 Day 1.5 — initial: POST /chat SSE + GET/cancel sessions
 
 Related:
     - .schemas (ChatRequest / ChatSessionResponse)
@@ -67,6 +66,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_harness._contracts import LoopCompleted, TraceContext
+from agent_harness.verification import run_with_verification
 from business_domain._service_factory import BusinessServiceFactory
 from core.config import get_settings
 from infrastructure.db.session import get_db_session
@@ -76,6 +76,7 @@ from platform_layer.governance.service_factory import (
 )
 from platform_layer.identity import get_current_tenant
 
+from ._verifier_factory import select_verifier_registry
 from .handler import build_handler
 from .schemas import ChatRequest, ChatSessionResponse
 from .session_registry import SessionRegistry, get_default_registry
@@ -191,13 +192,28 @@ async def _stream_loop_events(
     `trace_context` is the root context for this chat run — passed to
     ``loop.run`` so child spans (TurnStarted / LLMRequested / etc.) inherit
     the trace_id; sse.py extracts trace_id into each SSE event.
+
+    Sprint 55.5 (AD-Cat10-Wire-1; Option E 2-mode post-D4+D5):
+    Always invokes ``run_with_verification`` wrapper. When
+    ``settings.chat_verification_mode == "disabled"`` (default), passes
+    ``verifier_registry=None`` → wrapper transparently delegates to
+    ``loop.run()`` per correction_loop.py:99-106 (byte-for-byte event stream
+    identical to direct loop.run; backwards-compat preserved). When
+    ``"enabled"``, passes a populated ``VerifierRegistry`` → wrapper runs
+    verifiers + self-correction loop (max 2 attempts).
     """
+    settings = get_settings()
+    verifier_registry = select_verifier_registry(settings.chat_verification_mode)
+
     natural_completion = False
     try:
-        async for event in loop.run(  # type: ignore[attr-defined]
+        async for event in run_with_verification(
+            agent_loop=loop,  # type: ignore[arg-type]
             session_id=session_id,
             user_input=user_input,
             trace_context=trace_context,
+            verifier_registry=verifier_registry,
+            max_correction_attempts=2,
         ):
             try:
                 payload = serialize_loop_event(event)
