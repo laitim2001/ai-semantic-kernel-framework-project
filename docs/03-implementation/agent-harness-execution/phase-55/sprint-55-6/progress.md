@@ -217,9 +217,94 @@ Steps 2-5 are the missing pieces. Option H wires them in `_should_retry_tool_err
 
 ---
 
-## Day 1 — pending implementation (afternoon)
+## Day 1 Afternoon — 2026-05-05 ✅ (AD-Cat8-2 closed via Option H)
 
-(Will be filled after implementation completes)
+**Hours**: ~2 hr (implementation + lint + regression + commit prep)
+
+### D9 NEW DRIFT (Day 1 afternoon — AD-Plan-3 fourth application)
+
+Pre-implementation 5-min check on `ErrorRetried` constructor revealed:
+
+- Plan §Spec / progress.md Day 1 morning narrative used `backoff_seconds`
+- Reality: `_contracts/events.py:200` `class ErrorRetried(LoopEvent)` field is `backoff_ms: float = 0.0` — **MILLISECONDS**, not seconds
+- Other fields: `attempt: int = 0`, `error_class: str = ""` (no `tool_call_id` / `tool_name` per-tool context — design choice from 53.2)
+
+**Mitigation**: convert `backoff_seconds * 1000.0` when emitting `ErrorRetried(backoff_ms=...)`. Helper still returns `(should_retry, backoff_seconds)` since `compute_backoff` returns seconds; `asyncio.sleep` consumes seconds. Only the event payload converts.
+
+### Implementation completed
+
+**Files modified**: `backend/src/agent_harness/orchestrator_loop/loop.py`
+
+1. **Imports** — added `ErrorRetried` to `_contracts` block (alphabetical position between `DurableState` and `ExecutionContext`); added `compute_backoff` to `error_handling` block (isort split into separate import block per project config — accepted)
+
+2. **File header MHist** — added 1-line entry per AD-Lint-3 (compressed to 92 chars after first draft hit 115 chars E501; demonstrates AD-Lint-MHist-Verbosity recurring pattern — promotion target for Day 4)
+
+3. **NEW helper `_should_retry_tool_error`** added after `_handle_tool_error` (~50 LOC including comprehensive docstring):
+   - Consults `error_policy.should_retry(error, attempt=N)` → `retry_policy.get_policy(tool_name, error_class)` → `compute_backoff(config, attempt)`
+   - Returns `tuple[bool, float]` (should_retry, backoff_seconds)
+   - 3-layer baseline guard: returns `(False, 0.0)` when `error_policy is None` OR `retry_policy is None` OR `error_class is None`
+   - Defensive `attempt >= config.max_attempts` short-circuit before `compute_backoff` call (avoids unnecessary compute_backoff invocation when at cap)
+
+4. **Retry loop wrap @ L1024-L1140 (was L1024-L1111 + post-execute)**:
+   - Added `attempt_num = 1` counter outside try
+   - Wrapped existing `try` + `except CancelledError` + `except Exception` + soft-failure check inside `while True:` loop
+   - Hard-exception path (after `_handle_tool_error` returns non-terminate): consult `_should_retry_tool_error` → if retry: emit `ErrorRetried(backoff_ms=backoff_s * 1000.0)` + `await asyncio.sleep(backoff_s)` + `attempt_num += 1` + `continue`
+   - Soft-failure path: same retry consultation pattern
+   - **D7 fix**: both `_handle_tool_error` call sites now pass `attempt_num=attempt_num` (was hardcoded `=1`)
+   - `break` on success or no-retry → exits to post-execute code (tool_content / yield ToolCallExecuted/Failed / messages.append) at original indent level
+   - `_err_class` underscore prefix removed (now used as `err_class` for `_should_retry_tool_error` arg)
+
+### Lint chain results
+
+- ✅ black: 1 reformatted (whitespace consistency)
+- ✅ isort: split `compute_backoff` into separate import block (project config; accepted)
+- ✅ flake8: 1 E501 caught (MHist 115 chars) → compressed to 92 chars (D9 follow-on; AD-Lint-3 enforced)
+- ✅ mypy --strict: 0 errors on `loop.py`
+- ✅ 7 V2 lints: 7/7 green (`run_all.py` 0.82s) — including `check_llm_sdk_leak`
+- ✅ LLM SDK leak: 0
+
+### Pytest regression results
+
+- **Targeted (Cat 1 + Cat 8)**: 102/102 PASS in 0.72s
+  - `test_audit_fatal.py` (3) + `test_handle_tool_error.py` (3) + `test_loop.py` (7) + `test_termination.py` (10)
+  - `test_budget.py` (11) + `test_circuit_breaker.py` (15) + `test_policy.py` (25) + `test_retry.py` (15) + `test_terminator.py` (13)
+- **Full baseline**: **1454 passed / 4 skipped / 0 failed** in 31.10s
+  - **Same as Sprint 55.5 baseline** — byte-for-byte backwards-compat preserved as designed
+  - Day 2 tests will add +6-8 unit + 1 integration = pytest delta target ≥1462
+
+### Backwards-compat verification (D-empty-registry path equivalent)
+
+When `error_policy is None` OR `retry_policy is None`:
+1. `_should_retry_tool_error` returns `(False, 0.0)` immediately (no consultation)
+2. `should_retry == False` → no retry; falls through to existing soft-failure synthesis OR exits while loop via `break`
+3. Existing 53.1 raise behavior preserved on hard-exception path (`if self._error_policy is None: raise`)
+4. Existing 53.4 LLM-recoverable synthesis path preserved on no-retry decision
+5. Result: production default deployments (no Cat 8 deps) get **byte-for-byte identical event stream** as 53.4 baseline
+
+This is the same backwards-compat pattern as 55.5 AD-Cat10-Wire-1 (Option E always-call-wrapper with empty-registry short-circuit).
+
+### Day 1 totals
+
+- Morning (plan revision per AD-Plan-1): ~0.5 hr
+- Afternoon (implementation + lint + regression): ~2 hr
+- **Day 1 total**: ~2.5 hr (vs revised plan §Workload Day 1 estimate ~2 hr → ratio 1.25; slightly over but absorbed by D3+D6+D7 scope reduction earlier)
+
+### AD-Plan-3 fourth application ROI accounting
+
+D9 catch (ErrorRetried.backoff_ms vs backoff_seconds):
+- Cost: ~5 min (`Read events.py:200`)
+- Benefit: prevented runtime AttributeError or worse — passing `backoff_seconds` to a `backoff_ms` field would have caused integer overflow in tracing OR unit confusion (1.5 second backoff → 1.5 ms recorded; 1000× off)
+- Cumulative Sprint 55.6 AD-Plan-3 ROI: **9 drifts caught (D1-D9); ~55 min cost prevented ~5-6 hr re-work + 1 production-grade bug = 6-8× quantitative + 1 qualitative correctness save**
+
+### Next (Day 2)
+
+- Add 6-8 unit tests in `tests/unit/agent_harness/orchestrator_loop/test_retry_policy_wire.py`
+- Add 1 integration test in `tests/integration/agent_harness/test_loop_retry_integration.py` (or extend existing)
+- Verify cumulative pytest target ≥1462
+
+---
+
+## Day 2 — pending
 
 ---
 
