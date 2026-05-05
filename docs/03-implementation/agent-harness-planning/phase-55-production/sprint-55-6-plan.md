@@ -12,6 +12,8 @@
 > **Plan revision history**:
 > - 2026-05-05 (Day 0): Initial plan — Option A scope (4 backend/infra ADs + 2 process ADs); §Tech Spec proposed `ToolErrorAction.RETRY` enum extension + `ToolErrorDecision` dataclass extension
 > - 2026-05-05 (Day 1 morning): **D6+D7+D8 drift caught via AD-Plan-3 third application** — `ToolErrorDecision`/`ToolErrorAction` **don't exist** in 53.2 ABC (D6); `_handle_tool_error` already takes `attempt_num` param but call sites L1052+L1098 hardcode `=1` (D7); `ErrorRetried` event already shipped at `_contracts/events.py:200` (D8). **Plan revised to Option H** (no ABC change; new `_should_retry_tool_error` helper + retry loop wrap at L1044+L1092; reuse existing `ErrorRetried` event) per audit cycle 紀律 (minimal scope; preserves 17.md §Cat 8 single-source).
+> - 2026-05-05 (Day 2 morning): **D10 helper bug** caught while designing integration test — Step 2 gate via `error_policy.should_retry()` re-classifies via MRO walk → soft-failure path's synthetic Exception classifies as FATAL → never retries. **Helper fix**: gate via `error_class` param directly (already classified by caller). Test 8 updated to validate the soft-failure correctness invariant.
+> - 2026-05-05 (Day 3 morning): **D11 drift caught — Option Y aggregator not implementable**. GitHub Actions does not support cross-workflow `needs:` dependencies; an aggregator workflow cannot verify other workflow results without complex `gh api` query logic. **Plan revised to Option Z (remove paths-filter)**: simplest industry-standard fix — drop `paths:` filter from `backend-ci.yml` + `playwright-e2e.yml` so every PR triggers them. `e2e-tests.yml` already has no paths filter (unchanged). Required-status-checks unchanged (5 contexts always fire). Touch-header workaround retired permanently. Trade-off: every PR runs full CI (~+1.5 min for docs-only PRs) — acceptable for solo-dev volume. **Aggregator workflow file dropped from §File Change List; branch protection PATCH not needed.**
 
 > **Note**: Per **AD-Lint-2** (Sprint 55.3), per-day "Estimated X hours" headers dropped from checklist template. Sprint-aggregate estimate in §Workload only. Day-level actuals → progress.md.
 >
@@ -377,8 +379,11 @@ Add char-count budget guidance to MHist 1-line section (AD-Lint-3 enforced 1-lin
 - [ ] **AD-Cat8-2**: 6-8 unit tests covering retry-on-transient / retry-exhausted / retry-disabled / backoff-timing / error-class-not-retryable / attempt-counter / cat8-deps-none-baseline
 - [ ] **AD-Cat8-2**: 1 integration test (full AgentLoop run with deterministic flaky-tool fixture)
 - [ ] **AD-Cat8-2**: Backwards-compatible — production default `retry_policy=None` OR `error_policy=None` preserves existing behavior byte-for-byte (helper returns `(False, 0.0)`)
-- [ ] **AD-CI-5**: Aggregator workflow created + branch protection updated to point at aggregator
-- [ ] **AD-CI-5**: Verified on docs-only PR that aggregator passes without touch-header workaround
+- [ ] **AD-CI-5 (Option Z post-D11)**: Remove `paths:` filter from `backend-ci.yml` (push + pull_request blocks) so workflow always triggers
+- [ ] **AD-CI-5 (Option Z post-D11)**: Remove `paths:` filter from `playwright-e2e.yml` (push + pull_request blocks) so workflow always triggers
+- [ ] **AD-CI-5 (Option Z post-D11)**: `e2e-tests.yml` confirmed no paths filter (unchanged)
+- [ ] **AD-CI-5 (Option Z post-D11)**: branch protection unchanged (5 contexts already correct; just need them to actually fire on every PR)
+- [ ] **AD-CI-5 (Option Z post-D11)**: Document in workflow header comments that paths filter retired per AD-CI-5 / D11 / Option Z
 - [ ] **AD-CI-6**: deploy-production.yml disabled (workflow_dispatch only OR `if: false`) with re-enable criteria documented
 - [ ] **AD-Plan-3-Promotion**: sprint-workflow.md §Step 2.5 extended with content-verify task + ROI evidence + grep query patterns
 - [ ] **AD-Lint-MHist-Verbosity**: file-header-convention.md §格式 extended with char-count budget guidance + anti-patterns
