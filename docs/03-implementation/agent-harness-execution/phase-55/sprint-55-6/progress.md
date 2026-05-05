@@ -308,7 +308,85 @@ D9 catch (ErrorRetried.backoff_ms vs backoff_seconds):
 
 ---
 
-## Day 2 — pending
+## Day 2 — 2026-05-05 ✅ (AD-Cat8-2 tests + D10 helper bug fix)
+
+**Hours**: ~2 hr (read fixtures + 8 unit tests + 1 integration + D10 helper fix + lint cycle + commit prep)
+
+### D10 NEW DRIFT (Day 2 morning — AD-Plan-3 fifth application)
+
+While designing the integration test (driving full AgentLoop with flaky tool through soft-failure path), discovered a **helper bug** in `_should_retry_tool_error`:
+
+- Day 1 implementation (`87697b6a`) had Step 2 gate calling `error_policy.should_retry(error, attempt=attempt)` which internally re-classifies via `policy.classify(error)` MRO walk
+- **Bug**: in soft-failure path, `error` is a synthetic generic Exception (per `loop.py:1093 synthetic = Exception(result.error or "tool soft failure")`); MRO walk → FATAL classification → gate False → **never retries** even when caller's `error_class_str` (set by ToolExecutorImpl per 53.3 US-9) classifies the original tool exception as TRANSIENT
+- This contradicts AD-Cat8-3 narrow Option C from Sprint 55.4 which preserves type info via `error_class_str` for the soft-failure path
+
+**Fix**: gate via `error_class` param directly (already classified by caller via `_handle_tool_error` → `classify` or `classify_by_string`):
+```python
+# Step 2: gate via error_class param (already classified by caller).
+if error_class in (ErrorClass.HITL_RECOVERABLE, ErrorClass.FATAL):
+    return False, 0.0
+```
+
+This is semantically aligned with the spec ("gated by ErrorClass") and **functionally equivalent for hard-exception path** (where MRO classify works) while **fixing soft-failure path** (where MRO would misclassify).
+
+Test 8 updated: from "gate respects error_policy.should_retry" (was mocking `policy.should_retry.return_value = False`) to "helper trusts error_class param, not re-classification" — better reflects the soft-failure correctness invariant.
+
+### Files created
+
+1. **`backend/tests/unit/agent_harness/orchestrator_loop/test_retry_policy_wire.py`** (NEW;~230 LOC, 8 unit tests):
+   - `test_should_retry_tool_error_returns_true_for_transient_with_attempts_left` — happy path
+   - `test_should_retry_tool_error_returns_false_when_attempts_exhausted` — defensive short-circuit
+   - `test_should_retry_tool_error_returns_false_when_error_policy_is_none` — Cat 8 dep None baseline
+   - `test_should_retry_tool_error_returns_false_when_retry_policy_is_none` — same
+   - `test_should_retry_tool_error_returns_false_when_error_class_is_none` — defensive guard
+   - `test_should_retry_tool_error_returns_false_for_hitl_recoverable` — gate via error_class
+   - `test_should_retry_tool_error_returns_false_for_fatal` — gate via error_class
+   - `test_should_retry_tool_error_uses_error_class_param_not_re_classify` — D10 fix invariant
+
+2. **`backend/tests/integration/agent_harness/orchestrator_loop/test_loop_retry_integration.py`** (NEW;~270 LOC, 1 end-to-end test):
+   - `test_full_agent_loop_retry_with_flaky_tool_succeeds_after_one_retry` — drives full AgentLoop with `_FlakyChatClient` (canned tool_use → end_turn) + `_FlakyToolHandler` (fails 1× then succeeds) + `_FlakyPolicy` (FlakyTransientError → TRANSIENT) + zero-backoff RetryPolicyMatrix
+   - Asserts: 1 `ErrorRetried` event with `attempt=1` + `error_class="transient"` + `backoff_ms=0.0`; handler called 2× (1 fail + 1 success); 1 `LoopCompleted` with `stop_reason="end_turn"`; no `LoopTerminated`
+
+### Files modified
+
+- **`backend/src/agent_harness/orchestrator_loop/loop.py`**: D10 fix to `_should_retry_tool_error` Step 2 gate (uses `error_class` param instead of `error_policy.should_retry(error, attempt)` re-classification); MHist already updated Day 1
+
+### Lint chain results
+
+- ✅ black + isort + flake8 (max-line-length=100 from backend config; 1 E501 fixed by docstring compression)
+- ✅ mypy --strict 0 errors on `loop.py`
+- ✅ 7 V2 lints 7/7 green
+- ✅ LLM SDK leak 0 (covered by `check_llm_sdk_leak` in V2 lints)
+
+### Pytest results
+
+- **Targeted (Cat 1 retry-policy wire + handle_tool_error + loop)**: 18/18 PASS in 0.39s
+- **Integration (test_loop_retry_integration)**: 1/1 PASS in 0.31s
+- **Full baseline**: **1463 passed / 4 skipped / 0 failed** in 32.26s
+  - **Delta from Day 0 baseline**: 1454 → **1463** (+9; target was ≥+8 → **12.5% over target**)
+  - 8 unit tests + 1 integration = +9 ✓
+
+### AD-Plan-3 cumulative ROI (10 drifts caught D1-D10)
+
+| Day | Drifts | Cost | Benefit prevented |
+|-----|--------|------|-------------------|
+| 0 | D1-D5 | ~25 min | ~3 hr scope-creep + ~30 min Day 4 confusion |
+| 1-am | D6-D8 | ~25 min | ~2-3 hr ABC violation rework |
+| 1-pm | D9 | ~5 min | 1 production bug (units mismatch) |
+| 2-am | D10 | ~10 min | Soft-failure-path retry never fires (silent regression) |
+| **Total** | **10** | **~65 min** | **~6-7 hr re-work + 2 production-grade bugs** |
+
+### Day 2 calibration
+
+```
+Day 2 actual:   ~2 hr (matches plan §Workload Day 2 estimate ~2 hr → ratio 1.0 in band)
+Sprint cumulative: ~6.5 hr / ~12 hr (54%);on track
+```
+
+### Next (Day 3)
+
+- Group H CI/infra: AD-CI-5 (paths-filter aggregator workflow + branch protection PATCH) + AD-CI-6 (deploy-production disable)
+- Pre-code reading: existing 6 workflows + `gh api GET` current required_status_checks contexts
 
 ---
 
