@@ -38,6 +38,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-06: Sprint 56.1 Day 2 — pre-stream QuotaEnforcer.check_and_reserve gate (US-2)
     - 2026-05-05: Sprint 55.5 Day 1 — wire run_with_verification at L197 (AD-Cat10-Wire-1; Option E)
     - 2026-05-04: Sprint 55.2 — BusinessServiceFactory per-request wiring (AD-BizDomain-1)
     - 2026-05-04: Sprint 53.6 US-4 — ServiceFactory through build_handler (closes AD-Front-2)
@@ -75,6 +76,11 @@ from platform_layer.governance.service_factory import (
     get_service_factory,
 )
 from platform_layer.identity import get_current_tenant
+from platform_layer.tenant.quota import (
+    QuotaEnforcer,
+    QuotaExceededError,
+    maybe_get_quota_enforcer,
+)
 
 from ._verifier_factory import select_verifier_registry
 from .handler import build_handler
@@ -92,6 +98,7 @@ async def chat(
     current_tenant: UUID = Depends(get_current_tenant),
     factory: ServiceFactory = Depends(get_service_factory),
     db: AsyncSession = Depends(get_db_session),
+    quota_enforcer: QuotaEnforcer | None = Depends(maybe_get_quota_enforcer),
 ) -> StreamingResponse:
     """Run an agent loop and stream LoopEvents as SSE.
 
@@ -115,6 +122,25 @@ async def chat(
     AD-Cat12-Helpers-1 deferred (Phase 56+).
     """
     settings = get_settings()
+
+    # Sprint 56.1 Day 2 (US-2): pre-stream daily token quota gate.
+    # Off by default; enabled via env QUOTA_ENFORCEMENT_ENABLED=true after
+    # Redis client is wired at app startup (api/main.py). Post-call
+    # reconciliation deferred to Phase 56.x (AD-QuotaPostCall-1).
+    if settings.quota_enforcement_enabled and quota_enforcer is not None:
+        try:
+            await quota_enforcer.check_and_reserve(
+                tenant_id=current_tenant,
+                plan_name="enterprise",
+                estimated_tokens=settings.quota_estimated_tokens_per_call,
+            )
+        except QuotaExceededError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=str(exc),
+                headers={"Retry-After": str(exc.retry_after_seconds)},
+            ) from exc
+
     business_factory = BusinessServiceFactory(
         db=db,
         tenant_id=current_tenant,

@@ -1,0 +1,38 @@
+# File: backend/config/tenant_plans.yml
+# Purpose: Tenant plan template — defines per-tier quota / features / mcp_servers.
+# Category: Phase 56 SaaS Stage 1 / Sprint 56.1 (US-2 Plan Template Enforcement)
+# Created: 2026-05-06 (Sprint 56.1 Day 2)
+#
+# Description:
+#   Single-source plan registry consumed by:
+#     - platform_layer.tenant.plans.PlanLoader: read on startup + on-demand
+#     - platform_layer.tenant.quota.QuotaEnforcer: per-tenant daily token / cost cap
+#     - core.feature_flags.FeatureFlagsService (Day 3): default flag gating per plan
+#     - api/v1/admin/tenants.py provisioning: assign plan='enterprise' on tenant create
+#
+#   Phase 56.1 ships ONLY the `enterprise` tier (per user decision 2026-05-05).
+#   Stage 2 commercial SaaS (Phase 56.2+) will add `basic` + `standard`.
+#
+# Modification History (newest-first):
+#   - 2026-05-06: Initial creation (Sprint 56.1 Day 2 / US-2)
+#
+# Related:
+#   - sprint-56-1-plan.md §Plan Template (L358-378)
+#   - 15-saas-readiness.md §Tenant 配置範本 (L108-121)
+
+plans:
+  enterprise:
+    quota:
+      tokens_per_day: 10000000
+      cost_usd_per_day: 500
+      sessions_per_user_concurrent: 50
+      api_keys_max: 10
+    features:
+      verification: true
+      thinking: true
+      subagents: true
+      mcp_servers: "*"
+      custom_tools: true
+      dedicated_support: true
+
+# Phase 56+ Stage 2 will add `basic` and `standard` tiers here.

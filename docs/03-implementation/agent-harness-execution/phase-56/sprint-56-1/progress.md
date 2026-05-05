@@ -177,3 +177,123 @@ Per AD-Plan-1, plan revisions go through **separate commit** documenting drift f
 - 7 D-findings catalogued in Day 1 (D9-D15); cumulative Day 0+1 = 15 findings — Day-0+1 探勘 ROI strong
 - Calibration: Day 1 actual ~3.5 hr / committed ~3.4 hr (5/17 hr fraction = 29% vs Day count 1/5 = 20%) — ahead of pace by ~10%
 - Auth/audit/obs gaps (D11/D13) all converge on the same Phase 56.x integration sprint pattern;suggests a future "Phase 56.x SaaS Stage 1 integration polish" sprint candidate
+
+---
+
+## Day 2 (2026-05-06) — US-2 Plan Template + US-3 part 1 OnboardingTracker
+
+### Mid-sprint two-prong 探勘 baseline (per AD-Plan-3 promoted)
+
+**Prong 1 path verify** (4 expected NOT exist):
+- `config/tenant_plans.yml` ✅ not exist (will create)
+- `src/platform_layer/tenant/{plans,quota,onboarding}.py` ✅ not exist (will create — only Day 1's `lifecycle.py` + `provisioning.py` + `__init__.py` present)
+
+**Prong 2 content verify**:
+- ✅ `Tenant.onboarding_progress` + `Tenant.provisioning_progress` JSONB columns confirmed at `identity.py:125 / 130` (Day 1 migration 0014 wired correctly)
+- ✅ Chat endpoint Depends chain at `router.py:90-94`: `current_tenant + factory + db` (Day 2 adds `quota_enforcer` 4th)
+- ✅ `RedisBudgetStore` pattern at `agent_harness/error_handling/_redis_store.py` is reuse template — mirror MULTI/EXEC INCR+EXPIRE for QuotaEnforcer
+- ✅ `fakeredis>=2.20` confirmed in `pyproject.toml:27` — fixture pattern in `test_redis_budget_store.py:29-39`
+- ⚠️ `infrastructure/cache/__init__.py` is 1-line stub (Sprint 49.2 originally planned but never delivered) — no shared async Redis client utility; QuotaEnforcer pattern follows 53.2 caller-injects approach instead of reaching for an absent infra layer
+
+### D-findings catalogued (D16-D20)
+
+| ID | Severity | Finding | Implication |
+|----|----------|---------|-------------|
+| **D16** | green | Plan §2.3 mentions `handler.py` but actual chat endpoint is `router.py:89` (Day 0 探勘 already noted) | Day 2 modifies `router.py` (correct path) |
+| **D17** | yellow | `infrastructure/cache/__init__.py` is 1-line stub from Sprint 49.2 (never delivered) — no shared `AsyncRedis` factory | QuotaEnforcer mirrors 53.2 RedisBudgetStore caller-injects pattern (caller owns connection lifecycle); no new infra layer carved this sprint |
+| **D18** | green | 53.2 RedisBudgetStore uses MULTI/EXEC pipeline atomic INCR + EXPIRE (`_redis_store.py:50-53`) | QuotaEnforcer.check_and_reserve uses identical pipeline shape — atomic + cross-pattern consistency for Cat 8 (errors) + Phase 56 (quota) |
+| **D19** | yellow | Plan §US-2 says "Pre-call quota check" but doesn't say what `estimated_tokens` to reserve | Day 2 adds `settings.quota_estimated_tokens_per_call` (default 1000) — conservative pre-call reservation; production pass uses Cat 4 token counter pre-call → Phase 56.x carryover **AD-QuotaEstimation-1** |
+| **D20** | yellow | Plan §US-2 says "Post-call increment" but extracting actual token usage from streaming LLM completion needs LLMResponded event hook + factory wiring | Day 2 ships pre-call reservation only; post-call reconciliation deferred to Phase 56.x **AD-QuotaPostCall-1**; default `quota_enforcement_enabled=False` ships safe (no functional regression to existing chat flow) |
+
+### Tasks completed (2.1-2.7)
+
+#### 2.1 Plan template config + loader
+- ✅ `config/tenant_plans.yml` enterprise tier (quota: 10M tokens/day + $500/day + 50 concurrent + 10 keys; features: verification/thinking/subagents/mcp_servers/custom_tools/dedicated_support)
+- ✅ `src/platform_layer/tenant/plans.py` — `Plan` / `PlanQuota` / `PlanFeatures` Pydantic models + `PlanLoader` with idempotent in-memory cache + `get_plan_loader()` / `reset_plan_loader()` singleton hook (per `testing.md` §Module-level Singleton Reset Pattern)
+- ✅ `PlanNotFoundError(KeyError)` for unknown tier
+- ✅ Auto-resolves `parents[3] / "config" / "tenant_plans.yml"` so works from any cwd
+
+#### 2.2 QuotaEnforcer middleware
+- ✅ `src/platform_layer/tenant/quota.py` — Redis-backed atomic INCR+EXPIRE pipeline (mirrors 53.2 RedisBudgetStore per D18)
+- ✅ Key shape `quota:tokens:{tenant_id}:{YYYY-MM-DD}` (UTC date stamp) → midnight rollover via key change + 24h TTL
+- ✅ `check_and_reserve` — pre-call probe; raises `QuotaExceededError` with `retry_after_seconds` (= seconds to UTC midnight); rollback on cap breach so honest callers see accurate counts
+- ✅ `record_usage` — post-call reconciliation primitive (delta increment/decrement); Day 2 unit-tested but not yet wired into chat router (D20 → AD-QuotaPostCall-1)
+- ✅ `get_usage` — read-only counter probe
+- ✅ Singleton hooks: `set_quota_enforcer` (app startup) / `get_quota_enforcer` (strict — raises if uninitialised) / `maybe_get_quota_enforcer` (lenient — returns None) / `reset_quota_enforcer` (test isolation)
+
+#### 2.3 Chat endpoint quota integration
+- ✅ Added `quota_enforcer: QuotaEnforcer | None = Depends(maybe_get_quota_enforcer)` to `chat()` signature at `router.py:95`
+- ✅ Pre-stream gate: `if settings.quota_enforcement_enabled and quota_enforcer is not None: await quota_enforcer.check_and_reserve(...)` → raises `HTTPException(429)` with `Retry-After` header on `QuotaExceededError`
+- ✅ Default `settings.quota_enforcement_enabled=False` → existing 53.6 production HITL tests + all chat regression unaffected
+- ✅ `core/config/__init__.py` adds `quota_enforcement_enabled: bool = False` + `quota_estimated_tokens_per_call: int = 1000` settings
+- ✅ `router.py` Modification History updated (1-line per AD-Lint-3 char-budget rule)
+
+#### 2.4 OnboardingTracker (US-3 part 1)
+- ✅ `src/platform_layer/tenant/onboarding.py` — `OnboardingTracker` over `tenants.onboarding_progress` JSONB
+- ✅ `VALID_STEPS = (company_info, plan_selected, memory_uploaded, sso_configured, users_invited, health_check)` per 15-saas-readiness §Onboarding Wizard
+- ✅ `advance(tenant_id, step, payload)` → idempotent JSONB write with timestamp + payload record
+- ✅ `is_complete(tenant_id)` → all 6 steps present?
+- ✅ `get_progress(tenant_id)` → snapshot for status endpoint (Day 3 will wire HTTP endpoint)
+- ✅ `InvalidOnboardingStepError(ValueError)` for unknown step
+- ⏸ Auto-transition trigger to ACTIVE on 6/6 + health check → Day 3 (per US-3 part 2 split per checklist 2.4)
+
+#### 2.5 Tests (14 — exceeds plan target +8 by 6 buffer)
+**US-2 PlanLoader (4 tests)**:
+- `test_plan_loader_loads_enterprise_tier` ✅
+- `test_plan_loader_unknown_plan_raises` ✅ (PlanNotFoundError)
+- `test_plan_loader_singleton_returns_same_instance` ✅ (extra)
+- `test_plan_loader_reload_idempotent` ✅ (extra)
+
+**US-2 QuotaEnforcer (6 tests)**:
+- `test_quota_enforcer_within_limit` ✅
+- `test_quota_enforcer_exceeded_raises_429` ✅ + rollback invariant
+- `test_quota_enforcer_multi_tenant_isolation` ✅
+- `test_quota_enforcer_record_usage_reconciles` ✅ (extra — covers delta up + delta down)
+- `test_quota_enforcer_resets_at_midnight` ✅ (TTL on key + UTC date in key)
+- `test_quota_enforcer_singleton_not_initialised_raises` ✅ (extra — strict accessor RuntimeError)
+
+**US-3 OnboardingTracker (4 tests)**:
+- `test_onboarding_tracker_advance_step` ✅
+- `test_onboarding_tracker_invalid_step_raises` ✅
+- `test_onboarding_tracker_is_complete_after_six_steps` ✅ (extra)
+- `test_onboarding_tracker_get_progress_partition` ✅ (extra — completed/pending split)
+
+DoD: 14/14 pass in 0.60s
+
+#### 2.6 Sanity checks ✅
+- pytest full: **1489 passed / 4 skipped / 0 fail** (1475 + 14 = 1489 — exceeds plan target 1483 by +6)
+- mypy --strict: **0 errors** (279 source files; +3 vs Day 1's 276 = plans + quota + onboarding)
+- 7 V2 lints: **7/7 green** (run from project root via `python scripts/lint/run_all.py`)
+- black + isort + flake8: clean (1 round of black auto-fmt + 3 E501 fixed in test_onboarding.py via typed `db_session: AsyncSession` annotation)
+- LLM SDK leak in `agent_harness/business_domain/platform_layer/core`: 0
+- `yaml` import in `plans.py:38` uses `# type: ignore[import-untyped, unused-ignore]` cross-platform pattern per `code-quality.md` (mirrors 4 other yaml callers)
+
+### Calibration update
+
+| Metric | Value |
+|--------|-------|
+| Sprint committed | 17 hr |
+| Day 0 actual | ~1 hr |
+| Day 1 actual | ~3.5 hr |
+| Day 2 actual | ~3.5 hr |
+| Cumulative | 8 hr / 17 hr = **47%** |
+| Day count | 2/5 = 40% baseline |
+| Pace | **+7% ahead** (consistent with Day 1) |
+
+`large multi-domain` 0.55 mult **on track**;Day 4 ratio prediction holds ~0.95-1.05 in band.
+
+### Remaining for Day 3
+
+- US-3 part 2: Onboarding API endpoints (GET status / POST advance / 6-point health check / auto-transition to ACTIVE)
+- US-4: FeatureFlag ORM + FeatureFlagsService + 5 unit + 1 integration
+- 3 integration US-3 tests + 5 unit US-4 + 1 integration US-4 = +9 tests
+- Day 3 estimate: ~4 hr per plan §Workload
+
+### Notes
+
+- 5 D-findings catalogued in Day 2 (D16-D20); cumulative Day 0-2 = **20 findings**
+- 2 Day 2 D-findings → Phase 56.x carryover ADs:
+  - **AD-QuotaEstimation-1** (D19): wire Cat 4 token counter pre-call to replace fixed 1000-token reservation
+  - **AD-QuotaPostCall-1** (D20): post-call reconciliation via LLMResponded event hook → call `record_usage(actual_tokens=X, reserved_tokens=settings.quota_estimated_tokens_per_call)`
+- D17 surfaces broader "infrastructure/cache stub from 49.2 never delivered" gap — candidate for the same future "Phase 56.x SaaS Stage 1 integration polish" sprint flagged Day 1
+- Solo-dev policy unchanged — Day 2 commit goes direct to feature branch with no special workflow
