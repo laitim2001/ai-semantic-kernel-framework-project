@@ -37,43 +37,48 @@
 
 ---
 
-## Day 1 — AD-Cat10-Wire-1 (chat router default-wire `run_with_verification`)
+## Day 1 — AD-Cat10-Wire-1 (chat router default-wire `run_with_verification` — Option E 2-mode post-D4+D5)
 
 ### Day 1 Pre-code reading (~15 min)
 
-- [ ] **Read `backend/src/api/v1/chat/router.py`** full file (~200+ lines) — identify L197 chat invoke + surrounding context (deps / fixtures / SSE generator)
-- [ ] **Read `backend/src/agent_harness/verification/correction_loop.py`** — confirm `run_with_verification` signature (54.1 shipped; pure plug-in)
-- [ ] **Read `backend/src/agent_harness/verification/__init__.py`** — confirm Cat 10 public API re-exports
+- [x] **Read `backend/src/api/v1/chat/router.py`** full file (270 lines) — wrap target = `_stream_loop_events()` L197, NOT `chat()` endpoint;`loop.run(session_id=..., user_input=..., trace_context=...)` direct call
+- [x] **Read `backend/src/agent_harness/verification/correction_loop.py`** — **D4 caught**:real signature uses `verifier_registry` (registry-based) + `agent_loop` param + NO `mode` param + `verifier_registry=None or empty` transparently delegates to `loop.run()` (54.1 backwards-compat)
+- [x] **Read `backend/src/agent_harness/verification/__init__.py`** — Cat 10 public API re-exports include `run_with_verification` + `VerifierRegistry` + `RulesBasedVerifier` ✓
 - [ ] **Read `backend/src/core/config.py`** existing settings pattern — choose pydantic Field pattern (mirror existing fields)
 
-### AD-Cat10-Wire-1 — Implementation
+### AD-Cat10-Wire-1 — Implementation (Option E 2-mode + always-call-wrapper)
 
-- [ ] **Add `CHAT_VERIFICATION_MODE` field to `core/config.py`**
-  - 3-mode `Literal["disabled", "shadow", "enforce"]`
-  - Default: `"disabled"` (backwards-compatible)
-  - Description: cite AD-Cat10-Wire-1 + 3-mode semantics
+- [ ] **Add `chat_verification_mode` field to `core/config.py`**
+  - **2-mode** `Literal["disabled", "enabled"]` (revised post-D4+D5)
+  - Default: `"disabled"` (backwards-compatible via `verifier_registry=None`)
+  - Description: cite AD-Cat10-Wire-1 + 2-mode semantics + always-call-wrapper rationale
   - Update file header MHist (per AD-Lint-3 1-line)
 - [ ] **Create `backend/src/api/v1/chat/_verifier_factory.py`**
-  - `build_default_verifier() -> Verifier` returning `RulesBasedVerifier(rules=[])`
+  - `build_default_verifier_registry() -> VerifierRegistry` returning `VerifierRegistry` with `RulesBasedVerifier(rules=[])` registered
   - File header per file-header-convention.md
-- [ ] **Edit `backend/src/api/v1/chat/router.py:~L197`**
-  - Branch on `settings.CHAT_VERIFICATION_MODE`:
-    - `"disabled"` → `event_iterator = loop.run(...)` (existing path)
-    - `"shadow"` / `"enforce"` → `event_iterator = run_with_verification(loop=loop, ..., verifier=build_default_verifier(), mode=...)`
-  - Preserve existing trace_context propagation
+- [ ] **Edit `backend/src/api/v1/chat/router.py` `_stream_loop_events()` L197**
+  - Always-call-wrapper pattern:
+    ```python
+    verifier_registry = build_default_verifier_registry() if settings.chat_verification_mode == "enabled" else None
+    async for event in run_with_verification(
+        agent_loop=loop, session_id=session_id, user_input=user_input,
+        trace_context=trace_context, verifier_registry=verifier_registry,
+        max_correction_attempts=2,
+    ):
+    ```
+  - Preserve existing serialize_loop_event + format_sse_message + LoopCompleted exit
   - Update file header MHist (per AD-Lint-3 1-line)
 
 ### AD-Cat10-Wire-1 — Tests
 
 - [ ] **Create `backend/tests/unit/api/v1/chat/test_verification_wire.py`**
-  - test_disabled_mode_passes_through (default settings → loop.run() called, run_with_verification NOT called)
-  - test_shadow_mode_wraps_loop (settings override → run_with_verification called with mode="shadow")
-  - test_enforce_mode_wraps_loop (settings override → run_with_verification called with mode="enforce")
-  - test_verifier_factory_default_no_op (build_default_verifier returns RulesBasedVerifier with empty rules)
-  - test_invalid_mode_raises (pydantic validation rejects unknown mode)
-  - DoD: 5/5 tests PASS
-- [ ] **Add 1 integration test** — `backend/tests/integration/api/test_chat_verification_smoke.py` (NEW) OR add to existing chat smoke file (Day 1 read decides)
-  - Mock chat session + 3-mode TestClient invocation → assert event stream + verifier behavior per mode
+  - test_disabled_mode_injects_none_registry (default settings → `verifier_registry=None` passed to wrapper → wrapper delegates to loop.run)
+  - test_enabled_mode_injects_populated_registry (settings override → `verifier_registry` populated with default RulesBasedVerifier)
+  - test_verifier_factory_default_contains_rules_based_no_op (factory returns VerifierRegistry with 1 RulesBasedVerifier with empty rules)
+  - test_invalid_mode_raises (pydantic Literal validation rejects unknown mode like "shadow")
+  - DoD: 4/4 tests PASS
+- [ ] **Add 1 integration test** — `backend/tests/integration/api/test_chat_verification_smoke.py` (NEW)
+  - 2-mode TestClient SSE smoke (disabled / enabled);assert event stream identical when disabled (byte-for-byte equiv to direct loop.run()) + VerificationPassed event present when enabled
   - DoD: 1 test PASS
 
 ### Day 1 Wrap
@@ -203,11 +208,11 @@
 
 | AD | Status | Tests Added | Commit |
 |----|--------|-------------|--------|
-| AD-Cat10-Wire-1 | ⏳ Day 1 pending | 0 → target 5 unit + 1 integration | — |
+| AD-Cat10-Wire-1 | ⏳ Day 1 pending (Option E 2-mode post-D4+D5) | 0 → target 4 unit + 1 integration | — |
 | AD-Cat10-Obs-Cat9Wrappers | ⏳ Day 2 pending | 0 → target 3 sentinel | — |
-| AD-Plan-3 (process; first application) | ✅ Day 0 ROI validated (D1+D2 caught) | — (process AD) | Day 0 commit |
+| AD-Plan-3 (process; first application) | ✅ Day 0 ROI validated (D1+D2 caught) + Day 1 morning extension (D4+D5 caught wrong-API drift) | — (process AD) | Day 0 + Day 1 commits |
 | AD-Sprint-Plan-5 (process; first refinement) | ⏳ Day 4 calibration | — (process AD) | Day 4 retro |
-| **Total** | **0/2 backend closed** | **+9 expected (5+1+3)** | — |
+| **Total** | **0/2 backend closed** | **+8 expected (4+1+3)** | — |
 
 ---
 

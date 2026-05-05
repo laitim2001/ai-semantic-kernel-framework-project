@@ -69,7 +69,71 @@
 
 ---
 
-## Day 1 — 2026-05-XX (pending)
+## Day 1 — 2026-05-05 (morning Pre-code reading + drift response)
+
+**Estimated**: ~3 hr (Day 1 full;morning ~30 min + impl ~2.5 hr)
+**Actual** (morning so far): ~30 min
+
+### Morning Pre-code Reading (3/4 files done; AD-Plan-3 catches 2 more drifts)
+
+- ✅ Read `backend/src/api/v1/chat/router.py` (270 lines) — wrap target = `_stream_loop_events()` L197 (helper function), NOT `chat()` endpoint directly
+- ✅ Read `backend/src/agent_harness/verification/correction_loop.py` — confirmed `run_with_verification` real signature
+- ✅ Read `backend/src/agent_harness/verification/__init__.py` — public API re-exports include `run_with_verification` + `VerifierRegistry` + `RulesBasedVerifier`
+- ⏳ Read `backend/src/core/config.py` — pending (Day 1 impl phase)
+
+### Drift findings — Day 1 morning extension (D4+D5 — AD-Plan-3 second application)
+
+| ID | Type | Finding |
+|----|------|---------|
+| **D4** | Wrong-API drift | `run_with_verification` real signature uses `verifier_registry: VerifierRegistry` (registry-based, NOT single `verifier: Verifier` as plan §Spec assumed) + `agent_loop` param + NO `mode` param + `max_correction_attempts` param. Real wrapper is **2-mode by-design** (registry-presence dispatch); no shadow mode supported. Plan §Risks anticipated this risk ("Day 1 read correction_loop.py:run_with_verification to confirm signature first") — caught at exact intended checkpoint |
+| **D5** | Call-site drift | Wrap target is `_stream_loop_events()` helper at L197 (inside async generator), NOT `chat()` endpoint directly. Doesn't change scope but clarifies edit location |
+
+### Selection E approved by user 2026-05-05
+
+User approved **Option E (Simplify to 2-mode)**:
+- `disabled` (default) → inject `verifier_registry=None` → wrapper transparently delegates to `loop.run()` per `correction_loop.py:99-106` (54.1 backwards-compat preserved byte-for-byte)
+- `enabled` → inject populated `VerifierRegistry` containing `RulesBasedVerifier(rules=[])` → wrapper runs verifiers + self-correction (max 2 attempts)
+
+**Rationale**:
+1. Audit cycle 紀律 (no 17.md §Cat 10 contract change; no wrapper API extension)
+2. Always-call-wrapper pattern is cleaner than `if/else` branch (single call site)
+3. Backwards-compat preserved via wrapper's existing empty-registry short-circuit logic
+4. Calibration evidence preserved (4 unit + 1 integration + 3 sentinel = +8 tests; target +6 still hit)
+
+Rejected: Option F (extend wrapper API → +1 hr, violates audit cycle 紀律 + 17.md change) / Option G (router-level shadow event filter → +0.5 hr, fragile maintenance).
+
+### Plan + Checklist revisions (this commit)
+
+Per AD-Plan-1 audit-trail rule (no silent updates): drift response committed separately with explicit rationale + scope change documented.
+
+- `sprint-55-5-plan.md`:
+  - §Sprint Goal — 3-mode → 2-mode + Plan revision history added
+  - §AD-Cat10-Wire-1 Acceptance — 2-mode bullets;always-call-wrapper rationale
+  - §Technical Specifications — code blocks rewritten for `verifier_registry` API + always-call-wrapper pattern
+  - §Acceptance Criteria — 2-mode + 4 unit + 1 integration (was 4-5 + 1 with 3-mode)
+  - §Day-by-Day Plan Day 1 — revised test names + counts
+- `sprint-55-5-checklist.md`:
+  - Day 1 implementation bullets — `chat_verification_mode` (lowercase per existing settings), 2-mode Literal, always-call-wrapper code block
+  - Day 1 test bullets — 4 unit + 1 integration with revised names
+  - Tracker — target +8 tests (was +9)
+
+### Tomorrow morning (Day 1 impl phase)
+
+- Read `core/config.py` settings pattern (~5 min)
+- Add `chat_verification_mode` field
+- Create `_verifier_factory.py` with `build_default_verifier_registry()`
+- Edit `router.py:_stream_loop_events()` L197 always-call-wrapper
+- Write 4 unit tests in `tests/unit/api/v1/chat/test_verification_wire.py`
+- Write 1 integration test in `tests/integration/api/test_chat_verification_smoke.py`
+- Lint chain + commit + push
+
+### Open questions
+
+- (None at this drift response commit; Selection E unblocks Day 1 impl phase)
+
+---
+
+## Day 2 — 2026-05-XX (pending)
 
 _(to be filled in)_
 

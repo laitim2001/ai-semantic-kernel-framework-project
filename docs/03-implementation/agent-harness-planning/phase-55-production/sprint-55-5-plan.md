@@ -19,7 +19,11 @@
 
 ## Sprint Goal
 
-Wire `run_with_verification(loop, verifier=...)` into chat router (AD-Cat10-Wire-1) with 3-mode `CHAT_VERIFICATION_MODE` feature flag (disabled/shadow/enforce), and validate Cat 9 wrappers' D19 reuse-inner-tracer design (AD-Cat10-Obs-Cat9Wrappers) — closing 2 of 4 Cat 10 backend audit ADs in audit cycle Mini-Sprint #3 narrow scope (Option A approved by user 2026-05-05).
+Wire `run_with_verification(agent_loop=..., verifier_registry=...)` into chat router (AD-Cat10-Wire-1) with **2-mode** `CHAT_VERIFICATION_MODE` feature flag (`disabled`/`enabled`; **D4+D5 drift response — Option E approved 2026-05-05**), and validate Cat 9 wrappers' D19 reuse-inner-tracer design (AD-Cat10-Obs-Cat9Wrappers) — closing 2 of 4 Cat 10 backend audit ADs in audit cycle Mini-Sprint #3 narrow scope (Option A approved by user 2026-05-05).
+
+> **Plan revision history**:
+> - 2026-05-05 (Day 0): Initial 3-mode design (disabled/shadow/enforce)
+> - 2026-05-05 (Day 1 pre-code): **D4+D5 drift discovered** — `run_with_verification` real signature uses `verifier_registry` (registry-based, not single verifier) + no `mode` param + always-call-wrapper supports backwards-compat via empty registry. **Plan revised to 2-mode** (Option E) per audit cycle 紀律 (minimal scope; no 17.md §Cat 10 contract change).
 
 ---
 
@@ -64,14 +68,14 @@ This sprint also serves as:
 - **Real chat invoke at `router.py:197` is `async for event in loop.run(...)` — completely unwired** (D3: `run_with_verification` is shipped 54.1 + verification module re-exports; just unwired at chat invocation point)
 - Scope = pure plug-in at router.py:197 + `CHAT_VERIFICATION_MODE` feature flag (3-mode) + default verifier choice (RulesBasedVerifier with empty rules as no-op default; configurable)
 
-**Acceptance**:
-- `router.py` chat invoke wraps `loop.run()` via `run_with_verification(loop, ..., verifier=verifier)` when `CHAT_VERIFICATION_MODE != "disabled"`
-- 3-mode feature flag: `disabled` (default; pass-through;no-op), `shadow` (run wrapper, log failure but do not block), `enforce` (run wrapper, raise on failure)
-- Verifier injection via factory pattern (mirror 55.1 BusinessServiceFactory)
-- Default verifier when wired: `RulesBasedVerifier(rules=[])` (no-op behavior) — caller can override
-- 4-5 unit tests + 1 integration test (chat router smoke: disabled / shadow / enforce)
-- Backwards-compatible: production default `disabled` → existing behavior preserved
-- 17.md §2.1 ChatClient ABC + Cat 10 contracts unchanged (no new dataclass, no schema change)
+**Acceptance** (revised post-D4+D5 — Option E 2-mode):
+- `_stream_loop_events()` at L197 wraps `loop.run()` via `run_with_verification(agent_loop=loop, verifier_registry=registry_or_none, ...)` (always-call-wrapper pattern)
+- **2-mode** feature flag: `disabled` (default; injects `verifier_registry=None` → wrapper transparently delegates to `loop.run()` per existing 54.1 behavior), `enabled` (injects populated registry → wrapper runs verifiers + self-correction max 2)
+- Registry injection via factory pattern (mirror 55.1 BusinessServiceFactory)
+- Default registry when wired: `VerifierRegistry` containing `RulesBasedVerifier(rules=[])` (no-op rules; caller can extend; emits VerificationPassed events for observability without blocking)
+- 4 unit tests + 1 integration test (chat router smoke: disabled / enabled paths)
+- Backwards-compatible: production default `disabled` → existing behavior preserved (`verifier_registry=None` short-circuits to direct `loop.run()` per `correction_loop.py:99-106`)
+- 17.md §2.1 ChatClient ABC + Cat 10 contracts unchanged (no new dataclass, no schema change, no wrapper API extension)
 
 ### AD-Cat10-Obs-Cat9Wrappers — Validate D19 Reuse-Inner-Tracer Design
 
@@ -107,55 +111,55 @@ This sprint also serves as:
 
 ## Technical Specifications
 
-### AD-Cat10-Wire-1 Implementation
+### AD-Cat10-Wire-1 Implementation (revised post-D4+D5 — Option E 2-mode + always-call-wrapper)
 
-**File**: `backend/src/api/v1/chat/router.py`
+**File**: `backend/src/api/v1/chat/router.py` (edit `_stream_loop_events()` at L197)
 
 ```python
 # Sprint 55.5 — wire run_with_verification (Cat 10 default-wire per AD-Cat10-Wire-1)
 # Mode determined by CHAT_VERIFICATION_MODE env var:
-#   - "disabled" (default): pass-through to loop.run() (existing behavior)
-#   - "shadow":  wrap with run_with_verification; on verification failure,
-#                log + emit VerificationFailed event but do NOT block correction
-#   - "enforce": wrap with run_with_verification; on verification failure,
-#                trigger correction loop (run_with_verification's existing behavior)
+#   - "disabled" (default): inject verifier_registry=None → wrapper transparently
+#                           delegates to loop.run() per correction_loop.py:99-106
+#                           (existing 54.1 behavior; backwards-compatible)
+#   - "enabled":            inject populated VerifierRegistry → full verify +
+#                           self-correction loop (max 2 attempts; existing 54.1 wrapper)
 
-from agent_harness.verification import RulesBasedVerifier, run_with_verification
-from core.config import settings
+from agent_harness.verification import run_with_verification
+from core.config import get_settings
+from ._verifier_factory import build_default_verifier_registry
 
-verification_mode = settings.CHAT_VERIFICATION_MODE  # "disabled" | "shadow" | "enforce"
+settings = get_settings()
+verification_mode = settings.chat_verification_mode  # "disabled" | "enabled"
 
-if verification_mode == "disabled":
-    event_iterator = loop.run(
-        messages=...,
-        tools=...,
-        trace_context=...,
-    )
-else:
-    verifier = _build_default_verifier()  # RulesBasedVerifier(rules=[]) by default
-    event_iterator = run_with_verification(
-        loop=loop,
-        messages=...,
-        tools=...,
-        verifier=verifier,
-        mode=verification_mode,  # "shadow" or "enforce"
-        trace_context=...,
-    )
+verifier_registry = (
+    build_default_verifier_registry() if verification_mode == "enabled" else None
+)
 
-async for event in event_iterator:
-    yield event
+# Replace existing `loop.run(...)` with always-call-wrapper pattern.
+# When verifier_registry is None, wrapper transparently delegates → byte-for-byte
+# identical event stream as direct loop.run() (existing path preserved).
+async for event in run_with_verification(
+    agent_loop=loop,  # type: ignore[arg-type]
+    session_id=session_id,
+    user_input=user_input,
+    trace_context=trace_context,
+    verifier_registry=verifier_registry,
+    max_correction_attempts=2,
+):
+    ...  # existing serialize_loop_event + format_sse_message yield
 ```
 
 **File**: `backend/src/core/config.py`
 
 ```python
 # Sprint 55.5 — Cat 10 verification mode (AD-Cat10-Wire-1)
-CHAT_VERIFICATION_MODE: Literal["disabled", "shadow", "enforce"] = Field(
+chat_verification_mode: Literal["disabled", "enabled"] = Field(
     default="disabled",
     description=(
         "Cat 10 verification wiring at chat router. "
-        "'disabled' = pass-through (default); 'shadow' = log failures, don't block; "
-        "'enforce' = trigger correction loop on failure."
+        "'disabled' = inject verifier_registry=None (wrapper transparently delegates "
+        "to loop.run; existing behavior). 'enabled' = inject populated VerifierRegistry "
+        "(wrapper runs verifiers + self-correction max 2 per Sprint 54.1 spec)."
     ),
 )
 ```
@@ -165,19 +169,28 @@ CHAT_VERIFICATION_MODE: Literal["disabled", "shadow", "enforce"] = Field(
 ```python
 """
 File: backend/src/api/v1/chat/_verifier_factory.py
-Purpose: Build default Cat 10 verifier for chat router wiring per AD-Cat10-Wire-1.
+Purpose: Build default Cat 10 VerifierRegistry for chat router wiring per AD-Cat10-Wire-1.
 Category: API / Cat 10 wiring (delegates to agent_harness.verification owner)
 Created: 2026-05-05 (Sprint 55.5)
 Last Modified: 2026-05-05
 
 Modification History (newest-first):
-    - 2026-05-05: Initial creation (Sprint 55.5) — Cat 10 chat router wiring per AD-Cat10-Wire-1
+    - 2026-05-05: Initial creation (Sprint 55.5) — Cat 10 chat router 2-mode wiring per AD-Cat10-Wire-1 (Option E post-D4+D5)
 """
-from agent_harness.verification import RulesBasedVerifier, Verifier
+from agent_harness.verification import RulesBasedVerifier, VerifierRegistry
 
-def build_default_verifier() -> Verifier:
-    """Default no-op verifier; production callers can override via injection."""
-    return RulesBasedVerifier(rules=[])
+
+def build_default_verifier_registry() -> VerifierRegistry:
+    """Default registry with no-op RulesBasedVerifier (rules=[]).
+
+    No-op rules emit VerificationPassed events without blocking; production callers
+    extend the registry via additional verifiers. This is intentionally minimal
+    so 'enabled' mode is safe to flip in production without behavior change beyond
+    extra observability.
+    """
+    registry = VerifierRegistry()
+    registry.register(RulesBasedVerifier(rules=[]))
+    return registry
 ```
 
 ### AD-Cat10-Obs-Cat9Wrappers Implementation
@@ -226,10 +239,10 @@ Modification History (newest-first):
 
 ## Acceptance Criteria
 
-- [ ] AD-Cat10-Wire-1: router.py:197 wraps loop.run via run_with_verification when mode != disabled
-- [ ] AD-Cat10-Wire-1: 3-mode feature flag CHAT_VERIFICATION_MODE in core.config (default "disabled")
-- [ ] AD-Cat10-Wire-1: 4-5 unit tests + 1 integration test (chat router smoke: disabled / shadow / enforce)
-- [ ] AD-Cat10-Wire-1: Backwards-compatible — production default `disabled` preserves existing behavior
+- [ ] AD-Cat10-Wire-1: `_stream_loop_events()` at L197 wraps `loop.run()` via always-call-wrapper `run_with_verification(verifier_registry=None_or_populated)` (per Option E post-D4+D5)
+- [ ] AD-Cat10-Wire-1: **2-mode** feature flag `chat_verification_mode` in core.config (default `"disabled"` — backwards-compat via empty registry; `"enabled"` — populated registry)
+- [ ] AD-Cat10-Wire-1: 4 unit tests + 1 integration test (chat router smoke: disabled / enabled paths)
+- [ ] AD-Cat10-Wire-1: Backwards-compatible — production default `"disabled"` injects `verifier_registry=None` → wrapper transparently delegates to `loop.run()` per `correction_loop.py:99-106` 54.1 behavior (byte-for-byte event stream identical)
 - [ ] AD-Cat10-Obs-Cat9Wrappers: Decision documented (KEEP reuse-inner; no double instrumentation)
 - [ ] AD-Cat10-Obs-Cat9Wrappers: Docstring sections in cat9_fallback.py + cat9_mutator.py with D19 reference
 - [ ] AD-Cat10-Obs-Cat9Wrappers: Sentinel test enforces wrapper produces 1 span per invocation
@@ -256,19 +269,18 @@ Modification History (newest-first):
 - Day 0 progress.md entry
 - Commit Day 0 + push
 
-### Day 1 — AD-Cat10-Wire-1 Implementation (~3 hr)
+### Day 1 — AD-Cat10-Wire-1 Implementation (~3 hr; revised post-D4+D5 Option E 2-mode)
 
-- Add `CHAT_VERIFICATION_MODE` to `core/config.py`
-- Create `backend/src/api/v1/chat/_verifier_factory.py` with `build_default_verifier()`
-- Edit `router.py:197` to dispatch on verification mode
-- Add 4-5 unit tests in new `tests/unit/api/v1/chat/test_verification_wire.py`:
-  - test_disabled_mode_passes_through
-  - test_shadow_mode_wraps_loop
-  - test_enforce_mode_wraps_loop
-  - test_verifier_factory_default_no_op
-  - test_invalid_mode_raises (config validation)
-- Add 1 integration test in existing `tests/integration/api/test_chat_smoke.py` or NEW file:
-  - test_chat_router_verification_smoke (3 modes via TestClient)
+- Add `chat_verification_mode: Literal["disabled", "enabled"]` to `core/config.py` (lowercase per existing settings convention)
+- Create `backend/src/api/v1/chat/_verifier_factory.py` with `build_default_verifier_registry() -> VerifierRegistry`
+- Edit `router.py:_stream_loop_events()` at L197 — replace direct `loop.run(...)` with always-call-wrapper `run_with_verification(agent_loop=loop, ..., verifier_registry=registry_or_none)` pattern
+- Add 4 unit tests in new `tests/unit/api/v1/chat/test_verification_wire.py`:
+  - test_disabled_mode_injects_none_registry
+  - test_enabled_mode_injects_populated_registry
+  - test_verifier_factory_default_contains_rules_based_no_op
+  - test_invalid_mode_raises (pydantic Literal validation)
+- Add 1 integration test in `tests/integration/api/test_chat_verification_smoke.py` (NEW):
+  - test_chat_router_verification_smoke (2 modes via TestClient SSE; assert event stream identical when disabled)
 - Lint chain: black + isort + flake8 + mypy strict + 7 V2 lints
 - Commit + push
 - Day 1 progress.md entry
