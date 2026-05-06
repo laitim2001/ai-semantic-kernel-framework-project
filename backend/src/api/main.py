@@ -51,6 +51,7 @@ from typing import AsyncIterator
 
 from fastapi import FastAPI
 
+from api.v1.admin.cost_summary import router as admin_cost_summary_router
 from api.v1.admin.sla_reports import router as admin_sla_reports_router
 from api.v1.admin.tenants import router as admin_tenants_router
 from api.v1.audit import router as audit_router
@@ -101,6 +102,7 @@ def create_app() -> FastAPI:
     app.include_router(governance_router, prefix="/api/v1")
     app.include_router(admin_tenants_router, prefix="/api/v1")
     app.include_router(admin_sla_reports_router, prefix="/api/v1")
+    app.include_router(admin_cost_summary_router, prefix="/api/v1")
 
     return app
 

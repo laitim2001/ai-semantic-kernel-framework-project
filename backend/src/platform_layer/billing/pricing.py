@@ -139,6 +139,11 @@ def get_pricing_loader() -> PricingLoader:
     return _loader
 
 
+def maybe_get_pricing_loader() -> PricingLoader | None:
+    """FastAPI Depends accessor (lenient — returns None if uninitialised)."""
+    return _loader
+
+
 def set_pricing_loader(loader: PricingLoader | None) -> None:
     """Install singleton (app startup or tests fixture)."""
     global _loader
@@ -156,6 +161,7 @@ __all__ = [
     "PricingLoader",
     "ToolPricing",
     "get_pricing_loader",
+    "maybe_get_pricing_loader",
     "reset_pricing_loader",
     "set_pricing_loader",
 ]

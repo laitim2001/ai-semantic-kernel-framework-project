@@ -169,3 +169,41 @@ Per checklist Day 3 — US-3 CostLedgerService + US-4 auto-record hooks:
 4. Tool dispatcher post-execute hook (US-4 tool hook — **D4** decision: use existing `ToolCallExecuted` event in events.py:131,no new event needed)
 5. 2 unit US-3 (CostLedgerService) + 1 integration US-3 + 5 unit US-4 + 1 integration US-4 = +9 new tests
 6. Day 3 sanity (mypy / lints / pytest 1547 → 1556)
+
+---
+
+## Day 3 — US-3 CostLedgerService + US-4 auto-record hooks ✅ (2026-05-06)
+
+### Implementation summary
+
+| Step | Outcome |
+|------|---------|
+| 3.1 CostLedgerService | `platform_layer/billing/cost_ledger.py` (~250 LOC) — `record_llm_call` (single combined entry per Day 3 simplification — input/output split deferred AD-Cost-Ledger-Token-Split candidate;cached portion uses cached_input pricing) + `record_tool_call` (per-call entry) + `aggregate(month) -> AggregatedUsage` (SUM grouped by cost_type+sub_type with month boundary filter);set/get/maybe_get/reset hooks mirror QuotaEnforcer pattern |
+| 3.2 cost_summary endpoint | `api/v1/admin/cost_summary.py` GET endpoint with `require_admin_platform_role`;Pydantic AggregatedSliceResponse / CostSummaryResponse;registered in `api/main.py` as `admin_cost_summary_router` |
+| 3.3 Chat router LLM hook (US-4) | `_stream_loop_events` LoopCompleted observer extended after 56.3 SLA hook → `cost_ledger.record_llm_call(provider="azure_openai", model="gpt-5.4", total_tokens=event.total_tokens, session_id)` per **D2** simplification (default attribution;real metadata via AD-Cost-Ledger-Provider-Attribution Phase 56.x);best-effort failure pattern |
+| 3.4 Tool hook (US-4) | `_stream_loop_events` ToolCallExecuted observer (per **D4** verified — event already exists at events.py:131) → `cost_ledger.record_tool_call(tool_name, session_id)`;best-effort pattern |
+| 3.5 Tests | 2 unit US-3 (test_cost_ledger_service.py) + 5 unit US-4 (test_cost_ledger_us4.py) + 1 integration US-3 (test_admin_cost_summary.py) + 1 integration US-4 (test_chat_cost_ledger.py) = **+9 cumulative** matches plan target |
+| 3.6 Sanity | mypy 0/293 ✅ / black + isort + flake8 clean ✅ / 8 V2 lints 8/8 ✅ / pytest 1547 → **1556** ✅ +9 (exact match plan target) |
+
+### D-finding follow-ups within Day 3
+
+- **D2 (LoopCompleted missing input/output_tokens)** — applied path (b) **estimate via Cat 4 deferred / single-entry record**: chose simplification — record one ledger entry per LoopCompleted with combined `total_tokens`;document AD-Cost-Ledger-Token-Split (Phase 56.x) for input/output split + AD-Cost-Ledger-Provider-Attribution (Phase 56.x) for real provider/model metadata
+- **D4 (ToolCallExecuted exists)** — confirmed at events.py:131;US-4 wires via `isinstance(event, ToolCallExecuted)` observer block;no new event class added (saves 1 hr scope per Day 0 catalog)
+- 0 new D-findings introduced during Day 3 implementation
+
+### Net scope status
+
+- Day 3 actual time: ~3.5 hr (plan bottom-up 9 hr → calibrated 4.95 hr;under target by 1.45 hr — well in band)
+- Sprint cumulative: ~10 hr / ~13 hr commit (77%)
+- pytest delta: 1547 → 1556 (+9 new = 2 unit US-3 + 5 unit US-4 + 1 integration US-3 + 1 integration US-4);cumulative target 1530 → 1555 (+25);Day 1+2+3 contributes 26/25 (104% — over target by 1)
+
+### Day 4 plan (next)
+
+Per checklist Day 4 — US-5 Closeout Ceremony:
+1. Cross-AD e2e integration test `test_phase56_3_e2e.py` (provision RBAC + onboard + chat with quota reconcile from 56.2 + SLA span from US-1 + Cost Ledger entries from US-4 visible end-to-end)
+2. Final pytest + 8 V2 lints + LLM SDK leak verify
+3. retrospective.md (6 必答 + AD-Sprint-Plan-4 large multi-domain 2nd app calibration verify + AD-Plan-4-Schema-Grep verdict)
+4. Memory snapshot `memory/project_phase56_3_sla_monitor_cost_ledger.md`
+5. Open PR → CI green → solo-dev squash merge to main
+6. Closeout PR (SITUATION-V2 §9 + CLAUDE.md + memory MEMORY.md index)
+7. Final push + Phase 56-58 SaaS Stage 1 3/3 ceremony note
