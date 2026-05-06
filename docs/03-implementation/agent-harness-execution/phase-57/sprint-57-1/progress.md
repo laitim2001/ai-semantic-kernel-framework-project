@@ -205,3 +205,59 @@ Day 2 = SLA Dashboard implementation:
 
 Day 1 完成 ✅ — Day 2 SLA Dashboard 啟動條件具備。
 
+---
+
+## Day 2 — 2026-05-06
+
+### US-3 SLA Dashboard deliverables ✅
+
+**Files created**:
+1. `frontend/src/features/sla-dashboard/services/slaService.ts` — `fetchSLAReport(tenantId, month)` mirror costService(per Day 0 D6 plain fetch)
+2. `frontend/src/features/sla-dashboard/store/slaStore.ts` — Zustand store mirror costStore(currentMonth / data / loading / error;setMonth / loadData / reset)
+3. `frontend/src/features/sla-dashboard/components/SLAMetricsCard.tsx` — single metric card with pass-fail color rule;`mode="gte"`(higher is better — availability)/ `mode="lte"`(lower is better — latency p99);null value → "no data" muted display
+4. `frontend/src/features/sla-dashboard/components/SLAOverview.tsx` — 主容器(MonthPicker imports from cost-dashboard per Day 0 D — features/shared 不存在)+ violations badge + 6 SLAMetricsCard(availability + api_p99 + 3 loop_p99 + hitl_queue_notif_p99)+ tier threshold fallback Standard 99.5% per D10
+5. `frontend/src/pages/sla-dashboard/index.tsx` — wildcard route wrapper
+
+**Tier threshold logic**(per Day 0 D10 Option C — frontend 無 tenant.plan access):
+- Availability:fallback Standard 99.5%(Enterprise 99.9% deferred — Day 0 D10)
+- Latency p99 thresholds(sensible defaults):API 1000ms / loop_simple 5000ms / loop_medium 30000ms / loop_complex 120000ms / hitl_queue_notif 60000ms
+
+**5 unit tests**(plan 期望 2,actual 5 因為 SLAMetricsCard 需 cover gte/lte/null × 多 case):
+- `tests/unit/sla-dashboard/slaStore.test.ts` — 3 tests(success / error / setMonth clear)
+- `tests/unit/sla-dashboard/SLAMetricsCard.test.tsx` — 5 tests(gte PASS / gte FAIL / lte PASS / lte FAIL / null no-data)
+
+### Day 2 sanity checks ✅
+
+| 檢查 | 結果 |
+|------|------|
+| Vitest run | **5 files / 15 tests passed / 1.10s**(Day 1 = 3/7,Day 2 = 5/15)✅ |
+| Frontend lint | **0 errors** ✅ |
+| Frontend build | **52 modules / 188KB → gzip 60.70KB / 569ms** ✅(注:cost-dashboard + sla-dashboard 尚未在 App.tsx 註冊 → tree-shaken;Day 3 整合)|
+| Backend baseline 不動 | pytest 1557 / mypy 0/293 / 8 V2 lints 8/8 / LLM SDK leak 0 |
+
+### Day 2 D-findings 補充
+
+**D17** — Plan §US-3 期望 2 unit tests,actual 5 個。原因:SLAMetricsCard pass-fail color rule 有 4 個 logical case(gte pass / gte fail / lte pass / lte fail)+ null value display;split 細案 cover edge behaviors。Bonus coverage 不違反 scope。
+
+**D18** — SLA tier threshold 暫用 Standard 99.5% fallback;Enterprise 99.9% upgrade defer 至 Phase 57+ candidate sprint(需 backend expose tenant.plan field for client OR add `?tier=enterprise` query support)。Plan §Out of Scope 已含「tier-aware threshold per-tenant lookup」 — Day 2 actual 與 plan 一致。
+
+### Day 3 Plan(US-4 Routing + App Integration + Buffer)
+
+Day 3 = App.tsx 整合 + Home nav + manual smoke + buffer:
+1. **App.tsx wildcard routes** — add `/cost-dashboard/*` + `/sla-dashboard/*` Route entries
+2. **Home page nav** — add 2 `<Link>` entries(per D10 Option C — 無 role gate;always visible)
+3. **App.tsx file header MHist** bump per AD-Lint-3 1-line max
+4. **Manual smoke test** — start dev server + browse `/cost-dashboard?tenant_id=xxx&` → verify network call to `/api/v1/admin/tenants/{id}/cost-summary`
+5. **Buffer** — Day 1+Day 2 follow-ups + e2e fixture pre-stage(若 admin auth fixture 不存在)
+
+### Day 2 stats summary
+
+- Files created:7(5 src + 2 test files)
+- Tests:Day 1 7 + Day 2 8 = **15 unit tests** total passed
+- Frontend lint + build:clean
+- Day 2 commit:1 pending(US-3 implementation)
+- Backend baseline:unchanged(frontend-only sprint)
+
+Day 2 完成 ✅ — Day 3 整合啟動條件具備。
+
+
