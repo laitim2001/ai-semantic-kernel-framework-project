@@ -92,3 +92,43 @@ Per checklist Day 1 — US-1 SLA Metric Recorder:
 5. Chat router LoopCompleted observer extension (after 56.2 quota.record_usage → sla_recorder.record_loop_completion)
 6. 5 unit tests + 1 integration test (fakeredis)
 7. Day 1 sanity (mypy / lints / pytest 1530+6=1536)
+
+---
+
+## Day 1 — US-1 SLA Metric Recorder ✅ (2026-05-06)
+
+### Implementation summary
+
+| Step | Outcome |
+|------|---------|
+| 1.1 SLAMetricRecorder class | `platform_layer/observability/sla_monitor.py` (250 LOC) — 4 record methods + 3 p99 query methods + ZADD/ZREMRANGEBYSCORE epoch-index sliding window pattern |
+| 1.2 Loop complexity classifier | `classify_loop_complexity(LoopCompleted)` — D2 limitation documented (only `total_turns` + `total_tokens` available;tool_calls / subagent count deferred to Phase 56.x AD-Cat10-Cat11-LoopMetricsAccumulator candidate);off-spec / negative → conservative "complex" |
+| 1.3 FastAPI dep | `set_sla_recorder` / `get_sla_recorder` (strict) / `maybe_get_sla_recorder` (lenient) / `reset_sla_recorder` (test hook) — mirrors 56.1 QuotaEnforcer pattern;conftest.py autouse fixture renamed `_reset_module_singletons` (was `_reset_governance_singletons`) and now resets ServiceFactory + SLAMetricRecorder |
+| 1.4 Chat router observer | `api/v1/chat/router.py` add `Depends(maybe_get_sla_recorder)` + `chat_start_time = time.monotonic()` + LoopCompleted observer extension records loop latency in complexity bucket;best-effort pattern (failure does not break SSE per 56.2 reconcile pattern) |
+| 1.5 Tests | 5 unit (test_sla_monitor.py) + 1 integration (test_chat_sla_recording.py) |
+| 1.6 Sanity | mypy 0/285 / black + isort + flake8 clean / 8 V2 lints 8/8 / pytest 1530 → **1536 (+6)** ✅ exact target |
+
+### D-finding follow-ups within Day 1
+
+- **D2 (LoopCompleted missing fields)** — classifier limitation explicitly documented in sla_monitor.py L83-92;tool_calls / subagent count deferred to future LoopMetricsAccumulator AD;classifier conservative fallback ensures SLA accountability
+- **D7 (require_admin_platform_role baseline)** — not used Day 1;US-2 + US-3 endpoints will consume Day 2-3
+- 0 new D-findings during Day 1 implementation (plan §Tech Spec assumptions held)
+
+### Net scope status
+
+- Day 1 actual time: ~3 hr (plan bottom-up 6 hr → calibrated 3.3 hr;under target by 0.3 hr — well in band)
+- Sprint cumulative: ~3 hr / ~13 hr commit (23%)
+- pytest delta: 1530 → 1536 (+6 new = 5 unit + 1 integration);cumulative target 1530 → 1555 (+25);Day 1 contributes 24% to that target
+
+### Day 2 plan (next)
+
+Per checklist Day 2 — US-2 SLA Monthly Report + US-3 Cost Ledger DB schema (joint day):
+1. `infrastructure/db/models/sla.py` SLAViolation + SLAReport ORM
+2. `infrastructure/db/models/cost_ledger.py` CostLedger ORM
+3. **Alembic 0016_sla_and_cost_ledger.py** (per Day 0 D1 — head moved from 0015) migration with 3 tables + RLS + indexes
+4. `SLAReportGenerator.generate_monthly_report` method
+5. `api/v1/admin/sla_reports.py` GET endpoint
+6. `platform_layer/billing/__init__.py` + `pricing.py` PricingLoader
+7. `config/llm_pricing.yml` initial entries
+8. 4 unit US-2 + 2 integration US-2 + 3 unit US-3 (PricingLoader)
+9. Day 2 sanity (含 check_rls_policies on 3 new tables)
