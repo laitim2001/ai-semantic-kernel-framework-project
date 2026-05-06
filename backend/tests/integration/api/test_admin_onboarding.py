@@ -6,7 +6,7 @@ Scope: Sprint 56.1 / Day 3 / 3 integration US-3 tests per checklist 3.3.
 
 Description:
     Mounts the admin tenants router on a minimal FastAPI app with:
-      - require_admin_token override (noop)
+      - require_admin_platform_role override (returns stub user_id; no role check)
       - get_db_session override (yields the per-test db_session)
     Exercises the full provisioning + onboarding lifecycle:
       - test_onboarding_full_6_step_flow — seeds admin role + api_key so the
@@ -30,11 +30,11 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.v1.admin.tenants import require_admin_token
 from api.v1.admin.tenants import router as admin_tenants_router
 from infrastructure.db.models.api_keys import ApiKey
 from infrastructure.db.models.identity import Role, Tenant, TenantState, User, UserRole
 from infrastructure.db.session import get_db_session
+from platform_layer.identity.auth import require_admin_platform_role
 from tests.conftest import seed_tenant
 
 pytestmark = pytest.mark.asyncio
@@ -44,13 +44,15 @@ def _build_app(db_session: AsyncSession) -> FastAPI:
     app = FastAPI()
     app.include_router(admin_tenants_router, prefix="/api/v1")
 
-    async def _override_admin() -> None:
-        return None
+    async def _override_admin() -> UUID:
+        # Sprint 56.2 US-4 — require_admin_platform_role returns user_id;
+        # tests stub a fixed UUID since these endpoints don't consume user_id.
+        return UUID("00000000-0000-0000-0000-000000000001")
 
     async def _override_session() -> AsyncIterator[AsyncSession]:
         yield db_session
 
-    app.dependency_overrides[require_admin_token] = _override_admin
+    app.dependency_overrides[require_admin_platform_role] = _override_admin
     app.dependency_overrides[get_db_session] = _override_session
     return app
 

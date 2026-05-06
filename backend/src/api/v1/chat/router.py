@@ -38,6 +38,8 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-06: Sprint 56.2 Day 2 — quota pre-call estimate + post-call reconcile (US-2 + US-3)
+    - 2026-05-06: Sprint 56.2 Day 1 — real Tracer wired (closes AD-Cat12-BusinessObs)
     - 2026-05-06: Sprint 56.1 Day 2 — pre-stream QuotaEnforcer.check_and_reserve gate (US-2)
     - 2026-05-05: Sprint 55.5 Day 1 — wire run_with_verification at L197 (AD-Cat10-Wire-1; Option E)
     - 2026-05-04: Sprint 55.2 — BusinessServiceFactory per-request wiring (AD-BizDomain-1)
@@ -67,6 +69,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_harness._contracts import LoopCompleted, TraceContext
+from agent_harness.observability._abc import Tracer
 from agent_harness.verification import run_with_verification
 from business_domain._service_factory import BusinessServiceFactory
 from core.config import get_settings
@@ -76,6 +79,7 @@ from platform_layer.governance.service_factory import (
     get_service_factory,
 )
 from platform_layer.identity import get_current_tenant
+from platform_layer.observability import get_tracer
 from platform_layer.tenant.quota import (
     QuotaEnforcer,
     QuotaExceededError,
@@ -99,6 +103,7 @@ async def chat(
     factory: ServiceFactory = Depends(get_service_factory),
     db: AsyncSession = Depends(get_db_session),
     quota_enforcer: QuotaEnforcer | None = Depends(maybe_get_quota_enforcer),
+    tracer: Tracer = Depends(get_tracer),
 ) -> StreamingResponse:
     """Run an agent loop and stream LoopEvents as SSE.
 
@@ -125,14 +130,22 @@ async def chat(
 
     # Sprint 56.1 Day 2 (US-2): pre-stream daily token quota gate.
     # Off by default; enabled via env QUOTA_ENFORCEMENT_ENABLED=true after
-    # Redis client is wired at app startup (api/main.py). Post-call
-    # reconciliation deferred to Phase 56.x (AD-QuotaPostCall-1).
+    # Redis client is wired at app startup (api/main.py).
+    # Sprint 56.2 Day 2 (US-2 + US-3 — closes AD-QuotaEstimation-1 +
+    # AD-QuotaPostCall-1): replace fixed 1000-token reservation with
+    # message-length heuristic; post-call reconciliation in
+    # _stream_loop_events releases over-reservation when LoopCompleted fires.
+    estimated_tokens = 0
     if settings.quota_enforcement_enabled and quota_enforcer is not None:
+        estimated_tokens = quota_enforcer.estimate_pre_call_tokens(
+            req.message,
+            fallback=settings.quota_estimated_tokens_per_call,
+        )
         try:
             await quota_enforcer.check_and_reserve(
                 tenant_id=current_tenant,
                 plan_name="enterprise",
-                estimated_tokens=settings.quota_estimated_tokens_per_call,
+                estimated_tokens=estimated_tokens,
             )
         except QuotaExceededError as exc:
             raise HTTPException(
@@ -144,7 +157,7 @@ async def chat(
     business_factory = BusinessServiceFactory(
         db=db,
         tenant_id=current_tenant,
-        tracer=None,  # D2: get_tracer factory deferred to Phase 56+
+        tracer=tracer,  # Sprint 56.2 US-1: real Tracer wired (closes AD-Cat12-BusinessObs)
     )
 
     def business_factory_provider() -> BusinessServiceFactory:
@@ -188,6 +201,8 @@ async def chat(
             registry,
             user_input=req.message,
             trace_context=trace_ctx,
+            quota_enforcer=quota_enforcer,
+            estimated_tokens=estimated_tokens,
         ),
         media_type="text/event-stream",
         headers={
@@ -208,6 +223,8 @@ async def _stream_loop_events(
     *,
     user_input: str,
     trace_context: TraceContext,
+    quota_enforcer: QuotaEnforcer | None = None,
+    estimated_tokens: int = 0,
 ) -> AsyncIterator[bytes]:
     """Drive the loop generator + emit SSE bytes; finalize tenant-scoped registry.
 
@@ -254,6 +271,27 @@ async def _stream_loop_events(
             yield format_sse_message(payload["type"], payload["data"])
             if isinstance(event, LoopCompleted):
                 natural_completion = True
+                # Sprint 56.2 Day 2 (US-3 — closes AD-QuotaPostCall-1):
+                # reconcile reservation with actual tokens. event.total_tokens
+                # is the cumulative input+output across all LLM calls in this
+                # loop run (loop.py L944 accumulator → LoopCompleted event).
+                # Default 0 from early-termination paths releases full
+                # reservation back; happy-path END_TURN releases over-reservation.
+                if quota_enforcer is not None and estimated_tokens > 0:
+                    try:
+                        await quota_enforcer.record_usage(
+                            tenant_id=tenant_id,
+                            actual_tokens=event.total_tokens,
+                            reserved_tokens=estimated_tokens,
+                        )
+                    except Exception:  # noqa: BLE001
+                        # Reconciliation failure must not break SSE stream;
+                        # over-reservation will roll off at midnight UTC TTL.
+                        logger.exception(
+                            "chat session %s/%s: quota reconciliation failed",
+                            tenant_id,
+                            session_id,
+                        )
                 break
     except asyncio.CancelledError:
         logger.info(

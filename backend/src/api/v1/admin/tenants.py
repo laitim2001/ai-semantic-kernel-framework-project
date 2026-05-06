@@ -15,11 +15,13 @@ Description:
             with auto-transition to ACTIVE when all 6 steps complete + health
             check passes.
 
-    D13 (Sprint 56.1 Day 1 discovery): plan §US-1 acceptance said "reuse 53.x
-    admin role check" but no such dep exists in V2 codebase. Sprint 56.1 uses
-    a stub `require_admin_token` (X-Admin-Token header against env var) to
-    gate the endpoint; real RBAC role check deferred to Phase 56.x when
-    identity infrastructure exposes admin role enumeration.
+    Sprint 56.2 Day 1 (US-4 — closes AD-AdminAuth-1): the 56.1 stub
+    `require_admin_token` (X-Admin-Token header against env var) is replaced
+    by `require_admin_platform_role` (JWT-claim-based RBAC, mirrors 53.5
+    require_audit_role / require_approver_role pattern). All 3 admin
+    endpoints now check that the caller's JWT 'roles' claim includes "admin"
+    or "platform_admin". `tenant_admin` role is intentionally excluded —
+    tenant-scoped admins cannot create / suspend / archive other tenants.
 
     D11 (carryover): no Cat 12 obs span — structured logging only (consistent
     with provisioning.py D11 / chat router L121 D4).
@@ -27,7 +29,6 @@ Description:
 Key Components:
     - TenantCreateRequest / TenantCreateResponse Pydantic schemas
     - OnboardingStatusResponse / OnboardingAdvanceRequest schemas (Day 3)
-    - require_admin_token: stub admin auth dependency
     - router: APIRouter prefix /admin/tenants
     - create_tenant / get_onboarding_status / advance_onboarding_step
 
@@ -35,6 +36,7 @@ Created: 2026-05-06 (Sprint 56.1 Day 1)
 Last Modified: 2026-05-06
 
 Modification History:
+    - 2026-05-06: Sprint 56.2 Day 1 — RBAC dep replaces token stub (closes AD-AdminAuth-1)
     - 2026-05-06: Sprint 56.1 Day 4 CI — replace EmailStr with regex (avoid email-validator dep)
     - 2026-05-06: Sprint 56.1 Day 3 — onboarding-status GET + onboarding/{step} POST (US-3 part 2)
     - 2026-05-06: Initial creation (Sprint 56.1 Day 1 / US-1)
@@ -50,17 +52,17 @@ Related:
 
 from __future__ import annotations
 
-import os
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.db.models.identity import Tenant, TenantPlan, TenantState
 from infrastructure.db.session import get_db_session
+from platform_layer.identity.auth import require_admin_platform_role
 from platform_layer.tenant.health_check import TenantHealthChecker
 from platform_layer.tenant.lifecycle import IllegalTransitionError, TenantLifecycle
 from platform_layer.tenant.onboarding import (
@@ -75,21 +77,6 @@ router = APIRouter(prefix="/admin/tenants", tags=["admin", "tenants"])
 # Cheap email regex (RFC 5322-lite). We avoid pydantic's `EmailStr` so we
 # don't need the optional `email-validator` extra in CI / lean prod images.
 _EMAIL_PATTERN = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
-
-
-# Stub admin auth (D13). Phase 56.x will replace with RBAC role check.
-_ADMIN_TOKEN_ENV = "PLATFORM_ADMIN_TOKEN"
-
-
-async def require_admin_token(
-    x_admin_token: str | None = Header(default=None, alias="X-Admin-Token"),
-) -> None:
-    expected = os.environ.get(_ADMIN_TOKEN_ENV)
-    if not expected or x_admin_token != expected:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="admin authentication required",
-        )
 
 
 class TenantCreateRequest(BaseModel):
@@ -110,7 +97,7 @@ class TenantCreateResponse(BaseModel):
     "",
     status_code=status.HTTP_201_CREATED,
     response_model=TenantCreateResponse,
-    dependencies=[Depends(require_admin_token)],
+    dependencies=[Depends(require_admin_platform_role)],
 )
 async def create_tenant(
     payload: TenantCreateRequest,
@@ -190,7 +177,7 @@ async def _load_tenant_or_404(db: AsyncSession, tenant_id: UUID) -> Tenant:
 @router.get(
     "/{tenant_id}/onboarding-status",
     response_model=OnboardingStatusResponse,
-    dependencies=[Depends(require_admin_token)],
+    dependencies=[Depends(require_admin_platform_role)],
 )
 async def get_onboarding_status(
     tenant_id: UUID,
@@ -214,7 +201,7 @@ async def get_onboarding_status(
 @router.post(
     "/{tenant_id}/onboarding/{step}",
     response_model=OnboardingAdvanceResponse,
-    dependencies=[Depends(require_admin_token)],
+    dependencies=[Depends(require_admin_platform_role)],
 )
 async def advance_onboarding_step(
     tenant_id: UUID,

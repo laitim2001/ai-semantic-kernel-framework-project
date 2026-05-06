@@ -28,6 +28,7 @@ Key Components:
     - get_quota_enforcer / reset_quota_enforcer: FastAPI Depends + tests hook
 
 Modification History (newest-first):
+    - 2026-05-06: Sprint 56.2 Day 2 — add estimate_pre_call_tokens (closes AD-QuotaEstimation-1)
     - 2026-05-06: Initial creation (Sprint 56.1 Day 2 / US-2)
 
 Related:
@@ -103,6 +104,38 @@ class QuotaEnforcer:
     async def _resolve_cap(self, plan_name: str) -> int:
         plan = self._plan_loader.get_plan(plan_name)
         return plan.quota.tokens_per_day
+
+    @staticmethod
+    def estimate_pre_call_tokens(message: str, *, fallback: int) -> int:
+        """Heuristic pre-call input-token estimate from raw message text.
+
+        Sprint 56.2 US-2 (closes AD-QuotaEstimation-1) — replaces the 56.1
+        fixed `quota_estimated_tokens_per_call=1000` reservation with a
+        message-length-based heuristic.
+
+        Approach: ``len(message) // 4`` tokens (BPE rule-of-thumb for English),
+        clamped to [100, fallback]. Result is intentionally conservative —
+        post-LLM-call ``record_usage`` reconciles to actual tokens, releasing
+        any over-reservation back to the daily counter.
+
+        Why not use Cat 4 ChatClient.count_tokens directly:
+        - Pre-call gate runs in chat router before ``build_handler`` constructs
+          the AgentLoop (which owns the ChatClient). Refactoring ChatClient
+          access to the router boundary is a separate Phase 56.3 concern.
+        - Heuristic accuracy is sufficient for quota gating (under-estimate
+          worst case = over-quota request slips through; reconciled post-call).
+
+        Args:
+            message: raw user message text (single-turn input).
+            fallback: settings.quota_estimated_tokens_per_call upper bound.
+
+        Returns:
+            Estimated input tokens, clamped to [100, fallback].
+        """
+        if not message:
+            return 100
+        estimate = len(message) // 4
+        return max(100, min(estimate, fallback))
 
     async def check_and_reserve(
         self,

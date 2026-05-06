@@ -106,6 +106,12 @@ class Thinking(LoopEvent):
 class LoopCompleted(LoopEvent):
     stop_reason: str = "end_turn"
     total_turns: int = 0
+    # Sprint 56.2 US-3: cumulative total_tokens (input + output) across all
+    # LLM calls in this loop run, sourced from ChatResponse.usage.total_tokens
+    # accumulator (loop.py L944). Default 0 covers early-termination paths
+    # before any LLM call (input guardrail block / tripwire). Consumed by
+    # chat router to reconcile QuotaEnforcer reservation post-loop.
+    total_tokens: int = 0
 
 
 # === Category 6: Output Parser ==============================================
