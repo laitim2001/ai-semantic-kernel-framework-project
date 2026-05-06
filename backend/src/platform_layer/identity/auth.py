@@ -106,6 +106,15 @@ _AUDIT_ROLES: frozenset[str] = frozenset({"auditor", "admin", "compliance"})
 # tool action being requested.
 _APPROVER_ROLES: frozenset[str] = frozenset({"approver", "admin", "manager"})
 
+# RBAC roles permitted to invoke platform-admin endpoints (Sprint 56.2 US-4).
+# Used by api/v1/admin/tenants.py for tenant lifecycle + onboarding endpoints.
+# - "admin" = generic platform admin (existing convention from _AUDIT_ROLES /
+#   _APPROVER_ROLES + tenant_health_check.py:196 ["admin", "tenant_admin"]).
+# - "platform_admin" = explicit role code for SaaS-Stage-1 platform operators.
+# Tenant-scoped admins (role "tenant_admin") are intentionally excluded —
+# they cannot create / suspend / archive other tenants.
+_ADMIN_PLATFORM_ROLES: frozenset[str] = frozenset({"admin", "platform_admin"})
+
 
 async def require_audit_role(request: Request) -> UUID:
     """Authorize the caller for audit endpoints.
@@ -128,6 +137,21 @@ async def require_approver_role(request: Request) -> UUID:
     return await _require_role(request, _APPROVER_ROLES, role_label="Approver")
 
 
+async def require_admin_platform_role(request: Request) -> UUID:
+    """Authorize the caller for SaaS platform-admin endpoints.
+
+    Returns the authenticated user_id once role membership is verified.
+    Used by api/v1/admin/tenants.py — POST /admin/tenants (create) /
+    GET /admin/tenants/{id}/onboarding-status / POST /admin/tenants/{id}/onboarding/{step}.
+
+    Sprint 56.2 US-4 — closes AD-AdminAuth-1: replaces 56.1 stub
+    `require_admin_token` (X-Admin-Token header against env var) with real
+    JWT-claim-based RBAC role check, mirroring `require_audit_role` /
+    `require_approver_role` pattern (53.5).
+    """
+    return await _require_role(request, _ADMIN_PLATFORM_ROLES, role_label="Platform admin")
+
+
 async def _require_role(request: Request, allowed: frozenset[str], *, role_label: str) -> UUID:
     """Shared role-check helper used by require_audit_role + require_approver_role."""
     user_id = await get_current_user_id(request)
@@ -148,6 +172,7 @@ async def _require_role(request: Request, allowed: frozenset[str], *, role_label
 __all__ = [
     "get_current_tenant",
     "get_current_user_id",
+    "require_admin_platform_role",
     "require_audit_role",
     "require_approver_role",
 ]

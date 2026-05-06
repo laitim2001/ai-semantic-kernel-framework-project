@@ -94,3 +94,57 @@ Per 56.1 closeout state (`a0c192dd` HEAD): pytest 1508 / mypy 0/283 / 8 V2 lints
 9. Multi-tenant rule ✅ (RBAC + quota per-tenant Redis key)
 
 ---
+
+## Day 1 — 2026-05-06 — US-1 AD-Cat12-BusinessObs + US-4 AD-AdminAuth-1
+
+### Tasks completed (1.1-1.10)
+
+**US-1 wire (1.1-1.4)** — closes AD-Cat12-BusinessObs:
+- ✅ `platform_layer/observability/tracer.py` NEW — `get_tracer()` factory (module-level OTelTracer singleton; lazy init)
+- ✅ `platform_layer/observability/__init__.py` re-export `get_tracer`
+- ✅ `api/v1/chat/router.py` L105 add `tracer: Tracer = Depends(get_tracer)`; L151 replace `tracer=None` placeholder with `tracer=tracer`
+- ✅ 5 unit tests in `test_platform_tracer_factory.py` (renamed from `test_tracer.py` per D11 module-name collision discovery)
+
+**US-4 wire (1.5-1.7)** — closes AD-AdminAuth-1:
+- ✅ `platform_layer/identity/auth.py` add `_ADMIN_PLATFORM_ROLES = frozenset({"admin", "platform_admin"})` + `require_admin_platform_role` async dep (mirrors 53.5 require_audit_role / require_approver_role pattern)
+- ✅ `api/v1/admin/tenants.py` drop inline `require_admin_token` stub + `_ADMIN_TOKEN_ENV` + `import os` + `Header` import; 3 `dependencies=[Depends(require_admin_token)]` → `[Depends(require_admin_platform_role)]`
+- ✅ `tests/integration/api/test_admin_onboarding.py` update dep override (no behavior regression — 4/4 still pass)
+- ✅ 4 unit tests in `test_require_admin_platform_role.py`
+- ✅ 2 integration tests in `test_admin_tenants_rbac.py`
+
+**Day 1 sanity (1.8-1.10)**:
+- ✅ 8 V2 lints 8/8 green (0.84s)
+- ✅ mypy --strict 0/284 source files (was 283; +1 from tracer.py)
+- ✅ black + isort + flake8 clean (3 E501 trimmed per AD-Lint-MHist-Verbosity)
+- ✅ LLM SDK leak: 0 (only legitimate `adapters/azure_openai/`)
+- ✅ pytest 1508 → 1519 (+11; full suite 35s)
+- ✅ 0 regression (50 existing chat/admin/audit/governance tests pass)
+
+### D-Findings (Day 1)
+
+**D11**: pytest module-name collision between `tests/unit/agent_harness/observability/test_tracer.py` (49.4 baseline) and new `tests/unit/platform_layer/observability/test_tracer.py` — pytest `--rootdir` mode without `__init__.py` causes "import file mismatch" collection error.
+
+- **Fix**: rename my file to `test_platform_tracer_factory.py`. Applies AD-Test-Module-Naming hint from 54.1 retro Q3 (filename uniqueness convention).
+- **Implication**: same applies to any future test files added to nested `tests/unit/<layer>/<subsystem>/test_<X>.py`; check for sibling `test_<X>.py` in other layers before naming.
+
+### Day 1 actuals vs estimate
+
+| Task group | Est | Actual |
+|------------|-----|--------|
+| US-1 wire (1.1-1.4) | 1.5 hr | ~1.0 hr (D1+D3 simplification realized) |
+| US-4 wire (1.5-1.7) | 1.5 hr | ~1.2 hr (D8 simplification realized; D11 +5min rename overhead) |
+| Day 1 sanity (1.8-1.10) | 0.5 hr | ~0.8 hr (3 E501 trim + 1 isort fix + 1 collision fix) |
+| **Day 1 total** | **3.5 hr** | **~3.0 hr** (under est by ~14%) |
+
+### Day 2 plan (US-2 + US-3)
+
+US-2 (AD-QuotaEstimation-1) + US-3 (AD-QuotaPostCall-1):
+- 2.1 modify `platform_layer/tenant/quota.py` add `estimate_pre_call_tokens` (Cat 4 ChatClient.count_tokens) + `record_usage` (Redis MULTI/EXEC reconcile)
+- 2.2 chat router pre-LLM call use estimate
+- 2.4-2.6 D10 alternative reconcile point — extend `LLMResponded` event (or use `LoopCompleted` aggregation)
+- 2.7-2.8 sanity + commit
+
+**Day 2 est**: ~3.5 hr
+
+---
+

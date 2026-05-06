@@ -38,6 +38,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-06: Sprint 56.2 Day 1 — real Tracer wired (closes AD-Cat12-BusinessObs)
     - 2026-05-06: Sprint 56.1 Day 2 — pre-stream QuotaEnforcer.check_and_reserve gate (US-2)
     - 2026-05-05: Sprint 55.5 Day 1 — wire run_with_verification at L197 (AD-Cat10-Wire-1; Option E)
     - 2026-05-04: Sprint 55.2 — BusinessServiceFactory per-request wiring (AD-BizDomain-1)
@@ -67,6 +68,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_harness._contracts import LoopCompleted, TraceContext
+from agent_harness.observability._abc import Tracer
 from agent_harness.verification import run_with_verification
 from business_domain._service_factory import BusinessServiceFactory
 from core.config import get_settings
@@ -76,6 +78,7 @@ from platform_layer.governance.service_factory import (
     get_service_factory,
 )
 from platform_layer.identity import get_current_tenant
+from platform_layer.observability import get_tracer
 from platform_layer.tenant.quota import (
     QuotaEnforcer,
     QuotaExceededError,
@@ -99,6 +102,7 @@ async def chat(
     factory: ServiceFactory = Depends(get_service_factory),
     db: AsyncSession = Depends(get_db_session),
     quota_enforcer: QuotaEnforcer | None = Depends(maybe_get_quota_enforcer),
+    tracer: Tracer = Depends(get_tracer),
 ) -> StreamingResponse:
     """Run an agent loop and stream LoopEvents as SSE.
 
@@ -144,7 +148,7 @@ async def chat(
     business_factory = BusinessServiceFactory(
         db=db,
         tenant_id=current_tenant,
-        tracer=None,  # D2: get_tracer factory deferred to Phase 56+
+        tracer=tracer,  # Sprint 56.2 US-1: real Tracer wired (closes AD-Cat12-BusinessObs)
     )
 
     def business_factory_provider() -> BusinessServiceFactory:
