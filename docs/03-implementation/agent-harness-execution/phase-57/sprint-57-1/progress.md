@@ -260,4 +260,73 @@ Day 3 = App.tsx 整合 + Home nav + manual smoke + buffer:
 
 Day 2 完成 ✅ — Day 3 整合啟動條件具備。
 
+---
+
+## Day 3 — 2026-05-06
+
+### US-4 Routing + App Integration deliverables ✅
+
+**App.tsx modifications**:
+- 加 file header docstring + Modification History(per .claude/rules/file-header-convention.md;此前 App.tsx 無 header — 49.1 placeholder 遺留;此 sprint 改為 minimal docstring + 2-line MHist per AD-Lint-3 1-line each)
+- Import `CostDashboardPage` + `SLADashboardPage` 從 `./pages/cost-dashboard` + `./pages/sla-dashboard`
+- 加 2 個 `<Route path="/cost-dashboard/*" element={<CostDashboardPage />} />` + 同 sla-dashboard
+- Home `<ul>` 加 2 個 `<Link>`(per D10 Option C — always visible 無 role gate)
+- Home heading 從 「Phase 49 Foundation, Sprint 49.1 — frontend skeleton only.」 更新為 「Phase 57+ SaaS Frontend 1/N — Sprint 57.1 Cost + SLA dashboards.」(reflect current state)
+
+### Manual Smoke Test 替代(透過 build verify routes 整合)
+
+由於 dev server 啟動 + browser smoke 在 CI 等同 Playwright e2e Day 4 任務,Day 3 採 build-level verify:
+- Pre-Day 3 build:**52 modules / 188.10 KB / gzip 60.70 KB**(cost+sla tree-shaken)
+- Post-Day 3 build:**63 modules / 196.55 KB / gzip 62.69 KB**(cost+sla 進 bundle)
+- Delta:+11 modules / +8.45 KB raw / +1.99 KB gzip — 與兩 dashboards code 量一致
+- Routes 確實 integrate;Day 4 Playwright e2e 將驗證 runtime 行為
+
+### Day 3 Buffer 任務 ✅
+
+**Playwright fixture pre-stage 探勘 D19**:
+- 既有 fixtures:只有 `frontend/tests/e2e/fixtures/approval-fixtures.ts`(53.6 governance pattern)
+- 無 admin auth fixture(沒有 JWT login flow;**前端無 auth 機制 per D10**)
+- governance approvals.spec.ts pattern:用 `page.route()` browser-layer mock 後端 API response,**不需 real backend / 不需 auth fixture**
+- Day 4 cost / sla dashboard e2e 可同模式 — 直接 mock `/api/v1/admin/tenants/*/cost-summary` + `/sla-report` response;無需 admin auth 設定
+- **Implication**:Day 4 scope 不含 fixture 新建(saved ~30 min);但仍含 2 spec(cost + sla)各 happy + error path = 4 e2e tests total
+
+**Day 1+Day 2 follow-up review**:無 deferred items;Day 1+Day 2 全 green pass。
+
+### Day 3 sanity checks ✅
+
+| 檢查 | 結果 |
+|------|------|
+| Vitest run | **5 files / 15 tests passed / 1.02s**(Day 2 same — App.tsx 不影響 cost/sla unit tests)✅ |
+| Frontend lint | **0 errors** ✅ |
+| Frontend build | **63 modules / 196.55 KB → gzip 62.69 KB / 594ms**(+11 modules vs Day 2;cost+sla 在 bundle)✅ |
+| Backend baseline 不動 | pytest 1557 / mypy 0/293 / 8 V2 lints 8/8 / LLM SDK leak 0 |
+
+### Day 3 D-findings 補充
+
+**D19** — 既有 e2e pattern 用 `page.route()` browser-layer mock(非真實 backend / 非 JWT auth)。Implication:Day 4 不需新建 admin auth fixture;cost / sla e2e specs 模仿 governance approvals.spec.ts pattern。Saved ~30 min from US-5 fixture-build sub-task(plan §Risks 已預備)。
+
+### Day 4 Plan(US-5 Playwright E2E + Closeout)
+
+Day 4 = Final ceremony:
+1. **2 Playwright e2e specs**(per D19 pattern,無需 fixture 新建):
+   - `cost_dashboard.spec.ts`:happy(load + total + breakdown rows)+ error(500 retry)
+   - `sla_dashboard.spec.ts`:happy(load + violations badge + 6 metric cards)+ error(500 retry)
+2. **Final pytest + lint + build + Vitest + Playwright + LLM SDK leak**
+3. **retrospective.md**:6 必答 + AD-Sprint-Plan-4 medium-frontend 1st app calibration(actual / 11)+ v1 abort lesson Q1 sub-section + AD-Plan-4-Schema-Grep fold-in confirmation Q3 + Phase 57+ next-sprint candidates Q5
+4. **Memory snapshot** `memory/project_phase57_1_cost_sla_dashboards.md` + MEMORY.md index single-line entry
+5. **SITUATION-V2 §9 + CLAUDE.md sync** to **Phase 57+ SaaS Frontend 1/N (Sprint 57.1 closed)**
+6. **Open PR + CI green + solo-dev squash merge**
+7. **Closeout PR**
+
+### Day 3 stats summary
+
+- Files modified:1(App.tsx — added header / imports / routes / Home links)
+- Tests:Day 1+Day 2 = **15 unit tests** unchanged;Day 4 將加 4 e2e tests
+- Frontend lint + build:clean(bundle size +1.99 KB gzip — dashboards 進 bundle)
+- Day 3 commit:1 pending
+- Backend baseline:unchanged
+
+Day 3 完成 ✅ — Day 4 closeout 啟動條件具備。
+
+
 
