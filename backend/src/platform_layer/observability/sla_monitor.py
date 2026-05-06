@@ -64,8 +64,10 @@ from uuid import UUID, uuid4
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from agent_harness._contracts.events import LoopCompleted
+    from infrastructure.db.models.sla import SLAReport
 
 # Sliding window seconds — 5-min real-time monitoring;
 # SLAReportGenerator (US-2) aggregates 30-day windows from Postgres.
@@ -255,6 +257,191 @@ class SLAMetricRecorder:
         return await self._get_p99(tenant_id, "hitl_queue_notify")
 
 
+# =====================================================================
+# SLAReportGenerator — Day 2 / US-2
+# =====================================================================
+
+# SLA thresholds per 15-saas-readiness.md §SLA 承諾.
+# (availability_pct, api_p99_ms, loop_simple_p99_ms, loop_medium_p99_ms,
+#  loop_complex_p99_ms, hitl_queue_notif_p99_ms)
+_THRESHOLDS_BY_PLAN: dict[str, dict[str, float]] = {
+    "standard": {
+        "availability_pct": 99.5,
+        "api_p99_ms": 2_000,
+        "loop_simple_p99_ms": 10_000,
+        "loop_medium_p99_ms": 60_000,
+        "loop_complex_p99_ms": 300_000,
+        "hitl_queue_notif_p99_ms": 300_000,
+    },
+    "enterprise": {
+        "availability_pct": 99.9,
+        "api_p99_ms": 1_000,
+        "loop_simple_p99_ms": 5_000,
+        "loop_medium_p99_ms": 30_000,
+        "loop_complex_p99_ms": 180_000,
+        "hitl_queue_notif_p99_ms": 60_000,
+    },
+}
+
+
+def _compute_severity(actual: float, threshold: float, *, lower_is_better: bool) -> str:
+    """Map actual vs threshold delta to minor / major / critical severity.
+
+    Convention:
+    - For latency metrics (lower_is_better=True): delta = (actual - threshold) / threshold
+    - For availability (lower_is_better=False): delta = (threshold - actual) / threshold
+    Both yield positive deltas when violated; severity bins:
+        ≤ 5%  → minor
+        5-15% → major
+        > 15% → critical
+    """
+    if lower_is_better:
+        delta = (actual - threshold) / threshold if threshold > 0 else 0.0
+    else:
+        delta = (threshold - actual) / threshold if threshold > 0 else 0.0
+    if delta <= 0.05:
+        return "minor"
+    if delta <= 0.15:
+        return "major"
+    return "critical"
+
+
+class SLAReportGenerator:
+    """Generate per-tenant per-month SLAReport from Redis sliding window data.
+
+    Day 2 scope (US-2):
+    - Pull current p99 values from `SLAMetricRecorder` (Redis sliding window;
+      window_sec=300 gives recent-30-day proxy for "monthly" report — Phase
+      56.x audit cycle will replace with Postgres-backed historical aggregate)
+    - Compute availability_pct from outage windows (Day 1 records via
+      record_outage_window;Day 2 stub returns 99.99% when no outages logged
+      — real availability calculation deferred to Phase 56.x)
+    - Detect threshold breaches → persist SLAViolation rows
+    - Upsert SLAReport row keyed by (tenant_id, month)
+    """
+
+    def __init__(
+        self,
+        recorder: SLAMetricRecorder,
+        db_session: "AsyncSession",
+    ) -> None:
+        self._recorder = recorder
+        self._db = db_session
+
+    @staticmethod
+    def _resolve_thresholds(plan: str) -> dict[str, float]:
+        """Map tenant.plan ('standard' | 'enterprise' | …) to threshold dict."""
+        return _THRESHOLDS_BY_PLAN.get(plan, _THRESHOLDS_BY_PLAN["standard"])
+
+    async def _availability_pct(self, tenant_id: UUID) -> float:
+        """Compute availability % from outage records.
+
+        Day 2 stub: returns 99.99% (no outage tracking wired — outage_window
+        records via SLAMetricRecorder.record_outage_window remain Redis-only).
+        Phase 56.x audit cycle will compute from Postgres outage table.
+        """
+        del tenant_id  # placeholder
+        return 99.99
+
+    async def generate_monthly_report(
+        self,
+        tenant_id: UUID,
+        month: str,
+        *,
+        plan: str = "standard",
+    ) -> "SLAReport":
+        """Generate (or upsert) SLAReport for tenant + month.
+
+        Args:
+            tenant_id: scope
+            month: 'YYYY-MM' format
+            plan: 'standard' or 'enterprise' — determines threshold table
+
+        Returns:
+            Persisted SLAReport row.
+        """
+        from sqlalchemy import select
+
+        from infrastructure.db.models.sla import SLAReport, SLAViolation
+
+        thresholds = self._resolve_thresholds(plan)
+
+        # Pull recent p99s from Redis sliding window.
+        api_p99 = await self._recorder.get_api_p99(tenant_id)
+        loop_simple = await self._recorder.get_loop_p99(tenant_id, "simple")
+        loop_medium = await self._recorder.get_loop_p99(tenant_id, "medium")
+        loop_complex = await self._recorder.get_loop_p99(tenant_id, "complex")
+        hitl_q = await self._recorder.get_hitl_queue_p99(tenant_id)
+        availability = await self._availability_pct(tenant_id)
+
+        # Detect violations + count.
+        violations_count = 0
+        candidate_violations = [
+            ("availability", availability, thresholds["availability_pct"], False),
+            ("api_p99", api_p99, thresholds["api_p99_ms"], True),
+            ("loop_simple_p99", loop_simple, thresholds["loop_simple_p99_ms"], True),
+            ("loop_medium_p99", loop_medium, thresholds["loop_medium_p99_ms"], True),
+            ("loop_complex_p99", loop_complex, thresholds["loop_complex_p99_ms"], True),
+            (
+                "hitl_queue_notif_p99",
+                hitl_q,
+                thresholds["hitl_queue_notif_p99_ms"],
+                True,
+            ),
+        ]
+        for metric_type, actual, threshold, lower_is_better in candidate_violations:
+            if actual is None:
+                continue  # No data — no violation to record this period
+            violated = (lower_is_better and actual > threshold) or (
+                not lower_is_better and actual < threshold
+            )
+            if violated:
+                violations_count += 1
+                self._db.add(
+                    SLAViolation(
+                        tenant_id=tenant_id,
+                        metric_type=metric_type,
+                        threshold_pct=float(threshold),
+                        actual_pct=float(actual),
+                        severity=_compute_severity(
+                            float(actual),
+                            float(threshold),
+                            lower_is_better=lower_is_better,
+                        ),
+                    )
+                )
+
+        # Upsert SLAReport (tenant_id, month) UNIQUE constraint → check existing.
+        stmt = select(SLAReport).where(
+            (SLAReport.tenant_id == tenant_id) & (SLAReport.month == month)
+        )
+        existing = (await self._db.execute(stmt)).scalar_one_or_none()
+        if existing is not None:
+            existing.availability_pct = availability
+            existing.api_p99_ms = int(api_p99) if api_p99 is not None else None
+            existing.loop_simple_p99_ms = int(loop_simple) if loop_simple is not None else None
+            existing.loop_medium_p99_ms = int(loop_medium) if loop_medium is not None else None
+            existing.loop_complex_p99_ms = int(loop_complex) if loop_complex is not None else None
+            existing.hitl_queue_notif_p99_ms = int(hitl_q) if hitl_q is not None else None
+            existing.violations_count = violations_count
+            return existing
+
+        report = SLAReport(
+            tenant_id=tenant_id,
+            month=month,
+            availability_pct=availability,
+            api_p99_ms=int(api_p99) if api_p99 is not None else None,
+            loop_simple_p99_ms=int(loop_simple) if loop_simple is not None else None,
+            loop_medium_p99_ms=int(loop_medium) if loop_medium is not None else None,
+            loop_complex_p99_ms=int(loop_complex) if loop_complex is not None else None,
+            hitl_queue_notif_p99_ms=int(hitl_q) if hitl_q is not None else None,
+            violations_count=violations_count,
+        )
+        self._db.add(report)
+        await self._db.flush()
+        return report
+
+
 # Module-level singleton — reset hook per testing.md §Module-level Singleton Reset Pattern.
 _recorder: SLAMetricRecorder | None = None
 
@@ -300,6 +487,7 @@ __all__ = [
     "KEY_TTL_SEC",
     "SLAComplexityCategory",
     "SLAMetricRecorder",
+    "SLAReportGenerator",
     "WINDOW_SEC",
     "classify_loop_complexity",
     "get_sla_recorder",

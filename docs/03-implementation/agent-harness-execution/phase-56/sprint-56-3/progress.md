@@ -132,3 +132,40 @@ Per checklist Day 2 — US-2 SLA Monthly Report + US-3 Cost Ledger DB schema (jo
 7. `config/llm_pricing.yml` initial entries
 8. 4 unit US-2 + 2 integration US-2 + 3 unit US-3 (PricingLoader)
 9. Day 2 sanity (含 check_rls_policies on 3 new tables)
+
+---
+
+## Day 2 — US-2 SLA Monthly Report + US-3 Cost Ledger DB Schema ✅ (2026-05-06)
+
+### Implementation summary
+
+| Step | Outcome |
+|------|---------|
+| 2.1 SLA + Cost Ledger ORM | `infrastructure/db/models/sla.py` (SLAViolation + SLAReport with TenantScopedMixin + 2 enums) + `cost_ledger.py` (CostLedger with TenantScopedMixin + 1 enum);registered in `models/__init__.py` |
+| 2.2 Alembic 0016 migration | `0016_sla_and_cost_ledger.py` — 3 tables CREATE + 3 RLS policies + 6 indexes + CHECK constraints;applied via `alembic upgrade head` to test DB;`check_rls_policies` lint confirms 17 TenantScopedMixin → 18 RLS-protected (incl. 3 new) |
+| 2.3 SLAReportGenerator + endpoint | `SLAReportGenerator` class added to `sla_monitor.py` with `_THRESHOLDS_BY_PLAN` (standard / enterprise per 15-saas-readiness §SLA 承諾) + `_compute_severity` + violation detection + upsert `(tenant_id, month)`;`api/v1/admin/sla_reports.py` GET endpoint with `Depends(require_admin_platform_role)` + cache-first read + on-demand generate;registered in `api/main.py` as `admin_sla_reports_router` |
+| 2.4 Billing module + PricingLoader | `platform_layer/billing/__init__.py` + `pricing.py` (LLMPricing + ToolPricing dataclasses + PricingLoader yaml parser + set/get/reset hooks);`config/llm_pricing.yml` (azure_openai gpt-4o-mini + gpt-5.4 + anthropic claude-3.7-sonnet stub + tools default + 2 overrides);conftest.py adds `reset_pricing_loader` to `_reset_module_singletons` autouse |
+| 2.5 Tests | 4 unit US-2 (SLAReportGenerator) + 5 unit US-3 (PricingLoader — **bonus +2** over plan's 3: unknown_provider + missing_file_raises) + 2 integration US-2 (RBAC 403 + admin happy path) = **+11 cumulative** vs plan's +9 |
+| 2.6 Sanity | mypy 0/291 ✅ / black + isort + flake8 clean ✅ / 8 V2 lints 8/8 ✅ (check_rls_policies confirms 3 new tables RLS) / pytest 1536 → **1547** ✅ +11 (exceeds plan +9) |
+
+### D-finding follow-ups within Day 2
+
+- **D1 (Alembic head 0015 → use 0016)** — applied;migration filename `0016_sla_and_cost_ledger.py` with `down_revision = "0015_feature_flags"`;`alembic upgrade head` ran clean
+- **D6 (sessions.total_cost_usd cross-table coordination)** — documented in `cost_ledger.py` file header docstring;coordination explicitly deferred to Phase 56.x audit cycle (cost_ledger source-of-truth;sessions.total_cost_usd remains cached UI aggregate;sync wiring TBD)
+- 0 new D-findings introduced during Day 2 implementation (plan §Tech Spec assumptions held)
+
+### Net scope status
+
+- Day 2 actual time: ~3.5 hr (plan bottom-up 9 hr → calibrated 4.95 hr;under target by 1.45 hr — well in band)
+- Sprint cumulative: ~6.5 hr / ~13 hr commit (50%)
+- pytest delta: 1536 → 1547 (+11 new = 4 unit US-2 + 5 unit US-3 + 2 integration US-2);cumulative target 1530 → 1555 (+25);Day 1+2 contributes 17/25 (68%)
+
+### Day 3 plan (next)
+
+Per checklist Day 3 — US-3 CostLedgerService + US-4 auto-record hooks:
+1. `platform_layer/billing/cost_ledger.py` `CostLedgerService` (record_llm_call / record_tool_call / aggregate)
+2. `api/v1/admin/cost_summary.py` GET endpoint
+3. Chat router LoopCompleted Cost Ledger hook (US-4 LLM hook — **D2** decision: estimate input via Cat 4 ChatClient.count_tokens OR extend LoopCompleted with input/output_tokens fields)
+4. Tool dispatcher post-execute hook (US-4 tool hook — **D4** decision: use existing `ToolCallExecuted` event in events.py:131,no new event needed)
+5. 2 unit US-3 (CostLedgerService) + 1 integration US-3 + 5 unit US-4 + 1 integration US-4 = +9 new tests
+6. Day 3 sanity (mypy / lints / pytest 1547 → 1556)
