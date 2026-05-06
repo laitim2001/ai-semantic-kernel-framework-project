@@ -35,6 +35,9 @@ from infrastructure.db.models.business import (
     IncidentStatus,
 )
 
+# Sprint 56.3 Day 2 — Cost Ledger (US-3)
+from infrastructure.db.models.cost_ledger import CostLedger, CostType
+
 # Sprint 56.1 Day 3 — Feature Flags (US-4)
 from infrastructure.db.models.feature_flag import FeatureFlag
 
@@ -68,6 +71,14 @@ from infrastructure.db.models.sessions import (
     Message,
     MessageEvent,
     Session,
+)
+
+# Sprint 56.3 Day 2 — SLA Monitoring (US-2)
+from infrastructure.db.models.sla import (
+    SLAMetricType,
+    SLAReport,
+    SLASeverity,
+    SLAViolation,
 )
 
 # Day 4.1 — State
@@ -126,4 +137,12 @@ __all__ = [
     "IncidentStatus",
     # Feature Flags (Sprint 56.1 Day 3)
     "FeatureFlag",
+    # SLA Monitoring (Sprint 56.3 Day 2 — US-2)
+    "SLAViolation",
+    "SLAReport",
+    "SLASeverity",
+    "SLAMetricType",
+    # Cost Ledger (Sprint 56.3 Day 2 — US-3)
+    "CostLedger",
+    "CostType",
 ]

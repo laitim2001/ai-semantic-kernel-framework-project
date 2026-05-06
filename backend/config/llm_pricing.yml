@@ -1,0 +1,28 @@
+# Sprint 56.3 Day 2 — LLM + Tool pricing config
+# Per-million / per-call USD pricing reference for Cost Ledger entries.
+# Update last_updated when adjusting pricing; Phase 56.x audit cycle to evaluate
+# auto-sync from provider APIs.
+
+version: "1.0"
+last_updated: "2026-05-06"
+
+providers:
+  azure_openai:
+    gpt-4o-mini:
+      input_per_million: 0.15
+      output_per_million: 0.60
+      cached_input_per_million: 0.075
+    gpt-5.4:
+      input_per_million: 2.50
+      output_per_million: 10.00
+      cached_input_per_million: 1.25
+  anthropic:
+    claude-3.7-sonnet:
+      input_per_million: 3.00
+      output_per_million: 15.00
+      cached_input_per_million: 0.30
+
+tools:
+  default_per_call: 0.0001
+  salesforce_query: 0.001
+  d365_create: 0.0005

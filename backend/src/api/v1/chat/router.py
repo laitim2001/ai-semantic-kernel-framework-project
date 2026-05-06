@@ -38,6 +38,8 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-06: Sprint 56.3 Day 3 — wire Cost Ledger LLM + tool hooks (US-4)
+    - 2026-05-06: Sprint 56.3 Day 1 — wire SLA span observer (US-1 — Cat 12 SLA recording)
     - 2026-05-06: Sprint 56.2 Day 2 — quota pre-call estimate + post-call reconcile (US-2 + US-3)
     - 2026-05-06: Sprint 56.2 Day 1 — real Tracer wired (closes AD-Cat12-BusinessObs)
     - 2026-05-06: Sprint 56.1 Day 2 — pre-stream QuotaEnforcer.check_and_reserve gate (US-2)
@@ -61,6 +63,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
 
@@ -69,17 +72,28 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_harness._contracts import LoopCompleted, TraceContext
+from agent_harness._contracts.events import ToolCallExecuted
 from agent_harness.observability._abc import Tracer
 from agent_harness.verification import run_with_verification
 from business_domain._service_factory import BusinessServiceFactory
 from core.config import get_settings
 from infrastructure.db.session import get_db_session
+from platform_layer.billing import (
+    CostLedgerService,
+    PricingLoader,
+    maybe_get_pricing_loader,
+)
 from platform_layer.governance.service_factory import (
     ServiceFactory,
     get_service_factory,
 )
 from platform_layer.identity import get_current_tenant
-from platform_layer.observability import get_tracer
+from platform_layer.observability import (
+    SLAMetricRecorder,
+    classify_loop_complexity,
+    get_tracer,
+    maybe_get_sla_recorder,
+)
 from platform_layer.tenant.quota import (
     QuotaEnforcer,
     QuotaExceededError,
@@ -103,6 +117,8 @@ async def chat(
     factory: ServiceFactory = Depends(get_service_factory),
     db: AsyncSession = Depends(get_db_session),
     quota_enforcer: QuotaEnforcer | None = Depends(maybe_get_quota_enforcer),
+    sla_recorder: SLAMetricRecorder | None = Depends(maybe_get_sla_recorder),
+    pricing_loader: PricingLoader | None = Depends(maybe_get_pricing_loader),
     tracer: Tracer = Depends(get_tracer),
 ) -> StreamingResponse:
     """Run an agent loop and stream LoopEvents as SSE.
@@ -193,6 +209,20 @@ async def chat(
         session_id=session_id,
     )
 
+    # Sprint 56.3 Day 1 (US-1 — SLA Metric Recording): chat_start_time
+    # captures end-to-end loop latency at the request boundary; passed to
+    # _stream_loop_events so the LoopCompleted observer can record into the
+    # per-tenant Redis sliding window via SLAMetricRecorder.
+    chat_start_time = time.monotonic()
+
+    # Sprint 56.3 Day 3 (US-4 — Cost Ledger auto-record):
+    # Construct CostLedgerService per-request when pricing_loader is wired.
+    # CostLedgerService writes use the same `db` session as BusinessServiceFactory
+    # (kept alive by FastAPI for the StreamingResponse iterator's lifetime).
+    cost_ledger_service: CostLedgerService | None = None
+    if pricing_loader is not None:
+        cost_ledger_service = CostLedgerService(db=db, pricing_loader=pricing_loader)
+
     return StreamingResponse(
         _stream_loop_events(
             loop,
@@ -203,6 +233,9 @@ async def chat(
             trace_context=trace_ctx,
             quota_enforcer=quota_enforcer,
             estimated_tokens=estimated_tokens,
+            sla_recorder=sla_recorder,
+            chat_start_time=chat_start_time,
+            cost_ledger=cost_ledger_service,
         ),
         media_type="text/event-stream",
         headers={
@@ -225,6 +258,9 @@ async def _stream_loop_events(
     trace_context: TraceContext,
     quota_enforcer: QuotaEnforcer | None = None,
     estimated_tokens: int = 0,
+    sla_recorder: SLAMetricRecorder | None = None,
+    chat_start_time: float | None = None,
+    cost_ledger: CostLedgerService | None = None,
 ) -> AsyncIterator[bytes]:
     """Drive the loop generator + emit SSE bytes; finalize tenant-scoped registry.
 
@@ -292,7 +328,69 @@ async def _stream_loop_events(
                             tenant_id,
                             session_id,
                         )
+                # Sprint 56.3 Day 1 (US-1 — SLA Metric Recording):
+                # Record loop end-to-end latency in the complexity bucket so
+                # SLAReportGenerator (US-2) can compute per-tenant p99.
+                # Failure must not break SSE stream — Redis flake should not
+                # cascade into chat outage; SLA monitoring is best-effort.
+                if sla_recorder is not None and chat_start_time is not None:
+                    try:
+                        latency_ms = int((time.monotonic() - chat_start_time) * 1000)
+                        complexity = classify_loop_complexity(event)
+                        await sla_recorder.record_loop_completion(
+                            tenant_id=tenant_id,
+                            latency_ms=latency_ms,
+                            complexity_category=complexity,
+                        )
+                    except Exception:  # noqa: BLE001
+                        logger.exception(
+                            "chat session %s/%s: SLA loop completion record failed",
+                            tenant_id,
+                            session_id,
+                        )
+                # Sprint 56.3 Day 3 (US-4 — Cost Ledger LLM hook):
+                # Record one llm cost ledger entry from event.total_tokens.
+                # Day 0 D2 simplification: provider/model attribution defaults
+                # to "azure_openai" / "gpt-5.4" until LoopCompleted carries
+                # real metadata (AD-Cost-Ledger-Provider-Attribution Phase 56.x);
+                # input/output token split deferred (AD-Cost-Ledger-Token-Split
+                # Phase 56.x). Best-effort failure pattern: ledger write must
+                # not break SSE stream.
+                if cost_ledger is not None and event.total_tokens > 0:
+                    try:
+                        await cost_ledger.record_llm_call(
+                            tenant_id=tenant_id,
+                            provider="azure_openai",
+                            model="gpt-5.4",
+                            total_tokens=event.total_tokens,
+                            session_id=session_id,
+                        )
+                    except Exception:  # noqa: BLE001
+                        logger.exception(
+                            "chat session %s/%s: cost ledger LLM record failed",
+                            tenant_id,
+                            session_id,
+                        )
                 break
+            # Sprint 56.3 Day 3 (US-4 — Cost Ledger tool hook):
+            # Record one cost ledger entry per ToolCallExecuted event (per
+            # Day 0 D4 — event already exists at events.py:131; no new
+            # event needed). Per-tenant pricing comes from
+            # config/llm_pricing.yml (default_per_call + named overrides).
+            if isinstance(event, ToolCallExecuted) and cost_ledger is not None:
+                try:
+                    await cost_ledger.record_tool_call(
+                        tenant_id=tenant_id,
+                        tool_name=event.tool_name,
+                        session_id=session_id,
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.exception(
+                        "chat session %s/%s: cost ledger tool record failed (tool=%s)",
+                        tenant_id,
+                        session_id,
+                        event.tool_name,
+                    )
     except asyncio.CancelledError:
         logger.info(
             "chat session %s/%s: client disconnected mid-stream",

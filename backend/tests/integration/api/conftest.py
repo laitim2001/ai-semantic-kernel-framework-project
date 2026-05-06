@@ -5,12 +5,22 @@ Category: Tests / integration / api
 Scope: Phase 53 / Sprint 53.6 (US-5 ServiceFactory test isolation)
 
 Description:
-    Resets the module-level ServiceFactory singleton between tests so each
-    test gets a fresh factory bound to its own pytest-asyncio event loop.
-    Without this, the first test caches a session_factory bound to its loop,
-    and subsequent tests in the same process hit "Event loop is closed".
+    Resets module-level singletons between tests so each test gets a fresh
+    instance bound to its own pytest-asyncio event loop. Without this, the
+    first test caches resources bound to its loop, and subsequent tests in
+    the same process hit "Event loop is closed".
 
-Created: 2026-05-04 (Sprint 53.6 Day 4)
+    Singletons reset (per testing.md §Module-level Singleton Reset Pattern):
+    - ServiceFactory (53.6) — governance HITL/Risk/AuditQuery
+    - SLAMetricRecorder (56.3 US-1) — Cat 12 SLA recording
+    - PricingLoader (56.3 US-3) — LLM + tool pricing yaml cache
+    - CostLedgerService (56.3 US-3) — per-event Cost Ledger writer
+
+Modification History:
+    - 2026-05-06: Sprint 56.3 Day 3 — add reset_cost_ledger (US-3)
+    - 2026-05-06: Sprint 56.3 Day 2 — add reset_pricing_loader (US-3)
+    - 2026-05-06: Sprint 56.3 Day 1 — add reset_sla_recorder (US-1)
+    - 2026-05-04: Initial (Sprint 53.6 Day 4)
 """
 
 from __future__ import annotations
@@ -19,12 +29,21 @@ from collections.abc import Iterator
 
 import pytest
 
+from platform_layer.billing.cost_ledger import reset_cost_ledger
+from platform_layer.billing.pricing import reset_pricing_loader
 from platform_layer.governance.service_factory import reset_service_factory
+from platform_layer.observability import reset_sla_recorder
 
 
 @pytest.fixture(autouse=True)
-def _reset_governance_singletons() -> Iterator[None]:
-    """Clear ServiceFactory singleton before + after each test."""
+def _reset_module_singletons() -> Iterator[None]:
+    """Clear module-level singletons before + after each test."""
     reset_service_factory()
+    reset_sla_recorder()
+    reset_pricing_loader()
+    reset_cost_ledger()
     yield
     reset_service_factory()
+    reset_sla_recorder()
+    reset_pricing_loader()
+    reset_cost_ledger()
