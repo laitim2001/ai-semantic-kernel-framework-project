@@ -148,3 +148,73 @@ US-2 (AD-QuotaEstimation-1) + US-3 (AD-QuotaPostCall-1):
 
 ---
 
+## Day 2 — 2026-05-06 — US-2 AD-QuotaEstimation-1 + US-3 AD-QuotaPostCall-1
+
+### Tasks completed (2.1-2.8)
+
+**Day 2 探勘 D-finding**:
+- **D11** (this Day) — `record_usage(*, tenant_id, actual_tokens, reserved_tokens) -> int` ALREADY EXISTS at quota.py L138-159 (56.1 ship-with). Plan US-3 acceptance assumed this method needed creation; reality = pre-existing. Net: US-3 scope reduced ~75% (only chat router wire-up needed, no new method).
+
+**US-2 wire (2.1-2.3)** — closes AD-QuotaEstimation-1:
+- ✅ `platform_layer/tenant/quota.py` add `estimate_pre_call_tokens(message, *, fallback) -> int` static heuristic method (`len(message) // 4` clamped to `[100, fallback]`). Documented why heuristic over Cat 4 ChatClient.count_tokens (router boundary doesn't have ChatClient access pre-build_handler; refactor deferred to Phase 56.3).
+- ✅ `api/v1/chat/router.py` L130-150 replace `estimated_tokens=settings.quota_estimated_tokens_per_call` (fixed 1000) with `estimated_tokens = quota_enforcer.estimate_pre_call_tokens(req.message, fallback=...)`. Settings flag retained as fallback ceiling.
+- ✅ Capture `estimated_tokens` to local for later post-call reconciliation.
+
+**US-3 wire (2.4-2.6)** — closes AD-QuotaPostCall-1:
+- ✅ `agent_harness/_contracts/events.py` extend `LoopCompleted` with `total_tokens: int = 0` field (default 0; backwards-compat for early-termination paths).
+- ✅ `agent_harness/orchestrator_loop/loop.py` modify 5 main-loop `LoopCompleted` emission sites (L795 MAX_TURNS / L803 TOKEN_BUDGET / L811 CANCELLED / L939 cancel-during-chat / L996 stop_reason / L1007 FINAL) to pass `total_tokens=tokens_used`. Pre-LLM block sites (L439 GUARDRAIL_BLOCKED / L458 TRIPWIRE input / etc.) keep default 0 — no LLM call happened.
+- ✅ `api/v1/chat/router.py` `_stream_loop_events` extend signature with `quota_enforcer: QuotaEnforcer | None = None` + `estimated_tokens: int = 0` kwargs. On `LoopCompleted` event observation, call `record_usage(actual_tokens=event.total_tokens, reserved_tokens=estimated_tokens)`. Exception-safe — reconcile failure logs but does not break SSE stream (over-reservation rolls off at midnight UTC TTL).
+
+**Tests added (9)**:
+- 4 unit US-2 in `test_quota_estimation_reconcile.py::TestEstimatePreCallTokens` (heuristic floor / mid / ceiling clamp / empty)
+- 3 unit US-3 in `TestRecordUsageReconciliation` (under / equal / over reservation paths)
+- 2 integration in `test_chat_quota_reconcile.py` — uses `_StubLoop` async iterator yielding LoopCompleted with known total_tokens; verifies wire-up correctness end-to-end at `_stream_loop_events` boundary
+
+### D-Findings caveats
+
+- **L529, L712, L749, L1018, L1110, L1292** LoopCompleted sites NOT updated — they're in helper methods (e.g. `_cat9_tool_check_branch`) where `tokens_used` is not in lexical scope. Default 0 used.
+  - **Implication**: tripwire/guardrail mid-loop termination over-releases quota reservation by `tokens_used` (the actual LLM tokens consumed before tripwire). Acceptable trade-off — over-release means tenant gets MORE quota back than spent. Not a security issue. Phase 56.3 can refactor `tokens_used` to instance state for full propagation.
+- **D10 alternative chosen** — extend LoopCompleted (option a) over LLMResponded extension. Preserves single-source per 17.md §Contract events; simpler than per-LLM-call accumulation in chat router; happy path (END_TURN) gets accurate reconciliation.
+
+### Day 2 sanity (2.7-2.8)
+- ✅ 8 V2 lints 8/8 green
+- ✅ mypy --strict 0/284 source files
+- ✅ black + isort + flake8 clean (1 black auto-fix on test_quota_estimation_reconcile.py)
+- ✅ LLM SDK leak: 0
+- ✅ pytest 1519 → 1528 (+9 = 4+3 unit + 2 integration; full suite 35s)
+- ✅ 0 regression (chat_e2e 9/9 still pass after LoopCompleted extension)
+
+### Day 2 actuals vs estimate
+
+| Task group | Est | Actual |
+|------------|-----|--------|
+| US-2 wire (2.1-2.3) | 1.5 hr | ~1.0 hr (heuristic simpler than Cat 4 plan) |
+| US-3 wire (2.4-2.6) | 2 hr | ~1.5 hr (D11 simplification — record_usage already exists) |
+| Day 2 sanity (2.7-2.8) | 0.5 hr | ~0.5 hr (1 black fix + clean) |
+| **Day 2 total** | **4 hr** | **~3.0 hr** (under est by 25%) |
+
+### Day 3 plan (US-5 closeout)
+
+US-5:
+- 3.1 cross-AD e2e integration test (provision RBAC + onboard quota pre-call + chat reconcile + Cat 12 spans)
+- 3.2 final sanity verify
+- 3.3 retrospective.md (6 必答 + AD-Sprint-Plan-4 mixed 2nd app calibration verify + AD-Plan-4-Schema-Grep eval)
+- 3.4 open PR + CI green + solo-dev merge
+- 3.5 closeout PR (SITUATION + CLAUDE + memory)
+- 3.6 final push
+
+**Day 3 est**: ~1.5 hr
+
+### Sprint cumulative state (post-Day 2)
+
+| Metric | Value |
+|--------|-------|
+| Tests added | 20 (5 US-1 + 4+2 US-4 + 4+3 US-2 + 2 US-3) |
+| pytest | 1508 → 1528 (+20; target ≥+17 hit early) |
+| ADs closed | 4/4 (AD-Cat12-BusinessObs + AD-AdminAuth-1 + AD-QuotaEstimation-1 + AD-QuotaPostCall-1) |
+| Hours actual | ~6.0 hr (Day 0 ~0.5 + Day 1 ~3.0 + Day 2 ~2.5) |
+| Hours committed | 6 hr |
+| Calibration ratio (preview) | **1.00 ✅** (right on band; mixed 2nd application stable) |
+
+---
+

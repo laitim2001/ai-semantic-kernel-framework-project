@@ -795,6 +795,7 @@ class AgentLoopImpl(AgentLoop):
                     yield LoopCompleted(
                         stop_reason=TerminationReason.MAX_TURNS.value,
                         total_turns=turn_count,
+                        total_tokens=tokens_used,
                         trace_context=ctx,
                     )
                     return
@@ -802,6 +803,7 @@ class AgentLoopImpl(AgentLoop):
                     yield LoopCompleted(
                         stop_reason=TerminationReason.TOKEN_BUDGET.value,
                         total_turns=turn_count,
+                        total_tokens=tokens_used,
                         trace_context=ctx,
                     )
                     return
@@ -809,6 +811,7 @@ class AgentLoopImpl(AgentLoop):
                     yield LoopCompleted(
                         stop_reason=TerminationReason.CANCELLED.value,
                         total_turns=turn_count,
+                        total_tokens=tokens_used,
                         trace_context=ctx,
                     )
                     return
@@ -936,6 +939,7 @@ class AgentLoopImpl(AgentLoop):
                     yield LoopCompleted(
                         stop_reason=TerminationReason.CANCELLED.value,
                         total_turns=turn_count,
+                        total_tokens=tokens_used,
                         trace_context=ctx,
                     )
                     raise
@@ -992,6 +996,7 @@ class AgentLoopImpl(AgentLoop):
                     yield LoopCompleted(
                         stop_reason=TerminationReason.END_TURN.value,
                         total_turns=turn_count,
+                        total_tokens=tokens_used,
                         trace_context=ctx,
                     )
                     return
@@ -1003,6 +1008,7 @@ class AgentLoopImpl(AgentLoop):
                     yield LoopCompleted(
                         stop_reason=TerminationReason.END_TURN.value,
                         total_turns=turn_count,
+                        total_tokens=tokens_used,
                         trace_context=ctx,
                     )
                     return
