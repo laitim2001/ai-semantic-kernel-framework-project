@@ -131,18 +131,19 @@ Sprint 56.3 retrospective Q5 列出 Phase 57+ candidate scope:
 
 ## User Stories
 
-### US-1: Shared Frontend Dashboard Infrastructure
+### US-1: Shared Frontend Dashboard Infrastructure + Vitest Setup
 
 **As** a SaaS platform admin
-**I want** shared MonthPicker component + admin role display gate + per-feature folder skeletons mirroring chat_v2 + governance pattern
-**So that** Cost + SLA dashboards have consistent UX chrome and code organization aligns with v1 D-findings(per-feature folder + plain fetch + Zustand)
+**I want** per-feature folder skeletons + MonthPicker + Vitest config(per D11 — 前端原無 unit test infra)mirroring chat_v2 + governance pattern
+**So that** Cost + SLA dashboards have consistent UX chrome,code organization aligns with v1 D-findings(per-feature folder + plain fetch + Zustand),AND Vitest infra 為後續 frontend sprint 鋪路
 
 **Acceptance**:
 - `frontend/src/features/cost-dashboard/` + `sla-dashboard/` skeleton folders(components / services / store / types.ts)
-- `frontend/src/features/shared/components/MonthPicker.tsx`(若 features/shared/ 不存在 → Day 0 verify;否則 inline in cost-dashboard 共用 import)
-- Admin role display gate helper(`useIsAdmin()` hook OR shared component;Day 0 verify governance auth pattern reuse)
-- types.ts per feature(CostSummaryResponse / SLAReportResponse mirror 56.3 Pydantic)
-- 1 unit test for MonthPicker
+- MonthPicker.tsx 位置 per Day 0 verdict(features/shared/components/ OR cost-dashboard/components/ 共用 import)
+- types.ts per feature(CostSummaryResponse mirror 56.3 nested 2-level by_type per D9;SLAReportResponse mirror 56.3 flat fields per Day 0 verify)
+- ~~Admin role display gate helper~~ — drop per D10 Option C(前端無 auth 機制;backend 56.3 endpoints 已 enforce `require_admin_platform_role`;前端僅顯示 401/403 error UX)
+- **Vitest config + setup**(per D11 piggyback Day 0 OR Day 1 start):add vitest dev dependency + `vite.config.ts` test settings + `npm run test` script;1 smoke test 驗證 setup 工作
+- DoD:Vitest can run + 0 errors
 
 ### US-2: Cost Dashboard
 
@@ -183,8 +184,8 @@ Sprint 56.3 retrospective Q5 列出 Phase 57+ candidate scope:
 
 **Acceptance**:
 - `frontend/src/App.tsx` add `<Route path="/cost-dashboard/*" element={<CostDashboardPage />} />` + `<Route path="/sla-dashboard/*" element={<SLADashboardPage />} />`
-- Home page(App.tsx Home component)add 2 nav `<Link>` entries(role-gated display:若 user 有 admin role → show;else hide)
-- 1 unit test(routing pattern matches existing chat-v2 / governance pattern)
+- Home page(App.tsx Home component)add 2 nav `<Link>` entries — **always visible**(per D10 Option C:無前端 role gate;非授權用戶按下 link 後由 backend 401/403 + 前端 error UX 處理)
+- ~~1 unit test for routing pattern~~ — drop per Option C(沒有 role logic 需測試;routing pattern 既有 chat-v2 / governance / verification 已驗證)
 
 ### US-5: Playwright E2E + Closeout Ceremony
 
@@ -317,11 +318,12 @@ Sprint 57.1 v1(onboarding wizard)plan 起草 over-relied on memory snapshot 模�
 - [ ] Anti-pattern checklist 11 項對齐
 - [ ] 5 active CI checks green(含 Frontend E2E chromium headless per 53.7 baseline)
 - [ ] Frontend `npm run lint && npm run build` clean
-- [ ] Frontend `npm run test` (Vitest unit) ≥ 6 new tests pass
+- [ ] Frontend Vitest config + setup added(per D11 — 前端原無 Vitest);`npm run test` ≥ 3 new unit tests pass(cost store + cost service + sla store)
 - [ ] Playwright e2e 4 tests pass(2 happy + 2 error paths)
 - [ ] AD-Sprint-Plan-4 `medium-frontend` 1st application captured + verdict logged in retro Q2
 - [ ] AD-Plan-4-Schema-Grep fold-in to sprint-workflow.md §Step 2.5 Prong 3 done(formal section + evidence references + MHist bump)
 - [ ] v1 abort lesson captured in retro Q1(跨域 plan-time grep 應更密)
+- [ ] D8-D13 Day 0 探勘 v2 D-findings catalogued in progress.md + plan §Risks updated(scope shift ~5% within band per Option C)
 
 ### Per-User-Story
 
@@ -444,6 +446,20 @@ Sprint 57.1 v1(onboarding wizard)plan 起草 over-relied on memory snapshot 模�
 ### Day 0 探勘 D-findings v2 (catalogued during Day 0 兩-prong 探勘)
 
 > v1 D-findings 已 carry-forward: D1 per-feature folder + D2 pages/{feature}/index.tsx + D3 wildcard route + D4 no React Query / use plain fetch + D5 no form library + D6 plain fetch + _handleResponse helper + D7 (v1-only;onboarding API model);此 sprint v2 Day 0 探勘 catalogue 新 D-findings (D8+) below。
+
+**D8** — 56.3 cost-summary + sla-report endpoints auth = `require_admin_platform_role`(super-admin only),非 plan 假設的 `admin_tenant_role`。Implication:dashboards 是 super-admin tools,不是 tenant-admin self-service。前端 admin gate 邏輯(若加)應檢查 ADMIN_PLATFORM。
+
+**D9** — `CostSummaryResponse.by_type` 是 `dict[str, dict[str, AggregatedSliceResponse]]` 巢狀 2 層 dict(type→sub_type→{quantity / total_cost_usd / entry_count}),非 plan 假設的 flat breakdown。Implication:types.ts 鏡射 nested 結構;CostBreakdownTable 渲染需 2 層 iteration。
+
+**D10** — 前端完全沒有 auth/role 機制(useIsAdmin / useCurrentUser / ADMIN_PLATFORM 全 0 results)。Implication per Option C:跳過前端 auth gate;dashboards 直接 render;依賴 backend 56.3 endpoints 401/403 返回時前端顯示 error UX(retry button / 「Permission required」 message)。Saved ~30 min from US-1 admin gate task。
+
+**D11** — 前端沒有 Vitest(package.json 0 vitest dep / script;只有 Playwright)。Implication per Option C:Day 0 piggyback 加 Vitest config + setup(~1 hr);後續 frontend sprint 受益(Tenant Settings / Onboarding console 等候選 sprint 預備測試基礎建設)。3 unit tests(2 cost + 1 sla)+ 4 e2e = 7 total tests。
+
+**D12** — App.tsx Home 是 49.1 placeholder(plain `<Link>` list 無 auth context;comment 說 「Phase 50.2 extended」 each phase 自然延伸);Implication:加 2 個 dashboard `<Link>` 到 Home 自然 fit existing pattern,不需新組件;US-4 nav 任務 simplification。
+
+**D13** — Frontend Vite config proxy `/api/v1/health` to `localhost:8001`(non-blocking note;CLAUDE.md backend default 8000)。Implication:catalogue note;此 sprint 不修改 vite.config(可能歷史遺留 OR backend 多 port 配置);若 dashboard fetch 觸到 8001 vs 8000 mismatch → US-2/3 service.ts 需 explicit port note 在 Day 1 smoke test 確認。
+
+**Cumulative scope shift** ≈ +1 hr (Vitest setup) + 15 min (D9 nested types) - 30 min (D10 auth gate dropped) + 5 min (D8 role rename) = **+50 min ≈ +5%**;< 20% threshold per AD-Plan-1 → continue Day 1 with risks noted(no plan re-version required)。
 
 ### Sprint-specific Risks
 
