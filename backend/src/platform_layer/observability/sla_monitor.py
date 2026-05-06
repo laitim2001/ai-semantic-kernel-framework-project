@@ -233,7 +233,7 @@ class SLAMetricRecorder:
         all_entries = await self._client.zrange(key, 0, -1, withscores=True)
         if not all_entries:
             return None
-        scores = sorted(score for _, score in all_entries)
+        scores: list[float] = sorted(float(score) for _, score in all_entries)
         # p99 = ceil(0.99 * len) - 1 index;clamp to ≥ 0
         p99_idx = max(int(len(scores) * 0.99) - 1, 0)
         if p99_idx >= len(scores):
