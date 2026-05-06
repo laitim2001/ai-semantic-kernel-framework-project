@@ -137,3 +137,71 @@ Findings shift scope ~5% < 20% threshold → **continue Day 1** with risks noted
 - Branch handling:v1 `feature/sprint-57-1-onboarding-wizard` deleted (local + remote per Option α;`1e5c457b` orphan reference);v2 `feature/sprint-57-1-cost-sla-dashboards` active
 
 Day 0 完成 ✅ — Day 1 啟動條件具備。
+
+---
+
+## Day 1 — 2026-05-06
+
+### Setup ✅
+
+- npm install --save-dev vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom @vitest/ui — completed exit 0
+- Skeleton dirs created:`features/cost-dashboard/{components,services,store}`,`features/sla-dashboard/{components,services,store}`,`pages/cost-dashboard/`,`pages/sla-dashboard/`,`tests/unit/cost-dashboard/`
+
+### US-1 + US-2 deliverables ✅
+
+**Files created**:
+1. `frontend/src/features/cost-dashboard/types.ts` — CostSummaryResponse + AggregatedSlice interfaces (mirror 56.3 nested 2-level by_type per D9)
+2. `frontend/src/features/cost-dashboard/services/costService.ts` — plain fetch + `_handleResponse<T>` helper (per D6 pattern;`fetchCostSummary(tenantId, month)`)
+3. `frontend/src/features/cost-dashboard/store/costStore.ts` — Zustand store (currentMonth / data / loading / error;setMonth / loadData / reset actions per D4 plain Zustand)
+4. `frontend/src/features/cost-dashboard/components/MonthPicker.tsx` — shared YYYY-MM picker(features/shared 不存在 per Day 0 → 放 cost-dashboard 由 sla-dashboard import)
+5. `frontend/src/features/cost-dashboard/components/CostBreakdownTable.tsx` — 2-level nested dict iteration table renderer
+6. `frontend/src/features/cost-dashboard/components/CostOverview.tsx` — main container (MonthPicker + total + table + loading/error UX + retry button per D10 Option C)
+7. `frontend/src/features/sla-dashboard/types.ts` — SLAReportResponse skeleton(Day 2 fills service+store)
+8. `frontend/src/pages/cost-dashboard/index.tsx` — Routes wrapper (wildcard pattern per D3)
+
+**Vitest config + setup**(per D11 Option C piggyback):
+- `frontend/vite.config.ts` — added `test:` block (使用 `defineConfig` from `vitest/config` 而非 `vite` per build error fix);globals=true / environment=jsdom / setupFiles + include + exclude
+- `frontend/tests/unit/setup.ts` — jest-dom matchers registration
+- `frontend/package.json` — added `test` / `test:watch` / `test:ui` scripts
+
+**3 unit test files / 7 tests total**(plan target 3,實際 7 因為 store/service/picker 各分多個 case):
+- `tests/unit/cost-dashboard/MonthPicker.test.tsx` — 2 tests(renders + onChange)
+- `tests/unit/cost-dashboard/costStore.test.ts` — 3 tests(success / error / setMonth clear)
+- `tests/unit/cost-dashboard/costService.test.ts` — 2 tests(URL build + 5xx throw)
+
+### Day 1 sanity checks ✅
+
+| 檢查 | 結果 |
+|------|------|
+| Vitest run | **3 files / 7 tests passed / 1.07s** ✅ |
+| Frontend lint | **0 errors** ✅ |
+| Frontend build | **52 modules / 188KB → gzip 60.70KB / 551ms** ✅(注:cost-dashboard 尚未在 App.tsx 註冊 → tree-shaken;Day 3 整合)|
+| Backend baseline 不動 | pytest 1557 / mypy 0/293 / 8 V2 lints 8/8 / LLM SDK leak 0(此 sprint frontend-only)|
+
+### Day 1 D-findings 補充
+
+**D15** — `vite/UserConfigExport` 不含 `test:` field;若用 `defineConfig` from `vite` + `/// <reference types="vitest" />` 仍會 tsc TS2769 fail。修正:用 `defineConfig` from `vitest/config`(同 export `UserConfigExport` 但含 test 型別)。Implication:vite.config.ts 第 1 行 import 改 `vitest/config` — 不影響 vite dev server / production build 行為。
+
+**D16** — Vitest 7 個 tests 比 plan 期望 3 個多 4 個。原因:每個 store/service/picker 各 split 多 case 才能 cover happy + error + edge 行為。不違反 scope(更多 coverage 是好事);plan §Acceptance Criteria 更新為「≥ 3 unit tests」應加 「(actual 7)」 note。
+
+### Day 2 Plan(US-3 SLA Dashboard)
+
+Day 2 = SLA Dashboard implementation:
+1. `slaService.ts` — fetchSLAReport(tenantId, month) mirror costService pattern
+2. `slaStore.ts` — Zustand mirror costStore
+3. `SLAOverview.tsx` — 主容器(MonthPicker + 4 SLAMetricsCard + violations badge)
+4. `SLAMetricsCard.tsx` — metric card with pass-fail color
+5. Tier-aware threshold logic(per Day 0 verdict — fallback 通用 99.5%;tenant.plan 前端不可訪問)
+6. `pages/sla-dashboard/index.tsx` page wrapper
+7. 2 Vitest unit tests(slaStore + threshold logic)
+
+### Day 1 stats summary
+
+- Files created:11(8 src + 1 setup + 3 test files;package.json + vite.config.ts modified)
+- Tests:7 Vitest unit tests passed
+- Frontend lint + build:clean
+- Backend baseline:unchanged(frontend-only sprint)
+- Day 1 commits:1 pending(US-1+US-2 implementation + Vitest setup)
+
+Day 1 完成 ✅ — Day 2 SLA Dashboard 啟動條件具備。
+
