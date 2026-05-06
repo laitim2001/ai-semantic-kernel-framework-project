@@ -68,12 +68,12 @@ Build enterprise AI agent teams that work like **human professional teams** — 
 
 | Attribute | Value |
 |-----------|-------|
-| **Phase** | **🎉 V2 重構完成 — 22/22 sprint** + **Phase 56+ SaaS Stage 1 進度 1/3** |
-| **Latest Sprint** | **56.1** ✅ COMPLETE 2026-05-06（SaaS Stage 1 backend foundation — 5 USs all closed: tenant lifecycle + plan template + onboarding API + feature flags + RLS hardening；8th V2 lint check_rls_policies；pytest 1463→**1508**；calibration `large multi-domain` 0.55 1st app ratio **1.00 ✅ bullseye**）|
+| **Phase** | **🎉 V2 重構完成 — 22/22 sprint** + **Phase 56+ SaaS Stage 1 進度 2/3** |
+| **Latest Sprint** | **56.2** ✅ COMPLETE 2026-05-06（Polish Bundle — 4 ADs closed: Cat12-BusinessObs + QuotaEstimation-1 + QuotaPostCall-1 + AdminAuth-1；pytest 1508→**1530**；calibration `mixed` 0.60 2nd app ratio **1.17 ✅** in band；10-sprint window 6/10 first 60%）|
 | **Last main-progress Sprint** | **55.2** ✅ COMPLETE 2026-05-04（V2 21/22 → **22/22 = 100%**）|
-| **main HEAD** | `4aff9e70` (2026-05-06 — Sprint 56.1 SaaS Stage 1 foundation merged) |
-| **Next Phase** | **Phase 56.2** SaaS Stage 1 next sprint — 候選 scope: SLA Monitor / Cost Ledger / Citus PoC / Phase 56.x integration polish bundle (AD-AdminAuth-1 + AD-QuotaPostCall-1 + AD-QuotaEstimation-1)；user approval required per rolling planning 紀律 |
-| **Roadmap** | Phase 49-55 V2 ✅，Phase 56-58 SaaS Stage 1 進度 **1/3** |
+| **main HEAD** | `777b32e6` (2026-05-06 — Sprint 56.2 polish bundle merged) |
+| **Next Phase** | **Phase 56.3** SaaS Stage 1 final sprint — 候選 scope: SLA Monitor + Cost Ledger / Citus PoC / Compliance partial GDPR；user approval required per rolling planning 紀律 |
+| **Roadmap** | Phase 49-55 V2 ✅，Phase 56-58 SaaS Stage 1 進度 **2/3** |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis（V1 沿用）|
 | **Architecture** | TAO/ReAct loop + 11+1 範疇 全 Level 4（Cat 9 L5）+ LLM Provider 中性（CI-enforced）+ Multi-tenant 3 鐵律 |
 | **Branch Protection** | enforce_admins=true / **review_count=0**（solo-dev policy 永久，2026-05-03 Sprint 53.2 起）/ 5 active required CI checks |
@@ -556,9 +556,9 @@ V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（M
 
 ---
 
-**Last Updated**: 2026-05-06 (Sprint 56.1 closeout — SaaS Stage 1 backend foundation merged; calibration `large multi-domain` 0.55 1st app ratio 1.00 bullseye)
+**Last Updated**: 2026-05-06 (Sprint 56.2 closeout — Phase 56.x Integration Polish Bundle merged; calibration `mixed` 0.60 2nd app ratio 1.17 in band; 10-sprint window 6/10 first 60%)
 **Project Start**: 2025-11-14
-**Current Phase**: 🎉 **V2 重構完成（22/22）** + **Phase 56+ SaaS Stage 1 進度 1/3** — Sprint 56.1 ✅ delivered tenant lifecycle + plan template + onboarding API + feature flags + RLS hardening (8th V2 lint check_rls_policies); pytest 1463 → **1508** (+45); 28 D-findings catalogued; 3 carryover ADs logged for Phase 56.x integration polish (AD-AdminAuth-1 / AD-QuotaEstimation-1 / AD-QuotaPostCall-1); 下一個 Sprint 56.2 候選 scope (SLA Monitor / Cost Ledger / Citus PoC / 整合 polish) 待 user approve per rolling planning 紀律
-**main HEAD**: `4aff9e70`
+**Current Phase**: 🎉 **V2 重構完成（22/22）** + **Phase 56+ SaaS Stage 1 進度 2/3** — Sprint 56.2 ✅ delivered Polish Bundle: 4 ADs closed (AD-Cat12-BusinessObs real Tracer threading + AD-QuotaEstimation-1 heuristic pre-call estimate + AD-QuotaPostCall-1 LoopCompleted reconciliation + AD-AdminAuth-1 JWT-claim RBAC); pytest 1508 → **1530** (+22, target +17 hit 129%); 12 D-findings; mixed class 2-data-point mean 1.09 (KEEP 0.60); 下一個 Sprint 56.3 候選 scope (SLA Monitor + Cost Ledger / Citus PoC / Compliance partial GDPR) 待 user approve per rolling planning 紀律
+**main HEAD**: `777b32e6`
 **V2 Authority**: `docs/03-implementation/agent-harness-planning/` (19 docs)
 **V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`
