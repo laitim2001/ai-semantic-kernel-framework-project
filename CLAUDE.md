@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. **`docs/03-implementation/agent-harness-planning/10-server-side-philosophy.md`** — 3 大最高指導原則（必讀）
 4. **`docs/03-implementation/agent-harness-planning/17-cross-category-interfaces.md`** — Single-source 介面權威表
 
-> **權威排序**：`agent-harness-planning/` 17 份 V2 文件 > 本 CLAUDE.md > 任何 V1 文件 / 既有代碼。
+> **權威排序**：`agent-harness-planning/` 21 份 V2 文件（20 規劃 + 1 review）> 本 CLAUDE.md > 任何 V1 文件 / 既有代碼。
 > 衝突時以 V2 規劃為準。
 
 ---
@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 cmd /c "cd /d <project_path>\backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000"
 ```
 
-> **注意**：V1 backend / frontend 即將封存到 `archived/v1-phase1-48/`（Sprint 49.1 Day 1）。封存後啟動命令會更新為新 V2 backend 結構。
+> **注意**：V1 backend / frontend 已封存於 `archived/v1-phase1-48/`（Sprint 49.1 完成）。啟動命令對應新 V2 backend 結構。
 
 ---
 
@@ -145,7 +145,7 @@ V2 嚴格按以下範疇組織代碼，**禁止跨範疇雜湊**：
 
 建任何新 infra 前，**權威排序**：
 
-1. **`agent-harness-planning/` 17 份 V2 規劃**（最高權威）
+1. **`agent-harness-planning/` 21 份 V2 規劃**（20 規劃 + 1 review；最高權威）
 2. **Sprint 49.1+ plan/checklist** — 當前迭代決定
 3. **PoC worktrees 驗證模式** — poc-tools / intent-classifier / memory-system / subagent-control / KB enterprise
 4. **Phase 48 LLM-native orchestrator + 7 YAML configs**（已落地新基礎）
@@ -153,13 +153,13 @@ V2 嚴格按以下範疇組織代碼，**禁止跨範疇雜湊**：
 
 ### ⛔ 禁止反模式
 
-- ❌ 「MAF 已經有 X」— MAF 正在被封存
-- ❌ 翻 `reference/agent-framework/` 找實作 — 那是過時參考
-- ❌ 擴充 `backend/src/integrations/agent_framework/` — 整個目錄即將封存
+- ❌ 「MAF 已經有 X」— MAF 已封存於 `archived/v1-phase1-48/`，V2 不再以 MAF 為核心
+- ❌ 翻 `reference/agent-framework/` 找實作 — 該目錄為 MAF upstream 鏡像，僅作歷史參考，禁止用於 V2 設計
+- ❌ 擴充 `backend/src/integrations/agent_framework/` — 該目錄已不存在（隨 V1 一併封存到 archived/）
 
 ---
 
-## V2 規劃文件導航（19 份）
+## V2 規劃文件導航（21 份）
 
 | 文件 | 用途 |
 |------|------|
@@ -204,7 +204,7 @@ V1 雖被 V2 取代，但下列資產持續保留作為**設計知識**：
 
 ## Development Commands
 
-> ⚠️ **Sprint 49.1 Day 1 後，backend / frontend 將遷移**。以下命令在遷移後會更新。
+> Sprint 49.1 已完成 backend / frontend 遷移；以下命令對應 V2 結構。
 
 ### Unified Dev Environment
 
@@ -246,9 +246,16 @@ python scripts/dev.py logs docker -f
 | `git-workflow.md` | Git commits / branches |
 | `code-quality.md` | Black / ESLint / mypy |
 | `testing.md` | 測試標準（≥ 80% coverage） |
-| `azure-openai-api.md` | Azure OpenAI 用法 |
+| `adapters-layer.md` | LLM adapter 設計 + Azure OpenAI 細節（吸收原 azure-openai-api.md + agent-framework.md） |
+| `category-boundaries.md` | 11+1 範疇邊界與跨範疇 import 紀律 |
+| `llm-provider-neutrality.md` | `agent_harness/**` 禁 import LLM SDK；CI lint |
+| `anti-patterns-checklist.md` | 11 條反模式 PR 自檢清單 |
+| `multi-tenant-data.md` | tenant_id / RLS / GDPR / PII |
+| `observability-instrumentation.md` | 範疇 12 cross-cutting 埋點規範 |
+| `sprint-workflow.md` | 5 步 sprint 強制流程 |
+| `file-header-convention.md` | File header + Modification History |
 
-> **過時規則**：`.claude/rules/agent-framework.md`（MAF 用法）— V2 不適用，待移除或改寫為 adapter 規則。
+> 詳細索引見 [.claude/rules/README.md](.claude/rules/README.md)。
 
 ### Quick Commands
 
@@ -359,7 +366,7 @@ claudedocs/
 - **Never Delete Tests**: 不刪測試 / 不關測試 / 不跳測試
 - **Never Delete Docs**: 未授權不刪文件
 - **Never Delete Checklist Items**: 只能 `[ ]` → `[x]`，不能刪除未勾選項（Phase 42 Sprint 147 違規前車之鑑）
-- **Check Existing Before Building**: 建新 infra 前，先查 V2 17 份規劃 + Sprint plan + PoC worktrees（**不是查 MAF/AG-UI/SDK** — 它們正被封存）
+- **Check Existing Before Building**: 建新 infra 前，先查 V2 21 份規劃 + Sprint plan + PoC worktrees（**不是查 MAF/AG-UI/SDK** — 它們已封存於 archived/）
 
 ---
 
@@ -508,7 +515,7 @@ Phase README → Code → Progress Doc  ❌ 跳過 plan + checklist
 
 1. **Target Market**: 台灣 / 香港。技術詞英文，使用者面向繁體中文。
 2. **BMAD Methodology**: 沿用 BMad Agile workflow。狀態追蹤於 `docs/bmm-workflow-status.yaml`。
-3. **MAF Status**: V1 整合的 Microsoft Agent Framework 將於 Sprint 49.1 封存到 `archived/v1-phase1-48/`。V2 不再以 MAF 為核心；如需 multi-agent builder 才有條件保留 adapter。
+3. **MAF Status**: V1 整合的 Microsoft Agent Framework 已於 Sprint 49.1 完成封存到 `archived/v1-phase1-48/`。V2 不再以 MAF 為核心；如需 multi-agent builder 才有條件保留 adapter。
 
 ---
 
@@ -556,9 +563,9 @@ V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（M
 
 ---
 
-**Last Updated**: 2026-05-06 (Sprint 57.1 v2 closeout — Phase 57+ SaaS Frontend 1/N opens; Cost + SLA Dual Dashboard Bundle merged; calibration `medium-frontend` 0.65 mid-band 1st app ratio 0.85 ✅ in band lower edge; 12-sprint window 8/12 (67%) sustained; AD-Plan-4-Schema-Grep folded to sprint-workflow.md §Step 2.5 Prong 3)
+**Last Updated**: 2026-05-06 (audit-cycle CLAUDE.md V1/MAF cleanup — 11 處過時敘述更新為過去式;V2 docs 數量統一為 21 份;`.claude/rules/agent-framework.md` + `azure-openai-api.md` 已不存在引用清理;rule table 補入 8 條 V2-era 規則 + 連結 README.md。Sprint 57.1 v2 closeout 內容保持不變)
 **Project Start**: 2025-11-14
 **Current Phase**: 🎉 **V2 重構完成（22/22）** + 🎉 **Phase 56-58 SaaS Stage 1 完成（3/3 backend stack）** + 🎉 **Phase 57+ SaaS Frontend 啟動（1/N opens）** — Sprint 57.1 v2 ✅ delivered Cost + SLA Dual Dashboard Bundle: v1 onboarding wizard plan aborted Day 0 due to D7 backend admin-driven model mismatch (super-admin POST /admin/tenants/{id}/onboarding/{step} 模型 vs plan 假設 self-serve POST /onboarding/start), user redirected Option D dual dashboard bundle 2026-05-06; 5 USs closed (US-1 shared infra + Vitest setup per D11 first frontend test infra / US-2 Cost Dashboard consumes 56.3 cost-summary endpoint with nested 2-level by_type per D9 / US-3 SLA Dashboard with 6 metric cards + violations badge + Standard 99.5% threshold fallback per D10 (frontend has no tenant.plan accessible) / US-4 routing + Home nav + admin gate skipped per D10 Option C / US-5 Playwright e2e + closeout); 4 e2e (2 happy + 2 error) + 15 Vitest unit tests; D20 selector fix (getByText 匹配內層 strong → split assertion); Vitest config via vitest/config defineConfig per D15 fix; calibration ratio 0.85 ✅ (`medium-frontend` 0.65 mid-band 1st app — KEEP 0.65 multiplier 1-data-point baseline opens); 12-sprint window in-band **8/12 (67%)** sustained ≥ 60% threshold for 3rd consecutive sprint; 20 D-findings cumulative (D1-D7 v1 carry-forward + D8-D14 Day 0 兩-prong v2 + D15 vitest config + D16-D17 bonus coverage + D18 SLA tier fallback + D19 Playwright page.route mock + D20 e2e selector); AD-Plan-4-Schema-Grep **folded** to sprint-workflow.md §Step 2.5 Prong 3 formal section (closes 55.6 promotion + 56.3 3rd evidence; +35 lines, 5-row drift class table, ROI evidence sub-table); v1 abort lesson captured retro Q1 (跨域 plan-time grep 應加重 — memory 對 frontend 細節零基礎, 標準 SaaS lens 假設 self-serve 在 enterprise admin-driven 不適用, AD-Plan-3 兩-prong Day 0 catch ROI 顯著 1 hr cost vs Day 2 catch 8-10 hr cost rework); pytest 1557 unchanged (frontend-only sprint); mypy 0/293; 8 V2 lints 8/8; LLM SDK leak 0; Phase 57+ next-sprint candidates (Tenant Settings / Admin tenant console / Onboarding self-serve wizard 需 backend self-serve API design / DR + WAL streaming / Compliance partial GDPR / SaaS Stage 2 Stripe + 月結 + Status Page) 待 user approve per rolling planning 紀律
 **main HEAD**: `4d0a88de`
-**V2 Authority**: `docs/03-implementation/agent-harness-planning/` (19 docs)
+**V2 Authority**: `docs/03-implementation/agent-harness-planning/` (21 docs — 20 規劃 + 1 review)
 **V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`
