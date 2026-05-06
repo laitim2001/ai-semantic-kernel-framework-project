@@ -199,11 +199,63 @@ Per checklist Day 3 — US-3 CostLedgerService + US-4 auto-record hooks:
 
 ### Day 4 plan (next)
 
-Per checklist Day 4 — US-5 Closeout Ceremony:
-1. Cross-AD e2e integration test `test_phase56_3_e2e.py` (provision RBAC + onboard + chat with quota reconcile from 56.2 + SLA span from US-1 + Cost Ledger entries from US-4 visible end-to-end)
-2. Final pytest + 8 V2 lints + LLM SDK leak verify
-3. retrospective.md (6 必答 + AD-Sprint-Plan-4 large multi-domain 2nd app calibration verify + AD-Plan-4-Schema-Grep verdict)
-4. Memory snapshot `memory/project_phase56_3_sla_monitor_cost_ledger.md`
-5. Open PR → CI green → solo-dev squash merge to main
-6. Closeout PR (SITUATION-V2 §9 + CLAUDE.md + memory MEMORY.md index)
-7. Final push + Phase 56-58 SaaS Stage 1 3/3 ceremony note
+Per checklist Day 4 — US-5 Closeout Ceremony (originally planned next).
+
+---
+
+## Day 4 — US-5 Closeout Ceremony ✅ (2026-05-06)
+
+**Status**: ✅ COMPLETE — Phase 56-58 SaaS Stage 1 3/3 ✅ CLOSURE
+
+### 4.1 Cross-AD e2e integration test ✅
+- NEW `tests/integration/api/test_phase56_3_e2e.py` (~180 LOC)
+- Single integrated `_stream_loop_events` chat flow exercises:
+  - **US-1 (SLA)**: stub loop emits LoopCompleted → chat router observer calls `record_loop_completion(complexity=simple)` → `get_loop_p99` returns the recorded latency
+  - **US-3+US-4 (Cost Ledger)**: stub loop emits ToolCallExecuted + LoopCompleted → 1 LLM ledger entry (`azure_openai_gpt-5.4_total`) + 1 tool ledger entry (`salesforce_query`); aggregate(month) returns by_type breakdown with total_cost_usd > 0
+  - **56.2 carryover (US-2 + quota US-3)**: pre-call estimate 200 tokens (800-char message) → reserve → reconcile to actual 120 tokens
+- Uses real `db_session` fixture (Postgres testcontainer per conftest.py) + fakeredis for SLA + quota
+- All 4 hooks coexist in single chat run without breaking SSE event stream
+- DoD: 1 test passes 0.70s ✅
+
+### 4.2 Final pytest + lint + leak verify ✅
+- pytest **1557 passed** / 4 skipped (1556 + 1 e2e = exact target hit)
+- 8 V2 lints via `run_all.py`: **8/8 green** in 1.07s
+- mypy --strict: **0 errors / 293 source files**
+- black: 508 files unchanged
+- isort: clean
+- flake8: 1 issue caught (router.py L41 MHist E501) → trimmed
+- LLM SDK leak grep: 0 in `agent_harness/` / `business_domain/` / `platform_layer/` / `core/` (only adapters allowed per LLM Provider Neutrality §exception)
+
+### 4.3 Retrospective ✅
+- NEW `retrospective.md` (6 必答 + Phase 56-58 SaaS Stage 1 3/3 closure note)
+- **Q2 calibration**: actual ~13.5 hr / commit 13 hr → ratio **1.04 ✅** in [0.85, 1.20] band; 56.1=1.00, 56.3=1.04, mean **1.02** ✅
+- **Q3 AD-Plan-4-Schema-Grep verdict**: 3rd data point evidence (56.3 D6 sessions.total_cost_usd Day-0 catch saved ~1 hr) → **PROMOTE candidate → validated rule** as Prong 3 Schema Verify; fold-in pending next sprint touching `sprint-workflow.md`
+- **Q5 Phase 57+ candidate scope**: Citus PoC / DR + WAL streaming / Compliance partial GDPR / SLA monthly cron / Frontend Onboarding Wizard / Cost dashboard / SLA dashboard / SaaS Stage 2 (Stripe / Status Page) — user approval required per rolling planning 紀律
+
+### 4.4 Memory snapshot ✅
+- NEW `memory/project_phase56_3_sla_monitor_cost_ledger.md`
+- MEMORY.md index entry added (between 56.2 and ## Feedback section)
+- SITUATION-V2 §9 + CLAUDE.md sync deferred to closeout PR (after main HEAD captured)
+
+### 4.5 Open PR + CI green + solo-dev merge (next)
+- Pending: open PR → CI green → solo-dev squash merge
+
+### 4.6 Closeout PR (next)
+- Pending: SITUATION-V2 + CLAUDE.md + memory final sync
+
+### 4.7 Phase 56-58 SaaS Stage 1 ceremony note ✅
+
+🎉 **Phase 56-58 SaaS Stage 1 Backend Stack — 3/3 ✅ CLOSED**
+
+```
+Phase 56.1 ✅ tenant lifecycle + plans + onboarding + feature flags + RLS hardening
+Phase 56.2 ✅ integration polish (Cat 12 obs + quota wire + RBAC + admin endpoint)
+Phase 56.3 ✅ SLA Monitor + Cost Ledger 聯合 (this sprint)
+```
+
+3 sprints in 1 day (2026-05-06) — strong matrix discipline + AD-Plan-3 + AD-Plan-4 process tools enabled tight execution.
+
+### Day 4 stats
+- Day 4 actual time: ~2.5 hr (e2e + retrospective + memory + sanity verify)
+- Sprint cumulative actual: ~13.5 hr / 13 hr commit = **1.04 ratio ✅**
+- pytest 1556 → **1557** (+1 e2e)
