@@ -26,12 +26,12 @@ Created: 2026-05-07 (Sprint 57.2 Day 1)
 Last Modified: 2026-05-07
 
 Modification History (newest-first):
-    - 2026-05-07: Sprint 57.2 Day 1 — initial creation (closes AD-Cat10-Cat11-LoopMetricsAccumulator)
+    - 2026-05-07: Sprint 57.2 Day 1 — initial (closes AD-Cat10-Cat11-LoopMetricsAccumulator)
 
 Related:
     - 17-cross-category-interfaces.md §Cat 12 metrics
     - sla_monitor.py L92-94 — Day 0 D2 documented this deferred accumulator need
-    - LoopCompleted event (events.py L106) — input_tokens/output_tokens/provider/model fields added Sprint 57.2 Day 1
+    - LoopCompleted event (events.py L106) — input/output/provider/model fields (57.2 Day 1)
     - cost_ledger.py record_llm_call() — consumes split via chat router observer
 """
 

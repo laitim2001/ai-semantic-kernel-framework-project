@@ -1,6 +1,6 @@
 """
 File: backend/tests/unit/agent_harness/guardrails/test_factory.py
-Purpose: Unit tests for build_default_guardrail_engine() (Sprint 57.2 closes AD-Cat9-1-WireDetectors).
+Purpose: Unit tests for build_default_guardrail_engine() (57.2 closes AD-Cat9-1-WireDetectors).
 Category: Tests
 Created: 2026-05-07 (Sprint 57.2 Day 4)
 """

@@ -1,13 +1,11 @@
 """
 File: backend/tests/unit/agent_harness/orchestrator_loop/test_metrics_accumulator.py
-Purpose: Unit tests for LoopMetricsAccumulator (Sprint 57.2 closes AD-Cat10-Cat11-LoopMetricsAccumulator).
+Purpose: Unit tests for LoopMetricsAccumulator (57.2 closes AD-Cat10-Cat11-LoopMetricsAccumulator).
 Category: Tests
 Created: 2026-05-07 (Sprint 57.2 Day 3)
 """
 
 from __future__ import annotations
-
-import pytest
 
 from agent_harness._contracts.events import (
     LLMResponded,
