@@ -63,11 +63,13 @@ async def test_admin_cost_summary_endpoint_returns_aggregated(
     set_pricing_loader(pl)
 
     svc = CostLedgerService(db=db_session, pricing_loader=pl)
+    # Sprint 57.2: input/output token split (closes AD-Cost-Ledger-Token-Split).
     await svc.record_llm_call(
         tenant_id=t.id,
         provider="azure_openai",
         model="gpt-5.4",
-        total_tokens=1_000,
+        input_tokens=600,
+        output_tokens=400,
     )
     await svc.record_tool_call(tenant_id=t.id, tool_name="salesforce_query")
     await db_session.flush()
@@ -100,5 +102,7 @@ async def test_admin_cost_summary_endpoint_returns_aggregated(
     assert Decimal(str(body["total_cost_usd"])) > 0
     assert "llm" in body["by_type"]
     assert "tool" in body["by_type"]
-    assert "azure_openai_gpt-5.4_total" in body["by_type"]["llm"]
+    # Sprint 57.2: split sub_types replace combined "_total".
+    assert "azure_openai_gpt-5.4_input" in body["by_type"]["llm"]
+    assert "azure_openai_gpt-5.4_output" in body["by_type"]["llm"]
     assert "salesforce_query" in body["by_type"]["tool"]

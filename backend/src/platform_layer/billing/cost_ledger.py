@@ -100,54 +100,79 @@ class CostLedgerService:
         tenant_id: UUID,
         provider: str,
         model: str,
-        total_tokens: int,
+        input_tokens: int,
+        output_tokens: int,
         cached_input_tokens: int = 0,
         session_id: UUID | None = None,
-    ) -> CostLedger:
-        """Record one ledger entry for an LLM call.
+    ) -> list[CostLedger]:
+        """Record two ledger entries for an LLM call (input + output split).
 
-        Day 3 simplification: combined `total_tokens` (input + output) without
-        split. Pricing uses (input_per_million + output_per_million) / 2 as
-        conservative average. AD-Cost-Ledger-Token-Split (Phase 56.x) will
-        extract real input/output via Cat 4 ChatClient metadata.
+        Sprint 57.2 closes AD-Cost-Ledger-Token-Split + AD-Cost-Ledger-
+        Provider-Attribution. Replaces 56.3 D2 single-entry combined-token
+        simplification (avg pricing → real input/output split pricing).
+        Provider/model now sourced truthfully from LoopCompleted accumulator
+        (chat router observer reads event.provider + event.model populated by
+        AgentLoop from ChatResponse.model + adapter.model_info().provider).
 
-        If `cached_input_tokens > 0`, that portion uses cached_input_per_million.
+        Pricing:
+          - billable_input = max(input_tokens - cached_input_tokens, 0)
+            × pricing.input_per_million / 1M
+          - cached_input = cached_input_tokens × pricing.cached_input_per_million / 1M
+          - output = output_tokens × pricing.output_per_million / 1M
+
+        Returns list of 2 CostLedger entries (`{provider}_{model}_input` +
+        `{provider}_{model}_output` sub_types) for monthly aggregate
+        granularity. Both entries share session_id for per-session
+        reconciliation.
         """
         pricing = self._pricing.get_llm_pricing(provider, model)
         if pricing is None:
             # Unknown provider/model — record at zero cost; surfaces as
             # observable anomaly in monthly report (sub_type still recorded).
-            unit_cost = Decimal("0")
+            input_unit_cost = Decimal("0")
+            output_unit_cost = Decimal("0")
+            input_total_cost = Decimal("0")
+            output_total_cost = Decimal("0")
         else:
-            avg_per_million = Decimal(
-                str((pricing.input_per_million + pricing.output_per_million) / 2)
-            )
-            unit_cost = avg_per_million / Decimal("1000000")
+            input_per_m = Decimal(str(pricing.input_per_million))
+            output_per_m = Decimal(str(pricing.output_per_million))
+            cached_per_m = Decimal(str(pricing.cached_input_per_million))
+            input_unit_cost = input_per_m / Decimal("1000000")
+            output_unit_cost = output_per_m / Decimal("1000000")
 
-        # Cached-input portion gets cached pricing; remaining at avg.
-        billable_tokens = max(total_tokens - cached_input_tokens, 0)
-        cached_cost = Decimal("0")
-        if cached_input_tokens > 0 and pricing is not None:
-            cached_per_million = Decimal(str(pricing.cached_input_per_million))
-            cached_cost = Decimal(cached_input_tokens) * cached_per_million / Decimal("1000000")
+            # Input portion: cached portion at cached rate, remainder at input rate.
+            billable_input = max(input_tokens - cached_input_tokens, 0)
+            billable_input_cost = Decimal(billable_input) * input_unit_cost
+            cached_cost = Decimal(cached_input_tokens) * cached_per_m / Decimal("1000000")
+            input_total_cost = billable_input_cost + cached_cost
 
-        billable_cost = Decimal(billable_tokens) * unit_cost
-        total_cost_usd = billable_cost + cached_cost
+            # Output portion: full at output rate.
+            output_total_cost = Decimal(output_tokens) * output_unit_cost
 
-        sub_type = f"{provider}_{model}_total"
-        entry = CostLedger(
+        input_entry = CostLedger(
             tenant_id=tenant_id,
             cost_type="llm",
-            sub_type=sub_type,
-            quantity=Decimal(total_tokens),
+            sub_type=f"{provider}_{model}_input",
+            quantity=Decimal(input_tokens),
             unit="tokens",
-            unit_cost_usd=unit_cost,
-            total_cost_usd=total_cost_usd,
+            unit_cost_usd=input_unit_cost,
+            total_cost_usd=input_total_cost,
             session_id=session_id,
         )
-        self._db.add(entry)
+        output_entry = CostLedger(
+            tenant_id=tenant_id,
+            cost_type="llm",
+            sub_type=f"{provider}_{model}_output",
+            quantity=Decimal(output_tokens),
+            unit="tokens",
+            unit_cost_usd=output_unit_cost,
+            total_cost_usd=output_total_cost,
+            session_id=session_id,
+        )
+        self._db.add(input_entry)
+        self._db.add(output_entry)
         await self._db.flush()
-        return entry
+        return [input_entry, output_entry]
 
     async def record_tool_call(
         self,

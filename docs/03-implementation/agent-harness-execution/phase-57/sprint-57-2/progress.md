@@ -275,6 +275,84 @@ User 2026-05-07 approve Option A 後,啟動 Day 1 前 read events.py 確認 reco
 
 ⏸ **Day 2 closeout — commit Day 2 work**。Day 3 next session 啟動 cost_ledger fix + tests。
 
+---
+
+## Day 3 — 2026-05-07：cost_ledger refactor + tests ✅
+
+### Completed
+
+| Task | Status |
+|------|--------|
+| `cost_ledger.py` `record_llm_call()` signature change(`total_tokens` → `input_tokens` + `output_tokens`)| ✅ |
+| `record_llm_call()` 寫 2 entries(`{provider}_{model}_input` + `_output` sub_types)+ 拆分 pricing | ✅ |
+| Chat router L361-365 改讀 LoopCompleted `event.input_tokens` / `event.output_tokens` / `event.provider` / `event.model` | ✅ |
+| Update test_cost_ledger_us4.py(3 tests)— 新 signature + 2-entry assertions | ✅ |
+| Update test_cost_ledger_service.py(2 tests)— rename writes_one → writes_two_entries + aggregate split sub_types | ✅ |
+| Update test_admin_cost_summary.py(integration)— signature + assertion split | ✅ |
+| Update test_chat_cost_ledger.py(integration)— _StubLoop accepts input/output/provider/model + assertion 3 entries | ✅ |
+| Update test_phase56_3_e2e.py(cross-AD e2e)— 同 _StubLoop + 3-entry assertion | ✅ |
+| **NEW** `test_metrics_accumulator.py`(8 unit tests)| ✅ 新 +8 |
+| mypy --strict full src | ✅ 0 errors / **294** source files(was 293 + 1 _metrics.py)|
+| 8 V2 lints | ✅ 8/8 green |
+| pytest unit suite | ✅ 1284 passed / 1 skipped |
+| pytest integration suite | ✅ 266 passed / 3 skipped |
+| pytest collected baseline | ✅ 1561 → **1569**(+8 from accumulator tests)|
+
+### Day 3 design decisions
+
+1. **Backwards-incompat signature change** — `total_tokens` removed from `record_llm_call()`,因為 LoopCompleted 已 carry split via accumulator;callers 全部更新為 `input_tokens` + `output_tokens`(5 sites updated:1 service caller + 4 test files)
+2. **2-entry write per LLM call** — `{provider}_{model}_input` + `{provider}_{model}_output` sub_types;both share `session_id` for per-session reconciliation;both written via `db.add()` + single `flush()`(atomic)
+3. **Pricing split exactly** — `input × input_per_million / 1M` + `output × output_per_million / 1M`(取代 56.3 `avg = (input + output) / 2`);cached portion 仍 honor `cached_input_per_million` 從 input portion 扣除
+4. **Defensive fallback** — chat router observer 仍 `event.provider or "azure_openai"` + `event.model or "gpt-5.4"`(early-termination paths LoopCompleted 預設空 — 不會觸發 record_llm_call,因 input/output gate)
+5. **5 unit tests originally requested in plan → 8 delivered**(LoopMetricsAccumulator class 是 NEW 從 Day 1,需要獨立覆蓋率)
+
+### Day 3 Calibration
+
+- Plan committed Day 3: ~3.3 hr(US-1 cost_ledger fix + tests)
+- Actual Day 3: ~3 hr(record_llm_call refactor + 5 test files updates + 8 NEW accumulator unit tests + 1 stub_loop signature drift fix L199 llm_row → llm_rows[0])
+- Day 3 ratio:**0.91**(slightly under;test updates tighter than estimated)
+
+### Day 4 plan(剩餘)
+
+1. **US-3** chat router GuardrailEngine factory + DI wiring(per Day 0 D9+D10 — engine + loop already done since 53.3+55.4):
+   - 新增 `build_default_guardrail_engine()` factory(register PII + Jailbreak + 2 output detectors + ToolGuardrail)
+   - chat router instantiate engine + pass to AgentLoop ctor via existing `guardrail_engine: GuardrailEngine | None` param
+   - 1 unit test(factory)+ 1 integration test(chat router pre-tool block)
+2. **US-4** deploy-production.yml 啟用(workflow_dispatch only → push-to-main 觸發):
+   - 5-point criteria verify(per checklist 4.1)
+   - Trigger 改 + staging-smoke job 新增 + branch protection update
+3. **US-5** 11+1 範疇 alignment audit + closeout:
+   - light-touch 12 範疇 grep
+   - retrospective Q1-Q5
+   - PR open + merge + closeout PR(CLAUDE.md / SITUATION-V2 sync)+ memory snapshot
+
+### Files changed Day 3
+
+- `backend/src/platform_layer/billing/cost_ledger.py`(MODIFY:record_llm_call signature + 2-entry write logic)
+- `backend/src/api/v1/chat/router.py`(MODIFY:observer reads new LoopCompleted fields)
+- `backend/tests/unit/platform_layer/billing/test_cost_ledger_us4.py`(MODIFY:3 tests)
+- `backend/tests/unit/platform_layer/billing/test_cost_ledger_service.py`(MODIFY:2 tests)
+- `backend/tests/integration/api/test_admin_cost_summary.py`(MODIFY:1 test)
+- `backend/tests/integration/api/test_chat_cost_ledger.py`(MODIFY:_StubLoop + assertions)
+- `backend/tests/integration/api/test_phase56_3_e2e.py`(MODIFY:_StubLoopWithToolAndCompletion + assertions + L199 var name fix)
+- `backend/tests/unit/agent_harness/orchestrator_loop/test_metrics_accumulator.py`(NEW:8 unit tests / 152 lines)
+
+### 累積 calibration tracking
+
+| Day | Bottom-up | Calibrated | Actual | Ratio |
+|-----|-----------|------------|--------|-------|
+| 0 | ~3 hr | ~1.7 hr | ~2 hr | 1.18 |
+| 1 | ~6 hr | ~3.3 hr | ~2.5 hr | 0.76 |
+| 2 | ~6 hr | ~3.3 hr | ~2 hr | 0.61 |
+| 3 | ~6 hr | ~3.3 hr | ~3 hr | 0.91 |
+| 4 (remaining)| ~5 hr | ~2.7 hr | TBD | — |
+| **Sprint Total est** | **~26 hr** | **~14.3 hr** | TBD | TBD |
+
+**Cumulative through Day 3**: actual ~9.5 hr / committed ~11.6 hr → ratio **0.82**(slightly under,trending toward `large multi-domain` 0.55 multiplier still appropriate)
+
+⏸ **Day 3 closeout — commit Day 3 work**。Day 4 next session 啟動 US-3 + US-4 + US-5 + closeout。
+
+
 
 
 
