@@ -385,26 +385,34 @@ async def _stream_loop_events(
                 # user_id=None per audit_helper signature (system actor; no JWT
                 # user_id extraction in V2 yet — 57.6 Day 2 探勘 confirmed).
                 if db is not None:
+                    # Sprint 57.6 Day 4 CI fix: SAVEPOINT pattern per
+                    # .claude/rules/testing.md §SAVEPOINT — wrap append_audit in
+                    # `db.begin_nested()` so FK violations (e.g. test mocks with
+                    # non-existent tenant_id) auto-rollback the inner SAVEPOINT
+                    # without poisoning the outer session. Without SAVEPOINT,
+                    # IntegrityError on audit_log INSERT cascades into
+                    # PendingRollbackError on every subsequent SQL op in 8+ tests.
                     try:
-                        await append_audit(
-                            db,
-                            tenant_id=tenant_id,
-                            operation="conversation_completed",
-                            resource_type="session",
-                            resource_id=str(session_id),
-                            operation_data={
-                                "total_turns": event.total_turns,
-                                "total_tokens": event.total_tokens,
-                                "input_tokens": event.input_tokens,
-                                "output_tokens": event.output_tokens,
-                                "model": event.model or "",
-                                "provider": event.provider or "",
-                                "outcome": "completed",
-                            },
-                            user_id=None,
-                            session_id=session_id,
-                            operation_result="success",
-                        )
+                        async with db.begin_nested():
+                            await append_audit(
+                                db,
+                                tenant_id=tenant_id,
+                                operation="conversation_completed",
+                                resource_type="session",
+                                resource_id=str(session_id),
+                                operation_data={
+                                    "total_turns": event.total_turns,
+                                    "total_tokens": event.total_tokens,
+                                    "input_tokens": event.input_tokens,
+                                    "output_tokens": event.output_tokens,
+                                    "model": event.model or "",
+                                    "provider": event.provider or "",
+                                    "outcome": "completed",
+                                },
+                                user_id=None,
+                                session_id=session_id,
+                                operation_result="success",
+                            )
                     except Exception:  # noqa: BLE001
                         logger.exception(
                             "chat session %s/%s: audit_log append failed",

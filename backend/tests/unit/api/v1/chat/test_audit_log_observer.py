@@ -45,6 +45,24 @@ from agent_harness._contracts import LoopCompleted, TraceContext
 chat_router_module = importlib.import_module("api.v1.chat.router")
 
 
+def _make_mock_db() -> Any:
+    """Mock AsyncSession with `begin_nested` returning async context manager.
+
+    Real SQLAlchemy `AsyncSession.begin_nested()` is a sync method returning an
+    `AsyncSessionTransaction` context manager。AsyncMock() default makes EVERY
+    method async (returns coroutine),which breaks `async with db.begin_nested():`
+    with `TypeError: 'coroutine' object does not support the asynchronous context
+    manager protocol`。Override begin_nested with MagicMock returning proper
+    async context manager。
+    """
+    db = AsyncMock()
+    nested_ctx = AsyncMock()
+    nested_ctx.__aenter__ = AsyncMock(return_value=None)
+    nested_ctx.__aexit__ = AsyncMock(return_value=None)
+    db.begin_nested = MagicMock(return_value=nested_ctx)
+    return db
+
+
 def _make_loop_completed(
     *,
     total_turns: int = 2,
@@ -121,7 +139,7 @@ async def test_audit_log_observer_appends_on_loop_completed() -> None:
 
     tenant_id = uuid4()
     session_id = uuid4()
-    db = AsyncMock()
+    db = _make_mock_db()
     fake_event = _make_loop_completed()
 
     with patch.object(chat_router, "append_audit", new=AsyncMock()) as mock_append:
@@ -176,7 +194,7 @@ async def test_audit_log_observer_failure_does_not_break_stream() -> None:
     chat_router = chat_router_module
 
     fake_event = _make_loop_completed()
-    db = AsyncMock()
+    db = _make_mock_db()
 
     failing_append = AsyncMock(side_effect=RuntimeError("simulated DB write failure"))
 
