@@ -358,9 +358,7 @@ async def _stream_loop_events(
                 # not break SSE stream. Fallback for early-termination paths
                 # (provider="" or empty token counts) skips the write per
                 # event.input_tokens > 0 OR event.output_tokens > 0 gate.
-                if cost_ledger is not None and (
-                    event.input_tokens > 0 or event.output_tokens > 0
-                ):
+                if cost_ledger is not None and (event.input_tokens > 0 or event.output_tokens > 0):
                     try:
                         await cost_ledger.record_llm_call(
                             tenant_id=tenant_id,

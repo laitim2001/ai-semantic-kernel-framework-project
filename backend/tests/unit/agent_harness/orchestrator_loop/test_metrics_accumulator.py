@@ -113,8 +113,16 @@ def test_accumulator_subagent_spawned_increments_count() -> None:
     from uuid import uuid4
 
     pid = uuid4()
-    acc.on_event(SubagentSpawned(subagent_id=uuid4(), mode="fork", parent_session_id=pid, trace_context=_ctx()))
-    acc.on_event(SubagentSpawned(subagent_id=uuid4(), mode="teammate", parent_session_id=pid, trace_context=_ctx()))
+    acc.on_event(
+        SubagentSpawned(
+            subagent_id=uuid4(), mode="fork", parent_session_id=pid, trace_context=_ctx()
+        )
+    )
+    acc.on_event(
+        SubagentSpawned(
+            subagent_id=uuid4(), mode="teammate", parent_session_id=pid, trace_context=_ctx()
+        )
+    )
     assert acc.subagent_dispatched == 2
 
 

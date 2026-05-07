@@ -53,7 +53,9 @@ async def test_record_llm_call_uses_cached_pricing_when_cached_input(
     assert input_entry.sub_type == "azure_openai_gpt-5.4_input"
     assert output_entry.sub_type == "azure_openai_gpt-5.4_output"
     assert input_entry.total_cost_usd == Decimal("0.0018750000")
-    assert output_entry.total_cost_usd == Decimal("0E-10") or output_entry.total_cost_usd == Decimal("0")
+    assert output_entry.total_cost_usd == Decimal(
+        "0E-10"
+    ) or output_entry.total_cost_usd == Decimal("0")
 
 
 @pytest.mark.asyncio
