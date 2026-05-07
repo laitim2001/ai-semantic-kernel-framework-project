@@ -294,20 +294,18 @@
 ## Day 4 — US-5 Closeout: Retrospective + Phase 57.6+ Direction Decision
 
 ### 4.1 Retrospective.md
-- [ ] **Create `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-5/retrospective.md`**
-  - Q1 What went well — 真實 boot-up 哪些順利 + audit 哪些 doc 真實 well-aligned
-  - Q2 What didn't go well + calibration ratio(`mixed` 0.60 5th application;若 actual >> commit → V2 累積 drift 大;若 actual << commit → V2 alignment 比預期好)
-  - Q3 What we learned — V2 reality vs paper learnings(generalizable lessons)
-  - Q4 Audit Debt deferred — top 5 findings 中哪些 carry-forward 為 Phase 57.6+ AD-Reality-N
-  - Q5 Next steps + Phase 57.6+ direction proposal(rolling planning;不寫具體未來 sprint 任務,只寫 carryover 候選 + user decision required)
-  - Q6 Solo-dev policy validation
-  - Verify:`wc -l retrospective.md` ≥ 250 lines(reality check 因發現多於常規 sprint,期望 retro 較長)
+- [x] **Create `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-5/retrospective.md`** ✅
+  - Q1 What went well ✅ (5 W items: pivot agility / 三-prong 2nd app / over-delivery / dual scoring / calibration in-band)
+  - Q2 What didn't go well + calibration ratio ✅ (`reality-check` NEW class ratio ~1.04 ✅ in band; AD-Sprint-Plan-7 propose 0.85 baseline)
+  - Q3 What we learned ✅ (6 L items: AP-4 needs runtime enforcement / E2E real-LLM smoke gate / default boot path is truth-test / dual scoring honest framework / 21-doc audit format scales / solo-dev + strong CI bias)
+  - Q4 Audit Debt deferred ✅ (10 NEW AD-Reality-N: 5 Phase 57.6 + 5 Phase 57.7 + AD-Sprint-Plan-7 calibration class)
+  - Q5 Next steps + Phase 57.6+ direction proposal ✅ (Phase 57.6 plan draft + Phase 57.7 plan draft + 5 user decision points)
+  - Q6 Solo-dev policy validation ✅
+  - Verify:`wc -l retrospective.md` ≥ 250 lines ✅ (250 lines exact)
 
 ### 4.2 Memory snapshot + MEMORY.md index
-- [ ] **Create `memory/project_phase57_5_v2_reality_check.md`**
-  - Same format as `project_phase57_4_admin_tenants_list.md` (≤ 80 lines per memory budget per V2 紀律)
-  - Frontmatter complete
-- [ ] **Update MEMORY.md index** add 1 line entry
+- [x] **Create `memory/project_phase57_5_v2_reality_check.md`** ✅ (~70 lines under 80-line budget; full frontmatter)
+- [x] **Update MEMORY.md index** add 1 line entry ✅
 
 ### 4.3 Open PR + CI green + solo-dev merge
 - [ ] **Push branch + open PR**
