@@ -352,6 +352,75 @@ User 2026-05-07 approve Option A 後,啟動 Day 1 前 read events.py 確認 reco
 
 ⏸ **Day 3 closeout — commit Day 3 work**。Day 4 next session 啟動 US-3 + US-4 + US-5 + closeout。
 
+---
+
+## Day 4 — 2026-05-07：US-3 + US-4 + US-5 + closeout ✅
+
+### Completed
+
+| Task | Status |
+|------|--------|
+| **US-3** `_factory.py` NEW `build_default_guardrail_engine()` factory | ✅ |
+| `guardrails/__init__.py` export factory | ✅ |
+| `chat/handler.py` build_real_llm_handler 注入 `guardrail_engine=build_default_guardrail_engine()`(echo demo 不動,保持 test fixtures predictable)| ✅ |
+| **NEW** `tests/unit/agent_harness/guardrails/test_factory.py`(5 unit tests)| ✅ +5 |
+| **US-4** `deploy-production.yml` 5-point criteria check | ❌ **D16 Deferred** — 5-point criteria 全不滿足(Azure 資源未 provisioned;V2 pre-launch);AD-CI-6 defer to Phase 58 production launch sprint |
+| **US-5** 11+1 範疇 alignment audit — 13 directories listed + cross-checked | ✅ No structural drift |
+| `retrospective.md` Q1-Q5 written | ✅ |
+| mypy --strict | ✅ 0 errors / **295** source files(+1 `_factory.py`)|
+| 8 V2 lints | ✅ 8/8 green |
+| pytest unit | ✅ 1289 passed / 1 skip(was 1284 + 5 factory tests)|
+| pytest collected | ✅ 1569 → **1574**(+5)|
+
+### D-finding catalogued Day 4
+
+| ID | Finding | Action |
+|----|---------|--------|
+| **D16** | AD-CI-6 deploy-production.yml 5-point criteria 全部不滿足:Azure App Service 未 provision / ACR 未 provision / GitHub Secrets 未配置 / smoke-test 無真實 production URL / V2 pre-launch | **Defer to Phase 58 production launch sprint**(per criterion 5「Phase 56+ infra sprint」);US-4 cannot close in this audit cycle;rest of sprint scope unaffected |
+
+### Day 4 Calibration
+
+- Plan committed Day 4: ~2.7 hr(US-3 + US-4 + US-5 + closeout)
+- Actual Day 4: ~1.5 hr(factory + handler wire + 5 tests + retrospective + alignment audit;US-4 deferred saves ~1 hr)
+- Day 4 ratio:**0.56**(under;US-4 deferred + alignment audit was 「verify directories exist」not exhaustive grep)
+
+### Files changed Day 4
+
+- `backend/src/agent_harness/guardrails/_factory.py`(NEW:65 lines)
+- `backend/src/agent_harness/guardrails/__init__.py`(MODIFY:+2 lines export)
+- `backend/src/api/v1/chat/handler.py`(MODIFY:+5 lines import + factory wire)
+- `backend/tests/unit/agent_harness/guardrails/test_factory.py`(NEW:55 lines / 5 tests)
+- `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-2/retrospective.md`(NEW)
+- `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-2/progress.md`(MODIFY:Day 4 closeout)
+
+### Sprint 57.2 Final Stats
+
+| Metric | Baseline | Final | Delta |
+|--------|----------|-------|-------|
+| pytest collected | 1561 | **1574** | +13(8 accumulator + 5 factory)|
+| mypy --strict source files | 293 | **295** | +2(_metrics + _factory)|
+| 8 V2 lints | 8/8 | 8/8 | unchanged green |
+| LLM SDK leak | 0 | 0 | unchanged |
+| ADs closed(full)| — | **3** |(US-1 split + US-1 attribution + US-2 accumulator + US-3 wire = 4 USs;3 ADs full closed since US-1 covers 2 ADs同 patch)|
+| ADs deferred | — | **1** | AD-CI-6 → Phase 58 |
+| D-findings | — | **16** | D1-D16 |
+
+### Sprint 57.2 累積 calibration
+
+| Day | Bottom-up | Calibrated | Actual | Ratio |
+|-----|-----------|------------|--------|-------|
+| 0 | ~3 hr | ~1.7 hr | ~2 hr | 1.18 |
+| 1 | ~6 hr | ~3.3 hr | ~2.5 hr | 0.76 |
+| 2 | ~6 hr | ~3.3 hr | ~2 hr | 0.61 |
+| 3 | ~6 hr | ~3.3 hr | ~3 hr | 0.91 |
+| 4 | ~5 hr | ~2.7 hr | ~1.5 hr | 0.56 |
+| **Sprint Total** | **~26 hr** | **~14.3 hr** | **~11 hr** | **0.77** |
+
+**3-data-point `large multi-domain` window**: 56.1=1.00 + 56.3=1.04 + 57.2=0.77 = mean **0.94**(in band [0.85, 1.20]).
+
+⏸ **Sprint 57.2 closeout — commit Day 4 + open PR + merge + closeout PR(CLAUDE.md / SITUATION-V2 sync)+ memory snapshot**。
+
+
 
 
 

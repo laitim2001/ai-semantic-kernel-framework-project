@@ -59,6 +59,7 @@ from agent_harness._contracts import (
     StopReason,
     ToolCall,
 )
+from agent_harness.guardrails import build_default_guardrail_engine
 from agent_harness.orchestrator_loop import AgentLoopImpl
 from agent_harness.output_parser import OutputParserImpl
 from business_domain._register_all import make_default_executor
@@ -169,6 +170,10 @@ def build_real_llm_handler(
     registry, executor = make_default_executor(factory_provider=business_factory_provider)
     parser = OutputParserImpl()
 
+    # Sprint 57.2 US-3 (closes AD-Cat9-1-WireDetectors): production
+    # handler wires GuardrailEngine with default 4-detector chain (PII +
+    # Jailbreak input; Toxicity + SensitiveInfo output). Echo demo handler
+    # left without engine to keep test fixtures predictable.
     return AgentLoopImpl(
         chat_client=chat_client,
         output_parser=parser,
@@ -178,6 +183,7 @@ def build_real_llm_handler(
         max_turns=8,
         hitl_manager=hitl_manager,
         hitl_timeout_s=hitl_timeout_s,
+        guardrail_engine=build_default_guardrail_engine(),
     )
 
 

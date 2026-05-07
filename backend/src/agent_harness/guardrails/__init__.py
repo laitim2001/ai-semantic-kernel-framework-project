@@ -14,6 +14,7 @@ from agent_harness.guardrails.audit import (
     compute_entry_hash,
     verify_chain,
 )
+from agent_harness.guardrails._factory import build_default_guardrail_engine
 from agent_harness.guardrails.engine import GuardrailEngine
 from agent_harness.guardrails.input.jailbreak_detector import JailbreakDetector
 from agent_harness.guardrails.input.pii_detector import PIIDetector
@@ -36,6 +37,7 @@ __all__ = [
     "GuardrailAction",
     "GuardrailResult",
     "GuardrailEngine",
+    "build_default_guardrail_engine",
     "PIIDetector",
     "JailbreakDetector",
     "ToxicityDetector",
