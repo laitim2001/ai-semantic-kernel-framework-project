@@ -308,22 +308,21 @@
 - [x] **Update MEMORY.md index** add 1 line entry ✅
 
 ### 4.3 Open PR + CI green + solo-dev merge
-- [ ] **Push branch + open PR**
-  - Push:`git push -u origin feature/sprint-57-5-reality-check`
-  - PR title:`Sprint 57.5 — V2 Reality Check & Smoke Test Sprint (boot all services + 7-page browser test + 21-doc audit + gap report)`
-  - PR body:Sprint goal + 5 USs + acceptance + gap report top 5 critical findings + Phase 57.6+ direction TBD per user decision
-  - Verify:5 active CI checks green(此 sprint 0 source code → CI 應快速 green);solo-dev policy review_count=0 satisfied
-- [ ] **Squash merge to main**
-  - DoD:GitHub UI squash + merge;branch deleted post-merge
-  - Verify:main HEAD updated
+- [x] **Push branch + open PR** ✅
+  - Push:`git push -u origin feature/sprint-57-5-reality-check` ✅
+  - PR #112 opened with title + body + 5 USs + acceptance + gap report top 5 RED + Phase 57.6+ TBD per user decision ✅
+  - Verify:5 active CI checks green ✅ (backend-ci / V2-Lint / frontend-ci / Backend E2E / Lint+Type+Test); solo-dev policy review_count=0 satisfied ✅
+- [x] **Squash merge to main** ✅
+  - DoD:GitHub UI squash + merge ✅; branch deleted post-merge ✅
+  - Verify:main HEAD updated `c1139fcc` ✅
 
 ### 4.4 Closeout PR
-- [ ] **Closeout branch + PR**
-  - Branch:`chore/sprint-57-5-closeout`
-  - Updates:SITUATION-V2 §9 milestones row + §11 Last Updated + Update history;CLAUDE.md Phase / Latest Sprint / main HEAD / Last Updated / Current Phase fields(flag 33 deliverables verified count)
-  - Commit message:`docs(closeout, sprint-57-5): SITUATION-V2 + CLAUDE.md sync to V2 Reality Check + Phase 57.6+ direction TBD`
-  - PR body:reference Sprint 57.5 PR + summary stats(0 source code change / 8+ screenshots / 21 docs audited / N gaps catalogued / calibration ratio)
-  - Verify:Squash merge to main;both branches deleted;working tree clean
+- [x] **Closeout branch + PR** ✅ (in progress at this commit)
+  - Branch:`chore/sprint-57-5-closeout` ✅
+  - Updates:SITUATION-V2 §8 已知未解 + §9 milestones row (NEW Sprint 57.5 entry inserted above 57.4) + §11 Last Updated (with Previous chain) ✅; CLAUDE.md Latest Sprint + main HEAD + Next Phase + Last Updated + Current Phase + main HEAD bottom fields ✅
+  - Commit message:`docs(closeout, sprint-57-5): SITUATION-V2 + CLAUDE.md sync to V2 Reality Check Sprint + Phase 57.6+ Option D direction signaled` ✅
+  - PR body:reference PR #112 + summary stats (0 source code change / 28 D-findings / 21-doc audit / 315-line gap report / dual scoring framework / calibration `reality-check` 1.04 ✅) ✅
+  - Verify:Squash merge to main;both branches deleted;working tree clean (next step)
 
 ### 4.5 User decision interaction (Phase 57.6+ direction)
 - [ ] **Present gap report top 5 critical findings + user decision question**
