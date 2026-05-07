@@ -46,7 +46,7 @@ Created: 2026-05-06 (Sprint 56.1 Day 1)
 Last Modified: 2026-05-07
 
 Modification History:
-    - 2026-05-07: Sprint 57.4 Day 1 — add GET "" list endpoint + TenantListItem + TenantListResponse (US-1 closes D1)
+    - 2026-05-07: Sprint 57.4 — add GET "" list endpoint (US-1 closes D1)
     - 2026-05-07: Sprint 57.3 Day 2 — add PATCH /{id} + TenantUpdateRequest + audit chain (US-2)
     - 2026-05-07: Sprint 57.3 Day 1 — add GET /{tenant_id} + TenantResponse (US-1 closes D1)
     - 2026-05-06: Sprint 56.2 Day 1 — RBAC dep replaces token stub (closes AD-AdminAuth-1)
