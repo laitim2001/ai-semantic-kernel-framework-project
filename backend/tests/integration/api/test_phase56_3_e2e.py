@@ -56,9 +56,20 @@ _PRICING_YAML = Path(__file__).resolve().parents[3] / "config" / "llm_pricing.ym
 class _StubLoopWithToolAndCompletion:
     """Stub agent loop emitting ToolCallExecuted + LoopCompleted in one run."""
 
-    def __init__(self, *, total_tokens: int, tool_name: str) -> None:
-        self._total_tokens = total_tokens
+    def __init__(
+        self,
+        *,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        tool_name: str,
+        provider: str = "azure_openai",
+        model: str = "gpt-5.4",
+    ) -> None:
+        self._input_tokens = input_tokens
+        self._output_tokens = output_tokens
         self._tool_name = tool_name
+        self._provider = provider
+        self._model = model
 
     async def run(
         self,
@@ -74,10 +85,16 @@ class _StubLoopWithToolAndCompletion:
             result_content="ok",
             trace_context=trace_context,
         )
+        # Sprint 57.2: LoopCompleted carries split + provider/model
+        # (closes AD-Cost-Ledger-Token-Split + Provider-Attribution).
         yield LoopCompleted(
             stop_reason="end_turn",
             total_turns=1,
-            total_tokens=self._total_tokens,
+            total_tokens=self._input_tokens + self._output_tokens,
+            input_tokens=self._input_tokens,
+            output_tokens=self._output_tokens,
+            provider=self._provider,
+            model=self._model,
             trace_context=trace_context,
         )
 
@@ -115,7 +132,11 @@ async def test_phase56_3_cross_ad_full_flow(db_session: AsyncSession) -> None:
     assert await quota_enforcer.get_usage(tenant_id) == 200
 
     # Stub loop emits 1 ToolCallExecuted + 1 LoopCompleted.
-    stub_loop = _StubLoopWithToolAndCompletion(total_tokens=120, tool_name="salesforce_query")
+    stub_loop = _StubLoopWithToolAndCompletion(
+        input_tokens=70,
+        output_tokens=50,
+        tool_name="salesforce_query",
+    )
     trace_ctx = TraceContext(tenant_id=tenant_id, session_id=session_id)
     chat_start_time = time.monotonic()
 
@@ -158,18 +179,24 @@ async def test_phase56_3_cross_ad_full_flow(db_session: AsyncSession) -> None:
     cost_types = {r.cost_type for r in rows}
     assert "llm" in cost_types, "US-4: LLM ledger entry missing"
     assert "tool" in cost_types, "US-4: Tool ledger entry missing"
-    assert len(rows) == 2, f"US-4: expected 2 entries (1 LLM + 1 tool), got {len(rows)}"
+    # Sprint 57.2: 2 LLM entries (input + output) + 1 tool entry = 3 total.
+    assert len(rows) == 3, f"US-4: expected 3 entries (2 LLM + 1 tool), got {len(rows)}"
 
-    llm_row = next(r for r in rows if r.cost_type == "llm")
-    assert llm_row.sub_type == "azure_openai_gpt-5.4_total"
-    assert llm_row.session_id == session_id
+    llm_rows = [r for r in rows if r.cost_type == "llm"]
+    assert len(llm_rows) == 2
+    sub_types = {r.sub_type for r in llm_rows}
+    assert sub_types == {
+        "azure_openai_gpt-5.4_input",
+        "azure_openai_gpt-5.4_output",
+    }
+    assert all(r.session_id == session_id for r in llm_rows)
 
     tool_row = next(r for r in rows if r.cost_type == "tool")
     assert tool_row.sub_type == "salesforce_query"
     assert tool_row.session_id == session_id
 
     # US-3 aggregate API works end-to-end.
-    month = llm_row.recorded_at.strftime("%Y-%m")
+    month = llm_rows[0].recorded_at.strftime("%Y-%m")
     aggregate = await cost_ledger.aggregate(tenant_id=tenant_id, month=month)
     assert aggregate.total_cost_usd > 0, "US-3: aggregate total_cost_usd must be > 0"
     assert "llm" in aggregate.by_type

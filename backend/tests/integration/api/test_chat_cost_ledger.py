@@ -39,9 +39,19 @@ _PRICING_YAML = Path(__file__).resolve().parents[3] / "config" / "llm_pricing.ym
 class _StubLoop:
     """Yields ToolCallExecuted + LoopCompleted (1 of each) for chat router observer."""
 
-    def __init__(self, total_tokens: int, tool_name: str = "salesforce_query") -> None:
-        self._total_tokens = total_tokens
+    def __init__(
+        self,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        tool_name: str = "salesforce_query",
+        provider: str = "azure_openai",
+        model: str = "gpt-5.4",
+    ) -> None:
+        self._input_tokens = input_tokens
+        self._output_tokens = output_tokens
         self._tool_name = tool_name
+        self._provider = provider
+        self._model = model
 
     async def run(
         self,
@@ -57,10 +67,16 @@ class _StubLoop:
             result_content="ok",
             trace_context=trace_context,
         )
+        # Sprint 57.2: LoopCompleted carries split + provider/model
+        # (closes AD-Cost-Ledger-Token-Split + Provider-Attribution).
         yield LoopCompleted(
             stop_reason="end_turn",
             total_turns=1,
-            total_tokens=self._total_tokens,
+            total_tokens=self._input_tokens + self._output_tokens,
+            input_tokens=self._input_tokens,
+            output_tokens=self._output_tokens,
+            provider=self._provider,
+            model=self._model,
             trace_context=trace_context,
         )
 
@@ -83,7 +99,11 @@ async def test_chat_request_writes_cost_ledger_end_to_end(
     pricing.load_from_yaml(_PRICING_YAML)
     cost_ledger = CostLedgerService(db=db_session, pricing_loader=pricing)
 
-    stub_loop = _StubLoop(total_tokens=2_000, tool_name="salesforce_query")
+    stub_loop = _StubLoop(
+        input_tokens=1_200,
+        output_tokens=800,
+        tool_name="salesforce_query",
+    )
     trace_ctx = TraceContext(tenant_id=t.id, session_id=session_id)
 
     await _consume(
@@ -113,13 +133,18 @@ async def test_chat_request_writes_cost_ledger_end_to_end(
     cost_types = {r.cost_type for r in rows}
     assert "llm" in cost_types
     assert "tool" in cost_types
-    # 1 LLM entry + 1 tool entry = 2 total.
-    assert len(rows) == 2
+    # Sprint 57.2: 2 LLM entries (input + output split) + 1 tool entry = 3 total.
+    assert len(rows) == 3
 
-    # LLM entry sub_type = "azure_openai_gpt-5.4_total" per Day 3 default.
-    llm_row = next(r for r in rows if r.cost_type == "llm")
-    assert llm_row.sub_type == "azure_openai_gpt-5.4_total"
-    assert llm_row.session_id == session_id
+    # Both LLM entries have provider/model attribution + session_id.
+    llm_rows = [r for r in rows if r.cost_type == "llm"]
+    assert len(llm_rows) == 2
+    sub_types = {r.sub_type for r in llm_rows}
+    assert sub_types == {
+        "azure_openai_gpt-5.4_input",
+        "azure_openai_gpt-5.4_output",
+    }
+    assert all(r.session_id == session_id for r in llm_rows)
 
     # Tool entry sub_type = the tool name.
     tool_row = next(r for r in rows if r.cost_type == "tool")

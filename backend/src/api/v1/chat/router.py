@@ -348,21 +348,24 @@ async def _stream_loop_events(
                             tenant_id,
                             session_id,
                         )
-                # Sprint 56.3 Day 3 (US-4 — Cost Ledger LLM hook):
-                # Record one llm cost ledger entry from event.total_tokens.
-                # Day 0 D2 simplification: provider/model attribution defaults
-                # to "azure_openai" / "gpt-5.4" until LoopCompleted carries
-                # real metadata (AD-Cost-Ledger-Provider-Attribution Phase 56.x);
-                # input/output token split deferred (AD-Cost-Ledger-Token-Split
-                # Phase 56.x). Best-effort failure pattern: ledger write must
-                # not break SSE stream.
-                if cost_ledger is not None and event.total_tokens > 0:
+                # Sprint 56.3 Day 3 (US-4) → Sprint 57.2 (closes
+                # AD-Cost-Ledger-Token-Split + AD-Cost-Ledger-Provider-Attribution):
+                # Record TWO ledger entries (input + output split) from
+                # LoopCompleted accumulator-sourced fields. Provider/model
+                # now truthful (sourced from event.provider + event.model
+                # populated by AgentLoop from adapter.model_info().provider +
+                # ChatResponse.model). Best-effort failure: ledger write must
+                # not break SSE stream. Fallback for early-termination paths
+                # (provider="" or empty token counts) skips the write per
+                # event.input_tokens > 0 OR event.output_tokens > 0 gate.
+                if cost_ledger is not None and (event.input_tokens > 0 or event.output_tokens > 0):
                     try:
                         await cost_ledger.record_llm_call(
                             tenant_id=tenant_id,
-                            provider="azure_openai",
-                            model="gpt-5.4",
-                            total_tokens=event.total_tokens,
+                            provider=event.provider or "azure_openai",
+                            model=event.model or "gpt-5.4",
+                            input_tokens=event.input_tokens,
+                            output_tokens=event.output_tokens,
                             session_id=session_id,
                         )
                     except Exception:  # noqa: BLE001

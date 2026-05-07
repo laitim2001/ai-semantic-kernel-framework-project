@@ -7,6 +7,7 @@ from agent_harness.guardrails._abc import (
     GuardrailType,
     Tripwire,
 )
+from agent_harness.guardrails._factory import build_default_guardrail_engine
 from agent_harness.guardrails.audit import (
     AuditAppendError,
     ChainVerificationResult,
@@ -36,6 +37,7 @@ __all__ = [
     "GuardrailAction",
     "GuardrailResult",
     "GuardrailEngine",
+    "build_default_guardrail_engine",
     "PIIDetector",
     "JailbreakDetector",
     "ToxicityDetector",
