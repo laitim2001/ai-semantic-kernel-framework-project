@@ -133,9 +133,9 @@ async def test_audit_log_observer_appends_on_loop_completed() -> None:
         )
 
     assert frames == 1, f"Expected 1 SSE frame from fake LoopCompleted, got {frames}"
-    assert mock_append.call_count == 1, (
-        f"Expected append_audit called exactly once, got {mock_append.call_count}"
-    )
+    assert (
+        mock_append.call_count == 1
+    ), f"Expected append_audit called exactly once, got {mock_append.call_count}"
     # Verify call args structure (audit chain integrity preserved by helper).
     call = mock_append.call_args
     assert call.kwargs["tenant_id"] == tenant_id
@@ -186,9 +186,8 @@ async def test_audit_log_observer_failure_does_not_break_stream() -> None:
         frames = await _drive_stream(fake_event=fake_event, db=db)
 
     assert frames == 1, (
-        f"Expected SSE stream to complete despite audit_log failure, "
-        f"got {frames} frames"
+        f"Expected SSE stream to complete despite audit_log failure, " f"got {frames} frames"
     )
-    assert failing_append.call_count == 1, (
-        "append_audit must still have been attempted exactly once before failing"
-    )
+    assert (
+        failing_append.call_count == 1
+    ), "append_audit must still have been attempted exactly once before failing"

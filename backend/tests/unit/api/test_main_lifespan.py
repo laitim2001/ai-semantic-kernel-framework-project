@@ -45,6 +45,6 @@ def test_lifespan_calls_load_dotenv_on_startup() -> None:
         with TestClient(app):
             pass
         # Lifespan startup must have called load_dotenv exactly once.
-        assert mock_load.call_count == 1, (
-            f"Expected load_dotenv called once on startup, got {mock_load.call_count}"
-        )
+        assert (
+            mock_load.call_count == 1
+        ), f"Expected load_dotenv called once on startup, got {mock_load.call_count}"
