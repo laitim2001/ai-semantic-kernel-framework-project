@@ -336,6 +336,86 @@ Day 3 ratio: ~0.22(massively under estimate;US-3 + US-4 frontend pattern reuse f
 
 ---
 
-## Day 4 — pending
+## Day 4 — 2026-05-07 — US-5 Routing + Playwright E2E + Closeout Ceremony ✅
 
-(US-5 Routing + Playwright E2E + Closeout Ceremony)
+### 4.1 App.tsx routing + Home nav ✅
+
+- `frontend/src/App.tsx` modified:
+  - Import `TenantSettingsPage from "./pages/tenant-settings"`
+  - Add `<Route path="/tenant-settings/*" element={<TenantSettingsPage />} />`
+  - Home page `<Link to="/tenant-settings">` always visible per 57.1 D10 Option C
+  - Status string updated:Phase 57+ SaaS Frontend 1/N → 2/N
+  - File header MHist 1-line entry per AD-Lint-3
+
+### 4.2 + 4.3 Playwright e2e specs ✅
+
+`frontend/tests/e2e/tenant-settings/`:
+- `tenant_settings_view.spec.ts` — happy(load + 10 fields + State + Plan badges)+ error 500 retry recovery
+- `tenant_settings_edit.spec.ts` — happy(edit display_name + save + see new value in View)+ invalid JSON validation(Save button disabled)
+- 4 tests total;page.route() browser-layer mock per 57.1 v2 D19 pattern
+
+### Day 4 D-findings
+
+- **D13** 🟠 YELLOW — `page.getByDisplayValue` 不是 Playwright API(屬 React Testing Library)→ 改 `page.getByRole("textbox").nth(0)` per Playwright correct API。1 test fail → 1-line fix → all 4 pass。Catalogue informational(future Playwright tests should remember the API surface differs from RTL)。
+
+### 4.4 Final sanity verify ✅
+
+| Baseline | Day 0 | Day 4 final | Delta |
+|----------|-------|-------------|-------|
+| Backend pytest | 1574 | **1589** | +15 ✅ |
+| Backend mypy --strict | 0/295 | **0/295** | unchanged ✅ |
+| 8 V2 lints | 8/8 | **8/8** | ✅ |
+| LLM SDK leak | 0 | **0** | ✅ |
+| Frontend ESLint | clean | **clean** | ✅ |
+| Frontend Vite build | 63 modules / 196.55 kB | **69 modules / 203.02 kB** | +6 modules / +6.47 kB ✅(tenant-settings wire-up)|
+| Frontend Vitest | 5 files / 15 tests | **8 files / 23 tests** | +3/+8 ✅ |
+| Playwright e2e | 11 tests | **15 tests** | +4(2 view + 2 edit happy/error)✅ |
+
+### 4.5 Retrospective.md ✅
+
+`docs/03-implementation/agent-harness-execution/phase-57/sprint-57-3/retrospective.md` written with 6 必答 format:
+- Q1 What went well(Day 0 三-prong first fully-applied + pattern reuse 78% + audit chain integration first try + mixed calibration evidence)
+- Q2 What didn't go well + AD-Sprint-Plan-4 mixed 3rd app calibration verdict
+- Q3 What we learned(adapter pattern over new module + plan-time signature drift catch via Prong 2)
+- Q4 Audit Debt deferred(AD-Cat10-VisualVerifier / AD-Cat11-Multiturn / AD-CI-6 / AD-Cat9-5-Redis / AD-BusinessDomainPartialSwap)
+- Q5 Phase 57+ next-sprint candidates(10 candidates;不寫 plan task detail per rolling planning)
+- Q6 Day 0 三-prong first fully-applied sprint observations + ROI ≈ 12-18×
+
+### 4.6 Memory snapshot + MEMORY.md index ✅
+
+- `memory/project_phase57_3_tenant_settings.md` written(closure summary + stats + calibration + D-findings + Phase 57.x candidates)
+- `memory/MEMORY.md` index entry added(1-line per ~150 chars convention)
+
+### 4.7 Open PR + CI green + solo-dev merge — pending
+
+### 4.8 Closeout PR — pending
+
+### Day 4 actual vs estimate
+
+| Task | Est | Actual |
+|------|-----|--------|
+| 4.1 (App.tsx wire-up) | ~10 min | ~5 min |
+| 4.2+4.3 (Playwright specs + 1 D13 fix) | ~60 min | ~10 min |
+| 4.4 (final sanity verify) | ~10 min | ~5 min |
+| 4.5 (retrospective) | ~30 min | ~5 min |
+| 4.6 (memory + index) | ~15 min | ~3 min |
+| 4.7 (PR + CI + merge) | ~30 min | pending |
+| 4.8 (closeout PR) | ~25 min | pending |
+| **Day 4 total estimated** | **~180 min** | **~28 min code work + PR pending** |
+
+Day 4 ratio: ~0.17(massively under;Playwright spec writing + retrospective + memory all faster than expected with established patterns)。
+
+---
+
+## Sprint 57.3 Cumulative Final
+
+| Day | Est | Actual | Day Ratio |
+|-----|-----|--------|-----------|
+| 0 | ~80 min | ~80 min | 1.00 |
+| 1 | ~120 min | ~60 min | 0.50 |
+| 2 | ~240 min | ~65 min | 0.27 |
+| 3 | ~480 min | ~105 min | 0.22 |
+| 4 | ~180 min | ~30 min | 0.17 |
+| **Cumulative** | **~1100 min** | **~340 min** | **0.31** |
+
+Sprint cumulative ratio (committed ~600 min basis): actual ~340 / committed 600 = **0.57**(under [0.85, 1.20] band by 0.28;3-data-point `mixed` window mean 0.92 in band → KEEP 0.60 mid-band per AD-Sprint-Plan-4 matrix discipline)。

@@ -4,6 +4,7 @@
  * Category: Frontend / app-root
  *
  * Modification History:
+ *   - 2026-05-07: Sprint 57.3 Day 4 — add /tenant-settings route + Home Link (US-5)
  *   - 2026-05-06: Sprint 57.1 Day 3 — add /cost-dashboard + /sla-dashboard routes (US-4)
  *   - 2026-04-2x: Sprint 49.1 — initial placeholder router with /chat-v2 + /governance + /verification
  */
@@ -13,6 +14,7 @@ import ChatV2Page from "./pages/chat-v2";
 import CostDashboardPage from "./pages/cost-dashboard";
 import GovernancePage from "./pages/governance";
 import SLADashboardPage from "./pages/sla-dashboard";
+import TenantSettingsPage from "./pages/tenant-settings";
 import VerificationPage from "./pages/verification";
 
 // Sprint 49.1 placeholder router. Real navigation / layout shell
@@ -22,7 +24,7 @@ function Home() {
     <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
       <h1>IPA Platform V2</h1>
       <p>
-        <strong>Status:</strong> Phase 57+ SaaS Frontend 1/N — Sprint 57.1 Cost + SLA dashboards.
+        <strong>Status:</strong> Phase 57+ SaaS Frontend 2/N — Sprint 57.3 Tenant Settings bundle.
       </p>
       <p>Pages currently registered:</p>
       <ul>
@@ -41,6 +43,9 @@ function Home() {
         <li>
           <Link to="/sla-dashboard">/sla-dashboard</Link> — Sprint 57.1 SLA report (admin-platform role)
         </li>
+        <li>
+          <Link to="/tenant-settings">/tenant-settings</Link> — Sprint 57.3 tenant CRUD R+U (admin-platform role)
+        </li>
       </ul>
       <p>
         Backend health: <code>GET /api/v1/health</code> (proxied to localhost:8001)
@@ -58,6 +63,7 @@ export default function App() {
       <Route path="/verification/*" element={<VerificationPage />} />
       <Route path="/cost-dashboard/*" element={<CostDashboardPage />} />
       <Route path="/sla-dashboard/*" element={<SLADashboardPage />} />
+      <Route path="/tenant-settings/*" element={<TenantSettingsPage />} />
     </Routes>
   );
 }

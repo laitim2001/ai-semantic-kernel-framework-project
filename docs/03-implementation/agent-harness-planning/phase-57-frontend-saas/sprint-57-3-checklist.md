@@ -257,26 +257,26 @@
 ## Day 4 — US-5 Routing + Playwright E2E + Closeout Ceremony
 
 ### 4.1 App.tsx routing + Home nav
-- [ ] **Add wildcard route + nav link**
+- [x] **Add wildcard route + nav link**
   - `App.tsx`:add `import TenantSettingsPage from './pages/tenant-settings'` + `<Route path="/tenant-settings/*" element={<TenantSettingsPage />} />`
   - Home page:add `<Link to="/tenant-settings/{TENANT_ID}">Tenant Settings</Link>` always visible per 57.1 D10 Option C
   - File header MHist update(MHist 1-line per AD-Lint-3)
   - Verify:`npm run build` clean;manual smoke `npm run dev` → click Tenant Settings link → loads URL
 
 ### 4.2 Playwright e2e tenant_settings_view.spec.ts
-- [ ] **Create `frontend/tests/e2e/tenant_settings_view.spec.ts`**
+- [x] **Create `frontend/tests/e2e/tenant-settings/tenant_settings_view.spec.ts`**(D9 path nested per existing convention)
   - Test 1 happy path:admin auth fixture + page.route() mock GET 200 → load `/tenant-settings/{tenant_id}` → assert all read fields visible(code label / state badge / plan badge / created_at)
   - Test 2 error path:page.route() mock GET 500 → assert retry button visible + click retry + mock 200 next call → assert recovery
   - Verify:`npx playwright test tenant_settings_view.spec.ts --project=chromium` → 2 pass < 30s each
 
 ### 4.3 Playwright e2e tenant_settings_edit.spec.ts
-- [ ] **Create `frontend/tests/e2e/tenant_settings_edit.spec.ts`**
+- [x] **Create `frontend/tests/e2e/tenant-settings/tenant_settings_edit.spec.ts`**(D13 fix:getByRole textbox.nth(0))
   - Test 1 happy path edit:admin auth + mock GET + click Edit toggle + modify display_name + click Save + mock PATCH 200 → assert UI shows new display_name in View mode
   - Test 2 error path JSON validate:click Edit + paste invalid JSON in meta_data textarea + blur → assert Save button disabled + red error message visible
   - Verify:`npx playwright test tenant_settings_edit.spec.ts --project=chromium` → 2 pass
 
 ### 4.4 Final pytest + lint + leak verify
-- [ ] **All baselines green**
+- [x] **All baselines green**
   - `python -m pytest backend/tests/ -q --tb=no` → 1584+ collected / 0 failures
   - `python -m mypy backend/src --strict` → 0 errors / 297+ source files
   - `python scripts/lint/run_all.py` → 8 V2 lints 8/8 green
@@ -286,7 +286,7 @@
   - Verify:All 6 baselines pass + recorded in progress.md final tally
 
 ### 4.5 Retrospective.md (6 必答 format)
-- [ ] **Create `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-3/retrospective.md`**
+- [x] **Create `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-3/retrospective.md`**
   - Q1 What went well(包含 Day 0 三-prong 探勘 first fully-applied + D1 catch + Option B pivot ROI)
   - Q2 What didn't go well + AD-Sprint-Plan-4 mixed 3rd app calibration verify(actual / 10 ratio + verdict in/outside band + 3-data-point window observation)
   - Q3 What we learned(generalizable lessons + Day 0 三-prong first-fully-applied sprint observations)
@@ -296,7 +296,7 @@
   - Verify:6 必答 + AD-Sprint-Plan-4 verdict + Phase 57.x next-sprint candidates list documented
 
 ### 4.6 Memory snapshot + MEMORY.md index
-- [ ] **Create memory file**
+- [x] **Create memory file**
   - `memory/project_phase57_3_tenant_settings.md` per memory frontmatter format(name / description / type=project)
   - Content:Sprint summary + 5 USs delivery + calibration ratio + Day 0 三-prong first-fully-applied stats + D1 closure
   - Update `memory/MEMORY.md` index with 1-line entry under ~150 chars
