@@ -300,9 +300,74 @@
 ### Day 1 → Day 2 / Day 3 transition
 
 - Day 1 已 fully achieve Reality Check primary deliverable: 21 D-findings catalogued (3 RED + 8 YELLOW + 9 GREEN)
-- 不需 Day 2 frontend browser test for primary value(D-12 + D-14 + D-20 已是 dominant findings)
+- Day 2 仍 valuable to verify frontend integration reality
 - Day 3 V2 planning doc 21 份 audit 仍可 surface 額外 design-vs-code drift evidence(可選擇性執行)
 - Phase 57.6+ direction 已基本明確:Reality Gap Sprint 修 D-12 + D-20 + D-16/17/18(MUST-FIX)+ D-2 wire seed_defaults
-- 用戶決策 needed: 是否繼續 Day 2-3 OR 直接 Day 4 closeout + Phase 57.6+ pivot
+
+---
+
+## Day 2 — Frontend Playwright Browser Test (2026-05-08)
+
+### Vite boot
+- ✅ Vite v5.4.21 ready in 275ms
+- ⚠️ D-finding **D-21**:Vite listening on **3007** not 3005(3005/3006 ports occupied — `vite.config.ts:17` 確認 hardcoded 3007 + scripts/dev.py 期望 3005;config drift)
+
+### 7 Pages Browser Test (Playwright headless screenshots)
+
+| # | Page URL | Status | Reality finding |
+|---|----------|--------|----------------|
+| 1 | `/` Home | ✅ functional | Lists 7 pages + Phase progress;but says "proxied to localhost:8001" — **D-22** stale text(backend now 8000) |
+| 2 | `/chat-v2` | ⚠️ Skeleton | Phase 50.2 Day 3 skeleton;banner self-admits "Sprint 50.2 Day 3 skeleton";sidebar:"Session list lands in Phase 51.x"(but 51.x shipped);Inspector:"Token / cost tracker (52.1+), memory layer inspector (51.2), verification status (54.1) — coming in later sprints"(全 already shipped) — **D-23** chat-v2 frontend stuck at 50.2 baseline despite 22 sprint backend |
+| 3 | `/governance` | ⚠️ Placeholder | Heading + 1 empty listitem + "Audit log + risk policy management land in subsequent sprints" — **D-24** despite Sprint 53.5 ship governance approvals + ApprovalCard,frontend 仍是 placeholder |
+| 4 | `/verification` | ⚠️ Placeholder | Just "Coming in Phase 54.1 — Verifier results + self-correction trace" text — **D-25** Sprint 54.1 已 ship 但 frontend 依舊 "coming" placeholder |
+| 5 | `/cost-dashboard` | ⚠️ Awaiting query | Shell renders + "Missing ?tenant_id=... query parameter" prompt + month picker — actual data fetch needs `?tenant_id` query;backend admin-platform role enforced;**D-28** UX assumes user 知道如何傳 query param + 從哪裡得到 tenant_id;沒有 tenant selector dropdown |
+| 6 | `/sla-dashboard` | ⚠️ Awaiting query | Same pattern as cost-dashboard(needs ?tenant_id) |
+| 7 | `/tenant-settings` | ⚠️ Awaiting query | Same pattern(57.3 design needs ?tenant_id query for view+edit) |
+| 8 | `/admin-tenants` | 🔴 **HTTP 500** | "Error: HTTP 500" + filters render but backend unreachable;console 2 errors;**D-27** root cause: `vite.config.ts:22` proxy target = `http://localhost:8001` 但 backend 在 **8000** — frontend 永遠 HTTP 500 unless backend 改 8001 OR vite proxy 改 8000 |
+
+### Day 2 D-findings 補充
+
+**D-21** 🟠 YELLOW — Vite port drift(3005 expected vs 3007 actual)
+
+**D-22** 🟡 YELLOW — Home page stale text "proxied to localhost:8001"(implies original design intent was 8001)
+
+**D-23** 🟠 YELLOW — chat-v2 frontend stuck at 50.2 Day 3 skeleton;後續 22 sprint backend infrastructure(sessions / token / memory / verification)cumulatively 全 unwired into UI
+
+**D-24** 🟠 YELLOW — Governance frontend bare placeholder despite 53.5 backend ship(approvals + ApprovalCard + Cat 9 Stage 3 wiring)
+
+**D-25** 🟠 YELLOW — Verification frontend bare placeholder despite 54.1 backend ship(RulesBasedVerifier + LLMJudgeVerifier + 4 templates + self-correction)
+
+**D-26** 🔴 RED — admin-tenants HTTP 500 in browser(due to D-27 vite proxy target mismatch)
+
+**D-27** 🔴🔴 RED CRITICAL — **Vite proxy target hardcoded 8001 but backend default port 8000** — entire frontend API layer broken;system never end-to-end tested
+
+**D-28** 🟠 YELLOW — Cost / SLA / Tenant-settings pages all assume `?tenant_id=...` URL query param without selector UI;UX 不友好(admin 需手 paste tenant_id)
+
+### V2 22 Sprint Frontend Reality 雙評分(updated)
+
+**Frontend code-level alignment**: ★★★ (3/5) — Sprint 53.5/54.1/57.1/57.3/57.4 frontend code 部分 ship 但**多個 page 是 placeholder**;Vitest 35 unit tests 全 mock-based 沒檢測 placeholder vs implemented drift
+
+**Frontend runtime real-boot alignment**: ★ (1/5) — Vite proxy port mismatch 阻擋整個 frontend↔backend 通信;chat-v2 / governance / verification 都是 placeholder texts;admin-tenants 是唯一在 57.4 後實作完成的 page,但被 D-27 阻擋
+
+### Day 2 累計時間
+- Vite boot + Playwright nav 7 pages + screenshots: ~15 min
+- progress.md update: ~10 min
+- **Day 2 total ≈ 25 min** (远 under Day 2 budget ~3-4 hr)
+
+### 累計 Day 0-2 D-findings 總計
+
+**28 D-findings catalogued** — 7 RED critical + 13 YELLOW + 8 GREEN
+
+### Day 2 → Day 3 / Day 4 transition
+
+- Day 2 surface 8 個 frontend 額外 findings(D-21~D-28)
+- Reality Check primary deliverable基本 done:findings 已充分驅動 Phase 57.6+ scope
+- Day 3 V2 planning doc 21 份 audit 可選擇執行 OR skip 直接 Day 4 closeout
+- Phase 57.6+ Reality Gap Sprint 候選 MUST-FIX scope:
+  1. **D-12** + **D-21** + **D-27** entry-point + port config drift 統一修(5 unique findings same root cause: scripts/dev.py + vite.config.ts + src/main.py 沒 sync)
+  2. **D-20** wire python-dotenv autoload backend
+  3. **D-23** + **D-24** + **D-25** wire frontend pages to actual backend (3 placeholder pages → real data)
+  4. **D-16** + **D-17** chat session + audit DB persist
+  5. **D-2** seed_defaults at startup lifespan
 
 
