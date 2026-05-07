@@ -1,15 +1,15 @@
 """
 File: backend/src/api/v1/admin/tenants.py
-Purpose: System-admin tenant lifecycle endpoints — provisioning + onboarding API surface.
-Category: API Layer / Admin (Sprint 56.1 SaaS Stage 1)
-Scope: Sprint 56.1 Day 1 (US-1) + Day 3 (US-3 part 2 onboarding endpoints)
+Purpose: System-admin tenant lifecycle + settings CRUD endpoints.
+Category: API Layer / Admin (Sprint 56.1 + Sprint 57.3)
+Scope: Sprint 56.1 Day 1+3 (provisioning + onboarding) + Sprint 57.3 Day 1+2 (GET + PATCH)
 Owner: api/v1/admin owner
 
 Description:
-    Day 1 (US-1):
+    Sprint 56.1 Day 1 (US-1):
         POST /api/v1/admin/tenants — create new tenant + run ProvisioningWorkflow.
 
-    Day 3 (US-3 part 2):
+    Sprint 56.1 Day 3 (US-3 part 2):
         GET  /api/v1/admin/tenants/{id}/onboarding-status — snapshot
         POST /api/v1/admin/tenants/{id}/onboarding/{step} — advance step
             with auto-transition to ACTIVE when all 6 steps complete + health
@@ -23,19 +23,31 @@ Description:
     or "platform_admin". `tenant_admin` role is intentionally excluded —
     tenant-scoped admins cannot create / suspend / archive other tenants.
 
+    Sprint 57.3 Day 1+2 (US-1 + US-2 — closes Day 0 D1 RED finding via
+    Option B pivot user-confirmed 2026-05-07):
+        GET   /api/v1/admin/tenants/{tenant_id} — read full tenant entity
+            (10-field TenantResponse mirroring ORM fields).
+        PATCH /api/v1/admin/tenants/{tenant_id} — partial update for
+            display_name + meta_data only (extra='forbid' rejects other
+            fields); writes audit chain entry on actual change.
+
     D11 (carryover): no Cat 12 obs span — structured logging only (consistent
     with provisioning.py D11 / chat router L121 D4).
 
 Key Components:
     - TenantCreateRequest / TenantCreateResponse Pydantic schemas
     - OnboardingStatusResponse / OnboardingAdvanceRequest schemas (Day 3)
+    - TenantResponse / TenantUpdateRequest schemas (Sprint 57.3)
     - router: APIRouter prefix /admin/tenants
     - create_tenant / get_onboarding_status / advance_onboarding_step
+    - get_tenant / update_tenant (Sprint 57.3)
 
 Created: 2026-05-06 (Sprint 56.1 Day 1)
-Last Modified: 2026-05-06
+Last Modified: 2026-05-07
 
 Modification History:
+    - 2026-05-07: Sprint 57.3 Day 2 — add PATCH /{id} + TenantUpdateRequest + audit chain (US-2)
+    - 2026-05-07: Sprint 57.3 Day 1 — add GET /{tenant_id} + TenantResponse (US-1 closes D1)
     - 2026-05-06: Sprint 56.2 Day 1 — RBAC dep replaces token stub (closes AD-AdminAuth-1)
     - 2026-05-06: Sprint 56.1 Day 4 CI — replace EmailStr with regex (avoid email-validator dep)
     - 2026-05-06: Sprint 56.1 Day 3 — onboarding-status GET + onboarding/{step} POST (US-3 part 2)
@@ -52,14 +64,16 @@ Related:
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from infrastructure.db.audit_helper import append_audit
 from infrastructure.db.models.identity import Tenant, TenantPlan, TenantState
 from infrastructure.db.session import get_db_session
 from platform_layer.identity.auth import require_admin_platform_role
@@ -266,3 +280,129 @@ async def advance_onboarding_step(
         health_check=health_report_dict,
         transitioned_to_active=transitioned,
     )
+
+
+# ---------------------------------------------------------------------
+# Sprint 57.3 Day 1+2 (US-1 + US-2): Tenant settings read + partial update
+# Closes Day 0 D1 RED finding via Option B pivot user-confirmed 2026-05-07.
+# ---------------------------------------------------------------------
+
+
+class TenantResponse(BaseModel):
+    """Read-only response for GET /admin/tenants/{tenant_id}.
+
+    Mirrors all 10 ORM fields of the Tenant model. Used as response_model
+    for both GET (US-1) and PATCH (US-2 — caller sees post-update state).
+    """
+
+    id: UUID
+    code: str
+    display_name: str
+    state: TenantState
+    plan: TenantPlan
+    provisioning_progress: dict[str, Any]
+    onboarding_progress: dict[str, Any]
+    meta_data: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+@router.get(
+    "/{tenant_id}",
+    response_model=TenantResponse,
+    dependencies=[Depends(require_admin_platform_role)],
+)
+async def get_tenant(
+    tenant_id: UUID,
+    db: AsyncSession = Depends(get_db_session),
+) -> TenantResponse:
+    """Return full tenant entity (10 fields) given tenant_id.
+
+    Auth: require_admin_platform_role (super-admin only). 404 if tenant
+    not found via _load_tenant_or_404.
+    """
+    tenant = await _load_tenant_or_404(db, tenant_id)
+    return TenantResponse.model_validate(tenant)
+
+
+class TenantUpdateRequest(BaseModel):
+    """Partial update request for PATCH /admin/tenants/{tenant_id}.
+
+    Only display_name + meta_data are editable. Pydantic extra='forbid'
+    rejects any other field with 422 (per US-2 immutable field guard for
+    id / code / state / plan / created_at / updated_at / progress fields).
+
+    State transitions go through TenantLifecycle.transition (per
+    VALID_TRANSITIONS lifecycle.py:63); plan upgrades go through
+    PlanLoader workflow (56.1) — neither belongs here.
+    """
+
+    display_name: str | None = Field(None, min_length=1, max_length=256)
+    meta_data: dict[str, Any] | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+@router.patch("/{tenant_id}", response_model=TenantResponse)
+async def update_tenant(
+    tenant_id: UUID,
+    request: TenantUpdateRequest,
+    db: AsyncSession = Depends(get_db_session),
+    admin_user_id: UUID = Depends(require_admin_platform_role),
+) -> TenantResponse:
+    """Partial update for tenant settings (display_name + meta_data only).
+
+    On actual change, writes audit chain entry with operation=
+    "tenant_settings_updated" + operation_data containing changed_fields +
+    old_values + new_values for full audit trail.
+
+    No-op (no fields changed) short-circuits without audit entry.
+
+    Auth: require_admin_platform_role; admin_user_id captured for audit
+    chain user_id field.
+    """
+    tenant = await _load_tenant_or_404(db, tenant_id)
+
+    changed_fields: list[str] = []
+    old_values: dict[str, Any] = {}
+    new_values: dict[str, Any] = {}
+
+    if request.display_name is not None and request.display_name != tenant.display_name:
+        old_values["display_name"] = tenant.display_name
+        new_values["display_name"] = request.display_name
+        tenant.display_name = request.display_name
+        changed_fields.append("display_name")
+
+    if request.meta_data is not None and request.meta_data != tenant.meta_data:
+        old_values["meta_data"] = tenant.meta_data
+        new_values["meta_data"] = request.meta_data
+        tenant.meta_data = request.meta_data
+        changed_fields.append("meta_data")
+
+    if not changed_fields:
+        # No-op — return current state without writing audit entry.
+        return TenantResponse.model_validate(tenant)
+
+    await db.flush()  # Bump updated_at via SQLAlchemy onupdate.
+
+    # D11 (Day 2): append_audit signature uses operation/operation_data/user_id
+    # (not action/details/actor_user_id as plan-time assumed).
+    await append_audit(
+        db,
+        tenant_id=tenant_id,
+        operation="tenant_settings_updated",
+        resource_type="tenant",
+        resource_id=str(tenant_id),
+        operation_data={
+            "changed_fields": changed_fields,
+            "old_values": old_values,
+            "new_values": new_values,
+        },
+        user_id=admin_user_id,
+        operation_result="success",
+    )
+    await db.commit()
+
+    return TenantResponse.model_validate(tenant)
