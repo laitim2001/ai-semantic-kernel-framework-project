@@ -207,12 +207,8 @@ async def test_list_tenants_pagination(db_session: AsyncSession) -> None:
     app = _build_app(db_session=db_session)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        page1 = await ac.get(
-            "/api/v1/admin/tenants?search=PAGE_&limit=2&offset=0"
-        )
-        page2 = await ac.get(
-            "/api/v1/admin/tenants?search=PAGE_&limit=2&offset=2"
-        )
+        page1 = await ac.get("/api/v1/admin/tenants?search=PAGE_&limit=2&offset=0")
+        page2 = await ac.get("/api/v1/admin/tenants?search=PAGE_&limit=2&offset=2")
     assert page1.status_code == 200 and page2.status_code == 200
     body1 = page1.json()
     body2 = page2.json()
@@ -233,9 +229,7 @@ async def test_list_tenants_empty_filter(db_session: AsyncSession) -> None:
     app = _build_app(db_session=db_session)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get(
-            "/api/v1/admin/tenants?search=NONEXISTENT_TENANT_99999"
-        )
+        resp = await ac.get("/api/v1/admin/tenants?search=NONEXISTENT_TENANT_99999")
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["items"] == []

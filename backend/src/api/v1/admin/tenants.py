@@ -214,18 +214,14 @@ async def list_tenants(
         base_stmt = base_stmt.where(Tenant.plan == plan)
     if search is not None:
         like = f"%{search}%"
-        base_stmt = base_stmt.where(
-            or_(Tenant.code.ilike(like), Tenant.display_name.ilike(like))
-        )
+        base_stmt = base_stmt.where(or_(Tenant.code.ilike(like), Tenant.display_name.ilike(like)))
 
     count_stmt = select(func.count()).select_from(base_stmt.subquery())
     total_raw = (await db.execute(count_stmt)).scalar()
     total = int(total_raw or 0)
 
     page_stmt = (
-        base_stmt.order_by(Tenant.created_at.desc(), Tenant.id.desc())
-        .limit(limit)
-        .offset(offset)
+        base_stmt.order_by(Tenant.created_at.desc(), Tenant.id.desc()).limit(limit).offset(offset)
     )
     rows = (await db.execute(page_stmt)).scalars().all()
 
