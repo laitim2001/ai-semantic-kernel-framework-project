@@ -90,11 +90,21 @@ class LLMResponded(LoopEvent):
     Carries the canonical (content, tool_calls, thinking) tuple per
     02-architecture-design.md §SSE `llm_response` schema. Replaces SSE-level
     Thinking in 50.2; Thinking event itself stays for 50.1 test backward-compat.
+
+    Sprint 57.2 US-1+US-2 bundled (AD-Cost-Ledger-Token-Split + Provider-Attribution):
+    `provider / model / input_tokens / output_tokens` carry per-call metadata
+    sourced from ChatResponse.model + ChatResponse.usage.{prompt,completion}_tokens.
+    LoopMetricsAccumulator consumes per-event for LoopCompleted aggregation.
     """
 
     content: str = ""
     tool_calls: tuple[Any, ...] = field(default_factory=tuple)  # tuple[ToolCall, ...]
     thinking: str | None = None
+    # Sprint 57.2 US-1+US-2 bundled: per-call metadata
+    provider: str = ""
+    model: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 @dataclass(frozen=True)
@@ -112,6 +122,17 @@ class LoopCompleted(LoopEvent):
     # before any LLM call (input guardrail block / tripwire). Consumed by
     # chat router to reconcile QuotaEnforcer reservation post-loop.
     total_tokens: int = 0
+    # Sprint 57.2 US-1+US-2 bundled (AD-Cost-Ledger-Token-Split +
+    # Provider-Attribution + Cat10-Cat11-LoopMetricsAccumulator):
+    # accumulator-sourced cumulative split + dominant provider/model.
+    # input_tokens + output_tokens = total_tokens (invariant). provider/
+    # model from last LLM call (most-recent-wins for multi-model loops;
+    # majority of loops use single model so this is dominant attribution).
+    # Default empty/0 covers early-termination paths.
+    input_tokens: int = 0
+    output_tokens: int = 0
+    provider: str = ""
+    model: str = ""
 
 
 # === Category 6: Output Parser ==============================================
