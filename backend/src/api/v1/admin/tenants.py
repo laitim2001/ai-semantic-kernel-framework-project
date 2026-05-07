@@ -1,8 +1,8 @@
 """
 File: backend/src/api/v1/admin/tenants.py
-Purpose: System-admin tenant lifecycle + settings CRUD endpoints — provisioning + onboarding + read/update API surface.
-Category: API Layer / Admin (Sprint 56.1 SaaS Stage 1 + Sprint 57.3 Tenant Settings)
-Scope: Sprint 56.1 Day 1 (US-1) + Day 3 (US-3 part 2 onboarding) + Sprint 57.3 Day 1+2 (US-1 GET + US-2 PATCH)
+Purpose: System-admin tenant lifecycle + settings CRUD endpoints.
+Category: API Layer / Admin (Sprint 56.1 + Sprint 57.3)
+Scope: Sprint 56.1 Day 1+3 (provisioning + onboarding) + Sprint 57.3 Day 1+2 (GET + PATCH)
 Owner: api/v1/admin owner
 
 Description:
@@ -46,7 +46,7 @@ Created: 2026-05-06 (Sprint 56.1 Day 1)
 Last Modified: 2026-05-07
 
 Modification History:
-    - 2026-05-07: Sprint 57.3 Day 2 — add PATCH /{tenant_id} + TenantUpdateRequest + audit chain (US-2)
+    - 2026-05-07: Sprint 57.3 Day 2 — add PATCH /{id} + TenantUpdateRequest + audit chain (US-2)
     - 2026-05-07: Sprint 57.3 Day 1 — add GET /{tenant_id} + TenantResponse (US-1 closes D1)
     - 2026-05-06: Sprint 56.2 Day 1 — RBAC dep replaces token stub (closes AD-AdminAuth-1)
     - 2026-05-06: Sprint 56.1 Day 4 CI — replace EmailStr with regex (avoid email-validator dep)
