@@ -116,20 +116,20 @@
 ## Day 2 — US-2 Backend PATCH endpoint
 
 ### 2.1 TenantUpdateRequest Pydantic model
-- [ ] **Add `class TenantUpdateRequest(BaseModel)` to tenants.py**
+- [x] **Add `class TenantUpdateRequest(BaseModel)` to tenants.py**
   - Fields:`display_name: str | None = Field(None, min_length=1, max_length=256)` + `meta_data: dict[str, Any] | None = None`
   - `model_config = ConfigDict(extra="forbid")` rejects any other field with 422
   - Verify:`grep -n "class TenantUpdateRequest" backend/src/api/v1/admin/tenants.py` → 1 result
 
 ### 2.2 PATCH /{tenant_id} endpoint with audit chain
-- [ ] **Add `@router.patch("/{tenant_id}", response_model=TenantResponse)` endpoint**
+- [x] **Add `@router.patch("/{tenant_id}", response_model=TenantResponse)` endpoint**
   - Auth:`Depends(require_admin_platform_role)`(returns admin_user_id)
   - Logic per plan §Technical Specifications: load tenant → diff request fields vs current → mutate ORM → flush(bump updated_at)→ append_audit with action="tenant_settings_updated" + details {changed_fields, old_values, new_values} → commit → return TenantResponse
   - No-op short-circuit:若無 changed_fields → return early without audit entry
   - Verify:`grep -n "@router.patch" backend/src/api/v1/admin/tenants.py` shows new entry
 
 ### 2.3 NEW test file test_tenant_patch.py
-- [ ] **Create `backend/tests/integration/api/v1/admin/test_tenant_patch.py`**
+- [x] **Create `backend/tests/integration/api/test_admin_tenant_patch.py`**(D9 path follows existing 56.x flat convention)
   - Test 1:`test_patch_display_name_only` — payload `{"display_name": "New Name"}` → 200 + name changed + audit entry written
   - Test 2:`test_patch_meta_data_only` — payload `{"meta_data": {"foo": "bar"}}` → 200 + meta_data updated + audit entry
   - Test 3:`test_patch_both_fields` — payload `{"display_name": "X", "meta_data": {"y": "z"}}` → 200 + both updated + 1 audit entry with both fields in changed_fields
@@ -141,14 +141,14 @@
   - Verify:`python -m pytest backend/tests/integration/api/v1/admin/test_tenant_patch.py -v` → ≥7 pass / 0 fail
 
 ### 2.4 Module-level singleton reset pattern verify
-- [ ] **Check audit_helper module-level cache**
+- [x] **Check audit_helper module-level cache**
   - `grep -n "_instance\|_factory\|module-level" backend/src/infrastructure/db/audit_helper.py` → check for cached singletons
   - If found:add autouse `_reset_*` fixture in `backend/tests/integration/api/v1/admin/conftest.py` per testing.md §Module-level Singleton Reset Pattern
   - If not found:document in progress.md "no module-level singleton risk" + skip
   - Verify:`pytest backend/tests/integration/api/v1/admin/ --tb=no` → 0 cascade failures across test files
 
 ### 2.5 Day 2 sanity checks
-- [ ] **Backend baselines verify**
+- [x] **Backend baselines verify**
   - `python -m pytest backend/tests/ -q --tb=no` → 1584+ collected / 0 failures(+10 cumulative)
   - `python -m mypy backend/src/api/v1/admin/tenants.py --strict` → 0 errors
   - `python scripts/lint/run_all.py` → 8 V2 lints 8/8 green
@@ -156,7 +156,7 @@
   - Verify:All 4 sanity checks pass
 
 ### 2.6 Day 2 commit + push + progress.md
-- [ ] **Commit US-2 + push**
+- [x] **Commit US-2 + push**
   - Commit message:`feat(api, sprint-57-3): add PATCH /admin/tenants/{id} with audit chain (US-2 closes D1)`
   - progress.md Day 2 section + actual_hr ratio note
   - Verify:`git log main..HEAD --oneline` shows commit;remote up-to-date

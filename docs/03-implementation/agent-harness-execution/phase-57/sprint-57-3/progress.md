@@ -171,6 +171,82 @@ Day 1 ratio: ~0.5(under bottom-up estimate;mixed scope class historically over-e
 
 ---
 
-## Day 2 — pending
+## Day 2 — 2026-05-07 — US-2 Backend PATCH endpoint ✅
 
-(US-2 Backend PATCH endpoint)
+### 2.1 + 2.2 TenantUpdateRequest + PATCH endpoint ✅
+
+- `backend/src/api/v1/admin/tenants.py` modified:
+  - File header MHist + entry for Day 2(MHist 1-line)
+  - Imports: added `from infrastructure.db.audit_helper import append_audit`
+  - NEW `class TenantUpdateRequest(BaseModel)`:
+    - `display_name: str | None = Field(None, min_length=1, max_length=256)`
+    - `meta_data: dict[str, Any] | None = None`
+    - `model_config = ConfigDict(extra="forbid")`
+  - NEW `@router.patch("/{tenant_id}", response_model=TenantResponse)` endpoint:
+    - Arg-style `admin_user_id: UUID = Depends(require_admin_platform_role)`(captures user_id for audit chain)
+    - Diff request fields vs current → mutate ORM → flush(bumps updated_at)
+    - No-op short-circuit if no changed_fields(skips audit entry + commit)
+    - Otherwise:`await append_audit(...)` + `await db.commit()` + return TenantResponse
+
+### 2.3 NEW test file `test_admin_tenant_patch.py` (9 tests)
+
+- Path:`backend/tests/integration/api/test_admin_tenant_patch.py`(per D9 56.x flat convention)
+- Auth + lookup error paths(3 tests):
+  - `test_patch_401_without_auth` ✅
+  - `test_patch_403_wrong_role` ✅
+  - `test_patch_404_not_found` ✅
+- Validation error paths(2 tests):
+  - `test_patch_immutable_field_rejected` ✅(plan field rejected by extra="forbid")
+  - `test_patch_display_name_too_long` ✅(257 chars → 422)
+- Happy path + audit chain(3 tests):
+  - `test_patch_display_name_only` ✅(1 audit entry with changed_fields=["display_name"])
+  - `test_patch_meta_data_only` ✅(1 audit entry with changed_fields=["meta_data"])
+  - `test_patch_both_fields` ✅(1 audit entry with both fields in set)
+- No-op short-circuit(1 test):
+  - `test_patch_no_op` ✅(empty payload → no audit entry written)
+
+### Day 2 D-findings
+
+- **D11** 🟠 YELLOW — `append_audit` actual signature uses `operation=` / `operation_data=` / `user_id=` + required `resource_type=`,not plan-time assumed `action=` / `details=` / `actor_user_id=`。Adapted call signature in update_tenant + comment in code(D11 Day 2 callout)。Production behavior unaffected;只是 plan-time assumption drift。
+
+### 2.4 Module-level singleton reset pattern ✅
+
+- `audit_helper.py` 無 module-level singleton(grep `_instance|_factory|module-level` returns 0 matches)
+- 不需 autouse `_reset_*` fixture in conftest.py
+- Decision documented in progress.md
+
+### 2.5 Day 2 sanity checks ✅
+
+| Baseline | Day 1 | Day 2 | Delta |
+|----------|-------|-------|-------|
+| pytest collected | 1580 | **1589** | +9 ✅(plan target US-2 ≥+5;hit 180%)|
+| mypy --strict source files | 295 | **295** | unchanged(modify existing)|
+| mypy --strict errors | 0 | **0** | ✅ |
+| 8 V2 lints | 8/8 | **8/8** | ✅(1.00s)|
+| LLM SDK leak | 0 | **0** | ✅ |
+
+### Day 2 actual vs estimate
+
+| Task | Est | Actual |
+|------|-----|--------|
+| 2.1+2.2 (TenantUpdateRequest + PATCH + audit chain) | ~120 min | ~25 min |
+| 2.3 (9 tests + D11 signature adaptation) | ~80 min | ~30 min |
+| 2.4 (module-level singleton verify) | ~15 min | ~5 min |
+| 2.5 (sanity: pytest + mypy + lints + LLM SDK) | ~10 min | ~5 min |
+| 2.6 (commit + push + progress.md) | ~15 min | in progress |
+| **Day 2 total** | **~240 min** | **~65 min** |
+
+Day 2 ratio: ~0.27(way under estimate;US-2 PATCH endpoint signaling pattern much faster than expected — plan over-estimated audit chain integration complexity);Sprint cumulative through Day 0+1+2 = ~205 min / 600 min commit ≈ **34% complete after 50% of days**(Day 3 frontend remaining heaviest at 8 hr est)。
+
+### 主流量 D1 RED finding 完全 closed ✅
+
+- US-1 GET endpoint:read full TenantResponse 10-field shape
+- US-2 PATCH endpoint:partial update display_name + meta_data + audit chain
+- 主流量驗收:admin user 可 read + update tenant settings via web UI(待 Day 3+4 frontend)
+- Backend admin tenants.py 完整 R+U(create + read + onboarding + update);delete 不在 scope 內(soft-delete via state lifecycle;separate sprint)
+
+---
+
+## Day 3 — pending
+
+(US-3 Frontend Infra + US-4 Page Display + Edit Form)

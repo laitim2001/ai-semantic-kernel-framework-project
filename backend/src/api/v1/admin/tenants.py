@@ -46,6 +46,7 @@ Created: 2026-05-06 (Sprint 56.1 Day 1)
 Last Modified: 2026-05-07
 
 Modification History:
+    - 2026-05-07: Sprint 57.3 Day 2 — add PATCH /{tenant_id} + TenantUpdateRequest + audit chain (US-2)
     - 2026-05-07: Sprint 57.3 Day 1 — add GET /{tenant_id} + TenantResponse (US-1 closes D1)
     - 2026-05-06: Sprint 56.2 Day 1 — RBAC dep replaces token stub (closes AD-AdminAuth-1)
     - 2026-05-06: Sprint 56.1 Day 4 CI — replace EmailStr with regex (avoid email-validator dep)
@@ -72,6 +73,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from infrastructure.db.audit_helper import append_audit
 from infrastructure.db.models.identity import Tenant, TenantPlan, TenantState
 from infrastructure.db.session import get_db_session
 from platform_layer.identity.auth import require_admin_platform_role
@@ -322,4 +324,85 @@ async def get_tenant(
     not found via _load_tenant_or_404.
     """
     tenant = await _load_tenant_or_404(db, tenant_id)
+    return TenantResponse.model_validate(tenant)
+
+
+class TenantUpdateRequest(BaseModel):
+    """Partial update request for PATCH /admin/tenants/{tenant_id}.
+
+    Only display_name + meta_data are editable. Pydantic extra='forbid'
+    rejects any other field with 422 (per US-2 immutable field guard for
+    id / code / state / plan / created_at / updated_at / progress fields).
+
+    State transitions go through TenantLifecycle.transition (per
+    VALID_TRANSITIONS lifecycle.py:63); plan upgrades go through
+    PlanLoader workflow (56.1) — neither belongs here.
+    """
+
+    display_name: str | None = Field(None, min_length=1, max_length=256)
+    meta_data: dict[str, Any] | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+@router.patch("/{tenant_id}", response_model=TenantResponse)
+async def update_tenant(
+    tenant_id: UUID,
+    request: TenantUpdateRequest,
+    db: AsyncSession = Depends(get_db_session),
+    admin_user_id: UUID = Depends(require_admin_platform_role),
+) -> TenantResponse:
+    """Partial update for tenant settings (display_name + meta_data only).
+
+    On actual change, writes audit chain entry with operation=
+    "tenant_settings_updated" + operation_data containing changed_fields +
+    old_values + new_values for full audit trail.
+
+    No-op (no fields changed) short-circuits without audit entry.
+
+    Auth: require_admin_platform_role; admin_user_id captured for audit
+    chain user_id field.
+    """
+    tenant = await _load_tenant_or_404(db, tenant_id)
+
+    changed_fields: list[str] = []
+    old_values: dict[str, Any] = {}
+    new_values: dict[str, Any] = {}
+
+    if request.display_name is not None and request.display_name != tenant.display_name:
+        old_values["display_name"] = tenant.display_name
+        new_values["display_name"] = request.display_name
+        tenant.display_name = request.display_name
+        changed_fields.append("display_name")
+
+    if request.meta_data is not None and request.meta_data != tenant.meta_data:
+        old_values["meta_data"] = tenant.meta_data
+        new_values["meta_data"] = request.meta_data
+        tenant.meta_data = request.meta_data
+        changed_fields.append("meta_data")
+
+    if not changed_fields:
+        # No-op — return current state without writing audit entry.
+        return TenantResponse.model_validate(tenant)
+
+    await db.flush()  # Bump updated_at via SQLAlchemy onupdate.
+
+    # D11 (Day 2): append_audit signature uses operation/operation_data/user_id
+    # (not action/details/actor_user_id as plan-time assumed).
+    await append_audit(
+        db,
+        tenant_id=tenant_id,
+        operation="tenant_settings_updated",
+        resource_type="tenant",
+        resource_id=str(tenant_id),
+        operation_data={
+            "changed_fields": changed_fields,
+            "old_values": old_values,
+            "new_values": new_values,
+        },
+        user_id=admin_user_id,
+        operation_result="success",
+    )
+    await db.commit()
+
     return TenantResponse.model_validate(tenant)
