@@ -38,7 +38,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
-    - 2026-05-08: Sprint 57.6 Day 2 US-3 — audit_log observer wired at LoopCompleted (closes AD-Reality-3-audit_log + 57.5 D-17). sessions + tool_calls table observers split as AD-Reality-3a/3b (deferred Phase 57.7+ — require user_id JWT extraction infra not yet built).
+    - 2026-05-08: Sprint 57.6 US-3 — audit_log observer at LoopCompleted (AD-Reality-3-audit_log)
     - 2026-05-06: Sprint 56.3 Day 3 — wire Cost Ledger LLM + tool hooks (US-4)
     - 2026-05-06: Sprint 56.3 Day 1 — wire SLA span observer (US-1 — Cat 12 SLA recording)
     - 2026-05-06: Sprint 56.2 Day 2 — quota pre-call estimate + post-call reconcile (US-2 + US-3)

@@ -27,7 +27,7 @@ Created: 2026-04-29 (Sprint 49.4 Day 5)
 Last Modified: 2026-04-29
 
 Modification History (newest-first):
-    - 2026-05-08: Sprint 57.6 US-2 — _lifespan() autoload .env via python-dotenv (closes AD-Reality-2 + 57.5 D-20)
+    - 2026-05-08: Sprint 57.6 US-2 — _lifespan() autoload .env via dotenv (closes AD-Reality-2)
     - 2026-05-06: Sprint 56.1 — mount admin_tenants router (POST /api/v1/admin/tenants)
     - 2026-05-04: Mount governance router (Sprint 53.5 US-1) — GET /governance/approvals
         + POST /governance/approvals/{id}/decide (approver RBAC + tenant isolation).
