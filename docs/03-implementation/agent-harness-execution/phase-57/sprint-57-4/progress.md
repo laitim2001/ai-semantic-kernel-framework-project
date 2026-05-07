@@ -83,12 +83,67 @@
 
 ---
 
-## Day 1 — TBD (US-1 Backend GET list endpoint)
+## Day 1 — 2026-05-07 (US-1 Backend GET list endpoint)
 
-(In progress — see Day 1 commit logs)
+- ✅ TenantListItem (7 fields) + TenantListResponse Pydantic added to tenants.py
+- ✅ `@router.get("")` endpoint with state/plan/search/limit/offset Query params
+- ✅ ORDER BY (created_at DESC, id DESC) for deterministic pagination (D9 fix)
+- ✅ 9 integration tests in `test_admin_tenant_list.py` (401/403/happy/state/plan/search/pagination/empty/422)
+- ✅ pytest 1589 → 1598 (+9, 150% of plan target +6)
+- ✅ mypy --strict 0 errors in tenants.py / 8 V2 lints 8/8
+- Commit: `a749e4c0`
+- Actual: ~45 min (vs ~2 hr est)
+
+## Day 2 — 2026-05-07 (US-2 Frontend Infra)
+
+- ✅ `features/admin-tenants/{components,services,store}` skeleton created
+- ✅ types.ts re-exports TenantState + TenantPlan from tenant-settings (no duplicate enum per AP-11)
+- ✅ adminTenantsService.ts with `buildListSearchParams` helper (omit undefined filters) + listTenants
+- ✅ adminTenantsStore.ts Zustand store (query/items/total/loading/error + setFilter resets offset / setPagination / loadData / reset)
+- ✅ 7 Vitest unit tests (4 service + 3 store)
+- ✅ Vitest 23 → 30 (+7, 117% of plan target +6 for US-2)
+- Commit: `cb061505`
+- Actual: ~30 min (vs ~1.5 hr est)
+
+## Day 3 — 2026-05-07 (US-3 + US-4 Components + Page)
+
+- ✅ TenantListTable.tsx (rows + state/plan badges + View button + empty state + loading skeleton)
+- ✅ TenantListFilters.tsx (state/plan dropdowns + search + Apply/Reset; no debounce per AP-6 → AD-AdminTenants-DebouncedSearch deferred)
+- ✅ TenantListPagination.tsx (Prev/Next + range indicator + edge-disable)
+- ✅ pages/admin-tenants/index.tsx (Filters + Table + Pagination layout + auto-load on mount + error retry; URL query sync deferred → AD-AdminTenants-URL-QuerySync)
+- ✅ 5 Vitest tests (2 Table + 1 Filters + 2 Pagination)
+- ✅ Vitest 30 → 35 (+5, hits plan target +5)
+- Commit: (Day 3 commit)
+- Actual: ~50 min (vs ~2.5 hr est)
+
+## Day 4 — 2026-05-07 (US-5 Routing + Playwright + Closeout)
+
+- ✅ App.tsx import AdminTenantsPage + Route `/admin-tenants` + Home Link + status text update + MHist line
+- ✅ Playwright e2e `admin_tenants_list.spec.ts` 4 cases (happy / filter / click-row / empty)
+- ✅ D14 Playwright strict-mode selector fix (mid-test) — `getByText("active")` 2 matches → `.locator("td span").filter()` + `getByRole("heading")`
+- ✅ Vite build 69 → **75 modules** / 203.02 → **209.11 kB** (+6.09 kB, admin-tenants wired)
+- ✅ Playwright 19 → 23 (+4)
+- ✅ retrospective.md (6 必答 + AD-Sprint-Plan-6 logged + Phase 57.x candidates Q5)
+- ✅ Memory snapshot + MEMORY.md index updated
+- Actual: ~30 min (vs ~2 hr est)
 
 ---
 
 ## Sprint Summary
 
-(To be filled at Day 4 retrospective)
+| Metric | Baseline | After 57.4 | Delta | vs Plan |
+|--------|----------|------------|-------|---------|
+| Backend pytest | 1589 | **1598** | +9 | 150% of +6 |
+| Backend mypy --strict | 0/295 | 0/295 (unchanged) | 0 | ✅ |
+| 8 V2 lints | 8/8 | 8/8 | 0 | ✅ |
+| LLM SDK leak | 0 | 0 | 0 | ✅ |
+| Vitest | 23 / 8 files | 35 / 13 files | +12 | 200% of +6 |
+| Playwright e2e | 19 (chromium) | 23 (chromium) | +4 | ✅ |
+| Vite build modules | 69 | 75 | +6 | wire-up |
+| Vite build size | 203.02 kB | 209.11 kB | +6.09 kB | wire-up |
+
+**Calibration**: `mixed` 0.60 4th app actual ~3.5 hr / committed 8.4 hr → ratio **0.42** ⬇️ below band by 0.43; 4-data-point window mean **0.79** dropped below band — pattern reuse acceleration evidence. **AD-Sprint-Plan-6** logged proposing scope-class refinement (mixed-greenfield 0.60 vs mixed-pattern-reuse ~0.40).
+
+**D-findings**: 8 catalogued (1 RED + 5 GREEN + 2 YELLOW); D1 RED closed pre-Day-1 via Option A pre-emptive bundle; D9 + D14 mid-sprint fixes (pagination stability + Playwright selectors).
+
+See [retrospective.md](./retrospective.md) for 6 必答 details + carryover AD list + Phase 57.x next-sprint candidates.
