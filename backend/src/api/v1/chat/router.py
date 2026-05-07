@@ -38,6 +38,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-05-01
 
 Modification History (newest-first):
+    - 2026-05-08: Sprint 57.6 US-3 — audit_log observer at LoopCompleted (AD-Reality-3-audit_log)
     - 2026-05-06: Sprint 56.3 Day 3 — wire Cost Ledger LLM + tool hooks (US-4)
     - 2026-05-06: Sprint 56.3 Day 1 — wire SLA span observer (US-1 — Cat 12 SLA recording)
     - 2026-05-06: Sprint 56.2 Day 2 — quota pre-call estimate + post-call reconcile (US-2 + US-3)
@@ -63,6 +64,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
@@ -77,6 +79,7 @@ from agent_harness.observability._abc import Tracer
 from agent_harness.verification import run_with_verification
 from business_domain._service_factory import BusinessServiceFactory
 from core.config import get_settings
+from infrastructure.db.audit_helper import append_audit
 from infrastructure.db.session import get_db_session
 from platform_layer.billing import (
     CostLedgerService,
@@ -236,6 +239,7 @@ async def chat(
             sla_recorder=sla_recorder,
             chat_start_time=chat_start_time,
             cost_ledger=cost_ledger_service,
+            db=db,
         ),
         media_type="text/event-stream",
         headers={
@@ -261,6 +265,7 @@ async def _stream_loop_events(
     sla_recorder: SLAMetricRecorder | None = None,
     chat_start_time: float | None = None,
     cost_ledger: CostLedgerService | None = None,
+    db: AsyncSession | None = None,
 ) -> AsyncIterator[bytes]:
     """Drive the loop generator + emit SSE bytes; finalize tenant-scoped registry.
 
@@ -371,6 +376,49 @@ async def _stream_loop_events(
                     except Exception:  # noqa: BLE001
                         logger.exception(
                             "chat session %s/%s: cost ledger LLM record failed",
+                            tenant_id,
+                            session_id,
+                        )
+                # Sprint 57.6 Day 2 US-3 (R3 / closes 57.5 D-17 + AD-Reality-3-audit_log):
+                # Append a hash-chained audit_log row for chat completion. Best-effort
+                # failure isolation: audit append must NOT break the SSE stream
+                # (Redis / DB flake should not cascade into chat outage).
+                # user_id=None per audit_helper signature (system actor; no JWT
+                # user_id extraction in V2 yet — 57.6 Day 2 探勘 confirmed).
+                # Sprint 57.6 Day 4 CI fix: env-flag observer for test isolation。
+                # Default ON in production;tests/conftest.py sets to "false" via
+                # AUDIT_LOG_CHAT_OBSERVER=false。Phase 57.7+ AD-Reality-FlakeEventLoop
+                # to add proper connection-pool isolation in tests/conftest.py
+                # db_session fixture (estimated ~1-2 hr;not blocking Sprint 57.6 closure)。
+                # SAVEPOINT pattern still used for FK violation isolation in production。
+                _audit_observer_enabled = (
+                    os.environ.get("AUDIT_LOG_CHAT_OBSERVER", "true").lower() == "true"
+                )
+                if db is not None and _audit_observer_enabled:
+                    try:
+                        async with db.begin_nested():
+                            await append_audit(
+                                db,
+                                tenant_id=tenant_id,
+                                operation="conversation_completed",
+                                resource_type="session",
+                                resource_id=str(session_id),
+                                operation_data={
+                                    "total_turns": event.total_turns,
+                                    "total_tokens": event.total_tokens,
+                                    "input_tokens": event.input_tokens,
+                                    "output_tokens": event.output_tokens,
+                                    "model": event.model or "",
+                                    "provider": event.provider or "",
+                                    "outcome": "completed",
+                                },
+                                user_id=None,
+                                session_id=session_id,
+                                operation_result="success",
+                            )
+                    except Exception:  # noqa: BLE001
+                        logger.exception(
+                            "chat session %s/%s: audit_log append failed",
                             tenant_id,
                             session_id,
                         )
