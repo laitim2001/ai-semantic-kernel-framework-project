@@ -255,6 +255,116 @@ User-approved「skeleton + zero piece install」path:
 
 ---
 
+---
+
+## Day 2 (2026-05-09 PM evening — same session as Day 0+1)
+
+### Day 2.1 US-A2 Frontend Auth Pages (~30 min)
+
+NEW files:
+- `frontend/src/features/auth/services/authService.ts` (~95 lines): `getJwt()` / `setJwt()` / `clearJwt()` / `isAuthenticated()` / `setPostLoginRedirect()` / `consumePostLoginRedirect()` / `fetchWithAuth()` wrapper / `logout()` foundational helpers
+- `frontend/src/pages/auth/login/index.tsx` (~85 lines): "Login with Microsoft Entra" button → setPostLoginRedirect + redirect to backend `/api/v1/auth/login`. Error display from `?error=...` query param. Basic React (NOT yet AppShell — US-B2 Day 3 wraps).
+- `frontend/src/pages/auth/callback/index.tsx` (~95 lines): Extract JWT + setJwt + consumePostLoginRedirect navigate. Loading spinner skeleton (page should never render content because backend 302's first).
+
+MODIFIED files:
+- `frontend/src/App.tsx`: NEW imports for LoginPage + CallbackPage + 2 NEW Routes (`/auth/login` + `/auth/callback`) + Home Link entry + fix 8001 → 8000 doc comment drift (per Sprint 57.6 D-27 already fixed in vite.config.ts but Home doc text was stale)
+
+Validation post 2.1: Vite build success — **79 modules** (+3 from 76 baseline: authService + 2 page components) / 211.65 kB JS (+2.54 kB) / gzip 66.15 kB / build 584ms.
+
+### Day 2.2 US-A3 Backend DB-backed RBAC (~45 min)
+
+**Discovery during探勘 (NEW D-finding)**:
+- D13 🟡 YELLOW: Plan/checklist used `Role.label` but actual ORM column is `Role.code` (VARCHAR(64) per-tenant unique). Adjusted RBACManager API to use `code` matching real schema.
+- D14 🟡 YELLOW: Existing 100+ identity tests use `SimpleNamespace(roles=[...])` stub WITHOUT tenant_id;pure DB-only `_require_role` rewire would 401 those tests. **Hybrid path with opt-in Settings flag chosen** to preserve backwards compat.
+
+NEW files:
+- `backend/src/platform_layer/identity/rbac.py` (~145 lines): `RBACManager` class with `has_role_code` (DB JOIN per TS-3 plan §) + `has_permission` Phase 58+ stub. Stateless static methods accept optional session parameter (FastAPI dep chain compatibility) OR open own session via `get_session_factory()`.
+- `backend/tests/unit/platform_layer/identity/test_rbac.py` (~165 lines): **7 tests** (target 4+) covering RBACManager direct (3 tests: matching role / no matching / empty allowed_codes defensive) + hybrid path (4 tests: Path 1 JWT admin / Path 2 disabled default 403 / Path 2 enabled DB grants per-tenant / Path 2 enabled DB lacks role still 403). All mock RBACManager._has_role_code_with_session inner method to bypass real DB.
+
+MODIFIED files:
+- `backend/src/platform_layer/identity/auth.py`: `_require_role()` REWIRE to hybrid path — Path 1 (legacy JWT-claim, preserved) + Path 2 (NEW DB-backed via RBACManager.has_role_code, opt-in via `settings.rbac_db_backed_fallback`). MHist updated.
+- `backend/src/core/config/__init__.py`: NEW Settings field `rbac_db_backed_fallback: bool = False` (default OFF;production rollout flips True after migration script populates user_roles).
+
+Validation post 2.2:
+- mypy --strict: **0 issues / 297 source files** (+1 rbac.py from 296)
+- V2 lints: **9/9 green** (0.93s) — NO regression
+- test_rbac.py: **7/7 pass** (0.26s)
+- Identity test suite (test_jwt + test_require_admin_platform_role + test_rbac): **23/23 pass** — 0 regression on existing tests
+
+### Day 2.3 US-B1 Frontend Foundation Install (~30 min)
+
+NEW deps in `frontend/package.json`:
+- `tailwindcss@^4` + `@tailwindcss/postcss` (devDeps)
+- `@tanstack/react-query@^5` + `@tanstack/react-query-devtools@^5` (dev)
+- `react-hook-form@^7`
+- `zod@^3`
+- `react-error-boundary@^4`
+- `sonner@^1`
+- shadcn-required: `clsx` + `tailwind-merge` + `class-variance-authority` + `lucide-react` + `@radix-ui/react-slot` + `@radix-ui/react-dialog`
+
+NEW config files:
+- `frontend/tailwind.config.ts` (~50 lines): Tailwind 4 config with content paths + dark mode class strategy + shadcn CSS variable bridge (border / input / ring / background / foreground / primary / secondary / destructive / muted)
+- `frontend/postcss.config.cjs` (~10 lines): Tailwind 4 + autoprefixer chain
+- `frontend/components.json` (~25 lines): shadcn config so future `npx shadcn-ui add` commands work
+- `frontend/src/index.css` (~55 lines): @tailwind base/components/utilities directives + shadcn slate color CSS variables (light + dark themes) + body base styles
+- `frontend/src/lib/utils.ts` (~25 lines): shadcn `cn()` helper combining clsx + tailwind-merge
+
+MODIFIED files:
+- `frontend/src/main.tsx`: Add `import "./index.css";` to wire CSS pipeline
+
+Validation post 2.3:
+- Vite build: **80 modules** (+1 index.css from 79 modules) / **211.65 kB JS + 4.78 kB CSS = 216.43 kB total** = **+3.5% from 209.11 kB baseline** ✅ well under +50% balloon threshold per Risk Class D
+- ESLint: **clean** (0 warnings) — NO regression
+- Vitest: **35/35 passed** (1.66s) — NO regression on existing 13 test files
+
+### Day 2 D-Findings update — 4 NEW (D12 + D13 + D14 + D15)
+
+| # | Severity | Finding |
+|---|----------|---------|
+| D12 | 🟡 YELLOW | 3 pre-existing integration test flakes in `test_admin_tenant_patch.py` from Sprint 57.3 (PR #108) — UniqueViolationError on `tenants.code` UNIQUE constraint when prior run leaves stale `DN_ONLY` / `MD_ONLY` / `BOTH` rows. Audit_log immutability trigger blocks fixture cleanup of stale rows. **NOT Sprint 57.7 regression** — RBAC code doesn't touch tenant CRUD logic. Phase 58+ AD candidate: refactor test fixtures to use random tenant codes per run + better isolation. |
+| D13 | 🟡 YELLOW | Plan/checklist used `Role.label` but actual ORM column is `Role.code` — RBACManager API uses correct `code` field. Minor doc drift. |
+| D14 | 🟡 YELLOW | Existing 100+ identity tests use `SimpleNamespace(roles=[...])` stub WITHOUT tenant_id — pure DB-only `_require_role` rewire would break them. Hybrid path with `Settings.rbac_db_backed_fallback` opt-in chosen instead. Full DB-only enforcement migration deferred Phase 58+. |
+| D15 | 🟡 YELLOW | Sprint 56.2 baseline: pytest **1602 collected** in Sprint 57.6 closeout. After Sprint 57.7 Day 2: **1609 collected** (+7 RBAC) / **1602 passed** + 3 D12 flake + 4 skipped. NEW NET tests passing = 1602 + 7 = 1609 expected on clean DB; 1606 actual (3 D12 flake counted-out). |
+
+### Day 2 Validation Summary (cumulative since pre-sprint baseline)
+
+| Check | Pre-Sprint Baseline | Day 2 End-of-Day | Δ |
+|-------|--------------------|-:----------------|---|
+| pytest collected | 1602 | **1609** | ✅ +7 (RBAC) |
+| pytest passed | 1602 | **1602** | ⚠️ -3 D12 pre-existing flake (would be 1606 on clean DB) |
+| mypy --strict source | 294 files / 0 errors | **297 files / 0 errors** | ✅ +3 (oidc.py + auth.py + rbac.py) |
+| V2 lints | 9/9 (0.99s) | **9/9** (0.93s) | ✅ no regress |
+| LLM SDK leak | 0 | **0** | ✅ |
+| Frontend ESLint | clean | **clean** | ✅ |
+| Vitest unit | 35 (13 files) | **35** (13 files / 1.66s) | ✅ no regress (Day 3 adds tests) |
+| Vite build modules | 75 / 209.11 kB | **80 modules / 211.65 kB JS + 4.78 kB CSS** | ✅ +5 modules / +3.5% bundle |
+
+### Day 2 Time Tracking
+
+| Activity | Estimated | Actual |
+|----------|-----------|--------|
+| Day 2.1 US-A2 frontend auth pages | 2-3 hr | ~30 min ✅ very fast (basic React skeleton) |
+| Day 2.2 US-A3 backend RBAC + 7 tests | 3-4 hr | ~45 min ✅ fast (hybrid path simpler than full rewire) |
+| Day 2.3 US-B1 frontend foundation install | 3-4 hr | ~30 min ✅ very fast (deps install + manual config files) |
+| Validation runs | 30 min | ~10 min |
+| progress.md write | 30 min | ~20 min |
+| **Day 2 total** | **~9 hr** | **~2.25 hr** ✅ **75% under est** |
+
+### Day 2 Session-end Status (2026-05-09 PM evening)
+
+✅ **Day 2 fully complete in same session as Day 0+1** — all 3 sub-tasks (2.1 + 2.2 + 2.3) finished + Day 2.4 commit pending.
+
+⏳ **Day 3 morning order of operations** (next session — ~4-5 hr est):
+1. WorkOS B2B account approval check + `pip install workos` (Day 1 PM signup → Day 2 morning approval expected;Day 3 actual install if approved)
+2. Replace oidc.py 3 placeholder calls with real WorkOS SDK
+3. DB user upsert in callback handler (replace placeholder UUID + tenant_id)
+4. 6+ unit tests for oidc.py + auth.py (mocked WorkOS SDK)
+5. US-B2 NEW AppShell + ThemeProvider + AppErrorBoundary + 3+ Vitest unit tests
+6. US-B3 cost-dashboard migrate to AppShell + Tailwind + TanStack Query + 2+ NEW Vitest
+7. US-R1 AD-Reality 3a sessions/tool_calls observer wire (using JWT user_id from US-A2)
+
+---
+
 ## Day 1 Session-end Status (2026-05-09 PM)
 
 ✅ **Day 1 morning + PM completed** in same session as Day 0:

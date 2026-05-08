@@ -4,6 +4,7 @@
  * Category: Frontend / app-root
  *
  * Modification History:
+ *   - 2026-05-09: Sprint 57.7 Day 2 — add /auth/login + /auth/callback routes (US-A2)
  *   - 2026-05-07: Sprint 57.4 Day 4 — add /admin-tenants route + Home Link (US-5)
  *   - 2026-05-07: Sprint 57.3 Day 4 — add /tenant-settings route + Home Link (US-5)
  *   - 2026-05-06: Sprint 57.1 Day 3 — add /cost-dashboard + /sla-dashboard routes (US-4)
@@ -12,6 +13,8 @@
 
 import { Link, Route, Routes } from "react-router-dom";
 import AdminTenantsPage from "./pages/admin-tenants";
+import CallbackPage from "./pages/auth/callback";
+import LoginPage from "./pages/auth/login";
 import ChatV2Page from "./pages/chat-v2";
 import CostDashboardPage from "./pages/cost-dashboard";
 import GovernancePage from "./pages/governance";
@@ -26,10 +29,13 @@ function Home() {
     <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
       <h1>IPA Platform V2</h1>
       <p>
-        <strong>Status:</strong> Phase 57+ SaaS Frontend 3/N — Sprint 57.4 Admin Tenants Console list bundle.
+        <strong>Status:</strong> Phase 57+ Sprint 57.7 — IAM Foundation + Frontend Foundation 1/N spike.
       </p>
       <p>Pages currently registered:</p>
       <ul>
+        <li>
+          <Link to="/auth/login">/auth/login</Link> — Sprint 57.7 OIDC PKCE login (WorkOS Hosted IAM)
+        </li>
         <li>
           <Link to="/chat-v2">/chat-v2</Link> — Phase 50.2 main flow
         </li>
@@ -53,7 +59,7 @@ function Home() {
         </li>
       </ul>
       <p>
-        Backend health: <code>GET /api/v1/health</code> (proxied to localhost:8001)
+        Backend health: <code>GET /api/v1/health</code> (proxied to localhost:8000 — Sprint 57.6 D-27 fix)
       </p>
     </div>
   );
@@ -63,6 +69,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/auth/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<CallbackPage />} />
       <Route path="/chat-v2/*" element={<ChatV2Page />} />
       <Route path="/governance/*" element={<GovernancePage />} />
       <Route path="/verification/*" element={<VerificationPage />} />

@@ -57,6 +57,17 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 60
 
+    # ---- RBAC (Sprint 57.7 US-A3 — DB-backed RBAC opt-in) ----------
+    # When False (default): _require_role only checks JWT claim path
+    #   (preserves Sprint 53.5+ behavior + 100+ existing tests that mock
+    #   request.state.roles via SimpleNamespace stubs).
+    # When True: _require_role first checks JWT claim, then falls back to
+    #   RBACManager.has_role_code DB query for per-tenant custom roles.
+    # Production rollout: flip True after user_roles + roles tables are
+    #   populated via migration script + verify endpoint demo passes.
+    # Override via env: RBAC_DB_BACKED_FALLBACK=true
+    rbac_db_backed_fallback: bool = False
+
     # ---- WorkOS OIDC (Sprint 57.7 US-A2 — IAM Hosted vendor) -------
     # Path 1 per Day 0 D2 verify: V2 internal JWT stays HS256; vendor SDK
     # handles JWKS validation of WorkOS-issued tokens (no jwt_jwks_url
