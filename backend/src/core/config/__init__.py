@@ -8,6 +8,7 @@ Per project rules (.claude/rules/code-quality.md): always use Pydantic
 Settings (not raw os.environ) so type-safe + validation + .env support.
 
 Modification History (newest-first):
+    - 2026-05-09: Sprint 57.7 US-A2 — add WorkOS OIDC fields (vendor route per US-A1 matrix)
     - 2026-05-06: Sprint 56.1 Day 2 — add quota_enforcement_enabled (US-2)
     - 2026-05-05: Sprint 55.5 — add chat_verification_mode (AD-Cat10-Wire-1; Option E)
     - 2026-04-30: Sprint 55.1 — add business_domain_mode (Literal mock/service)
@@ -55,6 +56,28 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 60
+
+    # ---- RBAC (Sprint 57.7 US-A3 — DB-backed RBAC opt-in) ----------
+    # When False (default): _require_role only checks JWT claim path
+    #   (preserves Sprint 53.5+ behavior + 100+ existing tests that mock
+    #   request.state.roles via SimpleNamespace stubs).
+    # When True: _require_role first checks JWT claim, then falls back to
+    #   RBACManager.has_role_code DB query for per-tenant custom roles.
+    # Production rollout: flip True after user_roles + roles tables are
+    #   populated via migration script + verify endpoint demo passes.
+    # Override via env: RBAC_DB_BACKED_FALLBACK=true
+    rbac_db_backed_fallback: bool = False
+
+    # ---- WorkOS OIDC (Sprint 57.7 US-A2 — IAM Hosted vendor) -------
+    # Path 1 per Day 0 D2 verify: V2 internal JWT stays HS256; vendor SDK
+    # handles JWKS validation of WorkOS-issued tokens (no jwt_jwks_url
+    # needed). Vendor decision rationale: see iam-vendor-matrix.md
+    # (cost ~$15K/yr Year 1 / $40K/yr Year 2; B2B-best SAML+SCIM combo).
+    # Empty defaults so Settings still loads in test/dev without WorkOS
+    # account; OIDC routes return 503 if api_key blank.
+    workos_api_key: str = ""
+    workos_client_id: str = ""
+    oidc_redirect_uri: str = "http://localhost:3005/auth/callback"
 
     # ---- Business domain (Sprint 55.1) ------------------------------
     # mock   → 51.0 HTTP mock_executor pathway (PoC default; backwards-compat)

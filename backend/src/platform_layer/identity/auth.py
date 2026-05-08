@@ -31,6 +31,7 @@ Created: 2026-05-01 (Sprint 52.5 Day 1.2)
 Last Modified: 2026-05-01
 
 Modification History:
+    - 2026-05-09: Sprint 57.7 US-A3 — DB-backed RBAC hybrid path (closes Tier 0 #5)
     - 2026-05-04: Add require_approver_role RBAC dep + extract _require_role helper
         (Sprint 53.5 US-1 — approver / admin / manager)
     - 2026-05-04: Add require_audit_role RBAC dep (Sprint 53.5 US-5 — auditor / admin / compliance)
@@ -153,7 +154,18 @@ async def require_admin_platform_role(request: Request) -> UUID:
 
 
 async def _require_role(request: Request, allowed: frozenset[str], *, role_label: str) -> UUID:
-    """Shared role-check helper used by require_audit_role + require_approver_role."""
+    """Shared role-check helper used by require_audit_role + require_approver_role.
+
+    Sprint 57.7 US-A3 hybrid path:
+    - Path 1 (legacy JWT-claim): fast, in-process — preserves existing
+      53.5+ behavior + 100+ tests that mock request.state.roles
+    - Path 2 (NEW DB-backed fallback): RBACManager queries roles + user_roles
+      with per-tenant filter — closes Tier 0 #5 (per-tenant custom roles)
+
+    Path 1 is checked first;Path 2 only fires if Path 1 doesn't grant.
+    Full DB-only enforcement (drop Path 1) deferred to Phase 58+ per
+    `20-iam-deep-dive.md` §4 Open Invariants.
+    """
     user_id = await get_current_user_id(request)
     roles = getattr(request.state, "roles", None)
     if not isinstance(roles, list):
@@ -161,12 +173,33 @@ async def _require_role(request: Request, allowed: frozenset[str], *, role_label
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="roles middleware contract violated",
         )
-    if not any(r in allowed for r in roles):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"{role_label} role required",
-        )
-    return user_id
+
+    # Path 1: legacy JWT-claim check (preserves existing behavior + tests)
+    if any(r in allowed for r in roles):
+        return user_id
+
+    # Path 2: NEW DB-backed fallback (Sprint 57.7 US-A3 — opt-in via Settings)
+    # Default OFF — preserves 100+ existing tests that mock request.state.roles
+    # via SimpleNamespace stubs (no tenant_id available;Path 2 would 401).
+    # Production rollout flips Settings.rbac_db_backed_fallback=True after
+    # user_roles table populated via migration script.
+    from core.config import get_settings
+
+    if get_settings().rbac_db_backed_fallback:
+        from platform_layer.identity.rbac import RBACManager
+
+        tenant_id = await get_current_tenant(request)
+        if await RBACManager.has_role_code(
+            user_id=user_id,
+            tenant_id=tenant_id,
+            allowed_codes=allowed,
+        ):
+            return user_id
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=f"{role_label} role required",
+    )
 
 
 __all__ = [

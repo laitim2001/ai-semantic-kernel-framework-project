@@ -83,8 +83,10 @@ Per AD-Sprint-Plan-4 (logged Sprint 55.3) + 4-sprint window evidence,one-multipl
 | `large multi-domain` | 0.55 | 56.1=1.00 / 56.3=1.04 / 57.2=0.77 (3) | mean **0.94** ✅ in band | KEEP 0.55 |
 | **`reality-check` (NEW Sprint 57.5)** | **0.85** | **57.5=1.04 (1)** | **n/a 1-data-point** | **NEW class baseline opens (closes AD-Sprint-Plan-7);pending 2-3 sprint window evidence** |
 | **`reality-gap-fix` (NEW Sprint 57.6)** | **0.50** | **57.6=0.54 (1)** | **n/a 1-data-point** | **NEW class baseline opens;ratio below [0.85, 1.20] band by 0.31 → AD-Sprint-Plan-8 propose pending 2-3 sprint validation;potentially adjust to 0.35** |
+| **`iam-frontend-spike` (NEW Sprint 57.7)** | **0.60** (HYBRID weighted blend: IAM × 0.60 + Frontend × 0.65 + Reality × 0.50 + closeout × 0.80) | **57.7=~0.92 (1)** | **n/a 1-data-point** | **NEW class baseline opens (closes AD-Sprint-Plan-9);1st app projected ~0.92 in [0.85, 1.20] band at lower edge;KEEP 0.60 baseline per `When to adjust` 3-sprint window rule;pending 2-3 sprint validation** |
 
 **Modification History**:
+- 2026-05-10: Sprint 57.7 Day 4 — +1 NEW row `iam-frontend-spike` 0.60 HYBRID weighted blend 1-data-point baseline (closes AD-Sprint-Plan-9)
 - 2026-05-08: Sprint 57.6 Day 4 — add scope-class multiplier matrix (closes AD-Reality-10);+2 NEW rows `reality-check` 0.85 1-data-point baseline (closes AD-Sprint-Plan-7) + `reality-gap-fix` 0.50 1-data-point baseline (NEW AD-Sprint-Plan-8 pending 2-3 sprint validation)
 
 ---
@@ -309,6 +311,93 @@ Schema-Grep extends Prong 2 from code-pattern level to DB-column level. Without 
 
 **Daily (evening)**:
 - Update `docs/03-implementation/agent-harness-execution/phase-XX/sprint-XX-Y/progress.md`
+
+#### 🆕 Step 5.5: Spike Sprint Design Note Extract Pattern（2026-05-08+ — closes doc-level rolling discipline）
+
+**When to apply**:
+若 sprint 是 **spike sprint**（用於探索新領域 / 新 gap fill — 例：Phase 57.7 IAM Block A spike / 57.8 SOC 2 + SBOM spike / 57.9 Status Page + APAC compliance spike）：**Day 4 closeout 必須額外產出 1 份 design note**（extract from real implementation）。
+
+**When NOT to apply**:
+若 sprint 是 **feature continuation sprint**（單純擴充已驗證範疇 — 例：Phase 57.4 admin tenants list 是延伸 57.3 tenant settings pattern reuse）：**不需** design note；只需 progress.md + retrospective.md。
+
+#### 8-Point Quality Gate（design note submission checklist）
+
+每個 spike-extract design note **必須**通過下列 8 條（reviewer 逐點驗證）：
+
+- [ ] **1. Section header 對應 spike user story**
+  - ❌ Generic：「OIDC overview」/「Authentication design」
+  - ✅ Specific：「US-A2: OIDC PKCE Flow as wired in Sprint 57.7」
+
+- [ ] **2. 每個技術 claim 有 file:line**
+  - ❌「we use RS256」/「JWT validated via JWKS」
+  - ✅「`JWTManager.encode()` at `backend/src/platform_layer/identity/jwt.py:42-58`」
+
+- [ ] **3. Decision rationale 含比較矩陣**
+  - ❌「Best practice」/「industry standard」
+  - ✅ 三/四欄 vendor matrix + Cost / SCIM / SAML / Decision + 否決原因
+
+- [ ] **4. Verification command（reproducible）**
+  - ✅ `pytest tests/integration/auth/test_oidc_flow.py::test_real_entra_callback`
+  - ✅ 或具體 manual reproduce step（curl + expected response）
+
+- [ ] **5. Test fixture reference**
+  - ✅ Link 到實際 test data / mock setup file
+  - ✅ 若 real-LLM 測試，標明 `pytest -m real_llm` 與 cost 估算
+
+- [ ] **6. Open invariant 明確分界**
+  - ✅「Verified in this spike: A, B, C」+「Deferred to Phase XX.Y (NOT verified): D, E, F」
+  - ❌ 將 deferred 內容寫入主 section 偽裝 verified
+
+- [ ] **7. Rollback / fallback 路徑**
+  - ✅「若設計後續證明錯，revert API routes at `auth.py` + DB column `external_id`；估 1-2 day」
+  - ✅ 識別 sentinel / fallback 是否已存在
+  - ❌ 假設「不會錯」
+
+- [ ] **8. Cross-reference 17.md single-source**
+  - ✅ 任何新 contract 必須在 `17-cross-category-interfaces.md` 對應 §section 登記
+  - ✅ 若新增 ABC，標明 owner category
+  - ❌ 在 design note 平行定義 contract（違反 single-source）
+
+#### Quality 不是頁數，是 verified ratio
+
+| 維度 | 14.md 風格（high page low quality） | Spike-extract 風格（mid page high quality） |
+|------|-------------------------------|------------------------------------------|
+| Verified ratio | 10.6% (91/862 行) | ≥ 95% |
+| 每 claim 對應 file:line | ❌ 大部分 pseudo-code | ✅ 強制 |
+| Decision rationale | ❌ 「primary IdP = Entra」無矩陣 | ✅ vendor comparison matrix |
+| Verification reproducibility | ❌ 無 | ✅ pytest command + fixture |
+| Maintenance | ❌ 半年內過時（57.5 揭示） | ✅ 隨 PR 同步 |
+| 結果頁數 | 800+ 行 | 通常 200-500（outcome，非 cap） |
+
+**禁止**：用「regulated 200-300 行」當品質替代品。重點是**禁止 speculation 充頁數**，不是壓縮 verified content。若 spike 真的學到 600 行 worth verified invariants，就寫 600 行。
+
+#### Template
+
+每個 spike-extract design note 使用 `claudedocs/templates/spike-design-note-template.md` 結構（含 8 sections：Spike Summary / Decision Matrix / Verified Invariants / Cross-Category Contracts / Open Invariants / Rollback / References / Modification History）。
+
+#### Day 4 closeout 自查 record
+
+retrospective.md 必須記錄：
+
+```markdown
+## Design Note Extract（spike sprint only）
+
+**File**: `docs/03-implementation/agent-harness-planning/<doc-number>-<topic>.md`
+**Verified ratio (estimated)**: __%
+**8-Point Quality Gate**:
+- [ ] 1. Section header
+- [ ] 2. file:line 引用
+- [ ] 3. Decision matrix
+- [ ] 4. Verification command
+- [ ] 5. Test fixture
+- [ ] 6. Open invariant 分界
+- [ ] 7. Rollback path
+- [ ] 8. 17.md cross-ref
+
+**Reviewer pass**: <user / self-review>
+```
+
+
 - Format:
   ```markdown
   # Sprint XX.Y Progress — YYYY-MM-DD

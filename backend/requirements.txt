@@ -73,3 +73,10 @@ jsonschema>=4.20,<5.0       # agent_harness/tools/{registry,executor}.py — inp
 # Loaded by api/main.py _lifespan() so AZURE_OPENAI_API_KEY etc. populate
 # os.environ before settings / adapter initialization on uvicorn startup.
 python-dotenv>=1.0,<2.0
+
+# ---- Sprint 57.7 US-A2: IAM Hosted vendor (WorkOS chosen per US-A1 matrix) -
+# Vendor SDK consumed only from platform_layer/identity/oidc.py;
+# LLM-neutral allowlist N/A (workos is auth SDK, not LLM SDK).
+# Path 1 per Day 0 D2 verify: vendor SDK handles JWKS validation of
+# WorkOS-issued tokens; V2 internal JWT remains HS256 via JWTManager.
+workos>=4.0,<6.0
