@@ -50,7 +50,8 @@ export function SLAOverview() {
 
   return (
     <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1>SLA Dashboard</h1>
+      {/* Sprint 57.8 US-4 D9: h1 removed — AppShellV2 pageTitle="SLA Dashboard"
+          provides page-level h1 (per A1 architecture; inner = body only) */}
       <p style={{ color: "#666", fontSize: "0.9rem" }}>
         Per-tenant SLA report. Backend enforces admin-platform role
         (Sprint 56.3 endpoint). Threshold fallback to Standard 99.5%

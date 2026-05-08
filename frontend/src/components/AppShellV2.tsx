@@ -43,6 +43,7 @@
 import type { FC, ReactNode } from "react";
 
 import { Sidebar } from "./Sidebar";
+import { UserMenu } from "./UserMenu";
 
 interface AppShellV2Props {
   children: ReactNode;
@@ -50,7 +51,10 @@ interface AppShellV2Props {
   pageTitle: string;
   /** Optional per-page action buttons (right of title, left of user menu) */
   headerActions?: ReactNode;
-  /** Optional user menu slot (Day 2 US-2 will fill via prop or default) */
+  /**
+   * Optional user menu slot override. Default = <UserMenu /> (Sprint 57.8 US-2.2:
+   * auto-wired to consume Sprint 57.7 IAM JWT). Pass null to suppress.
+   */
   userMenu?: ReactNode;
 }
 
@@ -60,6 +64,7 @@ export const AppShellV2: FC<AppShellV2Props> = ({
   headerActions,
   userMenu,
 }) => {
+  const userMenuSlot = userMenu === undefined ? <UserMenu /> : userMenu;
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <Sidebar />
@@ -68,7 +73,7 @@ export const AppShellV2: FC<AppShellV2Props> = ({
           <h1 className="text-lg font-semibold tracking-tight">{pageTitle}</h1>
           <div className="flex items-center gap-3">
             {headerActions && <div className="flex items-center gap-2">{headerActions}</div>}
-            {userMenu}
+            {userMenuSlot}
           </div>
         </header>
         <main className="flex-1 p-6">{children}</main>

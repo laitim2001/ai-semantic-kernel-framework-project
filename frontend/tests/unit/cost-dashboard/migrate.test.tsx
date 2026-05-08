@@ -1,19 +1,27 @@
 /**
  * File: frontend/tests/unit/cost-dashboard/migrate.test.tsx
- * Purpose: Sprint 57.7 US-B3 migration regression tests for CostOverview.
+ * Purpose: Sprint 57.7 US-B3 → 57.8 US-4 architectural migration regression tests for CostOverview.
  * Category: Frontend / tests / unit / cost-dashboard
- * Scope: Phase 57 / Sprint 57.7 Day 3 Tier 3
+ * Scope: Phase 57 / Sprint 57.7 Day 3 Tier 3 → Sprint 57.8 US-4 (page-level wrap A1)
  *
  * Description:
- *   2 tests covering the AppShell + Tailwind migration (target +2 baseline):
- *   1. CostOverview wraps content in AppShell (header + main slot present)
- *   2. CostOverview renders without inline `style` attributes (no inline-style regression)
+ *   Sprint 57.8 A1 architectural change: AppShell wrap moved from
+ *   CostOverview (inner component) → pages/cost-dashboard/index.tsx
+ *   (page-level). CostOverview is now PURE BODY content with no layout
+ *   dependency.
  *
- *   Existing 4 cost-dashboard Vitest tests (costService / costStore / MonthPicker)
- *   serve as the regression sentinel — they must continue passing post-migrate
- *   per V2 紀律 0 test deletion.
+ *   This test asserts the new architecture:
+ *   1. CostOverview rendered alone produces NO brand link (no layout wrap)
+ *   2. CostOverview rendered alone produces NO h1 (h1 = AppShellV2 pageTitle prop)
+ *   3. CostOverview body has no inline `style` attributes (Tailwind only)
  *
  * Created: 2026-05-10 (Sprint 57.7 Day 3 Tier 3)
+ *
+ * Modification History:
+ *   - 2026-05-10: Sprint 57.8 US-4 — rewrite for A1 architecture (CostOverview
+ *     no longer wraps in AppShell + no longer renders h1; pages/index.tsx owns
+ *     layout via AppShellV2 pageTitle slot)
+ *   - 2026-05-10: Initial creation (Sprint 57.7 Day 3 Tier 3)
  */
 
 import { render, screen } from "@testing-library/react";
@@ -30,27 +38,22 @@ function renderInRouter(initialPath = "/cost-dashboard") {
   );
 }
 
-describe("CostOverview — Sprint 57.7 US-B3 migration", () => {
-  it("renders inside AppShell (brand link + main slot heading visible)", () => {
+describe("CostOverview — Sprint 57.7 US-B3 → 57.8 US-4 architectural migration", () => {
+  it("renders pure body — NO layout wrap (no brand link, no h1) per A1 architecture", () => {
     renderInRouter();
-    // Brand link is the AppShell footprint; presence proves the wrap.
-    expect(screen.getByRole("link", { name: "IPA Platform" })).toBeInTheDocument();
-    // Page heading still rendered inside main slot.
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Cost Dashboard" }),
-    ).toBeInTheDocument();
+    // Sprint 57.8 A1: AppShell wrap moved to pages/cost-dashboard/index.tsx;
+    // CostOverview alone has no brand link footprint.
+    expect(screen.queryByRole("link", { name: "IPA Platform" })).toBeNull();
+    // h1 now provided by AppShellV2 pageTitle prop at page level; CostOverview
+    // body emits no h1.
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
 
-  it("page heading + h1 wrapper carry no inline style (Tailwind migration of CostOverview-owned JSX)", () => {
+  it("body description paragraph rendered without inline style (Tailwind only)", () => {
     renderInRouter();
-    // Pre-migration: <div style={{ padding: "2rem" }}><h1>...</h1>... — h1's
-    // outer wrapper carried inline style. Post-migration: AppShell + Tailwind
-    // utilities. We check the heading + its parent + grandparent have no
-    // inline style. Child components (MonthPicker / CostBreakdownTable) are
-    // out of scope per V2 紀律 surgical change — their migration deferred.
-    const heading = screen.getByRole("heading", { level: 1, name: "Cost Dashboard" });
-    expect(heading.getAttribute("style")).toBeNull();
-    expect(heading.parentElement?.getAttribute("style")).toBeNull();
-    expect(heading.parentElement?.parentElement?.getAttribute("style")).toBeNull();
+    // The page description sentence was preserved post-migration.
+    const desc = screen.getByText(/Per-tenant cost ledger summary/);
+    expect(desc.getAttribute("style")).toBeNull();
+    expect(desc.parentElement?.getAttribute("style")).toBeNull();
   });
 });
