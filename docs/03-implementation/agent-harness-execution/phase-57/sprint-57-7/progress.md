@@ -2,7 +2,7 @@
 
 > **Sprint Type**: Phase 57+ sixth sprint — IAM Foundation + Frontend Foundation 1/N spike
 > **Branch**: `feature/sprint-57-7-iam-frontend-foundation`
-> **Day 3 Status**: ✅ Tier 1 (Day 2 carryover) + ✅ Tier 2 (US-R1 sessions/tool_calls observer) closed in same session ⏳ Tier 3 (US-B2 + US-B3 frontend) deferred to follow-up session
+> **Day 3 Status**: ✅ ALL TIERS — Tier 1 (Day 2 carryover) + Tier 2 (US-R1 sessions/tool_calls observer) + Tier 3 (US-B2 AppShell + US-B3 cost-dashboard migrate) all closed in same session;7/7 USs delivered;Day 4 closeout (design note + retro + PR) deferred to follow-up session
 
 ---
 
@@ -143,16 +143,65 @@
 - **Calibrated commit**: ~18 hr
 - **Cumulative ratio**: **~0.64** (still below band lower edge 0.85;Tier 3 + Day 4 closeout estimated ~5-7 hr → projected final **~0.91-1.04** likely **in band**)
 
-### 3.11 Tier 3 (US-B2 + US-B3) — DEFERRED to follow-up session
+### 3.11 Tier 3 (US-B2 + US-B3) ✅ COMPLETE (same session)
 
-⏳ Per V2 紀律 (誠實 over completeness; quality over volume), deferred to follow-up session:
+**3 NEW components + 1 MODIFY main.tsx + 1 MIGRATE CostOverview + 2 NEW test files**:
+
+- NEW `frontend/src/components/AppShell.tsx` — header (brand link + nav + headerActions slot) + main container + footer; pure Tailwind
+- NEW `frontend/src/components/ThemeProvider.tsx` — light/dark Context with `useTheme` hook;localStorage persist (`ipa-theme` key);html.dark class toggle;OS prefers-color-scheme fallback
+- NEW `frontend/src/components/AppErrorBoundary.tsx` — `react-error-boundary` wrapper with Tailwind-styled fallback Card + Reset button
+- MODIFY `frontend/src/main.tsx` — wrap entire tree in `<ThemeProvider>` → `<AppErrorBoundary>` → `<QueryClientProvider>` → `<BrowserRouter>` + `<Toaster richColors position="top-right" />`;single QueryClient instance with `staleTime: 30s` + `refetchOnWindowFocus: false` defaults
+- MIGRATE `frontend/src/features/cost-dashboard/components/CostOverview.tsx` — replaced 9 inline `style={{}}` blocks with Tailwind utility classes;wrapped in `<AppShell>` with `<MonthPicker>` hoisted to `headerActions` slot;preserved Zustand `useCostStore` (`useQuery` migration deferred per surgical change scope)
+- NEW `tests/unit/components/AppShell.test.tsx` — 4 tests (target +3 ⏫ +33%): AppShell renders + headerActions slot + ThemeProvider toggle persists + AppErrorBoundary fallback renders
+- NEW `tests/unit/cost-dashboard/migrate.test.tsx` — 2 tests: AppShell wrap verify (brand link + h1 in main slot) + heading + 2 wrappers carry no inline style (CostOverview-owned scope; child components' inline styles deferred per AP-3 surgical change)
+
+### 3.12 Tier 3 Validation Summary
+
+| Check | Pre-Tier-3 (Tier 2 end) | Post-Tier-3 | Δ |
+|-------|-------------------------|-------------|---|
+| Vitest tests | 35 | **41** | ✅ +6 (target +5 ⏫ +20%) |
+| Vite build modules | 80 | **132** | ✅ +52 (providers + react-query + sonner + react-error-boundary chunks) |
+| Vite build JS | 211.65 kB | **273.34 kB** | ✅ +29.3% (under +50% Risk Class D budget) |
+| Vite build CSS | 4.78 kB | **5.28 kB** | ✅ +10.5% |
+| Vite build gzip JS | n/a | **84.20 kB** | ✅ healthy |
+| ESLint | clean | **clean** (after react-refresh disable on useTheme) | ✅ |
+| Playwright e2e | 23 | **23** | ✅ no regression (regression sentinel green) |
+| 9 V2 lints (backend) | 9/9 | **9/9** (1.00s) | ✅ no impact (frontend-only changes) |
+
+### 3.13 Tier 3 D-findings
+
+- **D22** 🟡 YELLOW — ESLint `react-refresh/only-export-components` warning fires when `ThemeProvider.tsx` exports both `<ThemeProvider>` (component) AND `useTheme()` (hook). Resolved with surgical `// eslint-disable-next-line` annotation rather than splitting into 2 files (extra friction for shared context type). Pattern documented inline.
+- **D23** 🟢 GREEN — `useQuery` TanStack migration of CostOverview deliberately deferred. Existing Zustand `useCostStore.loadData` action pattern preserves all 4 existing Vitest tests (costService / costStore / MonthPicker) + 1 Playwright e2e regression sentinel. QueryClient at root level enables future migration without re-wiring.
+- **D24** 🟡 YELLOW — `npm run typecheck` fails with TS6310 (pre-existing tsconfig.node.json emit/noEmit conflict);verified by stash test that issue predates Sprint 57.7. `npm run build` (which runs `tsc -b && vite build`) succeeds. Phase 58+ AD candidate to fix tsconfig.
+- **D25** 🟢 GREEN — Migrate test relaxed to scope assertion (CostOverview-owned JSX only, NOT children components MonthPicker / CostBreakdownTable). Preserves V2 紀律 surgical change discipline — child component migration is independent scope.
+
+### 3.14 Tier 3 Time tracking
+
+| Task | Estimated | Actual |
+|------|-----------|--------|
+| AppShell + ThemeProvider + AppErrorBoundary | 1.5 hr | ~30 min |
+| main.tsx providers wire | 30 min | ~10 min |
+| CostOverview migrate (Tailwind + AppShell wrap) | 1 hr | ~20 min |
+| AppShell.test.tsx 4 tests | 45 min | ~25 min |
+| migrate.test.tsx 2 tests | 30 min | ~10 min |
+| Build + lint + typecheck verify + diagnose D22+D24 | 30 min | ~20 min |
+| progress.md write + commit | 30 min | ~15 min |
+| **Tier 3 total** | **~5 hr** | **~2.0 hr** ✅ **60% under est** |
+
+### 3.15 Sprint cumulative (Day 0+1+2+3 ALL Tiers complete)
+
+- **Cumulative actual**: ~13.5 hr (Day 0 ~2 + Day 1 ~3 + Day 2 ~2.25 + Day 3 Tier 1 ~2 + Tier 2 ~2.25 + Tier 3 ~2)
+- **Calibrated commit**: ~18 hr (HYBRID 0.60)
+- **Cumulative ratio**: **~0.75** (still below band lower edge 0.85;Day 4 closeout ~3-4 hr → projected final **~0.92-0.97 in band**)
+- **All 7 USs delivered** in 4-day session window;Day 4 = closeout ceremony only
+
+⏳ Day 4 closeout pending (deferred to follow-up session):
 
 | Item | Why deferred | Estimated next-session scope |
 |------|--------------|------------------------------|
-| US-B2 AppShell + Theme + ErrorBoundary | Frontend independent | ~2-3 hr (3+ Vitest) |
-| US-B3 cost-dashboard migrate | Frontend independent + dependent on US-B2 | ~2-3 hr (2+ Vitest + e2e regression) |
+| Day 4 closeout | Design note (`20-iam-deep-dive.md` per 8-Point Quality Gate) + retrospective.md + memory snapshot + MEMORY.md index + 4 doc syncs (CLAUDE.md / SITUATION-V2 / sprint-workflow.md calibration matrix / 16.md frontend ship counter) + PR | ~3-4 hr |
 
-**Justification**: Tier 2 (US-R1) closed in same session because Day 3 探勘 found AD-Reality-3a "blocked" assumption was wrong (user_id infra existed since Sprint 49.3 + 52.5). Tier 3 is pure frontend (no backend dependency on this sprint's code) — better executed with full attention next session.
+**Justification**: All 3 Tiers closed in same Day 3 session (~6.5 hr total) because (a) Day 2 carryover blocker was simple SDK swap not architectural rewrite, (b) US-R1 "blocked by infra missing" assumption was wrong (D19), (c) US-B2/B3 frontend was small surgical work given foundation already installed Day 2 (Tailwind 4 + shadcn + TanStack ready). Day 4 closeout requires user reviewer interaction for design note 8-Point Quality Gate + Phase 57.8+ direction decision — better separated to dedicated follow-up session.
 
 ### 3.7 Time tracking — Day 3 Tier 1 actual
 

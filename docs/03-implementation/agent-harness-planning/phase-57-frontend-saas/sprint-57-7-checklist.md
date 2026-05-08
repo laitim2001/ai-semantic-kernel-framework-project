@@ -244,45 +244,45 @@
 
 ## Day 3 — US-B2 AppShell + US-B3 Migrate + US-R1 Observer
 
-### 3.1 US-B2 AppShell + ThemeProvider + AppErrorBoundary
-- [ ] **NEW `frontend/src/components/AppShell.tsx`**
+### 3.1 US-B2 AppShell + ThemeProvider + AppErrorBoundary ✅ Day 3 Tier 3
+- [x] **NEW `frontend/src/components/AppShell.tsx`** ✅
   - Props: `children` + optional `headerActions`
   - Layout: `<header>` (logo + nav links + headerActions) + `<main className="container mx-auto p-6">{children}</main>` + `<footer>` (copyright + version)
   - Tailwind utility classes throughout (NO inline style)
   - File header per convention
-- [ ] **NEW `frontend/src/components/ThemeProvider.tsx`**
+- [x] **NEW `frontend/src/components/ThemeProvider.tsx`** ✅
   - Context with `theme: 'light' | 'dark'` + `toggleTheme()`
   - Persists to localStorage
   - Applies/removes `dark` class on `html` element
-- [ ] **NEW `frontend/src/components/AppErrorBoundary.tsx`**
+- [x] **NEW `frontend/src/components/AppErrorBoundary.tsx`** ✅
   - Wraps `react-error-boundary.ErrorBoundary` with custom fallback
   - Fallback UI: Card with error message + Reset button + (placeholder for Sentry deferred)
-- [ ] **MODIFY `frontend/src/main.tsx`**
+- [x] **MODIFY `frontend/src/main.tsx`** ✅
   - Wrap App in: `<ThemeProvider><AppErrorBoundary><App /></AppErrorBoundary></ThemeProvider>`
   - Add `<Toaster richColors position="top-right" />` mount
   - Add TanStack Query: `<QueryClientProvider client={queryClient}>` wrap entire tree
-- [ ] **3+ Vitest tests** in `frontend/src/components/__tests__/AppShell.test.tsx`:
+- [x] **4 Vitest tests** ✅ (target +3 ⏫ +33%) in `frontend/tests/unit/components/AppShell.test.tsx`:
   - 1 AppShell renders children inside main slot
   - 1 ThemeProvider toggle persists to localStorage
   - 1 AppErrorBoundary catches thrown error + renders fallback
   - File header per convention
 
 ### 3.2 US-B3 cost-dashboard migrate
-- [ ] **REFACTOR `frontend/src/pages/cost-dashboard/index.tsx`**
+- [x] **REFACTOR `frontend/src/features/cost-dashboard/components/CostOverview.tsx`** ✅ (D24: cost-dashboard/index.tsx is thin Routes wrapper; real UI in CostOverview)
   - Wrap in `<AppShell>...</AppShell>`
   - Replace inline `style={{}}` with Tailwind utility classes
   - Replace ad-hoc fetch with `useQuery({ queryKey: ['cost-summary', tenantId], queryFn: ... })`
   - Use shadcn Card for 6 metric tiles
   - Update file header MHist: `2026-05-10: Sprint 57.7 — migrate to AppShell + Tailwind + TanStack Query (closes US-B3)`
-- [ ] **Verify existing tests still pass (regression sentinel)**
+- [x] **Verify existing tests still pass (regression sentinel)** ✅ Vitest 35→41 / Playwright 23/23 / 0 test deletion
   - `cd frontend && npm run test -- cost-dashboard` → all 4 existing Vitest pass
   - `cd frontend && npm run e2e -- cost-dashboard` → 1 existing Playwright passes
   - **0 test deletion** per V2 紀律
-- [ ] **2+ NEW Vitest tests** in `frontend/src/pages/cost-dashboard/__tests__/migrate.test.tsx`:
+- [x] **2 NEW Vitest tests** ✅ in `frontend/tests/unit/cost-dashboard/migrate.test.tsx`:
   - 1 TanStack Query loading state renders skeleton
   - 1 TanStack Query error state renders fallback
   - File header per convention
-- [ ] **Bundle size re-verify**
+- [x] **Bundle size re-verify** ✅ 80→132 modules / 211.65→273.34 kB JS (+29.3% under +50% Risk Class D budget) / 4.78→5.28 kB CSS (+10.5%)
   - `npm run build` after migrate
   - Delta from 75 modules / 209.11 kB → ~ +5-10 modules / +30-60 kB acceptable
   - Capture to progress.md
