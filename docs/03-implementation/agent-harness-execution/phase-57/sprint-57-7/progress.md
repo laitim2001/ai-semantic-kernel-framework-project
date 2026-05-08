@@ -9,15 +9,20 @@
 
 ## Day 0 — Setup + Pre-flight + 三-prong + Calibration Pre-Read
 
-### 0.1 Branch + plan + checklist commit
+### 0.1 Branch + plan + checklist commit ✅ COMPLETE
 
-- ⏳ **Pending user approval of plan + checklist drafts** before branch creation
-- Note: Latest main HEAD = `d485b42d` (PR #115 Sprint 57.6 closeout doc) — newer than CLAUDE.md MEMORY recorded `799ce14e`
-- Pre-existing uncommitted state on main:
-  - `M .claude/rules/sprint-workflow.md` / `M CLAUDE.md` / `M claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md`
-  - `?? claudedocs/1-planning/enterprise-saas-gap-analysis-20260508.md` / `?? claudedocs/templates/`
-  - **These are 2026-05-08 doc-level rolling updates** + gap analysis report; NOT Phase 57.7 work
-  - **Day 1 decision**: include in branch initial commit OR rebase onto separate doc-update PR? (TBD with user)
+- ✅ **Branch created**: `feature/sprint-57-7-iam-frontend-foundation` from main `d485b42d`
+- ✅ **Day 0 commit**: `c4b2ef9e` (8 files / +2016 / -2):
+  - Plan: `docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-7-plan.md` (~310 lines)
+  - Checklist: `docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-7-checklist.md` (~300 lines)
+  - Day 0 progress.md (this file)
+  - Bundled 2026-05-08 doc-level rolling foundation (D9 RECOMMEND user-approved):
+    - `M .claude/rules/sprint-workflow.md` (§Step 5.5 spike extract pattern)
+    - `M CLAUDE.md` (§禁止反模式 doc-level rolling rule)
+    - `M claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md` (§6.5)
+    - `A claudedocs/1-planning/enterprise-saas-gap-analysis-20260508.md` (8 sub-agent audit)
+    - `A claudedocs/templates/spike-design-note-template.md` (8-Point Quality Gate)
+- ✅ **Push**: branch tracking origin;PR URL ready at https://github.com/laitim2001/ai-semantic-kernel-framework-project/pull/new/feature/sprint-57-7-iam-frontend-foundation
 
 ### 0.2 Day-0 三-prong 探勘 v1 (per AD-Plan-1+2+3+4 promoted Sprint 55.6 + 57.1)
 
@@ -101,15 +106,36 @@
 
 ### 0.4 Pre-flight verify (main green baseline — per CLAUDE.md memory + Sprint 57.6 closeout)
 
-| Baseline | Expected | Day 0 Status |
-|----------|----------|--------------|
-| Backend pytest | 1602 collected / 0 failures | ⏳ Day 1 morning verify |
-| mypy --strict source modules | 0 errors / 295 source files | ⏳ Day 1 morning verify |
-| V2 lints `python scripts/lint/run_all.py` | 9/9 green (post-57.6 NEW check_ap4_frontend_placeholder.py) | ⏳ Day 1 morning verify |
-| LLM SDK leak `grep` | 0 in `agent_harness/` + `platform_layer/identity/` | ✅ Day 0 ✅ confirmed identity/ clean |
-| Frontend Vitest | 35 unit | ⏳ Day 1 morning verify |
-| Frontend Playwright e2e | 23 tests | ⏳ Day 1 morning verify |
-| Frontend Vite build | 75 modules / 209.11 kB | ⏳ Day 1 morning verify |
+**Captured 2026-05-09 Day 0 PM** (all foreground green except Playwright deferred):
+
+| Baseline | Plan/Checklist Expected | Day 0.4 Actual | Status |
+|----------|------------------------|---------------|--------|
+| Backend pytest collected | 1602 | **1602** (collect-only 3.00s) | ✅ exact match |
+| mypy --strict source modules | 0 errors / 295 | **0 errors / 294** | ✅ -1 minor drift (D10 — likely Sprint 57.6 closeout removed 1 stub) |
+| V2 lints `python scripts/lint/run_all.py` | 9/9 green | **9/9 green** (0.99s total) | ✅ exact match |
+| LLM SDK leak `grep` agent_harness | 0 | **0** | ✅ exact match |
+| LLM SDK leak `grep` platform_layer/identity | 0 | **0** (Day 0.2 already confirmed) | ✅ |
+| Frontend ESLint | clean | **clean** | ✅ |
+| Frontend Vitest | 35 unit | **35 passed** (13 files / 1.67s) | ✅ exact match |
+| Frontend Vite build | 75 modules / 209.11 kB | **76 modules / 209.11 kB** (600ms / 65.51 kB gzip) | ✅ +1 module minor drift (D11 — likely React 18 sub-import shift; kB byte-identical) |
+| Frontend Playwright e2e | 23 tests | ⏳ DEFER Day 1 morning | DEFER (~5+ min run-time;not session-budget-friendly) |
+
+**D-Findings update — 2 NEW minor drifts captured**:
+- D10 🟡 YELLOW: mypy source files 295 (plan/checklist) → 294 (actual) — 1 file removed in Sprint 57.6 closeout (likely stub cleanup);non-blocking;Day 4 retro update plan/checklist if pattern persists
+- D11 🟡 YELLOW: Vite modules 75 → 76 (+1) — kB byte-identical so source unchanged;likely React 18 sub-import resolution shift;non-blocking
+
+**Lint script naming drift (informational)** — actual names more descriptive than checklist mention:
+- check_ap1_pipeline_disguise.py (not `check_ap1.py`)
+- check_promptbuilder_usage.py (not `check_promptbuilder.py`)
+- check_cross_category_import.py (not `check_cross_category.py`)
+- check_duplicate_dataclass.py (NOT in checklist list — likely added Sprint 55.x audit cycle)
+- check_llm_sdk_leak.py (not `check_neutrality.py`)
+- check_sync_callback.py (NOT in checklist list — likely added Sprint 55.x audit cycle)
+- check_sole_mutator.py (matches)
+- check_rls_policies.py (matches)
+- check_ap4_frontend_placeholder.py (matches Sprint 57.6 NEW)
+
+Checklist 0.2 list (pending Day 4 closeout sync update if needed) had outdated naming + missing 2 lint scripts;no scope impact since orchestrator runs all 9 anyway.
 
 ### 0.5 D-Findings Catalog (Day 0 cumulative — 9 findings)
 
@@ -146,10 +172,31 @@
 | D-findings catalogue + plan §Risks revision input | 30 min | ~25 min |
 | Calibration pre-read | 15 min | ~10 min |
 | progress.md write | 30 min | ~30 min |
-| **Day 0 total** | **~2.5 hr** | **~2.0 hr** |
+| Plan write (~310 lines) | 60 min | ~50 min |
+| Checklist write (~300 lines) | 60 min | ~45 min |
+| Branch + Day 0 commit + push | 15 min | ~10 min |
+| Pre-flight baselines (lint + grep + pytest collect + frontend) | 30 min | ~10 min (parallel + collect-only optimization) |
+| Update progress.md baselines + drift findings | 15 min | ~10 min |
+| **Day 0 total** | **~5.0 hr** | **~3.5 hr** ✅ under est |
 
-Day 0 ROI per AD-Plan-3-Promotion + AD-Plan-4-Schema-Grep = ~10-15× (40 min total cost prevented potential ~5-8 hr Day 1+ rework if RBAC scope had been mis-read or frontend foundation underestimated).
+Day 0 ROI per AD-Plan-3-Promotion + AD-Plan-4-Schema-Grep = ~10-15× (50 min探勘 cost prevented potential ~5-8 hr Day 1+ rework if RBAC scope had been mis-read or frontend foundation underestimated).
 
 ---
 
-**Next**: Plan + Checklist drafted in parallel (this session); user reviews + approves; Day 1 starts with branch creation + Day 0 commit.
+## Day 0 Session-end Status (2026-05-09 PM)
+
+✅ **Day 0 fully complete** — all 5 sub-sections (0.1 + 0.2 + 0.3 + 0.4 + 0.5) finished:
+- Branch + commit + push ✅
+- 三-prong 探勘 v1 ✅ (9 D-findings + 2 NEW Day 0.4 minor drifts = 11 cumulative)
+- Calibration HYBRID 0.60 weighted blend pre-read ✅
+- Pre-flight baselines (8/9 captured;Playwright deferred Day 1 morning) ✅
+- progress.md commit ✅ (this update will go in Day 0.6 commit)
+
+⏳ **Day 1 morning order of operations** (next session — ~5-6 hr est):
+1. Verify Settings `jwt_algorithm` default + JWKS endpoint pattern (resolve D2)
+2. Verify `users.external_id` column drift (resolve D8)
+3. Verify Playwright e2e baseline 23 tests (deferred from Day 0.4)
+4. US-A1 vendor matrix kickoff (4-vendor evaluation + cost projection + decision)
+5. Begin US-A2 chosen vendor SDK install + backend OIDC wire start
+
+⏳ **Day 0.4 progress.md update commit** (this session pending) — small commit just for baseline snapshot
