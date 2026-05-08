@@ -1,17 +1,20 @@
 /**
- * File: frontend/tests/unit/components/AppShell.test.tsx
- * Purpose: Unit tests for Sprint 57.7 US-B2 AppShell + ThemeProvider + AppErrorBoundary.
+ * File: frontend/tests/unit/components/AuthShell.test.tsx
+ * Purpose: Unit tests for Sprint 57.7 US-B2 (now AuthShell per Sprint 57.8 B1) + ThemeProvider + AppErrorBoundary.
  * Category: Frontend / tests / unit / components
- * Scope: Phase 57 / Sprint 57.7 Day 3 Tier 3
+ * Scope: Phase 57 / Sprint 57.7 Day 3 Tier 3 → Sprint 57.8 US-4 (renamed AppShell → AuthShell per Day 0 Decision B1)
  *
  * Description:
- *   4 tests covering all 3 US-B2 components (target +3 ⏫ +33%):
- *   1. AppShell renders children inside main + brand link
- *   2. AppShell renders headerActions when provided
+ *   4 tests covering Sprint 57.7 US-B2 components (renamed AppShell → AuthShell in 57.8):
+ *   1. AuthShell renders children inside main + brand link
+ *   2. AuthShell renders headerActions when provided
  *   3. ThemeProvider toggles html.dark class + persists to localStorage
  *   4. AppErrorBoundary catches thrown error + renders fallback + reset works
  *
- * Created: 2026-05-10 (Sprint 57.7 Day 3 Tier 3)
+ * Created: 2026-05-10 (Sprint 57.7 Day 3 Tier 3 — initial as AppShell.test.tsx)
+ *
+ * Modification History:
+ *   - 2026-05-10: Sprint 57.8 US-4 — rename test file + symbol references AppShell → AuthShell
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -19,16 +22,16 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppErrorBoundary } from "../../../src/components/AppErrorBoundary";
-import { AppShell } from "../../../src/components/AppShell";
+import { AuthShell } from "../../../src/components/AuthShell";
 import { ThemeProvider, useTheme } from "../../../src/components/ThemeProvider";
 
-describe("AppShell", () => {
+describe("AuthShell", () => {
   it("renders children inside the main slot + brand link", () => {
     render(
       <MemoryRouter>
-        <AppShell>
+        <AuthShell>
           <p>hello cost dashboard</p>
-        </AppShell>
+        </AuthShell>
       </MemoryRouter>,
     );
     expect(screen.getByText("hello cost dashboard")).toBeInTheDocument();
@@ -38,9 +41,9 @@ describe("AppShell", () => {
   it("renders headerActions when provided", () => {
     render(
       <MemoryRouter>
-        <AppShell headerActions={<button>Refresh</button>}>
+        <AuthShell headerActions={<button>Refresh</button>}>
           <p>body</p>
-        </AppShell>
+        </AuthShell>
       </MemoryRouter>,
     );
     expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();

@@ -1,9 +1,25 @@
 /**
  * File: frontend/src/App.tsx
- * Purpose: Root router + Home nav. Routes extended each phase.
+ * Purpose: Root router — generates routes from routes.config single-source registry.
  * Category: Frontend / app-root
  *
+ * Description:
+ *   Sprint 57.8 US-3 refactor: routes derived from `routes.config.ts`
+ *   (.filter(active).map(<Route>)) instead of inline hand-listed routes.
+ *   React.lazy + Suspense enable per-page code-splitting.
+ *
+ *   Auth routes (/auth/*) NOT in registry — they use AuthShell (renamed
+ *   from AppShell.tsx per Day 0 Decision B1; no sidebar for unauthed UX).
+ *
+ *   Legacy placeholder routes (/governance + /verification) preserved
+ *   intentionally pending Phase 57.9 + 57.10 real ship sprints. Per Sprint
+ *   57.5 reality check, these are placeholder pages that render minimal
+ *   stub UI; removing them would 404 any direct visitors during transition.
+ *   When 57.9 / 57.10 ship → set active=true in routes.config + delete from
+ *   here = single-source restored.
+ *
  * Modification History:
+ *   - 2026-05-10: Sprint 57.8 US-3 — refactor to consume routes.config + lazy-load
  *   - 2026-05-09: Sprint 57.7 Day 2 — add /auth/login + /auth/callback routes (US-A2)
  *   - 2026-05-07: Sprint 57.4 Day 4 — add /admin-tenants route + Home Link (US-5)
  *   - 2026-05-07: Sprint 57.3 Day 4 — add /tenant-settings route + Home Link (US-5)
@@ -11,73 +27,75 @@
  *   - 2026-04-2x: Sprint 49.1 — initial placeholder router with /chat-v2 + /governance + /verification
  */
 
-import { Link, Route, Routes } from "react-router-dom";
-import AdminTenantsPage from "./pages/admin-tenants";
+import { Suspense } from "react";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
+
 import CallbackPage from "./pages/auth/callback";
 import LoginPage from "./pages/auth/login";
-import ChatV2Page from "./pages/chat-v2";
-import CostDashboardPage from "./pages/cost-dashboard";
 import GovernancePage from "./pages/governance";
-import SLADashboardPage from "./pages/sla-dashboard";
-import TenantSettingsPage from "./pages/tenant-settings";
 import VerificationPage from "./pages/verification";
+import { ROUTES } from "./routes.config";
 
-// Sprint 49.1 placeholder router. Real navigation / layout shell
-// lands in Phase 50.2 (chat-v2 main flow) and is extended each phase.
 function Home() {
+  // Sprint 57.8: simple landing — list active pages dynamically from registry
+  // (was hand-curated <ul> per phase). Removed inline style; minimal padding
+  // OK at root since AppShellV2 isn't applicable (Home is pre-redirect landing).
+  const activeRoutes = ROUTES.filter((r) => r.active);
   return (
-    <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1>IPA Platform V2</h1>
-      <p>
-        <strong>Status:</strong> Phase 57+ Sprint 57.7 — IAM Foundation + Frontend Foundation 1/N spike.
+    <div className="p-8 font-sans">
+      <h1 className="mb-4 text-2xl font-semibold">IPA Platform V2</h1>
+      <p className="mb-4">
+        <strong>Status:</strong> Phase 57+ Sprint 57.8 — AppShell V2 + chat-v2 frontend real ship.
       </p>
-      <p>Pages currently registered:</p>
-      <ul>
-        <li>
-          <Link to="/auth/login">/auth/login</Link> — Sprint 57.7 OIDC PKCE login (WorkOS Hosted IAM)
-        </li>
-        <li>
-          <Link to="/chat-v2">/chat-v2</Link> — Phase 50.2 main flow
-        </li>
-        <li>
-          <Link to="/governance">/governance</Link> — Phase 53.3 HITL UI
-        </li>
-        <li>
-          <Link to="/verification">/verification</Link> — Phase 54.1 verifier panel
-        </li>
-        <li>
-          <Link to="/cost-dashboard">/cost-dashboard</Link> — Sprint 57.1 cost ledger summary (admin-platform role)
-        </li>
-        <li>
-          <Link to="/sla-dashboard">/sla-dashboard</Link> — Sprint 57.1 SLA report (admin-platform role)
-        </li>
-        <li>
-          <Link to="/tenant-settings">/tenant-settings</Link> — Sprint 57.3 tenant CRUD R+U (admin-platform role)
-        </li>
-        <li>
-          <Link to="/admin-tenants">/admin-tenants</Link> — Sprint 57.4 admin tenants console list (admin-platform role)
-        </li>
+      <p className="mb-2">Active pages (consume routes.config single-source):</p>
+      <ul className="list-disc pl-6">
+        {activeRoutes.map((r) => (
+          <li key={r.path}>
+            <Link to={r.path} className="text-blue-600 hover:underline">
+              {r.path}
+            </Link>{" "}
+            — {r.name}
+          </li>
+        ))}
       </ul>
-      <p>
-        Backend health: <code>GET /api/v1/health</code> (proxied to localhost:8000 — Sprint 57.6 D-27 fix)
+      <p className="mt-4">
+        Auth: <Link to="/auth/login" className="text-blue-600 hover:underline">/auth/login</Link> (Sprint 57.7 OIDC PKCE)
+      </p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Backend health: <code>GET /api/v1/health</code> (proxied to localhost:8000)
       </p>
     </div>
   );
 }
 
+function PageLoading() {
+  return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+}
+
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/auth/login" element={<LoginPage />} />
-      <Route path="/auth/callback" element={<CallbackPage />} />
-      <Route path="/chat-v2/*" element={<ChatV2Page />} />
-      <Route path="/governance/*" element={<GovernancePage />} />
-      <Route path="/verification/*" element={<VerificationPage />} />
-      <Route path="/cost-dashboard/*" element={<CostDashboardPage />} />
-      <Route path="/sla-dashboard/*" element={<SLADashboardPage />} />
-      <Route path="/tenant-settings/*" element={<TenantSettingsPage />} />
-      <Route path="/admin-tenants" element={<AdminTenantsPage />} />
-    </Routes>
+    <Suspense fallback={<PageLoading />}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+
+        {/* Auth routes — outside registry per Day 0 Decision B1 (use AuthShell, no sidebar) */}
+        <Route path="/auth/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<CallbackPage />} />
+
+        {/* Active routes generated from routes.config single-source */}
+        {ROUTES.filter((r) => r.active && r.component).map((r) => {
+          const Component = r.component!;
+          return <Route key={r.path} path={`${r.path}/*`} element={<Component />} />;
+        })}
+
+        {/* Legacy placeholder routes — preserved until Phase 57.9 + 57.10 real ship sprints
+            promote these to registry active=true (then delete from here). */}
+        <Route path="/governance/*" element={<GovernancePage />} />
+        <Route path="/verification/*" element={<VerificationPage />} />
+
+        {/* Catch-all → Home (vs explicit 404 page; revisit Phase 58.x with NotFoundPage) */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

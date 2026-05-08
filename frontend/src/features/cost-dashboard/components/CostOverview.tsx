@@ -26,16 +26,17 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { AppShell } from "../../../components/AppShell";
 import { useCostStore } from "../store/costStore";
 import { CostBreakdownTable } from "./CostBreakdownTable";
-import { MonthPicker } from "./MonthPicker";
 
 export function CostOverview() {
   const [searchParams] = useSearchParams();
   const tenantId = searchParams.get("tenant_id") ?? "";
 
-  const { currentMonth, data, loading, error, setMonth, loadData } = useCostStore();
+  // Sprint 57.8 US-4: setMonth removed (MonthPicker hoisted to page-level
+  // headerActions slot per Day 0 A1; page consumes setMonth via own
+  // useCostStore selector).
+  const { currentMonth, data, loading, error, loadData } = useCostStore();
 
   useEffect(() => {
     if (tenantId) {
@@ -44,54 +45,51 @@ export function CostOverview() {
   }, [tenantId, currentMonth, loadData]);
 
   return (
-    <AppShell
-      headerActions={
-        <MonthPicker value={currentMonth} onChange={setMonth} disabled={loading} />
-      }
-    >
-      <div className="space-y-4">
-        <header>
-          <h1 className="text-2xl font-semibold tracking-tight">Cost Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Per-tenant cost ledger summary. Backend enforces admin-platform role
-            (Sprint 56.3 endpoint). 401/403 surfaces as error below.
-          </p>
-        </header>
+    <div className="space-y-4">
+      <header>
+        <p className="text-sm text-muted-foreground">
+          Per-tenant cost ledger summary. Backend enforces admin-platform role
+          (Sprint 56.3 endpoint). 401/403 surfaces as error below.
+        </p>
+      </header>
 
-        {!tenantId && (
-          <p className="text-sm text-destructive">
-            Missing <code className="rounded bg-muted px-1 py-0.5">?tenant_id=...</code> query parameter.
-          </p>
-        )}
+      {!tenantId && (
+        <p className="text-sm text-destructive">
+          Missing{" "}
+          <code className="rounded bg-muted px-1 py-0.5">?tenant_id=...</code>{" "}
+          query parameter.
+        </p>
+      )}
 
-        {loading && (
-          <p className="text-sm italic text-muted-foreground">Loading cost summary…</p>
-        )}
+      {loading && (
+        <p className="text-sm italic text-muted-foreground">
+          Loading cost summary…
+        </p>
+      )}
 
-        {error && (
-          <div
-            role="alert"
-            className="rounded-lg border border-destructive/40 bg-destructive/5 p-4"
+      {error && (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/40 bg-destructive/5 p-4"
+        >
+          <p className="text-sm text-destructive">Error: {error}</p>
+          <button
+            onClick={() => tenantId && void loadData(tenantId)}
+            className="mt-3 inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted"
           >
-            <p className="text-sm text-destructive">Error: {error}</p>
-            <button
-              onClick={() => tenantId && void loadData(tenantId)}
-              className="mt-3 inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted"
-            >
-              Retry
-            </button>
-          </div>
-        )}
+            Retry
+          </button>
+        </div>
+      )}
 
-        {data && !loading && !error && (
-          <>
-            <p className="text-lg">
-              <strong>Total cost ({data.month}):</strong> ${data.total_cost_usd}
-            </p>
-            <CostBreakdownTable data={data} />
-          </>
-        )}
-      </div>
-    </AppShell>
+      {data && !loading && !error && (
+        <>
+          <p className="text-lg">
+            <strong>Total cost ({data.month}):</strong> ${data.total_cost_usd}
+          </p>
+          <CostBreakdownTable data={data} />
+        </>
+      )}
+    </div>
   );
 }

@@ -1,24 +1,25 @@
 /**
  * File: frontend/src/pages/tenant-settings/index.tsx
- * Purpose: Tenant Settings page wrapper — wildcard route per 57.1 v2 cost-dashboard pattern.
+ * Purpose: Tenant Settings page — wraps Routes in AppShellV2 (page-level layout per Day 0 A1).
  * Category: Frontend / pages / tenant-settings
- * Scope: Phase 57 / Sprint 57.3 US-5
- *
- * Created: 2026-05-07 (Sprint 57.3 Day 3)
- * Last Modified: 2026-05-07
+ * Scope: Phase 57 / Sprint 57.3 US-5 → 57.8 US-4 (page-level AppShellV2 migration)
  *
  * Modification History:
+ *   - 2026-05-10: Sprint 57.8 US-4 — page-level AppShellV2 wrap
  *   - 2026-05-07: Initial creation (Sprint 57.3 Day 3 / US-5 — Tenant Settings page wrapper)
  */
 
 import { Route, Routes } from "react-router-dom";
 
+import { AppShellV2 } from "../../components/AppShellV2";
 import { TenantSettingsView } from "../../features/tenant-settings/components/TenantSettingsView";
 
 export default function TenantSettingsPage() {
   return (
-    <Routes>
-      <Route index element={<TenantSettingsView />} />
-    </Routes>
+    <AppShellV2 pageTitle="Tenant Settings">
+      <Routes>
+        <Route index element={<TenantSettingsView />} />
+      </Routes>
+    </AppShellV2>
   );
 }

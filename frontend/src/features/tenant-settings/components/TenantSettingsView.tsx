@@ -64,7 +64,8 @@ export function TenantSettingsView() {
 
   return (
     <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1>Tenant Settings</h1>
+      {/* Sprint 57.8 US-4 D9: h1 removed — AppShellV2 pageTitle="Tenant Settings"
+          provides page-level h1 (per A1 architecture; inner = body only) */}
       <p style={{ color: "#666", fontSize: "0.9rem" }}>
         Per-tenant configuration. Backend enforces admin-platform role
         (Sprint 57.3 endpoints). 401/403 surfaces as error below.

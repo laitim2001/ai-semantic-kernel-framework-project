@@ -2,7 +2,7 @@
  * File: frontend/src/pages/admin-tenants/index.tsx
  * Purpose: Admin Tenants Console page (filters + table + pagination).
  * Category: Frontend / pages / admin-tenants
- * Scope: Phase 57 / Sprint 57.4 US-4
+ * Scope: Phase 57 / Sprint 57.4 US-4 → 57.8 US-4 (page-level AppShellV2 migration)
  *
  * Description:
  *   Loads on mount + on store query change. URL query string sync deferred
@@ -10,13 +10,19 @@
  *   real need surfaces; this sprint ships in-memory filter state only).
  *
  *   Backend enforces require_admin_platform_role; frontend lets 401/403
- *   surface as Error UX (Home Link always visible per 57.1 D10 Option C).
+ *   surface as Error UX.
+ *
+ * Modification History:
+ *   - 2026-05-10: Sprint 57.8 US-4 — page-level AppShellV2 wrap; remove inline
+ *     padding (AppShellV2 main provides p-6); error block inline styles
+ *     deferred to AD-Cost-Dashboard-ChildrenTailwind batch (Phase 58.2+)
  *
  * Created: 2026-05-07 (Sprint 57.4 Day 3)
  */
 
 import { useEffect } from "react";
 
+import { AppShellV2 } from "../../components/AppShellV2";
 import { TenantListFilters } from "../../features/admin-tenants/components/TenantListFilters";
 import { TenantListPagination } from "../../features/admin-tenants/components/TenantListPagination";
 import { TenantListTable } from "../../features/admin-tenants/components/TenantListTable";
@@ -30,9 +36,8 @@ export function AdminTenantsPage(): JSX.Element {
   }, [loadData]);
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1>Admin Tenants Console</h1>
-      <p style={{ color: "#666", fontSize: "0.9rem" }}>
+    <AppShellV2 pageTitle="Admin Tenants Console">
+      <p className="mb-4 text-sm text-muted-foreground">
         Browse + filter all tenants. Backend enforces admin-platform role
         (Sprint 57.4 list endpoint). 401/403 surfaces as error below.
       </p>
@@ -55,7 +60,7 @@ export function AdminTenantsPage(): JSX.Element {
 
       <TenantListTable />
       <TenantListPagination />
-    </div>
+    </AppShellV2>
   );
 }
 
