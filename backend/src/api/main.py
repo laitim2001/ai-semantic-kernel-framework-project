@@ -27,6 +27,7 @@ Created: 2026-04-29 (Sprint 49.4 Day 5)
 Last Modified: 2026-04-29
 
 Modification History (newest-first):
+    - 2026-05-09: Sprint 57.7 US-A2 — mount auth router (3 OIDC PKCE endpoints; WorkOS skeleton)
     - 2026-05-08: Sprint 57.6 US-2 — _lifespan() autoload .env via dotenv (closes AD-Reality-2)
     - 2026-05-06: Sprint 56.1 — mount admin_tenants router (POST /api/v1/admin/tenants)
     - 2026-05-04: Mount governance router (Sprint 53.5 US-1) — GET /governance/approvals
@@ -57,6 +58,7 @@ from api.v1.admin.cost_summary import router as admin_cost_summary_router
 from api.v1.admin.sla_reports import router as admin_sla_reports_router
 from api.v1.admin.tenants import router as admin_tenants_router
 from api.v1.audit import router as audit_router
+from api.v1.auth import router as auth_router
 from api.v1.chat import router as chat_router
 from api.v1.governance import router as governance_router
 from api.v1.health import router as health_router
@@ -103,6 +105,7 @@ def create_app() -> FastAPI:
 
     # Routers: api/v1.
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(auth_router, prefix="/api/v1")
     app.include_router(chat_router, prefix="/api/v1")
     app.include_router(audit_router, prefix="/api/v1")
     app.include_router(governance_router, prefix="/api/v1")

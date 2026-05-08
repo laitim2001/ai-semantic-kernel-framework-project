@@ -185,18 +185,90 @@ Day 0 ROI per AD-Plan-3-Promotion + AD-Plan-4-Schema-Grep = ~10-15× (50 min探�
 
 ## Day 0 Session-end Status (2026-05-09 PM)
 
-✅ **Day 0 fully complete** — all 5 sub-sections (0.1 + 0.2 + 0.3 + 0.4 + 0.5) finished:
-- Branch + commit + push ✅
-- 三-prong 探勘 v1 ✅ (9 D-findings + 2 NEW Day 0.4 minor drifts = 11 cumulative)
-- Calibration HYBRID 0.60 weighted blend pre-read ✅
-- Pre-flight baselines (8/9 captured;Playwright deferred Day 1 morning) ✅
-- progress.md commit ✅ (this update will go in Day 0.6 commit)
+✅ **Day 0 fully complete** — all 5 sub-sections (0.1 + 0.2 + 0.3 + 0.4 + 0.5) finished
+✅ **Day 0 commit `c4b2ef9e`** + Day 0.4 baseline snapshot commit `bdf916f4` pushed
 
-⏳ **Day 1 morning order of operations** (next session — ~5-6 hr est):
-1. Verify Settings `jwt_algorithm` default + JWKS endpoint pattern (resolve D2)
-2. Verify `users.external_id` column drift (resolve D8)
-3. Verify Playwright e2e baseline 23 tests (deferred from Day 0.4)
-4. US-A1 vendor matrix kickoff (4-vendor evaluation + cost projection + decision)
-5. Begin US-A2 chosen vendor SDK install + backend OIDC wire start
+---
 
-⏳ **Day 0.4 progress.md update commit** (this session pending) — small commit just for baseline snapshot
+## Day 1 (2026-05-09 PM — same session as Day 0)
+
+### Day 1.1 Morning verifies — All RESOLVED (~25 min)
+
+- ✅ **D2 RESOLVED**: `core/config/__init__.py:55-57` confirmed `jwt_secret = "change-me-in-production"` + `jwt_algorithm = "HS256"` (default symmetric) + `jwt_expires_minutes = 60`. **NO `jwt_jwks_url` field exists** → US-A2 path simplified to **Path 1**: V2 internal JWT remains HS256 + WorkOS SDK handles vendor JWT (RS256) JWKS validation internally. NO need to extend JWTManager with `decode_with_jwks` method (~30 min saved).
+- ✅ **D8 RESOLVED**: `infrastructure/db/models/identity.py:170` confirmed `external_id: Mapped[str | None] = mapped_column(String(256))` + partial index `idx_users_external` at L191-195 already optimized for OIDC subject lookup. **NO Alembic 0017 migration needed** (~1-2 hr saved)
+- ✅ **Playwright baseline**: 23 passed (7.1s) — matches Sprint 57.6 baseline ✅
+
+### Day 1.2 US-A1 Vendor Matrix completed (~1.5 hr)
+
+Created `iam-vendor-matrix.md` (Day 1 intermediate artifact;Day 4 closeout will fold into `20-iam-deep-dive.md` §1):
+
+- **Decision**: WorkOS chosen with explicit 3 rejection rationale (NOT「best practice」hand-wave per AP-2)
+- **Cost projection**: Year 1 (5K MAU + 5 conn) ~$15K/yr;Year 2 (50K MAU + 20 conn) ~$40K/yr;Year 3 (200K MAU + 75 conn) ~$260-300K/yr
+- **Rejected**:
+  - Clerk: SCIM April 2026 GA too recent + SOC 2 paywall + frontend SDK lock-in heavy
+  - Auth0: B2B Essentials only 3 conn cap + cost step from $150 → $800 → $30K+ too steep
+  - Supabase Auth: SCIM completely missing (enterprise procurement blocker)
+- **Migration off-ramp**: ~5-8 sprint to self-built if needed;`users.external_id` (already exists per D8) supports remap;V2-side RBAC (US-A3) makes vendor swap painless
+
+### Day 1.3 US-A2 Backend Skeleton (~1 hr)
+
+User-approved「skeleton + zero piece install」path:
+
+**Files modified**:
+- `backend/requirements.txt` (+5 lines): NEW `workos>=4.0,<6.0` Sprint 57.7 US-A2 section after python-dotenv
+- `backend/src/core/config/__init__.py` (+12 lines): NEW WorkOS section after JWT — `workos_api_key` + `workos_client_id` + `oidc_redirect_uri` Settings fields (empty defaults so Settings still loads in test/dev without WorkOS account)
+- `backend/src/api/main.py` (+2 lines): NEW `auth_router` import + `app.include_router(auth_router, prefix="/api/v1")` after health; MHist updated
+
+**Files NEW**:
+- `backend/src/platform_layer/identity/oidc.py` (~165 lines): `WorkOSOIDCFlow` class with 3 methods (initiate_login + exchange_callback + signout_url) + `OIDCProfile` dataclass + `OIDCConfigError` + `OIDCStateError` exceptions. Skeleton calls return placeholder profile;Day 2 will replace with real `workos` SDK calls once vendor account approved.
+- `backend/src/api/v1/auth.py` (~155 lines): 3 endpoints (GET /auth/login + GET /auth/callback + POST /auth/logout). State CSRF protection via httpOnly secure cookies (oidc_state + oidc_redirect_to + v2_jwt). User upsert path skeleton — Day 2 replaces with real DB query. V2 JWT issue via existing `JWTManager.encode()` (Path 1 D2 decision).
+
+**Validation results post-skeleton**:
+
+| Check | Pre-Sprint Baseline | Post-Skeleton | Delta |
+|-------|--------------------|--------------:|-------|
+| V2 lints | 9/9 green (0.99s) | **9/9 green (0.89s)** | ✅ |
+| mypy --strict | 0/294 source files | **0/296 source files** | ✅ +2 (oidc.py + auth.py) |
+| pytest collected | 1602 | **1602** | ✅ unchanged (Day 2 adds unit tests) |
+
+**Day 1 NOT done (deferred to Day 2)**:
+- ⏳ WorkOS Python SDK actual `pip install` (waits for vendor account approval per Risk Class A)
+- ⏳ Real WorkOS SDK call wiring inside oidc.py (replace placeholder return)
+- ⏳ DB user upsert in callback handler (replace placeholder UUID + tenant_id)
+- ⏳ 6+ unit tests for oidc.py + auth.py (Day 2 with mocked WorkOS SDK)
+- ⏳ Frontend `/auth/login` + `/auth/callback` pages (Day 2 — needs US-B1 frontend foundation install first)
+- ⏳ US-A3 DB-backed RBAC (Day 2)
+
+### Day 1 Time Tracking
+
+| Activity | Estimated | Actual |
+|----------|-----------|--------|
+| Day 1.1 morning verifies (D2 + D8 + Playwright) | 30 min | ~25 min |
+| Day 1.2 US-A1 vendor matrix research + write | 3 hr | ~1.5 hr (parallel WebSearch saved time) |
+| Day 1.3 US-A2 backend skeleton (Settings + requirements + oidc.py + auth.py + main wire) | 3-4 hr | ~1 hr (skeleton scope, no real SDK call yet) |
+| Validation (lints + mypy + collect) | 15 min | ~5 min (parallel) |
+| **Day 1 total** | **~7 hr** | **~3 hr** ✅ **57% under est** (vendor matrix faster + skeleton lighter than expected) |
+
+### Day 1 D-Findings update — 0 NEW (all 1.1 verifies RESOLVED clean)
+
+11 cumulative D-findings unchanged (D1-D9 from Day 0 + D10-D11 baseline drifts from Day 0.4).
+
+---
+
+## Day 1 Session-end Status (2026-05-09 PM)
+
+✅ **Day 1 morning + PM completed** in same session as Day 0:
+- 3 verifies RESOLVED (D2 + D8 + Playwright)
+- US-A1 vendor matrix complete with WorkOS decision + 3 rejection rationale
+- US-A2 backend skeleton: Settings extend + requirements add + oidc.py + auth.py + main wire — all parses clean (mypy 0/296;V2 lints 9/9)
+
+⏳ **Day 2 morning order of operations** (next session — ~5-6 hr est):
+1. WorkOS B2B trial account signup completion check (Day 1 PM signup → Day 2 morning approval expected)
+2. `pip install -r requirements.txt` to install workos SDK
+3. Replace oidc.py placeholder calls with real WorkOS SDK (initiate_login + exchange_callback + signout_url 3 methods)
+4. DB user upsert in callback handler (replace placeholder tenant_id + UUID)
+5. 6+ unit tests for oidc.py + auth.py (mocked WorkOS SDK)
+6. US-A3 NEW rbac.py + auth.py rewire 3 frozenset → DB lookup + 4 unit tests
+7. Begin US-B1 frontend foundation install (Tailwind 4 + shadcn + TanStack Query + RHF + Zod + Sonner + react-error-boundary)
+
+⏳ **Day 1 evidence commit** (this session pending) — combined Day 1 morning verify + PM US-A2 skeleton
