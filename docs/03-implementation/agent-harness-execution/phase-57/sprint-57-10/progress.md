@@ -195,3 +195,45 @@ Sprint 57.10 cumulative so far: ~2 hr (Day 0 ~1.5 + Day 0.5 ~30 min); remaining 
 Day 1 cumulative: ~2 hr (CONVENTION.md draft + commit)
 Sprint 57.10 cumulative: ~4 hr (Day 0 ~1.5 + Day 0.5 ~30 min + Day 1 ~2 hr); pace tracking ON budget per `audit-cycle` 0.40 baseline ~4 hr commit (Day 2 STYLE.md ~1.5 hr + Day 3 polish ~30 min + Day 4 retro ~1 hr would put total ~7 hr → ratio ~1.75 OVER band → AD-Sprint-Plan-12 candidate at Day 4 retro)
 
+---
+
+## Day 2 — 2026-05-09 — STYLE.md NEW (447 lines / 8 sections) + frontend-react.md cross-ref
+
+### Deliverables
+
+- ✅ `frontend/STYLE.md` created (447 lines; 49% above ≥300 acceptance threshold)
+- ✅ `.claude/rules/frontend-react.md` extended with NEW "Detailed Conventions" section (85 → 112 lines; existing 85 lines retained per plan)
+
+### STYLE.md 8 sections codified
+
+1. **Tailwind Utility-First** — no inline styles + no CSS-in-JS + shadcn primitives where available; Sprint 57.9 US-2 governance migration precedent (3 components inline → Tailwind)
+2. **Color Tokens** — 7-token canonical table (primary / success / warning / danger / thinking / tool / memory) per 16.md L249-262 + 6 shadcn semantic tokens (foreground / muted-foreground / background / muted / border / accent); arbitrary value rules (`text-success` preferred over `text-[#10B981]`)
+3. **Risk Badge Palette** — 4-level canonical table (LOW #2e7d32 / MEDIUM #ed6c02 / HIGH #d84315 / CRITICAL #b71c1c) per Sprint 53.5 governance ship; Phase 58.x tokenization candidate (`risk-low` / `risk-medium` etc class names) tracked as informal AD-RiskPaletteTokenization
+4. **Typography** — Inter sans + JetBrains Mono code; 6 size tokens (text-xs to text-2xl) per 16.md L264-276; font weight conventions (medium 500 / semibold 600 / bold 700 sparingly); code/JSON display pattern with mono + bg-muted
+5. **Spacing Convention** — Tailwind 4-base scale (p-2/p-4/p-6/gap-2/gap-4/mb-4/mb-6/space-y); page-level layout pattern per 57.9 governance + admin-tenants; arbitrary spacing avoided
+6. **Loading Skeleton Pattern** — 5-row table canonical (per 57.9 ApprovalList) + 3-card dashboard variant; why skeletons over spinners (perceived latency / no layout shift / shape communication)
+7. **Empty State Pattern** — center layout + actionable Reset/Retry button (per 57.9 governance + admin-tenants); 3 variants (filter-empty / no-data-yet / error-empty); avoid bare empty
+8. **Error Retry UX Pattern** — inline error + Retry button + refetch trigger; **D-PRE-15 retryClicked flag pattern fully codified with code example** (gates mock behavior on user-action NOT call count; survives any number of StrictMode double-renders); Sonner toast vs inline error decision (toast for non-blocking mutations / inline for page-level fetches)
+
+### frontend-react.md cross-ref update
+
+- Add NEW "## Detailed Conventions" section after "Prohibited"
+- Existing 85 lines retained UNCHANGED (additive only)
+- Cross-ref CONVENTION.md (architecture/state/SSE/test rules) + STYLE.md (visual/UX rules)
+- Reminder: codification threshold ≥ 2 sprint examples (per AD-Plan-3)
+- Linter added `paths: frontend/**/*.{ts,tsx}` frontmatter (intentional; project convention to scope rule to frontend files)
+
+### Cross-references in STYLE.md
+
+- → CONVENTION.md (architecture / state / SSE / test patterns)
+- → `.claude/rules/frontend-react.md` (basic React rules)
+- → 16-frontend-design.md (design philosophy)
+- → file-header-convention.md (MHist 1-line rule)
+
+### Day 2 commit
+
+`cd72b92a` docs(sprint-57-10, US-2+US-3 partial): NEW frontend/STYLE.md (8 sections) + frontend-react.md cross-ref to NEW docs
+
+Day 2 cumulative: ~1.5 hr (STYLE.md draft + frontend-react.md cross-ref + commit)
+Sprint 57.10 cumulative (excluding sunk Day 0 verification ship): ~4 hr (Day 0.5 ~30 min + Day 1 ~2 hr + Day 2 ~1.5 hr); on budget per `audit-cycle` 0.40 baseline ~4 hr commit. Day 3+4 remaining ~2 hr (~30 min self-review + early validation + ~1.5 hr retro/memory/4 doc syncs/PR). Final projected ~6 hr → ratio 1.50 over band by 0.30 → AD-Sprint-Plan-12 candidate at Day 4 retro Q2 (propose `audit-cycle` 0.40 → 0.50 lift; 2-data-point window: 55.2=1.10 + 57.10=~1.50 mean ~1.30 over band; pending 2-3 sprint validation per `When to adjust` rule).
+
