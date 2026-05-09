@@ -140,10 +140,12 @@ Related:
 - User Option A (Bundle a+c) chat session 2026-05-09 ✅
 - Sprint 57.12 plan/checklist deferred per rolling planning 紀律 ✅
 
-#### §0.6 Day 0 commit (CURRENT)
+#### §0.6 Day 0 commit ✅
 
-- [ ] Stage plan + checklist + progress (Day 0 entry filled)
-- [ ] Commit message per checklist L131 (with refreshed SHA `7c6d0d50`)
+- ✅ Staged: plan + checklist + progress.md (3 files)
+- ✅ Commit `0dc110ea` (1485 insertions): "chore(sprint-57-11, planning): Day 0 plan + checklist + 三-prong findings against main 7c6d0d50"
+- ✅ HEREDOC body narrates 9 drift findings + scope-shift assessment + calibration baseline + pre-flight baselines all-green + Co-Authored-By footer
+- Branch: `feature/sprint-57-11-verification-real-ship` ahead of `origin/main` by 1 commit (Day 0 only; Day 1+ commits to follow)
 
 ---
 

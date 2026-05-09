@@ -127,8 +127,8 @@ Related: sprint-57-11-plan.md
 
 ### 0.6 Day 0 commit
 
-- [ ] Stage plan + checklist + progress.md Day 0 entry: `git add docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-11-{plan,checklist}.md docs/03-implementation/agent-harness-execution/phase-57/sprint-57-11/progress.md`
-- [ ] Commit: `git commit -m "chore(sprint-57-11, planning): Day 0 plan + checklist + 三-prong findings against main 7c6d0d50"`
+- [x] Stage plan + checklist + progress.md Day 0 entry: `git add docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-11-{plan,checklist}.md docs/03-implementation/agent-harness-execution/phase-57/sprint-57-11/progress.md`
+- [x] Commit: `git commit -m "chore(sprint-57-11, planning): Day 0 plan + checklist + 三-prong findings against main 7c6d0d50"` → ✅ commit `0dc110ea` (3 files / 1485 insertions)
 
 ---
 
