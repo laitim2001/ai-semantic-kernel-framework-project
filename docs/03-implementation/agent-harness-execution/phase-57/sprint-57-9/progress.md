@@ -359,3 +359,77 @@
 - **Lines added**: ~830 (4 source NEW + 3 test NEW + types extension)
 - **Go/no-go for Day 4**: ✅ GO Day 4 (Vitest 75/75; bundle in budget; 0 regression; US-4 + US-5 governance ship complete; chain badge + audit log viewer ready for end-to-end real ship)
 - **Remaining for Day 4**: US-6 4-page TanStack migration (cost-dashboard / sla-dashboard / admin-tenants / tenant-settings) + Zustand store reductions (UI-only state) + closeout sweep + retrospective.md Q1-Q7 + memory snapshot + 3 doc syncs (sprint-workflow.md calibration matrix +1 row + SITUATION-V2 + 16-frontend-design.md) + PR open
+
+---
+
+## Day 4 — 2026-05-09 — US-6 4-page TanStack migration + closeout
+
+### What was built
+
+**4.1 US-6 4 NEW hooks + 1 bonus mutation hook**:
+- `cost-dashboard/hooks/useCostSummary.ts` — TanStack useQuery + COST_SUMMARY_QUERY_KEY_BASE single-source + enabled:Boolean(tenantId) + keepPreviousData
+- `sla-dashboard/hooks/useSLAReport.ts` — same pattern
+- `admin-tenants/hooks/useAdminTenants.ts` — reads `query` from store; queryKey includes filter+pagination → auto-refetch on change
+- `tenant-settings/hooks/useTenantSettings.ts` — query hook
+- `tenant-settings/hooks/useTenantSettingsSave.ts` (bonus) — useMutation + onSuccess invalidates TENANT_SETTINGS_QUERY_KEY_BASE
+
+**4.2 US-6 4-page component refactor**:
+- CostOverview drop useEffect+loadData; consume useCostSummary; error.message+refetch() retry path
+- SLAOverview same pattern + Tailwind migration drop ALL inline styles + violations badge `data-testid` preserved
+- admin-tenants page drops manual loadData useEffect; 3 children (TenantListFilters / TenantListPagination / TenantListTable) each independently consume useAdminTenants hook + store query state
+- TenantSettingsView consumes useTenantSettings(tenantId)
+- TenantSettingsEditForm: NEW `tenantId` prop (was store-driven); use useTenantSettingsSave mutation hook (drop store.save / saving / saveError)
+
+**4.3 US-6 4 stores reduced to UI-only**:
+- costStore: `currentMonth + setMonth + reset` only (dropped data/loading/error/loadData)
+- slaStore: same shape
+- adminTenantsStore: `query (filter+pagination) + setFilter + setPagination + reset` only (dropped items/total/loading/error/loadData)
+- tenantSettingsStore: `tenantId + setTenantId + reset` only (dropped data/saving/saveError/loadData/save)
+- Each store API surface tests assert dropped keys NOT present (regression sentinel)
+
+**4.4 main.tsx QueryClient `retry: false`** — production default to surface 4xx/5xx immediately + per-page Retry button (avoids retry storms on admin endpoints + matches e2e contract per D-PRE-15).
+
+**4.4 Closeout sweep all green**:
+- Vitest 75 → **93** (+18; target ≥+8 hit **225%**) in 3.65s
+- Playwright **27/27** in 7.3s — initially observed 9 failures (5 governance auth-gate + 4 StrictMode mock); fixed via 2 surgical patterns: `seedAuthJwt(page)` beforeEach in governance/approvals.spec.ts + `retryClicked` flag (instead of brittle `firstCall`) in cost-dashboard / sla-dashboard / tenant-settings view+edit error path tests
+- pytest 1622 collected (backend unchanged baseline)
+- tsc strict 0 errors; 9 V2 lints 9/9 in 1.00s
+- Vite build 240.86 kB main + 1865 modules (governance lazy + useQuery/useMutation chunks split)
+- Backend flake8 silent + black --check 300 files clean
+- LLM SDK leak 0
+- Frontend ESLint silent
+
+**4.6 Retrospective.md Q1-Q7** completed — calibration ratio **1.00 ✅ bullseye** (`frontend-feature-with-migration` 0.50 NEW class 1st app)
+
+**4.7 Memory snapshot** + MEMORY.md index entry
+
+**4.8 3 doc syncs**: sprint-workflow.md calibration matrix +1 row + SITUATION-V2 §9+§11 + 16-frontend-design.md V2 Ship Timeline 5/N → 6/N (governance promoted; verification = 1 priority remaining); CLAUDE.md sync deferred to post-merge closeout PR per Sprint 57.7+57.8 pattern
+
+### Day 4 D-findings (2 NEW)
+
+| ID | Severity | Finding |
+|----|----------|---------|
+| **D-PRE-15** (reused) | 🟡 YELLOW | TanStack StrictMode double-render (mount-unmount-mount under React 18 dev) breaks `firstCall` mock flag pattern in 4 e2e tests (cost / sla / tenant-edit / tenant-view error paths). Fix: gate success branch on `retryClicked` flag instead. NEW AD-StrictMode-MockPattern logged to codify pattern in Playwright fixtures helper. |
+| **D-PRE-16** | 🟡 YELLOW | Sprint 57.9 D1 governance auth gate addition silently broke 5 prior governance approvals e2e tests (Day 1+2+3 only ran Vitest, not Playwright; full Playwright sweep deferred to Day 4 per closeout pattern). Fix: `seedAuthJwt(page)` beforeEach in approvals.spec.ts. **Lesson** (retro Q3 #4): any sprint adding auth gate to a route MUST update existing e2e tests for that route in same PR (avoids hidden regression accumulation across sprints). |
+
+### Verification ✅
+
+| Check | Day 3 baseline | Day 4 measured | Delta |
+|-------|---------------|----------------|-------|
+| Vitest | 75/75 | **93/93** in 3.65s | **+18** ✅ (target ≥+8 hit **225%**) |
+| Playwright | 27/27 (Day 3 didn't run full Playwright) | **27/27** in 7.3s | maintained ✅ (5 governance + 4 StrictMode fixed) |
+| Vite build (main JS) | 240.78 kB | **240.86 kB** | +0.08 kB ✅ |
+| Vite build modules | 1861 | **1865** | +4 (4 NEW source files) |
+| AppShellV2 lazy | 34.88 kB | 34.88 kB | unchanged ✅ |
+| TypeScript strict | 0 errors | **0 errors** | ✅ |
+| pytest baseline | 1622 | **1622** | unchanged ✅ (no backend changes) |
+| 9 V2 lints | 9/9 | **9/9** | ✅ |
+
+### Day 4 wrap
+
+- **Actual hr**: ~2.5 hr (target ~5 hr Day 4 budget; ~50% under — pattern reuse acceleration peaks Day 4 with mechanical 4-page batch ~30 min/feature × 4 = 2 hr + ~30 min e2e fixups)
+- **Files changed**: ~30 (5 NEW hook files + 4 modify services + 4 modify stores + 5 modify components + 1 modify main.tsx + 4 modify e2e specs + ~6 modify/NEW test files + 4 doc updates: progress + retro + memory + checklist + 3 doc syncs)
+- **Sprint total actual**: ~10.5 hr (Day 0 ~1.5 + Day 1 ~2 + Day 2 ~2.5 + Day 3 ~2 + Day 4 ~2.5)
+- **Sprint calibration**: actual 10.5 hr / committed 10.5 hr = **ratio 1.00 ✅ bullseye** in [0.85, 1.20] band
+- **Go/no-go for PR**: ✅ READY (all closeout sweeps green; retro+memory+doc syncs complete; CLAUDE.md sync deferred post-merge per pattern)
+- **Remaining for PR**: Day 4 commit + push + PR open pending user instruct per CLAUDE.md "破壞性操作前必問"
