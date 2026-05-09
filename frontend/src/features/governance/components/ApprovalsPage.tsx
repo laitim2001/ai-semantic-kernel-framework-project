@@ -1,8 +1,8 @@
 /**
  * File: frontend/src/features/governance/components/ApprovalsPage.tsx
- * Purpose: Page-level container — fetches pending list + renders list/modal.
+ * Purpose: Pending approvals page — polls list + handles row click → DecisionModal.
  * Category: Frontend / governance / components
- * Scope: Phase 53 / Sprint 53.5 US-1
+ * Scope: Phase 53 / Sprint 53.5 US-1 → Sprint 57.9 US-2 Day 1 (Tailwind migration)
  *
  * Description:
  *   Polls GET /api/v1/governance/approvals every 30s while mounted (no SSE
@@ -12,7 +12,18 @@
  *   On row click, opens DecisionModal; on submit, calls governanceService.decide
  *   then refreshes the list.
  *
+ *   Sprint 57.9 US-2 Day 1: inline `style={{}}` migrated to Tailwind utility
+ *   classes (per .claude/rules/frontend-react.md "no inline styles"); behavior
+ *   100% preserved (regression sentinel: existing Vitest tests).
+ *   Sprint 57.9 US-3 Day 2 will further refactor: drop manual setInterval +
+ *   AbortController + useState/useEffect → consume `useApprovals` TanStack hook.
+ *
  * Created: 2026-05-04 (Sprint 53.5 Day 3)
+ * Last Modified: 2026-05-09
+ *
+ * Modification History (newest-first):
+ *   - 2026-05-09: Sprint 57.9 US-2 Day 1 — Tailwind migration (drop inline styles)
+ *   - 2026-05-04: Initial creation (Sprint 53.5 Day 3)
  *
  * Related:
  *   - ./ApprovalList.tsx
@@ -28,28 +39,6 @@ import { ApprovalList } from "./ApprovalList";
 import { DecisionModal } from "./DecisionModal";
 
 const POLL_INTERVAL_MS = 30_000;
-
-const pageStyle: React.CSSProperties = {
-  padding: "1.5rem 2rem",
-  fontFamily: "system-ui, sans-serif",
-};
-
-const headerRow: React.CSSProperties = {
-  display: "flex",
-  alignItems: "baseline",
-  justifyContent: "space-between",
-  marginBottom: "1rem",
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: "0.4rem 0.9rem",
-  border: "1px solid #1976d2",
-  background: "white",
-  color: "#1976d2",
-  borderRadius: 4,
-  cursor: "pointer",
-  fontSize: "0.9rem",
-};
 
 export function ApprovalsPage() {
   const [items, setItems] = useState<ApprovalSummary[]>([]);
@@ -93,16 +82,24 @@ export function ApprovalsPage() {
   };
 
   return (
-    <div style={pageStyle}>
-      <div style={headerRow}>
-        <h2 style={{ margin: 0 }}>Pending Approvals</h2>
-        <button type="button" style={buttonStyle} onClick={() => void refresh()} disabled={loading}>
+    <div className="space-y-4">
+      <div className="flex items-baseline justify-between">
+        <h2 className="m-0 text-xl font-semibold">Pending Approvals</h2>
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          disabled={loading}
+          className="inline-flex items-center rounded-md border border-primary bg-background px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
+        >
           {loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
       {error && (
-        <div role="alert" style={{ color: "#c62828", marginBottom: "1rem" }}>
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
+        >
           Failed to load approvals: {error}
         </div>
       )}

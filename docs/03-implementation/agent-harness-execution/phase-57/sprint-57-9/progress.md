@@ -128,3 +128,77 @@
 - **Drift findings**: 7 catalogued (1 RED resolved + 1 YELLOW informational + 5 GREEN; 0 plan rewrites needed)
 - **Go/no-go decision**: ✅ GO Day 1 (D-PRE-1 RED was Sprint 57.8 carryover, not Sprint 57.9 regression; baseline restored; no scope shift)
 - **Remaining for Day 1**: US-1 (governance AppShellV2 wrap + auth gate + 2-tab routes) + US-2 (Tailwind migration 3 components)
+
+---
+
+## Day 1 — 2026-05-09 — US-1 + US-2 (Governance AppShellV2 + Tailwind Migration)
+
+### US-1: Governance page composition ✅
+
+**1.1 pages/governance/index.tsx** — full rewrite (40 lines → 70 lines composed real ship):
+- Auth gate via `isAuthenticated()` + `setPostLoginRedirect("/governance")` + `<Navigate to="/auth/login" replace />`
+- AppShellV2 wrap with `pageTitle="Governance"`
+- 2-tab nav with NavLink (Pending Approvals + Audit Log) using `aria-label="Governance tabs"` + active state via `isActive` callback (text-primary + border-b-2 border-primary)
+- Nested Routes: index → `<Navigate to="approvals" replace />` / `path="approvals"` → ApprovalsPage / `path="audit-log"` → AuditLogViewer / `path="*"` → catch-all redirect to approvals
+- File header MHist updated: Sprint 57.9 US-1 Day 1 entry
+
+**1.2 routes.config.ts + App.tsx** — single-source restoration:
+- routes.config.ts: governance entry `active: false` → `active: true` + `component: lazy(() => import("./pages/governance"))`; file header active count 5→6 + new MHist entry
+- App.tsx: REMOVED `import GovernancePage from "./pages/governance"` (L35) + REMOVED `<Route path="/governance/*" element={<GovernancePage />} />` (L93) per in-code direction L91-93 ("When 57.9 / 57.10 ship → set active=true + delete from here = single-source restored")
+- App.tsx file header MHist updated; comment refined to note governance promoted Sprint 57.9; verification still placeholder pending Phase 57.10
+- **D-PRE-8 NEW**: App.tsx was NOT in plan §File Change List MODIFY but required by in-code direction. Adds ~5 min scope. Documenting for Day 4 calibration.
+
+**1.3 AuditLogViewer.tsx stub** — Day 1 import-resolver enabler:
+- Created stub returning Tailwind-styled `<div>` placeholder
+- Real implementation Day 3 US-4
+- File header notes stub status + Day 3 replacement plan + MHist initial entry
+
+### US-2: Tailwind migration (3 components) ✅
+
+**2.3 ApprovalsPage.tsx** — 121 → 99 lines (drop pageStyle / headerRow / buttonStyle const objects):
+- Container: `space-y-4` (no padding — AppShellV2 main has p-6)
+- Header row: `flex items-baseline justify-between` + `text-xl font-semibold m-0` h2
+- Refresh button: `inline-flex items-center rounded-md border border-primary bg-background px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-50`
+- Error div: `rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive` (mirror cost-dashboard pattern)
+- Behavior 100% preserved (polling 30s + AbortController + useState/useEffect — US-3 Day 2 will refactor to TanStack hooks)
+
+**2.4 ApprovalList.tsx** — 115 → 91 lines (drop tableStyle / thStyle / tdStyle / RISK_COLOR const + inline button style):
+- Risk badges: arbitrary-value Tailwind preserves exact 53.5 palette `text-[#2e7d32]` (LOW) / `text-[#ed6c02]` (MEDIUM) / `text-[#d84315]` (HIGH) / `text-[#b71c1c]` (CRITICAL) — regression sentinel for any test asserting computed color
+- Table: `w-full border-collapse font-sans text-[0.92rem]`
+- Th: `border-b-2 border-border bg-muted/30 p-2 text-left`
+- Td: `border-b border-border p-2`
+- Empty state: `my-4 italic text-muted-foreground`
+- Review button: `inline-flex items-center rounded border border-primary bg-background px-3 py-1 text-sm font-semibold text-primary hover:bg-primary/10`
+
+**2.5 DecisionModal.tsx** — 192 → 159 lines (drop overlayStyle / dialogStyle / headerStyle / fieldRow / labelStyle / reasonBox / buttonRow / buttonStyle() function):
+- Overlay: `fixed inset-0 z-[100] flex items-center justify-center bg-black/45`
+- Dialog: `min-w-[480px] max-w-[720px] rounded-lg bg-card p-6 font-sans shadow-2xl`
+- Tailwind impl per Day 0 D-PRE-2 + Sprint 57.8 UserMenu YAGNI precedent (no shadcn `<Dialog>` introduced — `frontend/src/components/ui/` directory still does not exist)
+- 4 button kinds preserved via `BUTTON_BASE` + `BUTTON_KIND` records using arbitrary-value classes for exact palette: approve `bg-[#2e7d32]` / reject `bg-[#c62828]` / escalate `bg-[#ed6c02]` / cancel `bg-[#e0e0e0]`
+- Field rows: `my-1.5 flex gap-2 text-[0.95rem]` with `min-w-[110px] font-semibold text-foreground/70` labels
+- Textarea: `mt-2 min-h-[80px] w-full resize-y rounded border border-border p-2`
+- Behavior 100% preserved (will refactor to useApprovalDecide mutation Day 2 US-3)
+
+### Verification ✅
+
+| Check | Day 0 baseline | Day 1 measured | Delta |
+|-------|---------------|----------------|-------|
+| Vitest | 57/57 | **57/57** in 2.43s | unchanged ✅ |
+| Vite build (main JS) | 246.19 kB | **240.30 kB** | **-5.89 kB** ✅ (governance lazy-loaded after legacy direct-import removed) |
+| Vite build (AppShellV2 lazy) | 34.88 kB | 34.88 kB | unchanged ✅ |
+| TypeScript strict (`tsc -b`) | 0 errors | **0 errors** | ✅ |
+
+### Drift findings (Day 1)
+
+| ID | Severity | Finding |
+|----|----------|---------|
+| **D-PRE-8** | 🟡 YELLOW | App.tsx was NOT in plan §File Change List MODIFY but required by in-code direction L91-93 (legacy `/governance/*` Route + import). Adds ~5 min scope; revealed by Day 1 Read of App.tsx. Plan §File Change List should be updated retroactively in Day 4 retro Q3 lessons. |
+| **D-PRE-9** | 🟢 GREEN | Vite bundle main DECREASED -5.89 kB (governance lazy-load > legacy direct-import inline). Day 1 budget headroom positive. |
+
+### Day 1 wrap
+
+- **Actual hr**: ~2.5 hr (target ~3 hr Day 1 budget; ~17% under)
+- **Files changed**: 6 (5 modify: pages/governance/index.tsx + routes.config.ts + App.tsx + 3 governance components / 1 NEW: AuditLogViewer.tsx stub)
+- **Lines changed**: -109 / +268 net
+- **Go/no-go for Day 2**: ✅ GO Day 2 (full validation green; bundle DECREASED; 0 regression)
+- **Remaining for Day 2**: US-3 (TanStack governance hooks: useApprovals + useApprovalDecide + governanceService fetchWithAuth swap + ApprovalsPage/DecisionModal refactor + 3 NEW Vitest tests)
