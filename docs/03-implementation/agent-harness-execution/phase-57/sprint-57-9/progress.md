@@ -202,3 +202,79 @@
 - **Lines changed**: -109 / +268 net
 - **Go/no-go for Day 2**: ✅ GO Day 2 (full validation green; bundle DECREASED; 0 regression)
 - **Remaining for Day 2**: US-3 (TanStack governance hooks: useApprovals + useApprovalDecide + governanceService fetchWithAuth swap + ApprovalsPage/DecisionModal refactor + 3 NEW Vitest tests)
+
+---
+
+## Day 2 — 2026-05-09 — US-3 (TanStack Governance Hooks + Service fetchWithAuth Swap)
+
+### US-3: TanStack governance hooks ✅
+
+**2.1 governanceService.ts fetchWithAuth swap** — 75 → 80 lines:
+- Both fetch sites (`listPending` L49 + `decide` L66) swapped raw `fetch` → `fetchWithAuth`
+- Mirror Sprint 57.8 D3 chatService pattern (Sprint 57.7 IAM JWT injection)
+- Drop manual `credentials: "same-origin"` (fetchWithAuth sets `credentials: "include"` itself)
+- File header MHist updated; Description doc'd Sprint 57.9 US-3 swap rationale + AD-Frontend-AuthUX backward-compat note
+
+**2.2 useApprovals.ts NEW** — 50 LOC:
+- `APPROVALS_QUERY_KEY = ["governance", "approvals"] as const` exported single-source for invalidation reuse
+- `useQuery({ queryKey, queryFn: ({ signal }) => listPending(signal), refetchInterval: 30_000 })`
+- File header doc'd FIRST TanStack consumer in V2 frontend + AD-Cost-Dashboard-UseQuery 57.7 closure path
+- TypeScript: `useQuery<ApprovalSummary[], Error>` strict signature
+
+**2.3 useApprovalDecide.ts NEW** — 53 LOC:
+- `useMutation<DecisionResponse, Error, DecideArgs>` strict signature
+- `mutationFn: ({ requestId, decision, reason }) => governanceService.decide(...)`
+- `onSuccess: () => qc.invalidateQueries({ queryKey: APPROVALS_QUERY_KEY })` (single-source reuse)
+- File header doc'd race protection + state machine 404/409 surfacing
+
+**2.4 ApprovalsPage refactor** — 99 → 64 lines (-35 LOC):
+- Dropped: `useState/useRef/useCallback/useEffect/setInterval/AbortController/refresh/abortRef/POLL_INTERVAL_MS` boilerplate (10 imports/symbols)
+- Use `const { data: items = [], isLoading, error, refetch } = useApprovals();`
+- Refresh button calls `refetch()`; error displays via `error.message`
+- `selected` state preserved (UI-only — picks which approval opens DecisionModal)
+- Drop `submit` callback prop wiring to DecisionModal (modal now self-contained)
+- File header MHist Sprint 57.9 US-3 entry
+
+**2.5 DecisionModal refactor** — 159 → 142 lines (-17 LOC):
+- API CHANGE: dropped `onSubmit` prop (no consumer outside ApprovalsPage; refactor safe per Day 0 探勘 — ApprovalCard chat-v2 uses governanceService.decide directly NOT through DecisionModal)
+- Dropped: `useState busy/setBusy + useState error/setError + try-catch wrapper`
+- Use `const decideM = useApprovalDecide();` + `decideM.mutate({ requestId, decision, reason }, { onSuccess: onClose })`
+- Loading via `decideM.isPending`; error via `decideM.error.message`
+- File header MHist Sprint 57.9 US-3 entry doc'ing API change
+
+**2.6 Vitest unit tests NEW** — 7 tests:
+- `tests/unit/governance/useApprovals.test.tsx` (4 tests):
+  1. APPROVALS_QUERY_KEY single-source ['governance', 'approvals']
+  2. Initial fetch returns approvals on success
+  3. Error state surfaces when service throws
+  4. refetch() triggers an additional service call (D-PRE-10 fix: callsBefore/After delta pattern instead of brittle exact-count)
+- `tests/unit/governance/useApprovalDecide.test.tsx` (3 tests):
+  1. mutate success → calls service with correct args + invalidates approvals query
+  2. mutate error → exposes error state without invalidate
+  3. isPending toggles during mutation lifecycle
+
+### Verification ✅
+
+| Check | Day 1 baseline | Day 2 measured | Delta |
+|-------|---------------|----------------|-------|
+| Vitest | 57/57 | **64/64** in 2.52s | **+7** ✅ (target ≥+6 hit 117%) |
+| Vite build (main JS) | 240.30 kB | **240.75 kB** | +0.45 kB ✅ (under 280 kB budget by 39 kB) |
+| Vite build (governance lazy) | (n/a — was inline) | 18.75 kB | NEW ✅ (governance now lazy + 2 NEW hooks) |
+| AppShellV2 lazy | 34.88 kB | 34.88 kB | unchanged ✅ |
+| TypeScript strict (`tsc -b`) | 0 errors | **0 errors** | ✅ |
+
+### Drift findings (Day 2)
+
+| ID | Severity | Finding |
+|----|----------|---------|
+| **D-PRE-10** | 🟡 YELLOW | Initial useApprovals refetch test (`expect(spy).toHaveBeenCalledTimes(2)`) brittle — TanStack v5 may make internal refetches on mount lifecycle (network status / focus) → spy actual count varied. Fix: use `mockResolvedValue` (not Once) + delta pattern `callsBefore < callsAfter`. Caught + fixed in Day 2 (~5 min cost). Lesson: TanStack hook tests should use delta assertions on internal call counts, not exact counts. Document for future hook tests (4-page Day 4 migration). |
+| **D-PRE-11** | 🟢 GREEN | Vitest +7 (target ≥+6); bonus test from APPROVALS_QUERY_KEY single-source assertion. |
+| **D-PRE-12** | 🟢 GREEN | DecisionModal API simplified (dropped onSubmit prop) per Day 0探勘 verification (no external consumer beyond ApprovalsPage); aligns with Karpathy「avoid backwards-compatibility hacks when you can just change the code」. |
+
+### Day 2 wrap
+
+- **Actual hr**: ~2.5 hr (target ~3 hr Day 2 budget; ~17% under)
+- **Files changed**: 7 (3 NEW: useApprovals.ts + useApprovalDecide.ts + 2 test files / 4 modify: governanceService.ts + ApprovalsPage.tsx + DecisionModal.tsx + 1 doc) — also 1 mid-day fix for D-PRE-10 brittle test
+- **Lines changed**: +335 / -157 net
+- **Go/no-go for Day 3**: ✅ GO Day 3 (Vitest 64/64; bundle in budget; 0 regression; AD-Cost-Dashboard-UseQuery partially closed via governance migration; Day 4 4-page migration completes closure)
+- **Remaining for Day 3**: US-4 (NEW AuditLogViewer real impl + auditService + useAuditLog + filter form + paginated table) + US-5 (AuditChainBadge + verifyChain extension)

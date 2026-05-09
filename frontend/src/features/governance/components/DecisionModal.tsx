@@ -1,44 +1,45 @@
 /**
  * File: frontend/src/features/governance/components/DecisionModal.tsx
- * Purpose: Modal dialog with Approve / Reject / Escalate buttons + reason input.
+ * Purpose: Modal dialog with Approve / Reject / Escalate buttons + reason input — TanStack-driven mutation.
  * Category: Frontend / governance / components
- * Scope: Phase 53 / Sprint 53.5 US-1 → Sprint 57.9 US-2 Day 1 (Tailwind migration)
+ * Scope: Phase 53 / Sprint 53.5 US-1 → Sprint 57.9 US-2 Day 1 (Tailwind) → Sprint 57.9 US-3 Day 2 (TanStack)
  *
  * Description:
  *   Click-outside-to-close overlay + dialog with approval details, reason
  *   textarea, and 4 action buttons (Cancel / Escalate / Reject / Approve).
  *
- *   Sprint 57.9 US-2 Day 1: inline `style={{}}` migrated to Tailwind utility
- *   classes (per .claude/rules/frontend-react.md "no inline styles"). Tailwind
- *   modal impl (no shadcn `<Dialog>`) per Day 0 D-PRE-2 + Sprint 57.8 UserMenu
- *   YAGNI precedent — shadcn primitives未引入,arbitrary inset utilities
- *   sufficient for this specific dialog.
- *   Sprint 57.9 US-3 Day 2 will further refactor: drop manual onSubmit + busy
- *   state → consume `useApprovalDecide` TanStack mutation hook.
+ *   Sprint 57.9 US-3 Day 2: dropped legacy `onSubmit` callback prop — modal is
+ *   now self-contained via `useApprovalDecide` mutation hook. On `mutate()`
+ *   success the hook invalidates `APPROVALS_QUERY_KEY` (refreshes the list)
+ *   and the modal calls `onClose()`. `isPending` from the mutation drives the
+ *   busy / disabled state on action buttons; `error` from the mutation is
+ *   surfaced inline.
+ *
+ *   Tailwind impl per Day 0 D-PRE-2 + Sprint 57.8 UserMenu YAGNI precedent.
  *
  * Created: 2026-05-04 (Sprint 53.5 Day 3)
  * Last Modified: 2026-05-09
  *
  * Modification History (newest-first):
+ *   - 2026-05-09: Sprint 57.9 US-3 Day 2 — drop onSubmit prop + useState/setBusy/setError → useApprovalDecide mutation
  *   - 2026-05-09: Sprint 57.9 US-2 Day 1 — Tailwind migration (drop inline styles)
  *   - 2026-05-04: Initial creation (Sprint 53.5 Day 3)
  *
  * Related:
- *   - ./ApprovalsPage.tsx (parent)
- *   - ../services/governanceService.ts (decide call)
+ *   - ./ApprovalsPage.tsx (parent — passes approval + onClose only post-57.9-US-3)
+ *   - ../hooks/useApprovalDecide.ts (TanStack mutation hook)
  */
 
 import { useState } from "react";
+
+import { useApprovalDecide } from "../hooks/useApprovalDecide";
 import type { ApprovalSummary, DecisionLabel } from "../types";
 
 type Props = {
   approval: ApprovalSummary;
-  onSubmit: (decision: DecisionLabel, reason?: string) => Promise<void>;
   onClose: () => void;
 };
 
-// Preserve exact 53.5 button palette via arbitrary-value Tailwind classes
-// (regression sentinel: tests asserting computed background may rely on hex).
 const BUTTON_BASE =
   "rounded px-4 py-2 text-[0.95rem] font-semibold disabled:opacity-50 disabled:cursor-not-allowed";
 
@@ -49,26 +50,24 @@ const BUTTON_KIND: Record<"approve" | "reject" | "escalate" | "cancel", string> 
   cancel: "bg-[#e0e0e0] text-[#333] hover:bg-[#d0d0d0]",
 };
 
-export function DecisionModal({ approval, onSubmit, onClose }: Props) {
+export function DecisionModal({ approval, onClose }: Props) {
   const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const decideM = useApprovalDecide();
 
-  const submit = async (decision: DecisionLabel) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await onSubmit(decision, reason.trim() || undefined);
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
+  const submit = (decision: DecisionLabel) => {
+    decideM.mutate(
+      {
+        requestId: approval.request_id,
+        decision,
+        reason: reason.trim() || undefined,
+      },
+      { onSuccess: onClose },
+    );
   };
 
   const toolName = approval.payload.tool_name ?? "(unknown tool)";
   const summary = approval.payload.summary ?? approval.payload.reason ?? "";
+  const busy = decideM.isPending;
 
   return (
     <div
@@ -125,9 +124,9 @@ export function DecisionModal({ approval, onSubmit, onClose }: Props) {
           />
         </label>
 
-        {error && (
+        {decideM.error && (
           <div role="alert" className="mt-2 text-[0.9rem] text-[#c62828]">
-            {error}
+            {decideM.error.message}
           </div>
         )}
 

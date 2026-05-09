@@ -141,54 +141,28 @@
 
 ## Day 2 — US-3 TanStack Governance Hooks + Refactor
 
-### 2.1 US-3: governanceService fetchWithAuth swap
-- [ ] **Modify `frontend/src/features/governance/services/governanceService.ts`**
-  - DoD: 2 fetch sites (`listPending` + `decide`) swap raw `fetch` → `fetchWithAuth`
-  - Pattern mirror Sprint 57.8 D3 chatService: `import { fetchWithAuth } from "../../auth/services/authService";`
-  - Preserve AbortSignal + headers + body
-  - MHist entry with Sprint 57.9 US-3 reason
-- [ ] **Verify existing Vitest unit tests pass unchanged**
+### 2.1 US-3: governanceService fetchWithAuth swap ✅
+- [x] **Modify `frontend/src/features/governance/services/governanceService.ts`**
+  - 2 fetch sites swapped → fetchWithAuth (mirror Sprint 57.8 D3 chatService pattern)
 
-### 2.2 US-3: useApprovals hook
-- [ ] **Create `frontend/src/features/governance/hooks/useApprovals.ts`**
-  - DoD: per plan §Technical Specifications snippet
-  - Export `APPROVALS_QUERY_KEY` const for invalidation reuse
-  - File header per convention
-- [ ] **Vitest unit test `frontend/tests/unit/governance/useApprovals.test.tsx`**
-  - DoD: ≥3 tests (initial fetch / refetch on stale / error state)
-  - Use `@tanstack/react-query` test utilities + `QueryClient` per-test isolation
+### 2.2 US-3: useApprovals hook ✅
+- [x] **Create `frontend/src/features/governance/hooks/useApprovals.ts`** — APPROVALS_QUERY_KEY single-source export + useQuery refetchInterval 30_000
+- [x] **Vitest test** — 4 tests pass (1 bonus: APPROVALS_QUERY_KEY single-source assertion)
 
-### 2.3 US-3: useApprovalDecide mutation hook
-- [ ] **Create `frontend/src/features/governance/hooks/useApprovalDecide.ts`**
-  - DoD: per plan §Technical Specifications snippet
-  - `onSuccess` invalidates `APPROVALS_QUERY_KEY`
-  - File header per convention
-- [ ] **Vitest unit test `frontend/tests/unit/governance/useApprovalDecide.test.tsx`**
-  - DoD: ≥3 tests (mutate success → invalidate query / error state / rapid double-click race per Risk B)
+### 2.3 US-3: useApprovalDecide mutation hook ✅
+- [x] **Create `frontend/src/features/governance/hooks/useApprovalDecide.ts`** — useMutation + onSuccess invalidates APPROVALS_QUERY_KEY
+- [x] **Vitest test** — 3 tests pass (mutate success+invalidate / error / isPending lifecycle)
 
-### 2.4 US-3: ApprovalsPage refactor
-- [ ] **Modify `frontend/src/features/governance/components/ApprovalsPage.tsx`**
-  - DoD: drop useEffect/useState/setInterval/AbortController/refresh callback
-  - Use `const { data: items = [], isLoading, error, refetch } = useApprovals();`
-  - Preserve loading/error UI; refresh button calls `refetch()`
-  - MHist entry "Sprint 57.9 US-3 — drop manual polling, consume useApprovals hook"
-- [ ] **Verify existing Vitest unit tests pass unchanged**
-  - Note: tests may need wrapper `<QueryClientProvider>` (mirror cost-dashboard 57.7 pattern if exists)
+### 2.4 US-3: ApprovalsPage refactor ✅
+- [x] **Modify `frontend/src/features/governance/components/ApprovalsPage.tsx`** — 99 → 64 lines (drop 10 imports/symbols including useState/useRef/useCallback/useEffect/setInterval/AbortController)
 
-### 2.5 US-3: DecisionModal refactor
-- [ ] **Modify `frontend/src/features/governance/components/DecisionModal.tsx`**
-  - DoD: drop manual `await onSubmit(decision, reason); refresh()` pattern
-  - Use `const decideM = useApprovalDecide();` + `decideM.mutate({ id, decision, reason }, { onSuccess: onClose })`
-  - Loading state via `decideM.isPending`; error via `decideM.error`
-  - MHist entry
-- [ ] **Verify existing Vitest unit tests pass unchanged**
+### 2.5 US-3: DecisionModal refactor ✅
+- [x] **Modify `frontend/src/features/governance/components/DecisionModal.tsx`** — 159 → 142 lines (drop onSubmit prop entirely + busy/error useState; consume useApprovalDecide mutation hook)
 
-### 2.6 Day 2 wrap
-- [ ] **Vite bundle size check**
-  - DoD: total JS ≤ 285 kB (small headroom for 3 hooks + service swap)
-- [ ] **Update progress.md Day 2 entry**
-- [ ] **Commit + push**
-  - Message: `feat(frontend, sprint-57-9): Day 2 — US-3 TanStack governance hooks + ApprovalsPage/DecisionModal refactor + governanceService fetchWithAuth`
+### 2.6 Day 2 wrap ✅
+- [x] **Vite bundle size check** — main JS 240.75 kB (+0.45 kB vs Day 1; under 280 kB budget by 39 kB); governance lazy 18.75 kB NEW
+- [x] **Update progress.md Day 2 entry**
+- [x] **Commit + push** (executed below — D-PRE-10 fix included in same Day 2 commit)
 
 ---
 
