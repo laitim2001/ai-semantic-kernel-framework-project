@@ -8,6 +8,7 @@ Created: 2026-05-09 (Day 0 stub awaiting Day 0 三-prong execution + commit)
 Last Modified: 2026-05-10
 
 Modification History (newest-first):
+    - 2026-05-10: Day 2 complete — US-3+US-4 frontend infra + page wrap + 14 Vitest; commit `9ea3f29b`
     - 2026-05-10: Day 1 complete — US-1+US-2 backend bundle; 13 new tests; commit `8a0ecaf3`
     - 2026-05-10: Day 0 三-prong executed — 9 drift findings (0🔴/3🟠/6🟢); proceed Day 1
     - 2026-05-09: base SHA refresh — main `412f26d6` → `7c6d0d50` (PR #124 Hybrid fix-up landed)
@@ -204,7 +205,50 @@ Related:
 
 ## Day 2 — US-3 Frontend Infra + US-4 Page Wrap + 1 Component
 
-**Status**: ⏳ Not started
+**Status**: ✅ Complete (2026-05-10)
+
+### Day 2 Execution Summary
+
+**Commits**: `9ea3f29b` (Day 2 frontend bundle, 12 files / ~600 insertions)
+
+**US-3 deliverables (Frontend infra)**:
+- `frontend/src/features/verification/types.ts` — TS contract mirroring backend Pydantic + SSE event payloads (6 exports)
+- `frontend/src/features/verification/services/verificationService.ts` — REST client + URLSearchParams omit-undefined helper (mirror 57.4 + 57.9 pattern); fetchWithAuth from authService.ts:74 (D-PRE-3)
+- `frontend/src/features/verification/hooks/useVerificationRecent.ts` — TanStack Query hook + `VERIFICATION_RECENT_QUERY_KEY_BASE` single-source
+- `frontend/src/features/verification/hooks/useCorrectionTrace.ts` — TanStack Query hook + `CORRECTION_TRACE_QUERY_KEY_BASE` + enabled-gate (sessionId !== null)
+
+**US-4 deliverables (Page wrap + VerifierTypeBadge)**:
+- `frontend/src/features/verification/components/VerifierTypeBadge.tsx` — Tailwind 3-variant badge (rules_based blue / llm_judge purple / external gray)
+- `frontend/src/pages/verification/index.tsx` — REPLACE Phase 49.1 placeholder with real ship: auth gate + AppShellV2 + 2-tab NavLink + nested Routes (mirror Sprint 57.9 governance pattern)
+- `frontend/src/features/verification/components/VerificationList.tsx` — STUB Day 2; Day 3 §3.1 full impl
+- `frontend/src/features/verification/components/CorrectionTraceView.tsx` — STUB Day 2; Day 3 §3.2 full impl
+
+**Tests added** (14 new Vitest):
+- `verificationService.test.ts` — 5 tests (URL building + filter omit-undefined + 403 error surface for /recent; URL + 404 for /correction-trace)
+- `useVerificationRecent.test.tsx` — 3 tests (BASE export / fetch happy / error surface)
+- `useCorrectionTrace.test.tsx` — 3 tests (BASE / enabled-gate sessionId=null / fetch when provided)
+- `VerifierTypeBadge.test.tsx` — 3 tests (3 type variants Tailwind class assertions)
+
+**Day 2 acceptance**:
+- 14/14 new Vitest tests pass ✅
+- Vitest baseline: 93 → **107** (+14; surpassed §2.3 target 97+ by 10, §2.4 target 100+ by 7) ✅
+- tsc --noEmit 0 errors ✅
+- ESLint silent ✅
+- Vite build: main chunk **276.62 kB** (under 285 kB §3.6 ceiling) ✅
+- Auth gate active when unauthenticated; 2 tabs render when authenticated ✅
+
+**Time spent**: ~1.5-2 hr (committed ~3-4 hr per plan §2 estimate; ~50% under budget — frontend velocity tracking parallel to Day 1's ~50% under budget)
+
+**Day 3 next**:
+- §3.1 VerificationList full impl (filter form + paginated table + 6 cols + click row navigate to timeline)
+- §3.2 CorrectionTraceView full impl (vertical timeline grouped by turn_index + correction_attempt; pass/fail color coding)
+- §3.3 chatStore.ts verifications slice + reducers (appendVerification + clearVerifications)
+- §3.4 useChatStream.ts SSE event branches (D-PRE-2 resolved: mod target = chatStore.mergeEvent + parseSSEFrame KNOWN events set per CONVENTION.md §7)
+- §3.5 VerificationPanel component + chat-v2 mount
+- §3.6 Day 3 wrap (Vitest 112+ / build ≤ 285 kB / commit)
+
+**Drift findings closed in Day 2**:
+- D-PRE-3 (fetchWithAuth from authService.ts:74) → verificationService.ts imports from `../../auth/services/authService`
 
 ---
 

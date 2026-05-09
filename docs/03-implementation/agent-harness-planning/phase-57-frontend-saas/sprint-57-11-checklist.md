@@ -215,62 +215,52 @@ Related: sprint-57-11-plan.md
 ### 2.1 US-3: features/verification/types.ts
 
 - [ ] Create `frontend/src/features/verification/types.ts` with:
-  - `VerifierType` type union (`'rules_based' | 'llm_judge' | 'external'`)
-  - `VerificationLogItem` interface (12 fields mirror backend Pydantic)
-  - `VerificationLogPage` interface (items / total / has_more)
-  - `VerificationLogFilter` interface (session_id? / verifier_type? / passed? / limit / offset)
-  - `CorrectionTraceResponse` interface (session_id / entries)
-  - `VerificationEvent` interface (mirrors SSE payload from sse.py:248-265)
-- [ ] DoD: `cd frontend && npx tsc --noEmit` → 0 errors
+  - `VerifierType` type union ✅
+  - `VerificationLogItem` (12 fields mirror backend Pydantic incl created_at_ms epoch ms for JS Date) ✅
+  - `VerificationLogPage` (items / total / has_more / next_offset / page_size) ✅
+  - `VerificationLogFilter` ✅
+  - `CorrectionTraceResponse` ✅
+  - `VerificationEvent` discriminated union (mirrors sse.py:243-265) ✅
+- [x] DoD: tsc --noEmit 0 errors ✅
 
 ### 2.2 US-3: verificationService.ts
 
-- [ ] Create `frontend/src/features/verification/services/verificationService.ts` with:
-  - `fetchVerificationRecent(filter, signal?)` consuming GET `/api/v1/verification/recent` via fetchWithAuth + URLSearchParams omit-undefined helper
-  - `fetchCorrectionTrace(sessionId)` consuming GET `/api/v1/verification/{session_id}/correction-trace`
-  - Both throw Error with detail message on non-2xx
-- [ ] Create `frontend/tests/unit/verification/verificationService.test.ts` (mirror Sprint 57.9 service test pattern with `expect.objectContaining({ credentials: "include" })`)
-- [ ] DoD: 2 service tests pass + tsc 0 errors
+- [x] Create verificationService.ts with fetchVerificationRecent + fetchCorrectionTrace + URLSearchParams omit-undefined helper (mirror Sprint 57.4 + 57.9 pattern); fetchWithAuth from authService.ts:74 (D-PRE-3 resolution)
+- [x] Create verificationService.test.ts — **5 tests** (3 fetchVerificationRecent + 2 fetchCorrectionTrace) ✅
+- [x] DoD: 5 service tests pass + tsc 0 errors ✅
 
 ### 2.3 US-3: useVerificationRecent + useCorrectionTrace hooks
 
-- [ ] Create `frontend/src/features/verification/hooks/useVerificationRecent.ts` with `VERIFICATION_RECENT_QUERY_KEY_BASE` single-source export
-- [ ] Create `frontend/src/features/verification/hooks/useCorrectionTrace.ts` with `CORRECTION_TRACE_QUERY_KEY_BASE` single-source export
-- [ ] Create `frontend/tests/unit/verification/useVerificationRecent.test.tsx` (3 tests: BASE export / filter changes refetch / disabled when filter invalid)
-- [ ] Create `frontend/tests/unit/verification/useCorrectionTrace.test.tsx` (3 tests: BASE export / enabled gate when sessionId null / fetch when provided)
-- [ ] DoD: 4 NEW Vitest pass; Vitest 93 → 97+
+- [x] Create useVerificationRecent.ts with VERIFICATION_RECENT_QUERY_KEY_BASE single-source ✅
+- [x] Create useCorrectionTrace.ts with CORRECTION_TRACE_QUERY_KEY_BASE + enabled gate (sessionId !== null) ✅
+- [x] useVerificationRecent.test.tsx (3 tests: BASE / fetch happy / error surface) ✅
+- [x] useCorrectionTrace.test.tsx (3 tests: BASE / enabled-gate sessionId=null skip / fetch when provided) ✅
+- [x] DoD: 6 NEW Vitest pass; Vitest 93 → 99 (passed §2.3 target 97+) ✅
 
 ### 2.4 US-3 + US-4: VerifierTypeBadge component (shared US-4 + US-5)
 
-- [ ] Create `frontend/src/features/verification/components/VerifierTypeBadge.tsx` with 3 type variants (Tailwind utility classes; no inline styles per .claude/rules/frontend-react.md)
-  - rules_based → blue: `bg-blue-100 text-blue-800`
-  - llm_judge → purple: `bg-purple-100 text-purple-800`
-  - external → gray: `bg-gray-100 text-gray-800`
-- [ ] Create `frontend/tests/unit/verification/VerifierTypeBadge.test.tsx` (3 tests for variants)
-- [ ] DoD: 3 NEW Vitest pass; Vitest 97 → 100+
+- [x] Create VerifierTypeBadge.tsx with 3 type variants (Tailwind utility classes; no inline styles per frontend-react.md) ✅
+- [x] VerifierTypeBadge.test.tsx (3 tests for variants) ✅
+- [x] DoD: 3 NEW Vitest pass; Vitest 99 → 102 (passed §2.4 target 100+) ✅
 
 ### 2.5 US-4: pages/verification/index.tsx page wrap
 
-- [ ] REPLACE `frontend/src/pages/verification/index.tsx` with composed real ship per plan §Technical Specifications:
-  - Auth gate via Navigate to /auth/login + setPostLoginRedirect("/verification")
-  - AppShellV2 wrap pageTitle="Verification"
-  - 2-tab NavLink (Recent / Correction Trace)
-  - Nested Routes index → Navigate to "recent" / "recent" → VerificationList stub / "timeline" → CorrectionTraceView stub
-- [ ] Update `frontend/src/pages/verification/README.md` (Phase reference 54.1 → 57.10 shipped)
-- [ ] DoD: page mounts via routes; auth gate redirects when not authenticated; 2 tabs visible
+- [x] REPLACE Phase 49.1 placeholder with real ship: auth gate (Navigate /auth/login + setPostLoginRedirect("/verification")) + AppShellV2 wrap pageTitle="Verification" + 2-tab NavLink (Recent / Correction Trace) + nested Routes (mirror Sprint 57.9 governance/index.tsx) ✅
+- [N/A] README.md update — file does not exist (verification page never had README); skip per scope-discipline (no orphan file creation)
+- [x] DoD: page composes via routes; auth gate redirects when not authenticated; 2 tabs render ✅
 
 ### 2.6 US-4: VerificationList + CorrectionTraceView stubs
 
-- [ ] Create `frontend/src/features/verification/components/VerificationList.tsx` STUB (returns `<div>VerificationList Day 3</div>` for now; full impl Day 3)
-- [ ] Create `frontend/src/features/verification/components/CorrectionTraceView.tsx` STUB (same pattern)
-- [ ] DoD: stubs importable + 0 tsc errors; allows page to mount Day 2 wrap test
+- [x] Create VerificationList.tsx STUB (Day 3 §3.1 full impl pending) ✅
+- [x] Create CorrectionTraceView.tsx STUB (Day 3 §3.2 full impl pending) ✅
+- [x] DoD: stubs importable + 0 tsc errors ✅
 
 ### 2.7 Day 2 wrap
 
-- [ ] Run frontend Vitest: `cd frontend && npm run test -- --run` → 100+ pass
-- [ ] Run tsc strict: `cd frontend && npx tsc --noEmit` → 0 errors
-- [ ] Run ESLint: `cd frontend && npm run lint` → silent
-- [ ] Commit Day 2: `git add frontend/ && git commit -m "feat(sprint-57-11, US-3+US-4 partial): verification feature folder infra + page wrap + VerifierTypeBadge + Day 3 stubs"`
+- [x] Run frontend Vitest: 32 files / **107 passed** (Day 2 baseline 93 → 107; +14 surpasses 100+ §2.7 target by 7) ✅
+- [x] Run tsc --noEmit: 0 errors ✅
+- [x] Run ESLint: silent ✅
+- [x] Commit Day 2: ✅ commit `9ea3f29b` (12 files / ~600 ins) — `feat(sprint-57-11, US-3+US-4 partial): verification feature folder infra + page wrap + VerifierTypeBadge + Day 3 stubs`
 
 ---
 
