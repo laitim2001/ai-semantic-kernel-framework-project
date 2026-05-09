@@ -97,3 +97,59 @@ Files staged for Day 0 commit:
 - `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-10/progress.md` (this file)
 
 Day 0 cumulative: ~1.5 hr (探勘 30 min + plan/checklist drafting 1 hr + baselines 10 min)
+
+---
+
+## Day 0.5 — 2026-05-09 — Sprint Pivot to Frontend Convention Codification
+
+### Context
+
+User 2026-05-09 reality-check session raised two structural concerns mid-sprint:
+1. **Q1: 13 pages 不夠 + agent setting/user profile 缺** — frontend has 7/13 ship pages; agent-harness UI components (LoopVisualizer / MemoryViewer / SubagentTree) per 16.md L159-220 ZERO implemented; 4 SaaS admin pages (cost / sla / tenant-settings / admin-tenants) added 但 NOT in original 16.md plan; user_profile / mfa / billing / onboarding all deferred
+2. **Q2: Frontend convention 沒統一標準** — only `.claude/rules/frontend-react.md` (~85 lines basic React); page architecture / state mgmt / TanStack pattern / SSE event handling / test pattern all "documented-by-precedent" via 6-8 sprint history grep; D-PRE-13 (chat-v2 silently dropping verification SSE 3+ sprints) is symptom
+
+### Pivot decision (user-approved 2026-05-09 chat session)
+
+| Q | User answer |
+|---|-------------|
+| Pivot Strategy | **(A) Keep Day 0 commit `6e11a9d9` + pivot 說明** (preserves verification ship plan + 13 D-PRE in git history; new commit replaces plan/checklist with convention scope) |
+| Doc count | **(2 docs) CONVENTION.md + STYLE.md** (NOT 3-doc with ARCHITECTURE.md per YAGNI) |
+| Calibration class | **`audit-cycle / docs / template` 0.40** (2nd app after 55.2=1.10 ✅) |
+| Phase 57.11+ hint | **Don't pre-commit** (rolling planning 紀律) |
+
+### Sprint 57.10 NEW scope
+
+**Goal**: Codify emergent frontend patterns from Sprint 57.7+57.8+57.9 ships into 2 NEW docs to stop convention drift.
+
+**3 USs**:
+- US-1 `frontend/CONVENTION.md` NEW (~400-500 lines / 9 sections: Page Architecture / features folder / Routing / State Mgmt / TanStack Query / API Service / SSE Event / Test / MHist)
+- US-2 `frontend/STYLE.md` NEW (~300-400 lines / 8 sections: Tailwind / Color Tokens / Risk Palette / Typography / Spacing / Loading Skeleton / Empty State / Error Retry)
+- US-3 `.claude/rules/frontend-react.md` cross-ref + Day 4 closeout 4 doc syncs
+
+**Bottom-up est**: ~10 hr × 0.40 (audit-cycle) = **~4 hr commit** (matches user 3-5 hr budget)
+
+**5 Days**: Day 0.5 pivot (this) → Day 1 CONVENTION.md → Day 2 STYLE.md + frontend-react.md cross-ref → Day 3 self-review + early validation → Day 4 retro + 4 doc syncs + PR + closeout
+
+### 3 NEW carryover ADs (logged Day 4 retro Q4)
+
+- **AD-Verification-RealShip-Deferred** — full plan/checklist preserved in commit `6e11a9d9`; backend Cat 10 production-ready since 54.1+55.5; Phase 57.11+ candidate (highest probability per Q5 retrospective)
+- **AD-Frontend-SSE-Silent-Drop-Fix** — D-PRE-13 standalone bug fix (~1 hr); `chat_v2/types.ts` LoopEvent union extension + `KNOWN_LOOP_EVENT_TYPES` set + `chatStore.mergeEvent` 2 case branches; could bundle with verification ship re-pickup
+- **AD-Convention-Drift-Audit-Cycle** — Phase 58.x periodic (every 4-6 sprints, scan latest ships for emergent patterns NOT in CONVENTION.md/STYLE.md)
+
+### Verification ship preservation
+
+- Day 0 commit `6e11a9d9` retained UNCHANGED in branch history
+- Original verification real ship plan + checklist + 13 D-PRE findings catalog all preserved
+- Re-pickup path: Phase 57.11+ checks out commit OR copies plan/checklist forward
+- D-PRE-13 SSE silent drop bug becomes its own AD (more granular than embedded in verification ship)
+
+### Day 0.5 commit pending
+
+Files staged:
+- `docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-10-plan.md` (REPLACED with convention codification scope; original verification ship version preserved in commit `6e11a9d9` history)
+- `docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-10-checklist.md` (REPLACED similarly)
+- `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-10/progress.md` (APPENDED this Day 0.5 section; original Day 0 entry preserved above)
+
+Day 0.5 cumulative: ~30 min (orientation + carryover catalog + replace plan/checklist + this entry)
+Sprint 57.10 cumulative so far: ~2 hr (Day 0 ~1.5 + Day 0.5 ~30 min); remaining budget ~2 hr per `audit-cycle` 0.40 calibration baseline ~4 hr commit
+
