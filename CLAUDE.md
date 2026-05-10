@@ -69,12 +69,12 @@ Build enterprise AI agent teams that work like **human professional teams** — 
 
 | Attribute | Value |
 |-----------|-------|
-| **Phase** | V2 22/22 ✅ + SaaS Stage 1 3/3 ✅ + SaaS Frontend 9/N（57.1/57.3/57.4/57.7/57.8/57.9/57.11/57.12 loop-debug + 57.12 memory）+ 57.10 PIVOTED Convention Codify ✅ |
-| **Latest Sprint** | 57.12 ✅ 2026-05-10 — Agent Harness UI Suite (LoopVisualizer + MemoryViewer + SubagentTree) + Cat 11 SubagentSpawned/Completed SSE + Cat 3 `/api/v1/memory` REST (role/session 501) + AD-AdminTenant-Patch-Flake fix (PR #127 main `3e06c48d`)。8/8 USs。pytest 1635→1654 / Vitest 119→168 / Playwright 31→37。詳細 retro 見 `memory/project_phase57_12_agent_harness_ui_suite.md` |
-| **Last Convention Codify Sprint** | 57.10 PIVOTED ✅ 2026-05-09 — Frontend Convention Codify (CONVENTION.md 667 行 + STYLE.md 447 行;PR #122 main `7d85df4c`)|
-| **main HEAD** | `3e06c48d` (Sprint 57.12 via PR #127, 2026-05-10) |
-| **Next Phase 候選** | Phase 57.13+ 5 候選（user 明確選定才起草 plan）:(a) AD-Bundle-Size optimization sprint ~3-5 hr — main 296.58 kB,extract shared inline-panel components (LoopVisualizer/SubagentTree/SubagentStatusBadge/VerifierTypeBadge) to dedicated chunk / (b) Cat 11 deepening ~8-12 hr — close AD-Cat11-Multiturn-Full + AD-Cat11-ParentCtx-Full + AD-Cat11-Handoff-Events-Phase58+ / (c) Memory read facade completion ~5-7 hr — close AD-Memory-Role-Session-Phase58 + AD-Memory-ABC-ListMethods（role+session layers + MemoryStore ABC list_*）/ (d) Tier 1 IaC + DR drill ~15-20 hr / (e) SOC 2 + SBOM ~12-15 hr |
-| **Roadmap** | Phase 49-55 V2 ✅ / Phase 56-58 SaaS Stage 1 3/3 ✅ / Phase 57+ Frontend 9/N（57.1/57.3/57.4/57.7/57.8/57.9/57.11/57.12×2）/ 57.10 PIVOTED Convention Codify ✅ |
+| **Phase** | V2 22/22 ✅ + SaaS Stage 1 3/3 ✅ + SaaS Frontend 10/N（57.1/57.3/57.4/57.7/57.8/57.9/57.11/57.12×2 + 57.13 Foundation 1/N COMPLETE）+ 57.10 PIVOTED Convention Codify ✅ |
+| **Latest Sprint** | 57.13 ✅ 2026-05-10 — **Frontend Foundation 1/N COMPLETE** + Frontend↔Backend Wiring (auth flow 端到端: D-PRE-8 middleware fix + `/auth/me` + dev-login + `<RequireAuth>` 4-page gate + cross-tenant admin + RLS;design-system layer `components/ui/`;Toast + Sentry/Web Vitals/Cat-12 telemetry;i18n en/zh-TW;jsx-a11y + Lighthouse CI;auth-pages rewrite lazy → main 297.89 kB ~flat) (PR #130 main `1c0e55d7`)。13/15 USs full + 2 minimal-viable。pytest 1658→1676+4 / Vitest 168→236 / Playwright +5 spec files。Carryovers: AD-Frontend-E2E-Sweep / AD-Inline-Style-Cleanup-Sweep / AD-Visual-Baseline-Generation / AD-Bundle-Size(降 optional)。詳細 retro 見 `memory/project_phase57_13_frontend_foundation_completion.md` |
+| **Last Convention Codify Sprint** | 57.10 PIVOTED ✅ 2026-05-09 — Frontend Convention Codify (CONVENTION.md 667→4 §addenda 行 + STYLE.md 447 行;PR #122 main `7d85df4c`;57.13 加 CONVENTION §10-§13 design-system/i18n/a11y/performance)|
+| **main HEAD** | `1c0e55d7` (Sprint 57.13 via PR #130, 2026-05-10) |
+| **Next Phase 候選** | Phase 57.14+ 候選（user 明確選定才起草 plan）:(a) **AD-Frontend-E2E-Sweep** ~4-6 hr — 剩餘 e2e spec regression（tenant_settings/verification 等對 Day 4-8 改動的 stale assertion）+ visual baselines 在 CI Linux 產生 + un-skip / (b) **AD-Inline-Style-Cleanup-Sweep** ~5-8 hr — ~15 檔 `style={{}}` → Tailwind（順帶解決 chat-v2 color-contrast）+ no-inline-style guard / (c) Lighthouse/visual → required CI check (AD-Lighthouse-Visual-Hard-Gate) / (d) IAM Block B spike ~12-18 hr — WorkOS SCIM/SAML/org-level（gap-analysis §1.2;spike → Day-4 design-note extract）/ (e) AD-Bundle-Size code-split（split i18next out of critical path — 降為 optional）/ (f) Tier 1 IaC + DR drill ~15-20 hr / (g) SOC 2 + SBOM ~12-15 hr |
+| **Roadmap** | Phase 49-55 V2 ✅ / Phase 56-58 SaaS Stage 1 3/3 ✅ / Phase 57+ Frontend 10/N（57.1/57.3/57.4/57.7/57.8/57.9/57.11/57.12×2/57.13 Foundation 1/N COMPLETE）/ 57.10 PIVOTED Convention Codify ✅ |
 | **Tech Stack** | FastAPI + React 18 + PostgreSQL + Redis（V1 沿用）|
 | **Architecture** | TAO/ReAct loop + 11+1 範疇 全 Level 4（Cat 9 L5）+ LLM Provider 中性（CI-enforced）+ Multi-tenant 3 鐵律 |
 | **Branch Protection** | enforce_admins=true / **review_count=0**（solo-dev policy 永久，2026-05-03 Sprint 53.2 起）/ 5 active required CI checks |
@@ -574,10 +574,10 @@ V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（M
 
 ---
 
-**Last Updated**: 2026-05-10 (Sprint 57.12 closeout — Agent Harness UI Suite + Cat 11 SSE + Cat 3 /api/v1/memory + AD-AdminTenant-Patch-Flake)
-**Recent Sprints (詳情見 memory/)**: 57.12 (Agent Harness UI Suite) / 57.11 (Verification ship) / 57.10 (Convention Codify) / 57.9 (Governance ship) / 57.8 (AppShell V2 + chat-v2) / 57.7 (IAM + frontend foundation) / 57.6 (Reality Gap Fix)
+**Last Updated**: 2026-05-10 (Sprint 57.13 closeout — Frontend Foundation 1/N COMPLETE: auth flow 端到端 + design-system layer + Sentry/Web Vitals/Cat-12 telemetry + i18n + jsx-a11y + Lighthouse CI + auth-pages rewrite)
+**Recent Sprints (詳情見 memory/)**: 57.13 (Frontend Foundation 1/N COMPLETE — auth flow / design-system / obs / i18n / a11y / Lighthouse) / 57.12 (Agent Harness UI Suite) / 57.11 (Verification ship) / 57.10 (Convention Codify) / 57.9 (Governance ship) / 57.8 (AppShell V2 + chat-v2) / 57.7 (IAM + frontend foundation)
 **Project Start**: 2025-11-14
-**Current Phase**: V2 22/22 ✅ + SaaS Stage 1 3/3 ✅ + SaaS Frontend 9/N（57.12 Agent Harness UI Suite — /loop-debug + /memory + chat-v2 inline LoopVisualizer/SubagentTree）。Phase 57.13+ 候選 5 條 pending user 明確選定（見上方表格 Next Phase 候選 row）。
-**main HEAD**: `3e06c48d` (Sprint 57.12 via PR #127, 2026-05-10)
+**Current Phase**: V2 22/22 ✅ + SaaS Stage 1 3/3 ✅ + SaaS Frontend 10/N（57.13 Frontend Foundation 1/N COMPLETE — auth flow 端到端 + `components/ui/` design-system + Toast/Sentry/Web Vitals/Cat-12 telemetry + i18n en/zh-TW + jsx-a11y + Lighthouse CI + auth-pages rewrite lazy-loaded）。Carryovers: AD-Frontend-E2E-Sweep / AD-Inline-Style-Cleanup-Sweep / AD-Visual-Baseline-Generation / AD-Bundle-Size(降 optional)。Phase 57.14+ 候選 7 條 pending user 明確選定（見上方表格 Next Phase 候選 row）。
+**main HEAD**: `1c0e55d7` (Sprint 57.13 via PR #130, 2026-05-10)
 **V2 Authority**: `docs/03-implementation/agent-harness-planning/` (21 docs — 20 規劃 + 1 review)
 **V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`
