@@ -248,29 +248,32 @@ Related:
 
 ---
 
-## Day 7 — US-B5: i18n (i18next + react-i18next, zh-TW + en)
+## Day 7 — US-B5: i18n (i18next + react-i18next, zh-TW + en) ✅ 2026-05-10 (commit `890876f7`)
 
 ### 7.1 npm installs + i18n setup
-- [ ] **`package.json`** — `+i18next` `+react-i18next` `+i18next-browser-languagedetector` `+i18next-parser`(dev) + script `"i18n:extract": "i18next-parser ..."`
-- [ ] **NEW `i18n/index.ts`** — `i18n.use(LanguageDetector).use(initReactI18next).init({resources:{en,"zh-TW"}, fallbackLng:"en", detection:{order:["localStorage","navigator"], lookupLocalStorage:"ipa-locale"}, interpolation:{escapeValue:false}})`
-- [ ] **NEW `i18n/locales/{en,zh-TW}/{common,auth}.json`** — namespace `common`（shell / sidebar nav / usermenu / 通用按鈕 Save/Cancel/Retry/Loading/...）+ `auth`（login / callback / dev-login）
-- [ ] **`main.tsx`** — `import "./i18n"` before render
+- [x] **`package.json`** — `+i18next@^26` `+react-i18next@^17` `+i18next-browser-languagedetector@^8` `+i18next-parser@^9`(dev) + script `"i18n:extract": "i18next-parser --config i18next-parser.config.cjs"` (i18next-parser is npm-deprecated → use as extraction-only dev tool, not CI; D-DAY7-2). NEW root `i18next-parser.config.cjs` (CommonJS — package.json is `"type":"module"`)
+- [x] **NEW `src/i18n/index.ts`** — `i18n.use(LanguageDetector).use(initReactI18next).init({resources, fallbackLng:"en", supportedLngs, ns:["common","auth"], defaultNS:"common", detection:{order:["localStorage","navigator"], lookupLocalStorage:"ipa-locale", caches:["localStorage"]}, interpolation:{escapeValue:false}, react:{useSuspense:false}})` + exports `SUPPORTED_LOCALES` / `LOCALE_STORAGE_KEY` / `resources`
+- [x] **NEW `src/i18n/locales/{en,zh-TW}/{common,auth}.json`** — `common`（shell.* / nav.* incl. nav.category.* / userMenu.* / action.* / verification.tab.*+tabsLabel）+ `auth`（signInTitle/Subtitle / loginWithWorkOS / errorTitle / completing / backToLogin / devSection.*）
+- [x] **`main.tsx`** — `import "./i18n"` before `createRoot`
 
 ### 7.2 採用
-- [ ] **`routes.config.ts`** — 加 `nameKey` for i18n（或 Sidebar 直接 `t(route.name)`）
-- [ ] **`AppShellV2` / `Sidebar`** — nav labels via `t()`
-- [ ] **`UserMenu`** — locale switcher（en ⇄ 繁中：寫 `ipa-locale` localStorage + `i18n.changeLanguage`）
-- [ ] **`pages/auth/login` + `callback`** — strings via `t()`（namespace `auth`）
-- [ ] **2 個 feature page 示範**（建議 cost-dashboard + verification）— `useTranslation` 採用
-- [ ] `CONVENTION.md` — §i18n addendum
+- [x] **`routes.config.ts`** — added required `nameKey: string` to `RouteEntry` + populated all 13 entries (`name` kept as dev/debug fallback; D-DAY7-1)
+- [x] **`Sidebar`** — nav labels via `t(entry.nameKey, entry.name)`; category headers `t("nav.category.${category}")`; aria-labels + "Coming soon" + collapse toggle via `t()` (replaced module-const `CATEGORY_LABELS`; D-DAY7-3). `AppShellV2` itself unchanged — its only string is the `pageTitle` prop, translated by callers
+- [x] **`UserMenu`** — filled the reserved locale-switcher slot: `<DropdownMenuLabel>Language</DropdownMenuLabel>` + one `<DropdownMenuItem>` per `SUPPORTED_LOCALES` (active one marked with `<Check>` + `aria-current`); `onSelect` writes `localStorage["ipa-locale"]` + `i18n.changeLanguage(id)`; "Signed in as"/"Sign out"/aria-labels via `t()` (D-DAY7-4)
+- [x] **`pages/auth/login` + `callback`** — all strings via `t(... , {ns:"auth"})` incl. `devSection.errorFailed` interpolation `{{status}}`; **inline styles NOT touched** — tailwind-ize + `<AuthShell>` wrap stays in US-B9 scope (D-DAY7-5; avoid scope bleed)
+- [x] **2 feature-page demos** — `cost-dashboard/index.tsx` (`pageTitle={t("nav.costDashboard")}`) + `verification/index.tsx` (`pageTitle={t("nav.verification")}` + tab labels `t("verification.tab.recent")`/`...correctionTrace` + tabs aria-label)
+- [x] `CONVENTION.md` — added §11 i18n Convention (rules table / namespaces / extraction tool / test reset rule)
 
 ### 7.3 Tests
-- [ ] **`tests/unit/i18n/i18n.test.ts`**（en/zh-TW bundle 相同 key set；changeLanguage 生效）
-- [ ] **`tests/e2e/i18n/locale-switch.spec.ts`**（切繁中 → sidebar label 變 + reload 後仍繁中）
+- [x] **`tests/unit/setup.ts`** — `import "@/i18n"` so component tests render real strings not raw keys
+- [x] **NEW `tests/unit/i18n/i18n.test.ts`** (6 tests) — 2 supported locales / en≡zh-TW key parity per ns / every leaf is non-empty string / `changeLanguage` switches resolved translations / interpolates `devSection.errorFailed` / unknown-locale → en fallback
+- [x] **`tests/unit/components/UserMenu.test.tsx`** — +1 test (locale switcher offers both locales + clicking persists `ipa-locale` + flips `resolvedLanguage`); `afterEach` resets language + clears `ipa-locale` (singleton/localStorage leak guard)
+- [x] **NEW `tests/e2e/i18n/locale-switch.spec.ts`** — self-contained (mocks `/auth/me` + cost-summary): /cost-dashboard renders English sidebar → open UserMenu → click "繁體中文" → sidebar nav shows zh-TW labels → reload → still zh-TW. ⚠️ **written, not executed in this session (no dev server)** → US-C1 e2e sweep verifies (D-DAY7-6, alongside D-DAY5-3 governance e2e + Day 1-2 auth-gate e2e)
 
 ### 7.4 Day 7 wrap
-- [ ] **Day 7 progress entry** + drift catalog
-- [ ] **Day 7 commit**: `feat(sprint-57-13, Day 7): US-B5 i18n (i18next zh-TW/en + shell/usermenu/auth/2-page adoption + locale switcher)`
+- [x] **Day 7 progress entry** + drift catalog (D-DAY7-1..6)
+- [x] **Day 7 commit**: `feat(sprint-57-13, Day 7): US-B5 i18n (i18next zh-TW/en + shell/usermenu/auth/2-page adoption + locale switcher)` → `890876f7`
+- Verify: vitest **56 files / 233 pass** (Day 6: 55/226; +1 file +7 tests) / lint clean / build OK (main bundle **304.37 kB** gzip 97.66 — **+59 kB** from i18next+react-i18next bundled into main; can't dynamic-import — must init before render; → AD-Bundle-Size carryover continuation, D-DAY7-7) / backend untouched (pytest baseline 1676+4 / 9-9 V2 lints holds)
 
 ---
 
