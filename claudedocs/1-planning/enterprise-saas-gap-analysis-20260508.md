@@ -3,7 +3,8 @@ title: Enterprise SaaS Gap Analysis — V2 vs Industry Baseline 2026
 purpose: Comprehensive checklist of what an enterprise-grade AI Agent SaaS platform should cover, identifying topics V2 (00-17 規劃文件) never discussed
 category: Phase 57.7+ planning input
 created: 2026-05-08
-status: Draft (awaiting user review)
+last_updated: 2026-05-10 (Phase 57.6-57.12 progress reflected — see §0.4 Progress Tracker)
+status: Active — partially actioned (Tier 0 Block B done + Block A partial via Phase 57.7; Top 10 #1-#3 done/partial, #4-#10 still open; Buy decision: IAM=WorkOS, other 8 undecided; only 20-iam-deep-dive.md of the 18-25 new docs created)
 authors: Claude Code (合成 8 個 sub-agent 平行調查)
 sources:
   - 8 sub-agent reports (Frontend / Identity / DevOps / Observability / Security / Data / API / Commerce)
@@ -21,6 +22,8 @@ sources:
 ---
 
 ## 0. Executive Summary
+
+> ⏱️ **2026-05-10 進度註**：§0.1-§0.3 的數字是 **2026-05-08 baseline**。Phase 57.6-57.12 之後的實際進展見 **§0.4 Progress Tracker**（IAM 與 Frontend foundation 已從「最嚴重 RED」降為「partial / 大致完成」；其餘缺口大致未變）。
 
 ### 0.1 V2 對業界 baseline 整體覆蓋率
 
@@ -53,18 +56,94 @@ sources:
 
 > 順序按「不修則 V2 無法 productize」嚴重度排序，**多項彼此依賴**。
 
-| # | Gap | 嚴重度 | 領域 | 連鎖影響 |
-|---|-----|-------|------|---------|
-| 1 | **Auth (Login + Refresh + RS256+JWKS + DB-backed RBAC)** | 🔴 Block-all | Identity | 沒有 demo 路徑；前端 4 ship pages 假設 token 自動存在 |
-| 2 | **Frontend Auth UX shell** (`/login` / `/callback` / MFA placeholder) | 🔴 Block-all | Frontend | 同上 |
-| 3 | **Frontend Foundation 1/N** (Tailwind 4 + shadcn/ui + TanStack Query + Error Boundary) | 🔴 Block | Frontend | 16.md 規劃了，0 安裝；後續每頁重造輪子 |
-| 4 | **Status Page + Incident Response process + On-call** | 🔴 Compliance | SRE | SOC 2 CC7 必備；client SLA 信任基礎 |
-| 5 | **SOC 2 control matrix + GRC tooling decision** | 🔴 Compliance | Security | 任何 enterprise 客戶 first ask |
-| 6 | **SBOM + Cosign + Trivy 在 CI** | 🔴 Compliance | DevOps/Security | EU CRA 2026 Sep 強制 |
-| 7 | **APAC PDPA / 個資法 / PDPO compliance map** | 🔴 Local | Privacy | 目標市場 mandatory；14.md 完全沒提 |
-| 8 | **IaC (Terraform) + KeyVault + 生產 K8s/Helm** | 🟠 Production | DevOps | 否則無法 reliably deploy 正式環境 |
-| 9 | **Public API spec (RFC 7807 + Idempotency-Key + cursor pagination + sunset)** | 🟠 Customer | API | 任何 third-party 整合都會卡 |
-| 10 | **Outbox pattern (transactional event emission)** | 🟠 Correctness | Data | Stripe billing 雙扣 / 漏扣風險 |
+> **狀態欄 2026-05-10**：✅ done · 🟡 partial · ❌ open。詳見 §0.4 Progress Tracker。
+
+| # | Gap | 嚴重度 | 領域 | 狀態 (2026-05-10) | 連鎖影響 |
+|---|-----|-------|------|-------------------|---------|
+| 1 | **Auth (Login + Refresh + RS256+JWKS + DB-backed RBAC)** | 🔴 Block-all | Identity | 🟡 **partial** — Phase 57.7: WorkOS 定案 + OIDC hosted login flow (`/auth/{login,callback,logout}` 後端) + DB-backed RBAC hybrid path (opt-in env flag)。**仍缺**: RS256+JWKS (V2 內部 JWT 維持 HS256 — Path 1 決策) / refresh rotation / SAML / SCIM / MFA → Phase 58+ | 沒有 demo 路徑；前端 4 ship pages 假設 token 自動存在 |
+| 2 | **Frontend Auth UX shell** (`/login` / `/callback` / MFA placeholder) | 🔴 Block-all | Frontend | 🟡 **partial** — Phase 57.7+57.8: `/auth/login` + `/auth/callback` 頁面 (bare) + AuthShell + chat-v2 first auth-gated page。**仍缺**: sign-up / forgot password / MFA settings → Phase 58.2+ Frontend Pages 11 | 同上 |
+| 3 | **Frontend Foundation 1/N** (Tailwind 4 + shadcn/ui + TanStack Query + Error Boundary) | 🔴 Block | Frontend | ✅ **done (大致)** — Phase 57.7 (install + AppShell V2) + 57.9 (TanStack Query 4-page migration) + 57.10 (CONVENTION.md 667 + STYLE.md 447 codify): Tailwind 4 ✓ / `@tanstack/react-query` 5 ✓ / react-hook-form + zod ✓ / `AppErrorBoundary.tsx` ✓。**跳過**: shadcn/ui (YAGNI — 用 plain Tailwind) / Sentry (placeholder only) / i18next / Lighthouse CI → Phase 58.2+ | 16.md 規劃了，0 安裝；後續每頁重造輪子 |
+| 4 | **Status Page + Incident Response process + On-call** | 🔴 Compliance | SRE | ❌ **open** — 原 roadmap Phase 57.9 Block E；57.9 pivot 去做 Governance ship，未做 | SOC 2 CC7 必備；client SLA 信任基礎 |
+| 5 | **SOC 2 control matrix + GRC tooling decision** | 🔴 Compliance | Security | ❌ **open** — 原 roadmap Phase 57.8 Block C；57.8 pivot 去做 AppShell V2 + chat-v2 ship，未做 | 任何 enterprise 客戶 first ask |
+| 6 | **SBOM + Cosign + Trivy 在 CI** | 🔴 Compliance | DevOps/Security | ❌ **open** — 原 roadmap Phase 57.8 Block D；未做 (EU CRA 2026 Sep 強制) | EU CRA 2026 Sep 強制 |
+| 7 | **APAC PDPA / 個資法 / PDPO compliance map** | 🔴 Local | Privacy | ❌ **open** — 原 roadmap Phase 57.9 Block F；未做 | 目標市場 mandatory；14.md 完全沒提 |
+| 8 | **IaC (Terraform) + KeyVault + 生產 K8s/Helm** | 🟠 Production | DevOps | ❌ **open** — Phase 58.0+ Tier 1，未到 | 否則無法 reliably deploy 正式環境 |
+| 9 | **Public API spec (RFC 7807 + Idempotency-Key + cursor pagination + sunset)** | 🟠 Customer | API | ❌ **open** — Phase 58.1 Tier 1，未到。(57.12 的 `/api/v1/memory` 是內部風格 read endpoint，非 public API spec) | 任何 third-party 整合都會卡 |
+| 10 | **Outbox pattern (transactional event emission)** | 🟠 Correctness | Data | ❌ **open** — Phase 58.1 Block M，未到 | Stripe billing 雙扣 / 漏扣風險 |
+
+---
+
+## 0.4 Progress Tracker（2026-05-10 — Phase 57.6-57.12 後更新）
+
+> 本節為事後追加，記錄本 gap analysis（v1 draft 2026-05-08）發布後實際發生的進展。**原文 §1-§7 的 baseline 描述保持不動**（歷史快照價值）；本節是 single source of「哪些動了」。
+
+### 已完成的相關 sprint（2026-05-08 ~ 2026-05-10）
+
+| Sprint | 主題 | 對本 doc 的影響 |
+|--------|------|-----------------|
+| **57.6** Reality Gap Fix | 關閉 Sprint 57.5 top 5 RED（R1 entry-point drift / R2 .env autoload / R3 chat DB persist / R4 5-page scope / R5 AP-4 lint+E2E real-LLM gate）| §2.1 連鎖依賴最底層 R3 已修一部分 |
+| **57.7** IAM Foundation + Frontend Foundation 1/N（spike）| Block A 部分 + Block B；extract `20-iam-deep-dive.md` | Top 10 #1 #2 partial / #3 done；§5 IAM = WorkOS 定案；§3.2 新文件 20 已建 |
+| **57.8** AppShell V2 + chat-v2 ship | AppShell V2 + Sidebar + routes.config single-source；chat-v2 first auth-gated page | §1.1 Frontend #3 Routing + #20 Auth UX 推進 |
+| **57.9** Governance ship + TanStack 4-page migration | TanStack Query 全棧鋪到 4 admin pages | §1.1 Frontend #2 State Management 推進；**注意**：原 roadmap Phase 57.9 = Status Page + APAC，被 pivot |
+| **57.10** Frontend Convention Codify（PIVOTED）| CONVENTION.md 667 行 + STYLE.md 447 行 | §1.1 Frontend #16 Testing + 整體 convention drift 收斂；§2.2 paper-vs-runtime drift 部分緩解 |
+| **57.11** Verification Real Ship + AD-Frontend-SSE-Silent-Drop-Fix | Cat 10 verification UI + SSE 3-edit checklist codified | agent harness UI 推進（非 SaaS 外圍）|
+| **57.12** Agent Harness UI Suite + Cat 11 SSE + Cat 3 `/api/v1/memory` + AD-AdminTenant-Patch-Flake | LoopVisualizer + MemoryViewer + SubagentTree（2 NEW pages + chat-v2 inline）| §1.1「16.md 沒提的 agent-harness UI」已 ship；Cat 3 read facade ≠ §1.7 public API spec |
+
+### Top 10 Critical Gaps 進度
+
+| # | Gap | 狀態 | 備註 |
+|---|-----|------|------|
+| 1 | Auth | 🟡 partial | WorkOS 定案 + OIDC login flow + RBAC hybrid；RS256/JWKS/refresh-rotation/SAML/SCIM/MFA 延 58+ |
+| 2 | Frontend Auth UX shell | 🟡 partial | `/auth/login` `/auth/callback` 頁面存在（bare）+ AuthShell；sign-up/forgot/MFA 延 58.2+ |
+| 3 | Frontend Foundation 1/N | ✅ done（大致）| Tailwind 4 + TanStack Query 5 + RHF/zod + AppErrorBoundary + AppShell V2 + CONVENTION/STYLE。跳過 shadcn（YAGNI）/Sentry（placeholder）/i18next/Lighthouse |
+| 4 | Status Page + Incident + On-call | ❌ open | roadmap 57.9 Block E 被 pivot |
+| 5 | SOC 2 control matrix + GRC 決策 | ❌ open | roadmap 57.8 Block C 被 pivot |
+| 6 | SBOM + Cosign + Trivy in CI | ❌ open | roadmap 57.8 Block D；EU CRA 2026 Sep 強制 |
+| 7 | APAC PDPA / 個資法 / PDPO map | ❌ open | roadmap 57.9 Block F 被 pivot |
+| 8 | IaC + KeyVault + 生產 K8s/Helm | ❌ open | Phase 58.0+ Tier 1 未到 |
+| 9 | Public API spec | ❌ open | Phase 58.1 Tier 1 未到（`/api/v1/memory` 為內部 read endpoint，非 public spec）|
+| 10 | Outbox pattern | ❌ open | Phase 58.1 Block M 未到 |
+
+**小計**：Top 10 中 1 done + 2 partial + 7 open。Compliance/SRE 軸（#4-#7）+ 生產化/API/Data 軸（#8-#10）完全未動。
+
+### Tier 0 Block 完成度（§4.1）
+
+| Block | 狀態 | 備註 |
+|-------|------|------|
+| A: IAM Foundation | 🟡 partial | WorkOS + OIDC hosted login + RBAC hybrid path；RS256/JWKS/SAML/SCIM/MFA/refresh rotation 延 58+（見 `20-iam-deep-dive.md` §4 open invariants）|
+| B: Frontend Foundation 1/N | ✅ done（大致）| 缺 shadcn/Sentry/Lighthouse CI |
+| C: SOC 2 readiness spike | ❌ open | |
+| D: SBOM + Supply Chain | ❌ open | EU CRA 2026 Sep 強制 |
+| E: Status Page + Incident Process | ❌ open | |
+| F: APAC + EU Compliance Map | ❌ open | |
+
+→ Tier 0 約 2/6 Block（A partial + B done）；Compliance/SRE 三 Block（C/D/E/F）完全未碰。
+
+### Buy-vs-Build 決策（§5，9 條）
+
+| 領域 | 狀態 | 備註 |
+|------|------|------|
+| IAM | ✅ **DECIDED 2026-05-10: WorkOS** | Phase 57.7 vendor matrix（vs Clerk/Auth0/Supabase 四欄）；理由 SCIM native + SAML best-in-class B2B + SOC 2 inherited；intermediate artifact `agent-harness-execution/phase-57/sprint-57-7/iam-vendor-matrix.md` |
+| Billing / Support / Product Analytics / Feature Flags / GRC / Status Page / Email / CMS（8 條）| ❌ **undecided** | 尚未進 vendor 評估 spike |
+
+### 新規劃文件 18-25（§3.2）
+
+| 編號 | 狀態 |
+|------|------|
+| 20 `20-iam-deep-dive.md` | ✅ **已建** — Phase 57.7 Day 4 spike-extract（verified ratio ≥95%，8-Point Quality Gate 通過）|
+| 18 / 19 / 21 / 22 / 23 / 24 / 25 | ❌ **未建** — 按 doc-level rolling 紀律順延至對應 Tier 0/1 spike 跑完（§3 開頭 Meta-Anti-Pattern Warning 仍適用）|
+| 14.md 拆 14a/14b/14c；13/16/15/09 擴充 | ❌ **未做** |
+
+### §7 四項決策請求 — 實際狀態
+
+1. **方向選擇** → 實際走了 **Option C(Pragmatic)變體**：Phase 57.7 做 Tier 0 Block A+B，之後 57.8-57.12 繼續 feature ship（沒等 SOC 2 / Status Page）
+2. **Buy-vs-Build** → 只有 IAM(WorkOS) 定案，其餘 8 條 undecided
+3. **18-25 新文件** → 只 `20-iam` 經 spike-extract 建立（刻意按 rolling 不預寫其餘）
+4. **目標市場聚焦** → **未明確決策**（APAC compliance map / EU CRA / EU AI Act 全未動）
+
+### 仍適用的 baseline 結論（§7）
+
+V2 在 agent harness 11+1 範疇核心**業界領先**（且 57.11+57.12 又補了 Cat 10/Cat 11/Cat 3 的 UI/SSE/REST 表面）；在 enterprise SaaS 外圍能力**整體仍 ~30-40%**，主要缺口未變：**Compliance program（SOC 2 / EU CRA / EU AI Act / APAC）+ SRE operational layer（incident/on-call/status page）+ DevOps 生產化（IaC/multi-region/SBOM）+ Public API surface + Data platform + Commercial layer**。IAM 與 Frontend foundation 已從「最嚴重」降級為「partial / 大致完成」。
 
 ---
 
@@ -379,14 +458,14 @@ V2 21 docs 完整覆蓋 agent harness 11+1 範疇 + adapter 中性 + multi-tenan
 
 > **目標**：4-6 sprint 內讓 V2 從「demo-able to admin only」進化為「demo-able to non-admin enterprise prospect」。
 
-| Sprint Block | Scope | 預計規模 |
-|-------------|-------|---------|
-| **Block A: IAM Foundation** | OIDC SSO (Entra/Google/Okta) + RS256+JWKS + Refresh rotation + DB-backed RBAC + Login/Register/Logout endpoints + frontend Auth UX shell | 2-3 sprint（自建）OR 1 sprint（WorkOS/Clerk hosted） |
-| **Block B: Frontend Foundation 1/N** | Tailwind 4 + shadcn/ui + TanStack Query + RHF/Zod + Error Boundary + Toast + AppShell layout + Sentry + Lighthouse CI | 1-2 sprint |
-| **Block C: SOC 2 readiness spike** | Drata/Vanta/Sprinto 評估 + control matrix to TSC + auto evidence collection + quarterly access review process | 1 sprint planning + 1 sprint impl |
-| **Block D: SBOM + Supply Chain** | gitleaks workflow + Trivy in backend-ci + Cosign keyless signing + SBOM via Syft + SLSA L2 attestation | 1 sprint（**EU CRA 2026 Sep 強制**） |
-| **Block E: Status Page + Incident Process** | BetterStack/Statuspage.io 評估 / 自建決策 + on-call rotation tooling + runbook library skeleton + postmortem template | 1 sprint |
-| **Block F: APAC + EU Compliance Map** | Taiwan 個資法 / HK PDPO / Singapore PDPA control mapping + EU AI Act high-risk classification（若 EU pipeline）+ ROPA template | 1 sprint planning |
+| Sprint Block | Scope | 預計規模 | 狀態 (2026-05-10) |
+|-------------|-------|---------|-------------------|
+| **Block A: IAM Foundation** | OIDC SSO (Entra/Google/Okta) + RS256+JWKS + Refresh rotation + DB-backed RBAC + Login/Register/Logout endpoints + frontend Auth UX shell | 2-3 sprint（自建）OR 1 sprint（WorkOS/Clerk hosted） | 🟡 **partial** — Phase 57.7: WorkOS 定案 + OIDC hosted login flow + DB-backed RBAC hybrid (opt-in env);RS256/JWKS/refresh rotation/SAML/SCIM/MFA 延 58+(`20-iam-deep-dive.md` §4) |
+| **Block B: Frontend Foundation 1/N** | Tailwind 4 + shadcn/ui + TanStack Query + RHF/Zod + Error Boundary + Toast + AppShell layout + Sentry + Lighthouse CI | 1-2 sprint | ✅ **done(大致)** — Phase 57.7(install + AppShell V2)+ 57.9(TanStack 4-page)+ 57.10(CONVENTION/STYLE);跳過 shadcn(YAGNI)/Sentry(placeholder)/Lighthouse CI |
+| **Block C: SOC 2 readiness spike** | Drata/Vanta/Sprinto 評估 + control matrix to TSC + auto evidence collection + quarterly access review process | 1 sprint planning + 1 sprint impl | ❌ **open** — 原排 Phase 57.8;被 pivot 去做 AppShell V2 + chat-v2 |
+| **Block D: SBOM + Supply Chain** | gitleaks workflow + Trivy in backend-ci + Cosign keyless signing + SBOM via Syft + SLSA L2 attestation | 1 sprint（**EU CRA 2026 Sep 強制**） | ❌ **open** — 原排 Phase 57.8;未做 |
+| **Block E: Status Page + Incident Process** | BetterStack/Statuspage.io 評估 / 自建決策 + on-call rotation tooling + runbook library skeleton + postmortem template | 1 sprint | ❌ **open** — 原排 Phase 57.9;被 pivot 去做 Governance ship |
+| **Block F: APAC + EU Compliance Map** | Taiwan 個資法 / HK PDPO / Singapore PDPA control mapping + EU AI Act high-risk classification（若 EU pipeline）+ ROPA template | 1 sprint planning | ❌ **open** — 原排 Phase 57.9;未做 |
 
 **Tier 0 總計**：6-8 sprint（自建路線）OR 4-6 sprint（hosted Auth + 自建其他）
 
@@ -426,7 +505,7 @@ V2 21 docs 完整覆蓋 agent harness 11+1 範疇 + adapter 中性 + multi-tenan
 
 | 領域 | Build（自建） | Buy（hosted SaaS） | V2 推薦 |
 |------|------------|-------------------|---------|
-| **IAM** | 15-25 sprint Tier 0+1 | WorkOS（B2B 強）/ Clerk（DX）/ Auth0（mature）/ Supabase（OSS） — 1 sprint 達 Tier 0+1 大部分 | **🟢 Buy WorkOS / Clerk** — V2 核心差異化是 agent harness，不是 IAM |
+| **IAM** | 15-25 sprint Tier 0+1 | WorkOS（B2B 強）/ Clerk（DX）/ Auth0（mature）/ Supabase（OSS） — 1 sprint 達 Tier 0+1 大部分 | ✅ **DECIDED 2026-05-10: WorkOS** (Phase 57.7 vendor matrix `sprint-57-7/iam-vendor-matrix.md`;理由 SCIM native + SAML best-in-class B2B + SOC 2 inherited) — 已落地 OIDC hosted login flow + RBAC hybrid path |
 | **Billing** | 8-15 sprint | Stripe Billing（dev）/ Chargebee（hybrid）/ Recurly（dunning leader）/ Lago（OSS metering） | **🟢 Buy Stripe + Lago hybrid** — V2 cost_ledger 已等同 Lago metering layer，補 Stripe 即可 |
 | **Support** | 5-8 sprint | Zendesk / Intercom / Plain（Slack-native B2B）/ Freshdesk | **🟢 Buy Plain or Intercom** — 自建毫無 ROI |
 | **Product Analytics** | 5-10 sprint | PostHog（OSS all-in-one + LLM obs）/ Mixpanel / Amplitude | **🟢 Buy PostHog** — 含 feature flags + replay + LLM obs，覆蓋 3 個領域 |
@@ -446,22 +525,31 @@ V2 21 docs 完整覆蓋 agent harness 11+1 範疇 + adapter 中性 + multi-tenan
 
 ### Adjusted Roadmap（推薦執行）
 
+> **2026-05-10 update — 實際發生 vs 此 roadmap**：
+> - ✅ **Phase 57.7 = 照做**（IAM Foundation + Frontend Foundation 1/N + AD-Reality-3a/3b observer + extract `20-iam-deep-dive.md`）— ratio ~0.92
+> - ⚠️ **Phase 57.8 ≠ 照做**：roadmap 排 SOC 2 + SBOM；實際做 AppShell V2 + chat-v2 ship
+> - ⚠️ **Phase 57.9 ≠ 照做**：roadmap 排 Status Page + APAC；實際做 Governance ship + TanStack 4-page migration
+> - ➕ **Phase 57.10/57.11/57.12 = roadmap 沒列的 feature sprints**：Convention Codify / Verification Real Ship / Agent Harness UI Suite
+> - ⏳ **未做（roadmap 仍有效，待 user 選定起 sprint）**：SOC 2 + SBOM（原 57.8）/ Status Page + APAC compliance（原 57.9）/ Tier 1 IaC + DR drill / Public API + Webhook / Frontend Pages 11 + i18n + a11y
+> 
+> → 實際路線接近 **Option C(Pragmatic)**：先做 Tier 0 Block A+B，然後一連串 feature ship，把 compliance/SRE/生產化 Block 全部推到「待選定」。
+
 ```
-Phase 57.7  Auth Foundation + Frontend Foundation 1/N           ← Tier 0 第一波
+Phase 57.7  Auth Foundation + Frontend Foundation 1/N           ← Tier 0 第一波  ✅ 照做（2026-05-10）
    ├─ Block A: IAM Auth (hosted route via WorkOS pending eval)  6-8 hr
    ├─ Block B: Frontend Foundation 1/N                          8-10 hr
    ├─ AD-Reality 3a sessions/tool_calls observer wire           3-5 hr
    └─ Day 4 extract: 20-iam-deep-dive.md (Quality Gate 8/8)
    = ~20-25 hr; 1 sprint with 0.85 reality-check + 0.65 medium-frontend multipliers
 
-Phase 57.8  SOC 2 Readiness Spike + SBOM Supply Chain            ← deadline 驅動
+Phase 57.8  SOC 2 Readiness Spike + SBOM Supply Chain            ← deadline 驅動  ⚠️ 未做（57.8 改做 AppShell V2 + chat-v2 ship）
    ├─ Block C: SOC 2 vendor eval (Drata/Vanta/Sprinto) + control matrix
    ├─ Block D: SBOM + Cosign + Trivy + gitleaks pipeline (EU CRA 2026 Sep)
    ├─ EU AI Act 2026 Aug high-risk classification check
    └─ Day 4 extract: 21-compliance-program.md (Quality Gate 8/8)
    = ~12-15 hr; 1 sprint
 
-Phase 57.9  Status Page + APAC Compliance Map                    ← 運營 + 目標市場
+Phase 57.9  Status Page + APAC Compliance Map                    ← 運營 + 目標市場  ⚠️ 未做（57.9 改做 Governance ship + TanStack 4-page migration）
    ├─ Block E: Status Page (BetterStack 接 / 自建 decision) + On-call + Runbook + Postmortem template
    ├─ Block F: APAC PDPA / 個資法 / PDPO 真實控制比對 + ROPA template
    └─ Day 4 extract: 22-sre-incident-response.md + 21.md APAC addendum (Quality Gate 8/8)
@@ -563,5 +651,7 @@ V2 在 **enterprise SaaS web application 外圍能力****整體 ~30-40% baseline
 
 ---
 
-**文件版本**：v1 draft
-**下一步**：等待用戶對 §7 四項決策的回覆，再進入 Phase 57.7 sprint plan
+**文件版本**：v1.1（2026-05-10 — 加 §0.4 Progress Tracker + Top 10/Tier 0/Buy-vs-Build/Roadmap 狀態標註；§1-§7 baseline 描述保持不動作歷史快照）
+**已 actioned**：Phase 57.6（Reality Gap Fix）/ 57.7（IAM Foundation WorkOS + Frontend Foundation 1/N + extract `20-iam-deep-dive.md`）/ 57.8（AppShell V2 + chat-v2 ship）/ 57.9（Governance ship + TanStack 4-page）/ 57.10（Convention Codify）/ 57.11（Verification ship）/ 57.12（Agent Harness UI Suite + Cat 11 SSE + Cat 3 memory REST）
+**仍 open（roadmap 有效，待 user 選定起 sprint）**：SOC 2 + SBOM（Tier 0 Block C+D）/ Status Page + APAC compliance（Tier 0 Block E+F）/ Tier 1 IaC + DR drill / Public API + Webhook / Frontend Pages 11 + i18n + a11y / Buy-vs-Build 其餘 8 條 vendor 評估
+**下一步**：等用戶選定 Phase 57.13+ 方向（CLAUDE.md「Next Phase 候選」5 條 + 本 doc Tier 0 Block C-F + Tier 1 Block G-P 皆為候選池）
