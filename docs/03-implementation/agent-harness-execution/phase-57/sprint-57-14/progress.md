@@ -140,7 +140,8 @@ gh workflow run "Playwright E2E" --ref main
 - deferred post-merge: `CLAUDE.md` (main HEAD + Latest Sprint + Next Phase 候選 — remove AD-Frontend-E2E-Sweep, AD-Visual-Baseline-Generation converged) + `SITUATION-V2-SESSION-START.md` §第八部分
 
 ### PR
-- `git push -u origin feature/sprint-57-14-frontend-e2e-sweep` + `gh pr create` (pending — Day 3 commit first)
+- pushed `feature/sprint-57-14-frontend-e2e-sweep` + `gh pr create` → **PR #133** ✅
+- CI: `visual-baseline` job correctly `skipping` on PR events ✅; `Frontend E2E (chromium headless)` + 4 other required checks running
 - Squash merge 🚧 NOT in-session — surfaced to user (PR open + CI green → user decides)
 
 ### Day 3 commit

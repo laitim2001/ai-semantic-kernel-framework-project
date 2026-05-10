@@ -125,14 +125,14 @@ Related:
 - [ ] **Deferred post-merge** (not in this PR): `CLAUDE.md` (main HEAD + Latest Sprint row + Next Phase 候選 — remove `AD-Frontend-E2E-Sweep`, update `AD-Visual-Baseline-Generation` to converged version) + `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md` §第八部分
 
 ### 3.6 US-C1: PR open + closeout sync
-- [ ] **`git push -u origin feature/sprint-57-14-frontend-e2e-sweep`**
-- [ ] **`gh pr create`** — title `Sprint 57.14 — AD-Frontend-E2E-Sweep (e2e suite green + visual baseline CI mechanism)`; body: summary + test plan + V2 紀律 9 項 self-check + carryover note + post-merge doc-sync TODO + one-shot visual-baseline trigger note
-- [ ] **Verify 5 active CI checks green** — incl. `playwright-e2e` (this sprint's target — should now be green)
+- [x] **`git push -u origin feature/sprint-57-14-frontend-e2e-sweep`** ✅
+- [x] **`gh pr create`** → **PR #133** (https://github.com/laitim2001/ai-semantic-kernel-framework-project/pull/133) — title `Sprint 57.14 — AD-Frontend-E2E-Sweep (e2e suite green + visual baseline CI mechanism)`; body has summary + V2 紀律 9 項 self-check + test plan + post-merge follow-ups (visual-baseline workflow trigger + CLAUDE.md/SITUATION sync) + carryover
+- [ ] **Verify 5 active CI checks green** — pending CI run (the `visual-baseline` job correctly shows `skipping` on PR events ✅; `Frontend E2E (chromium headless)` = this sprint's target — should now be green)
 - [ ] **Squash merge** — 🚧 NOT done in-session: per executing-actions-with-care, squash-merge to `main` is surfaced to the user for confirmation (PR open + CI green → user decides)
 
 ### 3.7 Day 3 progress entry + commit
 - [x] **Day 3 progress entry** (validation sweep results + closeout)
-- [ ] **Day 3 commit**: `chore(sprint-57-14, Day 3): retrospective + memory + doc syncs + closeout`
+- [x] **Day 3 commit** `16da45d2` `chore(sprint-57-14, Day 3): retrospective + doc syncs + closeout` ✅ (+ `<bookkeeping>` for PR# fill)
 
 ---
 
