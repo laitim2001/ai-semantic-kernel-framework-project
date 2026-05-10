@@ -1,0 +1,71 @@
+/**
+ * File: frontend/src/features/memory/types.ts
+ * Purpose: TypeScript types mirroring backend /api/v1/memory Pydantic DTOs (Sprint 57.12 US-3).
+ * Category: Frontend / memory / types
+ * Scope: Phase 57 / Sprint 57.12 Day 2 / US-3
+ *
+ * Description:
+ *   Single-source TS contract for the memory feature folder consumed by:
+ *     - services/memoryService.ts (REST DTOs)
+ *     - hooks/useMemoryRecent.ts + useMemoryByScope.ts + useMemoryByTime.ts (TanStack Query)
+ *     - components/MemoryRecentList.tsx + MemoryByScopeBrowser.tsx (US-5)
+ *     - components/MemoryScopeBadge.tsx (5-layer badge)
+ *
+ *   Backend authority:
+ *     - MemoryEntryItem  ↔ backend Pydantic MemoryEntryItem (api/v1/memory.py)
+ *     - MemoryEntryPage  ↔ MemoryEntryPage (memory.py)
+ *     - MemoryLayer / MemoryTimeScale enums ↔ backend Enum (memory.py)
+ *
+ *   Per Sprint 57.12 Day 1 D1-008: 5-layer ORM tables have non-uniform
+ *   schemas, so MemoryEntryItem is a discriminated shape with nullable
+ *   layer-specific fields. Frontend renders fields conditionally on `layer`.
+ *   Phase 57.12 ships tenant + user + system fully; role + session → 501.
+ *
+ * Created: 2026-05-10 (Sprint 57.12 Day 2 / US-3)
+ *
+ * Modification History (newest-first):
+ *   - 2026-05-10: Initial creation (Sprint 57.12 Day 2 / US-3)
+ *
+ * Related:
+ *   - backend/src/api/v1/memory.py (Pydantic DTOs)
+ *   - sprint-57-12-plan.md §US-3
+ */
+
+export type MemoryLayer = "system" | "tenant" | "role" | "user" | "session";
+
+export type MemoryTimeScale = "permanent" | "quarterly" | "daily";
+
+export interface MemoryEntryItem {
+  id: string;
+  layer: MemoryLayer;
+  /** tenant_id / role_id / user_id / session_id depending on layer; null for system. */
+  scope_id: string | null;
+  /** key string; null for layers without a key column (e.g. user). */
+  key: string | null;
+  /** entry content; for session layer this is the summary. */
+  content: string;
+  category: string | null;
+  /** Unix epoch ms; only memory_user has expires_at. */
+  expires_at_ms: number | null;
+  /** Unix epoch ms. */
+  created_at_ms: number;
+  /** Unix epoch ms; role + session don't have updated_at. */
+  updated_at_ms: number | null;
+  /** Only tenant + user layers (via TenantScopedMixin). */
+  tenant_id: string | null;
+}
+
+export interface MemoryEntryPage {
+  items: MemoryEntryItem[];
+  total: number;
+  has_more: boolean;
+  next_offset: number | null;
+  page_size: number;
+}
+
+/** Filter for the /recent endpoint. layer is mandatory (single layer per request). */
+export interface MemoryRecentFilter {
+  layer: MemoryLayer;
+  limit: number;
+  offset: number;
+}
