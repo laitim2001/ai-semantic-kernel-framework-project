@@ -107,6 +107,14 @@ class Settings(BaseSettings):
     quota_enforcement_enabled: bool = False
     quota_estimated_tokens_per_call: int = 1000  # conservative pre-call reservation
 
+    # ---- Sprint 57.11 Cat 10 verification persistence (US-2) --------
+    # When True (default): correction_loop.run_with_verification's write
+    # hook best-effort INSERTs each VerificationPassed/VerificationFailed
+    # event into verification_log via VerificationLogRepository. DB flake
+    # is logged at WARNING but never breaks the agent loop event stream.
+    # Override via env: VERIFICATION_LOG_PERSIST_ENABLED=false (kill switch).
+    verification_log_persist_enabled: bool = True
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

@@ -96,6 +96,12 @@ from infrastructure.db.models.tools import (
     ToolResult,
 )
 
+# Sprint 57.11 Day 1 — Verification Log (US-1)
+from infrastructure.db.models.verification_log import (
+    VerificationLog,
+    VerifierType,
+)
+
 __all__ = [
     # Identity
     "Tenant",
@@ -145,4 +151,7 @@ __all__ = [
     # Cost Ledger (Sprint 56.3 Day 2 — US-3)
     "CostLedger",
     "CostType",
+    # Verification Log (Sprint 57.11 Day 1 — US-1)
+    "VerificationLog",
+    "VerifierType",
 ]
