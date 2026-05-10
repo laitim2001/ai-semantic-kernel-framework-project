@@ -68,9 +68,10 @@ Created: 2026-05-10 (drafted Day 0 fresh against main `0a46b86e` after
     findings catalogued — 0 RED requiring abort + 1 RED scope-confirming
     + 2 YELLOW scope-confirming + 1 GREEN already-ready)
 Last Modified: 2026-05-10
-Status: Draft (pending user approval before Day 0 commit)
+Status: ✅ COMPLETE (Day 4 closeout — 8/8 USs; ratio ~0.75; PR pending merge)
 
 Modification History (newest-first):
+    - 2026-05-10: Sprint 57.12 Day 4 closeout — 8/8 USs shipped; pytest 1635→1654 / Vitest 119→168 / Playwright 31→37; ratio ~0.75 (large multi-domain 5th); closes AD-Cat11-SSEEvents + AD-AdminTenant-Patch-Flake
     - 2026-05-10: Initial creation (Sprint 57.12 drafting; user 2026-05-10
       confirmed Option A bundle: All 3 UI + audit cycle + Cat 11 backend
       bundle; LoopVisualizer mount = inline + standalone; MemoryViewer = read

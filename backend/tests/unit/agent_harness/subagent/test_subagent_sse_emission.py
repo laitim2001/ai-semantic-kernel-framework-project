@@ -1,6 +1,7 @@
 """
 File: backend/tests/unit/agent_harness/subagent/test_subagent_sse_emission.py
-Purpose: Unit tests for Sprint 57.12 US-1 — DefaultSubagentDispatcher emits SubagentSpawned + SubagentCompleted SSE events (closes AD-Cat11-SSEEvents 54.2 carryover).
+Purpose: Unit tests — DefaultSubagentDispatcher emits SubagentSpawned +
+    SubagentCompleted SSE events (closes AD-Cat11-SSEEvents 54.2 carryover).
 Category: Tests / 範疇 11 (Subagent Orchestration) / Cat 12 (Observability)
 Scope: Sprint 57.12 US-1
 
@@ -126,7 +127,9 @@ async def test_spawned_event_carries_correct_metadata() -> None:
 @pytest.mark.asyncio
 async def test_completed_event_carries_summary_and_tokens() -> None:
     """SubagentCompleted populates subagent_id + summary + tokens_used from SubagentResult."""
-    chat = MockChatClient(responses=[_mock_response("subagent reply text", prompt=42, completion=18)])
+    chat = MockChatClient(
+        responses=[_mock_response("subagent reply text", prompt=42, completion=18)]
+    )
     emitter = _RecordingEmitter()
     dispatcher = DefaultSubagentDispatcher(chat_client=chat, event_emitter=emitter)
     sid = await dispatcher.spawn(

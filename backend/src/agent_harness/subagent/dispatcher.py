@@ -65,11 +65,6 @@ from agent_harness._contracts import (
     SubagentSpawned,
     TraceContext,
 )
-
-logger = logging.getLogger(__name__)
-
-# Sprint 57.12 US-1: best-effort event emitter; exception isolated from tool path.
-SubagentEventEmitter = Callable[[LoopEvent], Awaitable[None]]
 from agent_harness.subagent._abc import SubagentDispatcher
 from agent_harness.subagent.budget import BudgetEnforcer
 from agent_harness.subagent.exceptions import (
@@ -86,6 +81,11 @@ if TYPE_CHECKING:
     # Tool handler return type — see modes/as_tool.py for ToolHandler alias.
     from agent_harness._contracts import ToolSpec
     from agent_harness.subagent.modes.as_tool import ToolHandler
+
+logger = logging.getLogger(__name__)
+
+# Sprint 57.12 US-1: best-effort event emitter; exception isolated from tool path.
+SubagentEventEmitter = Callable[[LoopEvent], Awaitable[None]]
 
 
 class DefaultSubagentDispatcher(SubagentDispatcher):
@@ -134,9 +134,7 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
         try:
             await self._event_emitter(event)
         except Exception as exc:  # noqa: BLE001 — emission MUST NOT break tool execution
-            logger.warning(
-                "Subagent event emission failed (%s): %s", type(exc).__name__, exc
-            )
+            logger.warning("Subagent event emission failed (%s): %s", type(exc).__name__, exc)
 
     async def spawn(
         self,

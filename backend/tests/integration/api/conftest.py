@@ -34,7 +34,7 @@ Description:
       handles dependent rows (memory_*, users, conversations, ...).
 
 Modification History (newest-first):
-    - 2026-05-10: Sprint 57.12 — add _clear_committed_test_tenants() (closes AD-AdminTenant-Patch-Flake)
+    - 2026-05-10: Sprint 57.12 — _clear_committed_test_tenants (AD-AdminTenant-Patch-Flake)
     - 2026-05-10: Sprint 57.11 — add dispose_engine() autouse (closes AD-Governance-RBAC-Flake)
     - 2026-05-06: Sprint 56.3 Day 3 — add reset_cost_ledger (US-3)
     - 2026-05-06: Sprint 56.3 Day 2 — add reset_pricing_loader (US-3)

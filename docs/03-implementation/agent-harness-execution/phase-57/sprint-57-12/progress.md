@@ -231,9 +231,45 @@ Day 3 actual ~1.5-2 hr / committed ~3-4 hr → ~50% of Day 3 budget. US-5 compon
 
 ---
 
-## Remaining for Day 4
+## Day 4 Accomplishments (2026-05-10) ✅
 
-- [ ] Day 4: US-8 routing wire (/memory + /loop-debug to routes.config.ts) + 4 Playwright e2e + chat-v2 8/8 regression + full validation sweep + retrospective Q1-Q7 + memory snapshot + 3 doc syncs + PR
+### US-8: routes.config.ts wire + 4 Playwright e2e + closeout
+- ✅ `frontend/src/routes.config.ts` — registered `/loop-debug` (Workflow icon, admin) + `/memory` (Brain icon, admin); 11 → 13 entries; active=true 7 → 9; lazy imports; header docstring + MHist updated
+- ✅ 4 NEW Playwright e2e specs (6 tests):
+  - `tests/e2e/loop-debug/loop-debug-standalone.spec.ts` (2 — auth gate redirect + AppShellV2 h1 + LoopVisualizer empty state)
+  - `tests/e2e/chat/chat-v2-loop-inline.spec.ts` (1 — inline panel hidden pre-session, appears after SSE turn with turn-bucket tree)
+  - `tests/e2e/memory/memory-page.spec.ts` (2 — auth gate + /memory→/memory/recent redirect + 2-tab nav + recent table mocked rows)
+  - `tests/e2e/chat/chat-v2-subagent-inline.spec.ts` (1 — inline SubagentTree hidden pre-session, spawned→completed node + status badge + tokens + summary after mocked SSE; scoped getByText to node since LoopVisualizer debug tree echoes raw event JSON)
+- ✅ STRETCH (SSE-injection real-flow chat-v2 spawn_subagent e2e) — DEFERRED → AD-Subagent-RealShip-E2E carryover (Playwright SSE mock at network layer is established pattern; 3 prior sprints — verification / governance / approval — deferred their real-flow variants for same brittleness)
+- ✅ chat-v2 e2e regression: **10/10 pass** (8/8 baseline — chat-v2-ship 4 + approval-card 4 — plus 2 NEW chat specs)
+
+### Day 4 lint fixup (caught by full validation sweep §4.4)
+- Day 1/Day 3 commits had slipped past `black`/`flake8` (only `mypy` + V2 lints were run): 4 files needed `black` reformat (dispatcher.py / sse.py / test_subagent_sse_emission.py / test_memory.py) + 3 E501 violations + dispatcher.py E402 (the `SubagentEventEmitter` type alias was placed BEFORE the rest of the module imports)
+- ✅ Fixed: ran `black` + `isort`; moved dispatcher.py `logger` + `SubagentEventEmitter` alias below all imports; trimmed 3 MHist/Purpose lines to E501 budget (`sse.py` MHist / `conftest.py` MHist / `test_subagent_sse_emission.py` Purpose split to 2 lines)
+- Lesson: pre-push must run `black . && isort . && flake8 .` not just `mypy + V2 lints` (per `feedback_pre_push_lint_must_run_flake8.md`) — folded into Day 4 commit, no separate FIX doc (lint-only fixup, no behavioral change)
+
+### Day 4 Full Validation Sweep (§4.4)
+| Check | Result | Target | Status |
+|-------|--------|--------|--------|
+| pytest | 1654 passed + 4 skipped | 1652+ | ✅ |
+| mypy --strict src/ | 0 issues / 305 files | 0 | ✅ |
+| 9 V2 lints (`scripts/lint/run_all.py`) | 9/9 green | 9/9 | ✅ |
+| Vitest | 168 passed / 45 files | 145+ | ✅ |
+| Playwright | 37 passed | 35+ | ✅ |
+| Vite build | succeeds; main `index-*.js` **296.58 kB** (gzip 93.48) | noted | ✅ (+1.44 kB vs 57.11's 295.14 — 2 new lazy chunks + lucide Brain/Workflow icons; AD-Bundle-Size-285kB-Carryover continues) |
+| ESLint | silent | silent | ✅ |
+| backend black/isort/flake8 | clean (538 files) | clean | ✅ |
+| LLM SDK leak | `check_llm_sdk_leak.py` OK + `test_llm_sdk_leak.py` pass | 0 | ✅ |
+
+### Day 4 Aggregate Test Deltas (sprint cumulative)
+- **pytest 1635 → 1654** (+19 net; Day 1 +23 backend, 4 are pre-existing real-LLM skips)
+- **Vitest 119 → 168** (+49; Day 2 +38 / Day 3 +11; Day 4 e2e-only, no Vitest add)
+- **Playwright 31 → 37** (+6; Day 4 all)
+
+### Day 4 Drift Catalog (0 new — all D-PRE / D1-Dn resolved in prior days)
+
+### Pace note
+Day 4 actual ~2-2.5 hr (incl. ~30 min unplanned lint fixup) / committed ~3-4 hr → ~60-65% of Day 4 budget. **Total sprint actual ~9.5-11.5 hr vs committed ~14 hr** → ratio **~0.7-0.8**.
 
 ---
 

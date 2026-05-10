@@ -121,9 +121,7 @@ def _build_app(
 
     async def _override_audit_role() -> UUID:
         if audit_user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Audit role required"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Audit role required")
         return audit_user_id
 
     async def _override_db() -> AsyncIterator[AsyncSession]:

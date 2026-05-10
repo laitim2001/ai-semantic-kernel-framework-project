@@ -13,21 +13,22 @@
  *   Inactive entries (active: false) are shown grayed in sidebar with
  *   "Coming soon" tooltip but produce no <Route>.
  *
- *   11 entries cover the V2 frontend roadmap per 16-frontend-design.md:
+ *   13 entries cover the V2 frontend roadmap per 16-frontend-design.md:
  *     - Operations (3): Chat (V2) / Cost / SLA
- *     - Admin (6): Tenants / Tenant Settings / Audit Log / Feature Flags / Governance / Verification
+ *     - Admin (8): Tenants / Tenant Settings / Audit Log / Feature Flags / Governance / Verification / Loop Debug / Memory
  *     - Settings (2): User Profile / MFA Settings
  *
- *   active=true (7): Chat V2 / Cost / SLA / Tenants / Tenant Settings / Governance (57.9) / Verification (57.11)
- *   active=false (4): placeholders for future Phase 57.12+ ships
+ *   active=true (9): Chat V2 / Cost / SLA / Tenants / Tenant Settings / Governance (57.9) / Verification (57.11) / Loop Debug (57.12) / Memory (57.12)
+ *   active=false (4): placeholders for future Phase 57.13+ ships
  *
  *   Auth routes (/auth/login, /auth/callback) are NOT in this registry —
  *   they use AuthShell (no sidebar) and are wired directly in App.tsx.
  *
  * Created: 2026-05-10 (Sprint 57.8 Day 1)
- * Last Modified: 2026-05-09
+ * Last Modified: 2026-05-10
  *
  * Modification History:
+ *   - 2026-05-10: Sprint 57.12 US-8 Day 4 — Loop Debug + Memory active=true + lazy imports (Agent Harness UI Suite)
  *   - 2026-05-10: Sprint 57.11 US-6 Day 4 — Verification active=true + lazy component import
  *   - 2026-05-09: Sprint 57.9 US-1 Day 1 — Governance active=true + lazy component import
  *   - 2026-05-10: Initial creation (Sprint 57.8 US-3 — page registry)
@@ -41,6 +42,7 @@
 import {
   Activity,
   BarChart3,
+  Brain,
   Building2,
   CheckCheck,
   Lock,
@@ -50,6 +52,7 @@ import {
   ShieldCheck,
   ToggleLeft,
   User,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 import type { ComponentType, LazyExoticComponent } from "react";
@@ -144,6 +147,22 @@ export const ROUTES: RouteEntry[] = [
     category: "admin",
     active: true,
     component: lazy(() => import("./pages/verification")),
+  },
+  {
+    name: "Loop Debug",
+    path: "/loop-debug",
+    icon: Workflow,
+    category: "admin",
+    active: true,
+    component: lazy(() => import("./pages/loop-debug")),
+  },
+  {
+    name: "Memory",
+    path: "/memory",
+    icon: Brain,
+    category: "admin",
+    active: true,
+    component: lazy(() => import("./pages/memory")),
   },
   // === Settings ===
   {
