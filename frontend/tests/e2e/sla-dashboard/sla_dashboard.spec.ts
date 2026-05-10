@@ -90,7 +90,8 @@ test.describe("Sprint 57.1 US-5 — SLA Dashboard e2e", () => {
 
     await page.goto(`/sla-dashboard?tenant_id=${TENANT_ID}`);
 
-    await expect(page.getByText(/Error:/)).toBeVisible();
+    // Error UX visible (Sprint 57.13 US-B2: <ErrorRetry> headline)
+    await expect(page.getByText("Failed to load data")).toBeVisible();
     const retryButton = page.getByRole("button", { name: "Retry" });
     await expect(retryButton).toBeVisible();
 
