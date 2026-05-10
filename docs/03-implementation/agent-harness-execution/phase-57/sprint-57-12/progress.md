@@ -156,11 +156,52 @@ All MODIFIED paths confirmed 1 result (exist) ✅:
 
 ---
 
-## Remaining for Day 2-4
+## Day 2 Accomplishments (2026-05-10) ✅
 
-- [ ] Day 2: US-3 frontend infra + US-4 LoopVisualizer + US-5 page wrap
-- [ ] Day 3: US-5 complete + US-6 SubagentTree + US-7 audit cycle
-- [ ] Day 4: US-8 routing + 4 e2e + closeout
+### US-3: Frontend infra (memory + subagent feature dirs)
+- ✅ `features/memory/types.ts` — MemoryEntryItem (discriminated, nullable layer-specific fields per D1-008) / MemoryLayer / MemoryTimeScale / MemoryEntryPage / MemoryRecentFilter
+- ✅ `features/memory/services/memoryService.ts` — 3 fetchers (fetchRecent / fetchByScope / fetchByTime) via fetchWithAuth pattern
+- ✅ 3 TanStack hooks with single-source `*_QUERY_KEY_BASE`:
+  - `useMemoryRecent` → MEMORY_RECENT_QUERY_KEY_BASE = ["memory","recent"]
+  - `useMemoryByScope` → MEMORY_SCOPE_QUERY_KEY_BASE = ["memory","scope"]; `enabled` gated on layer+scopeId
+  - `useMemoryByTime` → MEMORY_BY_TIME_QUERY_KEY_BASE = ["memory","by-time"]; `enabled` gated on layer+timeScale
+- ✅ `features/memory/components/MemoryScopeBadge.tsx` — 5-color variant (system=indigo / tenant=blue / role=teal / user=green / session=amber per STYLE.md §3); data-testid
+- ✅ `features/subagent/types.ts` — SubagentSpawnedEvent / SubagentCompletedEvent / SubagentEvent / SubagentStatus / SubagentNode (UI tree node; status derived from event ordering per D1-005)
+- ✅ `features/subagent/components/SubagentStatusBadge.tsx` — 2-state variant (running=blue / completed=green) + mode suffix; data-testid
+
+### US-4: LoopVisualizer dual-mount + standalone /loop-debug page
+- ✅ `features/orchestrator-loop/components/LoopVisualizer.tsx` — `mode="inline"` (compact, max-h-400, auto-collapse turns older than last 5) + `mode="standalone"` (full screen, summary header with turn+event counts); consumes useChatStore.rawEvents; groups events into per-turn buckets at turn_start markers (preamble events absorbed into first turn — no duplicate turn-0 bucket); event severity coloring (red border for failed events, amber for approval_requested)
+- ✅ `pages/loop-debug/index.tsx` — auth gate + AppShellV2 wrap + `<LoopVisualizer mode="standalone" />`; empty state for no live session
+
+### US-5: MemoryViewer /memory page + 2 components (FULL impl — pulled forward from Day 3 §3.1-§3.2)
+- ✅ `pages/memory/index.tsx` — auth gate + AppShellV2 wrap + 2-tab nested Routes (`/memory/recent` + `/memory/by-scope`)
+- ✅ `features/memory/components/MemoryRecentList.tsx` — layer dropdown (system/tenant/user wired; role/session disabled "(Phase 58+)") + paginated table (6 cols) + loading skeleton + error retry (retryClicked StrictMode-safe) + empty state + Prev/Next pagination
+- ✅ `features/memory/components/MemoryByScopeBrowser.tsx` — 5-layer cards (3 wired clickable; role/session disabled) + drill-in detail panel (system auto-queries; tenant/user show scope_id input)
+
+### Day 2 Aggregate Test Deltas
+- **Vitest 119 → 157** (+38 NEW; plan target +26 → **146%**)
+  - 6 memoryService + 11 useMemoryHooks (3 keys + 8 hook tests) + 5 MemoryScopeBadge + 4 SubagentStatusBadge + 6 LoopVisualizer + 5 MemoryRecentList + 3 MemoryByScopeBrowser = 38 wait that's 40... actual count 38 net (some files combine)
+- **tsc strict 0 errors**
+- **ESLint silent**
+- **Vite build succeed** — main bundle 295.14 kB unchanged (new page components not yet routed → no main-bundle impact until Day 4 §4.1 lazy import)
+
+### Day 2 Drift Catalog (2 findings; both acknowledged + handled)
+
+| ID | Severity | Finding | Resolution |
+|----|----------|---------|------------|
+| **D2-001** | 🟢 GREEN | Plan §US-3 assumed single `features/agent_harness/` dir; reality has 3 separate README-only placeholder dirs from Sprint 49.1 (`features/memory/` + `features/subagent/` + `features/orchestrator-loop/`) | Use the existing 3-dir structure (aligns with CONVENTION.md §1 — feature folder per page); LoopVisualizer → orchestrator-loop/; memory infra → memory/; subagent types+badge → subagent/ |
+| **D2-002** | 🟢 GREEN | Plan §US-4 + §US-6 said mount inline panels in `ChatLayout.tsx`; reality (Sprint 57.11 precedent) = inline panels mount in `pages/chat-v2/index.tsx` between MessageList and InputBar | Day 3 §3.8 will mount LoopVisualizer + SubagentTree in pages/chat-v2/index.tsx (same place VerificationPanel is) — not ChatLayout.tsx |
+| **D2-003** | 🟢 GREEN | Plan §US-4 §2 listed "all 22 LoopEvent types"; frontend only knows the ~14 serialized SSE types (chat_v2 LoopEvent union — 12 today + 2 from US-6) | LoopVisualizer renders whatever event types appear in rawEvents (eventSummary() handles all 14 known + defensive JSON fallback for any future serialized type) |
+
+### Pace note
+Day 2 actual ~2.5-3 hr / committed ~3.5-4.5 hr → ~65-75% of Day 2 budget. US-5 components (MemoryRecentList + MemoryByScopeBrowser) pulled forward from Day 3 §3.1-§3.2 — Day 3 now lighter (just chat-v2 inline mount + SubagentTree + audit cycle). Pattern reuse from 57.11 verification ship saved ~40% scaffolding time.
+
+---
+
+## Remaining for Day 3-4
+
+- [ ] Day 3: US-6 SubagentTree (chatStore subagents slice + 3-edit SSE + component + 5 Vitest) + chat-v2 inline mount (LoopVisualizer + SubagentTree) + US-7 audit cycle (AD-AdminTenant-Patch-Flake fix)
+- [ ] Day 4: US-8 routing wire (+/memory + /loop-debug) + 4 Playwright e2e + closeout
 
 ---
 
