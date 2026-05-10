@@ -15,8 +15,13 @@ Description:
     - SLAMetricRecorder (56.3 US-1) — Cat 12 SLA recording
     - PricingLoader (56.3 US-3) — LLM + tool pricing yaml cache
     - CostLedgerService (56.3 US-3) — per-event Cost Ledger writer
+    - DB Engine (Sprint 57.11 fix AD-Governance-RBAC-Flake) — async engine pool
+      futures bind to first-test event loop; without explicit dispose between
+      tests, subsequent tests hit "Future attached to a different loop" / "Event
+      loop is closed" failures (e.g. test_list_rejects_non_approver_role on CI).
 
-Modification History:
+Modification History (newest-first):
+    - 2026-05-10: Sprint 57.11 Day 4 — add dispose_engine() to autouse reset (closes AD-Governance-RBAC-Flake CI flake; per-test connection-pool reset prevents cross-loop Future leak)
     - 2026-05-06: Sprint 56.3 Day 3 — add reset_cost_ledger (US-3)
     - 2026-05-06: Sprint 56.3 Day 2 — add reset_pricing_loader (US-3)
     - 2026-05-06: Sprint 56.3 Day 1 — add reset_sla_recorder (US-1)
@@ -26,7 +31,7 @@ Modification History:
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator  # noqa: F401
 
 import pytest
 
@@ -44,6 +49,7 @@ os.environ.setdefault("AUDIT_LOG_CHAT_OBSERVER", "false")
 os.environ.setdefault("SESSIONS_CHAT_OBSERVER", "false")
 os.environ.setdefault("TOOL_CALLS_CHAT_OBSERVER", "false")
 
+from infrastructure.db.engine import dispose_engine  # noqa: E402
 from platform_layer.billing.cost_ledger import reset_cost_ledger  # noqa: E402
 from platform_layer.billing.pricing import reset_pricing_loader  # noqa: E402
 from platform_layer.governance.service_factory import reset_service_factory  # noqa: E402
@@ -51,14 +57,21 @@ from platform_layer.observability import reset_sla_recorder  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def _reset_module_singletons() -> Iterator[None]:
-    """Clear module-level singletons before + after each test."""
+async def _reset_module_singletons() -> "AsyncIterator[None]":  # type: ignore[name-defined] # noqa: F821
+    """Clear module-level singletons + dispose async engine before + after each test.
+
+    Sprint 57.11 fix (AD-Governance-RBAC-Flake): added await dispose_engine()
+    to prevent cross-loop Future leak when one test's connection-pool futures
+    are still pending when the next test's pytest-asyncio loop starts.
+    """
     reset_service_factory()
     reset_sla_recorder()
     reset_pricing_loader()
     reset_cost_ledger()
+    await dispose_engine()
     yield
     reset_service_factory()
     reset_sla_recorder()
     reset_pricing_loader()
     reset_cost_ledger()
+    await dispose_engine()
