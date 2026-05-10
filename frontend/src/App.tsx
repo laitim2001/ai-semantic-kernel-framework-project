@@ -15,6 +15,7 @@
  *   Auth routes (/auth/*) NOT in registry — they use AuthShell (no sidebar).
  *
  * Modification History:
+ *   - 2026-05-10: Sprint 57.13 US-B9 — lazy-load /auth/login + /auth/callback (keep their ui/ component cost out of the main bundle)
  *   - 2026-05-10: Sprint 57.13 US-A1 — add <AuthBootstrap>; drop redundant legacy /verification route (registry covers it since 57.11)
  *   - 2026-05-09: Sprint 57.9 US-1 — drop legacy /governance/* route + import (single-source restored)
  *   - 2026-05-10: Sprint 57.8 US-3 — refactor to consume routes.config + lazy-load
@@ -25,13 +26,14 @@
  *   - 2026-04-2x: Sprint 49.1 — initial placeholder router with /chat-v2 + /governance + /verification
  */
 
-import { Suspense, useEffect, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, type ReactNode } from "react";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 
 import { useAuthStore } from "./features/auth/store/authStore";
-import CallbackPage from "./pages/auth/callback";
-import LoginPage from "./pages/auth/login";
 import { ROUTES } from "./routes.config";
+
+const LoginPage = lazy(() => import("./pages/auth/login"));
+const CallbackPage = lazy(() => import("./pages/auth/callback"));
 
 /**
  * Runs authStore.bootstrap() once on app mount, then renders children. Public

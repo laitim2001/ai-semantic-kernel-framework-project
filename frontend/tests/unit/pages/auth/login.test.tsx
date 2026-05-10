@@ -1,10 +1,15 @@
 /**
  * File: frontend/tests/unit/pages/auth/login.test.tsx
- * Purpose: Unit test — LoginPage renders the WorkOS button + (DEV) dev fake-login form.
+ * Purpose: Unit test — LoginPage renders the WorkOS button + (DEV) dev fake-login form; no inline styles.
  * Category: Frontend / tests / unit / pages / auth
- * Scope: Phase 57 / Sprint 57.13 US-A4
+ * Scope: Phase 57 / Sprint 57.13 US-A4 → US-B9 (AuthShell rewrite — Tailwind-only assertion)
  *
  * Created: 2026-05-10 (Sprint 57.13 Day 2)
+ * Last Modified: 2026-05-10
+ *
+ * Modification History:
+ *   - 2026-05-10: Sprint 57.13 US-B9 — add "no inline style" assertion (page rewritten to <AuthShell>+<Card>+<Button>, Tailwind only)
+ *   - 2026-05-10: Initial creation (Sprint 57.13 Day 2 US-A4)
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -40,6 +45,12 @@ describe("LoginPage", () => {
   it("renders the WorkOS login button", () => {
     renderLogin();
     expect(screen.getByRole("button", { name: /Login with WorkOS/i })).toBeInTheDocument();
+  });
+
+  it("renders a page-level <h1> and uses no inline styles (US-B9 — AuthShell + Tailwind)", () => {
+    const { container } = renderLogin();
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    expect(container.querySelectorAll("[style]")).toHaveLength(0);
   });
 
   it("renders the dev fake-login form in DEV builds (import.meta.env.DEV)", () => {

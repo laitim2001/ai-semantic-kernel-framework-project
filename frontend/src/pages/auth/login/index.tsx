@@ -2,7 +2,7 @@
  * File: frontend/src/pages/auth/login/index.tsx
  * Purpose: Login entry — "Login with WorkOS" button (OIDC) + dev fake-login form (DEV builds only).
  * Category: Frontend / pages / auth
- * Scope: Phase 57 / Sprint 57.7 → Sprint 57.13 US-A4 (dev fake-login)
+ * Scope: Phase 57 / Sprint 57.7 → US-A4 (dev fake-login) → US-B5 (i18n) → US-B9 (AuthShell + Tailwind)
  *
  * Description:
  *   "Login with ..." → window.location to /api/v1/auth/login (302 → vendor →
@@ -14,49 +14,52 @@
  *   (the dev-login cookie authenticates /auth/me) and navigates to the
  *   stashed post-login page. Hidden in production builds via import.meta.env.DEV.
  *
- *   Tailwind-ize the inline styles + <AuthShell> wrap: Sprint 57.13 US-B9.
+ *   Sprint 57.13 US-B9: wrapped in <AuthShell> + <Card>; all strings via i18n
+ *   (auth ns); inline styles replaced with Tailwind utilities; primary actions
+ *   use <Button>; the error banner is a role="alert" surface.
  *
  * Created: 2026-05-09 (Sprint 57.7 Day 2 PM)
  * Last Modified: 2026-05-10
  *
  * Modification History:
- *   - 2026-05-10: Sprint 57.13 US-B5 — i18n the strings (auth namespace); inline styles unchanged (US-B9)
+ *   - 2026-05-10: Sprint 57.13 US-B9 — <AuthShell> + <Card> + <Button>; drop inline styles
+ *   - 2026-05-10: Sprint 57.13 US-B5 — i18n the strings (auth namespace)
  *   - 2026-05-10: Sprint 57.13 US-A4 — add DEV-only <DevLoginSection> (POST /auth/dev-login → bootstrap → navigate)
  *   - 2026-05-09: Initial skeleton (Sprint 57.7 US-A2 Day 2)
  *
  * Related:
  *   - backend/src/api/v1/auth.py:login + dev_login
+ *   - frontend/src/components/AuthShell.tsx (layout shell for /auth/*)
  *   - frontend/src/features/auth/services/authService.ts (consumePostLoginRedirect)
  *   - frontend/src/features/auth/store/authStore.ts (bootstrap)
  *   - frontend/src/i18n/locales/{en,zh-TW}/auth.json (auth.* keys)
  */
 
+import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { AuthShell } from "@/components/AuthShell";
+import { Button, Card, CardContent, CardHeader } from "@/components/ui";
 import {
   consumePostLoginRedirect,
   fetchWithAuth,
   setPostLoginRedirect,
-} from "../../../features/auth/services/authService";
-import { useAuthStore } from "../../../features/auth/store/authStore";
+} from "@/features/auth/services/authService";
+import { useAuthStore } from "@/features/auth/store/authStore";
 
-function ErrorBanner({ message }: { message: string }) {
+function ErrorAlert({ message }: { message: string }) {
   const { t } = useTranslation("auth");
   return (
     <div
       role="alert"
-      style={{
-        padding: "0.75rem 1rem",
-        marginBottom: "1.5rem",
-        backgroundColor: "#fee",
-        border: "1px solid #fcc",
-        borderRadius: "4px",
-        color: "#900",
-      }}
+      className="mb-4 flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
     >
-      <strong>{t("errorTitle")}:</strong> {message}
+      <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+      <span>
+        <strong>{t("errorTitle")}:</strong> {message}
+      </span>
     </div>
   );
 }
@@ -81,11 +84,11 @@ function DevLoginSection() {
         method: "POST",
       });
       if (!res.ok) {
-        const detail =
+        setDevError(
           res.status === 404
             ? t("devSection.errorDisabled")
-            : t("devSection.errorFailed", { status: res.status });
-        setDevError(detail);
+            : t("devSection.errorFailed", { status: res.status }),
+        );
         return;
       }
       // Cookie is set by the response; bootstrap re-reads it via /auth/me.
@@ -99,51 +102,32 @@ function DevLoginSection() {
   };
 
   return (
-    <form
-      onSubmit={submit}
-      style={{
-        marginTop: "2.5rem",
-        paddingTop: "1.5rem",
-        borderTop: "1px dashed #ccc",
-      }}
-    >
-      <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#555", marginBottom: "0.75rem" }}>
-        {t("devSection.heading")}
-      </p>
-      {devError ? <ErrorBanner message={devError} /> : null}
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
-        <label style={{ display: "flex", flexDirection: "column", fontSize: "0.8rem", color: "#666" }}>
+    <form onSubmit={submit} className="mt-8 border-t border-dashed border-border pt-6">
+      <p className="mb-3 text-sm font-semibold text-muted-foreground">{t("devSection.heading")}</p>
+      {devError ? <ErrorAlert message={devError} /> : null}
+      <div className="mb-3 flex flex-wrap gap-3">
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground" htmlFor="dev-login-tenant-code">
           tenant_code
           <input
+            id="dev-login-tenant-code"
             value={tenantCode}
             onChange={(e) => setTenantCode(e.target.value)}
-            style={{ padding: "0.4rem", border: "1px solid #ccc", borderRadius: "4px" }}
+            className="rounded border border-border px-2 py-1 text-sm text-foreground"
           />
         </label>
-        <label style={{ display: "flex", flexDirection: "column", fontSize: "0.8rem", color: "#666" }}>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground" htmlFor="dev-login-email">
           email
           <input
+            id="dev-login-email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{ padding: "0.4rem", border: "1px solid #ccc", borderRadius: "4px" }}
+            className="rounded border border-border px-2 py-1 text-sm text-foreground"
           />
         </label>
       </div>
-      <button
-        type="submit"
-        disabled={busy}
-        style={{
-          padding: "0.5rem 1rem",
-          fontSize: "0.9rem",
-          backgroundColor: busy ? "#999" : "#444",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: busy ? "default" : "pointer",
-        }}
-      >
+      <Button type="submit" variant="secondary" size="sm" disabled={busy}>
         {busy ? t("devSection.submitting") : t("devSection.submit")}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -165,37 +149,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      style={{
-        padding: "4rem 2rem",
-        fontFamily: "system-ui, sans-serif",
-        maxWidth: "480px",
-        margin: "0 auto",
-      }}
-    >
-      <h1 style={{ marginBottom: "1rem" }}>{t("signInTitle")}</h1>
-      <p style={{ color: "#666", marginBottom: "2rem" }}>{t("signInSubtitle")}</p>
+    <AuthShell>
+      <div className="mx-auto max-w-md py-12">
+        <Card>
+          <CardHeader>
+            {/* Page-level h1 (the login card is the whole page) — styled like CardTitle. */}
+            <h1 className="text-lg font-semibold leading-none tracking-tight">{t("signInTitle")}</h1>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-6 text-sm text-muted-foreground">{t("signInSubtitle")}</p>
 
-      {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
+            {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
 
-      <button
-        type="button"
-        onClick={handleLogin}
-        style={{
-          padding: "0.75rem 1.5rem",
-          fontSize: "1rem",
-          fontWeight: 600,
-          backgroundColor: "#0078d4",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-        }}
-      >
-        {t("loginWithWorkOS")}
-      </button>
+            <Button type="button" onClick={handleLogin} className="w-full">
+              {t("loginWithWorkOS")}
+            </Button>
 
-      {import.meta.env.DEV ? <DevLoginSection /> : null}
-    </div>
+            {import.meta.env.DEV ? <DevLoginSection /> : null}
+          </CardContent>
+        </Card>
+      </div>
+    </AuthShell>
   );
 }
