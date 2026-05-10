@@ -88,34 +88,33 @@ Related:
 ## Day 1 — US-A1: OIDC auth flow 端到端 (cookie-only)
 
 ### 1.1 Backend — middleware cookie fallback + EXEMPT_PATH_PREFIXES fix (D-PRE-8 🔴)
-- [ ] **`tenant_context.py` — JWT 來源加 `v2_jwt` cookie fallback** (Bearer header 缺則讀 `request.cookies.get("v2_jwt")`)
-- [ ] **`tenant_context.py` — `EXEMPT_PATH_PREFIXES` 補** (D-PRE-8: 目前只有 `/api/v1/health`；auth flow 因此 broken) → 加 `/api/v1/auth/login` / `/api/v1/auth/callback` / `/api/v1/auth/dev-login` / `/api/v1/auth/logout` / `/api/v1/telemetry`。**NOT** `/api/v1/auth/me`（需 JWT；401 是正確回應）
-  - Verify: `python -m mypy --strict src/platform_layer/middleware/tenant_context.py` + 既有 middleware tests pass
+- [x] **`tenant_context.py` — JWT 來源加 `v2_jwt` cookie fallback** (Bearer header 缺則讀 `request.cookies.get("v2_jwt")`；error messages preserved exactly for existing test_jwt_auth.py)
+- [x] **`tenant_context.py` — `EXEMPT_PATH_PREFIXES` 補** (D-PRE-8) → 加 `/api/v1/auth/login` / `/api/v1/auth/callback` / `/api/v1/auth/dev-login` / `/api/v1/auth/logout` / `/api/v1/telemetry`。**NOT** `/api/v1/auth/me`
+  - Verify: ✅ `mypy src` 305 files clean + `test_tenant_context.py` 4 pass + `test_jwt_auth.py` 8 pass
 
 ### 1.2 Backend — GET /api/v1/auth/me
-- [ ] **`api/v1/auth.py` — `GET /auth/me` endpoint** → `AuthMeResponse {user:{id,email,display_name}, tenant:{id,name,code}, roles:[str]}`
-  - handler 從 `request.state.{user_id,tenant_id,roles}` + DB 撈 user/tenant 詳情
-  - 401 由 middleware 自動處理（無 JWT）
-  - Verify: `pytest tests/integration/api/test_auth_me.py -v`
+- [x] **`api/v1/auth.py` — `GET /auth/me` endpoint** → `AuthMeResponse {user:{id,email,display_name}, tenant:{id,name,code}, roles:[str]}`
+  - handler 從 `request.state.{user_id,tenant_id,roles}` + DB 撈 user/tenant（用 `get_db_session_with_tenant` for RLS-safe users query）；401 由 middleware 處理；user/tenant row gone → 401 "no longer exists"
+  - Verify: ✅ `pytest tests/integration/api/test_auth_me.py` 5 pass
 
 ### 1.3 Backend — config oidc_redirect_uri + cookie_secure (D-PRE-4 + D-PRE-5)
-- [ ] **`core/config/__init__.py`** — `oidc_redirect_uri` default `http://localhost:3005/auth/callback` → `http://localhost:8000/api/v1/auth/callback`（D-PRE-5: 目前 doubly wrong — 3005 是 V1 + 指向 frontend；OIDC code-exchange 需 backend）+ NEW `cookie_secure: bool = False`（D-PRE-4: 不存在；註解 prod True）+ confirm `env` default `"development"`（D-PRE-3 — dev-login gate 用 `env.lower() not in ("production","prod")`）
-- [ ] **`auth.py` `/callback`** — `final_redirect` 改導 frontend `/auth/callback?next=<oidc_redirect_to cookie 值>`（frontend base：新增 `Settings.frontend_base_url` default `http://localhost:3007` 或從 request 推；Day 1 impl 後定）；cookie `secure=Settings.cookie_secure`
+- [x] **`core/config/__init__.py`** — `oidc_redirect_uri` default → `http://localhost:8000/api/v1/auth/callback`（D-PRE-5）+ NEW `cookie_secure: bool = False`（D-PRE-4）+ NEW `frontend_base_url: str = "http://localhost:3007"`（confirmed `env` default `"development"`, D-PRE-3）
+- [x] **`auth.py` `/callback`** — `final_redirect` 改導 `{frontend_base_url}/auth/callback?next=<oidc_redirect_to cookie 值>`；cookie attrs 統一走 `_cookie_kwargs()`（`secure=Settings.cookie_secure`, max_age=`jwt_expires_minutes*60`）；`/login` state cookies 同步用 `_cookie_kwargs`
 
 ### 1.4 Frontend — authStore + authService
-- [ ] **NEW `features/auth/store/authStore.ts`** — Zustand `{status, user, tenant, roles, bootstrap(), clear()}`；`bootstrap()` 打 `/api/v1/auth/me`
-- [ ] **`features/auth/services/authService.ts`** — `fetchAuthMe()` + `isAuthenticated()` 改查 authStore + `fetchWithAuth` 401 → toast(stub until B1) + clear + redirect + Bearer-from-localStorage 改成「只在有 token 時加」 + `logout()` → `/auth/logout` + `authStore.clear()`
-  - Verify: `tests/unit/auth/{authStore,isAuthenticated}.test.ts`
+- [x] **NEW `features/auth/store/authStore.ts`** — Zustand `{status, user, tenant, roles, bootstrap(), clear()}`；`bootstrap()` 打 `/api/v1/auth/me`（catch network → anonymous, app still renders）
+- [x] **`features/auth/services/authService.ts`** — `fetchAuthMe()` + `isAuthenticated()` 查 authStore + `fetchWithAuth` Bearer-from-localStorage 只在有 dev-token 時加（401 toast/redirect 是 US-B1 stub — Day 1 留給 callers/QueryClient） + `logout()` → `/auth/logout` + `clearDevToken()` + `authStore.clear()` + redirect；`getJwt/setJwt/clearJwt` 改名 `getDevToken/setDevToken/clearDevToken`
+  - Verify: ✅ `tests/unit/auth/{authStore,isAuthenticated}.test.ts` (8 tests) pass
 
 ### 1.5 Frontend — App bootstrap + callback rewire + 9-page gate
-- [ ] **`App.tsx` — `<AuthBootstrap>` wrapper** (`useEffect` → `authStore.bootstrap()`；`status==="unknown"` → loading spinner)
-- [ ] **`pages/auth/callback/index.tsx`** — 改 `await authStore.bootstrap()` → `navigate(next || consumePostLoginRedirect(), {replace})`；`?error=` → EmptyState（stub until B2/B9 — Day 1 用簡單 div，Day 9 換 AuthShell+EmptyState）
-- [ ] **5 個現有 auth-gated 頁面**（chat-v2 / governance / verification / loop-debug / memory）gate 改依 `authStore.status`（unknown→spinner / anonymous→Navigate+setPostLoginRedirect / authenticated→render）
-  - Verify: `tests/unit/pages/authGate.test.tsx`（含這 5 頁）
+- [x] **`App.tsx` — `<AuthBootstrap>` wrapper** (`useEffect` → `authStore.bootstrap()`；不 block public routes — gated 頁的 spinner 由 `<RequireAuth>` 提供)；同時移除 redundant legacy `/verification` route（registry 自 57.11 已含）
+- [x] **`pages/auth/callback/index.tsx`** — `await authStore.bootstrap()` → `navigate(?next || consumePostLoginRedirect(), {replace})`；`?error=` → 簡單 error div（Day 9 換 AuthShell+EmptyState）；移除 dead `?token` path
+- [x] **5 個現有 auth-gated 頁面**（chat-v2 / governance / verification / loop-debug / memory）改用 **NEW `<RequireAuth>` shared wrapper**（取代各頁 inline `if (!isAuthenticated())`）；wrapper 內含 unknown→spinner / anonymous→Navigate+setPostLoginRedirect / authenticated→render；UserMenu 也改讀 authStore.user + sign out 走 `logout()`
+  - Verify: ✅ `tests/unit/auth/RequireAuth.test.tsx`（3 tests — 替代 per-page authGate.test.tsx；shared wrapper 覆蓋 9 頁 gate）+ `tests/unit/components/UserMenu.test.tsx`（5 tests, rewritten）pass
 
 ### 1.6 Day 1 wrap
-- [ ] **Day 1 progress entry** + drift catalog
-- [ ] **Day 1 commit**: `feat(sprint-57-13, Day 1): US-A1 OIDC auth flow end-to-end (cookie-only) + GET /auth/me + authStore`
+- [x] **Day 1 progress entry** + drift catalog（residual content-verify items confirmed at start — see progress.md Day 1）
+- [x] **Day 1 commit**: `feat(sprint-57-13, Day 1): US-A1 OIDC auth flow end-to-end (cookie-only) + GET /auth/me + authStore`
 
 ---
 

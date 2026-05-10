@@ -49,9 +49,50 @@
 
 ---
 
-## Remaining for Day 1-9
+## Day 1 Accomplishments (2026-05-10) — US-A1: OIDC auth flow end-to-end (cookie-only)
 
-- [ ] Day 1: US-A1 — cookie fallback middleware + `EXEMPT_PATH_PREFIXES` fix (D-PRE-8) + GET /auth/me + config oidc_redirect_uri+cookie_secure + authStore + authService + App bootstrap + callback rewire + 5-page gate + tests
+### Residual content-verify confirmed at Day 1 start (per Day 0 §1.5 deferred)
+- `JWTManager.encode(*, sub: str, tenant_id: UUID, roles=(), expires_minutes=None, extra=None)` HS256; `JWTClaims` frozen dataclass — matches plan. ✓
+- `App.tsx` route wrapping: auth routes rendered bare (`<Route path="/auth/login" element={<LoginPage/>}/>`), no AuthShell wrap yet (deferred B9). The legacy `<Route path="/verification/*">` was redundant — `verification` is `active:true` in routes.config since 57.11 → removed it (registry covers it). ✓
+- `RBACManager` is a class (`platform_layer/identity/rbac.py`); `_require_role` (auth.py) uses `RBACManager.has_role_code(...)`. Not touched in Day 1 (US-A3 territory). ✓
+- 4-page tenant_id sourcing: not inspected in detail (US-A2 Day 2 scope; pages cost/sla/admin-tenants/tenant-settings currently ungated). Deferred to Day 2 — no Day 1 impact.
+
+### Backend
+- `core/config/__init__.py` — `oidc_redirect_uri` default `http://localhost:3005/auth/callback` → `http://localhost:8000/api/v1/auth/callback` (D-PRE-5: was V1 port + frontend path; OIDC code-exchange needs backend). NEW `frontend_base_url: str = "http://localhost:3007"`, `cookie_secure: bool = False`.
+- `platform_layer/middleware/tenant_context.py` — `TenantContextMiddleware` JWT source now: `Authorization: Bearer` header → fallback `request.cookies.get("v2_jwt")`. Existing 401 error message strings preserved verbatim (`"Authorization Bearer token required"` / `"Bearer token is empty"`) so `test_jwt_auth.py` (8 tests) stays green. `EXEMPT_PATH_PREFIXES` now `(/api/v1/health, /api/v1/auth/login, /api/v1/auth/callback, /api/v1/auth/dev-login, /api/v1/auth/logout, /api/v1/telemetry)` — **D-PRE-8 fix**: previously only `/health` was exempt, so `/auth/login` + `/callback` 401'd at the middleware before they could establish a session → the OIDC flow had never worked end-to-end (matches user report). `/auth/me` deliberately NOT exempt (it reads the session; 401 without JWT is correct).
+- `api/v1/auth.py` — NEW `GET /auth/me` → `AuthMeResponse {user:{id,email,display_name}, tenant:{id,name,code}, roles:[str]}` (reads `request.state` + DB; uses `get_db_session_with_tenant` so the users-table RLS policy passes in prod; user/tenant row gone → 401 "no longer exists"). `/callback` `final_redirect` now → `{settings.frontend_base_url}/auth/callback?next=<oidc_redirect_to>` (was redirecting straight to the page — left SPA with no signal to refresh auth state → "logged in but app says anonymous"). New `_cookie_kwargs()` helper (secure from `Settings.cookie_secure`, max_age from `jwt_expires_minutes*60`) — `/login` state cookies + `/callback` v2_jwt cookie both use it.
+
+### Frontend
+- NEW `features/auth/store/authStore.ts` — Zustand `{status: "unknown"|"authenticated"|"anonymous", user, tenant, roles, bootstrap(), clear()}`. `bootstrap()` calls `fetchAuthMe()`; network error → `anonymous` (so the app still renders rather than hanging on a spinner). Exports `AuthMeResponse`/`AuthUser`/`AuthTenant` types.
+- NEW `features/auth/components/RequireAuth.tsx` — shared route gate (`unknown`→spinner / `anonymous`→`setPostLoginRedirect(path)` + `<Navigate to="/auth/login?redirect_to=...">` / `authenticated`→children). **Design choice, slight deviation from plan**: the plan said "each page's gate 改成依 authStore.status" (per-page branching); a shared `<RequireAuth>` wrapper centralizes the 3-branch logic for all 9 pages (1 place to evolve; less churn when US-A2 adds 4 more). Same observable behavior.
+- `features/auth/services/authService.ts` — rewrote: `fetchAuthMe()` (GET /auth/me → payload | null on 401 | throws on 5xx/network); `isAuthenticated()` now reads `useAuthStore.getState().status === "authenticated"`; `fetchWithAuth` adds `Authorization: Bearer` only when a dev-login token is in localStorage (cookie flow needs no JS-readable token); `getJwt/setJwt/clearJwt` renamed `getDevToken/setDevToken/clearDevToken`; `logout()` → POST /auth/logout + `clearDevToken()` + `useAuthStore.getState().clear()` + redirect. 401-toast/auto-redirect deferred to US-B1 (QueryClient onError) — Day 1 callers handle their own 401s as before.
+- `App.tsx` — NEW `<AuthBootstrap>` wrapper runs `authStore.bootstrap()` once on mount, renders children immediately (public routes don't wait; gated pages spinner via `<RequireAuth>`). Removed redundant legacy `/verification` route + direct `VerificationPage` import (registry covers it since 57.11) → single-source restored. (Also dropped the stale "Status: Sprint 57.8" line from Home — Home gets a proper rewrite in US-B9.)
+- `pages/auth/callback/index.tsx` — rewrote logic: `?error=` → error div; else `await bootstrap()` → `navigate(?next || consumePostLoginRedirect(), {replace})`. Removed dead `?token` path. Inline styles kept (Tailwind-ize + AuthShell in US-B9).
+- 5 existing auth-gated pages (chat-v2 / governance / verification / loop-debug / memory) — replaced inline `if (!isAuthenticated()) {...}` with `<RequireAuth>...</RequireAuth>` wrap.
+- `components/UserMenu.tsx` — reads `useAuthStore.user` (display_name → fallback email) instead of decoding the JWT; renders null unless `status === "authenticated"`; Sign out → `logout()`. (Full Tailwind/Radix polish still US-B3/B9.)
+
+### Tests (new / changed)
+- NEW backend `tests/integration/api/test_auth_me.py` — 5 tests (401 no JWT / 401 expired / 200 with v2_jwt cookie / 200 with Bearer header / 401 when user row missing). Pattern mirrors `test_jwt_auth.py` (custom app + `TenantContextMiddleware` + test `JWTManager`) + `test_admin_tenant_get.py` (`dependency_overrides[get_db_session_with_tenant]`).
+- NEW frontend `tests/unit/auth/authStore.test.ts` (5) — initial unknown / bootstrap 200→authenticated / bootstrap 401→anonymous / bootstrap network-error→anonymous / clear→anonymous.
+- NEW frontend `tests/unit/auth/isAuthenticated.test.ts` (3) — unknown→false / anonymous→false / authenticated→true.
+- NEW frontend `tests/unit/auth/RequireAuth.test.tsx` (3) — unknown→spinner / anonymous→redirect + stash path / authenticated→children. (Replaces the planned `tests/unit/pages/authGate.test.tsx` — testing the shared wrapper covers all 9 pages' gate behavior in 3 tests; per-page render smoke comes via US-A2/C1 Playwright.)
+- CHANGED frontend `tests/unit/components/UserMenu.test.tsx` — rewritten for authStore-driven UserMenu (4 → 5 tests; sign-out path mocks `logout()`).
+
+### Verification
+- Backend: `black`/`isort`/`flake8` clean on 4 changed files; `mypy src` 305 files clean; **9/9 V2 lints green** (incl. `check_llm_sdk_leak`); **full `pytest -q` → 1659 passed + 4 skipped** (was 1654+4; +5 from `test_auth_me.py`).
+- Frontend: `npm run lint` clean (eslint src); `npm run build` ✅ (main bundle `index-*.js` 243.58 kB gzip 77.15 — *down* ~53 kB from 296.58 kB baseline; the legacy eager `VerificationPage` import moved to lazy; `RequireAuth` is its own 0.47 kB chunk); **`npm run test` → 48 files / 180 tests pass** (was 168; +12 — authStore 5 + isAuthenticated 3 + RequireAuth 3 + UserMenu +1).
+- Manual UI not run (no dev server boot this session); US-A5 connectivity smoke + Playwright e2e cover the runtime path (Day 3 / Day 9). The auth flow's *unit/integration* layer is now green; the live WorkOS redirect round-trip needs a staging WorkOS account (or the US-A4 dev-login, Day 2) — flagged as carryover-if-needed per plan §Risks.
+
+### Drift / notes
+- D-PRE-8 confirmed as a real bug, fixed in this US (the headline reason "logged in but couldn't actually use the app").
+- Deviation from plan: shared `<RequireAuth>` wrapper instead of per-page branching (documented above; behavior-equivalent, less churn). And `RequireAuth.test.tsx` instead of `pages/authGate.test.tsx`.
+- Bundle size went *down* this US (legacy eager import removed) — gives headroom for US-B2/B4/B5 additions.
+- No new agent-harness contract / ABC / LoopEvent / migration (this sprint is platform_layer + api/v1 + frontend only). 17.md update (registering `/auth/me`, `/auth/dev-login`, `/telemetry`) deferred to US-C1 closeout per plan.
+
+---
+
+## Remaining for Day 2-9
+
 - [ ] Day 2: US-A2 (4-page gate + tenant-from-authStore) + US-A3 (cross-tenant hardening) + US-A4 (dev-login)
 - [ ] Day 3: US-A5 (connectivity smoke + .env.example) + US-B1 (Toast)
 - [ ] Day 4: US-B2 (design-system component layer + refactor 6 feature areas) + mid-sprint ratio check

@@ -5,11 +5,14 @@ Category: api/v1 (Sprint 57.7 US-A2)
 Scope: Phase 57 / Sprint 57.7 (IAM Foundation Tier 0 spike)
 
 Description:
-    Three endpoints implementing OIDC hosted-login flow via WorkOS:
+    OIDC hosted-login flow via WorkOS + the session-introspection endpoint:
 
-    - GET /api/v1/auth/login    — generate vendor authorize URL + 302 redirect
-    - GET /api/v1/auth/callback — exchange code + V2 user upsert + V2 JWT issue
-    - POST /api/v1/auth/logout  — vendor signout redirect
+    - GET  /api/v1/auth/login    — generate vendor authorize URL + 302 redirect
+    - GET  /api/v1/auth/callback — exchange code + V2 user upsert + V2 JWT issue
+                                   (cookie) + 302 to SPA /auth/callback?next=...
+    - GET  /api/v1/auth/me       — current identity {user, tenant, roles} (401
+                                   if no valid JWT — used by SPA authStore.bootstrap)
+    - POST /api/v1/auth/logout   — vendor signout redirect + clear v2_jwt cookie
 
     State CSRF protection via httpOnly secure cookie set by /login + read by
     /callback. Tenant scoping via `tenant_code` query param at /login →
@@ -29,6 +32,7 @@ Created: 2026-05-09 (Sprint 57.7 Day 1 PM)
 Last Modified: 2026-05-10
 
 Modification History (newest-first):
+    - 2026-05-10: Sprint 57.13 US-A1 — add GET /auth/me + /callback 302→SPA + Settings cookie attrs
     - 2026-05-10: Sprint 57.7 Day 3 — DB user upsert + real tenant resolution
     - 2026-05-09: Initial skeleton creation (Sprint 57.7 US-A2 Day 1 PM)
 
@@ -48,12 +52,13 @@ from typing import Any
 from urllib.parse import quote_plus
 from uuid import UUID as PyUUID
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import get_settings
 from infrastructure.db.models.identity import Tenant, User
 from infrastructure.db.session import get_db_session
 from platform_layer.identity.jwt import JWTManager
@@ -64,9 +69,24 @@ from platform_layer.identity.oidc import (
     OIDCStateError,
     WorkOSOIDCFlow,
 )
+from platform_layer.middleware.tenant_context import get_db_session_with_tenant
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _cookie_kwargs(*, max_age: int) -> dict[str, Any]:
+    """Shared httpOnly cookie attrs. Secure flag from Settings (False in dev).
+
+    SameSite=Lax lets the cross-site vendor → /callback redirect deliver the
+    cookie back; httpOnly blocks JS access (XSS mitigation).
+    """
+    return {
+        "max_age": max_age,
+        "httponly": True,
+        "secure": get_settings().cookie_secure,
+        "samesite": "lax",
+    }
 
 
 # ---- Cookie names + TTL --------------------------------------------------
@@ -82,6 +102,24 @@ _STATE_TTL_SECONDS = 600  # 10 min
 
 class LogoutResponse(BaseModel):
     redirect_to: str
+
+
+class AuthMeUser(BaseModel):
+    id: PyUUID
+    email: str
+    display_name: str | None = None
+
+
+class AuthMeTenant(BaseModel):
+    id: PyUUID
+    name: str
+    code: str
+
+
+class AuthMeResponse(BaseModel):
+    user: AuthMeUser
+    tenant: AuthMeTenant
+    roles: list[str]
 
 
 @router.get("/login")
@@ -110,12 +148,7 @@ async def login(
         ) from exc
 
     response = RedirectResponse(url=authorize_url, status_code=status.HTTP_302_FOUND)
-    cookie_kwargs: dict[str, Any] = {
-        "max_age": _STATE_TTL_SECONDS,
-        "httponly": True,
-        "secure": False,  # Phase 58+: True in prod (set via Settings.cookie_secure)
-        "samesite": "lax",
-    }
+    cookie_kwargs = _cookie_kwargs(max_age=_STATE_TTL_SECONDS)
     response.set_cookie(key=_STATE_COOKIE, value=state, **cookie_kwargs)
     response.set_cookie(key=_REDIRECT_COOKIE, value=redirect_to, **cookie_kwargs)
     response.set_cookie(key=_TENANT_COOKIE, value=tenant_code, **cookie_kwargs)
@@ -257,7 +290,15 @@ async def callback(
         extra={"email": profile.email, "external_id": profile.external_id},
     )
 
-    final_redirect = oidc_redirect_to or "/cost-dashboard"
+    settings = get_settings()
+    next_path = oidc_redirect_to or "/cost-dashboard"
+    # Redirect the browser back to the SPA's /auth/callback so it can run
+    # authStore.bootstrap() (which reads the v2_jwt cookie via /auth/me) then
+    # navigate to the originally-requested page (?next=). Sprint 57.13 US-A1:
+    # previously redirected straight to next_path, which left the SPA with no
+    # signal to refresh its auth state — manifested as "logged in but app says
+    # anonymous" until a hard refresh.
+    final_redirect = f"{settings.frontend_base_url}/auth/callback?next={quote_plus(next_path)}"
     response = RedirectResponse(
         url=final_redirect,
         status_code=status.HTTP_302_FOUND,
@@ -265,16 +306,58 @@ async def callback(
     response.set_cookie(
         key=_JWT_COOKIE,
         value=v2_jwt,
-        max_age=3600,  # 1 hour matches jwt_expires_minutes default
-        httponly=True,
-        secure=False,
-        samesite="lax",
+        **_cookie_kwargs(max_age=settings.jwt_expires_minutes * 60),
     )
     # Clear ephemeral state cookies
     response.delete_cookie(_STATE_COOKIE)
     response.delete_cookie(_REDIRECT_COOKIE)
     response.delete_cookie(_TENANT_COOKIE)
     return response
+
+
+@router.get("/me", response_model=AuthMeResponse)
+async def me(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session_with_tenant),
+) -> AuthMeResponse:
+    """Return the current authenticated identity (user + tenant + roles).
+
+    Auth: requires a valid V2 JWT (Bearer header OR v2_jwt cookie) — the
+    TenantContextMiddleware decodes it and populates `request.state.{tenant_id,
+    user_id, roles}`. This path is NOT in EXEMPT_PATH_PREFIXES, so an absent /
+    invalid / expired JWT surfaces as 401 from the middleware before this
+    handler ever runs.
+
+    DB session: get_db_session_with_tenant (SET LOCAL app.tenant_id) so the
+    users-table RLS policy (migration 0009) lets the row through in prod —
+    request.state.tenant_id is guaranteed set since this path isn't exempt.
+
+    Sprint 57.13 US-A1: the SPA's authStore.bootstrap() calls this on app
+    mount + after login to decide authenticated vs anonymous, and to render
+    the user / tenant / roles in the shell + gate routes.
+    """
+    tenant_id: PyUUID = request.state.tenant_id
+    user_id: PyUUID = request.state.user_id
+    roles: list[str] = list(getattr(request.state, "roles", []))
+
+    user = (
+        await db.execute(select(User).where(User.id == user_id, User.tenant_id == tenant_id))
+    ).scalar_one_or_none()
+    tenant = (await db.execute(select(Tenant).where(Tenant.id == tenant_id))).scalar_one_or_none()
+    if user is None or tenant is None:
+        # JWT was valid but the referenced rows are gone (user offboarded /
+        # tenant archived). Treat as unauthenticated rather than 500.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="authenticated identity no longer exists",
+            headers={"WWW-Authenticate": 'Bearer error="invalid_token"'},
+        )
+
+    return AuthMeResponse(
+        user=AuthMeUser(id=user.id, email=user.email, display_name=user.display_name),
+        tenant=AuthMeTenant(id=tenant.id, name=tenant.display_name, code=tenant.code),
+        roles=roles,
+    )
 
 
 @router.post("/logout")

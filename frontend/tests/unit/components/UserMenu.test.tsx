@@ -2,30 +2,40 @@
  * File: frontend/tests/unit/components/UserMenu.test.tsx
  * Purpose: Vitest tests for UserMenu (auth-aware avatar dropdown).
  * Category: Frontend / tests / unit / components
- * Scope: Phase 57 / Sprint 57.8 US-2 Day 2
+ * Scope: Phase 57 / Sprint 57.8 US-2 (Sprint 57.13 US-A1 — authStore-driven)
  *
  * Created: 2026-05-10 (Sprint 57.8 Day 2)
  * Last Modified: 2026-05-10
  *
  * Modification History:
+ *   - 2026-05-10: Sprint 57.13 US-A1 — drive from authStore.user instead of a localStorage JWT; sign out → logout()
  *   - 2026-05-10: Initial creation (Sprint 57.8 US-2 — UserMenu Vitest)
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { UserMenu } from "@/components/UserMenu";
+import { logout } from "@/features/auth/services/authService";
+import { useAuthStore } from "@/features/auth/store/authStore";
 
-const JWT_KEY = "v2_jwt";
+vi.mock("@/features/auth/services/authService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/auth/services/authService")>();
+  return { ...actual, logout: vi.fn() };
+});
 
-// Helper to forge JWT with email claim (signature ignored — UserMenu is
-// browser-display only; backend re-verifies on every request).
-function forgeJwt(email: string): string {
-  const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const payload = btoa(JSON.stringify({ sub: "u1", email }));
-  const sig = "ignored";
-  return `${header}.${payload}.${sig}`;
+function setAuthed(user: { id: string; email: string; display_name: string | null }): void {
+  useAuthStore.setState({
+    status: "authenticated",
+    user,
+    tenant: { id: "t-1", name: "Acme", code: "ACME" },
+    roles: ["user"],
+  });
+}
+
+function setAnonymous(): void {
+  useAuthStore.setState({ status: "anonymous", user: null, tenant: null, roles: [] });
 }
 
 const renderMenu = () =>
@@ -37,11 +47,12 @@ const renderMenu = () =>
 
 describe("UserMenu", () => {
   beforeEach(() => {
-    localStorage.removeItem(JWT_KEY);
+    setAnonymous();
+    vi.mocked(logout).mockClear();
   });
 
   afterEach(() => {
-    localStorage.removeItem(JWT_KEY);
+    useAuthStore.setState({ status: "unknown", user: null, tenant: null, roles: [] });
   });
 
   test("renders nothing when not authenticated", () => {
@@ -49,34 +60,43 @@ describe("UserMenu", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  test("renders avatar with email initial when authed", () => {
-    localStorage.setItem(JWT_KEY, forgeJwt("alice@example.com"));
+  test("renders avatar with display-name initial when authed", () => {
+    setAuthed({ id: "u-1", email: "alice@example.com", display_name: "Alice Smith" });
     renderMenu();
     const button = screen.getByRole("button", { name: "User menu" });
-    expect(button).toHaveTextContent("A"); // first char uppercase
+    expect(button).toHaveTextContent("A"); // first char of display name, uppercase
     expect(button).toHaveAttribute("aria-haspopup", "menu");
     expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
-  test("clicking avatar opens dropdown showing email + Sign out button", () => {
-    localStorage.setItem(JWT_KEY, forgeJwt("bob@workos.com"));
+  test("falls back to email when display_name is null", () => {
+    setAuthed({ id: "u-1", email: "bob@workos.com", display_name: null });
+    renderMenu();
+    expect(screen.getByRole("button", { name: "User menu" })).toHaveTextContent("B");
+  });
+
+  test("clicking avatar opens dropdown showing user + Sign out button", () => {
+    setAuthed({ id: "u-1", email: "bob@workos.com", display_name: "Bob" });
     renderMenu();
     const button = screen.getByRole("button", { name: "User menu" });
     fireEvent.click(button);
 
     expect(screen.getByText("Signed in as")).toBeInTheDocument();
+    expect(screen.getByText("Bob")).toBeInTheDocument();
     expect(screen.getByText("bob@workos.com")).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /Sign out/ })).toBeInTheDocument();
     expect(button).toHaveAttribute("aria-expanded", "true");
   });
 
-  test("clicking Sign out clears localStorage JWT (redirect tested via integration)", () => {
-    localStorage.setItem(JWT_KEY, forgeJwt("charlie@test.com"));
+  test("clicking Sign out calls logout() and closes the menu", () => {
+    setAuthed({ id: "u-1", email: "charlie@test.com", display_name: "Charlie" });
     renderMenu();
 
-    fireEvent.click(screen.getByRole("button", { name: "User menu" }));
+    const button = screen.getByRole("button", { name: "User menu" });
+    fireEvent.click(button);
     fireEvent.click(screen.getByRole("menuitem", { name: /Sign out/ }));
 
-    expect(localStorage.getItem(JWT_KEY)).toBeNull();
+    expect(vi.mocked(logout)).toHaveBeenCalledTimes(1);
+    expect(button).toHaveAttribute("aria-expanded", "false");
   });
 });

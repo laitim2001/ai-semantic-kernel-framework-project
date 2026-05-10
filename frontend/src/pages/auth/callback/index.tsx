@@ -1,67 +1,61 @@
 /**
  * File: frontend/src/pages/auth/callback/index.tsx
- * Purpose: OIDC callback landing — extract V2 JWT cookie + redirect to original page.
- * Category: Frontend / pages / auth (Sprint 57.7 US-A2)
- * Scope: Phase 57 / Sprint 57.7
+ * Purpose: OIDC callback landing — bootstrap auth state then navigate to the original page.
+ * Category: Frontend / pages / auth
+ * Scope: Phase 57 / Sprint 57.13 US-A1
  *
  * Description:
- *   Skeleton callback page. Backend /api/v1/auth/callback handles all OIDC
- *   exchange + V2 JWT issue + sets v2_jwt cookie + 302 redirects browser
- *   to the original requested page (oidc_redirect_to cookie). This page
- *   only handles the edge case where browser lands here directly (e.g.
- *   user refreshes after redirect) — extract JWT from cookie/document,
- *   stash in localStorage, then navigate to consumePostLoginRedirect().
+ *   Backend /api/v1/auth/callback does the OIDC code exchange, sets the
+ *   httpOnly v2_jwt cookie, then 302s the browser HERE with ?next=<original
+ *   page>. This page runs authStore.bootstrap() (GET /auth/me, which the
+ *   cookie authenticates) → then navigate(next). On vendor failure the
+ *   backend redirects with ?error=<message> instead.
  *
- *   Day 3 may swap to httpOnly cookie-only flow (then this page becomes
- *   pure loading spinner + nav delegate to backend redirect chain).
- *
- *   For Day 2 skeleton: simple loading UI + delegate to backend redirect
- *   (page should NEVER actually render content because backend 302 fires
- *   before React mounts).
+ *   Tailwind-ize + <AuthShell> wrap deferred to Sprint 57.13 US-B9.
  *
  * Created: 2026-05-09 (Sprint 57.7 Day 2 PM)
- * Last Modified: 2026-05-09
+ * Last Modified: 2026-05-10
  *
  * Modification History:
+ *   - 2026-05-10: Sprint 57.13 US-A1 — bootstrap-then-navigate via authStore; read ?next; drop dead ?token path
  *   - 2026-05-09: Initial skeleton (Sprint 57.7 US-A2 Day 2)
  *
  * Related:
- *   - backend/src/api/v1/auth.py:callback (302 redirect with v2_jwt cookie)
- *   - frontend/src/features/auth/services/authService.ts
+ *   - backend/src/api/v1/auth.py:callback (302 here with v2_jwt cookie + ?next)
+ *   - frontend/src/features/auth/store/authStore.ts (bootstrap)
+ *   - frontend/src/features/auth/services/authService.ts (consumePostLoginRedirect)
  */
 
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  consumePostLoginRedirect,
-  setJwt,
-} from "../../../features/auth/services/authService";
+
+import { consumePostLoginRedirect } from "../../../features/auth/services/authService";
+import { useAuthStore } from "../../../features/auth/store/authStore";
 
 export default function CallbackPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
-    // Path 1: backend already 302'd here with v2_jwt cookie set + URL param
-    // Path 2: ?error=... query param surfaces vendor failure
     const error = params.get("error");
     if (error) {
       setErrorMessage(decodeURIComponent(error));
       return;
     }
 
-    // Day 2 skeleton: read JWT from URL query (?token=...). Day 3 swap to
-    // cookie-based flow once secure attribute decided.
-    const token = params.get("token");
-    if (token) {
-      setJwt(token);
-    }
-
-    const target = consumePostLoginRedirect();
-    // Use replace so back button doesn't return to /callback
-    navigate(target, { replace: true });
-  }, [navigate, params]);
+    let cancelled = false;
+    void (async () => {
+      await bootstrap();
+      if (cancelled) return;
+      const next = params.get("next") || consumePostLoginRedirect();
+      navigate(next, { replace: true });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, params, bootstrap]);
 
   if (errorMessage) {
     return (
