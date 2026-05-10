@@ -1,33 +1,147 @@
 /**
  * File: frontend/src/pages/auth/login/index.tsx
- * Purpose: OIDC login entry — "Login with Microsoft Entra" button + 302 redirect to backend.
- * Category: Frontend / pages / auth (Sprint 57.7 US-A2)
- * Scope: Phase 57 / Sprint 57.7
+ * Purpose: Login entry — "Login with WorkOS" button (OIDC) + dev fake-login form (DEV builds only).
+ * Category: Frontend / pages / auth
+ * Scope: Phase 57 / Sprint 57.7 → Sprint 57.13 US-A4 (dev fake-login)
  *
  * Description:
- *   Skeleton login page (basic React, NOT yet wrapped in AppShell — US-B2
- *   Day 3 will wrap). On click, sets post-login redirect target in
- *   sessionStorage then navigates browser to /api/v1/auth/login which
- *   returns 302 to vendor authorize URL. Backend handles all OIDC PKCE
- *   handshake; frontend only kicks off + receives JWT cookie at /callback.
+ *   "Login with ..." → window.location to /api/v1/auth/login (302 → vendor →
+ *   IdP → /auth/callback). `?redirect_to=` carries the originally-attempted
+ *   page through the round-trip; `?error=` surfaces a callback failure.
  *
- *   Display error message if URL has ?error=... query param (callback
- *   failure surfaced via redirect with error payload).
+ *   DEV-only: a <DevLoginSection> form (tenant_code + email) POSTs to
+ *   /api/v1/auth/dev-login (404 in prod), then runs authStore.bootstrap()
+ *   (the dev-login cookie authenticates /auth/me) and navigates to the
+ *   stashed post-login page. Hidden in production builds via import.meta.env.DEV.
+ *
+ *   Tailwind-ize the inline styles + <AuthShell> wrap: Sprint 57.13 US-B9.
  *
  * Created: 2026-05-09 (Sprint 57.7 Day 2 PM)
- * Last Modified: 2026-05-09
+ * Last Modified: 2026-05-10
  *
  * Modification History:
+ *   - 2026-05-10: Sprint 57.13 US-A4 — add DEV-only <DevLoginSection> (POST /auth/dev-login → bootstrap → navigate)
  *   - 2026-05-09: Initial skeleton (Sprint 57.7 US-A2 Day 2)
  *
  * Related:
- *   - backend/src/api/v1/auth.py:login (302 redirect target)
- *   - frontend/src/features/auth/services/authService.ts:setPostLoginRedirect
+ *   - backend/src/api/v1/auth.py:login + dev_login
+ *   - frontend/src/features/auth/services/authService.ts (consumePostLoginRedirect)
+ *   - frontend/src/features/auth/store/authStore.ts (bootstrap)
  */
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { setPostLoginRedirect } from "../../../features/auth/services/authService";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
+import {
+  consumePostLoginRedirect,
+  fetchWithAuth,
+  setPostLoginRedirect,
+} from "../../../features/auth/services/authService";
+import { useAuthStore } from "../../../features/auth/store/authStore";
+
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <div
+      role="alert"
+      style={{
+        padding: "0.75rem 1rem",
+        marginBottom: "1.5rem",
+        backgroundColor: "#fee",
+        border: "1px solid #fcc",
+        borderRadius: "4px",
+        color: "#900",
+      }}
+    >
+      <strong>Sign-in failed:</strong> {message}
+    </div>
+  );
+}
+
+/** DEV builds only — fake login without WorkOS (calls POST /api/v1/auth/dev-login). */
+function DevLoginSection() {
+  const navigate = useNavigate();
+  const bootstrap = useAuthStore((s) => s.bootstrap);
+  const [tenantCode, setTenantCode] = useState("dev");
+  const [email, setEmail] = useState("dev@local");
+  const [busy, setBusy] = useState(false);
+  const [devError, setDevError] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setDevError(null);
+    try {
+      const params = new URLSearchParams({ tenant_code: tenantCode, email });
+      const res = await fetchWithAuth(`/api/v1/auth/dev-login?${params.toString()}`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const detail =
+          res.status === 404
+            ? "dev-login is disabled in this environment"
+            : `dev-login failed (${res.status})`;
+        setDevError(detail);
+        return;
+      }
+      // Cookie is set by the response; bootstrap re-reads it via /auth/me.
+      await bootstrap();
+      navigate(consumePostLoginRedirect(), { replace: true });
+    } catch {
+      setDevError("dev-login request failed (is the backend running?)");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      style={{
+        marginTop: "2.5rem",
+        paddingTop: "1.5rem",
+        borderTop: "1px dashed #ccc",
+      }}
+    >
+      <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#555", marginBottom: "0.75rem" }}>
+        Dev fake-login (no WorkOS — DEV builds only)
+      </p>
+      {devError ? <ErrorBanner message={devError} /> : null}
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+        <label style={{ display: "flex", flexDirection: "column", fontSize: "0.8rem", color: "#666" }}>
+          tenant_code
+          <input
+            value={tenantCode}
+            onChange={(e) => setTenantCode(e.target.value)}
+            style={{ padding: "0.4rem", border: "1px solid #ccc", borderRadius: "4px" }}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", fontSize: "0.8rem", color: "#666" }}>
+          email
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{ padding: "0.4rem", border: "1px solid #ccc", borderRadius: "4px" }}
+          />
+        </label>
+      </div>
+      <button
+        type="submit"
+        disabled={busy}
+        style={{
+          padding: "0.5rem 1rem",
+          fontSize: "0.9rem",
+          backgroundColor: busy ? "#999" : "#444",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          cursor: busy ? "default" : "pointer",
+        }}
+      >
+        {busy ? "Signing in…" : "Dev Login"}
+      </button>
+    </form>
+  );
+}
 
 export default function LoginPage() {
   const [params] = useSearchParams();
@@ -35,16 +149,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     const error = params.get("error");
-    if (error) {
-      setErrorMessage(decodeURIComponent(error));
-    }
+    if (error) setErrorMessage(decodeURIComponent(error));
   }, [params]);
 
   const handleLogin = () => {
-    // Day 3 may pull intended page from referer or query param ?redirect_to=...
     const redirectTo = params.get("redirect_to") || "/cost-dashboard";
     setPostLoginRedirect(redirectTo);
-    // Navigate to backend; backend redirects to vendor → IdP → callback
     window.location.href = `/api/v1/auth/login?redirect_to=${encodeURIComponent(redirectTo)}`;
   };
 
@@ -58,25 +168,9 @@ export default function LoginPage() {
       }}
     >
       <h1 style={{ marginBottom: "1rem" }}>IPA Platform V2 — Sign In</h1>
-      <p style={{ color: "#666", marginBottom: "2rem" }}>
-        Sprint 57.7 spike — IAM Foundation Tier 0. Click below to sign in via Microsoft Entra ID.
-      </p>
+      <p style={{ color: "#666", marginBottom: "2rem" }}>Sign in to continue.</p>
 
-      {errorMessage ? (
-        <div
-          role="alert"
-          style={{
-            padding: "0.75rem 1rem",
-            marginBottom: "1.5rem",
-            backgroundColor: "#fee",
-            border: "1px solid #fcc",
-            borderRadius: "4px",
-            color: "#900",
-          }}
-        >
-          <strong>Sign-in failed:</strong> {errorMessage}
-        </div>
-      ) : null}
+      {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
 
       <button
         type="button"
@@ -92,12 +186,10 @@ export default function LoginPage() {
           cursor: "pointer",
         }}
       >
-        Login with Microsoft Entra
+        Login with WorkOS
       </button>
 
-      <p style={{ marginTop: "2rem", fontSize: "0.875rem", color: "#999" }}>
-        Vendor: WorkOS (chosen per Sprint 57.7 US-A1 vendor matrix)
-      </p>
+      {import.meta.env.DEV ? <DevLoginSection /> : null}
     </div>
   );
 }

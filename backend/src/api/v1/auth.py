@@ -12,6 +12,8 @@ Description:
                                    (cookie) + 302 to SPA /auth/callback?next=...
     - GET  /api/v1/auth/me       — current identity {user, tenant, roles} (401
                                    if no valid JWT — used by SPA authStore.bootstrap)
+    - POST /api/v1/auth/dev-login — dev-only fake login (404 in prod); upserts a
+                                   dev tenant+user, issues a JWT cookie, returns {user,tenant,roles}
     - POST /api/v1/auth/logout   — vendor signout redirect + clear v2_jwt cookie
 
     State CSRF protection via httpOnly secure cookie set by /login + read by
@@ -32,6 +34,7 @@ Created: 2026-05-09 (Sprint 57.7 Day 1 PM)
 Last Modified: 2026-05-10
 
 Modification History (newest-first):
+    - 2026-05-10: Sprint 57.13 US-A4 — add POST /auth/dev-login (dev-only fake login; 404 in prod)
     - 2026-05-10: Sprint 57.13 US-A1 — add GET /auth/me + /callback 302→SPA + Settings cookie attrs
     - 2026-05-10: Sprint 57.7 Day 3 — DB user upsert + real tenant resolution
     - 2026-05-09: Initial skeleton creation (Sprint 57.7 US-A2 Day 1 PM)
@@ -358,6 +361,79 @@ async def me(
         tenant=AuthMeTenant(id=tenant.id, name=tenant.display_name, code=tenant.code),
         roles=roles,
     )
+
+
+# Dev fake-login roles — every page renders (user pages + admin pages +
+# platform-admin pages) so local dev can exercise the whole app.
+_DEV_LOGIN_ROLES: tuple[str, ...] = ("user", "admin", "platform_admin")
+
+
+def _is_production() -> bool:
+    return get_settings().env.lower() in ("production", "prod")
+
+
+@router.post("/dev-login")
+async def dev_login(
+    tenant_code: str = Query("dev", description="Tenant code; auto-created if absent (dev only)."),
+    email: str = Query("dev@local", description="Dev user email."),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Dev-only fake login — no WorkOS account required. Returns 404 in production.
+
+    Sprint 57.13 US-A4: lets local development sign in to auth-gated pages.
+    Resolves (or auto-creates) a dev Tenant by `tenant_code`, upserts a dev
+    User (external_id=`dev:<email>`), issues a V2 JWT cookie with roles
+    [user, admin, platform_admin] so every page renders, and returns
+    {user, tenant, roles} JSON — the SPA sets authStore from the payload and
+    navigates itself (no 302 chain). In production (Settings.env in
+    {production, prod}) the route is invisible (404), so it's safe to ship.
+    """
+    if _is_production():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+
+    tenant = (
+        await db.execute(select(Tenant).where(Tenant.code == tenant_code))
+    ).scalar_one_or_none()
+    if tenant is None:
+        tenant = Tenant(code=tenant_code, display_name=f"Dev Tenant ({tenant_code})")
+        db.add(tenant)
+        await db.flush()
+
+    external_id = f"dev:{email}"
+    user = (
+        await db.execute(
+            select(User).where(User.tenant_id == tenant.id, User.external_id == external_id)
+        )
+    ).scalar_one_or_none()
+    if user is None:
+        user = User(
+            tenant_id=tenant.id,
+            email=email,
+            display_name=email.split("@", 1)[0],
+            external_id=external_id,
+        )
+        db.add(user)
+        await db.flush()
+
+    settings = get_settings()
+    v2_jwt = JWTManager().encode(
+        sub=str(user.id),
+        tenant_id=tenant.id,
+        roles=list(_DEV_LOGIN_ROLES),
+        extra={"email": email, "external_id": external_id},
+    )
+    body = AuthMeResponse(
+        user=AuthMeUser(id=user.id, email=user.email, display_name=user.display_name),
+        tenant=AuthMeTenant(id=tenant.id, name=tenant.display_name, code=tenant.code),
+        roles=list(_DEV_LOGIN_ROLES),
+    ).model_dump(mode="json")
+    response = JSONResponse(content=body)
+    response.set_cookie(
+        key=_JWT_COOKIE,
+        value=v2_jwt,
+        **_cookie_kwargs(max_age=settings.jwt_expires_minutes * 60),
+    )
+    return response
 
 
 @router.post("/logout")
