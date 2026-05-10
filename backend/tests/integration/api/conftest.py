@@ -21,7 +21,7 @@ Description:
       loop is closed" failures (e.g. test_list_rejects_non_approver_role on CI).
 
 Modification History (newest-first):
-    - 2026-05-10: Sprint 57.11 Day 4 — add dispose_engine() to autouse reset (closes AD-Governance-RBAC-Flake CI flake; per-test connection-pool reset prevents cross-loop Future leak)
+    - 2026-05-10: Sprint 57.11 — add dispose_engine() autouse (closes AD-Governance-RBAC-Flake)
     - 2026-05-06: Sprint 56.3 Day 3 — add reset_cost_ledger (US-3)
     - 2026-05-06: Sprint 56.3 Day 2 — add reset_pricing_loader (US-3)
     - 2026-05-06: Sprint 56.3 Day 1 — add reset_sla_recorder (US-1)
@@ -31,7 +31,7 @@ Modification History (newest-first):
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterator, Iterator  # noqa: F401
+from collections.abc import AsyncIterator
 
 import pytest
 
@@ -57,7 +57,7 @@ from platform_layer.observability import reset_sla_recorder  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-async def _reset_module_singletons() -> "AsyncIterator[None]":  # type: ignore[name-defined] # noqa: F821
+async def _reset_module_singletons() -> AsyncIterator[None]:
     """Clear module-level singletons + dispose async engine before + after each test.
 
     Sprint 57.11 fix (AD-Governance-RBAC-Flake): added await dispose_engine()
