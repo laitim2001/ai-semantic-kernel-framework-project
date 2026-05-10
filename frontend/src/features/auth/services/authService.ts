@@ -8,10 +8,14 @@
  *   Foundational auth service consumed by ALL feature services + the
  *   authStore. Provides:
  *
- *   1. fetchWithAuth(url, init) — fetch() wrapper; sends cookies
+ *   1. fetchWithAuth(url, init, opts?) — fetch() wrapper; sends cookies
  *      (credentials:"include") and adds Authorization: Bearer ONLY when a
  *      dev-login token is present in localStorage. Production browsers
  *      authenticate via the httpOnly v2_jwt cookie set by /api/v1/auth/callback.
+ *      On a 401 it (by default) toasts "session expired", clears local auth
+ *      state, stashes the current path, and navigates to /auth/login —
+ *      callers that handle 401 themselves (fetchAuthMe / logout) opt out via
+ *      { redirectOn401: false }.
  *   2. fetchAuthMe() — GET /api/v1/auth/me → {user, tenant, roles} | null
  *      (null on 401). Used by authStore.bootstrap().
  *   3. setPostLoginRedirect / consumePostLoginRedirect — stash the page the
@@ -27,6 +31,7 @@
  * Last Modified: 2026-05-10
  *
  * Modification History:
+ *   - 2026-05-10: Sprint 57.13 US-B1 — fetchWithAuth 401 → toast + clear + redirect (redirectOn401 opt-out)
  *   - 2026-05-10: Sprint 57.13 US-A1 — add fetchAuthMe; isAuthenticated reads authStore; rename JWT helpers → dev-token; logout clears authStore
  *   - 2026-05-09: Initial creation (Sprint 57.7 US-A2 Day 2)
  *
@@ -34,8 +39,10 @@
  *   - backend/src/api/v1/auth.py (login + callback + me + logout endpoints)
  *   - frontend/src/features/auth/store/authStore.ts (bootstrap consumer)
  *   - frontend/src/features/auth/components/RequireAuth.tsx (route gate)
+ *   - frontend/src/lib/toast.ts (toastError on 401)
  */
 
+import { toastError } from "../../../lib/toast";
 import { useAuthStore } from "../store/authStore";
 import type { AuthMeResponse } from "../store/authStore";
 
@@ -65,24 +72,44 @@ export function consumePostLoginRedirect(): string {
   return path || "/cost-dashboard";
 }
 
+interface FetchWithAuthOptions {
+  /** When true (default) a 401 toasts + clears auth + navigates to /auth/login. */
+  redirectOn401?: boolean;
+}
+
+function handleAuthExpired(): void {
+  toastError("登入已過期，請重新登入");
+  clearDevToken();
+  useAuthStore.getState().clear();
+  setPostLoginRedirect(window.location.pathname + window.location.search);
+  window.location.href = "/auth/login";
+}
+
 /**
  * fetch() wrapper used by all feature services + authStore. Always sends
  * cookies; adds Authorization: Bearer only if a dev-login token exists in
  * localStorage (so the normal cookie flow doesn't need JS-readable tokens).
  *
- * 401 responses are NOT redirected here — callers (or QueryClient onError,
- * US-B1) decide. fetchAuthMe() handles its own 401.
+ * On a 401 it (by default) treats the session as expired: toast + clear local
+ * auth state + stash current path + navigate to /auth/login. The response is
+ * still returned so callers can inspect it. fetchAuthMe() / logout() opt out
+ * via { redirectOn401: false } because they handle 401 themselves.
  */
 export async function fetchWithAuth(
   input: RequestInfo | URL,
   init?: RequestInit,
+  opts?: FetchWithAuthOptions,
 ): Promise<Response> {
   const headers = new Headers(init?.headers);
   const devToken = getDevToken();
   if (devToken) {
     headers.set("Authorization", `Bearer ${devToken}`);
   }
-  return fetch(input, { ...init, headers, credentials: "include" });
+  const res = await fetch(input, { ...init, headers, credentials: "include" });
+  if (res.status === 401 && opts?.redirectOn401 !== false) {
+    handleAuthExpired();
+  }
+  return res;
 }
 
 /**
@@ -92,7 +119,7 @@ export async function fetchWithAuth(
  * logged in" (null) from "backend down" (throw).
  */
 export async function fetchAuthMe(): Promise<AuthMeResponse | null> {
-  const res = await fetchWithAuth("/api/v1/auth/me");
+  const res = await fetchWithAuth("/api/v1/auth/me", undefined, { redirectOn401: false });
   if (res.status === 401) return null;
   if (!res.ok) {
     throw new Error(`/auth/me failed: ${res.status}`);
@@ -108,7 +135,9 @@ export function isAuthenticated(): boolean {
 export async function logout(): Promise<void> {
   let redirectTo = "/auth/login";
   try {
-    const response = await fetchWithAuth("/api/v1/auth/logout", { method: "POST" });
+    const response = await fetchWithAuth("/api/v1/auth/logout", { method: "POST" }, {
+      redirectOn401: false,
+    });
     if (response.ok) {
       const body = (await response.json()) as { redirect_to: string };
       redirectTo = body.redirect_to;
