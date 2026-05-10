@@ -204,22 +204,23 @@ Related:
 ## Day 5 — US-B3: Radix primitives (Dialog / DropdownMenu) + refactor consumers
 
 ### 5.1 NEW components/ui/ — Radix-based primitives
-- [ ] **`components/ui/dialog.tsx`** — wrap `@radix-ui/react-dialog`(已裝)：`<Dialog>...<DialogContent><DialogHeader><DialogTitle><DialogDescription><DialogFooter><DialogClose>` + Tailwind + overlay
-- [ ] **`components/ui/dropdown-menu.tsx`** — wrap `@radix-ui/react-dropdown-menu`（`npm i`）：`<DropdownMenu>...<DropdownMenuContent><DropdownMenuItem><DropdownMenuSeparator><DropdownMenuLabel>`
-- [ ] **`package.json`** — `+@radix-ui/react-dropdown-menu`
+- [x] **`components/ui/dialog.tsx`** — wrap `@radix-ui/react-dialog`：`Dialog/DialogTrigger/DialogClose/DialogPortal`（Radix re-exports）+ `DialogOverlay` + `DialogContent`（portalled centered panel + built-in X close + `role="dialog"`）+ `DialogHeader/DialogFooter` + `DialogTitle/DialogDescription`。Controlled use:`<Dialog open onOpenChange>`
+- [x] **`components/ui/dropdown-menu.tsx`** — wrap `@radix-ui/react-dropdown-menu`：`DropdownMenu/DropdownMenuTrigger/DropdownMenuPortal`（Radix）+ `DropdownMenuContent`（portalled;`bg-background` — 本專案無 `popover` token → D-DAY5-1）+ `DropdownMenuItem/Separator/Label`
+- [x] **`package.json`** — `+@radix-ui/react-dropdown-menu@^2.1.16`（`@radix-ui/react-dialog` 早已裝）;`index.ts` barrel 更新
+- [x] **`tests/unit/setup.ts`** — Radix-in-jsdom polyfills（`hasPointerCapture/setPointerCapture/releasePointerCapture/scrollIntoView/ResizeObserver`）— 無這些 Radix menu/dialog 在 @testing-library 下會 throw（D-DAY5-2）
 
 ### 5.2 採用
-- [ ] **governance `DecisionModal`** → 用 `<Dialog>`（保留 API 形狀；換內部實作）；跑 governance Vitest + e2e（approval flow 4/4）確認不破
-- [ ] **`components/UserMenu.tsx`** → 用 `<DropdownMenu>`（顯示 `authStore.user.email` + display_name + role `<Badge>`s + Sign out；locale switcher 留位給 B5）
+- [x] **governance `DecisionModal`** → `<Dialog open onOpenChange={(o) => !o && onClose()}>` + `<DialogContent><DialogHeader><DialogTitle>…</DialogTitle></DialogHeader>…<DialogFooter>{Cancel/Escalate/Reject/Approve}</DialogFooter></DialogContent>`。API（`{approval,onClose}`）不變;action buttons 保留 semantic colours;`role="dialog"` + button names 保留。**governance Vitest 全綠**;**e2e `approvals.spec` 本日未重跑 — 與其他 auth-gate e2e 一起留 US-C1 sweep**（D-DAY5-3）
+- [x] **`components/UserMenu.tsx`** → `<DropdownMenu>`（trigger 保留 `aria-label="User menu"` + `aria-haspopup="menu"`;顯示 `authStore.user.email` + display_name + role `<Badge variant="outline">`s + Sign out via `DropdownMenuItem onSelect → logout()`;locale switcher slot 留位給 B5）
 
 ### 5.3 Tests
-- [ ] **`tests/unit/components/ui/{dialog,dropdown-menu}.test.tsx`**（open/close/ESC/item click）
-- [ ] **`tests/unit/components/UserMenu.test.tsx`**（顯示 authStore.user；Sign out 呼 logout）
-- [ ] governance e2e regression 4/4
+- [x] **`tests/unit/components/ui/radix.test.tsx`** — 9 tests（Dialog: closed→no dialog / open→content+title+footer / ESC→onOpenChange(false) / X→onOpenChange(false);DropdownMenu: closed→no menu / open→menu+label+menuitem / item click→onSelect+close / aria-expanded toggle / stateful host）
+- [x] **`tests/unit/components/UserMenu.test.tsx`** — rewritten to `userEvent`（not `fireEvent`）for the Radix dropdown;5 tests（null when not authed / display-name initial / email initial fallback / open shows user+role-badge+Sign-out / Sign out → logout() + closes）
+- [ ] governance e2e regression 4/4 — 🚧 **deferred to US-C1 e2e sweep**（環境無 backend server 不能跑 e2e;DecisionModal Radix swap 保留了 `role="dialog"` + button names + ESC/outside-click,理論上不破,但需 US-C1 實跑確認）
 
 ### 5.4 Day 5 wrap
-- [ ] **Day 5 progress entry** + drift catalog
-- [ ] **Day 5 commit**: `feat(sprint-57-13, Day 5): US-B3 Radix Dialog+DropdownMenu primitives + DecisionModal+UserMenu refactor`
+- [x] **Day 5 progress entry** + drift catalog（D-DAY5-1..3）
+- [x] **Day 5 commit**: `feat(sprint-57-13, Day 5): US-B3 Radix Dialog+DropdownMenu primitives + DecisionModal+UserMenu refactor` (`6bb4fdde`)
 
 ---
 

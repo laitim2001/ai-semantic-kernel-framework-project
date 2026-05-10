@@ -205,11 +205,42 @@ The `<Skeleton>` primitive swap is everywhere; `<TableSkeleton>`/`<EmptyState>` 
 
 ---
 
-## Remaining for Day 5-9
+## Day 5 — US-B3 (Radix Dialog + DropdownMenu primitives + DecisionModal/UserMenu refactor) — `6bb4fdde`
+
+### NEW `components/ui/` Radix wrappers (barrel `index.ts` updated)
+- `dialog.tsx` — `Dialog`/`DialogTrigger`/`DialogClose`/`DialogPortal` (Radix re-exports) + `DialogOverlay` (dimmed backdrop) + `DialogContent` (portalled to `<body>`, centred panel, built-in X close button, `role="dialog"`) + `DialogHeader`/`DialogFooter` (layout) + `DialogTitle`/`DialogDescription` (Radix — accessible title/description). Controlled use: `<Dialog open onOpenChange={...}><DialogContent>…</DialogContent></Dialog>`. Radix supplies focus-trap + ESC + outside-click + aria wiring.
+- `dropdown-menu.tsx` — `DropdownMenu`/`DropdownMenuTrigger`/`DropdownMenuPortal` (Radix) + `DropdownMenuContent` (portalled menu surface; `bg-background border shadow-md` — this app's tailwind.config has no `popover` token → D-DAY5-1) + `DropdownMenuItem` (`role="menuitem"` + `focus:bg-muted`) + `DropdownMenuSeparator` + `DropdownMenuLabel`. Radix supplies keyboard nav + focus + ESC/outside-click close + `role="menu"`.
+- `package.json`: `+@radix-ui/react-dropdown-menu@^2.1.16` (`@radix-ui/react-dialog@^1.1.15` already present from 57.7 D-PRE-6).
+
+### Consumer refactors
+- **governance `DecisionModal`** — the hand-rolled `fixed inset-0 z-[100] … bg-black/45` overlay + inner `role="dialog"` panel with `onClick` outside-close + `stopPropagation` → `<Dialog open onOpenChange={(o) => { if (!o) onClose(); }}><DialogContent className="max-w-[720px] font-sans"><DialogHeader><DialogTitle>Review approval — {toolName}</DialogTitle></DialogHeader> … {reason textarea} … {error alert} … <DialogFooter>{Cancel | Escalate | Reject | Approve}</DialogFooter></DialogContent></Dialog>`. The API (`{ approval, onClose }`) and the parent's mount/unmount pattern are unchanged; the 4 action buttons keep their semantic colours (green/red/orange — `<Button>` variants don't carry those); `role="dialog"` + button accessible-names are preserved (so the approval-flow e2e selectors survive). **governance Vitest suite is green** (no DecisionModal vitest exists — only e2e). **The e2e `tests/e2e/governance/approvals.spec.ts` was NOT re-run this turn** (no backend server in this env) — folded into the US-C1 e2e sweep (which is already deferred for the auth-gate changes). D-DAY5-3.
+- **`UserMenu`** — the custom popover (`useState(open)` + `useRef(wrapperRef)` + `useEffect` for outside-click + ESC + a manual `<div role="menu">`) → `<DropdownMenu><DropdownMenuTrigger aria-label="User menu" …>{initial}</DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>{Signed-in-as / name / email / role badges}</DropdownMenuLabel><DropdownMenuSeparator/><DropdownMenuItem onSelect={() => void logout()}>Sign out</DropdownMenuItem></DropdownMenuContent></DropdownMenu>`. The trigger keeps `aria-label="User menu"` + `aria-haspopup="menu"` (Radix sets the latter + `aria-expanded`). It now also renders `authStore.roles` as `<Badge variant="outline">` pills (was just name/email before). A locale-switcher item slot is reserved for US-B5 (i18n).
+
+### Test infra
+- `tests/unit/setup.ts` — added jsdom polyfills for Radix: `Element.prototype.{hasPointerCapture, setPointerCapture, releasePointerCapture, scrollIntoView}` + `globalThis.ResizeObserver`. Without these, opening a Radix menu/dialog under `@testing-library` throws (`target.hasPointerCapture is not a function` etc.). D-DAY5-2.
+- `tests/unit/components/UserMenu.test.tsx` — rewritten: `@testing-library/user-event` instead of `fireEvent` (Radix dropdown needs real pointer-event sequencing to open); asserts the role-badge text + `aria-expanded` toggle on the trigger. Still 5 tests.
+- NEW `tests/unit/components/ui/radix.test.tsx` — 9 tests: Dialog (closed → no `role="dialog"` / open → content+title+footer / `{Escape}` → `onOpenChange(false)` / X button → `onOpenChange(false)`); DropdownMenu (closed → no `role="menu"` / open → menu+label+menuitem / item click → `onSelect` + menu closes / `aria-expanded` toggles / works inside a stateful host that updates on item select).
+- `CONVENTION.md` §10 — added "Modal dialog → `<Dialog>`" + "Dropdown/popover menu → `<DropdownMenu>`" rows + the Radix-in-jsdom test note (setup.ts polyfills + `user-event` not `fireEvent`).
+
+### Drift findings (Day 5)
+| ID | Finding | Implication |
+|----|---------|-------------|
+| D-DAY5-1 | This app's `tailwind.config.js` has no `popover` token (UserMenu's old custom popover used `bg-popover text-popover-foreground` — silently transparent) | `dropdown-menu.tsx` `DropdownMenuContent` uses `bg-background border border-border shadow-md` (tokens that exist). Pre-existing UserMenu transparency bug is moot now (replaced). Could add a `popover` token in a future polish. |
+| D-DAY5-2 | jsdom implements none of Radix's pointer-capture / scrollIntoView / ResizeObserver — Radix primitives throw under `@testing-library` without polyfills | Added the 5 polyfills to `tests/unit/setup.ts` (one-time; benefits all future Radix usage). Tests of Radix primitives must use `@testing-library/user-event`, not `fireEvent`. |
+| D-DAY5-3 | DecisionModal's e2e (`approvals.spec.ts`) can't be re-run here (no backend server); the Radix swap *should* be e2e-transparent (role="dialog" + button names + ESC/outside-click preserved) but isn't verified | 🚧 folded into the US-C1 e2e sweep (already deferred for the Day 1-2 auth-gate changes). |
+
+### Verification (Day 5 aggregate)
+- Frontend: `npm run lint` clean; `npm run build` ✅ — main `index-*.js` 243.89 kB gzip 77.33 (≈flat vs Day 4 243.86); **the `RequireAuth-*.js` lazy chunk grew 34.65 → 126.24 kB (gzip 11.56 → 41.04) — `@radix-ui/react-dialog` + `@radix-ui/react-dropdown-menu` land in that chunk** (governance/DecisionModal + AppShell/UserMenu pull them in). Lazy-loaded on first auth-gated route nav, so initial-load main bundle is unaffected — but flag for the AD-Bundle-Size watch. **`npm run test` → 54 files / 221 passed** (Day 4: 53/212; +1 file / +9 tests from `radix.test.tsx`). Pre-existing jsdom "Not implemented: navigation" + deliberate ErrorBoundary "kaboom" throw on stderr — not failures.
+- Backend: untouched (no backend changes); `pytest` baseline 1670 + 4 skipped.
+- Manual UI not run (no dev server boot).
+
+---
+
+## Remaining for Day 6-9
 
 - [x] Day 3: US-A5 (connectivity smoke + .env.example) + US-B1 (Toast) — `e1c3f58e`
 - [x] Day 4: US-B2 (design-system component layer + adopt across 6 feature areas) + mid-sprint ratio check — `02910cfe`
-- [ ] Day 5: US-B3 (Radix Dialog+DropdownMenu + DecisionModal+UserMenu refactor)
+- [x] Day 5: US-B3 (Radix Dialog+DropdownMenu primitives + DecisionModal+UserMenu refactor) — `6bb4fdde`
 - [ ] Day 6: US-B4 (Sentry + Web Vitals + telemetry endpoint)
 - [ ] Day 7: US-B5 (i18n)
 - [ ] Day 8: US-B6 (a11y) + US-B7 (Lighthouse CI)
