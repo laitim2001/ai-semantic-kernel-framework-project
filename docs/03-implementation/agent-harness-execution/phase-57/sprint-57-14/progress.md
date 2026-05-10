@@ -61,6 +61,35 @@
 - `npm run e2e -- smoke.spec.ts` → **2 passed (5.5s)** — pipeline works ✅
 
 ### Day 0 commit
-- (pending) `chore(sprint-57-14, Day 0): plan + checklist + 三-prong baseline`
+- `38f826b9` `chore(sprint-57-14, Day 0): plan + checklist + 三-prong baseline` ✅
+
+---
+
+## Day 1 — 2026-05-10 — US-A1 (run suite + triage) + US-A2 (fix)
+
+### US-A1: full Playwright e2e suite run + triage
+- `npx playwright test --reporter=list` → **39 passed / 1 failed / 7 skipped** (47 tests across 18 spec files; 7 skipped = 1 `connectivity.spec.ts` `test.skip(!RUN_CONNECTIVITY)` + 6 `visual-regression.spec.ts` `test.skip(!RUN_VISUAL)` — the expected opt-in skips).
+- **Triage** — only ONE failing test (the carryover note over-estimated the regression; the PR #130 CI-round fixes (`4667dd94` auth-fixtures `**/` JSDoc + 5-spec `seedAuthJwt` beforeEach; `c80e49cc` a11y color-contrast disable + cost/sla error-path "Failed to load data") had already synced the rest):
+
+  | Spec / test | Failure | Classification | Root cause |
+  |-------------|---------|----------------|------------|
+  | `a11y/a11y-scan.spec.ts:70` "gated pages … 0 critical/serious a11y violations" | isolation: `getByTestId('app-shell')` not found → "navigated to /auth/login" (deterministic, 4/4 repeats); full-suite: `frame.evaluate: Execution context was destroyed, most likely because of a navigation` (axe ran, then the page navigated under it) | **(d-ish) hermeticity bug, not a stale assertion** | The test mocked `**/api/v1/auth/me` (browser-side, 200) but NOT the pages' data endpoints. A Python backend **is running on :8000** (process 3552 — `Get-NetTCPConnection -LocalPort 8000`); so the gated pages' data fetches (`/api/v1/governance/approvals`, `/api/v1/admin/tenants`, …) went through the Vite proxy → real backend → no valid JWT (the mock was browser-side only; the real `fetch(..., {credentials:'include'})` carries no cookie/Bearer) → **401** → `fetchWithAuth`'s `handleAuthExpired()` → `window.location.href='/auth/login'` → shell unmounts / context destroyed. In CI (no backend on :8000) the data endpoints fail differently (Vite proxy → ECONNREFUSED → 500/socket-close → `<ErrorRetry>`, no redirect) so it would pass there — but the test was fragile (depended on the *absence* of a backend). |
+
+### US-A2: fix
+- **`tests/e2e/a11y/a11y-scan.spec.ts`** — root-cause fix (per RULES failure-investigation — fix the test's hermeticity, not the implementation): NEW `mockApi(page, authMe)` helper registers a catch-all `**/api/v1/**` → 503 FIRST, then `**/api/v1/auth/me` → 200/401 (more-specific last-registered handler wins for `/auth/me`; catch-all covers all other API calls → deterministic 503 → page renders `<ErrorRetry>` which axe still scans (the "error UIs need a11y too" intent preserved) and crucially never a 401 → no redirect). Both tests (gated-pages + auth-pages) use it. Also added `await page.waitForLoadState("networkidle")` after each `page.goto` and before `scan(...)` so client-side redirects (e.g. `/verification` → `/verification/recent` if it has an index `<Navigate>`) + mocked data fetches settle before axe injects/evaluates. File-header MHist + Description updated.
+- **`tests/e2e/fixtures/auth-fixtures.ts`** — NOT touched (D-PRE-2: already authStore-based + `seedAuthJwt` already had the fixes from PR #130; the stale "Full e2e sweep: Sprint 57.13 US-C1 (Day 9)" header NOTE left as-is since the file is untouched — Trivial-tier change not warranted; will update if a later sprint touches it).
+- No `src/` change; no implementation change; no new unit test (no real bug — the bug was in the *test's* hermeticity).
+
+### Verify
+- `npx playwright test a11y/a11y-scan.spec.ts --reporter=line` → **2 passed (12.8s)** (moderate/minor a11y warnings logged: `/chat-v2` 4 — heading-order/landmark-*; `/auth/callback?error` 1 — page-has-heading-one; these are baseline-scope `console.warn`, not failures)
+- `npx playwright test --reporter=line` (full suite) → **40 passed / 7 skipped / 0 failed** — re-run ×2 more → identical (no flake)
+- `git diff` shows only `tests/e2e/a11y/a11y-scan.spec.ts` (+ progress.md / checklist) — no `src/`, no `playwright.config.ts`
+
+### Drift findings (D-DAY1)
+- D-DAY1-1 (🟢 scope-reducing): the e2e regression was 1 test, not the broad "Days 4-8 churn" the carryover note implied → US-A1/A2 done in ~1 hr; sprint will come in well under the ~4-6.5 hr commit (ratio ~0.4-0.5). Surplus noted for retrospective Q2.
+- D-DAY1-2: a real backend running on :8000 (process 3552) — this is *why* the test was red locally but would be green in CI. The fix makes the test hermetic regardless. (Not stopping the backend per CLAUDE.md "Do not stop any node.js process" — though this is a python process; left running anyway, not relevant.)
+
+### Day 1 commit
+- (pending) `fix(sprint-57-14, Day 1): US-A1 e2e triage + US-A2 a11y-scan hermeticity (mock all /api/v1/**)`
 
 ---

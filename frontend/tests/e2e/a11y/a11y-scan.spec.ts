@@ -7,18 +7,29 @@
  * Description:
  *   Runs axe-core (@axe-core/playwright AxeBuilder) against:
  *     - the 9 active routes (sidebar + AppShellV2 shell rendered; data fetches
- *       fail with no backend → accessible <ErrorRetry> error state, which axe
- *       also scans — error UIs need a11y too), with /api/v1/auth/me mocked so
+ *       are mocked to 503 → accessible <ErrorRetry> error state, which axe also
+ *       scans — error UIs need a11y too), with /api/v1/auth/me mocked so
  *       <RequireAuth> lets the shell render
  *     - /auth/login (anonymous) + /auth/callback?error=… (error UI; the ?error
  *       branch short-circuits before bootstrap, so it doesn't redirect)
  *   Assertion: 0 violations with impact "critical" or "serious". moderate/minor
  *   are logged (console.warn) but don't fail — baseline scope.
  *
- *   Self-contained: page.route() mocks (per feedback_e2e_network_mocking_pattern.md);
- *   the Vite dev server is auto-started by playwright.config.ts webServer.
+ *   Self-contained: page.route() mocks (per feedback_e2e_network_mocking_pattern.md).
+ *   Every /api/v1/** request is intercepted — /auth/me to 200, everything else to
+ *   503 — so the test is hermetic whether or not a real backend happens to be
+ *   reachable on :8000. (Originally only /auth/me was mocked, so data endpoints
+ *   went through the Vite proxy; when a backend was running it returned 401 →
+ *   fetchWithAuth's handleAuthExpired → window.location='/auth/login' → the shell
+ *   never rendered. Sprint 57.14 AD-Frontend-E2E-Sweep made it hermetic.)
+ *   The Vite dev server is auto-started by playwright.config.ts webServer.
  *
  * Created: 2026-05-10 (Sprint 57.13 Day 8)
+ * Last Modified: 2026-05-10
+ *
+ * Modification History:
+ *   - 2026-05-10: Sprint 57.14 US-A2 — mock all /api/v1/** (data → 503) so the gated-pages scan is hermetic regardless of a running backend; wait for networkidle before axe to avoid mid-scan navigation
+ *   - 2026-05-10: Initial creation (Sprint 57.13 Day 8)
  */
 
 import AxeBuilder from "@axe-core/playwright";
@@ -45,6 +56,31 @@ const GATED_ROUTES = [
   "/memory",
 ];
 
+/**
+ * Make the test hermetic: every /api/v1/** request is intercepted.
+ * `/auth/me` gets the supplied identity (200) or null (401); all other API
+ * calls (the pages' data fetches) get a deterministic 503 → the page renders
+ * its <ErrorRetry> state (which axe also scans), and crucially never a 401 —
+ * a 401 would trip fetchWithAuth's handleAuthExpired() → window.location to
+ * /auth/login, so the shell would never render. Register the catch-all FIRST
+ * and the /auth/me handler SECOND so the more-specific (last-registered) one
+ * wins for /auth/me and the catch-all covers everything else.
+ */
+async function mockApi(page: Page, authMe: object | null): Promise<void> {
+  await page.route("**/api/v1/**", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "service unavailable (e2e mock)" }),
+    }),
+  );
+  await page.route("**/api/v1/auth/me", (route) =>
+    authMe
+      ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(authMe) })
+      : route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "anonymous" }) }),
+  );
+}
+
 async function scan(page: Page, label: string): Promise<void> {
   const results = await new AxeBuilder({ page })
     // color-contrast is disabled at baseline scope: the chat-v2 inline panels
@@ -68,27 +104,30 @@ async function scan(page: Page, label: string): Promise<void> {
 
 test.describe("Sprint 57.13 US-B6 — accessibility scan", () => {
   test("gated pages (shell + content/error UI) have 0 critical/serious a11y violations", async ({ page }) => {
-    await page.route("**/api/v1/auth/me", (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockAuthMe) }),
-    );
+    await mockApi(page, mockAuthMe);
     for (const route of GATED_ROUTES) {
       await page.goto(route);
       await expect(page.getByTestId("app-shell")).toBeVisible();
+      // Let any client-side redirect (e.g. /verification → /verification/recent)
+      // + the page's mocked data fetches settle before axe injects/evaluates —
+      // otherwise "Execution context was destroyed, most likely because of a
+      // navigation" if the SPA route changes mid-scan.
+      await page.waitForLoadState("networkidle");
       await scan(page, route);
     }
   });
 
   test("auth pages have 0 critical/serious a11y violations", async ({ page }) => {
-    await page.route("**/api/v1/auth/me", (route) =>
-      route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "anonymous" }) }),
-    );
+    await mockApi(page, null);
 
     await page.goto("/auth/login");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.waitForLoadState("networkidle");
     await scan(page, "/auth/login");
 
     await page.goto("/auth/callback?error=" + encodeURIComponent("test error from IdP"));
     await expect(page.getByRole("alert")).toBeVisible();
+    await page.waitForLoadState("networkidle");
     await scan(page, "/auth/callback?error");
   });
 });

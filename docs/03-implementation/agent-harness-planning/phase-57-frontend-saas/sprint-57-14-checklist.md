@@ -61,36 +61,35 @@ Related:
 
 ---
 
-## Day 1 — US-A1 + US-A2 (start): run e2e suite + triage + fix high-priority specs
+## Day 1 — US-A1 (run suite + triage) + US-A2 (fix) — DONE 2026-05-10 (commit pending)
 
 ### 1.1 US-A1: run full e2e suite + triage
-- [ ] **`npm run e2e`** — run full suite (auto webServer; chromium); capture all failures
-- [ ] **Triage table in progress.md Day 1** — per failing spec: classification (a stale selector / b stale assertion / c stale route-mock shape / d real bug → fix implementation + unit test + FIX-XXX / e flake → re-run stable) + fix plan
-  - DoD: every failing spec has a row; total fail count noted
+- [x] **`npm run e2e`** → **39 passed / 1 failed / 7 skipped** (47 tests / 18 spec files; 7 skipped = 1 connectivity + 6 visual-regression opt-in skips)
+- [x] **Triage table in progress.md Day 1** — only 1 failing test: `a11y/a11y-scan.spec.ts:70` "gated pages …" — classification (d-ish) **hermeticity bug, not stale assertion**: mocked `/auth/me` but not data endpoints; a real backend on :8000 returned 401 on the data fetches → `handleAuthExpired` → redirect to `/auth/login` → shell never rendered. (PR #130 CI-round fixes had already synced auth-fixtures + tenant-page specs + cost/sla error-path — the carryover note over-estimated the regression.)
 
-### 1.2 US-A2: fix high-priority specs (auth / governance / cost / sla)
-- [ ] **`tests/e2e/fixtures/auth-fixtures.ts`** — confirm `seedAuthJwt` aligns with cookie-only + `<RequireAuth>` (9-page gate); fix if Day 1-2 of 57.13 left it partial
-- [ ] **`tests/e2e/auth/*.spec.ts`** (auth-flow / dev-login / four-page-gate) — align selectors to login/callback rewrite (`<AuthShell>` + `<Card>` + page-level `<h1>` + `<Button>` names)
-- [ ] **`tests/e2e/governance/approvals.spec.ts`** — align to Radix `<Dialog>` (use `getByRole('dialog')` / `getByRole('button', {name})`; Radix renders to portal — avoid scoped `.modal` locators); confirm ESC / outside-click still asserted
-- [ ] **`tests/e2e/cost-dashboard/*.spec.ts` + `sla-dashboard/*.spec.ts`** — confirm error-path ("Failed to load data") + loading-skeleton testid match `<ErrorRetry>` / `<TableSkeleton>` / `<CardSkeleton>`
-  - Verify: each fixed spec runs green individually (`npm run e2e -- <spec>` ×3 — no flake)
-- [ ] **Day 1 progress entry** + commits (one logical unit per US/group): `fix(sprint-57-14, Day 1): US-A1 e2e triage + US-A2 auth/governance/cost/sla spec sync`
+### 1.2 US-A2: fix
+- [x] **`tests/e2e/a11y/a11y-scan.spec.ts`** — root-cause fix: NEW `mockApi(page, authMe)` registers catch-all `**/api/v1/**` → 503 FIRST + `**/api/v1/auth/me` → 200/401 SECOND (more-specific last-registered wins for `/auth/me`; catch-all 503 for all other API → page renders `<ErrorRetry>` which axe still scans, never a 401 → no redirect → hermetic regardless of a running backend) + `await page.waitForLoadState("networkidle")` after each `goto` before `scan(...)` (settle client redirects + mocked fetches before axe injects/evaluates). File-header MHist + Description updated.
+- [x] **`tests/e2e/fixtures/auth-fixtures.ts`** — NOT touched (D-PRE-2: already synced by PR #130; stale header NOTE left — Trivial-tier, untouched file)
+- [x] No `src/` change; no implementation change; no new unit test (the bug was in the *test's* hermeticity, not the app)
+  - Verify: ✅ `npx playwright test a11y/a11y-scan.spec.ts` → 2 passed (12.8s); `npx playwright test` (full) → **40 passed / 7 skipped / 0 failed** ×3 runs (no flake); `git diff` only `tests/e2e/a11y/a11y-scan.spec.ts`
+- [x] **Day 1 progress entry** + drift catalog (D-DAY1-1 scope-reducing / D-DAY1-2 backend on :8000)
+- [ ] **Day 1 commit**: `fix(sprint-57-14, Day 1): US-A1 e2e triage + US-A2 a11y-scan hermeticity (mock all /api/v1/**)`
+
+### Day 2.1 — US-A2 remaining specs (verification / memory / chat-v2 / a11y / i18n / admin-tenants / smoke) — DONE 2026-05-10 (all already green)
+> Collapsed into Day 1: the triage (1.1) showed the *only* failure was a11y-scan; every other spec already passes. The PR #130 CI-round fixes had synced the rest.
+- [x] **`tests/e2e/verification/*.spec.ts`** — 4 tests pass (verification tabs i18n already aligned)
+- [x] **`tests/e2e/memory/memory-page.spec.ts`** — 1 test pass (design-system swap already aligned)
+- [x] **`tests/e2e/chat/*.spec.ts`** (approval-card ×4 / chat-v2-ship ×2 / chat-v2-loop-inline / chat-v2-subagent-inline) — all pass (chat-v2 untouched this sprint; toast/queryClient changes didn't break ApprovalCard)
+- [x] **`tests/e2e/a11y/a11y-scan.spec.ts`** — fixed in 1.2 (hermeticity); color-contrast still disabled at baseline (chat-v2 inline styles — separate `AD-Inline-Style-Cleanup-Sweep`)
+- [x] **`tests/e2e/i18n/locale-switch.spec.ts`** — passes (locale switcher selectors fine)
+- [x] **`tests/e2e/admin_tenants/admin_tenants_list.spec.ts`** — 4 tests pass (`seedAuthJwt` + RequireAuth gate fine)
+- [x] **`tests/e2e/smoke.spec.ts` + `loop-debug/loop-debug-standalone.spec.ts`** — pass
+- [x] **`npm run e2e`** (full, excl. 2 opt-in skips) → 0 fail; re-run ×2 → no flake
+  - Verify: ✅ `git diff` only `tests/e2e/a11y/a11y-scan.spec.ts`; no `src/` change; no stray `test.skip`/`test.only`/`test.fixme`
 
 ---
 
-## Day 2 — US-A2 (finish): remaining specs + full-suite green + US-B1 visual CI mechanism
-
-### 2.1 US-A2: remaining specs (verification / memory / chat-v2 / a11y / i18n / admin-tenants / smoke)
-- [ ] **`tests/e2e/verification/*.spec.ts`** — align to verification tabs i18n (`t("verification.tab.*")` / `t("verification.tabsLabel")`)
-- [ ] **`tests/e2e/memory/memory-page.spec.ts`** — align to design-system `<EmptyState>` / `<Skeleton>` swap (testid / role)
-- [ ] **`tests/e2e/chat/*.spec.ts`** (approval-card / chat-v2-ship / chat-v2-loop-inline / chat-v2-subagent-inline) — chat-v2 untouched this sprint (low-risk) but ApprovalCard may be affected by toast/queryClient changes — confirm green
-- [ ] **`tests/e2e/a11y/a11y-scan.spec.ts`** — confirm `/api/v1/auth/me` route mock still matches `<RequireAuth>` bootstrap; color-contrast still disabled (chat-v2 inline styles — separate `AD-Inline-Style-Cleanup-Sweep`)
-- [ ] **`tests/e2e/i18n/locale-switch.spec.ts`** — confirm selectors (locale switcher in UserMenu DropdownMenu)
-- [ ] **`tests/e2e/admin_tenants/admin_tenants_list.spec.ts`** — confirm `seedAuthJwt(page)` (no tenantId, platform-level) + RequireAuth gate
-- [ ] **`tests/e2e/smoke.spec.ts` + `loop-debug/loop-debug-standalone.spec.ts`** — confirm basic routes
-- [ ] **`npm run e2e`** (full suite, excl. `connectivity` + `visual` opt-in skips) → 0 fail; **re-run ×2** → no flake
-  - Verify: `git diff` shows only `tests/e2e/**` (+ maybe `playwright.config.ts`); no `src/` change (unless real bug — then unit test + FIX-XXX); no stray `test.skip`/`test.only` (except existing 2 opt-in + any new `test.fixme` w/ reason + carryover AD)
-  - If scope overruns → fix high-value done, remaining low-risk specs (chat-v2/memory) 🚧 → `AD-Frontend-E2E-Sweep-Round2` (do NOT delete/disable specs)
+## Day 2 — US-B1 visual CI mechanism + US-C1 closeout
 
 ### 2.2 US-B1: visual-regression CI mechanism + skip-guard rewrite
 - [ ] **`.github/workflows/playwright-e2e.yml`** — add `workflow_dispatch` to `on:` (keep existing triggers) + NEW `visual-baseline` job (`if: github.event_name == 'workflow_dispatch'`; `runs-on: ubuntu-latest`; `permissions: contents: write`; checkout `ref: github.ref` + `token: GITHUB_TOKEN`; setup-node + `npm ci` in frontend; `npx playwright install --with-deps chromium`; `RUN_VISUAL=1 npm run e2e -- visual --update-snapshots`; `git add tests/e2e/visual/**/*-snapshots/` + commit `chore(e2e): regenerate visual-regression baselines [skip ci]` + push if changed)
