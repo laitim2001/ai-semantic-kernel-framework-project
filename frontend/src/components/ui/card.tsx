@@ -42,6 +42,9 @@ CardHeader.displayName = "CardHeader";
 
 export const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
+    // Content is supplied by the consumer via children (standard shadcn primitive);
+    // the lint rule can't see through the {...props} spread.
+    // eslint-disable-next-line jsx-a11y/heading-has-content
     <h3 ref={ref} className={cn("text-lg font-semibold leading-none tracking-tight", className)} {...props} />
   ),
 );

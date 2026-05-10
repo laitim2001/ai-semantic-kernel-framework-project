@@ -133,6 +133,8 @@ frontend/test-results/
 frontend/playwright/.cache/
 # Stray root-level test-results/ when playwright is run from repo root (57.13).
 /test-results/
+# Lighthouse CI run output (Sprint 57.13 US-B7 — lhci autorun writes here)
+frontend/.lighthouseci/
 
 # Test artifacts and results
 phase_tests_results_*.json

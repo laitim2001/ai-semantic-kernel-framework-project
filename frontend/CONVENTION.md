@@ -750,6 +750,53 @@ fallback.
 
 ---
 
+## 12. Accessibility Convention (a11y)
+
+Since Sprint 57.13 US-B6, `eslint.config.js` includes `eslint-plugin-jsx-a11y`'s
+recommended rule set (flat-config `jsxA11y.flatConfigs.recommended.rules`), so a11y
+issues fail `npm run lint` (`--max-warnings 0`). Plus a Playwright + axe-core scan.
+
+### Rules
+
+| Need | Do | NOT |
+|------|-----|-----|
+| Clickable non-`<button>` element | a real `<button>`, OR `role="button"` + `tabIndex={0}` + `onKeyDown` (Enter/Space → same action as `onClick`) | `<div onClick>` with no keyboard handler (jsx-a11y `click-events-have-key-events` / `interactive-supports-focus`) |
+| Form field | `<label htmlFor="x">` + `<input id="x">` (or nest the control inside `<label>`) | a bare `<label>` next to an `<input>` (jsx-a11y `label-has-associated-control`) |
+| Heading wrapper component (e.g. `CardTitle` = `<h3 {...props}/>`) | content comes from `children` at call sites; the spread hides it from the linter → a targeted `// eslint-disable-next-line jsx-a11y/heading-has-content` with a reason is acceptable | a real empty `<h1></h1>` |
+| Error / status region | `role="alert"` (already done in `<ErrorRetry>`) | a silent `<div>` |
+| Decorative icon (lucide `<Icon/>`) | leave as-is (no jsx-a11y rule covers `<svg>`; lucide marks them `aria-hidden`) | `<img>` for an icon without `alt=""` |
+
+### axe-core e2e scan
+
+`tests/e2e/a11y/a11y-scan.spec.ts` runs `new AxeBuilder({ page }).analyze()` against
+every shipped page (9 active routes with `/auth/me` mocked so `<RequireAuth>` renders
+the shell + `/auth/login` + `/auth/callback?error=…`) and asserts **0 violations with
+impact `critical` or `serious`** (moderate/minor are `console.warn`-ed for triage, not a
+failure — baseline scope). Run via `npx playwright test a11y`. New pages MUST be added to
+the route list.
+
+---
+
+## 13. Performance / Lighthouse Convention
+
+Since Sprint 57.13 US-B7 there's a Lighthouse CI budget (`lighthouserc.cjs` —
+CommonJS since `package.json` is `"type":"module"`, mirrors `i18next-parser.config.cjs`).
+`npm run lhci` (= `lhci autorun`) builds nothing — it expects `dist/` to exist, then
+`vite preview`s it and runs Lighthouse against `http://localhost:4173/auth/login` (the one
+route that renders fully without auth/backend). Assertions: **accessibility ≥ 0.9 is a hard
+`error` gate**; performance ≥ 0.7 / best-practices ≥ 0.8 / FCP ≤ 2000 ms / TTI ≤ 4000 ms
+are `warn` (informational while the bundle is being trimmed — see `AD-Bundle-Size`).
+
+`.github/workflows/frontend-lighthouse.yml` runs it on PRs touching `frontend/**` —
+`continue-on-error: true`, so it's a budget tripwire, never a required check. Reports
+upload to `temporary-public-storage` (no token). `frontend/.lighthouseci/` (run output) is
+gitignored.
+
+When you add a new public (no-auth) page, add its URL to `lighthouserc.cjs`'s `url` list.
+Auth-gated pages can't be Lighthouse'd without a backend — out of scope for now.
+
+---
+
 ## Cross-References
 
 - Visual + UX rules → [`STYLE.md`](./STYLE.md)
