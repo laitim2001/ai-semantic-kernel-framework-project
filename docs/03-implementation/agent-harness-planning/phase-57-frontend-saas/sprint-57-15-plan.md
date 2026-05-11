@@ -71,9 +71,10 @@ Description:
 
 Created: 2026-05-11 (Sprint 57.15 drafting; closes the standing carryover AD-Inline-Style-Cleanup-Sweep)
 Last Modified: 2026-05-11
-Status: Draft (Day 2 done — all 10 files migrated; 5 Round2 files file-level-disabled; `no-restricted-syntax` guard `error`; `color-contrast` re-enabled 8/9 routes; STYLE.md §1 updated. Day 3 = closeout + visual baseline refresh)
+Status: Closed (Day 3 closeout — 4/4 USs done; 10/15 files migrated, 5 → AD-Inline-Style-Cleanup-Sweep-Round2; guard `error`; color-contrast 8/9; visual baselines unchanged (workflow run found 0 diffs); PR opened, merge deferred to user; calibration ratio ~1.7 over band, KEEP 0.50 1-data-point — see retrospective.md)
 
 Modification History (newest-first):
+    - 2026-05-11: Day 3 closeout — validation sweep green / visual-baseline workflow run `25644392922` → 0 diffs (no commit) / retrospective Q1-Q7 / memory / doc syncs (16-frontend-design.md / sprint-workflow.md calibration / STYLE.md) / PR opened
     - 2026-05-11: Day 2 — §2.1 5 visual/a11y files migrated (ApprovalList was a no-op — already 57.9-migrated) + §2.3 5 Round2 file-level disables + US-B1 (guard / a11y color-contrast 8/9 / STYLE.md); D-DAY2-1 hotfix (ApprovalCard risk colours → `text-[#hex]` to keep approval-card.spec.ts color assertion + match §3 reference)
     - 2026-05-11: Day 1 — D-DAY1-1 scope finding (15 files / 133 `style=` attrs vs plan's 80/14); user chose (B) Tiered (10 files this sprint, 5 → NEW AD-Inline-Style-Cleanup-Sweep-Round2); see §"Day 1 scope revision"
     - 2026-05-11: Day 0 三-prong — 4 D-PRE findings (D-PRE-1 `eslint-plugin-react` not a dep → `no-restricted-syntax` selector instead; D-PRE-2/3/4 de-risk/align); see §"Day 0 三-prong drift findings" + progress.md

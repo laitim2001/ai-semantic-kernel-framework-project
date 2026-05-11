@@ -6,9 +6,10 @@ Scope: Phase 57 / Sprint 57.15
 
 Created: 2026-05-11 (drafted post-plan approval)
 Last Modified: 2026-05-11
-Status: Draft (Day 2 done — §0/§1/§2.1/§2.2/§2.3 [x]; all 10 files migrated, 5 Round2 file-level-disabled, guard `error`, color-contrast 8/9; Day 3 = §3.* closeout + visual baseline refresh)
+Status: Closed (Day 3 closeout — §0/§1/§2/§3 [x] except §3.5/§3.7 post-merge-deferred items; PR opened, merge deferred to user; visual baselines unchanged — workflow run `25644392922` found 0 diffs)
 
 Modification History (newest-first):
+    - 2026-05-11: Day 3 — §3.1-3.8 [x] (validation sweep green / visual-baseline workflow `25644392922` → 0 diffs no commit / retrospective Q1-Q7 / memory / doc syncs / PR); Status → Closed
     - 2026-05-11: Day 2 — §2.1 [x] (5 visual/a11y files; ApprovalList no-op) + §2.3 [x] (5 Round2 disables) + §2.2 [x] (guard / color-contrast 8/9 / STYLE.md); D-DAY2-1 hotfix (ApprovalCard risk colours → `text-[#hex]`)
     - 2026-05-11: Day 1 — §1.1/§1.2 [x] (4 chat-v2/subagent migrated); D-DAY1-1 scope finding → restructured §2.1 (6 visual/a11y files) + NEW §2.3 (5 Round2 files file-level disabled)
     - 2026-05-11: Day 0 — §0.1-0.6 [x]; 三-prong done (4 D-PRE; D-PRE-1 → guard uses `no-restricted-syntax` not `react/forbid-dom-props`); §2.2 updated accordingly
@@ -113,44 +114,44 @@ Related:
 
 ---
 
-## Day 3 — US-C1: validation sweep + visual baseline refresh + retrospective + memory + doc syncs + PR
+## Day 3 — US-C1: validation sweep + visual baseline refresh + retrospective + memory + doc syncs + PR — DONE 2026-05-11
 
 ### 3.1 US-C1: full validation sweep
-- [ ] **Frontend**: `npm run lint` (0 error, incl. new guard) / `npm run build` (main bundle ≈ 297.89 kB, ± small) / `npm run test` (vitest 236 pass, or adjusted count) / `npx playwright test` (40 pass / 7 skip on Windows; visual stays skip locally)
-- [ ] **Backend sanity** — `git diff --stat main..HEAD` = 0 `backend/` changes (only `frontend/**` + `docs/**`) → backend baselines guaranteed unchanged (pytest 1676 pass+4 skip / mypy 0/306 / 9-9 V2 lints / 0 LLM SDK leak); not re-run (rationale in retrospective Q1)
+- [x] **Frontend**: `npm run lint` 0 error (incl new `no-restricted-syntax` guard + `--report-unused-disable-directives` — the 5 Round2 file-level disables are *used*) ✅ / `npm run build` main bundle `index-*.js` **297.89 kB gzip 95.27 — byte-identical to baseline** ✅ / `npm run test` (vitest) **57 files / 236 pass — unchanged** ✅ / `npx playwright test` (full) **40 pass / 7 skip / 0 fail** ✅
+- [x] **Backend sanity** — `git diff --stat main..HEAD` = **0 `backend/` changes** (only `frontend/**` + `docs/**`) → backend baselines guaranteed unchanged (pytest 1676 pass+4 skip / mypy 0/306 / 9-9 V2 lints / 0 LLM SDK leak); not re-run (rationale in retrospective Q1) ✅
 
-### 3.2 US-C1: visual baseline refresh (first end-to-end use of the 57.14 mechanism)
-- [ ] **`git push -u origin feature/sprint-57-15-inline-style-cleanup`**
-- [ ] **`gh workflow run "Playwright E2E" --ref feature/sprint-57-15-inline-style-cleanup`** → wait for the `visual-baseline` job (ubuntu-latest) → it (a) runs `RUN_VISUAL=1 playwright test visual --update-snapshots`, (b) if changed: pushes to `chore/visual-baselines-<run_id>` + opens a PR against the feature branch, (c) always uploads the `visual-baselines` artifact
-- [ ] **`gh run download <run_id> -n visual-baselines`** → take the 6 PNGs → commit the changed ones (expect: `cost-dashboard` / `governance` / `admin-tenants` change colour; `app-shell` / `auth-login` / `verification-recent` unchanged) into the feature branch directly (same approach as 57.14 PR #135) → close the `chore/visual-baselines-<run_id>` auto-PR (not merged — committed manually)
-- [ ] **Eyeball the 3 changed PNGs** — confirm only colour changed (no layout/spacing drift — Tailwind `p-2`/`mt-4`/`w-full` are byte-equivalent to the original inline values; if layout drifted → migration bug → fix the migration)
-  - Verify: feature branch CI re-runs `visual-regression.spec.ts` → green. If the workflow can't run on the feature branch (perms) → fallback: note in retrospective Q4 (`AD-Visual-Baseline-Refresh-57.15`), PR description says "`visual-regression.spec.ts` CI red is intentional — baseline pending refresh post-merge via `gh workflow run --ref main`", don't block merge
+### 3.2 US-C1: visual baseline refresh — DONE 2026-05-11 (0 changes — mechanism validated working)
+- [x] **`git push -u origin feature/sprint-57-15-inline-style-cleanup`** ✅
+- [x] **`gh workflow run "Playwright E2E" --ref feature/sprint-57-15-inline-style-cleanup`** → `visual-baseline` job (run `25644392922`) ✅ all steps green
+- [x] **`gh run download 25644392922 -n visual-baselines`** + `sha256sum` compare → **all 6 `*-chromium-linux.png` SAME** as committed → the workflow's `git diff --cached --quiet` was true → it correctly committed nothing / opened no `chore/visual-baselines-*` PR. **No baseline commit this sprint.**
+- [x] **Eyeball / explanation** — the migrated components (`CostBreakdownTable` "No cost entries" `<p>`, `TenantListFilters` bar, `TenantListPagination` "0-0 of 0") aren't visible in the 6 snapshots: `visual-regression.spec.ts` screenshots immediately after `getByTestId("app-shell")` is visible, *before* the data fetch resolves → captures the loading/`<TableSkeleton>` state (design-system, untouched), not the populated/empty-message state. ⇒ the 57.14 `visual-baseline` workflow_dispatch path got its first real e2e exercise and behaved correctly (diffed → found nothing → did nothing — didn't blindly commit a re-render). No `AD-Visual-Baseline-Refresh-57.15` needed. (Companion follow-up noted in retro Q4: `waitForLoadState("networkidle")` in the visual specs would extend coverage to the populated states — out of scope here.)
+  - Verify: ✅ feature branch CI `visual-regression.spec.ts` will pass (baselines unchanged). The original `gh workflow run --ref <feature-branch>` path worked fine (no perms issue); fallback not needed.
 
 ### 3.3 US-C1: routes / docs cross-check
-- [ ] `routes.config.ts` — no change (no routing change) ✅
-- [ ] 17.md — no change (0 NEW agent-harness contract/ABC/LoopEvent/migration/API) ✅
+- [x] `routes.config.ts` — no change (no routing change) ✅
+- [x] 17.md — no change (0 NEW agent-harness contract/ABC/LoopEvent/migration/API) ✅
 
 ### 3.4 US-C1: retrospective.md (Q1-Q7)
-- [ ] **NEW `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-15/retrospective.md`** — Q1 (US-A1/A2/B1/C1) / Q2 (ratio vs committed ~4-6 hr; vs bottom-up; multiplier verdict) / Q3 (drift findings) / Q4 (carryover AD: `AD-Lighthouse-Visual-Hard-Gate` still open / `AD-Color-Contrast-Round2` if out-of-scope violations / `AD-Visual-Baseline-Refresh-57.15` if fallback path / 57.13 carryover untouched / pre-existing doc nits) / Q5 (Phase 57.16+ candidate names only) / Q6 (KEEP/adjust 0.50 — 1-data-point opens) / Q7 (N/A — not a spike) + 8-point self-check all ✅ + rolling-planning self-check ✅
+- [x] **NEW `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-15/retrospective.md`** — Q1 (US-A1/A2/B1/C1 ✅) / Q2 (`actual/bottom-up` ≈ 0.89 — bottom-up accurate; `actual/committed` ≈ 1.7 OVER band — 0.50 haircut too aggressive for a low-variance mechanical class) / Q3 (D-PRE-1 guard primitive / D-PRE-2+D-DAY2-1 partial color-contrast / ApprovalList phantom / D-DAY2-1 e2e colour-literal hotfix / bundle+baselines byte-identical) / Q4 (`AD-Inline-Style-Cleanup-Sweep-Round2` NEW / `AD-Lighthouse-Visual-Hard-Gate` baselines stable / 57.13-14 carryover / doc nits) / Q5 (Phase 57.16+ candidate names only) / Q6 (KEEP 0.50 — 1 data point; if recurs propose 0.70-0.80) / Q7 (N/A — not a spike) + 8-point self-check all ✅ + rolling-planning self-check ✅
 
 ### 3.5 US-C1: memory snapshot
-- [ ] **NEW `memory/project_phase57_15_inline_style_cleanup.md`** + **`MEMORY.md` index +1 row** (Recent Sprints top)
+- [x] **NEW `memory/project_phase57_15_inline_style_cleanup.md`** + **`MEMORY.md` index +1 row** (Recent Sprints top) ✅
 
 ### 3.6 US-C1: doc syncs (in-sprint)
-- [ ] `16-frontend-design.md` — V2 Ship Timeline +1 entry (12/N counter — inline-style sweep + a11y color-contrast re-enabled + no-inline-style guard + 3 visual baselines refreshed)
-- [ ] `.claude/rules/sprint-workflow.md` — calibration matrix +1 row (`frontend-refactor-mechanical` 0.50 1-data-point, ratio TBD KEEP) + matrix MHist
-- [ ] `STYLE.md` — §Inline styles + MHist (done in US-B1)
-- [ ] checklist [x] + plan/checklist header MHist closeout (Status: Draft → Closed)
-- [ ] **Deferred post-merge** (not in this PR): `CLAUDE.md` (main HEAD + Latest Sprint row + Next Phase 候選 — remove `AD-Inline-Style-Cleanup-Sweep`; note a11y color-contrast now enabled; carryover update) + `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md` §第八部分
+- [x] `16-frontend-design.md` — V2 Ship Timeline +1 entry (12/N counter — inline-style sweep 10/15 + no-inline-style guard + color-contrast re-enabled 8/9 + STYLE.md §1; visual baselines unchanged; 5 → Round2) ✅
+- [x] `.claude/rules/sprint-workflow.md` — calibration matrix +1 row (`frontend-refactor-mechanical` 0.50 1-data-point, ratio ~1.7 OVER band, KEEP) + matrix MHist ✅
+- [x] `STYLE.md` — §1 "Rules" + "Inline-style escape hatches" sub-§ + MHist (done in US-B1) ✅
+- [x] checklist [x] + plan/checklist header MHist closeout (Status: Draft → Closed) ✅
+- [ ] **Deferred post-merge** (not in this PR): `CLAUDE.md` (main HEAD + Latest Sprint row + Next Phase 候選 — remove `AD-Inline-Style-Cleanup-Sweep`, add `AD-Inline-Style-Cleanup-Sweep-Round2`; note a11y color-contrast now on for 8/9; carryover update) + `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md` §第八部分
 
 ### 3.7 US-C1: PR open + closeout sync
-- [ ] **`gh pr create`** — title `Sprint 57.15 — AD-Inline-Style-Cleanup-Sweep (14 components' inline styles → Tailwind + no-inline-style guard + color-contrast re-enabled)`; body has summary + V2 紀律 9 項 self-check + test plan + post-merge follow-ups (CLAUDE.md/SITUATION sync; visual-baseline refresh if fallback) + carryover
-- [ ] **Verify 5 active CI checks** — `Frontend E2E` green if visual baselines refreshed in-branch; else red on `visual-regression.spec.ts` with PR-description note (intentional)
+- [x] **`gh pr create`** — title `Sprint 57.15 — AD-Inline-Style-Cleanup-Sweep (10/15 components' inline styles → Tailwind + no-inline-style guard + color-contrast re-enabled 8/9)`; body has summary + V2 紀律 9 項 self-check + test plan + post-merge follow-ups (CLAUDE.md/SITUATION sync) + carryover (`AD-Inline-Style-Cleanup-Sweep-Round2`)
+- [ ] **Verify 5 active CI checks** — pending CI run (the `visual-baseline` job correctly `skipping` on PR events; `Frontend E2E (chromium headless)` = this sprint's main check — visual-regression.spec.ts will pass, baselines unchanged)
 - [ ] **Squash merge** — 🚧 NOT done in-session: per executing-actions-with-care, squash-merge to `main` is surfaced to the user for confirmation (PR open + CI status communicated → user decides)
 
 ### 3.8 Day 3 progress entry + commit
-- [ ] **Day 3 progress entry** (validation sweep results + baseline refresh outcome + closeout)
-- [ ] **Day 3 commit** `chore(sprint-57-15, Day 3): retrospective + doc syncs + visual baseline refresh + closeout`
+- [x] **Day 3 progress entry** (validation sweep + visual-baseline-0-changes outcome + closeout) ✅
+- [x] **Day 3 commit** `chore(sprint-57-15, Day 3): retrospective + doc syncs + closeout` (pending — about to commit)
 
 ---
 

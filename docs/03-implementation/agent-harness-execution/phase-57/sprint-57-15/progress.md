@@ -142,9 +142,42 @@ Full `npx playwright test` flagged `chat/approval-card.spec.ts:108` "CRITICAL �
 - `git diff --stat main..HEAD` (after Day 2 commit) — only `frontend/**` + `docs/**`; **0 `backend/` changes** ✅
 
 ### Day 2 commit
-- (pending) `feat(sprint-57-15, Day 2): US-A2 §2.1 (5 visual/a11y files) + §2.3 (5 Round2 disables) + US-B1 (no-inline-style guard + color-contrast re-enabled 8/9 + STYLE.md)`
+- `62cba647` `feat(sprint-57-15, Day 2): US-A2 §2.1 (5 visual/a11y files) + §2.3 (5 Round2 disables) + US-B1 (no-inline-style guard + color-contrast re-enabled 8/9 + STYLE.md)` ✅
 
-### Remaining for Day 3 (US-C1)
-- full validation sweep (lint+build+vitest+playwright; backend untouched sanity)
-- **visual baseline refresh** (first end-to-end use of the 57.14 `visual-baseline` workflow): `git push` → `gh workflow run "Playwright E2E" --ref feature/sprint-57-15-inline-style-cleanup` → wait → `gh run download <run_id> -n visual-baselines` → commit the **2 changed** PNGs (`cost-dashboard-chromium-linux.png` + `admin-tenants-chromium-linux.png`; `governance`/`app-shell`/`auth-login`/`verification-recent` unchanged) → eyeball (only colour changed) → close the auto-PR
-- retrospective.md Q1-Q7 + memory snapshot + doc syncs (16-frontend-design.md / sprint-workflow.md calibration +1 row / STYLE.md done / checklist [x] + plan/checklist MHist closeout) + PR (+ post-merge: CLAUDE.md / SITUATION)
+---
+
+## Day 3 — 2026-05-11 — US-C1: validation sweep + visual baseline workflow + retrospective + memory + doc syncs + PR
+
+### Validation sweep
+- `npm run lint` 0 error (incl new `no-restricted-syntax` guard + `--report-unused-disable-directives` — the 5 Round2 file-level disables are *used*) ✅
+- `npm run build` main bundle **297.89 kB gzip 95.27 — byte-identical** ✅
+- `npm run test` (vitest) **57 files / 236 pass — unchanged** ✅
+- `npx playwright test` (full) **40 pass / 7 skip / 0 fail** ✅
+- Backend: `git diff --stat main..HEAD` = **0 `backend/` changes** (only `frontend/**` + `docs/**`) → backend baselines unchanged (pytest 1676 pass+4 skip / mypy 0/306 / 9-9 V2 lints / 0 LLM SDK leak); not re-run ✅
+
+### Visual baseline workflow (first real e2e use of the 57.14 mechanism)
+- `git push -u origin feature/sprint-57-15-inline-style-cleanup` ✅ (the `push`-triggered `e2e` CI run got concurrency-cancelled — the PR's CI re-runs it)
+- `gh workflow run "Playwright E2E" --ref feature/sprint-57-15-inline-style-cleanup` → `visual-baseline` job **run `25644392922`** ✅ — all steps green ("Generate / update visual baselines" + "Open a PR with the updated baselines (if changed)" + "Upload generated baselines as artifact")
+- `gh run download 25644392922 -n visual-baselines` → `sha256sum` compare to the committed `*-chromium-linux.png` → **all 6 SAME** → the workflow's `git diff --cached --quiet` was true → it committed nothing / opened no `chore/visual-baselines-*` PR. **No baseline commit this sprint.**
+- **Why 0 diffs**: the migrated components (`CostBreakdownTable` "No cost entries" `<p>`, `TenantListFilters` bar, `TenantListPagination` "0-0 of 0") aren't visible in any of the 6 snapshots — `visual-regression.spec.ts` screenshots immediately after `getByTestId("app-shell")` is visible, *before* the data fetch resolves → it captures the loading/`<TableSkeleton>` state (design-system, untouched). ⇒ the 57.14 `visual-baseline` workflow_dispatch path is validated working (it diffed → found nothing → did nothing — didn't blindly commit a re-render). No `AD-Visual-Baseline-Refresh-57.15` needed; companion follow-up (`waitForLoadState` in visual specs) noted in retro Q4, out of scope.
+
+### Closeout deliverables
+- NEW `retrospective.md` (Q1-Q7 + 8-point self-check + rolling-planning self-check) ✅
+- NEW `memory/project_phase57_15_inline_style_cleanup.md` + `MEMORY.md` index +1 row ✅
+- doc syncs: `16-frontend-design.md` V2 Ship Timeline +1 (12/N) ✅ / `.claude/rules/sprint-workflow.md` calibration matrix +1 row (`frontend-refactor-mechanical` 0.50 1-data-point ratio ~1.7 OVER band KEEP) + matrix MHist ✅ / `STYLE.md` §1 + escape-hatches sub-§ (done Day 2) ✅ / checklist + plan Status → Closed + MHist ✅
+- Deferred post-merge (not in this PR): `CLAUDE.md` (main HEAD / Latest Sprint / Next Phase 候選 — remove `AD-Inline-Style-Cleanup-Sweep`, add `AD-Inline-Style-Cleanup-Sweep-Round2`; a11y color-contrast on for 8/9) + `claudedocs/6-ai-assistant/prompts/SITUATION-V2-SESSION-START.md` §第八部分
+
+### Day 3 commit + PR
+- (pending) Day 3 commit `chore(sprint-57-15, Day 3): retrospective + doc syncs + closeout`
+- (pending) `gh pr create` — title `Sprint 57.15 — AD-Inline-Style-Cleanup-Sweep (10/15 components' inline styles → Tailwind + no-inline-style guard + color-contrast re-enabled 8/9)`; merge deferred to user
+
+### Drift catalog (Day 1-3)
+| ID | Severity | Finding | Resolution |
+|----|----------|---------|------------|
+| D-PRE-1 | 🟡 | `eslint-plugin-react` not a dep → `react/forbid-dom-props` unavailable | guard uses built-in `no-restricted-syntax` `JSXAttribute[name.name='style']` (dep-free) — same deliverable |
+| D-PRE-2 | 🟡 | a11y-scan uses mockApi-503 → data-driven components render as `<ErrorRetry>` | color-contrast re-enable is partial — 8/9 routes (the data-driven targets aren't scanned anyway; `/chat-v2` is the only one with always-rendered low-contrast inline text = ChatLayout Round2) |
+| D-PRE-3 | 🟢 | `STYLE.md` already has §1 Rules / §3 Risk Badge Palette | §1 extended (not new top-level §); `ApprovalCard` riskColor aligned with §3 |
+| D-PRE-4 | 🟢 | 0 vitest asserts inline-style literals | true — but D-DAY2-1 found an *e2e* spec that does |
+| D-DAY1-1 | 🟡 (>20% scope) | plan 80/14 vs reality 15 files / 133 `style=` attrs + ~6 stylesheets + ~5 helper fns | user chose (B) Tiered: 10 files this sprint, 5 → NEW `AD-Inline-Style-Cleanup-Sweep-Round2` (file-level disabled) |
+| D-DAY1-2 | 🟢 | `ApprovalList.tsx` grep "1" was a false positive (JSDoc text) | no-op — already 57.9-Tailwind |
+| D-DAY2-1 | 🟢 | `approval-card.spec.ts:108` asserts CRITICAL risk colour == `#b71c1c`; first cut used `text-red-800` (#991b1b) | `ApprovalCard` `RISK_TEXT_CLASS` → `text-[#hex]` (canonical 53.5 palette, matches `governance/ApprovalList.tsx` the §3 ref) — align spec target with the canonical palette, not change the spec |
