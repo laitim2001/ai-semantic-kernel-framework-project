@@ -8,6 +8,7 @@
  * Last Modified: 2026-05-10
  *
  * Modification History:
+ *   - 2026-05-16: Sprint 57.18 — 3 → 6 categories per routes.config 6-category refactor (US-C1)
  *   - 2026-05-10: Initial creation (Sprint 57.8 US-1.2 — Sidebar Vitest)
  */
 
@@ -31,11 +32,17 @@ describe("Sidebar", () => {
     localStorage.removeItem("ipa-ui-state");
   });
 
-  test("renders 3 category headers (Operations / Admin / Settings) when expanded", () => {
+  test("renders 6 category headers (Operations / Business / Governance / Observability / Resources / Admin) when expanded", () => {
     renderWithRoute();
     expect(screen.getByText("Operations")).toBeInTheDocument();
+    expect(screen.getByText("Business")).toBeInTheDocument();
+    // Governance appears twice: category header + route entry (Governance page) — use getAllByText
+    expect(screen.getAllByText("Governance").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Observability")).toBeInTheDocument();
+    expect(screen.getByText("Resources")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
-    expect(screen.getByText("Settings")).toBeInTheDocument();
+    // Settings category removed in Sprint 57.18 — profile + mfa moved to Admin
+    expect(screen.queryByText("Settings")).toBeNull();
   });
 
   test("active route entry has aria-current page", () => {
