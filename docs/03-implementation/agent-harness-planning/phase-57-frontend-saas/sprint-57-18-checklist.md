@@ -289,7 +289,7 @@ Related:
 ## Day 3 — US-C3 (Sidebar.tsx) + Validation + US-D1 (Closeout)
 
 ### 3.1 US-C3: refactor `frontend/src/components/Sidebar.tsx`
-- [ ] **Replace category iteration logic** to use `CATEGORY_ORDER` constant from `routes.config.ts`
+- [x] **Replace category iteration logic** to use `CATEGORY_ORDER` constant from `routes.config.ts` — done Day 2 minimal cascade, full refactor Day 3
 - [ ] **Per-entry badge rendering** (3 variants):
   - `entry.proposed === true` → `<span className="ml-auto rounded px-1.5 py-0.5 text-[9px] font-medium uppercase bg-thinking/16 text-thinking">PROP</span>`
   - `entry.designed === true && entry.active === false` → `<span className="ml-auto rounded px-1.5 py-0.5 text-[9px] font-medium uppercase bg-warning/16 text-warning">DRAFT</span>`

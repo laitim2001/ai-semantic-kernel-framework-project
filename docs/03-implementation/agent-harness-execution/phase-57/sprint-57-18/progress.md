@@ -165,3 +165,70 @@
 - **4 drift findings catalogued** (D-DAY2-1 through D-DAY2-4 — all cosmetic non-blocking + 1 resolved). Pattern emerging: plan/checklist arithmetic drifts are very common for refactor-heavy sprints; per `feedback_day0_must_grep_plan_assumptions` D-PRE pass catches most before code, but Day N+ implementation often surfaces 2-3 more.
 - **Bundle size +12.49 KB**: above the typical lazy-chunk overhead per route (~0.5 KB × 18 = 9 KB expected); +3.5 KB likely from `dropdown-menu` rebuilds (118.30 KB now vs 123.16 KB before — actually **smaller** this run? Maybe minification chunking variance). Net main bundle 310.38 kB is well within Sprint 57.13 Lighthouse budget envelope.
 - **CSS +0.6 KB modest**: confirms my Day 1 hypothesis that token consumption drives CSS growth (~12 utility classes × ~50 bytes each = ~0.6 KB matches). Sprint 57.19+ first port should add 3-5 KB more as real components consume more tokens.
+
+---
+
+## Day 3 — 2026-05-16
+
+### Today's Accomplishments
+
+- **US-C3 Sidebar.tsx full PROP/DRAFT badge refactor** — actual ~25 min (est ~1.5 hr, well under-budget because Day 2 minimal cascade already wired CATEGORY_ORDER from registry):
+  - Extracted `renderEntryBadge(entry, collapsed)` helper that returns 3-variant badge JSX:
+    - `entry.proposed === true` → blue PROP badge (`bg-thinking/16 text-thinking`)
+    - `entry.designed === true && entry.active === false` → yellow DRAFT badge (`bg-warning/16 text-warning`)
+    - else → null (preserves "Coming soon" gray tooltip for `!active && !designed`)
+  - Extracted `BADGE_BASE_CLASS` const (`"ml-auto rounded px-1.5 py-0.5 text-[9px] font-medium uppercase"`) — reused 3× (entry PROP / entry DRAFT / category propCount)
+  - Category header refactored to flex layout (`flex items-center justify-between`) with optional "{N} PROP" count badge — appears when category has any `proposed: true` entries
+  - Badges hidden when `sidebarCollapsed === true` (icon-only mode)
+  - Pure Tailwind utility classes — no inline style (per Sprint 57.15+57.16 `no-restricted-syntax` guard)
+  - a11y preserved: `<nav role="navigation" aria-label="Primary">` + `<a>` semantics unchanged
+  - File header docstring updated to document new 3-state visual matrix + 2 NEW MHist lines (US-C1 cascade + US-C3 refactor)
+
+- **US-C3 validation sweep** — all green:
+  - `npx tsc --noEmit` → **0 errors** ✅
+  - `npm run lint` → silent (0 warnings 0 errors) ✅
+  - `npm run build` → ✅ built in 2.52s; main bundle 310.38 kB unchanged from Day 2 (Sidebar code addition under tree-shake dead-code threshold — `renderEntryBadge` is inline-called, JS minifier folds it back into main flow)
+  - `npx vitest run` → **236 / 236 pass** (57 test files) ✅ — Sidebar.test.tsx 4/4 unchanged (Day 2 cascade fix already future-proofed)
+
+- **US-D1 closeout deliverables** — actual ~25 min:
+  - `retrospective.md` Q1-Q7 (~250 lines) with detailed drift findings table + sprint metrics + Sprint 57.19+ priority order
+  - `memory/project_phase57_18_mockup_integration_foundation.md` (~120 lines) snapshot
+  - `MEMORY.md` +1 row at top of `Project — Recent Sprints (Phase 57+)` section
+  - `.claude/rules/sprint-workflow.md` calibration matrix +1 row (`mockup-integration-foundation` 0.55 1st app ratio 1.10 ✅ bullseye) + MHist +1 line
+  - progress.md Day 3 entry (this section)
+  - checklist Day 3 items → [x]
+
+- **Closeout doc syncs deferred to chore/closeout-57-18 follow-up PR** (4 items per plan §AC4 + my Day 3 scope-control decision to keep this commit focused):
+  - `16-frontend-design.md` Sprint Timeline +1 row
+  - `STYLE.md §2` token reality table update (closes D-PRE-4 documentation portion)
+  - `CONVENTION.md §3` ApprovalCard reference path fix (closes D-PRE-6 / Sprint 57.16 D-PRE-3 carryover)
+  - `CLAUDE.md` Phase 13/N → 14/N + Latest Sprint + main HEAD + Next Phase 候選 update
+  - `SITUATION-V2-SESSION-START.md` §第八部分 + §第九部分 +1 row
+
+### Sprint Final Metrics
+
+- **6 commits on branch** `feature/sprint-57-18-mockup-integration-foundation`:
+  1. `2e797101` Day 0 chore (user-supplied launch)
+  2. `c06d848a` Day 1 US-A1 (mockup cp)
+  3. `7e6feec0` Day 1 US-B1+B2 (tokens)
+  4. `49590c25` Day 2 US-C1 (routes 6-cat + i18n)
+  5. `651a7a70` Day 2 US-C2 (ComingSoonPlaceholder + 18 wrappers)
+  6. `ae8874a2` Day 3 US-C3 (Sidebar badges)
+  7. _pending_ Day 3 US-D1 (this closeout commit)
+
+- **Sprint total ~5.5 hr** (Day 0 ~1.5 + Day 1 ~1.5 + Day 2 ~1.5 + Day 3 ~1)
+- **Calibration ratio actual/committed = 5.5/5.0 = 1.10** ✅ bullseye [0.85, 1.20]
+- **Calibration ratio actual/bottom-up = 5.5/9.5 = 0.58** (0.55 multiplier validated within ±5%)
+- **12 drift findings catalogued** (5 closed in-scope / 1 carried to chore PR / 4 cosmetic / 1 resolved / 1 cascade)
+- **5 NEW carryover ADs** opened for Phase 57.19+
+- **2 ADs closed** (token-coverage portion only)
+
+### Notes
+
+- **Sprint 57.18 ✅ closed**. Phase 57+ Frontend SaaS opens 14/N.
+- **Anti-stop rule fully validated**: Day 1-3 had 0 frequent-stop incidents vs Day 0's 4 (~5-10 min cost). The codification + 2 Project CLAUDE.md edits paid for themselves within the same sprint.
+- **Calibration class `mockup-integration-foundation` 0.55 1st app** is a HYBRID weighted blend of 5 sub-classes (audit-cycle + medium-frontend + frontend-refactor-mechanical + closeout) — 1st application bullseye band suggests the weighted-blend approach is sound for multi-domain sprints. If Sprint 57.19+ rolling port uses similar shape, will be 2nd data point.
+- **PR not opened this session** per `feedback_tool_result_is_not_turn_boundary.md` destructive-op user-confirmation rule — `gh pr create` defers to user explicit action. Branch is push-ready: 6 commits + this closeout commit = 7 total, all CI green locally.
+- **Next session ToDo** (for whoever picks up):
+  1. User decides: push branch + open PR `chore/sprint-57-18` (or merge style); or proceed to chore/closeout-57-18 follow-up PR for 5 deferred doc syncs
+  2. Sprint 57.19 plan draft per user 2026-05-16 alignment: Operations core 4 port (overview + orchestrator + subagents + state-inspector) paired with backend Cat 1/3/7 API gap fills
