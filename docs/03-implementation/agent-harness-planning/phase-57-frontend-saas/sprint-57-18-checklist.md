@@ -191,7 +191,7 @@ Related:
 ## Day 2 — US-C1 (routes.config.ts) + US-C2 (ComingSoonPlaceholder + 20 wrappers)
 
 ### 2.1 US-C1: refactor `frontend/src/routes.config.ts`
-- [ ] **`RouteCategory` type expansion** (L62):
+- [x] **`RouteCategory` type expansion** (L62):
   - was: `"operations" | "admin" | "settings"`
   - now: `"operations" | "business" | "governance" | "observability" | "resources" | "admin"`
 - [ ] **`RouteEntry` interface** (L64-79) — add 2 optional fields:
@@ -281,8 +281,8 @@ Related:
 - [ ] **`npm run build`** → ✅ no warnings; 20 NEW lazy chunks produced (verify in `dist/assets/`)
 
 ### 2.5 Day 2 commits
-- [ ] **Day 2 commit 1** `feat(sprint-57-18, Day 2): routes.config.ts 6 categories + 20 PROP/DRAFT stubs + i18n keys (US-C1)`
-- [ ] **Day 2 commit 2** `feat(sprint-57-18, Day 2): ComingSoonPlaceholder + 20 wrapper pages (US-C2)`
+- [x] **Day 2 commit 1** `feat(sprint-57-18, Day 2): routes.config.ts 6 categories + 18 PROP stubs + i18n keys (US-C1; D-DAY2-1: 18 NEW not 20 per plan AC4 arithmetic)` — includes Sidebar.tsx CATEGORY_ORDER import refactor + Sidebar.test.tsx 6-categories update
+- [x] **Day 2 commit 2** `feat(sprint-57-18, Day 2): ComingSoonPlaceholder + 18 wrapper pages (US-C2; D-DAY2-2: 18 wrappers not 20 — profile + mfa stay designed only, no <Route>)` — includes progress.md Day 2 + checklist updates
 
 ---
 

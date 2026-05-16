@@ -109,3 +109,59 @@
 - **Anti-stop rule effective**: Day 1 executed as single continuous chain (Read → cp + Edit × 6 batch → Read + Write + Bash batch → smoke probe trio → commit) — 0 unnecessary pauses vs Day 0's 4 incidents. The `feedback_tool_result_is_not_turn_boundary.md` rule + 2 Project CLAUDE.md scope-narrowing edits are working as designed.
 - **Drift findings non-blocking**: D-DAY1-1 (jsx count 18 not 19) + D-DAY1-2 (hsl-bridge count 31 not ~27) are both cosmetic — plan/checklist text adjustments only, no scope shift. Retrospective Q3 will list them.
 - **CSS compiled delta +1.85 KB modest**: as expected — declarations alone don't emit utilities; tree-shake kicks in only when classes are consumed. Sprint 57.19+ first port will likely add ~3-5 KB more CSS as `bg-thinking`/`text-warning`/`border-risk-critical`/etc. start being used.
+
+---
+
+## Day 2 — 2026-05-16
+
+### Today's Accomplishments
+
+- **US-C1 routes.config.ts 6-category refactor + 18 PROP stubs + 13 re-categorize** — actual ~50 min (est ~2 hr, well under-budget):
+  - Full file rewrite (~360 lines from 199): expanded `RouteCategory` type from 3 → 6 (`operations`/`business`/`governance`/`observability`/`resources`/`admin`)
+  - Added `proposed?: boolean` + `designed?: boolean` optional fields to `RouteEntry` interface
+  - Exported `CATEGORY_ORDER: RouteCategory[]` constant (consumed by Sidebar)
+  - Re-categorized 13 existing entries per plan §AC3 table (chat-v2 stays operations; cost/sla moved to observability; governance/verification/audit-log to governance; loop-debug/memory to operations; feature-flags to resources; profile/mfa from settings to admin)
+  - Added 18 NEW PROP entries (active=true + proposed=true): overview/orchestrator/subagents/state-inspector/compaction/jit-retrieval/subagent-tree (operations +7) / incidents (business +1) / redaction/error-policy (governance +2) / cache-manager/sse/devui (observability +3) / models/tools (resources +2) / tenant-onboarding/pricing/rbac (admin +3)
+  - Added 16 NEW lucide imports (AlertOctagon / AlertTriangle / Code2 / Cpu / Database / DollarSign / EyeOff / GitBranch / GitFork / LayoutDashboard / Minimize2 / Radio / Search / Sparkles / UserPlus / Wrench)
+  - 4 inactive entries flagged `designed: true` (audit-log / feature-flags / profile / mfa)
+  - MHist +1 line at 99 chars
+  - **Drift D-DAY2-1 (cosmetic, non-blocking)**: plan §Description claimed "20 NEW + 13 existing = 33 entries" — actual is **18 NEW + 13 existing = 31 entries** (plan AC4 table counts 7+1+2+3+2+3 = 18 NEW; plan body text 20 was an arithmetic slip; checklist §2.1 verify "expect 33" same drift). Retrospective Q3 will document.
+  - Verify: `grep -c "category:" routes.config.ts` → **32** (31 ROUTES entries + 1 `category: RouteCategory` field declaration in interface) — matches 31 entries.
+
+- **US-C1 i18n keys (en + zh-TW)** — actual ~15 min (est ~30 min, under-budget):
+  - en/common.json: full rewrite — `nav.category.*` expanded 3→6 (Operations/Business/Governance/Observability/Resources/Admin); +18 new `nav.<id>` keys; new top-level `comingSoon.*` block (4 keys: notRegistered / designedIn (with {{file}} placeholder) / openMockup / sprintEpic)
+  - zh-TW/common.json: same structure, 繁中 translations (營運/業務/治理/可觀測性/資源/管理 categories; 總覽/編排器/子代理/狀態檢視器/上下文壓縮/JIT 檢索/子代理樹/事件/資料遮罩/錯誤策略/快取管理/SSE 監看/DevUI/模型/工具/租戶導入/定價/角色權限 entries)
+  - Verify: `grep -c '"' en/common.json` → **67** lines containing quotes (reasonable for ~33 keys + nested structure)
+
+- **US-C1 Sidebar.tsx minimal update** — actual ~5 min (Day 3 budgeted, advanced for tsc compatibility):
+  - Replaced local `CATEGORY_ORDER: RouteCategory[] = ["operations", "admin", "settings"]` (now-invalid string literal) with `import { CATEGORY_ORDER, ROUTES, type RouteEntry } from "@/routes.config"`
+  - Removed unused `type RouteCategory` import
+  - Sidebar now iterates 6 categories from registry single-source
+  - Full Sidebar refactor (PROP/DRAFT badge rendering + propCount per category header) deferred to Day 3 US-C3
+
+- **US-C2 ComingSoonPlaceholder + 18 thin wrappers** — actual ~30 min (est ~1 hr, under-budget):
+  - NEW `frontend/src/components/ComingSoonPlaceholder.tsx` (~120 lines): uses `useLocation()` + ROUTES lookup; renders icon + i18n title + PROP/DRAFT/Priority badge + mockup file hint + dev-only "Open mockup" link; tree-shakes 4 new tokens (`bg-thinking/16`, `text-thinking`, `bg-warning/16`, `text-warning`, `bg-info/16`, `text-info`, `text-muted-foreground`, `text-primary`)
+  - **Initial tsc error D-DAY2-3 (resolved)**: typing `const ComingSoonPlaceholder: FC = ...` caused `FunctionComponent<{}>` not assignable to `LazyExoticComponent<ComponentType<unknown>>` variance failure (FC defaults to FC<{}>, RouteEntry.component expects ComponentType<unknown>). Fix: removed `: FC` annotation; inferred return type compatible with ComponentType<unknown> via contravariance.
+  - 18 NEW `frontend/src/pages/<id>/index.tsx` thin wrappers (1-line each): re-export ComingSoonPlaceholder as default; lazy() chunks at build time
+  - **Drift D-DAY2-2 (cosmetic, non-blocking)**: checklist §2.4 listed 20 wrappers including profile + mfa; but profile + mfa stay active=false + designed=true (no `component:` field, no <Route>, no wrapper needed). Actual = 18 wrappers; checklist verify "expect 31" off by 2 (actual = 9 existing + 18 NEW = **27**). Retrospective Q3 documents.
+
+- **US-C1 + US-C2 Day 2 verify sweep** — all green:
+  - `npx tsc --noEmit` → **0 errors** ✅ (after D-DAY2-3 fix)
+  - `npm run lint` → silent (0 warnings 0 errors) ✅
+  - `npm run build` → ✅ built in 2.55s; main bundle 310.38 kB (was 297.89 kB → **+12.49 KB delta** from new lazy chunks + ComingSoonPlaceholder code-split); CSS 35,887 bytes ≈ 35.0 KB (Day 1 baseline 35,244 → **+0.6 KB** from `bg-thinking/16`/`text-thinking`/`bg-info/16`/`text-info` tree-shake emission)
+  - `npx vitest run` → **236 / 236 pass** (57 test files) ✅
+  - **Test update D-DAY2-4 (Day 2 scope cascade)**: `Sidebar.test.tsx` test 1 asserted "3 category headers (Operations / Admin / Settings)" — now refactored to "6 category headers" (Operations / Business / Governance / Observability / Resources / Admin) + `getAllByText("Governance")` for category-vs-route-entry text collision (Governance appears 2× in DOM: once as category header, once as route entry). MHist +1 line on test file.
+
+### Remaining for Next Day (Day 3)
+
+- [ ] US-C3 Sidebar.tsx full refactor: PROP/DRAFT/SOON badge per entry + per-category header propCount badge (e.g. "Operations · 7 PROP")
+- [ ] Day 3 validation sweep: full e2e (playwright) if `dev` server accessible / Playwright MCP smoke screenshot 3 new stub routes (/overview / /orchestrator / /subagents)
+- [ ] US-D1 closeout: retrospective Q1-Q7 + memory snapshot + 4 in-sprint doc syncs (16-frontend-design timeline / sprint-workflow calibration matrix / STYLE.md §2 token reality / CONVENTION.md §3 ApprovalCard path) + PR
+
+### Notes
+
+- **Day 2 actual ~1.5 hr** (committed ~1.5 hr) — exactly on-budget. US-C1 + US-C2 both finished under per-US est (50min+15min+30min = 1h35min vs plan 2h+1h = 3h budget) — likely because plan over-estimated mechanical rewrites; calibration class `mockup-integration-foundation` 0.55 1st app may end up at lower ratio (~0.45) which would prompt AD-Sprint-Plan-N if recurs.
+- **Anti-stop rule continues effective**: Day 2 batched 23 file writes in single turn (ComingSoonPlaceholder + 18 wrappers + routes.config rewrite + Sidebar Edit + 2 i18n JSON rewrites) + 1 D-DAY2-3 tsc fix iteration + 1 D-DAY2-4 test update + 2 commits. Zero unnecessary pauses.
+- **4 drift findings catalogued** (D-DAY2-1 through D-DAY2-4 — all cosmetic non-blocking + 1 resolved). Pattern emerging: plan/checklist arithmetic drifts are very common for refactor-heavy sprints; per `feedback_day0_must_grep_plan_assumptions` D-PRE pass catches most before code, but Day N+ implementation often surfaces 2-3 more.
+- **Bundle size +12.49 KB**: above the typical lazy-chunk overhead per route (~0.5 KB × 18 = 9 KB expected); +3.5 KB likely from `dropdown-menu` rebuilds (118.30 KB now vs 123.16 KB before — actually **smaller** this run? Maybe minification chunking variance). Net main bundle 310.38 kB is well within Sprint 57.13 Lighthouse budget envelope.
+- **CSS +0.6 KB modest**: confirms my Day 1 hypothesis that token consumption drives CSS growth (~12 utility classes × ~50 bytes each = ~0.6 KB matches). Sprint 57.19+ first port should add 3-5 KB more as real components consume more tokens.
