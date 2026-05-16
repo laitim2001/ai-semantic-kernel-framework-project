@@ -102,15 +102,29 @@ For a whole legacy file that hasn't been migrated yet, a top-of-file `/* eslint-
 
 Canonical color tokens per `16-frontend-design.md §245-262` + tailwind.config.ts theme.
 
-| Token | Hex | Tailwind class | Usage |
-|-------|-----|----------------|-------|
-| `primary` | `#3B82F6` | `text-primary` / `bg-primary` / `border-primary` | Main actions (submit / nav active) |
-| `success` | `#10B981` | `text-success` / `bg-success` / `border-success` | Verified / approved / passed |
-| `warning` | `#F59E0B` | `text-warning` / `bg-warning` | HITL pending / attention |
-| `danger` | `#EF4444` | `text-danger` / `bg-danger` | Errors / tripwire / blocked |
-| `thinking` | `#8B5CF6` | `text-thinking` / `bg-thinking` | Thinking blocks (LLM reasoning) |
-| `tool` | `#06B6D4` | `text-tool` / `bg-tool` | Tool call cards |
-| `memory` | `#EC4899` | `text-memory` / `bg-memory` | Memory operations |
+> **Sprint 57.18 update (2026-05-16)**: 7 semantic tokens + 4 risk levels NOW defined in `tailwind.config.ts` + `src/index.css` :root + .dark (closes AD-Style-Token-Config-Audit token-coverage portion). Note: production `primary` token is actually shadcn dark slate `hsl(222.2 47.4% 11.2%)` NOT `#3B82F6` blue; documented value preserved here for design vocabulary reference, but actual rendering uses shadcn primary. Contrast-ratio audit of components using new tokens deferred to Sprint 57.19+ first real port (AD-Post-Hotfix-Token-Audit contrast portion).
+
+| Token | Hex (reference) | Tailwind class | Usage |
+|-------|-----------------|----------------|-------|
+| `primary` | `#3B82F6` (mockup) / `hsl(222.2 47.4% 11.2%)` (production shadcn slate) | `text-primary` / `bg-primary` / `border-primary` | Main actions (submit / nav active); production uses shadcn slate not blue |
+| `success` | `#10B981` ≈ `hsl(150 60% 45%)` | `text-success` / `bg-success` / `border-success` | Verified / approved / passed |
+| `warning` | `#F59E0B` ≈ `hsl(38 92% 50%)` | `text-warning` / `bg-warning` | HITL pending / attention / DRAFT badge |
+| `danger` | `#EF4444` ≈ `hsl(0 84% 60%)` | `text-danger` / `bg-danger` | Errors / tripwire / blocked |
+| `thinking` | `#8B5CF6` ≈ `hsl(270 75% 60%)` | `text-thinking` / `bg-thinking` | Thinking blocks (LLM reasoning) / PROP badge |
+| `tool` | `#06B6D4` ≈ `hsl(188 70% 50%)` | `text-tool` / `bg-tool` | Tool call cards |
+| `memory` | `#EC4899` ≈ `hsl(326 80% 60%)` | `text-memory` / `bg-memory` | Memory operations |
+| `info` | `#3B82F6` ≈ `hsl(217 91% 60%)` | `text-info` / `bg-info` | Info banners / Priority badge (Sprint 57.18 NEW) |
+
+### Risk severity tokens (Sprint 57.18 NEW)
+
+4 risk levels per design/operator-portal/styles.css; used by ApprovalCard + risk badges:
+
+| Token | Hex (light) | Hex (dark) | Tailwind class | Usage |
+|-------|-------------|------------|----------------|-------|
+| `risk-low` | ≈ `hsl(150 60% 45%)` | ≈ `hsl(150 50% 55%)` | `text-risk-low` / `bg-risk-low` | LOW severity HITL approvals |
+| `risk-medium` | ≈ `hsl(38 92% 50%)` | ≈ `hsl(38 80% 60%)` | `text-risk-medium` / `bg-risk-medium` | MEDIUM severity |
+| `risk-high` | ≈ `hsl(20 90% 55%)` | ≈ `hsl(20 80% 60%)` | `text-risk-high` / `bg-risk-high` | HIGH severity |
+| `risk-critical` | `#B71C1C` ≈ `hsl(0 70% 40%)` | ≈ `hsl(0 60% 50%)` | `text-risk-critical` / `bg-risk-critical` | CRITICAL severity (matches approval-card.spec.ts sentinel `#b71c1c`) |
 
 ### shadcn semantic tokens (additionally)
 
@@ -157,7 +171,7 @@ cards / verifier results / guardrail alerts / audit log severity.
 
 ### Reference component
 
-`features/governance/components/ApprovalCard.tsx` (Sprint 53.5 → 57.9 Tailwind migration)
+`features/chat_v2/components/ApprovalCard.tsx` (Sprint 53.5 → 57.9 Tailwind migration; canonical reference. Note: the legacy `features/governance/components/ApprovalCard.tsx` path documented in this section prior to Sprint 57.18 was stale — file never existed at that path. Fixed by `chore/closeout-57-18`.)
 is the canonical risk badge implementation. New components consuming risk levels MUST
 import the same hex values OR use the same Tailwind classes (NOT introduce new shades).
 
