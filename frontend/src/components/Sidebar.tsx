@@ -43,11 +43,9 @@ import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
-import { ROUTES, type RouteCategory, type RouteEntry } from "@/routes.config";
+import { CATEGORY_ORDER, ROUTES, type RouteEntry } from "@/routes.config";
 import { useUIStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
-
-const CATEGORY_ORDER: RouteCategory[] = ["operations", "admin", "settings"];
 
 export const Sidebar: FC = () => {
   const { t } = useTranslation("common");
