@@ -149,7 +149,61 @@ User 2026-05-17 directive post-Day-1 closeout: Day 2-4 workflow pivots from **"w
 
 **Audit trail**: each NEW component file-header MHist cites source mockup line range (e.g. "extracted from page-chat.jsx L165-176 + tailwind convert"). DRIFT-REPORT-PHASE1.md §Section Mapping pre-records per-section line ranges (checklist §2.0).
 
-## Day 2 — _pending_
+## Day 2 — 2026-05-17 — Turn renderer + 4 Block components (US-C1 + US-C2; US-C3 deferred to Day 3)
+
+### Accomplishments
+
+**§2.0 Mockup baseline + scaffold** ✅:
+- 4 NEW directories: `components/{turns,blocks,inspector}/` + `fixtures/`
+- cp `reference/design-mockups/page-chat.jsx` → `components/_mockup-source.jsx.bak` (per-section reference; will be deleted Day 4 closeout)
+- Per-section line ranges catalogued in checklist Day 2 §2.0 + cited inline in each NEW component's MHist
+
+**§2.1 Turn role components + TurnList** ✅ (cp+convert from mockup):
+- NEW `turns/UserTurn.tsx` (~45 lines; from L165-176) — timeline rail/marker + display_name (authStore) + route-pill role + at; pure render
+- NEW `turns/AgentTurn.tsx` (~58 lines; from L178-197) — primary-tinted marker + agent name + turn # badge + optional stop_reason badge + optional duration + at + optional "awaiting approval" indicator; block dispatcher via `BlockRender`
+- NEW `turns/HITLTurn.tsx` (~165 lines; from L270-313) — warning-tinted marker + role label + **inline rich approval card** (severity-tinted border + bar + icon-ring + title + countdown + meta + rationale + payload pre-block + 4 action buttons with 2-action backend wire to `governanceService.decide`); RiskSeverity mapped to Sprint 57.18 risk-{low/medium/high/critical} tokens
+- NEW `TurnList.tsx` (~50 lines) — `useChatStore.turns` consumer + role dispatcher + auto-scroll + empty state matching Sprint 57.20 baseline copy
+
+**§2.2 4 Block components + Block dispatcher** ✅ (cp+convert from mockup):
+- NEW `blocks/ThinkingBlock.tsx` (~30 lines; from L200-207) — thinking-tinted left rail + uppercase mono "thinking" label + italic muted text
+- NEW `blocks/ToolBlock.tsx` (~62 lines; from L208-223) — tool-tinted head with name + status badge (pending/ok/error) + duration; monospace input pre-block + dashed-separated output pre-block (only when output non-null)
+- NEW `blocks/VerificationBlock.tsx` (~35 lines; from L234-244) — success/danger tone variant; check/x icon; claim + evidence rows
+- NEW `blocks/SubagentForkBlock.tsx` (~50 lines; from L245-264) — GitFork header + "Fork · concurrent" + spawned N count; agent rows w/ ChevronRight + name + task + status badge (info/success) + turns count
+- NEW `blocks/Block.tsx` (~35 lines) — discriminated-union dispatcher; tsc-exhaustive switch
+
+**Vitest coverage** ✅:
+- NEW `tests/unit/chat_v2/components/blocks.test.tsx` — 12 cases covering each of 4 block components (render + variants) + Block dispatcher dispatch correctness
+- NEW `tests/unit/chat_v2/components/TurnList.test.tsx` — 8 cases covering empty state + role dispatch (user/agent/hitl) + authStore display_name fallback to email + waiting state + decision label render + mixed turns ordering
+- Pre-Day-2 baseline 299 → Day 2 EOD **319 tests** (+20 NEW; 0 regression; 66 test files)
+
+**§2.3 ApprovalCard rewrite — DEFERRED to Day 3**:
+- HITLTurn.tsx Day 2 over-delivered the rich card body inline (~85 lines of approval-card markup directly in HITLTurn). ApprovalCard.tsx rewrite tightly coupled to MessageList → TurnList swap (Day 3 §3.2 ChatLayout rewrite). Day 2 ships HITLTurn for future TurnList consumption; ApprovalCard preserved as-is for current MessageList consumer + governance/approvals page consumer + e2e spec compatibility.
+- Day 3 ChatLayout swap will: (a) replace MessageList → TurnList; (b) update e2e selectors in approval-card.spec.ts to match new HITLTurn DOM; (c) decide ApprovalCard.tsx fate (deprecate vs thin compat re-export).
+
+### Quality gates (Day 2 EOD)
+
+| Gate | Day 1 baseline | Day 2 EOD | Verdict |
+|------|----------------|-----------|---------|
+| tsc errors | 0 | 0 | ✅ |
+| Vitest tests | 299 | **319** (+20 NEW) | ✅ 0 regression |
+| Vitest files | 64 | 66 (+2 NEW: blocks.test.tsx + TurnList.test.tsx) | ✅ |
+| Lint | silent | silent (1 transient warning on TurnList useEffect deps complex-expression; fixed via extract-to-local-var) | ✅ |
+| Build time | 3.12s | 2.82s | ✅ |
+| Main bundle | 320.76 kB | **320.76 kB byte-identical** | ✅ (tree-shake absorbs 9 NEW components + lucide-react imports — Brain/Wrench/Check/X/ChevronRight/GitFork/Clock/Shield/FileText already in chunk) |
+| Backend changes | 0 | 0 | ✅ |
+
+### Notes / decisions
+
+- **HITLTurn scope expansion (over-delivery)**: Day 2.1 originally planned HITLTurn as thin wrapper around ApprovalCard. Implementation chose to embed the rich card body directly in HITLTurn for visual coherence — ApprovalCard would need same logic anyway. Cost ~30 min over plan, but eliminates Day 2.3 rewrite scope. Day 3 swap from MessageList → TurnList is now self-contained (no ApprovalCard.tsx touch).
+- **Lucide-react icons**: mockup `<Icon name="...">` mapped to lucide-react equivalents (Brain for thinking; Wrench for tool; Check/X for verification; ChevronRight for subagent row; GitFork for subagent fork; Clock + Shield + FileText for HITL). Bundle unchanged because lucide-react chunk already included earlier components.
+- **Token alignment**: Sprint 57.18 wired `thinking` / `tool` / `success` / `danger` / `warning` / `info` / `risk-{low,medium,high,critical}` semantic tokens — all 9 NEW components use these tokens; 0 arbitrary hex literals; 0 ESLint inline-style escape.
+- **Pair-verify deferred**: Day 2 Playwright MCP capture skipped — chat-v2 page still renders MessageList Day 1 stub (Day 3 swap). Visual verification happens Day 3 when TurnList becomes live.
+
+### Estimate vs actual
+
+- Bottom-up estimate: 5-7 hr (Option C cp+convert overhead added to original 4-5 hr Day 2 budget)
+- Actual: ~3.5 hr (9 components written + 20 Vitest cases + tsc/lint/build green)
+- Delta: ~40% under estimate. Reason: mockup JSX already structured into clean per-component sections; Tailwind translation table from mockup CSS lookup was straightforward; Day 1 type design eliminated guessing about Block/Turn shape. Buffer carry forward to Day 3.
 
 ## Day 3 — _pending_
 

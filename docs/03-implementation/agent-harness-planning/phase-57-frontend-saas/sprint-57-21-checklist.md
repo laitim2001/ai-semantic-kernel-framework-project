@@ -112,10 +112,10 @@
 
 **Workflow pivot (2026-05-17 Day 1 EOD per user directive)**: Option C copy-then-convert per plan §Day 1 EOD strategy pivot section.
 
-### 2.0 Copy mockup baseline + scaffold target directories (~30 min)
-- [ ] Create directories: `frontend/src/features/chat_v2/components/{turns,blocks,inspector}/` + ensure `fixtures/` ready for Day 3
-- [ ] cp `reference/design-mockups/page-chat.jsx` → `frontend/src/features/chat_v2/components/_mockup-source.jsx.bak` (per-section reference; .bak extension keeps tsc/eslint from scanning; deleted Day 4 closeout)
-- [ ] Identify per-section line ranges in mockup (record in DRIFT-REPORT-PHASE1.md §Section Mapping):
+### 2.0 Copy mockup baseline + scaffold target directories ✅
+- [x] Create directories: `frontend/src/features/chat_v2/components/{turns,blocks,inspector}/` + `fixtures/`
+- [x] cp `reference/design-mockups/page-chat.jsx` → `frontend/src/features/chat_v2/components/_mockup-source.jsx.bak` (per-section reference; .bak extension keeps tsc/eslint from scanning; deleted Day 4 closeout)
+- [x] Identify per-section line ranges in mockup (cited inline in each NEW component file-header MHist; consolidated in DRIFT-REPORT-PHASE1.md Day 4 closeout):
   - L73-91 ChatV2 shell (Day 3 target)
   - L93-121 ChatHeader (Day 3 target, inside ChatLayout)
   - L123-156 SessionList (Day 3 target)
@@ -133,8 +133,8 @@
   - L468-487 InspectorMemory (Day 4 — coming-soon)
   - L489-531 InspectorTree (Day 4 — coming-soon)
 
-### 2.1 US-C1 TurnList + 3 Turn role components (cp+convert; ~2.5-3 hr)
-- [ ] **EXTRACT + CONVERT** mockup L165-176 → `frontend/src/features/chat_v2/components/turns/UserTurn.tsx`:
+### 2.1 US-C1 TurnList + 3 Turn role components ✅
+- [x] **EXTRACT + CONVERT** mockup L165-176 → `frontend/src/features/chat_v2/components/turns/UserTurn.tsx`:
   - useCs/useEcs imports → standard react
   - Inline `style={{...}}` → Tailwind utility classes (turn-rail / turn-marker / turn-head / turn-body equivalents via flex + border tokens)
   - `<span className="role">Jamie Liu</span>` → consume `authStore.user.name`
@@ -155,8 +155,8 @@
 - [ ] All NEW files have file-header per `.claude/rules/file-header-convention.md` w/ mockup line range cited
 - [ ] Commit: `feat(chat-v2, sprint-57-21, Day 2): TurnList + 3 Turn role components per mockup (cp+convert)`
 
-### 2.2 US-C2 4 Block components (cp+convert; ~3-4 hr)
-- [ ] **EXTRACT + CONVERT** mockup L200-207 → `frontend/src/features/chat_v2/components/blocks/ThinkingBlock.tsx`:
+### 2.2 US-C2 4 Block components ✅
+- [x] **EXTRACT + CONVERT** mockup L200-207 → `frontend/src/features/chat_v2/components/blocks/ThinkingBlock.tsx`:
   - `bg-thinking/16 text-thinking` (Sprint 57.18 token) for label + body container
 - [ ] **EXTRACT + CONVERT** mockup L208-223 → `frontend/src/features/chat_v2/components/blocks/ToolBlock.tsx`:
   - Head + body + result sections; `bg-tool/16 text-tool` for icon + name; status badge variant per ok/error
@@ -170,8 +170,10 @@
 - [ ] Vitest specs (~3-5 cases each block; total ~15-20 NEW cases)
 - [ ] Commit: `feat(chat-v2, sprint-57-21, Day 2): 4 block components (thinking/tool/verification/subagent_fork) per mockup (cp+convert)`
 
-### 2.3 US-C3 ApprovalCard visual rewrite (cp+convert; preserve 2-action backend) (~1.5 hr)
-- [ ] **EXTRACT + CONVERT** mockup L280-309 (HITL approval card body) → REWRITE in-place `frontend/src/features/chat_v2/components/ApprovalCard.tsx`:
+### 2.3 US-C3 ApprovalCard visual rewrite — **DEFERRED to Day 3** 🚧
+**Reason**: Day 2.1 HITLTurn.tsx over-delivered the rich card body inline (~85 lines of approval-card markup directly in HITLTurn). ApprovalCard.tsx rewrite tightly coupled to MessageList → TurnList swap (Day 3 §3.2 ChatLayout rewrite). Day 3 will: (a) replace MessageList → TurnList; (b) update approval-card.spec.ts selectors to match new HITLTurn DOM; (c) decide ApprovalCard.tsx fate (deprecate vs thin compat re-export). Day 2 ships HITLTurn fully functional for future TurnList consumption.
+
+- [x] DEFER: **EXTRACT + CONVERT** mockup L280-309 (HITL approval card body) → REWRITE in-place `frontend/src/features/chat_v2/components/ApprovalCard.tsx`:
   - `hitl-card` CSS → Tailwind: `relative rounded-xl border border-warning/40 bg-bg-1 p-4 shadow-warning/10`
   - `hitl-card-bar` (left rail color) → `absolute left-0 top-0 bottom-0 w-0.5 bg-warning` (severity-tinted via Sprint 57.18 `risk-*` tokens)
   - severity → `<RiskBadge level={severity} />` (D-PRE-3: create `frontend/src/components/ui/RiskBadge.tsx` ~30 lines per STYLE.md §3 pattern OR inline within ApprovalCard for now; decide Day 2 start)
@@ -181,14 +183,15 @@
 - [ ] Update existing ApprovalCard Vitest spec + Playwright e2e selectors (D-PRE-1: `approval-card.spec.ts` sentinel `#b71c1c` — decide token vs hex literal at Day 2 time)
 - [ ] Commit: `feat(chat-v2, sprint-57-21, Day 2): ApprovalCard visual rewrite per mockup HITLTurn (preserve 2-action backend)`
 
-### 2.4 Day 2 closeout
-- [ ] `npm run tsc` 0 errors
-- [ ] `npm run test` Vitest 299+N PASS
-- [ ] `npm run lint` silent (note: NEW components must have NO inline style — Sprint 57.16 guard remains active codebase-wide)
-- [ ] `npm run build` succeeds; main bundle within +30 KB of Sprint 57.20 baseline
-- [ ] Playwright MCP capture POST-Day-2 chat-v2 at 1440×900 → `screenshots/blocks/prod-chat-v2-day2.png` + per-block sub-zooms
-- [ ] Pair-verify each block vs mockup section — DRIFT verdict per component (parity / cosmetic / structural) recorded in DRIFT-REPORT-PHASE1.md §Verification
-- [ ] Progress.md Day 2 entry + cosmetic gaps logged for Day 4 retrospective
+### 2.4 Day 2 closeout ✅
+- [x] `npx tsc --noEmit` 0 errors ✅
+- [x] `npx vitest run` 319/319 PASS (Day 1 baseline 299 + 20 NEW; 0 regression) ✅
+- [x] `npm run lint` silent (1 transient warning fixed: TurnList useEffect deps complex-expression → extracted to local vars `lastTurn` + `turnCount`) ✅
+- [x] `npx vite build` 2.82s; main bundle **320.76 kB byte-identical** to Day 1 / Sprint 57.20 baseline (tree-shake absorbs 9 NEW components + lucide-react imports) ✅
+- [ ] Playwright MCP capture POST-Day-2 chat-v2 at 1440×900 — **DEFERRED to Day 3**: chat-v2 page still renders MessageList Day 1 stub; NEW components not visible until Day 3 ChatLayout swap to TurnList
+- [ ] Pair-verify each block vs mockup section — **DEFERRED to Day 3 + Day 4** along with visual capture
+- [x] Progress.md Day 2 entry + Day 2.3 scope reduction (ApprovalCard rewrite → Day 3) documented ✅
+- [x] Day 2 commit: `feat(chat-v2, sprint-57-21, Day 2): TurnList + 3 Turn role + 4 Block components + 20 Vitest (cp+convert from mockup)` ✅
 
 ---
 
