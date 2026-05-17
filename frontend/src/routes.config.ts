@@ -151,7 +151,6 @@ export const ROUTES: RouteEntry[] = [
     icon: Sparkles,
     category: "operations",
     active: true,
-    proposed: true,
     component: lazy(() => import("./pages/orchestrator")),
   },
   {
