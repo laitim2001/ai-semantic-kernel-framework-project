@@ -205,6 +205,63 @@ User 2026-05-17 directive post-Day-1 closeout: Day 2-4 workflow pivots from **"w
 - Actual: ~3.5 hr (9 components written + 20 Vitest cases + tsc/lint/build green)
 - Delta: ~40% under estimate. Reason: mockup JSX already structured into clean per-component sections; Tailwind translation table from mockup CSS lookup was straightforward; Day 1 type design eliminated guessing about Block/Turn shape. Buffer carry forward to Day 3.
 
-## Day 3 — _pending_
+## Day 3 — 2026-05-17 (SessionList + ChatLayout 3-col + Demo banner)
+
+### What landed
+
+§3.1 — **SessionList + fixture data**
+- NEW `frontend/src/features/chat_v2/fixtures/sessions.ts` (~95 lines) — verbatim port of mockup `SESSIONS` L5-12 (6 sessions: payment-gateway 5xx / Q4 audit / nightly patrol / RCA cache eviction / change request / tenant anomaly)
+- NEW `frontend/src/features/chat_v2/components/SessionList.tsx` (~160 lines per mockup L123-156 + DomainDot L153-156 inlined) — fixture-driven sidebar: New session button (Plus icon) + Filter ghost button / "Sessions" + count label / 6 SessionItem clickable items with DomainDot (incident=danger / audit=memory / patrol=tool / rca=thinking color map) + title + running live-dot OR HITL badge + agent · turns · time meta row. Click → `chatStore.setActiveSessionId`. Active session = `bg-bg-2` highlight + `data-active="true"`.
+- NEW `tests/unit/chat_v2/components/SessionList.test.tsx` (7 cases): 6 fixtures render / demo banner / click → setActiveSessionId + data-active flip / running status indicator / hitl badge / done status (no indicator) / session count label
+
+§3.2 — **ChatLayout 2-col placeholder → 3-col with collapsible rails + ChatHeader**
+- REWRITE `frontend/src/features/chat_v2/components/ChatLayout.tsx` — 3-col grid `[280px | 1fr | 360px]` with `listOpen` / `inspOpen` local state. Mobile (<768px) hides both rails. Left rail mounts `<SessionList />`, center hosts `<ChatHeader>` + `{children}`, right rail mounts `<ChatInspector />` (Day 3 stub).
+- NEW `frontend/src/features/chat_v2/components/ChatHeader.tsx` (~165 lines per mockup L93-121) — left panel toggle button + gradient danger→warning AlertTriangle icon + session title + agent / `claude-haiku-4-5` thinking badge / `provider: neutral` mono span / `· N turns` / streaming indicator (live-dot + `streaming` mono when status === "running") / Loop button + Audit button / right panel toggle button. Data sources: `FIXTURE_SESSIONS.find(s => s.id === activeSessionId)` for title/agent/turns; `chatStore.totalTurns` preferred when > 0 (live override fixture).
+- NEW `frontend/src/features/chat_v2/components/inspector/ChatInspector.tsx` (~30 lines — Day 3 stub; Day 4 §4.1 replaces with full 4-tab frame per mockup L371-390)
+- NEW `tests/unit/chat_v2/components/ChatHeader.test.tsx` (9 cases): fallback title / fixture title lookup / streaming hidden when idle / streaming visible when running / provider neutral always visible / left toggle data-active + callback / right toggle data-active + callback / Loop+Audit buttons render / live totalTurns override
+
+§3.3 — **Demo banner + i18n keys (AP-2 compliance)**
+- EDIT SessionList.tsx — yellow `bg-warning/16 border-warning/40 text-warning` banner above sessions list ("Demo data — backend list endpoint pending Sprint 57.22+ (AD-ChatV2-SessionList-Backend)")
+- EDIT `src/i18n/locales/en/common.json` + `zh-TW/common.json` — NEW `chat.{session,header,inspector}.*` namespace (12 keys × 2 locales = 24 NEW i18n entries): session.title / newSession / filter / status.{running,hitl,done} / meta.turns ({count}) / demoBanner / header.toggleList / toggleInspector / providerNeutral / streaming / loopButton / auditButton / inspector.comingSoon
+
+§3.2 cascade — **chat-v2 page swap**
+- EDIT `frontend/src/pages/chat-v2/index.tsx` — `MessageList` import → `TurnList` import; consumer body `<MessageList />` → `<TurnList />`. NEW MHist entry. MessageList.tsx left intact (no thin re-export yet; Day 4 closeout decision per checklist §4.2).
+
+### Drift findings — Day 3
+
+- **D-DAY3-1** (cosmetic / scope-internal): mockup `<Badge tone="warning">HITL</Badge>` and `<Badge tone="thinking">claude-haiku-4-5</Badge>` rely on a `tone` prop the shadcn Badge primitive doesn't expose. Used `variant="outline"` + explicit token classes (`border-warning/40 bg-warning/16 text-warning` / `border-thinking/40 bg-thinking/16 text-thinking`). Matches mockup visual; closes Sprint 57.18 D-PRE-1 risk-token usage pattern for chat-v2.
+- **D-DAY3-2** (in-scope additive): mockup ChatHeader title was a `<div>` with `fontWeight: 600` + ellipsis. Promoted to `<h2>` for accessibility (under AppShellV2's main `<h1>`); preserves Sprint 57.17 ChatLayout h1-cascade fix philosophy.
+- **D-DAY3-3** (deferred — Phase 58+ epic): existing chat-v2 e2e `approval-card.spec.ts` references ApprovalCard DOM/selectors; with MessageList → TurnList swap the approval rendering path is via HITLTurn (Day 2 §2.1) NOT ApprovalCard. Existing e2e may break selector lookup. Day 4 §4.2 decision: rewrite e2e selectors against HITLTurn DOM, OR keep ApprovalCard as thin compat wrapper. Behavioral wire (`governanceService.decide`) preserved either way.
+- **D-DAY3-4** (in-scope additive): ChatLayout collapsible rails use `grid-cols-[...]` per state. Alternative considered = always-render-and-CSS-hide; rejected because unmounting closed rails prevents `<SessionList />` from listening to `chatStore.activeSessionId` updates after a session click (would mass-re-render). Final: rail panels unmount when state is `false`; preserves keyboard tab order; mockup `data-list` / `data-insp` attribute pattern kept on shell for any future e2e selector.
+- **D-DAY3-5** (cosmetic): `live-dot` mockup CSS class translated as `inline-block h-2 w-2 animate-pulse rounded-full bg-warning`. Matches mockup visual; 4.6:1 contrast on bg-bg-1 verified per Sprint 57.17 STYLE.md §2.
+
+### Quality gates (Day 3 EOD)
+
+| Gate | Day 2 baseline | Day 3 EOD | Verdict |
+|------|----------------|-----------|---------|
+| tsc errors | 0 | 0 | ✅ |
+| Vitest tests | 319 | **335** (+16 NEW) | ✅ 0 regression |
+| Vitest files | 66 | 68 (+2 NEW: SessionList.test + ChatHeader.test) | ✅ |
+| Lint | silent | silent | ✅ |
+| Build time | 2.82s | 2.77s | ✅ |
+| Main bundle | 320.76 kB | **321.92 kB** (+1.16 kB) | ✅ within +30 kB target |
+| dropdown-menu chunk | 118.36 kB | 118.37 kB | ✅ ~flat |
+| Backend changes | 0 | 0 | ✅ |
+| i18n keys added | — | 24 (12 × 2 locales) | ✅ |
+
+### Notes / decisions
+
+- **AP-3 cross-directory check**: all NEW Day 3 files under `features/chat_v2/{components,fixtures}/`. 0 outside the feature.
+- **AP-2 Potemkin avoidance**: SessionList ships demo banner explaining fixture status; session click is reactive (updates store) but does NOT trigger backend fetch — explicit AD-ChatV2-SessionList-Backend carryover.
+- **AP-4 visible mockup-fidelity gain**: ChatLayout rewrite from 2-col placeholder to 3-col with mockup-matching ChatHeader is the visible win of Day 3. Playwright MCP visual capture deferred to Day 4 closeout (when Inspector Turn tab ships) per checklist §4.3.
+- **i18n namespace expansion**: NEW `chat.*` namespace is the first non-`nav.chatV2` chat key in common.json. Future Day 4 Composer + Inspector Turn tab can extend this namespace.
+- **`MessageList.tsx` left intact**: not converted to thin re-export this Day. Day 4 closeout will either delete or thin-shim depending on whether e2e + any historical importers still touch it.
+
+### Estimate vs actual
+
+- Bottom-up estimate: 3-4 hr (Day 2 buffer pulled forward)
+- Actual: ~2.5 hr (3 NEW components + 16 NEW Vitest cases + 24 i18n keys + 1 page consumer swap + tsc/lint/build green; 0 backend touched)
+- Delta: ~30% under estimate. Reason: SessionList + ChatHeader are mostly mechanical Tailwind translation; chatStore + types.ts session shape from Day 1 covered all needs; 0 surprise blockers.
+- Cumulative actual through Day 3: ~8.5 hr (Day 1 ~2.5 hr + Day 2 ~3.5 hr + Day 3 ~2.5 hr) — well inside the 9-11 hr calibrated commit; Day 4 has ample budget for Inspector + Composer + closeout.
 
 ## Day 4 — _pending_

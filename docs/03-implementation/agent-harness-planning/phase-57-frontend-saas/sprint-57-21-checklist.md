@@ -199,46 +199,47 @@
 
 **Workflow**: continues Day 2 Option C cp+convert. Source baseline: `_mockup-source.jsx.bak` (per §2.0). Each component file's MHist cites mockup line range.
 
-### 3.1 US-D1 SessionList + fixtures (~2 hr)
-- [ ] **NEW** `frontend/src/features/chat_v2/fixtures/sessions.ts` (~50 lines):
+### 3.1 US-D1 SessionList + fixtures (~2 hr) ✅
+- [x] **NEW** `frontend/src/features/chat_v2/fixtures/sessions.ts` (~95 lines):
   - 6 fixture sessions verbatim from mockup `SESSIONS` L5-12 (id / title / agent / turns / status / time / domain)
-- [ ] **NEW** `frontend/src/features/chat_v2/components/SessionList.tsx` (~150 lines per mockup L123-156):
+- [x] **NEW** `frontend/src/features/chat_v2/components/SessionList.tsx` (~160 lines per mockup L123-156 + DomainDot L153-156 inlined):
   - "New session" button + filter button at top
   - "Sessions" + count label
-  - Session item rendering: DomainDot (color map: incident/audit/patrol/rca) + title + status indicator (running/hitl/done) + agent + turns + time
-  - Active session highlight (`data-active`)
-  - onSelect → chatStore.setActiveSessionId
-- [ ] Vitest spec for SessionList (~5 cases: 6 sessions render / DomainDot color map / active highlight / status indicator variants / click → setActiveSessionId)
-- [ ] Commit: `feat(chat-v2, sprint-57-21, Day 3): SessionList sidebar + 6-session fixture per mockup`
+  - Session item rendering: DomainDot (color map: incident=danger / audit=memory / patrol=tool / rca=thinking) + title + status indicator (running live-dot / hitl badge / done blank) + agent + turns + time
+  - Active session highlight (`data-active="true"` + `bg-bg-2`)
+  - onSelect → `chatStore.setActiveSessionId`
+- [x] Vitest spec for SessionList (7 cases: 6 fixtures render / demo banner / click → setActiveSessionId + data-active flip / running status indicator / hitl badge / done status / session count label)
 
-### 3.2 US-D2 ChatLayout 2-col → 3-col (~1-2 hr)
-- [ ] **REWRITE** `frontend/src/features/chat_v2/components/ChatLayout.tsx`:
+### 3.2 US-D2 ChatLayout 2-col → 3-col (~1-2 hr) ✅
+- [x] **REWRITE** `frontend/src/features/chat_v2/components/ChatLayout.tsx`:
   - 3-column grid: `[sessions-list 280px | chat-stream 1fr | inspector 360px]` per mockup `chat-shell`
-  - State: `listOpen` + `inspOpen` toggles (default both `true` at 1440×900)
-  - `data-list` + `data-insp` attributes for collapsing CSS
-  - Mobile responsive: hide both side rails at <768px (per Sprint 57.13 a11y standards)
-  - Left rail mount: `<SessionList />`
-  - Center: existing TurnList + Composer
-  - Right rail mount: `<ChatInspector />` (placeholder until Day 4 Inspector ships)
-- [ ] Update existing ChatLayout Vitest spec selectors (preserve assertion structure)
-- [ ] Commit: `feat(chat-v2, sprint-57-21, Day 3): ChatLayout 2-col → 3-col with collapsible side rails per mockup`
+  - State: `listOpen` + `inspOpen` local state (default both `true` at md+)
+  - `data-list` + `data-insp` attributes preserved on shell for e2e selectors
+  - Mobile responsive: hide both side rails at <768px via `hidden md:block`
+  - Left rail mount: `<SessionList />` (unmounts when `listOpen=false`)
+  - Center: `<ChatHeader>` + `{children}` (TurnList + InputBar + panels)
+  - Right rail mount: `<ChatInspector />` (Day 3 stub; Day 4 §4.1 full)
+- [x] **NEW** `frontend/src/features/chat_v2/components/ChatHeader.tsx` (~165 lines per mockup L93-121) — left panel toggle + gradient warn icon + title + badges + streaming indicator + Loop+Audit buttons + right panel toggle
+- [x] **NEW** `frontend/src/features/chat_v2/components/inspector/ChatInspector.tsx` (Day 3 stub ~30 lines; Day 4 §4.1 rewrites to 4-tab frame)
+- [x] **NEW** Vitest spec for ChatHeader (9 cases: title fallback / fixture lookup / streaming hidden idle / streaming visible running / provider neutral / left toggle data-active + cb / right toggle data-active + cb / Loop+Audit buttons / live totalTurns override)
+- [x] **EDIT** `frontend/src/pages/chat-v2/index.tsx` — swap `MessageList` → `TurnList` consumer (D-DAY3-3 ApprovalCard e2e deferred to Day 4 §4.2)
 
-### 3.3 US-D3 Demo banner above SessionList (AP-2 compliance) (~30 min)
-- [ ] **EDIT** SessionList.tsx to render a yellow `bg-warning/16 text-warning-foreground` banner above sessions list:
+### 3.3 US-D3 Demo banner above SessionList (AP-2 compliance) (~30 min) ✅
+- [x] **EDIT** SessionList.tsx — yellow `bg-warning/16 border-warning/40 text-warning` banner above sessions list:
   - Text: "Demo data — backend list endpoint pending Sprint 57.22+ (AD-ChatV2-SessionList-Backend)"
   - i18n key: `chat.session.demoBanner` (en + zh-TW)
-- [ ] i18n key add: `frontend/src/i18n/en/common.json` + `zh-TW/common.json`
-- [ ] Commit: `feat(chat-v2, sprint-57-21, Day 3): SessionList demo banner for AP-2 compliance + i18n keys`
+- [x] i18n keys added: `frontend/src/i18n/locales/en/common.json` + `zh-TW/common.json` — NEW `chat.{session,header,inspector}.*` namespace (12 keys × 2 locales = 24 entries)
 
-### 3.4 Day 3 closeout
-- [ ] `npm run tsc` 0 errors
-- [ ] `npm run test` Vitest 277+N PASS
-- [ ] `npm run lint` silent
-- [ ] `npm run build` succeeds
-- [ ] Playwright MCP capture POST-Day-3 chat-v2 at 1440×900 → `screenshots/sessions-sidebar/prod-chat-v2-day3.png`
-- [ ] Pair-verify SessionList + 3-col layout vs mockup — DRIFT verdict
-- [ ] **Behavioral preservation smoke test**: open chat-v2, click each fixture session → state updates but stream stays on current session (no backend wire — expected)
-- [ ] Progress.md Day 3 entry + cosmetic gaps logged
+### 3.4 Day 3 closeout ✅ (Playwright MCP visual pair-verify DEFERRED to Day 4)
+- [x] `npx tsc --noEmit` 0 errors ✅
+- [x] `npx vitest run` Vitest **335/335 PASS** (Day 2 baseline 319 + 7 SessionList + 9 ChatHeader = +16 NEW; 0 regression) ✅
+- [x] `npm run lint` silent (`--max-warnings 0`) ✅
+- [x] `npx vite build` 2.77s; main bundle 321.92 kB (Day 2 baseline 320.76 → +1.16 kB; within +30 KB target) ✅
+- [ ] 🚧 **Playwright MCP capture POST-Day-3 chat-v2 at 1440×900 → `screenshots/sessions-sidebar/prod-chat-v2-day3.png`** — DEFERRED to Day 4 closeout (paired with Inspector + Composer ship per checklist §4.3; auth race D-PRE-4 + dev-login fixture pattern handled there in single MCP session)
+- [ ] 🚧 **Pair-verify SessionList + 3-col layout vs mockup — DRIFT verdict** — DEFERRED to Day 4 alongside above (visual capture prerequisite)
+- [ ] 🚧 **Behavioral preservation smoke test**: open chat-v2, click each fixture session → state updates but stream stays — DEFERRED to Day 4 (manual dev-server verify after Inspector ships)
+- [x] Progress.md Day 3 entry + 5 drift findings logged ✅
+- [x] Day 3 commit (next): `feat(chat-v2, sprint-57-21, Day 3): SessionList + ChatLayout 3-col + ChatHeader + demo banner + i18n (24 keys) + 16 Vitest`
 
 ---
 
