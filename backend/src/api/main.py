@@ -65,6 +65,8 @@ from api.v1.governance import router as governance_router
 from api.v1.health import router as health_router
 from api.v1.loops import router as loops_router
 from api.v1.memory import router as memory_router
+from api.v1.sessions import router as sessions_router
+from api.v1.subagents import router as subagents_router
 from api.v1.telemetry import router as telemetry_router
 from api.v1.verification import router as verification_router
 from infrastructure.db import dispose_engine
@@ -117,6 +119,8 @@ def create_app() -> FastAPI:
     app.include_router(verification_router, prefix="/api/v1")
     app.include_router(loops_router, prefix="/api/v1")
     app.include_router(memory_router, prefix="/api/v1")
+    app.include_router(sessions_router, prefix="/api/v1")
+    app.include_router(subagents_router, prefix="/api/v1")
     app.include_router(governance_router, prefix="/api/v1")
     app.include_router(admin_tenants_router, prefix="/api/v1")
     app.include_router(admin_sla_reports_router, prefix="/api/v1")
