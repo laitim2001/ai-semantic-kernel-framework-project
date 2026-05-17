@@ -226,3 +226,82 @@ Two commits per Day 1.7:
 - Day 1 elapsed: ~70 min (US-A1 ~25 min + US-B1 ~40 min + closeout ~5 min)
 - Within `mockup-page-port-with-backend-pairing-and-audit` 0.60 budget for Day 1 (~3-4 hr allocated for both USs)
 - Pattern reuse from Sprint 57.12 memory.py accelerated US-B1 by ~20% (direct copy of `_to_ms`, `_validate_page_size` style, FastAPI Depends pattern)
+
+---
+
+## Day 2 — 2026-05-17 (US-B2 memory ext + US-B3 sessions state + US-B4 subagents stub)
+
+### Today's accomplishments
+
+- ✅ **US-B2 extend `/api/v1/memory/recent` with `scope_id` + `time_scale`**:
+  - Added optional `scope_id: UUID | None` query param to `list_recent` — for layer=user uses as user_id filter; for layer=tenant validates scope_id == current_tenant (else 404)
+  - Added optional `time_scale: MemoryTimeScale | None` query param — only applies to layer=user (only layer with `expires_at` column per D1-008 from Sprint 57.12)
+  - Extended internal `_list_user` helper to accept both new filters; reuses existing PERMANENT/QUARTERLY/DAILY time-scale logic from `/by-time/{layer}/{time_scale}` endpoint
+  - Kept offset/limit pagination unchanged (cursor pagination for memory deferred — sprint scope reduction per Day 0 D-PRE assessment)
+  - `frontend/src/features/memory/services/memoryService.ts` extension deferred to Day 4 (frontend port group)
+  - MHist 1-line append
+  - **3 NEW integration tests** in `test_memory_query_extension.py`:
+    1. `test_recent_user_scope_id_filter` — user A 2 + user B 1 sessions; `?scope_id=A` returns 2
+    2. `test_recent_user_time_scale_permanent` — 2 permanent + 1 quarterly; `?time_scale=permanent` returns 2
+    3. `test_recent_tenant_scope_id_mismatch_404` — `?scope_id=<other-uuid>` for layer=tenant → 404
+  - Regression: 13/13 baseline `test_memory.py` Sprint 57.12 tests still PASS
+
+- ✅ **US-B3 NEW `/api/v1/sessions/{session_id}/state` endpoint** (Cat 7):
+  - Created `backend/src/api/v1/sessions.py` (~110 lines)
+  - Per **D-PRE-7 pivot**: no `state_mgmt/repository.py`; uses direct ORM `select(StateSnapshot).where(session_id == ...).where(tenant_id == ...).order_by(version DESC).limit(1)`
+  - Returns latest StateSnapshot per session (the append-only model means latest is always current)
+  - Multi-tenant rule: cross-tenant returns 404 (NOT 403) — non-existent and cross-tenant indistinguishable
+  - Response: session_id / tenant_id / version / turn_num / state_data (JSONB) / state_hash / reason / captured_at_ms
+  - 17.md §7 Cat 7: no new ABC method needed
+  - Registered in `backend/src/api/main.py`
+  - **3 NEW integration tests** in `test_state_snapshot.py`:
+    1. `test_state_snapshot_happy_path_latest_version` — 3 snapshots (v1,v2,v3); endpoint returns v3
+    2. `test_state_snapshot_cross_tenant_returns_404` — tenant A snapshot queried as tenant B → 404
+    3. `test_state_snapshot_session_not_found_returns_404` — unknown session_id → 404
+
+- ✅ **US-B4 NEW `/api/v1/subagents` endpoint** (Cat 11 — STUB + carryover):
+  - Created `backend/src/api/v1/subagents.py` (~120 lines)
+  - **Per D-PRE-SCHEMA-3 confirmed**: NO `class Subagent*` ORM exists in `infrastructure/db/models/`; `SubagentSpawned/Completed` are in-memory `LoopEvent` dataclasses emitted by `agent_harness/subagent/dispatcher.py` SSE; NOT inserted into `audit_log` (grep confirmed 0 matches for `audit.*subagent` / `action.*subagent`)
+  - Endpoint returns **empty list + `not_implemented_reason`** carryover note → frontend can render carryover banner when field is non-null + render empty-state widget
+  - Response contract `SubagentItem` includes all fields plan envisioned (invocation_id / mode / parent_session_id / status / total_tokens / started_at_ms / ended_at_ms) so frontend can wire against stable shape
+  - 3 alternatives considered + documented in docstring (audit_log projection / NEW ORM + migration / in-memory singleton); all rejected as out-of-scope or unsafe; **AD-Subagent-RealList-Phase58** carryover logged
+  - Registered in `backend/src/api/main.py`
+  - **3 NEW integration tests** in `test_subagent_registry.py`:
+    1. `test_subagents_empty_with_carryover_note` — verifies items=[], `not_implemented_reason` contains `AD-Subagent-RealList-Phase58`
+    2. `test_subagents_mode_filter_accepted` — `?mode=code` accepted, empty list returned
+    3. `test_subagents_invalid_mode_rejected` — `?mode=invalid_mode` → 422 (FastAPI Literal validation)
+
+- ✅ **Day 2 sanity all green**:
+  - pytest 29/29 PASS in 3.49s (test_loops 7 + test_memory 13 + test_memory_query_extension 3 + test_state_snapshot 3 + test_subagent_registry 3)
+  - black + isort: auto-reformatted 2 files; clean after
+  - flake8: silent (4 fixes: E501 in memory.py MHist + scope_id description split; F401 unused HTTPException/status in test_memory_query_extension.py)
+  - mypy: 0 errors on sessions.py + subagents.py
+  - V2 lints: 9/9 green in 0.98s
+
+### Drift findings — Day 2
+
+| ID | Finding | Severity | Action |
+|----|---------|----------|--------|
+| D-DAY2-1 | Plan checklist 2.1 spec said "Same cursor base64 pattern as US-B1" for memory.py extension — would have been substantial refactor of existing 3 endpoints (recent/scope/by-time). Adopted **minimal extension** approach: add optional filters as new query params to `/recent`; keep existing offset/limit; deferred cursor migration. | Sprint scope | In-scope reduction; no AD needed |
+| D-DAY2-2 | Plan checklist 2.3 spec said `Edit backend/src/agent_harness/subagent_orchestration/repository.py — add list_for_tenant method`. Per D-PRE-6, that directory doesn't exist. Per D-PRE-SCHEMA-3, no Subagent ORM. Pivoted US-B4 to **empty-list stub + carryover** rather than designing new persistence in this sprint. | Sprint scope | NEW carryover: **AD-Subagent-RealList-Phase58** |
+| D-DAY2-3 | Black auto-reformatted subagents.py + test_state_snapshot.py (multi-line tuple unpacking) | Style | Resolved by black + git pickup |
+| D-DAY2-4 | flake8 caught 2 E501 in memory.py (MHist + scope_id desc) + 2 F401 (unused HTTPException/status imports in test file) → all 4 fixed | Lint | Resolved |
+
+### NEW carryover AD
+
+- **AD-Subagent-RealList-Phase58** (NEW Sprint 57.19 Day 2): wire subagent invocation persistence (option a: audit_log SubagentSpawned/Completed projection per Sprint 57.12 SSE event addition; option b: NEW `SubagentInvocation` ORM + Alembic 0018 + dispatcher.spawn persist hook). Frontend US-C3 Day 4 subagents page will render carryover banner from `not_implemented_reason` field until persistence lands. Cost estimate ~6-10 hr standalone sprint.
+
+### Commit plan (Day 2.4)
+
+3 commits:
+- A: `feat(cat3, sprint-57-19): extend GET /api/v1/memory/recent with scope_id + time_scale` (memory.py + test_memory_query_extension.py)
+- B: `feat(cat7, sprint-57-19): GET /api/v1/sessions/{id}/state snapshot endpoint + cross-tenant 404` (sessions.py + test_state_snapshot.py + main.py)
+- C: `feat(cat11, sprint-57-19): GET /api/v1/subagents stub + AD-Subagent-RealList-Phase58 carryover` (subagents.py + test_subagent_registry.py + main.py)
+- D: `docs(sprint-57-19, Day 2): progress.md update` (progress.md only)
+
+### Calibration update (Day 2 partial)
+
+- Day 2 elapsed: ~85 min (US-B2 ~20 min + US-B3 ~30 min + US-B4 ~25 min + sanity/lint ~10 min)
+- Cumulative Day 0+1+2: ~205 min (~3.4 hr) of ~18.5 hr committed
+- US-B4 came in **much faster** (~25 min vs plan's ~60 min) due to honest "stub + carryover" decision instead of forcing persistence design in-scope (Sprint 57.5 reality-check methodology applied — no Potemkin endpoint with fake data)
+- US-B3 came in faster than expected (~30 min vs plan's ~45 min) — `infrastructure/db/models/state.py` ORM was clean + StateSnapshot append-only semantics meant "latest version" = single `ORDER BY version DESC LIMIT 1` query (no joins / no version walk needed)
