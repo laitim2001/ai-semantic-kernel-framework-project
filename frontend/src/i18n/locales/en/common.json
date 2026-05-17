@@ -59,7 +59,68 @@
     "options": "User menu options",
     "signedInAs": "Signed in as",
     "signOut": "Sign out",
-    "language": "Language"
+    "language": "Language",
+    "switchTenant": "Switch tenant",
+    "profile": "Profile",
+    "mfa": "MFA settings",
+    "preferences": "Preferences",
+    "themeLight": "Switch to light",
+    "themeDark": "Switch to dark"
+  },
+  "topbar": {
+    "commandPalette": {
+      "title": "Command palette",
+      "placeholder": "Search pages, actions, tenants, sessions…",
+      "empty": "No results",
+      "groups": {
+        "actions": "Actions",
+        "pages": "Pages",
+        "tenants": "Tenants",
+        "sessions": "Sessions"
+      },
+      "actions": {
+        "newChat": "New chat",
+        "newChatHint": "Open Chat V2 and start a new session",
+        "reviewHitl": "Review HITL queue",
+        "reviewHitlHint": "Jump to pending approvals",
+        "onboardTenant": "Onboard tenant",
+        "onboardTenantHint": "Tenant lifecycle wizard",
+        "declareIncident": "Declare incident",
+        "declareIncidentHint": "Open incident console"
+      },
+      "footer": {
+        "navigate": "navigate",
+        "open": "open",
+        "close": "close",
+        "results": "results"
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "new": "new",
+      "markAll": "Mark all read",
+      "empty": "You're all caught up",
+      "viewAll": "View all",
+      "prefs": "Preferences",
+      "tab": {
+        "all": "All",
+        "unread": "Unread"
+      },
+      "items": {
+        "n1Title": "P1 escalation awaiting approval",
+        "n1Body": "servicenow_create_ticket from sess_4f88c1a",
+        "n2Title": "p95 latency breach on gpt-4.1",
+        "n2Body": "INC-2451 · 3.2s / 2s threshold for 12m",
+        "n3Title": "Verification failed twice",
+        "n3Body": "compliance-auditor · LLM-judge rejected",
+        "n4Title": "PII redaction triggered",
+        "n4Body": "salesforce_query returned 3 redacted records",
+        "n5Title": "Cost MTD reached 68% of budget",
+        "n5Body": "$2,847 / $4,200 · projected $3,920",
+        "n6Title": "Cache rebuild completed",
+        "n6Body": "tenant_acme kb_search vector index"
+      }
+    }
   },
   "action": {
     "retry": "Retry",
@@ -72,6 +133,196 @@
     "tab": {
       "recent": "Recent",
       "correctionTrace": "Correction Trace"
+    }
+  },
+  "overview": {
+    "title": "Overview",
+    "subtitle": "Unified operator dashboard across the 12 categories.",
+    "export": "Export",
+    "newChat": "New chat",
+    "kpi": {
+      "activeSessions": "Active sessions",
+      "hitlPending": "HITL pending",
+      "costMtd": "Cost (MTD)",
+      "slaP95": "SLA p95"
+    },
+    "activeLoops": {
+      "title": "Active loops",
+      "subtitle": "live · last 60s",
+      "openDebug": "Open Loop Debug",
+      "empty": "No running loops right now."
+    },
+    "hitlQueue": {
+      "title": "HITL queue",
+      "review": "Review"
+    },
+    "costBurn": {
+      "title": "Cost burn",
+      "subtitle": "30-day spend vs $4,200 budget",
+      "details": "Details"
+    },
+    "providers": {
+      "title": "Providers",
+      "details": "Details"
+    },
+    "incidents": {
+      "title": "Recent incidents",
+      "all": "All incidents"
+    },
+    "errors": {
+      "title": "Errors · 24h",
+      "subtitle": "Hourly buckets across all loops",
+      "policy": "Policy"
+    },
+    "quick": {
+      "newChat": "New chat session",
+      "newChatSub": "Start a Chat (V2) session",
+      "review": "Review approvals",
+      "reviewSub": "Walk the HITL queue",
+      "tenants": "Tenants console",
+      "tenantsSub": "Lifecycle + settings",
+      "verification": "Verification log",
+      "verificationSub": "Recent corrections"
+    }
+  },
+  "orchestrator": {
+    "title": "Orchestrator",
+    "subtitle": "Range 1 · TAO/ReAct loop · dispatches 4 subagent modes",
+    "version": "v3.4.1",
+    "live": "live",
+    "actions": {
+      "test": "Test in Chat",
+      "viewRepo": "View in repo",
+      "deploy": "Deploy"
+    },
+    "kpi": {
+      "sessions24h": "Sessions · 24h",
+      "avgTurns": "Avg loop turns",
+      "subagentSpawns": "Subagent spawns · 24h",
+      "p95Session": "p95 session"
+    },
+    "tabs": {
+      "config": "Config",
+      "prompt": "System Prompt",
+      "tools": "Tools",
+      "subagents": "Subagents",
+      "budgets": "Budgets",
+      "policies": "Policies",
+      "label": "Orchestrator tabs"
+    },
+    "config": {
+      "core": "Core settings",
+      "memoryAccess": "Memory access",
+      "memoryAccessSub": "What scopes orchestrator can touch",
+      "verification": "Verification",
+      "verificationSub": "Range 7 settings"
+    },
+    "prompt": {
+      "title": "System prompt",
+      "subtitle": "Variables wrapped in {{double-braces}}",
+      "variables": "Variables",
+      "history": "History",
+      "test": "Test"
+    },
+    "tools": {
+      "title": "Tools attached to orchestrator",
+      "subtitle": "18 of 24 enabled · order ≈ selection bias",
+      "openRegistry": "Open registry"
+    },
+    "subagents": {
+      "title": "Subagents this orchestrator can dispatch",
+      "subtitle": "Pick from registry · per-subagent mode + budget",
+      "openRegistry": "Open registry"
+    },
+    "budgets": {
+      "loop": "Loop budgets",
+      "loopSub": "Hard ceilings per session · loop terminates when exceeded",
+      "termination": "Termination conditions"
+    },
+    "policies": {
+      "title": "HITL + risk policies"
+    }
+  },
+  "subagents": {
+    "title": "Subagents",
+    "subtitle": "Range 11 · AgentSpec definitions · 4 dispatch modes (fork / teammate / handoff / as_tool)",
+    "registered": "registered",
+    "syncFromRepo": "Sync from repo",
+    "newSubagent": "New subagent",
+    "carryoverHeading": "Backend gap",
+    "mode": {
+      "forkDesc": "Concurrent fan-out · parent merges results",
+      "asToolDesc": "LLM calls subagent as a tool · synchronous",
+      "teammateDesc": "Peer-to-peer mailbox · async coordination",
+      "handoffDesc": "Transfer control · shared conversation history"
+    },
+    "list": {
+      "title": "Subagents",
+      "subtitle": "Click to inspect / edit"
+    },
+    "col": {
+      "role": "Role",
+      "model": "Model",
+      "modes": "Modes",
+      "status": "Status",
+      "calls24h": "Calls · 24h",
+      "p95": "p95"
+    },
+    "detail": {
+      "tabsLabel": "Subagent detail tabs",
+      "spec": "AgentSpec",
+      "budget": "Budget",
+      "tools": "Tools",
+      "stats": "Stats",
+      "testInvoke": "Test invoke",
+      "role": "Role (immutable id)",
+      "model": "Model",
+      "systemPrompt": "System prompt",
+      "allowedModes": "Allowed dispatch modes",
+      "maxTokens": "Max tokens",
+      "maxDuration": "Max duration (s)",
+      "maxConcurrent": "Max concurrent invocations",
+      "maxDepth": "Max subagent depth (from this)",
+      "worktreeAbsent": "Worktree mode is intentionally absent from V2 — IPA runs server-side, so we use mailbox + handoff for isolation instead of git worktrees.",
+      "toolsAttached": "Tools available to this subagent",
+      "attachTool": "Attach tool",
+      "calls24h": "Calls · 24h",
+      "p95": "p95 duration",
+      "successRate": "Success rate",
+      "avgTokens": "Avg tokens / call",
+      "topOrchestrator": "Most-used orchestrator"
+    }
+  },
+  "stateInspector": {
+    "title": "State Inspector",
+    "subtitle": "Range 7 · LoopState time-travel · Reducer is the only mutator",
+    "versions": "versions",
+    "checkpoints": "checkpoints",
+    "diffVsParent": "Diff vs parent",
+    "restore": "Restore from version",
+    "exportCheckpoint": "Export checkpoint",
+    "carryoverHeading": "Backend gap",
+    "carryoverBody": "Version chain (10 entries) shown from mockup fixture — Cat 7 list-by-session endpoint not yet implemented (tracked as AD-State-VersionChain-Phase58). When ?session_id=<uuid> is provided in URL, the latest single version is fetched live via US-B3.",
+    "liveFetchError": "Live snapshot fetch failed",
+    "kpi": {
+      "currentVersion": "Current version",
+      "transientSize": "Transient size",
+      "durableBytes": "Durable bytes",
+      "pendingApprovals": "Pending approvals"
+    },
+    "chain": {
+      "title": "Version chain",
+      "subtitle": "Reducer-authored · monotonic"
+    },
+    "transient": {
+      "heading": "Transient state · in-memory"
+    },
+    "durable": {
+      "heading": "Durable state · DB-persisted"
+    },
+    "diff": {
+      "title": "Diff vs parent",
+      "noParent": "no parent"
     }
   }
 }

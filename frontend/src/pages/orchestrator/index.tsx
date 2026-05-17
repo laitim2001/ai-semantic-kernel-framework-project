@@ -1,1 +1,1 @@
-export { default } from "../../components/ComingSoonPlaceholder";
+export { OrchestratorPage as default } from "./OrchestratorPage";

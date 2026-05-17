@@ -20,6 +20,7 @@
  * Last Modified: 2026-05-10
  *
  * Modification History:
+ *   - 2026-05-17: Sprint 57.19 US-D3 — mockup port (tenant switch fixtures + nav items + role/region + theme toggle); preserves locale switcher + sign out
  *   - 2026-05-10: Sprint 57.13 US-B5 — locale switcher items + i18n the labels
  *   - 2026-05-10: Sprint 57.13 US-B3 — swap custom popover → <DropdownMenu>; add role badges
  *   - 2026-05-10: Sprint 57.13 US-A1 — read authStore.user instead of decoding the JWT; sign out via logout()
@@ -33,9 +34,12 @@
  *   - frontend/src/components/AppShellV2.tsx (host via userMenu prop slot)
  */
 
-import { Check, LogOut, User as UserIcon } from "lucide-react";
+import { Check, KeyRound, LogOut, Moon, Settings, Sun, User as UserIcon } from "lucide-react";
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+
+import { useTheme } from "@/components/ThemeProvider";
 
 import {
   Badge,
@@ -51,8 +55,17 @@ import { useAuthStore } from "@/features/auth/store/authStore";
 import { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES } from "@/i18n";
 import { cn } from "@/lib/utils";
 
+// Mockup fixture tenant list — replace with real API in Sprint 57.20+ (Cat 12 tenant feed).
+const TENANT_FIXTURES = [
+  { id: "t1", name: "acme-prod", region: "ap-east-1", active: true },
+  { id: "t2", name: "globex-eu", region: "eu-west-1", active: false },
+  { id: "t3", name: "initech-jp", region: "ap-northeast-1", active: false },
+];
+
 export const UserMenu: FC = () => {
   const { t, i18n } = useTranslation("common");
+  const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const roles = useAuthStore((s) => s.roles);
@@ -85,7 +98,7 @@ export const UserMenu: FC = () => {
       >
         {initial === "?" ? <UserIcon size={16} /> : initial}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" aria-label={t("userMenu.options")}>
+      <DropdownMenuContent align="end" aria-label={t("userMenu.options")} className="w-64">
         <DropdownMenuLabel className="font-normal">
           <div className="text-xs text-muted-foreground">{t("userMenu.signedInAs")}</div>
           <div className="truncate text-sm font-medium text-foreground">{label}</div>
@@ -103,7 +116,41 @@ export const UserMenu: FC = () => {
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+        <DropdownMenuLabel className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground">
+          {t("userMenu.switchTenant")}
+        </DropdownMenuLabel>
+        {TENANT_FIXTURES.map((tn) => (
+          <DropdownMenuItem
+            key={tn.id}
+            onSelect={() => { /* tenant switch wired Sprint 57.20+ */ }}
+            aria-current={tn.active ? "true" : undefined}
+          >
+            <Check size={14} className={cn(!tn.active && "invisible")} />
+            <div className="flex flex-col">
+              <span className="text-sm">{tn.name}</span>
+              <span className="font-mono text-[10px] text-muted-foreground">{tn.region}</span>
+            </div>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => navigate("/profile")}>
+          <UserIcon size={14} />
+          {t("userMenu.profile")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate("/mfa")}>
+          <KeyRound size={14} />
+          {t("userMenu.mfa")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate("/admin/tenants")}>
+          <Settings size={14} />
+          {t("userMenu.preferences")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={toggleTheme}>
+          {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+          {t(theme === "dark" ? "userMenu.themeLight" : "userMenu.themeDark")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground">
           {t("userMenu.language")}
         </DropdownMenuLabel>
         {SUPPORTED_LOCALES.map((loc) => {
@@ -120,7 +167,7 @@ export const UserMenu: FC = () => {
           );
         })}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => void logout()}>
+        <DropdownMenuItem onSelect={() => void logout()} className="text-danger">
           <LogOut size={14} />
           {t("userMenu.signOut")}
         </DropdownMenuItem>

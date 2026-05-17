@@ -1,1 +1,1 @@
-export { default } from "../../components/ComingSoonPlaceholder";
+export { StateInspectorPage as default } from "./StateInspectorPage";

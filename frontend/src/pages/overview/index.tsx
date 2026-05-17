@@ -1,1 +1,1 @@
-export { default } from "../../components/ComingSoonPlaceholder";
+export { OverviewPage as default } from "./OverviewPage";

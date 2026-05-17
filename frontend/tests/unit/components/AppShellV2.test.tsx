@@ -16,6 +16,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { AppShellV2 } from "@/components/AppShellV2";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { useUIStore } from "@/store/uiStore";
 
 const renderShell = (
@@ -24,9 +25,11 @@ const renderShell = (
 ) =>
   render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <AppShellV2 pageTitle="Test Page" {...props}>
-        <p>page body content</p>
-      </AppShellV2>
+      <ThemeProvider>
+        <AppShellV2 pageTitle="Test Page" {...props}>
+          <p>page body content</p>
+        </AppShellV2>
+      </ThemeProvider>
     </MemoryRouter>,
   );
 

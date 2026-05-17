@@ -133,7 +133,6 @@ export const ROUTES: RouteEntry[] = [
     icon: LayoutDashboard,
     category: "operations",
     active: true,
-    proposed: true,
     component: lazy(() => import("./pages/overview")),
   },
   {
@@ -152,7 +151,6 @@ export const ROUTES: RouteEntry[] = [
     icon: Sparkles,
     category: "operations",
     active: true,
-    proposed: true,
     component: lazy(() => import("./pages/orchestrator")),
   },
   {
@@ -162,7 +160,6 @@ export const ROUTES: RouteEntry[] = [
     icon: GitFork,
     category: "operations",
     active: true,
-    proposed: true,
     component: lazy(() => import("./pages/subagents")),
   },
   {
@@ -190,7 +187,6 @@ export const ROUTES: RouteEntry[] = [
     icon: Database,
     category: "operations",
     active: true,
-    proposed: true,
     component: lazy(() => import("./pages/state-inspector")),
   },
   {

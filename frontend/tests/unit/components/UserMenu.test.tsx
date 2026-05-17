@@ -19,6 +19,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { UserMenu } from "@/components/UserMenu";
 import { logout } from "@/features/auth/services/authService";
 import { useAuthStore } from "@/features/auth/store/authStore";
@@ -48,7 +49,9 @@ function setAnonymous(): void {
 const renderMenu = () =>
   render(
     <MemoryRouter>
-      <UserMenu />
+      <ThemeProvider>
+        <UserMenu />
+      </ThemeProvider>
     </MemoryRouter>,
   );
 

@@ -41,6 +41,7 @@ Description:
 Created: 2026-05-10 (Sprint 57.12 Day 1 / US-2)
 
 Modification History (newest-first):
+    - 2026-05-17: Sprint 57.19 US-B2 — extend /recent w/ optional scope_id + time_scale params
     - 2026-05-10: Initial creation (Sprint 57.12 Day 1 / US-2) — 3 endpoints
       ORM-direct read facade; tenant + user + system layers fully wired
 
@@ -205,10 +206,20 @@ async def _list_user(
     offset: int,
     limit: int,
     user_id: UUID | None = None,
+    time_scale: MemoryTimeScale | None = None,
 ) -> tuple[list[MemoryEntryItem], int]:
     base = select(MemoryUser).where(MemoryUser.tenant_id == current_tenant)
     if user_id is not None:
         base = base.where(MemoryUser.user_id == user_id)
+    if time_scale is not None:
+        now = datetime.now(UTC)
+        if time_scale == MemoryTimeScale.PERMANENT:
+            base = base.where(MemoryUser.expires_at.is_(None))
+        elif time_scale == MemoryTimeScale.QUARTERLY:
+            base = base.where(MemoryUser.expires_at > now + timedelta(days=30))
+        elif time_scale == MemoryTimeScale.DAILY:
+            base = base.where(MemoryUser.expires_at.is_not(None))
+            base = base.where(MemoryUser.expires_at <= now + timedelta(days=30))
     sel = base.order_by(desc(MemoryUser.created_at))
     items_orm = (await db.execute(sel.offset(offset).limit(limit))).scalars().all()
     total = len((await db.execute(base)).scalars().all())
@@ -234,6 +245,18 @@ async def list_recent(
     layer: MemoryLayer = Query(..., description="Layer to query (single layer per request)"),
     limit: int = Query(50, ge=1, le=_MAX_PAGE_SIZE),
     offset: int = Query(0, ge=0),
+    scope_id: UUID | None = Query(
+        None,
+        description=(
+            "Optional scope_id (Sprint 57.19 US-B2). For layer=user this is user_id; "
+            "for layer=tenant it must match current_tenant (else 404); ignored otherwise."
+        ),
+    ),
+    time_scale: MemoryTimeScale | None = Query(
+        None,
+        description="Optional time-scale filter (Sprint 57.19 US-B2). Only applies to layer=user; "
+        "ignored for other layers (only memory_user has expires_at column per D1-008).",
+    ),
     current_tenant: UUID = Depends(get_current_tenant),
     _audit: UUID = Depends(require_audit_role),
     db: AsyncSession = Depends(get_db_session_with_tenant),
@@ -243,14 +266,26 @@ async def list_recent(
     Tenant + user layers: filtered by JWT tenant_id via RLS.
     System layer: cross-tenant (auditor only).
     Role + session layers: 501 Not Implemented (AD-Memory-Role-Session-Phase58).
+
+    Sprint 57.19 US-B2 extension:
+    - scope_id: filter within layer (user_id for user; tenant cross-check for tenant)
+    - time_scale: only for layer=user (the only layer with expires_at column)
     """
     _validate_page_size(limit)
     if layer == MemoryLayer.SYSTEM:
         items, total = await _list_system(db, offset, limit)
     elif layer == MemoryLayer.TENANT:
+        # scope_id (if present) must match current_tenant for tenant layer.
+        if scope_id is not None and scope_id != current_tenant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="scope_id does not match current tenant",
+            )
         items, total = await _list_tenant(db, current_tenant, offset, limit)
     elif layer == MemoryLayer.USER:
-        items, total = await _list_user(db, current_tenant, offset, limit)
+        items, total = await _list_user(
+            db, current_tenant, offset, limit, user_id=scope_id, time_scale=time_scale
+        )
     else:
         # role / session — Phase 58+ scope per AD-Memory-Role-Session-Phase58.
         raise HTTPException(

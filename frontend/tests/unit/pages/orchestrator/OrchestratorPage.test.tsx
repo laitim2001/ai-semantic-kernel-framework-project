@@ -1,0 +1,91 @@
+/**
+ * File: frontend/tests/unit/pages/orchestrator/OrchestratorPage.test.tsx
+ * Purpose: Vitest coverage for OrchestratorPage (US-C2) — page chrome + 6 tabs + tab switching.
+ * Category: Frontend / Tests / pages / orchestrator
+ * Scope: Phase 57 / Sprint 57.19 Day 3 / US-C2
+ *
+ * Created: 2026-05-17 (Sprint 57.19 Day 3 / US-C2)
+ *
+ * Modification History (newest-first):
+ *   - 2026-05-17: Initial creation (Sprint 57.19 Day 3 / US-C2)
+ */
+
+import "@testing-library/jest-dom/vitest";
+
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/components/AppShellV2", () => ({
+  AppShellV2: ({ children, pageTitle }: { children: ReactNode; pageTitle: string }) => (
+    <div data-testid="app-shell" data-page-title={pageTitle}>
+      {children}
+    </div>
+  ),
+}));
+
+vi.mock("@/features/auth/components/RequireAuth", () => ({
+  RequireAuth: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
+import { OrchestratorPage } from "@/pages/orchestrator/OrchestratorPage";
+
+function wrap(children: ReactNode) {
+  return <MemoryRouter>{children}</MemoryRouter>;
+}
+
+describe("OrchestratorPage", () => {
+  it("renders AppShellV2 pageTitle", () => {
+    render(wrap(<OrchestratorPage />));
+    expect(screen.getByTestId("app-shell")).toHaveAttribute("data-page-title", "Orchestrator");
+  });
+
+  it("renders all 6 tab labels in the tablist", () => {
+    render(wrap(<OrchestratorPage />));
+    const tablist = screen.getByRole("tablist", { name: /Orchestrator tabs/i });
+    expect(tablist).toBeInTheDocument();
+    for (const label of ["Config", "System Prompt", "Tools", "Subagents", "Budgets", "Policies"]) {
+      expect(screen.getByRole("tab", { name: new RegExp(label, "i") })).toBeInTheDocument();
+    }
+  });
+
+  it("renders all 4 KPI cards", () => {
+    render(wrap(<OrchestratorPage />));
+    expect(screen.getByText("Sessions · 24h")).toBeInTheDocument();
+    expect(screen.getByText("Avg loop turns")).toBeInTheDocument();
+    expect(screen.getByText("Subagent spawns · 24h")).toBeInTheDocument();
+    expect(screen.getByText("p95 session")).toBeInTheDocument();
+  });
+
+  it("defaults to Config tab and shows its body", () => {
+    render(wrap(<OrchestratorPage />));
+    expect(screen.getByText("Core settings")).toBeInTheDocument();
+    const configTab = screen.getByRole("tab", { name: /^Config$/i });
+    expect(configTab).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("switches to Budgets tab and reveals budgets body", async () => {
+    const user = userEvent.setup();
+    render(wrap(<OrchestratorPage />));
+    await user.click(screen.getByRole("tab", { name: /^Budgets$/i }));
+    expect(screen.getByText("Loop budgets")).toBeInTheDocument();
+    expect(screen.getByText("Termination conditions")).toBeInTheDocument();
+  });
+
+  it("switches to Tools tab and shows tool registry table", async () => {
+    const user = userEvent.setup();
+    render(wrap(<OrchestratorPage />));
+    await user.click(screen.getByRole("tab", { name: /^Tools/i }));
+    expect(screen.getByText("incidents.list")).toBeInTheDocument();
+    expect(screen.getByText("k8s.rollback")).toBeInTheDocument();
+  });
+
+  it("renders orchestrator header chrome (name + version + live)", () => {
+    render(wrap(<OrchestratorPage />));
+    expect(screen.getByText("orchestrator-main")).toBeInTheDocument();
+    expect(screen.getByText("v3.4.1")).toBeInTheDocument();
+    expect(screen.getByText("live")).toBeInTheDocument();
+  });
+});
