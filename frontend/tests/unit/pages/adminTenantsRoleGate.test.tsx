@@ -13,6 +13,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AdminTenantsPage from "../../../src/pages/admin-tenants";
+import { ThemeProvider } from "../../../src/components/ThemeProvider";
 import { useAuthStore } from "../../../src/features/auth/store/authStore";
 
 // Stub the data hook so the platform-admin branch doesn't try to fetch.
@@ -31,7 +32,9 @@ function renderPage() {
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <AdminTenantsPage />
+        <ThemeProvider>
+          <AdminTenantsPage />
+        </ThemeProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );

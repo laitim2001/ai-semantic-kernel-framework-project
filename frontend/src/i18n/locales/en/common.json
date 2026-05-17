@@ -59,7 +59,68 @@
     "options": "User menu options",
     "signedInAs": "Signed in as",
     "signOut": "Sign out",
-    "language": "Language"
+    "language": "Language",
+    "switchTenant": "Switch tenant",
+    "profile": "Profile",
+    "mfa": "MFA settings",
+    "preferences": "Preferences",
+    "themeLight": "Switch to light",
+    "themeDark": "Switch to dark"
+  },
+  "topbar": {
+    "commandPalette": {
+      "title": "Command palette",
+      "placeholder": "Search pages, actions, tenants, sessions…",
+      "empty": "No results",
+      "groups": {
+        "actions": "Actions",
+        "pages": "Pages",
+        "tenants": "Tenants",
+        "sessions": "Sessions"
+      },
+      "actions": {
+        "newChat": "New chat",
+        "newChatHint": "Open Chat V2 and start a new session",
+        "reviewHitl": "Review HITL queue",
+        "reviewHitlHint": "Jump to pending approvals",
+        "onboardTenant": "Onboard tenant",
+        "onboardTenantHint": "Tenant lifecycle wizard",
+        "declareIncident": "Declare incident",
+        "declareIncidentHint": "Open incident console"
+      },
+      "footer": {
+        "navigate": "navigate",
+        "open": "open",
+        "close": "close",
+        "results": "results"
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "new": "new",
+      "markAll": "Mark all read",
+      "empty": "You're all caught up",
+      "viewAll": "View all",
+      "prefs": "Preferences",
+      "tab": {
+        "all": "All",
+        "unread": "Unread"
+      },
+      "items": {
+        "n1Title": "P1 escalation awaiting approval",
+        "n1Body": "servicenow_create_ticket from sess_4f88c1a",
+        "n2Title": "p95 latency breach on gpt-4.1",
+        "n2Body": "INC-2451 · 3.2s / 2s threshold for 12m",
+        "n3Title": "Verification failed twice",
+        "n3Body": "compliance-auditor · LLM-judge rejected",
+        "n4Title": "PII redaction triggered",
+        "n4Body": "salesforce_query returned 3 redacted records",
+        "n5Title": "Cost MTD reached 68% of budget",
+        "n5Body": "$2,847 / $4,200 · projected $3,920",
+        "n6Title": "Cache rebuild completed",
+        "n6Body": "tenant_acme kb_search vector index"
+      }
+    }
   },
   "action": {
     "retry": "Retry",

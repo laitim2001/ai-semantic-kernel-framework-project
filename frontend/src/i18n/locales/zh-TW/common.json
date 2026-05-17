@@ -59,7 +59,68 @@
     "options": "使用者選單選項",
     "signedInAs": "已登入身分",
     "signOut": "登出",
-    "language": "語言"
+    "language": "語言",
+    "switchTenant": "切換租戶",
+    "profile": "個人資料",
+    "mfa": "MFA 設定",
+    "preferences": "偏好設定",
+    "themeLight": "切換至亮色",
+    "themeDark": "切換至暗色"
+  },
+  "topbar": {
+    "commandPalette": {
+      "title": "命令面板",
+      "placeholder": "搜尋頁面、操作、租戶、會話…",
+      "empty": "找不到結果",
+      "groups": {
+        "actions": "操作",
+        "pages": "頁面",
+        "tenants": "租戶",
+        "sessions": "會話"
+      },
+      "actions": {
+        "newChat": "新對話",
+        "newChatHint": "開啟 Chat V2 並開始新會話",
+        "reviewHitl": "審核 HITL 佇列",
+        "reviewHitlHint": "跳至待批准項目",
+        "onboardTenant": "新增租戶",
+        "onboardTenantHint": "租戶生命週期精靈",
+        "declareIncident": "建立事件",
+        "declareIncidentHint": "開啟事件主控台"
+      },
+      "footer": {
+        "navigate": "瀏覽",
+        "open": "開啟",
+        "close": "關閉",
+        "results": "個結果"
+      }
+    },
+    "notifications": {
+      "title": "通知",
+      "new": "個新訊息",
+      "markAll": "全部標為已讀",
+      "empty": "目前沒有新通知",
+      "viewAll": "檢視全部",
+      "prefs": "偏好設定",
+      "tab": {
+        "all": "全部",
+        "unread": "未讀"
+      },
+      "items": {
+        "n1Title": "P1 升級事件待批准",
+        "n1Body": "來自 sess_4f88c1a 的 servicenow_create_ticket",
+        "n2Title": "gpt-4.1 p95 延遲超標",
+        "n2Body": "INC-2451 · 3.2s / 2s 閾值持續 12 分鐘",
+        "n3Title": "驗證失敗兩次",
+        "n3Body": "compliance-auditor · LLM 評審拒絕",
+        "n4Title": "PII 遮罩觸發",
+        "n4Body": "salesforce_query 回傳 3 筆已遮罩記錄",
+        "n5Title": "當月成本達預算 68%",
+        "n5Body": "$2,847 / $4,200 · 預計 $3,920",
+        "n6Title": "快取重建完成",
+        "n6Body": "tenant_acme kb_search 向量索引"
+      }
+    }
   },
   "action": {
     "retry": "重試",
