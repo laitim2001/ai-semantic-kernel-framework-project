@@ -467,3 +467,68 @@ Branch `feature/sprint-57-19-mockup-operations-port` now **13 commits ahead of m
 - US-C4 came in **well under** plan (~25 min vs plan's ~60 min) — pure rendering page (no DnD / no JSON tree complexity per Day 0 deferred decision; single hook + 1 useState); hybrid live+fixture data model is straightforward
 - Day 5 (US-D1 CommandPalette ⌘K + US-D2 NotificationsPanel + US-D3 UserMenu + US-F1 existing 8-page audit + closeout) projected ~120-180 min — sprint likely lands ~50-55% of calibrated 0.60-multiplier commit (`mockup-page-port-with-backend-pairing-and-audit` 0.60 1st app) — well under-budget run, will report final ratio in retrospective.md
 
+---
+
+## Day 5 — 2026-05-17 (US-D Topbar overlays + US-F1 audit + closeout)
+
+### 5.1 US-D1 CommandPalette ⌘K (✅ landed)
+
+- **NEW** `frontend/src/components/topbar/CommandPalette.tsx` (~200 lines) — cmdk-based palette mounted inside shadcn `<Dialog>`
+- 4 groups (Actions / Pages / Tenants / Sessions) per mockup; fuzzy substring match; arrow nav + Enter via cmdk; footer kbd hint bar
+- ROUTES consumed from `routes.config.ts` filter active=true; navigate via `useNavigate()`
+- Mockup fidelity: i18n placeholder + groups headings (mono uppercase 10px tracking-wider per mockup) + ESC kbd + footer kbd hints
+- `npm install cmdk` (cmdk@^1.1.1)
+- 6 Vitest cases (closed/open/Actions group/Pages group/filter/empty); 6/6 PASS
+- **Mount in `AppShellV2.tsx`**: always-present + global ⌘K/Ctrl+K hotkey via `useEffect` + `keydown` listener (Cmd or Ctrl + K → toggle palette)
+
+### 5.2 US-D2 NotificationsPanel (✅ landed)
+
+- **NEW** `frontend/src/components/topbar/NotificationsPanel.tsx` (~170 lines) — anchored panel `absolute right-16 top-14`
+- 6 mockup fixture items (HITL critical / incident high / verify medium / tripwire high / system low ×2); 3 unread / 3 read at seed
+- Tabs (All/Unread) + mark-all + per-row mark-on-click + severity-color badges (bg-danger/16 + bg-warning/16 + bg-info/16 + bg-success/16)
+- i18n: 22 keys per lang (title/new/markAll/empty/viewAll/prefs/tab/items×6)
+- 7 Vitest cases (closed/title+tabs/items/badge/Unread filter/markAll/footer); 7/7 PASS
+- **Mount in `AppShellV2.tsx`**: bell button (Lucide Bell + data-testid + aria-label + red dot for unread) + NotificationsPanel sibling to header (uses `relative` parent positioning)
+
+### 5.3 US-D3 UserMenu (✅ extended — D-DAY5-1)
+
+**D-DAY5-1 finding**: plan §5.3 says NEW `topbar/UserMenu.tsx`. Pre-existing `frontend/src/components/UserMenu.tsx` (Sprint 57.8→57.13) IS already shadcn DropdownMenu-based with locale switcher + sign out — creating a parallel file would violate AP-4 Potemkin Features. **Decision**: EXTEND existing UserMenu with mockup-port sections.
+
+- **EDIT** existing `frontend/src/components/UserMenu.tsx` (+~50 LoC):
+  - 3 mockup tenant fixtures (acme-prod / globex-eu / initech-jp) — tenant switching wired Sprint 57.20+
+  - 4 nav items (Profile / MFA / Preferences / Theme toggle) via `useNavigate()` + `useTheme()` (from Sprint 57.13 ThemeProvider)
+  - Preserves: signedInAs + role badges + locale switcher + sign-out (existing Sprint 57.13 logout() handler)
+  - `text-danger` on Sign out item per mockup
+- **i18n**: 6 NEW userMenu.* keys per lang (switchTenant / profile / mfa / preferences / themeLight / themeDark)
+- File header MHist +1 line
+
+**D-DAY5-2 cascade fix**: UserMenu now requires `useTheme()` which throws when no `<ThemeProvider>` wrapper. 3 test files affected:
+- `tests/unit/components/UserMenu.test.tsx` (6/6 fail → wrap `<ThemeProvider>` → 6/6 PASS)
+- `tests/unit/components/AppShellV2.test.tsx` (3/4 fail → wrap `<ThemeProvider>` → 4/4 PASS)
+- `tests/unit/pages/adminTenantsRoleGate.test.tsx` (3/3 fail → wrap `<ThemeProvider>` → 3/3 PASS)
+
+### 5.4 Sanity sweep (post-US-D landed)
+
+- **Vitest 277/277 PASS** (264 Day-4 baseline + 13 NEW: 6 CommandPalette + 7 NotificationsPanel; 0 regression)
+- **tsc --noEmit**: 0 errors
+- **ESLint**: silent (1 violation auto-fixed — `autoFocus` in CommandPalette suppressed with `eslint-disable-next-line jsx-a11y/no-autofocus` + reason: modal first-input autofocus is WCAG 2.4.3-correct pattern)
+- **Build**: `npm run build` → 2.78s; main bundle **310.38 → 320.76 kB (+10.38 kB)** + new `dropdown-menu-DOJLp65p.js` chunk **118.36 kB** (cmdk + Radix DropdownMenu now code-split; was inlined before); CSS ~35.0 → ~36.5 kB (+1.5 kB from new utility classes)
+- **Pytest baseline**: untouched (pure frontend sprint Day 5)
+
+### Drift findings (Day 5)
+
+- **D-DAY5-1** (resolved in-flight): plan §5.3 NEW `topbar/UserMenu.tsx` vs reality = existing `components/UserMenu.tsx` already shadcn DropdownMenu. Extended existing per AP-4.
+- **D-DAY5-2** (resolved in-flight): UserMenu's new `useTheme()` cascades through 3 test files needing `<ThemeProvider>` wrap. All 3 updated.
+
+### 5.5 Commit + branch state
+
+- Commit `<TBD>` `feat(frontend-port, sprint-57-19): topbar overlays CommandPalette + NotificationsPanel + UserMenu extension (US-D1+D2+D3)`
+- Branch `feature/sprint-57-19-mockup-operations-port` **15 commits ahead of main** (`a3d7d954`)
+
+### Day 5 partial calibration
+
+- Day 5 elapsed (US-D1+D2+D3): ~60 min (component build ~30 min / test fix cascade ~10 min / lint+build sanity ~5 min / checklist+progress doc ~15 min)
+- Cumulative Day 0+1+2+3+4+5(partial): ~430 min (~7.2 hr) of ~18.5 hr committed = **~39% spent / 90% of US shipped (10 of 11 — only US-F1 audit + retrospective remain)**
+- Pattern: under-budget consistent across all 5 days; matches mockup-port mechanical class shape
+- Remaining: US-F1 8-page mockup-fidelity drift audit (Playwright MCP captures + DRIFT-REPORT.md write-up) + closeout commits + retrospective.md draft
+
