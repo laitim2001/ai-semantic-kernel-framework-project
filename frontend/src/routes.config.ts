@@ -133,7 +133,6 @@ export const ROUTES: RouteEntry[] = [
     icon: LayoutDashboard,
     category: "operations",
     active: true,
-    proposed: true,
     component: lazy(() => import("./pages/overview")),
   },
   {

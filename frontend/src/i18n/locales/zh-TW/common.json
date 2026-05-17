@@ -73,5 +73,113 @@
       "recent": "最近",
       "correctionTrace": "修正軌跡"
     }
+  },
+  "overview": {
+    "title": "總覽",
+    "subtitle": "跨 12 範疇的統一操作員儀表板。",
+    "export": "匯出",
+    "newChat": "新對話",
+    "kpi": {
+      "activeSessions": "活躍會話",
+      "hitlPending": "HITL 待處理",
+      "costMtd": "當月成本",
+      "slaP95": "SLA p95"
+    },
+    "activeLoops": {
+      "title": "活躍迴圈",
+      "subtitle": "進行中 · 最近 60 秒",
+      "openDebug": "開啟迴圈除錯",
+      "empty": "目前沒有執行中的迴圈。"
+    },
+    "hitlQueue": {
+      "title": "HITL 佇列",
+      "review": "審核"
+    },
+    "costBurn": {
+      "title": "成本燃燒",
+      "subtitle": "30 天支出 vs $4,200 預算",
+      "details": "詳細"
+    },
+    "providers": {
+      "title": "服務提供者",
+      "details": "詳細"
+    },
+    "incidents": {
+      "title": "近期事件",
+      "all": "全部事件"
+    },
+    "errors": {
+      "title": "錯誤 · 24h",
+      "subtitle": "所有迴圈的每小時計數",
+      "policy": "錯誤政策"
+    },
+    "quick": {
+      "newChat": "新對話會話",
+      "newChatSub": "開始一個 Chat (V2) 會話",
+      "review": "審核批准",
+      "reviewSub": "處理 HITL 佇列",
+      "tenants": "租戶管理",
+      "tenantsSub": "生命週期 + 設定",
+      "verification": "驗證紀錄",
+      "verificationSub": "近期更正"
+    }
+  },
+  "orchestrator": {
+    "title": "編排器",
+    "subtitle": "範疇 1 · TAO/ReAct 迴圈 · 派遣 4 種子代理模式",
+    "version": "v3.4.1",
+    "live": "上線中",
+    "actions": {
+      "test": "在對話中測試",
+      "viewRepo": "於儲存庫檢視",
+      "deploy": "部署"
+    },
+    "kpi": {
+      "sessions24h": "會話 · 24h",
+      "avgTurns": "平均迴圈回合",
+      "subagentSpawns": "子代理派生 · 24h",
+      "p95Session": "p95 會話"
+    },
+    "tabs": {
+      "config": "設定",
+      "prompt": "系統提示詞",
+      "tools": "工具",
+      "subagents": "子代理",
+      "budgets": "預算",
+      "policies": "政策",
+      "label": "編排器分頁"
+    },
+    "config": {
+      "core": "核心設定",
+      "memoryAccess": "記憶體存取",
+      "memoryAccessSub": "編排器可觸及的範疇",
+      "verification": "驗證",
+      "verificationSub": "範疇 7 設定"
+    },
+    "prompt": {
+      "title": "系統提示詞",
+      "subtitle": "變數使用 {{雙花括號}} 包覆",
+      "variables": "變數",
+      "history": "歷史",
+      "test": "測試"
+    },
+    "tools": {
+      "title": "編排器掛載的工具",
+      "subtitle": "啟用 18 / 24 · 順序 ≈ 選用偏好",
+      "openRegistry": "開啟註冊表"
+    },
+    "subagents": {
+      "title": "本編排器可派遣的子代理",
+      "subtitle": "從註冊表挑選 · 每個子代理的模式 + 預算",
+      "openRegistry": "開啟註冊表"
+    },
+    "budgets": {
+      "loop": "迴圈預算",
+      "loopSub": "每會話硬上限 · 超出時迴圈終止",
+      "termination": "終止條件"
+    },
+    "policies": {
+      "title": "HITL + 風險政策"
+    }
   }
 }
