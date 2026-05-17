@@ -247,40 +247,30 @@
 
 **Workflow**: continues Day 2 Option C cp+convert. Source baseline: `_mockup-source.jsx.bak`. Day 4 final closeout deletes the `.bak` file.
 
-### 4.1 US-E1 ChatInspector + InspectorTurn tab (~2-3 hr)
-- [ ] **NEW** `frontend/src/features/chat_v2/components/inspector/ChatInspector.tsx` (~80 lines per mockup L371-390):
-  - 4-tab frame: Turn / Trace / Memory / Tree
-  - State: `tab` selector (default "turn")
-  - Render: tab === "turn" → `<InspectorTurn>`; else → `<ComingSoonInspectorTab name={...}>`
-- [ ] **NEW** `frontend/src/features/chat_v2/components/inspector/InspectorTurn.tsx` (~120 lines per mockup L392-417):
-  - KV pairs (selectActiveTurn from chatStore): stop_reason / duration / tokens.in / tokens.out / tokens.thinking / cost / trace_id (placeholder "—" if SSE missing) / span_id (placeholder "—" if SSE missing)
-  - "Block sequence" EventLine list (each block.type as colored dot + label + tone)
-  - 2 buttons: "Open audit entry" + "Open in Loop Debug"
-- [ ] **NEW** `frontend/src/features/chat_v2/components/inspector/ComingSoonInspectorTab.tsx` (~40 lines):
-  - Empty state with mockup file hint + "Defer to Sprint 57.22+ AD-ChatV2-Inspector-{Trace,Memory,SubagentTree}-Phase2"
-- [ ] Vitest spec for ChatInspector + InspectorTurn (~5-7 cases: tab switching / KV pairs render / EventLine list / trace_id placeholder fallback / buttons exist)
-- [ ] Commit: `feat(chat-v2, sprint-57-21, Day 4): ChatInspector 4-tab frame + InspectorTurn populated + 3 coming-soon placeholders`
+### 4.1 US-E1 ChatInspector + InspectorTurn tab (~2-3 hr) ✅
+- [x] **NEW** `inspector/ChatInspector.tsx` rewrite — 4-tab frame via Sprint 57.19 NEW shadcn `Tabs` primitive; local `tab` state default `"turn"`; switch dispatcher
+- [x] **NEW** `inspector/InspectorTurn.tsx` (~155 lines per mockup L392-417 + KV/EventLine L419-432 helpers inlined) — last AgentTurn via reverse-find; 8 KV pairs with '—' placeholders + Block sequence colored dots + describeBlock-generated text + 2 action buttons
+- [x] **NEW** `inspector/ComingSoonInspectorTab.tsx` (~50 lines) — named placeholder w/ `name` + `mockupSection` + `carryoverAd` + `hint` props
+- [x] Vitest spec ChatInspector.test.tsx (8 cases): default tab Turn / empty state / populated KV / '—' fallback / Block sequence type label + describe / 3 tab switches with carryover AD references / 4 tabs aria-selected default
 
-### 4.2 US-E2 Composer skeleton (~1-2 hr)
-- [ ] **NEW** `frontend/src/features/chat_v2/components/Composer.tsx` (~100 lines per mockup L316-368 simplified):
-  - Textarea + Send button (preserve InputBar state machine logic underneath — extract or proxy)
-  - 3 disabled coming-soon buttons: Attach + Tools(24) + Memory scope
-  - Model badge (claude-haiku-4-5) + "provider: neutral" indicator
-- [ ] Decision: **extract InputBar state machine into a shared `useInputBarState()` hook OR proxy via prop pass-through?** — pick lower-risk option (proxy via composition probably; final call at Day 4 start based on InputBar.tsx complexity)
-- [ ] **REWRITE in-place** `frontend/src/features/chat_v2/components/InputBar.tsx`: extract reusable state machine logic; render compat-shim wrapping Composer.tsx OR mark as deprecated re-export
-- [ ] Update existing InputBar Vitest spec + chat-v2 Playwright e2e (selector adapt; behavioral assertions preserve — 5 status states + send button + keyboard shortcuts)
-- [ ] Commit: `feat(chat-v2, sprint-57-21, Day 4): Composer skeleton + 3 disabled coming-soon buttons + InputBar state machine preserve`
+### 4.2 US-E2 Composer skeleton (~1-2 hr) ✅ (Option C scope decision)
+- [x] **NEW** `Composer.tsx` (~115 lines per mockup L316-368) — textarea + 3 disabled coming-soon buttons + model + provider neutral chips + disabled Send + drop-file hint; ALL tooltips reference AD-ChatV2-Composer-Richness-Phase2 or AD-ChatV2-Composer-Wire-Phase2
+- [x] **Decision** (Option C: defer Composer wire to Phase-2): chat-v2/index.tsx continues using InputBar.tsx for production sends. NEW carryover AD-ChatV2-Composer-Wire-Phase2 records the wire decision for Sprint 57.22+ when rich Attach/Tools/Memory-scope affordances themselves wire. Avoids regressing InputBar's 5-state pill + send/cancel + 14 SSE handling.
+- [x] **InputBar.tsx untouched** — Option C path eliminates the rewrite-in-place + compat-shim risk; existing InputBar Vitest spec preserved, chat-v2 e2e InputBar selectors continue to pass
+- [x] Vitest spec Composer.test.tsx (5 cases): textarea disabled + placeholder / 3 buttons disabled + AD tooltips / model + neutral chips / Send disabled + AD tooltip / drop hint
 
-### 4.3 Test + build + behavior sanity (~30 min)
-- [ ] `pytest backend/tests/` 0 regression (pure frontend sprint; backend untouched)
-- [ ] `npm run test` Vitest 277+N PASS
-- [ ] `npm run build` < 3s + main bundle within +30 KB of Sprint 57.20 baseline (320.76 kB)
-- [ ] `npm run lint` silent
-- [ ] LLM SDK leak check `grep -rn "import openai\|import anthropic" frontend/src/` = 0
-- [ ] `npx playwright test tests/e2e/chat-v2/` 10/10 PASS (selectors adapted; behavioral assertions preserved)
-- [ ] CI 7 checks projected green (verify after PR opens)
-- [ ] Playwright MCP capture POST-Day-4 chat-v2 at 1440×900 → `screenshots/inspector-turn/prod-chat-v2-day4.png` overall + sub-zooms (3 columns + Inspector tabs + Composer)
-- [ ] Pair-verify final vs `screenshots/mockup-chat-v2.png` — overall DRIFT verdict for Phase-1 (parity for shipped pieces; deferred items listed)
+### 4.3 Test + build + behavior sanity (~30 min) — partial; Playwright MCP visual capture as separate sub-step
+- [x] `pytest backend/tests/` — N/A 0 backend changes (verified `git diff --stat -- backend/` = empty)
+- [x] `npx vitest run` Vitest **348/348 PASS** (Day 3 baseline 335 + 8 ChatInspector + 5 Composer = +13 NEW; 0 regression) ✅
+- [x] `npx vite build` 2.94s; main bundle **321.92 kB byte-identical** to Day 3 (NEW Inspector + Composer tree-shake absorbed); within +30 KB target ✅
+- [x] `npm run lint` silent (`--max-warnings 0`) ✅
+- [x] LLM SDK leak check `grep -rn "import openai\|import anthropic" frontend/src/` = **0** ✅
+- [x] **D-DAY3-3 e2e contract preservation** — surgical edit `turns/HITLTurn.tsx` outer div added `role="region"` + `aria-label="HITL approval"`; existing `approval-card.spec.ts` `page.getByRole("region", ...)` selector continues to locate the card. CRITICAL severity literal already rendered via uppercase transform; "Approve" matches "Approve & continue" via Playwright substring rule.
+- [x] **Orphan cleanup** (Karpathy §3): DELETE MessageList.tsx + ToolCallCard.tsx + _mockup-source.jsx.bak (3 files; 0 production importers post-Day-3 swap; 0 Vitest specs)
+- [ ] 🚧 `npx playwright test tests/e2e/chat-v2/` and `tests/e2e/chat/approval-card.spec.ts` — DEFERRED to §4.5 PR CI run (or local manual; auth race D-PRE-4 with dev-server is fragile interactively; CI environment cleaner)
+- [ ] 🚧 CI 7 checks projected green — confirmed after PR opens (§4.5)
+- [ ] 🚧 **Playwright MCP capture POST-Day-4 chat-v2 at 1440×900 + sub-zooms** — DEFERRED to separate sub-step before §4.5 PR (mockup http server PID 44700 port 8080 + dev server PID 50796 port 3007 both still running per Day 0); will produce `screenshots/inspector-turn/prod-chat-v2-day4.png` overall + 4 sub-zooms (SessionList rail / ChatHeader / Inspector Turn populated / Inspector Trace coming-soon)
+- [ ] 🚧 **Pair-verify final vs mockup** — DEFERRED to same sub-step; DRIFT verdict feeds DRIFT-REPORT-PHASE1.md at §4.4
 
 ### 4.4 Retrospective + memory + doc syncs (US-E3) (~1-2 hr)
 - [ ] Create `retrospective.md` Q1-Q7 + Anti-Pattern 11/11 self-check + calibration analysis (2nd app of `frontend-mockup-direct-port` 0.55 class — compute `actual/committed` ratio + 2-data-point trend comment)

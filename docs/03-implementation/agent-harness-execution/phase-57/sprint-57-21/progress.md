@@ -264,4 +264,72 @@ User 2026-05-17 directive post-Day-1 closeout: Day 2-4 workflow pivots from **"w
 - Delta: ~30% under estimate. Reason: SessionList + ChatHeader are mostly mechanical Tailwind translation; chatStore + types.ts session shape from Day 1 covered all needs; 0 surprise blockers.
 - Cumulative actual through Day 3: ~8.5 hr (Day 1 ~2.5 hr + Day 2 ~3.5 hr + Day 3 ~2.5 hr) — well inside the 9-11 hr calibrated commit; Day 4 has ample budget for Inspector + Composer + closeout.
 
-## Day 4 — _pending_
+## Day 4 — 2026-05-17 (Inspector 4-tab + Composer scaffolding + e2e contract fix + orphan cleanup)
+
+### What landed
+
+§4.1 — **Inspector 4-tab frame + Turn populated + 3 coming-soon tabs**
+- REWRITE `inspector/ChatInspector.tsx` — Day 3 stub → 4-tab frame via Sprint 57.19 NEW shadcn `Tabs` primitive; local `tab` state (default `"turn"`); switch dispatcher → `<InspectorTurn>` or `<ComingSoonInspectorTab>` with named carryover AD
+- NEW `inspector/InspectorTurn.tsx` (~155 lines per mockup L392-417 + KV/EventLine L419-432 helpers inlined): pulls last `AgentTurn` from `chatStore.turns` via reverse-find; renders header "Turn N · stop_reason" + 8 KV pairs (`stop_reason` badge + `duration` + `tokens.{in,out,thinking}` + `cost` + `trace_id` + `span_id` — '—' placeholder when null) + Block sequence (4-block-type colored dots + describeBlock-generated descriptive text) + 2 action buttons (Open audit entry / Open in Loop Debug — placeholder wires).
+- NEW `inspector/ComingSoonInspectorTab.tsx` (~50 lines): named-empty-state placeholder accepts `name` + `mockupSection` + `carryoverAd` + `hint` props; renders mockup file hint copy + carryover AD link copy in a bordered box.
+
+§4.2 — **Composer visual scaffolding (Option C path)**
+- NEW `Composer.tsx` (~115 lines per mockup L316-368): textarea with mockup placeholder copy + 3 disabled coming-soon buttons (Attach / Tools (24) / Memory scope) + right-aligned model badge + provider neutral chip + disabled Send button + drop-file hint footer. ALL controls disabled; tooltips reference `AD-ChatV2-Composer-Richness-Phase2` + `AD-ChatV2-Composer-Wire-Phase2`.
+- **NOT wired** to `chat-v2/index.tsx` — production send path stays via `InputBar.tsx` (preserves Sprint 50.2 5-state pill + send/cancel + mode toggle + 14 SSE event handling battle-tested wire). Carryover AD-ChatV2-Composer-Wire-Phase2 records the wire decision for Sprint 57.22+ (extract-shared-hook vs proxy-via-composition decided when rich Attach/Tools/Memory-scope affordances themselves wire).
+
+§D-DAY3-3 — **HITLTurn e2e contract surgical preservation**
+- EDIT `turns/HITLTurn.tsx` outer wrapper — add `role="region"` + `aria-label="HITL approval"` so existing Playwright `approval-card.spec.ts` `page.getByRole("region", { name: "HITL approval" })` continues to locate the card after Day 3 MessageList→TurnList swap. "CRITICAL" severity literal text already rendered at L135 (`{severity.replace("risk-","").toUpperCase()}`); "Approve" button name matches "Approve & continue" via Playwright substring rule (no rename needed). MHist 1-line entry added.
+
+§4.2 cascade — **Orphan cleanup (Karpathy §3 — your changes produce the orphan, clean it)**
+- DELETE `MessageList.tsx` — 0 production importers post-Day-3 TurnList swap; 0 Vitest specs.
+- DELETE `ToolCallCard.tsx` — only consumer was MessageList; VerificationPanel / SubagentTree / LoopVisualizer have own UI.
+- DELETE `_mockup-source.jsx.bak` (Day 0 baseline; per checklist §2.0 footer "deleted Day 4 closeout"; reference is `reference/design-mockups/page-chat.jsx` canonical).
+
+### Drift findings — Day 4
+
+- **D-DAY4-1** (resolved in-sprint): Vitest `getByText("thinking")` matched twice — once from `ThinkingBlock.type` label, once from default `describeBlock(thinking)` return `"thinking"`. Fixed by changing `describeBlock` for thinking blocks to truncated-text-preview (`block.text.slice(0, 36) + "…"`); cleaner UI (mockup hint vs literal word duplication) AND no test collision.
+- **D-DAY4-2** (resolved in-sprint): `React.ReactNode` type referenced in `InspectorTurn` `KV` helper without importing React (vite-jsx default doesn't auto-import); fixed via explicit `import type { ReactNode } from "react"`.
+- **D-DAY4-3** (resolved via Karpathy §3 + AP-2): Day 1 stub MessageList.tsx + its ToolCallCard consumer became orphans after Day 3 MessageList→TurnList swap. Deleted both (0 production importers; 0 tests; comment-only refs in 4 file headers / e2e spec headers don't block). Avoids AP-2 Potemkin + AP-11 version-suffix-lingering.
+- **D-DAY4-4** (resolved in-sprint): `approval-card.spec.ts` e2e contract preservation via 2-line edit to HITLTurn outer wrapper (`role="region"` + `aria-label`). Existing test path: severity CRITICAL literal text already rendered via uppercase transform on `risk-critical` token; Approve button name matches via Playwright substring rule.
+- **D-DAY4-5** (deferred Phase-2+): Composer.tsx ships visual-only; NEW carryover AD-ChatV2-Composer-Wire-Phase2 records the Sprint 57.22+ wire decision (extract-shared-hook vs proxy-via-composition vs full rewrite). Honest scope reduction per checklist §4.2 footer "lower-risk option (proxy via composition probably; final call at Day 4 start based on InputBar.tsx complexity)" — Day 4 final call = neither (defer wire to Phase-2). InputBar.tsx untouched.
+
+### Quality gates (Day 4 EOD)
+
+| Gate | Day 3 baseline | Day 4 EOD | Verdict |
+|------|----------------|-----------|---------|
+| tsc errors | 0 | 0 | ✅ |
+| Vitest tests | 335 | **348** (+13 NEW) | ✅ 0 regression |
+| Vitest files | 68 | 70 (+2 NEW: ChatInspector.test + Composer.test) | ✅ |
+| Lint | silent | silent | ✅ |
+| Build time | 2.77s | 2.94s | ✅ |
+| Main bundle | 321.92 kB | **321.92 kB byte-identical** | ✅ (NEW Inspector + Composer tree-shake absorbed — Tabs primitive + lucide icons already chunked) |
+| Backend changes | 0 | 0 | ✅ |
+| LLM SDK leak | 0 | 0 | ✅ |
+| Orphan files | 3 (MessageList + ToolCallCard + mockup .bak) | 0 ✅ | ✅ Karpathy §3 |
+| chat_v2/components/*.tsx file count | 9 | 7 (+1 ChatHeader+SessionList+Composer−3 orphans+2 NEW = net −2) | ✅ |
+
+### Notes / decisions
+
+- **AP-2 anti-Potemkin maintained**: 3 coming-soon Inspector tabs each name their carryover AD + cite mockup section line range; Composer 3 disabled buttons each tooltip the carryover AD. No silent placeholders.
+- **AP-3 cross-directory check**: all Day 4 NEW under `features/chat_v2/components/{,inspector/}`. 0 outside feature.
+- **AP-4 visible mockup-fidelity gain**: ChatInspector 4-tab frame + populated InspectorTurn is the visible win of Day 4. Day 3 placeholder stub → real 4-tab + populated KV pairs + Block sequence.
+- **AP-9 race condition check**: `InspectorTurn` derives last AgentTurn via `[...turns].reverse().find(...)` — pure synchronous selector, no useEffect data loop; mergeEvent reducer (Day 1) is synchronous.
+- **AP-10 untested critical path**: 13 NEW Vitest cases cover Inspector 4-tab dispatch + InspectorTurn populated + 3 coming-soon AD references + Composer 5 visual contracts. e2e `approval-card.spec.ts` selectors will still locate the card via D-DAY3-3 surgical fix.
+- **AP-11 no version suffix**: orphan delete (MessageList / ToolCallCard / .bak) is the cleanup; no `_v1` / `_old` / `_legacy` left.
+
+### Estimate vs actual
+
+- Bottom-up estimate: 3-5 hr (Inspector + Composer + closeout test/build/lint)
+- Actual: ~3 hr (Inspector ~1.5 hr + Composer ~30 min + e2e contract fix + orphan cleanup + Vitest 13 NEW + retrospective WIP ~1 hr including this entry)
+- Cumulative actual through Day 4 code: ~11.5 hr (Day 1 ~2.5 + Day 2 ~3.5 + Day 3 ~2.5 + Day 4 ~3 hr); calibrated commit was 9-11 hr → ratio actual/committed ≈ 1.05-1.28 ✅ within [0.85, 1.20] band lower edge with light over (consistent with 1st app of `frontend-mockup-direct-port` 0.55 ratio 0.45-0.55 below band — bottom-up 2× too generous still applies but Inspector 4-tab + populated InspectorTurn + e2e contract fix forced the cumulative back into band; if Day 4.4 doc syncs run another ~1-2 hr, final ratio rounds to ~1.2-1.4 over band by ~0.2 — see §4.4 retrospective Q2 for 2nd-app trend analysis).
+
+### 🚧 DEFERRED Day 4 §4.3 Playwright MCP visual pair-verify
+
+Mockup http server (port 8080) + dev server (port 3007) both still running. Playwright MCP capture step will be done as a separate sub-step before §4.4 retrospective finalization + §4.5 PR. Target captures:
+- mockup `#chat` at 1440×900 (canonical visual target)
+- production `/chat-v2` at 1440×900 (full SessionList + ChatHeader + TurnList placeholder + Inspector 4-tab + InputBar) — auth race D-PRE-4 mitigated via `/auth/dev-login` fallback
+- Sub-zooms: SessionList left rail / ChatHeader top bar / Inspector Turn tab populated / Inspector Trace tab coming-soon
+
+DRIFT verdict + cosmetic gaps logged in `claudedocs/4-changes/sprint-57-21-chatv2-fidelity-phase-1/DRIFT-REPORT-PHASE1.md` (file scaffold from Day 0; to be populated at §4.4).
+
+## §4.4 — _pending — retrospective + memory + doc syncs_
