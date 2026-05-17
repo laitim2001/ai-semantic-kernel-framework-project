@@ -51,62 +51,60 @@
 - [x] Dev server running at port 3007 (verified PID 50796; not killed per CLAUDE rule)
 - [x] Playwright MCP capture mockup `#chat` route at 1440×900 → `screenshots/mockup-chat-v2/mockup-chat-v2-1440x900.png` (full viewport; sub-zooms deferred to Day 2+ when component-level work needs them)
 - [x] Playwright MCP capture pre-rewrite production `/chat-v2` at 1440×900 — 5 attempts captured (D-PRE-4 auth race condition: 3 redirected to login, 1 home page authenticated, 1 chat-v2 attempt with race redirect); files in `screenshots/prod-chat-v2-pre/`
-- [ ] Commit Day 0 artifacts: `chore(sprint-57-21, Day 0): plan + checklist + Day 0 三-prong + Playwright MCP reference captures`
+- [x] Commit Day 0 artifacts: `chore(sprint-57-21, Day 0): plan + checklist + Day 0 三-prong + Playwright MCP reference captures` (commit landed)
 
 ---
 
-## Day 1 — Turn block data model rewrite (US-B1 + US-B2 + US-B3)
+## Day 1 — Turn block data model rewrite (US-B1 + US-B2 + US-B3) ✅ COMPLETED
 
-### 1.1 US-B1 types.ts refactor — Turn discriminated union (~1-2 hr)
-- [ ] Read `reference/design-mockups/page-chat.jsx` L14-70 (TURNS data shape) + L199-267 (Block switch) end-to-end
-- [ ] **REWRITE** `frontend/src/features/chat_v2/types.ts`:
-  - Preserve: 14 SSE event types + `KNOWN_LOOP_EVENT_TYPES` set + `ChatStatus` + `ChatMode` + `ChatSession`
-  - Add NEW: `Block` discriminated union (thinking / tool / verification / subagent_fork) — 4 of 5 mockup types; memory deferred
-  - Add NEW: `Turn` discriminated union (user / agent / hitl) per mockup data shape
-  - Add NEW: `Session` interface (id / title / agent / turns / status / time / domain) for fixture
-  - Replace: `Message` type → mark as `@deprecated; use Turn` and add compat alias `export type Message = Turn` if needed for external consumers
-  - Add file-header Modification History 1-line entry
-- [ ] `npm run tsc` — confirm 0 type errors
-- [ ] Commit: `refactor(chat-v2, sprint-57-21, Day 1): types.ts Message → Turn discriminated union with 4 Block types`
+**Commit consolidation note**: 1.1 + 1.2 + 1.3 done in one session without broken intermediate states; consolidated into ONE Day 1 commit at 1.4 closeout to avoid tsc-broken intermediate commits (types.ts rewrite alone would break tsc until chatStore + MessageList adapted).
 
-### 1.2 US-B2 chatStore.mergeEvent rewrite (~3-4 hr)
-- [ ] Read current `chatStore.ts` `mergeEvent` end-to-end; enumerate each event-type case's existing behavioral contract
-- [ ] **REWRITE** `chatStore.ts`:
-  - State shape change: `{ messages: Message[] }` → `{ turns: Turn[], sessions: Session[], activeSessionId: string | null }` (sessions populated from fixture in Day 3)
-  - mergeEvent per plan §Technical Spec table (loop_start / turn_start / llm_request / llm_response / tool_call_request / tool_call_result / verification_passed / verification_failed / subagent_spawned / subagent_completed / loop_end / approval_requested / approval_received / guardrail_triggered)
-  - Each event-type case must preserve existing behavioral side effects (status update / approval entry / rawEvents append for unhandled)
-  - Add active-turn metadata aggregation for Inspector Turn tab data (tokens_in / tokens_out / tokens_thinking / cost / trace_id / span_id — placeholder "—" for trace_id/span_id if not in SSE)
-  - Add file-header Modification History 1-line entry
-- [ ] **DO NOT TOUCH**: `useLoopEventStream` hook signature; `chatService` API contract; `governanceService.decide` usage
-- [ ] Commit: `refactor(chat-v2, sprint-57-21, Day 1): chatStore.mergeEvent SSE event → block sequence append (preserve 14 event-type behavior)`
+### 1.1 US-B1 types.ts refactor — Turn discriminated union ✅
+- [x] Read `reference/design-mockups/page-chat.jsx` L14-70 (TURNS data shape) + L199-267 (Block switch) end-to-end (Day 0 already)
+- [x] **REWRITE** `frontend/src/features/chat_v2/types.ts`:
+  - Preserved: 14 SSE event types + `KNOWN_LOOP_EVENT_TYPES` set + `ChatStatus` + `ChatMode` + `ChatSession` + `ToolCallEntry` + `ApprovalEntry`
+  - Added NEW: `Block` discriminated union (4 types: thinking / tool / verification / subagent_fork); memory deferred to Phase-2+
+  - Added NEW: `Turn` discriminated union (user / agent / hitl) per mockup; AgentTurn has Inspector Turn tab metadata fields (tokensIn/Out/Thinking, costUsd, traceId, spanId — all nullable)
+  - Added NEW: `Session` interface + `SessionDomain` + `SessionStatusUI` for Day 3 fixture sidebar
+  - Added NEW: `RiskSeverity` token type aligned to Sprint 57.18 `risk-{low,medium,high,critical}` (per D-PRE-1)
+  - Added NEW: `SubagentEntry` + `ToolBlockStatus` helper types
+  - Removed `Message` type (clean removal; tsc gate surfaces consumers — only `MessageList.tsx` + `chatStore.ts` touched, both rewritten same Day 1; `useLoopEventStream.ts` only uses `pushUserMessage` action name, no TYPE)
+  - File-header Modification History 1-line entry added
+- [x] `npx tsc --noEmit` — exit 0, 0 type errors ✅
 
-### 1.3 US-B3 Vitest mergeEvent block-sequence coverage (~1-2 hr)
-- [ ] Update existing chat-v2 Vitest specs (~3-4 files) adapting to new state shape:
-  - Selector: `messages[i].content` → `turns[i].blocks[j]` or `turns[i].text`
-  - Behavioral assertion preserve: SSE event dispatch order; approval entry insertion; status transitions
-- [ ] **NEW Vitest spec** `frontend/src/features/chat_v2/store/chatStore.mergeEvent.test.ts`:
-  - ~15-20 NEW cases:
-    - turn_start emits new agent Turn with empty blocks
-    - llm_response with thinking emits thinking block
-    - tool_call_request + tool_call_result pair emits + updates single tool block (toolCallId pairing)
-    - verification_passed emits verification block ok=true
-    - verification_failed emits verification block ok=false with reason/suggested_correction
-    - subagent_spawned creates/extends subagent_fork block with new agent entry
-    - subagent_completed updates agent entry status
-    - approval_requested emits new hitl Turn with severity from risk_level
-    - approval_received updates hitl turn decision
-    - loop_end no block emit (only session status update)
-    - guardrail_triggered routes to rawEvents (Phase-1 — no block UI)
-- [ ] `npm run test` Vitest 277+ PASS (baseline + new cases; no regression)
-- [ ] Commit: `test(chat-v2, sprint-57-21, Day 1): mergeEvent block-sequence Vitest coverage + chat-v2 spec selector adapt`
+### 1.2 US-B2 chatStore.mergeEvent rewrite ✅
+- [x] Read current `chatStore.ts` `mergeEvent` end-to-end; enumerated each event-type case (L120-340)
+- [x] **REWRITE** `chatStore.ts`:
+  - State shape: `{ messages: Message[] }` → `{ turns: Turn[], sessions: Session[], activeSessionId: string | null }`
+  - Dual-emit mergeEvent: all 14 SSE event types preserve existing slices (rawEvents/approvals/verifications/subagents) AND emit blocks/turns into new `turns[]` array
+  - Helper functions: `nextTurnId()` / `nowIso()` / `mapRiskLevel()` (HIGH→risk-high mapping) / `updateLastAgentTurn()` (immutable pure update)
+  - turn lifecycle: loop_start → status running; turn_start → push empty AgentTurn with null metadata; llm_response → ThinkingBlock + ToolBlock per tool_call (thinking-before-tools order per mockup); tool_call_request defensive; tool_call_result → ToolBlock status/output/durationMs update; verification_* → VerificationBlock; subagent_spawned → find-or-create SubagentForkBlock; subagent_completed → update agent entry status; approval_requested → push HITLTurn; loop_end → status completed + turn stopReason + waiting flag (tool_use → waiting=true)
+  - File-header Modification History 1-line entry added
+- [x] **NOT TOUCHED**: `useLoopEventStream` hook signature; `chatService` API contract; `governanceService.decide` usage ✅
 
-### 1.4 Day 1 closeout
-- [ ] `npm run tsc` 0 errors
-- [ ] `npm run test` (Vitest) baseline preserved + grown
-- [ ] `npm run lint` silent (`--max-warnings 0`)
-- [ ] `npm run build` succeeds + main bundle within +30 KB
-- [ ] **Behavioral preservation smoke test**: dev server send a message in chat-v2; observe SSE stream renders Turn-with-blocks (verification + tool call should appear inline now); approve HITL request — workflow unbroken
-- [ ] Progress.md Day 1 entry + Day 1 drift findings if any
+### 1.3 US-B3 Vitest mergeEvent block-sequence coverage ✅
+- [x] Existing chat-v2 Vitest specs verified — 0 file references `messages` array or `Message` type (per grep); 2 existing chatStore-touching specs (`subagents.test.ts` + `verifications.test.ts`) STILL PASS without modification (dual-emit preserves Sprint 57.11/57.12 slice behavior)
+- [x] `MessageList.tsx` Day 1 stub: consumes `turns[]` + `ToolBlock → ToolCallCard` adapter inline; skips HITLTurn render (existing approvals dict path preserved). Day 2 replaces with proper TurnList + components/blocks/
+- [x] **NEW Vitest spec** `frontend/tests/unit/chat_v2/chatStore.mergeEvent.test.ts` — **22 NEW cases**:
+  - Lifecycle: pushUserMessage → UserTurn; turn_start → empty AgentTurn; llm_request → tokensIn populate
+  - llm_response: thinking-only / tool_calls-only / both (order); ToolBlock status=pending
+  - Tool flow: tool_call_request defensive + dedup; tool_call_result success/error
+  - Verification: passed/failed dual-emit (turn block + slice)
+  - Subagent: spawned single/multi + completed → done; dual-emit (turn block + slice)
+  - Approval: requested → HITLTurn + dict; received → decision update both; risk_level mapping low/medium/high/critical
+  - loop_end: end_turn (waiting=false) / tool_use (waiting=true)
+  - guardrail_triggered: rawEvents only, no turn changes
+  - End-to-end: user → turn_start → llm_response → tool_result → loop_end full sequence assert
+- [x] `npx vitest run` Vitest **299/299 PASS** (Sprint 57.20 baseline 277 + 22 NEW; 0 regression) ✅
+
+### 1.4 Day 1 closeout ✅
+- [x] `npx tsc --noEmit` 0 errors ✅
+- [x] `npx vitest run` 299/299 PASS; 64 test files (Sprint 57.20 was 63; +1 NEW chatStore.mergeEvent.test.ts) ✅
+- [x] `npm run lint` silent (--max-warnings 0 enforced) ✅
+- [x] `npx vite build` succeeds 3.12s; main bundle **320.76 kB byte-identical** to Sprint 57.20 baseline (type-shape change + mergeEvent expansion absorbed by tree-shaking) ✅
+- [ ] **Behavioral preservation smoke test**: dev server manual verify (deferred to Day 2 closeout once TurnList is in to validate full visual + behavioral baseline)
+- [x] Progress.md Day 1 entry + Day 1 drift findings recorded ✅
+- [x] Day 1 commit: `feat(chat-v2, sprint-57-21, Day 1): Turn block data model rewrite (types + chatStore + adapter + 22 Vitest)` — consolidated 1.1+1.2+1.3 to avoid broken intermediate
 
 ---
 
