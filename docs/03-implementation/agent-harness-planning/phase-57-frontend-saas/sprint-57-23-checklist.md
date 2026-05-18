@@ -176,7 +176,7 @@
 ## Day 3 — Invite + MFA + Expired (US-D1 + US-D2 + US-D3)
 
 ### 3.1 US-D1 /auth/invite/:token NEW
-- [ ] **NEW FILE** `frontend/src/pages/auth/invite/index.tsx` (~120L):
+- [x] **NEW FILE** `frontend/src/pages/auth/invite/index.tsx` (~120L):
   - Wrap in `<AuthShell footer={t("auth.invite.foot")}>`
   - Per mockup `page-auth-extras.jsx:191-246`: Card with avatar icon (56×56 primary alpha bg + User lucide) + title "You're invited to acme-prod" + subtitle + metadata grid 4 rows (Tenant / Invited by / Role / Expires; fixture values + Badge primary for Role) + Full name input + Set password input with hint "12+ chars · used only if SSO is unavailable" + Accept primary button + MFA notice shield-icon row
   - `useParams<{ token: string }>()` to read URL `:token` param
@@ -184,13 +184,13 @@
   - On Accept: call `POST /api/v1/invites/:token/accept` → expect 501 → demo banner → navigate `/auth/mfa` (mockup flow continuation L235)
   - "Backend wire pending Phase 58+ IAM Block B" demo banner
   - File-header MHist
-- [ ] **ADD ROUTE** in `App.tsx`: `const InvitePage = lazy(() => import("./pages/auth/invite"));` + `<Route path="/auth/invite/:token" element={<InvitePage />} />`
-- [ ] **i18n keys** `auth.json`: `invite.title` / `invite.subtitle` / `invite.fullName` / `invite.password` / `invite.passwordHint` / `invite.accept` / `invite.mfaHint` / `invite.foot` (~8 keys × 2 locales)
-- [ ] **NEW Vitest spec** `frontend/tests/unit/pages/auth/invite.test.tsx`: 3-4 cases (initial render with fixture metadata / Accept button calls POST / demo banner visible / navigate to /auth/mfa on success)
-- [ ] Verify: Playwright MCP capture `/auth/invite/test-token` at 1440×900 → DRIFT verdict
+- [x] **ADD ROUTE** in `App.tsx`: `const InvitePage = lazy(() => import("./pages/auth/invite"));` + `<Route path="/auth/invite/:token" element={<InvitePage />} />`
+- [x] **i18n keys** `auth.json`: `invite.*` 15 keys × 2 locales (en + zh-TW) ✅
+- [x] **NEW Vitest spec** `frontend/tests/unit/pages/auth/invite.test.tsx`: 4 cases (initial render fixture + demo banner / Accept POST + 501 stub error / 200 success navigate /auth/mfa / MFA hint row) — 4/4 PASS
+- [ ] 🚧 Verify: Playwright MCP capture `/auth/invite/test-token` at 1440×900 → DRIFT verdict — deferred to Day 4 batch (per Day 0 plan)
 
 ### 3.2 US-D2 /auth/mfa NEW — Roll-own TOTP + WebAuthn UI (Q3)
-- [ ] **NEW FILE** `frontend/src/pages/auth/mfa/index.tsx` (~200L):
+- [x] **NEW FILE** `frontend/src/pages/auth/mfa/index.tsx` (~200L):
   - Wrap in `<AuthShell footer={<>{t("auth.mfa.foot")} <a href="#">{t("auth.mfa.help")}</a></>}>`
   - Per mockup `page-auth-extras.jsx:249-371`: Card with warning-icon (Keys lucide) + title "Two-factor verification" + dynamic subtitle (TOTP/WebAuthn) + Tab selector (Authenticator default / Security Key)
   - **TOTP tab**: 6-digit input grid (6 `<input>` boxes 44×52 / 22px mono / `inputMode="numeric"` / `maxLength={1}`) with `useRef` array + auto-focus advance + Backspace step-back; filled boxes get `bg-primary/10` border-primary; countdown text "code refreshes in 23s" (static — no real rotation); Verify button disabled until `code.every(v => v !== "")`
@@ -200,30 +200,30 @@
   - On Verify submit: call `POST /api/v1/mfa/verify` → expect 501 → demo banner → navigate `/auth/callback`
   - "MFA backend wire pending Phase 58+ IAM Block C" demo banner above tabs
   - File-header MHist
-- [ ] **ADD ROUTE** in `App.tsx`: `const MFAPage = lazy(() => import("./pages/auth/mfa"));` + `<Route path="/auth/mfa" element={<MFAPage />} />`
-- [ ] **i18n keys** `auth.json`: `mfa.title` / `mfa.totpSub` / `mfa.webauthnSub` / `mfa.verify` / `mfa.recoveryCode` / `mfa.webauthnHint` / `mfa.simulate` / `mfa.foot` / `mfa.help` (~9 keys × 2 locales)
-- [ ] **NEW Vitest spec** `frontend/tests/unit/pages/auth/mfa.test.tsx`: 5-7 cases (TOTP digit entry advances focus / Backspace retreats focus / paste 6 digits fills all / Verify disabled until 6 digits / Verify enabled at 6 digits / Tab switch TOTP↔WebAuthn / WebAuthn simulate button)
-- [ ] Verify: Playwright MCP capture `/auth/mfa` at 1440×900 (TOTP tab + WebAuthn tab) → 2 screenshots + DRIFT verdicts
+- [x] **ADD ROUTE** in `App.tsx`: `const MFAPage = lazy(() => import("./pages/auth/mfa"));` + `<Route path="/auth/mfa" element={<MFAPage />} />`
+- [x] **i18n keys** `auth.json`: `mfa.*` 17 keys × 2 locales (en + zh-TW) ✅
+- [x] **NEW Vitest spec** `frontend/tests/unit/pages/auth/mfa.test.tsx`: 7 cases (initial render TOTP tab default + 6 inputs + demo banner + Verify disabled / typing digit advances focus / Backspace retreats focus / paste 6 digits fills all / Verify enabled at 6 digits / Tab switch → WebAuthn / Simulate POST navigate /auth/callback) — 7/7 PASS
+- [ ] 🚧 Verify: Playwright MCP capture `/auth/mfa` at 1440×900 (TOTP tab + WebAuthn tab) → 2 screenshots + DRIFT verdicts — deferred to Day 4 batch (per Day 0 plan)
 
 ### 3.3 US-D3 /auth/expired NEW
-- [ ] **NEW FILE** `frontend/src/pages/auth/expired/index.tsx` (~90L):
+- [x] **NEW FILE** `frontend/src/pages/auth/expired/index.tsx` (~90L):
   - Wrap in `<AuthShell>` (no footer per mockup)
   - Per mockup `page-auth-extras.jsx:374-416`: Card with warning-icon (Clock lucide) + title "Your session expired" + subtitle 320px max-width + metadata grid 3 rows (Last activity / Session ID / Reason Badge w/ tone=warning) + 2 buttons row (Sign in again outline + Resume session primary) + data preservation hint
   - `useSearchParams()` read `?session_id=` + `?reason=` query params; fallback to fixture values (14h 02m ago / sess_8a2f1c3 / jwt_expired · 24h max) when absent
   - On "Sign in again" click: `navigate("/auth/login")`
   - On "Resume session" click: `navigate("/auth/callback?next=" + originalPath)` (preserves stashed redirect)
   - File-header MHist
-- [ ] **ADD ROUTE** in `App.tsx`: `const ExpiredPage = lazy(() => import("./pages/auth/expired"));` + `<Route path="/auth/expired" element={<ExpiredPage />} />`
-- [ ] **i18n keys** `auth.json`: `expired.title` / `expired.subtitle` / `expired.signInAgain` / `expired.resume` / `expired.dataHint` (~5 keys × 2 locales)
-- [ ] **NEW Vitest spec** `frontend/tests/unit/pages/auth/expired.test.tsx`: 3 cases (initial render with fixture metadata / Sign in again click → navigate / Resume click → navigate with next param)
-- [ ] Verify: Playwright MCP capture `/auth/expired?session_id=test&reason=jwt_expired` at 1440×900 → DRIFT verdict
+- [x] **ADD ROUTE** in `App.tsx`: `const ExpiredPage = lazy(() => import("./pages/auth/expired"));` + `<Route path="/auth/expired" element={<ExpiredPage />} />`
+- [x] **i18n keys** `auth.json`: `expired.*` 8 keys × 2 locales (en + zh-TW) ✅
+- [x] **NEW Vitest spec** `frontend/tests/unit/pages/auth/expired.test.tsx`: 3 cases (fixture + query-param render / Sign-in-again navigate / Resume navigate with ?next= encoded forward) — 3/3 PASS
+- [ ] 🚧 Verify: Playwright MCP capture `/auth/expired?session_id=test&reason=jwt_expired` at 1440×900 → DRIFT verdict — deferred to Day 4 batch (per Day 0 plan)
 
 ### 3.4 Day 3 closeout
-- [ ] `npx tsc --noEmit` 0 errors
-- [ ] `npx vitest run` 348+N PASS (Day 3 deltas; expect ~11-14 NEW cases for invite + mfa + expired)
-- [ ] `npm run lint` silent
-- [ ] `npx vite build` succeeds; main bundle within +30 KB of 321.92 kB baseline
-- [ ] Progress.md Day 3 entry + 4 DRIFT verdicts (invite + 2 mfa tabs + expired) recorded
+- [x] `npx tsc --noEmit` 0 errors ✅
+- [x] `npx vitest run` **369/369 PASS** ✅ (baseline 355 → 369; +14 NEW: invite 4 + mfa 7 + expired 3 = 14 — matches plan estimate 11-14)
+- [x] `npm run lint` silent ✅
+- [x] `npx vite build` succeeds ✅; main bundle **329.11 kB** (Day 2 was 325.48 → +3.63 KB; within +30 KB Day 3 target)
+- [x] Progress.md Day 3 entry recorded (4 DRIFT verdicts deferred to Day 4 Playwright batch per Day 0 plan)
 - [ ] Day 3 commit: `feat(frontend, sprint-57-23, Day 3): /auth/invite + /auth/mfa + /auth/expired per mockup`
 
 ---

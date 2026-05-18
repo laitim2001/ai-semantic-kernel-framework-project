@@ -243,3 +243,120 @@
 - Cumulative Day 0+1+2 actual: ~10-11 hr (sprint commit budget ~28 hr); ~37% of budget used; 2 days remain (Day 3-4 ~6-9 hr/day)
 
 ---
+
+## Day 3 — 2026-05-18 (Invite + MFA + Expired NEW)
+
+### Today's Accomplishments
+
+**3 NEW pages shipped per mockup-direct port** (Sprint 57.23 Mockup-Fidelity Hard Constraint):
+
+| US | Route | File | LOC | Tests | Mockup ref |
+|----|-------|------|-----|-------|-----------|
+| US-D1 | `/auth/invite/:token` | `pages/auth/invite/index.tsx` NEW | ~200 | 4 NEW PASS | `page-auth-extras.jsx:191-246` (AuthInvite) |
+| US-D2 | `/auth/mfa` | `pages/auth/mfa/index.tsx` NEW | ~280 | 7 NEW PASS | `page-auth-extras.jsx:249-371` (AuthMFA) |
+| US-D3 | `/auth/expired` | `pages/auth/expired/index.tsx` NEW | ~110 | 3 NEW PASS | `page-auth-extras.jsx:374-416` (AuthExpired) |
+
+**App.tsx route wiring**:
+- +3 lazy imports (`InvitePage` / `MFAPage` / `ExpiredPage`)
+- +3 `<Route>` entries: `/auth/invite/:token` + `/auth/mfa` + `/auth/expired`
+- Total `/auth/*` routes now 7: login + callback + register + invite + mfa + expired + dev(DEV-gated)
+
+**i18n key additions** (en + zh-TW symmetric):
+- `invite.*` 15 keys: title / subtitle / tenant / invitedBy / role / expires / fullName / password / passwordHint / accept / accepting / mfaHint / foot / demoBanner / errorStubbed
+- `mfa.*` 17 keys: title / totpSub / webauthnSub / tabTotp / tabWebauthn / digitLabel (interp `{{idx}}`) / refreshIn / verify / verifying / webauthnHint / simulate / recoveryCode / recoveryTooltip / foot / help / demoBanner / errorStubbed
+- `expired.*` 8 keys: title / subtitle / lastActivity / sessionId / reason / signInAgain / resume / dataHint
+- **Total: 40 NEW keys × 2 locales = 80 NEW strings** (exceeds plan estimate ~22 × 2 = 44; growth due to translation of Verifying/Accepting busy states + recoveryTooltip help text — value/cost ratio acceptable)
+
+### Quality Gates
+
+| Gate | Result | Delta vs Day 2 |
+|------|--------|----------------|
+| `npx tsc --noEmit` | **0 errors** ✅ | maintained |
+| `npx vitest run` | **369/369 PASS** ✅ | +14 (355 → 369; invite 4 + mfa 7 + expired 3 = 14 NEW) |
+| `npm run lint` | **silent** ✅ | maintained |
+| `npx vite build` main bundle | **329.11 kB** ✅ | +3.63 KB (325.48 → 329.11; within +30 KB Day 3 target; +7.19 KB from 321.92 baseline) |
+
+### Key Design Decisions
+
+**1. /auth/invite/:token metadata fetch contract**:
+- On mount, `GET /api/v1/invites/:token` attempted; 501 stub falls back to fixture metadata silently — no error surface (demo banner explains backend-stub status)
+- Distinct from POST accept (which surfaces explicit errorStubbed message) — GET tolerant since metadata view is read-only fixture-okay; accept is action requires explicit user-facing error
+- AD-Auth-Invite-Backend-IAM-Block-B-Phase58 carryover for both endpoints
+
+**2. /auth/mfa Roll-own (per Q3 directive)**:
+- Per Q3 decision: frontend ships full TOTP grid + WebAuthn UI per mockup; backend MFA service is Phase 58+ IAM Block C
+- TOTP digit grid uses `useRef<Array<HTMLInputElement | null>>` callback-ref pattern (canonical React 18)
+- Paste handler attached only to digit 1 (matches mockup intent)
+- Filled-box visual: dynamic className swap between `border-border bg-bg-1` and `border-primary bg-primary/10` (per mockup L321-325)
+- Recovery code link rendered as `<span pointer-events-none>` with tooltip — visually present per mockup, behaviorally disabled (AD-Auth-MFA-Recovery-Page-Phase58 carryover)
+
+**3. /auth/expired query-param contract** (`useSearchParams`):
+- `?session_id=` displayed; fallback fixture `sess_8a2f1c3`
+- `?reason=` displayed in Badge; fallback fixture `jwt_expired · 24h max`
+- `?next=` forwarded to `/auth/callback?next=<encoded>` on Resume click (preserves stashed-redirect pattern from Sprint 57.7 US-A2 `consumePostLoginRedirect`)
+- Purely client-side splash; no fetch on mount (trigger is upstream 401 → JWT-expiry interceptor → redirect here)
+
+**4. ESLint escape hatches consumed**:
+- Sprint cumulative: **1 NEW** inline-style escape hatch in `mfa/index.tsx` (WebAuthn conic-gradient spinning ring — Tailwind cannot express conic-gradient + custom animation duration)
+- Reason comment: `// eslint-disable-next-line no-restricted-syntax -- STYLE.md §3 escape hatch: ... (Sprint 57.23 US-D2 mockup AuthMFA L342-345)`
+- Sprint cumulative 3 total escape hatches (AuthShell gradient backdrop + Callback conic-ring + MFA conic-ring) — all 3 with STYLE.md §3 reason comments
+
+### Day 3 Test Coverage Detail
+
+**invite.test.tsx (4/4 PASS)**:
+1. Initial render with fixture metadata + demo banner visible
+2. Accept submit → POST `/api/v1/invites/test-token-abc/accept` + 501 stub error surfaced + no navigate
+3. Accept on 200 success → navigate to `/auth/mfa`
+4. MFA hint row visible below Accept button
+
+**mfa.test.tsx (7/7 PASS)**:
+1. Initial render TOTP tab default + 6 digit inputs + demo banner + Verify disabled
+2. Typing digit advances focus to next input
+3. Backspace on empty digit retreats focus to previous input
+4. Paste 6 digits fills all boxes
+5. Verify button enabled once all 6 digits filled
+6. Tab switch TOTP → WebAuthn renders ring + Simulate (no digit grid)
+7. WebAuthn Simulate calls POST `/api/v1/mfa/verify` + navigates on success
+
+**expired.test.tsx (3/3 PASS)**:
+1. Initial render fixture when no params; query params honored when present (combined assertion)
+2. Sign in again click → navigate `/auth/login`
+3. Resume navigates `/auth/callback` (no next) AND `/auth/callback?next=<encoded>` (with next) — combined assertion
+
+### Deferred to Day 4 (per Day 0 plan)
+
+- 🚧 Playwright MCP captures: 4 pair-verifies (invite + mfa-totp + mfa-webauthn + expired) at 1440×900 → DRIFT-REPORT verdicts
+- 🚧 i18n symmetric verify: `diff <(jq -r 'paths(scalars)' en/auth.json) <(jq -r 'paths(scalars)' zh-TW/auth.json)` = 0 expected (R6 mitigation)
+- 🚧 `npm run build && grep "auth/dev" dist/` production gate verify (R8 mitigation)
+
+### Day 3 Actual Hours
+
+- US-D1 invite (page + test): ~1.5 hr
+- US-D2 mfa (page + test, ref-array + paste + tab logic): ~2 hr
+- US-D3 expired (page + test, query-param contract): ~1 hr
+- i18n keys × 2 locales + App.tsx wire + quality gates: ~0.5 hr
+- **Day 3 total ~5 hr** (vs informal target ~7 hr) → ~28% under
+
+**Cumulative Day 0+1+2+3 actual: ~15-16 hr** (sprint commit budget ~28 hr) → **~54% of budget used; 1 day (Day 4 closeout) remains ~6-7 hr informal target**
+
+**Calibration observation (preliminary, NEW class `frontend-mockup-strict-rebuild` 0.60 1st application)**:
+- Bottom-up Day 0-3 actual ~15-16 hr; against bottom-up estimate Day 0-3 ~22 hr → ratio actual/bottom-up ≈ 0.73
+- Against calibrated commit Day 0-3 ~22 × 0.60 = 13.2 hr → ratio actual/committed ≈ 1.18 (within [0.85, 1.20] band at upper edge)
+- Final ratio Day 4 closeout dependent — but trending toward in-band 0.60 baseline validation
+
+### Anti-Pattern Self-Check (11/11)
+
+All 11 V2 anti-patterns checked; no violations introduced this Day. Highlights:
+- AP-2 side-track: demo banners on /auth/invite + /auth/mfa explicitly flag stub-501 + Phase 58+ AD references
+- AP-4 premature abstraction: NO AuthShellX abstraction extracted yet — 3 sprints worth of usage required before promote
+- AP-7 skipped tests: 0 test.skip / 0 // TODO in shipped code
+
+### V2 Constraint Compliance (5/5)
+
+- **Server-Side First**: ✅ frontend-only sprint (per Q2); 0 backend changes; no agent_harness leakage
+- **LLM Provider Neutrality**: ✅ N/A — frontend has no LLM SDK imports
+- **CC Reference**: ✅ no CC patterns lifted; mockup is canonical visual source
+- **17.md Single-source**: ✅ no new contracts added (frontend-only)
+- **11+1 範疇歸屬**: ✅ all new code lives in `frontend/`; not crossing into `agent_harness/` or `platform_layer/`
+
+---
