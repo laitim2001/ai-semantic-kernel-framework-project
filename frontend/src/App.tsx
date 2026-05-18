@@ -15,6 +15,7 @@
  *   Auth routes (/auth/*) NOT in registry — they use AuthShell (no sidebar).
  *
  * Modification History:
+ *   - 2026-05-18: Sprint 57.23 US-B3 — add /auth/dev route (DEV-gated via import.meta.env.DEV; extracted from login)
  *   - 2026-05-10: Sprint 57.13 US-B9 — lazy-load /auth/login + /auth/callback (keep their ui/ component cost out of the main bundle)
  *   - 2026-05-10: Sprint 57.13 US-A1 — add <AuthBootstrap>; drop redundant legacy /verification route (registry covers it since 57.11)
  *   - 2026-05-09: Sprint 57.9 US-1 — drop legacy /governance/* route + import (single-source restored)
@@ -34,6 +35,8 @@ import { ROUTES } from "./routes.config";
 
 const LoginPage = lazy(() => import("./pages/auth/login"));
 const CallbackPage = lazy(() => import("./pages/auth/callback"));
+// Sprint 57.23 US-B3: DEV-only — production build gates via import.meta.env.DEV (verify post-build: grep "auth/dev" dist/ = 0)
+const DevLoginPage = lazy(() => import("./pages/auth/dev"));
 
 /**
  * Runs authStore.bootstrap() once on app mount, then renders children. Public
@@ -87,6 +90,7 @@ export default function App() {
           {/* Auth routes — outside registry (use AuthShell, no sidebar) */}
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<CallbackPage />} />
+          {import.meta.env.DEV && <Route path="/auth/dev" element={<DevLoginPage />} />}
 
           {/* Active routes generated from routes.config single-source */}
           {ROUTES.filter((r) => r.active && r.component).map((r) => {

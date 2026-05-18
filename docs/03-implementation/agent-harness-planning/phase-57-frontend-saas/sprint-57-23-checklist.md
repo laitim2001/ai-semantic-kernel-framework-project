@@ -75,52 +75,57 @@
 **Workflow**: mockup-direct rewrite per `.claude/rules/sprint-workflow.md` Frontend Mockup-Fidelity Hard Constraint. Source baseline: `reference/design-mockups/page-extras.jsx` L1-200.
 
 ### 1.1 US-B1 AuthShell.tsx full-screen-centered rewrite
-- [ ] **REWRITE** `frontend/src/components/AuthShell.tsx`:
+- [x] **REWRITE** `frontend/src/components/AuthShell.tsx`:
   - Remove sticky `<header>` + `container mx-auto p-6` + `<footer>` (current shell)
   - Add radial gradient backdrop via inline `style={{ background: "radial-gradient(...)" }}` (one escape-hatch per STYLE.md §3 — no Tailwind utility for multi-stop HSL gradient)
   - Centered 420-wide column + brand mark slot (32×32 `bg-primary` aria-hidden) + IPA Platform 16px / V2 · loop-first 10.5px subtitle + children + optional footer slot per mockup `page-extras.jsx:5-25`
   - Preserve `data-testid="auth-shell"` anchor for Playwright e2e selector stability (R7 mitigation)
   - File-header Modification History: `2026-05-18: Sprint 57.23 — rewrite to mockup full-screen centered per AD-AuthShell-Mockup-Refactor (closes Sprint 57.22 AD)`
-- [ ] **ADAPT existing Vitest specs** (`AuthShell.test.tsx` if exists):
+- [x] **ADAPT existing Vitest specs** (`AuthShell.test.tsx`):
   - Selector adapt: `<h1>IPA Platform V2 — Sign In</h1>` removed; replaced by 16px "IPA Platform" + 10.5px metadata
+  - Renamed prop `headerActions` → `footer` (mockup pattern); test adapted
   - Preserve behavioral assertions (children render slot / footer render slot / wrap pattern)
-- [ ] `npx tsc --noEmit` 0 errors
-- [ ] `npx vitest run AuthShell` PASS
-- [ ] Verify: Playwright MCP capture post-rewrite `/auth/login` at 1440×900 (login still wrapped in old AuthShell internals — visual baseline for cascade verify)
+- [x] `npx tsc --noEmit` 0 errors
+- [x] `npx vitest run AuthShell` PASS (2 cases adapted: brand text + footer slot)
+- [ ] Verify: Playwright MCP capture post-rewrite `/auth/login` at 1440×900 — DEFERRED to Day 4 batch capture (matches Sprint 57.21 pattern)
 
 ### 1.2 US-B2 /auth/login mockup-direct rewrite
-- [ ] **REWRITE** `frontend/src/pages/auth/login/index.tsx`:
-  - Remove embedded `DevLoginSection` (extract to §1.3)
+- [x] **REWRITE** `frontend/src/pages/auth/login/index.tsx`:
+  - Remove embedded `DevLoginSection` (extracted to §1.3)
   - Per mockup `page-extras.jsx:27-57`: Card containing "Sign in" 18px + sub "Continue with SSO or your work email." 12.5px + 3 SSO outline buttons (SAML / Microsoft / Google Workspace) **disabled** with tooltip "Enterprise SSO via WorkOS roadmap" (`aria-disabled` + secondary styling) + "or" divider + Work email input 13.5px + Continue primary button bg-primary + MFA hint footer + dev-login link
   - Preserve existing `handleLogin` (window.location WorkOS redirect)
   - Preserve `errorMessage` `?error=` param surface + ErrorAlert component
   - Remove `<h1>` heading (mockup has NO h1; H1-rule via mockup-fidelity overrides a11y page-has-heading-one for `/auth/login`)
-  - File-header MHist: `2026-05-18: Sprint 57.23 — rewrite to mockup AuthLogin (3 SSO outline + email + Continue; extract DevLoginSection to /auth/dev)`
-- [ ] **ADAPT existing Vitest specs** for login (`login.test.tsx` if exists):
-  - Selector adapt: button text/aria → "Continue" instead of "Login with WorkOS"
-  - Preserve handleLogin click → window.location assertion (behavioral)
-- [ ] Verify: Playwright MCP capture post-rewrite `/auth/login` at 1440×900 → `screenshots/post-rebuild/auth-login.png`; side-by-side vs `screenshots/mockup/auth-login.png` → DRIFT verdict (parity / cosmetic / structural) → DRIFT-REPORT entry
+  - File-header MHist: `2026-05-18: Sprint 57.23 US-B2 — mockup-direct rewrite (3 SSO disabled + email + Continue; extract DevLoginSection)`
+- [x] **ADAPT existing Vitest specs** for login (`login.test.tsx`):
+  - 5 obsolete tests removed/adapted: "Login with WorkOS" + h1 + no-inline-style + 3 dev-login tests moved to new dev.test.tsx
+  - 4 NEW cases: Sign in heading + 3 SSO disabled + Continue primary + no-h1
+- [x] **ADAPT i18n keys** `auth.json` EN + zh-TW:
+  - REMOVED: `signInTitle` / `signInSubtitle` / `loginWithWorkOS` / `devSection.*` (4 + 6 keys)
+  - ADDED: `login.*` (14 keys) + `dev.*` (12 keys; +tenantLabel/roleLabel/continueAs Day 1.3)
+- [ ] Verify: Playwright MCP capture post-rewrite `/auth/login` at 1440×900 → DEFERRED to Day 4 batch
 
 ### 1.3 US-B3 /auth/dev extraction
-- [ ] **NEW FILE** `frontend/src/pages/auth/dev/index.tsx` (~120L):
-  - Wrap in `<AuthShell footer={<>Disable <span className="font-mono">DEV_LOGIN=true</span> in production environments.</>}>`
-  - Per mockup `page-extras.jsx:109-185`: risk-high hitl-card banner + identity dropdown (jamie/priya/dan/platform fixtures) + "Assume identity" button
-  - Adapt: keep current `fetchWithAuth("/api/v1/auth/dev-login")` + `useAuthStore.bootstrap()` + `consumePostLoginRedirect()` post-success
-  - "Assume" button maps identity dropdown selection → tenant_code + email payload for existing dev-login backend endpoint
+- [x] **NEW FILE** `frontend/src/pages/auth/dev/index.tsx` (~180L; mockup AuthDev L109-152 1:1 port):
+  - Wrap in `<AuthShell footer={...}>` with mockup footer copy + monospace `DEV_LOGIN=true` highlight
+  - risk-high warning card with destructive token border + ShieldAlert icon + warning title + body (mockup hitl-card semantic preserved via destructive token mapping)
+  - Card with 3 fields: Assume identity (select 4 fixtures) + Tenant (select 3 fixtures) + Role (4 badges, active=identity.role; aria-pressed)
+  - "Continue as {{email}}" primary button → POST /api/v1/auth/dev-login (tenant_code + email) → bootstrap → navigate(consumePostLoginRedirect())
   - File-header MHist
-- [ ] **ADD ROUTE** in `App.tsx`:
-  - `const DevPage = lazy(() => import("./pages/auth/dev"));`
-  - `{import.meta.env.DEV && <Route path="/auth/dev" element={<DevPage />} />}` — production gates to 404
-- [ ] **i18n keys** `auth.json` EN + zh-TW: `dev.title` / `dev.warning` / `dev.identity.*` / `dev.assume` (~6 keys × 2 locales)
-- [ ] Verify: `npm run build && grep -r "auth/dev" frontend/dist/` = 0 results in production build (R8 mitigation)
-- [ ] Verify: Playwright MCP capture dev mode `/auth/dev` at 1440×900 → DRIFT verdict
+- [x] **ADD ROUTE** in `App.tsx`:
+  - `const DevLoginPage = lazy(() => import("./pages/auth/dev"));`
+  - `{import.meta.env.DEV && <Route path="/auth/dev" element={<DevLoginPage />} />}` — production gates to 404
+- [x] **i18n keys** `auth.json` EN + zh-TW: 12 dev.* keys (title / warningTitle / warningBody / identityLabel / tenantLabel / roleLabel / continueAs / footer / submitting / errorDisabled / errorFailed / errorRequest)
+- [x] **NEW Vitest spec** `frontend/tests/unit/pages/auth/dev.test.tsx` (3 cases: mockup shape render / POST dev-login + bootstrap / 404 errorDisabled)
+- [ ] Verify: `npm run build && grep -r "auth/dev" frontend/dist/` = 0 results in production build (R8 mitigation) — DEFERRED to Day 4 (current `npx vite build` was dev-mode preview; final prod gate verify at Day 4)
+- [ ] Verify: Playwright MCP capture dev mode `/auth/dev` at 1440×900 → DEFERRED to Day 4 batch
 
 ### 1.4 Day 1 closeout
-- [ ] `npx tsc --noEmit` 0 errors
-- [ ] `npx vitest run` Vitest 348+N PASS (Day 1 deltas; expect ~5-10 NEW cases for AuthShell + login + dev rendering)
-- [ ] `npm run lint` silent (--max-warnings 0)
-- [ ] `npx vite build` succeeds; main bundle within +5 KB of 321.92 kB Sprint 57.22 baseline
-- [ ] Progress.md Day 1 entry + 3 DRIFT verdicts (AuthShell / login / dev) recorded
+- [x] `npx tsc --noEmit` 0 errors
+- [x] `npx vitest run` Vitest 350/350 PASS (Sprint 57.22 baseline 348 → 350; net +2 = dev.test.tsx NEW 3 cases / login.test.tsx -1 obsolete DevLogin)
+- [x] `npm run lint` silent (--max-warnings 0; 1 escape-hatch eslint-disable-next-line on AuthShell gradient)
+- [x] `npx vite build` succeeds 3.46s; main bundle 323.24 kB (+1.32 KB vs 321.92 kB Sprint 57.22 baseline; within +5 KB target ✅)
+- [ ] Progress.md Day 1 entry + 3 DRIFT verdicts (AuthShell / login / dev) — DRIFT verdicts deferred to Day 4 Playwright MCP batch capture
 - [ ] Day 1 commit: `feat(frontend, sprint-57-23, Day 1): AuthShell + /auth/login + /auth/dev rewrite per mockup`
 
 ---

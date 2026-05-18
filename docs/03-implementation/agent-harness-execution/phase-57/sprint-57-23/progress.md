@@ -111,3 +111,74 @@
 - Anti-Pattern checklist focus: AP-2 demo banner discipline on `/auth/register` + `/auth/invite` + `/auth/mfa` (3 pages with stub-501 backend); AP-4 every rewrite delivers Playwright MCP pair-verify artifact
 
 ---
+
+## Day 1 — 2026-05-18
+
+### Today's Accomplishments
+
+- ✅ **US-B1 AuthShell.tsx full-screen-centered rewrite** complete
+  - REWRITE `frontend/src/components/AuthShell.tsx` per mockup `page-extras.jsx:5-25`
+  - Removed sticky `<header>` + `<footer>` + `container mx-auto p-6` inset shell (Sprint 57.7 → 57.13 shape retired)
+  - Added radial gradient backdrop (HSL `--primary` token / 0.12 alpha) via inline `style={{ background: ... }}` with `// eslint-disable-next-line no-restricted-syntax` escape hatch (STYLE.md §3 — Tailwind can't express multi-stop HSL gradient)
+  - Brand mark slot (32×32 `bg-primary` aria-hidden) + IPA Platform 16px + V2 · loop-first 10.5px mono uppercase subtitle + children + optional footer slot
+  - Prop interface change: `headerActions` → `footer` (mockup pattern); 0 external consumers verified via Grep (only 3 unrelated AppShellV2/Topbar/cost-dashboard headerActions hits)
+  - `data-testid="auth-shell"` anchor preserved
+  - File-header MHist 1-line updated
+- ✅ **US-B2 /auth/login mockup-direct rewrite** complete
+  - REWRITE `frontend/src/pages/auth/login/index.tsx` per mockup `page-extras.jsx:27-57`
+  - Card with "Sign in" 18px header + 12.5px sub + 3 SSO outline buttons (SAML/Microsoft/Google) **disabled** with `aria-disabled="true"` + tooltip `t("login.sso.comingSoonTooltip")` ("Enterprise SSO via WorkOS roadmap")
+  - "or" divider + Work email input (13.5px) + Continue primary button preserves existing `handleLogin` WorkOS redirect + MFA hint footer
+  - Dev-login `<Link to="/auth/dev">` (extracted from prior DevLoginSection)
+  - Removed `<h1>` heading (mockup intentional no-heading; cascade verified — a11y page-has-heading-one will be overridden by mockup-fidelity per CLAUDE.md hard constraint)
+  - Removed embedded DevLoginSection (~67 lines extracted to /auth/dev)
+  - AuthShell footer = `t("login.footer")` ("By signing in you agree to the Terms · Privacy")
+- ✅ **US-B3 /auth/dev extraction NEW route** complete
+  - NEW FILE `frontend/src/pages/auth/dev/index.tsx` (~180L) per mockup `page-extras.jsx:109-152`
+  - risk-high warning card with destructive token border + ShieldAlert icon + warningTitle + warningBody (mockup `hitl-card data-severity="risk-high"` semantic mapped to destructive variant per Sprint 57.18 token vocabulary)
+  - Card with 3 form fields: Assume identity (4 fixture IDENTITIES: jamie/priya/dan/platform) + Tenant (3 fixture TENANTS: acme-prod/globex-eu/initech-jp) + Role (4 read-only Badges with `variant=default` when active else `secondary`)
+  - "Continue as {{email}}" primary button → on submit: POST `/api/v1/auth/dev-login?tenant_code=...&email=...` → bootstrap → navigate(consumePostLoginRedirect())
+  - 404 → `dev.errorDisabled` ("dev-login is disabled in this environment"); other status → `dev.errorFailed`
+  - ADD ROUTE in `App.tsx`: `{import.meta.env.DEV && <Route path="/auth/dev" element={<DevLoginPage />} />}` — production build gates entirely (R8 mitigation)
+- ✅ **i18n keys overhaul** (en/auth.json + zh-TW/auth.json)
+  - REMOVED: `signInTitle` / `signInSubtitle` / `loginWithWorkOS` / `devSection.*` (4 + 6 keys; obsolete after rewrites)
+  - ADDED: `login.*` (14 keys — title/subtitle/sso.{saml,microsoft,google,comingSoonTooltip}/orDivider/workEmail/workEmailPlaceholder/continue/mfaHint/devLink/footer) + `dev.*` (12 keys — title/warningTitle/warningBody/identityLabel/tenantLabel/roleLabel/continueAs/footer/submitting/errorDisabled/errorFailed/errorRequest)
+  - Symmetric keys verified (i18n.test.ts spec passes)
+- ✅ **Vitest cascade adapt**:
+  - `tests/unit/components/AuthShell.test.tsx` — 2 cases adapted (brand text instead of brand link; footer slot instead of headerActions)
+  - `tests/unit/pages/auth/login.test.tsx` — full rewrite (4 NEW cases: Sign in heading + 3 SSO disabled + Continue primary + no-h1; removed 5 obsolete DevLogin tests)
+  - `tests/unit/pages/auth/dev.test.tsx` — NEW file (3 cases: mockup shape render / POST dev-login + bootstrap success / 404 errorDisabled)
+  - `tests/unit/pages/auth/callback.test.tsx` — 2 cases adapted (no-inline-style assertion scoped to children, exclude `[data-testid='auth-shell']` wrapper for gradient escape hatch)
+  - `tests/unit/i18n/i18n.test.ts` — 2 assertions adapted (`loginWithWorkOS` → `login.continue` / `devSection.errorFailed` → `dev.errorFailed`)
+
+### Day 1 Quality Gates
+
+| Gate | Status | Detail |
+|------|--------|--------|
+| `npx tsc --noEmit` | ✅ 0 errors | All types valid |
+| `npx vitest run` | ✅ 350/350 PASS | Sprint 57.22 baseline 348 + net +2 (dev.test.tsx NEW 3 / login.test.tsx -1 obsolete DevLogin); 0 regression |
+| `npm run lint` | ✅ silent | --max-warnings 0; 1 escape-hatch eslint-disable-next-line on AuthShell gradient |
+| `npx vite build` | ✅ 3.46s | Main bundle `index-CApLOQJD.js` 323.24 kB (+1.32 KB vs 321.92 kB Sprint 57.22 baseline; within +5 KB target) |
+| backend changes | ✅ 0 | verified via `git diff --stat main..HEAD` (frontend + i18n only) |
+| LLM SDK leak | ✅ 0 | grep `import openai\|import anthropic` in frontend/src returns 0 |
+
+### Day 1 D-DAY Drift Findings
+
+(None — Day 1 work proceeded per Day 0 三-prong scope; 0 new drift discoveries)
+
+### Remaining for Day 2
+
+- Capture mockup + production references at 1440×900 — DEFERRED to Day 4 batch
+- US-C1 /auth/callback timed 3-step progress rewrite
+- US-C2 /auth/register 4-step wizard NEW (largest single page this sprint ~280L)
+- Day 2 closeout: Vitest 350+~10 PASS + bundle within +15 KB
+
+### Notes
+
+- Day 1 actual hours: ~3.5-4 hr (vs informal target ~7 hr) → 50% under early-bird. Reasons:
+  - D-PRE-2 scope reduction (token already wired) saved ~1-2 hr
+  - AuthShell rewrite cascaded cleanly to login + callback Vitest specs (single test file each; selector adapt mostly mechanical)
+  - DevLoginSection extraction was lift-and-shift — preserved fetch + bootstrap logic intact
+- AP-2 demo banner discipline NOT YET triggered (no stub-501 endpoints yet; register/invite/mfa Days 2-3 will need it)
+- AP-4 mockup-fidelity gain pair-verify — Playwright MCP batch capture deferred to Day 4 closeout
+
+---

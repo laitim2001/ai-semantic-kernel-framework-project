@@ -45,7 +45,9 @@ describe("CallbackPage", () => {
     const { container } = renderCallback("/auth/callback");
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(screen.getByText(/Completing sign-in/i)).toBeInTheDocument();
-    expect(container.querySelectorAll("[style]")).toHaveLength(0);
+    // Sprint 57.23 US-B1: AuthShell now has 1 inline style (radial gradient backdrop, escape hatch per STYLE.md §3).
+    // Assert children of auth-shell have no inline styles (the wrapper itself is allowed).
+    expect(container.querySelectorAll("[style]:not([data-testid='auth-shell'])")).toHaveLength(0);
   });
 
   it("shows an alert EmptyState + 'Back to login' link when ?error= is present", () => {
@@ -54,7 +56,8 @@ describe("CallbackPage", () => {
     expect(screen.getByText("vendor said no")).toBeInTheDocument();
     const backLink = screen.getByRole("link", { name: /Back to login/i });
     expect(backLink).toHaveAttribute("href", "/auth/login");
-    expect(container.querySelectorAll("[style]")).toHaveLength(0);
+    // Sprint 57.23 US-B1: AuthShell's 1 wrapper gradient inline style allowed.
+    expect(container.querySelectorAll("[style]:not([data-testid='auth-shell'])")).toHaveLength(0);
     // ?error short-circuits before bootstrap → no fetch.
     expect(fetchSpy).not.toHaveBeenCalled();
   });
