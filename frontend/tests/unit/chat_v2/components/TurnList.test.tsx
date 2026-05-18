@@ -113,22 +113,30 @@ describe("TurnList (Sprint 57.21 Day 2)", () => {
     expect(screen.getByText("awaiting approval")).toBeInTheDocument();
   });
 
-  test("hitl role dispatches → HITLTurn with severity + title + buttons", () => {
+  test("hitl role dispatches → HITLTurn with severity + title + 2-action buttons + approval_id", () => {
     useChatStore.setState({ turns: [hitlTurn()] });
     render(<TurnList />);
     expect(screen.getByText("HITL approval required")).toBeInTheDocument();
     expect(screen.getByText("Approve write")).toBeInTheDocument();
     expect(screen.getByText("k8s.set_env")).toBeInTheDocument();
+    // Phase-1 ships canonical 2-action subset (matches Sprint 53.5 baseline +
+    // approval-card.spec.ts e2e contract). "Approve with edits" + "Escalate to L2"
+    // 4-action UX deferred to Phase-2 AD-ChatV2-HITL-FourAction-Phase2.
     expect(screen.getByText("Approve & continue")).toBeInTheDocument();
     expect(screen.getByText("Reject")).toBeInTheDocument();
-    expect(screen.getByText("Approve with edits")).toBeInTheDocument();
-    expect(screen.getByText("Escalate to L2")).toBeInTheDocument();
+    expect(screen.queryByText("Approve with edits")).not.toBeInTheDocument();
+    expect(screen.queryByText("Escalate to L2")).not.toBeInTheDocument();
+    // approval_id visible (e2e contract approval-card.spec.ts L70).
+    expect(screen.getByText(/approval_id: ap-/)).toBeInTheDocument();
   });
 
-  test("hitl with decision shows result label", () => {
+  test("hitl with decision shows result label + hides action buttons", () => {
     useChatStore.setState({ turns: [{ ...(hitlTurn() as Extract<Turn, { role: "hitl" }>), decision: "APPROVED" }] });
     render(<TurnList />);
     expect(screen.getByText(/Decision: APPROVED/)).toBeInTheDocument();
+    // Buttons hidden when decided (e2e contract approval-card.spec.ts L152).
+    expect(screen.queryByText("Approve & continue")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reject")).not.toBeInTheDocument();
   });
 
   test("mixed turns render in order user → agent → hitl", () => {

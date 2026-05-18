@@ -22,6 +22,7 @@
  * Created: 2026-05-17 (Sprint 57.21 Day 2 §2.1)
  *
  * Modification History (newest-first):
+ *   - 2026-05-18: Sprint 57.21 Day 4 CI-FIX — render approval_id + SEVERITY_BADGE_LITERAL hex + hide buttons when decided (preserves approval-card.spec.ts L70+L108+L131/152 contracts)
  *   - 2026-05-17: Sprint 57.21 Day 4 D-DAY3-3 — add role="region" + aria-label="HITL approval" for e2e contract preservation (approval-card.spec.ts selector compatibility post-TurnList swap)
  *   - 2026-05-17: Initial extract from mockup L270-313 + Tailwind convert (Sprint 57.21 Day 2 §2.1)
  *
@@ -65,6 +66,17 @@ const SEVERITY_TEXT_CLASS: Record<RiskSeverity, string> = {
   "risk-medium": "text-risk-medium",
   "risk-high": "text-risk-high",
   "risk-critical": "text-risk-critical",
+};
+
+// Severity badge text colour literal hex per STYLE.md §3 Risk Badge Palette —
+// Sprint 57.15 colour-literal sentinel preserved for approval-card.spec.ts L108
+// (CRITICAL → computed color === "rgb(183,28,28)"). Token-based class
+// `text-risk-critical` (CSS var) does NOT satisfy the literal assertion.
+const SEVERITY_BADGE_LITERAL: Record<RiskSeverity, string> = {
+  "risk-low": "text-[#2e7d32]",
+  "risk-medium": "text-[#ed6c02]",
+  "risk-high": "text-[#d84315]",
+  "risk-critical": "text-[#b71c1c]",
 };
 
 export function HITLTurn({ turn }: { turn: HITLTurnType }): JSX.Element {
@@ -137,7 +149,7 @@ export function HITLTurn({ turn }: { turn: HITLTurnType }): JSX.Element {
           <div className="mb-2.5 flex flex-wrap gap-3 text-[11.5px] text-fg-muted">
             <span className="flex items-center gap-1.5">
               severity:{" "}
-              <span className={`rounded px-1.5 py-px font-mono text-[10.5px] ${SEVERITY_BG_CLASS[severity]} ${SEVERITY_TEXT_CLASS[severity]}`}>
+              <span className={`rounded px-1.5 py-px font-mono text-[10.5px] ${SEVERITY_BG_CLASS[severity]} ${SEVERITY_BADGE_LITERAL[severity]}`}>
                 {severity.replace("risk-", "").toUpperCase()}
               </span>
             </span>
@@ -161,45 +173,44 @@ export function HITLTurn({ turn }: { turn: HITLTurnType }): JSX.Element {
               {turn.payload}
             </pre>
           )}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={decided || submitting !== null}
-              onClick={() => submitDecision("approved")}
-              className="inline-flex items-center gap-1.5 rounded-md bg-success px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-60"
-              data-testid="approve-btn"
-            >
-              <Check size={12} />
-              Approve &amp; continue
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Sprint 57.22+ AD-ChatV2-HITL-FourAction-Phase2"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-1 px-3 py-1.5 text-xs font-medium text-fg-muted opacity-60"
-            >
-              Approve with edits
-            </button>
-            <button
-              type="button"
-              disabled={decided || submitting !== null}
-              onClick={() => submitDecision("rejected")}
-              className="inline-flex items-center gap-1.5 rounded-md bg-risk-critical px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-risk-critical/90 disabled:cursor-not-allowed disabled:opacity-60"
-              data-testid="reject-btn"
-            >
-              <X size={12} />
-              Reject
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Sprint 57.22+ AD-ChatV2-HITL-FourAction-Phase2"
-              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-fg-muted opacity-60 hover:bg-bg-2"
-            >
-              Escalate to L2
-            </button>
-            <span className="ml-auto flex items-center gap-1.5 text-[11px] text-fg-subtle">
+          {!decided && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                aria-label="Approve"
+                disabled={submitting !== null}
+                onClick={() => submitDecision("approved")}
+                className="inline-flex items-center gap-1.5 rounded-md bg-success px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-60"
+                data-testid="approve-btn"
+              >
+                <Check size={12} />
+                Approve &amp; continue
+              </button>
+              <button
+                type="button"
+                aria-label="Reject"
+                disabled={submitting !== null}
+                onClick={() => submitDecision("rejected")}
+                className="inline-flex items-center gap-1.5 rounded-md bg-risk-critical px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-risk-critical/90 disabled:cursor-not-allowed disabled:opacity-60"
+                data-testid="reject-btn"
+              >
+                <X size={12} />
+                Reject
+              </button>
+              {/* "Approve with edits" + "Escalate to L2" 4-action UX deferred to
+                  Phase-2 AD-ChatV2-HITL-FourAction-Phase2 — backend needs APPROVED_WITH_EDITS
+                  variant + payload editor + escalate routing. Phase-1 ships canonical
+                  2-action subset (matches Sprint 53.5 baseline + e2e contract). */}
+            </div>
+          )}
+          {/* approval_id always visible (e2e contract approval-card.spec.ts L70);
+              audit_id placeholder until Phase-2 AD-ChatV2-HITL-FourAction-Phase2. */}
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-fg-subtle">
+            <span className="flex items-center gap-1.5">
               <FileText size={12} />
+              <span className="font-mono">approval_id: {turn.approvalRequestId}</span>
+            </span>
+            <span className="flex items-center gap-1.5">
               <span className="font-mono">audit_id: —</span>
             </span>
           </div>
