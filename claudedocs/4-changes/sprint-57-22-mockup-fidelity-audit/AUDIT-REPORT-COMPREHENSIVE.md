@@ -2071,16 +2071,214 @@ These 2 routes are in mockup `page-platform2.jsx` per earlier grep but not in cu
 
 ---
 
-## Priority Matrix (Day 4)
+## Priority Matrix (Day 4 — Sprint 57.23+ Roadmap)
 
-(Final priority matrix populated Day 4 after all audit units complete)
+**Classification rules**:
+- **P0** (must-fix Sprint 57.23): severity = FUNCTIONAL OR Strict 1:1 score < 40%
+- **P1** (Sprint 57.24+): severity = STRUCTURAL OR score 40-70%
+- **P2** (Sprint 57.25+): severity = COSMETIC OR score 70-90%
+- **P3** (defer / no-action): score ≥ 90% OR scope-question (no mockup designed)
 
-| Priority | Page | Score | Rebuild hr | Group | Dependencies |
-|----------|------|-------|-----------|-------|--------------|
-| _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+**Final Day 1+2+3 unit count**: 41 distinct audit units across 6 groups (12 Day 1 + 17 Day 2 + 12 Day 3 covering 17 unit headers due to architectural collapse).
+
+### P0 — Sprint 57.23+ Must-Fix (32 units; ~150-200 hr cumulative rebuild)
+
+| # | Unit | Route / Component | Score | Rebuild hr | Group | Key dependencies / coordinate |
+|---|------|-------------------|-------|-----------|-------|------------------------------|
+| 1 | 1 | /auth/login | 15% | 6-8 | Auth | WorkOS multi-IdP backend; AuthShell refactor |
+| 2 | 2 | /auth/callback | 5% | 3-4 | Auth | OIDC multi-step status SSE |
+| 3 | 3 | /auth/register | 0% | 8-10 | Auth | NEW backend `POST /api/v1/tenants/register` + email verify |
+| 4 | 4 | /auth/invite | 0% | 6-8 | Auth | NEW backend invitations; coord with Unit 31 Members tab |
+| 5 | 5 | /auth/mfa | 0% | 8-10 | Auth | TOTP + WebAuthn; WorkOS MFA decision |
+| 6 | 6 | /auth/expired | 0% | 4-6 | Auth | 401 interceptor redirect refactor |
+| 7 | 8 | /cost-dashboard | 15% | 4-5 | Ops Dashboards | Backend HTTP 500 fix (Sprint 56.3 Cost Ledger dev tenant) |
+| 8 | 9 | /sla-dashboard | 15% | 4-5 | Ops Dashboards | Backend HTTP 500 fix (Sprint 56.3 SLA dev tenant) |
+| 9 | 10 | /memory | 25% | 8-10 | Ops Dashboards | Cat 3 role/session scope + time travel + ops timeline |
+| 10 | 13 | Memory Block (chat-v2) | 0% | 4-6 | Chat-v2 Phase-2 | Cat 3 `memory_op_emitted` SSE event (shared w/ Unit 17) |
+| 11 | 14 | HITL FourAction | 70% | 3-4 | Chat-v2 Phase-2 | Cat 9 APPROVED_WITH_EDITS + escalation + audit_id SSE |
+| 12 | 15 | Composer Richness+Wire | 30% | 6-8 | Chat-v2 Phase-2 | Cat 2 tools registry + Cat 3 scopes + Cat 12 attachments |
+| 13 | 16 | Inspector Trace tab | 5% | 5-7 | Chat-v2 Phase-2 | Cat 12 `span_emitted` SSE event |
+| 14 | 17 | Inspector Memory tab | 5% | 4-5 | Chat-v2 Phase-2 | Shared backend w/ Unit 13 |
+| 15 | 18 | Inspector SubagentTree | 5% | 6-8 | Chat-v2 Phase-2 | Cat 11 tree endpoint + status SSE |
+| 16 | 19 | /governance approvals | 25% | 6-8 | Governance | Approvals metrics + filter + 4-action UX (Unit 14 shared) |
+| 17 | 20 | /redaction | 0% | 6-8 | Governance | Cat 9 redaction engine wire (greenfield-likely) |
+| 18 | 21 | /loop-debug | 20% | 8-10 | Governance | Cat 7 + Cat 12 loop_event persistence + replay |
+| 19 | 22 | /audit-log | 20% | 8-10 | Governance | Cat 12 WORM Merkle endpoints; route disambiguation |
+| 20 | 26 | /compaction | 0% | 5-7 | Ops Platform | Cat 4 endpoints + Spark sparkline primitive |
+| 21 | 27 | /workflows | 0% | 6-8 | Ops Platform | MAF workflow adapter; React Flow visualization |
+| 22 | 28 | /error-policy | 0% | 5-7 | Ops Platform | Cat 8 endpoints + HITL policy editor gate |
+| 23 | 29 | /rbac | 0% | 6-8 | Ops Platform | 🔴 IAM Block B RBAC backend (Cat 12 identity schema) |
+| 24 | 30 | /admin/tenants | 30% | 5-7 | Admin | Tenant lifecycle KPI + filter + CRUD wizard |
+| 25 | 31 | /tenant-settings (6-tab) | 15% | 12-16 | Admin | **Largest single unit**; 5 NEW tabs (flags/quotas/hitl/members/danger) |
+| 26 | 32 | /admin/tenant-onboarding | 0% | 6-8 | Admin | 6-step wizard + Sprint 56.1 provisioning |
+| 27 | 33 | /admin/pricing | 0% | 5-7 | Admin | Stripe+Lago integration; WORM audit per change |
+| 28 | 40 | /models | 0% | 8-10 | Misc | Cat 6 adapter registry endpoints (multi-tab) |
+| 29 | 41 | /tools | 0% | 6-8 | Misc | Shared backend w/ Unit 15 |
+| 30 | 45 | /incidents | 0% | 8-10 | Misc | Business Domain UI; coord Sprint 55.1 5 domains × 24 tools |
+| 31 | Bonus | /jit-retrieval | 0% | 5-7 | Misc | Cat 3 + Cat 4 cross-cutting; backend likely partial |
+| 32 | Bonus | /cache-manager | 0% | 4-6 | Misc | Cat 4 + Sprint 52.1 prompt caching baseline |
+
+**P0 Σ rebuild hours**: ~177-235 hr (mid-point ~206 hr)
+
+### P1 — Sprint 57.24+ (5 units; ~17-23 hr)
+
+| # | Unit | Route / Component | Score | Rebuild hr | Group | Note |
+|---|------|-------------------|-------|-----------|-------|------|
+| 1 | 11 | /verification | 40% | 3-4 | Ops Dashboards | Sprint 57.11 pre-mockup; token migrate + chrome rewrite |
+| 2 | 34 | /feature-flags (route-level) | dead stub | 3-4 | Admin | Disambiguation decision OR delete dead route |
+| 3 | 42 | /sse | 0% | 4-5 | Misc | Cat 12 SSE proxy endpoint; might subsume into Unit 43 DevUI tab |
+| 4 | 43 | /devui | 0% | 6-8 | Misc | Multi-tab dev observability hub |
+| 5 | 46 | /subagent-tree | 0% | 5-6 | Misc | Page-level variant of Unit 18 Inspector tab; shared component |
+
+**P1 Σ rebuild hours**: ~21-27 hr (mid-point ~24 hr)
+
+### P2 — Sprint 57.25+ (5 units; ~14-22 hr)
+
+| # | Unit | Route / Component | Score | Rebuild hr | Group | Note |
+|---|------|-------------------|-------|-----------|-------|------|
+| 1 | 7 | /overview | 60% | 3-4 | Ops Dashboards | Cosmetic micro-typography + card chrome polish |
+| 2 | 12 | /chat-v2 page-level | 75% | 2-3 | Chat-v2 | Sprint 57.21 Phase-1 baseline; typography polish only |
+| 3 | 23 | /orchestrator | 70% | 3-5 | Ops Platform | Sprint 57.19 mockup-port baseline; consult DRIFT-REPORT |
+| 4 | 24 | /subagents | 70% | 3-4 | Ops Platform | Sprint 57.19 baseline |
+| 5 | 25 | /state-inspector | 70% | 3-5 | Ops Platform | Sprint 57.19 baseline |
+
+**P2 Σ rebuild hours**: ~14-21 hr (mid-point ~17 hr)
+
+### P3 — Defer / scope-question (2 units)
+
+| # | Unit | Route / Component | Status | Note |
+|---|------|-------------------|--------|------|
+| 1 | 39 | /admin/domain-detail | scope-question | NO mockup; clarify scope OR drop from Phase 57.23+ |
+| 2 | 44 | /a11y-audit | scope-question | NO mockup; CI infra a11y already covered Sprint 57.13/14 |
+
+**P3 Σ rebuild hours**: 0 hr (deferred; scope-definition required first)
+
+### Cross-Priority Σ Totals
+
+| Priority | Unit count | Σ rebuild hr (mid-point) | Avg hr/unit |
+|----------|-----------|---------------------------|-------------|
+| **P0** | 32 | ~206 hr | ~6.4 hr |
+| **P1** | 5 | ~24 hr | ~4.8 hr |
+| **P2** | 5 | ~17 hr | ~3.4 hr |
+| **P3** | 2 | 0 hr (TBD) | n/a |
+| **Total audit** | **44** (29 ship + 13 stub/missing + 2 scope-q) | **~247 hr** | **~5.6 hr** |
+
+### Backend Coordination Cluster (Phase 58+ Stage 2)
+
+Many P0 units depend on backend epics that span multiple sprints:
+
+| Backend epic | Units depending | Estimated backend-only hr |
+|--------------|----------------|---------------------------|
+| **Cat 3 memory_op_emitted SSE** | Unit 13 + 17 (chat-v2 widgets) | 2-3 hr |
+| **Cat 12 OTel span_emitted SSE** | Unit 16 (Inspector Trace) + Unit 21 (/loop-debug) | 3-4 hr |
+| **Cat 11 subagent tree + status SSE** | Unit 18 + 46 (subagent-tree page) | 3-4 hr |
+| **Cat 9 governance 4-action variant** | Unit 14 + 19 (approvals + HITL) | 2-3 hr |
+| **Cat 9 redaction engine wire** | Unit 20 (/redaction) | 1.5 hr |
+| **Cat 12 WORM Merkle endpoints** | Unit 22 (/audit-log) | 3-4 hr |
+| **Cat 8 errors backend endpoints** | Unit 28 (/error-policy) | 3-4 hr |
+| **🔴 Cat 12 IAM Block B RBAC** | Unit 29 (/rbac) + Unit 31 (Members tab) | 4-6 hr |
+| **Cat 6 LLM adapter registry endpoints** | Unit 40 (/models) | 4-5 hr |
+| **Cat 2 tools registry endpoint** | Unit 15 + 41 (shared) | 1-1.5 hr |
+| **WorkOS multi-IdP wire** | Unit 1 + 31 SSO config | 3-4 hr |
+| **Tenant provisioning + onboarding** | Unit 32 + Sprint 56.1 coord | 2-3 hr |
+| **Stripe + Lago billing integration** | Unit 33 (/pricing) | 4-6 hr |
+| **MAF workflow adapter** | Unit 27 (/workflows) | 3-4 hr |
+
+**Backend-only Σ**: ~40-55 hr additional beyond frontend rebuild hours
+
+**Grand Σ Phase 57.23+ epic** (frontend ~247 hr + backend ~50 hr): **~297 hr** mid-point estimate
 
 ---
 
 ## Sprint 57.23+ Recommendation (Day 4)
 
-(Recommendation populated Day 4 based on priority matrix totals)
+### NEW Calibration Class Proposal: `frontend-mockup-strict-rebuild`
+
+Per `.claude/rules/sprint-workflow.md §Scope-class multiplier matrix`, the rebuild execution sprints starting Sprint 57.23+ need a NEW calibration class distinct from prior:
+
+| Existing classes (relevant) | Multiplier | Why not for mockup rebuild |
+|------------------------------|------------|---------------------------|
+| `frontend-mockup-direct-port-structural` (proposed 0.85; pending 3-data-point) | 0.85 | Token-sweep + structural-rewrite hybrid; LESS strict than 1:1 ±2px bar |
+| `frontend-mockup-direct-port-token-sweep` (proposed 0.40; pending split) | 0.40 | Mechanical token swap; doesn't capture full chrome rewrite |
+| `frontend-mockup-fidelity-audit` (NEW Sprint 57.22 baseline 0.85; this sprint) | 0.85 | Audit-only; not rebuild |
+
+**Proposed NEW class**: `frontend-mockup-strict-rebuild` with **multiplier 0.55-0.65** (HYBRID weighted blend):
+- **Backend new endpoints** (typical 30-40% of unit hours): ~0.65 (greenfield Cat work)
+- **Frontend page rewrite from mockup** (typical 50-60% of unit hours): ~0.55 (page-direct port; some structural rebuild)
+- **Tests** (typical 10-15% of unit hours): ~0.65 (test-mechanical class)
+- **Closeout** (typical 5%): ~0.80
+
+Weighted average ≈ 0.60 (mid-band of 0.55-0.65 proposal range).
+
+### First-Execution-Sprint Scope Candidate: Sprint 57.23 "Auth Page Full Rebuild Round 2"
+
+**Why Auth as first**:
+1. **6 P0 units** all in one domain (Unit 1-6); single-domain coordination reduces context-switching
+2. **AuthShell refactor** is a precondition — refactoring once unblocks all 6 pages
+3. **WorkOS multi-IdP backend wire** is independent backend epic — can run parallel; frontend ships with placeholder buttons + visible-but-disabled state
+4. **No HITL gates** — all P0 unblocked frontend changes; no IAM Block B RBAC dependencies
+5. **Smallest backend coordination overhead** (only WorkOS multi-IdP + email verify + invite + MFA endpoints — all platform_layer/identity)
+6. **Tier 1 priority per Sprint 57.18 mockup-fidelity hard constraint** — Auth is highest-traffic operator surface
+7. **Validates new calibration class** with bounded scope (6 units × ~6.4 hr avg = ~38 hr bottom-up; × 0.60 multiplier → commit ~23 hr per 5-day sprint structure)
+
+**Sprint 57.23 proposed scope**:
+- **Bottom-up est**: ~36-44 hr (Auth 6 units sum)
+- **Calibrated commit (×0.60)**: ~22-26 hr (1 sprint)
+- **Day structure**: 5 days
+  - Day 0: AuthShell refactor + 3-prong verify + WorkOS placeholder backend stubs
+  - Day 1: /auth/login + /auth/callback (real ship + tests)
+  - Day 2: /auth/register + /auth/invite (wizards + backend endpoints)
+  - Day 3: /auth/mfa + /auth/expired (MFA enrollment + redirect refactor)
+  - Day 4: Closeout (retrospective + memory + push + PR)
+- **Carryover decisions to user**:
+  - Q1: Adopt mockup oklch palette project-wide OR keep shadcn slate + document deviation (AD-Brand-Primary-Color-Decision finally)
+  - Q2: WorkOS Multi-IdP (3 SSO providers backend wire) — Phase 58 separate backend sprint OR partial wire in 57.23
+  - Q3: MFA implementation — WorkOS native vs roll-own TOTP+WebAuthn
+
+### Sprint 57.24+ Execution Order (Recommended)
+
+| Sprint | Scope | Bottom-up | Commit (×0.60) | Σ Phase status |
+|--------|-------|-----------|----------------|----------------|
+| 57.23 | Auth 6 P0 units | ~38 hr | ~23 hr | P0 6/32 closed |
+| 57.24 | Chat-v2 Phase-2 6 widgets (Unit 13-18) | ~32 hr | ~19 hr | P0 12/32 |
+| 57.25 | Governance 4 P0 (Unit 19-22) | ~32 hr | ~19 hr | P0 16/32 |
+| 57.26 | Admin /tenant-settings 6-tab (Unit 31 largest) | ~14 hr | ~8 hr (single-unit-sprint; 0.55-0.60) | P0 17/32 |
+| 57.27 | Admin /admin/tenants + onboarding + pricing (Unit 30/32/33) | ~22 hr | ~13 hr | P0 20/32 |
+| 57.28 | Ops Platform P0 4 (Unit 26/27/28/29 — incl 🔴 RBAC IAM Block B coord) | ~26 hr | ~16 hr | P0 24/32 |
+| 57.29 | Ops Dashboards remaining P0 (Unit 8/9/10 — cost/sla/memory) | ~20 hr | ~12 hr | P0 27/32 |
+| 57.30 | Misc P0 5 (Unit 40/41/45 + Bonus jit/cache) | ~33 hr | ~20 hr | P0 32/32 ✅ |
+| 57.31 | P1 sweep (5 units) + P2 polish wave 1 (Unit 7/12) | ~26 hr | ~16 hr | P0+P1 done |
+| 57.32 | P2 polish wave 2 (Unit 23/24/25 Sprint 57.19 drift) | ~11 hr | ~7 hr | P0+P1+P2 done ✅ |
+| 57.33+ | P3 scope decisions (Unit 39 + 44) + bug-fix sweep | TBD | TBD | Phase 57.23+ epic closed |
+
+**Σ Phase 57.23-57.32 commit hours**: ~153 hr across ~10 sprints (2.5 months at 1-week sprint pace).
+
+### Mockup Cleanup Carryovers (Outside Page Rebuilds)
+
+5 architecture-level carryovers identified across audit:
+1. **AD-Brand-Primary-Color-Decision** (Sprint 57.18 carryover; Unit 1 forced decision) — oklch palette vs shadcn slate
+2. **AD-Mockup-Card-Primitive-Phase58** (Unit 7+30+others reaffirmed) — custom `MockupCard` primitive with `.card-head/.card-body/.card-sub` variants
+3. **AD-Mockup-Typography-Scale-Phase58** (Unit 7 + many others) — extend `tailwind.config.ts` with 11/11.5/12/12.5/13/13.5px micro-size scale
+4. **AD-AuditLog-Route-Disambiguation-Phase58** (Unit 22) — remove top-level `/audit-log` dead stub OR redirect to nested
+5. **AD-FeatureFlags-Route-Disambiguation-Phase58** (Unit 34) — global cross-tenant vs tenant-tab-only decision
+
+### Total Phase 57.23+ Epic Estimate
+
+- **Frontend Σ rebuild**: ~247 hr (P0 ~206 + P1 ~24 + P2 ~17)
+- **Backend Σ greenfield**: ~50 hr (14 backend epics; ~3.5 hr avg)
+- **Architecture cleanup**: ~10 hr (5 cross-cutting AD)
+- **Phase 57.23-57.32 Σ commit (calibrated)**: **~153 hr across ~10 sprints**
+- **2.5 months at 1-week sprint pace, OR 5 months at 2-week sprint pace**
+
+### Phase 58 Stage 2 Coordination
+
+P0 units with backend dependencies that span Phase 58 (Stage 2 / IAM Block B / SaaS billing):
+
+| Phase 58 Stage 2 epic | Units affected | Coordinate sprint |
+|----------------------|----------------|-------------------|
+| **IAM Block B (RBAC + tenant-scoped policy)** | Unit 29 + Unit 31 Members tab | Backend pre-req Sprint 57.X (separate IAM execution) |
+| **Stripe + Lago billing** | Unit 33 /pricing + Unit 31 Quotas tab | Buy-vs-build Phase 58 epic |
+| **WorkOS multi-IdP enterprise SSO** | Unit 1 + Unit 31 SSO config | Phase 58 IAM backend |
+| **GDPR erasure + Cat 12 audit chain** | Unit 31 Danger Zone + Unit 22 /audit-log | EU CRA / SOC 2 compliance Phase 58 |
+
+**Phase 58 backend pre-req sprints (4 NEW epics)**: ~30-40 hr backend-only before frontend P0 units shippable
