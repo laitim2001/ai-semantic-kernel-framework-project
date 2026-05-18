@@ -30,6 +30,7 @@
  * Last Modified: 2026-05-18
  *
  * Modification History:
+ *   - 2026-05-18: Sprint 57.23 Day 4 — gate dev-link with import.meta.env.DEV (R8 hardening; route was already gated in App.tsx)
  *   - 2026-05-18: Sprint 57.23 US-B2 — mockup-direct rewrite (3 SSO disabled + email + Continue; extract DevLoginSection)
  *   - 2026-05-10: Sprint 57.13 US-B9 — <AuthShell> + <Card> + <Button>; drop inline styles
  *   - 2026-05-10: Sprint 57.13 US-B5 — i18n the strings (auth namespace)
@@ -148,9 +149,12 @@ export default function LoginPage() {
         </CardContent>
       </Card>
 
-      <Link to="/auth/dev" className="text-center text-[11px] text-fg-subtle hover:text-foreground">
-        {t("login.devLink")}
-      </Link>
+      {/* Sprint 57.23 Day 4 R8 hardening: gate dev-link with DEV flag (route was already gated in App.tsx; this hides the link too in prod build) */}
+      {import.meta.env.DEV && (
+        <Link to="/auth/dev" className="text-center text-[11px] text-fg-subtle hover:text-foreground">
+          {t("login.devLink")}
+        </Link>
+      )}
     </AuthShell>
   );
 }

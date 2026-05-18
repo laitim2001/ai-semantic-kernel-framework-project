@@ -339,6 +339,8 @@
 
 **Cumulative Day 0+1+2+3 actual: ~15-16 hr** (sprint commit budget ~28 hr) → **~54% of budget used; 1 day (Day 4 closeout) remains ~6-7 hr informal target**
 
+(Day 4 entry appended below — sprint closed.)
+
 **Calibration observation (preliminary, NEW class `frontend-mockup-strict-rebuild` 0.60 1st application)**:
 - Bottom-up Day 0-3 actual ~15-16 hr; against bottom-up estimate Day 0-3 ~22 hr → ratio actual/bottom-up ≈ 0.73
 - Against calibrated commit Day 0-3 ~22 × 0.60 = 13.2 hr → ratio actual/committed ≈ 1.18 (within [0.85, 1.20] band at upper edge)
@@ -358,5 +360,66 @@ All 11 V2 anti-patterns checked; no violations introduced this Day. Highlights:
 - **CC Reference**: ✅ no CC patterns lifted; mockup is canonical visual source
 - **17.md Single-source**: ✅ no new contracts added (frontend-only)
 - **11+1 範疇歸屬**: ✅ all new code lives in `frontend/`; not crossing into `agent_harness/` or `platform_layer/`
+
+---
+
+## Day 4 — 2026-05-18 (Sprint Closeout)
+
+### Today's Accomplishments
+
+**Quality gates re-verified**:
+- US-E1 i18n symmetric: `jq paths(scalars) | diff` en vs zh-TW = **0 output** ✅ (R6 mitigation closed)
+- US-E2 R8 dev-gate: production grep `auth/dev` in `dist/` → only 1 remaining hit (`/api/v1/auth/dev-login` URL inside lazy chunk; chunk never fetched in prod since route gated). Day 4 R8 hardening fix: wrap login.tsx `<Link to="/auth/dev">` with `import.meta.env.DEV` (R8 closure: route gate + backend env gate + UI gate — three-layer)
+- US-E3 Vitest full re-run: **369/369 PASS** preserved ✅ post login.tsx edit
+- US-E3 Playwright e2e: no dedicated `auth/` dir (auth via fixtures + visual snapshot); `data-testid="auth-shell"` anchor preserved on rewrite (line 45)
+- Build re-run: main bundle 329.11 kB stable (login.tsx edit was 1-line)
+
+**Methodology deviation: Playwright MCP visual pair-verify deferred to AD-Sprint-57-23-Playwright-MCP-Visual-Verify-Followup**:
+- Both `browser_navigate` and `browser_close` returned `Error: Browser is already in use for ...mcp-chrome-903abde, use --isolated`
+- Stale browser state from prior Sprint 57.22 session; cannot reset within single session
+- Closure via code-level audit (12 page-states; each impl file has `mockup-ref Lxx-yy` comments) + Sprint 57.22 baseline + visual-regression CI mechanism
+- All 12 verdicts: PARITY or COSMETIC; 0 STRUCTURAL / FUNCTIONAL
+- DRIFT-REPORT-AUTH-ROUND-2.md §Day 4 documents full rationale
+
+**Doc syncs (per REFACTOR-001 §Sprint Closeout policy)**:
+- ✅ `retrospective.md` — Q1-Q7 + Q8 NEW class calibration narrative
+- ✅ `memory/project_phase57_23_auth_page_full_rebuild_round_2.md` — quality pointer subfile
+- ✅ `memory/MEMORY.md` — +1 pointer entry (~600 char; topic + keywords)
+- ✅ `.claude/rules/sprint-workflow.md` — calibration matrix +1 row `frontend-mockup-strict-rebuild` 0.60 1st app + MHist entry
+- ✅ `CLAUDE.md` — Current Sprint row + Last Updated footer ONLY (minimal touch per REFACTOR-001)
+
+### Day 4 Actual Hours
+
+- US-E1 + US-E2 i18n diff + DEV-gate grep + R8 hardening fix: ~30 min
+- US-E3 Vitest re-run + Playwright e2e inventory: ~15 min
+- DRIFT-REPORT Day 4 code-level audit + verdicts table: ~30 min
+- retrospective.md Q1-Q8: ~30 min
+- memory subfile + MEMORY.md pointer + sprint-workflow.md row + CLAUDE.md minimal touch: ~15 min
+- **Day 4 total ~2 hr** (vs informal target ~6-7 hr; ~71% under)
+
+**Cumulative Day 0+1+2+3+4 actual: ~17-18 hr** (sprint commit budget ~28 hr)
+- **Final ratio actual/committed: ~0.61 BELOW [0.85, 1.20] band by 0.24**
+- **Final ratio actual/bottom-up: ~0.38** (bottom-up 2.6× generous)
+
+**Calibration final 1st app data point for NEW class `frontend-mockup-strict-rebuild` 0.60**:
+- KEEP 0.60 baseline per `When to adjust` 3-sprint window rule
+- If pattern recurs 2-3× → propose 0.60 → 0.40-0.45 (mechanical-class lift)
+- Tracked in `.claude/rules/sprint-workflow.md §Scope-class multiplier matrix`
+
+### 7 Carryover ADs (Phase 58+ pickup; documented in `claudedocs/1-planning/next-phase-candidates.md`)
+
+1. AD-Auth-Register-Backend-IAM-Block-B-Phase58
+2. AD-Auth-Invite-Backend-IAM-Block-B-Phase58
+3. AD-Auth-MFA-Backend-IAM-Block-C-Phase58
+4. AD-Auth-MFA-Recovery-Page-Phase58
+5. AD-Auth-Callback-Loading-UX-Phase58
+6. AD-WorkOS-Multi-IdP-Phase58
+7. AD-Sprint-57-23-Playwright-MCP-Visual-Verify-Followup
+
+### Sprint 57.23 = CLOSED ✅
+
+All 8 unit deliverables shipped + DRIFT-REPORT signed off + 7 ADs documented + memory + calibration matrix + CLAUDE.md minimal touch + retrospective complete.
+
+Branch ready for closeout commits + push + draft PR.
 
 ---
