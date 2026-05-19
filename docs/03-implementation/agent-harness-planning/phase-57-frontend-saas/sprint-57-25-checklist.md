@@ -12,45 +12,45 @@
 ## Day 0 — Plan + Checklist + 三-prong + Prong 5 + DRIFT-REPORT skeleton (2026-05-19)
 
 ### 0.1 Plan + Checklist + Branch
-- [ ] **Plan drafted** at `docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-25-plan.md`
+- [x] **Plan drafted** at `docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-25-plan.md`
   - DoD: 9-section structure mirror Sprint 57.24 v2 (Sprint Goal / Background / User Stories / Technical Spec / File Change List / Acceptance Criteria / Deliverables / Risks / Workload + Day plan)
   - Verify: file exists; sections present
-- [ ] **Checklist drafted** at `docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-25-checklist.md`
+- [x] **Checklist drafted** at `docs/03-implementation/agent-harness-planning/phase-57-frontend-saas/sprint-57-25-checklist.md`
   - DoD: Day 0-3 structure; per-task DoD + Verify command; sub-bullets 3-6 per task
   - Verify: this file exists
-- [ ] **Branch creation** from main `345f74a3`
+- [x] **Branch creation** from main `345f74a3`
   - DoD: `git checkout -b feature/sprint-57-25-sla-dashboard-rebuild`
   - Verify: `git branch --show-current` → `feature/sprint-57-25-sla-dashboard-rebuild`
-- [ ] **DRIFT-REPORT skeleton** at `claudedocs/4-changes/sprint-57-25-sla-dashboard-rebuild/DRIFT-REPORT.md`
+- [x] **DRIFT-REPORT skeleton** at `claudedocs/4-changes/sprint-57-25-sla-dashboard-rebuild/DRIFT-REPORT.md`
   - DoD: file with mockup ref `page-admin.jsx:31-199` resolution + 6-widget-group table skeleton
   - Verify: file exists
-- [ ] **progress.md Day 0** at `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-25/progress.md`
+- [x] **progress.md Day 0** at `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-25/progress.md`
   - DoD: Day 0 entry with 三-prong + Prong 5 findings + DRIFT-REPORT skeleton ref
   - Verify: file exists
 
 ### 0.2 Day 0 三-prong (Prong 1 path + Prong 2 content + Prong 4 test selector)
-- [ ] **Prong 1 Path verify**: Sprint 57.24 v2 primitives + production SLA files exist
+- [x] **Prong 1 Path verify**: Sprint 57.24 v2 primitives + production SLA files exist
   - DoD: 7 primitives (`components/charts/{Spark,StatCard,AreaChart,BarTrack}.tsx` + `components/ui/{CardShell,PageHead,BackendGapBanner}.tsx`) ✅ confirmed present
   - DoD: 3 production SLA files (`pages/sla-dashboard/index.tsx` + `features/sla-dashboard/components/{SLAOverview,SLAMetricsCard}.tsx`) ✅ confirmed present
   - Verify: `Glob("frontend/src/components/{charts,ui}/*.tsx")` + `Glob("frontend/src/features/sla-dashboard/**/*.tsx")`
-- [ ] **Prong 2 Content verify**: useSLAReport response shape vs mockup field semantic
+- [x] **Prong 2 Content verify**: useSLAReport response shape vs mockup field semantic
   - DoD: D-PRE-2 catalogued — useSLAReport returns `availability_pct` + `api_p99_ms` + `loop_simple_p99_ms` + `loop_medium_p99_ms` + `loop_complex_p99_ms` + `hitl_queue_notif_p99_ms` (only `_p99_*` no `_p50_*` no `_p95_*` no `error_budget`); mockup expects p50/p95/p99 split + error_budget separately
   - Implication: 3 of 4 stat cards + LatencyChart 3-series fully fixture-driven + AP-2 banner (real backend = `api_p99_ms` → p99 stat card only)
   - Verify: `Grep("availability_pct|p99_ms", frontend/src/features/sla-dashboard/hooks/useSLAReport.ts)` + read hook return type
-- [ ] **Prong 4 Test selector verify**: existing test files + visual-regression snapshot routes
+- [x] **Prong 4 Test selector verify**: existing test files + visual-regression snapshot routes
   - DoD: D-PRE-3 catalogued — `SLAOverview.test.tsx` exists; `SLAMetricsCard.test.tsx` exists; `frontend/tests/e2e/sla*` does NOT exist (different from cost-dashboard which had e2e); visual-regression.spec.ts 6-route list — check if `/sla-dashboard` already in
   - Verify: `Glob("frontend/src/features/sla-dashboard/components/__tests__/*.test.tsx")` + `Grep("sla-dashboard", frontend/tests/visual/visual-regression.spec.ts)`
 
 ### 0.3 Day 0 Prong 5 audit cross-ref (per AD #38)
-- [ ] **Prong 5 audit cross-ref**: Sprint 57.22 AUDIT-REPORT-COMPREHENSIVE.md classification for sla-dashboard
+- [x] **Prong 5 audit cross-ref**: Sprint 57.22 AUDIT-REPORT-COMPREHENSIVE.md classification for sla-dashboard
   - DoD: confirmed Unit 9 = P0 full rebuild (same FUNCTIONAL pattern as Unit 8 cost-dashboard); 15% mockup-fidelity baseline; 4-5 hr audit estimate aligned with this plan's ~5.7 hr bottom-up
   - Verify: `grep -B2 -A5 "Unit 9.*sla-dashboard" claudedocs/4-changes/sprint-57-22-mockup-fidelity-audit/AUDIT-REPORT-COMPREHENSIVE.md`
-- [ ] **No Prong 5 conflict** with #32 carryover spec
+- [x] **No Prong 5 conflict** with #32 carryover spec
   - DoD: #32 spec scope (6 widget groups; reuses 7 primitives; 3rd app data point) aligns with audit P0 finding + Sprint 57.24 v2 retro Q4 carryover
   - Implication: rebuild scope = full strict; NO Tier 1 cosmetic-retrofit miscarriage like Sprint 57.24 v1
 
 ### 0.4 Day 0 commit
-- [ ] **Day 0 commit** with plan + checklist + Day 0 progress + DRIFT-REPORT skeleton
+- [x] **Day 0 commit** with plan + checklist + Day 0 progress + DRIFT-REPORT skeleton — commit `70890f4d` (4 files; 942 insertions)
   - Commit message: `chore(sprint-57-25, Day 0): plan + checklist + Day 0 三-prong + Prong 5 + DRIFT-REPORT skeleton`
   - DoD: `git status` clean post-commit; commit hash recorded in progress.md
   - Verify: `git log --oneline -1`
@@ -60,22 +60,22 @@
 ## Day 1 — Group B (page-head + 4-stat + LatencyChart) (2026-05-20)
 
 ### 1.1 US-B1 page-head + TimeRangeTabs + Refresh + Export stubs
-- [ ] **`<TimeRangeTabs>` component** at `frontend/src/features/sla-dashboard/components/TimeRangeTabs.tsx` (~50 lines)
+- [x] **`<TimeRangeTabs>` component** at `frontend/src/features/sla-dashboard/components/TimeRangeTabs.tsx` (~50 lines)
   - Props: NONE (consumes local React useState; 4 ranges `1h | 24h | 7d | 30d`; default "24h")
   - DoD: visual matches mockup `page-admin.jsx:42-48` (inline-flex rounded border group; active tab has bg-bg-2 + text-fg; inactive has text-fg-muted + hover); role="tablist" + role="tab" + aria-selected for a11y; data-testid="sla-range-tab-{1h|24h|7d|30d}"
   - i18n: `sla.range.{label, 1h, 24h, 7d, 30d}` ✅ EN + zh-TW parity
   - Vitest: `tests/unit/sla-dashboard/TimeRangeTabs.test.tsx` (~3 cases: 4 tabs render / 24h active default / click changes active)
-- [ ] **`<RefreshButton>` + `<ExportButton>` stub buttons** (small ~25 lines each OR inline in SLAOverview if not reused)
-  - DoD: Refresh button: outline variant; icon refresh; onClick=`() => void refetch()`; disabled when isFetching; matches mockup `page-admin.jsx:49`
-  - DoD: Export button: outline variant; icon download; disabled + title tooltip "Export pending Phase 58+" per AP-2 honesty
-  - i18n: `sla.action.{refresh, export}` + `sla.action.exportPending`
-- [ ] **`<PageHead>` consumption in SLAOverview** (Sprint 57.24 v2 primitive REUSED unchanged)
+- [x] **Refresh + Export buttons inline in SLAOverview** (no separate components; per checklist "OR inline" path; shadcn Button outline variant)
+  - DoD: Refresh button onClick=`() => void refetch()`; disabled when `isFetching || !tenantId`; matches mockup `page-admin.jsx:49`
+  - DoD: Export button disabled + title tooltip "Export pending Phase 58+" per AP-2 honesty
+  - i18n: `sla.action.{refresh, export, exportPending}` ✅ EN + zh-TW parity
+- [x] **`<PageHead>` consumption in SLAOverview** (Sprint 57.24 v2 primitive REUSED unchanged)
   - DoD: Page title "SLA Dashboard" + subtitle "Range 12 · Observability · p50 / p95 / p99 latency + error budget" + routePath="/sla-dashboard" + actions={TimeRangeTabs + RefreshButton + ExportButton}
   - i18n: `sla.pageTitle` / `sla.pageSub` ✅ EN + zh-TW parity
   - Verify: page-head 1440×900 matches mockup `page-admin.jsx:33-52`
 
 ### 1.2 US-B2 4-stat sparkline grid (StatCard + Spark reused)
-- [ ] **4-stat sparkline grid** in SLAOverview using Sprint 57.24 v2 `<StatCard>` + `<Spark>` primitives REUSED unchanged
+- [x] **4-stat sparkline grid** in SLAOverview using Sprint 57.24 v2 `<StatCard>` + `<Spark>` primitives REUSED unchanged
   - DoD: 4 StatCard instances in `grid grid-cols-4 gap-3` + `data-testid="sla-stat-grid"`:
     - p50 latency: fixture "284" unit="ms" delta="-18ms" deltaDir="up" + Spark with primary tone
     - p95 latency: fixture "1.84" unit="s" delta="-180ms" deltaDir="up" + Spark with info tone
@@ -83,30 +83,28 @@
     - Error budget: fixture "92.4" unit="%" delta="-1.2pp" deltaDir="down" + Spark with success tone
   - DoD: 3 of 4 cards explicitly fixture-driven per D-PRE-2 (useSLAReport doesn't expose p50/p95/error_budget); AP-2 honest — these cards don't get individual BackendGapBanner because the entire dashboard's missing-fields are covered by LatencyChart 24h banner
   - i18n: `sla.stat.{p50, p95, p99, errorBudget}` ✅ EN + zh-TW parity
-- [ ] **Fixture file** `frontend/src/features/sla-dashboard/__fixtures__/statSparklines.ts`
-  - DoD: 4 spark arrays (sparkP50 / sparkP95 / sparkP99 / sparkErrorBudget) mirroring mockup `page-admin.jsx:55-58` demo values
+- [x] **Fixture file** `frontend/src/features/sla-dashboard/__fixtures__/statSparklines.ts`
+  - DoD: 4 spark arrays (SPARK_P50 / SPARK_P95 / SPARK_P99 / SPARK_ERROR_BUDGET) mirroring mockup `page-admin.jsx:55-58` demo values
 
 ### 1.3 US-B3 LatencyChart NEW (feature-scoped; Karpathy §2 inline)
-- [ ] **`<LatencyChart>` component** at `frontend/src/features/sla-dashboard/components/LatencyChart.tsx` (~85 lines mockup-direct port of `page-admin.jsx:157-198`)
+- [x] **`<LatencyChart>` component** at `frontend/src/features/sla-dashboard/components/LatencyChart.tsx` (~110 lines mockup-direct port of `page-admin.jsx:157-198`)
   - Props: NONE (consumes inline fixture from `__fixtures__/latencyChart24h.ts`)
   - DoD: pure SVG; 3 series (p50 / p95 / p99); 48 time points; viewBox 760×220; pad 30; preserveAspectRatio="none"; SVG height attribute 220 (no inline style per STYLE.md §1)
   - DoD: 3 horizontal grid lines at 25/50/75%; x labels every 6h (-23h / -17h / -11h / -5h / -0h); y labels 4 ticks (0/0.25/0.5/0.75 normalized to max)
   - DoD: stroke widths p50=1.8 / p95=1.4 / p99=1.4 opacity=0.9; colors `var(--primary)` / `var(--info)` / `var(--warning)` per mockup
   - DoD: empty fixture returns null
   - data-testid="sla-latency-chart" for test
-- [ ] **`<CardShell>` consumption** for LatencyChart wrapper (Sprint 57.24 v2 primitive REUSED unchanged)
+- [x] **`<CardShell>` consumption** for LatencyChart wrapper (Sprint 57.24 v2 primitive REUSED unchanged)
   - DoD: title `t("sla.latencyChart.title")` + subtitle `t("sla.latencyChart.subtitle")` + actions={kbar with 3 dot badges p50 (primary) / p95 (info) / p99 (warning)} matching mockup `page-admin.jsx:63-67`
   - i18n: `sla.latencyChart.{title, subtitle, badge.p50, badge.p95, badge.p99}` ✅ EN + zh-TW parity
-- [ ] **`<BackendGapBanner>` rendered** below LatencyChart (Sprint 57.24 v2 primitive REUSED unchanged)
+- [x] **`<BackendGapBanner>` rendered** below LatencyChart (Sprint 57.24 v2 primitive REUSED unchanged)
   - DoD: `reason={t("sla.banner.latencyChart24h")}` declaring backend time-series aggregation endpoint pending Phase 58+; 1st of 3 banner instances this sprint
-- [ ] **Fixture file** `frontend/src/features/sla-dashboard/__fixtures__/latencyChart24h.ts`
-  - DoD: 48-element array of `{p50, p95, p99}` objects mockup-faithful (use mockup `page-admin.jsx:159-167` algorithmic generation OR hardcoded mockup-equivalent values)
-- [ ] **Vitest spec** `tests/unit/sla-dashboard/LatencyChart.test.tsx` (~4 cases: svg renders / 3 series paths present / axis labels x-tick count 5 + y-tick count 4 / empty fixture edge returns null)
+- [x] **Fixture file** `frontend/src/features/sla-dashboard/__fixtures__/latencyChart24h.ts`
+  - DoD: 48-element array of `{p50, p95, p99}` objects mockup-faithful (seededNoise-based deterministic per mockup `page-admin.jsx:159-167` algorithm)
+- [x] **Vitest spec** `tests/unit/sla-dashboard/LatencyChart.test.tsx` (5 cases: svg + 3 series paths / 5 x-tick / 4 y-tick / stroke-width hierarchy 1.8 vs 1.4 / p99 opacity 0.9)
 
 ### 1.4 Day 1 Playwright MCP retry + commit
-- [ ] **Playwright MCP `browser_close` reset attempt** (post Group B implementation; AD #37 4th-consecutive blocker watch)
-  - If success: capture 1440×900 mockup + production pair for §1 + §2 + §3 widgets
-  - If still stuck: log Day 1 finding + code-level diff substitute; if 4th-consecutive blocker → strongly escalate AD #37
+- 🚧 **Playwright MCP `browser_close` reset attempt** deferred to Day 3 per Q4 user alignment + AD #37 4th-consecutive blocker watch policy; code-level audit substitute documented in progress.md Day 1 §Mockup-fidelity audit
 - [ ] **Day 1 commit** with Group B work
   - Commit message: `feat(sla-dashboard, sprint-57-25, Day 1, Group B): page-head + TimeRangeTabs + 4-stat sparkline + LatencyChart (NEW feature-scoped)`
   - DoD: `git status` clean post-commit

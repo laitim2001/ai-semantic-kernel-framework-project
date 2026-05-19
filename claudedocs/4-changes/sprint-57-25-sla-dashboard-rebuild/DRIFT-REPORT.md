@@ -67,7 +67,34 @@
 
 ---
 
-## Day 1 — pending (US-B1 + US-B2 + US-B3 verdicts)
+## Day 1 — 2026-05-19 (US-B1 + US-B2 + US-B3 SHIPPED)
+
+### Coverage matrix update (3 of 6 widget groups shipped)
+
+| # | Mockup widget group | Production state | Verdict (Day 1) |
+|---|---------------------|------------------|-----------------|
+| 1 | page-head + TimeRangeTabs + Refresh + Export | ✅ shipped (PageHead reuse + TimeRangeTabs NEW + Refresh wired + Export stub) | **PARITY (code-level)** |
+| 2 | 4-stat sparkline grid | ✅ shipped (StatCard + Spark reused × 4) | **PARITY (code-level; 3 of 4 fixture per D-PRE-2)** |
+| 3 | 24h LatencyChart 3-series | ✅ shipped (NEW feature-scoped + CardShell + BackendGapBanner) | **PARITY (code-level; fixture per D-PRE-2; banner present)** |
+| 4 | 5-row SLO status card | ⏳ pending Day 2 | n/a |
+| 5 | Top slow operations table | ⏳ pending Day 2 | n/a |
+| 6 | Error rate by service | ⏳ pending Day 2 | n/a |
+
+### Cross-references
+
+- `progress.md` Day 1 §Mockup-fidelity audit (line-by-line code vs mockup `page-admin.jsx:33-198`)
+- `LatencyChart.test.tsx` (5 cases verify SVG path count + tick count + stroke hierarchy + opacity)
+- `TimeRangeTabs.test.tsx` (4 cases verify 4 tabs render + 24h active default + click change + role tablist)
+
+### Day 1 deliverables (per Plan §Acceptance §1-§5)
+
+| AC | Status |
+|----|--------|
+| §1 6 widget groups at 1440×900 | 3 of 6 shipped Day 1; remaining 3 Day 2 |
+| §2 Reuse 7 Sprint 57.24 v2 primitives | ✅ PageHead + StatCard + Spark + CardShell + BackendGapBanner used Day 1; AreaChart not used (mockup multi-line ≠ single-area); BarTrack pending Day 2 |
+| §3 Real backend data where applicable | ✅ `useSLAReport.api_p99_ms` → p99 stat; remaining fields fixture per D-PRE-2 |
+| §4 BackendGapBanner instances | 1 of 3 expected shipped (LatencyChart 24h); 2 pending Day 2 (cross-operation p99 + per-service error rate) |
+| §5 TimeRangeTabs visual-only + MonthPicker auxiliary | ✅ both wired per Q1+Q2 user alignment |
 
 ## Day 2 — pending (US-C1 + US-C2 + US-C3 verdicts)
 

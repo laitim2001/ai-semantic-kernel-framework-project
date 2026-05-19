@@ -405,5 +405,40 @@
     "inspector": {
       "comingSoon": "Inspector 內容於 Sprint 57.21 Day 4（Turn 分頁）與 Sprint 57.22+（Trace / Memory / Tree 分頁）落地。"
     }
+  },
+  "sla": {
+    "pageTitle": "SLA 儀表板",
+    "pageSub": "Range 12 · 可觀測性 · p50 / p95 / p99 延遲 + 錯誤預算",
+    "range": {
+      "label": "時間區間",
+      "1h": "1 小時",
+      "24h": "24 小時",
+      "7d": "7 天",
+      "30d": "30 天"
+    },
+    "action": {
+      "refresh": "重新整理",
+      "export": "匯出",
+      "exportPending": "匯出功能於 Phase 58+ 上線（AD-SLA-Dashboard-Backend-Extensions）"
+    },
+    "stat": {
+      "p50": "p50 延遲",
+      "p95": "p95 延遲",
+      "p99": "p99 延遲",
+      "errorBudget": "錯誤預算"
+    },
+    "latencyChart": {
+      "title": "延遲分布",
+      "subtitle": "24 小時 · 所有 agent · p50 / p95 / p99",
+      "badge": {
+        "p50": "p50",
+        "p95": "p95",
+        "p99": "p99"
+      }
+    },
+    "monthPickerAuxiliary": "保留 MonthPicker 為輔助控制 — 時間區間切換目前僅作視覺呈現",
+    "banner": {
+      "latencyChart24h": "24 小時時間序列聚合 API 於 Phase 58+ 上線（AD-SLA-Dashboard-Backend-Extensions）；目前圖表展示為示範資料。"
+    }
   }
 }

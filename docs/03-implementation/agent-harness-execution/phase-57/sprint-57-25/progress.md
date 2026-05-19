@@ -112,7 +112,88 @@ frontend-mockup-strict-rebuild class history:
 
 ---
 
-## Day 1 — pending
+## Day 1 — 2026-05-19
+
+### Group B: page-head + 4-stat + LatencyChart (US-B1+B2+B3)
+
+**Commit**: pending Day 1 closeout
+
+#### Activities
+
+1. ✅ Read 7 Sprint 57.24 v2 primitives + useSLAReport + types + i18n cost.* pattern (~10 min)
+2. ✅ Create fixtures: `statSparklines.ts` (4 spark arrays mockup-faithful) + `latencyChart24h.ts` (48 deterministic seeded-noise data points)
+3. ✅ Create `TimeRangeTabs.tsx` feature-scoped (~50 lines; local React useState; default 24h active; role=tablist a11y; per Q2 visual-only)
+4. ✅ Create `LatencyChart.tsx` feature-scoped (~110 lines incl axis labels; 3-series multi-line SVG; per Karpathy §2 inline NOT extracted)
+5. ✅ Add 18 NEW i18n keys × 2 locales (`sla.pageTitle` / `sla.pageSub` / `sla.range.{label,1h,24h,7d,30d}` / `sla.action.{refresh,export,exportPending}` / `sla.stat.{p50,p95,p99,errorBudget}` / `sla.latencyChart.{title,subtitle,badge.{p50,p95,p99}}` / `sla.monthPickerAuxiliary` / `sla.banner.latencyChart24h`)
+6. ✅ Rewrite `SLAOverview.tsx` — page-head (US-B1) + 4-stat grid (US-B2) + LatencyChart card with kbar badges + BackendGapBanner (US-B3); legacy 6-SLAMetricsCard + violations Badge kept transitionally at bottom for Day 2 replacement; MonthPicker preserved as auxiliary per Q1
+7. ✅ Create Vitest specs: `TimeRangeTabs.test.tsx` (4 cases: 4 tabs render / 24h active default / click change active / role tablist a11y) + `LatencyChart.test.tsx` (5 cases: SVG 3 series paths / 5 x-tick / 4 y-tick / stroke width hierarchy / p99 opacity 0.9)
+8. ✅ Quality gates:
+   - **tsc 0 errors** (`npx tsc --noEmit`)
+   - **lint silent** (`npm run lint --max-warnings 0`)
+   - **Vitest 421/421 PASS** (+9 over Sprint 57.24 v2 baseline 412; 85 files; 0 regression; the AuthShell "kaboom" trace is an existing intentional error-boundary test)
+   - **build 3.57s green**; main bundle **333.36 kB** (+1.40 KB delta from 331.96 baseline; well within +20 KB Plan §AC §8 target)
+
+#### Mockup-fidelity audit (code-level; Playwright MCP retry deferred to Day 3 per Q4)
+
+§1 page-head:
+- ✅ PageHead reused unchanged with `routePath="/sla-dashboard"` per mockup line 36-40
+- ✅ TimeRangeTabs visual matches mockup `page-admin.jsx:42-48` (4-button group; default 24h active; outline-vs-ghost vocab translated to Tailwind active=`bg-bg-2` + inactive=hover)
+- ✅ Refresh button wired to `refetch()`; disabled when `isFetching || !tenantId`
+- ✅ Export button disabled stub + `title` tooltip per AP-2
+
+§2 4-stat grid:
+- ✅ p50 (284ms fixture / -18ms up / primary) per mockup line 55
+- ✅ p95 (1.84s fixture / -180ms up / info) per mockup line 56
+- ✅ p99 derives from `data.api_p99_ms / 1000` when real; fallback fixture "4.21s" / +0.30s down / warning per mockup line 57
+- ✅ Error budget (92.4% fixture / -1.2pp down / success) per mockup line 58
+- ✅ `grid grid-cols-2 lg:grid-cols-4 gap-3` responsive
+
+§3 LatencyChart:
+- ✅ 3 series (p50 primary stroke 1.8 / p95 info 1.4 / p99 warning 1.4 opacity 0.9) per mockup line 173-194
+- ✅ 5 x-axis ticks at i=0,12,24,36,47 (-23h / -17h / -11h / -5h / -0h labels) per mockup line 180-184
+- ✅ 4 y-axis ticks at 0/0.25/0.5/0.75 normalized to max per mockup line 185-189
+- ✅ 3 horizontal grid lines at 25/50/75% per mockup line 175-179
+- ✅ CardShell title + subtitle + kbar action slot (3 dot badges) per mockup line 62-67
+- ✅ BackendGapBanner below per AP-2; 1st of 3 expected banners this sprint
+
+#### Verdict (per-widget code-level audit)
+
+| Widget | Mockup ref | Status | Verdict |
+|--------|-----------|--------|---------|
+| §1 page-head | `:33-52` | shipped Day 1 | PARITY (code-level) |
+| §2 4-stat grid | `:54-59` | shipped Day 1 | PARITY (code-level; 3 of 4 fixture per D-PRE-2) |
+| §3 LatencyChart 24h | `:61-70 + :157-198` | shipped Day 1 | PARITY (code-level; fixture per D-PRE-2; banner present) |
+| §4 SLO status | `:72-99` | pending Day 2 | n/a |
+| §5 Top slow ops | `:104-129` | pending Day 2 | n/a |
+| §6 Error rate by service | `:131-152` | pending Day 2 | n/a |
+
+#### Files NEW / MODIFIED Day 1
+
+| File | LoC | Type |
+|------|----:|------|
+| `frontend/src/features/sla-dashboard/__fixtures__/statSparklines.ts` | 22 | NEW |
+| `frontend/src/features/sla-dashboard/__fixtures__/latencyChart24h.ts` | 51 | NEW |
+| `frontend/src/features/sla-dashboard/components/TimeRangeTabs.tsx` | 55 | NEW |
+| `frontend/src/features/sla-dashboard/components/LatencyChart.tsx` | 110 | NEW |
+| `frontend/src/features/sla-dashboard/components/SLAOverview.tsx` | ~230 (was 133) | REWRITE |
+| `frontend/src/i18n/locales/en/common.json` | +35 | MODIFIED (sla.* block 18 keys) |
+| `frontend/src/i18n/locales/zh-TW/common.json` | +35 | MODIFIED (sla.* block 18 keys mirror) |
+| `frontend/tests/unit/sla-dashboard/TimeRangeTabs.test.tsx` | 48 | NEW |
+| `frontend/tests/unit/sla-dashboard/LatencyChart.test.tsx` | 60 | NEW |
+
+#### Quality gate summary
+
+| Gate | Result |
+|------|--------|
+| tsc 0 errors | ✅ |
+| ESLint --max-warnings 0 | ✅ silent |
+| Vitest | ✅ 421/421 (+9; 0 regression) |
+| Build green | ✅ 3.57s |
+| Main bundle delta | ✅ +1.40 KB (target ≤+20) |
+| Backend changes | 0 (frontend-only sprint per V2 約束 1) |
+| LLM SDK leak | 0 (frontend-only) |
+| i18n EN+zhTW parity | ✅ 18 keys × 2 locales |
+| Playwright MCP pair-verify | 🚧 deferred Day 3 per Q4 (4th-consecutive blocker watch) |
 
 ## Day 2 — pending
 
