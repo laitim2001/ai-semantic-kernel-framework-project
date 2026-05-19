@@ -1,19 +1,29 @@
 /**
  * File: frontend/tests/e2e/sla-dashboard/sla_dashboard.spec.ts
- * Purpose: Playwright e2e — admin loads /sla-dashboard with mocked 56.3 sla-report endpoint.
+ * Purpose: Playwright e2e — admin loads /sla-dashboard with mocked sla-report endpoint.
  * Category: Frontend / e2e / sla-dashboard
- * Scope: Phase 57 / Sprint 57.1 US-5
+ * Scope: Phase 57 / Sprint 57.1 US-5 → Sprint 57.25 (mockup-fidelity rebuild adapt)
  *
  * Description:
- *   Validates the SLA Dashboard (57.1 US-3):
+ *   Validates the SLA Dashboard post-Sprint-57.25 6-widget-group rebuild:
  *     1. Happy path: admin loads /sla-dashboard?tenant_id=... → fetches
- *        56.3 sla-report → renders MonthPicker + violations badge + 6 metric cards.
+ *        56.3 sla-report → renders 6 mockup widget groups (page-head /
+ *        4-stat grid / LatencyChart / SLO status / slow ops / error rate)
+ *        + MonthPicker auxiliary preserved per Sprint 57.25 Q1 alignment.
  *     2. Error path: backend 500 → error message + retry button → mock 200
  *        → click retry → success.
  *
  *   Uses page.route() browser-layer mock per D19 (mirrors cost_dashboard.spec.ts).
  *
  * Created: 2026-05-06 (Sprint 57.1 Day 4)
+ * Last Modified: 2026-05-19
+ *
+ * Modification History (newest-first):
+ *   - 2026-05-19: Sprint 57.25 Day 3 — adapt selectors for 6-widget rebuild
+ *     (violations-badge + 6 sla-card-* DELETED with Karpathy §3 orphan
+ *     SLAMetricsCard removal; replaced by sla-stat-grid + sla-latency-chart
+ *     + sla-slo-card + sla-slow-ops-table + sla-error-rate-card visibility)
+ *   - 2026-05-06: Initial creation (Sprint 57.1 Day 4)
  */
 
 import { expect, test } from "@playwright/test";
@@ -35,13 +45,13 @@ const mockSLAReport = {
   violations_count: 0,
 };
 
-test.describe("Sprint 57.1 US-5 — SLA Dashboard e2e", () => {
+test.describe("Sprint 57.1 US-5 → 57.25 — SLA Dashboard e2e (mockup-fidelity rebuild)", () => {
   // Sprint 57.13 US-A2: the page is <RequireAuth>-gated + reads authStore.tenant.id.
   test.beforeEach(async ({ page }) => {
     await seedAuthJwt(page, { tenantId: TENANT_ID });
   });
 
-  test("happy path: admin loads dashboard, sees violations badge + 6 metric cards", async ({ page }) => {
+  test("happy path: admin loads dashboard, sees 6 mockup widget groups + MonthPicker auxiliary", async ({ page }) => {
     await page.route(SLA_ENDPOINT, async (route) => {
       await route.fulfill({
         status: 200,
@@ -52,20 +62,31 @@ test.describe("Sprint 57.1 US-5 — SLA Dashboard e2e", () => {
 
     await page.goto(`/sla-dashboard?tenant_id=${TENANT_ID}`);
 
+    // AppShellV2 pageTitle="SLA Dashboard" renders h1 chrome heading
     await expect(page.getByRole("heading", { name: "SLA Dashboard" })).toBeVisible();
+
+    // MonthPicker preserved as auxiliary per Sprint 57.25 Q1 alignment
     await expect(page.getByLabel("Select month")).toBeVisible();
-    await expect(page.getByTestId("violations-badge")).toContainText("Violations: 0");
 
-    // 6 metric cards via data-testid
-    await expect(page.getByTestId("sla-card-availability")).toBeVisible();
-    await expect(page.getByTestId("sla-card-api-p99")).toBeVisible();
-    await expect(page.getByTestId("sla-card-loop-simple-p99")).toBeVisible();
-    await expect(page.getByTestId("sla-card-loop-medium-p99")).toBeVisible();
-    await expect(page.getByTestId("sla-card-loop-complex-p99")).toBeVisible();
-    await expect(page.getByTestId("sla-card-hitl-queue-notif-p99")).toBeVisible();
+    // §1 page-head NEW Sprint 57.25 widgets
+    await expect(page.getByTestId("sla-range-tab-24h")).toBeVisible();
+    await expect(page.getByTestId("sla-action-refresh")).toBeVisible();
+    await expect(page.getByTestId("sla-action-export")).toBeVisible();
 
-    // Availability is 99.7% which passes Standard 99.5% threshold
-    await expect(page.getByTestId("sla-card-availability")).toContainText("PASS");
+    // §2 4-stat sparkline grid (Sprint 57.25 Day 1 US-B2)
+    await expect(page.getByTestId("sla-stat-grid")).toBeVisible();
+
+    // §3 24h LatencyChart 3-series (Sprint 57.25 Day 1 US-B3)
+    await expect(page.getByTestId("sla-latency-chart")).toBeVisible();
+
+    // §4 SLO status card (Sprint 57.25 Day 2 US-C1)
+    await expect(page.getByTestId("sla-slo-card")).toBeVisible();
+
+    // §5 Top slow operations table (Sprint 57.25 Day 2 US-C2)
+    await expect(page.getByTestId("sla-slow-ops-table")).toBeVisible();
+
+    // §6 Error rate by service card (Sprint 57.25 Day 2 US-C3)
+    await expect(page.getByTestId("sla-error-rate-card")).toBeVisible();
   });
 
   test("error path: backend 500 shows retry; mock 200 on retry recovers", async ({ page }) => {
@@ -97,6 +118,12 @@ test.describe("Sprint 57.1 US-5 — SLA Dashboard e2e", () => {
 
     retryClicked = true;
     await retryButton.click();
-    await expect(page.getByTestId("violations-badge")).toContainText("Violations: 0");
+
+    // Post-retry: ErrorRetry banner gone; 6 widget groups remain visible
+    // (the 4-stat grid / chart / SLO / slow ops / error rate render
+    // unconditionally outside the `error &&` guard per Sprint 57.25 layout).
+    await expect(page.getByText("Failed to load data")).not.toBeVisible();
+    await expect(page.getByTestId("sla-stat-grid")).toBeVisible();
+    await expect(page.getByTestId("sla-latency-chart")).toBeVisible();
   });
 });
