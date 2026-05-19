@@ -195,6 +195,95 @@ frontend-mockup-strict-rebuild class history:
 | i18n EN+zhTW parity | ✅ 18 keys × 2 locales |
 | Playwright MCP pair-verify | 🚧 deferred Day 3 per Q4 (4th-consecutive blocker watch) |
 
-## Day 2 — pending
+## Day 2 — 2026-05-19
+
+### Group C: SLO status + slow ops + error rate (US-C1+C2+C3) + Karpathy §3 orphan delete
+
+**Commit**: pending Day 2 closeout
+
+#### Activities
+
+1. ✅ Create `__fixtures__/slowOps.ts` (6 mockup-faithful rows × {name, kind, p50, p95, p99, calls}) + `__fixtures__/errorRateByService.ts` (6 rows × {name, rate})
+2. ✅ Create `SLOStatusCard.tsx` (~120 lines feature-scoped) — 5 SLO rows; reuses BarTrack + CardShell; consumes data prop with loop_simple_p99_ms proxy for Loop p95 SLO; 4 of 5 SLO rows fixture per D-PRE-2 (no per-SLO banner; functional algorithm even when fixture input)
+3. ✅ Create `TopSlowOpsTable.tsx` (~135 lines feature-scoped) — 6-row table; Kind Badge tone palette (tool/loop/subagent/verify/memory); p99 warning color when > 3000ms; BackendGapBanner declaring cross-operation p99 gap (2nd of 3 banners)
+4. ✅ Create `ErrorRateByServiceCard.tsx` (~80 lines feature-scoped) — 6 rows × service + rate% + BarTrack; warning tone when rate > 0.5; BarTrack pct = rate × 50 per mockup; BackendGapBanner declaring per-service error rate gap (3rd of 3 banners)
+5. ✅ Add 20 NEW i18n keys × 2 locales (`sla.slo.{title,subtitle,loopP95,toolSuccess,hitlResponse,subagentDepth,costPerRun,budgetUsed}` / `sla.slowOps.{title,subtitle,col.{operation,kind,p50,p95,p99,calls}}` / `sla.errorRate.{title,subtitle}` / `sla.banner.{crossOperationP99,perServiceErrorRate}`)
+6. ✅ Rewrite `SLAOverview.tsx` — assemble 6 widget groups in mockup-faithful grid: `grid-cols-[1fr_360px]` (§3 LatencyChart + §4 SLOStatusCard) + `grid-cols-2` (§5 TopSlowOps + §6 ErrorRate); DELETE legacy 6×SLAMetricsCard block + violations Badge + SLA threshold constants (moved into SLOStatusCard internal logic)
+7. ✅ **Karpathy §3 orphan delete**: `SLAMetricsCard.tsx` + `SLAMetricsCard.test.tsx` deleted; verified `grep -rn "SLAMetricsCard" src tests` returns 0 production importer (only 2 docstring/MHist refs in SLAOverview.tsx for audit trail per file-header-convention.md)
+8. ✅ Create Vitest specs: `SLOStatusCard.test.tsx` (5 cases) + `TopSlowOpsTable.test.tsx` (5 cases) + `ErrorRateByServiceCard.test.tsx` (4 cases)
+9. ✅ Quality gates:
+   - **tsc 0 errors**
+   - **lint silent** (`npm run lint --max-warnings 0`)
+   - **Vitest 430/430 PASS** (+9 net from 421 Day 1; 14 NEW cases - 5 deleted SLAMetricsCard cases; 87 files; 0 regression)
+   - **build 3.42s green**; main bundle **334.70 kB** (+1.34 KB Day 2 delta; +2.74 KB cumulative vs 331.96 baseline; well within +20 KB Plan §AC §8 target)
+
+#### Mockup-fidelity audit (code-level)
+
+§4 SLO status card:
+- ✅ 5 SLO rows per mockup `:74-79` (Loop p95 / Tool success / HITL response / Subagent depth / Cost per run)
+- ✅ Dot indicator color: success when ok / danger when failing (Cost / run 0.052 > 0.05 → failing per mockup demo data)
+- ✅ current / target display with mono tnum + danger color on failing
+- ✅ BarTrack budget-used % with success/danger tone matching row state
+- ✅ "budget used: N%" subtle label
+
+§5 Top slow operations table:
+- ✅ 6 rows per mockup `:111-116`
+- ✅ Kind Badge tone palette: tool/loop/subagent/verify/memory per mockup line 120
+- ✅ p99 warning color when > 3000ms (mockup line 123)
+- ✅ Calls column toLocaleString format
+- ✅ BackendGapBanner declaring cross-operation p99 gap
+
+§6 Error rate by service:
+- ✅ 6 rows per mockup `:134-140`
+- ✅ Warning color on rate > 0.5% (tool.runner 0.6)
+- ✅ BarTrack pct = rate × 50 algorithm (mockup line 147)
+- ✅ BackendGapBanner declaring per-service error rate gap
+
+#### Verdict (per-widget code-level audit)
+
+| Widget | Mockup ref | Status | Verdict |
+|--------|-----------|--------|---------|
+| §1 page-head | `:33-52` | shipped Day 1 | PARITY |
+| §2 4-stat grid | `:54-59` | shipped Day 1 | PARITY (3/4 fixture) |
+| §3 LatencyChart 24h | `:61-198` | shipped Day 1 | PARITY (banner #1) |
+| §4 SLO status | `:72-99` | shipped Day 2 | **PARITY** |
+| §5 Top slow ops | `:104-129` | shipped Day 2 | **PARITY (banner #2)** |
+| §6 Error rate by service | `:131-152` | shipped Day 2 | **PARITY (banner #3)** |
+
+**All 6 widget groups SHIPPED**; 3 of 3 expected BackendGapBanner present per AP-2 honesty.
+
+#### Files NEW / MODIFIED / DELETED Day 2
+
+| File | LoC | Type |
+|------|----:|------|
+| `frontend/src/features/sla-dashboard/__fixtures__/slowOps.ts` | 31 | NEW |
+| `frontend/src/features/sla-dashboard/__fixtures__/errorRateByService.ts` | 24 | NEW |
+| `frontend/src/features/sla-dashboard/components/SLOStatusCard.tsx` | 120 | NEW |
+| `frontend/src/features/sla-dashboard/components/TopSlowOpsTable.tsx` | 135 | NEW |
+| `frontend/src/features/sla-dashboard/components/ErrorRateByServiceCard.tsx` | 82 | NEW |
+| `frontend/src/features/sla-dashboard/components/SLAOverview.tsx` | 195 (was 230 Day 1) | REWRITE (legacy delete + 3 new widget assembly) |
+| `frontend/src/i18n/locales/en/common.json` | +25 | MODIFIED (sla.slo.* + sla.slowOps.* + sla.errorRate.* + 2 banner keys) |
+| `frontend/src/i18n/locales/zh-TW/common.json` | +25 | MODIFIED |
+| `frontend/src/features/sla-dashboard/components/SLAMetricsCard.tsx` | -70 | **DELETED (Karpathy §3)** |
+| `frontend/tests/unit/sla-dashboard/SLAMetricsCard.test.tsx` | -42 | **DELETED (Karpathy §3 orphan)** |
+| `frontend/tests/unit/sla-dashboard/SLOStatusCard.test.tsx` | 56 | NEW (5 cases) |
+| `frontend/tests/unit/sla-dashboard/TopSlowOpsTable.test.tsx` | 56 | NEW (5 cases) |
+| `frontend/tests/unit/sla-dashboard/ErrorRateByServiceCard.test.tsx` | 38 | NEW (4 cases) |
+
+#### Quality gate summary Day 2 cumulative
+
+| Gate | Result |
+|------|--------|
+| tsc 0 errors | ✅ |
+| ESLint --max-warnings 0 | ✅ silent |
+| Vitest | ✅ 430/430 (+9 net; 0 regression) |
+| Build green | ✅ 3.42s |
+| Main bundle delta | ✅ +2.74 KB cumulative (target ≤+20) |
+| Backend changes | 0 (V2 約束 1) |
+| LLM SDK leak | 0 (V2 約束 3) |
+| i18n EN+zhTW parity | ✅ 38 keys × 2 locales cumulative |
+| BackendGapBanner instances | ✅ 3 of 3 expected (US-B3 + US-C2 + US-C3) |
+| Karpathy §3 orphan delete | ✅ SLAMetricsCard + spec deleted; 0 production importer |
+| All 6 widget groups SHIPPED | ✅ |
 
 ## Day 3 — pending

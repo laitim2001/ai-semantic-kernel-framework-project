@@ -105,26 +105,26 @@
 
 ### 1.4 Day 1 Playwright MCP retry + commit
 - 🚧 **Playwright MCP `browser_close` reset attempt** deferred to Day 3 per Q4 user alignment + AD #37 4th-consecutive blocker watch policy; code-level audit substitute documented in progress.md Day 1 §Mockup-fidelity audit
-- [ ] **Day 1 commit** with Group B work
+- [x] **Day 1 commit** with Group B work — commit `24d46b89` (12 files; +745 / -50)
   - Commit message: `feat(sla-dashboard, sprint-57-25, Day 1, Group B): page-head + TimeRangeTabs + 4-stat sparkline + LatencyChart (NEW feature-scoped)`
-  - DoD: `git status` clean post-commit
+  - DoD: `git status` clean post-commit ✅
 
 ---
 
 ## Day 2 — Group C (SLO status + slow ops + error rate) (2026-05-21)
 
 ### 2.1 US-C1 `<SLOStatusCard>` (BarTrack + CardShell reused)
-- [ ] **Component** at `frontend/src/features/sla-dashboard/components/SLOStatusCard.tsx` (~110 lines mockup-direct port of `page-admin.jsx:72-99`)
+- [x] **Component** at `frontend/src/features/sla-dashboard/components/SLOStatusCard.tsx` (~110 lines mockup-direct port of `page-admin.jsx:72-99`)
   - Props: `data: SLAReport` (from useSLAReport)
   - DoD: 5 SLO rows × success/danger dot indicator + SLO name + current value (mono tnum; danger color if failing) / target value (subtle) + `<BarTrack pct={used}>` budget-used % + budget used % subtle label
   - SLOs: Loop p95 < 2s (real `data.loop_simple_p95_ms / 1000` if available, else fixture 1.84; ok if < 2.0) / Tool success ≥ 99% (fixture 99.4; ok) / HITL response < 5m (fixture 2.3 min; ok) / Subagent depth ≤ 5 (fixture 4; ok) / Cost/run < $0.05 (fixture 0.052; FAILING — danger tone)
   - DoD: reuses `<CardShell title={t("sla.slo.title")} subtitle={t("sla.slo.subtitle")}>` + `<BarTrack pct tone />` (tone success when ok / danger when failing)
   - i18n: `sla.slo.{title, subtitle, loopP95, toolSuccess, hitlResponse, subagentDepth, costPerRun, budgetUsed}` ✅ EN + zh-TW parity
   - data-testid="sla-slo-card" + `data-testid="sla-slo-row-${idx}"` per row for test
-- [ ] **Vitest spec** `tests/unit/sla-dashboard/SLOStatusCard.test.tsx` (~5 cases: 5 SLO rows render / success-danger dot color / failing SLO has danger text class / BarTrack budget-used % present / target value mono tnum format)
+- [x] **Vitest spec** `tests/unit/sla-dashboard/SLOStatusCard.test.tsx` (5 cases: 5 SLO rows render / dot color ok/failing / failing SLO danger text class / ok muted text class / Loop p95 proxy from real `loop_simple_p99_ms`)
 
 ### 2.2 US-C2 `<TopSlowOpsTable>` (CardShell + Badge reused)
-- [ ] **Component** at `frontend/src/features/sla-dashboard/components/TopSlowOpsTable.tsx` (~95 lines mockup-direct port of `page-admin.jsx:104-129`)
+- [x] **Component** at `frontend/src/features/sla-dashboard/components/TopSlowOpsTable.tsx` (~135 lines mockup-direct port of `page-admin.jsx:104-129`)
   - Props: NONE (consumes inline fixture from `__fixtures__/slowOps.ts`)
   - DoD: 6 rows × Operation (mono small) + Kind Badge (tool/loop/subagent/verify/memory tone palette mapping) + p50/p95/p99 (mono tnum right; p99 warning color if > 3000ms) + Calls (mono tnum subtle right toLocaleString)
   - Kind Badge tone mapping (mockup `page-admin.jsx:120`): tool→tool / loop→primary / subagent→thinking / verify→success / memory→memory
@@ -132,11 +132,11 @@
   - Fixture: `__fixtures__/slowOps.ts` 6 rows mirror mockup `page-admin.jsx:111-116` values
   - i18n: `sla.slowOps.{title, subtitle, col.operation, col.kind, col.p50, col.p95, col.p99, col.calls}` ✅ EN + zh-TW parity
   - data-testid="sla-slow-ops-table"
-- [ ] **`<BackendGapBanner reason={t("sla.banner.crossOperationP99")} />`** below table (2nd of 3 banners this sprint)
-- [ ] **Vitest spec** `tests/unit/sla-dashboard/TopSlowOpsTable.test.tsx` (~4 cases: 6 rows / Kind Badge tone per kind / p99 warning color when > 3000ms / BackendGapBanner present)
+- [x] **`<BackendGapBanner reason={t("sla.banner.crossOperationP99")} />`** below table (2nd of 3 banners this sprint)
+- [x] **Vitest spec** `tests/unit/sla-dashboard/TopSlowOpsTable.test.tsx` (5 cases: 6 rows / Kind tone per kind / p99 warning > 3000 / p99 muted <= 3000 / cross-operation banner)
 
 ### 2.3 US-C3 `<ErrorRateByServiceCard>` (BarTrack + CardShell reused)
-- [ ] **Component** at `frontend/src/features/sla-dashboard/components/ErrorRateByServiceCard.tsx` (~70 lines mockup-direct port of `page-admin.jsx:131-152`)
+- [x] **Component** at `frontend/src/features/sla-dashboard/components/ErrorRateByServiceCard.tsx` (~82 lines mockup-direct port of `page-admin.jsx:131-152`)
   - Props: NONE (consumes inline fixture from `__fixtures__/errorRateByService.ts`)
   - DoD: 6 rows × service name (mono small) + rate % (mono tnum; warning color if > 0.5%, fg-muted otherwise) + `<BarTrack pct={rate * 50} tone={rate > 0.5 ? "warning" : "success"} />`
   - Services: inference.adapter (0.04) / tool.runner (0.6) / memory.store (0.0) / audit.writer (0.0) / subagent.scheduler (0.12) / webhook.dispatcher (0.4)
@@ -144,21 +144,17 @@
   - Fixture: `__fixtures__/errorRateByService.ts` 6 rows mirror mockup `page-admin.jsx:134-140` values
   - i18n: `sla.errorRate.{title, subtitle}` ✅ EN + zh-TW parity
   - data-testid="sla-error-rate-card"
-- [ ] **`<BackendGapBanner reason={t("sla.banner.perServiceErrorRate")} />`** below card (3rd of 3 banners this sprint)
-- [ ] **Vitest spec** `tests/unit/sla-dashboard/ErrorRateByServiceCard.test.tsx` (~3 cases: 6 services / warning tone when rate > 0.5 / BackendGapBanner present)
+- [x] **`<BackendGapBanner reason={t("sla.banner.perServiceErrorRate")} />`** below card (3rd of 3 banners this sprint)
+- [x] **Vitest spec** `tests/unit/sla-dashboard/ErrorRateByServiceCard.test.tsx` (4 cases: 6 services / warning tone rate > 0.5 / muted tone rate <= 0.5 / per-service banner)
 
 ### 2.4 SLAOverview integration + Day 2 commit
-- [ ] **SLAOverview.tsx assembled** with all 6 widget groups in mockup-faithful grid (`grid grid-cols-4` 4-stat row + `grid grid-cols-[1fr_360px]` LatencyChart+SLO row + `grid grid-cols-2` slow-ops+error-rate row)
+- [x] **SLAOverview.tsx assembled** with all 6 widget groups in mockup-faithful grid (`grid grid-cols-4` 4-stat row + `grid grid-cols-[1fr_360px]` LatencyChart+SLO row + `grid grid-cols-2` slow-ops+error-rate row)
   - DoD: matches mockup `page-admin.jsx:61-153` 1:1 at 1440×900
-  - DoD: MonthPicker preserved as auxiliary control (inline below page-head row with sibling note `sla.banner.monthPickerAuxiliary`)
-- [ ] **MonthPicker placement decision** Day 2 mid (per Plan R5):
-  - Option A: Keep inline below page-head with sibling note (default per checklist; minimal drift)
-  - Option B: Move to AppShellV2 headerSlot (mirroring cost-dashboard pattern; requires `pages/sla-dashboard/index.tsx` adapt + AppShellV2 headerSlot prop check)
-  - Decision recorded in progress.md Day 2 entry
-- [ ] **Existing SLAOverview.test.tsx adapted** for new layout selectors (preserve behavioral assertions: tenant gate / no-tenant guard; drop legacy SLAMetricsCard-related assertions)
-- [ ] **SLAMetricsCard.tsx + SLAMetricsCard.test.tsx delete** (Karpathy §3 orphan delete post-rewrite verify)
-  - DoD: `grep -rn "SLAMetricsCard" frontend/src frontend/tests` returns 0 production+test importer (only deletion-itself git diff)
-- [ ] **Day 2 commit**
+  - DoD: MonthPicker preserved as auxiliary control (inline below page-head row with sibling note `sla.monthPickerAuxiliary`)
+- [x] **MonthPicker placement decision** Day 2: KEEP inline + sibling note (Option A, per Q1 alignment + checklist default; AppShellV2 headerSlot Option B deferred — minimal drift principle preserved)
+- [-] **Existing SLAOverview.test.tsx adapted** N/A — `SLAOverview.test.tsx` did not exist pre-rebuild (only SLAMetricsCard + slaStore + useSLAReport specs); no adapt needed
+- [x] **SLAMetricsCard.tsx + SLAMetricsCard.test.tsx delete** (Karpathy §3 orphan delete; verified `grep -rn "SLAMetricsCard" src tests` returns 0 production importer; 2 docstring/MHist refs in SLAOverview.tsx preserved per file-header-convention.md audit trail)
+- [ ] **Day 2 commit** pending
   - Commit message: `feat(sla-dashboard, sprint-57-25, Day 2, Group C): SLO status + top slow ops table + error rate by service + SLAOverview integration + SLAMetricsCard orphan delete`
   - DoD: `git status` clean post-commit
 

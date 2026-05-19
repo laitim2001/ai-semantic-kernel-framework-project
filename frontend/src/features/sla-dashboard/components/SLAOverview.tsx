@@ -2,45 +2,48 @@
  * File: frontend/src/features/sla-dashboard/components/SLAOverview.tsx
  * Purpose: SLA Dashboard top-level container — mockup-fidelity rebuild (Sprint 57.25).
  * Category: Frontend / sla-dashboard / components
- * Scope: Phase 57 / Sprint 57.25 Day 1 US-B1+B2+B3 (subsequent USs replace legacy MetricsCard block with SLO + slow ops + error rate cards)
+ * Scope: Phase 57 / Sprint 57.25 (Group B Day 1 + Group C Day 2 complete; 6 widget groups)
  *
  * Description:
- *   Sprint 57.25 incremental rebuild from Sprint 57.16 6-MetricsCard layout
- *   toward 6-widget-group mockup-fidelity layout per
- *   reference/design-mockups/page-admin.jsx:31-199 (SlaPage).
+ *   Sprint 57.25 Day 2 (this state): rebuild complete — assembles all 6
+ *   mockup widget groups per reference/design-mockups/page-admin.jsx:31-199
+ *   (SlaPage). Legacy 6-SLAMetricsCard block + violations Badge + SLA
+ *   threshold constants removed (Karpathy §3 orphan delete; semantically
+ *   replaced by SLOStatusCard per user Q3 alignment).
  *
- *   Day 1 (this state): + §1 page-head (PageHead + TimeRangeTabs + Refresh
- *   + Export stubs; US-B1) + §2 4-stat sparkline grid (StatCard + Spark
- *   reused; US-B2) + §3 24h LatencyChart 3-series SVG inside CardShell +
- *   BackendGapBanner (US-B3). Legacy MonthPicker preserved as auxiliary
- *   per user Q1 alignment with sibling note. Legacy violations Badge +
- *   6-SLAMetricsCard block kept transitionally at bottom; Day 2 deletes
- *   them and replaces with SLO status card + slow ops table + error rate
- *   card.
+ *   Final layout (mockup-faithful grid):
+ *   - §1 page-head (PageHead + TimeRangeTabs + Refresh + Export stubs)
+ *   - §2 4-stat sparkline grid (StatCard × 4 + Spark × 4 reused)
+ *   - §3 + §4 main grid (1fr_360px responsive): LatencyChart 24h left +
+ *     SLOStatusCard right per mockup line 61-99
+ *   - §5 + §6 secondary grid (2-col): TopSlowOpsTable left +
+ *     ErrorRateByServiceCard right per mockup line 103-153
+ *
+ *   3 BackendGapBanner instances per AP-2 honesty (LatencyChart 24h /
+ *   cross-operation p99 / per-service error rate); AD-SLA-Dashboard-
+ *   Backend-Extensions-Phase58 carryover documents per-field gap.
  *
  *   Backend reused: useSLAReport TanStack hook + GET /api/v1/sla-report
- *   (Sprint 57.9 US-6 Day 4 stable). 3 of 4 stat cards fixture-driven per
- *   D-PRE-2 (useSLAReport returns only _p99 fields; no p50/p95 split, no
- *   error_budget). LatencyChart 24h time-series fully fixture pending
- *   Phase 58+ backend (AD-SLA-Dashboard-Backend-Extensions).
+ *   (Sprint 57.9 US-6 Day 4 stable). MonthPicker preserved as auxiliary
+ *   per user Q1 alignment with sibling note.
  *
  * Created: 2026-05-06 (Sprint 57.1 Day 2)
  * Last Modified: 2026-05-19
  *
  * Modification History (newest-first):
+ *   - 2026-05-19: Sprint 57.25 Day 2 US-C1+C2+C3 — SLO status + slow ops table + error rate by service; orphan delete SLAMetricsCard (Karpathy §3); rebuild complete
  *   - 2026-05-19: Sprint 57.25 Day 1 US-B1+B2+B3 — PageHead + TimeRangeTabs + 4-stat sparkline + LatencyChart card (mockup rebuild start)
  *   - 2026-05-11: Sprint 57.16 — inline styles → Tailwind utility classes (AD-Inline-Style-Cleanup-Sweep-Round2)
- *   - 2026-05-10: Sprint 57.13 US-B2 — loading → <CardSkeleton>; error → <ErrorRetry> (components/ui)
- *   - 2026-05-10: Sprint 57.13 US-A2 — tenant_id from authStore.tenant.id (was URL ?tenant_id=)
- *   - 2026-05-09: Sprint 57.9 US-6 Day 4 — migrate to useSLAReport TanStack hook + Tailwind utilities (drop inline styles)
+ *   - 2026-05-10: Sprint 57.13 US-B2 — loading → <CardSkeleton>; error → <ErrorRetry>
+ *   - 2026-05-10: Sprint 57.13 US-A2 — tenant_id from authStore.tenant.id
+ *   - 2026-05-09: Sprint 57.9 US-6 Day 4 — migrate to useSLAReport TanStack hook + Tailwind utilities
  *   - 2026-05-06: Initial creation (Sprint 57.1 Day 2 / US-3 — SLA overview)
  *
  * Related:
  *   - reference/design-mockups/page-admin.jsx:31-199 (SlaPage canonical mockup)
- *   - frontend/src/components/ui/PageHead.tsx (US-B1 reuse)
- *   - frontend/src/components/charts/{Spark, StatCard, AreaChart, BarTrack}.tsx (US-B2/B3 reuse)
- *   - frontend/src/components/ui/{CardShell, BackendGapBanner}.tsx (US-B3 reuse)
- *   - frontend/src/features/sla-dashboard/components/{TimeRangeTabs, LatencyChart}.tsx (US-B1/B3 NEW feature-scoped)
+ *   - frontend/src/components/ui/PageHead.tsx + CardShell.tsx + BackendGapBanner.tsx (Sprint 57.24 v2 reused)
+ *   - frontend/src/components/charts/{Spark, StatCard, BarTrack}.tsx (Sprint 57.24 v2 reused)
+ *   - frontend/src/features/sla-dashboard/components/{TimeRangeTabs, LatencyChart, SLOStatusCard, TopSlowOpsTable, ErrorRateByServiceCard}.tsx (Sprint 57.25 NEW feature-scoped)
  *   - sprint-57-25-plan.md §Technical Specifications
  */
 
@@ -52,7 +55,6 @@ import { BackendGapBanner } from "../../../components/ui/BackendGapBanner";
 import { Button } from "../../../components/ui/button";
 import { CardShell } from "../../../components/ui/CardShell";
 import { PageHead } from "../../../components/ui/PageHead";
-import { cn } from "../../../lib/utils";
 import { useAuthStore } from "../../auth/store/authStore";
 import { MonthPicker } from "../../cost-dashboard/components/MonthPicker";
 import {
@@ -63,17 +65,11 @@ import {
 } from "../__fixtures__/statSparklines";
 import { useSLAReport } from "../hooks/useSLAReport";
 import { useSLAStore } from "../store/slaStore";
+import { ErrorRateByServiceCard } from "./ErrorRateByServiceCard";
 import { LatencyChart } from "./LatencyChart";
-import { SLAMetricsCard } from "./SLAMetricsCard";
+import { SLOStatusCard } from "./SLOStatusCard";
 import { TimeRangeTabs } from "./TimeRangeTabs";
-
-const AVAILABILITY_THRESHOLD_STANDARD = 99.5;
-
-const API_P99_MAX_MS = 1000;
-const LOOP_SIMPLE_P99_MAX_MS = 5000;
-const LOOP_MEDIUM_P99_MAX_MS = 30000;
-const LOOP_COMPLEX_P99_MAX_MS = 120000;
-const HITL_QUEUE_NOTIF_P99_MAX_MS = 60000;
+import { TopSlowOpsTable } from "./TopSlowOpsTable";
 
 export function SLAOverview() {
   const { t } = useTranslation("common");
@@ -138,9 +134,8 @@ export function SLAOverview() {
 
       {/* §2 4-stat sparkline grid (US-B2). p99 derives from real
           data.api_p99_ms when available; p50/p95/error_budget fully
-          fixture per D-PRE-2 (backend doesn't expose those fields).
-          AP-2 honesty: LatencyChart banner below covers the missing
-          fields aggregate; per-card banners would be noisy. */}
+          fixture per D-PRE-2. AP-2 honesty: LatencyChart banner below
+          covers missing fields aggregate; per-card banners would be noisy. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="sla-stat-grid">
         <StatCard
           label={t("sla.stat.p50")}
@@ -176,32 +171,44 @@ export function SLAOverview() {
         />
       </div>
 
-      {/* §3 24h LatencyChart 3-series (US-B3). NEW feature-scoped
-          LatencyChart per Karpathy §2 inline rule. Backend 24h
-          aggregation pending Phase 58+ — banner declares fixture. */}
-      <CardShell
-        title={t("sla.latencyChart.title")}
-        subtitle={t("sla.latencyChart.subtitle")}
-        actions={
-          <div className="flex items-center gap-3 text-[11px]" data-testid="sla-latency-chart-kbar">
-            <span className="inline-flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-primary" />
-              {t("sla.latencyChart.badge.p50")}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-info" />
-              {t("sla.latencyChart.badge.p95")}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-warning" />
-              {t("sla.latencyChart.badge.p99")}
-            </span>
-          </div>
-        }
-      >
-        <LatencyChart />
-        <BackendGapBanner reason={t("sla.banner.latencyChart24h")} />
-      </CardShell>
+      {/* §3 LatencyChart 24h (US-B3) + §4 SLO status (US-C1). 1fr_360px
+          responsive grid per mockup page-admin.jsx:61-99 grid-main 2-col. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+        <CardShell
+          title={t("sla.latencyChart.title")}
+          subtitle={t("sla.latencyChart.subtitle")}
+          actions={
+            <div
+              className="flex items-center gap-3 text-[11px]"
+              data-testid="sla-latency-chart-kbar"
+            >
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-primary" />
+                {t("sla.latencyChart.badge.p50")}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-info" />
+                {t("sla.latencyChart.badge.p95")}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-warning" />
+                {t("sla.latencyChart.badge.p99")}
+              </span>
+            </div>
+          }
+        >
+          <LatencyChart />
+          <BackendGapBanner reason={t("sla.banner.latencyChart24h")} />
+        </CardShell>
+        <SLOStatusCard data={data ?? null} />
+      </div>
+
+      {/* §5 TopSlowOpsTable (US-C2) + §6 ErrorRateByServiceCard (US-C3).
+          2-col grid per mockup page-admin.jsx:103-153. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <TopSlowOpsTable />
+        <ErrorRateByServiceCard />
+      </div>
 
       {/* Loading + error states (preserved from Sprint 57.13 baseline). */}
       {isLoading && tenantId && <CardSkeleton count={3} />}
@@ -210,73 +217,6 @@ export function SLAOverview() {
         <div role="alert">
           <ErrorRetry error={error} onRetry={() => void refetch()} />
         </div>
-      )}
-
-      {/* §4-§6 legacy MetricsCard block — TRANSITIONAL (Sprint 57.25 Day 1).
-          Replaced Day 2 by SLO status card + slow ops table + error rate
-          card. Kept here so existing tests + behavior preserved during
-          incremental Day 1+2 split. */}
-      {data && !isLoading && !error && (
-        <>
-          <div>
-            <span
-              data-testid="violations-badge"
-              className={cn(
-                "inline-block rounded-full px-3 py-1.5 font-bold",
-                data.violations_count > 0
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-[#e6f4ea] text-[#1a7f37]",
-              )}
-            >
-              Violations: {data.violations_count}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <SLAMetricsCard
-              label="Availability"
-              value={data.availability_pct}
-              threshold={AVAILABILITY_THRESHOLD_STANDARD}
-              unit="%"
-              mode="gte"
-            />
-            <SLAMetricsCard
-              label="API p99"
-              value={data.api_p99_ms}
-              threshold={API_P99_MAX_MS}
-              unit="ms"
-              mode="lte"
-            />
-            <SLAMetricsCard
-              label="Loop simple p99"
-              value={data.loop_simple_p99_ms}
-              threshold={LOOP_SIMPLE_P99_MAX_MS}
-              unit="ms"
-              mode="lte"
-            />
-            <SLAMetricsCard
-              label="Loop medium p99"
-              value={data.loop_medium_p99_ms}
-              threshold={LOOP_MEDIUM_P99_MAX_MS}
-              unit="ms"
-              mode="lte"
-            />
-            <SLAMetricsCard
-              label="Loop complex p99"
-              value={data.loop_complex_p99_ms}
-              threshold={LOOP_COMPLEX_P99_MAX_MS}
-              unit="ms"
-              mode="lte"
-            />
-            <SLAMetricsCard
-              label="HITL queue notif p99"
-              value={data.hitl_queue_notif_p99_ms}
-              threshold={HITL_QUEUE_NOTIF_P99_MAX_MS}
-              unit="ms"
-              mode="lte"
-            />
-          </div>
-        </>
       )}
     </div>
   );

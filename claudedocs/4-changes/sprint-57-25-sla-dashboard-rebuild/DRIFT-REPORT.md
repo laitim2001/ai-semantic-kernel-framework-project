@@ -96,6 +96,40 @@
 | §4 BackendGapBanner instances | 1 of 3 expected shipped (LatencyChart 24h); 2 pending Day 2 (cross-operation p99 + per-service error rate) |
 | §5 TimeRangeTabs visual-only + MonthPicker auxiliary | ✅ both wired per Q1+Q2 user alignment |
 
-## Day 2 — pending (US-C1 + US-C2 + US-C3 verdicts)
+## Day 2 — 2026-05-19 (US-C1 + US-C2 + US-C3 SHIPPED; rebuild COMPLETE)
+
+### Coverage matrix update (6 of 6 widget groups SHIPPED)
+
+| # | Mockup widget group | Production state | Verdict (Day 2) |
+|---|---------------------|------------------|-----------------|
+| 1 | page-head + TimeRangeTabs + Refresh + Export | ✅ shipped Day 1 | PARITY |
+| 2 | 4-stat sparkline grid | ✅ shipped Day 1 | PARITY (3/4 fixture) |
+| 3 | 24h LatencyChart 3-series | ✅ shipped Day 1 | PARITY (banner #1) |
+| 4 | 5-row SLO status card | ✅ shipped Day 2 (SLOStatusCard NEW; BarTrack + CardShell reused) | **PARITY** |
+| 5 | Top slow operations table | ✅ shipped Day 2 (TopSlowOpsTable NEW; Kind Badge tone palette; p99 warning > 3000ms) | **PARITY (banner #2)** |
+| 6 | Error rate by service | ✅ shipped Day 2 (ErrorRateByServiceCard NEW; warning tone > 0.5%; BarTrack reused) | **PARITY (banner #3)** |
+| — | legacy 6×SLAMetricsCard + violations Badge | ⚠️ DELETED Day 2 (Karpathy §3 orphan delete per Q3 user alignment) | reverse-drift resolved |
+
+### Cross-references
+
+- `progress.md` Day 2 §Mockup-fidelity audit (per-widget code vs mockup `page-admin.jsx:72-152`)
+- `SLOStatusCard.test.tsx` (5 cases: 5 SLO rows / dot color ok/failing / failing danger text / ok muted text / Loop p95 proxy from data)
+- `TopSlowOpsTable.test.tsx` (5 cases: 6 rows / Kind tone per kind / p99 warning > 3000 / p99 muted <= 3000 / cross-operation banner)
+- `ErrorRateByServiceCard.test.tsx` (4 cases: 6 rows / warning rate > 0.5 / muted rate <= 0.5 / per-service banner)
+
+### Day 2 deliverables (per Plan §Acceptance §1-§12)
+
+| AC | Status |
+|----|--------|
+| §1 6 widget groups at 1440×900 | ✅ **6 of 6 SHIPPED** |
+| §2 Reuse 7 Sprint 57.24 v2 primitives | ✅ PageHead + StatCard + Spark + CardShell + BackendGapBanner + BarTrack used; AreaChart not used (multi-line LatencyChart ≠ single-area shape) |
+| §3 Real backend data where applicable | ✅ `useSLAReport.api_p99_ms` → p99 stat; `loop_simple_p99_ms` → Loop p95 SLO proxy; remaining fields fixture per D-PRE-2 |
+| §4 BackendGapBanner instances | ✅ **3 of 3 expected** (LatencyChart 24h + cross-operation p99 + per-service error rate) |
+| §5 TimeRangeTabs visual-only + MonthPicker auxiliary | ✅ both wired per Q1+Q2 |
+| §12 Karpathy §3 orphan delete | ✅ `SLAMetricsCard.tsx` + spec deleted; 0 production importer |
+
+### Final verdict (Day 2 end)
+
+**`/sla-dashboard` rebuild: PARITY (code-level)** per CLAUDE.md §Frontend Mockup-Fidelity Hard Constraint + Sprint 57.22 Unit 9 P0 audit. Playwright MCP visual pair-verify deferred to Day 3 per Q4 (4th-consecutive blocker watch).
 
 ## Day 3 — final verdict (target: PARITY code-level audit per Q4 user alignment on Playwright MCP 4th-consecutive blocker fallback)
