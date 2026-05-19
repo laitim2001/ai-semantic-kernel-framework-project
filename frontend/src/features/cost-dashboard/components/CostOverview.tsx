@@ -1,47 +1,217 @@
 /**
  * File: frontend/src/features/cost-dashboard/components/CostOverview.tsx
- * Purpose: Cost Dashboard top-level container — TanStack-driven cost summary view.
+ * Purpose: Cost Dashboard top-level container — mockup-fidelity rebuild (Sprint 57.24 v2).
  * Category: Frontend / cost-dashboard / components
- * Scope: Phase 57 / Sprint 57.1 US-2 (initial) → Sprint 57.7 US-B3 (AppShell + Tailwind) → Sprint 57.9 US-6 Day 4 (TanStack)
+ * Scope: Phase 57 / Sprint 57.24 Day 1 US-B1 (page-head + page-actions; subsequent USs add stat grid / area chart / category bars / tenant table / provider mix)
  *
  * Description:
- *   Sprint 57.9 US-6 Day 4: replaced manual useEffect + loadData orchestration
- *   with `useCostSummary` TanStack Query hook (closes AD-Cost-Dashboard-UseQuery).
- *   Sprint 57.13 US-A2: tenant_id now comes from the authenticated session
- *   (authStore.tenant.id) — the page is wrapped in <RequireAuth> so tenant is
- *   always set; backend (US-A3) lets a user see their own tenant's data.
- *   currentMonth comes from useCostStore (UI-only state).
+ *   Sprint 57.24 v2 incremental rebuild from 68-line MVP toward 6-widget-group
+ *   mockup-fidelity layout per reference/design-mockups/page-admin.jsx:200-321 (CostPage).
+ *
+ *   Day 2 US-C3 (this state): + §5 + §6 admin-scope 2-col grid combining
+ *   TenantTopTable (left) + ProviderMixCard (right) per mockup page-admin
+ *   .jsx:257-318 grid-main 2-col layout. ProviderMixCard adds LLM-neutrality
+ *   redaction notice (mockup-faithful copy explaining V2 §約束 3 architectural
+ *   rationale) + BackendGapBanner declaring cross-provider API gap. Group C
+ *   complete (3/3 USs); CostOverview now has all 6 mockup widget groups.
+ *
+ *   Backend reused: useCostSummary TanStack hook + GET /api/v1/cost-summary
+ *   (Sprint 57.9 US-6 Day 4 stable).
  *
  * Created: 2026-05-06 (Sprint 57.1 Day 1)
- * Last Modified: 2026-05-10
+ * Last Modified: 2026-05-19
  *
  * Modification History (newest-first):
+ *   - 2026-05-19: Sprint 57.24 Day 2 US-C3 — §6 ProviderMixCard admin-scope (+ §5/§6 wrap 2-col grid; Group C complete)
+ *   - 2026-05-19: Sprint 57.24 Day 2 US-C2 — §5 TenantTopTable admin-scope top-8 (parent-gated; fixture + banner)
+ *   - 2026-05-19: Sprint 57.24 Day 2 US-C1 — §4 CategoryBarsCard 6-bar breakdown (fully-fixture per R3)
+ *   - 2026-05-19: Sprint 57.24 Day 1 US-B3 — §3 30d Spend over time card (CardShell + AreaChart + BackendGapBanner)
+ *   - 2026-05-19: Sprint 57.24 Day 1 US-B2 — 4-stat sparkline grid (Spark + StatCard) with real Spend MTD + 3 fixtures
+ *   - 2026-05-19: Sprint 57.24 Day 1 US-B1 — PageHead + admin scope gate + page-actions stubs (rebuild start)
+ *   - 2026-05-11: Sprint 57.15 — inline styles → Tailwind utility classes (AD-Inline-Style-Cleanup-Sweep)
  *   - 2026-05-10: Sprint 57.13 US-B2 — loading → <CardSkeleton>; error → <ErrorRetry> (components/ui)
  *   - 2026-05-10: Sprint 57.13 US-A2 — tenant_id from authStore.tenant.id (was URL ?tenant_id=)
  *   - 2026-05-09: Sprint 57.9 US-6 Day 4 — migrate to useCostSummary TanStack hook (drop store loadData/data/loading/error)
  *   - 2026-05-10: Sprint 57.7 US-B3 — migrate to AppShell + Tailwind utility classes
  *   - 2026-05-06: Initial creation (Sprint 57.1 Day 1 / US-2 — Cost overview)
+ *
+ * Related:
+ *   - reference/design-mockups/page-admin.jsx:200-321 (CostPage canonical mockup)
+ *   - frontend/src/components/ui/PageHead.tsx (US-B1 NEW primitive)
+ *   - sprint-57-24-plan.md v2 §Technical Specifications
  */
 
+import { useTranslation } from "react-i18next";
+
+import { AreaChart, Spark, StatCard } from "../../../components/charts";
+import { BackendGapBanner } from "../../../components/ui/BackendGapBanner";
+import { Button } from "../../../components/ui/button";
+import { CardShell } from "../../../components/ui/CardShell";
 import { CardSkeleton, ErrorRetry } from "../../../components/ui";
+import { PageHead } from "../../../components/ui/PageHead";
 import { useAuthStore } from "../../auth/store/authStore";
+import { SPEND_OVER_TIME_30D } from "../__fixtures__/spendOverTime30d";
 import { useCostSummary } from "../hooks/useCostSummary";
 import { useCostStore } from "../store/costStore";
+import { CategoryBarsCard } from "./CategoryBarsCard";
 import { CostBreakdownTable } from "./CostBreakdownTable";
+import { ProviderMixCard } from "./ProviderMixCard";
+import { TenantTopTable } from "./TenantTopTable";
+
+// Mirrors backend _ADMIN_PLATFORM_ROLES (platform_layer/identity/auth.py); same
+// pattern as AdminTenantsPage. Used to gate the admin-only scope Badge in the
+// page-head and (Day 1.4-Day 2) the cross-tenant + cross-provider widgets.
+const PLATFORM_ADMIN_ROLES = ["admin", "platform_admin"];
+
+// Sparkline fixtures for Day 1.2 4-stat grid. Spend MTD trend tail ($2,847)
+// matches the mockup demo value; other 3 fully fixture pending backend metric
+// surfaces (tokens.total / runs.count / cache.hit_rate; AD-Cost-Dashboard-
+// Backend-Extensions-Phase58). When real data lands, hooks replace inline arrays.
+const STAT_FIXTURES = {
+  spendMtdSpark: [1200, 1450, 1700, 1980, 2200, 2400, 2600, 2847],
+  tokensMtdSpark: [8, 9, 10, 11, 12, 13, 14, 14.2],
+  costPerRunSpark: [0.044, 0.046, 0.048, 0.05, 0.05, 0.052, 0.052],
+  cacheHitSpark: [28, 30, 32, 34, 35, 36, 37, 38],
+};
 
 export function CostOverview() {
+  const { t } = useTranslation("common");
   const tenantId = useAuthStore((s) => s.tenant?.id ?? "");
+  const roles = useAuthStore((s) => s.roles);
+  const isPlatformAdmin = roles.some((r) => PLATFORM_ADMIN_ROLES.includes(r));
   const currentMonth = useCostStore((s) => s.currentMonth);
 
   const { data, isLoading, error, refetch } = useCostSummary(tenantId, currentMonth);
 
   return (
     <div className="space-y-4">
-      <header>
-        <p className="text-sm text-muted-foreground">
-          Cost ledger summary for your tenant.
-        </p>
-      </header>
+      <PageHead
+        title={t("cost.pageTitle")}
+        subtitle={t("cost.pageSub")}
+        routePath="/cost-dashboard"
+        badges={
+          isPlatformAdmin && (
+            <span
+              data-testid="cost-admin-scope-badge"
+              className="inline-flex items-center rounded-full bg-warning/15 px-2 py-[2px] text-[10.5px] font-medium uppercase tracking-wide text-warning"
+            >
+              {t("cost.adminScope")}
+            </span>
+          )
+        }
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              title={t("cost.action.filterPending")}
+              data-testid="cost-action-by-tenant"
+            >
+              {t("cost.action.byTenant")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              title={t("cost.action.csvPending")}
+              data-testid="cost-action-csv"
+            >
+              {t("cost.action.csv")}
+            </Button>
+          </>
+        }
+      />
+
+      {/* §2 4-stat sparkline grid (US-B2). Spend MTD value swaps to real
+          data.total_cost_usd when loaded; other 3 + all 4 sparklines are
+          fixture pending backend metric surfaces (AP-2 honesty: fixture rows
+          plainly demo data; live data integration tracked in Phase 58+
+          AD-Cost-Dashboard-Backend-Extensions). */}
+      <div className="grid grid-cols-4 gap-3" data-testid="cost-stat-grid">
+        <StatCard
+          label={t("cost.stat.spendMtd")}
+          value={
+            data
+              ? `$${Number(data.total_cost_usd).toLocaleString()}`
+              : "$—"
+          }
+          delta="+8.4%"
+          deltaDir="down"
+          spark={
+            <Spark
+              points={STAT_FIXTURES.spendMtdSpark}
+              tone="hsl(var(--memory))"
+            />
+          }
+        />
+        <StatCard
+          label={t("cost.stat.tokensMtd")}
+          value="14.2"
+          unit="M"
+          delta="+2.1M"
+          deltaDir="up"
+          spark={<Spark points={STAT_FIXTURES.tokensMtdSpark} />}
+        />
+        <StatCard
+          label={t("cost.stat.costPerRun")}
+          value="$0.052"
+          delta="+$0.004"
+          deltaDir="down"
+          spark={
+            <Spark
+              points={STAT_FIXTURES.costPerRunSpark}
+              tone="hsl(var(--warning))"
+            />
+          }
+        />
+        <StatCard
+          label={t("cost.stat.cacheHit")}
+          value="38"
+          unit="%"
+          delta="+4pp"
+          deltaDir="up"
+          spark={
+            <Spark
+              points={STAT_FIXTURES.cacheHitSpark}
+              tone="hsl(var(--success))"
+            />
+          }
+        />
+      </div>
+
+      {/* §3 + §4 main grid (2 cols at lg breakpoint). US-B3 30d AreaChart left
+          + US-C1 CategoryBarsCard right per mockup page-admin.jsx:225-253
+          grid-main 2-col layout. */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {/* §3 Spend over time 30d AreaChart (US-B3). Fixture data pending
+            backend 30-day daily history endpoint
+            (AD-Cost-Dashboard-Backend-Extensions-Phase58). */}
+        <CardShell
+          title={t("cost.spendOverTime.title")}
+          subtitle={t("cost.spendOverTime.subtitle")}
+        >
+          <AreaChart data={SPEND_OVER_TIME_30D} tone="hsl(var(--memory))" />
+          <BackendGapBanner reason={t("cost.banner.areaChart30d")} />
+        </CardShell>
+
+        {/* §4 Spend-by-category breakdown (US-C1). Fully-fixture per
+            D-Day2-1 (mockup 6-category taxonomy ≠ backend by_type 2-level
+            shape; AD-Cost-Backend-Category-Taxonomy-Phase58). */}
+        <CategoryBarsCard />
+      </div>
+
+      {/* §5 + §6 admin-scope 2-col grid (US-C2 + US-C3). Mounted only for
+          platform admins (parent gate via isPlatformAdmin; components are
+          admin-agnostic for unit-test reuse). Fixture data + BackendGapBanner
+          per AP-2; cross-tenant + cross-provider APIs tracked
+          AD-Cost-Dashboard-Backend-Extensions-Phase58. */}
+      {isPlatformAdmin && (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <TenantTopTable />
+          <ProviderMixCard />
+        </div>
+      )}
 
       {!tenantId && (
         <p className="text-sm text-destructive">No tenant in your session.</p>

@@ -66,7 +66,12 @@ test.describe("Sprint 57.1 US-5 — Cost Dashboard e2e", () => {
     await expect(page.getByText("$12.3456")).toBeVisible();
 
     // 3 breakdown rows: llm_input + llm_output + tool
-    await expect(page.getByRole("row")).toHaveCount(4); // header + 3 data rows
+    // Sprint 57.24 Day 3: scope to <CostBreakdownTable> because the rebuild
+    // also mounts <TenantTopTable> (admin-only) with its own header + 8
+    // tenant rows — page-wide getByRole("row") would now match 13 rows.
+    await expect(
+      page.getByTestId("cost-breakdown-table").getByRole("row"),
+    ).toHaveCount(4); // header + 3 data rows
     await expect(page.getByText("azure_openai_gpt-5.4").first()).toBeVisible();
     await expect(page.getByText("salesforce_query")).toBeVisible();
   });

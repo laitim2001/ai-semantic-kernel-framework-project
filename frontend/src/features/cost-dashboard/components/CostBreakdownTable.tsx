@@ -12,6 +12,7 @@
  * Last Modified: 2026-05-11
  *
  * Modification History (newest-first):
+ *   - 2026-05-19: Sprint 57.24 Day 3 — add data-testid="cost-breakdown-table" for e2e selector scoping
  *   - 2026-05-11: Sprint 57.15 — inline styles → Tailwind utility classes; `#666`→text-muted-foreground (AD-Inline-Style-Cleanup-Sweep)
  *   - 2026-05-06: Initial creation (Sprint 57.1 Day 1 / US-2 — breakdown table)
  */
@@ -48,7 +49,10 @@ export function CostBreakdownTable({ data }: CostBreakdownTableProps) {
   }
 
   return (
-    <table className="mt-4 w-full border-collapse">
+    <table
+      data-testid="cost-breakdown-table"
+      className="mt-4 w-full border-collapse"
+    >
       <thead>
         <tr className="border-b-2 border-border text-left">
           <th className="p-2">Cost Type</th>

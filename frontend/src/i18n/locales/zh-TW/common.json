@@ -135,6 +135,60 @@
       "correctionTrace": "修正軌跡"
     }
   },
+  "cost": {
+    "pageTitle": "成本帳本",
+    "pageSub": "Range 12 · Token + 工具花費 · 管理員專屬供應商分解",
+    "adminScope": "管理員範圍",
+    "action": {
+      "byTenant": "依租戶篩選",
+      "csv": "CSV",
+      "filterPending": "篩選 API 待 Phase 58+ 開通",
+      "csvPending": "CSV 匯出待 Phase 58+ 開通"
+    },
+    "stat": {
+      "spendMtd": "當月花費",
+      "tokensMtd": "當月 Tokens",
+      "costPerRun": "每次執行成本",
+      "cacheHit": "快取命中率"
+    },
+    "spendOverTime": {
+      "title": "花費趨勢",
+      "subtitle": "每日 · 30 天 · 依分類堆疊"
+    },
+    "category": {
+      "title": "依分類花費",
+      "subtitle": "過去 7 天",
+      "inferenceInput": "推論（輸入）",
+      "inferenceOutput": "推論（輸出）",
+      "thinkingTokens": "思考 Tokens",
+      "toolRuns": "工具執行",
+      "embeddings": "Embeddings",
+      "sandboxCompute": "Sandbox 運算"
+    },
+    "tenant": {
+      "title": "依租戶花費",
+      "subtitle": "本月累計 · 前 8 名",
+      "anomaly": "異常",
+      "col": {
+        "tenant": "租戶",
+        "plan": "方案",
+        "tokens": "Tokens",
+        "cost": "花費",
+        "quotaUsed": "配額使用"
+      }
+    },
+    "provider": {
+      "title": "供應商組合",
+      "subtitle": "Admin-only · UI 對操作員遮蔽",
+      "llmNeutralityNotice": "操作員視圖中已遮蔽供應商身分,以實踐 LLM-neutrality。切換供應商不改變工具語意。"
+    },
+    "banner": {
+      "areaChart30d": "後端 30 天歷史 API 待 Phase 58+ AD-Cost-Dashboard-Backend-Extensions;圖表顯示 fixture 資料。",
+      "categoryTaxonomy": "Mockup 6 分類 ≠ 後端 by_type 兩層結構;統合待 Phase 58+ AD-Cost-Backend-Category-Taxonomy。圖表顯示 fixture 資料。",
+      "crossTenant": "後端跨租戶彙整 API 待 Phase 58+ AD-Cost-Dashboard-Backend-Extensions;表格顯示 fixture 資料。",
+      "crossProvider": "後端跨供應商彙整 API 待 Phase 58+ AD-Cost-Dashboard-Backend-Extensions;卡片顯示 fixture 資料。"
+    }
+  },
   "overview": {
     "title": "總覽",
     "subtitle": "跨 12 範疇的統一操作員儀表板。",

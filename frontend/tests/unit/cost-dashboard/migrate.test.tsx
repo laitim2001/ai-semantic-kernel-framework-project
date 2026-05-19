@@ -18,6 +18,7 @@
  * Created: 2026-05-10 (Sprint 57.7 Day 3 Tier 3)
  *
  * Modification History:
+ *   - 2026-05-19: Sprint 57.24 Day 1 US-B1 — adapt description selector to new PageHead subtitle (mockup rebuild)
  *   - 2026-05-10: Sprint 57.8 US-4 — rewrite for A1 architecture (CostOverview
  *     no longer wraps in AppShell + no longer renders h1; pages/index.tsx owns
  *     layout via AppShellV2 pageTitle slot)
@@ -54,11 +55,13 @@ describe("CostOverview — Sprint 57.7 US-B3 → 57.8 US-4 architectural migrati
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
 
-  it("body description paragraph rendered without inline style (Tailwind only)", () => {
+  it("body description / page-head subtitle rendered without inline style (Tailwind only)", () => {
     renderInRouter();
-    // Description sentence (Sprint 57.13 US-A2 reworded to "for your tenant" —
-    // tenant now comes from authStore, not a URL param).
-    const desc = screen.getByText(/Cost ledger summary for your tenant/);
+    // Sprint 57.24 Day 1 US-B1: PageHead subtitle ("Range 12 · Token + tool
+    // spend · admin-only provider breakdown" via i18n cost.pageSub) replaces
+    // the prior "Cost ledger summary for your tenant" paragraph. Assertion
+    // intent (no inline style; Tailwind only) preserved.
+    const desc = screen.getByText(/Range 12 · Token \+ tool spend/);
     expect(desc.getAttribute("style")).toBeNull();
     expect(desc.parentElement?.getAttribute("style")).toBeNull();
   });
