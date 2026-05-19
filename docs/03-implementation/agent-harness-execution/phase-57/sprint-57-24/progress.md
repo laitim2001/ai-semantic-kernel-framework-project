@@ -109,12 +109,42 @@ Per CLAUDE.md "Never Delete Docs" + V2 discipline:
 - ⏳ Plan + checklist redraft pending user direction (audit-only / split-audit-first / pure-rebuild)
 - ⏳ Class calibration pivot pending: `mockup-fidelity-retrofit` 0.55 → likely `frontend-mockup-fidelity-audit-tier-1` 0.85 (parallel Sprint 57.22 audit class) OR `frontend-mockup-strict-rebuild` 0.60 (parallel Sprint 57.23 rebuild class)
 
-### Day 1 hours
+### Day 1 hours (Group A — abort + redraft)
 
 - Production inventory (5 pages × inner components read): ~30 min
 - AskUserQuestion + abort decision: ~10 min
-- Documentation (this progress entry + DRIFT-REPORT update + TaskUpdate): pending below
-- **Day 1 total ~45 min before redraft decision**
+- Documentation (progress entry + DRIFT-REPORT update + TaskUpdate): ~15 min
+- Plan v2 + checklist v2 redraft (mirror Sprint 57.23 structure): ~45 min
+- Day 1.0 commit `308ca93b` (atomic redraft commit): ~5 min
+- **Day 1 abort + redraft subtotal ~1.75 hr**
+
+### Day 1.1 US-B1 page-head + page-actions (Group B start)
+
+**Output**:
+- NEW `frontend/src/components/ui/PageHead.tsx` (40 lines reusable primitive; 5 future consumer paths planned 57.25-57.28)
+- NEW `frontend/tests/unit/components/PageHead.test.tsx` (5 cases all pass: title+subtitle / routePath pill / badges slot / actions slot / actions omitted edge case)
+- REWRITE-TOP `frontend/src/features/cost-dashboard/components/CostOverview.tsx` (added PageHead + admin scope gate + page-actions row; preserved Total cost + CostBreakdownTable below temporarily)
+- UPDATE `frontend/src/i18n/locales/en/common.json` + `zh-TW/common.json` (+ cost.* namespace 7 keys × 2 locales)
+- UPDATE `frontend/tests/unit/cost-dashboard/migrate.test.tsx` (selector adapt for new PageHead subtitle; preserve assertion intent "no inline style")
+
+**Verification**:
+- Vitest 374/374 全綠 (76 files; +5 from Sprint 57.23 close baseline 369)
+- `npm run lint` exit 0 (0 errors / 0 warnings)
+- `npm run build` 3.79s; main bundle 329.57 kB (+0.46 kB from 329.11 baseline — PageHead + i18n keys)
+
+**DoD verified**:
+- ✅ PageHead matches mockup `page-admin.jsx:202-216` shape (title + subtitle + routePath + admin badge + 2 buttons)
+- ✅ Admin Badge gates on `isPlatformAdmin` (PLATFORM_ADMIN_ROLES `admin|platform_admin`)
+- ✅ "By tenant" + "CSV" buttons render disabled + title tooltip per AP-2 honesty
+- ✅ i18n EN + zh-TW parity (no missing translation warnings on build)
+- ✅ data-testid anchors installed for Day 3 Playwright pair-verify
+
+**Day 1.1 hours ~50 min**:
+- PageHead component + spec: ~20 min
+- CostOverview integration + i18n keys: ~15 min
+- Test selector adapt + verify Vitest/lint/build: ~15 min
+
+**Day 1 cumulative ~2.6 hr** (vs ~4.2 hr commit budget = ~62% consumed for ~25% Group B progress; on track)
 
 ---
 

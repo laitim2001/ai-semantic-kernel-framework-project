@@ -135,6 +135,17 @@
       "correctionTrace": "Correction Trace"
     }
   },
+  "cost": {
+    "pageTitle": "Cost Ledger",
+    "pageSub": "Range 12 · Token + tool spend · admin-only provider breakdown",
+    "adminScope": "admin scope",
+    "action": {
+      "byTenant": "By tenant",
+      "csv": "CSV",
+      "filterPending": "Filter API pending Phase 58+",
+      "csvPending": "CSV export pending Phase 58+"
+    }
+  },
   "overview": {
     "title": "Overview",
     "subtitle": "Unified operator dashboard across the 12 categories.",

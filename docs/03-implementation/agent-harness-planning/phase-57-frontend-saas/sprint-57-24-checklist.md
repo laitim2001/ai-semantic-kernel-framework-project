@@ -47,14 +47,15 @@
   - DoD: `git status` clean post-commit; commit message includes `Sprint 57.24 v2 redraft (D-Step 2.5 abort)`
 
 ### 1.1 US-B1 page-head + page-actions
-- [ ] **`<PageHead>` component or inline section** rendering title + subtitle + route-pill + admin Badge + page-actions
-  - File: `frontend/src/features/cost-dashboard/components/CostOverview.tsx` (or extracted `PageHead.tsx`)
-  - DoD: 1440×900 visual matches mockup `page-admin.jsx:202-216`
-  - i18n: `cost.pageTitle` / `cost.pageSub` / `cost.adminScope` / `cost.action.byTenant` / `cost.action.csv`
-- [ ] **Admin Badge gates on `isPlatformAdmin`** (PLATFORM_ADMIN_ROLES from authStore.roles)
-  - DoD: non-admin doesn't see admin Badge
-- [ ] **"By tenant" + "CSV" buttons stubs** (onClick toast "Backend filter API pending" for now)
-  - DoD: buttons render with icons + label per mockup
+- [x] **`<PageHead>` component extracted to `components/ui/PageHead.tsx`** (40 lines reusable; 5 future consumers planned 57.25-57.28)
+  - File: `frontend/src/components/ui/PageHead.tsx` (NEW)
+  - DoD: 1440×900 visual matches mockup `page-admin.jsx:202-216` (PageHead title + subtitle + routePath inline pill + badges slot + actions slot)
+  - i18n: `cost.pageTitle` / `cost.pageSub` / `cost.adminScope` / `cost.action.byTenant` / `cost.action.csv` / `cost.action.filterPending` / `cost.action.csvPending` ✅ EN + zh-TW parity
+  - Vitest: `tests/unit/components/PageHead.test.tsx` 5/5 passed
+- [x] **Admin Badge gates on `isPlatformAdmin`** (PLATFORM_ADMIN_ROLES = ["admin", "platform_admin"] from authStore.roles)
+  - DoD: non-admin doesn't see admin Badge (tested via `data-testid="cost-admin-scope-badge"`)
+- [x] **"By tenant" + "CSV" buttons stubs** (disabled + title tooltip pending backend per AP-2)
+  - DoD: buttons render with disabled state + tooltip via title attribute ("Filter API pending Phase 58+" / "CSV export pending Phase 58+")
 
 ### 1.2 US-B2 4-stat sparkline grid
 - [ ] **`<Spark>` primitive** at `frontend/src/components/charts/Spark.tsx`

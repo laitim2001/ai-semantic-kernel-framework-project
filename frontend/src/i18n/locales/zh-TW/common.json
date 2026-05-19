@@ -135,6 +135,17 @@
       "correctionTrace": "修正軌跡"
     }
   },
+  "cost": {
+    "pageTitle": "成本帳本",
+    "pageSub": "Range 12 · Token + 工具花費 · 管理員專屬供應商分解",
+    "adminScope": "管理員範圍",
+    "action": {
+      "byTenant": "依租戶篩選",
+      "csv": "CSV",
+      "filterPending": "篩選 API 待 Phase 58+ 開通",
+      "csvPending": "CSV 匯出待 Phase 58+ 開通"
+    }
+  },
   "overview": {
     "title": "總覽",
     "subtitle": "跨 12 範疇的統一操作員儀表板。",
