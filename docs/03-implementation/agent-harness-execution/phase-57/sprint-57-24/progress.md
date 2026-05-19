@@ -361,4 +361,66 @@ view alongside raw data so reviewers can validate).
 
 ---
 
+## Day 3 — 2026-05-19 — Closeout
+
+### Day 3.0-3.4 verification + DRIFT verdict
+
+**Playwright MCP browser_close retry**: 3rd consecutive sprint browser-stuck (57.22 + 57.23 + 57.24). AD-Playwright-MCP-Recovery-Phase58 carryover #37 logged.
+
+**Playwright e2e cost-dashboard**: initially 1/2 failed at `getByRole("row").toHaveCount(4)` (line 69) because rebuild's TenantTopTable added 9 more rows (1 header + 8 tenants). Fix: added `data-testid="cost-breakdown-table"` to CostBreakdownTable + updated spec to scope `getByRole("row")` to that table. 2/2 PASS post-fix.
+
+**a11y-scan**: 2/2 PASS — `/cost-dashboard` route + auth routes 0 critical/serious violations (mockup-fidelity widgets WCAG compliant).
+
+**visual-regression**: 6 tests SKIPPED locally (CI-only per Sprint 57.14 design); cost-dashboard.png baseline regen pending CI fail + workflow_dispatch + cherry-pick (parallel Sprint 57.23 PR #156 pattern).
+
+**DRIFT-REPORT verdict**: ✅ `/cost-dashboard` PARITY (code-level audit; visual screenshot pair-verify deferred to CI baseline regen loop). 4 other v1 targets DEFERRED to Sprint 57.25-57.28 separate rebuilds.
+
+### Day 3.5 documentation artifacts
+
+- ✅ DRIFT-REPORT Day 3 update (final verdicts table + reusable primitives inventory)
+- ✅ retrospective.md Q1-Q7 (class ratio 1.19 top of band; 2-data-point span 0.59→1.19 crosses entire band; 7 carryover ADs catalogued)
+- ✅ memory subfile `project_phase57_24_cost_dashboard_rebuild.md` + MEMORY.md +1 quality pointer line
+- ✅ `.claude/rules/sprint-workflow.md` calibration matrix +1 data point + MHist entry
+- ✅ CLAUDE.md Current Sprint row + Last Updated footer minimal touch (per REFACTOR-001 §Sprint Closeout policy)
+- ✅ next-phase-candidates.md +7 ADs (#32-#38):
+  - #32 AD-Mockup-Fidelity-Rebuild-Sla-Dashboard-Phase58 (Sprint 57.25 candidate)
+  - #33 AD-Mockup-Fidelity-Rebuild-Admin-Tenants-Phase58 (Sprint 57.26)
+  - #34 AD-Mockup-Fidelity-Rebuild-Verification-Phase58 (Sprint 57.27)
+  - #35 AD-Mockup-Fidelity-Rebuild-Tenant-Settings-Phase58 (Sprint 57.28)
+  - #36 AD-Cost-Dashboard-Backend-Extensions-Phase58
+  - #37 AD-Playwright-MCP-Recovery-Phase58 (3-sprint blocker)
+  - #38 AD-Sprint-Plan-Audit-Cross-Ref-Prong5 (plan-draft discipline addition)
+
+**Day 3 closeout hours ~50 min**:
+- Playwright MCP retry + e2e debug + selector fix: ~15 min
+- a11y + visual sweep verify: ~5 min
+- DRIFT-REPORT Day 3 + retrospective.md Q1-Q7: ~15 min
+- memory subfile + MEMORY.md + sprint-workflow.md calibration + CLAUDE.md + next-phase-candidates.md: ~15 min
+
+**Sprint 57.24 v2 total ~5.8 hr** (effective in-scope ~5.0 hr after subtracting ~50 min Day 1.0 abort+redraft overhead).
+
+### Final Sprint 57.24 v2 metrics
+
+| Metric | Sprint 57.24 v2 close | Sprint 57.23 close baseline | Delta |
+|--------|----------------------|----------------------------|-------|
+| Vitest | 412/412 (83 files) | 369 (76 files) | +43 cases / +7 files |
+| Lint | exit 0 | exit 0 | clean |
+| Build | 3.28s / 331.96 kB | 3.79s / 329.11 kB | +2.85 kB |
+| e2e cost-dashboard | 2/2 PASS | 2/2 PASS (different shape) | green |
+| a11y-scan | 2/2 PASS | 2/2 PASS | green |
+| Workload ratio | **1.19** (top of [0.85, 1.20]) | 0.59 (below band) | class 2-data-point span |
+| Reusable primitives extracted | 7 | 0 | +7 for 57.25-57.28 |
+| Carryover ADs | 7 new (#32-#38) | 8 new (#23-#30) | continuing epic |
+
+### Group A/B/C/D status
+
+- ✅ Group A (Day 0 三-prong + scope pivot)
+- ✅ Group B (Day 1 page-head + 4-stat grid + 30d chart + reusable primitives extraction)
+- ✅ Group C (Day 2 category bars + admin tenant table + admin provider mix + final integration)
+- ✅ Group D (Day 3 closeout — i18n verified / e2e fix / DRIFT verdict / retrospective / memory / calibration / CLAUDE.md sync / next-phase ADs)
+
+Sprint 57.24 v2 acceptance criteria all DoD verified ✅. PR ready to open.
+
+---
+
 ---

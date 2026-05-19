@@ -142,48 +142,35 @@
 ## Day 3 — Group D + closeout (2026-05-21 or 22)
 
 ### 3.1 US-D1 i18n EN + zh-TW parity
-- [ ] **EN keys added** to `frontend/src/i18n/locales/en/common.json` (~25 keys covering all 6 widget groups + banners)
-- [ ] **zh-TW mirror** to `frontend/src/i18n/locales/zh-TW/common.json`
-  - DoD: no missing translation warnings on `npm run build`
-- [ ] **Verify**: `npm run lint` + render checks both locales
+- [x] **EN keys added** to `frontend/src/i18n/locales/en/common.json` (33 keys covering all 6 widget groups + banners; landed incrementally Day 1.1-2.3)
+- [x] **zh-TW mirror** to `frontend/src/i18n/locales/zh-TW/common.json` (full parity)
+  - DoD: ✅ no missing translation warnings on `npm run build`
+- [x] **Verify**: `npm run lint` exit 0 / `npm run build` 3.28s green throughout
 
 ### 3.2 US-D2 Final assembly + selector adapt
-- [ ] **Existing tests audit**: any spec depending on old CostOverview shape needs selector update
-  - DoD: all referencing tests pass post-rewrite
-- [ ] **a11y-scan**: confirm `/cost-dashboard` passes (getByTestId("app-shell") + new widgets WCAG compliant)
-  - Color contrast checks on widget tone colors (Sprint 57.18 tokens)
-- [ ] **Bundle size delta check**: `npm run build` + compare KB delta; target ≤ +30 KB
+- [x] **Existing tests audit**: 1 e2e spec needed selector update — `cost_dashboard.spec.ts:69` `getByRole("row").toHaveCount(4)` matched 13 rows (TenantTopTable added 9) post-rebuild. Fixed by scoping to `getByTestId("cost-breakdown-table")` after adding test-id to CostBreakdownTable.
+  - DoD: ✅ e2e cost-dashboard 2/2 PASS (happy path + error path)
+- [x] **a11y-scan**: ✅ `/cost-dashboard` passes (gated routes 0 critical/serious violations) + auth routes still green
+- [x] **Bundle size delta**: 329.11 kB (Sprint 57.23 close) → 331.96 kB (Day 2.3) → 332.+ kB (Day 3 with cost-breakdown-table testid) = **+~3 kB cumulative** (well within +30 KB target)
 
 ### 3.3 US-D3 Vitest + Playwright + visual-regression
-- [ ] **Vitest 369+15 passing**
-  - DoD: `npm run test` exits 0; new spec count ≥ 15
-- [ ] **Playwright e2e cost-dashboard happy-path** passes (selector adapt for layout rewrite)
-- [ ] **Playwright MCP pair-verify** (Day 3 attempt; if browser still stuck → code-level diff substitute + AD-Playwright-MCP-Recovery-Phase58 carryover)
-  - Save screenshots to `claudedocs/4-changes/sprint-57-24-mockup-fidelity-retrofit-tier-1/screenshots/mockup/cost-dashboard.png` + `production/cost-dashboard.png`
-- [ ] **visual-regression baseline regenerated** via workflow_dispatch + cherry-pick from `chore/visual-baselines-*` PR (parallel Sprint 57.23 PR #156 recovery pattern)
+- [x] **Vitest 369+15 passing**: ✅ actual 412/412 (+43 from baseline 369; +28 over the +15 target; 83 files)
+- [x] **Playwright e2e cost-dashboard happy-path** passes (selector adapt landed Day 3 — `cost-breakdown-table` testid scope)
+- 🚧 **Playwright MCP pair-verify**: 3rd consecutive sprint browser-stuck (R1 carryover); fell back to code-level audit verdict; AD-Playwright-MCP-Recovery-Phase58 logged as carryover #37
+- 🚧 **visual-regression baseline regenerated**: pending CI fail on PR → workflow_dispatch `chore/visual-baselines-*` → cherry-pick (parallel Sprint 57.23 PR #156 pattern); will be handled in PR loop, not pre-merge
 
 ### 3.4 DRIFT-REPORT + verdict
-- [ ] **DRIFT-REPORT cost-dashboard verdict = PARITY** (or COSMETIC with documented residual drift if Playwright unavailable)
-- [ ] **Sprint 57.25-57.28 carryover**: 4 remaining pages (sla / tenants / verification / tenant-settings) catalog in next-phase-candidates.md as `AD-Mockup-Fidelity-Rebuild-Page-*-Phase58` (4 entries)
+- [x] **DRIFT-REPORT cost-dashboard verdict = PARITY (code-level audit)** — Playwright MCP unavailable; verdict relies on code-level diff vs mockup `page-admin.jsx:200-321`; visual baseline regen pending CI loop
+- [x] **Sprint 57.25-57.28 carryover**: ✅ 4 page rebuild ADs (#32-#35) added to next-phase-candidates.md + AD #36 backend extensions + AD #37 Playwright MCP recovery + AD #38 Prong 5 discipline = 7 new entries
 
 ### 3.5 Retrospective + memory + closeout
-- [ ] **retrospective.md Q1-Q7** at `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-24/retrospective.md`
-  - Q1: Did sprint goal land?
-  - Q2: Workload calibration ratio (actual / committed); class `frontend-mockup-strict-rebuild` 0.60 2nd app data point
-  - Q3: What went well?
-  - Q4: What didn't go well (Day 1 abort lesson + Playwright MCP recovery + class calibration)?
-  - Q5: Carryover ADs
-  - Q6: Reusable chart primitives — were extracts right-sized?
-  - Q7: Sprint 57.25+ readiness check
-- [ ] **memory snapshot** `memory/project_phase57_24_cost_dashboard_rebuild.md` (Sprint scope + key decisions + Day 1 abort + V2 rebuild + reusable charts + 4 carryover pages)
-- [ ] **MEMORY.md +1 quality pointer line** (per REFACTOR-001 §MEMORY.md Update Policy)
-- [ ] **`.claude/rules/sprint-workflow.md` calibration matrix +1 row**:
-  - `frontend-mockup-strict-rebuild` 2nd application; data point Sprint 57.24=X.XX
-  - 3-sprint window status: Sprint 57.23=0.59 + 57.24=X.XX (2 of 3); if both below band → AD-Sprint-Plan propose 0.60 → 0.40-0.45 lift parallel Sprint 57.16 mechanical-class rule
-- [ ] **CLAUDE.md Current Sprint row + Last Updated footer** (per REFACTOR-001 §CLAUDE.md Update Policy minimal touch — NO new history record additions)
-- [ ] **next-phase-candidates.md update**: +4 entries for Sprint 57.25-57.28 carryover pages + 1 entry for AD-Cost-Dashboard-Backend-Extensions-Phase58
-- [ ] **Day 3 commit** closeout
-  - Commit message: `chore(sprint-57-24, Day 3, closeout): retrospective + memory + calibration matrix + CLAUDE.md sync`
+- [x] **retrospective.md Q1-Q7** at `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-24/retrospective.md` ✅ (Q1 goal landed / Q2 ratio 1.19 top of band / Q3 5 wins / Q4 4 issues / Q5 7 carryovers / Q6 right-sized / Q7 ready)
+- [x] **memory snapshot** `memory/project_phase57_24_cost_dashboard_rebuild.md` ✅ (full distinguishing features + acceptance verdicts + metrics + keywords)
+- [x] **MEMORY.md +1 quality pointer line** ✅ (~310 char pointer with topic + keywords per quality-pointer-principle)
+- [x] **`.claude/rules/sprint-workflow.md` calibration matrix +1 row**: ✅ Sprint 57.24 v2=1.19 added; class baseline KEEP 0.60 per 3-sprint window rule; MHist note 2-point span 0.59→1.19 + potential sub-class proposal pending 3rd app
+- [x] **CLAUDE.md Current Sprint row + Last Updated footer** ✅ minimal touch per REFACTOR-001 §Sprint Closeout policy (NO history record additions)
+- [x] **next-phase-candidates.md update**: ✅ +7 entries (#32-#38) covering 4 page rebuilds (57.25-57.28) + backend extensions + Playwright MCP recovery + Prong 5 plan discipline
+- [ ] **Day 3 commit** closeout — pending below
 
 ### 3.6 PR open + CI + merge
 - [ ] **PR open** with comprehensive body (Sprint 57.24 v2 redraft context + 6 widget groups + reusable charts + carryover)

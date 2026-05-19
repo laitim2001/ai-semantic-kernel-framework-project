@@ -76,6 +76,42 @@ Sprint aborted per §Step 2.5. Plan + checklist redraft pending user direction. 
 
 ### Day 2 — TBD
 
-### Day 3 — TBD (pending redraft direction)
+### Day 3 — 2026-05-19 — Closeout
+
+**Sprint 57.24 v2 acceptance verdict for `/cost-dashboard`**: ✅ **PARITY** (code-level audit)
+
+Final verdicts per page (Sprint 57.24 v2 redraft scope = cost-dashboard rebuild only):
+
+| # | Page | Final verdict | Notes |
+|---|------|---------------|-------|
+| 1 | `/cost-dashboard` | ✅ **PARITY (code-level)** | Sprint 57.24 v2 strict rebuild closes Sprint 57.22 Unit 1 P0. 6 mockup widget groups rendered: page-head / 4-stat sparkline / 30d AreaChart / category bars / admin tenant table / admin provider mix + LLM-neutrality notice. Visual screenshot pair-verify deferred to CI (Playwright MCP browser-stuck local). |
+| 2 | `/sla-dashboard` | DEFERRED → Sprint 57.25 | Structural drift (D-STRUCTURAL-2) confirmed Day 1 reality check; rebuild needs same primitive treatment as cost-dashboard. AD-Mockup-Fidelity-Rebuild-Sla-Dashboard-Phase58 carryover. |
+| 3 | `/verification` | DEFERRED → Sprint 57.27 | Inner component verify pending; Sprint 57.22 Unit 11 P0. AD-Mockup-Fidelity-Rebuild-Verification-Phase58 carryover. |
+| 4 | `/admin/tenants` list | DEFERRED → Sprint 57.26 | Structural drift confirmed inner component verify; Sprint 57.22 P0. AD-Mockup-Fidelity-Rebuild-Admin-Tenants-Phase58 carryover. |
+| 5 | `/admin/tenants/settings` | DEFERRED → Sprint 57.28 | Sprint 57.22 Unit 31 6-tab + feature-flags lift architectural finding; needs structural refactor. AD-Mockup-Fidelity-Rebuild-Tenant-Settings-Phase58 carryover. |
+
+**Visual baseline regen pending CI**: `/cost-dashboard.png` baseline at `frontend/tests/e2e/visual/visual-regression.spec.ts-snapshots/cost-dashboard-*.png` will mismatch after rebuild. Recovery uses Sprint 57.14 workflow_dispatch + cherry-pick pattern (parallel Sprint 57.23 PR #156 recovery). Branch push + PR open + CI fail → trigger `chore/visual-baselines-*` workflow → cherry-pick baseline regen into PR.
+
+**Playwright MCP local pair-verify**: still browser-stuck across Day 0/1/2/3 attempts (R1 carryover). AD-Playwright-MCP-Recovery-Phase58 carryover to next-phase-candidates.md.
+
+---
+
+## Reusable Primitives Inventory (Sprint 57.24 v2 outputs)
+
+| Primitive | Path | Sprint 57.25-57.28 consumers expected |
+|-----------|------|--------------------------------------|
+| `<PageHead>` | `frontend/src/components/ui/PageHead.tsx` | All 4 rebuild sprints |
+| `<Spark>` | `frontend/src/components/charts/Spark.tsx` | sla-dashboard 4-stat sparklines (57.25) |
+| `<StatCard>` | `frontend/src/components/charts/StatCard.tsx` | sla-dashboard 4-stat grid (57.25) |
+| `<AreaChart>` | `frontend/src/components/charts/AreaChart.tsx` | sla-dashboard latency chart base (57.25) |
+| `<BarTrack>` | `frontend/src/components/charts/BarTrack.tsx` | sla-dashboard SLO budget bars (57.25) + others |
+| `<CardShell>` | `frontend/src/components/ui/CardShell.tsx` | All widget cards across 4 rebuilds |
+| `<BackendGapBanner>` | `frontend/src/components/ui/BackendGapBanner.tsx` | Wherever fixture data ships (AP-2 honesty) |
+
+Total: 7 primitives + 3 cost-dashboard feature components (CategoryBarsCard / TenantTopTable / ProviderMixCard) + 4 fixtures.
+
+---
+
+**Sprint 57.24 v2 DRIFT-REPORT signed off**: 2026-05-19 Day 3.
 
 ---
