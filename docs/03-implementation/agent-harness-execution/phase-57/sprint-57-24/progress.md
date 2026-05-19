@@ -146,6 +146,39 @@ Per CLAUDE.md "Never Delete Docs" + V2 discipline:
 
 **Day 1 cumulative ~2.6 hr** (vs ~4.2 hr commit budget = ~62% consumed for ~25% Group B progress; on track)
 
+### Day 1.2 US-B2 4-stat sparkline grid (Group B continued)
+
+**Output**:
+- NEW `frontend/src/components/charts/Spark.tsx` (~25 lines pure SVG polyline; mockup-direct port of ui.jsx:115-121)
+- NEW `frontend/src/components/charts/StatCard.tsx` (~55 lines mockup-direct port of ui.jsx:99-113 + styles.css:489-504)
+- NEW `frontend/src/components/charts/index.ts` (barrel — Spark + StatCard + types exports)
+- NEW `frontend/tests/unit/components/Spark.test.tsx` (5 cases: render / tone / defaults / custom-dims / empty-edge)
+- NEW `frontend/tests/unit/components/StatCard.test.tsx` (6 cases: label-value / unit / delta-up-success / delta-down-danger / spark-slot / omitted-delta)
+- UPDATE `frontend/src/features/cost-dashboard/components/CostOverview.tsx` (add §2 4-stat sparkline grid below PageHead; Spend MTD value derives real `data.total_cost_usd`; other 3 stats fixture + sparkline fixtures inline `STAT_FIXTURES` const)
+- UPDATE `frontend/src/i18n/locales/{en,zh-TW}/common.json` (+ cost.stat.{spendMtd, tokensMtd, costPerRun, cacheHit} × 2 locales = 8 new keys)
+
+**Verification**:
+- Vitest 385/385 全綠 (78 files; +11 from Day 1.1 baseline 374)
+- `npm run lint` exit 0 (0 errors / 0 warnings)
+- `npm run build` 3.60s; main bundle 329.76 kB (+0.19 from 329.57 Day 1.1 baseline)
+
+**DoD verified**:
+- ✅ Spark default width=90 height=26 matches mockup ui.jsx canonical
+- ✅ Spark pure SVG (no chart lib); single path with min/max normalization
+- ✅ StatCard Tailwind translation of mockup .stat styles (bg-bg-1 / border / px-4 py-3.5 / rounded-[10px])
+- ✅ StatCard deltaDir semantic: "up"=success+ArrowUp / "down"=danger+ArrowDown (per mockup .stat-delta.up/.down CSS)
+- ✅ StatCard spark slot absolute-positioned bottom-right opacity-60 per mockup .stat-spark CSS
+- ✅ 4 stat instances in grid-cols-4 with data-testid anchor + tone colors matching mockup (Spend MTD memory / Tokens default / Cost-run warning / Cache hit success)
+- ✅ Spend MTD value swaps to real data.total_cost_usd via toLocaleString when data loaded; "$—" placeholder otherwise
+- ✅ i18n EN + zh-TW parity (cost.stat.*; no missing translation warnings on build)
+
+**Day 1.2 hours ~40 min**:
+- Spark + StatCard primitives + specs: ~20 min
+- CostOverview integration + i18n + fixtures: ~10 min
+- Verify Vitest/lint/build: ~10 min
+
+**Day 1 cumulative ~3.3 hr** (vs ~4.2 hr commit budget = ~79% consumed for ~50% Group B progress; on track; US-B3 next)
+
 ---
 
 ---

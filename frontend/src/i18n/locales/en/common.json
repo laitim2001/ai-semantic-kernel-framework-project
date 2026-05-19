@@ -144,6 +144,12 @@
       "csv": "CSV",
       "filterPending": "Filter API pending Phase 58+",
       "csvPending": "CSV export pending Phase 58+"
+    },
+    "stat": {
+      "spendMtd": "Spend · MTD",
+      "tokensMtd": "Tokens · MTD",
+      "costPerRun": "Cost / run",
+      "cacheHit": "Cache hit rate"
     }
   },
   "overview": {

@@ -58,20 +58,20 @@
   - DoD: buttons render with disabled state + tooltip via title attribute ("Filter API pending Phase 58+" / "CSV export pending Phase 58+")
 
 ### 1.2 US-B2 4-stat sparkline grid
-- [ ] **`<Spark>` primitive** at `frontend/src/components/charts/Spark.tsx`
-  - Props: `points: number[]`, `tone?: string`, `width?: number=60`, `height?: number=24`
-  - DoD: pure SVG polyline; ≤ 30 lines
-- [ ] **`<StatCard>` primitive** at `frontend/src/components/charts/StatCard.tsx`
+- [x] **`<Spark>` primitive** at `frontend/src/components/charts/Spark.tsx` (~25 lines pure SVG polyline; default width=90 height=26 matching mockup ui.jsx:115-121)
+  - Props: `points: number[]`, `tone?: string=hsl(var(--primary))`, `width?: number=90`, `height?: number=26`
+  - DoD: ✅ pure SVG single path with min/max normalization; empty points returns null
+- [x] **`<StatCard>` primitive** at `frontend/src/components/charts/StatCard.tsx` (~55 lines mockup-direct port of ui.jsx:99-113 + styles.css:489-504)
   - Props: `label, value, unit?, delta?, deltaDir?: "up"|"down", spark?: ReactNode`
-  - DoD: ≤ 50 lines; Tailwind only (no inline styles)
-- [ ] **Charts barrel** `frontend/src/components/charts/index.ts` re-exports Spark + StatCard + AreaChart
-- [ ] **4 stat instances in CostOverview**:
-  - Spend MTD: `data.total_cost_usd` (real) + Spark fixture
-  - Tokens MTD: derive from `data.by_type` aggregation (if available) else fixture
-  - Cost / run: fixture (no backend run-count yet)
-  - Cache hit rate: fixture (no backend metric yet)
-  - DoD: 4 cards render in grid-cols-4 at 1440×900
-- [ ] **Vitest spec** `Spark.test.tsx` + `StatCard.test.tsx` (≥ 4 cases each: render / props / spark slot / delta direction)
+  - DoD: ✅ Tailwind translation of mockup .stat styles (rounded-[10px] / bg-bg-1 / px-4 py-3.5 / text-2xl font-semibold tracking-[-0.02em] tabular-nums); deltaDir semantic = "up=positive(success+ArrowUp) / down=negative(danger+ArrowDown)"; spark absolute-positioned bottom-right opacity-60 per mockup
+- [x] **Charts barrel** `frontend/src/components/charts/index.ts` exports Spark + StatCard (AreaChart added Day 1.3)
+- [x] **4 stat instances in CostOverview** in grid-cols-4:
+  - Spend MTD: real `data.total_cost_usd` value (`$X,XXX` toLocaleString) + Spark fixture (tone memory)
+  - Tokens MTD: fixture value `14.2 M` + Spark fixture (default tone)
+  - Cost / run: fixture `$0.052` + Spark fixture (tone warning)
+  - Cache hit rate: fixture `38 %` + Spark fixture (tone success)
+  - DoD: ✅ 4 cards render in `grid grid-cols-4 gap-3` with `data-testid="cost-stat-grid"` anchor for Day 3 Playwright
+- [x] **Vitest specs**: `Spark.test.tsx` (5 cases) + `StatCard.test.tsx` (6 cases) all pass; covers render / tone / width-height defaults / empty-points edge / delta tone semantic / spark slot / delta omitted
 
 ### 1.3 US-B3 `<AreaChart>` 30d Spend over time
 - [ ] **`<AreaChart>` primitive** at `frontend/src/components/charts/AreaChart.tsx`

@@ -144,6 +144,12 @@
       "csv": "CSV",
       "filterPending": "篩選 API 待 Phase 58+ 開通",
       "csvPending": "CSV 匯出待 Phase 58+ 開通"
+    },
+    "stat": {
+      "spendMtd": "當月花費",
+      "tokensMtd": "當月 Tokens",
+      "costPerRun": "每次執行成本",
+      "cacheHit": "快取命中率"
     }
   },
   "overview": {

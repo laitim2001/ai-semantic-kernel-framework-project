@@ -8,10 +8,12 @@
  *   Sprint 57.24 v2 incremental rebuild from 68-line MVP toward 6-widget-group
  *   mockup-fidelity layout per reference/design-mockups/page-admin.jsx:200-321 (CostPage).
  *
- *   Day 1.1 US-B1 (this state): PageHead added at top with title + subtitle +
- *   route-pill + admin scope Badge (gated on isPlatformAdmin via authStore.roles)
- *   + page-actions row (By tenant + CSV stubs disabled with tooltip pending
- *   backend API per AP-2 honesty). Existing Total cost + CostBreakdownTable
+ *   Day 1.2 US-B2 (this state): PageHead (Day 1.1) + 4-stat sparkline grid
+ *   below (Spend MTD / Tokens MTD / Cost-run / Cache hit rate) using new
+ *   <StatCard> + <Spark> primitives from components/charts/. Spend MTD value
+ *   derives from data.total_cost_usd (real backend); other 3 stats render
+ *   fixture data per CLAUDE.md §Frontend Mockup-Fidelity backend-gap
+ *   placeholder rule + AP-2 honesty. Existing Total cost + CostBreakdownTable
  *   preserved below temporarily; Day 2 US-C1 supersedes with CategoryBarsCard.
  *
  *   Backend reused: useCostSummary TanStack hook + GET /api/v1/cost-summary
@@ -21,6 +23,7 @@
  * Last Modified: 2026-05-19
  *
  * Modification History (newest-first):
+ *   - 2026-05-19: Sprint 57.24 Day 1 US-B2 — 4-stat sparkline grid (Spark + StatCard) with real Spend MTD + 3 fixtures
  *   - 2026-05-19: Sprint 57.24 Day 1 US-B1 — PageHead + admin scope gate + page-actions stubs (rebuild start)
  *   - 2026-05-11: Sprint 57.15 — inline styles → Tailwind utility classes (AD-Inline-Style-Cleanup-Sweep)
  *   - 2026-05-10: Sprint 57.13 US-B2 — loading → <CardSkeleton>; error → <ErrorRetry> (components/ui)
@@ -37,6 +40,7 @@
 
 import { useTranslation } from "react-i18next";
 
+import { Spark, StatCard } from "../../../components/charts";
 import { Button } from "../../../components/ui/button";
 import { CardSkeleton, ErrorRetry } from "../../../components/ui";
 import { PageHead } from "../../../components/ui/PageHead";
@@ -49,6 +53,17 @@ import { CostBreakdownTable } from "./CostBreakdownTable";
 // pattern as AdminTenantsPage. Used to gate the admin-only scope Badge in the
 // page-head and (Day 1.4-Day 2) the cross-tenant + cross-provider widgets.
 const PLATFORM_ADMIN_ROLES = ["admin", "platform_admin"];
+
+// Sparkline fixtures for Day 1.2 4-stat grid. Spend MTD trend tail ($2,847)
+// matches the mockup demo value; other 3 fully fixture pending backend metric
+// surfaces (tokens.total / runs.count / cache.hit_rate; AD-Cost-Dashboard-
+// Backend-Extensions-Phase58). When real data lands, hooks replace inline arrays.
+const STAT_FIXTURES = {
+  spendMtdSpark: [1200, 1450, 1700, 1980, 2200, 2400, 2600, 2847],
+  tokensMtdSpark: [8, 9, 10, 11, 12, 13, 14, 14.2],
+  costPerRunSpark: [0.044, 0.046, 0.048, 0.05, 0.05, 0.052, 0.052],
+  cacheHitSpark: [28, 30, 32, 34, 35, 36, 37, 38],
+};
 
 export function CostOverview() {
   const { t } = useTranslation("common");
@@ -98,6 +113,63 @@ export function CostOverview() {
           </>
         }
       />
+
+      {/* §2 4-stat sparkline grid (US-B2). Spend MTD value swaps to real
+          data.total_cost_usd when loaded; other 3 + all 4 sparklines are
+          fixture pending backend metric surfaces (AP-2 honesty: fixture rows
+          plainly demo data; live data integration tracked in Phase 58+
+          AD-Cost-Dashboard-Backend-Extensions). */}
+      <div className="grid grid-cols-4 gap-3" data-testid="cost-stat-grid">
+        <StatCard
+          label={t("cost.stat.spendMtd")}
+          value={
+            data
+              ? `$${Number(data.total_cost_usd).toLocaleString()}`
+              : "$—"
+          }
+          delta="+8.4%"
+          deltaDir="down"
+          spark={
+            <Spark
+              points={STAT_FIXTURES.spendMtdSpark}
+              tone="hsl(var(--memory))"
+            />
+          }
+        />
+        <StatCard
+          label={t("cost.stat.tokensMtd")}
+          value="14.2"
+          unit="M"
+          delta="+2.1M"
+          deltaDir="up"
+          spark={<Spark points={STAT_FIXTURES.tokensMtdSpark} />}
+        />
+        <StatCard
+          label={t("cost.stat.costPerRun")}
+          value="$0.052"
+          delta="+$0.004"
+          deltaDir="down"
+          spark={
+            <Spark
+              points={STAT_FIXTURES.costPerRunSpark}
+              tone="hsl(var(--warning))"
+            />
+          }
+        />
+        <StatCard
+          label={t("cost.stat.cacheHit")}
+          value="38"
+          unit="%"
+          delta="+4pp"
+          deltaDir="up"
+          spark={
+            <Spark
+              points={STAT_FIXTURES.cacheHitSpark}
+              tone="hsl(var(--success))"
+            />
+          }
+        />
+      </div>
 
       {!tenantId && (
         <p className="text-sm text-destructive">No tenant in your session.</p>
