@@ -405,5 +405,68 @@
     "inspector": {
       "comingSoon": "Inspector 內容於 Sprint 57.21 Day 4（Turn 分頁）與 Sprint 57.22+（Trace / Memory / Tree 分頁）落地。"
     }
+  },
+  "sla": {
+    "pageTitle": "SLA 儀表板",
+    "pageSub": "Range 12 · 可觀測性 · p50 / p95 / p99 延遲 + 錯誤預算",
+    "range": {
+      "label": "時間區間",
+      "1h": "1 小時",
+      "24h": "24 小時",
+      "7d": "7 天",
+      "30d": "30 天"
+    },
+    "action": {
+      "refresh": "重新整理",
+      "export": "匯出",
+      "exportPending": "匯出功能於 Phase 58+ 上線（AD-SLA-Dashboard-Backend-Extensions）"
+    },
+    "stat": {
+      "p50": "p50 延遲",
+      "p95": "p95 延遲",
+      "p99": "p99 延遲",
+      "errorBudget": "錯誤預算"
+    },
+    "latencyChart": {
+      "title": "延遲分布",
+      "subtitle": "24 小時 · 所有 agent · p50 / p95 / p99",
+      "badge": {
+        "p50": "p50",
+        "p95": "p95",
+        "p99": "p99"
+      }
+    },
+    "monthPickerAuxiliary": "保留 MonthPicker 為輔助控制 — 時間區間切換目前僅作視覺呈現",
+    "slo": {
+      "title": "SLO 狀態",
+      "subtitle": "啟用中的 SLO 目標",
+      "loopP95": "Loop p95 < 2s",
+      "toolSuccess": "Tool 成功率 ≥ 99%",
+      "hitlResponse": "HITL 回應 < 5m",
+      "subagentDepth": "Subagent 深度 ≤ 5",
+      "costPerRun": "每次執行成本 < $0.05",
+      "budgetUsed": "預算已用"
+    },
+    "slowOps": {
+      "title": "最慢的操作",
+      "subtitle": "p99 主要來源 · 近 24 小時",
+      "col": {
+        "operation": "操作",
+        "kind": "類型",
+        "p50": "p50",
+        "p95": "p95",
+        "p99": "p99",
+        "calls": "次數"
+      }
+    },
+    "errorRate": {
+      "title": "各服務錯誤率",
+      "subtitle": "近 1 小時"
+    },
+    "banner": {
+      "latencyChart24h": "24 小時時間序列聚合 API 於 Phase 58+ 上線（AD-SLA-Dashboard-Backend-Extensions）；目前圖表展示為示範資料。",
+      "crossOperationP99": "跨操作 p99 聚合 API 於 Phase 58+ 上線（AD-SLA-Dashboard-Backend-Extensions）；表格展示為示範資料。",
+      "perServiceErrorRate": "各服務錯誤率聚合 API 於 Phase 58+ 上線（AD-SLA-Dashboard-Backend-Extensions）；卡片展示為示範資料。"
+    }
   }
 }

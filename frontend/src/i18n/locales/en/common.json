@@ -405,5 +405,68 @@
     "inspector": {
       "comingSoon": "Inspector content lands Sprint 57.21 Day 4 (Turn tab) + Sprint 57.22+ (Trace / Memory / Tree tabs)."
     }
+  },
+  "sla": {
+    "pageTitle": "SLA Dashboard",
+    "pageSub": "Range 12 · Observability · p50 / p95 / p99 latency + error budget",
+    "range": {
+      "label": "Time range",
+      "1h": "1h",
+      "24h": "24h",
+      "7d": "7d",
+      "30d": "30d"
+    },
+    "action": {
+      "refresh": "Refresh",
+      "export": "Export",
+      "exportPending": "Export pending Phase 58+ AD-SLA-Dashboard-Backend-Extensions"
+    },
+    "stat": {
+      "p50": "p50 latency",
+      "p95": "p95 latency",
+      "p99": "p99 latency",
+      "errorBudget": "Error budget"
+    },
+    "latencyChart": {
+      "title": "Latency distribution",
+      "subtitle": "24h · all agents · p50 / p95 / p99",
+      "badge": {
+        "p50": "p50",
+        "p95": "p95",
+        "p99": "p99"
+      }
+    },
+    "monthPickerAuxiliary": "MonthPicker preserved as auxiliary — time-range tabs are visual-only this sprint",
+    "slo": {
+      "title": "SLO status",
+      "subtitle": "Active SLO objectives",
+      "loopP95": "Loop p95 < 2s",
+      "toolSuccess": "Tool success ≥ 99%",
+      "hitlResponse": "HITL response < 5m",
+      "subagentDepth": "Subagent depth ≤ 5",
+      "costPerRun": "Cost / run < $0.05",
+      "budgetUsed": "budget used"
+    },
+    "slowOps": {
+      "title": "Top slow operations",
+      "subtitle": "p99 contributors · last 24h",
+      "col": {
+        "operation": "Operation",
+        "kind": "Kind",
+        "p50": "p50",
+        "p95": "p95",
+        "p99": "p99",
+        "calls": "Calls"
+      }
+    },
+    "errorRate": {
+      "title": "Error rate by service",
+      "subtitle": "Last hour"
+    },
+    "banner": {
+      "latencyChart24h": "Backend 24h time-series aggregation API pending Phase 58+ AD-SLA-Dashboard-Backend-Extensions; current chart shows fixture demo data.",
+      "crossOperationP99": "Backend cross-operation p99 aggregation API pending Phase 58+ AD-SLA-Dashboard-Backend-Extensions; table shows fixture demo data.",
+      "perServiceErrorRate": "Backend per-service error rate aggregation API pending Phase 58+ AD-SLA-Dashboard-Backend-Extensions; card shows fixture demo data."
+    }
   }
 }
