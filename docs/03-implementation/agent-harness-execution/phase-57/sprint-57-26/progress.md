@@ -121,4 +121,28 @@
 
 ### Day 2 commit
 
-- Commit: _recorded after Day 2 commit_
+- Commit `536157dd` — `feat(frontend, sprint-57-26, Day 2, Group C): 22-route regression sweep + before/after + vs-mockup matrix + harness object-mock fix` (4 files; +155 / -64)
+
+---
+
+## Day 3 — Group D (closeout) — 2026-05-21
+
+### Today's Accomplishments
+
+- **Quality gate green**: Vitest **430/430** pass (87 files; 0 regression — the two `kaboom` console lines are `AuthShell.test.tsx`'s intentional error-boundary test throw, the test itself passes) · `npm run lint` silent (`--max-warnings 0`) · `npm run build` 3.40s · main bundle **334.70 kB = delta 0** vs Sprint 57.25 baseline (pure CSS/className change, no new dependency).
+- **D-PRE-3 confirmed**: 0 shell/layout Vitest specs asserted literal `240px`/`p-6`/`bg-background` → 0 spec adapt needed.
+- **FOUNDATION-DRIFT-REPORT** §4 final verdict + §5 epic-backlog cross-ref populated; Status → ✅ Complete.
+- **`frontend/diagnose-render.mjs` deleted** — superseded by `frontend/scripts/route-sweep.mjs` (Karpathy §3 orphan delete; its only purpose was the now-complete drift investigation).
+- **Closeout docs**: retrospective.md Q1-Q7 + memory snapshot `project_phase57_26_foundation_fidelity.md` + MEMORY.md +1 quality pointer + `sprint-workflow.md` calibration matrix +1 NEW class row + CLAUDE.md Current Sprint row + Last Updated footer (minimal touch per REFACTOR-001 §Sprint Closeout) + next-phase-candidates.md (#33/#34/#35 +1 shift + #41 4th-data-point → 57.27).
+
+### Calibration (retrospective Q2)
+
+NEW class `frontend-foundation-token-correction` 0.55 — 1st data point. Committed ~3.5 hr / actual ~3.2 hr → **ratio ~0.91 ✅ in-band [0.85, 1.20]**. KEEP 0.55 baseline (1 data point insufficient to adjust). `actual/bottom-up` ~0.50 (bottom-up 2× generous; 0.55 multiplier close to right).
+
+### Sprint outcome
+
+5 foundation-token drifts corrected globally · 22-route regression sweep 0 structural + 0 cosmetic regression · R1 closed (rebuilt routes intact) · quality gate green. The user-reported drift (font too large / main content mis-positioned / background hue off) is resolved at the foundation layer for all 22 routes at once.
+
+### Day 3 commit
+
+- Commit: _recorded after Day 3 commit_

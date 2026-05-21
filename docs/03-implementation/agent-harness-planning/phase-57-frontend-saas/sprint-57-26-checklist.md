@@ -122,41 +122,40 @@
 - [x] **Structural regressions logged** as carryover ADs — N/A: 0 structural regression. R1 rebuilt routes (auth/cost/sla) all re-verified intact; no `AD-Rebuilt-Route-Refidelity` carryover needed. The foundation correction is clean.
 
 ### 2.4 Day 2 commit
-- [ ] **Day 2 commit** with sweep results + cosmetic fixes
-  - Commit message: `feat(frontend, sprint-57-26, Day 2, Group C): 22-route regression sweep + before/after + vs-mockup matrix + cosmetic parity fixes`
-  - DoD: `git status` clean post-commit
+- [x] **Day 2 commit** with sweep results — commit `536157dd` (4 files; +155 / -64; no cosmetic fixes needed — 0 regression)
+  - Commit message: `feat(frontend, sprint-57-26, Day 2, Group C): 22-route regression sweep + before/after + vs-mockup matrix + harness object-mock fix`
+  - DoD: `git status` clean post-commit ✅
 
 ---
 
 ## Day 3 — Group D + closeout (2026-05-23)
 
 ### 3.1 US-D1 Vitest + lint + build
-- [ ] **Shell/layout Vitest specs adapted** for new foundation dimensions
-  - DoD: specs asserting `240px`/`p-6`/`bg-background` updated to `232px`/new-inset/`bg-bg` (adapt NOT delete)
-- [ ] **Vitest 430/430 passing** (Sprint 57.25 baseline preserved; 0 regression)
+- [x] **Shell/layout Vitest specs adapted** — N/A: D-PRE-3 found 0 specs assert literal `240px`/`p-6`/`bg-background`; Vitest 430/430 pass with 0 adapt needed
+- [x] **Vitest 430/430 passing** (Sprint 57.25 baseline preserved; 0 regression)
   - Verify: `npm run test` exit 0
-- [ ] **`npm run lint` exit 0** + **`npm run build` green** + bundle KB delta recorded
-  - DoD: bundle delta ≈ 0 (CSS + shell-only); recorded in progress.md
+- [x] **`npm run lint` exit 0** + **`npm run build` green** + bundle KB delta recorded
+  - DoD: lint silent ✅ · build 3.40s ✅ · main bundle 334.70 kB = delta 0 vs Sprint 57.25 baseline ✅ (pure CSS/className change)
 
 ### 3.2 US-D2 FOUNDATION-DRIFT-REPORT final
-- [ ] **Final per-route verdict** = FOUNDATION-PARITY (baseline aligned; residual content drift noted)
+- [x] **Final per-route verdict** = FOUNDATION-PARITY (baseline aligned; residual content drift noted)
   - DoD: all ~22 routes have a verdict
-- [ ] **Epic-backlog list** — routes still needing `frontend-mockup-strict-rebuild` treatment
+- [x] **Epic-backlog list** — routes still needing `frontend-mockup-strict-rebuild` treatment
   - DoD: accurate remaining-route list for the epic
-- [ ] **`frontend/diagnose-render.mjs` deleted** (superseded by `scripts/route-sweep.mjs`)
+- [x] **`frontend/diagnose-render.mjs` deleted** (superseded by `scripts/route-sweep.mjs`)
   - Verify: `Glob("frontend/diagnose-render.mjs")` → 0 results
 
 ### 3.3 US-D3 Retrospective + memory + closeout
-- [ ] **retrospective.md Q1-Q7** at `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-26/retrospective.md`
+- [x] **retrospective.md Q1-Q7** at `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-26/retrospective.md`
   - DoD: Q2 records actual/committed ratio = 1st data point for NEW `frontend-foundation-token-correction` class
-- [ ] **memory snapshot** `memory/project_phase57_26_foundation_fidelity.md`
+- [x] **memory snapshot** `memory/project_phase57_26_foundation_fidelity.md`
   - DoD: distinguishing features + verdicts + metrics + keywords per quality-pointer principle
-- [ ] **MEMORY.md +1 quality pointer line** (~300 char; topic + keywords + subfile link)
-- [ ] **`.claude/rules/sprint-workflow.md` calibration matrix +1 NEW class row**
+- [x] **MEMORY.md +1 quality pointer line** (~300 char; topic + keywords + subfile link)
+- [x] **`.claude/rules/sprint-workflow.md` calibration matrix +1 NEW class row**
   - DoD: `frontend-foundation-token-correction` 0.55 row with 1st data point `57.26=<ratio>` + MHist entry
-- [ ] **`claudedocs/1-planning/next-phase-candidates.md` update**
+- [x] **`claudedocs/1-planning/next-phase-candidates.md` update**
   - DoD: foundation-fidelity item closed; epic-backlog routes referenced; any R1 structural-regression carryover added
-- [ ] **CLAUDE.md Current Sprint row + Last Updated footer** (REFACTOR-001 §Sprint Closeout minimal touch — NO history additions)
+- [x] **CLAUDE.md Current Sprint row + Last Updated footer** (REFACTOR-001 §Sprint Closeout minimal touch — NO history additions)
 - [ ] **Day 3 commit** closeout
   - Commit message: `feat(frontend, sprint-57-26, Day 3): closeout — FOUNDATION-DRIFT-REPORT final + retrospective + calibration matrix NEW class + minimal CLAUDE.md touch`
   - DoD: `git status` clean post-commit

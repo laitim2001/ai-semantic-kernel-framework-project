@@ -4,9 +4,10 @@
 **Sprint**: 57.26
 **Scope**: Cross-cutting frontend (foundation layer only — NOT per-route content rebuild)
 **Created**: 2026-05-20 (Day 0 skeleton)
-**Status**: 🚧 In Progress — Day 2 sweep complete
+**Status**: ✅ Complete — Day 3 closeout
 
 > **Modification History**
+> - 2026-05-21: Day 3 — final verdict + epic-backlog cross-ref; quality gate recorded
 > - 2026-05-21: Day 2 — 22-route before/after + vs-mockup matrix populated; 0 structural regression
 > - 2026-05-20: Day 0 skeleton — 5 foundation drifts + 22-route before/after matrix skeleton
 
@@ -92,10 +93,30 @@ Verdict: `FOUNDATION-PARITY` = foundation baseline (font 13px / sidebar 232 / ma
 
 ## 4. Day 3 Final Verdict
 
-_Populated Day 3._
+**Sprint 57.26 foundation-token correction: SHIPPED — 0 regression.**
+
+All 5 foundation drifts corrected at the global layer (`index.css` + `AppShellV2.tsx` + `AuthShell.tsx`):
+
+1. root font-size → `13px` (rem-scaling; every Tailwind rem utility scales 13/16) ✓
+2. `<main>` padding → mockup `.content` `24px 28px 60px` (arbitrary-px) ✓
+3. sidebar grid column → `232px` ✓
+4. shell background → `--bg` / `--fg` token tree (`AuthShell` backdrop too) ✓
+5. `--radius` → `8px` (px — survives the root rescale) ✓
+
+**Per-route verdict**: 19/22 `FOUNDATION-PARITY` (verified rendering) + 3/22 `FOUNDATION-APPLIED` (memory / subagents / verification — global CSS provably applies; page body unrenderable under the sweep harness, before==after, deferred to their own rebuild sprints).
+
+**Regression**: 🟢 19 intended improvement · 🟡 0 cosmetic · 🔴 0 structural · ⚪ 3 harness-unrenderable (not a regression).
+
+**Quality gate**: Vitest 430/430 · lint silent (`--max-warnings 0`) · build 3.40s · main bundle 334.70 kB (delta 0 — pure CSS/className change, no new dependency).
+
+Every shipped route now inherits a mockup-faithful foundation baseline. The user-reported drift (font too large / main content mis-positioned / background hue off) is resolved at the foundation layer for all 22 routes at once. The `frontend-mockup-strict-rebuild` epic now builds on a correct base rather than compensating locally per route.
 
 ---
 
 ## 5. Epic Backlog (routes still needing `frontend-mockup-strict-rebuild`)
 
-_Populated Day 3 — the per-route residual content drift (distinct from the foundation baseline this sprint corrected) is already enumerated by the Sprint 57.22 `AUDIT-REPORT-COMPREHENSIVE.md` 41-route priority matrix; Day 3 cross-references it rather than re-deriving._
+This sprint corrected the **foundation baseline only**. Per-route **content** drift (widget layout / spacing / copy fidelity vs mockup) remains and is the scope of the `frontend-mockup-strict-rebuild` epic.
+
+The authoritative per-route content-drift backlog is the Sprint 57.22 `claudedocs/4-changes/sprint-57-22-mockup-fidelity-audit/AUDIT-REPORT-COMPREHENSIVE.md` 41-route priority matrix. Routes already rebuilt: `/auth/*` (57.23) · `/cost-dashboard` (57.24) · `/sla-dashboard` (57.25). Remaining P0/P1 routes per that audit continue the epic.
+
+This foundation correction does NOT change that backlog's contents — it ensures every future rebuild sprint starts from a mockup-faithful baseline. The 3 `FOUNDATION-APPLIED` routes (memory / subagents / verification) will have their foundation parity visually confirmed when their rebuild sprint runs with a real backend or correct fixture.
