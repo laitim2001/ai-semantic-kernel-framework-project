@@ -35,8 +35,8 @@
 |---|--------|-----------|-----|---------|------|
 | A | page-head | `:74-87` | 1 | ⬜ pending | — |
 | B | KPI row 4-stat | `:90-95` | 1 | ⬜ pending | — |
-| C | Active Loops card | `:99-141` | 1 | ⬜ pending | — |
-| D | HITL Queue card | `:143-167` | 1 | ⬜ pending | — |
+| C | Active Loops card | `:99-141` | 1 | 🟡 component built | `ActiveLoopsCard.tsx` (commit `9c4fd7f6`); 5-col layout D4 closed; agent/model placeholder per D-PRE-6 / D15. Full-page Playwright pair-verify → Day 3 assembly. |
+| D | HITL Queue card | `:143-167` | 1 | 🟡 component built | `HITLQueueCard.tsx` (commit `9c4fd7f6`); D13 critical tint closed; fixture + BackendGapBanner. Full-page pair-verify → Day 3. |
 | E | Cost Burn chart | `:172-178, 273-329` | 2 | ⬜ pending | — |
 | F | Providers card | `:180-199` | 2 | ⬜ pending | — |
 | G | Recent Incidents card | `:204-225` | 2 | ⬜ pending | — |

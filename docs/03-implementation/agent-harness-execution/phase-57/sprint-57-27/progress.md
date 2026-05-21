@@ -35,4 +35,36 @@ Scope shift from the 8 D-PRE findings is **< 20%** (mostly assumption correction
 
 ### Day 0 commit
 
-- Commit: plan + checklist + 三-prong + DRIFT skeleton + progress.md Day 0 + Sprint 57.26 checklist §3.4 fold
+- Commit `43eedcee` (5 files): plan + checklist + 三-prong + DRIFT skeleton + progress.md Day 0 + Sprint 57.26 checklist §3.4 fold
+
+---
+
+## Day 1 — Group B (Active Loops + HITL Queue) — 2026-05-21
+
+### Today's Accomplishments
+
+- **2/9 widget rebuilt** — `ActiveLoopsCard` + `HITLQueueCard` mockup-fidelity components created under `frontend/src/features/overview/components/` (D-PRE-1 confirmed: directory was absent → created).
+  - **ActiveLoopsCard** — 1:1 port of mockup `page-overview.jsx:99-141`; 5-col loop-row grid (`grid-cols-[auto_1fr_auto_auto_auto]`), font sizes `text-[12.5px]`/`[11px]`/`[10.5px]` per mockup; real `useActiveLoops(10)` data; loading / error / empty states preserved from prior inline impl. D-PRE-6 honesty: `Loop` type lacks `agent_name`/`model` → placeholder strings (`"agent"` / `"—"`); `MAX_TURNS=50` hardcoded (D15). Both tracked under existing `AD-Loop-Session-Enrich-Phase58`.
+  - **HITLQueueCard** — 3 risk-tinted cards per mockup `:143-167`; fixture-backed (`__fixtures__/hitlQueue.ts`) + `<BackendGapBanner>` (AP-2 honesty — no backend HITL-queue aggregation endpoint yet).
+  - **`_primitives.tsx`** — `Badge` / `RiskBadge` extracted from inline OverviewPage definitions; closes D11 (badge 4px radius, not pill) + D12 (RiskBadge `risk-*` token tone map).
+- **OverviewPage.tsx −170 lines** — inline `ActiveLoopsCard` / `HITLQueueCard` definitions removed; new components imported. AP-3 reversal (inline primitives → shared/feature components).
+- **2 Vitest specs** under `tests/unit/features/overview/` (path corrected per D-PRE-3): ActiveLoopsCard (loading/error/empty/happy 5-col) + HITLQueueCard (3 cards / critical tint / banner).
+- **i18n** — EN + zh-TW `overview.activeLoops.*` keys added.
+
+### Execution-order note
+
+Plan Day 1 listed page-head + KPI (US-B1) first, then widgets (US-B2). Actual order: **standalone widget component files first (Day 1-2), `OverviewPage.tsx` final assembly last (Day 3)**. Page-head + KPI row are in-page JSX inside `OverviewPage.tsx`, not standalone files — so they land naturally in the Day 3 assembly pass alongside the 9-widget grid wiring. Engineering-序 adjustment, not scope change; checklist §1.1 marked 🚧 DEFERRED accordingly.
+
+### Tests / discipline
+
+- Vitest 430 → **437/437** pass (+7); `npm run lint` ✅; `npm run build` ✅.
+- 0 backend changes; 0 LLM SDK leak; frontend-only — V2 紀律 9 項 all ✅/N/A.
+
+### Day 1 commit
+
+- Commit `9c4fd7f6` (10 files, +565/-171): `feat(frontend, sprint-57-27, Day 1, Group B): ActiveLoopsCard + HITLQueueCard + _primitives extract`
+
+### Remaining for Day 2-3
+
+- Day 2: CostBurnChart / ErrorTrendChart / ProvidersCard / IncidentsCard / QuickActionsStrip (5 widgets).
+- Day 3: page-head + KPI row (US-B1) + OverviewPage final assembly (grid2 / grid layout) + i18n completion + Playwright MCP full-page pair-verify + closeout.

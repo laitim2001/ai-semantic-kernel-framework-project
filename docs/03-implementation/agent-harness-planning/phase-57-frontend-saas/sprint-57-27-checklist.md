@@ -53,16 +53,17 @@
 ### 0.4 Day 0 commit
 - [x] **Fold Sprint 57.26 checklist §3.4** [x] marks (Merge / Post-merge cleanup) per user decision 2026-05-21
   - DoD: `sprint-57-26-checklist.md` §3.4 last 2 items already `[x]` (done this session); confirm staged
-- [ ] **Day 0 commit** — plan + checklist + 三-prong + DRIFT skeleton + progress + 57.26 §3.4 fold
+- [x] **Day 0 commit** — plan + checklist + 三-prong + DRIFT skeleton + progress + 57.26 §3.4 fold
   - DoD: `git add` plan + checklist + DRIFT skeleton + progress.md + sprint-57-26-checklist.md
   - Commit message: `chore(sprint-57-27, Day 0): plan + checklist + 三-prong + DRIFT skeleton + 57.26 §3.4 fold`
-  - Verify: `git log --oneline -1`
+  - Verify: `git log --oneline -1` → commit `43eedcee` (5 files)
 
 ---
 
 ## Day 1 — Group B (page-head + KPI row + Active Loops + HITL Queue) (2026-05-22)
 
 ### 1.1 US-B1 — page-head + KPI row 4-stat WITH sparklines
+> 🚧 **DEFERRED to Day 3 OverviewPage assembly** — page-head + KPI row are in-page JSX inside `OverviewPage.tsx` (not standalone component files). Execution-order adjustment: standalone widget component files (`features/overview/components/*`) are built first (Day 1-2), then the `OverviewPage.tsx` final assembly (page-head + KPI + 9-widget grid) lands Day 3. Items kept `[ ]` per sacred rule.
 - [ ] **Page-head** rebuilt per mockup `page-overview.jsx:74-87`
   - In-page title + subtitle + `/overview` route-pill + page-actions (Export outline + New Chat primary)
   - Mono `{tenant} · {role} · {clock}` meta line (D2; R1 decision — feature-scoped sibling unless PageHead has meta slot)
@@ -76,28 +77,29 @@
 - [ ] **Verify**: `npm run build` clean; page-head + KPI render at 1440×900
 
 ### 1.2 US-B2 — ActiveLoopsCard + HITLQueueCard
-- [ ] **ActiveLoopsCard** (NEW; `features/overview/components/ActiveLoopsCard.tsx`)
-  - 5-col loopRow per mockup `:99-141`; D4 closed: agent name + session + tenant + model content layout
+- [x] **ActiveLoopsCard** (NEW; `features/overview/components/ActiveLoopsCard.tsx`) — commit `9c4fd7f6`
+  - 5-col loopRow per mockup `:99-141`; D4 layout closed; agent_name/model placeholder per D-PRE-6 (`AD-Loop-Session-Enrich-Phase58`); `MAX_TURNS=50` hardcoded (D15)
   - Preserves `useActiveLoops(10)` real data + loading/error/empty states
   - Uses `<CardShell>` (flush body)
-  - DoD: real loop rows render; loading/error/empty states intact
-- [ ] **HITLQueueCard** (NEW; `features/overview/components/HITLQueueCard.tsx`)
+  - DoD: real loop rows render; loading/error/empty states intact ✅
+- [x] **HITLQueueCard** (NEW; `features/overview/components/HITLQueueCard.tsx`) — commit `9c4fd7f6`
   - 3 risk-tinted cards per mockup `:143-167`; D13 closed: critical tint matches mockup `oklch(.../0.08)`
-  - `hitlQueue.ts` fixture + `<BackendGapBanner>`
-  - DoD: 3 cards render; critical card danger-tinted; banner visible
-- [ ] **Verify**: ActiveLoops + HITL render in `grid2` 1.4fr/1fr layout
+  - `__fixtures__/hitlQueue.ts` fixture + `<BackendGapBanner>`
+  - DoD: 3 cards render; critical card danger-tinted; banner visible ✅
+- [ ] 🚧 **Verify**: ActiveLoops + HITL render in `grid2` 1.4fr/1fr layout — DEFERRED to Day 3 OverviewPage assembly (components built + imported; grid2 layout is an assembly-stage task)
 
 ### 1.3 Vitest — Day 1 components
-- [ ] **ActiveLoopsCard.test.tsx** (~4 cases: loading / error / empty / happy 5-col row)
-- [ ] **HITLQueueCard.test.tsx** (~3 cases: 3 cards / critical tint / BackendGapBanner)
-  - DoD: Vitest 430+7 passing; no regression
-  - Verify: `npm run test`
+- [x] **ActiveLoopsCard.test.tsx** — `tests/unit/features/overview/` (loading / error / empty / happy 5-col row) — commit `9c4fd7f6`
+- [x] **HITLQueueCard.test.tsx** — `tests/unit/features/overview/` (3 cards / critical tint / BackendGapBanner) — commit `9c4fd7f6`
+  - DoD: Vitest 430→437/437 passing (+7); no regression ✅
+  - Verify: `npm run test` ✅ / `npm run lint` ✅ / `npm run build` ✅
 
 ### 1.4 Day 1 Playwright MCP pair-verify + commit
-- [ ] **Playwright MCP** pair-verify Day 1 widgets (mockup 8080 + production 3007 at 1440×900)
+- [ ] 🚧 **Playwright MCP** pair-verify Day 1 widgets (mockup 8080 + production 3007 at 1440×900) — DEFERRED to Day 3: ActiveLoops + HITL are visible on `/overview` only after the OverviewPage assembly wires the grid2 layout; pair-verify the full page once Day 3 assembly completes
   - DoD: page-head + KPI + ActiveLoops + HITL screenshot compared; drift noted in DRIFT-REPORT
-- [ ] **Day 1 commit**
-  - Commit message: `feat(frontend, sprint-57-27, Day 1, Group B): page-head + KPI sparklines + ActiveLoopsCard + HITLQueueCard`
+- [x] **Day 1 commit** (partial — Group B widgets) — commit `9c4fd7f6` (10 files +565/-171)
+  - Commit message: `feat(frontend, sprint-57-27, Day 1, Group B): ActiveLoopsCard + HITLQueueCard + _primitives extract`
+  - Scope: ActiveLoopsCard + HITLQueueCard + `_primitives.tsx` + `__fixtures__/hitlQueue.ts` + 2 Vitest specs; OverviewPage -170 lines (inline defs removed, new components imported); i18n EN+zh-TW +1 key. page-head + KPI (US-B1) deferred to Day 3 assembly.
 
 ---
 
