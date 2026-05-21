@@ -196,9 +196,15 @@
     "newChat": "New chat",
     "kpi": {
       "activeSessions": "Active sessions",
+      "activeSessionsUnit": "loops",
       "hitlPending": "HITL pending",
+      "hitlPendingUnit": "approvals",
+      "hitlPendingDelta": "1 critical",
       "costMtd": "Cost (MTD)",
-      "slaP95": "SLA p95"
+      "costMtdDelta": "68% of $4,200 budget",
+      "slaP95": "SLA p95",
+      "slaP95Unit": "across loops",
+      "slaP95Delta": "-0.12s wow"
     },
     "activeLoops": {
       "title": "Active loops",

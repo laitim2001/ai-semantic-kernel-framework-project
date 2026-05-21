@@ -196,9 +196,15 @@
     "newChat": "新對話",
     "kpi": {
       "activeSessions": "活躍會話",
+      "activeSessionsUnit": "迴圈",
       "hitlPending": "HITL 待處理",
+      "hitlPendingUnit": "待審批",
+      "hitlPendingDelta": "1 個緊急",
       "costMtd": "當月成本",
-      "slaP95": "SLA p95"
+      "costMtdDelta": "預算 $4,200 已用 68%",
+      "slaP95": "SLA p95",
+      "slaP95Unit": "所有迴圈",
+      "slaP95Delta": "-0.12s 週環比"
     },
     "activeLoops": {
       "title": "活躍迴圈",

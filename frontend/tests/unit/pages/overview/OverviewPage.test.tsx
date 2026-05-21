@@ -7,6 +7,7 @@
  * Created: 2026-05-17 (Sprint 57.19 Day 3 / US-C1)
  *
  * Modification History (newest-first):
+ *   - 2026-05-21: Sprint 57.27 Day 3 — adapt for R7 in-page PageHead title (no AppShellV2 pageTitle prop)
  *   - 2026-05-17: Initial creation (Sprint 57.19 Day 3 / US-C1)
  */
 
@@ -21,10 +22,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as loopsService from "@/features/loops/services/loopsService";
 
 vi.mock("@/components/AppShellV2", () => ({
-  AppShellV2: ({ children, pageTitle }: { children: ReactNode; pageTitle: string }) => (
-    <div data-testid="app-shell" data-page-title={pageTitle}>
-      {children}
-    </div>
+  // R7: AppShellV2 no longer receives pageTitle for /overview — in-page PageHead is the title.
+  AppShellV2: ({ children }: { children: ReactNode }) => (
+    <div data-testid="app-shell">{children}</div>
   ),
 }));
 
@@ -50,14 +50,15 @@ describe("OverviewPage", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders page title via AppShellV2 pageTitle prop", () => {
+  it("renders in-page title via PageHead (R7: no AppShellV2 topbar duplicate)", () => {
     vi.spyOn(loopsService, "fetchLoops").mockResolvedValue({
       items: [],
       next_cursor: null,
       page_size: 10,
     });
     render(wrap(<OverviewPage />));
-    expect(screen.getByTestId("app-shell")).toHaveAttribute("data-page-title", "Overview");
+    // Title is rendered in-page by <PageHead> — assert the heading text is present
+    expect(screen.getByText("Overview")).toBeInTheDocument();
   });
 
   it("renders all 4 KPI cards", () => {
