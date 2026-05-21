@@ -110,3 +110,40 @@ Mockup uses `oklch(from var(--success) l c h / 0.18)` relative-color syntax for 
 - i18n completion (US-D1) — page-head + KPI label keys.
 - Playwright MCP full-page pair-verify (US-D3) + `/overview` visual-baseline regen per AD #42.
 - DRIFT-REPORT final verdict + retrospective + memory + closeout (US-D2/D3 §3.4-3.6).
+
+---
+
+## Day 3 — Group D final assembly — 2026-05-21
+
+### Today's Accomplishments
+
+- **OverviewPage final assembly** (US-B1 + US-D2) — 728-line all-in-one → ~215-line clean assembly:
+  - **page-head** — `<PageHead>` primitive: in-page title + `/overview` route-pill + mono meta line. Meta uses **real `authStore` tenant.code + roles[0]** (the mockup hardcodes `acme-prod · operator`; production shows the logged-in tenant — consistent with ActiveLoopsCard Day 1). Export + New Chat action buttons. R7: OverviewPage passes no `pageTitle` to AppShellV2 → no topbar duplicate; in-page `<PageHead>` is the sole title.
+  - **KPI row** — 4× `<StatCard>`; Cost MTD + SLA p95 carry `<Spark>` sparklines (`kpiSparklines.ts` fixture, `tone="hsl(var(--primary|success))"` per Spark API convention).
+  - **grid layout** — kpiRow `gap-[12px]` / grid2 `1.4fr 1fr` / grid2eq×2 `1fr 1fr` / quick strip, per mockup `overviewStyles`. CostBurnChart + ErrorTrendChart wrapped in `<CardShell>` (title + subtitle + ghost action) per mockup `:172-178` / `:227-233`.
+- **R9 resolved (user decision: Option A)** — `CardShell` card-title `text-sm` → `text-[12.5px]`; closes D8 toward mockup `.card-title` 12.5px. Shared correction — `/cost-dashboard` + `/sla-dashboard` also consume `CardShell` → those 2 pages shift toward mockup too (intended; re-verify noted as carryover, see below).
+- **AP-3 reversal COMPLETE** — zero inline `Card`/`Badge`/`Stat`/`RiskBadge` definitions remain in OverviewPage.tsx.
+- **OverviewPage.test.tsx adapted** — test 1 asserts in-page `"Overview"` title instead of `data-page-title` topbar attribute (R7 change); 6 tests intact.
+- Token drifts closed in assembly: D6 (radius 12px) / D7 (card-head padding) / D8 (card-title 12.5px) / D9 (stat padding) / D14 (page mb rhythm).
+
+### Review fixes (post-agent, pre-commit)
+
+- 5 Day-2 widget headers + OverviewPage header: agent wrote wrong `Scope` US tag → corrected (Day-2 widgets US-C1/C2/C3; OverviewPage US-B1+US-D2).
+- OverviewPage page-head meta: agent hardcoded `acme-prod · operator` literally → changed to real `useAuthStore` tenant + roles.
+
+### Tests / discipline
+
+- Vitest **457/457** pass; `npm run lint` ✅ 0/0; `npm run build` ✅.
+- 0 backend changes; 0 LLM SDK leak; frontend-only — V2 紀律 9 項 all ✅/N/A.
+
+### Day 3 assembly commit
+
+- Commit `dd405c6b` (6 files, +174/-143): `feat(frontend, sprint-57-27, Day 3): OverviewPage final assembly — page-head + KPI + grid layout`
+
+### Remaining for Day 3 closeout (§3.3-3.6)
+
+- **§3.3** Playwright MCP full-page pair-verify (mockup 8080 + production 3007 @ 1440×900). D-PRE-2 found `/overview` is NOT in `visual-regression.spec.ts` → no baseline-regen needed (R5 RESOLVED); US-D3 optional add deferred.
+- **§3.4** DRIFT-REPORT final verdict (D1-D14 + D16-D17 closed; D15 carryover) + per-widget A-I PARITY.
+- **§3.5** retrospective.md Q1-Q7 + Q2 calibration (4th `frontend-mockup-strict-rebuild` data point) + Q4 rich-dashboard sub-class DECISION (next-phase #41) + memory snapshot + sprint-workflow calibration matrix +1 row + next-phase-candidates (AD-Overview-Backend-Extensions-Phase58) + CLAUDE.md minimal touch.
+- **§3.6** PR open (needs user approval) + CI + merge.
+- **Carryover** — `/cost-dashboard` + `/sla-dashboard` re-verify after the shared `CardShell` 12.5px change (R9). Pure mockup-fidelity correction (improves both toward mockup), not a regression — fold into DRIFT-REPORT §4 / a shared-primitive carryover note.

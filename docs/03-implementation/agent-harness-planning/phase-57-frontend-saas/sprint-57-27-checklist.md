@@ -150,20 +150,21 @@
 ## Day 3 — Group D + closeout (2026-05-24)
 
 ### 3.1 US-D1 — i18n EN + zh-TW
-- [ ] **i18n keys** added to `frontend/src/i18n/locales/{en,zh-TW}/common.json`
-  - NEW keys: overview page-head copy + mono meta + KPI labels + 4-5 BackendGapBanner reasons + quick-action labels/subs + chart axis labels
-  - DoD: EN + zh-TW parity; no missing-translation warnings on `npm run build`
-  - Verify: `npm run build`
+- [x] **i18n keys** added to `frontend/src/i18n/locales/{en,zh-TW}/common.json` — commits `2bd7c776` (widget keys) + `dd405c6b` (page-head + KPI keys)
+  - NEW keys: `overview.{title,subtitle,export,newChat}` + `overview.kpi.*` + `overview.{costBurn,errors,providers,incidents,quickActions}.*` + 4 BackendGapBanner reasons
+  - DoD: EN + zh-TW parity; no missing-translation warnings on `npm run build` ✅
+  - Verify: `npm run build` ✅
 
 ### 3.2 US-D2 — OverviewPage final assembly
-- [ ] **OverviewPage.tsx rewritten** — 728-line all-in-one → ~150-line assembly
-  - Imports 7 extracted widgets + shared primitives; mockup-faithful grid layout (kpiRow / grid2 / grid2eq × 2 / quick strip)
-  - Token drifts closed: D6 (radius token) / D7 (card-head padding) / D8 (card-title 12.5px) / D9 (stat padding) / D14 (page-wrapper mb)
-  - AP-3 reversal: 0 inline `Card`/`Badge`/`Stat`/`RiskBadge` definitions remain
-  - DoD: page assembles; all 9 widgets render
-- [ ] **Existing OverviewPage spec adapted** — selectors updated for extracted-component layout
-  - DoD: spec passes
-- [ ] **Verify**: `npm run lint && npm run build` clean
+- [x] **OverviewPage.tsx rewritten** — 728-line all-in-one → ~215-line assembly — commit `dd405c6b`
+  - Imports 9 extracted widgets + shared primitives (PageHead / StatCard / Spark / CardShell); mockup-faithful grid layout (kpiRow gap-12 / grid2 1.4fr+1fr / grid2eq×2 / quick strip) ✅
+  - Token drifts closed: D6 (radius 12px ✓) / D7 (card-head padding in CardShell) / D8 (card-title 12.5px — R9, shared CardShell) / D9 (stat padding in StatCard) / D14 (page mb-[14px] rhythm) ✅
+  - AP-3 reversal COMPLETE: 0 inline `Card`/`Badge`/`Stat`/`RiskBadge` definitions remain ✅
+  - page-head mono meta uses real `authStore` tenant + role (not mockup's hardcoded `acme-prod`); R7: no AppShellV2 pageTitle → no topbar duplicate
+  - DoD: page assembles; all 9 widgets render ✅
+- [x] **Existing OverviewPage spec adapted** — `tests/unit/pages/overview/OverviewPage.test.tsx` test 1 updated (in-page title vs `data-page-title` topbar) — commit `dd405c6b`
+  - DoD: spec passes ✅ (6 tests intact)
+- [x] **Verify**: `npm run lint && npm run build` clean ✅; Vitest 457/457
 
 ### 3.3 US-D3 — Vitest + Playwright + visual-regression
 - [ ] **Vitest 430+N** (N≥14) passing — no regression

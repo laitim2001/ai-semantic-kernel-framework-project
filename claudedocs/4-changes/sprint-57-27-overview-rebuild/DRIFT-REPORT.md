@@ -34,8 +34,8 @@
 
 | # | Widget | Mockup ref | Day | Verdict | Note |
 |---|--------|-----------|-----|---------|------|
-| A | page-head | `:74-87` | 1 | ⬜ pending | — |
-| B | KPI row 4-stat | `:90-95` | 1 | ⬜ pending | — |
+| A | page-head | `:74-87` | 3 | 🟡 component built | OverviewPage assembly (commit `dd405c6b`); `<PageHead>` + in-page title + route-pill + mono meta (real authStore tenant/role) + Export/New Chat actions. D1+D2 closed; R7 topbar-dup suppressed. Full-page pair-verify → §3.3. |
+| B | KPI row 4-stat | `:90-95` | 3 | 🟡 component built | OverviewPage assembly (commit `dd405c6b`); 4× `<StatCard>` + 2× `<Spark>` (kpiSparklines.ts). D3+D5+D10 closed. Full-page pair-verify → §3.3. |
 | C | Active Loops card | `:99-141` | 1 | 🟡 component built | `ActiveLoopsCard.tsx` (commit `9c4fd7f6`); 5-col layout D4 closed; agent/model placeholder per D-PRE-6 / D15. Full-page Playwright pair-verify → Day 3 assembly. |
 | D | HITL Queue card | `:143-167` | 1 | 🟡 component built | `HITLQueueCard.tsx` (commit `9c4fd7f6`); D13 critical tint closed; fixture + BackendGapBanner. Full-page pair-verify → Day 3. |
 | E | Cost Burn chart | `:172-178, 273-329` | 2 | 🟡 component built | `CostBurnChart.tsx` (commit `2bd7c776`); bespoke SVG, D16 x-axis labels closed. +BackendGapBanner (not in mockup — D17, AP-2 honesty). Full-page pair-verify → Day 3. |
