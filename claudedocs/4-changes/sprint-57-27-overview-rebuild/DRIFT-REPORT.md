@@ -28,6 +28,7 @@
 | D14 | Page-wrapper `gap` vs mockup per-row `marginBottom` | cosmetic | US-D2 | — |
 | D15 | Active Loops `maxTurns` hardcoded 50 | functional | carryover | Backend gap — AD-Loop-Session-Enrich-Phase58 |
 | D16 | CostBurnChart + ErrorTrendChart drop x-axis labels + budget-line label | structural | US-C1 | — |
+| D17 | CostBurnChart + ErrorTrendChart carry `<BackendGapBanner>` (NOT in mockup) | accepted addition | US-C1 | Day 2 decision: of 9 widgets only ActiveLoopsCard has real data; 8 are fixture-backed. AP-2/AP-4 honesty — fixture data must be declared. Banner is the project-wide honesty escape hatch (used Sprint 57.24/57.25). DRIFT-REPORT §4 already lists Cost Burn + Error Trend as backend gaps. Justified deliberate drift, not a fidelity defect. |
 
 ## §2 — 9-Widget mockup-vs-production matrix (filled Day 1-3)
 
@@ -37,11 +38,11 @@
 | B | KPI row 4-stat | `:90-95` | 1 | ⬜ pending | — |
 | C | Active Loops card | `:99-141` | 1 | 🟡 component built | `ActiveLoopsCard.tsx` (commit `9c4fd7f6`); 5-col layout D4 closed; agent/model placeholder per D-PRE-6 / D15. Full-page Playwright pair-verify → Day 3 assembly. |
 | D | HITL Queue card | `:143-167` | 1 | 🟡 component built | `HITLQueueCard.tsx` (commit `9c4fd7f6`); D13 critical tint closed; fixture + BackendGapBanner. Full-page pair-verify → Day 3. |
-| E | Cost Burn chart | `:172-178, 273-329` | 2 | ⬜ pending | — |
-| F | Providers card | `:180-199` | 2 | ⬜ pending | — |
-| G | Recent Incidents card | `:204-225` | 2 | ⬜ pending | — |
-| H | Error Trend chart | `:227-233, 331-379` | 2 | ⬜ pending | — |
-| I | Quick Actions strip | `:236-266` | 2 | ⬜ pending | — |
+| E | Cost Burn chart | `:172-178, 273-329` | 2 | 🟡 component built | `CostBurnChart.tsx` (commit `2bd7c776`); bespoke SVG, D16 x-axis labels closed. +BackendGapBanner (not in mockup — D17, AP-2 honesty). Full-page pair-verify → Day 3. |
+| F | Providers card | `:180-199` | 2 | 🟡 component built | `ProvidersCard.tsx` (commit `2bd7c776`); trafficDot glow via `color-mix(in oklch …)` ≡ mockup `oklch(from …)`. Full-page pair-verify → Day 3. |
+| G | Recent Incidents card | `:204-225` | 2 | 🟡 component built | `IncidentsCard.tsx` (commit `2bd7c776`); D11+D12 closed via `_primitives.tsx`. Full-page pair-verify → Day 3. |
+| H | Error Trend chart | `:227-233, 331-379` | 2 | 🟡 component built | `ErrorTrendChart.tsx` (commit `2bd7c776`); 24-bar, D16 x-axis labels closed. +BackendGapBanner (not in mockup — D17, AP-2 honesty). Full-page pair-verify → Day 3. |
+| I | Quick Actions strip | `:236-266` | 2 | 🟡 component built | `QuickActionsStrip.tsx` (commit `2bd7c776`); 4-button flex strip. Full-page pair-verify → Day 3. |
 
 ## §3 — Final verdict (Day 3)
 

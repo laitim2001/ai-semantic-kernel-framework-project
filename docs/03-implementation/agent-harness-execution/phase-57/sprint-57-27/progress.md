@@ -68,3 +68,45 @@ Plan Day 1 listed page-head + KPI (US-B1) first, then widgets (US-B2). Actual or
 
 - Day 2: CostBurnChart / ErrorTrendChart / ProvidersCard / IncidentsCard / QuickActionsStrip (5 widgets).
 - Day 3: page-head + KPI row (US-B1) + OverviewPage final assembly (grid2 / grid layout) + i18n completion + Playwright MCP full-page pair-verify + closeout.
+
+---
+
+## Day 2 — Group C (5 widgets) — 2026-05-21
+
+### Today's Accomplishments
+
+- **5/5 Day-2 widgets rebuilt** + wired into OverviewPage (AP-3 reversal continued — inline defs → feature components):
+  - **CostBurnChart** (US-C1) — bespoke 360×130 SVG: 30-day cumulative burn line + `burnGrad` gradient area + budget diagonal + `[0,1050,2100,3150,4200]` gridlines + x-axis labels (`day 1`/`today`/`day 30`, D16 closed). `costBurn.ts` fixture computes the mockup formula at module level. Bespoke SVG per R3 (not force-fit AreaChart).
+  - **ErrorTrendChart** (US-C1) — bespoke 24-bar histogram, tone-by-value (≥10 danger / ≥6 warning / else info), `[0,4,8,12]` gridlines + x-axis labels (`-24h`/`-12h`/`now`, D16 closed). `errorTrend.ts` fixture.
+  - **ProvidersCard** (US-C2) — `<CardShell>` + 4 traffic-dot rows (8px circle + oklch glow ring), mono name / p95 / calls. `providers.ts` fixture.
+  - **IncidentsCard** (US-C2) — `<CardShell>` + 4 rows: RiskBadge + mono id + title + status Badge + since. D11 (Badge 4px radius) + D12 (RiskBadge tone map) closed via shared `_primitives.tsx`. `incidents.ts` fixture.
+  - **QuickActionsStrip** (US-C3) — 4-button flex strip (New Chat / Review / Tenants / Verification), lucide icons, navigate-on-click.
+- **OverviewPage.tsx −282 net lines** — 5 inline widget definitions + inline fixtures + orphan inline `Badge`/`RiskBadge`/`Tone` primitives removed (Karpathy §3 orphan cleanup — IncidentsCard is the sole consumer, now imports `_primitives.tsx`). page-head + KPI sections untouched (Day 3).
+- **5 Vitest specs** under `tests/unit/features/overview/` (~4 cases each).
+- **i18n** — EN + zh-TW `overview.{costBurn,errors,providers,incidents,quickActions}.*` keys added.
+
+### Decision — BackendGapBanner on the 2 charts
+
+Checklist §2.1 (CostBurnChart / ErrorTrendChart) did not spell out `<BackendGapBanner>` (only §2.2 cards did). Decision: **both charts also carry the banner.** Rationale — DRIFT-REPORT §4 Carryover explicitly lists *Cost Burn* + *Error Trend* among the fixture-backed widgets needing backend aggregation endpoints (`AD-Overview-Backend-Extensions-Phase58`). Of the 9 widgets only ActiveLoopsCard has real data; the other 8 are fixture-backed. Showing fake cost/error data with no honesty banner would violate AP-2/AP-4. The banner is the project-wide honesty escape hatch (not in mockup, but an allowed deliberate addition — used across Sprint 57.24/57.25). Recorded as a known, justified drift in DRIFT-REPORT.
+
+### Decision — ProvidersCard glow
+
+Mockup uses `oklch(from var(--success) l c h / 0.18)` relative-color syntax for the traffic-dot glow ring. Implemented as `color-mix(in oklch, <colour> 18%, transparent)` — functionally equivalent, wider browser support. Visually identical.
+
+### Tests / discipline
+
+- Vitest 437 → **457/457** pass (+20); `npm run lint` ✅ 0/0; `npm run build` ✅.
+- 0 backend changes; 0 LLM SDK leak; frontend-only — V2 紀律 9 項 all ✅/N/A.
+- 5 widget file headers: agent initially wrote `Scope: … US-B3` (wrong) → corrected to US-C1/C2/C3 before commit.
+
+### Day 2 commit
+
+- Commit `2bd7c776` (17 files, +1164/-360): `feat(frontend, sprint-57-27, Day 2, Group C): CostBurnChart + ErrorTrendChart + ProvidersCard + IncidentsCard + QuickActionsStrip`
+
+### Remaining for Day 3
+
+- page-head + KPI row (US-B1) — in-page JSX inside OverviewPage final assembly.
+- OverviewPage final assembly (US-D2) — mockup-faithful grid layout (kpiRow / grid2 / grid2eq×2 / quick strip); close D6/D7/D8/D9/D14 token drifts.
+- i18n completion (US-D1) — page-head + KPI label keys.
+- Playwright MCP full-page pair-verify (US-D3) + `/overview` visual-baseline regen per AD #42.
+- DRIFT-REPORT final verdict + retrospective + memory + closeout (US-D2/D3 §3.4-3.6).

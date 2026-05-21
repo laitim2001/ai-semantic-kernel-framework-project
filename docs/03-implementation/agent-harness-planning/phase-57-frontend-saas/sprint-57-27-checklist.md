@@ -106,42 +106,43 @@
 ## Day 2 — Group C (Cost Burn + Providers + Incidents + Error Trend + Quick Actions) (2026-05-23)
 
 ### 2.1 US-C1 — CostBurnChart + ErrorTrendChart
-- [ ] **CostBurnChart** (NEW; `features/overview/components/CostBurnChart.tsx`)
+- [x] **CostBurnChart** (NEW; `features/overview/components/CostBurnChart.tsx`) — commit `2bd7c776`
   - SVG cumulative 30-day burn line + gradient area + budget diagonal + gridlines per mockup `:273-329`
-  - D16 closed: x-axis labels (`day 1 / today / day 30`) + budget-line text label
-  - `costBurn.ts` fixture; bespoke SVG (R3 — not force-fit AreaChart)
-  - DoD: chart renders with axis labels + budget line
-- [ ] **ErrorTrendChart** (NEW; `features/overview/components/ErrorTrendChart.tsx`)
-  - 24-bar histogram + tone-by-value per mockup `:331-379`
-  - D16 closed: x-axis labels (`-24h / -12h / now`)
-  - `errorTrend.ts` fixture
-  - DoD: 24 bars render with axis labels
-- [ ] **Verify**: both charts render in `grid2eq` layout
+  - D16 closed: x-axis labels (`day 1 / today / day 30`) + budget-line text label ✅
+  - `costBurn.ts` fixture; bespoke SVG (R3 — not force-fit AreaChart) ✅
+  - `<BackendGapBanner>` added (not in mockup; AP-2 honesty — fixture-backed per DRIFT-REPORT §4)
+  - DoD: chart renders with axis labels + budget line ✅
+- [x] **ErrorTrendChart** (NEW; `features/overview/components/ErrorTrendChart.tsx`) — commit `2bd7c776`
+  - 24-bar histogram + tone-by-value per mockup `:331-379` ✅
+  - D16 closed: x-axis labels (`-24h / -12h / now`) ✅
+  - `errorTrend.ts` fixture ✅; `<BackendGapBanner>` added (AP-2 honesty, same rationale)
+  - DoD: 24 bars render with axis labels ✅
+- [x] **Verify**: both charts wired into OverviewPage `grid2eq` layout; build ✅
 
 ### 2.2 US-C2 — ProvidersCard + IncidentsCard
-- [ ] **ProvidersCard** (NEW; `features/overview/components/ProvidersCard.tsx`)
-  - 4-row trafficDot (green/amber/red glow) + mono name + p95 + calls per mockup `:180-199`
-  - `providers.ts` fixture + `<BackendGapBanner>`
-  - DoD: 4 rows render with trafficDot tones
-- [ ] **IncidentsCard** (NEW; `features/overview/components/IncidentsCard.tsx`)
-  - 4-row RiskBadge + mono id + title + status Badge + since per mockup `:204-225`
-  - D11 closed: Badge 4px radius (not pill); D12 closed: RiskBadge `risk-*` token tone map
-  - `incidents.ts` fixture + `<BackendGapBanner>`
-  - DoD: 4 rows render; badges 4px square; RiskBadge tones correct
-- [ ] **Verify**: Providers + Incidents render
+- [x] **ProvidersCard** (NEW; `features/overview/components/ProvidersCard.tsx`) — commit `2bd7c776`
+  - 4-row trafficDot (green/amber/red glow) + mono name + p95 + calls per mockup `:180-199` ✅
+  - `providers.ts` fixture + `<BackendGapBanner>` ✅ (glow uses `color-mix(in oklch …)` — functional equivalent of mockup `oklch(from …)`, wider browser support)
+  - DoD: 4 rows render with trafficDot tones ✅
+- [x] **IncidentsCard** (NEW; `features/overview/components/IncidentsCard.tsx`) — commit `2bd7c776`
+  - 4-row RiskBadge + mono id + title + status Badge + since per mockup `:204-225` ✅
+  - D11 closed: Badge 4px radius (not pill); D12 closed: RiskBadge `risk-*` token tone map ✅ (via shared `_primitives.tsx`)
+  - `incidents.ts` fixture + `<BackendGapBanner>` ✅
+  - DoD: 4 rows render; badges 4px square; RiskBadge tones correct ✅
+- [x] **Verify**: Providers + Incidents wired into OverviewPage; build ✅
 
 ### 2.3 US-C3 — QuickActionsStrip
-- [ ] **QuickActionsStrip** (NEW; `features/overview/components/QuickActionsStrip.tsx`)
-  - 4 quickBtn (New Chat / Review governance / Tenants / Verification; icon + label + sub) per mockup `:236-266`
-  - Full-width flex row; each button navigates on click
-  - DoD: 4 buttons render; navigate works
-- [ ] **Verify**: strip renders full-width below grids
+- [x] **QuickActionsStrip** (NEW; `features/overview/components/QuickActionsStrip.tsx`) — commit `2bd7c776`
+  - 4 quickBtn (New Chat / Review governance / Tenants / Verification; icon + label + sub) per mockup `:236-266` ✅
+  - Full-width flex row; each button navigates on click ✅
+  - DoD: 4 buttons render; navigate works ✅
+- [x] **Verify**: strip wired into OverviewPage below grids; build ✅
 
 ### 2.4 Vitest + Playwright + Day 2 commit
-- [ ] **Vitest specs** — CostBurnChart (~3) + ErrorTrendChart (~2) + ProvidersCard (~2) + IncidentsCard (~3) + QuickActionsStrip (~2)
-  - DoD: Vitest 430+7+12 passing; no regression
-- [ ] **Playwright MCP** pair-verify Day 2 widgets
-- [ ] **Day 2 commit**
+- [x] **Vitest specs** — CostBurnChart (4) + ErrorTrendChart (4) + ProvidersCard (4) + IncidentsCard (4) + QuickActionsStrip (4) — commit `2bd7c776`
+  - DoD: Vitest 437 → 457 passing (+20); no regression ✅
+- [ ] 🚧 **Playwright MCP** pair-verify Day 2 widgets — DEFERRED to Day 3 §3.3 full-page pair-verify (widgets visible on `/overview` only after Day 3 assembly polishes the grid layout to mockup fidelity; single full-page pass is more efficient than per-widget)
+- [x] **Day 2 commit** — commit `2bd7c776` (17 files, +1164/-360)
   - Commit message: `feat(frontend, sprint-57-27, Day 2, Group C): CostBurnChart + ErrorTrendChart + ProvidersCard + IncidentsCard + QuickActionsStrip`
 
 ---
