@@ -93,13 +93,13 @@ describe("OverviewPage", () => {
     });
   });
 
-  it("renders happy-path loop rows with status badge + truncated session id", async () => {
+  it("renders happy-path loop rows with status badge + session id + tokens", async () => {
     vi.spyOn(loopsService, "fetchLoops").mockResolvedValue({
       items: [
         {
           session_id: "11111111-2222-3333-4444-555555555555",
           status: "running",
-          started_at_ms: Date.UTC(2026, 4, 17, 14, 30),
+          started_at_ms: Date.now() - 12_000,
           ended_at_ms: null,
           turn_count: 6,
           token_usage: 18420,
@@ -111,7 +111,9 @@ describe("OverviewPage", () => {
     });
     render(wrap(<OverviewPage />));
     await waitFor(() => {
-      expect(screen.getByText("11111111…")).toBeInTheDocument();
+      // ActiveLoopsCard (Sprint 57.27) renders session as the 8-char prefix
+      // (no ellipsis) inside the 5-col loop row.
+      expect(screen.getByText("11111111", { exact: false })).toBeInTheDocument();
     });
     expect(screen.getByText("running")).toBeInTheDocument();
     expect(screen.getByText(/18,420 tok/)).toBeInTheDocument();

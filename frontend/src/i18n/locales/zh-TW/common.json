@@ -208,7 +208,8 @@
     },
     "hitlQueue": {
       "title": "HITL 佇列",
-      "review": "審核"
+      "review": "審核",
+      "backendGap": "HITL 佇列顯示的是固定範例資料 — 治理待審核 API 串接待辦（AD-Overview-Backend-Extensions-Phase58）。"
     },
     "costBurn": {
       "title": "成本燃燒",

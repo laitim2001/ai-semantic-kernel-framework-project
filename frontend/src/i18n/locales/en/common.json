@@ -208,7 +208,8 @@
     },
     "hitlQueue": {
       "title": "HITL queue",
-      "review": "Review"
+      "review": "Review",
+      "backendGap": "HITL queue shows fixture data — governance pending-approvals API wire pending (AD-Overview-Backend-Extensions-Phase58)."
     },
     "costBurn": {
       "title": "Cost burn",

@@ -27,6 +27,7 @@
  * Created: 2026-05-17 (Sprint 57.19 Day 3 / US-C1)
  *
  * Modification History (newest-first):
+ *   - 2026-05-21: Sprint 57.27 Day 1 — extract ActiveLoopsCard + HITLQueueCard to features/overview/components
  *   - 2026-05-17: Sprint 57.20 Day 2 US-C1 — token migration shadcn→mockup tree (bg-card→bg-bg-1; text-muted-foreground→text-fg-muted; hover:bg-muted/40→hover:bg-bg-hover) + shadow-sm on Stat cards for mockup parity
  *   - 2026-05-17: Initial creation (Sprint 57.19 Day 3 / US-C1)
  *
@@ -43,8 +44,8 @@ import { useNavigate } from "react-router-dom";
 
 import { AppShellV2 } from "@/components/AppShellV2";
 import { RequireAuth } from "@/features/auth/components/RequireAuth";
-import { useActiveLoops } from "@/features/loops/hooks/useActiveLoops";
-import type { Loop } from "@/features/loops/types";
+import { ActiveLoopsCard } from "@/features/overview/components/ActiveLoopsCard";
+import { HITLQueueCard } from "@/features/overview/components/HITLQueueCard";
 
 // ───────────────── primitives (mockup parity inline) ─────────────────
 
@@ -137,30 +138,7 @@ const Stat: FC<StatProps> = ({ label, value, unit, delta, deltaDir = "up" }) => 
 );
 
 // ───────────────── inline fixtures (Sprint 57.20+ swap to real APIs) ─────────────────
-
-const HITL_QUEUE = [
-  {
-    id: "appr_91",
-    title: "salesforce_update — refund $4,820",
-    risk: "high",
-    requester: "sess_7c11d",
-    sla: "3h 12m",
-  },
-  {
-    id: "appr_92",
-    title: "email_send — refund confirmation to 14 customers",
-    risk: "medium",
-    requester: "sess_7c11d",
-    sla: "3h 14m",
-  },
-  {
-    id: "appr_88",
-    title: "servicenow_create_ticket — P1 incident escalation",
-    risk: "critical",
-    requester: "sess_4f88c",
-    sla: "23m",
-  },
-];
+// HITL_QUEUE fixture migrated to features/overview/__fixtures__/hitlQueue.ts (Sprint 57.27).
 
 const RECENT_INCIDENTS = [
   { id: "INC-2451", title: "p95 latency breach · gpt-4.1 provider", sev: "high", status: "open", since: "12m" },
@@ -326,146 +304,6 @@ const ErrorTrendChart: FC = () => {
 };
 
 // ───────────────── widgets ─────────────────
-
-const STATUS_TONE: Record<string, Tone> = {
-  running: "success",
-  "hitl-paused": "warning",
-  verifying: "thinking",
-  error: "danger",
-  ended: "muted",
-};
-
-const ActiveLoopsCard: FC = () => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { data, isLoading, error } = useActiveLoops(10);
-  const items: Loop[] = data?.items ?? [];
-
-  return (
-    <Card
-      title={t("overview.activeLoops.title")}
-      subtitle={
-        isLoading
-          ? t("action.loading")
-          : `${items.length} ${t("overview.activeLoops.subtitle")}`
-      }
-      actions={
-        <button
-          type="button"
-          onClick={() => navigate("/loop-debug")}
-          className="flex items-center gap-1 text-[11px] text-fg-muted hover:text-foreground"
-        >
-          {t("overview.activeLoops.openDebug")} <ArrowRight className="h-3 w-3" />
-        </button>
-      }
-      bodyClassName=""
-    >
-      {error && (
-        <div className="px-4 py-6 text-center text-[12px] text-danger" role="alert">
-          {error.message}
-        </div>
-      )}
-      {!error && !isLoading && items.length === 0 && (
-        <div className="px-4 py-6 text-center text-[12px] text-fg-muted">
-          {t("overview.activeLoops.empty")}
-        </div>
-      )}
-      {!error && items.length > 0 && (
-        <div>
-          {items.map((loop) => {
-            const maxTurns = 50; // backend gap — see AD-Loop-Session-Enrich-Phase58
-            const pct = Math.min(100, (loop.turn_count / maxTurns) * 100);
-            const tone = STATUS_TONE[loop.status] ?? "muted";
-            return (
-              <button
-                key={loop.session_id}
-                type="button"
-                onClick={() => navigate("/loop-debug")}
-                className="grid w-full cursor-pointer grid-cols-[auto_1fr_auto_auto_auto] items-center gap-[10px] border-b border-border px-[10px] py-2 text-left text-[12.5px] last:border-0 hover:bg-bg-hover"
-              >
-                <Badge tone={tone} dot>
-                  {loop.status}
-                </Badge>
-                <div className="flex min-w-0 flex-col gap-[2px]">
-                  <span className="font-mono text-[11.5px]">
-                    {loop.session_id.slice(0, 8)}…
-                  </span>
-                  <span className="font-mono text-[10.5px] text-fg-muted">
-                    {loop.token_usage.toLocaleString()} tok · ${loop.total_cost_usd}
-                  </span>
-                </div>
-                <div className="flex w-20 flex-col gap-[3px]">
-                  <span className="font-mono text-[10.5px] text-fg-muted">
-                    turn {loop.turn_count}/{maxTurns}
-                  </span>
-                  <div className="relative h-[6px] overflow-hidden rounded-[3px] bg-bg-2">
-                    <div
-                      className={`absolute inset-0 origin-left ${pct > 80 ? "bg-warning" : "bg-primary"}`}
-                      // eslint-disable-next-line no-restricted-syntax -- dynamic per-row progress fill per mockup parity (STYLE.md §1 escape hatch)
-                      style={{ transform: `scaleX(${pct / 100})` }}
-                    />
-                  </div>
-                </div>
-                <span className="w-[60px] text-right font-mono text-[11px] text-fg-muted">
-                  {loop.turn_count}t
-                </span>
-                <span className="w-[40px] text-right font-mono text-[11px] text-fg-muted">
-                  {new Date(loop.started_at_ms).toLocaleTimeString("en-US", { hour12: false }).slice(0, 5)}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-};
-
-const HITLQueueCard: FC = () => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  return (
-    <Card
-      title={t("overview.hitlQueue.title")}
-      subtitle={`${HITL_QUEUE.length} pending`}
-      actions={
-        <button
-          type="button"
-          onClick={() => navigate("/governance")}
-          className="flex items-center gap-1 text-[11px] text-fg-muted hover:text-foreground"
-        >
-          {t("overview.hitlQueue.review")} <ArrowRight className="h-3 w-3" />
-        </button>
-      }
-    >
-      <div className="flex flex-col gap-[10px]">
-        {HITL_QUEUE.map((req) => (
-          <button
-            key={req.id}
-            type="button"
-            onClick={() => navigate("/governance")}
-            className={`flex flex-col gap-[6px] rounded-[8px] border p-[10px] text-left ${
-              req.risk === "critical"
-                ? "border-danger/40 bg-danger/8"
-                : "border-border bg-bg-2"
-            }`}
-          >
-            <div className="flex items-center justify-between gap-[6px]">
-              <RiskBadge level={req.risk} />
-              <span className="font-mono text-[10.5px] text-fg-muted">
-                SLA · {req.sla}
-              </span>
-            </div>
-            <div className="text-[12.5px] font-medium leading-[1.4]">{req.title}</div>
-            <div className="font-mono text-[10.5px] text-fg-muted">
-              {req.id} · from {req.requester}
-            </div>
-          </button>
-        ))}
-      </div>
-    </Card>
-  );
-};
 
 const ProvidersCard: FC = () => {
   const { t } = useTranslation();
