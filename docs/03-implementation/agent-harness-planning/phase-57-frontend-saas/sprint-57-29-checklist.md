@@ -124,24 +124,24 @@
 ## Day 4 — Group C (9 widgets)
 
 ### 4.1 US-C2 chart + quick-action widgets
-- [ ] **`CostBurnChart.tsx` + `ErrorTrendChart.tsx`** — legend `.row`/`.mono` + `.col` wrapper re-pointed (SVG paths already `var(--*)` — unchanged)
-- [ ] **`QuickActionsStrip.tsx`** — `.row` + `quickBtn` inline style; navigate + i18n preserved
+- [x] **`CostBurnChart.tsx` + `ErrorTrendChart.tsx`** — legend `.row`/`.mono` + `.col` wrapper re-pointed (SVG paths already `var(--*)` — unchanged)
+- [x] **`QuickActionsStrip.tsx`** — `.row` + `quickBtn` inline style; navigate + i18n preserved
 
 ### 4.2 US-C2 card widgets
-- [ ] **`ActiveLoopsCard.tsx`** — `.card`(`flush`) + `loopRow`/`miniBar`/`miniBarFill` inline; **`useActiveLoops(10)` real data + loading/error/empty branches preserved** (R6)
+- [x] **`ActiveLoopsCard.tsx`** — `.card`(`flush`) + `loopRow`/`miniBar`/`miniBarFill` inline; **`useActiveLoops(10)` real data + loading/error/empty branches preserved** (R6)
   - Verify: loading / error / empty / populated states all still render
-- [ ] **`HITLQueueCard.tsx`** — `.card`(`dense`) + `.col` risk-tinted cards with verbatim `oklch()` inline tints; fixture + `BackendGapBanner` preserved
-- [ ] **`ProvidersCard.tsx`** — `.card`(`dense`) + `.row` + `trafficDot(state)` verbatim inline; fixture preserved
-- [ ] **`IncidentsCard.tsx`** — `.card`(`flush`) + `.row` rows + `<RiskBadge>`/`<Badge>` from `mockup-ui.tsx`; fixture preserved
+- [x] **`HITLQueueCard.tsx`** — `.card`(`dense`) + `.col` risk-tinted cards with verbatim `oklch()` inline tints; fixture + `BackendGapBanner` preserved
+- [x] **`ProvidersCard.tsx`** — `.card`(`dense`) + `.row` + `trafficDot(state)` verbatim inline; fixture preserved
+- [x] **`IncidentsCard.tsx`** — `.card`(`flush`) + `.row` rows + `<RiskBadge>`/`<Badge>` from `mockup-ui.tsx`; fixture preserved
 
 ### 4.3 `_primitives.tsx` orphan decision
-- [ ] **`_primitives.tsx` re-pointed OR deleted-if-orphaned**
+- [x] **`_primitives.tsx` re-pointed OR deleted-if-orphaned**
   - DoD: if fully superseded by `mockup-ui.tsx` → `grep` confirms 0 importers → DELETE (Karpathy §3); else re-point its remaining exports
   - Verify: `grep -rn "_primitives" frontend/src` → 0 stale imports
 
 ### 4.4 Day 4 spot-check + commit
-- [ ] **Day 4 spot-check** — all 9 `/overview` widgets render with mockup classes
-- [ ] **Day 4 commit**
+- [x] **Day 4 spot-check** — all 9 `/overview` widgets render with mockup classes
+- [x] **Day 4 commit**
   - Commit message: `feat(frontend, sprint-57-29, Day 4, Group C): /overview 9 widgets verbatim re-point + _primitives orphan cleanup`
   - Verify: `git status` clean post-commit
 

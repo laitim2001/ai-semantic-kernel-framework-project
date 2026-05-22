@@ -131,3 +131,42 @@ The app shell (`AppShellV2` + `Sidebar` + `Topbar`, re-pointed Day 1-2) is a sin
 ### Remaining for Next Day
 
 - **Day 4 (Group C)**: re-point the 7 `features/overview/components/` widgets (CostBurnChart / ErrorTrendChart / QuickActionsStrip / ActiveLoopsCard / HITLQueueCard / ProvidersCard / IncidentsCard) + `_primitives.tsx` orphan decision.
+
+---
+
+## Day 4 — 2026-05-22 (Group C — 7 /overview widgets + _primitives orphan delete)
+
+### Today's Accomplishments
+
+- **US-C2** — all 7 `features/overview/components/` widgets re-pointed verbatim:
+  - `CostBurnChart.tsx` + `ErrorTrendChart.tsx` — legend → `.row` / `.mono`, wrapper → `.col`; the inline-SVG `<path>` geometry + `var(--*)` colours left unchanged.
+  - `QuickActionsStrip.tsx` — `.row` container + verbatim `quickBtn` `CSSProperties`; Lucide icons → mockup `Icon`; `navigate()` + i18n preserved.
+  - `ActiveLoopsCard.tsx` — `<Card>` (`mockup-ui`) + verbatim `loopRow` / `miniBar` / `miniBarFill` inline styles; `useActiveLoops(10)` hook + loading / error / empty / populated branches preserved (R6); `Badge` from `mockup-ui`.
+  - `HITLQueueCard.tsx` — `<Card bodyClass="dense">` + `.col` risk cards with verbatim `oklch(from var(--danger) …)` tints; `RiskBadge` from `mockup-ui`; `BackendGapBanner` preserved.
+  - `ProvidersCard.tsx` — `<Card bodyClass="dense">` + `.row` rows + verbatim typed `trafficDot(state)`; `data-testid="traffic-dot-${state}"` preserved (D-PRE-1); `BackendGapBanner` preserved.
+  - `IncidentsCard.tsx` — `<Card bodyClass="flush">` + `.row` rows + `<RiskBadge>` / `<Badge>` from `mockup-ui`; `BackendGapBanner` preserved.
+- **4.3** — `_primitives.tsx` **deleted**: after re-pointing IncidentsCard / HITLQueueCard / ActiveLoopsCard to consume `Badge` / `RiskBadge` from `mockup-ui.tsx`, `grep -rn "_primitives" frontend/src frontend/tests` → 0 references → deleted (Karpathy §3 orphan cleanup). The translated-Tailwind feature-scoped primitive is fully superseded by the verbatim `mockup-ui.tsx` set.
+- Implementation delegated to a `code-implementer` agent (ran Vitest itself; self-caught + fixed an `ActiveLoopsCard` loading-state double-text spec issue). Orchestrator hard-verified all 5 gates independently + deep-reviewed `HITLQueueCard` + the `check-mockup-fidelity.mjs` baseline change.
+
+### Findings
+
+- **D-DAY4-1** (🟡 caught + fixed): the agent's first pass kept the translated `bg-danger/8 border-danger/40` Tailwind classes on HITLQueueCard's critical card *alongside* the verbatim `oklch()` inline tint — leftover translation, kept solely to satisfy `HITLQueueCard.test.tsx`'s `toHaveClass("bg-danger/8")` assertion (written Sprint 57.27 against the translated version). That dual-class is exactly the drift this epic kills + misses the Day-4 DoD ("verbatim `oklch()` inline tints"). **Fixed**: removed the Tailwind ternary → `className="col"` (the inline `style` already applies the conditional oklch background / border); adapted the spec — the "critical tint" test now asserts the verbatim structural marker (`.sev-critical` on the critical card's `RiskBadge`, absent on a non-critical card) instead of the dropped Tailwind class. jsdom does not render `oklch()`, so the pixel-level tint is verified by the Day-5 Playwright fidelity sweep, not the unit test. Spec adaptation is sanctioned by checklist Day 5 US-E1 ("specs adapted"); done now to keep Day 4's HITLQueueCard clean of leftover translation.
+- **D-DAY4-2** (🟡 surfaced — CI-guard change): `frontend/scripts/check-mockup-fidelity.mjs` `HEX_OKLCH_BASELINE` raised **18 → 21**. The 3 added lines are verbatim mockup `oklch()` inline-style literals introduced by the re-point — HITLQueueCard critical tint (background + border, ×2) + ProvidersCard `trafficDot` glow ring (×1), copied byte-for-byte from `page-overview.jsx` (`trafficDot` :28-32 / HITL :149-166). Not drift — faithful verbatim reproduction of the mockup's own inline styles. The guard still functions (passes at exactly 21 == baseline 21, not loosely set; any value beyond 21 still fails). Checklist Day 5 US-E1 pre-authorised `HEX_OKLCH_BASELINE` adjustment for this sprint (it anticipated "lowered if `/overview` literals removed"; reality is *raised* — the verbatim method copies the mockup's inline oklch literals, which the guard's grep counts). Candidate AD: the guard's grep could exclude token-relative `oklch(from var(--token) …)` literals (which are not hardcoded colours) from the count — would stop the baseline growing on faithful re-points. Logged for Day-5 next-phase-candidates.
+- **D-DAY1-2** (🟢 carryover continues): file-level `eslint-disable no-restricted-syntax` again needed in the widgets carrying verbatim inline styles. `AD-Inline-Style-Rule-vs-Verbatim-Method`.
+- (minor, 🟢) 3× `jsx-ast-utils` `TSSatisfiesExpression` informational messages from inline `style={{…} satisfies CSSProperties}` in the widgets — informational only; `npm run lint` exits 0 (`--max-warnings 0` passes). Non-blocking; a future cleanup could extract those to named consts.
+
+### Quality gates (Day 4 — orchestrator-verified independently, after the D-DAY4-1 HITL fix)
+
+- `npx tsc -b` 0 errors · `npm run lint` exit 0 · `npm run test` **457/457** (94 files) · `npm run build` green · `npm run check:mockup-fidelity` pass (diff guard byte-identical, hex/oklch baseline 21).
+
+### Day 4.4 — Spot-check
+
+All 7 `/overview` widgets re-pointed to mockup classes / `mockup-ui.tsx` primitives; `OverviewPage` (Day 3) renders them unchanged. Render verified via the 457/457 Vitest pass (every widget has a unit spec) + `npm run build` green; `_primitives.tsx` removal confirmed clean by `tsc -b` 0 (no dangling imports). Full per-route + `/overview` visual fidelity verification is Day 5 (US-D1 sweep + US-D2 computed-style).
+
+### Notes
+
+- `/overview` is now fully re-pointed end-to-end: shell (Day 1-2) + page scaffold (Day 3) + 7 widgets (Day 4). Day 5 = 22-route regression sweep + `/overview` mockup-vs-production fidelity verdict + closeout.
+
+### Remaining for Next Day
+
+- **Day 5 (Group D + E + closeout)**: 22-route `route-sweep.mjs after` + before/after triage; `/overview` fidelity verification (Playwright + computed-style); Vitest / lint / build / guard final; REPOINT-REPORT final verdict; retrospective; calibration matrix NEW class row; PR.
