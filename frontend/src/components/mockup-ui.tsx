@@ -22,6 +22,7 @@
  *   - Badge: `badge ${tone} ${dot ? "dot" : ""} ${pill ? "pill" : ""}`
  *   - Card: `card` → `card-head` / `card-title` / `card-sub` / `card-body ${bodyClass}` / `card-foot`
  *   - Stat: `stat` / `stat-label` / `stat-value tnum` / `stat-delta` / `stat-spark`
+ *   - Spark: inline-SVG sparkline (`<path>` polyline) ported from mockup `ui.jsx` `Spark`
  *   - SevDot: `sev-dot sev-${level}`
  *   - RiskBadge: `Badge tone="risk-${level}"` + inline `sev-dot`
  *
@@ -29,6 +30,7 @@
  * Last Modified: 2026-05-22
  *
  * Modification History (newest-first):
+ *   - 2026-05-22: Sprint 57.29 Day 3 — add Spark SVG primitive (Day-1 port omitted it)
  *   - 2026-05-22: Initial creation (Sprint 57.29 Day 1) — verbatim port of ui.jsx primitives
  *
  * Related:
@@ -529,6 +531,40 @@ export function Stat({
       </div>
       {spark && <div className="stat-spark">{spark}</div>}
     </div>
+  );
+}
+
+// ───────────────── Spark ─────────────────
+
+interface SparkProps {
+  points: number[];
+  width?: number;
+  height?: number;
+  tone?: string;
+}
+
+/** Inline-SVG sparkline — verbatim port of mockup `ui.jsx` `Spark`. */
+export function Spark({
+  points,
+  width = 90,
+  height = 26,
+  tone = "var(--primary)",
+}: SparkProps): JSX.Element {
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const range = max - min || 1;
+  const step = width / (points.length - 1);
+  const d = points
+    .map((v, i) => {
+      const x = (i * step).toFixed(1);
+      const y = (height - ((v - min) / range) * height).toFixed(1);
+      return `${i === 0 ? "M" : "L"}${x},${y}`;
+    })
+    .join(" ");
+  return (
+    <svg width={width} height={height}>
+      <path d={d} fill="none" stroke={tone} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   );
 }
 

@@ -96,26 +96,26 @@
 ## Day 3 — Group B finish (UserMenu + shell spot-check) + Group C start (OverviewPage)
 
 ### 3.1 US-B5 overlays — UserMenu
-- [ ] **`UserMenu.tsx` → verbatim mockup overlay markup**
+- [x] **`UserMenu.tsx` → verbatim mockup overlay markup**
   - DoD: mockup `topbar-overlays.jsx` `UserMenu` classes + inline styles consumed; Radix `DropdownMenu` interaction layer untouched
   - DoD: preserved — `useAuthStore` user/tenant; tenant-switch handler; nav items; overlay testid
   - Verify: avatar opens user-menu; tenant switch + nav items work
 
 ### 3.2 Shell spot-check (all 19 routes)
-- [ ] **Shell renders on all 19 authenticated routes** — sidebar + topbar render; no crash
+- [x] **Shell renders on all 19 authenticated routes** — sidebar + topbar render; no crash
   - DoD: quick visual pass (dev server or sweep) confirms shell chrome renders on every route
   - DoD: ⌘K palette / notifications / user-menu open correctly from any route
   - DoD: all 6 shell testids resolve
 
 ### 3.3 US-C1 `OverviewPage.tsx` re-point
-- [ ] **`OverviewPage.tsx` → verbatim `.page-head` + inline `overviewStyles`**
+- [x] **`OverviewPage.tsx` → verbatim `.page-head` + inline `overviewStyles`**
   - DoD: `.page-head` / `.page-title` / `.page-sub` / `.route-pill` / `.page-actions` consumed; inline `overviewStyles` object (`page` `{padding:18}` / `kpiRow` / `grid2` `1.4fr 1fr` / `grid2eq` `1fr 1fr`) ported verbatim from `page-overview.jsx`
   - DoD: preserved — `useTranslation` / `useNavigate` / `useAuthStore` / live-clock `useEffect` / `RequireAuth`+`AppShellV2` wrapping
   - Verify: `/overview` page-head + grid layout render; `tsc` 0
 
 ### 3.4 Day 3 spot-check + commit
-- [ ] **Day 3 spot-check** — `/overview` page-head + shell render together correctly
-- [ ] **Day 3 commit**
+- [x] **Day 3 spot-check** — `/overview` page-head + shell render together correctly
+- [x] **Day 3 commit**
   - Commit message: `feat(frontend, sprint-57-29, Day 3, Group B+C): UserMenu re-point + shell spot-check + OverviewPage re-point`
   - Verify: `git status` clean post-commit
 

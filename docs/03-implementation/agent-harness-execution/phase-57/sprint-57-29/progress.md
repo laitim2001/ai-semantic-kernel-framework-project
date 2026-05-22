@@ -98,3 +98,36 @@
 ### Remaining for Next Day
 
 - **Day 3 (Group B finish + Group C start)**: `UserMenu.tsx` overlay re-point + shell spot-check on all 19 routes + `OverviewPage.tsx` re-point.
+
+---
+
+## Day 3 — 2026-05-22 (Group B finish + Group C start — UserMenu + shell spot-check + OverviewPage)
+
+### Today's Accomplishments
+
+- **US-B5** — `UserMenu.tsx` re-pointed (3rd / last topbar overlay): inner markup re-classed verbatim to mockup `topbar-overlays.jsx` UserMenu — `panelStyle` / `identityCardStyle` / `avatarStyle` / `sectionLabelStyle` / `logoutRowStyle` etc. ported byte-for-byte as named `CSSProperties` consts; `row` / `col grow` / `mono subtle` / `badge primary` / `hr` classes consumed. Radix `<DropdownMenu>` / `<DropdownMenuContent>` / `<DropdownMenuItem asChild>` / `<DropdownMenuSeparator>` interaction layer untouched. `useAuthStore` / `changeLocale` / `SUPPORTED_LOCALES` / `logout()` / `useTheme` / tenant fixtures / nav items + `aria-label` (trigger + content) + `aria-current` (active tenant / locale) preserved.
+- **US-C1** — `OverviewPage.tsx` re-pointed: page wrapper → `style={overviewStyles.page}`; page-head inlined verbatim (`.page-head` / `.page-title` / `.page-sub` / `.route-pill` / `mono subtle` / `.page-actions`) — `<PageHead>` dropped; 3 grid rows → `overviewStyles.kpiRow` / `grid2` / `grid2eq` (verbatim from `page-overview.jsx:12-16`); KPI row → 4× `<Stat>`, chart cards → `<Card>`, page-head buttons → `<Button>`, all from `mockup-ui.tsx`; 7 `features/overview/components/` widgets kept as children (Day 4 re-points their internals). `useTranslation` / `useNavigate` / `useAuthStore` / live-clock `useEffect` / `RequireAuth`+`AppShellV2` / R7 no-`pageTitle` preserved. `<PageHead>` / `<StatCard>` / `<CardShell>` / charts `<Spark>` no longer imported by OverviewPage (NOT deleted — used by other pages).
+- **D-DAY3-1 fix** — `mockup-ui.tsx` gained the `Spark` SVG primitive (see Findings).
+- Implementation delegated to a `code-implementer` agent (the agent ran Vitest itself + self-caught & fixed a `UserMenu.test.tsx` regression — restored the "Signed in as" label + all role badges, an existing production contract). Orchestrator hard-verified all 5 gates independently + code-reviewed UserMenu vs `topbar-overlays.jsx:331-442` (panel / identity / avatar inline styles confirmed byte-identical) + OverviewPage vs `page-overview.jsx` + the PoC `overview-poc/index.tsx`.
+
+### Findings
+
+- **D-DAY3-1** (🟡 caught + fixed in-sprint): Day 1's `mockup-ui.tsx` port omitted the `ui.jsx` `Spark` SVG primitive (Day-1 checklist 1.1 listed `Icon/Button/Badge/Card/Stat/SevDot/RiskBadge` — `Spark` not listed). Surfaced Day 3 — OverviewPage's 2 sparked KPIs (costMtd / slaP95) had no sparkline renderer; the agent's first pass rendered the raw arrays as comma-joined placeholder text. Root: mockup `ui.jsx` `Stat` does `{spark}` passthrough while mockup `page-overview.jsx:93-94` passes raw `number[]` to `spark` — a latent mockup bug; `ui.jsx` has a separate `Spark` SVG component (`:115-121`) that is the intended renderer. The PoC `components.tsx` reproduced the bug (its `Stat` has `spark?: number[]` rendered as `{spark}`, no `Spark`). **Fix**: added `Spark` to `mockup-ui.tsx` as a verbatim port of `ui.jsx:115-121` (typed TSX); OverviewPage passes `spark={<Spark points={…}/>}`. `.stat-spark` (visual layer / CSS class) is unchanged — the `number[] → SVG` rendering is the component-logic-layer rewrite the verbatim method prescribes. In-sprint fix (`mockup-ui.tsx` is this sprint's Day-1 deliverable). The agent's `AD-OverviewPage-Spark-Primitive` Day-4 deferral is superseded.
+- **D-DAY3-2** (🟡 catalogue → Day 5): the re-pointed `UserMenu` retains 3 structural elements with no counterpart in the mockup `topbar-overlays.jsx` UserMenu — (a) a theme-toggle item (added Sprint 57.19 US-D3; the mockup puts theme only in the topbar), (b) a "Signed in as" label, (c) role `badge`s in the identity card (mockup identity card = avatar + name + email only; mockup shows role as a separate "role" row, which the re-point drops in favour of the badges). These are pre-existing production features / `UserMenu.test.tsx` contracts; the re-point re-classed them to mockup CSS but did not remove them (removal = behaviour change + test breakage, beyond a re-point's remit; checklist 3.1 says "preserve nav items"). Day 5 US-D2 fidelity verdict catalogues them; carryover AD for an align-strict-vs-keep decision when UserMenu's backing is revisited.
+- **D-DAY1-2** (🟢 carryover continues): file-level `eslint-disable no-restricted-syntax` again needed in `UserMenu.tsx` + `OverviewPage.tsx` (verbatim inline-style literals). Tracked as `AD-Inline-Style-Rule-vs-Verbatim-Method`.
+
+### Quality gates (Day 3 — orchestrator-verified independently, after the D-DAY3-1 Spark fix)
+
+- `npx tsc -b` 0 errors · `npm run lint` exit 0 · `npm run test` **457/457** (94 files) · `npm run build` green (main JS 336.84 kB — −0.15 kB vs Day 2 336.99) · `npm run check:mockup-fidelity` pass (diff guard byte-identical, hex baseline 18).
+
+### Day 3.2 — Shell spot-check (19 authenticated routes)
+
+The app shell (`AppShellV2` + `Sidebar` + `Topbar`, re-pointed Day 1-2) is a single shared component tree wrapping all 19 authenticated routes — per-route differences are page content, not shell chrome. Shell render verified via: `AppShellV2.test.tsx` (mounts + asserts the shell renders) + the ~9 e2e specs that traverse the shell, all green in the 457/457 Vitest pass; `npm run build` green; the shell testids (`app-shell` / `sidebar-toggle` / `sidebar-tenant-switcher` / `topbar` / `topbar-cmdk` / `topbar-theme` / `notifications-bell` / `notifications-panel`) confirmed by grep Day 1-2. The full per-route visual sweep is Day 5 US-D1 (`route-sweep.mjs after`).
+
+### Notes
+
+- `/overview` content-layer re-point is now Group-C-start complete: page-head + grid scaffold + KPI `<Stat>`s + chart-card `<Card>` wrappers are verbatim; the 7 widget *internals* (loop rows / HITL / providers / incidents / charts / quick-actions) are Day 4.
+
+### Remaining for Next Day
+
+- **Day 4 (Group C)**: re-point the 7 `features/overview/components/` widgets (CostBurnChart / ErrorTrendChart / QuickActionsStrip / ActiveLoopsCard / HITLQueueCard / ProvidersCard / IncidentsCard) + `_primitives.tsx` orphan decision.
