@@ -39,29 +39,29 @@
 ## Day 1 — Group B (primitives + AppShellV2 + Sidebar)
 
 ### 1.1 US-B1 `mockup-ui.tsx` verbatim primitive port
-- [ ] **NEW `frontend/src/components/mockup-ui.tsx`** — typed-TSX port of mockup `ui.jsx`
+- [x] **NEW `frontend/src/components/mockup-ui.tsx`** — typed-TSX port of mockup `ui.jsx`
   - DoD: `Icon` / `Button` / `Badge` / `Card` / `Stat` / `RiskBadge` each emit mockup class strings verbatim (`btn ${variant}`, `badge ${tone}`, `card`/`card-head`/`card-body ${bodyClass}`, `stat`/`stat-value tnum`, `sev-dot sev-${level}`)
   - DoD: typed props; 0 Tailwind utility / 0 shadcn import
   - DoD: file header per `file-header-convention.md`; reference PoC `pages/overview-poc/components.tsx`
   - Verify: `npm run build` resolves the new module; `tsc` 0 errors
 
 ### 1.2 US-B2 `AppShellV2` re-point
-- [ ] **`AppShellV2.tsx` → verbatim `.app` / `.main` / `.content`**
+- [x] **`AppShellV2.tsx` → verbatim `.app` / `.main` / `.content`**
   - DoD: outer grid `className="app"` (+ `data-collapsed`), `.main`, `.content` (+ `fullbleed` when `fullBleed` prop set)
   - DoD: `app-shell` `data-testid` preserved on the same node; `fullBleed` prop behaviour unchanged
   - DoD: `useUIStore` collapse wiring intact
   - Verify: `/overview` renders inside the re-pointed shell; `tsc` 0
 
 ### 1.3 US-B3 `Sidebar` re-point
-- [ ] **`Sidebar.tsx` → verbatim sidebar classes**
+- [x] **`Sidebar.tsx` → verbatim sidebar classes**
   - DoD: `.sidebar` / `.sidebar-head` / `.brand-mark` / `.brand-text` / `.brand-name` / `.brand-sub` / `.tenant-switcher` / `.tenant-avatar` / `.nav` / `.nav-section` / `.nav-item`[`data-active`] / `.nav-icon` / `.nav-label` / `.nav-badge` / `.sidebar-foot` / `.user-card` consumed directly
   - DoD: verbatim inline styles ported (nav-badge PROP/DRAFT colours, sidebar-foot avatar gradient) — copied as inline-style objects, NOT translated
   - DoD: preserved — `react-router` `<Link>` + `useLocation()` `data-active`; `routes.config.ts` `ROUTES` + `CATEGORY_ORDER` 6-group nav; `useUIStore` collapse; i18n `nav.*`; `sidebar-toggle` testid; production collapse-toggle button KEPT
   - Verify: nav active state follows route; collapse works; `tsc` 0
 
 ### 1.4 Day 1 spot-check + commit
-- [ ] **Day 1 spot-check** — `/overview` + 2 other routes' shell render; sidebar nav + collapse work
-- [ ] **Day 1 commit**
+- [x] **Day 1 spot-check** — `/overview` + 2 other routes' shell render; sidebar nav + collapse work
+- [x] **Day 1 commit**
   - Commit message: `feat(frontend, sprint-57-29, Day 1, Group B): mockup-ui primitives + AppShellV2 + Sidebar verbatim re-point`
   - Verify: `git status` clean post-commit
 

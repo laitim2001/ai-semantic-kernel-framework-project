@@ -39,3 +39,32 @@
 ### Notes
 
 - PoC `investigation/mockup-fidelity-poc` `pages/overview-poc/{index.tsx,components.tsx}` is the proven content-layer template; the shell re-point has NO PoC precedent (R1 — first verbatim shell re-point).
+
+---
+
+## Day 1 — 2026-05-22 (Group B — primitives + AppShellV2 + Sidebar)
+
+### Today's Accomplishments
+
+- **US-B1** — NEW `frontend/src/components/mockup-ui.tsx`: typed-TSX verbatim port of mockup `ui.jsx` primitives (`Icon` 56-icon set / `Button` / `Badge` / `Card` / `Stat` / `SevDot` / `RiskBadge`); emits mockup class strings verbatim; 0 Tailwind / 0 shadcn.
+- **US-B2** — `AppShellV2.tsx` re-pointed: root `.app` grid (+ `data-collapsed`) / `.main` / `.content` (+ `.fullbleed`); `data-testid="app-shell"` + `fullBleed` prop preserved.
+- **US-B3** — `Sidebar.tsx` re-pointed: verbatim `.sidebar` / `.sidebar-head` / `.brand-*` / `.tenant-switcher` / `.nav` / `.nav-section` / `.nav-item`(`data-active`) / `.nav-icon` / `.nav-label` / `.nav-badge` / `.sidebar-foot` / `.user-card`; nav-badge tints + foot-avatar gradient copied verbatim as inline-style objects; `react-router` `<Link>`/`useLocation`, `routes.config.ts`, `useUIStore` collapse, i18n preserved.
+- Implementation delegated to a `code-implementer` agent; orchestrator hard-verified (build / lint / tsc / Vitest / check:mockup-fidelity / testid grep / file review).
+
+### Findings
+
+- **D-DAY1-1** (🟡 caught + fixed): the Sidebar re-point dropped the `<aside>` `aria-label={t("shell.primaryNavigation")}` → `AppShellV2.test.tsx:45` failed (`getByRole("complementary", { name: "Primary navigation" })`). The agent had not run Vitest; the orchestrator's verification Vitest pass caught it. **Fixed** — restored `aria-label` on the re-pointed `<aside>`. Lesson: a11y attributes (`aria-label` / `role`) are part of the preserve-contract alongside `data-testid` — Day 2+ re-point briefs call this out explicitly.
+- **D-DAY1-2** (🟢 noted → carryover): `no-restricted-syntax` (inline-`style=` ban, Sprint 57.15/57.16) conflicts with the verbatim-re-point method, which REQUIRES copying mockup inline-style literals (gradients / tints). Resolved per-file with a `/* eslint-disable no-restricted-syntax */` carrying the verbatim rationale (STYLE.md §1 escape hatch). Works, but every Phase-2 re-pointed file (~16 by sprint end) will need this → carryover **AD-Inline-Style-Rule-vs-Verbatim-Method** (next-phase-candidates at Day 5 closeout): scope the ESLint rule to exclude re-pointed dirs, or retire it.
+
+### Quality gates (Day 1)
+
+- `npx tsc -b` 0 errors · `npm run lint` exit 0 · `npm run build` green (main JS 337.06 kB — unchanged from Sprint 57.28 baseline) · Vitest **457/457** · `npm run check:mockup-fidelity` pass (18/18 hex baseline) · 3 shell testids (`app-shell` / `sidebar-toggle` / `sidebar-tenant-switcher`) preserved · 0 Tailwind residue in `Sidebar.tsx`.
+
+### Notes
+
+- Day 1 changed the shared shell (wraps all 19 routes); `AppShellV2.test.tsx` mounts + asserts the shell renders. Full 22-route visual sweep is Day 5 US-D1; the re-pointed shell is live on `:3007` via Vite HMR.
+- `mockup-ui.tsx` is created but not yet consumed — Day 2/3 overlays + Day 3/4 `/overview` widgets consume it.
+
+### Remaining for Next Day
+
+- **Day 2 (Group B)**: `Topbar.tsx` re-point + `CommandPalette.tsx` + `NotificationsPanel.tsx` overlay re-point.
