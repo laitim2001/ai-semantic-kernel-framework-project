@@ -114,4 +114,44 @@
 ### Notes
 
 - Workload Day 2 est ~2.2 hr calibrated — actual well under (Layer 4 was pre-done Day 1; Day 2 = theme wire only — a small, well-scoped change).
-- Day 2 commit: `<hash>` (4 files: ThemeProvider.tsx + AuthShell.test.tsx + checklist + this progress.md; screenshots/ kept local).
+- Day 2 commit: `a530187c` (4 files; +92 / -30; screenshots/ kept local). This hash-record line lands with the Day 3 commit.
+
+---
+
+## Day 3 — 2026-05-22 — Group D (CI guards + 22-route regression sweep + triage)
+
+### Today's Accomplishments
+
+- **US-D1 CI guards** — NEW `frontend/scripts/check-mockup-fidelity.mjs`; `package.json` `+1` script `check:mockup-fidelity`; `.github/workflows/frontend-ci.yml` `+1` step `Mockup-fidelity guard` after the ESLint step (in approved plan scope — additive guard).
+  - **diff guard** — `styles-mockup.css` vs `reference/design-mockups/styles.css`, line-ending normalised → byte-identical ✓
+  - **grep guard** — no NEW hardcoded `#hex`/`oklch()` in `src/features/**`+`src/pages/**`; comment lines skipped; `HEX_OKLCH_BASELINE = 18` (governance + chat_v2 risk-colour maps — DecisionModal 5 / AuditChainBadge 1 / ApprovalList 4 / ApprovalCard 4 / HITLTurn 4); hard-fails only above baseline. `pages/` = 0 offenders.
+  - `npm run check:mockup-fidelity` exits 0 ✓
+- **US-D2 after-switch sweep** — `route-sweep.mjs after` 22/22 routes captured ✓ (0 harness `✗`). FOUNDATION-SWITCH-REPORT §3 before/after matrix populated (all 22 after/ PNGs read; 5 before/ PNGs opened for direct comparison).
+- **US-D3 triage** (report §3a):
+  - **0 catastrophic** breakage from the switch — no route that rendered before is broken after.
+  - **0 structural regression** from the switch — no `AD-Foundation-Switch-Regression-*`.
+  - **19 routes 🟡 transition-drift** — every renderable route loads the verbatim foundation; colour fidelity improved, spacing/layout shifts on not-yet-re-pointed pages (Phase-2 re-point backlog).
+  - **3 routes ⚪ not-assessable** (`/subagents` `/memory` `/verification`) — AppErrorBoundary `undefined.length` IDENTICALLY in before/ + after/ → pre-existing route-sweep harness mock-shape gap (generic `[]` mock vs object-shaped data hooks; same D-DAY1-1 class as cost/sla). A CSS-only switch cannot cause a JS `.length` error → NOT a regression.
+
+### Drift findings (Day 3)
+
+| ID | Sev | Finding | Resolution |
+|----|-----|---------|------------|
+| D-DAY3-1 | 🟢 | grep guard found 0 hardcoded hex/oklch in `pages/` but 18 lines in `features/` (governance + chat_v2 risk-colour maps still use `bg-[#hex]`/`text-[#hex]` literals, not mockup `--risk-*` tokens). | Captured as `HEX_OKLCH_BASELINE = 18`; the guard absorbs them as Phase-2 backlog, hard-fails only on NEW offenders. |
+| D-DAY3-2 | 🟢 | `/subagents` `/memory` `/verification` error identically in before/ + after/ — route-sweep generic `[]` mock incompatible with their object-shaped data hooks. | NEW `AD-RouteSweep-Object-Mock-Gap` (harness maintenance — report §3b). Not a switch regression; not fixed this sprint (out of foundation-switch scope; needs data-shape investigation). |
+
+### Decisions taken
+
+- grep guard skips comment lines (trimmed start `*`/`//`/`/*`) → the 3 comment-only hex/oklch mentions (HITLQueueCard docstring, 2 MHist `#666`) are NOT counted; baseline 18 = real offenders only.
+- vs-mockup per-route pixel comparison deferred to Phase-2 re-point sprints (Option B — no markup re-pointed; report §3c). Day 3 matrix = before/after regression detection (the actual Day 3 purpose).
+- route-sweep harness NOT extended for subagents/memory/verification object mocks this sprint — out of foundation-switch scope; logged as `AD-RouteSweep-Object-Mock-Gap`.
+
+### Remaining for next day (Day 4 — Vitest + closeout)
+
+- US-E1: Vitest 457/457 re-confirm + lint + build + bundle KB delta.
+- US-E2: FOUNDATION-SWITCH-REPORT §5 final verdict; retrospective Q1-Q7 + calibration 1st-data-point; memory snapshot + MEMORY.md +1; sprint-workflow.md calibration matrix +1 NEW class row; next-phase-candidates.md update (incl. `AD-RouteSweep-Object-Mock-Gap`); CLAUDE.md minimal touch; PR.
+
+### Notes
+
+- Workload Day 3 est ~1.7 hr calibrated — actual on track (CI guard authoring + sweep + 27-image triage read).
+- Day 3 commit: `<hash>` (6 files: check-mockup-fidelity.mjs NEW + package.json + frontend-ci.yml + FOUNDATION-SWITCH-REPORT + checklist + progress.md; screenshots/ kept local). Hash-record line lands with the Day 4 commit.

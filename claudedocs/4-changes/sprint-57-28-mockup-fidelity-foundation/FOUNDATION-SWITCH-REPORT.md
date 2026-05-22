@@ -2,7 +2,7 @@
 
 **Purpose**: Track the verbatim-CSS 4-layer foundation switch — token-collision resolution + 22-route before/after regression evidence.
 **Sprint**: 57.28 (Phase 1 of `claudedocs/5-status/v2-investigation-20260522/03-mockup-consistency-rootcause.md` §5)
-**Status**: Day 0 — skeleton + token-collision enumeration complete; before-baseline captured
+**Status**: Day 3 — 22-route before/after sweep + triage complete (0 catastrophic / 0 structural regression from the switch); CI guards landed. Day 4 = final verdict.
 **Created**: 2026-05-22
 
 ---
@@ -55,34 +55,51 @@
 
 ## 3. 22-route before/after regression matrix
 
-Captured 1440×900 via `frontend/scripts/route-sweep.mjs`. Before = Day 0 (this branch, pre-switch). After = Day 3 (post Layer 2/3/4 + theme).
+Captured 1440×900 via `frontend/scripts/route-sweep.mjs`. Before = Day 0 (this branch, pre-switch). After = Day 3 (post Layer 2/3/4 + theme toggle). Both runs: **22/22 routes captured ✓** (0 harness `✗` — no navigation/load failure).
 
-| # | Route | Shell | Before (Day 0) | After (Day 3) | vs Mockup | Verdict |
-|---|-------|-------|----------------|---------------|-----------|---------|
-| 1 | `/` | Home | ✅ captured | — | — | TBD |
-| 2 | `/auth/login` | AuthShell | ✅ captured | — | — | TBD |
-| 3 | `/auth/callback` | AuthShell | ✅ captured | — | — | TBD |
-| 4 | `/auth/register` | AuthShell | ✅ captured | — | — | TBD |
-| 5 | `/auth/invite/:token` | AuthShell | ✅ captured | — | — | TBD |
-| 6 | `/auth/mfa` | AuthShell | ✅ captured | — | — | TBD |
-| 7 | `/auth/expired` | AuthShell | ✅ captured | — | — | TBD |
-| 8 | `/auth/dev` | AuthShell | ✅ captured | — | — | TBD |
-| 9 | `/overview` | AppShellV2 | ✅ captured | — | — | TBD |
-| 10 | `/chat-v2` | AppShellV2 | ✅ captured | — | — | TBD |
-| 11 | `/orchestrator` | AppShellV2 | ✅ captured | — | — | TBD |
-| 12 | `/subagents` | AppShellV2 | ✅ captured | — | — | TBD |
-| 13 | `/loop-debug` | AppShellV2 | ✅ captured | — | — | TBD |
-| 14 | `/memory` | AppShellV2 | ✅ captured | — | — | TBD |
-| 15 | `/state-inspector` | AppShellV2 | ✅ captured | — | — | TBD |
-| 16 | `/governance` | AppShellV2 | ✅ captured | — | — | TBD |
-| 17 | `/verification` | AppShellV2 | ✅ captured | — | — | TBD |
-| 18 | `/cost-dashboard` | AppShellV2 | ✅ captured | — | — | TBD |
-| 19 | `/sla-dashboard` | AppShellV2 | ✅ captured | — | — | TBD |
-| 20 | `/admin-tenants` | AppShellV2 | ✅ captured | — | — | TBD |
-| 21 | `/tenant-settings` | AppShellV2 | ✅ captured | — | — | TBD |
-| 22 | `/compaction` (PROP stub representative) | AppShellV2 | ✅ captured | — | — | TBD |
+Triage legend: 🟢 unchanged/improvement · 🟡 transition-drift (Phase-2 re-point backlog) · 🔴 catastrophic (in-sprint fix) · 🟠 structural-regression (carryover AD) · ⚪ not-assessable (pre-existing route-sweep mock-shape gap — errors identically before+after).
 
-Triage legend (Day 3): 🟢 intended-improvement · 🟡 transition-drift (Phase-2 backlog) · 🔴 catastrophic (in-sprint fix) · 🟠 structural-regression (carryover AD).
+| # | Route | Shell | Before | After (Day 3) | Verdict |
+|---|-------|-------|--------|---------------|---------|
+| 1 | `/` | Home | ✓ | plain dev route index (not a mockup-scoped page) | 🟢 unchanged |
+| 2 | `/auth/login` | AuthShell | ✓ | dark ✓ — centered card + radial backdrop | 🟡 transition-drift |
+| 3 | `/auth/callback` | AuthShell | ✓ | dark ✓ — sign-in progress card | 🟡 transition-drift |
+| 4 | `/auth/register` | AuthShell | ✓ | dark ✓ — 4-step wizard | 🟡 transition-drift |
+| 5 | `/auth/invite/:token` | AuthShell | ✓ | dark ✓ — login fallback (demo token) | 🟡 transition-drift |
+| 6 | `/auth/mfa` | AuthShell | ✓ | dark ✓ — 6-digit grid | 🟡 transition-drift |
+| 7 | `/auth/expired` | AuthShell | ✓ | dark ✓ — session-expired card | 🟡 transition-drift |
+| 8 | `/auth/dev` | AuthShell | ✓ | dark ✓ — dev-login form | 🟡 transition-drift |
+| 9 | `/overview` | AppShellV2 | ✓ | dark ✓ — operator dashboard, 9 widgets | 🟡 transition-drift |
+| 10 | `/chat-v2` | AppShellV2 | ✓ | dark ✓ — 3-col shell, sessions + inspector | 🟡 transition-drift |
+| 11 | `/orchestrator` | AppShellV2 | dark ✓ | dark ✓ — config form + 4 stat cards (tighter spacing) | 🟡 transition-drift |
+| 12 | `/subagents` | AppShellV2 | error boundary | error boundary — `undefined.length` | ⚪ not-assessable (identical before+after) |
+| 13 | `/loop-debug` | AppShellV2 | ✓ | dark ✓ — empty-state | 🟡 transition-drift |
+| 14 | `/memory` | AppShellV2 | error boundary | error boundary — `undefined.length` | ⚪ not-assessable (identical before+after) |
+| 15 | `/state-inspector` | AppShellV2 | dark ✓ | dark ✓ — version chain + diff panel | 🟡 transition-drift |
+| 16 | `/governance` | AppShellV2 | ✓ | dark ✓ — graceful inline data-load error (mock `[]`); page usable | 🟡 transition-drift |
+| 17 | `/verification` | AppShellV2 | error boundary | error boundary — `undefined.length` | ⚪ not-assessable (identical before+after) |
+| 18 | `/cost-dashboard` | AppShellV2 | ✓ | dark ✓ — Cost Ledger, charts + tables | 🟡 transition-drift |
+| 19 | `/sla-dashboard` | AppShellV2 | ✓ | dark ✓ — latency charts + SLO status (tighter spacing) | 🟡 transition-drift |
+| 20 | `/admin-tenants` | AppShellV2 | ✓ | dark ✓ — console + filter bar | 🟡 transition-drift |
+| 21 | `/tenant-settings` | AppShellV2 | ✓ | dark ✓ — settings field list | 🟡 transition-drift |
+| 22 | `/compaction` (PROP stub) | AppShellV2 | ✓ | dark ✓ — Coming-Soon placeholder | 🟢 unchanged (PROP stub) |
+
+> "Before ✓" = captured by the Day-0 sweep without harness error. `/orchestrator`, `/state-inspector`, `/subagents`, `/memory`, `/verification` before/ images were opened for direct before/after comparison; the rest are inferred from the functioning pre-57.28 app.
+
+### 3a. Triage (US-D3)
+
+- **🔴 Catastrophic from the switch: 0.** No route that rendered before is blank / crashed / unusable after.
+- **🟠 Structural regression from the switch: 0.** No `AD-Foundation-Switch-Regression-*` carryover needed.
+- **🟡 Transition-drift: 19 routes.** Every renderable route now loads the verbatim mockup CSS foundation. Colour fidelity improved (verbatim oklch tokens replace the Sprint 57.18/57.20 HSL approximations); spacing/layout shifts on the not-yet-re-pointed pages (`/orchestrator`, `/sla-dashboard` render tighter) because their markup still consumes shadcn utilities on top of the new foundation. **This is the Phase-2 per-page re-point backlog** — expected and accepted under Option B; not fixed this sprint.
+- **⚪ Not-assessable: 3 routes** (`/subagents`, `/memory`, `/verification`). All three render the AppErrorBoundary fallback with `Cannot read properties of undefined (reading 'length')` — **identically in the Day-0 before-baseline and the Day-3 after-sweep**. The error pre-dates the switch: it is a `route-sweep.mjs` harness limitation — the generic `[]` mock does not satisfy these pages' object-shaped data hooks (the same D-DAY1-1 class that earned `/cost-dashboard` + `/sla-dashboard` their object mocks; these three never got theirs). A CSS-only foundation switch cannot cause a JS `undefined.length` error. **NOT a foundation-switch regression.**
+
+### 3b. Carryover AD
+
+- 🆕 **AD-RouteSweep-Object-Mock-Gap** (harness maintenance): extend `frontend/scripts/route-sweep.mjs` with object-shaped mocks for `/api/v1/subagents`, `/api/v1/memory/recent`, and the verification endpoint (mirroring the Sprint 57.26 D-DAY1-1 `cost-summary` / `sla-report` object mocks) so those 3 routes become sweep-assessable. Until then they are covered only by their identical before/after error (which proves no switch regression). Picked up by a Phase-2 re-point sprint touching those pages, or a harness-maintenance pass.
+
+### 3c. vs-mockup comparison
+
+Under Option B no page markup is re-pointed this sprint, so a per-route pixel comparison against the `:8080` mockup is **deferred to each Phase-2 re-point sprint**, where it is that sprint's DoD. What this sprint guarantees: the **foundation** — `styles-mockup.css` verbatim load + token bridge + theme — now matches the mockup byte-for-byte (CI diff guard enforces it). The per-route content gap = the entire Phase-2 re-point epic.
 
 ---
 

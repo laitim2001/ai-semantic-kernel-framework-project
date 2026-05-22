@@ -94,30 +94,29 @@
 ## Day 3 — Group D (CI guards + 22-route regression sweep)
 
 ### 3.1 US-D1 CI guards
-- [ ] **`frontend/scripts/check-mockup-fidelity.mjs`** authored
-  - DoD: diff guard (`styles-mockup.css` vs `styles.css`, line-ending normalised) + grep guard (no new hardcoded hex/oklch in `features/`+`pages/`)
-  - DoD: grep guard records the current pre-existing-offender baseline count (Phase-2 backlog); hard-fails only on NEW offenders
-  - Verify: `node scripts/check-mockup-fidelity.mjs` exits 0
-- [ ] **`package.json` script + CI step**
-  - DoD: `+1` `package.json` script `check:mockup-fidelity`; `+1` step in the frontend CI workflow (file from Day 0 Prong 1) after lint
-  - Verify: `Grep("check:mockup-fidelity", frontend/package.json)` + the workflow file
+- [x] **`frontend/scripts/check-mockup-fidelity.mjs`** authored
+  - DoD: diff guard (`styles-mockup.css` vs `styles.css`, line-ending normalised) + grep guard (no new hardcoded hex/oklch in `features/`+`pages/`) — done; both guards pass
+  - DoD: grep guard records the current pre-existing-offender baseline count (Phase-2 backlog); hard-fails only on NEW offenders — `HEX_OKLCH_BASELINE = 18`
+  - Verify: `node scripts/check-mockup-fidelity.mjs` exits 0 ✓
+- [x] **`package.json` script + CI step**
+  - DoD: `+1` `package.json` script `check:mockup-fidelity`; `+1` step `Mockup-fidelity guard` in `.github/workflows/frontend-ci.yml` after the ESLint step
+  - Verify: `npm run check:mockup-fidelity` exits 0 ✓
 
 ### 3.2 US-D2 after-switch 22-route sweep
-- [ ] **After-switch sweep** — all ~22 routes via `route-sweep.mjs after` (fresh contexts, no cache)
-  - DoD: `screenshots/after/` has ~22 PNGs
-  - Verify: directory count ≈ 22
-- [ ] **Before/after + vs-mockup matrix** in FOUNDATION-SWITCH-REPORT
-  - DoD: 22-route matrix — before/after diff + after vs `:8080` mockup-equivalent per route
-  - Verify: report matrix populated for all ~22 routes
+- [x] **After-switch sweep** — all 22 routes via `route-sweep.mjs after` (fresh contexts, no cache)
+  - DoD: `screenshots/after/` has 22 PNGs — 22/22 captured ✓ (0 harness `✗`)
+- [x] **Before/after matrix + vs-mockup note** in FOUNDATION-SWITCH-REPORT
+  - DoD: 22-route before/after matrix populated (report §3); per-route vs-`:8080`-mockup pixel comparison deferred to each Phase-2 re-point sprint (Option B — no markup re-pointed this sprint; rationale in report §3c) — corrected per sprint-workflow §Step 2.5
+  - Verify: report §3 matrix populated for all 22 routes ✓
 
 ### 3.3 US-D3 regression triage
-- [ ] **Catastrophic breakage fixed in-sprint**
-  - DoD: any page that crashes / is blank / unusable fixed; if none → record "0 catastrophic"
-- [ ] **Transition drift catalogued** as Phase-2 epic backlog
-  - DoD: the 13 pages' expected shifts listed per-route as Phase-2 re-point backlog (NOT fixed this sprint)
-- [ ] **Structural regressions → carryover AD**
-  - DoD: any previously-correct route now structurally broken → `AD-Foundation-Switch-Regression-<route>` (NOT silently shipped)
-- [ ] **Day 3 commit**
+- [x] **Catastrophic breakage fixed in-sprint**
+  - DoD: 0 catastrophic breakage from the switch — recorded in report §3a (no route that rendered before is broken after)
+- [x] **Transition drift catalogued** as Phase-2 epic backlog
+  - DoD: 19 routes 🟡 transition-drift catalogued in report §3 matrix + §3a as the Phase-2 re-point backlog (NOT fixed this sprint)
+- [x] **Structural regressions → carryover AD**
+  - DoD: 0 structural regression from the switch (no `AD-Foundation-Switch-Regression-*`); 3 routes (`/subagents` `/memory` `/verification`) error identically before+after → pre-existing route-sweep harness mock gap → NEW `AD-RouteSweep-Object-Mock-Gap` (report §3b)
+- [x] **Day 3 commit**
   - Commit message: `feat(frontend, sprint-57-28, Day 3, Group D): CI mockup-fidelity guards + 22-route regression sweep + triage`
   - DoD: `git status` clean post-commit
 
