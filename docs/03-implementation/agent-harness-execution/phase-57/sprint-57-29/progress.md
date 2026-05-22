@@ -68,3 +68,33 @@
 ### Remaining for Next Day
 
 - **Day 2 (Group B)**: `Topbar.tsx` re-point + `CommandPalette.tsx` + `NotificationsPanel.tsx` overlay re-point.
+
+---
+
+## Day 2 — 2026-05-22 (Group B — Topbar + CommandPalette + NotificationsPanel)
+
+### Today's Accomplishments
+
+- **US-B4** — `Topbar.tsx` re-pointed: verbatim `.topbar` / `.crumb` / `.here` (kept as `<h1>` per page-title-is-h1 a11y contract) / `.route-pill` / `.tenant-pill` + `.dot` / `.topbar-spacer` / `.cmdk` / `.kbd`; theme + bell buttons use `.btn ghost` + `data-size="sm"` (mockup Button ghost sm); locale button + divider + bell unread badge + cmdk cursor ported as named `CSSProperties` consts copied byte-for-byte from `shell.jsx`. Lucide icon imports dropped → mockup `Icon` from `mockup-ui.tsx` (the mockup topbar itself renders `<Icon name=…>`). `useLocation` / `useTheme` / `useAuthStore` / i18n `toggleLocale` / all props preserved.
+- **US-B5** — `CommandPalette.tsx` re-pointed: mockup `topbar-overlays.jsx` `CommandPalette` classes + inline-style literals consumed; Radix `<Dialog>` / `<DialogContent>` / `<DialogTitle className="sr-only">` + `cmdk` `<Command>` interaction layer untouched; `jsx-a11y/no-autofocus` disable preserved.
+- **US-B5** — `NotificationsPanel.tsx` re-pointed: mockup `NotificationsPanel` classes + inline-style literals consumed; `role="dialog"` / `role="tablist"` / `role="tab"` + `aria-selected` + row `role="button"` + `tabIndex` + `onKeyDown` Enter/Space preserved; fixtures + mark-all/mark-one handlers + open/close intact.
+- Implementation delegated to a `code-implementer` agent (brief explicitly listed the 6 testids + a11y attrs as preserve-contract — D-DAY1-1 lesson); orchestrator hard-verified all 5 gates independently + greps + code review of the Topbar verbatim port against `shell.jsx`.
+
+### Findings
+
+- **D-DAY2-1** (🟢 verified, not a defect): the `.cmdk` element re-pointed as `<div role="button" tabIndex={0} onKeyDown={Enter}>` — initially flagged as a possible a11y downgrade from the pre-re-point native `<button>`. Verified against `reference/design-mockups/shell.jsx:178`: the mockup itself authors `<div className="cmdk" role="button" tabIndex={0} onKeyDown={…Enter…} style={{cursor:"pointer"}}>`. The re-point is a byte-for-byte verbatim copy → correct per the verbatim-fidelity method (the pre-re-point `<button>` was a translation-era deviation). No fix.
+- **D-DAY1-2** (🟢 carryover continues): the `no-restricted-syntax` inline-`style=` ban needed a file-level `eslint-disable` (verbatim rationale comment) in all 3 Day-2 files — same as Day 1's Sidebar. Still tracked as **AD-Inline-Style-Rule-vs-Verbatim-Method** (next-phase-candidates at Day 5 closeout).
+- **Agent decisions verified sound**: dropped the mockup `CommandPalette` backdrop/card div (superseded by Radix `<DialogContent>` modal shell — interaction layer must stay); dropped `AVATAR_STYLE` in Topbar (`<UserMenu />` owns its avatar — its re-point is Day 3.1, not now). `.btn ghost` + `data-size="sm"` used instead of non-existent `btn-ghost-sm`; `badge warning pill` instead of non-existent `badge-warning` — both match real `styles-mockup.css` modifier patterns + Day-1 Sidebar precedent.
+
+### Quality gates (Day 2 — orchestrator-verified independently)
+
+- `npx tsc -b` 0 errors · `npm run lint` exit 0 (`--report-unused-disable-directives --max-warnings 0`) · `npm run test` **457/457** (94 files; the `Error: kaboom` in stderr is `AuthShell.test.tsx`'s intentional error-boundary throw) · `npm run build` green (main JS 336.99 kB — −0.07 kB vs Day 1 337.06, Lucide imports dropped) · `npm run check:mockup-fidelity` pass (diff guard byte-identical, hex baseline 18) · 6 shell/overlay testids preserved (`topbar` / `topbar-cmdk` / `topbar-locale` / `topbar-theme` / `notifications-bell` / `notifications-panel`) · 0 Tailwind utility residue in all 3 files.
+
+### Notes
+
+- Day 2 spot-check = code-level review of the Topbar verbatim port against `shell.jsx:171-179` + all 5 gates green + Vitest jsdom render assertions for the topbar/overlay specs all pass. Full Playwright visual + computed-style verification is Day 5 US-D2.
+- `<UserMenu />` left untouched (Day 3.1 US-B5 scope).
+
+### Remaining for Next Day
+
+- **Day 3 (Group B finish + Group C start)**: `UserMenu.tsx` overlay re-point + shell spot-check on all 19 routes + `OverviewPage.tsx` re-point.

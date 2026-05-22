@@ -70,24 +70,24 @@
 ## Day 2 — Group B (Topbar + CommandPalette + NotificationsPanel)
 
 ### 2.1 US-B4 `Topbar` re-point
-- [ ] **`Topbar.tsx` → verbatim topbar classes**
+- [x] **`Topbar.tsx` → verbatim topbar classes**
   - DoD: `.topbar` / `.crumb` / `.here` / `.route-pill` / `.tenant-pill` / `.dot` / `.topbar-spacer` / `.cmdk` / `.kbd` / `.avatar` consumed directly
   - DoD: verbatim inline styles ported (locale button, theme divider, bell unread badge)
   - DoD: preserved — ⌘K hotkey + command-palette trigger; theme toggle; notifications + user-menu triggers; i18n `topbar.*`; `topbar` / `topbar-cmdk` / `topbar-theme` / `notifications-bell` testids
   - Verify: topbar renders; ⌘K + theme + bell + avatar triggers fire; `tsc` 0
 
 ### 2.2 US-B5 overlays — CommandPalette + NotificationsPanel
-- [ ] **`CommandPalette.tsx` → verbatim mockup overlay markup**
+- [x] **`CommandPalette.tsx` → verbatim mockup overlay markup**
   - DoD: mockup `topbar-overlays.jsx` `CommandPalette` classes + inline styles consumed; `cmdk` library + Radix `Dialog` interaction layer (filter / focus-trap / escape) untouched
   - DoD: preserved — ⌘K hotkey open; route navigation from palette; overlay testids
   - Verify: ⌘K opens; typing filters; Enter navigates; Escape closes
-- [ ] **`NotificationsPanel.tsx` → verbatim mockup overlay markup**
+- [x] **`NotificationsPanel.tsx` → verbatim mockup overlay markup**
   - DoD: mockup `NotificationsPanel` classes + inline styles consumed; open/close state + notification fixtures + mark-all handler preserved
   - Verify: bell opens panel; mark-all works; `notifications-bell` testid intact
 
 ### 2.3 Day 2 spot-check + commit
-- [ ] **Day 2 spot-check** — topbar + ⌘K palette + notifications render correctly
-- [ ] **Day 2 commit**
+- [x] **Day 2 spot-check** — topbar + ⌘K palette + notifications render correctly
+- [x] **Day 2 commit**
   - Commit message: `feat(frontend, sprint-57-29, Day 2, Group B): Topbar + CommandPalette + NotificationsPanel verbatim re-point`
   - Verify: `git status` clean post-commit
 
