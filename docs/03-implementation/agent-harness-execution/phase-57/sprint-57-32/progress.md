@@ -143,3 +143,36 @@ Day 2 wall-clock ~30 min (2 file edits + spec drift fix + verify). Sprint actual
 ### Open items
 
 - Day 3 work pending: TopSlowOpsTable `.table` 6-op verbatim + ErrorRateByServiceCard `.bar-track` 6-row verbatim + Vitest comprehensive re-run.
+
+---
+
+## Day 3 — Group D (Top slow + Error rate + Vitest) — ✅ done (2026-05-24)
+
+### Today's Accomplishments
+
+- **US-D1 TopSlowOpsTable verbatim** — Full re-point: CardShell → mockup-ui Card with bodyClass='flush'; table `w-full border-collapse text-left text-[12px]` → `.table`; thead/th drop translations (styles cascade from .table; textAlign right inline-style on numeric col headers); Operation td → `.mono` + inline fontSize 11.5; Kind cell shadcn-style Badge (KIND_TONE_CLASS Tailwind map) → mockup-ui `<Badge tone={KIND_TONE_MAP[row.kind]}>` with kind-to-tone dispatch (tool/primary/thinking/success/memory); p50/p95 td → `.mono .tnum` + inline textAlign right; p99 td uses Hybrid Tailwind+inline color bridge (preserve `text-warning`/`text-fg-muted` Tailwind classes alongside inline style color verbatim per Sprint 57.32 Day 2 SLOStatusCard precedent); Calls td → `.mono .tnum .subtle` + inline textAlign right.
+- **US-D2 ErrorRateByServiceCard verbatim** — Full re-point: CardShell → mockup-ui Card; outer `flex flex-col gap-2.5` → `.col` + inline gap 10 (mockup literal); per-row header → `.spread` + inline marginBottom 3 (mockup 3 not 1); service name → `.mono` + inline fontSize 11.5; rate % uses Hybrid Tailwind+inline color bridge; `<BarTrack>` → verbatim `<div className="bar-track"><span style={{ width: min(100, rate × 50)%, background: warn ? warning : success }} /></div>`.
+- **US-D3 Vitest comprehensive** — Full suite re-run **452/452 baseline maintained**; sla-dashboard subset 30/30 pass. No spec drift this time — Hybrid Tailwind+inline color bridge was applied preemptively for `text-warning`/`text-fg-muted` class assertions in both files (lesson from Day 2 SLOStatusCard spec drift was applied as pre-emptive measure here).
+
+### 5-gate result
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| 1. Vitest | ✅ | 94 files / 452/452 maintained; sla-dashboard subset 30/30; 0 spec drift (Hybrid bridge applied pre-emptively) |
+| 2. tsc strict | ✅ | Only pre-existing TS6310 carryover |
+| 3. ESLint | ✅ | exit 0 |
+| 4. Visual mini-verify | ✅ | `day3-sla-dashboard-full.png` confirms PARITY: Top slow ops table 6 rows with Badge tone-per-kind (tool yellow / loop primary / subagent thinking / verify success / memory memory) + right-aligned mono p50/p95/p99/calls + p99 color-coded for > 3000ms; Error rate by service 6 rows with .spread header (name mono + rate% warning/muted) + .bar-track fill scaled by rate × 50 |
+| 5. styles-mockup.css diff | ✅ | empty (foundation byte-identical contract honored) |
+
+### Notable decisions
+
+- **Pre-emptive Hybrid Tailwind+inline color bridge** — Day 2 SLOStatusCard had 2 spec drift catches when Tailwind color classes were removed; the same Vitest precedent (text-warning/text-fg-muted class membership assertions) applies to TopSlowOpsTable p99 col + ErrorRateByServiceCard rate %. Applied Hybrid bridge **preemptively** for both Day 3 files — result: 0 spec drift caught. This is the documented pattern for Sprint 57.32+ Phase-2 re-points on dashboards with Sprint 57.25+ class-membership Vitest contracts.
+- **Kind Badge tone dispatch via KIND_TONE_MAP** — Sprint 57.25 used a `KIND_TONE_CLASS` Tailwind class map (`bg-tool/15 text-tool` etc.); verbatim re-point switches to a `KIND_TONE_MAP` string map feeding mockup-ui `<Badge tone={...}>` (mockup line 120 inline ternary). The kind-to-tone mapping is identical: tool→tool / loop→primary / subagent→thinking / verify→success / memory→memory.
+
+### Pacing observation
+
+Day 3 wall-clock ~25 min (2 file edits + verify; no spec drift surprise — Hybrid bridge applied preemptively). Sprint actual through Day 3 ~2.5 hr (Day 0 ~1 hr + Day 1 ~30 min + Day 2 ~30 min + Day 3 ~25 min). Bottom-up est 10-15 hr → committed 5-7.5 hr → projected actual ~3-3.5 hr (Day 4 closeout ~30-45 min). **Predicted ratio actual/committed ~0.40-0.55** — lower band edge, consistent with Sprint 57.31 baseline-lift validation hypothesis trend.
+
+### Open items
+
+- Day 4 closeout pending: 22-route after-sweep + agent triage + REPOINT-REPORT.md + /sla-dashboard fidelity verify + full gates + retrospective.md Q1-Q7 + memory snapshot + docs sync + PR + CI green → merge + baseline-lift 1st validation data point logged.

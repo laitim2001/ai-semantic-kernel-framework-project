@@ -92,44 +92,55 @@
 - [x] tsc strict — 0 new errors
 - [x] Vitest after Hybrid bridge fix — 452/452 baseline maintained; sla-dashboard subset 30/30 (2 spec drift caught + adapted via Hybrid Tailwind+inline color bridge per Sprint 57.31 TenantTopTable precedent)
 - [x] Playwright shot `day2-sla-dashboard-full.png` confirms PARITY: LatencyChart 3-series SVG (p50 primary / p95 info / p99 warning) + SLOStatusCard 5-row budget gauge with proper ok/danger color coding (4 ok green + 1 failing Cost/run danger red)
-- [ ] Day 2 commit (pending; next step)
+- [x] Day 2 commit — `ffbf724b` on `feature/sprint-57-32-sla-dashboard-repoint`
 
 ---
 
-## Day 3 — Group D (Top slow + Error rate + Vitest)
+## Day 3 — Group D (Top slow + Error rate + Vitest) — ✅ done
 
-### 3.1 US-D1 — TopSlowOpsTable verbatim
+### 3.1 US-D1 — TopSlowOpsTable verbatim — ✅ done
 
-- [ ] **Read mockup** `page-admin.jsx:104-129` (.table 6-op)
-- [ ] **Re-point** `TopSlowOpsTable.tsx`
-  - Sub: `<Card title="Top slow operations" subtitle="p99 contributors · last 24h" bodyClass="flush">` wrapper
-  - Sub: `<table className="table">` with header (Operation/Kind/p50/p95/p99/Calls; right-aligned numeric cols)
-  - Sub: 6 op rows verbatim (tool.metrics.query / tool.k8s.set_env / loop.iteration / subagent.spawn / verification.run / memory.write)
-  - Sub: Badge tone-by-kind dispatch (tool → tool / memory → memory / subagent → thinking / verify → success / loop → primary)
-  - Sub: per-row mono tnum p50/p95 + p99 conditional color (> 3000ms → warning, else fg-muted) + calls subtle right-aligned
-- [ ] **Header MHist** updated
+- [x] **Read mockup** `page-admin.jsx:104-129` (.table 6-op)
+- [x] **Re-point** `TopSlowOpsTable.tsx`
+  - Sub: `<CardShell>` → mockup-ui `<Card title=... subtitle=... bodyClass="flush">`
+  - Sub: table `className="w-full border-collapse text-left text-[12px]"` → `className="table"` (styles-mockup.css cascade supplies layout)
+  - Sub: thead/th translations dropped (mockup has no className on tr/th; styles cascade from .table); textAlign right inline-style added to numeric col headers
+  - Sub: Kind cell shadcn-style Badge (KIND_TONE_CLASS map with `bg-tool/15 text-tool` etc.) → mockup-ui `<Badge tone={KIND_TONE_MAP[row.kind]}>` with kind-to-tone dispatch (tool/primary/thinking/success/memory)
+  - Sub: Operation td `px-4 py-2 font-mono text-[11.5px]` → `.mono` + inline `style={{ fontSize: 11.5 }}`
+  - Sub: p50/p95 td `px-4 py-2 text-right font-mono tabular-nums` → `.mono .tnum` + inline `style={{ textAlign: "right" }}`
+  - Sub: p99 td — **Hybrid Tailwind+inline color bridge** (preserve `text-warning`/`text-fg-muted` Tailwind alongside inline style color verbatim per Sprint 57.32 Day 2 SLOStatusCard precedent); `.mono .tnum` added
+  - Sub: Calls td `px-4 py-2 text-right font-mono tabular-nums text-fg-subtle` → `.mono .tnum .subtle` + inline `style={{ textAlign: "right" }}`
+  - Sub: Dropped imports: CardShell + cn util + KIND_TONE_CLASS shadcn map. Added Badge + Card from mockup-ui.
+  - Sub: BackendGapBanner preserved per AP-2 honesty
+  - Sub: Added file-level eslint-disable no-restricted-syntax verbatim escape-hatch comment
+- [x] **Header MHist** updated
 
-### 3.2 US-D2 — ErrorRateByServiceCard verbatim
+### 3.2 US-D2 — ErrorRateByServiceCard verbatim — ✅ done
 
-- [ ] **Read mockup** `page-admin.jsx:131-152` (6-row .bar-track)
-- [ ] **Re-point** `ErrorRateByServiceCard.tsx`
-  - Sub: `<Card title="Error rate by service" subtitle="Last hour">` wrapper
-  - Sub: 6-row inner `.col` with gap 10
-  - Sub: per row: `.spread` header (service name mono + rate % with > 0.5% conditional warning color) + `.bar-track` fill (width = `Math.min(100, rate × 50)`%, color = rate > 0.5 ? warning : success)
-  - Sub: 6 services verbatim (inference.adapter / tool.runner / memory.store / audit.writer / subagent.scheduler / webhook.dispatcher)
-- [ ] **Header MHist** updated
+- [x] **Read mockup** `page-admin.jsx:131-152` (6-row .bar-track)
+- [x] **Re-point** `ErrorRateByServiceCard.tsx`
+  - Sub: `<CardShell>` → mockup-ui `<Card>`
+  - Sub: outer `flex flex-col gap-2.5` → `.col` + inline `style={{ gap: 10 }}` (mockup gap 10 not 2.5×4=10 coincidence; verbatim literal)
+  - Sub: per-row header `mb-1 flex items-center justify-between` → `.spread` + inline `style={{ marginBottom: 3 }}` (mockup uses 3, not 1)
+  - Sub: service name `font-mono text-[11.5px]` → `.mono` + inline `style={{ fontSize: 11.5 }}`
+  - Sub: rate % — **Hybrid Tailwind+inline color bridge** (preserve `text-warning`/`text-fg-muted` Tailwind alongside inline style color verbatim); `.mono .tnum` added; inline style for fontSize 11 + color
+  - Sub: `<BarTrack pct={...} tone={...}>` → verbatim `<div className="bar-track"><span style={{ width: Math.min(100, rate × 50) + "%", background: warn ? "var(--warning)" : "var(--success)" }} /></div>`
+  - Sub: Dropped imports: BarTrack + CardShell + cn util. Added Card from mockup-ui.
+  - Sub: BackendGapBanner preserved per AP-2 honesty
+  - Sub: Added file-level eslint-disable no-restricted-syntax verbatim escape-hatch comment
+- [x] **Header MHist** updated
 
-### 3.3 US-D3 — Vitest comprehensive
+### 3.3 US-D3 — Vitest comprehensive — ✅ done
 
-- [ ] Run full Vitest suite — expect 452 baseline (or adapt count if spec drift)
-- [ ] If spec drift: identify which spec(s) test class names → adapt to verbatim DOM (likely 0 since Sprint 57.25 specs test data binding + testids, not class names per Sprint 57.31 precedent)
-- [ ] Document any adaptations in progress.md Day 3
+- [x] Full Vitest suite — **452/452 baseline maintained** (no spec drift this time; Hybrid bridge applied preemptively for `text-warning`/`text-fg-muted` class assertions)
+- [x] sla-dashboard subset 30/30 pass
 
-### 3.4 Day 3 mini-verify
+### 3.4 Day 3 mini-verify — ✅ done
 
-- [ ] All Day 3 files lint-clean
-- [ ] Playwright shot `day3-sla-dashboard-full.png` (full page above + below fold)
-- [ ] Day 3 commit
+- [x] All Day 3 files lint-clean (ESLint exit 0)
+- [x] tsc strict — 0 new errors (TS6310 carryover pre-existing only)
+- [x] Playwright shot `day3-sla-dashboard-full.png` confirms PARITY (Top slow ops table 6 rows with Badge tone-per-kind + p99 color-coded; Error rate by service 6 rows with .bar-track scaled by rate × 50)
+- [ ] Day 3 commit (pending; next step)
 
 ---
 
