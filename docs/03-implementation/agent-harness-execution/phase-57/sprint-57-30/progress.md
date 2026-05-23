@@ -68,3 +68,48 @@
 - Sprint 57.30 plan + checklist drafting time (~75 min) was higher than 57.29's similar phase — accounted for by (a) the bundled scope (hotfix + page) requiring HYBRID class breakdown in §Background; (b) explicit user-decision call-out for the Radix-drop architectural choice; (c) more risks (R1-R7 vs 57.29's 6). Acceptable per format-consistency rule (more content within same structure).
 - D5 (Tweaks button) is a new finding the plan §Risks didn't anticipate. Added to progress.md as YELLOW deferred rather than re-revising plan — preserves audit trail per `AD-Plan-1`. Will fold into Day 5 REPOINT-REPORT.md "Known structural deltas" section.
 - D3 explains the user's perception of "topbar icons bigger" cleanly: the icons are correct; the avatar inflation alone creates the visual rhythm distortion. This is good news — Day 1 US-B3 audit reduces to "0 fix discovered + scope close" (~15 min saved vs plan's ~30 min estimate).
+
+---
+
+## Day 1 — Group B Shell Hotfix (2026-05-23)
+
+### Today's Accomplishments
+
+- **US-B1**: UserMenu Radix-drop + verbatim `useDismiss` hook port — `UserMenu.tsx` +174 / −106; 0 active Radix references; 4 docstring breadcrumbs preserved as history
+- **US-B2**: Trigger 26×26 (via `className="avatar"`) + in-panel 36×36 (via renamed `identityAvatarStyle`) — clean split, 2 distinct sources
+- **US-B3**: D3 audit closure — 0 fix; MHist note only on `Topbar.tsx`
+- **US-B4**: Vitest 457/457 unchanged (spec preserved by hand-rolling `aria-haspopup="menu"` + `aria-expanded` + `role="menuitem"` semantics on the verbatim DOM); 5 a11y errors fixed via `onMenuItemKey` Enter/Space handler
+
+### 5-gate result
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| 1. Vitest | ✅ | 94 files / 457/457 tests (== Sprint 57.29 baseline) |
+| 2. tsc strict | ⚠️ pre-existing | `tsconfig.json(25,18): TS6310` same error on Day 0 baseline `5c0ce0dd` — NOT caused by this sprint; flag as separate cleanup AD (`AD-Tsconfig-Node-NoEmit`) |
+| 3. ESLint | ✅ | 0 errors after a11y `onMenuItemKey` fix |
+| 4. Vite build | ✅ | `✓ built in 3.54s` |
+| 5. Radix scrub | ✅ | 0 active references; 4 mentions all in docstring history |
+
+### Visual fix verification
+
+Day 1 verify shots in `claudedocs/4-changes/sprint-57-30-chatv2-shell-repoint/screenshots/day1-verify/`:
+- `day1-usermenu-trigger-26.png` — trigger visibly smaller (26 vs Day-0's 36)
+- `day1-usermenu-flush.png` — dropdown top edge flush against topbar bottom edge (the user-reported gap is gone)
+
+Side-by-side comparison vs Day-0 `extra-usermenu-open-overview.png` shows both bugs fixed at the pixel level. ✅
+
+### Decisions
+
+- **`useDismiss` extraction deferred** — inlined in `UserMenu.tsx` per Karpathy §2. Will extract to `frontend/src/hooks/useDismiss.ts` when CommandPalette + NotificationsPanel are Phase-2 re-pointed (Sprint 57.31+, likely re-points them off Radix `<Dialog>` to the same hook).
+- **`ui/dropdown-menu.tsx` orphan deferred** — the Radix wrapper at `frontend/src/components/ui/dropdown-menu.tsx` + the re-export in `ui/index.ts` are now orphans (0 consumers in `frontend/src/`). Defer cleanup to Day 5 closeout per Karpathy §3 (clean orphans your own changes create; Day 5 also verifies no last-minute Phase-2 re-point work resurrects a need).
+- **`AD-Tsconfig-Node-NoEmit`** — NEW AD: `tsc` strict reports `TS6310 referenced project tsconfig.node.json may not disable emit` since baseline. Not Sprint 57.30-caused; add to `next-phase-candidates.md` carryover for Phase 58+ cleanup sprint.
+
+### Open items / blockers
+
+- None for Day 1. Day 2 (chat-v2 shell + composer) can proceed.
+
+### Notes
+
+- The `code-implementer` agent ran Day 1 cleanly first pass (5 gates all green except the pre-existing tsc carryover; visual fix verified). ~45 min real wall-clock; matches plan estimate of ~3-4 hr after agent-assisted compression.
+- The verbatim `useDismiss` TypeScript port required a small adaptation: React's `KeyboardEvent<T>` import shadows DOM's global; resolved via `type KeyboardEvent as ReactKeyboardEvent` rename. Documented inline in `UserMenu.tsx` for future reference.
+- `onMenuItemKey` (Enter/Space → click) is the trade-off accepted in the AskUserQuestion Option A — we lose Radix's arrow-key nav but preserve Enter/Space keyboard activation. Matches mockup design (mockup ships without arrow-key nav).

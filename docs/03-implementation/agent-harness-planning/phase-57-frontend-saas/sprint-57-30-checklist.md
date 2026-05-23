@@ -31,7 +31,7 @@
 - [x] **22 AppShellV2 route screenshots** — `route-sweep.mjs before` mode (OUT_DIR re-pointed to sprint-57-30-* dir) → all 22 PNG in `before/`; ✅
 - [x] **UserMenu states** — `sprint-57-30-day0-extras.mjs` captured `extra-usermenu-closed-overview.png` + `extra-usermenu-open-overview.png` (the latter visually confirms the drift gap user reported)
 - [x] **chat-v2 states** — same script captured `extra-chatv2-inspector-default.png` + `extra-chatv2-inspector-toggled.png`
-- [ ] **Day 0 commit** — pending (next step)
+- [x] **Day 0 commit** — `5c0ce0dd` on `feature/sprint-57-30-chatv2-shell-repoint` (base `2d9d9e9f`); 26 PNG in `before/`
 
 ---
 
@@ -39,71 +39,25 @@
 
 ### 1.1 US-B1 — UserMenu Radix-drop verbatim port
 
-- [ ] **Port `useDismiss` hook verbatim** from mockup `topbar-overlays.jsx:9-27`
-  - Sub: decide extraction — `frontend/src/hooks/useDismiss.ts` (reusable) OR inline inside `UserMenu.tsx`
-  - Sub: copy hook verbatim (TypeScript port: typed `anchorRef: RefObject<HTMLElement>`; handler types: `(e: KeyboardEvent | MouseEvent) => void`)
-  - Sub: preserve mockup's ESC close + click-outside close + `data-topbar-overlay` opt-out semantics
-  - DoD: hook present + typed correctly + matches mockup line-by-line (modulo TS type annotations)
-  - Verify: `grep -n "useDismiss" frontend/src/hooks/useDismiss.ts` (or UserMenu.tsx) shows the hook signature
-- [ ] **Drop Radix `<DropdownMenu>` wrapper** in `UserMenu.tsx`
-  - Sub: remove `DropdownMenu` / `DropdownMenuTrigger` / `DropdownMenuContent` / `DropdownMenuItem` / `DropdownMenuSeparator` imports
-  - Sub: replace with native `<button>` (trigger) + conditional `<div data-topbar-overlay style={panelStyle}>` (panel)
-  - Sub: `useState` for `open` + `useRef` for `anchorRef` + call `useDismiss(open, () => setOpen(false), anchorRef)`
-  - Sub: each former `<DropdownMenuItem>` becomes a native `<button>` or `<div role="button">` with the same `onClick` / `onSelect` behaviour
-  - DoD: 0 Radix `DropdownMenu*` references remain in `UserMenu.tsx`
-  - Verify: `grep -n "DropdownMenu" frontend/src/components/UserMenu.tsx` returns 0 results
-- [ ] **Verify mockup-canonical positioning works** (manual smoke)
-  - Sub: `npm run dev` → open `/overview` → click avatar → confirm dropdown appears flush against topbar bottom edge (no gap)
-  - Sub: press ESC → dropdown closes
-  - Sub: click outside panel → dropdown closes
-  - Sub: click inside panel item → action fires + dropdown closes
-  - DoD: all 4 interaction checks pass
-  - Verify: Playwright screenshot `after-usermenu-flush.png` shows dropdown top edge = topbar bottom edge + 2px
+- [x] **Port `useDismiss` hook verbatim** from mockup `topbar-overlays.jsx:9-27` — inlined inside `UserMenu.tsx` (Karpathy §2 — defer extraction until 2nd consumer)
+- [x] **Drop Radix `<DropdownMenu>` wrapper** — 0 active references remain (4 mentions all in docstring breadcrumbs)
+- [x] **Verify mockup-canonical positioning works** — Playwright `day1-usermenu-flush.png` confirms dropdown flush with topbar bottom edge; ESC + click-outside + item-click all close
 
 ### 1.2 US-B2 — Avatar trigger 36→26 split
 
-- [ ] **Split `avatarStyle` into trigger + identity** in `UserMenu.tsx`
-  - Sub: define `triggerAvatarStyle` (26×26, font-size 10.5) per mockup `.avatar` class — or use the `.avatar` CSS class directly via `<button className="avatar">` (preferred since the class is already in `styles-mockup.css`)
-  - Sub: define `identityAvatarStyle` (36×36, font-size 13) per mockup `topbar-overlays.jsx:347-360` — inline-style only because the identity card has no mockup CSS class
-  - Sub: use trigger avatar at line ~147 (the button); use identity avatar at line ~161 (inside the dropdown identity card)
-  - DoD: 2 distinct style sources for the two avatars
-  - Verify: `grep -n "26\|36" frontend/src/components/UserMenu.tsx` shows the two sizes used at different positions
-- [ ] **Verify with Playwright screenshot**
-  - Sub: `/overview` topbar avatar at 1440×900 → screenshot
-  - Sub: compare to before-baseline → trigger avatar visibly smaller (26 vs 36 = 27% smaller)
-  - DoD: after-screenshot saved
-  - Verify: `claudedocs/4-changes/sprint-57-30-chatv2-shell-repoint/screenshots/after/usermenu-trigger-26px.png` exists
+- [x] **Split `avatarStyle` into trigger + identity** — trigger now uses `className="avatar"` CSS class (26×26); in-panel renamed `identityAvatarStyle` (36×36)
+- [x] **Verify with Playwright screenshot** — `day1-usermenu-trigger-26.png` shows visibly smaller trigger; identity card avatar inside dropdown still 36×36
 
-### 1.3 US-B3 — Topbar icon size audit + fix
+### 1.3 US-B3 — Topbar icon size audit (D3 Day-0 closure)
 
-- [ ] **Audit each topbar icon vs mockup** (per Day 0 Prong 2 findings)
-  - Sub: confirm `Icon name="search" size={13}` matches mockup ⌘K icon size (Day 0 catalogued)
-  - Sub: confirm `Icon name="globe" size={12}` matches mockup locale icon size
-  - Sub: confirm `Icon name={theme} size={14}` matches mockup theme-toggle icon size
-  - Sub: confirm `Icon name="bell" size={14}` matches mockup bell icon size
-  - DoD: each icon explicitly confirmed match OR fix committed
-  - Verify: `progress.md` Day 1 lists audit table per-icon match/fix outcome
-- [ ] **Fix any drift discovered** (likely few or zero corrections; mostly verification)
-  - Sub: update `Topbar.tsx` Icon `size={...}` literal(s)
-  - DoD: corrected sizes match mockup
-  - Verify: `grep -n "Icon name" frontend/src/components/layout/Topbar.tsx` shows updated values
+- [x] **Audit each topbar icon vs mockup** — Day 0 Prong 2 found 0 drift (search 13 / globe 12 / theme 14 / bell 14 all match mockup `Button size="sm"` default `Icon size={14}` per mockup-ui.tsx L436)
+- [x] **No fix needed** — only MHist note added to `Topbar.tsx`
 
-### 1.4 US-B4 — Vitest + Topbar / UserMenu spec adaptation
+### 1.4 US-B4 — Vitest + UserMenu spec adaptation
 
-- [ ] **Find Vitest specs that assert UserMenu or Topbar structure**
-  - Sub: `grep -rln "UserMenu\|userMenu\|topbar\|DropdownMenu" frontend/tests/`
-  - DoD: catalog of spec files in `progress.md` Day 1
-  - Verify: list ≥2 spec files (UserMenu + Topbar)
-- [ ] **Adapt assertions to verbatim structure**
-  - Sub: where spec asserts Radix `role="menu"` / `aria-haspopup="menu"` etc., adapt to native button + `data-topbar-overlay` panel semantics
-  - Sub: where spec asserts avatar size implicitly via Radix data attrs, assert the explicit `className="avatar"` or `width: 26` style on trigger
-  - DoD: all touched specs pass `npm run test`
-  - Verify: `npm run test -- UserMenu Topbar` exits 0
-- [ ] Day 1 commit
-  - Sub: `git add frontend/src/components/UserMenu.tsx frontend/src/components/layout/Topbar.tsx [frontend/src/hooks/useDismiss.ts if extracted] frontend/tests/...UserMenu*.test.tsx [Topbar*.test.tsx if touched]`
-  - Sub: `git commit -m "feat(frontend, sprint-57-30): Day 1 Group B — UserMenu Radix-drop verbatim + avatar trigger 26 split + topbar icon audit\n\nUS-B1: UserMenu Radix-drop → verbatim useDismiss hook (closes AD-UserMenu-Mockup-Structural-Deltas)\nUS-B2: trigger avatar 26×26 separated from identity-card avatar 36×36\nUS-B3: topbar icon size audit (all match mockup)\nUS-B4: Vitest adapted to Radix-free structure\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"`
-  - DoD: Day 1 commit landed
-  - Verify: `git log --oneline -2` shows Day 0 + Day 1 commits
+- [x] **UserMenu spec preserved** — Vitest 457/457 (no adapt needed; spec asserts `aria-haspopup="menu"` + `aria-expanded` + `role="menuitem"` which the hand-rolled verbatim version preserves)
+- [x] **ESLint a11y fix** — added `onMenuItemKey` handler on 5 menuitem `<div>`s (Enter/Space → click) to maintain keyboard parity after Radix drop without re-importing Radix focus-trap
+- [x] Day 1 commit — pending (next step)
 
 ---
 
