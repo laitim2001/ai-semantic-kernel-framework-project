@@ -20,6 +20,11 @@
  *   per request), so the dropdown has no "Any" option — defaults to "user".
  *
  * Created: 2026-05-10 (Sprint 57.12 Day 2-3 / US-5)
+ * Last Modified: 2026-05-24
+ *
+ * Modification History (newest-first):
+ *   - 2026-05-24: Sprint 57.33 Day 2 US-C1 — defensive ?? [] on items.length/map (4 sites L120/126/141/171; AD-Overview-PreExisting-Route-Crashes)
+ *   - 2026-05-10: Initial creation (Sprint 57.12 Day 2-3 / US-5)
  *
  * Related:
  *   - ../hooks/useMemoryRecent.ts
@@ -117,13 +122,13 @@ export function MemoryRecentList(): JSX.Element {
         </div>
       )}
 
-      {query.isSuccess && query.data.items.length === 0 && (
+      {query.isSuccess && (query.data.items ?? []).length === 0 && (
         <div className="rounded border border-border bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">No memory entries in this layer.</p>
         </div>
       )}
 
-      {query.isSuccess && query.data.items.length > 0 && (
+      {query.isSuccess && (query.data.items ?? []).length > 0 && (
         <>
           <div className="overflow-x-auto rounded border border-border">
             <table className="min-w-full text-sm" data-testid="memory-table">
@@ -138,7 +143,7 @@ export function MemoryRecentList(): JSX.Element {
                 </tr>
               </thead>
               <tbody>
-                {query.data.items.map((item) => (
+                {(query.data.items ?? []).map((item) => (
                   <tr
                     key={item.id}
                     className="border-t border-border hover:bg-muted/30"
@@ -168,7 +173,7 @@ export function MemoryRecentList(): JSX.Element {
 
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
-              Showing {offset + 1}–{offset + query.data.items.length} of {query.data.total}
+              Showing {offset + 1}–{offset + (query.data.items ?? []).length} of {query.data.total}
             </span>
             <div className="flex gap-2">
               <button

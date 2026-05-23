@@ -55,30 +55,20 @@
 
 ### 2.1 US-C1 — MemoryRecentList defensive guard
 
-- [ ] **Edit `features/memory/components/MemoryRecentList.tsx`** — 3 sites L120/126/171
-  - L120: `query.data.items.length === 0` → `(query.data.items ?? []).length === 0`
-  - L126: `query.data.items.length > 0` → `(query.data.items ?? []).length > 0`
-  - L171: `offset + query.data.items.length` → `offset + (query.data.items ?? []).length`
-  - DoD: all 3 sites guarded; consider top-of-`isSuccess`-branch `const items = query.data.items ?? []` refactor if cleaner (Idiom A from plan)
+- [x] **Edit `features/memory/components/MemoryRecentList.tsx`** — 4 sites L120/126/141/171 (drift D1: plan listed 3 sites L120/126/171; Day 2 grep found additional `.map` site L141 — same crash pattern just on `.map` instead of `.length`; both fixed uniformly with `(query.data.items ?? [])`)
 
 ### 2.2 US-C2 — MemoryByScopeBrowser defensive guard
 
-- [ ] **Edit `features/memory/components/MemoryByScopeBrowser.tsx`** — 2 sites L166/172
-  - L166: `query.data.items.length === 0` → `(query.data.items ?? []).length === 0`
-  - L172: `query.data.items.length > 0` → `(query.data.items ?? []).length > 0`
-  - DoD: both sites guarded
+- [x] **Edit `features/memory/components/MemoryByScopeBrowser.tsx`** — 3 sites L166/172/174 (drift D2: plan listed 2 sites L166/172; Day 2 grep found additional `.map` site L174 — same pattern)
 
 ### 2.3 US-C3 — Vitest defensive specs
 
-- [ ] **Add defensive specs** to existing test files (or create co-located spec)
-  - 1-2 specs: 1 covers MemoryRecentList empty-items; 1 covers MemoryByScopeBrowser empty-items
-  - DoD: each asserts render without crash
-  - Verify: `cd frontend; npm run test -- --run memory`
+- [x] **Added 2 defensive specs** — `MemoryRecentList.test.tsx` (no-items shape → empty state renders) + `MemoryByScopeBrowser.test.tsx` (click layer-card-system + no-items payload → scope-empty renders); each asserts no throw
 
 ### 2.4 Day 2 5-gate quick-check + commit
 
-- [ ] **tsc + ESLint + Vitest pass**
-- [ ] **Commit Day 2** — `fix(frontend, sprint-57-33): /memory crash fix — defensive ?? [] on items.length (US-C1+C2+C3)`
+- [x] **Vitest pass** — memory 30/30 (28 baseline + 2 NEW defensive)
+- [ ] **Commit Day 2** — `fix(frontend, sprint-57-33): /memory crash fix — defensive ?? [] on items.length/map (US-C1+C2+C3)`
 
 ---
 

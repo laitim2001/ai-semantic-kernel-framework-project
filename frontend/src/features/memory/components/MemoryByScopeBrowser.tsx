@@ -20,6 +20,11 @@
  *   Error retry with retryClicked flag (StrictMode-safe; Sprint 57.9 D-PRE-15).
  *
  * Created: 2026-05-10 (Sprint 57.12 Day 2-3 / US-5)
+ * Last Modified: 2026-05-24
+ *
+ * Modification History (newest-first):
+ *   - 2026-05-24: Sprint 57.33 Day 2 US-C2 — defensive ?? [] on items.length/map (3 sites L166/172/174; AD-Overview-PreExisting-Route-Crashes)
+ *   - 2026-05-10: Initial creation (Sprint 57.12 Day 2-3 / US-5)
  *
  * Related:
  *   - ../hooks/useMemoryByScope.ts
@@ -163,15 +168,15 @@ export function MemoryByScopeBrowser(): JSX.Element {
           </div>
         )}
 
-        {query.isSuccess && query.data.items.length === 0 && (
+        {query.isSuccess && (query.data.items ?? []).length === 0 && (
           <p className="text-sm text-muted-foreground" data-testid="scope-empty">
             No entries for this scope.
           </p>
         )}
 
-        {query.isSuccess && query.data.items.length > 0 && (
+        {query.isSuccess && (query.data.items ?? []).length > 0 && (
           <ul className="space-y-1" data-testid="scope-entries">
-            {query.data.items.map((item) => (
+            {(query.data.items ?? []).map((item) => (
               <li
                 key={item.id}
                 className="rounded bg-muted/20 p-2 text-xs"
