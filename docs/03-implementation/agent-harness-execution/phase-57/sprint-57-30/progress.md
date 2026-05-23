@@ -235,3 +235,49 @@ Day 4 verify shots in `claudedocs/4-changes/sprint-57-30-chatv2-shell-repoint/sc
 
 - Day 4 agent-assisted wall-clock ~50 min for 6 files (~8 min/file) — continuing the pattern-reuse acceleration (Day 1 45 min / Day 2 10 min/file / Day 3 9 min/file / Day 4 8 min/file).
 - 4-day cumulative production code edits: ~20 files re-pointed. Sprint actual through Day 4 ~3.5 hr (with agent assistance) vs ~10-13 hr committed = ratio ~0.30 — well below band. The HYBRID 0.60 blend (per plan §Background) calibrated as if this were a from-scratch port; reality is much faster because Sprint 57.21 Phase-1 already aligned structure to mockup pattern + Sprint 57.28 verbatim CSS foundation made the per-component edit one-pass-per-file.
+
+---
+
+## Day 5 — Closeout: after-sweep + chat-v2 fidelity + orphan cleanup + retro (2026-05-23)
+
+### Today's Accomplishments
+
+- **22-route after-sweep** captured via `route-sweep.mjs after`; total 22 PNG in `screenshots/after/`
+- **Triage agent** (general-purpose) classified all 22 routes: **1 🟢 PARITY (/chat-v2) + 18 🟡 acceptable-cosmetic (shell-wide avatar 36→26) + 0 🔴 / 0 🟠 + 3 ⚪ pre-existing fails** (`/subagents` / `/memory` / `/verification` — Sprint 57.29 `AD-Overview-PreExisting-Route-Crashes` carryover; before == after baseline on those 3 routes)
+- **REPOINT-REPORT.md** written by triage agent — full 22-route table + `/chat-v2` fidelity verdict + known structural deltas + closing summary
+- **Orphan cleanup**: deleted `frontend/src/components/ui/dropdown-menu.tsx` (0 consumers after UserMenu Radix-drop); removed `DropdownMenu` re-export from `ui/index.ts`; `npm uninstall @radix-ui/react-dropdown-menu` → **bundle -116.87 KB raw / -38.37 KB gzipped** (the `dropdown-menu-C36sh5_w.js` chunk eliminated entirely; main bundle stays similar 336.80 kB)
+- **Test cleanup**: `tests/unit/components/ui/radix.test.tsx` DropdownMenu test block (5 tests) removed; 4 Dialog tests kept → Vitest **452/452** (intentional -5 from 457; not regression)
+- **Retrospective.md Q1-Q6** written (Q7 N/A — feature ship, not spike, per Sprint 57.29 precedent)
+- **Docs sync**: CLAUDE.md Current Sprint row + footer / MEMORY.md pointer entry / `sprint-workflow.md §Scope-class multiplier matrix` 2nd-data-point row + MHist / `next-phase-candidates.md` 5 NEW carryover ADs / memory snapshot `project_phase57_30_chatv2_shell_repoint.md`
+
+### Final 5-gate result (Day 5 post-cleanup)
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| 1. Vitest | ✅ | 94 files / 452/452 (intentional -5 from orphan-spec cleanup; net delta from Day 4 baseline 457 = -5) |
+| 2. tsc strict | ✅ | Only pre-existing TS6310 carryover (no new errors) |
+| 3. ESLint | ✅ | exit 0 |
+| 4. Vite build | ✅ | `built in 3.21s` (was 3.30s Day 4; faster after dropdown-menu chunk removal); `dropdown-menu-*.js 116.87 kB` chunk GONE |
+| 5. check:mockup-fidelity | ✅ | diff guard byte-identical; grep guard 25/25 |
+| Bonus: Bundle delta | ✅ | -116.87 KB raw / -38.37 KB gzipped removed |
+| Bonus: Radix scrub | ✅ | `grep -rn "DropdownMenu\|@radix-ui/react-dropdown-menu" frontend/src/` returns 0 hits in source code |
+
+### Triage breakdown (22-route + extras)
+
+- **1 🟢 PARITY**: `/chat-v2` — 10+ mockup elements visibly rendered (3-col `.chat-shell` grid + ChatHeader `.panel-toggle` + `.session-item` pills + `.composer` band + filled Send button + Inspector 4-tab pill nav `Turn|Trace|Memory|Tree` replacing Day-0 single text heading + "NO ACTIVE TURN" empty-state + `.banner` warning + `+ New session` button + mode selector `echo_demo|real_llm`)
+- **18 🟡 acceptable-cosmetic**: avatar trigger 36→26 shell-wide; no structural change
+- **0 🟠 structural-regression**
+- **0 🔴 catastrophic**
+- **3 ⚪ pre-existing fail**: `/subagents` / `/memory` / `/verification` — identical "Cannot read properties of undefined (reading 'length')" crash before == after Sprint 57.30; Sprint 57.29 carryover `AD-Overview-PreExisting-Route-Crashes`; **NOT a Sprint 57.30 regression**
+
+### Open items / blockers
+
+- None blocking Day 5 closeout.
+- PR open + CI green → squash-merge pending (final closeout step).
+- 5 NEW carryover ADs logged in `next-phase-candidates.md` (see retrospective.md Q4 for detail).
+
+### Notes
+
+- Final commits count: Day 0 + Day 1 + Day 2 + Day 3 + Day 4 + Day 5 closeout = 6 commits on `feature/sprint-57-30-chatv2-shell-repoint`.
+- Sprint actual final estimate: ~5 hr orchestrator + ~5 agent delegations (Day 1 implementer + Day 2 implementer + Day 3 implementer + Day 4 implementer + Day 5 triage) — agent-assisted compressed session. Ratio actual/committed ~0.40 BELOW band (see retrospective Q2 for full calibration analysis).
+- The Radix orphan cleanup IS a meaningful frontend perf win: 117 KB raw / 38 KB gzipped JS removed from production = ~7% reduction of the previous total bundle. Pattern to remember for any future Radix-drop / shadcn-drop work: always audit `package.json` for the now-unused dep after refactoring.
