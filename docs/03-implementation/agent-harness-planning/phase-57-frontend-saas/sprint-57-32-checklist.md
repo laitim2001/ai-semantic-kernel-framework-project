@@ -176,13 +176,13 @@
 - [x] **CLAUDE.md** Current Sprint row + footer updated (minimal touch)
 - [x] **`sprint-workflow.md §Scope-class multiplier matrix`** updated — `frontend-verbatim-css-repoint` row now 4 data points + baseline-lift 1st-data-point validation result + MHist entry
 - [x] **`next-phase-candidates.md`** updated — Sprint 57.32 Carryover section added; baseline-lift AD updated with 1st validation status
-- [ ] **Day 4 commit** on `feature/sprint-57-32-sla-dashboard-repoint` (pending; next step)
-- [ ] **PR open** — `gh pr create` with body listing Sprint Goal + USs completed + 5 gates + baseline-lift 1st-validation narrative + 22-route sweep summary
-- [ ] **CI green → squash-merge** — if `/sla-dashboard` visual-regression baseline stale, expect manual ff-merge required (AD-CI-7-GHA-PR-Permission still open; same workaround as 57.31)
+- [x] **Day 4 commit** — `0d8eabd1` on `feature/sprint-57-32-sla-dashboard-repoint`
+- [x] **PR open** — PR #166 https://github.com/laitim2001/ai-semantic-kernel-framework-project/pull/166
+- [x] **CI green → squash-merge** — **All 7 checks PASS on 1st run** (Backend E2E / Frontend E2E chromium headless / Lighthouse informational / 2× Lint+Type+Build / 2× Lint+Type+Test with PG16 / v2-lints); no baseline regen needed (cleaner than Sprint 57.31); squash-merged as `eed0c70c` to main; feature branch deleted via `--delete-branch`
 
 ### 4.5 Sprint closeout self-check
 
-- [ ] Sacred Rule check — 0 unchecked items deleted
-- [ ] Acceptance Criteria — all 5 pass (PARITY + 0 catastrophic/structural + 5 gates green + baseline-lift validated + docs synced)
-- [ ] Working tree clean post-merge — on main; only untracked older-sprint debug PNGs
-- [ ] Branch deleted — `feature/sprint-57-32-sla-dashboard-repoint` deleted local + remote
+- [x] Sacred Rule check — 0 unchecked items deleted
+- [x] Acceptance Criteria — all 5 pass (PARITY + 0 catastrophic/structural + 5 gates green + baseline-lift 1st validation logged + docs synced)
+- [x] Working tree clean post-merge — on main; only untracked older-sprint debug PNGs
+- [x] Branch deleted — `feature/sprint-57-32-sla-dashboard-repoint` deleted local + remote
