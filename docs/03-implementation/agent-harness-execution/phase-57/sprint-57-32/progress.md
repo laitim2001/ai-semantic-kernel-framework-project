@@ -111,3 +111,35 @@ Day 1 wall-clock ~30 min for 3 file edits + verify (3 files smaller than 57.31 D
 ### Open items
 
 - Day 2 work pending: LatencyChart Card wrapper + .kbar legend re-point (verify no SVG regression) + SLOStatusCard 5-row .bar-track budget gauge re-point.
+
+---
+
+## Day 2 — Group C (Latency + SLO row) — ✅ done (2026-05-24)
+
+### Today's Accomplishments
+
+- **US-C1 LatencyChart verbatim** — SVG body re-point: `className="w-full"` → `className="chart"` + inline `style={{ height: 220 }}` (mockup .chart class + inline override per page-admin.jsx:174); `<g>` for grid: explicit `stroke="var(--border)" strokeWidth={1} opacity={0.4}` → `className="grid"` (styles-mockup.css:1078 .chart .grid line CSS); `<g>` for axis: explicit `fill="var(--fg-muted)" fontSize={9} fontFamily="ui-monospace"` → `className="axis"` (styles-mockup.css:1079 .chart .axis text CSS with .var(--fg-subtle) / font-size 10px / var(--font-mono)). Dropped opacity={0.4} drift not in mockup. 3-series paths preserved verbatim. Card wrapper + .kbar legend already done Day 1 inside SLAOverview composition.
+- **US-C2 SLOStatusCard verbatim** — Full re-point: `<CardShell>` → mockup-ui `<Card>`; outer `flex flex-col gap-3` → `.col` + inline `style={{ gap: 12 }}`; per-row header `mb-1 flex items-center justify-between` → `.spread` + inline `style={{ marginBottom: 4 }}`; inner left span `inline-flex items-center gap-1.5 text-[12.5px]` → `.row` + inline `style={{ gap: 6, fontSize: 12.5 }}`; color dot Tailwind `h-1.5 w-1.5 rounded-full bg-*` → inline `style={{ width: 6, height: 6, borderRadius: "50%", background: var(--*) }}`; **Hybrid Tailwind+inline color bridge** for current value (Sprint 57.31 TenantTopTable precedent); inner separator `text-fg-subtle` → `.subtle`; `<BarTrack>` → verbatim `<div className="bar-track"><span style={...} /></div>`; budget-used row `mt-1 font-mono text-[10px] text-fg-subtle` → `.subtle .mono` + inline `style={{ fontSize: 10, marginTop: 3 }}`.
+
+### 5-gate result
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| 1. Vitest | ✅ | 94 files / 452/452 maintained; sla-dashboard subset 30/30 (2 spec drift caught + adapted via Hybrid Tailwind+inline color bridge — text-fg-muted/text-danger preserved alongside inline style color verbatim per Sprint 57.31 TenantTopTable precedent) |
+| 2. tsc strict | ✅ | Only pre-existing TS6310 carryover |
+| 3. ESLint | ✅ | exit 0 (no new errors) |
+| 4. Visual mini-verify | ✅ | `day2-sla-dashboard-full.png` confirms PARITY: LatencyChart 3-series SVG renders (p50 primary / p95 info / p99 warning) + SLOStatusCard 5-row budget gauge with proper ok/danger color coding (4 ok green + 1 failing Cost/run $0.052/$0.05 danger red); .bar-track fill at 108% for failing SLO |
+| 5. styles-mockup.css diff | ✅ | empty (foundation byte-identical contract honored) |
+
+### Notable decisions
+
+- **Hybrid Tailwind+inline color bridge for SLOStatusCard current value** — Sprint 57.31 TenantTopTable precedent applied. The Sprint 57.25 Vitest spec asserts `text-fg-muted`/`text-danger` Tailwind classes on the current value span. Pure verbatim re-point would drop these → spec drift. Hybrid solution: keep both Tailwind classnames AND inline `color: var(--*)` verbatim — spec contract preserved, mockup color guaranteed via inline (defensive against Tailwind class purging or mode switches). Verbatim mockup `.mono .tnum` classes added in same className string.
+- **LatencyChart drop opacity={0.4}** — Mockup `<g className="grid">` has no opacity attr; Sprint 57.25 added opacity={0.4} as a deliberate-or-incidental visual tweak. Verbatim re-point drops it (faithful to mockup); .chart .grid line CSS supplies stroke + strokeWidth without opacity.
+
+### Pacing observation
+
+Day 2 wall-clock ~30 min (2 file edits + spec drift fix + verify). Sprint actual through Day 2 ~2 hr (Day 0 ~1 hr + Day 1 ~30 min + Day 2 ~30 min). Bottom-up est 10-15 hr → committed 5-7.5 hr → projected actual ~3-4 hr (Day 3 + Day 4). **Predicted ratio actual/committed ~0.45-0.60** — lower band edge, consistent with Sprint 57.31 baseline-lift validation hypothesis.
+
+### Open items
+
+- Day 3 work pending: TopSlowOpsTable `.table` 6-op verbatim + ErrorRateByServiceCard `.bar-track` 6-row verbatim + Vitest comprehensive re-run.

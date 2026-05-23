@@ -1,12 +1,32 @@
 /**
  * File: frontend/src/features/sla-dashboard/components/SLOStatusCard.tsx
- * Purpose: 5-row SLO objectives status card (Sprint 57.25 Day 2 US-C1).
+ * Purpose: 5-row SLO objectives status card (Sprint 57.25 Day 2 US-C1; Sprint 57.32 Day 2 US-C2 verbatim re-point).
  * Category: Frontend / sla-dashboard / components (feature-scoped)
- * Scope: Phase 57 / Sprint 57.25 Day 2 US-C1
+ * Scope: Phase 57 / Sprint 57.32 Day 2 US-C2 (Phase-2 verbatim re-point on Sprint 57.25 strict-rebuild scaffolding)
  *
  * Description:
- *   Mockup-direct port of reference/design-mockups/page-admin.jsx:72-99.
- *   5 SLO rows × dot indicator + name + current/target + BarTrack + used%.
+ *   Verbatim port of reference/design-mockups/page-admin.jsx:72-98.
+ *   5 SLO rows × dot indicator + name + current/target + .bar-track + used%.
+ *
+ *   Sprint 57.32 Day 2 US-C2: Phase-2 verbatim CSS re-point. CardShell →
+ *   mockup-ui Card. Outer flex container Tailwind `flex flex-col gap-3`
+ *   → mockup `.col` + inline style={{ gap: 12 }}. Per-row header Tailwind
+ *   `mb-1 flex items-center justify-between` → mockup `.spread` + inline
+ *   style={{ marginBottom: 4 }}. Inner left span Tailwind `inline-flex
+ *   items-center gap-1.5 text-[12.5px]` → mockup `.row` + inline style={{
+ *   gap: 6, fontSize: 12.5 }}. Color dot Tailwind `h-1.5 w-1.5 rounded-full
+ *   bg-success/danger` → inline style={{ width: 6, height: 6,
+ *   borderRadius: "50%", background: var(--success|danger) }}. Current
+ *   value uses Hybrid Tailwind+inline bridge (per Sprint 57.31 TenantTopTable
+ *   precedent for Vitest contract continuity): `text-fg-muted`/`text-danger`
+ *   Tailwind classes preserved alongside inline style={{ color:
+ *   var(--fg-muted|danger) }}; mockup `.mono .tnum` added; size set via
+ *   inline style={{ fontSize: 11.5 }} (mockup escape-hatch). Inner separator
+ *   `text-fg-subtle` → mockup `.subtle`. BarTrack component → verbatim
+ *   `<div className="bar-track"><span style={{ width: min(100, used)%,
+ *   background: ok ? success : danger }} /></div>`. Budget-used row
+ *   `mt-1 font-mono text-[10px] text-fg-subtle` → mockup `.subtle .mono`
+ *   + inline style={{ fontSize: 10, marginTop: 3 }}.
  *
  *   SLOs (mockup-faithful order):
  *   1. Loop p95 < 2s    — real `data.loop_simple_p99_ms / 1000` when
@@ -23,20 +43,23 @@
  *   when input is fixture).
  *
  * Created: 2026-05-19 (Sprint 57.25 Day 2 US-C1)
+ * Last Modified: 2026-05-23
  *
  * Modification History:
+ *   - 2026-05-23: Sprint 57.32 Day 2 US-C2 — verbatim re-point: Card + .col + .spread + .row + .mono .tnum + .subtle + .bar-track + Hybrid Tailwind+inline color bridge (Sprint 57.31 TenantTopTable precedent)
  *   - 2026-05-19: Initial creation (Sprint 57.25 Day 2 US-C1)
  *
  * Related:
- *   - reference/design-mockups/page-admin.jsx:72-99 (canonical mockup)
- *   - sprint-57-25-plan.md §Technical Spec §SLOStatusCard structure
+ *   - reference/design-mockups/page-admin.jsx:72-98 (canonical mockup)
+ *   - frontend/src/styles-mockup.css (.col / .spread / .row / .mono .tnum / .subtle / .bar-track)
+ *   - frontend/src/components/mockup-ui.tsx (Card primitive)
  */
+
+/* eslint-disable no-restricted-syntax -- verbatim re-point: inline style literals are copied byte-for-byte from mockup page-admin.jsx:72-98 escape-hatch (style={{ gap, marginBottom, fontSize, color, width, height, borderRadius, background, marginTop }} all verbatim from mockup). */
 
 import { useTranslation } from "react-i18next";
 
-import { BarTrack } from "../../../components/charts";
-import { CardShell } from "../../../components/ui/CardShell";
-import { cn } from "../../../lib/utils";
+import { Card } from "../../../components/mockup-ui";
 import type { SLAReportResponse } from "../types";
 
 interface SLORow {
@@ -71,50 +94,54 @@ export function SLOStatusCard({ data }: SLOStatusCardProps) {
   ];
 
   return (
-    <CardShell title={t("sla.slo.title")} subtitle={t("sla.slo.subtitle")}>
-      <div className="flex flex-col gap-3" data-testid="sla-slo-card">
+    <Card title={t("sla.slo.title")} subtitle={t("sla.slo.subtitle")}>
+      <div className="col" style={{ gap: 12 }} data-testid="sla-slo-card">
         {SLOS.map((s, idx) => {
           const ok = s.mode === "lte" ? s.current <= s.target : s.current >= s.target;
           return (
             <div key={s.key} data-testid={`sla-slo-row-${idx}`}>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 text-[12.5px]">
+              <div className="spread" style={{ marginBottom: 4 }}>
+                <span className="row" style={{ gap: 6, fontSize: 12.5 }}>
                   <span
-                    className={cn(
-                      "h-1.5 w-1.5 rounded-full",
-                      ok ? "bg-success" : "bg-danger",
-                    )}
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: ok ? "var(--success)" : "var(--danger)",
+                    }}
                     data-testid={`sla-slo-dot-${idx}`}
                     data-ok={ok ? "true" : "false"}
                   />
                   {t(s.i18nKey)}
                 </span>
                 <span
-                  className={cn(
-                    "font-mono text-[11.5px] tabular-nums",
-                    ok ? "text-fg-muted" : "text-danger",
-                  )}
+                  className={`mono tnum ${ok ? "text-fg-muted" : "text-danger"}`}
+                  style={{ fontSize: 11.5, color: ok ? "var(--fg-muted)" : "var(--danger)" }}
                   data-testid={`sla-slo-current-${idx}`}
                 >
                   {s.current}
                   {s.unit}{" "}
-                  <span className="text-fg-subtle">
+                  <span className="subtle">
                     / {s.target}
                     {s.unit}
                   </span>
                 </span>
               </div>
-              <BarTrack
-                pct={s.used}
-                tone={ok ? "var(--success)" : "var(--danger)"}
-              />
-              <div className="mt-1 font-mono text-[10px] text-fg-subtle">
+              <div className="bar-track">
+                <span
+                  style={{
+                    width: Math.min(100, s.used) + "%",
+                    background: ok ? "var(--success)" : "var(--danger)",
+                  }}
+                />
+              </div>
+              <div className="subtle mono" style={{ fontSize: 10, marginTop: 3 }}>
                 {t("sla.slo.budgetUsed")}: {s.used}%
               </div>
             </div>
           );
         })}
       </div>
-    </CardShell>
+    </Card>
   );
 }

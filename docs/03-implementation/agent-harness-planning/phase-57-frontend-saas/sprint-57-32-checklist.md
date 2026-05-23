@@ -52,37 +52,47 @@
 - [x] All Day 1 files lint-clean (ESLint exit 0)
 - [x] tsc strict — 0 new errors (TS6310 carryover pre-existing only)
 - [x] Vitest re-run — 452/452 baseline maintained; sla-dashboard subset 30/30 pass
-- [ ] Day 1 commit (pending; next step)
+- [x] Day 1 commit — `51fa3852` on `feature/sprint-57-32-sla-dashboard-repoint`
 
 ---
 
-## Day 2 — Group C (Latency + SLO row)
+## Day 2 — Group C (Latency + SLO row) — ✅ done
 
-### 2.1 US-C1 — LatencyChart Card wrapper + .kbar verbatim
+### 2.1 US-C1 — LatencyChart Card wrapper + .kbar verbatim — ✅ done
 
-- [ ] **Read mockup** `page-admin.jsx:62-70` (Card wrapper + .kbar legend)
-- [ ] **Re-point** `LatencyChart.tsx`
-  - Sub: Card wrapper with title "Latency distribution" + subtitle "24h · all agents · p50 / p95 / p99"
-  - Sub: `actions` prop = `.kbar` with 3 Badges (p50 primary-dot / p95 info-dot / p99 warning-dot)
-  - Sub: SVG body verify no regression from Sprint 57.25 canonical (mockup L157-198)
-  - Sub: data layer + 3 series rendering preserved
-- [ ] **Header MHist** updated
+- [x] **Read mockup** `page-admin.jsx:62-70` (Card wrapper + .kbar legend) — Card wrapper + .kbar legend ALREADY done Day 1 inside SLAOverview composition (Sprint 57.25 placed them in parent, not in LatencyChart.tsx itself). Day 2 work scoped to SVG body only.
+- [x] **Re-point** `LatencyChart.tsx`
+  - Sub: svg root `className="w-full" height={HEIGHT}` → `className="chart" style={{ height: HEIGHT }}` (mockup .chart class styles.css:1077 provides width 100% + height 180px default; inline style override matches mockup escape-hatch page-admin.jsx:174)
+  - Sub: `<g>` for grid lines: explicit `stroke="var(--border)" strokeWidth={1} opacity={0.4}` → `className="grid"` (styles-mockup.css:1078 .chart .grid line provides stroke + strokeWidth via CSS); dropped opacity={0.4} drift (not in mockup)
+  - Sub: `<g>` for axis text: explicit `fill="var(--fg-muted)" fontSize={9} fontFamily="ui-monospace"` → `className="axis"` (styles-mockup.css:1079 .chart .axis text provides fill var(--fg-subtle) + font-size 10px + font-family var(--font-mono))
+  - Sub: 3-series paths preserved verbatim (stroke colors + widths + p99 opacity 0.9; data-testid + aria-label preserved)
+  - Sub: Added file-level eslint-disable no-restricted-syntax verbatim escape-hatch comment
+- [x] **Header MHist** updated
 
-### 2.2 US-C2 — SLOStatusCard 5-row .bar-track verbatim
+### 2.2 US-C2 — SLOStatusCard 5-row .bar-track verbatim — ✅ done
 
-- [ ] **Read mockup** `page-admin.jsx:72-98` (5-row SLO budget gauge)
-- [ ] **Re-point** `SLOStatusCard.tsx`
-  - Sub: `<Card title="SLO status" subtitle="Active SLO objectives">` wrapper
-  - Sub: 5-row inner `.col` with gap 12
-  - Sub: per row: `.spread` header (color dot ok/danger + name) + mono current/target right + `.bar-track` (width = `Math.min(100, used)`%, color = ok ? success : danger) + `subtle mono` budget-used label
-  - Sub: 5 SLOs verbatim (Loop p95 < 2s / Tool success ≥ 99% / HITL response < 5m / Subagent depth ≤ 5 / Cost / run < $0.05)
-- [ ] **Header MHist** updated
+- [x] **Read mockup** `page-admin.jsx:72-98` (5-row SLO budget gauge)
+- [x] **Re-point** `SLOStatusCard.tsx`
+  - Sub: `<CardShell>` → mockup-ui `<Card>`
+  - Sub: dropped imports `BarTrack from "components/charts"` + `CardShell from "components/ui/CardShell"` + `cn from "lib/utils"` → added `Card from "components/mockup-ui"`
+  - Sub: outer Tailwind `flex flex-col gap-3` → mockup `.col` + inline style={{ gap: 12 }}
+  - Sub: per-row header Tailwind `mb-1 flex items-center justify-between` → mockup `.spread` + inline style={{ marginBottom: 4 }}
+  - Sub: inner left span Tailwind `inline-flex items-center gap-1.5 text-[12.5px]` → mockup `.row` + inline style={{ gap: 6, fontSize: 12.5 }}
+  - Sub: color dot Tailwind `h-1.5 w-1.5 rounded-full bg-success/danger` → inline style={{ width: 6, height: 6, borderRadius: "50%", background: ok ? "var(--success)" : "var(--danger)" }}
+  - Sub: current value — **Hybrid Tailwind+inline color bridge** (per Sprint 57.31 TenantTopTable precedent for Vitest contract continuity): `text-fg-muted`/`text-danger` Tailwind classes preserved alongside inline style color verbatim; mockup `.mono .tnum` added; size set via inline style={{ fontSize: 11.5 }}
+  - Sub: inner separator Tailwind `text-fg-subtle` → mockup `.subtle`
+  - Sub: `<BarTrack pct={s.used} tone={...}>` → verbatim `<div className="bar-track"><span style={{ width: Math.min(100, s.used) + "%", background: ok ? "var(--success)" : "var(--danger)" }} /></div>`
+  - Sub: budget-used row Tailwind `mt-1 font-mono text-[10px] text-fg-subtle` → mockup `.subtle .mono` + inline style={{ fontSize: 10, marginTop: 3 }}
+  - Sub: Added file-level eslint-disable no-restricted-syntax verbatim escape-hatch comment
+- [x] **Header MHist** updated
 
-### 2.3 Day 2 mini-verify
+### 2.3 Day 2 mini-verify — ✅ done
 
-- [ ] All Day 2 files lint-clean
-- [ ] Playwright shot `day2-sla-dashboard-row1.png` (page + latency + SLO row)
-- [ ] Day 2 commit
+- [x] All Day 2 files lint-clean (ESLint exit 0)
+- [x] tsc strict — 0 new errors
+- [x] Vitest after Hybrid bridge fix — 452/452 baseline maintained; sla-dashboard subset 30/30 (2 spec drift caught + adapted via Hybrid Tailwind+inline color bridge per Sprint 57.31 TenantTopTable precedent)
+- [x] Playwright shot `day2-sla-dashboard-full.png` confirms PARITY: LatencyChart 3-series SVG (p50 primary / p95 info / p99 warning) + SLOStatusCard 5-row budget gauge with proper ok/danger color coding (4 ok green + 1 failing Cost/run danger red)
+- [ ] Day 2 commit (pending; next step)
 
 ---
 
