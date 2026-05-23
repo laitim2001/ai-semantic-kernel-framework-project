@@ -85,39 +85,18 @@
 
 ### 3.1 US-D1 — TurnList + UserTurn + AgentTurn + HITLTurn
 
-- [ ] **TurnList** re-point
-  - Sub: verbatim mockup port; preserve scroll behaviour + virtualization (if any)
-  - Sub: header MHist
-- [ ] **UserTurn** re-point
-  - Sub: verbatim mockup user-turn shape
-  - Sub: preserve content rendering + timestamp + edit affordance
-  - Sub: header MHist
-- [ ] **AgentTurn** re-point
-  - Sub: verbatim mockup agent-turn shape (includes block routing for ThinkingBlock / ToolBlock / VerificationBlock / SubagentForkBlock)
-  - Sub: preserve discriminated-union routing from Sprint 57.21 Turn Block Model
-  - Sub: header MHist
-- [ ] **HITLTurn** re-point
-  - Sub: verbatim mockup HITL turn (the largest turn file — 229 lines today)
-  - Sub: preserve approval flow + governance integration
-  - Sub: header MHist
+- [x] **TurnList** re-point — scroll wrapper mockup L83 inline `{flex:1, overflowY:"auto"}` verbatim + `.subtle`/`.mono` empty state +11 lines
+- [x] **UserTurn** re-point — `.turn`/`.turn-rail`/`.turn-marker`/`.turn-head`/`.role`/`.route-pill`/`.turn-body` +4 lines
+- [x] **AgentTurn** re-point — `.turn[data-role=agent]` + `.badge.primary` + `.live-dot` warning override + awaiting-approval `.row` inline-style preserved mockup L188-191 +10 lines
+- [x] **HITLTurn** re-point — `.turn` + `.hitl-card`/`.hitl-card-bar`/`.hitl-head`/`.icon-ring`/`.hitl-meta`/`.hitl-payload`/`.hitl-actions`/`.hitl-countdown` + `.btn success/danger`; **e2e contracts preserved** (data-testid + `#b71c1c` literal hex for severity-badge getComputedStyle assertion + approval_id + HIGH text + decision banner) -20 lines
 
 ### 3.2 US-D2 first half — Block base + ThinkingBlock + ToolBlock
 
-- [ ] **Block** (base wrapper) re-point
-  - Sub: verbatim mockup block base style
-  - Sub: header MHist
-- [ ] **ThinkingBlock** re-point
-  - Sub: verbatim mockup thinking-block (collapsed + expanded states)
-  - Sub: preserve markdown rendering
-  - Sub: header MHist
-- [ ] **ToolBlock** re-point
-  - Sub: verbatim mockup tool-block (input args + output + status indicator)
-  - Sub: preserve JSON syntax highlighting
-  - Sub: header MHist
-- [ ] **Day 3 mini-verify**
-  - Sub: `/chat-v2` turn list renders with new turn frames + 3 block types
-  - Sub: Sprint 57.21 Vitest behavioural specs still pass
-- [ ] Day 3 commit
+- [x] **Block** (pure dispatcher) — MHist note only; mockup `Block` IS the switch over `b.type` with no common wrapper (verified mockup L199-267 + styles-mockup.css L773-842) +1 line
+- [x] **ThinkingBlock** re-point — `.block.thinking` + `.label` +2 lines
+- [x] **ToolBlock** re-point — `.block.tool-call` + `.block.tool-call-head` + `.block.tool-call-body` (+ `.result` for output) + `.badge.dot` for status +12 lines
+- [x] **Day 3 mini-verify** — empty-state shot captured (`day3-chatv2-empty.png`); turn-shape verify deferred to Day 5 full Playwright e2e (chatStore mock hook not wired in production; real turn injection via chat router on Day 5)
+- [ ] Day 3 commit — pending (next step)
 
 ---
 

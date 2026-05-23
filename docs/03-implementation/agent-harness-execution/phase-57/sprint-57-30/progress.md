@@ -151,3 +151,42 @@ Side-by-side comparison vs Day-0 `extra-usermenu-open-overview.png` shows both b
 - `code-implementer` agent ran cleanly first pass. All 6 files + 2 supporting (check:mockup-fidelity baseline + day2-verify script) edited correctly.
 - 0 Vitest spec adaptation needed across 6 component edits — the chat-v2 specs (94 test files / 457 tests) use testid + text queries, NOT class-name / DOM-structure assertions. This is the design payoff of Sprint 57.21 Phase-1 structural rewrite: when CSS is re-pointed in Phase-2, behavioural specs stay green.
 - Pattern reuse acceleration evident: Day 1 took ~45 min, Day 2 covered 6 files in ~60 min (10 min/file average) — agent-assisted Phase-2 per-component re-point is becoming routine.
+
+---
+
+## Day 3 — Group D first half: TurnList + 3 turn shapes + 3 blocks (2026-05-23)
+
+### Today's Accomplishments
+
+- **US-D1** (4 files): TurnList +11; UserTurn +4; AgentTurn +10; HITLTurn -20 (consolidation via mockup class vocabulary)
+- **US-D2 first half** (3 files): Block (pure dispatcher, MHist-only) +1; ThinkingBlock +2; ToolBlock +12
+- All 7 files re-pointed to mockup CSS class vocabulary; preserved Sprint 57.21 Phase-1 Turn Block Model discriminated union behaviour
+- Day 3 verify: empty-state shot `day3-chatv2-empty.png` captured; turn-shape verify deferred to Day 5 full Playwright e2e (production has no chatStore mock injection hook; real turn injection requires chat router roundtrip)
+
+### 5-gate result
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| 1. Vitest | ✅ | 94 files / 457/457 (== Day 2 baseline; no regression — testid + text queries preserved) |
+| 2. tsc strict | ✅ | Only pre-existing TS6310 carryover; 0 new errors |
+| 3. ESLint | ✅ | exit 0 |
+| 4. Vite build | ✅ | `built in 3.48s` |
+| 5. check:mockup-fidelity | ✅ | 25 oklch lines (baseline 25; no bump needed — all colors via mockup `var(--*)` tokens) |
+
+### Notable findings + design decisions
+
+- **Block.tsx is a pure dispatcher** — re-reading mockup L199-267 and verifying `styles-mockup.css` L773-842 (`.block` base + per-type compound selectors) confirms each block type owns its own `<div className="block thinking">` / `<div className="block tool-call">` etc. Block.tsx therefore needs no markup change — MHist note only. This is a structural payoff of Sprint 57.21 Phase-1 — production already follows mockup's per-type dispatch pattern.
+- **HITLTurn `#b71c1c` literal hex preserved** — the production e2e contract (`approval-card.spec.ts` L70/82) uses `getComputedStyle` to assert `rgb(183, 28, 28)` on the severity badge. This is the **only legitimate non-mockup-token literal** in chat-v2; documented inline as the e2e bridge. Not a fidelity violation (the hex IS the production-only e2e contract bridge to ARIA assertion); check-mockup-fidelity baseline still passes 25/25.
+- **HITLTurn risk-low / risk-medium fallback** — `styles-mockup.css` `.hitl-card[data-severity]` only defines `risk-critical` + `risk-high` selectors (L854-867). For risk-low/risk-medium, card falls back to base warning tones (L845-847). Matches mockup behavior intentionally — risk-medium/-low do NOT need their own severity rail style in mockup design language.
+- **AgentTurn awaiting-approval `.row` inline-style preserved** — mockup L188-191 uses `style={{...}}` inline literal for the awaiting-approval row; not a class. Re-pointed verbatim with eslint-disable header.
+
+### Open items / blockers
+
+- None for Day 3. Day 4 (VerificationBlock + SubagentForkBlock + 3 inspector files + ApprovalCard) can proceed.
+- Turn-shape pixel verification deferred to Day 5 Playwright e2e + fidelity verify (mockup-vs-prod computed-style comparison).
+
+### Notes
+
+- Day 3 agent-assisted wall-clock ~65 min for 7 files (~9 min/file average) — slightly faster than Day 2 (10 min/file). Pattern reuse acceleration continues.
+- All 3 days of code edits combined: ~14 production files re-pointed in ~3 hr of agent-orchestration time vs ~3-4 hr estimated for Day 1 alone in the plan workload section. Calibration ratio tracking at <0.50 so far (committed 10-13 hr; actual ~3 hr through Day 3 = ~25-30% pace).
+- This pace suggests the committed bottom-up estimate was generous for Phase-2 per-page re-point work where Phase-1 structural rewrite already aligned spec-vs-mockup pattern. If the trend holds through Day 4-5, sprint actual will be ~5-7 hr vs ~10-13 hr committed — ratio ~0.50, BELOW [0.85, 1.20] band by ~0.35. This would extend the bimodal pattern observed in Sprint 57.20 vs 57.21 (`frontend-mockup-direct-port` class). Track for Day 5 retrospective.
