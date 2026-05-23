@@ -46,71 +46,40 @@
 
 ## Day 1 — Group B (page-head + KPI row)
 
-### 1.1 US-B1 — page-head verbatim re-point
+### 1.1 US-B1 — page-head verbatim re-point — ✅ done (batched Day 1)
 
-- [ ] **Read mockup** `page-admin.jsx:203-219` CostPage page-head + audit production `pages/cost-dashboard/index.tsx`
-- [ ] **Re-point** `pages/cost-dashboard/index.tsx` page-head: title "Cost Ledger" + subtitle "Range 12 · Token + tool spend · admin-only provider breakdown" + `.route-pill /cost-dashboard` + `<Badge tone="warning">admin scope</Badge>` + actions (By tenant filter + CSV export); preserve AppShellV2 wrap, RequireAuth, page-level hooks
-- [ ] **Header MHist** update (1-line ≤100 chars)
+- [x] **Read mockup** `page-admin.jsx:203-219` + production index.tsx
+- [x] **Re-point** `pages/cost-dashboard/index.tsx` — drop `pageTitle` prop on AppShellV2 (avoid duplicate); +6/-5
+- [x] **Header MHist** updated
 
-### 1.2 US-B2 — KPI grid-stats verbatim
+### 1.2 US-B2 — KPI grid-stats verbatim — ✅ done (batched Day 1)
 
-- [ ] **Read mockup** `page-admin.jsx:221-225` `.grid-stats` 4-stat row + audit production `CostOverview.tsx`
-- [ ] **Re-point** `CostOverview.tsx` to verbatim `.grid-stats` div + 4 `<Stat>` cards (Spend MTD + Tokens MTD + Cost per run + Cache hit rate) using existing mockup-ui `<Stat>` + `<Spark>` primitives (Sprint 57.29 verbatim — reuse, do NOT re-port)
-- [ ] **Header MHist** update
+- [x] **Read mockup** `page-admin.jsx:221-225` + production CostOverview.tsx
+- [x] **Re-point** `CostOverview.tsx` — verbatim inline `.page-head` + `.grid-stats` + `.grid-main`; mockup-ui Stat/Spark/Card/Button/Badge primitives; +146/-118
+- [x] **Header MHist** updated
 
 ### 1.3 Day 1 mini-verify
 
-- [ ] Playwright screenshot `/cost-dashboard` showing new page-head + KPI row → `screenshots/day1-verify/`
-- [ ] Day 1 commit
+- [x] Playwright 3 shots (`day1-cost-dashboard-full.png` + `day1-cost-dashboard-fold.png` + `day1-cost-dashboard-table-anomaly.png`) → PARITY visual confirmed
+- [ ] Day 1 commit (pending — covers all 7 files batched per Day 0 visual finding adjustment)
 
 ---
 
-## Day 2 — Group C (chart cards row)
+## Day 2 — Subsumed into Day 1 batched delegation (per Day 0 visual finding)
 
-### 2.1 US-C1 — CategoryBarsCard verbatim
+Day 2 + Day 3 work all done in Day 1 batched delegation. Rationale: Day 0 baseline showed production cost-dashboard already very mockup-aligned from Sprint 57.24 v2 strict rebuild; batching 7 files in one agent delegation more efficient than 3 daily delegations.
 
-- [ ] **Read mockup** `page-admin.jsx:228-251` 6-row `.bar-track` category list
-- [ ] **Re-point** `CategoryBarsCard.tsx` — 6 rows with color dot + name + cost + `.bar-track` pct fill verbatim
-- [ ] **Header MHist** update
-
-### 2.2 US-C2 — ProviderMixCard verbatim (or production-only)
-
-- [ ] **Day 0 Prong 2** result determines: mockup has equivalent OR mark production-only
-- [ ] **Re-point** OR **annotate** with `BackendGapBanner` + verbatim token vocabulary
-- [ ] **Header MHist** update
-
-### 2.3 US-C3 — MonthPicker verbatim (or production-only)
-
-- [ ] **Day 0 Prong 2** result determines treatment
-- [ ] **Re-point** OR **annotate** as production-only with mockup-token vocabulary
-- [ ] **Header MHist** update
-
-### 2.4 Day 2 mini-verify + commit
-
-- [ ] Playwright screenshot `/cost-dashboard` showing chart row + production widgets
-- [ ] Day 2 commit
+- [x] **US-C1 CategoryBarsCard** — mockup-ui Card + `.col`/`.spread`/`.bar-track` verbatim; +64/-37
+- [x] **US-C2 ProviderMixCard** — mockup-ui Card/Icon + `.col`/`.spread`/`.bar-track`/`.thin-rule`/`.subtle` verbatim per `page-admin.jsx:295-318`; +91/-59
+- [x] **US-C3 MonthPicker** — production-only filter UI; mockup token vocabulary (var(--*) inline); no AP-2 banner; +44/-13
 
 ---
 
-## Day 3 — Group D (table cards + Vitest)
+## Day 3 — Subsumed into Day 1 batched delegation
 
-### 3.1 US-D1 — CostBreakdownTable verbatim
-
-- [ ] **Day 0 Prong 2** finalizes mockup line range (potentially `page-admin.jsx:295+` after TenantTopTable)
-- [ ] **Re-point** to `.table` + cells + per-row visual treatment verbatim
-- [ ] **Header MHist** update
-
-### 3.2 US-D2 — TenantTopTable verbatim
-
-- [ ] **Read mockup** `page-admin.jsx:259-294` TenantTopTable section
-- [ ] **Re-point** `TenantTopTable.tsx` — `.table` + 8-row body + plan `<Badge>` + tokens + cost + quota% color-coded text + `.bar-track` quota fill + anomaly `<Badge tone="danger" dot>` verbatim
-- [ ] **Header MHist** update
-
-### 3.3 US-D3 — Vitest comprehensive
-
-- [ ] `npm run test -- cost-dashboard` → all pass
-- [ ] Adapt any spec drift from translated DOM → verbatim DOM
-- [ ] Day 3 commit
+- [x] **US-D1 CostBreakdownTable** — Decision (c) production-only-by-design (real backend `by_type` 2-level drill-down for current tenant); mockup `.table`/`.mono`/`.tnum`/`.subtle` vocabulary; no AP-2 banner (real backend data, no gap); +66/-39
+- [x] **US-D2 TenantTopTable** — mockup-ui Card/Badge + `.table`/`.row`/`.mono`/`.tnum`/`.subtle`/`.bar-track` verbatim per `page-admin.jsx:253-294`; preserved `text-danger`/`-warning` Tailwind classnames alongside inline-style color for Vitest contract continuity; +138/-94
+- [x] **US-D3 Vitest comprehensive** — 452/452 (no spec drift; testid + class-membership contracts preserved)
 
 ---
 

@@ -68,3 +68,51 @@
 - Sprint 57.31 plan time (~30 min for plan + 25 min for checklist) is shorter than Sprint 57.30 (~75 min) — pattern reuse compounding (3rd Phase-2 sprint).
 - D4 (CostBreakdownTable mockup gap) is the most consequential finding. If it represents a missing backend feature (e.g. per-category drill-down), Phase-2 should preserve it as production-only with AP-2 honesty. If it's redundant with TenantTopTable, Day 1 can consolidate or leave both with mockup-style.
 - Bimodal-watch 3rd-data-point hypothesis: this sprint's outcome will resolve `AD-Sprint-Plan-frontend-verbatim-bimodal-watch` (Sprint 57.30 carryover) — see plan §Class baseline 3rd-data-point evaluation criteria for the decision matrix.
+
+---
+
+## Day 1 (batched) — All 7 components re-pointed (2026-05-23)
+
+### Plan-vs-execution adjustment
+
+Per Day 0 visual baseline finding (production cost-dashboard already very mockup-aligned from Sprint 57.24 v2 strict rebuild), Days 1-3 work batched into single agent delegation. Days 2+3 in checklist marked as "subsumed into Day 1" with audit trail. Plan §Day plan day-by-day sub-tasks all completed; only the day-boundary collapsed for execution efficiency. Calibration ratio still tracked by sprint-aggregate hours, so bimodal-watch 3rd-data-point measurement remains valid.
+
+### Today's Accomplishments
+
+- All 7 production files re-pointed (Day 1 single agent delegation; ~60 min wall-clock)
+  - `pages/cost-dashboard/index.tsx`: drop pageTitle (avoid topbar duplicate); +6/-5
+  - `CostOverview.tsx`: verbatim inline `.page-head` + `.grid-stats` + `.grid-main`; mockup-ui primitives; +146/-118
+  - `CategoryBarsCard.tsx`: mockup-ui Card + `.col`/`.spread`/`.bar-track`; +64/-37
+  - `ProviderMixCard.tsx`: Card/Icon + `.thin-rule` + LLM-neutrality disclosure verbatim; +91/-59
+  - `TenantTopTable.tsx`: `.table` + plan Badge + quota .bar-track + anomaly Badge.danger.dot verbatim; +138/-94
+  - `CostBreakdownTable.tsx`: production-only-by-design (real backend by_type drill-down); mockup .table vocabulary verbatim; +66/-39
+  - `MonthPicker.tsx`: production-only UI affordance; mockup var(--*) tokens inline; +44/-13
+- Day 1 verify Playwright shots × 3 — `/cost-dashboard` visual matches mockup canonical CostPage at 1440×900
+
+### 5-gate result
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| 1. Vitest | ✅ | 94 files / 452/452 (matches Sprint 57.30 baseline exactly; 0 spec drift — testid + class-membership contracts preserved) |
+| 2. tsc strict | ✅ | Only pre-existing TS6310 carryover |
+| 3. ESLint | ✅ | exit 0 |
+| 4. Vite build | ✅ | `built in 3.15s` |
+| 5. check:mockup-fidelity | ✅ | 25/25 unchanged (no new oklch literals; all colors via mockup `var(--*)` tokens) |
+
+### Notable decisions
+
+- **CostBreakdownTable (D4 RED) → Decision (c) production-only-by-design** — the widget shows real backend `by_type` 2-level drill-down (`cost_type → sub_type → quantity / total_cost_usd / entry_count`) for the current authenticated tenant; distinct from TenantTopTable (cross-tenant admin fixture). E2e contract `cost-breakdown-table` testid + 4 rows (header + 3 data) preserved. Re-pointed to mockup `.table` vocabulary; **no AP-2 banner needed** (real backend data, no gap).
+- **MonthPicker (D5 YELLOW) → production-only UI affordance** — mockup token vocabulary inline (var(--fg-muted) / var(--border) / var(--bg-1)); no AP-2 banner.
+- **TenantTopTable quota% styling** — preserved `text-danger`/`text-warning` Tailwind classnames alongside inline `color: var(--danger|warning|fg-muted)` for Vitest contract continuity (the existing spec asserts class membership; re-pointed visual ADDs the inline color but does NOT remove the class). Hybrid bridge.
+
+### Day 1 visual confirmation
+
+`day1-cost-dashboard-full.png` confirms PARITY: page-head with "Cost Ledger" + range pill + admin scope Badge + actions; 4-stat KPI grid; AreaChart "Spend over time"; CategoryBarsCard 6-row; TenantTopTable 8-row with tenant icons + plan badges + quota colors; ProviderMixCard 4-row + LLM-neutrality disclosure; AP-2 BackendGapBanner where appropriate. Matches mockup `page-admin.jsx:201-320` CostPage canonical.
+
+### Pacing observation
+
+Day 1 batched delegation for 7 files in ~60 min. Sprint actual through Day 1 ~2 hr (Day 0 1 hr + Day 1 1 hr). Bottom-up est 12-18 hr → committed 7-10 hr → actual ~2.5-3 hr projected (Day 4 closeout adds ~30-45 min). **Predicted ratio actual/committed ~0.30-0.40** — same pattern as Sprint 57.30 (below band). Will resolve bimodal-watch evaluation at Day 4 retrospective Q4.
+
+### Open items
+
+- Day 4 closeout pending (regression sweep + fidelity verify + retro + memory + docs sync + PR + merge).
