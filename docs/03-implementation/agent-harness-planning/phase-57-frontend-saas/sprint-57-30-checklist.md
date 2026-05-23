@@ -104,42 +104,25 @@
 
 ### 4.1 US-D2 second half — VerificationBlock + SubagentForkBlock
 
-- [ ] **VerificationBlock** re-point
-  - Sub: verbatim mockup verification-block (rule list + pass/fail + correction loop UI)
-  - Sub: header MHist
-- [ ] **SubagentForkBlock** re-point
-  - Sub: verbatim mockup subagent-fork (subagent tree + spawn/return events)
-  - Sub: header MHist
+- [x] **VerificationBlock** re-point — `.block.verification` + `.block.verification.failed` + inline-style icon color; 46→55 lines
+- [x] **SubagentForkBlock** re-point — `.subagent-tree` + `.subagent-row` + `.badge .dot`; 64→87 lines
 
 ### 4.2 US-D3 — ChatInspector + InspectorTurn + ComingSoonInspectorTab
 
-- [ ] **ChatInspector** re-point
-  - Sub: verbatim mockup 4-tab chrome (Overview / State / Tools / Verification)
-  - Sub: preserve tab state + tab-switch behaviour
-  - Sub: header MHist
-- [ ] **InspectorTurn** re-point
-  - Sub: verbatim mockup inspector-turn detail view
-  - Sub: preserve turn data binding
-  - Sub: header MHist
-- [ ] **ComingSoonInspectorTab** re-point
-  - Sub: verbatim mockup coming-soon placeholder
-  - Sub: header MHist
+- [x] **ChatInspector** re-point — `.chat-inspector` + inline `.tabs`/`.tab[data-active]` (shadcn `<Tabs>` dropped because it uses pre-Sprint-57.18 tokens `border-primary`/`text-muted-foreground`); `role="tab"` + `aria-selected` preserved for a11y; 93→117 lines
+- [x] **InspectorTurn** re-point — `.spread` + `.col` + `.thin-rule` + `.subtle` + `.mono` + `.tnum` + `.btn outline/ghost` (Badge / Button / cn imports dropped); 160→197 lines
+- [x] **ComingSoonInspectorTab** re-point — mockup-vocabulary inline-style + `.mono`; 57→88 lines
 
 ### 4.3 US-D4 — ApprovalCard
 
-- [ ] **ApprovalCard** re-point
-  - Sub: verbatim mockup HITL approval card visual
-  - Sub: preserve approve / deny / escalate handlers + governance integration
-  - Sub: header MHist
+- [x] **ApprovalCard** re-point — `.hitl-card` family + `.btn success/danger/ghost`; e2e contract `RISK_TEXT_HEX_LITERAL` preserved (mirrors HITLTurn `SEVERITY_BADGE_LITERAL_HEX` for `approval-card.spec.ts` L128 getComputedStyle assertion); 156→165 lines
+- Note: ApprovalCard confirmed legacy (HITLTurn is canonical Phase-1 chat-inline render per chatStore.ts L324 dual-emit comment); re-pointed for completeness, not main render path
 
 ### 4.4 Vitest comprehensive re-run
 
-- [ ] **Run all chat-v2 Vitest** + adapt any new spec drift
-  - Sub: `npm run test -- chat-v2`
-  - Sub: any failure → adapt to verbatim structure (not to Radix / Tailwind assertions)
-  - DoD: 100% pass
-- [ ] Day 4 commit
-  - Sub: `git commit -m "feat(frontend, sprint-57-30): Day 4 Group D second half — Inspector + ApprovalCard + last 2 blocks verbatim re-point\n\n..."`
+- [x] **Vitest 457/457** unchanged baseline; 1 spec adapted: `blocks.test.tsx:108` `border-danger/40` Tailwind → `.block.verification.failed` mockup class (verbatim DOM)
+- [x] **Day 4 verify** captured 3 inspector tab shots (`day4-chatv2-inspector-overview.png` Turn active + `day4-chatv2-inspector-state.png` Memory ComingSoon + `day4-chatv2-coming-soon-tab.png` Trace ComingSoon) — Inspector 4-tab chrome (Turn/Trace/Memory/Tree) now visible as separate tab buttons vs Day 0 baseline single heading
+- [ ] Day 4 commit — pending (next step)
 
 ---
 

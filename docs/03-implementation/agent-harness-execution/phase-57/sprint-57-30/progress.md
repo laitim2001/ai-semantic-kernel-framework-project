@@ -190,3 +190,48 @@ Side-by-side comparison vs Day-0 `extra-usermenu-open-overview.png` shows both b
 - Day 3 agent-assisted wall-clock ~65 min for 7 files (~9 min/file average) — slightly faster than Day 2 (10 min/file). Pattern reuse acceleration continues.
 - All 3 days of code edits combined: ~14 production files re-pointed in ~3 hr of agent-orchestration time vs ~3-4 hr estimated for Day 1 alone in the plan workload section. Calibration ratio tracking at <0.50 so far (committed 10-13 hr; actual ~3 hr through Day 3 = ~25-30% pace).
 - This pace suggests the committed bottom-up estimate was generous for Phase-2 per-page re-point work where Phase-1 structural rewrite already aligned spec-vs-mockup pattern. If the trend holds through Day 4-5, sprint actual will be ~5-7 hr vs ~10-13 hr committed — ratio ~0.50, BELOW [0.85, 1.20] band by ~0.35. This would extend the bimodal pattern observed in Sprint 57.20 vs 57.21 (`frontend-mockup-direct-port` class). Track for Day 5 retrospective.
+
+---
+
+## Day 4 — Group D second half + Inspector 4-tab + ApprovalCard (2026-05-23)
+
+### Today's Accomplishments
+
+- **US-D2 second half** (2 files): VerificationBlock 46→55 (`.block.verification(.failed)`); SubagentForkBlock 64→87 (`.subagent-tree`/`.subagent-row` + `.badge .dot`)
+- **US-D3** (3 files): ChatInspector 93→117 (`.chat-inspector` + inline verbatim `.tabs`/`.tab[data-active]`; shadcn `<Tabs>` dropped — uses pre-Sprint-57.18 tokens); InspectorTurn 160→197 (`.spread`/`.col`/`.thin-rule` + `.btn outline/ghost`); ComingSoonInspectorTab 57→88 (mockup vocabulary inline-style)
+- **US-D4**: ApprovalCard 156→165 (`.hitl-card` family + `.btn success/danger/ghost`; e2e contract `RISK_TEXT_HEX_LITERAL` preserved)
+- **1 Vitest spec adapted**: `blocks.test.tsx:108` Tailwind `.border-danger/40` → verbatim `.block.verification.failed` mockup class
+- Day 4 verify Playwright shots × 3 captured (Inspector tab cycling)
+
+### 5-gate result
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| 1. Vitest | ✅ | 94 files / 457/457 (== Day 3 baseline; 1 spec adapted per verbatim DOM rule) |
+| 2. tsc strict | ✅ | Only pre-existing TS6310 carryover |
+| 3. ESLint | ✅ | exit 0 |
+| 4. Vite build | ✅ | `built in 3.30s` |
+| 5. check:mockup-fidelity | ✅ | 25/25 (no new oklch literals; ApprovalCard's existing risk hex literals already in baseline) |
+
+### Visual fix verification
+
+Day 4 verify shots in `claudedocs/4-changes/sprint-57-30-chatv2-shell-repoint/screenshots/day4-verify/`:
+- `day4-chatv2-inspector-overview.png` — **Inspector 4-tab chrome now properly visible** as separate `.tab` buttons (Turn / Trace / Memory / Tree) with active-tab highlight. Day 0 baseline showed all 4 words as a single heading "Turn Trace Memory Tree" — now correctly split into clickable tab navigator per mockup canonical.
+- `day4-chatv2-inspector-state.png` — Memory tab activates ComingSoonInspectorTab placeholder with mockup vocabulary
+- `day4-chatv2-coming-soon-tab.png` — Trace tab same ComingSoonInspectorTab pattern
+
+### Notable design decisions
+
+- **shadcn `<Tabs>` dropped from ChatInspector** — the shared `frontend/src/components/ui/tabs.tsx` uses pre-Sprint-57.18 design-system tokens (`border-primary` / `text-foreground` / `text-muted-foreground`); using it would re-introduce Tailwind translation drift inside the very inspector chrome we're re-pointing. Inlined verbatim mockup `<button role="tab" aria-selected={...} className="tab" data-active={...}>` instead. Closes inspector-as-translated-tab structural drift.
+- **ApprovalCard legacy status confirmed** — `chatStore.ts:L324` dual-emit comment confirms HITLTurn is the canonical Phase-1 chat-inline render; ApprovalCard remains as a "preserve existing workflow" artifact. Re-pointed per task spec for completeness; not the main render path; orphan candidate for Phase 58+ cleanup once governance integration migrates to HITLTurn-only.
+- **`RISK_TEXT_HEX_LITERAL` `#b71c1c` preserved in ApprovalCard** — same e2e contract bridge as HITLTurn (`SEVERITY_BADGE_LITERAL_HEX`); `approval-card.spec.ts` L128 asserts `getComputedStyle` returns `rgb(183, 28, 28)` on CRITICAL risk. Production-only legitimate non-mockup-token literal.
+
+### Open items / blockers
+
+- None for Day 4. Day 5 (regression sweep + chat-v2 fidelity verify + closeout) can proceed.
+- ApprovalCard legacy cleanup candidate noted for Phase 58+ carryover.
+
+### Notes
+
+- Day 4 agent-assisted wall-clock ~50 min for 6 files (~8 min/file) — continuing the pattern-reuse acceleration (Day 1 45 min / Day 2 10 min/file / Day 3 9 min/file / Day 4 8 min/file).
+- 4-day cumulative production code edits: ~20 files re-pointed. Sprint actual through Day 4 ~3.5 hr (with agent assistance) vs ~10-13 hr committed = ratio ~0.30 — well below band. The HYBRID 0.60 blend (per plan §Background) calibrated as if this were a from-scratch port; reality is much faster because Sprint 57.21 Phase-1 already aligned structure to mockup pattern + Sprint 57.28 verbatim CSS foundation made the per-component edit one-pass-per-file.
