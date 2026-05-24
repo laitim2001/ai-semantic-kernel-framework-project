@@ -7,6 +7,7 @@
  * Created: 2026-05-10 (Sprint 57.12 Day 2 / US-4)
  *
  * Modification History:
+ *   - 2026-05-24: Sprint 57.36 Day 1-2 — adapt to verbatim CSS re-point (border-red-500 → ev-type color var(--danger))
  *   - 2026-05-10: Initial creation (Sprint 57.12 Day 2 / US-4)
  */
 
@@ -83,7 +84,10 @@ describe("LoopVisualizer (Sprint 57.12 US-4)", () => {
     expect(summary).toHaveTextContent("3");
   });
 
-  test("failed events get red left border (verification_failed)", () => {
+  test("failed events get danger tone (verification_failed)", () => {
+    // Sprint 57.36 Day 1-2 verbatim re-point: row uses mockup `.event-row` + `.ev-dot` + `.ev-type`
+    // with inline `style={{ color: var(--danger) }}` (page-governance.jsx:188-192 pattern) instead
+    // of the prior Tailwind `border-red-500` left-border vintage.
     feed([
       { type: "turn_start", data: { turn_num: 0 } },
       {
@@ -98,7 +102,13 @@ describe("LoopVisualizer (Sprint 57.12 US-4)", () => {
     ]);
     render(<LoopVisualizer mode="standalone" />);
     const evRow = screen.getByTestId("loop-event-verification_failed");
-    expect(evRow.className).toContain("border-red-500");
+    expect(evRow.className).toContain("event-row");
+    const evType = evRow.querySelector(".ev-type") as HTMLElement | null;
+    expect(evType).not.toBeNull();
+    expect(evType?.getAttribute("style")).toContain("var(--danger)");
+    const evDot = evRow.querySelector(".ev-dot") as HTMLElement | null;
+    expect(evDot).not.toBeNull();
+    expect(evDot?.getAttribute("style")).toContain("var(--danger)");
   });
 
   test("inline mode collapses turns older than the last 5", () => {

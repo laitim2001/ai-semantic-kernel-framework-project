@@ -63,3 +63,47 @@ Vs plan §8 bottom-up ~45 min (0.75 hr × 60). 10 min over budget — primarily 
 - Agent delegation pattern continues (Sprint 57.34 + 57.35 validated). Day 1-2 will spawn code-implementer agent with full plan §3 spec + drift summary (D-DAY0-1..7) + corrected BackendGapBanner API + dual-mount preservation directive.
 - Day 0 ~50 min wall-clock (plan + checklist + 三-prong + drift + route-sweep edit) — slightly above plan §8 0.75 hr (45 min) bottom-up estimate; on track.
 
+---
+
+## Day 1-2 — 2026-05-24 (Verbatim CSS re-point implementation)
+
+### Accomplishments
+
+- **LoopVisualizer.tsx fully re-pointed** to verbatim mockup classes per `reference/design-mockups/page-governance.jsx:33-212`:
+  - Standalone mode wraps in mockup `.loop-canvas` 2-col grid (track + inspector placeholder)
+  - Per-turn block: `.loop-turn` + `data-status="running"|"done"` + `.loop-turn-head` (with `.turn-no` mono badge) + `.loop-turn-body`
+  - Per-event row: `.event-row` + `.ev-dot` + `.ev-type` + `.ev-detail` + `.ev-timing` (matches mockup `EventRow` L187-212)
+  - Tone derivation: NEW `eventTone()` adapter maps production event type → mockup token vars (`--danger` / `--warning` / `--tool` / `--thinking` / `--success` / `--primary` / `--fg-muted`) per D-DAY0-6 brief
+  - Inline mode: compact `.loop-track` (no canvas / no inspector / no banner) — preserves Sprint 57.12 UX (max-height scroll + last-5-turns collapsed-count)
+- **AP-2 BackendGapBanner** placed in standalone mode only — explicitly defers mockup `LoopDebugHeader` (playback/scrubber/speed/filters) + `LoopInspector` right pane (HITL Policy + Raw payload) to Phase 58+ pending SSE event persistence (`loop_event` table per Sprint 57.12 AP-6)
+- **EmptyInspectorPlaceholder**: AP-2 honesty pattern — placeholder text instead of Potemkin pane
+- **All preserved**: `data-testid` (loop-visualizer-{mode}, loop-visualizer-summary, loop-turn-{N}, loop-event-{type}), `aria-label`, empty-state branches, `eventSummary()` switch, `groupByTurn()` bucket logic, inline collapsed-count UX
+- **Vitest spec update**: `frontend/tests/unit/orchestrator-loop/LoopVisualizer.test.tsx:86-114` adapted the `verification_failed → red border` assertion to the new verbatim shape (`.event-row` + `.ev-dot` + `.ev-type` style `var(--danger)`) per page-governance.jsx:189-192 pattern
+
+### Drift findings catalogued
+
+| ID | Finding | Implication | Resolution |
+|----|---------|-------------|------------|
+| **D-DAY1-1** | `LoopVisualizer.test.tsx` DOES exist at `frontend/tests/unit/orchestrator-loop/LoopVisualizer.test.tsx` (6 tests; Sprint 57.12 Day 2). Day 0 Prong 1 glob `frontend/src/**/LoopVisualizer*.test.*` missed it because the test file lives under repo `tests/` root, NOT colocated under `src/`. D-DAY0-1 was wrong (correction to plan §0 + Day 0 finding) | US-4 spec update IS needed; 1 test asserted `border-red-500` Tailwind class (vintage shape) and broke on first Vitest run after re-point | Updated L101 assertion to verify mockup `.event-row` + `.ev-dot` + `.ev-type` style="var(--danger)" verbatim pattern; Vitest 456/456 restored. Future Prong 1 glob should include `frontend/tests/**` not just `frontend/src/**`. |
+| **D-DAY1-2** | ESLint `no-restricted-syntax` (Sprint 57.15 STYLE.md §1 codebase-wide guard) flags JSX `style=` attribute regardless of expression contents — even `style={MODULE_CONSTANT_REF}` (selector is `JSXAttribute[name.name='style']`, body-blind) | 13 inline `style=` sites needed annotation (mockup `EventRow` pattern uses inline `style` for dynamic per-event tone — by-design verbatim mockup pattern; Sprint 57.16 retired file-level disables so per-site is the only path) | Extracted 10 static style objects to module-scope constants (INSPECTOR_WRAPPER_STYLE / STANDALONE_SUMMARY_STYLE / INLINE_TRACK_STYLE etc.) for readability, then added per-site `// eslint-disable-next-line no-restricted-syntax -- verbatim mockup page-governance.jsx:XXX <reason>; mockup-fidelity pattern` comments per Sprint 57.24 BarTrack precedent (STYLE.md §3 escape hatch); 0 remaining lint errors |
+
+### Verification gates — all green ✅
+
+- [x] **`npx tsc --noEmit`** → no errors (silent)
+- [x] **`npm run lint`** → 0 errors (3 pre-existing TSSatisfiesExpression noise warnings from `jsx-ast-utils` are unrelated to this sprint)
+- [x] **`npm run test -- --run`** → **456/456 passing** (94 test files; ~12.86s) — baseline preserved with spec update
+- [x] **`npm run check:mockup-fidelity`** → exit 0; HEX_OKLCH_BASELINE **41 unchanged** (added 0 `oklch(from var(--X) l c h / X)` literals — `eventTone()` uses direct `var(--token)` references only)
+
+### Anomalies
+
+- D-DAY1-1 is a Day 0 Prong 1 glob-pattern miss — confirms 三-prong guard value even when reported "all clear": one fast `Glob("frontend/tests/**/LoopVisualizer*.test.*")` retry would have caught it pre-implementation. Worth noting as Sprint 57.36 retrospective Q5 "lesson for future calibration matrix" — extend Prong 1 to consume both `frontend/src/**` AND `frontend/tests/**` glob roots when verifying spec existence claims.
+- D-DAY1-2 is the documented STYLE.md §3 escape hatch case — mockup's `EventRow` uses inline `style` for the same dynamic-tone purpose (page-governance.jsx:206-208). Per-site disables (not file-level) keep the guard tight; constant extraction reduces literal noise.
+
+### Day 1-2 wall-clock ~80 min
+
+Vs plan §8 Day 1+2 bottom-up ~2.5 hr (150 min) × 0.50 multiplier = ~75 min calibrated commit. Landed at ~80 min — 7% over (within ±20% no-replan threshold). Drift handling (D-DAY1-1 spec update + D-DAY1-2 per-site disables + constant extraction) added ~15 min over a pure happy-path port.
+
+### Day 1-2 summary
+
+✅ **Day 1-2 complete** — LoopVisualizer.tsx fully verbatim per page-governance.jsx:33-212; AP-2 BackendGapBanner declares Phase 58+ deferred features; dual-mount preserved (chat-v2 inline + /loop-debug standalone); all 4 verification gates green; 2 drifts catalogued (D-DAY1-1 spec existence miss + D-DAY1-2 lint escape-hatch). Ready for Day 3 sweep + retrospective.
+
