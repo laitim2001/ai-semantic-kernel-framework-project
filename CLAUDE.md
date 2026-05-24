@@ -70,7 +70,7 @@ Build enterprise AI agent teams that work like **human professional teams** — 
 | Attribute | Value |
 |-----------|-------|
 | **Phase** | V2 22/22 ✅ + SaaS Stage 1 3/3 ✅ + SaaS Frontend ongoing (Phase 57+) |
-| **Current Sprint** | Sprint 57.33 closed 2026-05-24 (PR pending) — page-bug-fix sweep on 3 ⚪ pre-existing crash routes (`/subagents` + `/memory` + `/verification`) — defensive `(query.data.X ?? []).length/map` across 5 files / 11 sites; 22-route sweep 3 ⚪ → ✅ flip + 0 regressions; Vitest 452→456 (4 NEW defensive specs); NEW class `frontend-page-bug-fix` 0.45 1st app ratio 1.24 top edge of band; closes `AD-Overview-PreExisting-Route-Crashes` carryover; unblocks Phase-2 re-point on these 3 routes. Detail in `memory/project_phase57_33_page_bug_fix_sweep.md`. Next: see `claudedocs/1-planning/next-phase-candidates.md` (Phase-2 epic — 10 🟡 routes remaining; 3 ⚪ routes now unblocked for re-point candidacy) |
+| **Current Sprint** | Sprint 57.34 closed 2026-05-24 (PR pending) — `/orchestrator` Phase-2 verbatim-CSS re-point (5th app of Phase-2 epic; **1st non-rich-dashboard shape** — config/tabbed-forms with 6 tabs); fidelity PARITY; 22-route sweep 0 regressions; Vitest 456/456 baseline preserved; 3 mockup-ui primitives promoted (Tabs/Field/Switch); ratio ≈0.95-1.05 in band middle (2nd validation of 0.50 lifted baseline); **bimodal-by-shape signal emerging** (rich-dashboard 3-pt mean ≈0.40 below band vs non-rich 1-pt ≈1.0 in band middle) → NEW `AD-Sprint-Plan-frontend-verbatim-css-repoint-shape-bimodal-watch` Sprint 57.35 3rd validation. Detail in `memory/project_phase57_34_orchestrator_repoint.md`. Next: see `claudedocs/1-planning/next-phase-candidates.md` (Phase-2 epic — 9 🟡 routes remaining; 3 ⚪ routes from 57.33 unblocked) |
 | **Sprint History** | See [`memory/MEMORY.md`](memory/MEMORY.md) §Recent Sprints + per-sprint subfile `memory/project_phase57_XX_*.md` + retrospective.md under `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-XX/` |
 | **Pending / Next Phase** | See [`claudedocs/1-planning/next-phase-candidates.md`](claudedocs/1-planning/next-phase-candidates.md) |
 | **Roadmap** | Phase 49-55 V2 ✅ / Phase 56-58 SaaS Stage 1 3/3 ✅ / Phase 57+ Frontend ongoing |
@@ -625,7 +625,7 @@ V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（M
 
 ---
 
-**Last Updated**: 2026-05-24 (Sprint 57.33 — Page Bug Fix Sweep: 3 ⚪ crash routes flipped to ✅; NEW class `frontend-page-bug-fix` 0.45 1st app); see `memory/` for sprint history
+**Last Updated**: 2026-05-24 (Sprint 57.34 — /orchestrator Phase-2 verbatim re-point; 1st non-rich-dashboard shape; bimodal-by-shape signal emerging — NEW shape-bimodal-watch AD); see `memory/` for sprint history
 **Project Start**: 2025-11-14
 **V2 Authority**: `docs/03-implementation/agent-harness-planning/` (21 docs — 20 規劃 + 1 review)
 **V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`
