@@ -49,6 +49,63 @@ Vs plan §8 bottom-up ~60 min (1 hr) — exactly on bottom-up. 7 drifts catalogu
 
 ---
 
+## Day 4 — 2026-05-24 (Closeout — after sweep + retro + 2-class matrix + memory + push + PR)
+
+### Accomplishments
+
+- **`node scripts/route-sweep.mjs after`** ran in ~30s; **22/22 PNG captured**
+- **22-route SHA256 + size diff (PowerShell)**: **18 IDENTICAL + 4 CHANGED**
+  - `loop-debug` +63,405 B (+66% from Sprint 57.36 96,310 B → 159,715 B; fixture demo + playback + filter + inspector all rendering content; **user's empty-state complaint clearly resolved**)
+  - `state-inspector` -14,681 B (Domain B verbatim re-point; mockup verbatim simpler than Tailwind utility patterns)
+  - `chat-v2` **0 B unchanged** (Sprint 57.30 inline mount PERFECT cascade preservation — better than Sprint 57.36's +18 B ε)
+  - `auth-callback` -68 B + `overview` +138 B (noise; no auth/overview files modified per git diff)
+- **Visual verify `/loop-debug` after.png** (Read by harness): full mockup widget set rendering (Loop Visualizer title + Session sess_4tk2p_demo + 6 filter pills + AP-2 DEMO DATA banner + playback strip with 8× active + Turns 4 / Events 18 + 3 turn buckets fully populated + EVENT INSPECTOR right pane with empty-state "Select an event row to inspect detail.")
+- **Visual verify `/state-inspector` after.png** (Read by harness): State Inspector title + Sprint 57.19 backend gap banner preserved + 4 KPI cards + 320px-1fr 2-col grid + 10-version chain + current state KvRow + diff vs parent — all mockup verbatim
+- **retrospective.md written** per Sprint 57.36 Q1-Q7 template — 2-domain calibration breakdown + 3-consecutive-above-band lift trigger MET analysis + class-split-proposal Option 1 vs Option 2 recommendation
+- **`memory/project_phase57_37_loop_debug_fixture_state_inspector.md` written** per REFACTOR-001 single-source policy
+- **`memory/MEMORY.md` updated** — 1-line quality pointer added at top of recent sprints
+- **`.claude/rules/sprint-workflow.md §Scope-class multiplier matrix` updated** — 2 class rows (Domain A 5th data point IN BAND + Domain B 8th data point ABOVE band with 3-consecutive trigger MET) + NEW MHist entry prepended
+- **`claudedocs/1-planning/next-phase-candidates.md` updated** — Sprint 57.37 Carryover section inserted; header date+headline updated to reflect 3-consecutive lift trigger signal
+- **`CLAUDE.md` updated** (minimal touch per REFACTOR-001 policy) — `Current Sprint` row + `Last Updated` footer
+
+### Verdict
+
+**PARITY** — Both domains visually parity with mockup. 22-route sweep: 0 catastrophic / 0 structural regression on other 20 routes. User-reported `/loop-debug` empty-state issue **FULLY RESOLVED**.
+
+### Sprint 57.37 Closeout Self-Check (per `.claude/rules/sprint-workflow.md` §Sprint Closeout)
+
+- [x] CLAUDE.md changes only navigator / principle / rule level (Current Sprint + Last Updated footer; NO Latest Sprint / Prev Sprint table rows added)
+- [x] MEMORY.md new entry ~600 char quality pointer (topic + keywords + subfile link; quality > char count)
+- [x] Sprint detail preserved in memory subfile + retrospective.md (single-source maintained)
+- [x] Carryover / open items in `next-phase-candidates.md` (NOT in CLAUDE.md table cell)
+- [x] 2 calibration ratios tracked in `sprint-workflow.md` matrix (one per class)
+
+### Day 4 wall-clock ~60 min
+
+---
+
+## Final Wall-Clock Summary
+
+| Day | Theme | Bottom-up | Calibrated (HYBRID 0.58) | Actual |
+|-----|-------|-----------|--------------------------|--------|
+| 0 | Plan + Checklist + 三-prong + before | ~60 min | ~50 min | ~60 min |
+| 1-2 | Domain A LoopVisualizer rebuild (agent) | ~240 min | ~155 min | ~180 min |
+| 3 | Domain B StateInspectorPage re-point (agent) | ~135 min | ~70 min | ~90 min |
+| 4 | Closeout (retro + memory + 2-class matrix + PR) | ~90 min | ~55 min | ~60 min |
+| **Total** | | **~525 min (8.75 hr)** | **~330 min (5.5 hr)** | **~390 min (6.5 hr)** |
+
+**Sprint total ratio actual/committed**: **~1.18** — IN BAND top edge (much cleaner than per-domain individual ratios; 2-domain HYBRID blend averaged variance)
+**Sprint total ratio actual/bottom-up**: **~0.74** — bottom-up was 35% generous
+
+**Per-domain ratio breakdown** (key for class-level calibration):
+- Domain A (`frontend-mockup-strict-rebuild` 5th app): ratio actual/committed **~1.18 IN BAND top edge ✅** (5-pt mean 0.96 in-band middle; KEEP 0.60)
+- Domain B (`frontend-verbatim-css-repoint` 8th app + 4th non-rich): ratio actual/committed **~1.33 ABOVE band by 0.13 ❌** — **3-consecutive-above-band trigger MET** (57.35 + 57.36 + 57.37B all > 1.20)
+
+→ Captured in retrospective.md Q2 + sprint-workflow.md §Scope-class multiplier matrix 5th + 8th data points + NEW class-split-proposal AD candidate for Sprint 57.38 retro decision.
+
+
+---
+
 ## Day 1-2 — 2026-05-24 (Domain A: LoopVisualizer fixture + playback + filter + inspector + Vitest)
 
 ### Accomplishments
