@@ -47,3 +47,42 @@ Vs plan §8 bottom-up ~60 min (1 hr) — exactly on bottom-up. 7 drifts catalogu
 - Day 1-2 = Domain A; Day 3 = Domain B. 4-day total per Sprint 57.36 pattern.
 - Sprint 57.36 D-DAY1-1 lesson (extend Prong 1 to `tests/**`) PAID OFF on first reuse — caught StateInspectorPage.test.tsx existence in Day 0.
 
+---
+
+## Day 1-2 — 2026-05-24 (Domain A: LoopVisualizer fixture + playback + filter + inspector + Vitest)
+
+### Accomplishments
+
+- **NEW**: `frontend/src/features/orchestrator-loop/_fixtures/demoLoopEvents.ts` (~145 lines; 18 typed `LoopEvent` entries spanning 5 turns; mockup→production mapping table in header)
+- **Modified**: `frontend/src/features/orchestrator-loop/components/LoopVisualizer.tsx` (~370 → ~700 lines; +330 lines for fixture loader / playback state / filter state / `LoopInspector` component / `KvRow` helper / `deriveTurnNum` helper / 4 mockup widgets per page-governance.jsx:118-263)
+- **Modified**: `frontend/tests/unit/orchestrator-loop/LoopVisualizer.test.tsx` (~127 → ~190 lines; +8 NEW specs: fixture-mode + live-events-suppress-fixture + playback strip render + speed pill toggle + filter pills render + filter pill toggle hides events + inspector empty-state + inspector populates on click + HITL Policy section)
+- **Updated**: `frontend/scripts/check-mockup-fidelity.mjs` `HEX_OKLCH_BASELINE 41→44` (3 verbatim `oklch(from <color> l c h / X)` literals from filter pill tints + selected event-row highlight; same vocabulary precedent as Sprint 57.30/57.35; MHist entry added)
+- **Verifies**:
+  - `npx tsc --noEmit` → exit 0 (after one initial `events.forEach` → `for-loop` flow-narrowing fix on `MutableBucket`)
+  - `npm run test -- --run` → **464/464 passing** (baseline 456 + 8 new specs; 94 files)
+  - `npm run check:mockup-fidelity` → exit 0 (44 lines vs baseline 44)
+  - `npm run lint` → exit 0
+
+### Drift findings Day 1-2
+
+| ID | Finding | Implication | Resolution |
+|----|---------|-------------|------------|
+| **D-DAY1-1** | TypeScript `events.forEach((ev, i) => {...})` flow-narrows `current: MutableBucket \| null` to `never` after the multi-branch assignment inside the callback, blocking `current.events.push(ev)` | Pure TS quirk; not a runtime bug | Switched to imperative `for (let i = 0; i < events.length; i++)` loop which preserves narrowing across iteration body |
+| **D-DAY2-1** | Initial Day 1 implementation hit 17 lint errors (14× missing `eslint-disable-next-line no-restricted-syntax` for inline-style constant refs in new widgets + 2× a11y `jsx-a11y/no-static-element-interactions` + `click-events-have-key-events` on clickable `event-row` div + 1× `// eslint-disable` line-comment in JSX text-only context that doesn't suppress the next JSX line) | Mechanical — all 17 fixable without behavior change | Added missing `{/* eslint-disable */}` JSX comments to all 14 new inline-style sites + added `role="button"` / `tabIndex={0}` / `onKeyDown` Enter/Space handler to clickable event-row when `onSelect` provided + converted stray line-comment to JSX block-comment form |
+| **D-DAY2-2** | HEX_OKLCH_BASELINE rose 41→44 (estimated +5-10 in Day 0 D-DAY0-6 — actual was +3; Domain B Day 3 may push higher) | Within estimate range | Baseline bumped with detailed MHist rationale per Sprint 57.30/57.35 precedent; D-DAY3-N may bump further |
+| **D-DAY2-3** | Initial fixture spec mapping decision: 24 mockup events → 18 production typed events (vs estimated 14-22 in plan §3.1) — within range | OK | Documented full mapping table in fixture file header `Description:` (10 typed event types used; memory.* + loop.iter_* + user_message + hitl.policy_check omitted with notes) |
+
+### Scope shift summary
+
+- Net scope impact: ~0% (all 4 D-DAY1-2 findings ALIGN with plan; mechanical only)
+
+### Day 1-2 wall-clock ~3 hr (combined Day 1 fixture+playback+filter ~1.5 hr + Day 2 inspector+a11y+spec ~1.5 hr)
+
+Vs plan §8 bottom-up Day 1 ~2 hr + Day 2 ~2-2.5 hr (combined ~4-4.5 hr) — about 30% under bottom-up. Within calibration multiplier 0.60 expectation.
+
+### Notes
+
+- Implementation decision: NO sub-component extraction (`_components/LoopPlaybackHeader.tsx` etc.). LoopVisualizer.tsx finalized at ~700 lines (still readable; agent decision per plan §4 allowance "if exceeds ~500 lines"). Cleaner single-file diff for review.
+- Cursor auto-advance logic: when live `rawEvents` grow & cursor was at/beyond previous length, cursor advances to new length so live mode "just works" without operator intervention; if operator scrubbed back, cursor stays put.
+- Inspector selection uses `events` (full array), not `filteredEvents`, so selection survives filter toggling. Returns undefined when selectedIndex points to a filtered-out event — inspector then shows empty-state until next row click.
+
