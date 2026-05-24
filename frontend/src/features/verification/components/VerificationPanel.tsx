@@ -37,6 +37,7 @@ export function VerificationPanel(): JSX.Element | null {
   return (
     <div
       className="p-3"
+      // eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015)
       style={{ borderTop: "1px solid var(--border)", background: "var(--bg-2)" }}
       data-testid="verification-panel"
       aria-label="Verification panel"
@@ -51,6 +52,7 @@ export function VerificationPanel(): JSX.Element | null {
             <li
               key={`${ev.type}-${idx}`}
               className="card flex items-start gap-2 p-2"
+              // eslint-disable-next-line no-restricted-syntax -- mockup verbatim border-left + var(--success|--danger); mockup-fidelity (FIX-015)
               style={{
                 borderLeft: `4px solid ${passed ? "var(--success)" : "var(--danger)"}`,
               }}
@@ -65,6 +67,7 @@ export function VerificationPanel(): JSX.Element | null {
                   <VerifierTypeBadge type={ev.data.verifier_type} />
                 </div>
                 {!passed && ev.data.reason && (
+                  /* eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015) */
                   <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                     {ev.data.reason}
                   </p>

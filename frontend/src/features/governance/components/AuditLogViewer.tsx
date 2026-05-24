@@ -119,6 +119,7 @@ export function AuditLogViewer() {
       </div>
 
       {/* Filter form */}
+      {/* eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015) */}
       <div className="card" style={{ padding: 16 }}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
           <label className="field">
@@ -183,6 +184,7 @@ export function AuditLogViewer() {
         <div
           role="alert"
           className="card"
+          // eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015)
           style={{
             padding: 12,
             borderColor: "oklch(from var(--danger) l c h / 0.4)",
@@ -196,6 +198,7 @@ export function AuditLogViewer() {
       )}
 
       {/* Table */}
+      {/* eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015) */}
       <div className="card" style={{ padding: 0, overflowX: "auto" }}>
         <table className="table">
           <thead>
@@ -220,12 +223,14 @@ export function AuditLogViewer() {
 
             {!isLoading && items.length === 0 && (
               <tr>
+                {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim layout (text-align/padding); mockup-fidelity (FIX-015) */}
                 <td colSpan={6} className="subtle" style={{ textAlign: "center", padding: "24px 12px" }}>
                   No audit log entries match the current filter.{" "}
                   <button
                     type="button"
                     onClick={reset}
                     className="font-semibold hover:underline"
+                    // eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015)
                     style={{ color: "var(--primary)", background: "transparent", border: 0, cursor: "pointer" }}
                   >
                     Reset filters
@@ -243,14 +248,17 @@ export function AuditLogViewer() {
                   <td>
                     {entry.resource_type}
                     {entry.resource_id && (
+                      /* eslint-disable-next-line no-restricted-syntax -- mockup verbatim font-size (11px); mockup-fidelity (FIX-015) */
                       <span className="subtle ml-1" style={{ fontSize: 11 }}>
                         ({entry.resource_id})
                       </span>
                     )}
                   </td>
+                  {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim font-size (11px); mockup-fidelity (FIX-015) */}
                   <td className="mono" style={{ fontSize: 11 }}>
                     {entry.user_id ?? <span className="subtle">—</span>}
                   </td>
+                  {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim font-size (11px); mockup-fidelity (FIX-015) */}
                   <td className="mono" style={{ fontSize: 11 }}>
                     {_shortHash(entry.current_log_hash)}
                   </td>
@@ -261,11 +269,13 @@ export function AuditLogViewer() {
       </div>
 
       {/* Pagination footer */}
+      {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim font-size (13px); mockup-fidelity (FIX-015) */}
       <div className="spread subtle" style={{ fontSize: 13 }}>
         <span>
           {items.length === 0 ? "No entries" : `Showing ${rangeStart}–${rangeEnd}`}
           {hasMore && <span className="ml-1">(more available)</span>}
         </span>
+        {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim gap (8px); mockup-fidelity (FIX-015) */}
         <div className="row" style={{ gap: 8 }}>
           <button
             type="button"

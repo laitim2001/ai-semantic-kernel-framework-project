@@ -114,6 +114,7 @@ export function DecisionModal({ approval, onClose }: Props) {
               <span className={ROW_LABEL}>Arguments:</span>
               <pre
                 className="m-0 p-1.5 text-[0.85rem]"
+                // eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015)
                 style={{
                   background: "var(--bg-2)",
                   border: "1px solid var(--border)",
@@ -139,6 +140,7 @@ export function DecisionModal({ approval, onClose }: Props) {
         </label>
 
         {decideM.error && (
+          /* eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015) */
           <div role="alert" className="text-[0.9rem]" style={{ color: "var(--danger)" }}>
             {decideM.error.message}
           </div>

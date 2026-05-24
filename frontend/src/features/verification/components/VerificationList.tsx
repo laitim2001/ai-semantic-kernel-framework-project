@@ -106,6 +106,7 @@ export function VerificationList(): JSX.Element {
       <form
         onSubmit={handleApply}
         className="card flex flex-wrap items-end gap-3"
+        // eslint-disable-next-line no-restricted-syntax -- mockup verbatim padding (12px); mockup-fidelity (FIX-015)
         style={{ padding: 12 }}
       >
         <label className="field">
@@ -175,6 +176,7 @@ export function VerificationList(): JSX.Element {
       {query.isError && (
         <div
           className="card"
+          // eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015)
           style={{
             padding: 12,
             borderColor: "oklch(from var(--danger) l c h / 0.4)",
@@ -196,6 +198,7 @@ export function VerificationList(): JSX.Element {
       )}
 
       {query.isSuccess && (query.data.items ?? []).length === 0 && (
+        /* eslint-disable-next-line no-restricted-syntax -- mockup verbatim layout (padding/text-align); mockup-fidelity (FIX-015) */
         <div className="card" style={{ padding: 24, textAlign: "center" }}>
           <p className="subtle text-sm">No verification entries match the filters.</p>
           <button
@@ -211,6 +214,7 @@ export function VerificationList(): JSX.Element {
 
       {query.isSuccess && (query.data.items ?? []).length > 0 && (
         <>
+          {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim layout (padding/overflow); mockup-fidelity (FIX-015) */}
           <div className="card" style={{ padding: 0, overflowX: "auto" }}>
             <table className="table" data-testid="verification-table">
               <thead>
@@ -232,9 +236,11 @@ export function VerificationList(): JSX.Element {
                     }
                     data-testid={`row-${item.id}`}
                   >
+                    {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim font-size (11px); mockup-fidelity (FIX-015) */}
                     <td className="subtle" style={{ fontSize: 11 }}>
                       {new Date(item.created_at_ms).toLocaleString()}
                     </td>
+                    {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim font-size (11px); mockup-fidelity (FIX-015) */}
                     <td className="mono" style={{ fontSize: 11 }}>
                       {item.session_id.slice(0, 8)}…
                     </td>
@@ -247,6 +253,7 @@ export function VerificationList(): JSX.Element {
                         {item.passed ? "Passed" : "Failed"}
                       </span>
                     </td>
+                    {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim font-size (11px); mockup-fidelity (FIX-015) */}
                     <td className="subtle" style={{ fontSize: 11 }}>
                       {_truncate(item.reason, REASON_SNIPPET_MAX)}
                     </td>
@@ -257,10 +264,12 @@ export function VerificationList(): JSX.Element {
           </div>
 
           {/* Pagination footer */}
+          {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim font-size (13px); mockup-fidelity (FIX-015) */}
           <div className="spread" style={{ fontSize: 13 }}>
             <span className="subtle">
               Showing {offset + 1}–{offset + (query.data.items ?? []).length} of {query.data.total}
             </span>
+            {/* eslint-disable-next-line no-restricted-syntax -- mockup verbatim gap (8px); mockup-fidelity (FIX-015) */}
             <div className="row" style={{ gap: 8 }}>
               <button
                 type="button"

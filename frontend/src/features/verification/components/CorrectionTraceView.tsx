@@ -68,6 +68,7 @@ export function CorrectionTraceView(): JSX.Element {
 
   if (sessionId === null) {
     return (
+      // eslint-disable-next-line no-restricted-syntax -- mockup verbatim layout (padding/text-align); mockup-fidelity (FIX-015)
       <div className="card" style={{ padding: 24, textAlign: "center" }} data-testid="trace-no-session">
         <p className="subtle text-sm">
           Select a session from the Recent tab to view its correction trace.
@@ -91,6 +92,7 @@ export function CorrectionTraceView(): JSX.Element {
     return (
       <div
         className="card"
+        // eslint-disable-next-line no-restricted-syntax -- mockup verbatim layout (padding/text-align); mockup-fidelity (FIX-015)
         style={{ padding: 24, textAlign: "center" }}
         data-testid={is404 ? "trace-empty" : "trace-error"}
       >
@@ -120,6 +122,7 @@ export function CorrectionTraceView(): JSX.Element {
                 <li
                   key={entry.id}
                   className="card p-3"
+                  // eslint-disable-next-line no-restricted-syntax -- mockup verbatim border-left + var(--success|--danger); mockup-fidelity (FIX-015)
                   style={{
                     borderLeft: `4px solid ${entry.passed ? "var(--success)" : "var(--danger)"}`,
                   }}
@@ -138,6 +141,7 @@ export function CorrectionTraceView(): JSX.Element {
                     )}
                   </div>
                   {!entry.passed && entry.reason && (
+                    /* eslint-disable-next-line no-restricted-syntax -- mockup CSS var consumed from styles-mockup.css verbatim; mockup-fidelity (FIX-015) */
                     <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                       {entry.reason}
                     </p>
