@@ -1,44 +1,48 @@
 /**
  * File: frontend/src/pages/auth/mfa/index.tsx
- * Purpose: Two-factor verification — TOTP 6-digit + WebAuthn UI (Roll-own per Sprint 57.23 Q3).
+ * Purpose: Two-factor verification — verbatim re-point per mockup AuthMFA (Sprint 57.35 US-D2).
  * Category: Frontend / pages / auth
- * Scope: Phase 57 / Sprint 57.23 US-D2 (NEW route)
+ * Scope: Phase 57 / Sprint 57.23 US-D2 (initial NEW route) → Sprint 57.35 US-D2 (Phase-2 verbatim-CSS re-point)
  *
  * Description:
- *   Sprint 57.23 US-D2 NEW per `reference/design-mockups/page-auth-extras.jsx:249-371`:
- *     - AuthShell wrapped with footer ("Locked out? Use recovery code")
- *     - 48×48 warning-alpha key-icon avatar + title "Two-factor verification" + dynamic subtitle
- *     - Tab selector: Authenticator (default) / Security Key
- *     - TOTP tab: 6-digit input grid (44×52 mono 22px) with useRef auto-focus advance,
- *       Backspace step-back, paste-6-digits split, filled boxes get primary/10 border-primary,
- *       static "code refreshes in 23s" countdown, Verify button disabled until full
- *     - WebAuthn tab: 88×88 conic-gradient spinning ring + Shield icon + hint + Simulate button
- *     - Recovery code link (pointer-events-none + tooltip — Phase 58+ AD-Auth-MFA-Recovery)
+ *   Sprint 57.35 US-D2 verbatim re-point per `reference/design-mockups/page-auth-extras.jsx:248-371`:
+ *     - Drop shadcn Card/CardContent/Button + lucide-react Clock/KeyRound/ShieldCheck/AlertTriangle/ArrowRight
+ *     - Use mockup-ui Card + Button + Icon (keys/shield/clock/warn/arrow_right)
+ *     - Verbatim .col + .row + .muted + .mono + .hr + .input classes
+ *     - 48×48 warning-alpha key avatar + tab selector + 6-digit TOTP grid +
+ *       WebAuthn 88×88 conic-gradient ring — all inline-style literals verbatim per mockup
+ *     - Preserve Sprint 57.23 US-D2 Q3 roll-own UI behavior:
+ *       · 6 input refs with useRef array + auto-focus advance + Backspace step-back +
+ *         onPaste split + filled-state visual primary border (var(--primary) bg + border)
+ *       · WebAuthn Simulate button → POST /api/v1/mfa/verify {simulated: true}
  *
- *   Backend stub:
- *     - POST /api/v1/mfa/verify expected 501; surfaces demo-banner error
- *     - AD-Auth-MFA-Backend-IAM-Block-C-Phase58 carryover for real implementation
- *     - "MFA backend wire pending Phase 58+ IAM Block C" demo banner above tabs
+ *   Backend stub behavior preserved (Sprint 57.23 US-D2):
+ *     - POST /api/v1/mfa/verify expected 501 → errorStubbed surface
+ *     - AD-Auth-MFA-Backend-IAM-Block-C-Phase58 carryover
  *
- *   On success (Phase 58+): navigate to /auth/callback.
- *
- *   Inline-style escape hatch (1 instance — STYLE.md §3):
- *     - WebAuthn conic-gradient spinning ring (Tailwind cannot express conic-gradient
- *       with --primary token + custom animation duration)
+ *   Inline-style escape hatch instances (STYLE.md §1, all verbatim mockup literals):
+ *     - 48×48 key avatar circle
+ *     - Tab selector buttons
+ *     - 6-digit input boxes (44×52 mono 22px + filled-state primary tint)
+ *     - 88×88 WebAuthn conic-gradient spinning ring (Sprint 57.23 §3 hatch retained)
  *
  * Created: 2026-05-18 (Sprint 57.23 US-D2)
+ * Last Modified: 2026-05-24
  *
  * Modification History:
+ *   - 2026-05-24: Sprint 57.35 US-D2 — verbatim re-point per page-auth-extras.jsx:248-371 (closes Sprint 57.23 vintage HSL-translation drift)
  *   - 2026-05-18: Initial creation (Sprint 57.23 US-D2) — mockup-direct port of AuthMFA
  *
  * Related:
  *   - backend/src/api/v1/mfa.py (Phase 58+ NEW; AD-IAM-Block-C-Phase58)
- *   - frontend/src/components/AuthShell.tsx (Sprint 57.23 mockup full-screen centered)
+ *   - frontend/src/components/AuthShell.tsx (Sprint 57.35 verbatim re-point)
+ *   - frontend/src/components/mockup-ui.tsx (Card/Button/Icon)
  *   - frontend/src/i18n/locales/{en,zh-TW}/auth.json (auth.mfa.* namespace)
- *   - reference/design-mockups/page-auth-extras.jsx:249-371 (AuthMFA canonical visual source)
+ *   - reference/design-mockups/page-auth-extras.jsx:248-371 (AuthMFA canonical visual source)
  */
 
-import { AlertTriangle, ArrowRight, Clock, KeyRound, ShieldCheck } from "lucide-react";
+/* eslint-disable no-restricted-syntax -- verbatim re-point: inline-style literals (avatar + tab selector + TOTP grid + WebAuthn conic spinner) copied byte-for-byte from mockup page-auth-extras.jsx:248-371 (STYLE.md §1 escape hatch + frontend-mockup-fidelity.md verbatim-CSS rule) */
+
 import {
   type ChangeEvent,
   type ClipboardEvent,
@@ -51,7 +55,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { AuthShell } from "@/components/AuthShell";
-import { Button, Card, CardContent } from "@/components/ui";
+import { Button, Card, Icon } from "@/components/mockup-ui";
 import { fetchWithAuth } from "@/features/auth/services/authService";
 
 type Method = "totp" | "webauthn";
@@ -63,7 +67,6 @@ export default function MFAPage(): JSX.Element {
   const [code, setCode] = useState<string[]>(["", "", "", "", "", ""]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // useRef array for 6 inputs
   const inputRefs = useRef<Array<HTMLInputElement | null>>([null, null, null, null, null, null]);
 
   const filled = code.every((v) => v !== "");
@@ -91,7 +94,6 @@ export default function MFAPage(): JSX.Element {
       next[i] = pasted[i];
     }
     setCode(next);
-    // Focus the next empty slot (or last)
     const focusIdx = Math.min(pasted.length, 5);
     inputRefs.current[focusIdx]?.focus();
   };
@@ -119,7 +121,6 @@ export default function MFAPage(): JSX.Element {
   };
 
   const simulateWebauthn = async (): Promise<void> => {
-    // DEV-only fallback per Q3 Roll-own — simulates platform authenticator success
     setBusy(true);
     setError(null);
     try {
@@ -145,162 +146,266 @@ export default function MFAPage(): JSX.Element {
       footer={
         <span>
           {t("mfa.foot")}{" "}
-          <a href="#recovery" className="text-primary hover:underline">
+          <a
+            href="#recovery"
+            style={{ color: "var(--primary)", textDecoration: "none" }}
+          >
             {t("mfa.help")}
           </a>
         </span>
       }
     >
       <Card>
-        <CardContent className="p-6">
-          <form onSubmit={verify} className="flex flex-col gap-4">
-            {/* Header (mockup L264-279) */}
-            <div className="flex flex-col items-center gap-2 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/15 text-warning">
-                <KeyRound size={22} aria-hidden />
+        <form onSubmit={verify} className="col" style={{ gap: 16 }}>
+          {/* Header — verbatim mockup L264-279 */}
+          <div
+            className="col"
+            style={{ gap: 8, alignItems: "center", textAlign: "center" }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                background: "oklch(from var(--warning) l c h / 0.14)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--warning)",
+              }}
+              aria-hidden
+            >
+              <Icon name="keys" size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+                {t("mfa.title")}
               </div>
-              <div>
-                <div className="mb-1 text-base font-semibold">{t("mfa.title")}</div>
-                <div className="text-[12.5px] text-fg-muted">
-                  {method === "totp" ? t("mfa.totpSub") : t("mfa.webauthnSub")}
-                </div>
+              <div className="muted" style={{ fontSize: 12.5 }}>
+                {method === "totp" ? t("mfa.totpSub") : t("mfa.webauthnSub")}
               </div>
             </div>
+          </div>
 
-            {/* AP-2 demo banner */}
-            <div
-              role="note"
-              className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-[11px] text-warning"
-            >
+          {/* AP-2 demo banner */}
+          <div className="hitl-card" data-severity="risk-medium" style={{ margin: 0 }} role="note">
+            <div className="hitl-card-bar" />
+            <div className="hitl-head">
+              <span className="icon-ring">
+                <Icon name="warn" size={13} />
+              </span>
               {t("mfa.demoBanner")}
             </div>
+          </div>
 
-            {/* Tab selector (mockup L281-304) */}
-            <div
-              role="tablist"
-              aria-label={t("mfa.title")}
-              className="flex flex-row gap-1.5 rounded-md bg-bg-2 p-1"
+          {/* Tab selector — verbatim mockup L281-304 */}
+          <div
+            role="tablist"
+            aria-label={t("mfa.title")}
+            className="row"
+            style={{
+              gap: 6,
+              padding: 4,
+              background: "var(--bg-2)",
+              borderRadius: "var(--radius-sm)",
+            }}
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={method === "totp"}
+              onClick={() => setMethod("totp")}
+              style={{
+                flex: 1,
+                padding: "6px 10px",
+                borderRadius: 4,
+                background: method === "totp" ? "var(--bg)" : "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--fg)",
+                fontSize: 12,
+                fontWeight: method === "totp" ? 500 : 400,
+              }}
             >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={method === "totp"}
-                onClick={() => setMethod("totp")}
-                className={
-                  method === "totp"
-                    ? "flex flex-1 items-center justify-center gap-1.5 rounded bg-background px-2.5 py-1.5 text-[12px] font-medium text-foreground"
-                    : "flex flex-1 items-center justify-center gap-1.5 rounded bg-transparent px-2.5 py-1.5 text-[12px] text-foreground"
-                }
-              >
-                <KeyRound size={11} aria-hidden />
-                {t("mfa.tabTotp")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={method === "webauthn"}
-                onClick={() => setMethod("webauthn")}
-                className={
-                  method === "webauthn"
-                    ? "flex flex-1 items-center justify-center gap-1.5 rounded bg-background px-2.5 py-1.5 text-[12px] font-medium text-foreground"
-                    : "flex flex-1 items-center justify-center gap-1.5 rounded bg-transparent px-2.5 py-1.5 text-[12px] text-foreground"
-                }
-              >
-                <ShieldCheck size={11} aria-hidden />
-                {t("mfa.tabWebauthn")}
-              </button>
+              <Icon
+                name="keys"
+                size={11}
+                style={{ verticalAlign: -1, marginRight: 4 }}
+              />
+              {t("mfa.tabTotp")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={method === "webauthn"}
+              onClick={() => setMethod("webauthn")}
+              style={{
+                flex: 1,
+                padding: "6px 10px",
+                borderRadius: 4,
+                background: method === "webauthn" ? "var(--bg)" : "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--fg)",
+                fontSize: 12,
+                fontWeight: method === "webauthn" ? 500 : 400,
+              }}
+            >
+              <Icon
+                name="shield"
+                size={11}
+                style={{ verticalAlign: -1, marginRight: 4 }}
+              />
+              {t("mfa.tabWebauthn")}
+            </button>
+          </div>
+
+          {/* Error surface */}
+          {error && (
+            <div
+              role="alert"
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+                padding: 10,
+                borderRadius: 6,
+                border: "1px solid oklch(from var(--danger) l c h / 0.4)",
+                background: "oklch(from var(--danger) l c h / 0.1)",
+                color: "var(--danger)",
+                fontSize: 12.5,
+              }}
+            >
+              <Icon name="warn" size={14} style={{ marginTop: 1, flexShrink: 0 }} />
+              <span>{error}</span>
             </div>
+          )}
 
-            {/* Error surface */}
-            {error && (
+          {/* TOTP panel — verbatim mockup L306-337 */}
+          {method === "totp" && (
+            <div className="col" style={{ gap: 12 }} role="tabpanel">
+              <div className="row" style={{ gap: 6, justifyContent: "center" }}>
+                {code.map((v, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => {
+                      inputRefs.current[i] = el;
+                    }}
+                    value={v}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      updateDigit(i, e.target.value)
+                    }
+                    onKeyDown={(e) => handleKeyDown(i, e)}
+                    onPaste={i === 0 ? handlePaste : undefined}
+                    inputMode="numeric"
+                    maxLength={1}
+                    aria-label={t("mfa.digitLabel", { idx: i + 1 })}
+                    className="input mono"
+                    style={{
+                      width: 44,
+                      height: 52,
+                      textAlign: "center",
+                      fontSize: 22,
+                      fontWeight: 500,
+                      background: v
+                        ? "oklch(from var(--primary) l c h / 0.10)"
+                        : "var(--bg-1)",
+                      borderColor: v ? "var(--primary)" : "var(--border)",
+                    }}
+                  />
+                ))}
+              </div>
               <div
-                role="alert"
-                className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+                className="row"
+                style={{
+                  justifyContent: "center",
+                  fontSize: 11,
+                  color: "var(--fg-subtle)",
+                  gap: 4,
+                }}
               >
-                <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                <span>{error}</span>
+                <Icon name="clock" size={11} />
+                <span className="mono">{t("mfa.refreshIn")}</span>
               </div>
-            )}
+              <Button
+                type="submit"
+                variant="primary"
+                data-size="lg"
+                iconRight="arrow_right"
+                disabled={!filled || busy}
+              >
+                {busy ? t("mfa.verifying") : t("mfa.verify")}
+              </Button>
+            </div>
+          )}
 
-            {/* TOTP panel (mockup L306-337) */}
-            {method === "totp" && (
-              <div className="flex flex-col gap-3" role="tabpanel">
-                <div className="flex flex-row justify-center gap-1.5">
-                  {code.map((v, i) => (
-                    <input
-                      key={i}
-                      ref={(el) => {
-                        inputRefs.current[i] = el;
-                      }}
-                      value={v}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => updateDigit(i, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(i, e)}
-                      onPaste={i === 0 ? handlePaste : undefined}
-                      inputMode="numeric"
-                      maxLength={1}
-                      aria-label={t("mfa.digitLabel", { idx: i + 1 })}
-                      className={
-                        v
-                          ? "h-[52px] w-11 rounded-md border border-primary bg-primary/10 text-center font-mono text-[22px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          : "h-[52px] w-11 rounded-md border border-border bg-bg-1 text-center font-mono text-[22px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      }
-                    />
-                  ))}
-                </div>
-                <div className="flex flex-row items-center justify-center gap-1 text-[11px] text-fg-subtle">
-                  <Clock size={11} aria-hidden />
-                  <span className="font-mono">{t("mfa.refreshIn")}</span>
-                </div>
-                <Button type="submit" disabled={!filled || busy}>
-                  {busy ? t("mfa.verifying") : t("mfa.verify")}
-                  <ArrowRight size={16} className="ml-1" />
-                </Button>
-              </div>
-            )}
-
-            {/* WebAuthn panel (mockup L339-361) */}
-            {method === "webauthn" && (
-              <div className="flex flex-col items-center gap-3 py-4" role="tabpanel">
+          {/* WebAuthn panel — verbatim mockup L339-361 */}
+          {method === "webauthn" && (
+            <div
+              className="col"
+              style={{ gap: 12, alignItems: "center", padding: "16px 0" }}
+              role="tabpanel"
+            >
+              <div
+                data-testid="webauthn-ring"
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: "50%",
+                  background:
+                    "conic-gradient(from 0deg, var(--primary), oklch(from var(--primary) l c h / 0.3))",
+                  animation: "spin 2.5s linear infinite",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <div
-                  data-testid="webauthn-ring"
-                  className="flex h-[88px] w-[88px] items-center justify-center rounded-full"
-                  // eslint-disable-next-line no-restricted-syntax -- STYLE.md §3 escape hatch: Tailwind cannot express conic-gradient with --primary token (Sprint 57.23 US-D2 mockup AuthMFA L342-345)
                   style={{
-                    background:
-                      "conic-gradient(from 0deg, var(--primary), var(--primary-soft-2))",
-                    animation: "spin 2.5s linear infinite",
+                    width: 76,
+                    height: 76,
+                    borderRadius: "50%",
+                    background: "var(--bg-1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--primary)",
                   }}
                 >
-                  <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full bg-bg-1 text-primary">
-                    <ShieldCheck size={32} aria-hidden />
-                  </div>
+                  <Icon name="shield" size={32} />
                 </div>
-                <div className="max-w-[280px] text-center text-[12px] text-fg-muted">
-                  {t("mfa.webauthnHint")}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => void simulateWebauthn()}
-                  disabled={busy}
-                >
-                  {t("mfa.simulate")}
-                </Button>
               </div>
-            )}
-
-            {/* Recovery link (mockup L363-366) */}
-            <div className="h-px bg-border" aria-hidden />
-            <div className="flex flex-row justify-center text-[11.5px]">
-              <span
-                title={t("mfa.recoveryTooltip")}
-                className="pointer-events-none text-fg-subtle"
+              <div
+                className="muted"
+                style={{ fontSize: 12, textAlign: "center", maxWidth: 280 }}
               >
-                {t("mfa.recoveryCode")}
-              </span>
+                {t("mfa.webauthnHint")}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => void simulateWebauthn()}
+                disabled={busy}
+              >
+                {t("mfa.simulate")}
+              </Button>
             </div>
-          </form>
-        </CardContent>
+          )}
+
+          {/* Recovery link — verbatim mockup L363-366 */}
+          <div className="hr" style={{ margin: 0 }} />
+          <div
+            className="row"
+            style={{ justifyContent: "center", fontSize: 11.5 }}
+          >
+            <span
+              title={t("mfa.recoveryTooltip")}
+              style={{ color: "var(--fg-subtle)", pointerEvents: "none" }}
+            >
+              {t("mfa.recoveryCode")}
+            </span>
+          </div>
+        </form>
       </Card>
     </AuthShell>
   );

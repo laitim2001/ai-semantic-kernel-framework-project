@@ -1,46 +1,46 @@
 /**
  * File: frontend/src/pages/auth/expired/index.tsx
- * Purpose: Session-expired splash — surfaces last-activity / session_id / reason + 2 recovery CTAs (mockup AuthExpired direct port).
+ * Purpose: Session-expired splash — verbatim re-point per mockup AuthExpired (Sprint 57.35 US-D3).
  * Category: Frontend / pages / auth
- * Scope: Phase 57 / Sprint 57.23 US-D3 (NEW route)
+ * Scope: Phase 57 / Sprint 57.23 US-D3 (initial NEW route) → Sprint 57.35 US-D3 (Phase-2 verbatim-CSS re-point)
  *
  * Description:
- *   Sprint 57.23 US-D3 NEW per `reference/design-mockups/page-auth-extras.jsx:374-416`:
- *     - AuthShell wrapped (no footer per mockup L375 — AuthShellX with empty footer slot)
- *     - 56×56 warning-alpha clock-icon avatar + title "Your session expired" + subtitle (320px max)
- *     - 3-row metadata grid: Last activity / Session ID / Reason (Badge tone=warning)
- *     - 2 buttons row: "Sign in again" (outline) + "Resume session" (primary with arrow)
- *     - Data-preservation hint below (11px subtle, 320px max)
+ *   Sprint 57.35 US-D3 verbatim re-point per `reference/design-mockups/page-auth-extras.jsx:373-416`:
+ *     - Drop shadcn Card/CardContent/Button/Badge + lucide-react Clock/ArrowRight
+ *     - Use mockup-ui Card + Button + Badge + Icon (clock/arrow_right)
+ *     - Verbatim .col + .row + .muted + .subtle + .mono + .spread classes
+ *     - 56×56 warning-alpha clock avatar inline-style verbatim per mockup L378-384
+ *     - 3-row metadata grid inline-style verbatim per mockup L390-403
+ *     - Badge tone="warning" for reason (was generic Badge in Sprint 57.23)
  *
- *   Query param contract (consumed via useSearchParams):
- *     - ?session_id=<id>  → displayed in metadata grid; falls back to fixture sess_8a2f1c3
- *     - ?reason=<reason>  → displayed in Badge; falls back to fixture jwt_expired · 24h max
- *     - ?next=<path>      → forwarded to /auth/callback?next= on "Resume session" click
+ *   Query param contract preserved:
+ *     - ?session_id=<id> → metadata grid (fallback FIXTURE_SESSION_ID)
+ *     - ?reason=<reason> → Badge (fallback FIXTURE_REASON)
+ *     - ?next=<path> → forwarded to /auth/callback?next= on "Resume session"
  *
- *   Backend invariants:
- *     - This page is purely client-side splash. JWT expiry is the trigger; backend has already
- *       returned 401 from a previous request. No fetch on mount.
- *     - "Sign in again" → /auth/login (forces fresh SAML / OIDC flow)
- *     - "Resume session" → /auth/callback?next=<original> (attempts silent refresh via existing
- *       authBootstrap mechanism, then restores original path if successful)
+ *   No backend fetch (client-side splash; previous request already returned 401).
  *
  * Created: 2026-05-18 (Sprint 57.23 US-D3)
+ * Last Modified: 2026-05-24
  *
  * Modification History:
+ *   - 2026-05-24: Sprint 57.35 US-D3 — verbatim re-point per page-auth-extras.jsx:373-416 (closes Sprint 57.23 vintage HSL-translation drift); Badge tone='warning' for reason matches mockup L401
  *   - 2026-05-18: Initial creation (Sprint 57.23 US-D3) — mockup-direct port of AuthExpired
  *
  * Related:
- *   - frontend/src/components/AuthShell.tsx (Sprint 57.23 mockup full-screen centered)
+ *   - frontend/src/components/AuthShell.tsx (Sprint 57.35 verbatim re-point)
+ *   - frontend/src/components/mockup-ui.tsx (Card/Button/Badge/Icon)
  *   - frontend/src/i18n/locales/{en,zh-TW}/auth.json (auth.expired.* namespace)
- *   - reference/design-mockups/page-auth-extras.jsx:374-416 (AuthExpired canonical visual source)
+ *   - reference/design-mockups/page-auth-extras.jsx:373-416 (AuthExpired canonical visual source)
  */
 
-import { ArrowRight, Clock } from "lucide-react";
+/* eslint-disable no-restricted-syntax -- verbatim re-point: inline-style literals (avatar + metadata grid + buttons row + container) copied byte-for-byte from mockup page-auth-extras.jsx:373-416 (STYLE.md §1 escape hatch + frontend-mockup-fidelity.md verbatim-CSS rule) */
+
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { AuthShell } from "@/components/AuthShell";
-import { Badge, Button, Card, CardContent } from "@/components/ui";
+import { Badge, Button, Card, Icon } from "@/components/mockup-ui";
 
 const FIXTURE_LAST_ACTIVITY = "14h 02m ago";
 const FIXTURE_SESSION_ID = "sess_8a2f1c3";
@@ -64,54 +64,104 @@ export default function ExpiredPage(): JSX.Element {
   return (
     <AuthShell>
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col items-center gap-4 p-2 text-center">
-            {/* Icon (mockup L378-384) */}
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-warning/15 text-warning">
-              <Clock size={26} aria-hidden />
-            </div>
+        <div
+          className="col"
+          style={{ gap: 16, alignItems: "center", textAlign: "center", padding: 8 }}
+        >
+          {/* Icon — verbatim mockup L378-384 */}
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              background: "oklch(from var(--warning) l c h / 0.14)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--warning)",
+            }}
+            aria-hidden
+          >
+            <Icon name="clock" size={26} />
+          </div>
 
-            {/* Title + subtitle (mockup L385-388) */}
-            <div>
-              <div className="mb-1.5 text-[17px] font-semibold">{t("expired.title")}</div>
-              <div className="mx-auto max-w-[320px] text-[13px] leading-[1.5] text-fg-muted">
-                {t("expired.subtitle")}
-              </div>
+          {/* Title + subtitle — verbatim mockup L385-388 */}
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 6 }}>
+              {t("expired.title")}
             </div>
-
-            {/* Metadata grid (mockup L390-403) */}
-            <div className="flex w-full flex-col rounded-md border border-border bg-bg-1">
-              <div className="flex flex-row items-center justify-between border-b border-border px-3 py-2 text-[11.5px]">
-                <span className="text-fg-muted">{t("expired.lastActivity")}</span>
-                <span className="font-mono">{FIXTURE_LAST_ACTIVITY}</span>
-              </div>
-              <div className="flex flex-row items-center justify-between border-b border-border px-3 py-2 text-[11.5px]">
-                <span className="text-fg-muted">{t("expired.sessionId")}</span>
-                <span className="font-mono text-fg-subtle">{sessionId}</span>
-              </div>
-              <div className="flex flex-row items-center justify-between px-3 py-2 text-[11.5px]">
-                <span className="text-fg-muted">{t("expired.reason")}</span>
-                <Badge>{reason}</Badge>
-              </div>
-            </div>
-
-            {/* Buttons row (mockup L405-408) */}
-            <div className="mt-1 flex w-full flex-row gap-2">
-              <Button variant="outline" onClick={signInAgain} className="flex-1">
-                {t("expired.signInAgain")}
-              </Button>
-              <Button onClick={resume} className="flex-1">
-                {t("expired.resume")}
-                <ArrowRight size={16} className="ml-1" />
-              </Button>
-            </div>
-
-            {/* Data hint (mockup L410-412) */}
-            <div className="mx-auto mt-0.5 max-w-[320px] text-[11px] leading-[1.5] text-fg-muted">
-              {t("expired.dataHint")}
+            <div
+              className="muted"
+              style={{ fontSize: 13, maxWidth: 320, lineHeight: 1.5 }}
+            >
+              {t("expired.subtitle")}
             </div>
           </div>
-        </CardContent>
+
+          {/* Metadata grid — verbatim mockup L390-403 */}
+          <div
+            className="col"
+            style={{
+              gap: 0,
+              alignSelf: "stretch",
+              background: "var(--bg-1)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-sm)",
+            }}
+          >
+            <div
+              className="spread"
+              style={{
+                padding: "8px 12px",
+                borderBottom: "1px solid var(--border)",
+                fontSize: 11.5,
+              }}
+            >
+              <span className="muted">{t("expired.lastActivity")}</span>
+              <span className="mono">{FIXTURE_LAST_ACTIVITY}</span>
+            </div>
+            <div
+              className="spread"
+              style={{
+                padding: "8px 12px",
+                borderBottom: "1px solid var(--border)",
+                fontSize: 11.5,
+              }}
+            >
+              <span className="muted">{t("expired.sessionId")}</span>
+              <span className="mono subtle">{sessionId}</span>
+            </div>
+            <div className="spread" style={{ padding: "8px 12px", fontSize: 11.5 }}>
+              <span className="muted">{t("expired.reason")}</span>
+              <Badge tone="warning">{reason}</Badge>
+            </div>
+          </div>
+
+          {/* Buttons row — verbatim mockup L405-408 */}
+          <div
+            className="row"
+            style={{ gap: 8, alignSelf: "stretch", marginTop: 4 }}
+          >
+            <Button variant="outline" onClick={signInAgain}>
+              {t("expired.signInAgain")}
+            </Button>
+            <Button
+              variant="primary"
+              iconRight="arrow_right"
+              onClick={resume}
+            >
+              {t("expired.resume")}
+            </Button>
+          </div>
+
+          {/* Data hint — verbatim mockup L410-412 */}
+          <div
+            className="muted"
+            style={{ fontSize: 11, marginTop: 2, maxWidth: 320, lineHeight: 1.5 }}
+          >
+            {t("expired.dataHint")}
+          </div>
+        </div>
       </Card>
     </AuthShell>
   );

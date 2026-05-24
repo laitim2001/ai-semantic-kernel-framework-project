@@ -1,45 +1,41 @@
 /**
  * File: frontend/src/pages/auth/invite/index.tsx
- * Purpose: Invite acceptance page — accept invite + set password before MFA (mockup AuthInvite direct port).
+ * Purpose: Invite acceptance page — verbatim re-point per mockup AuthInvite (Sprint 57.35 US-D1).
  * Category: Frontend / pages / auth
- * Scope: Phase 57 / Sprint 57.23 US-D1 (NEW route)
+ * Scope: Phase 57 / Sprint 57.23 US-D1 (initial NEW route) → Sprint 57.35 US-D1 (Phase-2 verbatim-CSS re-point)
  *
  * Description:
- *   Sprint 57.23 US-D1 NEW per `reference/design-mockups/page-auth-extras.jsx:191-246`:
- *     - AuthShell wrapped with footer ("Already a member? Sign in")
- *     - 56×56 primary-alpha user-icon avatar + title "You're invited to acme-prod" + subtitle
- *     - 4-row metadata grid: Tenant / Invited by / Role (Badge primary) / Expires
- *     - Full name + Set password fields with 12+ char hint
- *     - Accept invitation primary button
- *     - MFA notice shield-icon row below button
- *
- *   Backend stub:
- *     - GET /api/v1/invites/:token expected 501; falls back to fixture metadata
- *     - POST /api/v1/invites/:token/accept expected 501; surfaces demo-banner-style error
- *     - AD-Auth-Invite-Backend-IAM-Block-B-Phase58 carryover for real implementation
- *     - "Backend wire pending Phase 58+ IAM Block B" demo banner
- *
- *   On success (Phase 58+): navigate to /auth/mfa (mockup AuthInvite L235 flow continuation).
+ *   Sprint 57.35 US-D1 verbatim re-point per `reference/design-mockups/page-auth-extras.jsx:190-246`:
+ *     - Drop shadcn Card/CardContent/Button/Badge + lucide-react User/ArrowRight/ShieldCheck/AlertTriangle
+ *     - Use mockup-ui Card + Button + Badge + Field + Icon (user/warn/shield/arrow_right)
+ *     - Verbatim .col + .row + .muted + .subtle + .mono + .spread + .input classes
+ *     - 56×56 primary-alpha avatar inline-style verbatim per mockup L196-203
+ *     - Metadata grid 4 rows inline-style verbatim per mockup L210-227
+ *     - Backend stub behavior preserved (501 → fixture metadata fallback; accept POST 501 → errorStubbed)
  *
  * Created: 2026-05-18 (Sprint 57.23 US-D1)
+ * Last Modified: 2026-05-24
  *
  * Modification History:
+ *   - 2026-05-24: Sprint 57.35 US-D1 — verbatim re-point per page-auth-extras.jsx:190-246 (closes Sprint 57.23 vintage HSL-translation drift)
  *   - 2026-05-18: Initial creation (Sprint 57.23 US-D1) — mockup-direct port of AuthInvite
  *
  * Related:
  *   - backend/src/api/v1/invites.py (Phase 58+ NEW; AD-IAM-Block-B-Phase58)
- *   - frontend/src/components/AuthShell.tsx (Sprint 57.23 mockup full-screen centered)
+ *   - frontend/src/components/AuthShell.tsx (Sprint 57.35 verbatim re-point)
+ *   - frontend/src/components/mockup-ui.tsx (Card/Button/Badge/Field/Icon)
  *   - frontend/src/i18n/locales/{en,zh-TW}/auth.json (auth.invite.* namespace)
- *   - reference/design-mockups/page-auth-extras.jsx:191-246 (AuthInvite canonical visual source)
+ *   - reference/design-mockups/page-auth-extras.jsx:190-246 (AuthInvite canonical visual source)
  */
 
-import { AlertTriangle, ArrowRight, ShieldCheck, User } from "lucide-react";
+/* eslint-disable no-restricted-syntax -- verbatim re-point: inline-style literals (avatar circle + metadata grid rows + container) copied byte-for-byte from mockup page-auth-extras.jsx:190-246 (STYLE.md §1 escape hatch + frontend-mockup-fidelity.md verbatim-CSS rule) */
+
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { AuthShell } from "@/components/AuthShell";
-import { Badge, Button, Card, CardContent } from "@/components/ui";
+import { Badge, Button, Card, Field, Icon } from "@/components/mockup-ui";
 import { fetchWithAuth } from "@/features/auth/services/authService";
 
 interface InviteMetadata {
@@ -76,7 +72,6 @@ export default function InvitePage(): JSX.Element {
           const data = (await res.json()) as Partial<InviteMetadata>;
           setMetadata({ ...FIXTURE_METADATA, ...data });
         }
-        // 501 stub → keep fixture (no error surface; demo banner explains)
       } catch {
         // Network error → keep fixture
       }
@@ -114,106 +109,171 @@ export default function InvitePage(): JSX.Element {
       footer={
         <span>
           {t("invite.foot")}{" "}
-          <Link to="/auth/login" className="text-primary hover:underline">
+          <Link
+            to="/auth/login"
+            style={{ color: "var(--primary)", textDecoration: "none" }}
+          >
             {t("register.signIn")}
           </Link>
         </span>
       }
     >
       <Card>
-        <CardContent className="p-6">
-          <form onSubmit={accept} className="flex flex-col gap-4">
-            {/* Header (mockup L194-208) */}
-            <div className="flex flex-col items-center gap-2.5 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
-                <User size={26} aria-hidden />
+        <form onSubmit={accept} className="col" style={{ gap: 16 }}>
+          {/* Header — verbatim mockup L194-208 */}
+          <div
+            className="col"
+            style={{ gap: 10, alignItems: "center", textAlign: "center" }}
+          >
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                background: "oklch(from var(--primary) l c h / 0.14)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--primary)",
+              }}
+              aria-hidden
+            >
+              <Icon name="user" size={26} />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+                {t("invite.title")}
               </div>
-              <div>
-                <div className="mb-1 text-base font-semibold">{t("invite.title")}</div>
-                <div className="text-[12.5px] text-fg-muted">{t("invite.subtitle")}</div>
+              <div className="muted" style={{ fontSize: 12.5 }}>
+                {t("invite.subtitle")}
               </div>
             </div>
+          </div>
 
-            {/* AP-2 demo banner */}
-            <div
-              role="note"
-              className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-[11px] text-warning"
-            >
+          {/* AP-2 demo banner — verbatim per .hitl-card[data-severity="risk-medium"] pattern */}
+          <div className="hitl-card" data-severity="risk-medium" style={{ margin: 0 }} role="note">
+            <div className="hitl-card-bar" />
+            <div className="hitl-head">
+              <span className="icon-ring">
+                <Icon name="warn" size={13} />
+              </span>
               {t("invite.demoBanner")}
             </div>
+          </div>
 
-            {/* Metadata grid (mockup L210-227) */}
-            <div className="flex flex-col rounded-md border border-border bg-bg-1">
-              <div className="flex flex-row items-center justify-between border-b border-border px-3 py-2.5 text-[12px]">
-                <span className="text-fg-muted">{t("invite.tenant")}</span>
-                <span className="font-mono">{metadata.tenant}</span>
-              </div>
-              <div className="flex flex-row items-center justify-between border-b border-border px-3 py-2.5 text-[12px]">
-                <span className="text-fg-muted">{t("invite.invitedBy")}</span>
-                <span>{metadata.invitedBy}</span>
-              </div>
-              <div className="flex flex-row items-center justify-between border-b border-border px-3 py-2.5 text-[12px]">
-                <span className="text-fg-muted">{t("invite.role")}</span>
-                <Badge>{metadata.role}</Badge>
-              </div>
-              <div className="flex flex-row items-center justify-between px-3 py-2.5 text-[12px]">
-                <span className="text-fg-muted">{t("invite.expires")}</span>
-                <span className="font-mono text-fg-subtle">{metadata.expiresIn}</span>
-              </div>
+          {/* Metadata grid — verbatim mockup L210-227 */}
+          <div
+            className="col"
+            style={{
+              gap: 0,
+              background: "var(--bg-1)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-sm)",
+            }}
+          >
+            <div
+              className="spread"
+              style={{
+                padding: "10px 12px",
+                borderBottom: "1px solid var(--border)",
+                fontSize: 12,
+              }}
+            >
+              <span className="muted">{t("invite.tenant")}</span>
+              <span className="mono">{metadata.tenant}</span>
             </div>
-
-            {/* Error surface */}
-            {error && (
-              <div
-                role="alert"
-                className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-              >
-                <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Fields (mockup L229-234) */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="inv-name" className="text-[12px] font-medium text-fg-muted">
-                {t("invite.fullName")}
-              </label>
-              <input
-                id="inv-name"
-                value={fullName}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
-                placeholder="Jamie Liu"
-                className="h-9 rounded-md border border-border bg-background px-3 text-[13.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
+            <div
+              className="spread"
+              style={{
+                padding: "10px 12px",
+                borderBottom: "1px solid var(--border)",
+                fontSize: 12,
+              }}
+            >
+              <span className="muted">{t("invite.invitedBy")}</span>
+              <span>{metadata.invitedBy}</span>
             </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="inv-password" className="text-[12px] font-medium text-fg-muted">
-                {t("invite.password")}
-              </label>
-              <input
-                id="inv-password"
-                type="password"
-                value={password}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="h-9 rounded-md border border-border bg-background px-3 text-[13.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              <div className="text-[11px] text-fg-subtle">{t("invite.passwordHint")}</div>
+            <div
+              className="spread"
+              style={{
+                padding: "10px 12px",
+                borderBottom: "1px solid var(--border)",
+                fontSize: 12,
+              }}
+            >
+              <span className="muted">{t("invite.role")}</span>
+              <Badge tone="primary">{metadata.role}</Badge>
             </div>
-
-            {/* Accept button (mockup L236-238) */}
-            <Button type="submit" disabled={busy}>
-              {busy ? t("invite.accepting") : t("invite.accept")}
-              <ArrowRight size={16} className="ml-1" />
-            </Button>
-
-            {/* MFA hint (mockup L239-242) */}
-            <div className="flex flex-row items-center justify-center gap-1.5 text-[11px] text-fg-subtle">
-              <ShieldCheck size={11} aria-hidden />
-              <span>{t("invite.mfaHint")}</span>
+            <div className="spread" style={{ padding: "10px 12px", fontSize: 12 }}>
+              <span className="muted">{t("invite.expires")}</span>
+              <span className="mono subtle">{metadata.expiresIn}</span>
             </div>
-          </form>
-        </CardContent>
+          </div>
+
+          {/* Error surface */}
+          {error && (
+            <div
+              role="alert"
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+                padding: 10,
+                borderRadius: 6,
+                border: "1px solid oklch(from var(--danger) l c h / 0.4)",
+                background: "oklch(from var(--danger) l c h / 0.1)",
+                color: "var(--danger)",
+                fontSize: 12.5,
+              }}
+            >
+              <Icon name="warn" size={14} style={{ marginTop: 1, flexShrink: 0 }} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Fields — verbatim mockup L229-234 */}
+          <Field label={t("invite.fullName")}>
+            <input
+              id="inv-name"
+              className="input"
+              value={fullName}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
+              placeholder="Jamie Liu"
+              style={{ height: 36, fontSize: 13.5 }}
+            />
+          </Field>
+          <Field label={t("invite.password")} help={t("invite.passwordHint")}>
+            <input
+              id="inv-password"
+              type="password"
+              className="input"
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              placeholder="••••••••••••"
+              style={{ height: 36, fontSize: 13.5 }}
+            />
+          </Field>
+
+          {/* Accept button — verbatim mockup L236-238 */}
+          <Button
+            type="submit"
+            variant="primary"
+            data-size="lg"
+            iconRight="arrow_right"
+            disabled={busy}
+          >
+            {busy ? t("invite.accepting") : t("invite.accept")}
+          </Button>
+
+          {/* MFA hint — verbatim mockup L239-242 */}
+          <div
+            className="row subtle"
+            style={{ fontSize: 11, justifyContent: "center", gap: 6 }}
+          >
+            <Icon name="shield" size={11} />
+            <span>{t("invite.mfaHint")}</span>
+          </div>
+        </form>
       </Card>
     </AuthShell>
   );
