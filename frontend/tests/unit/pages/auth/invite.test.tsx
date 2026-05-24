@@ -72,9 +72,13 @@ describe("InvitePage", () => {
     expect(screen.getByText("dan@acme.com")).toBeInTheDocument();
     expect(screen.getByText("operator")).toBeInTheDocument();
     expect(screen.getByText(/in 6 days/i)).toBeInTheDocument();
-    // Fields
-    expect(screen.getByLabelText(/Full name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Set password/i)).toBeInTheDocument();
+    // Fields — Sprint 57.35 verbatim re-point uses mockup `.field` + `.field-label` (div, not
+    // <label htmlFor>); assert by visible label text + presence of input controls. Semantically
+    // equivalent to prior getByLabelText contract; visual layer changed, behavioral intent preserved.
+    expect(screen.getByText(/Full name/i)).toBeInTheDocument();
+    expect(screen.getByText(/Set password/i)).toBeInTheDocument();
+    expect(document.querySelector("#inv-name")).toBeInTheDocument();
+    expect(document.querySelector("#inv-password")).toBeInTheDocument();
     // Accept button
     expect(screen.getByRole("button", { name: /Accept invitation/i })).toBeInTheDocument();
   });
@@ -86,11 +90,12 @@ describe("InvitePage", () => {
     );
     renderInvite();
 
-    // Fill fields
-    fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: "Jamie Liu" } });
-    fireEvent.change(screen.getByLabelText(/Set password/i), {
-      target: { value: "verylongpassword123" },
-    });
+    // Fill fields — find by id (mockup .field-label is div, not label-htmlFor)
+    const nameInput = document.querySelector<HTMLInputElement>("#inv-name");
+    const passwordInput = document.querySelector<HTMLInputElement>("#inv-password");
+    if (!nameInput || !passwordInput) throw new Error("Invite form inputs not found");
+    fireEvent.change(nameInput, { target: { value: "Jamie Liu" } });
+    fireEvent.change(passwordInput, { target: { value: "verylongpassword123" } });
 
     // Submit
     fireEvent.click(screen.getByRole("button", { name: /Accept invitation/i }));
@@ -113,8 +118,11 @@ describe("InvitePage", () => {
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     renderInvite();
 
-    fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: "Jamie" } });
-    fireEvent.change(screen.getByLabelText(/Set password/i), { target: { value: "verylongpw1234" } });
+    const nameInput = document.querySelector<HTMLInputElement>("#inv-name");
+    const passwordInput = document.querySelector<HTMLInputElement>("#inv-password");
+    if (!nameInput || !passwordInput) throw new Error("Invite form inputs not found");
+    fireEvent.change(nameInput, { target: { value: "Jamie" } });
+    fireEvent.change(passwordInput, { target: { value: "verylongpw1234" } });
     fireEvent.click(screen.getByRole("button", { name: /Accept invitation/i }));
 
     await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith("/auth/mfa"));
