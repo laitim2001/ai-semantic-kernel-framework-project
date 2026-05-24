@@ -88,8 +88,64 @@ This is the **2nd consecutive sprint where Day 0 Prong 1+2 caught material plan-
 
 ### Pending for Day 2 (handles Domain C + Day 1 lessons)
 
-- [ ] Day 2.1 Domain C fullbleed audit finalize (grep production page mounts vs mockup fullbleed-class layouts)
-- [ ] Day 2.2 Any 1-line fullbleed fixes per audit verdict (cap 3 in-sprint per plan §Risks)
-- [ ] Day 2.3 Vitest + mockup-fidelity stability re-check after Day 2 edits
-- [ ] Day 2.4 progress.md Day 2 entry + commit
+- [x] Day 2.1 Domain C fullbleed audit finalize ✅ **0 sites missing — happy outcome**
+- [x] Day 2.2 Any 1-line fullbleed fixes per audit verdict — **N/A (0 sites)**
+- [x] Day 2.3 Vitest + mockup-fidelity stability — N/A (Day 1 already green, no Day 2 code changes)
+- [ ] Day 2.4 progress.md Day 2 entry + commit (this entry)
 - [ ] Day 2.5 after baseline + 22-route sweep diff review
+
+---
+
+## Day 2 — Domain C fullbleed audit (audit-only; 0 fixes needed)
+
+### Today's Accomplishments
+
+Domain C enumeration completed in 1 grep batch:
+
+**Production AppShellV2 mounts** (13 total):
+- 2 already with `fullBleed`: `/loop-debug` (FIX-010 — fullBleed=2: prop + MHist) + `/chat-v2` (Sprint 57.21 — fullBleed=1)
+- 11 WITHOUT `fullBleed`: admin-tenants / cost-dashboard / governance / memory / orchestrator / overview / sla-dashboard / state-inspector / subagents / tenant-settings / verification
+
+**Mockup outer-wrapper-class first-line per `reference/design-mockups/page-*.jsx`** (13 files):
+- `page-chat.jsx` → `<div className="chat-shell">` (fullbleed shape)
+- `page-governance.jsx LoopDebug block` → `<div className="loop-canvas">` (fullbleed shape)
+- **11 other mockup pages → `<div className="page-head">`** (standard padded card-layout shape)
+
+### Cross-ref verdict
+
+| Mockup wrapper class | Production page | `fullBleed`? | Correct? |
+|---------------------|-----------------|--------------|----------|
+| `chat-shell` | `/chat-v2` | ✅ YES (Sprint 57.21) | ✅ |
+| `loop-canvas` | `/loop-debug` | ✅ YES (FIX-010 yesterday) | ✅ |
+| `page-head` (11 pages) | admin-tenants / cost-dashboard / governance / memory / orchestrator / overview / sla-dashboard / state-inspector / subagents / tenant-settings / verification | ❌ NO | **✅ correct — mockup `page-head` IS the standard padded card-layout entry; these pages SHOULD NOT have `fullBleed`** |
+
+### Conclusion
+
+**Domain C audit verdict: 0 production fix needed**. FIX-010 was the only fullbleed-prop-drop bug. Layout-class assignment across production matches mockup intent everywhere else:
+
+- 2 fullbleed-design pages → both correctly opt into `fullBleed` ✅
+- 11 padded-card-design pages → all correctly default to NO `fullBleed` ✅
+
+This confirms FIX-010 was an isolated prop-drop slip, NOT a systematic layout-class assignment failure.
+
+### Domain C calibration data
+
+- **Class**: `sprint-meta + micro-fix` (per plan §1.4 baseline 0.65)
+- **Actual wall-clock**: ~10 min (1 grep batch + cross-ref verdict + this progress entry)
+- **Bottom-up estimate**: ~2 hr (plan §8 assumed ~3 fixes in scope)
+- **Calibrated commit**: ~1.4 hr
+- **Result**: 0 fixes needed reduces actual far below estimate; this is a "happy outcome under-run" not a calibration data point for the class (the class baseline 0.65 anticipated 0-3 fixes; finding 0 is a binary outcome, not a per-unit measurement)
+- **Implication for matrix**: Do NOT log as a 1st application of `sprint-meta + micro-fix`; the class is undertested because Domain C audit found nothing actionable. Document this in Day 3 retrospective as a class-validation insight.
+
+### Day 2 wall-clock total
+
+- ~10 min (single audit batch, no fixes)
+- Plan §8 estimated calibrated 1.4 hr → actual 0.17 hr → ratio actual/calibrated ~0.12 (significantly under)
+- Combined Day 1 + Day 2 wall-clock so far: ~40 min total (vs ~5 hr calibrated estimate for Day 1+2 combined)
+
+### Pending for Day 2.5
+
+- [ ] Day 2.5 capture after baseline (route-sweep)
+- [ ] Day 2.5 before/after diff review (expect only `/subagents` CHANGED + 0 unintended regressions)
+- [ ] Day 2.5 fidelity verdict for `/subagents`
+- [ ] Day 2.5 commit summary + Day 3 closeout prep
