@@ -23,7 +23,8 @@
  * Last Modified: 2026-05-24
  *
  * Modification History (newest-first):
- *   - 2026-05-24: Sprint 57.34 Day 1 — verbatim re-point: page-head + grid-stats + Tabs structure + import mockup-ui primitives (drop local Badge/Stat/RiskBadge/TONE_CLASS)
+ *   - 2026-05-24: Sprint 57.34 Day 2 — verbatim re-point: Config + Prompt tabs data-testid hooks + textarea verbatim defaultValue (folded into Day 1 visual re-point per scope-shape; tab bodies use .field/.input/.select/.textarea/.kbar verbatim CSS)
+ *   - 2026-05-24: Sprint 57.34 Day 1 — verbatim re-point: page-head + grid-stats + Tabs structure + import mockup-ui primitives (drop local Badge/Stat/RiskBadge/TONE_CLASS/Field/Switch/inputBase/TextInput/Select)
  *   - 2026-05-17: Initial creation (Sprint 57.19 Day 3 / US-C2)
  *
  * Related:
@@ -59,7 +60,7 @@ import { RequireAuth } from "@/features/auth/components/RequireAuth";
 const ConfigTab: FC = () => {
   const { t } = useTranslation();
   return (
-    <div className="grid-main">
+    <div className="grid-main" data-testid="orchestrator-config-tab">
       <Card title={t("orchestrator.config.core")}>
         <div className="col" style={{ gap: 14, maxWidth: 540 }}>
           <Field label="Display name">
@@ -170,7 +171,7 @@ Receive operator requests, plan a sequence of actions, dispatch to specialized s
 const PromptTab: FC = () => {
   const { t } = useTranslation();
   return (
-    <div className="grid-main">
+    <div className="grid-main" data-testid="orchestrator-prompt-tab">
       <Card
         title={t("orchestrator.prompt.title")}
         subtitle={t("orchestrator.prompt.subtitle")}
