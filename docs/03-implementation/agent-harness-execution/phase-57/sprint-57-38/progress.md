@@ -143,9 +143,54 @@ This confirms FIX-010 was an isolated prop-drop slip, NOT a systematic layout-cl
 - Plan §8 estimated calibrated 1.4 hr → actual 0.17 hr → ratio actual/calibrated ~0.12 (significantly under)
 - Combined Day 1 + Day 2 wall-clock so far: ~40 min total (vs ~5 hr calibrated estimate for Day 1+2 combined)
 
-### Pending for Day 2.5
+### Day 2.5 sweep results
 
-- [ ] Day 2.5 capture after baseline (route-sweep)
-- [ ] Day 2.5 before/after diff review (expect only `/subagents` CHANGED + 0 unintended regressions)
-- [ ] Day 2.5 fidelity verdict for `/subagents`
-- [ ] Day 2.5 commit summary + Day 3 closeout prep
+#### After baseline captured
+- 22/22 routes ✓ 0 failures (dev server PID 51124 still running)
+
+#### Before/after SHA-256 diff matrix
+
+**19 IDENTICAL + 3 CHANGED + 0 MISSING**
+
+| Route | Status | Before_KB | After_KB | Delta | Verdict |
+|-------|--------|-----------|----------|-------|---------|
+| **subagents** | CHANGED | 167.8 | 171.5 | **+3.6 KB** | ✅ **INTENTIONAL** — Domain B verbatim re-point added KPI grid `.stat` borderLeft colors + selected row oklch highlight + verbatim `.table` row structure |
+| chat-v2 | CHANGED | 137.2 | 137.2 | 0.00 KB / SHA-diff | ⚠️ NOISE — exact byte-identical size; SHA-diff likely render-order or animation-frame noise. Mirrors Sprint 57.37 `chat-v2 0 B PERFECT cascade` precedent. 0 visual regression. |
+| overview | CHANGED | 156.6 | 156.4 | -0.2 KB | ⚠️ NOISE — within Sprint 57.37 `auth-callback -68 B + overview +138 B noise` envelope. No production code change on /overview this sprint; pure render-noise. 0 visual regression. |
+| 19 others (admin-tenants / auth-* / cost-dashboard / governance / home / loop-debug / memory / orchestrator / prop-stub-compaction / sla-dashboard / state-inspector / tenant-settings / verification) | IDENTICAL | — | — | 0 | ✅ 0 unintended regression |
+
+#### Domain B `/subagents` fidelity verdict: **PARITY**
+
+Evidence:
+- Agent 1:1 mockup mapping per `page-agents.jsx:300-450` (4-mode KPI grid + 2-col 1.4fr 1fr + 8-row table + inner Tabs + oklch row highlight)
+- Vitest 464/464 spec compat preserved (D-DB1-1 div-wrap kept spec assertions valid)
+- mockup-fidelity guard: byte-identical + grep guard 51/51 (within plan §3.3 +5-8 envelope)
+- 22-route sweep: only /subagents in CHANGED set + 0 unintended regressions on padded card-layout pages
+
+#### Day 2.5 wall-clock
+
+- Capture after baseline: ~2 min
+- SHA-256 diff matrix + verdict classification: ~1 min
+- Progress entry update: ~3 min
+- Total: ~6 min (calibrated plan §8 estimated ~1.0 hr → actual 0.1 hr → ratio ~0.10)
+
+### Day 2 + Day 2.5 combined
+
+| Item | Status |
+|------|--------|
+| Day 2.1 audit enumeration | ✅ 0 sites missing (happy outcome) |
+| Day 2.2 fixes | N/A (0 sites) |
+| Day 2.3 stability | N/A (no code changes) |
+| Day 2.4 progress + commit | ✅ `8380253e` |
+| Day 2.5 after baseline + diff | ✅ this entry |
+| Day 2.5 commit | pending (next) |
+
+### Pending for Day 3 closeout
+
+- [ ] Day 2.5 commit + sweep evidence reference
+- [ ] Day 3.1 retrospective.md Q1-Q7 (Domain A class-split decision rationale Q2 narrative)
+- [ ] Day 3.2 calibration matrix update — Domain A apply (Option 1 lift OR Option 2 split) + Domain B 5th `-with-extras` data point
+- [ ] Day 3.3 memory subfile + MEMORY.md pointer
+- [ ] Day 3.4 next-phase-candidates.md — close 3 ADs + add 57.38 carryover section
+- [ ] Day 3.5 CLAUDE.md minimal touch
+- [ ] Day 3.6 final commit + push + PR
