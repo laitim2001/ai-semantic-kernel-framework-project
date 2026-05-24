@@ -7,6 +7,7 @@
  * Created: 2026-05-10 (Sprint 57.12 Day 2-3 / US-5)
  *
  * Modification History:
+ *   - 2026-05-24: Sprint 57.33 Day 2 US-C3 — defensive spec: browser survives backend payload with `items: undefined` (AD-Overview-PreExisting-Route-Crashes regression guard)
  *   - 2026-05-10: Initial creation (Sprint 57.12 Day 2-3 / US-5)
  */
 
@@ -88,5 +89,23 @@ describe("MemoryByScopeBrowser (Sprint 57.12 US-5)", () => {
         expect.anything(),
       ),
     );
+  });
+
+  // FIX-Sprint-57-33 US-C3 (2026-05-24): regression guard for
+  // AD-Overview-PreExisting-Route-Crashes — clicking a layer card with a backend
+  // payload missing the `items` field must not crash on `query.data.items.length`
+  // / `query.data.items.map`.
+  test("survives backend payload with items field missing (defensive guard)", async () => {
+    vi.spyOn(memoryService, "fetchByScope").mockResolvedValue({
+      // items field intentionally omitted.
+      total: 0,
+      has_more: false,
+      next_offset: null,
+      page_size: 50,
+    } as unknown as MemoryEntryPage);
+    renderBrowser();
+    expect(() => fireEvent.click(screen.getByTestId("layer-card-system"))).not.toThrow();
+    // Empty state appears once the query resolves cleanly.
+    await waitFor(() => expect(screen.getByTestId("scope-empty")).toBeInTheDocument());
   });
 });
