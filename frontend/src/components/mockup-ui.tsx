@@ -30,6 +30,7 @@
  * Last Modified: 2026-05-22
  *
  * Modification History (newest-first):
+ *   - 2026-05-24: Sprint 57.34 Day 1 — add Tabs + Field + Switch primitives (verbatim port of ui.jsx L123-174)
  *   - 2026-05-22: Sprint 57.29 Day 3 — add Spark SVG primitive (Day-1 port omitted it)
  *   - 2026-05-22: Initial creation (Sprint 57.29 Day 1) — verbatim port of ui.jsx primitives
  *
@@ -584,5 +585,137 @@ export function RiskBadge({ level }: { level: RiskLevel }): JSX.Element {
       <span className={`sev-dot sev-${level}`} style={{ width: 5, height: 5 }} />
       {level}
     </Badge>
+  );
+}
+
+// ───────────────── Tabs ─────────────────
+
+export interface TabItem {
+  id: string;
+  label: ReactNode;
+  icon?: IconName;
+  count?: number;
+}
+
+interface TabsProps {
+  items: TabItem[];
+  value: string;
+  onChange: (id: string) => void;
+  ariaLabel?: string;
+}
+
+/** Tabs — verbatim port of mockup `ui.jsx` `Tabs` (L123-133); uses `.tabs` / `.tab[data-active]` / `.tab-count` CSS.
+ * a11y bridge: mockup uses `<div onClick>` (UMD demo); typed port adds `tabIndex={0}` + `onKeyDown` Enter/Space
+ * to satisfy jsx-a11y click-events-have-key-events + interactive-supports-focus. Visual layer unchanged.
+ */
+export function Tabs({ items, value, onChange, ariaLabel }: TabsProps): JSX.Element {
+  return (
+    <div className="tabs" role="tablist" aria-label={ariaLabel}>
+      {items.map((t) => (
+        <div
+          key={t.id}
+          role="tab"
+          aria-selected={value === t.id}
+          tabIndex={0}
+          className="tab"
+          data-active={value === t.id}
+          onClick={() => onChange(t.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onChange(t.id);
+            }
+          }}
+        >
+          {t.icon && <Icon name={t.icon} size={13} />}
+          {t.label}
+          {t.count != null && <span className="tab-count">{t.count}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ───────────────── Field ─────────────────
+
+interface FieldProps {
+  label?: ReactNode;
+  help?: ReactNode;
+  optional?: boolean;
+  children: ReactNode;
+}
+
+/** Field — verbatim port of mockup `ui.jsx` `Field` (L135-146); uses `.field` / `.field-label` / `.field-help` CSS. */
+export function Field({ label, help, optional, children }: FieldProps): JSX.Element {
+  return (
+    <div className="field">
+      {label && (
+        <div className="field-label">
+          {label}
+          {optional && (
+            <span style={{ color: "var(--fg-subtle)", fontWeight: 400, fontSize: 10.5 }}>
+              optional
+            </span>
+          )}
+        </div>
+      )}
+      {children}
+      {help && <div className="field-help">{help}</div>}
+    </div>
+  );
+}
+
+// ───────────────── Switch ─────────────────
+
+interface SwitchProps {
+  on?: boolean;
+  onChange?: (next: boolean) => void;
+}
+
+/** Switch — verbatim port of mockup `ui.jsx` `Switch` (L159-174); inline-style toggle (no CSS class — mockup intentional).
+ * a11y bridge: mockup uses `<span onClick>`; typed port adds role=switch + tabIndex + onKeyDown for jsx-a11y compliance.
+ */
+export function Switch({ on = false, onChange }: SwitchProps): JSX.Element {
+  const toggle = (): void => {
+    if (onChange) onChange(!on);
+  };
+  return (
+    <span
+      role="switch"
+      aria-checked={on}
+      tabIndex={0}
+      onClick={toggle}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggle();
+        }
+      }}
+      style={{
+        width: 28,
+        height: 16,
+        borderRadius: 999,
+        background: on ? "var(--primary)" : "var(--bg-3)",
+        position: "relative",
+        cursor: "pointer",
+        display: "inline-block",
+        flexShrink: 0,
+        border: "1px solid var(--border)",
+        transition: "background 0.15s",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: 1,
+          left: on ? 13 : 1,
+          width: 12,
+          height: 12,
+          borderRadius: "50%",
+          background: "white",
+          transition: "left 0.15s",
+        }}
+      />
+    </span>
   );
 }

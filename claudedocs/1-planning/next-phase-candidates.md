@@ -4,11 +4,23 @@
 
 **Selection Rule**: User explicitly selects → draft plan kicks off Sprint XX.Y; otherwise items wait here indefinitely until selected or archived.
 
-**Updated**: 2026-05-24 (Sprint 57.33 closeout — page-bug-fix sweep on 3 ⚪ crash routes; closes `AD-Overview-PreExisting-Route-Crashes` carryover; NEW class `frontend-page-bug-fix` 0.45 1st app ratio 1.24 top edge of band)
+**Updated**: 2026-05-24 (Sprint 57.34 closeout — /orchestrator Phase-2 verbatim re-point; 1st non-rich-dashboard shape in epic; **bimodal-by-shape signal emerging** → NEW shape-bimodal-watch AD; 2nd validation of `frontend-verbatim-css-repoint` 0.50 lifted baseline)
 
 ---
 
-## 🆕 Sprint 57.33 Carryover (2026-05-24 — Page Bug Fix Sweep)
+## 🆕 Sprint 57.34 Carryover (2026-05-24 — /orchestrator Phase-2)
+
+Sprint 57.34 (`AD-Orchestrator-Verbatim-Repoint`) closed: `/orchestrator` re-pointed to mockup verbatim — **1st non-rich-dashboard shape** in the Phase-2 epic (prior 4 = rich operator dashboards). 22-route sweep **0 regressions** on other 21 routes. 5 gates green. Vitest 456/456 baseline preserved. Agent-assisted Day 1-3 via code-implementer agent (per CLAUDE.md Tool Optimization). 3 mockup-ui primitives promoted (Tabs / Field / Switch). OrchestratorPage 644 → 605 net –39 lines (drop ~150 lines of local primitives + Tailwind translations; add mockup-ui imports + verbatim CSS classes + data-testid hooks). ~3-4 hr human-equivalent effort. Carryover updates:
+
+- 🆕 **AD-Sprint-Plan-frontend-verbatim-css-repoint-shape-bimodal-watch** — Sprint 57.34 ratio ≈0.95-1.05 lands in [0.85, 1.20] band middle. Combined with prior 4 rich-dashboard apps (3-pt mean ≈0.40 below band ex-57.29 anchor), **bimodal-by-shape pattern emerging** — rich-dashboard ratios consistently below band; non-rich-dashboard (1st data point) in band middle. 2-data-point span (57.32 rich + 57.34 non-rich) suggestive but insufficient per `When to adjust` 3-sprint window rule. **KEEP 0.50 baseline this iteration.** If Sprint 57.35 (another non-rich-dashboard shape — `/loop-debug` / `/state-inspector` / `/admin-tenants` / `/governance` / `/tenant-settings`) confirms in-band → propose class split `-rich-dashboard` (0.40) vs `-config-form` (0.50). If lands below band → class-wide variance after all → 0.50 → 0.40 lift.
+
+- 🆕 **AD-Tabs-Migration-To-MockupUi** (low priority) — `frontend/src/components/ui/tabs.tsx` Sprint 57.19 vintage primitive still imported by other consumers (governance/loop-debug/state-inspector candidates); out-of-scope this sprint. Future Phase-2 re-point of those routes will naturally migrate them to mockup-ui Tabs, then `ui/tabs.tsx` can be deleted.
+
+- 🔄 **Updated AD-Sprint-Plan-frontend-verbatim-css-repoint-baseline-lift** (Sprint 57.31 NEW) — 2nd validation data point logged. 0.50 baseline still appropriate but bimodal-by-shape signal emerging. If 57.35 confirms, may close this AD in favor of class split.
+
+- 📚 **Atomic primitive promotion lesson** — when primitive promotions span multiple Days but consumer components consume them together, atomic Day 1 promotion is the right call (vs staggered across Days). Agent correctly identified this build-dep; Day 2/3 commits became cycle housekeeping. Plan structure looks "off" in retrospect but result was clean.
+
+## Sprint 57.33 Carryover (2026-05-24 — Page Bug Fix Sweep)
 
 Sprint 57.33 (`AD-Page-Bug-Fix-Sweep`) closed: 3 ⚪ pre-existing crash routes (`/subagents` + `/memory` + `/verification`) fixed by adding defensive `(query.data.X ?? []).length/map` across 5 files / 11 sites including 4 drift sites D1-D4 (`.map` × 3 + `_groupByTurn(items)` × 1) found by widening Day 0 grep beyond `.length`. 22-route sweep: **3 ⚪ → ✅ flip + 0 regressions** on other 19 routes. Vitest 452 → 456 (4 NEW defensive specs). NEW class `frontend-page-bug-fix` 0.45 1st application; ratio actual/committed **1.24** top edge of [0.85, 1.20] band +0.04 over. ~2.8 hr wall-clock. Closes `AD-Overview-PreExisting-Route-Crashes` carryover from Sprint 57.29-32. Updates:
 
