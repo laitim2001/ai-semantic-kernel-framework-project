@@ -35,7 +35,7 @@ Sprint 57.39 (`AD-Governance-Category-Multipage-Phase-2`) closed: 4-domain batch
 
 49. **`AD-RouteSweep-Coverage-Extend-PROP-Promoted-Pages`** (D-DAY2.5-1; sprint-meta + script change) — Extend `frontend/scripts/route-sweep.mjs` 22-route config to include all PROP-promoted routes (and ideally auto-derive from `routes.config.ts`). PROP→real promotion sprints currently lack before/after PNG evidence for newly-promoted routes. Estimated ~1-2 hr.
 
-50. **`AD-RouteSweep-Cwd-Relative-OUT_DIR-Foot-Gun-Fix`** (D4 Day 0; sprint-meta + script change) — Change `path.resolve('../...')` in `frontend/scripts/route-sweep.mjs` to `path.resolve(__dirname, '../...')` for script-relative OUT_DIR. Closes recurring foot-gun: running script from any cwd other than `frontend/` resolves OUT_DIR outside repo. Estimated ~15 min (3-line script change).
+50. ✅ **`AD-RouteSweep-Cwd-Relative-OUT_DIR-Foot-Gun-Fix`** — RESOLVED 2026-05-25 via **FIX-014**. ESM `__dirname` derivation via `fileURLToPath(import.meta.url)` + `path.resolve(__dirname, '../../claudedocs/...')` makes OUT_DIR cwd-invariant. Smoke-tested from non-project-root cwd; resolution correctly lands at `<project>/claudedocs/4-changes/<slug>/screenshots/<mode>/`. See `claudedocs/4-changes/bug-fixes/FIX-014-route-sweep-cwd-relative-outdir.md`.
 
 51. **`AD-Sprint-Plan-Agent-Delegation-Factor-Modifier`** (Q4 #4 from retro; meta) — Quantify code-implementer agent-delegation speedup factor (~3-5×) for `-with-extras` and other classes; propose embedding as multiplier-on-multiplier in `.claude/rules/sprint-workflow.md` §Scope-class multiplier matrix (e.g., `-with-extras + agent-delegated` sub-class at 0.30-0.40 effective). Defer 2-3 sprint validation; if 57.40+ continues showing ratio < 0.7 → propose 0.65 → 0.35-0.40 lift OR sub-class split. Estimated ~2 hr.
 
@@ -49,7 +49,7 @@ After Sprint 57.39, the Phase-2 epic non-STRUCTURAL backlog is mostly cleared. H
 - ~~**`AD-Shadcn-Border-Token-Visual-Audit-Or-Align-To-Mockup`** Path A 1-line global micro-fix~~ ✅ DONE 2026-05-25 via FIX-012 (Path A applied; see §Sprint 57.38 Follow-up Carryover for resolution detail)
 - ~~**`AD-Inline-Font-Baseline-Alignment`** typography audit~~ ✅ DONE 2026-05-25 via FIX-013 (documented case; B/C dispositioned Skip per Karpathy §3)
 - **Phase 58+ structural epic** `/memory` or `/tenant-settings` (~25-30 hr; needs backend pair)
-- **`AD-RouteSweep-Cwd-Relative-OUT_DIR-Foot-Gun-Fix`** (15 min micro-fix bundle candidate)
+- ~~**`AD-RouteSweep-Cwd-Relative-OUT_DIR-Foot-Gun-Fix`**~~ ✅ DONE 2026-05-25 via FIX-014 (ESM `__dirname` via `fileURLToPath` + `path.resolve(__dirname, '../../...')`)
 
 ---
 
