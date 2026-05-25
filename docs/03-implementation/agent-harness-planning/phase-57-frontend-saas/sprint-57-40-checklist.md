@@ -182,36 +182,35 @@
 ## Day 3 — Closeout (retro + matrix update + memory + push + PR)
 
 ### 3.1 Retrospective
-- [ ] **Create `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-40/retrospective.md`** with Q1-Q7 sections
-- [ ] **Q2 single-domain calibration ratio** — `actual_total_hr / committed_total_hr`; verdict vs 0.60 baseline (in [0.85, 1.20] band = PASS)
-- [ ] **Q2 6th data point narrative** — extends 5-pt window (57.23/24/25/27/37); compute 6-pt mean; class healthy assessment
-- [ ] **Q4 audit debt** — Detail pane `Approve with edits` / `Escalate to L2` deferred (AP-2 banners); approved/rejected/expired/policies tabs deferred (AP-2 banners); track as carryover ADs
-- [ ] **Q5 carryover candidates** — backend stats endpoint for 3 missing KPIs (p50/Approved 24h/Rejected 24h); backend filter endpoints for 4 non-active tabs
-- [ ] **Q6 verbatim-CSS protocol compliance** — Layer 2 diff guard 0 / Layer 4 collision check / HEX_OKLCH_BASELINE bump ≤6 envelope check
+- [x] **Create retrospective.md** with Q1-Q7 sections — 6-section retro mirroring Sprint 57.39 format (commits / Q1-Q5 narrative depth + Q6 verbatim-CSS + Q7 N/A SKIP)
+- [x] **Q2 single-domain calibration ratio** — actual ~3.85 / committed ~10.8 ≈ **0.36** BELOW [0.85, 1.20] band by 0.49
+- [x] **Q2 6th data point narrative** — 6-pt window 0.59/1.19/0.88/0.95/1.18/0.36; mean **0.86** at lower band edge (-0.10 vs prior 5-pt mean); `When to adjust` only 1 of last 3 < 0.7 → lower-trigger NOT met → KEEP 0.60
+- [x] **Q4 audit debt** — Detail pane `Approve with edits` / `Escalate to L2` AP-2 stub; 4 non-active tabs AP-2 banner; 3 KPI fixture deferred; documented as carryover ADs
+- [x] **Q5 carryover candidates** — 9 NEW ADs (verification rebuild as #1 ROI / chat-v2 rename quick win / memory/admin-tenants/tenant-settings remaining 3 CATASTROPHIC / shell defensive guards / mock LIFO convention / decision modal mop-up / envelope mock convention / agent-delegation factor modifier 3-data-point promotion candidate)
+- [x] **Q6 verbatim-CSS protocol compliance** — Layer 2 diff 0 / Layer 4 collision 0 / HEX_OKLCH_BASELINE bump 45→46 (+1 within ≤51 envelope) / guard PASS
 
 ### 3.2 Calibration matrix update (`sprint-workflow.md §Scope-class multiplier matrix`)
-- [ ] **`frontend-mockup-strict-rebuild` row update** — append Sprint 57.40 as 6th data point (ratio + 6-pt mean); update class status (`KEEP 0.60` if in band)
-- [ ] **MHist entry** — 6th data point notation
+- [x] **`frontend-mockup-strict-rebuild` row update** — append Sprint 57.40 as 6th data point (ratio 0.36 + 6-pt mean 0.86); status `KEEP 0.60`; root cause = agent-delegation factor
+- [x] **MHist entry** — Sprint 57.40 Day 3 entry added with 6th data point notation + 3-data-point cross-class evidence for `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier`
 
 ### 3.3 Memory subfile + MEMORY.md pointer
-- [ ] **Create `memory/project_phase57_40_governance_full_rebuild.md`** with sprint detail
-- [ ] **Add MEMORY.md entry** — quality pointer (~250-300 char with topic + keywords + subfile link per §Sprint Closeout Update Policy)
-- [ ] DoD: index entry rendered
+- [x] **Create `memory/project_phase57_40_governance_full_rebuild.md`** with sprint detail (goal/shipped/calibration/Phase-2 progress/carryover ADs/anomalies/commits/related)
+- [x] **Add MEMORY.md entry** — quality pointer with topic + keywords + subfile link per §Sprint Closeout Update Policy
 
 ### 3.4 next-phase-candidates.md
-- [ ] **Add Sprint 57.40 carryover section** at top
-- [ ] **Update Phase-2 epic progress** — 5 🟡 CATASTROPHIC → 4 🟡 remaining (memory / verification / admin-tenants / tenant-settings; `/chat-v2` tab rename minor NEAR-PARITY still open)
-- [ ] **Add NEW carryover ADs** — backend stats endpoint + backend filter endpoints for governance approvals queue tabs; `/chat-v2` tab vocab rename quick-win
+- [x] **Add Sprint 57.40 carryover section** at top with shipped summary + calibration + Phase-2 epic progress
+- [x] **Update Phase-2 epic progress** — 5 → 4 🔴 CATASTROPHIC remaining (memory / verification / admin-tenants / tenant-settings) + 1 NEAR-PARITY (chat-v2 rename) + 17 PARITY
+- [x] **Add 9 NEW carryover ADs** (#50-#59) ordered by ROI per audit Recommendations 1-6
 
 ### 3.5 CLAUDE.md minimal touch (per §Sprint Closeout Update Policy)
-- [ ] **Update `Current Sprint` row** with 57.41 placeholder (or candidate description)
-- [ ] **Update `Last Updated` footer** — 1-line: `**Last Updated**: 2026-05-XX (Sprint 57.40 — /governance Approvals view full mockup-fidelity rebuild — closes audit 2026-05-25 #3 priority); see memory/ for sprint history`
-- [ ] **NO retro detail packed into table cells** (per REFACTOR-001 lesson)
+- [x] **Update `Current Sprint` row** with Sprint 57.40 1-line + redirect to memory subfile + next-phase-candidates.md
+- [x] **Update `Last Updated` footer** — 1-line per §Sprint Closeout Policy navigator format
+- [x] **NO retro detail packed into table cells** (REFACTOR-001 discipline observed)
 
 ### 3.6 Commit closeout + push + PR
-- [ ] **Final commit**: `chore(sprint-57-40): closeout — retro + matrix + memory + CLAUDE.md`
+- [ ] **Final commit**: `chore(sprint-57-40): Day 3 closeout — retro + matrix + memory + CLAUDE.md`
 - [ ] **Push**: `git push -u origin feature/sprint-57-40-governance-full-rebuild`
-- [ ] **Open PR**: `gh pr create --base main --title "feat(frontend, sprint-57-40): /governance Approvals view full mockup-fidelity rebuild (closes drift audit 2026-05-25 #3 priority)"` with full body (mirror 57.39 PR template)
+- [ ] **Open PR**: `gh pr create --base main --title "feat(frontend, sprint-57-40): /governance Approvals view full mockup-fidelity rebuild (closes drift audit 2026-05-25 #3 priority)"`
 - [ ] **Wait for CI green** → squash-merge ready → user confirmation before merge
 
 ---

@@ -4,7 +4,58 @@
 
 **Selection Rule**: User explicitly selects → draft plan kicks off Sprint XX.Y; otherwise items wait here indefinitely until selected or archived.
 
-**Updated**: 2026-05-24 (Sprint 57.39 closed — Governance Category Multi-Page Phase-2 4-domain batched; Phase-2 epic 11/17 → 15/17 routes shipped / 2 🟡 Phase 58+ STRUCTURAL remaining; 5 NEW carryover ADs added below.)
+**Updated**: 2026-05-25 (Sprint 57.40 closed — /governance Approvals view full mockup-fidelity rebuild closes drift audit 2026-05-25 #3 priority CATASTROPHIC; 9 NEW carryover ADs added below; Phase-2 epic post-audit reality 17 PARITY + 1 NEAR-PARITY + 4 CATASTROPHIC remaining.)
+
+---
+
+## 🆕 Sprint 57.40 Carryover (2026-05-25 — /governance Approvals view Full Mockup-Fidelity Rebuild)
+
+Sprint 57.40 (`AD-Governance-Full-Mockup-Fidelity-Rebuild`) closed: single-domain rebuild closes drift audit 2026-05-25 (`claudedocs/5-status/drift-audit-2026-05-25/audit-report.md`) #3 priority `/governance` 🔴 CATASTROPHIC verdict.
+
+- **5 NEW components**: ApprovalsPageHeader / ApprovalsStatsStrip (4 KPI + AP-2 banner) / ApprovalsFilterTabs (5-tab nav + TabId union) / ApprovalDetailPane (rich right-col Detail) / ApprovalsEmptyTab (AP-2 placeholder)
+- **1 NEW `KvRow` primitive** in `mockup-ui.tsx` (verbatim port of `page-governance.jsx:265-272`)
+- **`ApprovalsPage.tsx`** restructure (73 → 115 lines; 5-component composition + `selected` state)
+- **`ApprovalList.tsx`** upgrade (102 → 131 lines; 6-col → 7-col with SevDot; row `onClick` replaces DecisionModal flow; `RISK_COLOR_CLASS` deleted in favor of mockup-ui `<RiskBadge>`)
+- **`DecisionModal.tsx`** Karpathy §3 orphan delete
+- **+15 NEW Vitest specs** (478 → 493; target +4-8 → **188-375%**)
+- **`route-sweep.mjs`** `/governance/approvals` envelope-shape mock (D-DAY0-1 closes audit's red-banner sweep-mock artifact)
+- **`check-mockup-fidelity.mjs`** `HEX_OKLCH_BASELINE` 45 → 46 (+1 row-highlight literal mockup-token vocabulary)
+- **Drift audit report**: `/governance` 🔴 → ✅ PARITY; 16 → 17 PARITY / 5 → 4 CATASTROPHIC; Recommendations #1+#3 struck; Key finding #5 RESOLVED
+- **22-route sweep**: 19 IDENTICAL + 1 expected CHANGED + 4 noise + 0 unintended regressions
+- **3-way evidence pair** (BEFORE 79.9 KB / AFTER 115.8 KB / MOCKUP 210.7 KB) staged
+
+**6th data point for `frontend-mockup-strict-rebuild` 0.60 baseline**: sprint-aggregate ratio ≈0.36 BELOW band [0.85, 1.20] by 0.49 (deepest below-band of class history). 6-pt mean 0.86 at lower band edge (-0.10 vs prior 5-pt mean 0.96). Per `When to adjust` rule: only 1 of last 3 < 0.7 → lower-trigger NOT met → **KEEP 0.60 baseline**.
+
+Root cause: code-implementer agent-delegation 7th consecutive ~40 min wall-clock for 5 NEW + 1 primitive + 2 restructures (human-equivalent ~6-8 hr); not modeled in baseline. **3rd data point for `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier`** across 2 classes (57.39=0.41 + FIX-015 + 57.40=0.36).
+
+### Phase-2 epic progress
+
+- Pre-Sprint 57.40 (per audit): 16 PARITY + 1 NEAR-PARITY + 5 🔴 CATASTROPHIC + 12 PROP stubs + 4 DRAFT inactive
+- **Post Sprint 57.40**: **17 PARITY + 1 NEAR-PARITY + 4 🔴 CATASTROPHIC** remaining
+- 4 remaining CATASTROPHIC: `/memory` (Memory Layers 5×N matrix) / `/verification` (4-KPI + 2-col Recent + sidebar) / `/admin-tenants` (Tenants table 9-col) / `/tenant-settings` (6-tab architecture)
+- 1 NEAR-PARITY: `/chat-v2` Inspector tab rename (~30 min quick win)
+
+### 🆕 9 NEW carryover ADs (Sprint 57.41+ candidates; ordered by ROI per audit Recommendations 1-6)
+
+50. 🆕 **`AD-Verification-Catastrophic-Rebuild`** — `/verification` rebuild to mockup 4-KPI + 2-col Recent verification runs + Failure modes/Policy checks sidebar. Class `frontend-mockup-strict-rebuild` 0.60. Est ~8-10 hr. **Highest pattern-reuse ROI**: 4 of Sprint 57.40's 5 NEW components (StatsStrip / FilterTabs / DetailPane / EmptyTab) transfer with mild rename to verification surface.
+
+51. 🆕 **`AD-ChatV2-Inspector-Tab-Rename`** — Inspector tab vocabulary rename `Turn/Trace/Memory/Tree` → mockup `Run/Tools/Memory/Verify`. Class `frontend-refactor-mechanical` 0.50. Est ~30 min (quick win).
+
+52. 🆕 **`AD-Memory-Layers-Matrix-Rebuild`** — `/memory` rebuild to mockup `Memory Layers` 5×N matrix design (SYSTEM/TENANT/ROLE/USER/SESSION × time-scale columns + playback slider + time travel + Export + New write + Recent memory ops strip). Currently Sprint 57.12 vintage shadcn-utility. Class `frontend-mockup-strict-rebuild` 0.60. Est ~10-15 hr.
+
+53. 🆕 **`AD-AdminTenants-Tenants-Table-Rebuild`** — `/admin-tenants` rebuild to mockup Tenants + 4 KPI + 9-col table 9 rows (TENANT/PLAN/REGION/SEATS/AGENTS/RUNS/STATUS/CREATED). Known CLAUDE.md 🟡 STRUCTURAL Phase 58+ #1 + matches Sprint 57.22 audit `6-tab architectural finding`. Backend GET endpoint already wired. Class `frontend-mockup-strict-rebuild` 0.60. Est ~12-15 hr.
+
+54. 🆕 **`AD-TenantSettings-6-Tab-Rebuild`** — `/tenant-settings` rebuild to mockup 6-tab nav (General/Feature Flags 14/Quotas/HITL Policies/Members 8/Danger Zone) + 2-col General form + Identity & SSO sidebar. Known CLAUDE.md 🟡 STRUCTURAL Phase 58+ #2. Class `frontend-mockup-strict-rebuild` 0.60. **Largest scope** (mostly form work). Est ~15-20 hr.
+
+55. 🆕 **`AD-Shell-Defensive-Guards-For-Malformed-AuthMe`** (D-DAY1-1 investigation byproduct) — pre-emptive hardening of Sidebar / Topbar / OverviewPage / UserMenu against hypothetical malformed `/auth/me` shape. Sprint 57.33 pattern precedent. FIX-019 candidate. Est ~30 min.
+
+56. 🆕 **`AD-Playwright-Mock-LIFO-Fixture-Convention`** (D-DAY1-2 investigation byproduct) — codify `r.fallback()` LIFO pattern + envelope-shape mock requirement into `.claude/rules/testing.md` or `docs/rules-on-demand/testing.md`. Est ~30 min.
+
+57. 🆕 **`AD-DecisionModal-Doc-References-Mop-Up`** (Day 1 Karpathy §3 orphan delete follow-up) — clean 3 stale doc refs after `DecisionModal.tsx` delete (dialog.tsx / useApprovalDecide.ts / guardrails README). Est ~15 min.
+
+58. 🆕 **`AD-RouteSweep-Envelope-Mock-Convention`** (Day 2 audit-report carryover) — codify in `frontend-mockup-fidelity.md` or `testing.md`: any endpoint returning envelope shape (e.g. `{items, total, has_more}`) needs explicit sweep mock entry; default `[]` is only safe for list-shaped endpoints. Grep-pattern + example. Est ~30 min.
+
+59. 🆕 **`AD-Sprint-Plan-Agent-Delegation-Factor-Modifier` PROMOTION CANDIDATE** (Sprint 57.40 Q2/Q4 #1) — accumulated 3 data points (57.39=0.41 + FIX-015 outlier + 57.40=0.36) all agent-delegated < 0.7 across 2 classes (`-with-extras` + `mockup-strict-rebuild`). Activation rule technically met but spans classes. Defer 1 more sprint for 4th data point in either class before structurally changing matrix. Recommendation: promote to active candidate at Sprint 57.41 plan §Workload Calibration discussion. Est ~2 hr to activate.
 
 ---
 
