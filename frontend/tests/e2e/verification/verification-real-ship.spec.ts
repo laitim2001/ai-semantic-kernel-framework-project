@@ -21,6 +21,7 @@
  * Created: 2026-05-10 (Sprint 57.11 Day 4 / US-6)
  *
  * Modification History (newest-first):
+ *   - 2026-05-25: FIX-020-C — add { exact: true } to "Failure kinds" + "Flaky checks" getByText (banner reason string contains same fixture; strict-mode violation 2-element match)
  *   - 2026-05-25: FIX-020-A — toBeVisible→toBeAttached for sidebar Card titles (right column below-fold at Playwright 1280px viewport; structural composition check semantics)
  *   - 2026-05-25: Sprint 57.41 Day 2 — adapted to mockup-shape view post-VerificationList orphan delete (3 obsolete tests replaced by 2 NEW mockup-shape tests)
  *   - 2026-05-10: Initial creation (Sprint 57.11 Day 4 / US-6)
@@ -100,8 +101,15 @@ test.describe("Sprint 57.11 US-6 — Verification page real ship (Sprint 57.41-a
     // projects-into-multiple-cells getAllByText pattern: assertion semantics
     // must match what we actually want to verify.
     await expect(page.getByText("Recent verification runs")).toBeVisible();
-    await expect(page.getByText("Failure kinds")).toBeAttached();
-    await expect(page.getByText("Flaky checks")).toBeAttached();
+    // FIX-020-C: { exact: true } — "Failure kinds" appears in BOTH the Card
+    // title AND the BackendGapBanner reason "⚠️ Failure kinds aggregation...";
+    // same for "Flaky checks". Strict-mode `getByText()` resolves to 2 elements
+    // → toBeAttached fails. Exact match picks the Card title only. Generalizable
+    // lesson same as Sprint 57.40 Day 2 D-DAY2-1 adapter-projects-into-multiple-
+    // cells getAllByText pattern: when a fixture string appears in title +
+    // banner reason, disambiguate via `exact: true`.
+    await expect(page.getByText("Failure kinds", { exact: true })).toBeAttached();
+    await expect(page.getByText("Flaky checks", { exact: true })).toBeAttached();
 
     // AP-2 BackendGapBanner declarations present (≥ 1 visible — 3 fixture KPI in
     // StatsStrip + 2 sidebar Cards each declare; recent runs Card does not)
