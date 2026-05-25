@@ -1,0 +1,228 @@
+# Sprint 57.40 — Checklist
+
+[Plan](sprint-57-40-plan.md)
+
+**Single-domain `frontend-mockup-strict-rebuild`** (mirror 57.39 5-phase Day-numbering): Day 0 / Day 1 / Day 2 / Day 2.5 / Day 3
+
+---
+
+## Day 0 — Plan + Checklist + 三-prong + before baseline
+
+### 0.1 Plan + Checklist drafted (Sprint 57.39 template mirror)
+- [x] **Read Sprint 57.39 plan + checklist § structure outline** (per sprint-workflow §Step 1 format-consistency rule)
+- [x] **Draft `sprint-57-40-plan.md`** mirroring 57.39 §0-9 (10 sections) with single-domain scope
+- [x] **Draft `sprint-57-40-checklist.md`** mirroring 57.39 Day 0/1/2/2.5/3 structure adapted for single-domain `frontend-mockup-strict-rebuild`
+
+### 0.2 Step 2.5 Prong 1 — Path verify (single domain scope)
+- [x] **Production source path verify** — `frontend/src/pages/governance/index.tsx` exists (83 lines; preserved outer 2-tab shell)
+- [x] **Production component tree path verify** — `frontend/src/features/governance/components/{ApprovalsPage,ApprovalList,DecisionModal,AuditLogViewer,AuditChainBadge}.tsx` all exist
+- [x] **Production hooks path verify** — `frontend/src/features/governance/hooks/{useApprovals,useApprovalDecide,useAuditLog}.ts` all exist
+- [x] **Production service path verify** — `frontend/src/features/governance/services/governanceService.ts` exists (85 lines)
+- [x] **Mockup source path verify** — `reference/design-mockups/page-governance.jsx` exists (773 lines); `const APPROVALS = [` @ L273; `const Approvals = () =>` @ L283-407 (~125 lines)
+- [ ] **mockup-ui primitive presence check** — `grep -nE "^export (function|const) (Tabs|Stat|Card|Field|Badge|KvRow)" frontend/src/components/mockup-ui.tsx` → log which primitives need lift (Day 1 budget)
+- [ ] **Vitest spec presence check** — `ls frontend/tests/unit/features/governance/` → identify existing specs that need migration vs new specs to add
+
+### 0.3 Step 2.5 Prong 2 — Content verify
+- [x] **Production governance/index.tsx content shape verify** — outer 2-tab (Pending Approvals / Audit Log) + RequireAuth + AppShellV2; will be PRESERVED unchanged (only `ApprovalsPage` body rebuilt)
+- [x] **Production ApprovalsPage.tsx content verify** — 73 lines; current simple `<h2>` + Refresh + error banner + `<ApprovalList>` table
+- [x] **Production ApprovalList.tsx content verify** — 102 lines; 6-col table; risk color via `RISK_COLOR_CLASS` (post FIX-017 `var(--risk-X)` tokens — preserved)
+- [x] **Production governanceService.listPending content verify** — returns `body.items` from `PendingListResponse` shape; D-DAY0-1 root cause confirmed (route-sweep mock returns `[]` not `{items: []}` → `body.items === undefined` → TanStack throws "data is undefined"; production with real backend is fine)
+- [ ] **`ApprovalSummary` type field verify** — `grep -A 20 "interface ApprovalSummary" frontend/src/features/governance/types.ts` → confirm fields needed for mockup Detail pane (tool / risk / policy / scope / operator / age / sla_deadline / payload.tool_input / payload.rationale); if missing, log scope decision (accept fixture + AP-2 banner per CLAUDE.md §Frontend Mockup-Fidelity Hard Constraint)
+- [ ] **Backend `/governance/approvals` response schema verify** — `grep -B 2 -A 20 "PendingListResponse" backend/src/api/v1/governance/router.py` → confirm field shape matches mockup detail pane needs; document gaps if any
+
+### 0.4 Step 2.5 Prong 2.5 — Child component tree depth audit (AP-Phase2-A/B/C anti-patterns) — AD-Plan-5
+- [ ] **Enumerate child component tree** — `grep -nE "import.*from.*@/features/governance" frontend/src/pages/governance/index.tsx` (depth-1)
+- [ ] **AP-Phase2-C grep on each child** — `grep -E "bg-card|text-foreground|border-border|bg-muted|text-muted-foreground" frontend/src/features/governance/components/*.tsx` → should be 0 (post FIX-015); confirm
+- [ ] **STYLE.md §3 inline `style=` escape comment grep** — `grep -E "style=\\{\\{" frontend/src/features/governance/components/*.tsx` → verify each match has adjacent `eslint-disable-next-line no-restricted-syntax` comment
+- [ ] **AP-Phase2-A outer wrapper artifact grep** — `grep -nE "<div style=\\{\\{[^}]*padding" frontend/src/features/governance/components/*.tsx` → should be 0
+- [ ] **Layout-class fullBleed drop grep** — `grep -nE "fullBleed" frontend/src/pages/governance/index.tsx` → governance is NOT fullBleed page (Approvals fits inside normal page padding), confirm
+
+### 0.5 Step 2.5 Prong 3 — Schema verify
+- [x] **N/A — no DB schema / migration / ORM changes in Sprint 57.40** (frontend-only sprint; backend `/governance/approvals` endpoint unchanged)
+
+### 0.6 Catalog drift findings in progress.md
+- [ ] **Create `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-40/progress.md`**
+  - Day 0 entry with "Drift findings" header
+  - D-DAY0-1 already known: route-sweep mock artifact (NOT bug); scope adjustment from audit's "2-3 hr fix" to "30 min mock specificity"
+  - Any Prong 2 + Prong 2.5 grep results that don't match Plan §3 spec → log as D-DAY0-X
+  - Decide go/no-go: ≤20% shift → continue; 20-50% → revise plan §Acceptance + §Workload; >50% → abort & redraft
+  - DoD: progress.md exists with Day 0 entry summarizing single-domain scope confirmation
+
+### 0.7 Capture before baseline (route-sweep)
+- [ ] **Re-point `frontend/scripts/route-sweep.mjs` OUT_DIR** to `sprint-57-40-governance-full-rebuild` (1-line edit + MHist entry; mirror Sprint 57.39 D-DAY0 pattern)
+- [ ] **Dev server already running on port 3007** (confirmed Day 0 audit work; reuse)
+- [ ] **Run sweep before**: `node frontend/scripts/route-sweep.mjs before` → 24 PNGs in `claudedocs/4-changes/sprint-57-40-governance-full-rebuild/screenshots/before/`
+- [ ] **Verify**: 24 files in before/ + no failed routes (16 AppShellV2 + 8 PUBLIC per FIX-018 auto-derive)
+
+### 0.8 Pre-Day-1 baseline checks
+- [ ] **Vitest baseline confirm 478/478** (`cd frontend && npm test -- --reporter=dot`)
+- [ ] **mockup-fidelity guard exit 0** (`node frontend/scripts/check-mockup-fidelity.mjs`)
+- [ ] **TypeScript compile baseline** — `npm run typecheck` (skip if pre-existing tsconfig TS6310 same as FIX-010/011 hotfix)
+- [ ] **Lint baseline** — `npm run lint` (clean except 3 pre-existing jsx-ast-utils warnings)
+
+### 0.9 Day 0 user review checkpoint
+- [ ] **Present plan + checklist summary to user** — `Sprint 57.40 Day 0 ready. Plan = ~325 lines. Checklist = ~200 lines. Single-domain frontend-mockup-strict-rebuild 0.60 (6th data point). Scope = 5 NEW components + ApprovalsPage restructure + ApprovalList 7-col upgrade + route-sweep mock fix + drift audit report update.`
+- [ ] **Wait for user green-light before Day 1 code starts** — per CLAUDE.md §Sprint Execution Workflow Step 1+2: plan + checklist must exist + be reviewed BEFORE Day 1
+
+---
+
+## Day 1 — Primitives + 5 NEW components + ApprovalsPage restructure + ApprovalList upgrade (agent-delegated)
+
+### 1.1 Agent delegation prep
+- [ ] **Read mockup `page-governance.jsx:265-407`** (KvRow primitive + APPROVALS data + Approvals component)
+- [ ] **Read existing primitives** — `frontend/src/components/mockup-ui.tsx` (verify Tabs/Stat/Card/Field/Badge presence; lift Sprint 57.24's CardShell / Sprint 57.24's StatCard / Sprint 57.24's RiskBadge if needed)
+- [ ] **Prepare agent task brief**:
+  - Scope = 5 NEW components + ApprovalsPage restructure + ApprovalList 7-col upgrade
+  - Preserve `useApprovals` / `useApprovalDecide` / `governanceService` wiring (NO touch)
+  - Preserve `RISK_COLOR_CLASS` post-FIX-017 token map (NO touch)
+  - Preserve outer 2-tab shell in `pages/governance/index.tsx` (NO touch)
+  - Use mockup verbatim CSS classes per Sprint 57.28 foundation; inline `style=` literals per `AD-Inline-Style-Rule-vs-Verbatim-Method` (file-level `eslint-disable no-restricted-syntax` with rationale)
+  - 4 KPI: Active queue derived from `useApprovals.data?.length`; other 3 fixture + AP-2 BackendGapBanner
+  - 5-tab: active wired to real query; other 4 render AP-2 banner placeholder
+  - Detail pane Approve/Reject buttons wire to `useApprovalDecide`; Approve-with-edits + Escalate AP-2 banner
+
+### 1.2 Primitive lifts (if Day 0 0.2 grep showed missing)
+- [ ] **Add `<KvRow>` primitive to `mockup-ui.tsx`** per mockup `page-governance.jsx:265-272`
+- [ ] **Lift `<Stat>` from Sprint 57.24** if missing (StatCard wraps it)
+- [ ] **Lift `<Card>` from Sprint 57.24** if missing (CardShell)
+- [ ] **Lift `<Field>` from Sprint 57.34** if missing
+- [ ] **Lift `<Badge>` from Sprint 57.24** if missing (separate from `var(--risk-X)` colored RiskBadge)
+
+### 1.3 5 NEW component creation (agent-delegated 1st invocation)
+- [ ] **Delegate to `code-implementer` agent** (1st invocation):
+  - Input: 5 component specs from plan §3.2 + mockup source line ranges + Sprint 57.24 + 57.37 precedents
+  - Output: 5 NEW files (ApprovalsPageHeader / ApprovalsStatsStrip / ApprovalsFilterTabs / ApprovalDetailPane / ApprovalsEmptyTab)
+  - DoD: TS 0 errors / lint clean / each component renders standalone if isolated
+
+### 1.4 ApprovalsPage restructure + ApprovalList upgrade
+- [ ] **Restructure `ApprovalsPage.tsx`** — replace simple 4-element structure with 5-component composition (header / stats / filter tabs / 2-col grid containing list + detail pane)
+- [ ] **Add `selected` state to ApprovalsPage** — `useState<string | null>(null)` for selected approval ID; passed to ApprovalList (highlight) + ApprovalDetailPane (content)
+- [ ] **Upgrade `ApprovalList.tsx`** — 6-col → 7-col (add SevDot first column); add `selected` prop + row highlight; refactor `onSelect(id)` to update parent state not modal
+- [ ] **Mark 7th consecutive code-implementer delegation** in progress.md Day 1 entry
+
+### 1.5 DecisionModal disposition
+- [ ] **Decide disposition** based on Detail pane completeness:
+  - **Option A (delete)**: if Detail pane fully covers Approve/Reject — delete `DecisionModal.tsx` per Karpathy §3 orphan delete
+  - **Option B (keep + refactor)**: if "Approve with edits" needs a reason-capture modal — keep modal but trigger only from "Approve with edits" button in Detail pane
+- [ ] **Document decision** in progress.md Day 1 D-DAY1-X entry
+
+### 1.6 Vitest spec verify (decide at agent finish)
+- [ ] **Run Vitest** — `npm test -- --reporter=dot`
+- [ ] **If all 478 pass** → D-DAY1-1 positive surprise (text/role/data-testid selectors class-swap-resilient per Sprint 57.37 D-DAY3-1 convention)
+- [ ] **If any fail** → adapt spec (prefer text/role/testid assertions over class-name)
+- [ ] DoD: Vitest ≥478/478 (NEW specs deferred to Day 2)
+
+### 1.7 Day 1 drift catalog + commit
+- [ ] **progress.md Day 1 entry** — actual hr vs ~4.8 est; drift findings if any (D-DAY1-X format)
+- [ ] **Commit**: `feat(frontend, sprint-57-40): /governance Approvals view full rebuild — 5 NEW components + ApprovalsPage restructure + ApprovalList 7-col upgrade`
+
+---
+
+## Day 2 — Vitest specs + route-sweep mock fix + mockup-fidelity threshold + drift audit report update
+
+### 2.1 Vitest spec migration
+- [ ] **Adapt existing `ApprovalList.test.tsx`** (if exists) — 6-col → 7-col + new SevDot column; preserve text/role assertions
+- [ ] **Migrate existing `ApprovalsPage.test.tsx`** (if exists) — modal-flow assertions → detail-pane content assertions
+
+### 2.2 NEW Vitest specs (+4-8 NEW specs target)
+- [ ] **NEW `ApprovalsStatsStrip.test.tsx`** — render 4 stat cards; Active queue count derives from `useApprovals.data?.length`; AP-2 banner present for other 3 KPIs
+- [ ] **NEW `ApprovalDetailPane.test.tsx`** — render KvRow set when approval selected; Approve button calls `useApprovalDecide`; Reject button same; Approve-with-edits + Escalate show AP-2 banner
+- [ ] **NEW `ApprovalsFilterTabs.test.tsx`** — 5 tabs render with correct labels + counts; switching tabs updates active state
+- [ ] **NEW `ApprovalsEmptyTab.test.tsx`** — renders AP-2 banner placeholder for 4 non-active tabs
+- [ ] DoD: Vitest 478 + 4-8 = 482-486 passing
+
+### 2.3 D-DAY0-1: route-sweep mock fix
+- [ ] **Edit `frontend/scripts/route-sweep.mjs`** — add specific `/governance/approvals` mock returning `{items: []}` per plan §3.5
+- [ ] **MHist entry** — `2026-05-25: Sprint 57.40 D-DAY0-1 fix — add specific /governance/approvals mock returning {items: []} shape (was tripping ApprovalsPage red banner in audit captures because default [] mock didn't match PendingListResponse shape)`
+- [ ] **Smoke test**: re-run `node scripts/route-sweep.mjs --list-only` → confirm derive logic unchanged
+
+### 2.4 mockup-fidelity threshold update
+- [ ] **Run guard** — `node frontend/scripts/check-mockup-fidelity.mjs`
+- [ ] **Update `HEX_OKLCH_BASELINE`** to actual measured count (current 45 → target ≤51 per plan §3.6)
+- [ ] **MHist entry** — Sprint 57.40 source bump
+
+### 2.5 Drift audit report update
+- [ ] **Edit `claudedocs/5-status/drift-audit-2026-05-25/audit-report.md`** — mark `/governance` verdict ✅ PARITY post-rebuild
+- [ ] **Update verdict summary table** — 16 PARITY → 17; 5 CATASTROPHIC → 4 (only memory / verification / admin-tenants / tenant-settings remain)
+- [ ] **Update Recommendations section** — strike through #3 `/governance rebuild`; promote next priority
+
+### 2.6 Day 2 drift catalog + commit
+- [ ] **progress.md Day 2 entry** — actual hr vs ~3.0 est; drift findings if any (D-DAY2-X format)
+- [ ] **Commit**: `chore(sprint-57-40): Day 2 — Vitest specs + route-sweep mock fix + mockup-fidelity threshold + audit report update`
+
+---
+
+## Day 2.5 — Capture after baseline + 22-route sweep diff review + fidelity verdict (governance)
+
+### 2.5.1 Capture after baseline (route-sweep)
+- [ ] **Run sweep after**: `node frontend/scripts/route-sweep.mjs after` → 24 PNGs in `screenshots/after/`
+- [ ] **Verify**: 24 files in after/ + 0 failed routes
+
+### 2.5.2 Before/after diff review
+- [ ] **Compare each route**: before/X.png vs after/X.png
+- [ ] **Classify**: IDENTICAL (byte-equal) / CHANGED (visual diff) / FAIL (any route crashed)
+- [ ] **Expected CHANGED set**: ONLY `/governance` (Domain rebuild)
+- [ ] **0 UNINTENDED regressions**: any CHANGED outside `/governance` = drift to investigate before close
+
+### 2.5.3 Fidelity verdict (/governance only)
+- [ ] **`/governance` verdict**: PARITY / NEAR-PARITY / MINOR-DRIFT / MAJOR-DRIFT (target: PARITY)
+- [ ] DoD: verdict recorded in retrospective.md §per-Domain (single domain this sprint)
+
+### 2.5.4 Side-by-side mockup compare (re-use mockup-sweep.mjs from drift audit)
+- [ ] **Re-shoot mockup `#approvals`** via `node frontend/scripts/mockup-sweep.mjs` (re-uses Sprint 57.40 audit infrastructure)
+- [ ] **Pixel-level compare**: production `after/governance.png` vs mockup `mockup/governance.png`
+- [ ] **Visual diff classification**: if ✅ PARITY, save the pair to `claudedocs/4-changes/sprint-57-40-governance-full-rebuild/before-after/` as evidence
+
+### 2.5.5 Day 2.5 drift + commit
+- [ ] **progress.md Day 2.5 entry** — sweep summary IDENTICAL count / CHANGED count (expected 23 IDENTICAL + 1 CHANGED)
+- [ ] **Commit**: `chore(sprint-57-40): Day 2.5 22-route sweep + /governance fidelity verdict`
+
+---
+
+## Day 3 — Closeout (retro + matrix update + memory + push + PR)
+
+### 3.1 Retrospective
+- [ ] **Create `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-40/retrospective.md`** with Q1-Q7 sections
+- [ ] **Q2 single-domain calibration ratio** — `actual_total_hr / committed_total_hr`; verdict vs 0.60 baseline (in [0.85, 1.20] band = PASS)
+- [ ] **Q2 6th data point narrative** — extends 5-pt window (57.23/24/25/27/37); compute 6-pt mean; class healthy assessment
+- [ ] **Q4 audit debt** — Detail pane `Approve with edits` / `Escalate to L2` deferred (AP-2 banners); approved/rejected/expired/policies tabs deferred (AP-2 banners); track as carryover ADs
+- [ ] **Q5 carryover candidates** — backend stats endpoint for 3 missing KPIs (p50/Approved 24h/Rejected 24h); backend filter endpoints for 4 non-active tabs
+- [ ] **Q6 verbatim-CSS protocol compliance** — Layer 2 diff guard 0 / Layer 4 collision check / HEX_OKLCH_BASELINE bump ≤6 envelope check
+
+### 3.2 Calibration matrix update (`sprint-workflow.md §Scope-class multiplier matrix`)
+- [ ] **`frontend-mockup-strict-rebuild` row update** — append Sprint 57.40 as 6th data point (ratio + 6-pt mean); update class status (`KEEP 0.60` if in band)
+- [ ] **MHist entry** — 6th data point notation
+
+### 3.3 Memory subfile + MEMORY.md pointer
+- [ ] **Create `memory/project_phase57_40_governance_full_rebuild.md`** with sprint detail
+- [ ] **Add MEMORY.md entry** — quality pointer (~250-300 char with topic + keywords + subfile link per §Sprint Closeout Update Policy)
+- [ ] DoD: index entry rendered
+
+### 3.4 next-phase-candidates.md
+- [ ] **Add Sprint 57.40 carryover section** at top
+- [ ] **Update Phase-2 epic progress** — 5 🟡 CATASTROPHIC → 4 🟡 remaining (memory / verification / admin-tenants / tenant-settings; `/chat-v2` tab rename minor NEAR-PARITY still open)
+- [ ] **Add NEW carryover ADs** — backend stats endpoint + backend filter endpoints for governance approvals queue tabs; `/chat-v2` tab vocab rename quick-win
+
+### 3.5 CLAUDE.md minimal touch (per §Sprint Closeout Update Policy)
+- [ ] **Update `Current Sprint` row** with 57.41 placeholder (or candidate description)
+- [ ] **Update `Last Updated` footer** — 1-line: `**Last Updated**: 2026-05-XX (Sprint 57.40 — /governance Approvals view full mockup-fidelity rebuild — closes audit 2026-05-25 #3 priority); see memory/ for sprint history`
+- [ ] **NO retro detail packed into table cells** (per REFACTOR-001 lesson)
+
+### 3.6 Commit closeout + push + PR
+- [ ] **Final commit**: `chore(sprint-57-40): closeout — retro + matrix + memory + CLAUDE.md`
+- [ ] **Push**: `git push -u origin feature/sprint-57-40-governance-full-rebuild`
+- [ ] **Open PR**: `gh pr create --base main --title "feat(frontend, sprint-57-40): /governance Approvals view full mockup-fidelity rebuild (closes drift audit 2026-05-25 #3 priority)"` with full body (mirror 57.39 PR template)
+- [ ] **Wait for CI green** → squash-merge ready → user confirmation before merge
+
+---
+
+## Sprint 57.40 Closeout Self-Check (per `.claude/rules/sprint-workflow.md` §Sprint Closeout)
+
+- [ ] **CLAUDE.md changes**: Only Current Sprint row + Last Updated footer (no per-sprint history table additions)?
+- [ ] **MEMORY.md new entry**: ~250-300 char quality pointer (topic + keywords + subfile link)?
+- [ ] **Sprint detail preserved**: memory subfile + retrospective.md with full content?
+- [ ] **Carryover / open items**: documented in `next-phase-candidates.md` (NOT in CLAUDE.md / MEMORY.md prose)?
+- [ ] **Calibration ratio**: tracked in `sprint-workflow.md §Scope-class multiplier matrix` (6th data point + 6-pt mean)?
+- [ ] **D-DAY1-1 surprise note**: if Vitest spec needed NO update on rebuild → record as Sprint 57.37 D-DAY3-1 convention candidate further validation
+- [ ] **Phase-2 epic progress note**: post-sprint 5 → 4 🟡 CATASTROPHIC remaining (next high-ROI candidate = `/verification` rebuild ~8-10 hr OR `/chat-v2` tab rename ~30 min quick win)
+- [ ] **Drift audit report updated**: `/governance` verdict ✅ PARITY in `claudedocs/5-status/drift-audit-2026-05-25/audit-report.md`?

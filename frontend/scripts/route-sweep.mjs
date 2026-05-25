@@ -25,6 +25,7 @@
  * Created: 2026-05-20 (Sprint 57.26 Day 0) — supersedes the temporary frontend/diagnose-render.mjs
  *
  * Modification History:
+ *   - 2026-05-25: Sprint 57.40 Day 0 — re-point OUT_DIR to sprint-57-40-governance-full-rebuild (single-domain rebuild: /governance Approvals view full mockup-fidelity rebuild; closes drift audit 2026-05-25 #3 priority)
  *   - 2026-05-25: FIX-018 — APPSHELL_ROUTES auto-derived from routes.config.ts (closes AD-RouteSweep-Auto-Derive; eliminates FIX-016-class manual-sync gap)
  *   - 2026-05-25: FIX-016 — APPSHELL_ROUTES +/redaction +/error-policy (PROP→real coverage gap)
  *   - 2026-05-25: FIX-014 — OUT_DIR cwd-relative → __dirname-relative (Sprint 57.39 D4 foot-gun)
@@ -122,7 +123,7 @@ const BASE = "http://localhost:3007";
 const VP = { width: 1440, height: 900 };
 const OUT_DIR = path.resolve(
   __dirname,
-  `../../claudedocs/4-changes/sprint-57-39-governance-multipage-phase2/screenshots/${MODE}`,
+  `../../claudedocs/4-changes/sprint-57-40-governance-full-rebuild/screenshots/${MODE}`,
 );
 
 // Home + AuthShell routes — no auth mock needed (public).
