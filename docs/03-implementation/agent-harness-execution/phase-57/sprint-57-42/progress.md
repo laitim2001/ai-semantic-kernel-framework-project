@@ -114,3 +114,99 @@ Per `.claude/rules/sprint-workflow.md §Step 2.5` decision rule:
 All Day 0 §0.1-§0.9 checklist items complete. Day 1 code start awaits user green-light per CLAUDE.md §Sprint Execution Workflow + checklist §0.9.
 
 ---
+
+## Day 1 — 2026-05-25 (6 NEW components + _fixtures.ts + page restructure + 6 vintage orphan delete + 5 orphan spec delete)
+
+### Agent delegation summary
+
+- **10th consecutive code-implementer invocation** dispatched with consolidated task brief (see commit message body)
+- **Wall-clock**: ~40 min (within 30-50 min agent-delegation envelope per Sprint 57.39+57.40+57.41 pattern)
+- **Bottom-up human-equivalent estimate**: ~5 hr
+- **Implied agent speedup**: ~7.5× — consistent with 4 prior consecutive agent-delegated rebuilds (57.39 / FIX-015 / 57.40 / 57.41 all ratio < 0.7)
+
+### Files created (7 NEW)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `frontend/src/features/memory/_fixtures.ts` | ~195 | Verbatim mockup port: 5 consts + RECENT_MEMORY_OPS + TOTAL_ENTRIES |
+| `frontend/src/features/memory/components/MemoryPageHeader.tsx` | ~85 | `.page-head` + 3 actions + conditional time-travel Badge |
+| `frontend/src/features/memory/components/TimeTravelScrubber.tsx` | ~155 | 24h slider Card + 12 op markers + 6 marks + cursor display |
+| `frontend/src/features/memory/components/MemoryMatrix.tsx` | ~175 | 5×3 grid + cursor-aware visibility filter + hover bg + AP-2 banner |
+| `frontend/src/features/memory/components/RecentMemoryOpsCard.tsx` | ~105 | 6-col table + 5 fixture rows + AP-2 banner |
+| `frontend/src/features/memory/components/GdprErasureCard.tsx` | ~70 | Subject input + reason select + danger tombstone Button + AP-2 banner |
+| `frontend/src/features/memory/components/MemoryView.tsx` | ~85 | Container — useState cursor/playing + useEffect setInterval playback |
+
+### Files modified (2)
+
+- `frontend/src/pages/memory/index.tsx` — 73 → 50 lines. Dropped outer 2-tab + NavLink imports per §1.4 Option B. Single `<MemoryView />` mount; backward-compat redirects `/memory/recent` + `/memory/by-scope` + `*` → `<Navigate to="/memory" replace />`. MHist newest-first updated.
+- `frontend/src/components/mockup-ui.tsx` — `ButtonVariant` type widened to add `"warning" | "danger"` (1-line; CSS class composition `btn ${variant}` + `styles-mockup.css` already supported these — narrow TS union was the constraint). Same pattern as Sprint 57.41 Badge tones widening.
+
+### Files deleted (11 total — Karpathy §3 orphan delete)
+
+**6 production source files** (agent delete):
+- `frontend/src/features/memory/components/{MemoryRecentList,MemoryByScopeBrowser,MemoryScopeBadge}.tsx`
+- `frontend/src/features/memory/hooks/{useMemoryByScope,useMemoryByTime,useMemoryRecent}.ts`
+- Empty `hooks/` directory removed
+
+**5 orphan spec files** (parent post-agent delete — Day 2 §2.1 plan task pulled forward to Day 1 closeout per Sprint 57.40 DecisionModal precedent):
+- `frontend/tests/unit/memory/MemoryRecentList.test.tsx` (6 tests)
+- `frontend/tests/unit/memory/MemoryByScopeBrowser.test.tsx` (4 tests)
+- `frontend/tests/unit/memory/MemoryScopeBadge.test.tsx` (5 tests)
+- `frontend/tests/unit/memory/useMemoryHooks.test.tsx` (9 tests)
+- `frontend/tests/e2e/memory/memory-page.spec.ts` (2-tab flow obsolete)
+
+### Verification
+
+| Check | Result |
+|-------|--------|
+| `npx tsc --noEmit` | **0 errors** ✅ (TSC_EXIT=0) |
+| `npm run lint` | **exit 0** ✅ (3 jsx-ast-utils baseline info preserved) |
+| Vitest baseline | **474/474** ✅ (100 test files; 498 - 24 vintage = 474, perfect D-DAY0-5 prediction match) |
+| AP-Phase2-C residue (`bg-card`/`text-foreground` etc.) | **0 in NEW components** ✅ |
+| Verbatim CSS classes used | `.page-head` / `.memory-matrix` / `.mm-cell` / `.mm-scope` / `.mm-header` / `.mm-entry` / `.count` / `.grid-main` / `.table` / `.col` / `.row` / `.grow` / `.subtle` / `.mono` / `.input` / `.select` / `.route-pill` / `.page-title` / `.page-sub` / `.page-actions` ✅ |
+| AP-2 BackendGapBanner declarations | **3** explicit (MemoryMatrix matrix endpoint / RecentMemoryOpsCard ops timeline / GdprErasureCard erasure POST) + 4 button-stub `window.alert` AP-2 disclosures (Export / New entry / Issue tombstone / View all inert) ✅ |
+| File-level `eslint-disable no-restricted-syntax` for inline styles | 4 files with rationale comment per Sprint 57.40 FIX-015 + Sprint 57.41 precedent ✅ |
+
+### Drift findings (D-DAY1-X)
+
+#### D-DAY1-1 — `ButtonVariant` type widening (1-line mockup-ui.tsx fix)
+- **Symptom**: Agent's first-pass NEW components used `<Button variant="warning">` (TimeTravelScrubber Pause / MemoryPageHeader Return-to-now) + `<Button variant="danger">` (GdprErasureCard Issue tombstone) per verbatim mockup. TypeScript `ButtonVariant` narrow union (`"outline" | "primary" | "ghost"`) blocked it.
+- **Reality**: CSS class composition `btn ${variant}` + `styles-mockup.css` already had `.btn.warning` and `.btn.danger` rules — runtime always worked; only TS type was over-narrow.
+- **Fix**: 1-line widen the union to `"outline" | "primary" | "ghost" | "warning" | "danger"`. Same pattern as Sprint 57.41 Badge tones.
+- **Carryover**: NONE (fix is complete; downstream consumers across app benefit globally).
+
+#### D-DAY1-2 — Orphan spec cleanup (executed Day 1, was Day 2 §2.1 plan task)
+- **Symptom**: 4 Vitest specs + 1 Playwright e2e referenced now-deleted symbols → import-time fail.
+- **Fix**: Deleted all 5 orphan spec files at Day 1 closeout (Karpathy §3 orphan delete co-located with parent delete; Sprint 57.40 DecisionModal precedent — spec delete same-day as source delete keeps repo in valid state at every commit).
+- **Day 2 §2.1 plan task**: now reduces to "confirm deletes" instead of "perform deletes" — 5 NEW Vitest specs (§2.2) still pending Day 2.
+
+#### D-DAY1-3 — `types.ts` MHist cosmetic stale refs (deferred)
+- **Symptom**: `frontend/src/features/memory/types.ts` MHist header references the deleted hook/component files.
+- **Impact**: Cosmetic comment only; `types.ts` is in PRESERVE list per plan §3.3 (still exported via `services/memoryService.ts`).
+- **Deferred**: Day 3 closeout cleanup pass OR carryover `AD-Memory-Types-MHist-Refresh`.
+
+#### D-DAY1-4 — `frontend/src/components/ui/badge.tsx` docstring stale ref (deferred)
+- **Symptom**: badge.tsx L12 docstring comment references `MemoryScopeBadge` (now deleted).
+- **Impact**: Cosmetic; 0 runtime impact.
+- **Deferred**: Day 3 closeout cleanup OR carryover `AD-Badge-Docstring-Refresh`.
+
+### `BackendGapBanner` signature discovery (informational)
+
+Agent brief assumed `<BackendGapBanner issue=... deferredTo=... backendEndpoint=...>` 3-prop signature. **Actual**: `<BackendGapBanner reason="..." />` single-prop signature (matches Sprint 57.41 `FailureKindsCard.tsx` precedent). Agent correctly identified + used the real signature with endpoint path embedded in `reason` string (e.g. `"... — GET /api/v1/memory/matrix?cursor= (Phase 58+)"`). No brief revision needed; documented for future agent briefs.
+
+### Day 1 Estimate vs actual
+
+- Plan §8 Day 1 est: ~8.5 hr bottom-up
+- Agent wall-clock: ~40 min (4 mockup ports + 1 type fix + 1 page restructure + 6 source deletes + 5 spec deletes)
+- Implied human-equivalent: ~5-5.5 hr
+- **Agent-delegation speedup**: ~7-8× — 5th cross-class data point for `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier`; activation criteria fully met after this sprint (target Sprint 57.43 retro structural decision per `.claude/rules/sprint-workflow.md §Proposed Agent Delegation Factor Modifier`)
+
+### Day 1 — Ready for Day 2
+
+- Vitest baseline post-Day-1: **474/474** (down from 498 ⇒ ready for Day 2 §2.2 +5-8 NEW specs target → final ~479-482)
+- TS strict + lint clean
+- Mockup-fidelity guard NOT re-run yet (Day 2 §2.4 task; expected bump +0-4 from 46 → ≤50 per plan §3.6)
+- Route-sweep `after` capture NOT run yet (Day 2.5 §2.5.1 task)
+- Day 2 entry awaits agent-delegation 11th consecutive (or human-direct) for Vitest specs + route-sweep mock + drift audit report update
+
+---

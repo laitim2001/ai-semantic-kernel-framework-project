@@ -414,7 +414,7 @@ export function Icon({ name, size = 16, className = "", style }: IconProps): JSX
 
 // ───────────────── Button ─────────────────
 
-type ButtonVariant = "outline" | "primary" | "ghost";
+type ButtonVariant = "outline" | "primary" | "ghost" | "warning" | "danger";
 
 interface ButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
