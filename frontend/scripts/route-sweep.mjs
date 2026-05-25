@@ -26,6 +26,7 @@
  *
  * Modification History:
  *   - 2026-05-25: Sprint 57.40 Day 2 D-DAY0-1 fix — add `/governance/approvals` specific mock returning {items, total, has_more} PendingListResponse shape (default [] fallback tripped rebuilt ApprovalsPage TanStack)
+ *   - 2026-05-25: Sprint 57.41 Day 0 — re-point OUT_DIR to sprint-57-41-verification-full-rebuild (single-domain rebuild: /verification recent view full mockup-fidelity rebuild; closes drift audit 2026-05-25 #2 priority CATASTROPHIC)
  *   - 2026-05-25: Sprint 57.40 Day 0 — re-point OUT_DIR to sprint-57-40-governance-full-rebuild (single-domain rebuild: /governance Approvals view full mockup-fidelity rebuild; closes drift audit 2026-05-25 #3 priority)
  *   - 2026-05-25: FIX-018 — APPSHELL_ROUTES auto-derived from routes.config.ts (closes AD-RouteSweep-Auto-Derive; eliminates FIX-016-class manual-sync gap)
  *   - 2026-05-25: FIX-016 — APPSHELL_ROUTES +/redaction +/error-policy (PROP→real coverage gap)
@@ -124,7 +125,7 @@ const BASE = "http://localhost:3007";
 const VP = { width: 1440, height: 900 };
 const OUT_DIR = path.resolve(
   __dirname,
-  `../../claudedocs/4-changes/sprint-57-40-governance-full-rebuild/screenshots/${MODE}`,
+  `../../claudedocs/4-changes/sprint-57-41-verification-full-rebuild/screenshots/${MODE}`,
 );
 
 // Home + AuthShell routes — no auth mock needed (public).

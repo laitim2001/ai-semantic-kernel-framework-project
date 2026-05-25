@@ -24,6 +24,7 @@
  * Last Modified: 2026-05-24
  *
  * Modification History (newest-first):
+ *   - 2026-05-25: Sprint 57.41 Day 1 — verification view full mockup-fidelity rebuild; mount VerificationView (replaces VerificationList orphan-deleted per Karpathy §3); preserve outer 2-tab shell + /timeline route
  *   - 2026-05-24: Sprint 57.39 Domain B — verbatim CSS swap tab-shell per page-extras.jsx:829 VerificationPage (.tabs/.tab[data-active]); Sprint 57.33 defensive ?? [] guard in VerificationList.tsx preserved (out of scope here)
  *   - 2026-05-10: Sprint 57.13 US-B5 — pageTitle + tab labels via i18n t()
  *   - 2026-05-10: Sprint 57.13 US-A1 — gate via <RequireAuth> (was inline isAuthenticated() check)
@@ -33,7 +34,7 @@
  * Related:
  *   - frontend/src/features/auth/components/RequireAuth.tsx (route gate)
  *   - frontend/src/components/AppShellV2.tsx (Sprint 57.8 US-1.3)
- *   - frontend/src/features/verification/components/VerificationList.tsx (Day 3 §3.1; Sprint 57.33 defensive ?? [] guard sites L191/205/220/262)
+ *   - frontend/src/features/verification/components/VerificationView.tsx (Sprint 57.41 mockup-fidelity rebuild; replaces VerificationList)
  *   - frontend/src/features/verification/components/CorrectionTraceView.tsx (Day 3 §3.2)
  *   - frontend/src/i18n/locales/{en,zh-TW}/common.json (nav.verification + verification.tab.* keys)
  *   - frontend/src/styles-mockup.css (.tabs / .tab[data-active] L590-610)
@@ -46,7 +47,7 @@ import { AppShellV2 } from "@/components/AppShellV2";
 import { Tabs } from "@/components/mockup-ui";
 import { RequireAuth } from "@/features/auth/components/RequireAuth";
 import { CorrectionTraceView } from "@/features/verification/components/CorrectionTraceView";
-import { VerificationList } from "@/features/verification/components/VerificationList";
+import { VerificationView } from "@/features/verification/components/VerificationView";
 
 export default function VerificationPage(): JSX.Element {
   const { t } = useTranslation("common");
@@ -70,7 +71,7 @@ export default function VerificationPage(): JSX.Element {
         />
         <Routes>
           <Route index element={<Navigate to="recent" replace />} />
-          <Route path="recent" element={<VerificationList />} />
+          <Route path="recent" element={<VerificationView />} />
           <Route path="timeline" element={<CorrectionTraceView />} />
           <Route path="*" element={<Navigate to="recent" replace />} />
         </Routes>
