@@ -210,3 +210,116 @@ Agent brief assumed `<BackendGapBanner issue=... deferredTo=... backendEndpoint=
 - Day 2 entry awaits agent-delegation 11th consecutive (or human-direct) for Vitest specs + route-sweep mock + drift audit report update
 
 ---
+
+## Day 2 — 2026-05-25 (Vitest specs agent + route-sweep + fidelity + audit report patches)
+
+### Day 2 Split
+
+User-approved at Day 1 §1.6 closeout checkpoint:
+- **Agent-delegated** (11th consecutive code-implementer in background, `a5e54ce71c2020db4`): Vitest specs §2.2 — 5-6 NEW spec files
+- **Human-direct (parent)**: route-sweep §2.3 + mockup-fidelity §2.4 + drift audit report §2.5
+
+### §2.3 route-sweep envelope mock — **NO-OP decision** (D-DAY2-1)
+
+Plan §3.5 anticipated adding `/api/v1/memory/{ops/recent,matrix}` envelope mocks as 3rd application of `AD-RouteSweep-Envelope-Mock-Convention`. **Reality after Day 1**:
+
+- All 3 `useMemoryX` hooks deleted Karpathy §3 → 0 `/api/v1/memory/*` calls fire from `/memory` page in production OR the route-sweep capture
+- `frontend/src/features/memory/services/memoryService.ts` preserved but has no consumers → orphan candidate
+- `routes.config.ts` only has `/memory` parent entry → no `/memory/recent` or `/memory/by-scope` ever in sweep list
+
+**Decision**: NO mock to add (rebuild is fully fixture-driven). `AD-RouteSweep-Envelope-Mock-Convention` stays at **2 applications** (Sprint 57.40 governance + Sprint 57.41 verification); 3rd application requires actual envelope-shaped backend call from a Phase-2 page — not this rebuild.
+
+→ §2.3 reduces to documentation (this Day 2 narrative) + carryover candidate `AD-Memory-Service-Orphan-Cleanup` Phase 58+ if memoryService.ts stays unused.
+
+### §2.4 mockup-fidelity baseline — **NO-OP** (D-DAY2-2)
+
+Re-ran `node frontend/scripts/check-mockup-fidelity.mjs` post Day 1:
+- ✓ diff guard: `styles-mockup.css` byte-identical
+- ✓ grep guard: **46 hardcoded hex/oklch lines (baseline 46 unchanged)**
+
+All 7 NEW component inline styles use **var(--memory) / var(--info) / var(--tool) / var(--warning) / var(--bg-2) / var(--fg) / var(--fg-muted) / var(--primary)** references (no new hex/oklch literals introduced). Plan §3.6 estimate +0-4 was conservative; actual +0.
+
+→ HEX_OKLCH_BASELINE **stays at 46**; no edit to `check-mockup-fidelity.mjs`. Class verbatim-CSS protocol compliance preserved.
+
+### §2.5 drift audit report — **8 edits applied** ✅
+
+`claudedocs/5-status/drift-audit-2026-05-25/audit-report.md` patches:
+1. Verdict summary table: PARITY 18 → 19 (add memory ⭐) / CATASTROPHIC 3 → 2 (drop memory)
+2. Per-page row #13 `/memory`: 🔴 CATASTROPHIC → ✅ PARITY (post-rebuild) + full rebuild summary
+3. Key findings #1: NEW paragraph "Post Sprint 57.42 (third follow-up)" → 19 PARITY + 1 NEAR-PARITY + 2 CATASTROPHIC
+4. Key findings #2 `/memory` row: status RESOLVED Sprint 57.42 Day 1 full rebuild
+5. Effort estimate row: strike `/memory` 10-15 hr; mark RESOLVED with actual ~5-5.5 hr human-eq (agent ~40 min)
+6. Recommendations table: strike #5 `/memory` rebuild (was → 2 priority); renumber admin-tenants (now → 2) + tenant-settings (→ 3) + CLAUDE.md realignment (→ 4)
+7. Carryover ADs #1 `AD-Memory-Layers-Matrix-Rebuild`: 🆕 → ✅ CLOSED Sprint 57.42 with full scope detail
+8. Footer status: Sprint 57.42 Day 2 closeout date stamp + remaining CATASTROPHIC count update
+
+### §2.2 Vitest specs agent — **completed** ✅ (6th cross-class data point for agent-delegation modifier)
+
+**Agent**: `a5e54ce71c2020db4` (11th consecutive code-implementer; background mode)
+**Wall-clock**: ~3.4 min (204 sec) — far below 25-35 min estimate; another +20-25× agent-speedup data point
+
+**Output — 6 NEW Vitest spec files** (+12 NEW tests):
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `MemoryPageHeader.test.tsx` | 2 | title+route+entries+cursor=0 button label / cursor<0 Badge + button label swap |
+| `TimeTravelScrubber.test.tsx` | 3 | slider mapping + onCursor rounding + "now" display / playing=false Replay + onPlay + Now ghost + T-Xm / playing=true Pause label |
+| `MemoryMatrix.test.tsx` | 4 | headers+TTL+scopes+banner+no overflow / cursor=0 session.day full 3 entries / cursor=-5 first-entry-only + hidden footer / cursor=-130 day-cells nuked + permanent preserved |
+| `RecentMemoryOpsCard.test.tsx` | 1 | Card+subtitle+6 headers+first-row content+3 op-type counts+banner |
+| `GdprErasureCard.test.tsx` | 1 | title+subtitle+placeholder+combobox+3 options+danger Button+banner |
+| `MemoryView.test.tsx` | 1 | integration — all 5 children render; initial cursor=0 → "Time travel" label |
+
+**+12 NEW** (over +5-8 target; precedent: Sprint 57.40 +15 / Sprint 57.41 +9 — within healthy cohort)
+
+### Verification (post Day 2)
+
+| Check | Result |
+|-------|--------|
+| `npx tsc --noEmit` | **0 errors** ✅ (TSC_EXIT=0) |
+| `npm test -- --reporter=dot` | **486/486** ✅ (106 test files; +6 NEW files +12 NEW tests from 474/100 baseline) |
+| Duration | 14.95s (vs 14.25s Day 1 baseline; +0.7s for 12 NEW tests = expected) |
+
+### D-DAY2-X drift findings
+
+#### D-DAY2-1 — `getByText("now")` ambiguous (agent caught + fixed mid-run)
+- **Symptom**: TIME_TRAVEL_MARKS includes a "now" label in the labels strip in addition to cursor display "now" mono text. `screen.getByText("now")` resolves to 2 elements → strict-mode test failure.
+- **Fix**: `getAllByText("now").length >= 2` — validates both occurrences. Generalizable spec convention for cases where mockup fixture string appears in 2+ rendered locations. **Parallels** Sprint 57.40 D-DAY2-1 `getAllByText` adapter-projects-into-multiple-cells lesson + Sprint 57.41 FIX-020-C `{exact: true}` banner-reason-fixture collision lesson.
+
+#### D-DAY2-2 — route-sweep envelope mock NO-OP (documented above §2.3)
+#### D-DAY2-3 — mockup-fidelity HEX baseline NO-OP (documented above §2.4)
+
+### Key spec convention decisions (agent-applied)
+
+- **No BackendGapBanner mock needed**: native `data-testid="backend-gap-banner"` query path used (Sprint 57.41 `vi.mock` was only for components where the banner caused render-time errors — N/A here)
+- **TimeTravelScrubber pure controlled**: `setInterval` lives in `MemoryView` parent → no fake-timer tests on Scrubber itself; documented in spec header
+- **"+N more" overflow honesty (Karpathy §4)**: mockup fixtures top out at 4 entries per cell (tenant|permanent) — `+N more` cannot trigger from real fixtures → asserted **absent** rather than fabricating fake fixture data. Verifiable goals only.
+
+### `memoryService.test.ts` preserved unchanged (6 tests)
+- HTTP 501 console error in test output is from this pre-existing test (501-envelope contract for `/api/v1/memory/recent`); not new specs
+
+### Day 2 sub-task summary
+
+| Sub-task | Status | Notes |
+|----------|--------|-------|
+| §2.1 Vintage spec migration | ✅ Done Day 1 (pulled forward) | 4 Vitest + 1 e2e orphans deleted with parents Day 1 §1.4 |
+| §2.2 NEW Vitest specs (+5-8 target) | ✅ +12 NEW (74→486) | agent ~3.4 min wall-clock |
+| §2.3 route-sweep envelope mock | ✅ NO-OP decision (D-DAY2-1 documented) | rebuild fixture-only; convention stays at 2 applications |
+| §2.4 mockup-fidelity baseline | ✅ NO-OP verified (D-DAY2-2 documented) | baseline 46 unchanged; var-based colors |
+| §2.5 Drift audit report update | ✅ 8 edits applied | verdict 18→19 PARITY / 3→2 CATASTROPHIC + per-page row #13 PARITY + Key findings + Recommendations renumber + Carryover #1 CLOSED + footer status |
+| §2.6 Day 2 commit | 🔄 In progress | next |
+
+### Day 2 Estimate vs actual
+
+- Plan §8 Day 2 est: ~3.0 hr bottom-up
+- Actual: ~25 min total (agent ~3.4 min wall-clock for specs + ~20 min for human-direct audit report 8 edits + no-op decisions + progress narrative)
+- Implied human-equivalent: ~2-3 hr (vs 3.0 est) — calibration on-track for sprint
+
+### Day 2 — Ready for Day 2.5
+
+- Vitest 486/486 final
+- TSC 0 errors / lint clean (was clean Day 1; no Day 2 source changes affecting lint)
+- mockup-fidelity baseline 46 unchanged (no edit needed)
+- audit-report.md updated (`/memory` verdict PARITY)
+- Day 2.5 §2.5.1 capture after sweep + diff review next
+
+---
