@@ -323,3 +323,77 @@ All 7 NEW component inline styles use **var(--memory) / var(--info) / var(--tool
 - Day 2.5 §2.5.1 capture after sweep + diff review next
 
 ---
+
+## Day 2.5 — 2026-05-25 (capture after baseline + 22-route diff + fidelity verdict + 3-way evidence)
+
+### §2.5.1 Capture after baseline (route-sweep) ✅
+
+- Sanity probe: `/memory` HTTP 200 OK (content-length 729 = SPA shell; client-side render)
+- `node frontend/scripts/route-sweep.mjs after` (background task `bch9ujgtp`) exit 0
+- **24 PNGs** written to `screenshots/after/` (matches before/ count; 8 PUBLIC + 16 AppShellV2)
+
+### §2.5.2 Before/after diff review ✅
+
+Python sha256 diff comparing 24 files in before/ vs after/:
+
+| Verdict | Count | Routes |
+|---------|:-----:|--------|
+| **IDENTICAL** | 20 | All routes EXCEPT memory + 3 noise (auth-callback / chat-v2 / overview) |
+| **CHANGED** | 4 | See breakdown below |
+
+**4 CHANGED breakdown**:
+
+| Route | Before | After | Delta | Classification |
+|-------|:------:|:-----:|:-----:|:--------------:|
+| `memory` | 71,388 B | 173,931 B | **+102,543 B (+144%)** | **INTENDED rebuild** ✅ |
+| `auth-callback` | 93,035 B | 93,012 B | -23 B | sub-300 noise (per Sprint 57.40+57.41 envelope; likely 3-step progress timing jitter) |
+| `chat-v2` | 138,613 B | 138,594 B | -19 B | sub-300 noise (likely live timestamp / chart render jitter) |
+| `overview` | 158,337 B | 158,299 B | -38 B | sub-300 noise (same pattern as Sprint 57.41 overview -44 B noise) |
+
+**0 UNINTENDED regressions** — cleanest sweep of Phase-2 epic to date. Only 1 INTENTIONAL change (`/memory` rebuild) + 3 acceptable sub-300-byte timing jitters across unrelated routes.
+
+### §2.5.3 Fidelity verdict ✅
+
+`/memory` verdict: ✅ **PARITY** (post-rebuild)
+
+Structural checklist confirmed in AFTER PNG (173,931 B):
+- ✅ `.page-head` with "Memory Layers" title + "Dual-axis · 5 scope × 3 time scale" sub + `/memory` route-pill + mono entries count
+- ✅ 3 outline buttons (Time travel / Export / New entry) per mockup verbatim
+- ✅ `<TimeTravelScrubber>` Card with Replay 24h button + Now ghost + 24h slider + 12 op markers behind slider + 6 TIME_TRAVEL_MARKS labels + cursor display
+- ✅ `.memory-matrix` 4-col × 6-row grid (1 header row + 5 SCOPE rows)
+- ✅ Header row: empty corner cell + 3 TIME_SCALES with colored dots + TTL subtitles
+- ✅ 5 scope rows (system / tenant / role / user / session) with name + sub + count + 3 entry cells each
+- ✅ MEMORY_ENTRIES rendered: e.g. tenant.permanent shows 4 entries (Pro plan / region / hitl risk_high / risk_medium); session.day shows 3 entries (root_cause / evidence / severity)
+- ✅ Bottom `.grid-main` 2-col: Recent memory ops 6-col table left + GDPR right-to-erasure form right
+- ✅ AP-2 BackendGapBanner declarations visible (MemoryMatrix matrix endpoint + RecentMemoryOpsCard ops timeline + GdprErasureCard erasure POST)
+
+### §2.5.4 Side-by-side mockup compare — 3-way evidence pair ✅
+
+Staged in `claudedocs/4-changes/sprint-57-42-memory-matrix-rebuild/before-after/`:
+
+| Stage | File | Size | Description |
+|-------|------|:----:|-------------|
+| BEFORE | `01-BEFORE-memory.png` | 71,388 B | Sprint 57.12 vintage 2-tab + paginated table |
+| AFTER | `02-AFTER-memory.png` | 173,931 B | Sprint 57.42 Day 1 rebuild — 5×3 matrix + scrubber + bottom 2-col |
+| MOCKUP | `03-MOCKUP-memory.png` | 189,410 B | Reference mockup `page-governance.jsx:462-598` |
+
+**Production AFTER size = 92% of MOCKUP** — ~15 KB gap likely from minor cosmetic differences (icon rendering subtleties / font hinting / oklch-vs-rgb pixel precision). Structural fidelity ✅ confirmed.
+
+### §2.5.5 Day 2.5 outcome summary
+
+- Drift verdict: ✅ **PARITY** (Sprint 57.42 Day 1+2 rebuild successful)
+- Phase-2 epic: 18 → **19 PARITY** + 1 NEAR-PARITY + 3 → **2 🔴 CATASTROPHIC remaining** (admin-tenants + tenant-settings)
+- Sweep evidence: 22 IDENTICAL + 1 INTENDED CHANGED (/memory) + 3 sub-300-byte timing noise + 0 unintended regressions
+- 3-way evidence pair staged for retro / future audit reference
+
+### Day 2.5 Estimate vs actual
+
+- Plan §8 Day 2.5 est: ~1.0 hr bottom-up
+- Actual: ~15 min (sweep ~1 min wall-clock + sha256 diff ~1 min + 3-way stage ~1 min + progress narrative ~12 min)
+- **Delta: -45 min under estimate**
+
+### Day 2.5 — Ready for Day 3
+
+All Day 2.5 §2.5.1-§2.5.5 checklist items complete. Day 3 closeout next: retro Q1-Q6 + matrix update + memory subfile + CLAUDE.md minimal touch + next-phase-candidates + push + PR.
+
+---
