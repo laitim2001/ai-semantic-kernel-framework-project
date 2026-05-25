@@ -15,9 +15,9 @@
 
 | Verdict | Count | Pages |
 |---------|:-----:|-------|
-| ✅ **PARITY** | 17 | 7 auth (login + callback + register + invite + mfa + expired + dev) / 7 ops (overview + orchestrator + subagents + loop-debug + state-inspector) + 3 governance (governance ⭐ + redaction + error-policy) + 2 dashboards (cost-dashboard + sla-dashboard) |
+| ✅ **PARITY** | 18 | 7 auth (login + callback + register + invite + mfa + expired + dev) / 7 ops (overview + orchestrator + subagents + loop-debug + state-inspector) + 3 governance (governance ⭐ + redaction + error-policy) + 2 dashboards (cost-dashboard + sla-dashboard) + **verification ⭐ (post Sprint 57.41)** |
 | 🟡 **NEAR-PARITY** | 1 | chat-v2 (Inspector tab name divergence) |
-| 🔴 **CATASTROPHIC drift** | 4 | **memory / verification / admin-tenants / tenant-settings** (post Sprint 57.40 /governance rebuild) |
+| 🔴 **CATASTROPHIC drift** | 3 | **memory / admin-tenants / tenant-settings** (post Sprint 57.41 /verification rebuild) |
 | 🟣 **PROP-by-design** | 1 | compaction representative (intentional ComingSoonPlaceholder, NOT drift) |
 
 ---
@@ -41,7 +41,7 @@
 | 13 | `/memory` | 🔴 **CATASTROPHIC** | **Memory Layers 5×N matrix** (SYSTEM/TENANT/ROLE/USER/SESSION × time-scale columns) + playback slider + time travel + Export + New write + Recent memory ops strip bottom | Only **2-tab (Recent / By Scope)** + 1 Layer dropdown + "No memory entries in this layer" placeholder | **FULL REBUILD** — design fundamentally different |
 | 14 | `/state-inspector` | ✅ PARITY | 4 KPI + Version chain left + Detail pane with Diff vs parent | Same; AP-2 banner intentional | none — Sprint 57.37 + FIX-011 + FIX-013 hold clean |
 | 15 | `/governance` | ✅ **PARITY** (post-rebuild) | HITL Approvals + 4 KPI + **5-tab nav** (Pending/Approved/Rejected/Expired/Policies) + 2-col Pending list + Detail pane + Approve/Reject buttons | **Same** — Sprint 57.40 Day 1 full rebuild ships 5 NEW components (PageHeader/StatsStrip/FilterTabs/DetailPane/EmptyTab) + ApprovalsPage restructure + ApprovalList 7-col upgrade. The pre-audit "runtime error banner" was a **route-sweep mock fixture artifact** (D-DAY1-2), NOT a production bug; fixed in D-DAY0-1 mock | **none** — Sprint 57.40 holds clean |
-| 16 | `/verification` | 🔴 **CATASTROPHIC** | Verification header + 4 KPI + 2-col Recent verification runs + Failure modes sidebar + Policy checks | Only filter form (Session ID / Verifier Type / Passed) + Apply/Reset + "No entries match" empty state | **FULL REBUILD** |
+| 16 | `/verification` | ✅ **PARITY** (post-rebuild) | Verification header + 4 KPI + 2-col Recent verification runs + Failure kinds sidebar + Flaky checks sidebar | **Same** — Sprint 57.41 Day 1 full rebuild ships 5 NEW components (PageHeader/StatsStrip/RunsTable/FailureKindsCard/FlakyChecksCard) + REBUILT VerificationView shell + VerificationList orphan-deleted (Karpathy §3); Day 2 ships 5 NEW Vitest specs (489→498 / +9 NEW) + e2e adapt + route-sweep envelope mock (`AD-RouteSweep-Envelope-Mock-Convention` 2nd application) | **none** — Sprint 57.41 holds clean |
 | 17 | `/redaction` | ✅ PARITY | Observation Masker + 4 KPI + Patterns table (8 rules) + Recent redactions sidebar | Pixel-perfect match; AP-2 banner intentional | none — Sprint 57.39 Phase-2 clean |
 | 18 | `/error-policy` | ✅ PARITY | Error Policy + 4 KPI + 4-class taxonomy + Retry budget + Circuit breakers table | Pixel-perfect match; AP-2 banner intentional | none — Sprint 57.39 Phase-2 clean |
 | 19 | `/cost-dashboard` | ✅ PARITY | Cost Ledger + 4 KPI + Spend over time area chart + Spend by category + Spend by tenant table + Provider mix | Pixel-perfect match; AP-2 banner intentional | none — Sprint 57.31 Phase-2 clean |
@@ -59,6 +59,8 @@
 The initial audit confirmed that **5 production pages were fundamentally different from mockup** (CATASTROPHIC drift). Pre-audit CLAUDE.md status said `15/17 Phase-2 routes shipped`; the truth before Sprint 57.40 was **~14 PARITY + 1 NEAR-PARITY + 5 CATASTROPHIC + 12 PROP stubs unshipped + 4 DRAFT inactive**.
 
 **Post Sprint 57.40 (this report's first follow-up sprint)**: `/governance` rebuilt → **17 PARITY + 1 NEAR-PARITY + 4 CATASTROPHIC remaining** (memory / verification / admin-tenants / tenant-settings).
+
+**Post Sprint 57.41 (this report's second follow-up sprint)**: `/verification` rebuilt → **18 PARITY + 1 NEAR-PARITY + 3 CATASTROPHIC remaining** (memory / admin-tenants / tenant-settings).
 
 ### 2. Two NEW catastrophic drift findings (not previously tracked)
 
@@ -123,11 +125,11 @@ After calibration multiplier (~0.55-0.65 frontend-mockup-strict-rebuild evidence
 | ~~1~~ | ~~**Fix `/governance` data-fetch runtime error**~~ | ✅ **RESOLVED Sprint 57.40 Day 2** — was sweep-mock artifact (see Key finding #5); fixed in route-sweep `/governance/approvals` mock entry |
 | ~~2~~ → 1 | **`/chat-v2` Inspector tab rename** | 30-min quick win |
 | ~~3~~ | ~~**`/governance` rebuild**~~ | ✅ **RESOLVED Sprint 57.40 Day 1** — 5 NEW components + ApprovalsPage restructure + ApprovalList 7-col; agent-delegated ~1.2 hr wall-clock |
-| ~~4~~ → 2 | **`/verification` rebuild** (4 KPI + 2-col + sidebar) | Pattern reuse from Sprint 57.40 governance primitives (StatsStrip / FilterTabs / DetailPane); ~8-10 hr |
-| ~~5~~ → 3 | **`/memory` Memory Layers matrix rebuild** | Big-impact UX upgrade; ~10-15 hr; reuse some primitives from cost-dashboard / sla-dashboard |
-| ~~6~~ → 4 | **`/admin-tenants` rebuild** | Backend GET endpoint already wired; pure frontend work; ~12-15 hr |
-| ~~7~~ → 5 | **`/tenant-settings` 6-tab rebuild** | Largest scope; mostly form work; ~15-20 hr |
-| ~~8~~ → 6 | Update CLAUDE.md routes-shipped count + carryover list | Honest status reflection; post Sprint 57.40 reality is **18-19/22** if we count audit re-verified pages |
+| ~~4~~ | ~~**`/verification` rebuild**~~ (4 KPI + 2-col + sidebar) | ✅ **RESOLVED Sprint 57.41** — 5 NEW components (PageHeader/StatsStrip/RunsTable/FailureKindsCard/FlakyChecksCard) + REBUILT VerificationView shell + VerificationList orphan-deleted (Karpathy §3); Day 2 ships 5 NEW Vitest specs (489→498 / +9 NEW) + e2e adapt + route-sweep envelope mock (2nd application of `AD-RouteSweep-Envelope-Mock-Convention`) |
+| ~~5~~ → 2 | **`/memory` Memory Layers matrix rebuild** | Big-impact UX upgrade; ~10-15 hr; reuse some primitives from cost-dashboard / sla-dashboard |
+| ~~6~~ → 3 | **`/admin-tenants` rebuild** | Backend GET endpoint already wired; pure frontend work; ~12-15 hr |
+| ~~7~~ → 4 | **`/tenant-settings` 6-tab rebuild** | Largest scope; mostly form work; ~15-20 hr |
+| ~~8~~ → 5 | Update CLAUDE.md routes-shipped count + carryover list | Honest status reflection; post Sprint 57.41 reality is **18-19/22** if we count audit re-verified pages |
 
 ---
 
@@ -142,18 +144,18 @@ After calibration multiplier (~0.55-0.65 frontend-mockup-strict-rebuild evidence
 
 ---
 
-## Carryover ADs from this audit (post Sprint 57.40)
+## Carryover ADs from this audit (post Sprint 57.41)
 
-1. 🆕 **`AD-Memory-Layers-Matrix-Rebuild`** — `/memory` needs full rebuild to mockup `Memory Layers` 5×N matrix design. Currently Sprint 57.12 vintage shadcn-utility implementation. Class: `frontend-mockup-strict-rebuild` 0.60. Est ~10-15 hr.
+1. 🆕 **`AD-Memory-Layers-Matrix-Rebuild`** — `/memory` needs full rebuild to mockup `Memory Layers` 5×N matrix design. Currently Sprint 57.12 vintage shadcn-utility implementation. Class: `frontend-mockup-strict-rebuild` 0.60. Est ~10-15 hr. **Pattern-reuse candidates**: Sprint 57.40 + 57.41 primitives (StatsStrip patterns / Card layouts / BackendGapBanner AP-2 declarations) likely transfer.
 2. ✅ **`AD-Governance-Catastrophic-Rebuild-And-Bug-Fix`** — **CLOSED Sprint 57.40**: (a) "data-fetch runtime bug" turned out to be a route-sweep mock fixture artifact (D-DAY1-2) — fixed in `/governance/approvals` specific mock; (b) full rebuild ships Sprint 57.40 Day 1 via agent-delegated 5 NEW components + ApprovalsPage restructure + ApprovalList 7-col upgrade. Verified PARITY.
-3. 🆕 **`AD-Verification-Catastrophic-Rebuild`** — `/verification` needs full rebuild to mockup 4-KPI + 2-col Recent + Failure modes/Policy checks sidebar design. Currently just filter form. Class: `frontend-mockup-strict-rebuild` 0.60. Est ~8-10 hr. **Pattern-reuse candidate**: Sprint 57.40 governance primitives (StatsStrip / FilterTabs / DetailPane) likely transfer; consider as next sprint after Sprint 57.40 merge.
+3. ✅ **`AD-Verification-Catastrophic-Rebuild`** — **CLOSED Sprint 57.41**: full rebuild ships Day 1 via agent-delegated 5 NEW components (PageHeader/StatsStrip/RunsTable/FailureKindsCard/FlakyChecksCard) + REBUILT VerificationView shell + VerificationList.tsx + VerificationList.test.tsx orphan-deleted (Karpathy §3). Day 2 ships 5 NEW Vitest specs (489→498 / +9 NEW, +112-225% over +4-8 target) + e2e adapt + route-sweep envelope mock (2nd application of `AD-RouteSweep-Envelope-Mock-Convention`). Verified PARITY.
 4. 🆕 **`AD-ChatV2-Inspector-Tab-Rename`** — rename Inspector tab vocabulary `Turn/Trace/Memory/Tree` → mockup `Run/Tools/Memory/Verify`. ~30 min. Class: `frontend-refactor-mechanical` 0.50.
-5. 🆕 **`AD-CLAUDE-md-Frontend-Status-Realignment`** — update `Phase 57+ 11/17 routes shipped / 2 🟡 STRUCTURAL remaining` to honest count after this audit. **Post Sprint 57.40**: STRUCTURAL list is **4** (`/memory` + `/verification` + `/admin-tenants` + `/tenant-settings`); Phase-2 epic count moves toward 12-16/17 depending on whether the audit pages count as "shipped".
+5. 🆕 **`AD-CLAUDE-md-Frontend-Status-Realignment`** — update `Phase 57+ 11/17 routes shipped / 2 🟡 STRUCTURAL remaining` to honest count after this audit. **Post Sprint 57.41**: STRUCTURAL list is **3** (`/memory` + `/admin-tenants` + `/tenant-settings`); Phase-2 epic count moves toward 13-16/17 depending on whether the audit pages count as "shipped".
 6. ✅ **`AD-Sprint-57.23-Auth-Spot-Check-Complete`** — Sprint 57.23 + 57.35 rebuild verified PARITY on 4/7 auth routes; 3 not-yet-individually-verified follow-up trivial (~5 min spot-check).
-7. 🆕 **`AD-RouteSweep-Envelope-Mock-Convention`** (Sprint 57.40 D-DAY1-2 lesson) — add a `testing.md` or `frontend-mockup-fidelity.md` note: any backend endpoint returning an envelope shape (e.g. `{items, total, has_more}`) needs an explicit sweep mock entry in `route-sweep.mjs`; the default `[]` is only safe for list-shaped endpoints. Codify with grep pattern + example to prevent future false-positive red banners in audit captures.
+7. 🆕 **`AD-RouteSweep-Envelope-Mock-Convention`** (Sprint 57.40 D-DAY1-2 lesson; 2nd application Sprint 57.41 D-DAY0-1) — add a `testing.md` or `frontend-mockup-fidelity.md` note: any backend endpoint returning an envelope shape (e.g. `{items, total, has_more}`) needs an explicit sweep mock entry in `route-sweep.mjs`; the default `[]` is only safe for list-shaped endpoints. Codify with grep pattern + example to prevent future false-positive red banners in audit captures. **2nd application validation**: Sprint 57.41 applied this preemptively at Day 0 (not reactively post-audit), proving the pattern transfers cleanly to subsequent envelope-shaped endpoints.
 
 ---
 
 **Author**: Claude Opus 4.7 (1M context) via 23-pair side-by-side audit
-**Date**: 2026-05-25 (initial); updated 2026-05-25 Sprint 57.40 Day 2 closeout
-**Status**: Sprint 57.40 closed `/governance` rebuild + sweep-mock fix. Remaining 4 CATASTROPHIC + 1 NEAR-PARITY awaits user prioritization (see Recommendations).
+**Date**: 2026-05-25 (initial); updated 2026-05-25 Sprint 57.40 Day 2 closeout; updated 2026-05-25 Sprint 57.41 Day 2 closeout
+**Status**: Sprint 57.41 closed `/verification` rebuild + envelope-mock convention 2nd application. Remaining 3 CATASTROPHIC + 1 NEAR-PARITY awaits user prioritization (see Recommendations).
