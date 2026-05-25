@@ -128,7 +128,7 @@ const BASE = "http://localhost:3007";
 const VP = { width: 1440, height: 900 };
 const OUT_DIR = path.resolve(
   __dirname,
-  `../../claudedocs/4-changes/sprint-57-43-admin-tenants-rebuild/screenshots/${MODE}`,
+  `../../claudedocs/4-changes/sprint-57-44-tenant-settings-rebuild/screenshots/${MODE}`,
 );
 
 // Home + AuthShell routes — no auth mock needed (public).
