@@ -25,6 +25,7 @@
  * Created: 2026-05-20 (Sprint 57.26 Day 0) — supersedes the temporary frontend/diagnose-render.mjs
  *
  * Modification History:
+ *   - 2026-05-25: FIX-018 — APPSHELL_ROUTES auto-derived from routes.config.ts (closes AD-RouteSweep-Auto-Derive; eliminates FIX-016-class manual-sync gap)
  *   - 2026-05-25: FIX-016 — APPSHELL_ROUTES +/redaction +/error-policy (PROP→real coverage gap)
  *   - 2026-05-25: FIX-014 — OUT_DIR cwd-relative → __dirname-relative (Sprint 57.39 D4 foot-gun)
  *   - 2026-05-24: Sprint 57.39 — re-point OUT_DIR to sprint-57-39-governance-multipage-phase2 (4-domain batched: /governance + /verification re-point + /redaction + /error-policy PROP→real; 1st deliberate-test of `-with-extras` 0.65 baseline post-57.38 split)
@@ -54,9 +55,67 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const MODE = process.argv[2] || "before";
+const LIST_ONLY = process.argv.includes("--list-only");
 if (!["before", "after"].includes(MODE)) {
-  console.error(`unknown mode "${MODE}" — use: before | after`);
+  console.error(`unknown mode "${MODE}" — use: before | after [--list-only]`);
   process.exit(1);
+}
+
+// === FIX-018: auto-derive APPSHELL_ROUTES from routes.config.ts ===
+// Why: prior to FIX-018, APPSHELL_ROUTES was hand-maintained. Each PROP→real
+// promotion (e.g. Sprint 57.39 /redaction + /error-policy) silently went
+// missing from the sweep until FIX-016 manually patched it. routes.config.ts
+// is the single source of truth for the active page registry (App.tsx +
+// Sidebar.tsx already consume it); the sweep should derive from the same.
+// Logic:
+//   - real pages = active=true && proposed!=true (15 routes as of FIX-018)
+//   - PROP rep   = first proposed=true entry in declaration order (covers
+//                  the shared ComingSoonPlaceholder shell once; the other
+//                  ~11 PROPs all render the same shell, so 1 is enough)
+//   - DRAFT (active=false && designed=true) excluded — no <Route> generated.
+//   - slug       = path.slice(1).replace(/\//g, '-')  (e.g. /admin/pricing
+//                  → admin-pricing); PROP rep slug = 'prop-stub-' + slug.
+//
+// Parser: regex against routes.config.ts text. Each RouteEntry block is a
+// `{ ... }` with no nested braces (lazy(() => import(...)) uses parens only),
+// so splitting on `},` boundaries is robust. If the regex finds 0 real
+// entries (file structure changed), THROW — never silently emit an empty
+// sweep list, per AD-Pre-Push-Lint-Silent-Suppression-Anti-Pattern lesson.
+function deriveAppshellRoutes() {
+  const configPath = path.resolve(__dirname, "../src/routes.config.ts");
+  const text = fs.readFileSync(configPath, "utf8");
+  const arrayMatch = text.match(/export const ROUTES\s*:\s*RouteEntry\[\]\s*=\s*\[([\s\S]+)\];?\s*$/m);
+  if (!arrayMatch) {
+    throw new Error(
+      "route-sweep FIX-018: failed to locate `export const ROUTES: RouteEntry[] = [...]` in routes.config.ts — schema changed? update parser.",
+    );
+  }
+  const body = arrayMatch[1];
+  const blocks = body
+    .split(/\}\s*,/)
+    .map((b) => b + "}")
+    .filter((b) => /\bpath:\s*"/.test(b) && /\bactive:\s*(true|false)/.test(b));
+  const real = [];
+  const propStubs = [];
+  for (const block of blocks) {
+    const pathMatch = block.match(/\bpath:\s*"([^"]+)"/);
+    const activeMatch = block.match(/\bactive:\s*(true|false)/);
+    if (!pathMatch || !activeMatch || activeMatch[1] !== "true") continue;
+    const routePath = pathMatch[1];
+    const slug = routePath.replace(/^\//, "").replace(/\//g, "-");
+    if (/\bproposed:\s*true/.test(block)) {
+      propStubs.push([routePath, `prop-stub-${slug}`]);
+    } else {
+      real.push([routePath, slug]);
+    }
+  }
+  if (real.length === 0) {
+    throw new Error(
+      "route-sweep FIX-018: derived 0 real routes — routes.config.ts parse failed silently? CHECK schema before continuing (do NOT silent-pass).",
+    );
+  }
+  const propRep = propStubs.length > 0 ? [propStubs[0]] : [];
+  return { routes: [...real, ...propRep], realCount: real.length, propTotal: propStubs.length };
 }
 
 const BASE = "http://localhost:3007";
@@ -65,7 +124,6 @@ const OUT_DIR = path.resolve(
   __dirname,
   `../../claudedocs/4-changes/sprint-57-39-governance-multipage-phase2/screenshots/${MODE}`,
 );
-fs.mkdirSync(OUT_DIR, { recursive: true });
 
 // Home + AuthShell routes — no auth mock needed (public).
 const PUBLIC_ROUTES = [
@@ -79,29 +137,29 @@ const PUBLIC_ROUTES = [
   ["/auth/dev", "auth-dev"],
 ];
 
-// AppShellV2 routes — 15 real pages + 1 PROP stub representative (/compaction;
-// the other 11 PROP stubs all render the same ComingSoonPlaceholder shell).
-// FIX-016: +/redaction +/error-policy (Sprint 57.39 PROP→real promotion gap;
-// previously stuck at 13 real + missed Sprint 57.39 deliberate-test PNG evidence).
-// Future auto-derive from routes.config.ts is AD-RouteSweep-Auto-Derive candidate.
-const APPSHELL_ROUTES = [
-  ["/overview", "overview"],
-  ["/chat-v2", "chat-v2"],
-  ["/orchestrator", "orchestrator"],
-  ["/subagents", "subagents"],
-  ["/loop-debug", "loop-debug"],
-  ["/memory", "memory"],
-  ["/state-inspector", "state-inspector"],
-  ["/governance", "governance"],
-  ["/verification", "verification"],
-  ["/redaction", "redaction"],
-  ["/error-policy", "error-policy"],
-  ["/cost-dashboard", "cost-dashboard"],
-  ["/sla-dashboard", "sla-dashboard"],
-  ["/admin-tenants", "admin-tenants"],
-  ["/tenant-settings", "tenant-settings"],
-  ["/compaction", "prop-stub-compaction"],
-];
+// AppShellV2 routes — auto-derived from routes.config.ts (FIX-018; closes
+// AD-RouteSweep-Auto-Derive). Prior hand-maintained list had to be patched
+// every PROP→real promotion (last patch: FIX-016 added /redaction +
+// /error-policy after Sprint 57.39 silently shipped them). routes.config.ts
+// is the single registry consumed by App.tsx + Sidebar.tsx; the sweep now
+// shares it. Real-page count + PROP rep are logged below for greppable
+// evidence; if the derivation drops to 0 real entries the script THROWS.
+const { routes: APPSHELL_ROUTES, realCount: APPSHELL_REAL_COUNT, propTotal: APPSHELL_PROP_TOTAL } =
+  deriveAppshellRoutes();
+
+// --list-only short-circuit (FIX-018 Day 2 dry-run): print derived list +
+// exit 0 without launching browser / creating OUT_DIR. Used to validate the
+// auto-derive output matches the prior hand-maintained list byte-for-byte.
+if (LIST_ONLY) {
+  console.log(`\n=== route-sweep --list-only (FIX-018 auto-derive evidence) ===\n`);
+  console.log(`PUBLIC_ROUTES (${PUBLIC_ROUTES.length}):`);
+  for (const [route, slug] of PUBLIC_ROUTES) console.log(`  ${slug.padEnd(26)} ${route}`);
+  console.log(
+    `\nAPPSHELL_ROUTES (${APPSHELL_ROUTES.length} = ${APPSHELL_REAL_COUNT} real + 1 of ${APPSHELL_PROP_TOTAL} PROP rep):`,
+  );
+  for (const [route, slug] of APPSHELL_ROUTES) console.log(`  ${slug.padEnd(26)} ${route}`);
+  process.exit(0);
+}
 
 const AUTH_ME = {
   user: { id: "u-dev", email: "dev@ipa.local", display_name: "Dev User" },
@@ -157,9 +215,13 @@ async function capture(ctx, route, slug) {
   }
 }
 
+fs.mkdirSync(OUT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 
-console.log(`\n=== route-sweep [${MODE}] → ${OUT_DIR} ===\n`);
+console.log(`\n=== route-sweep [${MODE}] → ${OUT_DIR} ===`);
+console.log(
+  `    auto-derived: ${APPSHELL_REAL_COUNT} real AppShellV2 routes + 1 of ${APPSHELL_PROP_TOTAL} PROP rep (FIX-018)\n`,
+);
 console.log("-- public (Home + AuthShell) --");
 {
   const ctx = await browser.newContext({ viewport: VP });
