@@ -25,6 +25,7 @@
  * Created: 2026-05-20 (Sprint 57.26 Day 0) — supersedes the temporary frontend/diagnose-render.mjs
  *
  * Modification History:
+ *   - 2026-05-25: Sprint 57.41 Day 2 D-DAY0-1 fix — add `/api/v1/verification/recent` specific mock returning {items, total, has_more, next_offset, page_size} VerificationLogPage envelope (default [] fallback would trip useVerificationRecent TanStack on `data.items === undefined`; 2nd application of envelope-mock convention, AD-RouteSweep-Envelope-Mock-Convention)
  *   - 2026-05-25: Sprint 57.40 Day 2 D-DAY0-1 fix — add `/governance/approvals` specific mock returning {items, total, has_more} PendingListResponse shape (default [] fallback tripped rebuilt ApprovalsPage TanStack)
  *   - 2026-05-25: Sprint 57.41 Day 0 — re-point OUT_DIR to sprint-57-41-verification-full-rebuild (single-domain rebuild: /verification recent view full mockup-fidelity rebuild; closes drift audit 2026-05-25 #2 priority CATASTROPHIC)
  *   - 2026-05-25: Sprint 57.40 Day 0 — re-point OUT_DIR to sprint-57-40-governance-full-rebuild (single-domain rebuild: /governance Approvals view full mockup-fidelity rebuild; closes drift audit 2026-05-25 #3 priority)
@@ -213,6 +214,14 @@ const SLA_REPORT = {
 // the broad /api/v1/ handler alongside cost-summary / sla-report.
 const APPROVALS_LIST = { items: [], total: 0, has_more: false };
 
+// Sprint 57.41 D-DAY0-1 — `/verification/recent` returns `VerificationLogPage`
+// shape `{items, total, has_more, next_offset, page_size}` (see backend
+// `api/v1/verification.py:89-95`). The rebuilt VerificationRunsTable consumes
+// `data.items` via the useVerificationRecent TanStack hook; the default `[]`
+// fallback would trip on `data.items === undefined`. 2nd application of the
+// envelope-mock convention after Sprint 57.40 (AD-RouteSweep-Envelope-Mock-Convention).
+const VERIFICATION_RECENT = { items: [], total: 0, has_more: false, next_offset: null, page_size: 50 };
+
 async function capture(ctx, route, slug) {
   const page = await ctx.newPage();
   try {
@@ -255,6 +264,7 @@ console.log("-- AppShellV2 (mocked auth) --");
     if (/\/cost-summary/.test(url)) return json(COST_SUMMARY);
     if (/\/sla-report/.test(url)) return json(SLA_REPORT);
     if (/\/governance\/approvals/.test(url)) return json(APPROVALS_LIST);
+    if (/\/verification\/recent/.test(url)) return json(VERIFICATION_RECENT);
     // default — list-shaped endpoints tolerate an empty array
     return r.fulfill({ status: 200, contentType: "application/json", body: "[]" });
   });

@@ -137,4 +137,70 @@ Total NEW ~500 lines (per plan §3.2 est ~395 lines; +27% over — mostly RunsTa
 
 ### Day 1 commits
 
-TBD next: progress.md update + Day 1 single commit.
+- ✅ `44459b30` — `feat(frontend, sprint-57-41): /verification recent view full rebuild — 6 NEW components + VerificationList orphan delete + recent route mount swap` (37 files / +1296 / -443)
+
+---
+
+## Day 2 — 2026-05-25 (Vitest specs + e2e adapt + route-sweep mock + drift audit report; agent-delegated)
+
+### Agent delegation summary
+
+- **Agent**: code-implementer (9th consecutive in Phase 57+ epic)
+- **Wall-clock**: ~20-25 min (single invocation)
+
+### §2.1 — e2e spec adaptation (D-DAY0-3 resolution)
+
+`frontend/tests/e2e/verification/verification-real-ship.spec.ts`:
+- ❌ DELETED 3 obsolete tests asserting OLD VerificationList filter form (L107 "recent tab renders 2 mocked rows on happy path" + L137 "No verification entries match the filters" + L141 "click recent table row navigates to /verification/timeline")
+- ✅ ADDED 2 NEW mockup-shape tests:
+  1. "recent tab renders mockup-shape view" — asserts page-title "Verification" + ≥1 `data-testid="backend-gap-banner"` + 3 Card titles ("Recent verification runs" / "Failure kinds" / "Flaky checks")
+  2. "recent tab handles 2 mocked items" — mocks 2 items; asserts ≥2 table rows + verifier_name visible
+- MHist Sprint 57.41 Day 2 entry added
+
+### §2.2 — NEW Vitest specs (5 files / 9 NEW tests)
+
+All under `frontend/tests/unit/verification/`:
+1. `VerificationPageHeader.test.tsx` — 2 tests
+2. `VerificationStatsStrip.test.tsx` — 2 tests (4 KPI labels + Pass rate computation 66.7%)
+3. `VerificationRunsTable.test.tsx` — 3 tests (empty / 2-item / isError)
+4. `FailureKindsCard.test.tsx` — 1 test (5 fixtures + AP-2)
+5. `FlakyChecksCard.test.tsx` — 1 test (3 fixtures + AP-2)
+
+**+9 NEW tests** (vs plan §4 +5-8 target = +112-225% over).
+
+### §2.3 — D-DAY0-1 route-sweep envelope mock (2nd application)
+
+`frontend/scripts/route-sweep.mjs`:
+- Added `VERIFICATION_RECENT` envelope constant (line ~218)
+- Added dispatch branch `if (/\/verification\/recent/.test(url))` returning `{items, total, has_more, next_offset, page_size}` (line ~259)
+- MHist entry added — **2nd application of envelope-mock convention** (`AD-RouteSweep-Envelope-Mock-Convention` validated for 2 different endpoints)
+
+### §2.4 — mockup-fidelity baseline check
+
+- ✅ Current count = **46 (unchanged)**; plan §3.6 estimated +2-4 bump did NOT materialize
+- Reason: Day 1 components use `var(--success)` / `var(--danger)` / `var(--warning)` / `var(--memory)` / `var(--info)` CSS variable references, NOT inline `oklch(...)` literals (correct per verbatim-CSS protocol; literals already in `styles-mockup.css`)
+- NO baseline update needed — guard PASS at 46 (no change)
+
+### §2.5 — drift audit report update
+
+`claudedocs/5-status/drift-audit-2026-05-25/audit-report.md`:
+- Row 16 `/verification` verdict: 🔴 CATASTROPHIC → ✅ **PARITY** (post-Sprint-57.41-rebuild)
+- Verdict summary table: `17 PARITY` → `18 PARITY` (+1) ; `4 CATASTROPHIC` → `3 CATASTROPHIC` (memory + admin-tenants + tenant-settings remain)
+- Recommendations renumbered: rec #4 struck `RESOLVED Sprint 57.41` ; rec #5→2 / #6→3 / #7→4 / #8→5
+- Carryover AD #3 closed; "Post Sprint 57.41" Key finding line added; AD #7 enriched with 2nd-application validation note
+
+### §2.6 — Day 2 verification
+
+| Check | Result |
+|-------|--------|
+| Vitest | **498/498 pass** (489 baseline + 9 NEW; 104 test files) |
+| `npm run lint` | PASS (3 pre-existing jsx-ast-utils warnings; no NEW errors) |
+| mockup-fidelity guard | PASS baseline 46 unchanged |
+
+### Day 2 drift findings
+
+- **D-DAY2-1** (resolved inline by agent): VerificationRunsTable adapter projects `reason` into BOTH `claim` AND `evidence` cells (sliced 80 chars in evidence). First-pass spec used `getByText` and threw on duplicate match. Fixed by switching to `getAllByText().length > 0`. **Generalizable lesson**: when an adapter projects one input field into multiple output cells, prefer `getAllByText` / `queryAllByText` over `getByText` to handle the expected duplicate. Cf. Sprint 57.40 Day 2 D-DAY2-X with `getAllByText(/PII access/i).length >= 1` for ApprovalDetailPane.
+
+### Day 2 commits
+
+TBD next: progress.md update + Day 2 single commit.
