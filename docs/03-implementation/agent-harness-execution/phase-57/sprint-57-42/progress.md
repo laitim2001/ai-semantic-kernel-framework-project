@@ -397,3 +397,52 @@ Staged in `claudedocs/4-changes/sprint-57-42-memory-matrix-rebuild/before-after/
 All Day 2.5 §2.5.1-§2.5.5 checklist items complete. Day 3 closeout next: retro Q1-Q6 + matrix update + memory subfile + CLAUDE.md minimal touch + next-phase-candidates + push + PR.
 
 ---
+
+## Day 3 — 2026-05-25 (closeout — retro + matrix + memory + CLAUDE.md + next-phase-candidates + PR)
+
+### Day 3 sub-task summary
+
+| Sub-task | Status | File |
+|----------|--------|------|
+| §3.1 retrospective.md Q1-Q7 | ✅ Done | `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-42/retrospective.md` (148 lines mirror Sprint 57.41 144-line structure) |
+| §3.2 Calibration matrix update | ✅ Done | `.claude/rules/sprint-workflow.md` — `frontend-mockup-strict-rebuild` row 8th data point appended + 8-pt mean 0.71 + lower-trigger MET narrative + MHist entry on top |
+| §3.3 Memory subfile + MEMORY.md pointer | ✅ Done | NEW `memory/project_phase57_42_memory_matrix_rebuild.md` + MEMORY.md entry #1 (quality pointer ~3 lines + Keywords block) |
+| §3.4 next-phase-candidates.md | ✅ Done | NEW Sprint 57.42 Carryover section at top + 7 NEW carryover ADs (#66-72) + AD #60 ✅ CLOSED status + Top 3 next-sprint candidates (post Sprint 57.42) |
+| §3.5 CLAUDE.md minimal touch | ✅ Done | Current Sprint row + Last Updated footer (per §Sprint Closeout Update Policy — NO retro detail packed into table cells; REFACTOR-001 discipline observed) |
+| §3.6 Day 3 closeout commit | 🔄 In progress | NEXT |
+| §3.7 Push + PR | ⏳ Pending user authorization | (per CLAUDE.md "Confirmation on Destructive Only" — `git push` needs explicit user green-light) |
+
+### Day 3 closeout commit
+
+Files staged:
+- NEW `retrospective.md` (Q1-Q7 with 8th data point ratio + 5th cross-class agent-delegation analysis)
+- MODIFIED `.claude/rules/sprint-workflow.md` (matrix row + MHist)
+- NEW `memory/project_phase57_42_memory_matrix_rebuild.md`
+- MODIFIED `memory/MEMORY.md`
+- MODIFIED `claudedocs/1-planning/next-phase-candidates.md`
+- MODIFIED `CLAUDE.md`
+- MODIFIED `progress.md` (this entry)
+
+### Day 3 Estimate vs actual
+
+- Plan §8 Day 3 est: ~1.5 hr bottom-up
+- Actual: ~35 min (retro ~15 min + matrix update ~5 min + memory subfile ~7 min + next-phase-candidates ~5 min + CLAUDE.md touch ~2 min + progress narrative ~1 min)
+- **Delta: -55 min under estimate**
+
+### Sprint 57.42 final totals
+
+- Bottom-up est: ~15 hr → Calibrated commit ~9 hr (0.60 multiplier)
+- Actual wall-clock: ~3.0 hr (Day 0 ~50 min + Day 1 ~50 min + Day 2 ~25 min + Day 2.5 ~15 min + Day 3 ~35 min)
+- **Ratio actual/committed: ~0.33** — BELOW [0.85, 1.20] band by 0.52
+- Ratio actual/bottom-up: ~0.20
+
+### 5 commits to date (Day 3 closeout adds 6th)
+
+- `bdb10844` plan + checklist draft / 2 files / +706
+- `f45ff7ee` Day 0 / 26 files / +118 / -1
+- `d93e0302` Day 1 / 21 files / +999 / -1153
+- `cceb79f4` Day 2 / 8 files / +522 / -12
+- `0166e737` Day 2.5 / 28 files / +74
+- (Day 3 closeout in next commit)
+
+---

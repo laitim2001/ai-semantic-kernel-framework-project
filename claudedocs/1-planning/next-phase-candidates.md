@@ -4,7 +4,55 @@
 
 **Selection Rule**: User explicitly selects → draft plan kicks off Sprint XX.Y; otherwise items wait here indefinitely until selected or archived.
 
-**Updated**: 2026-05-25 (Sprint 57.41 closed — /verification recent view full mockup-fidelity rebuild closes drift audit 2026-05-25 #2 priority CATASTROPHIC; 6 NEW carryover ADs added below; Phase-2 epic reality 18 PARITY + 1 NEAR-PARITY + 3 CATASTROPHIC remaining; `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier` activation criteria MET — propose Sprint 57.42 retro structural evaluation.)
+**Updated**: 2026-05-25 (Sprint 57.42 closed — /memory Memory Layers matrix full mockup-fidelity rebuild closes drift audit 2026-05-25 #2 priority CATASTROPHIC; 6 NEW carryover ADs added below; Phase-2 epic reality 19 PARITY + 1 NEAR-PARITY + 2 CATASTROPHIC remaining; `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier` activation criteria FULLY MET — Sprint 57.43 retro structural decision MANDATORY; `frontend-mockup-strict-rebuild` 3-consecutive-below-band lower-trigger MET — propose Sprint 57.43 baseline lift 0.60→0.40-0.45.)
+
+---
+
+## 🆕 Sprint 57.42 Carryover (2026-05-25 — /memory Memory Layers Matrix Full Mockup-Fidelity Rebuild)
+
+Sprint 57.42 (`AD-Memory-Layers-Matrix-Rebuild`) ✅ **CLOSED**: single-domain rebuild closes drift audit 2026-05-25 #2 priority `/memory` 🔴 CATASTROPHIC verdict (post Sprint 57.41 it was elevated to #2 priority; with Sprint 57.42 close it is fully RESOLVED).
+
+- **6 NEW components** (under `frontend/src/features/memory/components/`): MemoryPageHeader (~85 lines; `.page-head` + 3 actions + cond time-travel Badge) / TimeTravelScrubber (~155; 24h interactive playback Card with slider+op markers+marks+cursor display) / MemoryMatrix (~175; 5×3 grid with cursor-aware visibility filter + hover bg + AP-2 banner) / RecentMemoryOpsCard (~105; 6-col fixture table + AP-2 banner) / GdprErasureCard (~70; subject+select+danger Button + AP-2 banner) / MemoryView (~85; container with useState cursor/playing + useEffect setInterval cleanup)
+- **`_fixtures.ts` verbatim port** (~195 lines): SCOPES / TIME_SCALES / MEMORY_ENTRIES / TIME_TRAVEL_MARKS / MEMORY_OPS_TIMELINE / RECENT_MEMORY_OPS / TOTAL_ENTRIES
+- **Outer 2-tab DROP per §1.4 Option B** — **1st DROP precedent** of Phase-2 epic (Recent + By-Scope BOTH subsumed by mockup unified view, unlike Sprint 57.40 `/audit-log` / Sprint 57.41 `/timeline` distinct production-only concepts preserved)
+- **Backward-compat redirects**: `/memory/recent` + `/memory/by-scope` + `*` → `<Navigate to="/memory" replace />` inside `pages/memory/index.tsx`
+- **11 orphan deletes per Karpathy §3** — **largest single-wave of Phase-2 epic** (3 vintage components MemoryRecentList/MemoryByScopeBrowser/MemoryScopeBadge + 3 vintage hooks useMemoryByScope/useMemoryByTime/useMemoryRecent + 4 Vitest specs (24 tests) + 1 e2e memory-page.spec.ts)
+- **`mockup-ui.tsx` `ButtonVariant` 1-line widen** to add `"warning" | "danger"` (D-DAY1-1; CSS+styles-mockup.css already supported; same pattern as Sprint 57.41 Badge tones widening)
+- **+12 NEW Vitest tests** (6 NEW spec files; 474 → **486**; +150-240% over +5-8 target; within Sprint 57.40 +15 / 57.41 +9 cohort range)
+- **route-sweep envelope mock NO-OP decision** (D-DAY2-2) — rebuild fixture-only; `AD-RouteSweep-Envelope-Mock-Convention` stays at 2 applications
+- **HEX_OKLCH_BASELINE 46 unchanged** (estimated +0-4 didn't materialize — 3rd consecutive +0 actual; verbatim-CSS protocol +0-4 envelope consistently over-cautious)
+- **Drift audit report `/memory` verdict 🔴 → ✅ PARITY**; summary 18→19 PARITY / 3→2 CATASTROPHIC
+- **3-way evidence pair**: BEFORE 71.4 KB / AFTER 173.9 KB / MOCKUP 189.4 KB → **AFTER = 92% of MOCKUP** (structural PARITY confirmed)
+- **24-route sweep cleanest of Phase-2 epic**: 20 IDENTICAL + 4 CHANGED (1 INTENDED `/memory` +144% + 3 sub-300-byte noise auth-callback -23 / chat-v2 -19 / overview -38) + 0 unintended regressions (lowest noise + lowest regression count of class history)
+- **Class `frontend-mockup-strict-rebuild` 0.60 8th data point ratio ~0.33** — BELOW band by 0.52; 8-pt mean 0.71 lower band edge; **last 3 = 3 of 3 < 0.7 → `When to adjust` lower-trigger MET ✅** → propose Sprint 57.43 baseline lift 0.60 → 0.40-0.45
+- **🔴 Critical**: `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier` 5th cross-class data point — **activation criteria FULLY MET** (4 consecutive mockup-strict-rebuild agent-delegated < 0.7: 57.40 0.36 + 57.41 0.18 + 57.42 0.33 + 57.39 -with-extras 0.41 + FIX-015 outlier); **Sprint 57.43 retro structural decision MANDATORY**
+
+### Phase-2 epic progress (post Sprint 57.42)
+
+- Pre-Sprint 57.42: 18 PARITY + 1 NEAR-PARITY + 3 🔴 CATASTROPHIC
+- **Post Sprint 57.42**: **19 PARITY + 1 NEAR-PARITY + 2 🔴 CATASTROPHIC** remaining (`/admin-tenants` + `/tenant-settings`)
+
+### 🆕 7 NEW carryover ADs (Sprint 57.43+ candidates; ordered by ROI / priority)
+
+66. 🆕 **`AD-Memory-Matrix-Backend-Cursor-Aware-Endpoint`** — Backend `/api/v1/memory/matrix?scope=*&time_scale=*&cursor=*` endpoint for real cursor-aware time-travel data. Sprint 57.42 fixture + client-side filter simulation. Phase 58+.
+67. 🆕 **`AD-Memory-Ops-Timeline-Backend-Endpoint`** — Backend `/api/v1/memory/ops/recent?limit=100` endpoint for RecentMemoryOpsCard. Sprint 57.42 fixture-only. Phase 58+.
+68. 🆕 **`AD-Memory-GDPR-Erasure-Backend-Endpoint`** — Backend `/api/v1/memory/erasure` POST endpoint for GdprErasureCard form (audit chain WORM record). Sprint 57.42 form button non-functional (window.alert stub). Phase 58+.
+69. 🆕 **`AD-Memory-Vintage-Hooks-Cleanup`** — `memoryService.ts` preserved Day 1 but has 0 consumers post-rebuild. Phase 58+ either wire to RecentMemoryOpsCard (when ops endpoint ships) OR fully orphan delete.
+70. 🆕 **`AD-Memory-Old-URL-Redirect-Phase58-Retire`** — Sprint 57.42 keeps `/memory/recent` + `/memory/by-scope` → `/memory` redirects for backward compat. Phase 58+ analytics-based retire once bookmark traffic decays.
+71. 🆕 **`AD-Memory-New-Entry-Modal-Phase58`** + **`AD-Memory-Export-Action-Phase58`** — Mockup `.page-head` "New entry" and "Export" buttons are Sprint 57.42 AP-2 stubs. Phase 58+ wires write modal + CSV/JSON export endpoint.
+72. 🆕 **`AD-Sprint-Plan-frontend-mockup-strict-rebuild-baseline-lift`** — **Lower-trigger MET** (3 consecutive < 0.7: 57.40 0.36 + 57.41 0.18 + 57.42 0.33). Propose Sprint 57.43 plan lifts baseline 0.60 → 0.40-0.45. Validate next 2-3 sprints.
+
+### Carryover from Sprint 57.41 (still open as of Sprint 57.42 closeout)
+
+- **🔴 `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier`** — Sprint 57.42 contributes 5th cross-class data point; **activation criteria FULLY MET** (5 data points across 2 classes; 4 consecutive mockup-strict-rebuild agent-delegated < 0.7); **Sprint 57.43 retro structural decision MANDATORY** (Option A multiplicative `agent_factor` 0.55 coefficient OR Option B per-class sub-class split)
+- `AD-Verification-Out-Of-Scope-Components-Phase2-C-Mop-Up` — 2 residue sites in VerificationPanel.tsx (chat-v2) + CorrectionTraceView.tsx (/timeline) — still out-of-scope
+- `AD-Verification-Filter-Form-Phase58-Migrate` / `AD-Verification-Backend-Claim-Evidence-Extension` / `AD-Verification-Failure-Kinds-+-Flaky-Checks-Aggregation-Endpoints` — Sprint 57.41 Phase 58+ carryover continues
+
+### Top 3 next-sprint candidates (post Sprint 57.42)
+
+1. 🥇 **`AD-AdminTenants-Tenants-Table-Rebuild`** — `/admin-tenants` ~12-15 hr (4th CATASTROPHIC; backend GET list endpoint already wired; pure frontend work)
+2. **`AD-TenantSettings-6-Tab-Rebuild`** — `/tenant-settings` ~15-20 hr (5th and LAST CATASTROPHIC; largest scope; mostly form work)
+3. **`AD-ChatV2-Inspector-Tab-Rename`** — Inspector tab vocabulary rename ~30 min (NEAR-PARITY quick win)
 
 ---
 
@@ -32,7 +80,7 @@ Sprint 57.41 (`AD-Verification-Catastrophic-Rebuild`) ✅ **CLOSED**: single-dom
 
 ### 🆕 6 NEW carryover ADs (Sprint 57.42+ candidates; ordered by ROI / priority)
 
-60. 🆕 **`AD-Memory-Layers-Matrix-Rebuild`** — `/memory` matrix grid rebuild ~10-15 hr. **Highest ROI of remaining 3 CATASTROPHIC** (next sprint candidate).
+60. ✅ **`AD-Memory-Layers-Matrix-Rebuild`** — **CLOSED Sprint 57.42** (Day 1 agent-delegated 10th consecutive code-implementer ~40 min wall-clock + Day 2 +12 NEW Vitest specs + drift audit verdict PARITY; 6 NEW components + _fixtures.ts + outer 2-tab DROP §1.4 Option B + 11 orphan deletes Karpathy §3; actual ~3 hr human-eq vs est 10-15 hr → 8th data point for `frontend-mockup-strict-rebuild` 0.60 baseline ratio 0.33; lower-trigger MET for Sprint 57.43 baseline lift; 5th cross-class data point for agent-delegation modifier activation FULLY MET)
 61. 🆕 **`AD-AdminTenants-Tenants-Table-Rebuild`** — `/admin-tenants` tenants table rebuild ~12-15 hr.
 62. 🆕 **`AD-TenantSettings-6-Tab-Rebuild`** — `/tenant-settings` 6-tab rebuild ~15-20 hr. **Largest scope of remaining 3 CATASTROPHIC.**
 63. 🆕 **`AD-Verification-Filter-Form-Phase58-Migrate`** — Sprint 57.41 retired filter form per Karpathy §3 (mockup has none). Phase 58+ admin filter UI on `/verification/admin` separate route OR collapsible `<details>` panel.
