@@ -30,6 +30,7 @@
  * Last Modified: 2026-05-22
  *
  * Modification History (newest-first):
+ *   - 2026-05-25: Sprint 57.40 Day 1 — add KvRow primitive (verbatim port of page-governance.jsx L265-270)
  *   - 2026-05-24: Sprint 57.34 Day 1 — add Tabs + Field + Switch primitives (verbatim port of ui.jsx L123-174)
  *   - 2026-05-22: Sprint 57.29 Day 3 — add Spark SVG primitive (Day-1 port omitted it)
  *   - 2026-05-22: Initial creation (Sprint 57.29 Day 1) — verbatim port of ui.jsx primitives
@@ -717,5 +718,25 @@ export function Switch({ on = false, onChange }: SwitchProps): JSX.Element {
         }}
       />
     </span>
+  );
+}
+
+// ───────────────── KvRow ─────────────────
+
+interface KvRowProps {
+  k: ReactNode;
+  v: ReactNode;
+  mono?: boolean;
+}
+
+/** KvRow — verbatim port of mockup `page-governance.jsx` `KvRow` (L265-270);
+ * key-value pair with subtle key on left, right-aligned (optionally mono) value on right.
+ * Used in HITL ApprovalDetailPane (Sprint 57.40) and any future detail-pane layouts. */
+export function KvRow({ k, v, mono }: KvRowProps): JSX.Element {
+  return (
+    <div className="row" style={{ justifyContent: "space-between", gap: 8 }}>
+      <span className="subtle" style={{ minWidth: 64 }}>{k}</span>
+      <span className={mono ? "mono" : ""} style={{ textAlign: "right" }}>{v}</span>
+    </div>
   );
 }
