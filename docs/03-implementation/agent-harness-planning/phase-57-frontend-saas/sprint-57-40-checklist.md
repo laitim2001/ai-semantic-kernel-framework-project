@@ -121,34 +121,34 @@
 ## Day 2 — Vitest specs + route-sweep mock fix + mockup-fidelity threshold + drift audit report update
 
 ### 2.1 Vitest spec migration
-- [ ] **Adapt existing `ApprovalList.test.tsx`** (if exists) — 6-col → 7-col + new SevDot column; preserve text/role assertions
-- [ ] **Migrate existing `ApprovalsPage.test.tsx`** (if exists) — modal-flow assertions → detail-pane content assertions
+- [x] **Adapt existing `ApprovalList.test.tsx`** (if exists) — N/A (no such file in tests/unit/governance/; only hook/Audit* specs there)
+- [x] **Migrate existing `ApprovalsPage.test.tsx`** (if exists) — N/A (no such file)
 
-### 2.2 NEW Vitest specs (+4-8 NEW specs target)
-- [ ] **NEW `ApprovalsStatsStrip.test.tsx`** — render 4 stat cards; Active queue count derives from `useApprovals.data?.length`; AP-2 banner present for other 3 KPIs
-- [ ] **NEW `ApprovalDetailPane.test.tsx`** — render KvRow set when approval selected; Approve button calls `useApprovalDecide`; Reject button same; Approve-with-edits + Escalate show AP-2 banner
-- [ ] **NEW `ApprovalsFilterTabs.test.tsx`** — 5 tabs render with correct labels + counts; switching tabs updates active state
-- [ ] **NEW `ApprovalsEmptyTab.test.tsx`** — renders AP-2 banner placeholder for 4 non-active tabs
-- [ ] DoD: Vitest 478 + 4-8 = 482-486 passing
+### 2.2 NEW Vitest specs (+4-8 NEW specs target — actual +15 → 188-375%)
+- [x] **NEW `ApprovalsStatsStrip.test.tsx`** — 4 tests: 4 KPI labels render / Active queue derives from `approvals.length` / 0 fallback when undefined / AP-2 BackendGapBanner present
+- [x] **NEW `ApprovalDetailPane.test.tsx`** — 5 tests: empty placeholder when null / 7 KvRow labels + request_id mono / Approve→onApprove / Reject→onReject / Approve-with-edits + Escalate AP-2 alert stubs
+- [x] **NEW `ApprovalsFilterTabs.test.tsx`** — 4 tests: 5 mockup-verbatim labels / Active count derives from prop / aria-selected toggles / onChange dispatches tab id
+- [x] **NEW `ApprovalsEmptyTab.test.tsx`** — 2 tests: Card + AP-2 banner for approved tab / 4-case label dispatch for approved/rejected/expired/policies
+- [x] DoD: Vitest 478 + 15 = **493/493 ✅**
 
 ### 2.3 D-DAY0-1: route-sweep mock fix
-- [ ] **Edit `frontend/scripts/route-sweep.mjs`** — add specific `/governance/approvals` mock returning `{items: []}` per plan §3.5
-- [ ] **MHist entry** — `2026-05-25: Sprint 57.40 D-DAY0-1 fix — add specific /governance/approvals mock returning {items: []} shape (was tripping ApprovalsPage red banner in audit captures because default [] mock didn't match PendingListResponse shape)`
-- [ ] **Smoke test**: re-run `node scripts/route-sweep.mjs --list-only` → confirm derive logic unchanged
+- [x] **Edit `frontend/scripts/route-sweep.mjs`** — added `/governance/approvals` URL-dispatch branch in existing `/api/v1/` broad handler returning `{items: [], total: 0, has_more: false}`
+- [x] **MHist entry** added
+- [x] **Smoke test**: `node scripts/route-sweep.mjs before --list-only` → 16 AppShellV2 routes (15 real + 1 PROP rep) intact, derive logic unchanged
 
 ### 2.4 mockup-fidelity threshold update
-- [ ] **Run guard** — `node frontend/scripts/check-mockup-fidelity.mjs`
-- [ ] **Update `HEX_OKLCH_BASELINE`** to actual measured count (current 45 → target ≤51 per plan §3.6)
-- [ ] **MHist entry** — Sprint 57.40 source bump
+- [x] **Run guard** — live count = 46 (vs baseline 45 = FAIL pre-fix)
+- [x] **Update `HEX_OKLCH_BASELINE`** 45 → 46 (+1 verbatim `oklch(from var(--primary) l c h / 0.08)` literal in ApprovalList row-highlight; well within plan §3.6 ≤51 envelope)
+- [x] **MHist entry** added with mockup-token-vocabulary precedent reference
 
 ### 2.5 Drift audit report update
-- [ ] **Edit `claudedocs/5-status/drift-audit-2026-05-25/audit-report.md`** — mark `/governance` verdict ✅ PARITY post-rebuild
-- [ ] **Update verdict summary table** — 16 PARITY → 17; 5 CATASTROPHIC → 4 (only memory / verification / admin-tenants / tenant-settings remain)
-- [ ] **Update Recommendations section** — strike through #3 `/governance rebuild`; promote next priority
+- [x] **Edit `claudedocs/5-status/drift-audit-2026-05-25/audit-report.md`** — `/governance` verdict 🔴 CATASTROPHIC → ✅ PARITY (post-rebuild)
+- [x] **Update verdict summary table** — 16 PARITY → 17; 5 CATASTROPHIC → 4 (memory / verification / admin-tenants / tenant-settings remain)
+- [x] **Update Recommendations section** — struck #1 (sweep-mock fix) + #3 (governance rebuild); both closed by Sprint 57.40; remaining promoted to 1–6; Key finding #5 root-cause + tooling lesson documented; Carryover ADs closed `AD-Governance-Catastrophic-Rebuild-And-Bug-Fix` + added NEW `AD-RouteSweep-Envelope-Mock-Convention`
 
 ### 2.6 Day 2 drift catalog + commit
-- [ ] **progress.md Day 2 entry** — actual hr vs ~3.0 est; drift findings if any (D-DAY2-X format)
-- [ ] **Commit**: `chore(sprint-57-40): Day 2 — Vitest specs + route-sweep mock fix + mockup-fidelity threshold + audit report update`
+- [x] **progress.md Day 2 entry** — full Day 2 narrative with calibration data + commit SHA back-fill
+- [x] **Commit**: `e1b87a06` — `chore(frontend, sprint-57-40): Day 2 — +15 NEW Vitest specs + route-sweep envelope mock + mockup-fidelity baseline 45->46 + drift audit report governance PARITY update` (8 files / +587 / -3)
 
 ---
 

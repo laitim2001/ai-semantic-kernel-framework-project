@@ -261,5 +261,5 @@ Bottom-up estimate ~3.0 hr. Actual wall-clock ~50 min (mostly Vitest writes + ve
 
 ### Day 2 commit reference
 
-- `<TBD-Day-2-commit>` — Day 2 Vitest specs + route-sweep mock fix + mockup-fidelity threshold + audit report update + progress.md Day 2 entry
+- `e1b87a06` — Day 2 ship: +15 NEW Vitest specs + route-sweep `/governance/approvals` envelope mock + mockup-fidelity baseline 45→46 + drift audit report `/governance` PARITY update + progress.md Day 2 entry (8 files / +587 / -3)
 
