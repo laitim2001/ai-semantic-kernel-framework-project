@@ -280,7 +280,7 @@ Comparable to Sprint 57.43 (22 IDENTICAL + 1 INTENDED + 2 noise + 0 unintended).
 | Commits Day 0/1/2/2.5/3 | 5 total (8b2aab41 / 34668565 / 4a1bdbb9 / Day 2.5 / Day 3 pending) |
 | Vitest delta | 514 → **561** (+47; +287-487% over plan +12 target) |
 | Build / Lint / LLM SDK leak | green / 0 errors / 0 |
-| HEX_OKLCH_BASELINE | 46 unchanged (**5th consecutive +0**) |
+| HEX_OKLCH_BASELINE | **46 → 47 (+1)** — MembersTab avatar gradient verbatim port per plan §3.6 "+0-2 bump" prediction; **ended 4-sprint +0 streak** (Sprint 57.40-43 had +0) |
 | Route-sweep | **20 IDENTICAL + 1 INTENDED +43% + 3 noise + 0 unintended** |
 | Class data point | 10th `frontend-mockup-strict-rebuild` 0.60 |
 | **Phase-2 epic** | **🎉 21 PARITY + 1 NEAR-PARITY + 0 CATASTROPHIC — FULL CLEAN ✅** |

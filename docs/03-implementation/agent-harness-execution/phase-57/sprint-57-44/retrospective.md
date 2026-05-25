@@ -168,7 +168,7 @@ Sprint 57.44 is a **feature continuation sprint** of the Phase-2 epic (10th appl
 | Build | green |
 | Lint | 0 errors |
 | LLM SDK leak | 0 |
-| HEX_OKLCH_BASELINE | 46 unchanged (5th consecutive +0) |
+| HEX_OKLCH_BASELINE | **46 → 47 (+1)** — MembersTab avatar gradient verbatim port (mockup `page-admin.jsx:588`); per plan §3.6 "+0-2 bump" prediction within range; ended 4-sprint +0 streak |
 | Route-sweep | 20 IDENTICAL + 1 INTENDED + 3 noise + 0 unintended |
 | Phase-2 epic | **21 PARITY + 1 NEAR-PARITY + 0 CATASTROPHIC ✅ FULL CLEAN** |
 | Class data point | 10th `frontend-mockup-strict-rebuild` 0.60 |
