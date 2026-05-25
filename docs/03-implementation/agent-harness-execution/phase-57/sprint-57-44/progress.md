@@ -134,7 +134,114 @@ Specific Day 1 scope adjustments:
 
 All 6 D-DAY0 findings absorbable into Day 1 scope without plan revision (D-DAY0-4 RED pre-anticipated by plan §3.3 Option A posture; D-DAY0-2/3/5/6 are absorbable refinements). Day 1 code-implementer agent delegation proceeds.
 
+---
+
+## Day 1 — 2026-05-26 — Code-Implementer Agent Delegation (12th consecutive `mockup-strict-rebuild`)
+
+### Today's Accomplishments
+
+- ✅ Day 1 code-implementer agent ran ~5.5 min wall-clock (single delegation)
+- ✅ Commit `34668565` — 13 files / **+829 / -573 = NET +256 lines**
+- ✅ Build green (vite 3.33s) / Lint 0 errors / LLM SDK leak 0
+
+### Deliverables
+
+**8 NEW files** (per plan §4):
+- `_fixtures.ts` (mockup verbatim port — 6 data arrays + 3 fixture objects + SEATS_FIXTURE)
+- `TenantSettingsPageHeader.tsx` (~75 lines)
+- `tabs/GeneralTab.tsx` (~140 lines — display_name live-wire + 4 fixture fields + Identity & SSO Card)
+- `tabs/FeatureFlagsTab.tsx` / `QuotasTab.tsx` / `HITLPoliciesTab.tsx` / `MembersTab.tsx` (avatar gradient) / `DangerZoneTab.tsx`
+
+**1 REWRITE**: `TenantSettingsView.tsx` (single-card form → 6-tab router; drop `<details>` JSON dump + stateBadgeClass + EditForm mount per D-DAY0-3 + D-DAY0-6)
+
+**4 DELETE Karpathy §3**:
+- `TenantSettingsEditForm.tsx`
+- `TenantSettingsEditForm.test.tsx`
+- `tenant_settings_edit.spec.ts`
+- `tenant_settings_view.spec.ts` (Sprint 57.43 hotfix #1 precedent — tests Sprint 57.16 vintage IA; new e2e Phase 58+)
+
+### Plan vs Actual
+
+| Metric | Plan estimate | Actual | Δ |
+|--------|---------------|--------|---|
+| NET delta lines | +~690 | +256 | bottom-up was ~2.7× generous (consistent with class history) |
+
+### Deviations (minor; no scope changes)
+
+1. **Lint round 1**: 2 `eslint-disable-next-line` comments anchored 4 lines too high (anchored to `<input>` opening vs `style` attr). Moved to immediately-above-style-line per ESLint anchor rule. All inline-style verbatim ports preserved.
+2. **Untracked `frontend/scripts/mockup-sweep.mjs`**: pre-existing in working tree on entry — left alone per scope.
+
+### Carryover notes from agent
+
+- BackendGapBanner reused from `frontend/src/components/ui/BackendGapBanner.tsx` (Tailwind utility-class pattern — established Phase-2 epic precedent since 57.24)
+- General tab Save flow: dirty-detection on `display_name !== data.display_name`; auto-reset via `useEffect([data.display_name])` after success
+- 7 page-level interactive AP-2 stubs use `window.alert("backend gap (Phase 58+)")` (Sprint 57.43 PageHeader pattern)
+
+---
+
+## Day 2 — 2026-05-26 — Vitest Specs + Audit Report PARITY (code-implementer agent-delegated, 13th consecutive)
+
+### Today's Accomplishments
+
+- ✅ Day 2 code-implementer agent ran ~8.8 min wall-clock (single delegation)
+- ✅ Commit `4a1bdbb9` — 9 files / **+901 / -11 = NET +890 lines**
+- ✅ **Vitest 514 → 561 (+47; +287-487% over plan target +12)** — 50 NEW tests across 8 specs all GREEN
+- ✅ Build green (3.41s) / Lint 0 errors / Test files 115 passed
+
+### Deliverables
+
+**8 NEW Vitest specs** (mirroring Day 1 components 1:1):
+- `TenantSettingsView.test.tsx` (6-tab router integration; mocks `useTenantSettings`)
+- `TenantSettingsPageHeader.test.tsx` (page-head + Badge SEATS_FIXTURE=8)
+- `tabs/GeneralTab.test.tsx` (display_name live-wire + 4 fixture fields + Identity & SSO)
+- `tabs/FeatureFlagsTab.test.tsx` (8-row Switch/numeric dispatch)
+- `tabs/QuotasTab.test.tsx` (5 bar-tracks + 3 rate limits)
+- `tabs/HITLPoliciesTab.test.tsx` (4 risk-tier rows + Badge tone dispatch)
+- `tabs/MembersTab.test.tsx` (8 members + avatar gradient + role tone)
+- `tabs/DangerZoneTab.test.tsx` (4 danger sub-boxes; no BackendGapBanner)
+
+**1 MODIFIED** — `claudedocs/5-status/drift-audit-2026-05-25/audit-report.md`:
+8 edits closing Phase-2 epic FULL CLEAN milestone (row 22 verdict + summary + epic-closure paragraph + effort strike + recommendations renumber + carryover CLOSED + footer status + 8th edit integrated into existing footer block).
+
+### Deviations (minor)
+
+- 1 test fixed mid-Day 2: `TenantSettingsView.test.tsx::"default tab 'general'"` had "General" text collision between tab label and Card title → fixed with `getAllByText` per Sprint 57.41/42/43 cohort lesson. **No component changes**.
+
+---
+
+## Day 2.5 — 2026-05-26 — After-Sweep + 3-Way Evidence Pair
+
+### Today's Accomplishments
+
+- ✅ 24-route AFTER screenshots captured (`node scripts/route-sweep.mjs after` exit 0)
+- ✅ sha256 diff computed per-route
+- ✅ 3-way evidence pair staged (`before-after/01-BEFORE-tenant-settings.png` + `02-AFTER-tenant-settings.png`)
+- ✅ MOCKUP capture: **Option C byte-proxy deferred** per Sprint 57.43 precedent (`python -m http.server` + Playwright flow remains blocked; mockup file is window-mounted React component not standalone HTML page) → NEW carryover `AD-MockupCapture-04-MOCKUP-tenant-settings`
+
+### 24-route sweep results — cleanest co-class of Phase-2 epic
+
+| Category | Count | Routes |
+|----------|-------|--------|
+| **IDENTICAL** | 20 | admin-tenants / auth-dev / auth-expired / auth-invite / auth-login / auth-mfa / auth-register / cost-dashboard / error-policy / governance / home / loop-debug / memory / orchestrator / prop-stub-compaction / redaction / sla-dashboard / state-inspector / subagents / verification |
+| **CHANGED INTENDED** | 1 | `tenant-settings.png` +34,820 bytes / +43% (target route 6-tab IA expansion) |
+| **CHANGED sub-300-byte noise** | 3 | auth-callback +68 / chat-v2 -10 / overview -131 |
+| **UNINTENDED regressions** | **0** | ✅ |
+
+Comparable to Sprint 57.43 (22 IDENTICAL + 1 INTENDED + 2 noise + 0 unintended). Slight uptick in noise (3 vs 2) within Phase-2 epic envelope ≤ 3.
+
+### 3-way evidence pair
+
+| Artifact | Path | Size |
+|----------|------|------|
+| BEFORE | `claudedocs/4-changes/sprint-57-44-tenant-settings-rebuild/before-after/01-BEFORE-tenant-settings.png` | 80,435 bytes |
+| AFTER | same dir / `02-AFTER-tenant-settings.png` | 115,255 bytes |
+| MOCKUP | (deferred per Option C; carryover AD-MockupCapture-04) | n/a |
+
+**AFTER vs BEFORE**: +43% byte growth confirms substantial IA expansion (single-card form → 6-tab architecture with 7 NEW components + Identity & SSO sidecar).
+
+**AC5 threshold byte-proxy**: per Sprint 57.43 precedent, accept AFTER as structurally faithful given +43% expansion reflects mockup 6-tab IA add (mockup line count 411-621 ≈ 210 lines mostly tab content; AFTER captures all 6 tabs + active General tab content; ratio reasonable proxy).
+
 ### Remaining for Next Step
 
-- Day 0.8 — Commit Day 0 artefacts (progress.md + route-sweep.mjs OUT_DIR edit + 24 before-sweep PNGs)
-- Day 1 — Code-implementer agent delegation for 7 NEW components + TenantSettingsView rewrite + _fixtures.ts + Karpathy §3 orphan delete
+- Day 2.5 closeout commit (route-sweep AFTER PNGs + 3-way evidence + progress.md update)
+- Day 3 — retrospective Q1-Q7 + matrix MHist + `agent_factor 0.55` 2nd validation **MANDATORY** structural decision + memory subfile + CLAUDE.md sync + push + PR
