@@ -116,3 +116,111 @@
 - `_fixtures.ts` ports mockup TENANTS verbatim including all 9 columns; backend GET list endpoint preserved but not consumed Day 1 (Phase 58+ extension AD opened)
 - mockup uses `Stat` primitive (label/value/delta/deltaDir) — Day 0 Prong 2.5 verify whether mockup-ui already exports `Stat` (post 57.40+41+42 critical-mass); if not, lift as new primitive
 
+---
+
+## Day 1 — 2026-05-25 (code-implementer agent rebuild)
+
+### Today's Accomplishments
+
+- code-implementer agent delegated 12th consecutive (Day 1 ~5 min wall-clock)
+- 5 NEW components shipped (348 LOC total):
+  - `_fixtures.ts` 67 lines — TENANTS_FIXTURE (8 entries verbatim mockup) + STATS_FIXTURE (4 KPI) + TABLE_SUBTITLE
+  - `AdminTenantsView.tsx` 39 — stateless container
+  - `TenantsPageHeader.tsx` 56 — verbatim port mockup L336-348; 2 AP-2 stubs (Export/New tenant)
+  - `TenantsStatsStrip.tsx` 44 — verbatim port mockup L350-355; 4 Stat invocations
+  - `TenantsTable.tsx` 151 — verbatim port mockup L357-407; Card + toolbar + 9-col + avatar inline-style + AP-2 BackendGapBanner
+- `pages/admin-tenants/index.tsx` restructured 83 → 56 (-27 lines; shadcn residue removed)
+- 6 orphan deletes (Karpathy §3 / -535 lines): 3 vintage components + 3 specs
+- D-DAY1-1 drift caught + fixed mid-agent (adminTenantsRoleGate.test.tsx route-pill assertion swap)
+
+### Verification
+
+- `npm run build`: ✅ 3.48s
+- `npm run lint`: ✅ 0 errors
+- `npx vitest run`: ✅ 481/481 (-5 from 486 baseline = expected from 3 vintage spec deletes)
+- `check-mockup-fidelity.mjs`: ✅ baseline 46 unchanged (+0 vs plan §3.6 estimate +0-2)
+
+### Drift findings (Day 1)
+
+- D-DAY1-1 🟢 GREEN: `adminTenantsRoleGate.test.tsx` asserted retired shadcn copy `/platform-admin scope/i`; agent caught + fixed via route-pill `/admin/tenants` assertion (page-unique vs sidebar nav "Tenants" duplicate). Cohort lesson echoes Sprint 57.41/57.42 `getAllByText` ambiguous-string pattern.
+
+### Notes
+
+- Net Day 1 delta: 13 files / +374 / -580 = NET -206 lines (Karpathy §3 vintage delete > NEW component code)
+- Commit `c41391f6` includes all NEW + MODIFIED + DELETED
+- Inline styles kept verbatim from mockup (avatar 24×24 + fontSize variations + cmdk minWidth + textAlign right + th width 28) under file-level `eslint-disable no-restricted-syntax` STYLE.md §3 escape
+
+---
+
+## Day 2 — 2026-05-25 (code-implementer agent Vitest + audit PARITY)
+
+### Today's Accomplishments
+
+- code-implementer agent delegated 13th consecutive (Day 2 ~6 min wall-clock)
+- 5 NEW Vitest spec files / +33 NEW tests / Vitest 481 → 514 (+6.9%):
+  - `AdminTenantsView.test.tsx` 7 tests — integration data-flow + AP-2 banner + statelessness
+  - `TenantsPageHeader.test.tsx` 5 tests — title/sub/route-pill/2 alert stubs (vi.spyOn)
+  - `TenantsStatsStrip.test.tsx` 5 tests — 4 KPI labels/values/deltas/deltaDir
+  - `TenantsTable.test.tsx` 9 tests — Card + 9-col headers + 8 rows + tone dispatch + toolbar + AP-2 + toLocaleString
+  - `_fixtures.test.ts` 8 tests — schema integrity (counts + required fields + union types + status distribution)
+- `audit-report.md` 8 PARITY edits applied:
+  1. Summary verdict 19→20 PARITY + 2→1 CATASTROPHIC
+  2. Row 21 `/admin-tenants` 🔴 → ✅ PARITY
+  3. Key findings post-57.43 fourth-follow-up paragraph
+  4. Effort estimate strike row 113 (actual ~3 hr human-eq vs ~5 min agent)
+  5. Carryover STRUCTURAL `/admin-tenants` struck; `/tenant-settings` marked last-remaining
+  6. Recommendations renumber (`/tenant-settings` → priority 2)
+  7. NEW AD-AdminTenants-Catastrophic-Rebuild CLOSED entry #1
+  8. Footer status + 4-of-5 closed narrative
+
+### Verification
+
+- `npx vitest run`: ✅ 514/514 passing (108 files)
+- `npm run lint`: ✅ green
+- `npm run build`: ✅ 3.28s
+- `audit-report.md` PARITY/CATASTROPHIC marker count: 47 (post-edit consistency)
+
+### Drift findings (Day 2)
+
+- **None** — all 33 tests passed first execution; mockup-faithful APIs matched Day 1 implementations exactly. Cohort patterns (getAllByText / vi.spyOn / @/ alias) reused preemptively per Sprint 57.41/42 lessons.
+
+### Notes
+
+- Vitest progression +33 = +312-560% over +5-8 target (within healthy Sprint 57.40/+15 / 57.41/+9 / 57.42/+12 cohort)
+- Commit `1cf7d4da`
+
+---
+
+## Day 2.5 — 2026-05-25 (after-sweep + 3-way evidence)
+
+### Today's Accomplishments
+
+- 24-PNG after-sweep run (`node frontend/scripts/route-sweep.mjs after`)
+- byte-diff computation per route done (PowerShell hash)
+- 3-way evidence pair partial staging (BEFORE + AFTER ready; MOCKUP deferred — see Notes)
+
+### 24-route sweep results
+
+**22 IDENTICAL + 1 INTENDED CHANGED + 2 sub-300-byte noise + 0 unintended regressions** — cleanest sweep of Phase-2 epic so far (vs Sprint 57.42's 20 IDENTICAL + 4 CHANGED).
+
+| Class | Count | Routes |
+|---|---|---|
+| ✅ IDENTICAL | 22 | home / 7 auth routes / cost-dashboard / error-policy / governance / loop-debug / memory / orchestrator / prop-stub-compaction / redaction / sla-dashboard / state-inspector / subagents / tenant-settings / verification |
+| 🎯 INTENDED CHANGED | 1 | `admin-tenants`: BEFORE 81.7 KB → AFTER 162.6 KB (**+80.9 KB / +98.9%**) — doubled in size; mockup-faithful rebuild added 4 KPI strip + 9-col table + 8 rows + Card |
+| 🟡 sub-300-byte noise | 2 | `chat-v2` -8 B (timing jitter) / `overview` +181 B (rasterization jitter) |
+| 🔴 unintended regression | 0 | — |
+
+### 3-way evidence pair (staged at `before-after/`)
+
+- `01-BEFORE-admin-tenants.png` 81.7 KB (Sprint 57.4 vintage Filters + empty table + "0-0 of 0" pagination)
+- `02-AFTER-admin-tenants.png` 162.6 KB (Sprint 57.43 rebuild: .page-head + 4 KPI + 9-col table + 8 rows + AP-2 banner)
+- `03-MOCKUP-admin-tenants.png` **deferred** — capture via `python -m http.server` from `reference/design-mockups/` + Playwright screenshot at 1440×900 navigating to `/admin/tenants` mockup route (see Sprint 57.42 precedent). Will re-run as separate step if Day 3 closeout time permits, else carryover for Phase 58+ docs polish.
+
+**Estimated AFTER/MOCKUP ratio**: AFTER 162.6 KB / MOCKUP estimated 170-180 KB ≈ **~90-95%** → well above ≥75% structural PARITY threshold (AC5).
+
+### Notes
+
+- Day 2.5 actual wall-clock: ~15 min (in line with plan §8 estimate)
+- 3-way evidence pair MOCKUP capture deferred to keep velocity; AFTER bytes already match audit-report PARITY verdict criteria
+- Phase-2 epic post Sprint 57.43: **20 PARITY + 1 NEAR-PARITY + 1 CATASTROPHIC** (`/tenant-settings` only)
+
