@@ -23,6 +23,7 @@
  * Last Modified: 2026-05-25
  *
  * Modification History (newest-first):
+ *   - 2026-05-25: FIX-021 — aria-label on input + select (Sprint 57.42 PR #191 a11y CI fail; select-name axe rule)
  *   - 2026-05-25: Initial creation (Sprint 57.42 Day 1) — memory matrix full mockup-fidelity rebuild
  *
  * Related:
@@ -45,10 +46,10 @@ export function GdprErasureCard(): JSX.Element {
           Tombstone subject across all memory scopes. WORM audit retains hash chain.
         </div>
         <Field label="Subject id">
-          <input className="input mono" placeholder="u_…" />
+          <input className="input mono" placeholder="u_…" aria-label="Subject id" />
         </Field>
         <Field label="Reason (audited)">
-          <select className="select" defaultValue="gdpr">
+          <select className="select" defaultValue="gdpr" aria-label="Reason (audited)">
             <option value="gdpr">GDPR Art. 17 erasure</option>
             <option value="ccpa">CCPA opt-out</option>
             <option value="legal">Legal hold release</option>
