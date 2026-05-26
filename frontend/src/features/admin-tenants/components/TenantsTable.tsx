@@ -18,6 +18,7 @@
  * Last Modified: 2026-05-25
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.49 — add optional onRowClick prop for Members drawer drill-down (Track B)
  *   - 2026-05-25: Initial creation (Sprint 57.43 Day 1) — admin-tenants full mockup-fidelity rebuild
  *
  * Related:
@@ -45,7 +46,16 @@ function statusTone(status: TenantFixture["status"]): string {
   return "warning";
 }
 
-export function TenantsTable(): JSX.Element {
+export interface TenantsTableProps {
+  /**
+   * Optional row click handler — when provided, table rows become clickable
+   * and surface tenant_id for parent (Sprint 57.49 Track B uses this to open
+   * Members drawer; AdminTenantsView wires it).
+   */
+  onRowClick?: (tenantId: string) => void;
+}
+
+export function TenantsTable({ onRowClick }: TenantsTableProps = {}): JSX.Element {
   return (
     <Card
       title="All tenants"
@@ -82,7 +92,12 @@ export function TenantsTable(): JSX.Element {
         </thead>
         <tbody>
           {TENANTS_FIXTURE.map((t) => (
-            <tr key={t.id}>
+            <tr
+              key={t.id}
+              onClick={onRowClick ? () => onRowClick(t.id) : undefined}
+              style={onRowClick ? { cursor: "pointer" } : undefined}
+              data-testid={`tenant-row-${t.id}`}
+            >
               <td>
                 <div className="row" style={{ gap: 8 }}>
                   <span

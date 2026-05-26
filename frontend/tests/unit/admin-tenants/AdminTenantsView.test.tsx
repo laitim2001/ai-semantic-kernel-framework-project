@@ -13,6 +13,7 @@
  * Created: 2026-05-25 (Sprint 57.43 Day 2)
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.49 — add row click → drawer integration tests + mock useTenantMembers
  *   - 2026-05-25: Initial creation (Sprint 57.43 Day 2) — admin-tenants mockup-fidelity rebuild Vitest coverage
  *
  * Related:
@@ -23,7 +24,18 @@
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+
+// Sprint 57.49 — AdminTenantsView mounts TenantMembersDrawer which uses useTenantMembers
+vi.mock("@/features/tenant-settings/hooks/useTenantMembers", () => ({
+  useTenantMembers: vi.fn().mockReturnValue({
+    data: { items: [], total: 0, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  }),
+  TENANT_MEMBERS_QUERY_KEY_BASE: ["tenant-settings", "members"],
+}));
 
 import { AdminTenantsView } from "@/features/admin-tenants/components/AdminTenantsView";
 
@@ -74,13 +86,28 @@ describe("AdminTenantsView (Sprint 57.43)", () => {
     expect(banner).toHaveTextContent(/Phase 58\+/);
   });
 
-  it("is stateless (renders deterministically across multiple mounts)", () => {
-    const { unmount: u1 } = render(<AdminTenantsView />);
-    expect(screen.getByText("All tenants")).toBeInTheDocument();
-    u1();
+  it("Sprint 57.49: drawer is closed by default (no dialog visible)", () => {
     render(<AdminTenantsView />);
-    // Second mount renders the same content — no captured state from first mount
-    expect(screen.getByText("All tenants")).toBeInTheDocument();
-    expect(screen.getByText("Active tenants")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByTestId("tenant-members-drawer")).toBeNull();
+  });
+
+  it("Sprint 57.49: clicking a tenant row opens TenantMembersDrawer", async () => {
+    const user = userEvent.setup();
+    render(<AdminTenantsView />);
+    const row = screen.getByTestId("tenant-row-tenant_01h9a2");
+    await user.click(row);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("tenant-members-drawer")).toBeInTheDocument();
+  });
+
+  it("Sprint 57.49: Close button hides drawer (selectedTenantId → null)", async () => {
+    const user = userEvent.setup();
+    render(<AdminTenantsView />);
+    const row = screen.getByTestId("tenant-row-tenant_01h9a2");
+    await user.click(row);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /close/i }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

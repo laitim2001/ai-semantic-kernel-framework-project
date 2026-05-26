@@ -1,26 +1,12 @@
 /**
  * File: frontend/tests/unit/tenant-settings/tabs/MembersTab.test.tsx
- * Purpose: Vitest coverage for MembersTab — 8 members + avatar gradient + role Badge tone + Invite action.
+ * Purpose: Vitest coverage for MembersTab — useTenantMembers hook integration.
  * Category: Frontend / Tests / tenant-settings / unit / tabs
- * Scope: Phase 57 / Sprint 57.44 Day 2 (mockup-fidelity rebuild Vitest coverage)
- *
- * Description:
- *   - Renders "Members" Card title + subtitle "8 active · 0 invitations"
- *   - Renders Invite button + click fires window.alert with backend gap message
- *   - Renders 8 member rows (one per MEMBERS entry)
- *   - Each row has avatar span with linear-gradient style
- *   - Role Badge tone dispatch: admin=primary / compliance=memory / operator=no tone
- *   - BackendGapBanner present
- *
- * Created: 2026-05-26 (Sprint 57.44 Day 2)
+ * Scope: Phase 57 / Sprint 57.49 Day 1 (fixture → real backend migration)
  *
  * Modification History (newest-first):
- *   - 2026-05-26: Initial creation (Sprint 57.44 Day 2) — tenant-settings mockup-fidelity rebuild Vitest coverage
- *
- * Related:
- *   - frontend/src/features/tenant-settings/components/tabs/MembersTab.tsx
- *   - frontend/src/features/tenant-settings/_fixtures.ts (MEMBERS = 8 entries)
- *   - sprint-57-44-plan.md §AC3
+ *   - 2026-05-26: Sprint 57.49 — rewrite to mock useTenantMembers hook (shared with Track B drawer)
+ *   - 2026-05-26: Initial creation (Sprint 57.44 Day 2)
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -29,77 +15,95 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/features/tenant-settings/hooks/useTenantMembers", () => ({
+  useTenantMembers: vi.fn(),
+  TENANT_MEMBERS_QUERY_KEY_BASE: ["tenant-settings", "members"],
+}));
+
 import { MembersTab } from "@/features/tenant-settings/components/tabs/MembersTab";
-import { MEMBERS } from "@/features/tenant-settings/_fixtures";
+import { useTenantMembers } from "@/features/tenant-settings/hooks/useTenantMembers";
 
-describe("MembersTab (Sprint 57.44)", () => {
+function mockData(items: unknown[], total: number): void {
+  vi.mocked(useTenantMembers).mockReturnValue({
+    data: { items, total, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useTenantMembers>);
+}
+
+const SAMPLE_MEMBERS = [
+  { id: "u1", email: "alice@acme.com", display_name: "Alice Liu", status: "active", created_at: "2026-01-15T00:00:00Z" },
+  { id: "u2", email: "bob@acme.com", display_name: null, status: "active", created_at: "2026-02-10T00:00:00Z" },
+];
+
+describe("MembersTab (Sprint 57.49)", () => {
   beforeEach(() => {
-    vi.spyOn(window, "alert").mockImplementation(() => {});
+    mockData([], 0);
   });
-
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("renders Card title 'Members' + subtitle '8 active · 0 invitations'", () => {
-    render(<MembersTab />);
+  it("renders Card title 'Members' + subtitle reflects backend total", () => {
+    mockData(SAMPLE_MEMBERS, 2);
+    render(<MembersTab tenantId="t1" />);
     expect(screen.getByText("Members")).toBeInTheDocument();
-    expect(screen.getByText(/8 active · 0 invitations/)).toBeInTheDocument();
+    expect(screen.getByText(/2 active · 0 invitations/)).toBeInTheDocument();
+  });
+
+  it("renders Loading + Error + Empty states correctly", () => {
+    vi.mocked(useTenantMembers).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as unknown as ReturnType<typeof useTenantMembers>);
+    const { rerender } = render(<MembersTab tenantId="t1" />);
+    expect(screen.getByText(/Loading members/)).toBeInTheDocument();
+
+    vi.mocked(useTenantMembers).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("HTTP 404"),
+    } as unknown as ReturnType<typeof useTenantMembers>);
+    rerender(<MembersTab tenantId="t1" />);
+    expect(screen.getByText(/HTTP 404/)).toBeInTheDocument();
+
+    mockData([], 0);
+    rerender(<MembersTab tenantId="t1" />);
+    expect(screen.getByText(/No members in this tenant/)).toBeInTheDocument();
+  });
+
+  it("renders member rows with name/email; null display_name falls back to email local-part", () => {
+    mockData(SAMPLE_MEMBERS, 2);
+    render(<MembersTab tenantId="t1" />);
+    expect(screen.getByText("Alice Liu")).toBeInTheDocument();
+    expect(screen.getByText("alice@acme.com")).toBeInTheDocument();
+    expect(screen.getByText("bob")).toBeInTheDocument();
+    expect(screen.getByText("bob@acme.com")).toBeInTheDocument();
+  });
+
+  it("renders avatar spans with linear-gradient style (hue derived from id)", () => {
+    mockData(SAMPLE_MEMBERS, 2);
+    const { container } = render(<MembersTab tenantId="t1" />);
+    const avatars = container.querySelectorAll("span[style*='linear-gradient']");
+    expect(avatars.length).toBe(2);
   });
 
   it("renders Invite button + click fires window.alert with backend gap message", async () => {
-    const user = userEvent.setup();
+    mockData(SAMPLE_MEMBERS, 2);
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
-    render(<MembersTab />);
-    const btn = screen.getByRole("button", { name: /invite/i });
-    expect(btn).toBeInTheDocument();
-    await user.click(btn);
-    expect(alertSpy).toHaveBeenCalledTimes(1);
-    expect(alertSpy.mock.calls[0]![0]).toMatch(/backend gap/i);
-    expect(alertSpy.mock.calls[0]![0]).toMatch(/Phase 58\+/i);
-  });
-
-  it("renders 8 member rows from MEMBERS fixture (unique names)", () => {
-    render(<MembersTab />);
-    expect(MEMBERS).toHaveLength(8);
-    for (const m of MEMBERS) {
-      expect(screen.getByText(m.n)).toBeInTheDocument();
-      expect(screen.getByText(m.e)).toBeInTheDocument();
-    }
-  });
-
-  it("renders 8 avatar spans with linear-gradient style", () => {
-    const { container } = render(<MembersTab />);
-    // Avatar span is the first span inside each .row > td > .row div in member cell.
-    // Each avatar uses inline style.background containing 'linear-gradient'.
-    const allSpans = container.querySelectorAll("td span") as NodeListOf<HTMLSpanElement>;
-    const avatarSpans = Array.from(allSpans).filter((s) =>
-      (s.style.background || "").includes("linear-gradient"),
-    );
-    expect(avatarSpans.length).toBe(8);
-  });
-
-  it("Role Badge tone dispatch: admin → primary / compliance → memory / operator → no tone", () => {
-    render(<MembersTab />);
-    // 2 admins + 5 operators + 1 compliance in MEMBERS fixture
-    const adminBadges = screen.getAllByText("admin");
-    expect(adminBadges.length).toBe(2);
-    expect(adminBadges[0]!.className).toMatch(/primary/);
-
-    const complianceBadge = screen.getByText("compliance");
-    expect(complianceBadge.className).toMatch(/memory/);
-
-    const operatorBadges = screen.getAllByText("operator");
-    expect(operatorBadges.length).toBe(5);
-    // operator has empty tone — no primary/info/success/warning/danger/memory token
-    expect(operatorBadges[0]!.className).not.toMatch(/(primary|info|success|warning|danger|memory)/);
+    const user = userEvent.setup();
+    render(<MembersTab tenantId="t1" />);
+    await user.click(screen.getByRole("button", { name: /invite/i }));
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/backend gap/i));
+    alertSpy.mockRestore();
   });
 
   it("renders AP-2 BackendGapBanner", () => {
-    render(<MembersTab />);
+    mockData(SAMPLE_MEMBERS, 2);
+    render(<MembersTab tenantId="t1" />);
     const banner = screen.getByTestId("backend-gap-banner");
     expect(banner).toBeInTheDocument();
     expect(banner).toHaveTextContent(/Phase 58\+/);
-    expect(banner).toHaveTextContent(/Member roster/);
   });
 });

@@ -1,83 +1,96 @@
 /**
  * File: frontend/tests/unit/tenant-settings/tabs/HITLPoliciesTab.test.tsx
- * Purpose: Vitest coverage for HITLPoliciesTab — 4 risk-tier rows + Badge tone dispatch + AP-2 banner.
+ * Purpose: Vitest coverage for HITLPoliciesTab — real backend useHITLPolicies hook integration.
  * Category: Frontend / Tests / tenant-settings / unit / tabs
- * Scope: Phase 57 / Sprint 57.44 Day 2 (mockup-fidelity rebuild Vitest coverage)
- *
- * Description:
- *   - Renders "HITL policies" Card title + subtitle
- *   - Renders 4 risk-tier rows (critical / high / medium / low)
- *   - Each row has sev-dot sev-{level} class span
- *   - Badge tone dispatch: auto=success / ask_once=info / always_ask=warning
- *   - BackendGapBanner present
- *
- * Created: 2026-05-26 (Sprint 57.44 Day 2)
+ * Scope: Phase 57 / Sprint 57.49 Day 1 (fixture → real backend migration)
  *
  * Modification History (newest-first):
- *   - 2026-05-26: Initial creation (Sprint 57.44 Day 2) — tenant-settings mockup-fidelity rebuild Vitest coverage
- *
- * Related:
- *   - frontend/src/features/tenant-settings/components/tabs/HITLPoliciesTab.tsx
- *   - frontend/src/features/tenant-settings/_fixtures.ts (HITL_POLICIES = 4 entries)
- *   - sprint-57-44-plan.md §AC3
+ *   - 2026-05-26: Sprint 57.49 — rewrite to mock useHITLPolicies hook
+ *   - 2026-05-26: Initial creation (Sprint 57.44 Day 2)
  */
 
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/features/tenant-settings/hooks/useHITLPolicies", () => ({
+  useHITLPolicies: vi.fn(),
+  HITL_POLICIES_QUERY_KEY_BASE: ["tenant-settings", "hitl-policies"],
+}));
 
 import { HITLPoliciesTab } from "@/features/tenant-settings/components/tabs/HITLPoliciesTab";
-import { HITL_POLICIES } from "@/features/tenant-settings/_fixtures";
+import { useHITLPolicies } from "@/features/tenant-settings/hooks/useHITLPolicies";
 
-describe("HITLPoliciesTab (Sprint 57.44)", () => {
+function mockData(items: unknown[]): void {
+  vi.mocked(useHITLPolicies).mockReturnValue({
+    data: { items, total: items.length, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useHITLPolicies>);
+}
+
+describe("HITLPoliciesTab (Sprint 57.49)", () => {
+  beforeEach(() => {
+    mockData([]);
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders Card title 'HITL policies' + subtitle", () => {
-    render(<HITLPoliciesTab />);
+    render(<HITLPoliciesTab tenantId="t1" />);
     expect(screen.getByText("HITL policies")).toBeInTheDocument();
     expect(screen.getByText(/Per-tool · risk-tiered · escalation routing/)).toBeInTheDocument();
   });
 
-  it("renders all 5 column headers", () => {
-    render(<HITLPoliciesTab />);
-    expect(screen.getByText("Risk tier")).toBeInTheDocument();
-    expect(screen.getByText("Default policy")).toBeInTheDocument();
-    expect(screen.getByText("SLA")).toBeInTheDocument();
-    expect(screen.getByText("Approvers")).toBeInTheDocument();
-    expect(screen.getByText("Off-platform")).toBeInTheDocument();
+  it("renders 'Loading HITL policies…' when isLoading=true", () => {
+    vi.mocked(useHITLPolicies).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as unknown as ReturnType<typeof useHITLPolicies>);
+    render(<HITLPoliciesTab tenantId="t1" />);
+    expect(screen.getByText(/Loading HITL policies/)).toBeInTheDocument();
   });
 
-  it("renders 4 risk-tier rows with sev-dot sev-{level} class", () => {
-    const { container } = render(<HITLPoliciesTab />);
-    expect(HITL_POLICIES).toHaveLength(4);
-    for (const p of HITL_POLICIES) {
-      const dot = container.querySelector(`.sev-dot.sev-${p.risk}`);
-      expect(dot).not.toBeNull();
-      // Risk label text rendered (capitalize via CSS, raw text unchanged)
-      expect(screen.getByText(p.risk)).toBeInTheDocument();
-    }
+  it("renders empty state message when no policy configured", () => {
+    mockData([]);
+    render(<HITLPoliciesTab tenantId="t1" />);
+    expect(screen.getByText(/No HITL policy override configured/)).toBeInTheDocument();
   });
 
-  it("Badge tone dispatch: auto → success / ask_once → info / always_ask → warning", () => {
-    render(<HITLPoliciesTab />);
-    // critical = always_ask → warning
-    const alwaysAskBadges = screen.getAllByText("always_ask");
-    expect(alwaysAskBadges.length).toBe(2); // critical + high
-    expect(alwaysAskBadges[0]!.className).toMatch(/warning/);
+  it("renders 4 risk-tier rows + lowercases risk labels for CSS class", () => {
+    mockData([
+      { risk: "CRITICAL", policy: "always_ask", sla_seconds: 300, reviewers: "@platform-l2" },
+      { risk: "HIGH", policy: "always_ask", sla_seconds: 900, reviewers: "@platform-l2" },
+      { risk: "MEDIUM", policy: "ask_once", sla_seconds: 3600, reviewers: "@platform-l1" },
+      { risk: "LOW", policy: "auto", sla_seconds: null, reviewers: "" },
+    ]);
+    const { container } = render(<HITLPoliciesTab tenantId="t1" />);
+    expect(screen.getByText("critical")).toBeInTheDocument();
+    expect(screen.getByText("high")).toBeInTheDocument();
+    expect(screen.getByText("medium")).toBeInTheDocument();
+    expect(screen.getByText("low")).toBeInTheDocument();
+    expect(container.querySelector(".sev-critical")).toBeTruthy();
+    expect(container.querySelector(".sev-low")).toBeTruthy();
+  });
 
-    // medium = ask_once → info
-    const askOnceBadge = screen.getByText("ask_once");
-    expect(askOnceBadge.className).toMatch(/info/);
-
-    // low = auto → success
-    const autoBadge = screen.getByText("auto");
-    expect(autoBadge.className).toMatch(/success/);
+  it("formats sla_seconds: 300s → '5m', null → '—'", () => {
+    mockData([
+      { risk: "CRITICAL", policy: "always_ask", sla_seconds: 300, reviewers: "@a" },
+      { risk: "LOW", policy: "auto", sla_seconds: null, reviewers: "" },
+    ]);
+    render(<HITLPoliciesTab tenantId="t1" />);
+    expect(screen.getByText("5m")).toBeInTheDocument();
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders AP-2 BackendGapBanner", () => {
-    render(<HITLPoliciesTab />);
+    mockData([]);
+    render(<HITLPoliciesTab tenantId="t1" />);
     const banner = screen.getByTestId("backend-gap-banner");
     expect(banner).toBeInTheDocument();
     expect(banner).toHaveTextContent(/Phase 58\+/);
-    expect(banner).toHaveTextContent(/HITL/);
   });
 });

@@ -1,63 +1,96 @@
 /**
  * File: frontend/src/features/tenant-settings/components/tabs/FeatureFlagsTab.tsx
- * Purpose: Feature flags tab — table of 8 tenant-scoped flag overrides (mockup verbatim).
+ * Purpose: Feature flags tab — table of tenant-scoped flag overrides (real backend via useFeatureFlags).
  * Category: Frontend / tenant-settings / components / tabs
- * Scope: Phase 57 / Sprint 57.44 Day 1 (mockup-fidelity rebuild — D-DAY0-4 Option A)
+ * Scope: Phase 57 / Sprint 57.49 Day 1 (Track A 1.1.2 — fixture → real backend migration)
  *
  * Description:
- *   Verbatim port of mockup `page-admin.jsx` L476-505. Single Card with 4-col
- *   table (Flag / Description / Default / Tenant override). Boolean flags render
- *   <Switch>; numeric flags (`ctl === "num"`) render mono <input>. All flag
- *   values are read-only display fixtures pending Phase 58+ backend.
+ *   Sprint 57.49 migration: previously consumed `FEATURE_FLAGS` from `_fixtures.ts`;
+ *   now fetches via `useFeatureFlags(tenantId)` hook (Sprint 57.48 Track B endpoint).
  *
- * Created: 2026-05-26 (Sprint 57.44 Day 1)
+ *   Backend FeatureFlagItem shape: `{name, value, default_enabled, overridden,
+ *   description, updated_at}`. Numeric override (mockup fixture `ctl: "num"`)
+ *   not in backend yet — all rows render as boolean Switch. `def` derived from
+ *   `default_enabled` (bool → "on"/"off" label).
+ *
+ *   Loading/Empty/Error states added; BackendGapBanner kept for honesty (numeric
+ *   override Phase 58+).
+ *
+ * Created: 2026-05-26 (Sprint 57.44 Day 1) — original fixture port
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
- *   - 2026-05-26: Initial creation (Sprint 57.44 Day 1) — tenant-settings full mockup-fidelity rebuild
+ *   - 2026-05-26: Sprint 57.49 — fixture → useFeatureFlags real backend (Sprint 57.48 Track B)
+ *   - 2026-05-26: Initial creation (Sprint 57.44 Day 1)
  *
  * Related:
- *   - reference/design-mockups/page-admin.jsx L476-505
- *   - ../../_fixtures.ts (FEATURE_FLAGS)
+ *   - backend/src/api/v1/admin/tenants.py L803-871 (FeatureFlagItem / list_tenant_feature_flags)
+ *   - ../../hooks/useFeatureFlags.ts (TanStack consumer)
  */
 
 import { Badge, Card, Switch } from "../../../../components/mockup-ui";
 import { BackendGapBanner } from "../../../../components/ui/BackendGapBanner";
-import { FEATURE_FLAGS } from "../../_fixtures";
+import { useFeatureFlags } from "../../hooks/useFeatureFlags";
 
-export function FeatureFlagsTab(): JSX.Element {
+export interface FeatureFlagsTabProps {
+  tenantId: string;
+}
+
+export function FeatureFlagsTab({ tenantId }: FeatureFlagsTabProps): JSX.Element {
+  const { data, isLoading, error } = useFeatureFlags(tenantId);
+
+  if (isLoading) {
+    return (
+      <Card title="Feature flags" subtitle="Tenant-scoped overrides">
+        <p className="muted">Loading feature flags…</p>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card title="Feature flags" subtitle="Tenant-scoped overrides">
+        {/* eslint-disable-next-line no-restricted-syntax -- inline-style error hint */}
+        <p style={{ color: "var(--danger)", fontSize: 12 }}>
+          Error loading feature flags: {error.message}
+        </p>
+      </Card>
+    );
+  }
+
+  const items = data?.items ?? [];
+
   return (
     <Card title="Feature flags" subtitle="Tenant-scoped overrides">
-      <BackendGapBanner reason="Feature flag overrides: backend extension Phase 58+ — values shown are mockup defaults" />
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Flag</th>
-            <th>Description</th>
-            <th>Default</th>
-            <th>Tenant override</th>
-          </tr>
-        </thead>
-        <tbody>
-          {FEATURE_FLAGS.map((f) => (
-            <tr key={f.k}>
-              {/* eslint-disable-next-line no-restricted-syntax -- verbatim port: mono fontSize */}
-              <td className="mono" style={{ fontSize: 12 }}>{f.k}</td>
-              {/* eslint-disable-next-line no-restricted-syntax -- verbatim port: subtle fontSize */}
-              <td className="subtle" style={{ fontSize: 12 }}>{f.desc}</td>
-              <td><Badge>{f.def}</Badge></td>
-              <td>
-                {f.ctl === "num" ? (
-                  // eslint-disable-next-line no-restricted-syntax -- verbatim port: input width + fontSize
-                  <input className="input mono" style={{ width: 80, fontSize: 12 }} defaultValue={String(f.on)} />
-                ) : (
-                  <Switch on={Boolean(f.on)} />
-                )}
-              </td>
+      <BackendGapBanner reason="Numeric flag overrides + per-tenant override write API: backend extension Phase 58+ — booleans shown are tenant-effective" />
+      {items.length === 0 ? (
+        <p className="muted">No feature flags registered for this tenant.</p>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Flag</th>
+              <th>Description</th>
+              <th>Default</th>
+              <th>Tenant override</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {items.map((f) => (
+              <tr key={f.name}>
+                {/* eslint-disable-next-line no-restricted-syntax -- verbatim port: mono fontSize */}
+                <td className="mono" style={{ fontSize: 12 }}>{f.name}</td>
+                {/* eslint-disable-next-line no-restricted-syntax -- verbatim port: subtle fontSize */}
+                <td className="subtle" style={{ fontSize: 12 }}>{f.description ?? "—"}</td>
+                <td><Badge>{f.default_enabled ? "on" : "off"}</Badge></td>
+                <td>
+                  <Switch on={f.value} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </Card>
   );
 }

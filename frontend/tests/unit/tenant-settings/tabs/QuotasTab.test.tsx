@@ -1,26 +1,12 @@
 /**
  * File: frontend/tests/unit/tenant-settings/tabs/QuotasTab.test.tsx
- * Purpose: Vitest coverage for QuotasTab — 5 bar-track rows + 3 rate-limit rows + Request increase button.
+ * Purpose: Vitest coverage for QuotasTab — useQuotas + useRateLimits hook integration.
  * Category: Frontend / Tests / tenant-settings / unit / tabs
- * Scope: Phase 57 / Sprint 57.44 Day 2 (mockup-fidelity rebuild Vitest coverage)
- *
- * Description:
- *   - Renders "Usage quotas" + "Rate limits" Card titles
- *   - Renders 5 bar-track rows (one per QUOTAS entry)
- *   - Renders 3 spread rows for RATE_LIMITS (API requests / Tool calls / SSE connections)
- *   - Each bar-track inner span has width style matching q.pct%
- *   - Request increase Button + click fires window.alert with backend gap message
- *   - BackendGapBanner present
- *
- * Created: 2026-05-26 (Sprint 57.44 Day 2)
+ * Scope: Phase 57 / Sprint 57.49 Day 1 (fixture → real backend migration)
  *
  * Modification History (newest-first):
- *   - 2026-05-26: Initial creation (Sprint 57.44 Day 2) — tenant-settings mockup-fidelity rebuild Vitest coverage
- *
- * Related:
- *   - frontend/src/features/tenant-settings/components/tabs/QuotasTab.tsx
- *   - frontend/src/features/tenant-settings/_fixtures.ts (QUOTAS / RATE_LIMITS)
- *   - sprint-57-44-plan.md §AC3
+ *   - 2026-05-26: Sprint 57.49 — rewrite to mock useQuotas + useRateLimits hooks
+ *   - 2026-05-26: Initial creation (Sprint 57.44 Day 2)
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -29,64 +15,105 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/features/tenant-settings/hooks/useQuotas", () => ({
+  useQuotas: vi.fn(),
+  QUOTAS_QUERY_KEY_BASE: ["tenant-settings", "quotas"],
+}));
+vi.mock("@/features/tenant-settings/hooks/useRateLimits", () => ({
+  useRateLimits: vi.fn(),
+  RATE_LIMITS_QUERY_KEY_BASE: ["tenant-settings", "rate-limits"],
+}));
+
 import { QuotasTab } from "@/features/tenant-settings/components/tabs/QuotasTab";
-import { QUOTAS, RATE_LIMITS } from "@/features/tenant-settings/_fixtures";
+import { useQuotas } from "@/features/tenant-settings/hooks/useQuotas";
+import { useRateLimits } from "@/features/tenant-settings/hooks/useRateLimits";
 
-describe("QuotasTab (Sprint 57.44)", () => {
+function mockData(quotas: unknown[], rateLimits: unknown[]): void {
+  vi.mocked(useQuotas).mockReturnValue({
+    data: { items: quotas, total: quotas.length, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useQuotas>);
+  vi.mocked(useRateLimits).mockReturnValue({
+    data: { items: rateLimits, total: rateLimits.length, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useRateLimits>);
+}
+
+describe("QuotasTab (Sprint 57.49)", () => {
   beforeEach(() => {
-    vi.spyOn(window, "alert").mockImplementation(() => {});
+    mockData([], []);
   });
-
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("renders 'Usage quotas' + 'Rate limits' Card titles", () => {
-    render(<QuotasTab />);
+    render(<QuotasTab tenantId="t1" />);
     expect(screen.getByText("Usage quotas")).toBeInTheDocument();
     expect(screen.getByText("Rate limits")).toBeInTheDocument();
   });
 
-  it("renders 5 bar-track rows (one per QUOTAS entry)", () => {
-    const { container } = render(<QuotasTab />);
-    const barTracks = container.querySelectorAll(".bar-track");
-    expect(barTracks.length).toBe(QUOTAS.length);
-    expect(QUOTAS).toHaveLength(5);
+  it("Usage quotas Card renders loading state", () => {
+    vi.mocked(useQuotas).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as unknown as ReturnType<typeof useQuotas>);
+    vi.mocked(useRateLimits).mockReturnValue({
+      data: { items: [], total: 0, limit: 50, offset: 0 },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useRateLimits>);
+    render(<QuotasTab tenantId="t1" />);
+    expect(screen.getByText(/Loading quotas/)).toBeInTheDocument();
   });
 
-  it("each quota row renders the quota label", () => {
-    render(<QuotasTab />);
-    for (const q of QUOTAS) {
-      expect(screen.getByText(q.k)).toBeInTheDocument();
-    }
+  it("renders quota rows when data present + null current_usage renders 0% bar-track", () => {
+    mockData(
+      [
+        { resource: "tokens_per_day", limit: 10_000_000, unit: "tokens", period: "day", current_usage: null },
+        { resource: "cost_usd_per_day", limit: 100, unit: "usd", period: "day", current_usage: null },
+      ],
+      [],
+    );
+    const { container } = render(<QuotasTab tenantId="t1" />);
+    expect(screen.getByText("tokens_per_day")).toBeInTheDocument();
+    expect(screen.getByText("cost_usd_per_day")).toBeInTheDocument();
+    const bars = container.querySelectorAll(".bar-track");
+    expect(bars.length).toBe(2);
   });
 
-  it("renders 3 rate-limit spread rows from RATE_LIMITS fixture", () => {
-    render(<QuotasTab />);
-    for (const r of RATE_LIMITS) {
-      expect(screen.getByText(r.label)).toBeInTheDocument();
-      expect(screen.getByText(r.value)).toBeInTheDocument();
-    }
-    expect(RATE_LIMITS).toHaveLength(3);
+  it("renders rate-limit rows from useRateLimits data", () => {
+    mockData(
+      [],
+      [
+        { label: "API requests", value: "100 / min" },
+        { label: "Tool calls", value: "1,000 / min" },
+      ],
+    );
+    render(<QuotasTab tenantId="t1" />);
+    expect(screen.getByText("API requests")).toBeInTheDocument();
+    expect(screen.getByText("100 / min")).toBeInTheDocument();
+    expect(screen.getByText("Tool calls")).toBeInTheDocument();
   });
 
   it("Request increase button fires window.alert with backend gap message", async () => {
-    const user = userEvent.setup();
+    mockData([], [{ label: "x", value: "y" }]);
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
-    render(<QuotasTab />);
-    const btn = screen.getByRole("button", { name: /request increase/i });
-    expect(btn).toBeInTheDocument();
-    await user.click(btn);
-    expect(alertSpy).toHaveBeenCalledTimes(1);
-    expect(alertSpy.mock.calls[0]![0]).toMatch(/backend gap/i);
-    expect(alertSpy.mock.calls[0]![0]).toMatch(/Phase 58\+/i);
+    const user = userEvent.setup();
+    render(<QuotasTab tenantId="t1" />);
+    await user.click(screen.getByRole("button", { name: /request increase/i }));
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/backend gap/i));
+    alertSpy.mockRestore();
   });
 
-  it("renders AP-2 BackendGapBanner declaring backend extension", () => {
-    render(<QuotasTab />);
+  it("renders AP-2 BackendGapBanner for Usage quotas card", () => {
+    mockData([{ resource: "tokens_per_day", limit: 10_000_000, unit: "tokens", period: "day", current_usage: null }], []);
+    render(<QuotasTab tenantId="t1" />);
     const banner = screen.getByTestId("backend-gap-banner");
     expect(banner).toBeInTheDocument();
     expect(banner).toHaveTextContent(/Phase 58\+/);
-    expect(banner).toHaveTextContent(/Usage quotas/);
   });
 });

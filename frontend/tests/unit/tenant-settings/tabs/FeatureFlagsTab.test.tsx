@@ -1,82 +1,117 @@
 /**
  * File: frontend/tests/unit/tenant-settings/tabs/FeatureFlagsTab.test.tsx
- * Purpose: Vitest coverage for FeatureFlagsTab — 8 flag rows + Switch/numeric dispatch + AP-2 banner.
+ * Purpose: Vitest coverage for FeatureFlagsTab — real backend useFeatureFlags hook integration.
  * Category: Frontend / Tests / tenant-settings / unit / tabs
- * Scope: Phase 57 / Sprint 57.44 Day 2 (mockup-fidelity rebuild Vitest coverage)
+ * Scope: Phase 57 / Sprint 57.49 Day 1 (fixture → real backend migration)
  *
  * Description:
  *   - Renders "Feature flags" Card title + subtitle "Tenant-scoped overrides"
- *   - Renders 8 flag rows (FEATURE_FLAGS keys)
- *   - Boolean rows render <Switch role="switch">; numeric rows (ctl="num") render mono <input>
- *   - 4-column table headers rendered
+ *   - Loading state visible when isLoading=true
+ *   - Error state visible when error present
+ *   - Empty state when items=[]
+ *   - Renders flag rows from hook data; <Switch role='switch'> per row
  *   - BackendGapBanner present
  *
  * Created: 2026-05-26 (Sprint 57.44 Day 2)
+ * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
- *   - 2026-05-26: Initial creation (Sprint 57.44 Day 2) — tenant-settings mockup-fidelity rebuild Vitest coverage
- *
- * Related:
- *   - frontend/src/features/tenant-settings/components/tabs/FeatureFlagsTab.tsx
- *   - frontend/src/features/tenant-settings/_fixtures.ts (FEATURE_FLAGS = 8 entries; 2 numeric)
- *   - sprint-57-44-plan.md §AC3
+ *   - 2026-05-26: Sprint 57.49 — rewrite to mock useFeatureFlags hook (post fixture → real migration)
+ *   - 2026-05-26: Initial creation (Sprint 57.44 Day 2)
  */
 
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/features/tenant-settings/hooks/useFeatureFlags", () => ({
+  useFeatureFlags: vi.fn(),
+  FEATURE_FLAGS_QUERY_KEY_BASE: ["tenant-settings", "feature-flags"],
+}));
 
 import { FeatureFlagsTab } from "@/features/tenant-settings/components/tabs/FeatureFlagsTab";
-import { FEATURE_FLAGS } from "@/features/tenant-settings/_fixtures";
+import { useFeatureFlags } from "@/features/tenant-settings/hooks/useFeatureFlags";
 
-describe("FeatureFlagsTab (Sprint 57.44)", () => {
+function mockData(items: unknown[]): void {
+  vi.mocked(useFeatureFlags).mockReturnValue({
+    data: { items, total: items.length, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useFeatureFlags>);
+}
+
+describe("FeatureFlagsTab (Sprint 57.49)", () => {
+  beforeEach(() => {
+    mockData([]);
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders Card title 'Feature flags' + subtitle", () => {
-    render(<FeatureFlagsTab />);
+    render(<FeatureFlagsTab tenantId="t1" />);
     expect(screen.getByText("Feature flags")).toBeInTheDocument();
     expect(screen.getByText(/Tenant-scoped overrides/)).toBeInTheDocument();
   });
 
-  it("renders all 4 column headers", () => {
-    render(<FeatureFlagsTab />);
-    expect(screen.getByText("Flag")).toBeInTheDocument();
-    expect(screen.getByText("Description")).toBeInTheDocument();
-    expect(screen.getByText("Default")).toBeInTheDocument();
-    expect(screen.getByText("Tenant override")).toBeInTheDocument();
+  it("renders 'Loading feature flags…' when isLoading=true", () => {
+    vi.mocked(useFeatureFlags).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as unknown as ReturnType<typeof useFeatureFlags>);
+    render(<FeatureFlagsTab tenantId="t1" />);
+    expect(screen.getByText(/Loading feature flags/)).toBeInTheDocument();
   });
 
-  it("renders all 8 flag-key mono cells from FEATURE_FLAGS fixture", () => {
-    render(<FeatureFlagsTab />);
-    for (const f of FEATURE_FLAGS) {
-      expect(screen.getByText(f.k)).toBeInTheDocument();
-    }
-    expect(FEATURE_FLAGS).toHaveLength(8);
+  it("renders error message when error present", () => {
+    vi.mocked(useFeatureFlags).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("HTTP 500"),
+    } as unknown as ReturnType<typeof useFeatureFlags>);
+    render(<FeatureFlagsTab tenantId="t1" />);
+    expect(screen.getByText(/HTTP 500/)).toBeInTheDocument();
   });
 
-  it("renders <Switch role='switch'> for boolean rows + mono <input> for numeric (ctl='num') rows", () => {
-    const { container } = render(<FeatureFlagsTab />);
+  it("renders empty state when items=[]", () => {
+    mockData([]);
+    render(<FeatureFlagsTab tenantId="t1" />);
+    expect(screen.getByText(/No feature flags registered/)).toBeInTheDocument();
+  });
+
+  it("renders flag rows with Switch when data present", () => {
+    mockData([
+      {
+        name: "subagent.fork.enabled",
+        value: true,
+        default_enabled: true,
+        overridden: false,
+        description: "Allow concurrent fork mode",
+        updated_at: "2026-05-26T00:00:00Z",
+      },
+      {
+        name: "tool.sandbox_full",
+        value: false,
+        default_enabled: false,
+        overridden: false,
+        description: "Permit FULL_SANDBOX tool runs",
+        updated_at: "2026-05-26T00:00:00Z",
+      },
+    ]);
+    const { container } = render(<FeatureFlagsTab tenantId="t1" />);
+    expect(screen.getByText("subagent.fork.enabled")).toBeInTheDocument();
+    expect(screen.getByText("tool.sandbox_full")).toBeInTheDocument();
     const switches = container.querySelectorAll("[role='switch']");
-    const numericFlags = FEATURE_FLAGS.filter((f) => f.ctl === "num");
-    const booleanFlags = FEATURE_FLAGS.filter((f) => f.ctl !== "num");
-    expect(switches.length).toBe(booleanFlags.length);
-
-    // Numeric flags render <input class="input mono"> in tenant override column
-    // Two numeric rows: subagent.max_depth (def=5) + loop.max_iterations (def=30)
-    expect(numericFlags.length).toBe(2);
-    // Find numeric input values 5 + 30 via container queryByDisplayValue equivalent
-    const inputs = container.querySelectorAll("input.input.mono") as NodeListOf<HTMLInputElement>;
-    // 2 numeric inputs expected
-    expect(inputs.length).toBeGreaterThanOrEqual(2);
-    const values = Array.from(inputs).map((i) => i.defaultValue);
-    expect(values).toContain("5");
-    expect(values).toContain("30");
+    expect(switches.length).toBe(2);
   });
 
   it("renders AP-2 BackendGapBanner", () => {
-    render(<FeatureFlagsTab />);
+    mockData([]);
+    render(<FeatureFlagsTab tenantId="t1" />);
     const banner = screen.getByTestId("backend-gap-banner");
     expect(banner).toBeInTheDocument();
     expect(banner).toHaveTextContent(/Phase 58\+/);
-    expect(banner).toHaveTextContent(/Feature flag/);
   });
 });

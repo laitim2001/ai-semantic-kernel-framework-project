@@ -1,30 +1,46 @@
 /**
  * File: frontend/src/features/tenant-settings/services/tenantSettingsService.ts
- * Purpose: REST client for 57.3 admin tenant GET + PATCH endpoints.
+ * Purpose: REST client for /admin/tenants/{id} GET + PATCH + 5 sub-resource list endpoints.
  * Category: Frontend / tenant-settings / services
- * Scope: Phase 57 / Sprint 57.3 US-3 → Sprint 57.9 US-6 Day 4 (fetchWithAuth swap)
+ * Scope: Phase 57 / Sprint 57.3 US-3 → Sprint 57.9 US-6 → Sprint 57.49 US-1 (5 sub-resources)
  *
  * Description:
- *   Wraps GET + PATCH /api/v1/admin/tenants/{tenant_id}.
+ *   Wraps GET + PATCH /api/v1/admin/tenants/{tenant_id} (Sprint 57.3) plus 5
+ *   sub-resource list endpoints shipped Sprint 57.47/48:
+ *     - GET /{tenant_id}/members (Sprint 57.47 Track B)
+ *     - GET /{tenant_id}/hitl-policies (Sprint 57.48 Track A)
+ *     - GET /{tenant_id}/feature-flags (Sprint 57.48 Track B)
+ *     - GET /{tenant_id}/quotas (Sprint 57.48 Track C)
+ *     - GET /{tenant_id}/rate-limits (Sprint 57.48 Track D)
  *
- *   Sprint 57.9 US-6 Day 4: raw `fetch` swapped to `fetchWithAuth` (Sprint 57.7
- *   IAM JWT) + signal forwarded for TanStack auto-cancellation on the GET path.
+ *   All use shared `fetchWithAuth` (Sprint 57.7 IAM JWT) + AbortSignal forwarding
+ *   for TanStack auto-cancellation. Pagination params (limit/offset) optional;
+ *   defaults to server-side limit=50 / offset=0.
  *
  * Created: 2026-05-07 (Sprint 57.3 Day 3)
- * Last Modified: 2026-05-09
+ * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.49 Day 1 — +5 sub-resource list service funcs
  *   - 2026-05-09: Sprint 57.9 US-6 Day 4 — swap raw fetch to fetchWithAuth + signal param on GET
  *   - 2026-05-07: Initial creation (Sprint 57.3 Day 3)
  *
  * Related:
- *   - backend/src/api/v1/admin/tenants.py (GET + PATCH endpoints)
- *   - ../types.ts (TenantSettingsResponse + TenantUpdateRequest)
- *   - ../hooks/useTenantSettings.ts + useTenantSettingsSave.ts (TanStack consumers)
+ *   - backend/src/api/v1/admin/tenants.py (GET + PATCH + 5 sub-resource endpoints)
+ *   - ../types.ts (response interfaces incl. Sprint 57.49 additions)
+ *   - ../hooks/use*.ts (TanStack consumers)
  */
 
 import { fetchWithAuth } from "../../auth/services/authService";
-import type { TenantSettingsResponse, TenantUpdateRequest } from "../types";
+import type {
+  FeatureFlagListResponse,
+  HITLPolicyListResponse,
+  QuotaListResponse,
+  RateLimitListResponse,
+  TenantMemberListResponse,
+  TenantSettingsResponse,
+  TenantUpdateRequest,
+} from "../types";
 
 const API_BASE = "/api/v1/admin";
 
@@ -63,4 +79,79 @@ export async function updateTenantSettings(
     body: JSON.stringify(payload),
   });
   return _handleResponse<TenantSettingsResponse>(response);
+}
+
+/* === Sprint 57.49 — 5 sub-resource list endpoints === */
+
+function _buildPageParams(limit?: number, offset?: number): string {
+  const params = new URLSearchParams();
+  if (limit !== undefined) params.set("limit", String(limit));
+  if (offset !== undefined) params.set("offset", String(offset));
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchTenantMembers(
+  tenantId: string,
+  limit?: number,
+  offset?: number,
+  signal?: AbortSignal,
+): Promise<TenantMemberListResponse> {
+  const response = await fetchWithAuth(
+    `${API_BASE}/tenants/${tenantId}/members${_buildPageParams(limit, offset)}`,
+    { method: "GET", signal },
+  );
+  return _handleResponse<TenantMemberListResponse>(response);
+}
+
+export async function fetchHITLPolicies(
+  tenantId: string,
+  limit?: number,
+  offset?: number,
+  signal?: AbortSignal,
+): Promise<HITLPolicyListResponse> {
+  const response = await fetchWithAuth(
+    `${API_BASE}/tenants/${tenantId}/hitl-policies${_buildPageParams(limit, offset)}`,
+    { method: "GET", signal },
+  );
+  return _handleResponse<HITLPolicyListResponse>(response);
+}
+
+export async function fetchFeatureFlags(
+  tenantId: string,
+  limit?: number,
+  offset?: number,
+  signal?: AbortSignal,
+): Promise<FeatureFlagListResponse> {
+  const response = await fetchWithAuth(
+    `${API_BASE}/tenants/${tenantId}/feature-flags${_buildPageParams(limit, offset)}`,
+    { method: "GET", signal },
+  );
+  return _handleResponse<FeatureFlagListResponse>(response);
+}
+
+export async function fetchQuotas(
+  tenantId: string,
+  limit?: number,
+  offset?: number,
+  signal?: AbortSignal,
+): Promise<QuotaListResponse> {
+  const response = await fetchWithAuth(
+    `${API_BASE}/tenants/${tenantId}/quotas${_buildPageParams(limit, offset)}`,
+    { method: "GET", signal },
+  );
+  return _handleResponse<QuotaListResponse>(response);
+}
+
+export async function fetchRateLimits(
+  tenantId: string,
+  limit?: number,
+  offset?: number,
+  signal?: AbortSignal,
+): Promise<RateLimitListResponse> {
+  const response = await fetchWithAuth(
+    `${API_BASE}/tenants/${tenantId}/rate-limits${_buildPageParams(limit, offset)}`,
+    { method: "GET", signal },
+  );
+  return _handleResponse<RateLimitListResponse>(response);
 }

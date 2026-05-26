@@ -45,6 +45,12 @@ const SAMPLE: TenantSettingsResponse = {
   provisioning_progress: {},
   onboarding_progress: {},
   meta_data: {},
+  // Sprint 57.46 — SaaS settings extension
+  region: "apac",
+  locale: "zh-TW",
+  retention_days: 365,
+  sso_enabled: true,
+  seats: 8,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-05-07T00:00:00Z",
 };
