@@ -26,6 +26,7 @@ Description:
 Created: 2026-05-04 (Sprint 55.3 Day 3)
 
 Modification History:
+    - 2026-05-26: Sprint 57.54 — add put() upsert via pg_insert.on_conflict_do_update (Track A)
     - 2026-05-04: Initial creation (Sprint 55.3 / closes AD-Hitl-7)
 
 Related:
@@ -41,7 +42,8 @@ from __future__ import annotations
 from typing import Any, Callable
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from agent_harness._contracts.hitl import HITLPolicy, RiskLevel
 from agent_harness.hitl import HITLPolicyStore
@@ -70,6 +72,54 @@ class DBHITLPolicyStore(HITLPolicyStore):
             row = result.scalar_one_or_none()
             if row is None:
                 return None
+            return _row_to_policy(row, tenant_id)
+
+    async def put(self, tenant_id: UUID, policy: HITLPolicy) -> HITLPolicy:
+        """Upsert per-tenant HITLPolicy; returns the persisted policy.
+
+        Uses PostgreSQL ON CONFLICT (tenant_id) DO UPDATE upsert for atomicity.
+        The updated_at column rotates server-side via func.now() in the set_
+        clause (server_default applies only to INSERT path).
+
+        Args:
+            tenant_id: Owning tenant UUID; used as conflict key + final tenant
+                stamp on the returned dataclass.
+            policy: HITLPolicy composite (4 fields). The dataclass's own
+                tenant_id is ignored in favour of the explicit `tenant_id`
+                argument so callers cannot accidentally write a row scoped to
+                the wrong tenant.
+
+        Returns:
+            HITLPolicy hydrated from the upserted row.
+        """
+        async with self._session_factory() as session:
+            # JSONB columns store dict[str, V]; convert from dict[RiskLevel, V].
+            reviewer_groups_jsonb = {k.value: v for k, v in policy.reviewer_groups_by_risk.items()}
+            sla_seconds_jsonb = {k.value: v for k, v in policy.sla_seconds_by_risk.items()}
+            stmt = (
+                pg_insert(HitlPolicyRow)
+                .values(
+                    tenant_id=tenant_id,
+                    auto_approve_max_risk=policy.auto_approve_max_risk.value,
+                    require_approval_min_risk=policy.require_approval_min_risk.value,
+                    reviewer_groups_by_risk=reviewer_groups_jsonb,
+                    sla_seconds_by_risk=sla_seconds_jsonb,
+                )
+                .on_conflict_do_update(
+                    index_elements=["tenant_id"],
+                    set_={
+                        "auto_approve_max_risk": policy.auto_approve_max_risk.value,
+                        "require_approval_min_risk": (policy.require_approval_min_risk.value),
+                        "reviewer_groups_by_risk": reviewer_groups_jsonb,
+                        "sla_seconds_by_risk": sla_seconds_jsonb,
+                        "updated_at": func.now(),
+                    },
+                )
+                .returning(HitlPolicyRow)
+            )
+            result = await session.execute(stmt)
+            await session.commit()
+            row = result.scalar_one()
             return _row_to_policy(row, tenant_id)
 
 

@@ -46,6 +46,7 @@ Created: 2026-05-06 (Sprint 56.1 Day 1)
 Last Modified: 2026-05-10
 
 Modification History:
+    - 2026-05-26: Sprint 57.54 — add PUT /{id}/hitl-policies upsert + write schemas (Track A)
     - 2026-05-26: Sprint 57.50 Day 1 — Identity admin GET (closes AD-Identity-Cleanup)
     - 2026-05-26: Sprint 57.48 Day 1 — +4 admin GET endpoints HITL+FF+Quotas+RateLimits
     - 2026-05-26: Sprint 57.47 Day 1 — LIST 7→12 + region filter + members GET (AD-AdminT-Ext)
@@ -79,7 +80,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_harness._contracts.hitl import RiskLevel
+from agent_harness._contracts.hitl import HITLPolicy, RiskLevel
 from infrastructure.db.audit_helper import append_audit
 from infrastructure.db.models.feature_flag import FeatureFlag
 from infrastructure.db.models.identity import Tenant, TenantPlan, TenantState, User
@@ -789,6 +790,91 @@ async def list_tenant_hitl_policies(
     total = len(all_items)
     page = all_items[offset : offset + limit]
     return HITLPolicyListResponse(items=page, total=total, limit=limit, offset=offset)
+
+
+# =====================================================================
+# Sprint 57.54 Track A — HITLPolicies admin PUT upsert (Track A)
+# =====================================================================
+# WRITE side: NEW PUT /{tenant_id}/hitl-policies endpoint upserts the
+# composite HITLPolicy via DBHITLPolicyStore.put(). The Pydantic write
+# schema HITLPolicyUpsertRequest takes the composite shape directly
+# (4 fields matching HITLPolicy dataclass); the response echoes both the
+# saved composite and the projected items list so the frontend cache can
+# hydrate consistently with the existing GET endpoint (Sprint 57.48 Track A).
+
+
+class HITLPolicyUpsertRequest(BaseModel):
+    """Composite HITLPolicy upsert payload (matches HITLPolicy dataclass shape).
+
+    Sprint 57.54 Track A.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    auto_approve_max_risk: str = Field(
+        ...,
+        description="RiskLevel name: LOW | MEDIUM | HIGH | CRITICAL",
+    )
+    require_approval_min_risk: str = Field(
+        ...,
+        description="RiskLevel name: LOW | MEDIUM | HIGH | CRITICAL",
+    )
+    reviewer_groups_by_risk: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Map RiskLevel name → list of reviewer group names",
+    )
+    sla_seconds_by_risk: dict[str, int] = Field(
+        default_factory=dict,
+        description="Map RiskLevel name → SLA seconds (positive int)",
+    )
+
+    @field_validator("auto_approve_max_risk", "require_approval_min_risk")
+    @classmethod
+    def _validate_risk_level(cls, v: str) -> str:
+        if v not in {"LOW", "MEDIUM", "HIGH", "CRITICAL"}:
+            raise ValueError(f"Invalid RiskLevel: {v}")
+        return v
+
+
+class HITLPolicyUpsertResponse(BaseModel):
+    """Echoes saved composite + projects items list for cache hydration."""
+
+    saved_policy: HITLPolicyUpsertRequest
+    items: list[HITLPolicyItem]
+
+
+@router.put(
+    "/{tenant_id}/hitl-policies",
+    response_model=HITLPolicyUpsertResponse,
+    dependencies=[Depends(require_admin_platform_role)],
+)
+async def upsert_tenant_hitl_policies(
+    tenant_id: UUID,
+    payload: HITLPolicyUpsertRequest,
+    db: AsyncSession = Depends(get_db_session),
+) -> HITLPolicyUpsertResponse:
+    """Upsert per-tenant HITLPolicy composite override.
+
+    - 401/403 via require_admin_platform_role
+    - 404 via _load_tenant_or_404
+    - 200 with response.saved_policy + response.items projection
+    """
+    await _load_tenant_or_404(db, tenant_id)
+
+    policy = HITLPolicy(
+        tenant_id=tenant_id,
+        auto_approve_max_risk=RiskLevel(payload.auto_approve_max_risk),
+        require_approval_min_risk=RiskLevel(payload.require_approval_min_risk),
+        reviewer_groups_by_risk={
+            RiskLevel(k): v for k, v in payload.reviewer_groups_by_risk.items()
+        },
+        sla_seconds_by_risk={RiskLevel(k): v for k, v in payload.sla_seconds_by_risk.items()},
+    )
+
+    store = DBHITLPolicyStore(session_factory=_session_factory_from(db))
+    saved = await store.put(tenant_id, policy)
+
+    items = _project_hitl_policy_to_items(saved)
+    return HITLPolicyUpsertResponse(saved_policy=payload, items=items)
 
 
 # =====================================================================

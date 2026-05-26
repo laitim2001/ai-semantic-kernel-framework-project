@@ -17,6 +17,7 @@ import {
   fetchTenantIdentity,
   fetchTenantMembers,
   fetchTenantSettings,
+  saveHITLPolicies,
   updateTenantSettings,
 } from "../../../src/features/tenant-settings/services/tenantSettingsService";
 import {
@@ -179,6 +180,53 @@ describe("tenantSettingsService", () => {
         new Response(JSON.stringify({ detail: "tenant not found" }), { status: 404 }),
       );
       await expect(fetchRateLimits("tenant-x")).rejects.toThrow("tenant not found");
+    });
+  });
+
+  /* === Sprint 57.54 Track B — saveHITLPolicies PUT === */
+
+  describe("saveHITLPolicies (Sprint 57.54)", () => {
+    it("sends PUT with correct URL + JSON body", async () => {
+      const payload = {
+        auto_approve_max_risk: "LOW" as const,
+        require_approval_min_risk: "MEDIUM" as const,
+        reviewer_groups_by_risk: { HIGH: ["@platform-l1"] },
+        sla_seconds_by_risk: { HIGH: 900 },
+      };
+      const responseBody = {
+        saved_policy: payload,
+        items: [
+          { risk: "HIGH", policy: "always_ask", sla_seconds: 900, reviewers: "@platform-l1" },
+        ],
+      };
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify(responseBody), { status: 200 }),
+      );
+
+      const result = await saveHITLPolicies("tenant-x", payload);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/v1/admin/tenants/tenant-x/hitl-policies",
+        expect.objectContaining({
+          method: "PUT",
+          credentials: "include",
+          body: JSON.stringify(payload),
+        }),
+      );
+      expect(result).toEqual(responseBody);
+    });
+
+    it("throws Error with detail message on 422 validation failure", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "invalid risk level" }), { status: 422 }),
+      );
+      await expect(
+        saveHITLPolicies("tenant-x", {
+          auto_approve_max_risk: "LOW",
+          require_approval_min_risk: "MEDIUM",
+          reviewer_groups_by_risk: {},
+          sla_seconds_by_risk: {},
+        }),
+      ).rejects.toThrow("invalid risk level");
     });
   });
 

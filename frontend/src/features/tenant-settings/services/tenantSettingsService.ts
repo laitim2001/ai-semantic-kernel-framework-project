@@ -21,6 +21,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.54 Track B — add saveHITLPolicies PUT (HITLPolicies edit mode)
  *   - 2026-05-26: Sprint 57.50 — add fetchTenantIdentity (Identity fixture cleanup)
  *   - 2026-05-26: Sprint 57.49 Day 1 — +5 sub-resource list service funcs
  *   - 2026-05-09: Sprint 57.9 US-6 Day 4 — swap raw fetch to fetchWithAuth + signal param on GET
@@ -36,6 +37,8 @@ import { fetchWithAuth } from "../../auth/services/authService";
 import type {
   FeatureFlagListResponse,
   HITLPolicyListResponse,
+  HITLPolicyUpsertRequest,
+  HITLPolicyUpsertResponse,
   QuotaListResponse,
   RateLimitListResponse,
   TenantIdentity,
@@ -156,6 +159,25 @@ export async function fetchRateLimits(
     { method: "GET", signal },
   );
   return _handleResponse<RateLimitListResponse>(response);
+}
+
+/* === Sprint 57.54 Track B — HITLPolicies upsert (PUT) === */
+
+export async function saveHITLPolicies(
+  tenantId: string,
+  payload: HITLPolicyUpsertRequest,
+  signal?: AbortSignal,
+): Promise<HITLPolicyUpsertResponse> {
+  const response = await fetchWithAuth(
+    `${API_BASE}/tenants/${tenantId}/hitl-policies`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  );
+  return _handleResponse<HITLPolicyUpsertResponse>(response);
 }
 
 /* === Sprint 57.50 — Identity single-record endpoint === */
