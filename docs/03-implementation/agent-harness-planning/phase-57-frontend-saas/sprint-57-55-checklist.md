@@ -199,9 +199,9 @@
 - [x] Format: Problem (read-only state Sprint 57.48) / Root cause (Phase 58+ deferred + Day 0 pivot D-DAY0-B + D-DAY0-T) / Solution (4 backend + 6 frontend incl. 2 NEW files) / Verification (1784/630 + 9/9 V2 lints) / Impact (14 files +2173/-47 + tier-4 SPLIT calibration delta) / Lessons captured (3 codification candidates)
 
 ### 2.8 PR + merge (post-commit; user action)
-- [ ] Push branch `feature/sprint-57-55-feature-flags-write-endpoint` + open PR (user authorization required per CLAUDE.md `Confirmation on Destructive Only`)
+- [x] Push branch `feature/sprint-57-55-feature-flags-write-endpoint` + open **PR #205** (https://github.com/laitim2001/ai-semantic-kernel-framework-project/pull/205) — user authorized 2026-05-27
 - [ ] Touch `.github/workflows/backend-ci.yml` header IF CI doesn't fire (paths-filter workaround; Sprint 57.55 has backend test changes so should fire naturally)
-- [ ] 🚧 Wait CI green (5 required checks)
+- [ ] 🚧 Wait CI green (5 required checks: Backend E2E + Frontend E2E + Lint+Type+Test PG16 + v2-lints + chromatic)
 - [ ] 🚧 User merges (via GitHub UI when CI green)
 - [ ] 🚧 Local cleanup (main fast-forward + delete feature branch post-merge + delete remote branch if auto-delete not configured)
 
