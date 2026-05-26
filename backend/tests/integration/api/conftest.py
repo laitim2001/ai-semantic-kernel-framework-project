@@ -116,9 +116,7 @@ async def _clear_committed_test_tenants() -> None:
                 {"codes": list(_COMMITTING_TEST_TENANT_CODES)},
             )
             # Sprint 57.54 Track A — sweep uuid4-suffixed PUT /hitl-policies test tenants
-            await session.execute(
-                text("DELETE FROM tenants WHERE code LIKE 'HITL_PUT_%'")
-            )
+            await session.execute(text("DELETE FROM tenants WHERE code LIKE 'HITL_PUT_%'"))
             await session.execute(
                 text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update_delete")
             )
