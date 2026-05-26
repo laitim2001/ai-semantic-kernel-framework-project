@@ -2,27 +2,29 @@
  * File: frontend/tests/unit/tenant-settings/tabs/GeneralTab.test.tsx
  * Purpose: Vitest coverage for GeneralTab — display_name live-wire + 4 fixture fields + Identity & SSO.
  * Category: Frontend / Tests / tenant-settings / unit / tabs
- * Scope: Phase 57 / Sprint 57.44 Day 2 (mockup-fidelity rebuild Vitest coverage)
+ * Scope: Phase 57 / Sprint 57.44 Day 2 → Sprint 57.50 Day 1 (Identity real-backend)
  *
  * Description:
  *   - Renders 5 form fields (Display name / Tenant id / Region / Locale / Retention)
  *   - Display name input is editable (controlled state)
  *   - Tenant id input is readonly
  *   - Region / Locale / Retention disabled (fixture values shown)
- *   - Identity & SSO Card renders 4 spread rows from IDENTITY_FIXTURE
+ *   - Identity & SSO Card renders 4 spread rows from useTenantIdentity hook (Sprint 57.50)
  *   - BackendGapBanner present above Identity & SSO Card + above region/locale block
  *   - Save button appears only when display_name dirty + clicking calls mutate
  *   - Cancel button reverts display_name
+ *   - Identity loading + error states (Sprint 57.50)
  *
  * Created: 2026-05-26 (Sprint 57.44 Day 2)
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.50 — mock useTenantIdentity; +loading + error state tests
  *   - 2026-05-26: Initial creation (Sprint 57.44 Day 2) — tenant-settings mockup-fidelity rebuild Vitest coverage
  *
  * Related:
  *   - frontend/src/features/tenant-settings/components/tabs/GeneralTab.tsx
- *   - frontend/src/features/tenant-settings/_fixtures.ts (GENERAL_FIXTURE + IDENTITY_FIXTURE)
- *   - sprint-57-44-plan.md §AC3
+ *   - frontend/src/features/tenant-settings/hooks/useTenantIdentity.ts
+ *   - sprint-57-50-plan.md §AC8
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -35,11 +37,17 @@ vi.mock("@/features/tenant-settings/hooks/useTenantSettingsSave", () => ({
   useTenantSettingsSave: vi.fn(),
 }));
 
+vi.mock("@/features/tenant-settings/hooks/useTenantIdentity", () => ({
+  useTenantIdentity: vi.fn(),
+}));
+
 import { GeneralTab } from "@/features/tenant-settings/components/tabs/GeneralTab";
+import { useTenantIdentity } from "@/features/tenant-settings/hooks/useTenantIdentity";
 import { useTenantSettingsSave } from "@/features/tenant-settings/hooks/useTenantSettingsSave";
 import {
   TenantPlan,
   TenantState,
+  type TenantIdentity,
   type TenantSettingsResponse,
 } from "@/features/tenant-settings/types";
 
@@ -72,9 +80,25 @@ function setupSave(opts: { mutate?: ReturnType<typeof vi.fn>; isPending?: boolea
   return mutate;
 }
 
-describe("GeneralTab (Sprint 57.44)", () => {
+const DEFAULT_IDENTITY: TenantIdentity = {
+  provider: "SAML 2.0 · WorkOS",
+  scim_enabled: true,
+  allowed_domains: ["acme.com", "acme.io"],
+  mfa_required: true,
+};
+
+function setupIdentity(opts: { data?: TenantIdentity | undefined; isLoading?: boolean; error?: Error | null } = {}): void {
+  vi.mocked(useTenantIdentity).mockReturnValue({
+    data: "data" in opts ? opts.data : DEFAULT_IDENTITY,
+    isLoading: opts.isLoading ?? false,
+    error: opts.error ?? null,
+  } as unknown as ReturnType<typeof useTenantIdentity>);
+}
+
+describe("GeneralTab (Sprint 57.44 → 57.50)", () => {
   beforeEach(() => {
     setupSave();
+    setupIdentity();
     vi.spyOn(window, "alert").mockImplementation(() => {});
   });
 
@@ -123,15 +147,15 @@ describe("GeneralTab (Sprint 57.44)", () => {
     expect(values).toContain("zh-TW");
   });
 
-  it("Identity & SSO Card renders Provider type + SCIM + Allowed domains + MFA from IDENTITY_FIXTURE (Sprint 57.49)", () => {
+  it("Identity & SSO Card renders 4 rows from useTenantIdentity hook (Sprint 57.50)", () => {
     render(<GeneralTab data={SAMPLE} />);
     expect(screen.getByText("Identity & SSO")).toBeInTheDocument();
-    // Sprint 57.49: "SSO Provider" + "Provider type" replace original "Provider"
+    // Sprint 57.50: data sourced from useTenantIdentity hook (mocked DEFAULT_IDENTITY)
     expect(screen.getByText("SSO Provider")).toBeInTheDocument();
     expect(screen.getByText("Provider type")).toBeInTheDocument();
     expect(screen.getByText(/SAML 2\.0/)).toBeInTheDocument();
     expect(screen.getByText("SCIM")).toBeInTheDocument();
-    // Sprint 57.49: SSO Provider Badge + SCIM Badge both render "enabled" — use getAllByText
+    // SSO Provider Badge + SCIM Badge both render "enabled" — use getAllByText
     expect(screen.getAllByText("enabled").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Allowed domains")).toBeInTheDocument();
     expect(screen.getByText(/acme\.com, acme\.io/)).toBeInTheDocument();
@@ -139,12 +163,45 @@ describe("GeneralTab (Sprint 57.44)", () => {
     expect(screen.getByText("required")).toBeInTheDocument();
   });
 
+  it("Identity Card renders loading state when useTenantIdentity isLoading (Sprint 57.50)", () => {
+    setupIdentity({ data: undefined, isLoading: true });
+    render(<GeneralTab data={SAMPLE} />);
+    expect(screen.getByText(/Loading identity configuration/i)).toBeInTheDocument();
+    // 4 Identity rows should NOT render while loading
+    expect(screen.queryByText("Provider type")).toBeNull();
+    expect(screen.queryByText("SCIM")).toBeNull();
+  });
+
+  it("Identity Card renders error state when useTenantIdentity returns error (Sprint 57.50)", () => {
+    setupIdentity({ data: undefined, error: new Error("HTTP 404: tenant not found") });
+    render(<GeneralTab data={SAMPLE} />);
+    expect(screen.getByText(/Identity load failed/i)).toBeInTheDocument();
+    expect(screen.getByText(/tenant not found/)).toBeInTheDocument();
+  });
+
+  it("Identity Card renders MFA optional when mfa_required=false (Sprint 57.50)", () => {
+    setupIdentity({
+      data: {
+        provider: "OIDC · Okta",
+        scim_enabled: false,
+        allowed_domains: ["example.com"],
+        mfa_required: false,
+      },
+    });
+    render(<GeneralTab data={SAMPLE} />);
+    expect(screen.getByText(/OIDC · Okta/)).toBeInTheDocument();
+    expect(screen.getByText("optional")).toBeInTheDocument();
+    // SCIM Badge should show "disabled"
+    expect(screen.getAllByText("disabled").length).toBeGreaterThanOrEqual(1);
+  });
+
   it("renders ≥2 BackendGapBanner instances (region/locale block + Identity & SSO)", () => {
     render(<GeneralTab data={SAMPLE} />);
     const banners = screen.getAllByTestId("backend-gap-banner");
     expect(banners.length).toBeGreaterThanOrEqual(2);
+    // Sprint 57.50: Identity banner copy changed to "Phase 58.x"; widen regex to match both "Phase 58+" and "Phase 58."
     for (const banner of banners) {
-      expect(banner).toHaveTextContent(/Phase 58\+/);
+      expect(banner).toHaveTextContent(/Phase 58/);
     }
   });
 

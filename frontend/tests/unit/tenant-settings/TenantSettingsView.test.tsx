@@ -67,6 +67,11 @@ vi.mock("@/features/tenant-settings/hooks/useRateLimits", () => ({
   useRateLimits: vi.fn(),
   RATE_LIMITS_QUERY_KEY_BASE: ["tenant-settings", "rate-limits"],
 }));
+// Sprint 57.50 — Identity hook (consumed by GeneralTab Identity & SSO card)
+vi.mock("@/features/tenant-settings/hooks/useTenantIdentity", () => ({
+  useTenantIdentity: vi.fn(),
+  TENANT_IDENTITY_QUERY_KEY_BASE: ["tenant-settings", "identity"],
+}));
 
 vi.mock("@/features/auth/store/authStore", () => ({
   useAuthStore: vi.fn(),
@@ -79,6 +84,7 @@ import { useHITLPolicies } from "@/features/tenant-settings/hooks/useHITLPolicie
 import { useFeatureFlags } from "@/features/tenant-settings/hooks/useFeatureFlags";
 import { useQuotas } from "@/features/tenant-settings/hooks/useQuotas";
 import { useRateLimits } from "@/features/tenant-settings/hooks/useRateLimits";
+import { useTenantIdentity } from "@/features/tenant-settings/hooks/useTenantIdentity";
 import { useAuthStore } from "@/features/auth/store/authStore";
 
 const SAMPLE: TenantSettingsResponse = {
@@ -151,6 +157,17 @@ function setupHookLoaded(): void {
     isLoading: false,
     error: null,
   } as unknown as ReturnType<typeof useRateLimits>);
+  // Sprint 57.50 — Identity hook (Default mock with 4 fields for GeneralTab Identity Card)
+  vi.mocked(useTenantIdentity).mockReturnValue({
+    data: {
+      provider: "SAML 2.0 · WorkOS",
+      scim_enabled: true,
+      allowed_domains: ["acme.com", "acme.io"],
+      mfa_required: true,
+    },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useTenantIdentity>);
 }
 
 describe("TenantSettingsView (Sprint 57.44)", () => {

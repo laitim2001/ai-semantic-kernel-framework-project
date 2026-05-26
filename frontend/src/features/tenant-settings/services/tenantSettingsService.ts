@@ -21,6 +21,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.50 — add fetchTenantIdentity (Identity fixture cleanup)
  *   - 2026-05-26: Sprint 57.49 Day 1 — +5 sub-resource list service funcs
  *   - 2026-05-09: Sprint 57.9 US-6 Day 4 — swap raw fetch to fetchWithAuth + signal param on GET
  *   - 2026-05-07: Initial creation (Sprint 57.3 Day 3)
@@ -37,6 +38,7 @@ import type {
   HITLPolicyListResponse,
   QuotaListResponse,
   RateLimitListResponse,
+  TenantIdentity,
   TenantMemberListResponse,
   TenantSettingsResponse,
   TenantUpdateRequest,
@@ -154,4 +156,17 @@ export async function fetchRateLimits(
     { method: "GET", signal },
   );
   return _handleResponse<RateLimitListResponse>(response);
+}
+
+/* === Sprint 57.50 — Identity single-record endpoint === */
+
+export async function fetchTenantIdentity(
+  tenantId: string,
+  signal?: AbortSignal,
+): Promise<TenantIdentity> {
+  const response = await fetchWithAuth(`${API_BASE}/tenants/${tenantId}/identity`, {
+    method: "GET",
+    signal,
+  });
+  return _handleResponse<TenantIdentity>(response);
 }
