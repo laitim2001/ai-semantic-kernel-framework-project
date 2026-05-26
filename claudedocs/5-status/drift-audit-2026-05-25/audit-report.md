@@ -15,8 +15,8 @@
 
 | Verdict | Count | Pages |
 |---------|:-----:|-------|
-| ✅ **PARITY** | 21 | 7 auth (login + callback + register + invite + mfa + expired + dev) / 7 ops (overview + orchestrator + subagents + loop-debug + state-inspector + **memory ⭐ (post Sprint 57.42)**) + 3 governance (governance ⭐ + redaction + error-policy) + 2 dashboards (cost-dashboard + sla-dashboard) + **verification ⭐ (post Sprint 57.41)** + **admin-tenants ⭐ (post Sprint 57.43)** + **tenant-settings ⭐ (post Sprint 57.44)** |
-| 🟡 **NEAR-PARITY** | 1 | chat-v2 (Inspector tab name divergence) |
+| ✅ **PARITY** | 22 | 7 auth (login + callback + register + invite + mfa + expired + dev) / 7 ops (overview + orchestrator + subagents + loop-debug + state-inspector + **memory ⭐ (post Sprint 57.42)**) + 3 governance (governance ⭐ + redaction + error-policy) + 2 dashboards (cost-dashboard + sla-dashboard) + **verification ⭐ (post Sprint 57.41)** + **admin-tenants ⭐ (post Sprint 57.43)** + **tenant-settings ⭐ (post Sprint 57.44)** + **chat-v2 ⭐ (post Sprint 57.45 Path B audit overrule)** |
+| 🟡 **NEAR-PARITY** | 0 | — (was 1: chat-v2; resolved Sprint 57.45 Path B audit overrule — see Key finding #5b) |
 | 🔴 **CATASTROPHIC drift** | **0** | **FULL CLEAN ✅ — Phase-2 epic milestone reached Sprint 57.44** |
 | 🟣 **PROP-by-design** | 1 | compaction representative (intentional ComingSoonPlaceholder, NOT drift) |
 
@@ -34,7 +34,7 @@
 | 6 | `/auth/expired` | ✅ PARITY (pattern) | mockup designed | same Sprint 57.23+57.35 batch | none |
 | 7 | `/auth/dev` | ✅ PARITY (pattern) | mockup designed | same Sprint 57.23+57.35 batch | none |
 | 8 | `/overview` | ✅ PARITY | 4 KPI + 2-col main (Active loops + HITL queue + Cost burn + Providers) | Same numbers + same layout; AP-2 banner intentional | none |
-| 9 | `/chat-v2` | 🟡 NEAR-PARITY | 3-col (session list + chat + Inspector with **Run/Tools/Memory/Verify** tabs) | Same 3-col; Inspector tabs are **Turn/Trace/Memory/Tree** | tab name vocab divergence (1 component) |
+| 9 | `/chat-v2` | ✅ **PARITY (post Sprint 57.45 Path B audit overrule)** | ~~3-col (session list + chat + Inspector with Run/Tools/Memory/Verify tabs)~~ — **CORRECTION**: canonical mockup `page-chat.jsx:378-381` shows tab labels `Turn / Trace / Memory / Tree` (no "Run/Tools/Verify" anywhere in repo) | Same 3-col; Inspector tabs `Turn / Trace / Memory / Tree` — **matches canonical mockup exactly** | ~~tab name vocab divergence~~ → **0 divergence** (Sprint 57.45 Day 0 Prong 2 grep verified: "Run/Tools/Memory/Verify" pattern exists ONLY in audit-derivatives — 0 mockup file / archive / UX spec source. Audit row 9 NEAR-PARITY verdict was OBSOLETE; production already PARITY.) |
 | 10 | `/orchestrator` | ✅ PARITY | header + 4 KPI + 6-tab + Core settings form + Memory access + Verification sidebar | Pixel-perfect match | none — Sprint 57.34 holds clean |
 | 11 | `/subagents` | ✅ PARITY | Subagent Registry + 4 KPI + table left + Detail pane right | Pixel-perfect match | none — Sprint 57.38 holds clean |
 | 12 | `/loop-debug` | ✅ PARITY | Loop Visualizer + Replay/Live + playback strip + filter pills + turn-grouped events + Inspector pane | Same; AP-2 banner about SSE persistence | none — Sprint 57.37 holds clean |
@@ -66,11 +66,17 @@ The initial audit confirmed that **5 production pages were fundamentally differe
 
 **Post Sprint 57.43 (this report's fourth follow-up sprint)**: `/admin-tenants` rebuilt → **20 PARITY + 1 NEAR-PARITY + 1 CATASTROPHIC remaining** (tenant-settings only).
 
-**Post Sprint 57.44 (this report's fifth follow-up sprint)**: `/tenant-settings` rebuilt → **21 PARITY + 1 NEAR-PARITY + 0 CATASTROPHIC remaining** — **🎉 Phase-2 epic FULL CLEAN milestone reached**.
+**Post Sprint 57.45 (this report's sixth follow-up sprint)**: `/chat-v2` Inspector NEAR-PARITY verdict OVERRULED via Path B (Day 0 Prong 2 grep verified audit row 9 claim "Run/Tools/Memory/Verify" exists ONLY in audit-derivatives, 0 mockup source) → **22 PARITY + 0 NEAR-PARITY + 0 CATASTROPHIC remaining** — **🎉 Phase-2 epic + NEAR-PARITY clean DUAL milestone reached**.
 
-### 🎉 Sprint 57.44 — Phase-2 Epic FULL CLEAN Milestone
+### 🎉 Sprint 57.45 — Phase-2 Epic + NEAR-PARITY Clean DUAL Milestone
 
-`/tenant-settings` rebuild (Sprint 57.44 closed 2026-05-26) closes the last CATASTROPHIC verdict, bringing the Phase-2 mockup-strict-rebuild epic to FULL CLEAN: **21 PARITY + 1 NEAR-PARITY (chat-v2 Inspector tab rename ~30 min quick win) + 0 CATASTROPHIC**. All 5 original CATASTROPHIC verdicts (governance / verification / memory / admin-tenants / tenant-settings) resolved across Sprint 57.40-57.44. Phase-2 epic 22 IDENTICAL + 1 NEAR-PARITY + 0 unintended regressions stands as the cleanest mockup-fidelity sweep of the entire frontend rebuild program.
+`/chat-v2` Inspector tab NEAR-PARITY verdict was overruled via Sprint 57.45 Path B (closed 2026-05-26): Day 0 Prong 2 grep verified that the audit row 9 claim "mockup expects Run/Tools/Memory/Verify" appears ONLY in audit-derivative documents — 0 mockup files / archive / UX spec / design doc contain this vocabulary anywhere in the repository. The current canonical mockup `reference/design-mockups/page-chat.jsx:378-381` shows `Turn / Trace / Memory / Tree`, which production `ChatInspector.tsx:60-65` matches exactly. Per `frontend-mockup-fidelity.md` canonical source rule, the mockup file is authoritative; the audit row 9 verdict was a Sprint 57.22 transcription error.
+
+**Final drift-audit status**: **22/22 PARITY + 0 NEAR-PARITY + 0 CATASTROPHIC** — full drift-audit-2026-05-25 cleared in 6 sprints (57.40-57.45). Phase-2 epic + NEAR-PARITY clean DUAL milestone.
+
+### Sprint 57.44 — Phase-2 Epic FULL CLEAN Milestone (historical)
+
+`/tenant-settings` rebuild (Sprint 57.44 closed 2026-05-26) closed the last CATASTROPHIC verdict, bringing the Phase-2 mockup-strict-rebuild epic to FULL CLEAN: 21 PARITY + 1 NEAR-PARITY (chat-v2 Inspector — subsequently overruled by Sprint 57.45 Path B) + 0 CATASTROPHIC. All 5 original CATASTROPHIC verdicts (governance / verification / memory / admin-tenants / tenant-settings) resolved across Sprint 57.40-57.44.
 
 ### 2. Two NEW catastrophic drift findings (not previously tracked)
 
@@ -90,7 +96,7 @@ The initial audit confirmed that **5 production pages were fundamentally differe
 
 | Page | Drift |
 |------|-------|
-| `/chat-v2` | Inspector tab names: mockup `Run / Tools / Memory / Verify` vs production `Turn / Trace / Memory / Tree`. Same components, different vocab. ~30 min rename. |
+| ~~`/chat-v2`~~ | ~~Inspector tab names: mockup `Run / Tools / Memory / Verify` vs production `Turn / Trace / Memory / Tree`. Same components, different vocab. ~30 min rename.~~ ✅ **OVERRULED Sprint 57.45 Path B** — audit row 9 claim was Sprint 57.22 transcription error; canonical mockup `page-chat.jsx:378-381` shows `Turn/Trace/Memory/Tree` and production matches exactly (Day 0 Prong 2 grep: "Run/Tools/Memory/Verify" exists ONLY in audit-derivatives, 0 mockup source). 0 code change. |
 
 ### 5. `/governance` red banner was a sweep-mock artifact, NOT a production bug ✅ RESOLVED
 
@@ -114,7 +120,7 @@ This is also a tooling lesson: any new endpoint that returns an envelope shape (
 
 | Item | Verdict | Effort | Class (calibration matrix) |
 |------|---------|--------|---------------------------|
-| `/chat-v2` Inspector tab rename | 🟡 NEAR-PARITY | ~30 min | frontend-refactor-mechanical 0.50 |
+| ~~`/chat-v2` Inspector tab rename~~ | ✅ **OVERRULED Sprint 57.45 Path B** | ~~~30 min~~ actual ~10-15 min docs-only (no code change) | frontend-refactor-mechanical 0.80 (3rd app per AD-Sprint-Plan-13 lift; 1st validation under tightened `agent_factor = 0.45`) |
 | ~~`/memory` Memory Layers 5×N matrix rebuild~~ | ✅ **RESOLVED Sprint 57.42** | ~~10-15 hr~~ actual ~5-5.5 hr human-eq (agent ~40 min) | frontend-mockup-strict-rebuild 0.60 (8th data point) |
 | `/governance` runtime error fix + rebuild | 🔴 CATASTROPHIC | ~12-15 hr (fix bug ~2-3 hr + rebuild ~10-12 hr) | frontend-page-bug-fix 0.45 + frontend-mockup-strict-rebuild 0.60 |
 | `/verification` rebuild | 🔴 CATASTROPHIC | ~8-10 hr | frontend-mockup-strict-rebuild 0.60 |
@@ -133,14 +139,14 @@ After calibration multiplier (~0.55-0.65 frontend-mockup-strict-rebuild evidence
 | Priority | Action | Rationale |
 |---------|--------|-----------|
 | ~~1~~ | ~~**Fix `/governance` data-fetch runtime error**~~ | ✅ **RESOLVED Sprint 57.40 Day 2** — was sweep-mock artifact (see Key finding #5); fixed in route-sweep `/governance/approvals` mock entry |
-| ~~2~~ → 1 | **`/chat-v2` Inspector tab rename** | 30-min quick win |
+| ~~2 → 1~~ | ~~**`/chat-v2` Inspector tab rename**~~ | ✅ **OVERRULED Sprint 57.45 Path B** — audit row 9 was transcription error; production already PARITY; 0 code change |
 | ~~3~~ | ~~**`/governance` rebuild**~~ | ✅ **RESOLVED Sprint 57.40 Day 1** — 5 NEW components + ApprovalsPage restructure + ApprovalList 7-col; agent-delegated ~1.2 hr wall-clock |
 | ~~4~~ | ~~**`/verification` rebuild**~~ (4 KPI + 2-col + sidebar) | ✅ **RESOLVED Sprint 57.41** — 5 NEW components (PageHeader/StatsStrip/RunsTable/FailureKindsCard/FlakyChecksCard) + REBUILT VerificationView shell + VerificationList orphan-deleted (Karpathy §3); Day 2 ships 5 NEW Vitest specs (489→498 / +9 NEW) + e2e adapt + route-sweep envelope mock (2nd application of `AD-RouteSweep-Envelope-Mock-Convention`) |
 | ~~5~~ | ~~**`/memory` Memory Layers matrix rebuild**~~ | ✅ **RESOLVED Sprint 57.42** — 6 NEW components + verbatim `_fixtures.ts` + outer 2-tab DROP + backward-compat redirects + 11 orphan deletes (6 source + 5 specs); agent-delegated ~40 min wall-clock |
 | ~~6~~ | ~~**`/admin-tenants` rebuild**~~ | ✅ **RESOLVED Sprint 57.43** — 5 NEW components (TenantsPageHeader/TenantsStatsStrip/TenantsTable/AdminTenantsView + avatar cell inline) + verbatim `_fixtures.ts` mockup port (TENANTS_FIXTURE 8 + STATS_FIXTURE 4 + TABLE_SUBTITLE) + 6 vintage orphan-deletes (Karpathy §3) + AP-2 banner declaring `TenantListItem` schema gap deferred Phase 58+; agent-delegated ~5 min wall-clock Day 1 vs ~3 hr human-equivalent (1st validation of newly ACTIVATED `agent_factor = 0.55` per Sprint 57.42 retro Q4); Day 2 ships 5 NEW Vitest specs (481→514 / +33 NEW) |
 | ~~7~~ | ~~**`/tenant-settings` 6-tab rebuild**~~ | ✅ **RESOLVED Sprint 57.44** — 7 NEW components (TenantSettingsPageHeader / GeneralTab display_name live-wire / FeatureFlagsTab / QuotasTab / HITLPoliciesTab / MembersTab / DangerZoneTab) + 1 REWRITE (TenantSettingsView 6-tab router) + verbatim `_fixtures.ts` mockup port + 4 vintage orphan-deletes (Karpathy §3); Day 2 ships 8 NEW Vitest specs (514→561 / +47 NEW) — **closes Phase-2 epic FULL CLEAN** |
-| ~~8~~ → 1 | **`/chat-v2` Inspector tab rename** | 30-min quick win; **only remaining drift** post Phase-2 FULL CLEAN |
-| 2 | Update CLAUDE.md routes-shipped count + carryover list | Honest status reflection; post Sprint 57.44 reality is **22/22 PARITY** if we count audit re-verified pages (1 NEAR-PARITY is chat-v2 quick win) |
+| ~~8 → 1~~ | ~~**`/chat-v2` Inspector tab rename**~~ | ✅ **OVERRULED Sprint 57.45 Path B** — **🎉 22/22 PARITY + 0 NEAR-PARITY + 0 CATASTROPHIC DUAL CLEAN milestone reached** |
+| 1 | Update CLAUDE.md routes-shipped count + carryover list | Honest status reflection; post Sprint 57.45 reality is **22/22 PARITY + 0 NEAR-PARITY** — full drift-audit-2026-05-25 cleared |
 
 ---
 
@@ -164,13 +170,14 @@ After calibration multiplier (~0.55-0.65 frontend-mockup-strict-rebuild evidence
 2. ✅ **`AD-Memory-Layers-Matrix-Rebuild`** — **CLOSED Sprint 57.42**: full rebuild ships Day 1 via agent-delegated 6 NEW components (MemoryPageHeader / TimeTravelScrubber 24h interactive playback / MemoryMatrix 5×3 grid with cursor-aware visibility filter / RecentMemoryOpsCard / GdprErasureCard / MemoryView) + verbatim `_fixtures.ts` mockup port (SCOPES / TIME_SCALES / MEMORY_ENTRIES / TIME_TRAVEL_MARKS / MEMORY_OPS_TIMELINE / RECENT_MEMORY_OPS / TOTAL_ENTRIES) + outer 2-tab DROP per §1.4 Option B + backward-compat redirects (/memory/recent + /memory/by-scope → /memory) + 11 orphan deletes (3 vintage components + 3 vintage hooks + 4 Vitest specs + 1 e2e per Karpathy §3) + 1-line `ButtonVariant` widen for mockup-required `"warning" + "danger"` variants. Day 2 ships 5-6 NEW Vitest specs (474 → ~479-482 target) + drift audit report update. Class: `frontend-mockup-strict-rebuild` 0.60 (8th data point); agent-delegated 10th consecutive code-implementer ~40 min wall-clock vs ~5-5.5 hr human-equivalent → 5th cross-class data point for `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier` (activation criteria fully met). Verified PARITY.
 2. ✅ **`AD-Governance-Catastrophic-Rebuild-And-Bug-Fix`** — **CLOSED Sprint 57.40**: (a) "data-fetch runtime bug" turned out to be a route-sweep mock fixture artifact (D-DAY1-2) — fixed in `/governance/approvals` specific mock; (b) full rebuild ships Sprint 57.40 Day 1 via agent-delegated 5 NEW components + ApprovalsPage restructure + ApprovalList 7-col upgrade. Verified PARITY.
 3. ✅ **`AD-Verification-Catastrophic-Rebuild`** — **CLOSED Sprint 57.41**: full rebuild ships Day 1 via agent-delegated 5 NEW components (PageHeader/StatsStrip/RunsTable/FailureKindsCard/FlakyChecksCard) + REBUILT VerificationView shell + VerificationList.tsx + VerificationList.test.tsx orphan-deleted (Karpathy §3). Day 2 ships 5 NEW Vitest specs (489→498 / +9 NEW, +112-225% over +4-8 target) + e2e adapt + route-sweep envelope mock (2nd application of `AD-RouteSweep-Envelope-Mock-Convention`). Verified PARITY.
-4. 🆕 **`AD-ChatV2-Inspector-Tab-Rename`** — rename Inspector tab vocabulary `Turn/Trace/Memory/Tree` → mockup `Run/Tools/Memory/Verify`. ~30 min. Class: `frontend-refactor-mechanical` 0.50.
-5. 🆕 **`AD-CLAUDE-md-Frontend-Status-Realignment`** — update `Phase 57+ 11/17 routes shipped / 2 🟡 STRUCTURAL remaining` to honest count after this audit. **Post Sprint 57.44**: STRUCTURAL list is **0** (Phase-2 epic FULL CLEAN); Phase-2 epic count: **22/22 PARITY + 1 NEAR-PARITY (chat-v2 Inspector tab rename ~30 min quick win)**. All 5 originally-identified CATASTROPHIC drifts CLOSED across Sprint 57.40-57.44 (governance / verification / memory / admin-tenants / tenant-settings).
+4. ✅ **`AD-ChatV2-Inspector-Tab-Rename`** — **CLOSED Sprint 57.45 Path B (audit overrule)**: Day 0 Prong 2 repo-wide grep proved audit row 9 claim "mockup expects Run/Tools/Memory/Verify" is OBSOLETE — pattern exists ONLY in audit-derivative documents; 0 mockup files / archive / UX spec contain this vocabulary. Canonical mockup `page-chat.jsx:378-381` shows `Turn/Trace/Memory/Tree`; production matches exactly. 0 code change. Path B docs-only closure (audit-report + retro). 1st validation data point under newly tightened `agent_factor = 0.45` per Sprint 57.44 retro Q4 rollback rule decision.
+5a. ✅ **`AD-CLAUDE-md-Frontend-Status-Realignment`** — **Post Sprint 57.45**: Phase-2 epic count: **22/22 PARITY + 0 NEAR-PARITY + 0 CATASTROPHIC** (full drift-audit-2026-05-25 cleared). All 5 originally-identified CATASTROPHIC drifts CLOSED across Sprint 57.40-57.44 (governance / verification / memory / admin-tenants / tenant-settings); chat-v2 NEAR-PARITY overruled Sprint 57.45 Path B.
+5b. 🆕 **`AD-MockupFidelity-AuditDocSync-Rule`** (Sprint 57.45 NEW carryover) — `frontend-mockup-fidelity.md` should document the canonical-source-rule precedence explicitly: when audit-report disagrees with mockup file, **the mockup file always wins** unless audit cites a specific archive / UX spec / design doc as alternate canonical source. Future drift audits should verify mockup claims against current mockup file before recording verdicts. Path B is the precedent.
 6. ✅ **`AD-Sprint-57.23-Auth-Spot-Check-Complete`** — Sprint 57.23 + 57.35 rebuild verified PARITY on 4/7 auth routes; 3 not-yet-individually-verified follow-up trivial (~5 min spot-check).
 7. 🆕 **`AD-RouteSweep-Envelope-Mock-Convention`** (Sprint 57.40 D-DAY1-2 lesson; 2nd application Sprint 57.41 D-DAY0-1) — add a `testing.md` or `frontend-mockup-fidelity.md` note: any backend endpoint returning an envelope shape (e.g. `{items, total, has_more}`) needs an explicit sweep mock entry in `route-sweep.mjs`; the default `[]` is only safe for list-shaped endpoints. Codify with grep pattern + example to prevent future false-positive red banners in audit captures. **2nd application validation**: Sprint 57.41 applied this preemptively at Day 0 (not reactively post-audit), proving the pattern transfers cleanly to subsequent envelope-shaped endpoints.
 
 ---
 
 **Author**: Claude Opus 4.7 (1M context) via 23-pair side-by-side audit
-**Date**: 2026-05-25 (initial); updated 2026-05-25 Sprint 57.40 Day 2 closeout; updated 2026-05-25 Sprint 57.41 Day 2 closeout; updated 2026-05-25 Sprint 57.42 Day 2 closeout; updated 2026-05-25 Sprint 57.43 Day 2 closeout; **updated 2026-05-26 Sprint 57.44 Day 2 closeout — Phase-2 epic FULL CLEAN milestone**
-**Status**: ✅ **Phase-2 epic FULL CLEAN milestone reached Sprint 57.44 (2026-05-26)**. Sprint 57.44 closed `/tenant-settings` rebuild (drift audit 2026-05-25 last remaining-priority CATASTROPHIC verdict). Remaining: **0 CATASTROPHIC** + 1 NEAR-PARITY (chat-v2 Inspector tab rename ~30 min quick win) awaits user prioritization (see Recommendations). **All 5 originally-identified CATASTROPHIC drifts CLOSED across Sprint 57.40-57.44** (governance / verification / memory / admin-tenants / tenant-settings). Phase-2 epic count: **22/22 PARITY**. The largest mockup-fidelity rebuild epic of the frontend program (5 sprints, 28 NEW components, 67+ NEW Vitest specs) closes with 0 unintended regressions.
+**Date**: 2026-05-25 (initial); updated 2026-05-25 Sprint 57.40 Day 2 closeout; updated 2026-05-25 Sprint 57.41 Day 2 closeout; updated 2026-05-25 Sprint 57.42 Day 2 closeout; updated 2026-05-25 Sprint 57.43 Day 2 closeout; updated 2026-05-26 Sprint 57.44 Day 2 closeout — Phase-2 epic FULL CLEAN milestone; **updated 2026-05-26 Sprint 57.45 Day 1 Path B — Phase-2 epic + NEAR-PARITY clean DUAL milestone**
+**Status**: ✅ **Phase-2 epic + NEAR-PARITY clean DUAL milestone reached Sprint 57.45 Path B (2026-05-26)**. Sprint 57.45 overruled audit row 9 NEAR-PARITY verdict via Day 0 Prong 2 grep evidence (audit's claimed "Run/Tools/Memory/Verify" mockup vocab exists ONLY in audit-derivatives, 0 mockup source); canonical mockup `page-chat.jsx:378-381` shows `Turn/Trace/Memory/Tree` and production matches exactly. Final drift-audit-2026-05-25 status: **22 PARITY + 0 NEAR-PARITY + 0 CATASTROPHIC — full clean in 6 sprints (57.40-57.45)**. All 5 originally-identified CATASTROPHIC drifts CLOSED Sprint 57.40-57.44 (governance / verification / memory / admin-tenants / tenant-settings); chat-v2 NEAR-PARITY overruled Sprint 57.45 Path B docs-only closure (0 code change). The largest mockup-fidelity rebuild epic of the frontend program (6 sprints, 28 NEW components, 67+ NEW Vitest specs) closes with 0 unintended regressions. **Carryover**: `AD-MockupFidelity-AuditDocSync-Rule` (Key finding #5b) — codify mockup-file-canonical precedence vs audit-report claims to prevent future Sprint 57.45-class transcription errors.
