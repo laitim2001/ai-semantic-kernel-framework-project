@@ -8,6 +8,7 @@
 **Status**: Active
 
 > **Modification History**
+> - 2026-05-26: Sprint 57.51 — add §Common Risk Classes Risk Class D ORM File Path Reference Style (closes AD-Plan-Risk-ORM-File-Path-Reference-Style #82; Sprint 57.50 D-DAY0-2 lesson)
 > - 2026-05-26: Sprint 57.50 retro — `mechanical-single-domain` 0.45 2nd validation ratio 0.58 (2nd consec < 0.7) → Option B tier-2 ESCALATED: `pattern-reuse-heavy` 0.30 + `greenfield` 0.50 effective Sprint 57.51+ (closes AD #73+#74; parallel Sprint 57.38+57.48 precedent); `medium-backend` 0.80 5th data point 0.27 confound-resolved by tier-2 sub-class layer
 > - 2026-05-26: Sprint 57.49 retro — `mechanical-single-domain` 0.45 NEW sub-class 1st validation ratio ~0.14 single-data-point KEEP (need 2 consec); pattern-reuse 24× observed Sprint 57.49 5-tab+1-drawer (vs 11× Sprint 57.48 4-endpoint vs 7× Sprint 57.47 1-tab) — scaling with mechanical repetition count
 > - 2026-05-26: Sprint 57.48 retro — `agent_factor` 2nd consec < 0.7 (0.17) → Option B ESCALATED sub-class split: `mechanical-single-domain` 0.45 + `mixed-multidomain-bundle` 0.65 + `partial` 0.75 + `human` 1.0; closes AD-AgentFactor-Sub-Class-Calibration ACTIVATED
@@ -787,6 +788,16 @@ When drafting plan §Risks, consider these recurring risk classes (V2 carryover 
 **Workaround**: Per-suite `conftest.py` autouse fixture calling `reset_*()` for affected singletons. Pattern documented in `.claude/rules/testing.md` §Module-level Singleton Reset Pattern (since 53.7).
 
 **Long-term fix**: Refactor singletons to be DI-injected per-request (no module-level cache); avoids root cause. Per-singleton scope; track as needed.
+
+### Risk Class D: ORM File Path Reference Style (sprint planning)
+
+**Symptom**: Plan §8 Risks row references an ORM model with a speculation-based path like `backend/src/infrastructure/db/models/<table_name>.py` (e.g. `tenant.py`); Day 0.8 Prong 2 then wastes 3-5 min discovering the model lives elsewhere (e.g. `identity.py` per domain cohesion grouping).
+
+**Source**: Sprint 57.50 D-DAY0-2 — plan referenced `Tenant.meta_data` JSONB; AI initially looked at `tenant.py` (did not exist); Prong 2 grep resolved to `identity.py` per `09-db-schema-design.md` Group 1 (Identity & Tenancy domain groups User + Role + OIDCProvider + Tenant in one file). Verified in Sprint 57.51 Day 0.8 D-DAY0-3.
+
+**Workaround**: Cite `09-db-schema-design.md §Group N <Domain Name>` in plan §Risks rows touching ORM models, not the speculation-based `.py` path. Example: "Risk: `Tenant.X` field doesn't exist — mitigation: Day 0.8 Prong 2 read `Tenant` ORM in `09-db-schema-design.md §Group 1 Identity & Tenancy` (note: file is `identity.py`, not `tenant.py`)."
+
+**Long-term fix**: Codify in Plan template stub (when Plan template doc is formalized as part of `.claude/rules/`).
 
 ### How to use this section
 
