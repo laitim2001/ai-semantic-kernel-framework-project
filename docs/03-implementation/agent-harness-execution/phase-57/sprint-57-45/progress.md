@@ -99,9 +99,59 @@ All findings resolve cleanly. Path B selected with full grep evidence. Day 1 sco
 
 Scope shift from plan estimate: smaller (Path B is the lower-bound estimate; ~5 min Day 1 work vs estimated 10-15 min for Path A rename + spec). Class baseline `frontend-refactor-mechanical 0.80` still applies — the "mechanical" intent (resolve an audit-noted drift) is preserved even with 0 code change.
 
+---
+
+## Day 1 — 2026-05-26 — Path B Execution (audit-report.md edits; 0 code change)
+
+### Today's Accomplishments
+
+- ✅ 8 audit-report.md edits closing drift audit row 9 via Path B
+- ✅ Commit `be95a4ec` — 1 file / +22 / -15 = NET +7 lines
+- ✅ 0 code change (Path B docs-only closure)
+
+### Edits applied
+
+1. Summary count: 21 → 22 PARITY / 1 → 0 NEAR-PARITY
+2. Row 9 verdict 🟡 → ✅ PARITY (Sprint 57.45 Path B audit overrule)
+3. Post-Sprint summary + Sprint 57.45 DUAL CLEAN paragraph + Sprint 57.44 demoted to historical
+4. Drift table row 93 strike with Path B rationale
+5. Effort estimate row 117 strike
+6. Recommendations #2/#1 → strike; renumber #1 = CLAUDE.md realign
+7. Key finding #4 CLOSED; new #5a/#5b (5b = NEW carryover `AD-MockupFidelity-AuditDocSync-Rule`)
+8. Footer Date + Status: DUAL CLEAN reached Sprint 57.45 Path B
+
+---
+
+## Day 2.5 — 2026-05-26 — After-Sweep (Path B Verification)
+
+### Today's Accomplishments
+
+- ✅ 24-route AFTER screenshots captured (`node scripts/route-sweep.mjs after` exit 0)
+- ✅ sha256 diff computed per-route — **22 IDENTICAL + 2 sub-300-byte noise + 0 unintended regressions**
+- ✅ Path B validated: `/chat-v2` IDENTICAL (0 visible change confirms 0 code change)
+
+### 24-route sweep results — **cleanest sweep of all Phase-2 epic sprints**
+
+| Category | Count | Routes |
+|----------|-------|--------|
+| **IDENTICAL** | 22 | All routes including target `/chat-v2.png` (delta +0) |
+| **CHANGED INTENDED** | **0** | (Path B = no code change → no intended changes; first sprint with 0 intended) |
+| **CHANGED sub-300-byte noise** | 2 | auth-callback +27 / overview -95 (recurring noise pattern, well within ±300 byte envelope) |
+| **UNINTENDED regressions** | **0** | ✅ |
+
+This is the **cleanest sweep of any Phase-2 epic sprint** — `/chat-v2.png` literally identical post-Sprint validating Path B (no rendering change because no code change). Recurring sub-300-byte noise pattern on auth-callback + overview persists from prior 5 sprints (likely time-relative text or PNG AA variance per past investigation notes).
+
+### 3-way evidence pair
+
+**Path B implication**: no `/chat-v2` BEFORE→AFTER diff to stage since they're sha256-identical. Skipping 3-way pair staging per Path B specification.
+
+`AD-MockupCapture-05-MOCKUP-chat-v2` carryover NOT opened (no mockup-capture comparison needed for IDENTICAL route).
+
+### Day 2.5 closeout commit pending
+
+24 AFTER PNGs + progress.md update will be committed as Day 2.5 closeout.
+
 ### Remaining for Next Step
 
-- Day 0.8 — Commit Day 0 artefacts (progress.md + route-sweep.mjs OUT_DIR edit + 24 before-sweep PNGs)
-- Day 1 — Path B execution: audit-report.md edits + progress.md Path B documentation
-- Day 2.5 — After-sweep (expected 24 IDENTICAL — no code change → routes unchanged)
-- Day 3 — retro + matrix MHist + `agent_factor = 0.45` 1st validation + memory + CLAUDE.md + push + PR
+- Day 2.5 closeout commit (24 AFTER PNGs + progress.md update)
+- Day 3 — retro + matrix MHist + **`agent_factor = 0.45` 1st validation** + memory + CLAUDE.md sync + push + PR
