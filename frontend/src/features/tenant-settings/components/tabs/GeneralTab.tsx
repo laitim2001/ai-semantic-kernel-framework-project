@@ -2,35 +2,37 @@
  * File: frontend/src/features/tenant-settings/components/tabs/GeneralTab.tsx
  * Purpose: General tab — General Card (display_name + region/locale/retention real) + Identity Card.
  * Category: Frontend / tenant-settings / components / tabs
- * Scope: Phase 57 / Sprint 57.49 Day 1 (Track A 1.1.1 — Sprint 57.46 backend real consumption)
+ * Scope: Phase 57 / Sprint 57.50 Day 1 (Identity fixture → real backend wire)
  *
  * Description:
- *   Sprint 57.49: removes residual `GENERAL_FIXTURE` import; consumes real
- *   `data.region / data.locale / data.retention_days` (Sprint 57.46 TenantResponse
- *   15-field schema). `IDENTITY_FIXTURE` retained for SCIM/Allowed-domains/MFA
- *   (no backend fields yet); `data.sso_enabled` displayed as Provider badge.
+ *   Sprint 57.50 wires Identity & SSO Card to real backend via `useTenantIdentity`
+ *   hook (fixture-projection Option A). 4 Identity rows (Provider type / SCIM /
+ *   Allowed domains / MFA) now read from `GET /admin/tenants/{id}/identity`
+ *   response; `IDENTITY_FIXTURE` dropped. `data.sso_enabled` remains the SSO
+ *   Provider badge source (Sprint 57.46 baseline).
  *
- *   Save button now wires display_name + region + locale + retention_days
+ *   Save button continues to wire display_name + region + locale + retention_days
  *   (all 4 are patch-able via Sprint 57.46 TenantUpdateRequest extension).
  *
  * Created: 2026-05-26 (Sprint 57.44 Day 1) — original fixture port
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.50 — Identity Card wires useTenantIdentity (closes IdentityFixture-Cleanup)
  *   - 2026-05-26: Sprint 57.49 — drop GENERAL_FIXTURE; consume Sprint 57.46 real fields
  *   - 2026-05-26: Initial creation (Sprint 57.44 Day 1)
  *
  * Related:
  *   - reference/design-mockups/page-admin.jsx L440-465
  *   - ../../hooks/useTenantSettingsSave.ts (display_name + new fields PATCH)
- *   - ../../_fixtures.ts (IDENTITY_FIXTURE only; SCIM/Allowed-domains/MFA still gap)
+ *   - ../../hooks/useTenantIdentity.ts (Identity & SSO Card data source)
  */
 
 import { useEffect, useState } from "react";
 
 import { Badge, Button, Card, Field } from "../../../../components/mockup-ui";
 import { BackendGapBanner } from "../../../../components/ui/BackendGapBanner";
-import { IDENTITY_FIXTURE } from "../../_fixtures";
+import { useTenantIdentity } from "../../hooks/useTenantIdentity";
 import { useTenantSettingsSave } from "../../hooks/useTenantSettingsSave";
 import type { TenantSettingsResponse } from "../../types";
 
@@ -41,6 +43,7 @@ export interface GeneralTabProps {
 export function GeneralTab({ data }: GeneralTabProps): JSX.Element {
   const [displayName, setDisplayName] = useState<string>(data.display_name);
   const { mutate: save, isPending, error } = useTenantSettingsSave();
+  const { data: identity, isLoading: identityLoading, error: identityError } = useTenantIdentity(data.id);
 
   // Reset local edit state when backend data refreshes (post-save invalidation).
   useEffect(() => {
@@ -127,7 +130,7 @@ export function GeneralTab({ data }: GeneralTabProps): JSX.Element {
         </div>
       </Card>
       <Card title="Identity & SSO">
-        <BackendGapBanner reason="SCIM / Allowed-domains / MFA configuration: backend extension Phase 58+ — values shown are mockup defaults; SSO status from DB" />
+        <BackendGapBanner reason="SCIM / Allowed-domains / MFA values are tenant-effective via fixture-projection backend (Sprint 57.50); full SSO admin write endpoint deferred to Phase 58.x" />
         {/* eslint-disable-next-line no-restricted-syntax -- verbatim port: mockup uses inline style for col gap + fontSize */}
         <div className="col" style={{ gap: 10, fontSize: 12, marginTop: 8 }}>
           <div className="spread">
@@ -136,22 +139,40 @@ export function GeneralTab({ data }: GeneralTabProps): JSX.Element {
               {data.sso_enabled ? "enabled" : "disabled"}
             </Badge>
           </div>
-          <div className="spread">
-            <span className="muted">Provider type</span>
-            <Badge>{IDENTITY_FIXTURE.provider}</Badge>
-          </div>
-          <div className="spread">
-            <span className="muted">SCIM</span>
-            <Badge tone="success" dot>{IDENTITY_FIXTURE.scim}</Badge>
-          </div>
-          <div className="spread">
-            <span className="muted">Allowed domains</span>
-            <span className="mono">{IDENTITY_FIXTURE.allowedDomains}</span>
-          </div>
-          <div className="spread">
-            <span className="muted">MFA</span>
-            <Badge tone="success" dot>{IDENTITY_FIXTURE.mfa}</Badge>
-          </div>
+          {identityLoading && (
+            // eslint-disable-next-line no-restricted-syntax -- inline-style loading hint mirrors save-error pattern
+            <div className="muted" style={{ fontSize: 11.5 }}>Loading identity configuration…</div>
+          )}
+          {identityError && (
+            // eslint-disable-next-line no-restricted-syntax -- inline-style error hint mirrors save-error pattern L86
+            <div style={{ color: "var(--danger)", fontSize: 11.5 }}>
+              Identity load failed: {identityError.message}
+            </div>
+          )}
+          {identity && (
+            <>
+              <div className="spread">
+                <span className="muted">Provider type</span>
+                <Badge>{identity.provider}</Badge>
+              </div>
+              <div className="spread">
+                <span className="muted">SCIM</span>
+                <Badge tone={identity.scim_enabled ? "success" : ""} dot={identity.scim_enabled}>
+                  {identity.scim_enabled ? "enabled" : "disabled"}
+                </Badge>
+              </div>
+              <div className="spread">
+                <span className="muted">Allowed domains</span>
+                <span className="mono">{identity.allowed_domains.join(", ")}</span>
+              </div>
+              <div className="spread">
+                <span className="muted">MFA</span>
+                <Badge tone={identity.mfa_required ? "success" : ""} dot={identity.mfa_required}>
+                  {identity.mfa_required ? "required" : "optional"}
+                </Badge>
+              </div>
+            </>
+          )}
           <Button variant="outline" size="sm" icon="settings" onClick={handleConfigureSso}>
             Configure
           </Button>

@@ -14,6 +14,7 @@ import {
   fetchHITLPolicies,
   fetchQuotas,
   fetchRateLimits,
+  fetchTenantIdentity,
   fetchTenantMembers,
   fetchTenantSettings,
   updateTenantSettings,
@@ -178,6 +179,33 @@ describe("tenantSettingsService", () => {
         new Response(JSON.stringify({ detail: "tenant not found" }), { status: 404 }),
       );
       await expect(fetchRateLimits("tenant-x")).rejects.toThrow("tenant not found");
+    });
+  });
+
+  /* === Sprint 57.50 — Identity single-record endpoint === */
+
+  describe("fetchTenantIdentity (Sprint 57.50)", () => {
+    it("builds correct URL for /identity (no query-string)", async () => {
+      const payload = {
+        provider: "SAML 2.0 · WorkOS",
+        scim_enabled: true,
+        allowed_domains: ["acme.com", "acme.io"],
+        mfa_required: true,
+      };
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }));
+      const result = await fetchTenantIdentity("tenant-x");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/v1/admin/tenants/tenant-x/identity",
+        expect.objectContaining({ method: "GET", credentials: "include" }),
+      );
+      expect(result).toEqual(payload);
+    });
+
+    it("throws Error on non-2xx response", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "tenant not found" }), { status: 404 }),
+      );
+      await expect(fetchTenantIdentity("tenant-x")).rejects.toThrow("tenant not found");
     });
   });
 });

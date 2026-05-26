@@ -46,6 +46,7 @@ Created: 2026-05-06 (Sprint 56.1 Day 1)
 Last Modified: 2026-05-10
 
 Modification History:
+    - 2026-05-26: Sprint 57.50 Day 1 — Identity admin GET (closes AD-Identity-Cleanup)
     - 2026-05-26: Sprint 57.48 Day 1 — +4 admin GET endpoints HITL+FF+Quotas+RateLimits
     - 2026-05-26: Sprint 57.47 Day 1 — LIST 7→12 + region filter + members GET (AD-AdminT-Ext)
     - 2026-05-26: Sprint 57.46 Day 1 — +5 SaaS settings fields (closes AD-TenantSettings-Schema-Ext)
@@ -1028,3 +1029,86 @@ async def list_tenant_rate_limits(
     total = len(items)
     page = items[offset : offset + limit]
     return RateLimitListResponse(items=page, total=total, limit=limit, offset=offset)
+
+
+# =====================================================================
+# Sprint 57.50 — Identity admin GET (closes AD-TenantSettings-IdentityFixture-Cleanup)
+# =====================================================================
+# Option A fixture-projection mirror of Sprint 57.48 Track D RateLimits.
+# Project from tenant.meta_data["identity"] dict; fall back to DEFAULT_IDENTITY
+# (mirrors _fixtures.ts IDENTITY_FIXTURE shape) when meta_data carries nothing.
+# Real SSO admin endpoint (PATCH / dedicated tenant_identity table + audit chain)
+# deferred Phase 58.x (AD-TenantSettings-Identity-Persistence-Phase58).
+
+
+class TenantIdentityResponse(BaseModel):
+    """Tenant SSO / identity configuration projection.
+
+    Single record (not paginated list — Identity is one-per-tenant). Mirrors
+    `frontend/src/features/tenant-settings/_fixtures.ts` IDENTITY_FIXTURE
+    shape converted from UI-display strings to canonical bool/list types:
+
+        provider: "SAML 2.0 · WorkOS" (str — provider type label)
+        scim_enabled: True (bool — was "enabled" string in fixture)
+        allowed_domains: ["acme.com", "acme.io"] (list[str] — was CSV in fixture)
+        mfa_required: True (bool — was "required" string in fixture)
+
+    Frontend GeneralTab projects bools/list back to UI display strings.
+    """
+
+    provider: str
+    scim_enabled: bool
+    allowed_domains: list[str]
+    mfa_required: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+DEFAULT_IDENTITY: dict[str, Any] = {
+    "provider": "SAML 2.0 · WorkOS",
+    "scim_enabled": True,
+    "allowed_domains": ["acme.com", "acme.io"],
+    "mfa_required": True,
+}
+
+
+@router.get(
+    "/{tenant_id}/identity",
+    response_model=TenantIdentityResponse,
+    dependencies=[Depends(require_admin_platform_role)],
+)
+async def get_tenant_identity(
+    tenant_id: UUID,
+    db: AsyncSession = Depends(get_db_session),
+) -> TenantIdentityResponse:
+    """Return tenant SSO / identity configuration.
+
+    Source: tenant.meta_data["identity"] (dict); falls back to DEFAULT_IDENTITY
+    (4 fields mirroring frontend fixture) when no override is configured.
+    Phase 58.x may swap meta_data for a dedicated `tenant_identity` table if
+    persistence + audit-chain + admin PATCH requirements grow
+    (AD-TenantSettings-Identity-Persistence-Phase58).
+
+    Auth: require_admin_platform_role (mirrors /feature-flags / /rate-limits
+    / /quotas / /hitl-policies sibling endpoints per Sprint 57.48 pattern).
+    """
+    tenant = await _load_tenant_or_404(db, tenant_id)
+
+    raw = tenant.meta_data.get("identity") if tenant.meta_data else None
+    if not isinstance(raw, dict) or not raw:
+        raw = DEFAULT_IDENTITY
+
+    # Defensive: ensure all 4 fields present even when raw dict is partial.
+    # Missing keys fall back to DEFAULT_IDENTITY values for that key.
+    provider = str(raw.get("provider", DEFAULT_IDENTITY["provider"]))
+    scim_enabled = bool(raw.get("scim_enabled", DEFAULT_IDENTITY["scim_enabled"]))
+    allowed_domains_raw = raw.get("allowed_domains", DEFAULT_IDENTITY["allowed_domains"])
+    allowed_domains: list[str] = [str(d) for d in allowed_domains_raw]
+    mfa_required = bool(raw.get("mfa_required", DEFAULT_IDENTITY["mfa_required"]))
+
+    return TenantIdentityResponse(
+        provider=provider,
+        scim_enabled=scim_enabled,
+        allowed_domains=allowed_domains,
+        mfa_required=mfa_required,
+    )

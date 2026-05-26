@@ -21,6 +21,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.50 Day 1 — +TenantIdentity (Identity fixture cleanup)
  *   - 2026-05-26: Sprint 57.49 Day 1 — +5 sub-resource list shapes (Members/HITL/FF/Quotas/RateLimits)
  *   - 2026-05-26: Sprint 57.46 — TenantSettingsResponse +5 SaaS settings fields
  *   - 2026-05-07: Initial creation (Sprint 57.3 Day 3 / US-3)
@@ -144,4 +145,13 @@ export interface RateLimitListResponse {
   total: number;
   limit: number;
   offset: number;
+}
+
+/* === Sprint 57.50 — Identity single-record response === */
+
+export interface TenantIdentity {
+  provider: string;
+  scim_enabled: boolean;
+  allowed_domains: string[];
+  mfa_required: boolean;
 }
