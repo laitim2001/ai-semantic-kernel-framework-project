@@ -27,41 +27,41 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { TenantSettingsPageHeader } from "@/features/tenant-settings/components/TenantSettingsPageHeader";
-import { SEATS_FIXTURE } from "@/features/tenant-settings/_fixtures";
 
-describe("TenantSettingsPageHeader (Sprint 57.44)", () => {
+describe("TenantSettingsPageHeader (Sprint 57.49 — seats from real backend prop)", () => {
   it("renders page title 'Tenant Settings'", () => {
-    render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Pro" />);
+    render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Pro" seats={8} />);
     expect(screen.getByText("Tenant Settings")).toBeInTheDocument();
   });
 
   it("renders displayName in mono span", () => {
-    render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Pro" />);
+    render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Pro" seats={8} />);
     const monoMatches = screen.getAllByText("Acme Corp");
     expect(monoMatches.length).toBeGreaterThanOrEqual(1);
-    // Mono span has class "mono"
     expect(monoMatches[0]!.className).toMatch(/mono/);
   });
 
   it("renders code in route-pill", () => {
-    render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Pro" />);
+    render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Pro" seats={8} />);
     const codeNode = screen.getByText("ACME");
     expect(codeNode).toBeInTheDocument();
     expect(codeNode.className).toMatch(/route-pill/);
   });
 
-  it("renders plan + SEATS_FIXTURE seats Badge with primary tone", () => {
-    render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Pro" />);
-    // Combined Badge content "Pro · 8 seats"
+  it("renders plan + seats Badge from real backend prop (Sprint 57.49)", () => {
+    render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Pro" seats={8} />);
     expect(screen.getByText(/Pro\s*·\s*8\s*seats/)).toBeInTheDocument();
-    expect(SEATS_FIXTURE).toBe(8);
   });
 
   it("Badge has primary tone class for plan + seats", () => {
-    const { container } = render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Enterprise" />);
-    // Badge primary tone produces "badge primary" class
+    const { container } = render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Enterprise" seats={42} />);
     const primaryBadge = container.querySelector(".badge.primary");
     expect(primaryBadge).not.toBeNull();
-    expect(primaryBadge!.textContent).toMatch(/Enterprise\s*·\s*8\s*seats/);
+    expect(primaryBadge!.textContent).toMatch(/Enterprise\s*·\s*42\s*seats/);
+  });
+
+  it("seats prop defaults to 0 when omitted (back-compat)", () => {
+    render(<TenantSettingsPageHeader displayName="Acme Corp" code="ACME" plan="Pro" />);
+    expect(screen.getByText(/Pro\s*·\s*0\s*seats/)).toBeInTheDocument();
   });
 });

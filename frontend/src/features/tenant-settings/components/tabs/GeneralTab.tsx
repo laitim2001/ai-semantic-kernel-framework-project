@@ -1,41 +1,36 @@
 /**
  * File: frontend/src/features/tenant-settings/components/tabs/GeneralTab.tsx
- * Purpose: General tab — 2-col grid w/ General Card (display_name live + 4 fixture fields) + Identity & SSO Card.
+ * Purpose: General tab — General Card (display_name + region/locale/retention real) + Identity Card.
  * Category: Frontend / tenant-settings / components / tabs
- * Scope: Phase 57 / Sprint 57.44 Day 1 (mockup-fidelity rebuild — D-DAY0-4 Option A)
+ * Scope: Phase 57 / Sprint 57.49 Day 1 (Track A 1.1.1 — Sprint 57.46 backend real consumption)
  *
  * Description:
- *   Verbatim port of mockup `page-admin.jsx` L440-465. Two Cards in `.grid-main`:
- *   - General: 5 fields. ONLY `display_name` is live-wired to backend via
- *     useTenantSettingsSave (PATCH). Other 4 fields (Tenant id readonly, Default
- *     region, Default locale, Data retention) display GENERAL_FIXTURE values
- *     with disabled controls + BackendGapBanner above.
- *   - Identity & SSO: 4 .spread rows from IDENTITY_FIXTURE + Configure button
- *     (AP-2 stub) + BackendGapBanner above.
+ *   Sprint 57.49: removes residual `GENERAL_FIXTURE` import; consumes real
+ *   `data.region / data.locale / data.retention_days` (Sprint 57.46 TenantResponse
+ *   15-field schema). `IDENTITY_FIXTURE` retained for SCIM/Allowed-domains/MFA
+ *   (no backend fields yet); `data.sso_enabled` displayed as Provider badge.
  *
- *   The Save button only saves display_name (the only backend-supported PATCH
- *   field). Save state managed locally — input controlled state diverges from
- *   data.display_name only after user edits; resets on successful save via
- *   useTenantSettings query invalidation.
+ *   Save button now wires display_name + region + locale + retention_days
+ *   (all 4 are patch-able via Sprint 57.46 TenantUpdateRequest extension).
  *
- * Created: 2026-05-26 (Sprint 57.44 Day 1)
+ * Created: 2026-05-26 (Sprint 57.44 Day 1) — original fixture port
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
- *   - 2026-05-26: Initial creation (Sprint 57.44 Day 1) — tenant-settings full mockup-fidelity rebuild
+ *   - 2026-05-26: Sprint 57.49 — drop GENERAL_FIXTURE; consume Sprint 57.46 real fields
+ *   - 2026-05-26: Initial creation (Sprint 57.44 Day 1)
  *
  * Related:
  *   - reference/design-mockups/page-admin.jsx L440-465
- *   - ../../hooks/useTenantSettingsSave.ts (display_name PATCH)
- *   - ../../_fixtures.ts (GENERAL_FIXTURE + IDENTITY_FIXTURE)
- *   - frontend/src/components/ui/BackendGapBanner.tsx
+ *   - ../../hooks/useTenantSettingsSave.ts (display_name + new fields PATCH)
+ *   - ../../_fixtures.ts (IDENTITY_FIXTURE only; SCIM/Allowed-domains/MFA still gap)
  */
 
 import { useEffect, useState } from "react";
 
 import { Badge, Button, Card, Field } from "../../../../components/mockup-ui";
 import { BackendGapBanner } from "../../../../components/ui/BackendGapBanner";
-import { GENERAL_FIXTURE, IDENTITY_FIXTURE } from "../../_fixtures";
+import { IDENTITY_FIXTURE } from "../../_fixtures";
 import { useTenantSettingsSave } from "../../hooks/useTenantSettingsSave";
 import type { TenantSettingsResponse } from "../../types";
 
@@ -96,42 +91,53 @@ export function GeneralTab({ data }: GeneralTabProps): JSX.Element {
           <Field label="Tenant id">
             <input className="input mono" readOnly value={data.code} />
           </Field>
-          <BackendGapBanner reason="Region / locale / retention configuration: backend extension Phase 58+ — values shown are mockup defaults" />
           <Field label="Default region">
-            <select className="select" value={GENERAL_FIXTURE.region} disabled>
-              <option>ap-east-1</option>
-              <option>us-east-1</option>
-              <option>eu-west-1</option>
-            </select>
+            <input className="input" readOnly value={data.region} />
           </Field>
           <Field label="Default locale">
-            <select className="select" value={GENERAL_FIXTURE.locale} disabled>
-              <option>zh-TW</option>
-              <option>en-US</option>
-              <option>ja-JP</option>
-            </select>
+            <input className="input" readOnly value={data.locale} />
           </Field>
           <Field label="Data retention" help="Memory + audit retention. WORM audit is append-only.">
             {/* eslint-disable-next-line no-restricted-syntax -- verbatim port row gap */}
             <div className="row" style={{ gap: 8 }}>
               <input
                 className="input"
-                value={GENERAL_FIXTURE.retentionDays}
-                disabled
+                readOnly
+                value={data.retention_days}
                 // eslint-disable-next-line no-restricted-syntax -- verbatim port input maxWidth
                 style={{ maxWidth: 100 }}
               />
               <span className="muted">days</span>
             </div>
           </Field>
+          <Field label="Seats">
+            {/* eslint-disable-next-line no-restricted-syntax -- verbatim port row gap */}
+            <div className="row" style={{ gap: 8 }}>
+              <input
+                className="input"
+                readOnly
+                value={data.seats}
+                // eslint-disable-next-line no-restricted-syntax -- verbatim port input maxWidth
+                style={{ maxWidth: 100 }}
+              />
+              <span className="muted">licensed</span>
+            </div>
+          </Field>
+          <BackendGapBanner reason="Region / locale / retention / seats edit UI: backend supports PATCH (Sprint 57.46); inline edit UI Phase 58+ — values shown are tenant-effective from DB" />
         </div>
       </Card>
       <Card title="Identity & SSO">
-        <BackendGapBanner reason="Identity / SSO / SCIM configuration: backend extension Phase 58+ — values shown are mockup defaults" />
+        <BackendGapBanner reason="SCIM / Allowed-domains / MFA configuration: backend extension Phase 58+ — values shown are mockup defaults; SSO status from DB" />
         {/* eslint-disable-next-line no-restricted-syntax -- verbatim port: mockup uses inline style for col gap + fontSize */}
         <div className="col" style={{ gap: 10, fontSize: 12, marginTop: 8 }}>
           <div className="spread">
-            <span className="muted">Provider</span>
+            <span className="muted">SSO Provider</span>
+            <Badge tone={data.sso_enabled ? "success" : ""} dot={data.sso_enabled}>
+              {data.sso_enabled ? "enabled" : "disabled"}
+            </Badge>
+          </div>
+          <div className="spread">
+            <span className="muted">Provider type</span>
             <Badge>{IDENTITY_FIXTURE.provider}</Badge>
           </div>
           <div className="spread">

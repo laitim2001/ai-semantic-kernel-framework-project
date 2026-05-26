@@ -52,6 +52,12 @@ const SAMPLE: TenantSettingsResponse = {
   provisioning_progress: {},
   onboarding_progress: {},
   meta_data: {},
+  // Sprint 57.46 — SaaS settings extension
+  region: "apac",
+  locale: "zh-TW",
+  retention_days: 365,
+  sso_enabled: true,
+  seats: 8,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-05-07T00:00:00Z",
 };
@@ -105,22 +111,28 @@ describe("GeneralTab (Sprint 57.44)", () => {
     expect(displayInput.value).toBe("Renamed Corp");
   });
 
-  it("Region / Locale selects are disabled with fixture values", () => {
+  it("Region / Locale inputs are readonly with real backend values (Sprint 57.49)", () => {
     const { container } = render(<GeneralTab data={SAMPLE} />);
-    const selects = container.querySelectorAll("select.select");
-    expect(selects.length).toBe(2);
-    for (const sel of Array.from(selects)) {
-      expect((sel as HTMLSelectElement).disabled).toBe(true);
-    }
+    // Sprint 57.49: region/locale are now <input readOnly> (not <select disabled>)
+    const readonlyInputs = container.querySelectorAll("input[readonly]");
+    // Tenant id + region + locale + retention + seats = 5 readonly inputs
+    expect(readonlyInputs.length).toBeGreaterThanOrEqual(4);
+    // verify region + locale values from real backend
+    const values = Array.from(readonlyInputs).map((i) => (i as HTMLInputElement).value);
+    expect(values).toContain("apac");
+    expect(values).toContain("zh-TW");
   });
 
-  it("Identity & SSO Card renders 4 spread rows from IDENTITY_FIXTURE", () => {
+  it("Identity & SSO Card renders Provider type + SCIM + Allowed domains + MFA from IDENTITY_FIXTURE (Sprint 57.49)", () => {
     render(<GeneralTab data={SAMPLE} />);
     expect(screen.getByText("Identity & SSO")).toBeInTheDocument();
-    expect(screen.getByText("Provider")).toBeInTheDocument();
+    // Sprint 57.49: "SSO Provider" + "Provider type" replace original "Provider"
+    expect(screen.getByText("SSO Provider")).toBeInTheDocument();
+    expect(screen.getByText("Provider type")).toBeInTheDocument();
     expect(screen.getByText(/SAML 2\.0/)).toBeInTheDocument();
     expect(screen.getByText("SCIM")).toBeInTheDocument();
-    expect(screen.getByText("enabled")).toBeInTheDocument();
+    // Sprint 57.49: SSO Provider Badge + SCIM Badge both render "enabled" — use getAllByText
+    expect(screen.getAllByText("enabled").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Allowed domains")).toBeInTheDocument();
     expect(screen.getByText(/acme\.com, acme\.io/)).toBeInTheDocument();
     expect(screen.getByText("MFA")).toBeInTheDocument();

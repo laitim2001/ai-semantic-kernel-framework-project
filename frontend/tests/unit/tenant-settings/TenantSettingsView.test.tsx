@@ -46,12 +46,39 @@ vi.mock("@/features/tenant-settings/hooks/useTenantSettingsSave", () => ({
   useTenantSettingsSave: vi.fn(),
 }));
 
+// Sprint 57.49 — mock 5 NEW sub-resource hooks (tabs migrated fixture → real backend)
+vi.mock("@/features/tenant-settings/hooks/useTenantMembers", () => ({
+  useTenantMembers: vi.fn(),
+  TENANT_MEMBERS_QUERY_KEY_BASE: ["tenant-settings", "members"],
+}));
+vi.mock("@/features/tenant-settings/hooks/useHITLPolicies", () => ({
+  useHITLPolicies: vi.fn(),
+  HITL_POLICIES_QUERY_KEY_BASE: ["tenant-settings", "hitl-policies"],
+}));
+vi.mock("@/features/tenant-settings/hooks/useFeatureFlags", () => ({
+  useFeatureFlags: vi.fn(),
+  FEATURE_FLAGS_QUERY_KEY_BASE: ["tenant-settings", "feature-flags"],
+}));
+vi.mock("@/features/tenant-settings/hooks/useQuotas", () => ({
+  useQuotas: vi.fn(),
+  QUOTAS_QUERY_KEY_BASE: ["tenant-settings", "quotas"],
+}));
+vi.mock("@/features/tenant-settings/hooks/useRateLimits", () => ({
+  useRateLimits: vi.fn(),
+  RATE_LIMITS_QUERY_KEY_BASE: ["tenant-settings", "rate-limits"],
+}));
+
 vi.mock("@/features/auth/store/authStore", () => ({
   useAuthStore: vi.fn(),
 }));
 
 import { useTenantSettings } from "@/features/tenant-settings/hooks/useTenantSettings";
 import { useTenantSettingsSave } from "@/features/tenant-settings/hooks/useTenantSettingsSave";
+import { useTenantMembers } from "@/features/tenant-settings/hooks/useTenantMembers";
+import { useHITLPolicies } from "@/features/tenant-settings/hooks/useHITLPolicies";
+import { useFeatureFlags } from "@/features/tenant-settings/hooks/useFeatureFlags";
+import { useQuotas } from "@/features/tenant-settings/hooks/useQuotas";
+import { useRateLimits } from "@/features/tenant-settings/hooks/useRateLimits";
 import { useAuthStore } from "@/features/auth/store/authStore";
 
 const SAMPLE: TenantSettingsResponse = {
@@ -63,6 +90,12 @@ const SAMPLE: TenantSettingsResponse = {
   provisioning_progress: {},
   onboarding_progress: {},
   meta_data: {},
+  // Sprint 57.46 — SaaS settings extension (5 fields)
+  region: "apac",
+  locale: "zh-TW",
+  retention_days: 365,
+  sso_enabled: true,
+  seats: 8,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-05-07T00:00:00Z",
 };
@@ -92,6 +125,32 @@ function setupHookLoaded(): void {
     isPending: false,
     error: null,
   } as unknown as ReturnType<typeof useTenantSettingsSave>);
+  // Sprint 57.49 — 5 sub-resource hook mocks (default empty payload; specific tests override)
+  vi.mocked(useTenantMembers).mockReturnValue({
+    data: { items: [], total: 0, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useTenantMembers>);
+  vi.mocked(useHITLPolicies).mockReturnValue({
+    data: { items: [], total: 0, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useHITLPolicies>);
+  vi.mocked(useFeatureFlags).mockReturnValue({
+    data: { items: [], total: 0, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useFeatureFlags>);
+  vi.mocked(useQuotas).mockReturnValue({
+    data: { items: [], total: 0, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useQuotas>);
+  vi.mocked(useRateLimits).mockReturnValue({
+    data: { items: [], total: 0, limit: 50, offset: 0 },
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useRateLimits>);
 }
 
 describe("TenantSettingsView (Sprint 57.44)", () => {
@@ -125,14 +184,16 @@ describe("TenantSettingsView (Sprint 57.44)", () => {
     const generalMatches = screen.getAllByText("General");
     expect(generalMatches.length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Identity & SSO")).toBeInTheDocument();
+    // Sprint 57.49 — GeneralTab now consumes real backend SaaS fields
+    expect(screen.getByText("SSO Provider")).toBeInTheDocument();
   });
 
-  it("clicking Members tab reveals Members card", async () => {
+  it("clicking Members tab reveals Members card (Sprint 57.49 — subtitle now uses real backend total)", async () => {
     const user = userEvent.setup();
     render(<TenantSettingsView />);
     await user.click(screen.getByRole("tab", { name: /Members/ }));
-    // Members Card subtitle "8 active · 0 invitations"
-    expect(screen.getByText(/8 active · 0 invitations/)).toBeInTheDocument();
+    // Sprint 57.49: Members Card subtitle "${total} active · 0 invitations" — default mock total=0
+    expect(screen.getByText(/0 active · 0 invitations/)).toBeInTheDocument();
   });
 
   it("clicking Danger Zone tab reveals Danger zone card", async () => {

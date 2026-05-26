@@ -24,6 +24,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.49 — pass tenantId prop to 4 migrated tabs (FF/Quotas/HITL/Members)
  *   - 2026-05-26: Sprint 57.44 — full rewrite to 6-tab mockup IA (drop EditForm + JSON dump + dl/dt view)
  *   - 2026-05-11: Sprint 57.16 — inline styles → Tailwind utility classes; stateBadgeColor/planBadgeColor → *Class fns
  *   - 2026-05-10: Sprint 57.13 US-A2 — tenant_id from authStore.tenant.id (was URL ?tenant_id=)
@@ -103,6 +104,7 @@ export function TenantSettingsView(): JSX.Element {
         displayName={data.display_name}
         code={data.code}
         plan={data.plan}
+        seats={data.seats}
       />
       <Tabs
         items={TAB_ITEMS}
@@ -111,10 +113,10 @@ export function TenantSettingsView(): JSX.Element {
         ariaLabel="Tenant settings sections"
       />
       {tab === "general" && <GeneralTab data={data} />}
-      {tab === "flags" && <FeatureFlagsTab />}
-      {tab === "quotas" && <QuotasTab />}
-      {tab === "hitl" && <HITLPoliciesTab />}
-      {tab === "members" && <MembersTab />}
+      {tab === "flags" && <FeatureFlagsTab tenantId={tenantId} />}
+      {tab === "quotas" && <QuotasTab tenantId={tenantId} />}
+      {tab === "hitl" && <HITLPoliciesTab tenantId={tenantId} />}
+      {tab === "members" && <MembersTab tenantId={tenantId} />}
       {tab === "danger" && <DangerZoneTab />}
     </div>
   );

@@ -10,6 +10,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  fetchFeatureFlags,
+  fetchHITLPolicies,
+  fetchQuotas,
+  fetchRateLimits,
+  fetchTenantMembers,
   fetchTenantSettings,
   updateTenantSettings,
 } from "../../../src/features/tenant-settings/services/tenantSettingsService";
@@ -27,7 +32,13 @@ const MOCK_RESPONSE: TenantSettingsResponse = {
   plan: TenantPlan.ENTERPRISE,
   provisioning_progress: {},
   onboarding_progress: {},
-  meta_data: { region: "us-west" },
+  meta_data: { region_legacy: "us-west" },
+  // Sprint 57.46 — SaaS settings extension
+  region: "americas",
+  locale: "en-US",
+  retention_days: 180,
+  sso_enabled: false,
+  seats: 4,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-05-07T00:00:00Z",
 };
@@ -88,6 +99,85 @@ describe("tenantSettingsService", () => {
         }),
       );
       expect(result.display_name).toBe("Renamed Corp");
+    });
+  });
+
+  /* === Sprint 57.49 — 5 sub-resource list endpoints === */
+
+  describe("fetchTenantMembers (Sprint 57.49)", () => {
+    it("builds correct URL with no query-string when limit/offset omitted", async () => {
+      const payload = { items: [], total: 0, limit: 50, offset: 0 };
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }));
+      await fetchTenantMembers("tenant-x");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/v1/admin/tenants/tenant-x/members",
+        expect.objectContaining({ method: "GET", credentials: "include" }),
+      );
+    });
+
+    it("appends limit/offset query params when provided", async () => {
+      const payload = { items: [], total: 0, limit: 10, offset: 20 };
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }));
+      await fetchTenantMembers("tenant-x", 10, 20);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/v1/admin/tenants/tenant-x/members?limit=10&offset=20",
+        expect.objectContaining({ method: "GET" }),
+      );
+    });
+  });
+
+  describe("fetchHITLPolicies (Sprint 57.49)", () => {
+    it("builds correct URL for /hitl-policies", async () => {
+      const payload = { items: [], total: 0, limit: 50, offset: 0 };
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }));
+      await fetchHITLPolicies("tenant-x");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/v1/admin/tenants/tenant-x/hitl-policies",
+        expect.objectContaining({ method: "GET" }),
+      );
+    });
+  });
+
+  describe("fetchFeatureFlags (Sprint 57.49)", () => {
+    it("builds correct URL for /feature-flags", async () => {
+      const payload = { items: [], total: 0, limit: 50, offset: 0 };
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }));
+      await fetchFeatureFlags("tenant-x");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/v1/admin/tenants/tenant-x/feature-flags",
+        expect.objectContaining({ method: "GET" }),
+      );
+    });
+  });
+
+  describe("fetchQuotas (Sprint 57.49)", () => {
+    it("builds correct URL for /quotas", async () => {
+      const payload = { items: [], total: 0, limit: 50, offset: 0 };
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }));
+      await fetchQuotas("tenant-x");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/v1/admin/tenants/tenant-x/quotas",
+        expect.objectContaining({ method: "GET" }),
+      );
+    });
+  });
+
+  describe("fetchRateLimits (Sprint 57.49)", () => {
+    it("builds correct URL for /rate-limits", async () => {
+      const payload = { items: [], total: 0, limit: 50, offset: 0 };
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }));
+      await fetchRateLimits("tenant-x");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/v1/admin/tenants/tenant-x/rate-limits",
+        expect.objectContaining({ method: "GET" }),
+      );
+    });
+
+    it("throws Error on non-2xx response", async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "tenant not found" }), { status: 404 }),
+      );
+      await expect(fetchRateLimits("tenant-x")).rejects.toThrow("tenant not found");
     });
   });
 });
