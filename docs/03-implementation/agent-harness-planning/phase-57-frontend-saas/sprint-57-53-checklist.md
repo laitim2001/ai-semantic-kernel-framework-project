@@ -12,164 +12,149 @@
 
 ### 0.8 Day 0 三-Prong Verify (Step 2.5 mandatory)
 
-**Prong 1 — Path Verify** (~6 paths):
-- [ ] `backend/tests/integration/agent_harness/state_mgmt/test_checkpointer_db.py` exists (test target file with `test_tenant_isolation` at L142-155)
-- [ ] `backend/tests/conftest.py` exists (`db_session` fixture L41-62 + `seed_tenant` L65-73)
-- [ ] `backend/src/agent_harness/state_mgmt/checkpointer.py` exists (DBCheckpointer source under test)
-- [ ] `.claude/rules/sprint-workflow.md §Common Risk Classes` Risk Class C section exists (Sprint 53.6 module-level singleton precedent for SAVEPOINT pattern)
-- [ ] `backend/src/infrastructure/db/models/identity.py` (per 09-db-schema-design.md §Group 1 + Sprint 57.50 D-DAY0-2 lesson) — Tenant ORM with `tenants.code` UNIQUE constraint
-- [ ] `infrastructure/db/engine.py` — `get_session_factory` + `dispose_engine` (per-test rollback fixture machinery)
+**Prong 1 — Path Verify** (6/6 GREEN):
+- [x] `backend/tests/integration/agent_harness/state_mgmt/test_checkpointer_db.py` exists (test target file with `test_tenant_isolation` at L142-155)
+- [x] `backend/tests/conftest.py` exists (`db_session` fixture L41-62 + `seed_tenant` L65-73)
+- [x] `backend/src/agent_harness/state_mgmt/checkpointer.py` exists (DBCheckpointer source under test)
+- [x] `.claude/rules/sprint-workflow.md §Common Risk Classes` Risk Class C section exists at L792-800 (Sprint 53.6 module-level singleton precedent)
+- [x] `backend/src/infrastructure/db/models/identity.py` (per 09-db-schema-design.md §Group 1 + Sprint 57.50 D-DAY0-2 lesson) — Tenant ORM with `tenants.code` UNIQUE constraint at L116
+- [x] `infrastructure/db/engine.py` exists (`get_session_factory` + `dispose_engine` per-test rollback fixture machinery)
 
-**Prong 2 — Content Verify** (~6 claims; per `sprint-workflow.md §Step 2.5 Prong 2` Drift Class table):
-- [ ] **D-DAY0-1** `db_session` fixture in `conftest.py` L41-62 confirms `await session.rollback()` in finally + `await dispose_engine()` after; matches plan §2.2 baseline claim
-- [ ] **D-DAY0-2** `seed_tenant` in `conftest.py` L65-73 confirms `await session.flush()` (NOT commit); contract docstring "Caller must NOT commit" verbatim; matches plan §2.2
-- [ ] **D-DAY0-3** Sprint 53.6 SAVEPOINT precedent referenced in `sprint-workflow.md §Common Risk Classes Risk Class C` — confirm Sprint 53.6 cited + reset_service_factory autouse pattern documented (basis for Option C template in plan §4.3)
-- [ ] **D-DAY0-4** `tenants` table schema — `code VARCHAR(64) UNIQUE NOT NULL` constraint confirmed in `identity.py` Tenant ORM (matches UniqueViolationError message `uq_tenants_code`)
-- [ ] **D-DAY0-5** `test_checkpointer_db.py` `_build_session` helper at L49-59 uses positional `seed_tenant(db_session, code=tenant_code)` — confirm signature alignment with `seed_tenant` (no commit() in helper itself)
-- [ ] **D-DAY0-6** **Constraint-metric delta grep** (per Sprint 57.52 Track A NEW Drift Class row 6): if any Day 1 fix path adds NEW pytest tests, baseline 1759 PASS will shift; record planned baseline shift in plan §6 Workload + Day 1.4 verify
+**Prong 2 — Content Verify (5 GREEN + 1 YELLOW resolved Day 1.1.4 + 2 NEW NOTABLE + 1 NEW MAJOR D-DAY0-9)**:
+- [x] **D-DAY0-1** ✅ GREEN — `db_session` fixture in `conftest.py` L41-62 confirms `await session.rollback()` in finally + `await dispose_engine()` after
+- [x] **D-DAY0-2** ✅ GREEN — `seed_tenant` in `conftest.py` L65-73 confirms `await session.flush()` (NOT commit); contract docstring "Caller must NOT commit" verbatim
+- [x] **D-DAY0-3** 🟡 YELLOW resolved Day 1.1.4 — plan §2.4 + §4.3 Option C "Sprint 55.4 `AD-Test-DB-Trigger` SAVEPOINT pattern" reference verified at `docs/rules-on-demand/testing.md §SAVEPOINT Pattern` L179-225 ✅
+- [x] **D-DAY0-4** ✅ GREEN — `tenants.code VARCHAR(64) UNIQUE NOT NULL` at `identity.py` L116; maps to `uq_tenants_code` constraint name verbatim with UniqueViolationError
+- [x] **D-DAY0-5** ✅ GREEN — `_build_session` helper at L49-59 uses positional `seed_tenant(db_session, code=tenant_code)`; no commit() in helper itself
+- [x] **D-DAY0-6** ✅ GREEN — constraint-metric delta grep applied per Sprint 57.52 Track A NEW Drift Class row 6: pytest baseline 1759 PASS + 1 PRE-EXISTING fail; Option A scope predicts +1 PASS net (no NEW regression tests added)
+- [x] **D-DAY0-7** 🆕 NEW NOTABLE — 0 `.commit()` calls in `tests/integration/agent_harness/state_mgmt/` → H1 REFUTED for state_mgmt scope; strengthens H2/H5
+- [x] **D-DAY0-8** 🆕 NEW NOTABLE — 9 backend test/conftest files contain `.commit()` (api/conftest + governance + audit + hitl + memory unit tests); Day 1.1.2 confirmed only `test_checkpointer_db.py:145` uses bare `"ISO_A"` (0 cross-test collision risk)
+- [x] **D-DAY0-9** 🆕 NEW MAJOR — Sprint 57.12 `§Committed-Row Cleanup Pattern` (testing.md L229-283) is direct precedent for our case; root cause Sprint 57.12 was `admin/tenants.py` PATCH route commit; pattern provides WORM-trigger-toggle DELETE in autouse fixture
 
 **Prong 2.5 — Frontend Tree Depth Audit**: ✅ N/A (Sprint 57.53 backend test-infra investigation only; 0 frontend page changes)
 
-**Prong 3 — Schema Verify** (per `sprint-workflow.md §Step 2.5 Prong 3`; AD-Plan-4 promoted Sprint 57.1):
-- [ ] `tenants` table column `code VARCHAR(64) UNIQUE NOT NULL` in Alembic migrations history (no recent schema change to this column)
-- [ ] `tenants` table FK CASCADE rules to `audit_log` / `users` / `sessions` (check if cascading triggers persist rows beyond rollback)
-- [ ] Active triggers on `tenants` table: `SELECT * FROM information_schema.triggers WHERE event_object_table='tenants'` — confirm no WORM-style trigger that commits beyond rollback
+**Prong 3 — Schema Verify** (file-level GREEN; DB-level resolved at Day 1.1.5):
+- [x] `tenants.code VARCHAR(64) UNIQUE NOT NULL` confirmed in `identity.py` L116; maps to `uq_tenants_code` constraint
+- [x] FK CASCADE rules from `tenants` reach `audit_log` (per Sprint 57.12 cleanup pattern documentation) — relevant for DELETE mechanism not root cause; covered by WORM trigger toggle pattern
+- [x] Day 1.1.5 result: `TRIGGER_COUNT=0` on `tenants` table → H3 REFUTED
+- [x] Migration head ordering: Sprint 57.50 introduced Alembic 0018; no recent migration affecting `tenants.code`
 
-**Drift findings catalog**:
-- [ ] All findings logged to `progress.md` Day 0 entry per AD-Plan-2 promotion discipline (target: 5-6 GREEN + 0-2 YELLOW + 0 RED)
-- [ ] Go/no-go decision recorded — GO if 0 RED; revise plan §Technical Spec if YELLOW shifts scope > 20%
+**Drift findings catalog summary**:
+- [x] All findings logged to `progress.md` Day 0 entry per AD-Plan-2 promotion discipline (6 Prong 1 GREEN + 5 Prong 2 GREEN + 1 YELLOW resolved + 2 NEW NOTABLE + 1 NEW MAJOR + 2 Prong 3 GREEN + 2 Prong 3 DEFERRED resolved Day 1.1.5)
+- [x] Go/no-go decision recorded — **GO** (0 RED; D-DAY0-3 YELLOW scope-impact=0; Day 1 proceeds with original scope)
 
 ### 0.9 Branch + Day 0 commit
-- [ ] Branch `feature/sprint-57-53-checkpointer-tenant-isolation-investigation` created from main `43e5d8f7`
-- [ ] Day 0 + Day 1 combined commit (per Sprint 57.46/47/48/49/50/51/52 small-scope precedent; OR split if Day 1 fix path is non-trivial)
+- [x] Branch `feature/sprint-57-53-checkpointer-tenant-isolation-investigation` created from main `43e5d8f7`
+- [x] Day 0 + Day 1 combined commit `10112b0f` (per Sprint 57.46/47/48/49/50/51/52 small-scope precedent)
 
 ---
 
-## Day 1 — Implementation (Code-Implementer Agent Delegation — `mechanical-greenfield` 0.50 tier-3 1st validation)
+## Day 1 — Implementation (Parent-Assistant-Direct Execution — NOT agent-delegated per Sprint 57.45 Path B precedent → `agent_factor = 1.0`)
 
 ### 1.1 Task 1.1 — Hypothesis Elimination Investigation
 
 #### 1.1.1 Step 1 — Query test DB stale tenant rows
-- [ ] Run Python async script (per plan §4.1 Step 1) querying `SELECT code, display_name, id, created_at FROM tenants WHERE code IN ('ISO_A','RT','TT','MM_SID','MM_TID','MISSING','SIZE','CHKPT_TEST','TEST_TENANT')`
-- [ ] Record result in `progress.md` Day 1.1.1: codes present + count + `created_at` timestamps + same-hour clustering analysis
+- [x] Ran Python async script: `SELECT code, display_name, id, created_at FROM tenants WHERE code IN (...)` — result `STALE_ROW_COUNT=1; code='ISO_A' created_at=2026-05-26 02:14:29 UTC`
+- [x] Result captured in `progress.md` Day 1.1.1: only 1/9 codes leaked (ISO_A) → H5 REFUTED
 
 #### 1.1.2 Step 2 — Grep fixture-contract violators
-- [ ] `cd backend && grep -rn "session\.commit\|db_session\.commit\|\.commit()" tests/ --include="*.py" | grep -v "rollback" | head -50`
-- [ ] Catalog offending callers in `progress.md` Day 1.1.2 (file:line + commit context)
+- [x] `grep -rn "session\.commit|db_session\.commit|\.commit\(\)" tests/ --include="*.py"` — D-DAY0-7+8 reaffirmed: 0 commits in state_mgmt/ (H1 refuted in scope); 9 files elsewhere (api/conftest legitimate Sprint 57.12 cleanup + governance + audit + hitl + memory unit tests)
+- [x] ISO_A literal grep repo-wide: only `test_checkpointer_db.py:145` uses bare `"ISO_A"` (other ISO_A files use prefixed codes) — 0 cross-test collision risk
 
 #### 1.1.3 Step 3 — Review `seed_tenant` git history
-- [ ] `cd backend && git log --follow --oneline -- tests/conftest.py | head -20`
-- [ ] Identify any commit() → flush() refactor + record sprint origin (H4 hypothesis evidence)
+- [x] `git log --follow --oneline backend/tests/conftest.py` — 6 commits total; most recent `6671615f Sprint 49.2 creation`; no commit→flush refactor history → **H4 REFUTED**
 
 #### 1.1.4 Step 4 — Cross-reference SAVEPOINT precedent
-- [ ] `grep -n "savepoint\|SAVEPOINT\|begin_nested" backend/tests/conftest.py backend/tests/**/conftest.py 2>/dev/null`
-- [ ] Confirm whether Sprint 53.6 SAVEPOINT pattern already in use elsewhere in test infra
+- [x] `grep SAVEPOINT|begin_nested|AD-Test-DB-Trigger docs/rules-on-demand/testing.md` — confirms Sprint 55.4 `AD-Test-DB-Trigger` SAVEPOINT pattern at L179-225 (D-DAY0-3 YELLOW resolved) + surfaces **D-DAY0-9 NEW MAJOR** Sprint 57.12 `§Committed-Row Cleanup Pattern` at L229-283 (direct precedent for Option A)
 
 #### 1.1.5 Step 5 — Check triggers + WORM cascade
-- [ ] Run Python async script (per plan §4.1 Step 5) `SELECT * FROM information_schema.triggers WHERE event_object_table='tenants'`
-- [ ] Record trigger inventory in `progress.md` Day 1.1.5 (rule out H3 WORM hypothesis)
+- [x] Ran Python async script: `SELECT * FROM information_schema.triggers WHERE event_object_table='tenants'` — result `TRIGGER_COUNT=0` → **H3 REFUTED**
 
 #### 1.1.6 Verdict
-- [ ] Write hypothesis verdict in `progress.md` Day 1.1.6: H1/H2/H3/H4/H5 = confirmed / refuted / inconclusive
-- [ ] Highlight which 1-2 hypotheses have strongest evidence
+- [x] Verdict written in `progress.md` Day 1.1.6: H1 REFUTED in state_mgmt + CONFIRMED via Sprint 57.12 cross-scope precedent / H2 PLAUSIBLE secondary / H3/H4/H5/H6 all REFUTED with concrete evidence
+- [x] Strongest evidence: Sprint 57.12 cross-scope leak pattern (api PATCH route commit) + only 1/9 codes leaked (rules out crashed-run hypothesis)
 
 ### 1.2 Task 1.2 — Option Decision Gate
 
-- [ ] Review §4.2 decision criteria table mapping evidence → Option
-- [ ] Choose Option A / B / C / D (or hybrid) — write decision + rationale in `progress.md` Day 1.2
-- [ ] Confirm scope alignment with plan §6 Workload bottom-up est; if chosen Option drives > 20% scope expansion → escalate to user before Day 1.3
+- [x] Reviewed plan §4.2 decision criteria table mapping evidence → Option
+- [x] Decision: **Option A enriched with Sprint 57.12 `§Committed-Row Cleanup Pattern` lift** (Options B/C/D explicitly rejected per `testing.md` L274-275 documented anti-patterns)
+- [x] Scope alignment confirmed within ±5% of plan §6 bottom-up est (~30-45 min predicted; actual ~30 min Day 1.3 implementation)
 
-### 1.3 Task 1.3 — Fix Implementation (Option-dependent)
+### 1.3 Task 1.3 — Fix Implementation (Option A applied)
 
 **Option A — Data-only cleanup + autouse fixture**:
-- [ ] Manual one-shot `DELETE FROM tenants WHERE code IN ('ISO_A','RT','TT','MM_SID','MM_TID','MISSING','SIZE','CHKPT_TEST','TEST_TENANT')` against test DB (document runbook step in `progress.md` Day 1.3)
-- [ ] Add `_cleanup_stale_test_tenants` autouse session-scope fixture to `backend/tests/conftest.py` (per plan §4.3 Option A template)
-- [ ] File MHist 1-line entry on `conftest.py` (≤100 char budget per AD-Lint-MHist-Verbosity)
+- [x] Manual one-shot DELETE ISO_A from tenants (WORM trigger toggle pattern; `DELETED_ROWS=1; COMMIT_OK; POST_CLEANUP_ISO_A_COUNT=0`)
+- [x] NEW `backend/tests/integration/agent_harness/conftest.py` (~120 lines): allowlist `_COMMITTING_STATE_MGMT_TENANT_CODES` 9 codes + `_clear_committed_state_mgmt_tenants()` with WORM trigger toggle + `@pytest.fixture(autouse=True) _reset_state_mgmt_test_state` before+after yield
+- [x] File MHist 1-line entry on NEW conftest.py (file header MHist section per `.claude/rules/file-header-convention.md`)
 
-**Option B — Caller refactor + regression test**:
-- [ ] Locate offending committer test/fixture (from Day 1.1.2 catalog)
-- [ ] Refactor `await session.commit()` → `await session.flush()` (or remove entirely if not needed)
-- [ ] Create NEW `backend/tests/test_fixture_contract.py` with `test_seed_tenant_does_not_persist_across_sessions` regression test
-- [ ] File MHist 1-line entry on edited files
+**Option B / C / D — NOT APPLIED** (rejected per plan §4.2 decision criteria + Sprint 57.12 anti-patterns):
+- Option B: no committer caller identified in state_mgmt scope
+- Option C: `testing.md §SAVEPOINT Pattern` is for `try/except` post-error verification, NOT committed-row leak prevention
+- Option D: `testing.md L274` explicit anti-pattern "Make committing tests use UUID-suffixed codes"
 
-**Option C — SAVEPOINT pattern**:
-- [ ] Wrap `db_session` fixture body in `async with session.begin_nested():` SAVEPOINT (per plan §4.3 Option C template)
-- [ ] Verify pattern alignment with Sprint 53.6 `reset_service_factory` precedent (no double-rollback issue)
-- [ ] File MHist 1-line entry on `conftest.py`
-
-**Option D — Per-test code randomization**:
-- [ ] Change `seed_tenant` default to `code=f"TEST_{uuid.uuid4().hex[:8]}"` (per plan §4.3 Option D template)
-- [ ] Update existing test callers in `test_checkpointer_db.py` if explicit code assertions exist
-- [ ] File MHist 1-line entry on `conftest.py` + edited test files
-
-**Conditional — Risk Class codification** (Option B/C/D triggers):
-- [ ] Append NEW row to `.claude/rules/sprint-workflow.md §Common Risk Classes` (Risk Class E "DB Row Leak Across Pytest Sessions") OR extend Risk Class C variant note
-- [ ] File MHist 1-line entry on `sprint-workflow.md`
+**Conditional — Risk Class codification**: ⏸️ **N/A** — Option A applied + `testing.md` already documents the pattern at §Committed-Row Cleanup; no NEW row in `sprint-workflow.md` needed per plan §AC-15 conditional rule
 
 ### 1.4 Day 1 Validation Sweep
-- [ ] `cd backend && pytest tests/integration/agent_harness/state_mgmt/test_checkpointer_db.py -v` — **7/7 PASS** (target: full DBCheckpointer test class green)
-- [ ] `cd backend && pytest --tb=short -q` — **1759+N PASS + 0 fail** (N depends on Option B/C regression tests; record actual baseline in progress.md)
-- [ ] `cd backend && mypy --strict src/` — **0 errors / 310 files preserved**
-- [ ] `python scripts/lint/run_all.py` — **9/9 GREEN** preserved (Sprint 57.52 baseline; total ~1.00s)
-- [ ] `cd frontend && npm run lint` — **exit 0** (no `--silent` flag per Sprint 57.40 AD-Pre-Push-Lint-Silent-Suppression closure)
-- [ ] `cd frontend && npm run build` — **Vite built; bundle sizes preserved** (0 frontend changes expected)
-- [ ] `cd frontend && npm run test` — **Vitest 607 PASS / 118 test files preserved** (Sprint 57.52 baseline)
-- [ ] LLM SDK leak scan — **0** (covered by V2 lint #5 `check_llm_sdk_leak.py` in `run_all.py` GREEN sweep)
-- [ ] `git diff --stat HEAD` confirms: scope matches plan §5 File Change List (Option-dependent); **0 `.ts/.tsx` files touched**
+- [x] `cd backend && pytest tests/integration/agent_harness/state_mgmt/test_checkpointer_db.py -v` — **7/7 PASS** in 0.97s
+- [x] `cd backend && pytest --tb=short -q` — **1760 PASS + 4 skip + 0 fail** (+1 net vs Sprint 57.52 baseline; AD-Checkpointer CLOSED ✅)
+- [x] `cd backend && mypy --strict src/` — **0 errors / 310 files preserved** ("Success: no issues found")
+- [x] `python scripts/lint/run_all.py` — **9/9 GREEN** preserved (total 1.19s)
+- [x] `cd frontend && npm run lint` — exit 0 (pre-existing jsx-ast-utils stderr noise; no lint errors)
+- [x] `cd frontend && npm run build` — **Vite built in 3.51s** (bundle sizes preserved; 0 frontend changes)
+- [x] `cd frontend && npm run test` — **Vitest 607 PASS / 118 test files preserved** (Sprint 57.52 baseline)
+- [x] LLM SDK leak scan — **0** (covered by V2 lint #5 `check_llm_sdk_leak.py` in `run_all.py` GREEN sweep)
+- [x] `git diff --stat HEAD` confirms: 4 files / +913 insertions / 0 deletions; **0 `.ts`/`.tsx` files touched**; **0 modifications to existing files** (zero-edit-on-existing scope)
 
 ### 1.5 Day 1 commit
-- [ ] Commit: `feat(sprint-57-53): Day 0 + Day 1 — Checkpointer test tenant isolation fix (Option {A/B/C/D})` (Day 0 + Day 1 combined per small-scope precedent)
-- [ ] Includes plan + checklist + progress (Day 0 三-prong + Day 1 投查 + Fix) + chosen Option's source changes
+- [x] Commit `10112b0f`: `feat(sprint-57-53): Day 0 + Day 1 — Checkpointer test tenant isolation fix (Option A — Sprint 57.12 Committed-Row Cleanup Pattern lift to agent_harness scope)` (4 files +913/-0)
+- [x] Includes plan + checklist + progress (Day 0 三-prong + Day 1 investigation + decision + fix + validation) + NEW conftest.py (Sprint 57.12 pattern sibling)
 
 ---
 
 ## Day 2 — Closeout (parent assistant)
 
 ### 2.1 Validation
-- [ ] Full backend pytest suite passing (commit-time: 1759+N PASS + 0 fail) — **AD-Checkpointer-Test-Tenant-Isolation-PreExisting-Fail-Investigation CLOSED**
-- [ ] Full frontend Vitest suite passing (commit-time: 607 PASS preserved Sprint 57.52 baseline)
-- [ ] 9/9 V2 lints preserved (commit-time)
-- [ ] All edited files have MHist 1-line entry (`git diff --stat` matches plan §5 File Change List Option-dependent expansion)
+- [x] Full backend pytest suite passing (commit-time: 1760 PASS + 4 skip + 0 fail = AD-Checkpointer-Test-Tenant-Isolation CLOSED ✅)
+- [x] Full frontend Vitest suite passing (commit-time: 607 PASS preserved Sprint 57.52 baseline)
+- [x] 9/9 V2 lints preserved (commit-time)
+- [x] All edited files have MHist 1-line entry (NEW conftest.py has full header MHist section; 0 modifications to existing files)
 
 ### 2.2 Retrospective
-- [ ] Write `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-53/retrospective.md`
-- [ ] Q1-Q7 6 必答 format (per Sprint 57.52 + earlier precedent)
-- [ ] **Q3 (lessons)**: fixture contract finding + Option choice rationale + (conditional) propose Risk Class E codification OR Risk Class C variant note
-- [ ] **Q4 (calibration)**:
-  - `medium-backend` 0.80 6th data point (ratio + 6-pt mean + matrix decision per `When to adjust` rule)
-  - tier-3 `mechanical-greenfield` 0.50 **1st validation** (ratio + single-data-point caution rule decision: KEEP / flag Sprint 57.54+ for 2nd validation)
-- [ ] Q5 carryover candidate list (next sprint candidates per rolling planning §6)
-- [ ] Q7 Design note extract: N/A SKIP (investigation/fix sprint NOT spike; same precedent as Sprint 57.10/57.47-52)
+- [x] Written `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-53/retrospective.md`
+- [x] Q1-Q7 6 必答 format per Sprint 57.52 + earlier precedent
+- [x] **Q3 (lessons)**: 4 generalizable lessons documented (Sprint 57.12 pattern reusability + H1-H6 hypothesis methodology + agent_factor sub-class pre-commit + Day 0 vs Day 1 grep sharing); 3 NEW candidate ADs surfaced
+- [x] **Q4 (calibration)**: `medium-backend` 0.80 6th data point ratio 0.83 in band lower edge (cleaner signal under human 1.0 factor; 6-pt mean 0.57 improvement; KEEP per 3-sprint window rule) + `mechanical-greenfield` 0.50 1st validation NOT GENERATED (parent-assistant-direct per Sprint 57.45 Path B precedent → agent_factor=1.0; carryover renamed Sprint-57.54)
+- [x] Q5 Top 3 carryover candidates documented (AD-AgentFactor-Tier-3-Validation-Sprint-57.54 + AD-medium-frontend-Baseline-Recalibration + Phase 58.x deferred portfolio)
+- [x] Q7 Design note extract: N/A SKIP (investigation/fix sprint NOT spike; same precedent as Sprint 57.10 / 57.47-52)
 
 ### 2.3 sprint-workflow.md updates
-- [ ] File MHist entry (1-line; newest-first; ≤100 char budget)
-- [ ] Matrix `medium-backend` 0.80 row updated to 6 data points (55.5=1.14 + 55.6=0.92 + 57.47=0.16 + 57.48=0.11 + 57.50=0.27 + 57.53=?; 6-pt mean + decision)
-- [ ] §Active Activation history entry inserted after Sprint 57.52 retro Q4 (Sprint 57.53 retro Q4 — `mechanical-greenfield` 0.50 tier-3 1st validation outcome)
-- [ ] §Active sub-class table tracking entry updated if applicable (no structural change expected for 1st validation per single-data-point caution)
-- [ ] §Active History trail line extended with Sprint 57.53 1st validation entry
-- [ ] (Conditional) §Common Risk Classes Risk Class E NEW row OR Risk Class C variant note IF Option B/C/D triggered codification
+- [x] File MHist 1-line entry (newest-first; L11 prepended)
+- [x] Matrix `medium-backend` 0.80 row updated to 6 data points (55.5=1.14 + 55.6=0.92 + 57.47=0.16 + 57.48=0.11 + 57.50=0.27 + 57.53=0.83; 6-pt mean 0.57; KEEP)
+- [x] §Active Activation history entry inserted after Sprint 57.52 retro Q4 (Sprint 57.53 retro Q4 — `mechanical-greenfield` 0.50 1st validation NOT GENERATED + `medium-backend` 0.80 6th data point 0.83)
+- [x] §Active History trail continues (no structural change to agent_factor table this sprint per single-data-point caution rule)
+- [x] (Conditional) §Common Risk Classes Risk Class E NEW row OR variant note: **N/A** — Option A applied; `testing.md` already documents the pattern
 
 ### 2.4 Memory + index
-- [ ] `memory/project_phase57_53_checkpointer_tenant_isolation_fix.md` subfile created (full retro highlights + calibration + 3 ADs status + Option chosen + carryover ADs)
-- [ ] MEMORY.md pointer entry inserted at TOP of §Project — Recent Sprints (~250-300 char quality pointer per Sprint Closeout Policy)
+- [x] `memory/project_phase57_53_checkpointer_tenant_isolation_fix.md` subfile created (full retro highlights + calibration + 1 AD CLOSED + 4 NEW carryover ADs + Sprint 57.12 precedent reuse + 25-sprint streak BROKEN this sprint)
+- [x] MEMORY.md pointer entry inserted at TOP of §Project — Recent Sprints (~300 char quality pointer per Sprint Closeout Policy)
 
 ### 2.5 CLAUDE.md
-- [ ] Current Sprint row updated (Sprint 57.52 → Sprint 57.53; navigator-only per Sprint Closeout Policy)
-- [ ] Last Updated footer updated (Sprint 57.53 closeout note; AD-Checkpointer CLOSED + 1st validation outcome)
+- [x] Current Sprint row updated (Sprint 57.52 → Sprint 57.53; navigator-only per Sprint Closeout Policy; AD-Checkpointer CLOSED + carryover summary + DUAL CLEAN milestone preserved)
+- [x] Last Updated footer updated (Sprint 57.53 closeout note; pytest baseline restored 1759+1fail → 1760+0fail + class 6th data point + sub-class 1st validation NOT GENERATED outcome)
 
 ### 2.6 next-phase-candidates.md (REFACTOR-001 single-source for open items)
-- [ ] Update `Updated` header (Sprint 57.53 closeout note; demoted Sprint 57.52 to "Previous Updated")
-- [ ] Append Sprint 57.53 carryover section at TOP (AD-Checkpointer CLOSED + 1st validation outcome + carryover ADs from Sprint 57.53 retro Q5)
-- [ ] Mark `AD-Checkpointer-Test-Tenant-Isolation-PreExisting-Fail-Investigation` as CLOSED in candidates list
-- [ ] Mark `AD-AgentFactor-Tier-3-Validation-Sprint-57.53` as CLOSED with outcome ratio
+- [x] `Updated` header updated to Sprint 57.53 closeout note; demoted Sprint 57.52 to "Previous Updated"
+- [x] NEW Sprint 57.53 Carryover section appended at TOP (1 AD CLOSED + 4 NEW carryovers + Highlights)
+- [x] Demoted previous Sprint 57.52 Carryover section (removed 🆕 marker)
+- [x] Marked `AD-Checkpointer-Test-Tenant-Isolation-PreExisting-Fail-Investigation` as CLOSED
 
 ### 2.7 PR + merge (post-commit; user action)
-- [ ] Push branch + open PR (awaiting user authorization)
-- [ ] Touch `.github/workflows/backend-ci.yml` header IF CI doesn't fire (paths-filter workaround; Sprint 57.51 + 57.52 PR #201/#202 precedent: backend test changes naturally fire CI)
+- [x] Push branch + open PR (awaiting user authorization at Day 2 commit closeout)
+- [ ] Touch `.github/workflows/backend-ci.yml` header IF CI doesn't fire (paths-filter workaround precedent; Sprint 57.51 PR #201 + Sprint 57.52 PR #202 didn't need it — backend test changes naturally fire CI)
 - [ ] 🚧 Wait CI green (4 required checks: Backend E2E + Frontend E2E + Lint+Type+Test PG16 + v2-lints)
 - [ ] 🚧 User merges (via GitHub UI when CI green)
 - [ ] 🚧 Local cleanup (main fast-forward + delete feature branch post-merge)
 
 ### 2.8 Final
-- [ ] Day 2 commit: `chore(sprint-57-53): Day 2 retro + closeout (medium-backend 0.80 6th data point + mechanical-greenfield 0.50 tier-3 1st validation outcome)`
+- [ ] Day 2 commit: `chore(sprint-57-53): Day 2 retro + closeout (medium-backend 0.80 6th data point 0.83 in band lower edge + mechanical-greenfield 0.50 1st validation NOT GENERATED parent-assistant-direct per Sprint 57.45 Path B precedent)`
 - [ ] All Day 0-2.6 checklist items `[x]`; Day 2.7 PR + merge 🚧 pending user authorization; Day 2.8 final commit pending
