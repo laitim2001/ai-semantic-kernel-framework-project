@@ -21,6 +21,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-05-26: Sprint 57.54 Track B — +HITLPolicyUpsert{Request,Response} write schemas
  *   - 2026-05-26: Sprint 57.50 Day 1 — +TenantIdentity (Identity fixture cleanup)
  *   - 2026-05-26: Sprint 57.49 Day 1 — +5 sub-resource list shapes (Members/HITL/FF/Quotas/RateLimits)
  *   - 2026-05-26: Sprint 57.46 — TenantSettingsResponse +5 SaaS settings fields
@@ -154,4 +155,20 @@ export interface TenantIdentity {
   scim_enabled: boolean;
   allowed_domains: string[];
   mfa_required: boolean;
+}
+
+/* === Sprint 57.54 Track B — HITLPolicies upsert write schemas === */
+
+export type RiskLevelName = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export interface HITLPolicyUpsertRequest {
+  auto_approve_max_risk: RiskLevelName;
+  require_approval_min_risk: RiskLevelName;
+  reviewer_groups_by_risk: Record<string, string[]>;
+  sla_seconds_by_risk: Record<string, number>;
+}
+
+export interface HITLPolicyUpsertResponse {
+  saved_policy: HITLPolicyUpsertRequest;
+  items: HITLPolicyItem[];
 }

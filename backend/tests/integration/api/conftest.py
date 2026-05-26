@@ -34,6 +34,7 @@ Description:
       handles dependent rows (memory_*, users, conversations, ...).
 
 Modification History (newest-first):
+    - 2026-05-26: Sprint 57.54 Track A — sweep HITL_PUT_% tenants (committed by store.put)
     - 2026-05-10: Sprint 57.12 — _clear_committed_test_tenants (AD-AdminTenant-Patch-Flake)
     - 2026-05-10: Sprint 57.11 — add dispose_engine() autouse (closes AD-Governance-RBAC-Flake)
     - 2026-05-06: Sprint 56.3 Day 3 — add reset_cost_ledger (US-3)
@@ -114,6 +115,8 @@ async def _clear_committed_test_tenants() -> None:
                 text("DELETE FROM tenants WHERE code = ANY(:codes)"),
                 {"codes": list(_COMMITTING_TEST_TENANT_CODES)},
             )
+            # Sprint 57.54 Track A — sweep uuid4-suffixed PUT /hitl-policies test tenants
+            await session.execute(text("DELETE FROM tenants WHERE code LIKE 'HITL_PUT_%'"))
             await session.execute(
                 text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update_delete")
             )
