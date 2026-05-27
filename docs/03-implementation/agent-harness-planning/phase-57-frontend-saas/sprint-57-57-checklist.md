@@ -54,7 +54,7 @@
 
 ### 0.9 Branch + Day 0 commit
 - [x] Branch `feature/sprint-57-57-rate-limits-write-endpoint` created from main `7daaa66f` post Sprint 57.56 merge ✅
-- [ ] Day 0 + Day 1 combined commit (per Sprint 57.46-57.56 small-scope precedent; HASH staged below)
+- [x] **Day 0 + Day 1 combined commit `08695112`** (per Sprint 57.46-57.56 small-scope precedent; 13 files +2022/-44)
 
 ---
 
@@ -140,75 +140,75 @@
 - [x] LLM SDK leak scan — **0** (covered by V2 lint #5 `check_llm_sdk_leak.py` in `run_all.py` GREEN sweep)
 - [x] `git status --short` confirms 8 modified + 4 untracked files (3 backend mod + 5 frontend mod + sprint artifacts + 2 NEW frontend files)
 
-### 1.4 Day 1 commit
-- [ ] Commit **HASH_TBD**: `feat(sprint-57-57): Day 0 + Day 1 — RateLimits WRITE side ship (PUT items endpoint + tenants.meta_data["rate_limits"] JSONB direct ORM write + manual append_audit + frontend RateLimits Card edit mode with variable-length list UX + useRateLimitsSave mutation hook; Usage quotas Card unchanged per Sprint 57.56 scope guard reverse; Phase 58.x portfolio item 4/4 FINAL CLOSURE; mechanical-greenfield-design-decisions 0.65 tier-4 2nd validation under tier-4 sub-class table; closes AD-AgentFactor-Tier-4-Validation-Sprint-57.57)`
-- [ ] Includes plan + checklist + progress (Day 0 三-prong + Day 1 backend + frontend) + 3 modified backend (admin/tenants.py + test_admin_tenant_rate_limits.py + conftest.py) + 5 modified frontend (types.ts + service + QuotasTab.tsx + 2 test files) + 2 NEW frontend (useRateLimitsSave.ts + .test.tsx) + 3 sprint artifacts (NEW execution dir)
+### 1.4 Day 1 commit ✅
+- [x] **Commit `08695112`**: `feat(sprint-57-57): Day 0 + Day 1 — RateLimits WRITE side ship (PUT items endpoint + tenants.meta_data["rate_limits"] JSONB direct ORM write + manual append_audit + frontend RateLimits Card edit mode with variable-length list UX + useRateLimitsSave mutation hook; Usage quotas Card unchanged per Sprint 57.56 scope guard reverse; Phase 58.x portfolio item 4/4 FINAL CLOSURE; mechanical-greenfield-design-decisions 0.65 tier-4 2nd validation under tier-4 sub-class table; closes AD-AgentFactor-Tier-4-Validation-Sprint-57.57)` — 13 files +2022/-44
+- [x] Includes plan + checklist + progress (Day 0 三-prong + Day 1 backend + frontend) + 3 modified backend (admin/tenants.py + test_admin_tenant_rate_limits.py + conftest.py) + 5 modified frontend (types.ts + service + QuotasTab.tsx + 2 test files) + 2 NEW frontend (useRateLimitsSave.ts + .test.tsx) + 3 sprint artifacts (NEW execution dir)
 
 ---
 
-## Day 2 — Closeout (parent assistant)
+## Day 2 — Closeout (parent assistant) ✅ COMPLETE
 
-### 2.1 Validation
-- [ ] Full backend pytest suite passing: 1804-1806 PASS + 4 skip + 0 fail (verified Day 1.3 sweep)
-- [ ] Full frontend Vitest suite passing: 653-658 PASS / 0 fail (verified Day 1.3 sweep)
-- [ ] 9/9 V2 lints preserved (HEX_OKLCH check_ap4_frontend_placeholder.py GREEN; baseline 47 unchanged)
-- [ ] All edited files have MHist 1-line entry (per AD-Lint-MHist-Verbosity ≤100 char budget); NEW useRateLimitsSave.ts has full header MHist section
+### 2.1 Validation ✅
+- [x] Full backend pytest suite passing: **1806 PASS + 4 skip + 0 fail** (verified Day 1.3 sweep)
+- [x] Full frontend Vitest suite passing: **663 PASS / 0 fail** / 122 test files (verified Day 1.3 sweep)
+- [x] 9/9 V2 lints preserved (1.04s; HEX_OKLCH check_ap4_frontend_placeholder.py GREEN; baseline 47 unchanged)
+- [x] All edited files have MHist 1-line entry (per AD-Lint-MHist-Verbosity ≤100 char budget); NEW useRateLimitsSave.ts has full header MHist section
 
-### 2.2 Retrospective
-- [ ] Written `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-57/retrospective.md`
-- [ ] Q1-Q7 6必答 format per Sprint 57.52-57.56 precedent (Q7 N/A SKIP — feature ship NOT spike; **7th consecutive Q7 SKIP**)
-- [ ] **Q2 (didn't go well + actuals)**: ratio actual/agent-adjusted with band assessment; any D-DAY1-N drift findings
-- [ ] **Q3 (lessons)**: generalizable lessons (incl. 3 PROMOTION codification value verification; AD-Phase58-Persistence-WriteSide-Pattern-Template 4-data-point base reached)
-- [ ] **Q4 (calibration)**: `mechanical-greenfield-design-decisions` 0.65 **2nd validation ratio + tier-4 SPLIT 2-data-point assessment** (IN BAND → fully validated; OOB → mixed signal single-data-point caution KEEP); `medium-backend` 0.80 10th data point + `medium-frontend` 0.65 7th data point
-- [ ] Q5 Top 3 carryover candidates documented (NEW Phase 58+ extensions for RateLimits + carryovers from Sprint 57.56) + **Phase 58.x portfolio 4/4 FINAL CLOSURE 🎉**
-- [ ] Q6 Solo-Dev Policy Validation noted (enforce_admins=true + review_count=0 + 5 required CI checks pending PR)
-- [ ] Q7 Design note extract: N/A SKIP (feature ship per precedent; 7th consecutive)
+### 2.2 Retrospective ✅
+- [x] Written `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-57/retrospective.md`
+- [x] Q1-Q7 6必答 format per Sprint 57.52-57.56 precedent (Q7 N/A SKIP — feature ship NOT spike; **7th consecutive Q7 SKIP**)
+- [x] **Q2 (didn't go well + actuals)**: ratio actual/agent-adjusted ~1.15 ✅ IN BAND top edge; D-DAY1-2 Karpathy §3 cleanup NOTABLE; D-DAY1-3 Vitest banner test fix-forward NOTABLE; D-DAY1-4 Vitest +18 over plan +5-8 acceptable per Sprint 57.56 precedent; Day 2 closeout ~30-35 min including 3 PROMOTION docs edits
+- [x] **Q3 (lessons)**: 5 generalizable lessons documented (1. 4-sprint WRITE-side wave validates Phase 58+ persistence pattern template 4 architecture data points / 2. Day 0 Prong 2 grep template promotion-criteria reached for both storage + canonical service rules CODIFIED / 3. MANDATORY plan-time Agent-delegated field codification reached 5-data-point evidence CODIFIED / 4. tier-4 SPLIT FULLY VALIDATED — sub-class refinement preferred over flat tighten/lift / 5. Variable-length-list UX is `-design-decisions` 0.65 class NOT `-port-style` 0.45)
+- [x] **Q4 (calibration)**: `mechanical-greenfield-design-decisions` 0.65 **2nd validation ratio ~1.15 ✅ IN BAND top edge [0.85, 1.20] → tier-4 SPLIT FULLY VALIDATED 2 consec IN band (57.56=1.02 + 57.57=1.15)**; KEEP 0.65 baseline; rollback rule baseline established; `medium-backend` 0.80 10th data point ~0.72 KEEP per `When to adjust` 3-sprint window rule; `medium-frontend` 0.65 7th data point ~0.55 5th consecutive < 0.7 KEEP per confound-resolved-at-sub-class-layer discipline
+- [x] Q5 Top 3 carryover candidates documented (AD-AgentFactor-Tier-4-Validation-Sprint-57.58 NEW CONDITIONAL + 5 NEW Phase 58+ RateLimits extensions + carryovers from Sprint 57.56 re-listed) + **Phase 58.x portfolio 4/4 FINAL CLOSURE 🎉**
+- [x] Q6 Solo-Dev Policy Validation noted (enforce_admins=true + review_count=0 + 5 required CI checks pending PR #207)
+- [x] Q7 Design note extract: N/A SKIP (feature ship per precedent; 7th consecutive)
 
-### 2.3 sprint-workflow.md updates (matrix + MHist)
-- [ ] File MHist entry prepended (Sprint 57.57 retro highlight; mirror existing Sprint 57.56 entry length per convention)
-- [ ] Matrix `medium-backend` 0.80 row updated to 10 data points
-- [ ] Matrix `medium-frontend` 0.65 row updated to 7 data points
-- [ ] §Active Activation history entry for Sprint 57.57 (tier-4 `-design-decisions` 0.65 2nd validation outcome) — OR DEFERRED to Sprint 57.58 closeout per Sprint 57.56 precedent if churn-reduction preferred
-- [ ] Sub-class table tracking: tier-4 SPLIT 2nd validation outcome under `mechanical-greenfield-design-decisions` 0.65 captured in MHist + matrix Q4 cell
+### 2.3 sprint-workflow.md updates (matrix + MHist) ✅
+- [x] File MHist entry prepended (Sprint 57.57 retro highlight; mirror existing Sprint 57.56 entry length per convention)
+- [x] Matrix `medium-backend` 0.80 row updated to 10 data points (57.57≈0.72; 10-pt mean 0.66; last-3 mean ~0.72 KEEP per 3-sprint window rule)
+- [x] Matrix `medium-frontend` 0.65 row updated to 7 data points (57.57≈0.55; 7-pt mean ~0.54; last-3 mean 0.53; 5 consecutive < 0.7 lower-trigger MET BUT KEEP per confound-resolved-at-sub-class-layer discipline)
+- [x] §Active Activation history entry for Sprint 57.57 + 57.55 + 57.56 (3-entry combined backfill clearing DEFERRED backlog from Sprint 57.55+57.56 closeouts; tier-4 2nd validation outcome captured at top + Sprint 57.55+57.56 historical entries for archive completeness)
+- [x] Sub-class table tracking: tier-4 SPLIT 2nd validation outcome under `mechanical-greenfield-design-decisions` 0.65 = IN BAND top edge → 2 consec IN band FULLY VALIDATED captured in MHist + matrix Q4 cell
 
-### 2.4 sprint-workflow.md PROMOTIONS (Day 2 docs track per US-3 bundle decision)
-- [ ] **PROMOTION 1**: §Workload Calibration §Four-segment form when agent_factor applies — MANDATORY explicit "Agent-delegated: yes / no / partial" field codified at plan-time
-- [ ] **PROMOTION 1 sub**: §Tracking discipline updated to "explicit `agent-delegated: yes / no / partial` tag at plan-time (NOT just retrospective Q2)"
-- [ ] **PROMOTION 2**: §Step 2.5 Prong 2 Drift Class table — NEW row **Claimed-but-missing-storage-path** with grep template + ROI evidence (Sprint 57.55 D-DAY0-B + 57.56 D-DAY0-A + 57.57 inverse-validation)
-- [ ] **PROMOTION 3**: §Step 2.5 Prong 2 Drift Class table — NEW row **Claimed-but-missing-canonical-service** with grep template + ROI evidence (Sprint 57.55 D-DAY0-T positive direction + 57.56 D-DAY0-D inverse direction + 57.57 inverse-validation)
-- [ ] sprint-workflow.md File MHist 1-line entry for Sprint 57.57 PROMOTION bundle (≤100 chars per AD-Lint-MHist-Verbosity)
+### 2.4 sprint-workflow.md PROMOTIONS (Day 2 docs track per US-3 bundle decision) ✅
+- [x] **PROMOTION 1**: §Workload Calibration §Four-segment form when agent_factor applies — MANDATORY explicit "Agent-delegated: yes / no / partial / TBD-Day-1-decision" field codified at plan-time
+- [x] **PROMOTION 1 sub**: §Tracking discipline updated to "explicit `agent-delegated: yes / no / partial` tag at plan-time (NOT just retrospective Q2)" — cross-ref added
+- [x] **PROMOTION 2**: §Step 2.5 Prong 2 Drift Class table — NEW row **Claimed-but-missing-storage-path** with grep template + ROI evidence (Sprint 57.55 D-DAY0-B + 57.56 D-DAY0-A + 57.57 GREEN inverse-validation)
+- [x] **PROMOTION 3**: §Step 2.5 Prong 2 Drift Class table — NEW row **Claimed-but-missing-canonical-service** with grep template + ROI evidence (Sprint 57.55 D-DAY0-T positive direction + 57.56 D-DAY0-D inverse direction + 57.57 inverse continued)
+- [x] sprint-workflow.md File MHist 1-line entry for Sprint 57.57 PROMOTION bundle (captured in MHist top entry per AD-Lint-MHist-Verbosity)
 
-### 2.5 Memory + index
-- [ ] `memory/project_phase57_57_rate_limits_write_endpoint.md` subfile created (full retro highlights + calibration + Sprint 57.56 carryover CLOSED + Phase 58.x portfolio progress 3/4 → **4/4 FINAL CLOSURE 🎉** + Sprint 57.58+ carryover ADs + agent-delegated yes confirmation + `[[project-phase57-56-quotas-write-endpoint]]` link)
-- [ ] MEMORY.md pointer entry inserted at TOP of §Project — Recent Sprints (per Sprint Closeout Policy quality pointer principle; ~700 char with keywords block per existing per-sprint entry convention)
+### 2.5 Memory + index ✅
+- [x] `memory/project_phase57_57_rate_limits_write_endpoint.md` subfile created (full retro highlights + calibration + Sprint 57.56 carryover CLOSED + Phase 58.x portfolio progress 3/4 → **4/4 FINAL CLOSURE 🎉** + Sprint 57.58+ carryover ADs + agent-delegated yes confirmation + `[[project-phase57-56-quotas-write-endpoint]]` + `[[project-phase57-55-feature-flags-write-endpoint]]` + `[[project-phase57-54-hitl-policies-write-endpoint]]` links)
+- [x] MEMORY.md pointer entry inserted at TOP of §Project — Recent Sprints (per Sprint Closeout Policy quality pointer principle; ~700 char with keywords block per existing per-sprint entry convention)
 
-### 2.6 CLAUDE.md
-- [ ] Current Sprint row updated (Sprint 57.56 → Sprint 57.57; navigator-only per Sprint Closeout Policy; AD-AgentFactor-Tier-4-Validation-Sprint-57.57 CLOSED + tier-4 2nd validation outcome + Phase 58.x portfolio progress 4/4 FINAL CLOSURE 🎉 + DUAL CLEAN 13 consecutive sprints)
-- [ ] Last Updated footer updated (Sprint 57.57 closeout note; 1 line per policy; commit hash placeholder)
+### 2.6 CLAUDE.md ✅
+- [x] Current Sprint row updated (Sprint 57.56 → Sprint 57.57; navigator-only per Sprint Closeout Policy; AD-AgentFactor-Tier-4-Validation-Sprint-57.57 CLOSED + 5-ADs-CLOSED simultaneously + tier-4 SPLIT FULLY VALIDATED + Phase 58.x portfolio progress 4/4 FINAL CLOSURE 🎉 + DUAL CLEAN 13 consecutive sprints)
+- [x] Last Updated footer updated (Sprint 57.57 closeout note; 1 line per policy; commit `08695112` Day 0+1)
 
-### 2.7 next-phase-candidates.md
-- [ ] `Updated` header updated to Sprint 57.57 closeout note; demoted Sprint 57.56 to "Previous Updated"
-- [ ] NEW Sprint 57.57 Carryover section appended at TOP (1 AD CLOSED via ship + 3 ADs CLOSED via PROMOTION + 5-6 NEW Phase 58+ extensions for RateLimits + carryovers from Sprint 57.56 re-listed if still active + Phase 58.x portfolio 4/4 FINAL CLOSURE 🎉 + class baseline tracking + DUAL CLEAN 13 consecutive sprints preserved)
-- [ ] Demoted previous Sprint 57.56 Carryover section (removed 🆕 marker; section header changed to "Sprint 57.56 Carryover")
-- [ ] Marked `AD-AgentFactor-Tier-4-Validation-Sprint-57.57` as CLOSED via 2nd validation generated under tier-4 sub-class table
-- [ ] Marked 3 PROMOTION ADs as CLOSED via codification: `AD-Plan-Workload-AgentDelegation-Explicit-Field-Codification` + `AD-Day0-Prong2-Phase58-WriteSide-Resource-Storage-Grep` + `AD-Day0-Prong2-CanonicalService-Grep`
-- [ ] Marked `AD-TenantSettings-RateLimits-Write-Endpoint` as CLOSED via Sprint 57.57 ship (Phase 58.x portfolio FINAL 4/4)
-- [ ] Phase 58.x portfolio progress: HITLPolicies + FeatureFlags + Quotas + **RateLimits ALL CLOSED 🎉**; wave complete; Phase 58+ moves to deeper extensions
+### 2.7 next-phase-candidates.md ✅
+- [x] `Updated` header updated to Sprint 57.57 closeout note; demoted Sprint 57.56 to "Previous Updated"
+- [x] NEW Sprint 57.57 Carryover section appended at TOP (5 ADs CLOSED + 5 NEW Phase 58+ extensions for RateLimits + carryovers from Sprint 57.56 re-listed + Phase 58.x portfolio 4/4 FINAL CLOSURE 🎉 + class baseline tracking + DUAL CLEAN 13 consecutive sprints preserved)
+- [x] Demoted previous Sprint 57.56 Carryover section (removed 🆕 marker; section header changed to "Sprint 57.56 Carryover")
+- [x] Marked `AD-AgentFactor-Tier-4-Validation-Sprint-57.57` as CLOSED via 2nd validation generated under tier-4 sub-class table
+- [x] Marked 3 PROMOTION ADs as CLOSED via codification: `AD-Plan-Workload-AgentDelegation-Explicit-Field-Codification` + `AD-Day0-Prong2-Phase58-WriteSide-Resource-Storage-Grep` + `AD-Day0-Prong2-CanonicalService-Grep`
+- [x] Marked `AD-TenantSettings-RateLimits-Write-Endpoint` as CLOSED via Sprint 57.57 ship (Phase 58.x portfolio FINAL 4/4)
+- [x] Phase 58.x portfolio progress: HITLPolicies + FeatureFlags + Quotas + **RateLimits ALL CLOSED 🎉**; wave complete; Phase 58+ moves to deeper extensions
 
-### 2.8 CHANGE-027
-- [ ] `claudedocs/4-changes/feature-changes/CHANGE-027-rate-limits-write-endpoint.md` created per CLAUDE.md `4-changes/` convention
-- [ ] Format: Problem (read-only Sprint 57.48 Track D state) / Root cause (Phase 58+ deferred + scope guard reverse from Sprint 57.56) / Solution (3 backend EDIT only — no NEW source files + 7 frontend incl. 2 NEW + 3 PROMOTION docs edits) / Verification (1804-1806 / 653-658 + 9/9 V2 lints + DUAL CLEAN 13 consec) / Impact (~14 files; tier-4 2nd validation outcome + calibration delta + Phase 58.x portfolio 4/4 FINAL CLOSURE) / Lessons captured (3 PROMOTIONS codified)
+### 2.8 CHANGE-027 ✅
+- [x] `claudedocs/4-changes/feature-changes/CHANGE-027-rate-limits-write-endpoint.md` created per CLAUDE.md `4-changes/` convention
+- [x] Format: Problem (read-only Sprint 57.48 Track D state) / Root cause (Phase 58+ deferred + scope guard reverse from Sprint 57.56 + D-DAY0-A inverse-validation) / Solution (3 backend EDIT only — no NEW source files + 7 frontend incl. 2 NEW + 6 sprint-workflow.md PROMOTION edits) / Verification (1806 / 663 + 9/9 V2 lints + DUAL CLEAN 13 consec) / Impact (14 files +2022/-44 + tier-4 SPLIT FULLY VALIDATED + Phase 58.x portfolio 4/4 FINAL CLOSURE 🎉) / Lessons captured (5 lessons + 3 PROMOTIONS codified zero codification debt)
 
-### 2.9 PR + merge (post-commit; user action)
-- [ ] Push branch `feature/sprint-57-57-rate-limits-write-endpoint` + open PR #207 (user authorize)
+### 2.9 PR + merge (post-commit; user action) 🚧
+- [ ] Day 2 commit + push branch `feature/sprint-57-57-rate-limits-write-endpoint` + open PR #207 (user authorize merge)
 - [ ] Touch `.github/workflows/backend-ci.yml` header IF CI doesn't fire (paths-filter workaround; Sprint 57.57 has backend test changes so should fire naturally — NOT NEEDED)
 - [ ] 🚧 Wait CI green (5 required checks: Backend E2E + Frontend E2E + Lint+Type+Test PG16 + v2-lints + chromatic)
 - [ ] 🚧 User merges (via GitHub UI when CI green)
 - [ ] 🚧 Local cleanup (main fast-forward + delete feature branch post-merge + delete remote branch if auto-delete not configured)
 
 ### 2.10 Final
-- [ ] Day 2 commit (HASH staged for next bash call): `chore(sprint-57-57): Day 2 retro + closeout (mechanical-greenfield-design-decisions 0.65 tier-4 2nd validation ratio + outcome; medium-backend 0.80 10th data point + medium-frontend 0.65 7th data point KEEP per Sprint 57.56 retro Q4 discipline; Phase 58.x RateLimits WRITE-side ship 4/4 FINAL CLOSURE; DUAL CLEAN 22/22 PARITY preserved 13 consecutive sprints 57.45-57.57 strongest streak Phase 57+; 20th+21st consecutive code-implementer agent chain extended; 3 PROMOTION ADs codified into sprint-workflow.md)`
-- [ ] All Day 0-2.8 checklist items `[x]`; Day 2.9 PR + merge 🚧 pending user authorization; Day 2.10 commit HASH pending bash call
+- [ ] Day 2 commit (HASH staged for next bash call): `chore(sprint-57-57): Day 2 retro + closeout (mechanical-greenfield-design-decisions 0.65 tier-4 2nd validation ratio ~1.15 IN BAND top edge → tier-4 SPLIT FULLY VALIDATED 2 consec IN band; medium-backend 0.80 10th + medium-frontend 0.65 7th data points KEEP per Sprint 57.56 retro Q4 discipline; Phase 58.x RateLimits WRITE-side ship 4/4 FINAL CLOSURE 🎉 wave complete; DUAL CLEAN 22/22 PARITY preserved 13 consecutive sprints 57.45-57.57 strongest streak Phase 57+; 20th+21st consecutive code-implementer agent chain extended; 3 PROMOTION ADs codified into sprint-workflow.md zero codification debt)`
+- [x] All Day 0-2.8 checklist items `[x]`; Day 2.9 PR + merge 🚧 pending user authorization; Day 2.10 commit HASH pending bash call
 
 ---
 

@@ -182,3 +182,47 @@ User confirmed 4 scope decisions at Day 0 BEFORE plan v1 draft (per Sprint 57.55
 - Day 1 progress + checklist updates (parent assistant): ~10 min
 - **Day 1 total**: ~95-100 min (consistent with Sprint 57.56 ~90-100 min)
 
+---
+
+## Day 2 — Closeout (2026-05-27; parent assistant) ✅
+
+Day 2 closeout work captured fully in [`retrospective.md`](./retrospective.md) Q1-Q7 6必答 format. Summary:
+
+- **Retrospective Q1-Q7 written** (Q7 N/A SKIP 7th consecutive feature ship NOT spike per Sprint 57.52-57.56 precedent)
+- **sprint-workflow.md 6 edits** ✅:
+  - MHist prepend (Sprint 57.57 retro 1-line entry)
+  - Matrix `medium-backend` 0.80 row → 10 data points
+  - Matrix `medium-frontend` 0.65 row → 7 data points
+  - §Active Activation history block 3 entries appended (Sprint 57.55 + 57.56 + 57.57 — backfilled DEFERRED backlog from prior closeouts)
+  - **PROMOTION 1**: §Workload Calibration §Four-segment form MANDATORY `Agent-delegated:` plan-time field codification
+  - **PROMOTION 2 + 3**: §Step 2.5 Prong 2 Drift Class table 2 NEW rows (Claimed-but-missing-storage-path + Claimed-but-missing-canonical-service)
+- **Memory subfile** `project_phase57_57_rate_limits_write_endpoint.md` ✅
+- **MEMORY.md pointer** prepended at TOP of §Project — Recent Sprints (~700 char + keywords block) ✅
+- **CLAUDE.md** Current Sprint row + Last Updated footer updated (navigator-only per Sprint Closeout Policy) ✅
+- **next-phase-candidates.md** Updated header + NEW Sprint 57.57 Carryover section + Sprint 57.56 demoted ✅
+- **CHANGE-027** feature change record created ✅
+- **Checklist Day 2** items marked `[x]` ✅
+- **Day 2 wall-clock**: ~30-35 min (heavier than Sprint 57.56 by ~5-10 min due to 3 PROMOTION docs edits + retro Q3 5-lesson capture)
+
+### Sprint-aggregate totals
+
+| Metric | Value |
+|--------|-------|
+| Pytest delta | +10 (1796→1806; exact target hit) |
+| Vitest delta | +18 (645→663; over plan +5-8 by 10-13 acceptable per Sprint 57.56 +15 precedent) |
+| mypy --strict | 0 errors / 310 source files |
+| 9 V2 lints | 9/9 GREEN in 1.04s |
+| Vite build | 3.56s clean / tsc strict 0 errors |
+| HEX_OKLCH baseline | 47 unchanged (13 consecutive sprints 57.45-57.57 DUAL CLEAN — strongest streak Phase 57+) |
+| Day 0+1 commit | `08695112` (13 files +2022/-44) |
+| Total wall-clock | ~125-130 min (~2.08-2.17 hr) |
+| Ratio actual/agent-adjusted | ~1.15 ✅ IN BAND top edge [0.85, 1.20] |
+| Tier-4 SPLIT outcome | **FULLY VALIDATED** with 2 consec IN band (57.56=1.02 + 57.57=1.15) |
+| Phase 58.x portfolio | **4/4 FINAL CLOSURE 🎉** (HITLPolicies + FeatureFlags + Quotas + RateLimits all closed) |
+| ADs CLOSED simultaneously | 5 (1 tier-4 validation + 1 portfolio FINAL + 3 PROMOTIONS) |
+| NEW carryover ADs | 6 (5 Phase 58+ RateLimits extensions + 1 tier-4 Sprint 57.58 conditional) |
+
+### Day 2 commit pending
+
+🚧 Day 2 closeout commit staged for next bash call. Commit message captures tier-4 SPLIT FULLY VALIDATED + Phase 58.x portfolio FINAL CLOSURE 🎉 + DUAL CLEAN 13 consecutive + 20th+21st code-implementer chain + 3 PROMOTION docs track codified zero codification debt.
+
