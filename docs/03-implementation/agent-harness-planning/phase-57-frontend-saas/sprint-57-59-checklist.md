@@ -86,38 +86,37 @@ Plan: [`sprint-57-59-plan.md`](./sprint-57-59-plan.md)
 - [x] **AP-4 closed**: `rate_limits` usage table now written (`pg_insert`) + queried (recovery/usage GET) ✅
 
 ### 1.5 Day 1 commit
-- [ ] **Commit all Day 1 work**
-  - Message: `feat(rate-limits, sprint-57-59): two-table split — rate_limit_configs + activate rate_limits usage table (close AP-4 Potemkin)`
+- [x] **Commit all Day 1 work** ✅ `195072ef` (17 files +1898/-76)
 
 ---
 
 ## Day 2 — Closeout (parent assistant)
 
 ### 2.1 Final Validation Sweep
-- [ ] **Re-run Day 1.4 checks** sanity
-- [ ] **mockup-fidelity DUAL CLEAN 22/22 PARITY 15 consecutive 57.45-57.59**
+- [x] **Re-run Day 1.4 checks** sanity ✅ (Day 2 = docs-only; no code change since `195072ef`; Day 1.4 sweep authoritative)
+- [x] **mockup-fidelity DUAL CLEAN 22/22 PARITY 15 consecutive 57.45-57.59** ✅ (0 frontend touched)
 
 ### 2.2 Retrospective (Q1-Q6; Q7 N/A SKIP — refactor/migration NOT spike)
-- [ ] **NEW** `agent-harness-execution/phase-57/sprint-57-59/retrospective.md` (Q1-Q6 + calibration ratio + AP-4 closure note)
+- [x] **NEW** `retrospective.md` ✅ (Q1-Q6 + calibration 2nd validation rollback + AP-4 closure)
 
 ### 2.3 sprint-workflow.md updates
-- [ ] MHist 1-line + `mixed-multidomain-bundle` 0.65 SCOPE 3rd data point + `mixed-multidomain-bundle-mechanical` 0.65 tier-3 2nd validation (§Active block)
+- [x] MHist 1-line + `mixed-multidomain-bundle` 0.65 SCOPE 3rd data point + §Active block tighten 0.65→0.45 ✅
 
 ### 2.4 PROMOTIONS (SKIP-eligible)
-- [ ] Confirm 0 PROMOTION-CANDIDATE reach 3-data-point threshold (or codify `AD-Day0-Prong2-Nested-Shape-Read` if 57.59 = 2nd data point)
+- [x] Confirm 0 PROMOTION reach 3-data-point threshold ✅ SKIPPED (`AD-Day0-Prong2-Nested-Shape-Read` Sprint 57.58 1st + 57.59 reinforces → combine with NEW `AD-Day0-Prong3-Physical-Column-Read`; codify when 2 data points each — not yet)
 
 ### 2.5 Memory + index
-- [ ] **NEW** `memory/project_phase57_59_rate_limits_potemkin_migration.md` (user-home `.claude/projects/.../memory/`)
-- [ ] **EDIT** `memory/MEMORY.md` — quality pointer ~250-300 char
+- [x] **NEW** `memory/project_phase57_59_rate_limits_potemkin_migration.md` (user-home) ✅
+- [x] **EDIT** `memory/MEMORY.md` — quality pointer ✅
 
 ### 2.6 CLAUDE.md (navigator-only)
-- [ ] Current Sprint row + Last Updated footer
+- [x] Current Sprint row + Last Updated footer ✅
 
 ### 2.7 next-phase-candidates.md
-- [ ] Sprint 57.59 Carryover section: `AD-RateLimits-Potemkin-Migration-Phase58` CLOSED + AP-4 closed + NEW `AD-RateLimits-MetaData-Cleanup-Phase58`
+- [x] Sprint 57.59 Carryover section: Potemkin-Migration CLOSED + DedicatedTable CLOSED (folded) + 3 NEW carryovers ✅
 
 ### 2.8 REFACTOR-003 record
-- [ ] **NEW** `claudedocs/4-changes/refactoring/REFACTOR-003-sprint-57-59-rate-limits-potemkin-migration.md`
+- [x] **NEW** `REFACTOR-003-sprint-57-59-rate-limits-potemkin-migration.md` ✅
 
 ### 2.9 PR + merge (user action)
 - [ ] Push branch + open PR (title: `feat(rate-limits, sprint-57-59): RateLimits two-table split — close AP-4 Potemkin (Phase 58.x deeper extensions 2/5)`)
