@@ -105,37 +105,37 @@ Plan: [`sprint-57-62-plan.md`](./sprint-57-62-plan.md)
 ## Day 2 — Closeout (parent assistant)
 
 ### 2.1 Final Validation Sweep
-- [ ] **Re-run Day 1.4 checks** sanity
-- [ ] **mockup-fidelity DUAL CLEAN 22/22 PARITY 18 consecutive 57.45-57.62** (frontend alerts Card 0 new oklch)
+- [x] **Re-run Day 1.4 checks** sanity
+- [x] **mockup-fidelity DUAL CLEAN 22/22 PARITY 18 consecutive 57.45-57.62** (frontend alerts Card 0 new oklch)
 
 ### 2.2 Retrospective (Q1-Q6; Q7 N/A SKIP — feature ship NOT spike)
-- [ ] **NEW** `retrospective.md` (Q1-Q6 + calibration `mechanical-greenfield-design-decisions` 0.65 4th validation pair-shape + `medium-backend` 0.80 13th + AD closure)
+- [x] **NEW** `retrospective.md` (Q1-Q6 + calibration `mechanical-greenfield-design-decisions` 0.65 4th validation pair-shape + `medium-backend` 0.80 13th + AD closure)
 
 ### 2.3 sprint-workflow.md updates
-- [ ] MHist 1-line + `medium-backend` 0.80 13th data point + `mechanical-greenfield-design-decisions` 0.65 4th validation (pair shape) data point
+- [x] MHist 1-line + `medium-backend` 0.80 13th data point + `mechanical-greenfield-design-decisions` 0.65 4th validation (pair shape) data point
 
 ### 2.4 PROMOTIONS (check thresholds)
-- [ ] Confirm whether any AD reaches codify threshold (likely none new)
+- [x] Confirm whether any AD reaches codify threshold (likely none new)
 
 ### 2.5 Memory + index
-- [ ] **NEW** `memory/project_phase57_62_rate_limits_alerting.md` (user-home)
-- [ ] **EDIT** `memory/MEMORY.md` — quality pointer
+- [x] **NEW** `memory/project_phase57_62_rate_limits_alerting.md` (user-home)
+- [x] **EDIT** `memory/MEMORY.md` — quality pointer
 
 ### 2.6 CLAUDE.md (navigator-only)
-- [ ] Current Sprint row + Last Updated footer
+- [x] Current Sprint row + Last Updated footer
 
 ### 2.7 next-phase-candidates.md
-- [ ] Sprint 57.62 Carryover section: Alerting CLOSED + carryovers (Webhook / Ack-Mute / Quotas-Alerting template / 57.61 hygiene / BackendOnly-Variant-Watch continues)
+- [x] Sprint 57.62 Carryover section: Alerting CLOSED + carryovers (Webhook / Ack-Mute / Quotas-Alerting template / 57.61 hygiene / BackendOnly-Variant-Watch continues)
 
 ### 2.8 CHANGE-030 record
-- [ ] **NEW** `CHANGE-030-sprint-57-62-rate-limits-alerting.md` (feature — NEW alerting + table)
+- [x] **NEW** `CHANGE-030-sprint-57-62-rate-limits-alerting.md` (feature — NEW alerting + table)
 
 ### 2.9 PR + merge (user action)
 - [ ] Push branch + open PR (title: `feat(rate-limits, sprint-57-62): 80%-threshold usage alerting — persisted log + GET — close AD-RateLimits-Alerting-Phase58`)
 - [ ] Wait CI (5 required green) → user merge → branch cleanup
 
 ### 2.10 Final closeout
-- [ ] Day 2 commit (all docs)
+- [x] Day 2 commit (all docs)
 - [ ] Verify working tree clean on main after merge
 - [ ] Mark Sprint 57.62 CLOSED in next-phase-candidates.md
 

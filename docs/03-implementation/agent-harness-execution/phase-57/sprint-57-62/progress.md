@@ -72,6 +72,21 @@
 - Alembic **`0021` live down→up clean** (0021→0020→0021, both exit 0; + `test_rate_limit_alerts_migration` 2 tests)
 
 ### Day 1 commit
-- (SHA recorded at Day 2 closeout per 57.61 self-reference-avoidance lesson)
+- Day 1 commit `95c65e09` (17 files +1614/-26: 9 backend + 6 frontend + 2 docs)
 
-## Day 2 — Closeout (pending)
+## Day 2 — Closeout (2026-05-29)
+
+All closeout docs written; **push/PR awaiting user gate** (§2.9).
+
+- **§2.1 Final sweep**: Day 1.4 authoritative sweep is the source of truth (Day 2 touched docs only, 0 source change → byte-identical). DUAL CLEAN 22/22 PARITY **18 consecutive 57.45-57.62** (oklch delta 0, 0 frontend src changed in Day 2).
+- **§2.2 retrospective.md**: Q1-Q6 + Q7 N/A SKIP (11th consecutive); calibration `mechanical-greenfield-design-decisions` 0.65 4th validation pair-shape ~0.77 + `medium-backend` 0.80 13th ~0.50.
+- **§2.3 sprint-workflow.md**: MHist 57.62 entry + `medium-backend` 13th data-point row (last-3 3-consec confound-resolved KEEP) + `mechanical-greenfield-design-decisions` agent_factor 4th-validation note (R6 weakens).
+- **§2.4 PROMOTIONS**: none reach codify threshold (the 5 NEW carryover ADs are single-data-point).
+- **§2.5 memory**: NEW `project_phase57_62_rate_limits_alerting.md` (user-home) + MEMORY.md quality pointer prepended.
+- **§2.6 CLAUDE.md**: Current Sprint cell + Last Updated footer → 57.62.
+- **§2.7 next-phase-candidates.md**: NEW Sprint 57.62 Carryover section + header demote; 8 carryovers (5 NEW + 3 continuing).
+- **§2.8 CHANGE-030**: feature change record.
+- **§2.9 PR + merge**: ⏳ awaiting user authorization (push is an outward action).
+
+### Day 2 commit
+- (closeout docs; SHA in git log — self-reference-avoidance per 57.61 lesson)
