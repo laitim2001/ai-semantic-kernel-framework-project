@@ -63,6 +63,31 @@
 - 0 frontend touched → Vitest 675 unaffected; HEX_OKLCH baseline 48; DUAL CLEAN 22/22 PARITY 17 consec
 
 ### Day 1 commit
-- (pending — parent commits all Day 1 work after this entry)
+- ✅ `093a161d` (6 files: 2 source + 2 NEW test + progress + checklist)
 
-## Day 2 — Closeout (pending)
+## Day 2 — Closeout (2026-05-29)
+
+### 2.1 Final validation sweep (parent sanity re-run)
+- mypy `src/ --strict` **0 / 317 files** (CI parity) · **9/9 V2 lints** green (1.13s)
+- `git diff --name-only main...HEAD -- backend/src/` = 2 files (`api/v1/admin/tenants.py` + `platform_layer/tenant/rate_limit_config_store.py`); `git diff main...HEAD -- frontend/` = empty → **0 frontend touched**
+- Source byte-identical to Day 1 commit `093a161d` (only docs modified Day 2) → full **pytest 1887** Day-1.3 sweep remains authoritative; DUAL CLEAN 22/22 PARITY **17 consecutive 57.45-57.61**
+
+### 2.2-2.8 Closeout docs
+- `retrospective.md` Q1-Q6 (Q7 N/A SKIP 10th consecutive) + calibration
+- `sprint-workflow.md` — MHist 57.61 entry + `medium-backend` 0.80 12th data point + `-design-decisions` 0.65 3rd-validation (1st backend-only) appended
+- §2.4 PROMOTIONS: **none reach codify threshold** (2 NEW ADs single-data-point)
+- `memory/project_phase57_61_rate_limits_syntax_validation.md` (user-home) + `memory/MEMORY.md` quality pointer
+- `CLAUDE.md` Current Sprint row + footer → 57.61
+- `next-phase-candidates.md` 57.61 carryover section + header
+- `CHANGE-029-sprint-57-61-rate-limits-syntax-validation.md` (feature)
+
+### Calibration (retro Q4)
+- Bottom-up ~5.25 hr → class-calibrated ~4.2 hr (×0.80) → agent-adjusted ~2.7 hr (×0.65). Actual ~2.0 hr → **ratio actual/agent-adjusted ~0.74 BELOW band [0.85,1.20] by 0.11**.
+- `mechanical-greenfield-design-decisions` 0.65 3rd validation, **1st BACKEND-ONLY** — single BELOW point vs 2 prior IN-band (57.56=1.02 + 57.57=1.15, backend+frontend pairs) → KEEP 0.65 single-data-point caution. R6 materialized; counterfactual `-port-style` 0.45 → ~1.06 IN band. NEW `AD-AgentFactor-DesignDecisions-BackendOnly-Variant-Watch`.
+- `medium-backend` 0.80 12th data point ~0.48 confound-resolved KEEP (last-3 2/3 < 0.7 NOT 3-consec).
+
+### Day 2 commit
+- (pending) Day 2 closeout docs commit
+
+### 2.9 PR + merge — pending user confirmation (outward action gate)
+### 2.10 Final closeout — pending post-merge

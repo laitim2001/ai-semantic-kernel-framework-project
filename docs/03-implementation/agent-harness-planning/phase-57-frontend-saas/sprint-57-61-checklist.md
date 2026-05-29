@@ -75,37 +75,37 @@ Plan: [`sprint-57-61-plan.md`](./sprint-57-61-plan.md)
 - [x] **LLM SDK leak 0** + black/isort/flake8 clean
 
 ### 1.4 Day 1 commit
-- [ ] **Commit all Day 1 work**
+- [x] **Commit all Day 1 work** ✅ `093a161d`
 
 ---
 
 ## Day 2 — Closeout (parent assistant)
 
 ### 2.1 Final Validation Sweep
-- [ ] **Re-run Day 1.3 checks** sanity
-- [ ] **mockup-fidelity DUAL CLEAN 22/22 PARITY 17 consecutive 57.45-57.61** (0 frontend touched)
+- [x] **Re-run Day 1.3 checks** sanity ✅ (mypy `src/ --strict` 0/317 + 9/9 V2 lints + git diff confirms only 2 backend src files vs main, 0 frontend; full pytest 1887 Day-1.3 authoritative, source byte-identical to `093a161d`)
+- [x] **mockup-fidelity DUAL CLEAN 22/22 PARITY 17 consecutive 57.45-57.61** (0 frontend touched)
 
 ### 2.2 Retrospective (Q1-Q6; Q7 N/A SKIP — feature ship NOT spike)
-- [ ] **NEW** `retrospective.md` (Q1-Q6 + calibration `mechanical-greenfield-design-decisions` 0.65 3rd validation 1st backend-only + AD closure)
+- [x] **NEW** `retrospective.md` (Q1-Q6 + calibration `mechanical-greenfield-design-decisions` 0.65 3rd validation 1st backend-only ~0.74 BELOW band KEEP + AD closure; Q7 N/A SKIP 10th consecutive)
 
 ### 2.3 sprint-workflow.md updates
-- [ ] MHist 1-line + `medium-backend` 0.80 12th data point + `mechanical-greenfield-design-decisions` 0.65 3rd validation (1st backend-only) data point
+- [x] MHist 1-line 57.61 entry + `medium-backend` 0.80 12th data point (~0.48; 12-pt mean ~0.62) + `mechanical-greenfield-design-decisions` 0.65 3rd validation (1st backend-only ~0.74 BELOW band) appended to agent_factor sub-class line
 
 ### 2.4 PROMOTIONS (check thresholds)
-- [ ] Confirm whether any AD reaches codify threshold this sprint (likely none new — Prong promotions already codified 57.57+57.60)
+- [x] Confirmed: **no AD reaches codify threshold** this sprint — Prong promotions already codified 57.57+57.60; the 2 NEW ADs (`AD-AgentFactor-DesignDecisions-BackendOnly-Variant-Watch` + `AD-AgentDelegate-DevStack-Precheck`) are single-data-point
 
 ### 2.5 Memory + index
-- [ ] **NEW** `memory/project_phase57_61_rate_limits_syntax_validation.md` (user-home)
-- [ ] **EDIT** `memory/MEMORY.md` — quality pointer
+- [x] **NEW** `memory/project_phase57_61_rate_limits_syntax_validation.md` (user-home)
+- [x] **EDIT** `memory/MEMORY.md` — quality pointer (prepended above 57.60 entry)
 
 ### 2.6 CLAUDE.md (navigator-only)
-- [ ] Current Sprint row + Last Updated footer
+- [x] Current Sprint row (L73) + Last Updated footer (L628) → 57.61
 
 ### 2.7 next-phase-candidates.md
-- [ ] Sprint 57.61 Carryover section: SyntaxValidation CLOSED + carryovers (Alerting / DuplicateResource / ClientSide-Polish / Parser-Extract / Tier-3 0.45 deferred)
+- [x] Sprint 57.61 Carryover section + `**Updated**:` header (57.60 demoted to `**Previous Updated**:`): SyntaxValidation CLOSED + 6 carryovers (Alerting / DuplicateResource / ClientSide-Polish / Parser-Extract / BackendOnly-Variant-Watch / DevStack-Precheck; Tier-3 0.45 defers Sprint 57.62)
 
-### 2.8 CHANGE-0XX record
-- [ ] **NEW** `CHANGE-0XX-sprint-57-61-rate-limits-syntax-validation.md` (feature — NEW 422 validation contract)
+### 2.8 CHANGE-029 record
+- [x] **NEW** `CHANGE-029-sprint-57-61-rate-limits-syntax-validation.md` (feature — NEW 422 validation contract)
 
 ### 2.9 PR + merge (user action)
 - [ ] Push branch + open PR (title: `feat(rate-limits, sprint-57-61): PUT-time syntax validation — close AD-RateLimits-SyntaxValidation-Phase58`)
