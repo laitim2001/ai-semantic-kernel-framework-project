@@ -334,8 +334,7 @@ async def _stream_loop_events(
     """
     # Sprint 57.63 (Cat 10, approach A): verifier_registry is now passed in from
     # build_handler — built with the loop's OWN adapter (shared ChatClient) when
-    # settings.chat_verification_mode == "enabled", else None. The previous
-    # in-function select_verifier_registry() call is removed.
+    # settings.chat_verification_mode == "enabled", else None.
     natural_completion = False
     try:
         async for event in run_with_verification(
