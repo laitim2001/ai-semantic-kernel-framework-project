@@ -338,9 +338,7 @@ async def test_tier2_cache_hit_metric_emitted(monkeypatch: pytest.MonkeyPatch) -
     trace_ctx = TraceContext(tenant_id=tenant_id, session_id=session_id)
     events = [
         ev
-        async for ev in loop.run(
-            session_id=session_id, user_input="hello", trace_context=trace_ctx
-        )
+        async for ev in loop.run(session_id=session_id, user_input="hello", trace_context=trace_ctx)
     ]
 
     completed = [ev for ev in events if isinstance(ev, LoopCompleted)]
@@ -395,9 +393,7 @@ async def test_tier2_cache_hit_metric_accumulates_across_turns(
     trace_ctx = TraceContext(tenant_id=tenant_id, session_id=session_id)
     events = [
         ev
-        async for ev in loop.run(
-            session_id=session_id, user_input="hello", trace_context=trace_ctx
-        )
+        async for ev in loop.run(session_id=session_id, user_input="hello", trace_context=trace_ctx)
     ]
 
     final = [ev for ev in events if isinstance(ev, LoopCompleted)][-1]
@@ -426,9 +422,7 @@ async def test_tier2_no_cached_tokens_rate_is_zero_no_crash(
     trace_ctx = TraceContext(tenant_id=tenant_id, session_id=session_id)
     events = [
         ev
-        async for ev in loop.run(
-            session_id=session_id, user_input="hello", trace_context=trace_ctx
-        )
+        async for ev in loop.run(session_id=session_id, user_input="hello", trace_context=trace_ctx)
     ]
 
     final = [ev for ev in events if isinstance(ev, LoopCompleted)][-1]
@@ -492,7 +486,8 @@ async def test_tier2_memory_render_and_cache_metric_one_run(
 
     trace_ctx = TraceContext(tenant_id=tenant_id, user_id=user_id, session_id=session_id)
     events = [
-        ev async for ev in loop.run(session_id=session_id, user_input=token, trace_context=trace_ctx)
+        ev
+        async for ev in loop.run(session_id=session_id, user_input=token, trace_context=trace_ctx)
     ]
 
     # A-1: memory rendered into the final turn's assembled prompt.
