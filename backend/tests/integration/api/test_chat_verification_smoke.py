@@ -151,12 +151,18 @@ class TestChatVerificationWireSmoke:
         # covered by test_chat_category_activation_wiring.py Group A.
         import importlib
 
-        from api.v1.chat._verifier_factory import build_default_verifier_registry
+        from agent_harness.verification import RulesBasedVerifier, VerifierRegistry
         from api.v1.chat.handler import build_echo_demo_handler
 
         def _fake_build_handler(mode, message, **kwargs):  # type: ignore[no-untyped-def]
             loop, _ = build_echo_demo_handler(message)
-            return loop, build_default_verifier_registry()
+            # B-10 (AD-Cat10-VerifierFactory-Disposition): _verifier_factory removed;
+            # build the no-op registry inline (production "enabled" path builds a real
+            # LLMJudgeVerifier in build_real_llm_handler — covered by
+            # test_chat_category_activation_wiring.py Group A).
+            registry = VerifierRegistry()
+            registry.register(RulesBasedVerifier(rules=[]))
+            return loop, registry
 
         # `from api.v1.chat import router` yields the APIRouter INSTANCE (the
         # package __init__ re-exports it), so patch the actual module object —

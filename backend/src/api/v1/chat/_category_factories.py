@@ -137,9 +137,9 @@ def make_chat_verifier_registry(
 ) -> VerifierRegistry:
     """Cat 10: a VerifierRegistry with one real LLMJudgeVerifier (final-output judge).
 
-    Unlike the no-op `build_default_verifier_registry()` (empty RulesBasedVerifier),
-    this registers a real `LLMJudgeVerifier` that makes an independent LLM call to
-    judge the chat's final output. Fail-closed (any judge error → passed=False).
+    Unlike a no-op empty-rules RulesBasedVerifier, this registers a real
+    `LLMJudgeVerifier` that makes an independent LLM call to judge the chat's
+    final output. Fail-closed (any judge error → passed=False).
 
     Built here (api layer) because LLMJudgeVerifier needs the SAME ChatClient
     adapter the loop uses; the registry is threaded back to the router alongside
