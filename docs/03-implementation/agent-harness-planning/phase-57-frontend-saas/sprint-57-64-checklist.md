@@ -33,14 +33,16 @@
   - DoD: existing chat tests still pass; default (no deps) path unchanged
   - Verify: `pytest tests/integration/api/test_chat_e2e.py -q`
 - [ ] ADD `make_chat_prompt_builder` / `make_chat_memory_deps` / `make_chat_subagent_dispatcher` to `_category_factories.py` (mirror existing `make_chat_*` pattern)
+  - 🔸 `make_chat_prompt_builder` DONE (Day 1 ✅); `make_chat_memory_deps` / `make_chat_subagent_dispatcher` → Day 2
   - DoD: mypy strict clean; no SDK import in `agent_harness/**`
   - Verify: `python scripts/lint/run_all.py` (check_llm_sdk_leak green)
 
 ### 1.2 Cat 5 PromptBuilder injection (US-1, keystone)
-- [ ] Pass `prompt_builder=` (+ `memory_provider`) into `AgentLoopImpl(...)` at `handler.py:220-239`
+- [x] Pass `prompt_builder=` into `AgentLoopImpl(...)` (`handler.py` ~L226-244) (Day 1 ✅)
   - DoD: chat path reaches `loop.py:881` true-branch (`loop._prompt_builder is not None`)
-- [ ] Integration test: `PromptBuilt` emitted on chat SSE path (fallback NOT taken); negative guard (builder removed → no `PromptBuilt`)
-  - Verify: `pytest tests/integration/api/test_chat_keystone_wiring.py -k cat5 -q`
+  - 🔸 `memory_provider` deferred to Day 2 (ties to Cat 3 memory wiring)
+- [x] Integration test: `PromptBuilt` emitted on chat SSE path (fallback NOT taken); negative guard (builder removed → no `PromptBuilt`) (Day 1 ✅ — `test_chat_keystone_wiring.py`, 3 passed)
+  - Verify: `pytest tests/integration/api/test_chat_keystone_wiring.py -q` → 3 passed
 
 ---
 
@@ -64,7 +66,7 @@
 ## Day 3 — Cross-cutting Tests + lint true-green + real_llm e2e
 
 - [ ] Combined integration test: Cat 5 + Cat 3 + Cat 11 all active in one chat SSE run + multi-tenant scoping (memory + subagent per tenant)
-- [ ] Flip `check_promptbuilder_usage.py` false-green → true-green (detect chat call-site `prompt_builder=`); confirm it FAILS when kwarg removed
+- [x] Flip `check_promptbuilder_usage.py` false-green → true-green (detect chat call-site `prompt_builder=`); confirm it FAILS when kwarg removed (Day 1 ✅ — coupled w/ Cat 5; path-targeted AST positive check; regression confirmed)
   - Verify: `python scripts/lint/check_promptbuilder_usage.py` (green) + manual kwarg-removal regression check
 - [ ] `real_llm` e2e: benign multi-turn Azure run → END_TURN with `PromptBuilt` event (gated on C-11 secrets)
   - Verify: `pytest -m real_llm tests/integration/api/test_chat_e2e_real_llm.py -q` (or GitHub Actions "E2E Real-LLM Smoke")

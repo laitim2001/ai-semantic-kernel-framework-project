@@ -7,6 +7,13 @@ that any `<obj>.chat(...)` or `<obj>.stream(...)` call is paired with at
 least one `<obj>.build(...)` call in the SAME function scope. Files matching
 ALLOWLIST_PATTERNS are skipped (tests, mocks, utility-LLM callers).
 
+Sprint 57.64 — added a POSITIVE check (check_chat_handler_wiring) that asserts
+the production chat handler `build_real_llm_handler` constructs
+`AgentLoopImpl(..., prompt_builder=...)`. The negative scan above is rooted at
+agent_harness/ and never sees the api-layer handler, so it was false-green
+(AP-2): it passed even while the loop always took its naked fallback path. The
+positive check closes that gap and regresses if the kwarg is removed.
+
 Why:
     Anti-pattern AP-8 (no centralized PromptBuilder) caused V1 to leak prompt
     assembly across 6+ call-sites — each LLM caller hand-rolled `messages`
@@ -135,6 +142,78 @@ def _scan(root: Path) -> list[str]:
     return violations
 
 
+# --- Positive check: production chat handler must inject the PromptBuilder -----
+# Why (Sprint 57.64, closes AP-2 false-green): the negative-only `_scan` above
+# is rooted at `backend/src/agent_harness/`, so it NEVER scans the api-layer
+# chat handler. Before 57.64 the handler omitted `prompt_builder=` from its
+# AgentLoopImpl(...) call, so the loop always took its naked fallback path — yet
+# this lint stayed green (it simply never looked there). This positive check
+# asserts the keystone wiring exists at the real call-site: it PASSES once the
+# handler passes `prompt_builder=`, and REGRESSES (fails) if that kwarg is ever
+# removed. The check is path-targeted (not a scan-root extension) to avoid
+# flagging unrelated utility-LLM callers across the whole api tree.
+
+# Resolve <repo>/backend/src/api/v1/chat/handler.py from this file's location.
+_CHAT_HANDLER_REL = Path("backend/src/api/v1/chat/handler.py")
+_CHAT_HANDLER_FN = "build_real_llm_handler"
+_LOOP_CTOR = "AgentLoopImpl"
+_REQUIRED_KWARG = "prompt_builder"
+
+
+def _chat_handler_path() -> Path:
+    here = Path(__file__).resolve()
+    return here.parents[2] / _CHAT_HANDLER_REL
+
+
+def _call_passes_kwarg(node: ast.Call, ctor_name: str, kwarg: str) -> bool:
+    """True if `node` is a `<ctor_name>(...)` call passing keyword `kwarg=`."""
+    f = node.func
+    name = f.id if isinstance(f, ast.Name) else (f.attr if isinstance(f, ast.Attribute) else None)
+    if name != ctor_name:
+        return False
+    return any(kw.arg == kwarg for kw in node.keywords)
+
+
+def check_chat_handler_wiring(handler_path: Path | None = None) -> list[str]:
+    """Return violation messages if the chat handler omits the prompt_builder kwarg.
+
+    Positive (true-green) check: `build_real_llm_handler` MUST construct
+    `AgentLoopImpl(..., prompt_builder=...)`. Returns [] when wired correctly.
+    """
+    path = handler_path if handler_path is not None else _chat_handler_path()
+    if not path.exists():
+        return [f"{path.as_posix()}: chat handler not found — cannot verify Cat 5 wiring"]
+
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except SyntaxError as exc:
+        return [f"{path.as_posix()}: SyntaxError {exc}"]
+
+    target_fn: ast.FunctionDef | ast.AsyncFunctionDef | None = None
+    for fn in _function_scopes(tree):
+        if fn.name == _CHAT_HANDLER_FN:
+            target_fn = fn
+            break
+
+    if target_fn is None:
+        return [
+            f"{path.as_posix()}: function `{_CHAT_HANDLER_FN}` not found — "
+            f"cannot verify Cat 5 PromptBuilder wiring"
+        ]
+
+    wired = any(
+        isinstance(node, ast.Call) and _call_passes_kwarg(node, _LOOP_CTOR, _REQUIRED_KWARG)
+        for node in ast.walk(target_fn)
+    )
+    if wired:
+        return []
+    return [
+        f"{path.as_posix()}: `{_CHAT_HANDLER_FN}` builds `{_LOOP_CTOR}(...)` "
+        f"without `{_REQUIRED_KWARG}=` — Cat 5 keystone un-wired (loop falls back "
+        f"to naked prompt assembly; AP-8 / AP-2 regression)"
+    ]
+
+
 # --- CLI ----------------------------------------------------------------------
 
 
@@ -178,9 +257,16 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     violations = _scan(root)
+    # Positive check (Sprint 57.64): the production chat handler must inject the
+    # PromptBuilder into the loop. Runs regardless of --root so the AP-2
+    # false-green can never re-open by re-scoping the scan.
+    violations.extend(check_chat_handler_wiring())
 
     if not violations:
-        print(f"AP-8 lint: 0 violations under {root.as_posix()}.")
+        print(
+            f"AP-8 lint: 0 violations under {root.as_posix()}; "
+            f"chat handler injects {_REQUIRED_KWARG}=."
+        )
         return 0
 
     for msg in violations:
