@@ -1,9 +1,9 @@
 """
 File: backend/src/api/v1/chat/_category_factories.py
-Purpose: API-layer constructors for the Cat 4 / Cat 7 (+ Cat 8 from Day 2) deps
-    injected into the production chat-path AgentLoopImpl (Sprint 57.63).
+Purpose: API-layer constructors for the Cat 4 / Cat 5 / Cat 7 / Cat 8 / Cat 10 deps
+    injected into the production chat-path AgentLoopImpl (Sprint 57.63 / 57.64).
 Category: API / chat-path category activation (delegates to agent_harness owners)
-Scope: Phase 57 / Sprint 57.63
+Scope: Phase 57 / Sprint 57.63 (+ Cat 5 in 57.64)
 
 Description:
     build_real_llm_handler wires Cat 9 guardrails today but leaves Cat 4
@@ -20,19 +20,24 @@ Description:
 
 Key Components:
     - make_chat_compactor(chat_client) -> Compactor  (Cat 4)
+    - make_chat_prompt_builder(chat_client) -> PromptBuilder  (Cat 5)
+    - make_chat_memory_deps(db) -> (MemoryRetrieval, dict[str, MemoryLayer])  (Cat 3)
+    - make_chat_subagent_dispatcher(chat_client) -> SubagentDispatcher  (Cat 11)
     - make_chat_state_deps(db, session_id, tenant_id) -> (Reducer|None, Checkpointer|None)  (Cat 7)
 
 Created: 2026-05-31 (Sprint 57.63 Day 1)
-Last Modified: 2026-05-31
+Last Modified: 2026-06-01
 
 Modification History (newest-first):
+    - 2026-06-01: Sprint 57.64 Day 2 — add Cat 3 memory deps + Cat 11 subagent dispatcher factories
+    - 2026-06-01: Add make_chat_prompt_builder (Sprint 57.64 Day 1) — Cat 5 keystone factory
     - 2026-05-31: Initial creation (Sprint 57.63 Day 1) — Cat 4 + Cat 7 chat-path factories
 
 Related:
     - api/v1/chat/handler.py — build_real_llm_handler consumer
     - agent_harness/orchestrator_loop/loop.py — AgentLoopImpl opt-in deps (L195-204)
-    - 17-cross-category-interfaces.md §2.1 — Compactor / Reducer / Checkpointer ABCs
-    - sprint-57-63-plan.md §3 (D1 ctor correction applied)
+    - 17-cross-category-interfaces.md §2.1 — Compactor / PromptBuilder / Reducer / Checkpointer ABCs
+    - sprint-57-63-plan.md §3 (D1 ctor correction applied) / sprint-57-64-plan.md §3.1
 """
 
 from __future__ import annotations
@@ -41,9 +46,11 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from agent_harness.context_mgmt import Compactor
+from agent_harness.context_mgmt.cache_manager import InMemoryCacheManager
 from agent_harness.context_mgmt.compactor.hybrid import HybridCompactor
 from agent_harness.context_mgmt.compactor.semantic import SemanticCompactor
 from agent_harness.context_mgmt.compactor.structural import StructuralCompactor
+from agent_harness.context_mgmt.token_counter.tiktoken_counter import TiktokenCounter
 from agent_harness.error_handling import (
     DefaultCircuitBreaker,
     DefaultErrorPolicy,
@@ -53,9 +60,19 @@ from agent_harness.error_handling import (
     RetryPolicyMatrix,
     TenantErrorBudget,
 )
+from agent_harness.memory import MemoryLayer, MemoryRetrieval
+from agent_harness.memory.layers.role_layer import RoleLayer
+from agent_harness.memory.layers.session_layer import SessionLayer
+from agent_harness.memory.layers.system_layer import SystemLayer
+from agent_harness.memory.layers.tenant_layer import TenantLayer
+from agent_harness.memory.layers.user_layer import UserLayer
+from agent_harness.prompt_builder import PromptBuilder
+from agent_harness.prompt_builder.builder import DefaultPromptBuilder
 from agent_harness.state_mgmt import Checkpointer, DBCheckpointer, DefaultReducer, Reducer
+from agent_harness.subagent import DefaultSubagentDispatcher
 from agent_harness.verification import VerifierRegistry
 from agent_harness.verification.llm_judge import LLMJudgeVerifier
+from infrastructure.db.engine import get_session_factory
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -82,6 +99,109 @@ def make_chat_compactor(chat_client: ChatClient) -> Compactor:
         token_budget=_CHAT_TOKEN_BUDGET,
         token_threshold_ratio=_CHAT_TOKEN_THRESHOLD_RATIO,
     )
+
+
+def make_chat_prompt_builder(chat_client: ChatClient) -> PromptBuilder:
+    """Cat 5 (KEYSTONE): the centralized DefaultPromptBuilder for the chat path.
+
+    Wiring this into AgentLoopImpl(prompt_builder=...) flips the loop from its
+    naked fallback prompt assembly (taken whenever self._prompt_builder is None,
+    loop.py:881 false-branch) to the structured 6-section build() that emits
+    PromptBuilt and feeds memory layers / cache breakpoints. This closes AP-8
+    (no centralized PromptBuilder) on the production main flow.
+
+    Day 1 scope is Cat 5 standalone — no memory_provider yet (Cat 3 memory tool
+    wiring is Day 2). DefaultPromptBuilder works without live memory: an empty
+    MemoryRetrieval (no layers) makes _inject_memory_layers return {} and the
+    builder still assembles system + tools + conversation + user sections. The
+    Tier2 memory auto-inject path is a follow-up sprint (候選 Sprint B).
+
+    LLM-neutrality: the only LLM-touching dep is the SemanticCompactor-free
+    TiktokenCounter (pure tokenizer, no provider SDK). The ChatClient ABC is
+    accepted for signature parity with the other make_chat_* factories and to
+    keep the future memory_provider wiring point obvious; the builder itself
+    issues no provider call. No openai / anthropic import here or downstream.
+
+    Args:
+        chat_client: the adapter (ChatClient ABC) the loop runs on; reserved for
+            the Day 2 memory_provider wiring point (Cat 5 build() makes no LLM
+            call itself).
+    """
+    return DefaultPromptBuilder(
+        memory_retrieval=MemoryRetrieval(layers={}),
+        cache_manager=InMemoryCacheManager(),
+        token_counter=TiktokenCounter(model="gpt-4o"),
+    )
+
+
+def make_chat_memory_deps(
+    db: AsyncSession | None = None,
+) -> tuple[MemoryRetrieval, dict[str, MemoryLayer]]:
+    """Cat 3: build the real MemoryRetrieval + 5-scope MemoryLayer map for the chat path.
+
+    Returns (retrieval, layers) ready for
+    ``register_builtin_tools(registry, handlers, memory_retrieval=retrieval,
+    memory_layers=layers)`` so the chat executor exposes the REAL
+    ``memory_search`` / ``memory_write`` handlers (NOT the
+    ``memory_placeholder_handler`` fallback — AP-4 Potemkin guard).
+
+    Multi-tenant scoping (per .claude/rules/multi-tenant-data.md 鐵律): tenant_id /
+    user_id / session_id are NOT bound here — they arrive per-call via the
+    server-authoritative ExecutionContext that AgentLoopImpl builds from the
+    request TraceContext (loop.py:1136 reads ctx.tenant_id / ctx.user_id /
+    ctx.session_id). Each concrete layer then filters its storage query by
+    tenant_id + user_id (UserLayer.read loop.py-equivalent: WHERE tenant_id == ...
+    AND user_id == ...). So a tenant A request can never read tenant B rows even
+    though the layers are constructed once per request — the scope is the
+    request's authenticated identity, supplied at execute() time.
+
+    Layer backends:
+      - user / role / tenant / system → PostgreSQL via the module session
+        factory (each layer owns its own AsyncSession lifecycle; matches the
+        UserLayer(session_factory) ctor). The `db` request session is accepted
+        for signature parity / future per-request binding but the layers use
+        the shared session factory because they open/commit their own sessions
+        (the request `db` is reserved by the StreamingResponse iterator).
+      - session → in-memory dict (SessionLayer; per-request instance, no DB).
+
+    Args:
+        db: the request AsyncSession (reserved; layers use get_session_factory()).
+    """
+    del db  # reserved for future per-request session binding; layers self-manage.
+    session_factory = get_session_factory()
+    layers: dict[str, MemoryLayer] = {
+        "system": SystemLayer(session_factory),
+        "tenant": TenantLayer(session_factory),
+        "role": RoleLayer(session_factory),
+        "user": UserLayer(session_factory),
+        "session": SessionLayer(),
+    }
+    retrieval = MemoryRetrieval(layers=layers)
+    return retrieval, layers
+
+
+def make_chat_subagent_dispatcher(chat_client: ChatClient) -> DefaultSubagentDispatcher:
+    """Cat 11 (A-3a): the DefaultSubagentDispatcher for the chat path.
+
+    Wraps the loop's own ChatClient adapter so FORK / TEAMMATE single-shot
+    subagents (and AS_TOOL wrappers via as_tool_factory) run on the SAME
+    provider the parent loop runs on. HANDOFF is intentionally NOT exposed as a
+    chat tool this sprint (its executor is a hollow stub; A-3b is OUT) — but the
+    dispatcher.handoff() method remains present (used only by make_handoff_tool,
+    which the chat registration deliberately excludes).
+
+    Per-request DI (AD-Test-1, 53.6): a fresh dispatcher per chat request — NOT a
+    module-level singleton — so its in-flight task map / mailbox are scoped to
+    this conversation.
+
+    LLM-neutrality: receives the adapter as the ChatClient ABC; the dispatcher /
+    ForkExecutor issue provider calls only through that ABC. No openai /
+    anthropic import here or downstream in agent_harness.
+
+    Args:
+        chat_client: the adapter (ChatClient ABC) the loop runs on.
+    """
+    return DefaultSubagentDispatcher(chat_client=chat_client)
 
 
 def make_chat_state_deps(
@@ -158,6 +278,9 @@ def make_chat_verifier_registry(
 
 __all__ = [
     "make_chat_compactor",
+    "make_chat_prompt_builder",
+    "make_chat_memory_deps",
+    "make_chat_subagent_dispatcher",
     "make_chat_state_deps",
     "make_chat_error_deps",
     "make_chat_verifier_registry",

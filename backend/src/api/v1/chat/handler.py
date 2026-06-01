@@ -27,9 +27,11 @@ Key Components:
     - build_handler(mode: ChatMode, message: str) -> AgentLoopImpl  (dispatcher)
 
 Created: 2026-04-30 (Sprint 50.2 Day 1.4)
-Last Modified: 2026-05-04
+Last Modified: 2026-06-01
 
 Modification History (newest-first):
+    - 2026-06-01: Sprint 57.64 Day 2 — register Cat 3 memory + Cat 11 subagent tools; thread user_id
+    - 2026-06-01: Sprint 57.64 Day 1 — inject Cat 5 prompt_builder (keystone)
     - 2026-05-04: (Sprint 55.2 Day 3.4) build_handler + build_echo_demo_handler
       + build_real_llm_handler now accept `business_factory_provider`. Threaded
       to make_default_executor → register_all_business_tools → 5 register_*_tools
@@ -68,7 +70,10 @@ from core.config import get_settings
 from ._category_factories import (
     make_chat_compactor,
     make_chat_error_deps,
+    make_chat_memory_deps,
+    make_chat_prompt_builder,
     make_chat_state_deps,
+    make_chat_subagent_dispatcher,
     make_chat_verifier_registry,
 )
 from .schemas import ChatMode
@@ -160,6 +165,7 @@ def build_real_llm_handler(
     db: "AsyncSession | None" = None,
     session_id: "UUID | None" = None,
     tenant_id: "UUID | None" = None,
+    user_id: "UUID | None" = None,
 ) -> tuple[AgentLoopImpl, "VerifierRegistry | None"]:
     """Wire AgentLoopImpl with AzureOpenAIAdapter. Requires env vars.
 
@@ -170,6 +176,18 @@ def build_real_llm_handler(
     When `settings.chat_verification_mode == "enabled"`, builds a registry with a
     real `LLMJudgeVerifier` sharing THIS handler's adapter (the same ChatClient
     the loop runs on); otherwise returns `registry=None` (wrapper passthrough).
+
+    Sprint 57.64 Day 2 (Cat 3 + Cat 11): registers the REAL memory tools
+    (memory_search / memory_write) and the FORK/TEAMMATE/AS_TOOL subagent tools
+    on the chat executor. Both via opt-in deps to make_default_executor:
+      - memory: make_chat_memory_deps() builds the 5-scope layer map; tenant /
+        user / session scoping is supplied per-call by the loop's
+        ExecutionContext (built from the request TraceContext), so memory stays
+        tenant-isolated even though layers are constructed once per request.
+      - subagent: make_chat_subagent_dispatcher(chat_client) shares THIS adapter;
+        task_spawn binds to `session_id` for parent attribution. HANDOFF excluded.
+    `user_id` is threaded into the TraceContext by the router so memory reads /
+    writes attribute to the authenticated user.
 
     Raises:
         RuntimeError: when any of AZURE_OPENAI_ENDPOINT / AZURE_OPENAI_API_KEY /
@@ -191,7 +209,21 @@ def build_real_llm_handler(
     # AzureOpenAIConfig is a BaseSettings — pulls AZURE_OPENAI_* from env automatically.
     chat_client: ChatClient = AzureOpenAIAdapter(AzureOpenAIConfig())
 
-    registry, executor = make_default_executor(factory_provider=business_factory_provider)
+    # Sprint 57.64 Day 2: Cat 3 memory tools (REAL handlers, not placeholder) +
+    # Cat 11 FORK/TEAMMATE/AS_TOOL subagent tools, registered via opt-in deps.
+    # Both fall back to absent when their inputs are missing (e.g. session_id is
+    # required for the subagent task_spawn parent attribution).
+    memory_retrieval, memory_layers = make_chat_memory_deps(db)
+    subagent_dispatcher = (
+        make_chat_subagent_dispatcher(chat_client) if session_id is not None else None
+    )
+    registry, executor = make_default_executor(
+        factory_provider=business_factory_provider,
+        memory_retrieval=memory_retrieval,
+        memory_layers=memory_layers,
+        subagent_dispatcher=subagent_dispatcher,
+        parent_session_id=session_id,
+    )
     parser = OutputParserImpl()
 
     # Sprint 57.2 US-3 (closes AD-Cat9-1-WireDetectors): production
@@ -205,6 +237,12 @@ def build_real_llm_handler(
     # make_chat_state_deps returns (None, None) when db / session_id /
     # tenant_id is missing (legacy / test callers), preserving baseline.
     compactor = make_chat_compactor(chat_client)
+    # Sprint 57.64 Day 1: Cat 5 (KEYSTONE) — inject DefaultPromptBuilder so the
+    # loop takes its structured build() path (loop.py:881 true-branch, emits
+    # PromptBuilt) instead of the naked fallback. Closes the AP-8 / AP-2
+    # false-green: before this, self._prompt_builder was always None on the
+    # production chat path. Cat 5 works standalone (no memory_provider yet; Day 2).
+    prompt_builder = make_chat_prompt_builder(chat_client)
     reducer, checkpointer = make_chat_state_deps(db, session_id, tenant_id)
     # Sprint 57.63 Day 2: Cat 8 (error handling) — the 5 deps activate
     # `_handle_tool_error` (classify → budget → terminator) on the production
@@ -228,6 +266,7 @@ def build_real_llm_handler(
         hitl_timeout_s=hitl_timeout_s,
         guardrail_engine=build_default_guardrail_engine(),
         compactor=compactor,
+        prompt_builder=prompt_builder,
         reducer=reducer,
         checkpointer=checkpointer,
         tenant_id=tenant_id,
@@ -259,6 +298,7 @@ def build_handler(
     db: "AsyncSession | None" = None,
     session_id: "UUID | None" = None,
     tenant_id: "UUID | None" = None,
+    user_id: "UUID | None" = None,
 ) -> tuple[AgentLoopImpl, "VerifierRegistry | None"]:
     """Dispatch to the per-mode builder. Single entry-point for the router.
 
@@ -292,6 +332,7 @@ def build_handler(
             db=db,
             session_id=session_id,
             tenant_id=tenant_id,
+            user_id=user_id,
         )
     raise ValueError(f"Unsupported mode: {mode!r}")
 
