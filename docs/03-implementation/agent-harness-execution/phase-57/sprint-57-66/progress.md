@@ -102,12 +102,25 @@ PASS — types.ts diff matches spec exactly (4 types, no trace_id, union+set, ca
 
 ---
 
-## Day 3 — Cross-cutting + real_llm e2e + lint
+## Day 3 — Cross-cutting + real_llm e2e + lint — ✅
 
-(pending)
+### real_llm live leg — 🚧 DEFERRED (blocker REMOVED by this sprint)
+Investigation found there is **no `@pytest.mark.real_llm` marker registered** and **no `test_chat_e2e_real_llm.py` file** — the "real_llm e2e leg" cited in the 57.63/64/65 plans was always a conceptual deferred item, not existing infra (`real_llm` in the repo is the `mode` value, not a pytest marker). Creating net-new live-Azure test infra that cannot run without secrets (user: Azure secrets not available locally / not in GitHub) would be a Potemkin test (AP-4 violation — a test that never runs proves nothing). **Decision: defer the live leg (🚧), same as 57.63/64/65.**
+
+**Key difference this sprint**: A-5a **removed the architectural blocker**. 57.63/64/65 deferred their real_llm legs because "PromptBuilt / cache signal is in-process, not client SSE". After this sprint, those events ARE client-SSE-observable — and `TestDiagnosticEventsE2E` proves it deterministically through the REAL `_stream_loop_events`→`serialize_loop_event`→`format_sse_message` pipeline (mock loop, real router). That mock router-e2e is the primary AP-4 gate; the only thing still gated on Azure secrets is the live-LLM confirmation that a REAL loop emits these on the wire — which is now writable/possible (was architecturally blocked before).
+
+### Final lint sweep — all green
+- Backend (unchanged since Day-1 commit `fda80b09`): pytest **1964 passed / 4 skipped**; `mypy src/ --strict` **0/319**; `run_all.py` **9/9 V2 lints** (check_llm_sdk_leak 0).
+- Frontend: Vitest **693 passed**; `npx tsc --noEmit` EXIT 0; `npm run lint` clean (no `--silent`); `npm run build` ✓ (built in 3.98s, no errors).
 
 ---
 
-## Day 4 — Closeout
+## Day 4 — Closeout — ✅
 
-(pending)
+- Full validation: backend pytest 1964 / mypy 0/319 / 9-9 V2 lints (SDK leak 0); frontend Vitest 693 / tsc 0 / lint clean / build ✓.
+- CHANGE-034 (feature-change record); progress.md (this file Day 0-4); retrospective.md (Q1-Q7).
+- Calibration: `medium-backend` 0.80 + `agent_factor mechanical-greenfield-design-decisions` 0.65 — **CAVEATED low-confidence** (4th consecutive agent-delegated sprint with no clean wall-clock per `AD-Calibration-AgentDelegated-WallClock-Measure`); KEEP, no baseline change; recorded `calibration-log.md §3`.
+- Area-A capstone: A-5a+ shipped (4 diagnostic events + cache fields client-observable); D2/D3 corrections runtime-confirmed; A-5b (codegen) + A-5c (Inspector UI) remain.
+- MEMORY.md pointer + `project_phase57_66_*.md` subfile + CLAUDE.md lean (Current Sprint / Last Updated).
+- commits: `14fa1168` (plan+checklist) + `cf062802` (Day-0) + `fda80b09` (Day-1 backend + FIX-025) + `41576b89` (Day-2 frontend + 02.md) + Day-3/4 closeout (this) — push + PR user-authorized.
+- 🚧 real_llm live e2e — deferred (Azure secrets; blocker REMOVED — see Day 3).

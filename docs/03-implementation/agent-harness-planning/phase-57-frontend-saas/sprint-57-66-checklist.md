@@ -65,19 +65,18 @@
 
 ## Day 3 — Cross-cutting + real_llm e2e + lint
 
-- [ ] real_llm e2e (extend `test_chat_e2e_real_llm.py` or add `real_llm`-marked case): 2-turn Azure run → `prompt_built` frame in-stream + `cached_input_tokens>0` on turn-2 `llm_response`/`loop_end` → **closes deferred 57.63/64/65 legs** (gated C-11 secrets; assert via SSE stream now that A-5a makes it client-visible)
-  - Verify (when run): `pytest -m real_llm tests/integration/api/test_chat_e2e_real_llm.py -q`
-- [ ] Full sweep: backend `pytest` (+N new) / `mypy src/` 0 / `python scripts/lint/run_all.py` 9/9 (SDK leak 0) / frontend `npm run lint && npm run build` (NO `--silent`) + Vitest (+N new)
+- 🚧 real_llm live e2e — **DEFERRED** (Azure secrets unavailable locally; investigation found NO `real_llm` pytest marker + NO `test_chat_e2e_real_llm.py` — the cited infra never existed; a never-running test = AP-4 Potemkin). **Blocker REMOVED this sprint**: A-5a makes `prompt_built`/cache client-SSE-observable; `TestDiagnosticEventsE2E` proves it deterministically through the REAL router pipeline (primary AP-4 gate). Live-Azure confirmation now writable, only gated on secrets. (carryover `AD-RealLLM-E2E-Live-Confirmation`)
+- [x] Full sweep: backend pytest **1964 passed / 4 skipped** / `mypy src/` **0/319** / `run_all.py` **9/9** (SDK leak 0) / frontend `npm run lint` clean + `npm run build` ✓ (3.98s) + Vitest **693**
 
 ---
 
 ## Day 4 — Closeout
 
-- [ ] Full validation sweep: pytest (+N) / mypy src 0 / run_all.py 9/9 / Vitest (+N) / tsc 0
-- [ ] `claudedocs/4-changes/feature-changes/CHANGE-0XX-events-sse-serialize.md`
-- [ ] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
-- [ ] Calibration: `medium-backend` 0.80 + `agent_factor mechanical-greenfield-design-decisions` 0.65 (caveated per `AD-Calibration-AgentDelegated-WallClock-Measure`); record `calibration-log.md §3`
-- [ ] Area-A capstone: A-5a+ shipped; D2/D3 corrections runtime-confirmed; A-5b/A-5c remain
-- [ ] MEMORY.md pointer + `project_phase57_66_*.md` subfile + CLAUDE.md lean Current Sprint/Last Updated
-- [ ] commit (Day 1-4) + push + PR — user-authorized
-- [ ] 🚧 (carry if real_llm leg can't run locally — Azure secrets; mock tests are the primary gate)
+- [x] Full validation sweep: pytest 1964 / mypy src 0/319 / run_all.py 9/9 / Vitest 693 / tsc 0 / build ✓
+- [x] `claudedocs/4-changes/feature-changes/CHANGE-034-events-sse-serialize.md` (+ FIX-025 bug-fix record)
+- [x] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
+- [x] Calibration: `medium-backend` 0.80 + `agent_factor mechanical-greenfield-design-decisions` 0.65 (CAVEATED — 4th consecutive no-clean-wall-clock per `AD-Calibration-AgentDelegated-WallClock-Measure`); recorded `calibration-log.md §3`
+- [x] Area-A capstone: A-5a+ shipped; D2/D3 corrections runtime-confirmed; A-5b (codegen) + A-5c (Inspector UI) remain
+- [x] MEMORY.md pointer + `project_phase57_66_*.md` subfile + CLAUDE.md lean Current Sprint/Last Updated
+- [ ] commit (Day 3+4) + push + PR — user-authorized
+- 🚧 real_llm live e2e — deferred (Azure secrets; blocker REMOVED — mock router-e2e is primary gate)
