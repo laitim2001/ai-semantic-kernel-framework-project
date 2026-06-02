@@ -8,15 +8,16 @@ Description:
     The declarative WIRE_SCHEMA (event_wire_schema.py) is the single source of
     truth that the frontend events.json + loopEvents.generated.ts are generated
     from. This test locks non-drift between WIRE_SCHEMA and the actual
-    `serialize_loop_event` output: for each of the 17 wired event classes it
+    `serialize_loop_event` output: for each of the 18 wired event classes it
     builds one representative instance, serializes it, and asserts the payload's
     `data` key set (minus the universal `trace_id`) equals the registry entry.
     Drift in EITHER direction (serializer adds/removes a field, or registry
     drifts) fails this test. Also asserts the 6 unwired classes still raise
     NotImplementedError, that Thinking still serializes to None, and that the
-    registry has exactly 18 entries.
+    registry has exactly 19 entries.
 
 Created: 2026-06-02 (Sprint 57.67)
+Last Modified: 2026-06-02 (Sprint 57.68 A-3b — add AgentHandoff wired instance; 18→19)
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from uuid import uuid4
 import pytest
 
 from agent_harness._contracts import (
+    AgentHandoff,
     ApprovalReceived,
     ApprovalRequested,
     ContextCompacted,
@@ -104,6 +106,12 @@ WIRED_EVENT_INSTANCES: list[LoopEvent] = [
         duration_ms=2.3,
     ),
     StateCheckpointed(version=7),
+    AgentHandoff(
+        target_agent="researcher",
+        reason="needs deep research",
+        parent_session_id=uuid4(),
+        new_session_id=uuid4(),
+    ),
 ]
 
 # Cat 8/3/1/12 events with no serializer branch (must raise NotImplementedError).
@@ -118,8 +126,8 @@ UNWIRED_EVENT_INSTANCES: list[LoopEvent] = [
 
 
 class TestWireSchemaParity:
-    def test_wire_schema_has_18_entries(self) -> None:
-        assert len(WIRE_SCHEMA) == 18
+    def test_wire_schema_has_19_entries(self) -> None:
+        assert len(WIRE_SCHEMA) == 19
 
     def test_base_fields_only_trace_id(self) -> None:
         # trace_id is the universal field injected by serialize_loop_event;
@@ -158,7 +166,7 @@ class TestWireSchemaParity:
         assert failed["type"] == "tool_call_result"
         assert set(executed["data"]) == set(failed["data"])
 
-    def test_all_wired_classes_cover_all_18_wire_types(self) -> None:
+    def test_all_wired_classes_cover_all_19_wire_types(self) -> None:
         # The representative instances must collectively hit every WIRE_SCHEMA
         # key (proves no registry entry lacks a serializer branch).
         produced = set()

@@ -38,6 +38,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-06-01
 
 Modification History (newest-first):
+    - 2026-06-02: Sprint 57.68 A-3b — post-loop HANDOFF hook: boot child session + emit AgentHandoff
     - 2026-06-01: Sprint 57.64 Day 2 — thread user_id into build_handler + TraceContext (Cat 3)
     - 2026-05-31: FIX-022 §6.2 — consolidate gpt-5.4 pricing fallback into named const
     - 2026-05-10: Sprint 57.7 US-R1 — sessions + tool_calls observer (AD-Reality-3a/3b)
@@ -76,7 +77,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_harness._contracts import LoopCompleted, TraceContext
+from agent_harness._contracts import AgentHandoff, LoopCompleted, TraceContext
 from agent_harness._contracts.events import ToolCallExecuted
 from agent_harness.observability._abc import Tracer
 from agent_harness.verification import VerifierRegistry, run_with_verification
@@ -94,6 +95,7 @@ from platform_layer.governance.service_factory import (
     ServiceFactory,
     get_service_factory,
 )
+from platform_layer.handoff import HandoffError, HandoffService
 from platform_layer.identity import get_current_tenant
 from platform_layer.identity.auth import get_current_user_id
 from platform_layer.observability import (
@@ -108,7 +110,7 @@ from platform_layer.tenant.quota import (
     maybe_get_quota_enforcer,
 )
 
-from .handler import build_handler
+from .handler import build_handler, resolve_session_persona
 from .schemas import ChatRequest, ChatSessionResponse
 from .session_registry import SessionRegistry, get_default_registry
 from .sse import format_sse_message, serialize_loop_event
@@ -202,6 +204,13 @@ async def chat(
     # DBCheckpointer can bind to it (was generated AFTER build_handler pre-57.63).
     session_id = req.session_id or uuid4()
 
+    # Sprint 57.68 A-3b (US-3): resume of a HANDOFF-booted child session must run
+    # as its target persona (meta_data["agent_role"]) — resolved here so the sync
+    # builders receive a ready system_prompt (DEMO_SYSTEM_PROMPT for ordinary
+    # sessions / on any miss). Only meaningful when the client passed an existing
+    # session_id; a fresh session has no row yet (→ demo persona).
+    system_prompt = await resolve_session_persona(db, session_id, current_tenant)
+
     try:
         loop, verifier_registry = build_handler(
             req.mode,
@@ -214,6 +223,7 @@ async def chat(
             session_id=session_id,
             tenant_id=current_tenant,
             user_id=current_user,
+            system_prompt=system_prompt,
         )
     except (RuntimeError, ValueError) as exc:
         # Misconfiguration (env vars / unsupported mode) → 503.
@@ -471,6 +481,61 @@ async def _stream_loop_events(
                     except Exception:  # noqa: BLE001
                         logger.exception(
                             "chat session %s/%s: audit_log append failed",
+                            tenant_id,
+                            session_id,
+                        )
+                # Sprint 57.68 (A-3b — Cat 11 HANDOFF control transfer):
+                # when the loop terminated with stop_reason="handoff", boot a
+                # persisted child session for the target agent (HandoffService —
+                # server-side-first; DB/session knowledge stays out of the loop),
+                # then emit an AgentHandoff SSE frame carrying the new_session_id
+                # so the client can pivot. Multi-tenant 鐵律: the child inherits
+                # the parent's tenant_id; a foreign/unknown target raises
+                # HandoffError → fail soft (log, emit nothing) so a bad handoff
+                # never crashes the stream. user_id sourced from the request
+                # TraceContext (the authenticated actor).
+                if (
+                    event.stop_reason == "handoff"
+                    and db is not None
+                    and event.handoff_target
+                ):
+                    try:
+                        handoff_result = await HandoffService().boot_handoff(
+                            parent_session_id=session_id,
+                            target_agent=event.handoff_target,
+                            reason=event.handoff_reason or "",
+                            tenant_id=tenant_id,
+                            user_id=trace_context.user_id or tenant_id,
+                            db=db,
+                        )
+                        handoff_payload = serialize_loop_event(
+                            AgentHandoff(
+                                target_agent=event.handoff_target,
+                                reason=event.handoff_reason or "",
+                                parent_session_id=session_id,
+                                new_session_id=handoff_result.new_session_id,
+                                trace_context=trace_context,
+                            )
+                        )
+                        if handoff_payload is not None:
+                            yield format_sse_message(
+                                handoff_payload["type"], handoff_payload["data"]
+                            )
+                    except HandoffError:
+                        # Invalid handover (unknown target / foreign parent): no
+                        # child booted, no frame emitted — the parent already
+                        # ended normally. Do NOT crash the stream.
+                        logger.warning(
+                            "chat session %s/%s: handoff to %r failed (no child booted)",
+                            tenant_id,
+                            session_id,
+                            event.handoff_target,
+                        )
+                    except Exception:  # noqa: BLE001
+                        # Defensive: any other handoff failure (DB flake) must
+                        # not break the SSE stream — the parent loop is done.
+                        logger.exception(
+                            "chat session %s/%s: handoff boot failed",
                             tenant_id,
                             session_id,
                         )

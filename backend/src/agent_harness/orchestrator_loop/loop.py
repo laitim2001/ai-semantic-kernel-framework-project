@@ -20,7 +20,7 @@ Description:
         7. Check stop_reason terminator (END_TURN exit)
         8. classify_output(response) → branch:
              - FINAL    → yield LoopCompleted(end_turn) + return
-             - HANDOFF  → yield LoopCompleted(handoff_not_implemented) + return  [Cat 11 stub]
+             - HANDOFF  → yield LoopCompleted(handoff, handoff_target/reason) + return  [Cat 11]
              - TOOL_USE → for each tool_call:
                               yield ToolCallRequested
                               await tool_executor.execute(tc)
@@ -42,9 +42,10 @@ Description:
     revisit if per-run override is needed.
 
 Created: 2026-04-30 (Sprint 50.1 Day 2.2)
-Last Modified: 2026-06-01
+Last Modified: 2026-06-02
 
 Modification History (newest-first):
+    - 2026-06-02: Sprint 57.68 A-3b — HANDOFF branch yields stop_reason=handoff + target/reason
     - 2026-06-01: Sprint 57.65 A-2 — accumulate cached_input_tokens + emit cache_hit_rate
     - 2026-06-01: Sprint 57.65 — scope PromptBuilder.build user_id to ctx.user_id (A-1 Tier2)
     - 2026-05-05: Sprint 55.6 — close AD-Cat8-2 (retry wrap at L1044+L1092 — Option H)
@@ -164,7 +165,12 @@ from agent_harness.guardrails import (
 )
 from agent_harness.hitl import HITLManager
 from agent_harness.observability import NoOpTracer, Tracer
-from agent_harness.output_parser import OutputParser, OutputType, classify_output
+from agent_harness.output_parser import (
+    HANDOFF_TOOL_NAME,
+    OutputParser,
+    OutputType,
+    classify_output,
+)
 from agent_harness.prompt_builder import PromptBuilder
 from agent_harness.state_mgmt import Checkpointer, Reducer
 from agent_harness.tools import ToolExecutor, ToolRegistry  # public path per category-boundaries.md
@@ -1065,10 +1071,24 @@ class AgentLoopImpl(AgentLoop):
                     return
 
                 if output_type == OutputType.HANDOFF:
-                    # Cat 11 not implemented yet; reserve enum for Phase 54.2.
+                    # Cat 11 HANDOFF (Sprint 57.68 A-3b): control transfer to a
+                    # target agent. The "handoff" tool_call carries target_agent
+                    # + reason in its arguments dict (classifier matches
+                    # tc.name == HANDOFF_TOOL_NAME). The loop only terminates
+                    # with a `handoff` stop_reason carrying the parsed intent;
+                    # booting the child session is the platform layer's job
+                    # (router post-loop hook) — server-side-first layering keeps
+                    # DB / session knowledge out of the loop.
+                    handoff_tc = next(
+                        (tc for tc in parsed.tool_calls if tc.name == HANDOFF_TOOL_NAME),
+                        None,
+                    )
+                    handoff_args = handoff_tc.arguments if handoff_tc is not None else {}
                     yield LoopCompleted(
-                        stop_reason=TerminationReason.HANDOFF_NOT_IMPLEMENTED.value,
+                        stop_reason=TerminationReason.HANDOFF.value,
                         total_turns=turn_count,
+                        handoff_target=str(handoff_args.get("target_agent", "")),
+                        handoff_reason=str(handoff_args.get("reason", "")),
                         trace_context=ctx,
                     )
                     return

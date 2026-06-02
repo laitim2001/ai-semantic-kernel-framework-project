@@ -1,5 +1,6 @@
 {
   "wire_types": [
+    "agent_handoff",
     "approval_received",
     "approval_requested",
     "context_compacted",
@@ -110,6 +111,12 @@
     },
     "state_checkpointed": {
       "version": "number"
+    },
+    "agent_handoff": {
+      "target_agent": "string",
+      "reason": "string",
+      "parent_session_id": "string",
+      "new_session_id": "string"
     }
   }
 }

@@ -30,6 +30,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.4)
 Last Modified: 2026-06-01
 
 Modification History (newest-first):
+    - 2026-06-02: Sprint 57.68 A-3b — per-session persona (agent_role) resolution for HANDOFF child
     - 2026-06-01: Sprint 57.65 — share executor's MemoryRetrieval into prompt builder (A-1)
     - 2026-06-01: Sprint 57.64 Day 2 — register Cat 3 memory + Cat 11 subagent tools; thread user_id
     - 2026-06-01: Sprint 57.64 Day 1 — inject Cat 5 prompt_builder (keystone)
@@ -167,6 +168,7 @@ def build_real_llm_handler(
     session_id: "UUID | None" = None,
     tenant_id: "UUID | None" = None,
     user_id: "UUID | None" = None,
+    system_prompt: str = DEMO_SYSTEM_PROMPT,
 ) -> tuple[AgentLoopImpl, "VerifierRegistry | None"]:
     """Wire AgentLoopImpl with AzureOpenAIAdapter. Requires env vars.
 
@@ -266,7 +268,11 @@ def build_real_llm_handler(
         output_parser=parser,
         tool_executor=executor,
         tool_registry=registry,
-        system_prompt=DEMO_SYSTEM_PROMPT,
+        # Sprint 57.68 A-3b (US-3): a HANDOFF-booted child session runs as its
+        # target persona, NOT the demo persona (= Potemkin). The router resolves
+        # the session's meta_data["agent_role"] → persona prompt and passes it
+        # here; absent an agent_role it stays DEMO_SYSTEM_PROMPT (the default).
+        system_prompt=system_prompt,
         max_turns=8,
         hitl_manager=hitl_manager,
         hitl_timeout_s=hitl_timeout_s,
@@ -305,6 +311,7 @@ def build_handler(
     session_id: "UUID | None" = None,
     tenant_id: "UUID | None" = None,
     user_id: "UUID | None" = None,
+    system_prompt: str = DEMO_SYSTEM_PROMPT,
 ) -> tuple[AgentLoopImpl, "VerifierRegistry | None"]:
     """Dispatch to the per-mode builder. Single entry-point for the router.
 
@@ -339,6 +346,7 @@ def build_handler(
             session_id=session_id,
             tenant_id=tenant_id,
             user_id=user_id,
+            system_prompt=system_prompt,
         )
     raise ValueError(f"Unsupported mode: {mode!r}")
 
@@ -346,3 +354,45 @@ def build_handler(
 def _hitl_enabled() -> bool:
     """Feature toggle. Default ON; explicit `HITL_ENABLED=false` disables wiring."""
     return os.environ.get("HITL_ENABLED", "true").strip().lower() != "false"
+
+
+# === resolve_session_persona: HANDOFF-booted child runs as its target persona ==
+# Why (Sprint 57.68 A-3b US-3): a HANDOFF boots a child session carrying
+# meta_data["agent_role"] = target_agent (HandoffService). When the client later
+# resumes THAT child session via POST /chat, the loop must run as the target
+# persona (researcher / reviewer / planner) — NOT the demo persona, which would
+# make the whole handover a Potemkin feature. The router resolves this BEFORE
+# build_handler so the builders stay sync (no async DB import in the wiring
+# layer). Tenant-scoped lookup (multi-tenant 鐵律). Returns DEMO_SYSTEM_PROMPT
+# for ordinary (non-handoff) sessions and on any miss / DB flake (fail-open to
+# the demo persona — a resolution failure must not break chat).
+async def resolve_session_persona(
+    db: "AsyncSession | None",
+    session_id: "UUID | None",
+    tenant_id: "UUID | None",
+) -> str:
+    """Resolve a session's persona system prompt from meta_data["agent_role"].
+
+    Returns the target persona's system prompt when the session row carries an
+    `agent_role` that resolves in the persona registry; otherwise (no DB /
+    missing row / no agent_role / unknown persona / lookup error) returns
+    DEMO_SYSTEM_PROMPT.
+    """
+    if db is None or session_id is None or tenant_id is None:
+        return DEMO_SYSTEM_PROMPT
+    try:
+        from infrastructure.db.repositories.session_repository import SessionRepository
+        from platform_layer.handoff.persona_registry import resolve_persona
+
+        session = await SessionRepository(db).get_session(
+            session_id=session_id, tenant_id=tenant_id
+        )
+        if session is None:
+            return DEMO_SYSTEM_PROMPT
+        agent_role = (session.meta_data or {}).get("agent_role")
+        if not agent_role:
+            return DEMO_SYSTEM_PROMPT
+        persona = resolve_persona(str(agent_role))
+        return persona if persona is not None else DEMO_SYSTEM_PROMPT
+    except Exception:  # noqa: BLE001
+        return DEMO_SYSTEM_PROMPT

@@ -46,6 +46,7 @@ from agent_harness._contracts.errors import (
     ToolExecutionError,
 )
 from agent_harness._contracts.events import (
+    AgentHandoff,
     ApprovalReceived,
     ApprovalRequested,
     ContextCompacted,
@@ -165,6 +166,7 @@ __all__ = [
     "VerificationFailed",
     "SubagentSpawned",
     "SubagentCompleted",
+    "AgentHandoff",
     "ApprovalRequested",
     "ApprovalReceived",
     "SpanStarted",

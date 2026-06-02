@@ -10,10 +10,11 @@
  *   re-exported through ../types. This test imports from the SAME path every
  *   downstream consumer uses (@/features/chat_v2/types), proving the Stage-2
  *   re-export swap is transparent + the generated set has the expected
- *   18 wire-types including the 4 newest diagnostic events (Sprint 57.66).
+ *   19 wire-types including the 4 diagnostic events (Sprint 57.66) and the
+ *   agent_handoff event (Sprint 57.68 A-3b, Cat 11 HANDOFF).
  *
  * Created: 2026-06-02 (Sprint 57.67)
- * Modified: 2026-06-02
+ * Modified: 2026-06-02 (Sprint 57.68 A-3b — +agent_handoff; 18→19)
  */
 
 import { describe, expect, test } from "vitest";
@@ -21,8 +22,8 @@ import { describe, expect, test } from "vitest";
 import { KNOWN_LOOP_EVENT_TYPES } from "@/features/chat_v2/types";
 
 describe("generated SSE event schema (re-exported via chat_v2/types)", () => {
-  test("KNOWN_LOOP_EVENT_TYPES has exactly 18 wire-types", () => {
-    expect(KNOWN_LOOP_EVENT_TYPES.size).toBe(18);
+  test("KNOWN_LOOP_EVENT_TYPES has exactly 19 wire-types", () => {
+    expect(KNOWN_LOOP_EVENT_TYPES.size).toBe(19);
   });
 
   test("recognizes the 4 newest diagnostic events (Sprint 57.66)", () => {
@@ -34,6 +35,10 @@ describe("generated SSE event schema (re-exported via chat_v2/types)", () => {
     ]) {
       expect(KNOWN_LOOP_EVENT_TYPES.has(t)).toBe(true);
     }
+  });
+
+  test("recognizes the agent_handoff event (Sprint 57.68 A-3b)", () => {
+    expect(KNOWN_LOOP_EVENT_TYPES.has("agent_handoff")).toBe(true);
   });
 
   test("recognizes core loop wire-types", () => {

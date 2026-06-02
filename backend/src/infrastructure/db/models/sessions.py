@@ -29,9 +29,10 @@ Description:
           to a separate `message_compaction_links` table in Sprint 49.3+
 
 Created: 2026-04-29 (Sprint 49.2 Day 2.1)
-Last Modified: 2026-04-29
+Last Modified: 2026-06-02
 
 Modification History:
+    - 2026-06-02: Sprint 57.68 A-3b — add Session.handoff_parent_id FK + index (HANDOFF linkage)
     - 2026-04-29: Initial creation (Sprint 49.2 Day 2.1)
 
 Related:
@@ -94,6 +95,16 @@ class Session(Base, TenantScopedMixin):
         PgUUID(as_uuid=True), nullable=True
     )
 
+    # Sprint 57.68 A-3b (Cat 11 HANDOFF): when this session is booted by a
+    # control-transfer handoff, links back to the parent session. NULL for
+    # normal chat sessions. FK added in migration 0022. The target persona is
+    # stored in meta_data["agent_role"] (JSONB, no dedicated column — YAGNI).
+    handoff_parent_id: Mapped[PyUUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     total_turns: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_cost_usd: Mapped[Decimal] = mapped_column(
@@ -119,6 +130,8 @@ class Session(Base, TenantScopedMixin):
         Index("idx_sessions_tenant_user", "tenant_id", "user_id"),
         Index("idx_sessions_status", "status"),
         Index("idx_sessions_active", text("last_active_at DESC")),
+        # Sprint 57.68 — handoff chain lookups (children of a parent session)
+        Index("idx_sessions_handoff_parent", "handoff_parent_id"),
     )
 
 

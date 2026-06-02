@@ -34,6 +34,7 @@
  * Last Modified: 2026-06-02
  *
  * Modification History:
+ *   - 2026-06-02: Sprint 57.68 A-3b — +agent_handoff passthrough case (rawEvents-only, Cat 11)
  *   - 2026-06-02: Sprint 57.66 — +4 diagnostic event passthrough cases (rawEvents-only)
  *   - 2026-05-17: Sprint 57.21 Day 1 — mergeEvent SSE → Turn block sequence; dual-emit
  *   - 2026-05-10: Sprint 57.12 US-6 — subagents slice + reducers (AD-Cat11-SSEEvents)
@@ -401,6 +402,14 @@ export const useChatStore = create<ChatStoreState>((set) => ({
         case "tripwire_triggered": {
           // Sprint 57.66: recognized + typed + audit-trail only (rawEvents).
           // Rich Inspector render DEFERRED to A-5c (mirror guardrail_triggered).
+          return { ...s, rawEvents };
+        }
+
+        case "agent_handoff": {
+          // Sprint 57.68 A-3b (Cat 11 HANDOFF): recognized + typed + audit-trail
+          // only (rawEvents). The client-side pivot to new_session_id + a rich
+          // handoff Inspector render are DEFERRED to a later frontend sprint
+          // (this Stage-2 slice is backend-only). Mirrors the diagnostic group.
           return { ...s, rawEvents };
         }
 

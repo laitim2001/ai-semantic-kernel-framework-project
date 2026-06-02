@@ -37,6 +37,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.3)
 Last Modified: 2026-06-01
 
 Modification History (newest-first):
+    - 2026-06-02: Sprint 57.68 (A-3b) — serialize AgentHandoff → agent_handoff (Cat 11 HANDOFF)
     - 2026-06-02: FIX-025 — _jsonable: str-coerce UUID only, not float (cache_hit_rate wire type)
     - 2026-06-01: Sprint 57.66 (A-5a+) — serialize 4 diagnostic events + carry 57.65 cache fields
     - 2026-05-10: Sprint 57.12 US-1 — add Subagent SSE mappers (AD-Cat11-SSEEvents)
@@ -70,6 +71,7 @@ from typing import Any
 from uuid import UUID
 
 from agent_harness._contracts import (
+    AgentHandoff,
     ApprovalReceived,
     ApprovalRequested,
     ContextCompacted,
@@ -355,6 +357,26 @@ def _serialize_inner(event: LoopEvent) -> dict[str, Any] | None:
             "type": "state_checkpointed",
             "data": {
                 "version": event.version,
+            },
+        }
+
+    # Sprint 57.68 (A-3b): AgentHandoff serializer — Cat 11 HANDOFF control
+    # transfer. Emitted by the chat router's post-loop hook AFTER HandoffService
+    # boots the child session (so new_session_id is populated). UUIDs → str()
+    # for the wire (mirrors SubagentSpawned); trace_id auto-injected by the
+    # serialize_loop_event wrapper.
+    if isinstance(event, AgentHandoff):
+        return {
+            "type": "agent_handoff",
+            "data": {
+                "target_agent": event.target_agent,
+                "reason": event.reason,
+                "parent_session_id": (
+                    str(event.parent_session_id) if event.parent_session_id else None
+                ),
+                "new_session_id": (
+                    str(event.new_session_id) if event.new_session_id else None
+                ),
             },
         }
 

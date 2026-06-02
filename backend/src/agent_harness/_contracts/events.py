@@ -23,6 +23,7 @@ Created: 2026-04-29 (Sprint 49.1)
 Last Modified: 2026-04-29
 
 Modification History (newest-first):
+    - 2026-06-02: Sprint 57.68 A-3b — add AgentHandoff event + LoopCompleted.handoff_target/reason
     - 2026-06-01: Sprint 57.65 A-2 — add cached_input_tokens + cache_hit_rate (prompt-cache obs)
     - 2026-04-30: Add 3 new Cat 1-owned events (Sprint 50.2 Day 2.2) —
         TurnStarted / LLMRequested / LLMResponded for per-turn SSE granularity.
@@ -148,6 +149,12 @@ class LoopCompleted(LoopEvent):
     # Default 0 / 0.0 covers early-termination paths before any LLM call.
     cached_input_tokens: int = 0
     cache_hit_rate: float = 0.0
+    # Sprint 57.68 A-3b (HANDOFF control transfer): when a HANDOFF output ends
+    # the parent loop, stop_reason="handoff" and these carry the parsed target
+    # agent + reason out to the platform layer (router post-loop hook → session
+    # boot). Default None covers every non-handoff termination path.
+    handoff_target: str | None = None
+    handoff_reason: str | None = None
 
 
 # === Category 6: Output Parser ==============================================
@@ -324,6 +331,22 @@ class SubagentCompleted(LoopEvent):
     subagent_id: UUID | None = None
     summary: str = ""
     tokens_used: int = 0
+
+
+@dataclass(frozen=True)
+class AgentHandoff(LoopEvent):
+    """Sprint 57.68 A-3b (Cat 11 HANDOFF): control-transfer event emitted by the
+    platform layer AFTER a child session is booted for the target agent (so
+    new_session_id is populated). Carries enough for the client to later pivot.
+
+    Defined here (single-source LoopEvent tree); the SSE wire registration +
+    serializer branch are Stage-2 work (event_wire_schema.py / sse.py).
+    """
+
+    target_agent: str = ""
+    reason: str = ""
+    parent_session_id: UUID | None = None
+    new_session_id: UUID | None = None
 
 
 # === HITL Centralization ====================================================
