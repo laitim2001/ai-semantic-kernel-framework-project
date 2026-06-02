@@ -86,15 +86,15 @@
 ## Day 4 — Design note (8-point gate) + Closeout
 
 ### 4.1 Design note extension (US-5)
-- [ ] `18-handoff-design.md` EXTEND — NEW §context-carry (agent-side, in-process carrier, capped verbatim, copy-vs-summarize tradeoff, seed placement) + NEW §FE session-pivot (pivot action, post-stream, banner AP-2) + §5 open-invariant update (agent-side carried ✅; user-visible transcript continuity still deferred + why); 8-point gate ALL ✅; verified-ratio ≥95%
-- [ ] retrospective.md §Design Note Extract record (8-point self-check)
+- [x] `18-handoff-design.md` EXTEND — NEW §8 (slice 2: §8.1 stories / §8.2 C-1/C-2/C-3 decision matrix + persistence reframe / §8.3 6 verified invariants w/ file:line / §8.4 copy-vs-summarize tradeoff / §8.5 rollback / §8.6 verify commands / §8.7 17.md cross-ref) + §5 open-invariant update (agent-side carry + FE pivot ✅; transcript continuity still deferred + why) + header/MHist; 8-point gate ALL ✅; verified-ratio ≥95%
+- [x] retrospective.md §Design Note Extract record (8-point self-check)
 
 ### 4.2 Closeout
-- [ ] Full validation (parent re-verified): pytest full / mypy src 0 / run_all 10/10 / codegen --check 0 / Vitest / build
-- [ ] 17.md §4.1 unchanged (note in design note that `LoopCompleted.handoff_context` is an in-process carrier, not a wire contract); `CHANGE-037`
-- [ ] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
-- [ ] Calibration: `handoff-context-carry-spike` 0.55 (NEW, 1 pt) + `agent_factor mechanical-greenfield-design-decisions` 0.65 (CAVEATED — 7th consecutive no-clean-wall-clock); `AD-Day0-Codegen-Existing-Shape-Capture` watch; recorded `calibration-log.md §3`
-- [ ] Area-A: A-3b slice 2 (agent-side carry + FE pivot) shipped; user-visible transcript continuity + summarize-carry + target auto-first-turn + multi-hop + real catalog = carryover (design note §5)
-- [ ] MEMORY.md pointer + `project_phase57_69_*.md` subfile + CLAUDE.md lean (per §Sprint Closeout policy)
-- [ ] commit (Day 1-4) + push + PR — user-authorized
-- [ ] **Final-commit `black --check`** (per `AD-Final-Commit-Black-Check`, 57.68 lesson) before push
+- [x] Full validation (parent re-verified): pytest 2015 / mypy src 0/325 / run_all 10/10 / codegen --check 0 / FE check:mockup-fidelity ✓ 50=50 / lint exit 0 / Vitest 709 / build ✓
+- [x] 17.md §4.1 unchanged (design note §8.7 notes `LoopCompleted.handoff_context` is an in-process carrier, not a wire contract — intentionally not registered); `CHANGE-037` created
+- [x] progress.md (Day 0-4) + retrospective.md (Q1-Q7 + Design Note Extract)
+- [x] Calibration: `handoff-context-carry-spike` 0.55 (NEW, 1 pt) + `agent_factor mechanical-greenfield-design-decisions` 0.65 (CAVEATED — 7th consecutive no-clean-wall-clock 57.63→69); recorded `calibration-log.md §3`
+- [x] Area-A: A-3b slice 2 (agent-side carry + FE pivot) shipped; user-visible transcript continuity (needs message-persistence subsystem) + summarize-carry + target auto-first-turn + multi-hop + real catalog + dedicated columns = carryover (design note §5/§8.4)
+- [x] MEMORY.md pointer + `project_phase57_69_handoff_context_carry_pivot.md` subfile + CLAUDE.md lean (Current Sprint row + footer)
+- [x] **Final-commit `black --check`** (per `AD-Final-Commit-Black-Check`, 57.68 lesson): black All done (597 files unchanged) + isort clean + flake8 exit 0
+- [ ] commit (Day 4 closeout) + push + PR — **user-authorized** (push/PR pending user approval)
