@@ -33,7 +33,6 @@ import pytest
 import api.v1.chat.handler as handler_mod
 from api.v1.chat.handler import DEMO_SYSTEM_PROMPT, resolve_session_persona
 
-
 # ============================================================
 # Handler persona resolution (resolve_session_persona)
 # ============================================================
@@ -44,9 +43,7 @@ class _FakeSessionRow:
         self.meta_data = meta_data
 
 
-def _patch_repo(
-    monkeypatch: pytest.MonkeyPatch, *, returns: _FakeSessionRow | None
-) -> None:
+def _patch_repo(monkeypatch: pytest.MonkeyPatch, *, returns: _FakeSessionRow | None) -> None:
     """Patch the SessionRepository symbol resolve_session_persona imports."""
     import infrastructure.db.repositories.session_repository as repo_mod
 

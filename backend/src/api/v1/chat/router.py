@@ -494,11 +494,7 @@ async def _stream_loop_events(
                 # HandoffError → fail soft (log, emit nothing) so a bad handoff
                 # never crashes the stream. user_id sourced from the request
                 # TraceContext (the authenticated actor).
-                if (
-                    event.stop_reason == "handoff"
-                    and db is not None
-                    and event.handoff_target
-                ):
+                if event.stop_reason == "handoff" and db is not None and event.handoff_target:
                     try:
                         handoff_result = await HandoffService().boot_handoff(
                             parent_session_id=session_id,

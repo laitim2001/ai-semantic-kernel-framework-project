@@ -374,9 +374,7 @@ def _serialize_inner(event: LoopEvent) -> dict[str, Any] | None:
                 "parent_session_id": (
                     str(event.parent_session_id) if event.parent_session_id else None
                 ),
-                "new_session_id": (
-                    str(event.new_session_id) if event.new_session_id else None
-                ),
+                "new_session_id": (str(event.new_session_id) if event.new_session_id else None),
             },
         }
 

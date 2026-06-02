@@ -89,9 +89,7 @@ class _HandoffLoop:
         )
 
 
-async def _seed_parent_session(
-    db: AsyncSession, *, tenant_id: UUID, user_id: UUID
-) -> SessionModel:
+async def _seed_parent_session(db: AsyncSession, *, tenant_id: UUID, user_id: UUID) -> SessionModel:
     """Persist a parent Session row (status active) for a handoff to link to."""
     row = SessionModel(
         id=uuid4(),
@@ -164,9 +162,7 @@ async def test_chat_handoff_boots_child_and_emits_frame(db_session: AsyncSession
 
     # (b) child session row persisted, tenant-inherited + linked + persona role.
     child = (
-        await db_session.execute(
-            select(SessionModel).where(SessionModel.id == new_session_id)
-        )
+        await db_session.execute(select(SessionModel).where(SessionModel.id == new_session_id))
     ).scalar_one()
     assert child.tenant_id == tenant.id
     assert child.handoff_parent_id == parent.id
@@ -180,12 +176,16 @@ async def test_chat_handoff_boots_child_and_emits_frame(db_session: AsyncSession
 
     # (d) a session.handoff audit row exists for the parent.
     audit_rows = (
-        await db_session.execute(
-            select(AuditLog).where(
-                (AuditLog.tenant_id == tenant.id) & (AuditLog.operation == "session.handoff")
+        (
+            await db_session.execute(
+                select(AuditLog).where(
+                    (AuditLog.tenant_id == tenant.id) & (AuditLog.operation == "session.handoff")
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(audit_rows) == 1
     assert audit_rows[0].operation_data["target_agent"] == "researcher"
     assert audit_rows[0].operation_data["new_session_id"] == str(new_session_id)
@@ -209,9 +209,7 @@ async def test_chat_handoff_foreign_parent_fails_soft(db_session: AsyncSession) 
     other_tenant = await seed_tenant(db_session, code="HANDOFF_OT")
     other_user = await seed_user(db_session, other_tenant, email="ot@test.com")
 
-    trace_ctx = TraceContext(
-        tenant_id=other_tenant.id, session_id=parent.id, user_id=other_user.id
-    )
+    trace_ctx = TraceContext(tenant_id=other_tenant.id, session_id=parent.id, user_id=other_user.id)
     loop = _HandoffLoop(target_agent="researcher", reason="x")
     registry = get_default_registry()
     await registry.register(other_tenant.id, parent.id)
@@ -237,10 +235,14 @@ async def test_chat_handoff_foreign_parent_fails_soft(db_session: AsyncSession) 
 
     # No child session was booted under the foreign tenant.
     foreign_children = (
-        await db_session.execute(
-            select(SessionModel).where(SessionModel.tenant_id == other_tenant.id)
+        (
+            await db_session.execute(
+                select(SessionModel).where(SessionModel.tenant_id == other_tenant.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert foreign_children == []
 
     # Parent (in its own tenant) was NOT mutated.
