@@ -12,15 +12,15 @@
 ## Day 0 — Plan-vs-Repo Verify + Branch
 
 ### 0.1 Three-prong Day-0 verify
-- [ ] **Prong 1 (path)**: `loop.py:1073-1091` HANDOFF branch; `_contracts/events.py` `LoopCompleted` + `Message`; `platform_layer/handoff/{service.py,persona_registry.py}` (context_carry.py absent); `router.py` post-loop hook; `handler.py:369` resolve_session_persona; `session_repository.py:53-62` create_session (meta_data); FE `chatStore.ts:408-414` agent_handoff passthrough + `:71/:83` sessionId/activeSessionId + `:571` reset; `ChatLayout.tsx`; `styles-mockup.css` `.badge.info`/`.hitl-card`
-- [ ] **Prong 2 (content)**: read EXACT `LoopCompleted` field shape + how the 57.68 branch builds it + the `Message` type in `state.messages`; confirm `sse.py` `loop_end` serializer does NOT map a new field; read how `handler.py`/builder assembles the initial `LoopState.messages` (where the seed lands); read `boot_handoff` transaction + `create_session(meta_data=…)` call; read the 57.65 `_apply_memory_budget` drop-oldest pattern + neutral `token_counter` signature
-- [ ] **Prong 3 (schema)**: confirm NO migration needed (`carried_context` rides `meta_data` JSONB; `meta_data` accepted by `create_session` since 57.68); `WIRE_SCHEMA` stays 19 (no codegen); no new RLS
-- [ ] **Doc-location**: `18-handoff-design.md` (extend — §context-carry + §FE pivot + §5 update); 17.md §4.1 unchanged (event unchanged); CHANGE-037
-- [ ] Catalogued D-DAY0-1..N in progress.md; **go/no-go = decide** (≤20% continue / 20-50% revise §5+§7 + re-confirm / >50% redraft)
+- [x] **Prong 1 (path)**: `loop.py:1073-1094` HANDOFF branch; `_contracts/events.py:124-157` `LoopCompleted` (frozen, all-default); `Message` @ `chat.py:75-95`; `platform_layer/handoff/{service.py:87-174,persona_registry.py}` (context_carry.py absent ✓); `router.py` post-loop hook; `handler.py:369-399` resolve_session_persona; `session_repository.py` create_session (meta_data ✓ 57.68); FE `chatStore.ts:408-414` agent_handoff passthrough + `:69-103` state + `:105-132` _initial + `:193-201` loop_start + `:571` reset
+- [x] **Prong 2 (content)**: `LoopCompleted` frozen all-default → `handoff_context` additive (D-DAY0-1); `sse.py:208-217` loop_end maps only 4 fields → no wire leak (D-DAY0-2); `resolve_session_persona` returns system-prompt str → seed as text block there, NOT LoopState.messages (D-DAY0-3, scope-reducing); token counting is async `ChatClient.count_tokens` → message-COUNT cap (D-DAY0-4, scope-reducing); `Message.content` = `str | list[ContentBlock]` → render both (D-DAY0-7)
+- [x] **Prong 3 (schema)**: NO migration (`carried_context` rides `meta_data` JSONB; `create_session` accepts `meta_data` since 57.68); `WIRE_SCHEMA` stays 19 (no codegen); no new RLS (D-DAY0-5)
+- [x] **Doc-location**: `18-handoff-design.md` (extend — §context-carry + §FE pivot + §5 update); 17.md §4.1 unchanged (event unchanged); CHANGE-037
+- [x] Catalogued D-DAY0-1..7 in progress.md; **go/no-go = GO** (D-DAY0-3/4 simplify; <20% net change, same deliverables/AC → continue, no re-confirm)
 
 ### 0.2 Branch + decisions
-- [ ] Branch `feature/sprint-57-69-handoff-context-carry-pivot` from `2a872210`; plan+checklist commit; Day-0 progress commit
-- [ ] Decisions: carry = in-memory snapshot (not DB — D1); storage = capped verbatim in `meta_data["carried_context"]` (no migration — D5); summarize = design alternative (deferred); seed at handler first-turn; FE pivot post-stream + banner from oklch primitives (AP-2); **Agent-delegated: yes** (Stage-1 backend / Stage-2 frontend; design note parent-authored)
+- [x] Branch `feature/sprint-57-69-handoff-context-carry-pivot` from `2a872210`; plan+checklist commit `26b2cf3d`; Day-0 progress commit
+- [x] Decisions: carry = in-memory snapshot (not DB — D1); storage = message-count-capped verbatim in `meta_data["carried_context"]` (no migration — D-DAY0-4/5); summarize = design alternative (deferred); seed = text block in persona system prompt (D-DAY0-3); FE pivot post-stream + banner from oklch primitives (AP-2); **Agent-delegated: yes** (Stage-1 backend / Stage-2 frontend; design note parent-authored)
 
 ---
 
