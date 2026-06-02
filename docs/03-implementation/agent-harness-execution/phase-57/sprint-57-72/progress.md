@@ -26,3 +26,13 @@
 ### Decisions
 - Scope = Tree tab only; Trace/Memory deferred to their backend producers; render available `SubagentNode` fields, "—"/omit per-child turns + concurrency max (D5, no fabrication); verbatim mockup classes + `var(--*)` colors (no new CSS, no baseline bump); mirror `InspectorTurn`.
 - **Agent-delegated: yes** — single `code-implementer` (component + test + mockup-fidelity verify); parent independently re-verifies (verbatim-class fidelity + tree-build logic + empty state + runs `check:mockup-fidelity`).
+
+---
+
+## Day 1-2 — 2026-06-03 — InspectorTree + wire-in + mockup-fidelity (agent-delegated + parent re-verify)
+
+`code-implementer` agent built the component; parent independently re-verified (read the full component + diffs + ran all gates).
+
+- **Changes**: `InspectorTree.tsx` (NEW) — verbatim re-point of mockup `page-chat.jsx:489-531`; reads `useChatStore((s) => s.subagents)`; `buildTree()` folds flat `SubagentNode[]` → forest by `parentId` (roots = parentId ∉ subagent ids; `visited` cycle guard + `MAX_DEPTH=5`); `NodeRow` recursive `.subagent-row` + `.indent`; lucide MessageSquare/GitFork/ChevronRight; StatusBadge (running→`badge warning`, completed→`badge success dot`); `.thin-rule` + `.col` summary (Mode dominant badge / Depth max-nesting / Concurrency running-count / Tokens-subtree Σ); empty state. `ChatInspector.tsx` (EDIT, L94) — Tree `ComingSoonInspectorTab` → `<InspectorTree/>` (Trace/Memory untouched). `ChatInspector.test.tsx` extended 8→9 (empty + populated root+2children).
+- **D5 deviation (parent-accepted)**: dropped the mockup's demo-only synthetic "fork · t1 · 3 children" intermediate row + per-child "· Nt" turns + concurrency "/max" — these are mockup fixture fabrications absent from `SubagentNode`. The `.indent` nesting + GitFork icon on a parent-with-children convey the fork structure faithfully; nothing fabricated (AP-4 avoided). Structural CSS fidelity preserved; literal demo data not reproduced.
+- **Parent re-verify (decisive, parent-run gates)**: CSS diff EMPTY (styles-mockup.css untouched); `npm run build` tsc 0 (3.86s); `npx vitest run …/inspector` **9/9 passed**; `npm run check:mockup-fidelity` **byte-identical + 50 hardcoded lines (baseline 50 unchanged)** ✅; `npm run lint` (no `--silent`) EXIT=0 (jsx-ast-utils notices = pre-existing other-file noise); grep guard 0 hardcoded hex/oklch in InspectorTree.tsx. No backend change (pytest/mypy/V2-lints untouched). Verdict: **PASS**. Commit `<impl>`.

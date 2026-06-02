@@ -7,6 +7,7 @@
  * Created: 2026-05-17 (Sprint 57.21 Day 4 §4.1)
  *
  * Modification History:
+ *   - 2026-06-03: Sprint 57.72 — Tree tab now renders InspectorTree (A-5c); replace ComingSoon-Tree assertion with empty + populated tree
  *   - 2026-05-17: Initial creation (Sprint 57.21 Day 4 §4.1)
  */
 
@@ -17,6 +18,20 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { ChatInspector } from "@/features/chat_v2/components/inspector/ChatInspector";
 import { useChatStore } from "@/features/chat_v2/store/chatStore";
 import type { AgentTurn } from "@/features/chat_v2/types";
+import type { SubagentNode } from "@/features/subagent/types";
+
+function makeSubagent(overrides: Partial<SubagentNode> = {}): SubagentNode {
+  return {
+    subagentId: "sa-root",
+    parentId: "chat-1",
+    mode: "fork",
+    status: "running",
+    summary: null,
+    tokensUsed: null,
+    spawnedAt: Date.now(),
+    ...overrides,
+  };
+}
 
 function makeAgentTurn(overrides: Partial<AgentTurn> = {}): AgentTurn {
   return {
@@ -120,12 +135,60 @@ describe("ChatInspector (Sprint 57.21 Day 4 §4.1)", () => {
     expect(screen.getByText(/AD-ChatV2-Inspector-Memory-Phase2/)).toBeInTheDocument();
   });
 
-  test("Switch to Tree tab → ComingSoon Tree placeholder", async () => {
+  test("Switch to Tree tab → InspectorTree empty state when no subagents (no ComingSoon placeholder)", async () => {
     const user = userEvent.setup();
     render(<ChatInspector />);
     await user.click(screen.getByRole("tab", { name: "Tree" }));
-    expect(screen.getByTestId("inspector-tab-coming-soon-tree")).toBeInTheDocument();
-    expect(screen.getByText(/AD-ChatV2-Inspector-SubagentTree-Phase2/)).toBeInTheDocument();
+    expect(screen.getByTestId("inspector-tree-empty")).toBeInTheDocument();
+    expect(screen.getByText("no subagents spawned this session")).toBeInTheDocument();
+    // Tree tab no longer renders the ComingSoon placeholder (Sprint 57.72 wire-in).
+    expect(screen.queryByTestId("inspector-tab-coming-soon-tree")).toBeNull();
+  });
+
+  test("Switch to Tree tab → InspectorTree renders root + 2 children with status + summary rows", async () => {
+    useChatStore.setState({
+      subagents: [
+        makeSubagent({ subagentId: "sa-root", parentId: "chat-1", mode: "fork", status: "running" }),
+        makeSubagent({
+          subagentId: "child-a",
+          parentId: "sa-root",
+          mode: "teammate",
+          status: "completed",
+          summary: "scanned logs",
+          tokensUsed: 1200,
+        }),
+        makeSubagent({
+          subagentId: "child-b",
+          parentId: "sa-root",
+          mode: "teammate",
+          status: "completed",
+          summary: "checked deps",
+          tokensUsed: 800,
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+    render(<ChatInspector />);
+    await user.click(screen.getByRole("tab", { name: "Tree" }));
+
+    expect(screen.getByTestId("inspector-tree")).toBeInTheDocument();
+    // node rows (names) + nesting
+    expect(screen.getByTestId("inspector-tree-node-sa-root")).toBeInTheDocument();
+    const childA = screen.getByTestId("inspector-tree-node-child-a");
+    expect(childA).toBeInTheDocument();
+    expect(screen.getByTestId("inspector-tree-node-child-b")).toBeInTheDocument();
+    // status labels
+    expect(screen.getByText("running")).toBeInTheDocument();
+    expect(screen.getAllByText("completed").length).toBe(2);
+    // summary rows: Depth (root + children = 2), Concurrency (1 running), Tokens (1200+800 = 2,000)
+    expect(screen.getByText("Depth")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("Concurrency")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("Tokens (subtree)")).toBeInTheDocument();
+    expect(screen.getByText("2,000")).toBeInTheDocument();
+    // no ComingSoon placeholder
+    expect(screen.queryByTestId("inspector-tab-coming-soon-tree")).toBeNull();
   });
 
   test("All 4 tabs render in tablist with correct aria-selected default Turn=true", () => {
