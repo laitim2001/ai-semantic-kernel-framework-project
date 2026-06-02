@@ -58,4 +58,11 @@
 - **Tests**: `chatStore.mergeEvent.test.ts` (+8) + `HandoffBanner.test.tsx` (NEW, 3).
 - **Drift finding D-DAY2-1 (parent re-verify catch)**: the FE agent ran `npm run lint`/`build`/`test` but NOT `npm run check:mockup-fidelity` (a CI gate in `frontend-ci.yml`). The HandoffBanner's 2 `oklch(from var(--info) ...)` tints + 1 comment-mention pushed the grep guard to 51 vs `HEX_OKLCH_BASELINE` 48 → would have failed CI (the AD-silent-constraint-delta / Sprint 57.49 silent-drift pattern). **Fix**: reworded the `eslint-disable` comment to drop the literal `oklch(` substring (the checker is code-aware for `/** */` docstrings but not the `/* eslint-disable */` block, so the comment was false-counted) → live count 50; bumped `HEX_OKLCH_BASELINE` 48→50 + MHist (token-vocabulary precedent 57.30/57.35/57.37/57.38/57.40). Lesson: agent-delegated FE work must run ALL CI gates incl. `check:mockup-fidelity`, not just lint/build/test.
 - **Parent re-verify (independent)**: `check:mockup-fidelity` ✓ (styles byte-identical + grep guard 50=50); `lint` exit 0; `test` 709 passed (+11); `build` ✓. chatStore/ChatLayout diffs confirmed correct.
-- Commit (Stage-2) pending.
+- Commit `734c1c9e`.
+
+## Day 3 — 2026-06-02 — Full sweep + edge cases (decisive re-verify)
+
+- **Full backend sweep**: `pytest tests/unit tests/integration` → **2015 passed / 4 skipped / 0 failed** in 96s (= 57.68 baseline 1999 + 16 new backend tests; integration layer no regression).
+- **Edge cases** (covered by Stage-1/2 tests): empty parent conversation → no `carried_context` key (57.68 backward-compat); over-budget → drop-oldest last-20; malformed carried_context → nested fail-open (persona preserved, no crash); FE pivot is post-stream (integration asserts `loop_end` carries no `handoff_context`).
+- **Decisive re-verify totals**: pytest 2015; mypy src 0/325; run_all 10/10; codegen --check 0; FE check:mockup-fidelity ✓; lint exit 0; Vitest 709; build ✓.
+- No new drift beyond D-DAY0-3/4 (Day 0) + D-DAY2-1 (Day 2). Commit pending.

@@ -76,10 +76,10 @@
 
 ## Day 3 — Full sweep + edge cases
 
-- [ ] Full `pytest tests/unit tests/integration` green (carry + 57.68 + no regression); tenant-scoping + budget-cap + handler-seed asserted
-- [ ] Edge: empty parent conversation (no carry, backward-compat); over-budget (drop-oldest); malformed carried_context (fail-open); pivot order vs loop_end (post-stream)
-- [ ] Parent decisive re-verify: pytest full count; `mypy src/` 0; `run_all.py` 10/10; codegen `--check` 0; tsc 0; Vitest count; build ✓
-- [ ] If any drift from plan → catalog in progress.md + adjust (do NOT silently rewrite plan)
+- [x] Full `pytest tests/unit tests/integration` → **2015 passed / 4 skipped / 0 failed** (= 57.68 baseline 1999 + 16 new; integration no regression); tenant-scoping + budget-cap + handler-seed asserted
+- [x] Edge: empty parent conversation (no `carried_context` key, 57.68 backward-compat); over-budget (drop-oldest last-20); malformed carried_context (nested fail-open, persona preserved); pivot order vs loop_end (post-stream — integration asserts `loop_end` has no `handoff_context`)
+- [x] Parent decisive re-verify: pytest full 2015; `mypy src/` 0/325; `run_all.py` 10/10; codegen `--check` 0; FE check:mockup-fidelity ✓ 50=50; lint exit 0; Vitest 709; build ✓
+- [x] Drift catalogued: D-DAY2-1 (mockup-fidelity baseline bump) in progress.md Day 2; plan §3.2/§3.3 refinements (D-DAY0-3/4) in progress.md Day 0 (not silently rewritten)
 
 ---
 
