@@ -30,6 +30,7 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.1)
 Last Modified: 2026-04-30
 
 Modification History (newest-first):
+    - 2026-06-02: Sprint 57.68 A-3b — replace HANDOFF_NOT_IMPLEMENTED stub with real HANDOFF reason
     - 2026-04-30: Initial creation (Sprint 50.1 Day 2.1) — 4 pure terminators +
         TerminationReason enum + TripwireTerminator ABC stub.
 
@@ -58,7 +59,7 @@ class TerminationReason(Enum):
     TRIPWIRE = "tripwire"  # Cat 9 — wired in Phase 53.3
     GUARDRAIL_BLOCKED = "guardrail_blocked"  # Cat 9 — non-tripwire BLOCK / ESCALATE
     ERROR = "error"  # Cat 8 — wired in Phase 53.2
-    HANDOFF_NOT_IMPLEMENTED = "handoff_not_implemented"  # 50.1 stub for Cat 11
+    HANDOFF = "handoff"  # Cat 11 — control transfer to target agent (Phase 57.68)
 
 
 def should_terminate_by_stop_reason(response: ChatResponse) -> bool:

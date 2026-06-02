@@ -187,6 +187,17 @@ export interface StateCheckpointedEvent {
   };
 }
 
+export interface AgentHandoffEvent {
+  type: "agent_handoff";
+  data: {
+    trace_id?: string | null;
+    target_agent: string;
+    reason: string;
+    parent_session_id: string;
+    new_session_id: string;
+  };
+}
+
 export type LoopEvent =
   | LoopStartEvent
   | TurnStartEvent
@@ -205,7 +216,8 @@ export type LoopEvent =
   | SubagentCompletedEvent
   | ContextCompactedEvent
   | PromptBuiltEvent
-  | StateCheckpointedEvent;
+  | StateCheckpointedEvent
+  | AgentHandoffEvent;
 
 export const KNOWN_LOOP_EVENT_TYPES = new Set<string>([
   "loop_start",
@@ -226,4 +238,5 @@ export const KNOWN_LOOP_EVENT_TYPES = new Set<string>([
   "context_compacted",
   "prompt_built",
   "state_checkpointed",
+  "agent_handoff",
 ]);

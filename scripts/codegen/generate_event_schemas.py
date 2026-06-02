@@ -46,6 +46,7 @@ Created: 2026-06-02 (Sprint 57.67)
 Last Modified: 2026-06-02
 
 Modification History (newest-first):
+    - 2026-06-02: Sprint 57.68 A-3b — map agent_handoff → AgentHandoffEvent (Cat 11 HANDOFF)
     - 2026-06-02: Initial creation (Sprint 57.67 A-5b) — wire-schema → FE artifact codegen
 
 Related:
@@ -100,6 +101,7 @@ WIRE_TYPE_TO_INTERFACE: dict[str, str] = {
     "context_compacted": "ContextCompactedEvent",
     "prompt_built": "PromptBuiltEvent",
     "state_checkpointed": "StateCheckpointedEvent",
+    "agent_handoff": "AgentHandoffEvent",
 }
 
 

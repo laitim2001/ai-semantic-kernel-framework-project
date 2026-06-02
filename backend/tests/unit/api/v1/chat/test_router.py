@@ -5,6 +5,7 @@ Category: tests
 Scope: Phase 50 / Sprint 50.2 (Day 1.5) — Sprint 52.5 Day 2 (P0 #11+#12 dep + tenant)
 
 Modification History (newest-first):
+    - 2026-06-02: Sprint 57.68 A-3b — override get_db_session→None (no real conn leak; Risk Class C)
     - 2026-05-01: Sprint 52.5 Day 2 (P0 #11+#12) — every test exercises
         Depends(get_current_tenant) via dependency_overrides; storage
         reset uses _tenants.clear(); register() calls carry tenant_id;
@@ -15,7 +16,7 @@ Modification History (newest-first):
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from uuid import UUID, uuid4
 
 import pytest
@@ -24,6 +25,7 @@ from fastapi.testclient import TestClient
 
 from api.v1.chat import router as chat_router
 from api.v1.chat.session_registry import get_default_registry
+from infrastructure.db.session import get_db_session
 from platform_layer.identity import get_current_tenant
 from platform_layer.identity.auth import get_current_user_id
 
@@ -49,7 +51,21 @@ def app() -> FastAPI:
     # Sprint 57.7 US-R1: chat() now Depends(get_current_user_id);
     # mirror the tenant override so unit tests don't need real JWT.
     inst.dependency_overrides[get_current_user_id] = lambda: DEFAULT_USER_ID
+    # Sprint 57.68 A-3b: override get_db_session → None so the chat endpoint
+    # opens NO real engine connection. These unit tests have no real DB factory
+    # wired (db observers are env-disabled; the router + resolve_session_persona
+    # + _stream_loop_events + build_handler all handle db=None). Without this,
+    # the 57.68 resolve_session_persona() SELECT forces a real asyncpg socket on
+    # the TestClient's event loop that is never disposed (no db_session fixture),
+    # leaving a pooled connection bound to a closed loop → a later db_session
+    # test's engine ping raises "Event loop is closed" (Risk Class C).
+    inst.dependency_overrides[get_db_session] = _no_db
     return inst
+
+
+async def _no_db() -> AsyncIterator[None]:
+    """get_db_session override: yield None (no real engine connection)."""
+    yield None
 
 
 @pytest.fixture

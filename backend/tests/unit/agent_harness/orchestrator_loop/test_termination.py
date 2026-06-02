@@ -90,7 +90,8 @@ def test_termination_reason_values() -> None:
     assert TerminationReason.CANCELLED.value == "cancelled"
     assert TerminationReason.TRIPWIRE.value == "tripwire"
     assert TerminationReason.ERROR.value == "error"
-    assert TerminationReason.HANDOFF_NOT_IMPLEMENTED.value == "handoff_not_implemented"
+    # Sprint 57.68 A-3b: HANDOFF_NOT_IMPLEMENTED stub replaced by real HANDOFF.
+    assert TerminationReason.HANDOFF.value == "handoff"
 
 
 def test_tripwire_terminator_abc_unimplementable() -> None:

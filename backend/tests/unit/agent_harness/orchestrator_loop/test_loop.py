@@ -308,9 +308,18 @@ async def test_cancellation_during_tool_yields_cancelled() -> None:
 
 
 @pytest.mark.asyncio
-async def test_handoff_path_yields_not_implemented() -> None:
-    """HANDOFF detected → LoopCompleted(handoff_not_implemented); Cat 11 stub."""
-    handoff_call = ToolCall(id="h1", name="handoff", arguments={"target_agent": "specialist"})
+async def test_handoff_path_yields_handoff_stop_reason() -> None:
+    """HANDOFF detected → LoopCompleted(handoff) carrying target_agent + reason.
+
+    Sprint 57.68 A-3b: the loop swaps the old HANDOFF_NOT_IMPLEMENTED dead-end
+    for a real `handoff` stop_reason carrying the parsed control-transfer intent
+    (the platform layer boots the child session post-loop).
+    """
+    handoff_call = ToolCall(
+        id="h1",
+        name="handoff",
+        arguments={"target_agent": "specialist", "reason": "needs expert"},
+    )
     loop = _make_loop(
         chat_responses=[
             ChatResponse(
@@ -324,7 +333,10 @@ async def test_handoff_path_yields_not_implemented() -> None:
     events = await _collect(loop.run(session_id=uuid4(), user_input="x"))
     completed = events[-1]
     assert isinstance(completed, LoopCompleted)
-    assert completed.stop_reason == TerminationReason.HANDOFF_NOT_IMPLEMENTED.value
+    assert completed.stop_reason == TerminationReason.HANDOFF.value
+    assert completed.stop_reason == "handoff"
+    assert completed.handoff_target == "specialist"
+    assert completed.handoff_reason == "needs expert"
     # Verify NO ToolCallRequested was emitted (HANDOFF short-circuits before
     # the tool_call dispatch loop).
     assert not any(isinstance(e, ToolCallRequested) for e in events)

@@ -1,0 +1,103 @@
+"""
+File: backend/tests/unit/api/v1/chat/test_chat_handoff_unit.py
+Purpose: Unit tests for Sprint 57.68 A-3b handler per-session persona resolution
+    (resolve_session_persona).
+Category: Tests
+Scope: Phase 57 / Sprint 57.68 A-3b (Stage 2)
+
+Description:
+    No DB / no network. resolve_session_persona returns the target persona when
+    the (fake) session row carries meta_data["agent_role"], and falls back to
+    DEMO_SYSTEM_PROMPT otherwise / on missing inputs / unknown role. The
+    SessionRepository it imports is monkeypatched to a fake; the `db` argument is
+    a bare object() (never a real connection) so these never open an asyncpg
+    connection — keeping the unit file DB-connection-free.
+
+    The router post-loop hook tests (emit / fail-soft / skip) that drive the REAL
+    _stream_loop_events live in the integration file
+    (tests/integration/api/test_chat_handoff.py) where the managed `db_session`
+    fixture's dispose_engine() teardown prevents a real connection leaking onto a
+    closed event loop (Risk Class C).
+
+Created: 2026-06-02 (Sprint 57.68 A-3b Stage 2)
+Last Modified: 2026-06-02 (Sprint 57.68 A-3b — relocate router-hook tests to integration file)
+"""
+
+from __future__ import annotations
+
+from typing import Any
+from uuid import UUID, uuid4
+
+import pytest
+
+import api.v1.chat.handler as handler_mod
+from api.v1.chat.handler import DEMO_SYSTEM_PROMPT, resolve_session_persona
+
+# ============================================================
+# Handler persona resolution (resolve_session_persona)
+# ============================================================
+
+
+class _FakeSessionRow:
+    def __init__(self, meta_data: dict[str, Any] | None) -> None:
+        self.meta_data = meta_data
+
+
+def _patch_repo(monkeypatch: pytest.MonkeyPatch, *, returns: _FakeSessionRow | None) -> None:
+    """Patch the SessionRepository symbol resolve_session_persona imports."""
+    import infrastructure.db.repositories.session_repository as repo_mod
+
+    class _FakeRepo:
+        def __init__(self, db: Any) -> None:
+            self._db = db
+
+        async def get_session(self, *, session_id: UUID, tenant_id: UUID) -> Any:
+            return returns
+
+    monkeypatch.setattr(repo_mod, "SessionRepository", _FakeRepo)
+
+
+@pytest.mark.asyncio
+async def test_persona_resolves_target_role(monkeypatch: pytest.MonkeyPatch) -> None:
+    """agent_role in meta_data → the target persona system prompt (not DEMO)."""
+    _patch_repo(monkeypatch, returns=_FakeSessionRow({"agent_role": "researcher"}))
+    prompt = await resolve_session_persona(object(), uuid4(), uuid4())
+    assert prompt != DEMO_SYSTEM_PROMPT
+    assert "research specialist" in prompt
+
+
+@pytest.mark.asyncio
+async def test_persona_falls_back_when_no_agent_role(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A session without agent_role → DEMO_SYSTEM_PROMPT."""
+    _patch_repo(monkeypatch, returns=_FakeSessionRow({}))
+    prompt = await resolve_session_persona(object(), uuid4(), uuid4())
+    assert prompt == DEMO_SYSTEM_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_persona_falls_back_when_session_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No session row → DEMO_SYSTEM_PROMPT."""
+    _patch_repo(monkeypatch, returns=None)
+    prompt = await resolve_session_persona(object(), uuid4(), uuid4())
+    assert prompt == DEMO_SYSTEM_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_persona_falls_back_when_unknown_role(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unknown agent_role → DEMO_SYSTEM_PROMPT (persona registry miss)."""
+    _patch_repo(monkeypatch, returns=_FakeSessionRow({"agent_role": "nope-not-real"}))
+    prompt = await resolve_session_persona(object(), uuid4(), uuid4())
+    assert prompt == DEMO_SYSTEM_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_persona_falls_back_when_no_db() -> None:
+    """No db / session_id / tenant_id → DEMO_SYSTEM_PROMPT (ordinary session)."""
+    assert await resolve_session_persona(None, uuid4(), uuid4()) == DEMO_SYSTEM_PROMPT
+    assert await resolve_session_persona(object(), None, uuid4()) == DEMO_SYSTEM_PROMPT
+    assert await resolve_session_persona(object(), uuid4(), None) == DEMO_SYSTEM_PROMPT
+
+
+def test_handler_module_exposes_resolve() -> None:
+    """resolve_session_persona is importable from the handler module."""
+    assert hasattr(handler_mod, "resolve_session_persona")
