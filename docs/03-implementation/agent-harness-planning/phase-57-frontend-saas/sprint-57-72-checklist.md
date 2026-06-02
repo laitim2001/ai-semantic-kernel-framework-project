@@ -64,12 +64,12 @@
 ## Day 4 — Closeout
 
 ### 4.1 Closeout docs
-- [ ] CHANGE-040 created; no 17.md/02.md/01.md change (pure frontend consumer)
-- [ ] progress.md (Day 0-4) + retrospective.md (Q1-Q7) — NO design note (feature-continuation)
-- [ ] Calibration: `frontend-mockup-direct-port` 0.55 + `agent_factor` 0.65 (CAVEATED — 10th consecutive no-clean-wall-clock 57.63→72); record `calibration-log.md §3`
-- [ ] MEMORY.md pointer + `project_phase57_72_inspector_tree.md` subfile + CLAUDE.md lean (Current Sprint row + footer)
+- [x] CHANGE-040 created; no 17.md/02.md/01.md change (pure frontend consumer)
+- [x] progress.md (Day 0-4) + retrospective.md (Q1-Q7) — NO design note (feature-continuation)
+- [x] Calibration: `frontend-mockup-direct-port` 0.55 + `agent_factor` 0.65 (CAVEATED — 10th consecutive no-clean-wall-clock 57.63→72); recorded `calibration-log.md §3`
+- [x] MEMORY.md pointer + `project_phase57_72_inspector_tree.md` subfile + CLAUDE.md lean (Current Sprint row + footer)
 
 ### 4.2 Final verify + ship
-- [ ] Final verify: `npm run lint` + build + tsc 0 + Vitest + `check:mockup-fidelity` 50; CSS diff empty
-- [ ] commit (Day 1-4) + push + PR — **user-authorized** (push/PR pending user approval)
-- [ ] Carryover recorded (plan §9 + retrospective §Q5 + memory subfile): Trace tab (SpanStarted/SpanEnded SSE) + Memory tab (memory_accessed) + diagnostic-event surfacing + per-child turns/concurrency-max telemetry + A-6 + FE /subagents wiring + capstone key chains (C-11 / billing bundle)
+- [x] Final verify (parent-run): CSS diff empty + `npm run build` tsc 0 + Vitest 9/9 + `check:mockup-fidelity` 50 unchanged + `npm run lint` (no `--silent`) EXIT 0 + grep 0 hardcoded color
+- [ ] commit (Day 1-4) + push + PR — **user-authorized** (Day-0 `fd4312ee` + impl `0bdcbf91` committed; push/PR pending user approval)
+- [x] Carryover recorded (plan §9 + retrospective §Q5 + memory subfile): Trace tab (SpanStarted/SpanEnded SSE) + Memory tab (memory_accessed) + diagnostic-event surfacing + per-child turns/concurrency-max telemetry + A-6 + FE /subagents wiring + capstone key chains (C-11 / billing bundle)
