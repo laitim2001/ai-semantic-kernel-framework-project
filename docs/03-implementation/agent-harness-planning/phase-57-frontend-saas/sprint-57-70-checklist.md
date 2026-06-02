@@ -73,12 +73,12 @@
 ## Day 4 — Closeout
 
 ### 4.1 Closeout docs
-- [ ] `09-db-schema-design.md §Group 9` += agent_catalog table; 17.md unchanged (confirmed); CHANGE-038
-- [ ] progress.md (Day 0-4) + retrospective.md (Q1-Q7) — NO design note (feature-continuation)
-- [ ] Calibration: `agent-catalog-backend` 0.55 (NEW, 1 pt) + `agent_factor` 0.65 (CAVEATED — 8th consecutive no-clean-wall-clock); recorded `calibration-log.md §3`
-- [ ] MEMORY.md pointer + `project_phase57_70_*.md` subfile + CLAUDE.md lean (Current Sprint + footer)
+- [x] `09-db-schema-design.md §Group 9` += agent_catalog table (Stage-1a); 17.md unchanged (confirmed — resolver is platform-layer); CHANGE-038 created
+- [x] progress.md (Day 0-4) + retrospective.md (Q1-Q7) — NO design note (feature-continuation)
+- [x] Calibration: `agent-catalog-backend` 0.55 (NEW, 1 pt) + `agent_factor` 0.65 (CAVEATED — 8th consecutive no-clean-wall-clock 57.63→70); recorded `calibration-log.md §3`
+- [x] MEMORY.md pointer + `project_phase57_70_agent_catalog.md` subfile + CLAUDE.md lean (Current Sprint row + footer)
 
 ### 4.2 Final verify + ship
-- [ ] **Final-commit `black --check`** (AD-Final-Commit-Black-Check) + isort + flake8 + mypy src 0 + run_all 10/10
-- [ ] commit (Day 1-4) + push + PR — **user-authorized**
-- [ ] Carryover recorded: FE `/subagents` wiring → 57.71; allowed_modes/budget/tools loop-enforcement; AD-Subagent-RealList-Phase58; etc. (plan §9)
+- [x] **Final-commit `black --check`** (AD-Final-Commit-Black-Check): black 603 unchanged + isort/flake8 0 + mypy src 0/329 + run_all 10/10
+- [ ] commit (Day 1-4) + push + PR — **user-authorized** (push/PR pending user approval)
+- [x] Carryover recorded (plan §9 + retrospective §Q5 + memory subfile): FE `/subagents` wiring → 57.71; allowed_modes/budget/tools loop-enforcement; AD-Subagent-RealList-Phase58; default chat persona from catalog; provisioning seed; tenant self-service
