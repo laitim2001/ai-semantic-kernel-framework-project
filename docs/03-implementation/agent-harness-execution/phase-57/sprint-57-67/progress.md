@@ -56,3 +56,22 @@ Architecture pre-locked (user AskUserQuestion 2026-06-02): **declarative wire-sc
 - §3.4 lint.yml "no-op if it calls run_all.py" **resolved to: it does NOT** (D-DAY0-5) → add a `lint.yml` step (CI/CD change, push-gated).
 
 ---
+
+## Day 1+2 — 2026-06-02 — Implementation (staged code-implementer delegation)
+
+**Stage 1 (backend)** — `code-implementer` agent: `event_wire_schema.py` (`WIRE_SCHEMA` 18 entries + `BASE_FIELDS` + `LLMToolCall` + `validate_ts_type`, pure stdlib) + `scripts/codegen/generate_event_schemas.py` (importlib-by-path load + events.json + loopEvents.generated.ts + `--check`) + `test_event_wire_schema_parity.py` (30 cases). Backend green: parity 30 passed, full pytest 1994/4 skipped (+30), mypy src 320/0, SDK leak 0, codegen idempotent. Reproduced richer-than-table TS types from types.ts (`score: number|null`, `reason: string|null`, `verifier_type` literal union, `LLMToolCall`, `thinking`/`suggested_correction` nullable).
+
+**Stage 2 (FE + lint + tests)** — `code-implementer` agent: reconciled a **Stage-1 shape error** — generated TS was FLAT `{type, trace_id, ...fields}` but working `types.ts` is NESTED `{type, data:{...}}` (store reads `ev.data.X`). Fixed codegen `render_generated_ts` to emit nested `data: { trace_id?: string|null; <fields> }` (trace_id optional — wire carries it, fixtures/HITLTurn omit it); did NOT touch registry/events.json/parity test. Swapped `types.ts` → `export * from "./generated/loopEvents.generated"` (preserved Block/Turn/Session/ToolCallEntry/ApprovalEntry/Chat* non-event content). `.gitattributes` eol=lf for generated. `check_event_schema_sync.py` (10th lint) + `run_all.py` 9→10. FE test (`eventSchema.generated.test.ts`, 4 cases). FE green: tsc 0, Vitest 697 (693+4), build 4.18s, run_all 10/10, drift-catch proven (exit 1→regen→0).
+
+### Parent independent re-verification (57.64 discipline)
+Re-ran every authoritative gate myself (not trusting agent reports — Stage-1's report said "matches exactly" while the shape was wrong): read regenerated `loopEvents.generated.ts` (confirmed nested) + `types.ts` (confirmed clean re-export + preserved content); `codegen --check` exit 0; `run_all.py` **10/10**; backend parity **30 passed**; frontend `tsc` **0**; `Vitest` **697 passed (126 files)**; `build` ✓ **3.90s**. All green.
+
+## Day 3+4 — 2026-06-02 — CI wiring + closeout
+
+- **CI gate** (user-authorized Option A, 2026-06-02): `.github/workflows/lint.yml` `v2-lints` job += "Lint 7 — event schema codegen parity" step (`check_event_schema_sync.py`). v2-lints is a required status check → drift un-mergeable (US-3 satisfied). (User chose A over B new-workflow / C local-only after being shown B's enforcement gap.)
+- **Docs**: CHANGE-035 + this progress.md + retrospective.md (Q1-Q7) + calibration-log §3 + MEMORY subfile/pointer + CLAUDE.md lean.
+- Checklist Day 0-4 all `[x]` except commit/push/PR (user-gated).
+- **Calibration**: `medium-backend` 0.80 + `agent_factor mechanical-greenfield-design-decisions` 0.65 CAVEATED (5th consecutive no-clean-wall-clock); new `AD-AgentFactor-NewToolchain-Greenfield-Watch` (Stage-1 rework signals heavier greenfield than a pattern-mirror — no clean measure to confirm).
+- **Key AD** (`AD-Day0-Codegen-Existing-Shape-Capture`): the Stage-1 flat-vs-nested miss traces to Day-0 D-DAY0-2 listing inner `data` field names but not flagging the FE interface's nested wrapper shape → codegen-from-existing-types Day-0 must pin the target artifact's structural shape verbatim, not just field names.
+
+---
