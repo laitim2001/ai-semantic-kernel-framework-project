@@ -95,4 +95,7 @@ Track A (backend) regenerated frontend codegen artifacts; my Track-A re-verify r
 - Calibration: `mixed-multidomain-bundle` 0.65 + `agent_factor` 0.45 — CAVEATED (13th consecutive agent-delegated no-clean-wall-clock).
 - `AD-ChatV2-Inspector-Trace-Phase2` + `-Memory-Phase2` → CLOSED. NEW carryovers: subagent-boundary spans + memory write/evict emit. No design note (feature-continuation).
 
+### Post-PR CI fix — Frontend E2E (the one gate I couldn't run locally)
+PR #241: 8/9 checks green; **Frontend E2E** failed (1/41 e2e tests) — exactly the spec I flagged as not-run-locally (dev server :3007 is the live node process). Root cause: `chat-v2-inspector-trace-memory.spec.ts:100` page-wide `getByText("preferences.rca_format")` → strict-mode violation (2 elements). The dev-server (vite + React StrictMode) consumes the SSE mock stream **twice** → a duplicate memory row. Memory ops are an **append-only log, correctly NOT deduped** (a genuine repeat-read is a distinct event; only spans dedup by span_id) → the duplicate is expected in that env; **production SSE does not replay → not a memory bug**. Fix: scope the assertion to the `inspector-memory-op-0` row (standard Playwright practice). No production code change. Pushed as `<e2e-fix-commit>` → CI re-run. (Lesson reinforced: the e2e gate is the one I cannot reproduce locally — flag + budget for a CI round-trip on any sprint adding an e2e spec.)
+
 ---

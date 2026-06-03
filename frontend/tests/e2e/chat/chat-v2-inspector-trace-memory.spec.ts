@@ -93,12 +93,20 @@ test.describe("Sprint 57.75 A-5 — chat-v2 Inspector Trace + Memory", () => {
     await expect(page.getByTestId("inspector-trace-span-sp-llm")).toBeVisible();
     await expect(page.getByText("1.42s")).toBeVisible();
 
-    // Memory tab → the single READ access.
+    // Memory tab → the READ access. Scope the text assertions to the first op
+    // row: under the dev-server (vite + React StrictMode), the SSE mock stream
+    // can be consumed twice (StrictMode double-mount / EventSource reconnect),
+    // appending a duplicate memory row. Memory ops are an append-only log —
+    // correctly NOT deduped (a genuine repeat-read is a distinct event; only
+    // spans dedup, by span_id) — so a page-wide getByText would hit a strict-mode
+    // violation on the replayed row. Production SSE does not replay; op-0 is the
+    // deterministic first access and the assertion stays strict-mode-safe.
     await page.getByRole("tab", { name: "Memory" }).click();
     await expect(page.getByTestId("inspector-memory")).toBeVisible();
-    await expect(page.getByTestId("inspector-memory-op-0")).toBeVisible();
-    await expect(page.getByText("preferences.rca_format")).toBeVisible();
-    await expect(page.getByText("5-whys + timeline")).toBeVisible();
+    const memOp0 = page.getByTestId("inspector-memory-op-0");
+    await expect(memOp0).toBeVisible();
+    await expect(memOp0).toContainText("preferences.rca_format");
+    await expect(memOp0).toContainText("5-whys + timeline");
   });
 
   test("echo_demo stream (no memory_accessed) → Memory tab honest empty state", async ({ page }) => {
