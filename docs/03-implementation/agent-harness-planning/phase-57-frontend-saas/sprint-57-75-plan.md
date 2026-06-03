@@ -120,6 +120,7 @@ Full-chain vertical slice mirroring A-5 (57.66/67/72). Two independent backend p
 - `frontend/src/features/chat_v2/components/inspector/InspectorTrace.tsx` (NEW).
 - `frontend/src/features/chat_v2/components/inspector/InspectorMemory.tsx` (NEW).
 - `frontend/src/features/chat_v2/components/inspector/ChatInspector.tsx` — swap 2 tabs.
+- `frontend/src/features/chat_v2/components/inspector/ComingSoonInspectorTab.tsx` — **DELETED** (Day-3 decision, not in original plan): orphaned by the 2-tab swap (no remaining consumer; only a Sprint 57.30 one-shot verify-script comment mentions the name). AP-2 + Karpathy §3 (change-produced orphan). User-gated at PR review (deleting production code per CLAUDE.md).
 
 **Frontend tests** (~3 files):
 - `frontend/tests/unit/chat_v2/{InspectorTrace,InspectorMemory}.test.tsx` (NEW).

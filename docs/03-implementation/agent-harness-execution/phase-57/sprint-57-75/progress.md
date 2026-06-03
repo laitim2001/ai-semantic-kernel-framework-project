@@ -62,3 +62,37 @@ Combined backend Track A (Trace + Memory share events.py/sse.py/wire/codegen →
 - Read core emit code (events/builder/sse/wire/codegen) — additive, nested envelope consistent, no fabrication. Read all 5 modified existing tests — filter-only, no weakening. Read 5 new tests — non-shell, rigorous nesting/R3/honest-empty assertions.
 
 ---
+
+## Day 3 — Frontend 2 tabs (Track B, agent-delegated code-implementer) — `94836577`
+
+Agent wall-clock ~10 min; parent full re-verify.
+
+### Implemented
+- **chatStore.ts**: +`SpanNode`/`MemoryOp` types + `spans`/`memoryOps` slices (state + `_initial()` + `applyPivot` reset) + 3 `mergeEvent` cases — span_started (open, dedup by id) / span_ended (close+duration; orphan guard creates closed span if SpanStarted missed) / memory_accessed (push, `at=Date.now()` honest client time).
+- **InspectorTrace.tsx** (NEW): consume `s.spans`; `orderSpans()` parent-before-child by parentSpanId (cycle-guard + MAX_DEPTH=8) + tree-glyph + indent depth; `SPAN_COLOR` map (var(--*) tokens); duration bar width=ms/max; running span = subtle bar (opacity 0.4) + em-dash (no fake duration); honest empty-state. Verbatim mockup L434-466 CSS.
+- **InspectorMemory.tsx** (NEW): consume `s.memoryOps`; verbatim `<span className="badge memory">` + scope·timeScale (雙軸) + client-time HH:MM:SS + `{key} = {summary}`; honest empty "no memory accesses this session". Verbatim mockup L468-487.
+- **ChatInspector.tsx**: swap 2 `ComingSoonInspectorTab` → `<InspectorTrace/>`/`<InspectorMemory/>` (all 4 tabs now real).
+
+### Day-3 decision (NOT in plan §4 — flagged to user for PR gate)
+- **Removed `ComingSoonInspectorTab.tsx`** — orphaned by the swap (no consumer; only a Sprint 57.30 one-shot verify-script *comment* mentions the name; build tsc 0 + Vitest 738 prove no break). Karpathy §3 (change-produced orphan) + AP-2. Deleting production code is user-gated (CLAUDE.md) → recorded in plan §4 + CHANGE-043 + final report; user can revert at PR review.
+
+### Tests
+- NEW `InspectorTrace.test.tsx` (6: empty / row+duration / waterfall nesting glyph+indent / running em-dash / color-by-type / count) + `InspectorMemory.test.tsx` (7: empty / row+key=summary / scope·timeScale / bare scope / verbatim badge.memory / arrival order / HH:MM:SS).
+- `chatStore.mergeEvent.test.ts` +13 (3 new cases). `ChatInspector.test.tsx` 2 ComingSoon→empty-state. NEW e2e `chat-v2-inspector-trace-memory.spec.ts`.
+- **Fixed `eventSchema.generated.test.ts` 19→22** — Track A's codegen produced 3 new types but left this frontend consumer test at 19 (see Day 4 lesson).
+
+## Day 4 — Closeout
+
+### Parent re-verify (Before-Commit item 7) — all frontend gates green (parent-run)
+- lint exit 0 (NO `--silent`; the 3 `TSSatisfiesExpression` lines are pre-existing jsx-ast-utils library notices per 57.74 retro, not errors); build tsc 0; check:mockup-fidelity byte-identical + baseline 50 unchanged; Vitest **738 passed (131 files, +30)**; CSS byte-identical (check:mockup-fidelity authoritative).
+- Read 2 new components (verbatim CSS / English copy / honest running+empty / no fabrication), chatStore 3 cases (dedup + orphan guard), 2 new tests (rigorous). Confirmed ComingSoonInspectorTab deletion is a true orphan.
+
+### Lesson (Q4) — cross-boundary re-verify gap
+Track A (backend) regenerated frontend codegen artifacts; my Track-A re-verify ran only backend gates (`check_event_schema_sync` green) but NOT frontend Vitest → `eventSchema.generated.test.ts` count (19) was stale (→22). Track B caught + fixed. Principle: an agent track mutating files across the backend↔frontend boundary (codegen / shared schema) requires parent re-verify of BOTH sides' gates. Logged for possible Before-Commit item 7 fold-in if it recurs (rolling).
+
+### Closeout
+- CHANGE-043; retrospective.md Q1-Q7; checklist all `[x]`; MEMORY subfile + pointer; CLAUDE.md lean (Current Sprint + Last Updated); next-phase carryover; plan §4 deletion record.
+- Calibration: `mixed-multidomain-bundle` 0.65 + `agent_factor` 0.45 — CAVEATED (13th consecutive agent-delegated no-clean-wall-clock).
+- `AD-ChatV2-Inspector-Trace-Phase2` + `-Memory-Phase2` → CLOSED. NEW carryovers: subagent-boundary spans + memory write/evict emit. No design note (feature-continuation).
+
+---
