@@ -33,3 +33,28 @@ All confirmed: `models/memory.py` (MemoryUser :203-262), `migrations/versions/`,
 ### go/no-go = **GO** (Day 1 schema). Migration slot 0024 free; RLS template confirmed; layer signatures + Risk-C session known. No >20% scope drift.
 
 ---
+
+## Day 1-3 — Backend memory_ops (Track A, agent-delegated code-implementer)
+
+Single backend track (no frontend this sprint). Agent wall-clock ~13.5 min; parent Day-0 research + full re-verify.
+
+### Implemented
+- **MemoryOp ORM** (`models/memory.py` +71): `MemoryOp(Base, TenantScopedMixin)` — id BigInteger PK / user_id NULL / scope / operation NOT NULL / key/time_scale/value_snapshot/actor NULL / created_at; index `idx_memory_ops_tenant_created(tenant_id, created_at DESC)`; append-only, no hash-chain. Registered in `models/__init__.py`.
+- **Alembic 0024** (`0024_memory_ops.py`): `down_revision="0023_agent_catalog"`; create table+index; RLS **verbatim-mirrors 0023** (ENABLE + FORCE + `tenant_isolation_memory_ops` USING + `tenant_insert_memory_ops` WITH CHECK, `current_setting('app.tenant_id', true)::uuid`); downgrade drops 2 policies + index + table; no seed.
+- **`_record_memory_op` helper** (`memory/_ops_recorder.py` NEW): `session.add(MemoryOp)` only — takes the LAYER's session, no new session, no commit (Risk C).
+- **user + tenant layer emit** (`user_layer.py` +45, `tenant_layer.py` +42): write emit before `session.commit()` (same txn); evict **SELECT-before-DELETE** (capture old content → emit EVICT → DELETE; absent row → no op, no fabrication); tenant_id filter on evict.
+- **GET /memory/ops** (`api/v1/memory.py` +70): `MemoryOpsResponse{ops:[MemoryOpItem], next_cursor}`; deps trio mirror `/matrix` (get_current_tenant + require_audit_role + get_db_session_with_tenant); explicit tenant_id filter; `created_at DESC, id DESC`; cursor = created_at_ms, `before` → strictly older; limit 50/max.
+
+### Drift findings (agent-surfaced, parent-confirmed)
+- **D1 (role layer — researcher误报 corrected)**: plan §0 D-DAY0-1 (from researcher) listed user/tenant/**role** emit. Parent re-read `role_layer.py:89-111`: write/evict **raise NotImplementedError** (51.2 admin-managed; the researcher's ":76 INSERT" was actually a `read()` SELECT). Emitting after the raise = unreachable dead code (AP-4). → emit wired only in user + tenant (the 2 live DB write/evict paths); role honestly documented (role_layer.py:24-31 + MHist). Matches plan §3.3's own system-layer reasoning.
+- **D2 (endpoint path)**: plan §3.4 said `api/v1/chat/memory.py`; the matrix endpoint actually lives in `api/v1/memory.py` → ops endpoint added there (sibling of /matrix). Minor; agent correct.
+
+### Tests
+- NEW `test_ops_emit.py` (8: write/evict per layer + value_snapshot + system-raise→0 rows + Risk-C). `test_memory_ops_rls.py` (3: RLS select-scoped via **non-BYPASSRLS role**, INSERT WITH CHECK reject, **Risk-C same-txn rollback** — write→2 rows→rollback→0). `test_memory_ops_endpoint.py` (5: pagination cursor + require_audit_role gate + cross-tenant).
+- Updated 2 existing layer tests (`test_user_layer.py` +30, `test_tenant_layer.py` +6): pick MemoryX from dual-add `call_args_list` (was single-add); evict test **strengthened** (configure SELECT result + assert EVICT op value_snapshot). None weakened/deleted.
+
+### Parent re-verify (Before-Commit item 7) — all gates green (parent-run)
+- mypy `0/331`; pytest **2105 passed, 4 skipped, 0 failed**; `scripts/lint/run_all.py` **10/10** (check_rls_policies + check_llm_sdk_leak green); black 612 / isort / flake8 clean.
+- Read all agent-changed code: emit same-txn (Risk C, _ops_recorder no new session/commit); SELECT-before-DELETE; 0024 RLS verbatim mirror; endpoint deps+tenant filter+cursor; role drift correct (raise→no emit); RLS/Risk-C tests rigorous (real PG, non-BYPASSRLS role); existing tests not weakened. Alembic round-trip clean (agent-run; upgrade佐证 by RLS pytest passing).
+
+---

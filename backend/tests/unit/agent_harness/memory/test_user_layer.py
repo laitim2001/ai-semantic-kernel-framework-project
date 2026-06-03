@@ -10,6 +10,7 @@ Description:
     tests/integration/memory/ (Day 4-5).
 
 Created: 2026-04-30
+Modified: 2026-06-04 (Sprint 57.76 — update write/evict assertions for memory_ops emit)
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ from uuid import uuid4
 import pytest
 
 from agent_harness.memory.layers.user_layer import UserLayer
-from infrastructure.db.models.memory import MemoryUser
+from infrastructure.db.models.memory import MemoryOp, MemoryUser
 
 
 def _build_factory(rows: list[MemoryUser], scalar_value: str | None = None) -> AsyncMock:
@@ -115,8 +116,9 @@ async def test_write_long_term_no_expires() -> None:
     assert eid is not None
 
     session = layer._session_factory._mock_session  # type: ignore[attr-defined]
-    session.add.assert_called_once()
-    added: MemoryUser = session.add.call_args[0][0]
+    # Sprint 57.76: write now adds BOTH the MemoryUser row + a MemoryOp row.
+    targets = [c.args[0] for c in session.add.call_args_list]
+    added: MemoryUser = next(t for t in targets if isinstance(t, MemoryUser))
     assert added.tenant_id == tenant
     assert added.user_id == user
     assert added.expires_at is None  # long_term
@@ -136,7 +138,10 @@ async def test_write_short_term_sets_24h_expiry() -> None:
         time_scale="short_term",
     )
     session = layer._session_factory._mock_session  # type: ignore[attr-defined]
-    added: MemoryUser = session.add.call_args[0][0]
+    # Sprint 57.76: pick the MemoryUser row from the add() targets (a MemoryOp
+    # is also added in the same session).
+    targets = [c.args[0] for c in session.add.call_args_list]
+    added: MemoryUser = next(t for t in targets if isinstance(t, MemoryUser))
     assert added.expires_at is not None
     delta = added.expires_at - before
     assert timedelta(hours=23, minutes=55) < delta < timedelta(hours=24, minutes=5)
@@ -162,11 +167,22 @@ async def test_evict_no_op_without_tenant_id() -> None:
 
 @pytest.mark.asyncio
 async def test_evict_executes_delete_when_tenant_present() -> None:
-    layer = UserLayer(_build_factory([]))
+    # Sprint 57.76: evict now SELECTs-before-DELETE to snapshot the old value,
+    # then emits a MemoryOp(EVICT). Configure the SELECT result + assert both.
+    factory = _build_factory([])
+    old_user = uuid4()
+    factory._mock_session.execute.return_value.first.return_value = ("old fact", old_user)
+    layer = UserLayer(factory)
     await layer.evict(entry_id=uuid4(), tenant_id=uuid4())
-    session = layer._session_factory._mock_session  # type: ignore[attr-defined]
-    assert session.execute.await_count == 1
+    session = factory._mock_session  # type: ignore[attr-defined]
+    # SELECT + DELETE = 2 execute() calls now.
+    assert session.execute.await_count == 2
     session.commit.assert_awaited_once()
+    # An EVICT op row was recorded with the old value.
+    op_targets = [c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], MemoryOp)]
+    assert len(op_targets) == 1
+    assert op_targets[0].operation == "EVICT"
+    assert op_targets[0].value_snapshot == "old fact"
 
 
 @pytest.mark.asyncio

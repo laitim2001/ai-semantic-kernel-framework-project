@@ -31,9 +31,10 @@ Description:
     (no client integration; that lands in Phase 51.2).
 
 Created: 2026-04-29 (Sprint 49.3 Day 2.3)
-Last Modified: 2026-04-29
+Last Modified: 2026-06-04
 
 Modification History:
+    - 2026-06-04: Sprint 57.76 — add MemoryOp (append-only memory_ops ops log)
     - 2026-04-29: Initial creation (Sprint 49.3 Day 2.3)
 
 Related:
@@ -52,6 +53,7 @@ from typing import Any
 from uuid import UUID as PyUUID
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     ForeignKey,
@@ -309,10 +311,77 @@ class MemorySessionSummary(Base):
     )
 
 
+# ============================================================================
+# memory_ops  (append-only ops log; TenantScopedMixin)  — Sprint 57.76
+# ============================================================================
+# Why a dedicated table (not audit_log): the memory page's RecentOps +
+# TimeTravel widgets need a value snapshot per op (Option B per user 2026-06-03).
+# audit_log (Option A) carries no value snapshot and serialises per-tenant via a
+# hash chain; an ops log is append-only WITHOUT a chain (not tamper-evident audit
+# — see plan §0 D-DAY0-6) so it avoids that write-serialisation cost. Each
+# DB-backed layer's write/evict inserts a row in the SAME transaction (Risk C).
+class MemoryOp(Base, TenantScopedMixin):
+    """Append-only record of a memory write/evict (user / tenant / role layers).
+
+    Populated by the layer write/evict paths via _record_memory_op() in the
+    layer's own session/transaction. Read back by GET /memory/ops (time-ordered
+    DESC per tenant). No UPDATE path; no hash-chain.
+    """
+
+    __tablename__ = "memory_ops"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    # tenant_id provided by TenantScopedMixin (NOT NULL + FK CASCADE + index)
+    user_id: Mapped[PyUUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        nullable=True,
+        doc="Set for user-layer ops; NULL for tenant/role-layer ops.",
+    )
+    scope: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        doc="Memory layer that produced the op: user / tenant / role.",
+    )
+    key: Mapped[str | None] = mapped_column(
+        String(256),
+        nullable=True,
+        doc="Memory key / category touched by the op (NULL when not applicable).",
+    )
+    operation: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        doc="WRITE / EVICT.",
+    )
+    time_scale: Mapped[str | None] = mapped_column(
+        String(32),
+        nullable=True,
+        doc="short_term / long_term / semantic (NULL when not applicable).",
+    )
+    value_snapshot: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        doc="Content written (WRITE) or old content removed (EVICT).",
+    )
+    actor: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+        doc="Who triggered the op: user_id str or 'system'.",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        # Read path is time-ordered DESC per tenant.
+        Index("idx_memory_ops_tenant_created", "tenant_id", text("created_at DESC")),
+    )
+
+
 __all__ = [
     "MemorySystem",
     "MemoryTenant",
     "MemoryRole",
     "MemoryUser",
     "MemorySessionSummary",
+    "MemoryOp",
 ]

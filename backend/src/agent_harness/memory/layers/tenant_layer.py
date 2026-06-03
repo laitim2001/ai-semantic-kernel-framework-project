@@ -15,6 +15,9 @@ Owner: 01-eleven-categories-spec.md §範疇 3 Layer 2 Tenant
 Single-source: 17.md §2.1
 
 Created: 2026-04-30 (Sprint 51.2 Day 2)
+
+Modification History:
+    - 2026-06-04: Sprint 57.76 — emit memory_ops on write/evict (same txn, Risk C)
 """
 
 from __future__ import annotations
@@ -28,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from agent_harness._contracts import MemoryHint, TraceContext
 from agent_harness.memory._abc import MemoryLayer, MemoryScope
+from agent_harness.memory._ops_recorder import _record_memory_op
 from infrastructure.db.models.memory import MemoryTenant
 
 _TimeScale = Literal["short_term", "long_term", "semantic"]
@@ -103,16 +107,29 @@ class TenantLayer(MemoryLayer):
         }
 
         new_id = uuid4()
+        key = f"hint-{new_id}"
         async with self._session_factory() as session:
             row = MemoryTenant(
                 id=new_id,
                 tenant_id=tenant_id,
-                key=f"hint-{new_id}",
+                key=key,
                 category="domain_knowledge",
                 content=content,
                 metadata_=metadata,
             )
             session.add(row)
+            # Ops-history emit (same txn — Risk C): commit below persists both.
+            _record_memory_op(
+                session,
+                tenant_id=tenant_id,
+                user_id=None,
+                scope="tenant",
+                key=key,
+                operation="WRITE",
+                time_scale=time_scale,
+                value_snapshot=content,
+                actor="system",
+            )
             await session.commit()
 
         return new_id
@@ -127,12 +144,35 @@ class TenantLayer(MemoryLayer):
         if tenant_id is None:
             return
         async with self._session_factory() as session:
+            # SELECT-before-DELETE: capture old content for the ops snapshot.
+            old = (
+                await session.execute(
+                    select(MemoryTenant.content, MemoryTenant.key).where(
+                        MemoryTenant.id == entry_id,
+                        MemoryTenant.tenant_id == tenant_id,
+                    )
+                )
+            ).first()
             await session.execute(
                 delete(MemoryTenant).where(
                     MemoryTenant.id == entry_id,
                     MemoryTenant.tenant_id == tenant_id,
                 )
             )
+            if old is not None:
+                old_content, old_key = old
+                # Ops-history emit (same txn — Risk C).
+                _record_memory_op(
+                    session,
+                    tenant_id=tenant_id,
+                    user_id=None,
+                    scope="tenant",
+                    key=old_key,
+                    operation="EVICT",
+                    time_scale=None,
+                    value_snapshot=old_content,
+                    actor="system",
+                )
             await session.commit()
 
     async def resolve(

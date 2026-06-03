@@ -68,7 +68,9 @@ from infrastructure.db.models.identity import (
 )
 
 # Day 2.3 (Sprint 49.3) — Memory layers
+# Sprint 57.76 — MemoryOp (append-only memory_ops ops log)
 from infrastructure.db.models.memory import (
+    MemoryOp,
     MemoryRole,
     MemorySessionSummary,
     MemorySystem,
@@ -147,6 +149,8 @@ __all__ = [
     "MemoryRole",
     "MemoryUser",
     "MemorySessionSummary",
+    # Memory ops log (Sprint 57.76 — append-only memory_ops)
+    "MemoryOp",
     # Governance (Sprint 49.3)
     "Approval",
     "RiskAssessment",
