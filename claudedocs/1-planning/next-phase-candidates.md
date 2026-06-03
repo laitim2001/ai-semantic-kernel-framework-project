@@ -36,6 +36,29 @@
 
 ---
 
+## 🆕 Sprint 57.76 Carryover (2026-06-04 — Memory ops-history backend; closes AD-Memory-OpsHistory-Backend backend half)
+
+**Closed (backend half)**: `AD-Memory-OpsHistory-Backend` — NEW append-only `memory_ops` table (Option B) + Alembic 0024 (RLS 2-policy + FORCE mirror 0023) + user/tenant write/evict emit (same-txn, Risk-C atomicity tested; evict SELECT-before-DELETE) + `GET /memory/ops` (cursor pagination). **Backend-only; frontend half = Sprint 57.77**.
+
+### Sprint 57.77 (frontend half — next obvious follow-up)
+- `useMemoryOps` hook (mirror `useMemoryMatrix`) + wire `RecentMemoryOpsCard` (consume `GET /memory/ops`) + `TimeTravelScrubber` (timeline marks from ops) + remove fixtures + e2e. `MemoryOpItem` → FE `RecentMemoryOp {op, scope, k, v, by, at}`.
+
+### Area-A "process all carryover except A-4 Tier 2" program — remaining
+- ✅ #1+#2 Inspector Trace + Memory (57.75)
+- 🔶 `AD-Memory-OpsHistory-Backend` backend done (57.76); frontend → 57.77
+- ⏳ FE `/subagents` real list (`AD-Subagent-RealList-Phase58`) — last item (agent_catalog specs exist; needs tenant-facing GET + FE re-mount, like 57.73)
+
+### NEW carryovers (this sprint)
+- **READ-path emit** — write/evict only this sprint; sampled reads a future option (row-volume tradeoff)
+- **role/session/system layer ops** — role/system raise (admin-managed/read-only); session in-memory volatile; emittable if they gain live DB write paths
+- **Full point-in-time state reconstruction** — this sprint = time-ordered ops log (sufficient for RecentOps + TimeTravel marks); replaying snapshots to rebuild memory state at an arbitrary timestamp is deeper future work
+
+### Process / Calibration
+- **Q4 lesson (researcher behavioral-claim drift)**: a researcher's "layer X does INSERT" is a Prong-2 *content* assertion to confirm by reading the write/evict method body before the plan commits. The researcher reported `role_layer.py:76 = INSERT` (actually a `read()` SELECT); role write/evict raise NotImplementedError → no emit. Agent + parent re-verify both caught it (no harm). 1 data point; if recurs, consider Day-0 rule "grep-confirm each `layer does X` against the method body".
+- Calibration: `medium-backend` 0.80 + `agent_factor` 0.45 — CAVEATED (14th consecutive agent-delegated); medium-backend 3-sprint-mean recalibration watch (fresh data point).
+
+---
+
 ## 🆕 Sprint 57.75 Carryover (2026-06-03 — chat-v2 Inspector Trace + Memory tabs full-chain; closes AD-ChatV2-Inspector-Trace-Phase2 + -Memory-Phase2)
 
 **Closed**: `AD-ChatV2-Inspector-Trace-Phase2` + `AD-ChatV2-Inspector-Memory-Phase2` (Area-A program #1+#2). All 4 chat-v2 Inspector tabs now real (Turn 57.21 / Tree 57.72 / Trace+Memory 57.75).

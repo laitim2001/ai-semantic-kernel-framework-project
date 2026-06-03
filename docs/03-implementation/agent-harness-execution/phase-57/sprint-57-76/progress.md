@@ -58,3 +58,12 @@ Single backend track (no frontend this sprint). Agent wall-clock ~13.5 min; pare
 - Read all agent-changed code: emit same-txn (Risk C, _ops_recorder no new session/commit); SELECT-before-DELETE; 0024 RLS verbatim mirror; endpoint deps+tenant filter+cursor; role drift correct (raise→no emit); RLS/Risk-C tests rigorous (real PG, non-BYPASSRLS role); existing tests not weakened. Alembic round-trip clean (agent-run; upgrade佐证 by RLS pytest passing).
 
 ---
+
+## Day 4 — Closeout
+
+- CHANGE-044; retrospective.md Q1-Q7; checklist all `[x]` (push+PR left unchecked, user-gated); MEMORY subfile + pointer; CLAUDE.md lean (Current Sprint + Last Updated → 57.76); next-phase-candidates.md 57.76 carryover.
+- **No design note** (feature-continuation: memory_ops new table reuses 0023 RLS + TenantScopedMixin + matrix-endpoint pattern, like 57.70 agent_catalog — no new contract / no 17.md change).
+- Calibration: `medium-backend` 0.80 + `agent_factor` 0.45 — CAVEATED (14th consecutive agent-delegated no-clean-wall-clock; medium-backend 3-sprint-mean recalibration watch — fresh data point).
+- AD status: `AD-Memory-OpsHistory-Backend` **backend half done** → frontend half = Sprint 57.77 carryover. Q4 lesson (researcher behavioral-claim drift) logged.
+
+---
