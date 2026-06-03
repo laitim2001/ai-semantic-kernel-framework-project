@@ -39,3 +39,30 @@
 ### Decisions
 - A-6a = partial wiring (real list fields; `"—"` for agents/runs24; stats strip stays fixture+banner). A-6b = new `/memory/matrix` aggregate (system/tenant/user; role/session gapped; time-scale via expires_at for user, permanent for system/tenant) + wire matrix+header; ops/timeline stay fixture+banner. Mockup-native loading/error/empty (no shadcn residue). No migration.
 - **Agent-delegated: yes** — 3 sequential `code-implementer` tracks (A admin frontend, B memory backend, C memory frontend); parent independently re-verifies (aggregate correctness + tenant isolation + re-mount + honest gaps + runs `check:mockup-fidelity` + pytest + Vitest).
+
+---
+
+## Day 1-3 — 2026-06-03 — Implementation (agent-delegated, 3 tracks + parent re-verify)
+
+Track A + Track B launched in parallel (disjoint: admin-tenants frontend vs memory backend); Track C (memory frontend) ran after Track B confirmed the response shape.
+
+### Track A — admin-tenants wiring (US-1/US-2, `code-implementer` aac54e42)
+- `AdminTenantsView.tsx` mounts `useAdminTenants()` → threads `items`/`isLoading`/`isError`/`refetch` to `TenantsTable`. `TenantsTable.tsx` rewritten to take `tenants: TenantListItem[]` props (was direct `TENANTS_FIXTURE` import); field map name←display_name / id←code / plan / region / seats / status←state (→ existing pill tones) / created←created_at.slice(0,10); `agents`/`runs24` → `"—"` (`var(--fg-subtle)`, NOT fabricated); mockup-native skeleton/error/empty rows (NOT shadcn `TableSkeleton`/`EmptyState` — D10 residue avoidance); banner reworded. `types.ts` synced `TenantListItem` to the real backend contract (added region/locale/retention_days/sso_enabled/seats — FE type was stale at 57.4's 7 fields; required for tsc). `_fixtures.ts` dropped orphan `TENANTS_FIXTURE` (kept `STATS_FIXTURE`). Playwright e2e (happy/error/empty) 3/3.
+- **Parent re-verify catch (D-DAY1-1)**: the agent wrote the loading/error/empty COPY in 繁中 ("載入租戶清單失敗。"/"重試"/"沒有任何租戶。") — inconsistent with the codebase convention (governance `AuditLogViewer` "Failed to load audit log", `VerificationRunsTable` "Failed to load verification runs.", `TenantSettingsView` "Retry" are all English) AND with the page's own English headers/banner. Parent grep-confirmed the convention + corrected the component + its Vitest + the e2e spec to English ("Failed to load tenants." / "Retry" / "No tenants found.").
+
+### Track B — memory matrix backend (US-3, `code-implementer` a1a3c549)
+- `memory.py` new `GET /matrix` (mirrors `/recent` deps trio) + `MemoryMatrixCell`/`MemoryMatrixResponse`. Aggregate: system `count()` global → (system, permanent); tenant `count() WHERE tenant_id==current` → (tenant, permanent); user `count() GROUP BY case(expires_at)` → permanent/quarterly/daily (same predicate as `/by-time`). `gapped_layers=[role,session]` reported not queried; zero-cells omitted. No migration. 6 pytest (counts + isolation + empty + RBAC). Parent verified the aggregate query + the explicit `tenant_id==current` defense-in-depth (alongside RLS) by reading `memory.py:418-501`.
+
+### Track C — memory frontend wiring (US-4/US-5, `code-implementer` a3e29c76)
+- `types.ts` matrix types; `memoryService.fetchMatrix`; NEW `hooks/useMemoryMatrix.ts` (key `["memory","matrix"]`, mirrors `useCostSummary`). `MemoryMatrix.tsx` consumes the hook: 5×3 grid, `${layer}:${time_scale}`→count lookup (absent → 0 "— empty"), role/session via `gapped_layers` → `n/a` across the row (never fabricated); banner reworded; mockup-native loading/error/empty (English copy). `MemoryPageHeader.tsx` real `total` (dedup'd query). `MemoryView.tsx` dropped fixture-only `cursor` filter. RecentOps/TimeTravel unchanged (fixture + reworded banner → carryover). `_fixtures.ts` dropped orphan matrix/header fixtures. Parent verified honest gaps + no shadcn import by reading `MemoryMatrix.tsx`.
+
+---
+
+## Day 4 — 2026-06-03 — Parent final verification + closeout
+
+**Parent-run gates (decisive)**:
+- Frontend: `npm run build` tsc 0 (3.92s); `npm run check:mockup-fidelity` **byte-identical + baseline 50 unchanged** ✅; `npm run lint` (no `--silent`) EXIT 0 (only pre-existing jsx-ast-utils `TSSatisfiesExpression` info noise); Vitest admin-tenants+memory **72/72** (full suite 708, +10 from 698); CSS diff empty; grep 0 hardcoded hex/oklch.
+- Backend: `test_memory_matrix.py` **6/6**; memory regression **28 passed** (existing `test_memory.py` 13 + matrix 6 + query_extension 3 + chat wiring — facade intact); `mypy src --strict` **0/329**; `python scripts/lint/run_all.py` **10/10** (incl. `check_ap4_frontend_placeholder` — honest gaps pass AP-4; `check_llm_sdk_leak`; `check_rls_policies` unchanged — no new table).
+- Verdict: **PASS**. Honest gaps confirmed (admin agents/runs24 + stats strip; memory role/session + ops/time-travel) — no fabricated data, all declared via `BackendGapBanner` (AP-4 detector green).
+
+**Calibration**: scope `mixed-multidomain-bundle` 0.65; `agent_factor` `mixed-multidomain-bundle-mechanical` 0.45. Agent-delegated → no clean wall-clock (**11th consecutive** `AD-Calibration-AgentDelegated-WallClock-Measure`). See retrospective Q2 + `calibration-log.md §3`.
