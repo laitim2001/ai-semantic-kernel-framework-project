@@ -36,6 +36,20 @@
 
 ---
 
+## 🆕 Sprint 57.79 Carryover (2026-06-04 — C-11 billing-correctness; closes AD-Cost-Ledger-Model-Pricing-Key-Mismatch + AD-Adapter-MaxTokens-NewModel-Param)
+
+**Closed**: `AD-Cost-Ledger-Model-Pricing-Key-Mismatch` + `AD-Adapter-MaxTokens-NewModel-Param` — the 2 C-11 billing gaps. First post-Area-A sprint (user picked C-11 收尾 over carryover/B). Gap 1: `get_llm_pricing` strips `-YYYY-MM-DD` on exact-miss → base key (`gpt-5.2-2025-12-11` → `gpt-5.2`); yaml + `gpt-5.2` (1.75/14.00/0.175 user-provided); chose normalize over per-date yaml keys. Gap 2: adapter `_max_tokens_param_name` gpt-5→`max_completion_tokens` (config.model_name keyed). Real Azure verified: cost_ledger DB `unit_cost>0` (direct record path) + token-cap no 400. backend-only; no design note. Detail: `memory/project_phase57_79_c11_billing_correctness.md` + retrospective. CHANGE-047.
+
+### NEW carryovers (this sprint)
+- **`AD-Chat-RealLLM-Orphan-Tool-Message`** — chat router real_llm e2e blocked by a pre-existing, UNRELATED message-structure 400 (`messages[3] role 'tool' must follow tool_calls`; orphan tool message). Reproduces on a fresh tenant (messages_count:4 fixed) → prompt-builder/chat-handler assembly issue in real_llm mode, NOT session history, NOT this sprint's fix. cost_ledger e2e verified via direct record path instead. Needs separate investigation into the real_llm prompt assembly.
+- **Deployment requirement: `AZURE_OPENAI_MODEL_NAME`** — prod/other envs using a gpt-5.x deployment MUST set this to the real generation (e.g. `gpt-5.2`). Config default is `gpt-4o` (stale); if unaligned, Gap 2 mis-branches to `max_tokens` → 400 on gpt-5.x. (Gap 1 unaffected — uses response.model.) Deployment/ops note, not a code item.
+
+### Still-open billing bundle (Sprint 57.80+ candidates)
+- B-7 ErrorBudget Redis wiring / B-8 Verification default-enable / C-15 DevOps-data-platform billing — the billing-correctness bundle's remaining legs.
+- Auto-sync pricing from provider API (`llm_pricing.yml:3` future idea) — stays manual yaml.
+
+---
+
 ## 🆕 Sprint 57.78 Carryover (2026-06-04 — Subagents Registry real list; closes AD-Subagent-RealList-Phase58 → 🎉 Area-A program COMPLETE)
 
 **Closed**: `AD-Subagent-RealList-Phase58` — the LAST Area-A item. Re-pointed `GET /subagents` STUB (never-persisted invocations) → real per-tenant `agent_catalog` (57.70) registry view + wired the mockup-ported `/subagents` page. Catalog/Registry view (AskUserQuestion) over runtime invocations. Real role←key/model/modes←allowed_modes/status; KPI counts derived; detail spec/budget/tools real; usage metrics (calls24h/p95/stats) honest-gapped "—" (AP-4); removed 8-row fixture + carryover banner. Backend re-point + FE wire (sequential 2-agent); no migration; feature-continuation (no design note). Detail: `memory/project_phase57_78_subagents_registry_real_list.md` + retrospective. CHANGE-046.
@@ -149,8 +163,8 @@ Sprint 57.74 (Area-A **#3** of the "process all carryover except A-4 Tier 2" pro
 C-11 本機 real-LLM smoke 已實跑（用既有 `.env` Azure 憑證、零 GitHub secret、零 code change；詳 `claudedocs/5-status/c11-real-llm-e2e-analysis-20260601.md §8`）。**real-LLM 閉環 = LIVE + 已驗證**（HTTP 200 / `loop_end` / 真實 gpt-4o 回覆 / `audit_log` Δ=1）。`cost_ledger` Δ=0；root-cause 深查**推翻**初判的 streaming code bug（loop 用非串流 `chat()`、adapter usage 實測正常 prompt=12/comp=9、`record_llm_call` 缺 pricing 仍寫 0 成本行、yaml 載入 OK、FIX-022 已 wire）。3 衍生 AD：
 
 1. **`AD-RealLLM-CostLedger-ProcessState-Verify`**（✅ **RESOLVED** 2026-06-03，非 code bug）— 已執行重啟驗證：殺光 stale uvicorn reloader/worker → fresh restart 啟動 log `api.main: pricing loader wired`（`main.py:149`，非 `:151` fail-soft）→ smoke `cost_ledger Δ=2`（stale 進程為 Δ=0；input 1987 + output 11 tok）。確認「完全沒 cost 行」為運行進程啟動時 loader 未裝成的 **process-state**，非 code bug。e2e gate `Δ≥2` row-count leg 現已綠。詳 `c11-real-llm-e2e-analysis-20260601.md §8.6`。
-2. **`AD-Cost-Ledger-Model-Pricing-Key-Mismatch`**（確認真實缺口）— deployment=`gpt-5.2` / config `model_name`=`gpt-4o` / `config/llm_pricing.yml` 僅 `gpt-4o-mini` → `get_llm_pricing` None → cost 行 `total_cost_usd=0`（`cost_ledger.py:138-144`「observable anomaly」）。修法：對齊 `model_name`↔真實 deployment + 補 pricing yaml 真實模型條目（§8.6 實測 cost_ledger 記錄 model = `azure_openai/gpt-5.2-2025-12-11`，deployment 回傳值，非 gpt-4o）。屬 billing 正確性束（B-7/B-8/C-15）。~1-2 hr。
-3. **`AD-Adapter-MaxTokens-NewModel-Param`**（確認真實缺口）— gpt-5.2-class deployment 拒 `max_tokens`（回 400「use `max_completion_tokens`」）；loop 主流量未傳故不撞，但 `e2e-real-llm-smoke.yml` 成本護欄（`MAX_TOKENS_PER_CALL`/`max_tokens` `:132`）+ adapter `chat()`/`_stream_impl:282` 需依 model/api-version 切換 param 名。~1-2 hr。
+2. **`AD-Cost-Ledger-Model-Pricing-Key-Mismatch`**（✅ **CLOSED** Sprint 57.79 — date-suffix normalize + gpt-5.2 yaml）— deployment=`gpt-5.2` / config `model_name`=`gpt-4o` / `config/llm_pricing.yml` 僅 `gpt-4o-mini` → `get_llm_pricing` None → cost 行 `total_cost_usd=0`（`cost_ledger.py:138-144`「observable anomaly」）。修法：對齊 `model_name`↔真實 deployment + 補 pricing yaml 真實模型條目（§8.6 實測 cost_ledger 記錄 model = `azure_openai/gpt-5.2-2025-12-11`，deployment 回傳值，非 gpt-4o）。屬 billing 正確性束（B-7/B-8/C-15）。~1-2 hr。
+3. **`AD-Adapter-MaxTokens-NewModel-Param`**（✅ **CLOSED** Sprint 57.79 — adapter max_completion_tokens for gpt-5.x）— gpt-5.2-class deployment 拒 `max_tokens`（回 400「use `max_completion_tokens`」）；loop 主流量未傳故不撞，但 `e2e-real-llm-smoke.yml` 成本護欄（`MAX_TOKENS_PER_CALL`/`max_tokens` `:132`）+ adapter `chat()`/`_stream_impl:282` 需依 model/api-version 切換 param 名。~1-2 hr。
 
 > CI gate（`e2e-real-llm-smoke.yml`）維持手動/關閉（用戶 policy：secret 不進 GitHub）；本機路徑為實際驗收途徑。
 
