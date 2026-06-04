@@ -16,6 +16,19 @@ Description:
       tenant_id as caller-provided + relies on caller to resolve role list
 
 Owner: 01-eleven-categories-spec.md §範疇 3 Layer 3 Role
+
+Modification History:
+    - 2026-06-04: Sprint 57.76 — NO memory_ops emit here (write/evict raise
+      NotImplementedError; admin-managed, no live path to instrument; see below)
+
+Sprint 57.76 note (memory_ops emit):
+    The plan listed user/tenant/role as emit targets, but RoleLayer.write() and
+    RoleLayer.evict() both raise NotImplementedError (admin-managed, Phase 53+).
+    There is no live write/evict path to emit from — adding _record_memory_op()
+    after the raise would be unreachable dead code (AP-4 Potemkin). So role-layer
+    ops are honestly NOT recorded this sprint; they become emittable when/if
+    role write/evict gains a real DB path. Emit is wired only in the user +
+    tenant layers (the two DB-backed write/evict paths).
 """
 
 from __future__ import annotations

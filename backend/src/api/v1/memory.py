@@ -48,6 +48,7 @@ Description:
 Created: 2026-05-10 (Sprint 57.12 Day 1 / US-2)
 
 Modification History (newest-first):
+    - 2026-06-04: Sprint 57.76 — add GET /ops (paginated memory_ops history)
     - 2026-06-03: Sprint 57.73 Track B — add GET /matrix layer×time_scale count aggregate
     - 2026-05-17: Sprint 57.19 US-B2 — extend /recent w/ optional scope_id + time_scale params
     - 2026-05-10: Initial creation (Sprint 57.12 Day 1 / US-2) — 3 endpoints
@@ -74,6 +75,7 @@ from sqlalchemy import case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.db.models.memory import (
+    MemoryOp,
     MemorySystem,
     MemoryTenant,
     MemoryUser,
@@ -146,6 +148,27 @@ class MemoryMatrixResponse(BaseModel):
     cells: list[MemoryMatrixCell]
     total: int
     gapped_layers: list[MemoryLayer]
+
+
+class MemoryOpItem(BaseModel):
+    """Single memory_ops row (Sprint 57.76 — RecentOps + TimeTravel source).
+
+    Maps to the frontend RecentMemoryOp {op, scope, k, v, by, at} shape
+    (wired in Sprint 57.77).
+    """
+
+    op: str  # WRITE / EVICT
+    scope: str  # user / tenant / role
+    key: str | None = None
+    time_scale: str | None = None
+    value_snapshot: str | None = None
+    actor: str | None = None
+    created_at_ms: int
+
+
+class MemoryOpsResponse(BaseModel):
+    ops: list[MemoryOpItem]
+    next_cursor: int | None  # created_at_ms of the last row; None when no more
 
 
 def _to_ms(dt: datetime | None) -> int | None:
@@ -499,3 +522,50 @@ async def get_matrix(
         total=total,
         gapped_layers=[MemoryLayer.ROLE, MemoryLayer.SESSION],
     )
+
+
+@router.get("/ops", response_model=MemoryOpsResponse)
+async def list_ops(
+    limit: int = Query(50, ge=1, le=_MAX_PAGE_SIZE),
+    before: int | None = Query(
+        None,
+        description="Pagination cursor: created_at_ms; returns ops strictly OLDER than this.",
+    ),
+    current_tenant: UUID = Depends(get_current_tenant),
+    _audit: UUID = Depends(require_audit_role),
+    db: AsyncSession = Depends(get_db_session_with_tenant),
+) -> MemoryOpsResponse:
+    """Paginated memory_ops history for the current tenant (created_at DESC).
+
+    Records persisted by the user / tenant memory layers on write/evict
+    (Sprint 57.76). Tenant-scoped via RLS + an explicit tenant_id filter
+    (defense-in-depth). Cursor-paginated: `before` is the created_at_ms of the
+    last seen row; the response `next_cursor` is the created_at_ms of the last
+    returned row (None when the page is not full → no more rows).
+
+    Role + session layers are not recorded (admin-managed / volatile); see
+    memory/layers/role_layer.py + plan §9.
+    """
+    base = select(MemoryOp).where(MemoryOp.tenant_id == current_tenant)
+    if before is not None:
+        # created_at_ms cursor → datetime for the strict-older comparison.
+        cursor_dt = datetime.fromtimestamp(before / 1000, tz=UTC)
+        base = base.where(MemoryOp.created_at < cursor_dt)
+    stmt = base.order_by(desc(MemoryOp.created_at), desc(MemoryOp.id)).limit(limit)
+    rows = (await db.execute(stmt)).scalars().all()
+
+    ops = [
+        MemoryOpItem(
+            op=r.operation,
+            scope=r.scope,
+            key=r.key,
+            time_scale=r.time_scale,
+            value_snapshot=r.value_snapshot,
+            actor=r.actor,
+            created_at_ms=_to_ms(r.created_at) or 0,
+        )
+        for r in rows
+    ]
+    # next_cursor only when the page is full (otherwise no more rows to fetch).
+    next_cursor = ops[-1].created_at_ms if len(ops) == limit else None
+    return MemoryOpsResponse(ops=ops, next_cursor=next_cursor)

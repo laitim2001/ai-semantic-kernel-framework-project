@@ -5,6 +5,7 @@ Category: Tests / 範疇 3
 Scope: Phase 51 / Sprint 51.2 Day 2.8
 
 Created: 2026-04-30
+Modified: 2026-06-04 (Sprint 57.76 — update write assertion for memory_ops emit)
 """
 
 from __future__ import annotations
@@ -84,7 +85,10 @@ async def test_write_long_term() -> None:
     eid = await layer.write(content="new SOP", tenant_id=tenant, time_scale="long_term")
     assert eid is not None
     session = layer._session_factory._mock_session  # type: ignore[attr-defined]
-    added: MemoryTenant = session.add.call_args[0][0]
+    # Sprint 57.76: write now adds BOTH the MemoryTenant row + a MemoryOp row;
+    # find the MemoryTenant among the add() targets (order: tenant row first).
+    targets = [c.args[0] for c in session.add.call_args_list]
+    added: MemoryTenant = next(t for t in targets if isinstance(t, MemoryTenant))
     assert added.tenant_id == tenant
     meta = added.metadata_ or {}
     assert meta.get("time_scale") == "long_term"
