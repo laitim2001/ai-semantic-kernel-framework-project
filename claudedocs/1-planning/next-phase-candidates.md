@@ -57,8 +57,28 @@
 - **D-DAY1-2 lesson (i18n locale vs UI-state-string conflation — 57.73 D-DAY1-1 variant, 2nd occurrence)**: agent put 3 new keys in English in zh-TW citing "English convention"; but i18n LOCALE files ARE translated (existing subagents zh-TW all 繁中). Parent fixed → 繁中. **2 occurrences (57.73 opposite direction) → Before-Commit item 7 sub-bullet candidate**: distinguish "component inline string = English" from "i18n locale file = follow the file's language".
 - Calibration: `mixed-multidomain-bundle` 0.65 + `agent_factor` `mechanical-greenfield-design-decisions` 0.65 — CAVEATED (16th consecutive agent-delegated no-clean-wall-clock; `AD-Calibration-AgentDelegated-WallClock-Measure`).
 
-### NB (merge order)
-Sprint 57.77 (PR #243) + 57.78 both touch CLAUDE.md / MEMORY.md / this file's section anchor — 57.78 branched from main before #243 merged. Merge #243 first, then 57.78; on conflict take the 57.78 version (newer, references both).
+---
+
+## 🆕 Sprint 57.77 Carryover (2026-06-04 — Memory ops-history frontend full-wire; closes AD-Memory-OpsHistory-Backend frontend half → AD FULLY CLOSED)
+
+**Closed**: `AD-Memory-OpsHistory-Backend` **fully closed** (backend 57.76 + frontend 57.77). Wired shipped `GET /memory/ops`: NEW `useMemoryOps` hook (mirror useMemoryMatrix) + `fetchOps` service (URLSearchParams, `before` only-when-provided) + `MemoryOpItem`/`MemoryOpsResponse` wire-verbatim types; RecentMemoryOpsCard real cursor-filter (`created_at_ms ≤ cursor`, honest browse-ops-timeline, AP-4 not state-reconstruction) + loading/error/empty; TimeTravelScrubber marks from real `created_at_ms` domain + scrub→onCursor(ms) + hasDomain div-by-zero guard; MemoryView cursor ms|null + playback over real op range; deleted `_fixtures.ts` (3 fixtures + 3 orphan types + MemoryScopeId, 0 importers). Frontend-only; feature-continuation (no design note). Agent-delegated (Track A) + parent re-verify. Detail: `memory/project_phase57_77_memory_ops_history_frontend.md` + retrospective. CHANGE-045.
+
+### Area-A "process all carryover except A-4 Tier 2" program — remaining
+- ✅ #1+#2 Inspector Trace + Memory (57.75) · #3 admin-tenants stats (57.74)
+- ✅ `AD-Memory-OpsHistory-Backend` **fully closed** (backend 57.76 + frontend 57.77)
+- ⏳ **FE `/subagents` real list (`AD-Subagent-RealList-Phase58`) — THE LAST Area-A remaining item** (agent_catalog specs exist; needs tenant-facing GET + FE re-mount, like 57.73)
+- (A-4 Tier 2 real Jaeger export = EXCLUDED per user program → Area-C/DevOps)
+
+### NEW carryovers (this sprint)
+- **READ-path ops** — write/evict only (57.76 backend); sampled reads a future option (row-volume tradeoff).
+- **role/session/system layer ops** — those layers raise / in-memory (57.76); not recorded → never appear in RecentOps/marks.
+- **Point-in-time state reconstruction** — scrub = ops-browsing (filter visible ops by time); replaying snapshots to rebuild memory state at an arbitrary timestamp is deeper future work.
+- **Server-side ops time-window scrub** — current filters client-side from a single 50-row page; `before` cursor wired in `fetchOps` but pagination-only. Deep-history scrub needs server-side windowed fetch.
+
+### Process / Calibration
+- **D-DAY1-1 lesson (state-wiring seam)**: agent stayed narrowly in-scope (`MemoryPageHeader cursor={0}` hardcode) leaving a dead `cursor<0` branch + inert header; scrub didn't reflect in the header. Parent re-verify caught it (user-approved scope expansion → header migrated minute-offset→ms|null). Lesson: when delegating "wire X into page", trace the migrated state through EVERY page consumer (header was a 3rd, under-scoped in plan), not just named widgets — extend the Day-0 frontend audit to grep state consumers. Complements Prong-2.5 (which audits *styling* drift; this was a *state-wiring* seam). 1 data point.
+- **D-DAY1-2**: plan assumed colocated `src/**/*.test.tsx` NEW; Vitest `include` = `tests/unit/**` + 4 memory tests already existed (57.73) → rewrite-in-place (Sprint 57.66 test-infra-file-verify applied to FE Vitest layout). No coverage lost.
+- Calibration: `medium-frontend` 0.65 + `agent_factor` `mechanical-greenfield-design-decisions` 0.65 — CAVEATED (15th consecutive agent-delegated no-clean-wall-clock; `AD-Calibration-AgentDelegated-WallClock-Measure`).
 
 ---
 
