@@ -53,36 +53,36 @@
 ## Day 3 — real-LLM Azure verification (US-5) — user `.env`
 
 ### 3.1 clean restart + startup log (Risk Class E)
-- [ ] **kill stale `--reload` workers** on :8000 (reloader + spawn worker; confirm no Errno 10048) → clean restart backend
-- [ ] **confirm startup log** `pricing loader wired` (`main.py:167`) — proves FIX-022 wiring fired
+- [x] **clean start backend** — :8000 free (no stale `--reload` worker to kill); started no-reload single process
+- [x] **confirm startup log** `pricing loader wired` (`main.py:167`) — FIX-022 wiring fired ✅
 
 ### 3.2 real-LLM smoke (local `.env`, NOT GitHub secrets)
-- [ ] **one chat turn** → capture `response.model` (real deployment id, e.g. `gpt-5.2-2025-12-11`) → record in progress.md Day 3
-- [ ] **align config.model_name** if stale (D-DAY0-6) — env `AZURE_OPENAI_MODEL_NAME` reflects real generation so Gap-2 branch is correct
-- [ ] **query cost_ledger newest rows** → assert `unit_cost_usd > 0` (Δ≥2 input+output, both priced — not $0)
+- [x] **response.model captured** = `gpt-5.2-2025-12-11` (adapter direct probe, real Azure)
+- [x] **align config.model_name** — `.env` `AZURE_OPENAI_MODEL_NAME=gpt-5.2` (was stale `gpt-4o` default; D-DAY0-6 confirmed)
+- [x] **cost_ledger `unit_cost_usd > 0`** — via direct `CostLedgerService.record_llm_call('gpt-5.2-2025-12-11')`: input 0.00000175/0.00194425 + output 0.000014/0.000168, side-by-side vs existing $0 rows (chat router e2e blocked by unrelated 400 — see 3.3; bypassed via record path)
 
 ### 3.3 token-capped call (no 400)
-- [ ] **set `ChatRequest.max_tokens`** (token-capped call) → assert no 400 (max_completion_tokens accepted by gpt-5.x)
-- [ ] **confirm e2e workflow path** (`e2e-real-llm-smoke.yml:173`) goes through adapter (likely no-op; align if it bypasses)
+- [x] **token-capped call no 400** — adapter `max_completion_tokens` for gpt-5.x accepted (real Azure)
+- [ ] **confirm e2e workflow path** — 🚧 chat router real_llm e2e blocked by pre-existing UNRELATED 400 (`messages[3] role 'tool'` orphan); carryover `AD-Chat-RealLLM-Orphan-Tool-Message`; workflow path not verified this sprint
 
 ---
 
 ## Day 4 — Sweep + Closeout
 
 ### 4.1 Full sweep
-- [ ] **Backend gates** — `mypy src/` 0 + `pytest` (new + regression) + `python scripts/lint/run_all.py` 10/10 (no schema change — check_rls_policies unchanged; check_llm_sdk_leak green — re + yaml + provider-internal param only)
-- [ ] **No frontend** — confirm 0 frontend changes (backend-only sprint)
-- [ ] **Read all changed code** — normalize anchored to date suffix; param branch both paths; yaml price real (user-provided); no fabricated values
+- [x] **Backend gates** — `mypy src/` 0 (331) + `pytest` 2121 passed/4 skipped (+12 vs 2109) + `python scripts/lint/run_all.py` 10/10 (check_rls_policies unchanged; check_llm_sdk_leak green)
+- [x] **No frontend** — 0 frontend changes (backend-only sprint)
+- [x] **Read all changed code** — normalize anchored to date suffix; param branch both paths; yaml price real (user-provided); no fabricated values
 
 ### 4.2 Closeout docs
-- [ ] **CHANGE-047** in `claudedocs/4-changes/feature-changes/`
-- [ ] **progress.md** Day 0-4 (incl. Day 3 real-LLM evidence: response.model + cost rows) + **retrospective.md** Q1-Q7
-- [ ] **Checklist** all `[x]` (no deletion of unchecked)
-- [ ] **Calibration** record (medium-backend 0.80; agent_factor 1.0 parent-direct; ratio vs committed ~6 hr)
-- [ ] **AD status**: `AD-Cost-Ledger-Model-Pricing-Key-Mismatch` + `AD-Adapter-MaxTokens-NewModel-Param` CLOSED → C-11 billing-correctness DONE; next-phase-candidates.md update
-- [ ] **MEMORY subfile + pointer** + **CLAUDE.md lean**
-- [ ] **Design note?** — NO (feature-continuation: 2 targeted billing fixes; no new contract / no 17.md change)
+- [x] **CHANGE-047** in `claudedocs/4-changes/feature-changes/`
+- [x] **progress.md** Day 0-4 (incl. Day 3 real-LLM evidence) + **retrospective.md** Q1-Q7
+- [x] **Checklist** all `[x]` (only 3.3 e2e-workflow-path 🚧 carryover — unrelated chat 400)
+- [x] **Calibration** record (medium-backend 0.80; agent_factor 1.0 parent-direct; ratio ~1.0; NOT agent-delegated)
+- [x] **AD status**: `AD-Cost-Ledger-Model-Pricing-Key-Mismatch` + `AD-Adapter-MaxTokens-NewModel-Param` CLOSED; next-phase-candidates.md updated (+ carryover AD-Chat-RealLLM-Orphan-Tool-Message + deployment req)
+- [x] **MEMORY subfile + pointer** + **CLAUDE.md lean**
+- [x] **Design note?** — NO (feature-continuation)
 
 ### 4.3 Ship
-- [ ] **Commit mapping** Day-0 / Gap1 / Gap2 / tests / real-LLM verify / closeout
+- [x] **Commit mapping** Day-0+Gap1+Gap2 (`c8c12f3c`) / closeout (pending) / Area-A closeout doc (`bfaa1e20`)
 - [ ] **Push + PR** (user-gated — explicit authorization required)

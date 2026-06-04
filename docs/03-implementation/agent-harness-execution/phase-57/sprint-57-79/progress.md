@@ -61,3 +61,42 @@
 ### Remaining
 - Day 3: real-LLM Azure verify (needs user collaboration — backend restart + .env + response.model + cost_ledger unit_cost>0 + no-400 token cap).
 - Day 4: full sweep (mypy src/ + full pytest + run_all) + closeout.
+
+---
+
+## Day 3 — 2026-06-04 — real-LLM Azure verification
+
+### Accomplishments
+- **.env aligned**: added `AZURE_OPENAI_MODEL_NAME=gpt-5.2` (config.model_name default was stale `gpt-4o`; deployment is `gpt-5.2` — D-DAY0-6 confirmed). Required for Gap 2 to take effect in the real chat flow.
+- **backend clean start** (no `--reload`); startup log `pricing loader wired` confirmed (Risk Class E pass — FIX-022 fired).
+- **adapter direct (real Azure)**: `response.model='gpt-5.2-2025-12-11'`; Gap 1 pre-fix exact MISS ($0) → post-fix normalize → `LLMPricing(1.75/14.0/0.175)` → unit_cost 0.000189; Gap 2 `max_completion_tokens` → token-capped call no 400.
+- **cost_ledger DB (real `CostLedgerService.record_llm_call` path)**: fix-applied `gpt-5.2-2025-12-11` → input unit_cost 0.00000175 / total 0.00194425 + output unit_cost 0.000014 / total 0.000168 (**>0**); side-by-side with existing $0 rows (same model, pre-fix). DB-level proof of the #238 fix.
+
+### Verification chain
+- Gap 1 e2e: `get_llm_pricing('azure_openai','gpt-5.2-2025-12-11')` normalize → non-None → `cost_ledger.py:137-159` unit_cost = pricing × tokens > 0 (DB-confirmed).
+- Gap 2: adapter emits `max_completion_tokens` for gpt-5.x (config.model_name aligned) → no 400.
+
+### Carryover finding (UNRELATED to billing fix)
+- 🚧 **chat router real_llm e2e blocked by a pre-existing message-structure 400**: `messages[3] role 'tool' must follow tool_calls` (orphan tool message). Fresh tenant + clean session reproduces (messages_count:4 fixed) → prompt-builder/chat-handler assembly issue in real_llm mode, NOT session-history pollution, NOT this sprint's fix. Logged carryover `AD-Chat-RealLLM-Orphan-Tool-Message`. Bypassed via the direct cost_ledger record-path verification above.
+- Note: OTLP trace exporter `Failed to export to localhost:4317` warnings = no local collector (no-op fallback), unrelated.
+
+### .env change (deployment requirement)
+- `AZURE_OPENAI_MODEL_NAME=gpt-5.2` added (user-approved). **Production/other envs MUST set this to the real deployment generation** so Gap 2 takes effect (else stale `gpt-4o` default → `max_tokens` → 400 on gpt-5.x). Logged as deployment requirement.
+
+### Cleanup
+- Removed 3 temp verification scripts + backend-day3.log + 2 test cost_ledger rows; stopped backend.
+
+### Remaining
+- Day 4: full sweep (mypy src/ + full pytest + run_all) + closeout.
+
+---
+
+## Day 4 — 2026-06-04 — Full sweep + closeout
+
+### Accomplishments
+- **Full sweep**: `mypy src/` 0 (331 files) + `pytest` 2121 passed / 4 skipped (+12 vs baseline 2109) + `run_all.py` 10/10 (check_llm_sdk_leak green; check_rls_policies unchanged — no schema). Backend-only (0 frontend changes).
+- **Closeout**: CHANGE-047 + retrospective.md (Q1-Q7) + MEMORY subfile/pointer + CLAUDE.md lean (Current Sprint + Last Updated) + next-phase-candidates.md (2 ADs CLOSED + `AD-Chat-RealLLM-Orphan-Tool-Message` + deployment requirement `AZURE_OPENAI_MODEL_NAME`).
+- No design note (feature-continuation — 2 targeted billing fixes; no new contract / no 17.md change).
+
+### Status
+Both ADs CLOSED. Code + real-LLM Azure verified. Awaiting push + PR (user-gated).
