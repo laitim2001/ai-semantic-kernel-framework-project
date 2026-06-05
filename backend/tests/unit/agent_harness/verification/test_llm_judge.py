@@ -32,7 +32,7 @@ import pytest
 
 from adapters._testing.mock_clients import MockChatClient
 from agent_harness._contracts import LoopState, VerificationResult
-from agent_harness._contracts.chat import ChatRequest, ChatResponse, StopReason
+from agent_harness._contracts.chat import ChatRequest, ChatResponse, StopReason, TokenUsage
 from agent_harness.verification import LLMJudgeVerifier
 
 
@@ -206,3 +206,67 @@ def test_verification_result_is_dataclass() -> None:
     """Sanity: VerificationResult contract import works (regression guard for D3 drift)."""
     result = VerificationResult(passed=True, verifier_name="x", verifier_type="llm_judge")
     assert result.verifier_type == "llm_judge"
+
+
+# === Sprint 57.82 (B-8 leg-1): judge token capture for cost-ledger bubbling ===
+
+
+@pytest.mark.asyncio
+async def test_judge_captures_token_usage_and_model() -> None:
+    """Sprint 57.82: judge captures response.usage + model into the result so the
+    correction-loop wrapper can bubble it to LoopCompleted for cost-ledger/quota."""
+    resp = ChatResponse(
+        model="gpt-5.2-judge",
+        content=_judge_response(passed=True, score=0.9).content,
+        stop_reason=StopReason.END_TURN,
+        usage=TokenUsage(prompt_tokens=120, completion_tokens=8, total_tokens=128),
+    )
+    chat = MockChatClient(responses=[resp])
+    verifier = LLMJudgeVerifier(chat_client=chat, judge_template="Judge: {output}")
+    result = await verifier.verify(output="x", state=_state())
+
+    assert result.passed is True
+    assert result.input_tokens == 120
+    assert result.output_tokens == 8
+    assert result.model == "gpt-5.2-judge"
+
+
+@pytest.mark.asyncio
+async def test_judge_malformed_still_carries_token_usage() -> None:
+    """Even a malformed-response result carries token usage — the LLM call was made
+    and is chargeable (Sprint 57.82)."""
+    chat = MockChatClient(
+        responses=[
+            ChatResponse(
+                model="mock-judge",
+                content="not valid json",
+                stop_reason=StopReason.END_TURN,
+                usage=TokenUsage(prompt_tokens=50, completion_tokens=3, total_tokens=53),
+            )
+        ]
+    )
+    verifier = LLMJudgeVerifier(chat_client=chat, judge_template="Judge: {output}")
+    result = await verifier.verify(output="x", state=_state())
+
+    assert result.passed is False  # fail-closed on malformed
+    assert result.input_tokens == 50
+    assert result.output_tokens == 3
+    assert result.model == "mock-judge"
+
+
+@pytest.mark.asyncio
+async def test_judge_exception_path_keeps_zero_tokens() -> None:
+    """fail-closed exception path keeps 0 tokens / None model — the call raised and
+    may not have completed (Sprint 57.82)."""
+
+    class _RaisingChatClient(MockChatClient):
+        async def chat(self, request: ChatRequest, **kwargs: object) -> ChatResponse:
+            raise RuntimeError("boom")
+
+    verifier = LLMJudgeVerifier(chat_client=_RaisingChatClient(), judge_template="Judge: {output}")
+    result = await verifier.verify(output="x", state=_state())
+
+    assert result.passed is False
+    assert result.input_tokens == 0
+    assert result.output_tokens == 0
+    assert result.model is None

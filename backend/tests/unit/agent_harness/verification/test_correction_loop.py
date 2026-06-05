@@ -360,5 +360,157 @@ async def test_non_end_turn_completion_skips_verifier() -> None:
     assert completion[0].stop_reason == "max_turns"
 
 
+# === Sprint 57.82 (B-8 leg-1): judge token accumulation + LoopCompleted stamping ===
+
+
+class _TokenVerifier(Verifier):
+    """Verifier reporting fixed judge token usage per call; verdict per call from a list.
+
+    verdicts[i] drives the i-th verify() (clamped to the last entry once exhausted),
+    so a single False verdict means "always fail" across correction attempts.
+    """
+
+    def __init__(
+        self,
+        *,
+        verdicts: list[bool],
+        in_tok: int = 100,
+        out_tok: int = 10,
+        model: str = "judge-m",
+        name: str = "tok",
+    ) -> None:
+        self.name = name
+        self._verdicts = list(verdicts)
+        self._in = in_tok
+        self._out = out_tok
+        self._model = model
+        self.calls = 0
+
+    async def verify(
+        self,
+        *,
+        output: str,
+        state: LoopState,
+        trace_context: TraceContext | None = None,
+    ) -> VerificationResult:
+        idx = min(self.calls, len(self._verdicts) - 1)
+        passed = self._verdicts[idx]
+        self.calls += 1
+        return VerificationResult(
+            passed=passed,
+            verifier_name=self.name,
+            verifier_type="llm_judge",
+            reason=None if passed else "bad",
+            suggested_correction=None if passed else "fix it",
+            input_tokens=self._in,
+            output_tokens=self._out,
+            model=self._model,
+        )
+
+
+@pytest.mark.asyncio
+async def test_judge_tokens_stamped_on_passing_completion() -> None:
+    """(a) all-pass → captured LoopCompleted carries the judge tokens + model."""
+    stub = _StubAgentLoop(responses_per_call=[_seq(content="ok")])
+    registry = VerifierRegistry()
+    registry.register(_TokenVerifier(verdicts=[True], in_tok=120, out_tok=8, model="gpt-5.2-judge"))
+
+    events = [
+        ev
+        async for ev in run_with_verification(
+            agent_loop=stub, session_id=uuid4(), user_input="q", verifier_registry=registry
+        )
+    ]
+    completion = [ev for ev in events if isinstance(ev, LoopCompleted)][-1]
+    assert completion.stop_reason == "end_turn"
+    assert completion.verification_input_tokens == 120
+    assert completion.verification_output_tokens == 8
+    assert completion.verification_model == "gpt-5.2-judge"
+
+
+@pytest.mark.asyncio
+async def test_judge_tokens_summed_across_correction_attempts() -> None:
+    """(b) 1 correction then pass → tokens summed across BOTH judge runs."""
+    stub = _StubAgentLoop(responses_per_call=[_seq(content="bad"), _seq(content="good")])
+    registry = VerifierRegistry()
+    registry.register(_TokenVerifier(verdicts=[False, True], in_tok=100, out_tok=10))
+
+    events = [
+        ev
+        async for ev in run_with_verification(
+            agent_loop=stub,
+            session_id=uuid4(),
+            user_input="q",
+            verifier_registry=registry,
+            max_correction_attempts=2,
+        )
+    ]
+    completion = [ev for ev in events if isinstance(ev, LoopCompleted)][-1]
+    assert completion.stop_reason == "end_turn"
+    assert completion.verification_input_tokens == 200  # 2 judge runs
+    assert completion.verification_output_tokens == 20
+
+
+@pytest.mark.asyncio
+async def test_judge_tokens_summed_on_exhausted_completion() -> None:
+    """(c) all attempts fail → verification_failed LoopCompleted carries summed tokens."""
+    stub = _StubAgentLoop(
+        responses_per_call=[_seq(content="b1"), _seq(content="b2"), _seq(content="b3")]
+    )
+    registry = VerifierRegistry()
+    registry.register(_TokenVerifier(verdicts=[False], in_tok=100, out_tok=10))
+
+    events = [
+        ev
+        async for ev in run_with_verification(
+            agent_loop=stub,
+            session_id=uuid4(),
+            user_input="q",
+            verifier_registry=registry,
+            max_correction_attempts=2,
+        )
+    ]
+    completion = [ev for ev in events if isinstance(ev, LoopCompleted)][-1]
+    assert completion.stop_reason == VERIFICATION_FAILED_STOP_REASON
+    assert completion.verification_input_tokens == 300  # 3 attempts
+    assert completion.verification_output_tokens == 30
+
+
+@pytest.mark.asyncio
+async def test_judge_tokens_zero_on_non_end_turn() -> None:
+    """(d) non-end_turn → judge never ran this attempt → fields stay 0."""
+    stub = _StubAgentLoop(responses_per_call=[_seq(content="partial", stop="max_turns")])
+    registry = VerifierRegistry()
+    registry.register(_TokenVerifier(verdicts=[True], in_tok=100, out_tok=10))
+
+    events = [
+        ev
+        async for ev in run_with_verification(
+            agent_loop=stub, session_id=uuid4(), user_input="q", verifier_registry=registry
+        )
+    ]
+    completion = [ev for ev in events if isinstance(ev, LoopCompleted)][-1]
+    assert completion.stop_reason == "max_turns"
+    assert completion.verification_input_tokens == 0
+    assert completion.verification_output_tokens == 0
+    assert completion.verification_model is None
+
+
+@pytest.mark.asyncio
+async def test_judge_tokens_zero_on_passthrough() -> None:
+    """(e) no registry → passthrough → LoopCompleted unchanged (0 verification tokens)."""
+    stub = _StubAgentLoop(responses_per_call=[_seq()])
+    events = [
+        ev
+        async for ev in run_with_verification(
+            agent_loop=stub, session_id=uuid4(), user_input="q", verifier_registry=None
+        )
+    ]
+    completion = [ev for ev in events if isinstance(ev, LoopCompleted)][-1]
+    assert completion.verification_input_tokens == 0
+    assert completion.verification_output_tokens == 0
+    assert completion.verification_model is None
+
+
 # Reference unused import to pacify flake8 (cast / LoopState used by test fixtures)
 _ = cast(LoopState, None) if False else None
