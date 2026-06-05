@@ -55,13 +55,16 @@ def test_all_default_templates_load_and_have_placeholder(name: str) -> None:
     assert "JSON" in content, f"Template '{name}' should request JSON response"
 
 
-def test_output_quality_template_judges_four_dimensions() -> None:
-    """Sprint 57.83 (B-8 leg-2): the new general final-output quality judge judges
-    helpful/complete/accurate/on-topic + leans pass when uncertain (low-FP intent)."""
-    content = load_template("output_quality")
+def test_output_quality_template_is_clear_failure_only() -> None:
+    """Sprint 57.83 (B-8 leg-2): lightweight 'clearly-failed-only' quality judge.
+    Re-tuned to low-FP after the fail-on-any version measured ~75% FP on real Azure
+    (see claudedocs/5-status/cat10-verification-real-llm-measurement-20260605.md)."""
+    content = load_template("output_quality").lower()
     assert "{output}" in content
-    assert "JSON" in content
-    for dim in ("helpful", "complete", "accurate", "on-topic"):
-        assert dim in content, f"output_quality template missing dimension '{dim}'"
-    # fair-judging guard (lean pass when uncertain — keeps false-positive low)
+    assert "json" in content
+    # only these clear-failure criteria trigger a fail
+    for crit in ("refus", "incoherent", "empty", "off-topic"):
+        assert crit in content, f"output_quality template missing clear-failure criterion '{crit}'"
+    # low-FP guards
     assert "passed=true" in content
+    assert "when in doubt, pass" in content

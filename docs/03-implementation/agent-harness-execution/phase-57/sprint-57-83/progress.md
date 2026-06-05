@@ -64,3 +64,32 @@
 - Day 2: **real-LLM measurement (real Azure — confirm with user before running)** — FP rate / p95 latency / per-chat cost → artifact.
 - Day 3: data-gated flip decision.
 - Day 4: sweep + closeout.
+
+---
+
+## Day 2 — 2026-06-05 — Blocker C: real-LLM measurement (real Azure)
+
+### Accomplishments
+- User authorized full-stack spin-up (AskUserQuestion). Started Docker (postgres Healthy + redis) via `docker-compose.dev.yml` (dev.py didn't pass `-f`); DB at head `0024_memory_ops`; backend no-reload with `CHAT_VERIFICATION_MODE=enabled` + `CHAT_VERIFICATION_JUDGE_TEMPLATE=output_quality` (3 wiring lines confirmed in startup log).
+- Measurement protocol: dev-login (DEMO) + 8 normal + 2 nonsense prompts (mode=real_llm). Verdicts from SSE + cross-checked `verification_log`; judge cost from `cost_ledger` `_verification` entries (leg-1).
+- **Pass 1 (fail-on-any judge)**: 8 normal → **6 fail → FP ~75%** (normal answers like "HTTP stand for" / "one focus tip" judged quality-fail + up to 3 correction re-runs, stop=verification_failed); judge cost 9064 tokens/$0.047/10 chats; 2 bad both fail. **Gate verdict: DO NOT FLIP** — too strict for general traffic.
+- **Re-tune (AskUserQuestion)**: user chose "tune lightweight + re-measure + flip if OK". Rewrote `output_quality.txt` to a "clearly-failed-only" judge (flag ONLY refusal/incoherent/empty/off-topic; "short correct answer PASSES; when in doubt pass; Default to passed=true"). `load_template` reads per-call → running backend picked up the new template, no restart.
+- **Pass 2 (lightweight judge)**: 8 normal → **8 PASS / 0 fail → FP 0%** (0 corrections, ~5s each); 2 bad → both fail (3 corrections — true-positive sanity ✅). **Gate verdict: FLIP.**
+- Artifact: `claudedocs/5-status/cat10-verification-real-llm-measurement-20260605.md` (both passes + verdict). Temp script removed.
+
+### Notes
+- The leg-1 AskUserQuestion's "clearly-failed-only" low-FP judge was the right bar; the data-driven gate (Q2) caught the strict version before it shipped AND drove the in-sprint re-tune. Both `output_quality.txt` content + `test_judge_templates.py` assertions updated for the lightweight version.
+
+---
+
+## Day 3 — 2026-06-05 — Data-gated flip (US-4)
+
+### Accomplishments
+- FP 0% << 15% threshold + bad-case detection intact → **flip**: `chat_verification_mode` default `disabled` → `enabled` (config + docstring with measurement reference). `AD-Cat10-Wire-1-Production` / B-8 CLOSED.
+- Flip-impact grep (Prong-2 before flip): only `test_config_verification.py:38 test_default_is_disabled` depended on the default; smoke + category_activation tests all `setenv` mode explicitly; echo_demo builds no registry regardless of mode. → updated only that one test (`test_default_is_enabled`).
+
+### Verification
+- mypy src/ 0 (332) / **full pytest 2150 passed / 4 skipped** (flip broke NOTHING — all other tests set mode explicitly) / flake8 0 (after trimming 1 MHist E501 — the recurring file-header char-budget reflex) / run_all 10/10.
+
+### Remaining for Day 4
+- Sweep (done above) + closeout (CHANGE-050 + retrospective + MEMORY + CLAUDE + next-phase-candidates).

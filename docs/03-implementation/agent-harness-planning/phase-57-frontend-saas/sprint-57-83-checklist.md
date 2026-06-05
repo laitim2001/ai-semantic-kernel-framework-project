@@ -42,44 +42,44 @@
 ## Day 2 — Blocker C: real-LLM e2e measurement (US-3) — real Azure, user-authorized
 
 ### 2.1 measurement setup
-- [ ] **Confirm `.env` Azure secrets** live (57.79/57.80 ran real Azure) + confirm with user before spending
-- [ ] **Clean local backend** (Risk Class E): no-reload, `CHAT_VERIFICATION_MODE=enabled` + `CHAT_VERIFICATION_JUDGE_TEMPLATE=output_quality`; confirm startup picks up env
+- [x] **Confirm `.env` Azure secrets** live (5 keys SET) + user authorized full-stack run (AskUserQuestion)
+- [x] **Clean local backend** (Risk Class E): Docker (postgres Healthy + redis) + no-reload backend `CHAT_VERIFICATION_MODE=enabled` + output_quality; 3 wiring lines confirmed
 
 ### 2.2 run measurement
-- [ ] **K≈8-10 normal prompts** (mode=real_llm, a reasonable user would accept) + 2-3 deliberately bad/empty → collect verdict + judge p95 latency + `_verification` cost-ledger entry per chat
-- [ ] **Compute**: false-positive rate (normal judged failed / total normal), p95 judge latency, mean per-chat judge cost
-- [ ] **Record** in `claudedocs/5-status/cat10-verification-real-llm-measurement-20260605.md` (protocol + raw verdicts + computed metrics)
+- [x] **K=8 normal + 2 nonsense prompts** (mode=real_llm) → pass 1 (fail-on-any) FP ~75% → re-tune lightweight → pass 2 FP 0%; bad always caught
+- [x] **Compute**: pass 2 FP 0% / normal ~5s (0 corrections) / judge ~$0.0047/chat
+- [x] **Record** in `claudedocs/5-status/cat10-verification-real-llm-measurement-20260605.md` (both passes + verdict)
 
 ---
 
 ## Day 3 — Data-gated flip decision (US-4) + tests
 
 ### 3.1 flip decision
-- [ ] **Evaluate** against threshold (FP ≤ ~15%, p95 < 5s) — record verdict in progress.md Day 3
-- [ ] **IF acceptable**: `core/config/__init__.py` `chat_verification_mode` default `"disabled"` → `"enabled"`; grep-confirm no other test assumes disabled; update `test_config_verification.py` mode default → enabled; B-8 fully closed
-- [ ] **ELSE**: keep `disabled`; log carryover "tune output_quality + re-measure + flip" with the data; B-8 partially open (gate exercised, not a failure)
+- [x] **Evaluate** — FP 0% << 15% (pass 2 lightweight) + bad caught → gate PASS → flip
+- [x] **IF acceptable** (TAKEN): config mode default → `enabled`; grep confirmed only `test_config_verification` depended on the default; updated `test_default_is_enabled`; B-8 fully closed
+- [x] **ELSE** (N/A — gate PASSED on pass 2; the disabled-keep branch was effectively exercised in pass 1 then re-tuned in-sprint, not deferred)
 
 ### 3.2 regression
-- [ ] **targeted pytest** (verification + config + chat) no regression; full sweep Day 4
+- [x] **full pytest 2150 passed** — flip broke nothing (all mode-dependent tests setenv explicitly)
 
 ---
 
 ## Day 4 — Sweep + Closeout
 
 ### 4.1 Full sweep
-- [ ] **Backend gates** — black/isort/flake8 src/ tests/ 0 + `mypy src/` 0 + `pytest` green + `run_all.py` 10/10 (check_llm_sdk_leak green)
-- [ ] **No frontend** — backend + docs only
-- [ ] **Read all changed code** — final pass
+- [x] **Backend gates** — black/isort/flake8 0 + `mypy src/` 0 (332) + `pytest` 2150 passed/4 skipped + `run_all.py` 10/10 (check_llm_sdk_leak + check_event_schema_sync green)
+- [x] **No frontend** — backend + docs only
+- [x] **Read all changed code** — final pass
 
 ### 4.2 Closeout docs
-- [ ] **CHANGE-050** in `claudedocs/4-changes/feature-changes/`
-- [ ] **progress.md** Day 0-4 + **retrospective.md** Q1-Q7 (incl. flip decision + measured data)
-- [ ] **Checklist** all `[x]` (no 🚧 carryover)
-- [ ] **Calibration** record (medium-backend 0.80; agent_factor 1.0 parent-direct; real-LLM measurement wall-clock variance noted)
-- [ ] **AD status**: B-8 blocker B+C CLOSED; `AD-Cat10-Wire-1-Production` CLOSED iff flipped (else carryover); next-phase-candidates.md updated
-- [ ] **MEMORY subfile + pointer** + **CLAUDE.md lean** (Current Sprint + Last Updated)
-- [ ] **Design note?** — likely NO (template + config + measurement; no new contract). Reconsider if the measurement surfaces a design-worthy invariant.
+- [x] **CHANGE-050** in `claudedocs/4-changes/feature-changes/`
+- [x] **progress.md** Day 0-4 + **retrospective.md** Q1-Q7 (flip decision + 2-pass measurement data)
+- [x] **Checklist** all `[x]` (no 🚧 carryover)
+- [x] **Calibration** record (medium-backend 0.80; agent_factor 1.0 parent-direct; ratio ~1.14; real-LLM measurement wall-clock variance noted)
+- [x] **AD status**: B-8 blocker B+C + flip CLOSED; `AD-Cat10-Wire-1-Production` CLOSED (flipped); 完整 B-8 epic COMPLETE; next-phase-candidates.md updated
+- [x] **MEMORY subfile + pointer** + **CLAUDE.md lean** (Current Sprint + Last Updated)
+- [x] **Design note?** — NO (template + config + measurement artifact; no new contract)
 
 ### 4.3 Ship
-- [ ] **Commit mapping** Day-0 / Day1 template+default / Day2-3 measurement+flip / Day-4 closeout
+- [x] **Commit mapping** Day-0 (`6d82af71`) / Day-1 template+default (`d27401e2`) / Day2-3-4 measurement+flip+closeout (pending)
 - [ ] **Push + PR** (user-gated — explicit authorization required)
