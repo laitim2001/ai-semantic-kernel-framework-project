@@ -17,6 +17,7 @@ Created: 2026-05-31 (B-10)
 Last Modified: 2026-05-31
 
 Modification History (newest-first):
+    - 2026-06-05: Sprint 57.83 — judge_template default test + flip mode → enabled (B-8 leg-2)
     - 2026-05-31: B-10 migrate test_invalid_mode_raises (AD-Cat10-VerifierFactory)
 """
 
@@ -31,10 +32,11 @@ from core.config import Settings
 class TestChatVerificationModeValidation:
     """Settings.chat_verification_mode — pydantic Literal["disabled", "enabled"]."""
 
-    def test_default_is_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Default mode is 'disabled' (safe rollout — production unchanged)."""
+    def test_default_is_enabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Default mode is 'enabled' (Sprint 57.83 B-8 leg-2 — flipped after a real-LLM
+        measurement of the lightweight output_quality judge showed 0% false-positive)."""
         monkeypatch.delenv("CHAT_VERIFICATION_MODE", raising=False)
-        assert Settings().chat_verification_mode == "disabled"
+        assert Settings().chat_verification_mode == "enabled"
 
     def test_enabled_mode_accepted(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """'enabled' is a valid 2-mode value."""
@@ -51,3 +53,13 @@ class TestChatVerificationModeValidation:
         monkeypatch.setenv("CHAT_VERIFICATION_MODE", "shadow")
         with pytest.raises(ValidationError):
             Settings()
+
+
+class TestChatVerificationJudgeTemplate:
+    """Settings.chat_verification_judge_template default (Sprint 57.83 B-8 leg-2)."""
+
+    def test_default_is_output_quality(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Default judge template is the general 'output_quality' judge (was
+        'safety_review' — Cat 9-fitted, lean-unsafe; swapped Sprint 57.83 blocker B)."""
+        monkeypatch.delenv("CHAT_VERIFICATION_JUDGE_TEMPLATE", raising=False)
+        assert Settings().chat_verification_judge_template == "output_quality"

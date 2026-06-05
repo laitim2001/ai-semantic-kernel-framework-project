@@ -36,6 +36,22 @@
 
 ---
 
+## 🆕 Sprint 57.83 Carryover (2026-06-05 — B-8 leg-2: general judge + real-LLM e2e + flip default; closes B-8 / AD-Cat10-Wire-1-Production)
+
+**Closed**: B-8 fully (blocker B + C + flip) / `AD-Cat10-Wire-1-Production` — **完整 B-8 epic COMPLETE**. NEW lightweight `output_quality` judge + default template swap; a real-Azure measurement data-gated the flip; flipped `chat_verification_mode` default `disabled`→`enabled`. Final-output verification now ON by default for `real_llm` chat (env-overridable rollback). Detail: `memory/project_phase57_83_verification_default_enable.md` + retrospective + `claudedocs/5-status/cat10-verification-real-llm-measurement-20260605.md`. CHANGE-050.
+
+### Key result (the data-driven gate worked)
+- Pass 1 (Q1 fail-on-any judge): real-Azure FP ~75% (normal answers failed + up to 3× correction re-runs) → DO-NOT-FLIP.
+- Re-tune (Q2 + AskUserQuestion): lightweight "clearly-failed-only" judge → Pass 2 FP 0% (8/8 normal pass, 0 corrections) + nonsense caught → FLIP. The leg-1 low-FP judge recommendation was vindicated; the gate caught the strict version before it shipped.
+
+### NEW carryovers (this sprint)
+- **Monitor production verification_failed rate post-flip** — 0% FP is from an 8-prompt sample; watch real-traffic FP + correction rate (verification_log + `_verification` ledger give the data). Re-tune `output_quality` if FP creeps up.
+- **Per-verifier cost attribution** (leg-1 carryover) — still one `_verification` sub_type.
+- **Multi-judge registry** (safety + quality on the main path) — shipped one general quality judge; layering safety/PII is a separate decision.
+- Remaining billing bundle: **C-15** (DevOps/data-platform billing — cost_ledger 雙扣 risk).
+
+---
+
 ## 🆕 Sprint 57.82 Carryover (2026-06-05 — B-8 leg-1: verification judge token → cost ledger + quota; closes AD-Cat10-Judge-Cost-Ledger)
 
 **Closed**: B-8 **blocker A** / `AD-Cat10-Judge-Cost-Ledger` — the billing leg of the 完整 B-8 epic (user selected "clear 3 blockers + flip default"; this is leg 1 of a 2-leg epic). When verification is enabled, the LLM judge call's tokens are now recorded as a distinct `_verification` cost-ledger sub_type + counted against quota (previously discarded → billing/quota under-report). Design Option 1 (user AskUserQuestion): the correction-loop wrapper accumulates judge tokens across verifiers+attempts (the loop accumulator is frozen by the time verification runs in the wrapper) → `LoopCompleted.verification_*_tokens` → router records a distinct ledger entry + adds to quota actual. Default `chat_verification_mode` UNCHANGED (`disabled`) — a correctness fix activating only on the enabled path. backend+docs; no design note (17.md §1.1/§4.1 in-place). backend mypy 0/332 + pytest 2147 (+10) + run_all 10/10. Detail: `memory/project_phase57_82_verification_judge_cost_ledger.md` + retrospective. CHANGE-049.

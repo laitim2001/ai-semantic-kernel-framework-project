@@ -106,15 +106,22 @@ class Settings(BaseSettings):
     #            byte-for-byte event stream identical to direct loop.run)
     # enabled  → inject populated VerifierRegistry; wrapper runs verifiers +
     #            self-correction loop max 2 attempts (54.1 spec)
-    # Override via env: CHAT_VERIFICATION_MODE=enabled
+    # Override via env: CHAT_VERIFICATION_MODE=disabled
     # Option E 2-mode post-D4+D5: no shadow/enforce mode; rely on
     # registry-presence dispatch in run_with_verification wrapper.
-    chat_verification_mode: Literal["disabled", "enabled"] = "disabled"
+    # Sprint 57.83 (B-8 leg-2): default → "enabled" after a real-Azure measurement of
+    # the lightweight output_quality judge showed FP rate 0% on normal prompts (bad/
+    # nonsense still caught). See claudedocs/5-status/cat10-verification-real-llm-
+    # measurement-20260605.md. Closes AD-Cat10-Wire-1-Production / B-8.
+    chat_verification_mode: Literal["disabled", "enabled"] = "enabled"
     # Sprint 57.63 Cat 10: judge template used by the real LLMJudgeVerifier when
     # chat_verification_mode == "enabled". A template name resolved from
-    # verification/templates/<name>.txt (e.g. "safety_review", "factual_consistency")
+    # verification/templates/<name>.txt (e.g. "output_quality", "safety_review")
     # or a raw string containing the `{output}` placeholder. Final-output judge only.
-    chat_verification_judge_template: str = "safety_review"
+    # Sprint 57.83 (B-8 leg-2): default → general "output_quality" judge (helpful/
+    # complete/accurate/on-topic). Replaces the Cat 9-fitted "safety_review" default
+    # which leaned unsafe (high false-positive as a general final-output judge).
+    chat_verification_judge_template: str = "output_quality"
 
     # ---- Phase 56.1 SaaS quota (US-2) -------------------------------
     # Off by default — production rollout flips True after Redis client
