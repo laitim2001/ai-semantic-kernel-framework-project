@@ -345,12 +345,8 @@ async def test_loop_builder_tool_turn_keeps_tool_after_assistant() -> None:
     sent = chat_client.last_request
     assert sent is not None
     messages = sent.messages
-    a_idx = next(
-        i for i, m in enumerate(messages) if m.role == "assistant" and m.tool_calls
-    )
-    t_idx = next(
-        i for i, m in enumerate(messages) if m.role == "tool" and m.tool_call_id == "c1"
-    )
+    a_idx = next(i for i, m in enumerate(messages) if m.role == "assistant" and m.tool_calls)
+    t_idx = next(i for i, m in enumerate(messages) if m.role == "tool" and m.tool_call_id == "c1")
     assert t_idx == a_idx + 1, (
         "tool must immediately follow its assistant(tool_calls) in the assembled "
         f"request; got assistant@{a_idx}, tool@{t_idx} in {[m.role for m in messages]}"
