@@ -73,3 +73,32 @@
 
 ### Notes
 - Day-1 was lighter than the ~1.5+0.5 hr bottom-up (schema + model + migration ≈ 1 hr) — the lint-leniency discovery folded the D3 RLS design into Day-1 cleanly.
+
+---
+
+## Day 2 — 2026-06-05 — Service: enqueue + drain + tests (US-1..US-4)
+
+### Accomplishments
+- **NEW `platform_layer/billing/billing_outbox.py`**:
+  - `BillingOutboxService.enqueue` — `pg_insert(...).on_conflict_do_nothing(constraint="uq_billing_outbox_idem")` in the caller's request txn (atomic, idempotent — no 漏扣, redelivery no-op).
+  - `BillingOutboxDrainer.drain_once` — **per-row independent txn**: claim ONE due row (`FOR UPDATE SKIP LOCKED LIMIT 1` under the system sentinel) → `set_config('app.tenant_id', row.tenant_id, true)` → existing `CostLedgerService.record_*` from payload → mark `done` (same commit = exactly-once, no 雙扣). On failure: rollback (clears poisoned session + releases lock) → fresh txn records retry/backoff/last_error; dead-letter (next_retry_at=NULL) after MAX_RETRY.
+  - `DrainStats`, `llm_idempotency_key`/`tool_idempotency_key`, `set_/get_/maybe_get_billing_outbox` accessors, `_backoff_seconds` (exponential capped 3600s), `_payload_str/_int` validators.
+- **Tests** — `test_billing_outbox_service.py` (6 unit: enqueue + pure helpers) + `test_billing_outbox_drain.py` (5 integration: parity / idempotent-twice / reschedule / dead-letter / 2-tenant scoping). 11/11 green.
+
+### Day-序 resequence (NOT a scope change)
+- Plan slotted "router shadow" in Day 2, "flip" in Day 3. Reordered: **both move to Day 3** (shadow = Day-3 intra-day safety step BEFORE the flip). Rationale: the shadow needs the enqueue singleton wired (a Day-3 `api/main.py` edit); doing it in Day 2 would split the main.py edit across days for no safety gain. Day-2-end is already safe (nothing wired → existing direct cost-write path untouched → billing unchanged). Drainer is integration-proven NOW, so Day-3 wiring is de-risked.
+
+### Gate fixes (3)
+- **asyncpg SET param**: `SET LOCAL app.tenant_id = :p` fails (`syntax error at $1` — SET is a utility statement, no bind params). → `SELECT set_config('app.tenant_id', :p, true)` (function form, is_local=true = SET LOCAL). Mirrors `middleware/tenant_context.py:246`. Fixed in drainer `_set_tenant` + all test helpers.
+- **mypy `int ** int` → Any**: `2 ** (retry-1)` types as Any (pow can return float) → `min(...)` returned Any. → bit-shift `_BASE_BACKOFF_S << (retry-1)` (int<<int = int).
+- **pytest package collision**: stray `tests/integration/billing/__init__.py` made `billing` a regular package basename, colliding with `tests/unit/platform_layer/billing/` (which has `__init__.py`). Repo convention: integration test dirs have NO `__init__.py` (namespace/rootdir import, like `tests/integration/api/`). Removed the stray init.
+
+### Verification
+- `mypy src/` **0 / 335 files**; black + isort + flake8 **0**; **pytest 11/11** (6 unit + 5 drain integration, real Docker Postgres).
+
+### Remaining for Day 3+
+- Day 3: `api/main.py` `_wire_billing_outbox_drainer` (singleton + lifespan poller asyncio task + `BILLING_OUTBOX_*` config + `_DRAINER_ENABLED` flag) → router **shadow** dual-write → verify drain → router **flip** to enqueue-only (remove direct cost-write from 3 sites).
+- Day 4: chat-end-to-end + isolation integration (`test_chat_billing_outbox.py`) + real-Azure smoke + closeout.
+
+### Notes
+- Drainer is the harder piece; the per-row-txn + rollback-then-record-failure pattern avoids the poisoned-session trap of a single batch txn. Integration-tested against real Postgres (AP-10 — no mock divergence).

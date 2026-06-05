@@ -39,25 +39,29 @@
 
 ---
 
-## Day 2 — Service: enqueue + drain + shadow dual-write (US-1/US-2/US-3)
+## Day 2 — Service: enqueue + drain + tests (US-1/US-2/US-3/US-4)
+
+> **Day-序 resequence** (noted in progress.md, not a scope change): the router **shadow + flip** both move to Day 3 (shadow becomes the Day-3 intra-day safety step before the flip). Day 2 = pure new module + tests, ZERO risk to the existing cost-write path (nothing wired). The drainer is integration-tested NOW (before Day-3 wiring).
 
 ### 2.1 BillingOutboxService.enqueue
-- [ ] **NEW `platform_layer/billing/billing_outbox.py`** — `BillingOutboxService.enqueue(db, *, tenant_id, event_type, payload, idempotency_key, session_id)` using the passed-in request session; UNIQUE-conflict → no-op (idempotent enqueue); singleton accessors (`set_/get_/maybe_get_billing_outbox`, reset hook)
-  - DoD: enqueue adds row in caller's txn; duplicate key no-op
+- [x] **NEW `platform_layer/billing/billing_outbox.py`** — `BillingOutboxService.enqueue(db, *, tenant_id, event_type, payload, idempotency_key, session_id)` using the passed-in request session; `pg_insert(...).on_conflict_do_nothing(constraint="uq_billing_outbox_idem")` (idempotent enqueue); singleton accessors (`set_/get_/maybe_get_billing_outbox`, reset hook)
+  - DoD: enqueue adds row in caller's txn ✅; duplicate key no-op ✅ (unit tests)
 
 ### 2.2 BillingOutboxDrainer.drain_once
-- [ ] **`BillingOutboxDrainer.drain_once(system_db_factory) -> DrainStats`** — claim due rows (`FOR UPDATE SKIP LOCKED LIMIT N`); per row `SET LOCAL app.tenant_id` → call existing `CostLedgerService.record_llm_call/record_tool_call` from payload → mark `done`; on failure bump retry_count + next_retry_at(backoff) + last_error + status `failed`; dead-letter after MAX_RETRY (log/metric, not dropped)
-  - DoD: claim+materialize+mark in one txn (idempotent re-claim); pricing single-source (existing CostLedgerService)
+- [x] **`BillingOutboxDrainer.drain_once() -> DrainStats`** — per-row independent txn: claim ONE due row (`FOR UPDATE SKIP LOCKED LIMIT 1` under sentinel) → `set_config('app.tenant_id', row.tenant_id, true)` → existing `CostLedgerService.record_llm_call/record_tool_call` from payload → mark `done` (same commit = exactly-once); on materialize failure → rollback (clears poisoned session + releases lock) → fresh txn records retry/backoff/last_error; dead-letter (status=failed, next_retry_at=NULL) after MAX_RETRY
+  - DoD: claim+materialize+mark atomic (no 雙扣) ✅; pricing single-source (existing CostLedgerService) ✅ (drain integration tests)
 
-### 2.3 idempotency key builder + router shadow enqueue
-- [ ] **Idempotency key builder** — LLM `{session_id}:{event_type}:{sub_type or 'loop'}`; tool `{session_id}:tool:{tool_name}:{seq}` (per-request monotonic seq) — finalized against the real router event stream
-- [ ] **`router.py` shadow** — after each existing `cost_ledger.record_*` call, ALSO `billing_outbox.enqueue(...)` (dual-write; billing never regresses)
-  - DoD: shadow run writes BOTH a cost_ledger row (old path) AND an outbox row (new path)
+### 2.3 idempotency key builder
+- [x] **Idempotency key builder** — `llm_idempotency_key(session_id, sub_type)` = `{sid}:llm:{sub_type or 'loop'}` (loop vs _verification distinct); `tool_idempotency_key(session_id, tool_name, seq)` = `{sid}:tool:{tool_name}:{seq}` (per-request monotonic seq)
+  - DoD: loop≠verification, same-tool seq disambiguation (unit tests)
+- [→] **`router.py` shadow** — MOVED to Day 3 (intra-day safety step before flip). Not deleted; see Day 3.
 
-### 2.4 unit tests + gate
-- [ ] **NEW `test_billing_outbox_service.py`** — enqueue adds row / dup key no-op / drain materializes cost_ledger / drain idempotent (twice → one cost row) / retry+backoff on failure / dead-letter after MAX_RETRY
-- [ ] **black + isort + flake8 + mypy src/** — clean; pytest green
-- [ ] **Cut-line checkpoint** — Day-2-end = safe shadow ship; assess Day-3 flip risk
+### 2.4 unit + integration tests + gate
+- [x] **NEW `test_billing_outbox_service.py`** (unit, db_session) — enqueue adds pending row / dup key no-op + pure helpers (key builders / backoff exponential+capped / payload validators incl. error cases) — 6 tests
+- [x] **NEW `test_billing_outbox_drain.py`** (integration, committed data + cleanup) — drain materializes cost_ledger PARITY / idempotent-twice (→ exactly-once) / reschedule+backoff / dead-letter after max_retry / **2-tenant scoping (US-4)** — 5 tests
+- [x] **black + isort + flake8 + mypy src/** — clean (mypy 0/335; flake8 0); **pytest 11/11 green** (6 unit + 5 integration)
+  - Fix during gate: `SET LOCAL app.tenant_id = :p` → `SELECT set_config('app.tenant_id', :p, true)` (asyncpg rejects bind params on SET utility; mirror `middleware/tenant_context.py`); `int ** int`→`Any` mypy → bit-shift `<<`; removed stray `tests/integration/billing/__init__.py` (basename `billing` package collided with unit test pkg)
+- [x] **Cut-line checkpoint** — Day-2-end = safe (nothing wired; existing cost-write path untouched). Day-3 flip risk assessed: drainer proven by integration tests → safe to wire.
 
 ---
 
