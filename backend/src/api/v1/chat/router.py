@@ -35,9 +35,10 @@ Description:
     actual loop run lives in the worker.
 
 Created: 2026-04-30 (Sprint 50.2 Day 1.5)
-Last Modified: 2026-06-02
+Last Modified: 2026-06-05
 
 Modification History (newest-first):
+    - 2026-06-05: Sprint 57.82 — record verification judge LLM cost + count vs quota (B-8 leg-1)
     - 2026-06-02: Sprint 57.71 — thread real tracer into build_handler (A-4 Tier 0)
     - 2026-06-02: Sprint 57.69 A-3b — pass parent_context to boot_handoff (carry parent convo)
     - 2026-06-02: Sprint 57.68 A-3b — post-loop HANDOFF hook: boot child session + emit AgentHandoff
@@ -391,7 +392,14 @@ async def _stream_loop_events(
                     try:
                         await quota_enforcer.record_usage(
                             tenant_id=tenant_id,
-                            actual_tokens=event.total_tokens,
+                            # Sprint 57.82 (B-8 leg-1): judge LLM tokens (Cat 10
+                            # verification) count against the cap too — real
+                            # consumption. 0 when disabled / no judge ran.
+                            actual_tokens=(
+                                event.total_tokens
+                                + event.verification_input_tokens
+                                + event.verification_output_tokens
+                            ),
                             reserved_tokens=estimated_tokens,
                         )
                     except Exception:  # noqa: BLE001
@@ -445,6 +453,33 @@ async def _stream_loop_events(
                     except Exception:  # noqa: BLE001
                         logger.exception(
                             "chat session %s/%s: cost ledger LLM record failed",
+                            tenant_id,
+                            session_id,
+                        )
+                # Sprint 57.82 (B-8 leg-1): record the Cat 10 verification judge
+                # LLM call as a DISTINCT `_verification` sub_type so judge cost is
+                # separately auditable (not mixed into the loop entry). Judge shares
+                # the loop adapter → event.provider is correct; model is the judge's
+                # own (verification_model), falling back to the loop model. 0 tokens
+                # (verification disabled / no judge ran) → skip.
+                if cost_ledger is not None and (
+                    event.verification_input_tokens > 0 or event.verification_output_tokens > 0
+                ):
+                    try:
+                        await cost_ledger.record_llm_call(
+                            tenant_id=tenant_id,
+                            provider=event.provider or "azure_openai",
+                            model=(
+                                event.verification_model or event.model or _FALLBACK_PRICING_MODEL
+                            ),
+                            input_tokens=event.verification_input_tokens,
+                            output_tokens=event.verification_output_tokens,
+                            session_id=session_id,
+                            sub_type_suffix="_verification",
+                        )
+                    except Exception:  # noqa: BLE001
+                        logger.exception(
+                            "chat session %s/%s: cost ledger verification record failed",
                             tenant_id,
                             session_id,
                         )

@@ -49,19 +49,19 @@
 ## Day 2 — Record cost + quota + SSE + contract (US-3/US-4)
 
 ### 2.1 record_llm_call sub_type variant (US-3)
-- [ ] **`platform_layer/billing/cost_ledger.py`** — add optional `sub_type_suffix: str = ""` → `{provider}_{model}{suffix}_input/_output` (default "" keeps loop sub_types byte-identical)
+- [x] **`platform_layer/billing/cost_ledger.py`** — add optional `sub_type_suffix: str = ""` → `{provider}_{model}{suffix}_input/_output` (default "" keeps loop sub_types byte-identical)
   - DoD: existing loop entries unchanged; mypy clean
 
 ### 2.2 router judge record + quota (US-3)
-- [ ] **`api/v1/chat/router.py`** — after the loop record_llm_call: if `event.verification_input_tokens>0 or verification_output_tokens>0` → record_llm_call(judge tokens, `sub_type_suffix="_verification"`, model=verification_model or event.model) best-effort; quota `actual_tokens` += verification tokens
+- [x] **`api/v1/chat/router.py`** — after the loop record_llm_call: if `event.verification_input_tokens>0 or verification_output_tokens>0` → record_llm_call(judge tokens, `sub_type_suffix="_verification"`, model=verification_model or event.model) best-effort; quota `actual_tokens` += verification tokens
   - DoD: judge entry distinct from loop entry; quota includes judge; best-effort try/except mirrors existing
 
 ### 2.3 SSE serialize (US-4)
-- [ ] **`api/v1/chat/sse.py`** — LoopCompleted serializer emits the 3 verification token fields
-  - DoD: verification_passed/failed serializers unchanged
+- [x] **`api/v1/chat/sse.py`** — DECISION: NOT changed (Day-2 drift D3). LoopCompleted serializer already omits loop input/output_tokens — billing is server-side (router reads the event object, not the SSE payload). verification token stays server-side too for consistency; not added to the wire.
+  - DoD: sse.py untouched; router observer reads `event.verification_*` directly (verified Day-2)
 
 ### 2.4 17.md contract sync (US-4)
-- [ ] **`17-cross-category-interfaces.md`** — §1.1 VerificationResult +3 token fields; §4.1 LoopCompleted row note verification token fields (filled by Cat 10 wrapper, consumed by chat router billing observer)
+- [x] **`17-cross-category-interfaces.md`** — §1.1 VerificationResult +3 token fields; §4.1 LoopCompleted row note verification token fields (filled by Cat 10 wrapper, consumed by chat router billing observer)
 
 ---
 

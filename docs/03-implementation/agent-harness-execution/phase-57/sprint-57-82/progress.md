@@ -52,3 +52,39 @@
 ### Notes
 - Bottom-up est ~5.3 hr → calibrated ~4.2 hr (medium-backend 0.80, parent-direct agent_factor 1.0).
 - Epic roadmap: leg 1 (this) = blocker A; leg 2 (57.83) = blocker B (general judge template) + blocker C (real-LLM e2e) + flip default. B+C bundled because B's false-positive eval needs real-LLM.
+
+---
+
+## Day 1 — 2026-06-05 — Capture + bubble (US-1/US-2)
+
+### Accomplishments
+- **VerificationResult** (`_contracts/verification.py`) +3 fields: `input_tokens: int = 0`, `output_tokens: int = 0`, `model: str | None = None` (judge-only; rules_based/external default 0/None).
+- **LLMJudgeVerifier** (`llm_judge.py`) — `verify()` captures `response.usage` (prompt→input, completion→output) + `response.model` into the result via `dataclasses.replace` (covers both the valid + malformed-parse return paths; the thrown/fail-closed except path keeps 0 — the call may not have completed). Neutral `TokenUsage`, no SDK import.
+- **LoopCompleted** (`events.py`) +3 fields: `verification_input_tokens / verification_output_tokens / verification_model`, kept SEPARATE from loop input/output_tokens.
+- **correction_loop wrapper** — accumulate `result.input_tokens/output_tokens` + last model across ALL verifiers + ALL correction attempts (running `verif_in/verif_out/verif_model` initialised outside the while); stamp via `dataclasses.replace` on all 3 LoopCompleted yield points (non-end_turn :146 / all-pass :194 / exhausted :200-built). non-end_turn stamps the accumulator too (a prior correction attempt may have run judges before this re-run terminated early).
+
+### Verification
+- black 4 unchanged / isort clean / flake8 0 / `mypy src/` 0 in 332 files.
+
+### Commit
+- `acc6ea72` feat(verification, sprint-57-82): capture + bubble judge token via LoopCompleted (US-1/US-2).
+
+---
+
+## Day 2 — 2026-06-05 — Record cost + quota + contract (US-3/US-4)
+
+### Accomplishments
+- **cost_ledger.py** `record_llm_call` +optional `sub_type_suffix: str = ""` → entries `{provider}_{model}{suffix}_input/_output`; default "" keeps existing loop sub_types byte-identical.
+- **router.py** LoopCompleted observer: after the loop `record_llm_call`, a NEW best-effort judge record (when `verification_*_tokens > 0`) with `sub_type_suffix="_verification"`, model=`verification_model or event.model or _FALLBACK_PRICING_MODEL`, provider=`event.provider` (judge shares the loop adapter). quota `record_usage(actual_tokens = total_tokens + verification_input + verification_output)` so judge tokens count against the cap.
+- **17.md** §1.1 VerificationResult + §4.1 LoopCompleted rows updated (inline sprint annotation, per file convention).
+
+### Drift findings
+- **D3 (plan §3.4 sse correction)**: plan said "add the 3 verification token fields to the LoopCompleted SSE serializer". Day-2 read of `sse.py:212-222` showed the LoopCompleted serializer already OMITS the loop's own `input_tokens/output_tokens` (only `cached_input_tokens` + `cache_hit_rate` go on the wire) — billing is server-side (the router observer reads the `event` object directly, NOT the SSE payload). → For consistency, verification tokens stay **server-side only**; `sse.py` is NOT changed. No functional impact (router reads `event.verification_*` directly). 17.md §4.1 notes "server-side only, not on SSE wire".
+- **D4 (note, not this sprint's scope)**: `router.py:124-133` `_FALLBACK_PRICING_MODEL` docstring says "Only gpt-5.4 is priced" — stale post-57.79 (gpt-5.2 priced in 57.79). Karpathy §3: noted, not touched (out of leg-1 scope; the judge entry will price correctly when judge model is gpt-5.2).
+
+### Verification
+- black 1 reformatted (router.py) / isort clean / flake8 0 / `mypy src/` 0 in 332 files.
+
+### Remaining for Day 3+
+- Day 3: unit (llm_judge capture + correction_loop 5 paths) + integration (judge billing distinct sub_type + quota includes judge).
+- Day 4: sweep + closeout.

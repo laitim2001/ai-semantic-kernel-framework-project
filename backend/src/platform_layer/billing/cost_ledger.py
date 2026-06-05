@@ -36,9 +36,10 @@ Key Components:
     - get_cost_ledger / set_cost_ledger / reset_cost_ledger: hooks
 
 Created: 2026-05-06 (Sprint 56.3 Day 3)
-Last Modified: 2026-05-31
+Last Modified: 2026-06-05
 
 Modification History:
+    - 2026-06-05: Sprint 57.82 — add sub_type_suffix param (judge `_verification` attribution)
     - 2026-05-31: FIX-022 §6.2 — correct stale attribution docstring + pricing caveat
     - 2026-05-06: Initial creation (Sprint 56.3 Day 3 / US-3 + US-4)
 
@@ -113,6 +114,7 @@ class CostLedgerService:
         output_tokens: int,
         cached_input_tokens: int = 0,
         session_id: UUID | None = None,
+        sub_type_suffix: str = "",
     ) -> list[CostLedger]:
         """Record two ledger entries for an LLM call (input + output split).
 
@@ -129,10 +131,13 @@ class CostLedgerService:
           - cached_input = cached_input_tokens × pricing.cached_input_per_million / 1M
           - output = output_tokens × pricing.output_per_million / 1M
 
-        Returns list of 2 CostLedger entries (`{provider}_{model}_input` +
-        `{provider}_{model}_output` sub_types) for monthly aggregate
-        granularity. Both entries share session_id for per-session
-        reconciliation.
+        Returns list of 2 CostLedger entries (`{provider}_{model}{sub_type_suffix}_input`
+        + `..._output` sub_types) for monthly aggregate granularity. Both entries
+        share session_id for per-session reconciliation.
+
+        `sub_type_suffix` (Sprint 57.82): inserted before `_input/_output` to
+        attribute a distinct cost source (e.g. `_verification` for Cat 10 judge
+        calls); default "" keeps loop sub_types byte-identical.
         """
         pricing = self._pricing.get_llm_pricing(provider, model)
         if pricing is None:
@@ -161,7 +166,7 @@ class CostLedgerService:
         input_entry = CostLedger(
             tenant_id=tenant_id,
             cost_type="llm",
-            sub_type=f"{provider}_{model}_input",
+            sub_type=f"{provider}_{model}{sub_type_suffix}_input",
             quantity=Decimal(input_tokens),
             unit="tokens",
             unit_cost_usd=input_unit_cost,
@@ -171,7 +176,7 @@ class CostLedgerService:
         output_entry = CostLedger(
             tenant_id=tenant_id,
             cost_type="llm",
-            sub_type=f"{provider}_{model}_output",
+            sub_type=f"{provider}_{model}{sub_type_suffix}_output",
             quantity=Decimal(output_tokens),
             unit="tokens",
             unit_cost_usd=output_unit_cost,

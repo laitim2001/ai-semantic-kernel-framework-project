@@ -60,7 +60,7 @@ V2 review 發現 7 條跨範疇 / 跨文件重複定義：
 | `CompactionStrategy` | `01-eleven-categories-spec.md` | 範疇 4 | Compactor 策略 enum（STRUCTURAL / SEMANTIC / HYBRID）— **52.1 Day 1 新增** |
 | `CompactionResult` | `01-eleven-categories-spec.md` | 範疇 4 | `Compactor.compact_if_needed()` 回傳；7 欄位（triggered / strategy_used / tokens_before / tokens_after / messages_compacted / duration_ms / compacted_state）— **52.1 Day 1 新增** |
 | `CachePolicy` | `01-eleven-categories-spec.md` | 範疇 4 | `PromptCacheManager.get_cache_breakpoints()` 輸入；5 個 cache_* boolean + ttl_seconds + invalidate_on triggers — **52.1 Day 1 新增** |
-| `VerificationResult` | `01-eleven-categories-spec.md` | 範疇 10 | Verifier 回傳 |
+| `VerificationResult` | `01-eleven-categories-spec.md` | 範疇 10 | Verifier 回傳（**Sprint 57.82** 加 judge token 欄位 `input_tokens` / `output_tokens` / `model`，default 0/None；僅 LLMJudgeVerifier 填，供 correction-loop wrapper 冒泡至 LoopCompleted 入帳 cost-ledger/quota）|
 | `SubagentBudget` | `01-eleven-categories-spec.md` | 範疇 11 | token / duration / concurrency cap |
 | `SubagentResult` | `01-eleven-categories-spec.md` | 範疇 11 | Subagent 回傳（含強制 ≤ N token 摘要） |
 | `TraceContext` | `01-eleven-categories-spec.md` | **範疇 12 (Observability)** | trace_id / span_id / baggage |
@@ -252,7 +252,7 @@ def register_memory_tools(registry: ToolRegistry) -> None:
 | `AgentHandoff` | 範疇 11 | HANDOFF 控制轉移：父 agent 退出 + target 子 session 啟動（Sprint 57.68 A-3b；loop 終止 stop_reason="handoff"，platform `HandoffService` boot 子 session 後 router emit `agent_handoff` 含 `new_session_id`） |
 | `ApprovalRequested` | §HITL 中央化 | HITL 觸發等待 |
 | `ApprovalReceived` | §HITL 中央化 | HITL 結果回到 loop |
-| `LoopCompleted` | 範疇 1 | Loop 終止（Sprint 57.2 加 accumulator-sourced `total_tokens` / `input_tokens` / `output_tokens` / `provider` / `model`；**Sprint 57.65 A-2 Tier2 加 `cached_input_tokens` + 衍生 `cache_hit_rate`**（= cached / input，div-by-0 → 0.0；Cat 12 prompt-cache-hit-rate metric，無 Tracer/MetricsRegistry，metric 隨 event 欄位下游消費）） |
+| `LoopCompleted` | 範疇 1 | Loop 終止（Sprint 57.2 加 accumulator-sourced `total_tokens` / `input_tokens` / `output_tokens` / `provider` / `model`；**Sprint 57.65 A-2 Tier2 加 `cached_input_tokens` + 衍生 `cache_hit_rate`**（= cached / input，div-by-0 → 0.0；Cat 12 prompt-cache-hit-rate metric，無 Tracer/MetricsRegistry，metric 隨 event 欄位下游消費）；**Sprint 57.82 B-8 leg-1 加 `verification_input_tokens` / `verification_output_tokens` / `verification_model`** — Cat 10 correction-loop wrapper 跨 verifier+attempt 累加的 judge LLM token（loop accumulator 此時已 frozen，故由 wrapper 累加並 stamp），chat router billing observer 消費為獨立 `_verification` cost-ledger sub_type + 計入 quota actual；server-side only，不上 SSE wire（與 loop input/output_tokens 一致）） |
 | `SpanStarted` | **範疇 12** | OTel span 開始 |
 | `SpanEnded` | **範疇 12** | OTel span 結束 |
 | `MetricRecorded` | **範疇 12** | latency / token / cost 三軸 metric |
