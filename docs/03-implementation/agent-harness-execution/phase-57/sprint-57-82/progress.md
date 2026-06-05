@@ -88,3 +88,30 @@
 ### Remaining for Day 3+
 - Day 3: unit (llm_judge capture + correction_loop 5 paths) + integration (judge billing distinct sub_type + quota includes judge).
 - Day 4: sweep + closeout.
+
+---
+
+## Day 3 — 2026-06-05 — Tests (US-5)
+
+### Accomplishments
+- **test_llm_judge.py** +3: judge captures usage+model (gpt-5.2-judge / 120in/8out); malformed-response still carries tokens (the call was made); fail-closed exception path keeps 0/None.
+- **test_correction_loop.py** +5 (`_TokenVerifier` stub, verdicts-list driven): (a) all-pass stamps 120/8/model; (b) 1-correction-then-pass sums 200/20 across 2 judge runs; (c) exhausted verification_failed carries 300/30 (3 attempts); (d) non-end_turn → 0; (e) passthrough → 0.
+- **test_chat_cost_ledger.py** +2 (`_VerificationStubLoop` + `_SpyQuota`, via `_stream_loop_events` + real DB): distinct `_verification_input/_output` ledger entry (4 rows = loop 2 + judge 2, quantities {120,8}); quota actual_tokens = 1628 (1500 loop + 128 judge).
+
+### Verification
+- black 3 unchanged / isort clean / flake8 0 / targeted pytest **25 passed** (llm_judge 11 + correction_loop 11 + cost_ledger 3).
+
+### Commit
+- (Day 3 tests committed with Day 4 closeout — single test+sweep unit.)
+
+---
+
+## Day 4 — 2026-06-05 — Full sweep + closeout
+
+### Accomplishments
+- **Full sweep**: black/isort/flake8 src/+tests/ 0 + `mypy src/` 0 (332) + `pytest` **2147 passed / 4 skipped** (+10 vs 2137) + `run_all.py` **10/10** (check_llm_sdk_leak + check_cross_category_import + check_event_schema_sync all green — LLM neutrality preserved, category boundary intact, wire schema unchanged ∴ sse-not-changed decision validated).
+- **Closeout**: CHANGE-049 + retrospective.md (Q1-Q7) + MEMORY subfile/pointer + CLAUDE.md lean + next-phase-candidates.md (B-8 leg-1 / blocker A CLOSED; leg 2 = 57.83 blocker B+C + flip default).
+- No frontend (backend + docs only). No design note (wiring + contract extension of existing Cat 10; 17.md §1.1/§4.1 updated in-place).
+
+### Status
+B-8 **blocker A** / `AD-Cat10-Judge-Cost-Ledger` CLOSED. Verification judge LLM tokens now recorded as a distinct `_verification` cost-ledger sub_type + counted against quota (when enabled). Default `chat_verification_mode` UNCHANGED (`disabled`) — leg 2 (57.83) does blocker B (general judge template) + blocker C (real-LLM e2e) + the flip. Awaiting push + PR (user-gated).

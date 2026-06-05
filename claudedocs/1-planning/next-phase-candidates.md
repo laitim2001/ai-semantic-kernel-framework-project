@@ -36,6 +36,21 @@
 
 ---
 
+## 🆕 Sprint 57.82 Carryover (2026-06-05 — B-8 leg-1: verification judge token → cost ledger + quota; closes AD-Cat10-Judge-Cost-Ledger)
+
+**Closed**: B-8 **blocker A** / `AD-Cat10-Judge-Cost-Ledger` — the billing leg of the 完整 B-8 epic (user selected "clear 3 blockers + flip default"; this is leg 1 of a 2-leg epic). When verification is enabled, the LLM judge call's tokens are now recorded as a distinct `_verification` cost-ledger sub_type + counted against quota (previously discarded → billing/quota under-report). Design Option 1 (user AskUserQuestion): the correction-loop wrapper accumulates judge tokens across verifiers+attempts (the loop accumulator is frozen by the time verification runs in the wrapper) → `LoopCompleted.verification_*_tokens` → router records a distinct ledger entry + adds to quota actual. Default `chat_verification_mode` UNCHANGED (`disabled`) — a correctness fix activating only on the enabled path. backend+docs; no design note (17.md §1.1/§4.1 in-place). backend mypy 0/332 + pytest 2147 (+10) + run_all 10/10. Detail: `memory/project_phase57_82_verification_judge_cost_ledger.md` + retrospective. CHANGE-049.
+
+### 完整 B-8 epic — remaining (leg 2 = Sprint 57.83)
+- ✅ **leg 1 (57.82)**: blocker A — judge token → cost ledger + quota.
+- ⏳ **leg 2 (57.83, plan written at 57.83 kickoff — rolling)**: blocker B (design a general final-output judge template replacing the Cat 9-fitted `safety_review` default + measure false-positive rate) + blocker C (real-LLM e2e: false-positive / p95 latency / per-chat cost) + **flip `chat_verification_mode` → `enabled`**. B+C bundled (B's FP eval needs C's real-LLM). Needs real Azure (live since 57.79).
+
+### NEW carryovers (this sprint)
+- **Per-verifier cost attribution** — leg 1 aggregates all judge tokens into ONE `_verification` sub_type; a per-verifier breakdown is deferred.
+- **Drift D3 (sse server-side decision)** — verification tokens are NOT on the SSE wire (consistent with loop input/output_tokens being server-side only; router reads the event object). If a future UI needs to show judge cost, add the LoopCompleted serializer fields + frontend codegen then.
+- No blocking carryover. Remaining billing bundle: **C-15** (DevOps/data-platform billing — cost_ledger 雙扣 risk).
+
+---
+
 ## 🆕 Sprint 57.81 Carryover (2026-06-05 — B-7 ErrorBudget Redis wiring; closes B-7 / AD-ErrorBudget-Redis-Wiring)
 
 **Closed**: B-7 / `AD-ErrorBudget-Redis-Wiring` — wiring gap (not missing logic): `RedisBudgetStore` built + fakeredis-tested Sprint 53.2 but never wired (AP-2); `make_chat_error_deps()` hardcoded a fresh `InMemoryBudgetStore()` per request → counters reset every request → budget non-functional even single-instance. Fix Tier 1 (parent-direct, agent_harness DI-pure): NEW `platform_layer/governance/error_budget_provider.py` singleton (mirror rate_limit_counter) + `_wire_error_budget()` startup (fail-open) + export RedisBudgetStore + factory swap `maybe_get_budget_store() or InMemoryBudgetStore()`. Shared store fixes per-request reset AND cross-instance; pure Redis (no DB/RLS). Verified: fakeredis accumulation (2 factory calls → count=2) + startup-log `error budget store wired`; NO real-Azure (budget increments on errors only). backend-only Cat 8; no design note. Detail: `memory/project_phase57_81_errorbudget_redis_wiring.md` + retrospective. CHANGE-048.

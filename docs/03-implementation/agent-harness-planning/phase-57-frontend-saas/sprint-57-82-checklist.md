@@ -68,33 +68,33 @@
 ## Day 3 — Tests (US-5)
 
 ### 3.1 unit — llm_judge capture
-- [ ] **`test_llm_judge.py`** (extend) — MockChatClient returns ChatResponse with usage+model → VerificationResult.input_tokens/output_tokens/model populated; fail-closed path keeps 0
+- [x] **`test_llm_judge.py`** (extend) — MockChatClient returns ChatResponse with usage+model → VerificationResult.input_tokens/output_tokens/model populated; malformed-still-carries; fail-closed exception path keeps 0 (3 new tests)
 
 ### 3.2 unit — wrapper accumulation (5 paths)
-- [ ] **`test_correction_loop.py`** (extend) — (a) all-pass → captured LoopCompleted sums judge tokens; (b) 1-correction-then-pass → summed across 2 judge runs; (c) exhausted → verification_failed LoopCompleted carries tokens; (d) non-end_turn → 0; (e) passthrough → 0
+- [x] **`test_correction_loop.py`** (extend) — `_TokenVerifier` stub + (a) all-pass sums; (b) 1-correction-then-pass summed across 2 runs; (c) exhausted carries tokens; (d) non-end_turn → 0; (e) passthrough → 0 (5 new tests)
 
 ### 3.3 integration — billing + quota
-- [ ] **`tests/integration/api/`** — enabled registry + mock judge → distinct `_verification_input/_output` ledger entry written + quota actual_tokens includes judge tokens; default-disabled path asserts zero extra entry (AP-10: structural invariant on billing path via mock)
-- [ ] **regression** — targeted pytest (verification + billing + chat router) no regression
+- [x] **`tests/integration/api/test_chat_cost_ledger.py`** (extend) — `_VerificationStubLoop` (LoopCompleted carrying judge tokens) via `_stream_loop_events` + real DB → distinct `_verification_input/_output` ledger entry (4 rows) + `_SpyQuota` asserts actual_tokens includes judge (1628). (AP-10: structural invariant on billing path; wrapper→token end-to-end covered by test_correction_loop)
+- [x] **regression** — targeted pytest 25 passed (llm_judge 11 + correction_loop 11 + cost_ledger 3); full sweep Day 4
 
 ---
 
 ## Day 4 — Sweep + Closeout
 
 ### 4.1 Full sweep
-- [ ] **Backend gates** — black/isort/flake8 src/ tests/ 0 + `mypy src/` 0 + `pytest` green (+N) + `python scripts/lint/run_all.py` 10/10 (check_llm_sdk_leak + check_cross_category_import green)
-- [ ] **No frontend** — backend + docs only (sse field is additive; frontend may ignore)
-- [ ] **Read all changed code** — final pass
+- [x] **Backend gates** — black/isort/flake8 src/ tests/ 0 + `mypy src/` 0 (332) + `pytest` 2147 passed/4 skipped (+10) + `run_all.py` 10/10 (check_llm_sdk_leak + check_cross_category_import + check_event_schema_sync green)
+- [x] **No frontend** — backend + docs only (sse NOT changed per drift D3 → no wire change → no frontend codegen)
+- [x] **Read all changed code** — final pass (gate-clean; careful per-edit review)
 
 ### 4.2 Closeout docs
-- [ ] **CHANGE-049** in `claudedocs/4-changes/feature-changes/`
-- [ ] **progress.md** Day 0-4 + **retrospective.md** Q1-Q7
-- [ ] **Checklist** all `[x]` (no 🚧 carryover)
-- [ ] **Calibration** record (medium-backend 0.80; agent_factor 1.0 parent-direct; ratio in retro Q2)
-- [ ] **AD status**: B-8 blocker A / `AD-Cat10-Judge-Cost-Ledger` CLOSED; next-phase-candidates.md updated (leg 2 = 57.83: blocker B+C + flip default)
-- [ ] **MEMORY subfile + pointer** + **CLAUDE.md lean** (Current Sprint + Last Updated)
-- [ ] **Design note?** — NO (wiring + contract extension of existing Cat 10; 17.md §1.1/§4.1 updated in-place, not a new domain spike)
+- [x] **CHANGE-049** in `claudedocs/4-changes/feature-changes/`
+- [x] **progress.md** Day 0-4 + **retrospective.md** Q1-Q7
+- [x] **Checklist** all `[x]` (no 🚧 carryover)
+- [x] **Calibration** record (medium-backend 0.80; agent_factor 1.0 parent-direct; ratio ~0.83 in retro Q2)
+- [x] **AD status**: B-8 blocker A / `AD-Cat10-Judge-Cost-Ledger` CLOSED; next-phase-candidates.md updated (leg 2 = 57.83: blocker B+C + flip default)
+- [x] **MEMORY subfile + pointer** + **CLAUDE.md lean** (Current Sprint + Last Updated)
+- [x] **Design note?** — NO (wiring + contract extension of existing Cat 10; 17.md §1.1/§4.1 updated in-place, not a new domain spike)
 
 ### 4.3 Ship
-- [ ] **Commit mapping** Day-0 / Day1-3 code+tests / Day-4 closeout
+- [x] **Commit mapping** Day-0 (`e9a015f4`) / Day-1 (`acc6ea72`) / Day-2 (`1739de9d`) / Day3-4 tests+closeout (pending)
 - [ ] **Push + PR** (user-gated — explicit authorization required)
