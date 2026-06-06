@@ -15,6 +15,7 @@
  * Created: 2026-05-17 (Sprint 57.21 Day 2 §2.2)
  *
  * Modification History:
+ *   - 2026-06-06: CHANGE-054 honest surface — +answer case (AnswerBlock) so the agent's final text answer renders (was dropped — no answer block existed)
  *   - 2026-05-23: Sprint 57.30 Day 3 §D2 — no markup change (pure dispatcher); per-block re-point shipped in ThinkingBlock / ToolBlock
  *   - 2026-05-17: Initial creation (Sprint 57.21 Day 2 §2.2)
  *
@@ -25,6 +26,7 @@
  */
 
 import type { Block } from "../../types";
+import { AnswerBlock } from "./AnswerBlock";
 import { SubagentForkBlock } from "./SubagentForkBlock";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolBlock } from "./ToolBlock";
@@ -34,6 +36,9 @@ export function BlockRender({ block }: { block: Block }): JSX.Element | null {
   switch (block.type) {
     case "thinking":
       return <ThinkingBlock block={block} />;
+    // Honest-surface (CHANGE-054): render the agent's final text answer.
+    case "answer":
+      return <AnswerBlock block={block} />;
     case "tool":
       return <ToolBlock block={block} />;
     case "verification":

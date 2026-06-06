@@ -71,6 +71,7 @@ function KV({ k, v, mono = false }: { k: string; v: ReactNode; mono?: boolean })
 
 const BLOCK_TONE: Record<Block["type"], string> = {
   thinking: "var(--thinking)",
+  answer: "var(--primary)",
   tool: "var(--tool)",
   verification: "var(--success)",
   subagent_fork: "var(--info)",
@@ -82,6 +83,12 @@ function describeBlock(block: Block): string {
       const trimmed = block.text.trim();
       if (trimmed.length === 0) return "—";
       return trimmed.length > 36 ? `${trimmed.slice(0, 36)}…` : trimmed;
+    }
+    // Honest-surface (CHANGE-054): the agent's final text answer block.
+    case "answer": {
+      const trimmed = block.text.trim();
+      if (trimmed.length === 0) return "—";
+      return trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
     }
     case "tool":
       return `${block.name} · ${block.status === "pending" ? "pending" : `${block.durationMs ?? 0}ms`}`;

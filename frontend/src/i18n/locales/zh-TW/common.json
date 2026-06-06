@@ -426,7 +426,8 @@
       "meta": {
         "turns": "{{count}} 輪"
       },
-      "demoBanner": "示範資料 — 後端 list 端點待 Sprint 57.22+ 接通（AD-ChatV2-SessionList-Backend）"
+      "demoBanner": "示範資料 — 後端 list 端點待 Sprint 57.22+ 接通（AD-ChatV2-SessionList-Backend）",
+      "demoTag": "示範"
     },
     "header": {
       "toggleList": "切換工作階段列表",
@@ -438,6 +439,11 @@
     },
     "inspector": {
       "comingSoon": "Inspector 內容於 Sprint 57.21 Day 4（Turn 分頁）與 Sprint 57.22+（Trace / Memory / Tree 分頁）落地。"
+    },
+    "composer": {
+      "echoModeTitle": "離線模擬 — 只回放你的輸入，不是真實回答",
+      "realModeTitle": "真實 agent — 呼叫真正的 LLM 供應商（Azure OpenAI）",
+      "echoModeNote": "echo_demo 只回放你的輸入 — 切換到 real_llm 取得真實回答"
     }
   },
   "sla": {

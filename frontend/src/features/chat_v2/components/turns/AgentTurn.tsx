@@ -21,13 +21,16 @@
  *   inline-style approach as the mockup (page-chat.jsx L188-191) so the
  *   warning live-dot pulsing matches.
  *
- *   Agent name "incident-responder" is currently a fixture label per
- *   mockup; Sprint 57.22+ AD-ChatV2-SessionList-Backend will derive from
- *   active session metadata when /api/v1/sessions list ships.
+ *   Honest-surface (2026-06-06): the role label shows a neutral "agent" rather
+ *   than the misleading fixture persona "incident-responder" (which rendered on
+ *   every real run regardless of the actual model). A real per-session agent name
+ *   will derive from active session metadata when /api/v1/sessions ships
+ *   (AD-ChatV2-SessionList-Backend).
  *
  * Created: 2026-05-17 (Sprint 57.21 Day 2 §2.1)
  *
  * Modification History:
+ *   - 2026-06-06: chat-v2 honest surface — role label "incident-responder"→"agent" (drop misleading fixture persona on real runs) (CHANGE-054)
  *   - 2026-05-23: Sprint 57.30 Day 3 §D1 — verbatim re-point Tailwind → mockup .turn/.turn-head/.badge/.badge.primary/.turn-body + .row inline-style for awaiting-approval
  *   - 2026-05-17: Initial extract from mockup L178-197 + Tailwind convert
  *
@@ -53,7 +56,7 @@ export function AgentTurn({ turn }: { turn: AgentTurnType }): JSX.Element {
       <div className="turn-rail" />
       <div className="turn-marker" />
       <div className="turn-head">
-        <span className="role">incident-responder</span>
+        <span className="role">agent</span>
         <span className="badge primary">turn {turnNum}</span>
         {turn.stopReason && <span className="badge">stop: {turn.stopReason}</span>}
         {turn.durationMs !== null && (

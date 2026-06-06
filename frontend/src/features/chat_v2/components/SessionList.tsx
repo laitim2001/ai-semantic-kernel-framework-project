@@ -36,6 +36,7 @@
  * Last Modified: 2026-05-23
  *
  * Modification History:
+ *   - 2026-06-06: chat-v2 honest surface — wire "New session" → store.reset() (was a no-op button) + DEMO badge on section header (fixture list honesty) (CHANGE-054)
  *   - 2026-05-23: Sprint 57.30 Day 2 US-C2 — verbatim re-point to mockup page-chat.jsx L123-156 SessionList markup (.chat-list, .session-item, .session-title, .session-meta, .live-dot, .badge)
  *   - 2026-05-17: Initial creation (Sprint 57.21 Day 3 §3.1 + §3.3)
  *
@@ -129,6 +130,11 @@ function SessionItem({ session }: { session: Session }): JSX.Element {
 
 export function SessionList(): JSX.Element {
   const { t } = useTranslation("common");
+  // Honest-surface: "New session" was a visual-only button (no onClick). Wire it
+  // to reset the store so it actually starts a fresh conversation (clears turns /
+  // session id / inspector slices). A real persisted session-list is deferred to
+  // the backend endpoint (AD-ChatV2-SessionList-Backend).
+  const reset = useChatStore((s) => s.reset);
 
   return (
     <div className="chat-list" data-testid="session-list">
@@ -159,7 +165,12 @@ export function SessionList(): JSX.Element {
           gap: 6,
         }}
       >
-        <button type="button" className="btn primary" data-size="sm">
+        <button
+          type="button"
+          className="btn primary"
+          data-size="sm"
+          onClick={() => reset()}
+        >
           <Plus size={12} aria-hidden="true" />
           {t("chat.session.newSession")}
         </button>
@@ -182,16 +193,24 @@ export function SessionList(): JSX.Element {
           alignItems: "center",
         }}
       >
-        <span
-          className="mono"
-          style={{
-            fontSize: 10.5,
-            color: "var(--fg-subtle)",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-          }}
-        >
-          {t("chat.session.title")}
+        <span className="row" style={{ gap: 6, alignItems: "center" }}>
+          <span
+            className="mono"
+            style={{
+              fontSize: 10.5,
+              color: "var(--fg-subtle)",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}
+          >
+            {t("chat.session.title")}
+          </span>
+          {/* Honest-surface: the rows below are fixture demo data (see banner
+              above) — a DEMO badge makes that unmistakable until the backend
+              session-list endpoint ships (AD-ChatV2-SessionList-Backend). */}
+          <span className="badge warning" style={{ fontSize: 9 }}>
+            {t("chat.session.demoTag")}
+          </span>
         </span>
         <span className="mono" style={{ fontSize: 10.5, color: "var(--fg-subtle)" }}>
           {FIXTURE_SESSIONS.length}

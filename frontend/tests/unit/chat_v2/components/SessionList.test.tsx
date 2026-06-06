@@ -89,4 +89,15 @@ describe("SessionList (Sprint 57.21 Day 3 §3.1)", () => {
     const counts = screen.getAllByText(String(FIXTURE_SESSIONS.length));
     expect(counts.length).toBeGreaterThanOrEqual(1);
   });
+
+  test("'New session' resets the store (clears active session) — honest-surface wiring", async () => {
+    // CHANGE-054: the button was a no-op; it now calls store.reset(). Prove the
+    // wiring by seeding an active session and asserting it clears on click.
+    const user = userEvent.setup();
+    useChatStore.setState({ activeSessionId: "sess_4tk2p" });
+    expect(useChatStore.getState().activeSessionId).toBe("sess_4tk2p");
+    render(<SessionList />);
+    await user.click(screen.getByRole("button", { name: /New session/i }));
+    expect(useChatStore.getState().activeSessionId).toBeNull();
+  });
 });

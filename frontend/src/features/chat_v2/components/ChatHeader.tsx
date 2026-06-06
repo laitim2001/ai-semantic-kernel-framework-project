@@ -33,6 +33,7 @@
  * Last Modified: 2026-05-23
  *
  * Modification History:
+ *   - 2026-06-06: chat-v2 honest surface — model badge shows real currentModel (was hardcoded "claude-haiku-4-5"); agent default "incident-responder"→"agent" (CHANGE-054)
  *   - 2026-05-23: Sprint 57.30 Day 2 US-C2 — verbatim re-point to mockup page-chat.jsx L93-121 ChatHeader markup (.panel-toggle, inline-style literals byte-identical)
  *   - 2026-05-17: Initial creation (Sprint 57.21 Day 3 §3.2)
  *
@@ -61,13 +62,21 @@ export function ChatHeader({ listOpen, inspOpen, onToggleList, onToggleInsp }: P
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const status = useChatStore((s) => s.status);
   const totalTurns = useChatStore((s) => s.totalTurns);
+  const currentModel = useChatStore((s) => s.currentModel);
+  const mode = useChatStore((s) => s.mode);
   const { t } = useTranslation("common");
 
   const active = activeSessionId
     ? FIXTURE_SESSIONS.find((s) => s.id === activeSessionId)
     : undefined;
   const titleText = active?.title ?? "New session";
-  const agentText = active?.agent ?? "incident-responder";
+  // Honest-surface: with no fixture session selected (a real ad-hoc chat), show a
+  // neutral "agent" instead of the fixture persona "incident-responder".
+  const agentText = active?.agent ?? "agent";
+  // Honest-surface: badge reflects the ACTUAL model from the live run
+  // (currentModel from llm_request), falling back to the active mode before the
+  // first call. Replaces the hardcoded "claude-haiku-4-5" that misreported the model.
+  const modelText = currentModel ?? mode;
   // Prefer live totalTurns once a real session is running; otherwise show fixture turns.
   const turnCount = totalTurns > 0 ? totalTurns : (active?.turns ?? 0);
   const isStreaming = status === "running";
@@ -130,7 +139,7 @@ export function ChatHeader({ listOpen, inspOpen, onToggleList, onToggleInsp }: P
         </div>
         <div className="row" style={{ gap: 6, marginTop: 2, flexWrap: "wrap" }}>
           <span className="badge">{agentText}</span>
-          <span className="badge thinking">claude-haiku-4-5</span>
+          <span className="badge thinking">{modelText}</span>
           <span className="provider-neutral">{t("chat.header.providerNeutral")}</span>
           <span className="subtle" style={{ fontSize: 11 }}>
             · {t("chat.session.meta.turns", { count: turnCount })}

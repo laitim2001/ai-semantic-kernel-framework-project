@@ -34,6 +34,7 @@
  * Last Modified: 2026-06-02
  *
  * Modification History:
+ *   - 2026-06-06: chat-v2 honest testing surface — default mode echo_demo→real_llm; +currentModel (from llm_request); reset() zeroes _turnCounter (CHANGE-054)
  *   - 2026-06-03: Sprint 57.75 A-5 — +spans / memoryOps derived slices + span_started/span_ended/memory_accessed cases (Inspector Trace + Memory tabs)
  *   - 2026-06-02: Sprint 57.69 A-3b slice 2 — agent_handoff now pivots session (pivotSession + handoffBanner state)
  *   - 2026-06-02: Sprint 57.68 A-3b — +agent_handoff passthrough case (rawEvents-only, Cat 11)
@@ -113,6 +114,10 @@ type ChatStoreState = {
   stopReason: string | null;
   errorMessage: string | null;
   mode: ChatMode;
+  // Honest-surface: model name from the latest llm_request (null until the first
+  // LLM call). Drives the ChatHeader model badge instead of a hardcoded fixture
+  // ("claude-haiku-4-5"), so the badge reflects the ACTUAL model that ran.
+  currentModel: string | null;
 
   // Sprint 57.69: HANDOFF transition banner (null when no active handoff notice)
   handoffBanner: HandoffBanner | null;
@@ -157,6 +162,7 @@ const _initial = (): Pick<
   | "totalTurns"
   | "stopReason"
   | "errorMessage"
+  | "currentModel"
   | "handoffBanner"
   | "turns"
   | "sessions"
@@ -173,6 +179,7 @@ const _initial = (): Pick<
   totalTurns: 0,
   stopReason: null,
   errorMessage: null,
+  currentModel: null,
   handoffBanner: null,
   turns: [],
   sessions: [],
@@ -260,7 +267,10 @@ const applyPivot = (
 
 export const useChatStore = create<ChatStoreState>((set) => ({
   ..._initial(),
-  mode: "echo_demo",
+  // Honest default: real_llm so a user who just opens the page and sends a
+  // message gets the LIVE agent, not the offline echo mock. echo_demo stays
+  // available via the InputBar toggle for deterministic / offline use.
+  mode: "real_llm",
 
   setMode: (m) => set({ mode: m }),
   setStatus: (s) => set({ status: s }),
@@ -322,6 +332,7 @@ export const useChatStore = create<ChatStoreState>((set) => ({
           return {
             ...s,
             rawEvents,
+            currentModel: ev.data.model,
             turns: updateLastAgentTurn(s.turns, (t) => ({
               ...t,
               tokensIn: ev.data.tokens_in,
@@ -330,8 +341,8 @@ export const useChatStore = create<ChatStoreState>((set) => ({
         }
 
         case "llm_response": {
-          // Append ThinkingBlock (if thinking) + ToolBlock per tool_call.
-          // Visual order matches mockup (thinking before tools in same turn).
+          // Append ThinkingBlock (if thinking) + AnswerBlock (if final content)
+          // + ToolBlock per tool_call. Visual order: thinking → answer → tools.
           return {
             ...s,
             rawEvents,
@@ -339,6 +350,12 @@ export const useChatStore = create<ChatStoreState>((set) => ({
               const newBlocks: Block[] = [...t.blocks];
               if (ev.data.thinking) {
                 newBlocks.push({ type: "thinking", text: ev.data.thinking });
+              }
+              // Honest-surface (CHANGE-054): render the agent's final text answer.
+              // Only when non-empty — a tool-calling turn carries content="" until
+              // the model produces its final reply, so this skips intermediate turns.
+              if (ev.data.content) {
+                newBlocks.push({ type: "answer", text: ev.data.content });
               }
               for (const tc of ev.data.tool_calls) {
                 newBlocks.push({
@@ -733,5 +750,10 @@ export const useChatStore = create<ChatStoreState>((set) => ({
 
   clearSubagents: () => set({ subagents: [] }),
 
-  reset: () => set({ ..._initial() }),
+  reset: () => {
+    // Zero the module-global turn counter so a fresh session's turns restart at
+    // t_1 (otherwise "New session" inherits the prior session's climbing ids).
+    _turnCounter = 0;
+    set({ ..._initial() });
+  },
 }));

@@ -20,6 +20,7 @@
  * Created: 2026-05-17 (Sprint 57.21 Day 2 §2.1)
  *
  * Modification History:
+ *   - 2026-06-06: chat-v2 honest surface — empty-state copy explains real_llm (live) vs echo_demo (mock) instead of only teaching echo_demo (CHANGE-054)
  *   - 2026-05-23: Sprint 57.30 Day 3 §D1 — re-point scroll wrapper to mockup L83 verbatim inline-style + empty-state to mockup .subtle/.mono
  *   - 2026-05-17: Initial creation (Sprint 57.21 Day 2 §2.1)
  *
@@ -59,9 +60,11 @@ export function TurnList(): JSX.Element {
         className="subtle"
       >
         <div style={{ padding: "32px 24px", textAlign: "center", fontSize: 13 }}>
-          Type a message below to start. Try{" "}
-          <code className="mono" style={{ fontSize: 11 }}>echo hello</code>{" "}
-          in echo_demo mode.
+          Type a message below to start. The mode toggle switches between{" "}
+          <code className="mono" style={{ fontSize: 11 }}>real_llm</code>{" "}
+          (live agent) and{" "}
+          <code className="mono" style={{ fontSize: 11 }}>echo_demo</code>{" "}
+          (offline mock that just echoes your input).
         </div>
       </div>
     );

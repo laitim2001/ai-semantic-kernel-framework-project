@@ -426,7 +426,8 @@
       "meta": {
         "turns": "{{count}} turns"
       },
-      "demoBanner": "Demo data — backend list endpoint pending Sprint 57.22+ (AD-ChatV2-SessionList-Backend)"
+      "demoBanner": "Demo data — backend list endpoint pending Sprint 57.22+ (AD-ChatV2-SessionList-Backend)",
+      "demoTag": "DEMO"
     },
     "header": {
       "toggleList": "Toggle session list",
@@ -438,6 +439,11 @@
     },
     "inspector": {
       "comingSoon": "Inspector content lands Sprint 57.21 Day 4 (Turn tab) + Sprint 57.22+ (Trace / Memory / Tree tabs)."
+    },
+    "composer": {
+      "echoModeTitle": "Offline mock — echoes your input, not a real answer",
+      "realModeTitle": "Live agent — calls the real LLM provider (Azure OpenAI)",
+      "echoModeNote": "echo_demo echoes your input — switch to real_llm for a live answer"
     }
   },
   "sla": {
