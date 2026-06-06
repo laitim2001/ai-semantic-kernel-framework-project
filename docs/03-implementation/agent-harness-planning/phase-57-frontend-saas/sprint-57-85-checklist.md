@@ -44,34 +44,34 @@
 > Day 2 = pure new module + tests, ZERO router/middleware wiring (no live-path risk). The lifecycle is integration-proven at the service/DB layer BEFORE Day-3 wires the HTTP surface.
 
 ### 2.1 InvitesService.create + token
-- [ ] **NEW `platform_layer/identity/invites.py`** — `InvitesService.create(db, *, tenant_id, inviter_user_id, email, role_id, ttl_hours) -> (Invite, raw_token)`; `secrets.token_urlsafe(32)` + `sha256` hex; role-belongs-to-tenant validation; insert in caller's txn; singleton accessors (`set_/get_/maybe_get_invites_service` + reset hook)
+- [x] **NEW `platform_layer/identity/invites.py`** — `InvitesService.create(db, *, tenant_id, inviter_user_id, email, role_id, ttl_hours) -> (Invite, raw_token)`; `secrets.token_urlsafe(32)` + `sha256` hex; role-belongs-to-tenant validation; lazy-expire stale pending + dup-pending guard; insert in caller's txn + `invite_created` audit; **lenient singleton** (`maybe_get_invites_service() or InvitesService()` in endpoint — NO lifespan wiring → no leak risk; `set_/get_/maybe_get` retained for test injection)
   - DoD: create persists hash (raw never stored) ✅ (unit)
 
-### 2.2 InvitesService.get_by_token + accept + revoke + errors
-- [ ] **`get_by_token(db, raw)`** — sha256 → `WHERE token_hash=:hash`; lazy-expire (pending + expires_at<now → expired); typed errors (`InviteNotFoundError`→404 / `InviteExpiredError`/`InviteConsumedError`/`InviteRevokedError`→410)
-- [ ] **`accept(db, raw, *, full_name)`** — sentinel re-resolve → guard status → `set_config('app.tenant_id', invite.tenant_id, true)` → create User (uq_users_tenant_email conflict → `InviteEmailExistsError`→409) → grant UserRole(role_id, granted_by=invited_by) → mark consumed `UPDATE ... WHERE status='pending'` **rowcount guard** (double-accept loser → 410) → `WORMAuditLog.append(tenant_id, "invite_accepted", {...})`. password NOT passed to service.
-- [ ] **`revoke(db, *, tenant_id, invite_id)`** — pending→revoked rowcount guard (US-4 revocable)
-- [ ] **Typed errors** — `InviteError` base + subclasses co-located
-  - DoD: single-use rowcount guard works; audit row written (integration)
+### 2.2 InvitesService.get_metadata + accept + revoke + errors
+- [x] **`get_metadata(db, raw)`** (renamed from get_by_token) — sentinel lookup `WHERE token_hash=:hash` → guard → switch to invite.tenant → read Tenant/User/Role names → `InviteMetadata`; lazy-expire (pending + expires_at<now → expired); typed errors (`InviteNotFoundError`→404 / Expired/Consumed/Revoked→410)
+- [x] **`accept(db, raw, *, full_name)`** — sentinel re-resolve → guard status → `set_config('app.tenant_id', invite.tenant_id, true)` → create User (uq_users_tenant_email conflict → `InviteEmailExistsError`→409) → grant UserRole(role_id, granted_by=invited_by) → mark consumed `UPDATE ... WHERE status='pending' RETURNING id` (None=loser→410; **RETURNING not rowcount** — mypy-clean) → `append_audit("invite_accepted")`. password NOT passed to service.
+- [x] **`revoke(db, *, tenant_id, invite_id)`** — pending→revoked RETURNING guard (US-4 revocable)
+- [x] **Typed errors** — `InviteError` base + 7 subclasses (status_code hint) co-located
+  - DoD: single-use guard works; audit row written ✅ (unit + integration)
 
 ### 2.3 unit + integration tests + gate (SAFE CUT-LINE)
-- [ ] **NEW `tests/unit/platform_layer/identity/test_invites_service.py`** (db_session) — create raw+hash / get_by_token resolve+lazy-expire+typed errors / hash mismatch→not-found / pure helpers (sha256/ttl) — ~7-9 tests
-- [ ] **NEW `tests/integration/api/test_invites.py`** (committed-data + cleanup) — service-layer slice: create→get→accept→User+UserRole+audit / single-use(2nd→410) / expired→410 / revoked→410 / invalid→404 / dup-email→409 / **2-tenant isolation (US-4)** — ~8-10 tests (HTTP layer added Day 3)
-- [ ] **black + isort + flake8 + mypy src/ + pytest** — clean + green
-- [ ] **Cut-line checkpoint** — Day-2-end safe (nothing wired; OIDC path untouched). Day-3 wiring risk assessed: lifecycle proven → safe to wire.
+- [x] **NEW `tests/unit/platform_layer/identity/test_invites_service.py`** (db_session) — 11 tests: create raw+hash+audit / unknown-role / dup-pending / get_metadata resolve+invalid+expired+revoked / accept user+role+consume+audit / single-use / dup-email / hash_token helper
+- [x] **NEW `tests/integration/api/test_invites.py`** — **7 HTTP tests** (went beyond Day-2 service-layer plan to full HTTP e2e): create-requires-admin(401) / e2e create→GET→accept→User+UserRole+consumed / single-use(410) / invalid(404) / expired(410) / **tenant-scoping (app-level; RLS untestable under superuser test role — D5)** / exempt-path contract
+- [x] **black + isort + flake8 + mypy src/ + pytest** — clean (mypy 0/339; flake8 0); **18/18 new tests green** (11 unit + 7 integration); full suite **2179 passed**
+- [x] **Cut-line checkpoint** — service+endpoints+tests all green; OIDC path untouched (guest paths exempt-only; admin create role-gated)
 
 ---
 
 ## Day 3 — Endpoints + exempt path + frontend wire (US-2/US-3/US-5)
 
 ### 3.1 endpoints
-- [ ] **NEW `api/v1/invites.py`** — POST `/admin/tenants/{tenant_id}/invites` (admin RBAC; path-tenant == current-tenant guard) + GET `/invites/{token}` (sentinel lookup) + POST `/invites/{token}/accept` (`{full_name, password}`; password accepted-not-stored) [+ optional revoke]
-  - DoD: 201 token-once / 200 metadata / 200 accept / 404 / 410 / 409 / 403
-- [ ] **`api/main.py`** — include invites router (mirror `auth_router` `:348`)
+- [x] **NEW `api/v1/invites.py`** — POST `/admin/tenants/{tenant_id}/invites` (`require_admin_platform_role`) + GET `/invites/{token}` (sentinel lookup) + POST `/invites/{token}/accept` (`{full_name, password}`; password accepted-not-stored). **own-tenant guard REMOVED** (redundant: `_ADMIN_PLATFORM_ROLES` treats admin/platform_admin as cross-tenant by design, matching admin/tenants.py; invite scoped to PATH tenant + RLS). Pydantic models w/ `serialization_alias` (invitedBy/expiresIn).
+  - DoD: 201 token-once / 200 metadata / 200 accept / 404 / 410 / 409 / 401 ✅
+- [x] **`api/main.py`** — include invites router (after auth_router) + import (alpha order health/loops)
 
 ### 3.2 exempt path (guest context)
-- [ ] **`middleware/tenant_context.py`** — add `/api/v1/invites/` to `EXEMPT_PATH_PREFIXES` (GET/accept guest paths ONLY; admin create stays NON-exempt)
-  - DoD: test asserts admin create still requires auth; guest GET/accept reachable without JWT
+- [x] **`platform_layer/middleware/tenant_context.py`** — add `/api/v1/invites` to `TenantContextMiddleware.EXEMPT_PATH_PREFIXES` (class attr; GET/accept guest paths ONLY; admin create `/api/v1/admin/...` stays NON-exempt)
+  - DoD: `test_create_requires_admin` (401) + `test_exempt_path_contract` (prefix present, admin path not covered) ✅
 
 ### 3.3 frontend wire
 - [ ] **`frontend/src/pages/auth/invite/index.tsx`** — remove FIXTURE_METADATA (`:48-53`) + AP-2 banner (`:154-162`); consume real GET+accept; add 404/410 error states (reuse existing error surface, no new widgets); accept body unchanged
@@ -79,8 +79,7 @@
 - [ ] **NEW `frontend/tests/unit/pages/auth/invite.test.tsx`** — real metadata render / 404+410 states / accept submit calls real endpoint — ~4-6 tests
 
 ### 3.4 test-isolation (Risk Class C)
-- [ ] **conftest singleton reset** — autouse `reset` for `InvitesService` singleton (if module-singleton used) per testing.md §Module-level Singleton Reset
-  - DoD: full suite green, no event-loop leak
+- [→] **conftest singleton reset** — **N/A** (no lifespan-wired singleton; endpoint uses `maybe_get_invites_service() or InvitesService()` lenient fallback → nothing to leak; deliberately avoids the 57.84 Day-3 singleton-leak class). Full suite 2179 green, no event-loop leak.
 
 ---
 

@@ -43,3 +43,28 @@ User selected C-12 (IAM Block B/C) as the next area to "process all" remaining A
 
 ### Remaining for next day
 - Day 1: `invites` ORM + register + migration `0026` (read `0025` header for down_revision; both-direction apply).
+
+---
+
+## Day 1 — 2026-06-06 — Schema
+
+- NEW `infrastructure/db/models/invites.py` (`Invite` + `InviteStatus`) — UUID PK, FK role/invited_by(CASCADE)/accepted_user_id(SET NULL), UNIQUE(token_hash), status CHECK, idx_invites_tenant, partial-unique `uq_invites_pending_email` (tenant_id,email WHERE pending). Registered in `models/__init__.py`.
+- NEW migration `0026_invites` (down_revision `0025_billing_outbox`) — table + indexes + ENABLE+FORCE RLS + `tenant_isolation_invites` (USING + system-sentinel escape) + `tenant_insert_invites` (WITH CHECK). Applied **both directions** on Docker DB (up 0025→0026 → down -1 → re-up; `alembic current` = `0026_invites (head)`).
+- Gates: black/isort/flake8 0; mypy 0/337; `run_all.py` 10/10 (check_rls_policies discovers `invites`). Commit `e8f20e95`.
+
+## Day 2+3 — 2026-06-06 — Service + endpoints + tests (resequenced: backend done together)
+
+- NEW `platform_layer/identity/invites.py` — `InvitesService` (create / get_metadata / accept / revoke) + 7 typed errors (`InviteError` base w/ status_code hint) + `InviteMetadata` dataclass + lenient singleton accessors. Tenant context via `set_config` (sentinel lookup → invite.tenant writes; mirrors billing_outbox drainer). `create` lazy-expires stale pending + dup-pending guard + `invite_created` audit. `accept` creates User + grants UserRole + single-use consume via `UPDATE ... RETURNING id` (mypy-clean, no `.rowcount`) + `invite_accepted` audit; `password` NOT stored (deferred).
+- NEW `api/v1/invites.py` — 3 endpoints (admin create 201 / guest GET 200 / guest accept 200) + Pydantic models (`serialization_alias` → invitedBy/expiresIn). Endpoint uses `maybe_get_invites_service() or InvitesService()` (lenient — no lifespan singleton → no leak).
+- EDIT `api/main.py` (import + include invites_router after auth) + `platform_layer/middleware/tenant_context.py` (add `/api/v1/invites` to `EXEMPT_PATH_PREFIXES` — guest GET/accept only; admin create stays non-exempt).
+- Tests: 11 unit (`test_invites_service.py`) + 7 integration (`test_invites.py`, full HTTP e2e via `_build_app` + X-Test headers + override get_db_session/require_admin_platform_role). All 18 green; full suite **2179 passed**, mypy 0/339, run_all 10/10.
+
+### Day-2+3 design decisions / drift findings
+- **D5 (RLS untestable under superuser test role)** — the `ipa_v2` test DB connection role bypasses RLS (superuser/BYPASSRLS), so a cross-tenant read is NOT blocked at the DB in tests (confirmed: a `select(Invite)` under tenant-B context still returned a tenant-A row). The RLS policies ARE present (check_rls_policies green) and enforce in production under a non-superuser app role. Isolation is therefore asserted at the **application layer** (invite attributed to the path tenant; tenant B has no row), per the codebase convention (hitl/quotas isolation tests do the same). The sentinel-escape RLS is correct-by-construction (mirrors the production-verified billing_outbox 57.84) but exercised only functionally in tests.
+- **Own-tenant guard removed** (redundant) — `_ADMIN_PLATFORM_ROLES = {admin, platform_admin}` are both cross-tenant by design (admin/tenants.py convention); `require_tenant_match_or_platform_admin` treats "admin" as platform-level, so the guard was a no-op for the only roles that pass `require_admin_platform_role`. Dropped it (no fake defense); invite is scoped to the PATH tenant + RLS-isolated.
+- **rowcount → RETURNING** — `AsyncSession.execute(update())` is typed `Result` (no `.rowcount` under mypy strict); used `.returning(Invite.id).scalar_one_or_none()` for the single-use + revoke guards instead.
+- **get_by_token → get_metadata** — the GET needs tenant/inviter/role display names; reading them requires switching from sentinel to the invite's tenant context (users/roles have no sentinel escape), so the method resolves + returns an `InviteMetadata` rather than the raw row.
+
+### Remaining
+- Day 3 frontend: wire `invite/index.tsx` (remove fixture + AP-2 banner; real GET/accept; 404/410 states) + `invite.test.tsx`.
+- Day 4: design note (`21-iam-invites-spike.md`, 8-point gate) + CHANGE-052 + retrospective + closeout.
