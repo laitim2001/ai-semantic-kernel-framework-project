@@ -34,3 +34,22 @@ GO. Scope ≈ 1× a small backend spike (smaller than 57.86: no migration, no mo
 
 ### Next (Day 1)
 `RegistrationService` (`platform_layer/identity/registration.py`): register method + typed errors + lenient singleton + local `_set_tenant`.
+
+---
+
+## Day 1-2 — 2026-06-06 — RegistrationService + service tests (SAFE CUT-LINE)
+
+### Accomplishments
+- **NEW `platform_layer/identity/registration.py`** — `RegistrationService.register(...)`: slug-unique check → `Tenant(state=ACTIVE, plan=ENTERPRISE, meta_data={requested_plan, company_size})` → `_set_tenant` → seed `Role(code="admin")` → `User(status=active)` → `UserRole(user→admin)` → `append_audit("tenant_registered")`. Typed errors (`RegistrationError` 400 / `TenantSlugTakenError` 409); local `_set_tenant`; lenient singleton (no lifespan wiring — mirrors 57.85/57.86, avoids the 57.84 leak class).
+- **NEW `tests/unit/.../test_registration_service.py`** (6): happy-path (tenant+role+user+userrole+audit) / ACTIVE+ENTERPRISE+meta_data / duplicate-slug→`TenantSlugTakenError` / no-password (OIDC-first) / 2-tenant isolation / exactly-one-admin-role.
+- Gates: `mypy src/` **0/343** · flake8 0 · **6/6 service tests green**.
+- **Cut-line reached**: registration capability proven at the service/DB layer; nothing HTTP/UI-wired.
+
+### Refinement vs plan
+- `register()` returns a `RegistrationResult` dataclass (`.tenant`/`.user`) rather than the plan's bare `tuple[Tenant, User]` — cleaner consumer + mypy-friendly, mirrors invites' `InviteMetadata` dataclass. Trivial impl detail; scope unchanged.
+
+### Drift caught during testing
+- **D9 (RLS-untestable-under-superuser, = 57.85 D5 recurrence)** — the first isolation test asserted an RLS-filtered `SELECT *` returned only the tenant's rows; it FAILED (other tenants' rows leaked) because the test DB role is a superuser that bypasses RLS FORCE. Per 57.85's documented resolution, rewrote the isolation assertion to the **application layer** (`WHERE tenant_id == …`) — the production non-superuser role enforces the policy; the unit test pins the app-layer scoping invariant. (Confirms the 57.85 carryover "Day-0 check: if the test DB role is superuser, RLS-block is untestable → assert app-layer".)
+
+### Next (Day 3)
+Public `api/v1/tenants.py` (`POST /register`, EXEMPT) + `api/main.py` mount + `tenant_context.py` exempt + integration tests + frontend un-stub + i18n + frontend test.

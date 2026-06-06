@@ -19,14 +19,14 @@
 ### 0.2 Branch + decisions
 - [x] **Branch created** `feature/sprint-57-87-register-backend` (from `main` `ab2adcc7`)
 - [x] **Decisions locked** (see 0.1 Design locked)
-- [ ] **Day-0 commit** plan + checklist + progress.md Day 0
+- [x] **Day-0 commit** plan + checklist + progress.md Day 0
 
 ---
 
 ## Day 1 — RegistrationService build (US-1/US-2/US-3)
 
 ### 1.1 RegistrationService
-- [ ] **NEW `platform_layer/identity/registration.py`** — `RegistrationService.register(db, *, email, full_name, company_name, tenant_slug, region, requested_plan, company_size) -> tuple[Tenant, User]`:
+- [x] **NEW `platform_layer/identity/registration.py`** — `RegistrationService.register(db, *, email, full_name, company_name, tenant_slug, region, requested_plan, company_size) -> tuple[Tenant, User]`:
   - slug-unique check (`select(Tenant).where(code==slug)` → `TenantSlugTakenError` if exists)
   - create `Tenant(code=slug, display_name=company_name, state=ACTIVE, plan=ENTERPRISE, region=…, meta_data={requested_plan, company_size})` → flush
   - `_set_tenant(db, str(tenant.id))` (RLS context — D6)
@@ -35,7 +35,7 @@
   - `UserRole(user_id, role_id, granted_by=user.id)`
   - `append_audit(db, tenant_id, "tenant_registered", {tenant_code, email, requested_plan}, user_id)`
   - DoD: mypy clean
-- [ ] **Typed errors + helpers** — `RegistrationError` (400) base + `TenantSlugTakenError` (409); local `_set_tenant` 1-liner (mirror invites.py:392); lenient singleton `set_/get_/maybe_get_registration_service`
+- [x] **Typed errors + helpers** — `RegistrationError` (400) base + `TenantSlugTakenError` (409); local `_set_tenant` 1-liner (mirror invites.py:392); lenient singleton `set_/get_/maybe_get_registration_service`
   - DoD: mypy clean; file header + MHist
 
 ---
@@ -45,10 +45,10 @@
 > Day 2 = unit/service tests + RLS-isolation + slug-collision + meta_data verification, ZERO HTTP/frontend. Registration capability proven at service/DB layer BEFORE Day-3 wires the endpoint + page.
 
 ### 2.1 unit/service tests
-- [ ] **NEW `tests/unit/platform_layer/identity/test_registration_service.py`** (db_session, ~6) — register creates Tenant(state=ACTIVE, plan=ENTERPRISE, meta_data has requested_plan+company_size) + admin Role(code="admin") + User(status=active) + UserRole(user→admin) + audit row; slug collision → `TenantSlugTakenError`; the User/Role land under the new tenant's RLS (queryable with tenant context); 2-tenant isolation at service layer (two registers don't cross-leak)
+- [x] **NEW `tests/unit/platform_layer/identity/test_registration_service.py`** (db_session, **6**) — register creates Tenant(state=ACTIVE, plan=ENTERPRISE, meta_data has requested_plan+company_size) + admin Role(code="admin") + User(status=active) + UserRole(user→admin) + audit row; slug collision → `TenantSlugTakenError`; the User/Role land under the new tenant's RLS (queryable with tenant context); 2-tenant isolation at service layer (two registers don't cross-leak)
   - DoD: all green; one error type for slug collision
-- [ ] **black + isort + flake8 + mypy src/ + pytest** — clean; new service tests green
-- [ ] **Cut-line checkpoint** — registration provable at service/DB layer; nothing HTTP/UI-wired yet
+- [x] **black + isort + flake8 + mypy src/ + pytest** — clean (mypy 0/343; flake8 0); **6/6 service tests green**
+- [x] **Cut-line checkpoint** — registration provable at service/DB layer; nothing HTTP/UI-wired yet ✓ (isolation asserted app-layer per 57.85 D5 — test DB role is superuser, RLS-bypass)
 
 ---
 
