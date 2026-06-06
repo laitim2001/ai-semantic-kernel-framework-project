@@ -84,3 +84,18 @@
 
 ### Remaining
 - Day 4: full sweep + design note `22-iam-credentials-spike.md` (8-point gate) + 17.md assess + CHANGE-053 + retrospective + closeout (MEMORY + CLAUDE lean + next-phase-candidates).
+
+---
+
+## Day 4 — 2026-06-06 — Closeout
+
+- **Full sweep**: mypy **0/342** · backend pytest **2202 passed** (+23) · `run_all.py` **10/10** · frontend lint(no `--silent`)+build · Vitest **761 passed** (+4) · `check:mockup-fidelity` ✓ (53=baseline 53) · migration 0027 both directions. Final read-through of all changed code.
+- **Design note** `22-iam-credentials-spike.md` (SPIKE — §Step 5.5; 8-point gate all ✓; ~96% verified ratio).
+- **17.md = N/A** (assessed — identity not a registered 11+1 surface; same call as 57.84/57.85). Contracts in design note + docstrings + CHANGE-053.
+- CHANGE-053 + retrospective.md (Q1-Q7 + 8-point self-check + calibration).
+- **Calibration**: `medium-backend` 0.80 + `agent_factor` 1.0 (parent-direct); ratio ~1.15-1.2 — **2nd consecutive greenfield-IAM over-run** (57.85 ~1.25) → NEW `AD-Sprint-Plan-IAM-Backend-Spike-Class` (propose `iam-backend-spike` ~0.65 for the next IAM backend spike; do NOT pre-create).
+- **AD**: `AD-Auth-Credentials-PasswordLogin-Phase58` CLOSED; carryovers (lockout/strength/register/MFA/recovery/login-link/iam-backend-spike-class) → `next-phase-candidates.md` §Sprint 57.86.
+- MEMORY subfile `project_phase57_86_iam_credentials.md` + pointer; CLAUDE.md lean (Current Sprint + Last Updated).
+
+### Commit mapping
+- Day-0 `e57baa9d` / Day-1 `8e840174` / Day-2 `e5e687d9` / Day-3 `de5f7eb3` / Day-4 closeout (pending).

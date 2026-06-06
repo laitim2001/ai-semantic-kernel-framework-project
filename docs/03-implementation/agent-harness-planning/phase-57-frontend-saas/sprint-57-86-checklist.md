@@ -99,24 +99,24 @@
 ## Day 4 — Full sweep + design note + Closeout
 
 ### 4.1 Full sweep
-- [ ] **Backend gates** — black/isort/flake8 0 + `mypy src/` 0 + `pytest` green + `run_all.py` 10/10 (`check_rls_policies`)
-- [ ] **Frontend gates** — `npm run lint` (NO `--silent`) + `npm run build` + `npm run test` + `npm run check:mockup-fidelity` (oklch baseline unchanged)
-- [ ] **Read all changed code** — final pass (passwords, credentials, migration, invite-accept wire, endpoint, exempt path, frontend page, mockup)
-- [ ] **real-Azure smoke?** — N/A (no LLM in credentials path; e2e proven by unit+integration+frontend tests)
+- [x] **Backend gates** — black/isort/flake8 0 + `mypy src/` **0/342** + `pytest` **2202 passed** + `run_all.py` **10/10** (`check_rls_policies` green)
+- [x] **Frontend gates** — `npm run lint` (NO `--silent`) + `npm run build` + `npm run test` (**761**) + `npm run check:mockup-fidelity` ✓ (HEX_OKLCH_BASELINE 50→53; CSS byte-identical)
+- [x] **Read all changed code** — final pass (passwords, credentials, migration, invite-accept wire, endpoint, exempt path, frontend page, mockup)
+- [x] **real-Azure smoke?** — N/A (no LLM in credentials path; e2e proven by 23 backend + 4 frontend tests incl. full-stack invite-accept→login)
 
 ### 4.2 design note (SPIKE — §Step 5.5 mandatory)
-- [ ] **NEW `docs/03-implementation/agent-harness-planning/22-iam-credentials-spike.md`** — extracted from shipped impl; 8-point gate all ✓ (self-check in retrospective)
-- [ ] **17.md assess** — N/A vs add (likely N/A — identity not a registered 11+1 surface; same call as 57.84/57.85). Contract lives in design note + docstrings + CHANGE-053.
+- [x] **NEW `docs/03-implementation/agent-harness-planning/22-iam-credentials-spike.md`** — extracted from shipped impl; 8-point gate all ✓ (~96% verified; self-check in retrospective)
+- [x] **17.md assess** — **N/A** (identity not a registered 11+1 surface; same call as 57.84/57.85). Contracts in design note + docstrings + CHANGE-053.
 
 ### 4.3 Closeout docs
-- [ ] **CHANGE-053** in `claudedocs/4-changes/feature-changes/`
-- [ ] **progress.md** Day 0-4 + **retrospective.md** Q1-Q7 (bcrypt offload + generic-401/enumeration + new-page mockup extension + design-note 8-point gate)
-- [ ] **Checklist** all `[x]`/`[→]` (no deletions)
-- [ ] **Calibration** record (medium-backend 0.80; agent_factor 1.0 parent-direct; ratio — **2nd greenfield-IAM data point**; if > 1.0 again → propose `iam-backend-spike` ~0.55-0.65)
-- [ ] **AD status**: `AD-Auth-Credentials-PasswordLogin-Phase58` CLOSED; NEW `AD-Auth-PasswordLogin-Lockout-Phase58` + register/MFA/recovery/strength/login-link carryovers → next-phase-candidates.md
-- [ ] **MEMORY subfile + pointer** + **CLAUDE.md lean** (Current Sprint + Last Updated)
-- [ ] **Design note?** — YES (spike sprint — new IAM credentials domain; 8-point gate per §Step 5.5)
+- [x] **CHANGE-053** in `claudedocs/4-changes/feature-changes/`
+- [x] **progress.md** Day 0-4 + **retrospective.md** Q1-Q7 (bcrypt offload + generic-401/enumeration + fetchWithAuth-401 UX fix + new-page mockup extension + design-note 8-point gate)
+- [x] **Checklist** all `[x]`/`[→]` (no deletions)
+- [x] **Calibration** record (medium-backend 0.80; agent_factor 1.0 parent-direct; ratio ~1.15-1.2 — **2nd greenfield-IAM over-run** → propose `iam-backend-spike` ~0.65 via `AD-Sprint-Plan-IAM-Backend-Spike-Class`)
+- [x] **AD status**: `AD-Auth-Credentials-PasswordLogin-Phase58` CLOSED; NEW `AD-Auth-PasswordLogin-Lockout-Phase58` + register/MFA/recovery/strength/login-link/iam-backend-spike-class carryovers → next-phase-candidates.md
+- [x] **MEMORY subfile + pointer** + **CLAUDE.md lean** (Current Sprint + Last Updated)
+- [x] **Design note?** — YES (spike sprint — new IAM credentials domain; 8-point gate per §Step 5.5)
 
 ### 4.4 Ship
-- [ ] **Commit mapping** Day-0 / Day-1 schema / Day-2 service+wire+tests / Day-3 endpoint+frontend+mockup / Day-4 closeout
+- [x] **Commit mapping** Day-0 `e57baa9d` / Day-1 `8e840174` / Day-2 `e5e687d9` / Day-3 `de5f7eb3` / Day-4 closeout (pending)
 - [ ] **Push + PR** (user-gated — explicit authorization required)
