@@ -72,6 +72,15 @@ export type ThinkingBlock = {
   text: string;
 };
 
+// Honest-surface (CHANGE-054): the agent's final text answer (llm_response.content).
+// The mockup's block set (thinking / tool / verification / subagent_fork) had NO
+// assistant-answer block, so a plain Q&A turn (content, no tool call) rendered
+// nothing — the user saw an empty turn. This block makes the answer visible.
+export type AnswerBlock = {
+  type: "answer";
+  text: string;
+};
+
 export type ToolBlock = {
   type: "tool";
   toolCallId: string;
@@ -96,7 +105,12 @@ export type SubagentForkBlock = {
   agents: SubagentEntry[];
 };
 
-export type Block = ThinkingBlock | ToolBlock | VerificationBlock | SubagentForkBlock;
+export type Block =
+  | ThinkingBlock
+  | AnswerBlock
+  | ToolBlock
+  | VerificationBlock
+  | SubagentForkBlock;
 
 // === Sprint 57.21: Turn discriminated union ===============================
 // Per mockup L17-70 (TURNS data shape) + L159-313 (render dispatch).

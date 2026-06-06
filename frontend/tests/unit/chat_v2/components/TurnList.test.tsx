@@ -72,10 +72,13 @@ describe("TurnList (Sprint 57.21 Day 2)", () => {
     useChatStore.getState().reset();
   });
 
-  test("empty turns shows echo_demo hint empty-state", () => {
+  test("empty turns shows mode-aware hint empty-state (real_llm + echo_demo)", () => {
     render(<TurnList />);
     expect(screen.getByText(/Type a message below to start/)).toBeInTheDocument();
-    expect(screen.getByText("echo hello")).toBeInTheDocument();
+    // Honest-surface (CHANGE-054): empty state now explains BOTH modes instead of
+    // only teaching echo_demo — real_llm (live) vs echo_demo (offline mock).
+    expect(screen.getByText("real_llm")).toBeInTheDocument();
+    expect(screen.getByText("echo_demo")).toBeInTheDocument();
   });
 
   test("user role dispatches → UserTurn with display name + role pill + text", () => {
@@ -101,7 +104,8 @@ describe("TurnList (Sprint 57.21 Day 2)", () => {
   test("agent role dispatches → AgentTurn with turn # badge + thinking block", () => {
     useChatStore.setState({ turns: [agentTurn()] });
     render(<TurnList />);
-    expect(screen.getByText("incident-responder")).toBeInTheDocument();
+    // Honest-surface (CHANGE-054): neutral "agent" label, not the fixture persona.
+    expect(screen.getByText("agent")).toBeInTheDocument();
     expect(screen.getByText("turn a1")).toBeInTheDocument();
     expect(screen.getByText("stop: end_turn")).toBeInTheDocument();
     expect(screen.getByText("Initial analysis")).toBeInTheDocument();
@@ -145,7 +149,8 @@ describe("TurnList (Sprint 57.21 Day 2)", () => {
     });
     render(<TurnList />);
     expect(screen.getByText("Jamie Liu")).toBeInTheDocument();
-    expect(screen.getByText("incident-responder")).toBeInTheDocument();
+    // Honest-surface (CHANGE-054): neutral "agent" label, not the fixture persona.
+    expect(screen.getByText("agent")).toBeInTheDocument();
     expect(screen.getByText("HITL approval required")).toBeInTheDocument();
   });
 });

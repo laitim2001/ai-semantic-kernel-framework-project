@@ -7,6 +7,7 @@
  * Created: 2026-05-17 (Sprint 57.21 Day 3 §3.2)
  *
  * Modification History:
+ *   - 2026-06-06: CHANGE-054 honest surface — fallback assertions "incident-responder"→"agent", "claude-haiku-4-5"→"real_llm" (model badge reflects real run/mode)
  *   - 2026-05-17: Initial creation (Sprint 57.21 Day 3 §3.2)
  */
 
@@ -45,8 +46,11 @@ describe("ChatHeader (Sprint 57.21 Day 3 §3.2)", () => {
   test("renders fallback title when no active session", () => {
     setUp();
     expect(screen.getByText("New session")).toBeInTheDocument();
-    expect(screen.getByText("incident-responder")).toBeInTheDocument();
-    expect(screen.getByText("claude-haiku-4-5")).toBeInTheDocument();
+    // Honest-surface (CHANGE-054): no active fixture session → neutral "agent"
+    // label; model badge reflects the active mode ("real_llm" default, since no
+    // llm_request has set currentModel yet) instead of the hardcoded "claude-haiku-4-5".
+    expect(screen.getByText("agent")).toBeInTheDocument();
+    expect(screen.getByText("real_llm")).toBeInTheDocument();
   });
 
   test("renders fixture session title when activeSessionId is set", () => {

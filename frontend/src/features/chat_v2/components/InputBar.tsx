@@ -30,6 +30,7 @@
  * Last Modified: 2026-05-23
  *
  * Modification History (newest-first):
+ *   - 2026-06-06: chat-v2 honest surface — mode-button tooltips + echo_demo "echoes input" note; +useTranslation (CHANGE-054)
  *   - 2026-05-23: Sprint 57.30 Day 2 US-C2 — verbatim re-point to mockup composer shell (.composer / .composer-inner / .composer-input / .btn primary / .btn danger / .btn ghost)
  *   - 2026-05-17: Sprint 57.20 Day 3 US-D1 — token migration text-muted-foreground→text-fg-muted; bg-muted-foreground→bg-fg-muted (disabled Send) for new shell mockup consistency
  *   - 2026-05-11: Sprint 57.16 — inline styles → Tailwind utility classes; statusPill/modeButton/sendBtn → finite class lookup (AD-Inline-Style-Cleanup-Sweep-Round2)
@@ -45,6 +46,7 @@
  */
 
 import { useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useLoopEventStream } from "../hooks/useLoopEventStream";
 import { useChatStore } from "../store/chatStore";
@@ -64,6 +66,7 @@ function getPill(status: string): { label: string; color: string } {
 }
 
 export default function InputBar(): JSX.Element {
+  const { t } = useTranslation("common");
   const [text, setText] = useState("");
   const status = useChatStore((s) => s.status);
   const mode = useChatStore((s) => s.mode);
@@ -135,12 +138,25 @@ export default function InputBar(): JSX.Element {
               style={modeButtonStyle(mode === m)}
               onClick={() => setMode(m)}
               disabled={isRunning}
+              title={
+                m === "echo_demo"
+                  ? t("chat.composer.echoModeTitle")
+                  : t("chat.composer.realModeTitle")
+              }
             >
               {m}
             </button>
           ))}
         </div>
       </div>
+
+      {/* Honest-surface: echo_demo mirrors the input (offline mock) — make that
+          explicit so a tester doesn't mistake the echo for a real LLM answer. */}
+      {mode === "echo_demo" && (
+        <div style={{ fontSize: 11, color: "var(--warning)", marginBottom: 6 }}>
+          {t("chat.composer.echoModeNote")}
+        </div>
+      )}
 
       <div className="composer-inner">
         <textarea

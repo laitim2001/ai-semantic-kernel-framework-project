@@ -67,8 +67,8 @@ test.describe("chat-v2 unmocked regression net (opt-in, live backend)", () => {
       page.getByRole("heading", { level: 1, name: "Chat (V2)" }),
     ).toBeVisible();
 
-    // 3) Explicitly select echo_demo mode (also the store default) — exercises the
-    //    real mode toggle and pins the deterministic, Azure-free path.
+    // 3) Explicitly select echo_demo mode (store default is now real_llm, CHANGE-054)
+    //    — exercises the real mode toggle and pins the deterministic, Azure-free path.
     await page.getByRole("button", { name: "echo_demo", exact: true }).click();
 
     // 4) Send a message through the real composer → real POST /api/v1/chat/ → real SSE.
