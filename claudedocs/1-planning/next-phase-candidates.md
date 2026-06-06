@@ -36,6 +36,23 @@
 
 ---
 
+## 🆕 Sprint 57.86 Carryover (2026-06-06 — C-12 IAM Block B/C local credentials + password-login spike; closes AD-Auth-Credentials-PasswordLogin-Phase58)
+
+**Closed**: `AD-Auth-Credentials-PasswordLogin-Phase58` — the local-password leg of C-12 (the **second C-12 spike**, completes 57.85's accepted-not-stored gap). `bcrypt` dep + `users.password_hash` (migration 0027, inherits users RLS) + `passwords.py` (hash/verify, anyio offload, 72-byte guard, DUMMY_HASH) + `CredentialsService` (set_password/authenticate; **every** miss → one generic 401 + constant-time DUMMY_HASH miss = anti-enumeration) + invite-accept now bcrypt-stores the password + `POST /auth/password-login` (JSON body, generic 401, JWT/cookie/AuthMeResponse mirror dev-login, EXEMPT) + NEW mockup-faithful `/auth/password-login` page (route + i18n en/zh-TW + mockup `AuthPasswordLogin` + `fetchWithAuth {redirectOn401:false}` UX fix). Design note `22-iam-credentials-spike.md` (8-pt gate ~96%). mypy 0/342 + pytest 2202 + run_all 10/10 + Vitest 761 + mockup-fidelity ✓ (HEX_OKLCH_BASELINE 50→53). Detail: `memory/project_phase57_86_iam_credentials.md` + retrospective. CHANGE-053.
+
+### C-12 epic — remaining legs (rolling, NOT pre-written)
+- **`AD-Auth-Register-Backend-IAM-Block-B-Phase58`** — self-service tenant registration (POST /tenants/register: create tenant + first admin user + password; reuses `passwords.py` + `CredentialsService.set_password`). The register page is still fixture/501.
+- **`AD-Auth-MFA-Backend-IAM-Block-C-Phase58`** — Block C MFA TOTP + WebAuthn (password-login lands the user via `consumePostLoginRedirect()`; `/auth/mfa` still stub 501).
+
+### NEW carryovers (this sprint)
+- **`AD-Auth-PasswordLogin-Lockout-Phase58`** (NEW) — brute-force / lockout throttle on `/auth/password-login` (no per-tenant login-attempt counter this spike; bcrypt cost=12 + generic-401 raise per-guess cost but no rate limit). Candidate substrate: the Redis rate-limit-counter infra (57.48/57.58).
+- **Password-strength policy** — invite-accept keeps `min_length=1`; password fields gain only `max_length=72` (bcrypt safety). Min length / complexity / breach-check is a follow-up.
+- **`AD-Auth-Recovery-Page-Phase58`** — password reset / recovery; `/auth/recovery` does not exist.
+- **Login-page discoverability link** — the OIDC `/auth/login` page does NOT link to `/auth/password-login` (kept pristine per mockup); the page is reachable by direct route + is its own consumer. A mockup-gated link is a follow-up.
+- **Calibration — `AD-Sprint-Plan-IAM-Backend-Spike-Class`** (NEW): `medium-backend` 0.80 ran ratio ~1.15-1.2 (greenfield-IAM over-run) — **2nd consecutive** greenfield-IAM over-run (57.85 ~1.25 + 57.86 ~1.15-1.2). Propose a `iam-backend-spike` class (~0.65) for the next IAM backend spike (register/MFA); adopt in that sprint's plan, do NOT pre-create.
+
+---
+
 ## 🆕 Sprint 57.85 Carryover (2026-06-06 — C-12 IAM Block B invites vertical spike; closes AD-Auth-Invite-Backend-IAM-Block-B-Phase58)
 
 **Closed**: `AD-Auth-Invite-Backend-IAM-Block-B-Phase58` — the invites leg of C-12 Block B (the **first C-12 spike**, per the thin-spike discipline). DB-backed invite lifecycle: NEW `invites` table (migration 0026, RLS two-policy + system-sentinel guest-lookup escape) + `InvitesService` (opaque token sha256-stored-returned-once / create / get_metadata / single-use accept → User+UserRole+WORM-audit / revoke) + 3 endpoints (admin create `require_admin_platform_role` + guest GET/accept EXEMPT) + frontend invite page wired (fixture + AP-2 banner removed; 404/410 states). `password` accepted-not-stored (split → 57.86). Spike design note `21-iam-invites-spike.md` (8-pt gate). mypy 0/339 + pytest 2179 + run_all 10/10 + Vitest 757 + mockup-fidelity ✓. Detail: `memory/project_phase57_85_iam_invites.md` + retrospective. CHANGE-052.
