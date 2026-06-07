@@ -275,6 +275,7 @@
     "subtitle": "範疇 1 · TAO/ReAct 迴圈 · 派遣 4 種子代理模式",
     "version": "v3.4.1",
     "live": "上線中",
+    "backendGap": "編排器設定 / 部署後端 API 待 Phase 58+ 實作（AD-Orchestrator-Config-Backend）；此頁顯示 fixture 示範資料 —— 設定不會持久化，且測試 / 於儲存庫檢視 / 部署等動作均無實際功能。",
     "actions": {
       "test": "在對話中測試",
       "viewRepo": "於儲存庫檢視",

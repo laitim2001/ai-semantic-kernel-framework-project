@@ -275,6 +275,7 @@
     "subtitle": "Range 1 · TAO/ReAct loop · dispatches 4 subagent modes",
     "version": "v3.4.1",
     "live": "live",
+    "backendGap": "Backend orchestrator config / deploy API pending Phase 58+ (AD-Orchestrator-Config-Backend); this surface shows fixture demo data — settings are not persisted and the Test / View-in-repo / Deploy actions are non-functional.",
     "actions": {
       "test": "Test in Chat",
       "viewRepo": "View in repo",
