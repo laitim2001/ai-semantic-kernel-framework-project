@@ -36,6 +36,25 @@
 
 ---
 
+## 🆕 Drive-Through Audit Carryover (2026-06-06 — 35-page full Playwright sweep)
+
+**Source**: `claudedocs/5-status/drive-through-20260606/audit.md` (+ 20 screenshots in `shots/`). First systematic drive-through of all 35 frontend pages (real UI :3007 + real backend :8000 + real Azure LLM), per CLAUDE.md §Drive-Through Acceptance. **Audit-only — no code changed.** Headline: the spine is REAL (chat-v2 main-flow drive-through PASSES e2e — real gpt-5.2 loop → answer render → verification 0.78 → trace spans → cost_ledger; chat→cost_ledger→cost-dashboard confirmed by Total $0.0291→$0.0337). 11/15 full-impl pages honestly label fixtures; 12 proposed = honest ComingSoon stubs. Only **2 genuine page problems + 1 env blocker**.
+
+### NEW carryover ADs (from the audit; NOT yet fixed)
+- **`AD-SLA-Report-Endpoint-500`** (🔴 real bug) — `GET /api/v1/admin/tenants/{tid}/sla-report?month=2026-06 → HTTP 500`; /sla-dashboard shows "Failed to load data" (`slaService.ts:16` fetchSLAReport). Real wiring, backend 500s. Needs backend root-cause.
+- **`AD-Orchestrator-Page-Potemkin`** (🔴 Potemkin) — /orchestrator: zero data API (only auth/me+telemetry), hardcoded form values (model/temp/memory-scopes/verification switches), dead "Deploy" button, NO fixture note. The LONE unlabeled Potemkin among 15 full-impl pages. Fix = wire backend OR add a DEMO/fixture label. Contrast /subagents (same config-page shape, real agent_catalog).
+- **`AD-DriveThrough-Phase58-Endpoints-Reverify`** (✅ **RESOLVED 2026-06-07**) — was: stale backend (PID 15056 + orphaned `--reload` spawn-workers, Risk Class E) made register/invite/password-login 404/401. After a clean restart (kill all 3 uvicorn procs + `dev.py start`), re-verified ALL PASS: register full wizard → **201 + DB write + slug-unique 409**; password-login bad creds → **401 generic invalid**; invite fake token → **404 invalid**. **No code bug — 100% stale-process artifact.** Recommend separate git worktree per session to avoid recurrence (two-sessions-one-worktree). Detail: audit.md §8.
+- **`AD-Register-Concurrent-Slug-Race`** (🟡 dev-edge, NEW from re-verify) — the register wizard fired `POST /tenants/register` twice (React StrictMode dev double-invoke); both returned 201 → likely 2 same-slug tenants created (the slug pre-check is not atomic under concurrency; the serialized path correctly 409s). Add a DB unique constraint on `tenant_slug` OR an idempotency guard. Low severity (dev StrictMode + race window).
+- **`AD-Overview-TopKPI-Fixture-Label`** (🟡 AP-4) — /overview top-4 KPI cards (14 loops / 3 HITL / $2,847 MTD / 1.84s p95) are unlabeled fixture ($2,847 contradicts real cost_ledger $0.034). The 5 widgets below already carry `⚠️ ...fixture` notes; add one to the KPI row.
+- **`AD-ChatV2-Inspector-Turn-Metadata-Wire`** (🟡 wiring) — chat-v2 Inspector "Turn" tab metadata (tokens.in=0 / out=— / cost=— / trace_id=— / span_id=—) not wired, although the loop events carry real values (trace_id/duration/tokens all present in the Loop visualizer). Project the LoopCompleted/turn data into the Inspector fields.
+- **`AD-AdminTenants-ListHeader-Fixture-String`** (🟢 minor) — /admin-tenants list-header "48 active · 3 anomalies in last 24h" is a leftover fixture string vs the real KPI "Active tenants 0". Cosmetic.
+
+### Confirmed (already-tracked) by the audit
+- **`AD-RBAC-DB-To-JWT-Wiring-Phase58`** (57.87 carryover) — drive-through CONFIRMS live: dev-login selected `admin` but every page renders role=`user`, admin-only content (cost provider-mix) not gated. Cosmetic role, not enforced.
+- **`AD-ChatV2-SessionList-Backend`** — chat-v2 session list still DEMO-labelled (correct/honest); backend list endpoint still pending.
+
+---
+
 ## 🆕 Sprint 57.87 Carryover (2026-06-06 — C-12 IAM Block B self-service tenant registration; closes AD-Auth-Register-Backend-IAM-Block-B-Phase58)
 
 **Closed**: `AD-Auth-Register-Backend-IAM-Block-B-Phase58` — the self-service registration leg of C-12 (the **third C-12 spike**, after 57.85 invites + 57.86 credentials). NEW `RegistrationService.register` (slug-unique → 409 / `Tenant` state **ACTIVE** + plan ENTERPRISE + requested_plan/size in meta_data / `_set_tenant` RLS / seed real **admin `Role`** — codebase's first real Role-creation / founding `User` + `UserRole` / `tenant_registered` audit) + public EXEMPT `POST /api/v1/tenants/register` (`api/v1/tenants.py` + `api/main.py` mount) + un-stubbed `/auth/register` wizard (201→`/auth/callback`, 409→slug-taken; AP-2 banner removed; i18n en/zh-TW). **No migration / no mockup-CSS change.** Design note `23-iam-registration-spike.md` (8-pt gate ~95%). mypy 0/344 + pytest 2214 + run_all 10/10 + Vitest 763 + mockup-fidelity ✓ (oklch baseline 53 UNCHANGED). Detail: `memory/project_phase57_87_iam_registration.md` + retrospective. CHANGE-055.
