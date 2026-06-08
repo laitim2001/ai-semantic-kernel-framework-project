@@ -11,26 +11,37 @@
  *     3. Routes errors to store.setError + status="error"
  *     4. Owns an AbortController for cancellation via `cancel()`
  *
+ *   Sprint 57.88 (US-5): also provides `resume()` for the durable HITL
+ *   pause-resume continuation. After a deferred pause (loop_end with
+ *   stop_reason="awaiting_approval") and the human's decide() call, `resume()`
+ *   opens a fresh SSE stream via resumeChat() that merges the continuation
+ *   events into the SAME store (the resumed tool_call_result updates the
+ *   still-pending escalated ToolBlock by tool_call_id; turn_start pushes the
+ *   continuation as a new agent turn). No user message is pushed.
+ *
  *   Reuses the same Zustand chatStore — components subscribe directly to
  *   store fields rather than receiving them through hook return value.
  *
  * Created: 2026-04-30 (Sprint 50.2 Day 3.5)
- * Last Modified: 2026-04-30
+ * Last Modified: 2026-06-08
  *
  * Modification History:
+ *   - 2026-06-08: Sprint 57.88 US-5 — +resume() for durable HITL pause-resume continuation
  *   - 2026-04-30: Initial creation (Sprint 50.2 Day 3.5)
  *
  * Related:
- *   - ../services/chatService.ts (streamChat)
+ *   - ../services/chatService.ts (streamChat + resumeChat)
  *   - ../store/chatStore.ts (mergeEvent + status)
+ *   - ../components/turns/HITLTurn.tsx (calls resume() after an approve decision)
  */
 
 import { useCallback, useRef } from "react";
-import { streamChat } from "../services/chatService";
+import { resumeChat, streamChat } from "../services/chatService";
 import { useChatStore } from "../store/chatStore";
 
 export type UseLoopEventStream = {
   send: (message: string) => Promise<void>;
+  resume: () => Promise<void>;
   cancel: () => void;
   isRunning: boolean;
 };
@@ -80,10 +91,38 @@ export function useLoopEventStream(): UseLoopEventStream {
     [status, mode, sessionId, pushUserMessage, mergeEvent, setStatus, setError],
   );
 
+  // Sprint 57.88 (US-5): resume a deferred-paused chat after a human approval.
+  // Reads sessionId/status from the live store (not closure) to avoid a stale
+  // capture when invoked deep in the turn tree (HITLTurn). Pushes no user
+  // message — the continuation flows into the existing turns.
+  const resume = useCallback(async () => {
+    const { sessionId: sid, status: st } = useChatStore.getState();
+    if (st === "running" || sid === null) return;
+    setStatus("running");
+    setError(null);
+
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    await resumeChat(sid, {
+      onEvent: mergeEvent,
+      onError: (err) => {
+        setError(err.message);
+        setStatus("error");
+      },
+      signal: ctrl.signal,
+    });
+
+    // Mirror send(): if the resumed loop did NOT emit loop_end (drop / abort),
+    // settle status so the UI re-enables.
+    const finalStatus = useChatStore.getState().status;
+    if (finalStatus === "running") setStatus("completed");
+  }, [mergeEvent, setStatus, setError]);
+
   const cancel = useCallback(() => {
     abortRef.current?.abort();
     setStatus("cancelled");
   }, [setStatus]);
 
-  return { send, cancel, isRunning: status === "running" };
+  return { send, resume, cancel, isRunning: status === "running" };
 }

@@ -72,6 +72,7 @@ import { Check, Clock, FileText, Shield, X } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { governanceService } from "../../../governance/services/governanceService";
+import { useLoopEventStream } from "../../hooks/useLoopEventStream";
 import { useChatStore } from "../../store/chatStore";
 import type { HITLTurn as HITLTurnType, RiskSeverity } from "../../types";
 
@@ -99,6 +100,8 @@ const SEVERITY_BADGE_TONE: Record<RiskSeverity, string> = {
 export function HITLTurn({ turn }: { turn: HITLTurnType }): JSX.Element {
   const [submitting, setSubmitting] = useState<"approve" | "reject" | null>(null);
   const mergeEvent = useChatStore((s) => s.mergeEvent);
+  // Sprint 57.88 (US-5): resume the deferred-paused loop after an approve.
+  const { resume } = useLoopEventStream();
 
   const submitDecision = useCallback(
     async (decision: "approved" | "rejected") => {
@@ -117,11 +120,24 @@ export function HITLTurn({ turn }: { turn: HITLTurnType }): JSX.Element {
             decision: decision.toUpperCase(),
           },
         });
+        // Sprint 57.88 (US-5): durable HITL pause-resume. ONLY the deferred
+        // pause flow (loop_end with stop_reason="awaiting_approval", SSE stream
+        // already closed) needs a client-driven resume; the legacy BLOCKING
+        // HITL flow (Sprint 53.5/53.6) continues server-side on the SAME open
+        // stream, so it must NOT be resumed here (guarded on stopReason).
+        // Reject leaves the loop terminated (the tool never runs) — no
+        // continuation to render, so we do not resume on reject.
+        if (
+          decision === "approved" &&
+          useChatStore.getState().stopReason === "awaiting_approval"
+        ) {
+          await resume();
+        }
       } finally {
         setSubmitting(null);
       }
     },
-    [turn.approvalRequestId, turn.decision, mergeEvent],
+    [turn.approvalRequestId, turn.decision, mergeEvent, resume],
   );
 
   const decided = turn.decision !== null;

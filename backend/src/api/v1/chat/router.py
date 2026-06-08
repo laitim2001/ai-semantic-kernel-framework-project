@@ -38,6 +38,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-06-05
 
 Modification History (newest-first):
+    - 2026-06-08: Sprint 57.88 US-4 — NEW POST /chat/{id}/resume (durable HITL pause-resume)
     - 2026-06-05: Sprint 57.84 — C-15: chat cost-write → billing_outbox enqueue + drainer
     - 2026-06-05: Sprint 57.82 — record verification judge LLM cost + count vs quota (B-8 leg-1)
     - 2026-06-02: Sprint 57.71 — thread real tracer into build_handler (A-4 Tier 0)
@@ -81,9 +82,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_harness._contracts import AgentHandoff, LoopCompleted, TraceContext
+from agent_harness._contracts import AgentHandoff, LoopCompleted, LoopState, TraceContext
 from agent_harness._contracts.events import ToolCallExecuted
 from agent_harness.observability._abc import Tracer
+from agent_harness.orchestrator_loop import AgentLoop
 from agent_harness.verification import VerifierRegistry, run_with_verification
 from business_domain._service_factory import BusinessServiceFactory
 from core.config import get_settings
@@ -109,6 +111,7 @@ from platform_layer.observability import (
     get_tracer,
     maybe_get_sla_recorder,
 )
+from platform_layer.resume import ResumeService
 from platform_layer.tenant.quota import (
     QuotaEnforcer,
     QuotaExceededError,
@@ -262,6 +265,18 @@ async def chat(
                     user_id=current_user,
                     tenant_id=current_tenant,
                 )
+            # Sprint 57.88 (Day-4 drive-through fix): COMMIT the sessions row before
+            # the loop runs. A deferred-HITL ESCALATE (durable pause-resume) persists
+            # an `approvals` row that FKs to `sessions`; that INSERT happens mid-SSE-
+            # stream via the HITL manager's OWN db connection, which cannot see this
+            # request session's still-open transaction. Without an early commit the
+            # approval INSERT raises FK violation `approvals_session_id_fkey` →
+            # the loop soft-blocks the tool instead of pausing (the gates pass because
+            # integration tests pre-create the session row; only a real drive-through
+            # surfaced it). Committing here makes the row visible cross-connection.
+            # Tests skip this block entirely (SESSIONS_CHAT_OBSERVER=false), so their
+            # rollback-based isolation is unaffected.
+            await db.commit()
         except Exception:  # noqa: BLE001
             logger.exception(
                 "chat session %s/%s: sessions row INSERT failed (best-effort)",
@@ -719,3 +734,101 @@ async def cancel_session(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Session {session_id} not found.",
         )
+
+
+# === Sprint 57.88 (US-4): durable HITL pause-resume endpoint ================
+# Why: a chat tool ESCALATE in deferred mode pauses the loop with
+# stop_reason="awaiting_approval" + a resumable checkpoint, releasing the SSE
+# connection (a human approval may take hours/days). After the human decides via
+# the EXISTING POST /governance/approvals/{id}/decide, the client calls this NEW
+# endpoint to drive AgentLoopImpl.resume() on a fresh SSE stream — executing the
+# approved pending tool and continuing to end_turn (or emitting a block on
+# reject). Multi-tenant 鐵律: ResumeService is tenant-scoped; a checkpoint for
+# another tenant (or no paused checkpoint) → None → 404 (no info leak).
+
+
+def get_resume_service() -> ResumeService:
+    """ResumeService provider (default chat-builder). Tests override via DI."""
+    return ResumeService()
+
+
+async def _stream_resume_events(
+    loop: AgentLoop,
+    *,
+    state: LoopState,
+    trace_context: TraceContext,
+) -> AsyncIterator[bytes]:
+    """Drive loop.resume() + emit SSE bytes (thin mirror of _stream_loop_events).
+
+    Resume runs the post-approval continuation only (execute the approved pending
+    tool → continue to end_turn), so it skips the chat-start observers
+    (sessions / cost ledger / quota) — those fired on the original RUN-1 stream.
+    Framing matches _stream_loop_events: one frame per serializable event,
+    Thinking → None → skipped (LLMResponded carries the canonical content).
+    """
+    async for event in loop.resume(state=state, trace_context=trace_context):
+        try:
+            payload = serialize_loop_event(event)
+        except NotImplementedError:
+            logger.debug("sse(resume): skip unserialized event %s", type(event).__name__)
+            continue
+        if payload is None:
+            continue
+        yield format_sse_message(payload["type"], payload["data"])
+
+
+@router.post("/{session_id}/resume", status_code=status.HTTP_200_OK)
+async def resume_chat(
+    session_id: UUID,
+    current_tenant: UUID = Depends(get_current_tenant),
+    current_user: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_session),
+    resume_service: ResumeService = Depends(get_resume_service),
+) -> StreamingResponse:
+    """Resume a chat that paused on a deferred HITL approval; stream the continuation.
+
+    Re-derives tenant_id / user_id from the JWT (standard chat auth deps).
+    ResumeService loads the latest paused checkpoint for (session_id, tenant_id),
+    rebuilds the LoopState (messages from the checkpoint metadata — decision B),
+    and wires a fresh loop. A missing / cross-tenant paused checkpoint → 404
+    (multi-tenant 鐵律: never reveal cross-tenant existence).
+
+    The approval decision itself is checked inside `resume()` (non-blocking
+    get_decision): APPROVED → run the pending tool + continue to end_turn;
+    REJECTED / ESCALATED → GuardrailTriggered(block) + terminate. Both produce a
+    valid SSE stream (the checkpoint existed — it was just not approved), so we do
+    NOT 404 on an un-approved-yet decision; the stream reports the outcome.
+    """
+    result = await resume_service.resume_session(
+        session_id=session_id,
+        tenant_id=current_tenant,
+        user_id=current_user,
+        db=db,
+    )
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No resumable session {session_id} found.",
+        )
+
+    trace_ctx = TraceContext(
+        tenant_id=current_tenant,
+        session_id=session_id,
+        user_id=current_user,
+    )
+
+    return StreamingResponse(
+        _stream_resume_events(
+            result.loop,
+            state=result.state,
+            trace_context=trace_ctx,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+            "X-Session-Id": str(session_id),
+            "X-Trace-Id": trace_ctx.trace_id,
+        },
+    )

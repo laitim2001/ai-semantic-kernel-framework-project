@@ -22,6 +22,7 @@ Created: 2026-04-29 (Sprint 49.1)
 Last Modified: 2026-04-29
 
 Modification History:
+    - 2026-06-08: Sprint 57.88 US-3 — resume() doc: now implemented (durable HITL pause-resume)
     - 2026-04-29: Initial ABC stub (Sprint 49.1)
 
 Related:
@@ -66,6 +67,12 @@ class AgentLoop(ABC):
         state: LoopState,
         trace_context: TraceContext | None = None,
     ) -> AsyncIterator[LoopEvent]:
-        """Resume from a checkpointed state (e.g. after HITL approval)."""
-        raise NotImplementedError("Phase 50.1 will implement")
+        """Resume from a checkpointed state (e.g. after a deferred HITL approval).
+
+        Implemented by AgentLoopImpl since Sprint 57.88 (durable pause-resume):
+        the loaded ``state`` carries the pending tool call + approval decision
+        linkage in ``durable.metadata['pending_approval']``; resume() executes
+        the approved tool (or blocks on reject) and continues to end_turn.
+        """
+        raise NotImplementedError("AgentLoopImpl implements resume()")
         yield

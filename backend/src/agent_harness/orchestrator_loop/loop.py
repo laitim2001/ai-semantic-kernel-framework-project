@@ -45,6 +45,8 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-06-03
 
 Modification History (newest-first):
+    - 2026-06-08: Sprint 57.88 US-2 D2 — pause checkpoint self-contains messages (decision B)
+    - 2026-06-08: Sprint 57.88 US-1/US-3 — deferred-HITL pause branch + resume() impl
     - 2026-06-03: Sprint 57.75 A-5c — emit SpanStarted/Ended (6 sites) + MemoryAccessed per-hint
     - 2026-06-02: Sprint 57.71 — add PROMPT_BUILD + COMPACTION spans (A-4 Tier 1 Stage 2)
     - 2026-06-02: Sprint 57.71 — root span as-child + TURN/LLM_CALL/TOOL_EXEC spans (A-4 Tier 1)
@@ -193,6 +195,111 @@ from .termination import (
 )
 
 
+# === Message <-> JSONB-safe dict (57.88 US-2 durable pause-resume) ===========
+# Why: the checkpointer (US-3 split) does NOT persist the messages buffer, and
+# this codebase has no `messages` DB table. To resume a deferred-HITL pause the
+# loop must rehydrate the conversation, so the deferred branch serializes the
+# in-memory buffer into the checkpoint's DurableState.metadata["resume_messages"]
+# (which the existing JSONB (de)serializer round-trips — no migration / no
+# Checkpointer signature change). ResumeService reads it back to rebuild
+# transient.messages.
+#
+# SPIKE NOTE (plan §9 open question): self-contained-in-checkpoint message
+# storage is a spike shortcut. A production system should persist messages in a
+# dedicated `messages` table (or a bounded conversation summary) to avoid
+# checkpoint bloat on long conversations. Tracked as the "checkpoint bloat"
+# open question for the Day-4 design note.
+#
+# Scope: the deferred-pause buffer holds plain assistant / tool / user / system
+# messages whose `content` is `str` (the loop appends str content for those
+# roles). The list[ContentBlock] content shape is round-tripped best-effort via
+# asdict but not exercised on the pause path this slice.
+def _message_to_dict(msg: Message) -> dict[str, Any]:
+    """Serialize a Message to a JSONB-safe dict (57.88 US-2)."""
+    content: Any
+    if isinstance(msg.content, str):
+        content = msg.content
+    else:
+        # list[ContentBlock] — best-effort (not on the pause happy-path).
+        content = [_content_block_to_dict(b) for b in msg.content]
+    return {
+        "role": msg.role,
+        "content": content,
+        "tool_calls": (
+            [
+                {"id": tc.id, "name": tc.name, "arguments": dict(tc.arguments)}
+                for tc in msg.tool_calls
+            ]
+            if msg.tool_calls
+            else None
+        ),
+        "tool_call_id": msg.tool_call_id,
+        "name": msg.name,
+    }
+
+
+def _content_block_to_dict(block: ContentBlock) -> dict[str, Any]:
+    """Serialize a ContentBlock to a JSONB-safe dict (best-effort, 57.88 US-2)."""
+    return {
+        "type": block.type,
+        "text": block.text,
+        "image_url": block.image_url,
+        "tool_use_id": block.tool_use_id,
+        "tool_use_name": block.tool_use_name,
+        "tool_use_input": block.tool_use_input,
+        "tool_result_for_id": block.tool_result_for_id,
+        "tool_result_content": block.tool_result_content,
+    }
+
+
+def _message_from_dict(data: dict[str, Any]) -> Message:
+    """Rebuild a Message from a `_message_to_dict` payload (57.88 US-2)."""
+    raw_content = data.get("content", "")
+    content: str | list[ContentBlock]
+    if isinstance(raw_content, list):
+        content = [ContentBlock(**{k: v for k, v in b.items()}) for b in raw_content]
+    else:
+        content = str(raw_content)
+    raw_calls = data.get("tool_calls")
+    tool_calls = (
+        [
+            ToolCall(
+                id=str(c.get("id", "")),
+                name=str(c.get("name", "")),
+                arguments=dict(c.get("arguments", {})),
+            )
+            for c in raw_calls
+        ]
+        if raw_calls
+        else None
+    )
+    return Message(
+        role=data.get("role", "user"),
+        content=content,
+        tool_calls=tool_calls,
+        tool_call_id=data.get("tool_call_id"),
+        name=data.get("name"),
+    )
+
+
+def messages_from_metadata(metadata: dict[str, Any]) -> list[Message]:
+    """Rebuild the messages buffer from a paused checkpoint's metadata (57.88 US-2).
+
+    Reads ``metadata["resume_messages"]`` (a list of `_message_to_dict` payloads
+    persisted by the deferred-pause branch) and returns the rehydrated
+    ``list[Message]``. Returns ``[]`` when absent / malformed (defensive — a
+    checkpoint without resume_messages cannot be resumed; the caller terminates).
+    """
+    raw = metadata.get("resume_messages")
+    if not isinstance(raw, list):
+        return []
+    out: list[Message] = []
+    for item in raw:
+        if isinstance(item, dict):
+            out.append(_message_from_dict(item))
+    return out
+
+
 class AgentLoopImpl(AgentLoop):
     """Concrete TAO/ReAct loop. While-true driven, StopReason-terminated."""
 
@@ -230,6 +337,12 @@ class AgentLoopImpl(AgentLoop):
         # outcome. When None, ESCALATE remains a soft-block (53.3 baseline).
         hitl_manager: "HITLManager | None" = None,
         hitl_timeout_s: int = 14400,  # 4hr cross-session window
+        # 57.88 US-1 §durable HITL pause-resume: when True, a Cat 9 ESCALATE
+        # checkpoints + emits ApprovalRequested + terminates the run with
+        # stop_reason=awaiting_approval (releasing the SSE connection) instead
+        # of blocking on wait_for_decision. Default False preserves the 53.5
+        # blocking behavior for every existing caller / test.
+        hitl_deferred: bool = False,
     ) -> None:
         self._chat_client = chat_client
         self._output_parser = output_parser
@@ -276,6 +389,8 @@ class AgentLoopImpl(AgentLoop):
         # 53.5 US-3 §HITL Centralization
         self._hitl_manager = hitl_manager
         self._hitl_timeout_s = hitl_timeout_s
+        # 57.88 US-1 §durable HITL pause-resume (see ctor docstring above).
+        self._hitl_deferred = hitl_deferred
 
     async def _handle_tool_error(
         self,
@@ -484,12 +599,18 @@ class AgentLoopImpl(AgentLoop):
         tc: ToolCall,
         ctx: TraceContext,
         turn_count: int,
+        session_id: UUID,
+        messages: list[Message],
     ) -> AsyncIterator[LoopEvent]:
         """Cat 9 per-tool_call gating. Yields:
         GuardrailTriggered (action=BLOCK/ESCALATE/SANITIZE/REROLL) when
             guardrail returns non-PASS — caller wraps result as error
             ToolResult so LLM can adjust.
         TripwireTriggered + LoopCompleted(TRIPWIRE) when tripwire fires.
+
+        57.88 US-1: `session_id` + `messages` are threaded through so the
+        deferred-HITL ESCALATE branch can build + persist a resumable
+        checkpoint before terminating with ``awaiting_approval``.
         """
         if self._guardrail_engine is not None:
             g_result = await self._guardrail_engine.check_tool_call(tc, trace_context=ctx)
@@ -504,11 +625,16 @@ class AgentLoopImpl(AgentLoop):
                         tc=tc,
                         ctx=ctx,
                         guardrail_reason=g_result.reason or "escalated",
+                        turn_count=turn_count,
+                        session_id=session_id,
+                        messages=messages,
                     ):
                         yield ev
                     # _cat9_hitl_branch yields GuardrailTriggered(block) only
-                    # when rejected/timeout — when approved, it returns
-                    # without yielding so the caller flows to normal tool exec.
+                    # when rejected/timeout — when approved (blocking mode), it
+                    # returns without yielding so the caller flows to normal tool
+                    # exec. In deferred mode it yields LoopCompleted(awaiting_
+                    # approval) which the caller treats as a terminator.
                     return
 
                 await self._audit_log_safe(
@@ -555,15 +681,30 @@ class AgentLoopImpl(AgentLoop):
         tc: ToolCall,
         ctx: TraceContext,
         guardrail_reason: str,
+        turn_count: int = 0,
+        session_id: UUID | None = None,
+        messages: list[Message] | None = None,
     ) -> AsyncIterator[LoopEvent]:
-        """Cat 9 ESCALATE → HITL pause + wait_for_decision (Sprint 53.5 US-3).
+        """Cat 9 ESCALATE → HITL pause (Sprint 53.5 US-3 + 57.88 US-1).
 
-        Yields:
+        Two modes (selected by ``self._hitl_deferred``):
+
+        Blocking mode (default, 53.5 baseline):
             ApprovalRequested  — request created, awaiting reviewer.
             ApprovalReceived   — reviewer decision (or timeout fallback).
             GuardrailTriggered(block) — only when REJECTED / ESCALATED / TIMEOUT.
                 When APPROVED, no GuardrailTriggered is yielded — caller
-                flows to normal tool execution.
+                flows to normal tool execution. (in-process ``wait_for_decision``)
+
+        Deferred mode (57.88 US-1 — chat path durable pause-resume):
+            ApprovalRequested  — request created.
+            LoopCompleted(stop_reason="awaiting_approval") — after persisting an
+                enriched checkpoint (pending tool call + approval_request_id +
+                turn) so a later ``resume()`` can re-enter. NO blocking
+                ``wait_for_decision`` call — the SSE connection is released and
+                the human may take hours/days. Requires reducer + checkpointer +
+                tenant_id wired (Cat 7); if any is missing the deferred branch
+                falls back to blocking mode (it cannot persist a checkpoint).
 
         Risk level defaults to HIGH (escalation implies human review). Future
         sprints may pull from RiskPolicy via a callable injected at ctor time;
@@ -648,7 +789,54 @@ class AgentLoopImpl(AgentLoop):
             trace_context=ctx,
         )
 
-        # 2. Block for reviewer decision (cross-session resume supported by DB
+        # 2a. 57.88 US-1 — DEFERRED mode: persist a resumable checkpoint and
+        #     terminate with ``awaiting_approval`` (release the connection) so a
+        #     later resume() can re-enter. No blocking wait. Requires Cat 7
+        #     (reducer + checkpointer + tenant_id); without it we cannot persist
+        #     the resume payload, so we fall through to blocking mode.
+        if (
+            self._hitl_deferred
+            and self._checkpointer is not None
+            and self._reducer is not None
+            and session_id is not None
+        ):
+            pending_approval = {
+                "tool_call": {
+                    "name": tc.name,
+                    "arguments": dict(tc.arguments),
+                    "tool_call_id": tc.id,
+                },
+                "approval_request_id": str(request_id),
+                "turn": turn_count,
+            }
+            checkpoint_event = await self._emit_state_checkpoint(
+                session_id=session_id,
+                messages=messages if messages is not None else [],
+                turn_count=turn_count,
+                tokens_used=0,
+                source_category="orchestrator_loop:hitl_pause",
+                ctx=ctx,
+                pending_approval=pending_approval,
+            )
+            if checkpoint_event is not None:
+                yield checkpoint_event
+            await self._audit_log_safe(
+                event_type="guardrail.tool.escalate.deferred",
+                content={
+                    "tool": tc.name,
+                    "request_id": str(request_id),
+                    "turn": turn_count,
+                },
+                ctx=ctx,
+            )
+            yield LoopCompleted(
+                stop_reason=TerminationReason.AWAITING_APPROVAL.value,
+                total_turns=turn_count,
+                trace_context=ctx,
+            )
+            return
+
+        # 2b. Block for reviewer decision (cross-session resume supported by DB
         #    polling inside HITLManager.wait_for_decision).
         try:
             decision = await self._hitl_manager.wait_for_decision(
@@ -1349,7 +1537,11 @@ class AgentLoopImpl(AgentLoop):
                                 cat9_blocked: ToolResult | None = None
                                 cat9_terminated = False
                                 async for ev in self._cat9_tool_check(
-                                    tc=tc, ctx=ctx, turn_count=turn_count
+                                    tc=tc,
+                                    ctx=ctx,
+                                    turn_count=turn_count,
+                                    session_id=session_id,
+                                    messages=messages,
                                 ):
                                     yield ev
                                     if isinstance(ev, LoopCompleted):
@@ -1652,18 +1844,299 @@ class AgentLoopImpl(AgentLoop):
         state: LoopState,
         trace_context: TraceContext | None = None,
     ) -> AsyncIterator[LoopEvent]:
-        """Resume from checkpointed state.
+        """Resume a loop that paused on a deferred HITL approval (57.88 US-3).
 
-        50.1 Day 2 stub — full implementation in Phase 53.1 when
-        Checkpointer + State Mgmt land. Until then, calling resume()
-        yields a single LoopCompleted with reason=ERROR and a clear
-        message rather than silently breaking.
+        Replaces the 50.1 abstract stub. The caller (platform ResumeService)
+        rebuilds `state` from a paused checkpoint: `state.durable.metadata
+        ["pending_approval"]` carries the pending tool call + approval_request_id
+        + turn (persisted by the deferred ESCALATE branch, see
+        `_cat9_hitl_branch`), and `state.transient.messages` is rehydrated by
+        ResumeService from `state.durable.metadata["resume_messages"]` (decision
+        B: the US-3 checkpointer does NOT persist the buffer and this codebase
+        has no `messages` table, so the deferred-pause checkpoint self-contains
+        the buffer in its metadata — a SPIKE shortcut, see _emit_state_checkpoint
+        + messages_from_metadata; production → `messages` table, plan §9).
+
+        Flow (this slice handles exactly ONE pending-tool approval):
+            1. Read pending_approval; if absent → LoopCompleted(ERROR).
+            2. Non-blocking `HITLManager.get_decision(approval_request_id)`.
+                - undecided / no manager → LoopCompleted(ERROR) (caller should
+                  have gated on decided; defensive).
+                - APPROVED  → execute the pending tool → append the observation
+                  as a tool message → run a continuation loop to end_turn.
+                - REJECTED / ESCALATED → GuardrailTriggered(block) +
+                  LoopCompleted(GUARDRAIL_BLOCKED); the tool is NOT executed.
+
+        The continuation loop is a self-contained while-true (LLM → parse →
+        end_turn / tool exec) — it intentionally does NOT re-enter run()'s body
+        (run() starts a fresh conversation from user_input). Deeper resume
+        points + full Cat 8/9 re-arming in the continuation are a design-note
+        open question (plan §9); this slice proves the durable pause-resume line.
         """
-        yield LoopCompleted(
-            stop_reason=TerminationReason.ERROR.value,
-            total_turns=0,
-            trace_context=trace_context,
+        ctx = trace_context or TraceContext.create_root()
+        session_id = state.durable.session_id
+        messages: list[Message] = list(state.transient.messages)
+        turn_count = state.transient.current_turn
+        tokens_used = state.transient.token_usage_so_far
+
+        yield LoopStarted(session_id=session_id, trace_context=ctx)
+
+        pending = state.durable.metadata.get("pending_approval")
+        if not isinstance(pending, dict):
+            # No resumable approval on this checkpoint — defensive.
+            yield LoopCompleted(
+                stop_reason=TerminationReason.ERROR.value,
+                total_turns=turn_count,
+                total_tokens=tokens_used,
+                trace_context=ctx,
+            )
+            return
+
+        tc_data = pending.get("tool_call", {})
+        pending_tc = ToolCall(
+            id=str(tc_data.get("tool_call_id", "")),
+            name=str(tc_data.get("name", "")),
+            arguments=dict(tc_data.get("arguments", {})),
         )
+        request_id_raw = pending.get("approval_request_id")
+        request_id = UUID(str(request_id_raw)) if request_id_raw is not None else None
+
+        # --- Read the recorded decision (non-blocking) -----------------------
+        decision: ApprovalDecision | None = None
+        if self._hitl_manager is not None and request_id is not None:
+            decision = await self._hitl_manager.get_decision(request_id, trace_context=ctx)
+
+        if decision is None:
+            # Undecided (caller should have gated) or no manager → fail closed.
+            yield LoopCompleted(
+                stop_reason=TerminationReason.ERROR.value,
+                total_turns=turn_count,
+                total_tokens=tokens_used,
+                trace_context=ctx,
+            )
+            return
+
+        yield ApprovalReceived(
+            approval_request_id=request_id,
+            decision=decision.decision.value,
+            trace_context=ctx,
+        )
+
+        if decision.decision != DecisionType.APPROVED:
+            # REJECTED / ESCALATED → block the pending tool; terminate.
+            await self._audit_log_safe(
+                event_type=f"resume.approval.{decision.decision.value.lower()}",
+                content={"tool": pending_tc.name, "request_id": str(request_id)},
+                ctx=ctx,
+            )
+            yield GuardrailTriggered(
+                guardrail_type="tool",
+                action="block",
+                reason=f"approval {decision.decision.value.lower()}: "
+                f"{decision.reason or 'no reason'}",
+                trace_context=ctx,
+            )
+            yield LoopCompleted(
+                stop_reason=TerminationReason.GUARDRAIL_BLOCKED.value,
+                total_turns=turn_count,
+                total_tokens=tokens_used,
+                trace_context=ctx,
+            )
+            return
+
+        # --- APPROVED → execute the pending tool, then continue --------------
+        await self._audit_log_safe(
+            event_type="resume.approval.approved",
+            content={"tool": pending_tc.name, "request_id": str(request_id)},
+            ctx=ctx,
+        )
+        yield ToolCallRequested(
+            tool_call_id=pending_tc.id,
+            tool_name=pending_tc.name,
+            arguments=pending_tc.arguments,
+            trace_context=ctx,
+        )
+        exec_ctx = ExecutionContext(
+            tenant_id=ctx.tenant_id,
+            user_id=ctx.user_id,
+            session_id=ctx.session_id or session_id,
+        )
+        result = await self._tool_executor.execute(pending_tc, trace_context=ctx, context=exec_ctx)
+        tool_content = self._tool_result_to_text(result.content)
+        if result.success:
+            yield ToolCallExecuted(
+                tool_call_id=pending_tc.id,
+                tool_name=pending_tc.name,
+                duration_ms=result.duration_ms or 0.0,
+                result_content=tool_content,
+                trace_context=ctx,
+            )
+        else:
+            yield ToolCallFailed(
+                tool_call_id=pending_tc.id,
+                tool_name=pending_tc.name,
+                error=result.error or "unknown tool error",
+                trace_context=ctx,
+            )
+        messages.append(Message(role="tool", content=tool_content, tool_call_id=pending_tc.id))
+
+        # --- Continuation loop: LLM → parse → end_turn / tool exec -----------
+        async for ev in self._resume_continuation(
+            messages=messages,
+            turn_count=turn_count,
+            tokens_used=tokens_used,
+            ctx=ctx,
+        ):
+            yield ev
+
+    async def _resume_continuation(
+        self,
+        *,
+        messages: list[Message],
+        turn_count: int,
+        tokens_used: int,
+        ctx: TraceContext,
+    ) -> AsyncIterator[LoopEvent]:
+        """Self-contained continuation loop for resume() (57.88 US-3).
+
+        A minimal while-true (LLM → parse → end_turn / tool exec) that drives the
+        approved-and-resumed conversation to ``end_turn``. It deliberately omits
+        run()'s span/checkpoint/Cat 8/Cat 9 machinery (re-arming those in the
+        continuation is a design-note open question, plan §9) so this slice does
+        NOT refactor run()'s deeply-nested body. Honors max_turns / token_budget.
+        """
+        while True:
+            if should_terminate_by_turns(turn_count, self._max_turns):
+                yield LoopCompleted(
+                    stop_reason=TerminationReason.MAX_TURNS.value,
+                    total_turns=turn_count,
+                    total_tokens=tokens_used,
+                    trace_context=ctx,
+                )
+                return
+            if should_terminate_by_tokens(tokens_used, self._token_budget):
+                yield LoopCompleted(
+                    stop_reason=TerminationReason.TOKEN_BUDGET.value,
+                    total_turns=turn_count,
+                    total_tokens=tokens_used,
+                    trace_context=ctx,
+                )
+                return
+
+            turn_count += 1
+            yield TurnStarted(turn_num=turn_count, trace_context=ctx)
+
+            # Mirror run()'s Cat 5 contract: when a PromptBuilder is injected,
+            # build the per-turn chat() input through it (so memory layers are
+            # injected — the AP-8 invariant) and forward cache breakpoints. When
+            # None, fall back to the raw messages buffer (50.x baseline).
+            chat_messages: list[Message] = messages
+            cache_breakpoints: list[CacheBreakpoint] | None = None
+            if self._prompt_builder is not None:
+                build_state = LoopState(
+                    transient=TransientState(
+                        messages=list(messages),
+                        current_turn=turn_count,
+                        token_usage_so_far=tokens_used,
+                    ),
+                    durable=DurableState(
+                        session_id=ctx.session_id or uuid4(),
+                        tenant_id=self._tenant_id or (ctx.session_id or uuid4()),
+                    ),
+                    version=StateVersion(
+                        version=turn_count,
+                        parent_version=turn_count - 1 if turn_count > 0 else None,
+                        created_at=datetime.now(),
+                        created_by_category="orchestrator_loop:resume",
+                    ),
+                )
+                artifact = await self._prompt_builder.build(
+                    state=build_state,
+                    tenant_id=self._tenant_id or (ctx.session_id or uuid4()),
+                    user_id=ctx.user_id,
+                    tools=self._tool_registry.list(),
+                    trace_context=ctx,
+                )
+                chat_messages = list(artifact.messages)
+                cache_breakpoints = (
+                    list(artifact.cache_breakpoints) if artifact.cache_breakpoints else None
+                )
+            request = ChatRequest(
+                messages=chat_messages,
+                tools=self._tool_registry.list(),
+            )
+            response = await self._chat_client.chat(
+                request, cache_breakpoints=cache_breakpoints, trace_context=ctx
+            )
+            if response.usage is not None:
+                tokens_used += response.usage.total_tokens
+            parsed = await self._output_parser.parse(response, trace_context=ctx)
+            yield LLMResponded(
+                content=parsed.text,
+                tool_calls=tuple(parsed.tool_calls),
+                thinking=None,
+                model=response.model,
+                trace_context=ctx,
+            )
+            yield Thinking(text=parsed.text, trace_context=ctx)
+
+            if should_terminate_by_stop_reason(response):
+                yield LoopCompleted(
+                    stop_reason=TerminationReason.END_TURN.value,
+                    total_turns=turn_count,
+                    total_tokens=tokens_used,
+                    trace_context=ctx,
+                )
+                return
+
+            output_type = classify_output(response)
+            if output_type != OutputType.TOOL_USE:
+                # FINAL (or HANDOFF — not expected in this slice) → end.
+                yield LoopCompleted(
+                    stop_reason=TerminationReason.END_TURN.value,
+                    total_turns=turn_count,
+                    total_tokens=tokens_used,
+                    trace_context=ctx,
+                )
+                return
+
+            messages.append(
+                Message(
+                    role="assistant",
+                    content=parsed.text,
+                    tool_calls=parsed.tool_calls,
+                )
+            )
+            for tc in parsed.tool_calls:
+                yield ToolCallRequested(
+                    tool_call_id=tc.id,
+                    tool_name=tc.name,
+                    arguments=tc.arguments,
+                    trace_context=ctx,
+                )
+                exec_ctx = ExecutionContext(
+                    tenant_id=ctx.tenant_id,
+                    user_id=ctx.user_id,
+                    session_id=ctx.session_id,
+                )
+                result = await self._tool_executor.execute(tc, trace_context=ctx, context=exec_ctx)
+                tool_content = self._tool_result_to_text(result.content)
+                if result.success:
+                    yield ToolCallExecuted(
+                        tool_call_id=tc.id,
+                        tool_name=tc.name,
+                        duration_ms=result.duration_ms or 0.0,
+                        result_content=tool_content,
+                        trace_context=ctx,
+                    )
+                else:
+                    yield ToolCallFailed(
+                        tool_call_id=tc.id,
+                        tool_name=tc.name,
+                        error=result.error or "unknown tool error",
+                        trace_context=ctx,
+                    )
+                messages.append(Message(role="tool", content=tool_content, tool_call_id=tc.id))
 
     async def _emit_state_checkpoint(
         self,
@@ -1674,6 +2147,7 @@ class AgentLoopImpl(AgentLoop):
         tokens_used: int,
         source_category: str,
         ctx: TraceContext,
+        pending_approval: dict[str, Any] | None = None,
     ) -> StateCheckpointed | None:
         """Build LoopState from loop locals, reducer.merge → checkpointer.save.
 
@@ -1681,9 +2155,34 @@ class AgentLoopImpl(AgentLoop):
         Returns None if reducer/checkpointer/tenant_id not all configured
         (i.e., 51.x backward-compat caller path). Errors are NOT swallowed;
         the loop should fail loud rather than silently miss a checkpoint.
+
+        57.88 US-2: when ``pending_approval`` is provided (HITL deferred pause),
+        it is stored in ``DurableState.metadata["pending_approval"]`` so the
+        existing checkpointer JSONB (de)serializer round-trips it WITHOUT a
+        migration or a Checkpointer-signature change (the metadata dict already
+        persists per _serialize_state_for_db). resume() reads it back.
+
+        57.88 US-2 (decision B): the pause checkpoint ALSO stores the current
+        conversation buffer under ``metadata["resume_messages"]`` (serialized via
+        _message_to_dict). The US-3 checkpointer split drops the transient
+        messages buffer, and this codebase has no `messages` table — so the
+        deferred-pause path self-contains the buffer in the checkpoint metadata
+        for resume() / ResumeService to rehydrate. This is a SPIKE shortcut;
+        production should use a `messages` table / bounded summary (plan §9
+        checkpoint-bloat open question). Only the pause case (pending_approval set)
+        pays this cost; ordinary post_llm / post_tool checkpoints do NOT store
+        messages (metadata stays empty → no size regression on the happy path).
         """
         if self._reducer is None or self._checkpointer is None or self._tenant_id is None:
             return None
+
+        # Build the metadata payload. Only the deferred-pause path (pending_approval
+        # set) carries the resumable extras (pending tool call + message buffer);
+        # ordinary checkpoints keep metadata empty to avoid bloat.
+        metadata: dict[str, Any] = {}
+        if pending_approval is not None:
+            metadata["pending_approval"] = pending_approval
+            metadata["resume_messages"] = [_message_to_dict(m) for m in messages]
 
         # Build snapshot state from current loop locals.
         snapshot_state = LoopState(
@@ -1695,6 +2194,7 @@ class AgentLoopImpl(AgentLoop):
             durable=DurableState(
                 session_id=session_id,
                 tenant_id=self._tenant_id,
+                metadata=metadata,
             ),
             version=StateVersion(
                 version=turn_count,

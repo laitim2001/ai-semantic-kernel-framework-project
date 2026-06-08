@@ -21,6 +21,7 @@ Created: 2026-05-03 (Sprint 53.4 Day 1)
 Last Modified: 2026-05-04
 
 Modification History:
+    - 2026-06-08: Sprint 57.88 US-3 — implement non-blocking get_decision (extract _read_decision)
     - 2026-05-04: Sprint 55.3 — accept policy_store + override get_policy (closes AD-Hitl-7)
     - 2026-05-03: Day 2 — full implementation (Sprint 53.4 Day 2)
     - 2026-05-03: Initial skeleton (Sprint 53.4 Day 1) — Day 2 to implement
@@ -215,20 +216,46 @@ class DefaultHITLManager(HITLManager):
         """Poll DB until decision available or timeout."""
         deadline = datetime.now(timezone.utc) + timedelta(seconds=timeout_s)
         while datetime.now(timezone.utc) < deadline:
-            async with self._session_factory() as session:
-                row = await session.get(Approval, request_id)
-                if row is None:
-                    raise LookupError(f"approval not found: {request_id}")
-                if row.status != ApprovalState.PENDING.value:
-                    return ApprovalDecision(
-                        request_id=row.id,
-                        decision=self._state_to_decision(ApprovalState(row.status)),
-                        reviewer=str(row.approver_user_id or "system"),
-                        decided_at=row.decided_at or datetime.now(timezone.utc),
-                        reason=row.decision_reason,
-                    )
+            decision = await self._read_decision_if_decided(request_id)
+            if decision is not None:
+                return decision
             await asyncio.sleep(self._wait_poll_interval_s)
         raise TimeoutError(f"approval {request_id} not decided within {timeout_s}s")
+
+    async def get_decision(
+        self,
+        request_id: UUID,
+        *,
+        trace_context: TraceContext | None = None,
+    ) -> ApprovalDecision | None:
+        """Non-blocking single read (Sprint 57.88 US-3).
+
+        Returns the recorded decision if the approval is no longer PENDING,
+        else None. Used by AgentLoop.resume() to check a deferred approval the
+        human already decided — no polling, the connection was released at pause.
+        Raises LookupError if the request_id does not exist (caller bug / stale).
+        """
+        return await self._read_decision_if_decided(request_id)
+
+    async def _read_decision_if_decided(self, request_id: UUID) -> ApprovalDecision | None:
+        """Single DB read: return ApprovalDecision if decided, else None.
+
+        Shared by wait_for_decision (poll loop) + get_decision (single read).
+        Raises LookupError when the request does not exist.
+        """
+        async with self._session_factory() as session:
+            row = await session.get(Approval, request_id)
+            if row is None:
+                raise LookupError(f"approval not found: {request_id}")
+            if row.status != ApprovalState.PENDING.value:
+                return ApprovalDecision(
+                    request_id=row.id,
+                    decision=self._state_to_decision(ApprovalState(row.status)),
+                    reviewer=str(row.approver_user_id or "system"),
+                    decided_at=row.decided_at or datetime.now(timezone.utc),
+                    reason=row.decision_reason,
+                )
+        return None
 
     @staticmethod
     def _state_to_decision(state: ApprovalState) -> DecisionType:
