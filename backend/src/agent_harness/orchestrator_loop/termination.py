@@ -60,7 +60,8 @@ class TerminationReason(Enum):
     GUARDRAIL_BLOCKED = "guardrail_blocked"  # Cat 9 — non-tripwire BLOCK / ESCALATE
     ERROR = "error"  # Cat 8 — wired in Phase 53.2
     HANDOFF = "handoff"  # Cat 11 — control transfer to target agent (Phase 57.68)
-    AWAITING_APPROVAL = "awaiting_approval"  # Cat 9 — deferred HITL pause; loop checkpointed, resumes post-approval (Phase 57.88)
+    # Cat 9 — deferred HITL pause; loop checkpointed, resumes post-approval (Phase 57.88)
+    AWAITING_APPROVAL = "awaiting_approval"
 
 
 def should_terminate_by_stop_reason(response: ChatResponse) -> bool:

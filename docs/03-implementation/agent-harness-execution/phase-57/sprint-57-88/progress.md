@@ -70,3 +70,34 @@ Agent-delegated (code-implementer) + **parent re-verify (gates run by parent, no
 ### Next: Day 2 — Stage-2 (ResumeService + `POST /chat/{id}/resume` + integration tests + multi-tenant)
 
 ---
+
+## Day 2 — 2026-06-08 — Resume endpoint + platform service (Stage 2)
+
+Agent-delegated (code-implementer) + **parent re-verify (gates run by parent + ResumeService/endpoint/tests read by parent)**.
+
+### Two grounding-driven decisions (locked in spec)
+- **Decision A — wire `hitl_deferred=True`** in chat path: `handler.py` `build_real_llm_handler` → `AgentLoopImpl(..., hitl_deferred=(hitl_manager is not None))`. Without this the deferred branch never activates (Day-2 grounding caught it; checkpointer/reducer/hitl_manager were already injected).
+- **Decision B — checkpoint self-contains messages** (no `messages` table exists in the codebase): the deferred-pause `_emit_state_checkpoint` writes `metadata["resume_messages"]` (pause-only — normal post_llm/post_tool checkpoints stay empty, no bloat). ResumeService rehydrates `transient.messages` from it. Production should use a messages table / bounded summary (checkpoint-bloat = design-note open question, plan §9).
+
+### Done (US-4/US-5 backend)
+- **ResumeService** (`platform_layer/resume/service.py` NEW) — `resume_session(*, session_id, tenant_id, user_id, db) -> ResumeResult | None`: latest `reason="orchestrator_loop:hitl_pause"` snapshot for **(session_id, tenant_id)** (cross-tenant → no row → None → 404, 鐵律) → `DBCheckpointer.load(version)` → overlay messages from metadata → build loop via injected `build_loop` (default = real `build_real_llm_handler`, **zero divergence**). `messages_from_metadata` + msg↔dict helpers in `loop.py` (exported via `__init__`).
+- **`POST /chat/{session_id}/resume`** (`router.py`) — `Depends(get_current_tenant / get_current_user_id / get_db_session / get_resume_service)` (mirrors chat auth); None → 404; `StreamingResponse(_stream_resume_events)` (drives `loop.resume()`, reuses `serialize_loop_event`).
+- Builder extraction → abandoned (>60-line closure churn); ResumeService reuses `build_real_llm_handler` directly + `build_loop` DI for tests (the spec's sanctioned fallback).
+
+### Parent re-verify (gates run by parent)
+- `mypy src/` **0 issues / 346 files** ✅
+- `pytest` pause-resume e2e + chat_e2e + escalation + orchestrator_loop unit → **71 passed** ✅; implementer's wider sweep: chat/hitl/checkpointer 49 + integration/api 435 green.
+- `python scripts/lint/run_all.py` **10/10 green** ✅
+- Code read (parent): ResumeService tenant-guard ✓; endpoint `Depends` wiring ✓ (the gap the coroutine-test can't reach); 5 integration tests **genuine** (real loop.run → ESCALATE → checkpoint → real governance decide → resume_chat → tool exec / end_turn; + reject + cross-tenant 404 + no-paused 404).
+
+### Test-design note (honest)
+- Integration tests drive the endpoint **coroutines directly** (not via TestClient HTTP) — shared asyncpg `db_session` is bound to the test loop; TestClient's portal loop → "Future attached to a different loop" (Risk Class C). Still exercises the REAL `resume_chat` + `decide_approval` + ResumeService + `loop.resume()` + SSE serializer; **only HTTP transport is bypassed** (covered by the Day-4 chat-v2 drive-through). The `Depends()` auth wiring (which the coroutine call bypasses) was parent-read-verified instead.
+
+### Files changed (Stage-2)
+- `api/v1/chat/handler.py` (hitl_deferred wire) · `api/v1/chat/router.py` (resume endpoint + `_stream_resume_events` + `get_resume_service`)
+- `agent_harness/orchestrator_loop/loop.py` (msg↔dict helpers + `_emit_state_checkpoint` resume_messages) + `__init__.py` (export `messages_from_metadata`)
+- `platform_layer/resume/service.py` + `__init__.py` (NEW) · `tests/integration/api/test_chat_pause_resume_e2e.py` (NEW, 5)
+
+### Next: Day 3 — Stage-3 frontend (chat-v2 paused state + approve→decide→resume→new stream) → Day 4 drive-through + design note
+
+---

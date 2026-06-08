@@ -30,6 +30,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.4)
 Last Modified: 2026-06-02
 
 Modification History (newest-first):
+    - 2026-06-08: Sprint 57.88 US-1 — chat path opts into hitl_deferred=True (durable pause-resume)
     - 2026-06-02: Sprint 57.71 — thread tracer param through build_handler to loop (A-4 Tier 0)
     - 2026-06-02: Sprint 57.70 Stage-1a — await async per-tenant resolve_persona
     - 2026-06-02: Sprint 57.69 A-3b — append carried_context block to resolved persona (fail-open)
@@ -287,6 +288,15 @@ def build_real_llm_handler(
         max_turns=8,
         hitl_manager=hitl_manager,
         hitl_timeout_s=hitl_timeout_s,
+        # Sprint 57.88 US-1 (decision A): the chat path opts into DEFERRED HITL
+        # pause-resume whenever a HITLManager is wired. A tool ESCALATE then
+        # checkpoints + emits ApprovalRequested + terminates with
+        # stop_reason="awaiting_approval" (releasing the SSE connection) instead
+        # of blocking on wait_for_decision — a human approval may take hours/days.
+        # When hitl_manager is None (HITL_ENABLED=false / no factory) this is
+        # False → 53.5 baseline (the deferred branch is a no-op anyway since it
+        # needs the manager). The later POST /chat/{id}/resume drives resume().
+        hitl_deferred=(hitl_manager is not None),
         guardrail_engine=build_default_guardrail_engine(),
         compactor=compactor,
         prompt_builder=prompt_builder,

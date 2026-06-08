@@ -45,6 +45,7 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-06-03
 
 Modification History (newest-first):
+    - 2026-06-08: Sprint 57.88 US-2 D2 — pause checkpoint self-contains messages (decision B)
     - 2026-06-08: Sprint 57.88 US-1/US-3 — deferred-HITL pause branch + resume() impl
     - 2026-06-03: Sprint 57.75 A-5c — emit SpanStarted/Ended (6 sites) + MemoryAccessed per-hint
     - 2026-06-02: Sprint 57.71 — add PROMPT_BUILD + COMPACTION spans (A-4 Tier 1 Stage 2)
@@ -192,6 +193,111 @@ from .termination import (
     should_terminate_by_tokens,
     should_terminate_by_turns,
 )
+
+
+# === Message <-> JSONB-safe dict (57.88 US-2 durable pause-resume) ===========
+# Why: the checkpointer (US-3 split) does NOT persist the messages buffer, and
+# this codebase has no `messages` DB table. To resume a deferred-HITL pause the
+# loop must rehydrate the conversation, so the deferred branch serializes the
+# in-memory buffer into the checkpoint's DurableState.metadata["resume_messages"]
+# (which the existing JSONB (de)serializer round-trips — no migration / no
+# Checkpointer signature change). ResumeService reads it back to rebuild
+# transient.messages.
+#
+# SPIKE NOTE (plan §9 open question): self-contained-in-checkpoint message
+# storage is a spike shortcut. A production system should persist messages in a
+# dedicated `messages` table (or a bounded conversation summary) to avoid
+# checkpoint bloat on long conversations. Tracked as the "checkpoint bloat"
+# open question for the Day-4 design note.
+#
+# Scope: the deferred-pause buffer holds plain assistant / tool / user / system
+# messages whose `content` is `str` (the loop appends str content for those
+# roles). The list[ContentBlock] content shape is round-tripped best-effort via
+# asdict but not exercised on the pause path this slice.
+def _message_to_dict(msg: Message) -> dict[str, Any]:
+    """Serialize a Message to a JSONB-safe dict (57.88 US-2)."""
+    content: Any
+    if isinstance(msg.content, str):
+        content = msg.content
+    else:
+        # list[ContentBlock] — best-effort (not on the pause happy-path).
+        content = [_content_block_to_dict(b) for b in msg.content]
+    return {
+        "role": msg.role,
+        "content": content,
+        "tool_calls": (
+            [
+                {"id": tc.id, "name": tc.name, "arguments": dict(tc.arguments)}
+                for tc in msg.tool_calls
+            ]
+            if msg.tool_calls
+            else None
+        ),
+        "tool_call_id": msg.tool_call_id,
+        "name": msg.name,
+    }
+
+
+def _content_block_to_dict(block: ContentBlock) -> dict[str, Any]:
+    """Serialize a ContentBlock to a JSONB-safe dict (best-effort, 57.88 US-2)."""
+    return {
+        "type": block.type,
+        "text": block.text,
+        "image_url": block.image_url,
+        "tool_use_id": block.tool_use_id,
+        "tool_use_name": block.tool_use_name,
+        "tool_use_input": block.tool_use_input,
+        "tool_result_for_id": block.tool_result_for_id,
+        "tool_result_content": block.tool_result_content,
+    }
+
+
+def _message_from_dict(data: dict[str, Any]) -> Message:
+    """Rebuild a Message from a `_message_to_dict` payload (57.88 US-2)."""
+    raw_content = data.get("content", "")
+    content: str | list[ContentBlock]
+    if isinstance(raw_content, list):
+        content = [ContentBlock(**{k: v for k, v in b.items()}) for b in raw_content]
+    else:
+        content = str(raw_content)
+    raw_calls = data.get("tool_calls")
+    tool_calls = (
+        [
+            ToolCall(
+                id=str(c.get("id", "")),
+                name=str(c.get("name", "")),
+                arguments=dict(c.get("arguments", {})),
+            )
+            for c in raw_calls
+        ]
+        if raw_calls
+        else None
+    )
+    return Message(
+        role=data.get("role", "user"),
+        content=content,
+        tool_calls=tool_calls,
+        tool_call_id=data.get("tool_call_id"),
+        name=data.get("name"),
+    )
+
+
+def messages_from_metadata(metadata: dict[str, Any]) -> list[Message]:
+    """Rebuild the messages buffer from a paused checkpoint's metadata (57.88 US-2).
+
+    Reads ``metadata["resume_messages"]`` (a list of `_message_to_dict` payloads
+    persisted by the deferred-pause branch) and returns the rehydrated
+    ``list[Message]``. Returns ``[]`` when absent / malformed (defensive — a
+    checkpoint without resume_messages cannot be resumed; the caller terminates).
+    """
+    raw = metadata.get("resume_messages")
+    if not isinstance(raw, list):
+        return []
+    out: list[Message] = []
+    for item in raw:
+        if isinstance(item, dict):
+            out.append(_message_from_dict(item))
+    return out
 
 
 class AgentLoopImpl(AgentLoop):
@@ -1744,8 +1850,12 @@ class AgentLoopImpl(AgentLoop):
         rebuilds `state` from a paused checkpoint: `state.durable.metadata
         ["pending_approval"]` carries the pending tool call + approval_request_id
         + turn (persisted by the deferred ESCALATE branch, see
-        `_cat9_hitl_branch`), and `state.transient.messages` is rehydrated from
-        the messages DB table (US-3 checkpointer does NOT persist the buffer).
+        `_cat9_hitl_branch`), and `state.transient.messages` is rehydrated by
+        ResumeService from `state.durable.metadata["resume_messages"]` (decision
+        B: the US-3 checkpointer does NOT persist the buffer and this codebase
+        has no `messages` table, so the deferred-pause checkpoint self-contains
+        the buffer in its metadata — a SPIKE shortcut, see _emit_state_checkpoint
+        + messages_from_metadata; production → `messages` table, plan §9).
 
         Flow (this slice handles exactly ONE pending-tool approval):
             1. Read pending_approval; if absent → LoopCompleted(ERROR).
@@ -2051,9 +2161,28 @@ class AgentLoopImpl(AgentLoop):
         existing checkpointer JSONB (de)serializer round-trips it WITHOUT a
         migration or a Checkpointer-signature change (the metadata dict already
         persists per _serialize_state_for_db). resume() reads it back.
+
+        57.88 US-2 (decision B): the pause checkpoint ALSO stores the current
+        conversation buffer under ``metadata["resume_messages"]`` (serialized via
+        _message_to_dict). The US-3 checkpointer split drops the transient
+        messages buffer, and this codebase has no `messages` table — so the
+        deferred-pause path self-contains the buffer in the checkpoint metadata
+        for resume() / ResumeService to rehydrate. This is a SPIKE shortcut;
+        production should use a `messages` table / bounded summary (plan §9
+        checkpoint-bloat open question). Only the pause case (pending_approval set)
+        pays this cost; ordinary post_llm / post_tool checkpoints do NOT store
+        messages (metadata stays empty → no size regression on the happy path).
         """
         if self._reducer is None or self._checkpointer is None or self._tenant_id is None:
             return None
+
+        # Build the metadata payload. Only the deferred-pause path (pending_approval
+        # set) carries the resumable extras (pending tool call + message buffer);
+        # ordinary checkpoints keep metadata empty to avoid bloat.
+        metadata: dict[str, Any] = {}
+        if pending_approval is not None:
+            metadata["pending_approval"] = pending_approval
+            metadata["resume_messages"] = [_message_to_dict(m) for m in messages]
 
         # Build snapshot state from current loop locals.
         snapshot_state = LoopState(
@@ -2065,9 +2194,7 @@ class AgentLoopImpl(AgentLoop):
             durable=DurableState(
                 session_id=session_id,
                 tenant_id=self._tenant_id,
-                metadata=(
-                    {"pending_approval": pending_approval} if pending_approval is not None else {}
-                ),
+                metadata=metadata,
             ),
             version=StateVersion(
                 version=turn_count,

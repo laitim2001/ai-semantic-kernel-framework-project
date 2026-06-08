@@ -49,16 +49,16 @@
 ## Day 2 — Resume endpoint + platform service + integration tests (Stage 2)
 
 ### 2.1 Resume orchestration (US-4)
-- [ ] `platform_layer/resume/service.py` `ResumeService.resume_session(*, session_id, tenant_id, user_id, db)`: load paused checkpoint; reject (no-paused / cross-tenant 404 / un-decided); drive `AgentLoopImpl.resume(...)`
-- [ ] `POST /api/v1/chat/{session_id}/resume` SSE endpoint (JWT tenant/user; same serializer path); confirm normal stream closes cleanly on `awaiting_approval`
+- [x] `platform_layer/resume/service.py` `ResumeService.resume_session(...)`: latest `hitl_pause` snapshot for (session,tenant) → cross-tenant/no-row → None → 404; `DBCheckpointer.load` + messages from metadata; build loop via injected `build_loop` (default real chat builder, zero divergence). Decision B: messages self-contained in checkpoint (no messages table)
+- [x] `POST /chat/{session_id}/resume` — `Depends(get_current_tenant/get_current_user_id/get_db_session/get_resume_service)` mirror chat auth; None→404; `StreamingResponse(_stream_resume_events)` reuses `serialize_loop_event`. Decision A: `hitl_deferred=(hitl_manager is not None)` wired in handler.py
 
 ### 2.2 Integration tests (US-5)
-- [ ] `test_chat_pause_resume.py`: ESCALATE deferred → `awaiting_approval` + checkpoint `pending_approval` persisted (tenant-scoped) + `ApprovalRequested`; record decision (governance endpoint); `/chat/{id}/resume` → APPROVED tool exec + continue end_turn + continuation streamed; REJECTED → block, no exec
-- [ ] **multi-tenant**: resume with mismatched tenant JWT → 404 (鐵律); non-paused/un-decided → rejected
-- [ ] `ResumeService` rejection-path unit tests
+- [x] `test_chat_pause_resume_e2e.py` (5, real Postgres): pause→`awaiting_approval`+checkpoint(pending_approval+resume_messages); governance decide→APPROVED→resume→tool exec+end_turn; REJECTED→block+no exec
+- [x] **multi-tenant**: cross-tenant resume → 404 (no leak, tool not run); no-paused → 404
+- [x] (ResumeService paths covered by the 5 e2e tests; rejection/404 paths asserted there rather than separate unit file)
 
-### 2.3 Backend sweep
-- [ ] mypy 0; run_all 10/10; full `pytest tests/unit tests/integration` green (Risk Class C: ensure resume/new-endpoint tests override `get_db_session`)
+### 2.3 Backend sweep — parent re-verified
+- [x] mypy 0/346; run_all 10/10; 71 passed (pause-resume e2e + chat_e2e + escalation + loop unit); Risk Class C handled (shared db_session, commit→flush, endpoint get_db_session = test session). Endpoint `Depends` wiring parent-read-verified (coroutine test bypasses HTTP transport)
 
 ---
 
