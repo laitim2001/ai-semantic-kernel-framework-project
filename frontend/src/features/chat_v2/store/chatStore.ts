@@ -307,6 +307,14 @@ export const useChatStore = create<ChatStoreState>((set) => ({
             status: "running",
             errorMessage: null,
             handoffBanner: null,
+            // Sprint 57.88 (US-5): a new loop cycle — including a resume after a
+            // deferred HITL approval — clears the stale "awaiting approval"
+            // indicator from the turn that paused earlier. Once the loop is
+            // running again, no prior agent turn is still awaiting. No-op on a
+            // normal first send (no prior waiting turn).
+            turns: s.turns.map((t) =>
+              t.role === "agent" && t.waiting ? { ...t, waiting: false } : t,
+            ),
           };
         }
 

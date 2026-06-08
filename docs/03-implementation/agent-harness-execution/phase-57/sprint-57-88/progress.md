@@ -101,3 +101,44 @@ Agent-delegated (code-implementer) + **parent re-verify (gates run by parent + R
 ### Next: Day 3 — Stage-3 frontend (chat-v2 paused state + approve→decide→resume→new stream) → Day 4 drive-through + design note
 
 ---
+
+## Day 3 — 2026-06-08 — Frontend pause/resume wiring (Stage 3)
+
+Parent-direct (no agent delegation this stage — surgical 4-file wiring) + **parent re-verify (all FE gates run by parent)**.
+
+### Day-0-style grounding (2 parallel Explore + 4 file reads)
+- **Q1 (ESCALATE trigger) — KEY FINDING**: real chat path registers `echo_tool` (DEMO_SYSTEM_PROMPT drives the LLM to call it on "echo X"), but `build_default_guardrail_engine()` does **NOT** register `ToolGuardrail` → no tool currently ESCALATEs. The Day-4 drive-through needs a **deterministic ESCALATE trigger** (env-gated demo escalation of `echo_tool`, not the full CapabilityMatrix path — deferred). Surfaced to user before Day-4.
+- **Q2 (frontend) — most wiring already present**: `loop_end(stop_reason="awaiting_approval")` already sets `waiting` + records `stopReason`; `approval_requested` already pushes `HITLTurn`; `HITLTurn` Approve already calls `governanceService.decide()`. **Only gap**: after approve, call `POST /chat/{id}/resume` + consume the continuation stream.
+- **Resume event sequence** (loop.py `resume()` L1841+): `loop_start → approval_received → tool_call_request → tool_call_result(same id) → turn_start → llm_response → loop_end(end_turn)`. The continuation's `tool_call_result` updates the still-pending escalated `ToolBlock` **by tool_call_id** → mergeEvent needs **no change** for continuation rendering.
+
+### Done (US-5 frontend)
+- **`chatService.ts`** — `resumeChat(sessionId, opts)` (POST `/api/v1/chat/{id}/resume`, no body, `fetchWithAuth` JWT); extracted `consumeSSEStream` shared by `streamChat` + `resumeChat` (DRY; streamChat behavior byte-preserved — parseSSEFrame test still green).
+- **`useLoopEventStream.ts`** — `resume()`: reads sessionId/status from live store (no stale closure), owns AbortController, streams via `resumeChat` → `mergeEvent`, settles status.
+- **`HITLTurn.tsx`** — Approve → `decide()` → optimistic `approval_received` → **`resume()` guarded on `stopReason === "awaiting_approval"`** (the guard scopes resume to the NEW deferred-pause flow only; the legacy blocking-HITL flow — Sprint 53.5/53.6 — continues server-side on the same open stream and must NOT be resumed, protecting `approval-card.spec.ts`). Reject never resumes.
+- **`chatStore.ts`** — `loop_start` now clears the stale `waiting` ("awaiting approval") indicator on any prior agent turn (Drive-Through honesty: no misleading label after approval). No-op on a normal first send.
+
+### Decisions (Stage 3)
+- **Resume trigger lives in `HITLTurn` via the hook** (not a store action) — keeps streaming in service→hook layer (store stays a pure reducer). HITLTurn already imports `useChatStore` + `governanceService`, so adding the hook is consistent.
+- **`stopReason === "awaiting_approval"` guard** is the clean separator between deferred pause (client resume) and legacy blocking HITL (server continues same stream) — protects existing e2e without branching the component.
+- **No new `paused` ChatStatus** (YAGNI): the `waiting` indicator + HITL card convey the pause honestly; `status="completed"` correctly reflects the genuinely-closed SSE stream.
+
+### Parent re-verify (all FE gates run by parent)
+- `npm run lint` (no `--silent`) exit **0** ✅ · `npx tsc --noEmit` exit **0** ✅ · `npm run build` exit **0** ✅
+- `npx vitest run` → **772 passed / 134 files** ✅ (incl. 2 NEW: `chatStore.pauseResume.test.ts` 3 + `HITLTurn.resume.test.tsx` 3; existing parseSSEFrame/mergeEvent/subagents/verifications green — refactor + loop_start change zero-regression)
+- `npm run check:mockup-fidelity` ✅ (styles byte-identical; oklch baseline **53 unchanged** — TS/comment-only changes, no CSS)
+
+### Test design (honest)
+- `chatStore.pauseResume.test.ts` drives the FULL pause+resume event sequence through the real `mergeEvent` → proves continuation renders (escalated tool pending→ok by id, waiting cleared, HITL decided, answer in new turn) WITHOUT a stubbed reducer.
+- `HITLTurn.resume.test.tsx` mocks `governanceService` + `useLoopEventStream` → asserts the trigger + the `stopReason` guard (approve+awaiting → resume fired; approve+non-paused → guarded off; reject → no resume).
+- **NOT yet drive-through-verified** — Stage-3 is unit-gated only; real UI + real backend + real LLM ESCALATE is Day-4 (hard constraint). Day-4 needs the ESCALATE trigger decided first.
+
+### Files changed (Stage-3)
+- `frontend/src/features/chat_v2/services/chatService.ts` (+resumeChat, extract consumeSSEStream)
+- `frontend/src/features/chat_v2/hooks/useLoopEventStream.ts` (+resume)
+- `frontend/src/features/chat_v2/components/turns/HITLTurn.tsx` (resume trigger + guard)
+- `frontend/src/features/chat_v2/store/chatStore.ts` (loop_start clears stale waiting)
+- `frontend/tests/unit/chat_v2/chatStore.pauseResume.test.ts` (NEW, 3) · `frontend/tests/unit/chat_v2/HITLTurn.resume.test.tsx` (NEW, 3)
+
+### Next: Day 4 — ESCALATE trigger (env-gated demo, user decision pending) → chat-v2 drive-through (real UI + backend + LLM) → design note `19-pause-resume-design.md` 8-point gate → closeout
+
+---

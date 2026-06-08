@@ -2,7 +2,7 @@
  * File: frontend/src/features/chat_v2/services/chatService.ts
  * Purpose: Browser SSE consumer — fetch + ReadableStream parser.
  * Category: Frontend / chat_v2 / services
- * Scope: Phase 50 / Sprint 50.2 (Day 3.4) → Sprint 57.8 Day 3 D3 fetchWithAuth swap
+ * Scope: Phase 50 / Sprint 50.2 (Day 3.4) → Sprint 57.8 fetchWithAuth → Sprint 57.88 resume stream
  *
  * Description:
  *   Sends POST /api/v1/chat/ and parses the `text/event-stream` response
@@ -24,16 +24,23 @@
  *   is authenticated. Anonymous requests still work for backward compat
  *   while other pages lack auth gates (per AD-Frontend-AuthUX Phase 58.x).
  *
+ *   Sprint 57.88 (US-5): `resumeChat` drives the durable HITL pause-resume
+ *   continuation — POST /api/v1/chat/{id}/resume (no body; tenant + user from
+ *   auth) opens a FRESH SSE stream of the post-approval continuation (execute
+ *   the approved pending tool → continue to end_turn). Both functions share the
+ *   `consumeSSEStream` reader/parser (extracted to avoid duplication).
+ *
  * Created: 2026-04-30 (Sprint 50.2 Day 3.4)
- * Last Modified: 2026-05-09
+ * Last Modified: 2026-06-08
  *
  * Modification History (newest-first):
+ *   - 2026-06-08: Sprint 57.88 US-5 — +resumeChat (POST /chat/{id}/resume); extract consumeSSEStream
  *   - 2026-05-09: Sprint 57.8 D3 — swap raw fetch to fetchWithAuth (JWT injection)
  *   - 2026-04-30: Initial creation (Sprint 50.2 Day 3.4)
  *
  * Related:
- *   - backend POST /api/v1/chat/ (router.py)
- *   - ../hooks/useLoopEventStream.ts (consumer)
+ *   - backend POST /api/v1/chat/ + POST /api/v1/chat/{id}/resume (router.py)
+ *   - ../hooks/useLoopEventStream.ts (consumer — send + resume)
  *   - ../../auth/services/authService.ts (fetchWithAuth helper)
  */
 
@@ -46,6 +53,8 @@ export type ChatRequestBody = {
   session_id?: string;
 };
 
+// Shared by streamChat + resumeChat: both consume the same SSE wire format,
+// only the request (verb / URL / body) differs.
 export type StreamChatOptions = {
   onEvent: (ev: LoopEvent) => void;
   onError?: (err: Error) => void;
@@ -79,6 +88,59 @@ export async function streamChat(
     return;
   }
 
+  await consumeSSEStream(response, opts);
+}
+
+/**
+ * Sprint 57.88 (US-5): resume a chat that paused on a deferred HITL approval.
+ *
+ * POST /api/v1/chat/{sessionId}/resume carries NO body — the backend rebuilds
+ * the paused checkpoint from (session_id, tenant_id) where tenant + user come
+ * from the auth context (fetchWithAuth injects the JWT). The response is a fresh
+ * SSE stream of the post-approval continuation (loop_start → approval_received →
+ * the approved pending tool's tool_call_result → turn_start → … → loop_end),
+ * parsed identically to the initial stream. A missing / cross-tenant checkpoint
+ * → HTTP 404 → onError (the caller surfaces it; it should not happen in the
+ * normal approve flow). The approval decision itself is recorded out-of-band via
+ * POST /governance/approvals/{id}/decide BEFORE this call.
+ */
+export async function resumeChat(
+  sessionId: string,
+  opts: StreamChatOptions,
+): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetchWithAuth(`/api/v1/chat/${sessionId}/resume`, {
+      method: "POST",
+      headers: { Accept: "text/event-stream" },
+      signal: opts.signal,
+    });
+  } catch (err) {
+    if ((err as Error).name === "AbortError") return;
+    opts.onError?.(err as Error);
+    return;
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    opts.onError?.(new Error(`HTTP ${response.status}: ${text}`));
+    return;
+  }
+
+  await consumeSSEStream(response, opts);
+}
+
+/**
+ * Read a `text/event-stream` Response body to completion, parsing each SSE
+ * frame and dispatching valid LoopEvents to onEvent. Aborts cleanly (no further
+ * onEvent) when the signal fires; other read errors route to onError. Shared by
+ * streamChat + resumeChat (the response/ok handling differs; the consumption
+ * does not).
+ */
+async function consumeSSEStream(
+  response: Response,
+  opts: StreamChatOptions,
+): Promise<void> {
   const body_ = response.body;
   if (!body_) {
     opts.onError?.(new Error("response body is null"));

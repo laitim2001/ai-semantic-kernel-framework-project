@@ -65,11 +65,14 @@
 ## Day 3 — Frontend pause/resume wiring (Stage 3)
 
 ### 3.1 Paused state (US-5)
-- [ ] chat-v2 store/components handle `LoopCompleted.stop_reason=="awaiting_approval"` → render "Awaiting approval (paused)" + `ApprovalCard`/`HITLTurn`; mark stream closed
+- [x] chat-v2 store/components handle `LoopCompleted.stop_reason=="awaiting_approval"` → render "Awaiting approval (paused)" + `ApprovalCard`/`HITLTurn`; mark stream closed
+  - Done: `loop_end(awaiting_approval)` already sets agent turn `waiting=true` ("awaiting approval" indicator) + `stopReason`; `approval_requested` already pushes `HITLTurn`; `status="completed"` reflects the genuinely-closed SSE stream. `loop_start` now clears the stale `waiting` indicator on resume (Drive-Through honesty). No new `paused` status (YAGNI).
 ### 3.2 Approve → resume (US-5)
-- [ ] ApprovalCard approve → `POST /governance/approvals/{request_id}/decide` → `POST /chat/{session_id}/resume` → consume new SSE stream → render continuation + final answer (reuse `chatStore` SSE consumer)
+- [x] ApprovalCard approve → `POST /governance/approvals/{request_id}/decide` → `POST /chat/{session_id}/resume` → consume new SSE stream → render continuation + final answer (reuse `chatStore` SSE consumer)
+  - Done: `chatService.resumeChat` (POST `/chat/{id}/resume`, shared `consumeSSEStream`); `useLoopEventStream.resume()`; `HITLTurn` Approve → `decide()` → optimistic merge → `resume()` **guarded on `stopReason==="awaiting_approval"`** (scopes to deferred-pause flow; protects legacy blocking-HITL e2e). Continuation `tool_call_result` updates the pending escalated ToolBlock by id → no mergeEvent change.
 ### 3.3 Frontend green
-- [ ] `npm run lint && npm run build` (NO `--silent`); `tsc` 0; Vitest green (+ new tests); `check:mockup-fidelity` ✓ (oklch baseline unchanged)
+- [x] `npm run lint && npm run build` (NO `--silent`); `tsc` 0; Vitest green (+ new tests); `check:mockup-fidelity` ✓ (oklch baseline unchanged)
+  - Parent re-verified: lint exit 0 / tsc exit 0 / build exit 0 / Vitest **772 passed (134 files)** incl. 2 new test files (6 tests) / mockup-fidelity ✓ (oklch baseline 53 unchanged)
 
 ---
 
