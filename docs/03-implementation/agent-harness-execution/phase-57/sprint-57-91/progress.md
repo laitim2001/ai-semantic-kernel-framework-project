@@ -45,4 +45,39 @@
 ### Day 0 actions
 - [x] Branch `feature/sprint-57-91-generalized-pause-input-escalate` from `main` `1cf0ceb4`
 - [x] Three-prong verify (Prong 1 path + Prong 2 content + Prong 3 N/A) + 4 drift findings catalogued + GO
-- [ ] plan + checklist + progress committed (Day-0 commit) — next
+- [x] plan + checklist + progress committed (Day-0 commit `faee9a27`)
+
+---
+
+## Day 1-2 — Code + tests (2026-06-08)
+
+**Code** (commit `ecb64b57`, loop.py net +44/-? plus new guardrail + handler):
+- `loop.py`: NEW `_emit_deferred_pause` primitive (durable-pause tail decoupled from a tool); tool deferred tail routed through it (`pending_approval` gains `"kind":"tool"`, byte-identical — 14 tool-path pause-resume tests pass unchanged); `_cat9_input_check` extended sig + ESCALATE branch; NEW `_cat9_input_hitl_pause` (input ApprovalRequest → `ApprovalRequested` → `_emit_deferred_pause(input-kind)`, fail-closed BLOCK on no-identity/persist-fail); `resume()` branches on `pending_approval["kind"]` (input-kind APPROVED drives `_run_turns` no tool; tool-kind unchanged); `run()` call site threads `session_id`/`messages`/`turn_count`.
+- NEW `guardrails/input/escalation_keyword_detector.py` (`KeywordEscalationGuardrail`, INPUT, ESCALATE on phrase) + `input/__init__.py` export.
+- `handler.py`: `CHAT_HITL_ESCALATE_INPUT_PHRASES = {"approval required"}` + `engine.register(KeywordEscalationGuardrail(...), priority=5)` gated on `hitl_manager is not None`.
+
+**Tests** (+11): 4 input pause-resume unit (`test_input_escalate_pauses_before_llm` / `test_input_escalate_without_hitl_blocks` / `test_resume_input_approved_continues_no_tool` / `test_resume_input_rejected_blocks`) + 7 `KeywordEscalationGuardrail` unit. Tool-path tests UNCHANGED.
+
+**Gates**: pytest **2243 passed / 4 skipped** (baseline 2232 → +11, NET delta documented, no test deleted) · mypy `src --strict` **0** (347 files, +1 guardrail) · run_all **10/10** (AP-1 ✅ / LLM SDK leak 0 / AP-8 / event-schema sync — no new events) · black/isort/flake8 clean.
+
+---
+
+## Day 3 — Drive-through (US-6) — **PASS** (2026-06-08)
+
+### Risk Class E — caught a stale process serving old code
+First drive-through attempt: the input went straight to the LLM (answered "Paris", no pause). Diagnosis (NOT trusting the symptom): the `:8000` listener was owned by a STALE pre-57.91 process **PID 19056** (with spawn-worker 55392), NOT the fresh backend the `dev.py restart` reported (PID 57924) — SO_REUSEADDR let the old listener keep serving my requests against pre-57.91 `handler.py` (no input guardrail registered). Isolated the guardrail logic with a no-LLM repro (`check_input("approval required: …")` → `ESCALATE` ✅), confirming the bug was process-state, not code. Killed ALL stale uvicorn python procs (19056/55392 + orphaned 39508 + redundant 57924/48692), confirmed `:8000` FREE, started ONE clean backend (**PID 50548**, health 200, my committed code). `HITL_ENABLED` absent → default ON; `service_factory` passed on run path (router.py:225) → `hitl_manager` present → guardrail registered. (Reinforces `.claude/rules/sprint-workflow.md §Risk Class E`.)
+
+### Drive-through: real UI (chat-v2 :3007) + real backend (PID 50548) + real Azure gpt-5.2 (repo-root `.env`)
+Logged in dev-login dan@acme.com · admin / acme-prod; mode `real_llm`. Sent: `approval required: what is the capital of France? answer in one word.`
+
+| Step | Observed | Intended | ✓ |
+|------|----------|----------|---|
+| Send trigger input | Loop visualizer: `loop_start → span LOOP → approval_requested risk=HIGH → state_checkpointed v1 → span_ended LOOP → loop_end stop=awaiting_approval turns=0`. **No `llm_request` / no answer.** | Input guardrail ESCALATE pauses BEFORE any LLM call | ✅ |
+| Pause UI | Orange "Approval required: HIGH" HITL card; **`tool: —`** (no tool_call → input-kind); `approval_id: 654eb584-…`; Approve & Reject buttons; answer NOT rendered | Input-kind HITL card surfaces; SSE released; no answer | ✅ |
+| Frontend | The HITL card + Approve rendered with NO frontend change (events are tool-agnostic; `tool: —` for a no-tool pause) | No frontend fix needed | ✅ |
+| Click Approve | Card → `Decision: APPROVED`; loop resumes | Approve drives `POST /chat/{id}/resume` | ✅ |
+| Resume + answer | Agent turn `stop: end_turn` → **"Paris"** rendered (real gpt-5.2) | resume() input-kind APPROVED → drives `_run_turns` to the first LLM turn (no tool exec) → answer | ✅ |
+
+**Evidence**: `artifacts/sprint-57-91-input-pause-1-paused.png` (HITL card, no answer) + `artifacts/sprint-57-91-input-pause-2-resumed-answer.png` (APPROVED + "Paris").
+
+**Verdict: PASS** — the generalized input-ESCALATE pause point works end-to-end through the real UI + backend + LLM, with no frontend change. (Not gate-only; actually driven.)

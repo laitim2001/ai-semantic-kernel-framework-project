@@ -65,25 +65,24 @@
 - [x] **Full backend pytest green (NET delta documented)** — baseline 2232 → **2243 passed / 4 skipped** = +11 (4 input pause-resume unit + 7 guardrail unit); NO test deleted
 - [x] **mypy 0 + run_all 10/10 + format chain** — mypy `src --strict` 0 (347 files); run_all 10/10 (LLM SDK leak 0; AP-1; AP-8; event-schema sync); black/isort/flake8 clean
 
-### 3.2 Drive-through (US-6 — input pause is user-facing)
-- [ ] **Clean backend restart (Risk Class E)** — `dev.py restart backend` kill stale `--reload` workers → fresh process (committed code incl. the new guardrail); real Azure gpt-5.2 from repo-root `.env`
-- [ ] **Drive the input pause through real UI + real backend + real Azure** — trigger-phrase input → pause (HITL card, no answer yet) → approve → resume → LLM answers the approved input
-  - Walk every control: the input HITL card appears; its Approve drives `/resume`; the answer renders. If the card / Approve does NOT surface for a no-tool pause, fix the frontend (in scope, US-6).
-  - Evidence: `artifacts/sprint-57-91-input-pause-drivethrough.png` + observed-vs-intended table in progress.md Day 3.
-- [ ] **Frontend gap (if any) fixed** — record whether a frontend change was needed (expected: none; events are tool-agnostic)
+### 3.2 Drive-through (US-6 — input pause is user-facing) — **PASS**
+- [x] **Clean backend restart (Risk Class E)** — caught a stale pre-57.91 listener (PID 19056) serving old code via SO_REUSEADDR; killed all stale uvicorn procs → ONE clean backend (PID 50548, health 200, committed code). `HITL_ENABLED` default ON; `hitl_manager` present on run path.
+- [x] **Drive the input pause through real UI + real backend + real Azure** — `approval required: …` → pause (HITL card "tool: —" = input-kind, no answer, `loop_end awaiting_approval turns=0`, no LLM call) → Approve → `Decision: APPROVED` → resume → real gpt-5.2 answers "Paris" (`end_turn`). Observed-vs-intended table in progress.md Day 3.
+  - Evidence: `artifacts/sprint-57-91-input-pause-1-paused.png` + `-2-resumed-answer.png`
+- [x] **Frontend gap (if any) fixed** — NONE needed; the HITL card + Approve surfaced generically for a no-tool pause (events are tool-agnostic; `tool: —`)
 
 ### 3.3 CHANGE-058 + design-note update
-- [ ] `claudedocs/4-changes/feature-changes/CHANGE-058-generalized-pause-input-escalate.md` written
-- [ ] `19-pause-resume-design.md §5` — "Generalized pause points" split into shipped (input-ESCALATE + `_emit_deferred_pause` primitive) + still-deferred (between-turns / mid-thinking); add `pending_approval.kind` to §1/§3
-- [ ] `17-cross-category-interfaces.md` — 1-line note `awaiting_approval` now also originates from an input-guardrail ESCALATE (no new contract)
+- [x] `claudedocs/4-changes/feature-changes/CHANGE-058-generalized-pause-input-escalate.md` written
+- [x] `19-pause-resume-design.md §5` — "Generalized pause points" split into shipped (input-ESCALATE + `_emit_deferred_pause` primitive) + still-deferred (between-turns / mid-thinking); §1 pointer + `pending_approval.kind`
+- [x] `17-cross-category-interfaces.md` — `LoopCompleted` row: `awaiting_approval` now also originates from an input-guardrail ESCALATE (no new contract)
 
 ---
 
 ## Day 4 — Closeout
 
 ### 4.1 Closeout
-- [ ] Full validation (parent re-verified): pytest 2232+N / mypy 0/346 / run_all 10/10 / tool-path tests unchanged / **drive-through PASS** (screenshot + observed-vs-intended table)
-- [ ] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
-- [ ] Calibration: `backend-core-loop-refactor` 0.55 (3rd data point, caveated — feature-add shape) + `agent_factor` 1.0 (parent-direct); record `calibration-log.md §3`; carryover (Slice 3 legs 2/3 / subagent child-loop / 57.88 ADs) → next-phase-candidates.md
-- [ ] MEMORY.md pointer + `project_phase57_91_*.md` subfile + CLAUDE.md lean (Current Sprint row + Last Updated) + CHANGE-058 + `19-pause-resume-design.md §5` updated
+- [x] Full validation (parent re-verified): pytest **2243** (+11) / mypy 0/347 / run_all 10/10 / tool-path tests unchanged / **drive-through PASS** (2 screenshots + observed-vs-intended table)
+- [x] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
+- [x] Calibration: `backend-core-loop-refactor` 0.55 (3rd data point, caveated — feature-add shape) + `agent_factor` 1.0 (parent-direct); recorded `calibration-log.md §3`; carryover (Slice 3 legs 2/3 / subagent child-loop / 57.88 ADs) → next-phase-candidates.md
+- [x] MEMORY.md pointer + `project_phase57_91_*.md` subfile + CLAUDE.md lean (Current Sprint row + Last Updated) + CHANGE-058 + `19-pause-resume-design.md §5` + 17.md note updated
 - [ ] commit (Day 0-N) + push + PR — **push + PR pending user authorization**
