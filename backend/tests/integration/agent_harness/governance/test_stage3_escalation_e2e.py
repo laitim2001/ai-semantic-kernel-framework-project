@@ -237,6 +237,23 @@ class FakeHITLManager(HITLManager):
             reason=f"test {self._decision_type.value.lower()}",
         )
 
+    async def get_decision(
+        self,
+        request_id: UUID,
+        *,
+        trace_context: TraceContext | None = None,
+    ) -> ApprovalDecision | None:
+        # Non-blocking: None when still pending (timeout sim), else canned.
+        if self._timeout or self._decision_type is None:
+            return None
+        return ApprovalDecision(
+            request_id=request_id,
+            decision=self._decision_type,
+            reviewer="reviewer@test",
+            decided_at=datetime.now(timezone.utc),
+            reason=f"test {self._decision_type.value.lower()}",
+        )
+
     async def get_policy(
         self,
         tenant_id: UUID,

@@ -19,6 +19,7 @@ Owner: 01-eleven-categories-spec.md §HITL Centralization
 Single-source: 17.md §5
 
 Modification History:
+    - 2026-06-08: Sprint 57.88 US-3 — add non-blocking get_decision() to HITLManager
     - 2026-05-04: Sprint 55.3 — add HITLPolicyStore ABC (closes AD-Hitl-7)
     - 2026-04-29: Initial creation (Sprint 49.1)
 """
@@ -71,6 +72,23 @@ class HITLManager(ABC):
         timeout_s: int,
         trace_context: TraceContext | None = None,
     ) -> ApprovalDecision: ...
+
+    @abstractmethod
+    async def get_decision(
+        self,
+        request_id: UUID,
+        *,
+        trace_context: TraceContext | None = None,
+    ) -> ApprovalDecision | None:
+        """Non-blocking single read of a recorded decision (Sprint 57.88 US-3).
+
+        Unlike ``wait_for_decision`` (which polls until decided or times out),
+        this returns immediately: ``None`` if the request is still PENDING (or
+        not found), else the ``ApprovalDecision``. Used by ``AgentLoop.resume()``
+        to check a deferred approval that the human already decided hours/days
+        earlier — no blocking, the connection was released at pause time.
+        """
+        ...
 
     @abstractmethod
     async def get_pending(

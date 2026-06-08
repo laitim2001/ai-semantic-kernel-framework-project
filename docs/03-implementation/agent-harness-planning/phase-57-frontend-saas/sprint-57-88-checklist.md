@@ -12,36 +12,37 @@
 ## Day 0 — Plan-vs-Repo Verify + Branch
 
 ### 0.1 Three-prong Day-0 verify
-- [ ] **Prong 1 (path)**: `loop.py` `_cat9_hitl_branch` (~:552-697) + `wait_for_decision` call (~:654); `_abc.py:63-71` `resume()`; `checkpointer.py:12-16/68-70/94-100`; `_contracts/state.py`; `_contracts/events.py:382/388` (Approval events) + `LoopCompleted`/`TerminationReason`; `_contracts/hitl.py:55-77`; `hitl/_abc.py:53-99`; `governance/router.py:149-180` (decide endpoint); `chat/router.py`+`handler.py`+`sse.py`; `chat_v2` `ApprovalCard.tsx`/`HITLTurn.tsx`+store
-- [ ] **Prong 2 (content)**: exact `_cat9_hitl_branch` flow + `ApprovalRequested`/`LoopCompleted` field lists; does a **non-blocking `get_decision`** exist on `HITLManager` (or only `wait_for_decision`)?; how the chat stream ends (keys off `LoopCompleted`, not a specific stop_reason?); how `DefaultHITLManager` stores/reads the `ApprovalDecision`; chat-v2 SSE consumer + stop_reason handling
-- [ ] **Prong 3 (schema)**: `state_snapshots` table schema — can its payload column hold the `pending_approval` block (→ **no migration**)? if not → `0028` plan; confirm tenant_id + RLS; migration head = `0027`
-- [ ] **Doc-location**: 17.md target section for `resume()`/checkpoint contract; design note `19-pause-resume-design.md` (confirm `19` free)
-- [ ] Catalogue D-DAY0-1.. in progress.md; **go/no-go**
+- [x] **Prong 1 (path)**: all anchors confirmed — `_cat9_hitl_branch` loop.py:552-697; `_abc.py:63-71` resume; `checkpointer.py:118-181`; events.py:382/388; hitl.py:55/69; HITLManager; `manager.py` DefaultHITLManager; governance decide; chat router:138 + `_stream_loop_events`; `state.py:75` StateSnapshot
+- [x] **Prong 2 (content)**: shapes captured (progress.md Day-0) — `_cat9_hitl_branch(*, tc, ctx, guardrail_reason)`; ApprovalRequested{approval_request_id, risk_level}; ApprovalReceived{approval_request_id, decision}; **NO non-blocking get_decision** (D-DAY0-1, must add); stream ends on `LoopCompleted` (D-DAY0-3 → awaiting_approval closes cleanly); decisions in `approvals` table (status!=PENDING)
+- [x] **Prong 3 (schema)**: `state_snapshots.state_data` JSONB holds `pending_approval` → **免 migration** (D-DAY0-2); tenant_id+RLS ✓; head `0027`
+- [x] **Doc-location**: 17.md contract section; `19-pause-resume-design.md` free (18-handoff→20-iam; 19 skipped)
+- [x] Catalogued D-DAY0-1..8 in progress.md; **go/no-go = GO**
 
 ### 0.2 Branch + decisions
-- [ ] Branch `feature/sprint-57-88-pause-resume` from latest `main`; plan+checklist commit; Day-0 progress commit
-- [ ] Lock decisions: deferred mode = chat path only (blocking retained); resume trigger = NEW `POST /chat/{id}/resume` (governance decide unchanged); checkpoint enrich in existing JSONB (migration only if Prong-3 forces); ONE tool trigger = reuse `request_approval`; **Agent-delegated: yes** (Stage 1-3 below; drive-through + design note parent-driven)
+- [x] Branch `feature/sprint-57-88-pause-resume` from `41f1ed05`; plan+checklist (`65ab34fc`); Day-0 progress
+- [x] Locked: deferred = chat path only (blocking retained); resume trigger = NEW `POST /chat/{id}/resume`; checkpoint enrich in JSONB (**no migration** per D-DAY0-2); reuse `request_approval`; enum in `termination.py` not events.py (D-DAY0-7); **Agent-delegated: yes**
 
 ---
 
 ## Day 1 — Backend core (Stage 1)
 
 ### 1.1 Deferred-approval pause (US-1)
-- [ ] `TerminationReason.AWAITING_APPROVAL="awaiting_approval"` (`_contracts/events.py`; parallel to 57.68 HANDOFF)
-- [ ] `loop.py` `_cat9_hitl_branch` deferred branch: `request_approval` → `checkpointer.save(enriched)` → `yield ApprovalRequested` → `LoopCompleted(stop_reason="awaiting_approval")`; NO `wait_for_decision` in deferred path; blocking path untouched
-- [ ] `hitl_mode` discriminator wired (chat path = deferred)
+- [x] `TerminationReason.AWAITING_APPROVAL="awaiting_approval"` — in `termination.py:63` (D-DAY0-7: NOT events.py; parallel to 57.68 HANDOFF)
+- [x] `loop.py` `_cat9_hitl_branch` deferred branch: `request_approval`+`ApprovalRequested` (reused) → `_emit_state_checkpoint(pending_approval)` → `LoopCompleted("awaiting_approval")`; NO `wait_for_decision` in deferred; blocking path untouched; main loop `cat9_terminated→return` (loop.py:1366) skips tool
+- [x] discriminator = `hitl_deferred: bool = False` ctor flag (gated on +checkpointer+reducer+session_id, else fall back blocking)
 
 ### 1.2 Resumable checkpoint (US-2)
-- [ ] `_contracts/state.py` checkpoint payload += `pending_approval {tool_call{name,args,tool_call_id}, approval_request_id, turn}`
-- [ ] `checkpointer.py` save/load round-trips `pending_approval`; (conditional) migration `0028` if Prong-3 forced — up/down clean vs live Postgres
-- [ ] unit: checkpoint enrich/restore round-trip
+- [x] pending_approval `{tool_call{name,arguments,tool_call_id}, approval_request_id, turn}` in `DurableState.metadata` (D-DAY0-2)
+- [x] round-trips via existing `_serialize/_deserialize_state_for_db` JSONB — **NO migration**
+- [x] unit: checkpoint enrich/restore covered in `test_loop_pause_resume.py`
 
 ### 1.3 `resume()` implementation (US-3)
-- [ ] `AgentLoopImpl.resume(state, trace_context)`: load checkpoint → rebuild messages from DB → read decision (`get_decision`, non-blocking; add if absent) → APPROVED: exec pending tool + append observation + continue to end_turn; REJECTED: `GuardrailTriggered` block + terminate
-- [ ] unit: `resume()` approved + rejected paths (mock db + tool executor)
+- [x] `AgentLoopImpl.resume(*, state, trace_context)`: read pending_approval → `get_decision` (non-blocking, NEW) → APPROVED: exec pending tool + append observation + `_resume_continuation`→end_turn; REJECTED→block+LoopCompleted; undecided→fail-closed. ⚠️ `_resume_continuation` = reduced loop copy (no Cat 8/9/4) — design-note open question (§9)
+- [x] `HITLManager.get_decision` (ABC + DefaultHITLManager, shared `_read_decision_if_decided`; wait_for_decision refactored, 0 behavior change)
+- [x] unit: `resume()` approved + rejected + undecided paths
 
-### 1.4 Backend green (Stage 1)
-- [ ] black/isort/flake8; `mypy src/` 0; `check_llm_sdk_leak` 0; `run_all` 10/10; new unit tests pass
+### 1.4 Backend green (Stage 1) — parent re-verified (gates run by parent, not trusted from agent report)
+- [x] `mypy src/` 0/344; `run_all` 10/10 (incl. llm_sdk_leak, AP-1, AP-8); 56 passed (8 new pause-resume + loop regression + escalation e2e); zero regression
 
 ---
 
