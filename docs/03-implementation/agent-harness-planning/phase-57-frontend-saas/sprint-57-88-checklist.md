@@ -87,13 +87,21 @@
   - `artifacts/sprint-57-88-drivethrough-1-paused.png` + `-2-resumed-answer.png`; full observed-vs-intended in progress.md Day-4 part 2.
 
 ### 4.2 Design note extract (US-5)
-- [ ] `19-pause-resume-design.md` (NEW) — 8-point gate ALL (1 headers↔stories / 2 file:line / 3 decision matrix [deferred vs blocking; resume-endpoint vs governance-inline; JSONB-enrich vs migration] / 4 verify command / 5 fixture ref / 6 verified-vs-deferred / 7 rollback / 8 17.md cross-ref); verified-ratio ≥95%
-- [ ] retrospective.md §Design Note Extract (8-point self-check)
+- [x] `19-pause-resume-design.md` (NEW) — 8-point gate ALL (1 headers↔stories / 2 file:line / 3 decision matrix [deferred vs blocking; resume-endpoint vs governance-inline; JSONB-enrich vs migration] / 4 verify command / 5 fixture ref / 6 verified-vs-deferred / 7 rollback / 8 17.md cross-ref); verified-ratio ≥95%
+  - Done: 6-decision matrix (D1-D6) + §3 Verified Invariants (11 rows file:line + test) + §5 Open Invariants (4 NEW ADs fenced) + §6 rollback + §4 17.md cross-ref. Verified-ratio ≥95%.
+- [x] retrospective.md §Design Note Extract (8-point self-check)
+  - Done: 8/8 checked in retrospective.md §Design Note Extract; self-review pass 2026-06-08.
 
 ### 4.3 Closeout
-- [ ] Full validation (parent re-verified): pytest green / mypy src 0 / run_all 10/10 / Vitest / migration up+down (if any) / drive-through PASS
-- [ ] 17.md `resume()`+checkpoint+`AWAITING_APPROVAL`; `CHANGE-056`
-- [ ] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
-- [ ] Calibration: `loop-lifecycle-spike` 0.55 (NEW, 1 pt, caveated) + `agent_factor` 0.65; record `calibration-log.md §3`; carryover (generalized pause points / 地基 B / subagent / session-list paused badge) → next-phase-candidates.md
-- [ ] MEMORY.md pointer + `project_phase57_88_pause_resume.md` subfile + CLAUDE.md lean
+- [x] Full validation (parent re-verified): pytest green / mypy src 0 / run_all 10/10 / Vitest / migration up+down (if any) / drive-through PASS
+  - Done: mypy 0/346 · run_all 10/10 · pytest 2229 passed/4 skipped · Vitest 772/134 files · no migration · drive-through PASS (real backend + real Azure gpt-5.2).
+- [x] 17.md `resume()`+checkpoint+`AWAITING_APPROVAL`; `CHANGE-056`
+  - Done: 17.md §4.1 LoopEvent `awaiting_approval` note + §5.2 `get_decision` ABC + §5.3 deferred rule; CHANGE-056 written.
+- [x] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
+  - Done: progress.md Day 0-4 (incl. Day-4 part 1+2 drive-through) + retrospective.md Q1-Q7.
+- [x] Calibration: `loop-lifecycle-spike` 0.55 (NEW, 1 pt, caveated) + `agent_factor` 0.65; record `calibration-log.md §3`; carryover (generalized pause points / 地基 B / subagent / session-list paused badge) → next-phase-candidates.md
+  - Done: calibration-log.md §3 entry (2026-06-08, CAVEATED, 12th consecutive); carryover ADs → next-phase-candidates.md.
+- [x] MEMORY.md pointer + `project_phase57_88_pause_resume.md` subfile + CLAUDE.md lean
+  - Done: subfile created; MEMORY.md pointer (topic + keywords); CLAUDE.md Current Sprint + Last Updated lean.
 - [ ] commit (Day 0-4) + push + PR — user-authorized
+  - Code commits done (65ab34fc→99d04f60). Closeout-docs commit + push + PR **pending user authorization**.

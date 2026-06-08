@@ -208,3 +208,24 @@ Parent-driven via Playwright MCP (user authorized "我來執行") against dev fr
 ### Next: design note `19-pause-resume-design.md` (8-point gate) + 17.md resume contract + CHANGE-056 + retrospective + calibration + MEMORY.md + restore dev.py backend.
 
 ---
+
+## Day 4 (part 3) — 2026-06-08 — Closeout (docs)
+
+Parent-authored. Drive-through already PASSED + committed (part 2); this is the SPIKE doc closeout (sprint-workflow Step 5/5.5).
+
+### Done
+- **Design note** `docs/03-implementation/agent-harness-planning/19-pause-resume-design.md` (NEW) — 8-point gate ALL ✅ (6-decision matrix D1-D6 + §3 11 Verified Invariants with file:line + test + §5 4 NEW Open-Invariant ADs fenced + §6 rollback + §4 17.md cross-ref); verified-ratio ≥95%. 8-point self-check recorded in retrospective.md §Design Note Extract.
+- **17.md** single-source — §4.1 LoopEvent `LoopCompleted` row notes `stop_reason="awaiting_approval"` (parallel 57.68 handoff) + §5.2 `HITLManager.get_decision` ABC method + §5.3 deferred-mode rule.
+- **CHANGE-056** `claudedocs/4-changes/feature-changes/CHANGE-056-durable-pause-resume.md` (NEW).
+- **retrospective.md** Q1-Q7 + §Design Note Extract 8-point self-check.
+- **Calibration** — `calibration-log.md §3` entry (2026-06-08): `loop-lifecycle-spike` 0.55 (NEW, 1 pt, CAVEATED) + `agent_factor` `mechanical-greenfield-design-decisions` 0.65 (Day 1/2) / 1.0 (Day 3/4 parent-direct); 12th consecutive agent-delegated no-clean-measure → reinforces `AD-Calibration-AgentDelegated-WallClock-Measure`.
+- **Carryover ADs** → `next-phase-candidates.md` §Sprint 57.88 Carryover (4 Resume ADs + 地基 A generalization).
+- **MEMORY.md** pointer + `memory/project_phase57_88_pause_resume.md` subfile + **CLAUDE.md** lean (Current Sprint row + Last Updated footer).
+- **Checklist** 4.2 + 4.3 marked `[x]` (commit/push/PR row left `[ ]` — pending user authorization).
+
+### Gates (parent re-verified, closeout-docs only — no code change this part)
+- mypy 0/346 · run_all 10/10 · pytest 2229 passed / 4 skipped · Vitest 772 / 134 files · mockup-fidelity oklch baseline 53 unchanged (unchanged from part 2 — docs-only).
+
+### Next: closeout-docs commit + push + PR — **pending user authorization** (code commits 65ab34fc→99d04f60 already in place).
+
+---

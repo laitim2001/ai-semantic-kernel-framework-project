@@ -252,7 +252,7 @@ def register_memory_tools(registry: ToolRegistry) -> None:
 | `AgentHandoff` | 範疇 11 | HANDOFF 控制轉移：父 agent 退出 + target 子 session 啟動（Sprint 57.68 A-3b；loop 終止 stop_reason="handoff"，platform `HandoffService` boot 子 session 後 router emit `agent_handoff` 含 `new_session_id`） |
 | `ApprovalRequested` | §HITL 中央化 | HITL 觸發等待 |
 | `ApprovalReceived` | §HITL 中央化 | HITL 結果回到 loop |
-| `LoopCompleted` | 範疇 1 | Loop 終止（Sprint 57.2 加 accumulator-sourced `total_tokens` / `input_tokens` / `output_tokens` / `provider` / `model`；**Sprint 57.65 A-2 Tier2 加 `cached_input_tokens` + 衍生 `cache_hit_rate`**（= cached / input，div-by-0 → 0.0；Cat 12 prompt-cache-hit-rate metric，無 Tracer/MetricsRegistry，metric 隨 event 欄位下游消費）；**Sprint 57.82 B-8 leg-1 加 `verification_input_tokens` / `verification_output_tokens` / `verification_model`** — Cat 10 correction-loop wrapper 跨 verifier+attempt 累加的 judge LLM token（loop accumulator 此時已 frozen，故由 wrapper 累加並 stamp），chat router billing observer 消費為獨立 `_verification` cost-ledger sub_type + 計入 quota actual；server-side only，不上 SSE wire（與 loop input/output_tokens 一致）） |
+| `LoopCompleted` | 範疇 1 | Loop 終止（Sprint 57.2 加 accumulator-sourced `total_tokens` / `input_tokens` / `output_tokens` / `provider` / `model`；**Sprint 57.65 A-2 Tier2 加 `cached_input_tokens` + 衍生 `cache_hit_rate`**（= cached / input，div-by-0 → 0.0；Cat 12 prompt-cache-hit-rate metric，無 Tracer/MetricsRegistry，metric 隨 event 欄位下游消費）；**Sprint 57.82 B-8 leg-1 加 `verification_input_tokens` / `verification_output_tokens` / `verification_model`** — Cat 10 correction-loop wrapper 跨 verifier+attempt 累加的 judge LLM token（loop accumulator 此時已 frozen，故由 wrapper 累加並 stamp），chat router billing observer 消費為獨立 `_verification` cost-ledger sub_type + 計入 quota actual；server-side only，不上 SSE wire（與 loop input/output_tokens 一致）；**Sprint 57.88 地基 A 加 terminal `stop_reason="awaiting_approval"`**（`TerminationReason.AWAITING_APPROVAL`，parallel to 57.68 `handoff`）— chat-path tool ESCALATE 在 `hitl_deferred` 模式下 checkpoint loop（`pending_approval` + `resume_messages` 進 `state_snapshots` JSONB，免 migration）+ emit `ApprovalRequested` + 終止以**釋放 SSE 連線**；human approve（hours/days 後）→ `POST /chat/{id}/resume` 驅動 NEW `AgentLoopImpl.resume()` 續到 `end_turn`；見 `19-pause-resume-design.md`） |
 | `SpanStarted` | **範疇 12** | OTel span 開始 |
 | `SpanEnded` | **範疇 12** | OTel span 結束 |
 | `MetricRecorded` | **範疇 12** | latency / token / cost 三軸 metric |
@@ -331,7 +331,11 @@ class HITLManager(ABC):
     async def wait_for_decision(self, request_id: UUID, timeout_s: int) -> ApprovalDecision: ...
     @abstractmethod
     async def get_pending(self, tenant_id: UUID) -> list[ApprovalRequest]: ...
+    @abstractmethod
+    async def get_decision(self, request_id: UUID) -> ApprovalDecision | None: ...  # Sprint 57.88 — non-blocking read (None if still PENDING)
 ```
+
+> **Sprint 57.88 加 `get_decision`**：deferred pause-resume 需要一個**非阻塞**的決策讀取（`resume()` 在 RUN-2 讀已記錄的 `ApprovalDecision`，不能 block）。`wait_for_decision` 已 refactor 到共用 `_read_decision_if_decided`（0 行為變更）。實作 `DefaultHITLManager`（`platform_layer/governance/hitl/manager.py`）。
 
 ### 5.3 跨範疇 HITL 互動規則
 
@@ -339,6 +343,7 @@ class HITLManager(ABC):
 - 範疇 7 **是 storage**，把 `pending_approval_ids: list[UUID]` 放進 DurableState
 - 範疇 8 **不直接 own HITL**，只把 HITL pending 視為 「LLM-recoverable resumable wait」
 - HITL 結果回流時，**Reducer** 負責把 `ApprovalDecision` merge 回 `LoopState` 並 resume
+- **Deferred mode（Sprint 57.88 地基 A）**：chat path 在 `hitl_deferred=True` 時，範疇 9 的 ESCALATE branch **不** call `wait_for_decision`（阻塞），改 checkpoint loop（`pending_approval` + `resume_messages` 進 `state_snapshots` JSONB）+ emit `ApprovalRequested` + 終止以釋放 SSE 連線；human approve 後 `POST /chat/{id}/resume` → `AgentLoopImpl.resume()` 讀 `HITLManager.get_decision()`（非阻塞）→ APPROVED exec pending tool 續到 end_turn / REJECTED block。阻塞 `wait_for_decision` 路徑 retained（additive，給同步 caller）。權威設計：`19-pause-resume-design.md`
 
 ---
 
