@@ -67,28 +67,24 @@
   - Verify: `python -m pytest -q` → 2232 passed
 - [x] **mypy 0 + run_all 10/10 + format chain** — mypy `src/` 0/346; run_all 10/10 (AP-1 accepts resume driving `_run_turns`; LLM SDK leak 0; AP-8 green; event-schema sync); black/isort/flake8 clean on changed files
 
-### 3.2 Drive-through (US-5 — resume is user-facing)
-- [ ] **Clean backend restart (Risk Class E)** — kill all stale uvicorn reloader+worker procs on :8000; confirm sole owner; `dev.py start` backend + frontend
-  - Verify: startup log shows fresh process; no Errno 10048
-- [ ] **Drive multi-pause through the real UI + real backend + real Azure gpt-5.2**
-  - DoD: echo → 1st pause (HITLTurn) → approve → resume → echo → 2nd pause (HITLTurn) → approve → resume → final answer renders; every control walked (2nd HITLTurn appears, its Approve drives a 2nd `/resume`, answer renders)
-  - If the frontend doesn't surface the 2nd `AWAITING_APPROVAL` → fix `useLoopEventStream`/`chatStore`/`HITLTurn` (in scope)
-  - If real-LLM two-echo is non-deterministic → ALSO run a scripted real-backend two-`/resume` drive; record exactly what was driven
-  - DoD: screenshot(s) + "observed vs intended flow" diff in progress.md; NO "gate-only" claimed as drive-through
-- [ ] **(conditional) frontend fix verified** if the drive-through required one
-  - Verify: `cd frontend && npm run lint 2>&1 | tail -20 && npm run build 2>&1 | tail -5 && npm run test 2>&1 | tail -5` (no `--silent`)
+### 3.2 Drive-through (US-5 — resume is user-facing) — **PASS**
+- [x] **Clean backend restart (Risk Class E)** — `dev.py restart backend` killed stale PID 19056 → fresh PID 54916 (committed code); frontend node :3007 untouched; real Azure gpt-5.2 from repo-root `.env`
+- [x] **Drove multi-pause through the real UI + real backend + real Azure gpt-5.2** — PASS
+  - dan@acme.com admin / acme-prod / chat-v2 real_llm mode. Prompt induced two sequential echo_tool calls. Observed: turn 2 echo `alpha` → **pause 1** (approval a3022c6a) → approve → executed → turn 4 echo `beta` → **pause 2** (NEW approval e318b15c) → approve → executed → turn 6 **end_turn** answer rendered. Loop visualizer showed real LOOP/TURN/LLM_CALL spans + state_checkpointed v1/v2. The 2nd pause checkpoint persisted + the 2nd `/resume` loaded it (ResumeService DESC) → the multi-pause the deleted copy made impossible.
+  - Evidence: `artifacts/sprint-57-90-multipause-drivethrough.png` + observed-vs-intended table in progress.md Day 3.
+- [x] **No frontend fix needed** — chat-v2 surfaced the 2nd HITLTurn (new approval region + its own Approve) without change; `useLoopEventStream`/`chatStore`/`HITLTurn` re-trigger on a repeated pause as-is.
 
 ### 3.3 CHANGE-057 + design-note close
-- [ ] `claudedocs/4-changes/feature-changes/CHANGE-057-resume-drives-shared-loop-multi-pause.md` (summary / reason / changes / files / drive-through verification)
-- [ ] `19-pause-resume-design.md §5` — mark `AD-Resume-Continuation-Fidelity` CLOSED (Slice 1+2 landed)
+- [x] `claudedocs/4-changes/feature-changes/CHANGE-057-resume-drives-shared-loop-multi-pause.md` written
+- [x] `19-pause-resume-design.md §5` — `AD-Resume-Continuation-Fidelity` marked ✅ CLOSED (Slice 1+2)
 
 ---
 
 ## Day 4 — Closeout
 
 ### 4.1 Closeout
-- [ ] Full validation (parent re-verified): pytest green (delta documented) / mypy 0 / run_all 10/10 / pause-resume + multi-pause green / drive-through PASS (screenshot + diff)
-- [ ] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
-- [ ] Calibration: `backend-core-loop-refactor` 0.55 (2nd data point, caveated — behavior-change shape) + `agent_factor` 1.0 (parent-direct); record `calibration-log.md §3`; carryover (Slice 3 generalized pause / subagent child-loop / checkpoint-bloat / capability-policy / reject-path) → next-phase-candidates.md
-- [ ] MEMORY.md pointer + `project_phase57_90_resume_reentrancy_slice_2.md` subfile + CLAUDE.md lean (Current Sprint row + Last Updated)
-- [ ] commit (Day 0-N) + push + PR — user-authorized
+- [x] Full validation (parent re-verified): pytest **2232** (+1) / mypy 0/346 / run_all 10/10 / pause-resume 9 + multi-pause green / **drive-through PASS** (screenshot + observed-vs-intended table)
+- [x] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
+- [x] Calibration: `backend-core-loop-refactor` 0.55 (2nd data point, caveated — behavior-change shape) + `agent_factor` 1.0 (parent-direct); recorded `calibration-log.md §3`; carryover (Slice 3 / subagent child-loop / 57.88 ADs) → next-phase-candidates.md
+- [x] MEMORY.md pointer + `project_phase57_90_resume_reentrancy_slice_2.md` subfile + CLAUDE.md lean (Current Sprint row + Last Updated) + CHANGE-057 + `19-pause-resume-design.md §5` CLOSED
+- [ ] commit (Day 0-N) + push + PR — closeout commit pending; **push + PR pending user authorization**

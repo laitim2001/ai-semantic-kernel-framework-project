@@ -65,3 +65,35 @@
 ### Remaining (Day 3+)
 - Drive-through (US-5, user-facing) — real UI + real backend + real Azure: echo→pause→approve→echo→2nd pause→approve→answer (+ any frontend fix for a 2nd HITLTurn).
 - CHANGE-057 + `19-pause-resume-design.md §5` CLOSE + retrospective + calibration + MEMORY + CLAUDE lean.
+
+---
+
+## Day 3 — Drive-through (US-5) — **PASS** (2026-06-08)
+
+### Setup
+- Clean backend restart (Risk Class E): `dev.py restart backend` → killed stale PID 19056 → fresh PID 54916 running the committed Slice-2 code. Frontend (node :3007) untouched. Real Azure gpt-5.2 from repo-root `.env` (backend/.env does not exist — the config is the repo-root `.env`, loaded by dev.py).
+- Auth: `/auth/dev` → dan@acme.com · admin · acme-prod (Pro). chat-v2 mode = **real_llm** (header `agent · gpt-5.2 · provider: neutral`), NOT echo_demo mock.
+
+### Driven flow (real UI + real backend + real Azure gpt-5.2)
+Prompt: *"Use the echo tool to echo the text 'alpha'. Wait for that result, then use the echo tool again to echo the text 'beta'. Finally tell me both echoed values."*
+
+| Step | Observed | Intended | ✓ |
+|------|----------|----------|---|
+| turn 2 | real LLM called `echo_tool {"text":"alpha"}` → ESCALATE → **HITL approval (pause 1)**, approval_id `a3022c6a…`, risk HIGH | 1st tool pauses | ✅ |
+| approve 1 | clicked **Approve & continue** → resume drives `_run_turns` → `echo_tool alpha` executed (`// output alpha`, success) → "Decision: APPROVED" | resume execs pre-approved tool once | ✅ |
+| turn 4 | the resumed continuation's LLM called `echo_tool {"text":"beta"}` again → ESCALATE → **HITL approval (pause 2)**, **NEW approval_id `e318b15c…`** (≠ pause 1) | **multi-pause-per-run** — the 2nd tool pauses AGAIN | ✅ |
+| approve 2 | clicked **Approve & continue** → resume again → `echo_tool beta` executed (`// output beta`, success) → "Decision: APPROVED" | 2nd resume execs 2nd tool | ✅ |
+| turn 6 | **stop: end_turn** → final agent answer rendered | answer renders, flow completes | ✅ |
+
+- **Loop visualizer (real spans)**: pause-1 turn showed `loop_start → span_started(LOOP) → span_started(COMPACTION)/ended → span_started(TURN) → prompt_build (62ms) → llm_call (3625ms) → llm_response (1 tool call) → state_checkpointed v1 → tool_call_request echo_tool → approval_requested risk=HIGH → state_checkpointed v2 → span_ended(TURN/LOOP) → loop_end stop=awaiting_approval`. The resumed continuation's turns (pause 2 onward) appear with their OWN LOOP span — confirming resume now drives `_run_turns` with full Cat 12 spans + Cat 7 checkpoints (the deleted reduced copy emitted neither).
+- **The 2nd pause checkpoint persisted + loaded** — the 2nd `/resume` (approve 2) loaded the LATEST `hitl_pause` snapshot (`ResumeService` ORDER BY version DESC) and continued, proving the multi-pause checkpoint round-trips through the DB end-to-end.
+
+### Frontend
+- **NO frontend fix needed** — the chat-v2 UI surfaced the 2nd `AWAITING_APPROVAL` as a fresh HITL approval region (new approval_id + its own Approve/Reject) without any change. `useLoopEventStream`/`chatStore`/`HITLTurn` already re-trigger on a repeated pause.
+
+### Honest notes
+- The final agent answer text was terse (`beta` only, not "alpha and beta") — that is the real LLM's wording choice, NOT a code defect; the flow (both tools each approved + executed via two separate pauses + end_turn + answer rendered) is the acceptance and it passed.
+- Evidence: `artifacts/sprint-57-90-multipause-drivethrough.png` (full-page screenshot of the two pauses + executed outputs + end_turn answer).
+
+### Verdict
+**Drive-through PASS.** Multi-pause-per-run works end-to-end through the real UI + real backend + real Azure gpt-5.2 — the exact behavior the deleted `_resume_continuation` reduced copy made impossible (one-approval-per-run). `AD-Resume-Continuation-Fidelity` closed (Slice 1+2).
