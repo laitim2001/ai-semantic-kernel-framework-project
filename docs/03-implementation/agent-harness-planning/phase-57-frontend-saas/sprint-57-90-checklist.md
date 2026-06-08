@@ -1,0 +1,104 @@
+# Sprint 57.90 — Checklist (run() Re-entrancy Refactor Slice 2: rewire resume + delete copy + multi-pause + drive-through)
+
+**Plan**: [`sprint-57-90-plan.md`](./sprint-57-90-plan.md)
+**Created**: 2026-06-08
+**Status**: Draft (code gated on Day-0 GO)
+
+> Rule: only `[ ]` → `[x]`; never delete unchecked items; defer with `🚧 + reason`.
+> CHANGE (behavior change, NOT pure refactor) → CHANGE-057 record; no new design note (update `19-pause-resume-design.md §5`). Gate = full backend pytest green (NET delta documented) + **drive-through PASS** (resume is user-facing). Locked §6.1: pre-approved pending tool exec'd OUTSIDE `_run_turns` (no re-escalation).
+
+---
+
+## Day 0 — Plan-vs-Repo Verify + Branch
+
+### 0.1 Three-prong Day-0 verify
+- [x] **Prong 1 (path)**: confirmed — `resume()` @1847 / `_resume_continuation` @1998 (one caller @1990) / `_run_turns` @1055 / `_emit_state_checkpoint` @2147 / `_cat9_tool_check` @597 / `_cat9_hitl_branch` @679 (deferred checkpoint @813 `pending_approval=`) / `run()` delegates @1036 with sig (session_id, messages, turn_count, tokens_used, metrics_acc, ctx, root_ctx). `platform_layer/resume/service.py` present. (progress.md Day-0 Prong 1)
+- [x] **Prong 2 (content — the critical ones)**: confirmed — (a) `_run_turns` carries the tool loop → `_cat9_tool_check` → `_cat9_hitl_branch` deferred-pause checkpoint (multi-pause reachable from resume); (b) `_resume_continuation` has exactly ONE caller (`resume()` @1990) → safe to delete; (c) **resume-path loop is fully wired** — `ResumeService._default_build_loop` → `build_real_llm_handler(...)` (same builder as chat, zero divergence; saved the 1st checkpoint → saves the 2nd → multi-pause end-to-end with NO ResumeService change). (progress.md Day-0 Prong 2)
+- [x] **Prong 3 (schema)**: N/A — no DB / migration / ORM change this sprint (progress.md Day-0)
+- [x] **Baseline capture**: pre-sprint baseline = main `dc25dbf5` (57.89 merged): re-confirm exact pytest/mypy/run_all/Vitest numbers Day-1 before editing
+- [x] Catalogue D-DAY0-1..N drift findings in progress.md; **go/no-go = GO** (Option (b) locked; LOOP-span-around-`_run_turns` (Option Y) chosen to minimize 57.88 early-return test churn)
+
+### 0.2 Branch
+- [x] Branch `feature/sprint-57-90-resume-reentrancy-slice-2` from `main` (`dc25dbf5`)
+- [ ] plan + checklist committed (Day-0 commit)
+
+---
+
+## Day 1 — Rewire resume() + delete _resume_continuation (US-1/US-2/US-4)
+
+### 1.1 Rewire resume() to drive _run_turns
+- [ ] **Replace the `_resume_continuation` call (`loop.py:~1990-1996`) with a LOOP-span `_run_turns` drive**
+  - fresh `metrics_acc = LoopMetricsAccumulator()`; `async with self._tracer.start_span(name="agent_loop.run", category=SpanCategory.ORCHESTRATOR, trace_context=ctx, attributes={"span_type": "LOOP"}) as root_ctx:` + `_root_ctx_t0` + `SpanStarted(LOOP)` (in `try`) + `SpanEnded(LOOP)` (in `finally`); inside: `async for ev in self._run_turns(session_id=session_id, messages=messages, turn_count=turn_count, tokens_used=tokens_used, metrics_acc=metrics_acc, ctx=ctx, root_ctx=root_ctx): yield ev`
+  - DoD: resume drives `_run_turns`; the pending-tool exec + approval bridge above are byte-identical (0-line diff to `resume()`'s LoopStarted→…→pending-tool-append block)
+  - Verify: `grep -n "_run_turns\|_resume_continuation" backend/src/agent_harness/orchestrator_loop/loop.py`
+- [ ] **US-4: pending tool exec stays OUTSIDE `_run_turns` (no re-escalation)**
+  - DoD: the already-APPROVED pending tool is executed once (raw) + observation appended BEFORE the `_run_turns` drive; `_run_turns`'s first iteration is a fresh LLM turn (does not re-run the pending tool)
+- [ ] **mypy clean on the rewired resume()**
+  - DoD: resume() fully typed (root_ctx: TraceContext, metrics_acc: LoopMetricsAccumulator); no new mypy errors
+  - Verify: `cd backend && python -m mypy src/agent_harness/orchestrator_loop/loop.py 2>&1 | tail -1`
+
+### 1.2 Delete _resume_continuation (US-2)
+- [ ] **DELETE `_resume_continuation` (`loop.py:1998-2145`)**
+  - DoD: method removed; `grep` shows zero `_resume_continuation` references in `backend/src`
+  - Verify: `grep -rn "_resume_continuation" backend/src backend/tests`
+- [ ] **Remove orphan imports** the deleted copy solely required
+  - DoD: `CacheBreakpoint` / `ChatRequest` / `classify_output` / `should_terminate_*` / `LoopState`/`TransientState`/`DurableState`/`StateVersion` checked — keep those still used by `_run_turns`, drop any now-orphan; `flake8` F401 clean
+  - Verify: `cd backend && python -m flake8 src/agent_harness/orchestrator_loop/loop.py 2>&1 | tail -3`
+
+---
+
+## Day 2 — Tests: convert 57.88 + multi-pause (US-3)
+
+### 2.1 Convert 57.88 continuation assertions (Never-Delete)
+- [ ] **`test_loop_pause_resume.py` (8 unit) — approve-then-continue paths assert the run()-grade stream**
+  - DoD: early-return paths (pending-absent ERROR / decision-None ERROR / reject GUARDRAIL_BLOCKED) assertions UNCHANGED; the approve-then-continue paths updated for the richer stream (SpanStarted/SpanEnded(LOOP), per-turn spans, StateCheckpointed, LoopCompleted now carrying 57.2/57.65/57.82 fields); zero tests deleted
+  - Verify: `cd backend && python -m pytest tests/unit/agent_harness/orchestrator_loop/test_loop_pause_resume.py -q 2>&1 | tail -3`
+- [ ] **`test_chat_pause_resume_e2e.py` (5 integration) — resumed-continuation event assertions updated**
+  - DoD: the resumed-continuation assertions match the richer stream; converted, not deleted
+  - Verify: `cd backend && python -m pytest tests/integration/api/test_chat_pause_resume_e2e.py -q 2>&1 | tail -3`
+
+### 2.2 Multi-pause unit test (US-3)
+- [ ] **NEW test: a 2nd ESCALATE in the resumed continuation pauses again**
+  - DoD: resume with a continuation whose first LLM turn requests an approval-required tool → stream ends `LoopCompleted(stop_reason="awaiting_approval")` AND a NEW `hitl_pause` checkpoint emitted (deferred-branch contract); proves the resumed loop can pause again (closes the one-approval-per-run limitation)
+  - Verify: `cd backend && python -m pytest tests/unit/agent_harness/orchestrator_loop/test_loop_pause_resume.py -q -k "multi_pause or pause_again or second_escalate" 2>&1 | tail -3`
+- [ ] **Span-tree + event-schema guards green**
+  - DoD: the resumed path's LOOP→TURN nesting + `check_event_schema_sync` hold (continuation turns now appear in the tree — expected gain)
+  - Verify: `cd backend && python scripts/lint/run_all.py 2>&1 | tail -3`
+
+---
+
+## Day 3 — Full regression + drive-through (US-5) + CHANGE-057
+
+### 3.1 Full gate sweep
+- [ ] **Full backend pytest green (NET delta documented)**
+  - DoD: suite green; NET test-count delta = + the new multi-pause test (+ any split helpers), stated explicitly (not a silent baseline move)
+  - Verify: `cd backend && python -m pytest -q 2>&1 | tail -3`
+- [ ] **mypy 0 + run_all 10/10 + format chain**
+  - DoD: AP-1 accepts resume driving `_run_turns` (delegation-aware detector); LLM SDK leak 0; AP-8 green
+  - Verify: `cd backend && python -m mypy src/ && python scripts/lint/run_all.py && python -m black --check src/ tests/ && python -m isort --check-only src/ tests/ && python -m flake8 src/ tests/`
+
+### 3.2 Drive-through (US-5 — resume is user-facing)
+- [ ] **Clean backend restart (Risk Class E)** — kill all stale uvicorn reloader+worker procs on :8000; confirm sole owner; `dev.py start` backend + frontend
+  - Verify: startup log shows fresh process; no Errno 10048
+- [ ] **Drive multi-pause through the real UI + real backend + real Azure gpt-5.2**
+  - DoD: echo → 1st pause (HITLTurn) → approve → resume → echo → 2nd pause (HITLTurn) → approve → resume → final answer renders; every control walked (2nd HITLTurn appears, its Approve drives a 2nd `/resume`, answer renders)
+  - If the frontend doesn't surface the 2nd `AWAITING_APPROVAL` → fix `useLoopEventStream`/`chatStore`/`HITLTurn` (in scope)
+  - If real-LLM two-echo is non-deterministic → ALSO run a scripted real-backend two-`/resume` drive; record exactly what was driven
+  - DoD: screenshot(s) + "observed vs intended flow" diff in progress.md; NO "gate-only" claimed as drive-through
+- [ ] **(conditional) frontend fix verified** if the drive-through required one
+  - Verify: `cd frontend && npm run lint 2>&1 | tail -20 && npm run build 2>&1 | tail -5 && npm run test 2>&1 | tail -5` (no `--silent`)
+
+### 3.3 CHANGE-057 + design-note close
+- [ ] `claudedocs/4-changes/feature-changes/CHANGE-057-resume-drives-shared-loop-multi-pause.md` (summary / reason / changes / files / drive-through verification)
+- [ ] `19-pause-resume-design.md §5` — mark `AD-Resume-Continuation-Fidelity` CLOSED (Slice 1+2 landed)
+
+---
+
+## Day 4 — Closeout
+
+### 4.1 Closeout
+- [ ] Full validation (parent re-verified): pytest green (delta documented) / mypy 0 / run_all 10/10 / pause-resume + multi-pause green / drive-through PASS (screenshot + diff)
+- [ ] progress.md (Day 0-4) + retrospective.md (Q1-Q7)
+- [ ] Calibration: `backend-core-loop-refactor` 0.55 (2nd data point, caveated — behavior-change shape) + `agent_factor` 1.0 (parent-direct); record `calibration-log.md §3`; carryover (Slice 3 generalized pause / subagent child-loop / checkpoint-bloat / capability-policy / reject-path) → next-phase-candidates.md
+- [ ] MEMORY.md pointer + `project_phase57_90_resume_reentrancy_slice_2.md` subfile + CLAUDE.md lean (Current Sprint row + Last Updated)
+- [ ] commit (Day 0-N) + push + PR — user-authorized
