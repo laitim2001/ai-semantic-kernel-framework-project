@@ -74,3 +74,32 @@
 ### Remaining (after Day 2)
 - Day 3: align `config/llm_pricing.yml` (cheap + strong model) + drive-through (real UI + cheap deployment → verification recorded at the cheap model + $ delta). **Needs the cheap deployment name from the user.**
 - Day 4: design note `24-multi-model-profile-design.md` (8-pt gate) + CHANGE-064 + 17.md + closeout.
+
+---
+
+## Day 3 — 2026-06-09 — Config alignment + DRIVE-THROUGH PASS (US-5)
+
+### Config (user-provided)
+- User: cheap deployment = **`gpt-5.4-mini`** (also has `gpt-5.4-nano`, same API key); strong = `gpt-5.2` (confirmed in `.env`, already priced 1.75/14.00).
+- `config/llm_pricing.yml` — added `gpt-5.4-mini` (0.75 / 4.50 / 0.08) + `gpt-5.4-nano` (0.20 / 0.25 / 0.02) under `azure_openai`; `last_updated` → 2026-06-09. (FIX-022 §6.2 "gpt-5.2 unpriced" caveat already stale — yml prices gpt-5.2.)
+- `.env` (root) — appended `AZURE_OPENAI_CHEAP_DEPLOYMENT_NAME=gpt-5.4-mini` + `AZURE_OPENAI_CHEAP_MODEL_NAME=gpt-5.4-mini`.
+
+### 🔴 Drive-through finding D-DAY3-1 (Risk Class E — orphaned `multiprocessing.spawn` worker) — REINFORCES the rule
+- **Symptom**: first 2 drive-through chats (France, Japan) recorded the verification at `gpt-5.2` (strong), NOT `gpt-5.4-mini` — the cheap routing appeared dead, despite `dev.py restart` reporting a fresh PID.
+- **Root cause (NOT a code bug)**: a reproduce-script proved the code is correct (`build_azure_model_profile` builds a `gpt-5.4-mini` cheap client when the .env is loaded; `cheap IS action? False`). The real cause was **multiple orphaned `--reload` worker processes** sharing :8000 via SO_REUSEADDR: PID 38848 (a `multiprocessing.spawn` child of the long-dead 57.96 reloader 41464) was STILL ALIVE serving requests with **old code + old .env** (no cheap tier). `dev.py stop` + netstat + `taskkill /PID` all attributed the socket to the DEAD parent (41464) and missed the live orphaned child — the worker's cmdline is `python -c "from multiprocessing..."` (no "uvicorn"), so port-owner-based kills never found it. Enumerating `Win32_Process Name='python.exe'` by PID/PPID/StartTime exposed 3 live workers (38848 ← dead 41464 / 18864 ← dead 44412 / 56968 ← live 26332); the oldest (38848) won the requests.
+- **Fix**: `Stop-Process -Force` the orphaned workers (38848 + 18864) directly by PID → only the fresh 26332 reloader + 56968 worker remained → :8000 served exclusively by the fresh backend.
+- **Lesson (Risk Class E reinforcement)**: a clean restart must verify the **live serving process**, not the port-owner PID. `dev.py`/netstat/taskkill by port can leave orphaned `multiprocessing.spawn` workers from prior `--reload` sessions alive. The reliable check: `Get-CimInstance Win32_Process -Filter "Name='python.exe'"` → inspect PID/PPID/StartTime → kill any worker whose parent is dead or whose StartTime predates the current restart. (To fold into `sprint-workflow.md §Risk Class E` + memory at closeout.)
+
+### Drive-through PASS (real UI + real backend + real Azure)
+- Fresh backend PID **26332** (reloader) + 56968 (worker), sole live :8000 listener (PowerShell-verified). chat-v2, jamie@acme-prod, real_llm.
+- Prompt "Name three primary colors…" → answer rendered + `verification_passed score≈0.98`.
+- **cost_ledger (this session, newest 4 rows)** — the proof:
+  - `azure_openai_gpt-5.2-2025-12-11_input` qty 2101 → $0.003677 / `_output` qty 15 → $0.000210  (main turn = STRONG)
+  - `azure_openai_gpt-5.4-mini-2026-03-17_verification_input` qty 234 → $0.000176 / `_output` qty 28 → $0.000126  (verification = **CHEAP**)
+  - The model-version suffix (`-2026-03-17`) is stripped by `PricingLoader` → priced off the `gpt-5.4-mini` yml key (0.75/4.50).
+- **$ delta**: the verification call cost ~$0.000301 on gpt-5.4-mini vs ~$0.00080 if it had run on gpt-5.2 → **~62% cheaper for the per-request verification**, while the user-facing action turn stays on gpt-5.2 (unchanged). Real, visible cost saving.
+- Evidence: `artifacts/sprint-57-97-1-chat-answer-verification.png` (pre-fix France run) + `artifacts/sprint-57-97-2-drivethrough-pass-cheap-verification.png` (post-fix) + the cost_ledger rows above.
+- The plan §3.4 "LLM-call span model attribute" was correctly DEFERRED — the cost-ledger sub_type model-attribution (`_gpt-5.4-mini_verification_*`) is sufficient visible proof; no span change needed.
+
+### Remaining (after Day 3)
+- Day 4: design note `24-multi-model-profile-design.md` (8-pt gate) + CHANGE-064 + 17.md `ModelProfile` registration + calibration + MEMORY subfile + CLAUDE.md lean + Risk-Class-E reinforcement fold-in + push/PR (user-authorized).

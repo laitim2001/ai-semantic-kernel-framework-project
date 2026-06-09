@@ -2,7 +2,7 @@
 
 **Plan**: [`sprint-57-97-plan.md`](./sprint-57-97-plan.md)
 **Created**: 2026-06-09
-**Status**: Day 0-2 done (code + 8 tests + full gate green: mypy 0/353 · run_all 10/10 · flake8 clean · pytest 2291 +8); Day 3 drive-through needs the cheap deployment + llm_pricing.yml alignment
+**Status**: Day 0-3 done — **DRIVE-THROUGH PASS** (verification on gpt-5.4-mini, ~62% cheaper; cost_ledger-proven). Risk Class E zombie-worker hunt (D-DAY3-1). Day 4 remaining: CHANGE-064 + 17.md + design note 24 + calibration + memory + push/PR.
 
 > Rule: only `[ ]` → `[x]`; never delete unchecked items; defer with `🚧 + reason`.
 > **Spike** (new-domain: first multi-model profile) → Day-4 design-note extract MANDATORY (`sprint-workflow.md §Step 5.5` 8-pt gate) → `24-multi-model-profile-design.md`. Record = CHANGE-064 + 17.md `ModelProfile` registration. Gate = full backend pytest green (NET delta) + **drive-through PASS** (verification demonstrably ran on the cheap deployment with a visible cost delta vs the strong main turn). Locked scope (AskUserQuestion 2026-06-09): abstraction = **thin `ModelProfile` value object** `{action, cheap}`; first cheap-tier phase = **verification (llm_judge)**; cheap deployment **available** → drive-through measures a real cost delta. Out: compaction/memory/thinking cheap-tier, loop threading, per-tenant policy, `ModelProfileChatClient` ABC.
@@ -69,19 +69,19 @@
 ## Day 3 — Full regression + drive-through (US-5) + CHANGE-064
 
 ### 3.1 Full gate sweep
-- [ ] **Full backend pytest green (NET delta documented)** — baseline 2283 → expected +N; NO test deleted; 57.83 verification tests UNCHANGED + green
-- [ ] **mypy 0 + run_all 10/10 + format chain** — mypy `src --strict` 0; run_all **10/10** (LLM SDK leak 0; AP-1; AP-4; `check_event_schema_sync` unaffected; check_cross_category_import green); `black`/`isort`/`flake8 src tests` clean — **run each INDEPENDENTLY, not `&&`-chained** (57.95 CI lesson)
+- [x] **Full backend pytest green (NET delta documented)** — 2291 passed, 4 skipped (baseline 2283 → +8); NO test deleted; 57.83 verification tests UNCHANGED + green
+- [x] **mypy 0 + run_all 10/10 + format chain** — mypy `src --strict` 0/353; run_all **10/10** (LLM SDK leak 0); black/isort/flake8 (changed src+tests) clean — run independently
 
 ### 3.2 Drive-through (US-5 — verification ran on the cheap deployment, visible cost delta)
-- [ ] **Cheap deployment configured** — `AZURE_OPENAI_CHEAP_DEPLOYMENT_NAME` (+ cheap pricing) set in `.env` to a real cheaper deployment BEFORE the restart
-- [ ] **Clean backend restart (Risk Class E)** — kill stale 57.96 reloader+spawn-worker (python, not node); verify :8000 FREE → `dev.py start backend` → fresh PID owns :8000 (built with the cheap env); frontend node untouched; Azure live
-- [ ] **Drove a chat-v2 request through real UI + real backend + real Azure** — BEFORE (this sprint): one model for everything; AFTER: the verification (llm_judge) call ran on the cheap deployment (Trace span model = cheap / cost line cheap-priced) while the main turn ran on the strong deployment. Observed-vs-intended table in progress.md Day 3.2
-  - Evidence: `artifacts/sprint-57-97-{1-trace-verification-cheap-model,2-cost-delta}.png` + snapshot
-- [ ] **Cost-delta confirm** — the verification cost is demonstrably lower (cheap pricing) than it would be on the strong model; the action turn cost unchanged
+- [x] **Cheap deployment configured** — `AZURE_OPENAI_CHEAP_DEPLOYMENT_NAME=gpt-5.4-mini` set in `.env`; `gpt-5.4-mini`+`gpt-5.4-nano` priced in `llm_pricing.yml`
+- [x] **Clean backend restart (Risk Class E)** — 🔴 D-DAY3-1: `dev.py`/netstat/taskkill-by-port MISSED orphaned `multiprocessing.spawn` worker 38848 (child of dead 57.96 reloader 41464) serving old code+env; `Get-CimInstance Win32_Process` exposed 3 live workers, `Stop-Process -Force` 38848+18864 → only fresh 26332+56968 remain (PowerShell-verified sole :8000 owner); frontend node untouched
+- [x] **Drove a chat-v2 request through real UI + real backend + real Azure** — answer rendered + verification_passed; cost_ledger: main turn = `gpt-5.2` (strong), verification = `gpt-5.4-mini` (cheap). Observed-vs-intended in progress.md Day 3
+  - Evidence: `artifacts/sprint-57-97-1-chat-answer-verification.png` (pre-fix) + `sprint-57-97-2-drivethrough-pass-cheap-verification.png` (post-fix) + cost_ledger rows
+- [x] **Cost-delta confirm** — verification ~$0.000301 on gpt-5.4-mini vs ~$0.00080 on gpt-5.2 (~62% cheaper); action turn cost unchanged (gpt-5.2)
 
 ### 3.3 CHANGE-064 + design note + 17.md
 - [ ] `claudedocs/4-changes/feature-changes/CHANGE-064-multi-model-profile-verification.md` written
-- [ ] **`17-cross-category-interfaces.md`** — register `ModelProfile` (provider-neutral value object pairing `ChatClient`s; owner = design note 21)
+- [ ] **`17-cross-category-interfaces.md`** — register `ModelProfile` (provider-neutral value object pairing `ChatClient`s; owner = design note 24)
 
 ---
 

@@ -4,7 +4,7 @@
 # auto-sync from provider APIs.
 
 version: "1.0"
-last_updated: "2026-06-04"
+last_updated: "2026-06-09"
 
 providers:
   azure_openai:
@@ -20,6 +20,14 @@ providers:
       input_per_million: 2.50
       output_per_million: 10.00
       cached_input_per_million: 1.25
+    gpt-5.4-mini:
+      input_per_million: 0.75
+      output_per_million: 4.50
+      cached_input_per_million: 0.08
+    gpt-5.4-nano:
+      input_per_million: 0.20
+      output_per_million: 0.25
+      cached_input_per_million: 0.02
   anthropic:
     claude-3.7-sonnet:
       input_per_million: 3.00
