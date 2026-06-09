@@ -2,7 +2,7 @@
 
 **Plan**: [`sprint-57-97-plan.md`](./sprint-57-97-plan.md)
 **Created**: 2026-06-09
-**Status**: Day 0-1 done (code-complete + mypy 0/353); Day 2 tests next; drive-through (Day 3) needs the cheap deployment + llm_pricing.yml alignment
+**Status**: Day 0-2 done (code + 8 tests + full gate green: mypy 0/353 · run_all 10/10 · flake8 clean · pytest 2291 +8); Day 3 drive-through needs the cheap deployment + llm_pricing.yml alignment
 
 > Rule: only `[ ]` → `[x]`; never delete unchecked items; defer with `🚧 + reason`.
 > **Spike** (new-domain: first multi-model profile) → Day-4 design-note extract MANDATORY (`sprint-workflow.md §Step 5.5` 8-pt gate) → `24-multi-model-profile-design.md`. Record = CHANGE-064 + 17.md `ModelProfile` registration. Gate = full backend pytest green (NET delta) + **drive-through PASS** (verification demonstrably ran on the cheap deployment with a visible cost delta vs the strong main turn). Locked scope (AskUserQuestion 2026-06-09): abstraction = **thin `ModelProfile` value object** `{action, cheap}`; first cheap-tier phase = **verification (llm_judge)**; cheap deployment **available** → drive-through measures a real cost delta. Out: compaction/memory/thinking cheap-tier, loop threading, per-tenant policy, `ModelProfileChatClient` ABC.
@@ -50,19 +50,19 @@
 ## Day 2 — Cost attribution + observability (US-4) + tests (US-1..US-4)
 
 ### 2.1 Cost attribution + span model (US-4)
-- [ ] **verification cost path** (Day-0 Prong 2 locate) — confirm the verification cost uses the verifier client's `get_pricing()` (cheap-priced); if computed centrally with the loop client, wire it to the verifier's pricing; MHist (conditional)
-  - DoD: a verification run with a cheap-priced client records cheap cost
-- [ ] **LLM-call span `model` attribute** (Day-0 Prong 2.5 D1) — confirm the LLM-call Trace span carries `model`/`deployment`; if not, add it (reads `config.deployment_name`/`model_info()`); MHist (conditional)
-  - DoD: the verification call's span shows the cheap deployment; the action call's span shows the strong deployment
-- [ ] **`loop.py` diff = 0** — `git diff main..HEAD -- backend/src/agent_harness/orchestrator_loop/loop.py` empty
-- [ ] **`check_llm_sdk_leak` 0** — `ModelProfile` + handler wiring don't leak an SDK import outside `adapters/<provider>/`
+- [x] **verification cost path** — RESOLVED (D-DAY1-1): cost-ledger prices via `config/llm_pricing.yml` (model-keyed); `LLMJudgeVerifier` already captures `response.model` (57.82) → cheap verifier auto-reports the cheap model name. **No cost-wiring code needed**; the verifier client's `get_pricing()` is NOT the cost source.
+  - DoD: covered by builder test (cheap model name) + routing test (verifier ← cheap); $ delta = Day-3 drive-through (needs cheap+strong in llm_pricing.yml)
+- [ ] **LLM-call span `model` attribute** — 🚧 deferred to Day-3: the cost-ledger sub_type (`azure_openai_<model>_verification_*`) already carries the model attribution; add a span attr only if the drive-through Trace view shows it's needed (avoid speculative work — Karpathy §2)
+  - DoD: decided during Day-3 drive-through
+- [x] **`loop.py` diff = 0** — confirmed (handler-only wiring; loop receives profile.action == today's client)
+- [x] **`check_llm_sdk_leak` 0** — `ModelProfile` + handler wiring don't leak an SDK import outside `adapters/<provider>/` (run_all 10/10)
 
 ### 2.2 Backend tests (US-1..US-4)
-- [ ] **`ModelProfile` value object** — constructs with 2 mock clients; frozen/immutable; module imports only the ABC (NEW `test_model_profile.py`)
-- [ ] **cheap-config fallback** — env unset → `profile.cheap is profile.action` (identity); set → distinct adapter, cheap deployment + cheap pricing
-- [ ] **verifier-routing** — `build_real_llm_handler` → `LLMJudgeVerifier._chat is profile.cheap` + loop `_chat_client is profile.action`; cheap unset → both same instance (no behavior change)
-- [ ] **cost-attribution** — verification with a cheap-priced client → recorded verification cost = cheap pricing (not action pricing)
-- [ ] **existing 57.83 verification + handler tests green** — UNCHANGED (the verifier now gets the cheap client but the default-ON behavior is identical when cheap=action)
+- [x] **`ModelProfile` value object** — constructs with 2 mock clients; frozen/immutable; same-instance fallback shape (NEW `test_model_profile.py`, 3 tests)
+- [x] **cheap-config fallback** — env unset → `profile.cheap is profile.action` (identity); set → distinct adapter, cheap deployment + model name (NEW `test_profile.py`, 3 tests; pricing dropped per D-DAY1-1)
+- [x] **verifier-routing** — `build_real_llm_handler` → verifier `_chat` deployment == cheap + loop `_chat_client` deployment == strong; cheap unset → verifier shares loop's client (2 NEW tests in `test_handler.py`)
+- [ ] **cost-attribution** — 🚧 MOOT under D-DAY1-1 (cost via `llm_pricing.yml` model-key, NOT client pricing); attribution covered by builder (cheap model name) + routing (verifier ← cheap); $ delta verified Day-3 drive-through
+- [x] **existing 57.83 verification + handler tests green** — full pytest 2291 passed (+8), 4 skipped; 57.83 verification tests unchanged + green
 
 ---
 

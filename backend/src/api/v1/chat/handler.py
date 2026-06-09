@@ -30,7 +30,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.4)
 Last Modified: 2026-06-08
 
 Modification History (newest-first):
-    - 2026-06-09: Sprint 57.97 — build {action, cheap} ModelProfile; verification routed to profile.cheap
+    - 2026-06-09: Sprint 57.97 — ModelProfile{action,cheap}; verification on profile.cheap
     - 2026-06-09: Sprint 57.95 — wire subagent_event_emitter on chat path (SSE relay)
     - 2026-06-09: Sprint 57.94 — child-loop factory for real FORK/AS_TOOL child loops
     - 2026-06-08: Sprint 57.93 — OutputKeywordEscalationGuardrail (output pre-delivery pause)

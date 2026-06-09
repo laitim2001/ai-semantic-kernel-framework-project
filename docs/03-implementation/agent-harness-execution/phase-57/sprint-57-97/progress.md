@@ -46,7 +46,31 @@
 - The wiring is honest-minimal: only the verifier moves to `profile.cheap`; the user-facing action turn + compaction + subagents stay strong. `ModelProfile` is constructed + consumed in `handler.py` (not threaded into the loop) — the seam is documented for future phases (compaction/thinking cheap-tier).
 - **NOT claimed verified** — Day-1 is code-complete + mypy-clean ONLY. Behavioral tests (Day-2) + drive-through (Day-3, needs the cheap deployment + `llm_pricing.yml` alignment) pending.
 
-### Remaining
+### Remaining (as of Day 1)
 - Day 2: backend tests (ModelProfile + builder + verifier-routing + cost-attribution) + run_all + full pytest.
 - Day 3: align `config/llm_pricing.yml` (cheap + strong model) → drive-through (real UI + cheap deployment → verification sub_type = cheap model + $ delta).
+- Day 4: design note `24-multi-model-profile-design.md` (8-pt gate) + CHANGE-064 + 17.md + closeout.
+
+---
+
+## Day 2 — 2026-06-09 — Tests + cost-attribution resolution + full gate (US-1..US-4)
+
+### Tests (8 new, all green)
+- `tests/unit/adapters/_base/test_model_profile.py` (3) — pairs action/cheap; frozen (reassign raises); same-instance fallback shape.
+- `tests/unit/adapters/azure_openai/test_profile.py` (3) — unset → cheap IS action (identity); set → distinct cheap `AzureOpenAIAdapter` (cheap deployment + model name); model_name defaults to deployment when `AZURE_OPENAI_CHEAP_MODEL_NAME` unset.
+- `tests/unit/api/v1/chat/test_handler.py` (+2) — `build_real_llm_handler`: verifier `_chat` deployment == cheap + loop `_chat_client` deployment == strong; cheap unset → verifier shares the loop's (action) client.
+
+### Cost-attribution resolution (D-DAY1-1 follow-through)
+- The plan's "verifier uses `self._chat.get_pricing()`" assumption was WRONG. The cost-ledger prices via `config/llm_pricing.yml` (model-keyed) and `LLMJudgeVerifier` ALREADY captures `response.model` (Sprint 57.82) → routing the verifier to the cheap client makes the cheap MODEL NAME flow to the cost-ledger automatically. **No cost-wiring code needed.** The dedicated "cheap-priced client → cheap cost" unit test is moot (client pricing isn't the cost source); attribution is covered by the builder test (cheap model name) + the routing test (verifier ← cheap). The $ delta proof = Day-3 drive-through (needs the cheap + strong model priced in `llm_pricing.yml`).
+- LLM-call span `model` attribute (plan §3.4 conditional): **deferred to Day-3** — the cost-ledger sub_type (`azure_openai_<model>_verification_*`) already carries the model attribution; add a span attr only if the drive-through shows the Trace view needs it.
+
+### Full gate (GREEN)
+- mypy `src --strict` **0/353** (the Day-2 E501 fixes were comment/docstring-only; no logic change).
+- `run_all` **10/10** (`check_llm_sdk_leak` 0 — ModelProfile holds only the ABC; `check_cross_category_import` OK; `check_event_schema_sync` unaffected).
+- black / isort / flake8 (changed src + tests) clean — 3 E501 trimmed (profile.py Purpose + handler MHist + test docstring).
+- full backend pytest **2291 passed, 4 skipped** (baseline 2283 → **+8** new, 0 deletions; 57.83 verification tests unchanged + green).
+- `loop.py` diff = 0.
+
+### Remaining (after Day 2)
+- Day 3: align `config/llm_pricing.yml` (cheap + strong model) + drive-through (real UI + cheap deployment → verification recorded at the cheap model + $ delta). **Needs the cheap deployment name from the user.**
 - Day 4: design note `24-multi-model-profile-design.md` (8-pt gate) + CHANGE-064 + 17.md + closeout.

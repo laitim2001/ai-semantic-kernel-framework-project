@@ -1,6 +1,6 @@
 """
 File: backend/src/adapters/azure_openai/profile.py
-Purpose: build_azure_model_profile — assemble the {action, cheap} ModelProfile for the Azure provider.
+Purpose: build_azure_model_profile — build the {action, cheap} ModelProfile for Azure.
 Category: Adapters / Azure OpenAI
 Scope: Phase 57 / Sprint 57.97
 
