@@ -30,6 +30,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.4)
 Last Modified: 2026-06-08
 
 Modification History (newest-first):
+    - 2026-06-09: Sprint 57.97 — build {action, cheap} ModelProfile; verification routed to profile.cheap
     - 2026-06-09: Sprint 57.95 — wire subagent_event_emitter on chat path (SSE relay)
     - 2026-06-09: Sprint 57.94 — child-loop factory for real FORK/AS_TOOL child loops
     - 2026-06-08: Sprint 57.93 — OutputKeywordEscalationGuardrail (output pre-delivery pause)
@@ -292,9 +293,18 @@ def build_real_llm_handler(
     # Late import — keeps unit tests free of azure SDK weight when only echo_demo is exercised.
     from adapters.azure_openai.adapter import AzureOpenAIAdapter
     from adapters.azure_openai.config import AzureOpenAIConfig
+    from adapters.azure_openai.profile import build_azure_model_profile
 
     # AzureOpenAIConfig is a BaseSettings — pulls AZURE_OPENAI_* from env automatically.
     chat_client: ChatClient = AzureOpenAIAdapter(AzureOpenAIConfig())
+    # Sprint 57.97 (multi-model profile): pair the strong action client with a
+    # cheap tier. `chat_client` IS profile.action — the loop / compactor / prompt
+    # builder / subagents all run on it, unchanged. Only the verifier (below)
+    # routes to profile.cheap: a cheaper Azure deployment when
+    # AZURE_OPENAI_CHEAP_DEPLOYMENT_NAME is set, else the SAME strong client
+    # (byte-identical behavior). The cheap tier saves on the per-request llm_judge
+    # call (default-ON since 57.83) without touching the user-facing turn.
+    profile = build_azure_model_profile(chat_client)
     parser = OutputParserImpl()  # built early — the Sprint 57.94 child-loop factory needs it
 
     # Sprint 57.64 Day 2: Cat 3 memory tools (REAL handlers, not placeholder) +
@@ -476,8 +486,11 @@ def build_real_llm_handler(
     settings = get_settings()
     verifier_registry: VerifierRegistry | None = None
     if settings.chat_verification_mode == "enabled":
+        # Sprint 57.97: the verification (llm_judge) call runs on the CHEAP tier
+        # (profile.cheap) — it fires on every request, so it is the highest-value
+        # cheap-tier target; the user-facing action turn stays on profile.action.
         verifier_registry = make_chat_verifier_registry(
-            chat_client, settings.chat_verification_judge_template
+            profile.cheap, settings.chat_verification_judge_template
         )
     return loop, verifier_registry
 
