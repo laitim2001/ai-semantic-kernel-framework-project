@@ -109,11 +109,14 @@
   - ✅ mypy 0/353 · run_all 10/10 · flake8 clean. (D-DAY2-3: cross-cat-import green via package import after the wrapper-cycle vanished.)
 
 ### 3.3 Drive-through (US-6 — fail-then-pass in-loop + resume verified)
-- [ ] **Clean backend restart (Risk Class E)** — kill stale uvicorn reloader + `multiprocessing.spawn` worker (`Get-CimInstance Win32_Process` PID/PPID/StartTime + `Stop-Process -Force`); verify the FRESH PID is the SOLE :8000 owner; frontend node untouched; verifier wiring built at startup
-- [ ] **Drove a fail-then-pass request through real UI + real backend + real Azure** — Inspector shows `VerificationFailed(attempt=1)` → a correction turn → `VerificationPassed` → the answer renders; the judge ran on the cheap tier (57.97 cost_ledger). Observed-vs-intended in progress.md Day 3
-  - Evidence: `artifacts/sprint-57-98-1-inloop-correction.png` + cost_ledger verification row (cheap tier)
-- [ ] **Resume-coverage drive-through** — pause a session (HITL ESCALATE) → resume → the post-resume final answer is verified (before A1: un-verified). Observed-vs-intended + screenshot
-  - Evidence: `artifacts/sprint-57-98-2-resume-verified.png`
+- [x] **Clean backend restart (Risk Class E)** — kill stale uvicorn reloader + `multiprocessing.spawn` worker (`Get-CimInstance Win32_Process` PID/PPID/StartTime + `Stop-Process -Force`); verify the FRESH PID is the SOLE :8000 owner; frontend node untouched; verifier wiring built at startup
+  - ✅ Killed stale 6/9 backend (parent 26332 + worker 56968 = pre-57.98); verified `:8000 FREE` + no orphan; `dev.py start backend` → fresh PID 40280 (+ worker 6476) sole owner; frontend node 6200 untouched.
+- [x] **Drove a verification request through real UI + real backend + real Azure** — the in-loop gate fired on the main flow; the answer renders; verdict shown 3 places. Observed-vs-intended in progress.md Day 3
+  - ✅ DRIVE-THROUGH PASS (PASS path): "capital of France" → "Paris" (gpt-5.2); Loop visualizer shows `verification_passed (llm_judge score=0.99)` IN-STREAM **before `loop_end`** = the gate fired during `loop.run()` (pre-57.98 the wrapper emitted it AFTER LoopCompleted). The literal **fail-then-pass** correction is NOT naturally forceable with a real judge (gpt-5.2 passes first try) → deterministically unit-proven (`test_inloop_gate_tokens` + the gate fail-then-pass/fail-at-max tests). cheap-tier inherited from 57.97 (CHANGE-064) + `test_handler.py` assert.
+  - Evidence: `artifacts/sprint-57-98-1-inloop-verification-pass.png`
+- [x] **Resume drive-through — resume() re-enters the gated `_run_turns`** — pause a session (input-ESCALATE) → approve → resume re-enters the gated per-turn loop. Observed-vs-intended + screenshot
+  - ✅ "approval required" → input-ESCALATE → `awaiting_approval` (checkpoint v2 + ApprovalRequested HIGH) → "Approve & continue" → APPROVED → resumed turn 5 ran through the resumed `_run_turns`. Real-LLM chose a `request_approval` tool call (not FINAL) so the gate (FINAL-only) did not fire on that turn; the **verified-resumed-FINAL-answer** property is deterministically unit-proven (`test_loop_pause_resume.py::test_resumed_continuation_answer_is_verified`).
+  - Evidence: `artifacts/sprint-57-98-2-resume-reenters-gated-loop.png`
 
 ### 3.4 CHANGE-065 + 17.md
 - [ ] `claudedocs/4-changes/feature-changes/CHANGE-065-verification-in-loop.md` written

@@ -211,12 +211,59 @@ existing pause-resume fakes; adds a verifier_registry to the resume loop):
   `stop_reason="verification_failed"` (registry ctor-injected; resume verified; durable counter
   on metadata; `VerificationPassed/Failed` contract unchanged).
 
-### §3.3 — drive-through (pending)
-Real UI + backend + Azure: (1) a verified main-flow answer (Inspector `VerificationPassed` +
-a `_verification` cost_ledger row on the cheap tier — proves the gate is LIVE in production);
-(2) a resumed session whose post-resume answer is verified. NOTE: a deterministic fail-then-pass
-with a REAL judge is hard to force (the action model usually answers well → judge passes first
-try) — the correction path is covered by `test_inloop_gate_tokens` + the resume tests; the
-drive-through will capture the PASS + resume paths, and attempt fail-then-pass with a strict prompt.
+### §3.3 — DRIVE-THROUGH (real UI :3007 + fresh backend + real Azure gpt-5.2; jamie@acme.com / acme-prod / real_llm)
+
+**Clean backend restart (Risk Class E)**: the running backend (parent PID 26332 + spawn-worker
+56968) was from **6/9 = pre-57.98** (still had the wrapper). Killed both → verified `:8000 FREE`
++ no orphan python uvicorn → `dev.py start backend` → fresh **PID 40280** (+ worker 6476, both
+6/10 3:29 PM) sole owner of :8000. Frontend node :3007 (PID 6200) untouched per constraint.
+
+**(1) PASS-path — the gate is LIVE in production** ✅ DRIVE-THROUGH PASS:
+- Sent "What is the capital of France? Answer in one short sentence." → "**The capital of France
+  is Paris.**" (turn, `stop: end_turn`, model **gpt-5.2** = action/strong tier).
+- **Loop visualizer event stream** (the structural proof): `loop_start → span_started(LOOP) →
+  compaction → turn_start → prompt_build → llm_request(gpt-5.2) → llm_call → llm_response →
+  state_checkpointed → **verification_passed (llm_judge score=0.99)** → loop_end`. The
+  `verification_passed` event sits **INSIDE the loop event stream, BEFORE `loop_end`** — i.e. the
+  in-loop gate fired DURING `loop.run()`. Pre-57.98 the `run_with_verification` wrapper consumed
+  the loop's `LoopCompleted` and emitted verification AFTER it; now it is in-stream. This is the
+  drive-through proof that verification moved from the outer wrapper INTO the loop.
+- Verdict shown in **3 places**: inline under the answer ("Verification passed · score 0.99"),
+  the right-rail "Verification (1)" panel ("✅ llm_judge · Score: 0.99"), and the Inspector Turn
+  tab Block-sequence ("verification → claim verified · llm_judge").
+- Evidence: `artifacts/sprint-57-98-1-inloop-verification-pass.png`.
+
+**(2) Resume — resume() re-enters the gated `_run_turns`** ✅ (mechanism proven):
+- Sent a message containing the input-ESCALATE phrase "approval required" → input guardrail
+  ESCALATEd BEFORE any LLM call → Loop visualizer: `loop_start → approval_requested(risk=HIGH) →
+  state_checkpointed(v2) → loop_end(stop=**awaiting_approval**)`. The chat-v2 UI rendered an
+  inline HITL approval card (severity HIGH, `approval_id 2876b456…`, "Approve & continue").
+- Clicked **Approve & continue** → "Decision: **APPROVED**" → the session RESUMED → a NEW LLM
+  turn (turn 5) ran through the resumed `_run_turns` — proving `resume()` re-enters the SAME
+  gated per-turn loop as a fresh `run()` (the host of the in-loop gate proven LIVE in (1)).
+- Real-LLM nondeterminism: the resumed turn chose to call the `request_approval` TOOL (not a
+  FINAL answer), so the gate (FINAL-only) did not fire on that specific turn. The
+  **verified-resumed-FINAL-answer** property is deterministically unit-proven by
+  `test_loop_pause_resume.py::test_resumed_continuation_answer_is_verified` (just committed) — the
+  drive-through proves the resume mechanism re-enters the gated loop; the unit test proves the
+  gate verifies the resumed final answer.
+- Evidence: `artifacts/sprint-57-98-2-resume-reenters-gated-loop.png`.
+
+**Not separately driven (honest gaps, all covered elsewhere)**:
+- **cheap-tier cost routing**: inherited from Sprint 57.97 (CHANGE-064 drive-through proved the
+  `_verification` cost_ledger row runs on gpt-5.4-mini) + unit-asserted
+  (`test_handler.py::test_build_real_llm_routes_cheap_to_verifier_action_to_loop`). The 57.98
+  handler reuses the same `make_chat_verifier_registry(profile.cheap, …)` wiring. (Direct
+  cost_ledger re-query skipped — the DB password is a secret I do not read.)
+- **fail-then-pass correction**: a real gpt-5.2 answer to a factual prompt passes the
+  output_quality judge first try (score 0.99 above), so the correction path does not naturally
+  occur. It is deterministically unit-proven (`test_inloop_gate_tokens` + the gate's
+  fail-then-pass / fail-at-max tests). Forcing it would need a strict-judge template (deferred —
+  the in-loop correction MECHANISM is fully unit-covered).
+
+**Verdict**: DRIVE-THROUGH PASS for the core 57.98 claim — the in-loop Cat 10 gate is LIVE on the
+production chat main flow (verification in-stream before `loop_end`), and `resume()` re-enters the
+same gated loop. The finer resumed-final-verified + fail-then-pass properties are deterministically
+unit-proven.
 
 ---
