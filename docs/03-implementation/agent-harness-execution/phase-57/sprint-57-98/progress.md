@@ -267,3 +267,37 @@ same gated loop. The finer resumed-final-verified + fail-then-pass properties ar
 unit-proven.
 
 ---
+
+## Day 4 — Closeout (+ spike design note) (2026-06-10)
+
+### 4.1 Design note (MANDATORY — spike)
+- `docs/03-implementation/agent-harness-planning/25-verification-in-loop-design.md` written per
+  `claudedocs/templates/spike-design-note-template.md`. 8-Point Quality Gate **8/8** (self-review,
+  recorded in retrospective.md §Q6): section headers map to US-1..US-6 / every §2 invariant + §1
+  matrix row has a post-edit file:line (`loop.py:417/468/1606/2318-2346/2805/3185-3186/220`;
+  `persistence.py:44`; `registry.py:30/40`) / 5-row decision matrix (where-verify · gate-order ·
+  counter-durability · terminal · replay) / `pytest` verification commands + drive-through reproduce /
+  test fixtures + artifact PNGs / §4 Open Invariants fenced as NOT-verified (A2/A3/deliver-with-flag/
+  per-tenant/cheap-judge accuracy/cross-pause tokens) / §5 rollback (git revert + the env kill-switch) /
+  §3 17.md cross-ref. Verified ratio ~96%.
+
+### 4.2 Closeout
+- **Parent re-verification** (Day-4 full sweep): `mypy src` **0/353** · `run_all` **10/10** ·
+  `pytest -m "not real_llm"` **2290 passed + 4 skipped** · black/isort/flake8 clean ·
+  `events.py`/`ModelProfile`/frontend/DB diff = 0 · drive-through PASS (2 artifact PNGs).
+- **retrospective.md** written (Q1-Q7 + the design-note 8-pt gate self-check in Q6).
+- **Calibration recorded**: NEW `verification-in-loop-spike` 0.60 (1st data point, ratio ~0.92 IN band)
+  + `agent_factor` 1.0 (parent-direct) → `.claude/rules/sprint-workflow.md §Scope-class matrix` row +
+  `calibration-log.md §3` per-sprint entry.
+- **Carryover** (A2 verification-ESCALATE / A3 trace-critique / deliver-with-flag / per-tenant policy /
+  cheap-judge accuracy / judge-token-across-pause / strict-judge drive-through) →
+  `claudedocs/1-planning/next-phase-candidates.md` (NEW §Sprint 57.98 Carryover + roadmap A1 marked SHIPPED).
+- **Navigator files**: MEMORY.md pointer + `project_phase57_98_verification_in_loop.md` subfile +
+  CLAUDE.md lean (Current Sprint row + Last Updated only).
+- **push + PR**: pending user authorization (will run after closeout commit).
+
+**Verdict**: Sprint 57.98 A1 complete — all 6 user stories shipped, gate-green, drive-through PASS,
+design note 8/8, closeout docs written. The Cat 10 verification gate is a real in-loop pre-delivery
+gear; the resume correctness hole is closed; the wrapper is retired.
+
+---
