@@ -206,9 +206,7 @@ async def _drive(loop: AgentLoopImpl, *, session_id: UUID, trace: TraceContext) 
 async def test_persist_passed(monkeypatch: pytest.MonkeyPatch) -> None:
     """Passing verifier → persist_verification_event called with passed=True."""
     persist_mock = AsyncMock()
-    monkeypatch.setattr(
-        "agent_harness.verification.persist_verification_event", persist_mock
-    )
+    monkeypatch.setattr("agent_harness.verification.persist_verification_event", persist_mock)
 
     tenant_id, session_id = uuid4(), uuid4()
     loop = _build_loop(verifier_registry=_registry(_PassingVerifier("v1")))
@@ -231,9 +229,7 @@ async def test_persist_passed(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_persist_failed(monkeypatch: pytest.MonkeyPatch) -> None:
     """Failing verifier (max_attempts=0 → no re-run) → persist passed=False + reason."""
     persist_mock = AsyncMock()
-    monkeypatch.setattr(
-        "agent_harness.verification.persist_verification_event", persist_mock
-    )
+    monkeypatch.setattr("agent_harness.verification.persist_verification_event", persist_mock)
 
     tenant_id, session_id = uuid4(), uuid4()
     loop = _build_loop(verifier_registry=_registry(_FailingVerifier("vF")), max_attempts=0)
