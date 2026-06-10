@@ -42,9 +42,11 @@ Description:
     revisit if per-run override is needed.
 
 Created: 2026-04-30 (Sprint 50.1 Day 2.2)
-Last Modified: 2026-06-08
+Last Modified: 2026-06-10
 
 Modification History (newest-first):
+    - 2026-06-10: Sprint 57.98 A1 US-3 — durable verification_attempts via checkpoint metadata
+    - 2026-06-10: Sprint 57.98 A1 — in-loop Cat 10 verify gate (ctor registry + _cat10_verify_gate)
     - 2026-06-08: Sprint 57.93 — output-guardrail ESCALATE pre-delivery pause point (Slice 3)
     - 2026-06-08: Sprint 57.92 — between-turns guardrail ESCALATE pause point (Slice 3 leg 2)
     - 2026-06-08: Sprint 57.91 — _emit_deferred_pause primitive + input-ESCALATE pause point
@@ -105,10 +107,11 @@ from __future__ import annotations
 
 import asyncio
 import time
+from dataclasses import dataclass
 
 # Local import to avoid circular: only used at runtime for state placeholders
 from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator, cast
 from uuid import UUID, uuid4
 
 # Need imports from sibling adapter / tools / output_parser modules:
@@ -150,7 +153,9 @@ from agent_harness._contracts import (
     TransientState,
     TripwireTriggered,
     TurnStarted,
+    VerificationResult,
 )
+from agent_harness._contracts.events import VerificationFailed, VerificationPassed
 from agent_harness._contracts.hitl import (
     ApprovalDecision,
     ApprovalRequest,
@@ -198,6 +203,21 @@ from .termination import (
     should_terminate_by_tokens,
     should_terminate_by_turns,
 )
+
+if TYPE_CHECKING:
+    # Sprint 57.98 A1: VerifierRegistry is a type-only annotation, imported under
+    # TYPE_CHECKING so the loop module carries no runtime dependency on the Cat 10
+    # package for a forward-ref. Imported from the PACKAGE (not the private
+    # submodule) per the cross-category import rule (17.md §1). The gate consumes
+    # the registry by duck-typing (get_all()/len()); the persistence helper is
+    # lazy-imported inside the gate (also from the package) to keep the loop
+    # module's import-time dependency on Cat 10 to zero.
+    from agent_harness.verification import VerifierRegistry
+
+# Sprint 57.98 A1: stop-reason for LoopCompleted when the in-loop self-correction
+# budget is exhausted (mirrors the retired correction_loop.py wrapper constant).
+# A plain string, not a TerminationReason enum value — no consumer switches on it.
+VERIFICATION_FAILED_STOP_REASON = "verification_failed"
 
 
 # === Message <-> JSONB-safe dict (57.88 US-2 durable pause-resume) ===========
@@ -305,6 +325,45 @@ def messages_from_metadata(metadata: dict[str, Any]) -> list[Message]:
     return out
 
 
+@dataclass
+class _VerifyVerdict:
+    """Outcome of the in-loop Cat 10 verification gate (Sprint 57.98 A1).
+
+    `outcome` drives the caller in `_run_turns`:
+        - "pass"       → all verifiers passed; fall through to deliver.
+        - "correct"    → ≥1 failed AND attempt < max; `correction_block` carries
+                         the feedback to append before continuing the loop.
+        - "failed_max" → ≥1 failed AND attempt == max; emit verification_failed.
+    `events` are the VerificationPassed/Failed events the caller yields; the
+    verif_* fields are the accumulated judge-token usage (Sprint 57.82) the
+    caller stamps onto the terminal LoopCompleted.
+    """
+
+    outcome: str
+    events: list[LoopEvent]
+    correction_block: str | None
+    verif_in: int
+    verif_out: int
+    verif_model: str | None
+
+
+def _build_correction_block(failures: list[VerificationResult]) -> str:
+    """Build the correction-feedback block appended as a user Message in-loop.
+
+    Sprint 57.98 A1: the in-loop equivalent of the retired wrapper's
+    _build_correction_input, MINUS the original input (the conversation —
+    including the just-failed assistant answer — is already in `messages`, so
+    only the feedback block is appended as a fresh user turn).
+    """
+    reasons = [f.reason or "unspecified" for f in failures]
+    corrections = [f.suggested_correction for f in failures if f.suggested_correction]
+    parts = [f"Previous attempt failed verification: {'; '.join(reasons)}"]
+    if corrections:
+        parts.append(f"Suggested: {' / '.join(corrections)}")
+    parts.append("Please retry.")
+    return "[" + ". ".join(parts) + "]"
+
+
 class AgentLoopImpl(AgentLoop):
     """Concrete TAO/ReAct loop. While-true driven, StopReason-terminated."""
 
@@ -348,6 +407,15 @@ class AgentLoopImpl(AgentLoop):
         # of blocking on wait_for_decision. Default False preserves the 53.5
         # blocking behavior for every existing caller / test.
         hitl_deferred: bool = False,
+        # 57.98 A1 §Verification into the loop: opt-in Cat 10 registry. When set
+        # (+ non-empty), the in-loop _cat10_verify_gate runs AFTER the output
+        # guardrail and BEFORE the FINAL terminator; on FAIL it re-injects a
+        # correction Message and continues the SAME loop (the in-loop critique),
+        # exhausting at max_correction_attempts → stop_reason=verification_failed.
+        # When None / empty, the gate is skipped (byte-identical to pre-57.98).
+        # Replaces the run_with_verification wrapper (Cat 10 moves in-loop).
+        verifier_registry: "VerifierRegistry | None" = None,
+        max_correction_attempts: int = 2,
     ) -> None:
         self._chat_client = chat_client
         self._output_parser = output_parser
@@ -396,6 +464,9 @@ class AgentLoopImpl(AgentLoop):
         self._hitl_timeout_s = hitl_timeout_s
         # 57.88 US-1 §durable HITL pause-resume (see ctor docstring above).
         self._hitl_deferred = hitl_deferred
+        # 57.98 A1 §Verification into the loop (see ctor docstring above).
+        self._verifier_registry = verifier_registry
+        self._max_correction_attempts = max_correction_attempts
 
     async def _handle_tool_error(
         self,
@@ -758,6 +829,7 @@ class AgentLoopImpl(AgentLoop):
         turn_count: int,
         session_id: UUID,
         messages: list[Message],
+        verification_attempts: int = 0,
     ) -> AsyncIterator[LoopEvent]:
         """Cat 9 per-tool_call gating. Yields:
         GuardrailTriggered (action=BLOCK/ESCALATE/SANITIZE/REROLL) when
@@ -785,6 +857,7 @@ class AgentLoopImpl(AgentLoop):
                         turn_count=turn_count,
                         session_id=session_id,
                         messages=messages,
+                        verification_attempts=verification_attempts,
                     ):
                         yield ev
                     # _cat9_hitl_branch yields GuardrailTriggered(block) only
@@ -841,6 +914,7 @@ class AgentLoopImpl(AgentLoop):
         turn_count: int = 0,
         session_id: UUID | None = None,
         messages: list[Message] | None = None,
+        verification_attempts: int = 0,
     ) -> AsyncIterator[LoopEvent]:
         """Cat 9 ESCALATE → HITL pause (Sprint 53.5 US-3 + 57.88 US-1).
 
@@ -984,6 +1058,7 @@ class AgentLoopImpl(AgentLoop):
                     "turn": turn_count,
                 },
                 ctx=ctx,
+                verification_attempts=verification_attempts,
             ):
                 yield ev
             return
@@ -1047,6 +1122,7 @@ class AgentLoopImpl(AgentLoop):
         audit_event_type: str,
         audit_content: dict[str, Any],
         ctx: TraceContext,
+        verification_attempts: int = 0,
     ) -> AsyncIterator[LoopEvent]:
         """Generalized durable-pause tail (Sprint 57.91, 地基 A Slice 3 leg 1).
 
@@ -1073,6 +1149,7 @@ class AgentLoopImpl(AgentLoop):
             source_category="orchestrator_loop:hitl_pause",
             ctx=ctx,
             pending_approval=pending_approval,
+            verification_attempts=verification_attempts,
         )
         if checkpoint_event is not None:
             yield checkpoint_event
@@ -1181,6 +1258,7 @@ class AgentLoopImpl(AgentLoop):
         ctx: TraceContext,
         turn_count: int,
         session_id: UUID,
+        verification_attempts: int = 0,
     ) -> AsyncIterator[LoopEvent]:
         """Cat 9 between-turns gating (Sprint 57.92, 地基 A Slice 3 leg 2).
 
@@ -1214,6 +1292,7 @@ class AgentLoopImpl(AgentLoop):
                 session_id=session_id,
                 messages=messages,
                 turn_count=turn_count,
+                verification_attempts=verification_attempts,
             ):
                 yield ev
             return
@@ -1247,6 +1326,7 @@ class AgentLoopImpl(AgentLoop):
         session_id: UUID,
         messages: list[Message],
         turn_count: int,
+        verification_attempts: int = 0,
     ) -> AsyncIterator[LoopEvent]:
         """Cat 9 between-turns ESCALATE → durable HITL pause (Sprint 57.92).
 
@@ -1355,6 +1435,7 @@ class AgentLoopImpl(AgentLoop):
             audit_event_type="guardrail.between_turns.escalate.deferred",
             audit_content={"request_id": str(request_id), "turn": turn_count},
             ctx=ctx,
+            verification_attempts=verification_attempts,
         ):
             yield ev
 
@@ -1367,6 +1448,7 @@ class AgentLoopImpl(AgentLoop):
         turn_count: int,
         session_id: UUID,
         messages: list[Message],
+        verification_attempts: int = 0,
     ) -> AsyncIterator[LoopEvent]:
         """Cat 9 output-guardrail ESCALATE → pre-delivery HITL pause (Sprint 57.93).
 
@@ -1394,6 +1476,7 @@ class AgentLoopImpl(AgentLoop):
                 session_id=session_id,
                 messages=messages,
                 turn_count=turn_count,
+                verification_attempts=verification_attempts,
             ):
                 yield ev
         # else: no-op — the caller falls through to LLMResponded + _cat9_output_check.
@@ -1408,6 +1491,7 @@ class AgentLoopImpl(AgentLoop):
         session_id: UUID,
         messages: list[Message],
         turn_count: int,
+        verification_attempts: int = 0,
     ) -> AsyncIterator[LoopEvent]:
         """Cat 9 output ESCALATE → durable pre-delivery HITL pause (Sprint 57.93).
 
@@ -1515,8 +1599,101 @@ class AgentLoopImpl(AgentLoop):
             audit_event_type="guardrail.output.escalate.deferred",
             audit_content={"request_id": str(request_id), "turn": turn_count},
             ctx=ctx,
+            verification_attempts=verification_attempts,
         ):
             yield ev
+
+    async def _cat10_verify_gate(
+        self,
+        *,
+        output_text: str,
+        turn_count: int,
+        session_id: UUID,
+        attempt: int,
+        ctx: TraceContext,
+    ) -> _VerifyVerdict:
+        """Run the Cat 10 verifiers on a FINAL candidate answer (Sprint 57.98 A1).
+
+        The in-loop replacement for the run_with_verification wrapper's verify
+        block. Runs every registered verifier on `output_text`; collects a
+        VerificationPassed / VerificationFailed event per result (the caller
+        yields them); best-effort persists each (Sprint 57.11); accumulates judge
+        tokens (Sprint 57.82). Returns a verdict the caller acts on (pass /
+        correct / failed_max — see _VerifyVerdict). Caller-gated on
+        `self._verifier_registry` being set + non-empty.
+
+        The persistence helper is lazy-imported (not module-level) from the Cat 10
+        package so the loop module carries no import-time dependency on Cat 10 (see
+        the TYPE_CHECKING note above; imported from the package per 17.md §1).
+        """
+        from agent_harness.verification import persist_verification_event
+
+        registry = self._verifier_registry
+        assert registry is not None  # caller-gated (registry set + non-empty)
+        events: list[LoopEvent] = []
+        failures: list[VerificationResult] = []
+        verif_in = 0
+        verif_out = 0
+        verif_model: str | None = None
+        for verifier in registry.get_all():
+            result = await verifier.verify(
+                output=output_text,
+                state=cast(LoopState, None),
+                trace_context=ctx,
+            )
+            if result.passed:
+                events.append(
+                    VerificationPassed(
+                        verifier=result.verifier_name,
+                        score=result.score,
+                        verifier_type=result.verifier_type,
+                        trace_context=ctx,
+                    )
+                )
+            else:
+                events.append(
+                    VerificationFailed(
+                        verifier=result.verifier_name,
+                        reason=result.reason,
+                        suggested_correction=result.suggested_correction,
+                        verifier_type=result.verifier_type,
+                        correction_attempt=attempt,
+                        trace_context=ctx,
+                    )
+                )
+                failures.append(result)
+            # Sprint 57.82: accumulate judge tokens (pass OR fail — the LLM call
+            # was chargeable either way; rules-based verifiers contribute 0).
+            verif_in += result.input_tokens
+            verif_out += result.output_tokens
+            if result.model:
+                verif_model = result.model
+            # Sprint 57.11 (migrated in-loop 57.98): best-effort verification_log
+            # row per verifier so a single crash does not orphan its siblings.
+            await persist_verification_event(
+                tenant_id=ctx.tenant_id,
+                session_id=session_id,
+                turn_index=turn_count,
+                verifier_name=result.verifier_name,
+                verifier_type=result.verifier_type,
+                passed=result.passed,
+                score=result.score,
+                reason=result.reason,
+                suggested_correction=result.suggested_correction,
+                correction_attempt=attempt,
+            )
+        if not failures:
+            return _VerifyVerdict("pass", events, None, verif_in, verif_out, verif_model)
+        if attempt >= self._max_correction_attempts:
+            return _VerifyVerdict("failed_max", events, None, verif_in, verif_out, verif_model)
+        return _VerifyVerdict(
+            "correct",
+            events,
+            _build_correction_block(failures),
+            verif_in,
+            verif_out,
+            verif_model,
+        )
 
     async def run(
         self,
@@ -1629,6 +1806,7 @@ class AgentLoopImpl(AgentLoop):
         ctx: TraceContext,
         root_ctx: TraceContext,
         skip_between_turns_once: bool = False,
+        verification_attempts: int = 0,
     ) -> AsyncIterator[LoopEvent]:
         """Re-enterable per-turn loop (Sprint 57.89 Slice 1).
 
@@ -1639,7 +1817,16 @@ class AgentLoopImpl(AgentLoop):
         LOOP span ctx (root_ctx) the caller opened, so the per-turn TURN spans
         nest under it. A `return` here ends the generator; the caller's LOOP-span
         try/finally still fires SpanEnded(LOOP) on every exit path.
+
+        Sprint 57.98 A1: `verification_attempts` is the running in-loop
+        self-correction count (0 for a fresh run; resume() passes the
+        checkpointed value so a pause mid-correction keeps counting — US-3).
+        `verif_*` accumulate judge-token usage across attempts (Sprint 57.82)
+        to stamp the terminal LoopCompleted.
         """
+        verif_in = 0
+        verif_out = 0
+        verif_model: str | None = None
         while True:
             # === Pre-LLM termination checks ============================
             if should_terminate_by_turns(turn_count, self._max_turns):
@@ -1684,6 +1871,7 @@ class AgentLoopImpl(AgentLoop):
                     ctx=ctx,
                     turn_count=turn_count,
                     session_id=session_id,
+                    verification_attempts=verification_attempts,
                 ):
                     yield ev
                     if isinstance(ev, LoopCompleted):
@@ -2050,6 +2238,7 @@ class AgentLoopImpl(AgentLoop):
                             turn_count=turn_count,
                             session_id=session_id,
                             messages=messages,
+                            verification_attempts=verification_attempts,
                         ):
                             yield ev
                             if isinstance(ev, LoopCompleted):
@@ -2107,6 +2296,70 @@ class AgentLoopImpl(AgentLoop):
                     if output_terminated:
                         return
 
+                    # === Cat 10 in-loop verification gate (Sprint 57.98 A1) =====
+                    # Runs AFTER the Cat 9 output guardrail (locked order
+                    # guardrail->verification) and BEFORE the stop_reason / FINAL
+                    # terminator. For a FINAL candidate answer: verify it; on PASS
+                    # fall through to deliver; on FAIL with budget left, append the
+                    # failed answer + a correction-feedback Message and `continue`
+                    # (turn_count++) — the NEXT turn re-answers in the SAME loop
+                    # (the in-loop critique; prefix-stable for the Cat 4 cache); on
+                    # FAIL at the budget, emit verification_failed. Gated on the
+                    # registry so a non-verified run (echo/demo, or
+                    # chat_verification_mode off) is byte-unchanged. Replaces the
+                    # retired run_with_verification wrapper; resume() covers the
+                    # resume path automatically (shared _run_turns). Judge tokens
+                    # accumulate (verif_*) to stamp the terminal LoopCompleted (57.82).
+                    if (
+                        (
+                            should_terminate_by_stop_reason(response)
+                            or classify_output(response) == OutputType.FINAL
+                        )
+                        and self._verifier_registry is not None
+                        and len(self._verifier_registry) > 0
+                    ):
+                        verdict = await self._cat10_verify_gate(
+                            output_text=parsed.text,
+                            turn_count=turn_count,
+                            session_id=session_id,
+                            attempt=verification_attempts,
+                            ctx=ctx,
+                        )
+                        for vev in verdict.events:
+                            yield vev
+                        verif_in += verdict.verif_in
+                        verif_out += verdict.verif_out
+                        if verdict.verif_model:
+                            verif_model = verdict.verif_model
+                        if verdict.outcome == "correct":
+                            # In-loop critique: append the failed answer + the
+                            # correction feedback, then re-answer as the NEXT turn.
+                            messages.append(Message(role="assistant", content=parsed.text))
+                            messages.append(
+                                Message(role="user", content=verdict.correction_block or "")
+                            )
+                            verification_attempts += 1
+                            turn_count += 1
+                            continue
+                        if verdict.outcome == "failed_max":
+                            yield LoopCompleted(
+                                stop_reason=VERIFICATION_FAILED_STOP_REASON,
+                                total_turns=turn_count,
+                                total_tokens=tokens_used,
+                                input_tokens=metrics_acc.cumulative_input_tokens,
+                                output_tokens=metrics_acc.cumulative_output_tokens,
+                                provider=metrics_acc.last_provider,
+                                model=metrics_acc.last_model,
+                                cached_input_tokens=metrics_acc.cumulative_cached_input_tokens,
+                                cache_hit_rate=metrics_acc.cache_hit_rate,
+                                verification_input_tokens=verif_in,
+                                verification_output_tokens=verif_out,
+                                verification_model=verif_model,
+                                trace_context=ctx,
+                            )
+                            return
+                        # outcome == "pass" → fall through to the terminator below.
+
                     # === stop_reason terminator =================================
                     if should_terminate_by_stop_reason(response):
                         yield LoopCompleted(
@@ -2121,6 +2374,11 @@ class AgentLoopImpl(AgentLoop):
                             # Sprint 57.65 A-2 Tier2: prompt-cache observability
                             cached_input_tokens=metrics_acc.cumulative_cached_input_tokens,
                             cache_hit_rate=metrics_acc.cache_hit_rate,
+                            # Sprint 57.98 A1: stamp accumulated judge tokens (0 on a
+                            # non-verified run) so the cost ledger attributes them.
+                            verification_input_tokens=verif_in,
+                            verification_output_tokens=verif_out,
+                            verification_model=verif_model,
                             trace_context=ctx,
                         )
                         return
@@ -2141,6 +2399,11 @@ class AgentLoopImpl(AgentLoop):
                             # Sprint 57.65 A-2 Tier2: prompt-cache observability
                             cached_input_tokens=metrics_acc.cumulative_cached_input_tokens,
                             cache_hit_rate=metrics_acc.cache_hit_rate,
+                            # Sprint 57.98 A1: stamp accumulated judge tokens (0 on a
+                            # non-verified run) so the cost ledger attributes them.
+                            verification_input_tokens=verif_in,
+                            verification_output_tokens=verif_out,
+                            verification_model=verif_model,
                             trace_context=ctx,
                         )
                         return
@@ -2204,6 +2467,7 @@ class AgentLoopImpl(AgentLoop):
                             turn_count=turn_count,
                             session_id=session_id,
                             messages=messages,
+                            verification_attempts=verification_attempts,
                         ):
                             yield ev
                             if isinstance(ev, LoopCompleted):
@@ -2531,6 +2795,14 @@ class AgentLoopImpl(AgentLoop):
         messages: list[Message] = list(state.transient.messages)
         turn_count = state.transient.current_turn
         tokens_used = state.transient.token_usage_so_far
+        # Sprint 57.98 A1 (US-3): rehydrate the in-loop self-correction count so a
+        # pause that landed mid-correction continues the SAME correction budget
+        # rather than resetting it. The pause checkpoint stored it under
+        # metadata["verification_attempts"] (D-DAY2-1: rides metadata, not a
+        # DurableState scalar field — the checkpoint (de)serializer round-trips
+        # metadata verbatim, so no serializer / migration change). A fresh run()
+        # never writes it → absent → 0.
+        verification_attempts = int(state.durable.metadata.get("verification_attempts", 0))
 
         yield LoopStarted(session_id=session_id, trace_context=ctx)
 
@@ -2791,6 +3063,7 @@ class AgentLoopImpl(AgentLoop):
                     ctx=ctx,
                     root_ctx=root_ctx,
                     skip_between_turns_once=skip_between_turns_once,
+                    verification_attempts=verification_attempts,
                 ):
                     yield ev
             finally:
@@ -2865,6 +3138,7 @@ class AgentLoopImpl(AgentLoop):
         source_category: str,
         ctx: TraceContext,
         pending_approval: dict[str, Any] | None = None,
+        verification_attempts: int = 0,
     ) -> StateCheckpointed | None:
         """Build LoopState from loop locals, reducer.merge → checkpointer.save.
 
@@ -2900,6 +3174,16 @@ class AgentLoopImpl(AgentLoop):
         if pending_approval is not None:
             metadata["pending_approval"] = pending_approval
             metadata["resume_messages"] = [_message_to_dict(m) for m in messages]
+        # Sprint 57.98 A1 (US-3): the in-loop self-correction count rides the
+        # checkpoint metadata (mirrors the 57.88 pending_approval pattern — the
+        # JSONB (de)serializer already round-trips `metadata` verbatim, so no
+        # DurableState scalar field / serializer allowlist / migration change is
+        # needed; D-DAY2-1). Stored only when > 0 so ordinary checkpoints stay
+        # empty (no happy-path size regression). resume() reads it back so a
+        # pause that lands mid-correction keeps the correction budget instead of
+        # resetting it (a fresh run() never sets it → starts at 0).
+        if verification_attempts > 0:
+            metadata["verification_attempts"] = verification_attempts
 
         # Build snapshot state from current loop locals.
         snapshot_state = LoopState(

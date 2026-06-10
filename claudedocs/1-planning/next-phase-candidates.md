@@ -12,7 +12,7 @@
 
 It condenses the user's "5-point deepening discussion" into 3 workflows and a recommended slice order — **the items in the per-sprint carryovers below (verification, subagent TEAMMATE/HANDOFF, model policy / config 分層) are the raw material it organizes**:
 
-- **A. Verification into loop** (points 1 + 5) — A1 in-loop verify gate (retires the `correction_loop.py` wrapper; also closes the **resume-bypasses-verification structural hole**: `router.py:432` wraps `run()` but `:827`/`:878` resume calls `loop.resume()` un-wrapped) → A2 verification-ESCALATE human loop → A3 trace-critique (optional).
+- **A. Verification into loop** (points 1 + 5) — ✅ **A1 SHIPPED (Sprint 57.98)**: in-loop verify gate (retired the `correction_loop.py` wrapper; closed the **resume-bypasses-verification structural hole** — `resume()` now drives the same gated `_run_turns`) → **A2 verification-ESCALATE human loop (next A slice)** → A3 trace-critique (optional).
 - **B. Subagent completion** (point 3 + C-class live injection) — B1 between-turns injection primitive (serves BOTH chat live-injection AND TEAMMATE parent→child — one primitive, two payoffs) → B2 TEAMMATE multi-turn → B3 HANDOFF finish (**platform layer already done 57.68-70** — carryover text below saying "platform service absent" is stale; it shrinks to finish+governance) → B4 child governance.
 - **C. Model policy + config tiering** (point 4 + cc-parity §7.3) — C1 per-tenant model policy (`tenant.meta_data["model_policy"]` JSONB) → C2 compaction cheap tier → C3 policy面 + risky-action detector.
 
@@ -21,6 +21,21 @@ It condenses the user's "5-point deepening discussion" into 3 workflows and a re
 **⚠️ C1 soft-prereq**: `AD-RBAC-DB-To-JWT-Wiring-Phase58` (below) must be authz-effective BEFORE C1's admin PUT, else C1's admin endpoint is an AP-4 Potemkin dead control. A1/A2/B1/B2 do NOT depend on it.
 
 > **Status**: roadmap selected/acknowledged by user; NO slice sprint kicked off yet (rolling discipline — A1 plan is written only on explicit user go).
+
+---
+
+## 🆕 Sprint 57.98 Carryover — A1 verification-into-loop SHIPPED (gate moved in-loop, wrapper retired, resume hole closed); A2/A3 + the rest next
+
+**Source**: Sprint 57.98 closed 2026-06-10 — workflow A slice #1. The Cat 10 verify gate moved from the outer `run_with_verification` wrapper INTO `_run_turns` as a pre-delivery gate (after the Cat 9 output guardrail, before the terminator); the attempt counter is durable across pause→resume via `metadata["verification_attempts"]`; the max terminal is `LoopCompleted(stop_reason="verification_failed")`; the resume path is now verified for free (`resume()` drives the shared `_run_turns` + the ctor injection) — closing a real correctness hole (pre-57.98 a HITL-paused→resumed answer was delivered un-verified); `correction_loop.py` retired (sole consumer was the router). Drive-through PASS (the gate fires IN-STREAM before `loop_end`; resume re-enters the gated loop). Detail: `memory/project_phase57_98_verification_in_loop.md` + CHANGE-065 + design note `25-verification-in-loop-design.md`.
+
+- **A2 — verification-ESCALATE human-in-the-loop** (🟡 — the natural next A slice) — on max-attempts (or a config), ESCALATE → `_emit_deferred_pause(kind="verification")` + human approve / reject-with-note → the note re-injects as human-coached correction feedback. A1's terminal is `verification_failed`; A2 swaps it for the pause. Reuses the 57.91-93 pause基建.
+- **A3 — trace-aware critique** (🟢) — a verifier that sees recent turns / tool errors (not just the final string) + a formal cheap-judge accuracy benchmark (design-note 24+25 carryover).
+- **deliver-with-flag terminal** (🟢, option b) — deliver the answer but flag verification failed; not chosen for A1 (would need a new event/UI flag).
+- **per-tenant verification mode / template** (🟡 — Config 分層 = workflow C / C3) — a tenant choosing its own verification policy.
+- **cheap-judge accuracy benchmark** (🟢) — whether the cheap tier (57.97) over/under-corrects vs strong; documented as a design-note Open Invariant, NOT measured. The action turn is NEVER verified-away (quality preserved).
+- **judge-token accounting across a mid-correction pause** (🟢, D-DAY1-3) — within a non-paused run the verif tokens accumulate + stamp the terminal correctly; a rare pause-mid-correction may under-count (no `LoopCompleted` fires until resume). The attempt COUNTER is durable; the cross-pause token accounting is documented, not fixed.
+- **strict-judge drive-through template** (🟢) — a template to force a real fail-then-pass + verified-resumed-FINAL for a future drive-through (A1's literal fail-then-pass was unit-proven, not drive-driven — a real gpt-5.2 answer passes the judge first try).
+- `verification-in-loop-spike` calibration class 0.60 (1st data point ~0.92 IN band; pending 2-3 sprint validation; `agent_factor` 1.0 parent-direct).
 
 ---
 

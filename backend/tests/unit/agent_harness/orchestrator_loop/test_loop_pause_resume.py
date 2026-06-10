@@ -70,7 +70,9 @@ from agent_harness._contracts import (
     ToolSpec,
     TraceContext,
     TransientState,
+    VerificationResult,
 )
+from agent_harness._contracts.events import VerificationFailed, VerificationPassed
 from agent_harness._contracts.hitl import (
     ApprovalDecision,
     ApprovalRequest,
@@ -91,10 +93,14 @@ from agent_harness.guardrails.output.escalation_keyword_detector import (
     OutputKeywordEscalationGuardrail,
 )
 from agent_harness.hitl import HITLManager
-from agent_harness.orchestrator_loop.loop import AgentLoopImpl
+from agent_harness.orchestrator_loop.loop import (
+    VERIFICATION_FAILED_STOP_REASON,
+    AgentLoopImpl,
+)
 from agent_harness.orchestrator_loop.termination import TerminationReason
 from agent_harness.output_parser import OutputParserImpl
 from agent_harness.tools import ToolExecutorImpl, ToolRegistryImpl
+from agent_harness.verification import Verifier, VerifierRegistry
 
 pytestmark = pytest.mark.asyncio
 
@@ -1442,3 +1448,222 @@ async def test_get_decision_decided_returns_decision() -> None:
     decision = await hitl.get_decision(uuid4())
     assert decision is not None
     assert decision.decision == DecisionType.APPROVED
+
+
+# === Tests: in-loop verification on resume (Sprint 57.98 A1 US-3/US-4) =======
+# The Cat 10 verify gate now lives in the shared _run_turns (CHANGE-065), so a
+# resumed continuation is verified by the SAME gate as a fresh run — closing the
+# pre-57.98 hole where the outer run_with_verification wrapper never wrapped
+# resume(). These tests build the resume loop WITH a verifier_registry and assert:
+# (1) the resumed final answer is verified; (2) the durable verification_attempts
+# counter (checkpoint metadata) survives a pause mid-correction; (3) a fresh run()
+# resets it to 0; (4) an APPROVED output-pause REPLAY is NOT re-verified.
+
+
+class _PassingVerifier(Verifier):
+    async def verify(
+        self, *, output: str, state: LoopState, trace_context: TraceContext | None = None
+    ) -> VerificationResult:
+        return VerificationResult(
+            passed=True, verifier_name="pass", verifier_type="rules_based", score=1.0
+        )
+
+
+class _FailingVerifier(Verifier):
+    async def verify(
+        self, *, output: str, state: LoopState, trace_context: TraceContext | None = None
+    ) -> VerificationResult:
+        return VerificationResult(
+            passed=False,
+            verifier_name="fail",
+            verifier_type="rules_based",
+            score=0.0,
+            reason="always fails",
+            suggested_correction="do better",
+        )
+
+
+def _vregistry(*verifiers: Verifier) -> VerifierRegistry:
+    reg = VerifierRegistry()
+    for v in verifiers:
+        reg.register(v)
+    return reg
+
+
+def _build_resume_loop_verified(
+    *,
+    chat_client: ChatClient,
+    hitl_manager: HITLManager,
+    verifier_registry: VerifierRegistry,
+    max_attempts: int = 2,
+) -> tuple[AgentLoopImpl, SpyExecutor]:
+    """`_build_resume_loop` + an injected in-loop Cat 10 verifier registry."""
+    registry = _registry_with_tool()
+    executor = _executor(registry)
+    loop = AgentLoopImpl(
+        chat_client=chat_client,
+        output_parser=OutputParserImpl(),
+        tool_executor=executor,
+        tool_registry=registry,
+        tenant_id=_TENANT_ID,
+        hitl_manager=hitl_manager,
+        verifier_registry=verifier_registry,
+        max_correction_attempts=max_attempts,
+    )
+    return loop, executor
+
+
+def _paused_state_verified(
+    *,
+    decision_session: UUID,
+    verification_attempts: int = 0,
+    kind: str = "tool",
+    answer_text: str = "held answer",
+) -> LoopState:
+    """A paused checkpoint state with an optional durable verification_attempts.
+
+    kind="tool" → a tool-HITL pause (resume execs the pending tool then continues);
+    kind="output" → an output-guardrail pre-delivery pause (resume REPLAYS the
+    held answer via _replay_approved_output, no _run_turns drive).
+    """
+    if kind == "output":
+        pending: dict[str, Any] = {
+            "kind": "output",
+            "approval_request_id": str(uuid4()),
+            "turn": 1,
+            "response_snapshot": {"answer_text": answer_text},
+        }
+    else:
+        pending = {
+            "kind": "tool",
+            "tool_call": {
+                "name": "sensitive_tool",
+                "arguments": {"x": 42},
+                "tool_call_id": "tc-1",
+            },
+            "approval_request_id": str(uuid4()),
+            "turn": 1,
+        }
+    metadata: dict[str, Any] = {"pending_approval": pending}
+    if verification_attempts > 0:
+        metadata["verification_attempts"] = verification_attempts
+    return LoopState(
+        transient=TransientState(
+            messages=[Message(role="user", content="please act")],
+            current_turn=1,
+            token_usage_so_far=2,
+        ),
+        durable=DurableState(session_id=decision_session, tenant_id=_TENANT_ID, metadata=metadata),
+        version=StateVersion(
+            version=1,
+            parent_version=None,
+            created_at=_DATETIME_NOW,
+            created_by_category="orchestrator_loop:hitl_pause",
+        ),
+    )
+
+
+async def test_resumed_continuation_answer_is_verified() -> None:
+    """US-4: a resumed (tool-HITL) continuation's FINAL answer runs through the gate."""
+    session_id = uuid4()
+    chat = FakeChatClient(responses=[("the answer", None, StopReason.END_TURN)])
+    hitl = SpyHITLManager(decision=DecisionType.APPROVED)
+    loop, executor = _build_resume_loop_verified(
+        chat_client=chat, hitl_manager=hitl, verifier_registry=_vregistry(_PassingVerifier())
+    )
+
+    state = _paused_state_verified(decision_session=session_id)
+    ctx = TraceContext(tenant_id=_TENANT_ID, session_id=session_id)
+    events = [ev async for ev in loop.resume(state=state, trace_context=ctx)]
+
+    # The pre-approved tool ran, then the continuation's final answer was VERIFIED.
+    assert executor.executed and executor.executed[0].name == "sensitive_tool"
+    assert any(
+        isinstance(e, VerificationPassed) for e in events
+    ), "the resumed continuation's final answer must be verified (pre-57.98 it was not)"
+    completes = [e for e in events if isinstance(e, LoopCompleted)]
+    assert completes[-1].stop_reason == TerminationReason.END_TURN.value
+
+
+async def test_durable_counter_survives_pause_mid_correction() -> None:
+    """US-3: a pause that checkpointed verification_attempts=1 resumes with the SAME
+    budget — the resumed answers are attempts 1,2 (NOT reset to 0,1,2)."""
+    session_id = uuid4()
+    chat = FakeChatClient(
+        responses=[("bad1", None, StopReason.END_TURN), ("bad2", None, StopReason.END_TURN)]
+    )
+    hitl = SpyHITLManager(decision=DecisionType.APPROVED)
+    loop, _ = _build_resume_loop_verified(
+        chat_client=chat,
+        hitl_manager=hitl,
+        verifier_registry=_vregistry(_FailingVerifier()),
+        max_attempts=2,
+    )
+
+    state = _paused_state_verified(decision_session=session_id, verification_attempts=1)
+    ctx = TraceContext(tenant_id=_TENANT_ID, session_id=session_id)
+    events = [ev async for ev in loop.resume(state=state, trace_context=ctx)]
+
+    failed = [e for e in events if isinstance(e, VerificationFailed)]
+    # Counter survived as 1 → attempts 1 then 2 (2 failures), NOT 0,1,2 (3 failures).
+    assert [f.correction_attempt for f in failed] == [1, 2]
+    completes = [e for e in events if isinstance(e, LoopCompleted)]
+    assert completes[-1].stop_reason == VERIFICATION_FAILED_STOP_REASON
+
+
+async def test_fresh_run_starts_counter_at_zero() -> None:
+    """US-3 (D2): a fresh run() starts verification_attempts at 0 — a failing verifier
+    exhausts attempts 0,1,2 (3 failures), proving no stale counter leaks in."""
+    chat = FakeChatClient(
+        responses=[
+            ("b0", None, StopReason.END_TURN),
+            ("b1", None, StopReason.END_TURN),
+            ("b2", None, StopReason.END_TURN),
+        ]
+    )
+    registry = _registry_with_tool()
+    loop = AgentLoopImpl(
+        chat_client=chat,
+        output_parser=OutputParserImpl(),
+        tool_executor=_executor(registry),
+        tool_registry=registry,
+        tenant_id=_TENANT_ID,
+        verifier_registry=_vregistry(_FailingVerifier()),
+        max_correction_attempts=2,
+    )
+
+    sid = uuid4()
+    ctx = TraceContext(tenant_id=_TENANT_ID, session_id=sid)
+    events = [ev async for ev in loop.run(session_id=sid, user_input="hi", trace_context=ctx)]
+
+    failed = [e for e in events if isinstance(e, VerificationFailed)]
+    assert [f.correction_attempt for f in failed] == [0, 1, 2]
+    completes = [e for e in events if isinstance(e, LoopCompleted)]
+    assert completes[-1].stop_reason == VERIFICATION_FAILED_STOP_REASON
+
+
+async def test_replay_approved_output_not_reverified() -> None:
+    """US-4: an APPROVED output-pause REPLAYS the held answer directly — the in-loop
+    gate is NOT re-run on it (code-path isolation; _replay_approved_output re-emits)."""
+    session_id = uuid4()
+    chat = FakeChatClient(responses=[])  # replay makes no LLM call
+    hitl = SpyHITLManager(decision=DecisionType.APPROVED)
+    loop, _ = _build_resume_loop_verified(
+        chat_client=chat,
+        hitl_manager=hitl,
+        verifier_registry=_vregistry(_FailingVerifier()),  # would FAIL if it ran
+    )
+
+    state = _paused_state_verified(
+        decision_session=session_id, kind="output", answer_text="held answer"
+    )
+    ctx = TraceContext(tenant_id=_TENANT_ID, session_id=session_id)
+    events = [ev async for ev in loop.resume(state=state, trace_context=ctx)]
+
+    # The held answer is re-delivered WITHOUT re-verification — even a FAILING verifier
+    # never runs (an approved replay must not be second-guessed).
+    assert not any(isinstance(e, (VerificationPassed, VerificationFailed)) for e in events)
+    responded = [e for e in events if isinstance(e, LLMResponded)]
+    assert responded and responded[-1].content == "held answer"
+    completes = [e for e in events if isinstance(e, LoopCompleted)]
+    assert completes[-1].stop_reason == TerminationReason.END_TURN.value
