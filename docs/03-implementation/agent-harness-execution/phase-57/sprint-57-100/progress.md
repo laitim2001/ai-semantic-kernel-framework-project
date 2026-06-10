@@ -56,3 +56,26 @@ No DB/migration/ORM change (no new persisted field — `kind` already lives in t
 - **run_all** (V2 lints): **10/10** green ✅ (incl. `check_event_schema_sync` + `check_llm_sdk_leak`)
 - **frontend Vitest**: **777** passed (134 files) ✅
 - **check:mockup-fidelity**: `styles-mockup.css` byte-identical ✅ · HEX_OKLCH baseline **53** ✅
+
+---
+
+## Day 1 — The `kind` wire field (US-1) — 2026-06-10
+
+- **`events.py`**: `ApprovalRequested` +`kind: str = ""` (frozen dataclass field; optional default → all construction sites build). MHist.
+- **`loop.py`**: the 5 `yield ApprovalRequested(...)` sites pass their real `kind=` per the D-DAY0-1-corrected map — `:814` `input`, `:1030` `tool`, `:1433` `between_turns`, `:1596` `output`, `:1812` `verification` (each == its `pending_approval["kind"]`). MHist.
+- **`sse.py`**: the `approval_requested` serializer +`"kind": event.kind`. MHist + Last Modified.
+- **`event_wire_schema.py`**: the `"approval_requested"` entry +`"kind": "string"`. MHist + Last Modified.
+- **codegen**: `python scripts/codegen/generate_event_schemas.py` → regen. `git diff` = ONLY `approval_requested.kind` (`events.json` +`"kind": "string"`; `loopEvents.generated.ts` +`kind: string;` on `ApprovalRequestedEvent.data`). No event-count bump (22).
+- **Gate**: mypy `src` **0/353** · `check_event_schema_sync` **in sync** · `test_event_wire_schema_parity.py` **32 passed**. ✅
+
+## Day 2 — Frontend capture + REJECT-with-note (US-2..US-5) — 2026-06-10
+
+- **`types.ts`**: `HITLTurn` +`kind: string`. MHist + Last Modified.
+- **`chatStore.ts`**: the `approval_requested` case sets `kind: ev.data.kind ?? ""` (`""` fallback for an older replayed event). MHist + Last Modified.
+- **`HITLTurn.tsx`**: `isVerification = turn.kind === "verification"`; `submitDecision(decision, note?)` passes `note` to `decide` + `shouldResume = approved || (rejected && isVerification)` (guarded on `awaiting_approval`); the Reject button reveals a coaching-note textarea for verification (`reject-note` / `reject-confirm-btn` "Reject & coach") else submits immediately (byte-identical); the meta row reads `kind: verification` (mono `var(--tool)`) for verification, else `tool: {turn.tool}`. The textarea uses confirmed mockup tokens (`--radius-sm`/`--border`/`--bg-1`/`--fg`) — no new HEX/oklch. MHist.
+- **Drift D-DAY2-1**: `tsc -b` caught a stale demo fixture — `orchestrator-loop/_fixtures/demoLoopEvents.ts:155` built `approval_requested` WITHOUT `kind` (now a required field) → added `kind: "tool"` (a high-risk-tool HITL demo). Build green after. The wire field being REQUIRED (not optional) surfaced the only stale construction site at COMPILE time — the intended type-safety.
+- **Tests** (D-DAY0-2: extended, not new files):
+  - `HITLTurn.resume.test.tsx`: `makeTurn` +`kind` (base `"tool"` + `Partial` override); existing assertions → 3-arg `decide(...,undefined)`; +3 verification cases (reveal note / confirm → `decide(id,"rejected",note)`+`resume` / meta reads "verification"); + tool reject asserts no resume + no `reject-note`.
+  - `chatStore.mergeEvent.test.ts`: helper +`kind`; +2 cases (kind capture → `HITLTurn.kind==="verification"`; no-kind-on-wire → `""` fallback).
+  - `test_sse.py`: existing test +`kind==""` assert; +`test_approval_requested_carries_kind` (`kind="verification"`).
+- **Gate**: frontend build **exit 0** · lint clean · `check:mockup-fidelity` baseline **53 unchanged** · Vitest **782 passed** (777 + 5) · backend `test_sse.py` **31 passed** (30 + 1). ✅

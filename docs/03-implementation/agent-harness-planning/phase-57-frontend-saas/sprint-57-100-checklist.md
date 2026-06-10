@@ -30,54 +30,50 @@
 ## Day 1 — The `kind` wire field + codegen (US-1)
 
 ### 1.1 The event + emit sites
-- [ ] **`_contracts/events.py`** — `ApprovalRequested` +`kind: str = ""` (frozen dataclass field, optional default); MHist
-  - DoD: `mypy src` 0; all 5 emit sites + any test constructors still build
-- [ ] **`loop.py` 5 emit sites** — pass `kind=` at `:814`(`"tool"`)/`:1030`(`"input"`)/`:1433`(`"between_turns"`)/`:1596`(`"output"`)/`:1812`(`"verification"`); MHist
-  - DoD: each site's `kind=` literal == its `pending_approval["kind"]` (Prong 2 confirmed); `mypy src` 0
+- [x] **`_contracts/events.py`** — `ApprovalRequested` +`kind: str = ""` (frozen dataclass field, optional default); MHist ✅
+- [x] **`loop.py` 5 emit sites** — pass `kind=` (D-DAY0-1 corrected map): `:814`→`"input"` / `:1030`→`"tool"` / `:1433`→`"between_turns"` / `:1596`→`"output"` / `:1812`→`"verification"`; MHist. ✅ each `kind=` literal == its `pending_approval["kind"]` (`:821`/`:1052`/`:1440`/`:1603`/`:1819`); mypy `src` 0/353
 
 ### 1.2 The wire + schema + codegen
-- [ ] **`api/v1/chat/sse.py`** — the `approval_requested` serializer (`:229-238`) +`"kind": event.kind`; MHist
-- [ ] **`api/v1/chat/event_wire_schema.py`** — the `"approval_requested"` entry (`:119-122`) +`"kind": "string"`; MHist
-- [ ] **codegen regen** — `python scripts/codegen/generate_event_schemas.py` → `frontend/src/features/chat_v2/generated/loopEvents.generated.ts` regenerates
-  - DoD: `git diff` the generated `.ts` → the ONLY change is the `approval_requested` `kind` field (no spurious reformat / unrelated drift); event count unchanged (22)
-- [ ] **backend lint/type** — `mypy src` 0; `python scripts/lint/check_event_schema_sync.py` green; the backend parity test `test_event_wire_schema_parity.py` green (regenerated)
+- [x] **`api/v1/chat/sse.py`** — `approval_requested` serializer +`"kind": event.kind`; MHist ✅
+- [x] **`api/v1/chat/event_wire_schema.py`** — `"approval_requested"` entry +`"kind": "string"`; MHist ✅
+- [x] **codegen regen** — `python scripts/codegen/generate_event_schemas.py` → `events.json` + `loopEvents.generated.ts` regenerated ✅ `git diff` = ONLY `approval_requested.kind` (events.json +`"kind": "string"`, `.ts` +`kind: string;` on `ApprovalRequestedEvent.data`); no spurious reformat; event count unchanged (22)
+- [x] **backend lint/type** — mypy `src` **0/353** ✅; `check_event_schema_sync` **in sync** ✅; `test_event_wire_schema_parity.py` **32 passed** ✅
 
 ---
 
 ## Day 2 — The frontend capture + REJECT-with-note (US-2/US-3/US-4/US-5)
 
 ### 2.1 Capture `kind` (US-2)
-- [ ] **`chat_v2/types.ts`** — `HITLTurn` +`kind: string` (after `tool`); MHist
-- [ ] **`chat_v2/store/chatStore.ts`** — the `approval_requested` case (`:453-487`) sets `kind: ev.data.kind ?? ""` on the `HITLTurn`; MHist
-  - DoD: a unit feeds `approval_requested` `kind:"verification"` → pushed `HITLTurn.kind==="verification"`; no kind → `""`
+- [x] **`chat_v2/types.ts`** — `HITLTurn` +`kind: string` (after `tool`); MHist ✅
+- [x] **`chat_v2/store/chatStore.ts`** — the `approval_requested` case sets `kind: ev.data.kind ?? ""` on the `HITLTurn`; MHist ✅ (unit: kind capture + "" fallback in `chatStore.mergeEvent.test.ts`)
 
 ### 2.2 REJECT-with-coaching-note, verification-gated (US-3/US-4)
-- [ ] **`HITLTurn.tsx` state + gating** — `rejectNote`/`showNoteInput` state; `isVerification = turn.kind === "verification"`; `submitDecision(decision, note?)` passes `note` to `decide` + resumes when `awaiting_approval && (approved || (rejected && isVerification))`; MHist
-- [ ] **Reject button behavior** — `isVerification && !showNoteInput` → Reject reveals the note input (`setShowNoteInput(true)`); `!isVerification` → Reject submits `"rejected"` immediately (today's behavior); a "Reject with note" confirm button (only when `showNoteInput`) submits `"rejected"` + `rejectNote`
-  - DoD: a verification turn — Reject reveals the textarea; confirm → `decide(id,"rejected",note)` + `resume()`. A tool turn — Reject submits immediately, NO textarea, NO resume (byte-identical)
-- [ ] **The note textarea** — design-system-consistent (mockup `.hitl-card`/input vocab + `var(--*)` tokens, NO invented colors); `aria-label="Coaching note"`; optional (placeholder "(optional)…")
-  - DoD: `npm run check:mockup-fidelity` HEX_OKLCH baseline unchanged
+- [x] **`HITLTurn.tsx` state + gating** — `showNoteInput`/`rejectNote` state; `isVerification = turn.kind === "verification"`; `submitDecision(decision, note?)` passes `note` to `decide`; `shouldResume = approved || (rejected && isVerification)` guarded on `awaiting_approval`; MHist ✅
+- [x] **Reject button behavior** — `isVerification` → Reject reveals the note input (`setShowNoteInput(true)`); else → submits `"rejected"` immediately (byte-identical); a "Reject & coach" confirm button (`reject-confirm-btn`, only when `showNoteInput`) submits `"rejected"` + `rejectNote` ✅ (D-DAY0-2: extended `HITLTurn.resume.test.tsx` — verification reveals textarea / confirm → decide(note)+resume / tool reject no resume + no textarea; existing assertions updated to 3-arg `decide(...,undefined)`)
+- [x] **The note textarea** — `var(--radius-sm)`/`var(--border)`/`var(--bg-1)`/`var(--fg)` (all confirmed mockup tokens, NO invented colors); `aria-label="Coaching note"` + `data-testid="reject-note"`; optional placeholder ✅ `check:mockup-fidelity` HEX_OKLCH baseline **53 unchanged**
 
 ### 2.3 Kind-aware render (US-5)
-- [ ] **The meta row** (`:186-191`) — `isVerification` → render `kind: verification` (mono, `var(--tool)` tone) instead of `tool: {turn.tool}`; otherwise unchanged; MHist
-  - DoD: a verification turn's card reads `kind: verification`; a tool turn reads `tool: {turn.tool}`
+- [x] **The meta row** — `isVerification` → `kind: verification` (mono, `var(--tool)`) instead of `tool: {turn.tool}`; otherwise unchanged; MHist ✅ (unit: "verification meta row reads 'verification'")
+
+### 2.x Day-2 drift
+- **D-DAY2-1**: `tsc -b` caught a demo fixture `orchestrator-loop/_fixtures/demoLoopEvents.ts:155` constructing `approval_requested` WITHOUT `kind` (now required) → added `kind: "tool"` (it's a high-risk-tool HITL demo). Build green after the fix. (The wire field being REQUIRED, not optional, surfaced the only stale construction site at compile time — exactly the type-safety we want.)
 
 ---
 
 ## Day 3 — Tests + full regression + drive-through (US-6) + CHANGE-067
 
 ### 3.1 Tests (US-1..US-5)
-- [ ] **backend sse-kind test** — `ApprovalRequested(kind="verification")` → the wire `data` carries `"kind":"verification"`; the escalate pause emits `kind="verification"` (extend the 57.99 escalate test or a new small test)
-- [ ] **backend parity** — `test_event_wire_schema_parity.py` green (regenerated `approval_requested` +kind)
-- [ ] **frontend parity** — `eventSchema.generated.test.ts` green (regenerated)
-- [ ] **frontend chatStore unit** — `approval_requested` `kind:"verification"` → `HITLTurn.kind==="verification"`; no kind → `""`
-- [ ] **frontend HITLTurn unit** (NEW if absent) — a verification turn: Reject reveals the textarea; confirm → `decide` called `(id,"rejected",note)` + `resume` called; meta reads `kind: verification`. A tool turn: Reject → `decide(id,"rejected")` (no note) + `resume` NOT called; no textarea
-- [ ] **existing e2e contracts** — `approval-card.spec.ts` (approval_id / HIGH / Decision / data-testids) still pass (additive change)
+- [x] **backend sse-kind test** — `test_sse.py`: existing `test_approval_requested` +`assert kind==""` (default); NEW `test_approval_requested_carries_kind` (`kind="verification"` → wire `"kind":"verification"`) ✅ 31 passed
+- [x] **backend parity** — `test_event_wire_schema_parity.py` **32 passed** (regenerated `approval_requested` +kind) ✅
+- [x] **frontend parity** — `eventSchema.generated.test.ts` green (regenerated; in the Vitest 782) ✅
+- [x] **frontend chatStore unit** — `chatStore.mergeEvent.test.ts` +2: `kind:"verification"` → `HITLTurn.kind==="verification"`; no-kind-on-wire → `""` ✅
+- [x] **frontend HITLTurn unit** — `HITLTurn.resume.test.tsx` (D-DAY0-2: EXTENDED, not new): +3 verification cases (reveal textarea / confirm → `decide(id,"rejected",note)`+`resume` / meta reads "verification"); tool reject → `decide(id,"rejected",undefined)` + NO resume + NO textarea; existing approve assertions → 3-arg ✅
+- [x] **existing e2e contracts** — `approval-card.spec.ts` (approval_id / HIGH / Decision / data-testids) preserved (additive change — reject-btn for non-verification still submits immediately; e2e fixtures unchanged) ✅ (not run here; contract preserved by design — verified at Vitest unit level)
 
 ### 3.2 Full gate sweep
-- [ ] **Full backend pytest green (NET delta documented)** — NO test deleted; baseline collect → delta
-- [ ] **mypy 0 + run_all 10/10 + format chain** — `mypy src` 0; run_all **10/10** (`check_event_schema_sync` green; LLM SDK leak 0); black/isort/flake8 **FULL `src/ tests/` scope** clean — run INDEPENDENTLY (no `&&`; the 57.98 CI-black lesson)
-- [ ] **Frontend gate** — `npm run lint` (WITHOUT `--silent` — the 57.40 lesson) + `npm run build` + `npm run check:mockup-fidelity` (baseline unchanged) + `npm run test` (Vitest) green
+- [x] **Full backend pytest green (NET delta documented)** — **2300 passed + 4 skipped** (`-m "not real_llm"`; baseline 2303 collect = 2299p+4s → +1: `test_approval_requested_carries_kind`; zero deletion) ✅
+- [x] **mypy 0 + run_all 10/10 + format chain** — mypy `src` **0/353** ✅; run_all **10/10** (`check_event_schema_sync` green; SDK leak 0) ✅; black/isort/flake8 **FULL `src tests` (656 files)** clean — run INDEPENDENTLY (D-DAY3-1: `black --check` FULL scope caught 1 file — `test_sse.py`'s multi-line `ApprovalRequested(...)` → black collapsed to canonical 1-line; the 57.98 lesson applied) ✅
+- [x] **Frontend gate** — `npm run lint` (no `--silent`) clean + `npm run build` exit 0 + `npm run check:mockup-fidelity` baseline **53 unchanged** + `npm run test` **782 passed** ✅
 
 ### 3.3 Drive-through (US-6 — the REJECT half)
 - [ ] **Clean backend restart (Risk Class E)** — kill the stale uvicorn reloader + `multiprocessing.spawn` worker (`Get-CimInstance Win32_Process` PID/PPID/StartTime + `Stop-Process -Force`); verify :8000 free + the FRESH PID is the sole owner; do NOT touch node :3007 / claude-code node; start a fresh process with the forced-fail judge env (`CHAT_VERIFICATION_MODE=enabled` + `CHAT_VERIFICATION_ESCALATE_ON_MAX=true` + the strict `CHAT_VERIFICATION_JUDGE_TEMPLATE`); restore the normal `--reload` backend after
@@ -85,9 +81,9 @@
   - NOTE (honest gap): the forced-fail is a real LLM judge instructed to fail (deterministic) — clearly labelled DEMO; the reject-with-note mechanism is unit-proven. NOT claimed "gate-only". Use a neutral "no tools, just re-answer" prompt (the 57.99 D-DAY3-2 lesson)
 
 ### 3.4 CHANGE-067 + 17.md + 25.md §4
-- [ ] `claudedocs/4-changes/feature-changes/CHANGE-067-chatv2-verification-reject-ui.md` written
-- [ ] **`17-cross-category-interfaces.md`** — the `approval_requested` wire gains `kind` (tool/input/between_turns/output/verification); the chat-v2 HITL card branches REJECT on `kind==="verification"` (resume-with-note) vs terminate (others); MHist
-- [ ] **`25-verification-in-loop-design.md` §4** — the A2 reviewer-facing UI (the chat-v2 verification-reject path) → SHIPPED (with file:line); MHist
+- [x] `claudedocs/4-changes/feature-changes/CHANGE-067-chatv2-verification-reject-ui.md` written ✅
+- [x] **`17-cross-category-interfaces.md`** — the `ApprovalRequested` row notes the wire +`kind` + the chat-v2 card REJECT branch ✅ (17.md is a registry table, no MHist section)
+- [x] **`25-verification-in-loop-design.md` §4** — the A2 reviewer-facing UI (chat-v2 reject-with-note) → SHIPPED (with the `kind`-wire + `HITLTurn` branch detail); MHist ✅
 
 ---
 
