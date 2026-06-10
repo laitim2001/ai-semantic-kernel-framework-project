@@ -89,16 +89,24 @@
 ## Day 3 — Tests + full regression + drive-through (US-6) + CHANGE-065
 
 ### 3.1 Tests (US-1..US-5)
-- [ ] **NEW `test_loop_verification_gate.py`** — gate verifies a final answer (mock registry); PASS → `VerificationPassed` + deliver; FAIL<max → `VerificationFailed(correction_attempt=1)` + NEW turn (turn_count++, same LOOP span) + correction `Message` in next turn context; FAIL==max → `LoopCompleted(verification_failed)`; `verifier_registry is None` → byte-identical
-- [ ] **NEW durable-counter test** — pause mid-correction (guardrail-ESCALATE) → resume → count continues; fresh run resets to 0
-- [ ] **NEW resume-coverage test** — a resumed continuation's final answer is verified
-- [ ] **NEW replay-not-reverified test** — `_replay_approved_output` delivers without calling the verifier
-- [ ] **CONVERT (Never-Delete)** `test_correction_loop.py` + `test_correction_loop_persist.py` → in-loop gate + in-loop persistence equivalents
-- [ ] **`test_chat_verification_smoke.py` / `test_verification.py` / `test_sse_verification_serialization.py`** — green (wire unchanged); adjust only wrapper-specific multi-run assertions
+- [x] **NEW `test_loop_verification_gate.py`** — gate verifies a final answer (mock registry); PASS → `VerificationPassed` + deliver; FAIL<max → `VerificationFailed(correction_attempt=0)` + NEW turn (turn_count++, same LOOP span) + correction `Message` in next turn context; FAIL==max → `LoopCompleted(verification_failed)`; `verifier_registry is None` → byte-identical
+  - ✅ Day-1 (4 tests) + empty-registry (Day-2). NOTE: `correction_attempt` is 0-indexed (D-DAY1-2; first fail = attempt 0).
+- [x] **NEW durable-counter test** — pause mid-correction (guardrail-ESCALATE) → resume → count continues; fresh run resets to 0
+  - ✅ `test_loop_pause_resume.py::test_durable_counter_survives_pause_mid_correction` + `::test_fresh_run_starts_counter_at_zero` (Day-3)
+- [x] **NEW resume-coverage test** — a resumed continuation's final answer is verified
+  - ✅ `test_loop_pause_resume.py::test_resumed_continuation_answer_is_verified` (Day-3)
+- [x] **NEW replay-not-reverified test** — `_replay_approved_output` delivers without calling the verifier
+  - ✅ `test_loop_pause_resume.py::test_replay_approved_output_not_reverified` (Day-3)
+- [x] **CONVERT (Never-Delete)** `test_correction_loop.py` + `test_correction_loop_persist.py` → in-loop gate + in-loop persistence equivalents
+  - ✅ git mv → `test_inloop_gate_{tokens,persist}.py`, rewritten to drive `AgentLoopImpl`.
+- [x] **`test_chat_verification_smoke.py` / `test_verification.py` / `test_sse_verification_serialization.py`** — green (wire unchanged); adjust only wrapper-specific multi-run assertions
+  - ✅ smoke converted to in-loop `_fake_build_handler`; verification + sse_serialization unchanged + green.
 
 ### 3.2 Full gate sweep
-- [ ] **Full backend pytest green (NET delta documented)** — NO test deleted (conversions net ~0 + NEW gate tests); record baseline → delta
-- [ ] **mypy 0 + run_all 10/10 + format chain** — mypy `src --strict` 0; run_all **10/10** (AP-1 green — `continue` in while-driven `_run_turns`, not a pipeline; `check_event_schema_sync` unaffected; `check_cross_category_import` green for `VerifierRegistry` into `loop.py`; LLM SDK leak 0); black/isort/flake8 (changed src+tests) clean — run INDEPENDENTLY (no `&&`, no `--silent`)
+- [x] **Full backend pytest green (NET delta documented)** — NO test deleted (conversions net ~0 + NEW gate tests); record baseline → delta
+  - ✅ `2290 passed + 4 skipped` (`-m "not real_llm"`); NET −5 vs 2295 baseline = consolidation (11+3 wrapper cases → Day-1 gate + empty-registry + 5 token + 3 persist; no coverage loss).
+- [x] **mypy 0 + run_all 10/10 + format chain** — mypy `src --strict` 0; run_all **10/10** (AP-1 green — `continue` in while-driven `_run_turns`, not a pipeline; `check_event_schema_sync` unaffected; `check_cross_category_import` green for `VerifierRegistry` into `loop.py`; LLM SDK leak 0); black/isort/flake8 (changed src+tests) clean — run INDEPENDENTLY (no `&&`, no `--silent`)
+  - ✅ mypy 0/353 · run_all 10/10 · flake8 clean. (D-DAY2-3: cross-cat-import green via package import after the wrapper-cycle vanished.)
 
 ### 3.3 Drive-through (US-6 — fail-then-pass in-loop + resume verified)
 - [ ] **Clean backend restart (Risk Class E)** — kill stale uvicorn reloader + `multiprocessing.spawn` worker (`Get-CimInstance Win32_Process` PID/PPID/StartTime + `Stop-Process -Force`); verify the FRESH PID is the SOLE :8000 owner; frontend node untouched; verifier wiring built at startup

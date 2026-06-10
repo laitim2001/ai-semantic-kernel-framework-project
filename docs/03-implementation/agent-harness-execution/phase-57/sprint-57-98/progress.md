@@ -187,3 +187,36 @@ re-export). `test_persist_failure_silent` is unchanged (it patches
 - Day-4 design note `25-verification-in-loop-design.md` (8-pt gate) + closeout.
 
 ---
+
+## Day 3 — Resume tests + CHANGE-065 + 17.md (US-6 drive-through pending) (2026-06-10)
+
+### §3.1 — 4 NEW deterministic US-3/US-4 unit tests
+Added to `tests/unit/agent_harness/orchestrator_loop/test_loop_pause_resume.py` (reuses the
+existing pause-resume fakes; adds a verifier_registry to the resume loop):
+- `test_resumed_continuation_answer_is_verified` — a tool-HITL resume → the continuation's
+  FINAL answer emits `VerificationPassed` (US-4; pre-57.98 a resumed answer was un-verified).
+- `test_durable_counter_survives_pause_mid_correction` — a paused state with
+  `metadata["verification_attempts"]=1` resumes → the resumed answers are attempts **1,2**
+  (2 failures), NOT 0,1,2 — proving the durable counter survived (US-3).
+- `test_fresh_run_starts_counter_at_zero` — a fresh `run()` → attempts **0,1,2** (3 failures)
+  → the counter resets (D2 reset-on-run).
+- `test_replay_approved_output_not_reverified` — an APPROVED output-pause REPLAYS the held
+  answer; even a FAILING verifier never runs (US-4 replay code-path isolation).
+- 26 passed in the file (22 + 4); 121 passed across orchestrator_loop + verification; flake8 clean.
+
+### §3.4 — CHANGE-065 + 17.md
+- `claudedocs/4-changes/feature-changes/CHANGE-065-verification-in-loop.md` — full Day-1+Day-2 record.
+- `17-cross-category-interfaces.md` — `VerificationResult` bubble path + `LoopCompleted` judge-token
+  source updated (wrapper → in-loop gate); NEW `LoopCompleted` terminal origin
+  `stop_reason="verification_failed"` (registry ctor-injected; resume verified; durable counter
+  on metadata; `VerificationPassed/Failed` contract unchanged).
+
+### §3.3 — drive-through (pending)
+Real UI + backend + Azure: (1) a verified main-flow answer (Inspector `VerificationPassed` +
+a `_verification` cost_ledger row on the cheap tier — proves the gate is LIVE in production);
+(2) a resumed session whose post-resume answer is verified. NOTE: a deterministic fail-then-pass
+with a REAL judge is hard to force (the action model usually answers well → judge passes first
+try) — the correction path is covered by `test_inloop_gate_tokens` + the resume tests; the
+drive-through will capture the PASS + resume paths, and attempt fail-then-pass with a strict prompt.
+
+---
