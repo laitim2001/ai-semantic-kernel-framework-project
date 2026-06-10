@@ -54,3 +54,60 @@ def test_build_handler_dispatches_echo_demo() -> None:
 def test_build_handler_invalid_mode_raises() -> None:
     with pytest.raises(ValueError, match="Unsupported mode"):
         build_handler("bogus", "x")  # type: ignore[arg-type]
+
+
+# --- Sprint 57.97: multi-model profile (verifier on the cheap tier) ----------
+
+
+def _set_azure_env(monkeypatch: pytest.MonkeyPatch, *, strong: str) -> None:
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://placeholder.openai.azure.com/")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "placeholder-key")
+    monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT_NAME", strong)
+
+
+def _force_verification_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the handler's settings to verification-enabled so the verifier registry is built."""
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "api.v1.chat.handler.get_settings",
+        lambda: SimpleNamespace(
+            chat_verification_mode="enabled",
+            chat_verification_judge_template="output_quality",
+        ),
+    )
+
+
+def test_build_real_llm_routes_cheap_to_verifier_action_to_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sprint 57.97: the loop runs on the strong (action) deployment; the verifier on the cheap."""
+    _set_azure_env(monkeypatch, strong="strong-deploy")
+    monkeypatch.setenv("AZURE_OPENAI_CHEAP_DEPLOYMENT_NAME", "cheap-deploy")
+    monkeypatch.delenv("AZURE_OPENAI_CHEAP_MODEL_NAME", raising=False)
+    _force_verification_enabled(monkeypatch)
+
+    loop, verifier_registry = build_real_llm_handler()
+
+    # The user-facing action turn runs on the STRONG deployment (unchanged).
+    assert loop._chat_client.config.deployment_name == "strong-deploy"  # type: ignore[attr-defined]
+    # The verification (llm_judge) call runs on the CHEAP deployment.
+    assert verifier_registry is not None
+    verifier = verifier_registry.get_all()[0]
+    assert verifier._chat.config.deployment_name == "cheap-deploy"  # type: ignore[attr-defined]
+
+
+def test_build_real_llm_cheap_unset_verifier_shares_action_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cheap unset → the verifier shares the SAME client as the loop (byte-identical fallback)."""
+    _set_azure_env(monkeypatch, strong="strong-deploy")
+    monkeypatch.delenv("AZURE_OPENAI_CHEAP_DEPLOYMENT_NAME", raising=False)
+    _force_verification_enabled(monkeypatch)
+
+    loop, verifier_registry = build_real_llm_handler()
+
+    assert verifier_registry is not None
+    verifier = verifier_registry.get_all()[0]
+    # cheap is the strong client → verifier._chat IS loop._chat_client.
+    assert verifier._chat is loop._chat_client  # type: ignore[attr-defined]
