@@ -197,3 +197,44 @@ resume counterpart. Two human outcomes:
 - CHANGE-066 + `25-verification-in-loop-design.md` §4 (A2 Open Invariant → SHIPPED) + 17.md.
 
 ---
+
+## Day 3 (part 1) — Full sweep + the docs (US-6 drive-through pending)
+
+### Full backend pytest sweep + the escape it caught
+First full `pytest -m "not real_llm"` run since 57.97 surfaced **2 failures** in
+`tests/unit/api/v1/chat/test_handler.py` (the 57.97 multi-model-profile tests):
+`test_build_real_llm_routes_cheap_to_verifier_action_to_loop` +
+`test_build_real_llm_cheap_unset_verifier_shares_action_client`.
+
+- **D-DAY3-1** — root cause: my Day-1 `handler.py:474` added `settings.chat_verification_escalate_on_max`
+  to the MAIN real_llm loop ctor, but those 2 tests pin `get_settings` to a `SimpleNamespace` stub
+  (`_force_verification_enabled`) that enumerated only `chat_verification_mode` +
+  `_judge_template` → `AttributeError` on the new attribute. The Day-1 scoped regression run (loop +
+  verification + smoke) never exercised `test_handler.py`, so the escape slipped to the Day-3 full
+  sweep — exactly why the sweep exists. Fix: add `chat_verification_escalate_on_max=False` to the
+  stub (mirror real `Settings`, default OFF). Test-only; no production change. NOT a skip / delete.
+- Re-run: **2299 passed + 4 skipped = 2303** (Day-0 baseline 2298 + 5; zero deletion).
+
+### Docs (record = CHANGE-066 + 25.md §4 + 17.md — feature-continuation, NO new design note)
+- `CHANGE-066-verification-escalate.md` — written (the A2 max-fail-terminal → conditional pause +
+  the resume APPROVE/REJECT branches + D-DAY2-1 + D-DAY3-1).
+- `25-verification-in-loop-design.md` §4 — the "A2 — verification-ESCALATE" Open Invariant moved
+  deferred → ✅ SHIPPED with the A2 file:line anchors (config `:132` → ctor `loop.py:429/:482` →
+  `handler.py:474`; `_cat10_verification_escalate_pause():1713`; swap-point `:2501`; resume durable
+  read `:3013` + `kind="verification":3166`). MHist bumped.
+- `17-cross-category-interfaces.md` — the `LoopCompleted` row (§259) gains the `awaiting_approval`
+  **5th origin** (verification-ESCALATE) + the `resume()` `kind="verification"` description (APPROVE
+  replay / REJECT one coached turn); `ApprovalRequested/Received` contracts unchanged.
+
+### Gate (Day-3 part 1)
+- mypy `src` **0/353** · `run_all.py` **10/10** · black/isort/flake8 FULL scope clean ·
+  full sweep **2299 passed + 4 skipped**.
+
+### Remaining (Day-3 part 2 + Day-4)
+- US-6 drive-through (real UI + real backend + a strict judge): fail → escalate pause → APPROVE
+  renders the held answer; a fresh fail → REJECT-with-note → one coached turn. Risk Class E clean
+  restart; set `CHAT_VERIFICATION_ESCALATE_ON_MAX=true` + a strict judge.
+- Day-4 closeout (feature-continuation — NO design note): retrospective + calibration +
+  MEMORY subfile + CLAUDE.md lean + next-phase-candidates.
+
+---

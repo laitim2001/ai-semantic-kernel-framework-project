@@ -82,8 +82,8 @@
 - [x] **`test_chat_verification_smoke.py`** — green (toggle-OFF default preserves A1; no escalate) ✅ 3 passed
 
 ### 3.2 Full gate sweep
-- [ ] **Full backend pytest green (NET delta documented)** — NO test deleted; record baseline (2298 collect) → delta
-- [ ] **mypy 0 + run_all 10/10 + format chain** — mypy `src --strict` 0; run_all **10/10** (AP-1 green — the escalate is a conditional `return` in the while-driven `_run_turns`, the reject continuation drives `_run_turns`; `check_event_schema_sync` unaffected; LLM SDK leak 0); black/isort/flake8 **FULL `src/ tests/` scope** clean — run INDEPENDENTLY (no `&&`, no `--silent`; the 57.98 CI-black lesson — full scope, not changed-files subset)
+- [x] **Full backend pytest green (NET delta documented)** — NO test deleted; record baseline (2298 collect) → delta ✅ **2299 passed + 4 skipped = 2303** (2298 + 5: 2 Day-1 escalate + 3 Day-2 resume; zero deletion). D-DAY3-1: the sweep caught 2 Sprint-57.97 `test_handler.py` tests broken by the Day-1 `settings` read (their `SimpleNamespace` stub lacked the new attribute) → root-cause fix on the stub
+- [x] **mypy 0 + run_all 10/10 + format chain** — mypy `src --strict` 0; run_all **10/10** (AP-1 green — the escalate is a conditional `return` in the while-driven `_run_turns`, the reject continuation drives `_run_turns`; `check_event_schema_sync` unaffected; LLM SDK leak 0); black/isort/flake8 **FULL `src/ tests/` scope** clean — run INDEPENDENTLY (no `&&`, no `--silent`; the 57.98 CI-black lesson — full scope, not changed-files subset) ✅ mypy `src` 0/353 · run_all 10/10 · format clean
 
 ### 3.3 Drive-through (US-6 — strict-judge fail → escalate → approve + reject-coach)
 - [ ] **Clean backend restart (Risk Class E)** — kill stale uvicorn reloader + `multiprocessing.spawn` worker (`Get-CimInstance Win32_Process` PID/PPID/StartTime + `Stop-Process -Force`); verify the FRESH PID is the SOLE :8000 owner; frontend node untouched; the toggle read at startup (set `CHAT_VERIFICATION_ESCALATE_ON_MAX=true` + the strict judge for the drive-through backend)
@@ -92,9 +92,9 @@
   - NOTE: if a real fail can't be forced cleanly with a real judge (the 57.98 honest gap), drive the toggle + the pause UI with a forced-fail fixture clearly labelled + unit-prove the escalate/approve/reject mechanism; do NOT claim "gate-only" as drive-through
 
 ### 3.4 CHANGE-066 + 25.md §4 + 17.md
-- [ ] `claudedocs/4-changes/feature-changes/CHANGE-066-verification-escalate.md` written
-- [ ] **`25-verification-in-loop-design.md` §4** — move the "A2 — verification-ESCALATE human-in-the-loop" Open Invariant from deferred → SHIPPED (with the A2 file:line); MHist
-- [ ] **`17-cross-category-interfaces.md`** — the `LoopCompleted(verification_failed)` terminal now has a conditional human-ESCALATE alternative; `resume()` gains `kind="verification"` (APPROVE → replay held answer; REJECT → one coached turn); `ApprovalRequested/Received` contracts unchanged
+- [x] `claudedocs/4-changes/feature-changes/CHANGE-066-verification-escalate.md` written ✅
+- [x] **`25-verification-in-loop-design.md` §4** — move the "A2 — verification-ESCALATE human-in-the-loop" Open Invariant from deferred → SHIPPED (with the A2 file:line); MHist ✅
+- [x] **`17-cross-category-interfaces.md`** — the `LoopCompleted(verification_failed)` terminal now has a conditional human-ESCALATE alternative; `resume()` gains `kind="verification"` (APPROVE → replay held answer; REJECT → one coached turn); `ApprovalRequested/Received` contracts unchanged ✅ (`LoopCompleted` row §259 — `awaiting_approval` 5th origin)
 
 ---
 
