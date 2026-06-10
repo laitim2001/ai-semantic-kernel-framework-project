@@ -4,7 +4,7 @@
 **Change Type**: Feature continuation (A2 — harness-deepening Workflow A; extends the A1 in-loop gate from CHANGE-065)
 **Sprint**: 57.99 (A2)
 **Scope**: agent_harness/orchestrator_loop (Cat 1) × agent_harness/verification (Cat 10) × Cat 9 HITL pause infra × Cat 7 State × api/v1/chat (handler) × core/config
-**Status**: ✅ Day-2 complete (gate-green) — DRIVE-THROUGH pending (Day-3 US-6)
+**Status**: ✅ Complete — gate-green + the A2 escalate→APPROVE path drive-through-verified (real UI + real Azure + a real LLM judge); REJECT-with-note unit-proven + a documented chat-v2 frontend follow-up
 
 ## Change Summary
 
@@ -49,7 +49,9 @@ Because `resume()` drives the SAME `_run_turns` and the durable `verification_es
 
 - `pytest backend/tests/unit/agent_harness/orchestrator_loop/test_loop_pause_resume.py` — **31 passed** (28 prior + 3 Day-2 resume): toggle-OFF A1-byte-identical, toggle-ON escalate pause, resume APPROVE replays held, resume REJECT coaches one turn, reject-then-fail binds to A1.
 - **Gate**: `mypy src` 0/353 · `python scripts/lint/run_all.py` 10/10 (AP-1 — the escalate is a conditional `return` in the while-driven `_run_turns`; `check_event_schema_sync` green = no new event; SDK-leak 0) · `pytest -m "not real_llm"` **2299 passed + 4 skipped** (Day-0 baseline 2298 + 5; zero deletion) · black/isort/flake8 clean.
-- **Drive-through (Day-3 US-6, pending)**: real UI + backend + a strict judge — a forced verification fail → escalate pause (HITL card shows the held answer + the verifier reason) → APPROVE renders the held answer; a fresh fail → REJECT-with-note → one human-coached turn.
+- **Drive-through (Day-3 US-6) — APPROVE path VERIFIED**: real UI (jamie@acme.com/acme-prod, chat-v2, real_llm) + a fresh backend (`CHAT_VERIFICATION_MODE=enabled` + `CHAT_VERIFICATION_ESCALATE_ON_MAX=true` + a forced-fail real-LLM judge via `CHAT_VERIFICATION_JUDGE_TEMPLATE` env) + real Azure gpt-5.2. 3 final-answer attempts each `verification_failed` → attempt 2==max → `approval_requested risk=HIGH` + `loop_end stop=awaiting_approval` → kind-agnostic HITL card (severity HIGH, tool: —) → Approve → `resume()` → `_replay_approved_output` → turn flips to `stop: end_turn` + the held answer renders + "Decision: APPROVED". Screenshots: `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-99/artifacts/dt5799-{A-escalate-pause,B-approved-delivered}.png`.
+- **Drive-through — REJECT-with-note: backend proven, frontend gap**: A2's backend reject-with-note + resume is unit-proven (`test_verify_escalate_resume_reject_coaches_one_turn` + `_reject_then_fail_binds_to_a1_terminal`), but NOT UI-drivable — `HITLTurn` deliberately does NOT `resume()` on reject (built for tool-kind reject=terminate) + the reject button has no note input. Wiring the chat-v2 UI (verification-kind resume-on-reject + a coaching-note input) is a documented frontend follow-up (out of A2's backend scope; user-confirmed Option A).
+- **D-DAY3-2**: a forced-fail correction mentioning "approval" led gpt-5.2 to call the `request_approval` tool (a tool-kind 57.88 pause, NOT A2) — a tool-call turn is not a FINAL answer so the verify gate never reached failed_max. A neutral "no tools, just re-answer" correction kept 3 final answers → clean A2 escalate. Finding: a tool-equipped agent may ACT on a forced fail rather than re-answer.
 
 ## Impact
 

@@ -238,3 +238,73 @@ First full `pytest -m "not real_llm"` run since 57.97 surfaced **2 failures** in
   MEMORY subfile + CLAUDE.md lean + next-phase-candidates.
 
 ---
+
+## Day 3 (part 2) — US-6 drive-through (real UI + real backend + real Azure)
+
+### Setup (Risk Class E clean restart + a real-LLM forced-fail judge)
+The escalate toggle + judge template are read at STARTUP. Restarted the backend (NOT the
+running --reload one — Risk Class E): killed the stale reloader 40280 + spawn-worker 6476 via
+`Get-CimInstance Win32_Process` + `Stop-Process -Force`, verified :8000 free + node :3007 (PID
+6200) untouched, started a fresh NO-`--reload` single process with three env vars:
+`CHAT_VERIFICATION_MODE=enabled` + `CHAT_VERIFICATION_ESCALATE_ON_MAX=true` +
+`CHAT_VERIFICATION_JUDGE_TEMPLATE=<a forced-fail prompt>`. The judge template is a RAW prompt
+(LLMJudgeVerifier accepts `{output}` raw strings) instructing the real Azure judge to return
+`{"passed": false, ...}` — a real LLM call, deterministically failing, clearly labelled DEMO,
+ZERO code pollution (env-only). Restored the normal `--reload` backend afterwards.
+
+### APPROVE half — DRIVEN end-to-end ✅
+Logged in (dev-login jamie@acme.com / acme-prod / operator), chat-v2, real_llm mode, asked
+"Explain what recursion is in programming, briefly." Observed (Loop visualizer = the backend's
+own SSE event stream):
+- turn 0: `llm_response` (0 tool calls) → `verification_failed` (forced) → in-loop correction (attempt 0→1)
+- turn 1: `llm_response` (more detail) → `verification_failed` → correction (attempt 1→2)
+- turn 2: `llm_response` (even more detail) → `verification_failed` (attempt 2 == max → failed_max) →
+  **`approval_requested risk=HIGH`** → `state_checkpointed v4` → **`loop_end stop=awaiting_approval`**
+
+The HITL card rendered (kind-agnostic `HITLTurn`): "Approval required: HIGH", severity HIGH,
+**tool: —** (confirms verification-kind, NOT the tool-kind 57.88 pause), Approve/Reject, approval_id.
+Verification panel showed **3 ❌ llm_judge** entries. Clicked **Approve & continue** →
+`governanceService.decide(approved)` → (stopReason==awaiting_approval) `resume()` →
+the verification-kind APPROVE branch → `_replay_approved_output`: turn 4 flipped
+`awaiting_approval` → **`stop: end_turn`**, the HELD failed answer rendered as the delivered
+final answer (human overriding the verifier — no re-verify), card → **Decision: APPROVED**.
+Screenshots: `artifacts/dt5799-A-escalate-pause.png` (the escalate pause) +
+`dt5799-B-approved-delivered.png` (approved + delivered). This is the A2 escalate → APPROVE path
+through real UI + real backend + real Azure gpt-5.2 + a real LLM judge.
+
+### REJECT-with-note half — backend proven, frontend gap (US-6 finding)
+The drive-through revealed a chat-v2 frontend gap that blocks UI-driving the REJECT-with-note half:
+- `HITLTurn.submitDecision("rejected")` deliberately does NOT call `resume()` (comment: "Reject
+  leaves the loop terminated … no continuation to render") — built for the tool-kind pause where
+  reject = terminate. A2's verification-kind reject must RESUME to drive the one coached turn.
+- the Reject button is bare — `governanceService.decide(id, "rejected")` sends no `reason`, so even
+  if it resumed, the coaching note would be empty (no note input field).
+
+A2's BACKEND fully supports reject-with-note + resume (unit-proven:
+`test_verify_escalate_resume_reject_coaches_one_turn` asserts the note reaches the coached turn;
+`_reject_then_fail_binds_to_a1_terminal` asserts the one-turn bound). Wiring the chat-v2 UI
+(verification-kind resume-on-reject + a coaching-note input) is a frontend follow-up — out of A2's
+backend file-list scope (user-confirmed Option A 2026-06-10). Logged to next-phase-candidates.
+
+### Day-3 drift
+- **D-DAY3-2** — the FIRST forced-fail attempt used a correction text mentioning "seeking operator
+  approval"; gpt-5.2 (real agency + a `request_approval` tool available) responded by CALLING the
+  `request_approval` tool on the correction turn → a tool-call turn is NOT a FINAL answer → the
+  verify gate (final-answer-gated) never reached failed_max → the agent's tool triggered the
+  tool-kind 57.88 pause, NOT A2. Fix: a neutral "provide a more detailed answer. Do NOT call any
+  tools" correction → the model kept producing final answers → 3 fails → clean A2 escalate. Real
+  finding: with a forced-fail judge, an agent with tools may ACT (call tools) rather than passively
+  re-answer; the A2 escalate path needs the candidate to be a final answer.
+
+### Gate (Day-3 part 2)
+- No code change (drive-through is verification only; the forced-fail judge was env-only, reverted
+  by the normal restart). The A2 escalate→APPROVE path is now drive-through-verified; REJECT-with-
+  note is unit-proven + a documented frontend follow-up.
+
+### Remaining (Day-4)
+- Closeout (feature-continuation — NO design note): retrospective.md + calibration (NEW scope class
+  `loop-pause-point-feature` 0.50 + agent_factor 1.0 parent-direct) + MEMORY subfile + CLAUDE.md
+  lean + next-phase-candidates (the chat-v2 verification-reject UI follow-up). Commit + push + PR
+  (push pending user authorization).
+
+---
