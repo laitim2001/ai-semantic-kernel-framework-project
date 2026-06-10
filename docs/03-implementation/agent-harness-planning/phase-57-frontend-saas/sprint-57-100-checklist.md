@@ -94,4 +94,4 @@
 - [x] progress.md (Day 0-3) + retrospective.md (Q1-Q7) ✅
 - [x] Calibration: `frontend-feature-with-event-wire-addition` 0.55 (NEW class, 1st pt ~1.0 IN band) + `agent_factor` 1.0 (parent-direct); recorded `calibration-log.md §3` + `sprint-workflow.md §Scope-class matrix` row; carryover → next-phase-candidates.md ✅
 - [x] MEMORY.md pointer + `project_phase57_100_*.md` subfile + CLAUDE.md lean (Current Sprint row + Last Updated) + CHANGE-067 + 17.md + 25.md §4 ✅
-- [ ] commit (Day 0-N) + push + PR (user-authorized)
+- [x] commit (Day 0-N) + push + PR (user-authorized) — 4 commits (`d2dd8cb6` Day-0 / `dccf6421` Day-1+2+3 / `174fb2ec` Day-3 drive-through / `dd5bb109` Day-4 closeout); pushed + **PR #274** opened ✅
