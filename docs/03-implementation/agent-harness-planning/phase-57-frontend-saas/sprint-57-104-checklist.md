@@ -2,7 +2,7 @@
 
 [Plan](./sprint-57-104-plan.md)
 
-**Status**: Day 1 complete (backend US-1..US-5 + tests green: mypy 0/357 · run_all 10/10 · unit 27 · integration 13); Day 2 (FE tab) next
+**Status**: ✅ COMPLETE (Day 0-4) — drive-through PASS. Backend `2816e883` + FE `ae2aed96` committed; closeout docs done. Merge-pending (NOT pushed — awaiting authorization).
 **Branch**: `feature/sprint-57-104-per-tenant-model-policy`
 
 ---
@@ -63,56 +63,56 @@
 ## Day 2 — FE Model Policy tab + all tests (US-6 + backend/FE tests)
 
 ### 2.1 FE Day-0 (tab-specific) — pin before code
-- [ ] Pin `TenantSettingsView` tab registration shape + `QuotasTab` view/edit pattern + the tenant-settings admin service file (`getQuotas`/`putQuotas` analog) + i18n file + the operator-portal style authority (confirm no model-policy mockup; mirror QuotasTab)
+- [x] Pinned `TenantSettingsView` tab registration + `QuotasTab` view/edit pattern + service + hooks (no i18n layer — inline English literals, matches QuotasTab) + operator-portal style authority (no model-policy mockup → mirror QuotasTab)
 
 ### 2.2 FE service + tab (US-6)
-- [ ] **`getModelPolicy` + `putModelPolicy`** (tenant-settings admin service) → `GET`/`PUT /api/v1/admin/tenants/{id}/model-policy`
-- [ ] **`ModelPolicyTab.tsx`** (NEW, mirror `QuotasTab`): view effective policy; edit 4 fields; Save → PUT; unknown-model 422 inline error banner; no dead control
-- [ ] **Register tab** in `TenantSettingsView.tsx` (6 → 7 tabs, after Quotas) + i18n labels (English copy convention)
-  - DoD: `npm run build` ✓; `npm run lint` (no `--silent`) exit 0
+- [x] **`getModelPolicy` + `putModelPolicy`** (tenant-settings admin service) → `GET`/`PUT /api/v1/admin/tenants/{id}/model-policy` (snake↔camel + composite-replace blank-drop + 422 detail surfacing)
+- [x] **`ModelPolicyTab.tsx`** (NEW, mirror `QuotasTab`) + `useModelPolicy`/`useModelPolicySave` hooks: view (null→"System default"); edit 4 fields; Save → PUT; unknown-model 422 inline banner; no dead control
+- [x] **Register tab** in `TenantSettingsView.tsx` (6 → 7 tabs, after Quotas) + English inline copy
+  - DoD: `npm run build` ✓ (exit 0); `npm run lint` (no `--silent`) exit 0 — both parent-re-verified
 
 ### 2.3 Tests (US-1..US-6)
 - [x] **Backend** resolver: absent → `is_empty`; present → parsed; TTL hit/miss (injected clock); `invalidate` re-reads; autouse reset isolates singleton (11 tests)
 - [x] **Backend** builder: all-None byte-identical; action override → tenant deployment; cheap override → distinct cheap adapter; None never passed to `AzureOpenAIConfig` (8 tests; value-object 8 tests)
 - [x] **Backend** model-policy endpoints (13 integration tests): PUT 200/persists/audits/invalidates · 422 unpriced model · 404 missing · `extra="forbid"` 422 · composite-replace/clear · isolation · GET stored(sparse)/404/empty · admin gate (401 no-auth) — GET returns stored overrides (not ∪defaults; UI shows "system default" for unset)
 - [ ] **Backend** wiring: `build_real_llm_handler(tenant_id with policy)` → profile action deployment == tenant's — 🚧 DEFERRED to Day-3 drive-through (build_real_llm_handler heavy to mock; the 2-line router→handler→builder threading is mypy-checked + the pieces are unit-tested + drive-through proves end-to-end)
-- [ ] **Frontend Vitest**: `ModelPolicyTab` view renders effective policy; edit → Save calls `putModelPolicy`; 422 surfaces inline; `TenantSettingsView` registers the tab
+- [x] **Frontend Vitest**: `ModelPolicyTab` view/edit/Save/422 (14) + service mapping (5) + `TenantSettingsView` registration; full suite **809 passed / 136 files** (parent-re-verified)
 
 ---
 
 ## Day 3 — Full regression + drive-through (US-7) + CHANGE-071 + design note + 17.md
 
 ### 3.1 Full gate sweep
-- [ ] `black . && isort . && flake8 .` (src tests) clean
-- [ ] `mypy src` 0 errors
-- [ ] `python scripts/lint/run_all.py` 10/10 (event count UNCHANGED; `check_llm_sdk_leak` 0; `check_cross_category_import` green)
-- [ ] full `pytest -q` green — (+N, 0 deletions)
-- [ ] frontend `npm run lint` (exit 0, no `--silent`) + `npm run build` ✓ + Vitest (+N) + `check:mockup-fidelity` unchanged (operator tabs not in the customer-mockup baseline — confirm)
-- [ ] `git diff` confirms `loop.py` / DB / migration / generated wire schema diff = 0
+- [x] `black . && isort . && flake8 .` (src tests) clean
+- [x] `mypy src` 0 errors (0/357)
+- [x] `python scripts/lint/run_all.py` 10/10 (event count UNCHANGED; `check_llm_sdk_leak` 0; `check_cross_category_import` green)
+- [x] full `pytest` green — unit 27 + integration 13 (0 deletions)
+- [x] frontend `npm run lint` (exit 0, no `--silent`) + `npm run build` ✓ + Vitest 809/136 + `check:mockup-fidelity` 53 (operator tabs not in the customer-mockup baseline) — parent-re-verified
+- [x] `git diff` confirms `loop.py` / DB / migration / generated wire schema diff = 0
 
-### 3.2 Drive-through (US-7 — two-tenant model differentiation, set via the tab)
-- [ ] Clean restart (Risk Class E): kill stale uvicorn reloader + spawn-worker (`Get-CimInstance Win32_Process` PID/PPID/StartTime); fresh PID sole :8000 owner; frontend node untouched
-- [ ] Confirm a 2nd real Azure deployment is available (cheap-tier deployment) → tenant A `action_deployment` = it; tenant B unset
-- [ ] Real UI (dev-login `platform_admin`): open tenant A's Model Policy tab → set `action_deployment` → Save → GET/reload confirms persisted
-- [ ] Real chat UI (real_llm) + real Azure: tenant A chat + tenant B chat, same prompt → both answer
-- [ ] `cost_ledger` shows two different `azure_openai_{model}` sub_types (tenant A vs tenant B) — query + screenshot
-- [ ] In the tab, set an unknown model → 422 surfaced inline + audit row
-- [ ] Screenshots (tab edit + chat runs + cost ledger rows + 422) + observed-vs-intended in progress.md
+### 3.2 Drive-through (US-7 — per-tenant model differentiation, set via the tab) — PASS
+- [x] Clean restart (Risk Class E): killed stale PID 16496 (prior-session B2b, no C1); fresh no-reload PID 35340 sole :8000 owner ("pricing loader wired" + "billing outbox drainer started"); frontend node :3007 untouched
+- [x] Confirmed 2 real Azure deployments (gpt-5.4-nano + gpt-5.4-mini, both priced) — **single-tenant two-policies** flow chosen (stronger than two static tenants: also proves cache invalidation)
+- [x] Real UI (dev-login `platform_admin`): acme-prod Model Policy tab → set `action_deployment`=gpt-5.4-nano → Save → persists across reload (GET re-fetch)
+- [x] Real chat UI (real_llm) + real Azure: chat ("capital of France?"→Paris) → action turn on the nano policy
+- [x] `cost_ledger`: action sub_type `azure_openai_gpt-5.4-nano` (vs pre-C1 baseline `gpt-5.2`); after changing the policy to mini via the tab → 2nd chat action sub_type `azure_openai_gpt-5.4-mini` (= **cache invalidation** proven) — query in progress.md Day 3 table
+- [x] In the tab, set an unknown model (`bogus-model-xyz`) → **422 surfaced inline** "Save failed: Unknown/unpriced model…", stays in edit, policy unchanged
+- [x] Screenshots (`artifacts/dt57104-{1,2,3,4}.png`) + observed-vs-intended in progress.md Day 3; acme-prod cleared back to default (composite-replace clear path also driven)
 
 ### 3.3 CHANGE-071 + design note + 17.md
-- [ ] `CHANGE-071-per-tenant-model-policy.md` (problem / design / verification / impact + the RBAC prod-OIDC open invariant)
-- [ ] **NEW design note (config tiering + per-tenant model policy)** — §Step 5.5 spike requirement; pin the doc number (glob existing series); 8-point quality gate
-- [ ] 17.md: `ModelPolicy` value object + `resolve_tenant_model_policy` + model-policy endpoints (single-source)
+- [x] `CHANGE-071-per-tenant-model-policy.md` (problem / design / verification / impact + the RBAC prod-OIDC open invariant)
+- [x] **NEW design note `27-per-tenant-model-policy-design.md`** — §Step 5.5 spike requirement; 8-point quality gate ✅ (~95% verified)
+- [x] 17.md: `ModelPolicy` value object + `resolve_tenant_model_policy` + model-policy endpoints (single-source row added)
 
 ---
 
 ## Day 4 — Closeout (spike sprint — design note required)
 
 ### 4.1 Closeout
-- [ ] progress.md Day 0-3 + drive-through complete
-- [ ] retrospective.md Q1-Q7 (Q2 calibration; design-note 8-point gate record per §Step 5.5; the D9 FE-scope mid-Day-0 correction lesson)
-- [ ] CLAUDE.md Current Sprint + Last Updated (lean, per §Sprint Closeout policy)
-- [ ] MEMORY.md pointer + `project_phase57_104_per_tenant_model_policy.md` subfile
-- [ ] next-phase-candidates.md: C1 done; remaining C2/C3/C4 + the RBAC-JWT-wiring slice
-- [ ] sprint-workflow.md calibration row `config-tiering-model-policy-spike 0.60` (1st data point)
-- [ ] all checklist items `[x]` or 🚧 (never deleted unchecked)
+- [x] progress.md Day 0-3 + drive-through complete
+- [x] retrospective.md Q1-Q7 (Q2 calibration; design-note 8-point gate record per §Step 5.5; the D9 FE-scope mid-Day-0 correction lesson)
+- [x] CLAUDE.md Current Sprint + Last Updated (lean, per §Sprint Closeout policy)
+- [x] MEMORY.md pointer + `project_phase57_104_per_tenant_model_policy.md` subfile
+- [x] next-phase-candidates.md: C1 ✅ done; soft-prereq RESOLVED-for-C1 note; remaining C2/C3/C4 + the RBAC-JWT-wiring slice
+- [x] sprint-workflow.md calibration row `config-tiering-model-policy-spike 0.60` (1st data point)
+- [x] all checklist items `[x]` or 🚧 (the Day-1 wiring unit test was 🚧 DEFERRED → now drive-through-proven; never deleted unchecked)

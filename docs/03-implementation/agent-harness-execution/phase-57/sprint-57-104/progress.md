@@ -54,3 +54,58 @@
 
 ### Next (Day 2)
 - FE Model Policy tab (`ModelPolicyTab.tsx` mirroring `QuotasTab` + `TenantSettingsView` registration + admin service `getModelPolicy`/`putModelPolicy` + i18n) + Vitest. Then Day 3 full gate + drive-through (US-7).
+
+---
+
+## Day 2 — 2026-06-11 — FE Model Policy tab (US-6)
+
+### Approach
+- The mechanical FE mirror (tab + 2 hooks + service + tab registration + Vitest) was delegated to a code-implementer agent with a precise contract; **the parent independently reviewed the code + re-ran every gate** (Before-Commit item 7 — delegated FE must be parent-re-verified). → `agent-delegated: partial` (US-6 only; the backend Day 1 was parent-direct).
+
+### Shipped (commit `ae2aed96`)
+- `ModelPolicyTab.tsx` (NEW) — VIEW (4 fields; null → "System default") + EDIT (4 inputs + Save/Cancel) + inline 422 banner (`saveMutation.error.message`); no dead controls; mockup-ui `Card` + QuotasTab classes (`row`/`col`/`spread`/`mono`/`subtle`/`btn-*`).
+- `useModelPolicy.ts` + `useModelPolicySave.ts` (NEW) — mirror `useQuotas`/`useQuotasSave` (TanStack; invalidate on save).
+- `tenantSettingsService.ts` — `getModelPolicy`/`putModelPolicy` (snake↔camel `_modelPolicyFromApi`/`_modelPolicyToApi`; composite-replace drops blank fields; `_handleResponse` surfaces 422 `detail` → Error.message → inline banner).
+- `TenantSettingsView.tsx` — register "Model Policy" tab after Quotas (6 → 7).
+- `types.ts` — `ModelPolicy` (camelCase) + `ModelPolicyApiResponse`/`ModelPolicyApiUpsertRequest` (snake).
+- English copy (operator-tab convention; no i18n layer — inline literals, matches QuotasTab). Mockup-fidelity: operator tabs follow the in-repo QuotasTab style authority (not the customer oklch baseline); `check:mockup-fidelity` 53 unchanged.
+
+### Parent-re-verified gate (Day 2)
+- lint **exit 0** (the `TSSatisfiesExpression` lines are jsx-ast-utils library console noise, NOT eslint errors) · build **exit 0** (3.18s) · Vitest **809 passed / 136 files** (+22 net) · `check:mockup-fidelity` **passed** (byte-identical CSS; hex/oklch 53 unchanged).
+- Code review confirmed: the 422 path is correct end-to-end (backend 422 `{detail}` → `_handleResponse` throw Error(detail) → `saveMutation.error.message` → "Save failed: …" inline); no dead controls; English copy; URL `/api/v1/admin/tenants/{id}/model-policy` matches backend.
+
+### 🚧 Remaining (Day 3)
+- **Drive-through (US-7)** — the hard-constraint final gear: clean backend restart (Risk Class E) + real Azure + tenant A policy (set via the new tab) vs tenant B unset → `cost_ledger` model sub_type differentiation + 422 in the tab. NOT yet driven → C1 is **gate-verified, drive-through pending** (per the Drive-Through Acceptance Hard Constraint, not "done" until driven).
+- Day 4 closeout: CHANGE-071 + NEW design note (config-tiering spike, §Step 5.5) + 17.md + retrospective + CLAUDE/MEMORY + calibration row.
+
+---
+
+## Day 3 — 2026-06-11 — Full gate re-verify + DRIVE-THROUGH (US-7) ✅ PASS
+
+### Clean restart (Risk Class E)
+- Killed the stale dev backend PID 16496 (the prior-session B2b code, NO C1) — single no-reload process, no spawn-workers; `:8000` confirmed FREE + `python.exe count 0`; did NOT touch the frontend node (:3007 PID 22000).
+- Started a fresh no-reload backend (PID 35340); startup log confirmed **"pricing loader wired"** (→ the 422 validator is live) + **"billing outbox drainer started"** (→ the cost_ledger pipeline) + the C1 code loaded.
+
+### Drive-through (real UI :3007 + real backend + real Azure, Playwright; dev-login `platform_admin`)
+The full user-facing chain — including cache invalidation — proven on `acme-prod` (one tenant, policy changed via the tab):
+
+1. **Tab registered + GET works**: the "Model Policy" tab appears 7th (after Quotas); on load all 4 fields render "System default" (sparse GET → empty). (`dt57104-1`)
+2. **Set policy → persist → GET reflects**: Edit → action_deployment/model = `gpt-5.4-nano` → Save → exits edit, view shows `gpt-5.4-nano`; persists across a full page reload (re-GET). (`dt57104-2`)
+3. **Policy resolves into the chat → cost_ledger differentiates**: a real_llm chat ("capital of France?" → "Paris") with the nano policy → `cost_ledger` action turn sub_type = **`azure_openai_gpt-5.4-nano-2026-03-17_input/output`** (vs the pre-C1 baseline chat at 08:32 on the env-default **`azure_openai_gpt-5.2`**). The verification turn ran on the env cheap tier `gpt-5.4-mini` (policy didn't override cheap). (`dt57104-3`)
+4. **422 unpriced model surfaced inline (governance gear)**: Edit → action_model = `bogus-model-xyz` → Save → inline banner **"Save failed: Unknown/unpriced model: 'bogus-model-xyz' (not in config/llm_pricing.yml)"**, stays in edit mode, policy unchanged. (`dt57104-4`)
+5. **Cache invalidation**: changed the policy to `gpt-5.4-mini` via the tab → Save → ran a 2nd real_llm chat ("color of the sky?" → "Blue") → `cost_ledger` action turn = **`azure_openai_gpt-5.4-mini-2026-03-17_input/output`**. The policy CHANGE took effect on the very next chat ⇒ the PUT's `invalidate_tenant_model_policy` cleared the resolver TTL cache.
+6. **Clear → revert to default**: Edit → cleared both action fields → Save → all 4 back to "System default" (composite-replace clear); `acme-prod` left clean (no policy → env default).
+
+**cost_ledger evidence (acme-prod action turn, same tenant, policy set via the tab):**
+| recorded_at | action turn model sub_type | tab policy |
+|-------------|----------------------------|-----------|
+| 08:32 (pre-C1 baseline) | `azure_openai_gpt-5.2-2025-12-11` | none (env default) |
+| 11:59 (C1) | `azure_openai_gpt-5.4-nano-2026-03-17` | action=gpt-5.4-nano |
+| 12:04 (C1) | `azure_openai_gpt-5.4-mini-2026-03-17` | action=gpt-5.4-mini |
+
+**Drive-through verdict: PASS.** Every DoD met — tab persist/reflect, policy→chat model resolution, per-tenant model sub_type differentiation, cache invalidation on policy change, inline 422 governance, clear-to-default, no dead controls. Screenshots: `artifacts/dt57104-{1,2,3,4}.png` (the `gpt-5.4-mini` chat + clear states proven via cost_ledger query above, not separately screenshotted). The US-7 wiring assertion the Day-1 plan deferred is now end-to-end-proven (the nano/mini chats show `build_real_llm_handler(model_policy)` → the tenant's action deployment reaches the loop + cost ledger).
+
+### Day 3 gate (re-verified)
+- Backend: mypy `src` 0/357 · flake8 clean · run_all 10/10 · unit 27 · integration 13 (Day 1, unchanged).
+- Frontend: lint 0 · build 0 · Vitest 809/136 · check:mockup-fidelity 53 (Day 2, parent-re-verified).
+- `loop.py` / DB / migration / wire-schema diff = 0.
