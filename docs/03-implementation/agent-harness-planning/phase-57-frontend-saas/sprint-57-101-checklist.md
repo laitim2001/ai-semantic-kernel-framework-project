@@ -107,4 +107,4 @@
 - [x] progress.md (Day 0-3 + infra incident + drive-through) + retrospective.md (Q1-Q7 + 8-point gate self-check) ✅
 - [x] Calibration: `loop-injection-primitive-spike` 0.55 (NEW class, 1st pt) + `agent_factor` 1.0 (parent-direct); recorded `sprint-workflow.md §Scope-class matrix` row; carryover (B2 TEAMMATE) → next-phase-candidates.md ✅ (calibration-log §3 entry pending — folded into the closeout commit)
 - [x] MEMORY.md pointer + `project_phase57_101_between_turns_injection.md` subfile + CLAUDE.md lean (Current Sprint row + Last Updated) + CHANGE-068 + design note 26 + 17.md ✅
-- [ ] commit (Day 0-N) + push + PR (**push/PR user-authorized** — pending)
+- [x] commit (Day 0-N) + push + PR — 4 commits (`a7ec1951` Day-0 / `79439604` Day-1 / `ad2f1388` Day-2/3 / `8d7e1514` Day-3 drive-through + Day-4 closeout); pushed + **PR #275** opened ✅
