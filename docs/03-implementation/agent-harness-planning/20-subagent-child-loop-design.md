@@ -7,6 +7,7 @@
 **Source**: Sprint 57.94 implementation (`sprint-57-94-plan.md` + retrospective). Authority: this note describes WHAT WAS BUILT + VERIFIED; the live code is the source of truth.
 
 > **Modification History**
+> - 2026-06-11: Sprint 57.102 (B2a) — TEAMMATE now also a real child loop (§5 row updated); pattern reused via `TeammateChildLoopFactory` + `send_to_parent` + B1 inbox. See `CHANGE-069`.
 > - 2026-06-09: Initial creation — FORK real child-loop spike extract (Sprint 57.94)
 
 ---
@@ -50,7 +51,7 @@ The 地基 A lifecycle (durable pause-resume + re-enterable `_run_turns`, Sprint
 
 | Deferred | AD | Why |
 |----------|-----|-----|
-| TEAMMATE / HANDOFF real loops | (separate slices) | FORK + AS_TOOL only this spike |
+| ~~TEAMMATE real loop~~ → **SHIPPED Sprint 57.102 (B2a)** | CHANGE-069 | TEAMMATE now a real multi-turn child loop (`TeammateChildLoopFactory`) + `send_to_parent` + B1 inbox wired (UI producer = B2b). HANDOFF real loop still separate. |
 | `HandoffService` (boot child session on `stop_reason="handoff"`) | (separate) | loop-side terminator wired (57.68/69); consumer absent |
 | SSE-relay of child / subagent events | `AD-Subagent-Child-Event-SSE-Relay` | `LoopEvent` base has no `parent_session_id`/`depth`; the chat dispatcher has no `event_emitter` → Inspector Tree shows "no subagents"; the child runs **headless** (drive-through confirmed) |
 | Child LOOP-span nesting under parent | `AD-Subagent-Child-Span-Nesting` | the `task_spawn` handler passes `trace_context=None` to `spawn` → the child span is not explicitly parented (best-effort via ambient tracer); the parent trace shows only the wrapping `task_spawn` TOOL_EXEC span |
