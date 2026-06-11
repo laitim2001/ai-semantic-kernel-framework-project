@@ -47,3 +47,23 @@ A read-only 2-agent Explore recon (backend + frontend) mapped the real code on `
 
 ### Design-note decision
 New-domain spike (NEW Cat 1 `MessageInbox` + NEW `_run_turns` drain seam + NEW `MessageInjected` wire type) → **design note 26** (`26-between-turns-injection-design.md`); UPDATE 17.md (`MessageInbox` Cat 1 + `message_injected` Cat 12). The 57.94/97/98 new-domain-spike precedent.
+
+---
+
+## Day 1 — The contract + loop drain + the `MessageInjected` wire event (US-1/US-2) (2026-06-11)
+
+### Done
+- **`_contracts/inbox.py`** (NEW) — `MessageInbox(ABC)` with `async def drain(self) -> list[Message]` (non-blocking; `[]` if none). Imports only `Message` → `check_llm_sdk_leak` clean. Exported via `_contracts/__init__.py` (+ `MessageInjected`).
+- **`loop.py`** — ctor +`message_inbox: "MessageInbox | None" = None` (after `verification_escalate_on_max`, the LAST param) + `self._message_inbox` assign; `MessageInbox` imported under TYPE_CHECKING (annotation-only, mirrors the 57.98 `VerifierRegistry` pattern — avoids flake8 F401). `MessageInjected` added to the runtime `_contracts` import (it's yielded). **`_run_turns` drain seam**: after the 3 termination checks, BEFORE the between-turns gate — `if self._message_inbox is not None: for injected in await self._message_inbox.drain(): messages.append(injected); yield MessageInjected(text=<str-coerced injected.content>, trace_context=ctx)`. Drained BEFORE `_cat9_between_turns_check` reads `messages` → free Cat 9 check; fired on drain (proof it landed); `message_inbox=None` → no-op byte-identical.
+- **`MessageInjected` wire event** — `_contracts/events.py` +`MessageInjected(LoopEvent)` (`text: str = ""`); `sse.py` +import +serializer branch (`{"type":"message_injected","data":{"text":event.text}}`); `event_wire_schema.py` +`"message_injected": {"text":"string"}` (appended at END) + count comments `:30`/`:77` 23→24; `generate_event_schemas.py` +`"message_injected": "MessageInjectedEvent"` interface map.
+- **codegen regen** — clean: `events.json` +4, `loopEvents.generated.ts` +12/-1 = ONLY `MessageInjectedEvent` (interface w/ `trace_id?` + `text: string`, union member, KNOWN set entry); no spurious reformat; count 24.
+- **`test_event_wire_schema_parity.py`** — `test_wire_schema_has_24_entries` (`== 24`) + a `MessageInjected(text="also check the db pool")` wired instance.
+
+### Gates (Day 1)
+- mypy `src` **0/354** (+1 = inbox.py) ✅
+- parity test **33 passed** (+1) ✅
+- `run_all` **10/10** ✅ — `check_event_schema_sync` in sync (codegen regenerated); `check_ap1` green (the drain is a `for … append + yield` data-flow at the loop top — the loop is still `while True` driven by stop_reason; NOT a fixed-step pipeline restructure); `check_llm_sdk_leak` green.
+
+### Notes
+- The `events.py` header "22 subclasses" prose was already stale before 57.96 (which added `SubagentChildEvent`) — left untouched (Karpathy §3; the gating count is the parity test's `len(WIRE_SCHEMA) == 24`, which is correct). Added a 57.101 MHist line only.
+- No Day-1 drift beyond Day-0's D-DAY0-1 (count 23→24, already accounted).

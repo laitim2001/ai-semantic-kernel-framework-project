@@ -45,6 +45,7 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-06-10
 
 Modification History (newest-first):
+    - 2026-06-11: Sprint 57.101 B1 — ctor +message_inbox; _run_turns drains it before the between-turns gate
     - 2026-06-10: Sprint 57.100 — 5 ApprovalRequested yields +kind= (pause kind on the wire)
     - 2026-06-10: Sprint 57.99 A2 — resume() verify-kind: APPROVE replays / REJECT 1 coached turn
     - 2026-06-10: Sprint 57.99 A2 — verification-ESCALATE pause swaps the max-fail terminal (toggle)
@@ -140,6 +141,7 @@ from agent_harness._contracts import (
     LoopTerminated,
     MemoryAccessed,
     Message,
+    MessageInjected,
     PromptBuilt,
     SpanCategory,
     SpanEnded,
@@ -216,6 +218,11 @@ if TYPE_CHECKING:
     # lazy-imported inside the gate (also from the package) to keep the loop
     # module's import-time dependency on Cat 10 to zero.
     from agent_harness.verification import VerifierRegistry
+
+    # Sprint 57.101 B1: MessageInbox is a type-only annotation (the loop drains it
+    # but never constructs it — the concrete backing is ctor-injected). Imported
+    # from the PACKAGE per 17.md §1; TYPE_CHECKING keeps it a pure forward-ref.
+    from agent_harness._contracts import MessageInbox
 
 # Sprint 57.98 A1: stop-reason for LoopCompleted when the in-loop self-correction
 # budget is exhausted (mirrors the retired correction_loop.py wrapper constant).
@@ -428,6 +435,14 @@ class AgentLoopImpl(AgentLoop):
         # flag). Default False → the A1 terminal is byte-identical (the toggle
         # gates it; resume() drives the same gated _run_turns).
         verification_escalate_on_max: bool = False,
+        # 57.101 B1 §between-turns injection: an optional message inbox the loop
+        # drains at the TOP of each turn (before the between-turns guardrail), so a
+        # mid-run injected message joins the conversation at the NEXT turn boundary
+        # and is Cat 9-checked for free. When None, no drain runs (byte-identical to
+        # pre-57.101). The concrete backing is ctor-injected (the chat path wires a
+        # QueueMessageInbox over the module InjectionRegistry; B2 will back it with
+        # the TEAMMATE mailbox — same ABC).
+        message_inbox: "MessageInbox | None" = None,
     ) -> None:
         self._chat_client = chat_client
         self._output_parser = output_parser
@@ -481,6 +496,8 @@ class AgentLoopImpl(AgentLoop):
         self._max_correction_attempts = max_correction_attempts
         # 57.99 A2 §Verification-ESCALATE (see ctor docstring above).
         self._verification_escalate_on_max = verification_escalate_on_max
+        # 57.101 B1 §between-turns injection (see ctor docstring above).
+        self._message_inbox = message_inbox
 
     async def _handle_tool_error(
         self,
@@ -2006,6 +2023,25 @@ class AgentLoopImpl(AgentLoop):
                     trace_context=ctx,
                 )
                 return
+
+            # === Cat 1 between-turns injection drain (Sprint 57.101 B1) =
+            # Drain the optional message inbox at the loop TOP, BEFORE the
+            # between-turns guardrail below, so a mid-run injected message (a) joins
+            # the conversation at THIS turn boundary — it never interrupts an
+            # in-flight LLM/tool call (that would be a lie about what the loop can
+            # do) — and (b) is Cat 9-checked for free when the gate below runs over
+            # `messages`. MessageInjected fires on DRAIN (proof it landed in the
+            # loop), not when the inject POST returned. The drain runs every
+            # iteration (gated only on an inbox being present, NOT on turn_count), so
+            # an injection during turn N lands at the N→N+1 boundary. When no inbox
+            # is injected this is a no-op (byte-identical to pre-57.101).
+            if self._message_inbox is not None:
+                for injected in await self._message_inbox.drain():
+                    messages.append(injected)
+                    yield MessageInjected(
+                        text=injected.content if isinstance(injected.content, str) else "",
+                        trace_context=ctx,
+                    )
 
             # === Cat 9 between-turns gate (Sprint 57.92, Slice 3 leg 2) =
             # After ≥1 completed turn (turn_count > 0), BEFORE the next LLM call,

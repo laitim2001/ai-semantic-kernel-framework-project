@@ -85,6 +85,7 @@ from agent_harness._contracts import (
     LoopEvent,
     LoopStarted,
     MemoryAccessed,
+    MessageInjected,
     PromptBuilt,
     SpanEnded,
     SpanStarted,
@@ -222,6 +223,15 @@ def _serialize_inner(event: LoopEvent) -> dict[str, Any] | None:
                 "cached_input_tokens": event.cached_input_tokens,
                 "cache_hit_rate": event.cache_hit_rate,
             },
+        }
+
+    # Sprint 57.101 B1 (Cat 1): a mid-run injected message DRAINED at a turn
+    # boundary (the _run_turns top, before the between-turns guardrail). Fired on
+    # drain (proof it landed in the loop), not when the inject POST returned.
+    if isinstance(event, MessageInjected):
+        return {
+            "type": "message_injected",
+            "data": {"text": event.text},
         }
 
     # Sprint 53.5 US-2: HITL approval events. Loop emits ApprovalRequested when

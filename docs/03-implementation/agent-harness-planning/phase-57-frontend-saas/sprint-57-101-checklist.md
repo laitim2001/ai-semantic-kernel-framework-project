@@ -30,18 +30,18 @@
 ## Day 1 — The `MessageInbox` contract + loop drain seam + the `MessageInjected` event (US-1/US-2)
 
 ### 1.1 The contract + loop drain
-- [ ] **`_contracts/inbox.py`** — NEW `MessageInbox(ABC)` (`async def drain(self) -> list[Message]`); imports only `Message`; file header; `check_llm_sdk_leak` 0
-- [ ] **`loop.py` ctor** — +`message_inbox: MessageInbox | None = None` (after `verifier_registry`); `self._message_inbox`; MHist 1-line
-- [ ] **`loop.py` `_run_turns` drain seam** — at the top of the `while` body (before the `:2020` between-turns gate): `if self._message_inbox is not None: for m in await self._message_inbox.drain(): messages.append(m); yield MessageInjected(text=<str(m.content)>)`; the drained messages are appended BEFORE `_cat9_between_turns_check` (free guardrail check); `message_inbox=None` byte-identical; MHist 1-line; mypy `src` 0
+- [x] **`_contracts/inbox.py`** — NEW `MessageInbox(ABC)` (`async def drain(self) -> list[Message]`); imports only `Message`; file header; `check_llm_sdk_leak` 0 ✅; exported via `_contracts/__init__.py` (+ `MessageInjected`)
+- [x] **`loop.py` ctor** — +`message_inbox: "MessageInbox | None" = None` (after `verification_escalate_on_max`, LAST param `:430`); `self._message_inbox` assign; `MessageInbox` under TYPE_CHECKING (annotation-only, like `VerifierRegistry`); MHist 1-line ✅
+- [x] **`loop.py` `_run_turns` drain seam** — at the top of the `while` body (after the 3 termination checks, BEFORE the between-turns gate): `if self._message_inbox is not None: for injected in await self._message_inbox.drain(): messages.append(injected); yield MessageInjected(text=<str-coerced content>, trace_context=ctx)`; appended BEFORE `_cat9_between_turns_check` (free guardrail check); `message_inbox=None` byte-identical; MHist 1-line; mypy `src` **0/354** (+1 inbox.py) ✅
 
 ### 1.2 The `MessageInjected` wire event + codegen
-- [ ] **`_contracts/events.py`** — +`MessageInjected(LoopEvent)` (`text: str = ""`); bump subclass-count comment; MHist
-- [ ] **`api/v1/chat/sse.py`** — +`MessageInjected` serializer branch → `{"type":"message_injected","data":{"text":event.text}}`; MHist
-- [ ] **`api/v1/chat/event_wire_schema.py`** — +`"message_injected": {"text":"string"}`; count comments 23→24; MHist
-- [ ] **`scripts/codegen/generate_event_schemas.py`** — +`"message_injected": "MessageInjectedEvent"` in `WIRE_TYPE_TO_INTERFACE`; MHist
-- [ ] **codegen regen** — `python scripts/codegen/generate_event_schemas.py` → `events.json` + `loopEvents.generated.ts` regenerated; `git diff` = ONLY `message_injected` added (new interface + union member + KNOWN set entry; count 24); no spurious reformat
-- [ ] **`test_event_wire_schema_parity.py`** — `:142` `== 24` + a `MessageInjected(text="hi")` wired instance; passes
-- [ ] **backend lint/type** — mypy `src` 0; `check_event_schema_sync` in sync; `check_ap1` green (drain is data-flow, not a pipeline restructure)
+- [x] **`_contracts/events.py`** — +`MessageInjected(LoopEvent)` (`text: str = ""`) in a Cat 1 mini-section; MHist ✅ (the "22 subclasses" header prose was already stale pre-57.96 — left, not chased per Karpathy §3)
+- [x] **`api/v1/chat/sse.py`** — +`MessageInjected` import + serializer branch → `{"type":"message_injected","data":{"text":event.text}}` ✅
+- [x] **`api/v1/chat/event_wire_schema.py`** — +`"message_injected": {"text":"string"}` (appended at END for clean diff); count comments `:30`+`:77` 23→24; MHist ✅
+- [x] **`scripts/codegen/generate_event_schemas.py`** — +`"message_injected": "MessageInjectedEvent"` in `WIRE_TYPE_TO_INTERFACE` ✅
+- [x] **codegen regen** — `python scripts/codegen/generate_event_schemas.py` → `events.json` (+4) + `loopEvents.generated.ts` (+12/-1) regenerated; `git diff` = ONLY `message_injected` added (new `MessageInjectedEvent` interface w/ `text: string` + union member + KNOWN set entry; count 24); no spurious reformat ✅
+- [x] **`test_event_wire_schema_parity.py`** — `test_wire_schema_has_24_entries` `== 24` + `MessageInjected(text="also check the db pool")` wired instance; **33 passed** (+1) ✅
+- [x] **backend lint/type** — mypy `src` **0/354**; `check_event_schema_sync` in sync; `run_all` **10/10** (`check_ap1` green = drain is data-flow not a pipeline restructure; `check_llm_sdk_leak` green) ✅
 
 ---
 
