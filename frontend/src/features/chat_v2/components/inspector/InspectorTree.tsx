@@ -34,9 +34,10 @@
  *   - ChildTurnRow: one child-loop TAO event as a nested `.subagent-row` (Sprint 57.96)
  *
  * Created: 2026-06-03 (Sprint 57.72)
- * Last Modified: 2026-06-09
+ * Last Modified: 2026-06-11
  *
  * Modification History (newest-first):
+ *   - 2026-06-11: Sprint 57.103 B2b — message_injected child row (relay render; inject UI deferred to §2.5)
  *   - 2026-06-09: Sprint 57.96 — render childEvents as nested rows (Scope B turn-stream)
  *   - 2026-06-03: Initial creation (Sprint 57.72) — A-5c Tree tab verbatim re-point
  *
@@ -149,6 +150,11 @@ function childTurnLabel(ev: ChildTurnEvent): string {
       return ev.text
         ? `← ${ev.toolName ?? "tool"} · ${clip(ev.text)}`
         : `← ${ev.toolName ?? "tool"}`;
+    case "message_injected":
+      // Sprint 57.103 (B2b): a chat-user inject the teammate drained mid-run. The relay
+      // render is reachable once a live inject window exists (the detached teammate /
+      // streaming relay, proposal §2.5); the backend relay primitive is wired now.
+      return ev.text ? `injected · ${clip(ev.text)}` : "injected mid-run";
     default:
       return ev.kind;
   }

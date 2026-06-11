@@ -24,6 +24,17 @@ It condenses the user's "5-point deepening discussion" into 3 workflows and a re
 
 ---
 
+## 🆕 Sprint 57.103 Carryover — B2b inject-to-teammate: backend primitive + US-5 SHIPPED; inject UI 🚧 DEFERRED to §2.5 (await-completion finding)
+
+Sprint 57.103 (B2b) shipped the **backend primitive** (proven, reusable) + the **US-5 inline mode-aware label** (drive-through-proven), but the **inject UI control is blocked by the await-completion + buffered-relay architecture** and was removed per Option A (no dead control).
+
+- **SHIPPED + proven** — US-1 the `POST /chat/{id}/subagents/{sid}/inject` endpoint; US-2 the `TeammateInboxScope` lifecycle (`make_teammate_inbox_scope` registers the teammate's queue only while it runs); US-3 `MessageInjected`-in-relay; US-5 `SubagentForkBlock` "Teammate · peer" + real tokens (drive-through: "Teammate · peer" + "4,013 tok"; parent integrated "Teammate subagent finding (checkout patrol)" + verified). Commits `7e873583` + `35c4e797` + `982520a7`. See `CHANGE-070`.
+- **🔴 inject UI (US-4/6) — DEFERRED → §2.5** — the Cat 11→12 SSE relay (Sprint 57.95) buffers `SubagentSpawned`/`Child`/`Completed` + flushes them only when the parent loop yields its NEXT event, which is AFTER the awaited teammate completes. So the FE **never observes a teammate as "running"** → a control gated on `status === "running"` can never render. The live inject window needs the **detached / streaming teammate** (proposal §2.5: the parent reasons while the child runs, OR the SSE relay streams subagent events live). When §2.5 lands, rebuild the inject control (`injectToSubagent` + the `InspectorTree` gated control; the `message_injected` child-row render is already wired) on top of the proven backend primitive.
+- **Planning lesson (→ candidate AD for sprint-workflow Prong-2)** — when a feature's gating depends on a live in-progress state of a subagent/child, verify at Day-0 that the FE actually RECEIVES that state live (trace emit → SSE flush → store), not just that the event exists. A buffered / turn-boundary relay collapses in-progress states.
+- **Deferred (unchanged)** — depth>1 child-of-child inject routing; per-tenant teammate inject policy (C3); durable teammate transcript.
+
+---
+
 ## 🆕 Sprint 57.102 Carryover — B2a TEAMMATE real multi-turn child loop SHIPPED; B2b inject-to-teammate (FE producer) next
 
 **Source**: Sprint 57.102 closed 2026-06-11 — harness-deepening workflow B slice B2 (first half). TEAMMATE single-shot → real multi-turn child loop (mirror 57.94 FORK) + `send_to_parent` tool (child→parent report folded into the summary) + the B1 `MessageInbox` wired (reuse 57.101; `TeammateChildLoopFactory` + an `inbox_factory` over `InjectionRegistry` keyed by `subagent_id`). Backend-only, `loop.py` unchanged, no new wire event (reuses `SubagentChildEvent` 57.96), no DB, no FE. Drive-through PASS (real Azure gpt-5.2: parent `task_spawn mode=teammate` → teammate 3-turn loop `mock_patrol_check_servers`→`send_to_parent`→answer → parent integrated the report). Day-0 split B2 into B2a (this) / B2b after confirming the await-completion constraint (the parent blocks on the child; live parent→child mid-run injection needs a detached teammate, deferred). Detail: `memory/project_phase57_102_teammate_multiturn.md` + CHANGE-069 + 17.md + design note 20 edit.
