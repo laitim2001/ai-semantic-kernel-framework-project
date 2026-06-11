@@ -143,7 +143,7 @@ class QueueMessageInbox(MessageInbox):
 # (success / timeout / exception). The concrete CM stays here in the api layer; the
 # executor depends only on the MessageInbox ABC + the TeammateInboxScope callable.
 def make_teammate_inbox_scope(registry: InjectionRegistry, tenant_id: UUID) -> "TeammateInboxScope":
-    """Build the lifecycle-scoped teammate inbox over `registry` for `tenant_id` (Sprint 57.103 B2b)."""
+    """Build the lifecycle-scoped teammate inbox over `registry` for `tenant_id` (B2b)."""
 
     @asynccontextmanager
     async def _scope(subagent_id: UUID) -> "AsyncIterator[MessageInbox | None]":
