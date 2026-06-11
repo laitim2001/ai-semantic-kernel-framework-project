@@ -1,76 +1,113 @@
 """
 File: backend/src/agent_harness/subagent/modes/teammate.py
-Purpose: TeammateExecutor — runs a peer subagent that communicates via mailbox.
+Purpose: TeammateExecutor — runs a TEAMMATE peer as a REAL multi-turn child loop that
+    reports to the parent (send_to_parent) + carries the B1 between-turns inbox.
 Category: 範疇 11 (Subagent Orchestration)
-Scope: Sprint 54.2 US-3
+Scope: Sprint 54.2 US-3 → Sprint 57.102 (B2a: real child loop)
 
 Description:
-    TEAMMATE mode (per CC peer-pane pattern): a subagent runs independently of
-    the parent's context but can send messages back via MailboxStore. Unlike
-    Fork (parent context copy), Teammate has its own fresh context — useful
-    for parallel exploratory agents or specialist roles that should NOT see
-    parent's full conversation history.
+    TEAMMATE mode (per CC peer-pane pattern): a subagent runs with its own fresh
+    context (unlike FORK's parent-copy) but can communicate with its parent.
 
-    Per Day 3 simplification (D15): single-shot LLM call (same as Fork) but
-    with mailbox side effect — the subagent's response is also `send()`d to
-    parent's "parent" recipient queue. This demonstrates mailbox infrastructure
-    works without committing to multi-turn child loop semantics. Phase 55+
-    may extend to multi-turn loop pulling from mailbox each iteration.
+    Sprint 57.102 (B2a) replaced the Sprint 54.2 single-shot ChatClient call with a
+    REAL child AgentLoop (the same 57.94 FORK ChildLoopFactory pattern): the executor
+    builds a fresh child loop via the injected TeammateChildLoopFactory, drives
+    child.run(user_input=task), and DRAINS the child's LoopEvent stream into a
+    SubagentResult (last LLMResponded.content -> summary; LoopCompleted.total_tokens).
+    Two differences from FORK: (a) the child loop carries a `send_to_parent` tool + a
+    MessageInbox (the B1 between-turns inbox, Sprint 57.101 — wired here; the live
+    producer = B2b); (b) after the child completes, the executor drains the parent's
+    mailbox for any `send_to_parent` reports and folds them into the summary so the
+    parent integrates them via the existing task_spawn channel (await-completion: the
+    reports surface when the teammate finishes — live streaming to a busy parent needs
+    a non-blocking / detached teammate, deferred per proposal §2.5).
 
-    Failure modes (all return SubagentResult(success=False) — fail-closed):
-    - ChatClient raises any exception → error="chat_error: {type}: {msg}"
-    - asyncio.TimeoutError on max_duration_s → error="timeout: {N}s"
-    - Empty response.content → error="empty_response"
-    - Mailbox.send() raises (rare) → swallowed; LLM result still returned
+    While draining, it FORWARDS the child's per-turn TAO subset (TurnStarted /
+    LLMResponded / ToolCall*) wrapped in SubagentChildEvent to the injected emitter
+    (the Sprint 57.96 relay), so the chat-v2 Inspector Tree node expands to the
+    teammate's per-turn loop (incl. the send_to_parent tool call) for free.
+
+    The child reuses the parent run()/_run_turns (re-enterable since Sprint 57.89)
+    with ZERO loop.py change; it carries a recursion-safe tool subset (no task_spawn /
+    handoff) so a teammate cannot itself spawn (depth structurally bounded at 1).
+
+    Failure modes (all return SubagentResult(success=False) — fail-closed; execute()
+    never raises, since a raise would propagate through wait_for and crash the turn):
+    - teammate_child_loop_factory is None -> error="teammate_child_loop_factory_unavailable"
+    - asyncio.TimeoutError on max_duration_s -> error="timeout: {N}s"
+    - empty final answer -> error="empty_response"
+    - any child-loop exception -> error="child_loop_error: {type}: {msg}"
 
 Created: 2026-05-04 (Sprint 54.2)
+Last Modified: 2026-06-11
 
 Modification History:
+    - 2026-06-11: Sprint 57.102 (B2a) — single-shot → real child loop (mirror 57.94 FORK)
+      + send_to_parent report fold + B1 inbox wiring + TAO forward
     - 2026-05-04: Initial creation (Sprint 54.2 US-3)
 
 Related:
-    - subagent/mailbox.py — MailboxStore (US-3 dependency)
-    - subagent/modes/fork.py — sibling executor; same fail-closed pattern
-    - 01-eleven-categories-spec.md §範疇 11
+    - subagent/modes/fork.py — ForkExecutor pattern + _TAO_CHILD_EVENT_TYPES
+    - subagent/mailbox.py — MailboxStore (send_to_parent delivery + drain)
+    - subagent/tools.py — make_send_to_parent_tool
+    - _contracts/subagent.py — TeammateChildLoopFactory / SubagentBudget / SubagentResult
+    - _contracts/inbox.py — MessageInbox (the B1 between-turns inbox; producer = B2b)
+    - 01-eleven-categories-spec.md §範疇 11 / 20-subagent-child-loop-design.md
 """
 
 from __future__ import annotations
 
 import asyncio
 import time
-from uuid import UUID
+from typing import TYPE_CHECKING, Awaitable, Callable
+from uuid import UUID, uuid4
 
-from adapters._base.chat_client import ChatClient
 from agent_harness._contracts import (
-    ChatRequest,
-    Message,
+    LLMResponded,
+    LoopCompleted,
+    LoopEvent,
     SubagentBudget,
+    SubagentChildEvent,
     SubagentMode,
     SubagentResult,
     TraceContext,
 )
 from agent_harness.subagent.budget import BudgetEnforcer
 from agent_harness.subagent.mailbox import MailboxStore
+from agent_harness.subagent.modes.fork import _TAO_CHILD_EVENT_TYPES
+
+if TYPE_CHECKING:
+    from agent_harness._contracts import MessageInbox, TeammateChildLoopFactory
 
 
 class TeammateExecutor:
-    """Peer subagent runner; result also delivered to parent via mailbox.
+    """Runs a TEAMMATE subagent as a real child AgentLoop (Sprint 57.102 B2a).
 
-    Per Day 3 D15 simplification: single-shot LLM call (no multi-turn child
-    loop pulling from mailbox). The mailbox.send() at the end demonstrates
-    the bidirectional communication infrastructure; Phase 55+ may extend.
+    Like ForkExecutor, but the child loop ALSO carries a send_to_parent tool + a
+    MessageInbox (the B1 between-turns inbox; live producer = B2b), and the executor
+    folds any send_to_parent reports into the summary the parent integrates.
     """
 
     def __init__(
         self,
         *,
-        chat_client: ChatClient,
+        teammate_child_loop_factory: "TeammateChildLoopFactory | None" = None,
         mailbox: MailboxStore,
         enforcer: BudgetEnforcer | None = None,
+        event_emitter: Callable[[LoopEvent], Awaitable[None]] | None = None,
+        inbox_factory: Callable[[UUID], "MessageInbox"] | None = None,
     ) -> None:
-        self._chat = chat_client
+        self._child_loop_factory = teammate_child_loop_factory
         self._mailbox = mailbox
         self._enforcer = enforcer or BudgetEnforcer()
+        # Sprint 57.96 relay: forward the child's TAO events (best-effort; the
+        # dispatcher passes its own _emit_safely so a forward never breaks the loop).
+        self._event_emitter = event_emitter
+        # Sprint 57.102 (B2a): builds the child loop's MessageInbox bound to this
+        # subagent_id (the B1 InjectionRegistry/QueueMessageInbox keyed by subagent_id).
+        # None = no inbox. The live producer (chat-user inject-to-teammate) is B2b;
+        # here the inbox is wired + unit-proven, inert in production until B2b.
+        self._inbox_factory = inbox_factory
 
     async def execute(
         self,
@@ -82,74 +119,91 @@ class TeammateExecutor:
         budget: SubagentBudget,
         trace_context: TraceContext | None = None,
     ) -> SubagentResult:
-        """Run task as single-shot LLM call; deliver summary to parent's mailbox."""
+        """Run task as a real child loop; drain its events + send_to_parent reports
+        into a SubagentResult (fail-closed)."""
         start = time.monotonic()
-        try:
-            request = ChatRequest(
-                messages=[Message(role="user", content=task)],
-                max_tokens=budget.max_tokens,
-            )
-            response = await asyncio.wait_for(
-                self._chat.chat(request, trace_context=trace_context),
-                timeout=budget.max_duration_s,
-            )
-            duration_ms = (time.monotonic() - start) * 1000.0
-
-            content = response.content if isinstance(response.content, str) else ""
-            if not content:
-                return SubagentResult(
-                    subagent_id=subagent_id,
-                    mode=SubagentMode.TEAMMATE,
-                    success=False,
-                    summary="",
-                    duration_ms=duration_ms,
-                    error="empty_response",
-                )
-
-            summary, _ = self._enforcer.truncate_summary(content, cap_words=500)
-            if response.usage is None:
-                tokens_used = 0
-            elif response.usage.total_tokens > 0:
-                tokens_used = response.usage.total_tokens
-            else:
-                tokens_used = response.usage.prompt_tokens + response.usage.completion_tokens
-
-            # Deliver to parent's mailbox (best-effort; swallow exceptions).
-            try:
-                await self._mailbox.send(
-                    session_id=parent_session_id,
-                    sender=role,
-                    recipient="parent",
-                    content=summary,
-                )
-            except Exception:  # noqa: BLE001 — best-effort delivery
-                pass
-
-            return SubagentResult(
-                subagent_id=subagent_id,
-                mode=SubagentMode.TEAMMATE,
-                success=True,
-                summary=summary,
-                tokens_used=tokens_used,
-                duration_ms=duration_ms,
-            )
-        except asyncio.TimeoutError:
-            duration_ms = (time.monotonic() - start) * 1000.0
+        # Fail closed (no single-shot fallback — mirror FORK US-5). A raise would
+        # propagate through wait_for + crash the parent turn, so always RETURN.
+        factory = self._child_loop_factory
+        if factory is None:
             return SubagentResult(
                 subagent_id=subagent_id,
                 mode=SubagentMode.TEAMMATE,
                 success=False,
                 summary="",
-                duration_ms=duration_ms,
+                error="teammate_child_loop_factory_unavailable",
+            )
+
+        inbox = self._inbox_factory(subagent_id) if self._inbox_factory is not None else None
+        final_answer = ""
+        tokens_used = 0
+        emitter = self._event_emitter
+
+        async def _drive() -> None:
+            nonlocal final_answer, tokens_used
+            child = factory(budget, inbox)  # fresh child loop instance per spawn
+            child_session_id = uuid4()
+            async for ev in child.run(
+                session_id=child_session_id,
+                user_input=task,
+                trace_context=trace_context,
+            ):
+                # Sprint 57.96 relay: forward the child's per-turn TAO events tagged
+                # with THIS subagent_id (incl. the send_to_parent ToolCall) so the
+                # frontend routes them to the Tree node the spawn created.
+                if emitter is not None and isinstance(ev, _TAO_CHILD_EVENT_TYPES):
+                    await emitter(SubagentChildEvent(subagent_id=subagent_id, inner=ev))
+                if isinstance(ev, LLMResponded) and ev.content:
+                    final_answer = ev.content  # last assistant answer wins
+                elif isinstance(ev, LoopCompleted):
+                    tokens_used = ev.total_tokens
+
+        try:
+            await asyncio.wait_for(_drive(), timeout=budget.max_duration_s)
+        except asyncio.TimeoutError:
+            return SubagentResult(
+                subagent_id=subagent_id,
+                mode=SubagentMode.TEAMMATE,
+                success=False,
+                summary="",
+                duration_ms=(time.monotonic() - start) * 1000.0,
                 error=f"timeout: {budget.max_duration_s}s",
             )
         except Exception as exc:  # noqa: BLE001 — fail-closed catches all
-            duration_ms = (time.monotonic() - start) * 1000.0
+            return SubagentResult(
+                subagent_id=subagent_id,
+                mode=SubagentMode.TEAMMATE,
+                success=False,
+                summary="",
+                duration_ms=(time.monotonic() - start) * 1000.0,
+                error=f"child_loop_error: {type(exc).__name__}: {exc}",
+            )
+
+        duration_ms = (time.monotonic() - start) * 1000.0
+        if not final_answer:
             return SubagentResult(
                 subagent_id=subagent_id,
                 mode=SubagentMode.TEAMMATE,
                 success=False,
                 summary="",
                 duration_ms=duration_ms,
-                error=f"chat_error: {type(exc).__name__}: {exc}",
+                error="empty_response",
             )
+
+        # Sprint 57.102 (B2a): drain any send_to_parent reports the teammate delivered
+        # mid-loop + fold them into the summary so the parent integrates them via the
+        # existing task_spawn channel (await-completion: they surface now, at finish).
+        reports = await self._mailbox.drain(parent_session_id, "parent")
+        if reports:
+            report_block = "\n".join(str(r.content) for r in reports)
+            final_answer = f"[teammate reports]\n{report_block}\n[final answer]\n{final_answer}"
+
+        summary, _ = self._enforcer.truncate_summary(final_answer, cap_words=500)
+        return SubagentResult(
+            subagent_id=subagent_id,
+            mode=SubagentMode.TEAMMATE,
+            success=True,
+            summary=summary,
+            tokens_used=tokens_used,
+            duration_ms=duration_ms,
+        )

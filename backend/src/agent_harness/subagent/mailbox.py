@@ -24,8 +24,10 @@ Description:
     (NOT raises) so caller can retry / give up cleanly.
 
 Created: 2026-05-04 (Sprint 54.2)
+Last Modified: 2026-06-11
 
 Modification History:
+    - 2026-06-11: Sprint 57.102 (B2a) — add drain() (non-blocking) for send_to_parent
     - 2026-05-04: Initial creation (Sprint 54.2 US-3)
 
 Related:
@@ -89,6 +91,27 @@ class MailboxStore:
             )
         except asyncio.TimeoutError:
             return None
+
+    async def drain(self, session_id: UUID, recipient: str) -> list[Message]:
+        """Return all currently-queued messages for `recipient` (non-blocking).
+
+        Sprint 57.102 (B2a): the TeammateExecutor drains the parent's queue after
+        the child loop completes to collect any `send_to_parent` reports (folded into
+        the SubagentResult summary the parent integrates). Non-blocking (`get_nowait`
+        loop) — returns whatever is queued right now; `[]` if no queue / empty. Uses
+        `.get` (NOT `_queue_for`) so it does not create an empty queue as a side effect.
+        Mirrors InjectionRegistry.drain (Sprint 57.101 B1).
+        """
+        queue = self._queues.get(session_id, {}).get(recipient)
+        if queue is None:
+            return []
+        drained: list[Message] = []
+        while True:
+            try:
+                drained.append(queue.get_nowait())
+            except asyncio.QueueEmpty:
+                break
+        return drained
 
     def clear(self, session_id: UUID) -> None:
         """Drop all queues for a session (call at session close)."""

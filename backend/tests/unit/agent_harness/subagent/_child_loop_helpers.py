@@ -22,8 +22,10 @@ from uuid import UUID
 from adapters._base.chat_client import ChatClient
 from agent_harness._contracts import (
     ChildLoopFactory,
+    MessageInbox,
     SpanCategory,
     SubagentBudget,
+    TeammateChildLoopFactory,
     TraceContext,
 )
 from agent_harness.observability import NoOpTracer
@@ -62,6 +64,42 @@ def make_child_loop_factory(
             tracer=tracer,
             max_turns=max_turns,
             token_budget=budget.max_tokens,
+        )
+
+    return factory
+
+
+def make_teammate_child_loop_factory(
+    chat: ChatClient,
+    *,
+    registry: ToolRegistryImpl | None = None,
+    executor: ToolExecutorImpl | None = None,
+    tenant_id: UUID | None = None,
+    tracer: Tracer | None = None,
+    max_turns: int = 4,
+) -> TeammateChildLoopFactory:
+    """Return a TeammateChildLoopFactory that builds a real child AgentLoopImpl on `chat`.
+
+    Sprint 57.102 (B2a): like make_child_loop_factory, but the factory takes a SECOND
+    arg (the B1 MessageInbox) and wires it into the child loop (message_inbox=inbox) so a
+    mid-run injected message reaches the teammate at a turn boundary. Default registry /
+    executor are EMPTY (tool-less child); pass a real pair for a send_to_parent-capable
+    teammate child.
+    """
+
+    def factory(budget: SubagentBudget, inbox: "MessageInbox | None") -> AgentLoop:
+        reg = registry if registry is not None else ToolRegistryImpl()
+        exe = executor if executor is not None else ToolExecutorImpl(registry=reg, handlers={})
+        return AgentLoopImpl(
+            chat_client=chat,
+            output_parser=OutputParserImpl(),
+            tool_executor=exe,
+            tool_registry=reg,
+            tenant_id=tenant_id,
+            tracer=tracer,
+            max_turns=max_turns,
+            token_budget=budget.max_tokens,
+            message_inbox=inbox,
         )
 
     return factory

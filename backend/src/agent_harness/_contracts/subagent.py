@@ -17,9 +17,10 @@ Owner: 01-eleven-categories-spec.md §範疇 11
 Single-source: 17.md §1.1
 
 Created: 2026-04-29 (Sprint 49.1)
-Last Modified: 2026-06-09
+Last Modified: 2026-06-11
 
 Modification History:
+    - 2026-06-11: Add TeammateChildLoopFactory (Sprint 57.102 B2a) — TEAMMATE child loop + B1 inbox
     - 2026-06-09: Add ChildLoopFactory type (Sprint 57.94) — FORK real child loop
     - 2026-05-04: Add AgentSpec dataclass (Sprint 54.2 US-2; needed by AsToolWrapper
       and Phase 55 multi-role subagent registries). Closes Day 0 D7 partial.
@@ -40,6 +41,7 @@ from uuid import UUID
 if TYPE_CHECKING:
     # Type-only reference to the Cat 1 loop ABC for ChildLoopFactory. Guarded so
     # there is NO runtime Cat 11 -> Cat 1 import (loop.py imports these contracts).
+    from agent_harness._contracts.inbox import MessageInbox
     from agent_harness.orchestrator_loop._abc import AgentLoop
 
 
@@ -99,3 +101,11 @@ class AgentSpec:
 # Cat 11 -> Cat 1 import). The SubagentBudget arg lets the factory cap the child's
 # token_budget per spawn; each call MUST return a NEW loop instance (own session).
 ChildLoopFactory = Callable[[SubagentBudget], "AgentLoop"]
+
+
+# Sprint 57.102 (B2a): a TEAMMATE child loop factory. Like ChildLoopFactory, but the
+# teammate child ALSO takes an optional MessageInbox (the B1 between-turns inbox,
+# Sprint 57.101) so a mid-run message can reach the teammate at a turn boundary (the
+# live producer = B2b). A SEPARATE alias (not an extended ChildLoopFactory) so FORK's
+# ChildLoopFactory + every FORK call site stay byte-identical.
+TeammateChildLoopFactory = Callable[[SubagentBudget, "MessageInbox | None"], "AgentLoop"]

@@ -23,8 +23,10 @@ Description:
     stub events are wire-ready; emission is a Phase 55+ refinement.
 
 Created: 2026-05-04 (Sprint 54.2)
+Last Modified: 2026-06-11
 
 Modification History:
+    - 2026-06-11: Sprint 57.102 (B2a) — add make_send_to_parent_tool (TEAMMATE child→parent report)
     - 2026-05-04: Initial creation (Sprint 54.2 US-5)
 
 Related:
@@ -35,7 +37,7 @@ Related:
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 from uuid import UUID
 
 from agent_harness._contracts import (
@@ -44,6 +46,9 @@ from agent_harness._contracts import (
     ToolSpec,
 )
 from agent_harness.subagent._abc import SubagentDispatcher
+
+if TYPE_CHECKING:
+    from agent_harness.subagent.mailbox import MailboxStore
 
 ToolHandler = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 
@@ -181,5 +186,59 @@ def make_handoff_tool(
             "target_agent": target_agent,
             "new_session_id": str(new_session_id),
         }
+
+    return tool_spec, handler
+
+
+def make_send_to_parent_tool(
+    *,
+    mailbox: "MailboxStore",
+    parent_session_id: UUID,
+    role: str = "teammate",
+) -> tuple[ToolSpec, ToolHandler]:
+    """Factory: returns (ToolSpec, handler) for the `send_to_parent` Cat 11 tool.
+
+    Sprint 57.102 (B2a): a TEAMMATE child loop calls this to send a short progress
+    report / finding to the parent agent that spawned it, mid-loop (before its final
+    answer). The report is delivered to the parent's mailbox queue (recipient="parent");
+    the TeammateExecutor drains the queue after the child completes and folds the
+    reports into the SubagentResult summary the parent integrates (await-completion:
+    the reports surface to the parent when the teammate finishes — see plan §3.3).
+    LLM input schema: `{message: str}`. Registered ONLY in the teammate child's tool
+    registry (NOT FORK's, NOT the parent's).
+    """
+    tool_spec = ToolSpec(
+        name="send_to_parent",
+        description=(
+            "Send a short progress report or finding to the parent agent that spawned "
+            "you. Use this to share interim findings BEFORE your final answer; the parent "
+            "receives your reports alongside your final summary."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "The report / finding to send to the parent agent.",
+                },
+            },
+            "required": ["message"],
+        },
+    )
+
+    async def handler(args: dict[str, Any]) -> dict[str, Any]:
+        message = str(args.get("message", "")).strip()
+        if not message:
+            return {"delivered": False, "error": "empty_message"}
+        try:
+            await mailbox.send(
+                session_id=parent_session_id,
+                sender=role,
+                recipient="parent",
+                content=message,
+            )
+        except Exception as exc:  # noqa: BLE001 — surface as tool error
+            return {"delivered": False, "error": f"send_failed: {type(exc).__name__}: {exc}"}
+        return {"delivered": True}
 
     return tool_spec, handler

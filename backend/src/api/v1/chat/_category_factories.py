@@ -26,9 +26,10 @@ Key Components:
     - make_chat_state_deps(db, session_id, tenant_id) -> (Reducer|None, Checkpointer|None)  (Cat 7)
 
 Created: 2026-05-31 (Sprint 57.63 Day 1)
-Last Modified: 2026-06-05
+Last Modified: 2026-06-11
 
 Modification History (newest-first):
+    - 2026-06-11: Sprint 57.102 (B2a) — thread teammate factory + inbox_factory + mailbox
     - 2026-06-09: Sprint 57.95 — make_chat_subagent_dispatcher threads event_emitter (SSE relay)
     - 2026-06-05: Sprint 57.81 — error budget store via maybe_get_budget_store (B-7 wiring)
     - 2026-06-01: Sprint 57.65 — make_chat_prompt_builder accepts real MemoryRetrieval (A-1 Tier2)
@@ -45,7 +46,7 @@ Related:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 from uuid import UUID
 
 from agent_harness.context_mgmt import Compactor
@@ -82,7 +83,12 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from adapters._base.chat_client import ChatClient
-    from agent_harness._contracts import ChildLoopFactory
+    from agent_harness._contracts import (
+        ChildLoopFactory,
+        MessageInbox,
+        TeammateChildLoopFactory,
+    )
+    from agent_harness.subagent import MailboxStore
     from agent_harness.subagent.dispatcher import SubagentEventEmitter
 
 # Cat 4 budget — mirrors AgentLoopImpl default (loop.py:193) so compaction
@@ -201,6 +207,9 @@ def make_chat_subagent_dispatcher(
     *,
     child_loop_factory: ChildLoopFactory | None = None,
     event_emitter: SubagentEventEmitter | None = None,
+    teammate_child_loop_factory: TeammateChildLoopFactory | None = None,
+    inbox_factory: Callable[[UUID], MessageInbox] | None = None,
+    mailbox: MailboxStore | None = None,
 ) -> DefaultSubagentDispatcher:
     """Cat 11 (A-3a): the DefaultSubagentDispatcher for the chat path.
 
@@ -232,6 +241,13 @@ def make_chat_subagent_dispatcher(
         chat_client=chat_client,
         child_loop_factory=child_loop_factory,
         event_emitter=event_emitter,
+        # Sprint 57.102 (B2a): TEAMMATE now runs a real child loop (mirror FORK) +
+        # carries the B1 inbox (inbox_factory, keyed by subagent_id; producer = B2b)
+        # + a send_to_parent tool; the shared per-request mailbox is threaded so the
+        # tool delivery + the executor drain use the SAME instance.
+        teammate_child_loop_factory=teammate_child_loop_factory,
+        inbox_factory=inbox_factory,
+        mailbox=mailbox,
     )
 
 
