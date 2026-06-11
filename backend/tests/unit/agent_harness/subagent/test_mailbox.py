@@ -5,6 +5,7 @@ Category: Tests / 範疇 11 (Subagent Orchestration)
 Scope: Sprint 54.2 US-3
 
 Created: 2026-05-04 (Sprint 54.2)
+Last Modified: 2026-06-11 (Sprint 57.102 B2a — add drain() tests)
 """
 
 from __future__ import annotations
@@ -75,3 +76,58 @@ async def test_mailbox_clear_drops_session_queues() -> None:
     # After clear, a new receive() creates a fresh empty queue (no leak from prior)
     msg = await mb.receive(sid, recipient="parent", timeout_s=0.05)
     assert msg is None
+
+
+# === Sprint 57.102 (B2a): drain() — non-blocking batch read for the teammate executor ===
+
+
+@pytest.mark.asyncio
+async def test_drain_returns_all_in_fifo_order_then_empty() -> None:
+    """drain returns all queued messages (FIFO), non-blocking, and empties the queue."""
+    mb = MailboxStore()
+    sid = uuid4()
+    await mb.send(sid, sender="a", recipient="parent", content="first")
+    await mb.send(sid, sender="a", recipient="parent", content="second")
+
+    drained = await mb.drain(sid, "parent")
+    assert [str(m.content) for m in drained] == ["[from a] first", "[from a] second"]
+    # A second drain is non-blocking + empty (the queue was emptied).
+    assert await mb.drain(sid, "parent") == []
+
+
+@pytest.mark.asyncio
+async def test_drain_unregistered_returns_empty_no_side_effect() -> None:
+    """drain on a never-used (session, recipient) returns [] and does NOT create a queue."""
+    mb = MailboxStore()
+    sid = uuid4()
+    assert await mb.drain(sid, "parent") == []
+    # No queue created as a side effect (uses .get, not _queue_for / defaultdict __getitem__).
+    assert mb.session_count() == 0
+
+
+@pytest.mark.asyncio
+async def test_drain_coexists_with_receive() -> None:
+    """drain and the existing blocking receive() both operate on the same queue."""
+    mb = MailboxStore()
+    sid = uuid4()
+    await mb.send(sid, sender="a", recipient="parent", content="x")
+
+    msg = await mb.receive(sid, "parent", timeout_s=0.1)
+    assert msg is not None and "x" in str(msg.content)
+    # receive() consumed the only message → drain is empty.
+    assert await mb.drain(sid, "parent") == []
+
+
+@pytest.mark.asyncio
+async def test_drain_is_recipient_scoped() -> None:
+    """drain only returns messages for the requested recipient."""
+    mb = MailboxStore()
+    sid = uuid4()
+    await mb.send(sid, sender="a", recipient="parent", content="for-parent")
+    await mb.send(sid, sender="a", recipient="peer", content="for-peer")
+
+    parent_drained = await mb.drain(sid, "parent")
+    assert [str(m.content) for m in parent_drained] == ["[from a] for-parent"]
+    # The peer queue is untouched.
+    peer_drained = await mb.drain(sid, "peer")
+    assert [str(m.content) for m in peer_drained] == ["[from a] for-peer"]

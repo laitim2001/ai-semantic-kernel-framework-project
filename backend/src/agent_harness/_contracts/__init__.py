@@ -104,6 +104,7 @@ from agent_harness._contracts.subagent import (
     SubagentBudget,
     SubagentMode,
     SubagentResult,
+    TeammateChildLoopFactory,
 )
 from agent_harness._contracts.tools import (
     ConcurrencyPolicy,
@@ -192,6 +193,7 @@ __all__ = [
     "SubagentMode",
     "AgentSpec",
     "ChildLoopFactory",
+    "TeammateChildLoopFactory",
     # observability
     "TraceContext",
     "MetricEvent",

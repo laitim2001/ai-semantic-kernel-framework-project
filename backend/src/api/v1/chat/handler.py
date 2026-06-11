@@ -30,6 +30,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.4)
 Last Modified: 2026-06-10
 
 Modification History (newest-first):
+    - 2026-06-11: Sprint 57.102 B2a — wire teammate child-loop factory + inbox_factory
     - 2026-06-11: Sprint 57.101 B1 — wire QueueMessageInbox (between-turns injection) into loop ctor
     - 2026-06-10: Sprint 57.99 A2 — thread chat_verification_escalate_on_max into loop ctor
     - 2026-06-10: Sprint 57.98 A1 US-5 — inject verifier_registry into loop ctor; return loop
@@ -85,6 +86,7 @@ from agent_harness.guardrails.tool.capability_matrix import CapabilityMatrix, Pe
 from agent_harness.guardrails.tool.tool_guardrail import ToolGuardrail
 from agent_harness.orchestrator_loop import AgentLoopImpl
 from agent_harness.output_parser import OutputParserImpl
+from agent_harness.subagent import MailboxStore
 from business_domain._register_all import make_default_executor
 from core.config import get_settings
 
@@ -105,7 +107,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from agent_harness._contracts import SubagentBudget
+    from agent_harness._contracts import MessageInbox, SubagentBudget
     from agent_harness.hitl import HITLManager
     from agent_harness.observability import Tracer
     from agent_harness.orchestrator_loop._abc import AgentLoop
@@ -348,6 +350,50 @@ def build_real_llm_handler(
                 token_budget=budget.max_tokens,
             )
 
+        # Sprint 57.102 (B2a): the TEAMMATE child loop — a real multi-turn child (like
+        # FORK) but with a send_to_parent tool + the B1 MessageInbox. ONE shared per-
+        # request MailboxStore is threaded to the dispatcher (the executor's drain) AND
+        # to the teammate child executor's send_to_parent tool (via teammate_mailbox) so
+        # both use the SAME instance. The inbox_factory binds the child's MessageInbox to
+        # the B1 InjectionRegistry keyed by the child's subagent_id; in B2a no queue is
+        # registered at spawn (drain of an unregistered key = [] = no-op) — the live
+        # producer (chat-user inject-to-teammate) is B2b. inbox_factory is None without a
+        # tenant (the InjectionRegistry is tenant-scoped).
+        teammate_mailbox = MailboxStore()
+        teammate_registry, teammate_executor = make_default_executor(
+            factory_provider=business_factory_provider,
+            memory_retrieval=memory_retrieval,
+            memory_layers=memory_layers,
+            subagent_dispatcher=None,  # recursion-safe (no task_spawn) — depth bound 1
+            parent_session_id=session_id,  # send_to_parent attribution
+            teammate_mailbox=teammate_mailbox,  # registers send_to_parent on this child
+        )
+
+        def _make_teammate_child_loop(
+            budget: SubagentBudget, inbox: "MessageInbox | None"
+        ) -> AgentLoop:
+            return AgentLoopImpl(
+                chat_client=chat_client,
+                output_parser=parser,
+                tool_executor=teammate_executor,
+                tool_registry=teammate_registry,
+                system_prompt=CHILD_SUBAGENT_SYSTEM_PROMPT,
+                tenant_id=tenant_id,
+                tracer=tracer,
+                max_turns=CHILD_SUBAGENT_MAX_TURNS,
+                token_budget=budget.max_tokens,
+                message_inbox=inbox,
+            )
+
+        teammate_inbox_factory: "Callable[[UUID], MessageInbox] | None" = None
+        if tenant_id is not None:
+            _teammate_tenant_id = tenant_id  # narrow for the closure (mypy)
+
+            def _make_teammate_inbox(sid: UUID) -> "MessageInbox":
+                return QueueMessageInbox(get_default_injection_registry(), _teammate_tenant_id, sid)
+
+            teammate_inbox_factory = _make_teammate_inbox
+
         subagent_dispatcher = make_chat_subagent_dispatcher(
             chat_client,
             child_loop_factory=_make_child_loop,
@@ -355,6 +401,10 @@ def build_real_llm_handler(
             # Completed reach the SSE stream (Inspector Tree node). None on legacy
             # callers → dispatcher emission no-ops (pre-57.95 behavior).
             event_emitter=subagent_event_emitter,
+            # Sprint 57.102 (B2a): TEAMMATE real child loop + B1 inbox + shared mailbox.
+            teammate_child_loop_factory=_make_teammate_child_loop,
+            inbox_factory=teammate_inbox_factory,
+            mailbox=teammate_mailbox,
         )
     else:
         subagent_dispatcher = None

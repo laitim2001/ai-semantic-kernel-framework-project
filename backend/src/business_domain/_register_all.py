@@ -22,9 +22,10 @@ Lifecycle:
     each domain's mock_executor.py gets swapped.
 
 Created: 2026-04-30 (Sprint 51.0 Day 3)
-Last Modified: 2026-06-01
+Last Modified: 2026-06-11
 
 Modification History:
+    - 2026-06-11: Sprint 57.102 (B2a) — opt-in teammate_mailbox (registers send_to_parent)
     - 2026-06-01: Sprint 57.64 Day 2 — make_default_executor opt-in Cat 3 + Cat 11 deps
     - 2026-05-04: (Sprint 55.2 Day 3.1) Uniform mode/factory_provider threading
       to all 5 register_*_tools (was incident-only in 55.1; closes
@@ -42,7 +43,7 @@ from uuid import UUID
 
 from agent_harness._contracts import AgentSpec, ToolCall
 from agent_harness.observability import Tracer
-from agent_harness.subagent import make_task_spawn_tool
+from agent_harness.subagent import make_send_to_parent_tool, make_task_spawn_tool
 from agent_harness.tools import (
     ToolExecutorImpl,
     ToolHandler,
@@ -57,7 +58,7 @@ from ._service_factory import BusinessServiceFactory
 
 if TYPE_CHECKING:
     from agent_harness.memory import MemoryLayer, MemoryRetrieval
-    from agent_harness.subagent import DefaultSubagentDispatcher
+    from agent_harness.subagent import DefaultSubagentDispatcher, MailboxStore
 from .audit_domain.tools import register_audit_tools
 from .correlation.tools import register_correlation_tools
 from .incident.tools import register_incident_tools
@@ -170,6 +171,7 @@ def make_default_executor(
     memory_layers: "dict[str, MemoryLayer] | None" = None,
     subagent_dispatcher: "DefaultSubagentDispatcher | None" = None,
     parent_session_id: UUID | None = None,
+    teammate_mailbox: "MailboxStore | None" = None,
 ) -> tuple[ToolRegistryImpl, ToolExecutorImpl]:
     """Build a registry+executor pair with echo_tool + 18 business tools (19 total).
 
@@ -207,6 +209,9 @@ def make_default_executor(
         memory_layers: Cat 3 scope→MemoryLayer map (opt-in; pair with memory_retrieval).
         subagent_dispatcher: Cat 11 dispatcher (opt-in; FORK/TEAMMATE/AS_TOOL tools).
         parent_session_id: required when subagent_dispatcher is supplied (task_spawn).
+        teammate_mailbox: Cat 11 (B2a) mailbox for the teammate child's send_to_parent
+            tool (opt-in; requires parent_session_id). Set only when building the
+            teammate child executor (NOT the parent / FORK child).
 
     Returns:
         (registry, executor) — wired with the tools selected by the opt-in deps.
@@ -277,6 +282,24 @@ def make_default_executor(
         )
         registry.register(as_tool_spec)
         handlers[as_tool_spec.name] = _adapt_subagent_handler(as_tool_handler)
+
+    # Sprint 57.102 (B2a): the TEAMMATE child loop's send_to_parent tool. Opt-in like
+    # subagent_dispatcher above (same pattern): when teammate_mailbox is given, register
+    # send_to_parent so the teammate child can report to its parent mid-loop (the
+    # TeammateExecutor drains the parent mailbox + folds the reports into the summary).
+    # Registered ONLY on the teammate child executor (the handler passes teammate_mailbox
+    # only when building _make_teammate_child_loop) — NOT on the parent / FORK child.
+    if teammate_mailbox is not None:
+        if parent_session_id is None:
+            raise ValueError(
+                "make_default_executor(teammate_mailbox=...) requires parent_session_id"
+            )
+        sp_spec, sp_handler = make_send_to_parent_tool(
+            mailbox=teammate_mailbox,
+            parent_session_id=parent_session_id,
+        )
+        registry.register(sp_spec)
+        handlers[sp_spec.name] = _adapt_subagent_handler(sp_handler)
 
     # ToolExecutorImpl handler signature is `Callable[[ToolCall], Awaitable[str]]`;
     # business handlers return `str | dict` and ToolExecutorImpl coerces to str.

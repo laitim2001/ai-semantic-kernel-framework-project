@@ -33,6 +33,7 @@ US-2 deliverable (this file): wires FORK via ForkExecutor + as_tool_factory
 Created: 2026-05-04 (Sprint 54.2)
 
 Modification History:
+    - 2026-06-11: Sprint 57.102 (B2a) — TEAMMATE real child loop (teammate factory + inbox)
     - 2026-06-09: Sprint 57.96 — pass _emit_safely → ForkExecutor (forward child TAO events)
     - 2026-06-09: Sprint 57.94 — thread child_loop_factory → ForkExecutor (real FORK child loop)
     - 2026-05-10: Sprint 57.12 US-1 — emit SubagentSpawned/Completed (closes AD-Cat11-SSEEvents)
@@ -66,6 +67,7 @@ from agent_harness._contracts import (
     SubagentMode,
     SubagentResult,
     SubagentSpawned,
+    TeammateChildLoopFactory,
     TraceContext,
 )
 from agent_harness.subagent._abc import SubagentDispatcher
@@ -82,7 +84,7 @@ from agent_harness.subagent.modes.teammate import TeammateExecutor
 
 if TYPE_CHECKING:
     # Tool handler return type — see modes/as_tool.py for ToolHandler alias.
-    from agent_harness._contracts import ToolSpec
+    from agent_harness._contracts import MessageInbox, ToolSpec
     from agent_harness.subagent.modes.as_tool import ToolHandler
 
 logger = logging.getLogger(__name__)
@@ -109,7 +111,13 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
         mailbox: MailboxStore | None = None,
         event_emitter: SubagentEventEmitter | None = None,
         child_loop_factory: ChildLoopFactory | None = None,
+        teammate_child_loop_factory: TeammateChildLoopFactory | None = None,
+        inbox_factory: "Callable[[UUID], MessageInbox] | None" = None,
     ) -> None:
+        # Sprint 57.102 (B2a): `chat_client` is vestigial for TEAMMATE now (TEAMMATE
+        # runs a real child loop via teammate_child_loop_factory, like FORK). Retained
+        # as a ctor param for caller compatibility (make_chat_subagent_dispatcher + the
+        # FORK/AS_TOOL adapter still pass it) + a potential future single-shot mode.
         self._chat = chat_client
         self._enforcer = BudgetEnforcer()
         # Mailbox is per-request DI (NOT module-level singleton; AD-Test-1 53.6).
@@ -117,7 +125,7 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
         self._mailbox = mailbox or MailboxStore()
         # Sprint 57.94: FORK runs a REAL child loop via child_loop_factory (built at
         # composition where the Cat 1 dep-set is in scope). None = FORK fails closed
-        # (no single-shot fallback — US-5). TEAMMATE still uses chat_client (single-shot).
+        # (no single-shot fallback — US-5).
         # Sprint 57.96 (Cat 11 Scope B): pass _emit_safely so ForkExecutor FORWARDS
         # the child loop's per-turn TAO events (wrapped in SubagentChildEvent). The
         # bound method reads self._event_emitter at CALL time (set below), so there
@@ -128,10 +136,18 @@ class DefaultSubagentDispatcher(SubagentDispatcher):
             enforcer=self._enforcer,
             event_emitter=self._emit_safely,
         )
+        # Sprint 57.102 (B2a): TEAMMATE now runs a REAL multi-turn child loop via
+        # teammate_child_loop_factory (mirror FORK) + carries the B1 MessageInbox
+        # (via inbox_factory, keyed by subagent_id; live producer = B2b) + a
+        # send_to_parent tool. None factory → TEAMMATE fails closed (mirror FORK).
+        # Shares _emit_safely so the teammate's per-turn TAO + send_to_parent ToolCall
+        # relay to the Inspector Tree (57.96) for free.
         self._teammate = TeammateExecutor(
-            chat_client=chat_client,
+            teammate_child_loop_factory=teammate_child_loop_factory,
             mailbox=self._mailbox,
             enforcer=self._enforcer,
+            event_emitter=self._emit_safely,
+            inbox_factory=inbox_factory,
         )
         self._handoff = HandoffExecutor()
         self._as_tool_wrapper = AsToolWrapper(fork_executor=self._fork)

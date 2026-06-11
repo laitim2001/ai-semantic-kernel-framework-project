@@ -19,6 +19,7 @@ from agent_harness.subagent.modes.handoff import HandoffExecutor
 from agent_harness.subagent.modes.teammate import TeammateExecutor
 from agent_harness.subagent.tools import (
     make_handoff_tool,
+    make_send_to_parent_tool,
     make_task_spawn_tool,
 )
 
@@ -35,4 +36,5 @@ __all__ = [
     "HandoffExecutor",
     "make_task_spawn_tool",
     "make_handoff_tool",
+    "make_send_to_parent_tool",
 ]

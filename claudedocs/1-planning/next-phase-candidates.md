@@ -24,6 +24,18 @@ It condenses the user's "5-point deepening discussion" into 3 workflows and a re
 
 ---
 
+## 🆕 Sprint 57.102 Carryover — B2a TEAMMATE real multi-turn child loop SHIPPED; B2b inject-to-teammate (FE producer) next
+
+**Source**: Sprint 57.102 closed 2026-06-11 — harness-deepening workflow B slice B2 (first half). TEAMMATE single-shot → real multi-turn child loop (mirror 57.94 FORK) + `send_to_parent` tool (child→parent report folded into the summary) + the B1 `MessageInbox` wired (reuse 57.101; `TeammateChildLoopFactory` + an `inbox_factory` over `InjectionRegistry` keyed by `subagent_id`). Backend-only, `loop.py` unchanged, no new wire event (reuses `SubagentChildEvent` 57.96), no DB, no FE. Drive-through PASS (real Azure gpt-5.2: parent `task_spawn mode=teammate` → teammate 3-turn loop `mock_patrol_check_servers`→`send_to_parent`→answer → parent integrated the report). Day-0 split B2 into B2a (this) / B2b after confirming the await-completion constraint (the parent blocks on the child; live parent→child mid-run injection needs a detached teammate, deferred). Detail: `memory/project_phase57_102_teammate_multiturn.md` + CHANGE-069 + 17.md + design note 20 edit.
+
+- **B2b — chat-user inject-to-teammate** (🔴 next slice) — the live UI producer for the teammate inbox B2a wired: `POST /chat/{id}/subagents/{subagent_id}/inject` (extend B1's inject with a subagent target, gated on the parent session active+owned + the child registered) + the `InjectionRegistry` spawn-time registration/unregistration for the child + the FE inject-to-teammate control + render of the injected child turn + that inbox's drive-through.
+- **B2b — inline SubagentForkBlock mode-awareness** (🟢 FE, surfaced by the 57.102 drive-through) — the inline conversation fork-block hardcodes "Fork · concurrent" + shows "0t" for a teammate spawn (a pre-existing 57.95/96 carryover; the authoritative Inspector **Tree** correctly shows "teammate" + the real token count). Make the inline block mode-aware + fix the 0t display.
+- **detached / non-blocking teammate** (🟢, deferred — proposal §2.5) — live parent→child mid-run injection (the parent reasons WHILE the child runs) needs non-blocking spawn + teammate lifecycle management. YAGNI until a real use case.
+- **depth>1 (child-of-child)** (🟢) — the teammate child is recursion-bounded at 1 (no task_spawn); two-level `subagent_id` routing + nested render is a separate slice.
+- `subagent-teammate-multiturn-spike` calibration class 0.55 (1st data point; ratio ~0.95-1.0 IN band; pending 2-3 sprint validation; `agent_factor` 1.0 parent-direct).
+
+---
+
 ## 🆕 Sprint 57.101 Carryover — B1 between-turns injection primitive SHIPPED; B2 TEAMMATE reuses the drain seam next
 
 **Source**: Sprint 57.101 closed 2026-06-11 — harness-deepening workflow B slice 1. A chat-v2 user injects an instruction MID-RUN; the loop drains it at the next turn boundary (`MessageInbox` ABC + `_run_turns` drain) and the agent picks it up. D-DAY1-1: the injection is an INPUT → it runs `check_input` (a non-PASS injection is dropped + `GuardrailTriggered(input)`), NOT the between-turns gate (which checks OUTPUTs). Module-level `InjectionRegistry` + `POST /{id}/inject`; new `MessageInjected` wire (count 23→24); FE composer usable mid-run (real_llm). Drive-through BOTH cases PASS (real Azure gpt-5.2). Detail: `memory/project_phase57_101_between_turns_injection.md` + CHANGE-068 + design note 26 + 17.md.
