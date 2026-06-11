@@ -2,7 +2,7 @@
 
 [Plan](./sprint-57-103-plan.md)
 
-**Status**: In progress
+**Status**: Completed — US-1/2/3 backend + US-5 shipped & driven; **US-4 inject control + US-6 live inject 🚧 DEFERRED to proposal §2.5** (drive-through Day 3 found the FE never observes a teammate as "running" under the buffered SSE relay + await-completion → the control can never render; removed per Option A, no dead control)
 **Branch**: `feature/sprint-57-103-inject-to-teammate`
 
 ---
@@ -63,58 +63,56 @@
 ## Day 2 — Frontend: inject control + injected-turn render + inline mode-awareness + tests (US-3 FE/US-4/US-5)
 
 ### 2.1 FE service + inject control + injected child row (US-4 + US-3 FE)
-- [ ] **`injectToSubagent`** (`chatService.ts`) → `POST /chat/{id}/subagents/{subagentId}/inject` body `{message}`
-- [ ] **Inject control on running teammate node** (`InspectorTree.tsx`)
-  - shown only for `status === "running"` && parent `mode === "real_llm"` (no dead control); small input + button → `injectToSubagent`
-  - error via `setError` (no status change)
-- [ ] **`kind:"injected"` child row** (`InspectorTree.tsx` + `chatStore.ts` `subagent_child` reducer + `subagent/types.ts` `ChildTurnEvent.kind`)
-  - maps inner `message_injected` → `{kind:"injected", text}`; renders "injected mid-run: {text}"
+- [ ] **`injectToSubagent`** (`chatService.ts`) — 🚧 DEFERRED → §2.5 (built Day 2, REMOVED Day 3 per Option A: inject UI blocked by await-completion)
+- [ ] **Inject control on running teammate node** (`InspectorTree.tsx`) — 🚧 DEFERRED → §2.5 (built + Vitest-proven Day 2, REMOVED Day 3: the FE never observes a teammate "running" under the buffered relay → control can never render)
+- [x] **`message_injected` child row** (`InspectorTree.childTurnLabel` + `chatStore.ts` `subagent_child` text projection += `inner.text` + `subagent/types.ts` `kind` doc)
+  - the relay render is correct + reachable once a live inject window exists (§2.5); the backend relay primitive is wired + unit-proven now
 
 ### 2.2 Inline block mode-awareness (US-5 — 🟢 carryover)
-- [ ] **`SubagentEntry` += `mode` + `tokensUsed`** (`chat_v2/types.ts`) + source them at the `subagent_spawned`/`subagent_completed` dual-emit (`chatStore.ts`)
-- [ ] **Mode-aware label + real tokens** (`SubagentForkBlock.tsx`): `"teammate"` → "Teammate"; show `tokensUsed` (fallback turn count only when null) — surgical (label + count line only)
+- [x] **`SubagentEntry` += `mode` + `tokensUsed`** (`chat_v2/types.ts`) + source them at the `subagent_spawned`/`subagent_completed` dual-emit (`chatStore.ts`) — dropped the dead always-0 `turns`
+- [x] **Mode-aware label + real tokens** (`SubagentForkBlock.tsx`): `"teammate"` → "Teammate · peer" (icon Users); show `tokensUsed` — DRIVE-THROUGH PROVEN ("Teammate · peer" + "4,013 tok")
 
 ### 2.3 Tests (US-1..US-5)
-- [ ] **Backend** `test_router.py::TestInjectToSubagentEndpoint` (202 / 404 missing / 404 cross-tenant / 409 parent-not-running / 409 teammate-no-queue / 422 empty)
-- [ ] **Backend** `test_teammate_inbox.py` CONVERT to `inbox_scope` + ADD register-on-enter / unregister-on-exit / unregister-on-timeout / unregister-on-exception; keep `test_teammate_child_loop_drains_queued_inbox_message`
-- [ ] **Backend** `test_teammate.py` + `_child_loop_helpers.py` CONVERT `inbox_factory` ctor usages → `inbox_scope`
-- [ ] **Backend** relay assertion (child `MessageInjected` → `SubagentChildEvent`)
-- [ ] **Frontend Vitest**: chatStore injected-kind mapping; InspectorTree inject control gating + injected row; SubagentForkBlock "Teammate" + tokens
+- [x] **Backend** `test_router.py::TestInjectToSubagentEndpoint` (202 / 404 missing / 404 cross-tenant / 409 parent-not-running / 409 teammate-no-queue / 422 empty)
+- [x] **Backend** `test_teammate_inbox.py` CONVERT to `inbox_scope` + ADD register-on-enter / unregister-on-exit / unregister-on-exception + the drain seam test (3 → 6)
+- [x] **Backend** `test_teammate.py` + `_child_loop_helpers.py` — N/A: neither used the old `inbox_factory` ctor arg (Day-0 confirmed; no conversion needed)
+- [x] **Backend** relay assertion (child `MessageInjected` → `SubagentChildEvent`)
+- [x] **Frontend Vitest**: chatStore `message_injected` projection + completed `tokensUsed`; blocks "Teammate · peer" + tokens (the InspectorTree.inject gating tests were REMOVED Day 3 with the control → §2.5)
 
 ---
 
 ## Day 3 — Full regression + drive-through (US-6) + CHANGE-070 + 17.md
 
 ### 3.1 Full gate sweep
-- [ ] `black . && isort . && flake8 .` (src tests) clean
-- [ ] `mypy src` 0 errors
-- [ ] `python scripts/lint/run_all.py` 10/10 (event count UNCHANGED; `check_llm_sdk_leak` 0; `check_cross_category_import` green; `check_ap1` green)
-- [ ] full `pytest -q` green (+N, 0 deletions) — confirm baseline delta
-- [ ] frontend `npm run lint` (NO `--silent`) + `npm run build` + `npm run test` (Vitest) + `npm run check:mockup-fidelity` (unchanged)
-- [ ] `git diff` confirms `loop.py` / DB / migration / generated wire schema diff = 0
+- [x] `black . && isort . && flake8 .` (src tests) clean
+- [x] `mypy src` 0 errors (0/355)
+- [x] `python scripts/lint/run_all.py` 10/10 (event count UNCHANGED; `check_llm_sdk_leak` 0; `check_cross_category_import` green; `check_ap1` green)
+- [x] full `pytest -q` green — **2342 passed + 4 skipped (+9, 0 deletions)**
+- [x] frontend `npm run lint` (exit 0, no `--silent`) + `npm run build` ✓ + Vitest 143 + `npm run check:mockup-fidelity` 53 unchanged
+- [x] `git diff` confirms `loop.py` / DB / migration / generated wire schema diff = 0
 
 ### 3.2 Drive-through (US-6 — inject into a running multi-turn teammate)
-- [ ] Clean restart (Risk Class E): kill stale uvicorn reloader + spawn-worker (`Get-CimInstance Win32_Process` PID/PPID/StartTime), confirm fresh PID sole :8000 owner; do not touch frontend node
-- [ ] Real UI (real_llm) + real Azure gpt-5.2: spawn a multi-turn teammate (a task with several tool-call turns for an injection window)
-- [ ] Inject mid-run via the Tree node control (Playwright: snapshot running node → fill + click inject)
-- [ ] Observe: the Tree shows the injected child turn ("injected mid-run: …") + the teammate's later turn reflects it + the parent integrates
-- [ ] Screenshot (`artifacts/dt57103-inject-teammate.png`) + observed-vs-intended into progress.md
-- [ ] Walk every new control: clickable / effect / label real / result renders (Drive-Through DoD)
+- [x] Clean restart (Risk Class E): killed stale reloader 29576 + spawn-worker 38668; fresh no-reload backend PID 16496 sole :8000 owner; frontend node untouched
+- [x] Real UI (real_llm) + real Azure gpt-5.2: spawned real multi-turn teammates (mock_patrol_check_servers patrols)
+- [ ] Inject mid-run via the Tree node control — 🚧 IMPOSSIBLE under await-completion: the FE never observes a teammate "running" (buffered relay flushes spawn+child+completed together post-completion) → the control never renders → §2.5
+- [ ] Observe the injected child turn reflected — 🚧 same blocker (no live inject possible); the `message_injected` relay render is unit-proven + reachable once §2.5 lands
+- [x] Screenshots (`artifacts/dt57103-teammate-completed-no-running-window.png` = the finding; `artifacts/dt57103-shipped-teammate-label-tokens-parent-integrated.png` = what shipped) + observed-vs-intended in progress.md
+- [x] Walk every control: US-5 "Teammate · peer" + "4,013 tok" DRIVEN; the inject control was REMOVED (no dead control per Drive-Through rule)
 
 ### 3.3 CHANGE-070 + 17.md + design note 20
-- [ ] `CHANGE-070-inject-to-teammate.md` (problem / design / verification / impact)
-- [ ] 17.md Cat 11: `TeammateInboxScope` contract + MessageInjected-in-relay note (single-source)
-- [ ] design note 20 §5: B2b shipped (teammate inbox now has a live producer)
+- [x] `CHANGE-070-inject-to-teammate.md` (problem / design / verification / impact + the await-completion finding)
+- [x] 17.md Cat 11: `TeammateInboxScope` contract + the inject-to-subagent endpoint + MessageInjected-in-relay note
+- [x] design note 20 §5: B2b backend primitive shipped; the live inject UI deferred to §2.5 (await-completion finding)
 
 ---
 
 ## Day 4 — Closeout (composition continuation — no new design note)
 
 ### 4.1 Closeout
-- [ ] progress.md Day 0-3 + drive-through complete
-- [ ] retrospective.md Q1-Q7 (Q2 calibration ratio vs the 0.55 `subagent-inject-to-teammate` class; Q7 no-design-note rationale)
-- [ ] CLAUDE.md Current Sprint + Last Updated (lean, per §Sprint Closeout policy)
-- [ ] MEMORY.md pointer + `project_phase57_103_inject_to_teammate.md` subfile
-- [ ] next-phase-candidates.md: B2b → done; remaining carryovers (detached teammate / depth>1 / inline-block already in US-5)
-- [ ] sprint-workflow.md calibration row `subagent-inject-to-teammate 0.55` (1st data point)
-- [ ] all checklist items `[x]` (never delete unchecked; mark 🚧 + reason if deferred)
+- [x] progress.md Day 0-3 + drive-through complete
+- [x] retrospective.md Q1-Q7 (Q2 calibration; Q4 the await-completion planning-miss lesson; Q7 no-design-note rationale)
+- [x] CLAUDE.md Current Sprint + Last Updated (lean, per §Sprint Closeout policy)
+- [x] MEMORY.md pointer + `project_phase57_103_inject_to_teammate.md` subfile
+- [x] next-phase-candidates.md: B2b backend primitive + US-5 done; **inject UI deferred to §2.5** (await-completion prerequisite)
+- [x] sprint-workflow.md calibration row `subagent-inject-to-teammate 0.55` (1st data point)
+- [x] all checklist items `[x]` or 🚧 (never deleted unchecked; US-4/6 marked 🚧 DEFERRED with reason)

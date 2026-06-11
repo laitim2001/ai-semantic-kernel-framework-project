@@ -7,6 +7,7 @@
 **Source**: Sprint 57.94 implementation (`sprint-57-94-plan.md` + retrospective). Authority: this note describes WHAT WAS BUILT + VERIFIED; the live code is the source of truth.
 
 > **Modification History**
+> - 2026-06-11: Sprint 57.103 (B2b) — teammate inbox producer endpoint + `TeammateInboxScope` lifecycle + MessageInjected relay shipped; live inject UI deferred to §2.5 (buffered-relay finding). See `CHANGE-070`.
 > - 2026-06-11: Sprint 57.102 (B2a) — TEAMMATE now also a real child loop (§5 row updated); pattern reused via `TeammateChildLoopFactory` + `send_to_parent` + B1 inbox. See `CHANGE-069`.
 > - 2026-06-09: Initial creation — FORK real child-loop spike extract (Sprint 57.94)
 
@@ -51,7 +52,8 @@ The 地基 A lifecycle (durable pause-resume + re-enterable `_run_turns`, Sprint
 
 | Deferred | AD | Why |
 |----------|-----|-----|
-| ~~TEAMMATE real loop~~ → **SHIPPED Sprint 57.102 (B2a)** | CHANGE-069 | TEAMMATE now a real multi-turn child loop (`TeammateChildLoopFactory`) + `send_to_parent` + B1 inbox wired (UI producer = B2b). HANDOFF real loop still separate. |
+| ~~TEAMMATE real loop~~ → **SHIPPED Sprint 57.102 (B2a)** | CHANGE-069 | TEAMMATE now a real multi-turn child loop (`TeammateChildLoopFactory`) + `send_to_parent` + B1 inbox wired. HANDOFF real loop still separate. |
+| ~~chat-user inject-to-teammate (producer)~~ → **backend SHIPPED Sprint 57.103 (B2b); inject UI → §2.5** | CHANGE-070 | The inject endpoint `POST /chat/{id}/subagents/{sid}/inject` + the `TeammateInboxScope` register/unregister lifecycle + the `MessageInjected` relay are wired + unit-proven. The inject **UI** control is deferred: the Cat 11→12 SSE relay buffers subagent events + flushes them only after the awaited teammate completes (Sprint 57.95), so the FE never observes a teammate as "running" → a control gated on running can never render. The live inject window needs the detached/streaming teammate (proposal §2.5). |
 | `HandoffService` (boot child session on `stop_reason="handoff"`) | (separate) | loop-side terminator wired (57.68/69); consumer absent |
 | SSE-relay of child / subagent events | `AD-Subagent-Child-Event-SSE-Relay` | `LoopEvent` base has no `parent_session_id`/`depth`; the chat dispatcher has no `event_emitter` → Inspector Tree shows "no subagents"; the child runs **headless** (drive-through confirmed) |
 | Child LOOP-span nesting under parent | `AD-Subagent-Child-Span-Nesting` | the `task_spawn` handler passes `trace_context=None` to `spawn` → the child span is not explicitly parented (best-effort via ambient tracer); the parent trace shows only the wrapping `task_spawn` TOOL_EXEC span |

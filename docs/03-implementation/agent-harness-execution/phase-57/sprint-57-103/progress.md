@@ -67,3 +67,45 @@
 ### Drift note (positive, vs plan §3.5)
 
 The plan's nested-closure `_teammate_inbox_scope` in `handler.py` was extracted to `injection_registry.make_teammate_inbox_scope` — cleaner + testable. No scope change, just a better seam. Recorded as the Day-1 implementation refinement.
+
+---
+
+## Day 2 — Frontend: relay render + inject control + mode-aware inline block (2026-06-11)
+
+### Accomplishments (US-3 FE / US-4 / US-5)
+
+- **US-3 FE** — `chatStore` `subagent_child` reducer text projection += `inner.text`; `InspectorTree.childTurnLabel` + a `message_injected` case ("injected · …"). The Tree's generic `subagent_child` reducer already keys `kind: inner_type`, so the relayed `MessageInjected` auto-projects to a `ChildTurnEvent` (D2 positive drift).
+- **US-4** — built `TeammateInjectControl` in the Inspector Tree (gated `mode==="teammate" && status==="running" && real_llm`) + `injectToSubagent` service. (REMOVED Day 3 — see below.)
+- **US-5 (57.102 carryover)** — `SubagentEntry` += `mode` + `tokensUsed` (dropped the dead always-0 `turns`); `SubagentForkBlock` mode-aware label/icon ("Teammate · peer" vs "Fork · concurrent") + real tokens. Mockup `.subagent-tree`/`.subagent-row`/`.badge` CSS vocabulary unchanged.
+- Vitest +9 (149): InspectorTree.inject gating + click (6), chatStore message_injected projection + completed tokensUsed (2), blocks teammate label + tokens (1). build ✓ / lint exit 0 / mockup-fidelity 53 unchanged.
+
+---
+
+## Day 3 — Full gate + DRIVE-THROUGH (US-6) — architectural finding + Option A (2026-06-11)
+
+### Full gate (all green)
+
+- mypy `src` 0/355 · black/isort/flake8 clean · `run_all` 10/10 (event count unchanged) · full pytest **2342 +4 skip (+9, 0 del)** · `loop.py` + DB diff = 0 · FE build ✓ / lint exit 0 / Vitest / mockup-fidelity 53.
+
+### Drive-through (real UI jamie@acme.com + real Azure gpt-5.2, Playwright) — the load-bearing finding
+
+Clean restart (Risk Class E): killed the stale 57.102 reloader (29576) + its spawn-worker (38668); started a fresh no-`--reload` backend (PID 16496, "startup complete" + "pricing loader wired"). Frontend vite :3007 (PID 22000) untouched.
+
+**🔴 D-DAY3-1 (load-bearing) — the inject control can NEVER render under the current architecture.** Sent a message that spawned a real multi-turn teammate; polled the Tree 26s for the inject input → it never appeared, though teammate nodes DID appear (all already "completed"). Root cause (confirmed in code, `router.py:232-239` + `:445-447`): the Cat 11→12 SSE relay buffers `SubagentSpawned`/`Child`/`Completed` in a router-owned list and drains it only when the parent loop yields its NEXT event — which happens AFTER the awaited `task_spawn`/teammate completes. So the parent blocks in `wait_for` during the teammate run, the buffer accumulates, and spawn+child+completed flush together post-completion → **the FE never observes a teammate as "running"** → the control's `status==="running"` gate is never satisfied. A live inject window needs the detached/streaming teammate (proposal §2.5), which B2b deferred. (Planning miss: the B2b Day-0 noted the await-completion constraint but I did not connect that the *buffered relay* means no running window.)
+
+**Decision (user, Option A)** — per the Drive-Through Acceptance rule (no dead control): remove the un-reachable inject control + `injectToSubagent` + the `InspectorTree.inject` test; KEEP the proven, reusable backend primitive (endpoint + `inbox_scope` lifecycle + `MessageInjected` relay) + US-5. Commit `982520a7`.
+
+### What the drive-through DID prove (driven, not gate-only)
+
+- **US-5 ✅ DRIVEN** — inline block rendered "**Teammate · peer** spawned 1 subagent" + "…·teammate·done·**4,013 tok**" (mode-aware label NOT "Fork"; real tokens NOT "0t"). `artifacts/dt57103-shipped-teammate-label-tokens-parent-integrated.png`.
+- **Backend teammate flow ✅ end-to-end (real Azure)** — the parent's final answer integrated "**Teammate subagent finding (checkout patrol): …**" + `verification claim verified · llm_judge`. Proves US-1/2/3 backend wired correctly (task_spawn teammate → patrol → `send_to_parent` report folded → parent integrated + Cat 10 verified).
+- **US-3 relay ✅** — (first run) the Inspector Tree node expanded to the teammate's per-turn TAO (`turn 0 LLM → mock_patrol_check_servers() ← …`). The `message_injected` child-row render is unit-proven + reachable once §2.5 lands.
+- inject control absent post-removal (`injectControls: 0`).
+
+### US-4 / US-6 status: 🚧 DEFERRED (not done)
+
+The inject-to-teammate UI control + live inject are **blocked by the await-completion + buffered-relay architecture**; the prerequisite is the detached/streaming teammate (proposal §2.5). Carried to `next-phase-candidates.md`. NOT marked done — per the Drive-Through rule, un-driven user-facing items are not claimed.
+
+### Screenshots
+- `artifacts/dt57103-teammate-completed-no-running-window.png` — the finding (teammates seen as completed, no running window).
+- `artifacts/dt57103-shipped-teammate-label-tokens-parent-integrated.png` — what shipped (US-5 label+tokens + parent integrated the teammate finding).
