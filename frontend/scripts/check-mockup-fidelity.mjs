@@ -28,6 +28,7 @@
  * Created: 2026-05-22 (Sprint 57.28 Day 3 US-D1)
  *
  * Modification History:
+ *   - 2026-06-12: Sprint 57.107 — ratchet HEX_OKLCH_BASELINE 53→51 (SessionList DEMO banner removed −2)
  *   - 2026-06-06: Sprint 57.86 — bump HEX_OKLCH_BASELINE 50→53 (+3 verbatim `oklch(from var(--primary|--danger) l c h / α)` tints in NEW /auth/password-login page — avatar circle bg + generic-error alert border+bg per mockup page-auth-extras.jsx:AuthPasswordLogin; derive from --primary/--danger tokens, NOT raw colours; same vocabulary precedent as Sprint 57.35 auth verbatim port)
  *   - 2026-06-02: Sprint 57.69 — bump HEX_OKLCH_BASELINE 48→50 (+2 verbatim `oklch(from var(--info) l c h / α)` tints in HandoffBanner production-only AP-2 widget, no mockup source D8; --info token not raw colour)
  *   - 2026-05-26: Sprint 57.50 Day 2 hotfix — bump HEX_OKLCH_BASELINE 47→48 catching up Sprint 57.49 silent +1 drift (Sprint 57.49 dual-track frontend migration wave introduced +1 oklch literal without bumping baseline; main `33e9f2aa` CI silently exceeded baseline at merge; PR #200 first PR to surface the drift via failing Mockup-fidelity guard). Sprint 57.50 itself added 0 new oklch literals (GeneralTab.tsx Identity Card refactor uses only `var(--danger)` token references, no literals); fix-forward catch-up rather than fix-back to keep baseline aligned with merged main state.
@@ -91,7 +92,7 @@ const SCAN_DIRS = [path.join(FRONTEND, "src/features"), path.join(FRONTEND, "src
 // l c h / 0.14)` + generic-error alert border+bg `oklch(from var(--danger) l c h / α)`; verbatim
 // from mockup page-auth-extras.jsx:AuthPasswordLogin, same token vocabulary as the sibling
 // /auth/{invite,dev,register} pages (Sprint 57.35 auth verbatim port). NOT raw colours.
-const HEX_OKLCH_BASELINE = 53;
+const HEX_OKLCH_BASELINE = 51;
 
 let failed = false;
 

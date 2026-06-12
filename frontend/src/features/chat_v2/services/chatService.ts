@@ -34,6 +34,7 @@
  * Last Modified: 2026-06-08
  *
  * Modification History (newest-first):
+ *   - 2026-06-12: Sprint 57.107 B3 — +listSessions (GET /sessions; real SessionList data)
  *   - 2026-06-11: Sprint 57.101 B1 — +injectMessage (POST /chat/{id}/inject; mid-run instruction)
  *   - 2026-06-08: Sprint 57.88 US-5 — +resumeChat (POST /chat/{id}/resume); extract consumeSSEStream
  *   - 2026-05-09: Sprint 57.8 D3 — swap raw fetch to fetchWithAuth (JWT injection)
@@ -53,6 +54,39 @@ export type ChatRequestBody = {
   mode: ChatMode;
   session_id?: string;
 };
+
+// === Sprint 57.107 B3: session list ======================================
+// Snake_case wire shape of GET /api/v1/sessions items (1:1 backend). Mapped to
+// the camelCase `Session` UI type in chatStore.loadSessions.
+export type SessionListApiItem = {
+  id: string;
+  title: string | null;
+  status: string;
+  agent_role: string | null;
+  handoff_parent_id: string | null;
+  started_at_ms: number;
+  total_turns: number;
+};
+
+export type SessionListResponse = {
+  sessions: SessionListApiItem[];
+};
+
+/**
+ * Sprint 57.107 (B3): list the caller's chat sessions (tenant + user from the
+ * auth JWT via fetchWithAuth). Returns the raw snake_case items; chatStore
+ * maps them to the camelCase `Session` UI shape. A non-2xx throws so the caller
+ * can surface it.
+ */
+export async function listSessions(): Promise<SessionListApiItem[]> {
+  const response = await fetchWithAuth("/api/v1/sessions", { method: "GET" });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`HTTP ${response.status}: ${text}`);
+  }
+  const body = (await response.json()) as SessionListResponse;
+  return body.sessions;
+}
 
 // Shared by streamChat + resumeChat: both consume the same SSE wire format,
 // only the request (verb / URL / body) differs.

@@ -21,6 +21,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-06-12: Sprint 57.107 B3 — harness-policy mappers +handoff_enabled +handoff_target_allowlist
  *   - 2026-06-12: Sprint 57.106 C3 — +getHarnessPolicy/putHarnessPolicy (harness-policy tab)
  *   - 2026-06-11: Sprint 57.104 C1 — +getModelPolicy/putModelPolicy (model-policy tab)
  *   - 2026-05-29: Sprint 57.62 US-3 — +fetchRateLimitsAlerts GET recent alerts service func
@@ -384,6 +385,9 @@ function _harnessPolicyFromApi(api: HarnessPolicyApiResponse): HarnessPolicy {
     verificationEscalateOnMax: api.verification_escalate_on_max,
     riskyActionEnabled: api.risky_action_enabled,
     riskyActionExtraPatterns: api.risky_action_extra_patterns,
+    // Sprint 57.107 B3
+    handoffEnabled: api.handoff_enabled,
+    handoffTargetAllowlist: api.handoff_target_allowlist,
   };
 }
 
@@ -400,6 +404,9 @@ function _harnessPolicyToApi(policy: HarnessPolicy): HarnessPolicyApiUpsertReque
     verification_escalate_on_max: policy.verificationEscalateOnMax,
     risky_action_enabled: policy.riskyActionEnabled,
     risky_action_extra_patterns: policy.riskyActionExtraPatterns,
+    // Sprint 57.107 B3
+    handoff_enabled: policy.handoffEnabled,
+    handoff_target_allowlist: policy.handoffTargetAllowlist,
   };
 }
 

@@ -423,13 +423,15 @@
       "status": {
         "running": "進行中",
         "hitl": "待審",
+        "handedOff": "已交接",
         "done": "已完成"
       },
       "meta": {
         "turns": "{{count}} 輪"
       },
-      "demoBanner": "示範資料 — 後端 list 端點待 Sprint 57.22+ 接通（AD-ChatV2-SessionList-Backend）",
-      "demoTag": "示範"
+      "titleFallback": "未命名工作階段",
+      "emptyState": "尚無工作階段",
+      "chainBadge": "↳ {{role}}"
     },
     "header": {
       "toggleList": "切換工作階段列表",

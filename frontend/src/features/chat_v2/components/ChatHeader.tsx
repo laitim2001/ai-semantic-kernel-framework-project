@@ -19,8 +19,9 @@
  *   (claudedocs/5-status/v2-investigation-20260522/03-mockup-consistency-rootcause.md)
  *   identified. STYLE.md §1 escape hatch + frontend-mockup-fidelity.md.
  *
- *   Data sources (component-logic layer; preserved unchanged):
- *     - chatStore.activeSessionId → FIXTURE_SESSIONS lookup for title/agent/turns
+ *   Data sources (component-logic layer):
+ *     - chatStore.activeSessionId → chatStore.sessions lookup for title/agent/turns
+ *       (Sprint 57.107 B3: real GET /sessions data, was FIXTURE_SESSIONS)
  *     - chatStore.status === "running" → streaming indicator visibility
  *     - i18n via react-i18next ("common" namespace)
  *
@@ -33,6 +34,7 @@
  * Last Modified: 2026-05-23
  *
  * Modification History:
+ *   - 2026-06-12: Sprint 57.107 B3 — active-session lookup from real store.sessions (was FIXTURE_SESSIONS)
  *   - 2026-06-06: chat-v2 honest surface — model badge shows real currentModel (was hardcoded "claude-haiku-4-5"); agent default "incident-responder"→"agent" (CHANGE-054)
  *   - 2026-05-23: Sprint 57.30 Day 2 US-C2 — verbatim re-point to mockup page-chat.jsx L93-121 ChatHeader markup (.panel-toggle, inline-style literals byte-identical)
  *   - 2026-05-17: Initial creation (Sprint 57.21 Day 3 §3.2)
@@ -40,15 +42,13 @@
  * Related:
  *   - reference/design-mockups/page-chat.jsx L93-121 (ChatHeader source)
  *   - frontend/src/styles-mockup.css L712-724 (.panel-toggle) / L649 (.live-dot) / L613-620 (.row / .grow / .mono / .subtle) / L1092 (.provider-neutral)
- *   - ../fixtures/sessions.ts (FIXTURE_SESSIONS for title lookup)
- *   - ../store/chatStore.ts (activeSessionId + status)
+ *   - ../store/chatStore.ts (activeSessionId + sessions + status)
  *   - docs/rules-on-demand/frontend-mockup-fidelity.md (verbatim re-point method)
  */
 
 import { Activity, AlertTriangle, PanelLeft, PanelRight, ScrollText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { FIXTURE_SESSIONS } from "../fixtures/sessions";
 import { useChatStore } from "../store/chatStore";
 
 type Props = {
@@ -60,14 +60,16 @@ type Props = {
 
 export function ChatHeader({ listOpen, inspOpen, onToggleList, onToggleInsp }: Props): JSX.Element {
   const activeSessionId = useChatStore((s) => s.activeSessionId);
+  const sessions = useChatStore((s) => s.sessions);
   const status = useChatStore((s) => s.status);
   const totalTurns = useChatStore((s) => s.totalTurns);
   const currentModel = useChatStore((s) => s.currentModel);
   const mode = useChatStore((s) => s.mode);
   const { t } = useTranslation("common");
 
+  // Sprint 57.107 B3: look up the active session in the real store list.
   const active = activeSessionId
-    ? FIXTURE_SESSIONS.find((s) => s.id === activeSessionId)
+    ? sessions.find((s) => s.id === activeSessionId)
     : undefined;
   const titleText = active?.title ?? "New session";
   // Honest-surface: with no fixture session selected (a real ad-hoc chat), show a

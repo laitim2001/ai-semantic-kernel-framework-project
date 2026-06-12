@@ -7,6 +7,7 @@
  * Created: 2026-05-17 (Sprint 57.21 Day 3 §3.2)
  *
  * Modification History:
+ *   - 2026-06-12: Sprint 57.107 B3 — active-session title test seeds store.sessions (was FIXTURE_SESSIONS lookup)
  *   - 2026-06-06: CHANGE-054 honest surface — fallback assertions "incident-responder"→"agent", "claude-haiku-4-5"→"real_llm" (model badge reflects real run/mode)
  *   - 2026-05-17: Initial creation (Sprint 57.21 Day 3 §3.2)
  */
@@ -53,8 +54,24 @@ describe("ChatHeader (Sprint 57.21 Day 3 §3.2)", () => {
     expect(screen.getByText("real_llm")).toBeInTheDocument();
   });
 
-  test("renders fixture session title when activeSessionId is set", () => {
-    useChatStore.setState({ activeSessionId: "sess_91kxu" });
+  test("renders active session title from the store when activeSessionId is set", () => {
+    // Sprint 57.107 B3: ChatHeader looks up the active session in store.sessions
+    // (real GET /sessions data) instead of FIXTURE_SESSIONS.
+    useChatStore.setState({
+      sessions: [
+        {
+          id: "sess_91kxu",
+          title: "Q4 compliance audit — PCI scope",
+          agent: "compliance-auditor",
+          turns: 42,
+          status: "hitl",
+          time: "2026-06-12 09:52",
+          handoffParentId: null,
+          agentRole: "compliance-auditor",
+        },
+      ],
+      activeSessionId: "sess_91kxu",
+    });
     setUp();
     expect(screen.getByText("Q4 compliance audit — PCI scope")).toBeInTheDocument();
     expect(screen.getByText("compliance-auditor")).toBeInTheDocument();

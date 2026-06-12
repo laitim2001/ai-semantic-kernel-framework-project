@@ -8,14 +8,15 @@
  *   Read side: useHarnessPolicy(tenantId) → GET /admin/tenants/{id}/harness-policy
  *   (sparse: unset fields render "System default").
  *
- *   Write side: Edit button toggles edit mode. The 9 fields render type-aware
- *   editors: the 5 list fields (escalate_*_phrases / escalate_tools /
- *   risky_action_extra_patterns) use comma-or-newline text inputs (parsed to
- *   string[] on save; blank input = null/cleared); verification_mode uses a
- *   select (System default / enabled / disabled); verification_judge_template a
- *   select of the 5 shipped names + System default; the two booleans
- *   (verification_escalate_on_max / risky_action_enabled) tri-state selects
- *   (System default / on / off). Save invokes useHarnessPolicySave → PUT
+ *   Write side: Edit button toggles edit mode. The 11 fields render type-aware
+ *   editors: the 6 list fields (escalate_*_phrases / escalate_tools /
+ *   risky_action_extra_patterns / handoff_target_allowlist) use comma-or-newline
+ *   text inputs (parsed to string[] on save; blank input = null/cleared);
+ *   verification_mode uses a select (System default / enabled / disabled);
+ *   verification_judge_template a select of the 5 shipped names + System default;
+ *   the three booleans (verification_escalate_on_max / risky_action_enabled /
+ *   handoff_enabled) tri-state selects (System default / on / off). Save invokes
+ *   useHarnessPolicySave → PUT
  *   (composite-replace: the FULL desired policy; "System default" selections →
  *   null, cleared server-side). A 422 (`detail` string — unknown template /
  *   bad/oversize regex / >20 patterns / invalid mode) surfaces inline via the
@@ -27,6 +28,7 @@
  * Created: 2026-06-12 (Sprint 57.106 C3)
  *
  * Modification History (newest-first):
+ *   - 2026-06-12: Sprint 57.107 B3 — +handoffEnabled tri-state + handoffTargetAllowlist list field (Cat 11 handoff governance)
  *   - 2026-06-12: Initial creation (Sprint 57.106 C3)
  *
  * Related:
@@ -76,6 +78,9 @@ interface HarnessPolicyDraft {
   verificationEscalateOnMax: "" | "true" | "false";
   riskyActionEnabled: "" | "true" | "false";
   riskyActionExtraPatterns: string;
+  // Sprint 57.107 B3: Cat 11 handoff governance.
+  handoffEnabled: "" | "true" | "false";
+  handoffTargetAllowlist: string;
 }
 
 const EMPTY_DRAFT: HarnessPolicyDraft = {
@@ -88,9 +93,12 @@ const EMPTY_DRAFT: HarnessPolicyDraft = {
   verificationEscalateOnMax: "",
   riskyActionEnabled: "",
   riskyActionExtraPatterns: "",
+  // Sprint 57.107 B3
+  handoffEnabled: "",
+  handoffTargetAllowlist: "",
 };
 
-/** The 5 list fields in display order — label + testid suffix + draft key. */
+/** The 6 list fields in display order — label + testid suffix + draft key. */
 const LIST_FIELDS: ReadonlyArray<{
   key: keyof Pick<
     HarnessPolicyDraft,
@@ -99,6 +107,7 @@ const LIST_FIELDS: ReadonlyArray<{
     | "escalateOutputPhrases"
     | "escalateTools"
     | "riskyActionExtraPatterns"
+    | "handoffTargetAllowlist"
   >;
   policyKey: keyof Pick<
     HarnessPolicy,
@@ -107,6 +116,7 @@ const LIST_FIELDS: ReadonlyArray<{
     | "escalateOutputPhrases"
     | "escalateTools"
     | "riskyActionExtraPatterns"
+    | "handoffTargetAllowlist"
   >;
   label: string;
   testid: string;
@@ -140,6 +150,12 @@ const LIST_FIELDS: ReadonlyArray<{
     policyKey: "riskyActionExtraPatterns",
     label: "Risky action extra patterns",
     testid: "risky-action-extra-patterns",
+  },
+  {
+    key: "handoffTargetAllowlist",
+    policyKey: "handoffTargetAllowlist",
+    label: "Handoff target allowlist",
+    testid: "handoff-target-allowlist",
   },
 ];
 
@@ -191,6 +207,9 @@ function draftFromPolicy(policy: HarnessPolicy | undefined): HarnessPolicyDraft 
     verificationEscalateOnMax: boolToSelect(policy.verificationEscalateOnMax),
     riskyActionEnabled: boolToSelect(policy.riskyActionEnabled),
     riskyActionExtraPatterns: listToText(policy.riskyActionExtraPatterns),
+    // Sprint 57.107 B3
+    handoffEnabled: boolToSelect(policy.handoffEnabled),
+    handoffTargetAllowlist: listToText(policy.handoffTargetAllowlist),
   };
 }
 
@@ -207,6 +226,9 @@ function policyFromDraft(draft: HarnessPolicyDraft): HarnessPolicy {
     verificationEscalateOnMax: selectToBool(draft.verificationEscalateOnMax),
     riskyActionEnabled: selectToBool(draft.riskyActionEnabled),
     riskyActionExtraPatterns: textToList(draft.riskyActionExtraPatterns),
+    // Sprint 57.107 B3
+    handoffEnabled: selectToBool(draft.handoffEnabled),
+    handoffTargetAllowlist: textToList(draft.handoffTargetAllowlist),
   };
 }
 
@@ -313,8 +335,8 @@ export function HarnessPolicyTab({ tenantId }: HarnessPolicyTabProps): JSX.Eleme
         ) : (
           // eslint-disable-next-line no-restricted-syntax -- verbatim port: col gap
           <div className="col" style={{ gap: 14, marginTop: 8 }}>
-            {/* === Guardrail escalation list fields (4 of 5 list fields) === */}
-            {LIST_FIELDS.filter((f) => f.key !== "riskyActionExtraPatterns").map((field) => {
+            {/* === Guardrail escalation list fields (the 4 escalate_* fields) === */}
+            {LIST_FIELDS.filter((f) => f.key.startsWith("escalate")).map((field) => {
               const currentValue = policy ? policy[field.policyKey] : null;
               return (
                 <div key={field.key} className="spread">
@@ -472,6 +494,67 @@ export function HarnessPolicyTab({ tenantId }: HarnessPolicyTabProps): JSX.Eleme
 
             {/* === Risky action extra patterns (list field, after the toggle) === */}
             {LIST_FIELDS.filter((f) => f.key === "riskyActionExtraPatterns").map((field) => {
+              const currentValue = policy ? policy[field.policyKey] : null;
+              return (
+                <div key={field.key} className="spread">
+                  {/* eslint-disable-next-line no-restricted-syntax -- verbatim port: fontSize */}
+                  <span style={{ fontSize: 12.5 }}>{field.label}</span>
+                  {editing ? (
+                    <input
+                      type="text"
+                      value={draft[field.key]}
+                      placeholder="System default (comma or newline separated)"
+                      onChange={(e) => updateDraft(field.key, e.target.value)}
+                      // eslint-disable-next-line no-restricted-syntax -- verbatim port: input sizing
+                      style={{ width: 320, fontSize: 12, padding: "2px 6px" }}
+                      data-testid={`harness-policy-input-${field.testid}`}
+                      aria-label={`${field.label} override`}
+                    />
+                  ) : currentValue && currentValue.length > 0 ? (
+                    // eslint-disable-next-line no-restricted-syntax -- verbatim port: mono fontSize
+                    <span className="mono" style={{ fontSize: 11.5 }} data-testid={`harness-policy-value-${field.testid}`}>
+                      {currentValue.join(", ")}
+                    </span>
+                  ) : (
+                    <span className="subtle" data-testid={`harness-policy-value-${field.testid}`}>
+                      System default
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* === Handoff enabled (tri-state boolean) — Sprint 57.107 B3 === */}
+            <div className="spread">
+              {/* eslint-disable-next-line no-restricted-syntax -- verbatim port: fontSize */}
+              <span style={{ fontSize: 12.5 }}>Handoff enabled</span>
+              {editing ? (
+                <select
+                  value={draft.handoffEnabled}
+                  onChange={(e) =>
+                    updateDraft("handoffEnabled", e.target.value as HarnessPolicyDraft["handoffEnabled"])
+                  }
+                  data-testid="harness-policy-input-handoff-enabled"
+                  aria-label="Handoff enabled override"
+                >
+                  <option value="">System default</option>
+                  <option value="true">On</option>
+                  <option value="false">Off</option>
+                </select>
+              ) : (
+                <span
+                  className={policy?.handoffEnabled == null ? "subtle" : "mono"}
+                  // eslint-disable-next-line no-restricted-syntax -- verbatim port: mono fontSize
+                  style={{ fontSize: 11.5 }}
+                  data-testid="harness-policy-value-handoff-enabled"
+                >
+                  {boolToDisplay(policy ? policy.handoffEnabled : null)}
+                </span>
+              )}
+            </div>
+
+            {/* === Handoff target allowlist (list field, after the toggle) — Sprint 57.107 B3 === */}
+            {LIST_FIELDS.filter((f) => f.key === "handoffTargetAllowlist").map((field) => {
               const currentValue = policy ? policy[field.policyKey] : null;
               return (
                 <div key={field.key} className="spread">
