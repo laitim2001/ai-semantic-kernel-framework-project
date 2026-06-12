@@ -35,19 +35,20 @@
 
 ---
 
-## Day 2 — FE: store captures + renders + Vitest (US-2 + US-3 FE)
+## Day 2 — FE: store captures + renders + Vitest (US-2 + US-3 FE) ✅
 
 ### 2.1 HITL card real tool/reason (US-2)
-- [ ] **chatStore.ts** `approval_requested` case: `tool: ev.data.tool_name ?? "—"` + `rationale: ev.data.reason || "—"` (drop the :546 hardcode); `approvals[id]` += `toolName`/`reason`; `types.ts` ApprovalEntry +2
-- [ ] **HITLTurn.tsx + ApprovalCard.tsx**: render real values per Day-0 render-line findings (store-driven — minimal component diff expected)
-- [ ] **Vitest ADD**: approval card/HITLTurn unit cases (real tool renders; non-tool kind → "—" fallback); store capture tests
+- [x] **chatStore.ts** `approval_requested` case: `tool: ev.data.tool_name ?? "—"` + `rationale: ev.data.reason || "—"` (dropped the :546 hardcode); `approvals[id]`/`types.ts` ApprovalEntry extension DROPPED per D5 (nothing renders tool from the approvals dict — YAGNI)
+- [x] **HITLTurn.tsx + ApprovalCard.tsx**: ZERO component edits per D5 — HITLTurn already renders `turn.tool` (:197-199) + gates rationale/payload on `!== "—"` (:206/:212); fully store-driven
+- [x] **Vitest ADD**: approval tool-context + "—" fallback store cases (HITLTurn render path covered via the store-driven gates)
 
 ### 2.2 Inspector metadata captures (US-3 FE)
-- [ ] **trace_id**: `turn_start` handler `traceId: ev.data.trace_id ?? null` (drop the :394 hardcode)
-- [ ] **span_id**: `span_started` handler links the turn-root span (explicit match per Day-0, fallback first-span-of-turn) to active `AgentTurn.spanId`
-- [ ] **tokens**: `llm_response` handler accumulates `tokensIn`/`tokensOut` from `ev.data` (+= semantics; 2-call double-count unit test)
-- [ ] **Vitest CONVERT + ADD**: `ChatInspector.test.tsx` placeholder test narrows to cost/thinking ONLY + real-value cases; store unit tests ×3 captures
-  - DoD: FE lint 0 (non-silent) ✓ · build ✓ · Vitest green (828+ baseline, 0 del) ✓ · mockup-fidelity 51 unchanged ✓
+- [x] **trace_id**: `turn_start` handler `traceId: ev.data.trace_id ?? null` (dropped the :394 hardcode)
+- [x] **span_id**: linked in the `turn_start` handler from the newest RUNNING TURN span (D9: SpanStarted(TURN) precedes TurnStarted — linking in span_started would attach to the PREVIOUS turn) — explicit `spanType === "TURN"` match per D2
+- [x] **tokens**: `llm_response` handler OVERWRITES `tokensIn`/`tokensOut` from `ev.data` actuals when > 0 (D1: one LLM call per TAO turn — mirror the llm_request idiom; 0/absent keeps prior so old frames / unmeasured paths stay honest "—")
+- [x] **durationMs bonus fold-in (D3)**: `span_ended` TURN fills the spanId-matched `AgentTurn.durationMs` (no turn_end event exists)
+- [x] **Vitest ADD ×8** (`chatStore.mergeEvent.test.ts` 46→54): trace+span link / second-turn own-span / token overwrite / token absent-keeps-prior / approval context / approval fallback / TURN duration fill / non-TURN untouched. `ChatInspector.test.tsx` UNCHANGED — InspectorTurn component untouched; its null-fallback test stays valid (old frames CAN still carry nulls)
+  - DoD: FE lint 0 (non-silent) ✓ · build ✓ (incl. demoLoopEvents.ts type-contract ripple fix) · Vitest **836 (+8, 0 del)** ✓ · mockup-fidelity 51==51 ✓
 
 ---
 

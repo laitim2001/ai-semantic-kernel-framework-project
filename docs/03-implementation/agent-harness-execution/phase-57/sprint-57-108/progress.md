@@ -40,3 +40,14 @@ Branch `feature/sprint-57-108-chatv2-hitl-inspector-wire` created from `main` `a
 - Tests: 5 escalate-site assertions extended (tool=`sensitive_tool`+reason; 4 non-tool=None+reason) + test_sse defaults/tool-context/token-actuals (+2 net new tests); 0 deletions.
 - Gates: mypy 0/359 · black/isort/flake8 0 (four-segment chain run — 57.107 isort lesson applied) · run_all 10/10 from repo root (count 24 unchanged; check_event_schema_sync green) · full pytest **2462+4skip (+2, 0 del)**.
 - Actual ~1.5 hr (est ~2.5 hr bottom-up) — additive-field shape + D7 constructor safety made conversions thin.
+
+---
+
+## Day 2 — 2026-06-12 — FE store captures + Vitest (US-2 + US-3 FE)
+
+- **D9 (new drift finding, Day-2)**: `SpanStarted(TURN)` is emitted BEFORE `TurnStarted` (loop.py :2173-2186 → :2188) — the plan's "link in span_started" would attach the span to the PREVIOUS turn. Inverted: `turn_start` links the newest RUNNING TURN span from the spans slice (it was just pushed). `durationMs` fills on `span_ended` TURN by spanId match (order-independent).
+- chatStore.ts 4 captures: approval tool/rationale real (D5 — HITLTurn.tsx/ApprovalCard.tsx ZERO edits, store-driven; approvals-dict extension dropped, YAGNI) · turn_start traceId + spanId · llm_response token actuals overwrite-when->0 (D1 overwrite not accumulate; 0/absent keeps prior → honest "—" for old frames) · span_ended TURN → durationMs (D3 — no turn_end event exists).
+- Type-contract ripple: `demoLoopEvents.ts` (/loop-debug fixture) gained the new required literals (same 57.66 precedent).
+- Vitest +8 (mergeEvent 46→54); ChatInspector suite unchanged (component untouched; null-fallback test stays valid).
+- Gates: lint 0 (non-silent) · build ✓ · Vitest **836 (+8, 0 del)** · mockup-fidelity 51==51 byte-identical.
+- Actual ~1.5 hr (est ~2 hr bottom-up US-2 + ~1 hr of US-3 FE).
