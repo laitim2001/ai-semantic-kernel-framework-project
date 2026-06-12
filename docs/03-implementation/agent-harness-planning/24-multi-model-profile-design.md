@@ -71,7 +71,8 @@ status: Active
 
 ## 4. Open Invariants (deferred — NOT verified this sprint)
 
-- [ ] **Compaction / memory-extraction / thinking cheap-tier** — the seam is built; only verification is wired. Adding `profile.compaction` etc. is a follow-on (add a field defaulting to `action` + the consuming factory reads it). Compaction is the highest token-volume target but needs a long conversation to drive-through.
+- [x] **Compaction cheap-tier** — ✅ RESOLVED Sprint 57.109 (C2): `make_chat_compactor(profile.cheap)` + `_compaction` ledger attribution (CHANGE-076); drive-through proved a real summarize on `gpt-5.4-mini` with priced `_compaction` cost_ledger rows. Load-bearing finding: the chat main flow carries continuity in Cat 3 memory (one user msg per run) → semantic compaction was structurally unreachable at `keep_recent_turns=5`; the `CHAT_COMPACTION_KEEP_RECENT_TURNS` knob makes it deployable (carryover `AD-Semantic-Compaction-User-Turn-Anchor`).
+- [ ] **Memory-extraction / thinking cheap-tier** — still open (extraction is precision-sensitive; benchmark-gated before retier).
 - [ ] **Threading `ModelProfile` into the loop** — this sprint keeps it handler-local (constructed + consumed in `handler.py`). In-loop per-phase selection is a separate slice.
 - [ ] **Per-tenant model policy (Config 分層)** — a tenant choosing its own model/budget is the SEPARATE "Config 分層" parity gap (cc-parity §7.3), not this sprint.
 - [ ] **Cheap-judge accuracy** — a cheaper judge MAY be less reliable. NOT formally benchmarked; the drive-through observed the judge still functioned (score ≈0.98). The action turn is NEVER cheap (user-facing quality preserved). If the cheap judge visibly mis-verifies, keep the judge on the strong tier (the seam supports per-phase choice).
@@ -93,4 +94,5 @@ status: Active
 - Related rules: `.claude/rules/sprint-workflow.md` §Common Risk Classes Risk Class E (orphaned spawn-worker, reinforced this sprint) · `docs/rules-on-demand/llm-provider-neutrality.md`
 
 ## Modification History
+- 2026-06-12: Sprint 57.109 C2 — compaction cheap-tier invariant RESOLVED (CHANGE-076)
 - 2026-06-10: Initial extract from Sprint 57.97 closeout (Day 4) — multi-model `ModelProfile` seam; verification routed to cheap tier

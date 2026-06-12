@@ -106,11 +106,11 @@ Unit (backend): handler compactor-tier pin · `CompactionResult` defaults + sema
 
 ## 6. Deliverables
 
-- [ ] US-1 compactor cheap retier + handler tier-pin test
-- [ ] US-2 attribution chain (CompactionResult → accumulator → LoopCompleted → observer `_compaction`) + tests
-- [ ] US-3 env knob + `.env.example` + test
-- [ ] US-4 drive-through PASS (screenshots + observed-vs-intended + ledger rows)
-- [ ] CHANGE-076 + closeout (retro Q1-Q7 + calibration + navigators + design note 24 edit + next-phase-candidates)
+- [x] US-1 compactor cheap retier + handler tier-pin test
+- [x] US-2 attribution chain (CompactionResult → ContextCompacted carrier per D-DAY1-1 → observer `_compaction`) + tests
+- [x] US-3 env knob + `.env.example` + test (+ keep-recent-turns knob per D-DAY3-2)
+- [x] US-4 drive-through PASS (screenshots + observed-vs-intended + ledger rows)
+- [x] CHANGE-076 + closeout (retro Q1-Q7 + calibration + navigators + design note 24 edit + next-phase-candidates)
 
 ## 7. Workload Calibration
 
