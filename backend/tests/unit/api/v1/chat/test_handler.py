@@ -118,3 +118,39 @@ def test_build_real_llm_cheap_unset_verifier_shares_action_client(
     verifier = verifier_registry.get_all()[0]
     # cheap is the strong client → verifier._chat IS loop._chat_client.
     assert verifier._chat is loop._chat_client  # type: ignore[attr-defined]
+
+
+# --- Sprint 57.109 (C2): compactor on the cheap tier --------------------------
+
+
+def test_build_real_llm_routes_cheap_to_compactor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sprint 57.109 (C2): the compactor's semantic summarize runs on the cheap
+    deployment; the user-facing action turn stays on the strong one."""
+    _set_azure_env(monkeypatch, strong="strong-deploy")
+    monkeypatch.setenv("AZURE_OPENAI_CHEAP_DEPLOYMENT_NAME", "cheap-deploy")
+    monkeypatch.delenv("AZURE_OPENAI_CHEAP_MODEL_NAME", raising=False)
+
+    loop = build_real_llm_handler()
+    compactor = loop._compactor  # type: ignore[attr-defined]
+
+    assert compactor is not None
+    assert compactor.semantic.chat_client.config.deployment_name == "cheap-deploy"
+    assert loop._chat_client.config.deployment_name == "strong-deploy"  # type: ignore[attr-defined]
+
+
+def test_build_real_llm_cheap_unset_compactor_shares_action_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cheap unset → the compactor's semantic client IS the loop client
+    (cheap is action — byte-identical fallback, the 57.97 invariant)."""
+    _set_azure_env(monkeypatch, strong="strong-deploy")
+    monkeypatch.delenv("AZURE_OPENAI_CHEAP_DEPLOYMENT_NAME", raising=False)
+    monkeypatch.delenv("AZURE_OPENAI_CHEAP_MODEL_NAME", raising=False)
+
+    loop = build_real_llm_handler()
+    compactor = loop._compactor  # type: ignore[attr-defined]
+
+    assert compactor is not None
+    assert compactor.semantic.chat_client is loop._chat_client  # type: ignore[attr-defined]

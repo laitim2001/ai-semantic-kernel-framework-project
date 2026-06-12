@@ -329,3 +329,49 @@ async def test_preserves_message_order() -> None:
     kept = result.compacted_state.transient.messages
     assert [m.role for m in kept] == ["system", "user", "assistant", "user"]
     assert [m.content for m in kept] == ["sys", "q0", "a0", "q1"]
+
+
+# === Sprint 57.109 (C2): hybrid forwards the semantic stage's usage/model ====
+
+
+@pytest.mark.asyncio
+async def test_hybrid_forwards_semantic_usage_on_merged_result() -> None:
+    """The merged HYBRID result must carry the semantic stage's summarize usage +
+    model (the only path where an LLM call ran); structural-only paths keep zeros."""
+    state = _make_state(
+        [Message(role="user", content="hi"), Message(role="assistant", content="ok")]
+    )
+    compacted = _make_state([Message(role="user", content="hi")], token_used=5_000)
+    structural_stub = _StubCompactor(
+        fixed_result=_make_result(
+            triggered=False,
+            tokens_before=95_000,
+            tokens_after=95_000,
+        )
+    )
+    semantic_result = CompactionResult(
+        triggered=True,
+        strategy_used=CompactionStrategy.SEMANTIC,
+        tokens_before=95_000,
+        tokens_after=5_000,
+        messages_compacted=10,
+        duration_ms=0.0,
+        compacted_state=compacted,
+        input_tokens=2_000,
+        output_tokens=150,
+        model="cheap-mock",
+    )
+    semantic_stub = _StubSemantic(fixed_result=semantic_result)
+    hybrid = HybridCompactor(
+        structural=structural_stub,
+        semantic=semantic_stub,
+        token_budget=100_000,
+    )
+
+    result = await hybrid.compact_if_needed(state)
+
+    assert result.triggered is True
+    assert result.strategy_used is CompactionStrategy.HYBRID
+    assert result.input_tokens == 2_000
+    assert result.output_tokens == 150
+    assert result.model == "cheap-mock"

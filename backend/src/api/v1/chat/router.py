@@ -38,6 +38,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-06-11
 
 Modification History (newest-first):
+    - 2026-06-12: Sprint 57.109 C2 — `_compaction` billing enqueue + quota fold (57.82 sibling)
     - 2026-06-12: Sprint 57.107 B3 — thread handoff_allowed_targets into the boot hook
     - 2026-06-11: Sprint 57.103 B2b — POST /{id}/subagents/{sid}/inject (into a live teammate)
     - 2026-06-11: Sprint 57.101 B1 — POST /{id}/inject + register/unregister the injection queue
@@ -96,6 +97,7 @@ from agent_harness._contracts import (
     TraceContext,
 )
 from agent_harness._contracts.events import (
+    ContextCompacted,
     SubagentChildEvent,
     SubagentCompleted,
     SubagentSpawned,
@@ -552,6 +554,12 @@ async def _stream_loop_events(
     # Sprint 57.107 (US-4): per-sidechain monotonic sequence_num for the
     # message_events transcript rows (one counter per subagent_id).
     sidechain_seq: dict[UUID, int] = {}
+    # Sprint 57.109 (C2): accumulate the semantic summarize usage off
+    # ContextCompacted events (compaction can trigger on multiple turns) for the
+    # `_compaction` ledger enqueue + quota reconcile at LoopCompleted.
+    compaction_in = 0
+    compaction_out = 0
+    compaction_model: str | None = None
     try:
         async for event in loop.run(  # type: ignore[attr-defined]
             session_id=session_id,
@@ -585,6 +593,15 @@ async def _stream_loop_events(
                 # LLMResponded carries the canonical content).
                 continue
             yield format_sse_message(payload["type"], payload["data"])
+            # Sprint 57.109 (C2): fold the summarize call's usage (server-side
+            # fields on ContextCompacted; structural-only compactions carry 0).
+            if isinstance(event, ContextCompacted) and (
+                event.input_tokens > 0 or event.output_tokens > 0
+            ):
+                compaction_in += event.input_tokens
+                compaction_out += event.output_tokens
+                if event.model:
+                    compaction_model = event.model
             if isinstance(event, LoopCompleted):
                 natural_completion = True
                 # Sprint 56.2 Day 2 (US-3 — closes AD-QuotaPostCall-1):
@@ -600,10 +617,14 @@ async def _stream_loop_events(
                             # Sprint 57.82 (B-8 leg-1): judge LLM tokens (Cat 10
                             # verification) count against the cap too — real
                             # consumption. 0 when disabled / no judge ran.
+                            # Sprint 57.109 (C2): compaction summarize tokens are
+                            # real consumption too (cheap tier, but still tokens).
                             actual_tokens=(
                                 event.total_tokens
                                 + event.verification_input_tokens
                                 + event.verification_output_tokens
+                                + compaction_in
+                                + compaction_out
                             ),
                             reserved_tokens=estimated_tokens,
                         )
@@ -710,6 +731,42 @@ async def _stream_loop_events(
                     except Exception:  # noqa: BLE001
                         logger.exception(
                             "chat session %s/%s: billing outbox verification enqueue failed",
+                            tenant_id,
+                            session_id,
+                        )
+                # Sprint 57.109 (C2): enqueue the Cat 4 compaction summarize LLM
+                # call as a DISTINCT `_compaction` billing event (the 57.82
+                # `_verification` sibling). Usage accumulated off ContextCompacted
+                # events above (compaction can trigger on multiple turns, on ANY
+                # termination path); model is the compaction CHEAP tier's own,
+                # falling back to the loop model. 0 tokens (no semantic
+                # compaction ran) → skip.
+                if (
+                    billing_outbox is not None
+                    and db is not None
+                    and (compaction_in > 0 or compaction_out > 0)
+                ):
+                    try:
+                        await billing_outbox.enqueue(
+                            db,
+                            tenant_id=tenant_id,
+                            event_type="llm_call",
+                            payload={
+                                "provider": event.provider or "azure_openai",
+                                "model": (
+                                    compaction_model or event.model or _FALLBACK_PRICING_MODEL
+                                ),
+                                "input_tokens": compaction_in,
+                                "output_tokens": compaction_out,
+                                "cached_input_tokens": 0,
+                                "sub_type_suffix": "_compaction",
+                            },
+                            idempotency_key=llm_idempotency_key(session_id, "_compaction"),
+                            session_id=session_id,
+                        )
+                    except Exception:  # noqa: BLE001
+                        logger.exception(
+                            "chat session %s/%s: billing outbox compaction enqueue failed",
                             tenant_id,
                             session_id,
                         )

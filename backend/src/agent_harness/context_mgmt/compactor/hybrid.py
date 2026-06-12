@@ -31,6 +31,7 @@ Related:
 Created: 2026-05-01 (Sprint 52.1 Day 2.5)
 
 Modification History:
+    - 2026-06-12: Sprint 57.109 C2 — forward semantic usage/model on the merged result
     - 2026-05-01: Initial creation (Sprint 52.1 Day 2.5) — sequential fallback
 """
 
@@ -163,6 +164,11 @@ class HybridCompactor(Compactor):
         total_messages_compacted = (
             structural_result.messages_compacted if structural_result.triggered else 0
         ) + semantic_result.messages_compacted
+        # Sprint 57.109 C2: forward the semantic stage's REAL summarize usage so
+        # the ledger attribution survives the hybrid re-construction. All other
+        # return paths in this method carry zeros correctly (no LLM call ran —
+        # structural-only, passthrough, or the failed-semantic fallback whose
+        # failed attempts raised before any usage existed).
         return CompactionResult(
             triggered=True,
             strategy_used=CompactionStrategy.HYBRID,
@@ -171,4 +177,7 @@ class HybridCompactor(Compactor):
             messages_compacted=total_messages_compacted,
             duration_ms=(time.perf_counter() - start) * 1000.0,
             compacted_state=semantic_result.compacted_state,
+            input_tokens=semantic_result.input_tokens,
+            output_tokens=semantic_result.output_tokens,
+            model=semantic_result.model,
         )

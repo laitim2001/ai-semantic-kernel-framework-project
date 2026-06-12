@@ -31,6 +31,7 @@ Related:
 Created: 2026-05-01 (Sprint 52.1 Day 2.3)
 
 Modification History:
+    - 2026-06-12: Sprint 57.109 C2 — _summarise returns usage/model; result carries attribution
     - 2026-05-01: Initial creation (Sprint 52.1 Day 2.3) — LLM-driven summarisation
 """
 
@@ -101,8 +102,14 @@ class SemanticCompactor(Compactor):
         old_messages: list[Message],
         *,
         trace_context: TraceContext | None,
-    ) -> str:
-        """Call LLM to produce a summary. Retry once on failure; else raise."""
+    ) -> tuple[str, int, int, str]:
+        """Call LLM to produce a summary. Retry once on failure; else raise.
+
+        Returns (summary_text, prompt_tokens, completion_tokens, model) so the
+        caller can attribute the summarize call's REAL usage to the cost ledger
+        (Sprint 57.109 C2). A failed attempt raises before any usage exists, so
+        only the successful attempt is ever counted. usage None → zeros.
+        """
         history_text = "\n".join(
             f"{m.role}: {m.content if isinstance(m.content, str) else '[content blocks]'}"
             for m in old_messages
@@ -128,15 +135,19 @@ class SemanticCompactor(Compactor):
         for attempt in range(self.retry_count + 1):
             try:
                 response = await self.chat_client.chat(request, trace_context=trace_context)
+                usage = response.usage
+                prompt_tokens = usage.prompt_tokens if usage is not None else 0
+                completion_tokens = usage.completion_tokens if usage is not None else 0
                 content = response.content
                 if isinstance(content, str):
-                    return content
+                    return content, prompt_tokens, completion_tokens, response.model
                 # If adapter returned ContentBlock list, join the text blocks
                 text_parts: list[str] = []
                 for block in content:
                     if block.type == "text" and block.text:
                         text_parts.append(block.text)
-                return "\n".join(text_parts) if text_parts else "(empty summary)"
+                summary = "\n".join(text_parts) if text_parts else "(empty summary)"
+                return summary, prompt_tokens, completion_tokens, response.model
             except Exception as err:  # noqa: BLE001 — retry path needs broad catch
                 last_err = err
                 if attempt >= self.retry_count:
@@ -205,7 +216,9 @@ class SemanticCompactor(Compactor):
                 compacted_state=None,
             )
 
-        summary_text = await self._summarise(old_to_summarise, trace_context=trace_context)
+        summary_text, summary_in, summary_out, summary_model = await self._summarise(
+            old_to_summarise, trace_context=trace_context
+        )
 
         summary_msg = Message(
             role="assistant",
@@ -231,4 +244,7 @@ class SemanticCompactor(Compactor):
             messages_compacted=original_count - new_count,
             duration_ms=(time.perf_counter() - start) * 1000.0,
             compacted_state=new_state,
+            input_tokens=summary_in,
+            output_tokens=summary_out,
+            model=summary_model,
         )

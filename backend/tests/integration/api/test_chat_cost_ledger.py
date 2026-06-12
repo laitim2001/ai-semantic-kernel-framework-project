@@ -26,7 +26,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_harness._contracts import LoopCompleted, TraceContext
-from agent_harness._contracts.events import ToolCallExecuted
+from agent_harness._contracts.events import ContextCompacted, ToolCallExecuted
 from api.v1.chat.router import _stream_loop_events
 from api.v1.chat.session_registry import SessionRegistry
 from infrastructure.db.models.billing_outbox import BillingOutboxEvent
@@ -299,3 +299,237 @@ async def test_chat_verification_tokens_counted_against_quota(
 
     # total_tokens (1000+500) + judge (120+8) = 1628
     assert spy.recorded_actual == 1_628
+
+
+# === Sprint 57.109 (C2) compaction cost — `_compaction` sub_type attribution ===
+
+
+class _CompactionStubLoop:
+    """Yields N ContextCompacted events (each carrying summarize usage on the
+    server-side fields) + a LoopCompleted — the C2 shape: the router observer
+    accumulates compaction usage off the events and bills at LoopCompleted."""
+
+    def __init__(
+        self,
+        *,
+        input_tokens: int,
+        output_tokens: int,
+        compactions: list[tuple[int, int, str]],
+        provider: str = "azure_openai",
+        model: str = "gpt-5.4",
+    ) -> None:
+        self._in = input_tokens
+        self._out = output_tokens
+        self._compactions = compactions
+        self._provider = provider
+        self._model = model
+
+    async def run(
+        self,
+        *,
+        session_id: UUID,
+        user_input: str,
+        trace_context: TraceContext,
+    ) -> AsyncIterator[object]:
+        for cin, cout, cmodel in self._compactions:
+            yield ContextCompacted(
+                tokens_before=80_000,
+                tokens_after=20_000,
+                compaction_strategy="hybrid",
+                messages_compacted=12,
+                duration_ms=900.0,
+                input_tokens=cin,
+                output_tokens=cout,
+                model=cmodel,
+                trace_context=trace_context,
+            )
+        yield LoopCompleted(
+            stop_reason="end_turn",
+            total_turns=1,
+            total_tokens=self._in + self._out,
+            input_tokens=self._in,
+            output_tokens=self._out,
+            provider=self._provider,
+            model=self._model,
+            trace_context=trace_context,
+        )
+
+
+async def test_chat_compaction_summarize_enqueues_distinct_billing_outbox_event(
+    db_session: AsyncSession,
+) -> None:
+    """Sprint 57.109 (C2): a ContextCompacted carrying summarize usage enqueues a
+    DISTINCT `_compaction` llm_call billing event at the CHEAP model name."""
+    t = await seed_tenant(db_session, code="OBX_COMPACT_1")
+    await _set_tenant(db_session, t.id)
+    session_id = uuid4()
+    registry = SessionRegistry()
+    await registry.register(t.id, session_id)
+
+    stub_loop = _CompactionStubLoop(
+        input_tokens=1_000,
+        output_tokens=500,
+        compactions=[(2_000, 150, "gpt-4o-mini")],
+    )
+    trace_ctx = TraceContext(tenant_id=t.id, session_id=session_id)
+
+    await _consume(
+        _stream_loop_events(
+            stub_loop,
+            t.id,
+            session_id,
+            registry,
+            user_input="hi",
+            trace_context=trace_ctx,
+            billing_outbox=BillingOutboxService(),
+            db=db_session,
+        )
+    )
+
+    rows = (
+        (
+            await db_session.execute(
+                select(BillingOutboxEvent).where(BillingOutboxEvent.tenant_id == t.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 2
+    assert all(r.event_type == "llm_call" for r in rows)
+    keys = {r.idempotency_key for r in rows}
+    assert keys == {f"{session_id}:llm:loop", f"{session_id}:llm:_compaction"}
+
+    by_key = {r.idempotency_key: r for r in rows}
+    compact_row = by_key[f"{session_id}:llm:_compaction"]
+    assert compact_row.payload["input_tokens"] == 2_000
+    assert compact_row.payload["output_tokens"] == 150
+    assert compact_row.payload["model"] == "gpt-4o-mini"
+    assert compact_row.payload["sub_type_suffix"] == "_compaction"
+
+
+async def test_chat_structural_only_compaction_enqueues_nothing(
+    db_session: AsyncSession,
+) -> None:
+    """A structural-only compaction (zero summarize usage) must NOT produce a
+    `_compaction` billing event — only the loop event lands."""
+    t = await seed_tenant(db_session, code="OBX_COMPACT_0")
+    await _set_tenant(db_session, t.id)
+    session_id = uuid4()
+    registry = SessionRegistry()
+    await registry.register(t.id, session_id)
+
+    stub_loop = _CompactionStubLoop(
+        input_tokens=1_000,
+        output_tokens=500,
+        compactions=[(0, 0, "")],
+    )
+    trace_ctx = TraceContext(tenant_id=t.id, session_id=session_id)
+
+    await _consume(
+        _stream_loop_events(
+            stub_loop,
+            t.id,
+            session_id,
+            registry,
+            user_input="hi",
+            trace_context=trace_ctx,
+            billing_outbox=BillingOutboxService(),
+            db=db_session,
+        )
+    )
+
+    rows = (
+        (
+            await db_session.execute(
+                select(BillingOutboxEvent).where(BillingOutboxEvent.tenant_id == t.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    assert rows[0].idempotency_key == f"{session_id}:llm:loop"
+
+
+async def test_chat_multi_compaction_usage_accumulates_into_one_event(
+    db_session: AsyncSession,
+) -> None:
+    """Compaction can trigger on multiple turns — usage accumulates into a SINGLE
+    `_compaction` billing event (one idempotency key per session)."""
+    t = await seed_tenant(db_session, code="OBX_COMPACT_N")
+    await _set_tenant(db_session, t.id)
+    session_id = uuid4()
+    registry = SessionRegistry()
+    await registry.register(t.id, session_id)
+
+    stub_loop = _CompactionStubLoop(
+        input_tokens=1_000,
+        output_tokens=500,
+        compactions=[(2_000, 150, "gpt-4o-mini"), (1_500, 100, "gpt-4o-mini")],
+    )
+    trace_ctx = TraceContext(tenant_id=t.id, session_id=session_id)
+
+    await _consume(
+        _stream_loop_events(
+            stub_loop,
+            t.id,
+            session_id,
+            registry,
+            user_input="hi",
+            trace_context=trace_ctx,
+            billing_outbox=BillingOutboxService(),
+            db=db_session,
+        )
+    )
+
+    rows = (
+        (
+            await db_session.execute(
+                select(BillingOutboxEvent).where(
+                    BillingOutboxEvent.tenant_id == t.id,
+                    BillingOutboxEvent.idempotency_key == f"{session_id}:llm:_compaction",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    assert rows[0].payload["input_tokens"] == 3_500
+    assert rows[0].payload["output_tokens"] == 250
+
+
+async def test_chat_compaction_tokens_counted_against_quota(
+    db_session: AsyncSession,
+) -> None:
+    """Sprint 57.109 (C2): summarize tokens are real consumption — added to the
+    quota reconcile actual_tokens (the 57.82 judge-token sibling)."""
+    t = await seed_tenant(db_session, code="OBX_COMPACT_Q")
+    session_id = uuid4()
+    registry = SessionRegistry()
+    await registry.register(t.id, session_id)
+
+    spy = _SpyQuota()
+    stub_loop = _CompactionStubLoop(
+        input_tokens=1_000,
+        output_tokens=500,
+        compactions=[(2_000, 150, "gpt-4o-mini")],
+    )
+    trace_ctx = TraceContext(tenant_id=t.id, session_id=session_id)
+
+    await _consume(
+        _stream_loop_events(
+            stub_loop,
+            t.id,
+            session_id,
+            registry,
+            user_input="hi",
+            trace_context=trace_ctx,
+            quota_enforcer=spy,  # type: ignore[arg-type]  # duck-typed spy
+            estimated_tokens=4_000,
+        )
+    )
+
+    # total_tokens (1000+500) + summarize (2000+150) = 3650
+    assert spy.recorded_actual == 3_650

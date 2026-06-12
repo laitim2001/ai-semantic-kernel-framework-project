@@ -20,6 +20,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 from uuid import uuid4
 
+import pytest
+
 from adapters._testing.mock_clients import MockChatClient
 from agent_harness.context_mgmt.compactor.hybrid import HybridCompactor
 from agent_harness.error_handling import (
@@ -31,6 +33,8 @@ from agent_harness.error_handling import (
 )
 from agent_harness.state_mgmt import DBCheckpointer, DefaultReducer
 from api.v1.chat._category_factories import (
+    _DEFAULT_CHAT_TOKEN_BUDGET,
+    _compaction_token_budget,
     make_chat_compactor,
     make_chat_error_deps,
     make_chat_state_deps,
@@ -93,3 +97,32 @@ def test_make_chat_verifier_registry_registers_one_llm_judge() -> None:
     assert isinstance(registry, VerifierRegistry)
     # correction_loop.py gates on len(registry) == 0 → must be non-empty (1).
     assert len(registry) == 1
+
+
+# === Sprint 57.109 (C2): CHAT_COMPACTION_TOKEN_BUDGET env knob ===============
+
+
+def test_compaction_budget_default_without_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CHAT_COMPACTION_TOKEN_BUDGET", raising=False)
+    assert _compaction_token_budget() == _DEFAULT_CHAT_TOKEN_BUDGET == 100_000
+
+
+def test_compaction_budget_env_honored(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CHAT_COMPACTION_TOKEN_BUDGET", "2000")
+    assert _compaction_token_budget() == 2_000
+
+
+@pytest.mark.parametrize("raw", ["abc", "-5", "0", ""])
+def test_compaction_budget_invalid_falls_back(monkeypatch: pytest.MonkeyPatch, raw: str) -> None:
+    monkeypatch.setenv("CHAT_COMPACTION_TOKEN_BUDGET", raw)
+    assert _compaction_token_budget() == _DEFAULT_CHAT_TOKEN_BUDGET
+
+
+def test_factory_threads_budget_to_sub_compactors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """57.109 D13: hybrid delegates should_compact to the sub-strategies — all
+    three must agree on the (env-resolved) threshold or the knob is a no-op."""
+    monkeypatch.setenv("CHAT_COMPACTION_TOKEN_BUDGET", "2000")
+    compactor = make_chat_compactor(MockChatClient(responses=[]))
+    assert compactor.token_budget == 2_000  # type: ignore[attr-defined]
+    assert compactor.structural.token_budget == 2_000  # type: ignore[attr-defined]
+    assert compactor.semantic.token_budget == 2_000  # type: ignore[attr-defined]

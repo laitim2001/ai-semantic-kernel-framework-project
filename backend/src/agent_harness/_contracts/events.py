@@ -23,6 +23,7 @@ Created: 2026-04-29 (Sprint 49.1)
 Last Modified: 2026-06-12
 
 Modification History (newest-first):
+    - 2026-06-12: Sprint 57.109 C2 — ContextCompacted +usage/model (server-side ledger attribution)
     - 2026-06-12: Sprint 57.108 — ApprovalRequested +tool_name/reason (HITL card wire)
     - 2026-06-11: Sprint 57.101 — add MessageInjected (Cat 1 between-turns injection wire event)
     - 2026-06-10: Sprint 57.100 — ApprovalRequested +kind (pause kind on the wire; no new type)
@@ -235,6 +236,16 @@ class ContextCompacted(LoopEvent):
     compaction_strategy: str = ""
     messages_compacted: int = 0  # 52.1 Day 2.7 — compaction observability payload
     duration_ms: float = 0.0  # 52.1 Day 2.7 — compaction observability payload
+    # Sprint 57.109 (C2): the semantic summarize call's REAL usage + model, for the
+    # chat router's `_compaction` cost-ledger attribution (the 57.82 `_verification`
+    # sibling). NOT in the context_compacted wire schema (sse.py maps the 5 fields
+    # above) → server-side only (the handoff_context precedent). Riding THIS event
+    # instead of LoopCompleted means any termination path after a compaction still
+    # bills (compaction can trigger on any turn; LoopCompleted has 30+ ctor sites).
+    # 0/"" when the triggering strategy made no LLM call (structural-only).
+    input_tokens: int = 0
+    output_tokens: int = 0
+    model: str = ""
 
 
 # === Category 5: Prompt Builder =============================================

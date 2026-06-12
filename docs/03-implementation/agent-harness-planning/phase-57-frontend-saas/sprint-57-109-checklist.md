@@ -18,34 +18,34 @@
 
 ---
 
-## Day 1 — Backend: retier + usage capture (US-1 + US-2 first half)
+## Day 1 — Backend: retier + usage capture (US-1 + US-2 first half) ✅
 
 ### 1.1 Compactor cheap retier (US-1)
-- [ ] **`handler.py:460`**: `make_chat_compactor(profile.cheap)`; §321-327 comment block → three-tier consumer map (loop/prompt=action · verification=cheap 57.97 · compaction=cheap 57.109); MHist 1-line
-- [ ] **Handler tier-pin test**: the built compactor's semantic client IS the profile's cheap client (mirror the 57.97 verifier-tier test shape); cheap-unset `cheap is action` covered by the existing profile test (cite, don't duplicate)
+- [x] **`handler.py:460`**: `make_chat_compactor(profile.cheap)`; §321-327 comment block → three-tier consumer map (loop/prompt=action · verification=cheap 57.97 · compaction=cheap 57.109); MHist 1-line
+- [x] **Handler tier-pin test**: the built compactor's semantic client IS the profile's cheap client (mirror the 57.97 verifier-tier test shape) + explicit cheap-unset shares-action-client test (×2 added)
   - DoD: grep `make_chat_compactor(` → sole call site carries `profile.cheap` ✓
 
 ### 1.2 `CompactionResult` usage fields + semantic capture (US-2 backend half 1)
-- [ ] **`_contracts/compaction.py`**: `CompactionResult` += `input_tokens: int = 0` + `output_tokens: int = 0` + `model: str = ""` (frozen, defaulted; MHist 1-line)
-- [ ] **`semantic.py`**: `_summarise` (or its caller) reads the successful summarize `ChatResponse` usage + model into the result (retry = successful attempt only; failed-attempt blind spot documented)
-- [ ] **`hybrid.py`**: forward (or copy) semantic's usage fields per Day-0 construct-vs-forward finding; structural results keep zeros
-- [ ] **Unit tests CONVERT/ADD**: semantic mock returns usage → result carries it · structural result zeros · hybrid pass-through — 0 deletions across the 3 compactor suites
-  - DoD: 5 compaction suites green unchanged counts +new cases ✓; mypy strict 0 ✓
+- [x] **`_contracts/compaction.py`**: `CompactionResult` += `input_tokens: int = 0` + `output_tokens: int = 0` + `model: str = ""` (frozen, defaulted; MHist 1-line)
+- [x] **`semantic.py`**: `_summarise` returns `(text, prompt, completion, model)` (D3 — return-shape change), extracted at the call site into the triggered result (failed attempts raise → only the successful attempt counted)
+- [x] **`hybrid.py`**: :166 merged-result forwards semantic's usage fields (D4 — the only LLM-call path); structural/passthrough/failed-fallback keep zeros
+- [x] **Unit tests CONVERT/ADD**: semantic usage captured + usage-None zeros · hybrid forward — 0 deletions across the 3 compactor suites
+  - DoD: 5 compaction suites green +3 new cases ✓; mypy strict 0 ✓
 
 ---
 
-## Day 2 — Backend: accumulator + LoopCompleted + observer + knob (US-2 second half + US-3)
+## Day 2 — Backend: accumulator + LoopCompleted + observer + knob (US-2 second half + US-3) ✅
 
 ### 2.1 Accumulator → `LoopCompleted` → observer `_compaction` (US-2 backend half 2)
-- [ ] **`loop.py`** compaction site: fold triggered-result usage/model into the metrics accumulator (diff limited to the compaction site + accumulator class)
-- [ ] **`_contracts/events.py`**: `LoopCompleted` += `compaction_input_tokens: int = 0` / `compaction_output_tokens: int = 0` / `compaction_model: str = ""` (defaulted; `loop_end` WIRE untouched — count 24, no codegen diff)
-- [ ] **`router.py`** observer: `compaction_*_tokens > 0` → `billing_outbox.enqueue(sub_type_suffix="_compaction", model=<compaction model — truthful cheap>)`; zero-usage → NO enqueue (mirror :702-705)
-- [ ] **Unit tests ADD**: accumulator fold · observer enqueue shape (`_compaction` suffix + cheap model + token counts) · zero-usage no-enqueue · idempotency key distinct from loop/`_verification`
+- [x] **`loop.py`** compaction site: ~~accumulator fold~~ → **D-DAY1-1 design correction**: usage rides `ContextCompacted` (+3 server-side dataclass fields; wire untouched) — loop.py diff = ONE yield site; see progress.md D-DAY1-1
+- [x] **`_contracts/events.py`**: ~~`LoopCompleted` +3~~ → **`ContextCompacted` +3** per D-DAY1-1 (LoopCompleted has 30+ ctor sites; the event-carrier shape bills EVERY termination path — strictly better); `loop_end`/`context_compacted` WIRE untouched — count 24, no codegen diff ✓
+- [x] **`router.py`** observer: accumulates off `ContextCompacted` events (multi-compaction → ONE row) → `compaction_* > 0` → `billing_outbox.enqueue(sub_type_suffix="_compaction", model=<cheap, fallback loop model>)`; zero-usage → NO enqueue (mirror :704-736)
+- [x] **Tests ADD** (cost-ledger integration ×4): `_compaction` row at the cheap model name · structural-zero no-enqueue · multi-compaction accumulates into one idempotency key · quota fold (D12)
   - DoD: grep `sub_type_suffix` → loop ""/`_verification`/`_compaction` three-way ✓; run_all 10/10 (count 24) ✓
 
 ### 2.2 Budget env knob (US-3)
-- [ ] **`_category_factories.py`**: `_CHAT_TOKEN_BUDGET` env-read (`CHAT_COMPACTION_TOKEN_BUDGET`; default 100_000; non-int → default no-crash); `.env.example` documents it
-- [ ] **Unit test ADD**: monkeypatched env honored + invalid-fallback
+- [x] **`_category_factories.py`**: `_compaction_token_budget()` env-read (`CHAT_COMPACTION_TOKEN_BUDGET`; default 100_000; non-int/non-positive → default no-crash) + budget threaded to ALL THREE compactors (D13); `.env.example` documents it
+- [x] **Unit tests ADD ×7**: env honored + invalid-fallback ×4 + default + sub-compactor threading (appended to the EXISTING `tests/unit/api/test_category_factories.py` — D-DAY1-2 basename-collision lesson)
   - DoD: default path byte-identical (no env set → 100_000) ✓
 
 ---
