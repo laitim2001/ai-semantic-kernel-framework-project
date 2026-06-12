@@ -25,9 +25,10 @@ Key Components:
     - DEFAULT_SANDBOX_PATTERNS: conservative builtin deny-list (regex, word-bounded)
 
 Created: 2026-06-12 (Sprint 57.106)
-Last Modified: 2026-06-12
+Last Modified: 2026-06-13
 
 Modification History (newest-first):
+    - 2026-06-13: Sprint 57.110 B4 — +os.popen/os.spawn*/os.exec* (dt found the popen bypass)
     - 2026-06-12: Initial creation (Sprint 57.106 C3) — risky-action TOOL guardrail
 
 Related:
@@ -62,6 +63,11 @@ from agent_harness.guardrails._abc import (
 # match (\b + literal '(' anchoring); see test_risky_action_detector.py.
 DEFAULT_SANDBOX_PATTERNS: tuple[str, ...] = (
     r"\bos\.system\s*\(",
+    # Sprint 57.110 (B4 dt D-DAY3-1): the 57.110 drive-through showed a child
+    # agent rewriting a blocked os.system call as os.popen — cover the whole
+    # process-exec family, not just os.system.
+    r"\bos\.popen\s*\(",
+    r"\bos\.(?:spawn|exec)\w*\s*\(",
     r"\bos\.(?:remove|unlink|rmdir|removedirs)\s*\(",
     r"\bsubprocess\b",
     r"\bshutil\.rmtree\s*\(",

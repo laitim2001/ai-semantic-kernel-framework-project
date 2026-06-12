@@ -55,3 +55,25 @@
 - **17.md**: `SubagentBudget` row updated + `SubagentFailurePolicy` NEW row (`HarnessPolicy` itself is a platform_layer value object — not a 17.md contract, matching the 57.106/57.107 precedent).
 
 **Tests**: backend +13 (tools ×4 / salvage ×2 / FATAL ×1 / harness_policy ×2 / admin PUT ×2 / relay ×1 + Day-1's identity-in-suite recount) · FE Vitest +1. **Gates**: subagent 90 · admin harness-policy 23 · error_handling/harness_policy/handler green · mypy 0/359 · flake8 0 · run_all 10/10 (count 24, no codegen diff) · FE lint + build ✓ · `loop.py` UNTOUCHED (`git diff --stat` confirms).
+
+---
+
+## Day 3 — 2026-06-13 — Full gates + drive-through (US-4) ✅ ALL LEGS PASS
+
+**Gates**: full pytest **2502+4skip** (= 2485 baseline +17 at sweep time; +2 more Day-3 tests → final +19, 0 del) · Vitest **837** (+1) · mockup-fidelity 51 · mypy 0/359 · black/isort/flake8 0 · run_all 10/10 (count 24) · `loop.py` diff = **0 lines** (`git diff main...HEAD`).
+
+**Drive-through** (real UI :3007 + clean no-reload backend — stale 57.109-knob backend PID 36280 killed, sole-owner verified, restarts PID 9912 → 34916 post-fix — + real Azure gpt-5.2; zero dev-login founder@dt57105.test / dt57105-rbac):
+
+| Leg | Intended | Observed |
+|-----|----------|----------|
+| A — child Cat 9 + visibility | child inherits the tenant engine; a guardrail fire is visible in the Tree; parent continues (soft) | PASS — child's `subprocess.check_output` → **inherited C3 RiskyActionDetector ESCALATE → fail-closed tool BLOCK** (`tool blocked by guardrail: risky_action…`) → relay frame `subagent_child{inner_type:guardrail_triggered, tool/escalate}` → Tree child row **"guardrail escalate · risky_action: sandbox code matched '\bsubproces…'"**; parent answered honestly |
+| **D-DAY3-1** 🔴 | (n/a — dt discovery) | the child then REWROTE the blocked call as **`os.popen('whoami')` — NOT in the C3 deny-list → whoami actually executed**. The B4 machinery (inject → escalate → fail-closed block → relay → LLM-sees-error → continue) worked 100%; the C3 PATTERN SET had a process-exec gap. Fix-forward: +`\bos\.popen\s*\(` + `\bos\.(?:spawn\|exec)\w*\s*\(` patterns + regression tests (detector suite 23 passed; completeness test forced payload coverage) |
+| A-bis — re-drive post-fix | popen now escalates | PASS — backend restarted (34916); same spawn → popen blocked → child honestly gave up: *"I can't run `os.popen('whoami')` in the sandbox (it executes an external shell command)"* — **whoami did NOT run**; parent relayed honestly + verification 0.99 |
+| B — fail_fast | tenant flips policy → same-child failure becomes run-fatal, no re-spawn | PASS — PUT `subagent_failure_policy="fail_fast"` + sentinel phrase → 200 (**invalid literal → 422 live**); split-word prompt → parent wrote task `"zzqx sentinel"` (user input never contained the joined phrase) → child INPUT gate ESCALATE (relay frame `input/escalate/"input matched escalation phrase: 'zzqx sentinel'"`) → child `done · 0 tok` (no child LLM call) → task_spawn result never materialized (handler RAISED) → **run terminated**: no answer turn; no `conversation_completed` audit row (vs Leg A's row at 17:13:42) |
+| **D-DAY3-2** | (terminal shape) | the graceful FATAL terminal is **`LoopTerminated` — a server-side-only event** (not in the wire schema / SSE serializer; same pre-existing shape as 57.58 RateLimitExceededError) → the UI sees a silent stream end + a stuck "pending" tool chip. Pinned at the LOOP level by `test_fail_fast_child_failure_terminates_parent_run` (LoopTerminated + exactly ONE spawn + parent LLM called once; termination REQUIRES the production Cat 8 wiring — error_terminator + tenant_id, loop.py:548 — without it the failure soft-returns). Carryover `AD-LoopTerminated-Wire-Surface` (surface FATAL terminations to the FE — own slice) |
+| C — non-regression | normal spawn unchanged | covered by Leg A itself (fork done 5,745 tok · 57.102-shape Tree expansion · verification 0.98) |
+| cleanup | no lingering policy | PUT `{}` → 200; GET = all-None ✓ |
+
+**Evidence**: `artifacts/dt57110-legA-tree-guardrail-row.png` + `artifacts/dt57110-legAbis-popen-blocked.png` (never-commit). Audit trail: `tenant_harness_policy_upsert` 17:15:58 · Leg A `conversation_completed` 17:13:42 · Leg B has NO completion row (the termination path).
+
+**Process**: throwaway DB probe script created + removed (workspace hygiene); one PowerShell here-string SQL parse trap (FROM keyword) → file-based probe.

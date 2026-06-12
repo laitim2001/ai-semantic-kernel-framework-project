@@ -79,6 +79,8 @@ async def test_builtin_list_covers_every_pattern() -> None:
     """Each DEFAULT pattern has at least one hitting test payload above."""
     payloads = [
         "os.system('x')",
+        "os.popen('x')",  # Sprint 57.110 B4 dt — the popen bypass
+        "os.spawnl(0, 'x')",  # Sprint 57.110 B4 — spawn/exec family
         "os.unlink('f')",
         "subprocess",
         "shutil.rmtree('d')",
@@ -140,3 +142,19 @@ async def test_missing_code_arg_passes() -> None:
     call = _tool_call("python_sandbox", {"timeout_seconds": 5})
     result = await RiskyActionDetector().check(content=call)
     assert result.action is GuardrailAction.PASS
+
+
+# === Process-exec family (Sprint 57.110 B4 dt regression) ======================
+
+
+async def test_os_popen_and_spawn_family_escalate() -> None:
+    """The 57.110 drive-through showed a child rewriting a blocked os.system call
+    as os.popen — the whole process-exec family must escalate."""
+    for code in (
+        "import os\nprint(os.popen('whoami').read())\n",
+        "import os\nos.spawnl(os.P_WAIT, '/bin/ls', 'ls')\n",
+        "import os\nos.execvp('ls', ['ls'])\n",
+    ):
+        call = _tool_call("python_sandbox", {"code": code})
+        result = await RiskyActionDetector().check(content=call)
+        assert result.action is GuardrailAction.ESCALATE, code

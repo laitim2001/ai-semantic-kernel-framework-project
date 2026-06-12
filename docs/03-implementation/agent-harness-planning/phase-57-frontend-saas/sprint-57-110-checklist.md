@@ -46,20 +46,20 @@
 
 ---
 
-## Day 3 — Full gates + drive-through (US-4) + CHANGE-077
+## Day 3 — Full gates + drive-through (US-4) + CHANGE-077 ✅
 
 ### 3.1 Full gate sweep
-- [ ] mypy strict 0 · black/isort/flake8 0 (all four — 57.107 lesson) · run_all 10/10 from repo root (count 24; no codegen diff) · full pytest +N (0 del) · Vitest +N vs 836 · mockup-fidelity 51 holds · `loop.py` diff EMPTY · wire schema diff empty
+- [x] mypy strict 0/359 · black/isort/flake8 0 (all four) · run_all 10/10 from repo root (count 24; no codegen diff) · full pytest **2502+4skip (+17, 0 del)** vs 2485 baseline (+2 more Day-3: loop-level fail_fast pin + popen regression → final +19) · Vitest **837** (+1) · mockup-fidelity **51** holds · `loop.py` diff EMPTY (`git diff main...HEAD` = 0 lines) · wire schema diff empty
 
-### 3.2 Drive-through (US-4 — real UI :3007 + fresh no-reload backend + real Azure; zero dev-login; Risk Class E clean restart + `Win32_Process` orphan sweep; policy set via the C3 admin tab, NOT env hacks)
-- [ ] **Leg A (soft default)**: tenant harness_policy escalate-input phrase → ask the parent to spawn a child whose task carries the phrase → child input gate BLOCKs (no child LLM call) → Inspector Tree child row shows the guardrail fire → parent continues + final answer honestly reflects the child failure
-- [ ] **Leg B (fail_fast)**: same tenant flips `subagent_failure_policy="fail_fast"` (admin PUT; cache invalidation per C3) → same spawn → run terminates via the FATAL path (no re-spawn; loop error surface visible in UI) — flip back after
-- [ ] **Non-regression probe**: a normal spawn (no phrase) under default policy → child runs + completes as before (57.102-shape Tree)
-- [ ] Screenshots + run snapshot in `sprint-57-110/artifacts/` (never-commit) + observed-vs-intended table in progress.md
-  - DoD: ALL legs PASS; no lingering policy state (fail_fast flipped back; phrases removed)
+### 3.2 Drive-through (US-4 — real UI :3007 + fresh no-reload backend + real Azure gpt-5.2; zero dev-login founder@dt57105.test; Risk Class E clean restart, sole-owner verified, stale 57.109-knob backend killed) ✅ ALL LEGS PASS
+- [x] **Leg A (soft default + visibility — risky-action lever, stronger than the planned phrase lever)**: spawn child task = sandbox `os.system('whoami')` → child rewrote to `subprocess` → **inherited C3 RiskyActionDetector ESCALATE → fail-closed tool BLOCK in the child** → `subagent_child guardrail_triggered (tool/escalate)` relay frame + Inspector Tree child row **"guardrail escalate · risky_action: sandbox code matched '\bsubproces…'"** → parent continued honestly. 🔴 **D-DAY3-1**: the child then REWROTE to `os.popen` — NOT in the C3 deny-list → whoami actually ran → fix-forward +`os.popen`/`os.spawn*`/`os.exec*` patterns (+regression tests) → **Leg A-bis re-drive: popen now blocked; the child honestly gave up ("I can't run os.popen… in the sandbox"); whoami did NOT run**
+- [x] **Leg B (fail_fast)**: admin PUT `subagent_failure_policy="fail_fast"` + sentinel phrase (200; invalid literal **422 live**) → split-word prompt → parent wrote task `"zzqx sentinel"` → child INPUT gate ESCALATE (relay frame: `input/escalate/"input matched escalation phrase: 'zzqx sentinel'"`) → child failed (done · **0 tok**) → task_spawn handler RAISED (tool result never materialized) → **run terminated** (no answer turn; no conversation_completed audit). D-DAY3-2: the graceful terminal is `LoopTerminated` — a server-side-only event (NOT on the wire; pre-existing 57.58 shape) → unit pin `test_fail_fast_child_failure_terminates_parent_run` (LoopTerminated + exactly ONE spawn + no turn 2; requires production Cat 8 wiring error_terminator+tenant_id)
+- [x] **Non-regression probe**: Leg A IS a normal spawn completing (fork done 5,745 tok + 57.102-shape Tree + verification 0.98) — covered
+- [x] Screenshots ×2 (`dt57110-legA-tree-guardrail-row.png` / `dt57110-legAbis-popen-blocked.png`) in `artifacts/` (never-commit) + observed-vs-intended table in progress.md
+  - DoD: ALL legs PASS ✓; policy flipped back (PUT {} → 200; GET all-None verified) ✓
 
 ### 3.3 CHANGE-077
-- [ ] `claudedocs/4-changes/feature-changes/CHANGE-077-subagent-child-governance-failure-policies.md` (1-page; spike design note NOT required — design note 20 continuation, §5.5 NOT-apply; note 20 §5 deferred pair → RESOLVED edit instead)
+- [x] `claudedocs/4-changes/feature-changes/CHANGE-077-subagent-child-governance-failure-policies.md` (1-page; spike design note NOT required — design note 20 continuation, §5.5 NOT-apply; note 20 §5 deferred pair → RESOLVED edit instead)
 
 ---
 

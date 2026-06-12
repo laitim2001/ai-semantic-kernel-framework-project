@@ -282,6 +282,61 @@ async def test_fail_partial_salvages_timed_out_child_output() -> None:
 
 
 @pytest.mark.asyncio
+async def test_fail_fast_child_failure_terminates_parent_run() -> None:
+    """fail_fast END-TO-END at the LOOP level (Sprint 57.110 B4 dt D-DAY3-2 pin):
+    a failed child terminates the PARENT run via the Cat 8 FATAL path — the run
+    ends with LoopTerminated (server-side event; not on the SSE wire) and the
+    child is spawned exactly ONCE (no retry re-spawn). Termination requires the
+    production Cat 8 wiring (error_policy + error_terminator + tenant_id —
+    loop.py:548); without a terminator the failure soft-returns to the LLM."""
+    from agent_harness.error_handling import DefaultErrorPolicy, DefaultErrorTerminator
+    from agent_harness.orchestrator_loop import AgentLoopImpl
+    from agent_harness.output_parser import OutputParserImpl
+
+    child_chat = MockChatClient(
+        responses=[ChatResponse(model="mock-gpt", content="", stop_reason=StopReason.END_TURN)]
+    )
+    dispatcher = DefaultSubagentDispatcher(
+        chat_client=child_chat, child_loop_factory=make_child_loop_factory(child_chat)
+    )
+    parent_registry, parent_executor = make_default_executor(
+        subagent_dispatcher=dispatcher,
+        parent_session_id=uuid4(),
+        subagent_failure_policy="fail_fast",
+    )
+    parent_chat = MockChatClient(
+        responses=[
+            ChatResponse(
+                model="mock-gpt",
+                content="",
+                tool_calls=[
+                    ToolCall(
+                        id="t1", name="task_spawn", arguments={"task": "doomed", "mode": "fork"}
+                    )
+                ],
+                stop_reason=StopReason.TOOL_USE,
+            ),
+            _final("should never be reached"),
+        ]
+    )
+    parent = AgentLoopImpl(
+        chat_client=parent_chat,
+        output_parser=OutputParserImpl(),
+        tool_executor=parent_executor,
+        tool_registry=parent_registry,
+        tenant_id=uuid4(),
+        error_policy=DefaultErrorPolicy(),
+        error_terminator=DefaultErrorTerminator(),
+        max_turns=4,
+    )
+    events = [ev async for ev in parent.run(session_id=uuid4(), user_input="go")]
+    names = [type(ev).__name__ for ev in events]
+    assert "LoopTerminated" in names, f"expected LoopTerminated, got {names}"
+    assert child_chat.chat_call_count == 1  # exactly ONE spawn — FATAL is never retried
+    assert parent_chat.chat_call_count == 1  # the run ended; turn 2 never happened
+
+
+@pytest.mark.asyncio
 async def test_fail_soft_timeout_keeps_empty_summary() -> None:
     """The default (fail_soft) keeps today's shape: timeout → empty summary."""
     chat, registry, executor = _slow_tool_setup()
