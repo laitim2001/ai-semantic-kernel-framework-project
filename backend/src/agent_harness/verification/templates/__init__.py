@@ -22,6 +22,7 @@ Created: 2026-05-04 (Sprint 54.1 Day 2)
 Last Modified: 2026-06-05
 
 Modification History:
+    - 2026-06-12: Sprint 57.106 — add list_templates() (per-tenant template NAME allow-list, C3)
     - 2026-06-05: Sprint 57.83 — add output_quality general judge to default templates list (B-8)
     - 2026-05-04: Initial creation (Sprint 54.1 US-2) — closes AD-Cat9-1 fallback
 """
@@ -52,4 +53,15 @@ def load_template(name: str) -> str:
     return template_path.read_text(encoding="utf-8")
 
 
-__all__ = ["load_template"]
+def list_templates() -> frozenset[str]:
+    """Return the shipped template names (basenames without .txt).
+
+    Single source for the per-tenant verification-template NAME allow-list:
+    the chat handler validates a HarnessPolicy override against this set (an
+    unknown name → the system default, not a crash), and the admin PUT rejects
+    an unknown name with 422 (Sprint 57.106 C3).
+    """
+    return frozenset(p.stem for p in Path(__file__).parent.glob("*.txt"))
+
+
+__all__ = ["load_template", "list_templates"]

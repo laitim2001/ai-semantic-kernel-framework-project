@@ -42,17 +42,19 @@
 
 ---
 
-## Day 2 — Wiring + admin write/read (US-2 / US-4 backend)
+## Day 2 — Wiring + admin write/read (US-2 / US-4 backend) ✅
 
 ### 2.1 Handler/router wiring (US-2)
-- [ ] **`handler.py`**: 4 frozensets → `_DEFAULT_*` (kept as fallbacks, NOT deleted); `build_real_llm_handler(harness_policy=None)`; phrases/tools/verification sourcing = `policy or default`; `RiskyActionDetector` registered when enabled (priority 8)
-  - DoD: NO-policy tenant byte-identical (existing chat/guardrail/verification suites green UNCHANGED — the role-less-pole equivalent)
-- [ ] **`router.py`**: `resolve_tenant_harness_policy` pre-handler + thread (mirror C1 `:238` site); echo handler untouched
+- [x] **`handler.py`**: 4 frozensets KEPT as the system defaults (deviation from plan §3.2 cosmetic `_DEFAULT_*` rename — they're referenced by name in note_tool.py + _register_all.py comments; renaming churns unrelated files per surgical-changes; recorded D10); `build_real_llm_handler(harness_policy=None)` + `build_handler` forward; phrases/tools sourced `frozenset(policy.X) if not None else DEFAULT`; verification mode/template(NAME-validated via `list_templates()`)/escalate_on_max sourced policy-or-settings; `RiskyActionDetector` registered priority 8 when `risky_action_enabled is not False`
+  - DoD: NO-policy tenant byte-identical — chat handler/router + guardrail suites **506 passed** UNCHANGED ✓
+- [x] **`router.py`**: `resolve_tenant_harness_policy` pre-handler (mirror C1 `:238`) + thread through build_handler; echo path untouched
+- [x] **`templates/__init__.py`**: `list_templates()` single-source allow-list (shared by handler validation + PUT 422)
 
 ### 2.2 Admin PUT/GET (US-4 backend)
-- [ ] **`tenants.py`**: `HarnessPolicyUpsertRequest/Response` (`extra='forbid'`) + `PUT`/`GET /{tenant_id}/harness-policy` — composite-replace; 422 poles (unknown template name / non-compiling regex / >20 patterns / >200-char pattern); `append_audit("tenant_harness_policy_upsert")` + invalidate; `require_admin_platform_role`
-- [ ] **`test_admin_harness_policy.py`** (mirror model-policy suite): PUT→GET round-trip / 422 poles / clear-on-omit / audit row / cache-invalidation observable / cross-tenant isolation (鐵律)
-  - DoD: suite green; full pytest 0 deletions
+- [x] **`tenants.py`**: `HarnessPolicyUpsertRequest/Response` (`extra='forbid'`) + `PUT`/`GET /{tenant_id}/harness-policy` — composite-replace + `[]`-off-override kept; 422 poles (unknown template / non-compiling regex / >20 patterns / >200-char / bad mode); `append_audit("tenant_harness_policy_upsert")` + `invalidate_tenant_harness_policy`; `require_admin_platform_role`
+- [x] **`test_admin_tenant_harness_policy.py`** (17, mirror model-policy + D1 naming): auth/404 · create/composite-replace/`[]`-off/clear · 5 validation poles · isolation 鐵律 · audit chain · GET round-trip
+- [x] **conftest.py**: `HARNESSPOL_PUT_%` sweep + `reset_harness_policy_cache()` (Risk Class C)
+  - DoD: 17/17 green; mypy 0/359; run_all 10/10; full pytest **2438 passed + 4 skip** (1 pre-existing incident ordering-flake, passes isolated + 0 incident files in branch diff — NOT a C3 regression)
 
 ---
 

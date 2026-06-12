@@ -85,12 +85,15 @@ from agent_harness.guardrails.between_turns import BetweenTurnsKeywordGuardrail
 from agent_harness.guardrails.input import KeywordEscalationGuardrail
 from agent_harness.guardrails.output import OutputKeywordEscalationGuardrail
 from agent_harness.guardrails.tool.capability_matrix import CapabilityMatrix, PermissionRule
+from agent_harness.guardrails.tool.risky_action_detector import RiskyActionDetector
 from agent_harness.guardrails.tool.tool_guardrail import ToolGuardrail
 from agent_harness.orchestrator_loop import AgentLoopImpl
 from agent_harness.output_parser import OutputParserImpl
 from agent_harness.subagent import MailboxStore
+from agent_harness.verification.templates import list_templates
 from business_domain._register_all import make_default_executor
 from core.config import get_settings
+from platform_layer.governance.harness_policy import HarnessPolicy
 
 from ._category_factories import (
     make_chat_compactor,
@@ -264,6 +267,7 @@ def build_real_llm_handler(
     session_id: "UUID | None" = None,
     tenant_id: "UUID | None" = None,
     model_policy: "ModelPolicy | None" = None,
+    harness_policy: "HarnessPolicy | None" = None,
     user_id: "UUID | None" = None,
     system_prompt: str = DEMO_SYSTEM_PROMPT,
     tracer: "Tracer | None" = None,
@@ -462,22 +466,65 @@ def build_real_llm_handler(
     # guarantees every EXPOSED tool has a rule, so memory / subagent / business tools
     # never trip ToolGuardrail's unknown-tool → BLOCK default. Combined with
     # hitl_deferred (below), an echo_tool call pauses the loop for durable approval.
+    # Sprint 57.106 (C3): resolve the per-tenant HarnessPolicy overrides. Each
+    # field falls back to the module default when the tenant did not set it
+    # (None = not-set); an explicit empty tuple is a real "off" override (e.g.
+    # escalate_tools=() turns the escalate list off). A tenant with no policy is
+    # byte-identical to the pre-57.106 hardcoded path. The frozenset names below
+    # are the SYSTEM DEFAULTS (kept as-is — they are referenced by name in two
+    # other modules' comments; renaming would churn unrelated files per the
+    # surgical-changes rule).
+    policy = harness_policy or HarnessPolicy()
+    escalate_tools = (
+        frozenset(policy.escalate_tools)
+        if policy.escalate_tools is not None
+        else CHAT_HITL_ESCALATE_TOOLS
+    )
+    escalate_input_phrases = (
+        frozenset(policy.escalate_input_phrases)
+        if policy.escalate_input_phrases is not None
+        else CHAT_HITL_ESCALATE_INPUT_PHRASES
+    )
+    escalate_between_turns_phrases = (
+        frozenset(policy.escalate_between_turns_phrases)
+        if policy.escalate_between_turns_phrases is not None
+        else CHAT_HITL_ESCALATE_BETWEEN_TURNS_PHRASES
+    )
+    escalate_output_phrases = (
+        frozenset(policy.escalate_output_phrases)
+        if policy.escalate_output_phrases is not None
+        else CHAT_HITL_ESCALATE_OUTPUT_PHRASES
+    )
+
     guardrail_engine = build_default_guardrail_engine()
     tool_rules = {
-        spec.name: PermissionRule(requires_approval=spec.name in CHAT_HITL_ESCALATE_TOOLS)
+        spec.name: PermissionRule(requires_approval=spec.name in escalate_tools)
         for spec in registry.list()
     }
     guardrail_engine.register(
         ToolGuardrail(CapabilityMatrix(capability_to_tools={}, permission_rules=tool_rules)),
         priority=10,
     )
+    # Sprint 57.106 (C3): the risky-action detector screens python_sandbox code +
+    # tenant extra patterns into the existing Cat 9 HITL approval flow (ESCALATE,
+    # never BLOCK). Default ON; a tenant disables it via risky_action_enabled=False
+    # → not registered (zero-cost off). Priority 8 runs it before ToolGuardrail (p10)
+    # so a risky sandbox call escalates even if its per-tool rule is PASS. Independent
+    # of hitl_manager presence at registration, but the actual pause needs HITL (an
+    # ESCALATE without a deferred-pause manager fails closed to BLOCK in the loop —
+    # acceptable for a risky action).
+    if policy.risky_action_enabled is not False:
+        guardrail_engine.register(
+            RiskyActionDetector(extra_patterns=policy.risky_action_extra_patterns or ()),
+            priority=8,
+        )
     # Sprint 57.91 (Slice 3 leg 1): wire the input-ESCALATE pause trigger only when
     # a HITLManager is present (the deferred pause needs it; without it an ESCALATE
     # would fail closed to BLOCK). Priority 5 runs it before PII / Jailbreak — it
     # PASSes any non-trigger input, so the rest of the input chain still runs.
     if hitl_manager is not None:
         guardrail_engine.register(
-            KeywordEscalationGuardrail(CHAT_HITL_ESCALATE_INPUT_PHRASES),
+            KeywordEscalationGuardrail(escalate_input_phrases),
             priority=5,
         )
         # Sprint 57.92 (Slice 3 leg 2): between-turns-ESCALATE pause trigger (same
@@ -485,7 +532,7 @@ def build_real_llm_handler(
         # guardrail_type) so it does NOT double-fire with the per-response OUTPUT
         # check; the loop runs it at the loop top after ≥1 completed turn.
         guardrail_engine.register(
-            BetweenTurnsKeywordGuardrail(CHAT_HITL_ESCALATE_BETWEEN_TURNS_PHRASES),
+            BetweenTurnsKeywordGuardrail(escalate_between_turns_phrases),
         )
         # Sprint 57.93 (地基 A Slice 3 output-guardrail leg): output-ESCALATE
         # pre-delivery pause trigger. Registers on the OUTPUT chain at priority=5
@@ -495,7 +542,7 @@ def build_real_llm_handler(
         # through to the defaults unchanged. The loop's pre-delivery gate pauses
         # the flagged answer BEFORE LLMResponded renders it.
         guardrail_engine.register(
-            OutputKeywordEscalationGuardrail(CHAT_HITL_ESCALATE_OUTPUT_PHRASES),
+            OutputKeywordEscalationGuardrail(escalate_output_phrases),
             priority=5,
         )
 
@@ -507,12 +554,28 @@ def build_real_llm_handler(
     # the user-facing action turn stays on profile.action. None → the gate is
     # dormant (byte-identical to a non-verified run). resume() now covers the
     # resumed continuation for free (the loop's shared _run_turns carries the gate).
+    # Sprint 57.106 (C3): the tenant may override verification mode / judge template
+    # / escalate-on-max. mode + escalate_on_max fall back to the env settings when
+    # not set; the template override is honored ONLY when it names a shipped template
+    # (list_templates() — an unknown name from a hand-edited meta_data row falls back
+    # to the env default rather than crashing load_template at judge time; the admin
+    # PUT rejects an unknown name with 422 up front).
     settings = get_settings()
+    verification_mode = policy.verification_mode or settings.chat_verification_mode
+    judge_template = settings.chat_verification_judge_template
+    if (
+        policy.verification_judge_template
+        and policy.verification_judge_template in list_templates()
+    ):
+        judge_template = policy.verification_judge_template
+    verification_escalate_on_max = (
+        policy.verification_escalate_on_max
+        if policy.verification_escalate_on_max is not None
+        else settings.chat_verification_escalate_on_max
+    )
     verifier_registry: VerifierRegistry | None = None
-    if settings.chat_verification_mode == "enabled":
-        verifier_registry = make_chat_verifier_registry(
-            profile.cheap, settings.chat_verification_judge_template
-        )
+    if verification_mode == "enabled":
+        verifier_registry = make_chat_verifier_registry(profile.cheap, judge_template)
 
     # Sprint 57.101 B1: wire the between-turns injection inbox over the module
     # InjectionRegistry for this (tenant, session) so a mid-run POST /{id}/inject
@@ -534,7 +597,8 @@ def build_real_llm_handler(
         # ESCALATEs to a human HITL pause (deliver-as-is on APPROVE, one coached
         # retry on REJECT-with-note) instead of the A1 verification_failed terminal.
         # Effective only with a registry + hitl_manager; default False = A1.
-        verification_escalate_on_max=settings.chat_verification_escalate_on_max,
+        # Sprint 57.106 (C3): per-tenant override (falls back to the env setting).
+        verification_escalate_on_max=verification_escalate_on_max,
         # Sprint 57.101 B1: the between-turns injection inbox (None = no-op drain).
         message_inbox=message_inbox,
         # Sprint 57.71 (A-4 Tier 0): inject the router's real OTelTracer so the
@@ -587,6 +651,7 @@ def build_handler(
     session_id: "UUID | None" = None,
     tenant_id: "UUID | None" = None,
     model_policy: "ModelPolicy | None" = None,
+    harness_policy: "HarnessPolicy | None" = None,
     user_id: "UUID | None" = None,
     system_prompt: str = DEMO_SYSTEM_PROMPT,
     tracer: "Tracer | None" = None,
@@ -629,6 +694,10 @@ def build_handler(
             # (resolve_tenant_model_policy) and threads it here → the per-tenant
             # ModelProfile. None / echo path → env-only (byte-identical to 57.97).
             model_policy=model_policy,
+            # Sprint 57.106 (C3): the per-tenant harness policy (escalate phrases /
+            # tools / verification overrides + risky-action detector). None → the
+            # system-default path (byte-identical to pre-57.106).
+            harness_policy=harness_policy,
             user_id=user_id,
             system_prompt=system_prompt,
             # Sprint 57.71 (A-4 Tier 0): thread the router's real tracer through

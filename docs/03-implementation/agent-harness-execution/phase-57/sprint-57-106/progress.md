@@ -40,3 +40,27 @@ handler.py `:163/:173/:184/:196` 4 frozensets + `:460-467` PermissionRule-from-f
 - Gates: mypy `src` **0/359** (+2 files) · flake8/black/isort clean (3 E501 Purpose-line trims — the MHist char-budget lesson applies to Purpose lines too) · `run_all` 10/10 (`check_cross_category_import` green — detector imports no platform_layer; `check_event_schema_sync` unchanged).
 
 ---
+
+## Day 2 — 2026-06-12 — Handler/router wiring + admin PUT/GET (US-2/US-4 backend) ✅
+
+### Drift finding
+
+| ID | Finding | Implication |
+|----|---------|-------------|
+| D10 | The 4 escalate frozensets (`CHAT_HITL_ESCALATE_*`) are referenced BY NAME in 2 unrelated modules' comments (`note_tool.py:9`, `_register_all.py:247`). | Deviation from plan §3.2's cosmetic `_DEFAULT_*` rename: KEPT the names as the system-default values (renaming would churn 2 unrelated files' comments — surgical-changes rule). The policy-sourcing reads `frozenset(policy.X) if policy.X is not None else <NAME>`. No behavior change; the names ARE the defaults. |
+
+### Work
+
+- **`handler.py`**: `build_real_llm_handler` + `build_handler` gain `harness_policy` param; a resolved-values block computes `escalate_{tools,input,between,output}` (tri-state: `None`→default, `()`/values→override), `verification_{mode,template,escalate_on_max}` (template NAME-validated via `list_templates()` — a hand-edited bad name falls back to the env default instead of crashing `load_template`), and registers `RiskyActionDetector(priority=8)` unless `risky_action_enabled is False`.
+- **`router.py`**: `resolve_tenant_harness_policy` resolved pre-handler (mirror C1 line 238) + threaded.
+- **`templates/__init__.py`**: NEW `list_templates()` — single-source template-NAME allow-list shared by the handler (fallback) + the PUT (422).
+- **`tenants.py`**: `HarnessPolicyUpsertRequest/Response` + `PUT`/`GET /{id}/harness-policy` + `_validate_harness_policy` (422: bad mode / unknown template / non-compiling regex / >20 patterns / >200-char) + audit + cache-invalidate — byte-pattern mirror of model-policy.
+- **conftest.py**: `HARNESSPOL_PUT_%` committed-row sweep + `reset_harness_policy_cache()` at both reset points (Risk Class C).
+- **Tests**: 17 integration (auth/404 · persistence/composite-replace/`[]`-off/clear · 5 validation poles · isolation · audit · GET). Byte-identical proof: chat handler/router + guardrail suites **506 passed UNCHANGED**.
+- Gates: mypy 0/359 · flake8 clean · run_all 10/10 · full pytest **2438 passed + 4 skip**.
+
+### Pre-existing flake (NOT a C3 regression)
+
+`tests/unit/business_domain/incident/test_service.py::test_create_returns_incident` failed ONCE in the full-suite run but **passes isolated (1/1) and in its own file (12/12)**; `git diff main...HEAD` touches **zero** incident files; the conftest I edited is `tests/integration/api/` (a different tree from the failing `tests/unit/business_domain/incident/`). It's a full-suite ordering interaction (some earlier test's global state — Risk Class C class), pre-existing and out of C3 scope. Logged, not chased.
+
+---
