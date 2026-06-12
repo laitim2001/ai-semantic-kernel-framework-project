@@ -122,12 +122,12 @@ Unit: spec-shape + defensive-raise + registration gating (enabled/disabled/allow
 
 ## 6. Deliverables
 
-- [ ] US-1 stub retirement + spec-only tool + test conversions + 17.md row update
-- [ ] US-2 policy fields + boot enforcement + admin validation + FE tab fields
-- [ ] US-3 `GET /sessions` + repo + FE SessionList real-data + 鏈顯示（關 `AD-ChatV2-SessionList-Backend`）
-- [ ] US-4 migration 0028 + router observer + transcript tests（關 `AD-Subagent-Transcript-Isolation`）
-- [ ] US-5 drive-through PASS (screenshots + observed-vs-intended)
-- [ ] CHANGE-074 + design note 29 (spike extract: handoff completion + sidechain transcript) + closeout (retro Q1-Q7 + calibration + navigators + next-phase-candidates)
+- [x] US-1 stub retirement + spec-only tool + test conversions + 17.md row update
+- [x] US-2 policy fields + boot enforcement + admin validation + FE tab fields
+- [x] US-3 `GET /sessions` + repo + FE SessionList real-data + 鏈顯示（關 `AD-ChatV2-SessionList-Backend`）
+- [x] US-4 migration 0028 + router observer + transcript tests（關 `AD-Subagent-Transcript-Isolation`）
+- [x] US-5 drive-through PASS (4 legs; screenshots + observed-vs-intended)
+- [x] CHANGE-074 + design note 29 (spike extract: handoff completion + sidechain transcript) + closeout (retro Q1-Q7 + calibration + navigators + next-phase-candidates)
 
 ## 7. Workload Calibration
 

@@ -135,7 +135,7 @@ Per AD-Sprint-Plan-4 (logged Sprint 55.3) + 4-sprint window evidence,one-multipl
 | `frontend-verbatim-css-repoint -simple` | 0.50 | ~1.0 | KEEP (criteria: ≤3 files / no AP-2 banner / no dual-mount / no playback widgets / oklch bump <4) |
 | `frontend-verbatim-css-repoint -with-extras` | 0.65 | ~1.04 | KEEP (criteria: any of multi-file >3 / AP-2 banner / dual-mount / playback widgets / oklch bump ≥4) |
 | `frontend-page-bug-fix` | 0.45 | n/a (1 pt) | KEEP; if >1.20 recurs →0.55-0.60 |
-| `mixed-multidomain-bundle` | 0.65 | 0.42 | KEEP — agent-confound resolved at agent_factor sub-class layer |
+| `mixed-multidomain-bundle` | 0.65 | ~0.8-0.9 (latest 57.107) | KEEP — 57.107 B3 (4 tracks) ratio ≈0.8-0.9 IN band, first clean point post-confound (agent-delegated partial: FE delegated + parent re-verified, backend parent-direct); prior 0.42 mean was the agent-confound era |
 | `subagent-child-loop-spike` | 0.60 | n/a (1 pt) | KEEP pending 2-3 sprint validation (Sprint 57.94 ratio ~0.93 IN band; Cat 11 new-domain spike, parent-direct) |
 | `subagent-sse-relay-wiring` | 0.55 | n/a (1 pt) | KEEP pending 2-3 sprint validation (Sprint 57.95 ratio ~0.9-1.0 IN band; Cat 11→12 backend composition wiring, parent-direct) |
 | `subagent-child-turnstream-nesting` | 0.55 | n/a (1 pt) | KEEP pending 2-3 sprint validation (Sprint 57.96 ratio ~0.9-1.1 IN band; Cat 11×12 multi-layer feature — new wrapper event + executor forward + frontend store/render, parent-direct) |

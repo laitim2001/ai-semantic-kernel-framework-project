@@ -81,9 +81,9 @@
 
 ---
 
-## Day 4 — Closeout
+## Day 4 — Closeout ✅
 
 ### 4.1 Closeout
-- [ ] retrospective.md Q1-Q7 + calibration (`mixed-multidomain-bundle` 0.65 data point + agent-delegated tag) + progress.md final
-- [ ] Navigators: CLAUDE.md Current-Sprint row + Last-Updated; MEMORY.md quality pointer + memory subfile; next-phase-candidates 57.107 carryover block (close `AD-ChatV2-SessionList-Backend` + `AD-Subagent-Transcript-Isolation`; NEW `AD-Sidechain-Transcript-Read-API` etc.); sprint-workflow matrix row
+- [x] retrospective.md Q1-Q7 + calibration (ratio ≈0.8-0.9 IN band; agent-delegated: partial) + progress.md final
+- [x] Navigators: CLAUDE.md Current-Sprint row + Last-Updated; MEMORY.md quality pointer + memory subfile `project_phase57_107_handoff_finish.md`; next-phase-candidates 57.107 carryover block (closes `AD-ChatV2-SessionList-Backend` + `AD-Subagent-Transcript-Isolation`; NEW `AD-Sidechain-Transcript-Read-API` + `AD-RunAll-CWD-Guard`); sprint-workflow matrix row updated
 - [ ] PR (push + open on user authorization)
