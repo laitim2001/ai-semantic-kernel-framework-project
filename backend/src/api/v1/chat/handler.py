@@ -27,9 +27,10 @@ Key Components:
     - build_handler(mode: ChatMode, message: str) -> AgentLoopImpl  (dispatcher)
 
 Created: 2026-04-30 (Sprint 50.2 Day 1.4)
-Last Modified: 2026-06-11
+Last Modified: 2026-06-13
 
 Modification History (newest-first):
+    - 2026-06-13: Sprint 57.110 B4 — child loops inherit the composed guardrail engine
     - 2026-06-12: Sprint 57.109 C2 — compactor runs on profile.cheap (semantic summarize tier)
     - 2026-06-12: Sprint 57.107 B3 — register spec-only handoff tool (policy-gated, parent only)
     - 2026-06-11: Sprint 57.104 C1 — resolve per-tenant ModelPolicy → build per-tenant ModelProfile
@@ -124,7 +125,7 @@ if TYPE_CHECKING:
     from agent_harness.hitl import HITLManager
     from agent_harness.observability import Tracer
     from agent_harness.orchestrator_loop._abc import AgentLoop
-    from agent_harness.subagent.dispatcher import SubagentEventEmitter
+    from agent_harness.subagent.dispatcher import DefaultSubagentDispatcher, SubagentEventEmitter
     from agent_harness.verification import VerifierRegistry
     from business_domain._service_factory import BusinessServiceFactory
     from platform_layer.governance.service_factory import ServiceFactory
@@ -353,6 +354,12 @@ def build_real_llm_handler(
         )
 
         def _make_child_loop(budget: SubagentBudget) -> AgentLoop:
+            # Sprint 57.110 (B4): the child inherits the parent's COMPOSED guardrail
+            # engine (late-bound closure — `guardrail_engine` is assembled below with
+            # the tenant's C3 policy guardrails) so a child is never a Cat 9 bypass.
+            # No HITL wiring in the child → any ESCALATE fail-closes to BLOCK
+            # (loop.py's existing invariant). The factory only runs at spawn time,
+            # after this builder completes, so the late binding is safe.
             return AgentLoopImpl(
                 chat_client=chat_client,
                 output_parser=parser,
@@ -363,6 +370,7 @@ def build_real_llm_handler(
                 tracer=tracer,
                 max_turns=CHILD_SUBAGENT_MAX_TURNS,
                 token_budget=budget.max_tokens,
+                guardrail_engine=guardrail_engine,
             )
 
         # Sprint 57.102 (B2a): the TEAMMATE child loop — a real multi-turn child (like
@@ -387,6 +395,8 @@ def build_real_llm_handler(
         def _make_teammate_child_loop(
             budget: SubagentBudget, inbox: "MessageInbox | None"
         ) -> AgentLoop:
+            # Sprint 57.110 (B4): same composed-engine inheritance as _make_child_loop
+            # above (late-bound; ESCALATE-in-child fail-closes to BLOCK).
             return AgentLoopImpl(
                 chat_client=chat_client,
                 output_parser=parser,
@@ -398,6 +408,7 @@ def build_real_llm_handler(
                 max_turns=CHILD_SUBAGENT_MAX_TURNS,
                 token_budget=budget.max_tokens,
                 message_inbox=inbox,
+                guardrail_engine=guardrail_engine,
             )
 
         teammate_inbox_scope: "TeammateInboxScope | None" = None
@@ -406,7 +417,10 @@ def build_real_llm_handler(
                 get_default_injection_registry(), tenant_id
             )
 
-        subagent_dispatcher = make_chat_subagent_dispatcher(
+        # Explicit Optional annotation: the B4 late-bound closure capture above
+        # defers mypy's re-analysis of this function, which re-infers this
+        # conditional assignment strictly (None in the else branch below).
+        subagent_dispatcher: "DefaultSubagentDispatcher | None" = make_chat_subagent_dispatcher(
             chat_client,
             child_loop_factory=_make_child_loop,
             # Sprint 57.95: the chat path now wires the emitter so SubagentSpawned/

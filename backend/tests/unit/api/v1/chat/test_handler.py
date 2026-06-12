@@ -9,8 +9,12 @@ Created: 2026-04-30
 
 from __future__ import annotations
 
+from typing import Any
+from uuid import uuid4
+
 import pytest
 
+from agent_harness._contracts import SubagentBudget
 from agent_harness.orchestrator_loop import AgentLoopImpl
 from api.v1.chat.handler import (
     build_echo_demo_handler,
@@ -154,3 +158,36 @@ def test_build_real_llm_cheap_unset_compactor_shares_action_client(
 
     assert compactor is not None
     assert compactor.semantic.chat_client is loop._chat_client  # type: ignore[attr-defined]
+
+
+# --- Sprint 57.110 (B4): child loops inherit the composed guardrail engine ----
+
+
+def test_build_real_llm_child_loops_inherit_composed_guardrail_engine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sprint 57.110 (B4): FORK + TEAMMATE child loops carry the parent's COMPOSED
+    engine INSTANCE — a child is never a Cat 9 bypass (same tenant policy, no
+    second policy surface). Capture-and-delegate on make_chat_subagent_dispatcher
+    grabs the factory closures the handler wires."""
+    _set_azure_env(monkeypatch, strong="strong-deploy")
+
+    import api.v1.chat.handler as handler_mod
+
+    captured: dict[str, Any] = {}
+    real_factory = handler_mod.make_chat_subagent_dispatcher
+
+    def _capturing(*args: Any, **kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return real_factory(*args, **kwargs)
+
+    monkeypatch.setattr(handler_mod, "make_chat_subagent_dispatcher", _capturing)
+
+    loop = build_real_llm_handler(session_id=uuid4())
+    engine = loop._guardrail_engine  # type: ignore[attr-defined]
+    assert engine is not None
+
+    child = captured["child_loop_factory"](SubagentBudget())
+    teammate = captured["teammate_child_loop_factory"](SubagentBudget(), None)
+    assert child._guardrail_engine is engine  # noqa: SLF001 — identity, not a copy
+    assert teammate._guardrail_engine is engine  # noqa: SLF001

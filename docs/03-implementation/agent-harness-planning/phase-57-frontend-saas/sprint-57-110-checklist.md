@@ -18,13 +18,13 @@
 
 ---
 
-## Day 1 — Backend: child engine injection (US-1)
+## Day 1 — Backend: child engine injection (US-1) ✅
 
 ### 1.1 Engine injection (US-1)
-- [ ] **`handler.py`**: `_make_child_loop` + `_make_teammate_child_loop` pass `guardrail_engine=<composed engine>` (closure capture; factory aliases unchanged); MHist 1-line
-- [ ] **Injection identity tests ×2**: the child loop's engine IS the parent's composed instance (FORK + TEAMMATE)
-- [ ] **Fail-closed pins**: child input-block before any LLM call → `SubagentResult success=False` · tool-gate block → error ToolResult + child continues · ESCALATE-in-child → NO pause checkpoint + NO pending_approval · default-guardrails-active-in-child (the intentional behavior change pin)
-  - DoD: existing 8 subagent suites green UNCHANGED (0 del); `loop.py` diff EMPTY ✓; mypy strict 0 ✓
+- [x] **`handler.py`**: `_make_child_loop` + `_make_teammate_child_loop` pass `guardrail_engine=<composed engine>` (late-bound closure capture; factory aliases unchanged); MHist 1-line (+ explicit `DefaultSubagentDispatcher | None` annotation — the closure capture defers mypy re-analysis, D-DAY1-1)
+- [x] **Injection identity tests ×2**: capture-and-delegate on `make_chat_subagent_dispatcher` → FORK + TEAMMATE child engines ARE the parent's composed instance (1 test, both modes)
+- [x] **Fail-closed pins**: child input-block → `success=False` + truthful `error="child_guardrail_blocked"` (fork+teammate `_drive` stop_reason capture — D8 honest-label fix) · tool-gate ESCALATE → soft-blocked + child continues to final answer · ESCALATE-in-child → NO ApprovalRequested + `GuardrailTriggered(action="escalate")` event keeps the truth while the RUN blocks (D-DAY1-2 pin) · engine-threading identity on the helper factory
+  - DoD: subagent + handler suites **93 passed (+5 new, 0 del)** ✓; `loop.py` diff EMPTY ✓; mypy strict 0/359 ✓; flake8 0 ✓
 
 ---
 

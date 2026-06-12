@@ -35,13 +35,15 @@ Description:
     never raises, since a raise would propagate through wait_for and crash the turn):
     - teammate_child_loop_factory is None -> error="teammate_child_loop_factory_unavailable"
     - asyncio.TimeoutError on max_duration_s -> error="timeout: {N}s"
-    - empty final answer -> error="empty_response"
+    - empty final answer -> error="empty_response" (or "child_guardrail_blocked"
+      when the child run terminated guardrail_blocked — Sprint 57.110 truthful label)
     - any child-loop exception -> error="child_loop_error: {type}: {msg}"
 
 Created: 2026-05-04 (Sprint 54.2)
-Last Modified: 2026-06-11
+Last Modified: 2026-06-13
 
 Modification History:
+    - 2026-06-13: Sprint 57.110 B4 — truthful child_guardrail_blocked error (mirror fork.py)
     - 2026-06-11: Sprint 57.103 (B2b) — inbox_factory → inbox_scope (register/unregister the
       child's queue around the child run so a chat-user inject reaches a LIVE teammate)
     - 2026-06-11: Sprint 57.102 (B2a) — single-shot → real child loop (mirror 57.94 FORK)
@@ -143,10 +145,11 @@ class TeammateExecutor:
 
         final_answer = ""
         tokens_used = 0
+        stop_reason = ""
         emitter = self._event_emitter
 
         async def _drive(inbox: "MessageInbox | None") -> None:
-            nonlocal final_answer, tokens_used
+            nonlocal final_answer, tokens_used, stop_reason
             child = factory(budget, inbox)  # fresh child loop instance per spawn
             child_session_id = uuid4()
             async for ev in child.run(
@@ -164,6 +167,7 @@ class TeammateExecutor:
                     final_answer = ev.content  # last assistant answer wins
                 elif isinstance(ev, LoopCompleted):
                     tokens_used = ev.total_tokens
+                    stop_reason = ev.stop_reason
 
         # Sprint 57.103 (B2b): bracket the child drive in the inbox scope so the
         # child's InjectionRegistry queue is registered ONLY while the teammate runs
@@ -198,13 +202,16 @@ class TeammateExecutor:
 
         duration_ms = (time.monotonic() - start) * 1000.0
         if not final_answer:
+            # Sprint 57.110 (B4): truthful label for a guardrail-blocked child run
+            # (mirror fork.py; wire-stable stop_reason string, no Cat 1 enum import).
+            blocked = stop_reason == "guardrail_blocked"
             return SubagentResult(
                 subagent_id=subagent_id,
                 mode=SubagentMode.TEAMMATE,
                 success=False,
                 summary="",
                 duration_ms=duration_ms,
-                error="empty_response",
+                error="child_guardrail_blocked" if blocked else "empty_response",
             )
 
         # Sprint 57.102 (B2a): drain any send_to_parent reports the teammate delivered

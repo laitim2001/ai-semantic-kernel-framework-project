@@ -29,3 +29,15 @@
 ### Go/no-go
 
 **GO** — D5/D7 move the threading to `_register_all.py` + `make_task_spawn_tool` (file-list adjustment, <10% scope); D4 narrows the child output-gate semantics (test-pinned; dt unaffected — leg A is input-phrase); D8 adds a small in-scope honest-label fix (`child_guardrail_blocked`). No plan §Technical-Spec rewrite (findings recorded here per AP-2 audit-trail rule; plan §8 rows already anticipated D4/D5 shapes).
+
+---
+
+## Day 1 — 2026-06-13 — US-1 child engine injection ✅
+
+**Done**: `handler.py` both child factories inject `guardrail_engine` (late-bound closure — the composed engine is assembled after the factory defs; safe because factories only run at spawn time) + fork/teammate `_drive` captures the child `LoopCompleted.stop_reason` → truthful `error="child_guardrail_blocked"` (D8). Tests +5: helper engine-threading identity · input-ESCALATE fail-closes via ForkExecutor (`child_guardrail_blocked`) · direct-drive event pins (no ApprovalRequested; `GuardrailTriggered(input, action="escalate")` keeps the guardrail's truth while the RUN terminates `guardrail_blocked`) · tool-ESCALATE soft-blocks + child continues to its final answer · handler capture-and-delegate identity (FORK + TEAMMATE engines ARE `loop._guardrail_engine`).
+
+**Drift findings (Day 1)**:
+- **D-DAY1-1 (mypy deferred-analysis side effect)**: adding the late-bound `guardrail_engine` reference inside the closures made mypy DEFER + re-analyze `build_real_llm_handler`, which re-inferred the pre-existing conditional `subagent_dispatcher = make_chat_subagent_dispatcher(...) / else None` assignment strictly → a NEW error on an UNTOUCHED line (:433). Fix: explicit `"DefaultSubagentDispatcher | None"` annotation at the first assignment (+ TYPE_CHECKING import). Lesson: a closure capturing a later-assigned local can surface latent inference looseness elsewhere in the same function.
+- **D-DAY1-2 (event-vs-run semantics pin)**: the input soft-block path emits `GuardrailTriggered(action="escalate")` — the EVENT keeps the guardrail's truthful action while the RUN fail-closes (`stop_reason="guardrail_blocked"`). The plan's "GuardrailTriggered(input, block)" wording (from the loop docstring) describes the no-identity branch; the keyword path preserves the original action. Test pins the real shape — better for US-2 visibility (the Tree row will truthfully say escalate).
+
+**Gates**: subagent + handler suites 93 passed (+5, 0 del) · mypy strict 0/359 · flake8 0 · black/isort clean · `loop.py` UNTOUCHED.
