@@ -53,3 +53,34 @@ All EDIT targets Glob-1 (`handler.py` / `_category_factories.py` / `_contracts/c
 mypy **0/359** · black/isort/flake8 **0** · run_all **10/10** from repo root (event count/wire UNCHANGED — `check_event_schema_sync` green with NO codegen diff) · full pytest **2470+4skip non-e2e + 8 e2e = 2478 ≡ baseline 2462 + 16 new, 0 del** · `loop.py` diff = 1 yield site + MHist · touched suites: compactor 3 files / handler / factory / cost-ledger all green.
 
 ---
+
+## Day 3 — 2026-06-12 — Drive-through (US-4) — PASS after two load-bearing findings
+
+**Setup**: real UI :3007 (Vite PID 31616) + fresh no-reload backend (Risk Class E: killed stale 33124, sole-owner verified) + real Azure (action `gpt-5.2` / cheap `gpt-5.4-mini` — both already in `.env` from the 57.97 dt) + zero dev-login (founder@dt57105.test password-login, tenant `dt57105-rbac`). Knobs set BEFORE start: `CHAT_COMPACTION_TOKEN_BUDGET=2000` (+ later `CHAT_COMPACTION_KEEP_RECENT_TURNS=1` — see D-DAY3-2).
+
+### Drift findings (Day 3)
+
+| ID | Finding | Implication |
+|----|---------|-------------|
+| D-DAY3-1 🔴 (load-bearing) | First dt attempt (6 setup messages + tool-trigger message): compaction CHECK runs every turn (live `context_compacted` frames, tokens 2294/4794 > the 1500 threshold) but ALWAYS `messages_compacted=0` — **the chat main flow carries conversation continuity in Cat 3 memory (a memory hint returned BLUEFIN), NOT restored message history**; a loop run holds ONE user message, so the semantic cutoff `len(user_indices) > keep_recent_turns(5)` is structurally unreachable. The hybrid "triggered" frames were structural-tagged no-ops. | Semantic compaction was a latent main-flow no-op since 52.1 (invisible until this dt). Two consequences: (a) the `CHAT_COMPACTION_KEEP_RECENT_TURNS` knob (D-DAY3-2); (b) carryover `AD-Semantic-Compaction-User-Turn-Anchor` — the user-turn-anchored cutoff may deserve a message-count anchor in a future Cat 4 slice. |
+| D-DAY3-2 (scope add, knob #2) | With keep=5 fixed, the only zero-code trigger is 6 successful B1 mid-run injections — timing-infeasible (the run finishes faster than the inject cadence; 1/6 landed). Added `CHAT_COMPACTION_KEEP_RECENT_TURNS` env knob (default 5 UNCHANGED; min 1 — a 0 would make the cutoff `user_indices[-0]` == `[0]`, a silent full-keep bug) threaded to both sub-compactors + 7 unit cases + `.env.example`. Same ops-knob family as US-3. | dt recipe became: keep=1 + budget=2000 → ONE successful B1 injection puts `user_indices=2 > 1` → semantic engages for real. |
+| D-DAY3-3 | `billing_outbox` count for `_compaction` across the WHOLE dt day = exactly 1 (only the keep=1 run) — every earlier session/run enqueued NOTHING | live confirmation of the zero-usage guard (structural-only/no-op compactions bill nothing) |
+
+### Observed vs intended (the PASS run — trace `5653b0c3eefb4d53b855f7c07aba51b6`)
+
+| Step | Intended | Observed |
+|------|----------|----------|
+| 12-group patrol run + B1 inject "Note: my project codename is BLUEFIN." | inject lands mid-run | `message_injected` frame + "injected mid-run" UserTurn tag ✓ |
+| Next turn pre-check | semantic compaction triggers | `context_compacted` **tokens_before=9824 → tokens_after=2679, messages_compacted=8, duration 3535ms** (a REAL summarize LLM call) ✓ |
+| Summarize runs on the CHEAP tier | ledger attributes the cheap model | `billing_outbox` `{session}:llm:_compaction` payload model **`gpt-5.4-mini-2026-03-17`** (the live `response.model`, vs action `gpt-5.2`), in=260/out=149, status=done ✓ |
+| Drainer materializes | cost_ledger rows | `azure_openai_gpt-5.4-mini-2026-03-17_compaction_input` 260 tok / **$0.000195** + `_compaction_output` 149 tok / **$0.0006705** (priced, non-zero) ✓ |
+| Post-compaction quality | run continues; early fact survivable | turn-5 `prompt_built estimated_input_tokens=3411` (down from 9824); final answer block "my project codename is **BLUEFIN**" + `verification_passed llm_judge score=0.99` + `loop_end stop=end_turn turns=5` ✓ |
+| Memory extraction tier | stays action | code-pinned only (handler tier-map comment + extraction.py untouched in the diff) — extraction emits no ledger row, so runtime tier is NOT observable; reported honestly as gate-level |
+
+Screenshots: `artifacts/dt57109-compaction-run.png` + `dt57109-context-compacted-event.png` (9824→2679 frame in view) + `dt57109-final-turn-post-compaction.png`; full text evidence `artifacts/dt57109-run4-snapshot.yml` (never-commit).
+
+### Gates (final, Day 3)
+
+mypy 0/359 · flake8 0 · run_all 10/10 · full pytest **2477+4skip non-e2e + 8 e2e = 2485 ≡ baseline 2462 + 23 new, 0 del** (16 Day-1/2 + 7 keep-knob cases).
+
+---

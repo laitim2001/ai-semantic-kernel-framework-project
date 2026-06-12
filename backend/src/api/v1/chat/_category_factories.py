@@ -103,6 +103,9 @@ _DEFAULT_CHAT_TOKEN_BUDGET = 100_000
 _CHAT_TOKEN_THRESHOLD_RATIO = 0.75
 
 
+_DEFAULT_KEEP_RECENT_TURNS = 5
+
+
 def _compaction_token_budget() -> int:
     """Resolve the compaction token budget (CHAT_COMPACTION_TOKEN_BUDGET env knob)."""
     raw = os.environ.get("CHAT_COMPACTION_TOKEN_BUDGET", "")
@@ -111,6 +114,23 @@ def _compaction_token_budget() -> int:
     except ValueError:
         return _DEFAULT_CHAT_TOKEN_BUDGET
     return budget if budget > 0 else _DEFAULT_CHAT_TOKEN_BUDGET
+
+
+def _compaction_keep_recent_turns() -> int:
+    """Resolve keep_recent_turns (CHAT_COMPACTION_KEEP_RECENT_TURNS env knob).
+
+    57.109 D-DAY3-2: the chat main flow runs ONE user message per loop run
+    (continuity lives in Cat 3 memory, not restored history), so the semantic
+    cutoff `len(user_indices) > keep_recent_turns` is unreachable at the
+    default 5 unless mid-run injection (B1) adds user turns. The knob lets a
+    deployment compact more aggressively. Min 1 (a value of 0 would make the
+    cutoff index `user_indices[-0]` == `[0]` — a silent full-keep bug)."""
+    raw = os.environ.get("CHAT_COMPACTION_KEEP_RECENT_TURNS", "")
+    try:
+        keep = int(raw) if raw else _DEFAULT_KEEP_RECENT_TURNS
+    except ValueError:
+        return _DEFAULT_KEEP_RECENT_TURNS
+    return keep if keep >= 1 else _DEFAULT_KEEP_RECENT_TURNS
 
 
 def make_chat_compactor(chat_client: ChatClient) -> Compactor:
@@ -129,13 +149,16 @@ def make_chat_compactor(chat_client: ChatClient) -> Compactor:
     agree on the threshold).
     """
     budget = _compaction_token_budget()
+    keep_recent = _compaction_keep_recent_turns()
     return HybridCompactor(
         structural=StructuralCompactor(
+            keep_recent_turns=keep_recent,
             token_budget=budget,
             token_threshold_ratio=_CHAT_TOKEN_THRESHOLD_RATIO,
         ),
         semantic=SemanticCompactor(
             chat_client=chat_client,
+            keep_recent_turns=keep_recent,
             token_budget=budget,
             token_threshold_ratio=_CHAT_TOKEN_THRESHOLD_RATIO,
         ),

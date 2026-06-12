@@ -34,6 +34,8 @@ from agent_harness.error_handling import (
 from agent_harness.state_mgmt import DBCheckpointer, DefaultReducer
 from api.v1.chat._category_factories import (
     _DEFAULT_CHAT_TOKEN_BUDGET,
+    _DEFAULT_KEEP_RECENT_TURNS,
+    _compaction_keep_recent_turns,
     _compaction_token_budget,
     make_chat_compactor,
     make_chat_error_deps,
@@ -126,3 +128,32 @@ def test_factory_threads_budget_to_sub_compactors(monkeypatch: pytest.MonkeyPatc
     assert compactor.token_budget == 2_000  # type: ignore[attr-defined]
     assert compactor.structural.token_budget == 2_000  # type: ignore[attr-defined]
     assert compactor.semantic.token_budget == 2_000  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("1", 1), ("3", 3), ("", _DEFAULT_KEEP_RECENT_TURNS)],
+)
+def test_compaction_keep_recent_turns_env(
+    monkeypatch: pytest.MonkeyPatch, raw: str, expected: int
+) -> None:
+    monkeypatch.setenv("CHAT_COMPACTION_KEEP_RECENT_TURNS", raw)
+    assert _compaction_keep_recent_turns() == expected
+
+
+@pytest.mark.parametrize("raw", ["abc", "0", "-2"])
+def test_compaction_keep_recent_turns_invalid_falls_back(
+    monkeypatch: pytest.MonkeyPatch, raw: str
+) -> None:
+    """0 is rejected: `user_indices[-0]` == `[0]` would silently keep everything."""
+    monkeypatch.setenv("CHAT_COMPACTION_KEEP_RECENT_TURNS", raw)
+    assert _compaction_keep_recent_turns() == _DEFAULT_KEEP_RECENT_TURNS
+
+
+def test_factory_threads_keep_recent_to_sub_compactors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CHAT_COMPACTION_KEEP_RECENT_TURNS", "1")
+    compactor = make_chat_compactor(MockChatClient(responses=[]))
+    assert compactor.structural.keep_recent_turns == 1  # type: ignore[attr-defined]
+    assert compactor.semantic.keep_recent_turns == 1  # type: ignore[attr-defined]

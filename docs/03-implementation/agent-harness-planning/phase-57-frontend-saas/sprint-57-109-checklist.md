@@ -50,21 +50,21 @@
 
 ---
 
-## Day 3 — Full gates + drive-through (US-4) + CHANGE-076
+## Day 3 — Full gates + drive-through (US-4) + CHANGE-076 ✅
 
 ### 3.1 Full gate sweep
-- [ ] mypy strict 0 · black/isort/flake8 0 (all four, 57.107 lesson) · run_all 10/10 from repo root (count 24; no codegen diff) · full pytest 0 del vs 2462+4skip baseline · FE untouched holds (Vitest 836 / mockup-fidelity 51) · `loop.py` diff = compaction site + accumulator only · wire schema diff = empty
+- [x] mypy strict 0/359 · black/isort/flake8 0 (all four, 57.107 lesson) · run_all 10/10 from repo root (count 24; no codegen diff) · full pytest **2477+4skip non-e2e + 8 e2e = 2485 (+23, 0 del)** vs 2462+4skip baseline · FE untouched holds · `loop.py` diff = 1 yield site (D-DAY1-1 carrier shape) · wire schema diff = empty
 
-### 3.2 Drive-through (US-4 — real UI :3007 + fresh no-reload backend + real Azure; zero dev-login; Risk Class E clean restart with `CHAT_COMPACTION_TOKEN_BUDGET` set BEFORE start + orphan spawn-worker sweep)
-- [ ] **Tier delta lever confirmed**: `.env` cheap deployment distinct from action (or set the dt tenant's cheap via the C1 model-policy tab — 57.104 proven)
-- [ ] **Compaction triggers live**: lowered budget → multi-turn real conversation → `ContextCompacted` observed (raw events / SSE) with strategy + tokens_before/after real
-- [ ] **Ledger reality**: cost ledger shows `{provider}_{cheap_model}_compaction_input/_output` rows with real token counts (cost dashboard or DB read) — model = the CHEAP deployment, NOT action
-- [ ] **Quality + non-regression**: post-compaction answer still references an early-conversation fact (AP-7 in-the-flesh); memory extraction row still attributes the ACTION tier; normal default-budget session compacts nothing + enqueues nothing
-- [ ] Screenshots + observed-vs-intended table in progress.md
-  - DoD: ALL legs PASS; no tenant policy left modified (restore defaults after dt)
+### 3.2 Drive-through (US-4 — real UI :3007 + fresh no-reload backend + real Azure; zero dev-login; Risk Class E clean restart with BOTH knobs set BEFORE start; sole-owner verified, no orphan spawn-workers) ✅ PASS
+- [x] **Tier delta lever confirmed**: `.env` cheap `gpt-5.4-mini` distinct from action `gpt-5.2` (57.97 dt legacy — no tenant policy needed)
+- [x] **Compaction triggers live**: keep=1 + budget=2000 + 12-group patrol run + ONE B1 mid-run injection → `context_compacted` **9824→2679 tokens, messages_compacted=8, 3535ms** (a REAL summarize call; D-DAY3-1/2 catalogue why the keep knob was required — semantic was structurally unreachable on the main flow at keep=5)
+- [x] **Ledger reality**: billing_outbox `{session}:llm:_compaction` model **`gpt-5.4-mini-2026-03-17`** in=260/out=149 status=done → cost_ledger `azure_openai_gpt-5.4-mini-2026-03-17_compaction_input/_output` $0.000195/$0.0006705 (priced) — CHEAP model, NOT action
+- [x] **Quality + non-regression**: post-compaction turn-5 `prompt_built 3411` (from 9824); final answer carries **BLUEFIN** + `verification_passed llm_judge 0.99` + clean `loop_end`; `_compaction` outbox count across the whole dt day = 1 (every default-shape run enqueued NOTHING — D-DAY3-3); memory extraction = gate-level only (no runtime ledger surface; reported honestly)
+- [x] Screenshots ×3 + run snapshot in `artifacts/` + observed-vs-intended table in progress.md
+  - DoD: ALL legs PASS ✓; no tenant policy modified (env knobs only — process-scoped, gone on next normal restart)
 
 ### 3.3 CHANGE-076
-- [ ] `claudedocs/4-changes/feature-changes/CHANGE-076-compaction-cheap-tier-ledger-attribution.md` (1-page; spike design note NOT required — design-note-24 continuation, §5.5 NOT-apply)
+- [x] `claudedocs/4-changes/feature-changes/CHANGE-076-compaction-cheap-tier-ledger-attribution.md` (1-page; spike design note NOT required — design-note-24 continuation, §5.5 NOT-apply)
 
 ---
 
