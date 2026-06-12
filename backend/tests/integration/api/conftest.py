@@ -77,6 +77,9 @@ from infrastructure.db.engine import dispose_engine  # noqa: E402
 from infrastructure.db.session import get_session_factory  # noqa: E402
 from platform_layer.billing.cost_ledger import reset_cost_ledger  # noqa: E402
 from platform_layer.billing.pricing import reset_pricing_loader  # noqa: E402
+from platform_layer.governance.harness_policy import (  # noqa: E402
+    reset_harness_policy_cache,
+)
 from platform_layer.governance.service_factory import reset_service_factory  # noqa: E402
 from platform_layer.observability import reset_sla_recorder  # noqa: E402
 
@@ -140,6 +143,8 @@ async def _clear_committed_test_tenants() -> None:
             await session.execute(text("DELETE FROM tenants WHERE code LIKE 'AGENT_PUT_%'"))
             # Sprint 57.104 (C1) — sweep uuid4-suffixed PUT /model-policy test tenants
             await session.execute(text("DELETE FROM tenants WHERE code LIKE 'MODELPOL_PUT_%'"))
+            # Sprint 57.106 (C3) — sweep uuid4-suffixed PUT /harness-policy test tenants
+            await session.execute(text("DELETE FROM tenants WHERE code LIKE 'HARNESSPOL_PUT_%'"))
             # Sprint 57.55 — sweep uuid4-suffixed feature_flags rows seeded by PUT tests
             # (feature_flags is a global no-RLS registry; rows persist past test
             # rollback once any PUT test commits to make the row visible to the
@@ -170,6 +175,7 @@ async def _reset_module_singletons() -> AsyncIterator[None]:
     reset_sla_recorder()
     reset_pricing_loader()
     reset_cost_ledger()
+    reset_harness_policy_cache()
     await dispose_engine()
     await _clear_committed_test_tenants()
     yield
@@ -177,5 +183,6 @@ async def _reset_module_singletons() -> AsyncIterator[None]:
     reset_sla_recorder()
     reset_pricing_loader()
     reset_cost_ledger()
+    reset_harness_policy_cache()
     await dispose_engine()
     await _clear_committed_test_tenants()

@@ -21,6 +21,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-06-12: Sprint 57.106 C3 — +HarnessPolicy read/write schemas (harness-policy tab)
  *   - 2026-06-11: Sprint 57.104 C1 — +ModelPolicy read/write schemas (model-policy tab)
  *   - 2026-05-29: Sprint 57.62 US-3 — +RateLimitAlert{Item,Response} alerts read schemas
  *   - 2026-05-28: Sprint 57.58 Track D — +RateLimitsUsage{Item,Response} live usage read schemas
@@ -301,4 +302,72 @@ export interface ModelPolicyApiUpsertRequest {
   action_model?: string;
   cheap_deployment?: string;
   cheap_model?: string;
+}
+
+/* === Sprint 57.106 C3 — Harness policy (GET + PUT) ===
+ *
+ * Mirrors backend GET/PUT /admin/tenants/{id}/harness-policy. The tenant's
+ * harness policy governs the agent loop's guardrail-escalation phrase/tool sets
+ * (input / between-turns / output / tools), the in-loop verification gate
+ * (mode + judge template + escalate-on-max), and the risky-action detector
+ * (enabled + extra regex patterns). The policy is SPARSE: any unset field is
+ * null on read; on write, PUT is COMPOSITE-REPLACE — the body is the COMPLETE
+ * desired policy, so an omitted/null field is CLEARED (reverts to the system
+ * default). 422 (with `detail` string) when a judge-template name is unknown, a
+ * regex is bad/oversize, a list exceeds 20 patterns, or verification_mode is
+ * invalid (backend extra=forbid).
+ *
+ * FE convention: the value object is a single SPARSE shape shared by the UI and
+ * (after case-mapping) the API. The service maps to/from the snake_case API
+ * shape (see tenantSettingsService.ts get/putHarnessPolicy).
+ */
+
+/** Verification gate mode (null = system default). */
+export type HarnessVerificationMode = "enabled" | "disabled";
+
+/** The 5 shipped judge templates (null = system default). */
+export type HarnessJudgeTemplate =
+  | "factual_consistency"
+  | "format_compliance"
+  | "output_quality"
+  | "pii_leak_check"
+  | "safety_review";
+
+/** Camelcase UI shape — sparse (null = system default for every field). */
+export interface HarnessPolicy {
+  escalateInputPhrases: string[] | null;
+  escalateBetweenTurnsPhrases: string[] | null;
+  escalateOutputPhrases: string[] | null;
+  escalateTools: string[] | null;
+  verificationMode: HarnessVerificationMode | null;
+  verificationJudgeTemplate: HarnessJudgeTemplate | null;
+  verificationEscalateOnMax: boolean | null;
+  riskyActionEnabled: boolean | null;
+  riskyActionExtraPatterns: string[] | null;
+}
+
+/** Snake_case API read shape (GET response) — sparse (null = system default). */
+export interface HarnessPolicyApiResponse {
+  escalate_input_phrases: string[] | null;
+  escalate_between_turns_phrases: string[] | null;
+  escalate_output_phrases: string[] | null;
+  escalate_tools: string[] | null;
+  verification_mode: HarnessVerificationMode | null;
+  verification_judge_template: HarnessJudgeTemplate | null;
+  verification_escalate_on_max: boolean | null;
+  risky_action_enabled: boolean | null;
+  risky_action_extra_patterns: string[] | null;
+}
+
+/** Snake_case API write shape (PUT body) — composite-replace (null = cleared). */
+export interface HarnessPolicyApiUpsertRequest {
+  escalate_input_phrases?: string[] | null;
+  escalate_between_turns_phrases?: string[] | null;
+  escalate_output_phrases?: string[] | null;
+  escalate_tools?: string[] | null;
+  verification_mode?: HarnessVerificationMode | null;
+  verification_judge_template?: HarnessJudgeTemplate | null;
+  verification_escalate_on_max?: boolean | null;
+  risky_action_enabled?: boolean | null;
+  risky_action_extra_patterns?: string[] | null;
 }

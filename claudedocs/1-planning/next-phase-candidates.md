@@ -14,13 +14,24 @@ It condenses the user's "5-point deepening discussion" into 3 workflows and a re
 
 - **A. Verification into loop** (points 1 + 5) — ✅ **A1 SHIPPED (Sprint 57.98)**: in-loop verify gate (retired the `correction_loop.py` wrapper; closed the **resume-bypasses-verification structural hole** — `resume()` now drives the same gated `_run_turns`) → ✅ **A2 SHIPPED (Sprint 57.99)**: verification-ESCALATE human loop (the max-fail terminal conditionally becomes a human pause; APPROVE delivers the held answer, REJECT-with-note coaches one bounded turn; behind a toggle, default OFF = A1) → A3 trace-critique (optional).
 - **B. Subagent completion** (point 3 + C-class live injection) — ✅ **B1 SHIPPED (Sprint 57.101)**: between-turns injection primitive (`MessageInbox` ABC + `_run_turns` drain seam + `InjectionRegistry` + `POST /{id}/inject` + FE composer-mid-run; serves the chat live-injection payoff now, designed so **B2 reuses the same drain seam** — one primitive, two payoffs) → B2 TEAMMATE multi-turn (the child loop's inbox backed by the parent mailbox — next) → B3 HANDOFF finish (**platform layer already done 57.68-70** — carryover text below saying "platform service absent" is stale; it shrinks to finish+governance) → B4 child governance.
-- **C. Model policy + config tiering** (point 4 + cc-parity §7.3) — **C1 ✅ SHIPPED Sprint 57.104** (per-tenant model policy in `tenant.meta_data["model_policy"]` JSONB + TTL-cached resolver + admin tab; drive-through PASS; CHANGE-071 + design note 27) → C2 compaction cheap tier → C3 policy面 + risky-action detector.
+- **C. Model policy + config tiering** (point 4 + cc-parity §7.3) — **C1 ✅ SHIPPED Sprint 57.104** (per-tenant model policy; CHANGE-071 + note 27) → **C3 ✅ SHIPPED Sprint 57.106** (per-tenant harness policy 面 — escalate phrases/tools + verification overrides in `meta_data["harness_policy"]` + "Harness Policy" tab — + NEW Cat 9 `RiskyActionDetector` ESCALATE-not-BLOCK, per-tenant switchable; drive-through PASS; CHANGE-073 + design note 28) → C2 compaction cheap tier (remaining C slice).
 
 **Recommended 10-slice order**: A1 → A2 → B1 → B2 → C1 → B3 → C3 → C2 → B4 → A3 (driven by `loop.py` write-contention: A1+B1 both touch loop.py → serialize). **C1 can float to #2** if a per-tenant-governance milestone is prioritized (it doesn't touch loop.py).
 
 **C1 soft-prereq — ✅ FULLY RESOLVED Sprint 57.105**: `AD-RBAC-DB-To-JWT-Wiring-Phase58` shipped as its own slice (per the 57.104 decision below): the OIDC callback + password-login now source the JWT `roles` claim from `RBACManager.get_user_role_codes` (DB `Role JOIN UserRole`, tenant-scoped) — a DB role grant IS authz-effective at login; drive-through proved the full no-dev-login chain (register → password-login → admin renders → model-policy PUT 200; role-less JWT → 403). ISSUE-6 closed. CHANGE-072 + note 23 §5 RESOLVED. *(Historical context: C1 shipped 57.104 using dev-login's `platform_admin` JWT; the prod gap was pre-existing + shared across all 57.55-57.57 admin PUTs; user confirmed "直接做 C1" — don't bundle.)*
 
 > **Status**: roadmap selected/acknowledged by user; NO slice sprint kicked off yet (rolling discipline — A1 plan is written only on explicit user go).
+
+---
+
+## 🆕 Sprint 57.106 Carryover — C3 per-tenant harness policy + risky-action detector SHIPPED (drive-through PASS)
+
+Sprint 57.106 closed proposal §3.4 C3 (CHANGE-073 + design note 28). Per the 2026-06-12 interleave decision (RBAC → C3 → **B3** → UX → C2 → B4), **next slice: B3** (HANDOFF finish — the platform layer is ALREADY done 57.68-70 per the proposal; B3 shrinks to finish + governance, NOT a fresh build).
+
+- **`AD-HITL-Policy-ReadSide-Potemkin-Phase58`** (🆕 from the 57.106 Day-0 Explore) — `DBHITLPolicyStore.get_policy()` (Sprint 57.54 write-side + admin GET/PUT) works but is **never consumed at tool execution**: `ToolGuardrail` Stage 3 hardcodes `if rule.requires_approval: ESCALATE` and does NOT read the tenant's `auto_approve_max_risk` / `require_approval_min_risk` risk thresholds. Risk-threshold semantics redesign = own slice (user decision 2026-06-12: NOT folded into C3).
+- **`AD-ChatV2-HITL-Card-Tool-Name`** (🆕 from the 57.106 drive-through) — the chat-v2 HITL approval card renders `tool: —` for an `approval_requested` event (the tool name/reason isn't wired to the card). Pre-existing FE wiring gap; scoped chat-v2 task.
+- **`tenant_policies` dedicated table** — evaluated NOT built (note 28 §5): the JSONB-on-meta_data shape is schema-less; graduate to a typed+RLS+versioned table when ≥2 more policy concerns land on meta_data OR a typed-query need arises (the `rate_limit_configs` 0019 precedent).
+- capability_matrix per-tenant role/scope/max_calls override; raw verification-template upload; per-tenant injection policy (B-family); C2 compaction cheap tier (remaining C slice).
 
 ---
 

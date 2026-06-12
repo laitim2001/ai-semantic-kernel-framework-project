@@ -24,6 +24,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-06-12: Sprint 57.106 C3 — +Harness Policy tab (8th, after Model Policy)
  *   - 2026-06-11: Sprint 57.104 C1 — +Model Policy tab (7th, after Quotas)
  *   - 2026-05-26: Sprint 57.49 — pass tenantId prop to 4 migrated tabs (FF/Quotas/HITL/Members)
  *   - 2026-05-26: Sprint 57.44 — full rewrite to 6-tab mockup IA (drop EditForm + JSON dump + dl/dt view)
@@ -48,18 +49,20 @@ import { TenantSettingsPageHeader } from "./TenantSettingsPageHeader";
 import { DangerZoneTab } from "./tabs/DangerZoneTab";
 import { FeatureFlagsTab } from "./tabs/FeatureFlagsTab";
 import { GeneralTab } from "./tabs/GeneralTab";
+import { HarnessPolicyTab } from "./tabs/HarnessPolicyTab";
 import { HITLPoliciesTab } from "./tabs/HITLPoliciesTab";
 import { MembersTab } from "./tabs/MembersTab";
 import { ModelPolicyTab } from "./tabs/ModelPolicyTab";
 import { QuotasTab } from "./tabs/QuotasTab";
 
-type TabId = "general" | "flags" | "quotas" | "model" | "hitl" | "members" | "danger";
+type TabId = "general" | "flags" | "quotas" | "model" | "harness" | "hitl" | "members" | "danger";
 
 const TAB_ITEMS = [
   { id: "general", label: "General" },
   { id: "flags", label: "Feature Flags", count: 14 },
   { id: "quotas", label: "Quotas" },
   { id: "model", label: "Model Policy" },
+  { id: "harness", label: "Harness Policy" },
   { id: "hitl", label: "HITL Policies" },
   { id: "members", label: "Members", count: 8 },
   { id: "danger", label: "Danger Zone" },
@@ -119,6 +122,7 @@ export function TenantSettingsView(): JSX.Element {
       {tab === "flags" && <FeatureFlagsTab tenantId={tenantId} />}
       {tab === "quotas" && <QuotasTab tenantId={tenantId} />}
       {tab === "model" && <ModelPolicyTab tenantId={tenantId} />}
+      {tab === "harness" && <HarnessPolicyTab tenantId={tenantId} />}
       {tab === "hitl" && <HITLPoliciesTab tenantId={tenantId} />}
       {tab === "members" && <MembersTab tenantId={tenantId} />}
       {tab === "danger" && <DangerZoneTab />}

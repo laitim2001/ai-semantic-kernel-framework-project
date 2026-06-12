@@ -109,6 +109,7 @@ from platform_layer.billing.billing_outbox import (
     tool_idempotency_key,
 )
 from platform_layer.billing.model_policy import resolve_tenant_model_policy
+from platform_layer.governance.harness_policy import resolve_tenant_harness_policy
 from platform_layer.governance.service_factory import (
     ServiceFactory,
     get_service_factory,
@@ -237,6 +238,13 @@ async def chat(
     # Fail-open to an empty policy (the env-only path).
     model_policy = await resolve_tenant_model_policy(db, current_tenant)
 
+    # Sprint 57.106 (C3): resolve the tenant's harness policy (TTL-cached, same
+    # mirror) — escalate phrases / tools / verification overrides + the risky-action
+    # detector switch. Threads through build_handler → build_real_llm_handler into
+    # the guardrail engine + verifier wiring. Fail-open to an empty policy (the
+    # system-default path = byte-identical to pre-57.106).
+    harness_policy = await resolve_tenant_harness_policy(db, current_tenant)
+
     # Sprint 57.95 (Cat 11 → Cat 12 SSE relay): a router-owned buffer collects the
     # SubagentSpawned / SubagentCompleted events the dispatcher emits WHILE the loop
     # is awaiting a task_spawn tool (the loop generator is blocked then, so it cannot
@@ -265,6 +273,8 @@ async def chat(
             tenant_id=current_tenant,
             # Sprint 57.104 (C1): the per-tenant model policy resolved above.
             model_policy=model_policy,
+            # Sprint 57.106 (C3): the per-tenant harness policy resolved above.
+            harness_policy=harness_policy,
             user_id=current_user,
             system_prompt=system_prompt,
             # Sprint 57.71 (A-4 Tier 0): thread the already-resolved real

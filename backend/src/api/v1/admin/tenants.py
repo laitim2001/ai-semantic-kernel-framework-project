@@ -80,6 +80,7 @@ Related:
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
@@ -90,6 +91,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_harness._contracts.hitl import HITLPolicy, RiskLevel
+from agent_harness.verification.templates import list_templates
 from core.feature_flags import FeatureFlagNotFoundError, get_feature_flags_service
 from infrastructure.db.audit_helper import append_audit
 from infrastructure.db.models.agent_catalog import AgentCatalog
@@ -100,6 +102,7 @@ from infrastructure.db.models.sessions import Session
 from infrastructure.db.session import get_db_session
 from platform_layer.billing.model_policy import invalidate_tenant_model_policy
 from platform_layer.billing.pricing import maybe_get_pricing_loader
+from platform_layer.governance.harness_policy import invalidate_tenant_harness_policy
 from platform_layer.governance.hitl.policy_store import DBHITLPolicyStore
 from platform_layer.identity.auth import (
     require_admin_platform_role,
@@ -1603,6 +1606,182 @@ async def get_tenant_model_policy(
     raw = (tenant.meta_data or {}).get("model_policy")
     stored = raw if isinstance(raw, dict) else {}
     return _project_model_policy(stored)
+
+
+# === Sprint 57.106 (C3): per-tenant harness policy =============================
+# Governance knobs the chat handler previously hardcoded (escalate phrases / tools
+# + verification overrides) + the risky-action detector switch, stored sparse in
+# tenant.meta_data["harness_policy"] (mirrors model-policy above). Resolved per
+# request by resolve_tenant_harness_policy; this PUT invalidates that TTL cache.
+_MAX_EXTRA_PATTERNS = 20
+_MAX_PATTERN_LEN = 200
+_VERIFICATION_MODES = frozenset({"enabled", "disabled"})
+
+
+class HarnessPolicyUpsertRequest(BaseModel):
+    """Per-tenant harness policy (composite-replace semantics).
+
+    Every field optional; the payload is the COMPLETE desired override state — a
+    field omitted (or null) is CLEARED (reverts to the system default). An explicit
+    empty list is a real "off" override (e.g. escalate_tools=[] turns the escalate
+    list off), distinct from omitted=use-default.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    escalate_input_phrases: list[str] | None = None
+    escalate_between_turns_phrases: list[str] | None = None
+    escalate_output_phrases: list[str] | None = None
+    escalate_tools: list[str] | None = None
+    verification_mode: str | None = None
+    verification_judge_template: str | None = None
+    verification_escalate_on_max: bool | None = None
+    risky_action_enabled: bool | None = None
+    risky_action_extra_patterns: list[str] | None = None
+
+
+class HarnessPolicyResponse(BaseModel):
+    """A tenant's stored harness-policy overrides (sparse; absent field = default)."""
+
+    escalate_input_phrases: list[str] | None = None
+    escalate_between_turns_phrases: list[str] | None = None
+    escalate_output_phrases: list[str] | None = None
+    escalate_tools: list[str] | None = None
+    verification_mode: str | None = None
+    verification_judge_template: str | None = None
+    verification_escalate_on_max: bool | None = None
+    risky_action_enabled: bool | None = None
+    risky_action_extra_patterns: list[str] | None = None
+
+
+def _validate_harness_policy(payload: HarnessPolicyUpsertRequest) -> None:
+    """Reject (422) an unknown verification template name or a bad regex pattern.
+
+    Governance invariants: the per-tenant judge template must name a SHIPPED
+    template (raw-template upload is not allowed — prompt-injection + size risk);
+    each risky-action extra pattern must compile and stay within count/length caps
+    (regex-DoS guard).
+    """
+    if (
+        payload.verification_mode is not None
+        and payload.verification_mode not in _VERIFICATION_MODES
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"verification_mode must be one of {sorted(_VERIFICATION_MODES)}",
+        )
+    template = payload.verification_judge_template
+    if template and template not in list_templates():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Unknown verification template: {template!r} "
+                f"(must be one of {sorted(list_templates())})"
+            ),
+        )
+    patterns = payload.risky_action_extra_patterns or []
+    if len(patterns) > _MAX_EXTRA_PATTERNS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"risky_action_extra_patterns exceeds {_MAX_EXTRA_PATTERNS} patterns",
+        )
+    for pattern in patterns:
+        if len(pattern) > _MAX_PATTERN_LEN:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"pattern exceeds {_MAX_PATTERN_LEN} chars: {pattern[:40]!r}…",
+            )
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"invalid regex {pattern!r}: {exc}",
+            ) from exc
+
+
+def _project_harness_policy(stored: dict[str, Any]) -> HarnessPolicyResponse:
+    """Project a stored harness_policy dict into the response model (sparse)."""
+    return HarnessPolicyResponse(**stored)
+
+
+@router.put("/{tenant_id}/harness-policy", response_model=HarnessPolicyResponse)
+async def upsert_tenant_harness_policy(
+    tenant_id: UUID,
+    payload: HarnessPolicyUpsertRequest,
+    db: AsyncSession = Depends(get_db_session),
+    admin_user_id: UUID = Depends(require_admin_platform_role),
+) -> HarnessPolicyResponse:
+    """Upsert per-tenant harness policy into tenant.meta_data["harness_policy"].
+
+    Composite-replace: payload is the COMPLETE desired policy; omitted/null fields
+    are cleared (revert to system default). An explicit empty list is an "off"
+    override (kept), distinct from omitted (cleared).
+
+    - 401/403 via require_admin_platform_role
+    - 404 via _load_tenant_or_404 (cross-tenant → 404, never 403)
+    - 422 via extra="forbid" / unknown template / bad-or-oversize regex / bad mode
+    - 200 with the saved (sparse) policy; audit + cache-invalidate (mirror C1).
+    """
+    _validate_harness_policy(payload)
+    tenant = await _load_tenant_or_404(db, tenant_id)
+
+    # Sparse storage: keep only fields the admin set (None → cleared/default). Lists
+    # (incl. []) and bools are kept when not None; strings kept when truthy.
+    candidate: dict[str, Any] = {
+        "escalate_input_phrases": payload.escalate_input_phrases,
+        "escalate_between_turns_phrases": payload.escalate_between_turns_phrases,
+        "escalate_output_phrases": payload.escalate_output_phrases,
+        "escalate_tools": payload.escalate_tools,
+        "verification_mode": payload.verification_mode or None,
+        "verification_judge_template": payload.verification_judge_template or None,
+        "verification_escalate_on_max": payload.verification_escalate_on_max,
+        "risky_action_enabled": payload.risky_action_enabled,
+        "risky_action_extra_patterns": payload.risky_action_extra_patterns,
+    }
+    saved = {key: value for key, value in candidate.items() if value is not None}
+
+    new_meta = dict(tenant.meta_data or {})
+    if saved:
+        new_meta["harness_policy"] = saved
+    else:
+        new_meta.pop("harness_policy", None)  # all-None → clear the override entirely
+    tenant.meta_data = new_meta
+
+    await db.flush()
+
+    await append_audit(
+        db,
+        tenant_id=tenant_id,
+        operation="tenant_harness_policy_upsert",
+        resource_type="tenant",
+        resource_id=str(tenant_id),
+        operation_data={"tenant_id": str(tenant_id), "policy": saved},
+        user_id=admin_user_id,
+        operation_result="success",
+    )
+
+    await db.commit()
+    await db.refresh(tenant)
+
+    invalidate_tenant_harness_policy(tenant_id)
+
+    return _project_harness_policy(saved)
+
+
+@router.get("/{tenant_id}/harness-policy", response_model=HarnessPolicyResponse)
+async def get_tenant_harness_policy(
+    tenant_id: UUID,
+    db: AsyncSession = Depends(get_db_session),
+    admin_user_id: UUID = Depends(require_admin_platform_role),
+) -> HarnessPolicyResponse:
+    """Return a tenant's stored harness-policy overrides (sparse; absent = default).
+
+    Read-only (no audit — GET precedent). 404 via _load_tenant_or_404.
+    """
+    tenant = await _load_tenant_or_404(db, tenant_id)
+    raw = (tenant.meta_data or {}).get("harness_policy")
+    stored = raw if isinstance(raw, dict) else {}
+    return _project_harness_policy(stored)
 
 
 # =====================================================================
