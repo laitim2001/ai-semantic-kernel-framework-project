@@ -423,13 +423,15 @@
       "status": {
         "running": "running",
         "hitl": "HITL",
+        "handedOff": "handed off",
         "done": "done"
       },
       "meta": {
         "turns": "{{count}} turns"
       },
-      "demoBanner": "Demo data — backend list endpoint pending Sprint 57.22+ (AD-ChatV2-SessionList-Backend)",
-      "demoTag": "DEMO"
+      "titleFallback": "Untitled session",
+      "emptyState": "No sessions yet",
+      "chainBadge": "↳ {{role}}"
     },
     "header": {
       "toggleList": "Toggle session list",

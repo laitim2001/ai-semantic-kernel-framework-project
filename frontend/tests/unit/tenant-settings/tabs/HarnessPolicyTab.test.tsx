@@ -5,6 +5,7 @@
  * Scope: Phase 57 / Sprint 57.106 C3 (Harness Policy tab)
  *
  * Modification History (newest-first):
+ *   - 2026-06-12: Sprint 57.107 B3 — +handoffEnabled / handoffTargetAllowlist field cases; 9→11 fields
  *   - 2026-06-12: Initial creation (Sprint 57.106 C3)
  *
  * Related:
@@ -69,6 +70,8 @@ const SPARSE_POLICY: HarnessPolicy = {
   verificationEscalateOnMax: null,
   riskyActionEnabled: null,
   riskyActionExtraPatterns: null,
+  handoffEnabled: null,
+  handoffTargetAllowlist: null,
 };
 
 const FULL_POLICY: HarnessPolicy = {
@@ -81,6 +84,8 @@ const FULL_POLICY: HarnessPolicy = {
   verificationEscalateOnMax: true,
   riskyActionEnabled: false,
   riskyActionExtraPatterns: ["rm -rf"],
+  handoffEnabled: false,
+  handoffTargetAllowlist: ["compliance-auditor", "rca-bot"],
 };
 
 describe("HarnessPolicyTab (Sprint 57.106 C3)", () => {
@@ -111,12 +116,13 @@ describe("HarnessPolicyTab (Sprint 57.106 C3)", () => {
     expect(err).toHaveTextContent(/tenant not found/);
   });
 
-  it("view mode: sparse policy renders 'System default' for all 9 fields", () => {
+  it("view mode: sparse policy renders 'System default' for all 11 fields", () => {
     mockPolicy(SPARSE_POLICY);
     render(<HarnessPolicyTab tenantId="t1" />);
     const values = screen.getAllByText("System default");
-    // 4 escalate list fields + mode + template + 2 booleans + risky patterns = 9
-    expect(values.length).toBe(9);
+    // 4 escalate list + mode + template + 2 verif/risky booleans + risky patterns
+    // + handoff enabled + handoff allowlist = 11
+    expect(values.length).toBe(11);
     expect(screen.getByTestId("harness-policy-value-escalate-tools")).toHaveTextContent(
       "System default",
     );
@@ -125,6 +131,12 @@ describe("HarnessPolicyTab (Sprint 57.106 C3)", () => {
     );
     expect(
       screen.getByTestId("harness-policy-value-verification-escalate-on-max"),
+    ).toHaveTextContent("System default");
+    expect(screen.getByTestId("harness-policy-value-handoff-enabled")).toHaveTextContent(
+      "System default",
+    );
+    expect(
+      screen.getByTestId("harness-policy-value-handoff-target-allowlist"),
     ).toHaveTextContent("System default");
   });
 
@@ -152,6 +164,12 @@ describe("HarnessPolicyTab (Sprint 57.106 C3)", () => {
     expect(
       screen.getByTestId("harness-policy-value-risky-action-extra-patterns"),
     ).toHaveTextContent("rm -rf");
+    expect(screen.getByTestId("harness-policy-value-handoff-enabled")).toHaveTextContent(
+      "Off",
+    );
+    expect(
+      screen.getByTestId("harness-policy-value-handoff-target-allowlist"),
+    ).toHaveTextContent("compliance-auditor, rca-bot");
   });
 
   it("Edit button disabled while loading, enabled once loaded", () => {
@@ -198,6 +216,35 @@ describe("HarnessPolicyTab (Sprint 57.106 C3)", () => {
     expect(riskyEnabled.value).toBe("false");
   });
 
+  it("edit mode: handoff controls seeded from the current policy (FULL_POLICY)", () => {
+    mockPolicy(FULL_POLICY);
+    render(<HarnessPolicyTab tenantId="t1" />);
+    fireEvent.click(screen.getByTestId("harness-policy-edit-btn"));
+
+    const handoffEnabled = screen.getByTestId(
+      "harness-policy-input-handoff-enabled",
+    ) as HTMLSelectElement;
+    expect(handoffEnabled.value).toBe("false");
+
+    const allowlist = screen.getByTestId(
+      "harness-policy-input-handoff-target-allowlist",
+    ) as HTMLInputElement;
+    expect(allowlist.value).toBe("compliance-auditor, rca-bot");
+  });
+
+  it("surfaces a 422 'use handoff_enabled=false' empty-allowlist error inline", () => {
+    mockSave({
+      error: new Error("HTTP 422: handoff_target_allowlist cannot be empty — use handoff_enabled=false"),
+    });
+    mockPolicy(FULL_POLICY);
+    render(<HarnessPolicyTab tenantId="t1" />);
+    fireEvent.click(screen.getByTestId("harness-policy-edit-btn"));
+
+    const err = screen.getByTestId("harness-policy-save-error");
+    expect(err).toBeInTheDocument();
+    expect(err).toHaveTextContent(/use handoff_enabled=false/);
+  });
+
   it("edit mode seeds blank/System-default controls from a sparse policy", () => {
     mockPolicy(SPARSE_POLICY);
     render(<HarnessPolicyTab tenantId="t1" />);
@@ -238,6 +285,8 @@ describe("HarnessPolicyTab (Sprint 57.106 C3)", () => {
       verificationEscalateOnMax: null,
       riskyActionEnabled: null,
       riskyActionExtraPatterns: null,
+      handoffEnabled: null,
+      handoffTargetAllowlist: null,
     });
   });
 
@@ -269,6 +318,12 @@ describe("HarnessPolicyTab (Sprint 57.106 C3)", () => {
     fireEvent.change(screen.getByTestId("harness-policy-input-risky-action-enabled"), {
       target: { value: "true" },
     });
+    fireEvent.change(screen.getByTestId("harness-policy-input-handoff-enabled"), {
+      target: { value: "false" },
+    });
+    fireEvent.change(screen.getByTestId("harness-policy-input-handoff-target-allowlist"), {
+      target: { value: "rca-bot, change-reviewer" },
+    });
 
     fireEvent.click(screen.getByTestId("harness-policy-save-btn"));
 
@@ -282,6 +337,8 @@ describe("HarnessPolicyTab (Sprint 57.106 C3)", () => {
       verificationEscalateOnMax: false,
       riskyActionEnabled: true,
       riskyActionExtraPatterns: null,
+      handoffEnabled: false,
+      handoffTargetAllowlist: ["rca-bot", "change-reviewer"],
     });
   });
 

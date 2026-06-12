@@ -32,6 +32,7 @@ Created: 2026-04-29 (Sprint 49.2 Day 2.1)
 Last Modified: 2026-06-02
 
 Modification History:
+    - 2026-06-12: Sprint 57.107 B3 — add parent_session_id + is_sidechain (subagent transcripts)
     - 2026-06-02: Sprint 57.68 A-3b — add Session.handoff_parent_id FK + index (HANDOFF linkage)
     - 2026-04-29: Initial creation (Sprint 49.2 Day 2.1)
 
@@ -105,6 +106,20 @@ class Session(Base, TenantScopedMixin):
         nullable=True,
     )
 
+    # Sprint 57.107 B3 (CC parentUuid/isSidechain borrow): a FORK/TEAMMATE
+    # subagent child persists as a SIDECHAIN session row nested under its
+    # parent. DISTINCT from handoff_parent_id (handoff = control transfer
+    # between top-level sessions; sidechain = nested child transcript).
+    # Migration 0028. Top-level listings filter is_sidechain=false.
+    parent_session_id: Mapped[PyUUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    is_sidechain: Mapped[bool] = mapped_column(
+        nullable=False, default=False, server_default=text("FALSE")
+    )
+
     total_turns: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_cost_usd: Mapped[Decimal] = mapped_column(
@@ -132,6 +147,13 @@ class Session(Base, TenantScopedMixin):
         Index("idx_sessions_active", text("last_active_at DESC")),
         # Sprint 57.68 — handoff chain lookups (children of a parent session)
         Index("idx_sessions_handoff_parent", "handoff_parent_id"),
+        # Sprint 57.107 — sidechain children of a parent session (partial: only
+        # sidechain rows are indexed; top-level rows keep the index small)
+        Index(
+            "idx_sessions_sidechain_parent",
+            "parent_session_id",
+            postgresql_where=text("is_sidechain"),
+        ),
     )
 
 

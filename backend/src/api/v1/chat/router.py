@@ -38,6 +38,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-06-11
 
 Modification History (newest-first):
+    - 2026-06-12: Sprint 57.107 B3 — thread handoff_allowed_targets into the boot hook
     - 2026-06-11: Sprint 57.103 B2b — POST /{id}/subagents/{sid}/inject (into a live teammate)
     - 2026-06-11: Sprint 57.101 B1 — POST /{id}/inject + register/unregister the injection queue
     - 2026-06-10: Sprint 57.98 A1 US-5 — drop run_with_verification wrapper; gate is in-loop now
@@ -79,7 +80,7 @@ import asyncio
 import logging
 import os
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -94,12 +95,18 @@ from agent_harness._contracts import (
     Message,
     TraceContext,
 )
-from agent_harness._contracts.events import ToolCallExecuted
+from agent_harness._contracts.events import (
+    SubagentChildEvent,
+    SubagentCompleted,
+    SubagentSpawned,
+    ToolCallExecuted,
+)
 from agent_harness.observability._abc import Tracer
 from agent_harness.orchestrator_loop import AgentLoop
 from business_domain._service_factory import BusinessServiceFactory
 from core.config import get_settings
 from infrastructure.db.audit_helper import append_audit
+from infrastructure.db.models.sessions import MessageEvent
 from infrastructure.db.repositories import SessionRepository, ToolCallRepository
 from infrastructure.db.session import get_db_session
 from platform_layer.billing.billing_outbox import (
@@ -380,6 +387,10 @@ async def chat(
             billing_outbox=billing_outbox,
             db=db,
             subagent_event_buffer=subagent_event_buffer,
+            # Sprint 57.107 (B3): the tenant's handoff allowlist for the post-loop
+            # boot hook (None = no restriction). _stream_loop_events is module-
+            # level, so the resolved policy is threaded explicitly.
+            handoff_allowed_targets=harness_policy.handoff_target_allowlist,
         ),
         media_type="text/event-stream",
         headers={
@@ -390,6 +401,88 @@ async def chat(
             "X-Trace-Id": trace_ctx.trace_id,
         },
     )
+
+
+# === _persist_subagent_transcript: sidechain transcript observer (57.107) ===
+# Why: FORK/TEAMMATE child loops were ephemeral (uuid4-scoped, in-memory drain)
+# — no transcript survived the run (AD-Subagent-Transcript-Isolation). CC
+# persists subagent transcripts via parentUuid/isSidechain linkage; the V2
+# equivalent is a sidechain `sessions` row + per-turn `message_events` rows,
+# written HERE at the api layer (the loop + Cat 11 stay persistence-free).
+# Best-effort SAVEPOINT (mirror the sessions/audit observers): a DB flake must
+# never break the SSE stream. Rows commit with the request transaction.
+async def _persist_subagent_transcript(
+    events: "list[LoopEvent]",
+    *,
+    db: AsyncSession | None,
+    tenant_id: UUID,
+    user_id: UUID | None,
+    parent_session_id: UUID,
+    sidechain_seq: dict[UUID, int],
+) -> None:
+    """Persist subagent lifecycle + child-turn events as a sidechain transcript.
+
+    SubagentSpawned → sidechain `sessions` row (id=subagent_id,
+    parent_session_id=parent, is_sidechain=True). SubagentChildEvent →
+    `message_events` row (first real consumer of that table) with a
+    per-sidechain monotonic sequence_num. SubagentCompleted → mark the
+    sidechain completed + fold summary/tokens into meta_data.
+
+    Env-gated via SUBAGENT_TRANSCRIPT_OBSERVER (default on; tests/conftest.py
+    sets false for isolation parity with SESSIONS_CHAT_OBSERVER).
+    """
+    if db is None or not events:
+        return
+    if os.environ.get("SUBAGENT_TRANSCRIPT_OBSERVER", "true").lower() != "true":
+        return
+    try:
+        repo = SessionRepository(db)
+        async with db.begin_nested():
+            for ev in events:
+                if isinstance(ev, SubagentSpawned) and ev.subagent_id is not None:
+                    await repo.create_session(
+                        session_id=ev.subagent_id,
+                        user_id=user_id or tenant_id,
+                        tenant_id=tenant_id,
+                        title=f"Subagent · {ev.mode or 'fork'}",
+                        parent_session_id=parent_session_id,
+                        is_sidechain=True,
+                        meta_data={"mode": ev.mode},
+                    )
+                elif isinstance(ev, SubagentChildEvent) and ev.subagent_id is not None:
+                    try:
+                        payload = serialize_loop_event(ev)
+                    except NotImplementedError:
+                        continue
+                    if payload is None:
+                        continue
+                    seq = sidechain_seq.get(ev.subagent_id, 0) + 1
+                    sidechain_seq[ev.subagent_id] = seq
+                    db.add(
+                        MessageEvent(
+                            session_id=ev.subagent_id,
+                            tenant_id=tenant_id,
+                            event_type=payload["type"],
+                            event_data=payload["data"],
+                            sequence_num=seq,
+                            timestamp_ms=int(time.time() * 1000),
+                        )
+                    )
+                elif isinstance(ev, SubagentCompleted) and ev.subagent_id is not None:
+                    row = await repo.get_session(session_id=ev.subagent_id, tenant_id=tenant_id)
+                    if row is not None:
+                        row.status = "completed"
+                        row.meta_data = {
+                            **(row.meta_data or {}),
+                            "summary": ev.summary,
+                            "tokens_used": ev.tokens_used,
+                        }
+    except Exception:  # noqa: BLE001 — best-effort observer (mirror sessions/audit)
+        logger.exception(
+            "chat session %s/%s: subagent transcript persist failed (best-effort)",
+            tenant_id,
+            parent_session_id,
+        )
 
 
 def _drain_subagent_frames(buffer: "list[LoopEvent] | None") -> list[bytes]:
@@ -432,6 +525,7 @@ async def _stream_loop_events(
     billing_outbox: BillingOutboxService | None = None,
     db: AsyncSession | None = None,
     subagent_event_buffer: "list[LoopEvent] | None" = None,
+    handoff_allowed_targets: "Sequence[str] | None" = None,
 ) -> AsyncIterator[bytes]:
     """Drive the loop generator + emit SSE bytes; finalize tenant-scoped registry.
 
@@ -455,6 +549,9 @@ async def _stream_loop_events(
     # Sprint 57.84 (C-15): per-request monotonic seq disambiguates repeated
     # same-tool billing events in the idempotency key (a replay reuses the seq).
     tool_seq = 0
+    # Sprint 57.107 (US-4): per-sidechain monotonic sequence_num for the
+    # message_events transcript rows (one counter per subagent_id).
+    sidechain_seq: dict[UUID, int] = {}
     try:
         async for event in loop.run(  # type: ignore[attr-defined]
             session_id=session_id,
@@ -464,6 +561,17 @@ async def _stream_loop_events(
             # Sprint 57.95 (Cat 11 → Cat 12 SSE relay): flush any subagent events
             # emitted during the prior await (e.g. a task_spawn tool call) BEFORE the
             # loop event that follows them, so the Inspector Tree shows the node.
+            # Sprint 57.107 (US-4): persist the same buffered events as a sidechain
+            # transcript BEFORE the drain pops them (best-effort observer).
+            if subagent_event_buffer:
+                await _persist_subagent_transcript(
+                    list(subagent_event_buffer),
+                    db=db,
+                    tenant_id=tenant_id,
+                    user_id=trace_context.user_id,
+                    parent_session_id=session_id,
+                    sidechain_seq=sidechain_seq,
+                )
             for _frame in _drain_subagent_frames(subagent_event_buffer):
                 yield _frame
             try:
@@ -671,6 +779,10 @@ async def _stream_loop_events(
                             # in-memory conversation snapshot into the booted
                             # child's meta_data["carried_context"].
                             parent_context=event.handoff_context,
+                            # Sprint 57.107 (B3): tenant allowlist — an off-list
+                            # target raises HandoffError → the fail-soft path
+                            # below (no child, logged).
+                            allowed_targets=handoff_allowed_targets,
                         )
                         handoff_payload = serialize_loop_event(
                             AgentHandoff(
@@ -760,6 +872,16 @@ async def _stream_loop_events(
         # Sprint 57.95: drain any subagent events appended during the final await
         # (defensive — the per-iteration drain already flushes the common case, since
         # task_spawn precedes the LoopCompleted that breaks the loop).
+        # Sprint 57.107 (US-4): persist the defensive-flush events too.
+        if subagent_event_buffer:
+            await _persist_subagent_transcript(
+                list(subagent_event_buffer),
+                db=db,
+                tenant_id=tenant_id,
+                user_id=trace_context.user_id,
+                parent_session_id=session_id,
+                sidechain_seq=sidechain_seq,
+            )
         for _frame in _drain_subagent_frames(subagent_event_buffer):
             yield _frame
     except asyncio.CancelledError:

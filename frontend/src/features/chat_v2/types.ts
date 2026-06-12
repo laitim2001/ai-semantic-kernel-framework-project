@@ -14,8 +14,8 @@
  *      tool / verification / subagent_fork) per mockup L199-267. 4 of 5 mockup
  *      types ship Sprint 57.21; memory block DEFERRED to Phase-2+
  *      (AD-ChatV2-Memory-Block-Phase2 — requires NEW Cat 3 SSE event).
- *   4. Session — fixture-driven session list entry per mockup L5-12.
- *      Backend wire deferred (AD-ChatV2-SessionList-Backend Sprint 57.22+).
+ *   4. Session — session list entry. Sprint 57.107 B3: now real-backend shaped
+ *      (GET /sessions); was fixture-driven (mockup L5-12).
  *
  *   ToolCallEntry preserved as chatStore.mergeEvent internal pairing helper.
  *   ApprovalEntry preserved (HITL workflow Phase-1 keeps existing 2-action wire).
@@ -25,6 +25,7 @@
  * Last Modified: 2026-06-10
  *
  * Modification History:
+ *   - 2026-06-12: Sprint 57.107 B3 — Session now real-backend shaped (+handoffParentId +agentRole, title/agent nullable, drop domain) + SessionStatusUI +handed_off
  *   - 2026-06-11: Sprint 57.101 B1 — UserTurn +injected? (mid-run message_injected render tag)
  *   - 2026-06-10: Sprint 57.100 — HITLTurn +kind (pause kind from the approval_requested wire)
  *   - 2026-06-02: Sprint 57.67 — event types now re-exported from generated/loopEvents.generated (A-5b codegen)
@@ -174,17 +175,29 @@ export type Turn = UserTurn | AgentTurn | HITLTurn;
 // === Sprint 57.21: Session fixture type ===================================
 // Per mockup L5-12. Backend wire deferred (AD-ChatV2-SessionList-Backend).
 
-export type SessionDomain = "incident" | "audit" | "patrol" | "rca";
-export type SessionStatusUI = "running" | "hitl" | "done";
+// Sprint 57.107 B3: backend session status maps to one of these. `handed_off`
+// is the Cat 11 HANDOFF child marker (backend `handed_off`); `hitl` has no
+// backend source yet but is preserved for forward use.
+export type SessionStatusUI = "running" | "hitl" | "handed_off" | "done";
 
 export type Session = {
   id: string;
-  title: string;
-  agent: string;
+  // Sprint 57.107 B3: real backend `title` may be null (untitled session) — the
+  // SessionList renders a fallback label.
+  title: string | null;
+  // Sprint 57.107 B3: backend `agent_role` (null when unassigned). Previously a
+  // fixture-only display string.
+  agent: string | null;
   turns: number;
   status: SessionStatusUI;
+  // Sprint 57.107 B3: human-readable relative/absolute time derived from the
+  // backend `started_at_ms`.
   time: string;
-  domain: SessionDomain;
+  // Sprint 57.107 B3: the handoff-chain parent session id (null for a root
+  // session); non-null renders a chain badge in the SessionList row.
+  handoffParentId: string | null;
+  // Sprint 57.107 B3: the agent role label for the chain badge (null fallback).
+  agentRole: string | null;
 };
 
 // === UI aggregate types (preserved from Sprint 50.2 + 53.5) ===============

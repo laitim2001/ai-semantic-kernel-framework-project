@@ -71,6 +71,12 @@ os.environ.setdefault("AUDIT_LOG_CHAT_OBSERVER", "false")
 os.environ.setdefault("SESSIONS_CHAT_OBSERVER", "false")
 os.environ.setdefault("TOOL_CALLS_CHAT_OBSERVER", "false")
 
+# Sprint 57.107 US-4: same pattern for the sidechain transcript observer
+# (subagent SubagentSpawned/Child/Completed → sessions + message_events rows;
+# same loop-isolation concern). The dedicated observer suite re-enables it
+# via monkeypatch.setenv.
+os.environ.setdefault("SUBAGENT_TRANSCRIPT_OBSERVER", "false")
+
 from sqlalchemy import text  # noqa: E402
 
 from infrastructure.db.engine import dispose_engine  # noqa: E402

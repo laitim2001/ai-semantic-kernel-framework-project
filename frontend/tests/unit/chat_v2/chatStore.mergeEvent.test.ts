@@ -662,7 +662,9 @@ const sessionFixture = (id: string): Session => ({
   turns: 3,
   status: "done",
   time: "10:00",
-  domain: "incident",
+  // Sprint 57.107 B3: Session shape change (dropped domain; +handoffParentId/agentRole).
+  handoffParentId: null,
+  agentRole: "incident_responder",
 });
 
 describe("chatStore HANDOFF pivot + banner (Sprint 57.69)", () => {

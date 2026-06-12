@@ -21,6 +21,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-06-12: Sprint 57.107 B3 — HarnessPolicy +handoffEnabled +handoffTargetAllowlist (Cat 11 handoff governance)
  *   - 2026-06-12: Sprint 57.106 C3 — +HarnessPolicy read/write schemas (harness-policy tab)
  *   - 2026-06-11: Sprint 57.104 C1 — +ModelPolicy read/write schemas (model-policy tab)
  *   - 2026-05-29: Sprint 57.62 US-3 — +RateLimitAlert{Item,Response} alerts read schemas
@@ -344,6 +345,12 @@ export interface HarnessPolicy {
   verificationEscalateOnMax: boolean | null;
   riskyActionEnabled: boolean | null;
   riskyActionExtraPatterns: string[] | null;
+  // Sprint 57.107 B3: Cat 11 handoff governance.
+  // handoffEnabled tri-state (null = system default ON); handoffTargetAllowlist
+  // null = no restriction (any target). The backend rejects an empty list with a
+  // 422 ("use handoff_enabled=false").
+  handoffEnabled: boolean | null;
+  handoffTargetAllowlist: string[] | null;
 }
 
 /** Snake_case API read shape (GET response) — sparse (null = system default). */
@@ -357,6 +364,9 @@ export interface HarnessPolicyApiResponse {
   verification_escalate_on_max: boolean | null;
   risky_action_enabled: boolean | null;
   risky_action_extra_patterns: string[] | null;
+  // Sprint 57.107 B3
+  handoff_enabled: boolean | null;
+  handoff_target_allowlist: string[] | null;
 }
 
 /** Snake_case API write shape (PUT body) — composite-replace (null = cleared). */
@@ -370,4 +380,7 @@ export interface HarnessPolicyApiUpsertRequest {
   verification_escalate_on_max?: boolean | null;
   risky_action_enabled?: boolean | null;
   risky_action_extra_patterns?: string[] | null;
+  // Sprint 57.107 B3
+  handoff_enabled?: boolean | null;
+  handoff_target_allowlist?: string[] | null;
 }

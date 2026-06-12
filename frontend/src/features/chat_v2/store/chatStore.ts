@@ -35,6 +35,7 @@
  * Last Modified: 2026-06-10
  *
  * Modification History:
+ *   - 2026-06-12: Sprint 57.107 B3 — +loadSessions (real GET /sessions → Session[]; replaces fixture)
  *   - 2026-06-11: Sprint 57.103 B2b — SubagentEntry +mode +tokensUsed; child text += inner.text
  *   - 2026-06-11: Sprint 57.101 B1 — message_injected → UserTurn(injected) (mid-run injection render)
  *   - 2026-06-10: Sprint 57.100 — HITLTurn carries kind from wire (verification reject UI branch)
@@ -59,6 +60,7 @@ import { create } from "zustand";
 
 import type { ChildTurnEvent, SubagentNode } from "../../subagent/types";
 import type { VerificationEvent } from "../../verification/types";
+import { listSessions, type SessionListApiItem } from "../services/chatService";
 import type {
   AgentTurn,
   ApprovalEntry,
@@ -69,6 +71,7 @@ import type {
   LoopEvent,
   RiskSeverity,
   Session,
+  SessionStatusUI,
   SubagentEntry,
   SubagentForkBlock,
   Turn,
@@ -149,6 +152,7 @@ type ChatStoreState = {
   setStatus: (s: ChatStatus) => void;
   setError: (msg: string | null) => void;
   setSessions: (sessions: Session[]) => void;
+  loadSessions: () => Promise<void>;
   setActiveSessionId: (id: string | null) => void;
   pivotSession: (newSessionId: string, banner: HandoffBanner) => void;
   dismissHandoffBanner: () => void;
@@ -201,6 +205,43 @@ let _turnCounter = 0;
 const nextTurnId = (): string => `t_${++_turnCounter}`;
 
 const nowIso = (): string => new Date().toISOString();
+
+/**
+ * Sprint 57.107 B3: map the backend session status (active | handed_off |
+ * completed) to the SessionStatusUI token. Unknown values default to "done"
+ * (a terminal-looking state is the safe fallback for the sidebar indicator).
+ */
+const mapSessionStatus = (status: string): SessionStatusUI => {
+  switch (status) {
+    case "active":
+      return "running";
+    case "handed_off":
+      return "handed_off";
+    case "completed":
+      return "done";
+    default:
+      return "done";
+  }
+};
+
+/**
+ * Sprint 57.107 B3: format a backend `started_at_ms` epoch into a short display
+ * string. No relative-time helper exists in the codebase, so use the locale
+ * date/time string (honest absolute stamp — not a fabricated "5m ago").
+ */
+const formatStartedAt = (ms: number): string => new Date(ms).toLocaleString();
+
+/** Sprint 57.107 B3: map one snake_case API item to the camelCase Session UI shape. */
+const sessionFromApi = (item: SessionListApiItem): Session => ({
+  id: item.id,
+  title: item.title,
+  agent: item.agent_role,
+  turns: item.total_turns,
+  status: mapSessionStatus(item.status),
+  time: formatStartedAt(item.started_at_ms),
+  handoffParentId: item.handoff_parent_id,
+  agentRole: item.agent_role,
+});
 
 /**
  * Map backend risk_level string (e.g. "HIGH" / "high" / "Critical") to the
@@ -281,6 +322,21 @@ export const useChatStore = create<ChatStoreState>((set) => ({
   setStatus: (s) => set({ status: s }),
   setError: (msg) => set({ errorMessage: msg }),
   setSessions: (sessions) => set({ sessions }),
+
+  // Sprint 57.107 B3: fetch the caller's real sessions from GET /sessions and
+  // map them into the camelCase Session[] shape. On error, leave the existing
+  // list untouched (the SessionList renders an empty state when none loaded) —
+  // a transient fetch failure should not blank an already-populated sidebar.
+  loadSessions: async () => {
+    try {
+      const items = await listSessions();
+      set({ sessions: items.map(sessionFromApi) });
+    } catch {
+      // Swallow — keep whatever is already in `sessions`. The empty-state line
+      // covers the never-loaded case; this avoids flicker on a transient 5xx.
+    }
+  },
+
   setActiveSessionId: (id) => set({ activeSessionId: id }),
 
   // Sprint 57.69: HANDOFF pivot — reset the conversation onto the child session.

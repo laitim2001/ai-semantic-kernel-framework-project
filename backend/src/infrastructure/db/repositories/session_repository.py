@@ -21,6 +21,7 @@ Created: 2026-05-10 (Sprint 57.7 Day 3 Tier 2)
 Last Modified: 2026-06-02
 
 Modification History (newest-first):
+    - 2026-06-12: Sprint 57.107 B3 — sidechain params + list_sessions (top-level, newest-first)
     - 2026-06-02: Sprint 57.68 A-3b — handoff params + get_session + mark_handed_off
     - 2026-05-10: Initial creation (Sprint 57.7 US-R1 — AD-Reality-3a closure)
 
@@ -59,6 +60,8 @@ class SessionRepository:
         title: str | None = None,
         handoff_parent_id: UUID | None = None,
         meta_data: dict[str, Any] | None = None,
+        parent_session_id: UUID | None = None,
+        is_sidechain: bool = False,
     ) -> Session:
         """INSERT a new session row.
 
@@ -76,6 +79,11 @@ class SessionRepository:
             meta_data: Sprint 57.68 — optional JSONB metadata (e.g.
                 {"agent_role": target_agent} for handoff-booted sessions);
                 None falls back to the column server_default '{}'.
+            parent_session_id: Sprint 57.107 — the parent session when this row
+                is a subagent SIDECHAIN transcript (CC parentUuid borrow);
+                None for top-level sessions.
+            is_sidechain: Sprint 57.107 — True for subagent child transcript
+                rows (excluded from top-level listings).
 
         Returns:
             Session: ORM instance with id + tenant_id + user_id committed.
@@ -92,6 +100,8 @@ class SessionRepository:
             title=title,
             status="active",
             handoff_parent_id=handoff_parent_id,
+            parent_session_id=parent_session_id,
+            is_sidechain=is_sidechain,
         )
         # Only set meta_data when provided so the column server_default '{}'
         # applies for normal sessions (avoid overriding with an empty dict).
@@ -119,6 +129,22 @@ class SessionRepository:
         stmt = select(Session).where((Session.id == session_id) & (Session.tenant_id == tenant_id))
         result = await self._db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def list_sessions(self, *, tenant_id: UUID, limit: int = 50) -> list[Session]:
+        """List top-level sessions for a tenant, newest-first (Sprint 57.107).
+
+        Excludes sidechain rows (subagent child transcripts) so the chat
+        session list stays a top-level view; sidechains are reachable via
+        their parent (`parent_session_id`). Tenant-scoped (multi-tenant 鐵律).
+        """
+        stmt = (
+            select(Session)
+            .where((Session.tenant_id == tenant_id) & (Session.is_sidechain.is_(False)))
+            .order_by(Session.started_at.desc())
+            .limit(limit)
+        )
+        result = await self._db.execute(stmt)
+        return list(result.scalars().all())
 
     async def mark_handed_off(self, *, session_id: UUID, tenant_id: UUID) -> int:
         """Mark a session status='handed_off' (Sprint 57.68 HANDOFF).
