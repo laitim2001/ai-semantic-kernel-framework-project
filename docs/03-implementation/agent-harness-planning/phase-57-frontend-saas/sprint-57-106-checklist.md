@@ -22,23 +22,23 @@
 
 ---
 
-## Day 1 — Backend core: resolver + detector (US-1 / US-3)
+## Day 1 — Backend core: resolver + detector (US-1 / US-3) ✅
 
 ### 1.1 HarnessPolicy value object + resolver (US-1)
-- [ ] **`platform_layer/governance/harness_policy.py`**: frozen `HarnessPolicy` (9 sparse fields per plan §3.0) + `_HarnessPolicyCache` (TTL 60s, injectable clock) + `resolve_tenant_harness_policy(db, tenant_id)` (fail-open → empty) + `invalidate_tenant_harness_policy`
-  - Mirror `model_policy.py` byte-pattern; file header + MHist per convention
-  - DoD: mypy green; unit tests (1.3) green
-- [ ] **Risk Class C guard**: autouse reset fixture for the cache singleton (conftest of affected suites)
+- [x] **`platform_layer/governance/harness_policy.py`**: frozen `HarnessPolicy` (9 sparse fields; tuple `()` = explicit-off vs `None` = not-set tri-state) + `_HarnessPolicyCache` (TTL 60s, injectable clock) + `resolve_tenant_harness_policy` (fail-open) + `invalidate_tenant_harness_policy` + `reset_harness_policy_cache`
+  - Mirror `model_policy.py` byte-pattern ✓; value object lives in-file (not adapters — non-provider concern)
+  - DoD: mypy 0/359 ✓; unit tests green ✓
+- [x] **Risk Class C guard**: autouse `_reset_cache` fixture in the unit suite (integration conftest extension lands with Day 2 suite)
 
 ### 1.2 RiskyActionDetector (US-3)
-- [ ] **`agent_harness/guardrails/tool/risky_action_detector.py`**: `guardrail_type=TOOL`; python_sandbox `code`-arg builtin deny-list scan + any-tool `extra_patterns` scan → `GuardrailResult(ESCALATE, reason="risky_action: …")`; `enabled=False` → not registered
-  - Builtin list finalized WITH tests (each pattern: hit + near-miss clean case); patterns pre-compiled at ctor
-  - DoD: existing `GuardrailTriggered` path only (no event change); category boundaries clean (Cat 9, no platform_layer import)
+- [x] **`agent_harness/guardrails/tool/risky_action_detector.py`**: `guardrail_type=TOOL`; 9-pattern builtin deny-list (`os.system`/`os.remove|unlink|rmdir|removedirs`/`subprocess`/`shutil.rmtree`/`eval(`/`exec(`/`__import__`/`socket`/`ctypes`) over sandbox `code` + any-tool `extra_patterns` over serialized args → ESCALATE (risk HIGH); invalid tenant pattern skipped defensively; exported via `tool/__init__.py`
+  - DoD: existing `GuardrailTriggered` path only ✓; `check_cross_category_import` green (no platform_layer import) ✓
+- [x] (handler-level `enabled=False` → not-registered lands with Day 2 wiring)
 
 ### 1.3 Unit tests
-- [ ] **`test_harness_policy.py`**: TTL expiry / invalidate / fail-open / sparse-field parse / unknown-key tolerance
-- [ ] **`test_risky_action_detector.py`**: per-pattern hit / clean pass / extra-pattern hit / disabled passthrough
-  - DoD: `pytest tests/unit/platform_layer/governance tests/unit/agent_harness/guardrails -q` green
+- [x] **`test_harness_policy.py`** (22): TTL hit/expiry/invalidate · resolver fail-open/cache/invalidate-reread · from_dict all types / wrong-types-not-set / `[]`-off-override / round-trip
+- [x] **`test_risky_action_detector.py`** (16): each builtin pattern hit (9) + near-miss cleans (`evaluate(`/`execute_query(`/`list.remove`) + extra-pattern any-tool hit/clean + invalid-pattern skip + non-tool-content/missing-code defensive
+  - DoD: 38/38 green ✓; flake8 clean ✓; run_all 10/10 ✓
 
 ---
 

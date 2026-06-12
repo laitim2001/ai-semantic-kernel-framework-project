@@ -31,3 +31,12 @@ handler.py `:163/:173/:184/:196` 4 frozensets + `:460-467` PermissionRule-from-f
 **GO** — scope shift ≈ 0 (D1/D5 naming + micro-edits; D2-D4 confirm the design; D3 strengthens the detector's rationale).
 
 ---
+
+## Day 1 — 2026-06-12 — Backend core: resolver + detector (US-1/US-3) ✅
+
+- **`harness_policy.py`** (NEW, platform_layer/governance): `HarnessPolicy` frozen value object — 9 sparse fields with a deliberate tri-state (`None` = not-set/use-default vs `()` = explicit off-override, e.g. `escalate_tools: []` turns the default escalate list OFF); `_HarnessPolicyCache` (TTL 60s, injectable clock) + `resolve_tenant_harness_policy` (fail-open) + invalidate + reset — byte-pattern mirror of `model_policy.py`. Value object lives in-file (NOT adapters/_base — it's a governance concern, not provider-related; ModelPolicy's adapters home was provider-specific).
+- **`risky_action_detector.py`** (NEW, Cat 9 TOOL chain): 9 builtin word-bounded deny patterns over the sandbox `code` arg + tenant `extra_patterns` over ANY tool's serialized args → ESCALATE (never BLOCK; risk HIGH); invalid hand-written tenant pattern skipped defensively (the PUT validates, but meta_data can be hand-edited); exported via `tool/__init__.py`.
+- **Unit tests**: 38/38 (policy 22 + detector 16) — incl. near-miss cleans proving the `\b` + `(` anchoring (`evaluate(` / `execute_query(` / `list.remove` do NOT fire).
+- Gates: mypy `src` **0/359** (+2 files) · flake8/black/isort clean (3 E501 Purpose-line trims — the MHist char-budget lesson applies to Purpose lines too) · `run_all` 10/10 (`check_cross_category_import` green — detector imports no platform_layer; `check_event_schema_sync` unchanged).
+
+---
