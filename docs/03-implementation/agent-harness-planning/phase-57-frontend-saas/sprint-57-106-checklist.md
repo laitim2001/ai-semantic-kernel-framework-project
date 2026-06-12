@@ -2,7 +2,7 @@
 
 [Plan](./sprint-57-106-plan.md)
 
-**Status**: 🚧 Day 0 ✅ GO — Day 1 next
+**Status**: ✅ CLOSED 2026-06-12 — drive-through PASS; merge-pending (push awaiting authorization)
 **Branch**: `feature/sprint-57-106-harness-policy`
 
 ---
@@ -87,10 +87,10 @@
 
 ## Day 4 — Closeout
 
-### 4.1 Closeout
-- [ ] progress.md Day 0-3 complete (drift catalog + drive-through table)
-- [ ] retrospective.md Q1-Q7 (Q2: `config-tiering-model-policy-spike` 0.60 2nd-validation ratio → window)
-- [ ] CLAUDE.md Current Sprint + Last Updated (lean) · MEMORY.md pointer + `project_phase57_106_harness_policy.md` subfile (auto-memory dir)
-- [ ] next-phase-candidates.md: C3 ✅ + 🆕 `AD-HITL-Policy-ReadSide-Potemkin-Phase58` + next slice **B3** per interleave
-- [ ] sprint-workflow.md calibration row update (`config-tiering-model-policy-spike` 2 pt)
-- [ ] all checklist items `[x]` or annotated 🚧 (never delete unchecked)
+### 4.1 Closeout ✅
+- [x] progress.md Day 0-3 complete (D1-D11 drift catalog + drive-through observed-vs-intended table)
+- [x] retrospective.md Q1-Q7 (Q2: `config-tiering-model-policy-spike` 0.60 2nd validation ratio ≈1.02 IN band → KEEP, 2-consec; Q7 design-note 28 8-point gate ≥95%)
+- [x] CLAUDE.md Current Sprint + Last Updated (lean) · MEMORY.md pointer + `project_phase57_106_harness_policy.md` subfile (auto-memory dir)
+- [x] next-phase-candidates.md: C3 ✅ + 🆕 `AD-HITL-Policy-ReadSide-Potemkin-Phase58` + `AD-ChatV2-HITL-Card-Tool-Name` + next slice **B3** per interleave
+- [x] sprint-workflow.md calibration row (`config-tiering-model-policy-spike` 0.60 → ~0.98 2 pt validated)
+- [x] all checklist items `[x]` (0 deleted)
