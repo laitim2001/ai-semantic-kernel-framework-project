@@ -24,6 +24,17 @@ It condenses the user's "5-point deepening discussion" into 3 workflows and a re
 
 ---
 
+## 🆕 Sprint 57.109 Carryover — C2 compaction cheap tier SHIPPED (drive-through PASS; C-family 3/3 done)
+
+Sprint 57.109 closed proposal §3.4 C2 (CHANGE-076; design note 24 §4 compaction invariant RESOLVED): `make_chat_compactor(profile.cheap)` + `_compaction` cost-ledger attribution (the 57.82 `_verification` sibling — usage rides `ContextCompacted` server-side fields per D-DAY1-1, billing every termination path) + `CHAT_COMPACTION_TOKEN_BUDGET` / `CHAT_COMPACTION_KEEP_RECENT_TURNS` env knobs. Drive-through proved a real summarize (9824→2679, 8 msgs) on `gpt-5.4-mini` with priced `_compaction` cost_ledger rows. Per the interleave (RBAC → C3 → B3 → UX → **C2 ✅** → B4), **next slice: B4** (child governance — the last B slice before optional A3).
+
+- **`AD-Semantic-Compaction-User-Turn-Anchor`** (🆕 from the 57.109 drive-through — load-bearing): semantic compaction was a **latent main-flow NO-OP since 52.1** — chat continuity lives in Cat 3 memory (ONE user message per loop run; transient resets per POST), so the user-turn-anchored cutoff (`len(user_indices) > keep_recent_turns`) never engaged; every gate stayed green. The keep knob makes it deployable (keep=1 + B1 injection proved the machinery); a message-count / token-mass anchor would make it ORGANICALLY reachable — own Cat 4 slice.
+- **`AD-Resume-Billing-Observers`** (🆕 🟢 pre-existing): the resume path (`router.py` resume stream) has NO billing/quota observers — loop + verification + compaction tokens all unbilled on resumed continuations.
+- **Test-basename Prong-1 watch** (1st pt — D-DAY1-2): pytest unique-basename rule; Glob the basename across the test tree before creating any new test file (57.109: `tests/unit/api/v1/chat/test_category_factories.py` collided with the existing `tests/unit/api/` one — standalone green, full-run collection ERROR). Promote to a Prong-1 row on 2nd occurrence.
+- Calibration: `multi-model-profile-spike` 0.55 **2nd data point** ratio ≈1.1-1.2 IN band upper edge (57.97 ~0.93; mean ~1.0 KEEP); agent-delegated: no.
+
+---
+
 ## 🆕 Sprint 57.108 Carryover — UX slice: chat-v2 HITL card real tool/reason + Inspector turn metadata SHIPPED (drive-through ALL legs PASS)
 
 Sprint 57.108 closed the chat-v2 UX bundle (CHANGE-075; **closes `AD-ChatV2-HITL-Card-Tool-Name` + `AD-ChatV2-Inspector-Turn-Metadata-Wire`** / ISSUE-5). Additive wire fields only (`approval_requested` +tool_name/reason from all 5 escalate sites; `llm_response` +token actuals; count 24 unchanged) + chatStore 4 captures (ZERO component edits — store-driven). Per the interleave decision (RBAC → C3 → B3 → **UX ✅** → C2 → B4), **next slice: C2** (compaction cheap tier — the remaining C slice).

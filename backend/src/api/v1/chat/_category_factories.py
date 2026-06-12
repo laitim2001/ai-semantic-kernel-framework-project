@@ -29,6 +29,7 @@ Created: 2026-05-31 (Sprint 57.63 Day 1)
 Last Modified: 2026-06-11
 
 Modification History (newest-first):
+    - 2026-06-12: Sprint 57.109 C2 — compaction budget env knob + thread to sub-compactors
     - 2026-06-11: Sprint 57.103 (B2b) — inbox_factory → inbox_scope (register child queue)
     - 2026-06-11: Sprint 57.102 (B2a) — thread teammate factory + inbox_factory + mailbox
     - 2026-06-09: Sprint 57.95 — make_chat_subagent_dispatcher threads event_emitter (SSE relay)
@@ -47,6 +48,7 @@ Related:
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -92,10 +94,43 @@ if TYPE_CHECKING:
     from agent_harness.subagent import MailboxStore
     from agent_harness.subagent.dispatcher import SubagentEventEmitter
 
-# Cat 4 budget — mirrors AgentLoopImpl default (loop.py:193) so compaction
-# triggers at the same threshold the loop reasons about.
-_CHAT_TOKEN_BUDGET = 100_000
+# Cat 4 budget — defaults mirror AgentLoopImpl default (loop.py:193) so compaction
+# triggers at the same threshold the loop reasons about. Sprint 57.109 (C2): the
+# env knob lets ops tune the COMPACTION budget independently of the loop budget
+# (intentional divergence — e.g. compact earlier on memory-constrained deployments;
+# also the drive-through trigger lever). Invalid / unset env → default.
+_DEFAULT_CHAT_TOKEN_BUDGET = 100_000
 _CHAT_TOKEN_THRESHOLD_RATIO = 0.75
+
+
+_DEFAULT_KEEP_RECENT_TURNS = 5
+
+
+def _compaction_token_budget() -> int:
+    """Resolve the compaction token budget (CHAT_COMPACTION_TOKEN_BUDGET env knob)."""
+    raw = os.environ.get("CHAT_COMPACTION_TOKEN_BUDGET", "")
+    try:
+        budget = int(raw) if raw else _DEFAULT_CHAT_TOKEN_BUDGET
+    except ValueError:
+        return _DEFAULT_CHAT_TOKEN_BUDGET
+    return budget if budget > 0 else _DEFAULT_CHAT_TOKEN_BUDGET
+
+
+def _compaction_keep_recent_turns() -> int:
+    """Resolve keep_recent_turns (CHAT_COMPACTION_KEEP_RECENT_TURNS env knob).
+
+    57.109 D-DAY3-2: the chat main flow runs ONE user message per loop run
+    (continuity lives in Cat 3 memory, not restored history), so the semantic
+    cutoff `len(user_indices) > keep_recent_turns` is unreachable at the
+    default 5 unless mid-run injection (B1) adds user turns. The knob lets a
+    deployment compact more aggressively. Min 1 (a value of 0 would make the
+    cutoff index `user_indices[-0]` == `[0]` — a silent full-keep bug)."""
+    raw = os.environ.get("CHAT_COMPACTION_KEEP_RECENT_TURNS", "")
+    try:
+        keep = int(raw) if raw else _DEFAULT_KEEP_RECENT_TURNS
+    except ValueError:
+        return _DEFAULT_KEEP_RECENT_TURNS
+    return keep if keep >= 1 else _DEFAULT_KEEP_RECENT_TURNS
 
 
 def make_chat_compactor(chat_client: ChatClient) -> Compactor:
@@ -105,11 +140,29 @@ def make_chat_compactor(chat_client: ChatClient) -> Compactor:
     the threshold param is `token_threshold_ratio` (NOT `threshold`);
     SemanticCompactor needs keyword `chat_client`; StructuralCompactor() has no
     required deps.
+
+    Sprint 57.109 (C2): `chat_client` is the CHEAP tier (handler passes
+    profile.cheap — summarisation is not user-facing reasoning). The budget is
+    threaded to BOTH sub-compactors too (57.109 D13: their own defaults happened
+    to match the hybrid's, so the gap was invisible until the env knob existed —
+    hybrid delegates should_compact to the sub-strategies, so all three must
+    agree on the threshold).
     """
+    budget = _compaction_token_budget()
+    keep_recent = _compaction_keep_recent_turns()
     return HybridCompactor(
-        structural=StructuralCompactor(),
-        semantic=SemanticCompactor(chat_client=chat_client),
-        token_budget=_CHAT_TOKEN_BUDGET,
+        structural=StructuralCompactor(
+            keep_recent_turns=keep_recent,
+            token_budget=budget,
+            token_threshold_ratio=_CHAT_TOKEN_THRESHOLD_RATIO,
+        ),
+        semantic=SemanticCompactor(
+            chat_client=chat_client,
+            keep_recent_turns=keep_recent,
+            token_budget=budget,
+            token_threshold_ratio=_CHAT_TOKEN_THRESHOLD_RATIO,
+        ),
+        token_budget=budget,
         token_threshold_ratio=_CHAT_TOKEN_THRESHOLD_RATIO,
     )
 

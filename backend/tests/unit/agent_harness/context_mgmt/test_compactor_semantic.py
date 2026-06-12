@@ -35,6 +35,7 @@ from agent_harness._contracts import (
     Message,
     StateVersion,
     StopReason,
+    TokenUsage,
     ToolSpec,
     TraceContext,
     TransientState,
@@ -234,3 +235,48 @@ async def test_summary_metadata_marker() -> None:
     assert len(summary_msgs) == 1
     assert summary_msgs[0].role == "assistant"
     assert summary_msgs[0].content == summary
+
+
+# === Sprint 57.109 (C2): summarize usage/model attribution on the result ====
+
+
+@pytest.mark.asyncio
+async def test_summarize_usage_and_model_captured_on_result() -> None:
+    """Sprint 57.109 (C2): the summarize call's REAL usage + model ride the result
+    (prompt→input, completion→output) for the `_compaction` ledger attribution."""
+    mock = MockChatClient(
+        responses=[
+            ChatResponse(
+                model="cheap-mock",
+                content="summary",
+                stop_reason=StopReason.END_TURN,
+                usage=TokenUsage(prompt_tokens=2_000, completion_tokens=150),
+            )
+        ]
+    )
+    compactor = SemanticCompactor(chat_client=mock, keep_recent_turns=3, token_budget=10_000)
+    state = _make_state(_make_long_history(num_turns=12))
+
+    result = await compactor.compact_if_needed(state)
+
+    assert result.triggered is True
+    assert result.input_tokens == 2_000
+    assert result.output_tokens == 150
+    assert result.model == "cheap-mock"
+
+
+@pytest.mark.asyncio
+async def test_summarize_usage_none_defaults_to_zero() -> None:
+    """usage=None (adapter didn't report) → zeros; model still captured (honest)."""
+    mock = MockChatClient(
+        responses=[ChatResponse(model="mock", content="s", stop_reason=StopReason.END_TURN)]
+    )
+    compactor = SemanticCompactor(chat_client=mock, keep_recent_turns=3, token_budget=10_000)
+    state = _make_state(_make_long_history(num_turns=12))
+
+    result = await compactor.compact_if_needed(state)
+
+    assert result.triggered is True
+    assert result.input_tokens == 0
+    assert result.output_tokens == 0
+    assert result.model == "mock"

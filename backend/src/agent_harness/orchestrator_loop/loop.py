@@ -45,6 +45,7 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-06-12
 
 Modification History (newest-first):
+    - 2026-06-12: Sprint 57.109 C2 — ContextCompacted yield carries summarize usage/model
     - 2026-06-12: Sprint 57.108 — 5 ApprovalRequested yields +reason= (tool site also +tool_name=)
     - 2026-06-11: Sprint 57.101 B1 — +message_inbox; _run_turns drains before between-turns gate
     - 2026-06-10: Sprint 57.100 — 5 ApprovalRequested yields +kind= (pause kind on the wire)
@@ -2161,6 +2162,12 @@ class AgentLoopImpl(AgentLoop):
                         compaction_strategy=strategy_label,
                         messages_compacted=compaction_result.messages_compacted,
                         duration_ms=compaction_result.duration_ms,
+                        # Sprint 57.109 (C2): summarize-call usage rides the event
+                        # (server-side fields; not on the wire) so the router can
+                        # bill the `_compaction` sub_type on the cheap tier.
+                        input_tokens=compaction_result.input_tokens,
+                        output_tokens=compaction_result.output_tokens,
+                        model=compaction_result.model,
                         trace_context=ctx,
                     )
 

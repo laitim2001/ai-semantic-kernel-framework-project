@@ -19,6 +19,7 @@ Single-source: 17-cross-category-interfaces.md §1.1
 Created: 2026-05-01 (Sprint 52.1, Day 1)
 
 Modification History:
+    - 2026-06-12: Sprint 57.109 C2 — CompactionResult +input/output_tokens +model (ledger attribution)
     - 2026-05-01: Initial creation (Sprint 52.1 Day 1) — define CompactionStrategy + CompactionResult  # noqa: E501
 """
 
@@ -69,3 +70,14 @@ class CompactionResult:
 
     compacted_state: LoopState | None
     """The new compacted state; None if triggered=False (caller keeps original)."""
+
+    input_tokens: int = 0
+    """Real prompt tokens consumed by the semantic summarize LLM call (Sprint 57.109
+    C2 cost attribution); 0 for structural-only / passthrough results (no LLM call)."""
+
+    output_tokens: int = 0
+    """Real completion tokens of the summarize call; 0 when no LLM call ran."""
+
+    model: str = ""
+    """Model that served the summarize call (the compaction cheap tier); "" when
+    no LLM call ran. Feeds the ledger `_compaction` sub_type attribution."""

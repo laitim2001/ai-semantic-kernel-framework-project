@@ -30,6 +30,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.4)
 Last Modified: 2026-06-11
 
 Modification History (newest-first):
+    - 2026-06-12: Sprint 57.109 C2 — compactor runs on profile.cheap (semantic summarize tier)
     - 2026-06-12: Sprint 57.107 B3 — register spec-only handoff tool (policy-gated, parent only)
     - 2026-06-11: Sprint 57.104 C1 — resolve per-tenant ModelPolicy → build per-tenant ModelProfile
     - 2026-06-11: Sprint 57.103 B2b — teammate inbox_factory → inbox_scope (register child queue)
@@ -317,12 +318,14 @@ def build_real_llm_handler(
 
     # Sprint 57.104 (C1): build the per-tenant ModelProfile from the resolved policy.
     # The router resolved it via resolve_tenant_model_policy BEFORE build_handler (the
-    # resolve_session_persona pattern), so this stays sync. `chat_client` IS
-    # profile.action — the tenant's strong tier — and the loop / compactor / prompt
-    # builder / subagents all run on it; only the verifier (below) routes to
-    # profile.cheap (the tenant's, or env, cheap deployment). A None / all-None policy
-    # is byte-identical to the Sprint 57.97 env-only path; the cheap tier saves on the
-    # per-request llm_judge call (default-ON since 57.83) without touching the turn.
+    # resolve_session_persona pattern), so this stays sync. Tier consumer map:
+    # `chat_client` IS profile.action — the tenant's strong tier — and the loop /
+    # prompt builder / subagents / memory extraction run on it; the verifier (below,
+    # 57.97) AND the compactor's semantic summarize (57.109 C2) route to profile.cheap
+    # (the tenant's, or env, cheap deployment). A None / all-None policy is
+    # byte-identical to the Sprint 57.97 env-only path (cheap is action when unset);
+    # the cheap tier saves on the per-request llm_judge call (default-ON since 57.83)
+    # and the compaction summarize call without touching the user-facing turn.
     profile = build_azure_model_profile(model_policy)
     chat_client: ChatClient = profile.action
     parser = OutputParserImpl()  # built early — the Sprint 57.94 child-loop factory needs it
@@ -457,7 +460,10 @@ def build_real_llm_handler(
     # loop.py call-sites verified Day 0). Cat 7 is all-three-or-nothing —
     # make_chat_state_deps returns (None, None) when db / session_id /
     # tenant_id is missing (legacy / test callers), preserving baseline.
-    compactor = make_chat_compactor(chat_client)
+    # Sprint 57.109 (C2): the semantic summarize runs on the CHEAP tier —
+    # compaction is summarisation, not user-facing reasoning (cheap unset →
+    # cheap is action → byte-identical).
+    compactor = make_chat_compactor(profile.cheap)
     # Sprint 57.64 Day 1: Cat 5 (KEYSTONE) — inject DefaultPromptBuilder so the
     # loop takes its structured build() path (loop.py:881 true-branch, emits
     # PromptBuilt) instead of the naked fallback. Closes the AP-8 / AP-2
