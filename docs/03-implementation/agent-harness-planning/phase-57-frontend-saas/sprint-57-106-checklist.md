@@ -60,14 +60,15 @@
 
 ## Day 3 — FE tab + full gates + drive-through (US-4 FE / US-5) + CHANGE-073 + note 28
 
-### 3.1 FE tab (US-4)
-- [ ] **`HarnessPolicyTab.tsx`** mirror ModelPolicyTab (view/edit/Save/Cancel + 422 inline); list fields as comma/line-separated inputs; service get/put + case mappers; `TAB_ITEMS` 7→8
-- [ ] FE Vitest: render / edit / save / 422; `npm run lint && npm run build && npm run check:mockup-fidelity` (no `--silent`)
+### 3.1 FE tab (US-4) ✅
+- [x] **`HarnessPolicyTab.tsx`** mirror ModelPolicyTab (view/edit/Save/Cancel + 422 inline `harness-policy-save-error`); 5 list fields comma/newline-separated; verification_mode + template + 2 bools as tri-state selects (""=System default); `hooks/useHarnessPolicy.ts` + `useHarnessPolicySave.ts` (mirror useModelPolicy location); service get/put + camel↔snake mappers; `types.ts` unions; `TAB_ITEMS` 7→8 (4 wiring points)
+  - Agent-delegated (code-implementer) → **parent independently re-verified all 4 gates** (Before-Commit item 7): 0 shadcn residue · 0 Chinese copy (English state strings) · real save mutation (not Potemkin)
+- [x] FE Vitest **206 passed** (21 files, +13 HarnessPolicyTab); `npm run lint` exit 0 (no `--silent`) · `npm run build` exit 0 · `npm run check:mockup-fidelity` 53 unchanged
 
-### 3.2 Full gate sweep
-- [ ] `black/isort/flake8` clean · `mypy src` 0 · `python scripts/lint/run_all.py` 10/10 (event count UNCHANGED)
-- [ ] full `pytest` green (0 deletions) · FE Vitest green · mockup-fidelity 53
-- [ ] `loop.py` / DB / migration / wire schema diff = 0
+### 3.2 Full gate sweep ✅
+- [x] `black/isort/flake8` clean · `mypy src` 0/359 · `python scripts/lint/run_all.py` 10/10 (event count UNCHANGED)
+- [x] full `pytest` 2438 passed + 4 skip (0 deletions; 1 pre-existing incident ordering-flake, passes isolated) · FE Vitest 206 · mockup-fidelity 53
+- [x] `loop.py` / DB / migration / wire schema diff = 0 (none touched)
 
 ### 3.3 Drive-through (US-5 — two tenants, NO dev-login) — must PASS
 - [ ] Clean restart (Risk Class E): fresh no-reload uvicorn sole :8000 + startup log; Vite :3007

@@ -21,6 +21,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-06-12: Sprint 57.106 C3 — +getHarnessPolicy/putHarnessPolicy (harness-policy tab)
  *   - 2026-06-11: Sprint 57.104 C1 — +getModelPolicy/putModelPolicy (model-policy tab)
  *   - 2026-05-29: Sprint 57.62 US-3 — +fetchRateLimitsAlerts GET recent alerts service func
  *   - 2026-05-28: Sprint 57.58 Track D — +fetchRateLimitsUsage GET live usage service func
@@ -44,6 +45,9 @@ import type {
   FeatureFlagListResponse,
   FeatureFlagOverridesUpsertRequest,
   FeatureFlagOverridesUpsertResponse,
+  HarnessPolicy,
+  HarnessPolicyApiResponse,
+  HarnessPolicyApiUpsertRequest,
   HITLPolicyListResponse,
   HITLPolicyUpsertRequest,
   HITLPolicyUpsertResponse,
@@ -355,6 +359,78 @@ export async function putModelPolicy(
   );
   const api = await _handleResponse<ModelPolicyApiResponse>(response);
   return _modelPolicyFromApi(api);
+}
+
+/* === Sprint 57.106 C3 — Harness policy (GET + PUT) ===
+ *
+ * GET returns a sparse snake_case policy (unset fields null). PUT is
+ * composite-replace: the body is the COMPLETE desired policy — a null field is
+ * cleared (reverts to system default). The service maps the FE camelCase
+ * `HarnessPolicy` to/from the snake_case API shape. The UI keeps a sparse value
+ * object (null = "System default"); on write, the FULL desired state is sent
+ * (every field present; "System default" selections → null). Errors surface via
+ * _handleResponse (422 `detail` string for unknown judge template, bad/oversize
+ * regex, >20 patterns, or invalid verification_mode).
+ */
+
+function _harnessPolicyFromApi(api: HarnessPolicyApiResponse): HarnessPolicy {
+  return {
+    escalateInputPhrases: api.escalate_input_phrases,
+    escalateBetweenTurnsPhrases: api.escalate_between_turns_phrases,
+    escalateOutputPhrases: api.escalate_output_phrases,
+    escalateTools: api.escalate_tools,
+    verificationMode: api.verification_mode,
+    verificationJudgeTemplate: api.verification_judge_template,
+    verificationEscalateOnMax: api.verification_escalate_on_max,
+    riskyActionEnabled: api.risky_action_enabled,
+    riskyActionExtraPatterns: api.risky_action_extra_patterns,
+  };
+}
+
+function _harnessPolicyToApi(policy: HarnessPolicy): HarnessPolicyApiUpsertRequest {
+  // Composite-replace: send the COMPLETE desired policy. Every field is present;
+  // a null field is cleared server-side (reverts to system default).
+  return {
+    escalate_input_phrases: policy.escalateInputPhrases,
+    escalate_between_turns_phrases: policy.escalateBetweenTurnsPhrases,
+    escalate_output_phrases: policy.escalateOutputPhrases,
+    escalate_tools: policy.escalateTools,
+    verification_mode: policy.verificationMode,
+    verification_judge_template: policy.verificationJudgeTemplate,
+    verification_escalate_on_max: policy.verificationEscalateOnMax,
+    risky_action_enabled: policy.riskyActionEnabled,
+    risky_action_extra_patterns: policy.riskyActionExtraPatterns,
+  };
+}
+
+export async function getHarnessPolicy(
+  tenantId: string,
+  signal?: AbortSignal,
+): Promise<HarnessPolicy> {
+  const response = await fetchWithAuth(
+    `${API_BASE}/tenants/${tenantId}/harness-policy`,
+    { method: "GET", signal },
+  );
+  const api = await _handleResponse<HarnessPolicyApiResponse>(response);
+  return _harnessPolicyFromApi(api);
+}
+
+export async function putHarnessPolicy(
+  tenantId: string,
+  policy: HarnessPolicy,
+  signal?: AbortSignal,
+): Promise<HarnessPolicy> {
+  const response = await fetchWithAuth(
+    `${API_BASE}/tenants/${tenantId}/harness-policy`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(_harnessPolicyToApi(policy)),
+      signal,
+    },
+  );
+  const api = await _handleResponse<HarnessPolicyApiResponse>(response);
+  return _harnessPolicyFromApi(api);
 }
 
 /* === Sprint 57.50 — Identity single-record endpoint === */
