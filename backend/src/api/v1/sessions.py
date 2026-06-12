@@ -5,8 +5,15 @@ Category: api/v1
 Scope: Phase 57 / Sprint 57.19 Day 2 / US-B3
 
 Description:
-    Single GET endpoint, gated by `Depends(get_current_tenant)` + RLS via
+    GET endpoints, gated by `Depends(get_current_tenant)` + RLS via
     `Depends(get_db_session_with_tenant)`:
+
+    - GET /api/v1/sessions
+        Sprint 57.107 (B3): top-level session list for the current tenant,
+        newest-first, with handoff lineage fields (handoff_parent_id +
+        meta_data agent_role). Sidechain rows (subagent transcripts) are
+        excluded. Replaces the chat-v2 fixture SessionList backend gap
+        (AD-ChatV2-SessionList-Backend).
 
     - GET /api/v1/sessions/{session_id}/state
         Returns the LATEST state snapshot for the given session within the
@@ -27,6 +34,7 @@ Description:
 Created: 2026-05-17 (Sprint 57.19 Day 2 / US-B3)
 
 Modification History (newest-first):
+    - 2026-06-12: Sprint 57.107 B3 — GET /sessions list (lineage fields, sidechain-excluded)
     - 2026-05-17: Initial creation (Sprint 57.19 Day 2 / US-B3) — StateSnapshot direct query
 
 Related:
@@ -50,10 +58,58 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.db.models.state import StateSnapshot
+from infrastructure.db.repositories.session_repository import SessionRepository
 from platform_layer.identity.auth import get_current_tenant
 from platform_layer.middleware.tenant_context import get_db_session_with_tenant
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+
+
+class SessionListItem(BaseModel):
+    """One top-level session row with handoff lineage (Sprint 57.107 B3)."""
+
+    id: UUID
+    title: str | None
+    status: str
+    agent_role: str | None
+    handoff_parent_id: UUID | None
+    started_at_ms: int
+    total_turns: int
+
+
+class SessionListResponse(BaseModel):
+    """Top-level session list, newest-first (sidechains excluded)."""
+
+    sessions: list[SessionListItem]
+
+
+@router.get("", response_model=SessionListResponse)
+async def list_sessions(
+    current_tenant: UUID = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db_session_with_tenant),
+) -> SessionListResponse:
+    """List the current tenant's top-level sessions, newest-first.
+
+    Lineage: a handoff-booted child carries `handoff_parent_id` + its target
+    persona in `agent_role` (from meta_data) so the FE can render the chain.
+    Sidechain rows (subagent transcripts, Sprint 57.107 US-4) are excluded —
+    they are nested under their parent, not top-level conversations.
+    """
+    rows = await SessionRepository(db).list_sessions(tenant_id=current_tenant)
+    return SessionListResponse(
+        sessions=[
+            SessionListItem(
+                id=row.id,
+                title=row.title,
+                status=row.status,
+                agent_role=(row.meta_data or {}).get("agent_role"),
+                handoff_parent_id=row.handoff_parent_id,
+                started_at_ms=_to_ms(row.started_at),
+                total_turns=row.total_turns,
+            )
+            for row in rows
+        ]
+    )
 
 
 class StateSnapshotResponse(BaseModel):

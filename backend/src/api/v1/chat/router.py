@@ -95,7 +95,13 @@ from agent_harness._contracts import (
     Message,
     TraceContext,
 )
-from agent_harness._contracts.events import ToolCallExecuted
+from agent_harness._contracts.events import (
+    SubagentChildEvent,
+    SubagentCompleted,
+    SubagentSpawned,
+    ToolCallExecuted,
+)
+from infrastructure.db.models.sessions import MessageEvent
 from agent_harness.observability._abc import Tracer
 from agent_harness.orchestrator_loop import AgentLoop
 from business_domain._service_factory import BusinessServiceFactory
@@ -397,6 +403,88 @@ async def chat(
     )
 
 
+# === _persist_subagent_transcript: sidechain transcript observer (57.107) ===
+# Why: FORK/TEAMMATE child loops were ephemeral (uuid4-scoped, in-memory drain)
+# — no transcript survived the run (AD-Subagent-Transcript-Isolation). CC
+# persists subagent transcripts via parentUuid/isSidechain linkage; the V2
+# equivalent is a sidechain `sessions` row + per-turn `message_events` rows,
+# written HERE at the api layer (the loop + Cat 11 stay persistence-free).
+# Best-effort SAVEPOINT (mirror the sessions/audit observers): a DB flake must
+# never break the SSE stream. Rows commit with the request transaction.
+async def _persist_subagent_transcript(
+    events: "list[LoopEvent]",
+    *,
+    db: AsyncSession | None,
+    tenant_id: UUID,
+    user_id: UUID | None,
+    parent_session_id: UUID,
+    sidechain_seq: dict[UUID, int],
+) -> None:
+    """Persist subagent lifecycle + child-turn events as a sidechain transcript.
+
+    SubagentSpawned → sidechain `sessions` row (id=subagent_id,
+    parent_session_id=parent, is_sidechain=True). SubagentChildEvent →
+    `message_events` row (first real consumer of that table) with a
+    per-sidechain monotonic sequence_num. SubagentCompleted → mark the
+    sidechain completed + fold summary/tokens into meta_data.
+
+    Env-gated via SUBAGENT_TRANSCRIPT_OBSERVER (default on; tests/conftest.py
+    sets false for isolation parity with SESSIONS_CHAT_OBSERVER).
+    """
+    if db is None or not events:
+        return
+    if os.environ.get("SUBAGENT_TRANSCRIPT_OBSERVER", "true").lower() != "true":
+        return
+    try:
+        repo = SessionRepository(db)
+        async with db.begin_nested():
+            for ev in events:
+                if isinstance(ev, SubagentSpawned) and ev.subagent_id is not None:
+                    await repo.create_session(
+                        session_id=ev.subagent_id,
+                        user_id=user_id or tenant_id,
+                        tenant_id=tenant_id,
+                        title=f"Subagent · {ev.mode or 'fork'}",
+                        parent_session_id=parent_session_id,
+                        is_sidechain=True,
+                        meta_data={"mode": ev.mode},
+                    )
+                elif isinstance(ev, SubagentChildEvent) and ev.subagent_id is not None:
+                    try:
+                        payload = serialize_loop_event(ev)
+                    except NotImplementedError:
+                        continue
+                    if payload is None:
+                        continue
+                    seq = sidechain_seq.get(ev.subagent_id, 0) + 1
+                    sidechain_seq[ev.subagent_id] = seq
+                    db.add(
+                        MessageEvent(
+                            session_id=ev.subagent_id,
+                            tenant_id=tenant_id,
+                            event_type=payload["type"],
+                            event_data=payload["data"],
+                            sequence_num=seq,
+                            timestamp_ms=int(time.time() * 1000),
+                        )
+                    )
+                elif isinstance(ev, SubagentCompleted) and ev.subagent_id is not None:
+                    row = await repo.get_session(session_id=ev.subagent_id, tenant_id=tenant_id)
+                    if row is not None:
+                        row.status = "completed"
+                        row.meta_data = {
+                            **(row.meta_data or {}),
+                            "summary": ev.summary,
+                            "tokens_used": ev.tokens_used,
+                        }
+    except Exception:  # noqa: BLE001 — best-effort observer (mirror sessions/audit)
+        logger.exception(
+            "chat session %s/%s: subagent transcript persist failed (best-effort)",
+            tenant_id,
+            parent_session_id,
+        )
+
+
 def _drain_subagent_frames(buffer: "list[LoopEvent] | None") -> list[bytes]:
     """Serialize + frame any buffered subagent events (SubagentSpawned/Completed).
 
@@ -461,6 +549,9 @@ async def _stream_loop_events(
     # Sprint 57.84 (C-15): per-request monotonic seq disambiguates repeated
     # same-tool billing events in the idempotency key (a replay reuses the seq).
     tool_seq = 0
+    # Sprint 57.107 (US-4): per-sidechain monotonic sequence_num for the
+    # message_events transcript rows (one counter per subagent_id).
+    sidechain_seq: dict[UUID, int] = {}
     try:
         async for event in loop.run(  # type: ignore[attr-defined]
             session_id=session_id,
@@ -470,6 +561,17 @@ async def _stream_loop_events(
             # Sprint 57.95 (Cat 11 → Cat 12 SSE relay): flush any subagent events
             # emitted during the prior await (e.g. a task_spawn tool call) BEFORE the
             # loop event that follows them, so the Inspector Tree shows the node.
+            # Sprint 57.107 (US-4): persist the same buffered events as a sidechain
+            # transcript BEFORE the drain pops them (best-effort observer).
+            if subagent_event_buffer:
+                await _persist_subagent_transcript(
+                    list(subagent_event_buffer),
+                    db=db,
+                    tenant_id=tenant_id,
+                    user_id=trace_context.user_id,
+                    parent_session_id=session_id,
+                    sidechain_seq=sidechain_seq,
+                )
             for _frame in _drain_subagent_frames(subagent_event_buffer):
                 yield _frame
             try:
@@ -770,6 +872,16 @@ async def _stream_loop_events(
         # Sprint 57.95: drain any subagent events appended during the final await
         # (defensive — the per-iteration drain already flushes the common case, since
         # task_spawn precedes the LoopCompleted that breaks the loop).
+        # Sprint 57.107 (US-4): persist the defensive-flush events too.
+        if subagent_event_buffer:
+            await _persist_subagent_transcript(
+                list(subagent_event_buffer),
+                db=db,
+                tenant_id=tenant_id,
+                user_id=trace_context.user_id,
+                parent_session_id=session_id,
+                sidechain_seq=sidechain_seq,
+            )
         for _frame in _drain_subagent_frames(subagent_event_buffer):
             yield _frame
     except asyncio.CancelledError:

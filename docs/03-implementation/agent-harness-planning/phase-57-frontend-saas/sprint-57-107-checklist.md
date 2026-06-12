@@ -41,20 +41,20 @@
 
 ---
 
-## Day 2 — Sessions list + sidechain transcript (US-3 backend / US-4)
+## Day 2 — Sessions list + sidechain transcript (US-3 backend / US-4) ✅
 
 ### 2.1 Sessions list API (US-3 backend)
-- [ ] **Repo**: `SessionRepository.list_sessions(tenant_id, *, limit=50)` — top-level only (`is_sidechain=false` post-2.2 migration), `started_at DESC`
-- [ ] **`api/v1/sessions.py`**: `GET /api/v1/sessions` → `SessionListItem{id, title, status, created_at, agent_role, handoff_parent_id}`; `get_current_tenant` + RLS pattern per existing endpoint
-- [ ] **Integration tests**: list round-trip + lineage fields + sidechain exclusion + tenant isolation 鐵律 (foreign tenant sees nothing)
-  - DoD: suite green; OpenAPI renders; mypy 0
+- [x] **Repo**: `SessionRepository.list_sessions(tenant_id, *, limit=50)` — top-level only (`is_sidechain=false`), `started_at DESC`; `create_session` +`parent_session_id`/`is_sidechain` kwargs
+- [x] **`api/v1/sessions.py`**: `GET /api/v1/sessions` → `SessionListItem{id, title, status, agent_role, handoff_parent_id, started_at_ms, total_turns}`; `get_current_tenant` + RLS pattern per existing endpoint
+- [x] **Integration tests**: `test_sessions_list.py` (4: newest-first+lineage / sidechain-excluded / isolation 鐵律 / empty-200)
+  - DoD: suite green ✓; mypy 0/359 ✓
 
 ### 2.2 Sidechain migration + observer (US-4)
-- [ ] **Migration 0028** (number per Prong-3): `sessions.parent_session_id UUID NULL FK sessions(id) ON DELETE SET NULL` + `sessions.is_sidechain BOOL NOT NULL DEFAULT false` + partial index; `models/sessions.py` 2 columns + MHist
-- [ ] **Router observer** (mirror :313-339 best-effort SAVEPOINT): `SubagentSpawned` → INSERT sidechain session (id=subagent_id, tenant/user inherited, title from task, meta_data mode/agent); `SubagentChildEvent` → INSERT `message_events` (event_type=inner type, serialized inner, monotonic sequence_num); `SubagentCompleted` → status=completed + summary/tokens meta_data
-- [ ] **Admin validation (US-2 rest)**: `tenants.py` 2 fields + 422 poles (empty allowlist → 422 / >20 entries / >100 chars / non-str) + audit + invalidate (existing op name)
-- [ ] **Integration tests**: fake loop emits Spawned/Child×N/Completed → sidechain session row + N `message_events` rows + isolation; allowlist-reject e2e (extend `test_chat_handoff.py`); admin PUT poles
-  - DoD: alembic upgrade head clean; full pytest 0 del; run_all 10/10; RLS lint green
+- [x] **Migration 0028** `0028_sidechain_sessions`: 2 columns + partial index + **DEFAULT partitions for messages + message_events (D4 time-bomb fix — tables were un-writable from 2026-07-01)**; `models/sessions.py` 2 columns + MHist; `alembic upgrade head` clean ✓
+- [x] **Router observer** `_persist_subagent_transcript` (best-effort SAVEPOINT, both drain sites): `SubagentSpawned` → sidechain session (title `Subagent · {mode}` per D5 — event has no task field); `SubagentChildEvent` → `message_events` INSERT (serializer payload, monotonic per-sidechain seq); `SubagentCompleted` → completed + summary/tokens meta_data; env-gate `SUBAGENT_TRANSCRIPT_OBSERVER` (conftest false — D7)
+- [x] **Admin validation (US-2 rest)**: `tenants.py` 2 fields + 422 poles (empty allowlist / >20 / >100 chars) + audit + invalidate (existing op name)
+- [x] **Integration tests**: `test_subagent_transcript_observer.py` (3: full transcript round-trip / env-gated-off / cross-tenant isolation) + `test_chat_handoff.py` +2 (off-list fail-soft no-child + allowlisted boots) + admin +4 poles
+  - DoD: alembic clean ✓; **full pytest 2460+4skip (+21, 0 del)** ✓; run_all 10/10 ✓; flake8 0 ✓
 
 ---
 

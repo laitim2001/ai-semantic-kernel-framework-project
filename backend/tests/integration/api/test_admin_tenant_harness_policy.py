@@ -353,3 +353,62 @@ async def test_get_reflects_put(db_session: AsyncSession) -> None:
     body = get_resp.json()
     assert body["escalate_tools"] == ["t1"]
     assert body["risky_action_enabled"] is False
+
+
+# === handoff governance fields (Sprint 57.107 B3) ==============================
+
+
+async def test_put_handoff_fields_round_trip(db_session: AsyncSession) -> None:
+    tenant = await _seed_tenant(db_session, code=_unique_code())
+    app = _build_app(db_session=db_session)
+    transport = ASGITransport(app=app)
+    payload = {"handoff_enabled": True, "handoff_target_allowlist": ["planner", "reviewer"]}
+    async with AsyncClient(transport=transport, base_url=_BASE_URL) as ac:
+        resp = await ac.put(f"/api/v1/admin/tenants/{tenant.id}/harness-policy", json=payload)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["handoff_enabled"] is True
+    assert body["handoff_target_allowlist"] == ["planner", "reviewer"]
+
+    row = (await db_session.execute(select(Tenant).where(Tenant.id == tenant.id))).scalar_one()
+    assert row.meta_data["harness_policy"] == payload
+
+
+async def test_put_handoff_empty_allowlist_rejected(db_session: AsyncSession) -> None:
+    """[] is rejected — disabling handoff is handoff_enabled=false, not allowlist=[]."""
+    tenant = await _seed_tenant(db_session, code=_unique_code())
+    app = _build_app(db_session=db_session)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url=_BASE_URL) as ac:
+        resp = await ac.put(
+            f"/api/v1/admin/tenants/{tenant.id}/harness-policy",
+            json={"handoff_target_allowlist": []},
+        )
+    assert resp.status_code == 422
+    assert "handoff_enabled=false" in resp.json()["detail"]
+
+
+async def test_put_handoff_too_many_targets_rejected(db_session: AsyncSession) -> None:
+    tenant = await _seed_tenant(db_session, code=_unique_code())
+    app = _build_app(db_session=db_session)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url=_BASE_URL) as ac:
+        resp = await ac.put(
+            f"/api/v1/admin/tenants/{tenant.id}/harness-policy",
+            json={"handoff_target_allowlist": [f"agent-{i}" for i in range(21)]},
+        )
+    assert resp.status_code == 422
+    assert "exceeds" in resp.json()["detail"]
+
+
+async def test_put_handoff_blank_target_rejected(db_session: AsyncSession) -> None:
+    tenant = await _seed_tenant(db_session, code=_unique_code())
+    app = _build_app(db_session=db_session)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url=_BASE_URL) as ac:
+        resp = await ac.put(
+            f"/api/v1/admin/tenants/{tenant.id}/harness-policy",
+            json={"handoff_target_allowlist": ["   "]},
+        )
+    assert resp.status_code == 422
+    assert "invalid handoff target" in resp.json()["detail"]

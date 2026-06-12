@@ -41,3 +41,16 @@ US-1 stub retirement + spec-only tool + US-2 governance fields + boot enforcemen
 
 ### Remaining for Day 2
 US-3 sessions list API + US-4 migration 0028 (sidechain columns + DEFAULT partitions per D4) + router observer + admin validation fields + integration tests.
+
+---
+
+## Day 2 — 2026-06-12 — US-3 sessions list + US-4 sidechain transcript (backend)
+
+**Done**:
+- **US-3**: `SessionRepository.list_sessions` (top-level, newest-first, limit 50) + `create_session` sidechain kwargs; `GET /api/v1/sessions` (`SessionListItem` with `agent_role` + `handoff_parent_id` lineage); `test_sessions_list.py` 4 tests.
+- **US-4**: migration `0028_sidechain_sessions` (2 columns + partial index + **DEFAULT partitions both tables — D4 fix**; applied clean); `models/sessions.py` + repo; router `_persist_subagent_transcript` observer (SAVEPOINT best-effort, BOTH drain sites — in-loop + defensive flush; per-sidechain monotonic seq; `SUBAGENT_TRANSCRIPT_OBSERVER` env-gate, conftest false per D7); `message_events` gets its FIRST writer. `test_subagent_transcript_observer.py` 3 tests.
+- **US-2 rest**: admin `tenants.py` +2 fields + 422 poles (empty-allowlist / >20 / blank-or->100-char) + caps `_MAX_HANDOFF_TARGETS=20`/`_MAX_HANDOFF_TARGET_LEN=100`; +4 pole tests; `test_chat_handoff.py` +2 allowlist e2e (off-list fail-soft: no child + parent stays active + no `agent_handoff` frame; allowlisted boots).
+- **Gates**: mypy 0/359 · flake8 0 · run_all 10/10 · **full pytest 2460+4skip (+21 vs 57.106, 0 del)** · alembic head = 0028.
+
+### Remaining for Day 3
+FE (SessionList real-data + 鏈 badge + HarnessPolicyTab 2 fields + Vitest) → full FE gates → drive-through (US-5) → CHANGE-074 + note 29.

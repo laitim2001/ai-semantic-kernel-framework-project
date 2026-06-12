@@ -571,3 +571,81 @@ async def test_chat_handoff_resolves_default_when_catalog_empty(
     # Child persona resolves to the hardcoded DEFAULT_AGENTS prompt (fallback).
     prompt = await resolve_session_persona(db_session, new_session_id, tenant.id)
     assert prompt == DEFAULT_AGENTS["reviewer"]
+
+
+# === tenant handoff allowlist at the boot hook (Sprint 57.107 B3) =============
+
+
+@pytest.mark.asyncio
+async def test_chat_handoff_offlist_target_fails_soft_no_child(db_session: AsyncSession) -> None:
+    """An off-list target (KNOWN persona) → fail-soft: no child, no agent_handoff frame."""
+    tenant = await seed_tenant(db_session, code="HANDOFF_ALLOW_T")
+    user = await seed_user(db_session, tenant, email="allowlist@test.com")
+    parent = await _seed_parent_session(db_session, tenant_id=tenant.id, user_id=user.id)
+
+    trace_ctx = TraceContext(tenant_id=tenant.id, session_id=parent.id, user_id=user.id)
+    loop = _HandoffLoop(target_agent="researcher", reason="off-list attempt")
+    registry = get_default_registry()
+    await registry.register(tenant.id, parent.id)
+
+    raw = [
+        frame
+        async for frame in _stream_loop_events(
+            loop,
+            tenant.id,
+            parent.id,
+            registry,
+            user_input="hand this off",
+            trace_context=trace_ctx,
+            db=db_session,
+            handoff_allowed_targets=["planner"],  # researcher NOT allowed
+        )
+    ]
+    frames = _collect_frames(raw)
+
+    # No agent_handoff frame emitted (fail-soft) ...
+    assert [d for t, d in frames if t == "agent_handoff"] == []
+    # ... no child session booted, parent NOT marked handed_off.
+    children = (
+        (
+            await db_session.execute(
+                select(SessionModel).where(SessionModel.handoff_parent_id == parent.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert children == []
+    await db_session.refresh(parent)
+    assert parent.status == "active"
+
+
+@pytest.mark.asyncio
+async def test_chat_handoff_allowlisted_target_boots(db_session: AsyncSession) -> None:
+    """A target ON the tenant allowlist boots normally (positive control)."""
+    tenant = await seed_tenant(db_session, code="HANDOFF_ALLOW_OK")
+    user = await seed_user(db_session, tenant, email="allowlist_ok@test.com")
+    parent = await _seed_parent_session(db_session, tenant_id=tenant.id, user_id=user.id)
+
+    trace_ctx = TraceContext(tenant_id=tenant.id, session_id=parent.id, user_id=user.id)
+    loop = _HandoffLoop(target_agent="planner", reason="allowed")
+    registry = get_default_registry()
+    await registry.register(tenant.id, parent.id)
+
+    raw = [
+        frame
+        async for frame in _stream_loop_events(
+            loop,
+            tenant.id,
+            parent.id,
+            registry,
+            user_input="hand this off",
+            trace_context=trace_ctx,
+            db=db_session,
+            handoff_allowed_targets=["planner"],
+        )
+    ]
+    frames = _collect_frames(raw)
+    handoff_frames = [d for t, d in frames if t == "agent_handoff"]
+    assert len(handoff_frames) == 1
+    assert handoff_frames[0]["target_agent"] == "planner"

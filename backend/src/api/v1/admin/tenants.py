@@ -46,6 +46,7 @@ Created: 2026-05-06 (Sprint 56.1 Day 1)
 Last Modified: 2026-05-10
 
 Modification History:
+    - 2026-06-12: Sprint 57.107 B3 — harness-policy +handoff_enabled/target_allowlist + 422 poles
     - 2026-06-03: Sprint 57.74 — add GET /stats fleet aggregate (closes AD-AdminTenants-Stats)
     - 2026-05-29: Sprint 57.62 Track A — add GET /rate-limits/alerts (80%-threshold alert log)
     - 2026-05-29: Sprint 57.61 — RateLimits PUT field_validator (422 on malformed value/label)
@@ -1616,6 +1617,9 @@ async def get_tenant_model_policy(
 _MAX_EXTRA_PATTERNS = 20
 _MAX_PATTERN_LEN = 200
 _VERIFICATION_MODES = frozenset({"enabled", "disabled"})
+# Sprint 57.107 (B3): handoff allowlist caps (mirror the pattern caps above).
+_MAX_HANDOFF_TARGETS = 20
+_MAX_HANDOFF_TARGET_LEN = 100
 
 
 class HarnessPolicyUpsertRequest(BaseModel):
@@ -1637,6 +1641,9 @@ class HarnessPolicyUpsertRequest(BaseModel):
     verification_escalate_on_max: bool | None = None
     risky_action_enabled: bool | None = None
     risky_action_extra_patterns: list[str] | None = None
+    # Sprint 57.107 (B3): handoff governance — enabled gate + target allowlist.
+    handoff_enabled: bool | None = None
+    handoff_target_allowlist: list[str] | None = None
 
 
 class HarnessPolicyResponse(BaseModel):
@@ -1651,6 +1658,8 @@ class HarnessPolicyResponse(BaseModel):
     verification_escalate_on_max: bool | None = None
     risky_action_enabled: bool | None = None
     risky_action_extra_patterns: list[str] | None = None
+    handoff_enabled: bool | None = None
+    handoff_target_allowlist: list[str] | None = None
 
 
 def _validate_harness_policy(payload: HarnessPolicyUpsertRequest) -> None:
@@ -1697,6 +1706,27 @@ def _validate_harness_policy(payload: HarnessPolicyUpsertRequest) -> None:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"invalid regex {pattern!r}: {exc}",
             ) from exc
+    # Sprint 57.107 (B3): handoff allowlist poles. An explicit empty list is
+    # rejected — disabling handoff is handoff_enabled=false, not allowlist=[]
+    # (one knob per concern; [] would shadow the enabled gate).
+    allowlist = payload.handoff_target_allowlist
+    if allowlist is not None:
+        if not allowlist:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="handoff_target_allowlist cannot be empty (use handoff_enabled=false)",
+            )
+        if len(allowlist) > _MAX_HANDOFF_TARGETS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"handoff_target_allowlist exceeds {_MAX_HANDOFF_TARGETS} targets",
+            )
+        for target in allowlist:
+            if not target.strip() or len(target) > _MAX_HANDOFF_TARGET_LEN:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"invalid handoff target: {target[:40]!r}",
+                )
 
 
 def _project_harness_policy(stored: dict[str, Any]) -> HarnessPolicyResponse:
@@ -1737,6 +1767,8 @@ async def upsert_tenant_harness_policy(
         "verification_escalate_on_max": payload.verification_escalate_on_max,
         "risky_action_enabled": payload.risky_action_enabled,
         "risky_action_extra_patterns": payload.risky_action_extra_patterns,
+        "handoff_enabled": payload.handoff_enabled,
+        "handoff_target_allowlist": payload.handoff_target_allowlist,
     }
     saved = {key: value for key, value in candidate.items() if value is not None}
 
