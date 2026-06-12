@@ -19,19 +19,19 @@
 
 ---
 
-## Day 1 — Backend: additive event fields + wire + serializer + codegen (US-1 + US-3 backend)
+## Day 1 — Backend: additive event fields + wire + serializer + codegen (US-1 + US-3 backend) ✅
 
 ### 1.1 `ApprovalRequested` +2 fields + 5-site emission (US-1)
-- [ ] **`_contracts/events.py`**: `ApprovalRequested` += `tool_name: str | None = None` + `reason: str = ""` (defaulted; frozen dataclass; MHist 1-line)
-- [ ] **`loop.py`**: 5 yield sites pass `reason=` from in-scope local; tool site (:1048) additionally `tool_name=tc.name`; verification site per Day-0 finding (worst case `reason=""`)
+- [x] **`_contracts/events.py`**: `ApprovalRequested` += `tool_name: str | None = None` + `reason: str = ""` (defaulted; frozen dataclass; MHist 1-line)
+- [x] **`loop.py`**: 5 yield sites pass `reason=` from in-scope local; tool site (:1048) additionally `tool_name=tc.name`; verification site carries the joined verifier reason (D6 — real reason, no `""` fallback needed)
   - DoD: grep `yield ApprovalRequested` → 5 sites all carry reason ✓; loop.py diff limited to yield sites ✓
-- [ ] **Wire + serializer**: `event_wire_schema.py` approval_requested += `{tool_name: "string | null", reason: "string"}`; `sse.py` approval serializer reads both
-- [ ] **Unit tests CONVERT**: loop escalate-shape suites assert new fields (tool site = tc.name; others None) — 0 deletions; parity test fields extended, count stays 24
+- [x] **Wire + serializer**: `event_wire_schema.py` approval_requested += `{tool_name: "string | null", reason: "string"}`; `sse.py` approval serializer reads both
+- [x] **Unit tests CONVERT**: 5 escalate-site assertions extended (tool site = `sensitive_tool` + reason; input/between_turns/output/verification = tool_name None + reason truthy) + test_sse defaults/tool-context cases — 0 deletions; parity auto-holds, count stays 24
 
 ### 1.2 `llm_response` token pair (US-3 backend)
-- [ ] **Wire + serializer**: `event_wire_schema.py` llm_response += `{input_tokens: "number", output_tokens: "number"}`; `sse.py` llm_response serializer reads `event.input_tokens`/`event.output_tokens` (dataclass already carries them — no events.py change)
-- [ ] **Codegen regen**: `python scripts/codegen/generate_event_schemas.py` → commit `events.json` + `loopEvents.generated.ts` in the SAME commit
-  - DoD: `check_event_schema_sync` green ✓; run_all 10/10 (count 24 UNCHANGED) ✓; mypy strict 0 ✓; black/isort/flake8 0 ✓; full backend pytest 0 del ✓
+- [x] **Wire + serializer**: `event_wire_schema.py` llm_response += `{input_tokens: "number", output_tokens: "number"}`; `sse.py` llm_response serializer reads `event.input_tokens`/`event.output_tokens` (dataclass already carries them — no events.py change beyond ApprovalRequested)
+- [x] **Codegen regen**: `python scripts/codegen/generate_event_schemas.py` → `events.json` + `loopEvents.generated.ts` committed in the SAME commit
+  - DoD: `check_event_schema_sync` green ✓; run_all 10/10 (count 24 UNCHANGED) ✓; mypy strict 0/359 ✓; black/isort/flake8 0 ✓; full backend pytest **2462+4skip (+2, 0 del)** ✓
 
 ---
 

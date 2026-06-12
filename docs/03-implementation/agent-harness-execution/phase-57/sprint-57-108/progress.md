@@ -31,3 +31,12 @@ Branch `feature/sprint-57-108-chatv2-hitl-inspector-wire` created from `main` `a
 ### Go/no-go
 
 **GO** — drift findings SHRINK scope (HITLTurn no-edit; tokens.in already wired; explicit TURN span match; durationMs bonus fold-in). Shift ≪20%.
+
+---
+
+## Day 1 — 2026-06-12 — Backend additive fields + wire + codegen (US-1 + US-3 backend)
+
+- `ApprovalRequested` += `tool_name`/`reason` (events.py; defaulted, constructor-safe per D7); 5 loop.py yield sites pass `reason=` (tool site also `tool_name=tc.name`); wire + sse serializer pairs (`approval_requested` +2; `llm_response` +`input_tokens`/`output_tokens` — LLMResponded already carried them); codegen regen (both artifacts, same commit).
+- Tests: 5 escalate-site assertions extended (tool=`sensitive_tool`+reason; 4 non-tool=None+reason) + test_sse defaults/tool-context/token-actuals (+2 net new tests); 0 deletions.
+- Gates: mypy 0/359 · black/isort/flake8 0 (four-segment chain run — 57.107 isort lesson applied) · run_all 10/10 from repo root (count 24 unchanged; check_event_schema_sync green) · full pytest **2462+4skip (+2, 0 del)**.
+- Actual ~1.5 hr (est ~2.5 hr bottom-up) — additive-field shape + D7 constructor safety made conversions thin.
