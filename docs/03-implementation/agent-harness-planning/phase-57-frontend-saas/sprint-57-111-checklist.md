@@ -66,11 +66,11 @@
 
 ---
 
-## Day 4 — Closeout
+## Day 4 — Closeout ✅
 
 ### 4.1 Closeout
-- [ ] retrospective.md Q1-Q7 + calibration (NEW `verification-trace-and-benchmark-spike` 0.60 1st data point + ratio + agent-delegated: no) + progress.md final
-- [ ] Design note 25 §5 trace-aware critique design + the benchmark verdict (design note 24 open-invariant RESOLVED with the real number + go/no-go, OR a focused benchmark design note 26 — finalized per §5.5); MHist 1-line
-- [ ] Navigators: CLAUDE.md Current-Sprint row + Last-Updated; MEMORY.md quality pointer + memory subfile `project_phase57_111_trace_aware_critique_benchmark.md`; next-phase-candidates A3-DONE block + roadmap A-line (A-family 3/3 — harness-deepening 10-slice set COMPLETE); sprint-workflow matrix NEW row `verification-trace-and-benchmark-spike` 0.60; 17.md if the Verifier contract changed
-- [ ] Spike design-note 8-point quality gate self-check (spike sprint → design note required per §5.5)
+- [x] retrospective.md Q1-Q7 + calibration (NEW `verification-trace-and-benchmark-spike` 0.60 1st data point, ratio ~1.0-1.1 IN band upper edge, agent-delegated: no) + progress.md final
+- [x] Design note 25 §2.6 trace-aware critique + §4 A3/cheap-judge-accuracy SHIPPED + 24 §4 cheap-judge RESOLVED with the real number + keep-cheap verdict (note 25 continuation; no new note 26 per §5.5); MHist 1-line (both notes)
+- [x] Navigators: CLAUDE.md Current-Sprint row + Last-Updated; MEMORY.md quality pointer + memory subfile `project_phase57_111_trace_aware_critique_benchmark.md`; next-phase-candidates 57.111 carryover block + roadmap A-line (A-family 3/3 — harness-deepening 10-slice set COMPLETE); sprint-workflow matrix NEW row `verification-trace-and-benchmark-spike` 0.60; 17.md Verifier §2.1 state-Optional note
+- [x] Spike design-note 8-point quality gate self-check (retro Q6 — all 8 ✓, ~95% verified ratio)
 - [ ] PR (push + open on user authorization)
