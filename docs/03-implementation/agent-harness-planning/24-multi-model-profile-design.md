@@ -75,7 +75,7 @@ status: Active
 - [ ] **Memory-extraction / thinking cheap-tier** — still open (extraction is precision-sensitive; benchmark-gated before retier).
 - [ ] **Threading `ModelProfile` into the loop** — this sprint keeps it handler-local (constructed + consumed in `handler.py`). In-loop per-phase selection is a separate slice.
 - [ ] **Per-tenant model policy (Config 分層)** — a tenant choosing its own model/budget is the SEPARATE "Config 分層" parity gap (cc-parity §7.3), not this sprint.
-- [ ] **Cheap-judge accuracy** — a cheaper judge MAY be less reliable. NOT formally benchmarked; the drive-through observed the judge still functioned (score ≈0.98). The action turn is NEVER cheap (user-facing quality preserved). If the cheap judge visibly mis-verifies, keep the judge on the strong tier (the seam supports per-phase choice).
+- [x] **Cheap-judge accuracy** — ✅ RESOLVED Sprint 57.111 (A3; CHANGE-078). The permanent `@pytest.mark.benchmark` harness (`scripts/benchmark_judge.py` + a 28-case golden fixture) measured real Azure: cheap **92.86%** (stable ×2) · strong 78.57–92.86% (Azure non-determinism on clear_pass even at temp 0) · **trace_delta +42.86% (stable)** · floor 70% PASS. **Verdict: keep the cheap tier** — the cheap judge is accurate (100% on trace_dependent) AND aligns BETTER with the lenient "default-pass, flag-only-clear-failures" contract than the strong tier (which over-flags clear_pass). The action turn remains NEVER cheap. Detail → `25-verification-in-loop-design.md` §4.
 - [ ] **Non-Azure cheap tiers** — the seam is provider-neutral but only the Azure builder is wired. An Anthropic/OpenAI cheap tier is a follow-on builder.
 - [ ] **LLM-call Trace span `model` attribute** — deferred: the cost-ledger sub_type (`azure_openai_<model>_verification_*`) already carries the model attribution, so no span change was needed for the drive-through. Add a span attr only if a future Trace-view feature needs per-call model on the span itself.
 
@@ -94,5 +94,6 @@ status: Active
 - Related rules: `.claude/rules/sprint-workflow.md` §Common Risk Classes Risk Class E (orphaned spawn-worker, reinforced this sprint) · `docs/rules-on-demand/llm-provider-neutrality.md`
 
 ## Modification History
+- 2026-06-13: Sprint 57.111 A3 — cheap-judge-accuracy invariant RESOLVED (benchmark; keep cheap; CHANGE-078)
 - 2026-06-12: Sprint 57.109 C2 — compaction cheap-tier invariant RESOLVED (CHANGE-076)
 - 2026-06-10: Initial extract from Sprint 57.97 closeout (Day 4) — multi-model `ModelProfile` seam; verification routed to cheap tier
