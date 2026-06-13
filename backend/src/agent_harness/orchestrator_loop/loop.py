@@ -45,7 +45,7 @@ Created: 2026-04-30 (Sprint 50.1 Day 2.2)
 Last Modified: 2026-06-13
 
 Modification History (newest-first):
-    - 2026-06-13: Sprint 57.111 A3 — _cat10_verify_gate threads real trace_state (recent turns) to the judge
+    - 2026-06-13: Sprint 57.111 A3 — _cat10_verify_gate threads real trace_state to the judge
     - 2026-06-12: Sprint 57.109 C2 — ContextCompacted yield carries summarize usage/model
     - 2026-06-12: Sprint 57.108 — 5 ApprovalRequested yields +reason= (tool site also +tool_name=)
     - 2026-06-11: Sprint 57.101 B1 — +message_inbox; _run_turns drains before between-turns gate
