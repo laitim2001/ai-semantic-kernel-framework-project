@@ -47,3 +47,17 @@ No assertion on the exact built-in tool COUNT or on `DEMO_SYSTEM_PROMPT` content
 **Est vs actual**: registry+loader+tool+bundled+tests ~3 hr est → actual ~2.5 hr (the from_dir loader + 2 real skill bodies were the bulk; the tool.py spec mirrored echo_tool.py directly).
 
 ---
+
+## Day 2 — 2026-06-13 — read_skill tool + main-flow wiring (US-2) ✅
+
+**Shipped**: `make_default_executor(skill_registry=None)` opt-in (registers `read_skill` mirroring the echo + handoff opt-in) · `build_handler` + `build_real_llm_handler` threaded `skill_registry` (the dispatcher forwards; the real builder appends `render_catalog_block` to `system_prompt` + passes the registry to the executor) · `router.py` passes `get_default_skill_registry()` · `test_skills_tool.py` ×4 + `test_skills_wiring.py` ×6.
+
+**Seam confirmed at runtime (D1 GREEN proof)**: the integration test `test_build_handler_appends_skills_block_to_system_prompt` asserts the constructed `loop._system_prompt` contains "## Available Skills" + both bundled skill names + the `read_skill(name)` instruction — and the no-registry test asserts it stays `== DEMO_SYSTEM_PROMPT`. The scripted-LLM test (`test_chat_path_read_skill_executes`) drives a `read_skill("code-review")` tool call through the real `AgentLoopImpl` SSE flow (MockChatClient, Azure-call-free) → `ToolCallExecuted.result_content` carries the framed instructions. This is CI-safe proof of the full discover→advertise→load chain (約束 2); the drive-through adds the real-LLM self-selection confirmation.
+
+**Pytest basename collision (fixed)**: `skills/test_registry.py` collided with `verification/test_registry.py` (test dirs have no `__init__.py` → pytest rootdir import uses the bare module name). Renamed both skills unit tests to unique basenames `test_skills_{registry,tool}.py` (the 57.109 D-DAY1-2 lesson + Risk Class catalog).
+
+**Gate (full sweep, Day 3.1 done early)**: ✅ mypy `src` **0/366** (+3 vs 363) · black/isort/flake8 0 (changed files, CI-identical) · run_all **10/10** (count 24 — no codegen/wire diff; `check_cross_category_import` green = Cat 5 `skills/` → `_contracts` ToolSpec import clean; `check_llm_sdk_leak` green; `check_event_schema_sync` green) · full pytest **2566 passed + 5 skipped** (+20 vs 2546, 0 del) · Vitest/mockup-fidelity UNCHANGED (zero FE touched) · `loop.py`/wire/codegen/migrations UNTOUCHED.
+
+**Est vs actual**: tool + executor opt-in + handler/router wiring + 10 tests ~5 hr est → actual ~4 hr (the keystone fake-Azure test pattern was directly reusable; the basename rename was the only surprise).
+
+---

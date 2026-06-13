@@ -44,27 +44,27 @@
 
 ---
 
-## Day 2 — Backend: read_skill tool + main-flow wiring (US-2)
+## Day 2 — Backend: read_skill tool + main-flow wiring (US-2) ✅
 
 ### 2.1 read_skill tool
-- [ ] **`agent_harness/skills/tool.py`** (NEW): `READ_SKILL_TOOL_SPEC` (`ToolSpec` name=`read_skill`, `input_schema {name:str, required, additionalProperties:false}`, `risk_level=LOW`, `hitl_policy=AUTO`, `tags=("skills",)`); `make_read_skill_handler(registry)` — closure matching the `ToolHandler` convention (per D-tool-handler-convention); known skill → `f"# Skill: {name}\n\n{instructions}\n\nFollow these instructions for the current task."`; unknown → recoverable "Unknown skill '{name}'. Available: {names}" (NOT an exception); read-only, no DB; re-export from `__init__.py`; file header
-- [ ] **Unit tests ADD** `tests/unit/agent_harness/skills/test_tool.py` (NEW): handler returns framed instructions for a known skill · unknown → recoverable message (no raise) · `READ_SKILL_TOOL_SPEC.input_schema` survives `ToolRegistryImpl.register` (valid Draft-2012 schema)
-  - DoD: all pass; mypy `src` 0; black/isort/flake8 0
+- [x] **`agent_harness/skills/tool.py`** (NEW — written Day 1): `READ_SKILL_TOOL_SPEC` (read-only, `additionalProperties:false`, `risk_level=LOW`, `tags=("skills",)`); `make_read_skill_handler(registry)` — `async def(call: ToolCall) -> str` per D3; known → framed `# Skill:` + instructions + "Follow these instructions…"; unknown/missing-arg → recoverable "Unknown skill … Available: …" (no raise); read-only, no DB
+- [x] **Unit tests ADD** `tests/unit/agent_harness/skills/test_skills_tool.py` (NEW, ×4): framed for known · unknown → recoverable (no raise) · missing-arg → recoverable · spec survives `ToolRegistryImpl.register` (valid Draft-2012)
+  - DoD: ✅ 4 pass; mypy 0; flake8 0 (renamed `test_tool.py`→`test_skills_tool.py` for unique basename — pytest rootdir collision vs `verification/test_registry.py`, the 57.109 D-DAY1-2 lesson)
 
 ### 2.2 make_default_executor opt-in + build_handler + router wiring
-- [ ] **`business_domain/_register_all.py`**: `make_default_executor(..., skill_registry: "SkillRegistry | None" = None)` — after built-ins, `if skill_registry is not None: registry.register(READ_SKILL_TOOL_SPEC); handlers["read_skill"] = make_read_skill_handler(skill_registry)` (mirror echo :257-258 + teammate_mailbox opt-in); MHist 1-line
-- [ ] **`api/v1/chat/handler.py`**: `build_handler(..., skill_registry: "SkillRegistry | None" = None)` — (a) `if skill_registry: block = render_catalog_block(skill_registry.list()); if block: system_prompt = f"{system_prompt}\n\n{block}"` before the loop ctor; (b) pass `skill_registry=skill_registry` to `make_default_executor(...)`; MHist 1-line
-- [ ] **`api/v1/chat/router.py`**: pass `skill_registry=get_default_skill_registry()` to `build_handler(...)`; MHist 1-line
+- [x] **`business_domain/_register_all.py`**: `make_default_executor(..., skill_registry=None)` — `if skill_registry is not None: registry.register(READ_SKILL_TOOL_SPEC); handlers["read_skill"] = make_read_skill_handler(skill_registry)` (mirror echo + handoff opt-in); import + TYPE_CHECKING `SkillRegistry`; MHist 1-line
+- [x] **`api/v1/chat/handler.py`**: threaded `skill_registry` through BOTH `build_handler` (dispatcher) AND `build_real_llm_handler` (wiring); `build_real_llm_handler` appends `render_catalog_block` to `system_prompt` (rides the persona seam, D1) + passes `skill_registry` to `make_default_executor`; import + TYPE_CHECKING; comments
+- [x] **`api/v1/chat/router.py`**: pass `skill_registry=get_default_skill_registry()` to `build_handler(...)`; import; comment
 - [x] ~~`capability_matrix.yaml` allowlist~~ — DROPPED (D2: chat path derives the matrix from the live registry → `read_skill` auto-PASSes once registered)
-- [ ] **Integration tests ADD** `tests/integration/api/test_skills_wiring.py` (NEW): `make_default_executor(skill_registry=reg)` → `read_skill` in `registry.list()` · `build_handler(skill_registry=reg)` → constructed loop system text contains "## Available Skills" + both skill names · `build_handler(skill_registry=None)` → system_prompt byte-identical (no-skills regression) · a stubbed-LLM chat emitting `read_skill` → tool result carries the framed instructions
-  - DoD: all pass; mypy `src` 0 (all edits); black/isort/flake8 0; `loop.py`/wire/codegen/migrations UNTOUCHED
+- [x] **Integration tests ADD** `tests/integration/api/test_skills_wiring.py` (NEW, ×6): executor opt-in registers read_skill (+ negative guard) · read_skill executes through `executor.execute` → framed · `build_handler(skill_registry=reg)` → `loop._system_prompt` has "## Available Skills" + code-review + summarize + read_skill(name) · `build_handler` no-registry → `== DEMO_SYSTEM_PROMPT` (regression) · scripted MockChatClient read_skill call → ToolCallExecuted result carries framed instructions (lazy-load on the SSE flow). Azure-call-free (57.64 keystone fake-env pattern)
+  - DoD: ✅ 6 pass; mypy `src` **0/366** (+3 skills); run_all **10/10** (count 24); full pytest **2566+5skip** (+20, 0 del); `loop.py`/wire/codegen/migrations UNTOUCHED
 
 ---
 
 ## Day 3 — Full gates + drive-through (US-3) + CHANGE-080
 
-### 3.1 Full gate sweep
-- [ ] mypy `src` 0 · black/isort/flake8 0 (full `src tests` CI-identical) · run_all 10/10 (count 24 — no codegen diff; `check_event_schema_sync`+`check_llm_sdk_leak`+`check_cross_category_import` green) · full pytest 2546+N (0 del) · Vitest 840 (unchanged — no FE) · mockup-fidelity 51 (no FE/CSS) · `loop.py`/wire diff empty
+### 3.1 Full gate sweep ✅
+- [x] mypy `src` **0/366** (+3) · black/isort/flake8 0 (changed files, CI-identical) · run_all **10/10** (count 24 — no codegen diff; `check_event_schema_sync`+`check_llm_sdk_leak`+`check_cross_category_import` green) · full pytest **2566+5skip** (+20, 0 del) · Vitest 840 + mockup-fidelity 51 UNCHANGED (zero FE touched) · `loop.py`/wire diff empty
 
 ### 3.2 Drive-through (US-3 — real chat-v2 :3007 + fresh single-process backend + real Azure LLM; Risk Class E clean restart + startup probe logging loaded skill names)
 - [ ] **Clean restart + probe**: kill stale `--reload` workers (`Win32_Process` PID/PPID/StartTime sweep); fresh no-reload backend sole owner of :8000; startup probe confirms `agent_harness/skills/bundled/` loaded (`code-review`+`summarize`)

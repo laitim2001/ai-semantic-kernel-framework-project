@@ -1,5 +1,5 @@
 """
-File: backend/tests/unit/agent_harness/skills/test_registry.py
+File: backend/tests/unit/agent_harness/skills/test_skills_registry.py
 Purpose: Unit tests for SkillRegistry, the frontmatter loader, and render_catalog_block.
 Category: Tests
 Scope: Phase 57 / Sprint 57.113
