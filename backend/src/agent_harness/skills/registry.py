@@ -26,6 +26,7 @@ Created: 2026-06-13 (Sprint 57.113)
 Last Modified: 2026-06-13
 
 Modification History (newest-first):
+    - 2026-06-13: Sprint 57.114 — add SkillRegistry.with_overlay (per-tenant overlay primitive)
     - 2026-06-13: Initial creation (Sprint 57.113) — Skills System first vertical
 
 Related:
@@ -38,6 +39,7 @@ Related:
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -97,6 +99,22 @@ class SkillRegistry:
 
     def list(self) -> list[Skill]:
         return list(self._skills.values())
+
+    # === Per-tenant overlay ===
+    # Why: a tenant's custom skills (loaded from the tenant_skills table by
+    # platform_layer/skills) are merged ON TOP of the bundled set — a same-name
+    # tenant skill REPLACES the bundled body (override-by-name), new names are
+    # added, the rest of the bundled set stays. Pure (no DB / no I/O): neither
+    # this registry nor the bundled singleton is mutated; a fresh registry is
+    # built each call so the resolver can cache it per tenant. Dict insertion
+    # order keeps bundled names first, then new tenant names (deterministic).
+    def with_overlay(self, extra: Sequence[Skill]) -> "SkillRegistry":
+        """Return a NEW registry: this registry's skills with `extra` overlaid by name."""
+        merged: dict[str, Skill] = {skill.name: skill for skill in self.list()}
+        merged.update({skill.name: skill for skill in extra})
+        overlaid = SkillRegistry()
+        overlaid._skills = merged
+        return overlaid
 
     @classmethod
     def from_dir(cls, path: str | Path) -> "SkillRegistry":

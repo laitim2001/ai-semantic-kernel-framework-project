@@ -121,6 +121,9 @@ from infrastructure.db.models.tools import (
     ToolResult,
 )
 
+# Sprint 57.114 — TenantSkill (per-tenant custom Skills catalog; Skills System overlay)
+from infrastructure.db.models.skill import TenantSkill
+
 # Sprint 57.11 Day 1 — Verification Log (US-1)
 from infrastructure.db.models.verification_log import (
     VerificationLog,
@@ -194,4 +197,6 @@ __all__ = [
     "VerifierType",
     # Agent Catalog (Sprint 57.70 — per-tenant AgentSpec definitions, Cat 11)
     "AgentCatalog",
+    # Tenant Skills (Sprint 57.114 — per-tenant custom Skills catalog overlay)
+    "TenantSkill",
 ]
