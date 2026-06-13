@@ -28,6 +28,7 @@ from agent_harness._contracts import (
     TeammateChildLoopFactory,
     TraceContext,
 )
+from agent_harness.guardrails.engine import GuardrailEngine
 from agent_harness.observability import NoOpTracer
 from agent_harness.observability._abc import Tracer
 from agent_harness.orchestrator_loop import AgentLoopImpl
@@ -45,11 +46,14 @@ def make_child_loop_factory(
     tenant_id: UUID | None = None,
     tracer: Tracer | None = None,
     max_turns: int = 4,
+    guardrail_engine: GuardrailEngine | None = None,
 ) -> ChildLoopFactory:
     """Return a ChildLoopFactory that builds a real child AgentLoopImpl on `chat`.
 
     Default registry/executor are EMPTY (tool-less child). Pass a real pair (e.g.
-    from make_default_executor()) for a tool-capable child loop.
+    from make_default_executor()) for a tool-capable child loop. Sprint 57.110 (B4):
+    pass a guardrail_engine to mirror the production child-governance injection
+    (no HITL wiring in the child → ESCALATE fail-closes to BLOCK).
     """
 
     def factory(budget: SubagentBudget) -> AgentLoop:
@@ -64,6 +68,7 @@ def make_child_loop_factory(
             tracer=tracer,
             max_turns=max_turns,
             token_budget=budget.max_tokens,
+            guardrail_engine=guardrail_engine,
         )
 
     return factory
@@ -77,6 +82,7 @@ def make_teammate_child_loop_factory(
     tenant_id: UUID | None = None,
     tracer: Tracer | None = None,
     max_turns: int = 4,
+    guardrail_engine: GuardrailEngine | None = None,
 ) -> TeammateChildLoopFactory:
     """Return a TeammateChildLoopFactory that builds a real child AgentLoopImpl on `chat`.
 
@@ -100,6 +106,7 @@ def make_teammate_child_loop_factory(
             max_turns=max_turns,
             token_budget=budget.max_tokens,
             message_inbox=inbox,
+            guardrail_engine=guardrail_engine,
         )
 
     return factory

@@ -30,13 +30,15 @@ Description:
     never raises, since a raise would propagate through wait_for and crash the turn):
     - child_loop_factory is None -> error="child_loop_factory_unavailable"
     - asyncio.TimeoutError on max_duration_s -> error="timeout: {N}s"
-    - empty final answer -> error="empty_response"
+    - empty final answer -> error="empty_response" (or "child_guardrail_blocked"
+      when the child run terminated guardrail_blocked — Sprint 57.110 truthful label)
     - any child-loop exception -> error="child_loop_error: {type}: {msg}"
 
 Created: 2026-05-04 (Sprint 54.2)
-Last Modified: 2026-06-09
+Last Modified: 2026-06-13
 
 Modification History:
+    - 2026-06-13: Sprint 57.110 B4 — GuardrailTriggered relay + blocked label + partial salvage
     - 2026-06-11: Sprint 57.103 (B2b) — add MessageInjected to the relayed TAO subset
     - 2026-06-09: Sprint 57.96 — forward child TAO events (SubagentChildEvent) via emitter
     - 2026-06-09: Real child loop via ChildLoopFactory + LoopEvent drain (Sprint 57.94)
@@ -58,6 +60,7 @@ from uuid import UUID, uuid4
 
 from agent_harness._contracts import (
     ChildLoopFactory,
+    GuardrailTriggered,
     LLMResponded,
     LoopCompleted,
     LoopEvent,
@@ -82,6 +85,8 @@ from agent_harness.subagent.budget import BudgetEnforcer
 # Sprint 57.103 (B2b): MessageInjected joins the subset — a chat-user inject landing
 # on a running TEAMMATE child is HIGH-signal (the whole point of B2b is SEEING it land
 # on the Tree node). FORK children carry no inbox, so they never fire it (harmless).
+# Sprint 57.110 (B4): GuardrailTriggered joins — once the child is governed, a child
+# guardrail fire is HIGH-signal audit/transparency (the Tree must show governance acting).
 _TAO_CHILD_EVENT_TYPES: tuple[type[LoopEvent], ...] = (
     TurnStarted,
     LLMResponded,
@@ -89,6 +94,7 @@ _TAO_CHILD_EVENT_TYPES: tuple[type[LoopEvent], ...] = (
     ToolCallExecuted,
     ToolCallFailed,
     MessageInjected,
+    GuardrailTriggered,
 )
 
 
@@ -136,10 +142,11 @@ class ForkExecutor:
 
         final_answer = ""
         tokens_used = 0
+        stop_reason = ""
         emitter = self._event_emitter
 
         async def _drive() -> None:
-            nonlocal final_answer, tokens_used
+            nonlocal final_answer, tokens_used, stop_reason
             child = factory(budget)  # fresh child loop instance per spawn
             child_session_id = uuid4()
             async for ev in child.run(
@@ -157,6 +164,16 @@ class ForkExecutor:
                     final_answer = ev.content  # last assistant answer wins
                 elif isinstance(ev, LoopCompleted):
                     tokens_used = ev.total_tokens
+                    stop_reason = ev.stop_reason
+
+        def _salvaged_summary() -> str:
+            # Sprint 57.110 (B4) fail_partial: the nonlocal final_answer survives
+            # the wait_for cancellation — a timed-out / crashed child's partial
+            # work is salvaged into the summary instead of discarded.
+            if budget.failure_policy == "fail_partial" and final_answer:
+                summary, _ = self._enforcer.truncate_summary(final_answer, cap_words=500)
+                return summary
+            return ""
 
         try:
             await asyncio.wait_for(_drive(), timeout=budget.max_duration_s)
@@ -165,29 +182,36 @@ class ForkExecutor:
                 subagent_id=subagent_id,
                 mode=SubagentMode.FORK,
                 success=False,
-                summary="",
+                summary=_salvaged_summary(),
                 duration_ms=(time.monotonic() - start) * 1000.0,
                 error=f"timeout: {budget.max_duration_s}s",
+                metadata={"failure_policy": budget.failure_policy},
             )
         except Exception as exc:  # noqa: BLE001 — fail-closed catches all
             return SubagentResult(
                 subagent_id=subagent_id,
                 mode=SubagentMode.FORK,
                 success=False,
-                summary="",
+                summary=_salvaged_summary(),
                 duration_ms=(time.monotonic() - start) * 1000.0,
                 error=f"child_loop_error: {type(exc).__name__}: {exc}",
+                metadata={"failure_policy": budget.failure_policy},
             )
 
         duration_ms = (time.monotonic() - start) * 1000.0
         if not final_answer:
+            # Sprint 57.110 (B4): a guardrail-blocked child run produces no final
+            # answer — label it truthfully (the wire-stable stop_reason string is
+            # TerminationReason.GUARDRAIL_BLOCKED.value; Cat 11 avoids the Cat 1
+            # enum import).
+            blocked = stop_reason == "guardrail_blocked"
             return SubagentResult(
                 subagent_id=subagent_id,
                 mode=SubagentMode.FORK,
                 success=False,
                 summary="",
                 duration_ms=duration_ms,
-                error="empty_response",
+                error="child_guardrail_blocked" if blocked else "empty_response",
             )
         summary, _ = self._enforcer.truncate_summary(final_answer, cap_words=500)
         return SubagentResult(
