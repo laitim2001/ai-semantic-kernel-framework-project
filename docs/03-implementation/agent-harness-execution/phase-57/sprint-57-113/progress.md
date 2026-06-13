@@ -61,3 +61,23 @@ No assertion on the exact built-in tool COUNT or on `DEMO_SYSTEM_PROMPT` content
 **Est vs actual**: tool + executor opt-in + handler/router wiring + 10 tests ~5 hr est → actual ~4 hr (the keystone fake-Azure test pattern was directly reusable; the basename rename was the only surprise).
 
 ---
+
+## Day 3 — 2026-06-13 — Drive-through (US-3) + CHANGE-080 ✅
+
+**Setup (Risk Class E clean start)**: no orphan uvicorn/spawn python workers (Win32_Process sweep); :8000 free → started a fresh no-reload single-process backend (`python -m uvicorn api.main:app --app-dir src`, NO `--reload`, pid 38620) — startup log clean ("startup complete", pricing/billing wired, root `.env` autoloaded via `load_dotenv()` walking up from backend). Runtime skill-load probe: `get_default_skill_registry()` → `['code-review', 'summarize']` (CR 1179 / SUM 740 chars) confirming `Path(__file__).parent/"bundled"` resolves in the server runtime. Frontend :3007 (Vite, node) already up. Real Azure (real_llm mode, non-echo).
+
+**Drive-through (real chat-v2 UI :3007 + real backend + real Azure gpt, dev-login jamie@acme.com · acme-prod · operator; Playwright):**
+
+- **Leg A (code-review — discover→load→follow) PASS**: typed `Review this Python function: def get_user(uid): return db.execute("SELECT * FROM users WHERE id = " + uid).fetchone()`. The model (seeing "## Available Skills") emitted a `read_skill("code-review")` tool call (the Inspector Trace shows `agent_loop.tool.read_skill` TOOL_EXEC span; page DOM `mentionsReadSkill: true`) → the tool result returned the full instructions → the assistant produced output in the EXACT skill shape: `## Summary` ("SQL injection vulnerability … not safe to merge as-is") + a `## Risks` markdown table (`| Severity | Issue | Location |` — High SQL injection / Medium type-quoting / Medium None-handling, security ranked first) + `## Suggested fixes` (parameterized query, `int(uid)` validation). Screenshot `artifacts/dt57113-A-code-review.png`.
+- **Leg B (summarize — a different skill) PASS**: new session → `Summarize this thread: Alice proposed moving to Postgres. Bob … migration plan by Friday. Carol … MySQL for analytics, still undecided. Dave will benchmark …`. `read_skill("summarize")` fired (`mentionsReadSkill: true`) → output in the skill shape: `## Decisions` (Move to Postgres) + `## Action Items` (**`Bob — produce a migration plan by Friday`** / **`Dave — benchmark Postgres vs MySQL next week`** — the skill's exact `owner — task` format) + `## Open Questions` (keep MySQL for analytics — undecided). Proves the model self-selected the CORRECT (different) skill. Screenshot `artifacts/dt57113-B-summarize.png`.
+- **Leg C (no false trigger) PASS**: new session → `What is 2 + 2, and why?` → `mentionsReadSkill: false`; the assistant answered directly ("2 + 2 = 4, because addition combines quantities…") with NO read_skill call. The model does not force a skill where none fits. Screenshot `artifacts/dt57113-C-no-trigger.png`.
+
+**Observed vs intended**: matches exactly — the cheap "## Available Skills" block reached the system prompt (the model knew the two skills existed), the model self-selected + lazy-loaded the right one via `read_skill`, and the output shape DISTINCTLY followed the loaded skill (not a generic answer) — the AP-4 guard the drive-through exists to confirm. The negative leg proves no false-positive coupling. No dead control, no fixture, no mislabeled output.
+
+**Teardown (Risk Class E)**: stopped the dt backend (pid 38620 → :8000 free); removed the temp `dt_backend.log`; the Vite node :3007 left running (not ours to stop). Screenshots moved to `artifacts/` (never-commit, local evidence).
+
+**CHANGE-080** written (`claudedocs/4-changes/feature-changes/CHANGE-080-skills-system-spike.md`).
+
+**Est vs actual**: drive-through ~1 hr est → actual ~1 hr (3 legs + screenshots; the dev-login → chat-v2 path was straightforward).
+
+---

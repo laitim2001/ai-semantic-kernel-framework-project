@@ -66,24 +66,24 @@
 ### 3.1 Full gate sweep ✅
 - [x] mypy `src` **0/366** (+3) · black/isort/flake8 0 (changed files, CI-identical) · run_all **10/10** (count 24 — no codegen diff; `check_event_schema_sync`+`check_llm_sdk_leak`+`check_cross_category_import` green) · full pytest **2566+5skip** (+20, 0 del) · Vitest 840 + mockup-fidelity 51 UNCHANGED (zero FE touched) · `loop.py`/wire diff empty
 
-### 3.2 Drive-through (US-3 — real chat-v2 :3007 + fresh single-process backend + real Azure LLM; Risk Class E clean restart + startup probe logging loaded skill names)
-- [ ] **Clean restart + probe**: kill stale `--reload` workers (`Win32_Process` PID/PPID/StartTime sweep); fresh no-reload backend sole owner of :8000; startup probe confirms `agent_harness/skills/bundled/` loaded (`code-review`+`summarize`)
-- [ ] **Leg A (discover+load+follow)**: chat-v2 "Review this function: `<small buggy snippet>`" → model emits `read_skill("code-review")` (Inspector tool view) → tool result = full instructions → assistant output in structured shape (Summary + Risks table w/ severities + Fixes)
-- [ ] **Leg B (2nd skill)**: "Summarize this thread: `<few decision lines>`" → `read_skill("summarize")` → Decisions / Action Items / Open Questions
-- [ ] **Leg C (no false trigger)**: "What's 2+2 and why?" → NO `read_skill` call
-- [ ] Screenshots `artifacts/dt57113-*.png` (tool call + structured output) + observed-vs-intended in progress.md; no dead control / no fixture / no mislabeled output
-  - DoD: discover→load→follow drivable e2e on real UI+backend+LLM; output shape proves the skill was followed (not just called); no false trigger
+### 3.2 Drive-through (US-3 — real chat-v2 :3007 + fresh single-process backend + real Azure LLM; Risk Class E clean restart) ✅
+- [x] **Clean restart + probe**: no orphan workers; fresh no-reload backend pid 38620 sole owner of :8000 (startup clean); runtime probe `get_default_skill_registry()` → `['code-review','summarize']` (CR 1179 / SUM 740 chars)
+- [x] **Leg A (discover+load+follow) PASS**: `Review this Python function: …SQL string-concat…` → `read_skill("code-review")` (Trace `agent_loop.tool.read_skill` span; `mentionsReadSkill: true`) → output `## Summary` + `## Risks` table (High SQL injection / Med type / Med None) + `## Suggested fixes` (parameterized). `dt57113-A-code-review.png`
+- [x] **Leg B (2nd skill) PASS**: `Summarize this thread: …Postgres/Friday/MySQL/benchmark…` → `read_skill("summarize")` → `## Decisions` + `## Action Items` (`Bob — …` / `Dave — …` owner—task) + `## Open Questions`. `dt57113-B-summarize.png`
+- [x] **Leg C (no false trigger) PASS**: `What is 2 + 2, and why?` → `mentionsReadSkill: false`, direct answer, NO read_skill. `dt57113-C-no-trigger.png`
+- [x] Screenshots in `artifacts/` + observed-vs-intended in progress.md; no dead control / no fixture / no mislabeled output; teardown stopped pid 38620 + removed temp log
+  - DoD: ✅ discover→load→follow drivable e2e on real UI+backend+LLM; output shape DISTINCTLY follows the skill (load+follow proven, AP-4 guard); negative leg proves no false-positive
 
-### 3.3 CHANGE-080
-- [ ] `claudedocs/4-changes/feature-changes/CHANGE-080-skills-system-spike.md` (1-page)
+### 3.3 CHANGE-080 ✅
+- [x] `claudedocs/4-changes/feature-changes/CHANGE-080-skills-system-spike.md` (1-page, incl. the 3-leg drive-through)
 
 ---
 
-## Day 4 — Closeout
+## Day 4 — Closeout ✅
 
 ### 4.1 Closeout
-- [ ] retrospective.md Q1-Q7 + calibration (NEW `skills-system-spike` 0.60 1st data point — record ratio; agent-delegated: no) + progress.md final
-- [ ] **Spike design note `31-skills-system-spike.md`** (§5.5) — 8-point quality gate all ✓, verified ratio recorded (retro Q6)
-- [ ] Navigators: CLAUDE.md Current-Sprint row + Last-Updated; MEMORY.md quality pointer + memory subfile `project_phase57_113_skills_system_spike.md`; next-phase-candidates — Skills System epic OPENED (this spike DONE) + deferred ADs (per-tenant catalog / slash command / Inspector affordance / authoring UI / bundled-scripts); sprint-workflow matrix NEW `skills-system-spike` 0.60 1st data point; 17.md — add `read_skill` Cat 2 spec / catalog-block seam if it warrants a contract, else note N/A
-- [ ] **Anti-pattern self-check** (retro Q7): AP-4 ✅ real drivable skills (output shape proves followed, not stub); AP-2 ✅ reachable from main flow (router→build_handler→executor), no dead code; AP-8 ✅ rides the proven system_prompt seam (no second prompt-assembly path); AP-3 ✅ skills concentrated in `agent_harness/skills/` + the tool registration in the established `_register_all.py` home
+- [x] retrospective.md Q1-Q7 + calibration (NEW `skills-system-spike` 0.60 1st data point ratio ~0.94 IN band KEEP; agent-delegated: no) + progress.md final
+- [x] **Spike design note `31-skills-system-spike.md`** (§5.5) — 8-point quality gate all ✓, ~95% verified ratio (retro Q6)
+- [x] Navigators: CLAUDE.md Current-Sprint row + Last-Updated (minimal touch); MEMORY.md quality pointer + memory subfile `project_phase57_113_skills_system_spike.md`; next-phase-candidates — Skills System epic OPENED + 6 deferred items; sprint-workflow matrix NEW `skills-system-spike` 0.60 1st data point; 17.md — N/A (no new contract — identity/MFA precedent; noted in design note §4)
+- [x] **Anti-pattern self-check** (retro Q5/Q7): AP-4 ✅ real drivable skills (dt output shape proves followed, not stub; negative-guard tests); AP-2 ✅ reachable from main flow (router→build_handler→executor + block→system_prompt); AP-8 ✅ rides the proven system_prompt seam (no second prompt-assembly path); AP-3 ✅ skills in `agent_harness/skills/` + tool reg in the established `_register_all.py`
 - [ ] PR (push + open on user authorization)
