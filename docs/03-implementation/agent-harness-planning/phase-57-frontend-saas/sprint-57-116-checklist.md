@@ -83,12 +83,12 @@
 
 ## Day 4 — CHANGE-083 + closeout (NO design note — feature continuation)
 
-### 4.1 CHANGE-083
-- [ ] **`claudedocs/4-changes/feature-changes/CHANGE-083-skills-inspector-affordance.md`** (1-page, incl. the 3-case drive-through)
-- [ ] (NO design note — feature continuation of the validated Skills epic + the 57.108 additive-wire-field pattern; sprint-workflow §5.5 → design note is spike-only)
+### 4.1 CHANGE-083 ✅
+- [x] **`claudedocs/4-changes/feature-changes/CHANGE-083-skills-inspector-affordance.md`** (1-page, incl. the 3-case drive-through)
+- [x] (NO design note — feature continuation of the validated Skills epic + the 57.108 additive-wire-field pattern; sprint-workflow §5.5 → design note is spike-only)
 
-### 4.2 Closeout
-- [ ] retrospective.md Q1-Q7 + calibration (`frontend-feature-with-event-wire-addition` 0.55 **3rd data point** — ratio vs ~1.05 mean; parent-direct agent_factor 1.0) + progress.md final
-- [ ] Navigators: CLAUDE.md Current-Sprint row + Last-Updated (minimal touch); MEMORY.md quality pointer + memory subfile `project_phase57_116_skills_inspector_affordance.md`; next-phase-candidates — `AD-Skills-Inspector-Affordance` CLOSED + 57.116 carryover block + remaining Skills ADs carried; sprint-workflow matrix `frontend-feature-with-event-wire-addition` 0.55 3rd-point update; 17.md — N/A (additive `loop_start` field, no new contract)
-- [ ] **Anti-pattern self-check** (retro Q5/Q7): AP-4 (drive-through proves the chip is server-confirmed — Leg B no-chip on an invalid name) · AP-2 (force-load → router augment → loop_start → store → chip main flow) · AP-3 (wire field chat api / store+render chat_v2) · AP-6 (additive field, no speculative new event type)
+### 4.2 Closeout ✅
+- [x] retrospective.md Q1-Q7 + calibration (`frontend-feature-with-event-wire-addition` 0.55 **3rd data point** ~1.1-1.2 IN band, 3-pt mean ~1.07 → KEEP validated; parent-direct agent_factor 1.0) + progress.md final
+- [x] Navigators: CLAUDE.md Current-Sprint row + Last-Updated (minimal touch); MEMORY.md quality pointer + memory subfile `project_phase57_116_skills_inspector_affordance.md`; next-phase-candidates — `AD-Skills-Inspector-Affordance` CLOSED + 57.116 carryover block + remaining Skills ADs carried; sprint-workflow matrix `frontend-feature-with-event-wire-addition` 0.55 3rd-point update; 17.md — N/A (additive `loop_start` field, no new contract)
+- [x] **Anti-pattern self-check** (retro Q5/Q7): AP-4 (drive-through proves the chip is server-confirmed — Leg B no-chip on an invalid name) · AP-2 (force-load → router augment → loop_start → store → chip main flow) · AP-3 (wire field chat api / store+render chat_v2) · AP-6 (additive field, no speculative new event type) — 0 violations
 - [ ] PR (push + open on user authorization)
