@@ -69,15 +69,15 @@
 
 ## Day 3 — Drive-through (US-5) — real chat-v2 + fresh backend + real Azure LLM (Risk Class E clean restart)
 
-### 3.1 Clean restart + probe
-- [ ] Kill stale uvicorn (listener + `multiprocessing.spawn` orphan workers via `Win32_Process` PID/PPID/StartTime sweep); confirm port free; restart from **repo-root** with `--env-file .env` + `PYTHONPATH=backend/src`; startup-log Azure loaded; probe `GET /api/v1/chat/skills` 200. Reuse dev tenant `acme-skills` (jamie@acme.com, cookie) with the persisted `release-notes` overlay
+### 3.1 Clean restart + probe ✅
+- [x] Killed stale backend PID 26524 (57.115 code) via `Stop-Process`; port 8000 free + ZERO orphan uvicorn (`Win32_Process` sweep, no `--reload` workers); restarted from **repo-root** `PYTHONPATH=backend/src ... --env-file .env`; startup-log all-wired + complete (fresh 57.116 process). dev-login `acme-skills`/jamie 200; `GET /api/v1/chat/skills` → [code-review, summarize, release-notes] (persisted overlay). API pre-probe (curl-layer sanity): echo_demo `force_load_skill=release-notes` → loop_start `active_skill="release-notes"`; unknown → `null`
 
-### 3.2 Drive-through 1 leg / 3 cases
-- [ ] **Leg A (force-load → chip + determinism) PASS**: `/release-notes <task>` via the picker → Send → the sent user turn shows a "⚡ release-notes" chip + the output follows the release-notes shape + Inspector `read_skill` 0×. `legA-userturn-skill-chip.png`
-- [ ] **Leg B (graceful unknown → no chip) PASS**: `/nonexistent write a haiku` → the router drops it (`active_skill: null`) → NO chip; the chat answers normally. `legB-unknown-no-chip.png`
-- [ ] **Leg C (plain → no chip) PASS**: a normal message (no `/`) → NO chip. `legC-plain-no-chip.png`
-- [ ] Each control driven (no dead control / no fixture / real LLM): the chip is SERVER-confirmed (Leg B — an invalid name the FE DID send yields no chip → not a client echo); Drive-Through-Acceptance + AP-4 guard satisfied
-  - DoD: ALL 3 cases PASS + the chip is server-confirmed
+### 3.2 Drive-through 1 leg / 3 cases ✅ (real chat-v2 :3007 + real Azure gpt-5.2, mode=real_llm)
+- [x] **Leg A (force-load → chip + determinism) PASS**: `/release-notes <task>` → Send → user turn shows **`⚡ release-notes`** chip (`data-testid` + `title="Skill: release-notes"`) + the `/token` STRIPPED + output follows `## Summary/## Highlights/## Upgrade steps` + Inspector `read_skill` **0×** (`toolBlockCount=0`, `mentionsReadSkill=false`) + verification 0.99. `artifacts/sprint-57-116-legA-userturn-skill-chip.png`
+- [x] **Leg B (graceful unknown → no chip) PASS**: `/nonexistent reply with exactly: OK` → user turn shows the LITERAL token (not stripped) + **NO chip** (router dropped → `active_skill:null`) + agent "OK"; `totalChips` stays 1. `artifacts/sprint-57-116-legB-unknown-no-chip.png`
+- [x] **Leg C (plain → no chip) PASS**: `What is 2 plus 2?` (no `/`) → **NO chip** + agent "4"; `totalChips` stays 1. `artifacts/sprint-57-116-legC-plain-no-chip.png`
+- [x] Each control driven (real LLM, no fixture): the chip is SERVER-confirmed (Leg B — a `/nonexistent` token the FE sent yields no chip → not a client echo); bound to the CORRECT triggering turn (3 user turns, only Leg A chipped); Drive-Through-Acceptance + AP-4 guard satisfied
+  - DoD: ✅ ALL 3 cases PASS + the chip is server-confirmed
 
 ---
 

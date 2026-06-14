@@ -76,5 +76,22 @@ Head-start = 2 Explore recon agents (backend wire taxonomy + FE chat-v2 store/re
 ### Gate
 - `npm run lint` (no `--silent`) 0 error (the `TSSatisfiesExpression` lines are pre-existing jsx-ast-utils plugin noise, not lint errors) · `npm run build` ✓ (tsc + vite, 3.30s) · `npm run test` Vitest **869 passed** vs 863 → **+6** · `npm run check:mockup-fidelity` **51** holds (`.route-pill` reused, no CSS change).
 
+---
+
+## Day 3 — 2026-06-14 — Drive-through (real chat-v2 :3007 + fresh backend + real Azure gpt-5.2) — ALL 3 cases PASS
+
+### Setup (Risk Class E clean restart)
+- Killed the stale backend (PID 26524, 57.115 code, started 1:06 PM) via `Stop-Process`; confirmed port 8000 free + ZERO orphan uvicorn `python.exe` (`Win32_Process` sweep — no `--reload` spawn workers). Started a fresh single-process no-reload backend from **repo-root**: `PYTHONPATH=backend/src python -m uvicorn api.main:app --env-file .env --host 0.0.0.0 --port 8000`. Startup log: rate-limit / pricing / error-budget / SLA / billing-outbox all wired + "startup complete" (fresh process serving 57.116). Frontend dev server (:3007) already up.
+- dev-login `POST /api/v1/auth/dev-login?tenant_code=acme-skills&email=jamie@acme.com` → 200 (jamie, tenant acme-skills, httpOnly cookie). `GET /api/v1/chat/skills` → `[code-review, summarize, release-notes]` (release-notes = the 57.115 persisted acme-skills overlay).
+- **API pre-probe (curl-layer — NOT the drive-through, a fast new-code sanity)**: `POST /chat/` echo_demo `force_load_skill=release-notes` → first frame `loop_start ... "active_skill":"release-notes"`; `force_load_skill=nope-not-real` → `"active_skill":null`. Confirms the new router augment is live before driving the UI.
+
+### Drive-through (real UI driven via Playwright; mode = real_llm = real Azure gpt-5.2)
+- **Leg A (force-load → chip + determinism) PASS**: composer `/release-notes We shipped a user-turn skill chip and fixed a loop_start wire field` → Send. **Observed = intended**: the sent user turn renders **`⚡ release-notes`** chip (`data-testid="user-turn-skill-chip"`, `title="Skill: release-notes"`); the `/release-notes` token is STRIPPED from the message body; the agent output follows the skill EXACTLY (`## Summary` / `## Highlights` / `## Upgrade steps`); the Inspector shows `read_skill` **0×** (`mentionsReadSkill=false`, `toolBlockCount=0` — the instructions were force-injected, not model-invoked); verification ✅ 0.99; tokens.in 2,429 / out 95. `artifacts/sprint-57-116-legA-userturn-skill-chip.png`.
+- **Leg B (graceful unknown → no chip) PASS**: composer `/nonexistent reply with exactly: OK` → Send. **Observed = intended**: the user turn shows the LITERAL `/nonexistent reply with exactly: OK` (unmatched → not a known skill → not stripped) with **NO chip** (the router dropped the unknown name → `active_skill:null`); the agent answered "OK", verification 0.99. `totalChips` stays **1** (only Leg A). `artifacts/sprint-57-116-legB-unknown-no-chip.png`.
+- **Leg C (plain → no chip) PASS**: composer `What is 2 plus 2? Reply with just the number.` (no `/`) → Enter. **Observed = intended**: NO chip; the agent answered "4", verification 0.99. `totalChips` stays **1**. `artifacts/sprint-57-116-legC-plain-no-chip.png`.
+
+### Verdict
+ALL 3 cases PASS. The chip is **server-confirmed, not a client echo**: Leg B sent a `/nonexistent` token yet produced NO chip (the router's registry validation dropped it → `active_skill:null`) — the AP-4 mislabel the design guards against does not occur. The chip is bound to the CORRECT triggering turn: across 3 user turns only Leg A's is chipped (the truthy-guard last-user-turn stamp targets the right turn; a later `null` does not propagate the chip). Real Azure (gpt-5.2), real verification, real cookie auth. Drive-Through-Acceptance satisfied.
+
 ## Remaining for Next Day
-- Day 3: drive-through (real chat-v2 + fresh backend + real Azure) — Leg A force-load chip / Leg B unknown no-chip / Leg C plain no-chip.
+- Day 4: CHANGE-083 + closeout (retro / calibration / navigators / next-phase-candidates `AD-Skills-Inspector-Affordance` CLOSED). NO design note (feature continuation).
