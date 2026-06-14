@@ -57,5 +57,24 @@ Head-start = 2 Explore recon agents (backend wire taxonomy + FE chat-v2 store/re
 ### Notes
 - The router-augment design (vs the Explore agent's thread-through-loop option) kept `loop.py`/`events.py` diff-0 — Cat-1 boundary clean. The parity guard (`test_event_wire_schema_parity.py`) confirmed the serializer default `None` matches the new schema key (green).
 
+---
+
+## Day 2 — 2026-06-14 — Frontend: `UserTurn.activeSkill` store stamp + `.route-pill` chip + Vitest
+
+### Done
+- **`types.ts`**: `UserTurn` += `activeSkill?: string`.
+- **`chatStore.ts`** (`mergeEvent` `case "loop_start"`): precompute `lastUserIdx` (reduce over turns for the last `role==="user"`, only when `ev.data.active_skill` truthy); the `turns` map stamps that turn with `activeSkill` (folded alongside the existing 57.88 agent-waiting clear). Truthy guard → a null (resume mirror / no force-load) never overwrites an existing chip. WHY comment + MHist (in-code).
+- **`UserTurn.tsx`** (`.turn-head`): a conditional `.route-pill` "⚡ {activeSkill}" chip (`data-testid="user-turn-skill-chip"`, `title="Skill: …"`) after the timestamp — mirrors the 57.101 `injected` `.route-pill` (no new colour literal). MHist.
+- **Tests**: NEW `chatStore.activeSkill.test.ts` (×4 — stamp on truthy / null no-stamp / later-null resume-safe / last-USER-turn skips a trailing agent turn) + `UserTurn.skillChip.test.tsx` (×2 — chip present/absent).
+
+### Build-time fixes (tsc -b stricter than the Vitest transform)
+- The generated `LoopStartEvent.data.active_skill` is **required** (not optional) → 2 type errors the Vitest oxc transform did NOT catch but `tsc -b` did:
+  1. `chatStore.ts` loop_start map — the initial `let next = t; if (...) next = {...next, X}` form lost union narrowing (UserTurn has no `waiting`; AgentTurn has no `activeSkill`). Restructured to narrow `t` directly per branch (`if (i===lastUserIdx && t.role==="user") return {...t, activeSkill}` / `if (t.role==="agent" && t.waiting) return {...t, waiting:false}` / `return t`).
+  2. `features/orchestrator-loop/_fixtures/demoLoopEvents.ts:73` — the demo `loop_start` literal was missing the now-required `active_skill` → added `active_skill: null`.
+- Lesson (process): adding a REQUIRED field to a codegen wire type breaks every existing event LITERAL (fixtures), not just the consumer. Run `npm run build` (tsc), not only Vitest, after a wire-schema field add — the Vitest transform skips type-checking. (Folds into the 57.108 additive-field pattern note.)
+
+### Gate
+- `npm run lint` (no `--silent`) 0 error (the `TSSatisfiesExpression` lines are pre-existing jsx-ast-utils plugin noise, not lint errors) · `npm run build` ✓ (tsc + vite, 3.30s) · `npm run test` Vitest **869 passed** vs 863 → **+6** · `npm run check:mockup-fidelity` **51** holds (`.route-pill` reused, no CSS change).
+
 ## Remaining for Next Day
-- Day 2: frontend — `types.ts` `UserTurn.activeSkill?` + `chatStore` `loop_start` stamp (truthy guard) + `UserTurn.tsx` `.route-pill` chip + Vitest.
+- Day 3: drive-through (real chat-v2 + fresh backend + real Azure) — Leg A force-load chip / Leg B unknown no-chip / Leg C plain no-chip.

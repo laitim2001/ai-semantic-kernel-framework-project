@@ -49,20 +49,21 @@
 
 ## Day 2 — Frontend: `UserTurn.activeSkill` store stamp + the `.route-pill` chip + Vitest (US-2, US-3, US-4)
 
-### 2.1 Store stamp (US-2)
-- [ ] **`features/chat_v2/types.ts`** (EDIT): `UserTurn` += `activeSkill?: string` (after `injected?`)
-- [ ] **`features/chat_v2/store/chatStore.ts`** (EDIT): in `mergeEvent` `case "loop_start"`, when `ev.data.active_skill` truthy, map `turns` immutably to set `activeSkill` on the LAST `role==="user"` turn (a `stampLastUserTurn` helper); a `null`/absent value → `turns` unchanged (truthy guard, resume-safe); WHY comment + MHist
-- [ ] **`tests/unit/chat_v2/chatStore.activeSkill.test.ts`** (NEW): a `loop_start` with `active_skill` stamps the last user turn · `null` → no stamp · a trailing agent turn is not mis-stamped · an existing chip is not cleared by a later `null`
-  - DoD: Vitest pass; truthy guard verified
+### 2.1 Store stamp (US-2) ✅
+- [x] **`features/chat_v2/types.ts`** (EDIT): `UserTurn` += `activeSkill?: string` (after `injected?`)
+- [x] **`features/chat_v2/store/chatStore.ts`** (EDIT): in `mergeEvent` `case "loop_start"`, precompute `lastUserIdx` (reduce, only when `ev.data.active_skill` truthy); the `turns` map stamps that turn's `activeSkill` (folded with the 57.88 agent-waiting clear, narrowing `t` per branch); a `null`/absent value → `turns` unchanged (truthy guard, resume-safe); WHY comment + MHist
+- [x] **`tests/unit/chat_v2/chatStore.activeSkill.test.ts`** (NEW ×4): `active_skill` stamps the last user turn · `null` → no stamp · a later `null` doesn't clear an existing chip · the last USER turn is stamped (a trailing agent turn skipped)
+  - DoD: ✅ Vitest pass; truthy guard + last-user-turn target verified
 
-### 2.2 The chip (US-3)
-- [ ] **`features/chat_v2/components/turns/UserTurn.tsx`** (EDIT): in `.turn-head` after the timestamp, `{turn.activeSkill && <span className="route-pill" data-testid="user-turn-skill-chip" title={`Skill: ${turn.activeSkill}`}>⚡ {turn.activeSkill}</span>}` (mirror the `injected` `.route-pill`); inline English; mockup token only (no colour literal)
-- [ ] **`tests/unit/chat_v2/UserTurn.skillChip.test.tsx`** (NEW): chip renders "⚡ {skill}" when `activeSkill` set · absent when unset
-  - DoD: `npm run build` clean; chip renders conditionally
+### 2.2 The chip (US-3) ✅
+- [x] **`features/chat_v2/components/turns/UserTurn.tsx`** (EDIT): in `.turn-head` after the timestamp, a conditional `.route-pill` "⚡ {activeSkill}" chip (`data-testid="user-turn-skill-chip"`, `title="Skill: …"`) — mirrors the `injected` `.route-pill`; inline English; mockup token only (no colour literal)
+- [x] **`tests/unit/chat_v2/UserTurn.skillChip.test.tsx`** (NEW ×2): chip renders "⚡ {skill}" when `activeSkill` set · absent when unset
+  - DoD: ✅ `npm run build` clean; chip renders conditionally
+- [x] **Build-time fix** (tsc -b stricter than Vitest transform): the generated `LoopStartEvent.data.active_skill` is REQUIRED → fixed `chatStore.ts` union narrowing (narrow `t` per branch, not a `let next`) + `features/orchestrator-loop/_fixtures/demoLoopEvents.ts:73` (add `active_skill: null`). Lesson: a REQUIRED codegen field breaks every existing event LITERAL → run `npm run build`, not just Vitest, after a wire field add.
 
-### 2.3 FE gate sweep (US-4)
-- [ ] `npm run lint` (NO `--silent`) 0 error · `npm run build` clean · `npm run test` Vitest **+M vs 863** · `npm run check:mockup-fidelity` **51** holds (no CSS change; `.route-pill` reused)
-  - Verify: `cd frontend && npm run lint && npm run build && npm run test && npm run check:mockup-fidelity`
+### 2.3 FE gate sweep (US-4) ✅
+- [x] `npm run lint` (NO `--silent`) 0 error (TSSatisfiesExpression = pre-existing plugin noise) · `npm run build` ✓ (tsc + vite) · `npm run test` Vitest **869 (+6 vs 863)** · `npm run check:mockup-fidelity` **51** holds (no CSS change; `.route-pill` reused)
+  - Verify: ✅ `cd frontend && npm run lint && npm run build && npm run test && npm run check:mockup-fidelity`
 
 ---
 
