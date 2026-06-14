@@ -64,3 +64,27 @@ pytest 2602+5skip · wire 24 · Vitest 851 · mockup-fidelity 51 · mypy `src` 0
 **Touch points**: `router.py` (EDIT) + `test_chat_skills_list.py` (NEW) + `test_chat_force_load_skill.py` (NEW). `loop.py`/`make_default_executor`/wire/codegen/migration UNTOUCHED.
 
 ---
+
+## Day 3 — 2026-06-14 — Frontend `/skill-name` picker + plumbing (US-4 + US-5)
+
+**Prong-2.5 (deferred from Day-0)**: `InputBar.tsx` + composer chrome use mockup classes + inline mockup-token styles — NO shadcn-utility residue. GREEN.
+
+**Done (3.1 + 3.2 + 3.3)**:
+- `chatService.ts`: `ChatRequestBody += force_load_skill?`; `ChatSkill`/`ChatSkillsResponse`; `fetchChatSkills()` (GET, mirrors listSessions).
+- `useChatSkills.ts` (NEW): TanStack `useQuery(["chat-v2","skills"], enabled, staleTime 60s)`.
+- `useLoopEventStream.ts`: `send(message, opts?: {forceLoadSkill?})` → threads into the streamChat body.
+- `SkillSlashMenu.tsx` (NEW): presentational dropdown (mockup tokens + `var(--shadow)` + file-level eslint-disable; `aria-selected`/`tabIndex=-1`).
+- `InputBar.tsx`: `/`-trigger (gated `!isRunning && real_llm`), filter, keyboard ↑/↓/Enter/Esc, `matchForceLoad` (leading KNOWN-skill token → forceLoadSkill + strip), conditional `send`.
+
+**Bugs caught + fixed**:
+- a11y lint `interactive-supports-focus` (role="option" needs focusable) → `tabIndex={-1}`.
+- mockup-fidelity FAIL — my `SkillSlashMenu` shadow `oklch(0 0 0 / 0.3)` was a NEW colour literal (51→52) → switched to the `var(--shadow)` token (no literal; baseline 51 holds). The Day-0 silent-constraint-delta drift class in action.
+- existing `InputBar.test.tsx` would break (InputBar now imports `useChatSkills` → `useQuery` needs a provider) → added a `useChatSkills` mock there (`{data:[]}`); also made `onSend` pass 1-arg `send(msg)` when no force-load so the existing `toHaveBeenCalledWith("hello")` stays green (Never-Delete: mock added, no test removed).
+
+**Plan-vs-repo adjustment**: the `useChatSkills` mock in the existing `InputBar.test.tsx` is a Never-Delete-safe addition (the 57.101 inject tests stay green, unchanged assertions).
+
+**Tests/gate (Day-3)**: chat_v2 Vitest 15/15 (4 menu + 8 slash + 3 existing) → full Vitest **863 passed (+12 vs 851)**; `npm run lint` 0 (no `--silent`); `npm run build` clean; `npm run check:mockup-fidelity` **51** holds.
+
+**Touch points**: `chatService.ts` · `useLoopEventStream.ts` · `InputBar.tsx` (EDIT) + `useChatSkills.ts` · `SkillSlashMenu.tsx` (NEW) + 2 NEW Vitest + `InputBar.test.tsx` (mock add). `chatStore`/wire/codegen UNTOUCHED.
+
+---

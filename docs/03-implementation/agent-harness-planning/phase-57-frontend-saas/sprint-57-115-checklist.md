@@ -15,7 +15,7 @@
   - [x] **D-route-collision** 🟢: only `GET /sessions/{session_id}` (`:973`); no `GET /{param}` catch-all → `GET /skills` static-segment safe
   - [x] **D-chatrequest-config** 🟢: `ChatRequest` no `model_config` (no `extra=forbid`); `Field` already imported
   - [x] **D-fe-send-sig** 🟢: `send: (message)=>` single-arg (`useLoopEventStream:44`) → add opts; `ChatRequestBody{message,mode,session_id?}`; new GET mirrors `listSessions` `fetchWithAuth` pattern
-  - [ ] **D-fe-tree (Prong-2.5)** — DEFERRED to Day-3 start (read `InputBar.tsx` before editing)
+  - [x] **D-fe-tree (Prong-2.5)** 🟢 (done Day-3 start): `InputBar.tsx` + composer chrome use mockup classes (`.composer`/`.composer-input`/`.btn primary`) + inline mockup-token styles (`var(--border)`/`var(--bg)`/`var(--primary)`) — NO shadcn-utility residue to inherit; `SkillSlashMenu` net-new (mockup tokens + file-level eslint-disable, InputBar precedent)
   - [x] **D-echo-path** 🟢 RESOLVED: echo `build_handler` branch passes NO registry/force_load → force-load structural no-op
 - [x] **Prong 3 — N/A** (no new table / migration / ORM this sprint)
 - [x] **Catalog drift** findings in progress.md Day 0
@@ -67,22 +67,22 @@
 
 ## Day 3 — Frontend: `SkillSlashMenu` + InputBar `/`-trigger + service/hook/send plumbing (US-4, US-5)
 
-### 3.1 Service + hook + types (US-5)
-- [ ] **`features/chat_v2/services/chatService.ts`** (EDIT): `ChatRequestBody` += `force_load_skill?: string` (snake_case, mirroring `session_id`); `type ChatSkill = {name; description}` + `type ChatSkillsResponse = {skills: ChatSkill[]}`; `fetchChatSkills(signal?)` (`GET /api/v1/chat/skills` via the chat service idiom); `streamChat` includes `force_load_skill` when set
-- [ ] **`features/chat_v2/hooks/useChatSkills.ts`** (NEW): `useQuery` (`["chat-v2","skills"]`, `fetchChatSkills`) feeding the picker
-- [ ] **`features/chat_v2/hooks/useLoopEventStream.ts`** (EDIT): `send(message, opts?: {forceLoadSkill?})` → threads `opts?.forceLoadSkill` into `streamChat` (existing single-arg callers stay valid)
+### 3.1 Service + hook + types (US-5) ✅
+- [x] **`features/chat_v2/services/chatService.ts`** (EDIT): `ChatRequestBody` += `force_load_skill?: string` (snake_case); `ChatSkill`/`ChatSkillsResponse` types; `fetchChatSkills(signal?)` (`GET /api/v1/chat/skills`, mirrors `listSessions`); `streamChat` forwards `force_load_skill` (threaded from the hook)
+- [x] **`features/chat_v2/hooks/useChatSkills.ts`** (NEW): `useQuery` (`["chat-v2","skills"]`, `fetchChatSkills`, `enabled` param, `staleTime` 60s) — gated to real_llm by the InputBar
+- [x] **`features/chat_v2/hooks/useLoopEventStream.ts`** (EDIT): `send(message, opts?: {forceLoadSkill?})` → threads `opts.forceLoadSkill` into the `streamChat` body (`force_load_skill`); existing single-arg callers stay valid
 
-### 3.2 `SkillSlashMenu` + InputBar wiring (US-4)
-- [ ] **`features/chat_v2/components/SkillSlashMenu.tsx`** (NEW): filtered dropdown anchored above the composer (name + muted description per row; `activeIndex` highlight; "No matching skills" empty row); `styles-mockup.css` tokens only (`var(--card)`/`var(--border)`/`var(--muted-foreground)`); `data-testid="skill-slash-menu"` + `skill-slash-item-{name}`
-- [ ] **`features/chat_v2/components/InputBar.tsx`** (EDIT): `slashActive = text.startsWith("/")` + `slashQuery`; render `<SkillSlashMenu>` when active+matches; keyboard (menu open: ↓/↑ move, Enter select→insert `/{name} `, Esc close; menu closed: Enter send); `onSend` parses `^\/([a-z0-9-]+)\s*` → if it matches an available skill: `forceLoadSkill`+strip, else plain text; `send(message, {forceLoadSkill})`; empty-after-strip → send stays disabled
-  - DoD: `npm run build` clean; the menu opens on `/` + selecting force-loads
-- [ ] **`features/chat_v2/components/Composer.tsx`** (EDIT — only if the production composer wraps `InputBar` + needs the menu's positioning container; else N/A) — Day-3 confirms `InputBar` is the sole production path
+### 3.2 `SkillSlashMenu` + InputBar wiring (US-4) ✅
+- [x] **`features/chat_v2/components/SkillSlashMenu.tsx`** (NEW): presentational filtered dropdown anchored above the composer (`/name` + muted description; `activeIndex` highlight via `aria-selected`; "No matching skills" empty row); mockup tokens (`var(--bg-2)`/`var(--border)`/`var(--primary)`/`var(--shadow)` — NOT a colour literal) + file-level eslint-disable (InputBar precedent); `data-testid` per row; `tabIndex=-1` a11y (keyboard lives on the textarea)
+- [x] **`features/chat_v2/components/InputBar.tsx`** (EDIT): `slashEnabled = !isRunning && mode==="real_llm"` (no dead control in echo/mid-run); `slashActive` = leading `/` no-space; filter + `showMenu`; keyboard (menu open: ↓/↑/Enter-select→`/{name} `/Esc-dismiss; closed: Enter send); `matchForceLoad` parses leading `/skill` (KNOWN skill only) → `forceLoadSkill` + strip; `send(msg)` or `send(msg, {forceLoadSkill})`; `freshSendDisabled = showMenu || empty-after-strip`
+  - DoD: ✅ `npm run build` clean; menu opens on `/`, select force-loads
+- [x] **`features/chat_v2/components/Composer.tsx`** — N/A: `InputBar` IS the sole production send path (Composer.tsx is disabled scaffolding); menu anchored to `.composer-inner` (`position: relative` inline)
 
-### 3.3 Vitest + FE gates
-- [ ] **`tests/unit/chat_v2/SkillSlashMenu.test.tsx`** (NEW): renders the list · filters by query · highlights `activeIndex` · click/Enter calls `onSelect` · empty-filter row
-- [ ] **`tests/unit/chat_v2/InputBar.slash.test.tsx`** (NEW): `/` opens the menu · ↑/↓/Enter/Esc behavior · a leading `/skill-name` sets `forceLoadSkill` + strips it · an unmatched `/foo` stays plain text · a mid-message `/` stays plain text · `send` called with `{forceLoadSkill}`
-- [ ] FE gates: `npm run lint` (NO `--silent`) 0 error · `npm run build` clean · `npm run test` Vitest **+M vs 851** · `npm run check:mockup-fidelity` **51** holds
-  - Verify: `cd frontend && npm run lint && npm run build && npm run test && npm run check:mockup-fidelity`
+### 3.3 Vitest + FE gates ✅
+- [x] **`tests/unit/chat_v2/SkillSlashMenu.test.tsx`** (NEW ×4): renders `/name`+description · `aria-selected` on activeIndex · click → `onSelect` · empty-state row
+- [x] **`tests/unit/chat_v2/InputBar.slash.test.tsx`** (NEW ×8): `/` opens menu · prefix filter · Enter selects (`/name `, no send) · ArrowDown+Enter · Escape dismiss · leading `/skill` → `send("task", {forceLoadSkill})` + strip · unmatched `/foo` plain · non-leading `/` plain. **+ existing `InputBar.test.tsx` (3) given a `useChatSkills` mock** (it now imports the TanStack hook; mock returns `{data:[]}` → no menu; the 57.101 inject coverage stays green)
+- [x] FE gates: `npm run lint` (NO `--silent`) **0 error** (fixed a11y `interactive-supports-focus` → `tabIndex=-1`) · `npm run build` clean · `npm run test` Vitest **863 (+12 vs 851)** · `npm run check:mockup-fidelity` **51** holds (fixed: shadow `oklch` literal → `var(--shadow)` token)
+  - Verify: ✅ `cd frontend && npm run lint && npm run build && npm run test && npm run check:mockup-fidelity`
 
 ---
 
