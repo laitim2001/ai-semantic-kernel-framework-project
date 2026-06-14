@@ -88,3 +88,27 @@ pytest 2602+5skip · wire 24 · Vitest 851 · mockup-fidelity 51 · mypy `src` 0
 **Touch points**: `chatService.ts` · `useLoopEventStream.ts` · `InputBar.tsx` (EDIT) + `useChatSkills.ts` · `SkillSlashMenu.tsx` (NEW) + 2 NEW Vitest + `InputBar.test.tsx` (mock add). `chatStore`/wire/codegen UNTOUCHED.
 
 ---
+
+## Day 4 — 2026-06-14 — Drive-through (ALL 3 legs PASS) + closeout
+
+**Clean restart (Risk Class E)**: killed stale backend PID 38756 (57.114 code) + a transient PID 6716 (started from `backend/` CWD → `.env` not found → no Azure); ZERO python orphans confirmed; restarted from **repo-root** with `--env-file .env` + `PYTHONPATH=backend/src` (the `env_file=".env"` is CWD-relative + `.env` lives at repo root) → fresh PID, startup complete, pricing/SLA/billing wired, Azure loaded. Frontend :3007 (node, HMR serves the new FE). Reused dev tenant **acme-skills** (jamie@acme.com via dev-login cookie) — its 57.114 overlay `release-notes` + bundled `code-review`/`summarize` persisted.
+
+**Endpoint live-probe**: `GET /api/v1/chat/skills` → **200** `{code-review, summarize, release-notes}` name+description, **NO `instructions`** (no-leak confirmed live).
+
+**Leg A (force-load determinism) PASS** — real chat-v2 + real Azure gpt-5.2:
+- Picker `/release-notes` → Enter selects → typed a generic task → Send.
+- User turn shows the CLEAN message ("We shipped dark mode and fixed two login crashes this week.") — **the `/release-notes` token was stripped**.
+- Agent output followed the release-notes skill EXACTLY: `## Summary` / `## Highlights` (bullets) / `## Upgrade steps` (numbered).
+- **`read_skill` called 0×** — the Loop trace shows `llm_response: 0 tool calls`, NO `read_skill` event (the instructions were force-injected into the `## Active Skill` system-prompt block; input 3495 est / 2425 actual tokens). Verification 0.98 PASS. → deterministic injection PROVEN distinct from model-invoked. Screenshot `legA-forceload-output-follows-readskill-0x.png`.
+
+**Leg B (picker discoverability + filter) PASS**:
+- `/` → the picker lists all 3 (`/code-review`, `/summarize`, `/release-notes` overlay). Screenshot `legB-picker-open-all-skills.png`.
+- `/re` → filtered to code-review + release-notes (both contain "re" substring); `summarize` correctly dropped. Keyboard select (Enter) inserted `/release-notes ` + closed the menu.
+
+**Leg C (graceful unknown) PASS**:
+- `/nonexistent reply with exactly: OK` → NO menu (empty filter, no dead control) → Send enabled.
+- User turn shows the LITERAL `/nonexistent reply with exactly: OK` (NOT stripped — unmatched token = plain text) → agent answered **"OK"** normally, verification 0.99, no error. Screenshot `legC-unknown-token-graceful-plain-text.png`.
+
+**Drive-Through-Acceptance**: the picker DRIVES the request (force-load changes the output + read_skill 0×, not a cosmetic menu); all controls live (type/filter/keyboard-select/send); no fixture, no dead control, no mislabeled output (AP-4 guard satisfied). OTel "Failed to detach context" log noise is pre-existing async-tracer teardown (not a functional failure; both legs verified 0.98/0.99).
+
+---

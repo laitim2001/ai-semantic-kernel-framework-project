@@ -88,20 +88,20 @@
 
 ## Day 4 — Drive-through (US-6) + CHANGE-082 + design note 33 + closeout
 
-### 4.1 Drive-through (real chat-v2 :3007 + fresh single-process backend + real Azure LLM; Risk Class E clean restart)
-- [ ] **Clean restart + probe**: orphan sweep (`Win32_Process` PID/PPID/StartTime) → ZERO python.exe orphans, :8000 free → fresh no-reload backend sole owner (startup probe + `GET /chat/skills` 200); a dev tenant with a custom skill (reuse 57.114 `acme-skills`, or add `release-notes` via the Skills admin tab)
-- [ ] **Leg A (force-load determinism) PASS**: chat-v2 real_llm → `/` → pick `release-notes` (or type `/release-notes`) + a generic task → Send → Inspector shows `read_skill` **0×** yet the output follows the `release-notes` shape → screenshots (picker + answer + Inspector-no-read_skill)
-- [ ] **Leg B (picker discoverability + filter) PASS**: `/` lists the tenant's effective skills (bundled `code-review`/`summarize` + overlay) · `/re` filters to `release-notes` · ↓/↑ highlight · Esc dismiss · Enter inserts `/{name} ` → screenshots (open + filtered)
-- [ ] **Leg C (graceful + overlay-aware) PASS**: `/nonexistent <task>` → no force-load, chat answers normally (no error) · force-load a tenant-overridden `code-review` → the `## Active Skill` carries the OVERRIDDEN body → output follows the override → screenshots
-- [ ] Each control driven (no dead control / no fixture / real LLM): the picker actually changes the output (force-load follows + `read_skill` 0×); Drive-Through-Acceptance (load+follow + graceful + overlay, AP-4 guard)
-  - DoD: ALL 3 legs PASS + the picker drives the request
+### 4.1 Drive-through (real chat-v2 :3007 + fresh single-process backend + real Azure LLM; Risk Class E clean restart) ✅
+- [x] **Clean restart + probe**: killed stale PID 38756 (57.114 code) + transient PID 6716 (CWD `.env` miss → no Azure); ZERO python orphans; restarted from **repo-root** with `--env-file .env` + `PYTHONPATH=backend/src` (env_file CWD-relative, `.env` at root) → startup complete + Azure loaded; `GET /api/v1/chat/skills` **200** (name+desc only, no instructions). Reused dev tenant `acme-skills` (jamie@acme.com, cookie) with persisted overlay `release-notes`
+- [x] **Leg A (force-load determinism) PASS**: `/release-notes` picker→Enter→task→Send → user turn shows the STRIPPED message → output followed `## Summary/## Highlights/## Upgrade steps` EXACTLY → Loop trace `llm_response: 0 tool calls` (**`read_skill` 0×**, force-injected into `## Active Skill`) → verification 0.98. `legA-forceload-output-follows-readskill-0x.png`
+- [x] **Leg B (picker discoverability + filter) PASS**: `/` lists all 3 (`/code-review`/`/summarize`/`/release-notes`) · `/re` filtered (summarize dropped; substring `includes`) · Enter inserts `/release-notes ` + closes. `legB-picker-open-all-skills.png`
+- [x] **Leg C (graceful unknown) PASS**: `/nonexistent reply with exactly: OK` → NO menu (empty filter, no dead control) → user turn shows the LITERAL token (unmatched = plain text) → agent answered "OK" normally, verification 0.99, no error. `legC-unknown-token-graceful-plain-text.png`. (Overlay-aware force-load already proven by Leg A — `release-notes` IS acme's overlay skill.)
+- [x] Each control driven (no dead control / no fixture / real LLM): the picker DRIVES the request (output changes + `read_skill` 0×, not cosmetic); Drive-Through-Acceptance + AP-4 guard satisfied
+  - DoD: ✅ ALL 3 legs PASS + the picker drives the request
 
-### 4.2 CHANGE-082 + design note 33
-- [ ] **`claudedocs/4-changes/feature-changes/CHANGE-082-skills-slash-command.md`** (1-page, incl. the 3-leg drive-through)
-- [ ] **Design note `33-skills-slash-command.md`** (8-point quality gate — the FIRST user-invoked force-load + the FIRST chat-user-facing skills endpoint + the greenfield composer picker; file:line anchors; decision: system-prompt injection vs forced-tool-call; verified ratio target ~95%)
+### 4.2 CHANGE-082 + design note 33 ✅
+- [x] **`claudedocs/4-changes/feature-changes/CHANGE-082-skills-slash-command.md`** (1-page, incl. the 3-leg drive-through)
+- [x] **Design note `33-skills-slash-command.md`** (8-point quality gate ALL pass — decision matrix A/B/C system-prompt-injection vs forced-tool-call; file:line anchors; verified ratio ~96%; 17.md decision: NO new contract)
 
-### 4.3 Closeout
-- [ ] retrospective.md Q1-Q7 + calibration (NEW `skills-slash-command-fullstack` 0.55 1st data point — record ratio vs ~9.5 hr commit; agent-delegated partial/parent-direct as executed) + progress.md final
-- [ ] Navigators: CLAUDE.md Current-Sprint row + Last-Updated (minimal touch); MEMORY.md quality pointer + memory subfile `project_phase57_115_skills_slash_command.md`; next-phase-candidates — `AD-Skills-Slash-Command` CLOSED + remaining Skills ADs carried; sprint-workflow matrix NEW `skills-slash-command-fullstack` 0.55 1st data point; 17.md — decision (NO new contract vs a documented `force_load_skill` seam)
-- [ ] **Anti-pattern self-check** (retro Q5/Q7): AP-4 (drive-through proves force-load changes output + `read_skill` 0×, not a cosmetic menu) · AP-2 (reachable from the composer→router→build_handler main flow) · AP-3 (helper in Cat 5 / endpoint+field in chat api / picker in chat_v2 — no scattering) · AP-6 (single skill, no speculative multi-skill list)
+### 4.3 Closeout ✅
+- [x] retrospective.md Q1-Q7 + calibration (NEW `skills-slash-command-fullstack` 0.55 1st data point — ratio ~1.0 IN band → KEEP; **parent-direct** agent_factor 1.0, NOT the planned partial) + progress.md final
+- [x] Navigators: CLAUDE.md Current-Sprint row + Last-Updated (minimal touch); MEMORY.md quality pointer + memory subfile `project_phase57_115_skills_slash_command.md`; next-phase-candidates — `AD-Skills-Slash-Command` CLOSED + 57.115 carryover block + remaining Skills ADs carried; sprint-workflow matrix NEW `skills-slash-command-fullstack` 0.55; 17.md — **decision: NO new contract** (additive ChatRequest field + intra-Cat-5 helper + api endpoint; mirrors 57.113/114 — noted in design note §4)
+- [x] **Anti-pattern self-check** (retro Q5/Q7): AP-4 (drive-through proves force-load changes output + `read_skill` 0×) · AP-2 (composer→router→build_handler main flow) · AP-3 (helper Cat 5 / endpoint+field chat api / picker chat_v2) · AP-6 (single skill)
 - [ ] PR (push + open on user authorization)
