@@ -43,20 +43,20 @@
 
 ## Day 2 — Wiring + demo asset + tests (US-3, US-4, US-5)
 
-### 2.1 Chat-path wiring (US-3)
-- [ ] **`business_domain/_register_all.py`** (EDIT): in `if skill_registry is not None:` (`:295`), after `read_skill`, `registry.register(RUN_SKILL_SCRIPT_TOOL_SPEC)` + `handlers["run_skill_script"] = make_run_skill_script_handler(skill_registry, default_sandbox())`; import the spec/factory from `agent_harness.skills` + `default_sandbox` from `agent_harness.tools.sandbox`; MHist
-- [ ] **`tests/unit/business_domain/<test_executor>.py`** (EDIT): `make_default_executor(skill_registry=...)` registers `run_skill_script` + a handler (alongside `read_skill`)
-  - DoD: executor unit passes; the registry-derived matrix auto-PASSes it (per Day-0 D-permission-gate; else the explicit-capability entry is added + tested)
+### 2.1 Chat-path wiring (US-3) ✅
+- [x] **`business_domain/_register_all.py`** (EDIT): in `if skill_registry is not None:` (`:295`), after `read_skill`, `registry.register(RUN_SKILL_SCRIPT_TOOL_SPEC)` + `handlers["run_skill_script"] = make_run_skill_script_handler(skill_registry)` (sandbox=None → the lazy `_get_default_sandbox()` singleton in `skills/tool.py`; NO `default_sandbox` import here — Day-0 refinement); import block + WHY comment + MHist + Last Modified
+- [x] **`tests/integration/api/test_skills_wiring.py`** (EDIT, consolidated — NOT a new business_domain file): `make_default_executor(skill_registry=)` registers `run_skill_script` + a no-registry negative guard
+  - DoD: ✅ registration passes; the registry-derived matrix auto-PASSes it (Day-0 D-permission-gate confirmed; no explicit capability entry)
 
-### 2.2 Demo bundled skill + script (US-4)
-- [ ] **`agent_harness/skills/bundled/<name>.md`** (NEW): frontmatter `name`+`description`; body instructs the model to call `run_skill_script('<name>')` for the canonical digest (do not compute it itself)
-- [ ] **`agent_harness/skills/bundled/<name>.py`** (NEW): self-contained, no input — `hashlib.sha256(b"...").hexdigest()` print (a runtime computation the LLM cannot fabricate; benign — no risky calls)
-  - DoD: `get_default_skill_registry().get("<name>").script` is the `.py` source; the existing 2 skills still load (`script=None`)
+### 2.2 Demo bundled skill + script (US-4) ✅
+- [x] **`agent_harness/skills/bundled/digest.md`** (NEW): frontmatter `name: digest`; body instructs the model to call `run_skill_script("digest")` for the canonical digest (do not compute it itself)
+- [x] **`agent_harness/skills/bundled/digest.py`** (NEW): self-contained — `print(hashlib.sha256(b"agent-harness-bundled-skill").hexdigest())` (a runtime computation the LLM cannot fabricate; benign)
+  - DoD: ✅ `get_default_skill_registry().get("digest").script` is the `.py` source; the existing 2 skills still load (`script=None`); `digest.py` typechecks clean (mypy 371)
 
-### 2.3 Integration + gate sweep (US-5)
-- [ ] **`tests/integration/.../<test_run_skill_script>.py`** (NEW): the tool runs the demo bundled script via the real `default_sandbox()` → returns the expected sha256 (skip when the sandbox is unavailable — the Day-0 D-sandbox-skip pattern)
-- [ ] Backend gate sweep: mypy `src` **0/370** · black/isort/flake8 0 (changed files) · `python scripts/lint/run_all.py` **10/10** (count 24, NO codegen change) · full pytest **+N (0 del)** vs 2630 · `loop.py`/`events.py`/`sse.py`/`event_wire_schema`/codegen/migration UNTOUCHED · LLM-neutrality + `check_cross_category_import` green
-  - Verify: `python -m mypy src` · `python -m pytest tests/unit/agent_harness/skills tests/unit/business_domain tests/integration/<...> -q` · `python scripts/lint/run_all.py`
+### 2.3 Integration + gate sweep (US-5) ✅
+- [x] **`tests/integration/api/test_skills_wiring.py`** (EDIT, consolidated — NOT a new file): `test_run_skill_script_runs_bundled_digest_in_real_sandbox` runs the demo script via a directly-injected **`SubprocessSandbox()`** (deterministic, runs on Windows + Docker-less CI — the Day-0 refinement over a skip) → `stdout.strip()` == the locally-computed sha256. `test_skills_registry.py` +1 (digest has a script)
+- [x] Backend gate sweep: mypy `src` **0/371** (+1 `bundled/digest.py`) · black/isort/flake8 0 · `python scripts/lint/run_all.py` (repo root) **10/10** (count 24) · targeted skills+wiring **45 passed** · full pytest **2644 passed, 5 skipped** (+14, 0 del) vs 2630 · `loop.py`/`events.py`/`sse.py`/`event_wire_schema`/codegen/migration UNTOUCHED · LLM-neutrality + `check_cross_category_import` green
+  - Verify: ✅ `python -m mypy src` · `python -m pytest tests/unit/agent_harness/skills tests/integration/api/test_skills_wiring.py -q` (45) · `python scripts/lint/run_all.py`
 
 ---
 

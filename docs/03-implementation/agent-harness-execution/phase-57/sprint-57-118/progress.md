@@ -60,4 +60,14 @@
 
 > Tooling note: `scripts/lint/run_all.py` lives at REPO ROOT (not `backend/`), and must be run WITHOUT a masking `| tail` (a pipe makes the pipeline exit 0 even on a python file-not-found). Run: `cd <repo-root> && python scripts/lint/run_all.py`.
 
-## Day 2 — (pending)
+## Day 2 — Wiring + demo skill/script + integration (US-3, US-4, US-5) — 2026-06-15
+
+**US-3 chat-path wiring** (`business_domain/_register_all.py`): in the `if skill_registry is not None:` opt-in block (`:295`), after `read_skill`, `registry.register(RUN_SKILL_SCRIPT_TOOL_SPEC)` + `handlers["run_skill_script"] = make_run_skill_script_handler(skill_registry)` (sandbox=None → the lazy `_get_default_sandbox()` singleton in `skills/tool.py`; NO `default_sandbox` import here, NO per-request Docker probe). Import block + the WHY comment + MHist + Last Modified updated. The registry-derived permission matrix auto-PASSes it (Day-0 D-permission-gate).
+
+**US-4 demo skill + script**: `bundled/digest.md` (frontmatter `name: digest` + instructions: "call `run_skill_script("digest")` … report the exact hex digest") + `bundled/digest.py` (`print(hashlib.sha256(b"agent-harness-bundled-skill").hexdigest())` — a RUNTIME computation the LLM cannot fabricate; benign, no risky calls). The 2 existing skills (no sibling `.py`) stay `script=None`; adding a 3rd bundled skill is safe (no test asserts exactly-2; catalog assertions use subset/substring).
+
+**US-5 integration + executor registration**: `test_skills_wiring.py` +3 — `make_default_executor(skill_registry=)` registers `run_skill_script` (+ a no-registry negative guard) AND `test_run_skill_script_runs_bundled_digest_in_real_sandbox`: the bundled `digest` skill's script runs in a **REAL** `SubprocessSandbox` (injected directly — deterministic, runs on Windows + Docker-less CI) and `stdout.strip()` EQUALS the locally-computed `hashlib.sha256(b"agent-harness-bundled-skill").hexdigest()` (the genuine-execution proof at the test layer). `test_skills_registry.py` +1 — the bundled `digest` skill has a non-None `script`.
+
+**Gate**: mypy `src` **Success 0/371** (+1 = `bundled/digest.py` typechecks clean) · black/isort/flake8 0 (changed files; 2 header E501s fixed) · `python scripts/lint/run_all.py` (repo root) **10/10** (count 24) · targeted `tests/unit/agent_harness/skills` + `tests/integration/api/test_skills_wiring.py` **45 passed** (incl. the real-SubprocessSandbox digest run) · full pytest **2644 passed, 5 skipped** (+14, 0 del) vs 2630. `loop.py`/`events.py`/`sse.py`/`event_wire_schema`/codegen/migration UNTOUCHED.
+
+## Day 3 — (pending)

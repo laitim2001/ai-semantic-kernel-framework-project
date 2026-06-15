@@ -166,6 +166,15 @@ def test_bundled_skills_have_no_script_by_default() -> None:
         assert skill.script is None
 
 
+def test_bundled_digest_skill_has_script() -> None:
+    # The 57.118 demo 'digest' skill ships a sibling digest.py → script is loaded.
+    reg = get_default_skill_registry()
+    digest = reg.get("digest")
+    assert digest is not None
+    assert digest.script is not None
+    assert "sha256" in digest.script  # the computing script, not a stub
+
+
 def test_with_overlay_tenant_skills_have_no_script() -> None:
     # The per-tenant overlay carries text-only DB rows → overlaid skills have script=None.
     bundled = SkillRegistry()
