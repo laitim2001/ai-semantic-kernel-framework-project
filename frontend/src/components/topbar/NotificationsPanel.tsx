@@ -1,6 +1,6 @@
 /**
  * File: frontend/src/components/topbar/NotificationsPanel.tsx
- * Purpose: Bell-icon dropdown panel — 6 fixture notifications (HITL/incident/verify/tripwire/system) + tabs + mark-read.
+ * Purpose: Bell-icon dropdown panel — DEMO notifications fixture (shared source) + visible DEMO banner + tabs + mark-read.
  * Category: Frontend / components / topbar (Cat 12 cross-cutting UX surface)
  * Scope: Phase 57 / Sprint 57.19 Day 5 / US-D2
  *
@@ -14,9 +14,10 @@
  *   Backend wiring: deferred to Sprint 57.20+ (Cat 12 notifications feed via SSE / poll endpoint).
  *
  * Created: 2026-05-17 (Sprint 57.19 Day 5 / US-D2)
- * Last Modified: 2026-05-22
+ * Last Modified: 2026-06-16
  *
  * Modification History:
+ *   - 2026-06-16: Sprint 57.124 — extract DEMO_NOTIFICATIONS to shared fixture + add BackendGapBanner DEMO banner
  *   - 2026-05-22: Sprint 57.29 US-B4 — verbatim re-point panel shell to mockup topbar-overlays.jsx literals
  *   - 2026-05-17: Initial creation (Sprint 57.19 Day 5 / US-D2) — mockup port with 6 fixture items
  *
@@ -33,6 +34,14 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { Icon } from "@/components/mockup-ui";
+import { BackendGapBanner } from "@/components/ui/BackendGapBanner";
+
+import {
+  DEMO_NOTIFICATIONS,
+  type NotificationItem,
+  type NotificationKind,
+  type NotificationSeverity,
+} from "./notificationsFixture";
 
 // ─── Verbatim mockup topbar-overlays.jsx inline-style literals ───────────────
 
@@ -93,8 +102,7 @@ const UNREAD_DOT_STYLE: CSSProperties = {
 };
 
 // Severity icon badge
-type Severity = "critical" | "high" | "medium" | "low";
-const sevIconStyle = (sev: Severity): CSSProperties => ({
+const sevIconStyle = (sev: NotificationSeverity): CSSProperties => ({
   width: 28, height: 28, borderRadius: 6,
   background: `oklch(from var(${sev === "critical" ? "--danger" : sev === "high" ? "--warning" : sev === "medium" ? "--info" : "--success"}) l c h / 0.14)`,
   color: `var(${sev === "critical" ? "--danger" : sev === "high" ? "--warning" : sev === "medium" ? "--info" : "--success"})`,
@@ -132,31 +140,9 @@ const PREFS_BTN_STYLE: CSSProperties = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-type NotificationKind = "hitl" | "incident" | "verify" | "tripwire" | "system";
-
 const KIND_ICON: Record<NotificationKind, string> = {
   hitl: "approval", incident: "warn", verify: "checkcheck", tripwire: "shield", system: "info",
 };
-
-interface NotificationItem {
-  id: string;
-  kind: NotificationKind;
-  severity: Severity;
-  titleKey: string;
-  bodyKey: string;
-  time: string;
-  unread: boolean;
-  routePath?: string;
-}
-
-const NOTIFICATIONS_SEED: NotificationItem[] = [
-  { id: "n1", kind: "hitl",     severity: "critical", titleKey: "topbar.notifications.items.n1Title", bodyKey: "topbar.notifications.items.n1Body", time: "23m", unread: true,  routePath: "/governance" },
-  { id: "n2", kind: "incident", severity: "high",     titleKey: "topbar.notifications.items.n2Title", bodyKey: "topbar.notifications.items.n2Body", time: "1h",  unread: true,  routePath: "/incidents" },
-  { id: "n3", kind: "verify",   severity: "medium",   titleKey: "topbar.notifications.items.n3Title", bodyKey: "topbar.notifications.items.n3Body", time: "2h",  unread: true,  routePath: "/verification" },
-  { id: "n4", kind: "tripwire", severity: "high",     titleKey: "topbar.notifications.items.n4Title", bodyKey: "topbar.notifications.items.n4Body", time: "3h",  unread: false, routePath: "/redaction" },
-  { id: "n5", kind: "system",   severity: "low",      titleKey: "topbar.notifications.items.n5Title", bodyKey: "topbar.notifications.items.n5Body", time: "5h",  unread: false, routePath: "/cost-dashboard" },
-  { id: "n6", kind: "system",   severity: "low",      titleKey: "topbar.notifications.items.n6Title", bodyKey: "topbar.notifications.items.n6Body", time: "8h",  unread: false, routePath: "/cache-manager" },
-];
 
 interface NotificationsPanelProps {
   open: boolean;
@@ -166,7 +152,7 @@ interface NotificationsPanelProps {
 export const NotificationsPanel: FC<NotificationsPanelProps> = ({ open, onClose }) => {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
-  const [items, setItems] = useState(NOTIFICATIONS_SEED);
+  const [items, setItems] = useState(DEMO_NOTIFICATIONS);
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
   if (!open) return null;
@@ -206,6 +192,11 @@ export const NotificationsPanel: FC<NotificationsPanelProps> = ({ open, onClose 
         >
           {t("topbar.notifications.markAll")}
         </button>
+      </div>
+
+      {/* DEMO honesty banner — no notifications backend yet (AD-NotificationsPanel-Backend-Feed) */}
+      <div style={{ padding: "8px 14px 0" }}>
+        <BackendGapBanner reason={t("topbar.notifications.demoBanner")} />
       </div>
 
       {/* Tabs */}

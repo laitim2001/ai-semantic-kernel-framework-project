@@ -103,6 +103,7 @@
       "empty": "You're all caught up",
       "viewAll": "View all",
       "prefs": "Preferences",
+      "demoBanner": "Demo data — notifications backend not yet wired",
       "tab": {
         "all": "All",
         "unread": "Unread"

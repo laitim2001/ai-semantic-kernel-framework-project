@@ -34,7 +34,6 @@ from agent_harness.tools.memory_tools import (
     make_memory_write_handler,
     memory_placeholder_handler,
 )
-from agent_harness.tools.permissions import PermissionChecker, PermissionDecision
 from agent_harness.tools.registry import ToolRegistryImpl
 from agent_harness.tools.sandbox import (
     SandboxBackend,
@@ -126,8 +125,6 @@ __all__ = [
     "MEMORY_TOOL_SPECS",
     "MEMORY_WRITE_SPEC",
     "PYTHON_SANDBOX_SPEC",
-    "PermissionChecker",
-    "PermissionDecision",
     "REQUEST_APPROVAL_SPEC",
     "SandboxBackend",
     "SandboxResult",

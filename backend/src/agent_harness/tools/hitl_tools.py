@@ -12,11 +12,10 @@ Description:
     table and returns a structured payload with the request_id.
 
     The tool's own `hitl_policy=ALWAYS_ASK` is self-referential: every
-    invocation by definition requires approval. ToolExecutorImpl will
-    therefore short-circuit with PermissionDecision.REQUIRE_APPROVAL
-    before this handler runs in production. The handler is reached only
-    when pre-authorized (e.g., explicit_approval=True during testing /
-    dry-run, or after the user already approved out-of-band).
+    invocation by definition requires approval. As of Sprint 57.124 the
+    loop's `_cat9_tool_check` + per-tenant `HITLPolicy` escalates it (the
+    executor no longer gates — the former PermissionChecker was removed);
+    on approval the handler runs and creates the ApprovalRequest.
 
 Created: 2026-04-30 (Sprint 51.1 Day 4.2)
 Last Modified: 2026-05-03

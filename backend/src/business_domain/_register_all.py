@@ -194,7 +194,8 @@ def make_default_executor(
 
     Sprint 51.1 Day 5: switched from InMemoryToolRegistry / InMemoryToolExecutor
     to production Cat 2 implementations (ToolRegistryImpl + ToolExecutorImpl
-    with PermissionChecker + JSONSchema validation + concurrency-aware batch).
+    with JSONSchema validation + concurrency-aware batch; tool gating (HITL / risk /
+    destructive) is owned by the loop's _cat9 + per-tenant HITLPolicy since 57.124).
 
     Sprint 55.1 (US-4): added `mode` + `factory_provider`. When `mode is None`,
     settings.business_domain_mode (env: BUSINESS_DOMAIN_MODE) is read.

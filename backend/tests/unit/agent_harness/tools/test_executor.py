@@ -17,7 +17,6 @@ import pytest
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
-    ExecutionContext,
     RiskLevel,
     ToolAnnotations,
     ToolCall,
@@ -25,7 +24,6 @@ from agent_harness._contracts import (
     ToolSpec,
 )
 from agent_harness.tools import (
-    PermissionDecision,
     ToolExecutorImpl,
     ToolRegistryImpl,
 )
@@ -75,7 +73,7 @@ async def _explode_handler(call: ToolCall) -> str:
     raise RuntimeError("boom")
 
 
-# === Permission tests (Day 2.4) ===========================================
+# === Executor allow path (Sprint 57.124: gating moved to loop _cat9) ======
 
 
 @pytest.mark.asyncio
@@ -91,86 +89,39 @@ async def test_allow_simple_read_only() -> None:
 
 
 @pytest.mark.asyncio
-async def test_require_approval_always_ask() -> None:
+async def test_executor_runs_always_ask_tool_no_gate() -> None:
+    """Sprint 57.124: the executor no longer gates on hitl_policy — gating moved
+    to the loop's _cat9 + per-tenant HITLPolicy. An ALWAYS_ASK tool runs through
+    the handler at the executor layer (the loop escalates it upstream)."""
     reg = ToolRegistryImpl()
-    spec = _spec("sensitive", hitl=ToolHITLPolicy.ALWAYS_ASK)
-    reg.register(spec)
+    reg.register(_spec("sensitive", hitl=ToolHITLPolicy.ALWAYS_ASK))
     exe = ToolExecutorImpl(registry=reg, handlers={"sensitive": _ok_handler})
 
     result = await exe.execute(_call("sensitive"))
-    assert result.success is False
-    assert result.error is not None
-    assert "approval required" in result.error
-    assert "always_ask" in result.error
-
-
-@pytest.mark.asyncio
-async def test_require_approval_ask_once() -> None:
-    reg = ToolRegistryImpl()
-    spec = _spec("first_call", hitl=ToolHITLPolicy.ASK_ONCE)
-    reg.register(spec)
-    exe = ToolExecutorImpl(registry=reg, handlers={"first_call": _ok_handler})
-
-    result = await exe.execute(_call("first_call"))
-    assert result.success is False
-    assert "approval required" in (result.error or "")
-
-
-@pytest.mark.asyncio
-async def test_require_approval_high_risk_overrides_auto_hitl() -> None:
-    reg = ToolRegistryImpl()
-    # AUTO hitl_policy but HIGH risk → still REQUIRE_APPROVAL
-    spec = _spec("dangerous", hitl=ToolHITLPolicy.AUTO, risk=RiskLevel.HIGH)
-    reg.register(spec)
-    exe = ToolExecutorImpl(registry=reg, handlers={"dangerous": _ok_handler})
-
-    result = await exe.execute(_call("dangerous"))
-    assert result.success is False
-    assert "approval required" in (result.error or "")
-    assert "HIGH" in (result.error or "")
-
-
-@pytest.mark.asyncio
-async def test_deny_destructive_without_explicit_approval() -> None:
-    reg = ToolRegistryImpl()
-    spec = _spec("delete_db", destructive=True, concurrency=ConcurrencyPolicy.SEQUENTIAL)
-    reg.register(spec)
-    exe = ToolExecutorImpl(registry=reg, handlers={"delete_db": _ok_handler})
-
-    result = await exe.execute(_call("delete_db"))
-    assert result.success is False
-    assert "permission denied" in (result.error or "")
-
-
-@pytest.mark.asyncio
-async def test_allow_destructive_with_explicit_approval() -> None:
-    reg = ToolRegistryImpl()
-    spec = _spec("delete_db", destructive=True, concurrency=ConcurrencyPolicy.SEQUENTIAL)
-    reg.register(spec)
-    exe = ToolExecutorImpl(registry=reg, handlers={"delete_db": _ok_handler})
-
-    ctx = ExecutionContext(explicit_approval=True)
-    result = await exe.execute(_call("delete_db"), context=ctx)
     assert result.success is True
+    assert result.content == "echoed:hi"
 
 
 @pytest.mark.asyncio
-async def test_deny_beats_require_approval() -> None:
-    """Resolution order: DENY > REQUIRE_APPROVAL. Destructive + ALWAYS_ASK → DENY (not approval)."""
+async def test_executor_runs_destructive_high_risk_tool_no_gate() -> None:
+    """Sprint 57.124: a destructive + HIGH-risk tool is NOT re-blocked by the
+    executor (the removed PermissionChecker dim 3 used to hard-DENY it even after a
+    human approved it). It runs through the handler; the loop's _cat9 + the
+    destructive HIGH-floor own the escalate decision upstream."""
     reg = ToolRegistryImpl()
-    spec = _spec(
-        "wipe",
-        destructive=True,
-        hitl=ToolHITLPolicy.ALWAYS_ASK,
-        risk=RiskLevel.HIGH,
-        concurrency=ConcurrencyPolicy.SEQUENTIAL,
+    reg.register(
+        _spec(
+            "wipe",
+            destructive=True,
+            hitl=ToolHITLPolicy.ALWAYS_ASK,
+            risk=RiskLevel.HIGH,
+            concurrency=ConcurrencyPolicy.SEQUENTIAL,
+        )
     )
-    reg.register(spec)
     exe = ToolExecutorImpl(registry=reg, handlers={"wipe": _ok_handler})
 
     result = await exe.execute(_call("wipe"))
-    assert result.success is False
-    assert "permission denied" in (result.error or "")
+    assert result.success is True
 
 
 # === JSONSchema validation tests (Day 2.3) ================================
@@ -351,8 +302,8 @@ async def test_handler_exception_writes_error_class() -> None:
 @pytest.mark.asyncio
 async def test_non_exception_failure_has_no_error_class() -> None:
     """Sprint 53.3 US-9: error_class is None for non-exception failures
-    (unknown tool / schema mismatch / permission denied) since these
-    paths use `_fail()` which doesn't set error_class.
+    (unknown tool / schema mismatch) since these paths use `_fail()`
+    which doesn't set error_class.
     """
     reg = ToolRegistryImpl()
     exe = ToolExecutorImpl(registry=reg, handlers={})
@@ -371,12 +322,3 @@ async def test_no_handler_registered_returns_error() -> None:
     result = await exe.execute(_call("orphan"))
     assert result.success is False
     assert "no handler" in (result.error or "")
-
-
-# === PermissionChecker direct tests =======================================
-
-
-def test_permission_decision_enum_values() -> None:
-    assert PermissionDecision.ALLOW.value == "allow"
-    assert PermissionDecision.REQUIRE_APPROVAL.value == "require_approval"
-    assert PermissionDecision.DENY.value == "deny"

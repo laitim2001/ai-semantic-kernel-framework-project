@@ -103,6 +103,7 @@
       "empty": "目前沒有新通知",
       "viewAll": "檢視全部",
       "prefs": "偏好設定",
+      "demoBanner": "示範資料 — 通知後端尚未接通",
       "tab": {
         "all": "全部",
         "unread": "未讀"

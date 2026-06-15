@@ -34,6 +34,7 @@
  * Last Modified: 2026-05-22
  *
  * Modification History (newest-first):
+ *   - 2026-06-16: Sprint 57.124 — bell badge derives from shared DEMO_NOTIFICATIONS (drop hardcoded FIXTURE_UNREAD_COUNT)
  *   - 2026-05-22: Sprint 57.29 — verbatim re-point to mockup .app/.main/.content classes (drop Tailwind grid)
  *   - 2026-05-21: Sprint 57.26 — sidebar 240→232px + bg-bg/text-fg tokens + main mockup-content padding (foundation-fidelity)
  *   - 2026-05-18: Sprint 57.21 Day 4 D-DAY4-7 — add `fullBleed` opt-in prop; chat-v2 uses it to drop the default `<main p-6>` inset and render mockup `chat-shell` 3-col edge-to-edge
@@ -58,6 +59,7 @@ import { useUIStore } from "@/store/uiStore";
 
 import { Sidebar } from "./Sidebar";
 import { CommandPalette } from "./topbar/CommandPalette";
+import { DEMO_UNREAD_COUNT } from "./topbar/notificationsFixture";
 import { NotificationsPanel } from "./topbar/NotificationsPanel";
 import { Topbar } from "./layout/Topbar";
 
@@ -74,9 +76,6 @@ interface AppShellV2Props {
    */
   fullBleed?: boolean;
 }
-
-// Mockup placeholder unread count; AD-NotificationsPanel-Backend-Feed Sprint 57.21+ wires real feed.
-const FIXTURE_UNREAD_COUNT = 3;
 
 export const AppShellV2: FC<AppShellV2Props> = ({
   children,
@@ -115,7 +114,7 @@ export const AppShellV2: FC<AppShellV2Props> = ({
           userMenu={userMenu}
           onOpenPalette={() => setPaletteOpen(true)}
           onToggleNotifs={() => setNotifOpen((p) => !p)}
-          unreadCount={FIXTURE_UNREAD_COUNT}
+          unreadCount={DEMO_UNREAD_COUNT}
         />
         <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
         <main className={fullBleed ? "content fullbleed" : "content"}>{children}</main>

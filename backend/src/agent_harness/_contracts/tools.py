@@ -20,9 +20,10 @@ Owner: 01-eleven-categories-spec.md §範疇 2
 Single-source: 17.md §1.1
 
 Created: 2026-04-29 (Sprint 49.1)
-Last Modified: 2026-04-30
+Last Modified: 2026-06-16
 
 Modification History (newest-first):
+    - 2026-06-16: Sprint 57.124 — docstrings reflect PermissionChecker removal
     - 2026-04-30: Add first-class ToolHITLPolicy enum + risk_level field on
       ToolSpec (Sprint 51.1 Day 1; CARRY-021 from 51.0 retro). Replaces
       tags-encoded `hitl_policy:*` / `risk:*` workaround. Reuses existing
@@ -63,8 +64,9 @@ class ToolHITLPolicy(Enum):
     Distinct from per-tenant HITLPolicy (in _contracts.hitl) which encodes
     tenant-level approval routing. This enum encodes the tool's intrinsic
     HITL stance: whether each invocation requires human approval before
-    handler execution. PermissionChecker (Sprint 51.1 Day 2) consumes this
-    plus risk_level to compute PermissionDecision.
+    handler execution. The loop's `_cat9_tool_check` + per-tenant `HITLPolicy`
+    (Sprint 57.122/57.124) gate execution from this + risk_level +
+    annotations.destructive (the former PermissionChecker was removed in 57.124).
     """
 
     AUTO = "auto"  # no HITL required (subject to risk_level + tenant policy)
@@ -103,8 +105,9 @@ class ExecutionContext:
 
     Forward-compatible for Phase 53.3 RBAC wiring (tenant-scoped role checks
     will read tenant_id) and HITL tracking (session_id ties first-call
-    state to session). `explicit_approval` lets the caller signal that the
-    operator has already authorized a destructive action this turn.
+    state to session). `explicit_approval` was consumed only by the removed
+    PermissionChecker (Sprint 57.124); the field is retained for forward-compat
+    (AD-ExecutionContext-ExplicitApproval-Tidy tracks removing it).
 
     Sprint 52.5 P0 #18 (CARRY-030): `user_id` was added so memory_tools
     handlers can attribute writes / reads to the authenticated user from

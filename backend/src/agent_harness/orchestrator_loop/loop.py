@@ -538,14 +538,16 @@ class AgentLoopImpl(AgentLoop):
         return policy
 
     def _resolve_tool_call_risk(self, tool_name: str, *, flagged: bool) -> RiskLevel:
-        """Resolve the effective risk of a tool call from its ToolSpec (57.122).
+        """Resolve the effective risk of a tool call from its ToolSpec (57.122/57.124).
 
-        Reads ``ToolSpec.risk_level`` from the tool registry; ``resolve_tool_risk``
-        applies the per-rule flag MEDIUM-floor + the unknown-tool fallback.
+        Reads ``ToolSpec.risk_level`` + ``annotations.destructive`` from the registry;
+        ``resolve_tool_risk`` applies the destructive HIGH-floor (57.124) + the per-rule
+        flag MEDIUM-floor + the unknown-tool fallback.
         """
         spec = self._tool_registry.get(tool_name) if self._tool_registry is not None else None
         spec_risk = spec.risk_level if spec is not None else None
-        return resolve_tool_risk(spec_risk, rule_requires_approval=flagged)
+        destructive = spec.annotations.destructive if spec is not None else False
+        return resolve_tool_risk(spec_risk, rule_requires_approval=flagged, destructive=destructive)
 
     async def _handle_tool_error(
         self,

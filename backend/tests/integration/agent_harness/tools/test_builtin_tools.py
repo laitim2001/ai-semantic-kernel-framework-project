@@ -13,9 +13,8 @@ import json
 import httpx
 import pytest
 
-from agent_harness._contracts import ExecutionContext, ToolCall
+from agent_harness._contracts import ToolCall
 from agent_harness.tools import (
-    PermissionChecker,
     ToolExecutorImpl,
     ToolHandler,
     ToolRegistryImpl,
@@ -86,9 +85,11 @@ async def test_python_sandbox_via_executor() -> None:
 
 
 @pytest.mark.asyncio
-async def test_request_approval_blocked_by_always_ask_policy() -> None:
-    """request_approval has hitl_policy=ALWAYS_ASK so it short-circuits at
-    the executor's permission gate — handler never runs in normal flow."""
+async def test_request_approval_runs_through_executor_no_gate() -> None:
+    """Sprint 57.124: the executor no longer gates on hitl_policy. request_approval
+    (ALWAYS_ASK) is NOT short-circuited with an "approval required" error at the
+    executor layer — the loop's _cat9 escalates it upstream (covered in the
+    loop/_cat9 tests). The executor reaches the handler."""
     reg = ToolRegistryImpl()
     handlers: dict[str, ToolHandler] = {}
     register_builtin_tools(reg, handlers)
@@ -101,34 +102,8 @@ async def test_request_approval_blocked_by_always_ask_policy() -> None:
             arguments={"message": "send urgent email", "severity": "high"},
         )
     )
-    assert result.success is False
-    assert "approval required" in (result.error or "")
-    assert "always_ask" in (result.error or "")
-
-
-@pytest.mark.asyncio
-async def test_request_approval_handler_runs_with_explicit_approval_bypass() -> None:
-    """When ExecutionContext.explicit_approval=True bypasses HITL... wait —
-    explicit_approval is for destructive bypass, not HITL bypass. Validate
-    that ALWAYS_ASK still gates even with explicit_approval=True."""
-    reg = ToolRegistryImpl()
-    handlers: dict[str, ToolHandler] = {}
-    register_builtin_tools(reg, handlers)
-    exe = ToolExecutorImpl(registry=reg, handlers=handlers)
-
-    ctx = ExecutionContext(explicit_approval=True)
-    result = await exe.execute(
-        ToolCall(
-            id="a2",
-            name="request_approval",
-            arguments={"message": "approved scenario", "severity": "low"},
-        ),
-        context=ctx,
-    )
-    # explicit_approval bypasses DESTRUCTIVE gate, but not ALWAYS_ASK gate.
-    # PermissionChecker resolution: destructive(False)→fall through; HITL ALWAYS_ASK→REQUIRE_APPROVAL  # noqa: E501
-    assert result.success is False
-    assert "approval required" in (result.error or "")
+    # No executor-level "approval required" gate anymore (gating → loop _cat9).
+    assert "approval required" not in (result.error or "")
 
 
 @pytest.mark.asyncio
@@ -265,25 +240,3 @@ def test_builtin_specs_have_first_class_hitl_and_risk() -> None:
         # first-class fields must be present (default values are OK)
         assert spec.hitl_policy is not None
         assert spec.risk_level is not None
-
-
-def test_permission_checker_registered_specs_consistent() -> None:
-    """Quick sanity: each builtin spec's PermissionDecision is reproducible."""
-    reg = ToolRegistryImpl()
-    handlers: dict[str, ToolHandler] = {}
-    register_builtin_tools(reg, handlers)
-    checker = PermissionChecker()
-
-    spec_to_call = {s.name: ToolCall(id="x", name=s.name, arguments={}) for s in reg.list()}
-
-    decisions = {
-        name: checker.check(reg.get(name), call, ExecutionContext())  # type: ignore[arg-type]
-        for name, call in spec_to_call.items()
-    }
-    # echo / python_sandbox / web_search / memory_* → ALLOW; request_approval → REQUIRE_APPROVAL
-    assert decisions["echo_tool"].value == "allow"
-    assert decisions["python_sandbox"].value == "allow"
-    assert decisions["web_search"].value == "allow"
-    assert decisions["memory_search"].value == "allow"
-    assert decisions["memory_write"].value == "allow"
-    assert decisions["request_approval"].value == "require_approval"
