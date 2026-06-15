@@ -63,11 +63,11 @@
 ## Day 3 — Drive-through (US-6) — real chat + real sandbox (the FIRST main-flow sandboxed-execution proof)
 
 ### 3.1 Clean restart + sandbox-backend probe
-- [ ] Risk Class E clean restart from repo-root (`Win32_Process` PID/PPID/StartTime orphan sweep + a startup probe); record whether `default_sandbox()` resolved to Docker (daemon reachable) or the Subprocess fallback (WARN logged) — both EXECUTE; note which for the drive-through
+- [x] Risk Class E clean restart from repo-root (`Win32_Process` PID/PPID/StartTime orphan sweep + a startup probe); record whether `default_sandbox()` resolved to Docker (daemon reachable) or the Subprocess fallback (WARN logged) — both EXECUTE; note which for the drive-through → **DockerSandbox** (Docker 29.5.2); single python.exe owned :8000, no orphan worker; fresh backend startup-log `pricing loader wired` + `startup complete`
 
 ### 3.2 Drive-through (real chat + real sandbox + Playwright/API)
-- [ ] **Leg (bundled-script execution) PASS**: ask the model to use the demo skill for the canonical digest → it calls `run_skill_script('<name>')` → the sandbox runs `bundled/<name>.py` → the tool returns `{stdout: "<sha256>", exit_code: 0}` → the model reports the digest; **VERIFY** the reported value EQUALS the locally-computed `hashlib.sha256(b"...").hexdigest()` (provably script-produced — the LLM cannot fabricate a sha256). `artifacts/sprint-57-118-*.png`
-- [ ] Each control driven (real tool execution + a real sandbox subprocess/container, not a fixture/echo): the FIRST main-flow drive-through of sandboxed execution (AP-4 — the primitive actually runs, the value matches). Observed-vs-intended + the backend (Docker/Subprocess) in progress.md
+- [x] **Leg (bundled-script execution) PASS**: ask the model to use the demo skill for the canonical digest → it calls `run_skill_script('<name>')` → the sandbox runs `bundled/<name>.py` → the tool returns `{stdout: "<sha256>", exit_code: 0}` → the model reports the digest; **VERIFY** the reported value EQUALS the locally-computed `hashlib.sha256(b"...").hexdigest()` (provably script-produced — the LLM cannot fabricate a sha256). `artifacts/sprint-57-118-*.png` → **PASS**: read_skill→run_skill_script (span 546ms, exit_code 0) → final answer `039e824c…517b8b1e` == local ground truth byte-for-byte; verification 0.99
+- [x] Each control driven (real tool execution + a real sandbox subprocess/container, not a fixture/echo): the FIRST main-flow drive-through of sandboxed execution (AP-4 — the primitive actually runs, the value matches). Observed-vs-intended + the backend (Docker/Subprocess) in progress.md → real chat-v2 :3007 + real Azure gpt-5.2 + real Docker container; observed == intended; backend = DockerSandbox
   - DoD: the digest matches the local compute; the tool call + result screenshotted; backend noted
 
 ---

@@ -70,4 +70,24 @@
 
 **Gate**: mypy `src` **Success 0/371** (+1 = `bundled/digest.py` typechecks clean) · black/isort/flake8 0 (changed files; 2 header E501s fixed) · `python scripts/lint/run_all.py` (repo root) **10/10** (count 24) · targeted `tests/unit/agent_harness/skills` + `tests/integration/api/test_skills_wiring.py` **45 passed** (incl. the real-SubprocessSandbox digest run) · full pytest **2644 passed, 5 skipped** (+14, 0 del) vs 2630. `loop.py`/`events.py`/`sse.py`/`event_wire_schema`/codegen/migration UNTOUCHED.
 
-## Day 3 — (pending)
+## Day 3 — Drive-through (real UI + real backend + real LLM + REAL Docker sandbox) — 2026-06-15
+
+**Setup (Risk Class E clean restart)**: killed the stale 57.117 backend pair (uvicorn PID 28700 + its pwsh wrapper 28864) — `Win32_Process` sweep confirmed a SINGLE python.exe owning :8000 (no orphan `multiprocessing.spawn` worker), port freed cleanly. Started a fresh 57.118 backend from repo root (`PYTHONPATH=backend/src python -m uvicorn api.main:app --env-file .env`, no `--reload`, deterministic); startup log `pricing loader wired` + `startup complete` + `Uvicorn running on :8000`. Confirmed the new code loaded: `GET /api/v1/chat/skills` (dev-login acme-skills) lists **`digest`** ("Compute the canonical SHA-256 digest by running this skill's bundled script.") alongside code-review / summarize / release-notes. `default_sandbox()` resolves to **DockerSandbox** here (Docker 29.5.2).
+
+**Ground truth (local)**: `hashlib.sha256(b"agent-harness-bundled-skill").hexdigest()` = `039e824cfd166d0c491ca12b290e28b6da2d89b0eaceca4b33a57231517b8b1e`.
+
+**Drive (real chat-v2 :3007 UI + real Azure gpt-5.2)**: dev-login acme-skills (jamie@acme.com), mode `real_llm`, prompt: *"Use the digest skill to compute the canonical SHA-256 digest by running its bundled script, then report the exact hex digest it prints."* The agent loop ran 3 turns:
+
+| Turn | Tool call (live SSE / Loop visualizer) | Result |
+|------|----------------------------------------|--------|
+| 0 | `read_skill` `{"name":"digest"}` | success — returned the digest skill instructions ("call `run_skill_script("digest")` … report it exactly") |
+| 1 | `run_skill_script` `{"skill_name":"digest"}` | success, span `agent_loop.tool.run_skill_script` **duration_ms 546** — output JSON `{"stdout":"039e824c…517b8b1e\n","stderr":"","exit_code":0,"duration_seconds":0.484,"killed_by_timeout":false}` |
+| 2 | (no tool calls) | final answer `039e824cfd166d0c491ca12b290e28b6da2d89b0eaceca4b33a57231517b8b1e` + `verification_passed llm_judge score=0.99` → `loop_end stop=end_turn` |
+
+**Observed vs intended flow**: intended = model self-selects the digest skill → reads its instructions → calls the new `run_skill_script` tool → the bundled script runs in the sandbox → the model reports the script's exact stdout. Observed = EXACTLY that, end-to-end, with **zero** prompt scaffolding beyond naming the skill. The reported digest **equals the local ground truth byte-for-byte** — a value the model provably cannot fabricate, so this is the **first main-flow proof that the sandbox actually executed a bundled script** (vs the model reciting a value). `default_sandbox()` = **DockerSandbox** → it ran in a REAL hardened Docker container (`--cap-drop=ALL` / `read_only` / `network=none` / non-root), not the Subprocess fallback. No AP-4 Potemkin: the tool is wired (registered + executed), the label is real (`run_skill_script` shows the true skill_name input + the real JSON output), and the result genuinely renders in both the turn block and the Loop visualizer.
+
+**Evidence**: `artifacts/sprint-57-118-drivethrough-digest.png` (chat-v2 turn blocks: read_skill → run_skill_script JSON → final digest + Verification 0.99; right Inspector Turn tab; Loop visualizer 3 turns).
+
+**Verdict**: ✅ **PASS** — Drive-Through Acceptance satisfied (real UI + real backend + real LLM + real Docker sandbox); user-facing path is genuinely usable, not gate-only.
+
+## Day 4 — (pending: design note 34 + CHANGE-085 + retrospective + navigators + PR)
