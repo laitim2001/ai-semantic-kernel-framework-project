@@ -13,6 +13,7 @@ Scope: Phase 57 / Sprint 57.122
 Created: 2026-06-15 (Sprint 57.122 — US-4 integration + multi-tenant)
 
 Modification History (newest-first):
+    - 2026-06-16: Sprint 57.124 — add destructive HIGH-floor escalate test
     - 2026-06-15: Initial creation (Sprint 57.122 Day 2)
 """
 
@@ -28,6 +29,7 @@ from adapters._base.chat_client import ChatClient
 from agent_harness._contracts import (
     ApprovalRequested,
     LoopEvent,
+    ToolAnnotations,
     ToolCall,
     ToolSpec,
     TraceContext,
@@ -151,13 +153,14 @@ class _PolicyHITL(HITLManager):
         return self._policy
 
 
-def _registry(tool_risk: RiskLevel) -> ToolRegistryImpl:
+def _registry(tool_risk: RiskLevel, *, destructive: bool = False) -> ToolRegistryImpl:
     registry = ToolRegistryImpl()
     registry.register(
         ToolSpec(
             name="the_tool",
             description="a tool",
             input_schema={"type": "object", "properties": {}},
+            annotations=ToolAnnotations(destructive=destructive),
             risk_level=tool_risk,
         )
     )
@@ -165,7 +168,12 @@ def _registry(tool_risk: RiskLevel) -> ToolRegistryImpl:
 
 
 def _build(
-    *, action: GuardrailAction, tool_risk: RiskLevel, hitl: _PolicyHITL, tenant_id: UUID
+    *,
+    action: GuardrailAction,
+    tool_risk: RiskLevel,
+    hitl: _PolicyHITL,
+    tenant_id: UUID,
+    destructive: bool = False,
 ) -> AgentLoopImpl:
     engine = GuardrailEngine()
     engine.register(_Guardrail(action), priority=10)
@@ -173,7 +181,7 @@ def _build(
         chat_client=MagicMock(spec=ChatClient),  # never called by _cat9_tool_check
         output_parser=OutputParserImpl(),
         tool_executor=MagicMock(),
-        tool_registry=_registry(tool_risk),
+        tool_registry=_registry(tool_risk, destructive=destructive),
         guardrail_engine=engine,
         tenant_id=tenant_id,
         hitl_manager=hitl,
@@ -302,3 +310,26 @@ async def test_policy_resolved_once_and_cached_across_tool_calls() -> None:
     await _gate(loop, tenant_id=_TENANT_A)
     await _gate(loop, tenant_id=_TENANT_A)
     assert hitl.policy_calls == 1, "policy should be resolved once and cached"
+
+
+async def test_destructive_tool_escalates_via_high_floor_under_default() -> None:
+    """Sprint 57.124: a destructive LOW-risk tool that the guardrail PASSes
+    (unflagged) escalates under the DEFAULT policy — the destructive HIGH-floor in
+    resolve_tool_risk lifts it to HIGH (>= require_approval_min_risk=MEDIUM). This
+    is the loop wiring that replaces the removed PermissionChecker dim 3 (which used
+    to hard-DENY destructive tools even AFTER a human approved them). The same
+    non-destructive LOW tool does NOT escalate (the PASS/LOW/DEFAULT baseline)."""
+    hitl = _PolicyHITL(DEFAULT_POLICY)
+    loop = _build(
+        action=GuardrailAction.PASS,
+        tool_risk=RiskLevel.LOW,
+        hitl=hitl,
+        tenant_id=_TENANT_A,
+        destructive=True,
+    )
+    events = await _gate(loop, tenant_id=_TENANT_A)
+
+    assert _escalated(events) is True
+    assert hitl.requests
+    # The ApprovalRequest carries the destructive-floored HIGH risk.
+    assert hitl.requests[-1].risk_level == RiskLevel.HIGH

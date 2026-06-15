@@ -7,6 +7,7 @@
  * Created: 2026-05-17 (Sprint 57.19 Day 5 / US-D2)
  *
  * Modification History (newest-first):
+ *   - 2026-06-16: Sprint 57.124 — assert the DEMO BackendGapBanner (AD-NotificationsPanel-Backend-Feed)
  *   - 2026-05-17: Initial creation (Sprint 57.19 Day 5 / US-D2)
  */
 
@@ -70,5 +71,12 @@ describe("NotificationsPanel", () => {
     render(wrap(true));
     expect(screen.getByText(/view all/i)).toBeInTheDocument();
     expect(screen.getByText(/preferences/i)).toBeInTheDocument();
+  });
+
+  it("shows a DEMO BackendGapBanner (Sprint 57.124 — notifications backend not yet wired)", () => {
+    render(wrap(true));
+    const banner = screen.getByTestId("backend-gap-banner");
+    expect(banner).toBeInTheDocument();
+    expect(banner).toHaveTextContent(/Demo data/i);
   });
 });

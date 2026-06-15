@@ -20,11 +20,9 @@ Description:
     Sprint 51.1 Day 5 migration: switched from InMemoryToolRegistry /
     InMemoryToolExecutor (deleted) to production ToolRegistryImpl /
     ToolExecutorImpl. Several tests exercise HIGH-risk + ALWAYS_ASK tools
-    (e.g. mock_rootcause_apply_fix, mock_incident_close) whose permission
-    gate would normally short-circuit handler execution. To preserve the
-    original "handler-routing" test focus, an `_AllowAllPermissionChecker`
-    is injected — permission semantics are independently covered in
-    tests/unit/agent_harness/tools/test_executor.py.
+    (e.g. mock_rootcause_apply_fix, mock_incident_close). Sprint 57.124 removed
+    the executor's PermissionChecker gate (gating now lives in the loop's _cat9 +
+    per-tenant HITLPolicy), so handlers route directly — no AllowAll shim needed.
 
 Created: 2026-04-30 (Sprint 51.0 Day 4)
 Last Modified: 2026-04-30
@@ -40,37 +38,17 @@ import httpx
 import pytest
 
 from agent_harness._contracts import (
-    ExecutionContext,
     RiskLevel,
     ToolCall,
     ToolHITLPolicy,
 )
 from agent_harness.tools import (
-    PermissionChecker,
-    PermissionDecision,
     ToolExecutorImpl,
     ToolRegistryImpl,
 )
 from business_domain._register_all import register_all_business_tools
 from mock_services.data.loader import load_seed
 from mock_services.main import app
-
-
-class _AllowAllPermissionChecker(PermissionChecker):
-    """Test-only checker that always returns ALLOW.
-
-    Used to keep this suite focused on handler routing through the ASGI
-    transport. Production permission semantics are covered in
-    tests/unit/agent_harness/tools/test_executor.py.
-    """
-
-    def check(
-        self,
-        spec: Any,  # noqa: ANN401 — relax for test
-        call: ToolCall,
-        context: ExecutionContext,
-    ) -> PermissionDecision:
-        return PermissionDecision.ALLOW
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -101,7 +79,6 @@ def registry_and_executor() -> tuple[ToolRegistryImpl, ToolExecutorImpl]:
     executor = ToolExecutorImpl(
         registry=registry,
         handlers=handlers,
-        permission_checker=_AllowAllPermissionChecker(),
     )
     return registry, executor
 

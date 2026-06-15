@@ -14,9 +14,10 @@ Owner: 01-eleven-categories-spec.md §HITL 中央化
 Single-source: 17.md §1.1, §5
 
 Created: 2026-04-29 (Sprint 49.1)
-Last Modified: 2026-06-15
+Last Modified: 2026-06-16
 
 Modification History:
+    - 2026-06-16: Sprint 57.124 — resolve_tool_risk += destructive HIGH-floor
     - 2026-06-15: Sprint 57.122 — add RISK_ORDER + decide_tool_hitl + resolve_tool_risk
     - 2026-04-29: Initial creation (Sprint 49.1)
 
@@ -128,23 +129,32 @@ def resolve_tool_risk(
     spec_risk: RiskLevel | None,
     *,
     rule_requires_approval: bool,
+    destructive: bool = False,
 ) -> RiskLevel:
-    """Resolve the effective risk level of a tool call (Sprint 57.122).
+    """Resolve the effective risk level of a tool call (Sprint 57.122 / 57.124).
 
     The tool's intrinsic ``ToolSpec.risk_level`` is the base (LOW when the spec is
-    missing — tool not in the registry).
+    missing — tool not in the registry). Two floors can lift the base:
 
-    The per-rule capability-matrix ``requires_approval=True`` flag is treated as a
-    risk **floor of MEDIUM**: a flagged tool's effective risk is ``max(base,
-    MEDIUM)``. This preserves backward compatibility — under the DEFAULT policy
-    (``require_approval_min_risk=MEDIUM``) a flagged tool still escalates, so wiring
-    the policy in never SILENTLY relaxes an approval the admin already required
-    (most ``ToolSpec.risk_level`` default to LOW). A permissive tenant
-    (``auto_approve_max_risk >= MEDIUM``) can still auto-approve it — that's the
-    load-bearing part. (design note 35; user motivation 2026-06-15 = 企業安全剛需,
-    i.e. tighter enforcement, not a relaxation.)
+    1. ``destructive=True`` (``ToolSpec.annotations.destructive``) floors to
+       **HIGH** (Sprint 57.124). Destructive ops are the highest-consequence tool
+       class; flooring to HIGH makes them ESCALATE under the DEFAULT policy
+       (``require_approval_min_risk=MEDIUM``) so a human can approve them and they
+       then RUN. This moves destructive gating into the load-bearing per-tenant
+       policy path, replacing the removed ``PermissionChecker`` dim-3 hard-DENY
+       (which blocked destructive tools even AFTER a human approved them). A tenant
+       that explicitly trusts HIGH (``auto_approve_max_risk >= HIGH``) can still
+       auto-approve — the per-tenant policy stays load-bearing.
+       (design note 36; AD-PermissionChecker-Shadow-Gate-Phase58.)
+    2. The per-rule capability-matrix ``requires_approval=True`` flag floors to
+       **MEDIUM**: a flagged tool's effective risk is ``max(base, MEDIUM)``. Under
+       the DEFAULT policy a flagged tool still escalates, so wiring the policy in
+       never SILENTLY relaxes an approval the admin already required (most
+       ``ToolSpec.risk_level`` default to LOW). (design note 35; 企業安全剛需.)
     """
     base = spec_risk if spec_risk is not None else RiskLevel.LOW
+    if destructive and RISK_ORDER[base] < RISK_ORDER[RiskLevel.HIGH]:
+        base = RiskLevel.HIGH
     if rule_requires_approval and RISK_ORDER[base] < RISK_ORDER[RiskLevel.MEDIUM]:
         return RiskLevel.MEDIUM
     return base

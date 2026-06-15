@@ -1,6 +1,6 @@
 """
 File: backend/src/agent_harness/tools/executor.py
-Purpose: Production ToolExecutor — permission gate + JSONSchema validate + concurrency-aware batch.
+Purpose: Production ToolExecutor — JSONSchema validate + dispatch + rate-limit + metrics.
 Category: 範疇 2 (Tool Layer)
 Scope: Phase 51 / Sprint 51.1 Day 2.2
 
@@ -9,17 +9,17 @@ Description:
     pipeline (replaces `_inmemory.InMemoryToolExecutor`, DEPRECATED-IN: 51.1):
 
       1. Registry lookup — unknown tool → ToolResult(success=False, error="unknown tool: <name>")
-      2. Permission gate — calls `PermissionChecker.check()`:
-         - DENY → ToolResult(success=False, error="permission denied: destructive without explicit approval")  # noqa: E501
-         - REQUIRE_APPROVAL → ToolResult(success=False, error="approval required: <hitl_policy>/<risk_level>")  # noqa: E501
-           (51.1 returns error semantically; Phase 53.3 wires ApprovalManager invocation)
-         - ALLOW → continue
+      2. (Sprint 57.124) tool gating REMOVED from the executor. The loop's
+         `_cat9_tool_check` + per-tenant `HITLPolicy` (Sprint 57.122) is the single
+         source of truth for HITL / risk / destructive gating; the former
+         `PermissionChecker` was a stale duplicate that could override the
+         load-bearing per-tenant policy (AD-PermissionChecker-Shadow-Gate-Phase58).
       3. JSONSchema runtime validation — call.arguments validated against
          spec.input_schema using cached `Draft202012Validator`. Bad input
          → ToolResult(success=False, error="schema mismatch: <field>: <reason>")
       4. Handler dispatch — async handler invocation inside tracer span
       5. Metric emission — `tool_execution_duration_seconds` per call
-         (status=success / error / denied / approval_required / schema_invalid / unknown)
+         (status=success / error / schema_invalid / unknown)
       6. Exception → ToolResult(success=False, error=str(exc))
 
     `execute_batch()` honors `ConcurrencyPolicy` per spec:
@@ -38,9 +38,10 @@ Owner: 01-eleven-categories-spec.md §範疇 2
 Single-source: 17.md §2.1
 
 Created: 2026-04-30 (Sprint 51.1 Day 2.2)
-Last Modified: 2026-04-30
+Last Modified: 2026-06-16
 
 Modification History (newest-first):
+    - 2026-06-16: Sprint 57.124 — remove PermissionChecker gating (single source = loop _cat9)
     - 2026-04-30: Initial creation (Sprint 51.1 Day 2.2) — full pipeline:
       registry lookup + permission + JSONSchema validate + tracer span +
       metric emit + concurrency-aware batch.
@@ -48,7 +49,6 @@ Modification History (newest-first):
 Related:
     - ._abc (ToolExecutor ABC; 49.1)
     - .registry (Day 1.4 ToolRegistryImpl)
-    - .permissions (Day 2.1 PermissionChecker)
     - ._inmemory (DEPRECATED-IN 51.1; tracer/metric pattern carried forward)
     - sprint-51-1-plan.md §決策 4 (permission) / §決策 5 (JSONSchema position)
     - .claude/rules/observability-instrumentation.md (Cat 2 emits
@@ -84,7 +84,6 @@ from agent_harness.observability import (
 )
 
 from ._abc import ToolExecutor, ToolRegistry
-from .permissions import PermissionChecker, PermissionDecision
 
 #: Tool handler protocol — accepts EITHER ``(call)`` or ``(call, context)``.
 #:
@@ -135,14 +134,12 @@ class ToolExecutorImpl(ToolExecutor):
         *,
         registry: ToolRegistry,
         handlers: dict[str, ToolHandler],
-        permission_checker: PermissionChecker | None = None,
         tracer: Tracer | None = None,
         metric_registry: MetricRegistry | None = None,
         rate_limit_gate: RateLimitGate | None = None,
     ) -> None:
         self._registry = registry
         self._handlers = dict(handlers)
-        self._permission = permission_checker or PermissionChecker()
         self._tracer = tracer or NoOpTracer()
         self._metrics = metric_registry or MetricRegistry()
         # Sprint 57.58 Track B: optional per-tenant tool-call rate-limit gate.
@@ -166,27 +163,12 @@ class ToolExecutorImpl(ToolExecutor):
         if spec is None:
             return self._fail(call, "unknown", f"unknown tool: {call.name}", trace_context, t0=None)
 
-        decision = self._permission.check(spec, call, ctx)
-        if decision is PermissionDecision.DENY:
-            return self._fail(
-                call,
-                "denied",
-                f"permission denied: destructive tool '{call.name}' requires explicit approval",
-                trace_context,
-                t0=None,
-            )
-        if decision is PermissionDecision.REQUIRE_APPROVAL:
-            return self._fail(
-                call,
-                "approval_required",
-                (
-                    f"approval required: tool '{call.name}' "
-                    f"(hitl_policy={spec.hitl_policy.value}, risk_level={spec.risk_level.value})"
-                ),
-                trace_context,
-                t0=None,
-            )
-
+        # Sprint 57.124: tool gating (HITL / risk / destructive) is owned by the
+        # loop's `_cat9_tool_check` + per-tenant `HITLPolicy` (Sprint 57.122) — the
+        # single source of truth. The executor no longer runs a `PermissionChecker`
+        # (a stale duplicate that could override the load-bearing per-tenant policy;
+        # AD-PermissionChecker-Shadow-Gate-Phase58). Executor = validate → dispatch →
+        # rate-limit → metric/span.
         schema_error = self._validate_arguments(spec, call)
         if schema_error is not None:
             return self._fail(

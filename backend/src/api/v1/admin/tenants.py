@@ -43,9 +43,10 @@ Key Components:
     - get_tenant / update_tenant (Sprint 57.3)
 
 Created: 2026-05-06 (Sprint 56.1 Day 1)
-Last Modified: 2026-06-15
+Last Modified: 2026-06-16
 
 Modification History:
+    - 2026-06-16: Sprint 57.124 — HITLPolicy PUT cross-field validator (auto<require → 422)
     - 2026-06-15: Sprint 57.119 — Skills system-visibility: +GET /{id}/skills/system (read-only)
     - 2026-06-15: Sprint 57.117 — Skills quota: instructions max_length + SkillListResponse limits
     - 2026-06-13: Sprint 57.110 B4 — harness-policy +subagent_failure_policy + literal 422
@@ -90,7 +91,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -998,6 +999,21 @@ class HITLPolicyUpsertRequest(BaseModel):
         if v not in {"LOW", "MEDIUM", "HIGH", "CRITICAL"}:
             raise ValueError(f"Invalid RiskLevel: {v}")
         return v
+
+    @model_validator(mode="after")
+    def _validate_threshold_ordering(self) -> "HITLPolicyUpsertRequest":
+        # Sprint 57.124 (AD-HITL-Policy-Threshold-Validation): reject an overlapping
+        # policy at write time. The runtime is SAFE via 57.122 escalate-first ordering,
+        # but a misconfigured `auto >= require` silently means "escalate the whole gray
+        # band" with no operator feedback — fail loud (422) instead. The field_validator
+        # above guarantees both are valid RiskLevel names before this runs.
+        if _RISK_ORDER[RiskLevel(self.auto_approve_max_risk)] >= _RISK_ORDER[
+            RiskLevel(self.require_approval_min_risk)
+        ]:
+            raise ValueError(
+                "auto_approve_max_risk must be strictly less than require_approval_min_risk"
+            )
+        return self
 
 
 class HITLPolicyUpsertResponse(BaseModel):

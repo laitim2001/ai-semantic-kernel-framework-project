@@ -9,6 +9,7 @@ Scope: Phase 57 / Sprint 57.122
 Created: 2026-06-15 (Sprint 57.122 — AD-HITL-Policy-ReadSide-Potemkin-Phase58)
 
 Modification History (newest-first):
+    - 2026-06-16: Sprint 57.124 — add destructive HIGH-floor cases (resolve_tool_risk + escalate)
     - 2026-06-15: Initial creation (Sprint 57.122 Day 1 — US-1/US-4)
 """
 
@@ -171,3 +172,64 @@ def test_permissive_tenant_can_auto_approve_a_flagged_tool() -> None:
     threshold is now consulted at runtime."""
     risk = resolve_tool_risk(RiskLevel.LOW, rule_requires_approval=True)  # MEDIUM floor
     assert decide_tool_hitl(risk, PERMISSIVE, rule_requires_approval=True) is False
+
+
+# --------------------------------------------------------------------------- #
+# resolve_tool_risk — destructive HIGH-floor (Sprint 57.124)                  #
+# --------------------------------------------------------------------------- #
+
+# Moderately-permissive tenant (auto=MEDIUM, require=HIGH): the destructive floor
+# is what keeps a MEDIUM-risk destructive tool escalating (it would auto-approve
+# without the floor). The regression guard for removing PermissionChecker dim 3
+# (which used to hard-DENY destructive tools even AFTER a human approved them).
+MODERATE = HITLPolicy(
+    tenant_id=TENANT,
+    auto_approve_max_risk=RiskLevel.MEDIUM,
+    require_approval_min_risk=RiskLevel.HIGH,
+)
+
+
+@pytest.mark.parametrize(
+    "spec_risk,destructive,expected",
+    [
+        (RiskLevel.LOW, True, RiskLevel.HIGH),  # destructive floors LOW → HIGH
+        (RiskLevel.MEDIUM, True, RiskLevel.HIGH),  # MEDIUM → HIGH
+        (RiskLevel.HIGH, True, RiskLevel.HIGH),  # already at floor
+        (RiskLevel.CRITICAL, True, RiskLevel.CRITICAL),  # above floor unchanged
+        (None, True, RiskLevel.HIGH),  # unknown + destructive → HIGH
+        (RiskLevel.LOW, False, RiskLevel.LOW),  # non-destructive unchanged
+        (RiskLevel.MEDIUM, False, RiskLevel.MEDIUM),
+    ],
+)
+def test_resolve_tool_risk_destructive_floor(
+    spec_risk: RiskLevel | None, destructive: bool, expected: RiskLevel
+) -> None:
+    assert (
+        resolve_tool_risk(spec_risk, rule_requires_approval=False, destructive=destructive)
+        is expected
+    )
+
+
+def test_destructive_floor_beats_rule_flag() -> None:
+    """destructive (HIGH-floor) dominates the per-rule MEDIUM-floor."""
+    assert (
+        resolve_tool_risk(RiskLevel.LOW, rule_requires_approval=True, destructive=True)
+        is RiskLevel.HIGH
+    )
+
+
+def test_destructive_escalates_under_default_policy() -> None:
+    """End-to-end: a destructive LOW-risk tool escalates under the DEFAULT policy."""
+    risk = resolve_tool_risk(RiskLevel.LOW, rule_requires_approval=False, destructive=True)
+    assert risk is RiskLevel.HIGH
+    assert decide_tool_hitl(risk, DEFAULT, rule_requires_approval=False) is True
+
+
+def test_destructive_floor_escalates_under_moderate_tenant() -> None:
+    """A MEDIUM-risk destructive tool under a moderately-permissive tenant
+    (auto=MEDIUM) would AUTO-RUN without the floor; the HIGH-floor makes it
+    ESCALATE — preserving the safety the removed PermissionChecker dim 3 gave."""
+    without_floor = resolve_tool_risk(RiskLevel.MEDIUM, rule_requires_approval=False)
+    assert decide_tool_hitl(without_floor, MODERATE, rule_requires_approval=False) is False
+    with_floor = resolve_tool_risk(RiskLevel.MEDIUM, rule_requires_approval=False, destructive=True)
+    assert decide_tool_hitl(with_floor, MODERATE, rule_requires_approval=False) is True

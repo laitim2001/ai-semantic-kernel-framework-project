@@ -19,6 +19,7 @@ Description:
 Created: 2026-05-26 (Sprint 57.48 Day 1)
 
 Modification History (newest-first):
+    - 2026-06-16: Sprint 57.124 — add 3 threshold-ordering tests (422 overlap/equal + 200 valid)
     - 2026-05-26: Sprint 57.54 — add 12 PUT tests (Track A — upsert + 422 + iso + idemp)
     - 2026-05-26: Initial creation (Sprint 57.48 Day 1 Track A — HITLPolicies admin GET)
 """
@@ -396,6 +397,52 @@ async def test_put_extra_field_rejected(db_session: AsyncSession) -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.put(f"/api/v1/admin/tenants/{tenant.id}/hitl-policies", json=payload)
     assert resp.status_code == 422
+
+
+async def test_put_overlapping_thresholds_rejected(db_session: AsyncSession) -> None:
+    """auto_approve_max_risk > require_approval_min_risk → 422 via the cross-field
+    model_validator (AD-HITL-Policy-Threshold-Validation, Sprint 57.124). The
+    overlap is runtime-safe (57.122 escalate-first) but should fail loud at write
+    time rather than silently mean 'escalate the gray band'."""
+    tenant = await _seed_tenant(db_session, code=_unique_code("HITL_PUT_OVERLAP"))
+    app = _build_app(db_session=db_session)
+    payload = _valid_put_payload(  # HIGH >= MEDIUM → overlap
+        auto_approve_max_risk="HIGH",
+        require_approval_min_risk="MEDIUM",
+    )
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.put(f"/api/v1/admin/tenants/{tenant.id}/hitl-policies", json=payload)
+    assert resp.status_code == 422
+    assert "strictly less than" in resp.text
+
+
+async def test_put_equal_thresholds_rejected(db_session: AsyncSession) -> None:
+    """auto == require (both MEDIUM) is also an overlap (not strictly less) → 422."""
+    tenant = await _seed_tenant(db_session, code=_unique_code("HITL_PUT_EQ"))
+    app = _build_app(db_session=db_session)
+    payload = _valid_put_payload(
+        auto_approve_max_risk="MEDIUM",
+        require_approval_min_risk="MEDIUM",
+    )
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.put(f"/api/v1/admin/tenants/{tenant.id}/hitl-policies", json=payload)
+    assert resp.status_code == 422
+
+
+async def test_put_valid_ordering_accepted(db_session: AsyncSession) -> None:
+    """auto < require (LOW < HIGH) → 200 (the validator allows valid ordering)."""
+    tenant = await _seed_tenant(db_session, code=_unique_code("HITL_PUT_VALIDORD"))
+    app = _build_app(db_session=db_session)
+    payload = _valid_put_payload(
+        auto_approve_max_risk="LOW",
+        require_approval_min_risk="HIGH",
+    )
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.put(f"/api/v1/admin/tenants/{tenant.id}/hitl-policies", json=payload)
+    assert resp.status_code == 200, resp.text
 
 
 async def test_put_multi_tenant_isolation(db_session: AsyncSession) -> None:
