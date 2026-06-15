@@ -53,6 +53,20 @@
 
 **Commit**: `feat(skills, sprint-57-117): per-tenant quota + instructions body-size + list-response limits` (Day-1 backend).
 
-## Day 2 — (pending)
+## Day 2 — Frontend: the Skills-tab quota / size surface + Vitest — 2026-06-15
+
+**Day-2 drift correction** (read-before-edit): the skills TS types live in `features/tenant-settings/types.ts`, NOT `tenantSettingsService.ts` (the plan's guess). And `useTenantSkills` returns the whole `SkillListResponse` via `useQuery` → `SkillsTab` reads `skills.data?.max_skills` directly, so **the hook + service needed NO change** (simpler than the plan's 2-file estimate — 1 type file + 1 component).
+
+**US-4 type** (`types.ts`): `SkillListResponse` += `max_skills?` + `max_instructions_chars?` — **optional** so existing Vitest mocks (`{ skills: [...] }`) still compile AND an older/cached response never crashes; the tab falls back to `Infinity` (no cap).
+
+**US-4 component** (`SkillsTab.tsx`): `maxSkills`/`maxInstructionsChars` (`?? Infinity`) + `atLimit = items.length >= maxSkills`; a "N / max skills" count; Add `disabled={isLoading || atLimit}` + a "Skill limit reached" hint at the cap; the `instructions` `<textarea maxLength>` + a `{len} / {max}` counter. The **existing inline error banner** already renders the mutation error message → a 409 quota / 422 size shows the backend detail verbatim (no custom status→copy mapping; honest server message, AP-4-safe).
+
+**Tests** (`SkillsTab.test.tsx` +4): N/max count · Add disabled + hint at the cap · textarea `maxLength` + counter · a quota 409 create error renders inline.
+
+**Gate**: `npm run lint` 0 error (only pre-existing `TSSatisfiesExpression` plugin noise) · `npm run build` ✓ tsc + vite (3.36s — the optional-field type change compiles) · `npm run test` Vitest **873 (+4 vs 869)** · `npm run check:mockup-fidelity` **51** holds (byte-identical, no new colour literal — `var(--danger)` token). No mockup CSS change.
+
+**Commit**: `feat(skills, sprint-57-117): chat — Skills tab quota/size affordances (Day-2 FE)`.
+
+## Day 3 — (pending)
 ## Day 3 — (pending)
 ## Day 4 — (pending)

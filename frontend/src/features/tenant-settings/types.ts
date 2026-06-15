@@ -21,6 +21,7 @@
  * Last Modified: 2026-05-26
  *
  * Modification History (newest-first):
+ *   - 2026-06-15: Sprint 57.117 — SkillListResponse +max_skills/+max_instructions_chars (quota limits)
  *   - 2026-06-13: Sprint 57.114 — +Skill CRUD schemas (per-tenant skills catalog tab)
  *   - 2026-06-12: Sprint 57.107 B3 — HarnessPolicy +handoffEnabled +handoffTargetAllowlist (Cat 11 handoff governance)
  *   - 2026-06-12: Sprint 57.106 C3 — +HarnessPolicy read/write schemas (harness-policy tab)
@@ -410,6 +411,14 @@ export interface Skill {
 
 export interface SkillListResponse {
   skills: Skill[];
+  /**
+   * Sprint 57.117: the effective write-path limits the backend GET surfaces, so the
+   * Skills tab is single-source against the server (N/max + disable Add at the cap +
+   * cap the textarea) — not a hardcoded FE mirror. Optional → the tab falls back to no
+   * cap (Infinity) if an older/cached response omits them (never falsely disables).
+   */
+  max_skills?: number;
+  max_instructions_chars?: number;
 }
 
 export interface SkillCreateRequest {

@@ -49,20 +49,20 @@
 
 ## Day 2 — Frontend: the Skills-tab quota / size surface + Vitest (US-4, US-5)
 
-### 2.1 Service + hook surface the limits (US-4)
-- [ ] **`features/tenant-settings/services/tenantSettingsService.ts`** (EDIT): the skills list-response type += `max_skills: number` + `max_instructions_chars: number` (snake_case direct — 57.114)
-- [ ] **`features/tenant-settings/hooks/useTenantSkills.ts`** (EDIT): return the limits alongside `skills` (safe fallback — a large sentinel when absent so the tab never falsely disables / caps); MHist
-  - DoD: types compile; the hook exposes the limits
+### 2.1 Type surfaces the limits (US-4) ✅
+- [x] **`features/tenant-settings/types.ts`** (EDIT — Day-2 drift: the skills types live in `types.ts`, NOT `tenantSettingsService.ts` as the plan guessed): `SkillListResponse` += `max_skills?: number` + `max_instructions_chars?: number` (snake_case direct — 57.114; **optional** → tab falls back to `Infinity`, so existing mocks + an older cached response never falsely disable); MHist
+- [x] **`useTenantSkills.ts` / `tenantSettingsService.ts`** — **NOT changed** (the hook returns the whole `SkillListResponse` via `useQuery`; `SkillsTab` reads `skills.data?.max_skills` directly — no pass-through wiring needed). Simpler than the plan's 2-file estimate.
+  - DoD: ✅ tsc compiles (build green); the limits flow through the existing query
 
-### 2.2 SkillsTab affordances (US-4)
-- [ ] **`features/tenant-settings/components/tabs/SkillsTab.tsx`** (EDIT): a "N / max skills" count; the Add control `disabled` + a "limit reached" hint when `skills.length >= max_skills`; the `instructions` `<textarea maxLength={max_instructions_chars}>` + a `{len}/{max}` counter; render the mutation error (409 → quota copy / 422 → size copy, mapped by HTTP status); inline English copy; WHY comment + MHist
-- [ ] **`tests/unit/tenant-settings/tabs/SkillsTab.test.tsx`** (EDIT): Add disabled + the hint when at the limit · the `<textarea maxLength>` from `max_instructions_chars` · a 409 mutation → the quota error renders · a 422 → the size error renders
-  - DoD: Vitest pass; the affordances are driven by the server-sourced limits
-- [ ] **Build-time check** (the 57.116 lesson): `npm run build` (tsc -b), not only Vitest, after the type change
+### 2.2 SkillsTab affordances (US-4) ✅
+- [x] **`features/tenant-settings/components/tabs/SkillsTab.tsx`** (EDIT): `maxSkills`/`maxInstructionsChars` reads (`?? Infinity` fallback) + `atLimit`; a "N / max skills" count (`skills-count`); Add `disabled={isLoading || atLimit}` + a "Skill limit reached" hint (`skills-limit-hint`) at the cap; the `instructions` `<textarea maxLength>` + a `{len} / {max}` counter (`*-instructions-counter`); the existing inline error banner renders the backend detail (409 quota / 422 size — no custom status mapping needed; honest server message); WHY comment + MHist + Description
+- [x] **`tests/unit/tenant-settings/tabs/SkillsTab.test.tsx`** (EDIT +4): "N / max" count · Add disabled + hint at the cap · textarea `maxLength` + counter from `max_instructions_chars` · a quota 409 create error renders inline
+  - DoD: ✅ Vitest pass; affordances driven by the server-sourced limits
+- [x] **Build-time check** (57.116 lesson): `npm run build` (tsc + vite) ran ✓ after the type change
 
-### 2.3 FE gate sweep (US-5)
-- [ ] `npm run lint` (NO `--silent`) 0 error · `npm run build` ✓ (tsc + vite) · `npm run test` Vitest +M vs 869 · `npm run check:mockup-fidelity` 51 holds (no CSS change)
-  - Verify: `cd frontend && npm run lint && npm run build && npm run test && npm run check:mockup-fidelity`
+### 2.3 FE gate sweep (US-5) ✅
+- [x] `npm run lint` (NO `--silent`) 0 error (only the pre-existing `TSSatisfiesExpression` plugin noise) · `npm run build` ✓ (tsc + vite, 3.36s) · `npm run test` Vitest **873 (+4 vs 869)** · `npm run check:mockup-fidelity` **51** holds (byte-identical; no new colour literal — `var(--danger)` token)
+  - Verify: ✅ `cd frontend && npm run lint && npm run build && npm run test && npm run check:mockup-fidelity`
 
 ---
 

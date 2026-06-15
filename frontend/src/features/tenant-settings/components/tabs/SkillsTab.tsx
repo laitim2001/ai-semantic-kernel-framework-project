@@ -13,8 +13,10 @@
  *   through useTenantSkill{Create,Update,Delete}; each invalidates the read so the
  *   list re-fetches. A tenant's custom skill overlays the bundled set per chat
  *   request — a same-name skill shadows a built-in one (e.g. a "code-review"
- *   override). Backend errors (409 duplicate / 404 missing / 422 non-kebab name)
- *   surface inline via the same error-banner pattern as the other tabs.
+ *   override). The header shows the per-tenant quota (N / max) + disables Add at the
+ *   cap; the instructions textarea caps at the body-size limit (both server-sourced,
+ *   Sprint 57.117). Backend errors (409 duplicate / quota, 404 missing, 422 non-kebab /
+ *   oversized) surface inline via the same error-banner pattern as the other tabs.
  *
  *   Admin-internal page → mockup-ui Card + grid-main + inline tokens only (no
  *   mockup-fidelity CSS); English copy. Mirrors QuotasTab's view/edit idioms.
@@ -22,6 +24,7 @@
  * Created: 2026-06-13 (Sprint 57.114)
  *
  * Modification History (newest-first):
+ *   - 2026-06-15: Sprint 57.117 — N/max count + disable Add at quota + textarea maxLength + counter
  *   - 2026-06-13: Initial creation (Sprint 57.114)
  *
  * Related:
@@ -106,6 +109,12 @@ export function SkillsTab({ tenantId }: SkillsTabProps): JSX.Element {
   }, [updateMutation.isSuccess, editingId]);
 
   const items = skills.data?.skills ?? [];
+  // Sprint 57.117: the effective per-tenant limits (server-sourced via the list response).
+  // Fall back to no cap (Infinity) when absent so an older/cached response never falsely
+  // disables Add or caps the textarea.
+  const maxSkills = skills.data?.max_skills ?? Infinity;
+  const maxInstructionsChars = skills.data?.max_instructions_chars ?? Infinity;
+  const atLimit = items.length >= maxSkills;
 
   const handleAddOpen = (): void => {
     setAddDraft({ ...EMPTY_DRAFT });
@@ -202,11 +211,22 @@ export function SkillsTab({ tenantId }: SkillsTabProps): JSX.Element {
         placeholder="Full instructions (read_skill returns this verbatim)"
         onChange={(e) => setDraft({ ...draft, instructions: e.target.value })}
         rows={5}
+        maxLength={Number.isFinite(maxInstructionsChars) ? maxInstructionsChars : undefined}
         // eslint-disable-next-line no-restricted-syntax -- inline-style: textarea sizing
         style={{ fontSize: 12, padding: "4px 8px", fontFamily: "inherit" }}
         data-testid={`${idPrefix}-instructions`}
         aria-label="Skill instructions"
       />
+      {Number.isFinite(maxInstructionsChars) ? (
+        <span
+          className="subtle"
+          // eslint-disable-next-line no-restricted-syntax -- inline-style: char counter
+          style={{ fontSize: 10.5, alignSelf: "flex-end" }}
+          data-testid={`${idPrefix}-instructions-counter`}
+        >
+          {draft.instructions.length} / {maxInstructionsChars}
+        </span>
+      ) : null}
     </div>
   );
 
@@ -220,19 +240,37 @@ export function SkillsTab({ tenantId }: SkillsTabProps): JSX.Element {
           replaces it; others are added. Changes apply on the next chat request.
         </p>
 
-        {/* eslint-disable-next-line no-restricted-syntax -- inline-style: row flex gap */}
-        <div className="row" style={{ gap: 8, marginBottom: 12, justifyContent: "flex-end" }}>
-          {!adding ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddOpen}
-              disabled={skills.isLoading}
-              data-testid="skills-add-btn"
-            >
-              + Add skill
-            </Button>
-          ) : null}
+        {/* eslint-disable-next-line no-restricted-syntax -- inline-style: count+action row */}
+        <div className="row" style={{ gap: 8, marginBottom: 12, justifyContent: "space-between", alignItems: "center" }}>
+          {/* eslint-disable-next-line no-restricted-syntax -- inline-style: count label */}
+          <span className="subtle" style={{ fontSize: 11.5 }} data-testid="skills-count">
+            {items.length}
+            {Number.isFinite(maxSkills) ? ` / ${maxSkills}` : ""} skills
+          </span>
+          {/* eslint-disable-next-line no-restricted-syntax -- inline-style: right action group */}
+          <span className="row" style={{ gap: 8, alignItems: "center" }}>
+            {atLimit && !adding ? (
+              <span
+                className="subtle"
+                // eslint-disable-next-line no-restricted-syntax -- inline-style: limit hint colour
+                style={{ fontSize: 11.5, color: "var(--danger)" }}
+                data-testid="skills-limit-hint"
+              >
+                Skill limit reached
+              </span>
+            ) : null}
+            {!adding ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddOpen}
+                disabled={skills.isLoading || atLimit}
+                data-testid="skills-add-btn"
+              >
+                + Add skill
+              </Button>
+            ) : null}
+          </span>
         </div>
 
         {adding ? (

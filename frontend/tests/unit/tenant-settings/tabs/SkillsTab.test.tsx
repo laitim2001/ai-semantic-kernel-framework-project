@@ -5,6 +5,7 @@
  * Scope: Phase 57 / Sprint 57.114 (Per-Tenant Skills Catalog)
  *
  * Modification History (newest-first):
+ *   - 2026-06-15: Sprint 57.117 — quota count / disable-at-cap / textarea maxLength+counter / quota error
  *   - 2026-06-13: Initial creation (Sprint 57.114)
  *
  * Related:
@@ -201,5 +202,39 @@ describe("SkillsTab (Sprint 57.114)", () => {
     render(<SkillsTab tenantId="t1" />);
     fireEvent.click(screen.getByTestId("skills-delete-btn-release-notes"));
     expect(screen.getByTestId("skills-delete-error")).toHaveTextContent(/skill not found/);
+  });
+
+  // === Sprint 57.117: quota + body-size affordances (server-sourced limits) ===
+
+  it("shows the N / max skills count when the server returns a quota", () => {
+    mockSkills({ skills: [SKILL_A], max_skills: 50, max_instructions_chars: 20000 });
+    render(<SkillsTab tenantId="t1" />);
+    expect(screen.getByTestId("skills-count")).toHaveTextContent("1 / 50 skills");
+  });
+
+  it("disables Add + shows the limit hint when at the skill quota", () => {
+    mockSkills({ skills: [SKILL_A], max_skills: 1, max_instructions_chars: 20000 });
+    render(<SkillsTab tenantId="t1" />);
+    expect(screen.getByTestId("skills-add-btn")).toBeDisabled();
+    expect(screen.getByTestId("skills-limit-hint")).toBeInTheDocument();
+  });
+
+  it("caps the instructions textarea + shows a counter from max_instructions_chars", () => {
+    mockSkills({ skills: [], max_skills: 50, max_instructions_chars: 200 });
+    render(<SkillsTab tenantId="t1" />);
+    fireEvent.click(screen.getByTestId("skills-add-btn"));
+    const ta = screen.getByTestId("skills-add-instructions");
+    expect(ta).toHaveAttribute("maxlength", "200");
+    expect(screen.getByTestId("skills-add-instructions-counter")).toHaveTextContent("0 / 200");
+  });
+
+  it("surfaces a quota 409 create error inline (the backend detail)", () => {
+    mockSkills({ skills: [], max_skills: 5, max_instructions_chars: 20000 });
+    mockMutation(useTenantSkillCreate, {
+      error: new Error("HTTP 409: skill quota reached for this tenant"),
+    });
+    render(<SkillsTab tenantId="t1" />);
+    fireEvent.click(screen.getByTestId("skills-add-btn"));
+    expect(screen.getByTestId("skills-add-error")).toHaveTextContent(/quota reached/);
   });
 });
