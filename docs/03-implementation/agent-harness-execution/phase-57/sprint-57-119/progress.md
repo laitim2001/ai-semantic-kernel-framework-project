@@ -43,4 +43,14 @@
 
 **Gate (Day 1)**: mypy `src` **0/371** (Success) · black/isort/flake8 0 (the 1 E501 on the response docstring trimmed) · the 4 new system-skills tests **4 passed** (`pytest -k system`). `registry.py` UNTOUCHED (read-only consumer).
 
-## Day 2 — (pending)
+## Day 2 — Frontend: data layer + System Skills section + Preview modal (US-2/3/4/5) — 2026-06-15
+
+**Data layer (US-2)**: `types.ts` += `SystemSkill` (`name`/`description`/`instructions`/`has_script`/`overridden`) + `SystemSkillListResponse`. `tenantSettingsService.ts` += `fetchSystemSkills(tenantId)` (mirrors `fetchTenantSkills`). `useTenantSkills.ts` += `useSystemSkills(tenantId)` (own `SYSTEM_SKILLS_QUERY_KEY_BASE` — the static bundled set needs no mutation invalidation).
+
+**System Skills section + Preview modal (US-3/4)**: `SkillsTab.tsx` += a sibling `<Card title="System Skills">` (read-only) listing each bundled skill — name + a "🔧 script" badge (`has_script`) + a "shadowed by your skill" tag (`overridden`) + a Preview button; NO edit/delete. Plus a `previewSkill` state + an inline-overlay Preview modal (no `Modal` primitive in mockup-ui — D-modal-primitive) rendering any skill's `instructions` in a mono `<pre>`; a Preview button on the tenant rows too. **a11y**: followed the `TenantMembersDrawer` convention — a window Escape-key `useEffect` + `role="dialog"`/`aria-label` on the panel + the matching `jsx-a11y/click-events-have-key-events, jsx-a11y/no-(static|noninteractive)-element-interactions` disables on the backdrop + stop-propagation panel. Tokens `var(--bg)`/`var(--border)`/`var(--radius)`/`var(--shadow)` (the drawer's `--bg`, not a `--background` guess).
+
+**Tests (US-5)**: `SkillsTab.test.tsx` +6 — section render / has-script badge on `digest` only / shadowed tag when overridden / Preview opens+shows instructions / tenant-row Preview + Close dismiss / system load-error. **D-fe-test-path fix**: the file is at `frontend/tests/unit/tenant-settings/tabs/` (NOT co-located). `mockSystemSkills` added to BOTH describe `beforeEach` (the component now calls `useSystemSkills` in every render → the existing 15 would crash without a default mock).
+
+**Gate (Day 2)**: mypy `src` **0/371** · black/isort/flake8 0 · `run_all` **10/10** (count 24, no codegen) · `npm run lint` clean (the 4 jsx-a11y modal errors fixed) · `npm run build` ✅ (tsc — the 57.116 build-not-just-Vitest discipline) · Vitest **879 (142 files)** (+6 vs 873) · mockup-fidelity **51** (byte-identical + 51 baseline; no CSS) · `loop.py`/`events.py`/`sse.py`/`event_wire_schema`/codegen/migration UNTOUCHED · `check_cross_category_import` green (api→Cat-5 read).
+
+## Day 3 — (pending)

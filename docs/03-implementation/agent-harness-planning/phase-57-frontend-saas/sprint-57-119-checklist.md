@@ -38,20 +38,20 @@
 
 ## Day 2 — Frontend: data layer + System Skills section + Preview modal (US-2, US-3, US-4, US-5)
 
-### 2.1 FE data layer (US-2)
-- [ ] **`frontend/src/features/tenant-settings/types.ts`** (EDIT): `SystemSkill { name; description; instructions; has_script: boolean; overridden: boolean }` + `SystemSkillListResponse { skills: SystemSkill[] }`
-- [ ] **`frontend/src/features/tenant-settings/services/tenantSettingsService.ts`** (EDIT): `fetchSystemSkills(tenantId) -> SystemSkillListResponse` (GET `/admin/tenants/{id}/skills/system`; mirror `fetchTenantSkills`)
-- [ ] **`frontend/src/features/tenant-settings/hooks/useTenantSkills.ts`** (EDIT): `useSystemSkills(tenantId)` (`useQuery`, queryKey `["tenant-skills-system", tenantId]`; mirror `useTenantSkills`)
-  - DoD: tsc clean; the hook mirrors the existing read convention
+### 2.1 FE data layer (US-2) ✅
+- [x] **`types.ts`** (EDIT): `SystemSkill { name; description; instructions; has_script: boolean; overridden: boolean }` + `SystemSkillListResponse { skills: SystemSkill[] }`
+- [x] **`tenantSettingsService.ts`** (EDIT): `fetchSystemSkills(tenantId)` (GET `/admin/tenants/{id}/skills/system`; mirrors `fetchTenantSkills`)
+- [x] **`useTenantSkills.ts`** (EDIT): `useSystemSkills(tenantId)` + `SYSTEM_SKILLS_QUERY_KEY_BASE` (`["tenant-settings","skills-system"]`); no mutation invalidates it (static bundled set)
+  - DoD: ✅ tsc clean (`npm run build`)
 
-### 2.2 System Skills read-only section + Preview modal (US-3, US-4)
-- [ ] **`frontend/src/features/tenant-settings/components/tabs/SkillsTab.tsx`** (EDIT): a read-only "System Skills" section (under the tenant Card or a sibling Card) listing each bundled skill — name (mono) + description (subtle) + a "🔧 script" badge (`system-skill-script-badge-{name}`) when `has_script` + a "shadowed by your skill" tag (`system-skill-shadowed-{name}`) when `overridden` + a Preview button (`system-skill-preview-btn-{name}`); NO edit/delete; loading/error states mirror the tenant list (`system-skills-section`); a short hint copy. Plus a `previewSkill` state + a Preview modal (`skill-preview-modal` + `skill-preview-close-btn`) rendering `name` + a read-only mono `<pre>` of `instructions`; a Preview button on the tenant rows too (passing `{name, instructions}`). Inline tokens (admin-internal; no mockup CSS); English copy; MHist
-  - DoD: the section renders; Preview opens + shows instructions; no disturbance to the 57.114/117 idioms
+### 2.2 System Skills read-only section + Preview modal (US-3, US-4) ✅
+- [x] **`SkillsTab.tsx`** (EDIT): a sibling `<Card title="System Skills">` listing each bundled skill — name (mono) + 🔧 script badge (`system-skill-script-badge-{name}`) + "shadowed by your skill" tag (`system-skill-shadowed-{name}`) + Preview button (`system-skill-preview-btn-{name}`); NO edit/delete; loading/error (`system-skills-section`/`system-skills-load-error`) mirror the tenant list. `previewSkill` state + an inline-overlay Preview modal (`skill-preview-modal`/`skill-preview-body`/`skill-preview-close-btn`, `role="dialog"` + a window Escape listener — the `TenantMembersDrawer` a11y convention) rendering any skill's `instructions`; a Preview button on the tenant rows too. Inline tokens (`var(--bg)`/`var(--border)`/`var(--radius)`/`var(--shadow)`); English copy; MHist
+  - DoD: ✅ section renders; Preview opens + shows instructions; no disturbance to the 57.114/117 idioms; lint clean (a11y disables match `TenantMembersDrawer`)
 
-### 2.3 FE Vitest + gate sweep (US-5)
-- [ ] **`frontend/src/features/tenant-settings/components/tabs/SkillsTab.test.tsx`** (EDIT): the System Skills section renders the bundled skills · the has-script badge on `digest` · the shadowed tag when a tenant skill shares a name · the Preview modal opens + shows `instructions` · a tenant-row Preview works (mock `useSystemSkills`)
-- [ ] Gate sweep: mypy `src` 0/371 · black/isort/flake8 0 · `python scripts/lint/run_all.py` (repo root) 10/10 (count 24, no codegen) · `npm run lint && npm run build` (no `--silent`) · Vitest +M vs baseline · mockup-fidelity 51 · full pytest +N vs 2644 · `loop.py`/`events.py`/`sse.py`/`event_wire_schema`/codegen/migration UNTOUCHED · LLM-neutrality + `check_cross_category_import` green
-  - Verify: `python -m mypy src` · `python -m pytest tests/integration/api/test_admin_tenant_skills.py -q` · `cd frontend && npm run test -- SkillsTab && npm run build`
+### 2.3 FE Vitest + gate sweep (US-5) ✅
+- [x] **`frontend/tests/unit/tenant-settings/tabs/SkillsTab.test.tsx`** (EDIT +6; path drift D-fe-test-path): section render · has-script badge on `digest` only · shadowed tag when overridden · Preview modal opens+shows `instructions` · tenant-row Preview + Close dismisses · system load-error. `mockSystemSkills` added to BOTH describe `beforeEach` (else the existing 15 crash). SkillsTab suite **21 passed** (15+6)
+- [x] Gate sweep: mypy `src` **0/371** · black/isort/flake8 0 · `run_all` **10/10** (count 24, no codegen) · `npm run lint && npm run build` ✅ (no `--silent`; a11y fixed) · Vitest **879 (142 files)** (+6) · mockup-fidelity **51** (byte-identical + 51 baseline) · `loop.py`/`events.py`/`sse.py`/`event_wire_schema`/codegen/migration UNTOUCHED · `check_cross_category_import` green
+  - Verify: ✅ `python scripts/lint/run_all.py` · `npx vitest run` (879) · `npm run build`
 
 ---
 
