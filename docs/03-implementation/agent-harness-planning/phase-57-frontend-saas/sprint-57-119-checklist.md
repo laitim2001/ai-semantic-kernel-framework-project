@@ -57,13 +57,13 @@
 
 ## Day 3 — Drive-through (US-6) — real admin tab + real backend
 
-### 3.1 Clean restart + tab probe
-- [ ] Risk Class E clean restart from repo-root (`Win32_Process` PID/PPID/StartTime orphan sweep + a startup probe); `GET /admin/tenants/{id}/skills/system` (dev-login acme-skills) returns the 3 bundled skills (verify the new code is live)
+### 3.1 Clean restart + tab probe ✅
+- [x] Risk Class E clean restart from repo-root (killed stale 57.118 PID 41268; `Win32_Process` sweep → single python.exe owned :8000, no orphan; `Application startup complete`); `GET /admin/tenants/{id}/skills/system` (dev-login acme-skills) → **200** code-review(F)/digest(**T**)/summarize(F) — new code live
 
-### 3.2 Drive-through (real admin Skills tab + Playwright/real backend)
-- [ ] **Leg (visibility + preview) PASS**: open `/tenant-settings` → the Skills tab (acme-skills) → the **System Skills** section lists `code-review`/`digest`/`summarize` read-only → `digest` shows the "🔧 script" badge → (a bundled name the tenant has shadowed shows the "shadowed by your skill" tag — exercise the tag logic) → click Preview on `digest` → the modal renders `digest.md`'s instructions → Preview a tenant skill → its instructions render. `artifacts/sprint-57-119-*.png`
-- [ ] Each control driven (real fetch + real render, not a fixture/echo): the section data is from the real endpoint; the badge reflects the real `has_script`; the modal shows the real instructions. Observed-vs-intended + the backend noted in progress.md
-  - DoD: the System Skills section + the badges + the Preview modal are live; screenshots captured
+### 3.2 Drive-through (real admin Skills tab + Playwright/real backend) ✅
+- [x] **Leg (visibility + preview) PASS**: `/tenant-settings` → Skills tab (acme-skills) → System Skills lists code-review/digest/summarize read-only → `digest` "🔧 script" badge (only) → created a tenant `code-review` (201) → reload → System Skills `code-review` shows "shadowed by your skill" (digest does NOT) → cleanup deleted (204) → click `digest` Preview → `role="dialog"` modal renders `digest.md` instructions verbatim → Close dismisses → tenant `release-notes` Preview renders too. 2 screenshots in `artifacts/`
+- [x] Each control driven (real fetch + real render, not a fixture/echo): section from the real `/skills/system`; badge = real `has_script`; shadowed tag = real per-tenant `overridden` (created+deleted live); modal = real instructions. Observed-vs-intended + backend noted in progress.md
+  - DoD: ✅ section + badges + shadowed tag + Preview modal all live; screenshots captured
 
 ---
 

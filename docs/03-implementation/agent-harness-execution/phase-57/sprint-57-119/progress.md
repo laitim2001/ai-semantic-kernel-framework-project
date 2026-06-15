@@ -53,4 +53,24 @@
 
 **Gate (Day 2)**: mypy `src` **0/371** · black/isort/flake8 0 · `run_all` **10/10** (count 24, no codegen) · `npm run lint` clean (the 4 jsx-a11y modal errors fixed) · `npm run build` ✅ (tsc — the 57.116 build-not-just-Vitest discipline) · Vitest **879 (142 files)** (+6 vs 873) · mockup-fidelity **51** (byte-identical + 51 baseline; no CSS) · `loop.py`/`events.py`/`sse.py`/`event_wire_schema`/codegen/migration UNTOUCHED · `check_cross_category_import` green (api→Cat-5 read).
 
-## Day 3 — (pending)
+## Day 3 — Drive-through (real admin Skills tab + real backend) — 2026-06-15
+
+**Setup (Risk Class E clean restart)**: killed the stale 57.118 backend (uvicorn PID 41268, started 14:04 — pre-57.119, no `/skills/system`); `Win32_Process` sweep confirmed a single python.exe owned :8000, port freed cleanly. Started a fresh 57.119 backend from repo root (`PYTHONPATH=backend/src python -m uvicorn api.main:app --env-file .env`, no `--reload`); `Application startup complete`. API probe (dev-login acme-skills → `GET /admin/tenants/{id}/skills/system`) → **200** with `code-review`(script=F) / `digest`(**script=T**) / `summarize`(script=F), all `overridden=F` (the new code is live).
+
+**Drive (real admin Skills tab :3007 + real backend, acme-skills)**: `/tenant-settings` → Skills tab.
+
+| Control | Observed |
+|---------|----------|
+| **System Skills section** | Renders `code-review` / `digest` / `summarize` read-only below the tenant Skills, with the hint "Built-in skills available to every tenant…" |
+| **🔧 script badge** | On `digest` ONLY (the 57.118 bundled script); `code-review`/`summarize` have none |
+| **Preview (system)** | Click `digest` Preview → a `role="dialog"` modal renders `digest.md`'s verbatim instructions ("# Digest … Call `run_skill_script(\"digest\")` … Read the hex digest …"); Close dismisses it |
+| **Preview (tenant)** | The tenant `release-notes` row gained a Preview button (alongside Edit/Delete) — opens the modal with its instructions |
+| **shadowed tag** | Created a tenant skill named `code-review` (POST 201) → reload → the System Skills `code-review` row shows "shadowed by your skill"; `digest` does NOT (overridden=False); tenant count "2 / 50". Cleanup: deleted the tenant `code-review` (204) → acme-skills back to `release-notes` only |
+
+**Observed vs intended**: intended = a read-only System Skills view (badge + shadowed tag) + a Preview of any skill's body. Observed = EXACTLY that — the section data is from the real `/skills/system` endpoint (not a fixture), the badge reflects the real `has_script`, the shadowed tag reflects the real per-tenant `overridden` (created+deleted live), and the modal renders the real instructions. No AP-4 Potemkin: every control is live (real fetch + real render), labels are real, results render.
+
+**Evidence**: `artifacts/sprint-57-119-drivethrough-system-skills-preview.png` (System Skills section + the `digest` 🔧-script badge + the Preview modal open with digest.md instructions) · `artifacts/sprint-57-119-drivethrough-shadowed-tag.png` (the `code-review` System Skills row with the "shadowed by your skill" tag while a tenant `code-review` exists).
+
+**Verdict**: ✅ **PASS** — Drive-Through Acceptance satisfied (real UI + real backend); the System Skills visibility + preview is genuinely usable, not gate-only.
+
+## Day 4 — (pending: CHANGE-086 + retrospective + navigators + PR)
