@@ -69,12 +69,12 @@
 
 ## Day 4 — CHANGE-086 + closeout (feature continuation — NO design note)
 
-### 4.1 CHANGE-086
-- [ ] **`claudedocs/4-changes/feature-changes/CHANGE-086-skills-system-visibility.md`** (1-page, incl. the drive-through)
+### 4.1 CHANGE-086 ✅
+- [x] **`claudedocs/4-changes/feature-changes/CHANGE-086-skills-system-visibility.md`** (1-page, incl. the drive-through)
 
 ### 4.2 Closeout
-- [ ] retrospective.md Q1-Q7 + calibration (`skills-admin-readonly-surface` 0.55 1st data point; ratio + KEEP/re-point note) + progress.md final
-- [ ] Final gate sweep: mypy 0/371 · run_all 10/10 (count 24) · full pytest +N vs 2644 · Vitest +M · mockup 51 holds
-- [ ] Navigators: CLAUDE.md Current-Sprint + Last-Updated (minimal touch); MEMORY.md quality pointer + memory subfile `project_phase57_119_skills_system_visibility.md`; next-phase-candidates — `AD-Skills-Authoring-UI` system-skills-visibility leg shipped + versioning/hot-reload/disable-toggle carried + remaining Skills ADs (120 inspector-metadata / 121 slash-menu-mockup) carried; sprint-workflow matrix `skills-admin-readonly-surface` 0.55 1st-point add; 17.md — N/A (an api read endpoint, no new contract)
-- [ ] **Anti-pattern self-check** (retro Q5): AP-4 (drive-through proves the section is live — real fetch + real render, not a fixture) · AP-2 (the endpoint → the hook → the tab section + modal; main flow) · AP-3 (the endpoint in the api admin layer reading the Cat-5 registry — the chat-path precedent; the FE in tenant-settings) · AP-6 (read-only visibility + preview, no speculative edit/disable/versioning) — target 0 violations
+- [x] retrospective.md Q1-Q7 + calibration (`skills-admin-readonly-surface` 0.55 1st data point) + progress.md final → ratio ~0.97 IN band, KEEP 0.55
+- [x] Final gate sweep: mypy **0/371** · run_all **10/10** (count 24) · full pytest **2648 passed, 5 skipped** (+4) vs 2644 · Vitest **879** (+6) · mockup **51** holds
+- [x] Navigators: CLAUDE.md Current-Sprint + Last-Updated · MEMORY.md pointer + memory subfile `project_phase57_119_skills_system_visibility.md` · next-phase-candidates (`AD-Skills-Authoring-UI` visibility leg SHIPPED + versioning/hot-reload/disable carried + 120/121 carried) · sprint-workflow matrix `skills-admin-readonly-surface` 0.55 1st-point · 17.md N/A (api read endpoint, no new contract)
+- [x] **Anti-pattern self-check** (retro Q5): AP-4 / AP-2 / AP-3 / AP-6 → **0 violations**
 - [ ] PR (push + open on user authorization); CI → merge on green (gh-verified MERGED before main sync)
