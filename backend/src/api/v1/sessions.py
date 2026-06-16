@@ -12,8 +12,18 @@ Description:
         Sprint 57.107 (B3): top-level session list for the current tenant,
         newest-first, with handoff lineage fields (handoff_parent_id +
         meta_data agent_role). Sidechain rows (subagent transcripts) are
-        excluded. Replaces the chat-v2 fixture SessionList backend gap
-        (AD-ChatV2-SessionList-Backend).
+        excluded. This closed the chat-v2 fixture SessionList backend gap
+        (AD-ChatV2-SessionList-Backend) — the session LIST. The separate
+        history-REPLAY gap (clicking a session to reload its conversation) is
+        AD-ChatV2-Session-History-Replay-Phase58 → GET /{id}/events below.
+
+    - GET /api/v1/sessions/{session_id}/events
+        Sprint 57.125 (history replay, arc slice 1/2): the session's persisted
+        SSE event stream, ordered by sequence_num, for the chat-v2 frontend
+        (57.126) to replay through the live mergeEvent reducer. Rows are written
+        by the main-session transcript observer (router._persist_main_event).
+        A cross-tenant / unknown / event-less session returns 200 + [] (never
+        404 — zero events is valid + cross-tenant existence must stay hidden).
 
     - GET /api/v1/sessions/{session_id}/state
         Returns the LATEST state snapshot for the given session within the
@@ -34,6 +44,7 @@ Description:
 Created: 2026-05-17 (Sprint 57.19 Day 2 / US-B3)
 
 Modification History (newest-first):
+    - 2026-06-16: Sprint 57.125 — GET /{id}/events replay endpoint (main transcript history)
     - 2026-06-12: Sprint 57.107 B3 — GET /sessions list (lineage fields, sidechain-excluded)
     - 2026-05-17: Initial creation (Sprint 57.19 Day 2 / US-B3) — StateSnapshot direct query
 
@@ -57,6 +68,7 @@ from pydantic import BaseModel
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from infrastructure.db.models.sessions import MessageEvent
 from infrastructure.db.models.state import StateSnapshot
 from infrastructure.db.repositories.session_repository import SessionRepository
 from platform_layer.identity.auth import get_current_tenant
@@ -163,4 +175,67 @@ async def get_state_snapshot(
         state_hash=snapshot.state_hash,
         reason=snapshot.reason,
         captured_at_ms=_to_ms(snapshot.created_at),
+    )
+
+
+class SessionEventItem(BaseModel):
+    """One persisted SSE event from a session's transcript (Sprint 57.125).
+
+    Shape == the live SSE frame (serialize_loop_event output): the 57.126
+    frontend feeds these through the same mergeEvent reducer it uses for the
+    live stream → pixel-identical historical turns.
+    """
+
+    type: str
+    data: dict[str, Any]
+    sequence_num: int
+    timestamp_ms: int
+
+
+class SessionEventsResponse(BaseModel):
+    """A session's persisted SSE event stream, ordered by sequence_num.
+
+    Empty for a brand-new session (no events yet) AND for a cross-tenant /
+    unknown session id (RLS + tenant filter yield 0 rows) — the two are
+    indistinguishable, which satisfies the multi-tenant 鐵律 (never reveal
+    cross-tenant existence). Unlike GET /{id}/state (which 404s on a missing
+    snapshot), zero events is a VALID state here → 200 + [].
+    """
+
+    events: list[SessionEventItem]
+
+
+@router.get("/{session_id}/events", response_model=SessionEventsResponse)
+async def list_session_events(
+    session_id: UUID,
+    current_tenant: UUID = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db_session_with_tenant),
+) -> SessionEventsResponse:
+    """Return `session_id`'s persisted SSE event stream, ordered by sequence_num.
+
+    The chat-v2 frontend (Sprint 57.126) replays these events through the live
+    mergeEvent reducer to reconstruct a historical conversation. Rows are written
+    by the main-session transcript observer (Sprint 57.125,
+    router._persist_main_event). Tenant-scoped + RLS + a redundant app-layer
+    tenant_id filter (defence-in-depth). A cross-tenant / unknown / event-less
+    session returns 200 + [] (never 404 — zero events is a valid state and
+    cross-tenant existence must not be revealed).
+    """
+    stmt = (
+        select(MessageEvent)
+        .where(MessageEvent.session_id == session_id)
+        .where(MessageEvent.tenant_id == current_tenant)
+        .order_by(MessageEvent.sequence_num)
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    return SessionEventsResponse(
+        events=[
+            SessionEventItem(
+                type=row.event_type,
+                data=row.event_data,
+                sequence_num=row.sequence_num,
+                timestamp_ms=row.timestamp_ms,
+            )
+            for row in rows
+        ]
     )

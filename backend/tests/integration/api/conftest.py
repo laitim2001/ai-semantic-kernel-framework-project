@@ -77,6 +77,12 @@ os.environ.setdefault("TOOL_CALLS_CHAT_OBSERVER", "false")
 # via monkeypatch.setenv.
 os.environ.setdefault("SUBAGENT_TRANSCRIPT_OBSERVER", "false")
 
+# Sprint 57.125: same pattern for the MAIN-session transcript observer
+# (main chat SSE events → message_events rows for history replay; same
+# loop-isolation concern as the sidechain observer above). The dedicated
+# main-transcript suite re-enables it via monkeypatch.setenv.
+os.environ.setdefault("MAIN_TRANSCRIPT_OBSERVER", "false")
+
 from sqlalchemy import text  # noqa: E402
 
 from infrastructure.db.engine import dispose_engine  # noqa: E402
