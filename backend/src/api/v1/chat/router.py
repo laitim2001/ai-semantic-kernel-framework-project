@@ -35,9 +35,10 @@ Description:
     actual loop run lives in the worker.
 
 Created: 2026-04-30 (Sprint 50.2 Day 1.5)
-Last Modified: 2026-06-14
+Last Modified: 2026-06-16
 
 Modification History (newest-first):
+    - 2026-06-16: Sprint 57.125 — persist main-session SSE events to message_events (replay)
     - 2026-06-14: Sprint 57.116 — inject confirmed active_skill onto the loop_start frame
     - 2026-06-14: Sprint 57.115 — GET /skills picker list + force_load_skill validate-and-pass
     - 2026-06-12: Sprint 57.109 C2 — `_compaction` billing enqueue + quota fold (57.82 sibling)
@@ -84,6 +85,7 @@ import logging
 import os
 import time
 from collections.abc import AsyncIterator, Sequence
+from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -548,6 +550,57 @@ async def _persist_subagent_transcript(
         )
 
 
+# === _persist_main_event: main-session transcript observer (Sprint 57.125) ===
+# Why: the main chat SSE event stream was unpersisted — only subagent sidechains
+# were written to message_events (57.107). Without a durable main transcript,
+# clicking a historical session in chat-v2 cannot replay its conversation
+# (AD-ChatV2-Session-History-Replay-Phase58, arc slice 1/2: this is the backend
+# writer; slice 2 = the frontend replay). Persists the EXACT serialized SSE
+# payload (the same dict yielded to the client, incl. active_skill) so the 57.126
+# frontend can replay it through the live mergeEvent reducer for a pixel-identical
+# historical Turn stream. Mirrors _persist_subagent_transcript: best-effort
+# SAVEPOINT (a DB flake must NEVER break the SSE stream), keyed by the MAIN
+# session_id (sidechain rows are keyed by subagent_id → no collision). Env-gated
+# via MAIN_TRANSCRIPT_OBSERVER (default on; tests/integration/api/conftest.py sets
+# false for isolation parity with SUBAGENT_TRANSCRIPT_OBSERVER). All main event
+# `data` dicts are JSON-native (every serializer str()-coerces UUIDs; trace_id is
+# a hex str) → persist payload["data"] directly (same as the sidechain writer).
+async def _persist_main_event(
+    payload: dict[str, Any],
+    *,
+    db: AsyncSession | None,
+    tenant_id: UUID,
+    session_id: UUID,
+    sequence_num: int,
+) -> None:
+    """Persist one already-serialized main-session SSE event to message_events.
+
+    `payload` is serialize_loop_event's output (with active_skill applied) — the
+    exact frame yielded to the client. Best-effort: a persist failure is logged
+    and swallowed so the SSE stream is never broken.
+    """
+    if db is None:
+        return
+    try:
+        async with db.begin_nested():
+            db.add(
+                MessageEvent(
+                    session_id=session_id,
+                    tenant_id=tenant_id,
+                    event_type=payload["type"],
+                    event_data=payload["data"],
+                    sequence_num=sequence_num,
+                    timestamp_ms=int(time.time() * 1000),
+                )
+            )
+    except Exception:  # noqa: BLE001 — best-effort observer (mirror sidechain)
+        logger.exception(
+            "chat session %s/%s: main transcript persist failed (best-effort)",
+            tenant_id,
+            session_id,
+        )
+
+
 def _drain_subagent_frames(buffer: "list[LoopEvent] | None") -> list[bytes]:
     """Serialize + frame any buffered subagent events (SubagentSpawned/Completed).
 
@@ -616,6 +669,11 @@ async def _stream_loop_events(
     # Sprint 57.107 (US-4): per-sidechain monotonic sequence_num for the
     # message_events transcript rows (one counter per subagent_id).
     sidechain_seq: dict[UUID, int] = {}
+    # Sprint 57.125: per-request monotonic sequence_num for the MAIN-session
+    # message_events transcript (AD-ChatV2-Session-History-Replay backend). Keyed
+    # by the main session_id (distinct from the per-subagent sidechain_seq above).
+    main_seq = 0
+    main_transcript_on = os.environ.get("MAIN_TRANSCRIPT_OBSERVER", "true").lower() == "true"
     # Sprint 57.109 (C2): accumulate the semantic summarize usage off
     # ContextCompacted events (compaction can trigger on multiple turns) for the
     # `_compaction` ledger enqueue + quota reconcile at LoopCompleted.
@@ -664,6 +722,18 @@ async def _stream_loop_events(
             # the field stays null → chat-v2 renders no chip.
             if active_skill and isinstance(event, LoopStarted):
                 payload["data"]["active_skill"] = active_skill
+            # Sprint 57.125: persist the main-session event BEFORE the yield (the
+            # persisted payload == the streamed frame, incl. active_skill). The
+            # best-effort SAVEPOINT inside the helper never blocks/breaks the stream.
+            if main_transcript_on:
+                main_seq += 1
+                await _persist_main_event(
+                    payload,
+                    db=db,
+                    tenant_id=tenant_id,
+                    session_id=session_id,
+                    sequence_num=main_seq,
+                )
             yield format_sse_message(payload["type"], payload["data"])
             # Sprint 57.109 (C2): fold the summarize call's usage (server-side
             # fields on ContextCompacted; structural-only compactions carry 0).
