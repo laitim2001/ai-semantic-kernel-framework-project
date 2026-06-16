@@ -15,6 +15,7 @@
  * Created: 2026-05-17 (Sprint 57.21 Day 1)
  *
  * Modification History:
+ *   - 2026-06-17: Sprint 57.131 — llm_request stamps per-turn model + turn_start model-null coverage
  *   - 2026-06-16: Sprint 57.130 — loop_terminated → flip pending tool + terminated record coverage
  *   - 2026-06-12: Sprint 57.108 — HITL tool/reason + traceId/spanId/tokens/duration capture coverage
  *   - 2026-06-11: Sprint 57.101 B1 — message_injected → UserTurn(injected) coverage
@@ -252,6 +253,7 @@ describe("chatStore.mergeEvent Turn block sequence (Sprint 57.21 Day 1)", () => 
     expect(t.tokensIn).toBeNull();
     expect(t.tokensOut).toBeNull();
     expect(t.costUsd).toBeNull();
+    expect(t.model).toBeNull(); // Sprint 57.131: model null until the first llm_request
     expect(t.traceId).toBeNull();
   });
 
@@ -319,6 +321,15 @@ describe("chatStore.mergeEvent Turn block sequence (Sprint 57.21 Day 1)", () => 
     useChatStore.getState().mergeEvent(llmRequest(14820));
     const t = lastAgentTurn(useChatStore.getState().turns);
     expect(t.tokensIn).toBe(14820);
+  });
+
+  // Sprint 57.131: the same llm_request frame stamps the per-turn model (for the
+  // Inspector Turn tab model row); null until the first llm_request.
+  test("llm_request stamps the per-turn model on the active AgentTurn", () => {
+    useChatStore.getState().mergeEvent(turnStart());
+    expect(lastAgentTurn(useChatStore.getState().turns).model).toBeNull();
+    useChatStore.getState().mergeEvent(llmRequest(14820));
+    expect(lastAgentTurn(useChatStore.getState().turns).model).toBe("claude-haiku-4-5");
   });
 
   // --- llm_response → blocks ---------------------------------------------

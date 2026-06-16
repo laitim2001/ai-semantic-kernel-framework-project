@@ -70,7 +70,7 @@ Build enterprise AI agent teams that work like **human professional teams** — 
 | Attribute | Value |
 |-----------|-------|
 | **Phase** | V2 22/22 ✅ + SaaS Stage 1 3/3 ✅ + SaaS Frontend ongoing (Phase 57+) |
-| **Current Sprint** | Sprint 57.130 **MERGED** (PR #307, main `d92c327b`; from main `b9334946` post-#306, 57.129 MERGED) — **chat-v2 LoopTerminated wire surface** (closes `AD-LoopTerminated-Wire-Surface`, 57.110 carryover: a FATAL terminate's `LoopTerminated` Cat-8 event was dropped at `serialize_loop_event` (`NotImplementedError`) → silent stream end → stuck pending tool chip + no reason). Cross-stack: `sse.py` serializer branch + `WIRE_SCHEMA` 24→25 + codegen regen + `mergeEvent` `loop_terminated` case (flip dangling pending `ToolBlock`→error = stuck-chip fix + `terminated · {reason}` `.badge.danger` + status terminal = composer unfreeze). Minimal render reuses existing `.badge.danger`/`var(--danger)` → 0 new CSS / 0 new oklch (mockup 51 byte-identical); NO new backend primitive/contract/migration. mypy 0/372 · run_all 10/10 (wire 25) · pytest 2727+5skip · Vitest 908 (+4) · build/lint clean. **Drive-through PASS** (real Azure gpt-5.2, jamie@acme.com/acme-prod: `web_search` + unset Bing key → `WebSearchConfigError` → unregistered → FATAL → `LoopTerminated(fatal_exception)` mid-tool → UI flips the pending web_search chip to error + renders `terminated · fatal_exception` + unfreezes composer). 2 Day-0-missed drifts (codegen `WIRE_TYPE_TO_INTERFACE` map + 3 hardcoded count-test locations). CHANGE-097, NO design note. Detail: `memory/project_phase57_130_chatv2_loop_terminated_wire_surface.md`. |
+| **Current Sprint** | Sprint 57.131 **PR-pending** (NOT pushed; from main `eef15c5e` post-#308, 57.130 MERGED) — **chat-v2 Inspector Turn tab `model` row** (closes the `model` row leg of `AD-ChatV2-Inspector-Turn-Metadata-Wire`, 57.120 carryover: the Inspector showed `trace_id`/`tokens`/`cost`/`active_skill` but not the model that ran the turn). FE-only, mirrors the 57.120 `active_skill` row: `AgentTurn += model: string \| null` + per-turn capture in the EXISTING `llm_request` `mergeEvent` case (init `model: null` at `turn_start`) + a `<KV k="model">` row in InspectorTurn (reuse `KV` helper). NO backend/wire/codegen/migration (`llm_request.model` already on wire — 25 unchanged); 0 new CSS/oklch (mockup 51 byte-identical). full Vitest 911 (+3) · build/lint clean · mockup 51 · backend gates UNCHANGED (zero backend diff). **Drive-through PASS** (real Azure: Inspector Turn tab `model = gpt-5.2`, after `cost`/before `active_skill`, matches the ChatHeader badge). 1 Day-0 drift (+2 test factories from the required-field tsc ripple, caught Day-0). CHANGE-098, NO design note. **Also REFACTOR-008** (interleaved per user observation): froze `claudedocs/templates/sprint-{plan,checklist}-template.md` + re-anchored the format 鐵律 (sprint-workflow.md + CLAUDE.md) from "mirror most-recent sprint" (relative→drift) to "mirror frozen template" (absolute). Detail: `memory/project_phase57_131_chatv2_inspector_model_row.md`. |
 | **Sprint History** | See [`memory/MEMORY.md`](memory/MEMORY.md) §Recent Sprints + per-sprint subfile `memory/project_phase57_XX_*.md` + retrospective.md under `docs/03-implementation/agent-harness-execution/phase-57/sprint-57-XX/` |
 | **Pending / Next Phase** | See [`claudedocs/1-planning/next-phase-candidates.md`](claudedocs/1-planning/next-phase-candidates.md) |
 | **Roadmap** | Phase 49-55 V2 ✅ / Phase 56-58 SaaS Stage 1 3/3 ✅ / Phase 57+ Frontend ongoing |
@@ -566,10 +566,10 @@ Related:
 - File change list
 - Acceptance criteria
 
-> **🔴 格式一致性鐵律**：起草前必先讀**最近一個 completed sprint 的 plan**（不是 49.1 / 50.1 等舊樣板，是最新 closed 的）作為模板。
-> 章節編號 / 章節命名 / Day 結構 / 每 task 細節水平**必須一致**。
+> **🔴 格式一致性鐵律**（FROZEN — REFACTOR-008, 2026-06-17）：起草前必先讀**凍結模板** `claudedocs/templates/sprint-plan-template.md`（**絕對錨點**，不是「最近 closed 的 sprint」）作為模板。
+> 章節編號 / 章節命名（§0-9）/ Day 結構 / metadata 區塊 / 每 task 細節水平**必須一致**；H1 是**一行短標題**（完整描述放 `**Summary**` 段，禁止塞進 H1）；§0 用子標題 + 斷行（非整段散文）。
 > Sprint scope 差異透過**內容**調整（更多 stories / 更多 file），**不是透過結構**調整（多加章節 / 改 Day 數）。
-> 例：51.2 plan 9 sections（0-9）→ 52.1 plan 必須也 9 sections + 命名一致；違反 = 用戶矯正成本（前車：52.1 v1→v3 三輪重寫）。
+> **為何改錨點**：舊規則「鏡像最近 closed sprint」是相對/浮動錨點 → 每 sprint 抄前一個 → drift 單調累積（審計：49.1 freeform → 51.2/52.1 §0-9 中文 → 57.107-130 英文巨型 H1 + dense §0）。凍結模板是絕對錨點，止住 ratchet。詳見 `claudedocs/4-changes/refactoring/REFACTOR-008-*.md`。
 
 ### Step 2: Create Checklist File
 建 `phase-XX-*/sprint-XXX-checklist.md`：
@@ -577,8 +577,8 @@ Related:
 - 驗證標準
 - 連結 plan
 
-> **🔴 格式一致性鐵律**：同 Step 1 — 必讀最近 completed sprint checklist 為模板。
-> Day 數預設 5（Day 0-4，與 V2 累計 sprint 一致）；Day 4 含 retro + closeout。
+> **🔴 格式一致性鐵律**（FROZEN — REFACTOR-008）：同 Step 1 — 必讀**凍結模板** `claudedocs/templates/sprint-checklist-template.md`（絕對錨點，非最近 sprint）。
+> Day 數預設 5（Day 0-4）；Day 4 含 retro + closeout；header 一行短描述（完整描述在 plan `**Summary**`，不重複）。
 > 每 task 含：bold task 描述 / 3-6 sub-bullets（具體 case / 配置 / DoD）/ Verify command。
 > 細節水平：同等 scope sprint，checklist 行數 ±20% 內。
 
@@ -619,7 +619,7 @@ V1 完整 CLAUDE.md 已保留於 `CLAUDE.backup.md`。如需查閱 V1 架構（M
 
 ---
 
-**Last Updated**: 2026-06-16 (Sprint 57.130 — chat-v2 LoopTerminated wire surface: serialize the Cat-8 fatal-terminate event onto the chat SSE wire (24→25) + FE `mergeEvent` flips the dangling pending tool to error + renders a `terminated · {reason}` `.badge.danger` + unfreezes the composer, closing `AD-LoopTerminated-Wire-Surface`; drive-through PASS via a real `web_search` FATAL terminate); see `memory/` for sprint history
+**Last Updated**: 2026-06-17 (Sprint 57.131 — chat-v2 Inspector Turn tab `model` row: a per-turn `model` KV row surfacing the LLM model that ran each turn (FE-only, captured at `llm_request` alongside `tokensIn`), closing the `model` row leg of `AD-ChatV2-Inspector-Turn-Metadata-Wire`; drive-through PASS `model = gpt-5.2`. Also REFACTOR-008: froze the sprint plan/checklist template + re-anchored the format 鐵律 relative→absolute to stop drift); see `memory/` for sprint history
 **Project Start**: 2025-11-14
 **V2 Authority**: `docs/03-implementation/agent-harness-planning/` (21 docs — 20 規劃 + 1 review)
 **V1 Reference**: `CLAUDE.backup.md` + `docs/07-analysis/V9/00-index.md`

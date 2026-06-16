@@ -12,7 +12,7 @@
  *   Sprint 57.21 mergeEvent rewrite — folds 14 (Sprint 57.66: 18) SSE event types into Turn blocks:
  *     - loop_start         → set sessionId + status=running (preserve turns)
  *     - turn_start         → push new AgentTurn with empty blocks + null metadata
- *     - llm_request        → update active AgentTurn.tokensIn
+ *     - llm_request        → update active AgentTurn.tokensIn + model (Sprint 57.131)
  *     - llm_response       → append ThinkingBlock (if thinking) + ToolBlock per tool_call
  *     - tool_call_request  → defensive append ToolBlock if missing (rare path)
  *     - tool_call_result   → update matching ToolBlock status/output/durationMs
@@ -36,6 +36,7 @@
  * Last Modified: 2026-06-16
  *
  * Modification History:
+ *   - 2026-06-16: Sprint 57.131 — llm_request stamps per-turn model on the AgentTurn (Inspector model row)
  *   - 2026-06-16: Sprint 57.130 — +loop_terminated case (flip pending tool→error + terminated badge)
  *   - 2026-06-16: Sprint 57.126 — +loadSessionHistory (fetch /events → replay) + user_message case
  *   - 2026-06-15: Sprint 57.120 — turn_start carries activeSkill onto AgentTurn (Inspector row)
@@ -512,6 +513,9 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             tokensOut: null,
             tokensThinking: null,
             costUsd: null,
+            // Sprint 57.131: null until this turn's first llm_request stamps the model
+            // (turn_start fires BEFORE llm_request, so the model isn't known yet).
+            model: null,
             traceId: ev.data.trace_id ?? null,
             spanId: turnSpan?.spanId ?? null,
             activeSkill: triggerSkill,
@@ -545,9 +549,13 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             ...s,
             rawEvents,
             currentModel: ev.data.model,
+            // Sprint 57.131: stamp the per-turn model alongside tokensIn (same
+            // llm_request frame) so the Inspector Turn tab shows which model ran this
+            // turn; a multi-call turn keeps the latest (overwrite, like tokensIn).
             turns: updateLastAgentTurn(s.turns, (t) => ({
               ...t,
               tokensIn: ev.data.tokens_in,
+              model: ev.data.model,
             })),
           };
         }

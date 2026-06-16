@@ -7,6 +7,7 @@
  * Created: 2026-05-17 (Sprint 57.21 Day 4 §4.1)
  *
  * Modification History:
+ *   - 2026-06-17: Sprint 57.131 — +model row cases (set / "—" absent); makeAgentTurn +model; dash count 7→8
  *   - 2026-06-15: Sprint 57.120 — +active_skill row cases (⚡ set / "—" absent); null-dash count 6→7
  *   - 2026-06-03: Sprint 57.75 — Trace+Memory tabs now wired (A-5); replace ComingSoon assertions with empty states
  *   - 2026-06-03: Sprint 57.72 — Tree tab now renders InspectorTree (A-5c); replace ComingSoon-Tree assertion with empty + populated tree
@@ -60,6 +61,7 @@ function makeAgentTurn(overrides: Partial<AgentTurn> = {}): AgentTurn {
     tokensOut: 186,
     tokensThinking: 412,
     costUsd: 0.0142,
+    model: "azure/gpt-5.2",
     traceId: "6f3a.b2k1",
     spanId: "a04.zp2",
     ...overrides,
@@ -90,6 +92,7 @@ describe("ChatInspector (Sprint 57.21 Day 4 §4.1)", () => {
     expect(screen.getByText("186")).toBeInTheDocument();
     expect(screen.getByText("412")).toBeInTheDocument();
     expect(screen.getByText("$0.0142")).toBeInTheDocument();
+    expect(screen.getByText("azure/gpt-5.2")).toBeInTheDocument(); // Sprint 57.131: model row
     expect(screen.getByText("6f3a.b2k1")).toBeInTheDocument();
     expect(screen.getByText("a04.zp2")).toBeInTheDocument();
   });
@@ -102,6 +105,7 @@ describe("ChatInspector (Sprint 57.21 Day 4 §4.1)", () => {
           tokensOut: null,
           tokensThinking: null,
           costUsd: null,
+          model: null,
           traceId: null,
           spanId: null,
         }),
@@ -109,8 +113,8 @@ describe("ChatInspector (Sprint 57.21 Day 4 §4.1)", () => {
     });
     render(<ChatInspector />);
     const dashes = screen.getAllByText("—");
-    // 7 fields nullable: tokens.in / tokens.out / tokens.thinking / cost / trace_id /
-    // span_id / active_skill (Sprint 57.120 — makeAgentTurn default carries no skill)
+    // 8 fields nullable: tokens.in / tokens.out / tokens.thinking / cost / model
+    // (Sprint 57.131) / trace_id / span_id / active_skill (Sprint 57.120 — default no skill)
     expect(dashes.length).toBeGreaterThanOrEqual(7);
   });
 
@@ -130,6 +134,23 @@ describe("ChatInspector (Sprint 57.21 Day 4 §4.1)", () => {
     expect(screen.getByText("active_skill")).toBeInTheDocument();
     // the only nullable-rendered field in the otherwise-populated default turn
     expect(screen.getAllByText("—")).toHaveLength(1);
+  });
+
+  // Sprint 57.131: the Inspector Turn tab surfaces the per-turn LLM model (captured at
+  // llm_request) as a model KV row.
+  test("InspectorTurn shows the model row with the model name when set", () => {
+    useChatStore.setState({ turns: [makeAgentTurn({ model: "azure/gpt-5.2" })] });
+    render(<ChatInspector />);
+    expect(screen.getByText("model")).toBeInTheDocument();
+    expect(screen.getByText("azure/gpt-5.2")).toBeInTheDocument();
+  });
+
+  test("InspectorTurn shows model '—' when the turn carries no model", () => {
+    useChatStore.setState({ turns: [makeAgentTurn({ model: null })] });
+    render(<ChatInspector />);
+    expect(screen.getByText("model")).toBeInTheDocument();
+    // 2 dashes now: model (this turn) + active_skill (default carries no skill)
+    expect(screen.getAllByText("—")).toHaveLength(2);
   });
 
   test("Block sequence renders 1 line per block with correct type label", () => {
