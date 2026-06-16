@@ -38,6 +38,7 @@ Created: 2026-04-30 (Sprint 50.2 Day 1.5)
 Last Modified: 2026-06-16
 
 Modification History (newest-first):
+    - 2026-06-16: Sprint 57.128 — persist post-resume SSE events to message_events (resume replay)
     - 2026-06-16: Sprint 57.126 — persist user_message row + main_seq seed from MAX (multi-turn)
     - 2026-06-16: Sprint 57.125 — persist main-session SSE events to message_events (replay)
     - 2026-06-14: Sprint 57.116 — inject confirmed active_skill onto the loop_start frame
@@ -1203,6 +1204,9 @@ async def _stream_resume_events(
     *,
     state: LoopState,
     trace_context: TraceContext,
+    tenant_id: UUID,
+    session_id: UUID,
+    db: AsyncSession | None = None,
 ) -> AsyncIterator[bytes]:
     """Drive loop.resume() + emit SSE bytes (thin mirror of _stream_loop_events).
 
@@ -1211,7 +1215,21 @@ async def _stream_resume_events(
     (sessions / cost ledger / quota) — those fired on the original RUN-1 stream.
     Framing matches _stream_loop_events: one frame per serializable event,
     Thinking → None → skipped (LLMResponded carries the canonical content).
+
+    Sprint 57.128 (AD-ChatV2-Resume-Transcript-Persistence): like the send path,
+    persist each post-resume event to message_events BEFORE the yield so a later
+    GET /sessions/{id}/events replay shows the post-approval continuation. Before
+    this, _stream_resume_events omitted the _persist_main_event call that
+    _stream_loop_events has, so a paused-then-resumed session's replay stopped at
+    the pause. main_seq seeds from the session MAX so post-resume rows continue
+    monotonically AFTER the pre-pause events (the 57.126 ordering logic). No
+    user_message row (resume has no new user prompt — the original send already
+    persisted the prompt + pre-pause events). Best-effort + MAIN_TRANSCRIPT_OBSERVER
+    -gated + db-None-safe, identical to the send path. The active_skill stamping is
+    send-path only (resume → the field stays null, per the _stream_loop_events note).
     """
+    main_transcript_on = os.environ.get("MAIN_TRANSCRIPT_OBSERVER", "true").lower() == "true"
+    main_seq = await _max_main_seq(db, tenant_id, session_id) if main_transcript_on else 0
     async for event in loop.resume(state=state, trace_context=trace_context):
         try:
             payload = serialize_loop_event(event)
@@ -1220,6 +1238,15 @@ async def _stream_resume_events(
             continue
         if payload is None:
             continue
+        if main_transcript_on:
+            main_seq += 1
+            await _persist_main_event(
+                payload,
+                db=db,
+                tenant_id=tenant_id,
+                session_id=session_id,
+                sequence_num=main_seq,
+            )
         yield format_sse_message(payload["type"], payload["data"])
 
 
@@ -1351,6 +1378,12 @@ async def resume_chat(
             result.loop,
             state=result.state,
             trace_context=trace_ctx,
+            # Sprint 57.128: persist the post-resume transcript to message_events so
+            # the session replay shows the post-approval continuation (deps already
+            # in scope here; the generator mirrors the send path's best-effort persist).
+            tenant_id=current_tenant,
+            session_id=session_id,
+            db=db,
         ),
         media_type="text/event-stream",
         headers={
