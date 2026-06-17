@@ -82,11 +82,11 @@
 ## Day 4 — CHANGE-099 + closeout
 
 ### 4.1 CHANGE-099
-- [ ] **`CHANGE-099-chatv2-resume-ledger-persist.md`** (gap + 2-leg fix + drive-through PASS + AD closed). NO design note (continuation of 57.127/129 ledger)
+- [x] **`CHANGE-099-chatv2-resume-ledger-persist.md`** (gap + 2-leg fix + drive-through PASS + AD closed). NO design note (continuation of 57.127/129 ledger) ✅
 
 ### 4.2 Closeout
-- [ ] retrospective.md Q1-Q7 + calibration (`chatv2-resume-ledger-persist-wiring` 0.70, 1st data point; flag if ratio out of band → re-point)
-- [ ] Final gate sweep: mypy · run_all · pytest · Vitest · mockup · build · lint · LLM-SDK-leak
-- [ ] Navigators: CLAUDE.md Current-Sprint + Last-Updated · MEMORY.md pointer + subfile · next-phase-candidates (CLOSE `AD-ChatV2-Resume-Tool-RoundTrips` + sibling) · sprint-workflow matrix (`chatv2-resume-ledger-persist-wiring` row, 1st data point)
-- [ ] Anti-pattern self-check (retro Q5): AP-2/3/4/6/8/11 → violations; v2 lints 10/10
-- [ ] **Commit** → ⏳ PR push + open → CI → merge: PENDING USER CONFIRMATION (push is outward-facing per Developer Preferences) → post-merge status flip after gh-verified MERGED
+- [x] retrospective.md Q1-Q7 + calibration (`chatv2-resume-ledger-persist-wiring` 0.70 → **re-pointed 0.85**, 1st pt ratio ~1.4-1.6 over) ✅
+- [x] Final gate sweep: mypy 0/372 · run_all 10/10 · pytest 2731+5skip · black/isort/flake8 clean · Vitest/mockup UNTOUCHED · LLM-SDK-leak clean ✅
+- [x] Navigators: CLAUDE.md Current-Sprint + Last-Updated · MEMORY.md pointer + subfile · next-phase-candidates (CLOSED `AD-ChatV2-Resume-Tool-RoundTrips` + sibling; NEW `AD-ChatV2-Resume-Replay-Drive-Through`) · sprint-workflow matrix (`chatv2-resume-ledger-persist-wiring` row) ✅
+- [x] Anti-pattern self-check (retro Q5): AP-2/3/4/6/8/11 → 0 violations; v2 lints 10/10 ✅
+- [x] **Commit** `6c3c898a` (11 files, +627) → ⏳ PR push + open → CI → merge: **PENDING USER CONFIRMATION** (push is outward-facing per Developer Preferences) → post-merge status flip after gh-verified MERGED
