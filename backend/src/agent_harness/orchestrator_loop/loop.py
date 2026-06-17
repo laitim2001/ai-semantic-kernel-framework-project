@@ -42,9 +42,10 @@ Description:
     revisit if per-run override is needed.
 
 Created: 2026-04-30 (Sprint 50.1 Day 2.2)
-Last Modified: 2026-06-16
+Last Modified: 2026-06-17
 
 Modification History (newest-first):
+    - 2026-06-17: Sprint 57.132 — resume() persists tool round-trip + held-answer replay to ledger
     - 2026-06-16: Sprint 57.129 — TOOL_USE branch persists tool round-trips to the ledger
     - 2026-06-16: Sprint 57.127 — multi-turn rehydration via MessageStore dep; serde → _contracts
     - 2026-06-15: Sprint 57.122 — tool HITL reads tenant risk-threshold policy (load-bearing)
@@ -1909,7 +1910,8 @@ class AgentLoopImpl(AgentLoop):
         no-op without a store). Used for the user prompt at send start (57.127),
         the final assistant answer at end_turn (57.127), and — since Sprint 57.129
         (AD-ChatV2-Ledger-Tool-RoundTrips) — each turn's COMPLETE intra-turn tool
-        round-trip ([assistant tool_use, *tool results]) from the TOOL_USE branch,
+        round-trip ([assistant tool_use, *tool results]) from the TOOL_USE branch
+        and — since 57.132 — the resume() tool-approval + held-answer replay paths,
         so a follow-up send rehydrates the full tool context. ONLY new messages are
         passed (never system / prior); the tool batch is passed as a complete,
         well-formed unit, so the ledger never holds a tool_use without its result."""
@@ -3447,6 +3449,22 @@ class AgentLoopImpl(AgentLoop):
                     trace_context=ctx,
                 )
             messages.append(Message(role="tool", content=tool_content, tool_call_id=pending_tc.id))
+            # Sprint 57.132 (AD-ChatV2-Resume-Tool-RoundTrips): persist this paused-
+            # then-approved tool's COMPLETE round-trip to the `messages` ledger. The
+            # assistant tool_use was rehydrated from the pause checkpoint (the run's
+            # 57.129 _run_turns persist never ran — cat9 ESCALATE returned before it),
+            # and the result is appended above OUTSIDE _run_turns (the continuation's
+            # persist won't cover it). Slice from the LAST assistant (carrying the
+            # pending tool_call) through the result(s) — a complete unit mirroring the
+            # 57.129 batch contract (backward-scan handles a multi-call turn where an
+            # earlier tool already ran). Reached ONLY on APPROVED+exec; REJECTED /
+            # undecided returned earlier → no dangling tool_use in the ledger.
+            _resume_asst_idx = next(
+                (i for i in range(len(messages) - 1, -1, -1) if messages[i].role == "assistant"),
+                None,
+            )
+            if _resume_asst_idx is not None:
+                await self._persist_to_ledger(messages[_resume_asst_idx:], turn_num=turn_count)
 
         # --- Drive the SHARED re-enterable loop (Sprint 57.90 Slice 2) -------
         # Per kind, the approval-specific prep is done above: a tool-kind pause
@@ -3542,6 +3560,17 @@ class AgentLoopImpl(AgentLoop):
             trace_context=ctx,
         )
         yield Thinking(text=answer_text, trace_context=ctx)
+        # Sprint 57.132 (AD-ChatV2-Resume-Replay-Answer-Persistence): persist the
+        # delivered held answer to the `messages` ledger. An output/verification-kind
+        # APPROVE delivers via this TERMINAL replay (no _run_turns drive → no end_turn
+        # persist), and the held answer was withheld at pause (never appended to a
+        # buffer) — so without this a follow-up send would not rehydrate it. Mirrors
+        # the run() end_turn answer-persist (a single assistant message); guarded on
+        # answer_text so an empty snapshot persists nothing.
+        if answer_text:
+            await self._persist_to_ledger(
+                [Message(role="assistant", content=answer_text)], turn_num=turn_count
+            )
         yield LoopCompleted(
             stop_reason=TerminationReason.END_TURN.value,
             total_turns=turn_count,
