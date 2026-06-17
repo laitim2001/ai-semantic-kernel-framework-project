@@ -34,7 +34,7 @@ Description:
       or on a non-final response.
 
 Created: 2026-06-08 (Sprint 57.88)
-Last Modified: 2026-06-10 (Sprint 57.99 — A2 verification-ESCALATE pause: escalate tests)
+Last Modified: 2026-06-17 (Sprint 57.132 — resume-path ledger persist tests)
 """
 
 from __future__ import annotations
@@ -99,6 +99,7 @@ from agent_harness.orchestrator_loop.loop import (
 )
 from agent_harness.orchestrator_loop.termination import TerminationReason
 from agent_harness.output_parser import OutputParserImpl
+from agent_harness.state_mgmt import MessageStore
 from agent_harness.tools import ToolExecutorImpl, ToolRegistryImpl
 from agent_harness.verification import Verifier, VerifierRegistry
 
@@ -570,7 +571,10 @@ def _paused_state(*, decision_session: UUID) -> LoopState:
 
 
 def _build_resume_loop(
-    *, chat_client: ChatClient, hitl_manager: HITLManager
+    *,
+    chat_client: ChatClient,
+    hitl_manager: HITLManager,
+    message_store: MessageStore | None = None,
 ) -> tuple[AgentLoopImpl, SpyExecutor]:
     registry = _registry_with_tool()
     executor = _executor(registry)
@@ -581,6 +585,9 @@ def _build_resume_loop(
         tool_registry=registry,
         tenant_id=_TENANT_ID,
         hitl_manager=hitl_manager,
+        # Sprint 57.132: inject a recording store so the resume-path ledger persist
+        # (tool round-trip + held-answer replay) is observable; None = no-op baseline.
+        message_store=message_store,
     )
     return loop, executor
 
@@ -1937,3 +1944,112 @@ async def test_verify_escalate_reject_then_fail_binds_to_a1_terminal() -> None:
     assert not any(isinstance(e, ApprovalRequested) for e in events)
     new_pauses = [s for s in checkpointer.saved if "pending_approval" in s.durable.metadata]
     assert not new_pauses, "the durable verification_escalated flag must prevent a 2nd pause"
+
+
+# === Tests: resume-path ledger persistence (57.132) =========================
+# AD-ChatV2-Resume-Tool-RoundTrips (+ sibling held-answer gap): the resume path
+# appends its out-of-loop messages (a paused-then-approved tool's round-trip; an
+# output/verification held answer) to the buffer but — before 57.132 — never
+# persisted them to the `messages` Cat-3 ledger, so a follow-up send after a resume
+# rehydrated an incomplete conversation. These tests inject a recording MessageStore
+# and assert both legs persist (and the no-store / REJECTED paths persist nothing).
+
+
+class RecordingMessageStore(MessageStore):
+    """In-memory MessageStore: load() returns nothing; records each append() batch
+    so a test can assert the resume-path persist fires with the right shape."""
+
+    def __init__(self) -> None:
+        self.appended: list[Message] = []
+        # one entry per append() call → assert the tool round-trip is ONE atomic batch.
+        self.append_calls: list[list[Message]] = []
+
+    async def load(self) -> list[Message]:
+        return []
+
+    async def append(self, messages: list[Message], *, turn_num: int) -> None:
+        self.appended.extend(messages)
+        self.append_calls.append(list(messages))
+
+
+async def test_resume_tool_roundtrip_persisted_atomically() -> None:
+    """Leg 1: resume() tool-kind APPROVED persists the paused tool's COMPLETE
+    round-trip ([assistant tool_use, tool result]) to the ledger as ONE atomic
+    append — never a dangling bare tool_use (mirrors the 57.129 run-path contract)."""
+    session_id = uuid4()
+    chat = FakeChatClient(responses=[("final answer", None, StopReason.END_TURN)])
+    hitl = SpyHITLManager(decision=DecisionType.APPROVED)
+    store = RecordingMessageStore()
+    loop, executor = _build_resume_loop(chat_client=chat, hitl_manager=hitl, message_store=store)
+
+    state = _paused_state(decision_session=session_id)
+    ctx = TraceContext(tenant_id=_TENANT_ID, session_id=session_id)
+    events = [ev async for ev in loop.resume(state=state, trace_context=ctx)]
+
+    # The pre-approved tool executed + the turn continued to end_turn.
+    assert executor.executed and executor.executed[0].name == "sensitive_tool"
+    completes = [e for e in events if isinstance(e, LoopCompleted)]
+    assert completes[-1].stop_reason == TerminationReason.END_TURN.value
+    # Exactly ONE append carries a tool_use; it carries the matching result too
+    # ([assistant tool_use, tool]) → dangling-free.
+    batch_calls = [c for c in store.append_calls if any(m.tool_calls for m in c)]
+    assert len(batch_calls) == 1
+    batch = batch_calls[0]
+    assert [m.role for m in batch] == ["assistant", "tool"]
+    assert batch[0].tool_calls is not None and batch[0].tool_calls[0].name == "sensitive_tool"
+    assert batch[1].tool_call_id == "tc-1"
+
+
+async def test_resume_tool_roundtrip_no_store_is_noop() -> None:
+    """Leg 1: resume() tool-kind APPROVED with message_store=None → the new persist
+    is a safe no-op (no crash); the tool still executes + the turn ends."""
+    session_id = uuid4()
+    chat = FakeChatClient(responses=[("final answer", None, StopReason.END_TURN)])
+    hitl = SpyHITLManager(decision=DecisionType.APPROVED)
+    loop, executor = _build_resume_loop(chat_client=chat, hitl_manager=hitl, message_store=None)
+
+    state = _paused_state(decision_session=session_id)
+    ctx = TraceContext(tenant_id=_TENANT_ID, session_id=session_id)
+    events = [ev async for ev in loop.resume(state=state, trace_context=ctx)]
+
+    assert executor.executed and executor.executed[0].name == "sensitive_tool"
+    completes = [e for e in events if isinstance(e, LoopCompleted)]
+    assert completes[-1].stop_reason == TerminationReason.END_TURN.value
+
+
+async def test_resume_output_approved_persists_held_answer() -> None:
+    """Leg 2: resume() output-kind APPROVED delivers the held answer via the TERMINAL
+    _replay_approved_output (no _run_turns drive) and now persists it to the ledger,
+    so a follow-up send rehydrates it."""
+    session_id = uuid4()
+    chat = FakeChatClient(responses=[])  # terminal replay never calls the LLM
+    hitl = SpyHITLManager(decision=DecisionType.APPROVED)
+    store = RecordingMessageStore()
+    loop, _ = _build_resume_loop(chat_client=chat, hitl_manager=hitl, message_store=store)
+
+    state = _paused_output_state(decision_session=session_id)
+    ctx = TraceContext(tenant_id=_TENANT_ID, session_id=session_id)
+    events = [ev async for ev in loop.resume(state=state, trace_context=ctx)]
+
+    # The held answer was delivered (LLMResponded re-emit) AND persisted.
+    assert any(isinstance(e, LLMResponded) for e in events)
+    persisted = [(m.role, str(m.content)) for m in store.appended]
+    assert ("assistant", "the held confidential answer") in persisted
+
+
+async def test_resume_output_rejected_persists_nothing() -> None:
+    """Leg 2: resume() output-kind REJECTED withholds the held answer (block) and
+    persists nothing (the replay path is never reached)."""
+    session_id = uuid4()
+    chat = FakeChatClient(responses=[])
+    hitl = SpyHITLManager(decision=DecisionType.REJECTED)
+    store = RecordingMessageStore()
+    loop, _ = _build_resume_loop(chat_client=chat, hitl_manager=hitl, message_store=store)
+
+    state = _paused_output_state(decision_session=session_id)
+    ctx = TraceContext(tenant_id=_TENANT_ID, session_id=session_id)
+    events = [ev async for ev in loop.resume(state=state, trace_context=ctx)]
+
+    blocks = [e for e in events if isinstance(e, GuardrailTriggered)]
+    assert blocks and blocks[0].action == "block"
+    assert store.appended == []
