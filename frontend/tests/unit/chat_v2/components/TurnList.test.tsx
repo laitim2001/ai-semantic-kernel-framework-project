@@ -45,6 +45,7 @@ const agentTurn = (id = "t_a1"): Turn => ({
   tokensOut: null,
   tokensThinking: null,
   costUsd: null,
+  model: null, // Sprint 57.131: per-turn model (null until llm_request)
   traceId: null,
   spanId: null,
 });

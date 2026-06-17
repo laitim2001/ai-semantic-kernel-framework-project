@@ -25,6 +25,7 @@
  * Last Modified: 2026-06-16
  *
  * Modification History:
+ *   - 2026-06-16: Sprint 57.131 — AgentTurn +model (per-turn LLM model for the Inspector Turn row)
  *   - 2026-06-16: Sprint 57.130 — AgentTurn +terminated? (LoopTerminated wire surface)
  *   - 2026-06-16: Sprint 57.126 — +UserMessageEvent (persist-only replay event; not a wire type)
  *   - 2026-06-15: Sprint 57.120 — AgentTurn +activeSkill? (Inspector active_skill row)
@@ -168,6 +169,12 @@ export type AgentTurn = {
   tokensOut: number | null;
   tokensThinking: number | null;
   costUsd: number | null;
+  // Sprint 57.131: the LLM model that ran this turn (captured from llm_request.model
+  // in the same mergeEvent case that sets tokensIn). null until the turn's first
+  // llm_request fires (turn_start initializes it null; a multi-call turn keeps the
+  // latest). Surfaced as the Inspector Turn tab `model` KV row (closes the model-row
+  // leg of AD-ChatV2-Inspector-Turn-Metadata-Wire).
+  model: string | null;
   traceId: string | null;
   spanId: string | null;
   // Sprint 57.120: the force-loaded skill for this turn's loop (carried from the

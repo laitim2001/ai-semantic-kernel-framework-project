@@ -178,6 +178,10 @@ export function InspectorTurn(): JSX.Element {
           mono
         />
         <KV k="cost" v={lastAgent.costUsd != null ? `$${lastAgent.costUsd.toFixed(4)}` : "—"} mono />
+        {/* Sprint 57.131: the LLM model that ran this turn (captured at llm_request,
+            alongside tokens). Reuses the KV helper + .mono (a technical identifier, like
+            trace_id) — no new mockup CSS / HEX / oklch. "—" until the first llm_request. */}
+        <KV k="model" v={lastAgent.model ?? "—"} mono />
         {/* Sprint 57.120: the force-loaded skill for this turn's loop (carried onto the
             AgentTurn at turn_start). ⚡ matches the 57.116 user-turn chip; "—" when no
             skill. Reuses the KV helper — no new mockup CSS / HEX / oklch. */}
