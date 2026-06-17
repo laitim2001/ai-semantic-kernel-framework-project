@@ -161,6 +161,10 @@ async def _clear_committed_test_tenants() -> None:
             # Sprint 57.114 — sweep uuid4-suffixed admin /skills CRUD test tenants
             # (FK CASCADE from tenants drops their tenant_skills rows).
             await session.execute(text("DELETE FROM tenants WHERE code LIKE 'SKILL_ADMIN_%'"))
+            # Sprint 57.134 — sweep uuid4-suffixed transcript-retention apply test tenants
+            # (the apply POST commits; FK CASCADE drops their users/sessions/messages/
+            # message_events rows).
+            await session.execute(text("DELETE FROM tenants WHERE code LIKE 'TRANSCRIPTRET_%'"))
             # Sprint 57.55 — sweep uuid4-suffixed feature_flags rows seeded by PUT tests
             # (feature_flags is a global no-RLS registry; rows persist past test
             # rollback once any PUT test commits to make the row visible to the
